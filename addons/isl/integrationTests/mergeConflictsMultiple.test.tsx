@@ -6,7 +6,7 @@
  */
 
 import {initRepo} from './setup';
-import {act, fireEvent, screen, waitFor, within} from '@testing-library/react';
+import {act, screen, waitFor, within} from '@testing-library/react';
 
 describe('multiple merge conflicts integration test', () => {
   it('shows conflicts, supports resolving, and continuing the operation', async () => {

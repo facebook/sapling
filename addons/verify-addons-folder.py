@@ -88,7 +88,13 @@ async def verify_isl():
         lint_and_test(isl_server),
         lint_and_test(vscode),
     )
+    # run integration tests separately to reduce flakiness from CPU contention with normal unit tests
+    await run_isl_integration_tests()
     timer.report(ok("ISL"))
+
+
+async def run_isl_integration_tests():
+    await run(["yarn", "integration", "--watchAll=false"], cwd="isl")
 
 
 async def lint_and_test(cwd: Path):

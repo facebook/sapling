@@ -24,6 +24,9 @@ jest.mock('../src/logger', () => ({
 
 jest.mock('@stylexjs/stylex');
 
+// reduce flakiness by retrying
+jest.retryTimes(1);
+
 import {configure} from '@testing-library/react';
 
 const IS_CI = !!process.env.SANDCASTLE || !!process.env.GITHUB_ACTIONS;

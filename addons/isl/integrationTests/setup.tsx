@@ -22,6 +22,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
+const IS_CI = !!process.env.SANDCASTLE || !!process.env.GITHUB_ACTIONS;
+
 const mockTracker = makeServerSideTracker(
   console,
   {platformName: 'test'} as ServerPlatform,
@@ -130,11 +132,20 @@ export async function initRepo() {
   const repoDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'isl-integration-test-repo-'));
   const testLogger = wrapLogger(console, '[ test ]');
 
+  let cmd = 'sl';
+  if (process.env.SANDCASTLE) {
+    // On internal CI, it's easiest to run 'hg' instead of 'sl'.
+    cmd = 'hg';
+    process.env.PATH += ':/bin/hg';
+  }
+
+  testLogger.info('sl cmd: ', cmd);
+
   testLogger.log('temp repo: ', repoDir);
   process.chdir(repoDir);
 
   const ctx: RepositoryContext = {
-    cmd: 'sl',
+    cmd,
     cwd: repoDir,
     logger: testLogger,
     tracker: mockTracker,
@@ -145,6 +156,7 @@ export async function initRepo() {
     const result = await runCommand(ctx, args, {
       ...options,
       env: {
+        ...process.env,
         ...(options?.env ?? {}),
         FB_SCM_DIAGS_NO_SCUBA: '1',
       } as Record<string, string> as NodeJS.ProcessEnv,
@@ -175,6 +187,15 @@ commit(date='now')
     await sl(['debugdrawdag'], {input});
   }
 
+  await sl(['version'])
+    .catch(e => {
+      testLogger.log('err in version', e);
+      return e;
+    })
+    .then(s => {
+      testLogger.log('sl version: ', s.stdout, s.stderr, s.exitCode);
+    });
+
   // set up empty repo
   await sl(['init', '--config=format.use-eager-repo=True', '--config=init.prefer-git=False', '.']);
   await writeFileInRepo('.watchmanconfig', '{}');
@@ -201,7 +222,7 @@ commit(date='now')
   const disposeServer = onClientConnection({
     cwd: repoDir,
     version: 'integration-test',
-    command: 'sl',
+    command: cmd,
     logger: serverLogger,
 
     postMessage(message: string): Promise<boolean> {
@@ -242,10 +263,14 @@ commit(date='now')
       testLogger.log(' -------- cleaning up -------- ');
       disposeServer();
       disposeClientConnection();
-      // rm -rf the temp dir with the repo in it
-      await retry(() => fs.promises.rm(repoDir, {recursive: true, force: true})).catch(() => {
-        testLogger.log('failed to clean up temp dir: ', repoDir);
-      });
+      if (!IS_CI) {
+        testLogger.log('removing repo dir');
+        // rm -rf the temp dir with the repo in it
+        // skip on CI because it can cause flakiness, and the job will get cleaned up anyway
+        await retry(() => fs.promises.rm(repoDir, {recursive: true, force: true})).catch(() => {
+          testLogger.log('failed to clean up temp dir: ', repoDir);
+        });
+      }
     },
     writeFileInRepo,
     drawdag,

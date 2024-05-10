@@ -34,4 +34,3 @@ Generally:
 - Call `await initRepo()` at the start of the test. It sets up the real repo and provides various utils
 - Call `await act(cleanup)` at the end of the test
 - **Important:** Do not import files at the top level that use ISL dependencies. Instead, use the `await import()` syntax. This is important since `initRepo()` sets up mocks that MUST happen before ANY other `isl/src` imports
-- It's easy for integration tests to be flakey. Make liberal use of `waitFor()` and `refresh()`.

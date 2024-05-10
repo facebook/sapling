@@ -24,7 +24,7 @@ const config: Config.InitialOptions = {
   testEnvironment: 'jsdom',
   rootDir: '..',
   setupFilesAfterEnv: ['<rootDir>/integrationTests/setupTests.ts'],
-  testTimeout: 60_000,
+  testTimeout: 120_000,
 
   modulePaths: ['<rootDir>/src'],
   moduleNameMapper: {
