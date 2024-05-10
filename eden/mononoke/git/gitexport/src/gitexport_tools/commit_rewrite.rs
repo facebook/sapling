@@ -387,6 +387,7 @@ async fn create_bonsai_for_new_repo<'a>(
                             exp_p,
                             copy_from_cs_id
                         );
+                        warn!(logger, "pre move/copy path: {}", old_path);
                     }
 
                     *tracked_fc = tracked_fc.with_new_copy_from(None);

@@ -91,8 +91,9 @@ Set some env vars that will be used frequently
 
 Run the tool without passing the old name as an export path
 
-  $ test_gitexport --log-level WARN -p "$EXPORT_DIR"
-  *] Changeset 6fc3f51f797aecf2a419fb70362d7da614bf5a7c1fc7ca067af0bdccff817493 might have created the exported path export_dir by moving/copying files from a commit that might not be exported (id 659ed19d0148b13710d4d466e39a5d86d52e6dabfe3becd8dbfb7e02fe327abc). (glob)
+  $ test_gitexport --log-level WARN -p "$EXPORT_DIR" |& strip_glog
+  Changeset 6fc3f51f797aecf2a419fb70362d7da614bf5a7c1fc7ca067af0bdccff817493 might have created the exported path export_dir by moving/copying files from a commit that might not be exported (id 659ed19d0148b13710d4d466e39a5d86d52e6dabfe3becd8dbfb7e02fe327abc).
+  pre move/copy path: old_export_dir/B.txt
 
   $ git clone $GIT_BUNDLE_OUTPUT $GIT_REPO
   Cloning into '$TESTTMP/git_repo'...
