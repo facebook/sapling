@@ -253,26 +253,31 @@ pub async fn verify_working_copy_with_version<
 }
 
 #[derive(Debug, Eq, PartialEq)]
-enum ValidationOutputElement {
+enum RewriteMismatchElement {
     File((ContentId, FileType)),
     Directory,
     Nothing,
 }
 
-impl ValidationOutputElement {
+impl RewriteMismatchElement {
     fn printable_type(&self) -> &'static str {
         match self {
-            ValidationOutputElement::File(_) => "a file",
-            ValidationOutputElement::Directory => "a directory",
-            ValidationOutputElement::Nothing => "nonexistant",
+            RewriteMismatchElement::File(_) => "a file",
+            RewriteMismatchElement::Directory => "a directory",
+            RewriteMismatchElement::Nothing => "nonexistant",
         }
     }
 }
 
-type ValidationOutput = Vec<(
-    Source<(Option<NonRootMPath>, ValidationOutputElement)>,
-    Target<(Option<NonRootMPath>, ValidationOutputElement)>,
-)>;
+enum ValidationOutputElement {
+    RewriteMismatch {
+        source: (Option<NonRootMPath>, RewriteMismatchElement),
+        target: (Option<NonRootMPath>, RewriteMismatchElement),
+    },
+}
+use ValidationOutputElement::*;
+
+type ValidationOutput = Vec<ValidationOutputElement>;
 
 struct PrintableValidationOutput(Source<String>, Target<String>, ValidationOutput);
 
@@ -281,9 +286,11 @@ impl fmt::Display for PrintableValidationOutput {
         let Self(Source(source_name), Target(target_name), output) = self;
         for item in output {
             match item {
-                (Source((source_path, source_element)), Target((target_path, target_element)))
-                    if std::mem::discriminant(source_element)
-                        != std::mem::discriminant(target_element) =>
+                RewriteMismatch {
+                    source: (source_path, source_element),
+                    target: (target_path, target_element),
+                } if std::mem::discriminant(source_element)
+                    != std::mem::discriminant(target_element) =>
                 {
                     writeln!(
                         f,
@@ -296,10 +303,10 @@ impl fmt::Display for PrintableValidationOutput {
                         target_path,
                     )?;
                 }
-                (
-                    Source((source_path, ValidationOutputElement::File((source_id, source_type)))),
-                    Target((target_path, ValidationOutputElement::File((target_id, target_type)))),
-                ) => {
+                RewriteMismatch {
+                    source: (source_path, RewriteMismatchElement::File((source_id, source_type))),
+                    target: (target_path, RewriteMismatchElement::File((target_id, target_type))),
+                } => {
                     writeln!(
                         f,
                         "file differs between {} (path: {:?}, content_id: {:?}, type: {:?}) and {} (path: {:?}, content_id: {:?}, type: {:?})",
@@ -313,7 +320,10 @@ impl fmt::Display for PrintableValidationOutput {
                         target_type,
                     )?;
                 }
-                (Source((source_path, _)), Target((target_path, _))) => {
+                RewriteMismatch {
+                    source: (source_path, _),
+                    target: (target_path, _),
+                } => {
                     writeln!(
                         f,
                         "path differs between {} (path: {:?}) and {} (path: {:?})",
@@ -568,27 +578,27 @@ async fn verify_dir<'a>(
                     }
 
                     let source_elem = match source_entry {
-                        FsnodeEntry::File(source_file) => ValidationOutputElement::File((
+                        FsnodeEntry::File(source_file) => RewriteMismatchElement::File((
                             source_file.content_id().clone(),
                             source_file.file_type().clone(),
                         )),
-                        FsnodeEntry::Directory(_dir) => ValidationOutputElement::Directory,
+                        FsnodeEntry::Directory(_dir) => RewriteMismatchElement::Directory,
                     };
 
                     let target_elem = match target_fsnode {
-                        Some(Entry::Leaf(target_file)) => ValidationOutputElement::File((
+                        Some(Entry::Leaf(target_file)) => RewriteMismatchElement::File((
                             target_file.content_id().clone(),
                             target_file.file_type().clone(),
                         )),
-                        Some(Entry::Tree(_id)) => ValidationOutputElement::Directory,
-                        None => ValidationOutputElement::Nothing,
+                        Some(Entry::Tree(_id)) => RewriteMismatchElement::Directory,
+                        None => RewriteMismatchElement::Nothing,
                     };
 
                     let output = if source_elem != target_elem {
-                        vec![(
-                            Source((Some(source_path), source_elem)),
-                            Target((target_path, target_elem)),
-                        )]
+                        vec![RewriteMismatch {
+                            source: (Some(source_path), source_elem),
+                            target: (target_path, target_elem),
+                        }]
                     } else {
                         vec![]
                     };
