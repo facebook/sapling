@@ -259,6 +259,16 @@ enum ValidationOutputElement {
     Nothing,
 }
 
+impl ValidationOutputElement {
+    fn printable_type(&self) -> &'static str {
+        match self {
+            ValidationOutputElement::File(_) => "a file",
+            ValidationOutputElement::Directory => "a directory",
+            ValidationOutputElement::Nothing => "nonexistant",
+        }
+    }
+}
+
 type ValidationOutput = Vec<(
     Source<(Option<NonRootMPath>, ValidationOutputElement)>,
     Target<(Option<NonRootMPath>, ValidationOutputElement)>,
@@ -271,44 +281,19 @@ impl fmt::Display for PrintableValidationOutput {
         let Self(Source(source_name), Target(target_name), output) = self;
         for item in output {
             match item {
-                (
-                    Source((source_path, ValidationOutputElement::Nothing)),
-                    Target((target_path, _)),
-                ) => {
+                (Source((source_path, source_element)), Target((target_path, target_element)))
+                    if std::mem::discriminant(source_element)
+                        != std::mem::discriminant(target_element) =>
+                {
                     writeln!(
                         f,
-                        "{:?} is present in {}, but not in {} (under {:?})",
-                        target_path, target_name, source_name, source_path,
-                    )?;
-                }
-                (
-                    Source((source_path, _)),
-                    Target((target_path, ValidationOutputElement::Nothing)),
-                ) => {
-                    writeln!(
-                        f,
-                        "{:?} is present in {}, but not in {} (under {:?})",
-                        source_path, source_name, target_name, target_path,
-                    )?;
-                }
-                (
-                    Source((source_path, ValidationOutputElement::Directory)),
-                    Target((target_path, ValidationOutputElement::File(_))),
-                ) => {
-                    writeln!(
-                        f,
-                        "{:?} is a directory in {}, but a file in {} (under {:?})",
-                        source_path, source_name, target_name, target_path,
-                    )?;
-                }
-                (
-                    Source((source_path, ValidationOutputElement::File(_))),
-                    Target((target_path, ValidationOutputElement::Directory)),
-                ) => {
-                    writeln!(
-                        f,
-                        "{:?} is a directory in {}, but a file in {} (under {:?})",
-                        target_path, target_name, source_name, source_path,
+                        "{:?} is {} in {}, but {} in {} (under {:?})",
+                        source_path,
+                        source_element.printable_type(),
+                        source_name,
+                        target_element.printable_type(),
+                        target_name,
+                        target_path,
                     )?;
                 }
                 (
