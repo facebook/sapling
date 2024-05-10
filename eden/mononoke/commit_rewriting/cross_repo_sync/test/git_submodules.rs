@@ -12,3 +12,6 @@ mod forward_sync;
 mod git_submodules_test_utils;
 #[cfg(test)]
 mod in_memory_repo_tests;
+
+#[cfg(test)]
+mod validation;
