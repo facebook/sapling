@@ -68,7 +68,7 @@ Diff output:
 Skip:
 
   $ cat > test-skip.t << 'EOF'
-  > #require false no-eden
+  > #require false
   > EOF
 
 Exception:
