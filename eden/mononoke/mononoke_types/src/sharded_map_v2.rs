@@ -59,6 +59,10 @@ pub trait Rollup<Value: ShardedMapV2Value>:
     fn rollup(value: Option<&Value>, child_rollup_data: Vec<Self>) -> Self;
 }
 
+impl<Value: ShardedMapV2Value> Rollup<Value> for () {
+    fn rollup(_value: Option<&Value>, _child_rollup_data: Vec<Self>) -> Self {}
+}
+
 type SmallBinary = SmallVec<[u8; 24]>;
 
 #[derive(Derivative)]

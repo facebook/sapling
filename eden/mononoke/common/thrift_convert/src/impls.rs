@@ -95,3 +95,15 @@ impl ThriftConvert for Bytes {
         self
     }
 }
+
+impl ThriftConvert for () {
+    const NAME: &'static str = "()";
+    type Thrift = ();
+
+    fn from_thrift(_: Self::Thrift) -> Result<Self> {
+        Ok(())
+    }
+    fn into_thrift(self) -> Self::Thrift {
+        self
+    }
+}
