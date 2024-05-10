@@ -198,12 +198,10 @@ Various invalid arg combos:
   > EOS
   $ hg go -q $A
   $ echo diverged > foo
-TODO(sggutier): Investigate if this is a case of diferring EdenFS behavior
   $ hg go --merge $B
   merging foo
   warning: 1 conflicts while merging foo! (edit, then use 'hg resolve --mark')
-  1 files updated, 0 files merged, 0 files removed, 1 files unresolved (no-eden !)
-  0 files merged, 1 files unresolved (eden !)
+  1 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges
   [1]
   $ hg go -qC $B

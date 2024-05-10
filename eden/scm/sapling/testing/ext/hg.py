@@ -42,7 +42,13 @@ def testsetup(t: TestTmp):
         if "eden" not in t.shenv.cmdtable:
             t.requireexe("eden")
         t.registerfallbackmatch(
-            lambda a, b: b == "update complete"
+            lambda a, b: (
+                b == "update complete"
+                or re.match(
+                    r"[0-9]+ files merged, [0-9]+ files unresolved",
+                    b,
+                )
+            )
             and re.match(
                 r"[0-9]+ files updated, [0-9]+ files merged, [0-9]+ files removed, [0-9]+ files unresolved",
                 a,
