@@ -42,6 +42,9 @@ struct LandChangesetRequest {
 
   /// The name of the repository.
   6: string repo_name;
+
+  /// Whether to log new public commits
+  7: bool log_new_public_commits_to_scribe;
 } (rust.exhaustive)
 
 struct BonsaiHashPairs {

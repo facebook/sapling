@@ -223,6 +223,8 @@ async fn process_land_changesets_request(
     let bookmark_restrictions =
         conversion_helpers::convert_bookmark_restrictions(request.bookmark_restrictions)?;
 
+    let log_new_public_commits_to_scribe = request.log_new_public_commits_to_scribe;
+
     let outcome = LocalPushrebaseClient {
         ctx: &ctx,
         authz: &authz,
@@ -235,7 +237,7 @@ async fn process_land_changesets_request(
         Some(&pushvars),
         cross_repo_push_source,
         bookmark_restrictions,
-        false, // Currently mononoke server logs the new commits
+        log_new_public_commits_to_scribe,
     )
     .await?;
 
