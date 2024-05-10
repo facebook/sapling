@@ -33,7 +33,7 @@ Avoid local clone error "fatal: transport 'file' not allowed" in new Git version
 
 Run the x-repo with submodules setup  
   $ run_common_xrepo_sync_with_gitsubmodules_setup
-  $ set_git_submodules_action_in_config_version "$LATEST_CONFIG_VERSION_NAME" "$SUBMODULE_REPO_ID" 3
+  $ set_git_submodules_action_in_config_version "$LATEST_CONFIG_VERSION_NAME" "$SUBMODULE_REPO_ID" 3 # 3=expand
   $ set_git_submodule_dependencies_in_config_version "$LATEST_CONFIG_VERSION_NAME" \
   > "$SUBMODULE_REPO_ID" "{\"git-repo-b\": $REPO_B_ID, \"git-repo-b/git-repo-c\": $REPO_C_ID, \"repo_c\": $REPO_C_ID}"
   $ ENABLE_API_WRITES=1 REPOID="$REPO_C_ID" REPONAME="repo_c" setup_common_config "$REPOTYPE"
@@ -405,3 +405,27 @@ Check that the diff that updates the submodule generates the correct delta
   
   $ cat smallrepofolder1/.x-repo-submodule-git-repo-b
   0597690a839ce11a250139dae33ee85d9772a47a (no-eol)
+
+Also check that our two binaries that can verify working copy are able to deal with expansions
+  $ REPOIDLARGE=$LARGE_REPO_ID REPOIDSMALL=$SUBMODULE_REPO_ID quiet_grep ", but" -- verify_wc master | sort
+  Some(NonRootMPath("smallrepofolder1/.x-repo-submodule-git-repo-b")) is a file in large_repo, but nonexistant in small_repo (under Some(NonRootMPath(".x-repo-submodule-git-repo-b")))
+  Some(NonRootMPath("smallrepofolder1/git-repo-b")) is a directory in large_repo, but a file in small_repo (under Some(NonRootMPath("git-repo-b")))
+
+The check-push-redirection-prereqs should behave the same both ways but let's verify it (we had bugs where it didn't)
+  $ quiet_grep ", but" -- megarepo_tool_multirepo --source-repo-id $SUBMODULE_REPO_ID --target-repo-id $LARGE_REPO_ID check-push-redirection-prereqs "heads/master" "master" "$LATEST_CONFIG_VERSION_NAME" | sort | tee $TESTTMP/push_redir_prereqs_small_large
+  Some(NonRootMPath("smallrepofolder1/.x-repo-submodule-git-repo-b")) is a file in large_repo, but nonexistant in small_repo (under Some(NonRootMPath(".x-repo-submodule-git-repo-b")))
+  Some(NonRootMPath("smallrepofolder1/git-repo-b")) is a directory in large_repo, but a file in small_repo (under Some(NonRootMPath("git-repo-b")))
+  $ quiet_grep ", but" -- megarepo_tool_multirepo --source-repo-id $LARGE_REPO_ID --target-repo-id $SUBMODULE_REPO_ID check-push-redirection-prereqs "master" "heads/master" "$LATEST_CONFIG_VERSION_NAME" | sort | tee $TESTTMP/push_redir_prereqs_large_small
+  Some(NonRootMPath("smallrepofolder1/.x-repo-submodule-git-repo-b")) is a file in large_repo, but nonexistant in small_repo (under Some(NonRootMPath(".x-repo-submodule-git-repo-b")))
+  Some(NonRootMPath("smallrepofolder1/git-repo-b")) is a directory in large_repo, but a file in small_repo (under Some(NonRootMPath("git-repo-b")))
+
+  $ diff $TESTTMP/push_redir_prereqs_small_large $TESTTMP/push_redir_prereqs_large_small
+
+Let's corrupt the expansion and check if validation complains
+  $ echo corrupt > smallrepofolder1/git-repo-b/git-repo-c/choo3 
+  $ echo corrupt > smallrepofolder1/.x-repo-submodule-git-repo-b
+  $ hg commit -m "submodule corruption"
+  $ hg push -q --to master
+  $ quiet_grep ", but" -- megarepo_tool_multirepo --source-repo-id $LARGE_REPO_ID --target-repo-id $SUBMODULE_REPO_ID check-push-redirection-prereqs "master" "heads/master" "$LATEST_CONFIG_VERSION_NAME" | sort
+  Some(NonRootMPath("smallrepofolder1/.x-repo-submodule-git-repo-b")) is a file in large_repo, but nonexistant in small_repo (under Some(NonRootMPath(".x-repo-submodule-git-repo-b")))
+  Some(NonRootMPath("smallrepofolder1/git-repo-b")) is a directory in large_repo, but a file in small_repo (under Some(NonRootMPath("git-repo-b")))

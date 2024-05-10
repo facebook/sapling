@@ -11,6 +11,7 @@
   $ export SUBMODULE_REPO_ID=11
 
   $ . "${TEST_FIXTURES}/library.sh"
+  $ . "${TEST_FIXTURES}/library-push-redirector.sh"
   $ . "${TEST_FIXTURES}/library-xrepo-sync-with-git-submodules.sh"
 
 
@@ -70,3 +71,5 @@ Create commit that modifies git submodule in small repo
   
   Deriving all the enabled derived data types
   Error: * (glob)
+
+  $ REPOIDLARGE=$LARGE_REPO_ID REPOIDSMALL=$SUBMODULE_REPO_ID verify_wc "f299e57c379932297b130d60f6d86e54c87c8e02507bf0867783e23d7d8f8a50"

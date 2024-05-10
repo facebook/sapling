@@ -11,6 +11,7 @@
   $ export SUBMODULE_REPO_ID=11
 
   $ . "${TEST_FIXTURES}/library.sh"
+  $ . "${TEST_FIXTURES}/library-push-redirector.sh"
   $ . "${TEST_FIXTURES}/library-xrepo-sync-with-git-submodules.sh"
 
 
@@ -85,3 +86,7 @@ Create commit that modifies git submodule in small repo
   RewrittenAs([(ChangesetId(Blake2(54f6eed1de6b6caeb23c17044f9bf8133aa20e68b1b9cf7057f1eb7fe5b48a73)), CommitSyncConfigVersion("INITIAL_IMPORT_SYNC_CONFIG"))])
   
   Deriving all the enabled derived data types
+
+  $ REPOIDLARGE=$LARGE_REPO_ID REPOIDSMALL=$SUBMODULE_REPO_ID quiet_grep ", but" -- verify_wc 768a9c6d2b6943900f9d4374028a891c7d3dc62d7ecc25a1fd2a9c3fc9aba14b | sort
+  Some(NonRootMPath("bar/git_submodule")) is a file in small_repo, but nonexistant in large_repo (under Some(NonRootMPath("smallrepofolder1/bar/git_submodule")))
+  Some(NonRootMPath("foo/git_submodule")) is a file in small_repo, but nonexistant in large_repo (under Some(NonRootMPath("smallrepofolder1/foo/git_submodule")))
