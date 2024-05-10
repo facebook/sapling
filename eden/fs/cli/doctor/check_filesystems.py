@@ -884,6 +884,11 @@ def get_hg_diff(checkout: EdenCheckout) -> Set[Path]:
 def check_hg_status_match_hg_diff(
     tracker: ProblemTracker, instance: EdenInstance, checkout: EdenCheckout
 ) -> None:
+    if checkout.get_config().scm_type == "filteredhg":
+        # TODO(cuev): This check is currently broken on FilteredHg because we
+        # don't pass the active filter to the getScmStatusV2 call in
+        # get_modified_files. We will skip the check until we fix it.
+        return
     try:
         modified_files = get_modified_files(instance, checkout)
     except InProgressCheckoutError:
