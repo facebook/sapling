@@ -20,7 +20,6 @@ blake2 = "0.10"
 blobstore = { version = "0.1.0", path = "../blobstore" }
 borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 bounded_traversal = { version = "0.1.0", path = "../common/bounded_traversal" }
-bufsize = "1.0.5"
 bytes = { version = "1.6.0", features = ["serde"] }
 chrono = { version = "0.4", features = ["clock", "serde", "std"], default-features = false }
 chrono-english = "0.1.7"
@@ -49,6 +48,7 @@ sorted_vector_map = { version = "0.2.0", git = "https://github.com/facebookexper
 sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 strum = { version = "0.26.2", features = ["derive"] }
 thiserror = "1.0.49"
+thrift_convert = { version = "0.1.0", path = "../common/thrift_convert" }
 vec_map = "0.8"
 xdiff = { version = "0.1.0", path = "../../scm/lib/xdiff" }
 

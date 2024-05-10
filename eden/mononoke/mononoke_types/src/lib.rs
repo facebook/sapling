@@ -38,7 +38,6 @@ pub mod sql_types;
 pub mod svnrev;
 pub mod test_manifest;
 pub mod test_sharded_manifest;
-pub mod thrift_convert;
 pub mod trie_map;
 pub mod typed_hash;
 pub mod unode;

@@ -1,0 +1,14 @@
+load("@fbcode_macros//build_defs:thrift_library.bzl", "thrift_library")
+
+oncall("mononoke")
+
+thrift_library(
+    name = "thrift-convert-test",
+    languages = [
+        "rust",
+        "cpp2",
+    ],
+    rust_deps = [],
+    thrift_srcs = {"thrift_convert_test.thrift": []},
+    deps = [],
+)

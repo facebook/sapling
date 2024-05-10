@@ -1,0 +1,43 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbcode_macros//build_defs:rust_unittest.bzl", "rust_unittest")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mononoke")
+
+rust_library(
+    name = "thrift_convert",
+    srcs = glob(["src/**/*.rs"]),
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:bufsize",
+        "fbsource//third-party/rust:bytes",
+        ":thrift_convert_proc_macros",
+        "//thrift/lib/rust:fbthrift",
+    ],
+)
+
+rust_library(
+    name = "thrift_convert_proc_macros",
+    srcs = glob(["proc_macros/*.rs"]),
+    autocargo = {
+        "cargo_toml_dir": "proc_macros",
+    },
+    crate_root = "proc_macros/lib.rs",
+    proc_macro = True,
+    deps = [
+        # "fbsource//third-party/rust:proc-macro-crate",
+        "fbsource//third-party/rust:proc-macro2",
+        "fbsource//third-party/rust:quote",
+        "fbsource//third-party/rust:syn1",
+    ],
+)
+
+rust_unittest(
+    name = "thrift_convert_tests",
+    srcs = glob(["tests/**/*.rs"]),
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        ":thrift_convert",
+        "//eden/mononoke/common/thrift_convert/tests/if:thrift-convert-test-rust",
+    ],
+)
