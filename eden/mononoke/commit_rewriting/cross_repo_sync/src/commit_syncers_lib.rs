@@ -653,6 +653,20 @@ impl<R: Repo> CommitSyncRepos<R> {
         }
     }
 
+    pub fn get_small_repo(&self) -> &R {
+        match self {
+            CommitSyncRepos::LargeToSmall { small_repo, .. }
+            | CommitSyncRepos::SmallToLarge { small_repo, .. } => small_repo,
+        }
+    }
+
+    pub fn get_large_repo(&self) -> &R {
+        match self {
+            CommitSyncRepos::LargeToSmall { large_repo, .. }
+            | CommitSyncRepos::SmallToLarge { large_repo, .. } => large_repo,
+        }
+    }
+
     pub(crate) fn get_source_repo_type(&self) -> SyncedCommitSourceRepo {
         match self {
             CommitSyncRepos::LargeToSmall { .. } => SyncedCommitSourceRepo::Large,
