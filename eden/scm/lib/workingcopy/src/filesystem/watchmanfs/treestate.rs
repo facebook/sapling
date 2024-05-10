@@ -103,7 +103,7 @@ pub(crate) fn set_clock(ts: &mut TreeState, clock: Clock) -> Result<()> {
 pub(crate) fn list_needs_check(
     ts: &mut TreeState,
     matcher: DynMatcher,
-) -> Result<(Vec<RepoPathBuf>, Vec<ParseError>)> {
+) -> Result<(Vec<(RepoPathBuf, StateFlags)>, Vec<ParseError>)> {
     let mut needs_check = Vec::new();
 
     let parse_errs = walk_treestate(
@@ -112,8 +112,8 @@ pub(crate) fn list_needs_check(
         StateFlags::NEED_CHECK,
         StateFlags::empty(),
         StateFlags::empty(),
-        |path, _state| {
-            needs_check.push(path);
+        |path, state| {
+            needs_check.push((path, state.state));
             Ok(())
         },
     )?;
@@ -162,7 +162,10 @@ mod tests {
         let (needs_check, _) = list_needs_check(&mut ts, matcher)?;
         assert_eq!(
             needs_check,
-            vec![RepoPathBuf::from_string("include_me".to_string())?],
+            vec![(
+                RepoPathBuf::from_string("include_me".to_string())?,
+                fs.state
+            )],
         );
 
         Ok(())

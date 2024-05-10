@@ -6,7 +6,6 @@
  */
 
 use std::collections::HashMap;
-use std::collections::HashSet;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -528,7 +527,7 @@ pub(crate) fn detect_changes(
 
     // NB: ts_need_check is filtered by the matcher, so it does not
     // necessarily contain all NEED_CHECK entries in the treestate.
-    let ts_need_check: HashSet<_> = ts_need_check.into_iter().collect();
+    let ts_need_check: HashMap<_, _> = ts_need_check.into_iter().collect();
 
     let mut pending_changes: Vec<Result<PendingChange>> =
         ts_errors.into_iter().map(|e| Err(anyhow!(e))).collect();
@@ -545,7 +544,7 @@ pub(crate) fn detect_changes(
     let total_needs_check = ts_need_check.len()
         + wm_need_check
             .iter()
-            .filter(|(p, _)| !ts_need_check.contains(*p))
+            .filter(|(p, _)| !ts_need_check.contains_key(*p))
             .count();
 
     // This is to set "total" for progress bar.
@@ -555,7 +554,7 @@ pub(crate) fn detect_changes(
 
     let _span = tracing::info_span!("submit ts_need_check").entered();
 
-    for ts_needs_check in ts_need_check.iter() {
+    for (ts_needs_check, _state) in ts_need_check.iter() {
         // Prefer to kick off file check using watchman data since that already
         // includes disk metadata.
         if wm_need_check.contains_key(ts_needs_check) {
@@ -669,7 +668,7 @@ pub(crate) fn detect_changes(
                 if let PendingChange::Deleted(path) = change {
                     deletes.push(path);
                 } else {
-                    if !ts_need_check.contains(path) {
+                    if !ts_need_check.contains_key(path) {
                         needs_mark.push(path.clone());
                     }
                     pending_changes.push(Ok(change));
@@ -679,7 +678,7 @@ pub(crate) fn detect_changes(
                 // File is clean. Update treestate entry if it was marked
                 // NEED_CHECK, or if we have fs_meta which implies treestate
                 // metadata (e.g. mtime, size, etc.) is out of date.
-                if ts_need_check.contains(&path) || fs_meta.is_some() {
+                if ts_need_check.contains_key(&path) || fs_meta.is_some() {
                     needs_clear.push((path, fs_meta));
                 }
             }
@@ -690,7 +689,7 @@ pub(crate) fn detect_changes(
     drop(_span);
 
     for d in deletes {
-        if !ts_need_check.contains(&d) {
+        if !ts_need_check.contains_key(&d) {
             needs_mark.push(d.clone());
         }
         pending_changes.push(Ok(PendingChange::Deleted(d)));
