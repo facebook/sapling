@@ -486,7 +486,7 @@ mod tests {
     fn test_status_merge() {
         let treestate = &[
             ("merged-only-p2", EXIST_P2 | EXIST_NEXT),
-            ("merged-in-both", EXIST_P1 | EXIST_P2 | EXIST_NEXT),
+            ("merged-in-both", StateFlags::TRACKED),
             ("merged-and-removed", EXIST_P2),
             ("merged-but-deleted", EXIST_P2 | EXIST_NEXT),
         ];

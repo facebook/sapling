@@ -626,12 +626,10 @@ pub(crate) fn detect_changes(
     for (_, wm_needs_check) in wm_need_check {
         // is_tracked is used to short circuit invocations of the ignore
         // matcher, which can be expensive.
-        let is_tracked = match &wm_needs_check.ts_state {
-            Some(state) => state
-                .state
-                .intersects(StateFlags::EXIST_P1 | StateFlags::EXIST_P2 | StateFlags::EXIST_NEXT),
-            None => false,
-        };
+        let is_tracked = wm_needs_check
+            .ts_state
+            .as_ref()
+            .map_or(false, |state| state.state.is_tracked());
 
         if !is_tracked {
             if let Some(Some(fs_meta)) = &wm_needs_check.fs_meta {

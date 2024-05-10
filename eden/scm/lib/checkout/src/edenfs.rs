@@ -258,13 +258,12 @@ fn clear_edenfs_dirstate(wc: &LockedWorkingCopy) -> anyhow::Result<()> {
     let tbind = wc.treestate();
     let mut treestate = tbind.lock();
     let matcher = Arc::new(AlwaysMatcher::new());
-    let mask = StateFlags::EXIST_P1 | StateFlags::EXIST_P2 | StateFlags::EXIST_NEXT;
     let mut tracked = Vec::new();
     walk_treestate(
         &mut treestate,
         matcher,
         StateFlags::empty(),
-        mask,
+        StateFlags::TRACKED,
         StateFlags::empty(),
         |path, _state| {
             tracked.push(path);

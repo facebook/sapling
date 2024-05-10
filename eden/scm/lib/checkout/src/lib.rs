@@ -533,12 +533,8 @@ impl CheckoutPlan {
                     }
                 }
             };
-            let unknown = match state {
-                None => true,
-                Some(state) => !state.state.intersects(
-                    StateFlags::EXIST_P1 | StateFlags::EXIST_P2 | StateFlags::EXIST_NEXT,
-                ),
-            };
+            let unknown = state.map_or(true, |state| !state.state.is_tracked());
+
             if unknown && matches!(vfs.is_file(file), Ok(true)) {
                 let repo_path = file.as_repo_path();
                 let hgid = match manifest.get_file(repo_path)? {
