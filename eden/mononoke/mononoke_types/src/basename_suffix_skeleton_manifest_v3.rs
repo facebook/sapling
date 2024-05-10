@@ -33,13 +33,16 @@ use crate::ThriftConvert;
 // See docs/basename_suffix_skeleton_manifest.md and serialization/bssm.thrift
 // for more documentation on this.
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(ThriftConvert, Debug, Clone, PartialEq, Eq, Hash)]
+#[thrift(thrift::bssm::BssmV3Entry)]
 pub enum BssmV3Entry {
+    #[thrift(thrift::bssm::BssmV3File)]
     File,
     Directory(BssmV3Directory),
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(ThriftConvert, Debug, Clone, PartialEq, Eq, Hash)]
+#[thrift(thrift::bssm::BssmV3Directory)]
 pub struct BssmV3Directory {
     pub subentries: ShardedMapV2Node<BssmV3Entry>,
 }
@@ -70,47 +73,6 @@ impl Loadable for BssmV3Directory {
         _blobstore: &'a B,
     ) -> Result<Self::Value, LoadableError> {
         Ok(self.clone())
-    }
-}
-
-impl ThriftConvert for BssmV3Directory {
-    const NAME: &'static str = "BssmV3Directory";
-    type Thrift = thrift::bssm::BssmV3Directory;
-
-    fn from_thrift(t: Self::Thrift) -> Result<Self> {
-        Ok(Self {
-            subentries: ThriftConvert::from_thrift(t.subentries)?,
-        })
-    }
-
-    fn into_thrift(self) -> Self::Thrift {
-        thrift::bssm::BssmV3Directory {
-            subentries: self.subentries.into_thrift(),
-        }
-    }
-}
-
-impl ThriftConvert for BssmV3Entry {
-    const NAME: &'static str = "BssmV3Entry";
-    type Thrift = thrift::bssm::BssmV3Entry;
-
-    fn from_thrift(t: Self::Thrift) -> Result<Self> {
-        Ok(match t {
-            thrift::bssm::BssmV3Entry::file(thrift::bssm::BssmV3File {}) => Self::File,
-            thrift::bssm::BssmV3Entry::directory(dir) => {
-                Self::Directory(ThriftConvert::from_thrift(dir)?)
-            }
-            thrift::bssm::BssmV3Entry::UnknownField(variant) => {
-                anyhow::bail!("Unknown variant: {}", variant)
-            }
-        })
-    }
-
-    fn into_thrift(self) -> Self::Thrift {
-        match self {
-            Self::File => thrift::bssm::BssmV3Entry::file(thrift::bssm::BssmV3File {}),
-            Self::Directory(dir) => thrift::bssm::BssmV3Entry::directory(dir.into_thrift()),
-        }
     }
 }
 
