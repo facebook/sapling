@@ -510,7 +510,7 @@ class EdenfsPrivHelperNotHealthy(Problem):
 class EdenfsStarting(Problem):
     def __init__(self) -> None:
         remediation = '''\
-Please wait for edenfs to finish starting. You can watch it's progress with
+Please wait for edenfs to finish starting. You can watch its progress with
 `eden status --wait`.
 
 If EdenFS seems to be taking too long to start you can try restarting it

@@ -324,7 +324,7 @@ Collect an 'eden rage' and ask in the EdenFS (Windows |macOS )?Users group if yo
             out.getvalue(),
             r"""<yellow>- Found problem:<reset>
 EdenFS is currently still starting\.
-Please wait for edenfs to finish starting\. You can watch it's progress with
+Please wait for edenfs to finish starting\. You can watch its progress with
 `eden status --wait`\.
 
 If EdenFS seems to be taking too long to start you can try restarting it
