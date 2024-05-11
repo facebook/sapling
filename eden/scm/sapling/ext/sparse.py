@@ -1648,7 +1648,10 @@ def _getcachedprofileconfigs(repo):
     for name in [pendingfile, profilecachefile]:
         if repo.localvfs.exists(name):
             serialized = repo.localvfs.readutf8(name)
-            return json.loads(serialized)
+            try:
+                return json.loads(serialized)
+            except Exception:
+                continue
     return {}
 
 

@@ -183,6 +183,13 @@ And is cleaned up on the next update
   alwaysincluded
   includedbyconfig
 
+Empty (truncated after power cycle) sparseprofileconfigs does not break things
+
+  $ echo 'x' > .hg/sparseprofileconfigs
+  $ hg status
+  $ hg files
+  alwaysincluded
+
 Reset
   $ cp .hg/hgrc.bak .hg/hgrc
   $ hg up -q .~-1

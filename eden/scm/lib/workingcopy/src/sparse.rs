@@ -175,7 +175,10 @@ pub fn disk_overrides(dot_path: &Path) -> anyhow::Result<HashMap<String, String>
         CONFIG_OVERRIDE_CACHE.to_string(),
     ] {
         match util::file::open(dot_path.join(&loc), "r") {
-            Ok(f) => return Ok(serde_json::from_reader(f)?),
+            Ok(f) => match serde_json::from_reader(f) {
+                Ok(v) => return Ok(v),
+                Err(_) => continue,
+            },
             Err(err) if err.kind() != std::io::ErrorKind::NotFound => return Err(err.into()),
             _ => continue,
         }
