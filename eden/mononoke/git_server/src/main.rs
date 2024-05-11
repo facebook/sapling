@@ -237,7 +237,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         })
         .transpose()?;
     let acl_provider = app.environment().acl_provider.clone();
-    let mut scuba = app.environment().scuba_sample_builder.clone();
+    let scuba = app.environment().scuba_sample_builder.clone();
     let common = app.repo_configs().common.clone();
     let tls_session_data_log = args.tls_session_data_log_file.clone();
     let enforce_authorization = !args.skip_authorization;
@@ -312,10 +312,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .add(LoadMiddleware::new())
                 .add(log_middleware)
                 .add(OdsMiddleware::new())
-                .add(<ScubaMiddleware<MononokeGitScubaHandler>>::new({
-                    scuba.add("log_tag", "MononokeGit Request Processed");
-                    scuba
-                }))
+                .add(<ScubaMiddleware<MononokeGitScubaHandler>>::new(scuba))
                 .add(TimerMiddleware::new())
                 .add(ConfigInfoMiddleware::new(configs))
                 .build(router);

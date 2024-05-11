@@ -63,7 +63,7 @@ impl ScubaHandler for MononokeGitScubaHandler {
         }
     }
 
-    fn populate_scuba(self, info: &PostResponseInfo, scuba: &mut MononokeScubaSampleBuilder) {
+    fn log_processed(self, info: &PostResponseInfo, mut scuba: MononokeScubaSampleBuilder) {
         scuba.add_opt(MononokeGitScubaKey::User, self.client_username);
 
         if let Some(info) = self.method_info {
@@ -76,7 +76,7 @@ impl ScubaHandler for MononokeGitScubaHandler {
         }
 
         if let Some(ctx) = self.request_context {
-            ctx.ctx.perf_counters().insert_perf_counters(scuba);
+            ctx.ctx.perf_counters().insert_perf_counters(&mut scuba);
         }
 
         if let Some(err) = info.first_error() {
@@ -84,5 +84,13 @@ impl ScubaHandler for MononokeGitScubaHandler {
         }
 
         scuba.add(MononokeGitScubaKey::ErrorCount, info.error_count());
+
+        scuba.add("log_tag", "MononokeGit Request Processed");
+        scuba.log();
+    }
+
+    fn log_cancelled(mut scuba: MononokeScubaSampleBuilder) {
+        scuba.add("log_tag", "MononokeGit Request Cancelled");
+        scuba.log();
     }
 }

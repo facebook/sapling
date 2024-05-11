@@ -61,7 +61,7 @@ impl ScubaHandler for EdenApiScubaHandler {
         }
     }
 
-    fn populate_scuba(self, info: &PostResponseInfo, scuba: &mut MononokeScubaSampleBuilder) {
+    fn log_processed(self, info: &PostResponseInfo, mut scuba: MononokeScubaSampleBuilder) {
         scuba.add_opt(EdenApiScubaKey::User, self.client_username);
 
         if let Some(info) = self.handler_info {
@@ -70,7 +70,7 @@ impl ScubaHandler for EdenApiScubaHandler {
         }
 
         if let Some(ctx) = self.request_context {
-            ctx.ctx.perf_counters().insert_perf_counters(scuba);
+            ctx.ctx.perf_counters().insert_perf_counters(&mut scuba);
         }
 
         if let Some(err) = info.first_error() {
@@ -78,5 +78,13 @@ impl ScubaHandler for EdenApiScubaHandler {
         }
 
         scuba.add(EdenApiScubaKey::HandlerErrorCount, info.error_count());
+
+        scuba.add("log_tag", "EdenAPI Request Processed");
+        scuba.log();
+    }
+
+    fn log_cancelled(mut scuba: MononokeScubaSampleBuilder) {
+        scuba.add("log_tag", "EdenAPI Request Cancelled");
+        scuba.log();
     }
 }

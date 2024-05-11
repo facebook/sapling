@@ -26,6 +26,7 @@ use scuba_ext::MononokeScubaSampleBuilder;
 use scuba_ext::ScubaValue;
 use time_ext::DurationExt;
 
+use super::request_context::RequestContext;
 use super::HeadersDuration;
 use crate::middleware::ConfigInfo;
 use crate::middleware::MetadataState;
@@ -118,13 +119,22 @@ impl From<HttpScubaKey> for String {
 }
 
 pub trait ScubaHandler: Send + 'static {
+    /// Construct an instance of this scuba handler from the Gotham `State`.
     fn from_state(state: &State) -> Self;
 
-    fn populate_scuba(self, info: &PostResponseInfo, scuba: &mut MononokeScubaSampleBuilder);
+    /// Log to scuba that this request was processed.
+    fn log_processed(self, info: &PostResponseInfo, scuba: MononokeScubaSampleBuilder);
+
+    /// Log to scuba that this request was cancelled.
+    fn log_cancelled(scuba: MononokeScubaSampleBuilder) {
+        let _ = scuba;
+    }
 }
 
 #[derive(Clone)]
 pub struct ScubaMiddleware<H> {
+    /// Fallback scuba sample builder to use if the request context is not
+    /// available.
     scuba: MononokeScubaSampleBuilder,
     _phantom: PhantomHandler<H>,
 }
@@ -149,7 +159,7 @@ impl<H> ScubaMiddleware<H> {
 /// This isn't actually necessary since the middleware itself does not contain
 /// an instance of the handler. (The handler is instantiated shortly before it
 /// is used in a post-request callback.) Therefore, it is safe to manually mark
-/// `PhantomData<H>` with these traits via a wrapper struct, ensuring that
+/// `PhantomHandler<H>` with these traits via a wrapper struct, ensuring that
 /// the middleware automatically implements the required marker traits.
 #[derive(Clone)]
 struct PhantomHandler<H>(PhantomData<H>);
@@ -302,17 +312,10 @@ fn log_stats<H: ScubaHandler>(
             scuba.add_prefixed_stream_stats(stats);
         }
 
-        handler.populate_scuba(info, &mut scuba);
-
-        scuba.log();
+        handler.log_processed(info, scuba);
     });
 
     Some(())
-}
-
-fn log_cancelled(mut scuba: MononokeScubaSampleBuilder) {
-    scuba.add("log_tag", "EdenAPI Request Cancelled");
-    scuba.log();
 }
 
 #[derive(StateData)]
@@ -370,17 +373,28 @@ impl ScubaMiddlewareState {
 #[async_trait::async_trait]
 impl<H: ScubaHandler> Middleware for ScubaMiddleware<H> {
     async fn inbound(&self, state: &mut State) -> Option<Response<Body>> {
-        // Reset the scuba sequence counter for each request.
-        let mut scuba = self.scuba.clone().with_seq("seq");
+        // Get the scuba sample builder from the ctx in the request context.
+        let mut scuba = if let Some(req) = state.try_borrow::<RequestContext>() {
+            req.ctx.scuba().clone()
+        } else {
+            // Use the fallback scuba sample builder instead, resetting the
+            // scuba sequence counter for each request.
+            self.scuba.clone().with_seq("seq")
+        };
 
         // Populate the sample builder with values available at the start of the request.
         populate_scuba(&mut scuba, state);
+
+        // Update the request context with the populated scuba sample builder.
+        if let Some(req) = state.try_borrow_mut::<RequestContext>() {
+            req.ctx = req.ctx.with_mutated_scuba(|_| scuba.clone());
+        }
 
         // Ensure we log if the request is cancelled.
         let scuba = scopeguard::guard(
             scuba,
             Box::new(|scuba| {
-                log_cancelled(scuba);
+                H::log_cancelled(scuba);
             }) as Box<dyn FnOnce(MononokeScubaSampleBuilder) + Send>,
         );
 
