@@ -26,8 +26,7 @@ use hook_manager::manager::HookManagerRef;
 use hook_manager::CrossRepoPushSource;
 use hook_manager::PushAuthoredBy;
 use mononoke_types::ChangesetId;
-use pushrebase_client::LocalPushrebaseClient;
-use pushrebase_client::PushrebaseClient;
+use pushrebase_client::normal_pushrebase;
 use repo_blobstore::RepoBlobstoreRef;
 use unbundle::PushRedirector;
 
@@ -174,18 +173,16 @@ impl RepoContext {
                 .sync_uploaded_changesets(ctx, changesets, Some(&large_bookmark))
                 .await?;
             // Land the mapped changesets on the large repo
-            let outcome = LocalPushrebaseClient {
-                ctx: self.ctx(),
-                authz: self.authorization_context(),
-                repo: &redirector.repo.inner,
-                hook_manager: redirector.repo.hook_manager(),
-            }
-            .pushrebase(
-                &large_bookmark,
+            let outcome = normal_pushrebase(
+                self.ctx(),
+                &redirector.repo.inner,
                 small_to_large.into_values().collect(),
+                &large_bookmark,
                 pushvars,
+                redirector.repo.hook_manager(),
                 CrossRepoPushSource::PushRedirected,
                 bookmark_restrictions,
+                self.authorization_context(),
                 true, // log_new_public_commits_to_scribe
             )
             .await?;
@@ -194,18 +191,16 @@ impl RepoContext {
                 .await?
                 .0
         } else {
-            LocalPushrebaseClient {
-                ctx: self.ctx(),
-                authz: self.authorization_context(),
-                repo: self.inner_repo(),
-                hook_manager: self.hook_manager().as_ref(),
-            }
-            .pushrebase(
-                &bookmark,
+            normal_pushrebase(
+                self.ctx(),
+                self.inner_repo(),
                 changesets,
+                &bookmark,
                 pushvars,
+                self.hook_manager().as_ref(),
                 CrossRepoPushSource::NativeToThisRepo,
                 bookmark_restrictions,
+                self.authorization_context(),
                 true, // log_new_public_commits_to_scribe
             )
             .await?

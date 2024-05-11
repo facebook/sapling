@@ -14,6 +14,7 @@ use anyhow::Error;
 use anyhow::Result;
 use bookmarks::BookmarkKind;
 use bookmarks::BookmarkUpdateReason;
+use bookmarks_movement::BookmarkKindRestrictions;
 use bookmarks_movement::BookmarkMovementError;
 use bookmarks_movement::BookmarkUpdatePolicy;
 use bookmarks_movement::BookmarkUpdateTargets;
@@ -276,6 +277,7 @@ async fn run_pushrebase(
                 .map(|bcs| (bcs.get_changeset_id(), CommitInfo::new(bcs, None)))
                 .collect();
 
+            let authz = AuthorizationContext::new(ctx);
             let outcome = normal_pushrebase(
                 ctx,
                 repo,
@@ -284,6 +286,9 @@ async fn run_pushrebase(
                 maybe_pushvars.as_ref(),
                 hook_manager,
                 cross_repo_push_source,
+                BookmarkKindRestrictions::OnlyPublishing,
+                &authz,
+                false, // We will log new commits locally
             )
             .await;
             let (pushrebased_rev, pushrebased_changesets) = match outcome {

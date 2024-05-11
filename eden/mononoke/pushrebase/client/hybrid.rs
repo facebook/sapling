@@ -36,8 +36,10 @@ pub async fn normal_pushrebase<'a>(
     maybe_pushvars: Option<&'a HashMap<String, Bytes>>,
     hook_manager: &'a HookManager,
     cross_repo_push_source: CrossRepoPushSource,
+    bookmark_restrictions: BookmarkKindRestrictions,
+    authz: &'a AuthorizationContext,
+    log_new_public_commits_to_scribe: bool,
 ) -> Result<PushrebaseOutcome, BookmarkMovementError> {
-    let bookmark_restriction = BookmarkKindRestrictions::OnlyPublishing;
     let remote_mode = if let Ok(true) = justknobs::eval(
         "scm/mononoke:mononoke_force_local_pushrebase",
         None,
@@ -58,7 +60,7 @@ pub async fn normal_pushrebase<'a>(
                     changesets.clone(),
                     maybe_pushvars,
                     cross_repo_push_source,
-                    bookmark_restriction,
+                    bookmark_restrictions,
                     false, // We will log new commits locally
                 )
                 .await;
@@ -92,10 +94,9 @@ pub async fn normal_pushrebase<'a>(
             None
         }
     };
-    let authz = AuthorizationContext::new(ctx);
     let result = LocalPushrebaseClient {
         ctx,
-        authz: &authz,
+        authz,
         repo,
         hook_manager,
     }
@@ -104,8 +105,8 @@ pub async fn normal_pushrebase<'a>(
         changesets,
         maybe_pushvars,
         cross_repo_push_source,
-        bookmark_restriction,
-        false, // We log commits to scribe ourselves
+        bookmark_restrictions,
+        log_new_public_commits_to_scribe,
     )
     .await;
     if let Some((mut scuba, err)) = maybe_fallback_scuba {
