@@ -26,6 +26,7 @@ use repo_derived_data::RepoDerivedData;
 
 use crate::delta::DeltaInstructionChunkIdPrefix;
 use crate::delta_manifest::GitDeltaManifest;
+use crate::delta_manifest::ObjectKind;
 use crate::fetch_delta_instructions;
 use crate::GitDeltaManifestEntry;
 use crate::ObjectDelta;
@@ -104,6 +105,9 @@ pub trait GitDeltaManifestEntryOps {
     /// Returns the OID of the full object.
     fn full_object_oid(&self) -> ObjectId;
 
+    /// Returns the kind of the full object.
+    fn full_object_kind(&self) -> ObjectKind;
+
     /// Returns the RichGitSha1 of the full object.
     fn full_object_rich_git_sha1(&self) -> Result<RichGitSha1>;
 
@@ -120,6 +124,10 @@ impl GitDeltaManifestEntryOps for GitDeltaManifestEntry {
 
     fn full_object_oid(&self) -> ObjectId {
         self.full.oid
+    }
+
+    fn full_object_kind(&self) -> ObjectKind {
+        self.full.kind
     }
 
     fn full_object_rich_git_sha1(&self) -> Result<RichGitSha1> {

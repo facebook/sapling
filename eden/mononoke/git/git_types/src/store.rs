@@ -28,6 +28,7 @@ use futures::stream::BoxStream;
 use futures::StreamExt;
 use futures::TryStreamExt;
 use gix_object::WriteTo;
+use mononoke_types::hash::GitSha1;
 use mononoke_types::hash::RichGitSha1;
 use mononoke_types::BlobstoreBytes;
 use mononoke_types::BlobstoreKey;
@@ -151,48 +152,84 @@ pub enum HeaderState {
     Excluded,
 }
 
-/// Free function for fetching the raw bytes of stored git objects. Applies
-/// to all git objects. Depending on the header_state, the returned bytes might
-/// or might not contain the git header for the object.
+/// Enum determining the type of git object identifier
+#[derive(Clone, Debug)]
+pub enum GitIdentifier {
+    Rich(RichGitSha1),
+    Basic(GitSha1),
+}
+
+impl GitIdentifier {
+    fn basic_sha(&self) -> GitSha1 {
+        match self {
+            GitIdentifier::Rich(rich_sha) => rich_sha.sha1(),
+            GitIdentifier::Basic(basic_sha) => basic_sha.clone(),
+        }
+    }
+
+    fn blob_identifier(&self) -> bool {
+        match self {
+            GitIdentifier::Rich(rich_sha) => rich_sha.is_blob(),
+            GitIdentifier::Basic(_) => true, // May or may not be a blob, we can't know
+        }
+    }
+}
+
+async fn maybe_fetch_blob_bytes(
+    ctx: &CoreContext,
+    blobstore: Arc<dyn Blobstore>,
+    sha: &GitSha1,
+    header_state: HeaderState,
+) -> anyhow::Result<Option<Bytes>> {
+    let fetch_key = sha.clone().into();
+    let output = fetch_with_size(blobstore, ctx, &fetch_key)
+        .await
+        .map_err(|e| GitError::StorageFailure(sha.to_hex().to_string(), e.into()))?;
+    let (bytes_stream, num_bytes) = match output {
+        Some((bytes, num_bytes)) => (bytes, num_bytes),
+        None => return Ok(None),
+    };
+    // The blob object stored in the blobstore exists without the git header. If requested, prepend the git blob header before returning the bytes
+    let mut header_bytes = match header_state {
+        HeaderState::Included => format!("blob {}\0", num_bytes).into_bytes(),
+        HeaderState::Excluded => vec![],
+    };
+    // We know the number of bytes we are going to write so reserve the buffer to avoid resizing
+    header_bytes.reserve(num_bytes as usize);
+    bytes_stream
+        .try_fold(header_bytes, |mut acc, bytes| async move {
+            acc.append(&mut bytes.to_vec());
+            anyhow::Ok(acc)
+        })
+        .await
+        .map(|bytes| Some(Bytes::from(bytes)))
+}
+
+/// Fetch the raw bytes of stored git objects. Applies to all git objects.
+/// Depending on the header_state, the returned bytes might or might not
+/// contain the git header for the object.
 pub async fn fetch_git_object_bytes(
     ctx: &CoreContext,
     blobstore: Arc<dyn Blobstore>,
-    sha: &RichGitSha1,
+    identifier: &GitIdentifier,
     header_state: HeaderState,
 ) -> anyhow::Result<Bytes> {
-    let git_objectid = sha.sha1().to_object_id()?;
-    if sha.is_blob() {
-        // Blobs are stored as regular content in Mononoke and can be accessed via GitSha1 alias
-        let fetch_key = sha.clone().into();
-        let (bytes_stream, num_bytes) = fetch_with_size(blobstore, ctx, &fetch_key)
-            .await
-            .map_err(|e| GitError::StorageFailure(sha.to_hex().to_string(), e.into()))?
-            .ok_or_else(|| GitError::NonExistentObject(sha.to_hex().to_string()))?;
-        // The blob object stored in the blobstore exists without the git header. Prepend the git blob header before retuning the bytes
-        let mut header_bytes = match header_state {
-            HeaderState::Included => sha.prefix(),
-            HeaderState::Excluded => vec![],
-        };
-        // We know the number of bytes we are going to write so reserve the buffer to avoid resizing
-        header_bytes.reserve(num_bytes as usize);
-        bytes_stream
-            .try_fold(header_bytes, |mut acc, bytes| async move {
-                acc.append(&mut bytes.to_vec());
-                anyhow::Ok(acc)
-            })
-            .await
-            .map(Bytes::from)
+    let sha = identifier.basic_sha();
+    if identifier.blob_identifier() {
+        if let Some(blob_bytes) =
+            maybe_fetch_blob_bytes(ctx, blobstore.clone(), &sha, header_state.clone()).await?
+        {
+            return Ok(blob_bytes);
+        }
     }
-    // Non-blob objects are stored directly as raw Git objects in Mononoke
-    else {
-        let object = fetch_non_blob_git_object(ctx, &blobstore, git_objectid.as_ref()).await?;
-        let mut object_bytes = match header_state {
-            HeaderState::Included => object.loose_header().into_vec(),
-            HeaderState::Excluded => vec![],
-        };
-        object.write_to(object_bytes.by_ref())?;
-        Ok(Bytes::from(object_bytes))
-    }
+    let git_objectid = sha.to_object_id()?;
+    let object = fetch_non_blob_git_object(ctx, &blobstore, git_objectid.as_ref()).await?;
+    let mut object_bytes = match header_state {
+        HeaderState::Included => object.loose_header().into_vec(),
+        HeaderState::Excluded => vec![],
+    };
+    object.write_to(object_bytes.by_ref())?;
+    Ok(Bytes::from(object_bytes))
 }
 
 /// Free function for fetching stored git objects. Applies to all git
@@ -200,12 +237,13 @@ pub async fn fetch_git_object_bytes(
 pub async fn fetch_git_object(
     ctx: &CoreContext,
     blobstore: Arc<dyn Blobstore>,
-    sha: &RichGitSha1,
+    identifier: &GitIdentifier,
 ) -> anyhow::Result<gix_object::Object> {
-    let raw_bytes = fetch_git_object_bytes(ctx, blobstore, sha, HeaderState::Included).await?;
+    let raw_bytes =
+        fetch_git_object_bytes(ctx, blobstore, identifier, HeaderState::Included).await?;
     let object = gix_object::ObjectRef::from_loose(raw_bytes.as_ref()).map_err(|e| {
         GitError::InvalidContent(
-            sha.to_hex().to_string(),
+            identifier.basic_sha().to_hex().to_string(),
             anyhow::anyhow!(e.to_string()).into(),
         )
     })?;

@@ -665,6 +665,12 @@ impl MPath {
             .with_context(|| format!("Error in creating Vec<MPathElement> from {:?}", path))?;
         Ok(MPath::from_elements(segments.iter()))
     }
+
+    /// Returns the depth of this path. The root has a depth 0, and any non-root path has depth
+    /// equal to the number of elements in it.
+    pub fn depth(&self) -> u64 {
+        self.elements.len() as u64
+    }
 }
 
 impl From<Option<NonRootMPath>> for MPath {

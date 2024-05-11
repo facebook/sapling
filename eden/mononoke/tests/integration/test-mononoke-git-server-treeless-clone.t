@@ -41,60 +41,33 @@
 # Start up the Mononoke Git Service
   $ mononoke_git_service
 
-# Partial clone the repo where the only allowed object type is tree (commits and tags are always included). Combine tree and blob filters
-# on top where tree depth limit is 3 and blob size limit is 10MB. Since the only allowed type is trees, the blob filter should be ignored
+# Partial clone the repo where the only allowed object type is tree (commits and tags are always included)
   $ cd "$TESTTMP"
-  $ git clone --filter=object:type=tree --filter=tree:3 --filter=blob:limit=10m --no-checkout file://"$GIT_REPO_ORIGIN"
+  $ git clone --filter=object:type=tree --no-checkout file://"$GIT_REPO_ORIGIN"
   Cloning into 'repo-git'...
 
 # Get the count of objects received as part of this clone. Use count-objects instead of rev-list to prevent Git from downloading missing objects
 # from remote since this is a partial clone
   $ cd $GIT_REPO
   $ git count-objects -v | grep "in-pack"
-  in-pack: 10
+  in-pack: 13
 
 # Partial clone the repo from Mononoke and ensure we get the same number of objects
-  $ git_client clone $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git --filter=object:type=tree --filter=tree:3 --filter=blob:limit=10m --no-checkout
+  $ git_client clone $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git --filter=object:type=tree --no-checkout
   Cloning into 'repo'...
 
 # Get the count of objects received as part of this clone. Use count-objects instead of rev-list to prevent Git from downloading missing objects
 # from remote since this is a partial clone
   $ cd $REPONAME
   $ git count-objects -v | grep "in-pack"
-  in-pack: 10
-
-  $ cd "$TESTTMP"
-  $ rm -rf $GIT_REPO
-  $ rm -rf $REPONAME
-
-# Partial clone where we specify multiple allowed types but Git only picks the first one (blob in this case). Combine it with type specific filters.
-# The tree filters should get ignored
-  $ git clone --filter=object:type=blob --filter=object:type=tree --filter=tree:0 --filter=blob:limit=10m --no-checkout file://"$GIT_REPO_ORIGIN"
-  Cloning into 'repo-git'...
-
-# Get the count of objects received as part of this clone. Use count-objects instead of rev-list to prevent Git from downloading missing objects
-# from remote since this is a partial clone
-  $ cd $GIT_REPO
-  $ git count-objects -v | grep "in-pack"
-  in-pack: 5
-
-# Partial clone the repo from Mononoke and ensure we get the same number of objects
-  $ git_client clone --filter=object:type=blob --filter=object:type=tree --filter=tree:0 --filter=blob:limit=10m --no-checkout $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git
-  Cloning into 'repo'...
-
-# Get the count of objects received as part of this clone. Use count-objects instead of rev-list to prevent Git from downloading missing objects
-# from remote since this is a partial clone
-  $ cd $REPONAME
-  $ git count-objects -v | grep "in-pack"
-  in-pack: 5
+  in-pack: 13
 
   $ cd "$TESTTMP"
   $ rm -rf $GIT_REPO
   $ rm -rf $REPONAME
 
-# Perform partial clone by filtering everything except commits. However since commits and tags are explicitly part of client WANT requests those
-# are ALWAYS sent by the server regardless of the filter
-  $ git clone --filter=object:type=commit --no-checkout file://"$GIT_REPO_ORIGIN"
+# Another way of having treeless clone is with --filter=tree:0
+  $ git clone --filter=tree:0 --no-checkout file://"$GIT_REPO_ORIGIN"
   Cloning into 'repo-git'...
 
 # Get the count of objects received as part of this clone. Use count-objects instead of rev-list to prevent Git from downloading missing objects
@@ -104,7 +77,7 @@
   in-pack: 5
 
 # Partial clone the repo from Mononoke and ensure we get the same number of objects
-  $ git_client clone --filter=object:type=commit --no-checkout $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git
+  $ git_client clone --filter=tree:0 --no-checkout $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git
   Cloning into 'repo'...
 
 # Get the count of objects received as part of this clone. Use count-objects instead of rev-list to prevent Git from downloading missing objects
@@ -112,6 +85,30 @@
   $ cd $REPONAME
   $ git count-objects -v | grep "in-pack"
   in-pack: 5
+
+  $ cd "$TESTTMP"
+  $ rm -rf $GIT_REPO
+  $ rm -rf $REPONAME
+
+# Perform partial clone by filtering trees with depth >= 3 (should exclude directories d4, d5 and file deep_file in this case)
+  $ git clone --filter=tree:3 --no-checkout file://"$GIT_REPO_ORIGIN"
+  Cloning into 'repo-git'...
+
+# Get the count of objects received as part of this clone. Use count-objects instead of rev-list to prevent Git from downloading missing objects
+# from remote since this is a partial clone
+  $ cd $GIT_REPO
+  $ git count-objects -v | grep "in-pack"
+  in-pack: 14
+
+# Partial clone the repo from Mononoke and ensure we get the same number of objects
+  $ git_client clone --filter=tree:3 --no-checkout $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git
+  Cloning into 'repo'...
+
+# Get the count of objects received as part of this clone. Use count-objects instead of rev-list to prevent Git from downloading missing objects
+# from remote since this is a partial clone
+  $ cd $REPONAME
+  $ git count-objects -v | grep "in-pack"
+  in-pack: 14
 
 # Using rev-list we can validate the lazy on-demand download of objects by Git works for partial repos
   $ cd $GIT_REPO

@@ -59,6 +59,7 @@ use crate::fetch_git_object_bytes;
 use crate::mode;
 use crate::store::store_delta_instructions;
 use crate::store::store_raw_delta;
+use crate::store::GitIdentifier;
 use crate::store::HeaderState;
 use crate::DeltaInstructions;
 use crate::DeltaObjectKind;
@@ -174,14 +175,14 @@ async fn metadata_to_manifest_entry(
                 let actual_object = fetch_git_object_bytes(
                     &ctx,
                     blobstore.clone(),
-                    metadata.actual.oid(),
+                    &GitIdentifier::Rich(*metadata.actual.oid()),
                     HeaderState::Excluded,
                 )
                 .await?;
                 let base_object = fetch_git_object_bytes(
                     &ctx,
                     blobstore.clone(),
-                    delta_metadata.object.oid(),
+                    &GitIdentifier::Rich(*delta_metadata.object.oid()),
                     HeaderState::Excluded,
                 )
                 .await?;

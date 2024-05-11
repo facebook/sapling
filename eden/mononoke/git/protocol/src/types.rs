@@ -349,9 +349,23 @@ pub struct FetchRequest {
 /// Struct representing the filtering options that can be used during fetch / clone
 #[derive(Debug, Clone)]
 pub struct FetchFilter {
+    /// The maximum size of blob in bytes that is allowed by the client
     pub max_blob_size: u64,
+    /// The maximum depth a tree OR blob can have in the packfile
     pub max_tree_depth: u64,
+    /// The types of objects allowed by the client
     pub allowed_object_types: Vec<gix_object::Kind>,
+}
+
+impl FetchFilter {
+    pub fn include_commits(&self) -> bool {
+        self.allowed_object_types
+            .contains(&gix_object::Kind::Commit)
+    }
+
+    pub fn include_tags(&self) -> bool {
+        self.allowed_object_types.contains(&gix_object::Kind::Tag)
+    }
 }
 
 /// Struct representing the packfile item response generated for the

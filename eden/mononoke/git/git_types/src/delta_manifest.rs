@@ -24,6 +24,7 @@ use futures::StreamExt;
 use futures::TryStreamExt;
 use gix_hash::oid;
 use gix_hash::ObjectId;
+use gix_object::Kind;
 use mononoke_types::hash::Blake2;
 use mononoke_types::hash::GitSha1;
 use mononoke_types::hash::RichGitSha1;
@@ -515,10 +516,27 @@ impl Arbitrary for ObjectEntry {
 
 /// Enum representing the types of Git objects that can be present
 /// in a GitDeltaManifest
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum ObjectKind {
     Blob,
     Tree,
+}
+
+impl ObjectKind {
+    pub fn to_gix_kind(&self) -> Kind {
+        match self {
+            ObjectKind::Blob => Kind::Blob,
+            ObjectKind::Tree => Kind::Tree,
+        }
+    }
+
+    pub fn is_tree(&self) -> bool {
+        *self == ObjectKind::Tree
+    }
+
+    pub fn is_blob(&self) -> bool {
+        *self == ObjectKind::Blob
+    }
 }
 
 impl TryFrom<thrift::ObjectKind> for ObjectKind {

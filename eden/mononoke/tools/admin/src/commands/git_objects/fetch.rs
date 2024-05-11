@@ -11,6 +11,7 @@ use clap::Args;
 use context::CoreContext;
 use git_types::fetch_git_object;
 use git_types::fetch_non_blob_git_object;
+use git_types::GitIdentifier;
 use gix_object::Object::Blob;
 use gix_object::Object::Commit;
 use gix_object::Object::Tag;
@@ -38,8 +39,9 @@ pub async fn fetch(repo: &Repo, ctx: &CoreContext, mut fetch_args: FetchArgs) ->
     let size = fetch_args.size.take();
     let git_object = match (ty, size) {
         (Some(ty), Some(size)) => {
-            let git_hash = RichGitSha1::from_sha1(fetch_args.id, ty.leak(), size);
-            fetch_git_object(ctx, repo.repo_blobstore.clone(), &git_hash).await?
+            let git_ident =
+                GitIdentifier::Rich(RichGitSha1::from_sha1(fetch_args.id, ty.leak(), size));
+            fetch_git_object(ctx, repo.repo_blobstore.clone(), &git_ident).await?
         }
         _ => {
             let git_hash = fetch_args
