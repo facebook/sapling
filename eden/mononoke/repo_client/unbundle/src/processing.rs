@@ -12,10 +12,8 @@ use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
-use bookmarks::BookmarkKey;
 use bookmarks::BookmarkKind;
 use bookmarks::BookmarkUpdateReason;
-use bookmarks_movement::BookmarkKindRestrictions;
 use bookmarks_movement::BookmarkMovementError;
 use bookmarks_movement::BookmarkUpdatePolicy;
 use bookmarks_movement::BookmarkUpdateTargets;
@@ -23,20 +21,14 @@ use bytes::Bytes;
 use context::CoreContext;
 use hooks::HookManager;
 use mercurial_mutation::HgMutationStoreRef;
-use metaconfig_types::Address;
-use metaconfig_types::PushrebaseRemoteMode;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use pushrebase::PushrebaseError;
-#[cfg(fbcode_build)]
-use pushrebase_client::LandServicePushrebaseClient;
-use pushrebase_client::LocalPushrebaseClient;
-use pushrebase_client::PushrebaseClient;
+use pushrebase_client::normal_pushrebase;
 use repo_authorization::AuthorizationContext;
 use repo_identity::RepoIdentityRef;
 use repo_update_logger::log_new_commits;
 use repo_update_logger::CommitInfo;
-use scuba_ext::MononokeScubaSampleBuilder;
 use slog::debug;
 use stats::prelude::*;
 
@@ -284,17 +276,27 @@ async fn run_pushrebase(
                 .map(|bcs| (bcs.get_changeset_id(), CommitInfo::new(bcs, None)))
                 .collect();
 
-            let (pushrebased_rev, pushrebased_changesets) = normal_pushrebase(
+            let outcome = normal_pushrebase(
                 ctx,
                 repo,
                 uploaded_bonsais,
                 &onto_bookmark,
                 maybe_pushvars.as_ref(),
                 hook_manager,
-                hook_rejection_remapper.as_ref(),
                 cross_repo_push_source,
             )
-            .await?;
+            .await;
+            let (pushrebased_rev, pushrebased_changesets) = match outcome {
+                Ok(outcome) => (outcome.head, outcome.rebased_changesets),
+                Err(err) => {
+                    return Err(convert_bookmark_movement_err(
+                        err,
+                        hook_rejection_remapper.as_ref(),
+                    )
+                    .await?);
+                }
+            };
+
             // Modify the changeset logs with the newly pushrebased hashes.
             for pair in pushrebased_changesets.iter() {
                 let info = changesets_to_log
@@ -423,136 +425,6 @@ async fn convert_bookmark_movement_err(
         }
         _ => BundleResolverError::Error(err.into()),
     })
-}
-
-pub async fn maybe_client_from_address<'a>(
-    remote_mode: &'a PushrebaseRemoteMode,
-    ctx: &'a CoreContext,
-    repo: &'a impl Repo,
-) -> Result<Option<Box<dyn PushrebaseClient + 'a>>> {
-    match remote_mode {
-        PushrebaseRemoteMode::RemoteLandService(address)
-        | PushrebaseRemoteMode::RemoteLandServiceWithLocalFallback(address) => {
-            Ok(address_from_land_service(address, ctx, repo).await?)
-        }
-        PushrebaseRemoteMode::Local => Ok(None),
-    }
-}
-
-async fn address_from_land_service<'a>(
-    address: &'a Address,
-    ctx: &'a CoreContext,
-    repo: &'a impl Repo,
-) -> Result<Option<Box<dyn PushrebaseClient + 'a>>> {
-    #[cfg(fbcode_build)]
-    {
-        match address {
-            metaconfig_types::Address::Tier(tier) => Ok(Some(Box::new(
-                LandServicePushrebaseClient::from_tier(ctx, tier.clone(), repo).await?,
-            ))),
-            metaconfig_types::Address::HostPort(host_port) => Ok(Some(Box::new(
-                LandServicePushrebaseClient::from_host_port(ctx, host_port.clone(), repo).await?,
-            ))),
-        }
-    }
-    #[cfg(not(fbcode_build))]
-    {
-        let _ = (address, ctx, repo);
-        unreachable!()
-    }
-}
-
-async fn normal_pushrebase<'a>(
-    ctx: &'a CoreContext,
-    repo: &'a impl Repo,
-    changesets: HashSet<BonsaiChangeset>,
-    bookmark: &'a BookmarkKey,
-    maybe_pushvars: Option<&'a HashMap<String, Bytes>>,
-    hook_manager: &'a HookManager,
-    hook_rejection_remapper: &'a dyn HookRejectionRemapper,
-    cross_repo_push_source: CrossRepoPushSource,
-) -> Result<(ChangesetId, Vec<pushrebase::PushrebaseChangesetPair>), BundleResolverError> {
-    let bookmark_restriction = BookmarkKindRestrictions::OnlyPublishing;
-    let remote_mode = if let Ok(true) = justknobs::eval(
-        "scm/mononoke:mononoke_force_local_pushrebase",
-        None,
-        Some(repo.repo_identity().name()),
-    ) {
-        PushrebaseRemoteMode::Local
-    } else {
-        repo.repo_config().pushrebase.remote_mode.clone()
-    };
-    let maybe_fallback_scuba: Option<(MononokeScubaSampleBuilder, BookmarkMovementError)> = {
-        let maybe_client: Option<Box<dyn PushrebaseClient>> =
-            maybe_client_from_address(&remote_mode, ctx, repo).await?;
-
-        if let Some(client) = maybe_client {
-            let result = client
-                .pushrebase(
-                    bookmark,
-                    changesets.clone(),
-                    maybe_pushvars,
-                    cross_repo_push_source,
-                    bookmark_restriction,
-                    false, // We will log new commits locally
-                )
-                .await;
-            match (result, &remote_mode) {
-                (Ok(outcome), _) => {
-                    return Ok((outcome.head, outcome.rebased_changesets));
-                }
-                // No fallback, propagate error
-                (Err(err), metaconfig_types::PushrebaseRemoteMode::RemoteLandService(..)) => {
-                    return Err(convert_bookmark_movement_err(err, hook_rejection_remapper).await?);
-                }
-                (Err(err), _) => {
-                    slog::warn!(
-                        ctx.logger(),
-                        "Failed to pushrebase remotely, falling back to local. Error: {}",
-                        err
-                    );
-                    let mut scuba = ctx.scuba().clone();
-                    scuba.add("bookmark_name", bookmark.as_str());
-                    scuba.add(
-                        "changeset_id",
-                        changesets
-                            .iter()
-                            .next()
-                            .map(|b| b.get_changeset_id().to_string()),
-                    );
-                    Some((scuba, err))
-                }
-            }
-        } else {
-            None
-        }
-    };
-    let authz = AuthorizationContext::new(ctx);
-    let result = LocalPushrebaseClient {
-        ctx,
-        authz: &authz,
-        repo,
-        hook_manager,
-    }
-    .pushrebase(
-        bookmark,
-        changesets,
-        maybe_pushvars,
-        cross_repo_push_source,
-        bookmark_restriction,
-        false, // We log commits to scribe ourselves
-    )
-    .await;
-    if let Some((mut scuba, err)) = maybe_fallback_scuba {
-        if result.is_ok() {
-            scuba.log_with_msg("failed_remote_pushrebase", err.to_string());
-        }
-    }
-
-    match result {
-        Ok(outcome) => Ok((outcome.head, outcome.rebased_changesets)),
-        Err(err) => Err(convert_bookmark_movement_err(err, hook_rejection_remapper).await?),
-    }
 }
 
 async fn force_pushrebase(

@@ -110,8 +110,12 @@ rust_library(
         "//eden/mononoke/pushrebase:pushrebase",
         "//eden/mononoke/repo_authorization:repo_authorization",
         "//eden/mononoke/server/context:context",
-    ] + ([] if rust_oss.is_oss_build() else [
+        "//common/rust/shed/justknobs_stub:justknobs",
+        "//eden/mononoke/metaconfig:metaconfig_types",
+        "//eden/mononoke/common/scuba_ext:scuba_ext",
+        "fbsource//third-party/rust:slog",
         "fbsource//third-party/rust:anyhow",
+    ] + ([] if rust_oss.is_oss_build() else [
         "fbsource//third-party/rust:arc-swap",
         "fbsource//third-party/rust:regex",
         "//eden/mononoke/repo_attributes/repo_identity:repo_identity",

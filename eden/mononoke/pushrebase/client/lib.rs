@@ -7,6 +7,7 @@
 
 #[cfg(fbcode_build)]
 mod facebook;
+mod hybrid;
 mod local;
 
 use std::collections::HashMap;
@@ -21,6 +22,7 @@ pub use facebook::land_service::override_certificate_paths as land_service_overr
 #[cfg(fbcode_build)]
 pub use facebook::land_service::LandServicePushrebaseClient;
 use hooks::CrossRepoPushSource;
+pub use hybrid::normal_pushrebase;
 pub use local::LocalPushrebaseClient;
 use mononoke_types::BonsaiChangeset;
 use pushrebase::PushrebaseOutcome;
