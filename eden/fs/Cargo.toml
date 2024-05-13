@@ -12,7 +12,7 @@ pcics = { git = "https://github.com/peterdelevoryas/pcics.git", rev = "aac7ac4b9
 perf-event = { version = "0.4", git = "https://github.com/krallin/perf-event.git", rev = "86224a9bc025d5d19f719542f27c8c629a08b167" }
 perf-event-open-sys = { version = "4.0", git = "https://github.com/krallin/perf-event.git", rev = "86224a9bc025d5d19f719542f27c8c629a08b167" }
 quickcheck = { git = "https://github.com/jakoschiko/quickcheck", rev = "6ecdf5bb4b0132ce66670b4d46453aa022ea892c" }
-riscv = { git = "https://github.com/jsgf/riscv.git", rev = "a2a988817419b4617a5cb4dbefdf4f0fded0ac49" }
+riscv = { git = "https://github.com/rust-embedded/riscv.git", rev = "e9f43ae4722cfcdda67d36fdfcf462a0f12e9928" }
 
 [workspace]
 members = [
