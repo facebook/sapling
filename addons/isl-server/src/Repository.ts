@@ -420,6 +420,29 @@ export class Repository {
     return this.mergeConflicts;
   }
 
+  public async getMergeTool(ctx: RepositoryContext): Promise<string | undefined> {
+    const tool = ctx.knownConfigs?.get('ui.merge') ?? 'internal:merge';
+    let usesCustomMerge = tool !== 'internal:merge';
+
+    if (usesCustomMerge) {
+      // TODO: we could also check merge-tools.${tool}.disabled here
+      const customToolUsesGui =
+        (
+          await this.forceGetConfig(ctx, `merge-tools.${tool}.gui`).catch(() => undefined)
+        )?.toLowerCase() === 'true';
+      if (!customToolUsesGui) {
+        ctx.logger.warn(
+          `configured custom merge tool '${tool}' is not a GUI tool, using :merge3 instead`,
+        );
+        usesCustomMerge = false;
+      } else {
+        ctx.logger.info(`using configured custom GUI merge tool ${tool}`);
+      }
+    }
+
+    return usesCustomMerge ? tool : undefined;
+  }
+
   /**
    * Determine basic repo info including the root and important config values.
    * Resulting RepoInfo may have null fields if cwd is not a valid repo root.
@@ -644,25 +667,8 @@ export class Repository {
    * ...unless the custom merge tool is *not* a GUI tool, like vimdiff, which would not be interactable in ISL.
    */
   async getMergeToolEnvVars(ctx: RepositoryContext): Promise<Record<string, string> | undefined> {
-    const tool = ctx.knownConfigs?.get('ui.merge') ?? 'internal:merge';
-    let usesCustomMerge = tool !== 'internal:merge';
-
-    if (usesCustomMerge) {
-      const customToolUsesGui =
-        (
-          await this.forceGetConfig(ctx, `merge-tools.${tool}.gui`).catch(() => undefined)
-        )?.toLowerCase() === 'true';
-      if (!customToolUsesGui) {
-        ctx.logger.warn(
-          `configured custom merge tool '${tool}' is not a GUI tool, using :merge3 instead`,
-        );
-        usesCustomMerge = false;
-      } else {
-        ctx.logger.info(`using configured custom GUI merge tool ${tool}`);
-      }
-    }
-
-    return usesCustomMerge
+    const tool = await this.getMergeTool(ctx);
+    return tool != null
       ? // allow sl to use the already configured merge tool
         {}
       : // otherwise, use 3-way merge

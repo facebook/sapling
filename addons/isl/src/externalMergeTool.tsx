@@ -5,21 +5,16 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {configBackedAtom} from './jotaiUtils';
-import {atom} from 'jotai';
+import serverAPI from './ClientToServerAPI';
+import {lazyAtom} from './jotaiUtils';
 
-// TODO: should we read `merge-tool.$tool` to check `.disabled`?
-const uiMergeConfig = configBackedAtom<string | null>(
-  'ui.merge',
-  null,
-  true,
-  /* use raw value */ true,
-);
-export const externalMergeToolAtom = atom(get => {
-  const config = get(uiMergeConfig);
-  // filter out internal merge tools
-  if (config == null || config.startsWith('internal:')) {
-    return null;
-  }
-  return config;
-});
+export const externalMergeToolAtom = lazyAtom(() => {
+  serverAPI.onConnectOrReconnect(() => {
+    serverAPI.postMessage({
+      type: 'getConfiguredMergeTool',
+    });
+  });
+  return serverAPI
+    .nextMessageMatching('gotConfiguredMergeTool', () => true)
+    .then(event => event.tool);
+}, undefined);

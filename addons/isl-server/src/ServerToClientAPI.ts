@@ -898,6 +898,15 @@ export default class ServerToClientAPI {
       case 'gotUiState': {
         break;
       }
+      case 'getConfiguredMergeTool': {
+        repo.getMergeTool(ctx).then((tool: string | undefined) => {
+          this.postMessage({
+            type: 'gotConfiguredMergeTool',
+            tool,
+          });
+        });
+        break;
+      }
       default: {
         if (repo.codeReviewProvider?.handleClientToServerMessage?.(data) === true) {
           break;

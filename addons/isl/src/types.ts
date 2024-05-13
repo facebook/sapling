@@ -662,6 +662,7 @@ export type ClientToServerMessage =
   | {type: 'fetchStableLocationAutocompleteOptions'}
   | {type: 'confirmLand'; landConfirmationInfo: LandConfirmationInfo}
   | {type: 'getSuggestedReviewers'; context: {paths: Array<string>}; key: string}
+  | {type: 'getConfiguredMergeTool'}
   | {type: 'updateRemoteDiffMessage'; diffId: DiffId; title: string; description: string}
   | {type: 'pageVisibility'; state: PageVisibility}
   | {type: 'requestComparison'; comparison: Comparison}
@@ -736,6 +737,7 @@ export type ServerToClientMessage =
   | {type: 'fetchedStableLocationAutocompleteOptions'; result: Result<Array<TypeaheadResult>>}
   | {type: 'renderedMarkup'; html: string; id: number}
   | {type: 'gotSuggestedReviewers'; reviewers: Array<string>; key: string}
+  | {type: 'gotConfiguredMergeTool'; tool: string | undefined}
   | {type: 'updatedRemoteDiffMessage'; diffId: DiffId; error?: string}
   | {type: 'uploadFileResult'; id: string; result: Result<string>}
   | {type: 'comparison'; comparison: Comparison; data: ComparisonData}
