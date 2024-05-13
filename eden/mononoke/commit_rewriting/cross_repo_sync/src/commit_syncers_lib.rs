@@ -64,7 +64,7 @@ use crate::commit_sync_outcome::CommitSyncOutcome;
 use crate::commit_sync_outcome::DesiredRelationship;
 use crate::commit_sync_outcome::PluralCommitSyncOutcome;
 use crate::commit_syncer::CommitSyncer;
-use crate::git_submodules::expand_and_validate_all_git_submodule_file_changes;
+use crate::git_submodules::rewrite_commit_with_submodule_expansion;
 use crate::git_submodules::SubmoduleExpansionData;
 use crate::sync_config_version_utils::get_mapping_change_version;
 use crate::types::ErrorKind;
@@ -123,7 +123,7 @@ pub async fn rewrite_commit<'a, R: Repo>(
                     anyhow!("Submodule expansion data not provided when submodules is enabled for small repo")
                 )?;
 
-                let new_bonsai = expand_and_validate_all_git_submodule_file_changes(
+                return rewrite_commit_with_submodule_expansion(
                     ctx,
                     cs,
                     source_repo,
@@ -132,9 +132,7 @@ pub async fn rewrite_commit<'a, R: Repo>(
                     remapped_parents,
                     rewrite_opts,
                 )
-                .await?;
-
-                return Ok(Some(new_bonsai));
+                .await;
             }
         };
 

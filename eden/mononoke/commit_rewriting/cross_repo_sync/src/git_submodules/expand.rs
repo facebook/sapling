@@ -109,18 +109,18 @@ enum ExpansionFileChange {
     Generated((NonRootMPath, FileChange)),
 }
 
-pub async fn expand_and_validate_all_git_submodule_file_changes<'a, R: Repo>(
+pub async fn rewrite_commit_with_submodule_expansion<'a, R: Repo>(
     ctx: &'a CoreContext,
     bonsai: BonsaiChangesetMut,
-    small_repo: &'a R,
+    source_repo: &'a R,
     sm_exp_data: SubmoduleExpansionData<'a, R>,
     mover: Mover,
     // Parameters needed to generate a bonsai for the large repo using `rewrite_commit`
     remapped_parents: &'a HashMap<ChangesetId, ChangesetId>,
     rewrite_opts: RewriteOpts,
-) -> Result<BonsaiChangesetMut> {
+) -> Result<Option<BonsaiChangesetMut>> {
     ensure!(
-        small_repo.repo_identity().id() != *sm_exp_data.large_repo_id,
+        source_repo.repo_identity().id() != *sm_exp_data.large_repo_id,
         "Can't sync changes from large to small repo if small repo has submodule expansion enabled"
     );
 
@@ -128,12 +128,12 @@ pub async fn expand_and_validate_all_git_submodule_file_changes<'a, R: Repo>(
         ctx,
         "Expanding all git submodule file changes",
         None,
-        expand_all_git_submodule_file_changes(ctx, bonsai, small_repo, sm_exp_data.clone()),
+        expand_all_git_submodule_file_changes(ctx, bonsai, source_repo, sm_exp_data.clone()),
     )
     .await
     .context("Failed to expand submodule file changes from bonsai")?;
 
-    let rewritten_bonsai = run_and_log_stats_to_scuba(
+    let mb_rewritten_bonsai = run_and_log_stats_to_scuba(
         ctx,
         "Rewriting commit",
         None,
@@ -142,28 +142,32 @@ pub async fn expand_and_validate_all_git_submodule_file_changes<'a, R: Repo>(
             new_bonsai,
             remapped_parents,
             mover_to_multi_mover(mover.clone()),
-            small_repo,
+            source_repo,
             None,
             rewrite_opts,
         ),
     )
     .await
-    .context("Failed to create bonsai to be synced")?
-    .ok_or(anyhow!("No bonsai to be synced was returned"))?;
+    .context("Failed to rewrite commit")?;
 
-    let rewritten_bonsai = rewritten_bonsai.freeze()?;
+    match mb_rewritten_bonsai {
+        Some(rewritten_bonsai) => {
+            let rewritten_bonsai = rewritten_bonsai.freeze()?;
 
-    let validated_bonsai = run_and_log_stats_to_scuba(
-        ctx,
-        "Validating all submodule expansions",
-        None,
-        validate_all_submodule_expansions(ctx, sm_exp_data, rewritten_bonsai, mover),
-    )
-    .await
-    // TODO(gustavoavena): print some identifier of changeset that failed
-    .context("Validation of submodule expansion failed")?;
+            let validated_bonsai = run_and_log_stats_to_scuba(
+                ctx,
+                "Validating all submodule expansions",
+                None,
+                validate_all_submodule_expansions(ctx, sm_exp_data, rewritten_bonsai, mover),
+            )
+            .await
+            // TODO(gustavoavena): print some identifier of changeset that failed
+            .context("Validation of submodule expansion failed")?;
 
-    Ok(validated_bonsai.into_mut())
+            Ok(Some(validated_bonsai.into_mut()))
+        }
+        None => Ok(None),
+    }
 }
 
 /// Iterate over all file changes from the bonsai being synced and expand any

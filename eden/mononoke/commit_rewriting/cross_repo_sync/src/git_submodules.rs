@@ -11,7 +11,7 @@ mod in_memory_repo;
 mod utils;
 mod validation;
 
-pub use expand::expand_and_validate_all_git_submodule_file_changes;
+pub use expand::rewrite_commit_with_submodule_expansion;
 pub use expand::SubmoduleExpansionData;
 pub use in_memory_repo::InMemoryRepo;
 pub use validation::validate_all_submodule_expansions;
