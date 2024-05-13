@@ -101,9 +101,11 @@ function setup_sync_config_stripping_git_submodules {
 }
 
 function run_common_xrepo_sync_with_gitsubmodules_setup {
-  ENABLE_API_WRITES=1 REPOID="$LARGE_REPO_ID" REPONAME="$LARGE_REPO_NAME" setup_common_config "$REPOTYPE"
+  INFINITEPUSH_ALLOW_WRITES=true ENABLE_API_WRITES=1 REPOID="$LARGE_REPO_ID" \
+    REPONAME="$LARGE_REPO_NAME" setup_common_config "$REPOTYPE"
   # Enable writes in small repo as well, so we can update bookmarks when running gitimport
-  ENABLE_API_WRITES=1 REPOID="$SUBMODULE_REPO_ID" REPONAME="$SUBMODULE_REPO_NAME" setup_common_config "$REPOTYPE"
+  INFINITEPUSH_ALLOW_WRITES=true ENABLE_API_WRITES=1 REPOID="$SUBMODULE_REPO_ID" \
+    REPONAME="$SUBMODULE_REPO_NAME" setup_common_config "$REPOTYPE"
 
   setup_sync_config_stripping_git_submodules
 
