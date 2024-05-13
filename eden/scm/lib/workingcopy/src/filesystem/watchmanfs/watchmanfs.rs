@@ -554,7 +554,7 @@ pub(crate) fn detect_changes(
 
     let _span = tracing::info_span!("submit ts_need_check").entered();
 
-    for (ts_needs_check, _state) in ts_need_check.iter() {
+    for (ts_needs_check, state) in ts_need_check.iter() {
         // Prefer to kick off file check using watchman data since that already
         // includes disk metadata.
         if wm_need_check.contains_key(ts_needs_check) {
@@ -564,8 +564,13 @@ pub(crate) fn detect_changes(
         // This check is important when we are tracking ignored files.
         // We won't do a fresh watchman query, so we must get the list
         // of ignored files from the treestate.
-        if include_ignored && ignore_matcher.matches_file(ts_needs_check)? {
-            pending_changes.push(Ok(PendingChange::Ignored(ts_needs_check.clone())));
+        if !state.is_tracked() && ignore_matcher.matches_file(ts_needs_check)? {
+            if include_ignored {
+                pending_changes.push(Ok(PendingChange::Ignored(ts_needs_check.clone())));
+            } else if !track_ignored {
+                // We have an ignored file in treestate - clear it out.
+                needs_clear.push((ts_needs_check.clone(), None));
+            }
             continue;
         }
 
@@ -638,14 +643,17 @@ pub(crate) fn detect_changes(
                 }
             }
 
-            let ignored = ignore_matcher.matches_file(&wm_needs_check.path)?;
-            if include_ignored && ignored {
-                pending_changes.push(Ok(PendingChange::Ignored(wm_needs_check.path.clone())));
-            }
-            if !track_ignored && ignored {
-                if wm_needs_check.ts_state.is_some() {
-                    // We have an ignored file in treestate - clear it out.
-                    needs_clear.push((wm_needs_check.path, None));
+            if ignore_matcher.matches_file(&wm_needs_check.path)? {
+                if include_ignored {
+                    pending_changes.push(Ok(PendingChange::Ignored(wm_needs_check.path.clone())));
+                }
+
+                // Based on track_ignore, make sure ignored file is or isn't in treestate.
+                match (track_ignored, wm_needs_check.ts_state.is_some()) {
+                    (true, false) => needs_mark.push(wm_needs_check.path),
+                    (true, true) => {}
+                    (false, true) => needs_clear.push((wm_needs_check.path, None)),
+                    (false, false) => {}
                 }
 
                 continue;

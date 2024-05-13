@@ -229,11 +229,6 @@ impl<M: Matcher + Clone + Send + Sync + 'static> PendingChanges<M> {
                 Some(Ok(WalkEntry::File(mut path, metadata))) => {
                     tracing::trace!(%path, "found file");
 
-                    if self.include_ignored && self.ignore_matcher.matches_file(&path)? {
-                        tracing::trace!(%path, "ignored");
-                        return Ok(Some(PendingChange::Ignored(path)));
-                    }
-
                     let mut ts = self.treestate.lock();
 
                     // On case insensitive systems, normalize the path so
@@ -267,6 +262,22 @@ impl<M: Matcher + Clone + Send + Sync + 'static> PendingChanges<M> {
                             }
                         }
                     }
+
+                    let is_tracked = ts_state
+                        .as_ref()
+                        .map_or(false, |state| state.state.is_tracked());
+
+                    if !is_tracked {
+                        if self.ignore_matcher.matches_file(&path)? {
+                            tracing::trace!(%path, "ignored");
+                            if self.include_ignored {
+                                return Ok(Some(PendingChange::Ignored(path)));
+                            } else {
+                                continue;
+                            }
+                        }
+                    }
+
                     self.seen.insert(path.clone());
                     let changed = self
                         .file_change_detector
