@@ -170,12 +170,13 @@ async fn make_file_diff_request(
     paths: Vec<thrift::CommitFileDiffsParamsPathPair>,
     diff_size_limit: Option<i64>,
     diff_format: thrift::DiffFormat,
+    context: i64,
 ) -> Result<DiffOutput> {
     let params = thrift::CommitFileDiffsParams {
         other_commit_id,
         paths,
         format: diff_format,
-        context: 3,
+        context,
         diff_size_limit,
         ..Default::default()
     };
@@ -224,6 +225,7 @@ pub(crate) fn diff_files(
     paths_sizes: impl IntoIterator<Item = (thrift::CommitFileDiffsParamsPathPair, i64)>,
     diff_size_limit: Option<i64>,
     diff_format: thrift::DiffFormat,
+    context: i64,
 ) -> impl Stream<Item = Result<impl Render<Args = ()>>> {
     let mut size_sum: i64 = 0;
     let mut path_count: i64 = 0;
@@ -256,6 +258,7 @@ pub(crate) fn diff_files(
                 paths,
                 diff_size_limit,
                 diff_format,
+                context,
             )
             .await
         }

@@ -64,6 +64,9 @@ pub(super) struct CommandArgs {
     /// The format of the diff.
     #[clap(long, short = 'f', value_enum, default_value_t = DiffFormat::RawDiff)]
     diff_format: DiffFormat,
+    /// Number of lines of unified context around differences.
+    #[clap(long = "unified", short = 'U', default_value_t = 3)]
+    context: i64,
 }
 
 #[derive(Serialize)]
@@ -208,6 +211,7 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
                 paths_sizes,
                 args.diff_size_limit,
                 diff_format,
+                args.context,
             ),
         )
         .await
