@@ -10,6 +10,7 @@ import type {DetailedHTMLProps} from 'react';
 import serverAPI from './ClientToServerAPI';
 import {t} from './i18n';
 import {atomFamilyWeak, lazyAtom} from './jotaiUtils';
+import {colors, radius} from './tokens.stylex';
 import * as stylex from '@stylexjs/stylex';
 import {useAtomValue} from 'jotai';
 
@@ -30,13 +31,15 @@ const avatarUrl = atomFamilyWeak((author: string) => {
 export function AvatarImg({
   url,
   username,
+  xstyle,
   ...rest
-}: {url?: string; username: string} & DetailedHTMLProps<
+}: {url?: string; username: string; xstyle?: stylex.StyleXStyles} & DetailedHTMLProps<
   React.ImgHTMLAttributes<HTMLImageElement>,
   HTMLImageElement
 >) {
   return url == null ? null : (
     <img
+      {...stylex.props(styles.circle, xstyle)}
       src={url}
       width={14}
       height={14}
@@ -47,18 +50,21 @@ export function AvatarImg({
 }
 
 const styles = stylex.create({
-  empty: {
-    content: '',
+  circle: {
     width: 14,
     height: 14,
+    border: '2px solid',
+    borderRadius: radius.full,
+    borderColor: colors.fg,
+  },
+  empty: {
+    content: '',
     backgroundColor: 'var(--foreground)',
-    borderRadius: '50%',
-    border: '1px solid var(--foreground)',
   },
 });
 
 export function BlankAvatar() {
-  return <div {...stylex.props(styles.empty)} />;
+  return <div {...stylex.props(styles.circle, styles.empty)} />;
 }
 
 export function Avatar({

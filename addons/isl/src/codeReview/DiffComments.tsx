@@ -82,9 +82,6 @@ const styles = stylex.create({
     flexShrink: 0,
   },
   avatar: {
-    borderRadius: radius.full,
-    border: '2px solid',
-    borderColor: colors.fg,
     marginBlock: spacing.half,
   },
   byline: {
@@ -101,11 +98,7 @@ function Comment({comment, isTopLevel}: {comment: DiffComment; isTopLevel?: bool
   return (
     <Row xstyle={styles.comment}>
       <Column {...stylex.props(styles.left)}>
-        <AvatarImg
-          username={comment.author}
-          url={comment.authorAvatarUri}
-          {...stylex.props(styles.avatar)}
-        />
+        <AvatarImg username={comment.author} url={comment.authorAvatarUri} xstyle={styles.avatar} />
       </Column>
       <Column xstyle={styles.commentInfo}>
         <b {...stylex.props(styles.author)}>{comment.author}</b>
