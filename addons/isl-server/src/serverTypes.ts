@@ -21,5 +21,11 @@ export type RepositoryContext = {
   tracker: ServerSideTracker;
 
   knownConfigs?: ReadonlyMap<ConfigName, string> | undefined;
+  /**
+   * Configured merge tool, from `ui.merge`, as long as merge-tools.$tool.gui is also True.
+   * null -> no merge tool configured or not valid
+   * undefined -> not cached yet
+   */
+  cachedMergeTool?: string | null;
   // TODO: visible commit age range
 };

@@ -420,7 +420,11 @@ export class Repository {
     return this.mergeConflicts;
   }
 
-  public async getMergeTool(ctx: RepositoryContext): Promise<string | undefined> {
+  public async getMergeTool(ctx: RepositoryContext): Promise<string | null> {
+    // treat undefined as "not cached", and null as "not configured"/invalid
+    if (ctx.cachedMergeTool !== undefined) {
+      return ctx.cachedMergeTool;
+    }
     const tool = ctx.knownConfigs?.get('ui.merge') ?? 'internal:merge';
     let usesCustomMerge = tool !== 'internal:merge';
 
@@ -438,9 +442,13 @@ export class Repository {
       } else {
         ctx.logger.info(`using configured custom GUI merge tool ${tool}`);
       }
+    } else {
+      ctx.logger.info(`using default :merge3 merge tool`);
     }
 
-    return usesCustomMerge ? tool : undefined;
+    const mergeTool = usesCustomMerge ? tool : null;
+    ctx.cachedMergeTool = mergeTool;
+    return mergeTool;
   }
 
   /**

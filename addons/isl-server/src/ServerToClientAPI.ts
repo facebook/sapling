@@ -899,10 +899,10 @@ export default class ServerToClientAPI {
         break;
       }
       case 'getConfiguredMergeTool': {
-        repo.getMergeTool(ctx).then((tool: string | undefined) => {
+        repo.getMergeTool(ctx).then((tool: string | null) => {
           this.postMessage({
             type: 'gotConfiguredMergeTool',
-            tool,
+            tool: tool ?? undefined,
           });
         });
         break;
