@@ -29,7 +29,7 @@ use mononoke_types::RepositoryId;
 use movers::Mover;
 use synced_commit_mapping::SyncedCommitMapping;
 
-use crate::commit_sync_config_utils::get_strip_git_submodules_by_version;
+use crate::commit_sync_config_utils::get_git_submodule_action_by_version;
 use crate::commit_sync_outcome::CommitSyncOutcome;
 use crate::commit_syncer::CommitSyncer;
 use crate::commit_syncers_lib::get_mover_by_version;
@@ -219,7 +219,7 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
             self.target_repo_id,
         )
         .await?;
-        let git_submodules_action = get_strip_git_submodules_by_version(
+        let git_submodules_action = get_git_submodule_action_by_version(
             self.ctx,
             Arc::clone(&self.live_commit_sync_config),
             &expected_version,
@@ -327,7 +327,7 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
                 let mut remapped_parents = HashMap::new();
                 remapped_parents.insert(p, remapped_p);
 
-                let git_submodules_action = get_strip_git_submodules_by_version(
+                let git_submodules_action = get_git_submodule_action_by_version(
                     self.ctx,
                     Arc::clone(&self.live_commit_sync_config),
                     &version,
@@ -484,7 +484,7 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
                 }
             }
 
-            let git_submodules_action = get_strip_git_submodules_by_version(
+            let git_submodules_action = get_git_submodule_action_by_version(
                 self.ctx,
                 Arc::clone(&self.live_commit_sync_config),
                 &version,

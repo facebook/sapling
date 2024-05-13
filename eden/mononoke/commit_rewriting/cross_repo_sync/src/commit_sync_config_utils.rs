@@ -30,7 +30,7 @@ use crate::reporting::log_warning;
 
 // TODO(T169306120): rename this module
 
-pub async fn get_strip_git_submodules_by_version(
+pub async fn get_git_submodule_action_by_version(
     ctx: &CoreContext,
     live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
     version: &CommitSyncConfigVersion,

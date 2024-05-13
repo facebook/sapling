@@ -22,9 +22,9 @@ mod validation;
 
 pub use commit_sync_config_utils::get_bookmark_renamer;
 pub use commit_sync_config_utils::get_common_pushrebase_bookmarks;
+pub use commit_sync_config_utils::get_git_submodule_action_by_version;
 pub use commit_sync_config_utils::get_mover;
 pub use commit_sync_config_utils::get_reverse_mover;
-pub use commit_sync_config_utils::get_strip_git_submodules_by_version;
 pub use commit_sync_config_utils::version_exists;
 pub use commit_sync_outcome::commit_sync_outcome_exists;
 pub use commit_sync_outcome::get_commit_sync_outcome;

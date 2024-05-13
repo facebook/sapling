@@ -49,9 +49,9 @@ use synced_commit_mapping_pushrebase_hook::ForwardSyncedCommitInfo;
 use crate::commit_in_memory_syncer::CommitInMemorySyncer;
 use crate::commit_sync_config_utils::get_bookmark_renamer;
 use crate::commit_sync_config_utils::get_common_pushrebase_bookmarks;
+use crate::commit_sync_config_utils::get_git_submodule_action_by_version;
 use crate::commit_sync_config_utils::get_reverse_bookmark_renamer;
 use crate::commit_sync_config_utils::get_reverse_mover;
-use crate::commit_sync_config_utils::get_strip_git_submodules_by_version;
 use crate::commit_sync_config_utils::version_exists;
 use crate::commit_sync_outcome::commit_sync_outcome_exists;
 use crate::commit_sync_outcome::get_commit_sync_outcome;
@@ -835,7 +835,7 @@ where
         let submodule_deps = self.get_submodule_deps();
         let mover = self.get_mover_by_version(sync_config_version).await?;
 
-        let git_submodules_action = get_strip_git_submodules_by_version(
+        let git_submodules_action = get_git_submodule_action_by_version(
             ctx,
             Arc::clone(&self.live_commit_sync_config),
             sync_config_version,
@@ -947,7 +947,7 @@ where
 
         let mover = self.get_mover_by_version(&version).await?;
 
-        let git_submodules_action = get_strip_git_submodules_by_version(
+        let git_submodules_action = get_git_submodule_action_by_version(
             ctx,
             Arc::clone(&self.live_commit_sync_config),
             &version,

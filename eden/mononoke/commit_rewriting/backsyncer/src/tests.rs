@@ -32,7 +32,7 @@ use cloned::cloned;
 use commit_graph::CommitGraphRef;
 use commit_transformation::upload_commits;
 use context::CoreContext;
-use cross_repo_sync::get_strip_git_submodules_by_version;
+use cross_repo_sync::get_git_submodule_action_by_version;
 use cross_repo_sync::rewrite_commit;
 use cross_repo_sync::CandidateSelectionHint;
 use cross_repo_sync::CommitSyncContext;
@@ -1370,7 +1370,7 @@ async fn init_repos(
 
     let live_commit_sync_config = Arc::new(lv_cfg);
 
-    let git_submodules_action = get_strip_git_submodules_by_version(
+    let git_submodules_action = get_git_submodule_action_by_version(
         &ctx,
         live_commit_sync_config.clone(),
         &version,
