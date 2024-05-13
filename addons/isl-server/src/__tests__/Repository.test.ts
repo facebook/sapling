@@ -280,7 +280,7 @@ describe('Repository', () => {
     }
 
     it('runs operations', async () => {
-      runOperation({
+      await runOperation({
         args: ['commit', '--message', 'hi'],
       });
 
@@ -292,7 +292,7 @@ describe('Repository', () => {
     });
 
     it('handles succeedable revsets', async () => {
-      runOperation({
+      await runOperation({
         args: ['rebase', '--rev', {type: 'succeedable-revset', revset: 'aaa'}],
       });
 
@@ -304,7 +304,7 @@ describe('Repository', () => {
     });
 
     it('handles exact revsets', async () => {
-      runOperation({
+      await runOperation({
         args: ['rebase', '--rev', {type: 'exact-revset', revset: 'aaa'}],
       });
 
@@ -316,7 +316,7 @@ describe('Repository', () => {
     });
 
     it('handles repo-relative files', async () => {
-      runOperation({
+      await runOperation({
         args: ['add', {type: 'repo-relative-file', path: 'path/to/file.txt'}],
       });
 
@@ -328,7 +328,7 @@ describe('Repository', () => {
     });
 
     it('handles allowed configs', async () => {
-      runOperation({
+      await runOperation({
         args: ['commit', {type: 'config', key: 'ui.allowemptycommit', value: 'True'}],
       });
 
@@ -340,7 +340,7 @@ describe('Repository', () => {
     });
 
     it('disallows some commands', async () => {
-      runOperation({
+      await runOperation({
         args: ['debugsh'],
       });
 
@@ -352,7 +352,7 @@ describe('Repository', () => {
     });
 
     it('disallows unknown configs', async () => {
-      runOperation({
+      await runOperation({
         args: ['commit', {type: 'config', key: 'foo.bar', value: '1'}],
       });
 
@@ -364,7 +364,7 @@ describe('Repository', () => {
     });
 
     it('disallows unstructured --config flag', async () => {
-      runOperation({
+      await runOperation({
         args: ['commit', '--config', 'foo.bar=1'],
       });
 

@@ -597,12 +597,16 @@ export class Repository {
     const {cwd} = ctx;
     const cwdRelativeArgs = this.normalizeOperationArgs(cwd, operation.args);
     const {stdin} = operation;
+
     const {command, args, options} = getExecParams(
       this.info.command,
       cwdRelativeArgs,
       cwd,
       stdin ? {input: stdin} : undefined,
-      Internal.additionalEnvForCommand?.(operation),
+      {
+        ...Internal.additionalEnvForCommand?.(operation),
+        ...(await this.getMergeToolEnvVars(ctx)),
+      },
     );
 
     ctx.logger.log('run operation: ', command, cwdRelativeArgs.join(' '));
@@ -631,6 +635,41 @@ export class Repository {
     });
     handleAbortSignalOnProcess(execution, signal);
     await execution;
+  }
+
+  /**
+   * Get environment variables to set up which merge tool to use during an operation.
+   * If you're using the default merge tool, use :merge3 instead for slightly better merge information.
+   * If you've configured a custom merge tool, make sure we don't overwrite it...
+   * ...unless the custom merge tool is *not* a GUI tool, like vimdiff, which would not be interactable in ISL.
+   */
+  async getMergeToolEnvVars(ctx: RepositoryContext): Promise<Record<string, string> | undefined> {
+    const tool = ctx.knownConfigs?.get('ui.merge') ?? 'internal:merge';
+    let usesCustomMerge = tool !== 'internal:merge';
+
+    if (usesCustomMerge) {
+      const customToolUsesGui =
+        (
+          await this.forceGetConfig(ctx, `merge-tools.${tool}.gui`).catch(() => undefined)
+        )?.toLowerCase() === 'true';
+      if (!customToolUsesGui) {
+        ctx.logger.warn(
+          `configured custom merge tool '${tool}' is not a GUI tool, using :merge3 instead`,
+        );
+        usesCustomMerge = false;
+      } else {
+        ctx.logger.info(`using configured custom GUI merge tool ${tool}`);
+      }
+    }
+
+    return usesCustomMerge
+      ? // allow sl to use the already configured merge tool
+        {}
+      : // otherwise, use 3-way merge
+        {
+          HGMERGE: ':merge3',
+          SL_MERGE: ':merge3',
+        };
   }
 
   setPageFocus(page: string, state: PageVisibility) {

@@ -204,10 +204,6 @@ export function getExecParams(
     // allow constructing the `.git/sl` repo regardless of the identity.
     // allow automatically setting ui.username.
     SL_AUTOMATION_EXCEPT: 'ghrevset,phrevset,sniff,username',
-    // Prevent user-specified merge tools from attempting to
-    // open interactive editors.
-    HGMERGE: ':merge3',
-    SL_MERGE: ':merge3',
     EDITOR: undefined,
     VISUAL: undefined,
     HGUSER: undefined,
