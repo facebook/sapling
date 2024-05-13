@@ -258,31 +258,40 @@ function ISLNullState({repoError}: {repoError: RepositoryError}) {
       }
     } else if (repoError.type === 'cwdDoesNotExist') {
       content = (
-        <ErrorNotice
-          title={
-            <T replace={{$cwd: repoError.cwd}}>
-              cwd $cwd does not exist. Make sure the folder exists.
-            </T>
-          }
-          error={
-            new Error(
-              t('$cwd not found', {
-                replace: {$cwd: repoError.cwd},
-              }),
-            )
-          }
-          buttons={[
-            <Button
-              key="help-button"
-              onClick={e => {
-                platform.openExternalLink('https://sapling-scm.com/docs/introduction/installation');
-                e.preventDefault();
-                e.stopPropagation();
-              }}>
-              <T>See installation docs</T>
-            </Button>,
-          ]}
-        />
+        <>
+          {Internal.InternalInstallationDocs ? (
+            <Internal.InternalInstallationDocs repoError={repoError} />
+          ) : (
+            <ErrorNotice
+              title={
+                <T replace={{$cwd: repoError.cwd}}>
+                  cwd $cwd does not exist. Make sure the folder exists.
+                </T>
+              }
+              error={
+                new Error(
+                  t('$cwd not found', {
+                    replace: {$cwd: repoError.cwd},
+                  }),
+                )
+              }
+              buttons={[
+                <Button
+                  key="help-button"
+                  onClick={e => {
+                    platform.openExternalLink(
+                      'https://sapling-scm.com/docs/introduction/installation',
+                    );
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }}>
+                  <T>See installation docs</T>
+                </Button>,
+              ]}
+            />
+          )}
+          <CwdSelections dismiss={() => null} />
+        </>
       );
     } else if (repoError.type === 'invalidCommand') {
       if (Internal.InvalidSlCommand) {

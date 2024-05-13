@@ -21,7 +21,7 @@ import {ButtonDropdown} from './components/ButtonDropdown';
 import {Divider} from './components/Divider';
 import {RadioGroup} from './components/Radio';
 import {T, t} from './i18n';
-import {lazyAtom, writeAtom} from './jotaiUtils';
+import {writeAtom} from './jotaiUtils';
 import {serverCwd} from './repositoryData';
 import {repositoryInfo} from './serverAPIState';
 import {registerCleanup, registerDisposable} from './utils';
