@@ -1,8 +1,5 @@
 #debugruntest-compatible
 
-#require no-eden
-
-
   $ newclientrepo
   $ echo foo > .gitignore
 Avoid dirstate race condition where added files end up as NEED_CHECK.
@@ -34,14 +31,7 @@ Avoid dirstate race condition where added files end up as NEED_CHECK.
 
 We want the ignore files to be present in our treestate.
   $ hg debugtree list
-  .gitignore: 0100644 4 + EXIST_P1 EXIST_NEXT  (no-windows !)
-  .gitignore: 0100666 4 + EXIST_P1 EXIST_NEXT  (windows !)
+  .gitignore: * 4 + EXIST_P1 EXIST_NEXT  (glob) (no-eden !)
   foo/a: 00 -1 -1 NEED_CHECK  (fsmonitor !)
   foo/b: 00 -1 -1 NEED_CHECK  (fsmonitor !)
   foo/c: 00 -1 -1 NEED_CHECK  (fsmonitor !)
-
-#if fsmonitor
-We shouldn't need to check any files from treestate.
-  $ LOG=workingcopy::filesystem::watchmanfs=debug hg status 2>&1 | grep treestate_needs_check
-  * treestate_needs_check=0 (glob)
-#endif

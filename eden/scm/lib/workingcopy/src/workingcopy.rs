@@ -27,7 +27,6 @@ use manifest_tree::ReadTreeManifest;
 use manifest_tree::TreeManifest;
 use once_cell::sync::Lazy;
 use parking_lot::Mutex;
-use pathmatcher::DifferenceMatcher;
 use pathmatcher::DynMatcher;
 use pathmatcher::GitignoreMatcher;
 use pathmatcher::IntersectMatcher;
@@ -404,16 +403,6 @@ impl WorkingCopy {
 
         let manifests =
             WorkingCopy::current_manifests(&self.treestate.lock(), &self.tree_resolver)?;
-        let mut manifest_matchers: Vec<DynMatcher> = Vec::with_capacity(manifests.len());
-
-        let case_sensitive = self.vfs.case_sensitive();
-
-        for manifest in manifests.iter() {
-            manifest_matchers.push(Arc::new(manifest_tree::ManifestMatcher::new(
-                manifest.clone(),
-                case_sensitive,
-            )));
-        }
 
         let sparse_matcher = self
             .filesystem
@@ -424,17 +413,7 @@ impl WorkingCopy {
             matcher = Arc::new(IntersectMatcher::new(vec![matcher, sparse]));
         }
 
-        // The GitignoreMatcher minus files in the repo. In other words, it does
-        // not match an ignored file that has been previously committed.
-        let mut ignore_matcher: DynMatcher = Arc::new(DifferenceMatcher::new(
-            self.ignore_matcher.clone(),
-            UnionMatcher::new_or_single(manifest_matchers),
-        ));
-
-        // If we have been asked to report ignored files, don't skip them in the matcher.
-        if !include_ignored {
-            matcher = Arc::new(DifferenceMatcher::new(matcher, ignore_matcher.clone()));
-        }
+        let mut ignore_matcher: DynMatcher = self.ignore_matcher.clone();
 
         // Treat files outside sparse profile as ignored.
         if let Some(sparse) = sparse_matcher.clone() {

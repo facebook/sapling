@@ -66,13 +66,15 @@
 
   $ touch buildstuff/output builddocs.txt
 
+# x.pyc disappears w/ fsmonitor because the above "status" removes it from the treestate.
+# We don't track ignored files in the treestate by default.
   $ hg status
   ? .gitignore
   ? Makefile
   ? builddocs.txt
   ? exp/.gitignore
   ? exp/i.tmp
-  ? x.pyc
+  ? x.pyc (no-fsmonitor !)
 
 # Test exclusion patterns
 
