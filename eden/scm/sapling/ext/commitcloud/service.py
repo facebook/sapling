@@ -19,7 +19,8 @@ def get(ui, repo=None):
     elif servicetype == "remote":
         return httpsservice.HttpsCommitCloudService(ui)
     elif servicetype == "edenapi":
-        return edenapiservice.EdenApiService(ui, repo)
+        fallback = httpsservice.HttpsCommitCloudService(ui)
+        return edenapiservice.EdenApiService(ui, repo, fallback)
     else:
         msg = "Unrecognized commitcloud.servicetype: %s" % servicetype
         raise error.Abort(msg)
