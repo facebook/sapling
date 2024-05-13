@@ -442,6 +442,12 @@ export class Repository {
       } else {
         ctx.logger.info(`using configured custom GUI merge tool ${tool}`);
       }
+      ctx.tracker.track('UsingExternalMergeTool', {
+        extras: {
+          tool,
+          isValid: usesCustomMerge,
+        },
+      });
     } else {
       ctx.logger.info(`using default :merge3 merge tool`);
     }

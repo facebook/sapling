@@ -90,6 +90,7 @@ export type TrackEventName =
   | 'ConfirmDragAndDropRebase'
   | 'ResolveOperation'
   | 'ResolveInExternalMergeToolOperation'
+  | 'UsingExternalMergeTool'
   | 'RevertOperation'
   | 'RmOperation'
   | 'RunMergeDriversOperation'
