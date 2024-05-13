@@ -37,6 +37,7 @@ use git_types::fetch_non_blob_git_object_bytes;
 use git_types::fetch_packfile_base_item;
 use git_types::fetch_packfile_base_item_if_exists;
 use git_types::upload_packfile_base_item;
+use git_types::DeltaObjectKind;
 use git_types::GitDeltaManifestEntryOps;
 use git_types::GitDeltaManifestOps;
 use git_types::GitIdentifier;
@@ -192,11 +193,11 @@ pub async fn ref_oid_mapping(
 fn filter_object(
     filter: Arc<Option<FetchFilter>>,
     path: &MPath,
-    entry: &impl GitDeltaManifestEntryOps,
+    kind: DeltaObjectKind,
+    size: u64,
 ) -> bool {
     match filter.as_ref() {
         Some(filter) => {
-            let (kind, size) = (entry.full_object_kind(), entry.full_object_size());
             let too_deep =
                 (kind.is_tree() || kind.is_blob()) && path.depth() >= filter.max_tree_depth;
             let too_large = kind.is_blob() && size >= filter.max_blob_size;
@@ -241,11 +242,12 @@ async fn trees_and_blobs_count(
                     .try_filter_map(|(path, entry)| {
                         let filter = filter.clone();
                         async move {
+                            let (kind, size) = (entry.full_object_kind(), entry.full_object_size());
                             // If the entry does not pass the filter, then it should not be included in the count
-                            if !filter_object(filter, &path, &entry) {
+                            if !filter_object(filter.clone(), &path, kind, size) {
                                 return Ok(None);
                             }
-                            let delta = delta_base(&entry, delta_inclusion);
+                            let delta = delta_base(&entry, delta_inclusion, filter);
                             let output = (
                                 entry.full_object_oid(),
                                 delta.map(|delta| delta.base_object_oid()),
@@ -301,6 +303,7 @@ fn delta_below_threshold(
 fn delta_base(
     entry: &impl GitDeltaManifestEntryOps,
     delta_inclusion: DeltaInclusion,
+    filter: Arc<Option<FetchFilter>>,
 ) -> Option<impl ObjectDeltaOps + Send> {
     match delta_inclusion {
         DeltaInclusion::Include {
@@ -313,7 +316,12 @@ fn delta_base(
                     .cmp(&b.instructions_compressed_size())
             })
             .filter(|delta| {
+                let path = delta.base_object_path();
+                let kind = delta.base_object_kind();
+                let size = delta.base_object_size();
+                // Only use the delta if it is below the threshold and passes the filter
                 delta_below_threshold(*delta, entry.full_object_size(), inclusion_threshold)
+                    && filter_object(filter, path, kind, size)
             })
             .cloned(),
         // Can't use the delta variant if the request prevents us from using it
@@ -809,6 +817,7 @@ async fn blob_and_tree_packfile_stream<'a>(
     // efficiently in the packfile/bundle
     let (second_blobstore, second_ctx) = (blobstore.clone(), ctx.clone());
     let (spare_blobstore, spare_ctx) = (blobstore.clone(), ctx.clone());
+    let delta_filter = filter.clone();
     let packfile_item_stream = target_commits
         .map_ok(move |changeset_id| {
             let blobstore = blobstore.clone();
@@ -829,10 +838,11 @@ async fn blob_and_tree_packfile_stream<'a>(
             let filter = filter.clone();
             async move {
                 let object_id = entry.full_object_oid();
+                let (kind, size) = (entry.full_object_kind(), entry.full_object_size());
                 if base_set.contains(&object_id) {
                     // This object is already present at the client, so do not include it in the packfile
                     Ok(None)
-                } else if !filter_object(filter, &path, &entry) {
+                } else if !filter_object(filter, &path, kind, size) {
                     // This object does not pass the filter specified by the client, so do not include it in the packfile
                     Ok(None)
                 } else {
@@ -848,7 +858,8 @@ async fn blob_and_tree_packfile_stream<'a>(
                 std::result::Result::Ok((changeset_id, path, entry)) => {
                     let ctx = second_ctx.clone();
                     let blobstore = second_blobstore.clone();
-                    let delta = delta_base(&entry, delta_inclusion);
+                    let filter = delta_filter.clone();
+                    let delta = delta_base(&entry, delta_inclusion, filter);
                     let weight = delta.as_ref().map_or(entry.full_object_size(), |delta| {
                         delta.instructions_compressed_size()
                     }) as usize;

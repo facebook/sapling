@@ -151,6 +151,15 @@ pub trait ObjectDeltaOps {
     /// Returns the OID of the base object.
     fn base_object_oid(&self) -> ObjectId;
 
+    /// Returns the path of the base object.
+    fn base_object_path(&self) -> &MPath;
+
+    /// Returns the kind of the base object.
+    fn base_object_kind(&self) -> ObjectKind;
+
+    /// Returns the size of the base object in bytes.
+    fn base_object_size(&self) -> u64;
+
     /// Returns the instructions bytes of the delta.
     async fn instruction_bytes(
         &self,
@@ -173,6 +182,18 @@ impl ObjectDeltaOps for ObjectDelta {
 
     fn base_object_oid(&self) -> ObjectId {
         self.base.oid
+    }
+
+    fn base_object_path(&self) -> &MPath {
+        &self.base.path
+    }
+
+    fn base_object_kind(&self) -> ObjectKind {
+        self.base.kind
+    }
+
+    fn base_object_size(&self) -> u64 {
+        self.base.size
     }
 
     async fn instruction_bytes(
