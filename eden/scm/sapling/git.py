@@ -371,6 +371,8 @@ def openstore(repo):
     """Obtain a gitstore object to access git odb"""
     gitdir = readgitdir(repo)
     if gitdir:
+        if DOTGIT_REQUIREMENT not in repo.storerequirements:
+            write_maintained_git_config(repo)
         return bindings.gitstore.gitstore(gitdir, repo.ui._rcfg)
 
 
@@ -389,6 +391,89 @@ def readconfig(repo):
         section, name = sectionname.split(".", 1)
         config.set(section, name, value, "git")
     return config
+
+
+# By default, `git maintenance run --auto` (run by `git fetch`) triggers GC,
+# which runs repack. The gc/repack can cause compatibility issues with
+# shallow/not-shallow mix, such as some blob or tree cannot be read. `repack
+# --filter=tree:0` might work but it can be slow.
+#
+# `git maintenance run --task incremental-repack` and
+# `git maintenance run --task loose-objects` seem to work.
+#
+# `repack.writeBitmaps` is incompatible with `repack --filter...` and
+# might cause issues. Therefore disable it.
+MAINTAINED_GIT_CONFIG = """
+[maintenance "gc"]
+  enabled = false
+[maintenance "loose-objects"]
+  enabled = true
+[maintenance "incremental-repack"]
+  enabled = true
+[repack]
+  writeBitmaps = false
+"""
+
+
+@cached
+def write_maintained_git_config(repo):
+    """Update the git repo config file so it contains the maintained config."""
+    # For performance we are going to modify the git/config directly.
+    gitdir = readgitdir(repo)
+    config_path = os.path.join(gitdir, "config")
+    try:
+        old_config = util.readfileutf8(config_path)
+    except FileNotFoundError:
+        old_config = ""
+    new_config = calculate_new_config(old_config, MAINTAINED_GIT_CONFIG)
+    if new_config != old_config:
+        util.replacefile(config_path, new_config.encode())
+
+
+def calculate_new_config(old_config: str, maintained_config: str):
+    r"""
+    Examples:
+
+    Empty config:
+        >>> print(calculate_new_config('user config', ''))
+        user config
+
+    Add a maintained config section:
+        >>> c = calculate_new_config('user config', 'maintained config') + 'user config2'
+        >>> print(c)
+        user config
+        #### Begin maintained by Sapling ####
+        maintained config
+        #### End maintained by Sapling ####
+        user config2
+
+    No-op change to the maintained config section:
+        >>> print(calculate_new_config(c, 'maintained config'))
+        user config
+        #### Begin maintained by Sapling ####
+        maintained config
+        #### End maintained by Sapling ####
+        user config2
+
+    Change the maintained config section:
+        >>> print(calculate_new_config(c, 'maintained config - changed'))
+        user config
+        #### Begin maintained by Sapling ####
+        maintained config - changed
+        #### End maintained by Sapling ####
+        user config2
+    """
+    begin_split = "\n#### Begin maintained by Sapling ####\n"
+    end_split = "\n#### End maintained by Sapling ####\n"
+    if begin_split in old_config and end_split in old_config:
+        head, rest = old_config.split(begin_split, 1)
+        old_maintained, tail = rest.split(end_split, 1)
+    else:
+        head = old_config
+        tail = old_maintained = ""
+    if old_maintained == maintained_config:
+        return old_config
+    return "".join([head, begin_split, maintained_config, end_split, tail])
 
 
 def update_and_persist_config(repo, section, name, value):
