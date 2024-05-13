@@ -57,6 +57,7 @@ use edenapi_types::SnapshotRawData;
 use edenapi_types::SuffixQueryResponse;
 use edenapi_types::TreeAttributes;
 use edenapi_types::TreeEntry;
+use edenapi_types::UpdateReferencesParams;
 use edenapi_types::UploadSnapshotResponse;
 use edenapi_types::UploadToken;
 use edenapi_types::WorkspaceData;
@@ -559,6 +560,12 @@ py_class!(pub class client |py| {
         -> PyResult<Serde<ReferencesData>>
     {
         self.inner(py).as_ref().cloud_references_py(data, py)
+    }
+
+    def cloudupdatereferences(&self, data: Serde<UpdateReferencesParams>)
+        -> PyResult<Serde<ReferencesData>>
+    {
+        self.inner(py).as_ref().cloud_update_references_py(data, py)
     }
 });
 

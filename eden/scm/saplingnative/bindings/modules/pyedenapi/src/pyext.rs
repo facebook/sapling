@@ -55,6 +55,7 @@ use edenapi_types::ReferencesData;
 use edenapi_types::SetBookmarkResponse;
 use edenapi_types::TreeAttributes;
 use edenapi_types::TreeEntry;
+use edenapi_types::UpdateReferencesParams;
 use edenapi_types::UploadHgChangeset;
 use edenapi_types::UploadToken;
 use edenapi_types::WorkspaceData;
@@ -735,6 +736,18 @@ pub trait EdenApiPyExt: EdenApi {
             .map_pyerr(py)?
             .map_pyerr(py)
             .map(Serde)
+    }
+
+    fn cloud_update_references_py(
+        &self,
+        data: Serde<UpdateReferencesParams>,
+        py: Python,
+    ) -> PyResult<Serde<ReferencesData>> {
+        let responses = py
+            .allow_threads(|| block_unless_interrupted(self.cloud_update_references(data.0)))
+            .map_pyerr(py)?
+            .map_pyerr(py)?;
+        Ok(Serde(responses))
     }
 }
 

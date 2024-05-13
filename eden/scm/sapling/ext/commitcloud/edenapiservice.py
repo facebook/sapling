@@ -5,6 +5,8 @@
 
 from __future__ import absolute_import
 
+from bindings import clientinfo as clientinfomod
+
 # Standard Library
 
 from sapling import error
@@ -80,7 +82,69 @@ class EdenApiService(baseservice.BaseService):
         clientinfo=None,
         logopts={},
     ):
-        raise NotImplementedError  # Not supported in edenapi service yet
+        self.ui.debug("sending 'update_references' request\n", component="commitcloud")
+        oldheads = oldheads or []
+        newheads = newheads or []
+        oldbookmarks = oldbookmarks or []
+        newbookmarks = newbookmarks or {}
+        oldremotebookmarks = oldremotebookmarks or []
+        newremotebookmarks = newremotebookmarks or {}
+
+        # remove duplicates, must preserve order in the newheads list
+        newheadsset = set(newheads)
+        commonset = set([item for item in oldheads if item in newheadsset])
+
+        newheads = [h for h in newheads if h not in commonset]
+        oldheads = [h for h in oldheads if h not in commonset]
+
+        client_correlator = clientinfomod.get_client_correlator().decode()
+        client_entry_point = clientinfomod.get_client_entry_point().decode()
+        self.ui.log(
+            "commitcloud_updates",
+            version=version,
+            repo=reponame,
+            workspace=workspace,
+            oldheadcount=len(oldheads),
+            newheadcount=len(newheads),
+            oldbookmarkcount=len(oldbookmarks),
+            newbookmarkcount=len(newbookmarks),
+            oldremotebookmarkcount=len(oldremotebookmarks),
+            newremotebookmarkcount=len(newremotebookmarks),
+            client_correlator=client_correlator,
+            client_entry_point=client_entry_point,
+            **logopts,
+        )
+
+        # send request
+
+        response = self.repo.edenapi.cloudupdatereferences(
+            {
+                "version": version,
+                "reponame": reponame,
+                "workspace": workspace,
+                "removed_heads": oldheads,
+                "new_heads": newheads,
+                "removed_bookmarks": oldbookmarks,
+                "updated_bookmarks": newbookmarks,
+                "removed_remote_bookmarks": oldremotebookmarks,
+                "updated_remote_bookmarks": newremotebookmarks,
+                "new_snapshots": [],
+                "removed_snapshots": [],
+                "clientinfo": None,
+            }
+        )
+        newversion = response["version"]
+
+        self.ui.debug(
+            "'update_references' accepted update, old version is %d, new version is %d\n"
+            % (version, newversion),
+            component="commitcloud",
+        )
+
+        return (
+            True,
+            self._makeemptyreferences(newversion),
+        )
 
     def getsmartlog(self, reponame, workspace, repo, limit, flags=[]):
         raise NotImplementedError  # Not supported in edenapi service yet
