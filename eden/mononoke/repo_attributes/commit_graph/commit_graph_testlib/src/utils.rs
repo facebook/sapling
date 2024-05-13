@@ -653,19 +653,50 @@ pub async fn assert_ancestors_within_distance(
     ctx: &CoreContext,
     graph: &CommitGraph,
     cs_ids: Vec<&str>,
-    distance: u64,
-    expected_ancestors: Vec<&str>,
+    max_distance: u64,
+    expected_ancestors_and_distances: Vec<(&str, u64)>,
 ) -> Result<()> {
     let cs_ids: Vec<_> = cs_ids.into_iter().map(name_cs_id).collect();
-    let ancestors = graph
-        .ancestors_within_distance(ctx, cs_ids, distance)
+    let ancestors_and_distances = graph
+        .ancestors_within_distance_stream(ctx, cs_ids.clone(), max_distance)
         .await?
         .try_collect::<HashSet<_>>()
         .await?;
 
-    let expected_ancestors: HashSet<_> = expected_ancestors.into_iter().map(name_cs_id).collect();
+    let expected_ancestors_and_distances: HashSet<_> = expected_ancestors_and_distances
+        .into_iter()
+        .map(|(name, distance)| (name_cs_id(name), distance))
+        .collect();
 
-    assert_eq!(ancestors, expected_ancestors);
+    assert_eq!(ancestors_and_distances, expected_ancestors_and_distances);
+
+    let ancestors_and_boundaries = graph
+        .ancestors_within_distance(ctx, cs_ids, max_distance)
+        .await?;
+
+    assert_eq!(
+        ancestors_and_boundaries
+            .ancestors
+            .into_iter()
+            .collect::<HashSet<_>>(),
+        expected_ancestors_and_distances
+            .iter()
+            .map(|(cs_id, _)| cs_id)
+            .copied()
+            .collect::<HashSet<_>>()
+    );
+    assert_eq!(
+        ancestors_and_boundaries
+            .boundaries
+            .into_iter()
+            .collect::<HashSet<_>>(),
+        expected_ancestors_and_distances
+            .iter()
+            .filter(|(_, distance)| *distance == max_distance)
+            .map(|(cs_id, _)| cs_id)
+            .copied()
+            .collect::<HashSet<_>>()
+    );
 
     Ok(())
 }

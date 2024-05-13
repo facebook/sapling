@@ -1477,16 +1477,37 @@ pub async fn test_ancestors_within_distance(
     .await?;
     storage.flush();
 
-    assert_ancestors_within_distance(&ctx, &graph, vec!["N"], 0, vec!["N"]).await?;
-    assert_ancestors_within_distance(&ctx, &graph, vec!["N"], 1, vec!["N", "L", "K"]).await?;
-    assert_ancestors_within_distance(&ctx, &graph, vec!["N"], 2, vec!["N", "L", "K", "E", "J"])
-        .await?;
+    assert_ancestors_within_distance(&ctx, &graph, vec!["N"], 0, vec![("N", 0)]).await?;
+    assert_ancestors_within_distance(
+        &ctx,
+        &graph,
+        vec!["N"],
+        1,
+        vec![("N", 0), ("L", 1), ("K", 1)],
+    )
+    .await?;
+    assert_ancestors_within_distance(
+        &ctx,
+        &graph,
+        vec!["N"],
+        2,
+        vec![("N", 0), ("L", 1), ("K", 1), ("E", 2), ("J", 2)],
+    )
+    .await?;
     assert_ancestors_within_distance(
         &ctx,
         &graph,
         vec!["N"],
         3,
-        vec!["N", "L", "K", "E", "J", "I", "D"],
+        vec![
+            ("N", 0),
+            ("L", 1),
+            ("K", 1),
+            ("E", 2),
+            ("J", 2),
+            ("I", 3),
+            ("D", 3),
+        ],
     )
     .await?;
     assert_ancestors_within_distance(
@@ -1494,7 +1515,17 @@ pub async fn test_ancestors_within_distance(
         &graph,
         vec!["N"],
         4,
-        vec!["N", "L", "K", "E", "J", "I", "D", "F", "C"],
+        vec![
+            ("N", 0),
+            ("L", 1),
+            ("K", 1),
+            ("E", 2),
+            ("J", 2),
+            ("I", 3),
+            ("D", 3),
+            ("F", 4),
+            ("C", 4),
+        ],
     )
     .await?;
     assert_ancestors_within_distance(
@@ -1502,7 +1533,18 @@ pub async fn test_ancestors_within_distance(
         &graph,
         vec!["N"],
         5,
-        vec!["N", "L", "K", "E", "J", "I", "D", "F", "C", "B"],
+        vec![
+            ("N", 0),
+            ("L", 1),
+            ("K", 1),
+            ("E", 2),
+            ("J", 2),
+            ("I", 3),
+            ("D", 3),
+            ("F", 4),
+            ("C", 4),
+            ("B", 5),
+        ],
     )
     .await?;
     assert_ancestors_within_distance(
@@ -1510,7 +1552,19 @@ pub async fn test_ancestors_within_distance(
         &graph,
         vec!["N"],
         6,
-        vec!["N", "L", "K", "E", "J", "I", "D", "F", "C", "B", "A"],
+        vec![
+            ("N", 0),
+            ("L", 1),
+            ("K", 1),
+            ("E", 2),
+            ("J", 2),
+            ("I", 3),
+            ("D", 3),
+            ("F", 4),
+            ("C", 4),
+            ("B", 5),
+            ("A", 6),
+        ],
     )
     .await?;
     assert_ancestors_within_distance(
@@ -1518,17 +1572,35 @@ pub async fn test_ancestors_within_distance(
         &graph,
         vec!["N"],
         100,
-        vec!["N", "L", "K", "E", "J", "I", "D", "F", "C", "B", "A"],
+        vec![
+            ("N", 0),
+            ("L", 1),
+            ("K", 1),
+            ("E", 2),
+            ("J", 2),
+            ("I", 3),
+            ("D", 3),
+            ("F", 4),
+            ("C", 4),
+            ("B", 5),
+            ("A", 6),
+        ],
     )
     .await?;
-    assert_ancestors_within_distance(&ctx, &graph, vec!["N", "M", "H"], 0, vec!["N", "M", "H"])
-        .await?;
+    assert_ancestors_within_distance(
+        &ctx,
+        &graph,
+        vec!["N", "M", "H"],
+        0,
+        vec![("N", 0), ("M", 0), ("H", 0)],
+    )
+    .await?;
     assert_ancestors_within_distance(
         &ctx,
         &graph,
         vec!["N", "M", "H"],
         1,
-        vec!["N", "M", "H", "L", "K", "G"],
+        vec![("N", 0), ("M", 0), ("H", 0), ("L", 1), ("K", 1), ("G", 1)],
     )
     .await?;
     assert_ancestors_within_distance(&ctx, &graph, vec![], 100, vec![]).await?;

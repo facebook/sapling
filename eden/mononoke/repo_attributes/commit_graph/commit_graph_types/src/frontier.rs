@@ -136,6 +136,12 @@ impl Extend<(ChangesetId, Generation)> for ChangesetFrontier {
 #[derive(Clone, Debug)]
 pub struct ChangesetFrontierWithinDistance(BTreeMap<Generation, HashMap<ChangesetId, u64>>);
 
+#[derive(Clone, Debug)]
+pub struct AncestorsWithinDistance {
+    pub ancestors: Vec<ChangesetId>,
+    pub boundaries: Vec<ChangesetId>,
+}
+
 impl ChangesetFrontierWithinDistance {
     pub fn new() -> Self {
         Self(Default::default())
