@@ -53,7 +53,7 @@ Test with empty file
   diff --git a/a b/empty
   --- a/a
   +++ b/empty
-  @@ -1,6 +1,0 @@
+  @@ -1,6 +0,0 @@
   -a
   -b
   -c
@@ -102,9 +102,9 @@ Test copy
   @@ -2,1 +2,1 @@
   -b
   +x
-  @@ -5,1 +5,0 @@
+  @@ -5,1 +4,0 @@
   -e
-  @@ -7,0 +6,1 @@
+  @@ -6,0 +6,1 @@
   +g
 
 Test move

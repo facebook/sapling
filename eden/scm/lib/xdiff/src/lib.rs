@@ -267,11 +267,18 @@ where
         self.emit(
             format!(
                 "@@ -{},{} +{},{} @@\n",
-                // Of course line ranges in the diff format start from 1.
-                &cluster_bounds.remove.start + 1,
+                // Increment since line numbers in a diff start from 1. If a
+                // hunk contains zero lines, the line number has to be one lower
+                // than one would expect. So, don't increment in that case.
+                cluster_bounds.remove.start
+                    + (if cluster_bounds.remove.is_empty() {
+                        0
+                    } else {
+                        1
+                    }),
                 &cluster_bounds.remove.len(),
-                &cluster_bounds.add.start + 1,
-                &cluster_bounds.add.len()
+                cluster_bounds.add.start + (if cluster_bounds.add.is_empty() { 0 } else { 1 }),
+                &cluster_bounds.add.len(),
             )
             .as_bytes(),
         );
@@ -1060,11 +1067,55 @@ d
             r"diff --git a/x b/x
 --- a/x
 +++ b/x
-@@ -1,0 +1,4 @@
+@@ -0,0 +1,4 @@
 +a
 +b
 +c
 +d
+"
+        );
+    }
+
+    #[test]
+    fn test_diff_unified_with_zero_context_lines() {
+        let a = r#"lorem
+ipsum
+dolor
+sit
+consectetur
+"#;
+
+        let b = r#"lorem
+dolor
+sit
+amet
+consectetur
+"#;
+
+        assert_eq!(
+            String::from_utf8_lossy(&diff_unified(
+                Some(DiffFile {
+                    contents: FileContent::Inline(&a),
+                    path: "x",
+                    file_type: FileType::Regular,
+                }),
+                Some(DiffFile {
+                    contents: FileContent::Inline(&b),
+                    path: "x",
+                    file_type: FileType::Regular,
+                }),
+                DiffOpts {
+                    context: 0,
+                    copy_info: CopyInfo::None,
+                }
+            )),
+            r"diff --git a/x b/x
+--- a/x
++++ b/x
+@@ -2,1 +1,0 @@
+-ipsum
+@@ -4,0 +4,1 @@
++amet
 "
         );
     }
