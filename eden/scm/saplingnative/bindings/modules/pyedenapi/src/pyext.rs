@@ -43,6 +43,7 @@ use edenapi_types::EdenApiServerError;
 use edenapi_types::FetchSnapshotRequest;
 use edenapi_types::FetchSnapshotResponse;
 use edenapi_types::FileResponse;
+use edenapi_types::GetReferencesParams;
 use edenapi_types::HgChangesetContent;
 use edenapi_types::HgFilenodeData;
 use edenapi_types::HgMutationEntryContent;
@@ -50,6 +51,7 @@ use edenapi_types::HistoryEntry;
 use edenapi_types::IndexableId;
 use edenapi_types::LandStackResponse;
 use edenapi_types::LookupResult;
+use edenapi_types::ReferencesData;
 use edenapi_types::SetBookmarkResponse;
 use edenapi_types::TreeAttributes;
 use edenapi_types::TreeEntry;
@@ -722,6 +724,17 @@ pub trait EdenApiPyExt: EdenApi {
             .map_pyerr(py)?
             .map_pyerr(py)?;
         Ok(Serde(responses))
+    }
+
+    fn cloud_references_py(
+        &self,
+        data: Serde<GetReferencesParams>,
+        py: Python,
+    ) -> PyResult<Serde<ReferencesData>> {
+        py.allow_threads(|| block_unless_interrupted(self.cloud_references(data.0)))
+            .map_pyerr(py)?
+            .map_pyerr(py)
+            .map(Serde)
     }
 }
 

@@ -32,7 +32,39 @@ class EdenApiService(baseservice.BaseService):
         baseversion,
         clientinfo=None,
     ):
-        raise NotImplementedError  # Not supported in edenapi service yet
+        self.ui.debug("Calling 'get_references' on edenapi\n", component="commitcloud")
+        response = self.repo.edenapi.cloudreferences(
+            {
+                "workspace": workspace,
+                "reponame": reponame,
+                "version": baseversion,
+                "client_info": None,
+            }
+        )
+        version = response["version"]
+
+        if version == 0:
+            self.ui.debug(
+                "'get_references' returns that workspace '%s' is not known by server\n"
+                % workspace,
+                component="commitcloud",
+            )
+            return self._makeemptyreferences(version)
+
+        if version == baseversion:
+            self.ui.debug(
+                "'get_references' confirms the current version %s is the latest\n"
+                % version,
+                component="commitcloud",
+            )
+            return self._makeemptyreferences(version)
+
+        self.ui.debug(
+            "'get_references' returns version %s, current version %s\n"
+            % (version, baseversion),
+            component="commitcloud",
+        )
+        return self._makereferences(self._castreferences(response))
 
     def updatereferences(
         self,
@@ -90,3 +122,32 @@ class EdenApiService(baseservice.BaseService):
     def cleanupworkspace(self, reponame, workspace):
         """Cleanup unnecessary remote bookmarks from the given workspace"""
         raise NotImplementedError  # Not supported in the tests yet
+
+    def _castreferences(self, refs):
+        """
+        1. Create list of heads from head_dates data. Server may omit heads to reduce data transmission.
+        2. The server returns changeset ids as hex encoded bytes, but we need them as str, so we convert them here.
+        """
+        if not refs.get("heads") and refs.get("head_dates"):
+            refs["heads"] = refs.get("head_dates", {}).keys()
+
+        local_bookmarks = dict(
+            map(lambda item: (item[0], item[1].hex()), refs["bookmarks"].items())
+        )
+        heads_dates = dict(
+            map(lambda item: (item[0].hex(), item[1]), refs["heads_dates"].items())
+        )
+        heads = list(map(lambda item: item.hex(), refs["heads"]))
+        snapshots = list(map(lambda item: item.hex(), refs["snapshots"]))
+        remote_bookmarks = []
+        for remote_bookmark in refs["remote_bookmarks"]:
+            if remote_bookmark["node"] is not None:
+                remote_bookmark["node"] = remote_bookmark["node"].hex()
+            remote_bookmarks.append(remote_bookmark)
+
+        refs["remote_bookmarks"] = remote_bookmarks
+        refs["bookmarks"] = local_bookmarks
+        refs["heads_date"] = heads_dates
+        refs["snapshots"] = snapshots
+        refs["heads"] = heads
+        return refs

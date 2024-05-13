@@ -189,7 +189,7 @@ def _sync(
         return 0, None
 
     # Connect to the commit cloud service.
-    serv = service.get(ui)
+    serv = service.get(ui, repo)
 
     origrepostate = _hashrepostate(repo)
 
