@@ -460,7 +460,7 @@ async fn expand_git_submodule_file_change<'a, R: Repo>(
 }
 
 #[async_recursion]
-async fn expand_git_submodule<'a, R: Repo>(
+async fn expand_git_submodule<'a, R>(
     ctx: &'a CoreContext,
     small_repo: &'a R,
     // Parents from the **source repo commmit** being rewritten.
@@ -476,7 +476,10 @@ async fn expand_git_submodule<'a, R: Repo>(
     // Returns a map from submodule path to a list of file changes, so that
     // before the file changes are rewritten, the file content blobs are copied
     // from the appropriate submodule repo into the source repo's blobstore.
-) -> Result<HashMap<SubmodulePath, Vec<(NonRootMPath, FileChange)>>> {
+) -> Result<HashMap<SubmodulePath, Vec<(NonRootMPath, FileChange)>>>
+where
+    R: Repo,
+{
     log_debug(ctx, format!("Expanding submodule {}", &submodule_path));
 
     let submodule_repo = get_submodule_repo(&submodule_path, sm_exp_data.submodule_deps)?;

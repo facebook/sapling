@@ -253,13 +253,13 @@ pub mod not_shardmanager_compatible {
         .await
     }
 
-    pub async fn open_source_repo<'a, R: 'a>(
+    pub async fn open_source_repo<'a, R>(
         _: FacebookInit,
         logger: &'a Logger,
         matches: &'a MononokeMatches<'a>,
     ) -> Result<R, Error>
     where
-        R: for<'builder> facet::AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
+        R: for<'builder> facet::AsyncBuildable<'builder, RepoFactoryBuilder<'builder>> + 'a,
     {
         let config_store = matches.config_store();
         let source_repo_id = get_source_repo_id(config_store, matches)?;
@@ -276,13 +276,13 @@ pub mod not_shardmanager_compatible {
         .await
     }
 
-    pub async fn open_target_repo<'a, R: 'a>(
+    pub async fn open_target_repo<'a, R>(
         _: FacebookInit,
         logger: &'a Logger,
         matches: &'a MononokeMatches<'a>,
     ) -> Result<R, Error>
     where
-        R: for<'builder> facet::AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
+        R: for<'builder> facet::AsyncBuildable<'builder, RepoFactoryBuilder<'builder>> + 'a,
     {
         let config_store = matches.config_store();
         let source_repo_id = get_target_repo_id(config_store, matches)?;
@@ -357,13 +357,13 @@ pub mod not_shardmanager_compatible {
 
     /// Create a new repo object -- for local instances, expect its contents to be empty.
     #[inline]
-    pub fn create_repo<'a, R: 'a>(
+    pub fn create_repo<'a, R>(
         fb: FacebookInit,
         logger: &'a Logger,
         matches: &'a MononokeMatches<'a>,
     ) -> impl Future<Output = Result<R, Error>> + 'a
     where
-        R: for<'builder> facet::AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
+        R: for<'builder> facet::AsyncBuildable<'builder, RepoFactoryBuilder<'builder>> + 'a,
     {
         open_repo_internal(fb, logger, matches, true, None, None)
     }
@@ -371,39 +371,39 @@ pub mod not_shardmanager_compatible {
     /// Create a new repo object -- for local instances, expect its contents to be empty.
     /// Make sure that the opened repo has redaction disabled
     #[inline]
-    pub fn create_repo_unredacted<'a, R: 'a>(
+    pub fn create_repo_unredacted<'a, R>(
         fb: FacebookInit,
         logger: &'a Logger,
         matches: &'a MononokeMatches<'a>,
     ) -> impl Future<Output = Result<R, Error>> + 'a
     where
-        R: for<'builder> facet::AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
+        R: for<'builder> facet::AsyncBuildable<'builder, RepoFactoryBuilder<'builder>> + 'a,
     {
         open_repo_internal(fb, logger, matches, true, Some(Redaction::Disabled), None)
     }
 
     /// Open an existing repo object -- for local instances, expect contents to already be there.
     #[inline]
-    pub fn open_repo<'a, R: 'a>(
+    pub fn open_repo<'a, R>(
         fb: FacebookInit,
         logger: &'a Logger,
         matches: &'a MononokeMatches<'a>,
     ) -> impl Future<Output = Result<R, Error>> + 'a
     where
-        R: for<'builder> facet::AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
+        R: for<'builder> facet::AsyncBuildable<'builder, RepoFactoryBuilder<'builder>> + 'a,
     {
         open_repo_internal(fb, logger, matches, false, None, None)
     }
 
     #[inline]
-    pub fn open_repo_with_factory<'a, R: 'a>(
+    pub fn open_repo_with_factory<'a, R>(
         fb: FacebookInit,
         logger: &'a Logger,
         matches: &'a MononokeMatches<'a>,
         repo_factory: RepoFactory,
     ) -> impl Future<Output = Result<R, Error>> + 'a
     where
-        R: for<'builder> facet::AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
+        R: for<'builder> facet::AsyncBuildable<'builder, RepoFactoryBuilder<'builder>> + 'a,
     {
         open_repo_internal(fb, logger, matches, false, None, Some(repo_factory))
     }
@@ -411,13 +411,13 @@ pub mod not_shardmanager_compatible {
     /// Open an existing repo object -- for local instances, expect contents to already be there.
     /// Make sure that the opened repo has redaction disabled
     #[inline]
-    pub fn open_repo_unredacted<'a, R: 'a>(
+    pub fn open_repo_unredacted<'a, R>(
         fb: FacebookInit,
         logger: &'a Logger,
         matches: &'a MononokeMatches<'a>,
     ) -> impl Future<Output = Result<R, Error>> + 'a
     where
-        R: for<'builder> facet::AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
+        R: for<'builder> facet::AsyncBuildable<'builder, RepoFactoryBuilder<'builder>> + 'a,
     {
         open_repo_internal(fb, logger, matches, false, Some(Redaction::Disabled), None)
     }
@@ -476,14 +476,14 @@ where
 }
 
 #[inline]
-pub fn open_repo_by_name<'a, R: 'a>(
+pub fn open_repo_by_name<'a, R>(
     fb: FacebookInit,
     logger: &'a Logger,
     matches: &'a MononokeMatches<'a>,
     repo_name: String,
 ) -> impl Future<Output = Result<R, Error>> + 'a
 where
-    R: for<'builder> facet::AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
+    R: for<'builder> facet::AsyncBuildable<'builder, RepoFactoryBuilder<'builder>> + 'a,
 {
     open_repo_by_name_internal(fb, logger, matches, false, None, None, repo_name)
 }
@@ -491,14 +491,14 @@ where
 /// Open the repo corresponding to the provided repo-name.
 /// Make sure that the opened repo has redaction disabled
 #[inline]
-pub fn open_repo_by_name_unredacted<'a, R: 'a>(
+pub fn open_repo_by_name_unredacted<'a, R>(
     fb: FacebookInit,
     logger: &'a Logger,
     matches: &'a MononokeMatches<'a>,
     repo_name: String,
 ) -> impl Future<Output = Result<R, Error>> + 'a
 where
-    R: for<'builder> facet::AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
+    R: for<'builder> facet::AsyncBuildable<'builder, RepoFactoryBuilder<'builder>> + 'a,
 {
     open_repo_by_name_internal(
         fb,
@@ -518,14 +518,14 @@ pub fn get_repo_factory<'a>(matches: &'a MononokeMatches<'a>) -> Result<RepoFact
 /// Open an existing repo object by ID -- for local instances, expect contents to already be there.
 /// It useful when we need to open more than 1 mononoke repo based on command line arguments
 #[inline]
-pub async fn open_repo_by_id<'a, R: 'a>(
+pub async fn open_repo_by_id<'a, R>(
     _: FacebookInit,
     logger: &'a Logger,
     matches: &'a MononokeMatches<'a>,
     repo_id: RepositoryId,
 ) -> Result<R, Error>
 where
-    R: for<'builder> facet::AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
+    R: for<'builder> facet::AsyncBuildable<'builder, RepoFactoryBuilder<'builder>> + 'a,
 {
     let repo_factory = get_repo_factory(matches)?;
     open_repo_internal_with_repo_id(
@@ -540,14 +540,14 @@ where
 }
 
 #[inline]
-pub async fn open_repo_by_id_unredacted<'a, R: 'a>(
+pub async fn open_repo_by_id_unredacted<'a, R>(
     _: FacebookInit,
     logger: &'a Logger,
     matches: &'a MononokeMatches<'a>,
     repo_id: RepositoryId,
 ) -> Result<R, Error>
 where
-    R: for<'builder> facet::AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
+    R: for<'builder> facet::AsyncBuildable<'builder, RepoFactoryBuilder<'builder>> + 'a,
 {
     let repo_factory = get_repo_factory(matches)?;
     open_repo_internal_with_repo_id(
@@ -718,14 +718,14 @@ where
     Ok(repo)
 }
 
-pub async fn open_repo_with_repo_id<'a, R: 'a>(
+pub async fn open_repo_with_repo_id<'a, R>(
     _: FacebookInit,
     logger: &Logger,
     repo_id: RepositoryId,
     matches: &'a MononokeMatches<'a>,
 ) -> Result<R, Error>
 where
-    R: for<'builder> facet::AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
+    R: for<'builder> facet::AsyncBuildable<'builder, RepoFactoryBuilder<'builder>> + 'a,
 {
     let repo_factory = get_repo_factory(matches)?;
 
@@ -740,14 +740,14 @@ where
     .await
 }
 
-pub async fn open_repo_with_repo_name<'a, R: 'a>(
+pub async fn open_repo_with_repo_name<'a, R>(
     _: FacebookInit,
     logger: &Logger,
     repo_name: String,
     matches: &'a MononokeMatches<'a>,
 ) -> Result<R, Error>
 where
-    R: for<'builder> facet::AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
+    R: for<'builder> facet::AsyncBuildable<'builder, RepoFactoryBuilder<'builder>> + 'a,
 {
     let repo_factory = get_repo_factory(matches)?;
 

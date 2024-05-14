@@ -450,11 +450,11 @@ fn fill_multiple_cachelib<'a, V>(
     }
 }
 
-async fn fill_multiple_memcache<'a, V: 'a>(
+async fn fill_multiple_memcache<'a, V>(
     memcache: &'a MemcacheHandler,
     data: impl IntoIterator<Item = (MemcacheKey, CacheTtl, &'a V)>,
 ) where
-    V: MemcacheEntity,
+    V: MemcacheEntity + 'a,
 {
     if memcache.is_noop() {
         return;
