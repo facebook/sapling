@@ -61,7 +61,7 @@ pub async fn normal_pushrebase<'a>(
                     maybe_pushvars,
                     cross_repo_push_source,
                     bookmark_restrictions,
-                    false, // We will log new commits locally
+                    log_new_public_commits_to_scribe,
                 )
                 .await;
             match (result, &remote_mode) {
