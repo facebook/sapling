@@ -294,33 +294,18 @@ class SaplingBackingStore final : public BackingStore {
   SaplingBackingStore& operator=(const SaplingBackingStore&) = delete;
 
   /**
-   * This is a private enum to differentiate between the different
-   * types of Trees that can be get from backing store.
-   * All getTree(), getRootTree(), and importManifestForRoot() at some point
-   * call retryGetTree() or importTreeManifest() to get Tree from backing store.
-   * This enum is passed in the params then these functions will know which type
-   * of Tree they are getting from baacking store. We will use it to collect
-   * correct metrics.
-   */
-  enum getTreeType {
-    Tree,
-    RootTree,
-    ManifestForRoot,
-  };
-
-  /**
    * Import the manifest for the specified revision using mercurial
    * treemanifest data.
    */
   folly::Future<TreePtr> importTreeManifest(
       const ObjectId& commitId,
       const ObjectFetchContextPtr& context,
-      const getTreeType getType);
+      const ObjectFetchContext::ObjectType type);
 
   folly::Future<TreePtr> importTreeManifestImpl(
       Hash20 manifestNode,
       const ObjectFetchContextPtr& context,
-      const getTreeType getType);
+      const ObjectFetchContext::ObjectType type);
 
   ImmediateFuture<GetRootTreeResult> getRootTree(
       const RootId& rootId,
@@ -344,14 +329,15 @@ class SaplingBackingStore final : public BackingStore {
       const RelativePath& path,
       const Hash20& manifestId,
       const ObjectId& edenTreeId,
-      ObjectFetchContextPtr context);
+      ObjectFetchContextPtr context,
+      const ObjectFetchContext::ObjectType type);
 
   folly::Future<TreePtr> retryGetTree(
       const Hash20& manifestNode,
       const ObjectId& edenTreeID,
       RelativePathPiece path,
       ObjectFetchContextPtr context,
-      const getTreeType getType);
+      const ObjectFetchContext::ObjectType type);
 
   folly::Future<TreePtr> retryGetTreeImpl(
       Hash20 manifestNode,
@@ -359,7 +345,7 @@ class SaplingBackingStore final : public BackingStore {
       RelativePath path,
       std::shared_ptr<LocalStore::WriteBatch> writeBatch,
       ObjectFetchContextPtr context,
-      const getTreeType getType);
+      const ObjectFetchContext::ObjectType type);
 
   /**
    * Imports the tree identified by the given hash from the hg cache.

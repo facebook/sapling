@@ -393,7 +393,9 @@ void SaplingBackingStore::processBlobImportRequests(
             << "Blob found in Sapling local for "
             << request->getRequest<SaplingImportRequest::BlobImport>()->hash;
         request->getContext()->setFetchedSource(
-            ObjectFetchContext::FetchedSource::Local);
+            ObjectFetchContext::FetchedSource::Local,
+            ObjectFetchContext::ObjectType::Blob,
+            stats_.copy());
         stats_->addDuration(
             &SaplingBackingStoreStats::fetchBlob, watch.elapsed());
         stats_->increment(&SaplingBackingStoreStats::fetchBlobSuccess);
@@ -417,7 +419,9 @@ void SaplingBackingStore::processBlobImportRequests(
               << "Blob found in Sapling remote for "
               << request->getRequest<SaplingImportRequest::BlobImport>()->hash;
           request->getContext()->setFetchedSource(
-              ObjectFetchContext::FetchedSource::Remote);
+              ObjectFetchContext::FetchedSource::Remote,
+              ObjectFetchContext::ObjectType::Blob,
+              stats_.copy());
         }
         stats_->addDuration(
             &SaplingBackingStoreStats::fetchBlob, watch.elapsed());
@@ -492,16 +496,22 @@ folly::SemiFuture<BlobPtr> SaplingBackingStore::retryGetBlob(
           switch (fetch_mode) {
             case sapling::FetchMode::LocalOnly:
               context->setFetchedSource(
-                  ObjectFetchContext::FetchedSource::Local);
+                  ObjectFetchContext::FetchedSource::Local,
+                  ObjectFetchContext::ObjectType::Blob,
+                  stats_.copy());
               break;
             case sapling::FetchMode::RemoteOnly:
               context->setFetchedSource(
-                  ObjectFetchContext::FetchedSource::Remote);
+                  ObjectFetchContext::FetchedSource::Remote,
+                  ObjectFetchContext::ObjectType::Blob,
+                  stats_.copy());
               break;
             case sapling::FetchMode::AllowRemote:
             case sapling::FetchMode::AllowRemotePrefetch:
               context->setFetchedSource(
-                  ObjectFetchContext::FetchedSource::Unknown);
+                  ObjectFetchContext::FetchedSource::Unknown,
+                  ObjectFetchContext::ObjectType::Blob,
+                  stats_.copy());
               break;
           }
           stats_->increment(&SaplingBackingStoreStats::fetchBlobRetrySuccess);
@@ -632,7 +642,9 @@ void SaplingBackingStore::processTreeImportRequests(
             << "Tree found in Sapling local for "
             << request->getRequest<SaplingImportRequest::TreeImport>()->hash;
         request->getContext()->setFetchedSource(
-            ObjectFetchContext::FetchedSource::Local);
+            ObjectFetchContext::FetchedSource::Local,
+            ObjectFetchContext::ObjectType::Tree,
+            stats_.copy());
         stats_->addDuration(
             &SaplingBackingStoreStats::fetchTree, watch.elapsed());
         stats_->increment(&SaplingBackingStoreStats::fetchTreeSuccess);
@@ -655,7 +667,9 @@ void SaplingBackingStore::processTreeImportRequests(
               << "Tree found in Sapling remote for "
               << request->getRequest<SaplingImportRequest::TreeImport>()->hash;
           request->getContext()->setFetchedSource(
-              ObjectFetchContext::FetchedSource::Remote);
+              ObjectFetchContext::FetchedSource::Remote,
+              ObjectFetchContext::ObjectType::Tree,
+              stats_.copy());
         }
         stats_->addDuration(
             &SaplingBackingStoreStats::fetchTree, watch.elapsed());
@@ -675,7 +689,7 @@ void SaplingBackingStore::processTreeImportRequests(
               treeImport->hash,
               treeImport->proxyHash.path(),
               request->getContext().copy(),
-              getTreeType::Tree)
+              ObjectFetchContext::ObjectType::Tree)
               .semi();
       futures.emplace_back(
           std::move(treeSemiFuture)
@@ -897,7 +911,9 @@ void SaplingBackingStore::processBlobMetaImportRequests(
                           ->getRequest<SaplingImportRequest::BlobMetaImport>()
                           ->hash;
         request->getContext()->setFetchedSource(
-            ObjectFetchContext::FetchedSource::Local);
+            ObjectFetchContext::FetchedSource::Local,
+            ObjectFetchContext::ObjectType::BlobMetadata,
+            stats_.copy());
         stats_->addDuration(
             &SaplingBackingStoreStats::fetchBlobMetadata, watch.elapsed());
         stats_->increment(&SaplingBackingStoreStats::fetchBlobMetadataSuccess);
@@ -918,7 +934,9 @@ void SaplingBackingStore::processBlobMetaImportRequests(
                             ->getRequest<SaplingImportRequest::BlobMetaImport>()
                             ->hash;
           request->getContext()->setFetchedSource(
-              ObjectFetchContext::FetchedSource::Remote);
+              ObjectFetchContext::FetchedSource::Remote,
+              ObjectFetchContext::ObjectType::BlobMetadata,
+              stats_.copy());
         }
         stats_->addDuration(
             &SaplingBackingStoreStats::fetchBlobMetadata, watch.elapsed());
@@ -1138,6 +1156,7 @@ folly::SemiFuture<BackingStore::GetTreeResult> SaplingBackingStore::getTree(
     XLOG(DBG5) << "imported tree of '" << proxyHash.path() << "', "
                << proxyHash.revHash().toString() << " from hgcache";
     stats_->increment(&SaplingBackingStoreStats::fetchTreeSuccess);
+    stats_->increment(&SaplingBackingStoreStats::fetchTreeLocal);
     return folly::makeSemiFuture(GetTreeResult{
         std::move(tree), ObjectFetchContext::Origin::FromDiskCache});
   }
@@ -1265,6 +1284,7 @@ folly::SemiFuture<BackingStore::GetBlobResult> SaplingBackingStore::getBlob(
   auto blob = getBlobLocal(proxyHash);
   if (blob.hasValue()) {
     stats_->increment(&SaplingBackingStoreStats::fetchBlobSuccess);
+    stats_->increment(&SaplingBackingStoreStats::fetchBlobLocal);
     return folly::makeSemiFuture(GetBlobResult{
         std::move(blob.value()), ObjectFetchContext::Origin::FromDiskCache});
   }
@@ -1346,6 +1366,7 @@ SaplingBackingStore::getBlobMetadata(
   auto metadata = getLocalBlobMetadata(proxyHash);
   if (metadata.hasValue()) {
     stats_->increment(&SaplingBackingStoreStats::fetchBlobMetadataSuccess);
+    stats_->increment(&SaplingBackingStoreStats::fetchBlobMetadataLocal);
     return folly::makeSemiFuture(GetBlobMetaResult{
         std::move(metadata.value()),
         ObjectFetchContext::Origin::FromDiskCache});
@@ -1443,7 +1464,9 @@ SaplingBackingStore::getRootTree(
               -> folly::SemiFuture<BackingStore::GetRootTreeResult> {
             if (!result.isValid()) {
               return importTreeManifest(
-                         commitId, context, getTreeType::RootTree)
+                         commitId,
+                         context,
+                         ObjectFetchContext::ObjectType::RootTree)
                   .thenValue([this, commitId, watch](TreePtr rootTree) {
                     XLOG(DBG1) << "imported mercurial commit " << commitId
                                << " as tree " << rootTree->getHash();
@@ -1465,7 +1488,9 @@ SaplingBackingStore::getRootTree(
                 "getRootTree",
                 *stats_);
             return importTreeManifestImpl(
-                       rootTreeHash.revHash(), context, getTreeType::RootTree)
+                       rootTreeHash.revHash(),
+                       context,
+                       ObjectFetchContext::ObjectType::RootTree)
                 .thenValue([this, watch](TreePtr tree) {
                   stats_->addDuration(
                       &SaplingBackingStoreStats::getRootTree, watch.elapsed());
@@ -1477,11 +1502,11 @@ SaplingBackingStore::getRootTree(
 folly::Future<TreePtr> SaplingBackingStore::importTreeManifest(
     const ObjectId& commitId,
     const ObjectFetchContextPtr& context,
-    const getTreeType getType) {
+    const ObjectFetchContext::ObjectType type) {
   return folly::via(
              serverThreadPool_,
              [this, commitId] { return getManifestNode(commitId); })
-      .thenValue([this, commitId, fetchContext = context.copy(), getType](
+      .thenValue([this, commitId, fetchContext = context.copy(), type](
                      auto manifestNode) {
         if (!manifestNode.has_value()) {
           auto ew = folly::exception_wrapper{std::runtime_error{
@@ -1494,7 +1519,7 @@ folly::Future<TreePtr> SaplingBackingStore::importTreeManifest(
             commitId,
             manifestNode.value());
         return importTreeManifestImpl(
-            *std::move(manifestNode), fetchContext, getType);
+            *std::move(manifestNode), fetchContext, type);
       });
 }
 
@@ -1511,7 +1536,7 @@ std::optional<Hash20> SaplingBackingStore::getManifestNode(
 folly::Future<TreePtr> SaplingBackingStore::importTreeManifestImpl(
     Hash20 manifestNode,
     const ObjectFetchContextPtr& context,
-    const getTreeType getType) {
+    const ObjectFetchContext::ObjectType type) {
   // Record that we are at the root for this node
   RelativePathPiece path{};
   auto hgObjectIdFormat = config_->getEdenConfig()->hgObjectIdFormat.getValue();
@@ -1530,40 +1555,50 @@ folly::Future<TreePtr> SaplingBackingStore::importTreeManifestImpl(
 
   // try SaplingNativeBackingStore
   auto tree = getTreeFromBackingStore(
-      path.copy(), manifestNode, objectId, context.copy());
+      path.copy(), manifestNode, objectId, context.copy(), type);
   if (tree.hasValue()) {
     XLOG(DBG4) << "imported tree node=" << manifestNode << " path=" << path
                << " from SaplingNativeBackingStore";
-    switch (getType) {
-      case getTreeType::Tree:
+    switch (type) {
+      case ObjectFetchContext::ObjectType::Tree:
         // getTree never gets here. We add this case only for completeness
         stats_->increment(&SaplingBackingStoreStats::fetchTreeSuccess);
         break;
-      case getTreeType::RootTree:
+      case ObjectFetchContext::ObjectType::RootTree:
         stats_->increment(&SaplingBackingStoreStats::getRootTreeSuccess);
         break;
-      case getTreeType::ManifestForRoot:
+      case ObjectFetchContext::ObjectType::ManifestForRoot:
         stats_->increment(
             &SaplingBackingStoreStats::importManifestForRootSuccess);
+        break;
+      // The following types cannot get here. It is just for completeness
+      case ObjectFetchContext::Blob:
+      case ObjectFetchContext::BlobMetadata:
+      case ObjectFetchContext::kObjectTypeEnumMax:
         break;
     }
     return folly::makeFuture(std::move(tree.value()));
   }
   // retry once if the initial fetch failed
-  switch (getType) {
-    case getTreeType::Tree:
+  switch (type) {
+    case ObjectFetchContext::ObjectType::Tree:
       // getTree never gets here. We add this case only for completeness
       stats_->increment(&SaplingBackingStoreStats::fetchTreeFailure);
       break;
-    case getTreeType::RootTree:
+    case ObjectFetchContext::ObjectType::RootTree:
       stats_->increment(&SaplingBackingStoreStats::getRootTreeFailure);
       break;
-    case getTreeType::ManifestForRoot:
+    case ObjectFetchContext::ObjectType::ManifestForRoot:
       stats_->increment(
           &SaplingBackingStoreStats::importManifestForRootFailure);
       break;
+      // The following types cannot get here. It is just for completeness
+    case ObjectFetchContext::Blob:
+    case ObjectFetchContext::BlobMetadata:
+    case ObjectFetchContext::kObjectTypeEnumMax:
+      break;
   }
-  return retryGetTree(manifestNode, objectId, path, context.copy(), getType);
+  return retryGetTree(manifestNode, objectId, path, context.copy(), type);
 }
 
 folly::Future<TreePtr> SaplingBackingStore::retryGetTree(
@@ -1571,7 +1606,7 @@ folly::Future<TreePtr> SaplingBackingStore::retryGetTree(
     const ObjectId& edenTreeID,
     RelativePathPiece path,
     ObjectFetchContextPtr context,
-    const getTreeType getType) {
+    const ObjectFetchContext::ObjectFetchContext::ObjectType type) {
   XLOG(DBG6) << "importing tree " << edenTreeID << ": hg manifest "
              << manifestNode << " for path \"" << path << "\"";
 
@@ -1600,7 +1635,7 @@ folly::Future<TreePtr> SaplingBackingStore::retryGetTree(
              path.copy(),
              std::move(writeBatch),
              context.copy(),
-             getType)
+             type)
       .thenValue([config = config_](TreePtr&& result) mutable {
         return std::move(result);
       });
@@ -1610,7 +1645,8 @@ folly::Try<TreePtr> SaplingBackingStore::getTreeFromBackingStore(
     const RelativePath& path,
     const Hash20& manifestId,
     const ObjectId& edenTreeId,
-    ObjectFetchContextPtr context) {
+    ObjectFetchContextPtr context,
+    const ObjectFetchContext::ObjectType type) {
   folly::Try<std::shared_ptr<sapling::Tree>> tree;
   sapling::FetchMode fetch_mode = sapling::FetchMode::AllowRemote;
   if (config_->getEdenConfig()->allowRemoteGetBatch.getValue()) {
@@ -1658,14 +1694,17 @@ folly::Try<TreePtr> SaplingBackingStore::getTreeFromBackingStore(
         config_->getEdenConfig()->hgFilteredPaths.getValue();
     switch (fetch_mode) {
       case sapling::FetchMode::LocalOnly:
-        context->setFetchedSource(ObjectFetchContext::FetchedSource::Local);
+        context->setFetchedSource(
+            ObjectFetchContext::FetchedSource::Local, type, stats_.copy());
         break;
       case sapling::FetchMode::RemoteOnly:
-        context->setFetchedSource(ObjectFetchContext::FetchedSource::Remote);
+        context->setFetchedSource(
+            ObjectFetchContext::FetchedSource::Remote, type, stats_.copy());
         break;
       case sapling::FetchMode::AllowRemote:
       case sapling::FetchMode::AllowRemotePrefetch:
-        context->setFetchedSource(ObjectFetchContext::FetchedSource::Unknown);
+        context->setFetchedSource(
+            ObjectFetchContext::FetchedSource::Unknown, type, stats_.copy());
         break;
     }
     return GetTreeResult{fromRawTree(
@@ -1686,7 +1725,7 @@ folly::Future<TreePtr> SaplingBackingStore::retryGetTreeImpl(
     RelativePath path,
     std::shared_ptr<LocalStore::WriteBatch> writeBatch,
     ObjectFetchContextPtr context,
-    const getTreeType getType) {
+    const ObjectFetchContext::ObjectType type) {
   return folly::via(
       retryThreadPool_.get(),
       [this,
@@ -1696,7 +1735,7 @@ folly::Future<TreePtr> SaplingBackingStore::retryGetTreeImpl(
        writeBatch,
        &liveImportTreeWatches = liveImportTreeWatches_,
        context = context.copy(),
-       getType] {
+       type] {
         RequestMetricsScope queueTracker{&liveImportTreeWatches};
 
         // NOTE: In the future we plan to update
@@ -1713,20 +1752,25 @@ folly::Future<TreePtr> SaplingBackingStore::retryGetTreeImpl(
         // Retry using datapackStore (SaplingNativeBackingStore)
         auto result = folly::makeFuture<TreePtr>(TreePtr{nullptr});
         auto tree = getTreeFromBackingStore(
-            path, manifestNode, edenTreeID, context.copy());
+            path, manifestNode, edenTreeID, context.copy(), type);
         if (tree.hasValue()) {
-          switch (getType) {
-            case getTreeType::Tree:
+          switch (type) {
+            case ObjectFetchContext::ObjectType::Tree:
               stats_->increment(
                   &SaplingBackingStoreStats::fetchTreeRetrySuccess);
               break;
-            case getTreeType::RootTree:
+            case ObjectFetchContext::ObjectType::RootTree:
               stats_->increment(
                   &SaplingBackingStoreStats::getRootTreeRetrySuccess);
               break;
-            case getTreeType::ManifestForRoot:
+            case ObjectFetchContext::ObjectType::ManifestForRoot:
               stats_->increment(
                   &SaplingBackingStoreStats::importManifestForRootRetrySuccess);
+              break;
+            // The following types cannot get here. It is just for completeness
+            case ObjectFetchContext::Blob:
+            case ObjectFetchContext::BlobMetadata:
+            case ObjectFetchContext::kObjectTypeEnumMax:
               break;
           }
           result = tree.value();
@@ -1740,18 +1784,23 @@ folly::Future<TreePtr> SaplingBackingStore::retryGetTreeImpl(
                 true});
           }
 
-          switch (getType) {
-            case getTreeType::Tree:
+          switch (type) {
+            case ObjectFetchContext::ObjectType::Tree:
               stats_->increment(
                   &SaplingBackingStoreStats::fetchTreeRetryFailure);
               break;
-            case getTreeType::RootTree:
+            case ObjectFetchContext::ObjectType::RootTree:
               stats_->increment(
                   &SaplingBackingStoreStats::getRootTreeRetryFailure);
               break;
-            case getTreeType::ManifestForRoot:
+            case ObjectFetchContext::ObjectType::ManifestForRoot:
               stats_->increment(
                   &SaplingBackingStoreStats::importManifestForRootRetryFailure);
+              break;
+            // The following types cannot get here. It is just for completeness
+            case ObjectFetchContext::Blob:
+            case ObjectFetchContext::BlobMetadata:
+            case ObjectFetchContext::kObjectTypeEnumMax:
               break;
           }
           auto ew = folly::exception_wrapper{tree.exception()};
@@ -1971,7 +2020,9 @@ ImmediateFuture<folly::Unit> SaplingBackingStore::importManifestForRoot(
             }
 
             return importTreeManifestImpl(
-                       manifestId, context, getTreeType::ManifestForRoot)
+                       manifestId,
+                       context,
+                       ObjectFetchContext::ObjectType::ManifestForRoot)
                 .thenValue(
                     [this, commitId, manifestId, watch](TreePtr rootTree) {
                       XLOG(DBG3) << "imported mercurial commit " << commitId

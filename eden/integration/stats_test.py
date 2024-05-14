@@ -174,17 +174,46 @@ class ObjectCacheStatsTest(testcase.EdenRepoTest):
 
 @testcase.eden_nfs_repo_test
 class SaplingBackingStoreStatsTest(testcase.EdenRepoTest):
-    def test_reading_file_gets_file_from_hg(self) -> None:
+    def test_reading_file_bump_sapling_stats(self) -> None:
         counters_before = self.get_counters()
         path = Path(self.mount) / "dir" / "subdir" / "file"
         path.read_bytes()
         counters_after = self.get_counters()
 
-        self.assertEqual(
-            counters_after["store.sapling.get_blob_us.count"],
-            counters_before.get("store.sapling.get_blob_us.count", 0) + 1,
-            f"Reading {path} should increment store.sapling.get_blob_us.count",
-        )
+        TEMPLATE = "store.sapling.{}.count"
+        for counter, init_val, incr_val in self.getSaplingCounters():
+            counter_name = TEMPLATE.format(counter)
+            self.assertEqual(
+                counters_before[counter_name],
+                init_val,
+                f"Reading {path} should increment {counter_name}",
+            )
+            self.assertEqual(
+                counters_after[counter_name],
+                counters_before.get(counter_name, 0) + incr_val,
+                f"Reading {path} should increment {counter_name}",
+            )
+
+    def getSaplingCounters(self) -> typing.List[typing.Tuple[str, int, int]]:
+        # (counter, init_val, incr_val)
+        return [
+            # Two trees are fetched
+            ("get_tree_us", 0, 2),
+            ("fetch_tree_success", 0, 2),
+            ("fetch_tree_local", 0, 2),
+            # The root tree is only fetched once in the initial checkout
+            ("get_root_tree_us", 1, 0),
+            ("get_root_tree_success", 1, 0),
+            ("get_root_tree_local", 1, 0),
+            # One blob is fetched
+            ("get_blob_us", 0, 1),
+            ("fetch_blob_success", 0, 1),
+            ("fetch_blob_local", 0, 1),
+            # One blob metadata is fetched
+            ("get_blob_metadata_us", 0, 1),
+            ("fetch_blob_metadata_success", 0, 1),
+            ("fetch_blob_metadata_local", 0, 1),
+        ]
 
     def test_pending_import_counters_available(self) -> None:
         counters = self.get_counters()
@@ -210,31 +239,6 @@ class SaplingBackingStoreStatsTest(testcase.EdenRepoTest):
 
         for counter_name in counter_names_to_check:
             self.assertIn(counter_name, counters, f"{counter_name} should be available")
-
-    def create_repo(self, name: str) -> HgRepository:
-        return self.create_hg_repo(name)
-
-    def populate_repo(self) -> None:
-        # This file evades EdenFS' automatic prefetching by being two levels
-        # inside the root.
-        self.repo.write_file("dir/subdir/file", "hello world!\n")
-
-        self.repo.commit("Initial commit.")
-
-
-@testcase.eden_nfs_repo_test
-class HgImporterStatsTest(testcase.EdenRepoTest):
-    def test_reading_file_imports_blob(self) -> None:
-        counters_before = self.get_counters()
-        path = Path(self.mount) / "dir" / "subdir" / "file"
-        path.read_bytes()
-        counters_after = self.get_counters()
-
-        self.assertEqual(
-            counters_after["store.sapling.get_blob_us.count"],
-            counters_before.get("store.sapling.get_blob_us.count", 0) + 1,
-            f"Reading {path} should increment store.sapling.get_blob_us.count",
-        )
 
     def create_repo(self, name: str) -> HgRepository:
         return self.create_hg_repo(name)

@@ -111,6 +111,7 @@ cpp_library(
         "fbsource//third-party/fmt:fmt",
         "//eden/common/os:os",
         "//eden/common/utils:ref_ptr",
+        "//eden/fs/telemetry:stats",
     ],
 )
 
