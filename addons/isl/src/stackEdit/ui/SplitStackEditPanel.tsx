@@ -781,8 +781,10 @@ export function SplitFile(props: SplitFileProps) {
       const divs = mainContentRef.current.querySelectorAll<HTMLDivElement>('div[data-sel-id]');
       const selIds: Array<string> = [];
       for (const div of divs) {
-        const child = div.lastChild;
-        if (child && selection.containsNode(child, true)) {
+        if (
+          (div.lastChild && selection.containsNode(div.lastChild, true)) ||
+          (div.firstChild && selection.containsNode(div.firstChild, true))
+        ) {
           selIds.push(nullthrows(div.dataset.selId));
         }
       }
