@@ -32,7 +32,8 @@ export async function activate(context: vscode.ExtensionContext) {
   try {
     const [, enabledSCMApiFeatures] = await Promise.all([
       ensureTranslationsLoaded(context),
-      Internal.getEnabledSCMApiFeatures?.() ?? new Set<EnabledSCMApiFeature>(['blame', 'sidebar']),
+      Internal.getEnabledSCMApiFeatures?.() ??
+        new Set<EnabledSCMApiFeature>(['blame', 'sidebar', 'autoresolve']),
     ]);
     logger.info('enabled features: ', [...enabledSCMApiFeatures].join(', '));
     const ctx: RepositoryContext = {

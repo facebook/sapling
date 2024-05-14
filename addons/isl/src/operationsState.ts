@@ -320,13 +320,7 @@ function runOperationImpl(operation: Operation): Promise<undefined | Error> {
   // and mark those to not be rewritten.
   serverAPI.postMessage({
     type: 'runOperation',
-    operation: {
-      args: operation.getArgs(),
-      id: operation.id,
-      stdin: operation.getStdin(),
-      runner: operation.runner,
-      trackEventName: operation.trackEventName,
-    },
+    operation: operation.getRunnableOperation(),
   });
   const defered = defer<undefined | Error>();
   operationCompletionCallbacks.set(operation.id, (err?: Error) => {

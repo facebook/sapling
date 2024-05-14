@@ -20,8 +20,12 @@ import {getCLICommand} from './config';
 import {t} from './i18n';
 import {Repository} from 'isl-server/src/Repository';
 import {repositoryCache} from 'isl-server/src/RepositoryCache';
+import {ResolveOperation, ResolveTool} from 'isl/src/operations/ResolveOperation';
+import * as path from 'path';
 import {ComparisonType} from 'shared/Comparison';
 import * as vscode from 'vscode';
+
+const mergeConflictStartRegex = new RegExp('<{7}|>{7}|={7}|[|]{7}');
 
 export class VSCodeReposList {
   private knownRepos = new Map</* attached folder root */ string, RepositoryReference>();
@@ -145,6 +149,8 @@ export class VSCodeRepo implements vscode.QuickDiffProvider {
     this.rootUri = vscode.Uri.file(repo.info.repoRoot);
     this.rootPath = repo.info.repoRoot;
 
+    this.autoResolveFilesOnSave();
+
     if (!this.enabledFeatures.has('sidebar')) {
       // if sidebar is not enabled, VSCodeRepo is mostly useless, but still used for checking which paths can be used for ISL and blame.
       return;
@@ -182,6 +188,53 @@ export class VSCodeRepo implements vscode.QuickDiffProvider {
       fileDecorationProvider,
     );
     this.updateResourceGroups();
+  }
+
+  /** If this uri is for a file inside the repo, return the repo-relative path. Otherwise, return undefined.  */
+  public repoRelativeFsPath(uri: vscode.Uri): string | undefined {
+    return uri.scheme === this.rootUri.scheme &&
+      uri.authority === this.rootUri.authority &&
+      uri.fsPath.startsWith(this.rootPath)
+      ? path.relative(this.rootPath, uri.fsPath)
+      : undefined;
+  }
+
+  private autoResolveFilesOnSave(): vscode.Disposable {
+    return vscode.workspace.onDidSaveTextDocument(document => {
+      const repoRelativePath = this.repoRelativeFsPath(document.uri);
+      const conflicts = this.repo.getMergeConflicts();
+      if (conflicts == null || repoRelativePath == null) {
+        return;
+      }
+      const filesWithConflicts = conflicts.files?.map(file => file.path);
+      if (filesWithConflicts?.includes(repoRelativePath) !== true) {
+        return;
+      }
+      const autoResolveEnabled = vscode.workspace
+        .getConfiguration('sapling')
+        .get<boolean>('markConflictingFilesResolvedOnSave');
+      if (!autoResolveEnabled) {
+        return;
+      }
+      const allConflictsThisFileResolved = !mergeConflictStartRegex.test(document.getText());
+      if (!allConflictsThisFileResolved) {
+        return;
+      }
+      this.logger.info(
+        'auto marking file with no remaining conflicts as resolved:',
+        repoRelativePath,
+      );
+
+      this.repo.runOrQueueOperation(
+        this.repo.initialConnectionContext,
+        {
+          ...new ResolveOperation(repoRelativePath, ResolveTool.mark).getRunnableOperation(),
+          // Distinguish in analytics from manually resolving
+          trackEventName: 'AutoMarkResolvedOperation',
+        },
+        () => null,
+      );
+    });
   }
 
   private updateResourceGroups() {

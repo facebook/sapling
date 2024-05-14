@@ -10,5 +10,6 @@
  * blame => inline and toggleable blame
  * sidebar => VS Code SCM API, VS Code Source Control sidebar entry.
  * diffview => diff commands, gutters. Requires 'sidebar'.
+ * autoresolve => automatically mark merge conflicts as resolved on file save
  * */
-export type EnabledSCMApiFeature = 'blame' | 'sidebar';
+export type EnabledSCMApiFeature = 'blame' | 'sidebar' | 'autoresolve';

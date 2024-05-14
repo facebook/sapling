@@ -12,7 +12,7 @@ import type {
   MergeConflictsPreviewContext,
   UncommittedChangesPreviewContext,
 } from '../previews';
-import type {CommandArg} from '../types';
+import type {CommandArg, RunnableOperation} from '../types';
 import type {TrackEventName} from 'isl-server/src/analytics/eventNames';
 
 import {CommandRunner} from '../types';
@@ -69,6 +69,16 @@ export abstract class Operation {
    */
   optimisticDag(dag: Dag): Dag {
     return dag;
+  }
+
+  getRunnableOperation(): RunnableOperation {
+    return {
+      args: this.getArgs(),
+      id: this.id,
+      stdin: this.getStdin(),
+      runner: this.runner,
+      trackEventName: this.trackEventName,
+    };
   }
 }
 
