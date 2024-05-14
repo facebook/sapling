@@ -256,6 +256,9 @@ impl CommitGraph {
     /// by taking no more than `max_distance` edges from some changeset in `heads`,
     /// as well as the boundary changesets which are the changesets for which
     /// the shortest distance to them is exactly `max_distance`.
+    /// NOTE: The ancestors property of AncestorsWithinDistance represents the ancestors
+    /// which are inside the boundary. The boundary ancestors are represented via the
+    /// boundaries field.
     pub async fn ancestors_within_distance(
         &self,
         ctx: &CoreContext,
@@ -268,19 +271,13 @@ impl CommitGraph {
             .try_collect::<Vec<_>>()
             .await?;
 
-        let mut boundaries = vec![];
-        for (cs_id, distance) in &cs_id_and_distance {
-            if *distance == max_distance {
-                boundaries.push(*cs_id);
-            }
-        }
+        let (boundary, ancestors): (Vec<_>, Vec<_>) = cs_id_and_distance
+            .iter()
+            .partition(|(_, distance)| *distance == max_distance);
 
         Ok(AncestorsWithinDistance {
-            ancestors: cs_id_and_distance
-                .into_iter()
-                .map(|(cs_id, _)| cs_id)
-                .collect(),
-            boundaries,
+            ancestors: ancestors.into_iter().map(|(cs_id, _)| cs_id).collect(),
+            boundaries: boundary.into_iter().map(|(cs_id, _)| cs_id).collect(),
         })
     }
 

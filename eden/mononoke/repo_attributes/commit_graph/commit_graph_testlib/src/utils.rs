@@ -673,12 +673,19 @@ pub async fn assert_ancestors_within_distance(
     let ancestors_and_boundaries = graph
         .ancestors_within_distance(ctx, cs_ids, max_distance)
         .await?;
+    let boundaries = ancestors_and_boundaries
+        .boundaries
+        .clone()
+        .into_iter()
+        .collect::<HashSet<_>>();
+    let all_ancestors = ancestors_and_boundaries
+        .ancestors
+        .into_iter()
+        .chain(ancestors_and_boundaries.boundaries)
+        .collect::<HashSet<_>>();
 
     assert_eq!(
-        ancestors_and_boundaries
-            .ancestors
-            .into_iter()
-            .collect::<HashSet<_>>(),
+        all_ancestors,
         expected_ancestors_and_distances
             .iter()
             .map(|(cs_id, _)| cs_id)
@@ -686,10 +693,7 @@ pub async fn assert_ancestors_within_distance(
             .collect::<HashSet<_>>()
     );
     assert_eq!(
-        ancestors_and_boundaries
-            .boundaries
-            .into_iter()
-            .collect::<HashSet<_>>(),
+        boundaries,
         expected_ancestors_and_distances
             .iter()
             .filter(|(_, distance)| *distance == max_distance)
