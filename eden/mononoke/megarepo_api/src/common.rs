@@ -973,39 +973,6 @@ pub trait MegarepoOp {
         Ok(())
     }
 
-    async fn move_bookmark(
-        &self,
-        ctx: &CoreContext,
-        repo: &impl Repo,
-        bookmark: String,
-        cs_id: ChangesetId,
-    ) -> Result<(), MegarepoError> {
-        let mut txn = repo.bookmarks().create_transaction(ctx.clone());
-        let bookmark = BookmarkKey::new(bookmark).map_err(MegarepoError::request)?;
-        let maybe_book_value = repo.bookmarks().get(ctx.clone(), &bookmark).await?;
-
-        match maybe_book_value {
-            Some(old) => {
-                txn.update(&bookmark, cs_id, old, BookmarkUpdateReason::XRepoSync)?;
-            }
-            None => {
-                txn.create(&bookmark, cs_id, BookmarkUpdateReason::XRepoSync)?;
-            }
-        }
-
-        let success = txn
-            .commit()
-            .await
-            .map_err(MegarepoError::internal)?
-            .is_some();
-        if !success {
-            return Err(MegarepoError::internal(anyhow!(
-                "failed to move a bookmark, possibly because of race condition"
-            )));
-        }
-        Ok(())
-    }
-
     async fn check_if_new_sync_target_config_is_equivalent_to_already_existing(
         &self,
         ctx: &CoreContext,

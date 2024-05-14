@@ -50,14 +50,6 @@ use crate::CombinedBookmarkUpdateLogEntry;
 use crate::CommitsInBundle;
 use crate::Repo;
 
-#[derive(Clone)]
-pub struct PreparedBookmarkUpdateLogEntry {
-    pub log_entry: BookmarkUpdateLogEntry,
-    pub bundle_file: Arc<NamedTempFile>,
-    pub timestamps_file: Arc<NamedTempFile>,
-    pub cs_id: Option<(ChangesetId, HgChangesetId)>,
-}
-
 pub struct BundlePreparer {
     repo: Repo,
     base_retry_delay_ms: u64,

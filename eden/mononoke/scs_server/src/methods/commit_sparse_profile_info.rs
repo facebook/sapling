@@ -7,7 +7,6 @@
 
 use anyhow::Result;
 use context::CoreContext;
-use itertools::Itertools;
 use mononoke_api::sparse_profile::get_profile_delta_size;
 use mononoke_api::sparse_profile::MonitoringProfiles;
 use mononoke_api::sparse_profile::ProfileSizeChange;
@@ -16,23 +15,6 @@ use source_control as thrift;
 
 use crate::errors;
 use crate::source_control_impl::SourceControlServiceImpl;
-
-pub(crate) trait SparseProfilesExt {
-    fn to_string(&self) -> String;
-}
-
-impl SparseProfilesExt for thrift::SparseProfiles {
-    fn to_string(&self) -> String {
-        match self {
-            thrift::SparseProfiles::all_profiles(_) => "all sparse profiles".to_string(),
-            thrift::SparseProfiles::profiles(profiles) => profiles
-                .iter()
-                .format_with("\n", |item, f| f(&item))
-                .to_string(),
-            thrift::SparseProfiles::UnknownField(t) => format!("unknown SparseProfiles type {}", t),
-        }
-    }
-}
 
 impl SourceControlServiceImpl {
     pub(crate) async fn commit_sparse_profile_size(
