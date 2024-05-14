@@ -60,6 +60,7 @@ rust_binary(
         "//common/rust/shed/cloned:cloned",
         "//common/rust/shed/facet:facet",
         "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/futures_stats:futures_stats",
         "//common/rust/shed/shared_error:shared_error",
         "//common/rust/srserver:srserver",
         "//eden/mononoke/bookmarks:bookmarks_cache",
