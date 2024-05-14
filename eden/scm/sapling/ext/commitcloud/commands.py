@@ -509,7 +509,7 @@ cloudsmartlogopts = [
     + workspace.workspaceopts,
 )
 def cloudlog(ui, repo, **opts):
-    """Print the content of a given Commit Cloud workspace.
+    """print the content of a given Commit Cloud workspace.
 
     By default, '@prog@ cloud log' prints the commit's hash, non-trivial parents, user,
     date, time, and the single-line summary for all draft commits from the given workspace.
@@ -999,7 +999,7 @@ def cloudlistworspaces(ui, repo, **opts):
 
 @subcmd("deleteworkspace|delete", [] + workspace.workspaceopts)
 def clouddeleteworkspace(ui, repo, **opts):
-    """Delete (archive) workspace from commit cloud"""
+    """delete (archive) workspace from commit cloud"""
 
     workspacename = workspace.parseworkspace(ui, opts)
     if workspacename is None:
@@ -1026,7 +1026,7 @@ def clouddeleteworkspace(ui, repo, **opts):
 
 @subcmd("undeleteworkspace|undelete", [] + workspace.workspaceopts)
 def cloudundeleteworkspace(ui, repo, **opts):
-    """Restore (unarchive) workspace in commit cloud"""
+    """restore (unarchive) workspace in commit cloud"""
 
     workspacename = workspace.parseworkspace(ui, opts)
     if workspacename is None:
@@ -1456,7 +1456,7 @@ def backupdisable(ui, repo, **opts):
 
 @subcmd("share")
 def shareworkspace(ui, repo, **opts):
-    """Marks the given workspace for sharing and prints out the corresponding ACL"""
+    """marks the given workspace for sharing and prints out the corresponding ACL"""
     workspacename = workspace.currentworkspace(repo)
     if workspacename is None:
         ui.write(_("You are not connected to any workspace\n"))
@@ -1469,7 +1469,7 @@ def shareworkspace(ui, repo, **opts):
 
 @subcmd("status")
 def cloudstatus(ui, repo, **opts):
-    """Shows information about the state of the user's workspace"""
+    """shows information about the state of the user's workspace"""
 
     workspacename = workspace.currentworkspace(repo)
     if workspacename is None:
@@ -1618,7 +1618,7 @@ def isbackedup(ui, repo, **opts):
     _("[-r] REV..."),
 )
 def cloudupload(ui, repo, *revs, **opts):
-    """Upload draft commits using EdenApi Uploads
+    """upload draft commits using EdenApi Uploads
 
     Commits that have already been uploaded will be skipped.
     If no revision is specified, uploads all visible commits.
