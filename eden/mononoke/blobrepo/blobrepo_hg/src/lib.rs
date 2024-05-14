@@ -438,16 +438,7 @@ impl<T: CommitGraphRef + BonsaiHgMappingRef + Send + Sync> BlobRepoHg for T {
 }
 
 pub fn to_hg_bookmark_stream<'repo, BookmarkType>(
-    repo: &(
-         impl CommitGraphRef
-         + BonsaiHgMappingRef
-         + RepoDerivedDataRef
-         + BlobRepoHg
-         + Clone
-         + Send
-         + Sync
-         + 'repo
-     ),
+    repo: &(impl CommitGraphRef + BonsaiHgMappingRef + RepoDerivedDataRef + BlobRepoHg + Clone + 'repo),
     ctx: &CoreContext,
     stream: impl Stream<Item = Result<(BookmarkType, ChangesetId), Error>> + Send + 'repo,
 ) -> BoxStream<'repo, Result<(BookmarkType, HgChangesetId), Error>>

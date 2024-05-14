@@ -64,7 +64,7 @@ impl RootBssmV3DirectoryId {
     pub async fn find_files_filter_basenames<'a>(
         &self,
         ctx: &'a CoreContext,
-        blobstore: impl Blobstore + Clone + Sync + Send + 'static,
+        blobstore: impl Blobstore + Clone + 'static,
         prefixes: Vec<MPath>,
         basenames_and_suffixes: EitherOrBoth<Vec1<String>, Vec1<String>>,
         ordered: Option<Option<MPath>>,

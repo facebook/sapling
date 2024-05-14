@@ -990,7 +990,7 @@ impl ChangesetContext {
                         }
                         ManifestDiff::Removed(path, entry @ ManifestEntry::Leaf(_)) => {
                             #[allow(clippy::if_same_then_else)]
-                            if copy_path_map.get(&path).is_some() {
+                            if copy_path_map.contains_key(&path) {
                                 // The file is was moved (not removed), it will be covered by a "Moved" entry.
                                 None
                             } else if !diff_files || !within_restrictions(&path, &path_restrictions)

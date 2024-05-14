@@ -132,7 +132,7 @@ mod tests {
                 if key != &cache_key.0 {
                     return TestResult::error("Key and cache key got mixed in left!");
                 }
-                if initial_keys.get(key).is_some() {
+                if initial_keys.contains_key(key) {
                     return TestResult::error("After get_multiple_from_cachelib left is incorrect");
                 }
             }

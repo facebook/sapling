@@ -412,9 +412,7 @@ impl Bubble {
 
     pub fn repo_view(
         &self,
-        container: &(
-             impl RepoBlobstoreRef + RepoIdentityRef + RepoIdentityArc + ChangesetsArc + RepoConfigArc
-         ),
+        container: &(impl RepoBlobstoreRef + RepoIdentityArc + ChangesetsArc + RepoConfigArc),
     ) -> EphemeralRepoView {
         let repo_blobstore = self.wrap_repo_blobstore(container.repo_blobstore().clone());
         let repo_identity = container.repo_identity_arc();

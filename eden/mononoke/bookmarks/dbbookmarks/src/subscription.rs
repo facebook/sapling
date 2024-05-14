@@ -309,7 +309,7 @@ mod test {
         txn.commit().await?;
 
         sub.refresh(&ctx).await?;
-        assert!(sub.bookmarks.get(&book).is_some());
+        assert!(sub.bookmarks.contains_key(&book));
 
         Ok(())
     }

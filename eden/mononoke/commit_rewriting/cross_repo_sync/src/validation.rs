@@ -339,25 +339,11 @@ impl fmt::Display for PrintableValidationOutput {
 async fn verify_working_copy_inner<'a>(
     ctx: &'a CoreContext,
     source_repo: Source<
-        &'a (
-                impl RepoIdentityRef
-                + RepoDerivedDataRef
-                + RepoBlobstoreRef
-                + RepoBlobstoreArc
-                + Send
-                + Sync
-            ),
+        &'a (impl RepoIdentityRef + RepoDerivedDataRef + RepoBlobstoreArc + Send + Sync),
     >,
     source_root_fsnode_id: FsnodeId,
     target_repo: Target<
-        &'a (
-                impl RepoIdentityRef
-                + RepoDerivedDataRef
-                + RepoBlobstoreRef
-                + RepoBlobstoreArc
-                + Send
-                + Sync
-            ),
+        &'a (impl RepoIdentityRef + RepoDerivedDataRef + RepoBlobstoreArc + Send + Sync),
     >,
     target_root_fsnode_id: FsnodeId,
     mover: &Mover,
@@ -448,26 +434,12 @@ fn wrap_mover_result(
 async fn verify_dir<'a>(
     ctx: &'a CoreContext,
     source_repo: Source<
-        &'a (
-                impl RepoIdentityRef
-                + RepoDerivedDataRef
-                + RepoBlobstoreRef
-                + RepoBlobstoreArc
-                + Send
-                + Sync
-            ),
+        &'a (impl RepoIdentityRef + RepoDerivedDataRef + RepoBlobstoreArc + Send + Sync),
     >,
     source_path: Option<NonRootMPath>,
     source_root_fsnode_id: FsnodeId,
     target_repo: Target<
-        &'a (
-                impl RepoIdentityRef
-                + RepoDerivedDataRef
-                + RepoBlobstoreRef
-                + RepoBlobstoreArc
-                + Send
-                + Sync
-            ),
+        &'a (impl RepoIdentityRef + RepoDerivedDataRef + RepoBlobstoreArc + Send + Sync),
     >,
     target_root_fsnode_id: FsnodeId,
     mover: &Mover,

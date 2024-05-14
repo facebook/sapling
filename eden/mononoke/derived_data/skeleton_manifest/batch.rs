@@ -267,7 +267,7 @@ mod test {
         )
         .await?;
 
-        let m = commit_map.get(&"M".to_string()).unwrap();
+        let m = commit_map.get("M").unwrap();
         bookmark(ctx, &repo, "master").set_to(*m).await?;
 
         Ok(repo)

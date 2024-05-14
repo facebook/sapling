@@ -1391,8 +1391,8 @@ async fn build_changegroup_push(
                         // that this changeset exists.
                         let new = get_ascii_param(&aparams, "bookmarknode")?;
                         let new = HgChangesetId::from_ascii_str(&new)?;
-                        let create = aparams.get("create").is_some();
-                        let force = aparams.get("force").is_some();
+                        let create = aparams.contains_key("create");
+                        let force = aparams.contains_key("force");
 
                         Some(InfiniteBookmarkPush {
                             name,

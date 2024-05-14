@@ -1394,8 +1394,8 @@ mod test {
         for head in heads {
             println!("verifying working copy for {}", head);
             verify_working_copy(
-                &ctx,
-                &commit_syncer,
+                ctx,
+                commit_syncer,
                 head,
                 commit_syncer.live_commit_sync_config.clone(),
             )
