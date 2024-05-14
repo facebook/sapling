@@ -38,7 +38,6 @@ use mononoke_api::FileContext;
 use mononoke_api::FileId;
 use mononoke_api::Mononoke;
 use mononoke_api::RepoContext;
-use mononoke_api::RepositoryId;
 use mononoke_api::SessionContainer;
 use mononoke_api::TreeContext;
 use mononoke_api::TreeId;
@@ -360,18 +359,6 @@ impl SourceControlServiceImpl {
             .await
     }
 
-    /// Get the repo specified by its ID
-    #[allow(dead_code)] // TODO(T185337400): support submodule expansion in SCS
-    pub(crate) async fn repo_by_id(
-        &self,
-        ctx: CoreContext,
-        repo_id: RepositoryId,
-    ) -> Result<RepoContext, errors::ServiceError> {
-        let authz = AuthorizationContext::new(&ctx);
-        self.repo_by_id_impl(ctx, repo_id, authz, |_| async { Ok(None) })
-            .await
-    }
-
     /// Get the repo specified by a `thrift::RepoSpecifier` for access by a
     /// named service.
     pub(crate) async fn repo_for_service(
@@ -404,30 +391,6 @@ impl SourceControlServiceImpl {
             .repo(ctx, &repo.name)
             .await?
             .ok_or_else(|| errors::repo_not_found(repo.description()))?
-            .with_bubble(bubble_fetcher)
-            .await?
-            .with_authorization_context(authz)
-            .build()
-            .await?;
-        Ok(repo)
-    }
-
-    async fn repo_by_id_impl<F, R>(
-        &self,
-        ctx: CoreContext,
-        repo_id: RepositoryId,
-        authz: AuthorizationContext,
-        bubble_fetcher: F,
-    ) -> Result<RepoContext, errors::ServiceError>
-    where
-        F: FnOnce(RepoEphemeralStore) -> R,
-        R: Future<Output = anyhow::Result<Option<BubbleId>>>,
-    {
-        let repo = self
-            .mononoke
-            .repo_by_id(ctx, repo_id)
-            .await?
-            .ok_or_else(|| errors::repo_not_found(repo_id.to_string()))?
             .with_bubble(bubble_fetcher)
             .await?
             .with_authorization_context(authz)
