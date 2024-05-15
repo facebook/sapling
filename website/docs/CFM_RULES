@@ -1,5 +1,5 @@
 publish(
     wiki_root_path = "Sapling-Internal/dev/DeveloperGuide/internals",
-    folder = "./internals",
+    folder = "./dev/internals",
     oncall = "source_control",
 )
