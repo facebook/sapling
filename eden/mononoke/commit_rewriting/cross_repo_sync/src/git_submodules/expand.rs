@@ -28,6 +28,7 @@ use either::Either::*;
 use futures::stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
+use itertools::Itertools;
 use manifest::BonsaiDiffFileChange;
 use maplit::hashmap;
 use mononoke_types::BlobstoreValue;
@@ -47,6 +48,7 @@ use crate::commit_syncers_lib::mover_to_multi_mover;
 use crate::git_submodules::in_memory_repo::InMemoryRepo;
 use crate::git_submodules::utils::build_recursive_submodule_deps;
 use crate::git_submodules::utils::get_git_hash_from_submodule_file;
+use crate::git_submodules::utils::get_submodule_expansions_affected;
 use crate::git_submodules::utils::get_submodule_file_content_id;
 use crate::git_submodules::utils::get_submodule_repo;
 use crate::git_submodules::utils::get_x_repo_submodule_metadata_file_path;
@@ -120,10 +122,35 @@ pub async fn rewrite_commit_with_submodule_expansion<'a, R: Repo>(
     remapped_parents: &'a HashMap<ChangesetId, ChangesetId>,
     rewrite_opts: RewriteOpts,
 ) -> Result<Option<BonsaiChangesetMut>> {
-    ensure!(
-        source_repo.repo_identity().id() != *sm_exp_data.large_repo_id,
-        "Can't sync changes from large to small repo if small repo has submodule expansion enabled"
-    );
+    let is_forward_sync = source_repo.repo_identity().id() != *sm_exp_data.large_repo_id;
+    if !is_forward_sync {
+        // Backsyncing, so ensure that submodule expansions are not being modified
+        let submodules_affected =
+            get_submodule_expansions_affected(&sm_exp_data, &bonsai, mover.clone())?;
+
+        ensure!(
+            submodules_affected.is_empty(),
+            "Changeset can't be synced from large to small repo because it modifies the expansion of submodules: {0:#?}",
+            submodules_affected
+                .into_iter()
+                .map(|p| p.to_string())
+                .sorted()
+                .collect::<Vec<_>>(),
+        );
+
+        // No submodule expansions are being modified, so it's safe to backsync
+        return rewrite_commit(
+            ctx,
+            bonsai,
+            remapped_parents,
+            mover_to_multi_mover(mover.clone()),
+            source_repo,
+            None,
+            rewrite_opts,
+        )
+        .await
+        .context("Failed to create small repo bonsai");
+    };
 
     let new_bonsai = run_and_log_stats_to_scuba(
         ctx,

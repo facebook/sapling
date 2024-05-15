@@ -22,21 +22,25 @@ use futures::stream::Stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use git_types::ObjectKind;
+use itertools::Itertools;
 use manifest::bonsai_diff;
 use manifest::BonsaiDiffFileChange;
 use manifest::Entry;
 use manifest::ManifestOps;
 use mononoke_types::hash::GitSha1;
 use mononoke_types::hash::RichGitSha1;
+use mononoke_types::BonsaiChangesetMut;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
 use mononoke_types::FileType;
 use mononoke_types::FsnodeId;
 use mononoke_types::MPathElement;
 use mononoke_types::NonRootMPath;
+use movers::Mover;
 use repo_blobstore::RepoBlobstoreArc;
 use repo_derived_data::RepoDerivedDataRef;
 
+use crate::git_submodules::expand::SubmoduleExpansionData;
 use crate::git_submodules::expand::SubmodulePath;
 use crate::git_submodules::in_memory_repo::InMemoryRepo;
 use crate::types::Repo;
@@ -307,4 +311,50 @@ pub(crate) fn build_recursive_submodule_deps<R: Repo>(
         .collect();
 
     rec_small_repo_deps
+}
+
+/// Returns the submodule expansions affected by a large repo changeset.
+///
+/// This could happen by directly modifying the submodule's expansion or its
+/// metadata file.
+pub(crate) fn get_submodule_expansions_affected<'a, R: Repo>(
+    sm_exp_data: &SubmoduleExpansionData<'a, R>,
+    // Bonsai from the large repo
+    bonsai: &BonsaiChangesetMut,
+    mover: Mover,
+) -> Result<Vec<NonRootMPath>> {
+    let submodules_affected = sm_exp_data
+        .submodule_deps
+        .iter()
+        .map(|(submodule_path, _)| {
+            // Get the submodule's metadata file path
+            let metadata_file_path = get_x_repo_submodule_metadata_file_path(
+                &SubmodulePath(submodule_path.clone()),
+                sm_exp_data.x_repo_submodule_metadata_file_prefix,
+            )?;
+
+            let submodule_expansion_changed = bonsai
+                .file_changes
+                .iter()
+                .map(|(p, _)| mover(p))
+                .filter_map(Result::transpose)
+                .process_results(|mut iter| {
+                    iter.any(|small_repo_path| {
+                        // File modified expansion directly
+                        submodule_path.is_prefix_of(&small_repo_path)
+                        // or the submodule's metadata file
+                        || small_repo_path == metadata_file_path
+                    })
+                })?;
+
+            if submodule_expansion_changed {
+                return anyhow::Ok(Some(submodule_path.clone()));
+            };
+
+            Ok(None)
+        })
+        .filter_map(Result::transpose)
+        .collect::<Result<Vec<_>>>()?;
+
+    Ok(submodules_affected)
 }

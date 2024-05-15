@@ -57,24 +57,20 @@ pub async fn get_git_submodule_action_by_version(
             .submodule_config
             .git_submodules_action
             .clone();
-        // TODO(T179530927): return small repo action instead of default one
-        if small_repo_action != GitSubmodulesChangesAction::default() {
-            log_warning(
-                ctx,
-                format!(
-                    "Using default submodule action for backsyncing. Actual submodule action configured for small repo is {0:#?}",
-                    small_repo_action
-                ),
-            );
-        };
+
+        return Ok(small_repo_action);
     };
 
-    // TODO(T179530927): get the correct submodule action from small repo
-    // when call is made during backsyncing.
-    // Currently, when this is called for backsyncing, we look for the large
-    // repo in the small repo configs, don't find it and return the default
-    // action of STRIP.
-
+    // If the action if not found above, there might be something wrong. We
+    // should still fallback to the default action to avoid ever syncing submodule
+    // file changes to the large repo, but let's at least log a warning.
+    log_warning(
+        ctx,
+        format!(
+            "Couldn't find git submodule action for source repo id {}, target repo id {} and commit sync version {}",
+            source_repo_id, target_repo_id, version,
+        ),
+    );
     Ok(GitSubmodulesChangesAction::default())
 }
 
