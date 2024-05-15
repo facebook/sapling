@@ -119,6 +119,8 @@ export class GithubUICodeReviewProvider implements UICodeReviewProvider {
 
   supportSubmittingAsDraft = 'newDiffsOnly' as const;
   supportsUpdateMessage = false;
+  submitDisabledReason = () =>
+    Internal.submitForGitHubDisabledReason?.(this.preferredSubmitCommand);
 
   enableMessageSyncing = false;
 

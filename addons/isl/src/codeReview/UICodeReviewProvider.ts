@@ -45,6 +45,9 @@ export interface UICodeReviewProvider {
 
   submitCommandName(): string;
 
+  /** If provided, any form of submitting for code review is currently disabled for this provider for the given reason */
+  submitDisabledReason?: () => string | undefined;
+
   RepoInfo(): JSX.Element | null;
 
   isDiffClosed(summary: DiffSummary): boolean;

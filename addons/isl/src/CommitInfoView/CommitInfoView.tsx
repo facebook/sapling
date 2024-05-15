@@ -574,6 +574,8 @@ function ActionsBar({
     diffSummaries.value && provider?.getSubmittableDiffs([commit], diffSummaries.value);
   const canSubmitIndividualDiffs = submittable && submittable.length > 0;
 
+  const submitDisabledReason = provider?.submitDisabledReason?.();
+
   const ongoingImageUploads = useAtomValue(numPendingImageUploads);
   const areImageUploadsOngoing = ongoingImageUploads > 0;
 
@@ -696,6 +698,8 @@ function ActionsBar({
             title={
               areImageUploadsOngoing
                 ? t('Image uploads are still pending')
+                : submitDisabledReason
+                ? submitDisabledReason
                 : canSubmitWithCodeReviewProvider
                 ? t('Submit for code review with $provider', {
                     replace: {$provider: codeReviewProviderName ?? 'remote'},
@@ -707,7 +711,11 @@ function ActionsBar({
             placement="top">
             <OperationDisabledButton
               contextKey={`submit-${commit.isDot ? 'head' : commit.hash}`}
-              disabled={!canSubmitWithCodeReviewProvider || areImageUploadsOngoing}
+              disabled={
+                !canSubmitWithCodeReviewProvider ||
+                areImageUploadsOngoing ||
+                submitDisabledReason != null
+              }
               runOperation={async () => {
                 let amendOrCommitOp;
                 if (commit.isDot && anythingToCommit) {

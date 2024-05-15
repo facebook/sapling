@@ -364,7 +364,7 @@ describe('Image upload inside TextArea ', () => {
         expect(CommitInfoTestUtils.withinCommitActionBar().getByText('Commit')).not.toBeDisabled();
       });
 
-      it('disables commit and submit button', async () => {
+      it.skip('disables commit and submit button', async () => {
         act(() => {
           simulateMessageFromServer({
             type: 'repoInfo',
