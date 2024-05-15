@@ -98,6 +98,7 @@ rust_binary(
         "//eden/mononoke/cmdlib/mononoke_app:mononoke_app",
         "//eden/mononoke/derived_data:derived_data_remote",
         "//eden/mononoke/mononoke_api:mononoke_api",
+        "//eden/mononoke/mononoke_repos:mononoke_repos",
         "//eden/mononoke/mononoke_types:mononoke_types",
         "//eden/mononoke/repo_authorization:repo_authorization",
         "//eden/mononoke/repo_factory:repo_factory",

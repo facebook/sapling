@@ -40,6 +40,7 @@ use mononoke_app::fb303::AliveService;
 use mononoke_app::fb303::Fb303AppExtension;
 use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
+use mononoke_repos::MononokeRepos;
 use mononoke_types::NonRootMPath;
 use print_graph::print_graph;
 use print_graph::PrintGraphOptions;
@@ -239,7 +240,15 @@ async fn async_main_impl(
     };
 
     let auth_ctx = AuthorizationContext::new_bypass_access_control();
-    let repo_ctx: RepoContext = RepoContext::new(ctx, auth_ctx.into(), repo, None, None).await?;
+    let repo_ctx: RepoContext = RepoContext::new(
+        ctx,
+        auth_ctx.into(),
+        repo,
+        None,
+        None,
+        Arc::new(MononokeRepos::new()),
+    )
+    .await?;
 
     let cs_ctx = get_latest_changeset_context(&repo_ctx, &args).await?;
 

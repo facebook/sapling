@@ -123,7 +123,7 @@ impl Mononoke {
         match self.repos.get_by_name(name.as_ref()) {
             None => Ok(None),
             Some(repo) => Ok(Some(
-                RepoContextBuilder::new(ctx, repo, self.repos.as_ref()).await?,
+                RepoContextBuilder::new(ctx, repo, self.repos.clone()).await?,
             )),
         }
     }
@@ -139,7 +139,7 @@ impl Mononoke {
         match self.repos.get_by_id(repo_id.id()) {
             None => Ok(None),
             Some(repo) => Ok(Some(
-                RepoContextBuilder::new(ctx, repo, self.repos.as_ref()).await?,
+                RepoContextBuilder::new(ctx, repo, self.repos.clone()).await?,
             )),
         }
     }

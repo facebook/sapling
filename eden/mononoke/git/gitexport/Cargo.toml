@@ -43,6 +43,7 @@ maplit = "1.0"
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_api = { version = "0.1.0", path = "../../mononoke_api" }
 mononoke_app = { version = "0.1.0", path = "../../cmdlib/mononoke_app" }
+mononoke_repos = { version = "0.1.0", path = "../../mononoke_repos" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 packfile = { version = "0.1.0", path = "../packfile" }
 print_graph = { version = "0.1.0", path = "../../cmdlib/displaying/graph" }
