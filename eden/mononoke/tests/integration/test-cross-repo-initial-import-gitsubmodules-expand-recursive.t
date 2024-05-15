@@ -32,12 +32,12 @@ Avoid local clone error "fatal: transport 'file' not allowed" in new Git version
 
 
 Run the x-repo with submodules setup  
+  $ ENABLE_API_WRITES=1 REPOID="$REPO_C_ID" REPONAME="repo_c" setup_common_config "$REPOTYPE"
+  $ ENABLE_API_WRITES=1 REPOID="$REPO_B_ID" REPONAME="repo_b" setup_common_config "$REPOTYPE"
   $ run_common_xrepo_sync_with_gitsubmodules_setup
   $ set_git_submodules_action_in_config_version "$LATEST_CONFIG_VERSION_NAME" "$SUBMODULE_REPO_ID" 3 # 3=expand
   $ set_git_submodule_dependencies_in_config_version "$LATEST_CONFIG_VERSION_NAME" \
   > "$SUBMODULE_REPO_ID" "{\"git-repo-b\": $REPO_B_ID, \"git-repo-b/git-repo-c\": $REPO_C_ID, \"repo_c\": $REPO_C_ID}"
-  $ ENABLE_API_WRITES=1 REPOID="$REPO_C_ID" REPONAME="repo_c" setup_common_config "$REPOTYPE"
-  $ ENABLE_API_WRITES=1 REPOID="$REPO_B_ID" REPONAME="repo_b" setup_common_config "$REPOTYPE"
 
 
 Create a commit in the large repo
@@ -294,10 +294,12 @@ Make changes to submodule and make sure they're synced properly
   heads/master
 
 Import the changes from the git repos B and C into their Mononoke repos
-  $ REPOID="$REPO_C_ID" quiet gitimport "$GIT_REPO_C" --bypass-derived-data-backfilling \
+  $ REPOID="$REPO_C_ID" QUIET_LOGGING_LOG_FILE="$TESTTMP/gitimport_repo_c.out"  \
+  > quiet gitimport "$GIT_REPO_C" --bypass-derived-data-backfilling \
   > --bypass-readonly --generate-bookmarks missing-for-commit "$GIT_REPO_C_HEAD"
 
-  $ REPOID="$REPO_B_ID" quiet gitimport "$GIT_REPO_B" --bypass-derived-data-backfilling \
+  $ REPOID="$REPO_B_ID" QUIET_LOGGING_LOG_FILE="$TESTTMP/gitimport_repo_b.out" \
+  > quiet gitimport "$GIT_REPO_B" --bypass-derived-data-backfilling \
   > --bypass-readonly --generate-bookmarks missing-for-commit "$GIT_REPO_B_HEAD"
 
 Set up live forward syncer, which should sync all commits in small repo's (repo A)
@@ -310,30 +312,30 @@ forward synced to the large repo
   $ REPOID="$SUBMODULE_REPO_ID" with_stripped_logs gitimport "$GIT_REPO_A" --bypass-derived-data-backfilling \
   > --bypass-readonly --generate-bookmarks missing-for-commit "$GIT_REPO_A_HEAD" > $TESTTMP/gitimport_output
 
-  $ wait_for_xrepo_sync 2
+  $ QUIET_LOGGING_LOG_FILE="$TESTTMP/xrepo_sync_last_logs.out" with_stripped_logs wait_for_xrepo_sync 2
 
   $ cd "$TESTTMP/$LARGE_REPO_NAME"
   $ hg pull -q 
   $ hg co -q master
 
-  $ hg log --graph -T '{node|short} {desc}\n' -r "all()"
-  @  3fafe9ae1f32 Remove repo C submodule from repo A
+  $ hg log --graph -T '{node} {desc}\n' -r "all()"
+  @  3fafe9ae1f322ab664bdf968b4678085a110c55f Remove repo C submodule from repo A
   │
-  o  966d27bdf05c Update submodule B in repo A
+  o  966d27bdf05c9c50d2e6e52390ef539e7ed88347 Update submodule B in repo A
   │
-  o  e21dab0d1f38 Change directly in A
+  o  e21dab0d1f381cd1d46cd735013714d34bf02eaf Change directly in A
   │
-  o    6a66af335e25 [MEGAREPO GRADUAL MERGE] gradual merge (0)
+  o    6a66af335e25a2fbbe762dd9de5253bfdf973fb5 [MEGAREPO GRADUAL MERGE] gradual merge (0)
   ├─╮
-  │ o  93d781922882 Added git repo C as submodule directly in A
+  │ o  93d78192288211ec611cde910d9ed46df80c9fd4 Added git repo C as submodule directly in A
   │ │
-  │ o  1f9d3769f8c2 Added git repo B as submodule in A
+  │ o  1f9d3769f8c22b50db3ed0105c9d0e9490bbe7e9 Added git repo B as submodule in A
   │ │
-  │ o  e2c69ce8cc11 Add regular_dir/aardvar
+  │ o  e2c69ce8cc11691984e50e6023f4bbf4271aa4c3 Add regular_dir/aardvar
   │ │
-  │ o  df9086c77129 Add root_file
+  │ o  df9086c771290c305c738040313bf1cc5759eba9 Add root_file
   │
-  o  54a6db91baf1 L_A
+  o  54a6db91baf1c10921369339b50e5a174a7ca82e L_A
   
 
 Check that deletions were made properly, i.e. submodule in repo_c was entirely
