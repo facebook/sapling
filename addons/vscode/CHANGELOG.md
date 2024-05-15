@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.1.50
+
+### May 15 2024
+
+- Auto-mark files with conflicts as resolved when saving them
+- Show cwds as relative paths from their repo repository
+- Automatically run custom configured merge tools instead of requiring a button press
+- Fix issue where changing available workspace folders in vscode doesn't update the available cwds in ISL
+- Show Split and Edit Stack modals immediately with a loading spinner
+- Delay loading Split and Edit Stack data until running commands have finished, to prevent stale data
+- Add selection checkboxes when viewing uncommitted changes in "tree" mode
+- Add button to clear out the current commit message in the commit info view
+- Reduce truncation of long bookmarks
+- Fix left/right arrows in interactive split sometimes not moving all selected lines
+
 ## 0.1.49
 
 ### May 2 2024
