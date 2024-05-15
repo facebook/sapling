@@ -155,6 +155,7 @@ export function StackEditConfirmButtons(): React.ReactElement {
         placement="bottom">
         <VSCodeButton
           className="confirm-edit-stack-button"
+          data-testid="confirm-edit-stack-button"
           appearance="primary"
           onClick={handleSaveChanges}>
           {stackIntention === 'split' ? <T>Split</T> : <T>Save changes</T>}

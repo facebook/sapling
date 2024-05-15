@@ -36,6 +36,7 @@ export function MaybeEditStackModal() {
     )
   ) : isEditing ? (
     <Modal
+      dataTestId="edit-stack-loading"
       dismiss={() => {
         // allow dismissing in loading state in case it gets stuck
         setStackIntention(['general', new Set()]);
@@ -56,7 +57,7 @@ export function MaybeEditStackModal() {
 /** A Modal for dedicated split UI. Subset of `LoadedEditStackModal`. */
 function LoadedSplitModal() {
   return (
-    <Modal>
+    <Modal dataTestId="interactive-split-modal">
       <SplitStackEditPanel />
       <Row style={{padding: 'var(--pad) 0', justifyContent: 'flex-end'}}>
         <StackEditConfirmButtons />
