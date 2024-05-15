@@ -21,7 +21,7 @@ import {
   useAbortRunningOperation,
 } from './operationsState';
 import {repositoryInfo} from './serverAPIState';
-import {TerminalLikeOutput, processTerminalLines} from './terminalOutput';
+import {processTerminalLines} from './terminalOutput';
 import {CommandRunner} from './types';
 import {short} from './utils';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';

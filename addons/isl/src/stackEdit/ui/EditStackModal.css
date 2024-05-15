@@ -5,6 +5,11 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+.edit-stack-modal-panels {
+  min-width: 400px;
+  min-height: 300px;
+}
+
 .edit-stack-modal-panels vscode-panel-tab {
   font-size: 110%;
   margin: 0px calc(2 * var(--pad));

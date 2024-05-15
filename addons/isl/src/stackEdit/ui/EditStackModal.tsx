@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {Row, FlexSpacer, ScrollY} from '../../ComponentUtils';
+import {Row, FlexSpacer, ScrollY, Center} from '../../ComponentUtils';
 import {Modal} from '../../Modal';
 import {tracker} from '../../analytics';
 import {T} from '../../i18n';
@@ -14,15 +14,16 @@ import {StackEditConfirmButtons} from './StackEditConfirmButtons';
 import {StackEditSubTree} from './StackEditSubTree';
 import {loadingStackState, editingStackIntentionHashes} from './stackEditState';
 import {VSCodePanels, VSCodePanelTab, VSCodePanelView} from '@vscode/webview-ui-toolkit/react';
-import {useAtomValue} from 'jotai';
+import {useAtom, useAtomValue} from 'jotai';
 import {useState} from 'react';
+import {Icon} from 'shared/Icon';
 
 import './EditStackModal.css';
 
 /// Show a <Modal /> when editing a stack.
 export function MaybeEditStackModal() {
   const loadingState = useAtomValue(loadingStackState);
-  const [stackIntention, stackHashes] = useAtomValue(editingStackIntentionHashes);
+  const [[stackIntention, stackHashes], setStackIntention] = useAtom(editingStackIntentionHashes);
 
   const isEditing = stackHashes.size > 0;
   const isLoaded = isEditing && loadingState.state === 'hasValue';
@@ -33,6 +34,22 @@ export function MaybeEditStackModal() {
     ) : (
       <LoadedEditStackModal />
     )
+  ) : isEditing ? (
+    <Modal
+      dismiss={() => {
+        // allow dismissing in loading state in case it gets stuck
+        setStackIntention(['general', new Set()]);
+      }}>
+      <Center
+        // add spacing to account for action buttons, so the modal is the same size during and after loading
+        style={{paddingBottom: 'calc(24px + 2 * var(--pad))'}}
+        className={stackIntention === 'split' ? 'interactive-split' : 'edit-stack-modal-panels'}>
+        <Row>
+          <Icon icon="loading" size="M" />
+          {(loadingState.state === 'loading' && loadingState.message) ?? null}
+        </Row>
+      </Center>
+    </Modal>
   ) : null;
 }
 

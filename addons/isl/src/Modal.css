@@ -45,4 +45,5 @@
   position: absolute;
   top: var(--pad);
   right: var(--pad);
+  z-index: 10;
 }
