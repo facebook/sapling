@@ -8,6 +8,7 @@
 use std::clone::Clone;
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::sync::Arc;
 
 use anyhow::anyhow;
 use anyhow::ensure;
@@ -83,7 +84,7 @@ pub async fn validate_all_submodule_expansions<'a, R: Repo>(
                         sm_exp_data,
                         bonsai,
                         submodule_path,
-                        submodule_repo,
+                        submodule_repo.as_ref(),
                         mover,
                     ),
                 )
@@ -459,7 +460,7 @@ async fn validate_working_copy_of_expansion_with_recursive_submodules<'a, R>(
     // `adjusted_submodule_deps`, as it's done in expansion module.
     // Small repo submodule dependencies, but with their paths adjusted to
     // account for recursive submodules.
-    adjusted_submodule_deps: HashMap<NonRootMPath, R>,
+    adjusted_submodule_deps: HashMap<NonRootMPath, Arc<R>>,
     submodule_repo: &'a R,
     expansion_fsnode_id: FsnodeId,
     submodule_fsnode_id: FsnodeId,
@@ -673,8 +674,8 @@ where
 // Doing this means that any unnaccounted file will be flagged right away,
 // without having to do the recursive calls.
 struct EntriesToValidate<R: Repo> {
-    rec_submodule_repo_deps: HashMap<NonRootMPath, R>,
-    submodule_repo: R,
+    rec_submodule_repo_deps: HashMap<NonRootMPath, Arc<R>>,
+    submodule_repo: Arc<R>,
     expansion_fsnode_id: FsnodeId,
     submodule_repo_fsnode_id: FsnodeId,
 }
@@ -706,7 +707,7 @@ async fn validate_expansion_directory_against_submodule_manifest_entry<'a, R: Re
     submodule_repo: &'a R,
     // Small repo submodule dependencies, but with their paths adjusted to
     // account for recursive submodules.
-    adjusted_submodule_deps: HashMap<NonRootMPath, R>,
+    adjusted_submodule_deps: HashMap<NonRootMPath, Arc<R>>,
     entry_validation_res: EntryValidationData<R>,
     exp_path: MPathElement,
     exp_directory: FsnodeDirectory,
@@ -732,7 +733,7 @@ async fn validate_expansion_directory_against_submodule_manifest_entry<'a, R: Re
         // so we just call the validation for it.
         entries_to_validate.push(EntriesToValidate {
             rec_submodule_repo_deps,
-            submodule_repo: submodule_repo.clone(),
+            submodule_repo: submodule_repo.clone().into(),
             expansion_fsnode_id: exp_dir_fsnode_id,
             submodule_repo_fsnode_id: *submodule_dir.id(),
         });
@@ -804,7 +805,7 @@ async fn validate_expansion_directory_against_submodule_manifest_entry<'a, R: Re
 
     let rec_submodule_fsnode_id: FsnodeId = root_fsnode_id_from_submodule_git_commit(
         ctx,
-        &recursive_submodule_repo,
+        recursive_submodule_repo.as_ref(),
         exp_metadata_git_hash,
     )
     .await?;

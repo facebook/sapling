@@ -270,11 +270,11 @@ pub async fn get_all_possible_small_repo_submodule_deps_from_matches<R: Repo>(
         .flatten()
         .collect::<HashSet<_>>();
 
-    let submodule_deps_map: HashMap<NonRootMPath, R> = stream::iter(small_repo_deps_ids)
+    let submodule_deps_map: HashMap<NonRootMPath, Arc<R>> = stream::iter(small_repo_deps_ids)
         .then(|(submodule_path, repo_id)| async move {
             let repo =
                 args::open_repo_by_id_unredacted(ctx.fb, ctx.logger(), matches, repo_id).await?;
-            anyhow::Ok((submodule_path, repo))
+            anyhow::Ok((submodule_path, Arc::new(repo)))
         })
         .try_collect()
         .await?;

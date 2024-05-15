@@ -372,7 +372,10 @@ pub(crate) fn create_repo_a_to_large_repo_commit_syncer(
         large_repo_id: large_repo.repo_identity().id(),
     };
 
-    let all_submodule_deps = submodule_deps.into_iter().collect::<HashMap<_, _>>();
+    let all_submodule_deps = submodule_deps
+        .into_iter()
+        .map(|(p, repo)| (p, Arc::new(repo)))
+        .collect::<HashMap<_, _>>();
 
     // all_submodule_deps.insert(NonRootMPath::new("submodules/repo_b")?, repo_b.clone());
     let submodule_deps = SubmoduleDeps::ForSync(all_submodule_deps);

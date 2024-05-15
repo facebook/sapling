@@ -8,6 +8,7 @@
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::str::FromStr;
+use std::sync::Arc;
 
 use anyhow::anyhow;
 use anyhow::Context;
@@ -85,11 +86,13 @@ pub(crate) async fn git_hash_from_submodule_metadata_file<'a>(
 
 pub(crate) fn get_submodule_repo<'a, 'b, R: Repo>(
     sm_path: &'a SubmodulePath,
-    submodule_deps: &'b HashMap<NonRootMPath, R>,
+    submodule_deps: &'b HashMap<NonRootMPath, Arc<R>>,
 ) -> Result<&'b R> {
-    submodule_deps
+    let repo_arc = submodule_deps
         .get(&sm_path.0)
-        .ok_or_else(|| anyhow!("Mononoke repo from submodule {} not available", sm_path.0))
+        .ok_or_else(|| anyhow!("Mononoke repo from submodule {} not available", sm_path.0))?;
+
+    Ok(repo_arc.as_ref())
 }
 
 /// Returns true if the given path is a git submodule.
@@ -292,10 +295,10 @@ pub(crate) async fn root_fsnode_id_from_submodule_git_commit(
 /// It removes the path of the given submodule from all the entries that are
 /// under it and ignores the ones that aren't.
 pub(crate) fn build_recursive_submodule_deps<R: Repo>(
-    submodule_deps: &HashMap<NonRootMPath, R>,
+    submodule_deps: &HashMap<NonRootMPath, Arc<R>>,
     submodule_path: &NonRootMPath,
-) -> HashMap<NonRootMPath, R> {
-    let rec_small_repo_deps: HashMap<NonRootMPath, R> = submodule_deps
+) -> HashMap<NonRootMPath, Arc<R>> {
+    let rec_small_repo_deps: HashMap<NonRootMPath, Arc<R>> = submodule_deps
         .iter()
         .filter_map(|(p, repo)| {
             p.remove_prefix_component(submodule_path)

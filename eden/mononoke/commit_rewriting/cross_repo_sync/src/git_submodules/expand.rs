@@ -9,6 +9,7 @@ use std::clone::Clone;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::fmt;
+use std::sync::Arc;
 
 use anyhow::anyhow;
 use anyhow::ensure;
@@ -80,7 +81,7 @@ pub struct SubmoduleExpansionData<'a, R: Repo> {
     // that a bonsai in the large repo doesn't break the consistency of submodule
     // expansions.
     #[derivative(Debug = "ignore")]
-    pub submodule_deps: &'a HashMap<NonRootMPath, R>,
+    pub submodule_deps: &'a HashMap<NonRootMPath, Arc<R>>,
     pub x_repo_submodule_metadata_file_prefix: &'a str,
     // TODO(T179530927): remove this once backsync is supported
     /// Used to ensure that trying to backsync from large to small repos that

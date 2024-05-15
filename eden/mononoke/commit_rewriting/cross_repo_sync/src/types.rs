@@ -13,6 +13,7 @@ use std::hash::Hash;
 use std::hash::Hasher;
 use std::ops::Deref;
 use std::ops::DerefMut;
+use std::sync::Arc;
 
 use bonsai_git_mapping::BonsaiGitMapping;
 use bonsai_git_mapping::BonsaiGitMappingArc;
@@ -267,7 +268,7 @@ assert_impl_all!(ConcreteRepo: Repo);
 /// this map has to be available, or the operation will crash otherwise.
 #[derive(Clone)]
 pub enum SubmoduleDeps<R> {
-    ForSync(HashMap<NonRootMPath, R>),
+    ForSync(HashMap<NonRootMPath, Arc<R>>),
     NotNeeded,
 }
 
