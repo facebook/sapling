@@ -364,7 +364,7 @@ describe('Image upload inside TextArea ', () => {
         expect(CommitInfoTestUtils.withinCommitActionBar().getByText('Commit')).not.toBeDisabled();
       });
 
-      it.skip('disables commit and submit button', async () => {
+      it('disables commit and submit button', async () => {
         act(() => {
           simulateMessageFromServer({
             type: 'repoInfo',
@@ -379,6 +379,10 @@ describe('Image upload inside TextArea ', () => {
             },
           });
         });
+        // Get around internally-disabled button
+        fireEvent.click(screen.getByTestId('settings-gear-button'));
+        const enableSubmit = screen.queryByTestId('force-enable-github-submit');
+        enableSubmit && fireEvent.click(enableSubmit);
         CommitInfoTestUtils.clickCommitMode();
         expect(
           CommitInfoTestUtils.withinCommitActionBar().getByText('Commit and Submit'),

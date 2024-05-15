@@ -21,6 +21,7 @@ import {Tooltip} from './Tooltip';
 import {codeReviewProvider} from './codeReview/CodeReviewInfo';
 import {showDiffNumberConfig} from './codeReview/DiffBadge';
 import {SubmitAsDraftCheckbox} from './codeReview/DraftCheckbox';
+import {overrideDisabledSubmitModes} from './codeReview/github/branchPrState';
 import {Button} from './components/Button';
 import {Checkbox} from './components/Checkbox';
 import {Dropdown} from './components/Dropdown';
@@ -375,16 +376,28 @@ function ZoomUISetting() {
 
 function DebugToolsField() {
   const [isDebug, setIsDebug] = useAtom(debugToolsEnabledState);
+  const [overrideDisabledSubmit, setOverrideDisabledSubmit] = useAtom(overrideDisabledSubmitModes);
+  const provider = useAtomValue(codeReviewProvider);
 
   return (
-    <DropdownField title={t('Debug Tools')}>
-      <Checkbox
-        checked={isDebug}
-        onChange={checked => {
-          setIsDebug(checked);
-        }}>
-        <T>Enable Debug Tools</T>
-      </Checkbox>
+    <DropdownField title={t('Debug Tools & Experimental')}>
+      <Column alignStart>
+        <Checkbox
+          checked={isDebug}
+          onChange={checked => {
+            setIsDebug(checked);
+          }}>
+          <T>Enable Debug Tools</T>
+        </Checkbox>
+        {provider?.submitDisabledReason?.() != null && (
+          <Checkbox
+            checked={overrideDisabledSubmit}
+            onChange={setOverrideDisabledSubmit}
+            data-testid="force-enable-github-submit">
+            <T>Force enable `sl pr submit` and `sl ghstack submit`</T>
+          </Checkbox>
+        )}
+      </Column>
     </DropdownField>
   );
 }

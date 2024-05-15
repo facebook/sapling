@@ -32,6 +32,7 @@ import {
   latestCommitMessageFields,
 } from '../codeReview/CodeReviewInfo';
 import {submitAsDraft, SubmitAsDraftCheckbox} from '../codeReview/DraftCheckbox';
+import {overrideDisabledSubmitModes} from '../codeReview/github/branchPrState';
 import {Badge} from '../components/Badge';
 import {Divider} from '../components/Divider';
 import {RadioGroup} from '../components/Radio';
@@ -574,7 +575,8 @@ function ActionsBar({
     diffSummaries.value && provider?.getSubmittableDiffs([commit], diffSummaries.value);
   const canSubmitIndividualDiffs = submittable && submittable.length > 0;
 
-  const submitDisabledReason = provider?.submitDisabledReason?.();
+  const forceEnableSubmit = useAtomValue(overrideDisabledSubmitModes);
+  const submitDisabledReason = forceEnableSubmit ? undefined : provider?.submitDisabledReason?.();
 
   const ongoingImageUploads = useAtomValue(numPendingImageUploads);
   const areImageUploadsOngoing = ongoingImageUploads > 0;
