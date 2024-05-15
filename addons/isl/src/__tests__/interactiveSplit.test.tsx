@@ -108,7 +108,7 @@ describe('Interactive Split', () => {
     await waitFor(() => expectMessageSentToServer({type: 'exportStack', revs: 'e'}));
   });
 
-  it.skip('shows errors', async () => {
+  it('shows errors', async () => {
     fireEvent.click(screen.getByText('Split'));
     await waitFor(() => expectMessageSentToServer({type: 'exportStack', revs: 'e'}));
     act(() => {

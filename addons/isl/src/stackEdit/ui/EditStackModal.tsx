@@ -6,9 +6,10 @@
  */
 
 import {Row, FlexSpacer, ScrollY, Center} from '../../ComponentUtils';
+import {ErrorNotice} from '../../ErrorNotice';
 import {Modal} from '../../Modal';
 import {tracker} from '../../analytics';
-import {T} from '../../i18n';
+import {T, t} from '../../i18n';
 import {SplitStackEditPanel, SplitStackToolbar} from './SplitStackEditPanel';
 import {StackEditConfirmButtons} from './StackEditConfirmButtons';
 import {StackEditSubTree} from './StackEditSubTree';
@@ -45,10 +46,14 @@ export function MaybeEditStackModal() {
         // add spacing to account for action buttons, so the modal is the same size during and after loading
         style={{paddingBottom: 'calc(24px + 2 * var(--pad))'}}
         className={stackIntention === 'split' ? 'interactive-split' : 'edit-stack-modal-panels'}>
-        <Row>
-          <Icon icon="loading" size="M" />
-          {(loadingState.state === 'loading' && loadingState.message) ?? null}
-        </Row>
+        {loadingState.state === 'hasError' ? (
+          <ErrorNotice error={new Error(loadingState.error)} title={t('Loading stack failed')} />
+        ) : (
+          <Row>
+            <Icon icon="loading" size="M" />
+            {(loadingState.state === 'loading' && loadingState.message) ?? null}
+          </Row>
+        )}
       </Center>
     </Modal>
   ) : null;
