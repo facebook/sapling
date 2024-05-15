@@ -17,7 +17,9 @@ import {
   commitMessageFieldsToString,
 } from '../../CommitInfoView/CommitMessageFields';
 import {getTracker} from '../../analytics/globalTracker';
+import {t} from '../../i18n';
 import {readAtom, writeAtom} from '../../jotaiUtils';
+import {waitForNothingRunning} from '../../operationsState';
 import {CommitStackState} from '../../stackEdit/commitStackState';
 import {assert, registerDisposable} from '../../utils';
 import {List, Record} from 'immutable';
@@ -161,6 +163,7 @@ export type Loading<T> =
       exportedStack:
         | ExportStack /* Got the exported stack. Analyzing. */
         | undefined /* Haven't got the exported stack. */;
+      message?: string;
     }
   | {state: 'hasValue'; value: T}
   | {state: 'hasError'; error: string};
@@ -271,8 +274,21 @@ export const editingStackIntentionHashes = atom<
     const state = get(stackEditState);
     return [state.intention, state.hashes];
   },
-  (_get, set, newValue) => {
+  async (_get, set, newValue) => {
     const [intention, hashes] = newValue;
+    const waiter = waitForNothingRunning();
+    if (waiter != null) {
+      set(stackEditState, {
+        hashes,
+        intention,
+        history: {
+          state: 'loading',
+          exportedStack: undefined,
+          message: t('Waiting for other commands to finish'),
+        },
+      });
+      await waiter;
+    }
     if (hashes.size > 0) {
       const revs = getRevs(hashes);
       clientToServerAPI.postMessage({type: 'exportStack', revs});
