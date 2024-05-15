@@ -22,7 +22,6 @@ rust_binary(
         "fbsource//third-party/rust:strum",
         "fbsource//third-party/rust:tokio",
         "//common/rust/shed/cached_config:cached_config",
-        "//common/rust/shed/cloned:cloned",
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/futures_stats:futures_stats",
         "//eden/mononoke/blobrepo:repo_blobstore",

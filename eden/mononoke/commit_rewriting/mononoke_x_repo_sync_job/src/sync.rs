@@ -20,7 +20,6 @@ use bookmarks::BookmarkUpdateLogEntry;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks::BookmarksRef;
 use bulk_derivation::BulkDerivation;
-use cloned::cloned;
 use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use cross_repo_sync::find_toposorted_unsynced_ancestors;
@@ -54,7 +53,6 @@ use repo_identity::RepoIdentityRef;
 use scuba_ext::MononokeScubaSampleBuilder;
 use strum::IntoEnumIterator;
 use synced_commit_mapping::SyncedCommitMapping;
-use tokio::task;
 
 use crate::reporting::log_bookmark_deletion_result;
 use crate::reporting::log_non_pushrebase_sync_single_changeset_result;
@@ -633,14 +631,18 @@ where
 
         let large_repo = commit_syncer.get_target_repo();
 
-        if !no_automatic_derivation {
-            // Fsnodes will be derived synchronously, because submodule
-            // expansion depends on it.
+        if no_automatic_derivation {
+            // Fsnodes always need to be derived synchronously during initial
+            // import because syncing a commit with submodule expansion depends
+            // on the fsnodes of its parents.
+            //
+            // If fsnodes aren't derived synchronously, expansion of submodules
+            // will derive it using an InMemoryRepo, throwing away all the results
+            // and doing it all again in the next changeset.
             let root_fsnode_id = large_repo
                 .repo_derived_data()
                 .derive::<RootFsnodeId>(ctx, synced)
                 .await?;
-
             log_trace(
                 ctx,
                 format!(
@@ -648,28 +650,26 @@ where
                     root_fsnode_id.into_fsnode_id()
                 ),
             );
-
-            let types_to_derive_asynchronously = DerivableType::iter()
-                // Fsnodes were derived synchronously above
-                .filter(|ddt| *ddt != DerivableType::Fsnodes)
-                .collect::<Vec<_>>();
-
-            // Asynchronously derive the other data types
-            let dd_manager = large_repo.repo_derived_data().manager().clone();
-            let _ = task::spawn({
-                cloned!(ctx, synced);
-                async move {
-                    dd_manager
-                        .derive_bulk(
-                            &ctx,
-                            vec![synced],
-                            None,
-                            types_to_derive_asynchronously.as_slice(),
-                        )
-                        .await
-                }
-            })
-            .await?;
+        } else {
+            // Derive all the data types synchronously to speed up the overall
+            // import process.
+            let duration = large_repo
+                .repo_derived_data()
+                .manager()
+                .derive_bulk(
+                    ctx,
+                    vec![synced],
+                    None,
+                    DerivableType::iter().collect::<Vec<_>>().as_slice(),
+                )
+                .await?;
+            log_trace(
+                ctx,
+                format!(
+                    "Finished bulk derivation of changeset {synced} in {0:.3} seconds",
+                    duration.as_secs_f64()
+                ),
+            );
         };
 
         if let Some(progress_bar) = &mb_prog_bar {
