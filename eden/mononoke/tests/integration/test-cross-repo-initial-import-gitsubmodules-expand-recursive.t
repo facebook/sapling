@@ -431,3 +431,327 @@ Let's corrupt the expansion and check if validation complains
   $ quiet_grep ", but" -- megarepo_tool_multirepo --source-repo-id $LARGE_REPO_ID --target-repo-id $SUBMODULE_REPO_ID check-push-redirection-prereqs "master" "heads/master" "$LATEST_CONFIG_VERSION_NAME" | sort
   Some(NonRootMPath("smallrepofolder1/.x-repo-submodule-git-repo-b")) is a file in large_repo, but nonexistant in small_repo (under Some(NonRootMPath(".x-repo-submodule-git-repo-b")))
   Some(NonRootMPath("smallrepofolder1/git-repo-b")) is a directory in large_repo, but a file in small_repo (under Some(NonRootMPath("git-repo-b")))
+
+-- ------------------------------------------------------------------------------
+-- Test hgedenapi xrepo lookup with commits that are synced
+
+-- Helper function to look for the mapping in the database using admin and then
+-- call hgedenpi committranslateids endpoint from large to small.
+  $ function check_mapping_and_run_xrepo_lookup_large_to_small {
+  >   local hg_hash=$1; shift;
+  >   
+  >   printf "Check mapping in database with Mononoke admin\n"
+  >   with_stripped_logs mononoke_admin_source_target $LARGE_REPO_ID $SUBMODULE_REPO_ID \
+  >     crossrepo map $hg_hash | rg -v "using repo"
+  >   
+  >   printf "\n\nCall hgedenapi committranslateids\n" 
+  >   
+  >   REPONAME=$LARGE_REPO_NAME hgedenapi debugapi -e committranslateids \
+  >     -i "[{'Hg': '$hg_hash'}]" -i "'Bonsai'" -i None -i "'$SUBMODULE_REPO_NAME'"
+  >   
+  > }
+
+
+-- Looking up synced commits from large to small.
+-- EXPECT: all of them should return the same value as mapping check using admin
+
+-- Commit: Change directly in A
+  $ check_mapping_and_run_xrepo_lookup_large_to_small e21dab0d1f381cd1d46cd735013714d34bf02eaf
+  Check mapping in database with Mononoke admin
+  changeset resolved as: ChangesetId(Blake2(e43bc530a8d68be3efffb4923154d9af94e4b5b3b6c72df66d9788f168da6f80))
+  RewrittenAs([(ChangesetId(Blake2(4aee0499ea629ebcd9d0e4be89267d7a4eab5e72f988c20a392d59081db0c32a)), CommitSyncConfigVersion("INITIAL_IMPORT_SYNC_CONFIG"))])
+  
+  
+  Call hgedenapi committranslateids
+  [{"commit": {"Hg": bin("e21dab0d1f381cd1d46cd735013714d34bf02eaf")},
+    "translated": {"Bonsai": bin("4aee0499ea629ebcd9d0e4be89267d7a4eab5e72f988c20a392d59081db0c32a")}}]
+
+-- Commit: Update submodule B in repo A
+  $ check_mapping_and_run_xrepo_lookup_large_to_small 966d27bdf05c9c50d2e6e52390ef539e7ed88347
+  Check mapping in database with Mononoke admin
+  changeset resolved as: ChangesetId(Blake2(4f4d70c002c11a4299d391722c27b696413cb39baaf25845ee75470ec02341fc))
+  RewrittenAs([(ChangesetId(Blake2(b86f7426fc1fe95e22b6bef591e7ba9c8385b86f7b85abd3a377f941d39522af)), CommitSyncConfigVersion("INITIAL_IMPORT_SYNC_CONFIG"))])
+  
+  
+  Call hgedenapi committranslateids
+  [{"commit": {"Hg": bin("966d27bdf05c9c50d2e6e52390ef539e7ed88347")},
+    "translated": {"Bonsai": bin("b86f7426fc1fe95e22b6bef591e7ba9c8385b86f7b85abd3a377f941d39522af")}}]
+
+-- Check an original commit from small repo (before merge)
+-- Commit: Added git repo C as submodule directly in A
+  $ check_mapping_and_run_xrepo_lookup_large_to_small 93d78192288211ec611cde910d9ed46df80c9fd4
+  Check mapping in database with Mononoke admin
+  changeset resolved as: ChangesetId(Blake2(9f66c500dd865669c0458820af27352ec9af5efe19714dd0400d4055d5310bcf))
+  RewrittenAs([(ChangesetId(Blake2(eef414bd5fc8f7dcc129318276af6945117fe32bb5cfda6b0e6d43036107f61c)), CommitSyncConfigVersion("INITIAL_IMPORT_SYNC_CONFIG"))])
+  
+  
+  Call hgedenapi committranslateids
+  [{"commit": {"Hg": bin("93d78192288211ec611cde910d9ed46df80c9fd4")},
+    "translated": {"Bonsai": bin("eef414bd5fc8f7dcc129318276af6945117fe32bb5cfda6b0e6d43036107f61c")}}]
+
+
+
+-- ------------------------------------------------------------------------------
+-- Test backsyncing (i.e. large to small)
+
+  $ cd "$TESTTMP/$LARGE_REPO_NAME" || exit
+  $ hg pull -q && hg co -q master  
+  $ hgmn status
+  $ hgmn co -q .^ # go before the commit that corrupts submodules
+  $ hgmn status
+  $ enable commitcloud infinitepush # to push commits to server
+  $ function hg_log() { 
+  >   hgmn log --graph -T '{node|short} {desc}\n' "$@" 
+  > }
+
+  $ hg_log
+  o  904d89930e20 submodule corruption
+  │
+  @  3fafe9ae1f32 Remove repo C submodule from repo A
+  │
+  o  966d27bdf05c Update submodule B in repo A
+  │
+  o  e21dab0d1f38 Change directly in A
+  │
+  o    6a66af335e25 [MEGAREPO GRADUAL MERGE] gradual merge (0)
+  ├─╮
+  │ o  93d781922882 Added git repo C as submodule directly in A
+  │ │
+  │ o  1f9d3769f8c2 Added git repo B as submodule in A
+  │ │
+  │ o  e2c69ce8cc11 Add regular_dir/aardvar
+  │ │
+  │ o  df9086c77129 Add root_file
+  │
+  o  54a6db91baf1 L_A
+  
+
+  $ tree
+  .
+  |-- file_in_large_repo.txt
+  `-- smallrepofolder1
+      |-- duplicates
+      |   |-- x
+      |   |-- y
+      |   `-- z
+      |-- git-repo-b
+      |   `-- git-repo-c
+      |       |-- choo
+      |       |-- choo3
+      |       |-- choo4
+      |       `-- hoo
+      |           `-- qux
+      |-- regular_dir
+      |   `-- aardvar
+      `-- root_file
+  
+  6 directories, 10 files
+  $ function backsync_get_info_and_derive_data() {
+  >   REPONAME="$LARGE_REPO_NAME" hgedenapi cloud backup -q
+  >   COMMIT_TO_SYNC=$(hgmn whereami)
+  >   COMMIT_TITLE=$(hgmn log -l1  -T "{truncate(desc, 1)}")
+  >   printf "Processing commit: $COMMIT_TITLE\n"
+  >   printf "Commit hash: $COMMIT_TO_SYNC\n"
+  >   
+  >   (check_mapping_and_run_xrepo_lookup_large_to_small \
+  >     $COMMIT_TO_SYNC && echo "Success!") 2>&1 | tee $TESTTMP/lookup_commit \
+  >     | rg "error|Success" || true;
+  >   
+  >   # Return early if sync fails
+  >   SYNC_EXIT_CODE=${PIPESTATUS[0]}
+  >   if [ $SYNC_EXIT_CODE -ne 0 ]; then return $SYNC_EXIT_CODE; fi
+  >   SYNCED_BONSAI=$(rg '"translated": \{"Bonsai": bin\("(\w+)"\)\}\}\]' -or '$1' $TESTTMP/lookup_commit);
+  >   
+  >   printf "\n\nSubmodule repo commit info using newadmin:\n"
+  >   mononoke_newadmin fetch -R "$SUBMODULE_REPO_NAME" -i "$SYNCED_BONSAI" \
+  >     | rg -v "Author"
+  > 
+  >   printf "\n\nDeriving all enabled types except hgchangesets and filenodes\n";
+  >   (mononoke_newadmin derived-data -R "$SUBMODULE_REPO_NAME" derive -i $SYNCED_BONSAI \
+  >     -T fsnodes -T unodes -T fastlog -T fsnodes -T blame -T changeset_info \
+  >     -T skeleton_manifests -T deleted_manifest -T bssm_v3 \
+  >     -T git_commits -T git_trees -T git_delta_manifests \
+  >       && echo "Success!") 2>&1 | rg "Error|Success" || true;
+  > }
+
+-- Change a large repo file and try to backsync it to small repo
+-- EXPECT: commit isn't synced and returns working copy equivalent instead
+  $ echo "changing large repo file" > file_in_large_repo.txt
+  $ hgmn commit -A -m "Changing large repo file" 
+  $ backsync_get_info_and_derive_data
+  Processing commit: Changing large repo file
+  Commit hash: c96ebcf44276a8d93be4e1ee18fa69eb8c370a48
+  Success!
+  
+  
+  Submodule repo commit info using newadmin:
+  BonsaiChangesetId: de0a58fea04aaf7e162bcb87017752be9d3c838525df6d75a0b897ffaa068a28
+  Message: Remove repo C submodule from repo A
+  
+  FileChanges:
+  	 ADDED/MODIFIED: .gitmodules f98d40341818ca2b4b820319487d7f21ebf2f4ea2b4e2d45bab2100f212f2d49
+  	 REMOVED: repo_c
+  
+  
+  
+  Deriving all enabled types except hgchangesets and filenodes
+  Success!
+
+-- Change a small repo file outside of a submodule expansion
+-- EXPECT: commit is backsynced normally because it doesn't touch submodule expansions
+  $ echo "changing small repo file" > smallrepofolder1/regular_dir/aardvar
+  $ hgmn commit -A -m "Changing small repo in large repo (not submodule)" 
+  $ backsync_get_info_and_derive_data
+  Processing commit: Changing small repo in large repo (not submodule)
+  Commit hash: 0f70e42ae585a33bec651a5a275b84b85594b7c6
+  Success!
+  
+  
+  Submodule repo commit info using newadmin:
+  BonsaiChangesetId: ee442222a80354fc6e4b8dc910d9938b73a9780608f1762ccd9836dbf2319422
+  Message: Changing small repo in large repo (not submodule)
+  FileChanges:
+  	 ADDED/MODIFIED: regular_dir/aardvar 58186314bed8b207f5f63a4a58aa858e715f25225a6fcb68e93c12f731b801b1
+  
+  
+  
+  Deriving all enabled types except hgchangesets and filenodes
+  Success!
+
+-- -----------------------------------------------------------------------------
+-- Test backsyncing changes that affect submodule expansions, which is 
+-- not supported yet.
+-- ALL SCENARIOS BELOW SHOULD FAIL TO BACKSYNC
+-- -----------------------------------------------------------------------------
+
+TODO(T179530927): properly support backsyncing with submodule expansion
+
+-- Change a small repo file inside a submodule expansion
+  $ echo "changing submodule expansion" > smallrepofolder1/git-repo-b/foo
+  $ hgmn commit -A -m "Changing submodule expansion in large repo" 
+  adding smallrepofolder1/git-repo-b/foo
+  $ backsync_get_info_and_derive_data
+  Processing commit: Changing submodule expansion in large repo
+  Commit hash: 89bb486311105dca437ea01f1d74ae37de3d2a06
+  *error: Changeset can't be synced from large to small repo because it modifies the expansion of submodules* (glob)
+  [255]
+ 
+
+-- Change a small repo file inside a recursive submodule expansion
+  $ hgmn co -q .^ # go to previous commit because the current one doesn't sync
+  $ echo "changing submodule expansion" > smallrepofolder1/git-repo-b/git-repo-c/choo
+  $ hgmn commit -A -m "Changing recursive submodule expansion in large repo" 
+  $ backsync_get_info_and_derive_data
+  Processing commit: Changing recursive submodule expansion in large repo
+  Commit hash: 5c1362308c9da907edab995ce89475c94471d780
+  *error: Changeset can't be synced from large to small repo because it modifies the expansion of submodules* (glob)
+  [255]
+
+-- Delete submodule metadata file
+  $ hgmn co -q .^ # go to previous commit because the current one doesn't sync
+  $ rm smallrepofolder1/.x-repo-submodule-git-repo-b
+  $ hgmn commit -q -A -m "Deleting repo_b submodule metadata file" 
+  $ backsync_get_info_and_derive_data
+  Processing commit: Deleting repo_b submodule metadata file
+  Commit hash: dcbba251e8b4472cd3273b239043fa7278f377c2
+  *error: Changeset can't be synced from large to small repo because it modifies the expansion of submodules* (glob)
+  [255]
+
+
+-- Delete recursive submodule metadata file
+  $ hgmn co -q .^ # go to previous commit because the current one doesn't sync
+  $ rm smallrepofolder1/git-repo-b/.x-repo-submodule-git-repo-c
+  $ hgmn commit -q -A -m "Deleting repo_c recursive submodule metadata file" 
+  $ backsync_get_info_and_derive_data
+  Processing commit: Deleting repo_c recursive submodule metadata file
+  Commit hash: 2e08e5dcf8bcc9196ff897eb93ff01ec3f8384bc
+  *error: Changeset can't be synced from large to small repo because it modifies the expansion of submodules* (glob)
+  [255]
+
+
+-- Modify submodule metadata file
+  $ hgmn co -q .^ # go to previous commit because the current one doesn't sync
+  $ echo "change metadata file" > smallrepofolder1/.x-repo-submodule-git-repo-b
+  $ hgmn commit -q -A -m "Change repo_b submodule metadata file" 
+  $ backsync_get_info_and_derive_data
+  Processing commit: Change repo_b submodule metadata file
+  Commit hash: e819cd7b037da2b4311f2a0c11360501c5feab7a
+  *error: Changeset can't be synced from large to small repo because it modifies the expansion of submodules* (glob)
+  [255]
+
+
+-- Modify recursive submodule metadata file
+  $ hgmn co -q .^ # go to previous commit because the current one doesn't sync
+  $ echo "change metadata file" > smallrepofolder1/git-repo-b/.x-repo-submodule-git-repo-c
+  $ hgmn commit -q -A -m "Change repo_c recursive submodule metadata file" 
+  $ backsync_get_info_and_derive_data
+  Processing commit: Change repo_c recursive submodule metadata file
+  Commit hash: 314076ad733cd3481928e8c6ee2f60eb0fc105a3
+  *error: Changeset can't be synced from large to small repo because it modifies the expansion of submodules* (glob)
+  [255]
+
+
+
+-- Delete submodule expansion
+  $ hgmn co -q .^ # go to previous commit because the current one doesn't sync
+  $ rm -rf smallrepofolder1/git-repo-b
+  $ hgmn commit -q -A -m "Delete repo_b submodule expansion" 
+  $ backsync_get_info_and_derive_data
+  Processing commit: Delete repo_b submodule expansion
+  Commit hash: 16fbd31058621a0d871b1c67884df8028d9d4a52
+  *error: Changeset can't be synced from large to small repo because it modifies the expansion of submodules* (glob)
+  [255]
+
+-- Delete recursive submodule expansion
+  $ hgmn co -q .^ # go to previous commit because the current one doesn't sync
+  $ rm -rf smallrepofolder1/git-repo-b/git-repo-c
+  $ hgmn commit -q -A -m "Delete repo_c recursive submodule expansion" 
+  $ backsync_get_info_and_derive_data
+  Processing commit: Delete repo_c recursive submodule expansion
+  Commit hash: 3524f01b068091beefa2caab9a5361c5657e2a06
+  *error: Changeset can't be synced from large to small repo because it modifies the expansion of submodules* (glob)
+  [255]
+
+
+
+  $ hg_log -r "sort(all(), desc)"
+  @  3524f01b0680 Delete repo_c recursive submodule expansion
+  │
+  │ o  16fbd3105862 Delete repo_b submodule expansion
+  ├─╯
+  │ o  314076ad733c Change repo_c recursive submodule metadata file
+  ├─╯
+  │ o  e819cd7b037d Change repo_b submodule metadata file
+  ├─╯
+  │ o  2e08e5dcf8bc Deleting repo_c recursive submodule metadata file
+  ├─╯
+  │ o  dcbba251e8b4 Deleting repo_b submodule metadata file
+  ├─╯
+  │ o  5c1362308c9d Changing recursive submodule expansion in large repo
+  ├─╯
+  │ o  89bb48631110 Changing submodule expansion in large repo
+  ├─╯
+  o  0f70e42ae585 Changing small repo in large repo (not submodule)
+  │
+  o  c96ebcf44276 Changing large repo file
+  │
+  │ o  904d89930e20 submodule corruption
+  ├─╯
+  o  3fafe9ae1f32 Remove repo C submodule from repo A
+  │
+  o  966d27bdf05c Update submodule B in repo A
+  │
+  o  e21dab0d1f38 Change directly in A
+  │
+  o    6a66af335e25 [MEGAREPO GRADUAL MERGE] gradual merge (0)
+  ├─╮
+  │ o  93d781922882 Added git repo C as submodule directly in A
+  │ │
+  │ o  1f9d3769f8c2 Added git repo B as submodule in A
+  │ │
+  │ o  e2c69ce8cc11 Add regular_dir/aardvar
+  │ │
+  │ o  df9086c77129 Add root_file
+  │
+  o  54a6db91baf1 L_A
+  
