@@ -1,5 +1,6 @@
 #chg-compatible
 #require no-windows
+#debugruntest-incompatible
   $ configure modernclient
   $ newclientrepo
 

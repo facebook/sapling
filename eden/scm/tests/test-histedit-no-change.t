@@ -1,4 +1,5 @@
 #chg-compatible
+#debugruntest-incompatible
 
 test for old histedit issue #6:
 editing a changeset without any actual change would corrupt the repository

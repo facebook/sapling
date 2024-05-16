@@ -1,3 +1,4 @@
+#debugruntest-incompatible
   $ eagerepo
 hg debuginstall
   $ hg debuginstall

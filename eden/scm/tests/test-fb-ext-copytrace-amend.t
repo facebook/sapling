@@ -1,3 +1,4 @@
+#debugruntest-incompatible
 (debugruntest fails under buck for some reason)
 #chg-compatible
 

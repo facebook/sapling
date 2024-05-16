@@ -1,4 +1,5 @@
 #chg-compatible
+#debugruntest-incompatible
 
   $ eagerepo
   $ newext crash <<EOF

@@ -1,4 +1,5 @@
 #require rmcwd normal-layout
+#debugruntest-incompatible
 
   $ eagerepo
 Note: With buck build the hg script can be a wrapper that runs shell commands.

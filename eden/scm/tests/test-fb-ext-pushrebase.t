@@ -1,4 +1,5 @@
 #chg-compatible
+#debugruntest-incompatible
   $ setconfig devel.segmented-changelog-rev-compat=true
   $ setconfig experimental.allowfilepeer=True
   $ setconfig checkout.use-rust=true

@@ -1,5 +1,6 @@
 #chg-compatible
 #require mononoke
+#debugruntest-incompatible
   $ setconfig experimental.allowfilepeer=True
 
   $ . "$TESTDIR/library.sh"

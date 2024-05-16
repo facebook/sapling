@@ -1,4 +1,5 @@
 #chg-compatible
+#debugruntest-incompatible
 
 Test that when lazy changelog is used, and the server strips some lazy portion
 that is already present in the client-side, the client can still behave

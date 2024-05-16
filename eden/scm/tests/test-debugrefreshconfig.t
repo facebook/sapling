@@ -1,4 +1,5 @@
 #chg-compatible
+#debugruntest-incompatible
   $ configure modernclient
 
   $ export HG_TEST_INTERNALCONFIG="$TESTTMP/test_hgrc"

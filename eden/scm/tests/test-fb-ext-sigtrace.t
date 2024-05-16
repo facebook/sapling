@@ -1,3 +1,4 @@
+#debugruntest-incompatible
 
   $ eagerepo
   $ newext signal <<EOF

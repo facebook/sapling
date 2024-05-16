@@ -1,4 +1,5 @@
 #chg-compatible
+#debugruntest-incompatible
 
   $ configure modern
   $ enable undo remotenames

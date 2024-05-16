@@ -1,3 +1,4 @@
+#debugruntest-incompatible
   $ setconfig experimental.allowfilepeer=True
 # Initial setup
 

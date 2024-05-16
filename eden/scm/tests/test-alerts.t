@@ -1,3 +1,4 @@
+#debugruntest-incompatible
 
   $ newext crash <<EOF
   > from sapling import registrar

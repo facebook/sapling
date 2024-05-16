@@ -1,5 +1,6 @@
 #chg-compatible
 #require git gpg2 no-windows
+#debugruntest-incompatible
 
   $ . $TESTDIR/git.sh
   $ setconfig diff.git=true ui.allowemptycommit=true

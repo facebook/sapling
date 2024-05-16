@@ -1,4 +1,5 @@
 #chg-compatible
+#debugruntest-incompatible
 
   $ eagerepo
   $ setconfig devel.segmented-changelog-rev-compat=true

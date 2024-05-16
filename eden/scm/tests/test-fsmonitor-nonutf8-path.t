@@ -1,4 +1,5 @@
 #require fsmonitor linux
+#debugruntest-incompatible
 
   $ configure modernclient
   $ newclientrepo repo

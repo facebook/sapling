@@ -1,4 +1,5 @@
 #chg-compatible
+#debugruntest-incompatible
 
 test sparse
 

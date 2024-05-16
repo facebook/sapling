@@ -1,3 +1,4 @@
+#debugruntest-incompatible
   $ . "$TESTDIR/library.sh"
   $ setconfig experimental.allowfilepeer=True
   $ setconfig treemanifest.treeonly=False

@@ -1,4 +1,5 @@
 #chg-compatible
+#debugruntest-incompatible
   $ setconfig format.use-segmented-changelog=false
   $ setconfig devel.segmented-changelog-rev-compat=true
   $ setconfig experimental.allowfilepeer=True

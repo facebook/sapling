@@ -1,4 +1,5 @@
 #chg-compatible
+#debugruntest-incompatible
 
 
 Tests for change/delete conflicts, including:

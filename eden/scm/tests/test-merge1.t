@@ -1,4 +1,5 @@
 #chg-compatible
+#debugruntest-incompatible
 
   $ configure modernclient
   $ setconfig commands.update.check=none

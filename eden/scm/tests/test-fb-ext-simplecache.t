@@ -1,4 +1,5 @@
 #chg-compatible
+#debugruntest-incompatible
 
 Setup the extension
 

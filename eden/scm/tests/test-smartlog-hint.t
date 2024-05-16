@@ -1,3 +1,4 @@
+#debugruntest-incompatible
 Not using debugruntest to be sure we are testing "real" argv handling.
 #chg-compatible
 

@@ -1,4 +1,5 @@
 #chg-compatible
+#debugruntest-incompatible
 
 Test the lfs.localstore config option
 

@@ -1,4 +1,5 @@
 #chg-compatible
+#debugruntest-incompatible
 
 #require unix-permissions no-root no-windows no-eden
 

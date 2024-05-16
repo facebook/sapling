@@ -1,5 +1,6 @@
 #chg-compatible
 #require no-fsmonitor
+#debugruntest-incompatible
 
 Short help:
 
