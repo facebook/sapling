@@ -177,6 +177,8 @@ M_ENV.pop("HGTEST_EXCLUDED")
 
 M_ENV.pop("HGTEST_BLOCKLIST")
 
+M_ENV["DEBUGRUNTEST_DEFAULT_DISABLED"] = "1"
+
 M_ENV["HGTEST_INCLUDED"] = "test_(fb_ext_remotefilelog_(log|getpackv2|worker|rust_lfs|ruststores_lfs_duplicated)|edenapi.*)_t"
 
 M_ENV["TEST_FIXTURES"] = "$(location //eden/mononoke/tests/integration:test_fixtures)"

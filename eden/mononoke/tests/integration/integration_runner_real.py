@@ -174,6 +174,7 @@ def _hg_runner(
                 # non-utf8 data will result in "Illegal byte sequence" error.
                 # That is why we are forcing the "C" locale.
                 "HGTEST_LOCALE": "C",
+                "DEBUGRUNTEST_DEFAULT_DISABLED": "1",
                 "PYTHON_SYS_EXECUTABLE": manifest_env["BINARY_HGPYTHON"],
             }
         )

@@ -377,8 +377,8 @@ def compatiblewithdebugruntest(path):
     try:
         with open(path, "r", encoding="utf8") as f:
             contents = f.read(1024)
-            return (
-                "#debugruntest-compatible" in contents
+            return "#debugruntest-compatible" in contents or (
+                os.environ.get("DEBUGRUNTEST_DEFAULT_DISABLED") != "1"
                 and "#debugruntest-incompatible" not in contents
             )
     except IOError as ex:

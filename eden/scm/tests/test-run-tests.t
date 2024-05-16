@@ -1,6 +1,7 @@
 #chg-compatible
 #debugruntest-incompatible
 
+  $ export DEBUGRUNTEST_DEFAULT_DISABLED=1
   $ eagerepo
   $ setconfig devel.segmented-changelog-rev-compat=true
 This file tests the behavior of run-tests.py itself.
