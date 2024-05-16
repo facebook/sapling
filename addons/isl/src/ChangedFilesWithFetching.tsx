@@ -31,29 +31,9 @@ export function ChangedFilesWithFetching({commit}: {commit: CommitInfo}) {
     if (hasAllFilesAlready) {
       return;
     }
-    const foundPromise = allCommitFilesCache.get(commit.hash);
-    if (foundPromise != null) {
-      foundPromise.then(result => {
-        if (result.value != null) {
-          setFetchedAllFiles(result.value);
-        }
-      });
-      return;
-    }
-    serverAPI.postMessage({
-      type: 'fetchAllCommitChangedFiles',
-      hash: commit.hash,
-    });
-
-    const resultPromise = serverAPI
-      .nextMessageMatching('fetchedAllCommitChangedFiles', message => message.hash === commit.hash)
-      .then(result => result.result);
-    allCommitFilesCache.set(commit.hash, resultPromise);
-
-    resultPromise.then(result => {
-      const files = result.value;
-      if (files != null) {
-        setFetchedAllFiles(files);
+    getChangedFilesForHash(commit.hash).then(result => {
+      if (result.value != null) {
+        setFetchedAllFiles(result.value);
       }
     });
   }, [commit.hash, hasAllFilesAlready]);
@@ -72,4 +52,25 @@ export function ChangedFilesWithFetching({commit}: {commit: CommitInfo}) {
       }
     />
   );
+}
+
+/** Get all the changed files in a given commit.
+ * A subset of the files may have already been fetched,
+ * or in some cases no files may be cached yet and all files need to be fetched asynchronously. */
+export function getChangedFilesForHash(hash: Hash): Promise<Result<Array<ChangedFile>>> {
+  const foundPromise = allCommitFilesCache.get(hash);
+  if (foundPromise != null) {
+    return foundPromise;
+  }
+  serverAPI.postMessage({
+    type: 'fetchAllCommitChangedFiles',
+    hash,
+  });
+
+  const resultPromise = serverAPI
+    .nextMessageMatching('fetchedAllCommitChangedFiles', message => message.hash === hash)
+    .then(result => result.result);
+  allCommitFilesCache.set(hash, resultPromise);
+
+  return resultPromise;
 }
