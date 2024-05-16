@@ -14,7 +14,7 @@ import {ComparisonType} from 'shared/Comparison';
 import {LRU} from 'shared/LRU';
 
 // Cache fetches in progress so we don't double fetch
-const allCommitFilesCache = new LRU<Hash, Promise<Result<Array<ChangedFile>>>>(10);
+const commitFilesCache = new LRU<Hash, Promise<Result<Array<ChangedFile>>>>(10);
 
 /**
  * The basic CommitInfo we fetch in bulk only contains the first 25 files.
@@ -54,27 +54,28 @@ export function ChangedFilesWithFetching({commit}: {commit: CommitInfo}) {
   );
 }
 
-/** Get all the changed files in a given commit.
- * A subset of the files may have already been fetched,
+/**
+ * Get changed files in a given commit.
+ * A small subset of the files may have already been fetched,
  * or in some cases no files may be cached yet and all files need to be fetched asynchronously. */
 export function getChangedFilesForHash(
   hash: Hash,
   limit = 1000,
 ): Promise<Result<Array<ChangedFile>>> {
-  const foundPromise = allCommitFilesCache.get(hash);
+  const foundPromise = commitFilesCache.get(hash);
   if (foundPromise != null) {
     return foundPromise;
   }
   serverAPI.postMessage({
-    type: 'fetchAllCommitChangedFiles',
+    type: 'fetchCommitChangedFiles',
     hash,
     limit,
   });
 
   const resultPromise = serverAPI
-    .nextMessageMatching('fetchedAllCommitChangedFiles', message => message.hash === hash)
+    .nextMessageMatching('fetchedCommitChangedFiles', message => message.hash === hash)
     .then(result => result.result);
-  allCommitFilesCache.set(hash, resultPromise);
+  commitFilesCache.set(hash, resultPromise);
 
   return resultPromise;
 }
