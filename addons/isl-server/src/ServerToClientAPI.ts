@@ -627,8 +627,9 @@ export default class ServerToClientAPI {
             this.postMessage({
               type: 'fetchedCommitChangedFiles',
               hash: data.hash,
-              result: {value: files.slice(0, data.limit)},
-              totalFileCount: files.length,
+              result: {
+                value: {filesSample: files.slice(0, data.limit), totalFileCount: files.length},
+              },
             });
           })
           .catch(err => {

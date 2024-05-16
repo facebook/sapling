@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {Hash, Result, ChangedFile, CommitInfo} from './types';
+import type {Hash, Result, CommitInfo, FilesSample} from './types';
 
 import serverAPI from './ClientToServerAPI';
 import {ChangedFiles} from './UncommittedChanges';
@@ -14,7 +14,7 @@ import {ComparisonType} from 'shared/Comparison';
 import {LRU} from 'shared/LRU';
 
 // Cache fetches in progress so we don't double fetch
-const commitFilesCache = new LRU<Hash, Promise<Result<Array<ChangedFile>>>>(10);
+const commitFilesCache = new LRU<Hash, Promise<Result<FilesSample>>>(10);
 
 /**
  * The basic CommitInfo we fetch in bulk only contains the first 25 files.
@@ -23,7 +23,7 @@ const commitFilesCache = new LRU<Hash, Promise<Result<Array<ChangedFile>>>>(10);
  * to augment the subset we already have.
  */
 export function ChangedFilesWithFetching({commit}: {commit: CommitInfo}) {
-  const [fetchedAllFiles, setFetchedAllFiles] = useState<Array<ChangedFile> | undefined>(undefined);
+  const [fetchedAllFiles, setFetchedAllFiles] = useState<FilesSample | undefined>(undefined);
 
   const hasAllFilesAlready = commit.filesSample.length === commit.totalFileCount;
   useEffect(() => {
@@ -40,8 +40,8 @@ export function ChangedFilesWithFetching({commit}: {commit: CommitInfo}) {
 
   return (
     <ChangedFiles
-      filesSubset={fetchedAllFiles ?? commit.filesSample}
-      totalFiles={commit.totalFileCount}
+      filesSubset={fetchedAllFiles?.filesSample ?? commit.filesSample}
+      totalFiles={fetchedAllFiles?.totalFileCount ?? commit.totalFileCount}
       comparison={
         commit.isDot
           ? {type: ComparisonType.HeadChanges}
@@ -58,10 +58,7 @@ export function ChangedFilesWithFetching({commit}: {commit: CommitInfo}) {
  * Get changed files in a given commit.
  * A small subset of the files may have already been fetched,
  * or in some cases no files may be cached yet and all files need to be fetched asynchronously. */
-export function getChangedFilesForHash(
-  hash: Hash,
-  limit = 1000,
-): Promise<Result<Array<ChangedFile>>> {
+export function getChangedFilesForHash(hash: Hash, limit = 1000): Promise<Result<FilesSample>> {
   const foundPromise = commitFilesCache.get(hash);
   if (foundPromise != null) {
     return foundPromise;

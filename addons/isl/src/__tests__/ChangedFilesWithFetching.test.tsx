@@ -81,7 +81,7 @@ describe('ChangedFilesWithFetching', () => {
       simulateMessageFromServer({
         type: 'fetchedCommitChangedFiles',
         hash: 'b',
-        result: {value: makeFiles(510)},
+        result: {value: {filesSample: makeFiles(510), totalFileCount: 510}},
       });
     });
 

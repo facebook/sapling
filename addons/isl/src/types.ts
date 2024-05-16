@@ -275,6 +275,10 @@ export type ChangedFile = {
    * */
   copy?: RepoRelativePath;
 };
+export type FilesSample = {
+  filesSample: Array<ChangedFile>;
+  totalFileCount: number;
+};
 
 export type SucceedableRevset = {type: 'succeedable-revset'; revset: Revset};
 export type ExactRevset = {type: 'exact-revset'; revset: Revset};
@@ -725,8 +729,7 @@ export type ServerToClientMessage =
   | {
       type: 'fetchedCommitChangedFiles';
       hash: Hash;
-      result: Result<Array<ChangedFile>>;
-      totalFileCount?: number;
+      result: Result<FilesSample>;
     }
   | {type: 'typeaheadResult'; id: string; result: Array<TypeaheadResult>}
   | {type: 'applicationInfo'; info: ApplicationInfo}
