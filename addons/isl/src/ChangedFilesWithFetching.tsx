@@ -57,7 +57,10 @@ export function ChangedFilesWithFetching({commit}: {commit: CommitInfo}) {
 /** Get all the changed files in a given commit.
  * A subset of the files may have already been fetched,
  * or in some cases no files may be cached yet and all files need to be fetched asynchronously. */
-export function getChangedFilesForHash(hash: Hash): Promise<Result<Array<ChangedFile>>> {
+export function getChangedFilesForHash(
+  hash: Hash,
+  limit = 1000,
+): Promise<Result<Array<ChangedFile>>> {
   const foundPromise = allCommitFilesCache.get(hash);
   if (foundPromise != null) {
     return foundPromise;
@@ -65,6 +68,7 @@ export function getChangedFilesForHash(hash: Hash): Promise<Result<Array<Changed
   serverAPI.postMessage({
     type: 'fetchAllCommitChangedFiles',
     hash,
+    limit,
   });
 
   const resultPromise = serverAPI

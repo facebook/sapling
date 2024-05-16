@@ -35,7 +35,7 @@ import {generatedFilesDetector} from './GeneratedFiles';
 import {Internal} from './Internal';
 import {Repository} from './Repository';
 import {repositoryCache} from './RepositoryCache';
-import {findPublicAncestor, parseExecJson} from './utils';
+import {parseExecJson} from './utils';
 import {serializeToString, deserializeFromString} from 'isl/src/serialize';
 import {Readable} from 'node:stream';
 import {revsetForComparison} from 'shared/Comparison';
@@ -627,7 +627,8 @@ export default class ServerToClientAPI {
             this.postMessage({
               type: 'fetchedAllCommitChangedFiles',
               hash: data.hash,
-              result: {value: files},
+              result: {value: files.slice(0, data.limit)},
+              totalFileCount: files.length,
             });
           })
           .catch(err => {

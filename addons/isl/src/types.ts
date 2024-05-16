@@ -647,7 +647,7 @@ export type ClientToServerMessage =
   | {type: 'fetchCommitMessageTemplate'}
   | {type: 'fetchShelvedChanges'}
   | {type: 'fetchLatestCommit'; revset: string}
-  | {type: 'fetchAllCommitChangedFiles'; hash: Hash}
+  | {type: 'fetchAllCommitChangedFiles'; hash: Hash; limit: number}
   | {type: 'renderMarkup'; markup: string; id: number}
   | {type: 'typeahead'; kind: TypeaheadKind; query: string; id: string}
   | {type: 'requestRepoInfo'}
@@ -722,7 +722,12 @@ export type ServerToClientMessage =
   | {type: 'fetchedCommitMessageTemplate'; template: string}
   | {type: 'fetchedShelvedChanges'; shelvedChanges: Result<Array<ShelvedChange>>}
   | {type: 'fetchedLatestCommit'; info: Result<CommitInfo>; revset: string}
-  | {type: 'fetchedAllCommitChangedFiles'; hash: Hash; result: Result<Array<ChangedFile>>}
+  | {
+      type: 'fetchedAllCommitChangedFiles';
+      hash: Hash;
+      result: Result<Array<ChangedFile>>;
+      totalFileCount?: number;
+    }
   | {type: 'typeaheadResult'; id: string; result: Array<TypeaheadResult>}
   | {type: 'applicationInfo'; info: ApplicationInfo}
   | {type: 'repoInfo'; info: RepoInfo; cwd?: string}

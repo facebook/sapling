@@ -76,7 +76,7 @@ describe('ChangedFilesWithFetching', () => {
   it('Fetches files and shows additional pages', async () => {
     CommitInfoTestUtils.clickToSelectCommit('b');
 
-    expectMessageSentToServer({type: 'fetchAllCommitChangedFiles', hash: 'b'});
+    expectMessageSentToServer({type: 'fetchAllCommitChangedFiles', hash: 'b', limit: 1000});
     act(() => {
       simulateMessageFromServer({
         type: 'fetchedAllCommitChangedFiles',
