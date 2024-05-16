@@ -376,7 +376,11 @@ def compatiblewithdebugruntest(path):
     """check whether a .t test is compatible with debugruntest"""
     try:
         with open(path, "r", encoding="utf8") as f:
-            return "#debugruntest-compatible" in f.read(1024)
+            contents = f.read(1024)
+            return (
+                "#debugruntest-compatible" in contents
+                and "#debugruntest-incompatible" not in contents
+            )
     except IOError as ex:
         if ex.errno != errno.ENOENT:
             raise
