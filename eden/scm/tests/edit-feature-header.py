@@ -142,7 +142,8 @@ def main(args):
     newfeaturepaths = edit(featurepaths)
     newpathfeatures = transpose(newfeaturepaths)
 
-    for path, wantedfeatures in newpathfeatures.items():
+    for path in set(newpathfeatures) | set(pathfeatures):
+        wantedfeatures = newpathfeatures.get(path) or []
         if wantedfeatures == pathfeatures.get(path):
             # nothing changed
             continue
