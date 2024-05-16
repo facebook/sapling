@@ -1,6 +1,6 @@
 #debugruntest-compatible
-#require icasefs no-eden
-#require no-windows no-eden
+#require icasefs
+#require no-windows
 
 
 Status is clean when file changes case
@@ -16,9 +16,10 @@ Status keeps removed file and untracked file separate
   $ hg commit -Aqm foo
   $ hg rm file
   $ touch FILE
+TODO(sggutier): EdenFS behaves differently here
   $ hg st
   R file
-  ? FILE
+  ? FILE (no-eden !)
 
 Status is clean when directory changes case
   $ newclientrepo
@@ -64,6 +65,8 @@ Test behavior when checking out across directory case change:
   $ find .
   DIR
   DIR/file
+#if no-eden
+TODO(sggutier): EdenFS behaves differently here too, the goto fails
   $ hg go -q '.^'
   $ find .
   dir
@@ -85,8 +88,10 @@ match the tracked file "dir/file".
   $ hg st
   ? dir/untracked (no-fsmonitor !)
   ? DIR/untracked (fsmonitor !)
+#endif
 
 
+#if no-eden
 Sparse profile rules are case sensitive:
   $ newclientrepo
   $ enable sparse
@@ -100,6 +105,7 @@ Sparse profile rules are case sensitive:
   $ hg sparse reset
   $ hg sparse include INCLUDED
   $ find .
+#endif
 
 
 Gitignore filters files case-insensitively:
@@ -115,5 +121,7 @@ Gitignore filters files case-insensitively:
   $ hg st -u
   ? excluded/file
   $ echo INCLUDED > .gitignore
+TODO(sggutier): Investigate why only on macOS this is not respected
   $ hg st -u
   ? excluded/file
+  ? included/file (eden !) (osx !)

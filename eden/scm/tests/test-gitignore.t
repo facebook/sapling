@@ -1,15 +1,11 @@
 #debugruntest-compatible
 
-#require no-eden
-
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-  $ eagerepo
-
-  $ newrepo
+  $ newclientrepo
   $ setconfig 'ui.gitignore=1'
 
   $ cat > .gitignore << 'EOF'
@@ -49,11 +45,13 @@
   ? exp/i.tmp
   ? x.pyc
 
+TODO(sggutier): Make EdenFS respect ui.ignore
   $ hg status --config 'ui.ignore.global=$TESTTMP/globalignore'
   ? .gitignore
   ? Makefile
   ? exp/.gitignore
   ? exp/i.tmp
+  ? x.pyc (eden !)
 
 # Test directory patterns only match directories.
 

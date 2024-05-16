@@ -1,9 +1,5 @@
 #debugruntest-compatible
 
-#require no-eden
-
-
-  $ eagerepo
   $ addcommit () {
   >     echo $1 > $1
   >     hg add $1
@@ -14,8 +10,7 @@
   >     hg commit -d "${2} 0" -m $1
   > }
 
-  $ hg init a
-  $ cd a
+  $ newclientrepo a
   $ addcommit "A" 0
   $ addcommit "B" 1
   $ echo "C" >> A

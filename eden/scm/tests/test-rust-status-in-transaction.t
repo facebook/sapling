@@ -1,10 +1,7 @@
 #debugruntest-compatible
 #require fsmonitor no-eden
 
-  $ eagerepo
-
-  $ hg init repo
-  $ cd repo
+  $ newclientrepo repo
   $ hg st
   $ hg debugtreestate list
 

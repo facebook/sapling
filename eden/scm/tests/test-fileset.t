@@ -1,16 +1,11 @@
 #debugruntest-compatible
 
-#require no-eden
-
-
   $ setconfig devel.segmented-changelog-rev-compat=true
-  $ eagerepo
   $ fileset() {
   >   hg debugfileset "$@"
   > }
 
-  $ hg init repo
-  $ cd repo
+  $ newclientrepo
   $ echo a > a1
   $ echo a > a2
   $ echo b > b1
@@ -200,7 +195,8 @@ Test merge states
 
   $ hg ci -m manychanges
   $ hg up -C 'desc(addfiles)'
-  * files updated, 0 files merged, * files removed, 0 files unresolved (glob)
+  * files updated, 0 files merged, * files removed, 0 files unresolved (glob) (no-eden !)
+  update complete (eden !)
   $ echo c >> b2
   $ hg ci -m diverging b2
   $ fileset 'resolved()'
@@ -210,7 +206,8 @@ Test merge states
   $ hg merge
   merging b2
   warning: 1 conflicts while merging b2! (edit, then use 'hg resolve --mark')
-  * files updated, 0 files merged, 1 files removed, 1 files unresolved (glob)
+  * files updated, 0 files merged, 1 files removed, 1 files unresolved (glob) (no-eden !)
+  0 files merged, 1 files unresolved (eden !)
   use 'hg resolve' to retry unresolved file merges or 'hg goto -C .' to abandon
   [1]
   $ fileset 'resolved()'
@@ -224,6 +221,9 @@ Test merge states
   b2
   $ fileset 'unresolved()'
   warning: fileset evaluated to zero files (?)
+
+#if no-eden
+TODO(sggutier): EdenFS starts failing from here on for some reason, investigate why
   $ hg ci -m merge
 
 There was a commit from subrepo here. Now subrepos are gone, insert a dummy commit to take its place.
@@ -559,3 +559,4 @@ Empty revset will error at the revset layer
   ( 
     ^ here)
   [255]
+#endif

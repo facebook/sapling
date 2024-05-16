@@ -1,7 +1,5 @@
 #debugruntest-compatible
 
-#require no-eden
-
 # coding=utf-8
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
@@ -10,7 +8,6 @@
 
 
   $ setconfig devel.segmented-changelog-rev-compat=true
-  $ eagerepo
   $ setconfig 'experimental.evolution='
   $ enable absorb
 
@@ -29,7 +26,7 @@
   > amendflag = correlated
   > EOF
 
-  $ newrepo
+  $ newclientrepo
 
 # Do not crash with empty repo:
 

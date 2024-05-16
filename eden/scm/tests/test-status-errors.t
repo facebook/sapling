@@ -1,8 +1,5 @@
 #debugruntest-compatible
 
-#require no-eden
-
-
   $ newclientrepo
   $ mkdir dir
   $ cd dir

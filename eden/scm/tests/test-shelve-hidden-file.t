@@ -1,15 +1,10 @@
 #debugruntest-compatible
 
-#require no-eden
-
-
-  $ configure modern
   $ enable shelve
 
 Use wrong formatted '._*' files to mimic the binary files created by MacOS:
 
-  $ newrepo simple
-  $ drawdag << 'EOS'
+  $ newclientrepo simple << 'EOS'
   > d
   > | c
   > | |
@@ -17,7 +12,10 @@ Use wrong formatted '._*' files to mimic the binary files created by MacOS:
   > |/
   > a
   > EOS
+#if no-eden
+TODO(sggutier): This should work on EdenFS, but there seems to be a bug in EagerRepo's implementation
   $ hg goto $c
+  pulling 'a82ac2b3875752239b995aabd5b4e9712db0bc9e' from 'test:simple_server'
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ echo c > c.txt
@@ -31,3 +29,4 @@ Use wrong formatted '._*' files to mimic the binary files created by MacOS:
 
   $ hg log -r 'shelved()' -T '{desc}'
   shelve changes to: c (no-eol)
+#endif

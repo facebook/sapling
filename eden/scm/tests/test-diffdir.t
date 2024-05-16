@@ -1,17 +1,13 @@
 #debugruntest-compatible
 
-#require no-eden
-
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 # Copyright (c) Mercurial Contributors.
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-  $ eagerepo
   $ setconfig devel.segmented-changelog-rev-compat=true
-  $ hg init repo
-  $ cd repo
+  $ newclientrepo repo
   $ touch a
   $ hg add a
   $ hg ci -m a

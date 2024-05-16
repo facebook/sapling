@@ -1,12 +1,6 @@
 #debugruntest-compatible
 
-#require no-eden
-
-
-  $ eagerepo
-
-  $ hg init repo
-  $ cd repo
+  $ newclientrepo
 
 Set up history and working copy
 

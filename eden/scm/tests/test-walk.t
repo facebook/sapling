@@ -1,12 +1,6 @@
 #debugruntest-compatible
 
-#require no-eden
-
-
-  $ eagerepo
-
-  $ hg init t
-  $ cd t
+  $ newclientrepo t
   $ mkdir -p beans
   $ for b in kidney navy turtle borlotti black pinto; do
   >     echo $b > beans/$b
@@ -326,7 +320,7 @@ Test patterns:
   $ echo glob:glob > glob:glob
   $ hg addremove
   adding glob:glob
-  warning: filename contains ':', which is reserved on Windows: 'glob:glob'
+  warning: filename contains ':', which is reserved on Windows: 'glob:glob' (no-eden !)
   $ hg debugwalk 'glob:*'
   f  fennel      fennel
   f  fenugreek   fenugreek
@@ -395,7 +389,7 @@ It is okay to delete this test if you are dropping support.
   $ hg debugwalk NOEXIST
   NOEXIST: * (glob)
 
-#if mkfifo
+#if mkfifo no-eden
   $ mkfifo fifo
   $ hg debugwalk fifo
   fifo: unsupported file type (type is fifo)
