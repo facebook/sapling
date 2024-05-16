@@ -1,4 +1,3 @@
-#debugruntest-compatible
 
   $ enable shelve
 

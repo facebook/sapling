@@ -1,5 +1,4 @@
 #require git no-windows no-eden
-#debugruntest-compatible
 
 This test forces a submodule path to be tracked in treestate (which does not
 usually happen, but has been witnessed), and check related logic can handle

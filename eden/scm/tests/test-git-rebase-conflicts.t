@@ -1,5 +1,4 @@
 #require git no-windows no-eden
-#debugruntest-compatible
 
   $ eagerepo
 Test that rebasing in a git repo with conflicts work.

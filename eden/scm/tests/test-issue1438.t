@@ -1,4 +1,3 @@
-#debugruntest-compatible
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 # Copyright (c) Mercurial Contributors.
 #

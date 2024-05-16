@@ -1,4 +1,3 @@
-#debugruntest-compatible
 
   $ eagerepo
   $ enable rebase copytrace

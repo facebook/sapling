@@ -1,4 +1,3 @@
-#debugruntest-compatible
 
 #require diff no-eden
 

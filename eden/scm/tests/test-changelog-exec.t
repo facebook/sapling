@@ -1,4 +1,3 @@
-#debugruntest-compatible
 
 #require execbit no-eden
 

@@ -1,4 +1,3 @@
-#debugruntest-compatible
 
   $ newclientrepo
   $ drawdag << 'EOS'

@@ -1,4 +1,3 @@
-#debugruntest-compatible
 
   $ eagerepo
   $ configure mutation-norecord

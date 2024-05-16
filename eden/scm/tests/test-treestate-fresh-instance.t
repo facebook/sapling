@@ -1,4 +1,3 @@
-#debugruntest-compatible
 #require fsmonitor no-eden
 
   $ setconfig format.dirstate=2

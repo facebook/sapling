@@ -1,4 +1,3 @@
-#debugruntest-compatible
 
   $ configure modernclient mutation
   $ enable rebase amend undo

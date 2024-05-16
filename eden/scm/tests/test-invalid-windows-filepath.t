@@ -1,4 +1,3 @@
-#debugruntest-compatible
 #require git no-eden
 
   $ eagerepo

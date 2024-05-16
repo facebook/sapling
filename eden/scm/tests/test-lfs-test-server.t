@@ -1,4 +1,3 @@
-#debugruntest-compatible
 XXX: This test is currently broken if lfs-test-server is installed.
 
 #require false lfs-test-server no-eden

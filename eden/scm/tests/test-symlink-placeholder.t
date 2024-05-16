@@ -1,4 +1,3 @@
-#debugruntest-compatible
 
 #require symlink no-eden
 

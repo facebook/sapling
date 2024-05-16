@@ -1,4 +1,3 @@
-#debugruntest-compatible
 
 We only expand globs on Windows.
 #require windows no-eden

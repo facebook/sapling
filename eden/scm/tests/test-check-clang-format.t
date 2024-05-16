@@ -1,4 +1,3 @@
-#debugruntest-compatible
 #chg-compatible
 
 #require clang-format test-repo no-eden

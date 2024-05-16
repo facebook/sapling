@@ -1,4 +1,3 @@
-#debugruntest-compatible
 #if osx
 #require security no-eden
 #else

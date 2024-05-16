@@ -1,4 +1,3 @@
-#debugruntest-compatible
 #modern-config-incompatible
 
 #require execbit no-eden

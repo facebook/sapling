@@ -1,4 +1,3 @@
-#debugruntest-compatible
 #require no-windows no-eden
 
   $ cat > make-request.py <<'EOF'

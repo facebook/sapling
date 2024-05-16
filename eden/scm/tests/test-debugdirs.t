@@ -1,5 +1,4 @@
 #debugruntest-compatibile
-#debugruntest-compatible
 
 #require no-eden
 

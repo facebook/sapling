@@ -1,4 +1,3 @@
-#debugruntest-compatible
 
 TODO(sggutier): Make EdenFS respect `ui.ignore`
   $ newclientrepo

@@ -1,5 +1,4 @@
 #require git no-windows no-eden
-#debugruntest-compatible
 
 Test that committer and author can be set separately. Committer is updated when
 rewriting commits.

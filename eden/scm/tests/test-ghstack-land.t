@@ -1,4 +1,3 @@
-#debugruntest-compatible
 #inprocess-hg-incompatible
 #require git no-windows no-eden
 

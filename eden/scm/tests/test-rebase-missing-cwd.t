@@ -1,4 +1,3 @@
-#debugruntest-compatible
 
   $ configure mutation-norecord
 #require rmcwd no-eden

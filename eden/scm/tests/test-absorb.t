@@ -1,4 +1,3 @@
-#debugruntest-compatible
 
 # coding=utf-8
 # Copyright (c) Meta Platforms, Inc. and affiliates.

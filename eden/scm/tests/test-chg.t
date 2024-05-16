@@ -1,4 +1,3 @@
-#debugruntest-compatible
 #chg-compatible
 #require chg linux no-eden
 

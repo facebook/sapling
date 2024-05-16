@@ -1,5 +1,4 @@
 #require no-fsmonitor no-eden
-#debugruntest-compatible
 
 setup
   $ readconfig <<EOF

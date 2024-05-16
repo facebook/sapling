@@ -1,4 +1,3 @@
-#debugruntest-compatible
 #require git symlink no-eden
 
   $ . $TESTDIR/git.sh

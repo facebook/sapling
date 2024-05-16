@@ -1,4 +1,3 @@
-#debugruntest-compatible
 #require no-eden
 
 # coding=utf-8

@@ -1,4 +1,3 @@
-#debugruntest-compatible
 #inprocess-hg-incompatible
 #chg-incompatible
 #require lldb py3.10

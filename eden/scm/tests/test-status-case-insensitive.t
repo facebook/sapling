@@ -1,4 +1,3 @@
-#debugruntest-compatible
 #require icasefs
 #require no-windows
 

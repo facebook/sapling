@@ -1,4 +1,3 @@
-#debugruntest-compatible
 
   $ addcommit () {
   >     echo $1 > $1

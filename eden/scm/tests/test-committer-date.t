@@ -1,5 +1,4 @@
 #require no-eden jq
-#debugruntest-compatible
 
 Test that different formats of committer date are supported
 

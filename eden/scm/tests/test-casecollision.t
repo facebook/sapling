@@ -1,4 +1,3 @@
-#debugruntest-compatible
 
 #require no-icasefs no-eden
 

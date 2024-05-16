@@ -1,4 +1,3 @@
-#debugruntest-compatible
 
   $ setconfig checkout.use-rust=true
   $ setconfig experimental.nativecheckout=true

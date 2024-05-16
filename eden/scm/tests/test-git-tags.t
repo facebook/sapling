@@ -1,6 +1,5 @@
 #require git no-windows no-eden
 #modern-config-incompatible
-#debugruntest-compatible
 
   $ . $TESTDIR/git.sh
   $ setconfig diff.git=true ui.allowemptycommit=true

@@ -1,4 +1,3 @@
-#debugruntest-compatible
 #modern-config-incompatible
 #modern-config-incompatible
 

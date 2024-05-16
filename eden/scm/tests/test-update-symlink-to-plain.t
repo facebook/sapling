@@ -1,4 +1,3 @@
-#debugruntest-compatible
   $ setconfig experimental.allowfilepeer=True
 
 #require symlink no-eden

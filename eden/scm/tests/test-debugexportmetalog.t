@@ -1,5 +1,4 @@
 #require git no-eden
-#debugruntest-compatible
 
   $ configure modern
   $ setconfig metalog.track-config=0

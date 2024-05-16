@@ -1,4 +1,3 @@
-#debugruntest-compatible
 #require bash no-eden
 
   $ eagerepo

@@ -1,4 +1,3 @@
-#debugruntest-compatible
 
   $ newclientrepo repo
   >>> with open("a", "wb") as f: f.write(b"a\n" * 213) and None

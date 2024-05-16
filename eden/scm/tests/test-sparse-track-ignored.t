@@ -1,4 +1,3 @@
-#debugruntest-compatible
 #require fsmonitor no-eden
 
   $ enable sparse

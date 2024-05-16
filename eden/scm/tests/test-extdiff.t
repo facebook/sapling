@@ -1,4 +1,3 @@
-#debugruntest-compatible
 #inprocess-hg-incompatible
 
 #require diff echo no-eden

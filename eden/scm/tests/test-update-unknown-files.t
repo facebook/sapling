@@ -1,4 +1,3 @@
-#debugruntest-compatible
 
 #inprocess-hg-incompatible
   $ setconfig experimental.nativecheckout=true

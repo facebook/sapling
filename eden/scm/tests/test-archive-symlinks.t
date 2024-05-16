@@ -1,4 +1,3 @@
-#debugruntest-compatible
 
 #require symlink tar unzip no-eden
 

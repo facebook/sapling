@@ -1,4 +1,3 @@
-#debugruntest-compatible
 #inprocess-hg-incompatible
 #require symlink no-eden
 

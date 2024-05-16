@@ -1,4 +1,3 @@
-#debugruntest-compatible
 #require icasefs no-eden
 
   $ setconfig checkout.use-rust=true
