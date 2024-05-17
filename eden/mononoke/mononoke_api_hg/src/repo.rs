@@ -569,7 +569,7 @@ impl HgRepoContext {
     }
 
     /// This provides the same functionality as
-    /// `mononke_api::RepoContext::many_changeset_ids_to_locations`. It just translates to
+    /// `mononoke_api::RepoContext::many_changeset_ids_to_locations`. It just translates to
     /// and from Mercurial types.
     pub async fn many_changeset_ids_to_locations(
         &self,
