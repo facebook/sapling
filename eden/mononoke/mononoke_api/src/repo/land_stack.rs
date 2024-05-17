@@ -111,6 +111,7 @@ impl RepoContext {
         pushvars: Option<&HashMap<String, Bytes>>,
         bookmark_restrictions: BookmarkKindRestrictions,
         push_authored_by: PushAuthoredBy,
+        force_local_pushrebase: bool,
     ) -> Result<PushrebaseOutcome, MononokeError> {
         self.start_write()?;
 
@@ -184,6 +185,7 @@ impl RepoContext {
                 bookmark_restrictions,
                 self.authorization_context(),
                 true, // log_new_public_commits_to_scribe
+                force_local_pushrebase,
             )
             .await?;
             // Convert response back, finishing the land on the small repo
@@ -202,6 +204,7 @@ impl RepoContext {
                 bookmark_restrictions,
                 self.authorization_context(),
                 true, // log_new_public_commits_to_scribe
+                force_local_pushrebase,
             )
             .await?
         };

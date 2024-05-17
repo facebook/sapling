@@ -278,6 +278,9 @@ async fn run_pushrebase(
                 .collect();
 
             let authz = AuthorizationContext::new(ctx);
+            // todo: get value from jk, default to false
+            let force_local_pushrebase = false;
+
             let outcome = normal_pushrebase(
                 ctx,
                 repo,
@@ -289,6 +292,7 @@ async fn run_pushrebase(
                 BookmarkKindRestrictions::OnlyPublishing,
                 &authz,
                 false, // We will log new commits locally
+                force_local_pushrebase,
             )
             .await;
             let (pushrebased_rev, pushrebased_changesets) = match outcome {

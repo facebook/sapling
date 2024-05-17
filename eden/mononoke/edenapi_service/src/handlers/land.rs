@@ -100,6 +100,9 @@ async fn land_stack(
         .ok_or(ErrorKind::HgIdNotFound(base_hgid))?
         .id();
 
+    // todo: get value from jk, default to false
+    let force_local_pushrebase = false;
+
     let pushrebase_outcome = repo
         .land_stack(
             bookmark,
@@ -112,6 +115,7 @@ async fn land_stack(
             },
             BookmarkKindRestrictions::AnyKind,
             PushAuthoredBy::User,
+            force_local_pushrebase,
         )
         .await?;
 

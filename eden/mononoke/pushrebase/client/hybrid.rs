@@ -39,8 +39,11 @@ pub async fn normal_pushrebase<'a>(
     bookmark_restrictions: BookmarkKindRestrictions,
     authz: &'a AuthorizationContext,
     log_new_public_commits_to_scribe: bool,
+    force_local_pushrebase: bool,
 ) -> Result<PushrebaseOutcome, BookmarkMovementError> {
-    let remote_mode = if let Ok(true) = justknobs::eval(
+    let remote_mode = if force_local_pushrebase {
+        PushrebaseRemoteMode::Local
+    } else if let Ok(true) = justknobs::eval(
         "scm/mononoke:mononoke_force_local_pushrebase",
         None,
         Some(repo.repo_identity().name()),

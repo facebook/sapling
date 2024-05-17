@@ -158,6 +158,9 @@ impl SourceControlServiceImpl {
         let pushvars = convert_pushvars(params.pushvars);
         let bookmark_restrictions =
             BookmarkKindRestrictions::from_request(&params.bookmark_restrictions)?;
+        // todo: get value from jk, default to true since scs_server has permission issues
+        // to use land_service for now
+        let force_local_pushrebase = true;
 
         let pushrebase_outcome = repo
             .land_stack(
@@ -167,6 +170,7 @@ impl SourceControlServiceImpl {
                 pushvars.as_ref(),
                 bookmark_restrictions,
                 push_authored_by,
+                force_local_pushrebase,
             )
             .await?
             .into_response_with(&(
