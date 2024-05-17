@@ -206,7 +206,7 @@ impl AsBlobRepo for BlobRepo {
     }
 }
 
-/// This function uploads bonsai changests object to blobstore in parallel, and then does
+/// This function uploads bonsai changesets object to blobstore in parallel, and then does
 /// sequential writes to changesets table. Parents of the changesets should already by saved
 /// in the repository.
 pub async fn save_bonsai_changesets(

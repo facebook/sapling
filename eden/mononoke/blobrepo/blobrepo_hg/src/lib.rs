@@ -168,7 +168,7 @@ define_stats! {
 
 #[async_trait]
 impl<T: CommitGraphRef + BonsaiHgMappingRef + Send + Sync> BlobRepoHg for T {
-    // Returns only the mapping for valid changests that are known to the server.
+    // Returns only the mapping for valid changesets that are known to the server.
     // For Bonsai -> Hg conversion, missing Hg changesets will be derived (so all Bonsais will be
     // in the output).
     // For Hg -> Bonsai conversion, missing Bonsais will not be returned, since they cannot be
