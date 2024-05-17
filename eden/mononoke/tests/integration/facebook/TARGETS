@@ -104,6 +104,7 @@ dott_test(
 
 dott_test(
     name = "gitbundle",
+    disable_all_network_access_target = False,
     dott_files =
         glob([
             "test-gitbundle*.t",
