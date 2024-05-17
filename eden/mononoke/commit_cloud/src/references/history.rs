@@ -5,15 +5,17 @@
  * GNU General Public License version 2.
  */
 
+use mononoke_types::Timestamp;
+
 use crate::references::heads::WorkspaceHead;
-use crate::references::history::WorkspaceHistory;
 use crate::references::local_bookmarks::WorkspaceLocalBookmark;
 use crate::references::remote_bookmarks::WorkspaceRemoteBookmark;
 
-#[allow(unused)]
-pub(crate) struct WorkspaceContents {
-    heads: Vec<WorkspaceHead>,
-    local_bookmarks: Vec<WorkspaceLocalBookmark>,
-    remote_bookmarks: Vec<WorkspaceRemoteBookmark>,
-    history: WorkspaceHistory,
+#[derive(Clone, Debug, PartialEq)]
+pub struct WorkspaceHistory {
+    pub version: u64,
+    pub timestamp: Option<Timestamp>,
+    pub heads: Vec<WorkspaceHead>,
+    pub local_bookmarks: Vec<WorkspaceLocalBookmark>,
+    pub remote_bookmarks: Vec<WorkspaceRemoteBookmark>,
 }

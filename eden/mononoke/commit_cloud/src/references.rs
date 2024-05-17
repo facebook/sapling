@@ -13,18 +13,23 @@ use edenapi_types::ReferencesData;
 use edenapi_types::UpdateReferencesParams;
 use mononoke_types::Timestamp;
 
-use crate::sql::heads_ops::update_heads;
-use crate::sql::heads_ops::WorkspaceHead;
-use crate::sql::local_bookmarks_ops::update_bookmarks;
-use crate::sql::local_bookmarks_ops::WorkspaceLocalBookmark;
+use crate::references::heads::update_heads;
+use crate::references::heads::WorkspaceHead;
+use crate::references::local_bookmarks::update_bookmarks;
+use crate::references::local_bookmarks::WorkspaceLocalBookmark;
+use crate::references::remote_bookmarks::update_remote_bookmarks;
+use crate::references::remote_bookmarks::WorkspaceRemoteBookmark;
+use crate::references::snapshots::update_snapshots;
+use crate::references::snapshots::WorkspaceSnapshot;
 use crate::sql::ops::Get;
 use crate::sql::ops::SqlCommitCloud;
-use crate::sql::remote_bookmarks_ops::update_remote_bookmarks;
-use crate::sql::remote_bookmarks_ops::WorkspaceRemoteBookmark;
-use crate::sql::snapshots_ops::update_snapshots;
-use crate::sql::snapshots_ops::WorkspaceSnapshot;
 use crate::CommitCloudContext;
 
+pub mod heads;
+pub mod history;
+pub mod local_bookmarks;
+pub mod remote_bookmarks;
+pub mod snapshots;
 // Workspace information as we retrieve it form the database
 #[derive(Debug, Clone)]
 pub struct RawReferencesData {

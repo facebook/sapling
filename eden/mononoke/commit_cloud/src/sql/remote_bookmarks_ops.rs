@@ -6,12 +6,9 @@
  */
 
 use async_trait::async_trait;
-use edenapi_types::cloud::RemoteBookmark;
-use mercurial_types::HgChangesetId;
-use serde::Deserialize;
-use serde::Serialize;
 use sql_ext::mononoke_queries;
 
+use crate::references::remote_bookmarks::WorkspaceRemoteBookmark;
 use crate::sql::ops::Delete;
 use crate::sql::ops::Get;
 use crate::sql::ops::Insert;
@@ -19,13 +16,6 @@ use crate::sql::ops::SqlCommitCloud;
 use crate::sql::ops::Update;
 use crate::sql::utils::changeset_as_bytes;
 use crate::sql::utils::changeset_from_bytes;
-use crate::CommitCloudContext;
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct WorkspaceRemoteBookmark {
-    pub name: String,
-    pub commit: HgChangesetId,
-    pub remote: String,
-}
 
 pub struct DeleteArgs {
     pub removed_bookmarks: Vec<String>,
@@ -127,50 +117,4 @@ impl Delete<WorkspaceRemoteBookmark> for SqlCommitCloud {
         .await?;
         Ok(())
     }
-}
-
-pub async fn update_remote_bookmarks(
-    sql_commit_cloud: &SqlCommitCloud,
-    ctx: CommitCloudContext,
-    updated_remote_bookmarks: Option<Vec<RemoteBookmark>>,
-    removed_remote_bookmarks: Option<Vec<RemoteBookmark>>,
-) -> anyhow::Result<()> {
-    if removed_remote_bookmarks
-        .clone()
-        .is_some_and(|x| !x.is_empty())
-    {
-        let removed_commits = removed_remote_bookmarks
-            .unwrap()
-            .into_iter()
-            .map(|b| b.remote + &b.name)
-            .collect::<Vec<_>>();
-        let delete_args = DeleteArgs {
-            removed_bookmarks: removed_commits,
-        };
-
-        Delete::<WorkspaceRemoteBookmark>::delete(
-            sql_commit_cloud,
-            ctx.reponame.clone(),
-            ctx.workspace.clone(),
-            delete_args,
-        )
-        .await?;
-    }
-
-    for book in updated_remote_bookmarks.unwrap_or_default() {
-        //TODO: Resolve remote bookmarks if no node available (e.g. master)
-        Insert::<WorkspaceRemoteBookmark>::insert(
-            sql_commit_cloud,
-            ctx.reponame.clone(),
-            ctx.workspace.clone(),
-            WorkspaceRemoteBookmark {
-                name: book.name,
-                commit: book.node.unwrap_or_default().into(),
-                remote: book.remote,
-            },
-        )
-        .await?;
-    }
-
-    Ok(())
 }

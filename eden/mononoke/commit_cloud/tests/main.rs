@@ -8,14 +8,14 @@
 use std::path::PathBuf;
 use std::str::FromStr;
 
+use commit_cloud::references::heads::WorkspaceHead;
+use commit_cloud::references::local_bookmarks::WorkspaceLocalBookmark;
+use commit_cloud::references::remote_bookmarks::WorkspaceRemoteBookmark;
+use commit_cloud::references::snapshots::WorkspaceSnapshot;
 use commit_cloud::sql::builder::SqlCommitCloudBuilder;
 use commit_cloud::sql::checkout_locations_ops::WorkspaceCheckoutLocation;
-use commit_cloud::sql::heads_ops::WorkspaceHead;
-use commit_cloud::sql::local_bookmarks_ops::WorkspaceLocalBookmark;
 use commit_cloud::sql::ops::Delete;
 use commit_cloud::sql::ops::Insert;
-use commit_cloud::sql::remote_bookmarks_ops::WorkspaceRemoteBookmark;
-use commit_cloud::sql::snapshots_ops::WorkspaceSnapshot;
 use commit_cloud::sql::versions_ops::WorkspaceVersion;
 use fbinit::FacebookInit;
 use mercurial_types::HgChangesetId;
@@ -245,10 +245,10 @@ async fn test_versions(_fb: FacebookInit) -> anyhow::Result<()> {
 
 #[fbinit::test]
 async fn test_history(_fb: FacebookInit) -> anyhow::Result<()> {
+    use commit_cloud::references::history::WorkspaceHistory;
     use commit_cloud::sql::history_ops::DeleteArgs;
     use commit_cloud::sql::history_ops::GetOutput;
     use commit_cloud::sql::history_ops::GetType;
-    use commit_cloud::sql::history_ops::WorkspaceHistory;
     use commit_cloud::sql::ops::GenericGet;
 
     // Create a workspace with heads and bookmarks

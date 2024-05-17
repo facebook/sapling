@@ -5,16 +5,12 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::HashMap;
-
 use ::sql_ext::mononoke_queries;
 use async_trait::async_trait;
-use edenapi_types::HgId;
 use mercurial_types::HgChangesetId;
-use serde::Deserialize;
-use serde::Serialize;
 use sql::Connection;
 
+use crate::references::local_bookmarks::WorkspaceLocalBookmark;
 use crate::sql::ops::Delete;
 use crate::sql::ops::Get;
 use crate::sql::ops::Insert;
@@ -23,13 +19,6 @@ use crate::sql::ops::Update;
 use crate::sql::utils::changeset_as_bytes;
 use crate::sql::utils::changeset_from_bytes;
 use crate::sql::utils::list_as_bytes;
-use crate::CommitCloudContext;
-
-#[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
-pub struct WorkspaceLocalBookmark {
-    pub name: String,
-    pub commit: HgChangesetId,
-}
 
 pub struct DeleteArgs {
     pub removed_bookmarks: Vec<HgChangesetId>,
@@ -129,44 +118,4 @@ impl Delete<WorkspaceLocalBookmark> for SqlCommitCloud {
         .await?;
         Ok(())
     }
-}
-
-pub async fn update_bookmarks(
-    sql_commit_cloud: &SqlCommitCloud,
-    ctx: CommitCloudContext,
-    updated_bookmarks: HashMap<String, HgId>,
-    removed_bookmarks: Vec<HgId>,
-) -> anyhow::Result<()> {
-    if !removed_bookmarks.is_empty() {
-        let removed_commits = removed_bookmarks
-            .into_iter()
-            .map(|id| id.into())
-            .collect::<Vec<HgChangesetId>>();
-        let delete_args = DeleteArgs {
-            removed_bookmarks: removed_commits,
-        };
-
-        Delete::<WorkspaceLocalBookmark>::delete(
-            sql_commit_cloud,
-            ctx.reponame.clone(),
-            ctx.workspace.clone(),
-            delete_args,
-        )
-        .await?;
-    }
-
-    for (name, book) in updated_bookmarks {
-        Insert::<WorkspaceLocalBookmark>::insert(
-            sql_commit_cloud,
-            ctx.reponame.clone(),
-            ctx.workspace.clone(),
-            WorkspaceLocalBookmark {
-                name,
-                commit: book.into(),
-            },
-        )
-        .await?;
-    }
-
-    Ok(())
 }

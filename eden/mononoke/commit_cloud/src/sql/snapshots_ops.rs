@@ -7,9 +7,9 @@
 
 use ::sql_ext::mononoke_queries;
 use async_trait::async_trait;
-use edenapi_types::HgId;
 use mercurial_types::HgChangesetId;
 
+use crate::references::snapshots::WorkspaceSnapshot;
 use crate::sql::ops::Delete;
 use crate::sql::ops::Get;
 use crate::sql::ops::Insert;
@@ -18,12 +18,6 @@ use crate::sql::ops::Update;
 use crate::sql::utils::changeset_as_bytes;
 use crate::sql::utils::changeset_from_bytes;
 use crate::sql::utils::list_as_bytes;
-use crate::CommitCloudContext;
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct WorkspaceSnapshot {
-    pub commit: HgChangesetId,
-}
 
 pub struct DeleteArgs {
     pub removed_commits: Vec<HgChangesetId>,
@@ -117,42 +111,4 @@ impl Delete<WorkspaceSnapshot> for SqlCommitCloud {
         .await?;
         Ok(())
     }
-}
-
-pub async fn update_snapshots(
-    sql_commit_cloud: &SqlCommitCloud,
-    ctx: CommitCloudContext,
-    new_snapshots: Vec<HgId>,
-    removed_snapshots: Vec<HgId>,
-) -> anyhow::Result<()> {
-    if !removed_snapshots.is_empty() {
-        let delete_args = DeleteArgs {
-            removed_commits: removed_snapshots
-                .into_iter()
-                .map(|id| id.into())
-                .collect::<Vec<HgChangesetId>>(),
-        };
-
-        Delete::<WorkspaceSnapshot>::delete(
-            sql_commit_cloud,
-            ctx.reponame.clone(),
-            ctx.workspace.clone(),
-            delete_args,
-        )
-        .await?;
-    }
-
-    for snapshot in new_snapshots {
-        Insert::<WorkspaceSnapshot>::insert(
-            sql_commit_cloud,
-            ctx.reponame.clone(),
-            ctx.workspace.clone(),
-            WorkspaceSnapshot {
-                commit: snapshot.into(),
-            },
-        )
-        .await?;
-    }
-
-    Ok(())
 }
