@@ -15,6 +15,7 @@ export enum SyncStatus {
   InSync = 'inSync',
   LocalIsNewer = 'localIsNewer',
   RemoteIsNewer = 'remoteIsNewer',
+  BothChanged = 'bothChanged',
 }
 
 const emptyMap = new Map<Hash, SyncStatus>();
