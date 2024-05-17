@@ -1,6 +1,12 @@
 #chg-compatible
 #debugruntest-incompatible
 
+#testcases ruststatus pythonstatus
+
+#if pythonstatus
+  $ setconfig status.use-rust=false
+#endif
+
   $ setconfig devel.segmented-changelog-rev-compat=true
   $ . "$TESTDIR/histedit-helpers.sh"
 

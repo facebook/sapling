@@ -647,8 +647,11 @@ def statuscmd(orig, ui, repo, *pats, **opts):
             message = _("--root-relative not supported with patterns")
             hint = _("run from the repo root instead")
             raise error.Abort(message, hint=hint)
-    elif ui.plain():
-        pass
+
+    # Only default rootrel if it wasn't specified by user.
+    if rootrel is None:
+        rootrel = ui.plain()
+
     # Here's an ugly hack! If users are passing "re:" to make status relative,
     # hgwatchman will never refresh the full state and status will become and
     # remain slow after a restart or 24 hours. Here, we check for this and
@@ -657,14 +660,10 @@ def statuscmd(orig, ui, repo, *pats, **opts):
     # only pattern passed.
     #
     # Also set pats to [''] if pats is empty because that makes status relative.
-    elif not pats or (len(pats) == 1 and pats[0] == "re:"):
+    if not rootrel and not pats or (len(pats) == 1 and pats[0] == "re:"):
         pats = [""]
 
-    with (
-        ui.configoverride({("commands", "status.relative"): "false"})
-        if rootrel
-        else util.nullcontextmanager()
-    ):
+    with ui.configoverride({("commands", "status.relative"): str(not rootrel)}):
         return orig(ui, repo, *pats, **opts)
 
 
