@@ -44,13 +44,11 @@
   ? exp/i.tmp
   ? x.pyc
 
-TODO(sggutier): Make EdenFS respect ui.ignore
   $ hg status --config 'ui.ignore.global=$TESTTMP/globalignore'
   ? .gitignore
   ? Makefile
   ? exp/.gitignore
   ? exp/i.tmp
-  ? x.pyc (eden !)
 
 # Test directory patterns only match directories.
 

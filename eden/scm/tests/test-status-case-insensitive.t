@@ -1,7 +1,6 @@
 #require icasefs
 #require no-windows
 
-
 Status is clean when file changes case
   $ newclientrepo
   $ touch file
@@ -120,7 +119,5 @@ Gitignore filters files case-insensitively:
   $ hg st -u
   ? excluded/file
   $ echo INCLUDED > .gitignore
-TODO(sggutier): Investigate why only on macOS this is not respected
   $ hg st -u
   ? excluded/file
-  ? included/file (eden !) (osx !)
