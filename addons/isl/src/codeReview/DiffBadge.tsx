@@ -20,6 +20,7 @@ import {CircleExclamationIcon} from '../icons/CircleExclamationIcon';
 import {configBackedAtom, useAtomGet} from '../jotaiUtils';
 import {PullRevOperation} from '../operations/PullRevOperation';
 import {useRunOperation} from '../operationsState';
+import platform from '../platform';
 import {exactRevset} from '../types';
 import {codeReviewProvider, diffSummary} from './CodeReviewInfo';
 import {DiffCommentsDetails} from './DiffComments';
@@ -167,6 +168,8 @@ function DiffInfoInner({
       <DiffNumber url={info.url}>{provider.formatDiffNumber(diffId)}</DiffNumber>
       {shouldHideActions ? null : syncStatus === SyncStatus.RemoteIsNewer ? (
         <DownloadNewVersionButton diffId={diffId} provider={provider} />
+      ) : syncStatus === SyncStatus.BothChanged ? (
+        <DownloadNewVersionButton diffId={diffId} provider={provider} bothChanged />
       ) : syncStatus === SyncStatus.LocalIsNewer ? (
         <ResubmitSyncButton commit={commit} provider={provider} />
       ) : null}
@@ -177,19 +180,33 @@ function DiffInfoInner({
 function DownloadNewVersionButton({
   diffId,
   provider,
+  bothChanged,
 }: {
   diffId: DiffId;
   provider: UICodeReviewProvider;
+  bothChanged?: boolean;
 }) {
   const runOperation = useRunOperation();
-  return (
-    <Tooltip
-      title={t('$provider has a newer version of this Diff. Click to download the newer version.', {
+  const tooltip = bothChanged
+    ? t(
+        'Both remote and local verisons have changed.\n\n$provider has a new version of this Diff, but this commit has also changed locally since it was last submitted. You can download the new remote version, but it may not include your other local changes.',
+        {replace: {$provider: provider.label}},
+      )
+    : t('$provider has a newer version of this Diff. Click to download the newer version.', {
         replace: {$provider: provider.label},
-      })}>
+      });
+
+  return (
+    <Tooltip title={tooltip}>
       <VSCodeButton
         appearance="icon"
-        onClick={() => {
+        onClick={async () => {
+          if (bothChanged) {
+            const confirmed = await platform.confirm(tooltip);
+            if (confirmed !== true) {
+              return;
+            }
+          }
           if (Internal.diffDownloadOperation != null) {
             runOperation(Internal.diffDownloadOperation(exactRevset(diffId)));
           } else {

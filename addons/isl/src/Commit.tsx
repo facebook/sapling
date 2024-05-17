@@ -184,10 +184,7 @@ export const Commit = memo(
           onClick: viewChangesCallback,
         });
       }
-      if (
-        !isPublic &&
-        (syncStatus === SyncStatus.LocalIsNewer || syncStatus === SyncStatus.RemoteIsNewer)
-      ) {
+      if (!isPublic && syncStatus != null && syncStatus !== SyncStatus.InSync) {
         const provider = readAtom(codeReviewProvider);
         if (provider?.supportsComparingSinceLastSubmit) {
           items.push({
