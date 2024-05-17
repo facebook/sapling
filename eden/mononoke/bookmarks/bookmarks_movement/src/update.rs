@@ -103,6 +103,7 @@ impl<'op> UpdateBookmarkOp<'op> {
         targets: BookmarkUpdateTargets,
         update_policy: BookmarkUpdatePolicy,
         reason: BookmarkUpdateReason,
+        affected_changesets_limit: Option<usize>,
     ) -> UpdateBookmarkOp<'op> {
         UpdateBookmarkOp {
             bookmark,
@@ -111,7 +112,7 @@ impl<'op> UpdateBookmarkOp<'op> {
             reason,
             kind_restrictions: BookmarkKindRestrictions::AnyKind,
             cross_repo_push_source: CrossRepoPushSource::NativeToThisRepo,
-            affected_changesets: AffectedChangesets::new(),
+            affected_changesets: AffectedChangesets::with_limit(affected_changesets_limit),
             pushvars: None,
             log_new_public_commits_to_scribe: false,
             only_log_acl_checks: false,

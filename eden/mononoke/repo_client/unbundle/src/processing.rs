@@ -491,15 +491,19 @@ async fn plain_push_bookmark(
             .unwrap_or_default();
     match (bookmark_push.old, bookmark_push.new) {
         (None, Some(new_target)) => {
-            let res =
-                bookmarks_movement::CreateBookmarkOp::new(&bookmark_push.name, new_target, reason)
-                    .only_if_public()
-                    .with_new_changesets(new_changesets)
-                    .with_pushvars(maybe_pushvars)
-                    .with_push_source(cross_repo_push_source)
-                    .only_log_acl_checks(only_log_acl_checks)
-                    .run(ctx, &authz, repo, hook_manager)
-                    .await;
+            let res = bookmarks_movement::CreateBookmarkOp::new(
+                &bookmark_push.name,
+                new_target,
+                reason,
+                None,
+            )
+            .only_if_public()
+            .with_new_changesets(new_changesets)
+            .with_pushvars(maybe_pushvars)
+            .with_push_source(cross_repo_push_source)
+            .only_log_acl_checks(only_log_acl_checks)
+            .run(ctx, &authz, repo, hook_manager)
+            .await;
             match res {
                 Ok(_log_id) => {}
                 Err(err) => match err {
@@ -530,6 +534,7 @@ async fn plain_push_bookmark(
                     BookmarkUpdatePolicy::FastForwardOnly
                 },
                 reason,
+                None,
             )
             .only_if_public()
             .with_new_changesets(new_changesets)
@@ -597,6 +602,7 @@ async fn infinitepush_scratch_bookmark(
             &bookmark_push.name,
             bookmark_push.new,
             BookmarkUpdateReason::Push,
+            None,
         )
         .only_if_scratch()
         .with_push_source(cross_repo_push_source)
@@ -623,6 +629,7 @@ async fn infinitepush_scratch_bookmark(
                 BookmarkUpdatePolicy::FastForwardOnly
             },
             BookmarkUpdateReason::Push,
+            None,
         )
         .only_if_scratch()
         .with_push_source(cross_repo_push_source)

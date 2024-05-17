@@ -30,6 +30,7 @@ impl RepoContext {
         old_target: Option<ChangesetId>,
         allow_non_fast_forward: bool,
         pushvars: Option<&HashMap<String, Bytes>>,
+        affected_changesets_limit: Option<usize>,
     ) -> Result<(), MononokeError> {
         self.start_write()?;
 
@@ -54,6 +55,7 @@ impl RepoContext {
             old_target: ChangesetId,
             allow_non_fast_forward: bool,
             pushvars: Option<&'a HashMap<String, Bytes>>,
+            affected_changesets_limit: Option<usize>,
         ) -> UpdateBookmarkOp<'a> {
             let op = UpdateBookmarkOp::new(
                 bookmark,
@@ -67,6 +69,7 @@ impl RepoContext {
                     BookmarkUpdatePolicy::FastForwardOnly
                 },
                 BookmarkUpdateReason::ApiRequest,
+                affected_changesets_limit,
             )
             .with_pushvars(pushvars);
             op.log_new_public_commits_to_scribe()
@@ -90,6 +93,7 @@ impl RepoContext {
                 old_target,
                 allow_non_fast_forward,
                 pushvars,
+                affected_changesets_limit,
             )
             .run(
                 self.ctx(),
@@ -107,6 +111,7 @@ impl RepoContext {
                 old_target,
                 allow_non_fast_forward,
                 pushvars,
+                affected_changesets_limit,
             )
             .run(
                 self.ctx(),

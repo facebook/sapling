@@ -38,6 +38,8 @@ use crate::restrictions::should_run_hooks;
 use crate::BookmarkMovementError;
 use crate::Repo;
 
+const DEFAULT_ADDITIONAL_CHANGESETS_LIMIT: usize = 200000;
+
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub(crate) enum AdditionalChangesets {
     None,
@@ -57,14 +59,18 @@ pub(crate) struct AffectedChangesets {
 
     /// Additional changesets, if they have been loaded.
     additional_changesets: Option<HashSet<BonsaiChangeset>>,
+
+    /// Max limit on how many additional changesets to load
+    additional_changesets_limit: usize,
 }
 
 impl AffectedChangesets {
-    pub(crate) fn new() -> Self {
+    pub(crate) fn with_limit(limit: Option<usize>) -> Self {
         Self {
             new_changesets: HashMap::new(),
             source_changesets: HashSet::new(),
             additional_changesets: None,
+            additional_changesets_limit: limit.unwrap_or(DEFAULT_ADDITIONAL_CHANGESETS_LIMIT),
         }
     }
 
@@ -73,6 +79,7 @@ impl AffectedChangesets {
             new_changesets: HashMap::new(),
             source_changesets,
             additional_changesets: None,
+            additional_changesets_limit: DEFAULT_ADDITIONAL_CHANGESETS_LIMIT,
         }
     }
 
@@ -152,7 +159,7 @@ impl AffectedChangesets {
                 future::ready(!exists)
             });
 
-        const ADDITIONAL_CHANGESETS_LIMIT: usize = 200000;
+        let additional_changesets_limit = self.additional_changesets_limit;
 
         let additional_changesets = if justknobs::eval(
             "scm/mononoke:run_hooks_on_additional_changesets",
@@ -166,7 +173,7 @@ impl AffectedChangesets {
                     let mut count = 0;
                     move |bcs_id| {
                         count += 1;
-                        if count > ADDITIONAL_CHANGESETS_LIMIT {
+                        if count > additional_changesets_limit {
                             future::ready(Err(anyhow!(
                                 "bookmark movement additional changesets limit reached at {}",
                                 bcs_id
@@ -196,13 +203,13 @@ impl AffectedChangesets {
             // Logging-only mode.  Work out how many changesets we would have run
             // on, and whether the limit would have been reached.
             let count = range
-                .take(ADDITIONAL_CHANGESETS_LIMIT)
+                .take(additional_changesets_limit)
                 .try_fold(0usize, |acc, _| async move { Ok(acc + 1) })
                 .await?;
 
             let mut scuba = ctx.scuba().clone();
             scuba.add("hook_running_additional_changesets", count);
-            if count >= ADDITIONAL_CHANGESETS_LIMIT {
+            if count >= additional_changesets_limit {
                 scuba.add("hook_running_additional_changesets_limit_reached", true);
             }
             scuba.log_with_msg("Hook running skipping additional changesets", None);

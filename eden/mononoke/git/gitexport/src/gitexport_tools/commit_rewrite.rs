@@ -256,7 +256,12 @@ pub async fn rewrite_partial_changesets(
 
     // Set master bookmark to point to the latest changeset
     temp_repo_ctx
-        .create_bookmark(&BookmarkKey::from_str(MASTER_BOOKMARK)?, head_cs_id, None)
+        .create_bookmark(
+            &BookmarkKey::from_str(MASTER_BOOKMARK)?,
+            head_cs_id,
+            None,
+            None,
+        )
         .await
         .with_context(|| "Failed to create master bookmark")?;
 

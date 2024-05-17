@@ -410,6 +410,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
                                     Some(old_changeset),
                                     allow_non_fast_forward,
                                     pushvars.as_ref(),
+                                    None,
                                 )
                                 .await
                                 .with_context(|| format!("failed to move bookmark {name} from {old_changeset:?} to {final_changeset:?}"))?;
@@ -428,7 +429,12 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
                     None => {
                         upload_if_tag.await?;
                         repo_context
-                            .create_bookmark(&bookmark_key, final_changeset, pushvars.as_ref())
+                            .create_bookmark(
+                                &bookmark_key,
+                                final_changeset,
+                                pushvars.as_ref(),
+                                None,
+                            )
                             .await
                             .with_context(|| {
                                 format!("failed to create bookmark {name} during gitimport")
