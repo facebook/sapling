@@ -13,16 +13,16 @@ use edenapi_types::ReferencesData;
 use edenapi_types::UpdateReferencesParams;
 use mononoke_types::Timestamp;
 
-use crate::sql::heads::update_heads;
-use crate::sql::heads::WorkspaceHead;
-use crate::sql::local_bookmarks::update_bookmarks;
-use crate::sql::local_bookmarks::WorkspaceLocalBookmark;
+use crate::sql::heads_ops::update_heads;
+use crate::sql::heads_ops::WorkspaceHead;
+use crate::sql::local_bookmarks_ops::update_bookmarks;
+use crate::sql::local_bookmarks_ops::WorkspaceLocalBookmark;
 use crate::sql::ops::Get;
 use crate::sql::ops::SqlCommitCloud;
-use crate::sql::remote_bookmarks::update_remote_bookmarks;
-use crate::sql::remote_bookmarks::WorkspaceRemoteBookmark;
-use crate::sql::snapshots::update_snapshots;
-use crate::sql::snapshots::WorkspaceSnapshot;
+use crate::sql::remote_bookmarks_ops::update_remote_bookmarks;
+use crate::sql::remote_bookmarks_ops::WorkspaceRemoteBookmark;
+use crate::sql::snapshots_ops::update_snapshots;
+use crate::sql::snapshots_ops::WorkspaceSnapshot;
 use crate::CommitCloudContext;
 
 // Workspace information as we retrieve it form the database

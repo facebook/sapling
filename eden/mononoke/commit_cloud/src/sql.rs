@@ -6,12 +6,12 @@
  */
 
 pub mod builder;
-pub mod checkout_locations;
-pub mod heads;
-pub mod history;
-pub mod local_bookmarks;
+pub mod checkout_locations_ops;
+pub mod heads_ops;
+pub mod history_ops;
+pub mod local_bookmarks_ops;
 pub mod ops;
-pub mod remote_bookmarks;
-pub mod snapshots;
+pub mod remote_bookmarks_ops;
+pub mod snapshots_ops;
 pub mod utils;
-pub mod versions;
+pub mod versions_ops;

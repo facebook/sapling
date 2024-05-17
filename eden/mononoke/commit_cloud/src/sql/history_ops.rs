@@ -9,14 +9,14 @@ use ::sql_ext::mononoke_queries;
 use async_trait::async_trait;
 use mononoke_types::Timestamp;
 
-use crate::sql::heads::WorkspaceHead;
-use crate::sql::local_bookmarks::WorkspaceLocalBookmark;
+use crate::sql::heads_ops::WorkspaceHead;
+use crate::sql::local_bookmarks_ops::WorkspaceLocalBookmark;
 use crate::sql::ops::Delete;
 use crate::sql::ops::GenericGet;
 use crate::sql::ops::Insert;
 use crate::sql::ops::SqlCommitCloud;
 use crate::sql::ops::Update;
-use crate::sql::remote_bookmarks::WorkspaceRemoteBookmark;
+use crate::sql::remote_bookmarks_ops::WorkspaceRemoteBookmark;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct WorkspaceHistory {

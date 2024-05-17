@@ -5,10 +5,10 @@
  * GNU General Public License version 2.
  */
 
-use crate::sql::heads::WorkspaceHead;
-use crate::sql::history::WorkspaceHistory;
-use crate::sql::local_bookmarks::WorkspaceLocalBookmark;
-use crate::sql::remote_bookmarks::WorkspaceRemoteBookmark;
+use crate::sql::heads_ops::WorkspaceHead;
+use crate::sql::history_ops::WorkspaceHistory;
+use crate::sql::local_bookmarks_ops::WorkspaceLocalBookmark;
+use crate::sql::remote_bookmarks_ops::WorkspaceRemoteBookmark;
 
 #[allow(unused)]
 pub(crate) struct WorkspaceContents {

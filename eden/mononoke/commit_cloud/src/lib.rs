@@ -20,7 +20,7 @@ use crate::references::fetch_references;
 use crate::sql::ops::Get;
 use crate::sql::ops::Insert;
 use crate::sql::ops::SqlCommitCloud;
-use crate::sql::versions::WorkspaceVersion;
+use crate::sql::versions_ops::WorkspaceVersion;
 #[facet::facet]
 pub struct CommitCloud {
     pub storage: SqlCommitCloud,
