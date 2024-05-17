@@ -43,6 +43,16 @@ impl Type {
             Type::File(FileType::GitSubmodule) => Err(anyhow!("Git submodules not supported")),
         }
     }
+
+    pub fn augmented_manifest_suffix(&self) -> Result<&'static [u8]> {
+        match self {
+            Type::Tree => Ok(b"t"),
+            Type::File(FileType::Symlink) => Ok(b"l"),
+            Type::File(FileType::Executable) => Ok(b"x"),
+            Type::File(FileType::Regular) => Ok(b"r"),
+            Type::File(FileType::GitSubmodule) => Err(anyhow!("Git submodules not supported")),
+        }
+    }
 }
 
 impl fmt::Display for Type {

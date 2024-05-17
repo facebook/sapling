@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::io::Write;
 use std::str::FromStr;
 
 use anyhow::bail;
@@ -16,6 +17,7 @@ use blobstore::Loadable;
 use blobstore::LoadableError;
 use bytes::Bytes;
 use context::CoreContext;
+use futures::stream;
 use futures::stream::BoxStream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
@@ -40,7 +42,10 @@ use crate::HgNodeHash;
 use crate::HgParents;
 use crate::MPathElement;
 use crate::MononokeHgError;
+use crate::Type;
 use crate::NULL_HASH;
+
+const MAX_BUFFERED_ENTRIES: usize = 500;
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub struct HgAugmentedFileLeafNode {
@@ -158,6 +163,136 @@ impl ShardedHgAugmentedManifest {
     #[inline]
     pub fn computed_node_id(&self) -> HgNodeHash {
         self.computed_node_id
+    }
+
+    // The format of the content addressed manifest blob is as follows:
+    //
+    // entry ::= <path> '\0' <hg-node-hex> <type> ' ' <entry-value> '\n'
+    //
+    // entry-value ::= <cas-blake3-hex> ' ' <size-dec> ' ' <sha1-hex>
+    //               | <cas-blake3-hex> ' ' <size-dec>
+    //
+    // tree ::= <version> ' ' <sha1-hex> ' ' <computed_sha1-hex (if different) or -> ' ' <p1-hex> ' ' <p2-hex> '\n' <entry>*
+
+    fn serialize_content_addressed_prefix(&self) -> Result<Bytes> {
+        let mut buf = Vec::with_capacity(41 * 4); // 40 for a hex hash and a separator
+        self.write_content_addressed_prefix(&mut buf)?;
+        Ok(buf.into())
+    }
+
+    fn serialize_content_addressed_entries(
+        entries: Vec<(MPathElement, HgAugmentedManifestEntry)>,
+    ) -> Result<Bytes> {
+        let mut buf: Vec<u8> = Vec::with_capacity(entries.len() * 100);
+        Self::write_content_addressed_entries(
+            entries
+                .iter()
+                .map(|(path, augmented_manifest_entry)| (path, augmented_manifest_entry)),
+            &mut buf,
+        )?;
+        Ok(buf.into())
+    }
+
+    fn write_content_addressed_entries<'a>(
+        entries: impl Iterator<Item = (&'a MPathElement, &'a HgAugmentedManifestEntry)>,
+        mut w: impl Write,
+    ) -> Result<()> {
+        for (path, augmented_manifest_entry) in entries {
+            Self::write_content_addressed_entry(path, augmented_manifest_entry, &mut w)?;
+        }
+        Ok(())
+    }
+
+    fn write_content_addressed_prefix(&self, mut w: impl Write) -> Result<()> {
+        w.write_all(b"v1")?; // version number for this format
+        w.write_all(b" ")?;
+        w.write_all(self.hg_node_id.to_hex().as_bytes())?;
+        w.write_all(b" ")?;
+        if self.hg_node_id != self.computed_node_id {
+            w.write_all(self.computed_node_id.to_hex().as_bytes())?;
+        } else {
+            w.write_all(b"-")?;
+        }
+        w.write_all(b" ")?;
+        if let Some(p1) = self.p1 {
+            w.write_all(p1.to_hex().as_bytes())?;
+        }
+        w.write_all(b" ")?;
+        if let Some(p2) = self.p2 {
+            w.write_all(p2.to_hex().as_bytes())?;
+        }
+        w.write_all(b"\n")?;
+        Ok(())
+    }
+
+    fn write_content_addressed_entry(
+        path: &MPathElement,
+        augmented_manifest_entry: &HgAugmentedManifestEntry,
+        mut w: impl Write,
+    ) -> Result<()> {
+        w.write_all(path.as_ref())?;
+        let (tag, sapling_hash) = match augmented_manifest_entry {
+            HgAugmentedManifestEntry::DirectoryNode(ref directory) => {
+                (Type::Tree.augmented_manifest_suffix()?, directory.treenode)
+            }
+            HgAugmentedManifestEntry::FileNode(ref file) => {
+                let tag = Type::File(file.file_type).augmented_manifest_suffix()?;
+                (tag, file.filenode)
+            }
+        };
+        w.write_all(b"\0")?;
+        w.write_all(sapling_hash.to_hex().as_bytes())?;
+        w.write_all(tag)?;
+        w.write_all(b" ")?;
+        Self::write_content_addressed_entry_value(augmented_manifest_entry, &mut w)?;
+        w.write_all(b"\n")?;
+        Ok(())
+    }
+
+    fn write_content_addressed_entry_value(
+        augmented_manifest_entry: &HgAugmentedManifestEntry,
+        mut w: impl Write,
+    ) -> Result<()> {
+        // Representation of content addressed Digest.
+        let (id, size) = match augmented_manifest_entry {
+            HgAugmentedManifestEntry::DirectoryNode(ref directory) => (
+                directory.augmented_manifest_id,
+                directory.augmented_manifest_size,
+            ),
+            HgAugmentedManifestEntry::FileNode(ref file) => (file.content_blake3, file.total_size),
+        };
+        w.write_all(id.to_hex().as_bytes())?;
+        w.write_all(b" ")?;
+        w.write_all(size.to_string().as_bytes())?;
+        if let HgAugmentedManifestEntry::FileNode(ref file) = augmented_manifest_entry {
+            w.write_all(b" ")?;
+            w.write_all(file.content_sha1.to_hex().as_bytes())?;
+        }
+        Ok(())
+    }
+
+    pub fn into_content_addressed_manifest_blob<'a>(
+        self,
+        ctx: &'a CoreContext,
+        blobstore: &'a impl Blobstore,
+    ) -> BoxStream<'a, Result<Bytes>> {
+        let prefix_bytes = self.serialize_content_addressed_prefix();
+        stream::once(std::future::ready(prefix_bytes))
+            .chain(
+                self.subentries
+                    .into_entries(ctx, blobstore)
+                    .map(|res| {
+                        res.and_then(|(k, v)| anyhow::Ok((MPathElement::from_smallvec(k)?, v)))
+                    })
+                    .chunks(MAX_BUFFERED_ENTRIES)
+                    .map(|results| {
+                        results
+                            .into_iter()
+                            .collect::<Result<Vec<_>, _>>()
+                            .and_then(Self::serialize_content_addressed_entries)
+                    }),
+            )
+            .boxed()
     }
 }
 
@@ -378,12 +513,23 @@ impl HgAugmentedManifestEnvelope {
         &self.augmented_manifest
     }
 
+    /// The next 3 functions are used to generate the content addressed manifest blob to store in content addressed store.
+
     pub fn augmented_manifest_id(&self) -> Blake3 {
         self.augmented_manifest_id
     }
 
     pub fn augmented_manifest_size(&self) -> u64 {
         self.augmented_manifest_size
+    }
+
+    pub fn into_content_addressed_manifest_blob<'a>(
+        self,
+        ctx: &'a CoreContext,
+        blobstore: &'a impl Blobstore,
+    ) -> BoxStream<'a, Result<Bytes>> {
+        self.augmented_manifest
+            .into_content_addressed_manifest_blob(ctx, blobstore)
     }
 }
 
