@@ -13,16 +13,13 @@ use edenapi_types::GetReferencesParams;
 use edenapi_types::ReferencesData;
 use edenapi_types::UpdateReferencesParams;
 use mononoke_types::Timestamp;
+use references::update_references_data;
 
 use crate::references::cast_references_data;
 use crate::references::fetch_references;
-use crate::sql::heads::update_heads;
-use crate::sql::local_bookmarks::update_bookmarks;
 use crate::sql::ops::Get;
 use crate::sql::ops::Insert;
 use crate::sql::ops::SqlCommitCloud;
-use crate::sql::remote_bookmarks::update_remote_bookmarks;
-use crate::sql::snapshots::update_snapshots;
 use crate::sql::versions::WorkspaceVersion;
 #[facet::facet]
 pub struct CommitCloud {
@@ -136,34 +133,7 @@ impl CommitCloud {
                 .await;
         }
 
-        update_heads(
-            &self.storage,
-            ctx.clone(),
-            params.removed_heads,
-            params.new_heads,
-        )
-        .await?;
-        update_bookmarks(
-            &self.storage,
-            ctx.clone(),
-            params.updated_bookmarks,
-            params.removed_bookmarks,
-        )
-        .await?;
-        update_remote_bookmarks(
-            &self.storage,
-            ctx.clone(),
-            params.updated_remote_bookmarks,
-            params.removed_remote_bookmarks,
-        )
-        .await?;
-        update_snapshots(
-            &self.storage,
-            ctx.clone(),
-            params.new_snapshots,
-            params.removed_snapshots,
-        )
-        .await?;
+        update_references_data(&self.storage, params, &ctx).await?;
         let new_version_timestamp = Timestamp::now();
         let args = WorkspaceVersion {
             workspace: ctx.workspace.clone(),

@@ -10,13 +10,18 @@ use std::collections::HashMap;
 use edenapi_types::cloud::RemoteBookmark;
 use edenapi_types::HgId;
 use edenapi_types::ReferencesData;
+use edenapi_types::UpdateReferencesParams;
 use mononoke_types::Timestamp;
 
+use crate::sql::heads::update_heads;
 use crate::sql::heads::WorkspaceHead;
+use crate::sql::local_bookmarks::update_bookmarks;
 use crate::sql::local_bookmarks::WorkspaceLocalBookmark;
 use crate::sql::ops::Get;
 use crate::sql::ops::SqlCommitCloud;
+use crate::sql::remote_bookmarks::update_remote_bookmarks;
 use crate::sql::remote_bookmarks::WorkspaceRemoteBookmark;
+use crate::sql::snapshots::update_snapshots;
 use crate::sql::snapshots::WorkspaceSnapshot;
 use crate::CommitCloudContext;
 
@@ -96,4 +101,34 @@ pub(crate) async fn cast_references_data(
         snapshots: Some(snapshots),
         timestamp: Some(version_timestamp),
     })
+}
+
+pub(crate) async fn update_references_data(
+    sql: &SqlCommitCloud,
+    params: UpdateReferencesParams,
+    ctx: &CommitCloudContext,
+) -> anyhow::Result<()> {
+    update_heads(sql, ctx.clone(), params.removed_heads, params.new_heads).await?;
+    update_bookmarks(
+        sql,
+        ctx.clone(),
+        params.updated_bookmarks,
+        params.removed_bookmarks,
+    )
+    .await?;
+    update_remote_bookmarks(
+        sql,
+        ctx.clone(),
+        params.updated_remote_bookmarks,
+        params.removed_remote_bookmarks,
+    )
+    .await?;
+    update_snapshots(
+        sql,
+        ctx.clone(),
+        params.new_snapshots,
+        params.removed_snapshots,
+    )
+    .await?;
+    Ok(())
 }
