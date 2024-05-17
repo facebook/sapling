@@ -23,6 +23,7 @@ use hooks::PushAuthoredBy;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgNodeHash;
 use mononoke_api_hg::HgRepoContext;
+use repo_identity::RepoIdentityRef;
 
 use super::handler::EdenApiContext;
 use super::EdenApiHandler;
@@ -100,8 +101,12 @@ async fn land_stack(
         .ok_or(ErrorKind::HgIdNotFound(base_hgid))?
         .id();
 
-    // todo: get value from jk, default to false
-    let force_local_pushrebase = false;
+    let force_local_pushrebase = justknobs::eval(
+        "scm/mononoke:edenapi_force_local_pushrebase",
+        None,
+        Some(repo.inner_repo().repo_identity().name()),
+    )
+    .unwrap_or(false);
 
     let pushrebase_outcome = repo
         .land_stack(

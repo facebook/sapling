@@ -14,6 +14,7 @@ use hooks::PushAuthoredBy;
 use mononoke_api::ChangesetSpecifier;
 use mononoke_api::MononokeError;
 use pushrebase::PushrebaseConflict;
+use repo_identity::RepoIdentityRef;
 use service::RepoLandStackExn;
 use source_control as thrift;
 use source_control_services::errors::source_control_service as service;
@@ -158,9 +159,13 @@ impl SourceControlServiceImpl {
         let pushvars = convert_pushvars(params.pushvars);
         let bookmark_restrictions =
             BookmarkKindRestrictions::from_request(&params.bookmark_restrictions)?;
-        // todo: get value from jk, default to true since scs_server has permission issues
-        // to use land_service for now
-        let force_local_pushrebase = true;
+        // default to true since scs_server has a permission issue to use land_service for now
+        let force_local_pushrebase = justknobs::eval(
+            "scm/mononoke:scs_force_local_pushrebase",
+            None,
+            Some(repo.inner_repo().repo_identity().name()),
+        )
+        .unwrap_or(true);
 
         let pushrebase_outcome = repo
             .land_stack(

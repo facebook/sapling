@@ -72,6 +72,7 @@ rust_binary(
         "//eden/mononoke/phases:phases",
         "//eden/mononoke/pushrebase:pushrebase",
         "//eden/mononoke/pushrebase_mutation_mapping:pushrebase_mutation_mapping",
+        "//eden/mononoke/repo_attributes/repo_identity:repo_identity",
         "//eden/mononoke/repo_authorization:repo_authorization",
         "//eden/mononoke/scs/if:source_control-rust",
         "//eden/mononoke/scs/if:source_control-rust-services",

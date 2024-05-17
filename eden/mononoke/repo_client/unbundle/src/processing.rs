@@ -278,8 +278,12 @@ async fn run_pushrebase(
                 .collect();
 
             let authz = AuthorizationContext::new(ctx);
-            // todo: get value from jk, default to false
-            let force_local_pushrebase = false;
+            let force_local_pushrebase = justknobs::eval(
+                "scm/mononoke:wireproto_force_local_pushrebase",
+                None,
+                Some(repo.repo_identity().name()),
+            )
+            .unwrap_or(false);
 
             let outcome = normal_pushrebase(
                 ctx,
