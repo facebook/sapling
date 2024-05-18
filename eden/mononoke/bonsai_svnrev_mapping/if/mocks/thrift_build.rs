@@ -46,6 +46,6 @@ fn main() {
     conf.base_path(base_path);
     conf.types_crate("bonsai_svnrev_mapping_thrift__types");
     conf.clients_crate("bonsai_svnrev_mapping_thrift__clients");
-    let srcs = &["../bonsai_svnrev_mapping.thrift"];
+    let srcs: &[&str] = &["../bonsai_svnrev_mapping.thrift"];
     conf.run(srcs).expect("Failed while running thrift compilation");
 }

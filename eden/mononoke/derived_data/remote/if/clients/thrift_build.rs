@@ -51,6 +51,6 @@ fn main() {
     conf.types_crate("derived_data_service_if__types");
     conf.clients_crate("derived_data_service_if__clients");
     conf.options("deprecated_default_enum_min_i32");
-    let srcs = &["../derived_data_service.thrift"];
+    let srcs: &[&str] = &["../derived_data_service.thrift"];
     conf.run(srcs).expect("Failed while running thrift compilation");
 }

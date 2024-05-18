@@ -28,6 +28,6 @@ fn main() {
     conf.base_path(base_path);
     conf.types_crate("thrift-convert-test__types");
     conf.clients_crate("thrift-convert-test__clients");
-    let srcs = &["../thrift_convert_test.thrift"];
+    let srcs: &[&str] = &["../thrift_convert_test.thrift"];
     conf.run(srcs).expect("Failed while running thrift compilation");
 }

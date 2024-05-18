@@ -46,6 +46,6 @@ fn main() {
     conf.base_path(base_path);
     conf.types_crate("derivation_queue_thrift__types");
     conf.clients_crate("derivation_queue_thrift__clients");
-    let srcs = &["derivation_queue.thrift"];
+    let srcs: &[&str] = &["derivation_queue.thrift"];
     conf.run(srcs).expect("Failed while running thrift compilation");
 }

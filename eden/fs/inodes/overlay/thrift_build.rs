@@ -28,6 +28,6 @@ fn main() {
     conf.base_path(base_path);
     conf.types_crate("serialization__types");
     conf.clients_crate("serialization__clients");
-    let srcs = &["overlay.thrift"];
+    let srcs: &[&str] = &["overlay.thrift"];
     conf.run(srcs).expect("Failed while running thrift compilation");
 }

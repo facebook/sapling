@@ -47,6 +47,6 @@ fn main() {
     conf.base_path(base_path);
     conf.types_crate("megarepo_types-thrift__types");
     conf.clients_crate("megarepo_types-thrift__clients");
-    let srcs = &["../megarepo_types_thrift.thrift"];
+    let srcs: &[&str] = &["../megarepo_types_thrift.thrift"];
     conf.run(srcs).expect("Failed while running thrift compilation");
 }

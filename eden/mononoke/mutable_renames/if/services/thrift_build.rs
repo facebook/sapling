@@ -46,6 +46,6 @@ fn main() {
     conf.base_path(base_path);
     conf.types_crate("mutable-rename-thrift__types");
     conf.clients_crate("mutable-rename-thrift__clients");
-    let srcs = &["../mutable_rename.thrift"];
+    let srcs: &[&str] = &["../mutable_rename.thrift"];
     conf.run(srcs).expect("Failed while running thrift compilation");
 }

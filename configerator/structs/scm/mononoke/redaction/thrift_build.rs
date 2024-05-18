@@ -30,6 +30,6 @@ fn main() {
     conf.types_crate("redaction_set__types");
     conf.clients_crate("redaction_set__clients");
     conf.options("serde");
-    let srcs = &["redaction_set.thrift"];
+    let srcs: &[&str] = &["redaction_set.thrift"];
     conf.run(srcs).expect("Failed while running thrift compilation");
 }

@@ -28,6 +28,6 @@ fn main() {
     conf.base_path(base_path);
     conf.types_crate("packblob-thrift__types");
     conf.clients_crate("packblob-thrift__clients");
-    let srcs = &["../packblob.thrift"];
+    let srcs: &[&str] = &["../packblob.thrift"];
     conf.run(srcs).expect("Failed while running thrift compilation");
 }

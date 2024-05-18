@@ -30,6 +30,6 @@ fn main() {
     conf.types_crate("megarepo_configs__types");
     conf.clients_crate("megarepo_configs__clients");
     conf.options("serde");
-    let srcs = &["megarepo_configs.thrift"];
+    let srcs: &[&str] = &["megarepo_configs.thrift"];
     conf.run(srcs).expect("Failed while running thrift compilation");
 }

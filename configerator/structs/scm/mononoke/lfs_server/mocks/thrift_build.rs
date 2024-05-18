@@ -31,6 +31,6 @@ fn main() {
     conf.types_crate("lfs_server_config__types");
     conf.clients_crate("lfs_server_config__clients");
     conf.options("serde");
-    let srcs = &["../lfs_server.thrift"];
+    let srcs: &[&str] = &["../lfs_server.thrift"];
     conf.run(srcs).expect("Failed while running thrift compilation");
 }

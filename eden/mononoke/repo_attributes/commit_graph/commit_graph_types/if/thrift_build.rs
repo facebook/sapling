@@ -46,6 +46,6 @@ fn main() {
     conf.base_path(base_path);
     conf.types_crate("commit_graph_thrift__types");
     conf.clients_crate("commit_graph_thrift__clients");
-    let srcs = &["commit_graph.thrift"];
+    let srcs: &[&str] = &["commit_graph.thrift"];
     conf.run(srcs).expect("Failed while running thrift compilation");
 }

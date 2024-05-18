@@ -28,6 +28,6 @@ fn main() {
     conf.base_path(base_path);
     conf.types_crate("memcache-lock-thrift__types");
     conf.clients_crate("memcache-lock-thrift__clients");
-    let srcs = &["../memcache_lock.thrift"];
+    let srcs: &[&str] = &["../memcache_lock.thrift"];
     conf.run(srcs).expect("Failed while running thrift compilation");
 }

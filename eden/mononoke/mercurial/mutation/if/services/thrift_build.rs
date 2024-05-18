@@ -29,6 +29,6 @@ fn main() {
     conf.base_path(base_path);
     conf.types_crate("hg_mutation_entry_thrift__types");
     conf.clients_crate("hg_mutation_entry_thrift__clients");
-    let srcs = &["../hg_mutation_entry.thrift"];
+    let srcs: &[&str] = &["../hg_mutation_entry.thrift"];
     conf.run(srcs).expect("Failed while running thrift compilation");
 }

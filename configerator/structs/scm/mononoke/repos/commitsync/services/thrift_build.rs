@@ -31,6 +31,6 @@ fn main() {
     conf.types_crate("commitsync__types");
     conf.clients_crate("commitsync__clients");
     conf.options("serde");
-    let srcs = &["../../commitsync.thrift"];
+    let srcs: &[&str] = &["../../commitsync.thrift"];
     conf.run(srcs).expect("Failed while running thrift compilation");
 }

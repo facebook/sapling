@@ -30,6 +30,6 @@ fn main() {
     conf.types_crate("observability_config__types");
     conf.clients_crate("observability_config__clients");
     conf.options("deprecated_default_enum_min_i32,serde");
-    let srcs = &["observability_config.thrift"];
+    let srcs: &[&str] = &["observability_config.thrift"];
     conf.run(srcs).expect("Failed while running thrift compilation");
 }

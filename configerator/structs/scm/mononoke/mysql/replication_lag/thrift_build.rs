@@ -30,6 +30,6 @@ fn main() {
     conf.types_crate("replication_lag_config__types");
     conf.clients_crate("replication_lag_config__clients");
     conf.options("serde");
-    let srcs = &["config.thrift"];
+    let srcs: &[&str] = &["config.thrift"];
     conf.run(srcs).expect("Failed while running thrift compilation");
 }

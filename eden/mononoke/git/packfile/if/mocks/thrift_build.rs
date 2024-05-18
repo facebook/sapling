@@ -29,6 +29,6 @@ fn main() {
     conf.types_crate("packfile-thrift__types");
     conf.clients_crate("packfile-thrift__clients");
     conf.options("deprecated_default_enum_min_i32");
-    let srcs = &["../packfile_thrift.thrift"];
+    let srcs: &[&str] = &["../packfile_thrift.thrift"];
     conf.run(srcs).expect("Failed while running thrift compilation");
 }

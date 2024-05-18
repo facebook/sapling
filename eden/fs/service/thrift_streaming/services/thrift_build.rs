@@ -30,6 +30,6 @@ fn main() {
     conf.types_crate("thrift-streaming__types");
     conf.clients_crate("thrift-streaming__clients");
     conf.options("deprecated_default_enum_min_i32");
-    let srcs = &["../../streamingeden.thrift"];
+    let srcs: &[&str] = &["../../streamingeden.thrift"];
     conf.run(srcs).expect("Failed while running thrift compilation");
 }

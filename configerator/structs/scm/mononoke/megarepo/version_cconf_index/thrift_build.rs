@@ -30,6 +30,6 @@ fn main() {
     conf.types_crate("version_cconf_index__types");
     conf.clients_crate("version_cconf_index__clients");
     conf.options("serde");
-    let srcs = &["../version_cconf_index.thrift"];
+    let srcs: &[&str] = &["../version_cconf_index.thrift"];
     conf.run(srcs).expect("Failed while running thrift compilation");
 }

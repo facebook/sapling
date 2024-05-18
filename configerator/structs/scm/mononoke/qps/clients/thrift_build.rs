@@ -30,6 +30,6 @@ fn main() {
     conf.types_crate("qps_config__types");
     conf.clients_crate("qps_config__clients");
     conf.options("serde");
-    let srcs = &["../qps_config.thrift"];
+    let srcs: &[&str] = &["../qps_config.thrift"];
     conf.run(srcs).expect("Failed while running thrift compilation");
 }

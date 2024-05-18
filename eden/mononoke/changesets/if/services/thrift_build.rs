@@ -46,6 +46,6 @@ fn main() {
     conf.base_path(base_path);
     conf.types_crate("changeset-entry-thrift__types");
     conf.clients_crate("changeset-entry-thrift__clients");
-    let srcs = &["../changeset_entry.thrift"];
+    let srcs: &[&str] = &["../changeset_entry.thrift"];
     conf.run(srcs).expect("Failed while running thrift compilation");
 }

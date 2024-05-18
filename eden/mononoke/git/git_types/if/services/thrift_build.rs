@@ -47,6 +47,6 @@ fn main() {
     conf.types_crate("git-types-thrift__types");
     conf.clients_crate("git-types-thrift__clients");
     conf.options("deprecated_default_enum_min_i32");
-    let srcs = &["../git_types_thrift.thrift"];
+    let srcs: &[&str] = &["../git_types_thrift.thrift"];
     conf.run(srcs).expect("Failed while running thrift compilation");
 }

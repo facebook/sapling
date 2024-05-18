@@ -46,6 +46,6 @@ fn main() {
     conf.base_path(base_path);
     conf.types_crate("bonsai_git_mapping_entry_thrift__types");
     conf.clients_crate("bonsai_git_mapping_entry_thrift__clients");
-    let srcs = &["../bonsai_git_mapping.thrift"];
+    let srcs: &[&str] = &["../bonsai_git_mapping.thrift"];
     conf.run(srcs).expect("Failed while running thrift compilation");
 }
