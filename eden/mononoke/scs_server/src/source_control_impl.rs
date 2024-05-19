@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::borrow::Cow;
 use std::collections::HashSet;
 use std::future::Future;
 use std::net::IpAddr;
@@ -28,6 +29,7 @@ use identity::Identity;
 use login_objects_thrift::EnvironmentType;
 use maplit::hashset;
 use megarepo_api::MegarepoApi;
+use memory::MemoryStats;
 use metaconfig_types::CommonConfig;
 use metadata::Metadata;
 use mononoke_api::ChangesetContext;
@@ -588,14 +590,34 @@ fn should_log_memory_usage(method: &str) -> bool {
     justknobs::eval("scm/mononoke:scs_log_memory_usage", None, Some(method)).unwrap_or(false)
 }
 
-fn log_start(ctx: &CoreContext, method: &str) {
+fn log_start(ctx: &CoreContext, method: &str) -> Option<MemoryStats> {
+    let mut start_mem_stats = None;
     let mut scuba = ctx.scuba().clone();
     if should_log_memory_usage(method) {
         if let Ok(stats) = memory::get_stats() {
             scuba.add_memory_stats(&stats);
+            start_mem_stats = Some(stats);
         }
     }
     scuba.log_with_msg("Request start", None);
+    start_mem_stats
+}
+
+fn add_request_end_memory_stats(
+    scuba: &mut MononokeScubaSampleBuilder,
+    method: &str,
+    start_mem_stats: Option<&MemoryStats>,
+) {
+    if should_log_memory_usage(method) {
+        if let Ok(stats) = memory::get_stats() {
+            scuba.add_memory_stats(&stats);
+            if let Some(start_mem_stats) = start_mem_stats {
+                let rss_used_delta =
+                    start_mem_stats.rss_free_bytes as isize - stats.rss_free_bytes as isize;
+                scuba.add("rss_used_delta", rss_used_delta);
+            }
+        }
+    }
 }
 
 fn log_result<T: AddScubaResponse>(
@@ -603,14 +625,11 @@ fn log_result<T: AddScubaResponse>(
     method: &str,
     stats: &FutureStats,
     result: &Result<T, impl errors::LoggableError>,
+    start_mem_stats: Option<&MemoryStats>,
 ) {
     let mut scuba = ctx.scuba().clone();
 
-    if should_log_memory_usage(method) {
-        if let Ok(stats) = memory::get_stats() {
-            scuba.add_memory_stats(&stats);
-        }
-    }
+    add_request_end_memory_stats(&mut scuba, method, start_mem_stats);
 
     let (status, error, invalid_request, internal_failure, overloaded) = match result {
         Ok(response) => {
@@ -651,25 +670,37 @@ fn log_result<T: AddScubaResponse>(
     scuba.log_with_msg("Request complete", None);
 }
 
-fn log_cancelled(ctx: &CoreContext, method: &str, stats: &FutureStats) {
+fn log_cancelled(
+    ctx: &CoreContext,
+    method: &str,
+    stats: &FutureStats,
+    start_mem_stats: Option<&MemoryStats>,
+) {
     STATS::total_request_success.add_value(0);
     STATS::total_request_internal_failure.add_value(0);
     STATS::total_request_invalid.add_value(0);
     STATS::total_request_cancelled.add_value(1);
 
     let mut scuba = ctx.scuba().clone();
-    if should_log_memory_usage(method) {
-        if let Ok(stats) = memory::get_stats() {
-            scuba.add_memory_stats(&stats);
-        }
-    }
+    add_request_end_memory_stats(&mut scuba, method, start_mem_stats);
     ctx.perf_counters().insert_perf_counters(&mut scuba);
     scuba.add_future_stats(stats);
     scuba.add("status", "CANCELLED");
     scuba.log_with_msg("Request cancelled", None);
 }
 
-fn check_memory_usage(ctx: &CoreContext, method: &str) -> Result<(), errors::ServiceError> {
+fn check_memory_usage(
+    ctx: &CoreContext,
+    method: &str,
+    start_mem_stats: Option<&MemoryStats>,
+) -> Result<(), errors::ServiceError> {
+    let stats = match start_mem_stats {
+        Some(start_mem_stats) => Cow::Borrowed(start_mem_stats),
+        None => match memory::get_stats() {
+            Ok(stats) => Cow::Owned(stats),
+            _ => return Ok(()),
+        },
+    };
     let rss_min_free_bytes =
         justknobs::get_as::<usize>("scm/mononoke:scs_rss_min_free_bytes", Some(method))
             .unwrap_or(0);
@@ -682,46 +713,44 @@ fn check_memory_usage(ctx: &CoreContext, method: &str) -> Result<(), errors::Ser
             "{}: min free mem: {} {}%", method, rss_min_free_bytes, rss_min_free_pct
         );
 
-        if let Ok(stats) = memory::get_stats() {
+        debug!(
+            ctx.logger(),
+            "{}: memory stats: free {} / total {} {:.1}%",
+            method,
+            stats.rss_free_bytes,
+            stats.total_rss_bytes,
+            stats.rss_free_pct
+        );
+
+        if stats.rss_free_bytes < rss_min_free_bytes {
             debug!(
                 ctx.logger(),
-                "{}: memory stats: free {} / total {} {:.1}%",
+                "{}: not enough memory free, need at least {} bytes free, only {} free right now",
                 method,
+                rss_min_free_bytes,
                 stats.rss_free_bytes,
-                stats.total_rss_bytes,
-                stats.rss_free_pct
             );
 
-            if stats.rss_free_bytes < rss_min_free_bytes {
-                debug!(
-                    ctx.logger(),
-                    "{}: not enough memory free, need at least {} bytes free, only {} free right now",
-                    method,
-                    rss_min_free_bytes,
-                    stats.rss_free_bytes,
-                );
+            return Err(errors::overloaded(format!(
+                "Not enough memory free ({} < {})",
+                stats.rss_free_bytes, rss_min_free_bytes
+            ))
+            .into());
+        }
+        if stats.rss_free_pct < rss_min_free_pct as f32 {
+            debug!(
+                ctx.logger(),
+                "{}: not enough memory free, need at least {}% free, only {:.1}% free right now",
+                method,
+                rss_min_free_pct,
+                stats.rss_free_pct,
+            );
 
-                return Err(errors::overloaded(format!(
-                    "Not enough memory free ({} < {})",
-                    stats.rss_free_bytes, rss_min_free_bytes
-                ))
-                .into());
-            }
-            if stats.rss_free_pct < rss_min_free_pct as f32 {
-                debug!(
-                    ctx.logger(),
-                    "{}: not enough memory free, need at least {}% free, only {:.1}% free right now",
-                    method,
-                    rss_min_free_pct,
-                    stats.rss_free_pct,
-                );
-
-                return Err(errors::overloaded(format!(
-                    "Not enough memory free ({:.0}% < {}%)",
-                    stats.rss_free_pct, rss_min_free_pct
-                ))
-                .into());
-            }
+            return Err(errors::overloaded(format!(
+                "Not enough memory free ({:.0}% < {}%)",
+                stats.rss_free_pct, rss_min_free_pct
+            ))
+            .into());
         }
     }
     Ok(())
@@ -762,16 +791,16 @@ macro_rules! impl_thrift_methods {
             {
                 let handler = async move {
                     let ctx = create_ctx!(self.0, $method_name, req_ctxt, $( $param_name ),*).await?;
-                    log_start(&ctx, stringify!($method_name));
+                    let start_mem_stats = log_start(&ctx, stringify!($method_name));
                     STATS::total_request_start.add_value(1);
                     let (stats, res) = async {
-                        check_memory_usage(&ctx, stringify!($method_name))?;
+                        check_memory_usage(&ctx, stringify!($method_name), start_mem_stats.as_ref())?;
                         (self.0).$method_name(ctx.clone(), $( $param_name ),* ).await
                     }
                     .timed()
-                    .on_cancel_with_data(|stats| log_cancelled(&ctx, stringify!($method_name), &stats))
+                    .on_cancel_with_data(|stats| log_cancelled(&ctx, stringify!($method_name), &stats, start_mem_stats.as_ref()))
                     .await;
-                    log_result(ctx, stringify!($method_name), &stats, &res);
+                    log_result(ctx, stringify!($method_name), &stats, &res, start_mem_stats.as_ref());
                     let method = stringify!($method_name).to_string();
                     STATS::method_completion_time_ms.add_value(stats.completion_time.as_millis_unchecked() as i64, (method,));
                     res.map_err(Into::into)
