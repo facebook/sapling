@@ -2133,6 +2133,7 @@ service SourceControlService extends fb303_core.BaseService {
   list<Repo> list_repos(1: ListReposParams params) throws (
     1: RequestError request_error,
     2: InternalError internal_error,
+    3: OverloadError overload_error,
   );
 
   /// Repository methods
@@ -2142,6 +2143,7 @@ service SourceControlService extends fb303_core.BaseService {
   RepoInfo repo_info(1: RepoSpecifier repo, 2: RepoInfoParams params) throws (
     1: RequestError request_error,
     2: InternalError internal_error,
+    3: OverloadError overload_error,
   );
 
   /// Resolve a bookmark
@@ -2150,33 +2152,53 @@ service SourceControlService extends fb303_core.BaseService {
   RepoResolveBookmarkResponse repo_resolve_bookmark(
     1: RepoSpecifier repo,
     2: RepoResolveBookmarkParams params,
-  ) throws (1: RequestError request_error, 2: InternalError internal_error);
+  ) throws (
+    1: RequestError request_error,
+    2: InternalError internal_error,
+    3: OverloadError overload_error,
+  );
 
   /// Resolve commit by the given prefix
   RepoResolveCommitPrefixResponse repo_resolve_commit_prefix(
     1: RepoSpecifier repo,
     2: RepoResolveCommitPrefixParams params,
-  ) throws (1: RequestError request_error, 2: InternalError internal_error);
+  ) throws (
+    1: RequestError request_error,
+    2: InternalError internal_error,
+    3: OverloadError overload_error,
+  );
 
   /// Comprehensive information about bookmark (use repo_resolve_bookmark for
   /// simply resolving bookmark value).
   RepoBookmarkInfoResponse repo_bookmark_info(
     1: RepoSpecifier repo,
     2: RepoBookmarkInfoParams params,
-  ) throws (1: RequestError request_error, 2: InternalError internal_error);
+  ) throws (
+    1: RequestError request_error,
+    2: InternalError internal_error,
+    3: OverloadError overload_error,
+  );
 
   /// List all bookmarks in the repo.
   RepoListBookmarksResponse repo_list_bookmarks(
     1: RepoSpecifier repo,
     2: RepoListBookmarksParams params,
-  ) throws (1: RequestError request_error, 2: InternalError internal_error);
+  ) throws (
+    1: RequestError request_error,
+    2: InternalError internal_error,
+    3: OverloadError overload_error,
+  );
 
   /// Generate commit info for all the draft commits
   /// for the given set of heads.and public roots.
   RepoStackInfoResponse repo_stack_info(
     1: RepoSpecifier repo,
     2: RepoStackInfoParams params,
-  ) throws (1: RequestError request_error, 2: InternalError internal_error);
+  ) throws (
+    1: RequestError request_error,
+    2: InternalError internal_error,
+    3: OverloadError overload_error,
+  );
 
   /// Generate Git bundle for the given stack of commits with the ref BUNDLE_HEAD
   /// pointing to the top of the stack. Store the bundle in everstore and return
@@ -2184,7 +2206,11 @@ service SourceControlService extends fb303_core.BaseService {
   RepoStackGitBundleStoreResponse repo_stack_git_bundle_store(
     1: RepoSpecifier repo,
     2: RepoStackGitBundleStoreParams params,
-  ) throws (1: RequestError request_error, 2: InternalError internal_error);
+  ) throws (
+    1: RequestError request_error,
+    2: InternalError internal_error,
+    3: OverloadError overload_error,
+  );
 
   /// Repository write methods
   /// ========================
@@ -2195,32 +2221,52 @@ service SourceControlService extends fb303_core.BaseService {
   RepoCreateCommitResponse repo_create_commit(
     1: RepoSpecifier repo,
     2: RepoCreateCommitParams params,
-  ) throws (1: RequestError request_error, 2: InternalError internal_error);
+  ) throws (
+    1: RequestError request_error,
+    2: InternalError internal_error,
+    3: OverloadError overload_error,
+  );
 
   /// Create a stack of new commits.  A stack is a linear chain of commits
   /// where each commit is the single immediate child of the previous commit.
   RepoCreateStackResponse repo_create_stack(
     1: RepoSpecifier repo,
     2: RepoCreateStackParams params,
-  ) throws (1: RequestError request_error, 2: InternalError internal_error);
+  ) throws (
+    1: RequestError request_error,
+    2: InternalError internal_error,
+    3: OverloadError overload_error,
+  );
 
   /// Create a bookmark.
   RepoCreateBookmarkResponse repo_create_bookmark(
     1: RepoSpecifier repo,
     2: RepoCreateBookmarkParams params,
-  ) throws (1: RequestError request_error, 2: InternalError internal_error);
+  ) throws (
+    1: RequestError request_error,
+    2: InternalError internal_error,
+    3: OverloadError overload_error,
+  );
 
   /// Move a bookmark.
   RepoMoveBookmarkResponse repo_move_bookmark(
     1: RepoSpecifier repo,
     2: RepoMoveBookmarkParams params,
-  ) throws (1: RequestError request_error, 2: InternalError internal_error);
+  ) throws (
+    1: RequestError request_error,
+    2: InternalError internal_error,
+    3: OverloadError overload_error,
+  );
 
   /// Delete a bookmark.
   RepoDeleteBookmarkResponse repo_delete_bookmark(
     1: RepoSpecifier repo,
     2: RepoDeleteBookmarkParams params,
-  ) throws (1: RequestError request_error, 2: InternalError internal_error);
+  ) throws (
+    1: RequestError request_error,
+    2: InternalError internal_error,
+    3: OverloadError overload_error,
+  );
 
   /// Land a stack of commits via pushrebase.
   RepoLandStackResponse repo_land_stack(
@@ -2231,19 +2277,28 @@ service SourceControlService extends fb303_core.BaseService {
     2: InternalError internal_error,
     3: PushrebaseConflictsException pushrebase_conflicts,
     4: HookRejectionsException hook_rejections,
+    5: OverloadError overload_error,
   );
 
   /// Derive data for commits in a repo
   RepoPrepareCommitsResponse repo_prepare_commits(
     1: RepoSpecifier repo,
     2: RepoPrepareCommitsParams params,
-  ) throws (1: RequestError request_error, 2: InternalError internal_error);
+  ) throws (
+    1: RequestError request_error,
+    2: InternalError internal_error,
+    3: OverloadError overload_error,
+  );
 
   /// Upload new file content
   RepoUploadFileContentResponse repo_upload_file_content(
     1: RepoSpecifier repo,
     2: RepoUploadFileContentParams params,
-  ) throws (1: RequestError request_error, 2: InternalError internal_error);
+  ) throws (
+    1: RequestError request_error,
+    2: InternalError internal_error,
+    3: OverloadError overload_error,
+  );
 
   /// Commit methods
   /// ==============
@@ -2257,13 +2312,21 @@ service SourceControlService extends fb303_core.BaseService {
   CommitFileDiffsResponse commit_file_diffs(
     1: CommitSpecifier commit,
     2: CommitFileDiffsParams params,
-  ) throws (1: RequestError request_error, 2: InternalError internal_error);
+  ) throws (
+    1: RequestError request_error,
+    2: InternalError internal_error,
+    3: OverloadError overload_error,
+  );
 
   /// Look-up a commit to see if it exists and find alternative IDs.
   CommitLookupResponse commit_lookup(
     1: CommitSpecifier commit,
     2: CommitLookupParams params,
-  ) throws (1: RequestError request_error, 2: InternalError internal_error);
+  ) throws (
+    1: RequestError request_error,
+    2: InternalError internal_error,
+    3: OverloadError overload_error,
+  );
 
   /// Look up commit history over Pushrebase mutations. It finishes on commit
   /// version that was originally pushed. Provided commit must be public.
@@ -2281,25 +2344,41 @@ service SourceControlService extends fb303_core.BaseService {
   CommitLookupPushrebaseHistoryResponse commit_lookup_pushrebase_history(
     1: CommitSpecifier commit,
     2: CommitLookupPushrebaseHistoryParams params,
-  ) throws (1: RequestError request_error, 2: InternalError internal_error);
+  ) throws (
+    1: RequestError request_error,
+    2: InternalError internal_error,
+    3: OverloadError overload_error,
+  );
 
   /// Get commit info.
   CommitInfo commit_info(
     1: CommitSpecifier commit,
     2: CommitInfoParams params,
-  ) throws (1: RequestError request_error, 2: InternalError internal_error);
+  ) throws (
+    1: RequestError request_error,
+    2: InternalError internal_error,
+    3: OverloadError overload_error,
+  );
 
   /// Get commit generation.
   i64 commit_generation(
     1: CommitSpecifier commit,
     2: CommitGenerationParams params,
-  ) throws (1: RequestError request_error, 2: InternalError internal_error);
+  ) throws (
+    1: RequestError request_error,
+    2: InternalError internal_error,
+    3: OverloadError overload_error,
+  );
 
   /// Check if this commit is an ancestor of some other commit.
   bool commit_is_ancestor_of(
     1: CommitSpecifier commit,
     2: CommitIsAncestorOfParams params,
-  ) throws (1: RequestError request_error, 2: InternalError internal_error);
+  ) throws (
+    1: RequestError request_error,
+    2: InternalError internal_error,
+    3: OverloadError overload_error,
+  );
 
   /// Find the lowest common ancestor of two commits.
   ///
@@ -2309,14 +2388,22 @@ service SourceControlService extends fb303_core.BaseService {
   CommitLookupResponse commit_common_base_with(
     1: CommitSpecifier commit,
     2: CommitCommonBaseWithParams params,
-  ) throws (1: RequestError request_error, 2: InternalError internal_error);
+  ) throws (
+    1: RequestError request_error,
+    2: InternalError internal_error,
+    3: OverloadError overload_error,
+  );
 
   /// Compute differences between two commits.
   /// note: copy/move information included only when comparing with parent
   CommitCompareResponse commit_compare(
     1: CommitSpecifier commit,
     2: CommitCompareParams params,
-  ) throws (1: RequestError request_error, 2: InternalError internal_error);
+  ) throws (
+    1: RequestError request_error,
+    2: InternalError internal_error,
+    3: OverloadError overload_error,
+  );
 
   /// Find files within the commit that match criteria.
   CommitFindFilesResponse commit_find_files(
@@ -2331,12 +2418,20 @@ service SourceControlService extends fb303_core.BaseService {
   CommitHistoryResponse commit_history(
     1: CommitSpecifier commit,
     2: CommitHistoryParams params,
-  ) throws (1: RequestError request_error, 2: InternalError internal_error);
+  ) throws (
+    1: RequestError request_error,
+    2: InternalError internal_error,
+    3: OverloadError overload_error,
+  );
 
   CommitListDescendantBookmarksResponse commit_list_descendant_bookmarks(
     1: CommitSpecifier commit,
     2: CommitListDescendantBookmarksParams params,
-  ) throws (1: RequestError request_error, 2: InternalError internal_error);
+  ) throws (
+    1: RequestError request_error,
+    2: InternalError internal_error,
+    3: OverloadError overload_error,
+  );
 
   /// Run hooks for a commit without landing it. Useful for getting early signal.
   /// It is NOT guaranteed that a push will succeed if all hooks pass,
@@ -2344,7 +2439,11 @@ service SourceControlService extends fb303_core.BaseService {
   CommitRunHooksResponse commit_run_hooks(
     1: CommitSpecifier commit,
     2: CommitRunHooksParams params,
-  ) throws (1: RequestError request_error, 2: InternalError interal_error);
+  ) throws (
+    1: RequestError request_error,
+    2: InternalError interal_error,
+    3: OverloadError overload_error,
+  );
 
   /// CommitPath methods
   /// ==============
@@ -2353,51 +2452,87 @@ service SourceControlService extends fb303_core.BaseService {
   CommitPathExistsResponse commit_path_exists(
     1: CommitPathSpecifier commit_path,
     2: CommitPathExistsParams params,
-  ) throws (1: RequestError request_error, 2: InternalError internal_error);
+  ) throws (
+    1: RequestError request_error,
+    2: InternalError internal_error,
+    3: OverloadError overload_error,
+  );
 
   /// Get information about a path in a commit.
   CommitPathInfoResponse commit_path_info(
     1: CommitPathSpecifier commit_path,
     2: CommitPathInfoParams params,
-  ) throws (1: RequestError request_error, 2: InternalError internal_error);
+  ) throws (
+    1: RequestError request_error,
+    2: InternalError internal_error,
+    3: OverloadError overload_error,
+  );
 
   /// Get information about multiple paths in a commit.
   CommitMultiplePathInfoResponse commit_multiple_path_info(
     1: CommitSpecifier commit,
     2: CommitMultiplePathInfoParams params,
-  ) throws (1: RequestError request_error, 2: InternalError internal_error);
+  ) throws (
+    1: RequestError request_error,
+    2: InternalError internal_error,
+    3: OverloadError overload_error,
+  );
 
   CommitPathBlameResponse commit_path_blame(
     1: CommitPathSpecifier commit_path,
     2: CommitPathBlameParams params,
-  ) throws (1: RequestError request_error, 2: InternalError internal_error);
+  ) throws (
+    1: RequestError request_error,
+    2: InternalError internal_error,
+    3: OverloadError overload_error,
+  );
 
   CommitPathHistoryResponse commit_path_history(
     1: CommitPathSpecifier commit_path,
     2: CommitPathHistoryParams params,
-  ) throws (1: RequestError request_error, 2: InternalError internal_error);
+  ) throws (
+    1: RequestError request_error,
+    2: InternalError internal_error,
+    3: OverloadError overload_error,
+  );
 
   CommitPathLastChangedResponse commit_path_last_changed(
     1: CommitPathSpecifier commit_path,
     2: CommitPathLastChangedParams params,
-  ) throws (1: RequestError request_error, 2: InternalError internal_error);
+  ) throws (
+    1: RequestError request_error,
+    2: InternalError internal_error,
+    3: OverloadError overload_error,
+  );
 
   CommitMultiplePathLastChangedResponse commit_multiple_path_last_changed(
     1: CommitSpecifier commit,
     2: CommitMultiplePathLastChangedParams params,
-  ) throws (1: RequestError request_error, 2: InternalError internal_error);
+  ) throws (
+    1: RequestError request_error,
+    2: InternalError internal_error,
+    3: OverloadError overload_error,
+  );
 
   /// Calculate the size change for each sparse profile for a given commit
   CommitSparseProfileDeltaResponse commit_sparse_profile_delta(
     1: CommitSpecifier commit,
     2: CommitSparseProfileDeltaParams params,
-  ) throws (1: RequestError request_error, 2: InternalError internal_error);
+  ) throws (
+    1: RequestError request_error,
+    2: InternalError internal_error,
+    3: OverloadError overload_error,
+  );
 
   /// Calculate the total size of each sparse profiles
   CommitSparseProfileSizeResponse commit_sparse_profile_size(
     1: CommitSpecifier commit,
     2: CommitSparseProfileSizeParams params,
-  ) throws (1: RequestError request_error, 2: InternalError internal_error);
+  ) throws (
+    1: RequestError request_error,
+    2: InternalError internal_error,
+    3: OverloadError overload_error,
+  );
 
   /// Tree Methods
   /// ============
@@ -2406,13 +2541,18 @@ service SourceControlService extends fb303_core.BaseService {
   bool tree_exists(1: TreeSpecifier file, 2: TreeExistsParams params) throws (
     1: RequestError request_error,
     2: InternalError internal_error,
+    3: OverloadError overload_error,
   );
 
   /// List the contents of a directory.
   TreeListResponse tree_list(
     1: TreeSpecifier tree,
     2: TreeListParams params,
-  ) throws (1: RequestError request_error, 2: InternalError internal_error);
+  ) throws (
+    1: RequestError request_error,
+    2: InternalError internal_error,
+    3: OverloadError overload_error,
+  );
 
   /// File Methods
   /// ============
@@ -2421,25 +2561,35 @@ service SourceControlService extends fb303_core.BaseService {
   bool file_exists(1: FileSpecifier file, 2: FileExistsParams params) throws (
     1: RequestError request_error,
     2: InternalError internal_error,
+    3: OverloadError overload_error,
   );
 
   /// Get information about a file.
   FileInfo file_info(1: FileSpecifier file, 2: FileInfoParams params) throws (
     1: RequestError request_error,
     2: InternalError internal_error,
+    3: OverloadError overload_error,
   );
 
   /// Get a chunk of a file's content.
   FileChunk file_content_chunk(
     1: FileSpecifier file,
     2: FileContentChunkParams params,
-  ) throws (1: RequestError request_error, 2: InternalError internal_error);
+  ) throws (
+    1: RequestError request_error,
+    2: InternalError internal_error,
+    3: OverloadError overload_error,
+  );
 
   /// Compare a file with another file.
   FileDiffResponse file_diff(
     1: FileSpecifier file,
     2: FileDiffParams params,
-  ) throws (1: RequestError request_error, 2: InternalError internal_error);
+  ) throws (
+    1: RequestError request_error,
+    2: InternalError internal_error,
+    3: OverloadError overload_error,
+  );
 
   /// Old-style Cross-Repo Methods (used for ovrsource merge into fbsource)
   /// ============================
@@ -2448,7 +2598,11 @@ service SourceControlService extends fb303_core.BaseService {
   CommitLookupResponse commit_lookup_xrepo(
     1: CommitSpecifier commit,
     2: CommitLookupXRepoParams params,
-  ) throws (1: RequestError request_error, 2: InternalError internal_error);
+  ) throws (
+    1: RequestError request_error,
+    2: InternalError internal_error,
+    3: OverloadError overload_error,
+  );
 
   /// Megarepo Service Methods
   /// ========================
@@ -2456,33 +2610,57 @@ service SourceControlService extends fb303_core.BaseService {
   /// Add a new unused config version to the library of versions
   MegarepoAddConfigResponse megarepo_add_sync_target_config(
     1: MegarepoAddConfigParams params,
-  ) throws (1: RequestError request_error, 2: InternalError internal_error);
+  ) throws (
+    1: RequestError request_error,
+    2: InternalError internal_error,
+    3: OverloadError overload_error,
+  );
 
   /// Read the target config for a particular commit
   MegarepoReadConfigResponse megarepo_read_target_config(
     1: MegarepoReadConfigParams params,
-  ) throws (1: RequestError request_error, 2: InternalError internal_error);
+  ) throws (
+    1: RequestError request_error,
+    2: InternalError internal_error,
+    3: OverloadError overload_error,
+  );
 
   /// Add a new target to the list of known targets and set its
   /// initial SyncTargetConfig value
   MegarepoAddTargetToken megarepo_add_sync_target(
     1: MegarepoAddTargetParams params,
-  ) throws (1: RequestError request_error, 2: InternalError internal_error);
+  ) throws (
+    1: RequestError request_error,
+    2: InternalError internal_error,
+    3: OverloadError overload_error,
+  );
 
   //// Poll the execution of megarepo_add_sync_target request
   MegarepoAddTargetPollResponse megarepo_add_sync_target_poll(
     1: MegarepoAddTargetToken token,
-  ) throws (1: RequestError request_error, 2: InternalError internal_error);
+  ) throws (
+    1: RequestError request_error,
+    2: InternalError internal_error,
+    3: OverloadError overload_error,
+  );
 
   /// Add a new target that branches off existing target.
   MegarepoAddBranchingTargetToken megarepo_add_branching_sync_target(
     1: MegarepoAddBranchingTargetParams params,
-  ) throws (1: RequestError request_error, 2: InternalError internal_error);
+  ) throws (
+    1: RequestError request_error,
+    2: InternalError internal_error,
+    3: OverloadError overload_error,
+  );
 
   //// Poll the execution of megarepo_add_sync_target request
   MegarepoAddBranchingTargetPollResponse megarepo_add_branching_sync_target_poll(
     1: MegarepoAddBranchingTargetToken token,
-  ) throws (1: RequestError request_error, 2: InternalError internal_error);
+  ) throws (
+    1: RequestError request_error,
+    2: InternalError internal_error,
+    3: OverloadError overload_error,
+  );
 
   /// Set target's version to a new value while applying necessary transformations
   /// These transformations may include:
@@ -2493,22 +2671,38 @@ service SourceControlService extends fb303_core.BaseService {
   /// Note: may advance the bookmark by >1 commit
   MegarepoChangeConfigToken megarepo_change_target_config(
     1: MegarepoChangeTargetConfigParams params,
-  ) throws (1: RequestError request_error, 2: InternalError internal_error);
+  ) throws (
+    1: RequestError request_error,
+    2: InternalError internal_error,
+    3: OverloadError overload_error,
+  );
 
   /// Poll the execution of change_target_config request
   MegarepoChangeTargetConfigPollResponse megarepo_change_target_config_poll(
     1: MegarepoChangeConfigToken token,
-  ) throws (1: RequestError request_error, 2: InternalError internal_error);
+  ) throws (
+    1: RequestError request_error,
+    2: InternalError internal_error,
+    3: OverloadError overload_error,
+  );
 
   /// Sync commits up until cs_id source -> target
   MegarepoSyncChangesetToken megarepo_sync_changeset(
     1: MegarepoSyncChangesetParams params,
-  ) throws (1: RequestError request_error, 2: InternalError internal_error);
+  ) throws (
+    1: RequestError request_error,
+    2: InternalError internal_error,
+    3: OverloadError overload_error,
+  );
 
   /// Poll the execution of sync_changeset request
   MegarepoSyncChangesetPollResponse megarepo_sync_changeset_poll(
     1: MegarepoSyncChangesetToken token,
-  ) throws (1: RequestError request_error, 2: InternalError internal_error);
+  ) throws (
+    1: RequestError request_error,
+    2: InternalError internal_error,
+    3: OverloadError overload_error,
+  );
 
   /// Merge source into target from the `cs_id`,
   /// removing previous remapping of the source
@@ -2523,12 +2717,20 @@ service SourceControlService extends fb303_core.BaseService {
   ///       advances the target
   MegarepoRemergeSourceToken megarepo_remerge_source(
     1: MegarepoRemergeSourceParams params,
-  ) throws (1: RequestError request_error, 2: InternalError internal_error);
+  ) throws (
+    1: RequestError request_error,
+    2: InternalError internal_error,
+    3: OverloadError overload_error,
+  );
 
   /// Poll the execution of megarepo_re_merge_source request
   MegarepoRemergeSourcePollResponse megarepo_remerge_source_poll(
     1: MegarepoRemergeSourceToken token,
-  ) throws (1: RequestError request_error, 2: InternalError internal_error);
+  ) throws (
+    1: RequestError request_error,
+    2: InternalError internal_error,
+    3: OverloadError overload_error,
+  );
 
   /// Git Import Methods
   /// ==================
@@ -2538,13 +2740,21 @@ service SourceControlService extends fb303_core.BaseService {
   RepoUploadNonBlobGitObjectResponse repo_upload_non_blob_git_object(
     1: RepoSpecifier repo,
     2: RepoUploadNonBlobGitObjectParams params,
-  ) throws (1: RequestError request_error, 2: InternalError internal_error);
+  ) throws (
+    1: RequestError request_error,
+    2: InternalError internal_error,
+    3: OverloadError overload_error,
+  );
 
   /// Upload packfile base item corresponding to git object to Mononoke data store
   RepoUploadPackfileBaseItemResponse repo_upload_packfile_base_item(
     1: RepoSpecifier repo,
     2: RepoUploadPackfileBaseItemParams params,
-  ) throws (1: RequestError request_error, 2: InternalError internal_error);
+  ) throws (
+    1: RequestError request_error,
+    2: InternalError internal_error,
+    3: OverloadError overload_error,
+  );
 
   /// Create Mononoke counterpart of git tree object in the form of a bonsai changeset.
   /// The raw git tree object must already be stored in Mononoke stores before invoking
@@ -2552,7 +2762,11 @@ service SourceControlService extends fb303_core.BaseService {
   CreateGitTreeResponse create_git_tree(
     1: RepoSpecifier repo,
     2: CreateGitTreeParams params,
-  ) throws (1: RequestError request_error, 2: InternalError internal_error);
+  ) throws (
+    1: RequestError request_error,
+    2: InternalError internal_error,
+    3: OverloadError overload_error,
+  );
 
   /// Create Mononoke counterpart of git tag object in the form of a bonsai changeset.
   /// The raw git tag object must already be stored in Mononoke stores before invoking
@@ -2560,5 +2774,9 @@ service SourceControlService extends fb303_core.BaseService {
   CreateGitTagResponse create_git_tag(
     1: RepoSpecifier repo,
     2: CreateGitTagParams params,
-  ) throws (1: RequestError request_error, 2: InternalError internal_error);
+  ) throws (
+    1: RequestError request_error,
+    2: InternalError internal_error,
+    3: OverloadError overload_error,
+  );
 } (rust.request_context, sr.service_name = "mononoke-scs-server")

@@ -222,8 +222,8 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let will_exit = Arc::new(AtomicBool::new(false));
 
-    if args.max_memory.is_some() {
-        memory::set_max_memory(args.max_memory.unwrap());
+    if let Some(max_memory) = args.max_memory {
+        memory::set_max_memory(max_memory);
     }
 
     // Initialize the FB303 Thrift stack.

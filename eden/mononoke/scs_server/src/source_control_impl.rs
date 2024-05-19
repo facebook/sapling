@@ -51,6 +51,7 @@ use repo_authorization::AuthorizationContext;
 use scribe_ext::Scribe;
 use scuba_ext::MononokeScubaSampleBuilder;
 use scuba_ext::ScubaValue;
+use slog::debug;
 use slog::Logger;
 use source_control as thrift;
 use source_control_services::errors::source_control_service as service;
@@ -583,12 +584,33 @@ impl SourceControlServiceImpl {
     }
 }
 
+fn should_log_memory_usage(method: &str) -> bool {
+    justknobs::eval("scm/mononoke:scs_log_memory_usage", None, Some(method)).unwrap_or(false)
+}
+
+fn log_start(ctx: &CoreContext, method: &str) {
+    let mut scuba = ctx.scuba().clone();
+    if should_log_memory_usage(method) {
+        if let Ok(stats) = memory::get_stats() {
+            scuba.add_memory_stats(&stats);
+        }
+    }
+    scuba.log_with_msg("Request start", None);
+}
+
 fn log_result<T: AddScubaResponse>(
     ctx: CoreContext,
+    method: &str,
     stats: &FutureStats,
     result: &Result<T, impl errors::LoggableError>,
 ) {
     let mut scuba = ctx.scuba().clone();
+
+    if should_log_memory_usage(method) {
+        if let Ok(stats) = memory::get_stats() {
+            scuba.add_memory_stats(&stats);
+        }
+    }
 
     let (status, error, invalid_request, internal_failure, overloaded) = match result {
         Ok(response) => {
@@ -629,17 +651,80 @@ fn log_result<T: AddScubaResponse>(
     scuba.log_with_msg("Request complete", None);
 }
 
-fn log_cancelled(ctx: &CoreContext, stats: &FutureStats) {
+fn log_cancelled(ctx: &CoreContext, method: &str, stats: &FutureStats) {
     STATS::total_request_success.add_value(0);
     STATS::total_request_internal_failure.add_value(0);
     STATS::total_request_invalid.add_value(0);
     STATS::total_request_cancelled.add_value(1);
 
     let mut scuba = ctx.scuba().clone();
+    if should_log_memory_usage(method) {
+        if let Ok(stats) = memory::get_stats() {
+            scuba.add_memory_stats(&stats);
+        }
+    }
     ctx.perf_counters().insert_perf_counters(&mut scuba);
     scuba.add_future_stats(stats);
     scuba.add("status", "CANCELLED");
     scuba.log_with_msg("Request cancelled", None);
+}
+
+fn check_memory_usage(ctx: &CoreContext, method: &str) -> Result<(), errors::ServiceError> {
+    let rss_min_free_bytes =
+        justknobs::get_as::<usize>("scm/mononoke:scs_rss_min_free_bytes", Some(method))
+            .unwrap_or(0);
+    let rss_min_free_pct =
+        justknobs::get_as::<i32>("scm/mononoke:scs_rss_min_free_pct", Some(method)).unwrap_or(0);
+
+    if rss_min_free_bytes > 0 || rss_min_free_pct > 0 {
+        debug!(
+            ctx.logger(),
+            "{}: min free mem: {} {}%", method, rss_min_free_bytes, rss_min_free_pct
+        );
+
+        if let Ok(stats) = memory::get_stats() {
+            debug!(
+                ctx.logger(),
+                "{}: memory stats: free {} / total {} {:.1}%",
+                method,
+                stats.rss_free_bytes,
+                stats.total_rss_bytes,
+                stats.rss_free_pct
+            );
+
+            if stats.rss_free_bytes < rss_min_free_bytes {
+                debug!(
+                    ctx.logger(),
+                    "{}: not enough memory free, need at least {} bytes free, only {} free right now",
+                    method,
+                    rss_min_free_bytes,
+                    stats.rss_free_bytes,
+                );
+
+                return Err(errors::overloaded(format!(
+                    "Not enough memory free ({} < {})",
+                    stats.rss_free_bytes, rss_min_free_bytes
+                ))
+                .into());
+            }
+            if stats.rss_free_pct < rss_min_free_pct as f32 {
+                debug!(
+                    ctx.logger(),
+                    "{}: not enough memory free, need at least {}% free, only {:.1}% free right now",
+                    method,
+                    rss_min_free_pct,
+                    stats.rss_free_pct,
+                );
+
+                return Err(errors::overloaded(format!(
+                    "Not enough memory free ({:.0}% < {}%)",
+                    stats.rss_free_pct, rss_min_free_pct
+                ))
+                .into());
+            }
+        }
+    }
+    Ok(())
 }
 
 // Define a macro to construct a CoreContext based on the thrift parameters.
@@ -677,14 +762,16 @@ macro_rules! impl_thrift_methods {
             {
                 let handler = async move {
                     let ctx = create_ctx!(self.0, $method_name, req_ctxt, $( $param_name ),*).await?;
-                    ctx.scuba().clone().log_with_msg("Request start", None);
+                    log_start(&ctx, stringify!($method_name));
                     STATS::total_request_start.add_value(1);
-                    let (stats, res) = (self.0)
-                        .$method_name(ctx.clone(), $( $param_name ),* )
-                        .timed()
-                        .on_cancel_with_data(|stats| log_cancelled(&ctx, &stats))
-                        .await;
-                    log_result(ctx, &stats, &res);
+                    let (stats, res) = async {
+                        check_memory_usage(&ctx, stringify!($method_name))?;
+                        (self.0).$method_name(ctx.clone(), $( $param_name ),* ).await
+                    }
+                    .timed()
+                    .on_cancel_with_data(|stats| log_cancelled(&ctx, stringify!($method_name), &stats))
+                    .await;
+                    log_result(ctx, stringify!($method_name), &stats, &res);
                     let method = stringify!($method_name).to_string();
                     STATS::method_completion_time_ms.add_value(stats.completion_time.as_millis_unchecked() as i64, (method,));
                     res.map_err(Into::into)

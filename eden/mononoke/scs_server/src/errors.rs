@@ -230,20 +230,6 @@ macro_rules! impl_into_thrift_error {
                 match e {
                     ServiceError::Request(e) => e.into(),
                     ServiceError::Internal(e) => e.into(),
-                    _ => unreachable!(),
-                }
-            }
-        }
-    };
-}
-
-macro_rules! impl_into_thrift_error_with_oveload {
-    ($t:ty) => {
-        impl From<ServiceError> for $t {
-            fn from(e: ServiceError) -> Self {
-                match e {
-                    ServiceError::Request(e) => e.into(),
-                    ServiceError::Internal(e) => e.into(),
                     ServiceError::Overload(e) => e.into(),
                 }
             }
@@ -275,7 +261,7 @@ impl_into_thrift_error!(service::CommitInfoExn);
 impl_into_thrift_error!(service::CommitGenerationExn);
 impl_into_thrift_error!(service::CommitCompareExn);
 impl_into_thrift_error!(service::CommitIsAncestorOfExn);
-impl_into_thrift_error_with_oveload!(service::CommitFindFilesExn);
+impl_into_thrift_error!(service::CommitFindFilesExn);
 impl_into_thrift_error!(service::CommitHistoryExn);
 impl_into_thrift_error!(service::CommitListDescendantBookmarksExn);
 impl_into_thrift_error!(service::CommitRunHooksExn);
