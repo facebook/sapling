@@ -129,18 +129,22 @@ fn looks_like_ascii_identifier(bytes: &[u8]) -> bool {
 pub struct Group(pub usize);
 
 impl Group {
-    /// The "master" group. `ancestors(master)`.
+    /// The "master" group. usually `ancestors(master)`.
     /// - Expected to have most of the commits in a repo.
-    /// - Expected to be free from fragmentation. In other words,
+    /// - Ideally free from fragmentation. In other words,
     ///   `ancestors(master)` can be represented in a single Span.
+    /// - Ideally has limited heads. Does not scale with too many heads.
+    /// - VertexNames (commit hashes) might be lazy.
     pub const MASTER: Self = Self(0);
 
     /// The "non-master" group.
-    /// - Anything not in `ancestors(master)`. For example, public release
-    ///   branches, local feature branches.
+    /// - Concrete vertexes not in the "master" group. For example, public
+    ///   release branches, local feature branches.
     /// - Expected to have multiple heads. In other words, is fragmented.
     /// - Expected to be sparse referred. For example, the "visible heads"
     ///   will refer to a bounded subset in this group.
+    /// - Expected to be non-lazy. Code paths assume VertexNames
+    ///   (commit hashes) are known in this group.
     pub const NON_MASTER: Self = Self(1);
 
     pub const ALL: [Self; 2] = [Self::MASTER, Self::NON_MASTER];
