@@ -5,8 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {ExclusiveOr} from 'shared/typeUtils';
-
 import {spacing} from './tokens.stylex';
 import * as stylex from '@stylexjs/stylex';
 import {Icon} from 'shared/Icon';

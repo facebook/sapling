@@ -152,7 +152,9 @@ function translate(
       parts
         .map(part => options.replace?.[part] ?? part)
         // if we replace with a component, we need to set a key or react will complain
-        .map((part, i) => (typeof part === 'object' ? {...part, key: i} : part))
+        .map((part, i) =>
+          typeof part === 'object' ? ({...part, key: String(i)} as ReactNode) : part,
+        )
     );
   }
   return [result];
