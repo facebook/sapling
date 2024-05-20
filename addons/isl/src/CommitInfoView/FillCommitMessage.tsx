@@ -32,6 +32,7 @@ import {
   commitMessageFieldsSchema,
   mergeCommitMessageFields,
   findConflictingFieldsWhenMerging,
+  mergeOnlyEmptyMessageFields,
 } from './CommitMessageFields';
 import {SmallCapsTitle} from './utils';
 import * as stylex from '@stylexjs/stylex';
@@ -133,7 +134,8 @@ export function FillCommitMessage({commit, mode}: {commit: CommitInfo; mode: Com
       const buttons = [
         {label: t('Cancel')},
         {label: t('Overwrite')},
-        {label: t('Merge'), primary: true},
+        {label: t('Merge')},
+        {label: t('Only Fill Empty'), primary: true},
       ] as const;
       let answer: (typeof buttons)[number] | undefined = buttons[2]; // merge if no conflicts
       const conflictingFields = findConflictingFieldsWhenMerging(schema, oldMessage, newMessage);
@@ -152,8 +154,11 @@ export function FillCommitMessage({commit, mode}: {commit: CommitInfo; mode: Com
           buttons,
         });
       }
-      if (answer === buttons[2]) {
-        // TODO: T177275949 should we warn about conflicts instead of just merging?
+      if (answer === buttons[3]) {
+        const merged = mergeOnlyEmptyMessageFields(schema, oldMessage, newMessage);
+        writeAtom(editedCommitMessages(hashOrHead), merged);
+        return;
+      } else if (answer === buttons[2]) {
         const merged = mergeCommitMessageFields(schema, oldMessage, newMessage);
         writeAtom(editedCommitMessages(hashOrHead), merged);
         return;
@@ -219,8 +224,11 @@ function MessageConflictWarning({
       <div>
         <T>The new commit message being loaded conflicts with your current message.</T>
       </div>
-      <div>
-        <T>Would you like to merge them or overwrite your current message with the new one?</T>
+      <div style={{maxWidth: '500px'}}>
+        <T>
+          Would you like to overwrite your current message with the new one, merge them, or only
+          fill fields that are empty in the current message?
+        </T>
       </div>
       <div style={{marginBlock: spacing.pad}}>
         <T>These fields are conflicting:</T>

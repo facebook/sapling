@@ -196,6 +196,31 @@ export function mergeCommitMessageFields(
   );
 }
 
+/**
+ * Merge two message fields, but always take A's fields if both are non-empty.
+ */
+export function mergeOnlyEmptyMessageFields(
+  schema: Array<FieldConfig>,
+  a: CommitMessageFields,
+  b: CommitMessageFields,
+): CommitMessageFields {
+  return Object.fromEntries(
+    schema
+      .map(config => {
+        const isANonEmpty = isFieldNonEmpty(a[config.key]);
+        const isBNonEmpty = isFieldNonEmpty(b[config.key]);
+        if (!isANonEmpty && !isBNonEmpty) {
+          return undefined;
+        } else if (!isANonEmpty || !isBNonEmpty) {
+          return [config.key, isANonEmpty ? a[config.key] : b[config.key]];
+        } else {
+          return [config.key, a[config.key]];
+        }
+      })
+      .filter(notEmpty),
+  );
+}
+
 export function mergeManyCommitMessageFields(
   schema: Array<FieldConfig>,
   fields: Array<CommitMessageFields>,

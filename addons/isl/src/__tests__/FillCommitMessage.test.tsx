@@ -158,6 +158,19 @@ describe('FillCommitMessage', () => {
       });
     });
 
+    it('allows merging non-empty', async () => {
+      await triggerConflict();
+      const mergeButton = screen.getByText('Only Fill Empty');
+      expect(mergeButton).toBeInTheDocument();
+      fireEvent.click(mergeButton);
+
+      await waitFor(() => {
+        expect(getTitleEditor().value).toMatch('existing title');
+        expect(getDescriptionEditor().value).toMatch(/existing description/);
+        expect(getDescriptionEditor().value).not.toMatch(/This is my commit message/);
+      });
+    });
+
     it('allows cancelling', async () => {
       await triggerConflict();
       const cancelButton = screen.getByText('Cancel');
