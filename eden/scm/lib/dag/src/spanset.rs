@@ -103,6 +103,11 @@ impl Span {
         (Id::MIN..=Id::MAX).into()
     }
 
+    /// Test if this span overlaps with another.
+    pub fn overlaps_with(&self, other: &Self) -> bool {
+        self.low <= other.high && other.low <= self.high
+    }
+
     pub(crate) fn try_from_bounds(bounds: impl RangeBounds<Id>) -> Option<Self> {
         use Bound::Excluded;
         use Bound::Included;
@@ -1014,6 +1019,8 @@ mod flat_id {
 #[cfg(test)]
 #[allow(clippy::redundant_clone)]
 mod tests {
+    use std::collections::HashSet;
+
     use super::*;
 
     impl From<RangeInclusive<u64>> for Span {
@@ -1417,5 +1424,26 @@ mod tests {
         assert_eq!(format!("{:3?}", &set), "1..=10 20 31..=40");
         assert_eq!(format!("{:2?}", &set), "1..=10 20 and 1 span");
         assert_eq!(format!("{:1?}", &set), "1..=10 and 2 spans");
+    }
+
+    #[test]
+    fn test_span_overlaps_with() {
+        const N: u64 = 10;
+        for span1_low in 0..N {
+            for span1_high in span1_low..N {
+                for span2_low in 0..N {
+                    for span2_high in span2_low..N {
+                        let span1 = Span::new(Id(span1_low), Id(span1_high));
+                        let span2 = Span::new(Id(span2_low), Id(span2_high));
+                        let overlap_naive = (span1_low..=span1_high)
+                            .collect::<HashSet<_>>()
+                            .intersection(&(span2_low..=span2_high).collect::<HashSet<_>>())
+                            .count()
+                            > 0;
+                        assert_eq!(overlap_naive, span1.overlaps_with(&span2));
+                    }
+                }
+            }
+        }
     }
 }
