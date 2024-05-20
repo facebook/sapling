@@ -32,6 +32,7 @@ use crate::id::Group;
 use crate::id::Id;
 use crate::ops::Persist;
 use crate::ops::StorageVersion;
+use crate::ops::TryClone;
 use crate::segment::describe_segment_bytes;
 use crate::segment::hex;
 use crate::segment::Segment;
@@ -702,8 +703,10 @@ impl IndexedLogStore {
         };
         Ok(iddag)
     }
+}
 
-    pub fn try_clone(&self) -> Result<IndexedLogStore> {
+impl TryClone for IndexedLogStore {
+    fn try_clone(&self) -> Result<IndexedLogStore> {
         let log = self.log.try_clone()?;
         let store = IndexedLogStore {
             log,
