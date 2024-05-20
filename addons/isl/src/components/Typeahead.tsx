@@ -72,13 +72,7 @@ export function Typeahead({
 
   const saveNewValue = (value: string | undefined) => {
     if (value && !tokens.includes(value)) {
-      setTokenString(
-        tokensToString(
-          tokens,
-          // add comma to end the token
-          value + ',',
-        ),
-      );
+      setTokenString(tokensToString([...tokens, value], ''));
       // clear out typeahead
       setTypeaheadSuggestions({type: 'success', values: [], timestamp: Date.now()});
 

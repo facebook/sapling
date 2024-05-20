@@ -234,33 +234,39 @@ function MessageConflictWarning({
         <T>These fields are conflicting:</T>
       </div>
       <div>
-        {conflictingFields.map((field, i) => (
-          <div key={i} {...stylex.props(layout.paddingBlock)}>
-            <SmallCapsTitle>
-              <Icon icon={field.icon} />
-              {field.key}
-            </SmallCapsTitle>
-            <div {...stylex.props(layout.flexRow)}>
-              <b>
-                <T>Current:</T>
-              </b>
-              <Truncate>{oldMessage[field.key]}</Truncate>
+        {conflictingFields.map((field, i) => {
+          const oldValue = oldMessage[field.key];
+          const newValue = newMessage[field.key];
+          return (
+            <div key={i} {...stylex.props(layout.paddingBlock)}>
+              <SmallCapsTitle>
+                <Icon icon={field.icon} />
+                {field.key}
+              </SmallCapsTitle>
+              <div {...stylex.props(layout.flexRow)}>
+                <b>
+                  <T>Current:</T>
+                </b>
+                <Truncate>{oldValue}</Truncate>
+              </div>
+              <div {...stylex.props(layout.flexRow)}>
+                <b>
+                  <T>New:</T>
+                </b>
+                <Truncate>{newValue}</Truncate>
+              </div>
             </div>
-            <div {...stylex.props(layout.flexRow)}>
-              <b>
-                <T>New:</T>
-              </b>
-              <Truncate>{newMessage[field.key]}</Truncate>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
 }
 
 function Truncate({children}: {children: string | Array<string>}) {
-  const content = Array.isArray(children) ? children.join(', ') : children;
+  const content = Array.isArray(children)
+    ? children.filter(v => v.trim() !== '').join(', ')
+    : children;
   return (
     <span {...stylex.props(styles.truncate)} title={content}>
       {content}

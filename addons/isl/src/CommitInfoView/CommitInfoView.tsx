@@ -254,7 +254,7 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
             const setField = (newVal: string) =>
               setEditedCommitMessage(val => ({
                 ...val,
-                [field.key]: field.type === 'field' ? [newVal] : newVal,
+                [field.key]: field.type === 'field' ? newVal.split(',') : newVal,
               }));
 
             let editedFieldValue = editedMessage?.[field.key];
