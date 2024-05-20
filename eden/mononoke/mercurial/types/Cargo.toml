@@ -45,4 +45,8 @@ tokio = { version = "1.37.0", features = ["full", "test-util", "tracing"] }
 types = { version = "0.1.0", path = "../../../scm/lib/types" }
 
 [dev-dependencies]
+fbinit = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+fbinit-tokio = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+fixtures = { version = "0.1.0", path = "../../tests/fixtures" }
 mononoke_types_serialization = { version = "0.1.0", path = "../../mononoke_types/serialization" }
+repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }

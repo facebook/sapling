@@ -16,6 +16,7 @@ use blobstore::Blobstore;
 use blobstore::Loadable;
 use blobstore::LoadableError;
 use bytes::Bytes;
+use bytes::BytesMut;
 use context::CoreContext;
 use futures::stream;
 use futures::stream::BoxStream;
@@ -546,5 +547,133 @@ impl Loadable for HgAugmentedManifestId {
         HgAugmentedManifestEnvelope::load(ctx, blobstore, id)
             .await?
             .ok_or_else(|| LoadableError::Missing(id.blobstore_key()))
+    }
+}
+
+#[cfg(test)]
+mod sharded_augmented_manifest_tests {
+    use fbinit::FacebookInit;
+    use fixtures::Linear;
+    use fixtures::TestRepoFixture;
+    use repo_blobstore::RepoBlobstoreArc;
+
+    use super::*;
+
+    fn hash_ones() -> HgNodeHash {
+        HgNodeHash::new("1111111111111111111111111111111111111111".parse().unwrap())
+    }
+
+    fn hash_twos() -> HgNodeHash {
+        HgNodeHash::new("2222222222222222222222222222222222222222".parse().unwrap())
+    }
+
+    fn hash_threes() -> HgNodeHash {
+        HgNodeHash::new("3333333333333333333333333333333333333333".parse().unwrap())
+    }
+
+    fn hash_fours() -> HgNodeHash {
+        HgNodeHash::new("4444444444444444444444444444444444444444".parse().unwrap())
+    }
+
+    fn blake3_ones() -> Blake3 {
+        Blake3::from_byte_array([0x11; 32])
+    }
+
+    fn blake3_twos() -> Blake3 {
+        Blake3::from_byte_array([0x22; 32])
+    }
+
+    fn blake3_threes() -> Blake3 {
+        Blake3::from_byte_array([0x33; 32])
+    }
+
+    fn blake3_fours() -> Blake3 {
+        Blake3::from_byte_array([0x44; 32])
+    }
+
+    #[allow(dead_code)]
+    fn sha1_ones() -> Sha1 {
+        Sha1::from_byte_array([0x11; 20])
+    }
+
+    fn sha1_twos() -> Sha1 {
+        Sha1::from_byte_array([0x21; 20])
+    }
+
+    #[allow(dead_code)]
+    fn sha1_three() -> Sha1 {
+        Sha1::from_byte_array([0x33; 20])
+    }
+
+    fn sha1_fours() -> Sha1 {
+        Sha1::from_byte_array([0x44; 20])
+    }
+
+    #[fbinit::test]
+    async fn test_serialize_augmented_manifest(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let blobrepo = Linear::getrepo(fb).await;
+        let blobstore = blobrepo.repo_blobstore_arc();
+
+        let subentries = vec![
+            (
+                MPathElement::new_from_slice(b"a.rs")?,
+                HgAugmentedManifestEntry::FileNode(HgAugmentedFileLeafNode {
+                    file_type: FileType::Regular,
+                    filenode: hash_fours(),
+                    content_blake3: blake3_fours(),
+                    content_sha1: sha1_fours(),
+                    total_size: 10,
+                }),
+            ),
+            (
+                MPathElement::new_from_slice(b"b.rs")?,
+                HgAugmentedManifestEntry::FileNode(HgAugmentedFileLeafNode {
+                    file_type: FileType::Regular,
+                    filenode: hash_twos(),
+                    content_blake3: blake3_twos(),
+                    content_sha1: sha1_twos(),
+                    total_size: 1000,
+                }),
+            ),
+            (
+                MPathElement::new_from_slice(b"dir_1")?,
+                HgAugmentedManifestEntry::DirectoryNode(HgAugmentedDirectoryNode {
+                    treenode: hash_threes(),
+                    augmented_manifest_id: blake3_threes(),
+                    augmented_manifest_size: 10,
+                }),
+            ),
+            (
+                MPathElement::new_from_slice(b"dir_2")?,
+                HgAugmentedManifestEntry::DirectoryNode(HgAugmentedDirectoryNode {
+                    treenode: hash_ones(),
+                    augmented_manifest_id: blake3_ones(),
+                    augmented_manifest_size: 10000,
+                }),
+            ),
+        ];
+
+        let augmented_manifest = ShardedHgAugmentedManifest {
+            hg_node_id: hash_ones(),
+            p1: Some(hash_twos()),
+            p2: Some(hash_threes()),
+            computed_node_id: hash_ones(),
+            subentries: ShardedMapV2Node::from_entries(&ctx, &blobstore, subentries).await?,
+        };
+
+        assert_eq!(
+            augmented_manifest
+                .into_content_addressed_manifest_blob(&ctx, &blobstore)
+                .map(|b| b.unwrap())
+                .collect::<BytesMut>()
+                .await,
+            Bytes::from(
+                #[allow(clippy::octal_escapes)]
+                "v1 1111111111111111111111111111111111111111 - 2222222222222222222222222222222222222222 3333333333333333333333333333333333333333\na.rs\04444444444444444444444444444444444444444r 4444444444444444444444444444444444444444444444444444444444444444 10 4444444444444444444444444444444444444444\nb.rs\02222222222222222222222222222222222222222r 2222222222222222222222222222222222222222222222222222222222222222 1000 2121212121212121212121212121212121212121\ndir_1\03333333333333333333333333333333333333333t 3333333333333333333333333333333333333333333333333333333333333333 10\ndir_2\01111111111111111111111111111111111111111t 1111111111111111111111111111111111111111111111111111111111111111 10000\n"
+            )
+        );
+
+        Ok(())
     }
 }
