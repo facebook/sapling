@@ -134,6 +134,8 @@ To full segments:
     Group Non-Master:
      Segments: 1
       1fc8102cda62+N0 : 5e98a0f69ae0+N6 [] Root
+    Group Virtual:
+     Segments: 0
    Level 0
     Group Master:
      Segments: 0
@@ -143,6 +145,8 @@ To full segments:
       5e98a0f69ae0+N6 : 5e98a0f69ae0+N6 [4ec7ca77ac1a+N2, 50e53efd5222+N5]
       e7050b6e5048+N3 : 50e53efd5222+N5 [] Root
       1fc8102cda62+N0 : 4ec7ca77ac1a+N2 [] Root
+    Group Virtual:
+     Segments: 0
 
 The segments backend does not need revlog data.
 
@@ -245,6 +249,8 @@ Prepare the "master" group. Note the "Group Master" output in debugchangelog:
     Group Non-Master:
      Segments: 1
       f535a6a0548e+N0 : f535a6a0548e+N0 [4ec7ca77ac1a+2]
+    Group Virtual:
+     Segments: 0
 
 To lazy:
 
