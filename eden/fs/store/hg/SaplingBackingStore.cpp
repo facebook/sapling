@@ -392,13 +392,26 @@ void SaplingBackingStore::processBlobImportRequests(
         XLOG(DBG4)
             << "Blob found in Sapling local for "
             << request->getRequest<SaplingImportRequest::BlobImport>()->hash;
-        request->getContext()->setFetchedSource(
-            ObjectFetchContext::FetchedSource::Local,
-            ObjectFetchContext::ObjectType::Blob,
-            stats_.copy());
-        stats_->addDuration(
-            &SaplingBackingStoreStats::fetchBlob, watch.elapsed());
-        stats_->increment(&SaplingBackingStoreStats::fetchBlobSuccess);
+        switch (request->getFetchType()) {
+          case SaplingImportRequest::FetchType::Prefetch:
+            stats_->addDuration(
+                &SaplingBackingStoreStats::prefetchBlob, watch.elapsed());
+            stats_->increment(&SaplingBackingStoreStats::prefetchBlobSuccess);
+            request->getContext()->setFetchedSource(
+                ObjectFetchContext::FetchedSource::Local,
+                ObjectFetchContext::ObjectType::PrefetchBlob,
+                stats_.copy());
+            break;
+          case SaplingImportRequest::FetchType::Fetch:
+            stats_->addDuration(
+                &SaplingBackingStoreStats::fetchBlob, watch.elapsed());
+            stats_->increment(&SaplingBackingStoreStats::fetchBlobSuccess);
+            request->getContext()->setFetchedSource(
+                ObjectFetchContext::FetchedSource::Local,
+                ObjectFetchContext::ObjectType::Blob,
+                stats_.copy());
+            break;
+        }
       } else {
         retryRequest.emplace_back(std::move(request));
       }
@@ -418,23 +431,50 @@ void SaplingBackingStore::processBlobImportRequests(
           XLOG(DBG4)
               << "Blob found in Sapling remote for "
               << request->getRequest<SaplingImportRequest::BlobImport>()->hash;
-          request->getContext()->setFetchedSource(
-              ObjectFetchContext::FetchedSource::Remote,
-              ObjectFetchContext::ObjectType::Blob,
-              stats_.copy());
+          switch (request->getFetchType()) {
+            case SaplingImportRequest::FetchType::Prefetch:
+              request->getContext()->setFetchedSource(
+                  ObjectFetchContext::FetchedSource::Remote,
+                  ObjectFetchContext::ObjectType::PrefetchBlob,
+                  stats_.copy());
+              break;
+            case SaplingImportRequest::FetchType::Fetch:
+              request->getContext()->setFetchedSource(
+                  ObjectFetchContext::FetchedSource::Remote,
+                  ObjectFetchContext::ObjectType::Blob,
+                  stats_.copy());
+              break;
+          }
         }
-        stats_->addDuration(
-            &SaplingBackingStoreStats::fetchBlob, watch.elapsed());
-        stats_->increment(&SaplingBackingStoreStats::fetchBlobSuccess);
+        switch (request->getFetchType()) {
+          case SaplingImportRequest::FetchType::Prefetch:
+            stats_->addDuration(
+                &SaplingBackingStoreStats::prefetchBlob, watch.elapsed());
+            stats_->increment(&SaplingBackingStoreStats::prefetchBlobSuccess);
+            break;
+          case SaplingImportRequest::FetchType::Fetch:
+            stats_->addDuration(
+                &SaplingBackingStoreStats::fetchBlob, watch.elapsed());
+            stats_->increment(&SaplingBackingStoreStats::fetchBlobSuccess);
+            break;
+        }
         continue;
       }
 
+      switch (request->getFetchType()) {
+        case SaplingImportRequest::FetchType::Prefetch:
+          stats_->increment(&SaplingBackingStoreStats::prefetchBlobFailure);
+          break;
+        case SaplingImportRequest::FetchType::Fetch:
+          stats_->increment(&SaplingBackingStoreStats::fetchBlobFailure);
+          break;
+      }
       // The blobs were either not found locally, or, when EdenAPI is enabled,
       // not found on the server. Let's retry to import the blob
-      stats_->increment(&SaplingBackingStoreStats::fetchBlobFailure);
       auto fetchSemiFuture = retryGetBlob(
           request->getRequest<SaplingImportRequest::BlobImport>()->proxyHash,
-          request->getContext().copy());
+          request->getContext().copy(),
+          request->getFetchType());
       futures.emplace_back(
           std::move(fetchSemiFuture)
               .defer([request = std::move(request),
@@ -444,8 +484,17 @@ void SaplingBackingStore::processBlobImportRequests(
                     << "Imported blob from HgImporter for "
                     << request->getRequest<SaplingImportRequest::BlobImport>()
                            ->hash;
-                stats->addDuration(
-                    &SaplingBackingStoreStats::fetchBlob, watch.elapsed());
+                switch (request->getFetchType()) {
+                  case SaplingImportRequest::FetchType::Prefetch:
+                    stats->addDuration(
+                        &SaplingBackingStoreStats::prefetchBlob,
+                        watch.elapsed());
+                    break;
+                  case SaplingImportRequest::FetchType::Fetch:
+                    stats->addDuration(
+                        &SaplingBackingStoreStats::fetchBlob, watch.elapsed());
+                    break;
+                }
                 request
                     ->getPromise<SaplingImportRequest::BlobImport::Response>()
                     ->setTry(std::forward<decltype(result)>(result));
@@ -458,13 +507,15 @@ void SaplingBackingStore::processBlobImportRequests(
 
 folly::SemiFuture<BlobPtr> SaplingBackingStore::retryGetBlob(
     HgProxyHash hgInfo,
-    ObjectFetchContextPtr context) {
+    ObjectFetchContextPtr context,
+    const SaplingImportRequest::FetchType fetch_type) {
   return folly::via(
       retryThreadPool_.get(),
       [this,
        hgInfo = std::move(hgInfo),
        &liveImportBlobWatches = liveImportBlobWatches_,
-       context = context.copy()] {
+       context = context.copy(),
+       fetch_type] {
         RequestMetricsScope queueTracker{&liveImportBlobWatches};
 
         // NOTE: In the future we plan to update
@@ -493,17 +544,30 @@ folly::SemiFuture<BlobPtr> SaplingBackingStore::retryGetBlob(
         }
 
         if (blob.hasValue()) {
+          auto object_type = ObjectFetchContext::ObjectType::Blob;
+          switch (fetch_type) {
+            case SaplingImportRequest::FetchType::Prefetch:
+              object_type = ObjectFetchContext::ObjectType::PrefetchBlob;
+              stats_->increment(
+                  &SaplingBackingStoreStats::prefetchBlobRetrySuccess);
+              break;
+            case SaplingImportRequest::FetchType::Fetch:
+              object_type = ObjectFetchContext::ObjectType::Blob;
+              stats_->increment(
+                  &SaplingBackingStoreStats::fetchBlobRetrySuccess);
+              break;
+          }
           switch (fetch_mode) {
             case sapling::FetchMode::LocalOnly:
               context->setFetchedSource(
                   ObjectFetchContext::FetchedSource::Local,
-                  ObjectFetchContext::ObjectType::Blob,
+                  object_type,
                   stats_.copy());
               break;
             case sapling::FetchMode::RemoteOnly:
               context->setFetchedSource(
                   ObjectFetchContext::FetchedSource::Remote,
-                  ObjectFetchContext::ObjectType::Blob,
+                  object_type,
                   stats_.copy());
               break;
             case sapling::FetchMode::AllowRemote:
@@ -514,7 +578,6 @@ folly::SemiFuture<BlobPtr> SaplingBackingStore::retryGetBlob(
                   stats_.copy());
               break;
           }
-          stats_->increment(&SaplingBackingStoreStats::fetchBlobRetrySuccess);
           result = blob.value();
         } else {
           // Record miss and return error
@@ -525,8 +588,16 @@ folly::SemiFuture<BlobPtr> SaplingBackingStore::retryGetBlob(
                 blob.exception().what().toStdString(),
                 true});
           }
-
-          stats_->increment(&SaplingBackingStoreStats::fetchBlobRetryFailure);
+          switch (fetch_type) {
+            case SaplingImportRequest::FetchType::Prefetch:
+              stats_->increment(
+                  &SaplingBackingStoreStats::prefetchBlobRetryFailure);
+              break;
+            case SaplingImportRequest::FetchType::Fetch:
+              stats_->increment(
+                  &SaplingBackingStoreStats::fetchBlobRetryFailure);
+              break;
+          }
           auto ew = folly::exception_wrapper{blob.exception()};
           result = folly::makeFuture<BlobPtr>(std::move(ew));
         }
@@ -1289,7 +1360,8 @@ folly::SemiFuture<BackingStore::GetBlobResult> SaplingBackingStore::getBlob(
         std::move(blob.value()), ObjectFetchContext::Origin::FromDiskCache});
   }
 
-  return getBlobImpl(id, proxyHash, context)
+  return getBlobImpl(
+             id, proxyHash, context, SaplingImportRequest::FetchType::Fetch)
       .ensure([scope = std::move(scope)] {})
       .semi();
 }
@@ -1297,13 +1369,15 @@ folly::SemiFuture<BackingStore::GetBlobResult> SaplingBackingStore::getBlob(
 ImmediateFuture<BackingStore::GetBlobResult> SaplingBackingStore::getBlobImpl(
     const ObjectId& id,
     const HgProxyHash& proxyHash,
-    const ObjectFetchContextPtr& context) {
+    const ObjectFetchContextPtr& context,
+    const SaplingImportRequest::FetchType fetch_type) {
   auto getBlobFuture = makeImmediateFutureWith([&] {
     XLOG(DBG4) << "make blob import request for " << proxyHash.path()
                << ", hash is:" << id;
     auto requestContext = context.copy();
     auto request = SaplingImportRequest::makeBlobImportRequest(
         id, proxyHash, requestContext);
+    request->setFetchType(fetch_type);
     auto unique = request->getUnique();
 
     auto importTracker =
@@ -1574,6 +1648,7 @@ folly::Future<TreePtr> SaplingBackingStore::importTreeManifestImpl(
       // The following types cannot get here. It is just for completeness
       case ObjectFetchContext::Blob:
       case ObjectFetchContext::BlobMetadata:
+      case ObjectFetchContext::ObjectType::PrefetchBlob:
       case ObjectFetchContext::kObjectTypeEnumMax:
         break;
     }
@@ -1595,6 +1670,7 @@ folly::Future<TreePtr> SaplingBackingStore::importTreeManifestImpl(
       // The following types cannot get here. It is just for completeness
     case ObjectFetchContext::Blob:
     case ObjectFetchContext::BlobMetadata:
+    case ObjectFetchContext::PrefetchBlob:
     case ObjectFetchContext::kObjectTypeEnumMax:
       break;
   }
@@ -1770,6 +1846,7 @@ folly::Future<TreePtr> SaplingBackingStore::retryGetTreeImpl(
             // The following types cannot get here. It is just for completeness
             case ObjectFetchContext::Blob:
             case ObjectFetchContext::BlobMetadata:
+            case ObjectFetchContext::PrefetchBlob:
             case ObjectFetchContext::kObjectTypeEnumMax:
               break;
           }
@@ -1800,6 +1877,7 @@ folly::Future<TreePtr> SaplingBackingStore::retryGetTreeImpl(
             // The following types cannot get here. It is just for completeness
             case ObjectFetchContext::Blob:
             case ObjectFetchContext::BlobMetadata:
+            case ObjectFetchContext::PrefetchBlob:
             case ObjectFetchContext::kObjectTypeEnumMax:
               break;
           }
@@ -1840,7 +1918,11 @@ folly::SemiFuture<folly::Unit> SaplingBackingStore::prefetchBlobs(
           const auto& id = ids[i];
           const auto& proxyHash = proxyHashes[i];
 
-          futures.emplace_back(getBlobImpl(id, proxyHash, context));
+          futures.emplace_back(getBlobImpl(
+              id,
+              proxyHash,
+              context,
+              SaplingImportRequest::FetchType::Prefetch));
         }
 
         return collectAllSafe(std::move(futures)).unit();

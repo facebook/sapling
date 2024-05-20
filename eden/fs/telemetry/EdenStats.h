@@ -346,6 +346,13 @@ struct SaplingBackingStoreStats : StatsGroup<SaplingBackingStoreStats> {
   Counter fetchBlobFailure{"store.sapling.fetch_blob_failure"};
   Counter fetchBlobRetrySuccess{"store.sapling.fetch_blob_retry_success"};
   Counter fetchBlobRetryFailure{"store.sapling.fetch_blob_retry_failure"};
+  Duration prefetchBlob{"store.sapling.prefetch_blob_us"};
+  Counter prefetchBlobLocal{"store.sapling.prefetch_blob_local"};
+  Counter prefetchBlobRemote{"store.sapling.prefetch_blob_remote"};
+  Counter prefetchBlobSuccess{"store.sapling.prefetch_blob_success"};
+  Counter prefetchBlobFailure{"store.sapling.prefetch_blob_failure"};
+  Counter prefetchBlobRetrySuccess{"store.sapling.prefetch_blob_retry_success"};
+  Counter prefetchBlobRetryFailure{"store.sapling.prefetch_blob_retry_failure"};
   Duration getBlobMetadata{"store.sapling.get_blob_metadata_us"};
   Duration fetchBlobMetadata{"store.sapling.fetch_blob_metadata_us"};
   Counter fetchBlobMetadataLocal{"store.sapling.fetch_blob_metadata_local"};

@@ -85,6 +85,18 @@ class SaplingImportRequest {
   SaplingImportRequest(SaplingImportRequest&&) = default;
   SaplingImportRequest& operator=(SaplingImportRequest&&) = default;
 
+  /**
+   * Some of the get functions are getting calls from both fetch and
+   * prefetch functions. For example, SaplingBackingStore::getBlobImpl()
+   * is getting called from both SaplingBackingStore::getBlob() and
+   * SaplingBackingStore::prefetchBlob(). This enum will use in the
+   * functions params and requests, therefore we can collect correct metrics.
+   */
+  enum FetchType {
+    Fetch,
+    Prefetch,
+  };
+
   template <typename T>
   T* getRequest() noexcept {
     return std::get_if<T>(&request_);
@@ -105,6 +117,14 @@ class SaplingImportRequest {
 
   ImportPriority getPriority() const noexcept {
     return priority_;
+  }
+
+  FetchType getFetchType() const noexcept {
+    return fetchType_;
+  }
+
+  void setFetchType(FetchType fetch_type) noexcept {
+    fetchType_ = fetch_type;
   }
 
   ObjectFetchContext::Cause getCause() const noexcept {
@@ -168,6 +188,8 @@ class SaplingImportRequest {
   ImportPriority priority_;
   Response promise_;
   uint64_t unique_ = generateUniqueID();
+  // What is the fetch type of this request
+  FetchType fetchType_ = FetchType::Fetch;
   std::chrono::steady_clock::time_point requestTime_ =
       std::chrono::steady_clock::now();
 

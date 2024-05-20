@@ -41,6 +41,7 @@ class ObjectFetchContext : public RefCounted {
     Tree,
     RootTree,
     ManifestForRoot,
+    PrefetchBlob,
     kObjectTypeEnumMax,
   };
 
@@ -197,6 +198,10 @@ class ObjectFetchContext : public RefCounted {
            &SaplingBackingStoreStats::fetchBlobMetadataLocal},
           {{FetchedSource::Remote, ObjectType::BlobMetadata},
            &SaplingBackingStoreStats::fetchBlobMetadataRemote},
+          {{FetchedSource::Local, ObjectType::PrefetchBlob},
+           &SaplingBackingStoreStats::prefetchBlobLocal},
+          {{FetchedSource::Remote, ObjectType::PrefetchBlob},
+           &SaplingBackingStoreStats::prefetchBlobRemote},
       };
 };
 

@@ -384,7 +384,8 @@ class SaplingBackingStore final : public BackingStore {
   // Get blob step functions
   folly::SemiFuture<BlobPtr> retryGetBlob(
       HgProxyHash hgInfo,
-      ObjectFetchContextPtr context);
+      ObjectFetchContextPtr context,
+      const SaplingImportRequest::FetchType fetch_type);
 
   /**
    * Import multiple blobs at once. The vector parameters have to be the same
@@ -405,7 +406,8 @@ class SaplingBackingStore final : public BackingStore {
   ImmediateFuture<GetBlobResult> getBlobImpl(
       const ObjectId& id,
       const HgProxyHash& proxyHash,
-      const ObjectFetchContextPtr& context);
+      const ObjectFetchContextPtr& context,
+      const SaplingImportRequest::FetchType fetch_type);
 
   /**
    * Imports the blob identified by the given hash from the backing store.
