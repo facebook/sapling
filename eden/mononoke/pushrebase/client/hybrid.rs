@@ -43,12 +43,6 @@ pub async fn normal_pushrebase<'a>(
 ) -> Result<PushrebaseOutcome, BookmarkMovementError> {
     let remote_mode = if force_local_pushrebase {
         PushrebaseRemoteMode::Local
-    } else if let Ok(true) = justknobs::eval(
-        "scm/mononoke:mononoke_force_local_pushrebase",
-        None,
-        Some(repo.repo_identity().name()),
-    ) {
-        PushrebaseRemoteMode::Local
     } else {
         repo.repo_config().pushrebase.remote_mode.clone()
     };
