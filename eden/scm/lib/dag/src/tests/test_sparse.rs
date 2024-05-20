@@ -68,6 +68,8 @@ async fn test_sparse_dag() {
     0 : I+4 [] Root OnlyHead
   Group Non-Master:
    Segments: 0
+  Group Virtual:
+   Segments: 0
 "#
         );
 

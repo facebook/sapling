@@ -147,7 +147,13 @@ impl Group {
     ///   (commit hashes) are known in this group.
     pub const NON_MASTER: Self = Self(1);
 
-    pub const ALL: [Self; 2] = [Self::MASTER, Self::NON_MASTER];
+    /// The "virtual" group.
+    /// - Typically, "null" and "wdir()".
+    /// - Should not be written to disk.
+    /// - Not lazy.
+    pub const VIRTUAL: Self = Self(2);
+
+    pub const ALL: [Self; 3] = [Self::MASTER, Self::NON_MASTER, Self::VIRTUAL];
 
     pub const COUNT: usize = Self::ALL.len();
 
@@ -216,8 +222,10 @@ impl Id {
 impl fmt::Display for Id {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let group = self.group();
-        if group == Group::NON_MASTER {
-            write!(f, "N")?;
+        match group {
+            Group::NON_MASTER => write!(f, "N")?,
+            Group::VIRTUAL => write!(f, "V")?,
+            _ => {}
         }
         write!(f, "{}", self.0 - group.min_id().0)
     }
@@ -234,6 +242,7 @@ impl fmt::Display for Group {
         match *self {
             Group::MASTER => write!(f, "Group Master"),
             Group::NON_MASTER => write!(f, "Group Non-Master"),
+            Group::VIRTUAL => write!(f, "Group Virtual"),
             _ => write!(f, "Group {}", self.0),
         }
     }

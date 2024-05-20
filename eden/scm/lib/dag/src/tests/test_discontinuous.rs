@@ -63,6 +63,8 @@ async fn test_simple_3_branches() {
     A+0 : F+5 [] Root OnlyHead
   Group Non-Master:
    Segments: 0
+  Group Virtual:
+   Segments: 0
 "#
     );
 

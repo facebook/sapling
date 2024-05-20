@@ -370,7 +370,7 @@ impl InProcessStore {
             non_master_segments: Vec::new(),
             level_head_index: Vec::new(),
             parent_index: BTreeMap::new(),
-            id_set_by_group: [IdSet::empty(), IdSet::empty()],
+            id_set_by_group: [IdSet::empty(), IdSet::empty(), IdSet::empty()],
             removed_store_ids: Default::default(),
         }
     }
