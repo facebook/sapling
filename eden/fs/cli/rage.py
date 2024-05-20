@@ -716,26 +716,31 @@ def print_crashed_edenfs_logs(processor: str, out: IO[bytes], dry_run: bool) -> 
     section_title("EdenFS crashes and dumps:", out)
     num_uploads = 0
     for crashes_path in crashes_paths:
-        if not crashes_path.exists():
-            continue
+        try:
+            if not crashes_path.exists():
+                continue
 
-        # Only upload crashes from the past week.
-        date_threshold = datetime.now() - timedelta(weeks=1)
-        for crash in crashes_path.iterdir():
-            if crash.name.startswith("edenfs"):
-                crash_time = datetime.fromtimestamp(crash.stat().st_mtime)
-                human_crash_time = crash_time.strftime("%b %d %H:%M:%S")
-                out.write(f"{str(crash.name)} from {human_crash_time}: ".encode())
-                if crash_time > date_threshold and num_uploads <= 2:
-                    num_uploads += 1
-                    paste_output(
-                        lambda sink: print_log_file(crash, sink, whole_file=True),
-                        processor,
-                        out,
-                        dry_run,
-                    )
-                else:
-                    out.write(" not uploaded due to age or max num dumps\n".encode())
+            # Only upload crashes from the past week.
+            date_threshold = datetime.now() - timedelta(weeks=1)
+            for crash in crashes_path.iterdir():
+                if crash.name.startswith("edenfs"):
+                    crash_time = datetime.fromtimestamp(crash.stat().st_mtime)
+                    human_crash_time = crash_time.strftime("%b %d %H:%M:%S")
+                    out.write(f"{str(crash.name)} from {human_crash_time}: ".encode())
+                    if crash_time > date_threshold and num_uploads <= 2:
+                        num_uploads += 1
+                        paste_output(
+                            lambda sink: print_log_file(crash, sink, whole_file=True),
+                            processor,
+                            out,
+                            dry_run,
+                        )
+                    else:
+                        out.write(
+                            " not uploaded due to age or max num dumps\n".encode()
+                        )
+        except Exception as e:
+            out.write(f"Error accessing crash file at {crashes_path}: {e}\n".encode())
 
     out.write("\n".encode())
 
