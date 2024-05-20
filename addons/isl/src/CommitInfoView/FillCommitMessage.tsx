@@ -39,6 +39,23 @@ import {useCallback} from 'react';
 import {useContextMenu} from 'shared/ContextMenu';
 import {Icon} from 'shared/Icon';
 
+/**
+ * The last entry in a tokenized field value is used as the value being typed in the editor.
+ * When filling, we want all the values to be tokens and not inserted to the editors.
+ * Add empty entries at the end of all tokenized fields to force tokens.
+ */
+function forceTokenizeAllFields(fields: CommitMessageFields): CommitMessageFields {
+  const result: CommitMessageFields = {};
+  for (const [key, value] of Object.entries(fields)) {
+    if (Array.isArray(value)) {
+      result[key] = value.length > 0 && value.at(-1) ? [...value, ''] : value;
+    } else {
+      result[key] = value;
+    }
+  }
+  return result;
+}
+
 const fillCommitMessageMethods: Array<{
   label: string;
   getMessage: (
@@ -63,11 +80,12 @@ const fillCommitMessageMethods: Array<{
         return undefined;
       }
       const fields = parseCommitMessageFields(schema, parent.title, parent.description);
+
       if (Internal.diffFieldTag) {
         // don't fill in diff field, so we don't conflict with a previous diff
         delete fields[Internal.diffFieldTag];
       }
-      return fields;
+      return forceTokenizeAllFields(fields);
     },
   },
   {
