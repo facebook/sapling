@@ -654,6 +654,12 @@ impl IndexedLogStore {
 
                 let seg = Segment(Bytes::copy_from_slice(data));
                 let mut result = Vec::new();
+                if let Ok(high) = seg.high() {
+                    assert!(
+                        !high.is_virtual(),
+                        "bug: VIRTUAL group should never be written to disk"
+                    );
+                }
                 if seg.level().ok() == Some(0) {
                     // This should never pass since MAGIC_CLEAR_NON_MASTER[0] != 0.
                     // ([0] stores level: u8).

@@ -127,6 +127,13 @@ impl IdMap {
                         panic!("bug: invalid segment {:?}", &data);
                     }
                 } else {
+                    let slice = &data[..8];
+                    let slice: [u8; 8] = slice.try_into().unwrap(); // length checked
+                    let id = Id(u64::from_be_bytes(slice));
+                    assert!(
+                        !id.is_virtual(),
+                        "bug: VIRTUAL group should never be written to disk"
+                    );
                     vec![log::IndexOutput::Reference(0..8)]
                 }
             })

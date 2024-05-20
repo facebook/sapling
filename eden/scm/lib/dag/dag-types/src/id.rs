@@ -215,6 +215,11 @@ impl Id {
         [prefix, a[0], a[1], a[2], a[3], a[4], a[5], a[6], a[7]]
     }
 
+    /// Test if this `Id` is in the VIRTUAL group.
+    pub fn is_virtual(self) -> bool {
+        self.group() == Group::VIRTUAL
+    }
+
     pub const MAX: Self = Group::ALL[Group::COUNT - 1].max_id();
     pub const MIN: Self = Group::ALL[0].min_id();
 }
