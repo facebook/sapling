@@ -23,6 +23,7 @@ class EdenApiService(baseservice.BaseService):
             raise error.Abort("Tried to start edenapiservice with no repo object")
         self.repo = repo
         self.repo.edenapi.capabilities()  # Check edenapi is reachable
+        self.fallback_service = fallback_service
 
     def check(self):
         return True
