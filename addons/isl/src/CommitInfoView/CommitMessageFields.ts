@@ -11,7 +11,6 @@ import type {CommitMessageFields, FieldConfig, FieldsBeingEdited} from './types'
 import {temporaryCommitTitle} from '../CommitTitle';
 import {Internal} from '../Internal';
 import {codeReviewProvider} from '../codeReview/CodeReviewInfo';
-import {atomResetOnCwdChange} from '../repositoryData';
 import {arraysEqual} from '../utils';
 import {OSSCommitMessageFieldSchema} from './OSSCommitMessageFieldsSchema';
 import {atom} from 'jotai';
@@ -35,13 +34,20 @@ export function allFieldsBeingEdited(schema: Array<FieldConfig>): FieldsBeingEdi
   return Object.fromEntries(schema.map(config => [config.key, true]));
 }
 
+function trimEmpty(a: Array<string>): Array<string> {
+  return a.filter(s => s.trim() !== '');
+}
+
 function fieldEqual(
   config: FieldConfig,
   a: Partial<CommitMessageFields>,
   b: Partial<CommitMessageFields>,
 ): boolean {
   return config.type === 'field'
-    ? arraysEqual((a[config.key] ?? []) as Array<string>, (b[config.key] ?? []) as Array<string>)
+    ? arraysEqual(
+        trimEmpty((a[config.key] ?? []) as Array<string>),
+        trimEmpty((b[config.key] ?? []) as Array<string>),
+      )
     : a[config.key] === b[config.key];
 }
 

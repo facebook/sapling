@@ -39,6 +39,7 @@ export function TokensList({
             {onClickX == null ? null : (
               <VSCodeButton
                 appearance="icon"
+                data-testid="token-x"
                 onClick={e => {
                   onClickX?.(token);
                   e.stopPropagation();

@@ -209,11 +209,14 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
   const parsedFields = useAtomValue(latestCommitMessageFields(hashOrHead));
 
   const startEditingField = (field: string) => {
-    // Set the latest message value for the edited message of this field.
-    // fieldsBeingEdited is derived from this.
+    const original = parsedFields[field];
+    // If you start editing a tokenized field, add a blank token so you can write a new token instead of
+    // modifying the last existing token.
+    const fieldValue = Array.isArray(original) && original.at(-1) ? [...original, ''] : original;
+
     setEditedCommitMessage(last => ({
       ...last,
-      [field]: parsedFields[field],
+      [field]: fieldValue,
     }));
   };
 
