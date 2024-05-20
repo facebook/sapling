@@ -712,16 +712,6 @@ impl IndexedLogStore {
         };
         Ok(store)
     }
-
-    pub fn try_clone_without_dirty(&self) -> Result<IndexedLogStore> {
-        let log = self.log.try_clone_without_dirty()?;
-        let store = IndexedLogStore {
-            log,
-            path: self.path.clone(),
-            cached_max_level: AtomicU8::new(MAX_LEVEL_UNKNOWN),
-        };
-        Ok(store)
-    }
 }
 
 // Build index key for the INDEX_PARENT (group-parent-child) index.
