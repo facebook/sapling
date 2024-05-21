@@ -674,7 +674,7 @@ def debugmarklanded(ui, repo, **opts):
     + cmdutil.walkopts,
 )
 def url(ui, repo, *pats, **opts):
-    """show url for the given files"""
+    """show url for the given files, or the current directory if no files are provided"""
     from urllib.parse import quote
 
     url_reponame = ui.config("fbscmquery", "reponame")
@@ -687,6 +687,10 @@ def url(ui, repo, *pats, **opts):
         paths = m.files()
     else:
         paths = ctx.walk(m)
+
+    if not paths:
+        paths = [repo.getcwd()]
+
     for path in paths:
         url = url_template % {
             "repo_name": url_reponame,
