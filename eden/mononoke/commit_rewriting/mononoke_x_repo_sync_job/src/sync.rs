@@ -46,12 +46,10 @@ use indicatif::ProgressBar;
 use indicatif::ProgressStyle;
 use metaconfig_types::CommitSyncConfigVersion;
 use mononoke_types::ChangesetId;
-use mononoke_types::DerivableType;
 use mononoke_types::Timestamp;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
 use scuba_ext::MononokeScubaSampleBuilder;
-use strum::IntoEnumIterator;
 use synced_commit_mapping::SyncedCommitMapping;
 
 use crate::reporting::log_bookmark_deletion_result;
@@ -651,17 +649,19 @@ where
                 ),
             );
         } else {
+            let derived_data_types = large_repo
+                .repo_derived_data()
+                .active_config()
+                .types
+                .iter()
+                .cloned()
+                .collect::<Vec<_>>();
             // Derive all the data types synchronously to speed up the overall
             // import process.
             let duration = large_repo
                 .repo_derived_data()
                 .manager()
-                .derive_bulk(
-                    ctx,
-                    vec![synced],
-                    None,
-                    DerivableType::iter().collect::<Vec<_>>().as_slice(),
-                )
+                .derive_bulk(ctx, vec![synced], None, &derived_data_types)
                 .await?;
             log_trace(
                 ctx,
