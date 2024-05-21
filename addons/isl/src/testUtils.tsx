@@ -244,8 +244,7 @@ export const fireMouseEvent = function (
   return elem.dispatchEvent(evt);
 };
 
-// See https://github.com/testing-library/user-event/issues/440
-export const dragAndDrop = (elemDrag: HTMLElement, elemDrop: HTMLElement) => {
+export const drag = (elemDrag: HTMLElement, elemDrop: HTMLElement) => {
   act(() => {
     // calculate positions
     let pos = elemDrag.getBoundingClientRect();
@@ -282,6 +281,15 @@ export const dragAndDrop = (elemDrag: HTMLElement, elemDrop: HTMLElement) => {
     fireMouseEvent('dragenter', elemDrop, center2X, center2Y);
     fireMouseEvent('mouseover', elemDrop, center2X, center2Y);
     fireMouseEvent('dragover', elemDrop, center2X, center2Y);
+  });
+};
+export const drop = (elemDrag: HTMLElement, elemDrop: HTMLElement) => {
+  act(() => {
+    // calculate positions
+    let pos = elemDrag.getBoundingClientRect();
+    pos = elemDrop.getBoundingClientRect();
+    const center2X = Math.floor((pos.left + pos.right) / 2);
+    const center2Y = Math.floor((pos.top + pos.bottom) / 2);
 
     // release dragged element on top of drop target
     fireMouseEvent('drop', elemDrop, center2X, center2Y);
@@ -290,7 +298,17 @@ export const dragAndDrop = (elemDrag: HTMLElement, elemDrop: HTMLElement) => {
   });
 };
 
-export function dragAndDropCommits(draggedCommit: Hash | HTMLElement, onto: Hash) {
+// See https://github.com/testing-library/user-event/issues/440
+export const dragAndDrop = (elemDrag: HTMLElement, elemDrop: HTMLElement) => {
+  drag(elemDrag, elemDrop);
+  drop(elemDrag, elemDrop);
+};
+
+export function dragAndDropCommits(
+  draggedCommit: Hash | HTMLElement,
+  onto: Hash,
+  op: typeof dragAndDrop | typeof drag | typeof drop = dragAndDrop,
+) {
   const draggableCommit =
     typeof draggedCommit !== 'string'
       ? draggedCommit
@@ -300,9 +318,17 @@ export function dragAndDropCommits(draggedCommit: Hash | HTMLElement, onto: Hash
   expect(dragTargetComit).toBeDefined();
 
   act(() => {
-    dragAndDrop(draggableCommit as HTMLElement, dragTargetComit as HTMLElement);
+    op(draggableCommit as HTMLElement, dragTargetComit as HTMLElement);
     jest.advanceTimersByTime(2);
   });
+}
+
+export function dragCommits(draggedCommit: Hash | HTMLElement, onto: Hash) {
+  dragAndDropCommits(draggedCommit, onto, drag);
+}
+
+export function dropCommits(draggedCommit: Hash | HTMLElement, onto: Hash) {
+  dragAndDropCommits(draggedCommit, onto, drop);
 }
 
 /** Check that YouAreHere points to the given commit. */
