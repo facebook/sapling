@@ -35,7 +35,7 @@ import {
   mergeConflicts,
   repositoryInfo,
 } from '../serverAPIState';
-import {useShowToast} from '../toast';
+import {showToast} from '../toast';
 import {colors} from '../tokens.stylex';
 import {isDev} from '../utils';
 import {ComponentExplorerButton} from './ComponentExplorer';
@@ -92,13 +92,12 @@ function InternalState() {
   const [reactTools, setReactTools] = useAtom(enableReactTools);
   const needSerialize = useAtomValue(holdingCtrlAtom);
 
-  const showToast = useShowToast();
   const generate = () => {
     // No need for useAtomValue - no need to re-render or recalculate this function.
     const atomsState = readInterestingAtoms();
     const value = needSerialize ? serializeAtomsState(atomsState) : atomsState;
     console.log(`jotai state (${needSerialize ? 'JSON' : 'objects'}):`, value);
-    showToast.show(`logged jotai state to console!${needSerialize ? ' (serialized)' : ''}`);
+    showToast(`logged jotai state to console!${needSerialize ? ' (serialized)' : ''}`);
   };
 
   return (
@@ -122,7 +121,7 @@ function InternalState() {
           <VSCodeButton
             onClick={() => {
               console.log('persisted state:', platform.getAllPersistedState());
-              showToast.show('logged persisted state to console!');
+              showToast('logged persisted state to console!');
             }}
             appearance="secondary">
             <T>Log Persisted State</T>
@@ -137,7 +136,7 @@ function InternalState() {
             onClick={() => {
               platform.clearPersistedState();
               console.log('--- cleared isl persisted state ---');
-              showToast.show('cleared persisted state');
+              showToast('cleared persisted state');
             }}
             appearance="secondary">
             <T>Clear Persisted State</T>

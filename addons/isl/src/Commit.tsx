@@ -58,7 +58,7 @@ import {inMergeConflicts, mergeConflicts} from './serverAPIState';
 import {useConfirmUnsavedEditsBeforeSplit} from './stackEdit/ui/ConfirmUnsavedEditsBeforeSplit';
 import {SplitButton} from './stackEdit/ui/SplitButton';
 import {editingStackIntentionHashes} from './stackEdit/ui/stackEditState';
-import {useShowToast} from './toast';
+import {copyAndShowToast} from './toast';
 import {succeedableRevset} from './types';
 import {short} from './utils';
 import * as stylex from '@stylexjs/stylex';
@@ -137,10 +137,8 @@ export const Commit = memo(
 
     const commitLabel = useAtomValue(commitLabelForCommit(commit.hash));
 
-    const toast = useShowToast();
-
     const clipboardCopy = (text: string, url?: string) =>
-      toast.copyAndShowToast(text, url == null ? undefined : clipboardLinkHtml(text, url));
+      copyAndShowToast(text, url == null ? undefined : clipboardLinkHtml(text, url));
 
     const viewChangesCallback = useAtomCallback((_get, set) => {
       set(currentComparisonMode, {

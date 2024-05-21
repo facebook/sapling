@@ -34,7 +34,7 @@ import {useRunOperation} from './operationsState';
 import {useUncommittedSelection} from './partialSelection';
 import platform from './platform';
 import {optimisticMergeConflicts} from './previews';
-import {useShowToast} from './toast';
+import {copyAndShowToast} from './toast';
 import {ConflictType, succeedableRevset} from './types';
 import {usePromise} from './usePromise';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
@@ -67,8 +67,7 @@ export function File({
   place?: Place;
   generatedStatus?: GeneratedStatus;
 }) {
-  const toast = useShowToast();
-  const clipboardCopy = (text: string) => toast.copyAndShowToast(text);
+  const clipboardCopy = (text: string) => copyAndShowToast(text);
 
   // Renamed files are files which have a copy field, where that path was also removed.
 
