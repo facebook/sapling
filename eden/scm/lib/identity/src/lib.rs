@@ -6,8 +6,10 @@
  */
 
 use std::borrow::Cow;
+use std::collections::HashSet;
 use std::env::VarError;
 use std::fs;
+use std::fs::read_link;
 use std::io;
 use std::path::Path;
 use std::path::PathBuf;
@@ -589,21 +591,36 @@ pub fn must_sniff_dir(path: &Path) -> Result<Identity> {
 pub fn sniff_root(path: &Path) -> Result<Option<(PathBuf, Identity)>> {
     tracing::debug!(start=%path.display(), "sniffing for repo root");
 
-    let mut path = Some(path);
+    let mut path = Some(path.to_path_buf());
     let mut best_priority = usize::MAX;
     let mut best = None;
 
+    let mut seen: HashSet<PathBuf> = HashSet::new();
     while let Some(p) = path {
-        if let Some(ident) = sniff_dir(p)? {
+        if !seen.insert(p.clone()) {
+            break;
+        }
+
+        if let Some(ident) = sniff_dir(&p)? {
             if ident.repo.sniff_root_priority == 0 {
-                return Ok(Some((p.to_path_buf(), ident)));
+                return Ok(Some((p, ident)));
             } else if best_priority > ident.repo.sniff_root_priority {
                 best_priority = ident.repo.sniff_root_priority;
-                best = Some((p, ident));
+                best = Some((p.clone(), ident));
             }
         }
 
-        path = p.parent();
+        if let Ok(mut target) = read_link(&p) {
+            if !target.is_absolute() {
+                // Resolve relative symlink.
+                if let Some(link_parent) = p.parent() {
+                    target = link_parent.join(target);
+                }
+            }
+            path = target.parent().map(|p| p.to_owned());
+        } else {
+            path = p.parent().map(|p| p.to_owned());
+        }
     }
 
     Ok(best.map(|(path, ident)| (path.to_path_buf(), ident)))
@@ -716,7 +733,7 @@ mod test {
 
         let root = dir.path().join("root");
 
-        assert!(sniff_root(&root)?.is_none());
+        assert_eq!(sniff_root(&root)?, None);
 
         let dot_dir = root.join(TEST.dot_dir());
         fs::create_dir_all(dot_dir)?;
@@ -733,6 +750,54 @@ mod test {
         assert_eq!(sniffed_root, root);
         assert_eq!(sniffed_ident.repo, TEST.repo);
         assert_eq!(sniffed_ident.user, default().user);
+
+        Ok(())
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn test_sniff_root_symlink() -> Result<()> {
+        use std::os::unix::fs::symlink;
+
+        let dir = tempfile::tempdir()?;
+
+        let root = dir.path().join("root");
+
+        let dot_dir = root.join(TEST.dot_dir());
+        fs::create_dir_all(dot_dir)?;
+
+        let subdir = root.join("subdir");
+        fs::create_dir_all(&subdir)?;
+
+        let link = dir.path().join("link");
+        symlink(&subdir, &link)?;
+
+        let (sniffed_root, _) = sniff_root(&link)?.unwrap();
+        assert_eq!(sniffed_root, root);
+
+        let relative_link = dir.path().join("relative-link");
+        symlink(Path::new("root/subdir"), &relative_link)?;
+
+        let (sniffed_root, _) = sniff_root(&relative_link)?.unwrap();
+        assert_eq!(sniffed_root, root);
+
+        Ok(())
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn test_sniff_root_symlink_cycle() -> Result<()> {
+        use std::os::unix::fs::symlink;
+
+        let dir = tempfile::tempdir()?;
+
+        let a = dir.path().join("a");
+        let b = dir.path().join("b");
+
+        symlink(b.join("subdir"), &a)?;
+        symlink(a.join("subdir"), &b)?;
+
+        assert!(sniff_root(&a)?.is_none());
 
         Ok(())
     }
