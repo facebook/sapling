@@ -23,6 +23,8 @@ import {
   simulateUncommittedChangedFiles,
   COMMIT,
   scanForkedBranchHashes,
+  dragCommits,
+  dropCommits,
 } from '../../testUtils';
 import {CommandRunner, succeedableRevset} from '../../types';
 import {fireEvent, render, screen, waitFor, within, act} from '@testing-library/react';
@@ -139,6 +141,33 @@ describe('rebase operation', () => {
     expect(
       screen.queryByTestId('commit-d')?.querySelector('.commit-preview-rebase-optimistic-root'),
     ).toBeInTheDocument();
+  });
+
+  it('allows re-dragging a previously dragged commit back onto the same parent', () => {
+    // Drag and drop 'e' normally onto 'c'
+    dragCommits('e', 'd');
+    expect(screen.queryByText('Run Rebase')).not.toBeInTheDocument(); // dragging on original parent is noop
+    dragAndDropCommits('e', 'c');
+    expect(screen.getByText('Run Rebase')).toBeInTheDocument();
+
+    // Drag the previously preview'd 'e' from 'c' onto 'b', without dropping
+    dragCommits(getCommitWithPreview('e', CommitPreview.REBASE_ROOT), 'b');
+    // Keep dragging the previously preview'd 'e' from 'b' back to 'c'
+    dragCommits(getCommitWithPreview('e', CommitPreview.REBASE_ROOT), 'c');
+    // Finally, drop on 'c'. This should work, even though the preview'd 'e' started on top of 'c', so it's the "parent"
+    dropCommits(getCommitWithPreview('e', CommitPreview.REBASE_ROOT), 'c');
+
+    fireEvent.click(screen.getByText('Run Rebase'));
+
+    expectMessageSentToServer({
+      type: 'runOperation',
+      operation: {
+        args: ['rebase', '-s', succeedableRevset('e'), '-d', succeedableRevset('c')],
+        id: expect.anything(),
+        runner: CommandRunner.Sapling,
+        trackEventName: 'RebaseOperation',
+      },
+    });
   });
 
   it('cancel cancels the preview', () => {

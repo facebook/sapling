@@ -11,9 +11,9 @@ import {latestSuccessorUnlessExplicitlyObsolete} from './SuccessionTracker';
 import {Tooltip} from './Tooltip';
 import {t} from './i18n';
 import {readAtom, writeAtom} from './jotaiUtils';
-import {RebaseOperation} from './operations/RebaseOperation';
+import {REBASE_PREVIEW_HASH_PREFIX, RebaseOperation} from './operations/RebaseOperation';
 import {operationBeingPreviewed} from './operationsState';
-import {CommitPreview, uncommittedChangesWithPreviews} from './previews';
+import {CommitPreview, dagWithPreviews, uncommittedChangesWithPreviews} from './previews';
 import {latestDag} from './serverAPIState';
 import {succeedableRevset} from './types';
 import {useState, useCallback, useEffect} from 'react';
@@ -41,7 +41,8 @@ function isDraggablePreview(previewType?: CommitPreview): boolean {
   }
 }
 
-let commitBeingDragged: CommitInfo | undefined = undefined;
+let commitBeingDragged: {info: CommitInfo; originalParents: ReadonlyArray<string>} | undefined =
+  undefined;
 
 // This is a global state outside React because commit DnD is a global
 // concept: there won't be 2 DnD happening at once in the same window.
@@ -91,14 +92,15 @@ export function DragToRebase({
       }
       const dag = readAtom(latestDag);
 
-      if (currentBeingDragged != null && commit.hash !== currentBeingDragged.hash) {
-        const beingDragged = currentBeingDragged;
+      if (currentBeingDragged != null && commit.hash !== currentBeingDragged.info.hash) {
+        const beingDragged = currentBeingDragged.info;
+        const originalParents = currentBeingDragged.originalParents;
         if (dag.has(beingDragged.hash)) {
           if (
             // can't rebase a commit onto its descendants
             !dag.isAncestor(beingDragged.hash, commit.hash) &&
             // can't rebase a commit onto its parent... it's already there!
-            !(beingDragged.parents as Array<string>).includes(commit.hash)
+            (originalParents == null || !originalParents?.includes(commit.hash))
           ) {
             // if the dest commit has a remote bookmark, use that instead of the hash.
             // this is easier to understand in the command history and works better with optimistic state
@@ -139,7 +141,14 @@ export function DragToRebase({
         event.preventDefault();
       }
 
-      commitBeingDragged = commit;
+      // To avoid rebasing onto the original parent commit, we save the parent.
+      // If you've already dragging, we need to lookup the old rebase preview commit in the dag.
+      // This depends on the RebaseOperation's REBASE_OLD preview.
+      const dag = readAtom(dagWithPreviews);
+      const oldRebaseCommitHash = `${REBASE_PREVIEW_HASH_PREFIX}:${commit.parents[0]}:${commit.hash}`;
+      const original = dag.get(oldRebaseCommitHash) ?? commit;
+
+      commitBeingDragged = {info: commit, originalParents: original.parents};
       event.dataTransfer.dropEffect = 'none';
 
       const draggedDOMNode = event.target;

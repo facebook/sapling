@@ -49,7 +49,7 @@ export class RebaseOperation extends Operation {
     }
     const src = dag.descendants(srcHash);
     const srcHashes = src.toHashes().toArray();
-    const prefix = `${REBASE_PREVIEW}:${destHash}:`;
+    const prefix = `${REBASE_PREVIEW_HASH_PREFIX}:${destHash}:`;
     const rewriteHash = (h: Hash) => (src.contains(h) ? prefix + h : h);
     const date = new Date();
     const newCommits = srcHashes.flatMap(h => {
@@ -112,4 +112,4 @@ export class RebaseOperation extends Operation {
   }
 }
 
-const REBASE_PREVIEW = 'OPTIMISTIC_REBASE_PREVIEW';
+export const REBASE_PREVIEW_HASH_PREFIX = 'OPTIMISTIC_REBASE_PREVIEW';
