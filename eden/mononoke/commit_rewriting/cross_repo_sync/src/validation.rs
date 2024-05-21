@@ -200,6 +200,8 @@ enum ValidationOutputElement {
         source: (Option<NonRootMPath>, RewriteMismatchElement),
         target: (Option<NonRootMPath>, RewriteMismatchElement),
     },
+    #[allow(dead_code)]
+    SubmoduleExpansionMismatch(String),
 }
 use ValidationOutputElement::*;
 
@@ -255,6 +257,9 @@ impl fmt::Display for PrintableValidationOutput {
                         "path differs between {} (path: {:?}) and {} (path: {:?})",
                         source_name, source_path, target_name, target_path,
                     )?;
+                }
+                SubmoduleExpansionMismatch(msg) => {
+                    writeln!(f, "submodule expansion mismatch: {}", msg)?;
                 }
             }
         }
