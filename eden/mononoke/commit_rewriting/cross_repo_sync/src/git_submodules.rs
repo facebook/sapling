@@ -13,5 +13,7 @@ mod validation;
 
 pub use expand::rewrite_commit_with_submodule_expansion;
 pub use expand::SubmoduleExpansionData;
+pub(crate) use expand::SubmodulePath;
 pub use in_memory_repo::InMemoryRepo;
+pub(crate) use utils::get_x_repo_submodule_metadata_file_path;
 pub use validation::validate_all_submodule_expansions;

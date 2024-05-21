@@ -468,6 +468,11 @@ impl MPath {
         }
     }
 
+    /// Converts MPath into NonRootMath by adding one element to it
+    pub fn join_into_non_root_mpath(&self, another: &MPathElement) -> NonRootMPath {
+        NonRootMPath(self.join(another))
+    }
+
     pub fn join_element(&self, element: Option<&MPathElement>) -> Self {
         match element {
             Some(element) => self.join(element),

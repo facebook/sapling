@@ -409,9 +409,8 @@ Check that the diff that updates the submodule generates the correct delta
   0597690a839ce11a250139dae33ee85d9772a47a (no-eol)
 
 Also check that our two binaries that can verify working copy are able to deal with expansions
-  $ REPOIDLARGE=$LARGE_REPO_ID REPOIDSMALL=$SUBMODULE_REPO_ID quiet_grep ", but" -- verify_wc master | sort
-  Some(NonRootMPath("smallrepofolder1/.x-repo-submodule-git-repo-b")) is a file in large_repo, but nonexistant in small_repo (under Some(NonRootMPath(".x-repo-submodule-git-repo-b")))
-  Some(NonRootMPath("smallrepofolder1/git-repo-b")) is a directory in large_repo, but a file in small_repo (under Some(NonRootMPath("git-repo-b")))
+  $ REPOIDLARGE=$LARGE_REPO_ID REPOIDSMALL=$SUBMODULE_REPO_ID quiet_grep ", but" -- verify_wc master |& sort | strip_glog
+  submodule expansion data neded for validation
 
 The check-push-redirection-prereqs should behave the same both ways but let's verify it (we had bugs where it didn't)
   $ quiet_grep ", but" -- megarepo_tool_multirepo --source-repo-id $SUBMODULE_REPO_ID --target-repo-id $LARGE_REPO_ID check-push-redirection-prereqs "heads/master" "master" "$LATEST_CONFIG_VERSION_NAME" | sort | tee $TESTTMP/push_redir_prereqs_small_large

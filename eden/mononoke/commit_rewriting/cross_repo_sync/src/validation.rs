@@ -11,6 +11,7 @@ use std::fmt;
 use std::fmt::Debug;
 use std::sync::Arc;
 
+use anyhow::anyhow;
 use anyhow::format_err;
 use anyhow::Error;
 use blobstore::Loadable;
@@ -29,27 +30,36 @@ use live_commit_sync_config::LiveCommitSyncConfig;
 use manifest::Entry;
 use manifest::ManifestOps;
 use mercurial_types::FileType;
+use mercurial_types::MPath;
 use metaconfig_types::CommitSyncConfigVersion;
 use metaconfig_types::CommitSyncDirection;
 use metaconfig_types::DefaultSmallToLargeCommitSyncPathAction;
+use metaconfig_types::GitSubmodulesChangesAction;
+use mononoke_types::fsnode::Fsnode;
 use mononoke_types::fsnode::FsnodeEntry;
 use mononoke_types::typed_hash::FsnodeId;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
 use mononoke_types::NonRootMPath;
 use movers::Mover;
-use repo_blobstore::RepoBlobstoreArc;
-use repo_derived_data::RepoDerivedDataRef;
-use repo_identity::RepoIdentityRef;
 use slog::debug;
 use slog::error;
 use slog::info;
+use sorted_vector_map::SortedVectorMap;
 use synced_commit_mapping::SyncedCommitMapping;
 
 use crate::commit_syncer::CommitSyncer;
+use crate::get_git_submodule_action_by_version;
+use crate::get_x_repo_submodule_metadata_file_prefx_from_config;
+use crate::git_submodules::get_x_repo_submodule_metadata_file_path;
+use crate::git_submodules::SubmodulePath;
 use crate::types::Repo;
 use crate::types::Source;
 use crate::types::Target;
+use crate::InMemoryRepo;
+use crate::Large;
+use crate::SubmoduleDeps;
+use crate::SubmoduleExpansionData;
 
 // NOTE: Occurrences of Option<NonRootMPath> in this file have not been replaced with MPath since such a
 // replacement is only possible in cases where Option<NonRootMPath> is used to represent a path that can also
@@ -125,6 +135,36 @@ pub async fn verify_working_copy_with_version<
                 commit_syncer.reverse()?,
             ),
         };
+    let submodules_action = get_git_submodule_action_by_version(
+        ctx,
+        live_commit_sync_config.clone(),
+        version,
+        small_repo.repo_identity().id(),
+        large_repo.repo_identity().id(),
+    )
+    .await?;
+
+    let submodule_deps = commit_syncer.get_submodule_deps();
+    let x_repo_submodule_metadata_file_prefix =
+        get_x_repo_submodule_metadata_file_prefx_from_config(
+            small_repo.repo_identity().id(),
+            version,
+            live_commit_sync_config.clone(),
+        )
+        .await?;
+    let large_in_memory_repo = InMemoryRepo::from_repo(large_repo)?;
+    let sm_exp_data = match submodule_deps {
+        SubmoduleDeps::ForSync(ref deps) => Some(SubmoduleExpansionData {
+            submodule_deps: deps,
+            x_repo_submodule_metadata_file_prefix: &x_repo_submodule_metadata_file_prefix,
+            large_repo_id: Large(large_repo.repo_identity().id()),
+            large_repo: large_in_memory_repo,
+        }),
+        SubmoduleDeps::NotNeeded => None,
+    };
+    let mover = commit_syncer.get_mover_by_version(version).await?;
+    let exp_and_metadata_paths =
+        list_possible_expansion_and_metadata_paths(&mover, submodules_action, &sm_exp_data)?;
 
     let large_repo_prefixes_to_visit =
         get_large_repo_prefixes_to_visit(&commit_syncer, version, live_commit_sync_config).await?;
@@ -140,12 +180,16 @@ pub async fn verify_working_copy_with_version<
     let reverse_mover = commit_syncer.get_reverse_mover_by_version(version).await?;
     verify_working_copy_inner(
         ctx,
+        CommitSyncDirection::LargeToSmall,
         Source(large_repo),
         large_root_fsnode_id,
         Target(small_repo),
         small_root_fsnode_id,
         &reverse_mover,
         large_repo_prefixes_to_visit.clone().into_iter().collect(),
+        submodules_action,
+        &sm_exp_data,
+        &exp_and_metadata_paths,
     )
     .await?;
 
@@ -166,12 +210,16 @@ pub async fn verify_working_copy_with_version<
         .collect();
     verify_working_copy_inner(
         ctx,
+        CommitSyncDirection::SmallToLarge,
         Source(small_repo),
         small_root_fsnode_id,
         Target(large_repo),
         large_root_fsnode_id,
-        &commit_syncer.get_mover_by_version(version).await?,
+        &mover,
         small_repo_prefixes_to_visit,
+        submodules_action,
+        &sm_exp_data,
+        &exp_and_metadata_paths,
     )
     .await?;
     info!(ctx.logger(), "all is well!");
@@ -269,16 +317,16 @@ impl fmt::Display for PrintableValidationOutput {
 
 async fn verify_working_copy_inner<'a>(
     ctx: &'a CoreContext,
-    source_repo: Source<
-        &'a (impl RepoIdentityRef + RepoDerivedDataRef + RepoBlobstoreArc + Send + Sync),
-    >,
+    direction: CommitSyncDirection,
+    source_repo: Source<&'a impl Repo>,
     source_root_fsnode_id: FsnodeId,
-    target_repo: Target<
-        &'a (impl RepoIdentityRef + RepoDerivedDataRef + RepoBlobstoreArc + Send + Sync),
-    >,
+    target_repo: Target<&'a impl Repo>,
     target_root_fsnode_id: FsnodeId,
     mover: &Mover,
     prefixes_to_visit: Vec<Option<NonRootMPath>>,
+    submodules_action: GitSubmodulesChangesAction,
+    sm_exp_data: &Option<SubmoduleExpansionData<'a, impl Repo>>,
+    exp_and_metadata_paths: &ExpansionAndMetadataPaths,
 ) -> Result<(), Error> {
     let prefix_set: HashSet<_> = prefixes_to_visit
         .iter()
@@ -288,6 +336,7 @@ async fn verify_working_copy_inner<'a>(
     let out = stream::iter(prefixes_to_visit.into_iter().map(|path| {
         verify_dir(
             ctx,
+            direction,
             source_repo,
             path,
             source_root_fsnode_id.clone(),
@@ -295,6 +344,9 @@ async fn verify_working_copy_inner<'a>(
             target_root_fsnode_id.clone(),
             mover,
             &prefix_set,
+            submodules_action,
+            sm_exp_data,
+            exp_and_metadata_paths,
         )
     }))
     .buffer_unordered(100)
@@ -361,20 +413,100 @@ fn wrap_mover_result(
         None => Ok(None),
     }
 }
+/// Datastructure that allows quick identification of submodule expansion paths
+/// in the large repo and finding their corresponding metatdata.
+#[derive(Default, Debug)]
+struct ExpansionAndMetadataPaths {
+    #[allow(dead_code)]
+    expansion_path_to_metadata: SortedVectorMap<NonRootMPath, NonRootMPath>,
+    #[allow(dead_code)]
+    metadata_path_to_expansion: SortedVectorMap<NonRootMPath, NonRootMPath>,
+}
+
+fn list_possible_expansion_and_metadata_paths<'a>(
+    small_to_large_mover: &Mover,
+    submodules_action: GitSubmodulesChangesAction,
+    sm_exp_data: &Option<SubmoduleExpansionData<'a, impl Repo>>,
+) -> Result<ExpansionAndMetadataPaths, Error> {
+    match submodules_action {
+        GitSubmodulesChangesAction::Keep | GitSubmodulesChangesAction::Strip => {
+            Ok(Default::default())
+        }
+        GitSubmodulesChangesAction::Expand => {
+            let sm_exp_data = sm_exp_data
+                .as_ref()
+                .ok_or(anyhow!("submodule expansion data neded for validation"))?;
+            let mut expansion_to_metadata = Vec::new();
+            let mut metadata_to_expansion = Vec::new();
+
+            for submodule_path in sm_exp_data.submodule_deps.keys() {
+                let expansion_path =
+                    if let Some(expansion_path) = small_to_large_mover(submodule_path)? {
+                        expansion_path
+                    } else {
+                        return Err(anyhow!(
+                            "submodule path rewrites to nothing in the large repo!"
+                        ));
+                    };
+                let metadata_path = get_x_repo_submodule_metadata_file_path(
+                    &SubmodulePath(expansion_path.clone()),
+                    sm_exp_data.x_repo_submodule_metadata_file_prefix,
+                )?;
+                expansion_to_metadata.push((expansion_path.clone(), metadata_path.clone()));
+                metadata_to_expansion.push((metadata_path, expansion_path));
+            }
+            Ok(ExpansionAndMetadataPaths {
+                expansion_path_to_metadata: expansion_to_metadata.into_iter().collect(),
+                metadata_path_to_expansion: metadata_to_expansion.into_iter().collect(),
+            })
+        }
+    }
+}
+
+/// Given a source and target directories fsnodes and a mover, verify that for all submodule
+/// expansions (or submodules) in the source repo the expansion was done correctly. Also filter
+/// those out so the rest of validation process will ignore them.
+async fn verify_and_filter_out_submodule_changes<'a>(
+    _ctx: &'a CoreContext,
+    _direction: CommitSyncDirection,
+    _source_repo: Source<&'a impl Repo>,
+    source_path: &MPath,
+    source_dir: Fsnode,
+    _target_repo: Target<&'a impl Repo>,
+    _target_root_fsnode_id: FsnodeId,
+    _mover: &Mover,
+    _submodules_action: GitSubmodulesChangesAction,
+    _sm_exp_data: &Option<SubmoduleExpansionData<'a, impl Repo>>,
+    _exp_and_metadata_paths: &ExpansionAndMetadataPaths,
+) -> Result<
+    (
+        Vec<ValidationOutputElement>,
+        Vec<(NonRootMPath, FsnodeEntry)>,
+    ),
+    Error,
+> {
+    let filtered_entries = source_dir
+        .into_subentries()
+        .into_iter()
+        .map(|(elem, entry)| (source_path.join_into_non_root_mpath(&elem), entry))
+        .collect::<Vec<_>>();
+    // TODO: filtering is not implemented yet, this function is just a passthrough now
+    Ok((vec![], filtered_entries))
+}
 
 async fn verify_dir<'a>(
     ctx: &'a CoreContext,
-    source_repo: Source<
-        &'a (impl RepoIdentityRef + RepoDerivedDataRef + RepoBlobstoreArc + Send + Sync),
-    >,
+    direction: CommitSyncDirection,
+    source_repo: Source<&'a impl Repo>,
     source_path: Option<NonRootMPath>,
     source_root_fsnode_id: FsnodeId,
-    target_repo: Target<
-        &'a (impl RepoIdentityRef + RepoDerivedDataRef + RepoBlobstoreArc + Send + Sync),
-    >,
+    target_repo: Target<&'a impl Repo>,
     target_root_fsnode_id: FsnodeId,
     mover: &Mover,
     prefixes_to_visit: &HashSet<NonRootMPath>,
+    submodules_action: GitSubmodulesChangesAction,
+    sm_exp_data: &Option<SubmoduleExpansionData<'a, impl Repo>>,
+    exp_and_metadata_paths: &ExpansionAndMetadataPaths,
 ) -> Result<ValidationOutput, Error> {
     let source_blobstore = source_repo.repo_blobstore_arc();
     let target_blobstore = target_repo.repo_blobstore_arc();
@@ -386,6 +518,7 @@ async fn verify_dir<'a>(
         )
         .await?;
 
+    let mut outs = vec![];
     let inits = match maybe_source_manifest_entry {
         Some(source_entry) => match source_entry {
             Entry::Leaf(source_leaf) => {
@@ -396,23 +529,29 @@ async fn verify_dir<'a>(
             }
             Entry::Tree(source_dir_fsnode_id) => {
                 let source_dir = source_dir_fsnode_id.load(ctx, &source_blobstore).await?;
-                source_dir
-                    .into_subentries()
-                    .into_iter()
-                    .map(|(elem, entry)| {
-                        (
-                            NonRootMPath::join_opt_element(source_path.as_ref(), &elem),
-                            entry,
-                        )
-                    })
-                    .collect::<Vec<_>>()
+                let (validation_errors, filtered_source_dir) =
+                    verify_and_filter_out_submodule_changes(
+                        ctx,
+                        direction,
+                        source_repo,
+                        &source_path.clone().into(),
+                        source_dir,
+                        target_repo,
+                        target_root_fsnode_id,
+                        mover,
+                        submodules_action,
+                        sm_exp_data,
+                        exp_and_metadata_paths,
+                    )
+                    .await?;
+                outs.extend(validation_errors);
+                filtered_source_dir
             }
         },
         None => vec![],
     };
     let start_source_path = source_path;
 
-    let mut outs = vec![];
     for init in inits {
         cloned!(start_source_path, source_blobstore, target_blobstore);
         let out = bounded_traversal::bounded_traversal(
@@ -449,35 +588,50 @@ async fn verify_dir<'a>(
                     ) = (&source_entry, target_fsnode)
                     {
                         let target_dir = target_dir_fsnode_id.load(ctx, &target_blobstore).await?;
-                        let recurse = if source_dir.summary().simple_format_sha256
+                        if source_dir.summary().simple_format_sha256
                             != target_dir.summary().simple_format_sha256
                         {
-                            source_dir
-                                .id()
-                                .load(ctx, &source_blobstore)
-                                .await?
-                                .into_subentries()
-                                .into_iter()
-                                .map(|(elem, entry)| (source_path.join_element(Some(&elem)), entry))
-                                .collect()
+                            let source_dir = source_dir.id().load(ctx, &source_blobstore).await?;
+                            let (validation_errors, recurse) =
+                                verify_and_filter_out_submodule_changes(
+                                    ctx,
+                                    direction,
+                                    source_repo,
+                                    &source_path.clone().into(),
+                                    source_dir,
+                                    target_repo,
+                                    target_root_fsnode_id,
+                                    mover,
+                                    submodules_action,
+                                    sm_exp_data,
+                                    exp_and_metadata_paths,
+                                )
+                                .await?;
+                            return Ok((validation_errors, recurse));
                         } else {
-                            vec![]
+                            return Ok((vec![], vec![]));
                         };
-                        return Ok((vec![], recurse));
                     }
                     // The dir might not to map to the other side but if all subdirs map then we're good.
                     if let (FsnodeEntry::Directory(source_dir), None) =
                         (&source_entry, target_fsnode)
                     {
-                        let recurse = source_dir
-                            .id()
-                            .load(ctx, &source_blobstore)
-                            .await?
-                            .into_subentries()
-                            .into_iter()
-                            .map(|(elem, entry)| (source_path.join_element(Some(&elem)), entry))
-                            .collect();
-                        return Ok((vec![], recurse));
+                        let source_dir = source_dir.id().load(ctx, &source_blobstore).await?;
+                        let (validation_errors, recurse) = verify_and_filter_out_submodule_changes(
+                            ctx,
+                            direction,
+                            source_repo,
+                            &source_path.clone().into(),
+                            source_dir,
+                            target_repo,
+                            target_root_fsnode_id,
+                            mover,
+                            submodules_action,
+                            sm_exp_data,
+                            exp_and_metadata_paths,
+                        )
+                        .await?;
+                        return Ok((validation_errors, recurse));
                     }
 
                     let source_elem = match source_entry {

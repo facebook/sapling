@@ -1268,7 +1268,7 @@ pub enum DefaultSmallToLargeCommitSyncPathAction {
 /// the changesets before being synced.
 /// Since this is used in the small repo config, defininig a struct to set the
 /// default to true, to avoid accidentally syncing git submodules to large repos.
-#[derive(Debug, Clone, Eq, PartialEq, Default)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Default)]
 pub enum GitSubmodulesChangesAction {
     /// Sync all changes made to git submodules without alterations.
     Keep,
