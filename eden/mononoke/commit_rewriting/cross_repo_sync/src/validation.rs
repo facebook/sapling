@@ -30,6 +30,7 @@ use manifest::Entry;
 use manifest::ManifestOps;
 use mercurial_types::FileType;
 use metaconfig_types::CommitSyncConfigVersion;
+use metaconfig_types::CommitSyncDirection;
 use metaconfig_types::DefaultSmallToLargeCommitSyncPathAction;
 use mononoke_types::fsnode::FsnodeEntry;
 use mononoke_types::typed_hash::FsnodeId;
@@ -92,6 +93,11 @@ pub async fn verify_working_copy_with_version<
     version: &'a CommitSyncConfigVersion,
     live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
 ) -> Result<(), Error> {
+    info!(
+        ctx.logger(),
+        "target repo cs id: {}, mapping version: {}", target_hash, version
+    );
+
     let source_repo = commit_syncer.get_source_repo();
     let target_repo = commit_syncer.get_target_repo();
 
@@ -102,151 +108,72 @@ pub async fn verify_working_copy_with_version<
         .await?
         .into_fsnode_id();
 
+    let (small_repo, large_repo, small_root_fsnode_id, large_root_fsnode_id, commit_syncer) =
+        match commit_syncer.repos.get_direction() {
+            CommitSyncDirection::SmallToLarge => (
+                source_repo,
+                target_repo,
+                source_root_fsnode_id,
+                target_root_fsnode_id,
+                commit_syncer.clone(),
+            ),
+            CommitSyncDirection::LargeToSmall => (
+                target_repo,
+                source_repo,
+                target_root_fsnode_id,
+                source_root_fsnode_id,
+                commit_syncer.reverse()?,
+            ),
+        };
+
+    let large_repo_prefixes_to_visit =
+        get_large_repo_prefixes_to_visit(&commit_syncer, version, live_commit_sync_config).await?;
+
+    info!(ctx.logger(), "###");
     info!(
         ctx.logger(),
-        "target repo cs id: {}, mapping version: {}", target_hash, version
+        "### Checking that all the paths from the repo {} are properly rewritten to {}",
+        large_repo.repo_identity().name(),
+        small_repo.repo_identity().name(),
     );
+    info!(ctx.logger(), "###");
+    let reverse_mover = commit_syncer.get_reverse_mover_by_version(version).await?;
+    verify_working_copy_inner(
+        ctx,
+        Source(large_repo),
+        large_root_fsnode_id,
+        Target(small_repo),
+        small_root_fsnode_id,
+        &reverse_mover,
+        large_repo_prefixes_to_visit.clone().into_iter().collect(),
+    )
+    .await?;
 
-    let prefixes_to_visit =
-        get_prefixes(source_repo, commit_syncer, version, live_commit_sync_config).await?;
-
-    match prefixes_to_visit {
-        PrefixesToVisit {
-            source_prefixes_to_visit: Some(source_prefixes_to_visit),
-            target_prefixes_to_visit: None,
-        } => {
-            let mover = commit_syncer.get_mover_by_version(version).await?;
-            verify_working_copy_inner(
-                ctx,
-                Source(source_repo),
-                source_root_fsnode_id,
-                Target(target_repo),
-                target_root_fsnode_id,
-                &mover,
-                source_prefixes_to_visit.clone().into_iter().collect(),
-            )
-            .await?;
-
-            info!(ctx.logger(), "###");
-            info!(
-                ctx.logger(),
-                "### Checking all the files from repo {} that should be present in {}",
-                source_repo.repo_identity().name(),
-                target_repo.repo_identity().name(),
-            );
-            info!(ctx.logger(), "###");
-
-            let target_prefixes_to_visit = source_prefixes_to_visit
-                .into_iter()
-                .map(|prefix| wrap_mover_result(&mover, &prefix))
-                .collect::<Result<Vec<Option<Option<NonRootMPath>>>, Error>>()?;
-            let target_prefixes_to_visit = target_prefixes_to_visit.into_iter().flatten().collect();
-            verify_working_copy_inner(
-                ctx,
-                Source(target_repo),
-                target_root_fsnode_id,
-                Target(source_repo),
-                source_root_fsnode_id,
-                &commit_syncer.get_reverse_mover_by_version(version).await?,
-                target_prefixes_to_visit,
-            )
-            .await?;
-        }
-        PrefixesToVisit {
-            source_prefixes_to_visit: None,
-            target_prefixes_to_visit: Some(target_prefixes_to_visit),
-        } => {
-            let reverse_mover = commit_syncer.get_reverse_mover_by_version(version).await?;
-            info!(ctx.logger(), "###");
-            info!(
-                ctx.logger(),
-                "### Checking all the files in repo {} are present in {}",
-                target_repo.repo_identity().name(),
-                source_repo.repo_identity().name(),
-            );
-            info!(ctx.logger(), "###");
-            verify_working_copy_inner(
-                ctx,
-                Source(target_repo),
-                target_root_fsnode_id,
-                Target(source_repo),
-                source_root_fsnode_id,
-                &reverse_mover,
-                target_prefixes_to_visit.clone().into_iter().collect(),
-            )
-            .await?;
-
-            let source_prefixes_to_visit = target_prefixes_to_visit
-                .into_iter()
-                .map(|prefix| wrap_mover_result(&reverse_mover, &prefix))
-                .collect::<Result<Vec<Option<Option<NonRootMPath>>>, Error>>()?
-                .into_iter()
-                .flatten()
-                .collect();
-            verify_working_copy_inner(
-                ctx,
-                Source(source_repo),
-                source_root_fsnode_id,
-                Target(target_repo),
-                target_root_fsnode_id,
-                &commit_syncer.get_mover_by_version(version).await?,
-                source_prefixes_to_visit,
-            )
-            .await?;
-        }
-        PrefixesToVisit {
-            source_prefixes_to_visit: Some(source_prefixes_to_visit),
-            target_prefixes_to_visit: Some(target_prefixes_to_visit),
-        } => {
-            let mover = commit_syncer.get_mover_by_version(version).await?;
-            info!(ctx.logger(), "###");
-            info!(
-                ctx.logger(),
-                "### Checking all the files from repo {} that should be present in {}",
-                source_repo.repo_identity().name(),
-                target_repo.repo_identity().name(),
-            );
-            info!(ctx.logger(), "###");
-            verify_working_copy_inner(
-                ctx,
-                Source(source_repo),
-                source_root_fsnode_id,
-                Target(target_repo),
-                target_root_fsnode_id,
-                &mover,
-                source_prefixes_to_visit.clone().into_iter().collect(),
-            )
-            .await?;
-
-            info!(ctx.logger(), "###");
-            info!(
-                ctx.logger(),
-                "### Checking all the files from repo {} that should be present in {}",
-                target_repo.repo_identity().name(),
-                source_repo.repo_identity().name(),
-            );
-            info!(ctx.logger(), "###");
-            let reverse_mover = commit_syncer.get_reverse_mover_by_version(version).await?;
-            verify_working_copy_inner(
-                ctx,
-                Source(target_repo),
-                target_root_fsnode_id,
-                Target(source_repo),
-                source_root_fsnode_id,
-                &reverse_mover,
-                target_prefixes_to_visit.clone().into_iter().collect(),
-            )
-            .await?;
-        }
-        PrefixesToVisit {
-            source_prefixes_to_visit: None,
-            target_prefixes_to_visit: None,
-        } => {
-            return Err(format_err!(
-                "programming error: fast path doesn't work with no prefixes to visit!"
-            ));
-        }
-    }
+    info!(ctx.logger(), "###");
+    info!(
+        ctx.logger(),
+        "### Checking that all the paths from the repo {} are properly rewritten to {}",
+        small_repo.repo_identity().name(),
+        large_repo.repo_identity().name(),
+    );
+    info!(ctx.logger(), "###");
+    let small_repo_prefixes_to_visit = large_repo_prefixes_to_visit
+        .into_iter()
+        .map(|prefix| wrap_mover_result(&reverse_mover, &prefix))
+        .collect::<Result<Vec<Option<Option<NonRootMPath>>>, Error>>()?
+        .into_iter()
+        .flatten()
+        .collect();
+    verify_working_copy_inner(
+        ctx,
+        Source(small_repo),
+        small_root_fsnode_id,
+        Target(large_repo),
+        large_root_fsnode_id,
+        &commit_syncer.get_mover_by_version(version).await?,
+        small_repo_prefixes_to_visit,
+    )
+    .await?;
     info!(ctx.logger(), "all is well!");
     Ok(())
 }
@@ -595,15 +522,14 @@ async fn verify_dir<'a>(
 
 // Returns list of prefixes that need to be visited in both large and small
 // repositories to establish working copy equivalence.
-async fn get_prefixes<'a, M: SyncedCommitMapping + Clone + 'static, R: Repo>(
-    source_repo: &'a impl RepoIdentityRef,
+async fn get_large_repo_prefixes_to_visit<'a, M: SyncedCommitMapping + Clone + 'static, R: Repo>(
     commit_syncer: &'a CommitSyncer<M, R>,
     version: &'a CommitSyncConfigVersion,
     live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
-) -> Result<PrefixesToVisit, Error> {
+) -> Result<Vec<Option<NonRootMPath>>, Error> {
     let small_repo_id = commit_syncer.get_small_repo().repo_identity().id();
     let config = live_commit_sync_config
-        .get_commit_sync_config_by_version(source_repo.repo_identity().id(), version)
+        .get_commit_sync_config_by_version(small_repo_id, version)
         .await?;
 
     let small_repo_config = config.small_repos.get(&small_repo_id).ok_or_else(|| {
@@ -631,24 +557,7 @@ async fn get_prefixes<'a, M: SyncedCommitMapping + Clone + 'static, R: Repo>(
         }
     }
 
-    if let DefaultSmallToLargeCommitSyncPathAction::Preserve = &small_repo_config.default_action {}
-    if small_repo_id == source_repo.repo_identity().id() {
-        Ok(PrefixesToVisit {
-            source_prefixes_to_visit: None,
-            target_prefixes_to_visit: Some(prefixes_to_visit),
-        })
-    } else {
-        Ok(PrefixesToVisit {
-            source_prefixes_to_visit: Some(prefixes_to_visit),
-            target_prefixes_to_visit: None,
-        })
-    }
-}
-
-#[derive(Default)]
-pub struct PrefixesToVisit {
-    source_prefixes_to_visit: Option<Vec<Option<NonRootMPath>>>,
-    target_prefixes_to_visit: Option<Vec<Option<NonRootMPath>>>,
+    Ok(prefixes_to_visit)
 }
 
 /// This function returns what bookmarks are different between a source repo and a target repo.
