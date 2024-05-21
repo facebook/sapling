@@ -1096,17 +1096,6 @@ def ordinarypath(p):
     return p and p[0] != "." and p[-1] != "~"
 
 
-# distutils expects version to be str/unicode. Converting it to
-# unicode on Python 2 still works because it won't contain any
-# non-ascii bytes and will be implicitly converted back to bytes
-# when operated on.
-setupversion = sapling_version
-
-if os.name == "nt":
-    # Windows binary file versions for exe/dll files must have the
-    # form W.X.Y.Z, where W,X,Y,Z are numbers in the range 0..65535
-    setupversion = sapling_version.split("+", 1)[0]
-
 if sys.platform == "darwin" and os.path.exists("/usr/bin/xcodebuild"):
     xcode_version = runcmd(["/usr/bin/xcodebuild", "-version"], {})[1].splitlines()
     if xcode_version:
@@ -1237,7 +1226,7 @@ if sys.platform == "cygwin":
 
 setup(
     name="sapling",
-    version=setupversion,
+    version="0.0.1",  # dummy version to make setuptools happy
     author="Olivia Mackall and many others",
     url="https://sapling-scm.com/",
     description=(
