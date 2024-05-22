@@ -24,6 +24,7 @@ use metaconfig_types::SmallRepoCommitSyncConfig;
 use metaconfig_types::SmallRepoGitSubmoduleConfig;
 use metaconfig_types::SmallRepoPermanentConfig;
 use metaconfig_types::DEFAULT_GIT_SUBMODULE_METADATA_FILE_PREFIX;
+use mononoke_types::hash::GitSha1;
 use mononoke_types::NonRootMPath;
 use mononoke_types::RepositoryId;
 use repos::RawCommitSyncConfig;
@@ -190,6 +191,7 @@ impl Convert for RawCommitSyncSmallRepoConfig {
             git_submodules_action,
             submodule_dependencies,
             submodule_metadata_file_prefix,
+            dangling_submodule_pointers,
             ..
         } = self;
 
@@ -227,6 +229,11 @@ impl Convert for RawCommitSyncSmallRepoConfig {
             Some(git_submodules_action) => git_submodules_action.convert()?,
             None => GitSubmodulesChangesAction::default(),
         };
+        let dangling_submodule_pointers = dangling_submodule_pointers
+            .unwrap_or(Vec::new())
+            .into_iter()
+            .map(|git_commit_str| GitSha1::from_str(&git_commit_str))
+            .collect::<Result<Vec<_>>>()?;
 
         Ok(SmallRepoCommitSyncConfig {
             default_action,
@@ -235,6 +242,7 @@ impl Convert for RawCommitSyncSmallRepoConfig {
                 git_submodules_action,
                 submodule_dependencies,
                 submodule_metadata_file_prefix,
+                dangling_submodule_pointers,
             },
         })
     }

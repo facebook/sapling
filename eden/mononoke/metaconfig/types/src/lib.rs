@@ -29,6 +29,7 @@ use ascii::AsciiString;
 use bookmarks_types::BookmarkKey;
 use derive_more::From;
 use derive_more::Into;
+use mononoke_types::hash::GitSha1;
 use mononoke_types::path::MPath;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
@@ -1303,6 +1304,16 @@ pub struct SmallRepoGitSubmoduleConfig {
     /// named "<PREFIX><SUBMODULE_PATH>", e.g. ".x-repo-submodule-voip".
     /// This file will store the git commit that the expansion corresponds to.
     pub submodule_metadata_file_prefix: String,
+
+    /// List git commit hashes that are known dangling submodule pointers in the
+    /// repo's history, i.e. don't actually exist in the submodule repo it's
+    /// supposed to point to.
+    /// This can happen after non-fast-forward pushes or accidentally pushing
+    /// commits with local submodule pointers.
+    ///
+    /// The expansion of these commits will contain a single text file informing
+    /// that the expansion belongs to a dangling submodule pointer.
+    pub dangling_submodule_pointers: Vec<GitSha1>,
 }
 
 impl Default for SmallRepoGitSubmoduleConfig {
@@ -1311,6 +1322,7 @@ impl Default for SmallRepoGitSubmoduleConfig {
             git_submodules_action: GitSubmodulesChangesAction::default(),
             submodule_dependencies: HashMap::new(),
             submodule_metadata_file_prefix: DEFAULT_GIT_SUBMODULE_METADATA_FILE_PREFIX.to_string(),
+            dangling_submodule_pointers: Vec::new(),
         }
     }
 }
