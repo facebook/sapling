@@ -9,6 +9,7 @@ import type {Deferred} from 'shared/utils';
 
 import {useCommand} from './ISLShortcuts';
 import {Modal} from './Modal';
+import {writeAtom} from './jotaiUtils';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {atom, useAtom, useSetAtom} from 'jotai';
 import React, {useCallback, useEffect, useRef} from 'react';
@@ -165,4 +166,15 @@ export function useModal(): <T>(config: ModalConfig<T>) => Promise<T | undefined
     },
     [setModal],
   );
+}
+
+export function showModal<T>(config: ModalConfig<T>): Promise<T | undefined> {
+  const deferred = defer<T | undefined>();
+  writeAtom(modalState, {
+    config: config as ModalConfig<unknown>,
+    visible: true,
+    deferred: deferred as Deferred<unknown | undefined>,
+  });
+
+  return deferred.promise as Promise<T>;
 }
