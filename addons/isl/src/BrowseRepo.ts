@@ -5,12 +5,14 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {Hash} from './types';
+import type {Hash, RepoRelativePath} from './types';
+import type {Comparison} from 'shared/Comparison';
 
 import serverAPI from './ClientToServerAPI';
 import {configBackedAtom} from './jotaiUtils';
 import foundPlatform from './platform';
-import {showToast} from './toast';
+import {copyAndShowToast, showToast} from './toast';
+import {revsetForComparison} from 'shared/Comparison';
 
 export const supportsBrowseUrlForHash = configBackedAtom(
   'fbcodereview.code-browser-url',
@@ -20,7 +22,7 @@ export const supportsBrowseUrlForHash = configBackedAtom(
 );
 
 export async function openBrowseUrlForHash(hash: Hash) {
-  serverAPI.postMessage({type: 'getRepoUrlAtHash', hash});
+  serverAPI.postMessage({type: 'getRepoUrlAtHash', revset: hash});
   const msg = await serverAPI.nextMessageMatching('gotRepoUrlAtHash', () => true);
 
   const url = msg.url;
@@ -31,4 +33,19 @@ export async function openBrowseUrlForHash(hash: Hash) {
     return;
   }
   foundPlatform.openExternalLink(url.value);
+}
+
+export async function copyUrlForFile(path: RepoRelativePath, comparison: Comparison) {
+  const revset = revsetForComparison(comparison);
+  serverAPI.postMessage({type: 'getRepoUrlAtHash', revset, path});
+  const msg = await serverAPI.nextMessageMatching('gotRepoUrlAtHash', () => true);
+
+  const url = msg.url;
+  if (url.error) {
+    showToast('Failed to get repo URL to copy', {durationMs: 5000});
+    return;
+  } else if (url.value == null) {
+    return;
+  }
+  copyAndShowToast(url.value, undefined);
 }

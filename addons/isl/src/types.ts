@@ -670,7 +670,7 @@ export type ClientToServerMessage =
   | {type: 'getConfiguredMergeTool'}
   | {type: 'updateRemoteDiffMessage'; diffId: DiffId; title: string; description: string}
   | {type: 'pageVisibility'; state: PageVisibility}
-  | {type: 'getRepoUrlAtHash'; hash: Hash; path?: string}
+  | {type: 'getRepoUrlAtHash'; revset: Revset; path?: string}
   | {type: 'requestComparison'; comparison: Comparison}
   | {
       type: 'requestComparisonContextLines';

@@ -911,7 +911,7 @@ export default class ServerToClientAPI {
         break;
       }
       case 'getRepoUrlAtHash': {
-        const args = ['url', '--rev', data.hash];
+        const args = ['url', '--rev', data.revset];
         // validate that the path is a valid file in repo
         if (data.path != null && absolutePathForFileInRepo(data.path, repo) != null) {
           args.push(data.path);

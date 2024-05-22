@@ -11,6 +11,7 @@ import type {ChangedFileType, GeneratedStatus} from './types';
 import type {ReactNode} from 'react';
 import type {Comparison} from 'shared/Comparison';
 
+import {copyUrlForFile, supportsBrowseUrlForHash} from './BrowseRepo';
 import {type ChangedFilesDisplayType} from './ChangedFileDisplayTypePicker';
 import {generatedStatusToLabel, generatedStatusDescription} from './GeneratedFile';
 import {PartialFileSelectionWithMode} from './PartialFileSelection';
@@ -82,6 +83,7 @@ export function File({
       {label: t('Copy Filename'), onClick: () => clipboardCopy(basename(file.path))},
       {label: t('Open File'), onClick: () => platform.openFile(file.path)},
     ];
+
     if (platform.openContainingFolder != null) {
       options.push({
         label: t('Open Containing Folder'),
@@ -94,6 +96,15 @@ export function File({
           replace: {$comparison: labelForComparison(comparison)},
         }),
         onClick: () => platform.openDiff?.(file.path, comparison),
+      });
+    }
+
+    if (readAtom(supportsBrowseUrlForHash)) {
+      options.push({
+        label: t('Copy file URL'),
+        onClick: () => {
+          copyUrlForFile(file.path, comparison);
+        },
       });
     }
     return options;
