@@ -1,7 +1,14 @@
-
   $ configure modernclient mutation
   $ enable rebase amend undo
   $ setconfig rebase.reproducible-commits=true
+
+#testcases in-memory not-in-memory
+
+#if in-memory
+  $ setconfig rebase.experimental.inmemory=true
+#else
+  $ setconfig rebase.experimental.inmemory=false
+#endif
 
   $ newclientrepo
   $ drawdag <<EOS

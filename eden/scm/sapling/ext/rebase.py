@@ -91,6 +91,13 @@ def _savegraft(ctx, extra) -> None:
         extra["intermediate-source"] = s
 
 
+def _reproduciblecommits(ctx, extra) -> None:
+    # If we want reproducible commits, we need stable dates. The mutation date in
+    # extras is always "now", which affects the commit hash. Nothing uses this
+    # extra, so should be okay to skip.
+    extra.pop("mutdate", None)
+
+
 def _savebranch(ctx, extra) -> None:
     extra["branch"] = ctx.branch()
 
@@ -251,6 +258,10 @@ class rebaseruntime:
 
         e = opts.get("extrafn")  # internal, used by e.g. hgsubversion
         self.extrafns = [_savegraft]
+
+        if repo.ui.configbool("rebase", "reproducible-commits"):
+            self.extrafns.append(_reproduciblecommits)
+
         if e:
             self.extrafns = [e]
 
@@ -1702,12 +1713,6 @@ def concludenode(
             mutinfo = mutation.record(repo, extra, preds, mutop)
         if extrafn:
             extrafn(ctx, extra)
-
-        if repo.ui.configbool("rebase", "reproducible-commits"):
-            # If we want reproducible commits, we need stable dates. The mutation date in
-            # extras is always "now", which affects the commit hash. Nothing uses this
-            # extra, so should be okay to skip.
-            extra.pop("mutdate", None)
 
         loginfo = {"predecessors": ctx.hex(), "mutation": "rebase"}
 
