@@ -34,8 +34,11 @@ union UnodeEntry {
 
 struct ManifestUnode {
   1: list<id.ManifestUnodeId> parents;
-  2: map<path.MPathElement, UnodeEntry> (
-    rust.type = "sorted_vector_map::SortedVectorMap",
-  ) subentries;
+  2: map_MPathElement_UnodeEntry_3251 subentries;
   3: id.ChangesetId linknode;
 } (rust.exhaustive)
+
+// The following were automatically generated and may benefit from renaming.
+typedef map<path.MPathElement, UnodeEntry> (
+  rust.type = "sorted_vector_map::SortedVectorMap",
+) map_MPathElement_UnodeEntry_3251

@@ -51,8 +51,11 @@ struct SkeletonManifestEntry {
 // represented by a single skeleton manifest.  Skeleton manifest identities
 // change when files are added or removed.
 struct SkeletonManifest {
-  1: map<path.MPathElement, SkeletonManifestEntry> (
-    rust.type = "sorted_vector_map::SortedVectorMap",
-  ) subentries;
+  1: map_MPathElement_SkeletonManifestEntry_4470 subentries;
   2: SkeletonManifestSummary summary;
 } (rust.exhaustive)
+
+// The following were automatically generated and may benefit from renaming.
+typedef map<path.MPathElement, SkeletonManifestEntry> (
+  rust.type = "sorted_vector_map::SortedVectorMap",
+) map_MPathElement_SkeletonManifestEntry_4470

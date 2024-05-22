@@ -126,9 +126,7 @@ struct BlameDataV2 {
   // Changesets are removed from this map when all lines that were added in the
   // changeset are moved and none of the ranges reference it.  This means there
   // are gaps in this mapping, and so a map is used.
-  2: map<i32, id.ChangesetId> (
-    rust.type = "sorted_vector_map::SortedVectorMap",
-  ) csids;
+  2: map_i32_ChangesetId_1681 csids;
 
   // The maximum index that is assigned to a changeset id.  This is also the
   // index that would be assigned to the current changeset, as long as the
@@ -150,3 +148,8 @@ union BlameV2 {
   // This version of the file was rejected for blaming.
   2: BlameRejected rejected;
 }
+
+// The following were automatically generated and may benefit from renaming.
+typedef map<i32, id.ChangesetId> (
+  rust.type = "sorted_vector_map::SortedVectorMap",
+) map_i32_ChangesetId_1681

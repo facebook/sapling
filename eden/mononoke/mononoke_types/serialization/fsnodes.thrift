@@ -60,8 +60,11 @@ union FsnodeEntry {
 // files and manifests, and the number of files and sub-directories within
 // directories.
 struct Fsnode {
-  1: map<path.MPathElement, FsnodeEntry> (
-    rust.type = "sorted_vector_map::SortedVectorMap",
-  ) subentries;
+  1: map_MPathElement_FsnodeEntry_7103 subentries;
   2: FsnodeSummary summary;
 } (rust.exhaustive)
+
+// The following were automatically generated and may benefit from renaming.
+typedef map<path.MPathElement, FsnodeEntry> (
+  rust.type = "sorted_vector_map::SortedVectorMap",
+) map_MPathElement_FsnodeEntry_7103

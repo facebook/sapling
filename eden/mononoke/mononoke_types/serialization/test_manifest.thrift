@@ -33,9 +33,7 @@ union TestManifestEntry {
 } (rust.exhaustive)
 
 struct TestManifest {
-  1: map<path.MPathElement, TestManifestEntry> (
-    rust.type = "sorted_vector_map::SortedVectorMap",
-  ) subentries;
+  1: map_MPathElement_TestManifestEntry_3039 subentries;
 } (rust.exhaustive)
 
 // TestShardedManifest is a sharded version of TestManifest (uses ShardedMapV2 in place of SortedVectorMap).
@@ -57,3 +55,8 @@ union TestShardedManifestEntry {
 struct TestShardedManifest {
   1: sharded_map.ShardedMapV2Node subentries;
 } (rust.exhaustive)
+
+// The following were automatically generated and may benefit from renaming.
+typedef map<path.MPathElement, TestManifestEntry> (
+  rust.type = "sorted_vector_map::SortedVectorMap",
+) map_MPathElement_TestManifestEntry_3039

@@ -32,9 +32,7 @@ typedef data.LargeBinary MapValue
 struct ShardedMapTerminalNode {
   // The key is the original map key minus the prefixes and edges from all
   // intermediate nodes in the path to this node.
-  1: map<data.SmallBinary, MapValue> (
-    rust.type = "sorted_vector_map::SortedVectorMap",
-  ) values;
+  1: map_SmallBinary_MapValue_6340 values;
 } (rust.exhaustive)
 
 // An intermediate node of the sharded map node tree, though it may have a
@@ -47,9 +45,7 @@ struct ShardedMapIntermediateNode {
   2: optional MapValue value;
   // Children of this node. We only store the first byte of the edge,
   // the remaining bytes are stored in the child node itself.
-  3: map<byte, ShardedMapEdge> (
-    rust.type = "sorted_vector_map::SortedVectorMap",
-  ) edges;
+  3: map_byte_ShardedMapEdge_2565 edges;
 } (rust.exhaustive)
 
 // An edge from a map node to another
@@ -145,7 +141,16 @@ union LoadableShardedMapV2Node {
 struct ShardedMapV2Node {
   1: data.SmallBinary prefix;
   2: optional ShardedMapV2Value value;
-  3: map<byte, LoadableShardedMapV2Node> (
-    rust.type = "sorted_vector_map::SortedVectorMap",
-  ) children;
+  3: map_byte_LoadableShardedMapV2Node_7012 children;
 } (rust.exhaustive)
+
+// The following were automatically generated and may benefit from renaming.
+typedef map<data.SmallBinary, MapValue> (
+  rust.type = "sorted_vector_map::SortedVectorMap",
+) map_SmallBinary_MapValue_6340
+typedef map<byte, LoadableShardedMapV2Node> (
+  rust.type = "sorted_vector_map::SortedVectorMap",
+) map_byte_LoadableShardedMapV2Node_7012
+typedef map<byte, ShardedMapEdge> (
+  rust.type = "sorted_vector_map::SortedVectorMap",
+) map_byte_ShardedMapEdge_2565
