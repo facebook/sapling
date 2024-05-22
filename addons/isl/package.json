@@ -6,7 +6,7 @@
   "dependencies": {
     "@stylexjs/stylex": "^0.4.1",
     "@testing-library/jest-dom": "^5.14.1",
-    "@testing-library/react": "^13.0.0",
+    "@testing-library/react": "^15.0.6",
     "@testing-library/user-event": "^13.2.1",
     "@types/node": "^16.7.13",
     "@types/react": "^18.3.1",
