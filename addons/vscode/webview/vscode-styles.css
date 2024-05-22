@@ -10,7 +10,8 @@ body {
   overflow: hidden;
 }
 
-html .vscode-high-contrast {
+html body.vscode-high-contrast.vscode-high-contrast > * {
+  --button-primary-hover-background: var(--vscode-contrastBorder);
   --selected-commit-border: 1px solid var(--vscode-button-border);
 }
 
@@ -25,6 +26,7 @@ code {
    which is an undesirably noticeable red color.
    Just unset this to reset to more browser-like style. */
   color: unset;
+  background-color: unset;
 }
 
 /* Improve handling of the "Modern" themes, which have a particularly "loud" badge color. */
