@@ -242,7 +242,12 @@ async fn validate_submodule_expansion<'a, R: Repo>(
         ctx,
         "Getting root fsnode id from submodule git commit",
         format!("Submodule repo: {}", &submodule_repo.repo_identity().name()),
-        root_fsnode_id_from_submodule_git_commit(ctx, submodule_repo, git_hash),
+        root_fsnode_id_from_submodule_git_commit(
+            ctx,
+            submodule_repo,
+            git_hash,
+            &sm_exp_data.dangling_submodule_pointers,
+        ),
     )
     .await?;
 
@@ -807,6 +812,7 @@ async fn validate_expansion_directory_against_submodule_manifest_entry<'a, R: Re
         ctx,
         recursive_submodule_repo.as_ref(),
         exp_metadata_git_hash,
+        &sm_exp_data.dangling_submodule_pointers,
     )
     .await?;
 

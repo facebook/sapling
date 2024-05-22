@@ -14,15 +14,18 @@ use std::str::FromStr;
 use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
+use blobstore::Loadable;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarksRef;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use git_types::MappedGitCommitId;
 use maplit::btreemap;
+use mononoke_types::hash::GitSha1;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileType;
 use mononoke_types::NonRootMPath;
+use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentityRef;
 use tests_utils::CreateCommitContext;
@@ -1611,6 +1614,357 @@ async fn test_submodule_validation_fails_with_file_on_metadata_file_path_in_recu
 
     // When this is fixed, the commit sync should fail, instead of validation.
     // check_mapping(ctx.clone(), &commit_syncer, repo_a_cs_id, None).await;
+
+    Ok(())
+}
+
+/// Test that expanding a **known** dangling submodule pointer works as expected.
+/// A commit is created in the submodule repo with a README file informing that
+/// the pointer didn't exist in the submodule.
+/// The list of known dangling submodule pointers can be set in the small repo's
+/// sync config.
+#[fbinit::test]
+async fn test_expanding_known_dangling_submodule_pointers(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb.clone());
+
+    let (repo_c, repo_c_cs_map) = build_repo_c(fb).await?;
+    let c_master_mapped_git_commit = repo_c
+        .repo_derived_data()
+        .derive::<MappedGitCommitId>(&ctx, repo_c_cs_map["C_B"])
+        .await?;
+    let c_master_git_sha1 = *c_master_mapped_git_commit.oid();
+
+    let repo_c_submodule_path_in_repo_b = NonRootMPath::new("submodules/repo_c")?;
+    let (repo_b, repo_b_cs_map) =
+        build_repo_b_with_c_submodule(fb, c_master_git_sha1, &repo_c_submodule_path_in_repo_b)
+            .await?;
+    let repo_c_submodule_path =
+        NonRootMPath::new(REPO_B_SUBMODULE_PATH)?.join(&repo_c_submodule_path_in_repo_b);
+
+    let SubmoduleSyncTestData {
+        repo_a_info: (repo_a, repo_a_cs_map),
+        large_repo_info: (large_repo, _large_repo_master),
+        commit_syncer,
+        ..
+    } = build_submodule_sync_test_data(
+        fb,
+        &repo_b,
+        vec![
+            (NonRootMPath::new(REPO_B_SUBMODULE_PATH)?, repo_b.clone()),
+            (repo_c_submodule_path, repo_c.clone()),
+        ],
+    )
+    .await?;
+
+    // COMMIT 1: set a dangling pointer in repo_b submodule
+    const COMMIT_MSG_1: &str = "Set submodule pointer to known dangling pointer from config";
+
+    // Test expanding a known dangling submodule pointer
+    let repo_b_dangling_pointer = GitSha1::from_str(REPO_B_DANGLING_GIT_COMMIT_HASH)?;
+
+    let repo_a_cs_id =
+        CreateCommitContext::new(&ctx, &repo_a, vec![*repo_a_cs_map.get("A_C").unwrap()])
+            .set_message(COMMIT_MSG_1)
+            .add_file_with_type(
+                REPO_B_SUBMODULE_PATH,
+                repo_b_dangling_pointer.into_inner(),
+                FileType::GitSubmodule,
+            )
+            .commit()
+            .await?;
+
+    let large_repo_cs_id = sync_to_master(ctx.clone(), &commit_syncer, repo_a_cs_id)
+        .await?
+        .ok_or(anyhow!("Failed to sync commit"))?;
+
+    // Look for the README file and assert its content matches expectation
+    let bonsai = large_repo_cs_id
+        .load(&ctx, large_repo.repo_blobstore())
+        .await
+        .context("Failed to load bonsai in large repo")?;
+    let readme_file_change = bonsai
+        .file_changes_map()
+        .get(&NonRootMPath::new("repo_a/submodules/repo_b/README.TXT")?)
+        .ok_or(anyhow!(
+            "No file change for README file about dangling submodule pointer"
+        ))?;
+    let readme_file_content_id = readme_file_change
+        .simplify()
+        .expect("Should be a file change with content id")
+        .content_id();
+    let readme_file_bytes =
+        filestore::fetch_concat(large_repo.repo_blobstore(), &ctx, readme_file_content_id).await?;
+    let readme_file_content = std::str::from_utf8(readme_file_bytes.as_ref())?;
+
+    assert_eq!(
+        readme_file_content,
+        "This is the expansion of a known dangling submodule pointer e957dda44445098cfbaea99e4771e737944e3da4. This commit doesn't exist in the repo repo_b",
+        "Dangling submodule pointer expansion README file doesn't have the right content"
+    );
+
+    check_submodule_metadata_file_in_large_repo(
+        &ctx,
+        &large_repo,
+        large_repo_cs_id,
+        NonRootMPath::new("repo_a/submodules/.x-repo-submodule-repo_b")?,
+        &repo_b_dangling_pointer,
+    )
+    .await?;
+
+    check_mapping(
+        ctx.clone(),
+        &commit_syncer,
+        repo_a_cs_id,
+        Some(large_repo_cs_id),
+    )
+    .await;
+
+    // COMMIT 2: set repo_b submodule pointer to a new valid commit
+
+    const COMMIT_MSG_2: &str = "Fix repo_b submodule pointer";
+
+    let repo_b_cs_id =
+        CreateCommitContext::new(&ctx, &repo_b, vec![*repo_b_cs_map.get("B_B").unwrap()])
+            .set_message("Add file to repo_b")
+            .add_file("B_C", "new file content")
+            .commit()
+            .await?;
+
+    let repo_b_mapped_git_commit = repo_b
+        .repo_derived_data()
+        .derive::<MappedGitCommitId>(&ctx, repo_b_cs_id)
+        .await?;
+    let repo_b_git_commit_hash = *repo_b_mapped_git_commit.oid();
+
+    let repo_a_cs_id = CreateCommitContext::new(&ctx, &repo_a, vec![repo_a_cs_id])
+        .set_message(COMMIT_MSG_2)
+        .add_file_with_type(
+            REPO_B_SUBMODULE_PATH,
+            repo_b_git_commit_hash.into_inner(),
+            FileType::GitSubmodule,
+        )
+        .commit()
+        .await?;
+
+    let large_repo_cs_id = sync_to_master(ctx.clone(), &commit_syncer, repo_a_cs_id)
+        .await?
+        .ok_or(anyhow!("Failed to sync commit"))?;
+
+    check_submodule_metadata_file_in_large_repo(
+        &ctx,
+        &large_repo,
+        large_repo_cs_id,
+        NonRootMPath::new("repo_a/submodules/.x-repo-submodule-repo_b")?,
+        &repo_b_git_commit_hash,
+    )
+    .await?;
+
+    check_mapping(
+        ctx.clone(),
+        &commit_syncer,
+        repo_a_cs_id,
+        Some(large_repo_cs_id),
+    )
+    .await;
+
+    // COMMIT 3: set a dangling pointer in repo_c submodule in repo_b to test
+    // dangling pointers in recursive submodules.
+
+    const COMMIT_MSG_3: &str = "Set repo_c recursive submodule pointer to known dangling pointer";
+
+    let repo_c_dangling_pointer = GitSha1::from_str(REPO_C_DANGLING_GIT_COMMIT_HASH)?;
+
+    let repo_b_cs_id = CreateCommitContext::new(&ctx, &repo_b, vec![repo_b_cs_id])
+        .set_message("Set dangling pointer in repo_c recursive submodule")
+        .add_file_with_type(
+            repo_c_submodule_path_in_repo_b.clone(),
+            repo_c_dangling_pointer.into_inner(),
+            FileType::GitSubmodule,
+        )
+        .commit()
+        .await?;
+
+    let repo_b_mapped_git_commit = repo_b
+        .repo_derived_data()
+        .derive::<MappedGitCommitId>(&ctx, repo_b_cs_id)
+        .await?;
+    let repo_b_git_commit_hash = *repo_b_mapped_git_commit.oid();
+
+    let repo_a_cs_id = CreateCommitContext::new(&ctx, &repo_a, vec![repo_a_cs_id])
+        .set_message(COMMIT_MSG_3)
+        .add_file_with_type(
+            REPO_B_SUBMODULE_PATH,
+            repo_b_git_commit_hash.into_inner(),
+            FileType::GitSubmodule,
+        )
+        .commit()
+        .await?;
+
+    let large_repo_cs_id = sync_to_master(ctx.clone(), &commit_syncer, repo_a_cs_id)
+        .await?
+        .ok_or(anyhow!("Failed to sync commit"))?;
+
+    check_submodule_metadata_file_in_large_repo(
+        &ctx,
+        &large_repo,
+        large_repo_cs_id,
+        NonRootMPath::new("repo_a/submodules/.x-repo-submodule-repo_b")?,
+        &repo_b_git_commit_hash,
+    )
+    .await?;
+
+    check_mapping(
+        ctx.clone(),
+        &commit_syncer,
+        repo_a_cs_id,
+        Some(large_repo_cs_id),
+    )
+    .await;
+
+    // COMMIT 4: set repo_c recursive submodule pointer to valid commit
+    const COMMIT_MSG_4: &str = "Fix repo_c recursive submodule by pointing it back to C_B";
+
+    let repo_b_cs_id = CreateCommitContext::new(&ctx, &repo_b, vec![repo_b_cs_id])
+        .set_message("Fix dangling pointer in repo_c recursive submodule")
+        .add_file_with_type(
+            repo_c_submodule_path_in_repo_b,
+            c_master_git_sha1.into_inner(),
+            FileType::GitSubmodule,
+        )
+        .commit()
+        .await?;
+
+    let repo_b_mapped_git_commit = repo_b
+        .repo_derived_data()
+        .derive::<MappedGitCommitId>(&ctx, repo_b_cs_id)
+        .await?;
+    let repo_b_git_commit_hash = *repo_b_mapped_git_commit.oid();
+
+    let repo_a_cs_id = CreateCommitContext::new(&ctx, &repo_a, vec![repo_a_cs_id])
+        .set_message(COMMIT_MSG_4)
+        .add_file_with_type(
+            REPO_B_SUBMODULE_PATH,
+            repo_b_git_commit_hash.into_inner(),
+            FileType::GitSubmodule,
+        )
+        .commit()
+        .await?;
+
+    let large_repo_cs_id = sync_to_master(ctx.clone(), &commit_syncer, repo_a_cs_id)
+        .await?
+        .ok_or(anyhow!("Failed to sync commit"))?;
+
+    check_submodule_metadata_file_in_large_repo(
+        &ctx,
+        &large_repo,
+        large_repo_cs_id,
+        NonRootMPath::new("repo_a/submodules/.x-repo-submodule-repo_b")?,
+        &repo_b_git_commit_hash,
+    )
+    .await?;
+
+    check_submodule_metadata_file_in_large_repo(
+        &ctx,
+        &large_repo,
+        large_repo_cs_id,
+        NonRootMPath::new("repo_a/submodules/repo_b/submodules/.x-repo-submodule-repo_c")?,
+        &c_master_git_sha1,
+    )
+    .await?;
+
+    check_mapping(
+        ctx.clone(),
+        &commit_syncer,
+        repo_a_cs_id,
+        Some(large_repo_cs_id),
+    )
+    .await;
+
+    // ------------------ Assertions / validations ------------------
+
+    // Get all the changesets
+    let large_repo_changesets = get_all_changeset_data_from_repo(&ctx, &large_repo).await?;
+
+    // Ensure everything can be derived successfully
+    derive_all_data_types_for_repo(&ctx, &large_repo, &large_repo_changesets).await?;
+
+    compare_expected_changesets(
+        large_repo_changesets.last_chunk::<4>().unwrap(),
+        &[
+            // COMMIT 1: Expansion of known dangling pointer
+            ExpectedChangeset::new_by_file_change(
+                COMMIT_MSG_1,
+                vec![
+                    // Submodule metadata file is updated
+                    "repo_a/submodules/.x-repo-submodule-repo_b",
+                    // README file is added with a message informing that this
+                    // submodule pointer was dangling.
+                    "repo_a/submodules/repo_b/README.TXT",
+                ],
+                // Should delete everything from previous expansion
+                vec![
+                    "repo_a/submodules/repo_b/B_A",
+                    "repo_a/submodules/repo_b/B_B",
+                    "repo_a/submodules/repo_b/submodules/.x-repo-submodule-repo_c",
+                    "repo_a/submodules/repo_b/submodules/repo_c/C_A",
+                    "repo_a/submodules/repo_b/submodules/repo_c/C_B",
+                ],
+            ),
+            // COMMIT 2: Fix the dangling pointer
+            ExpectedChangeset::new_by_file_change(
+                COMMIT_MSG_2,
+                vec![
+                    // Submodule metadata file is updated
+                    "repo_a/submodules/.x-repo-submodule-repo_b",
+                    // Add back files from previous submodule pointer
+                    "repo_a/submodules/repo_b/B_A",
+                    "repo_a/submodules/repo_b/B_B",
+                    "repo_a/submodules/repo_b/submodules/.x-repo-submodule-repo_c",
+                    "repo_a/submodules/repo_b/submodules/repo_c/C_A",
+                    "repo_a/submodules/repo_b/submodules/repo_c/C_B",
+                    // Plus the new file added in the new valid pointer
+                    "repo_a/submodules/repo_b/B_C",
+                ],
+                vec![
+                    // Delete README file from dangling pointer expansion
+                    "repo_a/submodules/repo_b/README.TXT",
+                ],
+            ),
+            // COMMIT 3: Set dangling pointer in repo_c recursive submodule
+            ExpectedChangeset::new_by_file_change(
+                COMMIT_MSG_3,
+                vec![
+                    // Submodule metadata files are updated
+                    "repo_a/submodules/.x-repo-submodule-repo_b",
+                    "repo_a/submodules/repo_b/submodules/.x-repo-submodule-repo_c",
+                    // README file is added with a message informing that this
+                    // submodule pointer was dangling.
+                    "repo_a/submodules/repo_b/submodules/repo_c/README.TXT",
+                ],
+                // Should delete everything from previous expansion
+                vec![
+                    "repo_a/submodules/repo_b/submodules/repo_c/C_A",
+                    "repo_a/submodules/repo_b/submodules/repo_c/C_B",
+                ],
+            ),
+            // COMMIT 4: Fix dangling pointer in repo_c recursive submodule
+            ExpectedChangeset::new_by_file_change(
+                COMMIT_MSG_4,
+                vec![
+                    // Submodule metadata files are updated
+                    "repo_a/submodules/.x-repo-submodule-repo_b",
+                    "repo_a/submodules/repo_b/submodules/.x-repo-submodule-repo_c",
+                    // Add back files from expansion of commit C_B
+                    "repo_a/submodules/repo_b/submodules/repo_c/C_A",
+                    "repo_a/submodules/repo_b/submodules/repo_c/C_B",
+                ],
+                vec![
+                    // Delete README file from dangling pointer expansion
+                    "repo_a/submodules/repo_b/submodules/repo_c/README.TXT",
+                ],
+            ),
+        ],
+    )?;
 
     Ok(())
 }

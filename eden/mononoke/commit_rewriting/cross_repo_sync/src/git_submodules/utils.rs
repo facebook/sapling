@@ -14,6 +14,8 @@ use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
+use blobstore::Storable;
+use changesets_creation::save_changesets;
 use context::CoreContext;
 use fsnodes::RootFsnodeId;
 use futures::future;
@@ -29,9 +31,12 @@ use manifest::Entry;
 use manifest::ManifestOps;
 use mononoke_types::hash::GitSha1;
 use mononoke_types::hash::RichGitSha1;
+use mononoke_types::BlobstoreValue;
 use mononoke_types::BonsaiChangesetMut;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
+use mononoke_types::FileChange;
+use mononoke_types::FileContents;
 use mononoke_types::FileType;
 use mononoke_types::FsnodeId;
 use mononoke_types::MPathElement;
@@ -39,10 +44,12 @@ use mononoke_types::NonRootMPath;
 use movers::Mover;
 use repo_blobstore::RepoBlobstoreArc;
 use repo_derived_data::RepoDerivedDataRef;
+use sorted_vector_map::SortedVectorMap;
 
 use crate::git_submodules::expand::SubmoduleExpansionData;
 use crate::git_submodules::expand::SubmodulePath;
 use crate::git_submodules::in_memory_repo::InMemoryRepo;
+use crate::reporting::log_warning;
 use crate::types::Repo;
 
 /// Get the git hash from a submodule file, which represents the commit from the
@@ -274,18 +281,10 @@ pub(crate) async fn root_fsnode_id_from_submodule_git_commit(
     ctx: &CoreContext,
     repo: &impl Repo,
     git_hash: GitSha1,
+    dangling_submodule_pointers: &[GitSha1],
 ) -> Result<FsnodeId> {
-    let cs_id: ChangesetId = repo
-        .bonsai_git_mapping()
-        .get_bonsai_from_git_sha1(ctx, git_hash)
-        .await?
-        .ok_or_else(|| {
-            anyhow!(
-                "Failed to get changeset id from git submodule commit hash {} in repo {}",
-                &git_hash,
-                &repo.repo_identity().name()
-            )
-        })?;
+    let cs_id =
+        get_submodule_bonsai_changeset_id(ctx, repo, git_hash, dangling_submodule_pointers).await?;
     let submodule_root_fsnode_id: RootFsnodeId = repo
         .repo_derived_data()
         .derive::<RootFsnodeId>(ctx, cs_id)
@@ -357,4 +356,108 @@ pub(crate) fn get_submodule_expansions_affected<'a, R: Repo>(
         .collect::<Result<Vec<_>>>()?;
 
     Ok(submodules_affected)
+}
+
+/// Gets the bonsai changeset id from a given git commit hash from the submodule
+/// repo.
+///
+/// If the bonsai is not found in the bonsai git mapping, this function will
+/// check the list of known dangling submodule pointers associated with the
+/// small repo.
+/// If the provided git commit is not there, it will crash.
+///
+/// If it's there, it will create a commit in the submodule repo containing a
+/// single README file informing that it represents a dangling submodule pointer
+/// and will return this new commit's changeset id.
+pub(crate) async fn get_submodule_bonsai_changeset_id<R: Repo>(
+    ctx: &CoreContext,
+    submodule_repo: &R,
+    git_submodule_sha1: GitSha1,
+    dangling_submodule_pointers: &[GitSha1],
+) -> Result<ChangesetId> {
+    let mb_cs_id = submodule_repo
+        .bonsai_git_mapping()
+        .get_bonsai_from_git_sha1(ctx, git_submodule_sha1)
+        .await?;
+
+    if let Some(cs_id) = mb_cs_id {
+        return Ok(cs_id);
+    };
+
+    if !dangling_submodule_pointers.contains(&git_submodule_sha1) {
+        // Not a known dangling pointer, so it's an unexpected failure
+        return Err(anyhow!(
+            "Failed to get changeset id from git submodule commit hash {} in repo {}",
+            &git_submodule_sha1,
+            &submodule_repo.repo_identity().name()
+        ));
+    };
+
+    // At this point, we know that the submodule commit hash is a dangling
+    // pointer, so we create a commit in the submodule repo containing a text
+    // file and return that as the commit to be expanded.
+    log_warning(
+        ctx,
+        format!(
+            "Expanding dangling submodule pointer {} from submodule repo {}",
+            git_submodule_sha1,
+            submodule_repo.repo_identity().name()
+        ),
+    );
+
+    let exp_bonsai_cs_id =
+        create_bonsai_for_dangling_submodule_pointer(git_submodule_sha1, submodule_repo, ctx)
+            .await?;
+
+    Ok(exp_bonsai_cs_id)
+}
+
+/// Create and upload a bonsai to the submodule repo to represent the dangling
+/// submodule pointer that's being expanded.
+async fn create_bonsai_for_dangling_submodule_pointer<R: Repo>(
+    git_submodule_sha1: GitSha1,
+    submodule_repo: &R,
+    ctx: &CoreContext,
+) -> Result<ChangesetId> {
+    let readme_file_content = FileContents::new_bytes(format!(
+        "This is the expansion of a known dangling submodule pointer {}. This commit doesn't exist in the repo {}",
+        git_submodule_sha1,
+        submodule_repo.repo_identity().name()
+    ));
+    let readme_file_size = readme_file_content.size();
+    let readme_file_content_id = readme_file_content
+        .into_blob()
+        .store(ctx, submodule_repo.repo_blobstore())
+        .await?;
+    let dangling_expansion_file_change = FileChange::tracked(
+        readme_file_content_id,
+        FileType::Regular,
+        readme_file_size,
+        None,
+    );
+    let file_changes: SortedVectorMap<NonRootMPath, FileChange> = vec![(
+        NonRootMPath::new("README.TXT")?,
+        dangling_expansion_file_change,
+    )]
+    .into_iter()
+    .collect();
+    let commit_msg = format!(
+        "The git commit {} didn't exist in the submodule repo {}, so it's snapshot couldn't be created.",
+        git_submodule_sha1,
+        submodule_repo.repo_identity().name()
+    );
+    let exp_bonsai_mut = BonsaiChangesetMut {
+        parents: vec![],
+        message: commit_msg,
+        file_changes,
+        ..Default::default()
+    };
+    let exp_bonsai = exp_bonsai_mut.freeze()?;
+    let exp_bonsai_cs_id = exp_bonsai.get_changeset_id();
+
+    save_changesets(ctx, submodule_repo, vec![exp_bonsai])
+        .await
+        .context("Failed to save bonsai for dangling submodule pointer expansion")?;
+
+    Ok(exp_bonsai_cs_id)
 }

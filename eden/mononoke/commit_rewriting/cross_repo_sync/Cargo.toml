@@ -26,6 +26,7 @@ bounded_traversal = { version = "0.1.0", path = "../../common/bounded_traversal"
 cacheblob = { version = "0.1.0", path = "../../blobstore/cacheblob" }
 changeset_info = { version = "0.1.0", path = "../../derived_data/changeset_info" }
 changesets = { version = "0.1.0", path = "../../changesets" }
+changesets_creation = { version = "0.1.0", path = "../../changesets/changesets_creation" }
 changesets_impl = { version = "0.1.0", path = "../../changesets/changesets_impl" }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 commit_graph = { version = "0.1.0", path = "../../repo_attributes/commit_graph/commit_graph" }
@@ -84,7 +85,6 @@ vec1 = { version = "1", features = ["serde"] }
 ascii = "1.0"
 blobrepo = { version = "0.1.0", path = "../../blobrepo" }
 bulk_derivation = { version = "0.1.0", path = "../../derived_data/bulk_derivation" }
-changesets_creation = { version = "0.1.0", path = "../../changesets/changesets_creation" }
 cross_repo_sync_test_utils = { version = "0.1.0", path = "test_utils" }
 fbinit-tokio = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fixtures = { version = "0.1.0", path = "../../tests/fixtures" }

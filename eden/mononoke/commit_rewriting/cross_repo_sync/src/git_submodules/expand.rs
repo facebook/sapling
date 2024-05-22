@@ -49,6 +49,7 @@ use crate::commit_syncers_lib::mover_to_multi_mover;
 use crate::git_submodules::in_memory_repo::InMemoryRepo;
 use crate::git_submodules::utils::build_recursive_submodule_deps;
 use crate::git_submodules::utils::get_git_hash_from_submodule_file;
+use crate::git_submodules::utils::get_submodule_bonsai_changeset_id;
 use crate::git_submodules::utils::get_submodule_expansions_affected;
 use crate::git_submodules::utils::get_submodule_file_content_id;
 use crate::git_submodules::utils::get_submodule_repo;
@@ -557,17 +558,13 @@ where
         ),
     );
 
-    let sm_changeset_id = submodule_repo
-        .bonsai_git_mapping()
-        .get_bonsai_from_git_sha1(ctx, git_submodule_sha1)
-        .await?
-        .ok_or_else(|| {
-            anyhow!(
-                "Failed to get changeset id from git submodule commit hash {} in repo {}",
-                &git_submodule_sha1,
-                &submodule_repo.repo_identity().name()
-            )
-        })?;
+    let sm_changeset_id = get_submodule_bonsai_changeset_id(
+        ctx,
+        submodule_repo,
+        git_submodule_sha1,
+        &sm_exp_data.dangling_submodule_pointers,
+    )
+    .await?;
 
     let sm_parents = get_previous_submodule_commits(
         ctx,
@@ -575,6 +572,7 @@ where
         small_repo,
         submodule_path.clone(),
         submodule_repo,
+        &sm_exp_data.dangling_submodule_pointers,
     )
     .await?;
 
@@ -616,6 +614,7 @@ where
                                 small_repo,
                                 submodule_path.clone(),
                                 submodule_repo,
+                                &sm_exp_data.dangling_submodule_pointers,
                             )
                             .await?;
 
@@ -639,6 +638,7 @@ where
                                 small_repo,
                                 submodule_path.clone(),
                                 submodule_repo,
+                                &sm_exp_data.dangling_submodule_pointers,
                             )
                             .await?;
 
@@ -815,6 +815,7 @@ async fn get_previous_submodule_commits<'a, R: Repo>(
     submodule_path: SubmodulePath,
     // Submodule repo in Mononoke
     submodule_repo: &'a R,
+    dangling_submodule_pointers: &[GitSha1],
 ) -> Result<Vec<ChangesetId>> {
     let parents_vec = parents
         .iter()
@@ -826,11 +827,13 @@ async fn get_previous_submodule_commits<'a, R: Repo>(
     // submodule is being added, this set will be empty.
     let sm_parents: Vec<ChangesetId> = stream::iter(parents_vec)
         .try_filter_map(|cs_id| {
-            cloned!(ctx, submodule_path);
+            cloned!(ctx, submodule_path, dangling_submodule_pointers);
 
             async move {
                 // Check the submodule path on that revision
-                match get_submodule_file_content_id(&ctx, small_repo, cs_id, &submodule_path.0).await? {
+                match get_submodule_file_content_id(&ctx, small_repo, cs_id, &submodule_path.0)
+                    .await?
+                {
                     // If it's a submodule file, the submodule is being updated
                     Some(submodule_file_content_id) => {
                         // File is a submodule, so get the git hash that it stored
@@ -844,17 +847,13 @@ async fn get_previous_submodule_commits<'a, R: Repo>(
 
                         // From the git hash, get the bonsai changeset it in the
                         // submodule Mononoke repo.
-                        let sm_parent_cs_id = submodule_repo
-                            .bonsai_git_mapping()
-                            .get_bonsai_from_git_sha1(&ctx, git_sha1)
-                            .await?
-                            .ok_or_else(|| {
-                                anyhow!(
-                                    "Failed to get changeset id from git submodule parent commit hash {} in repo {}",
-                                    &git_sha1,
-                                    &submodule_repo.repo_identity().name()
-                                )
-                            })?;
+                        let sm_parent_cs_id = get_submodule_bonsai_changeset_id(
+                            &ctx,
+                            submodule_repo,
+                            git_sha1,
+                            dangling_submodule_pointers,
+                        )
+                        .await?;
                         Ok(Some(sm_parent_cs_id))
                     }
                     // If it doesn't exist, or is a directory, skip it because
@@ -866,8 +865,9 @@ async fn get_previous_submodule_commits<'a, R: Repo>(
                     // submodule, and can also be skipped.
                     None => Ok(None),
                 }
-            // Get content id of the file
-        }})
+                // Get content id of the file
+            }
+        })
         .try_collect::<Vec<_>>()
         .await?;
     Ok(sm_parents)
@@ -946,6 +946,7 @@ async fn delete_submodule_expansion<'a, R: Repo>(
         small_repo,
         submodule_path.clone(),
         submodule_repo,
+        &sm_exp_data.dangling_submodule_pointers,
     )
     .await?;
 

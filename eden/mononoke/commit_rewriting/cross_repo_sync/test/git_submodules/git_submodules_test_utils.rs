@@ -11,6 +11,7 @@
 use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::fmt::Debug;
+use std::str::FromStr;
 use std::sync::Arc;
 
 use anyhow::anyhow;
@@ -79,6 +80,9 @@ use crate::prepare_repos_mapping_and_config;
 use crate::sync_to_master;
 
 pub const MASTER_BOOKMARK_NAME: &str = "master";
+
+pub const REPO_B_DANGLING_GIT_COMMIT_HASH: &str = "e957dda44445098cfbaea99e4771e737944e3da4";
+pub const REPO_C_DANGLING_GIT_COMMIT_HASH: &str = "408dc1a8d40f13a0b8eee162411dba2b8830b1f0";
 
 pub(crate) struct SubmoduleSyncTestData {
     pub(crate) repo_a_info: (TestRepo, BTreeMap<String, ChangesetId>),
@@ -424,13 +428,16 @@ pub(crate) fn create_small_repo_sync_config(
         .map(|(path, repo)| (path, repo.repo_identity().id()))
         .collect::<HashMap<_, _>>();
 
-    // submodule_deps.insert(NonRootMPath::new("submodules/repo_b")?, repo_b_id);
+    let repo_b_dangling_pointer = GitSha1::from_str(REPO_B_DANGLING_GIT_COMMIT_HASH)?;
+    let repo_c_dangling_pointer = GitSha1::from_str(REPO_C_DANGLING_GIT_COMMIT_HASH)?;
 
     let small_repo_submodule_config = SmallRepoGitSubmoduleConfig {
         git_submodules_action: GitSubmodulesChangesAction::Expand,
         submodule_dependencies: submodule_deps,
+        dangling_submodule_pointers: vec![repo_b_dangling_pointer, repo_c_dangling_pointer],
         ..Default::default()
     };
+
     let small_repo_config = SmallRepoCommitSyncConfig {
         default_action: DefaultSmallToLargeCommitSyncPathAction::PrependPrefix(NonRootMPath::new(
             prefix,

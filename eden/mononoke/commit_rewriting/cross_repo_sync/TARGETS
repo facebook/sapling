@@ -57,6 +57,7 @@ rust_library(
         "//eden/mononoke/bookmarks:bookmarks",
         "//eden/mononoke/changesets:changesets",
         "//eden/mononoke/changesets:changesets_impl",
+        "//eden/mononoke/changesets/changesets_creation:changesets_creation",
         "//eden/mononoke/cmdlib:environment",
         "//eden/mononoke/commit_rewriting/bookmark_renaming:bookmark_renaming",
         "//eden/mononoke/commit_rewriting/live_commit_sync_config:live_commit_sync_config",
