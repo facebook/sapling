@@ -39,6 +39,7 @@ import {FileTree, FileTreeFolderHeader} from './FileTree';
 import {useGeneratedFileStatuses} from './GeneratedFile';
 import {Internal} from './Internal';
 import {DOCUMENTATION_DELAY, Tooltip} from './Tooltip';
+import {UnsavedFilesCount} from './UnsavedFiles';
 import {tracker} from './analytics';
 import {latestCommitMessageFields} from './codeReview/CodeReviewInfo';
 import {Badge} from './components/Badge';
@@ -702,6 +703,7 @@ export function UncommittedChanges({place}: {place: Place}) {
           }}
         />
       )}
+      <UnsavedFilesCount />
       {conflicts != null || place !== 'main' ? null : (
         <div className="button-rows">
           <div className="button-row">

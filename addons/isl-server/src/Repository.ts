@@ -323,6 +323,10 @@ export class Repository {
     return this.visibleCommitRanges[this.currentVisibleCommitRangeIndex];
   }
 
+  public isPathInsideRepo(p: AbsolutePath): boolean {
+    return path.normalize(p).startsWith(this.info.repoRoot);
+  }
+
   /**
    * Typically, disposing is handled by `RepositoryCache` and not used directly.
    */

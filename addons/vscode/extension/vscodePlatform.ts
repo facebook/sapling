@@ -10,6 +10,7 @@ import type {RepositoryContext} from 'isl-server/src/serverTypes';
 import type {
   AbsolutePath,
   PlatformSpecificClientToServerMessages,
+  RepoRelativePath,
   ServerToClientMessage,
 } from 'isl/src/types';
 import type {Json} from 'shared/typeUtils';
@@ -17,6 +18,7 @@ import type {Json} from 'shared/typeUtils';
 import {executeVSCodeCommand} from './commands';
 import {t} from './i18n';
 import {Repository} from 'isl-server/src/Repository';
+import {arraysEqual} from 'isl/src/utils';
 import * as pathModule from 'node:path';
 import * as vscode from 'vscode';
 
@@ -92,6 +94,43 @@ export const getVSCodePlatform = (context: vscode.ExtensionContext): ServerPlatf
             OKButton,
           );
           postMessage({type: 'platform/confirmResult', result: result === OKButton});
+          break;
+        }
+        case 'platform/subscribeToUnsavedFiles': {
+          let previous: Array<{path: RepoRelativePath; uri: string}> = [];
+          const postUnsavedFiles = () => {
+            if (repo == null) {
+              return;
+            }
+            const files = vscode.workspace.textDocuments
+              .filter(
+                document =>
+                  (document.isDirty && repo.isPathInsideRepo(document.fileName)) ||
+                  document.isUntitled,
+              )
+              .filter(document => document.isDirty || document.isUntitled)
+              .map(document => {
+                return {
+                  path: pathModule.relative(repo.info.repoRoot, document.fileName),
+                  uri: document.uri.toString(),
+                };
+              });
+
+            if (!arraysEqual(files, previous)) {
+              postMessage({
+                type: 'platform/unsavedFiles',
+                unsaved: files,
+              });
+              previous = files;
+            }
+          };
+
+          const disposables = [
+            vscode.workspace.onDidChangeTextDocument(postUnsavedFiles),
+            vscode.workspace.onDidSaveTextDocument(postUnsavedFiles),
+          ];
+          postUnsavedFiles();
+          onDispose(() => disposables.forEach(d => d.dispose()));
           break;
         }
         case 'platform/subscribeToAvailableCwds': {

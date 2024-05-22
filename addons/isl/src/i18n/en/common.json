@@ -10,6 +10,8 @@
   "confirmUnsavedEditsBeforeEditStack_other": "You have unsaved edits to commit messages which must be saved before editing this stack. Do you want to save these edits first?",
   "someCommitsUpdatedLocallyAddendum_one": "\n\n1 commit in this stack has been updated locally and should be resubmitted.",
   "someCommitsUpdatedLocallyAddendum_other": "\n\n$count commits in this stack have been updated locally and should be resubmitted.",
+  "unsavedFileCount_one": "1 unsaved file",
+  "unsavedFileCount_other": "$count unsaved files",
   "commitsBeingBackedUp_one": "1 commit being backed up...",
   "commitsBeingBackedUp_other": "$count commits being backed up...",
   "commitsFailedBackingUp_one": "1 commit failed to back up",
