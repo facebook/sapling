@@ -33,9 +33,9 @@ use crate::commit_sync_config_utils::get_git_submodule_action_by_version;
 use crate::commit_sync_outcome::CommitSyncOutcome;
 use crate::commit_syncer::CommitSyncer;
 use crate::commit_syncers_lib::get_mover_by_version;
-use crate::commit_syncers_lib::get_x_repo_submodule_metadata_file_prefx_from_config;
 use crate::commit_syncers_lib::rewrite_commit;
 use crate::commit_syncers_lib::strip_removed_parents;
+use crate::commit_syncers_lib::submodule_metadata_file_prefix_and_dangling_pointers;
 use crate::git_submodules::InMemoryRepo;
 use crate::git_submodules::SubmoduleExpansionData;
 use crate::reporting::CommitSyncContext;
@@ -228,8 +228,8 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
         )
         .await?;
 
-        let x_repo_submodule_metadata_file_prefix =
-            get_x_repo_submodule_metadata_file_prefx_from_config(
+        let (x_repo_submodule_metadata_file_prefix, dangling_submodule_pointers) =
+            submodule_metadata_file_prefix_and_dangling_pointers(
                 self.small_repo_id(),
                 &expected_version,
                 self.live_commit_sync_config.clone(),
@@ -243,6 +243,7 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
                     .as_str(),
                 large_repo_id: Large(self.large_repo_id()),
                 large_repo: self.large_repo,
+                dangling_submodule_pointers,
             }),
             SubmoduleDeps::NotNeeded => None,
         };
@@ -336,8 +337,8 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
                 )
                 .await?;
 
-                let x_repo_submodule_metadata_file_prefix =
-                    get_x_repo_submodule_metadata_file_prefx_from_config(
+                let (x_repo_submodule_metadata_file_prefix, dangling_submodule_pointers) =
+                    submodule_metadata_file_prefix_and_dangling_pointers(
                         self.small_repo_id(),
                         &version,
                         self.live_commit_sync_config.clone(),
@@ -351,6 +352,7 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
                             x_repo_submodule_metadata_file_prefix.as_str(),
                         large_repo_id: Large(self.large_repo_id()),
                         large_repo: self.large_repo,
+                        dangling_submodule_pointers,
                     }),
                     SubmoduleDeps::NotNeeded => None,
                 };
@@ -493,8 +495,8 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
             )
             .await?;
 
-            let x_repo_submodule_metadata_file_prefix =
-                get_x_repo_submodule_metadata_file_prefx_from_config(
+            let (x_repo_submodule_metadata_file_prefix, dangling_submodule_pointers) =
+                submodule_metadata_file_prefix_and_dangling_pointers(
                     self.small_repo_id(),
                     &version,
                     self.live_commit_sync_config.clone(),
@@ -508,6 +510,7 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
                         .as_str(),
                     large_repo_id: Large(self.large_repo_id()),
                     large_repo: self.large_repo,
+                    dangling_submodule_pointers,
                 }),
                 SubmoduleDeps::NotNeeded => None,
             };

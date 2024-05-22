@@ -31,6 +31,7 @@ use futures::stream::TryStreamExt;
 use itertools::Itertools;
 use manifest::BonsaiDiffFileChange;
 use maplit::hashmap;
+use mononoke_types::hash::GitSha1;
 use mononoke_types::BlobstoreValue;
 use mononoke_types::BonsaiChangesetMut;
 use mononoke_types::ChangesetId;
@@ -94,6 +95,15 @@ pub struct SubmoduleExpansionData<'a, R: Repo> {
     /// This is needed to validate submodule expansion in large repo bonsais.
     #[derivative(Debug = "ignore")]
     pub large_repo: InMemoryRepo,
+    /// List git commit hashes that are known dangling submodule pointers in the
+    /// repo's history, i.e. don't actually exist in the submodule repo it's
+    /// supposed to point to.
+    /// This can happen after non-fast-forward pushes or accidentally pushing
+    /// commits with local submodule pointers.
+    ///
+    /// The expansion of these commits will contain a single text file informing
+    /// that the expansion belongs to a dangling submodule pointer.
+    pub dangling_submodule_pointers: Vec<GitSha1>,
 }
 
 /// Used to distinguish file changes that came from the original bonsai or

@@ -62,10 +62,10 @@ use crate::commit_sync_outcome::CommitSyncOutcome;
 use crate::commit_sync_outcome::PluralCommitSyncOutcome;
 use crate::commit_syncers_lib::find_toposorted_unsynced_ancestors;
 use crate::commit_syncers_lib::get_mover_by_version;
-use crate::commit_syncers_lib::get_x_repo_submodule_metadata_file_prefx_from_config;
 use crate::commit_syncers_lib::remap_parents;
 use crate::commit_syncers_lib::rewrite_commit;
 use crate::commit_syncers_lib::run_with_lease;
+use crate::commit_syncers_lib::submodule_metadata_file_prefix_and_dangling_pointers;
 use crate::commit_syncers_lib::update_mapping_with_version;
 use crate::commit_syncers_lib::CommitSyncRepos;
 use crate::commit_syncers_lib::SyncedAncestorsVersions;
@@ -855,8 +855,8 @@ where
         };
 
         let small_repo = self.get_small_repo();
-        let x_repo_submodule_metadata_file_prefix =
-            get_x_repo_submodule_metadata_file_prefx_from_config(
+        let (x_repo_submodule_metadata_file_prefix, dangling_submodule_pointers) =
+            submodule_metadata_file_prefix_and_dangling_pointers(
                 small_repo.repo_identity().id(),
                 sync_config_version,
                 self.live_commit_sync_config.clone(),
@@ -873,6 +873,7 @@ where
                 x_repo_submodule_metadata_file_prefix: x_repo_submodule_metadata_file_prefix
                     .as_str(),
                 large_repo_id,
+                dangling_submodule_pointers,
             }),
             SubmoduleDeps::NotNeeded => None,
         };
@@ -977,8 +978,8 @@ where
             .collect();
 
         let small_repo = self.get_small_repo();
-        let x_repo_submodule_metadata_file_prefix =
-            get_x_repo_submodule_metadata_file_prefx_from_config(
+        let (x_repo_submodule_metadata_file_prefix, dangling_submodule_pointers) =
+            submodule_metadata_file_prefix_and_dangling_pointers(
                 small_repo.repo_identity().id(),
                 &version,
                 self.live_commit_sync_config.clone(),
@@ -996,6 +997,7 @@ where
                 x_repo_submodule_metadata_file_prefix: x_repo_submodule_metadata_file_prefix
                     .as_str(),
                 large_repo_id,
+                dangling_submodule_pointers,
             }),
             SubmoduleDeps::NotNeeded => None,
         };

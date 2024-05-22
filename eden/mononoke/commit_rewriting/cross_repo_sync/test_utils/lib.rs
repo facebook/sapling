@@ -28,8 +28,8 @@ use changesets::Changesets;
 use commit_graph::CommitGraph;
 use commit_transformation::upload_commits;
 use context::CoreContext;
-use cross_repo_sync::get_x_repo_submodule_metadata_file_prefx_from_config;
 use cross_repo_sync::rewrite_commit;
+use cross_repo_sync::submodule_metadata_file_prefix_and_dangling_pointers;
 use cross_repo_sync::update_mapping_with_version;
 use cross_repo_sync::CommitSyncContext;
 use cross_repo_sync::CommitSyncRepos;
@@ -155,8 +155,8 @@ where
         let map = HashMap::new();
         let version = CommitSyncConfigVersion("TEST_VERSION_NAME".to_string());
         let mover = commit_syncer.get_mover_by_version(&version).await?;
-        let x_repo_submodule_metadata_file_prefix =
-            get_x_repo_submodule_metadata_file_prefx_from_config(
+        let (x_repo_submodule_metadata_file_prefix, dangling_submodule_pointers) =
+            submodule_metadata_file_prefix_and_dangling_pointers(
                 source_repo.repo_identity().id(),
                 &version,
                 commit_syncer.live_commit_sync_config.clone(),
@@ -174,6 +174,7 @@ where
                 x_repo_submodule_metadata_file_prefix: x_repo_submodule_metadata_file_prefix
                     .as_str(),
                 large_repo_id,
+                dangling_submodule_pointers,
             }),
             SubmoduleDeps::NotNeeded => None,
         };

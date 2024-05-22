@@ -44,6 +44,7 @@ use metaconfig_types::CommitSyncConfigVersion;
 use metaconfig_types::CommitSyncDirection;
 use metaconfig_types::CommonCommitSyncConfig;
 use metaconfig_types::GitSubmodulesChangesAction;
+use mononoke_types::hash::GitSha1;
 use mononoke_types::BonsaiChangesetMut;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileChange;
@@ -967,13 +968,14 @@ where
     Ok(())
 }
 
-/// Get the prefix used to generate the submodule metadata file name from the
-/// small repo sync config.
-pub async fn get_x_repo_submodule_metadata_file_prefx_from_config(
+// TODO(T186874619): rename this function and group data in a struct
+/// Get the prefix used to generate the submodule metadata file name and the list
+/// of known dangling submodule pointers from from a small repo's sync config.
+pub async fn submodule_metadata_file_prefix_and_dangling_pointers(
     small_repo_id: RepositoryId,
     config_version: &CommitSyncConfigVersion,
     live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
-) -> Result<String> {
+) -> Result<(String, Vec<GitSha1>)> {
     // Get the full commit sync config for that version name.
     let mut commit_sync_config = live_commit_sync_config
         .get_commit_sync_config_by_version(small_repo_id, config_version)
@@ -991,7 +993,16 @@ pub async fn get_x_repo_submodule_metadata_file_prefx_from_config(
             )
         )?;
 
-    Ok(small_repo_sync_config
+    let x_repo_submodule_metadata_file_prefx = small_repo_sync_config
         .submodule_config
-        .submodule_metadata_file_prefix)
+        .submodule_metadata_file_prefix;
+
+    let dangling_submodule_pointers = small_repo_sync_config
+        .submodule_config
+        .dangling_submodule_pointers;
+
+    Ok((
+        x_repo_submodule_metadata_file_prefx,
+        dangling_submodule_pointers,
+    ))
 }

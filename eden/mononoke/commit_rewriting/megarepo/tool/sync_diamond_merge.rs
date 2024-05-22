@@ -29,8 +29,8 @@ use commit_graph::CommitGraphRef;
 use commit_transformation::upload_commits;
 use context::CoreContext;
 use cross_repo_sync::create_commit_syncers;
-use cross_repo_sync::get_x_repo_submodule_metadata_file_prefx_from_config;
 use cross_repo_sync::rewrite_commit;
+use cross_repo_sync::submodule_metadata_file_prefix_and_dangling_pointers;
 use cross_repo_sync::update_mapping_with_version;
 use cross_repo_sync::CandidateSelectionHint;
 use cross_repo_sync::CommitSyncContext;
@@ -284,8 +284,8 @@ async fn create_rewritten_merge_commit(
         p2 => remapped_p2,
     };
 
-    let x_repo_submodule_metadata_file_prefix =
-        get_x_repo_submodule_metadata_file_prefx_from_config(
+    let (x_repo_submodule_metadata_file_prefix, dangling_submodule_pointers) =
+        submodule_metadata_file_prefix_and_dangling_pointers(
             small_repo.repo_identity().id(),
             &root_version,
             syncers.small_to_large.live_commit_sync_config.clone(),
@@ -302,6 +302,7 @@ async fn create_rewritten_merge_commit(
             x_repo_submodule_metadata_file_prefix: x_repo_submodule_metadata_file_prefix.as_str(),
             large_repo_id,
             large_repo: large_in_memory_repo,
+            dangling_submodule_pointers,
         }),
         SubmoduleDeps::NotNeeded => None,
     };

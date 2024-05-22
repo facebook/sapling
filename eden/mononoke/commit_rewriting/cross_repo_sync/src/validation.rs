@@ -50,9 +50,9 @@ use synced_commit_mapping::SyncedCommitMapping;
 
 use crate::commit_syncer::CommitSyncer;
 use crate::get_git_submodule_action_by_version;
-use crate::get_x_repo_submodule_metadata_file_prefx_from_config;
 use crate::git_submodules::get_x_repo_submodule_metadata_file_path;
 use crate::git_submodules::SubmodulePath;
+use crate::submodule_metadata_file_prefix_and_dangling_pointers;
 use crate::types::Repo;
 use crate::types::Source;
 use crate::types::Target;
@@ -145,8 +145,8 @@ pub async fn verify_working_copy_with_version<
     .await?;
 
     let submodule_deps = commit_syncer.get_submodule_deps();
-    let x_repo_submodule_metadata_file_prefix =
-        get_x_repo_submodule_metadata_file_prefx_from_config(
+    let (x_repo_submodule_metadata_file_prefix, dangling_submodule_pointers) =
+        submodule_metadata_file_prefix_and_dangling_pointers(
             small_repo.repo_identity().id(),
             version,
             live_commit_sync_config.clone(),
@@ -159,6 +159,7 @@ pub async fn verify_working_copy_with_version<
             x_repo_submodule_metadata_file_prefix: &x_repo_submodule_metadata_file_prefix,
             large_repo_id: Large(large_repo.repo_identity().id()),
             large_repo: large_in_memory_repo,
+            dangling_submodule_pointers,
         }),
         SubmoduleDeps::NotNeeded => None,
     };

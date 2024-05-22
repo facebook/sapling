@@ -245,6 +245,7 @@ async fn rewrite_file_paths(
                 x_repo_submodule_metadata_file_prefix: DEFAULT_GIT_SUBMODULE_METADATA_FILE_PREFIX,
                 large_repo_id,
                 large_repo: large_in_memory_repo,
+                dangling_submodule_pointers: vec![],
             }),
             SubmoduleDeps::NotNeeded => None,
         };
