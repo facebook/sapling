@@ -11,6 +11,7 @@ import type {ReactNode} from 'react';
 import type {ContextMenuItem} from 'shared/ContextMenu';
 
 import {Bookmarks} from './Bookmark';
+import {openBrowseUrlForHash, supportsBrowseUrlForHash} from './BrowseRepo';
 import {hasUnsavedEditedCommitMessage} from './CommitInfoView/CommitInfoState';
 import {currentComparisonMode} from './ComparisonView/atoms';
 import {Row} from './ComponentUtils';
@@ -166,6 +167,19 @@ export const Commit = memo(
           onClick: () => clipboardCopy(commit.hash),
         },
       ];
+      if (isPublic && readAtom(supportsBrowseUrlForHash)) {
+        items.push({
+          label: (
+            <Row>
+              <T>Browse Repo At This Commit</T>
+              <Icon icon="link-external" />
+            </Row>
+          ),
+          onClick: () => {
+            openBrowseUrlForHash(commit.hash);
+          },
+        });
+      }
       if (!isPublic && commit.diffId != null) {
         items.push({
           label: <T replace={{$number: commit.diffId}}>Copy Diff Number "$number"</T>,

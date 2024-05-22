@@ -11,6 +11,7 @@ import type {ServerSideTracker} from './analytics/serverSideTracker';
 import type {Logger} from './logger';
 import type {ServerPlatform} from './serverPlatform';
 import type {RepositoryContext} from './serverTypes';
+import type {ExecaError} from 'execa';
 import type {TypeaheadResult} from 'isl/src/CommitInfoView/types';
 import type {Serializable} from 'isl/src/serialize';
 import type {
@@ -33,7 +34,7 @@ import type {ExportStack, ImportedStack} from 'shared/types/stack';
 
 import {generatedFilesDetector} from './GeneratedFiles';
 import {Internal} from './Internal';
-import {Repository} from './Repository';
+import {Repository, absolutePathForFileInRepo} from './Repository';
 import {repositoryCache} from './RepositoryCache';
 import {parseExecJson} from './utils';
 import {serializeToString, deserializeFromString} from 'isl/src/serialize';
@@ -907,6 +908,29 @@ export default class ServerToClientAPI {
             tool: tool ?? undefined,
           });
         });
+        break;
+      }
+      case 'getRepoUrlAtHash': {
+        const args = ['url', '--rev', data.hash];
+        // validate that the path is a valid file in repo
+        if (data.path != null && absolutePathForFileInRepo(data.path, repo) != null) {
+          args.push(data.path);
+        }
+        repo
+          .runCommand(args, 'RepoUrlCommand', ctx)
+          .then(result => {
+            this.postMessage({
+              type: 'gotRepoUrlAtHash',
+              url: {value: result.stdout},
+            });
+          })
+          .catch((err: ExecaError) => {
+            this.logger.error('Failed to get repo url at hash:', err);
+            this.postMessage({
+              type: 'gotRepoUrlAtHash',
+              url: {error: err},
+            });
+          });
         break;
       }
       default: {

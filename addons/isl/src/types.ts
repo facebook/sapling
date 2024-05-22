@@ -586,6 +586,7 @@ export const allConfigNames = [
   'isl.generated-files-regex',
   'ui.username',
   'ui.merge',
+  'fbcodereview.code-browser-url',
 ] as const;
 
 /** sl configs read by ISL */
@@ -669,6 +670,7 @@ export type ClientToServerMessage =
   | {type: 'getConfiguredMergeTool'}
   | {type: 'updateRemoteDiffMessage'; diffId: DiffId; title: string; description: string}
   | {type: 'pageVisibility'; state: PageVisibility}
+  | {type: 'getRepoUrlAtHash'; hash: Hash; path?: string}
   | {type: 'requestComparison'; comparison: Comparison}
   | {
       type: 'requestComparisonContextLines';
@@ -748,6 +750,7 @@ export type ServerToClientMessage =
   | {type: 'gotConfiguredMergeTool'; tool: string | undefined}
   | {type: 'updatedRemoteDiffMessage'; diffId: DiffId; error?: string}
   | {type: 'uploadFileResult'; id: string; result: Result<string>}
+  | {type: 'gotRepoUrlAtHash'; url: Result<string>}
   | {type: 'comparison'; comparison: Comparison; data: ComparisonData}
   | {type: 'comparisonContextLines'; path: RepoRelativePath; lines: Result<Array<string>>}
   | {type: 'beganLoadingMoreCommits'}

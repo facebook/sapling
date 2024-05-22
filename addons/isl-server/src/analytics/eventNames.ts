@@ -137,6 +137,7 @@ export type TrackEventName =
   | 'UploadImage'
   | 'RunVSCodeCommand'
   | 'RageCommand'
+  | 'RepoUrlCommand'
   | 'UnsubmittedStarRating'
   | 'BlameLoaded'
   | 'VSCodeExtensionActivated'
