@@ -118,7 +118,7 @@ function merge_repo_a_to_large_repo {
   print_section "Importing repo A commits into large repo"
   # shellcheck disable=SC2153
   with_stripped_logs mononoke_x_repo_sync "$SUBMODULE_REPO_ID" "$LARGE_REPO_ID" initial-import \
-    --no-progress-bar -i "$GIT_REPO_A_HEAD" \
+    --no-progress-bar --derivation-batch-size 2 -i "$GIT_REPO_A_HEAD" \
     --version-name "$LATEST_CONFIG_VERSION_NAME" 2>&1 | tee "$TESTTMP/initial_import_output"
 
   print_section "Large repo bookmarks"

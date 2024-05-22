@@ -523,6 +523,7 @@ pub async fn sync_commits_for_initial_import<M: SyncedCommitMapping + Clone + 's
     config_version: CommitSyncConfigVersion,
     disable_progress_bar: bool,
     no_automatic_derivation: bool,
+    derivation_batch_size: usize,
 ) -> Result<Vec<ChangesetId>>
 where
     R: Repo,
@@ -603,7 +604,10 @@ where
         Some(progress_bar)
     };
 
+    let large_repo = commit_syncer.get_target_repo();
     let mut res = vec![];
+    let mut changesets_to_derive = vec![];
+
     // Sync all of the ancestors first
     for ancestor_cs_id in unsynced_ancestors {
         let (stats, mb_synced) = commit_syncer
@@ -621,55 +625,37 @@ where
             .clone()
             .ok_or(anyhow!("Failed to sync ancestor commit {}", ancestor_cs_id))?;
         res.push(synced);
+        changesets_to_derive.push(synced);
 
         log_debug(
             ctx,
             format!("Ancestor {ancestor_cs_id} synced successfully as {synced}"),
         );
 
-        let large_repo = commit_syncer.get_target_repo();
+        // Fsnodes always need to be derived synchronously during initial
+        // import because syncing a commit with submodule expansion depends
+        // on the fsnodes of its parents.
+        //
+        // If fsnodes aren't derived synchronously, expansion of submodules
+        // will derive it using an InMemoryRepo, throwing away all the results
+        // and doing it all again in the next changeset.
+        let root_fsnode_id = large_repo
+            .repo_derived_data()
+            .derive::<RootFsnodeId>(ctx, synced)
+            .await?;
+        log_trace(
+            ctx,
+            format!(
+                "Root fsnode id from {synced}: {0}",
+                root_fsnode_id.into_fsnode_id()
+            ),
+        );
 
-        if no_automatic_derivation {
-            // Fsnodes always need to be derived synchronously during initial
-            // import because syncing a commit with submodule expansion depends
-            // on the fsnodes of its parents.
-            //
-            // If fsnodes aren't derived synchronously, expansion of submodules
-            // will derive it using an InMemoryRepo, throwing away all the results
-            // and doing it all again in the next changeset.
-            let root_fsnode_id = large_repo
-                .repo_derived_data()
-                .derive::<RootFsnodeId>(ctx, synced)
-                .await?;
-            log_trace(
-                ctx,
-                format!(
-                    "Root fsnode id from {synced}: {0}",
-                    root_fsnode_id.into_fsnode_id()
-                ),
-            );
-        } else {
-            let derived_data_types = large_repo
-                .repo_derived_data()
-                .active_config()
-                .types
-                .iter()
-                .cloned()
-                .collect::<Vec<_>>();
-            // Derive all the data types synchronously to speed up the overall
-            // import process.
-            let duration = large_repo
-                .repo_derived_data()
-                .manager()
-                .derive_bulk(ctx, vec![synced], None, &derived_data_types)
-                .await?;
-            log_trace(
-                ctx,
-                format!(
-                    "Finished bulk derivation of changeset {synced} in {0:.3} seconds",
-                    duration.as_secs_f64()
-                ),
-            );
+        if !no_automatic_derivation {
+            if changesets_to_derive.len() >= derivation_batch_size {
+                derive_initial_import_batch(ctx, large_repo, &changesets_to_derive).await?;
+                changesets_to_derive.clear();
+            };
         };
 
         if let Some(progress_bar) = &mb_prog_bar {
@@ -678,6 +664,12 @@ where
 
         log_success_to_scuba(scuba_sample.clone(), ancestor_cs_id, mb_synced, stats, None);
     }
+
+    // Make sure we derive the last batch
+    if !no_automatic_derivation && !changesets_to_derive.is_empty() {
+        derive_initial_import_batch(ctx, large_repo, &changesets_to_derive).await?;
+        changesets_to_derive.clear();
+    };
 
     let (stats, result) = commit_syncer
         .unsafe_sync_commit(
@@ -969,6 +961,42 @@ async fn move_or_create_bookmark(
     } else {
         Err(format_err!("failed to move or create a bookmark"))
     }
+}
+
+async fn derive_initial_import_batch<R: Repo>(
+    ctx: &CoreContext,
+    large_repo: &R,
+    changesets_to_derive: &[ChangesetId],
+) -> Result<()> {
+    let derived_data_types = large_repo
+        .repo_derived_data()
+        .active_config()
+        .types
+        .iter()
+        .cloned()
+        .collect::<Vec<_>>();
+
+    // Derive all the data types in bulk to speed up the overall import process
+    let duration = large_repo
+        .repo_derived_data()
+        .manager()
+        .derive_bulk(
+            ctx,
+            changesets_to_derive.to_vec(),
+            None,
+            &derived_data_types,
+        )
+        .await?;
+
+    log_debug(
+        ctx,
+        format!(
+            "Finished bulk derivation of {0} changesets in {1:.3} seconds",
+            changesets_to_derive.len(),
+            duration.as_secs_f64()
+        ),
+    );
+    Ok(())
 }
 
 #[cfg(test)]

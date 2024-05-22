@@ -34,6 +34,10 @@ pub struct InitialImportCommandArgs {
     /// Disable automatic derivation of fsnodes as commits are synced
     #[clap(long)]
     pub no_automatic_derivation: bool,
+
+    /// Size of the bulk derivation batch during the initial import
+    #[clap(long, default_value_t = 100)]
+    pub derivation_batch_size: usize,
 }
 
 #[derive(Debug, Args)]
