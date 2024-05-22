@@ -56,6 +56,11 @@ export function UnsavedFilesCount() {
         foundPlatform.openFile(fullPaths[i]);
       },
     }));
+    options.push({type: 'divider'});
+    options.push({
+      label: t('Save All'),
+      onClick: () => serverAPI.postMessage({type: 'platform/saveAllUnsavedFiles'}),
+    });
     return options;
   });
 

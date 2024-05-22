@@ -509,6 +509,7 @@ export type PlatformSpecificClientToServerMessages =
   | {type: 'platform/confirm'; message: string; details?: string | undefined}
   | {type: 'platform/subscribeToAvailableCwds'}
   | {type: 'platform/subscribeToUnsavedFiles'}
+  | {type: 'platform/saveAllUnsavedFiles'}
   | {type: 'platform/setPersistedState'; data?: string}
   | {
       type: 'platform/setVSCodeConfig';
@@ -533,6 +534,7 @@ export type PlatformSpecificServerToClientMessages =
       options: Array<CwdInfo>;
     }
   | {type: 'platform/unsavedFiles'; unsaved: Array<{path: RepoRelativePath; uri: string}>}
+  | {type: 'platform/savedAllUnsavedFiles'; success: boolean}
   | {
       type: 'platform/vscodeConfigChanged';
       config: string;

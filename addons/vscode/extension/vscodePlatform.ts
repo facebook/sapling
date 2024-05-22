@@ -102,19 +102,12 @@ export const getVSCodePlatform = (context: vscode.ExtensionContext): ServerPlatf
             if (repo == null) {
               return;
             }
-            const files = vscode.workspace.textDocuments
-              .filter(
-                document =>
-                  (document.isDirty && repo.isPathInsideRepo(document.fileName)) ||
-                  document.isUntitled,
-              )
-              .filter(document => document.isDirty || document.isUntitled)
-              .map(document => {
-                return {
-                  path: pathModule.relative(repo.info.repoRoot, document.fileName),
-                  uri: document.uri.toString(),
-                };
-              });
+            const files = getUnsavedFiles(repo).map(document => {
+              return {
+                path: pathModule.relative(repo.info.repoRoot, document.fileName),
+                uri: document.uri.toString(),
+              };
+            });
 
             if (!arraysEqual(files, previous)) {
               postMessage({
@@ -131,6 +124,18 @@ export const getVSCodePlatform = (context: vscode.ExtensionContext): ServerPlatf
           ];
           postUnsavedFiles();
           onDispose(() => disposables.forEach(d => d.dispose()));
+          break;
+        }
+        case 'platform/saveAllUnsavedFiles': {
+          if (repo == null) {
+            return;
+          }
+          Promise.all(getUnsavedFiles(repo).map(doc => doc.save())).then(results => {
+            postMessage({
+              type: 'platform/savedAllUnsavedFiles',
+              success: results.every(result => result),
+            });
+          });
           break;
         }
         case 'platform/subscribeToAvailableCwds': {
@@ -195,3 +200,12 @@ export const getVSCodePlatform = (context: vscode.ExtensionContext): ServerPlatf
     }
   },
 });
+
+function getUnsavedFiles(repo: Repository): Array<vscode.TextDocument> {
+  return vscode.workspace.textDocuments
+    .filter(
+      document =>
+        (document.isDirty && repo.isPathInsideRepo(document.fileName)) || document.isUntitled,
+    )
+    .filter(document => document.isDirty || document.isUntitled);
+}
