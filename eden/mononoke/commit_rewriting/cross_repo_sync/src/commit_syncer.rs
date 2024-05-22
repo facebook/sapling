@@ -73,6 +73,7 @@ use crate::git_submodules::InMemoryRepo;
 use crate::git_submodules::SubmoduleExpansionData;
 use crate::reporting;
 use crate::reporting::log_rewrite;
+use crate::reporting::set_scuba_logger_fields;
 use crate::reporting::CommitSyncContext;
 use crate::sync_config_version_utils::get_version;
 use crate::sync_config_version_utils::set_mapping_change_version;
@@ -776,6 +777,8 @@ where
         commit_sync_context: CommitSyncContext,
         expected_version: Option<CommitSyncConfigVersion>,
     ) -> Result<Option<ChangesetId>, Error> {
+        let ctx =
+            &set_scuba_logger_fields(ctx, [("sync_context", commit_sync_context.to_string())]);
         debug!(
             ctx.logger(),
             "{:?}: unsafe_sync_commit called for {}, with hint: {:?}",

@@ -33,6 +33,7 @@ use mononoke_types::RepositoryId;
 use readonlyblob::ReadOnlyBlobstore;
 use repo_blobstore::RepoBlobstore;
 use repo_derived_data::RepoDerivedData;
+use repo_identity::RepoIdentity;
 use scuba_ext::MononokeScubaSampleBuilder;
 use sql_construct::SqlConstruct;
 use vec1::Vec1;
@@ -59,11 +60,14 @@ pub struct InMemoryRepo {
     // Only needed for creation of RepoDerivedData and for unit test
     #[facet]
     pub changesets: dyn Changesets,
+
+    #[facet]
+    repo_identity: RepoIdentity,
 }
 
 impl InMemoryRepo {
     pub fn from_repo<R: Repo + Send + Sync>(repo: &R) -> Result<Self> {
-        let repo_identity = repo.repo_identity();
+        let repo_identity = repo.repo_identity().clone();
 
         let scuba = MononokeScubaSampleBuilder::with_discard();
 
@@ -113,6 +117,7 @@ impl InMemoryRepo {
             derived_data: repo_derived_data.into(),
             filestore_config: filestore_config.into(),
             changesets: in_memory_changesets,
+            repo_identity: Arc::new(repo_identity.clone()),
         })
     }
 }

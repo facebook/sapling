@@ -59,6 +59,7 @@ use crate::git_submodules::utils::submodule_diff;
 use crate::git_submodules::validation::validate_all_submodule_expansions;
 use crate::reporting::log_debug;
 use crate::reporting::run_and_log_stats_to_scuba;
+use crate::reporting::set_scuba_logger_fields;
 use crate::types::Large;
 use crate::types::Repo;
 
@@ -123,7 +124,18 @@ pub async fn rewrite_commit_with_submodule_expansion<'a, R: Repo>(
     rewrite_opts: RewriteOpts,
 ) -> Result<Option<BonsaiChangesetMut>> {
     let is_forward_sync = source_repo.repo_identity().id() != *sm_exp_data.large_repo_id;
+
     if !is_forward_sync {
+        let ctx = &set_scuba_logger_fields(
+            ctx,
+            [
+                (
+                    "source_repo",
+                    sm_exp_data.large_repo.repo_identity().id().id(),
+                ),
+                ("target_repo", source_repo.repo_identity().id().id()),
+            ],
+        );
         // Backsyncing, so ensure that submodule expansions are not being modified
         let submodules_affected =
             get_submodule_expansions_affected(&sm_exp_data, &bonsai, mover.clone())?;
@@ -151,6 +163,17 @@ pub async fn rewrite_commit_with_submodule_expansion<'a, R: Repo>(
         .await
         .context("Failed to create small repo bonsai");
     };
+
+    let ctx = &set_scuba_logger_fields(
+        ctx,
+        [
+            ("source_repo", source_repo.repo_identity().id().id()),
+            (
+                "target_repo",
+                sm_exp_data.large_repo.repo_identity().id().id(),
+            ),
+        ],
+    );
 
     let new_bonsai = run_and_log_stats_to_scuba(
         ctx,

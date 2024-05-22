@@ -14,7 +14,7 @@ use mononoke_types::RepositoryId;
 
 /// Repository identity information.
 #[facet::facet]
-#[derive(Hash, PartialEq, Eq)]
+#[derive(Hash, PartialEq, Eq, Clone)]
 pub struct RepoIdentity {
     /// The ID of the repository.
     id: RepositoryId,

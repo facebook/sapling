@@ -14,6 +14,7 @@ use futures::Future;
 use futures_stats::TimedFutureExt;
 use mononoke_types::ChangesetId;
 use scuba_ext::MononokeScubaSampleBuilder;
+use scuba_ext::ScubaValue;
 use slog::crit;
 use slog::debug;
 use slog::error;
@@ -195,4 +196,18 @@ fn log_with_level<S: Into<String>>(ctx: &CoreContext, level: slog::Level, msg: S
         let mut scuba = ctx.scuba().clone();
         scuba.log_with_msg(level_tag, msg);
     }
+}
+
+pub(crate) fn set_scuba_logger_fields<K, V, L>(ctx: &CoreContext, data: L) -> CoreContext
+where
+    K: Into<String>,
+    V: Into<ScubaValue>,
+    L: IntoIterator<Item = (K, V)>,
+{
+    ctx.with_mutated_scuba(|mut scuba| {
+        data.into_iter().for_each(|(key, value)| {
+            scuba.add(key, value);
+        });
+        scuba
+    })
 }
