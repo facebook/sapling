@@ -359,18 +359,6 @@ static double timethreshold = 2;
 static size_t countthreshold = 2;
 static int dedup = 1;
 
-static void settimethreshold(double ms) {
-  timethreshold = ms;
-}
-
-static void setcountthreshold(size_t count) {
-  countthreshold = count;
-}
-
-static void setdedup(int value) {
-  dedup = value;
-}
-
 static void fprintframetree(
     FILE* fp = stderr,
     frameid_t fid = 0,
