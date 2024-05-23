@@ -931,6 +931,7 @@ impl Client {
         self.log_request(&set_bookmark_req, "set_bookmark");
         let req = self
             .configure_request(self.inner.client.post(url))?
+            .min_transfer_speed(None)
             .cbor(&set_bookmark_req.to_wire())
             .map_err(EdenApiError::RequestSerializationFailed)?;
 
