@@ -78,6 +78,7 @@ import {
   removeNoopEdits,
 } from './CommitMessageFields';
 import {FillCommitMessage} from './FillCommitMessage';
+import SplitSuggestion from './SplitSuggestion';
 import {CommitTitleByline, getTopmostEditedField, Section, SmallCapsTitle} from './utils';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {useAtom, useAtomValue} from 'jotai';
@@ -87,7 +88,6 @@ import {ComparisonType} from 'shared/Comparison';
 import {useContextMenu} from 'shared/ContextMenu';
 import {Icon} from 'shared/Icon';
 import {firstLine, notEmpty, nullthrows} from 'shared/utils';
-
 import './CommitInfoView.css';
 
 export function CommitInfoSidebar() {
@@ -209,6 +209,7 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
 
   const parsedFields = useAtomValue(latestCommitMessageFields(hashOrHead));
 
+  const provider = useAtomValue(codeReviewProvider);
   const startEditingField = (field: string) => {
     const original = parsedFields[field];
     // If you start editing a tokenized field, add a blank token so you can write a new token instead of
@@ -222,6 +223,7 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
   };
 
   const topmostEditedField = getTopmostEditedField(schema, fieldsBeingEdited);
+  const isSplitSuggestionSupported = provider?.isSplitSuggestionSupported() ?? false;
 
   return (
     <div className="commit-info-view" data-testid="commit-info-view">
@@ -341,14 +343,17 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
           {isFoldPreview ? (
             <FoldPreviewActions />
           ) : (
-            <ActionsBar
-              commit={commit}
-              latestMessage={parsedFields}
-              editedMessage={editedMessage}
-              fieldsBeingEdited={fieldsBeingEdited}
-              isCommitMode={isCommitMode}
-              setMode={setMode}
-            />
+            <>
+              {isSplitSuggestionSupported ? <SplitSuggestion commit={commit} /> : null}
+              <ActionsBar
+                commit={commit}
+                latestMessage={parsedFields}
+                editedMessage={editedMessage}
+                fieldsBeingEdited={fieldsBeingEdited}
+                isCommitMode={isCommitMode}
+                setMode={setMode}
+              />
+            </>
           )}
         </div>
       )}

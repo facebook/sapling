@@ -141,7 +141,9 @@ export type TrackEventName =
   | 'UnsubmittedStarRating'
   | 'BlameLoaded'
   | 'VSCodeExtensionActivated'
-  | 'UseCustomCommitMessageTemplate';
+  | 'UseCustomCommitMessageTemplate'
+  | 'SlocCommand'
+  | 'SplitSuggestionError';
 
 export type TrackErrorName =
   | 'BlameError'
@@ -160,4 +162,5 @@ export type TrackErrorName =
   | 'SyncMessageError'
   | 'UploadImageError'
   | 'VSCodeCommandError'
-  | 'VSCodeActivationError';
+  | 'VSCodeActivationError'
+  | 'SplitSuggestionError';

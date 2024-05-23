@@ -34,6 +34,7 @@ function getTooltipGroup(group: string): TypedEventEmitter<'change', HTMLDivElem
 }
 
 type TooltipProps = {
+  inline?: boolean;
   children: ReactNode;
   placement?: Placement;
   /**
@@ -105,7 +106,9 @@ export function Tooltip({
   onDismiss,
   additionalToggles,
   group,
+  inline: inlineProp,
 }: TooltipProps) {
+  const inline = inlineProp ?? false;
   const trigger = triggerProp ?? 'hover';
   const placement = placementProp ?? 'top';
   const [visible, setVisible] = useState<VisibleState>(false);
@@ -223,7 +226,7 @@ export function Tooltip({
 
   return (
     <div
-      className="tooltip-creator"
+      className={inline ? 'tooltip-creator-inline' : 'tooltip-creator'}
       ref={ref}
       onClick={
         trigger === 'click'

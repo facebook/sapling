@@ -1086,6 +1086,23 @@ export class Repository {
     return result;
   }
 
+  public async fetchSignificantLinesOfCode(ctx: RepositoryContext, hash: Hash): Promise<number> {
+    const output = (
+      await this.runCommand(
+        ['diff', '--stat', '-B', '-X', '"**__generated__*"', '-c', hash],
+        'SlocCommand',
+        ctx,
+      )
+    ).stdout;
+    const lines = output.split('\n');
+    const changes = lines[lines.length - 1];
+    const diffStatRe = /\d+ files changed, (\d+) insertions\(\+\), (\d+) deletions\(-\)/;
+    const diffStatMatch = changes.match(diffStatRe);
+    const insertions = parseInt(diffStatMatch?.[1] ?? '0', 10);
+    const deletions = parseInt(diffStatMatch?.[2] ?? '0', 10);
+    const sloc = insertions + deletions;
+    return sloc;
+  }
   public async getAllChangedFiles(ctx: RepositoryContext, hash: Hash): Promise<Array<ChangedFile>> {
     const output = (
       await this.runCommand(

@@ -700,7 +700,8 @@ export type ClientToServerMessage =
     }
   | {type: 'gotUiState'; state: string}
   | CodeReviewProviderSpecificClientToServerMessages
-  | PlatformSpecificClientToServerMessages;
+  | PlatformSpecificClientToServerMessages
+  | {type: 'fetchSignificantLinesOfCode'; hash: Hash};
 
 export type SubscriptionResultsData = {
   uncommittedChanges: FetchedUncommittedChanges;
@@ -777,7 +778,8 @@ export type ServerToClientMessage =
     }
   | {type: 'getUiState'}
   | OperationProgressEvent
-  | PlatformSpecificServerToClientMessages;
+  | PlatformSpecificServerToClientMessages
+  | {type: 'fetchedSignificantLinesOfCode'; hash: Hash; linesOfCode: Result<number>};
 
 export type Disposable = {
   dispose(): void;

@@ -11,6 +11,11 @@
   display: flex;
 }
 
+.tooltip-creator-inline {
+  display: inline;
+  text-decoration: underline;
+}
+
 .tooltip {
   position: absolute;
   pointer-events: initial;

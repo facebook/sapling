@@ -621,6 +621,26 @@ export default class ServerToClientAPI {
           });
         break;
       }
+      case 'fetchSignificantLinesOfCode':
+        {
+          repo
+            .fetchSignificantLinesOfCode(ctx, data.hash)
+            .then(value => {
+              this.postMessage({
+                type: 'fetchedSignificantLinesOfCode',
+                hash: data.hash,
+                linesOfCode: {value},
+              });
+            })
+            .catch(err => {
+              this.postMessage({
+                type: 'fetchedSignificantLinesOfCode',
+                hash: data.hash,
+                linesOfCode: {error: err as Error},
+              });
+            });
+        }
+        break;
       case 'fetchCommitChangedFiles': {
         repo
           .getAllChangedFiles(ctx, data.hash)

@@ -86,7 +86,9 @@ export class GithubUICodeReviewProvider implements UICodeReviewProvider {
       </span>
     );
   };
-
+  isSplitSuggestionSupported(): boolean {
+    return false;
+  }
   submitOperation(_commits: [], options: {draft?: boolean; updateMessage?: string}): Operation {
     if (this.preferredSubmitCommand === 'ghstack') {
       return new GhStackSubmitOperation(options);
