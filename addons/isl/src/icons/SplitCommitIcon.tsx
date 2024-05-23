@@ -7,7 +7,13 @@
 
 export function SplitCommitIcon(props: {slot?: 'start'}) {
   return (
-    <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" {...props}>
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 64 64"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      {...props}>
       <g stroke="currentColor" strokeWidth={4}>
         <path d="M 51.3384,38.090562 16.404011,45.516095 A 18,18 0 0 0 37.197792,57.45369 18,18 0 0 0 51.3384,38.090562 Z" />
         <path d="M 26.802208,8.54631 A 18,18 0 0 0 12.650137,27.911875 L 47.607452,20.481468 A 18,18 0 0 0 26.802208,8.54631 Z" />

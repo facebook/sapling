@@ -355,7 +355,7 @@ export const Commit = memo(
       commitActions.push(<UncommitButton key="uncommit" />);
     }
     if (!isPublic && !actionsPrevented && commit.isDot && !isObsoleted && !inConflicts) {
-      commitActions.push(<SplitButton key="split" commit={commit} />);
+      commitActions.push(<SplitButton icon key="split" commit={commit} />);
     }
 
     if (!isPublic && !actionsPrevented) {

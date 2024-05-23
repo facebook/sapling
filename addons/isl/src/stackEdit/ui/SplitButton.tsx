@@ -9,17 +9,20 @@ import type {CommitInfo} from '../../types';
 
 import {Tooltip} from '../../Tooltip';
 import {tracker} from '../../analytics';
+import {Button} from '../../components/Button';
 import {T, t} from '../../i18n';
 import {SplitCommitIcon} from '../../icons/SplitCommitIcon';
 import {uncommittedChangesWithPreviews} from '../../previews';
 import {useConfirmUnsavedEditsBeforeSplit} from './ConfirmUnsavedEditsBeforeSplit';
 import {editingStackIntentionHashes} from './stackEditState';
-import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {useAtomValue, useSetAtom} from 'jotai';
 
 /** Button to open split UI for the current commit. Expected to be shown on the head commit.
  * Loads that one commit in the split UI. */
-export function SplitButton({commit}: {commit: CommitInfo}) {
+export function SplitButton({
+  commit,
+  ...rest
+}: {commit: CommitInfo} & React.ComponentProps<typeof Button>) {
   const confirmUnsavedEditsBeforeSplit = useConfirmUnsavedEditsBeforeSplit();
   const setEditStackIntentionHashes = useSetAtom(editingStackIntentionHashes);
 
@@ -37,10 +40,10 @@ export function SplitButton({commit}: {commit: CommitInfo}) {
     <Tooltip
       title={hasUncommittedChanges ? t('Cannot currently split with uncommitted changes') : ''}
       trigger={hasUncommittedChanges ? 'hover' : 'disabled'}>
-      <VSCodeButton appearance="icon" onClick={onClick} disabled={hasUncommittedChanges}>
-        <SplitCommitIcon slot="start" />
+      <Button onClick={onClick} disabled={hasUncommittedChanges} {...rest}>
+        <SplitCommitIcon />
         <T>Split</T>
-      </VSCodeButton>
+      </Button>
     </Tooltip>
   );
 }
