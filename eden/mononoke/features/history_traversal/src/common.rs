@@ -43,6 +43,8 @@ pub(crate) async fn find_possible_mutable_ancestors(
         stream::iter(mutable_csids.into_iter().map(anyhow::Ok))
             .try_filter_map({
                 move |mutated_at| async move {
+                    // Yield to avoid long polls with large numbers of ancestors.
+                    tokio::task::yield_now().await;
                     // First, we filter out csids that cannot be reached from here. These
                     // are attached to mutable renames that are either descendants of us, or
                     // in a completely unrelated tree of history.

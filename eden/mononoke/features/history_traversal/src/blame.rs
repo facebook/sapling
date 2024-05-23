@@ -131,6 +131,9 @@ async fn fetch_mutable_blame(
     // If we have mutable blame down two ancestors of a merge, we'd expect that the order
     // of applying those mutations will not affect the final result
     while let Some((_, mutated_csid)) = possible_mutable_ancestors.pop() {
+        // Yield to avoid long polls with large numbers of ancestors.
+        tokio::task::yield_now().await;
+
         // Apply mutation for mutated_csid
         let ((mutated_blame, _), (original_blame, _)) = try_join!(
             fetch_mutable_blame(ctx, repo, mutated_csid, path, seen),
@@ -146,6 +149,8 @@ async fn fetch_mutable_blame(
             stream::iter(possible_mutable_ancestors.into_iter().map(anyhow::Ok))
                 .try_filter_map({
                     move |(gen, csid)| async move {
+                        // Yield to avoid long polls with large numbers of ancestors.
+                        tokio::task::yield_now().await;
                         if repo
                             .commit_graph()
                             .is_ancestor(ctx, csid, mutated_csid)
