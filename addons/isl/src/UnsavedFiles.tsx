@@ -9,13 +9,14 @@ import type {RepoRelativePath} from './types';
 import type {ContextMenuItem} from 'shared/ContextMenu';
 
 import serverAPI from './ClientToServerAPI';
-import {Row} from './ComponentUtils';
+import {Column, Row} from './ComponentUtils';
 import {availableCwds} from './CwdSelector';
 import {Subtle} from './Subtle';
 import {Button} from './components/Button';
 import {T, t} from './i18n';
-import {writeAtom} from './jotaiUtils';
+import {readAtom, writeAtom} from './jotaiUtils';
 import foundPlatform from './platform';
+import {showModal} from './useModal';
 import {registerCleanup, registerDisposable} from './utils';
 import {atom, useAtomValue} from 'jotai';
 import {useContextMenu} from 'shared/ContextMenu';
@@ -77,4 +78,50 @@ export function UnsavedFilesCount() {
       </Row>
     </Subtle>
   );
+}
+
+/**
+ * If there are unsaved files, ask the user if they want to save them.
+ * Returns true if the user wants to continue with the operation (after possibly having saved the files),
+ * false if they cancelled.
+ */
+export async function confirmUnsavedFiles(): Promise<boolean> {
+  const unsaved = readAtom(unsavedFiles);
+  if (unsaved.length === 0) {
+    return true;
+  }
+
+  const buttons = [
+    t('Cancel'),
+    t('Continue Without Saving'),
+    {label: t('Save All and Continue'), primary: true},
+  ];
+  const answer = await showModal({
+    type: 'confirm',
+    buttons,
+    title: <T count={unsaved.length}>confirmUnsavedFileCount</T>,
+    message: (
+      <Column alignStart>
+        <Column alignStart>
+          {unsaved.map(({path}) => (
+            <Row key={path}>{path}</Row>
+          ))}
+        </Column>
+        <Row>
+          <T count={unsaved.length}>doYouWantToSaveThem</T>
+        </Row>
+      </Column>
+    ),
+  });
+
+  if (answer === buttons[2]) {
+    serverAPI.postMessage({type: 'platform/saveAllUnsavedFiles'});
+    const message = await serverAPI.nextMessageMatching(
+      'platform/savedAllUnsavedFiles',
+      () => true,
+    );
+    return message.success;
+  }
+
+  return answer === buttons[1];
 }

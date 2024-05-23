@@ -11,7 +11,10 @@ import {commitMessageFieldsSchema} from './CommitInfoView/CommitMessageFields';
 import {OSSCommitMessageFieldSchema} from './CommitInfoView/OSSCommitMessageFieldsSchema';
 import {readAtom} from './jotaiUtils';
 import {individualToggleKey} from './selection';
+import {expectMessageSentToServer} from './testUtils';
 import {screen, within, fireEvent, waitFor, act} from '@testing-library/react';
+import {wait} from '@testing-library/user-event/dist/utils';
+import {nextTick} from 'shared/testUtils';
 import {nullthrows} from 'shared/utils';
 
 export const CommitTreeListTestUtils = {
@@ -71,7 +74,7 @@ export const CommitInfoTestUtils = {
     });
   },
 
-  clickAmendButton() {
+  async clickAmendButton() {
     const amendButton: HTMLButtonElement | null = within(
       screen.getByTestId('commit-info-actions-bar'),
     ).queryByText('Amend');
@@ -79,6 +82,14 @@ export const CommitInfoTestUtils = {
     act(() => {
       fireEvent.click(nullthrows(amendButton));
     });
+    await waitFor(() =>
+      expectMessageSentToServer({
+        type: 'runOperation',
+        operation: expect.objectContaining({
+          args: expect.arrayContaining(['amend']),
+        }),
+      }),
+    );
   },
 
   clickAmendMessageButton() {
@@ -91,7 +102,7 @@ export const CommitInfoTestUtils = {
     });
   },
 
-  clickCommitButton() {
+  async clickCommitButton() {
     const commitButton: HTMLButtonElement | null = within(
       screen.getByTestId('commit-info-actions-bar'),
     ).queryByText('Commit');
@@ -99,6 +110,14 @@ export const CommitInfoTestUtils = {
     act(() => {
       fireEvent.click(nullthrows(commitButton));
     });
+    await waitFor(() =>
+      expectMessageSentToServer({
+        type: 'runOperation',
+        operation: expect.objectContaining({
+          args: expect.arrayContaining(['commit']),
+        }),
+      }),
+    );
   },
 
   clickCancel() {

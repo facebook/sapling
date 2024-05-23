@@ -25,6 +25,7 @@ import {latestSuccessorUnlessExplicitlyObsolete} from '../SuccessionTracker';
 import {SuggestedRebaseButton} from '../SuggestedRebase';
 import {Tooltip} from '../Tooltip';
 import {UncommittedChanges} from '../UncommittedChanges';
+import {confirmUnsavedFiles} from '../UnsavedFiles';
 import {tracker} from '../analytics';
 import {
   allDiffSummaries,
@@ -641,6 +642,11 @@ function ActionsBar({
                   }
                 }
 
+                const shouldContinue = await confirmUnsavedFiles();
+                if (!shouldContinue) {
+                  return;
+                }
+
                 return doAmendOrCommit();
               }}>
               {isCommitMode ? <T>Commit</T> : <T>Amend</T>}
@@ -722,6 +728,11 @@ function ActionsBar({
                 submitDisabledReason != null
               }
               runOperation={async () => {
+                const shouldContinue = await confirmUnsavedFiles();
+                if (!shouldContinue) {
+                  return;
+                }
+
                 let amendOrCommitOp;
                 if (commit.isDot && anythingToCommit) {
                   // TODO: we should also amend if there are pending commit message changes, and change the button

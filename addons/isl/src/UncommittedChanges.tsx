@@ -39,7 +39,7 @@ import {FileTree, FileTreeFolderHeader} from './FileTree';
 import {useGeneratedFileStatuses} from './GeneratedFile';
 import {Internal} from './Internal';
 import {DOCUMENTATION_DELAY, Tooltip} from './Tooltip';
-import {UnsavedFilesCount} from './UnsavedFiles';
+import {UnsavedFilesCount, confirmUnsavedFiles} from './UnsavedFiles';
 import {tracker} from './analytics';
 import {latestCommitMessageFields} from './codeReview/CodeReviewInfo';
 import {Badge} from './components/Badge';
@@ -496,7 +496,12 @@ export function UncommittedChanges({place}: {place: Place}) {
     [headCommit],
   );
 
-  const onConfirmQuickCommit = () => {
+  const onConfirmQuickCommit = async () => {
+    const shouldContinue = await confirmUnsavedFiles();
+    if (!shouldContinue) {
+      return;
+    }
+
     const titleEl = commitTitleRef.current as HTMLInputElement | null;
     const title = titleEl?.value || template?.Title || temporaryCommitTitle();
     // use the template, unless a specific quick title is given
@@ -756,7 +761,12 @@ export function UncommittedChanges({place}: {place: Place}) {
                 appearance="icon"
                 disabled={noFilesSelected || !headCommit}
                 data-testid="uncommitted-changes-quick-amend-button"
-                onClick={() => {
+                onClick={async () => {
+                  const shouldContinue = await confirmUnsavedFiles();
+                  if (!shouldContinue) {
+                    return;
+                  }
+
                   const hash = headCommit?.hash ?? '.';
                   const allFiles = uncommittedChanges.map(file => file.path);
                   const operation = getAmendOperation(
