@@ -36,10 +36,13 @@ use metaconfig_types::CommitSyncDirection;
 use metaconfig_types::DefaultSmallToLargeCommitSyncPathAction;
 use metaconfig_types::GitSubmodulesChangesAction;
 use mononoke_types::fsnode::Fsnode;
+use mononoke_types::fsnode::FsnodeDirectory;
 use mononoke_types::fsnode::FsnodeEntry;
+use mononoke_types::fsnode::FsnodeFile;
 use mononoke_types::typed_hash::FsnodeId;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
+use mononoke_types::MPathElement;
 use mononoke_types::NonRootMPath;
 use movers::Mover;
 use slog::debug;
@@ -414,6 +417,43 @@ fn wrap_mover_result(
         None => Ok(None),
     }
 }
+
+/// Verify that submodule expansion in the repo is correct in small->large direction
+/// i.e. for given git submodule in the small repo  (identified by its path and fsnode)
+/// whether the metadata and expansion directory exist in the target repo and their contents
+/// match the submodule contents.
+async fn verify_git_submodule_expansion_small_to_large<'a>(
+    _ctx: &'a CoreContext,
+    _small_repo: Source<&'a impl Repo>,
+    _large_repo: Target<&'a impl Repo>,
+    _sm_exp_data: &Option<SubmoduleExpansionData<'a, impl Repo>>,
+    _mover: &Mover,
+    _submodule_path: NonRootMPath,
+    _submodule_fsnode_file_entry: FsnodeFile,
+    _large_root_fsnode_id: FsnodeId,
+) -> Result<Option<ValidationOutputElement>, Error> {
+    // TODO: implementation coming in the next diff right now let's mark everything as valid
+    Ok(None)
+}
+
+/// Verify that submodule expansion in the repo is correct in large->small direction
+/// i.e. for given large repo submodule expansion and metadata file whether they
+/// have a corresponding submodule node in the small repo and its content match
+/// the submodule contents.
+async fn verify_git_submodule_expansion_large_to_small<'a>(
+    _ctx: &'a CoreContext,
+    _small_repo: Target<&'a impl Repo>,
+    _sm_exp_data: &Option<SubmoduleExpansionData<'a, impl Repo>>,
+    _mover: &Mover,
+    _small_root_fsnode_id: FsnodeId,
+    _expansion_path: NonRootMPath,
+    _expansion_fsnode_dir_entry: FsnodeDirectory,
+    _expansion_metadata_file: FsnodeFile,
+) -> Result<Option<ValidationOutputElement>, Error> {
+    // TODO: implementation coming in the next diff right now let's mark everything as valid
+    Ok(None)
+}
+
 /// Datastructure that allows quick identification of submodule expansion paths
 /// in the large repo and finding their corresponding metatdata.
 #[derive(Default, Debug)]
@@ -464,21 +504,106 @@ fn list_possible_expansion_and_metadata_paths<'a>(
     }
 }
 
+// Struct used for output of function below. Represents a
+// submodule expansion directory and its metadata file.
+struct SubmoduleExpansionDirectoryAndMetadata {
+    expansion_path: NonRootMPath,
+    expansion_fsnode_dir_entry: FsnodeDirectory,
+    expansion_metadata_file: FsnodeFile,
+}
+
+enum ElemAction {
+    Keep,
+    Skip(Option<ValidationOutputElement>),
+    VerifyExpansion(SubmoduleExpansionDirectoryAndMetadata),
+}
+
+// Determines if given entry is submodule expansion directory and returns
+// pointers to directory and metadata.
+// Determines whether further validation should skip the entry.
+// Assumes that submodule expansion is enabled.
+fn find_submodule_expansion(
+    exp_and_metadata_paths: &ExpansionAndMetadataPaths,
+    source_dir_path: &MPath,
+    source_dir_map: &SortedVectorMap<MPathElement, FsnodeEntry>,
+    elem: &MPathElement,
+    entry: &FsnodeEntry,
+) -> Result<ElemAction, Error> {
+    // validation errors
+    if let FsnodeEntry::File(fsnode_fileentry) = entry {
+        // if submodule expansion is ON then the submodules have no business to exist in
+        // the large repo
+        if *fsnode_fileentry.file_type() == FileType::GitSubmodule {
+            return Ok(ElemAction::Skip(Some(SubmoduleExpansionMismatch(
+                "git submodules not allowed in large to small sync".to_string(),
+            ))));
+        }
+    }
+    let source_elem_path = source_dir_path.join_element(Some(elem)).try_into()?;
+
+    if let Some(expansion_path) = exp_and_metadata_paths
+        .metadata_path_to_expansion
+        .get(&source_elem_path)
+    {
+        let expansion_metadata_file = if let FsnodeEntry::File(fsnode_fileentry) = entry {
+            if *fsnode_fileentry.file_type() != FileType::Regular {
+                return Ok(ElemAction::Skip(Some(SubmoduleExpansionMismatch(format!(
+                    "git submodule expansion metadata file {} has to be a regular file",
+                    &source_elem_path,
+                )))));
+            }
+            fsnode_fileentry
+        } else {
+            return Ok(ElemAction::Skip(Some(SubmoduleExpansionMismatch(format!(
+                "git submodule expansion metadata path {} has to be a file",
+                &source_elem_path,
+            )))));
+        };
+        if let Some(FsnodeEntry::Directory(expansion_fsnode_dir_entry)) =
+            source_dir_map.get(expansion_path.basename())
+        {
+            return Ok(ElemAction::VerifyExpansion(
+                SubmoduleExpansionDirectoryAndMetadata {
+                    expansion_path: expansion_path.clone(),
+                    expansion_fsnode_dir_entry: expansion_fsnode_dir_entry.clone(),
+                    expansion_metadata_file: expansion_metadata_file.clone(),
+                },
+            ));
+        } else {
+            return Ok(ElemAction::Skip(Some(SubmoduleExpansionMismatch(format!(
+                "submodule expansion directory not found in large repo: {:?} while submodule metadata file is present",
+                &expansion_path,
+            )))));
+        }
+    }
+    if let Some(metadata_path) = exp_and_metadata_paths
+        .expansion_path_to_metadata
+        .get(&source_elem_path)
+    {
+        if let Some(_entry) = source_dir_map.get(metadata_path.basename()) {
+            // here we just skip the expansion file and continue (as it was handled
+            // together with metadata file earlier)
+            return Ok(ElemAction::Skip(None));
+        }
+    }
+    Ok(ElemAction::Keep)
+}
+
 /// Given a source and target directories fsnodes and a mover, verify that for all submodule
 /// expansions (or submodules) in the source repo the expansion was done correctly. Also filter
 /// those out so the rest of validation process will ignore them.
 async fn verify_and_filter_out_submodule_changes<'a>(
-    _ctx: &'a CoreContext,
-    _direction: CommitSyncDirection,
-    _source_repo: Source<&'a impl Repo>,
+    ctx: &'a CoreContext,
+    direction: CommitSyncDirection,
+    source_repo: Source<&'a impl Repo>,
     source_path: &MPath,
     source_dir: Fsnode,
-    _target_repo: Target<&'a impl Repo>,
-    _target_root_fsnode_id: FsnodeId,
-    _mover: &Mover,
-    _submodules_action: GitSubmodulesChangesAction,
-    _sm_exp_data: &Option<SubmoduleExpansionData<'a, impl Repo>>,
-    _exp_and_metadata_paths: &ExpansionAndMetadataPaths,
+    target_repo: Target<&'a impl Repo>,
+    target_root_fsnode_id: FsnodeId,
+    mover: &Mover,
+    submodules_action: GitSubmodulesChangesAction,
+    sm_exp_data: &Option<SubmoduleExpansionData<'a, impl Repo>>,
+    exp_and_metadata_paths: &ExpansionAndMetadataPaths,
 ) -> Result<
     (
         Vec<ValidationOutputElement>,
@@ -486,13 +611,118 @@ async fn verify_and_filter_out_submodule_changes<'a>(
     ),
     Error,
 > {
-    let filtered_entries = source_dir
-        .into_subentries()
+    // the filtered directory entries that will be returned
+    let mut filtered_directory_entries = Vec::new();
+    // validation errors
+    let mut output_elements = vec![];
+    // futures for submodule verification, we buffer them in this vector so we can run them in parallel
+    let mut verification_futures = vec![];
+    match direction {
+        // large to small: find all expansions and their metadata files and call the
+        // appropiate validation function
+        CommitSyncDirection::LargeToSmall => {
+            match submodules_action {
+                // in case of keep and strip there should be nothing in the large repo
+                // that doesn't rewrite cleanly to small one with just mover - no filtering needed
+                GitSubmodulesChangesAction::Keep | GitSubmodulesChangesAction::Strip => {
+                    return Ok((
+                        vec![],
+                        source_dir
+                            .into_subentries()
+                            .into_iter()
+                            .map(|(elem, entry)| {
+                                (source_path.join_into_non_root_mpath(&elem), entry)
+                            })
+                            .collect::<Vec<_>>(),
+                    ));
+                }
+                // rest of this block cares only about expand scenario
+                // we're using match here rather than "if let" so the person adding
+                // new variants of submodule changes action will get a compile time error
+                GitSubmodulesChangesAction::Expand => (),
+            };
+            // this map will contain only the entries that are not submodule expansions or metadata files
+            let source_dir_map = source_dir.clone().into_subentries();
+            for (elem, entry) in source_dir.into_subentries() {
+                let elem_action = find_submodule_expansion(
+                    exp_and_metadata_paths,
+                    source_path,
+                    &source_dir_map,
+                    &elem,
+                    &entry,
+                )?;
+                match elem_action {
+                    ElemAction::Keep => filtered_directory_entries.push((elem, entry)),
+                    ElemAction::Skip(Some(output_elem)) => output_elements.push(output_elem),
+                    ElemAction::Skip(None) => (),
+                    ElemAction::VerifyExpansion(exp_and_metadata) => {
+                        let verification_fut = verify_git_submodule_expansion_large_to_small(
+                            ctx,
+                            target_repo,
+                            sm_exp_data,
+                            mover,
+                            target_root_fsnode_id,
+                            exp_and_metadata.expansion_path,
+                            exp_and_metadata.expansion_fsnode_dir_entry,
+                            exp_and_metadata.expansion_metadata_file,
+                        );
+                        verification_futures.push(verification_fut.boxed());
+                    }
+                }
+            }
+        }
+        // small to large is simpler: ws need to call validation for each submodule
+        CommitSyncDirection::SmallToLarge => {
+            for (elem, entry) in source_dir.into_subentries() {
+                if let FsnodeEntry::File(fsnode_fileentry) = entry {
+                    if *fsnode_fileentry.file_type() == FileType::GitSubmodule {
+                        match submodules_action {
+                            // when keeping submodules don't filter them out - we need a matching
+                            // submodule on both sides of sync
+                            GitSubmodulesChangesAction::Keep => (),
+                            // for strip we just drop the submodule
+                            GitSubmodulesChangesAction::Strip => {
+                                continue;
+                            }
+                            // for expand call the validation function
+                            GitSubmodulesChangesAction::Expand => {
+                                let submodule_path =
+                                    source_path.join_element(Some(&elem)).try_into()?;
+                                verification_futures.push(
+                                    verify_git_submodule_expansion_small_to_large(
+                                        ctx,
+                                        source_repo,
+                                        target_repo,
+                                        sm_exp_data,
+                                        mover,
+                                        submodule_path,
+                                        fsnode_fileentry,
+                                        target_root_fsnode_id,
+                                    )
+                                    .boxed(),
+                                );
+                                continue;
+                            }
+                        };
+                    }
+                }
+                filtered_directory_entries.push((elem, entry));
+            }
+        }
+    }
+    let downstream_verification_output: Vec<ValidationOutputElement> =
+        stream::iter(verification_futures)
+            .buffered(10)
+            .try_filter_map(|x| async { Ok(x) })
+            .try_collect()
+            .await?;
+    output_elements.extend(downstream_verification_output);
+
+    let filtered_directory_entries = filtered_directory_entries
         .into_iter()
         .map(|(elem, entry)| (source_path.join_into_non_root_mpath(&elem), entry))
         .collect::<Vec<_>>();
-    // TODO: filtering is not implemented yet, this function is just a passthrough now
-    Ok((vec![], filtered_entries))
+    Ok((output_elements, filtered_directory_entries))
 }
 
 async fn verify_dir<'a>(

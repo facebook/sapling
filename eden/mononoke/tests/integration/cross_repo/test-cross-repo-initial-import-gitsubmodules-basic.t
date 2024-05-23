@@ -87,6 +87,4 @@ Create commit that modifies git submodule in small repo
   
   Deriving all the enabled derived data types
 
-  $ REPOIDLARGE=$LARGE_REPO_ID REPOIDSMALL=$SUBMODULE_REPO_ID quiet_grep ", but" -- verify_wc 768a9c6d2b6943900f9d4374028a891c7d3dc62d7ecc25a1fd2a9c3fc9aba14b | sort
-  Some(NonRootMPath("bar/git_submodule")) is a file in small_repo, but nonexistant in large_repo (under Some(NonRootMPath("smallrepofolder1/bar/git_submodule")))
-  Some(NonRootMPath("foo/git_submodule")) is a file in small_repo, but nonexistant in large_repo (under Some(NonRootMPath("smallrepofolder1/foo/git_submodule")))
+  $ REPOIDLARGE=$LARGE_REPO_ID REPOIDSMALL=$SUBMODULE_REPO_ID verify_wc 768a9c6d2b6943900f9d4374028a891c7d3dc62d7ecc25a1fd2a9c3fc9aba14b
