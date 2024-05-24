@@ -27,6 +27,7 @@ use clap::Parser;
 use dialoguer::Confirm;
 use edenfs_client::checkout::find_checkout;
 use edenfs_client::checkout::CheckoutConfig;
+use edenfs_client::fsutil::forcefully_remove_dir_all;
 use edenfs_client::redirect::get_configured_redirections;
 use edenfs_client::redirect::get_effective_redirections;
 use edenfs_client::redirect::try_add_redirection;
@@ -77,6 +78,11 @@ pub enum RedirectCmd {
             help = "force the bind mount to fail if it would overwrite a pre-existing directory"
         )]
         strict: bool,
+        #[clap(
+            long,
+            help = "Forcefully add redirection, removing files in order to remove directories that should be redirections and killing processes preventing it if needed."
+        )]
+        force: bool,
     },
     #[clap(
         about = "Unmount all effective redirection configuration, but preserve the configuration \
@@ -113,6 +119,11 @@ pub enum RedirectCmd {
             fix paths only from the .eden-redirections source."
         )]
         only_repo_source: bool,
+        #[clap(
+            long,
+            help = "Forcefully fix redirections, removing files in order to remove directories that should be redirections and killing processes preventing it if needed."
+        )]
+        force: bool,
     },
     #[clap(about = "Delete stale apfs volumes")]
     CleanupApfs {},
@@ -187,6 +198,7 @@ impl RedirectCmd {
         redir_type: &str,
         force_remount_bind_mounts: bool,
         strict: bool,
+        force: bool,
     ) -> Result<ExitCode> {
         let repo_path = remove_trailing_slash(repo_path);
         let redir_type = RedirectionType::from_str(redir_type)?;
@@ -207,6 +219,7 @@ impl RedirectCmd {
             redir_type,
             force_remount_bind_mounts,
             strict,
+            force,
         )
         .await
         .with_context(|| {
@@ -344,6 +357,7 @@ impl RedirectCmd {
         mount: Option<PathBuf>,
         force_remount_bind_mounts: bool,
         only_repo_source: bool,
+        force: bool,
     ) -> Result<ExitCode> {
         let instance = EdenFsInstance::global();
         let mount = match mount {
@@ -376,7 +390,21 @@ impl RedirectCmd {
                 continue;
             }
 
-            eprintln!("Fixing {}", redir.repo_path.display());
+            eprintln!(
+                "Fixing {}, state = {:?}",
+                redir.repo_path.display(),
+                redir.state
+            );
+
+            if redir.state == Some(RedirectionState::RealDirWithData) && force {
+                // This is the case in which instead of having a symlink pointing to the target we have a real
+                // directory with data.
+                if forcefully_remove_dir_all(&redir.repo_path).is_err() {
+                    eprintln!("{:?}, failed to fix; unable to remove directory", redir);
+                    continue;
+                }
+            }
+
             if let Err(e) = redir.remove_existing(&checkout, false).await {
                 eprintln!(
                     "Unable to remove redirection {}... this isn't necessarily an error: {}",
@@ -390,7 +418,7 @@ impl RedirectCmd {
                 continue;
             }
 
-            if let Err(e) = redir.apply(&checkout).await {
+            if let Err(e) = redir.apply(&checkout, force).await {
                 eprintln!(
                     "Unable to apply redirection {}: {}",
                     redir.repo_path.display(),
@@ -540,6 +568,7 @@ impl Subcommand for RedirectCmd {
                 redir_type,
                 force_remount_bind_mounts,
                 strict,
+                force,
             } => {
                 self.add(
                     mount.to_owned(),
@@ -547,6 +576,7 @@ impl Subcommand for RedirectCmd {
                     redir_type,
                     *force_remount_bind_mounts,
                     *strict,
+                    *force,
                 )
                 .await
             }
@@ -556,11 +586,13 @@ impl Subcommand for RedirectCmd {
                 mount,
                 force_remount_bind_mounts,
                 only_repo_source,
+                force,
             } => {
                 self.fixup(
                     mount.to_owned(),
                     *force_remount_bind_mounts,
                     *only_repo_source,
+                    *force,
                 )
                 .await
             }

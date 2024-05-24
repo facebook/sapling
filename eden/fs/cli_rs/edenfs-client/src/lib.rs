@@ -17,6 +17,7 @@ use thrift_streaming_clients::StreamingEdenService;
 use thrift_types::edenfs_clients::EdenService;
 
 pub mod checkout;
+pub mod fsutil;
 pub mod instance;
 mod mounttable;
 pub mod redirect;

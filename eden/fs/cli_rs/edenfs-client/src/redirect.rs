@@ -44,6 +44,7 @@ use util::path::absolute;
 
 use crate::checkout::CheckoutConfig;
 use crate::checkout::EdenFsCheckout;
+use crate::fsutil::forcefully_remove_dir_all;
 #[cfg(unix)]
 use crate::instance::EdenFsInstance;
 use crate::mounttable::read_mount_table;
@@ -594,7 +595,7 @@ impl Redirection {
     fn _bind_mount_darwin(&self, checkout_path: &Path, target: &Path) -> Result<()> {
         // We default to APFS since DMG redirections are experimental at this point
         if Self::determine_bind_redirection_type() == DarwinBindRedirectionType::SYMLINK {
-            self._apply_symlink(checkout_path, target)
+            self._apply_symlink(checkout_path, target, false)
         } else if Self::determine_bind_redirection_type() == DarwinBindRedirectionType::DMG {
             self._bind_mount_darwin_dmg(checkout_path, target)
         } else {
@@ -603,23 +604,23 @@ impl Redirection {
     }
 
     #[cfg(target_os = "windows")]
-    fn _bind_mount_windows(&self, checkout_path: &Path, target: &Path) -> Result<()> {
-        self._apply_symlink(checkout_path, target)
+    fn _bind_mount_windows(&self, checkout_path: &Path, target: &Path, force: bool) -> Result<()> {
+        self._apply_symlink(checkout_path, target, force)
     }
 
     #[cfg(target_os = "linux")]
-    async fn _bind_mount(&self, checkout: &Path, target: &Path) -> Result<()> {
+    async fn _bind_mount(&self, checkout: &Path, target: &Path, _force: bool) -> Result<()> {
         self._bind_mount_linux(checkout, target).await
     }
 
     #[cfg(target_os = "macos")]
-    async fn _bind_mount(&self, checkout: &Path, target: &Path) -> Result<()> {
+    async fn _bind_mount(&self, checkout: &Path, target: &Path, _force: bool) -> Result<()> {
         self._bind_mount_darwin(checkout, target)
     }
 
     #[cfg(target_os = "windows")]
-    async fn _bind_mount(&self, checkout: &Path, target: &Path) -> Result<()> {
-        self._bind_mount_windows(checkout, target)
+    async fn _bind_mount(&self, checkout: &Path, target: &Path, force: bool) -> Result<()> {
+        self._bind_mount_windows(checkout, target, force)
     }
 
     #[cfg(all(not(unix), not(windows)))]
@@ -704,7 +705,8 @@ impl Redirection {
 
     /// Attempts to create a symlink at checkout_path/self.repo_path that points to target.
     /// This will fail if checkout_path/self.repo_path already exists
-    fn _apply_symlink(&self, checkout_path: &Path, target: &Path) -> Result<()> {
+    #[allow(unused)] // Force is only used in Windows
+    fn _apply_symlink(&self, checkout_path: &Path, target: &Path, force: bool) -> Result<()> {
         let symlink_path = checkout_path.join(&self.repo_path);
 
         // If .parent() resolves to None or parent().exists() == true, we skip directory creation
@@ -757,13 +759,26 @@ impl Redirection {
             {
                 // These files should be created by EdenFS only, let's just remove
                 // it if it's there.
+                if temp_symlink_path.exists() && temp_symlink_path.is_dir() && force {
+                    println!(
+                        "This should be a symlink but it's a directory, deleting because --force was specified: {}",
+                        temp_symlink_path.display()
+                    );
+                }
+
                 if temp_symlink_path.exists() {
                     std::fs::remove_file(&temp_symlink_path)
                         .from_err()
                         .with_context(|| {
+                            let extra = if force {
+                                " (consider adding --force)"
+                            } else {
+                                ""
+                            };
                             format!(
-                                "Failed to remove existing file {}",
-                                temp_symlink_path.display()
+                                "Failed to remove existing file {}{}",
+                                temp_symlink_path.display(),
+                                extra
                             )
                         })?;
                 }
@@ -861,7 +876,7 @@ impl Redirection {
         Ok(disposition)
     }
 
-    pub async fn apply(&self, checkout: &EdenFsCheckout) -> Result<()> {
+    pub async fn apply(&self, checkout: &EdenFsCheckout, force: bool) -> Result<()> {
         // Check for non-empty directory. We only care about this if we are creating a symlink type redirection or bind type redirection on Windows.
         let disposition = self
             .remove_existing(checkout, false)
@@ -881,11 +896,24 @@ impl Redirection {
             // disk image can leave marker files like `.automounted` in the
             // directory that we mount over, so let's only treat this as a hard
             // error if we want to redirect using a symlink.
-            return Err(EdenFsError::Other(anyhow!(
-                "Cannot redirect {} because it is a non-empty directory.  Review its contents and \
+            if !force {
+                return Err(EdenFsError::Other(anyhow!(
+                    "Cannot redirect {} because it is a non-empty directory (full path {}).  Review its contents and \
                 remove it if that is appropriate and then try again.",
-                self.repo_path.display()
-            )));
+                    self.repo_path.display(),
+                    self.expand_repo_path(checkout).display()
+                )));
+            } else {
+                println!("Attempting to remove forcefully.");
+                if forcefully_remove_dir_all(&self.expand_repo_path(checkout)).is_err() {
+                    return Err(EdenFsError::Other(anyhow!(
+                        "Cannot redirect {} because it is a non-empty directory (full path {}).  An error occured when removing; \
+                you will have to remove manually and retry.",
+                        self.repo_path.display(),
+                        self.expand_repo_path(checkout).display()
+                    )));
+                };
+            }
         }
 
         if disposition == RepoPathDisposition::IsFile {
@@ -898,7 +926,7 @@ impl Redirection {
         if self.redir_type == RedirectionType::Bind {
             let target = self.expand_target_abspath(checkout)?;
             match target {
-                Some(t) => self._bind_mount(&checkout.path(), &t).await,
+                Some(t) => self._bind_mount(&checkout.path(), &t, force).await,
                 None => Err(EdenFsError::Other(anyhow!(
                     "failed to expand target abspath for checkout {}",
                     &checkout.path().display()
@@ -916,7 +944,7 @@ impl Redirection {
                 )
             })?;
             match target {
-                Some(t) => self._apply_symlink(&checkout.path(), &t),
+                Some(t) => self._apply_symlink(&checkout.path(), &t, force),
                 None => Err(EdenFsError::Other(anyhow!(
                     "failed to expand target abspath for checkout {}",
                     &checkout.path().display()
@@ -1387,6 +1415,7 @@ pub async fn try_add_redirection(
     redir_type: RedirectionType,
     force_remount_bind_mounts: bool,
     strict: bool,
+    force: bool,
 ) -> Result<i32> {
     // Get only the explicitly configured entries for the purposes of the
     // add command, so that we avoid writing out any of the effective list
@@ -1488,7 +1517,7 @@ pub async fn try_add_redirection(
         }
     }
 
-    redir.apply(checkout).await.with_context(|| {
+    redir.apply(checkout, force).await.with_context(|| {
         format!(
             "Failed to apply redirection '{}' for checkout {}",
             redir.repo_path.display(),
@@ -1937,7 +1966,7 @@ mod tests {
 
         let symlink_path = fake_checkout_path.join(&redir1.repo_path());
         redir1
-            ._apply_symlink(fake_checkout_path, &symlink_path)
+            ._apply_symlink(fake_checkout_path, &symlink_path, false)
             .expect("Failed to create symlink");
         assert!(symlink_path.is_symlink())
     }
