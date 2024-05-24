@@ -334,7 +334,7 @@ impl Redirection {
                 format!(
                     "Failed to execute mkscratch cmd: `{} {}`",
                     &mkscratch.display(),
-                    shlex::join(args.iter().copied()),
+                    shlex::try_join(args.iter().copied()).unwrap(), // Unwrap OK, we know the args are valid
                 )
             })?;
         if output.status.success() {
@@ -351,7 +351,7 @@ impl Redirection {
             Err(EdenFsError::Other(anyhow!(
                 "Failed to execute `{} {}`, stderr: {}, exit status: {:?}",
                 &mkscratch.display(),
-                shlex::join(args.iter().copied()),
+                shlex::try_join(args.iter().copied()).unwrap_or("<undecodeable>".to_string()),
                 String::from_utf8_lossy(&output.stderr),
                 output.status,
             )))
