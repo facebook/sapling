@@ -366,7 +366,7 @@ class SaplingBackingStore final : public BackingStore {
       const ObjectFetchContextPtr& context);
 
   /**
-   * Fetch a tree from Mercurial.
+   * Create a tree fetch request and enqueue it to the SaplingImportRequestQueue
    *
    * For latency sensitive context, the caller is responsible for checking if
    * the tree is present locally, as this function will always push the request
@@ -397,13 +397,13 @@ class SaplingBackingStore final : public BackingStore {
       sapling::FetchMode fetchMode);
 
   /**
-   * Fetch a blob from Mercurial.
+   * Create a blob fetch request and enqueue it to the SaplingImportRequestQueue
    *
    * For latency sensitive context, the caller is responsible for checking if
    * the blob is present locally, as this function will always push the request
    * at the end of the queue.
    */
-  ImmediateFuture<GetBlobResult> getBlobImpl(
+  ImmediateFuture<GetBlobResult> getBlobEnqueue(
       const ObjectId& id,
       const HgProxyHash& proxyHash,
       const ObjectFetchContextPtr& context,
@@ -441,13 +441,14 @@ class SaplingBackingStore final : public BackingStore {
       const ObjectFetchContextPtr& context) override;
 
   /**
-   * Fetch the blob metadata from Mercurial.
+   * Create a blob metadata fetch request and enqueue it to the
+   * SaplingImportRequestQueue
    *
    * For latency sensitive context, the caller is responsible for checking if
    * the blob metadata is present locally, as this function will always push
    * the request at the end of the queue.
    */
-  ImmediateFuture<GetBlobMetaResult> getBlobMetadataImpl(
+  ImmediateFuture<GetBlobMetaResult> getBlobMetadataEnqueue(
       const ObjectId& id,
       const HgProxyHash& proxyHash,
       const ObjectFetchContextPtr& context);

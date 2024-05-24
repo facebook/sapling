@@ -3776,7 +3776,7 @@ EdenServiceHandler::semifuture_debugGetBlobMetadata(
         castToSaplingBackingStore(backingStore, edenMount->getPath());
 
     blobFutures.emplace_back(
-        ImmediateFuture{saplingBackingStore->getBlobMetadataImpl(
+        ImmediateFuture{saplingBackingStore->getBlobMetadataEnqueue(
                             id, proxyHash, fetchContext)}
             .thenValue([edenMount, id](BackingStore::GetBlobMetaResult result) {
               return transformToBlobMetadataFromOrigin(

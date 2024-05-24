@@ -1360,13 +1360,14 @@ folly::SemiFuture<BackingStore::GetBlobResult> SaplingBackingStore::getBlob(
         std::move(blob.value()), ObjectFetchContext::Origin::FromDiskCache});
   }
 
-  return getBlobImpl(
+  return getBlobEnqueue(
              id, proxyHash, context, SaplingImportRequest::FetchType::Fetch)
       .ensure([scope = std::move(scope)] {})
       .semi();
 }
 
-ImmediateFuture<BackingStore::GetBlobResult> SaplingBackingStore::getBlobImpl(
+ImmediateFuture<BackingStore::GetBlobResult>
+SaplingBackingStore::getBlobEnqueue(
     const ObjectId& id,
     const HgProxyHash& proxyHash,
     const ObjectFetchContextPtr& context,
@@ -1446,13 +1447,13 @@ SaplingBackingStore::getBlobMetadata(
         ObjectFetchContext::Origin::FromDiskCache});
   }
 
-  return getBlobMetadataImpl(id, proxyHash, context)
+  return getBlobMetadataEnqueue(id, proxyHash, context)
       .ensure([scope = std::move(scope)] {})
       .semi();
 }
 
 ImmediateFuture<BackingStore::GetBlobMetaResult>
-SaplingBackingStore::getBlobMetadataImpl(
+SaplingBackingStore::getBlobMetadataEnqueue(
     const ObjectId& id,
     const HgProxyHash& proxyHash,
     const ObjectFetchContextPtr& context) {
@@ -1918,7 +1919,7 @@ folly::SemiFuture<folly::Unit> SaplingBackingStore::prefetchBlobs(
           const auto& id = ids[i];
           const auto& proxyHash = proxyHashes[i];
 
-          futures.emplace_back(getBlobImpl(
+          futures.emplace_back(getBlobEnqueue(
               id,
               proxyHash,
               context,
