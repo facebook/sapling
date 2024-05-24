@@ -1157,6 +1157,14 @@ class ConfigCmd(Subcmd):
         raise NotImplementedError("Stub -- only implemented in Rust")
 
 
+if sys.platform == "win32":
+
+    @subcmd("handles", "Get list of open file handles for a checkout")
+    class HandlesCmd(Subcmd):
+        def run(self, args: argparse.Namespace) -> int:
+            raise NotImplementedError("Stub -- only implemented in Rust")
+
+
 @subcmd("fsconfig", "Query EdenFS daemon configuration")
 class FsConfigCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:

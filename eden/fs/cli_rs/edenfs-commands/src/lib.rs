@@ -25,6 +25,7 @@ mod config;
 mod debug;
 mod du;
 mod gc;
+mod handles;
 mod list;
 mod minitop;
 mod pid;
@@ -110,6 +111,8 @@ pub enum TopLevelSubcommand {
     PrefetchProfile(crate::prefetch_profile::PrefetchCmd),
     #[clap(subcommand, alias = "redir")]
     Redirect(crate::redirect::RedirectCmd),
+    #[cfg(target_os = "windows")]
+    Handles(crate::handles::HandlesCmd),
     Reloadconfig(crate::config::ReloadConfigCmd),
     #[clap(alias = "health")]
     Status(crate::status::StatusCmd),
@@ -133,6 +136,8 @@ impl TopLevelSubcommand {
             Pid(cmd) => cmd,
             PrefetchProfile(cmd) => cmd,
             Redirect(cmd) => cmd,
+            #[cfg(target_os = "windows")]
+            Handles(cmd) => cmd,
             Status(cmd) => cmd,
             // Top(cmd) => cmd,
             Uptime(cmd) => cmd,
@@ -148,6 +153,8 @@ impl TopLevelSubcommand {
             TopLevelSubcommand::Du(_) => "du",
             TopLevelSubcommand::Fsconfig(_) => "fsconfig",
             //TopLevelSubcommand::Gc(_) => "gc",
+            #[cfg(target_os = "windows")]
+            TopLevelSubcommand::Handles(_) => "handles",
             TopLevelSubcommand::List(_) => "list",
             TopLevelSubcommand::Minitop(_) => "minitop",
             TopLevelSubcommand::Pid(_) => "pid",

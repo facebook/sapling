@@ -17,21 +17,21 @@ use sysinfo::Pid;
 use sysinfo::System;
 
 #[derive(Debug, Clone, PartialEq)]
-struct FileHandleEntry {
-    process_name: String,
-    process_id: String,
-    resource_type: String,
-    path: String,
-    kill_order: u32,
+pub struct FileHandleEntry {
+    pub process_name: String,
+    pub process_id: String,
+    pub resource_type: String,
+    pub path: String,
+    pub kill_order: u32,
 }
 
 #[derive(Debug)]
-enum HandleErrors {
+pub enum HandleErrors {
     FormatError,
 }
 
 #[derive(Debug)]
-struct HandleError {
+pub struct HandleError {
     error: HandleErrors,
 }
 
@@ -85,6 +85,18 @@ fn parse_handler_output(output: &str) -> Result<Vec<FileHandleEntry>, HandleErro
         });
     }
     Ok(ret)
+}
+
+#[allow(dead_code)]
+pub fn find_resource_locks(mount: &Path) -> Result<Vec<FileHandleEntry>, HandleError> {
+    let output = std::process::Command::new("handle.exe")
+        .args(["/accepteula", "-nobanner", mount.to_str().unwrap()])
+        .output()
+        .expect("failed to execute handle.exe");
+    let output = String::from_utf8(output.stdout).expect("Failed to decode handle.exe output");
+    let mut entries = parse_handler_output(&output)?;
+    entries.sort_by_key(|e| e.kill_order);
+    Ok(entries)
 }
 
 #[allow(dead_code)]
