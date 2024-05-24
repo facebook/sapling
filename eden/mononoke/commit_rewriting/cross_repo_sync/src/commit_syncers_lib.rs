@@ -872,15 +872,11 @@ where
     let small_to_large_commit_sync_repos = CommitSyncRepos::new(
         small_repo.clone(),
         large_repo.clone(),
-        submodule_deps,
+        submodule_deps.clone(),
         &common_config,
     )?;
-    let large_to_small_commit_sync_repos = CommitSyncRepos::new(
-        large_repo,
-        small_repo,
-        SubmoduleDeps::NotNeeded,
-        &common_config,
-    )?;
+    let large_to_small_commit_sync_repos =
+        CommitSyncRepos::new(large_repo, small_repo, submodule_deps, &common_config)?;
 
     let large_to_small_commit_syncer = CommitSyncer::new(
         ctx,

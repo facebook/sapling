@@ -409,24 +409,15 @@ Check that the diff that updates the submodule generates the correct delta
   0597690a839ce11a250139dae33ee85d9772a47a (no-eol)
 
 Also check that our two binaries that can verify working copy are able to deal with expansions
-  $ REPOIDLARGE=$LARGE_REPO_ID REPOIDSMALL=$SUBMODULE_REPO_ID quiet_grep ", but" -- verify_wc master |& sort | strip_glog
-  submodule expansion data neded for validation
+  $ REPOIDLARGE=$LARGE_REPO_ID REPOIDSMALL=$SUBMODULE_REPO_ID verify_wc master |& strip_glog
 
 The check-push-redirection-prereqs should behave the same both ways but let's verify it (we had bugs where it didn't)
 (those outputs are still not correct but that's expected)
   $ quiet_grep "all is well" -- megarepo_tool_multirepo --source-repo-id $SUBMODULE_REPO_ID --target-repo-id $LARGE_REPO_ID check-push-redirection-prereqs "heads/master" "master" "$LATEST_CONFIG_VERSION_NAME" | strip_glog | tee $TESTTMP/push_redir_prereqs_small_large
   all is well!
-  $ quiet_grep ", but" -- megarepo_tool_multirepo --source-repo-id $LARGE_REPO_ID --target-repo-id $SUBMODULE_REPO_ID check-push-redirection-prereqs "master" "heads/master" "$LATEST_CONFIG_VERSION_NAME" | tee $TESTTMP/push_redir_prereqs_large_small
-  Some(NonRootMPath("smallrepofolder1/.x-repo-submodule-git-repo-b")) is a file in large_repo, but nonexistant in small_repo (under Some(NonRootMPath(".x-repo-submodule-git-repo-b")))
-  Some(NonRootMPath("smallrepofolder1/git-repo-b")) is a directory in large_repo, but a file in small_repo (under Some(NonRootMPath("git-repo-b")))
+  $ quiet_grep "all is well" -- megarepo_tool_multirepo --source-repo-id $LARGE_REPO_ID --target-repo-id $SUBMODULE_REPO_ID check-push-redirection-prereqs "master" "heads/master" "$LATEST_CONFIG_VERSION_NAME" | strip_glog | tee $TESTTMP/push_redir_prereqs_large_small
+  all is well!
   $ diff -wbBdu $TESTTMP/push_redir_prereqs_small_large $TESTTMP/push_redir_prereqs_large_small
-  --- $TESTTMP/push_redir_prereqs_small_large	* (glob)
-  +++ $TESTTMP/push_redir_prereqs_large_small	* (glob)
-  @@ -1 +1,2 @@
-  -all is well!
-  +Some(NonRootMPath("smallrepofolder1/.x-repo-submodule-git-repo-b")) is a file in large_repo, but nonexistant in small_repo (under Some(NonRootMPath(".x-repo-submodule-git-repo-b")))
-  +Some(NonRootMPath("smallrepofolder1/git-repo-b")) is a directory in large_repo, but a file in small_repo (under Some(NonRootMPath("git-repo-b")))
-  [1]
 
 Let's corrupt the expansion and check if validation complains
 (those outputs are still not correct but that's expected)
@@ -437,18 +428,10 @@ Let's corrupt the expansion and check if validation complains
   $ quiet_grep "mismatch" -- megarepo_tool_multirepo --source-repo-id $SUBMODULE_REPO_ID --target-repo-id $LARGE_REPO_ID check-push-redirection-prereqs "heads/master" "master" "$LATEST_CONFIG_VERSION_NAME" | strip_glog | tee $TESTTMP/push_redir_prereqs_small_large
   submodule expansion mismatch: Failed to fetch content from content id 06a434694d9172d617062abd92f015f73978fb17dd6bcc54e708cd2c6f247970 file containing the submodule's git commit hash
 
-  $ quiet_grep ", but" -- megarepo_tool_multirepo --source-repo-id $LARGE_REPO_ID --target-repo-id $SUBMODULE_REPO_ID check-push-redirection-prereqs "master" "heads/master" "$LATEST_CONFIG_VERSION_NAME" | sort | tee $TESTTMP/push_redir_prereqs_large_small
-  Some(NonRootMPath("smallrepofolder1/.x-repo-submodule-git-repo-b")) is a file in large_repo, but nonexistant in small_repo (under Some(NonRootMPath(".x-repo-submodule-git-repo-b")))
-  Some(NonRootMPath("smallrepofolder1/git-repo-b")) is a directory in large_repo, but a file in small_repo (under Some(NonRootMPath("git-repo-b")))
+  $ quiet_grep "mismatch" -- megarepo_tool_multirepo --source-repo-id $LARGE_REPO_ID --target-repo-id $SUBMODULE_REPO_ID check-push-redirection-prereqs "master" "heads/master" "$LATEST_CONFIG_VERSION_NAME" | sort | tee $TESTTMP/push_redir_prereqs_large_small
+  submodule expansion mismatch: Failed to fetch content from content id 06a434694d9172d617062abd92f015f73978fb17dd6bcc54e708cd2c6f247970 file containing the submodule's git commit hash
 
   $ diff -wbBdu $TESTTMP/push_redir_prereqs_small_large $TESTTMP/push_redir_prereqs_large_small
-  --- $TESTTMP/push_redir_prereqs_small_large	* (glob)
-  +++ $TESTTMP/push_redir_prereqs_large_small	* (glob)
-  @@ -1 +1,2 @@
-  -submodule expansion mismatch: Failed to fetch content from content id 06a434694d9172d617062abd92f015f73978fb17dd6bcc54e708cd2c6f247970 file containing the submodule's git commit hash
-  +Some(NonRootMPath("smallrepofolder1/.x-repo-submodule-git-repo-b")) is a file in large_repo, but nonexistant in small_repo (under Some(NonRootMPath(".x-repo-submodule-git-repo-b")))
-  +Some(NonRootMPath("smallrepofolder1/git-repo-b")) is a directory in large_repo, but a file in small_repo (under Some(NonRootMPath("git-repo-b")))
-  [1]
 
 -- ------------------------------------------------------------------------------
 -- Test hgedenapi xrepo lookup with commits that are synced

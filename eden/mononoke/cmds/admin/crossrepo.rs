@@ -30,6 +30,7 @@ use clientinfo::ClientInfo;
 use cmdlib::args;
 use cmdlib::args::MononokeMatches;
 use cmdlib::helpers;
+use cmdlib_x_repo::create_commit_syncers_from_matches;
 use context::CoreContext;
 use cross_repo_sync::create_commit_syncer_lease;
 use cross_repo_sync::create_commit_syncers;
@@ -177,20 +178,18 @@ pub async fn subcommand_crossrepo<'a>(
             subcommand_map(ctx, commit_syncer, hash).await
         }
         (VERIFY_WC_SUBCOMMAND, Some(sub_sub_m)) => {
-            let (source_repo, target_repo, mapping) =
-                get_source_target_repos_and_mapping(fb, logger, matches).await?;
-
-            let live_commit_sync_config: Arc<dyn LiveCommitSyncConfig> =
-                Arc::new(live_commit_sync_config);
-            let commit_syncer = get_large_to_small_commit_syncer(
+            let source_repo_id =
+                args::not_shardmanager_compatible::get_source_repo_id(config_store, matches)?;
+            let target_repo_id =
+                args::not_shardmanager_compatible::get_target_repo_id(config_store, matches)?;
+            let syncers = create_commit_syncers_from_matches::<CrossRepo>(
                 &ctx,
-                source_repo,
-                target_repo,
-                live_commit_sync_config.clone(),
-                mapping,
                 matches,
+                Some((source_repo_id, target_repo_id)),
             )
             .await?;
+
+            let commit_syncer = syncers.large_to_small;
 
             let large_hash = {
                 let large_hash = sub_sub_m.value_of(LARGE_REPO_HASH_ARG).unwrap().to_owned();
@@ -198,9 +197,14 @@ pub async fn subcommand_crossrepo<'a>(
                 helpers::csid_resolve(&ctx, large_repo, large_hash).await?
             };
 
-            verify_working_copy(&ctx, &commit_syncer, large_hash, live_commit_sync_config)
-                .await
-                .map_err(|e| e.into())
+            verify_working_copy(
+                &ctx,
+                &commit_syncer,
+                large_hash,
+                commit_syncer.live_commit_sync_config.clone(),
+            )
+            .await
+            .map_err(|e| e.into())
         }
         (VERIFY_BOOKMARKS_SUBCOMMAND, Some(sub_sub_m)) => {
             let (source_repo, target_repo, mapping) =
