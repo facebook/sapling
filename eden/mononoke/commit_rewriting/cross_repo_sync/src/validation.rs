@@ -53,7 +53,13 @@ use synced_commit_mapping::SyncedCommitMapping;
 
 use crate::commit_syncer::CommitSyncer;
 use crate::get_git_submodule_action_by_version;
+use crate::git_submodules::build_recursive_submodule_deps;
+use crate::git_submodules::get_git_hash_from_submodule_file;
+use crate::git_submodules::get_submodule_repo;
 use crate::git_submodules::get_x_repo_submodule_metadata_file_path;
+use crate::git_submodules::git_hash_from_submodule_metadata_file;
+use crate::git_submodules::root_fsnode_id_from_submodule_git_commit;
+use crate::git_submodules::validate_working_copy_of_expansion_with_recursive_submodules;
 use crate::git_submodules::SubmodulePath;
 use crate::submodule_metadata_file_prefix_and_dangling_pointers;
 use crate::types::Repo;
@@ -252,7 +258,6 @@ enum ValidationOutputElement {
         source: (Option<NonRootMPath>, RewriteMismatchElement),
         target: (Option<NonRootMPath>, RewriteMismatchElement),
     },
-    #[allow(dead_code)]
     SubmoduleExpansionMismatch(String),
 }
 use ValidationOutputElement::*;
@@ -423,16 +428,126 @@ fn wrap_mover_result(
 /// whether the metadata and expansion directory exist in the target repo and their contents
 /// match the submodule contents.
 async fn verify_git_submodule_expansion_small_to_large<'a>(
-    _ctx: &'a CoreContext,
-    _small_repo: Source<&'a impl Repo>,
-    _large_repo: Target<&'a impl Repo>,
-    _sm_exp_data: &Option<SubmoduleExpansionData<'a, impl Repo>>,
-    _mover: &Mover,
-    _submodule_path: NonRootMPath,
-    _submodule_fsnode_file_entry: FsnodeFile,
-    _large_root_fsnode_id: FsnodeId,
+    ctx: &'a CoreContext,
+    small_repo: Source<&'a impl Repo>,
+    large_repo: Target<&'a impl Repo>,
+    sm_exp_data: &Option<SubmoduleExpansionData<'a, impl Repo>>,
+    mover: &Mover,
+    submodule_path: NonRootMPath,
+    submodule_fsnode_file_entry: FsnodeFile,
+    large_root_fsnode_id: FsnodeId,
 ) -> Result<Option<ValidationOutputElement>, Error> {
-    // TODO: implementation coming in the next diff right now let's mark everything as valid
+    // STEP 1: Assert that the submodule expansion data is available
+    let sm_exp_data = sm_exp_data
+        .as_ref()
+        .ok_or(anyhow!("submodule expansion data neded for validation"))?;
+    // STEP 2: Compute the expansion path and find is fsnode in the large repo
+    let expansion_path =
+        mover(&submodule_path)?.ok_or(anyhow!("submodule path rewrites to nothing!"))?;
+    let expansion_fsnode_entry = large_root_fsnode_id
+        .find_entry(
+            ctx.clone(),
+            large_repo.repo_blobstore_arc(),
+            expansion_path.clone().into(),
+        )
+        .await?;
+    let expansion_fsnode_id = expansion_fsnode_entry
+        .ok_or(anyhow!("No submodule expansion fsnode entry in large repo"))?
+        .into_tree()
+        .ok_or(anyhow!("submodule path doesn't rewrite to a directory"))?;
+
+    // STEP 3: Adjust the submodule deps
+    let adjusted_submodule_deps =
+        build_recursive_submodule_deps(sm_exp_data.submodule_deps, &submodule_path);
+
+    // STEP 4: Get submodule repo
+    let submodule_repo = get_submodule_repo(
+        &SubmodulePath(submodule_path.clone()),
+        sm_exp_data.submodule_deps,
+    )?;
+
+    // STEP 5: Get the submodule metadata file
+    let metadata_file_path = get_x_repo_submodule_metadata_file_path(
+        &SubmodulePath(expansion_path),
+        sm_exp_data.x_repo_submodule_metadata_file_prefix,
+    )?;
+
+    let metadata_file_entry = large_root_fsnode_id
+        .find_entry(
+            ctx.clone(),
+            large_repo.repo_blobstore_arc(),
+            metadata_file_path.clone().into(),
+        )
+        .await?
+        .ok_or_else(|| {
+            anyhow!(
+                "submodule metadata file not found in large repo: {:?}",
+                &metadata_file_path
+            )
+        })?;
+
+    let metadata_file = match metadata_file_entry {
+        Entry::Leaf(file) => file,
+        _ => {
+            return Err(anyhow!(
+                "submodule metadata path doesn't represent a file: {:?}",
+                &metadata_file_path
+            ));
+        }
+    };
+
+    // STEP 6: Load and compare the commit hashes from metadata file and submodule
+    let exp_metadata_git_hash = match git_hash_from_submodule_metadata_file(
+        ctx,
+        &sm_exp_data.large_repo,
+        *metadata_file.content_id(),
+    )
+    .await
+    {
+        Ok(exp_metadata_git_hash) => exp_metadata_git_hash,
+        Err(err) => {
+            // TODO: distinguish validation errors from other errors
+            return Ok(Some(SubmoduleExpansionMismatch(err.to_string())));
+        }
+    };
+    let git_hash = get_git_hash_from_submodule_file(
+        ctx,
+        small_repo.0,
+        *submodule_fsnode_file_entry.content_id(),
+    )
+    .await?;
+
+    if git_hash != exp_metadata_git_hash {
+        return Err(anyhow!(
+            "submodule metadata file git hash {:?} doesn't match the hash in metadata file {:?}",
+            git_hash,
+            exp_metadata_git_hash,
+        ));
+    }
+
+    // STEP 7: Load submodule fsnode id in submodule repo
+    let submodule_fsnode_id = root_fsnode_id_from_submodule_git_commit(
+        ctx,
+        submodule_repo,
+        git_hash,
+        &sm_exp_data.dangling_submodule_pointers,
+    )
+    .await?;
+
+    // STEP 8: Validate the expansion contents
+    // TODO: distinguish validation errors from other errors
+    if let Err(err) = validate_working_copy_of_expansion_with_recursive_submodules(
+        ctx,
+        sm_exp_data.clone(),
+        adjusted_submodule_deps,
+        submodule_repo,
+        expansion_fsnode_id,
+        submodule_fsnode_id,
+    )
+    .await
+    {
+        return Ok(Some(SubmoduleExpansionMismatch(err.to_string())));
+    }
     Ok(None)
 }
 
@@ -458,9 +573,7 @@ async fn verify_git_submodule_expansion_large_to_small<'a>(
 /// in the large repo and finding their corresponding metatdata.
 #[derive(Default, Debug)]
 struct ExpansionAndMetadataPaths {
-    #[allow(dead_code)]
     expansion_path_to_metadata: SortedVectorMap<NonRootMPath, NonRootMPath>,
-    #[allow(dead_code)]
     metadata_path_to_expansion: SortedVectorMap<NonRootMPath, NonRootMPath>,
 }
 

@@ -458,7 +458,7 @@ async fn get_submodule_expansion_fsnode_id<'a, R: Repo>(
 /// commit that it's expanding from the submodule repo and will assert that
 /// they're equivalent, accounting for expansion of any submodules.
 #[async_recursion]
-async fn validate_working_copy_of_expansion_with_recursive_submodules<'a, R>(
+pub(crate) async fn validate_working_copy_of_expansion_with_recursive_submodules<'a, R>(
     ctx: &'a CoreContext,
     sm_exp_data: SubmoduleExpansionData<'a, R>,
     // TODO(T186874619): build recursive sm_exp_data and pass

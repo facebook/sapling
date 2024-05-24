@@ -85,15 +85,17 @@ async fn test_verify_working_copy_with_submodules_simple_error_case(
             .commit()
             .await?;
     let repo_a_master = repo_a_cs_map.get("A_C").unwrap();
-    // TODO: right now the validation is waaaay to permissive.
-    verify_working_copy_with_version(
-        &ctx,
-        &commit_syncer,
-        Source(*repo_a_master),
-        Target(large_repo_with_changed_expansion_csid),
-        &base_commit_sync_version_name(),
-        live_commit_sync_config,
-    )
-    .await?;
+    assert!(
+        verify_working_copy_with_version(
+            &ctx,
+            &commit_syncer,
+            Source(*repo_a_master),
+            Target(large_repo_with_changed_expansion_csid),
+            &base_commit_sync_version_name(),
+            live_commit_sync_config,
+        )
+        .await
+        .is_err()
+    );
     Ok(())
 }
