@@ -100,7 +100,7 @@ pub fn find_resource_locks(mount: &Path) -> Result<Vec<FileHandleEntry>, HandleE
 }
 
 #[allow(dead_code)]
-fn get_process_tree() -> HashSet<u32> {
+pub fn get_process_tree() -> HashSet<u32> {
     let mut pid = process::id();
     let s = System::new_all();
     let mut res = HashSet::new();
