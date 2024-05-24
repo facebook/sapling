@@ -556,16 +556,110 @@ async fn verify_git_submodule_expansion_small_to_large<'a>(
 /// have a corresponding submodule node in the small repo and its content match
 /// the submodule contents.
 async fn verify_git_submodule_expansion_large_to_small<'a>(
-    _ctx: &'a CoreContext,
-    _small_repo: Target<&'a impl Repo>,
-    _sm_exp_data: &Option<SubmoduleExpansionData<'a, impl Repo>>,
-    _mover: &Mover,
-    _small_root_fsnode_id: FsnodeId,
-    _expansion_path: NonRootMPath,
-    _expansion_fsnode_dir_entry: FsnodeDirectory,
-    _expansion_metadata_file: FsnodeFile,
+    ctx: &'a CoreContext,
+    small_repo: Target<&'a impl Repo>,
+    mover: &Mover,
+    sm_exp_data: &Option<SubmoduleExpansionData<'a, impl Repo>>,
+    small_root_fsnode_id: FsnodeId,
+    expansion_path: NonRootMPath,
+    expansion_fsnode_dir_entry: FsnodeDirectory,
+    expansion_metadata_file: FsnodeFile,
 ) -> Result<Option<ValidationOutputElement>, Error> {
-    // TODO: implementation coming in the next diff right now let's mark everything as valid
+    // STEP 1: Assert that the submodule expansion data is available
+    let sm_exp_data = sm_exp_data
+        .as_ref()
+        .ok_or(anyhow!("submodule expansion data neded for validation"))?;
+
+    // STEP 2: Compute the submodule path and find is fsnode in the small repo
+    let submodule_path = if let Some(submodule_path) = mover(&expansion_path)? {
+        submodule_path
+    } else {
+        return Err(anyhow!("expansion path rewrites to nothing in small repo!"));
+    };
+    let submodule_fsnode_entry = small_root_fsnode_id
+        .find_entry(
+            ctx.clone(),
+            small_repo.repo_blobstore_arc(),
+            submodule_path.clone().into(),
+        )
+        .await?;
+    let submodule_fsnode_file = submodule_fsnode_entry
+        .ok_or(anyhow!(
+            "No manifest entry in small repo for submodule path {}",
+            &submodule_path
+        ))?
+        .into_leaf()
+        .ok_or(anyhow!(
+            "Small repo manifest entry for submodule path {} is not a leaf",
+            &submodule_path
+        ))?;
+
+    if *submodule_fsnode_file.file_type() != FileType::GitSubmodule {
+        return Err(anyhow!(
+            "submodule path is not a git submodule: {}!",
+            &submodule_path,
+        ));
+    }
+
+    // STEP 3: Adjust the submodule deps
+    let adjusted_submodule_deps =
+        build_recursive_submodule_deps(sm_exp_data.submodule_deps, &submodule_path);
+
+    // STEP 4: Get submodule repo
+    let submodule_repo = get_submodule_repo(
+        &SubmodulePath(submodule_path.clone()),
+        sm_exp_data.submodule_deps,
+    )?;
+
+    // STEP 5: Load and compare the commit hashes from metadata file and submodule
+    let exp_metadata_git_hash = match git_hash_from_submodule_metadata_file(
+        ctx,
+        &sm_exp_data.large_repo,
+        *expansion_metadata_file.content_id(),
+    )
+    .await
+    {
+        Ok(exp_metadata_git_hash) => exp_metadata_git_hash,
+        Err(err) => {
+            // TODO: distinguish validation errors from other errors
+            return Ok(Some(SubmoduleExpansionMismatch(err.to_string())));
+        }
+    };
+    let git_hash =
+        get_git_hash_from_submodule_file(ctx, small_repo.0, *submodule_fsnode_file.content_id())
+            .await?;
+
+    if git_hash != exp_metadata_git_hash {
+        return Err(anyhow!(
+            "submodule metadata file git hash {:?} doesn't match the hash in metadata file {:?}",
+            git_hash,
+            exp_metadata_git_hash,
+        ));
+    }
+
+    // STEP 6: Load submodule fsnode id in submodule repo
+    let submodule_fsnode_id = root_fsnode_id_from_submodule_git_commit(
+        ctx,
+        submodule_repo,
+        git_hash,
+        &sm_exp_data.dangling_submodule_pointers,
+    )
+    .await?;
+
+    // STEP 7: Validate the expansion contents
+    // TODO: distinguish validation errors from other errors
+    if let Err(err) = validate_working_copy_of_expansion_with_recursive_submodules(
+        ctx,
+        sm_exp_data.clone(),
+        adjusted_submodule_deps,
+        submodule_repo,
+        *expansion_fsnode_dir_entry.id(),
+        submodule_fsnode_id,
+    )
+    .await
+    {
+        return Ok(Some(SubmoduleExpansionMismatch(err.to_string())));
+    }
     Ok(None)
 }
 
@@ -772,8 +866,8 @@ async fn verify_and_filter_out_submodule_changes<'a>(
                         let verification_fut = verify_git_submodule_expansion_large_to_small(
                             ctx,
                             target_repo,
-                            sm_exp_data,
                             mover,
+                            sm_exp_data,
                             target_root_fsnode_id,
                             exp_and_metadata.expansion_path,
                             exp_and_metadata.expansion_fsnode_dir_entry,
