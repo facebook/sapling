@@ -7,7 +7,7 @@
 
 #pragma once
 
-#include <folly/experimental/AtomicReadMostlyMainPtr.h>
+#include <folly/concurrency/memory/AtomicReadMostlyMainPtr.h>
 #include <folly/portability/Windows.h>
 #include <thrift/lib/cpp/util/EnumUtils.h>
 
