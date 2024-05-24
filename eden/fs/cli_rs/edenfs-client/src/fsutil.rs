@@ -5,12 +5,16 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashSet;
 use std::error::Error;
 use std::fmt;
 use std::fs;
 use std::path::Path;
+use std::process;
 
 use regex::Regex;
+use sysinfo::Pid;
+use sysinfo::System;
 
 #[derive(Debug, Clone, PartialEq)]
 struct FileHandleEntry {
@@ -81,6 +85,25 @@ fn parse_handler_output(output: &str) -> Result<Vec<FileHandleEntry>, HandleErro
         });
     }
     Ok(ret)
+}
+
+#[allow(dead_code)]
+fn get_process_tree() -> HashSet<u32> {
+    let mut pid = process::id();
+    let s = System::new_all();
+    let mut res = HashSet::new();
+
+    while let Some(process) = s.process(Pid::from_u32(pid)) {
+        if !res.insert(process.pid().as_u32()) {
+            // Prevent loops in case a previous parent PID was reused.
+            break;
+        }
+        let Some(parent_proc) = process.parent() else {
+            break;
+        };
+        pid = parent_proc.as_u32();
+    }
+    res
 }
 
 #[cfg(target_os = "windows")]
@@ -872,4 +895,15 @@ fn test_parse_handler_output_detect_format_change() {
     ";
     let actual = parse_handler_output(output);
     assert!(actual.is_err());
+}
+
+#[test]
+fn test_get_process_tree() {
+    // We can't test with guaranteed data since it changes per run, but at least do a sanity check and confirm that our own PID and our parent's is on the list.
+    let ancestors = get_process_tree();
+    let my_pid = process::id();
+    assert!(ancestors.contains(&my_pid));
+    let s = System::new_all();
+    let process = s.process(Pid::from_u32(my_pid)).unwrap();
+    assert!(ancestors.contains(&process.parent().unwrap().as_u32()));
 }
