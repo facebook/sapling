@@ -56,7 +56,7 @@ export async function runCommand(
   timeout: number = READ_COMMAND_TIMEOUT_MS,
 ): Promise<execa.ExecaReturnValue<string>> {
   const {command, args, options} = getExecParams(ctx.cmd, args_, ctx.cwd, options_);
-  ctx.logger.log('run command: ', command, args[0]);
+  ctx.logger.log('run command: ', ctx.cwd, command, args[0]);
   const result = execa(command, args, options);
 
   let timedOut = false;

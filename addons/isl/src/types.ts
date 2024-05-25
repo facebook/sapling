@@ -701,7 +701,7 @@ export type ClientToServerMessage =
   | {type: 'gotUiState'; state: string}
   | CodeReviewProviderSpecificClientToServerMessages
   | PlatformSpecificClientToServerMessages
-  | {type: 'fetchSignificantLinesOfCode'; hash: Hash};
+  | {type: 'fetchSignificantLinesOfCode'; hash: Hash; generatedFiles: string[]};
 
 export type SubscriptionResultsData = {
   uncommittedChanges: FetchedUncommittedChanges;

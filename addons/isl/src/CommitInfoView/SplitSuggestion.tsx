@@ -5,10 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {CommitInfo, Hash, Result} from '../types';
-
 import {Banner, BannerKind} from '../Banner';
 import serverAPI from '../ClientToServerAPI';
+import {useGeneratedFileStatuses} from '../GeneratedFile';
 import {Internal} from '../Internal';
 import {Tooltip} from '../Tooltip';
 import {tracker} from '../analytics';
@@ -16,6 +15,7 @@ import {Divider} from '../components/Divider';
 import {useFeatureFlagSync} from '../featureFlags';
 import {T} from '../i18n';
 import {SplitButton} from '../stackEdit/ui/SplitButton';
+import {GeneratedStatus, type CommitInfo, type Hash, type Result} from '../types';
 import {useEffect, useState} from 'react';
 import {Icon} from 'shared/Icon';
 import {LRU} from 'shared/LRU';
@@ -23,7 +23,7 @@ import {LRU} from 'shared/LRU';
 // Cache fetches in progress so we don't double fetch
 const commitFilesCache = new LRU<Hash, Promise<Result<number>>>(10);
 
-function fetchSignificantLinesOfCode(hash: Hash) {
+function fetchSignificantLinesOfCode(hash: Hash, generatedFiles: string[]) {
   const foundPromise = commitFilesCache.get(hash);
   if (foundPromise != null) {
     return foundPromise;
@@ -31,6 +31,7 @@ function fetchSignificantLinesOfCode(hash: Hash) {
   serverAPI.postMessage({
     type: 'fetchSignificantLinesOfCode',
     hash,
+    generatedFiles,
   });
 
   const resultPromise = serverAPI
@@ -43,9 +44,19 @@ function fetchSignificantLinesOfCode(hash: Hash) {
 }
 
 function SplitSuggestionImpl({commit}: {commit: CommitInfo}) {
+  const filesToQueryGeneratedStatus = commit.filesSample.map(f => f.path);
+  const generatedStatuses = useGeneratedFileStatuses(filesToQueryGeneratedStatus);
+
   const [significantLinesOfCode, setSignificantLinesOfCode] = useState(0);
   useEffect(() => {
-    fetchSignificantLinesOfCode(commit.hash).then(result => {
+    const generatedFiles = commit.filesSample.reduce<string[]>((filtered, f) => {
+      // the __generated__ pattern is included in the exclusions, so we don't need to include it here
+      if (!f.path.match(/__generated__/) && generatedStatuses[f.path] !== GeneratedStatus.Manual) {
+        filtered.push(f.path);
+      }
+      return filtered;
+    }, []);
+    fetchSignificantLinesOfCode(commit.hash, generatedFiles).then(result => {
       if (result.error != null) {
         tracker.error('SplitSuggestionError', 'SplitSuggestionError', result.error, {
           extras: {
@@ -58,7 +69,7 @@ function SplitSuggestionImpl({commit}: {commit: CommitInfo}) {
         setSignificantLinesOfCode(result.value);
       }
     });
-  }, [commit.hash]);
+  }, [commit.filesSample, commit.hash, generatedStatuses]);
   if (significantLinesOfCode <= 100) {
     return null;
   }
@@ -94,11 +105,19 @@ function SplitSuggestionImpl({commit}: {commit: CommitInfo}) {
   );
 }
 
-export default function SplitSuggestion({commit}: {commit: CommitInfo}) {
+function GatedSplitSuggestion({commit}: {commit: CommitInfo}) {
   const showSplitSuggestion = useFeatureFlagSync(Internal.featureFlags?.ShowSplitSuggestion);
 
   if (!showSplitSuggestion) {
     return null;
   }
   return <SplitSuggestionImpl commit={commit} />;
+}
+
+export default function SplitSuggestion({commit}: {commit: CommitInfo}) {
+  if (commit.totalFileCount > 25) {
+    return null;
+  }
+  // using a gated component to avoid exposing when diff size is too big  to show the split suggestion
+  return <GatedSplitSuggestion commit={commit} />;
 }

@@ -1086,21 +1086,32 @@ export class Repository {
     return result;
   }
 
-  public async fetchSignificantLinesOfCode(ctx: RepositoryContext, hash: Hash): Promise<number> {
+  public async fetchSignificantLinesOfCode(
+    ctx: RepositoryContext,
+    hash: Hash,
+    generatedFiles: string[],
+  ): Promise<number> {
+    const exclusions = generatedFiles.flatMap(file => [
+      '-X',
+      absolutePathForFileInRepo(file, this) ?? file,
+    ]);
+
     const output = (
       await this.runCommand(
-        ['diff', '--stat', '-B', '-X', '"**__generated__*"', '-c', hash],
+        ['diff', '--stat', '-B', '-X', '**__generated__**', ...exclusions, '-c', hash],
         'SlocCommand',
         ctx,
       )
     ).stdout;
-    const lines = output.split('\n');
+    const lines = output.trim().split('\n');
     const changes = lines[lines.length - 1];
     const diffStatRe = /\d+ files changed, (\d+) insertions\(\+\), (\d+) deletions\(-\)/;
     const diffStatMatch = changes.match(diffStatRe);
     const insertions = parseInt(diffStatMatch?.[1] ?? '0', 10);
     const deletions = parseInt(diffStatMatch?.[2] ?? '0', 10);
     const sloc = insertions + deletions;
+
+    ctx.logger.info('Fetched SLOC for commit:', hash, output, `SLOC: ${sloc}`);
     return sloc;
   }
   public async getAllChangedFiles(ctx: RepositoryContext, hash: Hash): Promise<Array<ChangedFile>> {

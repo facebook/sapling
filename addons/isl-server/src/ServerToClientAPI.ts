@@ -624,7 +624,7 @@ export default class ServerToClientAPI {
       case 'fetchSignificantLinesOfCode':
         {
           repo
-            .fetchSignificantLinesOfCode(ctx, data.hash)
+            .fetchSignificantLinesOfCode(ctx, data.hash, data.generatedFiles)
             .then(value => {
               this.postMessage({
                 type: 'fetchedSignificantLinesOfCode',
