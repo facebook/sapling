@@ -376,6 +376,78 @@ describe('Repository', () => {
     });
   });
 
+  describe('fetchSloc', () => {
+    const repoInfo: ValidatedRepoInfo = {
+      type: 'success',
+      command: 'sl',
+      dotdir: '/path/to/repo/.sl',
+      repoRoot: '/path/to/repo',
+      codeReviewSystem: {type: 'unknown'},
+      pullRequestDomain: undefined,
+    };
+
+    const EXAMPLE_DIFFSTAT = `
+|  34 ++++++++++
+www/flib/intern/entity/diff/EntPhabricatorDiffSchema.php                                                            |  11 +++
+2 files changed, 45 insertions(+), 0 deletions(-)\n`;
+
+    it('parses sloc', async () => {
+      const repo = new Repository(repoInfo, ctx);
+
+      const execaSpy = mockExeca([[/^sl diff/, () => ({stdout: EXAMPLE_DIFFSTAT})]]);
+      const results = repo.fetchSignificantLinesOfCode(ctx, 'abcdef', ['generated.file']);
+      await expect(results).resolves.toEqual(45);
+      expect(execaSpy).toHaveBeenCalledWith(
+        'sl',
+        expect.arrayContaining([
+          'diff',
+          '-B',
+          '-X',
+          '**__generated__**',
+          '-X',
+          '/path/to/repo/generated.file',
+          '-c',
+          'abcdef',
+        ]),
+        expect.anything(),
+      );
+    });
+
+    it('handles empty generated list', async () => {
+      const repo = new Repository(repoInfo, ctx);
+      const execaSpy = mockExeca([[/^sl diff/, () => ({stdout: EXAMPLE_DIFFSTAT})]]);
+      repo.fetchSignificantLinesOfCode(ctx, 'abcdef', []);
+      expect(execaSpy).toHaveBeenCalledWith(
+        'sl',
+        expect.arrayContaining(['diff', '-B', '-X', '**__generated__**', '-c', 'abcdef']),
+        expect.anything(),
+      );
+    });
+
+    it('handles multiple generated files', async () => {
+      const repo = new Repository(repoInfo, ctx);
+      const execaSpy = mockExeca([[/^sl diff/, () => ({stdout: EXAMPLE_DIFFSTAT})]]);
+      const generatedFiles = ['generated1.file', 'generated2.file'];
+      repo.fetchSignificantLinesOfCode(ctx, 'abcdef', generatedFiles);
+      expect(execaSpy).toHaveBeenCalledWith(
+        'sl',
+        expect.arrayContaining([
+          'diff',
+          '-B',
+          '-X',
+          '**__generated__**',
+          '-X',
+          '/path/to/repo/generated1.file',
+          '-X',
+          '/path/to/repo/generated2.file',
+          '-c',
+          'abcdef',
+        ]),
+        expect.anything(),
+      );
+    });
+  });
+
   describe('fetchSmartlogCommits', () => {
     const repoInfo: ValidatedRepoInfo = {
       type: 'success',
