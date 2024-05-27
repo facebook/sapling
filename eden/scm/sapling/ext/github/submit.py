@@ -449,8 +449,9 @@ async def create_pull_requests_serially(
         if workflow == SubmitWorkflow.SINGLE and parent:
             base = none_throws(parent.head_branch_name)
 
-        body = commit.get_msg()
-        title = firstline(body)
+        commit_msg = commit.get_msg()
+        title = firstline(commit_msg)
+        body = commit_msg[len(title) + 1 :]
         result = await gh_submit.create_pull_request(
             hostname=repository.hostname,
             owner=owner,
