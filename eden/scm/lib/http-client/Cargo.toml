@@ -41,5 +41,5 @@ url = "2.2.2"
 [dev-dependencies]
 assert_matches = "1.5"
 crossbeam = "0.8"
-mockito = "0.25"
+mockito = "1.4.0"
 zstd = { version = "0.13", features = ["experimental", "zstdmt"] }

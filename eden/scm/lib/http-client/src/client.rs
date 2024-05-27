@@ -378,7 +378,6 @@ mod tests {
 
     use anyhow::Result;
     use http::StatusCode;
-    use mockito::mock;
     use url::Url;
 
     use super::*;
@@ -392,22 +391,27 @@ mod tests {
         let body2 = b"body2";
         let body3 = b"body3";
 
-        let mock1 = mock("GET", "/test1")
+        let mut server = mockito::Server::new();
+
+        let mock1 = server
+            .mock("GET", "/test1")
             .with_status(201)
             .with_body(body1)
             .create();
 
-        let mock2 = mock("GET", "/test2")
+        let mock2 = server
+            .mock("GET", "/test2")
             .with_status(201)
             .with_body(body2)
             .create();
 
-        let mock3 = mock("GET", "/test3")
+        let mock3 = server
+            .mock("GET", "/test3")
             .with_status(201)
             .with_body(body3)
             .create();
 
-        let server_url = Url::parse(&mockito::server_url())?;
+        let server_url = Url::parse(&server.url())?;
 
         let url1 = server_url.join("test1")?;
         let req1 = Request::get(url1);
@@ -447,22 +451,27 @@ mod tests {
         let body2 = b"body2";
         let body3 = b"body3";
 
-        let mock1 = mock("GET", "/test1")
+        let mut server = mockito::Server::new();
+
+        let mock1 = server
+            .mock("GET", "/test1")
             .with_status(201)
             .with_body(body1)
             .create();
 
-        let mock2 = mock("GET", "/test2")
+        let mock2 = server
+            .mock("GET", "/test2")
             .with_status(201)
             .with_body(body2)
             .create();
 
-        let mock3 = mock("GET", "/test3")
+        let mock3 = server
+            .mock("GET", "/test3")
             .with_status(201)
             .with_body(body3)
             .create();
 
-        let server_url = Url::parse(&mockito::server_url())?;
+        let server_url = Url::parse(&server.url())?;
 
         let url1 = server_url.join("test1")?;
         let rcv1 = TestReceiver::new();
@@ -505,22 +514,27 @@ mod tests {
         let body2 = b"body2";
         let body3 = b"body3";
 
-        let mock1 = mock("GET", "/test1")
+        let mut server = mockito::Server::new_async().await;
+
+        let mock1 = server
+            .mock("GET", "/test1")
             .with_status(201)
             .with_body(body1)
             .create();
 
-        let mock2 = mock("GET", "/test2")
+        let mock2 = server
+            .mock("GET", "/test2")
             .with_status(201)
             .with_body(body2)
             .create();
 
-        let mock3 = mock("GET", "/test3")
+        let mock3 = server
+            .mock("GET", "/test3")
             .with_status(201)
             .with_body(body3)
             .create();
 
-        let server_url = Url::parse(&mockito::server_url())?;
+        let server_url = Url::parse(&server.url())?;
 
         let url1 = server_url.join("test1")?;
         let req1 = Request::get(url1);
@@ -564,11 +578,13 @@ mod tests {
 
     #[tokio::test]
     async fn test_event_listeners() -> Result<()> {
-        let server_url = Url::parse(&mockito::server_url())?;
+        let mut server = mockito::Server::new_async().await;
+        let server_url = Url::parse(&server.url())?;
 
         // this is actually used, it changes how mockito behaves
         const BODY: &[u8] = b"body";
-        let _mock1 = mock("GET", "/test1")
+        let _mock1 = server
+            .mock("GET", "/test1")
             .with_status(201)
             .with_body(BODY)
             .create();

@@ -354,7 +354,6 @@ mod tests {
 
     use anyhow::Result;
     use futures::TryStreamExt;
-    use mockito::mock;
     use url::Url;
 
     use crate::request::Encoding;
@@ -365,14 +364,16 @@ mod tests {
         let uncompressed = b"Hello, world!";
         let compressed = zstd::encode_all(Cursor::new(uncompressed), 0)?;
 
-        let mock = mock("GET", "/test")
+        let mut server = mockito::Server::new_async().await;
+        let mock = server
+            .mock("GET", "/test")
             .match_header("Accept-Encoding", "zstd, br, gzip, deflate")
             .with_status(200)
             .with_header("Content-Encoding", "zstd")
             .with_body(compressed)
             .create();
 
-        let url = Url::parse(&mockito::server_url())?.join("test")?;
+        let url = Url::parse(&server.url())?.join("test")?;
         let res = Request::get(url)
             .accept_encoding(Encoding::all())
             .send_async()

@@ -2125,7 +2125,8 @@ mod tests {
     #[test]
     fn test_new_shared() -> Result<()> {
         let dir = TempDir::new()?;
-        let config = make_lfs_config(&dir, "test_new_shared");
+        let server = mockito::Server::new();
+        let config = make_lfs_config(&server, &dir, "test_new_shared");
         let _ = LfsStore::shared(&dir, &config)?;
 
         let mut lfs_dir = dir.as_ref().to_owned();
@@ -2139,7 +2140,8 @@ mod tests {
     #[test]
     fn test_new_local() -> Result<()> {
         let dir = TempDir::new()?;
-        let config = make_lfs_config(&dir, "test_new_local");
+        let server = mockito::Server::new();
+        let config = make_lfs_config(&server, &dir, "test_new_local");
         let _ = LfsStore::local(&dir, &config)?;
 
         let mut lfs_dir = dir.as_ref().to_owned();
@@ -2153,7 +2155,8 @@ mod tests {
     #[test]
     fn test_add() -> Result<()> {
         let dir = TempDir::new()?;
-        let config = make_lfs_config(&dir, "test_add");
+        let server = mockito::Server::new();
+        let config = make_lfs_config(&server, &dir, "test_add");
         let store = LfsStore::shared(&dir, &config)?;
 
         let k1 = key("a", "2");
@@ -2182,7 +2185,8 @@ mod tests {
     #[test]
     fn test_loose() -> Result<()> {
         let dir = TempDir::new()?;
-        let config = make_lfs_config(&dir, "test_loose");
+        let server = mockito::Server::new();
+        let config = make_lfs_config(&server, &dir, "test_loose");
         let blob_store = LfsBlobsStore::shared(dir.path(), &config)?;
         let loose_store = LfsBlobsStore::loose(get_lfs_objects_path(dir.path())?);
 
@@ -2199,7 +2203,8 @@ mod tests {
     #[test]
     fn test_add_get_missing() -> Result<()> {
         let dir = TempDir::new()?;
-        let config = make_lfs_config(&dir, "test_add_get_missing");
+        let server = mockito::Server::new();
+        let config = make_lfs_config(&server, &dir, "test_add_get_missing");
         let store = LfsStore::shared(&dir, &config)?;
 
         let k1 = key("a", "2");
@@ -2222,7 +2227,8 @@ mod tests {
     #[test]
     fn test_add_get() -> Result<()> {
         let dir = TempDir::new()?;
-        let config = make_lfs_config(&dir, "test_add_get");
+        let server = mockito::Server::new();
+        let config = make_lfs_config(&server, &dir, "test_add_get");
         let store = LfsStore::shared(&dir, &config)?;
 
         let k1 = key("a", "2");
@@ -2242,7 +2248,8 @@ mod tests {
     #[test]
     fn test_invalid_hash() -> Result<()> {
         let dir = TempDir::new()?;
-        let config = make_lfs_config(&dir, "test_invalid_hash");
+        let server = mockito::Server::new();
+        let config = make_lfs_config(&server, &dir, "test_invalid_hash");
 
         let store = LfsIndexedLogBlobsStore::shared(dir.path(), &config)?;
 
@@ -2260,7 +2267,8 @@ mod tests {
     #[test]
     fn test_prefer_newer_chunks() -> Result<()> {
         let dir = TempDir::new()?;
-        let config = make_lfs_config(&dir, "test_invalid_hash");
+        let server = mockito::Server::new();
+        let config = make_lfs_config(&server, &dir, "test_invalid_hash");
 
         let store = LfsIndexedLogBlobsStore::shared(dir.path(), &config)?;
 
@@ -2293,7 +2301,8 @@ mod tests {
     #[test]
     fn test_add_get_split() -> Result<()> {
         let dir = TempDir::new()?;
-        let mut config = make_lfs_config(&dir, "test_add_get_split");
+        let server = mockito::Server::new();
+        let mut config = make_lfs_config(&server, &dir, "test_add_get_split");
         setconfig(&mut config, "lfs", "blobschunksize", "2");
 
         let store = LfsStore::shared(&dir, &config)?;
@@ -2321,7 +2330,8 @@ mod tests {
     #[test]
     fn test_partial_blob() -> Result<()> {
         let dir = TempDir::new()?;
-        let config = make_lfs_config(&dir, "test_partial_blob");
+        let server = mockito::Server::new();
+        let config = make_lfs_config(&server, &dir, "test_partial_blob");
 
         let store = LfsIndexedLogBlobsStore::shared(dir.path(), &config)?;
 
@@ -2346,7 +2356,8 @@ mod tests {
     #[test]
     fn test_full_chunked() -> Result<()> {
         let dir = TempDir::new()?;
-        let config = make_lfs_config(&dir, "test_full_chunked");
+        let server = mockito::Server::new();
+        let config = make_lfs_config(&server, &dir, "test_full_chunked");
 
         let store = LfsIndexedLogBlobsStore::shared(dir.path(), &config)?;
 
@@ -2388,7 +2399,8 @@ mod tests {
     #[test]
     fn test_overlapped_chunked() -> Result<()> {
         let dir = TempDir::new()?;
-        let config = make_lfs_config(&dir, "test_overlapped_chunked");
+        let server = mockito::Server::new();
+        let config = make_lfs_config(&server, &dir, "test_overlapped_chunked");
 
         let store = LfsIndexedLogBlobsStore::shared(dir.path(), &config)?;
 
@@ -2452,7 +2464,8 @@ mod tests {
     #[test]
     fn test_add_get_copyfrom() -> Result<()> {
         let dir = TempDir::new()?;
-        let config = make_lfs_config(&dir, "test_add_get_copyform");
+        let server = mockito::Server::new();
+        let config = make_lfs_config(&server, &dir, "test_add_get_copyform");
         let store = LfsStore::shared(&dir, &config)?;
 
         let k1 = key("a", "2");
@@ -2478,7 +2491,8 @@ mod tests {
     #[test]
     fn test_multiplexer_smaller_than_threshold() -> Result<()> {
         let dir = TempDir::new()?;
-        let config = make_lfs_config(&dir, "test_multiplexer_smaller_than_threshold");
+        let server = mockito::Server::new();
+        let config = make_lfs_config(&server, &dir, "test_multiplexer_smaller_than_threshold");
         let lfs = Arc::new(LfsStore::shared(&dir, &config)?);
 
         let dir = TempDir::new()?;
@@ -2516,7 +2530,8 @@ mod tests {
     #[test]
     fn test_multiplexer_larger_than_threshold() -> Result<()> {
         let dir = TempDir::new()?;
-        let config = make_lfs_config(&dir, "test_multiplexer_larger_than_threshold");
+        let server = mockito::Server::new();
+        let config = make_lfs_config(&server, &dir, "test_multiplexer_larger_than_threshold");
         let lfs = Arc::new(LfsStore::shared(&dir, &config)?);
 
         let dir = TempDir::new()?;
@@ -2554,7 +2569,8 @@ mod tests {
     #[test]
     fn test_multiplexer_add_pointer() -> Result<()> {
         let lfsdir = TempDir::new()?;
-        let config = make_lfs_config(&lfsdir, "test_multiplexer_add_pointer");
+        let server = mockito::Server::new();
+        let config = make_lfs_config(&server, &lfsdir, "test_multiplexer_add_pointer");
         let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
 
         let dir = TempDir::new()?;
@@ -2632,7 +2648,8 @@ mod tests {
     #[test]
     fn test_multiplexer_add_copy_from_pointer() -> Result<()> {
         let lfsdir = TempDir::new()?;
-        let config = make_lfs_config(&lfsdir, "test_multiplexer_add_copy_pointer");
+        let server = mockito::Server::new();
+        let config = make_lfs_config(&server, &lfsdir, "test_multiplexer_add_copy_pointer");
         let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
 
         let dir = TempDir::new()?;
@@ -2713,7 +2730,8 @@ mod tests {
     #[test]
     fn test_multiplexer_blob_with_header() -> Result<()> {
         let lfsdir = TempDir::new()?;
-        let config = make_lfs_config(&lfsdir, "test_multiplexer_blob_with_header");
+        let server = mockito::Server::new();
+        let config = make_lfs_config(&server, &lfsdir, "test_multiplexer_blob_with_header");
         let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
 
         let dir = TempDir::new()?;
@@ -2773,7 +2791,6 @@ mod tests {
         use std::sync::atomic::AtomicBool;
 
         #[cfg(fbcode_build)]
-        use mockito::mock;
         use parking_lot::Mutex;
 
         use super::*;
@@ -2810,12 +2827,13 @@ mod tests {
             let sentinel = Sentinel::new();
             let cachedir = TempDir::new()?;
             let lfsdir = TempDir::new()?;
-            let config = make_lfs_config(&cachedir, "test_lfs_proxy_non_present");
+            let mut server = mockito::Server::new();
+            let config = make_lfs_config(&server, &cachedir, "test_lfs_proxy_non_present");
 
             let blob = &example_blob();
-            let _m1 = get_lfs_batch_mock(200, &[blob]);
+            let _m1 = get_lfs_batch_mock(&mut server, 200, &[blob]);
 
-            let _m2 = get_lfs_download_mock(200, blob);
+            let _m2 = get_lfs_download_mock(&mut server, 200, blob);
 
             let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
             let remote = LfsRemote::new(lfs, None, &config)?;
@@ -2837,7 +2855,8 @@ mod tests {
 
             let cachedir = TempDir::new()?;
             let lfsdir = TempDir::new()?;
-            let config = make_lfs_config(&cachedir, "test_lfs_proxy_no_http");
+            let mut server = mockito::Server::new();
+            let config = make_lfs_config(&server, &cachedir, "test_lfs_proxy_no_http");
 
             set_var("https_proxy", "fwdproxy:8082");
 
@@ -2864,7 +2883,8 @@ mod tests {
 
             let cachedir = TempDir::new()?;
             let lfsdir = TempDir::new()?;
-            let config = make_lfs_config(&cachedir, "test_lfs_proxy_http");
+            let server = mockito::Server::new();
+            let config = make_lfs_config(&server, &cachedir, "test_lfs_proxy_http");
 
             set_var("https_proxy", "http://fwdproxy:8082");
 
@@ -2889,12 +2909,13 @@ mod tests {
             let sentinel = Sentinel::new();
             let cachedir = TempDir::new()?;
             let lfsdir = TempDir::new()?;
-            let config = make_lfs_config(&cachedir, "test_lfs_no_proxy");
+            let mut server = mockito::Server::new();
+            let config = make_lfs_config(&server, &cachedir, "test_lfs_no_proxy");
 
             let blob = &example_blob();
-            let _m1 = get_lfs_batch_mock(200, &[blob]);
+            let _m1 = get_lfs_batch_mock(&mut server, 200, &[blob]);
 
-            let _m2 = get_lfs_download_mock(200, blob);
+            let _m2 = get_lfs_download_mock(&mut server, 200, blob);
 
             set_var("http_proxy", "http://shouldnt-touch-this:8082");
             set_var("NO_PROXY", "localhost,127.0.0.1");
@@ -2912,7 +2933,11 @@ mod tests {
             Ok(())
         }
 
-        fn test_download<C>(configure: C, blobs: &[&TestBlob]) -> Result<()>
+        fn test_download<C>(
+            server: &mut mockito::ServerGuard,
+            configure: C,
+            blobs: &[&TestBlob],
+        ) -> Result<()>
         where
             C: for<'a> FnOnce(&'a mut BTreeMap<String, String>),
         {
@@ -2920,14 +2945,14 @@ mod tests {
 
             let cachedir = TempDir::new()?;
             let lfsdir = TempDir::new()?;
-            let mut config = make_lfs_config(&cachedir, "test_download");
+            let mut config = make_lfs_config(server, &cachedir, "test_download");
             configure(&mut config);
             let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
             let remote = LfsRemote::new(lfs, None, &config)?;
 
             let _mocks: Vec<_> = blobs
                 .iter()
-                .map(|b| get_lfs_download_mock(200, b))
+                .map(|b| get_lfs_download_mock(server, 200, b))
                 .collect();
 
             let objs = [
@@ -2972,9 +2997,11 @@ mod tests {
 
             let blobs = vec![&b1, &b2, &b3];
 
-            let _m1 = get_lfs_batch_mock(200, &blobs);
+            let mut server = mockito::Server::new();
+            let _m1 = get_lfs_batch_mock(&mut server, 200, &blobs);
 
             test_download(
+                &mut server,
                 |config| setconfig(config, "lfs", "http-version", "1.1"),
                 &blobs,
             )
@@ -2992,9 +3019,11 @@ mod tests {
 
             let blobs = vec![&b1, &b2, &b3];
 
-            let _m1 = get_lfs_batch_mock(200, &blobs);
+            let mut server = mockito::Server::new();
+            let _m1 = get_lfs_batch_mock(&mut server, 200, &blobs);
 
             test_download(
+                &mut server,
                 |config| setconfig(config, "lfs", "http-version", "2"),
                 &blobs,
             )
@@ -3011,9 +3040,11 @@ mod tests {
             let b3 = nonexistent_blob();
             let blobs = vec![&blob1, &blob2, &b3];
 
-            let _m1 = get_lfs_batch_mock(200, &blobs);
+            let mut server = mockito::Server::new();
+            let _m1 = get_lfs_batch_mock(&mut server, 200, &blobs);
 
             test_download(
+                &mut server,
                 |config| {
                     setconfig(config, "lfs", "download-chunk-size", "3");
                 },
@@ -3027,7 +3058,8 @@ mod tests {
 
             let cachedir = TempDir::new()?;
             let lfsdir = TempDir::new()?;
-            let mut config = make_lfs_config(&cachedir, "test_lfs_invalid_http");
+            let server = mockito::Server::new();
+            let mut config = make_lfs_config(&server, &cachedir, "test_lfs_invalid_http");
             setconfig(&mut config, "lfs", "http-version", "3");
 
             let lfs = Arc::new(LfsStore::shared(&lfsdir, &config).unwrap());
@@ -3044,7 +3076,8 @@ mod tests {
 
             let cachedir = TempDir::new()?;
             let lfsdir = TempDir::new()?;
-            let mut config = make_lfs_config(&cachedir, "test_lfs_request_timeout");
+            let server = mockito::Server::new();
+            let mut config = make_lfs_config(&server, &cachedir, "test_lfs_request_timeout");
 
             setconfig(&mut config, "lfs", "requesttimeout", "0");
 
@@ -3072,12 +3105,13 @@ mod tests {
 
             let cachedir = TempDir::new()?;
             let lfsdir = TempDir::new()?;
-            let config = make_lfs_config(&cachedir, "test_lfs_remote_datastore");
+            let mut server = mockito::Server::new();
+            let config = make_lfs_config(&server, &cachedir, "test_lfs_remote_datastore");
 
             let blob = &example_blob();
 
-            let _m1 = get_lfs_batch_mock(200, &[blob]);
-            let _m2 = get_lfs_download_mock(200, blob);
+            let _m1 = get_lfs_batch_mock(&mut server, 200, &[blob]);
+            let _m2 = get_lfs_download_mock(&mut server, 200, blob);
 
             let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
             let remote = Arc::new(LfsRemote::new(lfs.clone(), None, &config)?);
@@ -3122,19 +3156,21 @@ mod tests {
 
             let cachedir = TempDir::new()?;
             let lfsdir = TempDir::new()?;
-            let mut config = make_lfs_config(&cachedir, "test_lfs_redacted");
+            let mut server = mockito::Server::new();
+            let mut config = make_lfs_config(&server, &cachedir, "test_lfs_redacted");
             setconfig(
                 &mut config,
                 "lfs",
                 "url",
-                &[mockito::server_url(), "/repo".to_string()].concat(),
+                &[server.url(), "/repo".to_string()].concat(),
             );
 
             let blob = &example_blob();
 
-            let _m1 = get_lfs_batch_mock(200, &[blob]);
+            let _m1 = get_lfs_batch_mock(&mut server, 200, &[blob]);
 
-            let _m2 = mock("GET", format!("/repo/download/{}", blob.oid).as_str())
+            let _m2 = server
+                .mock("GET", format!("/repo/download/{}", blob.oid).as_str())
                 .with_status(410)
                 .create();
 
@@ -3163,7 +3199,8 @@ mod tests {
         let _env_lock = crate::env_lock();
 
         let cachedir = TempDir::new()?;
-        let mut config = make_lfs_config(&cachedir, "test_lfs_remote_file");
+        let server = mockito::Server::new();
+        let mut config = make_lfs_config(&server, &cachedir, "test_lfs_remote_file");
 
         let lfsdir = TempDir::new()?;
         let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
@@ -3222,7 +3259,8 @@ mod tests {
         let _env_lock = crate::env_lock();
 
         let cachedir = TempDir::new()?;
-        let mut config = make_lfs_config(&cachedir, "test_lfs_upload_remote_file");
+        let server = mockito::Server::new();
+        let mut config = make_lfs_config(&server, &cachedir, "test_lfs_upload_remote_file");
 
         let lfsdir = TempDir::new()?;
         let shared_lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
@@ -3278,7 +3316,8 @@ mod tests {
         let _env_lock = crate::env_lock();
 
         let cachedir = TempDir::new()?;
-        let mut config = make_lfs_config(&cachedir, "test_lfs_upload_move_to_shared");
+        let server = mockito::Server::new();
+        let mut config = make_lfs_config(&server, &cachedir, "test_lfs_upload_move_to_shared");
 
         let lfsdir = TempDir::new()?;
         let shared_lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
@@ -3318,7 +3357,8 @@ mod tests {
     #[test]
     fn test_blob() -> Result<()> {
         let dir = TempDir::new()?;
-        let config = make_lfs_config(&dir, "test_blob");
+        let server = mockito::Server::new();
+        let config = make_lfs_config(&server, &dir, "test_blob");
         let store = LfsStore::shared(&dir, &config)?;
 
         let data = Bytes::from(&[1, 2, 3, 4][..]);
@@ -3340,7 +3380,8 @@ mod tests {
     #[test]
     fn test_metadata() -> Result<()> {
         let dir = TempDir::new()?;
-        let config = make_lfs_config(&dir, "test_metadata");
+        let server = mockito::Server::new();
+        let config = make_lfs_config(&server, &dir, "test_metadata");
         let store = LfsStore::shared(&dir, &config)?;
 
         let k1 = key("a", "2");
@@ -3371,7 +3412,9 @@ mod tests {
     fn test_lfs_skips_server_for_empty_batch() -> Result<()> {
         let cachedir = TempDir::new()?;
         let lfsdir = TempDir::new()?;
-        let mut config = make_lfs_config(&cachedir, "test_lfs_skips_server_for_empty_batch");
+        let server = mockito::Server::new();
+        let mut config =
+            make_lfs_config(&server, &cachedir, "test_lfs_skips_server_for_empty_batch");
 
         let store = Arc::new(LfsStore::local(&lfsdir, &config)?);
 
@@ -3441,13 +3484,14 @@ mod tests {
                 backoff_config.split(',').count() + 1
             };
 
-            let m1 = get_lfs_batch_mock(200, &blobs).expect(1);
-            let m2 = get_lfs_download_mock(408, &blob1)
+            let mut server = mockito::Server::new();
+            let m1 = get_lfs_batch_mock(&mut server, 200, &blobs).expect(1);
+            let m2 = get_lfs_download_mock(&mut server, 408, &blob1)
                 .pop()
                 .unwrap()
                 .expect(req_count);
             let cachedir = TempDir::new()?;
-            let mut config = make_lfs_config(&cachedir, "test_download");
+            let mut config = make_lfs_config(&server, &cachedir, "test_download");
 
             setconfig(&mut config, "lfs", "backofftimes", backoff_config);
 

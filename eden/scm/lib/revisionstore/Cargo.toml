@@ -66,7 +66,7 @@ vlqencoding = { version = "0.1.0", path = "../vlqencoding" }
 
 [dev-dependencies]
 maplit = "1.0"
-mockito = "0.25"
+mockito = "1.4.0"
 rand_chacha = "0.3"
 
 [features]

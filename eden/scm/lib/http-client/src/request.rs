@@ -919,7 +919,6 @@ mod tests {
     use http::header::HeaderName;
     use http::header::HeaderValue;
     use http::StatusCode;
-    use mockito::mock;
     use mockito::Matcher;
     use serde_json::json;
 
@@ -929,7 +928,9 @@ mod tests {
 
     #[test]
     fn test_get() -> Result<()> {
-        let mock = mock("GET", "/test")
+        let mut server = mockito::Server::new();
+        let mock = server
+            .mock("GET", "/test")
             .with_status(200)
             .match_header("X-Api-Key", "1234")
             .with_header("Content-Type", "text/plain")
@@ -937,7 +938,7 @@ mod tests {
             .with_body("Hello, world!")
             .create();
 
-        let url = Url::parse(&mockito::server_url())?.join("test")?;
+        let url = Url::parse(&server.url())?.join("test")?;
         let res = Request::get(url).header("X-Api-Key", "1234").send()?;
 
         mock.assert();
@@ -961,7 +962,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_async_get() -> Result<()> {
-        let mock = mock("GET", "/test")
+        let mut server = mockito::Server::new_async().await;
+        let mock = server
+            .mock("GET", "/test")
             .with_status(200)
             .match_header("X-Api-Key", "1234")
             .with_header("Content-Type", "text/plain")
@@ -969,7 +972,7 @@ mod tests {
             .with_body("Hello, world!")
             .create();
 
-        let url = Url::parse(&mockito::server_url())?.join("test")?;
+        let url = Url::parse(&server.url())?.join("test")?;
         let res = Request::get(url)
             .header("X-Api-Key", "1234")
             .send_async()
@@ -998,14 +1001,16 @@ mod tests {
 
     #[test]
     fn test_head() -> Result<()> {
-        let mock = mock("HEAD", "/test")
+        let mut server = mockito::Server::new();
+        let mock = server
+            .mock("HEAD", "/test")
             .with_status(200)
             .match_header("X-Api-Key", "1234")
             .with_header("Content-Type", "text/plain")
             .with_header("X-Served-By", "mock")
             .create();
 
-        let url = Url::parse(&mockito::server_url())?.join("test")?;
+        let url = Url::parse(&server.url())?.join("test")?;
         let res = Request::head(url).header("X-Api-Key", "1234").send()?;
 
         mock.assert();
@@ -1031,13 +1036,15 @@ mod tests {
     fn test_post() -> Result<()> {
         let body = "foo=hello&bar=world";
 
-        let mock = mock("POST", "/test")
+        let mut server = mockito::Server::new();
+        let mock = server
+            .mock("POST", "/test")
             .with_status(201)
             .match_header("Content-Type", "application/x-www-form-urlencoded")
             .match_body(Matcher::Exact(body.into()))
             .create();
 
-        let url = Url::parse(&mockito::server_url())?.join("test")?;
+        let url = Url::parse(&server.url())?.join("test")?;
         let res = Request::post(url).body(body.as_bytes()).send()?;
 
         mock.assert();
@@ -1051,13 +1058,15 @@ mod tests {
         let body_bytes = vec![65; 1024 * 1024];
         let body = String::from_utf8_lossy(body_bytes.as_ref());
 
-        let mock = mock("POST", "/test")
+        let mut server = mockito::Server::new();
+        let mock = server
+            .mock("POST", "/test")
             .with_status(201)
             .match_header("Expect", Matcher::Missing)
             .match_body(Matcher::Exact(body.into()))
             .create();
 
-        let url = Url::parse(&mockito::server_url())?.join("test")?;
+        let url = Url::parse(&server.url())?.join("test")?;
         let res = Request::post(url).body(body_bytes).send()?;
 
         mock.assert();
@@ -1070,13 +1079,15 @@ mod tests {
     fn test_put() -> Result<()> {
         let body = "Hello, world!";
 
-        let mock = mock("PUT", "/test")
+        let mut server = mockito::Server::new();
+        let mock = server
+            .mock("PUT", "/test")
             .with_status(201)
             .match_header("Content-Type", "text/plain")
             .match_body(Matcher::Exact(body.into()))
             .create();
 
-        let url = Url::parse(&mockito::server_url())?.join("test")?;
+        let url = Url::parse(&server.url())?.join("test")?;
         let res = Request::put(url)
             .header("Content-Type", "text/plain")
             .body(body.as_bytes())
@@ -1095,13 +1106,15 @@ mod tests {
             "hello": "world"
         });
 
-        let mock = mock("POST", "/test")
+        let mut server = mockito::Server::new();
+        let mock = server
+            .mock("POST", "/test")
             .with_status(201)
             .match_header("Content-Type", "application/json")
             .match_body(Matcher::Json(body.clone()))
             .create();
 
-        let url = Url::parse(&mockito::server_url())?.join("test")?;
+        let url = Url::parse(&server.url())?.join("test")?;
         let res = Request::post(url).json(&body)?.send()?;
 
         mock.assert();
@@ -1123,14 +1136,15 @@ mod tests {
             hello: "world",
         };
 
-        let mock = mock("POST", "/test")
+        let mut server = mockito::Server::new();
+        let mock = server
+            .mock("POST", "/test")
             .with_status(201)
             .match_header("Content-Type", "application/cbor")
-            // As of v0.25, mockito doesn't support matching binary bodies.
-            .match_body(Matcher::Any)
+            .match_body(serde_cbor::to_vec(&body)?)
             .create();
 
-        let url = Url::parse(&mockito::server_url())?.join("test")?;
+        let url = Url::parse(&server.url())?.join("test")?;
         let res = Request::post(url).cbor(&body)?.send()?;
 
         mock.assert();
@@ -1141,7 +1155,9 @@ mod tests {
 
     #[test]
     fn test_accept_encoding() -> Result<()> {
-        let mock = mock("GET", "/test")
+        let mut server = mockito::Server::new();
+        let mock = server
+            .mock("GET", "/test")
             .with_status(200)
             .match_header("Accept-Encoding", "zstd, gzip, foobar")
             .create();
@@ -1152,7 +1168,7 @@ mod tests {
             Encoding::Other("foobar".into()),
         ];
 
-        let url = Url::parse(&mockito::server_url())?.join("test")?;
+        let url = Url::parse(&server.url())?.join("test")?;
         let _ = Request::get(url).accept_encoding(encodings).send()?;
 
         mock.assert();
@@ -1193,8 +1209,12 @@ mod tests {
             }
         });
 
-        let mock = mock("HEAD", "/test_callback").with_status(200).create();
-        let url = Url::parse(&mockito::server_url())?.join("test_callback")?;
+        let mut server = mockito::Server::new();
+        let mock = server
+            .mock("HEAD", "/test_callback")
+            .with_status(200)
+            .create();
+        let url = Url::parse(&server.url())?.join("test_callback")?;
         let _res = Request::head(url).send()?;
 
         mock.assert();

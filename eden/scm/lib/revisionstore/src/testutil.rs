@@ -406,7 +406,6 @@ mod lfs_mocks {
     use lfs_protocol::ResponseObject;
     use lfs_protocol::Sha256 as LfsSha256;
     use lfs_protocol::Transfer;
-    use mockito::mock;
     use mockito::Mock;
     use types::Sha256;
 
@@ -468,7 +467,11 @@ mod lfs_mocks {
         }
     }
 
-    pub fn get_lfs_batch_mock(status: usize, blobs: &[&TestBlob]) -> Mock {
+    pub fn get_lfs_batch_mock(
+        server: &mut mockito::ServerGuard,
+        status: usize,
+        blobs: &[&TestBlob],
+    ) -> Mock {
         let objects = blobs
             .iter()
             .map(|tb| {
@@ -490,7 +493,7 @@ mod lfs_mocks {
                         actions: vec![(
                             Operation::Download,
                             ObjectAction {
-                                href: format!("{}/repo/download/{}", mockito::server_url(), tb.oid)
+                                href: format!("{}/repo/download/{}", server.url(), tb.oid)
                                     .as_str()
                                     .try_into()
                                     .unwrap(),
@@ -515,16 +518,22 @@ mod lfs_mocks {
 
         let json_response = serde_json::to_string(&r).unwrap();
 
-        mock("POST", "/repo/objects/batch")
+        server
+            .mock("POST", "/repo/objects/batch")
             .with_status(status)
             .with_body(json_response)
             .create()
     }
 
-    pub fn get_lfs_download_mock(status: usize, blob: &TestBlob) -> Vec<Mock> {
+    pub fn get_lfs_download_mock(
+        server: &mut mockito::Server,
+        status: usize,
+        blob: &TestBlob,
+    ) -> Vec<Mock> {
         let mut mocks = vec![];
         for response in blob.response.iter() {
-            let m = mock("GET", format!("/repo/download/{}", blob.oid).as_str())
+            let m = server
+                .mock("GET", format!("/repo/download/{}", blob.oid).as_str())
                 .with_status(status)
                 .with_body(response)
                 .with_header("content-type", "application/octet-stream");
@@ -553,15 +562,16 @@ mod lfs_mocks {
         mocks.into_iter().map(|m| m.create()).collect()
     }
 
-    pub fn make_lfs_config(dir: impl AsRef<Path>, agent_sufix: &str) -> BTreeMap<String, String> {
+    pub fn make_lfs_config(
+        server: &mockito::Server,
+        dir: impl AsRef<Path>,
+        agent_sufix: &str,
+    ) -> BTreeMap<String, String> {
         let mut config = make_config(dir);
         let mut set = |key: &str, value: &str| {
             config.insert(key.to_string(), value.to_string());
         };
-        set(
-            "lfs.url",
-            &[mockito::server_url(), "/repo".to_string()].concat(),
-        );
+        set("lfs.url", &[server.url(), "/repo".to_string()].concat());
         set("lfs.use-client-certs", "false");
         set(
             "experimental.lfs.user-agent",
