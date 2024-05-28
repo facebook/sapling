@@ -383,28 +383,6 @@ async fn expand_all_git_submodule_file_changes<'a, R: Repo>(
         ..cs
     };
 
-    // Upload all file changes to the large repo's InMemory blobstore. The file
-    // changes are needed to derive fsnodes for validation and are not persisted
-    // to the large repo's real blobstore.
-    let files_to_sync = new_cs
-        .file_changes
-        .values()
-        .filter_map(|change| match change {
-            FileChange::Change(tc) => Some(tc.content_id()),
-            FileChange::UntrackedChange(uc) => Some(uc.content_id()),
-            FileChange::Deletion | FileChange::UntrackedDeletion => None,
-        })
-        .collect::<HashSet<_>>();
-
-    copy_file_contents(
-        ctx,
-        small_repo,
-        &sm_exp_data.large_repo,
-        files_to_sync,
-        |_| {},
-    )
-    .await?;
-
     let new_cs = new_cs.freeze()?;
 
     Ok(new_cs.into_mut())

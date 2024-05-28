@@ -165,7 +165,11 @@ where
 
         let large_repo = commit_syncer.get_large_repo();
         let large_repo_id = Large(large_repo.repo_identity().id());
-        let large_in_memory_repo = InMemoryRepo::from_repo(target_repo)?;
+        let fallback_repos = vec![Arc::new(source_repo.clone())]
+            .into_iter()
+            .chain(submodule_deps.repos())
+            .collect::<Vec<_>>();
+        let large_in_memory_repo = InMemoryRepo::from_repo(target_repo, fallback_repos)?;
 
         let submodule_expansion_data = match submodule_deps {
             SubmoduleDeps::ForSync(deps) => Some(SubmoduleExpansionData {

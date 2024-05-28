@@ -5,11 +5,16 @@
  * GNU General Public License version 2.
  */
 
+use std::fmt;
+use std::fmt::Debug;
 use std::sync::Arc;
 
 use anyhow::bail;
 use anyhow::Result;
 use async_trait::async_trait;
+use blobstore::Blobstore;
+use blobstore::BlobstoreBytes;
+use blobstore::BlobstoreGetData;
 use bonsai_hg_mapping::MemWritesBonsaiHgMapping;
 use cacheblob::MemWritesBlobstore;
 use changesets::ChangesetEntry;
@@ -22,8 +27,11 @@ use commit_graph::CommitGraph;
 use context::CoreContext;
 use derivative::Derivative;
 use filestore::FilestoreConfig;
+use futures::future;
+use futures::stream;
 use futures::stream::BoxStream;
 use futures::try_join;
+use futures::StreamExt;
 use itertools::Itertools;
 use mononoke_types::ChangesetId;
 use mononoke_types::ChangesetIdPrefix;
@@ -66,17 +74,30 @@ pub struct InMemoryRepo {
 }
 
 impl InMemoryRepo {
-    pub fn from_repo<R: Repo + Send + Sync>(repo: &R) -> Result<Self> {
+    pub fn from_repo<R: Repo + Send + Sync>(
+        repo: &R,
+        // Repos to fallback on blobstore reads if a blob isn't found on the
+        // inner repo's blobstore
+        fallback_repos: Vec<Arc<R>>,
+    ) -> Result<Self> {
         let repo_identity = repo.repo_identity().clone();
 
         let scuba = MononokeScubaSampleBuilder::with_discard();
 
         let original_blobstore = repo.repo_blobstore().clone();
 
+        let repo_prefix = repo_identity.id().prefix();
+
         let mem_writes_repo_blobstore =
             RepoBlobstore::new_with_wrapped_inner_blobstore(original_blobstore, |blobstore| {
                 let readonly_blobstore = ReadOnlyBlobstore::new(blobstore);
-                Arc::new(MemWritesBlobstore::new(readonly_blobstore))
+                let mem_writes = Arc::new(MemWritesBlobstore::new(readonly_blobstore));
+
+                Arc::new(MemWritesBlobstoreWithFallback::new(
+                    mem_writes,
+                    repo_prefix,
+                    fallback_repos,
+                ))
             });
         let orig_derived_data = repo.repo_derived_data();
 
@@ -229,5 +250,110 @@ impl Changesets for InMemoryChangesets {
         _read_from_master: bool,
     ) -> BoxStream<'_, Result<(ChangesetId, u64)>> {
         unimplemented!()
+    }
+}
+
+#[derive(Clone, Derivative)]
+
+struct MemWritesBlobstoreWithFallback<T, R: Repo + Clone> {
+    inner: Arc<MemWritesBlobstore<T>>,
+    /// Prefix of the inner repo's blobstore, required to update keys and
+    /// read from the fallback repos' blobstores.
+    inner_prefix: String,
+    /// Repos to fallback on blobstore reads if a blob isn't found on the
+    /// inner repo's blobstore
+    fallback_blobstores: Vec<Arc<R>>,
+}
+
+impl<T: Blobstore + Clone, R: Repo + Clone> MemWritesBlobstoreWithFallback<T, R> {
+    fn new(
+        inner: Arc<MemWritesBlobstore<T>>,
+        inner_prefix: String,
+        fallback_blobstores: Vec<Arc<R>>,
+    ) -> Self {
+        Self {
+            inner,
+            inner_prefix,
+            fallback_blobstores,
+        }
+    }
+
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(
+            f,
+            "MemWritesBlobstoreWithFallback<{0}, {1:#?}>",
+            &self.inner,
+            &self
+                .fallback_blobstores
+                .iter()
+                .map(|repo| (
+                    repo.repo_identity().name().to_string().clone(),
+                    repo.repo_blobstore()
+                ))
+                .collect::<Vec<_>>()
+        )
+    }
+}
+
+#[async_trait]
+impl<T: Blobstore + Clone, R: Repo + Clone> Blobstore for MemWritesBlobstoreWithFallback<T, R> {
+    async fn put<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> Result<()> {
+        self.inner.put(ctx, key, value).await?;
+        Ok(())
+    }
+
+    async fn get<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: &'a str,
+    ) -> Result<Option<BlobstoreGetData>> {
+        let mb_value = self.inner.get(ctx, key).await?;
+
+        match mb_value {
+            Some(value) => Ok(Some(value)),
+            None => {
+                // Query the fallback repos blobstores concurrently and return
+                // the first `Ok(Some)` result found.
+                let fallback_value = stream::iter(self.fallback_blobstores.clone())
+                    .map(|repo| {
+                        let blobstore: RepoBlobstore = repo.repo_blobstore().clone();
+                        let new_key = key
+                            .to_string()
+                            .strip_prefix(&self.inner_prefix)
+                            .unwrap()
+                            .to_string();
+                        async move {
+                            let mb_val = blobstore.get(ctx, new_key.as_str()).await?;
+                            anyhow::Ok(mb_val)
+                        }
+                    })
+                    // Buffer all blobstore reads unordered
+                    .buffer_unordered(10)
+                    // Ignore all reads that don't return any result
+                    .filter_map(|v| future::ready(v.transpose()))
+                    // Get the first `Some` result
+                    .next()
+                    .await;
+                fallback_value.transpose()
+            }
+        }
+    }
+}
+impl<T: Blobstore + Clone, R: Repo + Clone> std::fmt::Display
+    for MemWritesBlobstoreWithFallback<T, R>
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        self.fmt(f)
+    }
+}
+
+impl<T: Blobstore + Clone, R: Repo + Clone> Debug for MemWritesBlobstoreWithFallback<T, R> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.fmt(f)
     }
 }

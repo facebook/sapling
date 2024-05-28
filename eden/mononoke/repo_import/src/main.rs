@@ -237,7 +237,8 @@ async fn rewrite_file_paths(
         let bcs_id = bcs.get_changeset_id();
 
         let large_repo_id = Large(repo.repo_identity().id());
-        let large_in_memory_repo = InMemoryRepo::from_repo(repo)?;
+        let fallback_repos = vec![];
+        let large_in_memory_repo = InMemoryRepo::from_repo(repo, fallback_repos)?;
         let submodule_expansion_data = match submodule_deps {
             SubmoduleDeps::ForSync(ref deps) => Some(SubmoduleExpansionData {
                 submodule_deps: deps,

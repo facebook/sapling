@@ -295,7 +295,11 @@ async fn create_rewritten_merge_commit(
     let submodule_deps = syncers.small_to_large.get_submodule_deps();
 
     let large_repo_id = Large(large_repo.repo_identity().id());
-    let large_in_memory_repo = InMemoryRepo::from_repo(large_repo)?;
+    let fallback_repos = vec![Arc::new(small_repo.clone())]
+        .into_iter()
+        .chain(submodule_deps.repos())
+        .collect::<Vec<_>>();
+    let large_in_memory_repo = InMemoryRepo::from_repo(large_repo, fallback_repos)?;
     let submodule_expansion_data = match submodule_deps {
         SubmoduleDeps::ForSync(deps) => Some(SubmoduleExpansionData {
             submodule_deps: deps,

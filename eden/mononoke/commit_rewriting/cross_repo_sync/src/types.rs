@@ -301,6 +301,13 @@ impl<R: Repo> SubmoduleDeps<R> {
             _ => None,
         }
     }
+
+    pub fn repos(&self) -> Vec<Arc<R>> {
+        match self {
+            Self::ForSync(map) => map.values().cloned().collect(),
+            _ => Vec::new(),
+        }
+    }
 }
 
 impl<R: Repo> Debug for SubmoduleDeps<R> {

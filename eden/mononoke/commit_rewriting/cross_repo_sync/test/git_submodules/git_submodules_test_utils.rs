@@ -742,7 +742,13 @@ pub(crate) async fn test_submodule_expansion_validation_in_large_repo_bonsai(
     let mover = commit_syncer
         .get_mover_by_version(&sync_config_version)
         .await?;
-    let large_in_memory_repo = InMemoryRepo::from_repo(&large_repo)?;
+
+    let submodule_deps = commit_syncer.get_submodule_deps();
+    let fallback_repos = vec![Arc::new(repo_a.clone())]
+        .into_iter()
+        .chain(submodule_deps.repos())
+        .collect::<Vec<_>>();
+    let large_in_memory_repo = InMemoryRepo::from_repo(&large_repo, fallback_repos)?;
     let (x_repo_submodule_metadata_file_prefix, dangling_submodule_pointers) =
         submodule_metadata_file_prefix_and_dangling_pointers(
             repo_a.repo_identity().id(),
@@ -751,7 +757,7 @@ pub(crate) async fn test_submodule_expansion_validation_in_large_repo_bonsai(
         )
         .await?;
 
-    let submodule_deps = match commit_syncer.get_submodule_deps() {
+    let submodule_deps = match submodule_deps {
         SubmoduleDeps::ForSync(deps) => deps,
         SubmoduleDeps::NotNeeded => return Err(anyhow!("Submodule deps should have been set!")),
     };

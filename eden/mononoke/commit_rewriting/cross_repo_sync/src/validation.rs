@@ -161,7 +161,11 @@ pub async fn verify_working_copy_with_version<
             live_commit_sync_config.clone(),
         )
         .await?;
-    let large_in_memory_repo = InMemoryRepo::from_repo(large_repo)?;
+    let fallback_repos = vec![Arc::new(small_repo.clone())]
+        .into_iter()
+        .chain(submodule_deps.repos())
+        .collect::<Vec<_>>();
+    let large_in_memory_repo = InMemoryRepo::from_repo(large_repo, fallback_repos)?;
     let sm_exp_data = match submodule_deps {
         SubmoduleDeps::ForSync(ref deps) => Some(SubmoduleExpansionData {
             submodule_deps: deps,

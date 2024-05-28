@@ -7,6 +7,8 @@
 
 //! Tests for the InMemoryRepo used in submodule expansion validation
 
+use std::sync::Arc;
+
 use anyhow::Context;
 use anyhow::Result;
 use blobstore::Loadable;
@@ -29,10 +31,14 @@ async fn test_original_blobstore_and_changesets_are_the_same_after_validation(
     fb: FacebookInit,
 ) -> Result<()> {
     let ctx = CoreContext::test_mock(fb.clone());
+
+    let (fallback_repo, _fallback_repo_cs_map) = build_repo_c(fb).await?;
+
     let (orig_repo, _orig_repo_cs_map) = build_repo_b(fb).await?;
 
+    let fallback_repos = vec![Arc::new(fallback_repo.clone())];
     // Create an InMemoryRepo from the original repo
-    let in_memory_repo = InMemoryRepo::from_repo(&orig_repo)?;
+    let in_memory_repo = InMemoryRepo::from_repo(&orig_repo, fallback_repos)?;
 
     // Create a new bonsai changeset using the in_memory_repo
     let new_bonsai_mut = BonsaiChangesetMut {
@@ -90,6 +96,45 @@ async fn test_original_blobstore_and_changesets_are_the_same_after_validation(
         orig_changeset.is_none(),
         "Changeset was found in original repo when it shouldn't be"
     );
+
+    // ------------------ Test fallback repo ------------------
+
+    // Create a new bonsai changeset in fallback repo
+    let new_bonsai_mut = BonsaiChangesetMut {
+        parents: vec![],
+        message: "Create directory in repo C".into(),
+        file_changes: SortedVectorMap::new(),
+        author_date: DateTime::from_timestamp(0, 0).unwrap(),
+        ..Default::default()
+    };
+
+    let bonsai = new_bonsai_mut.freeze().unwrap();
+    let _ = bonsai.get_changeset_id();
+
+    println!("fallback_changeset_bonsai: {0:#?}", &bonsai);
+
+    // Save that changeset
+    save_changesets(&ctx, &fallback_repo, vec![bonsai])
+        .await
+        .context("Failed to save changesets")?;
+
+    // 5. Fallback repo changeset can be loaded from in_memory repo
+    let fallback_changeset_in_memory = cs_id.load(&ctx, &in_memory_repo.repo_blobstore()).await?;
+    println!(
+        "fallback_changeset_in_memory: {0:#?}",
+        fallback_changeset_in_memory
+    );
+
+    // 6. Fallback repo bonsai can't be loaded from original repo
+    let fallback_changeset_orig_repo = cs_id.load(&ctx, &orig_repo.repo_blobstore()).await;
+    println!(
+        "Loading Fallback repo changeset from original repo: {0:#?}",
+        fallback_changeset_orig_repo
+    );
+    assert!(fallback_changeset_orig_repo.is_err_and(|e| {
+        // Fails to find changeset blob
+        e.to_string().contains("Blob is missing: changeset.blake2")
+    }));
 
     Ok(())
 }
