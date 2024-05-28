@@ -298,6 +298,7 @@ impl MononokeConfigoClient {
 
                     ..Default::default()
                 }),
+                callsite: Some("fbcode/eden/mononoke/megarepo_api/configo_client/src/facebook.rs".to_string()),
                 ..Default::default()
             }),
             ..Default::default()
