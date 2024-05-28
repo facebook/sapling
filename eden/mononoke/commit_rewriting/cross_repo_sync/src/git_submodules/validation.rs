@@ -187,7 +187,7 @@ async fn validate_submodule_expansion<'a, R: Repo>(
                         FileType::Regular,
                     )
                 })
-                .buffered(10)
+                .buffer_unordered(10)
                 .boxed()
                 .try_collect::<Vec<_>>()
                 .await?
@@ -342,7 +342,7 @@ async fn _ensure_submodule_expansion_deletion<'a, R: Repo>(
     // A `FileChange::Deletion` should exist in the bonsai for all of these
     // paths.
     let entire_submodule_expansion_was_deleted = stream::iter(bonsai.parents())
-        .then(|parent_cs_id| {
+        .map(|parent_cs_id| {
             cloned!(synced_submodule_path);
             let large_repo = sm_exp_data.large_repo.clone();
             async move {
@@ -355,6 +355,7 @@ async fn _ensure_submodule_expansion_deletion<'a, R: Repo>(
                 .await
             }
         })
+        .buffer_unordered(10)
         .boxed()
         .try_flatten()
         .try_all(|path| {

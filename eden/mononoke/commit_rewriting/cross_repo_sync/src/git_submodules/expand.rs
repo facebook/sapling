@@ -500,7 +500,7 @@ async fn expand_git_submodule_file_change<'a, R: Repo>(
     );
 
     stream::iter(copy_per_submodule)
-        .then(|(sm_path, content_ids_to_copy)| async move {
+        .map(|(sm_path, content_ids_to_copy)| async move {
             let submodule_repo = get_submodule_repo(&sm_path, sm_exp_data.submodule_deps)?;
 
             // The commit rewrite crate copies the file content blobs from the
@@ -515,6 +515,7 @@ async fn expand_git_submodule_file_change<'a, R: Repo>(
                     )
                 })
         })
+        .buffer_unordered(10)
         .try_collect()
         .await?;
 
@@ -890,7 +891,7 @@ async fn handle_submodule_deletion<'a, R: Repo>(
         // the FileType of the submodule file path in each of the parents.
         let is_git_submodule_file = stream::iter(parents)
             .map(|cs_id| is_path_git_submodule(ctx, small_repo, *cs_id, &deleted_path))
-            .buffered(10)
+            .buffer_unordered(10)
             .boxed()
             .try_collect::<Vec<_>>()
             .await?
@@ -954,7 +955,7 @@ async fn delete_submodule_expansion<'a, R: Repo>(
     // can generate the proper paths to be deleted.
     let submodule_leaves = stream::iter(sm_parents)
         .map(|cs_id| list_all_paths(ctx, submodule_repo, cs_id))
-        .buffered(10)
+        .buffer_unordered(10)
         .try_flatten_unordered(None)
         .try_collect::<Vec<_>>()
         .await?;
