@@ -54,6 +54,11 @@ impl AsyncNameSetQuery for StaticSet {
         Ok(self.0.len())
     }
 
+    async fn size_hint(&self) -> (usize, Option<usize>) {
+        let size = self.0.len();
+        (size, Some(size))
+    }
+
     async fn is_empty(&self) -> Result<bool> {
         Ok(self.0.is_empty())
     }
@@ -120,6 +125,7 @@ mod tests {
         assert_eq!(nb(set.count())?, 5);
         assert_eq!(shorten_name(nb(set.first())?.unwrap()), "11");
         assert_eq!(shorten_name(nb(set.last())?.unwrap()), "55");
+        assert_eq!(nb(set.size_hint()), (5, Some(5)));
         Ok(())
     }
 

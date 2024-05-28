@@ -254,6 +254,11 @@ impl AsyncNameSetQuery for IdStaticSet {
         Ok(self.spans.count() as usize)
     }
 
+    async fn size_hint(&self) -> (usize, Option<usize>) {
+        let size = self.spans.count() as usize;
+        (size, Some(size))
+    }
+
     async fn first(&self) -> Result<Option<VertexName>> {
         if self.reversed {
             self.min().await
@@ -337,6 +342,7 @@ pub(crate) mod tests {
         with_dag(|dag| {
             let bef = r(dag.range("B".into(), "F".into()))?;
             check_invariants(bef.deref())?;
+            assert_eq!(nb(bef.size_hint()), (3, Some(3)));
 
             Ok(())
         })
