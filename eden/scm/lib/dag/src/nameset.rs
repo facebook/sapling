@@ -575,6 +575,14 @@ pub trait AsyncNameSetQuery: Any + Debug + Send + Sync {
         Ok(count)
     }
 
+    /// Returns the bounds on the length of the set as a hint.
+    /// The first item is the lower bound.
+    /// The second item is the upper bound.
+    /// This method should not block on long operations like waiting for network.
+    async fn size_hint(&self) -> (usize, Option<usize>) {
+        (0, None)
+    }
+
     /// The first name in the set.
     async fn first(&self) -> Result<Option<VertexName>> {
         self.iter().await?.next().await.transpose()
@@ -1245,6 +1253,7 @@ pub(crate) mod tests {
             .collect();
         let is_empty = nb(query.is_empty())?;
         let count = nb(query.count())?;
+        let (size_hint_min, size_hint_max) = nb(query.size_hint());
         let first = nb(query.first())?;
         let last = nb(query.last())?;
         let names: Vec<VertexName> = ni(query.iter())?.collect::<Result<Vec<_>>>()?;
@@ -1266,6 +1275,22 @@ pub(crate) mod tests {
             "count() should match iter().count() (set: {:?})",
             &query
         );
+        assert!(
+            size_hint_min <= count,
+            "size_hint().0 ({}) must <= count ({}) (set: {:?})",
+            size_hint_min,
+            count,
+            &query
+        );
+        if let Some(size_hint_max) = size_hint_max {
+            assert!(
+                size_hint_max >= count,
+                "size_hint().1 ({}) must >= count ({}) (set: {:?})",
+                size_hint_max,
+                count,
+                &query
+            );
+        }
         assert_eq!(
             is_empty,
             count == 0,
