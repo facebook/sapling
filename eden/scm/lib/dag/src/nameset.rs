@@ -340,6 +340,17 @@ impl NameSet {
         Self::from_query(union::UnionSet::new(self.clone(), other.clone()))
     }
 
+    /// Similar to `union`, but without showfast paths, and force a "flatten zip" order.
+    /// For example `[1,2,3,4].union_zip([5,6])` produces this order: `[1,5,2,6,3,4]`.
+    pub fn union_zip(&self, other: &NameSet) -> NameSet {
+        tracing::debug!(
+            target: "dag::algo::union_zip",
+            "union_zip(x={:.6?}, y={:.6?}) (slow path)", self, other);
+        Self::from_query(
+            union::UnionSet::new(self.clone(), other.clone()).with_order(union::UnionOrder::Zip),
+        )
+    }
+
     /// Filter using the given async function. If `filter_func` returns `true`
     /// for a vertex, then the vertex will be taken, other it will be skipped.
     pub fn filter(
@@ -967,6 +978,18 @@ pub(crate) mod tests {
         assert_eq!(
             format!("{:?}", r(set.flatten()).unwrap()),
             "<static [0202, 0101]>"
+        );
+    }
+
+    #[test]
+    fn test_union_zip() {
+        let set1 = NameSet::from_static_names(vec![to_name(1), to_name(2), to_name(3), to_name(4)]);
+        let set2 = NameSet::from_static_names(vec![to_name(5), to_name(6)]);
+        let unioned = set1.union_zip(&set2);
+        let names = unioned.iter().unwrap().collect::<Result<Vec<_>>>().unwrap();
+        assert_eq!(
+            format!("{:?}", names),
+            "[0101, 0505, 0202, 0606, 0303, 0404]"
         );
     }
 
