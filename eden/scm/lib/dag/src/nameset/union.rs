@@ -9,6 +9,7 @@ use std::any::Any;
 use std::fmt;
 
 use futures::StreamExt;
+use serde::Deserialize;
 
 use super::hints::Flags;
 use super::AsyncNameSetQuery;
@@ -19,13 +20,20 @@ use crate::fmt::write_debug;
 use crate::Result;
 use crate::VertexName;
 
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Deserialize)]
+pub enum UnionOrder {
+    /// The first set is iterated first using its own order.
+    /// Then the second set is iterated, with duplications skipped.
+    FirstSecond,
+}
+
 /// Union of 2 sets.
 ///
-/// The order is preserved. The first set is iterated first, then the second set
-/// is iterated, with duplicated names skipped.
+/// See [`UnionOrder`] for iteration order.
 pub struct UnionSet {
     sets: [NameSet; 2],
     hints: Hints,
+    order: UnionOrder,
 }
 
 impl UnionSet {
@@ -46,7 +54,13 @@ impl UnionSet {
         Self {
             sets: [lhs, rhs],
             hints,
+            order: UnionOrder::FirstSecond,
         }
+    }
+
+    pub fn with_order(mut self, order: UnionOrder) -> Self {
+        self.order = order;
+        self
     }
 }
 
@@ -57,7 +71,9 @@ impl AsyncNameSetQuery for UnionSet {
         let diff = self.sets[1].clone() - self.sets[0].clone();
         let diff_iter = diff.iter().await?;
         let set0_iter = self.sets[0].iter().await?;
-        let iter = set0_iter.chain(diff_iter);
+        let iter = match self.order {
+            UnionOrder::FirstSecond => set0_iter.chain(diff_iter),
+        };
         Ok(Box::pin(iter))
     }
 
@@ -66,7 +82,9 @@ impl AsyncNameSetQuery for UnionSet {
         let diff = self.sets[1].clone() - self.sets[0].clone();
         let diff_iter = diff.iter_rev().await?;
         let set0_iter = self.sets[0].iter_rev().await?;
-        let iter = diff_iter.chain(set0_iter);
+        let iter = match self.order {
+            UnionOrder::FirstSecond => diff_iter.chain(set0_iter),
+        };
         Ok(Box::pin(iter))
     }
 
@@ -126,6 +144,10 @@ impl fmt::Debug for UnionSet {
         write!(f, "<or")?;
         write_debug(f, &self.sets[0])?;
         write_debug(f, &self.sets[1])?;
+        match self.order {
+            UnionOrder::FirstSecond => {}
+            order => write!(f, " (order={:?})", order)?,
+        }
         write!(f, ">")
     }
 }
