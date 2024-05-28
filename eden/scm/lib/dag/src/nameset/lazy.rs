@@ -178,6 +178,17 @@ impl AsyncNameSetQuery for LazySet {
         Ok(inner.visited.len())
     }
 
+    async fn size_hint(&self) -> (usize, Option<usize>) {
+        let inner = self.inner.lock().await;
+        let min = inner.visited.len();
+        let max = match inner.state {
+            State::Incomplete => None,
+            State::Complete => Some(min),
+            State::Error => None,
+        };
+        (min, max)
+    }
+
     async fn last(&self) -> Result<Option<VertexName>> {
         let inner = self.load_all().await?;
         Ok(inner.visited.iter().rev().nth(0).cloned())
@@ -271,6 +282,19 @@ mod tests {
         assert_eq!(format!("{:2.2?}", &set), "<lazy [11, 33]+ 1 + ? more>");
         iter.next();
         assert_eq!(format!("{:1.3?}", &set), "<lazy [111] + 2 more>");
+    }
+
+    #[test]
+    fn test_lazy() -> Result<()> {
+        let set = lazy_set(b"\x11\x33\x22");
+        assert_eq!(nb(set.size_hint()), (0, None));
+        // is_empty() reads one next item.
+        assert!(!nb(set.is_empty())?);
+        assert_eq!(nb(set.size_hint()), (1, None));
+        // count() reads all items.
+        assert_eq!(nb(set.count())?, 3);
+        assert_eq!(nb(set.size_hint()), (3, Some(3)));
+        Ok(())
     }
 
     quickcheck::quickcheck! {
