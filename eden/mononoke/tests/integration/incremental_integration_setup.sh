@@ -27,6 +27,12 @@ fi
 
 shift
 
+# Set the default build mode to 'mode/dev-nosan-lg', which is the same mode used in CI.
+build_args=("@fbcode//mode/dev-nosan-lg")
+if [ $# -ne 0 ]; then
+    build_args=("$@")
+fi
+
 set -x
 
-$BUCK build "$@" //eden/mononoke/tests/integration:integration_runner_real "//eden/mononoke/tests/integration$TARGET" "//eden/mononoke/tests/integration${TARGET}[deps]"
+$BUCK build "${build_args[@]}" //eden/mononoke/tests/integration:integration_runner_real "//eden/mononoke/tests/integration$TARGET" "//eden/mononoke/tests/integration${TARGET}[deps]"
