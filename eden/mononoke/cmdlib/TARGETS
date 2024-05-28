@@ -19,6 +19,7 @@ rust_library(
         "fbsource//third-party/rust:slog-term",
         "fbsource//third-party/rust:strum",
         "fbsource//third-party/rust:tokio",
+        "fbsource//third-party/rust:tracing",
         ":cmdlib_logging",
         ":environment",
         "//common/rust/ratelim:ratelim",

@@ -50,7 +50,7 @@ Before the change
   $ echo b > non_path_shifting/bar
   $ hg ci -Aqm "before config change"
   $ REPONAME=small-mon hgmn push -r . --to master_bookmark -q
-  $ log 
+  $ log
   @  before config change [public;rev=2;bc6a206054d0] default/master_bookmark
   │
   o  first post-move commit [public;rev=1;11f848659bfc]
@@ -99,7 +99,6 @@ After the change
   $ with_stripped_logs mononoke_admin_source_target 0 1 crossrepo map $(hg whereami)
   using repo "large-mon" repoid RepositoryId(0)
   using repo "small-mon" repoid RepositoryId(1)
-  changeset resolved as: ChangesetId(Blake2(a45c6ed3a8522811955be9b4eb0b80f29d2229eeeb43f7f017b2411c0feab955))
   EquivalentWorkingCopyAncestor(ChangesetId(Blake2(cdd50b2d186ce87fe6d2428b01caf9994a98ac51e65f7d6bb43c6a0f6e8d7a56)), CommitSyncConfigVersion("new_version"))
 
   $ cd "$TESTTMP/small-hg-client"
@@ -176,5 +175,4 @@ Rest of this test won't pass as we failed the previous command so is commented o
   $ with_stripped_logs mononoke_admin_source_target 0 1 crossrepo map $(hg log -T "{node}" -r .^)
   using repo "large-mon" repoid RepositoryId(0)
   using repo "small-mon" repoid RepositoryId(1)
-  changeset resolved as: ChangesetId(Blake2(*)) (glob)
   RewrittenAs([(ChangesetId(Blake2(e7a0827177ac9caf3578f2c5e4307f3d11a8954ccaa576c3813f166d174f4e64)), CommitSyncConfigVersion("new_version"))])

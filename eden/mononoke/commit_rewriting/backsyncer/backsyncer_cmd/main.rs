@@ -446,13 +446,11 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 executor.block_and_execute(&logger, Arc::new(AtomicBool::new(false))),
                 fb,
                 &std::env::var("TW_JOB_NAME").unwrap_or_else(|_| APP_NAME.to_string()),
-                matches.logger(),
                 &matches,
                 cmdlib::monitoring::AliveService,
             )
         }
         None => {
-            let logger = process.matches.logger().clone();
             let matches = process.matches.clone();
             let config_store = matches.config_store();
             let source_repo_id =
@@ -474,7 +472,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 fut,
                 fb,
                 APP_NAME,
-                &logger,
                 &matches,
                 cmdlib::monitoring::AliveService,
             )

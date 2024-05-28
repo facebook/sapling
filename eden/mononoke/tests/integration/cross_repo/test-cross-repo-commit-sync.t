@@ -163,9 +163,9 @@ ovrsource has two problems
   'ovr-mon' has a bookmark master_bookmark but it points to a commit that has no equivalent in 'meg-mon'. If it's a shared bookmark (e.g. master) that might mean that it points to a commit from another repository
   inconsistent value of forgotten_bookmark: 'ovr-mon' has 36a934b2f08adf9ed2331b0e0dce29522584d085748a9f42d1ca7d1c7787306a, but 'meg-mon' bookmark points to None
 
-update-large-repo-bookmarks won't create commits by itself 
+update-large-repo-bookmarks won't create commits by itself
 only the syncer can create the commit or they have to be imported some other way
-  $ quiet_grep Missing -- crossrepo_verify_bookmarks 0 2 --update-large-repo-bookmarks 
+  $ quiet_grep Missing -- crossrepo_verify_bookmarks 0 2 --update-large-repo-bookmarks
   * Missing outcome for 36a934b2f08adf9ed2331b0e0dce29522584d085748a9f42d1ca7d1c7787306a from small repo (glob)
   [1]
 
@@ -173,8 +173,6 @@ but let's  say we synced that commit manually
   $ megarepo_tool_multirepo --source-repo-id 2 --target-repo-id 0 manual-commit-sync --commit $FORGOTTEN --parents $FORGOTTEN_PARENT --mapping-version-name TEST_VERSION_NAME
   * using repo "ovr-mon" repoid RepositoryId(2) (glob)
   * using repo "meg-mon" repoid RepositoryId(0) (glob)
-  * changeset resolved as: ChangesetId(Blake2(a30a90f6e3e887c6ee6451dc4c7f9cd352c20495407eb912f9017641e300ca9a)) (glob)
-  * changeset resolved as: ChangesetId(Blake2(36a934b2f08adf9ed2331b0e0dce29522584d085748a9f42d1ca7d1c7787306a)) (glob)
   * target cs id is Some(ChangesetId(Blake2(5ec36a79a341b4235da29af79ff591881a994b44c94acaa10c3f583bdef4f2fb))) (glob)
 
 it still doesn't have any data derived

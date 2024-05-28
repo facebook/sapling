@@ -1432,7 +1432,6 @@ fn main(fb: FacebookInit) -> Result<()> {
         subcommand_future,
         fb,
         "megarepotool",
-        logger,
         &matches,
         cmdlib::monitoring::AliveService,
     )

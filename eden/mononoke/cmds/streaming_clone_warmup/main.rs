@@ -84,7 +84,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         run(ctx, &matches),
         fb,
         &std::env::var("TW_JOB_NAME").unwrap_or_else(|_| "streaming_clone_warmup".to_string()),
-        logger,
         &matches,
         cmdlib::monitoring::AliveService,
     )

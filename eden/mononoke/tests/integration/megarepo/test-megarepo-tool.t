@@ -61,7 +61,6 @@ blobimport
 move things in fbsource
   $ RUST_BACKTRACE=1 megarepo_tool move 1 fbsource_master user "fbsource move" --mark-public --commit-date-rfc3339 "$COMMIT_DATE" --bookmark fbsource_move --mapping-version-name TEST_VERSION_NAME
   * using repo "repo" repoid RepositoryId(0) (glob)
-  * changeset resolved as: * (glob)
   * Marked as public * (glob)
   * Setting bookmark * "fbsource_move" * to point to * (glob)
   * Setting bookmark * "fbsource_move" * finished (glob)
@@ -71,7 +70,6 @@ move things in fbsource
 move things in ovrsource in a stack
   $ megarepo_tool move 2 ovrsource_master user "ovrsource stack move" --mark-public --commit-date-rfc3339 "$COMMIT_DATE" --max-num-of-moves-in-commit 1 --bookmark ovrsource_move --mapping-version-name TEST_VERSION_NAME
   * using repo "repo" repoid RepositoryId(0) (glob)
-  * changeset resolved as: * (glob)
   * Marked as public * (glob)
   * Setting bookmark * "ovrsource_move" * to point to * (glob)
   * Setting bookmark * "ovrsource_move" * finished (glob)
@@ -112,8 +110,6 @@ move things in ovrsource in a stack
 merge things in both repos
   $ megarepo_tool merge fbsource_move ovrsource_move user "megarepo merge" --mark-public --commit-date-rfc3339 "$COMMIT_DATE" --bookmark master
   * using repo "repo" repoid RepositoryId(0) (glob)
-  * changeset resolved as: * (glob)
-  * changeset resolved as: * (glob)
   * Creating a merge commit (glob)
   * Checking if there are any path conflicts (glob)
   * Done checking path conflicts (glob)

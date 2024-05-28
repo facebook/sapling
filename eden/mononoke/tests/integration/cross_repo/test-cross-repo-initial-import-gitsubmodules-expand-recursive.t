@@ -106,6 +106,14 @@ Setup git repos A, B and C
   
   7 directories, 11 files
 
+
+
+
+
+
+
+
+
 Import all git repos into Mononoke
   $ gitimport_repos_a_b_c
   
@@ -132,15 +140,11 @@ Merge repo A into the large repo
   
   NOTE: Creating gradual merge commit
   using repo "large_repo" repoid RepositoryId(10)
-  changeset resolved as: ChangesetId(Blake2(9f66c500dd865669c0458820af27352ec9af5efe19714dd0400d4055d5310bcf))
-  changeset resolved as: ChangesetId(Blake2(6e3217760eada6926186d7cb48f4f24bd8a734ad615aec528065a0912dec6cba))
   Finding all commits to merge...
   2 total commits to merge
   Finding commits that haven't been merged yet...
-  changeset resolved as: ChangesetId(Blake2(b006a2b1425af8612bc80ff4aa9fa8a1a2c44936ad167dd21cb9af2a9a0248c4))
   merging 1 commits
   Preparing to merge 9f66c500dd865669c0458820af27352ec9af5efe19714dd0400d4055d5310bcf
-  changeset resolved as: ChangesetId(Blake2(b006a2b1425af8612bc80ff4aa9fa8a1a2c44936ad167dd21cb9af2a9a0248c4))
   Created merge changeset 671ade4dbbb1c68e733c4e2fb59a2cd39cf72ea66f898f092e128e9dce1b135f
   Generated hg changeset 6a66af335e25a2fbbe762dd9de5253bfdf973fb5
   Now running pushrebase...
@@ -244,6 +248,22 @@ Merge repo A into the large repo
   9f66c500dd865669c0458820af27352ec9af5efe19714dd0400d4055d5310bcf: 0
   9f66c500dd865669c0458820af27352ec9af5efe19714dd0400d4055d5310bcf: 0
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 Make changes to submodule and make sure they're synced properly
   $ make_changes_to_git_repos_a_b_c
   
@@ -289,6 +309,16 @@ Make changes to submodule and make sure they're synced properly
   f3ce0ee Added git repo B as submodule in A
   ad7b606 Add regular_dir/aardvar
   8c33a27 Add root_file
+
+
+
+
+
+
+
+
+
+
 
   $ mononoke_newadmin bookmarks -R "$SUBMODULE_REPO_NAME" list -S hg
   heads/master
@@ -389,6 +419,7 @@ TODO(T174902563): Fix deletion of submodules in EXPAND submodule action.
   9 directories, 17 files                                         |  6 directories, 14 files
   [1]
 
+
 Check that the diff that updates the submodule generates the correct delta
 (i.e. instead of copying the entire working copy of the submodule every time)
   $ hg show --stat -T 'commit: {node}\n{desc}\n' .^
@@ -405,6 +436,7 @@ Check that the diff that updates the submodule generates the correct delta
    smallrepofolder1/repo_c/choo4                            |  1 +
    9 files changed, 7 insertions(+), 5 deletions(-)
   
+ 
   $ cat smallrepofolder1/.x-repo-submodule-git-repo-b
   0597690a839ce11a250139dae33ee85d9772a47a (no-eol)
 
@@ -459,7 +491,6 @@ Let's corrupt the expansion and check if validation complains
 -- Commit: Change directly in A
   $ check_mapping_and_run_xrepo_lookup_large_to_small e21dab0d1f381cd1d46cd735013714d34bf02eaf
   Check mapping in database with Mononoke admin
-  changeset resolved as: ChangesetId(Blake2(e43bc530a8d68be3efffb4923154d9af94e4b5b3b6c72df66d9788f168da6f80))
   RewrittenAs([(ChangesetId(Blake2(4aee0499ea629ebcd9d0e4be89267d7a4eab5e72f988c20a392d59081db0c32a)), CommitSyncConfigVersion("INITIAL_IMPORT_SYNC_CONFIG"))])
   
   
@@ -470,7 +501,6 @@ Let's corrupt the expansion and check if validation complains
 -- Commit: Update submodule B in repo A
   $ check_mapping_and_run_xrepo_lookup_large_to_small 966d27bdf05c9c50d2e6e52390ef539e7ed88347
   Check mapping in database with Mononoke admin
-  changeset resolved as: ChangesetId(Blake2(4f4d70c002c11a4299d391722c27b696413cb39baaf25845ee75470ec02341fc))
   RewrittenAs([(ChangesetId(Blake2(b86f7426fc1fe95e22b6bef591e7ba9c8385b86f7b85abd3a377f941d39522af)), CommitSyncConfigVersion("INITIAL_IMPORT_SYNC_CONFIG"))])
   
   
@@ -482,7 +512,6 @@ Let's corrupt the expansion and check if validation complains
 -- Commit: Added git repo C as submodule directly in A
   $ check_mapping_and_run_xrepo_lookup_large_to_small 93d78192288211ec611cde910d9ed46df80c9fd4
   Check mapping in database with Mononoke admin
-  changeset resolved as: ChangesetId(Blake2(9f66c500dd865669c0458820af27352ec9af5efe19714dd0400d4055d5310bcf))
   RewrittenAs([(ChangesetId(Blake2(eef414bd5fc8f7dcc129318276af6945117fe32bb5cfda6b0e6d43036107f61c)), CommitSyncConfigVersion("INITIAL_IMPORT_SYNC_CONFIG"))])
   
   

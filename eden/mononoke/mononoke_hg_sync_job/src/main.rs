@@ -1616,7 +1616,6 @@ fn main(fb: FacebookInit) -> Result<()> {
                 executor.block_and_execute(&logger, Arc::new(AtomicBool::new(false))),
                 fb,
                 &std::env::var("TW_JOB_NAME").unwrap_or_else(|_| "hg_sync_job".to_string()),
-                matches.logger(),
                 &matches,
                 cmdlib::monitoring::AliveService,
             )?;
@@ -1637,7 +1636,6 @@ fn main(fb: FacebookInit) -> Result<()> {
                 fut,
                 fb,
                 "hg_sync_job",
-                matches.logger(),
                 &matches,
                 cmdlib::monitoring::AliveService,
             )?;
