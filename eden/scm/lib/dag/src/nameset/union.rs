@@ -7,7 +7,9 @@
 
 use std::any::Any;
 use std::fmt;
+use std::task::Poll;
 
+use futures::Stream;
 use futures::StreamExt;
 use serde::Deserialize;
 
@@ -25,6 +27,12 @@ pub enum UnionOrder {
     /// The first set is iterated first using its own order.
     /// Then the second set is iterated, with duplications skipped.
     FirstSecond,
+
+    /// Take one item from the first set, then one item from the second set
+    /// (if not exist in the first set), and repeat. Note this is slightly
+    /// different from "zip" as the second set is treated as not having
+    /// items duplicated with the first set.
+    Zip,
 }
 
 /// Union of 2 sets.
@@ -71,10 +79,11 @@ impl AsyncNameSetQuery for UnionSet {
         let diff = self.sets[1].clone() - self.sets[0].clone();
         let diff_iter = diff.iter().await?;
         let set0_iter = self.sets[0].iter().await?;
-        let iter = match self.order {
-            UnionOrder::FirstSecond => set0_iter.chain(diff_iter),
+        let iter: BoxVertexStream = match self.order {
+            UnionOrder::FirstSecond => Box::pin(set0_iter.chain(diff_iter)),
+            UnionOrder::Zip => Box::pin(ZipStream::new(set0_iter, diff_iter)),
         };
-        Ok(Box::pin(iter))
+        Ok(iter)
     }
 
     async fn iter_rev(&self) -> Result<BoxVertexStream> {
@@ -82,10 +91,20 @@ impl AsyncNameSetQuery for UnionSet {
         let diff = self.sets[1].clone() - self.sets[0].clone();
         let diff_iter = diff.iter_rev().await?;
         let set0_iter = self.sets[0].iter_rev().await?;
-        let iter = match self.order {
-            UnionOrder::FirstSecond => diff_iter.chain(set0_iter),
+        let iter: BoxVertexStream = match self.order {
+            UnionOrder::FirstSecond => Box::pin(diff_iter.chain(set0_iter)),
+            UnionOrder::Zip => {
+                // note: cannot use ZipStream::new(diff_iter, set_iter) when two iters have
+                // different lengths.
+                let mut iter = self.iter().await?;
+                let mut items = Vec::new();
+                while let Some(item) = iter.next().await {
+                    items.push(item);
+                }
+                Box::pin(futures::stream::iter(items.into_iter().rev()))
+            }
         };
-        Ok(Box::pin(iter))
+        Ok(iter)
     }
 
     async fn count(&self) -> Result<usize> {
@@ -139,6 +158,61 @@ impl AsyncNameSetQuery for UnionSet {
     }
 }
 
+/// Iterate through iter1 and iter2 in turn until both iters end.
+/// For example, ZipStream([1,2], [3,4,5,6]) produces: [1,3,2,4,5,6].
+struct ZipStream {
+    // note: iters[1] should not overlap with iter[0]
+    iters: [BoxVertexStream; 2],
+    // Whether the stream has ended.
+    iter_ended: [bool; 2],
+    // Which to pull next, 0 or 1.
+    next_iter: usize,
+}
+
+impl ZipStream {
+    fn new(iter1: BoxVertexStream, iter2: BoxVertexStream) -> Self {
+        Self {
+            iters: [iter1, iter2],
+            iter_ended: [false, false],
+            next_iter: 0,
+        }
+    }
+}
+
+impl Stream for ZipStream {
+    type Item = Result<VertexName>;
+
+    fn poll_next(
+        mut self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> Poll<Option<Self::Item>> {
+        'again: loop {
+            let index = self.next_iter;
+            if self.iter_ended[index] {
+                return Poll::Ready(None);
+            }
+            match self.iters[index].as_mut().poll_next(cx) {
+                Poll::Ready(v) => {
+                    if v.is_none() {
+                        // Mark the current iterator as ended.
+                        self.iter_ended[index] = true;
+                    }
+                    if !self.iter_ended[index ^ 1] {
+                        // Switch to the other iterator if it hasn't ended.
+                        self.next_iter = index ^ 1;
+                    }
+                    if v.is_none() {
+                        // Try the other iterator.
+                        continue 'again;
+                    }
+                    return Poll::Ready(v);
+                }
+                Poll::Pending => return Poll::Pending,
+            }
+        }
+    }
+}
+
 impl fmt::Debug for UnionSet {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "<or")?;
@@ -185,6 +259,23 @@ mod tests {
         for &b in b"\x66\x77\x88".iter() {
             assert!(!nb(set.contains(&to_name(b)))?);
         }
+        Ok(())
+    }
+
+    #[test]
+    fn test_union_zip_order() -> Result<()> {
+        let set = union(b"\x33\x44\x55", b"").with_order(UnionOrder::Zip);
+        check_invariants(&set)?;
+        assert_eq!(shorten_iter(ni(set.iter())), ["33", "44", "55"]);
+
+        let set = union(b"", b"\x33\x44\x55").with_order(UnionOrder::Zip);
+        check_invariants(&set)?;
+        assert_eq!(shorten_iter(ni(set.iter())), ["33", "44", "55"]);
+
+        let set = union(b"\x33\x44\x55", b"\x55\x33\x22\x11").with_order(UnionOrder::Zip);
+        assert_eq!(shorten_iter(ni(set.iter())), ["33", "22", "44", "11", "55"]);
+        check_invariants(&set)?;
+
         Ok(())
     }
 
