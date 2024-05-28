@@ -59,6 +59,7 @@ rust_library(
         "//eden/mononoke/common/rust/sql_ext:sql_ext",
         "//eden/mononoke/common/scuba_ext:scuba_ext",
         "//eden/mononoke/features/repo_update_logger:repo_update_logger",
+        "//eden/mononoke/filenodes:filenodes",
         "//eden/mononoke/filestore:filestore",
         "//eden/mononoke/metaconfig:metaconfig_types",
         "//eden/mononoke/mononoke_types:mononoke_types",

@@ -329,7 +329,8 @@ where
 }
 
 /// Same as `find_toposorted_unsynced_ancestors` but uses the skew binary commit
-/// graph to find the oldest unsynced ancestor quicker.
+/// graph to find the oldest unsynced ancestor quicker and returns the last
+/// synced ancestors.
 /// NOTE: because this is used to run initial imports of small repos into large
 /// repos, this function DOES NOT take into account hardcoded mappings in
 /// hg extra metadata, as `find_toposorted_unsynced_ancestors` does.
@@ -337,7 +338,12 @@ pub async fn find_toposorted_unsynced_ancestors_with_commit_graph<'a, M, R>(
     ctx: &'a CoreContext,
     commit_syncer: &'a CommitSyncer<M, R>,
     start_cs_id: ChangesetId,
-) -> Result<(Vec<ChangesetId>, SyncedAncestorsVersions)>
+) -> Result<(
+    Vec<ChangesetId>,
+    SyncedAncestorsVersions,
+    // Last synced ancestors (if any)
+    Vec<ChangesetId>,
+)>
 where
     M: SyncedCommitMapping + Clone + 'static,
     R: Repo,
@@ -401,6 +407,12 @@ where
         .flatten()
         .collect::<Vec<(ChangesetId, (Option<ChangesetId>, CommitSyncConfigVersion))>>();
 
+    // The last generation of synced ancestors
+    let last_synced_ancestors = synced_ancestors_list
+        .iter()
+        .filter_map(|(_, (target, _))| target.clone())
+        .collect::<Vec<_>>();
+
     let synced_ancestors_versions = synced_ancestors_list
         .iter()
         .map(|(_source, (_target, v))| v.clone())
@@ -427,6 +439,7 @@ where
             versions: synced_ancestors_versions,
             rewritten_ancestors,
         },
+        last_synced_ancestors,
     ))
 }
 

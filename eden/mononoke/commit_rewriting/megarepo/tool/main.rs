@@ -92,6 +92,7 @@ use bookmarks::Bookmarks;
 use changeset_fetcher::ChangesetFetcher;
 use changesets::Changesets;
 use commit_graph::CommitGraph;
+use filenodes::Filenodes;
 use filestore::FilestoreConfig;
 use megarepolib::chunking::even_chunker_with_max_size;
 use megarepolib::chunking::parse_chunking_hint;
@@ -198,6 +199,7 @@ pub struct Repo(
     RepoDerivedData,
     RepoIdentity,
     CommitGraph,
+    dyn Filenodes,
 );
 
 async fn run_move<'a>(

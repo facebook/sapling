@@ -15,6 +15,7 @@ use bookmarks::Bookmarks;
 use changeset_fetcher::ChangesetFetcher;
 use changesets::Changesets;
 use commit_graph::CommitGraph;
+use filenodes::Filenodes;
 use filestore::FilestoreConfig;
 use metaconfig_types::RepoConfig;
 use mononoke_types::RepositoryId;
@@ -49,6 +50,7 @@ pub struct Repo {
         dyn PushrebaseMutationMapping,
         dyn MutableCounters,
         CommitGraph,
+        dyn Filenodes,
     )]
     blob_repo: BlobRepo,
 

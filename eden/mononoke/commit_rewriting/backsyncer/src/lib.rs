@@ -61,6 +61,7 @@ use cross_repo_sync::CandidateSelectionHint;
 use cross_repo_sync::CommitSyncContext;
 use cross_repo_sync::CommitSyncOutcome;
 use cross_repo_sync::CommitSyncer;
+use filenodes::Filenodes;
 use filestore::FilestoreConfig;
 use futures::future;
 use futures::stream;
@@ -119,6 +120,7 @@ pub struct Repo(
     RepoDerivedData,
     RepoIdentity,
     CommitGraph,
+    dyn Filenodes,
 );
 
 #[cfg(test)]

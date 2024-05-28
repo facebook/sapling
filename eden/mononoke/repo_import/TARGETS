@@ -58,6 +58,7 @@ rust_binary(
         "//eden/mononoke/common/topo_sort:topo_sort",
         "//eden/mononoke/derived_data:derived_data_utils",
         "//eden/mononoke/derived_data/mercurial_derivation:mercurial_derivation",
+        "//eden/mononoke/filenodes:filenodes",
         "//eden/mononoke/filestore:filestore",
         "//eden/mononoke/git/import_direct:import_direct",
         "//eden/mononoke/git/import_tools:import_tools",

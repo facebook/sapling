@@ -12,6 +12,7 @@ anyhow = "1.0.75"
 backsyncer = { version = "0.1.0", path = "../backsyncer" }
 blobstore = { version = "0.1.0", path = "../../blobstore" }
 bookmarks = { version = "0.1.0", path = "../../bookmarks" }
+borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 bulk_derivation = { version = "0.1.0", path = "../../derived_data/bulk_derivation" }
 cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 clap = { version = "4.5.4", features = ["derive", "env", "string", "unicode", "wrap_help"] }

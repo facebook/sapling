@@ -85,7 +85,6 @@ use mononoke_types::RepositoryId;
 use movers::DefaultAction;
 use movers::Mover;
 use pushrebase::do_pushrebase_bonsai;
-use repo_derived_data::RepoDerivedDataArc;
 use segmented_changelog::seedheads_from_config;
 use segmented_changelog::SeedHead;
 use segmented_changelog::SegmentedChangelogTailer;

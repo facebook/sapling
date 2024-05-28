@@ -33,6 +33,7 @@ rust_binary(
         "//eden/mononoke/commit_rewriting/cross_repo_sync:cross_repo_sync",
         "//eden/mononoke/commit_rewriting/synced_commit_mapping:synced_commit_mapping",
         "//eden/mononoke/common/time_measuring:time_measuring",
+        "//eden/mononoke/filenodes:filenodes",
         "//eden/mononoke/filestore:filestore",
         "//eden/mononoke/manifest:manifest",
         "//eden/mononoke/megarepo_api:commit_transformation",

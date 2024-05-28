@@ -33,7 +33,11 @@ use changesets::Changesets;
 use changesets::ChangesetsArc;
 use changesets::ChangesetsRef;
 use commit_graph::CommitGraph;
+use commit_graph::CommitGraphArc;
 use commit_graph::CommitGraphRef;
+use filenodes::Filenodes;
+use filenodes::FilenodesArc;
+use filenodes::FilenodesRef;
 use filestore::FilestoreConfig;
 use filestore::FilestoreConfigRef;
 use metaconfig_types::CommitSyncConfigVersion;
@@ -57,6 +61,7 @@ use repo_bookmark_attrs::RepoBookmarkAttrsRef;
 use repo_cross_repo::RepoCrossRepo;
 use repo_cross_repo::RepoCrossRepoRef;
 use repo_derived_data::RepoDerivedData;
+use repo_derived_data::RepoDerivedDataArc;
 use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentity;
 use repo_identity::RepoIdentityRef;
@@ -195,7 +200,11 @@ pub trait Repo = BookmarksArc
     + RepoBlobstoreRef
     + RepoConfigRef
     + RepoDerivedDataRef
+    + RepoDerivedDataArc
     + CommitGraphRef
+    + CommitGraphArc
+    + FilenodesArc
+    + FilenodesRef
     + Send
     + Sync
     + Clone
@@ -255,6 +264,9 @@ pub struct ConcreteRepo {
 
     #[facet]
     commit_graph: CommitGraph,
+
+    #[facet]
+    file_nodes: dyn Filenodes,
 }
 
 assert_impl_all!(ConcreteRepo: Repo);
