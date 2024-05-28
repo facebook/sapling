@@ -86,6 +86,7 @@ function SplitSuggestionImpl({commit}: {commit: CommitInfo}) {
             style={{
               border: '1px solid var(--button-secondary-hover-background)',
             }}
+            trackerEventName="SplitOpenFromSplitSuggestion"
             commit={commit}
           />
         }>

@@ -143,7 +143,8 @@ export type TrackEventName =
   | 'VSCodeExtensionActivated'
   | 'UseCustomCommitMessageTemplate'
   | 'SlocCommand'
-  | 'SplitSuggestionError';
+  | 'SplitSuggestionError'
+  | 'SplitOpenFromSplitSuggestion';
 
 export type TrackErrorName =
   | 'BlameError'

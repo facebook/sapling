@@ -6,6 +6,7 @@
  */
 
 import type {CommitInfo} from '../../types';
+import type {TrackEventName} from 'isl-server/src/analytics/eventNames';
 
 import {Tooltip} from '../../Tooltip';
 import {tracker} from '../../analytics';
@@ -21,8 +22,9 @@ import {useAtomValue, useSetAtom} from 'jotai';
  * Loads that one commit in the split UI. */
 export function SplitButton({
   commit,
+  trackerEventName,
   ...rest
-}: {commit: CommitInfo} & React.ComponentProps<typeof Button>) {
+}: {commit: CommitInfo; trackerEventName: TrackEventName} & React.ComponentProps<typeof Button>) {
   const confirmUnsavedEditsBeforeSplit = useConfirmUnsavedEditsBeforeSplit();
   const setEditStackIntentionHashes = useSetAtom(editingStackIntentionHashes);
 
@@ -34,7 +36,7 @@ export function SplitButton({
       return;
     }
     setEditStackIntentionHashes(['split', new Set([commit.hash])]);
-    tracker.track('SplitOpenFromHeadCommit');
+    tracker.track(trackerEventName);
   };
   return (
     <Tooltip
