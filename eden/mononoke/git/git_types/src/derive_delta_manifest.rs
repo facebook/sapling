@@ -411,8 +411,12 @@ async fn derive_git_delta_manifest(
                         manifest::Diff::Changed(path, old_entry, new_entry) => {
                             let actual = TreeMember::from(new_entry);
                             let base = TreeMember::from(old_entry);
-                            // If the entry corresponds to a submodules (and shows up as a commit), then we ignore it
                             if actual.filemode() == mode::GIT_FILEMODE_COMMIT {
+                                // If the entry corresponds to a submodules (and shows up as a commit), then we ignore it
+                                None
+                            } else if actual.oid() == base.oid() {
+                                // If the base and actual object are same, then we don't need to include them at all since no
+                                // new content has been introduced. This can happen when just the filemode of a blob is changed
                                 None
                             } else if actual.oid().size() > DELTA_THRESHOLD
                                 || base.oid().size() > DELTA_THRESHOLD
