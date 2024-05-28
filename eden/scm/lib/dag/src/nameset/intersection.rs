@@ -203,6 +203,16 @@ impl AsyncNameSetQuery for IntersectionSet {
         Ok(iter.into_stream())
     }
 
+    async fn size_hint(&self) -> (usize, Option<usize>) {
+        let lhs_max = self.lhs.size_hint().await.1;
+        let rhs_max = self.rhs.size_hint().await.1;
+        let max = match (lhs_max, rhs_max) {
+            (Some(l), Some(r)) => Some(l.min(r)),
+            _ => None,
+        };
+        (0, max)
+    }
+
     async fn contains(&self, name: &VertexName) -> Result<bool> {
         Ok(self.lhs.contains(name).await? && self.rhs.contains(name).await?)
     }
@@ -307,6 +317,11 @@ mod tests {
         // Should contain "70" and "20".
         assert_eq!(shorten_iter(ni(set.iter())), ["20", "40", "50", "70"]);
         assert_eq!(shorten_iter(ni(set.iter_rev())), ["70", "50", "40", "20"]);
+    }
+
+    #[test]
+    fn test_size_hint_sets() {
+        check_size_hint_sets(|a, b| IntersectionSet::new(a, b));
     }
 
     quickcheck::quickcheck! {

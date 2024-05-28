@@ -107,6 +107,20 @@ impl AsyncNameSetQuery for UnionSet {
         Ok(iter)
     }
 
+    async fn size_hint(&self) -> (usize, Option<usize>) {
+        let mut min_size = 0;
+        let mut max_size = Some(0usize);
+        for set in &self.sets {
+            let (min, max) = set.size_hint().await;
+            min_size = min.min(min_size);
+            max_size = match (max_size, max) {
+                (Some(max_size), Some(max)) => max_size.checked_add(max),
+                _ => None,
+            };
+        }
+        (min_size, max_size)
+    }
+
     async fn count(&self) -> Result<usize> {
         debug_assert_eq!(self.sets.len(), 2);
         // This is more efficient if sets[0] is a large set that has a fast path
@@ -277,6 +291,12 @@ mod tests {
         check_invariants(&set)?;
 
         Ok(())
+    }
+
+    #[test]
+    fn test_size_hint_sets() {
+        check_size_hint_sets(|a, b| UnionSet::new(a, b));
+        check_size_hint_sets(|a, b| UnionSet::new(a, b).with_order(UnionOrder::Zip));
     }
 
     quickcheck::quickcheck! {

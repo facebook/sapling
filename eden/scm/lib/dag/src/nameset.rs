@@ -847,8 +847,10 @@ pub(crate) mod tests {
         }
     }
 
+    type SizeHint = (usize, Option<usize>);
+
     #[derive(Default, Debug)]
-    pub(crate) struct VecQuery(Vec<VertexName>, Hints);
+    pub(crate) struct VecQuery(Vec<VertexName>, Hints, SizeHint);
 
     #[async_trait::async_trait]
     impl AsyncNameSetQuery for VecQuery {
@@ -864,26 +866,43 @@ pub(crate) mod tests {
         fn hints(&self) -> &Hints {
             &self.1
         }
+
+        async fn size_hint(&self) -> SizeHint {
+            self.2
+        }
     }
 
     impl VecQuery {
         /// Quickly create [`VecQuery`] that contains `len(bytes)` items.
         pub(crate) fn from_bytes(bytes: &[u8]) -> Self {
             let mut used = [false; 256];
-            Self(
-                bytes
-                    .iter()
-                    .filter_map(|&b| {
-                        if used[b as usize] {
-                            None
-                        } else {
-                            used[b as usize] = true;
-                            Some(to_name(b))
-                        }
-                    })
-                    .collect(),
-                Hints::default(),
-            )
+            let v: Vec<VertexName> = bytes
+                .iter()
+                .filter_map(|&b| {
+                    if used[b as usize] {
+                        None
+                    } else {
+                        used[b as usize] = true;
+                        Some(to_name(b))
+                    }
+                })
+                .collect();
+            let size_hint: SizeHint = (v.len(), Some(v.len()));
+            Self(v, Hints::default(), size_hint)
+        }
+
+        /// Adjust the "size_hint" to test various logic.
+        /// - "size_min" will be reduced by the 1st bit of `adjust` (0 to 1).
+        /// - "size_max" will be increased by the 2nd bit  of `adjust` (0 to 1).
+        /// - If `adjust` is greater than 3, the "size_max" will be set to `None`.
+        pub(crate) fn adjust_size_hint(mut self, adjust: usize) -> Self {
+            assert!(adjust <= 6);
+            self.2.0 = self.2.0.saturating_sub(adjust & 0b1);
+            self.2.1 = self.2.1.map(|v| v + ((adjust >> 1) & 0b1));
+            if adjust >= 4 {
+                self.2.1 = None;
+            }
+            self
         }
     }
 
@@ -1347,5 +1366,35 @@ pub(crate) mod tests {
             &query
         );
         Ok(())
+    }
+
+    /// Generate 2 sets in a loop to test container set (intersection, union, difference) types.
+    /// Focus on extra "size_hint" test.
+    pub(crate) fn check_size_hint_sets<Q: AsyncNameSetQuery>(
+        build_set: impl Fn(NameSet, NameSet) -> Q,
+    ) {
+        let lhs = b"\x11\x22\x33";
+        let rhs = b"\x33\x55\x77";
+        for lhs_start in 0..lhs.len() {
+            for lhs_end in lhs_start..lhs.len() {
+                for rhs_start in 0..rhs.len() {
+                    for rhs_end in rhs_start..rhs.len() {
+                        for lhs_size_hint_adjust in 0..7 {
+                            for rhs_size_hint_adjust in 0..7 {
+                                let lhs_set = VecQuery::from_bytes(&lhs[lhs_start..lhs_end])
+                                    .adjust_size_hint(lhs_size_hint_adjust);
+                                let rhs_set = VecQuery::from_bytes(&rhs[rhs_start..rhs_end])
+                                    .adjust_size_hint(rhs_size_hint_adjust);
+                                let set = build_set(
+                                    NameSet::from_query(lhs_set),
+                                    NameSet::from_query(rhs_set),
+                                );
+                                check_invariants(&set).unwrap();
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }

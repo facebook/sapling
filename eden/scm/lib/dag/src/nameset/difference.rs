@@ -91,6 +91,16 @@ impl AsyncNameSetQuery for DifferenceSet {
         Ok(result)
     }
 
+    async fn size_hint(&self) -> (usize, Option<usize>) {
+        let (lhs_min, lhs_max) = self.lhs.size_hint().await;
+        let (_rhs_min, rhs_max) = self.rhs.size_hint().await;
+        let min = match rhs_max {
+            None => 0,
+            Some(rhs_max) => lhs_min.saturating_sub(rhs_max),
+        };
+        (min, lhs_max)
+    }
+
     fn as_any(&self) -> &dyn Any {
         self
     }
@@ -162,6 +172,11 @@ mod tests {
             assert!(!nb(set.contains(&to_name(b)))??);
         }
         Ok(())
+    }
+
+    #[test]
+    fn test_size_hint_sets() {
+        check_size_hint_sets(|a, b| DifferenceSet::new(a, b));
     }
 
     quickcheck::quickcheck! {
