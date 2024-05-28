@@ -73,7 +73,7 @@ async fn test_original_blobstore_and_changesets_are_the_same_after_validation(
     assert_eq!(
         in_mememory_changeset,
         Some(ChangesetEntry {
-            repo_id: RepositoryId::new(0),
+            repo_id: RepositoryId::new(2),
             cs_id,
             parents: vec![],
             gen: 1,

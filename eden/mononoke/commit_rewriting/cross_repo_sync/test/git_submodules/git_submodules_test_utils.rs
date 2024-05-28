@@ -278,7 +278,7 @@ pub(crate) async fn build_repo_b(
       # bookmark: B_B master
   "#;
 
-    let repo = build_mononoke_git_mirror_repo(fb, "repo_b").await?;
+    let repo = build_mononoke_git_mirror_repo(fb, "repo_b", 2).await?;
     let (cs_map, _) = extend_from_dag_with_actions(&ctx, &repo, DAG).await?;
 
     Ok((repo, cs_map))
@@ -303,7 +303,7 @@ pub(crate) async fn build_repo_b_with_c_submodule(
         "#
     );
 
-    let repo = build_mononoke_git_mirror_repo(fb, "repo_b").await?;
+    let repo = build_mononoke_git_mirror_repo(fb, "repo_b", 2).await?;
     let (cs_map, _) = extend_from_dag_with_actions(&ctx, &repo, dag.as_str()).await?;
 
     Ok((repo, cs_map))
@@ -323,17 +323,22 @@ pub(crate) async fn build_repo_c(
     # bookmark: C_B master
 "#;
 
-    let repo = build_mononoke_git_mirror_repo(fb, "repo_c").await?;
+    let repo = build_mononoke_git_mirror_repo(fb, "repo_c", 3).await?;
     let (cs_map, _) = extend_from_dag_with_actions(&ctx, &repo, DAG).await?;
 
     Ok((repo, cs_map))
 }
 
-async fn build_mononoke_git_mirror_repo(fb: FacebookInit, repo_name: &str) -> Result<TestRepo> {
+async fn build_mononoke_git_mirror_repo(
+    fb: FacebookInit,
+    repo_name: &str,
+    id: i32,
+) -> Result<TestRepo> {
     let available_configs = derived_data_available_config();
 
     let repo = TestRepoFactory::new(fb)?
         .with_name(repo_name)
+        .with_id(RepositoryId::new(id))
         .with_config_override(|cfg| {
             cfg.derived_data_config.available_configs = available_configs;
 
