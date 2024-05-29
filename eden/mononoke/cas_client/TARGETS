@@ -1,0 +1,24 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbcode_macros//build_defs/lib:rust_oss.bzl", "rust_oss")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mononoke")
+
+rust_library(
+    name = "client",
+    srcs = glob(["client/**/*.rs"]),
+    autocargo = {"cargo_toml_dir": "client"},
+    deps = ([
+        "fbsource//third-party/rust:async-trait",
+        "fbsource//third-party/rust:bytes",
+        "//eden/mononoke/server/context:context",
+        "fbsource//third-party/rust:slog",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:thiserror",
+        "//eden/mononoke/mononoke_types:mononoke_types",
+    ] + ([] if rust_oss.is_oss_build() else [
+        "//remote_execution/client_lib/wrappers/rust:re_client_lib",
+        "//common/rust/shed/fbinit:fbinit",
+    ])),
+)

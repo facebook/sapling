@@ -111,6 +111,9 @@ pub use typed_hash::SkeletonManifestId;
 pub use typed_hash::TestManifestId;
 pub use typed_hash::TestShardedManifestId;
 
+#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub struct MononokeDigest(pub hash::Blake3, pub u64);
+
 mod macros;
 
 pub mod thrift {

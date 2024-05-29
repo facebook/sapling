@@ -197,6 +197,7 @@ members = [
   "bookmarks/warm_bookmarks_cache",
   "bulkops",
   "cache_warmup",
+  "cas_client/client",
   "cats",
   "changesets",
   "changesets/changesets_creation",
