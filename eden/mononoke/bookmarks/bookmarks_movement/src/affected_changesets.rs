@@ -38,6 +38,7 @@ use crate::restrictions::should_run_hooks;
 use crate::BookmarkMovementError;
 use crate::Repo;
 
+const N_CHANGESETS_TO_LOAD_AT_ONCE: usize = 1000;
 const DEFAULT_ADDITIONAL_CHANGESETS_LIMIT: usize = 200000;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -57,9 +58,6 @@ pub(crate) struct AffectedChangesets {
     /// Changesets that are being used as a source for pushrebase.
     source_changesets: HashSet<BonsaiChangeset>,
 
-    /// Additional changesets, if they have been loaded.
-    additional_changesets: Option<HashSet<BonsaiChangeset>>,
-
     /// Max limit on how many additional changesets to load
     additional_changesets_limit: usize,
 }
@@ -69,7 +67,6 @@ impl AffectedChangesets {
         Self {
             new_changesets: HashMap::new(),
             source_changesets: HashSet::new(),
-            additional_changesets: None,
             additional_changesets_limit: limit.unwrap_or(DEFAULT_ADDITIONAL_CHANGESETS_LIMIT),
         }
     }
@@ -78,7 +75,6 @@ impl AffectedChangesets {
         Self {
             new_changesets: HashMap::new(),
             source_changesets,
-            additional_changesets: None,
             additional_changesets_limit: DEFAULT_ADDITIONAL_CHANGESETS_LIMIT,
         }
     }
@@ -113,16 +109,16 @@ impl AffectedChangesets {
     ///
     /// These are the additional bonsais that we need to run hooks on for
     /// bookmark moves.
-    async fn load_additional_changesets(
-        &self,
-        ctx: &CoreContext,
-        repo: &impl Repo,
+    async fn load_additional_changesets<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        repo: &'a impl Repo,
         bookmark: &BookmarkKey,
         additional_changesets: AdditionalChangesets,
-    ) -> Result<HashSet<BonsaiChangeset>, Error> {
+    ) -> Result<BoxStream<'a, Result<BonsaiChangeset, BookmarkMovementError>>> {
         let (head, base) = match additional_changesets {
             AdditionalChangesets::None => {
-                return Ok(HashSet::new());
+                return Ok(stream::empty().boxed());
             }
             AdditionalChangesets::Ancestors(head) => (head, None),
             AdditionalChangesets::Range { head, base } => (head, Some(base)),
@@ -178,21 +174,22 @@ impl AffectedChangesets {
                         }
                     }
                 })
-                .map(|res| async move {
+                .map(move |res| async move {
                     match res {
-                        Ok(bcs_id) => Ok(bcs_id.load(ctx, repo.repo_blobstore()).await?),
-                        Err(e) => Err(e),
+                        Ok(bcs_id) => Ok(bcs_id
+                            .load(ctx, repo.repo_blobstore())
+                            .await
+                            .map_err(|e| BookmarkMovementError::Error(e.into()))?),
+                        Err(e) => Err(e.into()),
                     }
                 })
-                .buffered(100)
-                .try_collect::<HashSet<_>>()
-                .await?;
+                .buffered(N_CHANGESETS_TO_LOAD_AT_ONCE)
+                .boxed();
 
             ctx.scuba()
                 .clone()
-                .add("hook_running_additional_changesets", bonsais.len())
+                .add("hook_running_additional_changesets", None::<usize>)
                 .log_with_msg("Running hooks for additional changesets", None);
-
             bonsais
         } else {
             // Logging-only mode.  Work out how many changesets we would have run
@@ -208,21 +205,30 @@ impl AffectedChangesets {
                 scuba.add("hook_running_additional_changesets_limit_reached", true);
             }
             scuba.log_with_msg("Hook running skipping additional changesets", None);
-            HashSet::new()
+            stream::empty().boxed()
         };
 
         Ok(additional_changesets)
     }
 
-    fn iter(&self) -> impl Iterator<Item = &BonsaiChangeset> + Clone {
-        self.new_changesets
-            .values()
-            .chain(self.source_changesets.iter())
-            .chain(self.additional_changesets.iter().flatten())
-    }
-
-    async fn stream<'a>(&'a self) -> BoxStream<'a, Result<BonsaiChangeset, BookmarkMovementError>> {
-        stream::iter(self.iter().map(|r| Ok(r.clone()))).boxed()
+    async fn changesets_stream<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        repo: &'a impl Repo,
+        bookmark: &BookmarkKey,
+        additional_changesets: AdditionalChangesets,
+    ) -> Result<BoxStream<'a, Result<BonsaiChangeset, BookmarkMovementError>>> {
+        let additional_changesets = self
+            .load_additional_changesets(ctx, repo, bookmark, additional_changesets)
+            .await?;
+        Ok(
+            stream::iter(self.new_changesets.values().map(|r| Ok(r.clone())))
+                .chain(stream::iter(
+                    self.source_changesets.iter().map(|r| Ok(r.clone())),
+                ))
+                .chain(additional_changesets)
+                .boxed(),
+        )
     }
 
     /// Check all applicable restrictions on the affected changesets.
@@ -250,26 +256,17 @@ impl AffectedChangesets {
             || needs_hooks_check
             || needs_path_permissions_check
         {
-            self.additional_changesets = Some(
-                self.load_additional_changesets(ctx, repo, bookmark, additional_changesets)
-                    .await
-                    .context(
-                        "Failed to load additional affected changesets to check restrictions",
-                    )?,
-            );
-            self.stream().await
+            self.changesets_stream(ctx, repo, bookmark, additional_changesets)
+                .await
+                .context("Failed to load additional affected changesets to check restrictions")?
         } else {
             stream::empty().boxed()
         };
 
         changesets_stream
-            .chunks(10_000)
+            .chunks(N_CHANGESETS_TO_LOAD_AT_ONCE)
             // Aggregate any error loading changesets on a per-chunk basis
-            .map(|chunk| {
-                chunk
-                    .into_iter()
-                    .collect::<Result<Vec<_>, BookmarkMovementError>>()
-            })
+            .map(|chunk| chunk.into_iter().collect::<Result<Vec<_>, _>>())
             .try_for_each(|chunk| {
                 let adding_new_changesets_to_repo = self.adding_new_changesets_to_repo();
                 async move {
