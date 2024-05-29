@@ -311,6 +311,42 @@ impl AsyncNameSetQuery for IdStaticSet {
     fn specialized_reverse(&self) -> Option<NameSet> {
         Some(NameSet::from_query(self.clone().reversed()))
     }
+
+    fn specialized_take(&self, take: u64) -> Option<NameSet> {
+        let spans = if self.reversed {
+            let len = self.spans.count();
+            // [--skip-][take]
+            // [-----len-----]
+            let skip = len.saturating_sub(take);
+            self.spans.skip(skip).take(take)
+        } else {
+            // [take][-------]
+            // [-----len-----]
+            self.spans.take(take)
+        };
+        Some(NameSet::from_query(Self {
+            spans,
+            ..self.clone()
+        }))
+    }
+
+    fn specialized_skip(&self, skip: u64) -> Option<NameSet> {
+        let spans = if self.reversed {
+            let len = self.spans.count();
+            // [--take-][skip]
+            // [-----len-----]
+            let take = len.saturating_sub(skip);
+            self.spans.take(take)
+        } else {
+            // [skip][-------]
+            // [-----len-----]
+            self.spans.skip(skip)
+        };
+        Some(NameSet::from_query(Self {
+            spans,
+            ..self.clone()
+        }))
+    }
 }
 
 #[cfg(test)]
@@ -494,6 +530,14 @@ pub(crate) mod tests {
             );
 
             Ok(())
+        })
+    }
+
+    #[test]
+    fn test_skip_take_reverse() -> Result<()> {
+        with_dag(|dag| {
+            let set = r(dag.sort(&NameSet::from("A B C")))?;
+            check_skip_take_reverse(set)
         })
     }
 

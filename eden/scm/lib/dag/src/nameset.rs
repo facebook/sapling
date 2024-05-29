@@ -480,11 +480,11 @@ impl NameSet {
 
     /// Take the first `n` items.
     pub fn take(&self, n: u64) -> NameSet {
-        if let Some(set) = self.as_any().downcast_ref::<IdStaticSet>() {
-            tracing::debug!("take(x={:.6?}, {}) (fast path)", self, n);
-            Self::from_spans_idmap_dag(set.spans.take(n), set.map.clone(), set.dag.clone())
+        if let Some(set) = self.specialized_take(n) {
+            tracing::debug!("take(x={:.6?}, {}) (specialized path)", self, n);
+            set
         } else {
-            tracing::debug!("take(x={:.6?}, {}) (slow path)", self, n);
+            tracing::debug!("take(x={:.6?}, {}) (universal path)", self, n);
             let set = slice::SliceSet::new(self.clone(), 0, Some(n));
             Self::from_query(set)
         }
@@ -495,11 +495,11 @@ impl NameSet {
         if n == 0 {
             return self.clone();
         }
-        if let Some(set) = self.as_any().downcast_ref::<IdStaticSet>() {
-            tracing::debug!("skip(x={:.6?}, {}) (fast path)", self, n);
-            Self::from_spans_idmap_dag(set.spans.skip(n), set.map.clone(), set.dag.clone())
+        if let Some(set) = self.specialized_skip(n) {
+            tracing::debug!("skip(x={:.6?}, {}) (specialized path)", self, n);
+            set
         } else {
-            tracing::debug!("skip(x={:.6?}, {}) (slow path)", self, n);
+            tracing::debug!("skip(x={:.6?}, {}) (universal path)", self, n);
             let set = slice::SliceSet::new(self.clone(), n, None);
             Self::from_query(set)
         }
@@ -640,6 +640,20 @@ pub trait AsyncNameSetQuery: Any + Debug + Send + Sync {
     /// Specialized "reverse" implementation.
     /// Returns `None` to use the general purpose reverse implementation.
     fn specialized_reverse(&self) -> Option<NameSet> {
+        None
+    }
+
+    /// Specialized "take" implementation.
+    /// Returns `None` to use the general purpose implementation.
+    fn specialized_take(&self, n: u64) -> Option<NameSet> {
+        let _ = n;
+        None
+    }
+
+    /// Specialized "take" implementation.
+    /// Returns `None` to use the general purpose implementation.
+    fn specialized_skip(&self, n: u64) -> Option<NameSet> {
+        let _ = n;
         None
     }
 }
@@ -1426,5 +1440,40 @@ pub(crate) mod tests {
                 }
             }
         }
+    }
+
+    pub(crate) fn check_skip_take_reverse(set: NameSet) -> Result<()> {
+        let names: Vec<VertexName> = set.iter()?.collect::<Result<Vec<_>>>()?;
+        let len = names.len();
+        for reverse in [false, true] {
+            for skip in 0..=(len + 2) {
+                for take in 0..=(len + 2) {
+                    for skip_first in [false, true] {
+                        let mut test_set = set.clone();
+                        let mut expected_names = names.clone();
+                        if reverse {
+                            test_set = test_set.reverse();
+                            expected_names.reverse();
+                        }
+                        if skip_first {
+                            test_set = test_set.skip(skip as _).take(take as _);
+                            expected_names =
+                                expected_names.into_iter().skip(skip).take(take).collect();
+                        } else {
+                            test_set = test_set.take(take as _).skip(skip as _);
+                            expected_names =
+                                expected_names.into_iter().take(take).skip(skip).collect();
+                        }
+                        let actual_names = test_set.iter()?.collect::<Result<Vec<_>>>()?;
+                        assert_eq!(
+                            actual_names, expected_names,
+                            "check_skip_take_reverse {:?} failed at reverse={reverse} skip={skip} take={take}",
+                            &set
+                        );
+                    }
+                }
+            }
+        }
+        Ok(())
     }
 }
