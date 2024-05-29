@@ -1745,52 +1745,6 @@ def _do_manual_migration(
     print(get_migration_success_message(migrate_to))
 
 
-def detect_nested_checkout(
-    path: Union[str, Path],
-    instance: EdenInstance,
-) -> Tuple[Optional[EdenCheckout], Optional[Path]]:
-    """Get a tuple containing (checkout, rel_path) for any checkout that the provided
-    path is nested inside of.
-
-    A tuple of (None, None) is returned if the specified path is not nested inside
-    any existing checkouts.
-    """
-    if isinstance(path, str):
-        path = Path(path)
-
-    path = path.resolve(strict=False)
-    checkout = None
-    checkout_state_dir = None
-
-    try:
-        # However, we prefer to get the list from the current eden process (if one's running)
-        instance.get_running_version()
-        checkout_list = instance.get_mounts().items()
-    except EdenNotRunningError:  # If EdenFS isn't running, we should fail
-        return None, None
-
-    # Checkout list must be sorted so that parent paths are checked first
-    rel_path = None
-    for checkout_path_str, mount_info in sorted(checkout_list):
-        # symlinks could have been added since the mount was added, but
-        # we will not worry about this case
-        checkout_path = Path(checkout_path_str)
-        if path == checkout_path:
-            continue
-        else:
-            try:
-                rel_path = path.relative_to(checkout_path)
-            except ValueError:
-                continue
-            checkout_state_dir = mount_info.data_dir
-            checkout = EdenCheckout(instance, checkout_path, checkout_state_dir)
-            break
-    if checkout_state_dir is not None:
-        return checkout, rel_path
-    else:
-        return None, None
-
-
 def detect_checkout_path_problem(
     path: Union[str, Path],
     instance: EdenInstance,

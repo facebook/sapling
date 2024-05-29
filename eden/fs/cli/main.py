@@ -892,27 +892,39 @@ class CloneCmd(Subcmd):
         args.path = os.path.realpath(args.path)
         args.nfs = args.nfs or is_nfs_default()
 
-        # Check if requested path is inside an existing checkout
+        # Check if requested path is inside an existing checkout or backing_repo of existing checkout
         instance = EdenInstance(args.config_dir, args.etc_eden_dir, args.home_dir)
-        existing_checkout, rel_path = config_mod.detect_nested_checkout(
+        problem_type, existing_checkout = config_mod.detect_checkout_path_problem(
             args.path,
             instance,
         )
-        if existing_checkout is not None and rel_path is not None:
-            if args.allow_nested_checkout:
-                print(
-                    """\
-Warning: Creating a nested checkout. This is not recommended because it
-may cause `eden doctor` and `eden rm` to encounter spurious behavior."""
-                )
-            else:
+        if problem_type is not None and existing_checkout is not None:
+            if problem_type == config_mod.CheckoutPathProblemType.NESTED_CHECKOUT:
+                if args.allow_nested_checkout:
+                    print(
+                        """\
+    Warning: Creating a nested checkout. This is not recommended because it
+    may cause `eden doctor` and `eden rm` to encounter spurious behavior."""
+                    )
+                else:
+                    print_stderr(
+                        f"""\
+    error: destination path {args.path} is within an existing checkout {existing_checkout.path}.
+
+    Nested checkouts are usually not intended/recommended and may cause
+    `eden doctor` and `eden rm` to encounter spurious behavior. If you DO
+    want nested checkouts, re-run `eden clone` with --allow-nested-checkout or -n."""
+                    )
+                    return 1
+            if problem_type == config_mod.CheckoutPathProblemType.INSIDE_BACKING_REPO:
                 print_stderr(
                     f"""\
-error: destination path {args.path} is within an existing checkout {existing_checkout.path}.
+    error: destination path {args.path} is being created within backing repo of an existing checkout
+    {existing_checkout.path} located at {existing_checkout.get_backing_repo_path()}.
 
-Nested checkouts are usually not intended/recommended and may cause
-`eden doctor` and `eden rm` to encounter spurious behavior. If you DO
-want nested checkouts, re-run `eden clone` with --allow-nested-checkout or -n."""
+    Checkouts inside backing repo are usually not intended/recommended and may cause
+    `eden doctor` and `eden rm` to encounter spurious behavior and may also degrade performance
+    of source control operations."""
                 )
                 return 1
 
