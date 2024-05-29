@@ -885,7 +885,7 @@ where
             SubmoduleDeps::NotNeeded => None,
         };
 
-        let rewritten_commit = rewrite_commit(
+        let rewrite_res = rewrite_commit(
             ctx,
             source_cs,
             &remapped_parents,
@@ -896,7 +896,7 @@ where
             submodule_expansion_data,
         )
         .await?;
-        match rewritten_commit {
+        match rewrite_res.rewritten {
             None => {
                 self.set_no_sync_candidate(ctx, source_cs_id, sync_config_version.clone())
                     .await?;
@@ -1013,7 +1013,7 @@ where
             SubmoduleDeps::NotNeeded => None,
         };
 
-        let rewritten = rewrite_commit(
+        let rewrite_res = rewrite_commit(
             ctx,
             source_cs_mut,
             &remapped_parents,
@@ -1025,7 +1025,7 @@ where
         )
         .await?;
 
-        match rewritten {
+        match rewrite_res.rewritten {
             None => {
                 if remapped_parents_outcome.is_empty() {
                     self.set_no_sync_candidate(ctx, hash, version).await?;

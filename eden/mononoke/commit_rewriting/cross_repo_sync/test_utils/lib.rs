@@ -151,7 +151,7 @@ where
 
     let submodule_deps = commit_syncer.get_submodule_deps();
 
-    let maybe_rewritten = {
+    let rewrite_res = {
         let map = HashMap::new();
         let version = CommitSyncConfigVersion("TEST_VERSION_NAME".to_string());
         let mover = commit_syncer.get_mover_by_version(&version).await?;
@@ -195,7 +195,7 @@ where
         )
         .await?
     };
-    let mut target_bcs_mut = maybe_rewritten.unwrap();
+    let mut target_bcs_mut = rewrite_res.rewritten.unwrap();
     target_bcs_mut.parents = vec![bookmark_val];
 
     let target_bcs = target_bcs_mut.freeze()?;

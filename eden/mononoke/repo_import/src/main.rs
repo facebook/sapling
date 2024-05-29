@@ -262,7 +262,7 @@ async fn rewrite_file_paths(
         )
         .await?;
 
-        if let Some(rewritten_bcs_mut) = rewritten_bcs_opt {
+        if let Some(rewritten_bcs_mut) = rewritten_bcs_opt.rewritten {
             let rewritten_bcs = rewritten_bcs_mut.freeze()?;
             let rewritten_bcs_id = rewritten_bcs.get_changeset_id();
             remapped_parents.insert(bcs_id.clone(), rewritten_bcs_id);

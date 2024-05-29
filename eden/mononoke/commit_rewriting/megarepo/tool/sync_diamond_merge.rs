@@ -312,7 +312,7 @@ async fn create_rewritten_merge_commit(
     };
 
     let source_repo = syncers.small_to_large.get_source_repo();
-    let maybe_rewritten = rewrite_commit(
+    let rewrite_res = rewrite_commit(
         &ctx,
         merge_bcs,
         &remapped_parents,
@@ -326,8 +326,9 @@ async fn create_rewritten_merge_commit(
         submodule_expansion_data,
     )
     .await?;
-    let mut rewritten =
-        maybe_rewritten.ok_or_else(|| Error::msg("merge commit was unexpectedly rewritten out"))?;
+    let mut rewritten = rewrite_res
+        .rewritten
+        .ok_or_else(|| Error::msg("merge commit was unexpectedly rewritten out"))?;
 
     let mut additional_file_changes = generate_additional_file_changes(
         ctx.clone(),

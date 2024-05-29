@@ -46,6 +46,7 @@ use movers::Mover;
 use sorted_vector_map::SortedVectorMap;
 
 use crate::commit_syncers_lib::mover_to_multi_mover;
+use crate::commit_syncers_lib::CommitRewriteResult;
 use crate::git_submodules::in_memory_repo::InMemoryRepo;
 use crate::git_submodules::utils::build_recursive_submodule_deps;
 use crate::git_submodules::utils::get_git_hash_from_submodule_file;
@@ -68,7 +69,7 @@ use crate::types::Repo;
 /// Wrapper to differentiate submodule paths from file changes paths at the
 /// type level.
 #[derive(Eq, Clone, Debug, PartialEq, Hash, PartialOrd, Ord)]
-pub(crate) struct SubmodulePath(pub(crate) NonRootMPath);
+pub struct SubmodulePath(pub(crate) NonRootMPath);
 
 impl std::fmt::Display for SubmodulePath {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -133,7 +134,7 @@ pub async fn rewrite_commit_with_submodule_expansion<'a, R: Repo>(
     // Parameters needed to generate a bonsai for the large repo using `rewrite_commit`
     remapped_parents: &'a HashMap<ChangesetId, ChangesetId>,
     rewrite_opts: RewriteOpts,
-) -> Result<Option<BonsaiChangesetMut>> {
+) -> Result<CommitRewriteResult> {
     let is_forward_sync = source_repo.repo_identity().id() != *sm_exp_data.large_repo_id;
 
     if !is_forward_sync {
@@ -162,7 +163,7 @@ pub async fn rewrite_commit_with_submodule_expansion<'a, R: Repo>(
         );
 
         // No submodule expansions are being modified, so it's safe to backsync
-        return rewrite_commit(
+        let rewriten = rewrite_commit(
             ctx,
             bonsai,
             remapped_parents,
@@ -172,7 +173,9 @@ pub async fn rewrite_commit_with_submodule_expansion<'a, R: Repo>(
             rewrite_opts,
         )
         .await
-        .context("Failed to create small repo bonsai");
+        .context("Failed to create small repo bonsai")?;
+
+        return Ok(CommitRewriteResult::new(rewriten));
     };
 
     let ctx = &set_scuba_logger_fields(
@@ -226,9 +229,11 @@ pub async fn rewrite_commit_with_submodule_expansion<'a, R: Repo>(
             // TODO(gustavoavena): print some identifier of changeset that failed
             .context("Validation of submodule expansion failed")?;
 
-            Ok(Some(validated_bonsai.into_mut()))
+            let rewritten = Some(validated_bonsai.into_mut());
+
+            Ok(CommitRewriteResult::new(rewritten))
         }
-        None => Ok(None),
+        None => Ok(CommitRewriteResult::new(None)),
     }
 }
 

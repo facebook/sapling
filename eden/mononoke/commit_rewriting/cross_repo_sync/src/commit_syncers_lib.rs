@@ -76,6 +76,23 @@ use crate::types::Target;
 use crate::CommitSyncContext;
 
 const LEASE_WARNING_THRESHOLD: Duration = Duration::from_secs(60);
+pub struct CommitRewriteResult {
+    /// A version of the source repo's bonsai changeset with `Mover` applied to
+    /// all changes and submodules processed according to the
+    /// small repo sync config (e.g. expanded, stripped).
+    ///
+    /// - `None` if the rewrite decided that this commit should
+    ///              not be present in the rewrite target
+    /// - `Some(rewritten)` for a successful rewrite, which should be
+    ///                         present in the rewrite target
+    pub rewritten: Option<BonsaiChangesetMut>,
+}
+
+impl CommitRewriteResult {
+    pub fn new(rewritten: Option<BonsaiChangesetMut>) -> Self {
+        Self { rewritten }
+    }
+}
 
 /// Create a version of `cs` with `Mover` applied to all changes
 /// The return value can be:
@@ -99,7 +116,7 @@ pub async fn rewrite_commit<'a, R: Repo>(
     rewrite_opts: RewriteOpts,
     git_submodules_action: GitSubmodulesChangesAction,
     mb_submodule_expansion_data: Option<SubmoduleExpansionData<'a, R>>,
-) -> Result<Option<BonsaiChangesetMut>, Error> {
+) -> Result<CommitRewriteResult> {
     // TODO(T169695293): add filter to only keep submodules for implicit deletes?
     let (file_changes_filters, cs): (Vec<FileChangeFilter<'a>>, BonsaiChangesetMut) =
         match git_submodules_action {
@@ -137,7 +154,7 @@ pub async fn rewrite_commit<'a, R: Repo>(
             }
         };
 
-    rewrite_commit_with_file_changes_filter(
+    let mb_rewritten = rewrite_commit_with_file_changes_filter(
         ctx,
         cs,
         remapped_parents,
@@ -147,7 +164,9 @@ pub async fn rewrite_commit<'a, R: Repo>(
         rewrite_opts,
         file_changes_filters,
     )
-    .await
+    .await?;
+
+    Ok(CommitRewriteResult::new(mb_rewritten))
 }
 
 /// Mover moves a path to at most a single path, while MultiMover can move a

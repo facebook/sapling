@@ -1401,7 +1401,7 @@ async fn init_repos(
     upload_commits(&ctx, vec![first_bcs.clone()], &source_repo, &target_repo).await?;
     let first_bcs_mut = first_bcs.into_mut();
 
-    let maybe_rewritten = {
+    let rewrite_res = {
         let empty_map = HashMap::new();
         cloned!(ctx, source_repo);
         rewrite_commit(
@@ -1416,7 +1416,7 @@ async fn init_repos(
         )
         .await
     }?;
-    let rewritten_first_bcs_id = match maybe_rewritten {
+    let rewritten_first_bcs_id = match rewrite_res.rewritten {
         Some(mut rewritten) => {
             rewritten.parents.push(initial_commit_in_target);
 

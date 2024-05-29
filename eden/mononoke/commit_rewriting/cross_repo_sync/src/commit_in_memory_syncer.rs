@@ -247,7 +247,8 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
             }),
             SubmoduleDeps::NotNeeded => None,
         };
-        match rewrite_commit(
+
+        let rewrite_res = rewrite_commit(
             self.ctx,
             cs.into_mut(),
             &HashMap::new(),
@@ -257,8 +258,9 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
             git_submodules_action,
             submodule_expansion_data,
         )
-        .await?
-        {
+        .await?;
+
+        match rewrite_res.rewritten {
             Some(rewritten) => Ok(CommitSyncInMemoryResult::Rewritten {
                 source_cs_id,
                 rewritten,
@@ -356,7 +358,7 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
                     }),
                     SubmoduleDeps::NotNeeded => None,
                 };
-                let maybe_rewritten = rewrite_commit(
+                let rewrite_res = rewrite_commit(
                     self.ctx,
                     cs,
                     &remapped_parents,
@@ -367,7 +369,7 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
                     submodule_expansion_data,
                 )
                 .await?;
-                match maybe_rewritten {
+                match rewrite_res.rewritten {
                     Some(rewritten) => Ok(CommitSyncInMemoryResult::Rewritten {
                         source_cs_id,
                         rewritten,
@@ -522,7 +524,7 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
                 && !self
                     .live_commit_sync_config
                     .push_redirector_enabled_for_public(self.target_repo_id.0);
-            match rewrite_commit(
+            let rewrite_res = rewrite_commit(
                 self.ctx,
                 cs,
                 &new_parents,
@@ -532,8 +534,8 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
                 git_submodules_action,
                 submodule_expansion_data,
             )
-            .await?
-            {
+            .await?;
+            match rewrite_res.rewritten {
                 Some(rewritten)
                     // We sync the merge commit if-and-only-if:
 
