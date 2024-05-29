@@ -44,6 +44,7 @@ pub mod lazy;
 #[cfg(any(test, feature = "indexedlog-backend"))]
 pub mod legacy;
 pub mod meta;
+pub mod reverse;
 pub mod slice;
 pub mod r#static;
 pub mod union;
