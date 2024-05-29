@@ -17,6 +17,7 @@ use blobstore::LoadableError;
 use blobstore::Storable;
 use blobstore::StoreLoadable;
 use context::CoreContext;
+use either::Either;
 use futures::stream;
 use futures::stream::BoxStream;
 use futures::stream::StreamExt;
@@ -415,6 +416,111 @@ impl<
         blobstore: &Store,
     ) -> Result<Self::TrieMapType> {
         self.list(ctx, blobstore).await?.try_collect().await
+    }
+}
+
+#[async_trait]
+impl<
+    M: AsyncManifest<Store> + Send + Sync,
+    N: AsyncManifest<Store> + Send + Sync,
+    Store: Send + Sync,
+> AsyncManifest<Store> for Either<M, N>
+{
+    type TreeId = Either<<M as AsyncManifest<Store>>::TreeId, <N as AsyncManifest<Store>>::TreeId>;
+    type LeafId = Either<<M as AsyncManifest<Store>>::LeafId, <N as AsyncManifest<Store>>::LeafId>;
+    type TrieMapType =
+        Either<<M as AsyncManifest<Store>>::TrieMapType, <N as AsyncManifest<Store>>::TrieMapType>;
+
+    async fn list(
+        &self,
+        ctx: &CoreContext,
+        blobstore: &Store,
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>
+    {
+        let stream = match self {
+            Either::Left(m) => m
+                .list(ctx, blobstore)
+                .await?
+                .map_ok(|(path, entry)| (path, entry.left_entry()))
+                .boxed(),
+            Either::Right(n) => n
+                .list(ctx, blobstore)
+                .await?
+                .map_ok(|(path, entry)| (path, entry.right_entry()))
+                .boxed(),
+        };
+        Ok(stream)
+    }
+
+    async fn list_prefix(
+        &self,
+        ctx: &CoreContext,
+        blobstore: &Store,
+        prefix: &[u8],
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>
+    {
+        let stream = match self {
+            Either::Left(m) => m
+                .list_prefix(ctx, blobstore, prefix)
+                .await?
+                .map_ok(|(path, entry)| (path, entry.left_entry()))
+                .boxed(),
+            Either::Right(n) => n
+                .list_prefix(ctx, blobstore, prefix)
+                .await?
+                .map_ok(|(path, entry)| (path, entry.right_entry()))
+                .boxed(),
+        };
+        Ok(stream)
+    }
+
+    async fn list_prefix_after(
+        &self,
+        ctx: &CoreContext,
+        blobstore: &Store,
+        prefix: &[u8],
+        after: &[u8],
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>
+    {
+        let stream = match self {
+            Either::Left(m) => m
+                .list_prefix_after(ctx, blobstore, prefix, after)
+                .await?
+                .map_ok(|(path, entry)| (path, entry.left_entry()))
+                .boxed(),
+            Either::Right(n) => n
+                .list_prefix_after(ctx, blobstore, prefix, after)
+                .await?
+                .map_ok(|(path, entry)| (path, entry.right_entry()))
+                .boxed(),
+        };
+        Ok(stream)
+    }
+
+    async fn lookup(
+        &self,
+        ctx: &CoreContext,
+        blobstore: &Store,
+        name: &MPathElement,
+    ) -> Result<Option<Entry<Self::TreeId, Self::LeafId>>> {
+        match self {
+            Either::Left(m) => Ok(m.lookup(ctx, blobstore, name).await?.map(Entry::left_entry)),
+            Either::Right(n) => Ok(n
+                .lookup(ctx, blobstore, name)
+                .await?
+                .map(Entry::right_entry)),
+        }
+    }
+
+    async fn into_trie_map(
+        self,
+        ctx: &CoreContext,
+        blobstore: &Store,
+    ) -> Result<Self::TrieMapType> {
+        match self {
+            Either::Left(m) => Ok(Either::Left(m.into_trie_map(ctx, blobstore).await?)),
+            Either::Right(n) => Ok(Either::Right(n.into_trie_map(ctx, blobstore).await?)),
+        }
     }
 }
 
@@ -904,6 +1010,20 @@ impl<T, L> Entry<T, L> {
         match self {
             Entry::Tree(tree) => Entry::Tree(m(tree)),
             Entry::Leaf(leaf) => Entry::Leaf(leaf),
+        }
+    }
+
+    pub fn left_entry<T2, L2>(self) -> Entry<Either<T, T2>, Either<L, L2>> {
+        match self {
+            Entry::Tree(tree) => Entry::Tree(Either::Left(tree)),
+            Entry::Leaf(leaf) => Entry::Leaf(Either::Left(leaf)),
+        }
+    }
+
+    pub fn right_entry<T2, L2>(self) -> Entry<Either<T2, T>, Either<L2, L>> {
+        match self {
+            Entry::Tree(tree) => Entry::Tree(Either::Right(tree)),
+            Entry::Leaf(leaf) => Entry::Leaf(Either::Right(leaf)),
         }
     }
 
