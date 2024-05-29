@@ -113,20 +113,19 @@ impl AffectedChangesets {
     /// These are the additional bonsais that we need to run hooks on for
     /// bookmark moves.
     async fn load_additional_changesets(
-        &mut self,
+        &self,
         ctx: &CoreContext,
         repo: &impl Repo,
         bookmark: &BookmarkKey,
         additional_changesets: AdditionalChangesets,
-    ) -> Result<(), Error> {
-        if self.additional_changesets.is_some() {
-            return Ok(());
+    ) -> Result<HashSet<BonsaiChangeset>, Error> {
+        if let Some(additional_changesets) = &self.additional_changesets {
+            return Ok(additional_changesets.clone());
         }
 
         let (head, base) = match additional_changesets {
             AdditionalChangesets::None => {
-                self.additional_changesets = Some(HashSet::new());
-                return Ok(());
+                return Ok(HashSet::new());
             }
             AdditionalChangesets::Ancestors(head) => (head, None),
             AdditionalChangesets::Range { head, base } => (head, Some(base)),
@@ -215,8 +214,7 @@ impl AffectedChangesets {
             HashSet::new()
         };
 
-        self.additional_changesets = Some(additional_changesets);
-        Ok(())
+        Ok(additional_changesets)
     }
 
     fn is_empty(&self) -> bool {
@@ -260,9 +258,13 @@ impl AffectedChangesets {
             || needs_hooks_check
             || needs_path_permissions_check
         {
-            self.load_additional_changesets(ctx, repo, bookmark, additional_changesets)
-                .await
-                .context("Failed to load additional affected changesets to check restrictions")?;
+            self.additional_changesets = Some(
+                self.load_additional_changesets(ctx, repo, bookmark, additional_changesets)
+                    .await
+                    .context(
+                        "Failed to load additional affected changesets to check restrictions",
+                    )?,
+            );
         }
 
         if needs_extras_check {
