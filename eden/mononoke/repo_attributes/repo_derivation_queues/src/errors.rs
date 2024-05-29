@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+#[cfg(fbcode_build)]
 use bytes::Bytes;
 use derived_data_manager::DerivationError;
 use mononoke_types::RepositoryId;

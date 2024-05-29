@@ -16,6 +16,7 @@ use std::sync::Arc;
 
 use acl_regions::build_acl_regions;
 use acl_regions::ArcAclRegions;
+#[cfg(fbcode_build)]
 use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
@@ -1270,6 +1271,16 @@ impl RepoFactory {
     ) -> Result<ArcRepoDerivationQueues> {
         #[cfg(not(fbcode_build))]
         {
+            let _ = (
+                repo_identity,
+                repo_config,
+                changesets,
+                commit_graph,
+                bonsai_hg_mapping,
+                bonsai_git_mapping,
+                repo_blobstore,
+                filenodes,
+            );
             anyhow::bail!("RepoDerivationQueues is not supported in non-fbcode builds")
         }
         #[cfg(fbcode_build)]

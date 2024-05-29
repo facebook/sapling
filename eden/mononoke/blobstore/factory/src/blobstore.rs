@@ -604,7 +604,7 @@ pub fn make_blobstore_unlink_ops<'a>(
                 }
                 #[cfg(not(fbcode_build))]
                 {
-                    let _ = (region, num_concurrent_operations);
+                    let _ = (region, num_concurrent_operations, bucket);
                     unimplemented!("This is implemented only for fbcode_build")
                 }
             }
