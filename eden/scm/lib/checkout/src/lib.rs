@@ -1104,7 +1104,7 @@ fn prefetch_children(repo: &Repo, node: &HgId) -> Result<()> {
 }
 
 #[instrument(skip(repo))]
-fn update_distance(repo: &Repo, source: &HgId, dest: &HgId) -> Result<usize> {
+fn update_distance(repo: &Repo, source: &HgId, dest: &HgId) -> Result<u64> {
     let dag = repo.dag_commits()?;
     let dag = dag.read();
 

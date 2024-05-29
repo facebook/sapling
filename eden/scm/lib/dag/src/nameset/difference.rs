@@ -184,7 +184,7 @@ mod tests {
             let set = difference(&a, &b);
             check_invariants(&set).unwrap();
 
-            let count = nb(set.count()).unwrap().unwrap();
+            let count = nb(set.count()).unwrap().unwrap() as usize;
             assert!(count <= a.len());
 
             assert!(b.iter().all(|&b| nb(set.contains(&to_name(b))).unwrap().ok() == Some(false)));

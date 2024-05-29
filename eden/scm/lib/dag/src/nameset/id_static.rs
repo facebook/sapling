@@ -251,8 +251,8 @@ impl AsyncNameSetQuery for IdStaticSet {
         Ok(iter.into_box_stream())
     }
 
-    async fn count(&self) -> Result<usize> {
-        Ok(self.spans.count() as usize)
+    async fn count(&self) -> Result<u64> {
+        Ok(self.spans.count())
     }
 
     async fn size_hint(&self) -> (u64, Option<u64>) {

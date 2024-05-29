@@ -6,6 +6,7 @@
  */
 
 use std::io;
+use std::num::TryFromIntError;
 
 use thiserror::Error;
 
@@ -44,6 +45,10 @@ pub enum DagError {
     /// No space for new Ids.
     #[error("out of space for group {0:?}")]
     IdOverflow(Group),
+
+    /// Integer conversion overflow.
+    #[error(transparent)]
+    IntOverflow(#[from] TryFromIntError),
 }
 
 #[derive(Debug, Error)]

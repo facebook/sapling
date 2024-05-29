@@ -50,7 +50,7 @@ impl AsyncNameSetQuery for ReverseSet {
         self.inner.iter().await
     }
 
-    async fn count(&self) -> Result<usize> {
+    async fn count(&self) -> Result<u64> {
         self.inner.count().await
     }
 

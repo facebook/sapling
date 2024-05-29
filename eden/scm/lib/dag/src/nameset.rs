@@ -455,7 +455,7 @@ impl NameSet {
         if self.as_any().is::<IdStaticSet>() {
             return Ok(self.clone());
         }
-        let mut ids = Vec::with_capacity(self.count()?);
+        let mut ids = Vec::with_capacity(self.count()?.try_into()?);
         for vertex in self.iter()? {
             let id = id_map.vertex_id(vertex?).await?;
             ids.push(id);
@@ -575,7 +575,7 @@ pub trait AsyncNameSetQuery: Any + Debug + Send + Sync {
     }
 
     /// Number of names in this set.
-    async fn count(&self) -> Result<usize> {
+    async fn count(&self) -> Result<u64> {
         let mut iter = self.iter().await?;
         let mut count = 0;
         while let Some(item) = iter.next().await {
@@ -667,7 +667,7 @@ pub trait SyncNameSetQuery {
     fn iter_rev(&self) -> Result<Box<dyn NameIter>>;
 
     /// Number of names in this set.
-    fn count(&self) -> Result<usize>;
+    fn count(&self) -> Result<u64>;
 
     /// The first name in the set.
     fn first(&self) -> Result<Option<VertexName>>;
@@ -700,7 +700,7 @@ impl<T: AsyncNameSetQuery> SyncNameSetQuery for T {
         non_blocking(AsyncNameSetQuery::iter_rev(self))?.map(to_iter)
     }
 
-    fn count(&self) -> Result<usize> {
+    fn count(&self) -> Result<u64> {
         non_blocking(AsyncNameSetQuery::count(self))?
     }
 
@@ -742,7 +742,7 @@ impl SyncNameSetQuery for NameSet {
         non_blocking(AsyncNameSetQuery::iter_rev(self.0.deref()))?.map(to_iter)
     }
 
-    fn count(&self) -> Result<usize> {
+    fn count(&self) -> Result<u64> {
         non_blocking(AsyncNameSetQuery::count(self.0.deref()))?
     }
 
@@ -1329,12 +1329,12 @@ pub(crate) mod tests {
         );
         assert_eq!(
             count,
-            names.len(),
+            names.len() as u64,
             "count() should match iter().count() (set: {:?})",
             &query
         );
         assert!(
-            size_hint_min <= count as u64,
+            size_hint_min <= count,
             "size_hint().0 ({}) must <= count ({}) (set: {:?})",
             size_hint_min,
             count,
@@ -1342,7 +1342,7 @@ pub(crate) mod tests {
         );
         if let Some(size_hint_max) = size_hint_max {
             assert!(
-                size_hint_max >= count as u64,
+                size_hint_max >= count,
                 "size_hint().1 ({}) must >= count ({}) (set: {:?})",
                 size_hint_max,
                 count,

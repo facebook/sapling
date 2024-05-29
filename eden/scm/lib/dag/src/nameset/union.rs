@@ -121,7 +121,7 @@ impl AsyncNameSetQuery for UnionSet {
         (min_size, max_size)
     }
 
-    async fn count(&self) -> Result<usize> {
+    async fn count(&self) -> Result<u64> {
         debug_assert_eq!(self.sets.len(), 2);
         // This is more efficient if sets[0] is a large set that has a fast path
         // for "count()".
@@ -304,7 +304,7 @@ mod tests {
             let set = union(&a, &b);
             check_invariants(&set).unwrap();
 
-            let count = nb(set.count()).unwrap();
+            let count = nb(set.count()).unwrap() as usize;
             assert!(count <= a.len() + b.len());
 
             let set2: HashSet<_> = a.iter().chain(b.iter()).cloned().collect();

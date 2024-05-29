@@ -24,7 +24,7 @@ use tempfile::tempdir;
 pub fn main() {
     let clone_data = example_clone_data();
     let tip = clone_data.idmap.last_key_value().unwrap().1.clone();
-    let expected_count = clone_data.flat_segments.vertex_count() as usize;
+    let expected_count = clone_data.flat_segments.vertex_count();
 
     let assert_graph_size = |dag: &Dag| {
         let actual_count = nbr(async { dag.all().await.unwrap().count().await }).unwrap();

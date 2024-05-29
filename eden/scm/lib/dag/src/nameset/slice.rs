@@ -247,17 +247,18 @@ impl AsyncNameSetQuery for SliceSet {
             trace!("iter_rev({:0.6?}): use inner.iter_rev()", self,);
             let count = self.count().await?;
             let iter = self.inner.iter_rev().await?;
+            let count = count.try_into()?;
             Ok(Box::pin(iter.take(count)))
         }
     }
 
-    async fn count(&self) -> Result<usize> {
+    async fn count(&self) -> Result<u64> {
         let count = self.inner.count().await?;
         // consider skip_count
         let count = (count as u64).max(self.skip_count) - self.skip_count;
         // consider take_count
         let count = count.min(self.take_count.unwrap_or(u64::MAX));
-        Ok(count as _)
+        Ok(count)
     }
 
     async fn size_hint(&self) -> (u64, Option<u64>) {

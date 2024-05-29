@@ -45,7 +45,7 @@ py_class!(pub class nameset |py| {
     }
 
     def __len__(&self) -> PyResult<usize> {
-        block_on(self.inner(py).count()).map_pyerr(py)
+        block_on(self.inner(py).count()).and_then(|v| usize::try_from(v).map_err(Into::into)).map_pyerr(py)
     }
 
     def __repr__(&self) -> PyResult<String> {

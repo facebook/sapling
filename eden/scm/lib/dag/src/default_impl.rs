@@ -249,7 +249,7 @@ pub(crate) async fn first_ancestors(
     set: NameSet,
 ) -> Result<NameSet> {
     let mut to_visit: Vec<VertexName> = {
-        let mut list = Vec::with_capacity(set.count().await?);
+        let mut list = Vec::with_capacity(set.count().await?.try_into()?);
         let mut iter = set.iter().await?;
         while let Some(next) = iter.next().await {
             let vertex = next?;

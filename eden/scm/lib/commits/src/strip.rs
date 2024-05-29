@@ -36,7 +36,7 @@ pub(crate) async fn migrate_commits(
         .await?
         .iter_rev()?
         .collect::<dag::Result<Vec<_>>>()?;
-    let mut commits: Vec<HgCommit> = Vec::with_capacity(set.count()?);
+    let mut commits: Vec<HgCommit> = Vec::with_capacity(set.count()? as _);
     // This is inefficient - one by one fetching via async.
     // However the strip code paths only exist to support legacy `.t`
     // tests that use real strips. It's not used anywhere in production.

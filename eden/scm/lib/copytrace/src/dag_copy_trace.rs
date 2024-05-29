@@ -35,7 +35,7 @@ use crate::SearchDirection;
 use crate::TraceResult;
 
 /// limits the number of commits in path_copies
-const DEFAULT_PATH_COPIES_COMMIT_LIMIT: usize = 100;
+const DEFAULT_PATH_COPIES_COMMIT_LIMIT: u64 = 100;
 /// limits the missing files we will check
 const DEFAULT_MAX_MISSING_FILES: usize = 1000;
 
@@ -148,7 +148,7 @@ impl DagCopyTrace {
         }
     }
 
-    async fn compute_distance(&self, src: Vertex, dst: Vertex) -> Result<usize> {
+    async fn compute_distance(&self, src: Vertex, dst: Vertex) -> Result<u64> {
         let src: NameSet = src.into();
         let dst: NameSet = dst.into();
         let distance = self
@@ -378,9 +378,9 @@ impl CopyTrace for DagCopyTrace {
     }
 }
 
-fn get_path_copies_commit_limit(config: &dyn Config) -> Result<usize> {
+fn get_path_copies_commit_limit(config: &dyn Config) -> Result<u64> {
     let v = config
-        .get_opt::<usize>("copytrace", "pathcopiescommitlimit")?
+        .get_opt::<u64>("copytrace", "pathcopiescommitlimit")?
         .unwrap_or(DEFAULT_PATH_COPIES_COMMIT_LIMIT);
     Ok(v)
 }

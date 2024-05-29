@@ -173,9 +173,9 @@ impl AsyncNameSetQuery for LazySet {
         Ok(Box::pin(stream))
     }
 
-    async fn count(&self) -> Result<usize> {
+    async fn count(&self) -> Result<u64> {
         let inner = self.load_all().await?;
-        Ok(inner.visited.len())
+        Ok(inner.visited.len().try_into()?)
     }
 
     async fn size_hint(&self) -> (u64, Option<u64>) {
@@ -302,7 +302,7 @@ mod tests {
             let set = lazy_set(&a);
             check_invariants(&set).unwrap();
 
-            let count = nb(set.count()).unwrap();
+            let count = nb(set.count()).unwrap() as usize;
             assert!(count <= a.len());
 
             let set2: HashSet<_> = a.iter().cloned().collect();

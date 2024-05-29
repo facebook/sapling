@@ -329,7 +329,7 @@ mod tests {
             let set = intersection(&a, &b);
             check_invariants(&set).unwrap();
 
-            let count = nb(set.count()).unwrap();
+            let count = nb(set.count()).unwrap() as usize;
             assert!(count <= a.len(), "len({:?}) = {} should <= len({:?})" , &set, count, &a);
             assert!(count <= b.len(), "len({:?}) = {} should <= len({:?})" , &set, count, &b);
 
