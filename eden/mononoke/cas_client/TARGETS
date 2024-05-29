@@ -11,8 +11,6 @@ rust_library(
     deps = ([
         "fbsource//third-party/rust:async-trait",
         "fbsource//third-party/rust:bytes",
-        "//eden/mononoke/server/context:context",
-        "fbsource//third-party/rust:slog",
         "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:thiserror",
@@ -20,5 +18,7 @@ rust_library(
     ] + ([] if rust_oss.is_oss_build() else [
         "//remote_execution/client_lib/wrappers/rust:re_client_lib",
         "//common/rust/shed/fbinit:fbinit",
+        "fbsource//third-party/rust:slog",
+        "//eden/mononoke/server/context:context",
     ])),
 )
