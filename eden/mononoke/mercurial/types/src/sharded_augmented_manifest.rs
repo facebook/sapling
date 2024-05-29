@@ -16,7 +16,6 @@ use blobstore::Blobstore;
 use blobstore::Loadable;
 use blobstore::LoadableError;
 use bytes::Bytes;
-use bytes::BytesMut;
 use context::CoreContext;
 use futures::stream;
 use futures::stream::BoxStream;
@@ -552,6 +551,7 @@ impl Loadable for HgAugmentedManifestId {
 
 #[cfg(test)]
 mod sharded_augmented_manifest_tests {
+    use bytes::BytesMut;
     use fbinit::FacebookInit;
     use fixtures::Linear;
     use fixtures::TestRepoFixture;
