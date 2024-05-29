@@ -120,10 +120,6 @@ impl AffectedChangesets {
         bookmark: &BookmarkKey,
         additional_changesets: AdditionalChangesets,
     ) -> Result<HashSet<BonsaiChangeset>, Error> {
-        if let Some(additional_changesets) = &self.additional_changesets {
-            return Ok(additional_changesets.clone());
-        }
-
         let (head, base) = match additional_changesets {
             AdditionalChangesets::None => {
                 return Ok(HashSet::new());
