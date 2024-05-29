@@ -60,6 +60,12 @@ pub(crate) struct AffectedChangesets {
 
     /// Max limit on how many additional changesets to load
     additional_changesets_limit: usize,
+
+    /// Changesets that we have already checked.
+    /// This could be a large number, but we only store hashes.
+    /// This avoids performing the same checks twice, but more importantly, reloading the same
+    /// changesets over and over again in the case of additional changesets.
+    already_checked_changesets: HashSet<ChangesetId>,
 }
 
 impl AffectedChangesets {
@@ -68,6 +74,7 @@ impl AffectedChangesets {
             new_changesets: HashMap::new(),
             source_changesets: HashSet::new(),
             additional_changesets_limit: limit.unwrap_or(DEFAULT_ADDITIONAL_CHANGESETS_LIMIT),
+            already_checked_changesets: HashSet::new(),
         }
     }
 
@@ -76,6 +83,7 @@ impl AffectedChangesets {
             new_changesets: HashMap::new(),
             source_changesets,
             additional_changesets_limit: DEFAULT_ADDITIONAL_CHANGESETS_LIMIT,
+            already_checked_changesets: HashSet::new(),
         }
     }
 
@@ -147,7 +155,8 @@ impl AffectedChangesets {
             .yield_periodically()
             .try_filter(|bcs_id| {
                 let exists = self.new_changesets.contains_key(bcs_id);
-                future::ready(!exists)
+                let already_checked = self.already_checked_changesets.contains(bcs_id);
+                future::ready(!exists && !already_checked)
             });
 
         let additional_changesets_limit = self.additional_changesets_limit;
@@ -221,14 +230,23 @@ impl AffectedChangesets {
         let additional_changesets = self
             .load_additional_changesets(ctx, repo, bookmark, additional_changesets)
             .await?;
-        Ok(
-            stream::iter(self.new_changesets.values().map(|r| Ok(r.clone())))
-                .chain(stream::iter(
-                    self.source_changesets.iter().map(|r| Ok(r.clone())),
-                ))
-                .chain(additional_changesets)
-                .boxed(),
+        Ok(stream::iter(
+            self.new_changesets
+                .values()
+                .chain(self.source_changesets.iter())
+                .filter_map(|r| {
+                    if !self
+                        .already_checked_changesets
+                        .contains(&r.get_changeset_id())
+                    {
+                        Some(Ok(r.clone()))
+                    } else {
+                        None
+                    }
+                }),
         )
+        .chain(additional_changesets)
+        .boxed())
     }
 
     /// Check all applicable restrictions on the affected changesets.
@@ -263,11 +281,11 @@ impl AffectedChangesets {
             stream::empty().boxed()
         };
 
-        changesets_stream
+        self.already_checked_changesets = changesets_stream
             .chunks(N_CHANGESETS_TO_LOAD_AT_ONCE)
             // Aggregate any error loading changesets on a per-chunk basis
             .map(|chunk| chunk.into_iter().collect::<Result<Vec<_>, _>>())
-            .try_for_each(|chunk| {
+            .try_fold(HashSet::new(), |mut checked_changesets, chunk| {
                 let adding_new_changesets_to_repo = self.adding_new_changesets_to_repo();
                 async move {
                     if needs_extras_check {
@@ -296,7 +314,15 @@ impl AffectedChangesets {
                     if needs_path_permissions_check {
                         Self::check_path_permissions(&chunk, ctx, authz, repo).await?;
                     }
-                    Ok(())
+                    // No check failed. We can record this chunk of changesets as having passed the
+                    // checks and avoid loading them again next time.
+                    checked_changesets.extend(
+                        chunk
+                            .iter()
+                            .map(|bcs| bcs.get_changeset_id())
+                            .collect::<Vec<_>>(),
+                    );
+                    Ok(checked_changesets)
                 }
             })
             .await?;
