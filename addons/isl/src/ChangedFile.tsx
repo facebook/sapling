@@ -140,7 +140,7 @@ export function File({
         onContextMenu={contextMenu}
         key={file.path}
         tabIndex={0}
-        onKeyPress={e => {
+        onKeyUp={e => {
           if (e.key === 'Enter') {
             openFile();
           }
