@@ -1554,14 +1554,34 @@ class ChownCmd(Subcmd):
 class MountCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
-            "paths", nargs="+", metavar="path", help="The checkout mount path"
+            "paths", nargs="*", metavar="path", help="The checkout mount path"
         )
         parser.add_argument(
             "--read-only", action="store_true", dest="read_only", help="Read only mount"
         )
+        parser.add_argument(
+            "--all",
+            action="store_true",
+            dest="mount_all",
+            help="Remount all unmounted checkouts",
+        )
 
     def run(self, args: argparse.Namespace) -> int:
+        # validation
+        if not args.mount_all and len(args.paths) == 0:
+            raise config_mod.UsageError(
+                "Use either '--all' or path arguments to specify what to mount"
+            )
+
+        if args.mount_all and len(args.paths) > 0:
+            raise config_mod.UsageError(
+                "Flag '--all' and path arguments cannot be combined"
+            )
+
         instance = get_eden_instance(args)
+
+        exitcode = 0
+
         for path in args.paths:
             try:
                 exitcode = instance.mount(path, args.read_only)
@@ -1570,7 +1590,33 @@ class MountCmd(Subcmd):
             except (EdenService.EdenError, EdenNotRunningError) as ex:
                 print_stderr("error: {}", ex)
                 return 1
-        return 0
+
+        if args.mount_all:
+            exitcode = self.remount_checkouts(instance, args.read_only)
+
+        return exitcode
+
+    def remount_checkouts(self, instance: EdenInstance, read_only: bool) -> int:
+        exitcode = 0
+        mounts = instance.get_mounts()
+        for path, mount_info in sorted(mounts.items()):
+            if mount_info.state is None:
+                print(f"Found unmounted checkout at {path}, attempting to mount")
+                try:
+                    mount_exitcode = instance.mount(path, read_only)
+                    if mount_exitcode:
+                        print(
+                            f"Remount {path} failed. exit_code={mount_exitcode}. Please run `eden doctor` to fix it"
+                        )
+                        exitcode = 1
+                    else:
+                        print(f"Mount succeeded, path: {path}")
+                except Exception as ex:
+                    print(
+                        f"Failed to mount {path}:\n{ex}\nPlease run 'eden doctor' to fix it"
+                    )
+                    exitcode = 1
+        return exitcode
 
 
 # Types of removal
