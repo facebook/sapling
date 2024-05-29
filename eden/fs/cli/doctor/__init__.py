@@ -575,7 +575,18 @@ class NestedCheckout(Problem):
         super().__init__(
             f"""\
 edenfs reports that checkout {checkout.path} is nested within an existing checkout {existing_checkout.path}
-Nested checkouts are usually not intended and can cause spurious behavior.\n"""
+Nested checkouts are usually not intended and can cause spurious behavior. Consider running `eden rm {checkout.path}` to remove misplaced repo(s)\n"""
+        )
+
+
+class CheckoutInsideBackingRepo(Problem):
+    def __init__(
+        self, checkout: CheckoutInfo, existing_checkout: config_mod.EdenCheckout
+    ) -> None:
+        super().__init__(
+            f"""\
+edenfs reports that checkout {checkout.path} is created within backing repo of an existing checkout {existing_checkout.path} (backing repo: {existing_checkout.get_backing_repo_path()})
+Checkouts inside backing repo are usually not intended and can cause spurious behavior. Consider running `eden rm {checkout.path}` to remove misplaced repo(s)\n"""
         )
 
 
@@ -637,12 +648,18 @@ def check_mount(
 
     try:
         # Check if this checkout is nested inside another one
-        existing_checkout, rel_path = config_mod.detect_nested_checkout(
+        problem_type, existing_checkout = config_mod.detect_checkout_path_problem(
             checkout.path,
             instance,
         )
-        if existing_checkout is not None and rel_path is not None:
-            tracker.add_problem(NestedCheckout(checkout, existing_checkout))
+
+        if problem_type is not None and existing_checkout is not None:
+            if problem_type == config_mod.CheckoutPathProblemType.NESTED_CHECKOUT:
+                tracker.add_problem(NestedCheckout(checkout, existing_checkout))
+            if problem_type == config_mod.CheckoutPathProblemType.INSIDE_BACKING_REPO:
+                tracker.add_problem(
+                    CheckoutInsideBackingRepo(checkout, existing_checkout)
+                )
     except Exception as ex:
         raise RuntimeError("Failed to detect nested checkout") from ex
 

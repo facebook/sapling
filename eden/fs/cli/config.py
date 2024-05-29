@@ -23,6 +23,7 @@ import sys
 import time
 import typing
 import uuid
+from enum import Enum
 from pathlib import Path
 from typing import (
     Any,
@@ -137,6 +138,12 @@ currently running, or it simply does not have this checkout mounted yet.
 You can run "eden doctor" to check for problems with EdenFS and try to have it
 automatically remount your checkouts.
 """
+
+
+class CheckoutPathProblemType(Enum):
+    NESTED_CHECKOUT = "nested_checkout"
+    INSIDE_BACKING_REPO = "inside_backing_repo"
+    NONE = None
 
 
 class UsageError(Exception):
@@ -1782,6 +1789,59 @@ def detect_nested_checkout(
         return checkout, rel_path
     else:
         return None, None
+
+
+def detect_checkout_path_problem(
+    path: Union[str, Path],
+    instance: EdenInstance,
+) -> Tuple[Optional[CheckoutPathProblemType], Optional[EdenCheckout]]:
+    """
+    Get a tuple containing (problem_type, checkout, rel_path) for any checkout that the provided
+    path is nested inside of, or for any checkout whose
+    backing_repo contains the provided path and the relative path of that
+    path within the backing_repo, along with the problem type.
+
+    A tuple of (None, None, None) is returned if the specified path is not nested inside
+    any existing checkouts.
+    """
+    if isinstance(path, str):
+        path = Path(path)
+
+    path = path.resolve(strict=False)
+    try:
+        # However, we prefer to get the list from the current eden process (if one's running)
+        instance.get_running_version()
+        checkout_list = instance.get_mounts().items()
+    except EdenNotRunningError:  # If EdenFS isn't running, we should fail
+        return None, None
+
+    # Checkout list must be sorted so that parent paths are checked first
+    for checkout_path_str, mount_info in sorted(checkout_list):
+        # symlinks could have been added since the mount was added, but
+        # we will not worry about this case
+        checkout_path = Path(checkout_path_str)
+        if path != checkout_path and is_child_path(checkout_path, path):
+            checkout_state_dir = mount_info.data_dir
+            checkout = EdenCheckout(instance, checkout_path, checkout_state_dir)
+            return CheckoutPathProblemType.NESTED_CHECKOUT, checkout
+
+        # check if path is inside backing folder of the current checkout
+        backing_repo = mount_info.backing_repo
+        if backing_repo is not None and is_child_path(backing_repo, path):
+            checkout_state_dir = mount_info.data_dir
+            checkout = EdenCheckout(instance, checkout_path_str, checkout_state_dir)
+            return CheckoutPathProblemType.INSIDE_BACKING_REPO, checkout
+
+    return None, None
+
+
+def is_child_path(parent_path: Path, child_path: Path) -> bool:
+    """Returns true if the parent path is a prefix of the child path"""
+    try:
+        rel_path = child_path.relative_to(parent_path)
+        return rel_path != Path("") and rel_path != Path(".")
+    except ValueError:
+        return False
 
 
 def find_eden(
