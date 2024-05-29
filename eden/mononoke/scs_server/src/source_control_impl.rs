@@ -6,9 +6,9 @@
  */
 
 use std::borrow::Cow;
-use std::collections::HashSet;
 use std::future::Future;
 use std::net::IpAddr;
+use std::num::NonZeroU64;
 use std::pin::Pin;
 use std::sync::Arc;
 
@@ -27,7 +27,6 @@ use futures_stats::FutureStats;
 use futures_stats::TimedFutureExt;
 use identity::Identity;
 use login_objects_thrift::EnvironmentType;
-use maplit::hashset;
 use megarepo_api::MegarepoApi;
 use memory::MemoryStats;
 use metaconfig_types::CommonConfig;
@@ -46,7 +45,6 @@ use mononoke_api::TreeId;
 use mononoke_configs::MononokeConfigs;
 use mononoke_types::hash::Sha1;
 use mononoke_types::hash::Sha256;
-use once_cell::sync::Lazy;
 use permission_checker::MononokeIdentity;
 use permission_checker::MononokeIdentitySet;
 use repo_authorization::AuthorizationContext;
@@ -95,8 +93,6 @@ define_stats! {
     // Duration per method
     method_completion_time_ms: dynamic_histogram("method.{}.completion_time_ms", (method: String); 10, 0, 1_000, Average, Sum, Count; P 5; P 50 ; P 90),
 }
-
-static POPULAR_METHODS: Lazy<HashSet<&'static str>> = Lazy::new(|| hashset! {});
 
 #[derive(Clone)]
 pub(crate) struct SourceControlServiceImpl {
@@ -195,15 +191,10 @@ impl SourceControlServiceImpl {
             scuba.add("config_store_last_updated_at", config_info.last_updated_at);
         }
 
-        let sampling_rate = core::num::NonZeroU64::new(if POPULAR_METHODS.contains(name) {
-            const FALLBACK_SAMPLING_RATE: u64 = 1000;
-            justknobs::get_as::<u64>("scm/mononoke:scs_popular_methods_sampling_rate", None)
-                .unwrap_or(FALLBACK_SAMPLING_RATE)
-        } else {
-            const FALLBACK_SAMPLING_RATE: u64 = 1;
-            justknobs::get_as::<u64>("scm/mononoke:scs_other_methods_sampling_rate", None)
-                .unwrap_or(FALLBACK_SAMPLING_RATE)
-        });
+        let sampling_rate =
+            justknobs::get_as::<u64>("scm/mononoke:scs_method_sampling_rate", Some(name))
+                .ok()
+                .and_then(NonZeroU64::new);
         if let Some(sampling_rate) = sampling_rate {
             scuba.sampled(sampling_rate);
         } else {

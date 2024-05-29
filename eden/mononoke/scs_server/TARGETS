@@ -25,7 +25,6 @@ rust_binary(
         "fbsource//third-party/rust:gix-hash",
         "fbsource//third-party/rust:itertools",
         "fbsource//third-party/rust:maplit",
-        "fbsource//third-party/rust:once_cell",
         "fbsource//third-party/rust:serde_json",
         "fbsource//third-party/rust:slog",
         "fbsource//third-party/rust:tokio",
