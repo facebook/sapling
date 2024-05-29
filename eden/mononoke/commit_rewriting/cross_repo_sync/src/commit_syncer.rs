@@ -6,6 +6,7 @@
  */
 
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::fmt;
 use std::sync::Arc;
 use std::time::Instant;
@@ -35,10 +36,12 @@ use metaconfig_types::PushrebaseFlags;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::BonsaiChangesetMut;
 use mononoke_types::ChangesetId;
+use mononoke_types::ContentId;
 use mononoke_types::RepositoryId;
 use movers::Mover;
 use pushrebase::do_pushrebase_bonsai;
 use pushrebase_hooks::get_pushrebase_hooks;
+use repo_blobstore::RepoBlobstoreRef;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::debug;
 use synced_commit_mapping::EquivalentWorkingCopyEntry;
@@ -66,6 +69,7 @@ use crate::commit_syncers_lib::remap_parents;
 use crate::commit_syncers_lib::rewrite_commit;
 use crate::commit_syncers_lib::run_with_lease;
 use crate::commit_syncers_lib::submodule_metadata_file_prefix_and_dangling_pointers;
+use crate::commit_syncers_lib::submodule_repos_with_content_ids;
 use crate::commit_syncers_lib::update_mapping_with_version;
 use crate::commit_syncers_lib::CommitSyncRepos;
 use crate::commit_syncers_lib::SyncedAncestorsVersions;
@@ -555,18 +559,26 @@ where
     }
 
     // Rewrites a commit and uploads it
-    pub(crate) async fn upload_rewritten_and_update_mapping<'a>(
+    pub(crate) async fn upload_rewritten_and_update_mapping<'a, RB: RepoBlobstoreRef>(
         &'a self,
         ctx: &'a CoreContext,
         source_cs_id: ChangesetId,
         rewritten: BonsaiChangesetMut,
+        submodule_content_ids: Vec<(Arc<RB>, HashSet<ContentId>)>,
         version: CommitSyncConfigVersion,
     ) -> Result<ChangesetId, Error> {
         let (source_repo, target_repo) = self.get_source_target();
 
         let frozen = rewritten.freeze()?;
         let target_cs_id = frozen.get_changeset_id();
-        upload_commits(ctx, vec![frozen], &source_repo, &target_repo).await?;
+        upload_commits(
+            ctx,
+            vec![frozen],
+            &source_repo,
+            &target_repo,
+            submodule_content_ids,
+        )
+        .await?;
 
         // update_mapping also updates working copy equivalence, so no need
         // to do it separately
@@ -906,7 +918,18 @@ where
                 // Sync commit
                 let frozen = rewritten.freeze()?;
                 let frozen_cs_id = frozen.get_changeset_id();
-                upload_commits(ctx, vec![frozen], &source_repo, &target_repo).await?;
+                let submodule_content_ids = submodule_repos_with_content_ids(
+                    self.get_submodule_deps(),
+                    rewrite_res.submodule_expansion_content_ids,
+                )?;
+                upload_commits(
+                    ctx,
+                    vec![frozen],
+                    &source_repo,
+                    &target_repo,
+                    submodule_content_ids,
+                )
+                .await?;
 
                 update_mapping_with_version(
                     ctx,
@@ -1061,11 +1084,16 @@ where
                 // Sync commit
                 let frozen = rewritten.freeze()?;
                 let rewritten_list = hashset![frozen];
+                let submodule_content_ids = submodule_repos_with_content_ids(
+                    self.get_submodule_deps(),
+                    rewrite_res.submodule_expansion_content_ids,
+                )?;
                 upload_commits(
                     ctx,
                     rewritten_list.clone().into_iter().collect(),
                     &source_repo,
                     &target_repo,
+                    submodule_content_ids,
                 )
                 .await?;
 

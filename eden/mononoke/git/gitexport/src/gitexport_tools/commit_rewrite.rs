@@ -42,6 +42,7 @@ use mononoke_api::BookmarkKey;
 use mononoke_api::ChangesetContext;
 use mononoke_api::CoreContext;
 use mononoke_api::MononokeError;
+use mononoke_api::Repo;
 use mononoke_api::RepoContext;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
@@ -217,6 +218,7 @@ pub async fn rewrite_partial_changesets(
                             vec![new_bcs],
                             source_repo_ctx.repo(),
                             temp_repo_ctx.repo(),
+                            Vec::<(Arc<Repo>, HashSet<_>)>::new(),
                         ),
                     )
                     .await?;

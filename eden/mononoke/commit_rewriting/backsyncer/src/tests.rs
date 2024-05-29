@@ -7,6 +7,7 @@
 
 use std::collections::BTreeMap;
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::str::FromStr;
 use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
@@ -1398,7 +1399,17 @@ async fn init_repos(
     let first_bcs = initial_bcs_id
         .load(&ctx, source_repo.repo_blobstore())
         .await?;
-    upload_commits(&ctx, vec![first_bcs.clone()], &source_repo, &target_repo).await?;
+
+    // No submodules are expanded in backsyncing
+    let submodule_content_ids = Vec::<(Arc<TestRepo>, HashSet<_>)>::new();
+    upload_commits(
+        &ctx,
+        vec![first_bcs.clone()],
+        &source_repo,
+        &target_repo,
+        submodule_content_ids,
+    )
+    .await?;
     let first_bcs_mut = first_bcs.into_mut();
 
     let rewrite_res = {
@@ -1416,6 +1427,7 @@ async fn init_repos(
         )
         .await
     }?;
+
     let rewritten_first_bcs_id = match rewrite_res.rewritten {
         Some(mut rewritten) => {
             rewritten.parents.push(initial_commit_in_target);

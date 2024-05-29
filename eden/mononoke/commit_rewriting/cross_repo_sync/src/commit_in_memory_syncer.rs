@@ -36,6 +36,8 @@ use crate::commit_syncers_lib::get_mover_by_version;
 use crate::commit_syncers_lib::rewrite_commit;
 use crate::commit_syncers_lib::strip_removed_parents;
 use crate::commit_syncers_lib::submodule_metadata_file_prefix_and_dangling_pointers;
+use crate::commit_syncers_lib::submodule_repos_with_content_ids;
+use crate::commit_syncers_lib::SubmoduleExpansionContentIds;
 use crate::git_submodules::InMemoryRepo;
 use crate::git_submodules::SubmoduleExpansionData;
 use crate::reporting::CommitSyncContext;
@@ -62,6 +64,7 @@ pub(crate) enum CommitSyncInMemoryResult {
     Rewritten {
         source_cs_id: ChangesetId,
         rewritten: BonsaiChangesetMut,
+        submodule_expansion_content_ids: SubmoduleExpansionContentIds,
         version: CommitSyncConfigVersion,
     },
     WcEquivalence {
@@ -102,11 +105,25 @@ impl CommitSyncInMemoryResult {
             Rewritten {
                 source_cs_id,
                 rewritten,
+                submodule_expansion_content_ids,
                 version,
-            } => syncer
-                .upload_rewritten_and_update_mapping(ctx, source_cs_id, rewritten, version)
-                .await
-                .map(Some),
+            } => {
+                let submodule_content_ids = submodule_repos_with_content_ids(
+                    syncer.get_submodule_deps(),
+                    submodule_expansion_content_ids,
+                )?;
+
+                syncer
+                    .upload_rewritten_and_update_mapping(
+                        ctx,
+                        source_cs_id,
+                        rewritten,
+                        submodule_content_ids,
+                        version,
+                    )
+                    .await
+                    .map(Some)
+            }
         }
     }
 }
@@ -264,6 +281,7 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
             Some(rewritten) => Ok(CommitSyncInMemoryResult::Rewritten {
                 source_cs_id,
                 rewritten,
+                submodule_expansion_content_ids: rewrite_res.submodule_expansion_content_ids,
                 version: expected_version,
             }),
             None => Ok(CommitSyncInMemoryResult::WcEquivalence {
@@ -373,6 +391,8 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
                     Some(rewritten) => Ok(CommitSyncInMemoryResult::Rewritten {
                         source_cs_id,
                         rewritten,
+                        submodule_expansion_content_ids: rewrite_res
+                            .submodule_expansion_content_ids,
                         version,
                     }),
                     None => {
@@ -547,6 +567,7 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
                     Ok(CommitSyncInMemoryResult::Rewritten {
                         source_cs_id,
                         rewritten,
+                        submodule_expansion_content_ids: rewrite_res.submodule_expansion_content_ids,
                         version,
                     })
                 }

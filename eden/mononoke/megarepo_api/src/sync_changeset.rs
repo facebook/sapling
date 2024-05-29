@@ -6,6 +6,7 @@
  */
 
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::sync::Arc;
 
 use anyhow::anyhow;
@@ -482,13 +483,13 @@ async fn validate_can_sync_changeset(
     Ok(())
 }
 
-async fn sync_changeset_to_target(
+async fn sync_changeset_to_target<R: Repo>(
     ctx: &CoreContext,
     mapping: &SourceMappingRules,
     source: &SourceName,
-    source_repo: &impl Repo,
+    source_repo: &R,
     source_cs: BonsaiChangeset,
-    target_repo: &impl Repo,
+    target_repo: &R,
     target_cs_id: ChangesetId,
     target: &Target,
     mut state: CommitRemappingState,
@@ -577,10 +578,17 @@ async fn sync_changeset_to_target(
         .await?;
 
     let rewritten_commit = rewritten_commit.freeze().map_err(MegarepoError::internal)?;
+    let submodule_content_ids = Vec::<(Arc<R>, HashSet<_>)>::new();
     let target_cs_id = rewritten_commit.get_changeset_id();
-    upload_commits(ctx, vec![rewritten_commit], source_repo, target_repo)
-        .await
-        .map_err(MegarepoError::internal)?;
+    upload_commits(
+        ctx,
+        vec![rewritten_commit],
+        source_repo,
+        target_repo,
+        submodule_content_ids,
+    )
+    .await
+    .map_err(MegarepoError::internal)?;
 
     Ok(target_cs_id)
 }

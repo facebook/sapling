@@ -6,6 +6,7 @@
  */
 
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::str::FromStr;
 use std::sync::Arc;
 
@@ -199,12 +200,14 @@ where
     target_bcs_mut.parents = vec![bookmark_val];
 
     let target_bcs = target_bcs_mut.freeze()?;
+    let submodule_content_ids = Vec::<(Arc<TestRepo>, HashSet<_>)>::new();
 
     upload_commits(
         &ctx,
         vec![target_bcs.clone()],
         commit_syncer.get_source_repo(),
         commit_syncer.get_target_repo(),
+        submodule_content_ids,
     )
     .await?;
 

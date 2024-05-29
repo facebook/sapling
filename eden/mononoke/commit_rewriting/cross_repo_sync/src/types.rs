@@ -308,6 +308,13 @@ impl<R: Repo> SubmoduleDeps<R> {
             _ => Vec::new(),
         }
     }
+
+    pub fn dep_map(&self) -> Option<&HashMap<NonRootMPath, Arc<R>>> {
+        match self {
+            Self::ForSync(map) => Some(map),
+            _ => None,
+        }
+    }
 }
 
 impl<R: Repo> Debug for SubmoduleDeps<R> {

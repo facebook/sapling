@@ -738,6 +738,7 @@ pub async fn upload_commits<'a>(
     rewritten_list: Vec<BonsaiChangeset>,
     source_repo: &'a (impl RepoBlobstoreRef + ChangesetsRef),
     target_repo: &'a (impl RepoBlobstoreRef + ChangesetsRef + FilestoreConfigRef),
+    submodule_content_ids: Vec<(Arc<impl RepoBlobstoreRef>, HashSet<ContentId>)>,
 ) -> Result<(), Error> {
     let mut files_to_sync = HashSet::new();
     for rewritten in &rewritten_list {
@@ -753,6 +754,43 @@ pub async fn upload_commits<'a>(
                 });
         files_to_sync.extend(new_files_to_sync);
     }
+
+    // Remove the content ids from submodules from the ones that will be
+    // copied from source repo
+    //
+    // Used to dedupe duplicate content ids between submodules.
+    let mut already_processed: HashSet<ContentId> = HashSet::new();
+
+    let submodule_content_ids = submodule_content_ids
+        .into_iter()
+        .map(|(repo, content_ids)| {
+            // Keep only ids that haven't been seen in other submodules yet
+            let deduped_sm_content_ids = content_ids
+                .difference(&already_processed)
+                .cloned()
+                .collect::<HashSet<_>>();
+
+            deduped_sm_content_ids.iter().for_each(|content_id| {
+                // Remove it from the set of ids that are actually from
+                // the source repo
+                files_to_sync.remove(content_id);
+                // Add it to the list of content ids that were processed
+                already_processed.insert(*content_id);
+            });
+
+            (repo, deduped_sm_content_ids)
+        });
+
+    // Copy submodule changes
+    stream::iter(submodule_content_ids)
+        .map(|(sm_repo, content_ids)| async move {
+            copy_file_contents(ctx, sm_repo.as_ref(), target_repo, content_ids, |_| {}).await
+        })
+        .buffer_unordered(10)
+        .try_collect()
+        .await?;
+
+    // Then copy from source repo
     copy_file_contents(ctx, source_repo, target_repo, files_to_sync, |_| {}).await?;
     save_bonsai_changesets(rewritten_list.clone(), ctx.clone(), target_repo).await?;
     Ok(())

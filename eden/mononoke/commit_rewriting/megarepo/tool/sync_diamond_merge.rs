@@ -12,6 +12,7 @@
 //! USE WITH CARE!
 
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::sync::Arc;
 
 use anyhow::format_err;
@@ -207,7 +208,15 @@ pub async fn do_sync_diamond_merge(
 
     let new_merge_cs_id = rewritten.get_changeset_id();
     info!(ctx.logger(), "uploading merge commit {}", new_merge_cs_id);
-    upload_commits(ctx, vec![rewritten], &small_repo, &large_repo).await?;
+    let submodule_expansion_content_ids = Vec::<(Arc<Repo>, HashSet<_>)>::new();
+    upload_commits(
+        ctx,
+        vec![rewritten],
+        &small_repo,
+        &large_repo,
+        submodule_expansion_content_ids,
+    )
+    .await?;
 
     update_mapping_with_version(
         ctx,

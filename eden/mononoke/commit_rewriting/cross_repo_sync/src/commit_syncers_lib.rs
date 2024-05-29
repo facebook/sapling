@@ -47,6 +47,7 @@ use metaconfig_types::GitSubmodulesChangesAction;
 use mononoke_types::hash::GitSha1;
 use mononoke_types::BonsaiChangesetMut;
 use mononoke_types::ChangesetId;
+use mononoke_types::ContentId;
 use mononoke_types::FileChange;
 use mononoke_types::FileType;
 use mononoke_types::NonRootMPath;
@@ -67,6 +68,7 @@ use crate::commit_sync_outcome::PluralCommitSyncOutcome;
 use crate::commit_syncer::CommitSyncer;
 use crate::git_submodules::rewrite_commit_with_submodule_expansion;
 use crate::git_submodules::SubmoduleExpansionData;
+use crate::git_submodules::SubmodulePath;
 use crate::sync_config_version_utils::get_mapping_change_version;
 use crate::types::ErrorKind;
 use crate::types::Repo;
@@ -76,6 +78,9 @@ use crate::types::Target;
 use crate::CommitSyncContext;
 
 const LEASE_WARNING_THRESHOLD: Duration = Duration::from_secs(60);
+
+pub type SubmoduleExpansionContentIds = HashMap<SubmodulePath, HashSet<ContentId>>;
+
 pub struct CommitRewriteResult {
     /// A version of the source repo's bonsai changeset with `Mover` applied to
     /// all changes and submodules processed according to the
@@ -86,11 +91,21 @@ pub struct CommitRewriteResult {
     /// - `Some(rewritten)` for a successful rewrite, which should be
     ///                         present in the rewrite target
     pub rewritten: Option<BonsaiChangesetMut>,
+    /// Map from submodule dependency repo to all the file changes that have
+    /// to be copied from its blobstore to the large repo's blobstore for the
+    /// submodule expansion in the rewritten commit.
+    pub submodule_expansion_content_ids: SubmoduleExpansionContentIds,
 }
 
 impl CommitRewriteResult {
-    pub fn new(rewritten: Option<BonsaiChangesetMut>) -> Self {
-        Self { rewritten }
+    pub fn new(
+        rewritten: Option<BonsaiChangesetMut>,
+        submodule_expansion_content_ids: SubmoduleExpansionContentIds,
+    ) -> Self {
+        Self {
+            rewritten,
+            submodule_expansion_content_ids,
+        }
     }
 }
 
@@ -166,7 +181,7 @@ pub async fn rewrite_commit<'a, R: Repo>(
     )
     .await?;
 
-    Ok(CommitRewriteResult::new(mb_rewritten))
+    Ok(CommitRewriteResult::new(mb_rewritten, HashMap::new()))
 }
 
 /// Mover moves a path to at most a single path, while MultiMover can move a
@@ -1033,4 +1048,24 @@ pub async fn submodule_metadata_file_prefix_and_dangling_pointers(
         x_repo_submodule_metadata_file_prefx,
         dangling_submodule_pointers,
     ))
+}
+
+/// Helper to generate the map with the submodule repos and the content ids
+/// that need to be copied from it, which is required to save the rewritten
+/// bonsai to the large repo.
+pub fn submodule_repos_with_content_ids<'a, R: Repo>(
+    submodule_deps: &'a SubmoduleDeps<R>,
+    submodule_expansion_content_ids: SubmoduleExpansionContentIds,
+) -> Result<Vec<(Arc<R>, HashSet<ContentId>)>> {
+    let sm_dep_map = submodule_deps.dep_map().cloned().unwrap_or_default();
+
+    submodule_expansion_content_ids
+        .into_iter()
+        .map(|(sm_path, content_ids)| {
+            let repo_arc = sm_dep_map.get(&sm_path.0).ok_or_else(|| {
+                anyhow!("Mononoke repo from submodule {} not available", sm_path.0)
+            })?;
+            Ok((repo_arc.clone(), content_ids))
+        })
+        .collect::<Result<Vec<_>>>()
 }
