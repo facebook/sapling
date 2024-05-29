@@ -150,6 +150,26 @@ py_class!(pub class nameset |py| {
         Ok(Names(set))
     }
 
+    /// Reverse the iteration order.
+    /// Returns the reversed set. The current set is not affected.
+    def reverse(&self) -> PyResult<Names> {
+        let inner = self.inner(py);
+        let set = inner.reverse();
+        Ok(Names(set))
+    }
+
+    /// Union two sets with the "zip" order.
+    def union_zip(&self, rhs: Names) -> PyResult<Names> {
+        let lhs = self.inner(py);
+        Ok(Names(lhs.union_zip(&rhs.0)))
+    }
+
+    /// Get the size hint: (min_size_or_0, max_size_or_None).
+    def size_hint(&self) -> PyResult<(usize, Option<usize>)> {
+        let inner = self.inner(py);
+        Ok(async_runtime::block_on(inner.size_hint()))
+    }
+
     def hints(&self) -> PyResult<HashMap<&'static str, PyObject>> {
         let mut result = HashMap::new();
         let hints = self.inner(py).hints();
