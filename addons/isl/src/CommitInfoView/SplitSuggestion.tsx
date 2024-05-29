@@ -6,70 +6,18 @@
  */
 
 import {Banner, BannerKind} from '../Banner';
-import serverAPI from '../ClientToServerAPI';
-import {useGeneratedFileStatuses} from '../GeneratedFile';
 import {Internal} from '../Internal';
 import {Tooltip} from '../Tooltip';
-import {tracker} from '../analytics';
 import {Divider} from '../components/Divider';
 import {useFeatureFlagSync} from '../featureFlags';
 import {T} from '../i18n';
+import {useFetchSignificantLinesOfCode} from '../sloc/useFetchSignificantLinesOfCode';
 import {SplitButton} from '../stackEdit/ui/SplitButton';
-import {GeneratedStatus, type CommitInfo, type Hash, type Result} from '../types';
-import {useEffect, useState} from 'react';
+import {type CommitInfo} from '../types';
 import {Icon} from 'shared/Icon';
-import {LRU} from 'shared/LRU';
-
-// Cache fetches in progress so we don't double fetch
-const commitFilesCache = new LRU<Hash, Promise<Result<number>>>(10);
-
-function fetchSignificantLinesOfCode(hash: Hash, generatedFiles: string[]) {
-  const foundPromise = commitFilesCache.get(hash);
-  if (foundPromise != null) {
-    return foundPromise;
-  }
-  serverAPI.postMessage({
-    type: 'fetchSignificantLinesOfCode',
-    hash,
-    generatedFiles,
-  });
-
-  const resultPromise = serverAPI
-    .nextMessageMatching('fetchedSignificantLinesOfCode', message => message.hash === hash)
-    .then(result => result.linesOfCode);
-
-  commitFilesCache.set(hash, resultPromise);
-
-  return resultPromise;
-}
 
 function SplitSuggestionImpl({commit}: {commit: CommitInfo}) {
-  const filesToQueryGeneratedStatus = commit.filesSample.map(f => f.path);
-  const generatedStatuses = useGeneratedFileStatuses(filesToQueryGeneratedStatus);
-
-  const [significantLinesOfCode, setSignificantLinesOfCode] = useState(0);
-  useEffect(() => {
-    const generatedFiles = commit.filesSample.reduce<string[]>((filtered, f) => {
-      // the __generated__ pattern is included in the exclusions, so we don't need to include it here
-      if (!f.path.match(/__generated__/) && generatedStatuses[f.path] !== GeneratedStatus.Manual) {
-        filtered.push(f.path);
-      }
-      return filtered;
-    }, []);
-    fetchSignificantLinesOfCode(commit.hash, generatedFiles).then(result => {
-      if (result.error != null) {
-        tracker.error('SplitSuggestionError', 'SplitSuggestionError', result.error, {
-          extras: {
-            commitHash: commit.hash,
-          },
-        });
-        return;
-      }
-      if (result.value != null) {
-        setSignificantLinesOfCode(result.value);
-      }
-    });
-  }, [commit.filesSample, commit.hash, generatedStatuses]);
+  const significantLinesOfCode = useFetchSignificantLinesOfCode(commit);
   if (significantLinesOfCode <= 100) {
     return null;
   }
