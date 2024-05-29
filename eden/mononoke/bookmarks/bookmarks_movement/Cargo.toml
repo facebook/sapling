@@ -17,7 +17,6 @@ bonsai_globalrev_mapping = { version = "0.1.0", path = "../../bonsai_globalrev_m
 bonsai_hg_mapping = { version = "0.1.0", path = "../../bonsai_hg_mapping" }
 bookmarks = { version = "0.1.0", path = ".." }
 bookmarks_types = { version = "0.1.0", path = "../bookmarks_types" }
-borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 bytes = { version = "1.6.0", features = ["serde"] }
 changesets = { version = "0.1.0", path = "../../changesets" }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
@@ -52,6 +51,7 @@ sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-s
 thiserror = "1.0.49"
 
 [dev-dependencies]
+borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit-tokio = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 maplit = "1.0"

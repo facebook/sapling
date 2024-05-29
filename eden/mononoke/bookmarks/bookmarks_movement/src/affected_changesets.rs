@@ -16,7 +16,6 @@ use blobstore::Loadable;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks_types::BookmarkKey;
 use bookmarks_types::BookmarkKind;
-use borrowed::borrowed;
 use bytes::Bytes;
 use context::CoreContext;
 use cross_repo_sync::CHANGE_XREPO_MAPPING_EXTRA;
@@ -276,6 +275,14 @@ impl AffectedChangesets {
         Ok(())
     }
 
+    fn needs_extras_check(repo: &impl Repo, kind: BookmarkKind) -> bool {
+        (kind == BookmarkKind::Publishing || kind == BookmarkKind::PullDefaultPublishing)
+            && !repo
+                .repo_config()
+                .pushrebase
+                .allow_change_xrepo_mapping_extra
+    }
+
     async fn check_extras(
         &mut self,
         ctx: &CoreContext,
@@ -284,12 +291,7 @@ impl AffectedChangesets {
         kind: BookmarkKind,
         additional_changesets: AdditionalChangesets,
     ) -> Result<(), BookmarkMovementError> {
-        if (kind == BookmarkKind::Publishing || kind == BookmarkKind::PullDefaultPublishing)
-            && !repo
-                .repo_config()
-                .pushrebase
-                .allow_change_xrepo_mapping_extra
-        {
+        if Self::needs_extras_check(repo, kind) {
             self.load_additional_changesets(ctx, repo, bookmark, additional_changesets)
                 .await
                 .context("Failed to load additional affected changesets to check extras")?;
@@ -315,6 +317,12 @@ impl AffectedChangesets {
         Ok(())
     }
 
+    fn needs_case_conflicts_check(repo: &impl Repo, kind: BookmarkKind) -> bool {
+        let config = &repo.repo_config().pushrebase.flags;
+        (kind == BookmarkKind::Publishing || kind == BookmarkKind::PullDefaultPublishing)
+            && config.casefolding_check
+    }
+
     /// If the push is to a public bookmark, and the casefolding check is
     /// enabled, check that no affected changeset has case conflicts.
     async fn check_case_conflicts(
@@ -325,17 +333,13 @@ impl AffectedChangesets {
         kind: BookmarkKind,
         additional_changesets: AdditionalChangesets,
     ) -> Result<(), BookmarkMovementError> {
-        let config = &repo.repo_config().pushrebase.flags;
-        if (kind == BookmarkKind::Publishing || kind == BookmarkKind::PullDefaultPublishing)
-            && config.casefolding_check
-        {
+        if Self::needs_case_conflicts_check(repo, kind) {
             self.load_additional_changesets(ctx, repo, bookmark, additional_changesets)
                 .await
                 .context("Failed to load additional affected changesets to check case conflicts")?;
 
             stream::iter(self.iter().map(Ok))
                 .try_for_each_concurrent(100, |bcs| {
-                    borrowed!(config);
                     async move {
                         let bcs_id = bcs.get_changeset_id();
 
@@ -365,6 +369,7 @@ impl AffectedChangesets {
                                 .buffered(10)
                                 .try_collect::<Vec<_>>()
                                 .await?;
+                            let config = &repo.repo_config().pushrebase.flags;
 
                             if let Some((path1, path2)) = sk_mf
                                 .first_new_case_conflict(
@@ -390,6 +395,29 @@ impl AffectedChangesets {
         Ok(())
     }
 
+    fn needs_hooks_check(
+        kind: BookmarkKind,
+        authz: &AuthorizationContext,
+        reason: BookmarkUpdateReason,
+        hook_manager: &HookManager,
+        bookmark: &BookmarkKey,
+    ) -> bool {
+        let mut needs_hooks_check = (kind == BookmarkKind::Publishing
+            || kind == BookmarkKind::PullDefaultPublishing)
+            && should_run_hooks(authz, reason);
+        if reason == BookmarkUpdateReason::Push {
+            let disable_fallback_to_master =
+                justknobs::eval("scm/mononoke:disable_hooks_on_plain_push", None, None)
+                    .unwrap_or_default();
+            if disable_fallback_to_master {
+                // Skip running hooks for this plain push.
+                needs_hooks_check = false;
+            }
+        }
+        needs_hooks_check = needs_hooks_check && hook_manager.hooks_exist_for_bookmark(bookmark);
+        needs_hooks_check
+    }
+
     /// If this is a user-initiated update to a public bookmark, run the
     /// hooks against the affected changesets. Also run hooks if it is a
     /// service-initiated pushrebase but hooks will run with taking this
@@ -407,70 +435,64 @@ impl AffectedChangesets {
         additional_changesets: AdditionalChangesets,
         cross_repo_push_source: CrossRepoPushSource,
     ) -> Result<(), BookmarkMovementError> {
-        if (kind == BookmarkKind::Publishing || kind == BookmarkKind::PullDefaultPublishing)
-            && should_run_hooks(authz, reason)
-        {
-            if reason == BookmarkUpdateReason::Push {
-                let disable_fallback_to_master =
-                    justknobs::eval("scm/mononoke:disable_hooks_on_plain_push", None, None)
-                        .unwrap_or_default();
-                if disable_fallback_to_master {
-                    // Skip running hooks for this plain push.
+        if Self::needs_hooks_check(kind, authz, reason, hook_manager, bookmark) {
+            self.load_additional_changesets(ctx, repo, bookmark, additional_changesets)
+                .await
+                .context("Failed to load additional affected changesets to check hooks")?;
+
+            let skip_running_hooks_if_public: bool = repo
+                .repo_bookmark_attrs()
+                .select(bookmark)
+                .map(|attr| attr.params().allow_move_to_public_commits_without_hooks)
+                .any(|x| x);
+            if skip_running_hooks_if_public && !self.adding_new_changesets_to_repo() {
+                // For some bookmarks we allow to skip running hooks if:
+                // 1) this is just a bookmark move i.e. no new commits are added or pushrebased to the repo
+                // 2) we are allowed to skip commits for a bookmark like that
+                // 3) if all commits that are affectd by this bookmark move are public (which means
+                //  we should have already ran hooks for these commits).
+
+                let cs_ids = self
+                    .iter()
+                    .map(|bcs| bcs.get_changeset_id())
+                    .collect::<Vec<_>>();
+
+                let public = repo
+                    .phases()
+                    .get_public(ctx, cs_ids.clone(), false /* ephemeral_derive */)
+                    .await?;
+                if public == cs_ids.into_iter().collect::<HashSet<_>>() {
                     return Ok(());
                 }
             }
 
-            if hook_manager.hooks_exist_for_bookmark(bookmark) {
-                self.load_additional_changesets(ctx, repo, bookmark, additional_changesets)
-                    .await
-                    .context("Failed to load additional affected changesets to check hooks")?;
-
-                let skip_running_hooks_if_public: bool = repo
-                    .repo_bookmark_attrs()
-                    .select(bookmark)
-                    .map(|attr| attr.params().allow_move_to_public_commits_without_hooks)
-                    .any(|x| x);
-                if skip_running_hooks_if_public && !self.adding_new_changesets_to_repo() {
-                    // For some bookmarks we allow to skip running hooks if:
-                    // 1) this is just a bookmark move i.e. no new commits are added or pushrebased to the repo
-                    // 2) we are allowed to skip commits for a bookmark like that
-                    // 3) if all commits that are affectd by this bookmark move are public (which means
-                    //  we should have already ran hooks for these commits).
-
-                    let cs_ids = self
-                        .iter()
-                        .map(|bcs| bcs.get_changeset_id())
-                        .collect::<Vec<_>>();
-
-                    let public = repo
-                        .phases()
-                        .get_public(ctx, cs_ids.clone(), false /* ephemeral_derive */)
-                        .await?;
-                    if public == cs_ids.into_iter().collect::<HashSet<_>>() {
-                        return Ok(());
-                    }
-                }
-
-                if !self.is_empty() {
-                    let push_authored_by = if authz.is_service() {
-                        PushAuthoredBy::Service
-                    } else {
-                        PushAuthoredBy::User
-                    };
-                    run_hooks(
-                        ctx,
-                        hook_manager,
-                        bookmark,
-                        self.iter(),
-                        pushvars,
-                        cross_repo_push_source,
-                        push_authored_by,
-                    )
-                    .await?;
-                }
+            if !self.is_empty() {
+                let push_authored_by = if authz.is_service() {
+                    PushAuthoredBy::Service
+                } else {
+                    PushAuthoredBy::User
+                };
+                run_hooks(
+                    ctx,
+                    hook_manager,
+                    bookmark,
+                    self.iter(),
+                    pushvars,
+                    cross_repo_push_source,
+                    push_authored_by,
+                )
+                .await?;
             }
         }
         Ok(())
+    }
+
+    async fn needs_path_permissions_check(
+        ctx: &CoreContext,
+        authz: &AuthorizationContext,
+        repo: &impl Repo,
+    ) -> bool {
+        authz.check_any_path_write(ctx, repo).await.is_denied()
     }
 
     /// Check whether the user has permissions to modify the paths that are
@@ -486,7 +508,7 @@ impl AffectedChangesets {
         // For optimization, first check if the user is permitted to modify
         // all paths.  In that case we don't need to find out which paths were
         // affected.
-        if authz.check_any_path_write(ctx, repo).await.is_denied() {
+        if Self::needs_path_permissions_check(ctx, authz, repo).await {
             // User is not permitted to write to all paths, check if the paths
             // touched by the changesets are permitted.
             self.load_additional_changesets(ctx, repo, bookmark, additional_changesets)
