@@ -454,7 +454,7 @@ pub mod idents {
     }
 }
 
-static EXTRA_SNIFF_IDENTS: &'static [Identity] = &[SL_GIT];
+static EXTRA_SNIFF_IDENTS: &[Identity] = &[SL_GIT];
 
 static DEFAULT: Lazy<RwLock<Identity>> = Lazy::new(|| RwLock::new(compute_default()));
 
@@ -592,38 +592,56 @@ pub fn sniff_root(path: &Path) -> Result<Option<(PathBuf, Identity)>> {
     tracing::debug!(start=%path.display(), "sniffing for repo root");
 
     let mut path = Some(path.to_path_buf());
-    let mut best_priority = usize::MAX;
-    let mut best = None;
-
     let mut seen: HashSet<PathBuf> = HashSet::new();
-    while let Some(p) = path {
-        if !seen.insert(p.clone()) {
-            break;
-        }
 
-        if let Some(ident) = sniff_dir(&p)? {
-            if ident.repo.sniff_root_priority == 0 {
-                return Ok(Some((p, ident)));
-            } else if best_priority > ident.repo.sniff_root_priority {
-                best_priority = ident.repo.sniff_root_priority;
-                best = Some((p.clone(), ident));
+    // We first check all of `path` without following symlinks to maintain existing
+    // behavior when operating on symlinks within the repo. We then retry, following the
+    // deepest symlink we encountered in `path`. 0..2 gives two iterations which means we
+    // will follow at most one symlink. We can raise this if needed, but it seemed prudent
+    // to limit the scope to "reasonable" symlink situations.
+    for _ in 0..2 {
+        let mut best_priority = usize::MAX;
+        let mut best = None;
+        let mut final_symlink = None;
+
+        while let Some(p) = &path {
+            if !seen.insert(p.to_path_buf()) {
+                break;
             }
-        }
 
-        if let Ok(mut target) = read_link(&p) {
-            if !target.is_absolute() {
-                // Resolve relative symlink.
-                if let Some(link_parent) = p.parent() {
-                    target = link_parent.join(target);
+            if let Some(ident) = sniff_dir(p)? {
+                if ident.repo.sniff_root_priority == 0 {
+                    return Ok(Some((p.to_path_buf(), ident)));
+                } else if best_priority > ident.repo.sniff_root_priority {
+                    best_priority = ident.repo.sniff_root_priority;
+                    best = Some((p.to_path_buf(), ident));
                 }
             }
-            path = target.parent().map(|p| p.to_owned());
-        } else {
-            path = p.parent().map(|p| p.to_owned());
+
+            if final_symlink.is_none() && p.is_symlink() {
+                final_symlink = Some(p.to_path_buf());
+            }
+
+            path = p.parent().map(|p| p.to_path_buf());
+        }
+
+        if best.is_some() {
+            return Ok(best);
+        }
+
+        // We didn't find a repo - try following the final symlink we saw.
+        if let Some(symlink) = final_symlink {
+            if let Ok(mut target) = read_link(&symlink) {
+                // Resolve relative symlink.
+                if let Some(link_parent) = symlink.parent() {
+                    target = link_parent.join(target);
+                }
+                path = Some(target)
+            }
         }
     }
 
-    Ok(best.map(|(path, ident)| (path.to_path_buf(), ident)))
+    Ok(None)
 }
 
 pub fn env_var(var_suffix: &str) -> Option<Result<String, VarError>> {
@@ -756,7 +774,7 @@ mod test {
 
     #[test]
     #[cfg(unix)]
-    fn test_sniff_root_symlink() -> Result<()> {
+    fn test_sniff_root_symlink_into_repo() -> Result<()> {
         use std::os::unix::fs::symlink;
 
         let dir = tempfile::tempdir()?;
@@ -780,6 +798,57 @@ mod test {
 
         let (sniffed_root, _) = sniff_root(&relative_link)?.unwrap();
         assert_eq!(sniffed_root, root);
+
+        Ok(())
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn test_sniff_root_symlink_within_repo() -> Result<()> {
+        use std::os::unix::fs::symlink;
+
+        let dir = tempfile::tempdir()?;
+
+        let root = dir.path().join("root");
+
+        let dot_dir = root.join(TEST.dot_dir());
+        fs::create_dir_all(dot_dir)?;
+
+        let outside_repo = dir.path().join("not_repo");
+        fs::create_dir_all(&outside_repo)?;
+
+        let link_within_repo = root.join("link");
+        symlink(&outside_repo, &link_within_repo)?;
+
+        let (sniffed_root, _) = sniff_root(&link_within_repo)?.unwrap();
+        assert_eq!(sniffed_root, root);
+
+        Ok(())
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn test_sniff_root_symlink_within_repo_into_another_repo() -> Result<()> {
+        use std::os::unix::fs::symlink;
+
+        let dir = tempfile::tempdir()?;
+
+        let repo1 = dir.path().join("repo1");
+        fs::create_dir_all(repo1.join(TEST.dot_dir()))?;
+
+        let repo2 = dir.path().join("repo2");
+        fs::create_dir_all(repo2.join(TEST.dot_dir()))?;
+
+        let repo2_subdir = repo2.join("subdir");
+        fs::create_dir_all(&repo2_subdir)?;
+
+        let link_within_repo = repo1.join("link");
+        symlink(&repo2_subdir, &link_within_repo)?;
+
+        // We have a symlink within repo1 pointing to a subdir in repo2. We should prefer
+        // the "lexical" containing repo indicated by the path.
+        let (sniffed_root, _) = sniff_root(&link_within_repo)?.unwrap();
+        assert_eq!(sniffed_root, repo1);
 
         Ok(())
     }

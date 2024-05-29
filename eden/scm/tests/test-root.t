@@ -47,3 +47,9 @@
   $ ln -s repo1/dir my-link
   $ hg root --cwd my-link
   $TESTTMP/repo1
+
+# Don't mess up with symlinks within repo
+  $ ln -s $TESTTMP repo1/testtmp
+  $ hg root --cwd repo1/testtmp
+  $TESTTMP/repo1
+
