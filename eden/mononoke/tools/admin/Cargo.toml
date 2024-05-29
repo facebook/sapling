@@ -9,6 +9,7 @@ license = "GPLv2+"
 
 [dependencies]
 anyhow = "1.0.75"
+async-stream = "0.3"
 async-trait = "0.1.71"
 async_requests = { version = "0.1.0", path = "../../megarepo_api/async_requests" }
 blobstore = { version = "0.1.0", path = "../../blobstore" }

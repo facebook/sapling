@@ -10,7 +10,7 @@ mod derive;
 mod derive_bulk;
 mod derive_slice;
 mod exists;
-mod list_manifests;
+mod list_manifest;
 mod slice;
 mod verify_manifests;
 
@@ -45,8 +45,8 @@ use self::derive_slice::derive_slice;
 use self::derive_slice::DeriveSliceArgs;
 use self::exists::exists;
 use self::exists::ExistsArgs;
-use self::list_manifests::list_manifests;
-use self::list_manifests::ListManifestsArgs;
+use self::list_manifest::list_manifest;
+use self::list_manifest::ListManifestArgs;
 use self::slice::slice;
 use self::slice::SliceArgs;
 use self::verify_manifests::verify_manifests;
@@ -100,11 +100,11 @@ enum DerivedDataSubcommand {
     DeriveSlice(DeriveSliceArgs),
     /// Check if derived data has been generated
     Exists(ExistsArgs),
-    /// Inspect manifests for a given path
-    ListManifests(ListManifestsArgs),
+    /// List the contents of a manifest at a given path
+    ListManifest(ListManifestArgs),
     /// Slice underived ancestors of given commits
     Slice(SliceArgs),
-    /// Compare check if derived data has been generated
+    /// Compare different manifest types to ensure they are equivalent
     VerifyManifests(VerifyManifestsArgs),
 }
 
@@ -115,7 +115,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         DerivedDataSubcommand::Exists(_)
         | DerivedDataSubcommand::CountUnderived(_)
         | DerivedDataSubcommand::VerifyManifests(_)
-        | DerivedDataSubcommand::ListManifests(_)
+        | DerivedDataSubcommand::ListManifest(_)
         | DerivedDataSubcommand::Slice(_) => app
             .open_repo(&args.repo)
             .await
@@ -135,7 +135,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         DerivedDataSubcommand::Exists(args) => exists(&ctx, &repo, args).await?,
         DerivedDataSubcommand::CountUnderived(args) => count_underived(&ctx, &repo, args).await?,
         DerivedDataSubcommand::VerifyManifests(args) => verify_manifests(&ctx, &repo, args).await?,
-        DerivedDataSubcommand::ListManifests(args) => list_manifests(&ctx, &repo, args).await?,
+        DerivedDataSubcommand::ListManifest(args) => list_manifest(&ctx, &repo, args).await?,
         DerivedDataSubcommand::Derive(args) => derive(&mut ctx, &repo, args).await?,
         DerivedDataSubcommand::Slice(args) => slice(&ctx, &repo, args).await?,
         DerivedDataSubcommand::DeriveSlice(args) => derive_slice(&ctx, &repo, args).await?,
