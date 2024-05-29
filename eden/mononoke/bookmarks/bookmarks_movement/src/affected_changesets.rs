@@ -21,6 +21,7 @@ use context::CoreContext;
 use cross_repo_sync::CHANGE_XREPO_MAPPING_EXTRA;
 use futures::future;
 use futures::stream;
+use futures::stream::BoxStream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use futures_ext::FbStreamExt;
@@ -224,6 +225,10 @@ impl AffectedChangesets {
             .chain(self.additional_changesets.iter().flatten())
     }
 
+    async fn stream<'a>(&'a self) -> BoxStream<'a, Result<BonsaiChangeset, BookmarkMovementError>> {
+        stream::iter(self.iter().map(|r| Ok(r.clone()))).boxed()
+    }
+
     /// Check all applicable restrictions on the affected changesets.
     pub(crate) async fn check_restrictions(
         &mut self,
@@ -244,7 +249,7 @@ impl AffectedChangesets {
             Self::needs_hooks_check(kind, authz, reason, hook_manager, bookmark);
         let needs_path_permissions_check =
             Self::needs_path_permissions_check(ctx, authz, repo).await;
-        let loaded_changesets = if needs_extras_check
+        let changesets_stream = if needs_extras_check
             || needs_case_conflicts_check
             || needs_hooks_check
             || needs_path_permissions_check
@@ -256,37 +261,52 @@ impl AffectedChangesets {
                         "Failed to load additional affected changesets to check restrictions",
                     )?,
             );
-            self.iter().cloned().collect()
+            self.stream().await
         } else {
-            Vec::new()
+            stream::empty().boxed()
         };
 
-        if needs_extras_check {
-            Self::check_extras(&loaded_changesets).await?;
-        }
+        changesets_stream
+            .chunks(10_000)
+            // Aggregate any error loading changesets on a per-chunk basis
+            .map(|chunk| {
+                chunk
+                    .into_iter()
+                    .collect::<Result<Vec<_>, BookmarkMovementError>>()
+            })
+            .try_for_each(|chunk| {
+                let adding_new_changesets_to_repo = self.adding_new_changesets_to_repo();
+                async move {
+                    if needs_extras_check {
+                        Self::check_extras(&chunk).await?;
+                    }
 
-        if needs_case_conflicts_check {
-            Self::check_case_conflicts(&loaded_changesets, ctx, repo).await?;
-        }
+                    if needs_case_conflicts_check {
+                        Self::check_case_conflicts(&chunk, ctx, repo).await?;
+                    }
 
-        if needs_hooks_check {
-            Self::check_hooks(
-                self.adding_new_changesets_to_repo(),
-                &loaded_changesets,
-                ctx,
-                authz,
-                repo,
-                hook_manager,
-                bookmark,
-                pushvars,
-                cross_repo_push_source,
-            )
+                    if needs_hooks_check {
+                        Self::check_hooks(
+                            adding_new_changesets_to_repo,
+                            &chunk,
+                            ctx,
+                            authz,
+                            repo,
+                            hook_manager,
+                            bookmark,
+                            pushvars,
+                            cross_repo_push_source,
+                        )
+                        .await?;
+                    }
+
+                    if needs_path_permissions_check {
+                        Self::check_path_permissions(&chunk, ctx, authz, repo).await?;
+                    }
+                    Ok(())
+                }
+            })
             .await?;
-        }
-
-        if needs_path_permissions_check {
-            Self::check_path_permissions(&loaded_changesets, ctx, authz, repo).await?;
-        }
 
         Ok(())
     }
