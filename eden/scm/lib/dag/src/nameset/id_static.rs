@@ -23,6 +23,7 @@ use crate::Group;
 use crate::IdSet;
 use crate::IdSetIter;
 use crate::IdSpan;
+use crate::NameSet;
 use crate::Result;
 use crate::VertexName;
 
@@ -305,6 +306,10 @@ impl AsyncNameSetQuery for IdStaticSet {
 
     fn id_convert(&self) -> Option<&dyn IdConvert> {
         Some(self.map.as_ref() as &dyn IdConvert)
+    }
+
+    fn specialized_reverse(&self) -> Option<NameSet> {
+        Some(NameSet::from_query(self.clone().reversed()))
     }
 }
 

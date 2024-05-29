@@ -89,6 +89,10 @@ impl AsyncNameSetQuery for ReverseSet {
     fn id_convert(&self) -> Option<&dyn crate::ops::IdConvert> {
         self.inner.id_convert()
     }
+
+    fn specialized_reverse(&self) -> Option<NameSet> {
+        Some(self.inner.clone())
+    }
 }
 
 impl fmt::Debug for ReverseSet {

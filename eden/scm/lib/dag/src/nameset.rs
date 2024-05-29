@@ -53,6 +53,7 @@ use self::hints::Flags;
 use self::hints::Hints;
 use self::id_static::IdStaticSet;
 use self::meta::MetaSet;
+use self::reverse::ReverseSet;
 use self::r#static::StaticSet;
 
 /// A [`NameSet`] contains an immutable list of names.
@@ -172,6 +173,14 @@ impl NameSet {
         hints: Hints,
     ) -> NameSet {
         Self::from_query(MetaSet::from_evaluate_hints(evaluate, hints).with_contains(contains))
+    }
+
+    /// Reverse the iteration order of the `Set`.
+    pub fn reverse(&self) -> NameSet {
+        match self.0.specialized_reverse() {
+            Some(set) => set,
+            None => Self::from_query(ReverseSet::new(self.clone())),
+        }
     }
 
     /// Calculates the subset that is only in self, not in other.
@@ -625,6 +634,12 @@ pub trait AsyncNameSetQuery: Any + Debug + Send + Sync {
 
     /// Get an optional IdConvert interface to check hints.
     fn id_convert(&self) -> Option<&dyn IdConvert> {
+        None
+    }
+
+    /// Specialized "reverse" implementation.
+    /// Returns `None` to use the general purpose reverse implementation.
+    fn specialized_reverse(&self) -> Option<NameSet> {
         None
     }
 }
@@ -1242,6 +1257,15 @@ pub(crate) mod tests {
         })
     }
 
+    #[test]
+    fn test_reverse() {
+        let ab: NameSet = "a b".into();
+        let ba = ab.reverse();
+        check_invariants(&*ba).unwrap();
+        let names = ba.iter().unwrap().collect::<Result<Vec<_>>>().unwrap();
+        assert_eq!(format!("{:?}", names), "[b, a]");
+    }
+
     // Print hints for &, |, - operations.
     fn hints_ops(lhs: &NameSet, rhs: &NameSet) -> Vec<String> {
         vec![
@@ -1360,6 +1384,11 @@ pub(crate) mod tests {
             &query
         );
         let reversed: Vec<VertexName> = ni(query.iter_rev())?.collect::<Result<Vec<_>>>()?;
+        if let Some(reversed_set) = query.specialized_reverse() {
+            let iter = reversed_set.iter()?;
+            let names = iter.collect::<Result<Vec<_>>>()?;
+            assert_eq!(&names, &reversed);
+        }
         assert_eq!(
             names,
             reversed.into_iter().rev().collect::<Vec<VertexName>>(),
