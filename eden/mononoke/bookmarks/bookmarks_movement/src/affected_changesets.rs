@@ -217,15 +217,6 @@ impl AffectedChangesets {
         Ok(additional_changesets)
     }
 
-    fn is_empty(&self) -> bool {
-        self.new_changesets.is_empty()
-            && self.source_changesets.is_empty()
-            && self
-                .additional_changesets
-                .as_ref()
-                .map_or(true, HashSet::is_empty)
-    }
-
     fn iter(&self) -> impl Iterator<Item = &BonsaiChangeset> + Clone {
         self.new_changesets
             .values()
@@ -253,7 +244,7 @@ impl AffectedChangesets {
             Self::needs_hooks_check(kind, authz, reason, hook_manager, bookmark);
         let needs_path_permissions_check =
             Self::needs_path_permissions_check(ctx, authz, repo).await;
-        if needs_extras_check
+        let loaded_changesets = if needs_extras_check
             || needs_case_conflicts_check
             || needs_hooks_check
             || needs_path_permissions_check
@@ -265,18 +256,23 @@ impl AffectedChangesets {
                         "Failed to load additional affected changesets to check restrictions",
                     )?,
             );
-        }
+            self.iter().cloned().collect()
+        } else {
+            Vec::new()
+        };
 
         if needs_extras_check {
-            self.check_extras().await?;
+            Self::check_extras(&loaded_changesets).await?;
         }
 
         if needs_case_conflicts_check {
-            self.check_case_conflicts(ctx, repo).await?;
+            Self::check_case_conflicts(&loaded_changesets, ctx, repo).await?;
         }
 
         if needs_hooks_check {
-            self.check_hooks(
+            Self::check_hooks(
+                self.adding_new_changesets_to_repo(),
+                &loaded_changesets,
                 ctx,
                 authz,
                 repo,
@@ -289,7 +285,7 @@ impl AffectedChangesets {
         }
 
         if needs_path_permissions_check {
-            self.check_path_permissions(ctx, authz, repo).await?;
+            Self::check_path_permissions(&loaded_changesets, ctx, authz, repo).await?;
         }
 
         Ok(())
@@ -303,8 +299,10 @@ impl AffectedChangesets {
                 .allow_change_xrepo_mapping_extra
     }
 
-    async fn check_extras(&self) -> Result<(), BookmarkMovementError> {
-        for bcs in self.iter() {
+    async fn check_extras(
+        loaded_changesets: &[BonsaiChangeset],
+    ) -> Result<(), BookmarkMovementError> {
+        for bcs in loaded_changesets {
             if bcs
                 .hg_extra()
                 .any(|(name, _)| name == CHANGE_XREPO_MAPPING_EXTRA)
@@ -333,11 +331,11 @@ impl AffectedChangesets {
     /// If the push is to a public bookmark, and the casefolding check is
     /// enabled, check that no affected changeset has case conflicts.
     async fn check_case_conflicts(
-        &self,
+        loaded_changesets: &[BonsaiChangeset],
         ctx: &CoreContext,
         repo: &impl Repo,
     ) -> Result<(), BookmarkMovementError> {
-        stream::iter(self.iter().map(Ok))
+        stream::iter(loaded_changesets.iter().map(Ok))
             .try_for_each_concurrent(100, |bcs| {
                 async move {
                     let bcs_id = bcs.get_changeset_id();
@@ -420,7 +418,8 @@ impl AffectedChangesets {
     /// service-initiated pushrebase but hooks will run with taking this
     /// into account.
     async fn check_hooks(
-        &self,
+        adding_new_changesets_to_repo: bool,
+        loaded_changesets: &[BonsaiChangeset],
         ctx: &CoreContext,
         authz: &AuthorizationContext,
         repo: &impl Repo,
@@ -434,14 +433,14 @@ impl AffectedChangesets {
             .select(bookmark)
             .map(|attr| attr.params().allow_move_to_public_commits_without_hooks)
             .any(|x| x);
-        if skip_running_hooks_if_public && !self.adding_new_changesets_to_repo() {
+        if skip_running_hooks_if_public && !adding_new_changesets_to_repo {
             // For some bookmarks we allow to skip running hooks if:
             // 1) this is just a bookmark move i.e. no new commits are added or pushrebased to the repo
             // 2) we are allowed to skip commits for a bookmark like that
             // 3) if all commits that are affectd by this bookmark move are public (which means
             //  we should have already ran hooks for these commits).
 
-            let cs_ids = self
+            let cs_ids = loaded_changesets
                 .iter()
                 .map(|bcs| bcs.get_changeset_id())
                 .collect::<Vec<_>>();
@@ -454,7 +453,7 @@ impl AffectedChangesets {
             }
         }
 
-        if !self.is_empty() {
+        if !loaded_changesets.is_empty() {
             let push_authored_by = if authz.is_service() {
                 PushAuthoredBy::Service
             } else {
@@ -464,7 +463,7 @@ impl AffectedChangesets {
                 ctx,
                 hook_manager,
                 bookmark,
-                self.iter(),
+                loaded_changesets.iter(),
                 pushvars,
                 cross_repo_push_source,
                 push_authored_by,
@@ -488,12 +487,12 @@ impl AffectedChangesets {
     /// Check whether the user has permissions to modify the paths that are
     /// modified by the changesets that are affected by the bookmark move.
     async fn check_path_permissions(
-        &self,
+        loaded_changesets: &[BonsaiChangeset],
         ctx: &CoreContext,
         authz: &AuthorizationContext,
         repo: &impl Repo,
     ) -> Result<(), BookmarkMovementError> {
-        for cs in self.iter() {
+        for cs in loaded_changesets {
             authz.require_changeset_paths_write(ctx, repo, cs).await?;
         }
         Ok(())
