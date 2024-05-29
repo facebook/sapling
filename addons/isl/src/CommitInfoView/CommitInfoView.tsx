@@ -169,6 +169,7 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
   const hashOrHead = isCommitMode ? 'head' : commit.hash;
   const [editedMessage, setEditedCommitMessage] = useAtom(editedCommitMessages(hashOrHead));
   const uncommittedChanges = useAtomValue(uncommittedChangesWithPreviews);
+  const selection = useUncommittedSelection();
   const schema = useAtomValue(commitMessageFieldsSchema);
 
   const isFoldPreview = commit.hash.startsWith(FOLD_COMMIT_PREVIEW_HASH_PREFIX);
@@ -225,7 +226,9 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
 
   const topmostEditedField = getTopmostEditedField(schema, fieldsBeingEdited);
   const isSplitSuggestionSupported = provider?.isSplitSuggestionSupported() ?? false;
-
+  const selectedFilesLength = uncommittedChanges.filter(f =>
+    selection.isFullyOrPartiallySelected(f.path),
+  ).length;
   return (
     <div className="commit-info-view" data-testid="commit-info-view">
       {!commit.isDot ? null : (
@@ -300,7 +303,12 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
           <Section data-testid="changes-to-amend">
             <SmallCapsTitle>
               {isCommitMode ? <T>Changes to Commit</T> : <T>Changes to Amend</T>}
-              <Badge>{uncommittedChanges.length}</Badge>
+              <Badge>
+                {selectedFilesLength === uncommittedChanges.length
+                  ? null
+                  : selectedFilesLength + '/'}
+                {uncommittedChanges.length}
+              </Badge>
             </SmallCapsTitle>
             {uncommittedChanges.length === 0 ? (
               <Subtle>
