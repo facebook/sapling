@@ -73,7 +73,6 @@ overrides = "{{}}"
             {
                 "SCRATCH_CONFIG_PATH": str(scratch_config),
                 "INTEGRATION_TEST": "1",
-                "HOME": str(self.test_dir),
                 # Just in case
                 "CHGDISABLE": "1",
             }
@@ -127,12 +126,17 @@ darwin-redirection-type = "symlink"
             raise ex
 
     def generate_eden_cli_wrapper(self, binpath: Path):
-        cmd, env = self.eden.get_edenfsctl_cmd_env("", config_dir=True)
+        cmd, env = self.eden.get_edenfsctl_cmd_env("", config_dir=True, home_dir=False)
+
         edenpath = binpath.parents[1] / "install" / "bin" / "eden"
         # These two are not really necessary and contain symbols that might be
         # annoying to escape, so let's get rid of them
         env.pop("HGTEST_EXCLUDED", None)
         env.pop("HGTEST_INCLUDED", None)
+        # .t tests set the value for $HOME to $TESTTMP, and we don't want to
+        # force every EdenFS command to have the current value of $HOME at this
+        # point (which will likely be different to $TESTTMP)
+        env.pop("HOME", None)
         if not os.name == "nt":
             with open(edenpath, "w") as f:
                 f.write("#!/usr/bin/env bash\n")

@@ -215,6 +215,7 @@ class EdenFS:
         command: str,
         *args: str,
         config_dir: bool = True,
+        home_dir: bool = True,
     ) -> Tuple[List[str], Dict[str, str]]:
         """Combines the specified eden command args with the appropriate
         defaults.
@@ -231,11 +232,11 @@ class EdenFS:
             edenfsctl,
             "--etc-eden-dir",
             str(self._etc_eden_dir),
-            "--home-dir",
-            str(self._home_dir),
         ]
         if config_dir:
             cmd += ["--config-dir", str(self._eden_dir)]
+        if home_dir:
+            cmd += ["--home-dir", str(self._home_dir)]
         cmd.append(command)
         cmd.extend(args)
         return cmd, env

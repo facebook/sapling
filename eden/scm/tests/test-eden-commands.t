@@ -17,3 +17,15 @@ Test a few simple eden commands
    Installed: -
    Running:   -
    (Dev version of EdenFS seems to be running)
+
+Make sure local config values are picked up
+  $ cat > $HOME/.edenrc <<EOF
+  > [doctor]
+  > HOME_bogus = "HOME is TESTTMP"
+  > EOF
+  $ cat >> $TESTTMP/.edenrc <<EOF
+  > TESTTMP_bogus = "TESTTMP is HOME"
+  > EOF
+  $ eden config | grep _bogus
+  HOME_bogus = "HOME is TESTTMP"
+  TESTTMP_bogus = "TESTTMP is HOME"
