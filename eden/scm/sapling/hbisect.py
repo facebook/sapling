@@ -18,6 +18,8 @@ from __future__ import absolute_import
 import collections
 from typing import Optional, Sized
 
+import bindings
+
 from . import error, pycompat
 from .i18n import _
 from .node import hex, short
@@ -34,7 +36,13 @@ def bisect(repo, state):
     'good' is True if bisect is searching for a first good changeset, False
     if searching for a first bad one.
     """
+    if repo.ui.configbool("experimental", "bisect2"):
+        return _bisect2(repo, state)
+    else:
+        return _bisect1(repo, state)
 
+
+def _bisect1(repo, state):
     changelog = repo.changelog
     clparents = changelog.parentrevs
     skip = _state_to_revs(repo, state, "skip")
@@ -132,6 +140,144 @@ def bisect(repo, state):
     best_node = changelog.node(best_rev)
 
     return ([best_node], tot, good, badnode, goodnode)
+
+
+def _bisect2(repo, state):
+    """bisect algorithm based on segmented changelog"""
+
+    # States:
+    # - skip_revs: user provided "skip" revset. Might be expensive/lazy (no fastlen()).
+    # - good: marked as good nodes
+    # - bad: marked as bad ndoes
+    # - badtogood: True if bad is root, good is head; False if bad is head
+    # - roots, heads: defines the bisect range based on bad and good
+    # - rootnode, headnode: current (small) bisect range, for display only
+    # - candidate: bisect range
+    # - unskipped: bisect range, excluding "fast" skipped nodes
+    # - bestnode: the best node to test next
+    cl = repo.changelog
+    dag = cl.dag
+    skip_revs = _state_to_revs(repo, state, "skip")
+    if skip_revs.fastlen() is not None:
+        # skip is equvilent to skip_revs
+        skip = cl.tonodes(skip_revs)
+        skip_needs_extra_check = False
+    else:
+        # skip_revs might be a large lazy set. We don't want O(skip_revs).
+        # skip is not equvilent to skip_revs and needs special handling
+        skip = dag.sort([])
+        skip_needs_extra_check = True
+    good = dag.sort(state["good"])
+    bad = dag.sort(state["bad"])
+
+    # bad-to-good: find first good; bad (roots) is not candidate:
+    #
+    #   C good (candidate)
+    #   |
+    #   B maybe good (candidate)
+    #   |
+    #   A bad (NOT candidate)
+    #
+    # good-to-bad: find first bad; good (roots) is not candidate:
+    #
+    #   C bad (candidate)
+    #   |
+    #   B maybe bad (candidate)
+    #   |
+    #   A good (NOT candidate)
+    badtogood = len(dag.only(good, bad)) > 0
+    if badtogood:
+        roots, heads = bad, good
+    else:
+        roots, heads = good, bad
+    rootnode = roots.first()  # DESC order, first = max
+    headnode = heads.last()  # DESC order, last = min
+    heads = dag.roots(dag.range(heads, heads))
+    roots = dag.headsancestors(roots)
+    # see "NOT candidate" above for why "- roots".
+    candidate = cl.dageval(lambda: range(roots, heads) - roots)
+    total = len(candidate)
+    if total == 0:
+        if (
+            len(state["bad"]) == 1
+            and len(state["good"]) == 1
+            and state["bad"] != state["good"]
+        ):
+            raise error.Abort(_("starting revisions are not directly related"))
+        raise error.Abort(_("inconsistent state, %s is good and bad") % short(headnode))
+
+    # Here we only skip concrete commits. If "skip" is a lazy set we handle it later
+    # to avoid O(skip) or O(candidate) complexity - both of them could be large sets.
+    unskipped = candidate - skip
+
+    # got conclusion, or all skipped
+    if total == 1 or len(unskipped) == 0:
+        return (list(candidate), 0, badtogood, headnode, rootnode)
+
+    # Find a node in "unskipped" that will cut down search in half.
+    # The algorithm works similarly to setdiscover.py:
+    # 1. pick a node in "remaining"
+    #
+    #    heads
+    #     :
+    #    pick
+    #     :
+    #    roots
+    #
+    # 2. if "pick" is too closer to "roots", remove "ancestors(pick)"
+    #    from "remaining", since they will be worse.
+    # 3. if "pick" is too far from "roots" (closer to "heads"), remove
+    #    "descendants(pick)" from "remaining", similarily.
+    # 4. repeat from 1 until "remaining" is empty or "pick" is perfect.
+    perfect = len(unskipped) / 2
+    bestdelta = len(unskipped)
+    bestnode = unskipped.first()
+    remaining = unskipped
+    heads = dag.headsancestors(unskipped)
+    while len(remaining) > 0:
+        node = remaining.skip(len(remaining) // 2).first()
+        count = len(dag.ancestors([node]) & remaining)
+        delta = abs(count - perfect)
+        # update best?
+        if delta < bestdelta:
+            bestdelta = delta
+            bestnode = node
+        if delta < 1:
+            break
+        if count > perfect:
+            # skip descendants(node)
+            remaining = remaining - dag.range([node], heads)
+        else:
+            # skip ancestors(node)
+            remaining = remaining - dag.ancestors([node])
+
+    # Handle a lazy skip_revs.
+    if skip_needs_extra_check:
+        # To avoid applying the (potentially slow) lazy skip calculation to the
+        # entire "roots::heads" (or "unskipped") set, we test the lazy skip
+        # condition around the "bestnode" commit.
+        ancestors = dag.ancestors([bestnode]) & unskipped
+        not_ancestors = unskipped - ancestors
+        zip_set = ancestors.union_zip(not_ancestors.reverse())
+
+        # PERF: We reuse the revset prefetch fields from "skip_revs". This
+        # helps reduce round-trips for revset iteration (by look ahead and
+        # batch fetch text, hash, associated code review states). However, more
+        # complex revsets that need file/tree data (ex. modifies(path)) won't
+        # be batched this way. We need new infra to express dynamic, complex
+        # prefetch needs.
+        bar = bindings.progress.model.ProgressBar(
+            _("skipping"), len(unskipped), _("commits")
+        )
+        inc = bar.increase_position
+        for ctx in cl.torevset(zip_set).prefetch(*skip_revs.prefetchfields()).iterctx():
+            if ctx.rev() in skip_revs:
+                inc(1)
+                continue
+            bestnode = ctx.node()
+            break
+
+    return ([bestnode], total, badtogood, headnode, rootnode)
 
 
 def checksparsebisectskip(repo, candidatenode, badnode, goodnode) -> str:

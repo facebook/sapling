@@ -7,7 +7,7 @@
 # GNU General Public License version 2 or any later version.
 
   $ enable morestatus 
-  $ setconfig morestatus.show=true
+  $ setconfig morestatus.show=true experimental.bisect2=true
   $ eagerepo
   $ hg init repo
   $ cd repo
