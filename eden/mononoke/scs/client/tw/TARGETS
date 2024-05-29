@@ -1,0 +1,18 @@
+load("//antlir/fbpkg:fbpkg.bzl", "fbpkg")
+
+oncall("mononoke")
+
+fbpkg.builder(
+    name = "scm.scsc",
+    buck_opts = fbpkg.buck_opts(
+        config = {
+            "fbcode.dwp": "true",
+        },
+        mode = "opt",
+        version = "v2",
+    ),
+    fail_on_redundant_configerator_fbpkg = False,
+    path_actions = {
+        "scsc": "fbcode//eden/mononoke/scs/client:scsc",
+    },
+)
