@@ -172,6 +172,13 @@ pub trait AsyncManifest<Store: Send + Sync>: Sized + 'static {
         prefix: &[u8],
         after: &[u8],
     ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>;
+    /// List all subentries, skipping the first N
+    async fn list_skip(
+        &self,
+        ctx: &CoreContext,
+        blobstore: &Store,
+        skip: usize,
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>;
     async fn lookup(
         &self,
         ctx: &CoreContext,
@@ -202,6 +209,12 @@ pub trait Manifest: Sync + Sized + 'static {
             self.list()
                 .filter(move |(k, _)| k.as_ref() > after && k.starts_with(prefix)),
         )
+    }
+    fn list_skip<'a>(
+        &'a self,
+        skip: usize,
+    ) -> Box<dyn Iterator<Item = (MPathElement, Entry<Self::TreeId, Self::LeafId>)> + 'a> {
+        Box::new(self.list().skip(skip))
     }
     fn lookup(&self, name: &MPathElement) -> Option<Entry<Self::TreeId, Self::LeafId>>;
 }
@@ -246,6 +259,21 @@ impl<M: Manifest + Send, Store: Send + Sync> AsyncManifest<Store> for M {
     {
         Ok(stream::iter(
             Manifest::list_prefix_after(self, prefix, after)
+                .map(anyhow::Ok)
+                .collect::<Vec<_>>(),
+        )
+        .boxed())
+    }
+
+    async fn list_skip(
+        &self,
+        _ctx: &CoreContext,
+        _blobstore: &Store,
+        skip: usize,
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>
+    {
+        Ok(stream::iter(
+            Manifest::list_skip(self, skip)
                 .map(anyhow::Ok)
                 .collect::<Vec<_>>(),
         )
@@ -389,6 +417,21 @@ impl<
             .boxed())
     }
 
+    async fn list_skip(
+        &self,
+        ctx: &CoreContext,
+        blobstore: &Store,
+        skip: usize,
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>
+    {
+        let Combined(m, n) = self;
+        Ok(m.list_skip(ctx, blobstore, skip)
+            .await?
+            .zip(n.list_skip(ctx, blobstore, skip).await?)
+            .map(combine_entries::<M, N, Store>)
+            .boxed())
+    }
+
     async fn lookup(
         &self,
         ctx: &CoreContext,
@@ -497,6 +540,28 @@ impl<
         Ok(stream)
     }
 
+    async fn list_skip(
+        &self,
+        ctx: &CoreContext,
+        blobstore: &Store,
+        skip: usize,
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>
+    {
+        let stream = match self {
+            Either::Left(m) => m
+                .list_skip(ctx, blobstore, skip)
+                .await?
+                .map_ok(|(path, entry)| (path, entry.left_entry()))
+                .boxed(),
+            Either::Right(n) => n
+                .list_skip(ctx, blobstore, skip)
+                .await?
+                .map_ok(|(path, entry)| (path, entry.right_entry()))
+                .boxed(),
+        };
+        Ok(stream)
+    }
+
     async fn lookup(
         &self,
         ctx: &CoreContext,
@@ -577,6 +642,21 @@ impl<Store: Blobstore> AsyncManifest<Store> for BssmV3Directory {
         anyhow::Ok(
             self.clone()
                 .into_prefix_subentries_after(ctx, blobstore, prefix, after)
+                .map_ok(|(path, entry)| (path, bssm_v3_to_mf_entry(entry)))
+                .boxed(),
+        )
+    }
+
+    async fn list_skip(
+        &self,
+        ctx: &CoreContext,
+        blobstore: &Store,
+        skip: usize,
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>
+    {
+        anyhow::Ok(
+            self.clone()
+                .into_subentries_skip(ctx, blobstore, skip)
                 .map_ok(|(path, entry)| (path, bssm_v3_to_mf_entry(entry)))
                 .boxed(),
         )
@@ -751,6 +831,21 @@ impl<Store: Blobstore> AsyncManifest<Store> for TestShardedManifest {
         anyhow::Ok(
             self.clone()
                 .into_prefix_subentries_after(ctx, blobstore, prefix, after)
+                .map_ok(|(path, entry)| (path, convert_test_sharded_manifest(entry)))
+                .boxed(),
+        )
+    }
+
+    async fn list_skip(
+        &self,
+        ctx: &CoreContext,
+        blobstore: &Store,
+        skip: usize,
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>
+    {
+        anyhow::Ok(
+            self.clone()
+                .into_subentries_skip(ctx, blobstore, skip)
                 .map_ok(|(path, entry)| (path, convert_test_sharded_manifest(entry)))
                 .boxed(),
         )

@@ -456,7 +456,16 @@ impl<Value: ShardedMapV2Value> ShardedMapV2Node<Value> {
         ctx: &'a CoreContext,
         blobstore: &'a impl Blobstore,
     ) -> impl Stream<Item = Result<(SmallBinary, Value)>> + 'a {
-        self.into_prefix_entries_impl(ctx, blobstore, &[], None)
+        self.into_prefix_entries_impl(ctx, blobstore, &[], None, 0)
+    }
+
+    pub fn into_entries_skip<'a>(
+        self,
+        ctx: &'a CoreContext,
+        blobstore: &'a impl Blobstore,
+        skip: usize,
+    ) -> impl Stream<Item = Result<(SmallBinary, Value)>> + 'a {
+        self.into_prefix_entries_impl(ctx, blobstore, &[], None, skip)
     }
 
     /// Returns an ordered stream over all key-value pairs in the map for which
@@ -467,7 +476,7 @@ impl<Value: ShardedMapV2Value> ShardedMapV2Node<Value> {
         blobstore: &'a impl Blobstore,
         prefix: &'a [u8],
     ) -> impl Stream<Item = Result<(SmallBinary, Value)>> + 'a {
-        self.into_prefix_entries_impl(ctx, blobstore, prefix, None)
+        self.into_prefix_entries_impl(ctx, blobstore, prefix, None, 0)
     }
 
     /// Returns an ordered stream over all key-value pairs in the map for which
@@ -479,20 +488,32 @@ impl<Value: ShardedMapV2Value> ShardedMapV2Node<Value> {
         prefix: &'a [u8],
         after: &'a [u8],
     ) -> impl Stream<Item = Result<(SmallBinary, Value)>> + 'a {
-        self.into_prefix_entries_impl(ctx, blobstore, prefix, Some(after))
+        self.into_prefix_entries_impl(ctx, blobstore, prefix, Some(after), 0)
     }
 
+    /// Internal implementation of all `into_*_entries_*` methods.
+    ///
     /// Returns an ordered stream over all key-value pairs in the map for which
-    /// the key starts with the given prefix.
+    /// the key starts with the given prefix, and is either after the given resume
+    /// point, or after skipping a number of entries.
+    ///
+    /// Note that resume points and skipping are incompatible, as it's impossible
+    /// to know when recursing how many of a child's entries will end up being
+    /// skipped.
     fn into_prefix_entries_impl<'a>(
         self,
         ctx: &'a CoreContext,
         blobstore: &'a impl Blobstore,
         prefix: &'a [u8],
         after: Option<&'a [u8]>,
+        skip: usize,
     ) -> impl Stream<Item = Result<(SmallBinary, Value)>> + 'a {
         const BOUNDED_TRAVERSAL_SCHEDULED_MAX: NonZeroUsize = nonzero!(256usize);
         const BOUNDED_TRAVERSAL_QUEUED_MAX: NonZeroUsize = nonzero!(256usize);
+        debug_assert!(
+            after.is_none() || skip == 0,
+            "programming error: only one of after or skip should be set"
+        );
 
         bounded_traversal::bounded_traversal_ordered_stream(
             BOUNDED_TRAVERSAL_SCHEDULED_MAX,
@@ -503,13 +524,21 @@ impl<Value: ShardedMapV2Value> ShardedMapV2Node<Value> {
                     SmallBinary::new(),
                     prefix,
                     after,
+                    skip,
                     LoadableShardedMapV2Node::Inlined(self),
                 ),
             )],
-            move |(mut accumulated_prefix, target_prefix, target_after, current_node): (
+            move |(
+                mut accumulated_prefix,
+                target_prefix,
+                target_after,
+                mut target_skip,
+                current_node,
+            ): (
                 SmallBinary,
                 &[u8],
                 Option<&[u8]>,
+                usize,
                 LoadableShardedMapV2Node<Value>,
             )| {
                 async move {
@@ -537,6 +566,11 @@ impl<Value: ShardedMapV2Value> ShardedMapV2Node<Value> {
                             // not be output.
                             value = None;
                         }
+                        if target_skip > 0 && value.is_some() {
+                            target_skip -= 1;
+                            value = None;
+                        }
+
                         let (byte_after, child_after) = match target_after
                             .and_then(|after| after.strip_prefix(current_prefix.as_slice()))
                             .and_then(|after| after.split_first())
@@ -572,10 +606,22 @@ impl<Value: ShardedMapV2Value> ShardedMapV2Node<Value> {
                                     } else {
                                         None
                                     };
-                                    Some(OrderedTraversal::Recurse(
-                                        child.size(),
-                                        (accumulated_prefix, b"".as_slice(), child_after, child),
-                                    ))
+                                    let child_skip = target_skip.min(child.size());
+                                    target_skip = target_skip.saturating_sub(child_skip);
+                                    if child_skip == child.size() {
+                                        None
+                                    } else {
+                                        Some(OrderedTraversal::Recurse(
+                                            child.size(),
+                                            (
+                                                accumulated_prefix,
+                                                b"".as_slice(),
+                                                child_after,
+                                                child_skip,
+                                                child,
+                                            ),
+                                        ))
+                                    }
                                 }
                             }))
                             .collect::<Vec<_>>())
@@ -623,7 +669,7 @@ impl<Value: ShardedMapV2Value> ShardedMapV2Node<Value> {
 
                         Ok(vec![OrderedTraversal::Recurse(
                             child.size(),
-                            (accumulated_prefix, rest, child_after, child),
+                            (accumulated_prefix, rest, child_after, target_skip, child),
                         )])
                     }
                 }
@@ -884,6 +930,19 @@ mod test {
                 .await
         }
 
+        async fn into_entries_skip(
+            &self,
+            map: ShardedMapV2Node<TestValue>,
+            skip: usize,
+        ) -> Result<Vec<(String, u32)>> {
+            map.into_entries_skip(&self.0, &self.1, skip)
+                .and_then(
+                    |(key, value)| async move { Ok((String::from_utf8(key.to_vec())?, value.0)) },
+                )
+                .try_collect::<Vec<_>>()
+                .await
+        }
+
         async fn into_prefix_entries(
             &self,
             map: ShardedMapV2Node<TestValue>,
@@ -982,6 +1041,15 @@ mod test {
                     .await?,
                 to_test_vec(&EXAMPLE_ENTRIES[7..12])
             );
+
+            for skip in 0..12 {
+                assert_eq!(
+                    self.into_entries_skip(map.clone(), skip).await?,
+                    to_test_vec(&EXAMPLE_ENTRIES[skip..12]),
+                    "skip value {} failed",
+                    skip,
+                );
+            }
 
             assert_eq!(map.rollup_data(), MaxTestValue(12),);
 

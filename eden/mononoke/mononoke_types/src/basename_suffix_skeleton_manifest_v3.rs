@@ -153,6 +153,18 @@ impl BssmV3Directory {
             .boxed()
     }
 
+    pub fn into_subentries_skip<'a>(
+        self,
+        ctx: &'a CoreContext,
+        blobstore: &'a impl Blobstore,
+        skip: usize,
+    ) -> BoxStream<'a, Result<(MPathElement, BssmV3Entry)>> {
+        self.subentries
+            .into_entries_skip(ctx, blobstore, skip)
+            .and_then(|(k, v)| async move { anyhow::Ok((MPathElement::from_smallvec(k)?, v)) })
+            .boxed()
+    }
+
     pub fn into_prefix_subentries<'a>(
         self,
         ctx: &'a CoreContext,
