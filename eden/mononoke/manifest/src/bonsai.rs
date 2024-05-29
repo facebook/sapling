@@ -29,8 +29,8 @@ use mononoke_types::FileType;
 use mononoke_types::NonRootMPath;
 use tokio::task;
 
+use crate::AsyncManifest;
 use crate::Entry;
-use crate::Manifest;
 
 pub(crate) type BonsaiEntry<ManifestId, FileId> = Entry<ManifestId, (FileType, FileId)>;
 
@@ -148,10 +148,11 @@ async fn recurse_trees<ManifestId, FileId, Store, Leaf>(
     parents: HashSet<ManifestId>,
 ) -> Result<WorkEntry<ManifestId, FileId>, Error>
 where
+    Store: Send + Sync + Clone + 'static,
     FileId: Hash + Eq,
     ManifestId: Hash + Eq + StoreLoadable<Store>,
     <ManifestId as StoreLoadable<Store>>::Value:
-        Manifest<TreeId = ManifestId, LeafId = Leaf> + Send + Sync,
+        AsyncManifest<Store, TreeId = ManifestId, LeafId = Leaf> + Send + Sync,
     Leaf: ManifestLeafId<FileId = FileId>,
 {
     // If there is a single parent, and it's unchanged, then we don't need to recurse.
@@ -183,14 +184,16 @@ where
     };
 
     if let Some(node) = node {
-        for (path, entry) in node.list() {
+        let mut list = node.list(ctx, store).await?;
+        while let Some((path, entry)) = list.try_next().await? {
             ret.entry(path).or_insert((None, CompositeEntry::empty())).0 =
                 Some(convert_entry(entry));
         }
     }
 
     for parent in parents {
-        for (path, entry) in parent.list() {
+        let mut list = parent.list(ctx, store).await?;
+        while let Some((path, entry)) = list.try_next().await? {
             ret.entry(path)
                 .or_insert((None, CompositeEntry::empty()))
                 .1
@@ -253,10 +256,11 @@ async fn bonsai_diff_unfold<ManifestId, FileId, Store, Leaf>(
     Error,
 >
 where
+    Store: Send + Sync + Clone + 'static,
     FileId: Hash + Eq,
     ManifestId: Hash + Eq + StoreLoadable<Store>,
     <ManifestId as StoreLoadable<Store>>::Value:
-        Manifest<TreeId = ManifestId, LeafId = Leaf> + Send + Sync,
+        AsyncManifest<Store, TreeId = ManifestId, LeafId = Leaf> + Send + Sync,
     Leaf: ManifestLeafId<FileId = FileId>,
 {
     let res = match node {
@@ -336,7 +340,7 @@ where
     ManifestId: Hash + Eq + StoreLoadable<Store> + Send + Sync + 'static,
     Store: Send + Sync + Clone + 'static,
     <ManifestId as StoreLoadable<Store>>::Value:
-        Manifest<TreeId = ManifestId, LeafId = Leaf> + Send + Sync,
+        AsyncManifest<Store, TreeId = ManifestId, LeafId = Leaf> + Send + Sync,
     Leaf: ManifestLeafId<FileId = FileId>,
 {
     // NOTE: `async move` blocks are used below to own CoreContext and Store for the (static)
