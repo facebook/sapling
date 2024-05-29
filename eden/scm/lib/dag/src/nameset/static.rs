@@ -54,8 +54,8 @@ impl AsyncNameSetQuery for StaticSet {
         Ok(self.0.len())
     }
 
-    async fn size_hint(&self) -> (usize, Option<usize>) {
-        let size = self.0.len();
+    async fn size_hint(&self) -> (u64, Option<u64>) {
+        let size = self.0.len() as u64;
         (size, Some(size))
     }
 

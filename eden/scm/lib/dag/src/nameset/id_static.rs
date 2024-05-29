@@ -255,8 +255,8 @@ impl AsyncNameSetQuery for IdStaticSet {
         Ok(self.spans.count() as usize)
     }
 
-    async fn size_hint(&self) -> (usize, Option<usize>) {
-        let size = self.spans.count() as usize;
+    async fn size_hint(&self) -> (u64, Option<u64>) {
+        let size = self.spans.count();
         (size, Some(size))
     }
 

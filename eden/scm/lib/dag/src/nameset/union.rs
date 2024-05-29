@@ -107,9 +107,9 @@ impl AsyncNameSetQuery for UnionSet {
         Ok(iter)
     }
 
-    async fn size_hint(&self) -> (usize, Option<usize>) {
+    async fn size_hint(&self) -> (u64, Option<u64>) {
         let mut min_size = 0;
-        let mut max_size = Some(0usize);
+        let mut max_size = Some(0u64);
         for set in &self.sets {
             let (min, max) = set.size_hint().await;
             min_size = min.min(min_size);

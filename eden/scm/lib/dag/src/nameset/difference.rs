@@ -91,7 +91,7 @@ impl AsyncNameSetQuery for DifferenceSet {
         Ok(result)
     }
 
-    async fn size_hint(&self) -> (usize, Option<usize>) {
+    async fn size_hint(&self) -> (u64, Option<u64>) {
         let (lhs_min, lhs_max) = self.lhs.size_hint().await;
         let (_rhs_min, rhs_max) = self.rhs.size_hint().await;
         let min = match rhs_max {

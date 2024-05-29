@@ -165,7 +165,7 @@ py_class!(pub class nameset |py| {
     }
 
     /// Get the size hint: (min_size_or_0, max_size_or_None).
-    def size_hint(&self) -> PyResult<(usize, Option<usize>)> {
+    def size_hint(&self) -> PyResult<(u64, Option<u64>)> {
         let inner = self.inner(py);
         Ok(async_runtime::block_on(inner.size_hint()))
     }

@@ -178,12 +178,12 @@ impl AsyncNameSetQuery for LazySet {
         Ok(inner.visited.len())
     }
 
-    async fn size_hint(&self) -> (usize, Option<usize>) {
+    async fn size_hint(&self) -> (u64, Option<u64>) {
         let inner = self.inner.lock().await;
-        let min = inner.visited.len();
+        let min = inner.visited.len() as u64;
         let max = match inner.state {
             State::Incomplete => None,
-            State::Complete => Some(min),
+            State::Complete => Some(min as u64),
             State::Error => None,
         };
         (min, max)

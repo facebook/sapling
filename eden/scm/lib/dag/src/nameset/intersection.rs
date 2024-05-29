@@ -203,7 +203,7 @@ impl AsyncNameSetQuery for IntersectionSet {
         Ok(iter.into_stream())
     }
 
-    async fn size_hint(&self) -> (usize, Option<usize>) {
+    async fn size_hint(&self) -> (u64, Option<u64>) {
         let lhs_max = self.lhs.size_hint().await.1;
         let rhs_max = self.rhs.size_hint().await.1;
         let max = match (lhs_max, rhs_max) {

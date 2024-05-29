@@ -260,12 +260,12 @@ impl AsyncNameSetQuery for SliceSet {
         Ok(count as _)
     }
 
-    async fn size_hint(&self) -> (usize, Option<usize>) {
+    async fn size_hint(&self) -> (u64, Option<u64>) {
         let (min, max) = self.inner.size_hint().await;
         // [0 .. min .. max]
         // [ skip ][--- take ---]
-        let skip = self.skip_count as usize;
-        let take = self.take_count.map(|v| v as usize);
+        let skip = self.skip_count;
+        let take = self.take_count;
         let min = match take {
             None => min.saturating_sub(skip),
             Some(take) => min.saturating_sub(skip).min(take),

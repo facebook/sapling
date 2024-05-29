@@ -54,7 +54,7 @@ impl AsyncNameSetQuery for ReverseSet {
         self.inner.count().await
     }
 
-    async fn size_hint(&self) -> (usize, Option<usize>) {
+    async fn size_hint(&self) -> (u64, Option<u64>) {
         self.inner.size_hint().await
     }
 

@@ -589,7 +589,7 @@ pub trait AsyncNameSetQuery: Any + Debug + Send + Sync {
     /// The first item is the lower bound.
     /// The second item is the upper bound.
     /// This method should not block on long operations like waiting for network.
-    async fn size_hint(&self) -> (usize, Option<usize>) {
+    async fn size_hint(&self) -> (u64, Option<u64>) {
         (0, None)
     }
 
@@ -877,7 +877,7 @@ pub(crate) mod tests {
         }
     }
 
-    type SizeHint = (usize, Option<usize>);
+    type SizeHint = (u64, Option<u64>);
 
     #[derive(Default, Debug)]
     pub(crate) struct VecQuery(Vec<VertexName>, Hints, SizeHint);
@@ -917,7 +917,7 @@ pub(crate) mod tests {
                     }
                 })
                 .collect();
-            let size_hint: SizeHint = (v.len(), Some(v.len()));
+            let size_hint: SizeHint = (v.len() as u64, Some(v.len() as u64));
             Self(v, Hints::default(), size_hint)
         }
 
@@ -925,7 +925,7 @@ pub(crate) mod tests {
         /// - "size_min" will be reduced by the 1st bit of `adjust` (0 to 1).
         /// - "size_max" will be increased by the 2nd bit  of `adjust` (0 to 1).
         /// - If `adjust` is greater than 3, the "size_max" will be set to `None`.
-        pub(crate) fn adjust_size_hint(mut self, adjust: usize) -> Self {
+        pub(crate) fn adjust_size_hint(mut self, adjust: u64) -> Self {
             assert!(adjust <= 6);
             self.2.0 = self.2.0.saturating_sub(adjust & 0b1);
             self.2.1 = self.2.1.map(|v| v + ((adjust >> 1) & 0b1));
@@ -1334,7 +1334,7 @@ pub(crate) mod tests {
             &query
         );
         assert!(
-            size_hint_min <= count,
+            size_hint_min <= count as u64,
             "size_hint().0 ({}) must <= count ({}) (set: {:?})",
             size_hint_min,
             count,
@@ -1342,7 +1342,7 @@ pub(crate) mod tests {
         );
         if let Some(size_hint_max) = size_hint_max {
             assert!(
-                size_hint_max >= count,
+                size_hint_max >= count as u64,
                 "size_hint().1 ({}) must >= count ({}) (set: {:?})",
                 size_hint_max,
                 count,
