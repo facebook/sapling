@@ -474,6 +474,15 @@ impl IO {
         Ok(())
     }
 
+    /// Attempt to reset terminal back to a good state.
+    pub fn reset_term(&self) -> Result<(), io::Error> {
+        let mut inner = self.inner.io_state.lock();
+        match &mut inner.term {
+            Some(ref mut term) => term.reset(),
+            None => Ok(()),
+        }
+    }
+
     /// Obtain the main IO.
     ///
     /// The main IO must be set via `set_main` and is still alive.

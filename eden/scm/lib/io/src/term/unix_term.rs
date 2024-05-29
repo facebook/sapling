@@ -18,11 +18,16 @@ impl RawWrite for io::Stderr {}
 /// UnixTerminal for now.
 pub(crate) struct UnixTty {
     write: Box<dyn RawWrite>,
+    saved_termios: Option<termios::Termios>,
 }
 
 impl UnixTty {
     pub fn new(write: Box<dyn RawWrite>) -> Self {
-        Self { write }
+        let termios = termios::Termios::from_fd(write.as_raw_fd());
+        Self {
+            write,
+            saved_termios: termios.ok(),
+        }
     }
 }
 
@@ -32,6 +37,16 @@ impl RenderTty for UnixTty {
             Some((width, height)) => Ok((width.0 as _, height.0 as _)),
             // Fallback size, just in case.
             None => Ok((super::DEFAULT_TERM_WIDTH, super::DEFAULT_TERM_HEIGHT)),
+        }
+    }
+}
+
+impl super::ResettableTty for UnixTty {
+    fn reset(&mut self) -> io::Result<()> {
+        // Reset the termios, which turns echoing back on.
+        match &self.saved_termios {
+            Some(saved) => termios::tcsetattr(self.write.as_raw_fd(), termios::TCSANOW, saved),
+            None => Ok(()),
         }
     }
 }

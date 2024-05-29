@@ -38,6 +38,8 @@ impl RenderTty for WindowsTty {
     }
 }
 
+impl super::ResettableTty for WindowsTty {}
+
 impl io::Write for WindowsTty {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         self.write.write(buf)

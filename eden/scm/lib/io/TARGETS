@@ -12,6 +12,20 @@ rust_library(
             },
         },
     },
+    os_deps = [
+        (
+            "macos",
+            [
+                "fbsource//third-party/rust:termios",
+            ],
+        ),
+        (
+            "linux",
+            [
+                "fbsource//third-party/rust:termios",
+            ],
+        ),
+    ],
     deps = [
         "fbsource//third-party/rust:once_cell",
         "fbsource//third-party/rust:parking_lot",

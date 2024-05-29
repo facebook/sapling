@@ -952,6 +952,11 @@ fn setup_ctrlc() {
         // Exit pager to restore terminal states (ex. quit raw mode)
         if let Ok(io) = clidispatch::io::IO::main() {
             let _ = io.quit_pager();
+
+            // Attempt to reset terminal back to a good state. In particular, this fixes
+            // the terminal if a Python `input()` call (with readline) is interrupted by
+            // ctrl-c.
+            let _ = io.reset_term();
         }
 
         // Run atexit handlers.

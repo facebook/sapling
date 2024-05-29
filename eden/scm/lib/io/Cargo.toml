@@ -17,3 +17,9 @@ streampager = { version = "0.10.3", path = "../third-party/streampager" }
 terminal_size = "0.3"
 termwiz = { version = "0.22", features = ["widgets"] }
 time-interval = { version = "0.1.0", path = "../util/time-interval" }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+termios = "0.3"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+termios = "0.3"

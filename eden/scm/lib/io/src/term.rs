@@ -10,6 +10,7 @@ use std::io;
 use termwiz::caps::Capabilities;
 use termwiz::render::terminfo::TerminfoRenderer;
 use termwiz::render::RenderTty;
+use termwiz::surface;
 use termwiz::surface::Change;
 use termwiz::terminal::Terminal;
 use termwiz::Result;
@@ -30,6 +31,19 @@ mod unix_term;
 pub(crate) trait Term {
     fn render(&mut self, changes: &[Change]) -> Result<()>;
     fn size(&mut self) -> Result<(usize, usize)>;
+
+    /// Attempt to reset terminal back to initial state. This is not necessary if using
+    /// termwiz::Terminal since termwiz::Terminal resets automatically when dropped.
+    fn reset(&mut self) -> io::Result<()> {
+        Ok(())
+    }
+}
+
+pub(crate) trait ResettableTty: RenderTty {
+    /// Attempt to reset tty back to initial state.
+    fn reset(&mut self) -> std::io::Result<()> {
+        Ok(())
+    }
 }
 
 impl<T: Terminal> Term for T {
@@ -47,13 +61,13 @@ impl<T: Terminal> Term for T {
 
 /// DumbTerm allows writing termwiz Changes to an arbitrary writer,
 /// ignoring lack of ttyness and using a default terminal size.
-pub(crate) struct DumbTerm<W: RenderTty + io::Write> {
+pub(crate) struct DumbTerm<W: ResettableTty + io::Write> {
     tty: W,
     renderer: TerminfoRenderer,
     separator: Option<u8>,
 }
 
-impl<W: RenderTty + io::Write> DumbTerm<W> {
+impl<W: ResettableTty + io::Write> DumbTerm<W> {
     pub fn new(tty: W) -> Result<Self> {
         Ok(Self {
             tty,
@@ -67,7 +81,7 @@ impl<W: RenderTty + io::Write> DumbTerm<W> {
     }
 }
 
-impl<W: RenderTty + io::Write> Term for DumbTerm<W> {
+impl<W: ResettableTty + io::Write> Term for DumbTerm<W> {
     fn render(&mut self, changes: &[Change]) -> Result<()> {
         self.renderer.render_to(changes, &mut self.tty)?;
         if let Some(sep) = self.separator {
@@ -79,6 +93,14 @@ impl<W: RenderTty + io::Write> Term for DumbTerm<W> {
 
     fn size(&mut self) -> Result<(usize, usize)> {
         self.tty.get_size_in_cells()
+    }
+
+    fn reset(&mut self) -> io::Result<()> {
+        // Make sure cursor is visible.
+        self.render(&[Change::CursorVisibility(surface::CursorVisibility::Visible)])
+            .ok();
+
+        self.tty.reset()
     }
 }
 
@@ -97,6 +119,8 @@ impl RenderTty for DumbTty {
         Ok((DEFAULT_TERM_WIDTH, DEFAULT_TERM_HEIGHT))
     }
 }
+
+impl ResettableTty for DumbTty {}
 
 impl io::Write for DumbTty {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
