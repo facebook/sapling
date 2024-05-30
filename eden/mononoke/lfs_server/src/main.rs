@@ -57,14 +57,12 @@ use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
 use mononoke_configs::MononokeConfigs;
 use mononoke_repos::MononokeRepos;
-use qps::Qps;
 use repo_blobstore::RepoBlobstore;
 use repo_identity::RepoIdentity;
 use repo_permission_checker::RepoPermissionChecker;
 use slog::info;
 use tokio::net::TcpListener;
 
-use crate::lfs_server_context::get_bandwidth;
 use crate::lfs_server_context::LfsServerContext;
 use crate::lfs_server_context::ServerUris;
 use crate::middleware::OdsMiddleware;
@@ -160,9 +158,6 @@ struct LfsServerArgs {
     max_upload_size: Option<u64>,
     #[clap(flatten)]
     readonly: ReadonlyArgs,
-    /// Path to config
-    #[clap(long)]
-    cslb_config: Option<String>,
 }
 
 #[derive(Clone)]
@@ -239,14 +234,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let config_handle = config_handle.context(Error::msg("Failed to load configuration"))?;
 
-    let cslb_config = args.cslb_config;
-
-    let qps = match cslb_config {
-        Some(config) => {
-            Some(Qps::new(fb, config, config_store).with_context(|| "Failed to initialize QPS")?)
-        }
-        None => None,
-    };
     let max_upload_size: Option<u64> = args.max_upload_size;
 
     let self_urls = args.self_urls;
@@ -306,8 +293,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
             let server_uris = ServerUris::new(self_urls, upstream_url)?;
 
-            let bandwidth = get_bandwidth(&logger);
-
             let repos_config = repos.config.clone();
             let ctx = LfsServerContext::new(
                 repos,
@@ -316,9 +301,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 max_upload_size,
                 will_exit,
                 config_handle.clone(),
-                logger.clone(),
-                qps,
-                bandwidth,
             )?;
             let enforce_authentication = ctx.get_config().enforce_authentication();
 
