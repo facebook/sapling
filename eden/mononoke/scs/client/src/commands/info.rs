@@ -15,8 +15,8 @@ use anyhow::bail;
 use anyhow::Result;
 use futures::stream;
 use futures::stream::StreamExt;
+use scs_client_raw::thrift;
 use serde::Serialize;
-use source_control as thrift;
 
 use crate::args::commit_id::resolve_commit_id;
 use crate::args::commit_id::CommitIdArgs;

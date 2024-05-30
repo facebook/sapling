@@ -7,7 +7,7 @@
 
 //! Arguments for repository selection.
 
-use source_control as thrift;
+use scs_client_raw::thrift;
 
 #[derive(clap::Args, Clone)]
 pub(crate) struct RepoArgs {

@@ -12,8 +12,8 @@ use anyhow::anyhow;
 use anyhow::bail;
 use anyhow::Result;
 use maplit::btreeset;
+use scs_client_raw::thrift;
 use serde::Serialize;
-use source_control as thrift;
 
 use crate::args::commit_id::map_commit_id;
 use crate::args::commit_id::map_commit_ids;

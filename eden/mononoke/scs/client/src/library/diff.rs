@@ -14,10 +14,10 @@ use cloned::cloned;
 use futures::stream;
 use futures::stream::StreamExt;
 use futures::Stream;
+use scs_client_raw::thrift;
+use scs_client_raw::ScsClient;
 use serde::Serialize;
-use source_control as thrift;
 
-use crate::connection::Connection;
 use crate::render::Render;
 
 #[derive(Serialize)]
@@ -164,7 +164,7 @@ impl Render for DiffOutput {
 }
 
 async fn make_file_diff_request(
-    connection: &Connection,
+    connection: &ScsClient,
     commit: &thrift::CommitSpecifier,
     other_commit_id: Option<thrift::CommitId>,
     paths: Vec<thrift::CommitFileDiffsParamsPathPair>,
@@ -219,7 +219,7 @@ async fn make_file_diff_request(
 /// Given the paths and sizes of files to diff returns the stream of renderable
 /// structs. The sizes are used to avoid hitting size limit when doing batch requests.
 pub(crate) fn diff_files(
-    connection: &Connection,
+    connection: &ScsClient,
     commit: thrift::CommitSpecifier,
     other_commit_id: Option<thrift::CommitId>,
     paths_sizes: impl IntoIterator<Item = (thrift::CommitFileDiffsParamsPathPair, i64)>,

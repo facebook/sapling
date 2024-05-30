@@ -10,15 +10,15 @@ use std::io::Write;
 
 use anyhow::bail;
 use anyhow::Result;
+use scs_client_raw::thrift;
+use scs_client_raw::ScsClient;
 use serde::Serialize;
-use source_control as thrift;
 
 use crate::args::commit_id::map_commit_ids;
 use crate::args::commit_id::resolve_commit_id;
 use crate::args::commit_id::CommitId;
 use crate::args::commit_id::CommitIdArgs;
 use crate::args::commit_id::SchemeArgs;
-use crate::connection::Connection;
 use crate::library::commit_id::render_commit_id;
 use crate::render::Render;
 use crate::ScscApp;
@@ -98,7 +98,7 @@ impl Render for XRepoLookupOutput {
 }
 
 async fn build_commit_hint(
-    connection: &Connection,
+    connection: &ScsClient,
     target_repo: &thrift::RepoSpecifier,
     commit_id: &str,
     constructor: impl Fn(thrift::CommitId) -> thrift::CandidateSelectionHint,
@@ -110,7 +110,7 @@ async fn build_commit_hint(
 
 async fn build_hint(
     args: &CommandArgs,
-    connection: &Connection,
+    connection: &ScsClient,
     target_repo: &thrift::RepoSpecifier,
 ) -> Result<Option<thrift::CandidateSelectionHint>> {
     if let Some(commit_id) = &args.hint_exact_commit {

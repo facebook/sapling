@@ -12,8 +12,8 @@ use std::io::Write;
 use anyhow::Result;
 use clap::Parser;
 use cloned::cloned;
+use scs_client_raw::thrift;
 use serde::Serialize;
-use source_control as thrift;
 
 use crate::library::summary::run_stress;
 use crate::library::summary::summary_output;

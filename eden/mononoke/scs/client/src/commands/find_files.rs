@@ -10,8 +10,8 @@ use std::io::Write;
 use anyhow::Context;
 use anyhow::Result;
 use clap::Parser;
+use scs_client_raw::thrift;
 use serde::Serialize;
-use source_control as thrift;
 
 use crate::args::commit_id::resolve_commit_id;
 use crate::args::commit_id::CommitIdArgs;

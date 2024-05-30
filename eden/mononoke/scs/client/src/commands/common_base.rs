@@ -12,8 +12,8 @@ use std::io::Write;
 
 use anyhow::bail;
 use anyhow::Result;
+use scs_client_raw::thrift;
 use serde::Serialize;
-use source_control as thrift;
 
 use crate::args::commit_id::map_commit_ids;
 use crate::args::commit_id::resolve_commit_ids;

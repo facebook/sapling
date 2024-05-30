@@ -26,7 +26,8 @@ use futures::stream;
 use futures::stream::Stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
-use source_control as thrift;
+use scs_client_raw::thrift;
+use scs_client_raw::ScsClient;
 use tokio::io::AsyncBufReadExt;
 use tokio::io::AsyncWriteExt;
 
@@ -36,7 +37,6 @@ use crate::args::path::PathArgs;
 use crate::args::progress::ProgressArgs;
 use crate::args::progress::ProgressOutput;
 use crate::args::repo::RepoArgs;
-use crate::connection::Connection;
 use crate::library::path_tree::PathItem;
 use crate::library::path_tree::PathTree;
 use crate::render::Render;
@@ -80,7 +80,7 @@ pub(super) struct CommandArgs {
 
 /// Returns a stream of the names of the entries in a single directory `path`.
 async fn stream_tree_elements(
-    connection: &Connection,
+    connection: &ScsClient,
     commit: &thrift::CommitSpecifier,
     path: &str,
 ) -> Result<impl Stream<Item = Result<String>>> {
@@ -152,7 +152,7 @@ impl Casefold {
 /// Returns an arbitrary case insensitive match of `subpath` within the (case
 /// sensitive) `target_dir`, or `None` if there is no such match.
 fn case_insensitive_subpath<'a>(
-    connection: &'a Connection,
+    connection: &'a ScsClient,
     commit: &'a thrift::CommitSpecifier,
     target_dir: &'a str,
     subpath: &'a str,
@@ -207,7 +207,7 @@ fn iter_path_prefixes(path: &str) -> impl Iterator<Item = (&str, &str)> {
 /// Returns an arbitrary case-insensitive match of `path`, or `None` if there
 /// is no such match.
 async fn case_insensitive_path(
-    connection: &Connection,
+    connection: &ScsClient,
     commit: &thrift::CommitSpecifier,
     path: &str,
 ) -> Result<Option<String>> {
@@ -303,7 +303,7 @@ fn export_filtered_tree_entry(
 }
 
 async fn export_tree(
-    connection: Connection,
+    connection: ScsClient,
     repo: thrift::RepoSpecifier,
     path: String,
     id: Vec<u8>,
@@ -367,7 +367,7 @@ async fn export_tree(
 }
 
 async fn export_file(
-    connection: Connection,
+    connection: ScsClient,
     repo: thrift::RepoSpecifier,
     id: Vec<u8>,
     destination: PathBuf,
@@ -439,7 +439,7 @@ async fn export_file(
 }
 
 async fn export_item(
-    connection: Connection,
+    connection: ScsClient,
     repo: thrift::RepoSpecifier,
     item: ExportItem,
     casefold: Casefold,

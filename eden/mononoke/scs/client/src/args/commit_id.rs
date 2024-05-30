@@ -29,9 +29,8 @@ use futures::future::try_join_all;
 use futures::future::FutureExt;
 use futures::stream::FuturesOrdered;
 use futures::stream::TryStreamExt;
-use source_control as thrift;
-
-use crate::connection::Connection;
+use scs_client_raw::thrift;
+use scs_client_raw::ScsClient;
 
 pub(crate) const ARG_COMMIT_ID: &str = "commit-id";
 pub(crate) const ARG_BOOKMARK: &str = "bookmark";
@@ -588,7 +587,7 @@ impl fmt::Display for CommitId {
 
 /// Try to resolve a bookmark name to a commit ID.
 async fn try_resolve_bookmark(
-    conn: &Connection,
+    conn: &ScsClient,
     repo: &thrift::RepoSpecifier,
     bookmark: impl Into<String>,
 ) -> Result<Option<thrift::CommitId>, Error> {
@@ -607,7 +606,7 @@ async fn try_resolve_bookmark(
 
 /// Try to resolve a hex string to an hg commit ID (it can be prefix of the full hash)
 async fn try_resolve_hg_commit_id(
-    conn: &Connection,
+    conn: &ScsClient,
     repo: &thrift::RepoSpecifier,
     value: impl AsRef<str>,
 ) -> Result<Option<thrift::CommitId>, Error> {
@@ -644,7 +643,7 @@ async fn try_resolve_hg_commit_id(
 
 /// Try to resolve a hex string to a bonsai changeset ID (it can be prefix of the full hash)
 async fn try_resolve_bonsai_id(
-    conn: &Connection,
+    conn: &ScsClient,
     repo: &thrift::RepoSpecifier,
     value: impl AsRef<str>,
 ) -> Result<Option<thrift::CommitId>, Error> {
@@ -681,7 +680,7 @@ async fn try_resolve_bonsai_id(
 
 /// Try to resolve a git sha1 string to a commit ID.
 async fn try_resolve_git_sha1(
-    conn: &Connection,
+    conn: &ScsClient,
     repo: &thrift::RepoSpecifier,
     value: impl AsRef<str>,
 ) -> Result<Option<thrift::CommitId>, Error> {
@@ -708,7 +707,7 @@ async fn try_resolve_git_sha1(
 
 /// Try to resolve a globalrev string to a commit ID.
 async fn try_resolve_globalrev(
-    conn: &Connection,
+    conn: &ScsClient,
     repo: &thrift::RepoSpecifier,
     globalrev: impl AsRef<str>,
 ) -> Result<Option<thrift::CommitId>, Error> {
@@ -736,7 +735,7 @@ async fn try_resolve_globalrev(
 
 /// Try to resolve a svn revision number to a commit ID.
 async fn try_resolve_svnrev(
-    conn: &Connection,
+    conn: &ScsClient,
     repo: &thrift::RepoSpecifier,
     globalrev: impl AsRef<str>,
 ) -> Result<Option<thrift::CommitId>, Error> {
@@ -770,7 +769,7 @@ async fn try_resolve_svnrev(
 /// Other commit ID types, like bookmark names or hashes of an unknown type may
 /// involve a call to the server to resolve.
 pub(crate) async fn resolve_commit_ids(
-    conn: &Connection,
+    conn: &ScsClient,
     repo: &thrift::RepoSpecifier,
     commit_ids: impl IntoIterator<Item = &CommitId>,
 ) -> Result<Vec<thrift::CommitId>, Error> {
@@ -837,7 +836,7 @@ pub(crate) async fn resolve_commit_ids(
 
 /// Resolve a single commit ID.
 pub(crate) async fn resolve_commit_id(
-    conn: &Connection,
+    conn: &ScsClient,
     repo: &thrift::RepoSpecifier,
     commit_id: &CommitId,
 ) -> Result<thrift::CommitId, Error> {
@@ -846,7 +845,7 @@ pub(crate) async fn resolve_commit_id(
 }
 
 pub(crate) async fn resolve_optional_commit_id(
-    conn: &Connection,
+    conn: &ScsClient,
     repo: &thrift::RepoSpecifier,
     commit_id: Option<&CommitId>,
 ) -> Result<Option<thrift::CommitId>, Error> {

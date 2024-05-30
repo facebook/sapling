@@ -16,14 +16,14 @@ use futures::stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use futures::Stream;
+use scs_client_raw::thrift;
+use scs_client_raw::ScsClient;
 use serde::Serialize;
-use source_control as thrift;
 
 use crate::args::commit_id::resolve_commit_id;
 use crate::args::commit_id::CommitIdArgs;
 use crate::args::commit_id::SchemeArgs;
 use crate::args::repo::RepoArgs;
-use crate::connection::Connection;
 use crate::library::summary::run_stress;
 use crate::library::summary::summary_output;
 use crate::library::summary::StressArgs;
@@ -168,7 +168,7 @@ impl Render for LsOutput {
 }
 
 async fn fetch_link_target(
-    connection: Connection,
+    connection: ScsClient,
     repo: thrift::RepoSpecifier,
     id: Vec<u8>,
 ) -> Option<String> {
@@ -189,7 +189,7 @@ async fn fetch_link_target(
 }
 
 fn list_output(
-    connection: Connection,
+    connection: ScsClient,
     repo: thrift::RepoSpecifier,
     response: thrift::TreeListResponse,
     long: bool,

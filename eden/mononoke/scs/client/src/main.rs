@@ -20,8 +20,8 @@ use clap::CommandFactory;
 use clap::FromArgMatches;
 use clap::Parser;
 use fbinit::FacebookInit;
+use scs_client_raw::ScsClient;
 
-use crate::connection::Connection;
 use crate::connection::ConnectionArgs;
 use crate::render::OutputTarget;
 
@@ -69,7 +69,7 @@ pub(crate) struct ScscApp {
 }
 
 impl ScscApp {
-    fn get_connection(&self, repo: Option<&str>) -> anyhow::Result<Connection> {
+    fn get_connection(&self, repo: Option<&str>) -> anyhow::Result<ScsClient> {
         self.connection_args.get_connection(self.fb, repo)
     }
 }

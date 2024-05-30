@@ -15,15 +15,15 @@ use futures::stream;
 use futures::stream::Stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
+use scs_client_raw::thrift;
+use scs_client_raw::ScsClient;
 use serde::Serialize;
-use source_control as thrift;
 
 use crate::args::commit_id::map_commit_ids;
 use crate::args::commit_id::resolve_commit_id;
 use crate::args::commit_id::CommitIdsArgs;
 use crate::args::commit_id::SchemeArgs;
 use crate::args::repo::RepoArgs;
-use crate::connection::Connection;
 use crate::library::commit_id::render_commit_id;
 use crate::render::Render;
 use crate::ScscApp;
@@ -90,7 +90,7 @@ impl Render for BookmarkOutput {
 }
 
 fn repo_list_bookmarks(
-    connection: Connection,
+    connection: ScsClient,
     repo: thrift::RepoSpecifier,
     limit: Option<i64>,
     after: Option<String>,
@@ -138,7 +138,7 @@ fn repo_list_bookmarks(
 }
 
 fn commit_list_descendant_bookmarks(
-    connection: Connection,
+    connection: ScsClient,
     commit: thrift::CommitSpecifier,
     limit: Option<i64>,
     after: Option<String>,

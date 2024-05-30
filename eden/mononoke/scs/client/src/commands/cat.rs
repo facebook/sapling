@@ -15,8 +15,8 @@ use futures::future;
 use futures::stream;
 use futures::stream::StreamExt;
 use futures::TryFutureExt;
+use scs_client_raw::thrift;
 use serde_json::json;
-use source_control as thrift;
 
 use crate::args::commit_id::resolve_commit_id;
 use crate::args::commit_id::CommitIdArgs;

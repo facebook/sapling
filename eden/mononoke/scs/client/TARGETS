@@ -11,9 +11,6 @@ rust_binary(
         (
             "linux",
             [
-                "//common/rust/thrift/srclient:srclient",
-                "//eden/mononoke/scs/if:source_control-rust-srclients",
-                "//eden/mononoke/scs/if:source_control-rust-thriftclients",
                 "//common/rust/build_info:build_info",
             ],
         ),
@@ -21,7 +18,6 @@ rust_binary(
             "macos",
             [
                 "//common/rust/build_info:build_info",
-                "//eden/mononoke/scs/if:source_control-rust-thriftclients",
             ],
         ),
     ],
@@ -46,16 +42,12 @@ rust_binary(
         "fbsource//third-party/rust:tokio-stream",
         "fbsource//third-party/rust:unicode-truncate",
         "fbsource//third-party/rust:unicode-width",
-        "//c2p/secure_thrift/rust/client:x2pclient",
         "//common/rust/shed/cloned:cloned",
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/fbinit:fbinit-tokio",
         "//eden/mononoke/cmdlib/base_app:base_app",
-        "//eden/mononoke/cmdlib/sharding_ext:sharding_ext",
         "//eden/mononoke/common/bounded_traversal:bounded_traversal",
         "//eden/mononoke/scs/if:source_control-rust",
-        "//eden/mononoke/scs/if:source_control-rust-clients",
-        "//eden/mononoke/scs/if:source_control-rust-x2pclients",
-        "//eden/scm/lib/clientinfo:clientinfo",
+        "//eden/mononoke/scs/raw_client_lib:scs_client_raw",
     ],
 )

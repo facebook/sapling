@@ -6,7 +6,7 @@
  */
 
 use anyhow::Result;
-use source_control as thrift;
+use scs_client_raw::thrift;
 
 use crate::args::commit_id::resolve_commit_id;
 use crate::args::commit_id::OptionalCommitIdArgs;

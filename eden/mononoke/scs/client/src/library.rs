@@ -17,7 +17,7 @@ pub(crate) mod summary;
 use chrono::DateTime;
 use chrono::FixedOffset;
 use chrono::TimeZone;
-use source_control as thrift;
+use scs_client_raw::thrift;
 
 pub fn datetime(datetime: &thrift::DateTime) -> DateTime<FixedOffset> {
     FixedOffset::east_opt(datetime.tz)

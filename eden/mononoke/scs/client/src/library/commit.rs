@@ -16,8 +16,8 @@ use chrono::DateTime;
 use chrono::FixedOffset;
 use chrono::Local;
 use chrono::TimeZone;
+use scs_client_raw::thrift;
 use serde::Serialize;
-use source_control as thrift;
 
 use crate::args::commit_id::map_commit_ids;
 use crate::library::commit_id::render_commit_id;
