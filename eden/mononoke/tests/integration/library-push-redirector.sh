@@ -436,6 +436,130 @@ EOF
 
 }
 
+SUBMODULE_NOOP_VERSION_NAME="submodule_repo_noop"
+
+# NOTE: You need to set `SUBMODULE_REPO_ID` and `SUBMODULE_REPO_NAME`
+# environment vars when calling this!
+function submodule_expansion_noop {
+  jq . << EOF
+    {
+      "large_repo_id": $LARGE_REPO_ID,
+      "common_pushrebase_bookmarks": ["master_bookmark"],
+      "small_repos": [
+        {
+          "repoid": $SUBMODULE_REPO_ID,
+          "bookmark_prefix": "$SUBMODULE_REPO_NAME/",
+          "default_action": "prepend_prefix",
+          "default_prefix": "$SUBMODULE_REPO_NAME",
+          "direction": "small_to_large",
+          "mapping": {}
+        }
+      ],
+      "version_name": "$SUBMODULE_NOOP_VERSION_NAME"
+    }
+EOF
+}
+
+AFTER_SUBMODULE_REPO_VERSION_NAME="after_submodule_repo_version"
+
+# Config after merging the repo that expands git submodules
+# NOTE: You need to set `SUBMODULE_REPO_ID` and `SUBMODULE_REPO_NAME`
+# environment vars when calling this!
+function after_submodule_repo_version {
+  jq . << EOF
+    {
+      "large_repo_id": $LARGE_REPO_ID,
+      "common_pushrebase_bookmarks": ["master_bookmark"],
+      "small_repos": [
+        {
+          "repoid": $SMALL_REPO_ID,
+          "bookmark_prefix": "bookprefix/",
+          "default_action": "prepend_prefix",
+          "default_prefix": "smallrepofolder",
+          "direction": "large_to_small",
+          "mapping": {
+            "non_path_shifting": "non_path_shifting"
+          }
+        },
+        {
+          "repoid": $IMPORTED_REPO_ID,
+          "bookmark_prefix": "imported_repo/",
+          "default_action": "prepend_prefix",
+          "default_prefix": "imported_repo",
+          "direction": "large_to_small",
+          "mapping": {}
+        },
+        {
+          "repoid": $ANOTHER_REPO_ID,
+          "bookmark_prefix": "another_repo/",
+          "default_action": "prepend_prefix",
+          "default_prefix": "another_repo",
+          "direction": "large_to_small",
+          "mapping": {}
+        },
+        {
+          "repoid": $SUBMODULE_REPO_ID,
+          "bookmark_prefix": "$SUBMODULE_REPO_NAME/",
+          "default_action": "prepend_prefix",
+          "default_prefix": "$SUBMODULE_REPO_NAME",
+          "direction": "small_to_large",
+          "mapping": {}
+        }
+      ],
+      "version_name": "$AFTER_SUBMODULE_REPO_VERSION_NAME"
+    }
+EOF
+}
+
+# NOTE: You need to set `SUBMODULE_REPO_ID` and `SUBMODULE_REPO_NAME`
+# environment vars when calling this!
+function update_commit_sync_map_for_import_expanding_git_submodules {
+  configs_after_first_update
+  SUBMODULE_NOOP_VERSION=$(submodule_expansion_noop)
+  AFTER_SUBMODULE_REPO_VERSION=$(after_submodule_repo_version)
+
+  cat > "$COMMIT_SYNC_CONF/all" << EOF
+  {
+    "repos": {
+      "megarepo_test": {
+        "versions": [
+          $TEST_VERSION_CFG,
+          $IMPORTED_NOOP_CFG,
+          $ANOTHER_NOOP_CFG,
+          $NEW_VERSION_CFG,
+          $ANOTHER_VERSION_CFG,
+          $SUBMODULE_NOOP_VERSION,
+          $AFTER_SUBMODULE_REPO_VERSION
+        ],
+        "common": {
+          "common_pushrebase_bookmarks": ["master_bookmark"],
+          "large_repo_id": $LARGE_REPO_ID,
+          "small_repos": {
+            1: {
+              "bookmark_prefix": "bookprefix/"
+            },
+            2: {
+              "bookmark_prefix": "imported_repo/",
+              "common_pushrebase_bookmarks_map": { "master_bookmark": "heads/master_bookmark" }
+            },
+            3: {
+              "bookmark_prefix": "another_repo/",
+              "common_pushrebase_bookmarks_map": { "master_bookmark": "heads/master_bookmark" }
+            },
+            $SUBMODULE_REPO_ID: {
+              "bookmark_prefix": "$SUBMODULE_REPO_NAME/",
+              "common_pushrebase_bookmarks_map": { "master_bookmark": "heads/master_bookmark" }
+            }
+          }
+        }
+      }
+    }
+  }
+EOF
+
+}
+
+
 function init_large_small_repo() {
   create_large_small_repo
   start_large_small_repo "$@"

@@ -114,12 +114,14 @@ function gitimport_repos_a_b_c {
 }
 
 function merge_repo_a_to_large_repo {
+  FINAL_CONFIG_VERSION_NAME=${CONFIG_VERSION_NAME:-$LATEST_CONFIG_VERSION_NAME}
+  MASTER_BOOKMARK_NAME=${MASTER_BOOKMARK:-master}
 
   print_section "Importing repo A commits into large repo"
   # shellcheck disable=SC2153
   with_stripped_logs mononoke_x_repo_sync "$SUBMODULE_REPO_ID" "$LARGE_REPO_ID" initial-import \
     --no-progress-bar --derivation-batch-size 2 -i "$GIT_REPO_A_HEAD" \
-    --version-name "$LATEST_CONFIG_VERSION_NAME" 2>&1 | tee "$TESTTMP/initial_import_output"
+    --version-name "$FINAL_CONFIG_VERSION_NAME" 2>&1 | tee "$TESTTMP/initial_import_output"
 
   print_section "Large repo bookmarks"
   mononoke_newadmin bookmarks -R "$LARGE_REPO_NAME" list -S hg
@@ -132,7 +134,7 @@ function merge_repo_a_to_large_repo {
   COMMIT_DATE="1985-09-04T00:00:00.00Z"
   REPOID="$LARGE_REPO_ID" with_stripped_logs megarepo_tool gradual-merge \
     test_user "gradual merge" --pre-deletion-commit "$PARENT" \
-     --last-deletion-commit "$SYNCED_HEAD"  --bookmark master --limit 1 \
+     --last-deletion-commit "$SYNCED_HEAD"  --bookmark "$MASTER_BOOKMARK_NAME" --limit 1 \
      --commit-date-rfc3339 "$COMMIT_DATE"
 
 
@@ -140,10 +142,10 @@ function merge_repo_a_to_large_repo {
 
   clone_and_log_large_repo "$SYNCED_HEAD"
 
-  hg co -q master
+  hg co -q "$MASTER_BOOKMARK_NAME"
 
   echo "Large repo tree:"
-  tree -a -I ".hg"| tee "${TESTTMP}/large_repo_tree_1"
+  tree -a -I ".hg" | tee "${TESTTMP}/large_repo_tree_1"
 
 
   print_section "Count underived data types"

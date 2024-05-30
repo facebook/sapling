@@ -130,7 +130,7 @@ function clone_and_log_large_repo {
     hg pull -q -r "$LARGE_CS_ID"
   done
 
-  hg log --graph -T '{node|short} {desc}\n' --stat -r "all()"
+  hg log --graph -T '{node|short} {desc}\n' --stat -r "sort(all(), desc)"
 
   printf "\n\nRunning mononoke_admin to verify mapping\n\n"
   for LARGE_BCS_ID in "${LARGE_BCS_IDS[@]}"; do

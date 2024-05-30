@@ -420,3 +420,115 @@ Before config change
     o  message: AB
     │
     o  message: AA
+
+-- -------------- Introducing repo with git submodule expansion ----------------
+NOTE: the output of many of these steps is not relevant to this integration test,
+so they'll be dumped to files to keep this (already long) integration test shorter.
+
+-- Define the large and small repo ids and names before calling any helpers
+  $ export SUBMODULE_REPO_NAME="submodule_repo"
+  $ export SUBMODULE_REPO_ID=11
+
+  $ . "${TEST_FIXTURES}/library-xrepo-git-submodule-expansion.sh"
+
+-- Setting up mutable counter for live forward sync
+-- NOTE: this might need to be updated/refactored when setting up test for backsyncing
+  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" \
+  > "INSERT INTO mutable_counters (repo_id, name, value) \
+  > VALUES ($LARGE_REPO_ID, 'xreposync_from_$SUBMODULE_REPO_ID', 1)";
+
+  $ ENABLE_API_WRITES=1 REPOID="$SUBMODULE_REPO_ID" REPONAME="$SUBMODULE_REPO_NAME" setup_common_config "$REPOTYPE"
+  $ ENABLE_API_WRITES=1 REPOID="$REPO_C_ID" REPONAME="repo_c" setup_common_config "$REPOTYPE"
+  $ ENABLE_API_WRITES=1 REPOID="$REPO_B_ID" REPONAME="repo_b" setup_common_config "$REPOTYPE"
+
+-- Setup git repos A, B and C
+  $ setup_git_repos_a_b_c &> $TESTTMP/setup_git_repos_a_b_c.out
+
+-- Import all git repos into Mononoke
+  $ gitimport_repos_a_b_c &> $TESTTMP/gitimport_repos_a_b_c.out
+
+-- Update the commit sync config
+  $ update_commit_sync_map_for_import_expanding_git_submodules
+  $ force_update_configerator
+
+
+-- Merge repo A into the large repo
+  $ CONFIG_VERSION_NAME="$SUBMODULE_NOOP_VERSION_NAME" MASTER_BOOKMARK="master_bookmark" \
+  > merge_repo_a_to_large_repo &> $TESTTMP/merge_repo_a_to_large_repo.out
+
+-- Set up live forward syncer, which should sync all commits in submodule repo's
+-- heads/master bookmark to large repo's master bookmark via pushrebase
+  $ touch $TESTTMP/xreposync.out
+  $ with_stripped_logs mononoke_x_repo_sync_forever "$SUBMODULE_REPO_ID" "$LARGE_REPO_ID"
+
+
+-- push to large repo on top of merge
+  $ mkdir -p smallrepofolder
+  $ echo "baz after merging submodule expansion" > smallrepofolder/baz
+  $ hg ci -Aqm "after merging submodule expansion"
+  $ PREV_BOOK_VALUE=$(get_bookmark_value_edenapi $SMALL_REPO_NAME $MASTER_BOOKMARK)
+  $ REPONAME=$LARGE_REPO_NAME hgmn push -r . --to $MASTER_BOOKMARK -q
+  $ log_globalrev -r $MASTER_BOOKMARK -l 10
+  @  after merging submodule expansion [public;globalrev=;9b3e6a908bd8] default/master_bookmark
+  │
+  ~
+
+
+-- wait a second to give backsyncer some time to catch up
+  $ wait_for_bookmark_move_away_edenapi $SMALL_REPO_NAME $MASTER_BOOKMARK  "$PREV_BOOK_VALUE"
+
+-- Check if changes were backsynced properly  
+  $ cd "$TESTTMP/small-hg-client"
+  $ REPONAME=$SMALL_REPO_NAME hgmn pull -q
+  $ log_globalrev -l 5
+  o  after merging submodule expansion [public;globalrev=;71beb2542fe4] default/master_bookmark
+  │
+  o  [MEGAREPO GRADUAL MERGE] gradual merge (0) [public;globalrev=1000157984;63782775678a]
+  │
+  o  AD [public;globalrev=1000157981;cc919180ea26]
+  │
+  o  [MEGAREPO GRADUAL MERGE] another merge (0) [public;globalrev=1000157980;6db37bb0eca0]
+  │
+  o  after mapping change from small [public;globalrev=1000157976;ecca553b5690]
+  │
+  ~
+
+-- Make changes to the git repos and sync them to the submodule repo merged into
+-- the large repo.
+  $ make_changes_to_git_repos_a_b_c &> $TESTTMP/changes_to_git_repos.out
+
+
+-- Go to large repo, make a change to small repo folder and push
+  $ cd "$TESTTMP/large-hg-client"
+  $ echo "file.txt after making changes to the submodule repo" > smallrepofolder/file.txt
+  $ hg ci -Aqm "after live sync and changes to submodule repo"
+  $ PREV_BOOK_VALUE=$(get_bookmark_value_edenapi $SMALL_REPO_NAME $MASTER_BOOKMARK)
+  $ REPONAME=$LARGE_REPO_NAME hgmn push -r . --to $MASTER_BOOKMARK -q
+  $ log_globalrev -r $MASTER_BOOKMARK -l 10
+  o  after live sync and changes to submodule repo [public;globalrev=1000157985;cb738ed9087e] default/master_bookmark
+  │
+  ~
+-- wait a second to give backsyncer some time to catch up
+  $ wait_for_bookmark_move_away_edenapi $SMALL_REPO_NAME $MASTER_BOOKMARK  "$PREV_BOOK_VALUE"
+
+
+
+-- Check if changes were backsynced properly to small repo
+  $ cd "$TESTTMP/small-hg-client"
+  $ REPONAME=$SMALL_REPO_NAME hgmn pull -q
+  $ hg log -G -T "{desc} [{node|short}]\n" -l 5 --stat
+  o  after live sync and changes to submodule repo [bb0acd17a23e]
+  │   file.txt |  2 +-
+  │   1 files changed, 1 insertions(+), 1 deletions(-)
+  │
+  o  after merging submodule expansion [71beb2542fe4]
+  │   baz |  2 +-
+  │   1 files changed, 1 insertions(+), 1 deletions(-)
+  │
+  o  [MEGAREPO GRADUAL MERGE] gradual merge (0) [63782775678a]
+  │
+  o  AD [cc919180ea26]
+  │
+  o  [MEGAREPO GRADUAL MERGE] another merge (0) [6db37bb0eca0]
+  │
+  ~
