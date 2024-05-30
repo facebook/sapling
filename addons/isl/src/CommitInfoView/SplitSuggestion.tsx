@@ -18,7 +18,7 @@ import {Icon} from 'shared/Icon';
 
 function SplitSuggestionImpl({commit}: {commit: CommitInfo}) {
   const significantLinesOfCode = useFetchSignificantLinesOfCode(commit);
-  if (significantLinesOfCode <= 100) {
+  if (significantLinesOfCode == null || significantLinesOfCode <= 100) {
     return null;
   }
   return (
