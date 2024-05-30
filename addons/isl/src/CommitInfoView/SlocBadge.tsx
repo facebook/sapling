@@ -7,15 +7,13 @@
 
 import type {CommitInfo} from '../types';
 
-import {Internal} from '../Internal';
 import {Badge} from '../components/Badge';
-import {useFeatureFlagSync} from '../featureFlags';
 import {T} from '../i18n';
 import {useFetchSignificantLinesOfCode} from '../sloc/useFetchSignificantLinesOfCode';
 
 type Props = {commit: CommitInfo};
 
-function SlocBadge({commit}: Props) {
+export default function SlocBadge({commit}: Props) {
   const significantLinesOfCode = useFetchSignificantLinesOfCode(commit);
   if (significantLinesOfCode == null) {
     return null;
@@ -26,13 +24,4 @@ function SlocBadge({commit}: Props) {
       <Badge>{significantLinesOfCode}</Badge>
     </>
   );
-}
-
-export default function GatedSlocBadge({commit}: Props) {
-  const showSplitSuggestion = useFeatureFlagSync(Internal.featureFlags?.ShowSplitSuggestion);
-
-  if (!showSplitSuggestion) {
-    return null;
-  }
-  return <SlocBadge commit={commit} />;
 }

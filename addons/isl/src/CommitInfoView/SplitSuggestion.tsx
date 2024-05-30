@@ -9,7 +9,7 @@ import {Banner, BannerKind} from '../Banner';
 import {Internal} from '../Internal';
 import {Tooltip} from '../Tooltip';
 import {Divider} from '../components/Divider';
-import {useFeatureFlagSync} from '../featureFlags';
+import GatedComponent from '../components/GatedComponent';
 import {T} from '../i18n';
 import {useFetchSignificantLinesOfCode} from '../sloc/useFetchSignificantLinesOfCode';
 import {SplitButton} from '../stackEdit/ui/SplitButton';
@@ -54,19 +54,14 @@ function SplitSuggestionImpl({commit}: {commit: CommitInfo}) {
   );
 }
 
-function GatedSplitSuggestion({commit}: {commit: CommitInfo}) {
-  const showSplitSuggestion = useFeatureFlagSync(Internal.featureFlags?.ShowSplitSuggestion);
-
-  if (!showSplitSuggestion) {
-    return null;
-  }
-  return <SplitSuggestionImpl commit={commit} />;
-}
-
 export default function SplitSuggestion({commit}: {commit: CommitInfo}) {
   if (commit.totalFileCount > 25) {
     return null;
   }
-  // using a gated component to avoid exposing when diff size is too big  to show the split suggestion
-  return <GatedSplitSuggestion commit={commit} />;
+  // using a gated component here to avoid exposing when diff size is too big  to show the split suggestion
+  return (
+    <GatedComponent featureFlag={Internal.featureFlags?.ShowSplitSuggestion}>
+      <SplitSuggestionImpl commit={commit} />
+    </GatedComponent>
+  );
 }
