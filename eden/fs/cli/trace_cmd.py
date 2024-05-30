@@ -61,14 +61,14 @@ Event Type:
 \u26A0 FAILURE
 
 Resource Type:
-\U0001F954 Blob (file content)
+\U0001F4C4 Blob (file content)
 \U0001F332 Tree (directory content)
-\U0001F4DB Blob Metadata (sha1, size, blake3)
+\U0001F5C2\U00000020 Blob Metadata (sha1, size, blake3)
 
 Import Priority (--verbose):
-\U0001F7E5 LOW
-\U0001F536 NORMAL
-\U0001F7E2 HIGH
+\U0001F535 LOW
+\U0001F7E1 NORMAL
+\U0001F534 HIGH
 
 Import Cause (--verbose):
 \u2753 UNKNOWN
@@ -187,7 +187,7 @@ Event Progress:
 \u26A0 FAILURE
 
 Resource Type:
-\U0001F954 BLOB/FILE
+\U0001F4C4 BLOB/FILE
 \U0001F332 TREE/DIRECTORY
 
 Event Type
