@@ -33,6 +33,7 @@ from . import (
     dependencies,
     error as ccerror,
     interactivehistory,
+    megarepoimport,
     move,
     scmdaemon,
     service,
@@ -113,7 +114,10 @@ def cloud(ui, repo, **opts):
 
 subcmd = cloud.subcommand(
     categories=[
-        ("Connect to a cloud workspace", ["authenticate", "join", "switch", "leave"]),
+        (
+            "Connect to a cloud workspace",
+            ["authenticate", "join", "switch", "leave"],
+        ),
         ("Synchronize with the connected cloud workspace", ["sync"]),
         (
             "Manage cloud workspaces",
@@ -130,6 +134,10 @@ subcmd = cloud.subcommand(
         (
             "Manage commits and bookmarks in workspaces",
             ["move", "copy", "hide", "archive"],
+        ),
+        (
+            "Import workspaces from different repositories (requires megarepo support)",
+            ["import"],
         ),
     ]
 )
@@ -1693,3 +1701,29 @@ def cloudtidyup(ui, repo, **opts):
     )
     serv.cleanupworkspace(reponame, workspacename)
     ui.status(_("cleanup completed\n"), component="commitcloud")
+
+
+@subcmd(
+    "import",
+    [
+        (
+            "",
+            "source-repo",
+            "",
+            _("repo associated with the workspace to improt from"),
+        ),
+        (
+            "",
+            "destination-repo",
+            "",
+            _("repo associated with the workspace to import to"),
+        ),
+    ]
+    + move.srcdstworkspaceopts,
+)
+def cloudimport(ui, repo, **opts):
+    """translate commits that belong to another repo into the current repo, and add them to the destination workspace"""
+    sourceworkspace, destinationworkspace, sourcerepo, destinationrepo = (
+        megarepoimport.validateimportparams(ui, repo, opts)
+    )
+    return
