@@ -81,7 +81,7 @@ def _xrepopull(repo, name, rewritepullrev=False) -> Optional[pullattempt]:
     """
 
     def generateattempt() -> Optional[pullattempt]:
-        localnode = _xrepotranslate(repo, name)
+        localnode = xrepotranslate(repo, name)
         if not localnode:
             return None
         return autopull.pullattempt(headnodes=[localnode])
@@ -89,7 +89,7 @@ def _xrepopull(repo, name, rewritepullrev=False) -> Optional[pullattempt]:
     if rewritepullrev:
         if repo.ui.configbool("megarepo", "rewrite-pull-rev", True):
             return generateattempt()
-    elif _may_need_xrepotranslate(repo, name):
+    elif may_need_xrepotranslate(repo, name):
         return deferredpullattempt(generate=generateattempt)
 
     return None
@@ -99,7 +99,7 @@ _commithashre = re.compile(r"\A[0-9a-f]{6,40}\Z")
 _diffidre = re.compile(r"\AD\d+\Z")
 
 
-def _may_need_xrepotranslate(repo, commitid) -> bool:
+def may_need_xrepotranslate(repo, commitid) -> bool:
     """Test if 'commitid' may trigger xrepo lookup without asking remote servers.
     Returns True if the commitid might trigger xrepo lookup.
     Returns False if the commitid will NOT trigger xrepo lookup.
@@ -152,7 +152,7 @@ def _diff_to_commit(repo, commitid):
     return None
 
 
-def _xrepotranslate(repo, commitid):
+def xrepotranslate(repo, commitid):
     commit_ids = {commitid}
 
     if _diffidre.match(commitid):

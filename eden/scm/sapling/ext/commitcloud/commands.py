@@ -1736,5 +1736,14 @@ def cloudimport(ui, repo, **opts):
         destinationrepo,
         serv,
     )
+    megarepoimport.translateandpull(
+        ui,
+        repo,
+        sourceworkspace,
+        destinationworkspace,
+        sourcerepo,
+        destinationrepo,
+        serv,
+    )
 
     return

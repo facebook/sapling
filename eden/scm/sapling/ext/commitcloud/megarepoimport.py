@@ -6,9 +6,10 @@
 from __future__ import absolute_import
 
 from sapling import error
+from sapling.ext import megarepo
 from sapling.i18n import _
 
-from . import util as ccutil, workspace
+from . import service, sync, syncstate, util as ccutil, workspace
 
 
 def validateimportparams(ui, repo, opts):
@@ -70,4 +71,35 @@ def fetchworkspaces(
         raise error.Abort(
             _("destination workspace '%s' does not exist") % destinationworkspace
         )
-    return srcinfo, dstinfo
+
+
+def translateandpull(
+    ui, repo, sourceworkspace, destinationworkspace, sourcerepo, destinationrepo, serv
+):
+
+    cloudrefs = serv.getreferences(
+        sourcerepo,
+        sourceworkspace,
+        0,
+        clientinfo=service.makeclientinfo(
+            repo, syncstate.SyncState(repo, sourceworkspace)
+        ),
+    )
+
+    # Get the list of commits to pull
+    headsdates = cloudrefs.headdates
+    translatequeue = {}
+    for head in headsdates:
+        if megarepo.may_need_xrepotranslate(repo, head):
+            translatequeue[head] = headsdates[head]
+
+    # Translate heads
+    newheads = {}
+    for head in translatequeue:
+        newhead = megarepo.xrepotranslate(repo, head).hex()
+        newheads[newhead] = translatequeue[head]
+
+    remotepath = ccutil.getremotepath(ui)
+
+    headgroups = sync.partitionheads(ui, newheads)
+    sync.pullheadgroups(repo, remotepath, headgroups)
