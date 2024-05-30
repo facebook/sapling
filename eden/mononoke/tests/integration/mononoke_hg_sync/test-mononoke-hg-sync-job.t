@@ -80,7 +80,7 @@ Try to sync blobimport bookmark move, which should fail
 State 0 means Mononoke is unlocked
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "insert into repo_lock (repo_id, state, reason) values(0, 0, null)";
   $ mononoke_hg_sync_with_failure_handler repo-hg 0 2>&1 | grep 'unexpected bookmark move'
-  [1]
+  * unexpected bookmark move: blobimport* (glob)
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select count(*) from repo_lock"
   1
 
@@ -145,7 +145,7 @@ Enable replay verification hooks
 Replay in a loop
   $ cd $TESTTMP
   $ mononoke_hg_sync_loop repo-hg-3 0 2>&1 | grep 'unexpected bookmark'
-  [1]
+  * unexpected bookmark move: blobimport* (glob)
   $ mononoke_hg_sync_loop repo-hg-3 1 --bundle-prefetch 0 2>&1 | grep 'successful sync'
   * successful sync of entries [2]* (glob)
   * successful sync of entries [3]* (glob)

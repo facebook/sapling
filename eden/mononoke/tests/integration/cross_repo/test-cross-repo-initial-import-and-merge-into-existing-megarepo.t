@@ -227,6 +227,7 @@ Before config change
   $ PREV_BOOK_VALUE=$(get_bookmark_value_edenapi $SMALL_REPO_NAME $MASTER_BOOKMARK)
   $ with_stripped_logs mononoke_x_repo_sync "$IMPORTED_REPO_ID"  "$LARGE_REPO_ID" once --commit "$ID" --unsafe-change-version-to "new_version" --target-bookmark $MASTER_BOOKMARK
   Starting session with id * (glob)
+  changeset resolved as: ChangesetId(Blake2(a14dee507f7605083e9a99901971ac7c5558d8b28d7d01090bd2cff2432fa707))
   Checking if a14dee507f7605083e9a99901971ac7c5558d8b28d7d01090bd2cff2432fa707 is already synced 2->0
   Changing mapping version during pushrebase to new_version
   1 unsynced ancestors of a14dee507f7605083e9a99901971ac7c5558d8b28d7d01090bd2cff2432fa707
@@ -367,6 +368,7 @@ Before config change
   $ PREV_BOOK_VALUE=$(get_bookmark_value_edenapi $SMALL_REPO_NAME $MASTER_BOOKMARK)
   $ with_stripped_logs mononoke_x_repo_sync "$ANOTHER_REPO_ID"  "$LARGE_REPO_ID" once --commit "$AD" --unsafe-change-version-to "another_version" --target-bookmark $MASTER_BOOKMARK
   Starting session with id * (glob)
+  changeset resolved as: ChangesetId(Blake2(1d0bbdb162c2887a5b93893d7a48fd852a304ab58be2245899bb795e80aa10e9))
   Checking if 1d0bbdb162c2887a5b93893d7a48fd852a304ab58be2245899bb795e80aa10e9 is already synced 3->0
   Changing mapping version during pushrebase to another_version
   1 unsynced ancestors of 1d0bbdb162c2887a5b93893d7a48fd852a304ab58be2245899bb795e80aa10e9
@@ -386,7 +388,7 @@ Before config change
   IH=390213545a07b8f0b3452f97e862443d56b58375
   II=6738aefcbd6e1d868fa73a489b55aab543fd0c53
   $ wait_for_bookmark_move_away_edenapi "$IMPORTED_REPO_NAME" heads/$MASTER_BOOKMARK  "$PREV_BOOK_VALUE"
-  $ quiet with_stripped_logs mononoke_x_repo_sync "$IMPORTED_REPO_ID"  "$LARGE_REPO_ID" tail --bookmark-regex "heads/$MASTER_BOOKMARK" --catch-up-once
+  $ quiet with_stripped_logs mononoke_x_repo_sync "$IMPORTED_REPO_ID"  "$LARGE_REPO_ID" tail --bookmark-regex "heads/$MASTER_BOOKMARK" --catch-up-once 
 
   $ FINAL_BOOK_VALUE=$(x_repo_lookup $IMPORTED_REPO_NAME $LARGE_REPO_NAME $II)
 

@@ -571,6 +571,7 @@ fn main(fb: FacebookInit) -> Result<()> {
                 fb,
                 &std::env::var("TW_JOB_NAME")
                     .unwrap_or_else(|_| "backfill_derived_data".to_string()),
+                matches.logger(),
                 &matches,
                 cmdlib::monitoring::AliveService,
             )
@@ -603,6 +604,7 @@ fn main(fb: FacebookInit) -> Result<()> {
                 fb,
                 &std::env::var("TW_JOB_NAME")
                     .unwrap_or_else(|_| "backfill_derived_data".to_string()),
+                process.matches.logger(),
                 &process.matches,
                 cmdlib::monitoring::AliveService,
             )?;

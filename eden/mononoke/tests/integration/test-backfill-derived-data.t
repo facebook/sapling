@@ -78,6 +78,7 @@ backfill derived data
   *] Initiating derived data command execution for repo repo* (glob)
   * using repo "repo" repoid RepositoryId(0)* (glob)
   * Reloading redacted config from configerator (glob)
+  * changeset resolved as: * (glob)
   * derive exactly fsnodes batch from c3384961* to c3384961* (glob)
   * derived fsnodes in * (glob)
   *] Finished derived data command execution for repo repo* (glob)

@@ -39,7 +39,7 @@ Before the change
   $ echo b > non_path_shifting/bar
   $ hg ci -Aqm "before config change"
   $ REPONAME=small-mon hgmn push -r . --to master_bookmark -q
-  $ log
+  $ log 
   @  before config change [public;rev=2;bc6a206054d0] default/master_bookmark
   │
   o  first post-move commit [public;rev=1;11f848659bfc]
@@ -154,4 +154,5 @@ After the change
   $ with_stripped_logs mononoke_admin_source_target 0 1 crossrepo map $(hg whereami)
   using repo "large-mon" repoid RepositoryId(0)
   using repo "small-mon" repoid RepositoryId(1)
+  changeset resolved as: ChangesetId(Blake2(*)) (glob)
   RewrittenAs([(ChangesetId(Blake2(*)), CommitSyncConfigVersion("new_version"))]) (glob)

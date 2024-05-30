@@ -33,10 +33,11 @@ use mononoke_types::ChangesetId;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
 use services::Fb303Service;
+use slog::error;
+use slog::info;
+use slog::Logger;
 use tokio::io::AsyncBufReadExt;
 use tokio::runtime::Runtime;
-use tracing::error;
-use tracing::info;
 
 use crate::args::MononokeMatches;
 use crate::monitoring;
@@ -85,7 +86,7 @@ pub async fn csid_resolve(
 ) -> Result<ChangesetId, Error> {
     let res = csid_resolve_impl(ctx, &container, hash_or_bookmark).await;
     if let Ok(csid) = &res {
-        info!("changeset resolved as: {:?}", csid);
+        info!(ctx.logger(), "changeset resolved as: {:?}", csid);
     }
     res
 }
@@ -177,13 +178,14 @@ pub fn block_execute<F, Out, S: Fb303Service + Sync + Send + 'static>(
     future: F,
     fb: FacebookInit,
     app_name: &str,
+    logger: &Logger,
     matches: &MononokeMatches,
     service: S,
 ) -> Result<Out, Error>
 where
     F: Future<Output = Result<Out, Error>>,
 {
-    block_execute_impl(future, fb, app_name, matches, service)
+    block_execute_impl(future, fb, app_name, logger, matches, service)
 }
 
 /// Executes the future and waits for it to finish.
@@ -191,13 +193,14 @@ fn block_execute_impl<F, Out, S: Fb303Service + Sync + Send + 'static>(
     future: F,
     fb: FacebookInit,
     app_name: &str,
+    logger: &Logger,
     matches: &MononokeMatches,
     service: S,
 ) -> Result<Out, Error>
 where
     F: Future<Output = Result<Out, Error>>,
 {
-    monitoring::start_fb303_server(fb, app_name, matches, service)?;
+    monitoring::start_fb303_server(fb, app_name, logger, matches, service)?;
 
     let result = matches.runtime().block_on(async {
         let stats_agg = stats::schedule_stats_aggregation_preview()
@@ -209,7 +212,7 @@ where
 
     // Log error in glog format (main will log, but not with glog)
     result.map_err(move |e| {
-        error!("Execution error: {:?}", e);
+        error!(logger, "Execution error: {:?}", e);
         // Shorten the error that main will print, given that already printed in glog form
         format_err!("Execution failed")
     })

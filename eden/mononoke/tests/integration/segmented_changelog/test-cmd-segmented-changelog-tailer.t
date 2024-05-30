@@ -43,6 +43,7 @@ Run Segmented Changelog Tailer. This seeds the segmented changelog.
   $ quiet segmented_changelog_tailer_once --log-level TRACE --head master_bookmark --repo repo
   $ grep -e "repo_id: 0" -e "segmented_changelog_tailer" "$TESTTMP/quiet.last.log"
   * repo name 'repo' translates to id 0 (glob)
+  * changeset resolved as: *, repo_id: 0 (glob)
   * using * for head, repo_id: 0 (glob)
   * SegmentedChangelogTailer initialized, repo_id: 0 (glob)
   * woke up to update, repo_id: 0 (glob)

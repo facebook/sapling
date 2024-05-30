@@ -16,7 +16,8 @@ pub use mononoke_app::fb303::ReadyFlagService;
 // get AliveService.
 pub use services::AliveService;
 use services::Fb303Service;
-use tracing::info;
+use slog::info;
+use slog::Logger;
 
 use crate::args::MononokeMatches;
 
@@ -25,6 +26,7 @@ use crate::args::MononokeMatches;
 pub fn start_fb303_server<S: Fb303Service + Sync + Send + 'static>(
     fb: FacebookInit,
     service_name: &str,
+    logger: &Logger,
     matches: &MononokeMatches,
     service: S,
 ) -> Result<Option<()>, Error> {
@@ -33,7 +35,7 @@ pub fn start_fb303_server<S: Fb303Service + Sync + Send + 'static>(
         .value_of("fb303-thrift-port")
         .map(|port| {
             let port = port.parse().map_err(Error::from)?;
-            info!("Initializing fb303 thrift server on port {}", port);
+            info!(logger, "Initializing fb303 thrift server on port {}", port);
 
             thread::Builder::new()
                 .name("fb303_thrift_service".to_owned())
