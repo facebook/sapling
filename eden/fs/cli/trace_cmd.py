@@ -56,8 +56,9 @@ activitybuffer-max-events = 100
 Events are encoded using the following emojis:
 
 Event Type:
-\u21E3 START
-\u2193 FINISH
+\u2193 START
+\u2714 FINISH
+\u26A0 FAILURE
 
 Resource Type:
 \U0001F954 Blob (file content)
@@ -74,6 +75,13 @@ Import Cause (--verbose):
 \U0001F4C1 FS
 \U0001F4E0 THRIFT
 \U0001F4C5 PREFETCH
+
+Fetched Source in Sapling (--verbose):
+\U0001F4BB LOCAL
+\U0001F310 REMOTE
+\U0001F937 UNKNOWN
+\U00000020\U00000020 not available yet
+
 """
     # pyre-fixme[15]: Type typing.Type[argparse.RawDescriptionHelpFormatter] is not a
     # subtype of the overridden attribute typing.Optional[argparse.HelpFormatter]
@@ -174,8 +182,8 @@ https://github.com/facebookexperimental/eden/blob/main/eden/fs/docs/Glossary.md
 Events for this command are encoded using the following emojis/letters:
 
 Event Progress:
-\u21E3 START
-\u2193 FINISH
+\u2193 START
+\u2714 FINISH
 \u26A0 FAILURE
 
 Resource Type:
