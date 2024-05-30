@@ -53,3 +53,21 @@ def validateimportparams(ui, repo, opts):
         )
 
     return sourceworkspace, destinationworkspace, sourcerepo, destinationrepo
+
+
+def fetchworkspaces(
+    ui, repo, sourceworkspace, destinationworkspace, sourcerepo, destinationrepo, serv
+):
+
+    # Validate source workspace
+    srcinfo = serv.getworkspace(sourcerepo, sourceworkspace)
+    if not srcinfo:
+        raise error.Abort(_("source workspace '%s' does not exist") % sourceworkspace)
+
+    # Validate destination workspace
+    dstinfo = serv.getworkspace(destinationrepo, destinationworkspace)
+    if not dstinfo:
+        raise error.Abort(
+            _("destination workspace '%s' does not exist") % destinationworkspace
+        )
+    return srcinfo, dstinfo

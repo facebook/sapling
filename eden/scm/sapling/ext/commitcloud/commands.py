@@ -1726,4 +1726,15 @@ def cloudimport(ui, repo, **opts):
     sourceworkspace, destinationworkspace, sourcerepo, destinationrepo = (
         megarepoimport.validateimportparams(ui, repo, opts)
     )
+    serv = service.get(ui, repo)
+    megarepoimport.fetchworkspaces(
+        ui,
+        repo,
+        sourceworkspace,
+        destinationworkspace,
+        sourcerepo,
+        destinationrepo,
+        serv,
+    )
+
     return
