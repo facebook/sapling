@@ -174,7 +174,7 @@ pub async fn verify_working_copy_with_version<
             large_repo: large_in_memory_repo,
             dangling_submodule_pointers,
         }),
-        SubmoduleDeps::NotNeeded => None,
+        SubmoduleDeps::NotNeeded | SubmoduleDeps::NotAvailable => None,
     };
     let mover = commit_syncer.get_mover_by_version(version).await?;
     let exp_and_metadata_paths =

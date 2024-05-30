@@ -1776,21 +1776,20 @@ impl RepoContext {
             .get_all_possible_repo_submodule_deps()
             .await?;
 
-        match (source_submodule_deps, target_submodule_deps) {
-            (SubmoduleDeps::ForSync(dep_map), SubmoduleDeps::NotNeeded) => {
-                Ok(SubmoduleDeps::ForSync(dep_map.clone()))
-            }
-            (SubmoduleDeps::NotNeeded, SubmoduleDeps::ForSync(dep_map)) => {
-                Ok(SubmoduleDeps::ForSync(dep_map.clone()))
-            }
-            (SubmoduleDeps::ForSync(source_deps_map), SubmoduleDeps::ForSync(target_deps_map)) => {
+        match (
+            source_submodule_deps.dep_map(),
+            target_submodule_deps.dep_map(),
+        ) {
+            (Some(dep_map), None) => Ok(SubmoduleDeps::ForSync(dep_map.clone())),
+            (None, Some(dep_map)) => Ok(SubmoduleDeps::ForSync(dep_map.clone())),
+            (Some(source_deps_map), Some(target_deps_map)) => {
                 let mut deps_map = source_deps_map.clone();
                 deps_map.extend(target_deps_map.clone());
                 Ok(SubmoduleDeps::ForSync(deps_map))
             }
-            (SubmoduleDeps::NotNeeded, SubmoduleDeps::NotNeeded) => Err(MononokeError::from(
-                anyhow!("Submodule depdendencies not loaded for source and target repo"),
-            )),
+            (None, None) => Err(MononokeError::from(anyhow!(
+                "Submodule depdendencies not loaded for source and target repo"
+            ))),
         }
     }
 

@@ -262,7 +262,7 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
                 large_repo: self.large_repo,
                 dangling_submodule_pointers,
             }),
-            SubmoduleDeps::NotNeeded => None,
+            SubmoduleDeps::NotNeeded | SubmoduleDeps::NotAvailable => None,
         };
 
         let rewrite_res = rewrite_commit(
@@ -374,7 +374,7 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
                         large_repo: self.large_repo,
                         dangling_submodule_pointers,
                     }),
-                    SubmoduleDeps::NotNeeded => None,
+                    SubmoduleDeps::NotNeeded | SubmoduleDeps::NotAvailable => None,
                 };
                 let rewrite_res = rewrite_commit(
                     self.ctx,
@@ -534,7 +534,7 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
                     large_repo: self.large_repo,
                     dangling_submodule_pointers,
                 }),
-                SubmoduleDeps::NotNeeded => None,
+                SubmoduleDeps::NotNeeded | SubmoduleDeps::NotAvailable => None,
             };
             let is_mapping_change = get_mapping_change_version_from_hg_extra(
                 cs.hg_extra.iter().map(|(k, v)| (k.as_str(), v.as_slice())),

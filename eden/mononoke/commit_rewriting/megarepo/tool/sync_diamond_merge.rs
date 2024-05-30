@@ -317,7 +317,7 @@ async fn create_rewritten_merge_commit(
             large_repo: large_in_memory_repo,
             dangling_submodule_pointers,
         }),
-        SubmoduleDeps::NotNeeded => None,
+        SubmoduleDeps::NotNeeded | SubmoduleDeps::NotAvailable => None,
     };
 
     let source_repo = syncers.small_to_large.get_source_repo();

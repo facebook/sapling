@@ -759,7 +759,9 @@ pub(crate) async fn test_submodule_expansion_validation_in_large_repo_bonsai(
 
     let submodule_deps = match submodule_deps {
         SubmoduleDeps::ForSync(deps) => deps,
-        SubmoduleDeps::NotNeeded => return Err(anyhow!("Submodule deps should have been set!")),
+        SubmoduleDeps::NotNeeded | SubmoduleDeps::NotAvailable => {
+            return Err(anyhow!("Submodule deps should have been set!"));
+        }
     };
 
     let sm_exp_data = SubmoduleExpansionData {

@@ -181,7 +181,7 @@ where
                 large_repo_id,
                 dangling_submodule_pointers,
             }),
-            SubmoduleDeps::NotNeeded => None,
+            SubmoduleDeps::NotNeeded | SubmoduleDeps::NotAvailable => None,
         };
 
         rewrite_commit(

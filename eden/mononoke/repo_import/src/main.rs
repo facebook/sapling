@@ -247,7 +247,7 @@ async fn rewrite_file_paths(
                 large_repo: large_in_memory_repo,
                 dangling_submodule_pointers: vec![],
             }),
-            SubmoduleDeps::NotNeeded => None,
+            SubmoduleDeps::NotNeeded | SubmoduleDeps::NotAvailable => None,
         };
 
         let rewritten_bcs_opt = rewrite_commit(

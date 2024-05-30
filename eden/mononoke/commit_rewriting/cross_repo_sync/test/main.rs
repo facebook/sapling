@@ -2126,7 +2126,7 @@ async fn test_no_accidental_preserved_roots(
                 .iter()
                 .map(|(p, repo)| (p.clone(), repo.repo_identity().id()))
                 .collect(),
-            SubmoduleDeps::NotNeeded => HashMap::new(),
+            SubmoduleDeps::NotNeeded | SubmoduleDeps::NotAvailable => HashMap::new(),
         };
 
         let small_repo_config = SmallRepoCommitSyncConfig {

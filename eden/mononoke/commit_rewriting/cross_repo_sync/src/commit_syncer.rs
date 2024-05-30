@@ -894,7 +894,7 @@ where
                 large_repo_id,
                 dangling_submodule_pointers,
             }),
-            SubmoduleDeps::NotNeeded => None,
+            SubmoduleDeps::NotNeeded | SubmoduleDeps::NotAvailable => None,
         };
 
         let rewrite_res = rewrite_commit(
@@ -1033,7 +1033,7 @@ where
                 large_repo_id,
                 dangling_submodule_pointers,
             }),
-            SubmoduleDeps::NotNeeded => None,
+            SubmoduleDeps::NotNeeded | SubmoduleDeps::NotAvailable => None,
         };
 
         let rewrite_res = rewrite_commit(

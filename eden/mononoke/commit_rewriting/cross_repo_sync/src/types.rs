@@ -282,6 +282,7 @@ assert_impl_all!(ConcreteRepo: Repo);
 pub enum SubmoduleDeps<R> {
     ForSync(HashMap<NonRootMPath, Arc<R>>),
     NotNeeded,
+    NotAvailable,
 }
 
 impl<R> Default for SubmoduleDeps<R> {
