@@ -98,5 +98,6 @@ def editconfig(ui, path, section, name, value):
 
             bcontent = bcontent[:insertpos] + inserttext.encode() + bcontent[insertpos:]
 
+    os.makedirs(os.path.dirname(path), exist_ok=True)
     with util.atomictempfile(path) as f:
         f.write(bcontent)

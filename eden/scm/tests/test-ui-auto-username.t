@@ -5,7 +5,7 @@
 Do not use usernames from env vars:
 
   $ unset HGUSER EMAIL
-  $ export HGRCPATH=sys=$HGRCPATH:user=$HOME/.hgrc
+  $ export HGRCPATH=sys=$HGRCPATH:user=$HOME/.config/sapling/sapling.conf
 
 Without auto username:
 
