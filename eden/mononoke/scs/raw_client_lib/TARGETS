@@ -1,0 +1,37 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mononoke")
+
+rust_library(
+    name = "scs_client_raw",
+    srcs = glob(["src/**/*.rs"]),
+    allow_oss_build = False,
+    os_deps = [
+        (
+            "linux",
+            [
+                "//common/rust/thrift/srclient:srclient",
+                "//eden/mononoke/scs/if:source_control-rust-srclients",
+                "//eden/mononoke/scs/if:source_control-rust-thriftclients",
+            ],
+        ),
+        (
+            "macos",
+            [
+                "//eden/mononoke/scs/if:source_control-rust-thriftclients",
+            ],
+        ),
+    ],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:maplit",
+        "//c2p/secure_thrift/rust/client:x2pclient",
+        "//common/rust/shed/fbinit:fbinit",
+        "//eden/mononoke/cmdlib/sharding_ext:sharding_ext",
+        "//eden/mononoke/scs/if:source_control-rust",
+        "//eden/mononoke/scs/if:source_control-rust-clients",
+        "//eden/mononoke/scs/if:source_control-rust-x2pclients",
+        "//eden/scm/lib/clientinfo:clientinfo",
+    ],
+)
