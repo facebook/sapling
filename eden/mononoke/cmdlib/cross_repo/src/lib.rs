@@ -305,6 +305,8 @@ pub async fn get_all_possible_small_repo_submodule_deps<'a, R: CrossRepo>(
         .flatten()
         .collect::<HashSet<_>>();
 
+    let submodule_deps_to_load = small_repo_deps_ids.len();
+
     let submodule_deps_map: HashMap<NonRootMPath, Arc<R>> = stream::iter(small_repo_deps_ids)
         .then(|(submodule_path, repo_id)| {
             cloned!(repo_provider);
@@ -315,6 +317,10 @@ pub async fn get_all_possible_small_repo_submodule_deps<'a, R: CrossRepo>(
         })
         .try_collect()
         .await?;
+
+    if submodule_deps_map.len() < submodule_deps_to_load {
+        return Ok(SubmoduleDeps::NotAvailable);
+    }
 
     Ok(SubmoduleDeps::ForSync(submodule_deps_map))
 }

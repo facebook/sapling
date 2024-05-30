@@ -1727,6 +1727,15 @@ impl RepoContext {
             .flatten()
             .collect::<HashMap<_, _>>();
 
+        let submodule_deps_to_load = repo_deps_ids.len();
+
+        if submodule_deps_to_load == 0 {
+            // For repos without any submodule dependencies, we shouldn't expect any
+            // submodule expansion to be called, so return that submodule deps
+            // are not needed instead of returning an empty hash map.
+            return Ok(SubmoduleDeps::NotNeeded);
+        };
+
         let repo_deps: HashMap<NonRootMPath, Arc<Repo>> = repo_deps_ids
             .into_iter()
             .filter_map(|(submodule_path, sm_repo_id)| {
@@ -1760,6 +1769,25 @@ impl RepoContext {
             })
             .collect();
 
+        if repo_deps.len() < submodule_deps_to_load {
+            warn!(
+                ctx.logger(),
+                "Submodule dependencies failed to load. {} were loaded instead of the required {}",
+                repo_deps.len(),
+                submodule_deps_to_load
+            );
+
+            ctx.scuba().clone().log_with_msg(
+                "Submodule dependencies failed to load",
+                format!(
+                    "{} were loaded instead of the required {}",
+                    repo_deps.len(),
+                    submodule_deps_to_load
+                ),
+            );
+            return Ok(SubmoduleDeps::NotAvailable);
+        }
+
         Ok(SubmoduleDeps::ForSync(repo_deps))
     }
 
@@ -1787,9 +1815,7 @@ impl RepoContext {
                 deps_map.extend(target_deps_map.clone());
                 Ok(SubmoduleDeps::ForSync(deps_map))
             }
-            (None, None) => Err(MononokeError::from(anyhow!(
-                "Submodule depdendencies not loaded for source and target repo"
-            ))),
+            (None, None) => Ok(SubmoduleDeps::NotAvailable),
         }
     }
 
