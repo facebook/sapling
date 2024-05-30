@@ -1746,4 +1746,4 @@ def cloudimport(ui, repo, **opts):
         serv,
     )
 
-    return
+    return cloudsync(ui, repo)

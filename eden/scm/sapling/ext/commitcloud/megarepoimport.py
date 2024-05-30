@@ -103,3 +103,18 @@ def translateandpull(
 
     headgroups = sync.partitionheads(ui, newheads)
     sync.pullheadgroups(repo, remotepath, headgroups)
+
+    # Translate bookmarks
+    bookmarks = cloudrefs.bookmarks
+    bookmarkstotranslate = {}
+    for bookmark in bookmarks:
+        if megarepo.may_need_xrepotranslate(repo, bookmarks[bookmark]):
+            bookmarkstotranslate[bookmark] = bookmarks[bookmark]
+
+    newbookmarks = []
+    for bookmark in bookmarkstotranslate:
+        newbookmarknode = megarepo.xrepotranslate(repo, bookmarkstotranslate[bookmark])
+        newbookmarks.append((bookmark, newbookmarknode))
+
+    with repo.wlock(), repo.lock(), repo.transaction("cloudsync") as tr:
+        repo._bookmarks.applychanges(repo, tr, newbookmarks, warnoverwrite=True)
