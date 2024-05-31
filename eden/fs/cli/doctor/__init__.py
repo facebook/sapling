@@ -916,15 +916,15 @@ the old directory from before the EdenFS checkouts were mounted.
 
 
 class BadEdenFsVersion(Problem):
-    def __init__(self, installed_version: str, reasons: List[str]) -> None:
+    def __init__(self, running_version: str, reasons: List[str]) -> None:
         reasons_string = "\n    ".join(reasons)
         help_string = f"""\
-The version of EdenFS that is installed on your machine is:
-    {installed_version}
+The version of EdenFS that is running on your machine is:
+    {running_version}
 This version is known to have issue:
     {reasons_string}
 
-Run `edenfsctl restart --graceful` to migrate to the newer version to avoid these issues.
+Run `edenfsctl restart{"" if sys.platform == "win32" else " --graceful"}` to migrate to the newer version to avoid these issues.
 """
         super().__init__(dedent(help_string), severity=ProblemSeverity.ADVICE)
 
@@ -944,30 +944,31 @@ which may have important bug fixes or performance improvements.
 
 
 def check_edenfs_version(tracker: ProblemTracker, instance: EdenInstance) -> None:
-    # get installed version parts
-    iversion, irelease = version.get_current_version_parts()
-    if not iversion or not irelease:
-        # dev build of eden client returns empty strings here
-        return
-
-    # check for bad eden fs version
-    installed_version = version.format_eden_version((iversion, irelease))
-    installed_version_str = (
-        f"fb.eden {installed_version}"
-        if sys.platform == "win32"
-        else f"fb-eden-{installed_version}.x86_64"
-    )
-    bad_version_reasons_map = instance.get_known_bad_edenfs_versions()
-    if installed_version in bad_version_reasons_map:
-        reasons = bad_version_reasons_map[installed_version]
-        tracker.add_problem(BadEdenFsVersion(installed_version_str, reasons))
-        # if bad version, don't check for out of date version
-        return
-
+    # get released version parts
     rver, release = instance.get_running_version_parts()
     if not rver or not release:
         # This could be a dev build that returns the empty
         # string for both of these values.
+        return
+
+    # check for bad eden fs running version
+    bad_version_reasons_map = instance.get_known_bad_edenfs_versions()
+    running_version = version.format_eden_version((rver, release))
+    running_version_str = (
+        f"fb.eden {running_version}"
+        if sys.platform == "win32"
+        else f"fb-eden-{running_version}.x86_64"
+    )
+    if running_version in bad_version_reasons_map:
+        reasons = bad_version_reasons_map[running_version]
+        tracker.add_problem(BadEdenFsVersion(running_version_str, reasons))
+        # if bad version, don't check for out of date version
+        return
+
+    # get installed version parts
+    iversion, irelease = version.get_current_version_parts()
+    if not iversion or not irelease:
+        # dev build of eden client returns empty strings here
         return
 
     # check if the running version is more than two weeks old
@@ -979,11 +980,11 @@ def check_edenfs_version(tracker: ProblemTracker, instance: EdenInstance) -> Non
     if daysgap.days < 14:
         return
 
-    running_version = version.format_eden_version((rver, release))
-    running_version_str = (
-        f"fb.eden {running_version}"
+    installed_version = version.format_eden_version((iversion, irelease))
+    installed_version_str = (
+        f"fb.eden {installed_version}"
         if sys.platform == "win32"
-        else f"fb-eden-{running_version}.x86_64"
+        else f"fb-eden-{installed_version}.x86_64"
     )
     tracker.add_problem(OutOfDateVersion(installed_version_str, running_version_str))
 

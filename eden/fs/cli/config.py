@@ -431,6 +431,7 @@ class EdenInstance(AbstractEdenInstance):
         """
         Get a dictionary mapping bad EdenFS versions to their reasons.
         """
+        # 'bad_versions_config' format: [<bad_version_1>|<sev_1(optional):reason_1>,<bad_version_2>|<sev_2(optional):reason_2>]
         bad_versions_config = self.get_config_strs(
             "doctor.known-bad-edenfs-versions", default=configutil.Strs()
         )
@@ -439,8 +440,8 @@ class EdenInstance(AbstractEdenInstance):
         bad_versions_map = {}
         for item in bad_versions_config:
             if "|" not in item:
-                print(
-                    f"WARNING: `known-bad-edenfs-versions` config has an invalid entry `{item}`.",
+                log.warning(
+                    f"`known-bad-edenfs-versions` config has an invalid entry `{item}`.",
                 )
                 continue
             version, reason = item.split("|", 1)

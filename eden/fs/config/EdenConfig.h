@@ -1398,6 +1398,8 @@ class EdenConfig : private ConfigSettingManager {
   /**
    * Known bad edenfs versions for which we should print a warning in `edenfsctl
    * doctor`. Currently not used in Daemon.
+   * Format:
+   * [<bad_version_1>|<sev_1(optional):reason_1>,<bad_version_2>|<sev_2(optional):reason_2>]
    */
   ConfigSetting<std::vector<std::string>> doctorKnownBadEdenFsVersions{
       "doctor:known-bad-edenfs-versions",
