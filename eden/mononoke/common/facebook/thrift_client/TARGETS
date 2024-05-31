@@ -12,6 +12,7 @@ rust_library(
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:maplit",
         "fbsource//third-party/rust:serde_json",
+        "//common/rust/identity:identity",
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/thrift/bareclient:thriftclient",
         "//common/rust/thrift/srclient:srclient",
