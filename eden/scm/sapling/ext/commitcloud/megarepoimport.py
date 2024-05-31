@@ -5,6 +5,8 @@
 
 from __future__ import absolute_import
 
+import time
+
 from sapling import error
 from sapling.ext import megarepo
 from sapling.i18n import _
@@ -83,6 +85,7 @@ def translateandpull(
     sourcerepo,
     destinationrepo,
     serv,
+    full,
 ):
 
     cloudrefs = serv.getreferences(
@@ -97,8 +100,14 @@ def translateandpull(
     # Get the list of heads to pull
     headsdates = cloudrefs.headdates
     headstranslatequeue = {}
+    maxage = None if full else ui.configint("commitcloud", "max_sync_age", None)
     for head in headsdates:
-        if megarepo.may_need_xrepotranslate(repo, head):
+        mindate = 0
+        if maxage is not None and maxage >= 0:
+            mindate = time.time() - maxage * 86400
+        if cloudrefs.headdates[head] >= mindate and megarepo.may_need_xrepotranslate(
+            repo, head
+        ):
             headstranslatequeue[head] = headsdates[head]
 
     # Get list of bookmarks to translate

@@ -1719,7 +1719,8 @@ def cloudtidyup(ui, repo, **opts):
             _("repo associated with the workspace to import to"),
         ),
     ]
-    + move.srcdstworkspaceopts,
+    + move.srcdstworkspaceopts
+    + pullopts,
 )
 def cloudimport(ui, repo, **opts):
     """translate commits that belong to another repo into the current repo, and add them to the destination workspace"""
@@ -1740,6 +1741,7 @@ def cloudimport(ui, repo, **opts):
     currentrepo = ccutil.getreponame(repo)
 
     # Translate heads and bookmarks
+    full = opts.get("full")
     newheads, newbookmarks = megarepoimport.translateandpull(
         ui,
         repo,
@@ -1750,6 +1752,7 @@ def cloudimport(ui, repo, **opts):
         sourcerepo,
         destinationrepo,
         serv,
+        full,
     )
 
     # update the destination workspace
