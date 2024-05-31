@@ -5,7 +5,7 @@
 
 from collections import defaultdict
 from enum import Enum
-from typing import List, Optional, Tuple
+from typing import Dict, List, Optional
 
 from . import edenapi_upload, error, hg, mutation, phases, scmutil
 from .bookmarks import readremotenames, saveremotenames
@@ -377,7 +377,7 @@ def delete_remote_bookmark(repo, edenapi, bookmark, force, pushvars_strs) -> Non
 ### utils
 
 
-def parse_pushvars(pushvars_strs: Optional[List[str]]) -> List[Tuple[str, str]]:
+def parse_pushvars(pushvars_strs: Optional[List[str]]) -> Dict[str, str]:
     kvs = pushvars_strs or []
     pushvars = {}
     for kv in kvs:
