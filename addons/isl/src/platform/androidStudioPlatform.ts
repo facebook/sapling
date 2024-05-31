@@ -9,6 +9,8 @@ import type {Platform} from '../platform';
 import type {ThemeColor} from '../theme';
 import type {OneIndexedLineNumber, RepoRelativePath} from '../types';
 
+import {browserPlatformImpl} from './browerPlatformImpl';
+
 declare global {
   interface Window {
     __IdeBridge: {
@@ -46,20 +48,10 @@ const androidStudioPlatform: Platform = {
     window.__IdeBridge.clipboardCopy?.(text);
   },
 
-  getPersistedState<T>(_key: string): T | null {
-    // TODO: support local storage, which may require enabling some webview permissions.
-    return null;
-  },
-  setPersistedState<T>(_key: string, _value: T): void {
-    // TODO: support local storage, which may require enabling some webview permissions.
-  },
-  clearPersistedState(): void {
-    // TODO: support local storage, which may require enabling some webview permissions.
-  },
-  getAllPersistedState() {
-    // TODO: support local storage, which may require enabling some webview permissions.
-    return undefined;
-  },
+  getPersistedState: browserPlatformImpl.getPersistedState,
+  setPersistedState: browserPlatformImpl.setPersistedState,
+  clearPersistedState: browserPlatformImpl.clearPersistedState,
+  getAllPersistedState: browserPlatformImpl.getAllPersistedState,
 
   theme: {
     getTheme(): ThemeColor {
