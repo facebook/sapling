@@ -19,4 +19,5 @@ filestore = { version = "0.1.0", path = "../../filestore" }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
 mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
+slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 thiserror = "1.0.49"

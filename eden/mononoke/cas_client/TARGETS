@@ -30,6 +30,7 @@ rust_library(
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:slog",
         "fbsource//third-party/rust:thiserror",
         "//eden/mononoke/blobstore:blobstore",
         "//eden/mononoke/cas_client:cas_client",
