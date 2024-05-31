@@ -69,14 +69,7 @@ def push(
         % (short(head_node), edenapi.url(), remote_bookmark)
     )
 
-    uploaded, failed = edenapi_upload.uploadhgchangesets(repo, draft_nodes)
-    if failed:
-        raise error.Abort(
-            _("failed to upload commits to server: {}").format(
-                [repo[node].hex() for node in failed]
-            )
-        )
-    ui.debug(f"uploaded {len(uploaded)} new commits\n")
+    upload_draft_nodes(repo, draft_nodes)
 
     curr_bookmark_val = get_remote_bookmark_value(repo, edenapi, remote_bookmark, force)
 
@@ -134,6 +127,17 @@ def get_draft_nodes(repo, dest, head_node, remote_bookmark):
             _("merge commit is not supported by EdenApi push yet")
         )
     return draft_nodes
+
+
+def upload_draft_nodes(repo, draft_nodes):
+    uploaded, failed = edenapi_upload.uploadhgchangesets(repo, draft_nodes)
+    if failed:
+        raise error.Abort(
+            _("failed to upload commits to server: {}").format(
+                [repo[node].hex() for node in failed]
+            )
+        )
+    repo.ui.debug(f"uploaded {len(uploaded)} new commits\n")
 
 
 def plain_push(repo, edenapi, bookmark, to_node, curr_bookmark_val, force, opargs=None):
