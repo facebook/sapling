@@ -198,6 +198,7 @@ members = [
   "bulkops",
   "cache_warmup",
   "cas_client/client",
+  "cas_client/scm_client",
   "cats",
   "changesets",
   "changesets/changesets_creation",

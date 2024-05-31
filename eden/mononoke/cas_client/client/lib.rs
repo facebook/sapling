@@ -13,6 +13,7 @@ mod facebook;
 use anyhow::Error;
 use bytes::Bytes;
 pub use dummy::DummyCasClient;
+pub use errors::ErrorKind;
 #[cfg(fbcode_build)]
 pub use facebook::casd_client::RemoteExecutionCasdClient;
 use futures::Stream;
@@ -25,7 +26,7 @@ pub trait CasClient: Sync + Send {
     async fn streaming_upload_blob(
         &self,
         digest: &MononokeDigest,
-        bytes_stream: impl Stream<Item = Bytes> + std::marker::Send,
+        bytes_stream: impl Stream<Item = Result<Bytes, Error>> + std::marker::Send,
     ) -> Result<(), Error>;
     /// Upload given blob, having its digest and data.
     async fn upload_blob(&self, digest: &MononokeDigest, bytes: Bytes) -> Result<(), Error>;
