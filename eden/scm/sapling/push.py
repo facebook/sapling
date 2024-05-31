@@ -90,15 +90,17 @@ def push(
                 % remote_bookmark
             )
 
-    if force or repo[head_node].phase() == phases.public:
-        # if the head is already a public commit or force is set, then do a plain
-        # push (no pushrebase)
+    if is_plain_push(repo, head_node, force):
         plain_push(
             repo, edenapi, remote_bookmark, head_node, curr_bookmark_val, force, opargs
         )
     else:
         # update the exiting bookmark with push rebase
         return push_rebase(repo, dest, head_node, draft_nodes, remote_bookmark, opargs)
+
+
+def is_plain_push(repo, head_node, force):
+    return force or repo[head_node].phase() == phases.public
 
 
 def maybe_log_debug_info(repo, head_node, draft_nodes):
