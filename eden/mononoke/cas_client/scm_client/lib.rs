@@ -18,6 +18,11 @@ use mercurial_types::HgAugmentedManifestId;
 use mercurial_types::HgFileNodeId;
 use mononoke_types::MononokeDigest;
 
+#[cfg(fbcode_build)]
+pub type MononokeCasClient<'a> = ScmCasClient<cas_client::RemoteExecutionCasdClient<'a>>;
+#[cfg(not(fbcode_build))]
+pub type MononokeCasClient<'a> = ScmCasClient<cas_client::DummyCasClient<'a>>;
+
 const MAX_CONCURRENT_UPLOADS_TREES: usize = 200;
 const MAX_CONCURRENT_UPLOADS_FILES: usize = 100;
 
