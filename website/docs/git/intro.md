@@ -27,7 +27,7 @@ With the GitHub CLI caching your credentials, you will be able to run commands l
 
 ## Pull requests
 
-When it comes to working with pull requests from Sapling, you have three options: `sl pr`, and `sl push`. Each has its tradeoffs, so you may opt to use a different solution, depending on the scenario:
+When it comes to working with pull requests from Sapling, you have two options: `sl pr` and `sl push`. Each has its tradeoffs, so you may opt to use a different solution, depending on the scenario:
 
 ### `sl pr` (aka "Sapling stack")
 
