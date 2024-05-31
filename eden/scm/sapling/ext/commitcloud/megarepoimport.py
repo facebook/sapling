@@ -94,29 +94,37 @@ def translateandpull(
         ),
     )
 
-    # Get the list of commits to pull
+    # Get the list of heads to pull
     headsdates = cloudrefs.headdates
-    translatequeue = {}
+    headstranslatequeue = {}
     for head in headsdates:
         if megarepo.may_need_xrepotranslate(repo, head):
-            translatequeue[head] = headsdates[head]
+            headstranslatequeue[head] = headsdates[head]
+
+    # Get list of bookmarks to translate
+    bookmarks = cloudrefs.bookmarks
+    bookmarkstranslatequeue = {}
+    for bookmark in bookmarks:
+        if megarepo.may_need_xrepotranslate(repo, bookmarks[bookmark]):
+            bookmarkstranslatequeue[bookmark] = bookmarks[bookmark]
+
+    if not headstranslatequeue and not bookmarkstranslatequeue:
+        raise error.Abort(
+            _("nothing to sync translate between workspaces")
+            % (sourceworkspace, destinationworkspace)
+        )
 
     # Translate heads
     newheads = {}
-    for head in translatequeue:
+    for head in headstranslatequeue:
         newhead = megarepo.xrepotranslate(repo, head).hex()
-        newheads[newhead] = translatequeue[head]
+        newheads[newhead] = headstranslatequeue[head]
 
     # Translate bookmarks
-    bookmarks = cloudrefs.bookmarks
-    bookmarkstotranslate = {}
-    for bookmark in bookmarks:
-        if megarepo.may_need_xrepotranslate(repo, bookmarks[bookmark]):
-            bookmarkstotranslate[bookmark] = bookmarks[bookmark]
-
     newbookmarks = {}
-    for bookmark in bookmarkstotranslate:
-        newbookmarknode = megarepo.xrepotranslate(repo, bookmarkstotranslate[bookmark])
+    for bookmark in bookmarkstranslatequeue:
+        newbookmarknode = megarepo.xrepotranslate(
+            repo, bookmarkstranslatequeue[bookmark]
+        )
         newbookmarks[bookmark] = newbookmarknode
-
     return newheads, newbookmarks
