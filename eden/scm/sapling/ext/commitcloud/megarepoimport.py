@@ -137,3 +137,26 @@ def translateandpull(
         )
         newbookmarks[bookmark] = newbookmarknode
     return newheads, newbookmarks
+
+
+def dedupechanges(ui, heads, newheads, bookmarks, newbookmarks):
+
+    uniquenewheads = [head for head in newheads.keys() if head not in heads]
+
+    uniquenewbookmarks = {}
+    bookmarkstodelete = []
+    for key, value in newbookmarks.items():
+        value = value.hex()  # We store the hex value of the node
+        if key in bookmarks:
+            if bookmarks[key] != value:
+                ui.warn(
+                    _("Will overwrite bookmark %s from %s to %s\n")
+                    % (key, bookmarks[key], value),
+                    component="commitcloud",
+                )
+                bookmarkstodelete.append(key)
+                uniquenewbookmarks[key] = value
+        else:
+            uniquenewbookmarks[key] = value
+
+    return uniquenewheads, uniquenewbookmarks, bookmarkstodelete

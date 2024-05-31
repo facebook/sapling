@@ -1757,15 +1757,19 @@ def cloudimport(ui, repo, **opts):
 
     # update the destination workspace
     destcloudrefs = serv.getreferences(destinationrepo, destinationworkspace, 0)
-    # We store bookmarks hex encoded
-    hexbookmarks = (lambda d: {k: v.hex() for k, v in d.items()})(newbookmarks)
-
+    # Dedupe changes to avoid unnecessary updates
+    uniquenewheads, uniquenewbookmarks, bookmarkstodelete = (
+        megarepoimport.dedupechanges(
+            ui, destcloudrefs.heads, newheads, destcloudrefs.bookmarks, newbookmarks
+        )
+    )
     serv.updatereferences(
         destinationrepo,
         destinationworkspace,
         destcloudrefs.version,
-        newheads=newheads,
-        newbookmarks=hexbookmarks,
+        newheads=uniquenewheads,
+        newbookmarks=uniquenewbookmarks,
+        oldbookmarks=bookmarkstodelete,
     )
 
     # update local workspace
