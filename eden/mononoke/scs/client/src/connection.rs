@@ -10,6 +10,7 @@
 use anyhow::Error;
 use fbinit::FacebookInit;
 use scs_client_raw::ScsClient;
+use scs_client_raw::ScsClientBuilder;
 use scs_client_raw::SCS_DEFAULT_TIER;
 
 #[derive(clap::Args)]
@@ -28,9 +29,14 @@ pub(super) struct ConnectionArgs {
 impl ConnectionArgs {
     pub fn get_connection(&self, fb: FacebookInit, repo: Option<&str>) -> Result<ScsClient, Error> {
         if let Some(host_port) = &self.host {
-            ScsClient::from_host_port(fb, host_port)
+            ScsClientBuilder::new().build_from_host_port(fb, host_port)
         } else {
-            ScsClient::from_tier_name(fb, self.client_id.clone(), &self.tier, repo)
+            ScsClientBuilder::new().build_from_tier_name(
+                fb,
+                self.client_id.clone(),
+                &self.tier,
+                repo,
+            )
         }
     }
 }
