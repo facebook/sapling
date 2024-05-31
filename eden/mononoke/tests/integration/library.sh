@@ -1557,7 +1557,9 @@ function scsc_as {
     THRIFT_TLS_CL_CERT_PATH="$TEST_CERTDIR/$name.crt" \
     THRIFT_TLS_CL_KEY_PATH="$TEST_CERTDIR/$name.key" \
     THRIFT_TLS_CL_CA_PATH="$TEST_CERTDIR/root-ca.crt" \
-    "$SCS_CLIENT" --host "$LOCALIP:$SCS_PORT" "$@"
+    "$SCS_CLIENT" \
+    --expected-server-identity MACHINE:mononoke-test-server-000.vll0.facebook.com \
+    --host "$LOCALIP:$SCS_PORT" "$@"
 }
 
 function scsc {

@@ -27,6 +27,7 @@ rust_library(
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:maplit",
         "//c2p/secure_thrift/rust/client:x2pclient",
+        "//common/rust/identity:identity",
         "//common/rust/shed/fbinit:fbinit",
         "//eden/mononoke/cmdlib/sharding_ext:sharding_ext",
         "//eden/mononoke/scs/if:source_control-rust",
