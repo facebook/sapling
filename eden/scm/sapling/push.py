@@ -65,23 +65,7 @@ def push(
             _("merge commit is not supported by EdenApi push yet")
         )
 
-    if ui.configbool(CFG_SECTION, CFG_KEY_ENABLE_DEBUG_INFO):
-        commit_infos = []
-        for node in draft_nodes:
-            ctx = repo[node]
-            line = "  " + "|".join(
-                [
-                    str(ctx),
-                    ctx.phasestr(),
-                    ",".join(str(p) for p in ctx.parents()),
-                    ",".join(short(n) for n in ctx.mutationpredecessors()),
-                ]
-            )
-            commit_infos.append(line)
-        if commit_infos:
-            ui.write(_x("push commits debug info:\n%s\n") % "\n".join(commit_infos))
-        else:
-            ui.write(_x("head commit %s is not a draft commit\n") % short(head_node))
+    maybe_log_debug_info(repo, head_node, draft_nodes)
 
     # upload revs via EdenApi
 
@@ -125,6 +109,27 @@ def push(
     else:
         # update the exiting bookmark with push rebase
         return push_rebase(repo, dest, head_node, draft_nodes, remote_bookmark, opargs)
+
+
+def maybe_log_debug_info(repo, head_node, draft_nodes):
+    ui = repo.ui
+    if ui.configbool(CFG_SECTION, CFG_KEY_ENABLE_DEBUG_INFO):
+        commit_infos = []
+        for node in draft_nodes:
+            ctx = repo[node]
+            line = "  " + "|".join(
+                [
+                    str(ctx),
+                    ctx.phasestr(),
+                    ",".join(str(p) for p in ctx.parents()),
+                    ",".join(short(n) for n in ctx.mutationpredecessors()),
+                ]
+            )
+            commit_infos.append(line)
+        if commit_infos:
+            ui.write(_x("push commits debug info:\n%s\n") % "\n".join(commit_infos))
+        else:
+            ui.write(_x("head commit %s is not a draft commit\n") % short(head_node))
 
 
 def plain_push(repo, edenapi, bookmark, to_node, curr_bookmark_val, force, opargs=None):
