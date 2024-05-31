@@ -59,12 +59,7 @@ def push(
     edenapi = edenapi or get_edenapi_for_dest(repo, dest)
     opargs = opargs or {}
 
-    draft_nodes = repo.dageval(lambda: only([head_node], public()))
-    if repo.dageval(lambda: merges(draft_nodes)):
-        raise error.UnsupportedEdenApiPush(
-            _("merge commit is not supported by EdenApi push yet")
-        )
-
+    draft_nodes = get_draft_nodes(repo, dest, head_node, remote_bookmark)
     maybe_log_debug_info(repo, head_node, draft_nodes)
 
     # upload revs via EdenApi
@@ -130,6 +125,15 @@ def maybe_log_debug_info(repo, head_node, draft_nodes):
             ui.write(_x("push commits debug info:\n%s\n") % "\n".join(commit_infos))
         else:
             ui.write(_x("head commit %s is not a draft commit\n") % short(head_node))
+
+
+def get_draft_nodes(repo, dest, head_node, remote_bookmark):
+    draft_nodes = repo.dageval(lambda: only([head_node], public()))
+    if repo.dageval(lambda: merges(draft_nodes)):
+        raise error.UnsupportedEdenApiPush(
+            _("merge commit is not supported by EdenApi push yet")
+        )
+    return draft_nodes
 
 
 def plain_push(repo, edenapi, bookmark, to_node, curr_bookmark_val, force, opargs=None):
