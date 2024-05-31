@@ -59,7 +59,10 @@ def push(
     edenapi = edenapi or get_edenapi_for_dest(repo, dest)
     opargs = opargs or {}
 
-    draft_nodes = get_draft_nodes(repo, dest, head_node, remote_bookmark)
+    curr_bookmark_val = get_remote_bookmark_value(repo, edenapi, remote_bookmark, force)
+    draft_nodes = get_draft_nodes(
+        repo, dest, head_node, remote_bookmark, curr_bookmark_val
+    )
     maybe_log_debug_info(repo, head_node, draft_nodes)
 
     # upload revs via EdenApi
@@ -68,7 +71,6 @@ def push(
         _("pushing rev %s to destination %s bookmark %s\n")
         % (short(head_node), edenapi.url(), remote_bookmark)
     )
-
     upload_draft_nodes(repo, draft_nodes)
 
     curr_bookmark_val = get_remote_bookmark_value(repo, edenapi, remote_bookmark, force)
@@ -120,7 +122,15 @@ def maybe_log_debug_info(repo, head_node, draft_nodes):
             ui.write(_x("head commit %s is not a draft commit\n") % short(head_node))
 
 
-def get_draft_nodes(repo, dest, head_node, remote_bookmark):
+def get_draft_nodes(repo, dest, head_node, remote_bookmark, curr_bookmark_val):
+    bookmark_node = curr_bookmark_val.node
+    # pull the remote_bookmark to avoid wrongly treating some commits as draft
+    if bookmark_node and curr_bookmark_val.source == RemoteBookmarkValueSource.SERVER:
+        repo.pull(
+            source=dest,
+            bookmarknames=(remote_bookmark,),
+            remotebookmarks={remote_bookmark: bookmark_node},
+        )
     draft_nodes = repo.dageval(lambda: only([head_node], public()))
     if repo.dageval(lambda: merges(draft_nodes)):
         raise error.UnsupportedEdenApiPush(
