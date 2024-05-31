@@ -1736,9 +1736,15 @@ def cloudimport(ui, repo, **opts):
         destinationrepo,
         serv,
     )
-    megarepoimport.translateandpull(
+    currentworkspace = workspace.currentworkspace(repo)
+    currentrepo = ccutil.getreponame(repo)
+
+    # Translate heads and bookmarks
+    newheads, newbookmarks = megarepoimport.translateandpull(
         ui,
         repo,
+        currentrepo,
+        currentworkspace,
         sourceworkspace,
         destinationworkspace,
         sourcerepo,
@@ -1746,4 +1752,19 @@ def cloudimport(ui, repo, **opts):
         serv,
     )
 
-    return cloudsync(ui, repo)
+    # update the destination workspace
+    destcloudrefs = serv.getreferences(destinationrepo, destinationworkspace, 0)
+    # We store bookmarks hex encoded
+    hexbookmarks = (lambda d: {k: v.hex() for k, v in d.items()})(newbookmarks)
+
+    serv.updatereferences(
+        destinationrepo,
+        destinationworkspace,
+        destcloudrefs.version,
+        newheads=newheads,
+        newbookmarks=hexbookmarks,
+    )
+
+    # update local workspace
+    if currentrepo == destinationrepo and currentworkspace == destinationworkspace:
+        cloudsync(ui, repo, workspace=currentworkspace)

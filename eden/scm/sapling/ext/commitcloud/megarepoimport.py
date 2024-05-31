@@ -74,7 +74,15 @@ def fetchworkspaces(
 
 
 def translateandpull(
-    ui, repo, sourceworkspace, destinationworkspace, sourcerepo, destinationrepo, serv
+    ui,
+    repo,
+    currentrepo,
+    currentworkspace,
+    sourceworkspace,
+    destinationworkspace,
+    sourcerepo,
+    destinationrepo,
+    serv,
 ):
 
     cloudrefs = serv.getreferences(
@@ -99,11 +107,6 @@ def translateandpull(
         newhead = megarepo.xrepotranslate(repo, head).hex()
         newheads[newhead] = translatequeue[head]
 
-    remotepath = ccutil.getremotepath(ui)
-
-    headgroups = sync.partitionheads(ui, newheads)
-    sync.pullheadgroups(repo, remotepath, headgroups)
-
     # Translate bookmarks
     bookmarks = cloudrefs.bookmarks
     bookmarkstotranslate = {}
@@ -111,10 +114,9 @@ def translateandpull(
         if megarepo.may_need_xrepotranslate(repo, bookmarks[bookmark]):
             bookmarkstotranslate[bookmark] = bookmarks[bookmark]
 
-    newbookmarks = []
+    newbookmarks = {}
     for bookmark in bookmarkstotranslate:
         newbookmarknode = megarepo.xrepotranslate(repo, bookmarkstotranslate[bookmark])
-        newbookmarks.append((bookmark, newbookmarknode))
+        newbookmarks[bookmark] = newbookmarknode
 
-    with repo.wlock(), repo.lock(), repo.transaction("cloudsync") as tr:
-        repo._bookmarks.applychanges(repo, tr, newbookmarks, warnoverwrite=True)
+    return newheads, newbookmarks

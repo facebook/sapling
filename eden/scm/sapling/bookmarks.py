@@ -146,7 +146,7 @@ class bmstore(dict):
         self._clean = False
         return dict.__delitem__(self, key)
 
-    def applychanges(self, repo, tr, changes, warnoverwrite=False):
+    def applychanges(self, repo, tr, changes):
         """Apply a list of changes to bookmarks"""
         bmchanges = tr.changes.get("bookmarks")
         for name, node in changes:
@@ -154,15 +154,6 @@ class bmstore(dict):
             if node is None:
                 self._del(name)
             else:
-                if warnoverwrite and old is not None and old != node:
-                    self._repo.ui.warn(
-                        _("overwriting bookmark %s from %s to %s\n")
-                        % (
-                            name,
-                            short(old),
-                            short(node),
-                        )
-                    )
                 self._set(name, node)
             if bmchanges is not None:
                 # if a previous value exist preserve the "initial" value
