@@ -314,3 +314,6 @@ class FakeEdenInstance(AbstractEdenInstance):
 
     def get_running_version(self) -> str:
         return version_mod.format_eden_version(self.get_running_version_parts())
+
+    def get_known_bad_edenfs_versions(self) -> Dict[str, List[str]]:
+        return {}

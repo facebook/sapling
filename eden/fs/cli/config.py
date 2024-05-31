@@ -427,6 +427,31 @@ class EdenInstance(AbstractEdenInstance):
     def log_sample(self, log_type: str, **kwargs: telemetry.TelemetryTypes) -> None:
         self.get_telemetry_logger().log(log_type, **kwargs)
 
+    def get_known_bad_edenfs_versions(self) -> Dict[str, List[str]]:
+        """
+        Get a dictionary mapping bad EdenFS versions to their reasons.
+        """
+        bad_versions_config = self.get_config_strs(
+            "doctor.known-bad-edenfs-versions", default=configutil.Strs()
+        )
+        if not bad_versions_config:
+            return {}
+        bad_versions_map = {}
+        for item in bad_versions_config:
+            if "|" not in item:
+                print(
+                    f"WARNING: `known-bad-edenfs-versions` config has an invalid entry `{item}`.",
+                )
+                continue
+            version, reason = item.split("|", 1)
+            version = version.strip()
+            reason = reason.strip()
+            if version in bad_versions_map:
+                bad_versions_map[version].append(reason)
+            else:
+                bad_versions_map[version] = [reason]
+        return bad_versions_map
+
     def get_running_version_parts(self) -> Tuple[str, str]:
         """Get a tuple containing (version, release) of the currently running EdenFS
         daemon.
