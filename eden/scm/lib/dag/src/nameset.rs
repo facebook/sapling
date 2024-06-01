@@ -213,11 +213,15 @@ impl NameSet {
             let order = this.map.map_version().partial_cmp(other.map.map_version());
             if order.is_some() {
                 // Fast path for IdStaticSet
-                let result = Self::from_spans_idmap_dag(
+                let mut result = Self::from_spans_idmap_dag(
                     this.spans.difference(&other.spans),
                     this.map.clone(),
                     this.dag.clone(),
                 );
+                // Preserve order.
+                if this.is_reversed() {
+                    result = result.reverse();
+                }
                 tracing::debug!(
                     target: "dag::algo::difference",
                     "difference(x={:.6?}, y={:.6?}) = {:.6?} (fast path 3)",
@@ -276,11 +280,14 @@ impl NameSet {
             let order = this.map.map_version().partial_cmp(other.map.map_version());
             if let Some(order) = order {
                 // Fast path for IdStaticSet
-                let result = Self::from_spans_idmap_dag(
+                let mut result = Self::from_spans_idmap_dag(
                     this.spans.intersection(&other.spans),
                     pick(order, &this.map, &other.map).clone(),
                     pick(order, &this.dag, &other.dag).clone(),
                 );
+                if this.is_reversed() {
+                    result = result.reverse();
+                }
                 tracing::debug!(
                     target: "dag::algo::intersection",
                     "intersection(x={:.6?}, y={:.6?}) = {:?} (IdStatic fast path)",
@@ -829,6 +836,7 @@ fn pick<T>(order: cmp::Ordering, left: T, right: T) -> T {
 
 #[cfg(test)]
 pub(crate) mod tests {
+    use futures::TryStreamExt;
     use nonblocking::non_blocking_result as r;
 
     use super::*;
@@ -1475,5 +1483,11 @@ pub(crate) mod tests {
             }
         }
         Ok(())
+    }
+
+    pub(crate) fn fmt_iter(set: &NameSet) -> String {
+        let iter = r(AsyncNameSetQuery::iter(set.deref())).unwrap();
+        let names = r(iter.try_collect::<Vec<_>>()).unwrap();
+        format!("{:?}", names)
     }
 }

@@ -204,6 +204,10 @@ impl IdStaticSet {
         self
     }
 
+    pub(crate) fn is_reversed(&self) -> bool {
+        self.reversed
+    }
+
     async fn max(&self) -> Result<Option<VertexName>> {
         debug_assert_eq!(self.spans.max(), self.spans.iter_desc().nth(0));
         match self.spans.max() {
@@ -529,6 +533,30 @@ pub(crate) mod tests {
                 "[A, B, C, D, E, F, G]"
             );
 
+            Ok(())
+        })
+    }
+
+    #[test]
+    fn test_intersect_difference_preserve_reverse_order() -> Result<()> {
+        with_dag(|dag| -> Result<()> {
+            let abc = "A B C".into();
+            let cd = "C D".into();
+            let cba = r(dag.sort(&abc))?; // DESC
+            let dc = r(dag.sort(&cd))?;
+            let abc = cba.reverse();
+
+            let ab = abc.clone() - dc.clone();
+            check_invariants(&*ab)?;
+            assert_eq!(fmt_iter(&ab), "[A, B]");
+
+            let abc2 = abc.clone() & cba.clone();
+            check_invariants(&*abc2)?;
+            assert_eq!(fmt_iter(&abc2), "[A, B, C]");
+
+            let cba2 = cba & abc;
+            check_invariants(&*cba2)?;
+            assert_eq!(fmt_iter(&cba2), "[C, B, A]");
             Ok(())
         })
     }
