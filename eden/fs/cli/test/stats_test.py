@@ -96,30 +96,6 @@ key                1              2              3              4
         self.assertEqual(stats_print.format_time(60 * 60 * 32), "1.3 day(s)")
 
 
-class HgImporterStatsTest(unittest.TestCase):
-    def test_cat_file_call_counts_are_extracted_from_counters(self) -> None:
-        counters: DiagInfoCounters = {
-            "hg_importer.cat_file.count": 10,
-            "hg_importer.cat_file.count.3600": 9,
-            "hg_importer.cat_file.count.60": 1,
-            "hg_importer.cat_file.count.600": 7,
-            "journal.fbsource.count": 22,
-        }
-        table = get_counter_table(counters, ["hg_importer"], ["count"])
-        self.assertEqual(table.get("cat_file"), [1, 7, 9, 10])
-
-    def test_table_includes_unknown_counters(self) -> None:
-        counters: DiagInfoCounters = {
-            "hg_importer.dog_file.count": 100,
-            "hg_importer.dog_file.count.3600": 90,
-            "hg_importer.dog_file.count.60": 10,
-            "hg_importer.dog_file.count.600": 70,
-            "journal.fbsource.count": 33,
-        }
-        table = get_counter_table(counters, ["hg_importer"], ["count"])
-        self.assertEqual(table.get("dog_file"), [10, 70, 90, 100])
-
-
 class SaplingBackingStoreStatsTest(unittest.TestCase):
     def test_get_stats_from_right_store(self) -> None:
         counters: DiagInfoCounters = {

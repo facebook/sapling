@@ -25,7 +25,6 @@ struct PrjfsStats;
 struct ObjectStoreStats;
 struct LocalStoreStats;
 struct SaplingBackingStoreStats;
-struct HgImporterStats;
 struct JournalStats;
 struct ThriftStats;
 struct OverlayStats;
@@ -75,7 +74,6 @@ class EdenStats : public RefCounted {
   ThreadLocal<ObjectStoreStats> objectStoreStats_;
   ThreadLocal<LocalStoreStats> localStoreStats_;
   ThreadLocal<SaplingBackingStoreStats> saplingBackingStoreStats_;
-  ThreadLocal<HgImporterStats> hgImporterStats_;
   ThreadLocal<JournalStats> journalStats_;
   ThreadLocal<ThriftStats> thriftStats_;
   ThreadLocal<TelemetryStats> telemetryStats_;
@@ -119,11 +117,6 @@ template <>
 inline SaplingBackingStoreStats&
 EdenStats::getStatsForCurrentThread<SaplingBackingStoreStats>() {
   return *saplingBackingStoreStats_.get();
-}
-
-template <>
-inline HgImporterStats& EdenStats::getStatsForCurrentThread<HgImporterStats>() {
-  return *hgImporterStats_.get();
 }
 
 template <>
@@ -365,18 +358,6 @@ struct SaplingBackingStoreStats : StatsGroup<SaplingBackingStoreStats> {
   Counter fetchBlobMetadataSuccess{"store.sapling.fetch_blob_metadata_success"};
   Counter fetchBlobMetadataFailure{"store.sapling.fetch_blob_metadata_failure"};
   Counter loadProxyHash{"store.sapling.load_proxy_hash"};
-};
-
-/**
- * @see HgImporter
- * @see SaplingBackingStore
- */
-struct HgImporterStats : StatsGroup<HgImporterStats> {
-  Counter catFile{"hg_importer.cat_file"};
-  Counter fetchTree{"hg_importer.fetch_tree"};
-  Counter manifest{"hg_importer.manifest"};
-  Counter manifestNodeForCommit{"hg_importer.manifest_node_for_commit"};
-  Counter prefetchFiles{"hg_importer.prefetch_files"};
 };
 
 struct JournalStats : StatsGroup<JournalStats> {
