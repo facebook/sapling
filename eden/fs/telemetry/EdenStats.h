@@ -267,22 +267,27 @@ struct ObjectStoreStats : StatsGroup<ObjectStoreStats> {
   Duration getTree{"store.get_tree_us"};
   Duration getBlob{"store.get_blob_us"};
   Duration getBlobMetadata{"store.get_blob_metadata_us"};
+  Duration getRootTree{"store.get_root_tree_us"};
 
   Counter getBlobFromMemory{"object_store.get_blob.memory"};
   Counter getBlobFromLocalStore{"object_store.get_blob.local_store"};
   Counter getBlobFromBackingStore{"object_store.get_blob.backing_store"};
+  Counter getBlobFailed{"object_store.get_blob_failed"};
 
   Counter getTreeFromMemory{"object_store.get_tree.memory"};
   Counter getTreeFromLocalStore{"object_store.get_tree.local_store"};
   Counter getTreeFromBackingStore{"object_store.get_tree.backing_store"};
+  Counter getTreeFailed{"object_store.get_tree_failed"};
+
+  Counter getRootTreeFromBackingStore{
+      "object_store.get_root_tree.backing_store"};
+  Counter getRootTreeFailed{"object_store.get_root_tree_failed"};
 
   Counter getBlobMetadataFromMemory{"object_store.get_blob_metadata.memory"};
   Counter getBlobMetadataFromLocalStore{
       "object_store.get_blob_metadata.local_store"};
   Counter getBlobMetadataFromBackingStore{
       "object_store.get_blob_metadata.backing_store"};
-  Counter getLocalBlobMetadataFromBackingStore{
-      "object_store.get_blob_metadata.backing_store_cache"};
   Counter getBlobMetadataFromBlob{"object_store.get_blob_metadata.blob"};
   Counter getBlobMetadataFailed{"object_store.get_blob_metadata_failed"};
 };

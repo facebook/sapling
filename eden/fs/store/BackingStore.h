@@ -9,6 +9,7 @@
 
 #include <folly/Range.h>
 #include <folly/futures/Future.h>
+#include <folly/memory/not_null.h>
 #include <memory>
 
 #include "eden/common/utils/ImmediateFuture.h"
@@ -95,7 +96,7 @@ class BackingStore : public RootIdCodec, public ObjectIdCodec {
    */
   struct GetTreeResult {
     /** The retrieved tree. */
-    TreePtr tree;
+    folly::not_null<TreePtr> tree;
     /** The fetch origin of the tree. */
     ObjectFetchContext::Origin origin;
   };
@@ -105,7 +106,7 @@ class BackingStore : public RootIdCodec, public ObjectIdCodec {
    */
   struct GetBlobResult {
     /** The retrieved blob. */
-    BlobPtr blob;
+    folly::not_null<BlobPtr> blob;
     /** The fetch origin of the blob. */
     ObjectFetchContext::Origin origin;
   };
