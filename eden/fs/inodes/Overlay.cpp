@@ -444,11 +444,10 @@ DirContents Overlay::loadOverlayDir(InodeNumber inodeNumber) {
   IORequest req{this};
   auto dirData = inodeCatalog_->loadOverlayDir(inodeNumber);
   if (!dirData.has_value()) {
-    stats_->increment(&OverlayStats::loadOverlayDirMiss);
+    stats_->increment(&OverlayStats::loadOverlayDirFailure);
     return result;
   }
   const auto& dir = dirData.value();
-  stats_->increment(&OverlayStats::loadOverlayDirHit);
 
   bool shouldRewriteOverlay = false;
 
@@ -485,7 +484,7 @@ DirContents Overlay::loadOverlayDir(InodeNumber inodeNumber) {
   if (shouldRewriteOverlay) {
     saveOverlayDir(inodeNumber, result);
   }
-
+  stats_->increment(&OverlayStats::loadOverlayDirSuccessful);
   return result;
 }
 
@@ -538,8 +537,16 @@ overlay::OverlayDir Overlay::serializeOverlayDir(
 
 void Overlay::saveOverlayDir(InodeNumber inodeNumber, const DirContents& dir) {
   DurationScope<EdenStats> statScope{stats_, &OverlayStats::saveOverlayDir};
-  inodeCatalog_->saveOverlayDir(
-      inodeNumber, serializeOverlayDir(inodeNumber, dir));
+  try {
+    inodeCatalog_->saveOverlayDir(
+        inodeNumber, serializeOverlayDir(inodeNumber, dir));
+    stats_->increment(&OverlayStats::saveOverlayDirSuccessful);
+  } catch (const std::exception& e) {
+    XLOG(ERR) << "Failed to save overlay dir " << inodeNumber << " "
+              << e.what();
+    stats_->increment(&OverlayStats::saveOverlayDirFailure);
+    throw;
+  }
 }
 
 void Overlay::freeInodeFromMetadataTable(InodeNumber ino) {
@@ -553,38 +560,64 @@ void Overlay::freeInodeFromMetadataTable(InodeNumber ino) {
 
 void Overlay::removeOverlayFile(InodeNumber inodeNumber) {
   DurationScope<EdenStats> statScope{stats_, &OverlayStats::removeOverlayFile};
+  try {
 #ifndef _WIN32
-  IORequest req{this};
+    IORequest req{this};
 
-  freeInodeFromMetadataTable(inodeNumber);
-  fileContentStore_->removeOverlayFile(inodeNumber);
+    freeInodeFromMetadataTable(inodeNumber);
+    fileContentStore_->removeOverlayFile(inodeNumber);
 #else
-  (void)inodeNumber;
+    (void)inodeNumber;
 #endif
+    stats_->increment(&OverlayStats::removeOverlayFileSuccessful);
+  } catch (const std::exception& e) {
+    XLOG(ERR) << "Failed to remove overlay file " << inodeNumber << " "
+              << e.what();
+    stats_->increment(&OverlayStats::removeOverlayFileFailure);
+    throw;
+  }
 }
 
 void Overlay::removeOverlayDir(InodeNumber inodeNumber) {
   DurationScope<EdenStats> statScope{stats_, &OverlayStats::removeOverlayDir};
-  IORequest req{this};
+  try {
+    IORequest req{this};
 
-  freeInodeFromMetadataTable(inodeNumber);
-  inodeCatalog_->removeOverlayDir(inodeNumber);
+    freeInodeFromMetadataTable(inodeNumber);
+    inodeCatalog_->removeOverlayDir(inodeNumber);
+    stats_->increment(&OverlayStats::removeOverlayDirSuccessful);
+  } catch (const std::exception& e) {
+    XLOG(ERR) << "Failed to remove overlay dir " << inodeNumber << " "
+              << e.what();
+    stats_->increment(&OverlayStats::removeOverlayDirFailure);
+    throw;
+  }
 }
 
 void Overlay::recursivelyRemoveOverlayDir(InodeNumber inodeNumber) {
-  IORequest req{this};
-  freeInodeFromMetadataTable(inodeNumber);
+  DurationScope<EdenStats> statScope{
+      stats_, &OverlayStats::recursivelyRemoveOverlayDir};
+  try {
+    IORequest req{this};
+    freeInodeFromMetadataTable(inodeNumber);
 
-  // This inode's data must be removed from the overlay before
-  // recursivelyRemoveOverlayDir returns to avoid a race condition if
-  // recursivelyRemoveOverlayDir(I) is called immediately prior to
-  // saveOverlayDir(I).  There's also no risk of violating our durability
-  // guarantees if the process dies after this call but before the thread could
-  // remove this data.
-  auto dirData = inodeCatalog_->loadAndRemoveOverlayDir(inodeNumber);
-  if (dirData) {
-    gcQueue_.lock()->queue.emplace_back(std::move(*dirData));
-    gcCondVar_.notify_one();
+    // This inode's data must be removed from the overlay before
+    // recursivelyRemoveOverlayDir returns to avoid a race condition if
+    // recursivelyRemoveOverlayDir(I) is called immediately prior to
+    // saveOverlayDir(I).  There's also no risk of violating our durability
+    // guarantees if the process dies after this call but before the thread
+    // could remove this data.
+    auto dirData = inodeCatalog_->loadAndRemoveOverlayDir(inodeNumber);
+    if (dirData) {
+      gcQueue_.lock()->queue.emplace_back(std::move(*dirData));
+      gcCondVar_.notify_one();
+    }
+    stats_->increment(&OverlayStats::recursivelyRemoveOverlayDirSuccessful);
+  } catch (const std::exception& e) {
+    XLOG(ERR) << "Failed to recursively remove overlay dir " << inodeNumber
+              << " " << e.what();
+    stats_->increment(&OverlayStats::recursivelyRemoveOverlayDirFailure);
+    throw;
   }
 }
 
@@ -600,17 +633,36 @@ folly::Future<folly::Unit> Overlay::flushPendingAsync() {
 
 bool Overlay::hasOverlayDir(InodeNumber inodeNumber) {
   DurationScope<EdenStats> statScope{stats_, &OverlayStats::hasOverlayDir};
-  IORequest req{this};
-  return inodeCatalog_->hasOverlayDir(inodeNumber);
+  try {
+    IORequest req{this};
+
+    bool has_overlay_dir = inodeCatalog_->hasOverlayDir(inodeNumber);
+    stats_->increment(&OverlayStats::hasOverlayDirSuccessful);
+    return has_overlay_dir;
+  } catch (const std::exception& e) {
+    XLOG(ERR) << "Failed to check if overlay dir exists " << inodeNumber << " "
+              << e.what();
+    stats_->increment(&OverlayStats::hasOverlayDirFailure);
+    throw;
+  }
 }
 
 #ifndef _WIN32
 
 bool Overlay::hasOverlayFile(InodeNumber inodeNumber) {
   DurationScope<EdenStats> statScope{stats_, &OverlayStats::hasOverlayFile};
-  IORequest req{this};
-  XCHECK(fileContentStore_);
-  return fileContentStore_->hasOverlayFile(inodeNumber);
+  try {
+    IORequest req{this};
+    XCHECK(fileContentStore_);
+    bool has_overlay_file = fileContentStore_->hasOverlayFile(inodeNumber);
+    stats_->increment(&OverlayStats::hasOverlayFileSuccessful);
+    return has_overlay_file;
+  } catch (const std::exception& e) {
+    XLOG(ERR) << "Failed to check if overlay file exists " << inodeNumber << " "
+              << e.what();
+    stats_->increment(&OverlayStats::hasOverlayFileFailure);
+    throw;
+  }
 }
 
 // Helper function to open,validate,
@@ -618,41 +670,80 @@ bool Overlay::hasOverlayFile(InodeNumber inodeNumber) {
 OverlayFile Overlay::openFile(
     InodeNumber inodeNumber,
     folly::StringPiece headerId) {
+  DurationScope<EdenStats> statScope{stats_, &OverlayStats::openOverlayFile};
   IORequest req{this};
-  XCHECK(fileContentStore_);
-  return OverlayFile(
-      fileContentStore_->openFile(inodeNumber, headerId), weak_from_this());
+  try {
+    XCHECK(fileContentStore_);
+    auto file = OverlayFile(
+        fileContentStore_->openFile(inodeNumber, headerId), weak_from_this());
+    stats_->increment(&OverlayStats::openOverlayFileSuccessful);
+    return file;
+  } catch (const std::exception& e) {
+    XLOG(ERR) << "Failed to open file " << inodeNumber << " " << headerId << " "
+              << e.what();
+    stats_->increment(&OverlayStats::openOverlayFileFailure);
+    throw;
+  }
 }
 
 OverlayFile Overlay::openFileNoVerify(InodeNumber inodeNumber) {
+  DurationScope<EdenStats> statScope{stats_, &OverlayStats::openOverlayFile};
   IORequest req{this};
-  XCHECK(fileContentStore_);
-  return OverlayFile(
-      fileContentStore_->openFileNoVerify(inodeNumber), weak_from_this());
+  try {
+    XCHECK(fileContentStore_);
+    auto file = OverlayFile(
+        fileContentStore_->openFileNoVerify(inodeNumber), weak_from_this());
+    stats_->increment(&OverlayStats::openOverlayFileSuccessful);
+    return file;
+  } catch (const std::exception& e) {
+    XLOG(ERR) << "Failed to open file " << inodeNumber << " " << e.what();
+    stats_->increment(&OverlayStats::openOverlayFileFailure);
+    throw;
+  }
 }
 
 OverlayFile Overlay::createOverlayFile(
     InodeNumber inodeNumber,
     folly::ByteRange contents) {
+  DurationScope<EdenStats> statScope{stats_, &OverlayStats::createOverlayFile};
   IORequest req{this};
-  XCHECK_LT(inodeNumber.get(), nextInodeNumber_.load(std::memory_order_relaxed))
-      << "createOverlayFile called with unallocated inode number";
-  XCHECK(fileContentStore_);
-  return OverlayFile(
-      fileContentStore_->createOverlayFile(inodeNumber, contents),
-      weak_from_this());
+  try {
+    XCHECK_LT(
+        inodeNumber.get(), nextInodeNumber_.load(std::memory_order_relaxed))
+        << "createOverlayFile called with unallocated inode number";
+    XCHECK(fileContentStore_);
+    auto file = OverlayFile(
+        fileContentStore_->createOverlayFile(inodeNumber, contents),
+        weak_from_this());
+    stats_->increment(&OverlayStats::createOverlayFileSuccessful);
+    return file;
+  } catch (const std::exception& e) {
+    XLOG(ERR) << "Failed to create file " << inodeNumber << " " << e.what();
+    stats_->increment(&OverlayStats::createOverlayFileFailure);
+    throw;
+  }
 }
 
 OverlayFile Overlay::createOverlayFile(
     InodeNumber inodeNumber,
     const folly::IOBuf& contents) {
+  DurationScope<EdenStats> statScope{stats_, &OverlayStats::createOverlayFile};
   IORequest req{this};
-  XCHECK_LT(inodeNumber.get(), nextInodeNumber_.load(std::memory_order_relaxed))
-      << "createOverlayFile called with unallocated inode number";
-  XCHECK(fileContentStore_);
-  return OverlayFile(
-      fileContentStore_->createOverlayFile(inodeNumber, contents),
-      weak_from_this());
+  try {
+    XCHECK_LT(
+        inodeNumber.get(), nextInodeNumber_.load(std::memory_order_relaxed))
+        << "createOverlayFile called with unallocated inode number";
+    XCHECK(fileContentStore_);
+    auto file = OverlayFile(
+        fileContentStore_->createOverlayFile(inodeNumber, contents),
+        weak_from_this());
+    stats_->increment(&OverlayStats::createOverlayFileSuccessful);
+    return file;
+  } catch (const std::exception& e) {
+    XLOG(ERR) << "Failed to create file " << inodeNumber << " " << e.what();
+    stats_->increment(&OverlayStats::createOverlayFileFailure);
+    throw;
+  }
 }
 
 #endif // !_WIN32
@@ -818,11 +909,18 @@ void Overlay::addChild(
     const std::pair<PathComponent, DirEntry>& childEntry,
     const DirContents& content) {
   DurationScope<EdenStats> statScope{stats_, &OverlayStats::addChild};
-  if (supportsSemanticOperations_) {
-    inodeCatalog_->addChild(
-        parent, childEntry.first, serializeOverlayEntry(childEntry.second));
-  } else {
-    saveOverlayDir(parent, content);
+  try {
+    if (supportsSemanticOperations_) {
+      inodeCatalog_->addChild(
+          parent, childEntry.first, serializeOverlayEntry(childEntry.second));
+    } else {
+      saveOverlayDir(parent, content);
+    }
+    stats_->increment(&OverlayStats::addChildSuccessful);
+  } catch (const std::exception& e) {
+    XLOG(ERR) << "Failed to add child " << childEntry.first << " " << e.what();
+    stats_->increment(&OverlayStats::addChildFailure);
+    throw;
   }
 }
 
@@ -831,16 +929,30 @@ void Overlay::removeChild(
     PathComponentPiece childName,
     const DirContents& content) {
   DurationScope<EdenStats> statScope{stats_, &OverlayStats::removeChild};
-  if (supportsSemanticOperations_) {
-    inodeCatalog_->removeChild(parent, childName);
-  } else {
-    saveOverlayDir(parent, content);
+  try {
+    if (supportsSemanticOperations_) {
+      inodeCatalog_->removeChild(parent, childName);
+    } else {
+      saveOverlayDir(parent, content);
+    }
+    stats_->increment(&OverlayStats::removeChildSuccessful);
+  } catch (const std::exception& e) {
+    XLOG(ERR) << "Failed to remove child " << childName << " " << e.what();
+    stats_->increment(&OverlayStats::removeChildFailure);
+    throw;
   }
 }
 
 void Overlay::removeChildren(InodeNumber parent, const DirContents& content) {
   DurationScope<EdenStats> statScope{stats_, &OverlayStats::removeChildren};
-  saveOverlayDir(parent, content);
+  try {
+    saveOverlayDir(parent, content);
+    stats_->increment(&OverlayStats::removeChildrenSuccessful);
+  } catch (const std::exception& e) {
+    XLOG(ERR) << "Failed to remove children " << e.what();
+    stats_->increment(&OverlayStats::removeChildrenFailure);
+    throw;
+  }
 }
 
 void Overlay::renameChild(
@@ -851,13 +963,20 @@ void Overlay::renameChild(
     const DirContents& srcContent,
     const DirContents& dstContent) {
   DurationScope<EdenStats> statScope{stats_, &OverlayStats::renameChild};
-  if (supportsSemanticOperations_) {
-    inodeCatalog_->renameChild(src, dst, srcName, dstName);
-  } else {
-    saveOverlayDir(src, srcContent);
-    if (dst.get() != src.get()) {
-      saveOverlayDir(dst, dstContent);
+  try {
+    if (supportsSemanticOperations_) {
+      inodeCatalog_->renameChild(src, dst, srcName, dstName);
+    } else {
+      saveOverlayDir(src, srcContent);
+      if (dst.get() != src.get()) {
+        saveOverlayDir(dst, dstContent);
+      }
     }
+    stats_->increment(&OverlayStats::renameChildSuccessful);
+  } catch (const std::exception& e) {
+    XLOG(ERR) << "Failed to rename child " << srcName << " " << e.what();
+    stats_->increment(&OverlayStats::renameChildFailure);
+    throw;
   }
 }
 

@@ -395,16 +395,46 @@ struct ThriftStats : StatsGroup<ThriftStats> {
 struct OverlayStats : StatsGroup<OverlayStats> {
   Duration saveOverlayDir{"overlay.save_overlay_dir_us"};
   Duration loadOverlayDir{"overlay.load_overlay_dir_us"};
+  Duration openOverlayFile{"overlay.open_overlay_file_us"};
+  Duration createOverlayFile{"overlay.create_overlay_file_us"};
   Duration removeOverlayFile{"overlay.remove_overlay_file_us"};
   Duration removeOverlayDir{"overlay.remove_overlay_dir_us"};
+  Duration recursivelyRemoveOverlayDir{
+      "overlay.recursively_remove_overlay_dir_us"};
   Duration hasOverlayDir{"overlay.has_overlay_dir_us"};
   Duration hasOverlayFile{"overlay.has_overlay_file_us"};
   Duration addChild{"overlay.add_child_us"};
   Duration removeChild{"overlay.remove_child_us"};
   Duration removeChildren{"overlay.remove_children_us"};
   Duration renameChild{"overlay.rename_child_us"};
-  Counter loadOverlayDirHit{"overlay.load_overlay_dir_hit"};
-  Counter loadOverlayDirMiss{"overlay.load_overlay_dir_miss"};
+  Counter loadOverlayDirSuccessful{"overlay.load_overlay_dir_successful"};
+  Counter loadOverlayDirFailure{"overlay.load_overlay_dir_failure"};
+  Counter saveOverlayDirSuccessful{"overlay.save_overlay_dir_successful"};
+  Counter saveOverlayDirFailure{"overlay.save_overlay_dir_failure"};
+  Counter openOverlayFileSuccessful{"overlay.open_overlay_file_successful"};
+  Counter openOverlayFileFailure{"overlay.open_overlay_file_failure"};
+  Counter createOverlayFileSuccessful{"overlay.create_overlay_file_successful"};
+  Counter createOverlayFileFailure{"overlay.create_overlay_file_failure"};
+  Counter removeOverlayFileSuccessful{"overlay.remove_overlay_file_successful"};
+  Counter removeOverlayFileFailure{"overlay.remove_overlay_file_failure"};
+  Counter removeOverlayDirSuccessful{"overlay.remove_overlay_dir_successful"};
+  Counter removeOverlayDirFailure{"overlay.remove_overlay_dir_failure"};
+  Counter recursivelyRemoveOverlayDirSuccessful{
+      "overlay.recursively_remove_overlay_dir_successful"};
+  Counter recursivelyRemoveOverlayDirFailure{
+      "overlay.recursively_remove_overlay_dir_failure"};
+  Counter hasOverlayDirSuccessful{"overlay.has_overlay_dir_successful"};
+  Counter hasOverlayDirFailure{"overlay.has_overlay_dir_failure"};
+  Counter hasOverlayFileSuccessful{"overlay.has_overlay_file_successful"};
+  Counter hasOverlayFileFailure{"overlay.has_overlay_file_failure"};
+  Counter addChildSuccessful{"overlay.add_child_successful"};
+  Counter addChildFailure{"overlay.add_child_failure"};
+  Counter removeChildSuccessful{"overlay.remove_child_successful"};
+  Counter removeChildFailure{"overlay.remove_child_failure"};
+  Counter removeChildrenSuccessful{"overlay.remove_children_successful"};
+  Counter removeChildrenFailure{"overlay.remove_children_failure"};
+  Counter renameChildSuccessful{"overlay.rename_child_successful"};
+  Counter renameChildFailure{"overlay.rename_child_failure"};
 };
 
 struct InodeMapStats : StatsGroup<InodeMapStats> {
