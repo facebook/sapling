@@ -3480,7 +3480,7 @@ def debugresetheads(ui, repo) -> None:
 
 
 @command(
-    "debugruntest|debugrt",
+    "debugruntest|debugrt|.t",
     [
         ("i", "fix", False, _("update tests to match output")),
         ("j", "jobs", 0, _("number of jobs to run in parallel")),
