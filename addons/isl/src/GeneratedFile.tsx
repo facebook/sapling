@@ -51,6 +51,13 @@ export function useGeneratedFileStatus(path: RepoRelativePath): GeneratedStatus 
   }
   return found;
 }
+
+export function getGeneratedFilesFrom(paths: Array<RepoRelativePath>) {
+  return Object.fromEntries(
+    paths.map(path => [path, genereatedFileCache.get(path) ?? GeneratedStatus.Manual]),
+  );
+}
+
 export function useGeneratedFileStatuses(
   paths: Array<RepoRelativePath>,
 ): Record<RepoRelativePath, GeneratedStatus> {
@@ -59,9 +66,7 @@ export function useGeneratedFileStatuses(
   fetchMissingGeneratedFileStatuses(paths);
 
   return useMemo(() => {
-    return Object.fromEntries(
-      paths.map(path => [path, genereatedFileCache.get(path) ?? GeneratedStatus.Manual]),
-    );
+    return getGeneratedFilesFrom(paths);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [generation, paths]);
 }

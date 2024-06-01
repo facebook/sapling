@@ -14,6 +14,7 @@ import {T} from '../i18n';
 import {useFetchSignificantLinesOfCode} from '../sloc/useFetchSignificantLinesOfCode';
 import {SplitButton} from '../stackEdit/ui/SplitButton';
 import {type CommitInfo} from '../types';
+import {MAX_FETCHED_FILES_PER_COMMIT} from 'isl-server/src/commands';
 import {Icon} from 'shared/Icon';
 
 function SplitSuggestionImpl({commit}: {commit: CommitInfo}) {
@@ -55,7 +56,7 @@ function SplitSuggestionImpl({commit}: {commit: CommitInfo}) {
 }
 
 export default function SplitSuggestion({commit}: {commit: CommitInfo}) {
-  if (commit.totalFileCount > 25) {
+  if (commit.totalFileCount > MAX_FETCHED_FILES_PER_COMMIT) {
     return null;
   }
   // using a gated component here to avoid exposing when diff size is too big  to show the split suggestion
