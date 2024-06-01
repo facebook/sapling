@@ -80,8 +80,8 @@ fn parse_refresh_rate(arg: &str) -> Duration {
     Duration::new(seconds, 0)
 }
 
-const PENDING_COUNTER_REGEX: &str = r"store\.hg\.pending_import\..*";
-const LIVE_COUNTER_REGEX: &str = r"store\.hg\.live_import\..*";
+const PENDING_COUNTER_REGEX: &str = r"store\.sapling\.pending_import\..*";
+const LIVE_COUNTER_REGEX: &str = r"store\.sapling\.live_import\..*";
 const IMPORT_OBJECT_TYPES: &[&str] = &["blob", "tree", "blobmeta"];
 const STATS_NOT_AVAILABLE: i64 = 0;
 
@@ -264,7 +264,7 @@ async fn get_pending_import_counts(client: &EdenFsClient) -> Result<BTreeMap<Str
 
     let counters = client.getRegexCounters(PENDING_COUNTER_REGEX).await?;
     for import_type in IMPORT_OBJECT_TYPES {
-        let counter_prefix = format!("store.hg.pending_import.{}", import_type);
+        let counter_prefix = format!("store.sapling.pending_import.{}", import_type);
         let number_requests = counters
             .get(&format!("{}.count", counter_prefix))
             .unwrap_or(&STATS_NOT_AVAILABLE);
@@ -288,8 +288,8 @@ async fn get_live_import_counts(client: &EdenFsClient) -> Result<BTreeMap<String
     let mut imports = BTreeMap::<String, ImportStat>::new();
     let counters = client.getRegexCounters(LIVE_COUNTER_REGEX).await?;
     for import_type in IMPORT_OBJECT_TYPES {
-        let single_prefix = format!("store.hg.live_import.{}", import_type);
-        let batched_prefix = format!("store.hg.live_import.batched_{}", import_type);
+        let single_prefix = format!("store.sapling.live_import.{}", import_type);
+        let batched_prefix = format!("store.sapling.live_import.batched_{}", import_type);
 
         let count = counters
             .get(&format!("{}.count", single_prefix))

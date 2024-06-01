@@ -204,7 +204,7 @@ std::shared_ptr<Notifier> getPlatformNotifier(
 
 constexpr StringPiece kRocksDBPath{"storage/rocks-db"};
 constexpr StringPiece kSqlitePath{"storage/sqlite.db"};
-constexpr StringPiece kHgStorePrefix{"store.hg"};
+constexpr StringPiece kSlStorePrefix{"store.sapling"};
 #ifndef _WIN32
 constexpr StringPiece kFuseRequestPrefix{"fuse"};
 #endif
@@ -224,7 +224,7 @@ std::string getCounterNameForImportMetric(
   if (object.has_value()) {
     // base prefix . stage . object . metric
     return folly::to<std::string>(
-        kHgStorePrefix,
+        kSlStorePrefix,
         ".",
         RequestMetricsScope::stringOfHgImportStage(stage),
         ".",
@@ -234,7 +234,7 @@ std::string getCounterNameForImportMetric(
   }
   // base prefix . stage . metric
   return folly::to<std::string>(
-      kHgStorePrefix,
+      kSlStorePrefix,
       ".",
       RequestMetricsScope::stringOfHgImportStage(stage),
       ".",

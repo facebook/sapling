@@ -544,7 +544,9 @@ class Top:
                 import_stats[import_stage][import_type] = {}
                 stage_counter_piece = f"{import_stage.value}_import"
                 type_counter_piece = import_type.value
-                counter_prefix = f"store.hg.{stage_counter_piece}.{type_counter_piece}"
+                counter_prefix = (
+                    f"store.sapling.{stage_counter_piece}.{type_counter_piece}"
+                )
                 number_requests = counters.get(
                     f"{counter_prefix}.count", STATS_NOT_AVAILABLE
                 )
@@ -940,7 +942,7 @@ class Top:
         import_why = (
             "This is useful as an indicator of for the health of the imports "
             "process. Live imports indicate if there are issues importing from "
-            "hg, pending indicate if there is a problem with importing in "
+            "sapling, pending indicate if there is a problem with importing in "
             "general. If the pending imports metrics are concerning but the live "
             "metrics are not, this indicates an issue with queueing, possibly "
             "that a request is being starved :("

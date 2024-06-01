@@ -1568,7 +1568,7 @@ Starting background invalidation of not recently used files and directories in {
         instance = FakeEdenInstance(tmp_dir)
 
         instance.get_thrift_client_legacy().set_counter_value(
-            "store.hg.live_import.max_duration_us", 15 * 60 * 1_000_000
+            "store.sapling.live_import.max_duration_us", 15 * 60 * 1_000_000
         )
 
         out = TestOutput()
@@ -1670,7 +1670,7 @@ Collect an 'eden rage' and ask in the EdenFS (Windows |macOS )?Users group if yo
         )
 
         instance.get_thrift_client_legacy().set_counter_value(
-            "store.hg.live_import.max_duration_us", 15 * 60 * 1_000_000
+            "store.sapling.live_import.max_duration_us", 15 * 60 * 1_000_000
         )
 
         out = TestOutput()
