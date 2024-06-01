@@ -530,7 +530,7 @@ class SaplingBackingStore final : public BackingStore {
   std::pair<ImportRequestsMap, std::vector<sapling::SaplingRequest>>
   prepareRequests(
       const ImportRequestsList& importRequests,
-      const std::string& requestType);
+      const SaplingImportObject& requestType);
 
   /**
    * isRecordingFetch_ indicates if SaplingBackingStore is recording paths

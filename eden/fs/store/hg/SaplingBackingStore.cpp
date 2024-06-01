@@ -614,8 +614,8 @@ folly::SemiFuture<BlobPtr> SaplingBackingStore::retryGetBlob(
 void SaplingBackingStore::getBlobBatch(
     const ImportRequestsList& importRequests,
     sapling::FetchMode fetchMode) {
-  auto preparedRequests =
-      prepareRequests<SaplingImportRequest::BlobImport>(importRequests, "Blob");
+  auto preparedRequests = prepareRequests<SaplingImportRequest::BlobImport>(
+      importRequests, SaplingImportObject::BLOB);
   auto importRequestsMap = std::move(preparedRequests.first);
   auto requests = std::move(preparedRequests.second);
 
@@ -792,8 +792,8 @@ void SaplingBackingStore::processTreeImportRequests(
 void SaplingBackingStore::getTreeBatch(
     const ImportRequestsList& importRequests,
     sapling::FetchMode fetch_mode) {
-  auto preparedRequests =
-      prepareRequests<SaplingImportRequest::TreeImport>(importRequests, "Tree");
+  auto preparedRequests = prepareRequests<SaplingImportRequest::TreeImport>(
+      importRequests, SaplingImportObject::TREE);
   auto importRequestsMap = std::move(preparedRequests.first);
   auto requests = std::move(preparedRequests.second);
   auto hgObjectIdFormat = config_->getEdenConfig()->hgObjectIdFormat.getValue();
@@ -870,7 +870,7 @@ std::pair<
     std::vector<sapling::SaplingRequest>>
 SaplingBackingStore::prepareRequests(
     const ImportRequestsList& importRequests,
-    const std::string& requestType) {
+    const SaplingImportObject& requestType) {
   // TODO: extract each ClientRequestInfo from importRequests into a
   // sapling::ClientRequestInfo and pass them with the corresponding
   // sapling::NodeId
@@ -887,7 +887,7 @@ SaplingBackingStore::prepareRequests(
       XLOGF(
           DBG9,
           "Duplicate {} fetch request with proxyHash: {}",
-          requestType,
+          stringOfSaplingImportObject(requestType),
           nodeId);
       auto& importRequestList = importRequestsEntry->second.first;
 
@@ -905,7 +905,7 @@ SaplingBackingStore::prepareRequests(
               "{} requests have the same proxyHash (HgProxyHash) but different hash (ObjectId). "
               "This should not happen. Previous request: hash='{}', proxyHash='{}', proxyHash.path='{}'; "
               "current request: hash='{}', proxyHash ='{}', proxyHash.path='{}'.",
-              requestType,
+              stringOfSaplingImportObject(requestType),
               priorRequest->template getRequest<T>()->hash.asHexString(),
               folly::hexlify(
                   priorRequest->template getRequest<T>()->proxyHash.byteHash()),
@@ -921,8 +921,26 @@ SaplingBackingStore::prepareRequests(
     } else {
       std::vector<std::shared_ptr<SaplingImportRequest>> requests(
           {importRequest});
-      importRequestsMap.emplace(
-          nodeId, make_pair(requests, &liveBatchedBlobWatches_));
+      switch (requestType) {
+        case SaplingImportObject::TREE:
+          importRequestsMap.emplace(
+              nodeId, make_pair(requests, &liveBatchedTreeWatches_));
+          break;
+        case SaplingImportObject::BLOB:
+          importRequestsMap.emplace(
+              nodeId, make_pair(requests, &liveBatchedBlobWatches_));
+          break;
+        case SaplingImportObject::BLOBMETA:
+          importRequestsMap.emplace(
+              nodeId, make_pair(requests, &liveBatchedBlobMetaWatches_));
+          break;
+        // The following types cannot get here. It is just for completeness
+        case SaplingImportObject::BATCHED_TREE:
+        case SaplingImportObject::BATCHED_BLOB:
+        case SaplingImportObject::BATCHED_BLOBMETA:
+        case SaplingImportObject::PREFETCH:
+          break;
+      }
     }
   }
 
@@ -1035,7 +1053,7 @@ void SaplingBackingStore::getBlobMetadataBatch(
     const ImportRequestsList& importRequests,
     sapling::FetchMode fetch_mode) {
   auto preparedRequests = prepareRequests<SaplingImportRequest::BlobMetaImport>(
-      importRequests, "BlobMetadata");
+      importRequests, SaplingImportObject::BLOBMETA);
   auto importRequestsMap = std::move(preparedRequests.first);
   auto requests = std::move(preparedRequests.second);
 
