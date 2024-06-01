@@ -363,6 +363,7 @@ struct SaplingBackingStoreStats : StatsGroup<SaplingBackingStoreStats> {
 struct JournalStats : StatsGroup<JournalStats> {
   Counter truncatedReads{"journal.truncated_reads"};
   Counter filesAccumulated{"journal.files_accumulated"};
+  Duration accumulateRange{"journal.accumulate_range_us"};
 };
 
 struct ThriftStats : StatsGroup<ThriftStats> {

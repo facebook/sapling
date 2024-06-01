@@ -397,6 +397,7 @@ std::unique_ptr<JournalDeltaRange> Journal::accumulateRange(
     SequenceNumber from) {
   XDCHECK(from > 0);
   std::unique_ptr<JournalDeltaRange> result = nullptr;
+  folly::stop_watch<std::chrono::milliseconds> watch;
 
   size_t filesAccumulated = 0;
   auto deltaState = deltaState_.lock();
@@ -464,6 +465,7 @@ std::unique_ptr<JournalDeltaRange> Journal::accumulateRange(
         edenStats_->increment(&JournalStats::truncatedReads);
       }
       edenStats_->increment(&JournalStats::filesAccumulated, filesAccumulated);
+      edenStats_->addDuration(&JournalStats::accumulateRange, watch.elapsed());
     }
     if (deltaState->stats) {
       deltaState->stats->maxFilesAccumulated =
