@@ -122,6 +122,16 @@ def echo(args: List[str]) -> str:
 
 
 @command
+def basename(args: List[str]) -> str:
+    return "".join(arg.rsplit("/", 1)[-1] + "\n" for arg in args)
+
+
+@command
+def dirname(args: List[str]) -> str:
+    return "".join(arg.rsplit("/", 1)[0] + "\n" for arg in args)
+
+
+@command
 def printf(args: List[str]):
     fmt = list(_unescapechars(args[0]))
     unescapeposs = []

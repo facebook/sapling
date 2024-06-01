@@ -352,6 +352,13 @@ echo
     >>> t(r"echo 'foo\nbar'")
     'foo\nbar\n'
 
+basename and dirname
+
+    >>> t('basename a b/c/d')
+    'a\nd\n'
+    >>> t('dirname a b/c/d')
+    'a\nb/c\n'
+
 Commands on OS filesystem:
 
     >>> from .osfs import OSFS
