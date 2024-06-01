@@ -3486,6 +3486,7 @@ def debugresetheads(ui, repo) -> None:
         ("j", "jobs", 0, _("number of jobs to run in parallel")),
         ("x", "ext", [], _("extension modules to import")),
         ("d", "direct", False, _("run without isolation")),
+        ("", "record", False, _("record test state")),
     ],
     norepo=True,
 )
@@ -3607,6 +3608,8 @@ def debugruntest(ui, *paths, **opts) -> int:
 
     exts = ["sapling.testing.ext.hg", "sapling.testing.ext.python"]
     exts += opts.get("ext") or []
+    if opts.get("record"):
+        exts.append("sapling.testing.ext.record")
     jobs = opts.get("jobs") or 0
 
     # limit concurrency for stable order
