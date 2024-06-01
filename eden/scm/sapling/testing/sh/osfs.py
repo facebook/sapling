@@ -58,6 +58,10 @@ class OSFS(ShellFS):
         path = self._absjoin(path)
         return os.stat(path)
 
+    def lstat(self, path: str):
+        path = self._absjoin(path)
+        return os.lstat(path)
+
     def isdir(self, path: str):
         path = self._absjoin(path)
         return os.path.isdir(path)

@@ -289,6 +289,9 @@ class ShellFS(ABC):
     def stat(self, path: str):
         raise NotImplementedError
 
+    def lstat(self, path: str):
+        raise NotImplementedError
+
     def utime(self, path: str, time: int):
         raise NotImplementedError
 
