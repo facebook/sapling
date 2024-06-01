@@ -5,12 +5,15 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {CommitInfo} from '../types';
+import type {ChangedFile, CommitInfo} from '../types';
 
 import {Row} from '../ComponentUtils';
 import {Tooltip} from '../Tooltip';
 import {T, t} from '../i18n';
-import {useFetchSignificantLinesOfCode} from '../sloc/useFetchSignificantLinesOfCode';
+import {
+  useFetchPendingSignificantLinesOfCode,
+  useFetchSignificantLinesOfCode,
+} from '../sloc/useFetchSignificantLinesOfCode';
 import * as stylex from '@stylexjs/stylex';
 import {Icon} from 'shared/Icon';
 
@@ -26,8 +29,17 @@ const styles = stylex.create({
   },
 });
 
-export default function DiffStats({commit}: Props) {
+export function DiffStats({commit}: Props) {
   const significantLinesOfCode = useFetchSignificantLinesOfCode(commit);
+  return <DiffStatsView significantLinesOfCode={significantLinesOfCode} />;
+}
+
+export function PendingDiffStats({commit, selectedFiles}: Props & {selectedFiles: ChangedFile[]}) {
+  const significantLinesOfCode = useFetchPendingSignificantLinesOfCode(commit, selectedFiles);
+  return <DiffStatsView significantLinesOfCode={significantLinesOfCode} />;
+}
+
+function DiffStatsView({significantLinesOfCode}: {significantLinesOfCode?: number}) {
   if (significantLinesOfCode == null) {
     return null;
   }

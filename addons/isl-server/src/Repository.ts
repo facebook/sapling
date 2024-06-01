@@ -1089,9 +1089,9 @@ export class Repository {
   public async fetchSignificantLinesOfCode(
     ctx: RepositoryContext,
     hash: Hash,
-    generatedFiles: string[],
+    excludedFiles: string[],
   ): Promise<number> {
-    const exclusions = generatedFiles.flatMap(file => [
+    const exclusions = excludedFiles.flatMap(file => [
       '-X',
       absolutePathForFileInRepo(file, this) ?? file,
     ]);
@@ -1103,6 +1103,39 @@ export class Repository {
         ctx,
       )
     ).stdout;
+
+    const sloc = this.parseSlocFrom(output);
+
+    ctx.logger.info('Fetched SLOC for commit:', hash, output, `SLOC: ${sloc}`);
+    return sloc;
+  }
+
+  public async fetchPendingSignificantLinesOfCode(
+    ctx: RepositoryContext,
+    hash: Hash,
+    includedFiles: string[],
+  ): Promise<number> {
+    if (includedFiles.length === 0) {
+      return 0; // don't bother running sl diff if there are no files to include
+    }
+    const inclusions = includedFiles.flatMap(file => [
+      '-I',
+      absolutePathForFileInRepo(file, this) ?? file,
+    ]);
+
+    const output = (
+      await this.runCommand(
+        ['diff', '--stat', '-B', '-X', '**__generated__**', ...inclusions],
+        'PendingSlocCommand',
+        ctx,
+      )
+    ).stdout;
+    const sloc = this.parseSlocFrom(output);
+
+    ctx.logger.info('Fetched Pending SLOC for commit:', hash, output, `SLOC: ${sloc}`);
+    return sloc;
+  }
+  private parseSlocFrom(output: string) {
     const lines = output.trim().split('\n');
     const changes = lines[lines.length - 1];
     const diffStatRe = /\d+ files changed, (\d+) insertions\(\+\), (\d+) deletions\(-\)/;
@@ -1110,10 +1143,9 @@ export class Repository {
     const insertions = parseInt(diffStatMatch?.[1] ?? '0', 10);
     const deletions = parseInt(diffStatMatch?.[2] ?? '0', 10);
     const sloc = insertions + deletions;
-
-    ctx.logger.info('Fetched SLOC for commit:', hash, output, `SLOC: ${sloc}`);
     return sloc;
   }
+
   public async getAllChangedFiles(ctx: RepositoryContext, hash: Hash): Promise<Array<ChangedFile>> {
     const output = (
       await this.runCommand(

@@ -79,7 +79,7 @@ import {
   editedMessageSubset,
   removeNoopEdits,
 } from './CommitMessageFields';
-import DiffStats from './DiffStats';
+import {DiffStats, PendingDiffStats} from './DiffStats';
 import {FillCommitMessage} from './FillCommitMessage';
 import SplitSuggestion from './SplitSuggestion';
 import {CommitTitleByline, getTopmostEditedField, Section, SmallCapsTitle} from './utils';
@@ -228,9 +228,10 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
 
   const topmostEditedField = getTopmostEditedField(schema, fieldsBeingEdited);
   const isSplitSuggestionSupported = provider?.isSplitSuggestionSupported() ?? false;
-  const selectedFilesLength = uncommittedChanges.filter(f =>
+  const selectedFiles = uncommittedChanges.filter(f =>
     selection.isFullyOrPartiallySelected(f.path),
-  ).length;
+  );
+  const selectedFilesLength = selectedFiles.length;
   return (
     <div className="commit-info-view" data-testid="commit-info-view">
       {!commit.isDot ? null : (
@@ -312,6 +313,11 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
                 {uncommittedChanges.length}
               </Badge>
             </SmallCapsTitle>
+            {uncommittedChanges.length > 0 ? (
+              <GatedComponent featureFlag={Internal.featureFlags?.ShowSplitSuggestion}>
+                <PendingDiffStats commit={commit} selectedFiles={selectedFiles} />
+              </GatedComponent>
+            ) : null}
             {uncommittedChanges.length === 0 ? (
               <Subtle>
                 {isCommitMode ? <T>No changes to commit</T> : <T>No changes to amend</T>}

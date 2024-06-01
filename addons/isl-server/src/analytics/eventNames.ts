@@ -45,6 +45,8 @@ export type TrackEventName =
   | 'DiscardOperation'
   | 'EnterMergeConflicts'
   | 'ExitMergeConflicts'
+  | 'FetchPendingSloc'
+  | 'FetchSloc'
   | 'ForgetOperation'
   | 'FoldOperation'
   | 'FillCommitMessage'
@@ -144,7 +146,8 @@ export type TrackEventName =
   | 'UseCustomCommitMessageTemplate'
   | 'SlocCommand'
   | 'SplitSuggestionError'
-  | 'SplitOpenFromSplitSuggestion';
+  | 'SplitOpenFromSplitSuggestion'
+  | 'PendingSlocCommand';
 
 export type TrackErrorName =
   | 'BlameError'

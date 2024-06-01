@@ -621,10 +621,30 @@ export default class ServerToClientAPI {
           });
         break;
       }
+      case 'fetchPendingSignificantLinesOfCode':
+        {
+          repo
+            .fetchPendingSignificantLinesOfCode(ctx, data.hash, data.includedFiles)
+            .then(value => {
+              this.postMessage({
+                type: 'fetchedPendingSignificantLinesOfCode',
+                hash: data.hash,
+                linesOfCode: {value},
+              });
+            })
+            .catch(err => {
+              this.postMessage({
+                type: 'fetchedPendingSignificantLinesOfCode',
+                hash: data.hash,
+                linesOfCode: {error: err as Error},
+              });
+            });
+        }
+        break;
       case 'fetchSignificantLinesOfCode':
         {
           repo
-            .fetchSignificantLinesOfCode(ctx, data.hash, data.generatedFiles)
+            .fetchSignificantLinesOfCode(ctx, data.hash, data.excludedFiles)
             .then(value => {
               this.postMessage({
                 type: 'fetchedSignificantLinesOfCode',
