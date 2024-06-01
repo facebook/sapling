@@ -511,12 +511,18 @@ folly::SemiFuture<BlobPtr> SaplingBackingStore::retryGetBlob(
     const SaplingImportRequest::FetchType fetch_type) {
   return folly::via(
       retryThreadPool_.get(),
-      [this,
-       hgInfo = std::move(hgInfo),
-       &liveImportBlobWatches = liveImportBlobWatches_,
-       context = context.copy(),
-       fetch_type] {
-        RequestMetricsScope queueTracker{&liveImportBlobWatches};
+      [this, hgInfo = std::move(hgInfo), context = context.copy(), fetch_type] {
+        std::unique_ptr<RequestMetricsScope> queueTracker;
+        switch (fetch_type) {
+          case SaplingImportRequest::FetchType::Fetch:
+            queueTracker = std::make_unique<RequestMetricsScope>(
+                &this->liveImportBlobWatches_);
+            break;
+          case SaplingImportRequest::FetchType::Prefetch:
+            queueTracker = std::make_unique<RequestMetricsScope>(
+                &this->liveImportPrefetchWatches_);
+            break;
+        }
 
         // NOTE: In the future we plan to update
         // SaplingNativeBackingStore to provide and
@@ -1380,9 +1386,17 @@ SaplingBackingStore::getBlobEnqueue(
         id, proxyHash, requestContext);
     request->setFetchType(fetch_type);
     auto unique = request->getUnique();
-
-    auto importTracker =
-        std::make_unique<RequestMetricsScope>(&pendingImportBlobWatches_);
+    std::unique_ptr<RequestMetricsScope> importTracker;
+    switch (fetch_type) {
+      case SaplingImportRequest::FetchType::Fetch:
+        importTracker =
+            std::make_unique<RequestMetricsScope>(&pendingImportBlobWatches_);
+        break;
+      case SaplingImportRequest::FetchType::Prefetch:
+        importTracker = std::make_unique<RequestMetricsScope>(
+            &pendingImportPrefetchWatches_);
+        break;
+    }
     traceBus_->publish(HgImportTraceEvent::queue(
         unique,
         HgImportTraceEvent::BLOB,
@@ -1826,7 +1840,7 @@ folly::Future<TreePtr> SaplingBackingStore::retryGetTreeImpl(
         // data is written and to rescan pack files or local indexes
         flush();
 
-        // Retry using datapackStore (SaplingNativeBackingStore)
+        // Retry using SaplingNativeBackingStore
         auto result = folly::makeFuture<TreePtr>(TreePtr{nullptr});
         auto tree = getTreeFromBackingStore(
             path, manifestNode, edenTreeID, context.copy(), type);
