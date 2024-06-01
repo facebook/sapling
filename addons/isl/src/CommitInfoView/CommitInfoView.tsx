@@ -79,8 +79,8 @@ import {
   editedMessageSubset,
   removeNoopEdits,
 } from './CommitMessageFields';
+import DiffStats from './DiffStats';
 import {FillCommitMessage} from './FillCommitMessage';
-import SlocBadge from './SlocBadge';
 import SplitSuggestion from './SplitSuggestion';
 import {CommitTitleByline, getTopmostEditedField, Section, SmallCapsTitle} from './utils';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
@@ -326,10 +326,10 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
             <SmallCapsTitle>
               <T>Files Changed</T>
               <Badge>{commit.totalFileCount}</Badge>
-              <GatedComponent featureFlag={Internal.featureFlags?.ShowSplitSuggestion}>
-                <SlocBadge commit={commit} />
-              </GatedComponent>
             </SmallCapsTitle>
+            <GatedComponent featureFlag={Internal.featureFlags?.ShowSplitSuggestion}>
+              <DiffStats commit={commit} />
+            </GatedComponent>
             <div className="changed-file-list">
               <div className="button-row">
                 <OpenComparisonViewButton
