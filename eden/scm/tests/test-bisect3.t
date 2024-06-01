@@ -1,6 +1,7 @@
 
 #require no-eden
 
+  $ setconfig experimental.bisect2=true
 
 # Here we create a simple DAG which has just enough of the required
 # topology to test all the bisection status labels:
