@@ -483,17 +483,34 @@ class TestTmp:
         indent: int,
         filename: str,
     ):
-        return checkoutput(
-            a,
-            b,
-            src,
-            srcloc,
-            outloc,
-            endloc,
-            indent,
-            filename,
-            fallback_line_match=self._fallbackmatch,
-        )
+        try:
+            return checkoutput(
+                a,
+                b,
+                src,
+                srcloc,
+                outloc,
+                endloc,
+                indent,
+                filename,
+                fallback_line_match=self._fallbackmatch,
+            )
+        finally:
+            self.post_checkoutput(a, b, src, srcloc, outloc, endloc, indent, filename)
+
+    def post_checkoutput(
+        self,
+        a: str,
+        b: str,
+        src: str,
+        srcloc: int,
+        outloc: int,
+        endloc: int,
+        indent: int,
+        filename: str,
+    ):
+        # Can be patched by extensions, like "record".
+        pass
 
     def require(self, feature: str) -> bool:
         return require(feature)
