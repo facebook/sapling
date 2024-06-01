@@ -3689,6 +3689,35 @@ def debugruntest(ui, *paths, **opts) -> int:
     return ret
 
 
+@command(
+    "debugrestoretest",
+    [
+        ("l", "line", 1, _("line number (starts with 1)")),
+        ("c", "case", "", _("test case")),
+    ],
+    _("TEST_FILE"),
+    norepo=True,
+)
+def debugrestoretest(ui, test_file, **opts):
+    """restore test state based on previously recorded data"""
+    from sapling.testing.ext import record
+
+    filename = os.path.realpath(test_file)
+    testcase = opts.get("case") or None
+    loc = int(opts.get("line") or 1) - 1  # line starts from 1, loc starts from 0
+
+    metalog = record.try_locate_metalog(filename, testcase, loc)
+    if metalog is None:
+        raise error.Abort(
+            _("no recording found for test"),
+            hint=_("use '@prog@ .t --record' to record a test run"),
+        )
+    script_path = record.restore_state_script(metalog)
+    if ui.formatted:
+        ui.status_err(("Run or source the script to enter the testing environment:\n"))
+    ui.write(("%s\n") % script_path)
+
+
 @command("debugthrowrustexception", [], "")
 def debugthrowrustexception(ui, _repo) -> None:
     """cause an error to be returned from rust and propagated to python"""

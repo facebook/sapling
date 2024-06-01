@@ -9,6 +9,7 @@ import functools
 import hashlib
 import json
 import os
+import shlex
 import shutil
 import stat
 
@@ -92,6 +93,111 @@ def save_state(metalog, env, cwd: str, root: str):
     } - all_keys:
         metalog.remove(deleted_path)
     metalog["modes"] = dumps(modes).encode()
+
+
+def restore_state_script(metalog) -> str:
+    """Attempt to restore the testing environemnt: files, env, cwd.
+    The env and cwd cannot be restored to the current shell. So a shell script
+    is written to set the env and cwd. Returns a path to the script.
+    """
+    modes = json.loads(metalog["modes"].decode())
+    env = json.loads(metalog["env"].decode())
+    testtmp = metalog["TESTTMP"].decode()
+    os.makedirs(testtmp, exist_ok=True)
+
+    # Remove files that are not tracked.
+    all_paths = set(_walk(testtmp))
+    deleted_paths = all_paths - set(modes)
+    for path in sorted(deleted_paths, reverse=True):
+        # For convenience, do not delete top-level hidden files.
+        # This allows .git for manual investigation (ex. git add . and check
+        # differences), or keep shell rc and history.
+        if path.startswith("."):
+            continue
+        fullpath = os.path.join(testtmp, path)
+        try:
+            if os.path.isdir(fullpath):
+                os.rmdir(fullpath)
+            else:
+                os.unlink(fullpath)
+        except OSError:
+            pass
+
+    # Write out tracked files.
+    for key in metalog.keys():
+        if not key.startswith(b"file:"):
+            continue
+        path = key.split(b":", 1)[-1].decode()
+        data = metalog[key.decode()]
+        fullpath = os.path.join(testtmp, path)
+        mode = modes[path]
+        os.makedirs(os.path.dirname(fullpath), exist_ok=True)
+        if os.path.isdir(fullpath):
+            os.rmdir(fullpath)
+        if stat.S_ISLNK(mode):
+            try:
+                os.symlink(data.decode(), fullpath)
+            except FileExistsError:
+                os.unlink(fullpath)
+                os.symlink(data.decode(), fullpath)
+        elif stat.S_ISREG(mode):
+            with open(fullpath, "wb") as f:
+                f.write(data)
+            os.chmod(fullpath, mode)
+
+    # Write a script to set the env variables. The script can be executed or sourced.
+    script_path = os.path.join(testtmp, "env.sh")
+    cwd = metalog["cwd"].decode()
+    env = json.loads(metalog["env"].decode())
+    eol = "\n"  # workaround '\' not allowed in f-strings
+    ps1 = ""
+    for line in metalog.message().splitlines():
+        if line.startswith("Line "):
+            ps1 += f"line {int(line.split(' ', 1)[-1]) + 1}"
+        elif line.startswith("Test "):
+            ps1 += line.split(" ", 1)[-1] + " "
+    with open(script_path, "wb") as f:
+        f.write(
+            f"""#!/bin/bash
+ORIG_PATH="$PATH"
+{''.join(f"export {name}={shlex.quote(value)}{eol}" for name, value in env.items())}
+cd {shlex.quote(os.path.join(testtmp, cwd))}
+if [[ $- != *i* ]] && [[ -n "$TESTTMP" ]]; then
+    if [[ $TERM = fake-term ]]; then
+        export TERM=xterm-256color
+    fi
+    echo 1>&2 "Entering ({ps1}) testing environment".
+    export PS1="[\\W ({ps1.strip()})]\\$ "
+    # provide the original PATH for convenience
+    export PATH="$PATH:$ORIG_PATH"
+    /bin/bash --norc --noprofile -i
+    echo 1>&2 "Exiting ({ps1}) testing environment".
+fi
+""".encode()
+        )
+    os.chmod(script_path, os.stat(script_path).st_mode | stat.S_IXUSR)
+    return script_path
+
+
+def try_locate_metalog(test_filename: str, testcase=None, loc: int = 0):
+    """Given the test file and line number, locate a matching metalog state.
+    Returns the metalog state, or None if no such record is found.
+    """
+    metalog = _get_record_metalog(test_filename, testcase, create=False)
+    if metalog is None:
+        return None
+    best = None
+    for root in metalog.roots():  # oldest -> newest
+        current_metalog = metalog.checkout(root)
+        msg = current_metalog.message()
+        for line in msg.splitlines():
+            if line.startswith("Line "):
+                current_loc = int(line.split()[-1])  # starts from 0
+                if current_loc <= loc:
+                    best = current_metalog
+                else:
+                    return best
+    return best
 
 
 def testsetup(t):
