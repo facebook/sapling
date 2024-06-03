@@ -73,8 +73,6 @@ def push(
     )
     upload_draft_nodes(repo, draft_nodes)
 
-    curr_bookmark_val = get_remote_bookmark_value(repo, edenapi, remote_bookmark, force)
-
     # create remote bookmark
     if curr_bookmark_val.node is None:
         if opargs.get("create"):
