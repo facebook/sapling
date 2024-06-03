@@ -24,6 +24,14 @@ use crate::thrift;
 // as a repository that cannot be checked out isn't very useful.
 const MPATH_ELEMENT_MAX_LENGTH: usize = 255;
 
+///  Path elements cannot contain any of the following bytes.  '\x01' is not allowed as
+/// it is used as a metadata separator.
+///
+/// This is a mapping from the invalid byte to the representation that should be shown
+/// in error messages.
+const MPATH_ELEMENT_INVALID_BYTES: &[(u8, &str)] =
+    &[(0, "\\0"), (1, "\\x01"), (b'\n', "\\n"), (b'/', "/")];
+
 /// An element of a path or filename within Mercurial.
 ///
 /// Mercurial treats pathnames as sequences of bytes, but the manifest format
@@ -77,32 +85,13 @@ impl MPathElement {
                 "path elements cannot be empty".into()
             ));
         }
-        if p.contains(&0) {
-            bail!(MononokeTypeError::InvalidPath(
-                String::from_utf8_lossy(p).into_owned(),
-                "path elements cannot contain '\\0'".into(),
-            ));
-        }
-        if p.contains(&1) {
-            // NonRootMPath can not contain '\x01', in particular if mpath ends with '\x01'
-            // and it is part of move metadata, because key-value pairs are separated
-            // by '\n', you will get '\x01\n' which is also metadata separator.
-            bail!(MononokeTypeError::InvalidPath(
-                String::from_utf8_lossy(p).into_owned(),
-                "path elements cannot contain '\\1'".into(),
-            ));
-        }
-        if p.contains(&b'/') {
-            bail!(MononokeTypeError::InvalidPath(
-                String::from_utf8_lossy(p).into_owned(),
-                "path elements cannot contain '/'".into(),
-            ));
-        }
-        if p.contains(&b'\n') {
-            bail!(MononokeTypeError::InvalidPath(
-                String::from_utf8_lossy(p).into_owned(),
-                "path elements cannot contain '\\n'".into(),
-            ));
+        for (byte, byte_escaped) in MPATH_ELEMENT_INVALID_BYTES {
+            if p.contains(byte) {
+                bail!(MononokeTypeError::InvalidPath(
+                    String::from_utf8_lossy(p).into_owned(),
+                    format!("path elements cannot contain '{byte_escaped}'")
+                ));
+            }
         }
         if p == b"." || p == b".." {
             bail!(MononokeTypeError::InvalidPath(
@@ -268,6 +257,78 @@ impl std::fmt::Debug for MPathElement {
     }
 }
 
+/// A prefix of a path element.
+///
+/// Restrictions compared to MPathElements are relaxed.  For example, '.' is a
+/// valid prefix, as files may begin with '.'.
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub struct MPathElementPrefix(SmallVec<[u8; 24]>);
+
+impl MPathElementPrefix {
+    pub fn new() -> Self {
+        Self(SmallVec::new())
+    }
+
+    pub fn from_slice(s: &[u8]) -> Result<Self> {
+        Self::verify(s)?;
+        Ok(Self(SmallVec::from_slice(s)))
+    }
+
+    /// Append a byte to the end of the prefix.
+    pub fn push(&mut self, c: u8) -> Result<()> {
+        if self.0.len() == MPATH_ELEMENT_MAX_LENGTH {
+            bail!(MononokeTypeError::InvalidPath(
+                String::from_utf8_lossy(&self.0).into_owned(),
+                format!(
+                    "path elements cannot exceed {} bytes",
+                    MPATH_ELEMENT_MAX_LENGTH
+                )
+            ));
+        }
+        if let Some((_, byte_escaped)) = MPATH_ELEMENT_INVALID_BYTES
+            .iter()
+            .find(|(byte, _)| byte == &c)
+        {
+            bail!(MononokeTypeError::InvalidPath(
+                String::from_utf8_lossy(&self.0).into_owned(),
+                format!("path elements cannot contain '{byte_escaped}'")
+            ));
+        }
+        self.0.push(c);
+        Ok(())
+    }
+
+    fn verify(p: &[u8]) -> Result<()> {
+        for (byte, byte_escaped) in MPATH_ELEMENT_INVALID_BYTES {
+            if p.contains(byte) {
+                bail!(MononokeTypeError::InvalidPath(
+                    String::from_utf8_lossy(p).into_owned(),
+                    format!("path elements cannot contain '{byte_escaped}'")
+                ));
+            }
+        }
+        MPathElement::check_len(p)?;
+        Ok(())
+    }
+}
+
+impl AsRef<[u8]> for MPathElementPrefix {
+    #[inline]
+    fn as_ref(&self) -> &[u8] {
+        self.0.as_ref()
+    }
+}
+
+impl std::fmt::Debug for MPathElementPrefix {
+    fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(
+            fmt,
+            "MPathElementPrefix(\"{}\")",
+            String::from_utf8_lossy(&self.0)
+        )
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::mem::size_of;
@@ -294,6 +355,20 @@ mod tests {
             let p2 = MPathElement::from_thrift(thrift_pathelement)
                 .expect("converting a valid Thrift structure should always works");
             p == p2
+        }
+
+        fn pathelement_prefixes_all_valid(p: MPathElement, prefix_len: usize) -> bool {
+            let prefix_len = prefix_len.min(p.0.len());
+            let prefix = &p.0[..prefix_len];
+            MPathElementPrefix::verify(prefix).is_ok()
+        }
+
+        fn pathelement_prefix_construct_bytewise(p: MPathElement) -> bool {
+            let mut prefix = MPathElementPrefix::new();
+            for byte in p.0.iter() {
+                prefix.push(*byte).expect("prefix should be valid");
+            }
+            prefix.0 == p.0
         }
     }
 }
