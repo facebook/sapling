@@ -16,6 +16,7 @@ use clientinfo::ClientEntryPoint;
 use clientinfo::ClientInfo;
 use clientinfo::CLIENT_INFO_HEADER;
 use fbinit::FacebookInit;
+use identity::IdentitySet;
 use maplit::hashmap;
 use sharding_ext::encode_repo_name;
 pub use source_control as thrift;
@@ -51,6 +52,14 @@ impl ScsClientBuilder {
     ) -> Result<ScsClient, Error> {
         use source_control_thriftclients::make_SourceControlService_thriftclient;
 
+        let expected_identities = if let Ok(identity) =
+            std::env::var("MONONOKE_INTEGRATION_TEST_EXPECTED_THRIFT_SERVER_IDENTITY")
+        {
+            IdentitySet::from_iter(std::iter::once(identity.parse()?))
+        } else {
+            IdentitySet::new()
+        };
+
         let mut addrs = host_port.as_ref().to_socket_addrs()?;
         let addr = addrs.next().expect("no address found");
         let client = make_SourceControlService_thriftclient!(
@@ -58,7 +67,8 @@ impl ScsClientBuilder {
             from_sock_addr = addr,
             with_conn_timeout = CONN_TIMEOUT_MS,
             with_recv_timeout = RECV_TIMEOUT_MS,
-            with_secure = true
+            with_secure = true,
+            with_expected_identities = expected_identities,
         )?;
         Ok(ScsClient {
             client,
