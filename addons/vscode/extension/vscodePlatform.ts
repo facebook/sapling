@@ -28,6 +28,40 @@ function looksLikeImageUri(uri: vscode.Uri): boolean {
   return IMAGE_EXTENSIONS.has(ext);
 }
 
+function openFile(
+  repo: Repository | undefined,
+  filePath: string,
+  line?: number,
+  preview?: boolean,
+) {
+  if (repo == null) {
+    return;
+  }
+  const path: AbsolutePath = pathModule.join(repo.info.repoRoot, filePath);
+  const uri = vscode.Uri.file(path);
+  if (looksLikeImageUri(uri)) {
+    vscode.commands.executeCommand('vscode.open', uri).then(undefined, err => {
+      vscode.window.showErrorMessage('cannot open file' + (err.message ?? String(err)));
+    });
+    return;
+  }
+  vscode.window.showTextDocument(uri, {preview}).then(
+    editor => {
+      if (line != null) {
+        const lineZeroIndexed = line - 1; // vscode uses 0-indexed line numbers
+        editor.selections = [new vscode.Selection(lineZeroIndexed, 0, lineZeroIndexed, 0)]; // move cursor to line
+        editor.revealRange(
+          new vscode.Range(lineZeroIndexed, 0, lineZeroIndexed, 0),
+          vscode.TextEditorRevealType.InCenterIfOutsideViewport,
+        ); // scroll to line
+      }
+    },
+    err => {
+      vscode.window.showErrorMessage(err.message ?? String(err));
+    },
+  );
+}
+
 export const getVSCodePlatform = (context: vscode.ExtensionContext): ServerPlatform => ({
   platformName: 'vscode',
   sessionId: vscode.env.sessionId,
@@ -41,33 +75,7 @@ export const getVSCodePlatform = (context: vscode.ExtensionContext): ServerPlatf
     try {
       switch (message.type) {
         case 'platform/openFile': {
-          if (repo == null) {
-            break;
-          }
-          const path: AbsolutePath = pathModule.join(repo.info.repoRoot, message.path);
-          const uri = vscode.Uri.file(path);
-          if (looksLikeImageUri(uri)) {
-            vscode.commands.executeCommand('vscode.open', uri).then(undefined, err => {
-              vscode.window.showErrorMessage('cannot open file' + (err.message ?? String(err)));
-            });
-            return;
-          }
-          vscode.window.showTextDocument(uri).then(
-            editor => {
-              const line = message.options?.line;
-              if (line != null) {
-                const lineZeroIndexed = line - 1; // vscode uses 0-indexed line numbers
-                editor.selections = [new vscode.Selection(lineZeroIndexed, 0, lineZeroIndexed, 0)]; // move cursor to line
-                editor.revealRange(
-                  new vscode.Range(lineZeroIndexed, 0, lineZeroIndexed, 0),
-                  vscode.TextEditorRevealType.InCenterIfOutsideViewport,
-                ); // scroll to line
-              }
-            },
-            err => {
-              vscode.window.showErrorMessage(err.message ?? String(err));
-            },
-          );
+          openFile(repo, message.path, message.options?.line, false);
           break;
         }
         case 'platform/openDiff': {
