@@ -9,8 +9,6 @@
 
 use anyhow::Error;
 use fbinit::FacebookInit;
-use identity::Identity;
-use identity::IdentitySet;
 use scs_client_raw::ScsClient;
 use scs_client_raw::ScsClientBuilder;
 use scs_client_raw::SCS_DEFAULT_TIER;
@@ -26,23 +24,19 @@ pub(super) struct ConnectionArgs {
     #[clap(long, short = 'H', conflicts_with = "tier", global = true)]
     /// Connect to SCS through a given host and port pair, format HOST:PORT.
     host: Option<String>,
-    #[clap(long, global = true, hide = true)]
-    /// Expected server X509 identities (used only in tests).
-    /// Works only with SR thrift client.
-    expected_server_identity: Vec<Identity>,
 }
 
 impl ConnectionArgs {
     pub fn get_connection(&self, fb: FacebookInit, repo: Option<&str>) -> Result<ScsClient, Error> {
-        let mut builder = ScsClientBuilder::new();
-        if !self.expected_server_identity.is_empty() {
-            let ids = IdentitySet::from_iter(self.expected_server_identity.clone());
-            builder = builder.with_expected_identities(ids);
-        }
         if let Some(host_port) = &self.host {
-            builder.build_from_host_port(fb, host_port)
+            ScsClientBuilder::new().build_from_host_port(fb, host_port)
         } else {
-            builder.build_from_tier_name(fb, self.client_id.clone(), &self.tier, repo)
+            ScsClientBuilder::new().build_from_tier_name(
+                fb,
+                self.client_id.clone(),
+                &self.tier,
+                repo,
+            )
         }
     }
 }

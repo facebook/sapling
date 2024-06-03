@@ -42,7 +42,6 @@ rust_binary(
         "fbsource//third-party/rust:tokio-stream",
         "fbsource//third-party/rust:unicode-truncate",
         "fbsource//third-party/rust:unicode-width",
-        "//common/rust/identity:identity",
         "//common/rust/shed/cloned:cloned",
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/fbinit:fbinit-tokio",

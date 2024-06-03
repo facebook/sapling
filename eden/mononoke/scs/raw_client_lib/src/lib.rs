@@ -16,7 +16,6 @@ use clientinfo::ClientEntryPoint;
 use clientinfo::ClientInfo;
 use clientinfo::CLIENT_INFO_HEADER;
 use fbinit::FacebookInit;
-use identity::IdentitySet;
 use maplit::hashmap;
 use sharding_ext::encode_repo_name;
 pub use source_control as thrift;
@@ -28,23 +27,11 @@ pub const SCS_DEFAULT_TIER: &str = "shardmanager:mononoke.scs";
 const CONN_TIMEOUT_MS: u32 = 5000;
 const RECV_TIMEOUT_MS: u32 = 30_000;
 
-pub struct ScsClientBuilder {
-    expected_identities: Option<IdentitySet>,
-}
+pub struct ScsClientBuilder {}
 
 impl ScsClientBuilder {
     pub fn new() -> Self {
-        Self {
-            expected_identities: None,
-        }
-    }
-
-    /// Set the expected identities for this client. Used in tests,
-    /// currently only compatible with instantiating client with host:port
-    /// and SR client.
-    pub fn with_expected_identities(mut self, identities: IdentitySet) -> Self {
-        self.expected_identities = Some(identities);
-        self
+        Self {}
     }
 
     pub fn build(
@@ -71,8 +58,7 @@ impl ScsClientBuilder {
             from_sock_addr = addr,
             with_conn_timeout = CONN_TIMEOUT_MS,
             with_recv_timeout = RECV_TIMEOUT_MS,
-            with_secure = true,
-            with_expected_identities = self.expected_identities.unwrap_or(IdentitySet::new()),
+            with_secure = true
         )?;
         Ok(ScsClient {
             client,
@@ -101,9 +87,6 @@ impl ScsClientBuilder {
         tier: impl AsRef<str>,
         shardmanager_domain: Option<&str>,
     ) -> Result<ScsClient, Error> {
-        if self.expected_identities.is_none() {
-            return Err(anyhow!("Expected identities not supported here."));
-        }
         use source_control_srclients::make_SourceControlService_srclient;
         use srclient::ClientParams;
 
@@ -157,9 +140,6 @@ impl ScsClientBuilder {
         tier: impl AsRef<str>,
         shardmanager_domain: Option<&str>,
     ) -> Result<ScsClient, Error> {
-        if self.expected_identities.is_none() {
-            return Err(anyhow!("Expected identities not supported here."));
-        }
         let client_info = ClientInfo::new_with_entry_point(ClientEntryPoint::ScsClient)?;
         let headers = hashmap! {
             String::from(CLIENT_INFO_HEADER) => client_info.to_json()?,
@@ -195,9 +175,6 @@ impl ScsClientBuilder {
         tier: impl AsRef<str>,
         shardmanager_domain: Option<&str>,
     ) -> Result<ScsClient, Error> {
-        if self.expected_identities.is_none() {
-            return Err(anyhow!("Expected identities not supported here."));
-        }
         match x2pclient::get_env(fb) {
             x2pclient::Environment::Prod => {
                 if cfg!(target_os = "linux") {
