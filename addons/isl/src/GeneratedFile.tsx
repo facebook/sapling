@@ -71,6 +71,12 @@ export function useGeneratedFileStatuses(
   }, [generation, paths]);
 }
 
+export function getCachedGeneratedFileStatuses(
+  paths: Array<RepoRelativePath>,
+): Record<RepoRelativePath, GeneratedStatus | undefined> {
+  return Object.fromEntries(paths.map(path => [path, genereatedFileCache.get(path)]));
+}
+
 /**
  * Hint that this set of files are being used, any files missing from the generated files cache
  * should be checked on the server.

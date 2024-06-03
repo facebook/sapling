@@ -239,7 +239,7 @@
 .uncommitted-changes .button-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 0 var(--pad);
+  gap: var(--halfpad) var(--pad);
   align-items: center;
 }
 

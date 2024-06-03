@@ -15,6 +15,7 @@ import serverAPI from '../ClientToServerAPI';
 import {Commit} from '../Commit';
 import {OpenComparisonViewButton} from '../ComparisonView/OpenComparisonViewButton';
 import {Center} from '../ComponentUtils';
+import {getCachedGeneratedFileStatuses, useGeneratedFileStatuses} from '../GeneratedFile';
 import {numPendingImageUploads} from '../ImageUpload';
 import {Internal} from '../Internal';
 import {Link} from '../Link';
@@ -56,7 +57,7 @@ import platform from '../platform';
 import {CommitPreview, uncommittedChangesWithPreviews} from '../previews';
 import {selectedCommits} from '../selection';
 import {commitByHash, latestHeadCommit, repositoryInfo} from '../serverAPIState';
-import {succeedableRevset} from '../types';
+import {GeneratedStatus, succeedableRevset} from '../types';
 import {useModal} from '../useModal';
 import {firstOfIterable} from '../utils';
 import {CommitInfoField} from './CommitInfoField';
@@ -86,7 +87,7 @@ import {CommitTitleByline, getTopmostEditedField, Section, SmallCapsTitle} from 
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {useAtom, useAtomValue} from 'jotai';
 import {useAtomCallback} from 'jotai/utils';
-import {useCallback, useEffect} from 'react';
+import {useCallback, useEffect, useMemo} from 'react';
 import {ComparisonType} from 'shared/Comparison';
 import {useContextMenu} from 'shared/ContextMenu';
 import {Icon} from 'shared/Icon';
@@ -341,17 +342,7 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
                 <OpenComparisonViewButton
                   comparison={{type: ComparisonType.Committed, hash: commit.hash}}
                 />
-                <VSCodeButton
-                  appearance="icon"
-                  onClick={() => {
-                    tracker.track('OpenAllFiles');
-                    for (const file of commit.filesSample) {
-                      platform.openFile(file.path);
-                    }
-                  }}>
-                  <Icon icon="go-to-file" slot="start" />
-                  <T>Open All Files</T>
-                </VSCodeButton>
+                <OpenAllFilesButton commit={commit} />
               </div>
               <ChangedFilesWithFetching commit={commit} />{' '}
             </div>
@@ -378,6 +369,52 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * No files are generated -> "Open all" button
+ * All files are generated -> "Open all" button, with warning that they're all generated
+ * Some files are generated -> "Open non-generated files" button
+ */
+function OpenAllFilesButton({commit}: {commit: CommitInfo}) {
+  const paths = useMemo(() => commit.filesSample.map(file => file.path), [commit]);
+  const statuses = useGeneratedFileStatuses(paths);
+  const allAreGenerated = paths.every(file => statuses[file] === GeneratedStatus.Generated);
+  const someAreGenerated = paths.some(file => statuses[file] === GeneratedStatus.Generated);
+  const skipsGenerated = someAreGenerated && !allAreGenerated;
+  return (
+    <Tooltip
+      title={
+        skipsGenerated
+          ? t('Open all non-generated files for editing')
+          : t('Opens all files for editing.\nNote: All files are generated.')
+      }>
+      <VSCodeButton
+        appearance="icon"
+        onClick={() => {
+          tracker.track('OpenAllFiles');
+          const statuses = getCachedGeneratedFileStatuses(
+            commit.filesSample.map(file => file.path),
+          );
+          const toOpen = allAreGenerated
+            ? commit.filesSample
+            : commit.filesSample.filter(
+                file =>
+                  statuses[file.path] == null || statuses[file.path] !== GeneratedStatus.Generated,
+              );
+          for (const file of toOpen) {
+            platform.openFile(file.path);
+          }
+        }}>
+        <Icon icon="go-to-file" slot="start" />
+        {someAreGenerated && !allAreGenerated ? (
+          <T>Open Non-Generated Files</T>
+        ) : (
+          <T>Open All Files</T>
+        )}
+      </VSCodeButton>
+    </Tooltip>
   );
 }
 
