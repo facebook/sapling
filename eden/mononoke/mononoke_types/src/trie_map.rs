@@ -9,7 +9,7 @@ use std::collections::BTreeMap;
 
 use smallvec::SmallVec;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TrieMap<V> {
     pub value: Option<Box<V>>,
     pub edges: BTreeMap<u8, Self>,
@@ -21,12 +21,6 @@ impl<V> Default for TrieMap<V> {
             value: Default::default(),
             edges: Default::default(),
         }
-    }
-}
-
-impl<V: PartialEq> PartialEq for TrieMap<V> {
-    fn eq(&self, other: &Self) -> bool {
-        self.value == other.value && self.edges == other.edges
     }
 }
 
