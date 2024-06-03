@@ -16,6 +16,9 @@ use gix_transport::bstr::ByteSlice;
 use protocol::types::FetchFilter;
 use protocol::types::FetchRequest;
 use protocol::types::PackfileConcurrency;
+use protocol::types::ShallowInfoRequest;
+use protocol::types::ShallowInfoResponse;
+use protocol::types::ShallowVariant;
 
 const DONE: &[u8] = b"done";
 const THIN_PACK: &[u8] = b"thin-pack";
@@ -330,20 +333,42 @@ impl FetchArgs {
     }
 
     /// Convert the fetch command args into FetchRequest instance
-    pub fn into_request(self, concurrency: PackfileConcurrency) -> FetchRequest {
+    pub fn into_request(
+        self,
+        concurrency: PackfileConcurrency,
+        shallow_info: Option<ShallowInfoResponse>,
+    ) -> FetchRequest {
         FetchRequest {
             heads: self.wants,
             bases: self.haves,
             include_out_of_pack_deltas: self.thin_pack,
             include_annotated_tags: self.include_tag,
             offset_delta: self.ofs_delta,
-            shallow: self.shallow,
-            deepen: self.deepen,
-            deepen_since: self.deepen_since,
-            deepen_not: self.deepen_not,
-            deepen_relative: self.deepen_relative,
             filter: self.filter.map(FilterArgs::into_fetch_filter),
             concurrency,
+            shallow_info,
+        }
+    }
+
+    /// Convert the fetch command args into ShallowInfoRequest instance
+    pub fn into_shallow_request(&self) -> ShallowInfoRequest {
+        let variant = if let Some(timestamp) = self.deepen_since.as_ref() {
+            ShallowVariant::FromServerWithTime(timestamp.clone())
+        } else if let Some(oid) = self.deepen_not.as_ref() {
+            ShallowVariant::FromServerWithOid(oid.clone())
+        } else if let Some(depth) = self.deepen {
+            if self.deepen_relative {
+                ShallowVariant::FromClientWithDepth(depth)
+            } else {
+                ShallowVariant::FromServerWithDepth(depth)
+            }
+        } else {
+            ShallowVariant::None
+        };
+        ShallowInfoRequest {
+            heads: self.wants.clone(),
+            shallow: self.shallow.clone(),
+            variant,
         }
     }
 }

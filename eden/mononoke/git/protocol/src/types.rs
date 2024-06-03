@@ -9,11 +9,18 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::fmt::Display;
 use std::fmt::Formatter;
+use std::hash::Hash;
+use std::hash::Hasher;
 use std::marker::Unpin;
 
 use anyhow::Result;
 use futures::stream::BoxStream;
+use git_types::DeltaObjectKind;
+use git_types::GitDeltaManifestEntry;
+use git_types::ObjectEntry;
 use gix_hash::ObjectId;
+use mononoke_types::hash::RichGitSha1;
+use mononoke_types::path::MPath;
 use mononoke_types::ChangesetId;
 use packetline::encode::write_binary_packetline;
 use packfile::pack::DeltaForm;
@@ -319,28 +326,12 @@ pub struct FetchRequest {
     pub include_annotated_tags: bool,
     /// Flag indicating if the caller supports offset deltas
     pub offset_delta: bool,
-    /// List of object Ids representing the edge of the shallow history present
-    /// at the client, i.e. the set of commits that the client knows about but
-    /// does not have any of their parents and their ancestors
-    pub shallow: Vec<ObjectId>,
-    /// Requests that the fetch/clone should be shallow having a commit
-    /// depth of "deepen" relative to the server
-    pub deepen: Option<u32>,
-    /// Requests that the semantics of the "deepen" command be changed
-    /// to indicate that the depth requested is relative to the client's
-    /// current shallow boundary, instead of relative to the requested commits.
-    pub deepen_relative: bool,
-    /// Requests that the shallow clone/fetch should be cut at a specific time,
-    /// instead of depth. The timestamp provided should be in the same format
-    /// as is expected for git rev-list --max-age <timestamp>
-    pub deepen_since: Option<gix_date::Time>,
-    /// Requests that the shallow clone/fetch should be cut at a specific revision
-    /// instead of a depth, i.e. the specified oid becomes the boundary at which the
-    /// fetch or clone should stop at
-    pub deepen_not: Option<ObjectId>,
     /// Request that various objects from the packfile be omitted using
     /// one of several filtering techniques
     pub filter: Option<FetchFilter>,
+    /// Information pertaining to commits that will be part of the response if the
+    /// requested clone/pull is shallow
+    pub shallow_info: Option<ShallowInfoResponse>,
     /// The concurrency setting to be used for generating the packfile items for the
     /// fetch request
     pub concurrency: PackfileConcurrency,
@@ -449,3 +440,140 @@ impl<'a> FetchResponse<'a> {
         Self { items, num_items }
     }
 }
+
+/// Enum representing the type of shallow clone/fetch that is requested by the client
+#[derive(Debug, Clone)]
+pub enum ShallowVariant {
+    /// The fetch/clone requested by the client has no shallow properties
+    None,
+    /// Requests that the fetch/clone should be shallow having a commit
+    /// depth of "deepen" relative to the server
+    FromServerWithDepth(u32),
+    /// Requests that the semantics of the "deepen" command be changed
+    /// to indicate that the depth requested is relative to the client's
+    /// current shallow boundary, instead of relative to the requested commits.
+    FromClientWithDepth(u32),
+    /// Requests that the shallow clone/fetch should be cut at a specific time,
+    /// instead of depth. The timestamp provided should be in the same format
+    /// as is expected for git rev-list --max-age <timestamp>
+    FromServerWithTime(gix_date::Time),
+    /// Requests that the shallow clone/fetch should be cut at a specific revision
+    /// instead of a depth, i.e. the specified oid becomes the boundary at which the
+    /// fetch or clone should stop at
+    FromServerWithOid(ObjectId),
+}
+
+impl ShallowVariant {
+    pub fn is_none(&self) -> bool {
+        matches!(self, ShallowVariant::None)
+    }
+}
+
+/// Struct representing the request parameters for shallow info section in Git fetch response
+#[derive(Debug, Clone)]
+pub struct ShallowInfoRequest {
+    /// List of commit object Ids that are requested by the client
+    pub heads: Vec<ObjectId>,
+    /// List of object Ids representing the edge of the shallow history present
+    /// at the client, i.e. the set of commits that the client knows about but
+    /// does not have any of their parents and their ancestors
+    pub shallow: Vec<ObjectId>,
+    /// The type of shallow clone/fetch that is requested by the client
+    pub variant: ShallowVariant,
+}
+
+impl ShallowInfoRequest {
+    pub fn shallow_requested(&self) -> bool {
+        !self.variant.is_none()
+    }
+}
+
+/// Struct representing the response for shallow info section in Git fetch response
+#[derive(Debug, Clone)]
+pub struct ShallowInfoResponse {
+    /// The set of commits that need to be returned as part of the shallow clone/fetch
+    pub commits: Vec<ChangesetId>,
+    /// The set of commits that are returned as part of the shallow clone/fetch but also
+    /// form the boundary of the shallow history sent by the server
+    pub boundary_commits: Vec<ChangesetId>,
+    /// The set of commits that are considered as shallow at the client
+    pub client_shallow: Vec<ChangesetId>,
+}
+
+impl ShallowInfoResponse {
+    pub fn new(
+        commits: Vec<ChangesetId>,
+        boundary_commits: Vec<ChangesetId>,
+        client_shallow: Vec<ChangesetId>,
+    ) -> Self {
+        Self {
+            commits,
+            boundary_commits,
+            client_shallow,
+        }
+    }
+
+    /// Method responsible for fetching the commits that must be unshallowed by the
+    /// client
+    pub fn client_unshallow_commits(&self) -> Vec<ChangesetId> {
+        self.client_shallow
+            .iter()
+            .filter(|shallow_commit| self.commits.contains(shallow_commit))
+            .copied()
+            .collect()
+    }
+}
+
+/// Struct representing a complete Git content object (tree or blob) entry
+/// that is expressed without any delta
+#[derive(Debug, Clone)]
+pub(crate) struct FullObjectEntry {
+    pub(crate) cs_id: ChangesetId,
+    pub(crate) path: MPath,
+    pub(crate) oid: ObjectId,
+    pub(crate) rich_git_sha: RichGitSha1,
+}
+
+impl FullObjectEntry {
+    pub fn new(cs_id: ChangesetId, path: MPath, rich_git_sha: RichGitSha1) -> Result<Self> {
+        let oid = rich_git_sha.sha1().to_object_id()?;
+        Ok(Self {
+            cs_id,
+            path,
+            oid,
+            rich_git_sha,
+        })
+    }
+
+    pub fn into_delta_manifest_entry(self) -> GitDeltaManifestEntry {
+        let size = self.rich_git_sha.size();
+        let kind = if self.rich_git_sha.is_blob() {
+            DeltaObjectKind::Blob
+        } else {
+            DeltaObjectKind::Tree
+        };
+        GitDeltaManifestEntry {
+            full: ObjectEntry {
+                size,
+                kind,
+                oid: self.oid,
+                path: self.path,
+            },
+            deltas: vec![],
+        }
+    }
+}
+
+impl Hash for FullObjectEntry {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.rich_git_sha.hash(state);
+    }
+}
+
+impl PartialEq for FullObjectEntry {
+    fn eq(&self, other: &Self) -> bool {
+        self.rich_git_sha == other.rich_git_sha
+    }
+}
+
+impl Eq for FullObjectEntry {}

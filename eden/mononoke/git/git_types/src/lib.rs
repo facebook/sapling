@@ -37,6 +37,7 @@ pub use crate::delta::DeltaInstructionChunkIdPrefix;
 pub use crate::delta::DeltaInstructions;
 pub use crate::delta_manifest::GitDeltaManifestEntry;
 pub use crate::delta_manifest::ObjectDelta;
+pub use crate::delta_manifest::ObjectEntry;
 pub use crate::delta_manifest_ops::fetch_git_delta_manifest;
 pub use crate::delta_manifest_ops::GitDeltaManifestEntryOps;
 pub use crate::delta_manifest_ops::GitDeltaManifestOps;

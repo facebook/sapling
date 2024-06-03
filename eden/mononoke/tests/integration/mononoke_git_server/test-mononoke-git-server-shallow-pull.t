@@ -37,6 +37,8 @@
   $ echo "File D.File D.File D.File D.File D.File D.File D.File D.File D.File D.File D.File D.File D.File D.File D.File D." > fileD
   $ git add .
   $ git commit -qam "Adding fileC and fileD"
+  $ prev_head=$(git rev-parse HEAD)
+
 # Visualize the graph to verify its the right shape
   $ git log --all --decorate --oneline --graph
   * 47156f5 (R1) Adding fileA and fileB
@@ -48,6 +50,17 @@
   $ cd "$TESTTMP"
   $ git clone file://"$GIT_REPO_ORIGIN"
   Cloning into 'repo-git'...
+
+# Import the repo into Mononoke
+  $ cd "$TESTTMP"
+  $ quiet gitimport "$GIT_REPO_ORIGIN" --derive-hg --generate-bookmarks full-repo
+
+# Start up the Mononoke Git Service
+  $ mononoke_git_service
+
+# Clone the repo using Mononoke
+  $ git_client clone $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git
+  Cloning into 'repo'...
 
 # Add more changes to the origin repo
   $ cd "$GIT_REPO_ORIGIN"
@@ -84,10 +97,29 @@
 # since it exists at depth=3 and the client did not already have it after the clone
   $ cd $GIT_REPO
   $ quiet git pull --depth=2
-  $ git rev-list --objects --all | git cat-file --batch-check='%(objectname) %(objecttype) %(rest)' | grep commit
+  $ git rev-list --objects --all | git cat-file --batch-check='%(objectname) %(objecttype) %(rest)' | grep commit | sort
   18a6f40de35ce474e240faa7298ae2b5979751c8 commit 
   47156f5aa75771131c092593377d7e74d0c38baa commit 
   619f44e4b1883ec6cafa608967d2f314f2224792 commit 
   83ef99fe983e803ce5365adb6e3be59043bd7aad commit 
   9089a8c5d6429a5dfa430d1abefd73234894c4df commit 
   a9ff5f932c4a81f710d754b02e20dcbb8236cc23 commit 
+# Capture the list of objects in the repo
+  $ git rev-list --objects --all | git cat-file --batch-check='%(objectname) %(objecttype) %(rest)' | sort > $TESTTMP/object_list 
+
+# Pull the latest changes from Mononoke and verify we get the same end state
+  $ cd $GIT_REPO
+# Wait for the warm bookmark cache to catch up with the latest changes
+  $ wait_for_git_bookmark_move HEAD $prev_head
+  $ quiet git_client pull --depth=2
+  $ git rev-list --objects --all | git cat-file --batch-check='%(objectname) %(objecttype) %(rest)' | grep commit | sort
+  18a6f40de35ce474e240faa7298ae2b5979751c8 commit 
+  47156f5aa75771131c092593377d7e74d0c38baa commit 
+  619f44e4b1883ec6cafa608967d2f314f2224792 commit 
+  83ef99fe983e803ce5365adb6e3be59043bd7aad commit 
+  9089a8c5d6429a5dfa430d1abefd73234894c4df commit 
+  a9ff5f932c4a81f710d754b02e20dcbb8236cc23 commit 
+# Capture the list of objects in the repo
+  $ git rev-list --objects --all | git cat-file --batch-check='%(objectname) %(objecttype) %(rest)' | sort > $TESTTMP/new_object_list
+# Validate that the objects match
+  $ diff -w $TESTTMP/new_object_list $TESTTMP/object_list

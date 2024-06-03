@@ -44,6 +44,7 @@ hyper = { version = "0.14.26", features = ["client", "http1", "http2", "stream"]
 metaconfig_parser = { version = "0.1.0", path = "../metaconfig/parser" }
 metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
 mononoke_app = { version = "0.1.0", path = "../cmdlib/mononoke_app" }
+mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 packetline = { version = "0.1.0", path = "../git/packetline" }
 packfile = { version = "0.1.0", path = "../git/packfile" }
 permission_checker = { version = "0.1.0", path = "../permission_checker" }
@@ -53,6 +54,7 @@ repo_blobstore = { version = "0.1.0", path = "../blobrepo/repo_blobstore" }
 repo_derived_data = { version = "0.1.0", path = "../repo_attributes/repo_derived_data" }
 repo_identity = { version = "0.1.0", path = "../repo_attributes/repo_identity" }
 repo_permission_checker = { version = "0.1.0", path = "../repo_attributes/repo_permission_checker" }
+rustc-hash = "1.1.0"
 scuba_ext = { version = "0.1.0", path = "../common/scuba_ext" }
 secure_utils = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 serde = { version = "1.0.185", features = ["derive", "rc"] }
