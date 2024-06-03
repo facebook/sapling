@@ -9,6 +9,7 @@ rust_library(
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:clap",
         "fbsource//third-party/rust:rand",
+        "//common/rust/identity:identity",
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/thrift/bareclient:thriftclient",
         "//common/rust/thrift/srclient:srclient",
