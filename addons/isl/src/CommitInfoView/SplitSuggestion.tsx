@@ -11,15 +11,21 @@ import {Tooltip} from '../Tooltip';
 import {Divider} from '../components/Divider';
 import GatedComponent from '../components/GatedComponent';
 import {T} from '../i18n';
+import {
+  MAX_FILES_ALLOWED_FOR_DIFF_STAT,
+  SLOC_THRESHOLD_FOR_SPLIT_SUGGESTIONS,
+} from '../sloc/diffStatConstants';
 import {useFetchSignificantLinesOfCode} from '../sloc/useFetchSignificantLinesOfCode';
 import {SplitButton} from '../stackEdit/ui/SplitButton';
 import {type CommitInfo} from '../types';
-import {MAX_FETCHED_FILES_PER_COMMIT} from 'isl-server/src/commands';
 import {Icon} from 'shared/Icon';
 
 function SplitSuggestionImpl({commit}: {commit: CommitInfo}) {
   const significantLinesOfCode = useFetchSignificantLinesOfCode(commit);
-  if (significantLinesOfCode == null || significantLinesOfCode <= 100) {
+  if (
+    significantLinesOfCode == null ||
+    significantLinesOfCode <= SLOC_THRESHOLD_FOR_SPLIT_SUGGESTIONS
+  ) {
     return null;
   }
   return (
@@ -56,7 +62,7 @@ function SplitSuggestionImpl({commit}: {commit: CommitInfo}) {
 }
 
 export default function SplitSuggestion({commit}: {commit: CommitInfo}) {
-  if (commit.totalFileCount > MAX_FETCHED_FILES_PER_COMMIT) {
+  if (commit.totalFileCount > MAX_FILES_ALLOWED_FOR_DIFF_STAT) {
     return null;
   }
   // using a gated component here to avoid exposing when diff size is too big  to show the split suggestion

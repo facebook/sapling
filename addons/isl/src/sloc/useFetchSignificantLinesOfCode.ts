@@ -13,7 +13,7 @@ import {getGeneratedFilesFrom, useGeneratedFileStatuses} from '../GeneratedFile'
 import {tracker} from '../analytics';
 import {atomFamilyWeak, lazyAtom} from '../jotaiUtils';
 import {GeneratedStatus} from '../types';
-import {MAX_FETCHED_FILES_PER_COMMIT} from 'isl-server/src/commands';
+import {MAX_FILES_ALLOWED_FOR_DIFF_STAT} from './diffStatConstants';
 import {useAtomValue} from 'jotai';
 import {useState, useEffect} from 'react';
 
@@ -24,7 +24,7 @@ const commitSloc = atomFamilyWeak((hash: string) => {
       return undefined;
     }
     const [commit] = commits;
-    if (commit.totalFileCount > MAX_FETCHED_FILES_PER_COMMIT) {
+    if (commit.totalFileCount > MAX_FILES_ALLOWED_FOR_DIFF_STAT) {
       return undefined;
     }
     const filesToQueryGeneratedStatus = commit.filesSample.map(f => f.path);
@@ -84,8 +84,8 @@ export function useFetchPendingSignificantLinesOfCode(
   );
   useEffect(() => {
     if (
-      commit.totalFileCount > MAX_FETCHED_FILES_PER_COMMIT ||
-      selectedFiles.length > MAX_FETCHED_FILES_PER_COMMIT
+      commit.totalFileCount > MAX_FILES_ALLOWED_FOR_DIFF_STAT ||
+      selectedFiles.length > MAX_FILES_ALLOWED_FOR_DIFF_STAT
     ) {
       setSignificantLinesOfCode(undefined);
       return;
