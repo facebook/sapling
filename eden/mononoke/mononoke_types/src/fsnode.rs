@@ -18,7 +18,7 @@ use crate::errors::MononokeTypeError;
 use crate::file_change::FileType;
 use crate::hash::Sha1;
 use crate::hash::Sha256;
-use crate::path::MPathElement;
+use crate::path::mpath_element::MPathElement;
 use crate::thrift;
 use crate::typed_hash::ContentId;
 use crate::typed_hash::FsnodeId;

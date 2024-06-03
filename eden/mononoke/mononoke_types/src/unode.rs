@@ -17,7 +17,7 @@ use crate::blob::FileUnodeBlob;
 use crate::blob::ManifestUnodeBlob;
 use crate::errors::MononokeTypeError;
 use crate::file_change::FileType;
-use crate::path::MPathElement;
+use crate::path::mpath_element::MPathElement;
 use crate::path::MPathHash;
 use crate::thrift;
 use crate::typed_hash::ChangesetId;

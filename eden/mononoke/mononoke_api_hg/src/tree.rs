@@ -23,7 +23,7 @@ use mercurial_types::HgParents;
 use mercurial_types::HgPreloadedAugmentedManifest;
 use mononoke_api::errors::MononokeError;
 use mononoke_types::file_change::FileType;
-use mononoke_types::path::MPathElement;
+use mononoke_types::MPathElement;
 use repo_blobstore::RepoBlobstoreRef;
 use revisionstore_types::Metadata;
 
