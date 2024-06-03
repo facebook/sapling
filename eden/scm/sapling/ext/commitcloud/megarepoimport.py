@@ -119,8 +119,9 @@ def translateandpull(
 
     if not headstranslatequeue and not bookmarkstranslatequeue:
         raise error.Abort(
-            _("nothing to sync translate between workspaces")
-            % (sourceworkspace, destinationworkspace)
+            _("nothing to sync translate between workspaces %s and %s")
+            % (sourceworkspace, destinationworkspace),
+            component="commitcloud",
         )
 
     # Translate heads
