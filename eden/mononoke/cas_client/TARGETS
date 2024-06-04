@@ -41,3 +41,24 @@ rust_library(
         "//eden/mononoke/server/context:context",
     ],
 )
+
+rust_library(
+    name = "changesets_uploader",
+    srcs = glob(["changesets_uploader/**/*.rs"]),
+    autocargo = {"cargo_toml_dir": "changesets_uploader"},
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:slog",
+        "fbsource//third-party/rust:thiserror",
+        "//common/rust/shed/stats:stats",
+        "//eden/mononoke/blobrepo:repo_blobstore",
+        "//eden/mononoke/blobstore:blobstore",
+        "//eden/mononoke/bonsai_hg_mapping:bonsai_hg_mapping",
+        "//eden/mononoke/cas_client:cas_client",
+        "//eden/mononoke/cas_client:scm_client",
+        "//eden/mononoke/changesets:changesets",
+        "//eden/mononoke/mercurial:mercurial_types",
+        "//eden/mononoke/mononoke_types:mononoke_types",
+        "//eden/mononoke/server/context:context",
+    ],
+)

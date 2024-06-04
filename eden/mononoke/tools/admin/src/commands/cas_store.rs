@@ -17,7 +17,6 @@ use info::CasStoreInfoArgs;
 use mononoke_app::args::RepoArgs;
 use mononoke_app::MononokeApp;
 use repo_blobstore::RepoBlobstore;
-use repo_derived_data::RepoDerivedData;
 use repo_identity::RepoIdentity;
 use upload::CasStoreUploadArgs;
 
@@ -41,9 +40,6 @@ pub struct Repo {
 
     #[facet]
     repo_blobstore: RepoBlobstore,
-
-    #[facet]
-    repo_derived_data: RepoDerivedData,
 
     #[facet]
     changesets: dyn Changesets,
