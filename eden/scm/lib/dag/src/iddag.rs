@@ -1720,7 +1720,7 @@ pub trait IdDagAlgorithm: IdDagStore {
             self.id_set_to_id_segments_with_max_level(&untested.difference(skip), 0)?;
         let mut best_score = 0;
         let mut best_id = None;
-        for id_segment in flat_segments {
+        for id_segment in flat_segments.into_iter().rev() {
             // Pick "P", let "len(ancestors(P) & untested)" be "x".
             // - If P is good, bisect total -= x.
             // - If P is bad, bisect total -= (total + 1 - x).
@@ -1739,11 +1739,14 @@ pub trait IdDagAlgorithm: IdDagStore {
             let low_count = high_count.saturating_sub(id_segment.high.0 - id_segment.low.0);
             let best_count = ideal.max(low_count).min(high_count);
             let score = best_count.min(total + 1 - best_count);
-            if score >= best_score {
+            if score > best_score {
                 let id = id_segment.low + (best_count - low_count);
                 trace!(target: "dag::algo::suggest_bisect", "  id={} score={}", id, score);
                 best_score = score;
                 best_id = Some(id);
+                if best_count == ideal {
+                    break;
+                }
             }
         }
 
