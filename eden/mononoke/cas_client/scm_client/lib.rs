@@ -23,11 +23,18 @@ use mercurial_types::HgFileNodeId;
 use mononoke_types::ContentId;
 use mononoke_types::MononokeDigest;
 use slog::info;
+use stats::prelude::*;
 
 #[cfg(fbcode_build)]
 pub type MononokeCasClient<'a> = ScmCasClient<cas_client::RemoteExecutionCasdClient<'a>>;
 #[cfg(not(fbcode_build))]
 pub type MononokeCasClient<'a> = ScmCasClient<cas_client::DummyCasClient<'a>>;
+
+define_stats! {
+    prefix = "mononoke.cas_client";
+    uploaded_manifests_count: timeseries(Rate, Sum),
+    uploaded_files_count: timeseries(Rate, Sum),
+}
 
 const MAX_CONCURRENT_UPLOADS_TREES: usize = 200;
 const MAX_CONCURRENT_UPLOADS_FILES: usize = 100;
@@ -90,6 +97,7 @@ where
             ))?;
 
         self.client.streaming_upload_blob(&digest, stream).await?;
+        STATS::uploaded_files_count.add_value(1);
         Ok(())
     }
 
@@ -115,7 +123,9 @@ where
                     .await?
                     .ok_or(ErrorKind::ContentMissingInBlobstore(content_id.clone()))?,
             )
-            .await
+            .await?;
+        STATS::uploaded_files_count.add_value(1);
+        Ok(())
     }
 
     /// Upload given file contents to a Cas backend (batched API)
@@ -123,6 +133,7 @@ where
     /// Prior lookup flag is used to check if a digest already exists in the CAS backend before fetching data from Mononoke blobstore.
     /// Digests of files can be known a priori (from Augmented Manifest, for example), but it is not required.
     /// Caller can analyse individual results.
+    /// Do not increment uploaded_files_count counter, since the method is calling into the individual upload method.
     pub async fn upload_file_contents<'a>(
         &self,
         ctx: &'a CoreContext,
@@ -142,6 +153,7 @@ where
     }
 
     /// Upload given file contents to a Cas backend (batched API) (by Content Id)
+    /// Do not increment uploaded_files_count counter, since the method is calling into the individual upload method.
     pub async fn upload_files_by_content_id<'a>(
         &self,
         ctx: &'a CoreContext,
@@ -216,6 +228,7 @@ where
         self.client
             .streaming_upload_blob(&digest, bytes_stream)
             .await?;
+        STATS::uploaded_manifests_count.add_value(1);
         Ok(())
     }
 
@@ -224,6 +237,7 @@ where
     /// Prior lookup flag is used to check if a digest already exists in the CAS backend before fetching data from Mononoke blobstore.
     /// Digests of trees can be known a priori (from Augmented Manifest, for example), but it is not required.
     /// Caller can analyse individual results.
+    /// Do not increment uploaded_manifests_count counter, since the method is calling into the individual upload method.
     pub async fn upload_augmented_trees<'a>(
         &self,
         ctx: &'a CoreContext,
