@@ -87,7 +87,7 @@ def _lldb_backtrace_all_for_process(target, process, write):
     import lldb
 
     if target.addr_size != 8:
-        write("non-64-bit architecture is not yet supported\n")
+        write("non-64-bit (%s) architecture is not yet supported\n" % target.addr_size)
         return
 
     def read_u64(address: int) -> int:
