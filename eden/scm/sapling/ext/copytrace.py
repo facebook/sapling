@@ -71,7 +71,6 @@ The following are configs to tune the behavior of copy tracing algorithm:
 """
 
 import codecs
-import os
 
 from sapling import (
     cmdutil,
@@ -79,10 +78,8 @@ from sapling import (
     dispatch,
     extensions,
     filemerge,
-    git,
     hgdemandimport,
     json,
-    node,
     phases,
     pycompat,
     registrar,
@@ -122,55 +119,8 @@ def extsetup(ui) -> None:
         "$$ &Changed $$ &Deleted $$ &Unresolved $$ &Renamed"
     )
 
-    extensions.wrapfunction(filemerge, "_filemerge", _filemerge)
     extensions.wrapfunction(copiesmod, "mergecopies", _mergecopies)
     extensions.wrapfunction(cmdutil, "amend", _amend)
-
-
-def _filemerge(
-    origfunc,
-    premerge,
-    repo,
-    wctx,
-    mynode,
-    orig,
-    fcd,
-    fco,
-    fca,
-    labels=None,
-    *args,
-    **kwargs,
-):
-
-    if premerge:
-        # copytracing worked if files to merge have different file names
-        # and filelog contents are different (fco.cmp(fcd) returns True if
-        # they are different). If filelog contents are the same then the file
-        # was moved in the rebase/graft/merge source, but wasn't changed in the
-        # rebase/graft/merge destination. This case mercurial would've handled
-        # even with disabled copytracing, so we don't want to log it.
-        if orig != fco.path() and fco.cmp(fcd):
-            # copytracing was in action, let's record it
-            if repo.ui.config("experimental", "copytrace") == "on":
-                msg = "success (fastcopytracing)"
-            else:
-                msg = "success"
-
-            try:
-                destctx = _getctxfromfctx(fcd)
-                srcctx = _getctxfromfctx(fco)
-                hexes = "%s, %s" % (_gethex(destctx), _gethex(srcctx))
-                paths = "%s, %s" % (orig, fco.path())
-                msg = "%s (%s; %s)" % (msg, hexes, paths)
-            except Exception as e:
-                # we don't expect any exceptions to happen, but to be 100%
-                # sure we don't break hg let's catch everything and log it
-                msg = "failed to log: %s" % (e,)
-            repo.ui.log("copytrace", msg=msg, reponame=_getreponame(repo, repo.ui))
-
-    return origfunc(
-        premerge, repo, wctx, mynode, orig, fcd, fco, fca, labels, *args, **kwargs
-    )
 
 
 def _runcommand(orig, lui, repo, cmd, fullargs, ui, *args, **kwargs):
@@ -503,23 +453,3 @@ def _filtercopies(copies, base, otherctx):
 
 def _dagcopytraceenabled(ui):
     return ui.configbool("copytrace", "dagcopytrace")
-
-
-def _getreponame(repo, ui):
-    reporoot = repo.origroot if hasattr(repo, "origroot") else ""
-    reponame = ui.config("paths", "default") or reporoot
-    if reponame:
-        reponame = os.path.basename(reponame)
-    return reponame
-
-
-def _getctxfromfctx(fctx):
-    if fctx.isabsent():
-        return fctx._ctx
-    else:
-        return fctx._changectx
-
-
-def _gethex(ctx):
-    # for workingctx return p1 hex
-    return ctx.hex() if ctx.hex() != node.wdirhex else ctx.p1().hex()
