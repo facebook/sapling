@@ -147,6 +147,23 @@ py_class!(pub class dagalgo |py| {
         Ok(Names(result))
     }
 
+    /// suggest_bisect(roots, heads, skip) -> (Optional[node], untested, heads).
+    /// Suggest the next commit during bisect.
+    /// If `node` is None, then the bisect cannot continue. `untested` includes
+    /// skipped nodes and shows the ambigious nodes on completion. `heads` is
+    /// the "first good/bad" bisect result when `untested` is empty.
+    /// If `node` is not None, suggest bisecting that `node`. `untested` can be
+    /// used to show remaining commits and estimated steps.
+    def suggest_bisect(&self, roots: Names, heads: Names, skip: Names) -> PyResult<(Option<PyBytes>, Names, Names)> {
+        let dag = self.dag(py);
+        let (node, untested, heads) = block_on(dag.suggest_bisect(roots.0, heads.0, skip.0)).map_pyerr(py)?;
+        let node = match node {
+            Some(v) => Some(PyBytes::new(py, v.as_ref())),
+            None => None,
+        };
+        Ok((node, Names(untested), Names(heads)))
+    }
+
     /// Return true if the vertexes are lazily fetched from remote.
     def isvertexlazy(&self) -> PyResult<bool> {
         Ok(self.dag(py).is_vertex_lazy())
