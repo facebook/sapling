@@ -12,6 +12,8 @@ use mononoke_types::ChangesetId;
 pub enum CasChangesetUploaderErrorKind {
     #[error("The following changeset is unexpectedly missing: {0}")]
     InvalidChangeset(ChangesetId),
+    #[error("Diff changeset's manifest with its parents failed: {0}")]
+    DiffChangesetFailed(String),
     #[error(transparent)]
     Error(#[from] Error),
 }

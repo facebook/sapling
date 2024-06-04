@@ -48,6 +48,7 @@ rust_library(
     autocargo = {"cargo_toml_dir": "changesets_uploader"},
     deps = [
         "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:slog",
         "fbsource//third-party/rust:thiserror",
         "//common/rust/shed/stats:stats",
@@ -57,6 +58,7 @@ rust_library(
         "//eden/mononoke/cas_client:cas_client",
         "//eden/mononoke/cas_client:scm_client",
         "//eden/mononoke/changesets:changesets",
+        "//eden/mononoke/manifest:manifest",
         "//eden/mononoke/mercurial:mercurial_types",
         "//eden/mononoke/mononoke_types:mononoke_types",
         "//eden/mononoke/server/context:context",
