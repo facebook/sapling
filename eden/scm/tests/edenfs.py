@@ -135,14 +135,15 @@ darwin-redirection-type = "symlink"
         env.pop("HGTEST_INCLUDED", None)
         # .t tests set the value for $HOME to $TESTTMP, and we don't want to
         # force every EdenFS command to have the current value of $HOME at this
-        # point (which will likely be different to $TESTTMP)
+        # point (which will likely be different to $TESTTMP). The $HOME in the
+        # generated scripts below will be $TESTTMP at runtime.
         env.pop("HOME", None)
         if not os.name == "nt":
             with open(edenpath, "w") as f:
                 f.write("#!/usr/bin/env bash\n")
                 for k, v in env.items():
                     f.write(f"export {k}={repr(v)}\n")
-                f.write(" ".join(cmd) + ' "$@"\n')
+                f.write(" ".join(cmd) + '--home-dir "$HOME" "$@"\n')
             os.chmod(edenpath, 0o775)
         else:
             with open(str(edenpath) + ".bat", "w") as f:
@@ -151,5 +152,5 @@ darwin-redirection-type = "symlink"
                     f.write(f"set {k}={v}\n")
                 cmd[0] = f'"{cmd[0]}"'
                 fullpath = (" ".join(cmd)).strip()
-                f.write(f"{fullpath} %*\n")
+                f.write(f"{fullpath} --home-dir %HOME% %*\n")
                 f.write("exit /B %errorlevel%\n")
