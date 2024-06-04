@@ -30,6 +30,7 @@ mononoke_app::subcommands! {
     mod blobstore_bulk_unlink;
     mod blobstore_unlink;
     mod bookmarks;
+    mod cas_store;
     mod changelog;
     mod commit;
     mod commit_graph;

@@ -79,6 +79,8 @@ rust_binary(
         "//eden/mononoke/bookmarks:bookmarks_cache",
         "//eden/mononoke/bookmarks:bookmarks_movement",
         "//eden/mononoke/bulkops:bulkops",
+        "//eden/mononoke/cas_client:cas_client",
+        "//eden/mononoke/cas_client:scm_client",
         "//eden/mononoke/changesets:changesets",
         "//eden/mononoke/changesets/changesets_creation:changesets_creation",
         "//eden/mononoke/cmdlib:environment",

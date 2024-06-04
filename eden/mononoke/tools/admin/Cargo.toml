@@ -33,6 +33,7 @@ cacheblob = { version = "0.1.0", path = "../../blobstore/cacheblob" }
 cachelib = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 caching_commit_graph_storage = { version = "0.1.0", path = "../../repo_attributes/commit_graph/caching_commit_graph_storage" }
 caching_ext = { version = "0.1.0", path = "../../common/rust/caching_ext" }
+cas_client = { version = "0.1.0", path = "../../cas_client/client" }
 changeset_fetcher = { version = "0.1.0", path = "../../blobrepo/changeset_fetcher" }
 changeset_info = { version = "0.1.0", path = "../../derived_data/changeset_info" }
 changesets = { version = "0.1.0", path = "../../changesets" }
@@ -99,6 +100,7 @@ repo_cross_repo = { version = "0.1.0", path = "../../repo_attributes/repo_cross_
 repo_derived_data = { version = "0.1.0", path = "../../repo_attributes/repo_derived_data" }
 repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity" }
 repo_lock = { version = "0.1.0", path = "../../repo_attributes/repo_lock/repo_lock" }
+scm_client = { version = "0.1.0", path = "../../cas_client/scm_client" }
 serde = { version = "1.0.185", features = ["derive", "rc"] }
 serde_json = { version = "1.0.100", features = ["float_roundtrip", "unbounded_depth"] }
 skeleton_manifest = { version = "0.1.0", path = "../../derived_data/skeleton_manifest" }
