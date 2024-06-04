@@ -98,10 +98,6 @@ configitem("copytrace", "amendcopytracecommitlimit", default=100)
 configitem("copytrace", "dagcopytrace", default=False)
 
 
-def uisetup(ui) -> None:
-    extensions.wrapfunction(dispatch, "runcommand", _runcommand)
-
-
 def extsetup(ui) -> None:
     # With experimental.copytrace=off there can be cryptic merge errors.
     # Let's change error message to suggest re-running the command with
@@ -121,10 +117,6 @@ def extsetup(ui) -> None:
 
     extensions.wrapfunction(copiesmod, "mergecopies", _mergecopies)
     extensions.wrapfunction(cmdutil, "amend", _amend)
-
-
-def _runcommand(orig, lui, repo, cmd, fullargs, ui, *args, **kwargs):
-    return orig(lui, repo, cmd, fullargs, ui, *args, **kwargs)
 
 
 # Note: dbm._Database does not exist.
