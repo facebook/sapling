@@ -20,6 +20,7 @@ use futures::TryStreamExt;
 use mercurial_types::HgAugmentedManifestEntry;
 use mercurial_types::HgAugmentedManifestId;
 use mercurial_types::HgFileNodeId;
+use mononoke_types::ContentId;
 use mononoke_types::MononokeDigest;
 use slog::info;
 
@@ -92,6 +93,31 @@ where
         Ok(())
     }
 
+    /// Upload a given file to a CAS backend (by Content Id)
+    pub async fn upload_file_by_content_id<'a>(
+        &self,
+        ctx: &'a CoreContext,
+        blobstore: &'a impl Blobstore,
+        content_id: &ContentId,
+        prior_lookup: bool,
+    ) -> Result<(), Error> {
+        let meta = filestore::get_metadata(blobstore, ctx, &content_id.to_owned().into())
+            .await?
+            .ok_or(ErrorKind::ContentMissingInBlobstore(content_id.clone()))?;
+        let digest = MononokeDigest(meta.seeded_blake3, meta.total_size);
+        if prior_lookup && self.lookup_digest(&digest).await? {
+            return Ok(());
+        }
+        self.client
+            .streaming_upload_blob(
+                &digest,
+                filestore::fetch(blobstore, ctx.clone(), &content_id.to_owned().into())
+                    .await?
+                    .ok_or(ErrorKind::ContentMissingInBlobstore(content_id.clone()))?,
+            )
+            .await
+    }
+
     /// Upload given file contents to a Cas backend (batched API)
     /// This implementation doesn't use batched API on CAS side yet, but it is planned to be implemented.
     /// Prior lookup flag is used to check if a digest already exists in the CAS backend before fetching data from Mononoke blobstore.
@@ -115,6 +141,24 @@ where
             .await
     }
 
+    /// Upload given file contents to a Cas backend (batched API) (by Content Id)
+    pub async fn upload_files_by_content_id<'a>(
+        &self,
+        ctx: &'a CoreContext,
+        blobstore: &'a impl Blobstore,
+        ids: Vec<ContentId>,
+        prior_lookup: bool,
+    ) -> Vec<Result<ContentId, Error>> {
+        stream::iter(ids.into_iter().map(move |id| async move {
+            self.upload_file_by_content_id(ctx, blobstore, &id, prior_lookup)
+                .await?;
+            Ok(id)
+        }))
+        .buffer_unordered(MAX_CONCURRENT_UPLOADS_FILES)
+        .collect()
+        .await
+    }
+
     pub async fn ensure_upload_file_contents<'a>(
         &self,
         ctx: &'a CoreContext,
@@ -123,6 +167,19 @@ where
         prior_lookup: bool,
     ) -> Result<Vec<HgFileNodeId>, Error> {
         self.upload_file_contents(ctx, blobstore, ids, prior_lookup)
+            .await
+            .into_iter()
+            .collect()
+    }
+
+    pub async fn ensure_upload_files_by_content_id<'a>(
+        &self,
+        ctx: &'a CoreContext,
+        blobstore: &'a impl Blobstore,
+        ids: Vec<ContentId>,
+        prior_lookup: bool,
+    ) -> Result<Vec<ContentId>, Error> {
+        self.upload_files_by_content_id(ctx, blobstore, ids, prior_lookup)
             .await
             .into_iter()
             .collect()

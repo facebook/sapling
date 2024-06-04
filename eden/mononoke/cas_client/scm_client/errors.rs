@@ -6,6 +6,7 @@
  */
 
 use mercurial_types::HgNodeHash;
+use mononoke_types::ContentId;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -16,4 +17,6 @@ pub enum ErrorKind {
         "Content metadata is unexpectedly missing in the blobstore for the following hgid: {0}"
     )]
     ContentMetadataMissingInBlobstore(HgNodeHash),
+    #[error("Failed to fetch metadata or blob for the following Mononoke Content Id: {0}")]
+    ContentMissingInBlobstore(ContentId),
 }
