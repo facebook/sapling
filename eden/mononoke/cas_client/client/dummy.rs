@@ -24,7 +24,7 @@ impl<'a> CasClient for DummyCasClient<'a> {
     async fn streaming_upload_blob(
         &self,
         _digest: &MononokeDigest,
-        _bytes_stream: impl Stream<Item = Result<Bytes, Error>> + std::marker::Send,
+        _bytes_stream: impl Stream<Item = Result<Bytes, Error>> + Send,
     ) -> Result<(), Error> {
         Ok(())
     }

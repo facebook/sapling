@@ -26,7 +26,7 @@ pub trait CasClient: Sync + Send {
     async fn streaming_upload_blob(
         &self,
         digest: &MononokeDigest,
-        bytes_stream: impl Stream<Item = Result<Bytes, Error>> + std::marker::Send,
+        bytes_stream: impl Stream<Item = Result<Bytes, Error>> + Send,
     ) -> Result<(), Error>;
     /// Upload given blob, having its digest and data.
     async fn upload_blob(&self, digest: &MononokeDigest, bytes: Bytes) -> Result<(), Error>;
