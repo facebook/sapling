@@ -19,6 +19,8 @@ use crate::ops::DagAddHeads;
 use crate::ops::IdConvert;
 use crate::ops::IdDagAlgorithm;
 use crate::ops::Parents;
+use crate::ops::ToIdSet;
+use crate::ops::ToSet;
 use crate::utils;
 use crate::DagAlgorithm;
 use crate::Group;
@@ -389,6 +391,31 @@ pub(crate) async fn is_ancestor(
         }
     }
     Ok(false)
+}
+
+/// Implementation of `suggest_bisect`.
+///
+/// This is not the default trait implementation because the extra trait bounds
+/// (ToIdSet, ToSet).
+pub async fn suggest_bisect(
+    this: &(impl DagAlgorithm + ToIdSet + ToSet + IdConvert + ?Sized),
+    roots: NameSet,
+    heads: NameSet,
+    skip: NameSet,
+) -> Result<(Option<VertexName>, NameSet, NameSet)> {
+    let roots = this.to_id_set(&roots).await?;
+    let heads = this.to_id_set(&heads).await?;
+    let skip = this.to_id_set(&skip).await?;
+    let (maybe_id, untested, heads) = this
+        .id_dag_snapshot()?
+        .suggest_bisect(&roots, &heads, &skip)?;
+    let maybe_vertex = match maybe_id {
+        Some(id) => Some(this.vertex_name(id).await?),
+        None => None,
+    };
+    let untested = this.to_set(&untested)?;
+    let heads = this.to_set(&heads)?;
+    Ok((maybe_vertex, untested, heads))
 }
 
 // `scope` is usually the "dirty" set that might need to be inserted, or might

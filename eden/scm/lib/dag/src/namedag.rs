@@ -27,6 +27,7 @@ use futures::TryStreamExt;
 use nonblocking::non_blocking_result;
 
 use crate::clone::CloneData;
+use crate::default_impl;
 use crate::errors::bug;
 use crate::errors::programming;
 use crate::errors::DagError;
@@ -1989,6 +1990,15 @@ where
         let spans = self.dag().descendants(self.to_id_set(&set).await?)?;
         let result = NameSet::from_spans_dag(spans, self)?;
         Ok(result)
+    }
+
+    async fn suggest_bisect(
+        &self,
+        roots: NameSet,
+        heads: NameSet,
+        skip: NameSet,
+    ) -> Result<(Option<VertexName>, NameSet, NameSet)> {
+        default_impl::suggest_bisect(self, roots, heads, skip).await
     }
 
     /// Vertexes buffered in memory, not yet written to disk.

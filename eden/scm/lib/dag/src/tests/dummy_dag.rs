@@ -148,6 +148,15 @@ impl DagAlgorithm for DummyDag {
         Ok(set)
     }
 
+    async fn suggest_bisect(
+        &self,
+        _roots: NameSet,
+        heads: NameSet,
+        _skip: NameSet,
+    ) -> Result<(Option<VertexName>, NameSet, NameSet)> {
+        Ok((None, NameSet::empty(), heads))
+    }
+
     fn is_vertex_lazy(&self) -> bool {
         false
     }

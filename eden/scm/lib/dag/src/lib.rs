@@ -14,7 +14,7 @@
 
 mod bsearch;
 pub mod config;
-mod default_impl;
+pub mod default_impl;
 mod delegate;
 pub mod errors;
 mod fmt;

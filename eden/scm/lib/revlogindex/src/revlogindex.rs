@@ -1814,6 +1814,15 @@ impl DagAlgorithm for RevlogIndex {
         Ok(result)
     }
 
+    async fn suggest_bisect(
+        &self,
+        roots: Set,
+        heads: Set,
+        skip: Set,
+    ) -> dag::Result<(Option<Vertex>, Set, Set)> {
+        dag::default_impl::suggest_bisect(self, roots, heads, skip).await
+    }
+
     fn is_vertex_lazy(&self) -> bool {
         false
     }

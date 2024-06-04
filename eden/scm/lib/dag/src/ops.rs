@@ -191,6 +191,23 @@ pub trait DagAlgorithm: Send + Sync {
         default_impl::reachable_roots(self, roots, heads).await
     }
 
+    /// Suggest the next place to test during a bisect.
+    ///
+    /// - `(roots, heads)` are either `(good, bad)` or `(bad, good)`.
+    /// - `skip` should be non-lazy.
+    ///
+    /// Return `(vertex_to_bisect_next, untested_set, roots(high::))`.
+    ///
+    /// If `vertex_to_bisect_next` is `None`, the bisect is completed. At this
+    /// time, `roots(heads::)` is the "first good/bad" set. `untested_set`
+    /// is usually empty, or a subset of `skip`.
+    async fn suggest_bisect(
+        &self,
+        roots: NameSet,
+        heads: NameSet,
+        skip: NameSet,
+    ) -> Result<(Option<VertexName>, NameSet, NameSet)>;
+
     /// Vertexes buffered in memory, not yet written to disk.
     async fn dirty(&self) -> Result<NameSet>;
 

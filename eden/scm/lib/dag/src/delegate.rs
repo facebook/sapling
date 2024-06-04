@@ -271,6 +271,17 @@ macro_rules! delegate {
             {
                 self.$($t)*.reachable_roots(roots, heads)
             }
+            fn suggest_bisect<'a: 's, 's>(
+                &'a self,
+                roots: $crate::Set,
+                heads: $crate::Set,
+                skip: $crate::Set,
+            ) -> std::pin::Pin<Box<dyn std::future::Future<Output=
+                    $crate::Result<(Option<$crate::Vertex>, $crate::Set, $crate::Set)>
+                > + Send + 's>> where Self: 's
+            {
+                self.$($t)*.suggest_bisect(roots, heads, skip)
+            }
             fn dirty<'a: 's, 's>(&'a self)
                 -> std::pin::Pin<Box<dyn std::future::Future<Output=
                         $crate::Result<$crate::Set>
