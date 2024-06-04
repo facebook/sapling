@@ -450,7 +450,6 @@ members = [
   "scs/if/clients",
   "scs/if/mocks",
   "scs/if/services",
-  "scs/raw_client_lib",
   "segmented_changelog",
   "segmented_changelog/bench/concurrent_idmap",
   "segmented_changelog/types",
