@@ -38,9 +38,6 @@ selectivepull=true
 names=main,master
 repos=remote/
 
-[experimental]
-copytrace=off
-
 [tweakdefaults]
 defaultdest=
 
