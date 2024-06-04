@@ -18,7 +18,7 @@ export function Icon({
 }: {
   slot?: 'start';
   icon: string;
-  size?: 'S' | 'M' | 'L';
+  size?: 'XS' | 'S' | 'M' | 'L';
   color?: 'blue' | 'red' | 'green' | 'yellow';
 } & React.DetailedHTMLProps<React.HTMLAttributes<HTMLDivElement>, HTMLDivElement>) {
   return (
