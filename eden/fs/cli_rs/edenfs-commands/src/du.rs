@@ -53,7 +53,8 @@ use thrift_types::edenfs::GetScmStatusParams;
 use crate::ExitCode;
 
 #[cfg(target_os = "macos")]
-const PURGEABLE_DATA_UTIL: &str = "System/Library/Filesystems/apfs.fs/Contents/Resources/apfs.util";
+const PURGEABLE_DATA_UTIL: &str =
+    "/System/Library/Filesystems/apfs.fs/Contents/Resources/apfs.util";
 
 #[derive(Parser, Debug)]
 #[clap(about = "Show disk space usage for a checkout")]
