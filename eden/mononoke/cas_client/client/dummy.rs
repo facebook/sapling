@@ -39,4 +39,11 @@ impl<'a> CasClient for DummyCasClient<'a> {
     async fn lookup_blob(&self, _digest: &MononokeDigest) -> Result<bool, Error> {
         Ok(false)
     }
+
+    async fn missing_digests<'b>(
+        &self,
+        digests: &'b [MononokeDigest],
+    ) -> Result<Vec<MononokeDigest>, Error> {
+        Ok(digests.iter().cloned().collect())
+    }
 }

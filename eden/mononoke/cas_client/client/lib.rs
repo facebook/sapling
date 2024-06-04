@@ -34,4 +34,9 @@ pub trait CasClient: Sync + Send {
     async fn upload_blobs(&self, blobs: Vec<(MononokeDigest, Bytes)>) -> Result<(), Error>;
     /// Lookup given digest in a Cas backend.
     async fn lookup_blob(&self, digest: &MononokeDigest) -> Result<bool, Error>;
+    /// Lookup given digests in a Cas backend.
+    async fn missing_digests<'a>(
+        &self,
+        digests: &'a [MononokeDigest],
+    ) -> Result<Vec<MononokeDigest>, Error>;
 }
