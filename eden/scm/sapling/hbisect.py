@@ -162,7 +162,7 @@ def _bisect2(repo, state):
     good = dag.sort(state["good"])
     bad = dag.sort(state["bad"])
 
-    badtogood = len(dag.only(good, bad)) > 0
+    badtogood = bool(dag.range(bad, good))
     if badtogood:
         roots, heads = bad, good
     else:

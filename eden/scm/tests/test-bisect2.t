@@ -1,7 +1,6 @@
-
 #require no-eden
 
-
+  $ setconfig experimental.bisect2=true
 
 # The tests in test-bisect are done on a linear history. Here the
 # following repository history is used for testing:
