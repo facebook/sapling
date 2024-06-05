@@ -15,7 +15,7 @@ import {T, t} from '../../i18n';
 import {SplitCommitIcon} from '../../icons/SplitCommitIcon';
 import {uncommittedChangesWithPreviews} from '../../previews';
 import {useConfirmUnsavedEditsBeforeSplit} from './ConfirmUnsavedEditsBeforeSplit';
-import {editingStackIntentionHashes} from './stackEditState';
+import {bumpStackEditMetric, editingStackIntentionHashes} from './stackEditState';
 import {useAtomValue, useSetAtom} from 'jotai';
 
 /** Button to open split UI for the current commit. Expected to be shown on the head commit.
@@ -36,6 +36,9 @@ export function SplitButton({
       return;
     }
     setEditStackIntentionHashes(['split', new Set([commit.hash])]);
+    if (trackerEventName === 'SplitOpenFromSplitSuggestion') {
+      bumpStackEditMetric('splitFromSuggestion');
+    }
     tracker.track(trackerEventName);
   };
   return (

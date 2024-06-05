@@ -441,6 +441,7 @@ type StackEditMetrics = {
   splitMoveLine?: number;
   splitInsertBlank?: number;
   splitChangeRange?: number;
+  splitFromSuggestion?: number;
 };
 
 // Not atoms. They do not trigger re-render.
