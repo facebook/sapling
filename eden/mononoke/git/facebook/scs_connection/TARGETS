@@ -16,5 +16,7 @@ rust_library(
         "//eden/mononoke/cmdlib/sharding_ext:sharding_ext",
         "//eden/mononoke/scs/if:source_control-rust",
         "//eden/mononoke/scs/if:source_control-rust-clients",
+        "//eden/mononoke/scs/if:source_control-rust-srclients",
+        "//eden/mononoke/scs/if:source_control-rust-thriftclients",
     ],
 )
