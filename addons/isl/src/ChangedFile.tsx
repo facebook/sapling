@@ -459,9 +459,13 @@ function FileSelectionCheckbox({
   file: UIChangedFile;
   selection?: UseUncommittedSelection;
 }) {
+  const checked = selection?.isFullyOrPartiallySelected(file.path) ?? false;
   return selection == null ? null : (
     <Checkbox
-      checked={selection.isFullyOrPartiallySelected(file.path)}
+      aria-label={t('$label $file', {
+        replace: {$label: checked ? 'unselect' : 'select', $file: file.path},
+      })}
+      checked={checked}
       indeterminate={selection.isPartiallySelected(file.path)}
       data-testid={'file-selection-checkbox'}
       onChange={checked => {
