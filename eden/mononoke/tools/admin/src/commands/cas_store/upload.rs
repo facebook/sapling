@@ -34,6 +34,9 @@ pub struct CasStoreUploadArgs {
     /// Verbose logging of the upload process (CAS) vs quiet output by default.
     #[clap(long)]
     verbose: bool,
+    /// Upload only the blobs of a changeset.
+    #[clap(long)]
+    blobs_only: bool,
 }
 
 pub async fn cas_store_upload(
@@ -71,12 +74,17 @@ pub async fn cas_store_upload(
             match args.full {
                 true => {
                     cas_changesets_uploader
-                        .upload_single_changeset_recursively(ctx, repo, &changeset_id)
+                        .upload_single_changeset_recursively(
+                            ctx,
+                            repo,
+                            &changeset_id,
+                            args.blobs_only,
+                        )
                         .await?;
                 }
                 false => {
                     cas_changesets_uploader
-                        .upload_single_changeset(ctx, repo, &changeset_id)
+                        .upload_single_changeset(ctx, repo, &changeset_id, args.blobs_only)
                         .await?;
                 }
             }

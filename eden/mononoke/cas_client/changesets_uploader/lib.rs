@@ -32,6 +32,8 @@ use scm_client::ScmCasClient;
 use slog::debug;
 use stats::prelude::*;
 
+const MAX_CONCURRENT_UPLOADS: usize = 200;
+
 define_stats! {
     prefix = "mononoke.cas_changesets_uploader";
     uploaded_changesets: timeseries(Rate, Sum),
@@ -91,6 +93,7 @@ where
         ctx: &'a CoreContext,
         repo: &impl Repo,
         changeset_id: &ChangesetId,
+        blobs_only: bool,
     ) -> Result<(), Error> {
         let hg_cs_id = repo
             .bonsai_hg_mapping()
@@ -196,12 +199,18 @@ where
             files_list.len(),
         );
 
-        try_join!(
-            self.client
-                .ensure_upload_augmented_trees(ctx, &blobstore, manifests_list, true),
+        if blobs_only {
             self.client
                 .ensure_upload_file_contents(ctx, &blobstore, files_list, true)
-        )?;
+                .await?;
+        } else {
+            try_join!(
+                self.client
+                    .ensure_upload_augmented_trees(ctx, &blobstore, manifests_list, true),
+                self.client
+                    .ensure_upload_file_contents(ctx, &blobstore, files_list, true)
+            )?;
+        }
 
         debug!(
             ctx.logger(),
@@ -222,7 +231,52 @@ where
         ctx: &'a CoreContext,
         repo: &impl Repo,
         changeset_id: &ChangesetId,
+        blobs_only: bool,
     ) -> Result<(), CasChangesetUploaderErrorKind> {
+        if blobs_only {
+            let hg_cs_id = repo
+                .bonsai_hg_mapping()
+                .get_hg_from_bonsai(ctx, *changeset_id)
+                .await
+                .map(|cs| {
+                    cs.ok_or(CasChangesetUploaderErrorKind::InvalidChangeset(
+                        changeset_id.clone(),
+                    ))
+                })??;
+            let hg_cs = hg_cs_id
+                .load(ctx, &repo.repo_blobstore())
+                .await
+                .map_err(|e| CasChangesetUploaderErrorKind::Error(e.into()))?;
+            debug!(
+                ctx.logger(),
+                "Uploading all blobs recursively for [changeset id: {}, hg changeset id: {}]",
+                changeset_id,
+                hg_cs_id
+            );
+            let start_time = std::time::Instant::now();
+            hg_cs
+                .manifestid()
+                .list_leaf_entries(ctx.clone(), repo.repo_blobstore_arc())
+                .map_ok(move |(_, entry)| async move {
+                    let blobstore = repo.repo_blobstore();
+                    self.client
+                        .upload_file_content(ctx, &blobstore, &entry.1, None, true)
+                        .await
+                })
+                .try_buffered(MAX_CONCURRENT_UPLOADS)
+                .try_collect()
+                .await?;
+            debug!(
+                ctx.logger(),
+                "Upload of blobs from changeset {} to CAS (recursively) took {} seconds, corresponding hg changeset is {}",
+                changeset_id,
+                start_time.elapsed().as_secs_f64(),
+                hg_cs_id,
+            );
+            STATS::uploaded_changesets_recursive.add_value(1);
+            return Ok(());
+        }
+
         let (hg_cs_id, hg_augmented_manifest) = self
             .get_augmented_manifest_id_from_changeset(ctx, repo, changeset_id)
             .await?;
