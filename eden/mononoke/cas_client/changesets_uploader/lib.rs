@@ -36,7 +36,7 @@ use scm_client::ScmCasClient;
 use slog::debug;
 use stats::prelude::*;
 
-const MAX_CONCURRENT_UPLOADS: usize = 200;
+const MAX_CONCURRENT_UPLOADS: usize = 500;
 
 define_stats! {
     prefix = "mononoke.cas_changesets_uploader";
@@ -270,7 +270,7 @@ where
                             .upload_file_content(ctx, &blobstore, &entry.1, None, true)
                             .await?;
                         progress_counter.inc();
-                        if progress_counter.get() % 200 == 0 {
+                        if progress_counter.get() % 500 == 0 {
                             debug!(ctx.logger(), "Uploaded {} blobs", progress_counter.get());
                         }
                         Ok::<(), Error>(())
