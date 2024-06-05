@@ -218,6 +218,15 @@ def _bisect2(repo, state):
                 continue
             bestnode = ctx.node()
             break
+        else:
+            # everything is skipped
+            return (
+                list((first_heads + untested).iterrev()),
+                0,
+                badtogood,
+                headnode,
+                rootnode,
+            )
 
     return ([bestnode], total, badtogood, headnode, rootnode)
 
