@@ -19,7 +19,7 @@ rust_library(
     crate_root = "src/lib.rs",
     features = ["for-tests"],
     named_deps = {
-        "blake3-constant": "//blake3:blake3-constants-rust-nothrift",
+        "blake3-constants": "//blake3:blake3-constants-rust-nothrift",
     },
     test_deps = [
         "fbsource//third-party/rust:quickcheck",

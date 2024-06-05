@@ -131,19 +131,10 @@ impl Blake3IncrementalHasher {
     /// Creates a seeded Blake3 incremental hasher
     pub fn new_seeded() -> Self {
         #[cfg(fbcode_build)]
-        let bytes = blake3_constant::BLAKE3_HASH_KEY.as_bytes();
+        let key = blake3_constants::BLAKE3_HASH_KEY;
         #[cfg(not(fbcode_build))]
-        let bytes = "20220728-2357111317192329313741#".as_bytes();
-        if bytes.len() != blake3::KEY_LEN {
-            panic!(
-                "Seed for Blake3 hash needs exactly {} bytes",
-                blake3::KEY_LEN
-            )
-        } else {
-            let mut ret = [0; blake3::KEY_LEN];
-            ret.copy_from_slice(bytes);
-            Self(Blake3::new_keyed(&ret))
-        }
+        let key = b"20220728-2357111317192329313741#";
+        Self(Blake3::new_keyed(key))
     }
 }
 

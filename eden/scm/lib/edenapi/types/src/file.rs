@@ -175,13 +175,11 @@ impl FileAuxData {
         };
         let blake3 = {
             use blake3::Hasher;
-            #[cfg(not(fbcode_build))]
-            let key = "20220728-2357111317192329313741#".as_bytes();
             #[cfg(fbcode_build)]
-            let key = blake3_constant::BLAKE3_HASH_KEY.as_bytes();
-            let mut ret = [0; Blake3::len()];
-            ret.copy_from_slice(key);
-            let mut hasher = Hasher::new_keyed(&ret);
+            let key = blake3_constants::BLAKE3_HASH_KEY;
+            #[cfg(not(fbcode_build))]
+            let key = b"20220728-2357111317192329313741#";
+            let mut hasher = Hasher::new_keyed(key);
             hasher.update(data.as_ref());
             let hashed_bytes: [u8; Blake3::len()] = hasher.finalize().into();
             Blake3::from(hashed_bytes)
