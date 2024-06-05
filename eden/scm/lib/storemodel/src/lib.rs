@@ -25,7 +25,7 @@ use std::path::Path;
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use edenapi_trait::EdenApi;
+use edenapi_trait::SaplingRemoteApi;
 pub use edenapi_types::FileAuxData;
 pub use futures;
 use metalog::MetaLog;
@@ -430,7 +430,7 @@ pub trait StoreInfo: 'static {
     /// Provide the "storage path", which is usually `.sl/store` in the backing repo.
     fn store_path(&self) -> &Path;
     /// Provide the remote peer.
-    fn remote_peer(&self) -> anyhow::Result<Option<Arc<dyn EdenApi>>>;
+    fn remote_peer(&self) -> anyhow::Result<Option<Arc<dyn SaplingRemoteApi>>>;
     // Provide the metalog, useful to sync refs from git.
     fn metalog(&self) -> anyhow::Result<Arc<RwLock<MetaLog>>>;
 }

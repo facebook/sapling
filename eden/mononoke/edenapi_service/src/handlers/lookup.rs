@@ -32,10 +32,10 @@ use mononoke_api_hg::HgRepoContext;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
 
-use super::handler::EdenApiContext;
-use super::EdenApiHandler;
-use super::EdenApiMethod;
+use super::handler::SaplingRemoteApiContext;
 use super::HandlerResult;
+use super::SaplingRemoteApiHandler;
+use super::SaplingRemoteApiMethod;
 
 const MAX_CONCURRENT_LOOKUPS_PER_REQUEST: usize = 10000;
 
@@ -203,16 +203,16 @@ async fn check_request_item(repo: HgRepoContext, item: LookupRequest) -> Result<
 pub struct LookupHandler;
 
 #[async_trait]
-impl EdenApiHandler for LookupHandler {
+impl SaplingRemoteApiHandler for LookupHandler {
     type Request = Batch<LookupRequest>;
     type Response = LookupResponse;
 
     const HTTP_METHOD: hyper::Method = hyper::Method::POST;
-    const API_METHOD: EdenApiMethod = EdenApiMethod::Lookup;
+    const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::Lookup;
     const ENDPOINT: &'static str = "/lookup";
 
     async fn handler(
-        ectx: EdenApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
+        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
         let repo = ectx.repo();

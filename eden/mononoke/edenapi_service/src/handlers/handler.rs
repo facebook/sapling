@@ -22,7 +22,7 @@ use mononoke_api_hg::HgRepoContext;
 use nonzero_ext::nonzero;
 use serde::Deserialize;
 
-use super::EdenApiMethod;
+use super::SaplingRemoteApiMethod;
 use crate::context::ServerContext;
 use crate::utils::get_repo;
 
@@ -72,7 +72,7 @@ impl From<HttpError> for HandlerError {
 pub type HandlerResult<'a, Response> =
     Result<BoxStream<'a, anyhow::Result<Response>>, HandlerError>;
 
-pub struct EdenApiContext<P, Q> {
+pub struct SaplingRemoteApiContext<P, Q> {
     rctx: RequestContext,
     sctx: ServerContext,
     repo: HgRepoContext,
@@ -80,7 +80,7 @@ pub struct EdenApiContext<P, Q> {
     query: Q,
 }
 
-impl<P, Q> EdenApiContext<P, Q> {
+impl<P, Q> SaplingRemoteApiContext<P, Q> {
     pub fn new(
         rctx: RequestContext,
         sctx: ServerContext,
@@ -116,7 +116,7 @@ impl<P, Q> EdenApiContext<P, Q> {
 }
 
 #[async_trait]
-pub trait EdenApiHandler: 'static {
+pub trait SaplingRemoteApiHandler: 'static {
     type PathExtractor: PathExtractorWithRepo = BasicPathExtractor;
     type QueryStringExtractor: QueryStringExtractor<Body> + Send + Sync =
         gotham::extractor::NoopQueryStringExtractor;
@@ -124,7 +124,7 @@ pub trait EdenApiHandler: 'static {
     type Response: ToWire + Send + 'static;
 
     const HTTP_METHOD: hyper::Method;
-    const API_METHOD: EdenApiMethod;
+    const API_METHOD: SaplingRemoteApiMethod;
     /// DON'T include the /:repo prefix.
     /// Example: "/ephemeral/prepare"
     const ENDPOINT: &'static str;
@@ -134,7 +134,7 @@ pub trait EdenApiHandler: 'static {
     }
 
     async fn handler(
-        ctx: EdenApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
+        ctx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response>;
 }

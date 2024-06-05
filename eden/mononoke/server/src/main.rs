@@ -206,7 +206,7 @@ impl MononokeServerProcessExecutor {
         // sharded repos need to be present on each host.
         let is_deep_sharded = config
             .deep_sharding_config
-            .and_then(|c| c.status.get(&ShardedService::EdenApi).copied())
+            .and_then(|c| c.status.get(&ShardedService::SaplingRemoteApi).copied())
             .unwrap_or(false);
         if is_deep_sharded {
             self.repos_mgr.remove_repo(repo_name);
@@ -312,7 +312,7 @@ fn main(fb: FacebookInit) -> Result<()> {
         .sharded_executor_args
         .sharded_service_name
         .as_ref()
-        .map(|_| ShardedService::EdenApi);
+        .map(|_| ShardedService::SaplingRemoteApi);
     app.start_monitoring("mononoke_server", service.clone())?;
     app.start_stats_aggregation()?;
 

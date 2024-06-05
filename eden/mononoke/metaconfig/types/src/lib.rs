@@ -257,7 +257,7 @@ pub struct ShardingModeConfig {
 #[derive(Eq, Clone, Debug, PartialEq, Hash)]
 pub enum ShardedService {
     /// Eden / Mononoke Service
-    EdenApi,
+    SaplingRemoteApi,
     /// Source Control Service
     SourceControlService,
     /// Derived Data Service

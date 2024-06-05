@@ -13,7 +13,7 @@ use futures::prelude::*;
 use http_client::Stats;
 
 use crate::client::Client;
-use crate::errors::EdenApiError;
+use crate::errors::SaplingRemoteApiError;
 
 mod files;
 mod trees;
@@ -25,14 +25,14 @@ pub(crate) use trees::RetryableTrees;
 pub(crate) trait RetryableStreamRequest: Sized + Sync + Send + 'static {
     type Item: Send + 'static;
 
-    async fn perform(&self, client: Client) -> Result<Response<Self::Item>, EdenApiError>;
+    async fn perform(&self, client: Client) -> Result<Response<Self::Item>, SaplingRemoteApiError>;
 
     fn received_item(&mut self, _item: &Self::Item) {}
 
     async fn perform_with_retries(
         self,
         client: Client,
-    ) -> Result<Response<Self::Item>, EdenApiError> {
+    ) -> Result<Response<Self::Item>, SaplingRemoteApiError> {
         struct RetryState<R, T> {
             request: R,
             entries: Option<Entries<T>>,
@@ -143,8 +143,8 @@ mod tests {
 
     use super::*;
     use crate::builder::HttpClientBuilder;
-    use crate::EdenApiError;
     use crate::Response;
+    use crate::SaplingRemoteApiError;
 
     pub(crate) struct RetryableTest {
         pub keys: HashSet<Key>,
@@ -166,17 +166,20 @@ mod tests {
     impl RetryableStreamRequest for Arc<Mutex<RetryableTest>> {
         type Item = Key;
 
-        async fn perform(&self, _client: Client) -> Result<Response<Self::Item>, EdenApiError> {
+        async fn perform(
+            &self,
+            _client: Client,
+        ) -> Result<Response<Self::Item>, SaplingRemoteApiError> {
             let mut this = self.lock();
             let mut response = Response::empty();
-            let mut entries: Vec<Result<Key, EdenApiError>> =
+            let mut entries: Vec<Result<Key, SaplingRemoteApiError>> =
                 this.keys.iter().map(|k| Ok(k.clone())).collect();
 
             this.attempts += 1;
             if this.attempts <= this.fails {
-                entries[1] = Err(EdenApiError::Http(HttpClientError::BadResponse(anyhow!(
-                    "fake error"
-                ))));
+                entries[1] = Err(SaplingRemoteApiError::Http(HttpClientError::BadResponse(
+                    anyhow!("fake error"),
+                )));
             }
             response.entries = Box::pin(Box::new(stream::iter(entries)));
             Ok(response)

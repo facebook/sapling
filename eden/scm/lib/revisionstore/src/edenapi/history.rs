@@ -15,38 +15,38 @@ use types::Key;
 use types::NodeInfo;
 
 use super::hgid_keys;
-use super::EdenApiRemoteStore;
 use super::File;
+use super::SaplingRemoteApiRemoteStore;
 use crate::historystore::HgIdHistoryStore;
 use crate::historystore::HgIdMutableHistoryStore;
 use crate::historystore::RemoteHistoryStore;
 use crate::localstore::LocalStore;
 use crate::types::StoreKey;
 
-/// A history store backed by an `EdenApiRemoteStore` and a mutable store.
+/// A history store backed by an `SaplingRemoteApiRemoteStore` and a mutable store.
 ///
-/// This type can only be created from an `EdenApiRemoteStore<File>`; attempting
+/// This type can only be created from an `SaplingRemoteApiRemoteStore<File>`; attempting
 /// to create one from a remote store for trees will panic since EdenAPI does
 /// not support fetching tree history.
 ///
 /// Data will be fetched over the network via the remote store and stored in the
 /// mutable store before being returned to the caller. This type is not exported
 /// because it is intended to be used as a trait object.
-pub(super) struct EdenApiHistoryStore {
-    remote: Arc<EdenApiRemoteStore<File>>,
+pub(super) struct SaplingRemoteApiHistoryStore {
+    remote: Arc<SaplingRemoteApiRemoteStore<File>>,
     store: Arc<dyn HgIdMutableHistoryStore>,
 }
 
-impl EdenApiHistoryStore {
+impl SaplingRemoteApiHistoryStore {
     pub(super) fn new(
-        remote: Arc<EdenApiRemoteStore<File>>,
+        remote: Arc<SaplingRemoteApiRemoteStore<File>>,
         store: Arc<dyn HgIdMutableHistoryStore>,
     ) -> Self {
         Self { remote, store }
     }
 }
 
-impl RemoteHistoryStore for EdenApiHistoryStore {
+impl RemoteHistoryStore for SaplingRemoteApiHistoryStore {
     fn prefetch(&self, keys: &[StoreKey]) -> Result<()> {
         let client = self.remote.client.clone();
         let keys = hgid_keys(keys);
@@ -67,7 +67,7 @@ impl RemoteHistoryStore for EdenApiHistoryStore {
     }
 }
 
-impl HgIdHistoryStore for EdenApiHistoryStore {
+impl HgIdHistoryStore for SaplingRemoteApiHistoryStore {
     fn get_node_info(&self, key: &Key) -> Result<Option<NodeInfo>> {
         self.prefetch(&[StoreKey::hgid(key.clone())])?;
         self.store.get_node_info(key)
@@ -78,7 +78,7 @@ impl HgIdHistoryStore for EdenApiHistoryStore {
     }
 }
 
-impl LocalStore for EdenApiHistoryStore {
+impl LocalStore for SaplingRemoteApiHistoryStore {
     fn get_missing(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
         Ok(keys.to_vec())
     }
@@ -108,8 +108,8 @@ mod tests {
         };
         let history = hashmap! { k.clone() => n.clone() };
 
-        let client = FakeEdenApi::new().history(history).into_arc();
-        let remote = EdenApiRemoteStore::<File>::new(client);
+        let client = FakeSaplingRemoteApi::new().history(history).into_arc();
+        let remote = SaplingRemoteApiRemoteStore::<File>::new(client);
 
         // Set up local mutable store to write received data.
         let tmp = TempDir::new()?;
@@ -119,7 +119,7 @@ mod tests {
             StoreType::Shared,
         )?);
 
-        // Set up `EdenApiHistoryStore`.
+        // Set up `SaplingRemoteApiHistoryStore`.
         let edenapi = remote.historystore(local.clone());
 
         // Attempt fetch.
@@ -136,8 +136,8 @@ mod tests {
     #[test]
     #[should_panic]
     fn test_tree_history() {
-        let client = FakeEdenApi::new().into_arc();
-        let remote = EdenApiRemoteStore::<Tree>::new(client);
+        let client = FakeSaplingRemoteApi::new().into_arc();
+        let remote = SaplingRemoteApiRemoteStore::<Tree>::new(client);
 
         // Set up local mutable store to write received data.
         let tmp = TempDir::new().unwrap();

@@ -10,12 +10,12 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use edenapi::BlockingResponse;
-use edenapi::EdenApi;
-use edenapi::EdenApiError;
 use edenapi::Response;
-use edenapi_types::EdenApiServerError;
+use edenapi::SaplingRemoteApi;
+use edenapi::SaplingRemoteApiError;
 use edenapi_types::FileResponse;
 use edenapi_types::FileSpec;
+use edenapi_types::SaplingRemoteApiServerError;
 use edenapi_types::TreeAttributes;
 use edenapi_types::TreeEntry;
 use types::Key;
@@ -30,15 +30,15 @@ use crate::types::StoreKey;
 mod data;
 mod history;
 
-use data::EdenApiDataStore;
-use history::EdenApiHistoryStore;
+use data::SaplingRemoteApiDataStore;
+use history::SaplingRemoteApiHistoryStore;
 
 /// Convenience aliases for file and tree stores.
-pub type EdenApiFileStore = EdenApiRemoteStore<File>;
-pub type EdenApiTreeStore = EdenApiRemoteStore<Tree>;
+pub type SaplingRemoteApiFileStore = SaplingRemoteApiRemoteStore<File>;
+pub type SaplingRemoteApiTreeStore = SaplingRemoteApiRemoteStore<Tree>;
 
 /// A shim around an EdenAPI client that implements the various traits of
-/// Mercurial's storage layer, allowing a type that implements `EdenApi` to be
+/// Mercurial's storage layer, allowing a type that implements `SaplingRemoteApi` to be
 /// used alongside other Mercurial data and history stores.
 ///
 /// Note that this struct does not allow for data fetching on its own, because
@@ -46,13 +46,13 @@ pub type EdenApiTreeStore = EdenApiRemoteStore<Tree>;
 /// Use the methods from the `HgIdRemoteStore` trait to provide an appropriate
 /// mutable store.
 #[derive(Clone)]
-pub struct EdenApiRemoteStore<T> {
-    client: Arc<dyn EdenApi>,
+pub struct SaplingRemoteApiRemoteStore<T> {
+    client: Arc<dyn SaplingRemoteApi>,
     _phantom: PhantomData<T>,
 }
 
-impl<T: EdenApiStoreKind> EdenApiRemoteStore<T> {
-    /// Create a new EdenApiRemoteStore using the given EdenAPI client.
+impl<T: SaplingRemoteApiStoreKind> SaplingRemoteApiRemoteStore<T> {
+    /// Create a new SaplingRemoteApiRemoteStore using the given EdenAPI client.
     ///
     /// The current design of the storage layer also requires a distinction
     /// between stores that provide file data and stores that provide tree data.
@@ -64,43 +64,43 @@ impl<T: EdenApiStoreKind> EdenApiRemoteStore<T> {
     /// data would be created as follows:
     ///
     /// ```rust,ignore
-    /// let store = EdenApiStore::<File>::new(edenapi);
+    /// let store = SaplingRemoteApiStore::<File>::new(edenapi);
     /// ```
-    pub fn new(client: Arc<dyn EdenApi>) -> Arc<Self> {
+    pub fn new(client: Arc<dyn SaplingRemoteApi>) -> Arc<Self> {
         Arc::new(Self {
             client,
             _phantom: PhantomData,
         })
     }
 
-    /// Obtain the URL from the EdenApi client.
+    /// Obtain the URL from the SaplingRemoteApi client.
     pub fn url(&self) -> Option<String> {
         self.client.url()
     }
 }
 
-impl HgIdRemoteStore for EdenApiRemoteStore<File> {
+impl HgIdRemoteStore for SaplingRemoteApiRemoteStore<File> {
     fn datastore(
         self: Arc<Self>,
         store: Arc<dyn HgIdMutableDeltaStore>,
     ) -> Arc<dyn RemoteDataStore> {
-        Arc::new(EdenApiDataStore::new(self, store))
+        Arc::new(SaplingRemoteApiDataStore::new(self, store))
     }
 
     fn historystore(
         self: Arc<Self>,
         store: Arc<dyn HgIdMutableHistoryStore>,
     ) -> Arc<dyn RemoteHistoryStore> {
-        Arc::new(EdenApiHistoryStore::new(self, store))
+        Arc::new(SaplingRemoteApiHistoryStore::new(self, store))
     }
 }
 
-impl HgIdRemoteStore for EdenApiRemoteStore<Tree> {
+impl HgIdRemoteStore for SaplingRemoteApiRemoteStore<Tree> {
     fn datastore(
         self: Arc<Self>,
         store: Arc<dyn HgIdMutableDeltaStore>,
     ) -> Arc<dyn RemoteDataStore> {
-        Arc::new(EdenApiDataStore::new(self, store))
+        Arc::new(SaplingRemoteApiDataStore::new(self, store))
     }
 
     fn historystore(
@@ -117,35 +117,38 @@ pub enum File {}
 /// Marker type indicating that the store fetches tree data.
 pub enum Tree {}
 
-impl EdenApiFileStore {
+impl SaplingRemoteApiFileStore {
     pub fn files_blocking(
         &self,
         keys: Vec<Key>,
-    ) -> Result<BlockingResponse<FileResponse>, EdenApiError> {
+    ) -> Result<BlockingResponse<FileResponse>, SaplingRemoteApiError> {
         BlockingResponse::from_async(self.client.files(keys))
     }
 
     pub fn files_attrs_blocking(
         &self,
         reqs: Vec<FileSpec>,
-    ) -> Result<BlockingResponse<FileResponse>, EdenApiError> {
+    ) -> Result<BlockingResponse<FileResponse>, SaplingRemoteApiError> {
         BlockingResponse::from_async(self.client.files_attrs(reqs))
     }
 
     pub async fn files_attrs(
         &self,
         reqs: Vec<FileSpec>,
-    ) -> Result<Response<FileResponse>, EdenApiError> {
+    ) -> Result<Response<FileResponse>, SaplingRemoteApiError> {
         self.client.files_attrs(reqs).await
     }
 }
 
-impl EdenApiTreeStore {
+impl SaplingRemoteApiTreeStore {
     pub fn trees_blocking(
         &self,
         keys: Vec<Key>,
         attributes: Option<TreeAttributes>,
-    ) -> Result<BlockingResponse<Result<TreeEntry, EdenApiServerError>>, EdenApiError> {
+    ) -> Result<
+        BlockingResponse<Result<TreeEntry, SaplingRemoteApiServerError>>,
+        SaplingRemoteApiError,
+    > {
         BlockingResponse::from_async(self.client.trees(keys, attributes))
     }
 }
@@ -153,40 +156,42 @@ impl EdenApiTreeStore {
 /// Trait that provides a common interface for calling the `files` and `trees`
 /// methods on an EdenAPI client.
 #[async_trait]
-pub trait EdenApiStoreKind: Send + Sync + 'static {
+pub trait SaplingRemoteApiStoreKind: Send + Sync + 'static {
     async fn prefetch_files(
-        _client: Arc<dyn EdenApi>,
+        _client: Arc<dyn SaplingRemoteApi>,
         _keys: Vec<Key>,
-    ) -> Result<Response<FileResponse>, EdenApiError> {
+    ) -> Result<Response<FileResponse>, SaplingRemoteApiError> {
         unimplemented!("fetching files not supported for this store")
     }
 
     async fn prefetch_trees(
-        _client: Arc<dyn EdenApi>,
+        _client: Arc<dyn SaplingRemoteApi>,
         _keys: Vec<Key>,
         _attributes: Option<TreeAttributes>,
-    ) -> Result<Response<Result<TreeEntry, EdenApiServerError>>, EdenApiError> {
+    ) -> Result<Response<Result<TreeEntry, SaplingRemoteApiServerError>>, SaplingRemoteApiError>
+    {
         unimplemented!("fetching trees not supported for this store")
     }
 }
 
 #[async_trait]
-impl EdenApiStoreKind for File {
+impl SaplingRemoteApiStoreKind for File {
     async fn prefetch_files(
-        client: Arc<dyn EdenApi>,
+        client: Arc<dyn SaplingRemoteApi>,
         keys: Vec<Key>,
-    ) -> Result<Response<FileResponse>, EdenApiError> {
+    ) -> Result<Response<FileResponse>, SaplingRemoteApiError> {
         client.files(keys).await
     }
 }
 
 #[async_trait]
-impl EdenApiStoreKind for Tree {
+impl SaplingRemoteApiStoreKind for Tree {
     async fn prefetch_trees(
-        client: Arc<dyn EdenApi>,
+        client: Arc<dyn SaplingRemoteApi>,
         keys: Vec<Key>,
         attributes: Option<TreeAttributes>,
-    ) -> Result<Response<Result<TreeEntry, EdenApiServerError>>, EdenApiError> {
+    ) -> Result<Response<Result<TreeEntry, SaplingRemoteApiServerError>>, SaplingRemoteApiError>
+    {
         client.trees(keys, attributes).await
     }
 }

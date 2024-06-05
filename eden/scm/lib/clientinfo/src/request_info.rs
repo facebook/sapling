@@ -114,7 +114,8 @@ pub enum ClientEntryPoint {
     Fbclone,
     ScsServer,
     ScmQuery,
-    EdenApi,
+    #[serde(rename = "EdenApi", alias = "SaplingRemoteApi")]
+    SaplingRemoteApi,
     LandService,
     LfsServer,
     DerivedDataService,
@@ -128,7 +129,8 @@ pub enum ClientEntryPoint {
     MononokeAdmin,
     GitImport,
     RemoteGitImport,
-    EdenApiReplay,
+    #[serde(rename = "EdenApiReplay", alias = "SaplingRemoteApiReplay")]
+    SaplingRemoteApiReplay,
     MononokeHgSync,
     CurlTest,
     MirrorHgCommits,
@@ -197,7 +199,7 @@ impl Display for ClientEntryPoint {
             ClientEntryPoint::Fbclone => "fbclone",
             ClientEntryPoint::ScsServer => "scs",
             ClientEntryPoint::ScmQuery => "scm_query",
-            ClientEntryPoint::EdenApi => "eden_api",
+            ClientEntryPoint::SaplingRemoteApi => "eden_api",
             ClientEntryPoint::LandService => "landservice",
             ClientEntryPoint::LfsServer => "lfs",
             ClientEntryPoint::DerivedDataService => "derived_data_service",
@@ -211,7 +213,7 @@ impl Display for ClientEntryPoint {
             ClientEntryPoint::MononokeAdmin => "mononoke_admin",
             ClientEntryPoint::GitImport => "git_import",
             ClientEntryPoint::RemoteGitImport => "remote_git_import",
-            ClientEntryPoint::EdenApiReplay => "eden_api_replay",
+            ClientEntryPoint::SaplingRemoteApiReplay => "eden_api_replay",
             ClientEntryPoint::MononokeHgSync => "hg_sync",
             ClientEntryPoint::CurlTest => "curl_test",
             ClientEntryPoint::MirrorHgCommits => "mirror_hg_commits",
@@ -235,7 +237,7 @@ impl TryFrom<&str> for ClientEntryPoint {
             "fbclone" => Ok(ClientEntryPoint::Fbclone),
             "scs" => Ok(ClientEntryPoint::ScsServer),
             "scm_query" => Ok(ClientEntryPoint::ScmQuery),
-            "eden_api" => Ok(ClientEntryPoint::EdenApi),
+            "eden_api" => Ok(ClientEntryPoint::SaplingRemoteApi),
             "landservice" => Ok(ClientEntryPoint::LandService),
             "lfs" => Ok(ClientEntryPoint::LfsServer),
             "derived_data_service" => Ok(ClientEntryPoint::DerivedDataService),
@@ -249,7 +251,7 @@ impl TryFrom<&str> for ClientEntryPoint {
             "mononoke_admin" => Ok(ClientEntryPoint::MononokeAdmin),
             "git_import" => Ok(ClientEntryPoint::GitImport),
             "remote_git_import" => Ok(ClientEntryPoint::RemoteGitImport),
-            "eden_api_replay" => Ok(ClientEntryPoint::EdenApiReplay),
+            "eden_api_replay" => Ok(ClientEntryPoint::SaplingRemoteApiReplay),
             "hg_sync" => Ok(ClientEntryPoint::MononokeHgSync),
             "curl_test" => Ok(ClientEntryPoint::CurlTest),
             "mirror_hg_commits" => Ok(ClientEntryPoint::MirrorHgCommits),
@@ -279,13 +281,13 @@ mod tests {
 
         let correlator = "test1234".to_owned();
         let main_id = "user:test".to_owned();
-        let entry_point = ClientEntryPoint::EdenApi;
+        let entry_point = ClientEntryPoint::SaplingRemoteApi;
         cri.set_main_id(main_id.clone());
         cri.set_entry_point(entry_point);
         cri.set_correlator(correlator.clone());
 
         assert_eq!(cri.main_id, Some(main_id));
-        assert_eq!(cri.entry_point, ClientEntryPoint::EdenApi);
+        assert_eq!(cri.entry_point, ClientEntryPoint::SaplingRemoteApi);
         assert_eq!(cri.correlator, correlator);
         assert!(cri.has_main_id());
     }
@@ -323,8 +325,9 @@ mod tests {
             ClientEntryPoint::try_from(ClientEntryPoint::ScmQuery.to_string().as_ref()).ok()
         );
         assert_eq!(
-            Some(ClientEntryPoint::EdenApi),
-            ClientEntryPoint::try_from(ClientEntryPoint::EdenApi.to_string().as_ref()).ok()
+            Some(ClientEntryPoint::SaplingRemoteApi),
+            ClientEntryPoint::try_from(ClientEntryPoint::SaplingRemoteApi.to_string().as_ref())
+                .ok()
         );
         assert_eq!(
             Some(ClientEntryPoint::LandService),
@@ -386,8 +389,13 @@ mod tests {
             ClientEntryPoint::try_from(ClientEntryPoint::RemoteGitImport.to_string().as_ref()).ok()
         );
         assert_eq!(
-            Some(ClientEntryPoint::EdenApiReplay),
-            ClientEntryPoint::try_from(ClientEntryPoint::EdenApiReplay.to_string().as_ref()).ok()
+            Some(ClientEntryPoint::SaplingRemoteApiReplay),
+            ClientEntryPoint::try_from(
+                ClientEntryPoint::SaplingRemoteApiReplay
+                    .to_string()
+                    .as_ref()
+            )
+            .ok()
         );
         assert_eq!(
             Some(ClientEntryPoint::MononokeHgSync),

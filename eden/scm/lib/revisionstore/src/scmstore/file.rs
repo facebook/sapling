@@ -58,13 +58,13 @@ use crate::ContentDataStore;
 use crate::ContentMetadata;
 use crate::ContentStore;
 use crate::Delta;
-use crate::EdenApiFileStore;
 use crate::ExtStoredPolicy;
 use crate::LegacyStore;
 use crate::LocalStore;
 use crate::Metadata;
 use crate::MultiplexDeltaStore;
 use crate::RepackLocation;
+use crate::SaplingRemoteApiFileStore;
 use crate::StoreKey;
 use crate::StoreResult;
 
@@ -102,7 +102,7 @@ pub struct FileStore {
 
     // Remote stores
     pub(crate) lfs_remote: Option<Arc<LfsRemote>>,
-    pub(crate) edenapi: Option<Arc<EdenApiFileStore>>,
+    pub(crate) edenapi: Option<Arc<SaplingRemoteApiFileStore>>,
 
     // Legacy ContentStore fallback
     pub(crate) contentstore: Option<Arc<ContentStore>>,

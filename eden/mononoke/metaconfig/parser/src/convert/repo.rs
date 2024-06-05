@@ -780,7 +780,7 @@ impl Convert for RawShardedService {
 
     fn convert(self) -> Result<Self::Output> {
         let service = match self {
-            RawShardedService::EDEN_API => ShardedService::EdenApi,
+            RawShardedService::EDEN_API => ShardedService::SaplingRemoteApi,
             RawShardedService::SOURCE_CONTROL_SERVICE => ShardedService::SourceControlService,
             RawShardedService::DERIVED_DATA_SERVICE => ShardedService::DerivedDataService,
             RawShardedService::LAND_SERVICE => ShardedService::LandService,

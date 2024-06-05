@@ -156,9 +156,9 @@ fn register_error_handlers() {
             Some(PyErr::new::<NonUTF8Path, _>(py, format!("{:?}", e)))
         } else if e.is::<types::path::ParseError>() {
             Some(PyErr::new::<InvalidRepoPath, _>(py, format!("{:?}", e)))
-        } else if let Some(e) = e.downcast_ref::<edenapi::EdenApiError>() {
+        } else if let Some(e) = e.downcast_ref::<edenapi::SaplingRemoteApiError>() {
             match e {
-                edenapi::EdenApiError::Http(http_client::HttpClientError::Tls(
+                edenapi::SaplingRemoteApiError::Http(http_client::HttpClientError::Tls(
                     http_client::TlsError { source: e, .. },
                 )) => Some(PyErr::new::<TlsError, _>(py, e.to_string())),
                 _ => Some(PyErr::new::<HttpError, _>(py, e.to_string())),

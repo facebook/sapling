@@ -14,7 +14,7 @@ use anyhow::bail;
 use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Result;
-use edenapi::api::EdenApi;
+use edenapi::api::SaplingRemoteApi;
 use edenapi_types::AnyFileContentId;
 use edenapi_types::AnyId;
 use edenapi_types::BonsaiChangesetContent;
@@ -68,7 +68,7 @@ fn load_files(
 }
 
 pub async fn upload_snapshot(
-    api: &(impl EdenApi + ?Sized),
+    api: &(impl SaplingRemoteApi + ?Sized),
     data: SnapshotRawData,
     custom_duration_secs: Option<u64>,
     copy_from_bubble_id: Option<NonZeroU64>,

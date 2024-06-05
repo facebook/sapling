@@ -15,7 +15,7 @@ use mononoke_types::MPathElement;
 use crate::manifest::Type as HgManifestType;
 use crate::HgAugmentedManifestEntry;
 /// This is temporary type to preload Augmented Manifest and build manifest blobs in sapling native format
-/// The type will be used to convert an HgAugmentedManifest entry into an EdenApi TreeEntry.
+/// The type will be used to convert an HgAugmentedManifest entry into an SaplingRemoteApi TreeEntry.
 use crate::HgNodeHash;
 use crate::ShardedHgAugmentedManifest;
 

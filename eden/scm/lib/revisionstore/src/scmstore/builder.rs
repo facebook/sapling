@@ -36,9 +36,9 @@ use crate::util::get_indexedlogdatastore_aux_path;
 use crate::util::get_indexedlogdatastore_path;
 use crate::util::get_local_path;
 use crate::ContentStore;
-use crate::EdenApiFileStore;
-use crate::EdenApiTreeStore;
 use crate::ExtStoredPolicy;
+use crate::SaplingRemoteApiFileStore;
+use crate::SaplingRemoteApiTreeStore;
 
 pub struct FileStoreBuilder<'a> {
     config: &'a dyn Config,
@@ -51,7 +51,7 @@ pub struct FileStoreBuilder<'a> {
     lfs_local: Option<Arc<LfsStore>>,
     lfs_cache: Option<Arc<LfsStore>>,
 
-    edenapi: Option<Arc<EdenApiFileStore>>,
+    edenapi: Option<Arc<SaplingRemoteApiFileStore>>,
     contentstore: Option<Arc<ContentStore>>,
 }
 
@@ -86,7 +86,7 @@ impl<'a> FileStoreBuilder<'a> {
         self
     }
 
-    pub fn edenapi(mut self, edenapi: Arc<EdenApiFileStore>) -> Self {
+    pub fn edenapi(mut self, edenapi: Arc<SaplingRemoteApiFileStore>) -> Self {
         self.edenapi = Some(edenapi);
         self
     }
@@ -159,10 +159,10 @@ impl<'a> FileStoreBuilder<'a> {
     }
 
     #[context("unable to build edenapi")]
-    fn build_edenapi(&self) -> Result<Arc<EdenApiFileStore>> {
+    fn build_edenapi(&self) -> Result<Arc<SaplingRemoteApiFileStore>> {
         let client = Builder::from_config(self.config)?.build()?;
 
-        Ok(EdenApiFileStore::new(client))
+        Ok(SaplingRemoteApiFileStore::new(client))
     }
 
     #[context("failed to build local indexedlog")]
@@ -444,7 +444,7 @@ pub struct TreeStoreBuilder<'a> {
 
     indexedlog_local: Option<Arc<IndexedLogHgIdDataStore>>,
     indexedlog_cache: Option<Arc<IndexedLogHgIdDataStore>>,
-    edenapi: Option<Arc<EdenApiTreeStore>>,
+    edenapi: Option<Arc<SaplingRemoteApiTreeStore>>,
     contentstore: Option<Arc<ContentStore>>,
     filestore: Option<Arc<FileStore>>,
 }
@@ -479,7 +479,7 @@ impl<'a> TreeStoreBuilder<'a> {
         self
     }
 
-    pub fn edenapi(mut self, edenapi: Arc<EdenApiTreeStore>) -> Self {
+    pub fn edenapi(mut self, edenapi: Arc<SaplingRemoteApiTreeStore>) -> Self {
         self.edenapi = Some(edenapi);
         self
     }
@@ -519,10 +519,10 @@ impl<'a> TreeStoreBuilder<'a> {
     }
 
     #[context("failed to build EdenAPI from config")]
-    fn build_edenapi(&self) -> Result<Arc<EdenApiTreeStore>> {
+    fn build_edenapi(&self) -> Result<Arc<SaplingRemoteApiTreeStore>> {
         let client = Builder::from_config(self.config)?.build()?;
 
-        Ok(EdenApiTreeStore::new(client))
+        Ok(SaplingRemoteApiTreeStore::new(client))
     }
 
     #[context("failed to build local indexedlog")]
@@ -580,7 +580,7 @@ impl<'a> TreeStoreBuilder<'a> {
     #[context("failed to build revision store")]
     pub fn build(mut self) -> Result<TreeStore> {
         // TODO(meyer): Clean this up, just copied and pasted from the other version & did some ugly hacks to get this
-        // (the EdenApiAdapter stuff needs to be fixed in particular)
+        // (the SaplingRemoteApiAdapter stuff needs to be fixed in particular)
         tracing::trace!(target: "revisionstore::treestore", "checking cache");
         if self.contentstore.is_none() {
             if let Some(cache_path) = cache_path(self.config, &self.suffix)? {

@@ -25,10 +25,10 @@ use mercurial_types::HgChangesetId;
 use mercurial_types::HgNodeHash;
 use mononoke_api_hg::HgRepoContext;
 
-use super::handler::EdenApiContext;
-use super::EdenApiHandler;
-use super::EdenApiMethod;
+use super::handler::SaplingRemoteApiContext;
 use super::HandlerResult;
+use super::SaplingRemoteApiHandler;
+use super::SaplingRemoteApiMethod;
 use crate::errors::ErrorKind;
 
 /// XXX: This number was chosen arbitrarily.
@@ -38,16 +38,16 @@ const MAX_CONCURRENT_FETCHES_PER_REQUEST: usize = 100;
 pub struct BookmarksHandler;
 
 #[async_trait]
-impl EdenApiHandler for BookmarksHandler {
+impl SaplingRemoteApiHandler for BookmarksHandler {
     type Request = BookmarkRequest;
     type Response = BookmarkEntry;
 
     const HTTP_METHOD: hyper::Method = hyper::Method::POST;
-    const API_METHOD: EdenApiMethod = EdenApiMethod::Bookmarks;
+    const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::Bookmarks;
     const ENDPOINT: &'static str = "/bookmarks";
 
     async fn handler(
-        ectx: EdenApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
+        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
         let repo = ectx.repo();
@@ -76,16 +76,16 @@ async fn fetch_bookmark(repo: HgRepoContext, bookmark: String) -> Result<Bookmar
 pub struct SetBookmarkHandler;
 
 #[async_trait]
-impl EdenApiHandler for SetBookmarkHandler {
+impl SaplingRemoteApiHandler for SetBookmarkHandler {
     type Request = SetBookmarkRequest;
     type Response = SetBookmarkResponse;
 
     const HTTP_METHOD: hyper::Method = hyper::Method::POST;
-    const API_METHOD: EdenApiMethod = EdenApiMethod::SetBookmark;
+    const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::SetBookmark;
     const ENDPOINT: &'static str = "/bookmarks/set";
 
     async fn handler(
-        ectx: EdenApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
+        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
         let res = set_bookmark_response(

@@ -13,11 +13,11 @@ pub mod response;
 pub use configmodel;
 pub use edenapi_types as types;
 
-pub use crate::api::EdenApi;
+pub use crate::api::SaplingRemoteApi;
 pub use crate::errors::ConfigError;
-pub use crate::errors::EdenApiError;
+pub use crate::errors::SaplingRemoteApiError;
 pub use crate::response::Entries;
 pub use crate::response::Response;
 pub use crate::response::ResponseMeta;
 
-pub type Result<T> = std::result::Result<T, EdenApiError>;
+pub type Result<T> = std::result::Result<T, SaplingRemoteApiError>;

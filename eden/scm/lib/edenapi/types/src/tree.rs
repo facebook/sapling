@@ -19,9 +19,9 @@ use types::key::Key;
 use types::parents::Parents;
 
 use crate::DirectoryMetadata;
-use crate::EdenApiServerError;
 use crate::FileMetadata;
 use crate::InvalidHgId;
+use crate::SaplingRemoteApiServerError;
 use crate::UploadToken;
 
 #[derive(Debug, Error)]
@@ -61,7 +61,7 @@ pub struct TreeEntry {
     pub key: Key,
     pub data: Option<Bytes>,
     pub parents: Option<Parents>,
-    pub children: Option<Vec<Result<TreeChildEntry, EdenApiServerError>>>,
+    pub children: Option<Vec<Result<TreeChildEntry, SaplingRemoteApiServerError>>>,
 }
 
 impl TreeEntry {
@@ -84,7 +84,7 @@ impl TreeEntry {
 
     pub fn with_children<'a>(
         &'a mut self,
-        children: Option<Vec<Result<TreeChildEntry, EdenApiServerError>>>,
+        children: Option<Vec<Result<TreeChildEntry, SaplingRemoteApiServerError>>>,
     ) -> &'a mut Self {
         self.children = children;
         self

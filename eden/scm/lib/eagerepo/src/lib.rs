@@ -9,7 +9,7 @@
 //!
 //! Main goals:
 //! - Pure Rust. No Python dependencies.
-//! - Serve as EdenApi without going through real networking stack.
+//! - Serve as SaplingRemoteApi without going through real networking stack.
 //! - Replace SSH reps in tests, which is slow and unreliable on Windows.
 //!
 //! Although it's currently intended to be a test server repo. It is

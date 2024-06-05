@@ -12,7 +12,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use commits_trait::DagCommits;
-use edenapi::EdenApi;
+use edenapi::SaplingRemoteApi;
 use fs_err as fs;
 use storemodel::StoreInfo;
 
@@ -46,7 +46,7 @@ pub(crate) fn setup_commits_constructor() {
     factory::register_constructor("20-hgcommits", maybe_construct_commits);
 }
 
-fn get_required_edenapi(info: &dyn StoreInfo) -> anyhow::Result<Arc<dyn EdenApi>> {
+fn get_required_edenapi(info: &dyn StoreInfo) -> anyhow::Result<Arc<dyn SaplingRemoteApi>> {
     match info.remote_peer()? {
         Some(p) => Ok(p),
         None => {
@@ -100,7 +100,7 @@ fn open_double(store_path: &Path) -> anyhow::Result<Box<dyn DagCommits + Send + 
 
 fn open_hybrid(
     store_path: &Path,
-    eden_api: Arc<dyn EdenApi>,
+    eden_api: Arc<dyn SaplingRemoteApi>,
     lazy_hash: bool,
     use_revlog: bool,
 ) -> anyhow::Result<Box<dyn DagCommits + Send + 'static>> {

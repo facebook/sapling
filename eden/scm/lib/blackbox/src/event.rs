@@ -133,9 +133,9 @@ pub enum Event {
         value: Value,
     },
 
-    /// An EdenApi HTTP request was dispatched.
+    /// An SaplingRemoteApi HTTP request was dispatched.
     #[serde(rename = "EA", alias = "edenapi")]
-    EdenApi {
+    SaplingRemoteApi {
         #[serde(rename = "U")]
         url: Option<String>,
         #[serde(rename = "T")]
@@ -460,7 +460,7 @@ pub enum NetworkOp {
     HttpGetPack,
 
     #[serde(rename = "E", alias = "edenapi")]
-    EdenApiRequest,
+    SaplingRemoteApiRequest,
 }
 
 #[serde_alt]

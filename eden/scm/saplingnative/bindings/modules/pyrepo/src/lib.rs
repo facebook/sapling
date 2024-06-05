@@ -32,7 +32,7 @@ use parking_lot::RwLock;
 use pyconfigloader::config;
 use pydag::commits::commits as PyCommits;
 use pyeagerepo::EagerRepoStore as PyEagerRepoStore;
-use pyedenapi::PyClient as PyEdenApi;
+use pyedenapi::PyClient as PySaplingRemoteApi;
 use pymetalog::metalog as PyMetaLog;
 use pyrevisionstore::filescmstore as PyFileScmStore;
 use pyrevisionstore::pyremotestore as PyRemoteStore;
@@ -120,16 +120,16 @@ py_class!(pub class repo |py| {
         Ok(PyNone)
     }
 
-    def edenapi(&self) -> PyResult<PyEdenApi> {
+    def edenapi(&self) -> PyResult<PySaplingRemoteApi> {
         let repo_ref = self.inner(py).read();
         let edenapi_ref = repo_ref.eden_api().map_pyerr(py)?;
-        PyEdenApi::create_instance(py, edenapi_ref)
+        PySaplingRemoteApi::create_instance(py, edenapi_ref)
     }
 
-    def nullableedenapi(&self) -> PyResult<Option<PyEdenApi>> {
+    def nullableedenapi(&self) -> PyResult<Option<PySaplingRemoteApi>> {
         let repo_ref = self.inner(py).read();
         match repo_ref.optional_eden_api().map_pyerr(py)? {
-            Some(api) => Ok(Some(PyEdenApi::create_instance(py, api)?)),
+            Some(api) => Ok(Some(PySaplingRemoteApi::create_instance(py, api)?)),
             None => Ok(None),
         }
     }

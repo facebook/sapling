@@ -40,8 +40,6 @@ use revisionstore::DataPack;
 use revisionstore::DataPackStore;
 use revisionstore::DataPackVersion;
 use revisionstore::Delta;
-use revisionstore::EdenApiFileStore;
-use revisionstore::EdenApiTreeStore;
 use revisionstore::ExtStoredPolicy;
 use revisionstore::HgIdDataStore;
 use revisionstore::HgIdHistoryStore;
@@ -65,6 +63,8 @@ use revisionstore::RemoteDataStore;
 use revisionstore::RemoteHistoryStore;
 use revisionstore::RepackKind;
 use revisionstore::RepackLocation;
+use revisionstore::SaplingRemoteApiFileStore;
+use revisionstore::SaplingRemoteApiTreeStore;
 use revisionstore::StoreKey;
 use revisionstore::StoreResult;
 use revisionstore::StoreType;
@@ -849,21 +849,21 @@ impl ExtractInnerRef for pyremotestore {
 
 // Python wrapper around an EdenAPI-backed remote store for files.
 //
-// This type exists for the sole purpose of allowing an `EdenApiFileStore`
+// This type exists for the sole purpose of allowing an `SaplingRemoteApiFileStore`
 // to be passed from Rust to Python and back into Rust. It cannot be created
 // by Python code and does not expose any functionality to Python.
 py_class!(pub class edenapifilestore |py| {
-    data remote: Arc<EdenApiFileStore>;
+    data remote: Arc<SaplingRemoteApiFileStore>;
 });
 
 impl edenapifilestore {
-    pub fn new(py: Python, remote: Arc<EdenApiFileStore>) -> PyResult<Self> {
+    pub fn new(py: Python, remote: Arc<SaplingRemoteApiFileStore>) -> PyResult<Self> {
         edenapifilestore::create_instance(py, remote)
     }
 }
 
 impl ExtractInnerRef for edenapifilestore {
-    type Inner = Arc<EdenApiFileStore>;
+    type Inner = Arc<SaplingRemoteApiFileStore>;
 
     fn extract_inner_ref<'a>(&'a self, py: Python<'a>) -> &'a Self::Inner {
         self.remote(py)
@@ -872,21 +872,21 @@ impl ExtractInnerRef for edenapifilestore {
 
 // Python wrapper around an EdenAPI-backed remote store for trees.
 //
-// This type exists for the sole purpose of allowing an `EdenApiTreeStore`
+// This type exists for the sole purpose of allowing an `SaplingRemoteApiTreeStore`
 // to be passed from Rust to Python and back into Rust. It cannot be created
 // by Python code and does not expose any functionality to Python.
 py_class!(pub class edenapitreestore |py| {
-    data remote: Arc<EdenApiTreeStore>;
+    data remote: Arc<SaplingRemoteApiTreeStore>;
 });
 
 impl edenapitreestore {
-    pub fn new(py: Python, remote: Arc<EdenApiTreeStore>) -> PyResult<Self> {
+    pub fn new(py: Python, remote: Arc<SaplingRemoteApiTreeStore>) -> PyResult<Self> {
         edenapitreestore::create_instance(py, remote)
     }
 }
 
 impl ExtractInnerRef for edenapitreestore {
-    type Inner = Arc<EdenApiTreeStore>;
+    type Inner = Arc<SaplingRemoteApiTreeStore>;
 
     fn extract_inner_ref<'a>(&'a self, py: Python<'a>) -> &'a Self::Inner {
         self.remote(py)
@@ -1091,7 +1091,7 @@ fn make_filescmstore<'a>(
     path: Option<&'a Path>,
     config: &'a dyn Config,
     remote: Arc<PyHgIdRemoteStore>,
-    edenapi_filestore: Option<Arc<EdenApiFileStore>>,
+    edenapi_filestore: Option<Arc<SaplingRemoteApiFileStore>>,
     suffix: Option<String>,
 ) -> Result<(Arc<FileStore>, Arc<ContentStore>)> {
     let mut builder = ContentStoreBuilder::new(&config);
@@ -1312,7 +1312,7 @@ fn make_treescmstore<'a>(
     path: Option<&'a Path>,
     config: &'a dyn Config,
     remote: Arc<PyHgIdRemoteStore>,
-    edenapi_treestore: Option<Arc<EdenApiTreeStore>>,
+    edenapi_treestore: Option<Arc<SaplingRemoteApiTreeStore>>,
     filestore: Option<Arc<FileStore>>,
     suffix: Option<String>,
 ) -> Result<(Arc<TreeStore>, Arc<ContentStore>)> {
@@ -1331,7 +1331,7 @@ fn make_treescmstore<'a>(
         treestore_builder = treestore_builder.suffix(suffix);
     }
 
-    // Extract EdenApiAdapter for scmstore construction later on
+    // Extract SaplingRemoteApiAdapter for scmstore construction later on
     builder = if let Some(edenapi) = edenapi_treestore {
         treestore_builder = treestore_builder.edenapi(edenapi.clone());
         builder.remotestore(edenapi)

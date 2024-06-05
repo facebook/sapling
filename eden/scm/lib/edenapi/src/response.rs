@@ -14,7 +14,7 @@ pub use edenapi_trait::ResponseMeta;
 use futures::prelude::*;
 use http_client::Stats;
 
-use crate::errors::EdenApiError;
+use crate::errors::SaplingRemoteApiError;
 
 /// Non-async version of `Response`.
 pub struct BlockingResponse<T> {
@@ -23,9 +23,9 @@ pub struct BlockingResponse<T> {
 }
 
 impl<T> BlockingResponse<T> {
-    pub fn from_async<F>(fetch: F) -> Result<Self, EdenApiError>
+    pub fn from_async<F>(fetch: F) -> Result<Self, SaplingRemoteApiError>
     where
-        F: Future<Output = Result<Response<T>, EdenApiError>>,
+        F: Future<Output = Result<Response<T>, SaplingRemoteApiError>>,
     {
         // Fetch ClientRequestInfo from a thread local and pass to async code
         let maybe_client_request_info = get_client_request_info_thread_local();

@@ -8,7 +8,7 @@
 use std::path::Path;
 use std::sync::Arc;
 
-use edenapi::EdenApi;
+use edenapi::SaplingRemoteApi;
 use metalog::MetaLog;
 use parking_lot::RwLock;
 use storemodel::StoreInfo;
@@ -31,7 +31,7 @@ impl StoreInfo for Repo {
         &self.store_path
     }
 
-    fn remote_peer(&self) -> anyhow::Result<Option<Arc<dyn EdenApi>>> {
+    fn remote_peer(&self) -> anyhow::Result<Option<Arc<dyn SaplingRemoteApi>>> {
         Ok(self.optional_eden_api()?)
     }
 

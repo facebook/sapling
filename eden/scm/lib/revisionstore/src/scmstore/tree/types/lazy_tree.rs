@@ -30,8 +30,8 @@ pub(crate) enum LazyTree {
     /// An entry from a local IndexedLog. The contained Key's path might not match the requested Key's path.
     IndexedLog(Entry),
 
-    /// An EdenApi TreeEntry.
-    EdenApi(TreeEntry),
+    /// An SaplingRemoteApi TreeEntry.
+    SaplingRemoteApi(TreeEntry),
 }
 
 impl LazyTree {
@@ -41,7 +41,7 @@ impl LazyTree {
         match self {
             ContentStore(_, _) => None,
             IndexedLog(ref entry) => Some(entry.key().hgid),
-            EdenApi(ref entry) => Some(entry.key().hgid),
+            SaplingRemoteApi(ref entry) => Some(entry.key().hgid),
         }
     }
 
@@ -51,7 +51,7 @@ impl LazyTree {
         Ok(match self {
             IndexedLog(ref entry) => entry.content()?,
             ContentStore(ref blob, _) => blob.clone(),
-            EdenApi(ref entry) => entry.data()?.into(),
+            SaplingRemoteApi(ref entry) => entry.data()?.into(),
         })
     }
 
@@ -60,7 +60,9 @@ impl LazyTree {
         use LazyTree::*;
         Ok(match self {
             IndexedLog(ref entry) => Some(entry.clone().with_key(key)),
-            EdenApi(ref entry) => Some(Entry::new(key, entry.data()?.into(), Metadata::default())),
+            SaplingRemoteApi(ref entry) => {
+                Some(Entry::new(key, entry.data()?.into(), Metadata::default()))
+            }
             // ContentStore handles caching internally
             ContentStore(_, _) => None,
         })
@@ -76,31 +78,33 @@ impl LazyTree {
     pub fn aux_data(&self) -> HashMap<HgId, FileAuxData> {
         use LazyTree::*;
         match self {
-            EdenApi(entry) => entry
-                .children
-                .as_ref()
-                .map_or_else(HashMap::new, |childrens| {
-                    childrens
-                        .iter()
-                        .filter_map(|entry| {
-                            let child_entry = match entry {
-                                Err(err) => {
-                                    tracing::warn!("Error fetching child entry: {:?}", err);
-                                    return None;
+            SaplingRemoteApi(entry) => {
+                entry
+                    .children
+                    .as_ref()
+                    .map_or_else(HashMap::new, |childrens| {
+                        childrens
+                            .iter()
+                            .filter_map(|entry| {
+                                let child_entry = match entry {
+                                    Err(err) => {
+                                        tracing::warn!("Error fetching child entry: {:?}", err);
+                                        return None;
+                                    }
+                                    Ok(file_entry) => file_entry,
+                                };
+                                // TODO: Also return directory aux data.
+                                if let TreeChildEntry::File(file_entry) = child_entry {
+                                    file_entry.file_metadata.map(|file_metadata| {
+                                        (file_entry.key.hgid, file_metadata.into())
+                                    })
+                                } else {
+                                    None
                                 }
-                                Ok(file_entry) => file_entry,
-                            };
-                            // TODO: Also return directory aux data.
-                            if let TreeChildEntry::File(file_entry) = child_entry {
-                                file_entry.file_metadata.map(|file_metadata| {
-                                    (file_entry.key.hgid, file_metadata.into())
-                                })
-                            } else {
-                                None
-                            }
-                        })
-                        .collect::<HashMap<_, _>>()
-                }),
+                            })
+                            .collect::<HashMap<_, _>>()
+                    })
+            }
             _ => HashMap::new(),
         }
     }

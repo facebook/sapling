@@ -109,6 +109,6 @@ mod tests {
     fn test_read_from_json() {
         // test checks that we can parse ClientInfo object from a json where only entry_point and
         // correlator set.
-        assert!(ClientInfo::from_json(r#"{"request_info":{"entry_point":"EdenApiReplay","correlator":"vmazpnjezhjsjkay"}}"#).is_ok());
+        assert!(ClientInfo::from_json(r#"{"request_info":{"entry_point":"SaplingRemoteApiReplay","correlator":"vmazpnjezhjsjkay"}}"#).is_ok());
     }
 }

@@ -22,7 +22,7 @@ use anyhow::Result;
 use bytes::Bytes;
 use cached_config::ConfigStore;
 use connection_security_checker::ConnectionSecurityChecker;
-use edenapi_service::EdenApi;
+use edenapi_service::SaplingRemoteApi;
 use failure_ext::SlogKVError;
 use fbinit::FacebookInit;
 use futures::channel::mpsc;
@@ -121,7 +121,7 @@ pub async fn connection_acceptor(
     terminate_process: oneshot::Receiver<()>,
     rate_limiter: Option<RateLimitEnvironment>,
     scribe: Scribe,
-    edenapi: EdenApi,
+    edenapi: SaplingRemoteApi,
     will_exit: Arc<AtomicBool>,
     config_store: &ConfigStore,
     cslb_config: Option<String>,
@@ -211,7 +211,7 @@ pub struct Acceptor {
     pub rate_limiter: Option<RateLimitEnvironment>,
     pub scribe: Scribe,
     pub logger: Logger,
-    pub edenapi: EdenApi,
+    pub edenapi: SaplingRemoteApi,
     pub enable_http_control_api: bool,
     pub server_hostname: String,
     pub will_exit: Arc<AtomicBool>,

@@ -53,7 +53,7 @@ use time_ext::DurationExt;
 
 use crate::context::ServerContext;
 use crate::middleware::request_dumper::RequestDumper;
-use crate::scuba::EdenApiScubaKey;
+use crate::scuba::SaplingRemoteApiScubaKey;
 use crate::utils::cbor_mime;
 use crate::utils::get_repo;
 use crate::utils::monitor::Monitor;
@@ -75,18 +75,18 @@ mod pull;
 mod repos;
 mod suffix_query;
 mod trees;
-pub(crate) use handler::EdenApiHandler;
 pub(crate) use handler::HandlerResult;
 pub(crate) use handler::PathExtractorWithRepo;
+pub(crate) use handler::SaplingRemoteApiHandler;
 
-use self::handler::EdenApiContext;
+use self::handler::SaplingRemoteApiContext;
 
 const REPORTING_LOOP_WAIT: u64 = 5;
 
 /// Enum identifying the EdenAPI method that each handler corresponds to.
 /// Used to identify the handler for logging and stats collection.
 #[derive(Copy, Clone)]
-pub enum EdenApiMethod {
+pub enum SaplingRemoteApiMethod {
     SuffixQuery,
     Blame,
     Capabilities,
@@ -122,7 +122,7 @@ pub enum EdenApiMethod {
     CloudUpdateReferences,
 }
 
-impl fmt::Display for EdenApiMethod {
+impl fmt::Display for SaplingRemoteApiMethod {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let name = match self {
             Self::SuffixQuery => "suffix_query",
@@ -170,11 +170,11 @@ impl fmt::Display for EdenApiMethod {
 #[derive(Default, StateData, Clone)]
 pub struct HandlerInfo {
     pub repo: Option<String>,
-    pub method: Option<EdenApiMethod>,
+    pub method: Option<SaplingRemoteApiMethod>,
 }
 
 impl HandlerInfo {
-    pub fn new(repo: impl ToString, method: EdenApiMethod) -> Self {
+    pub fn new(repo: impl ToString, method: SaplingRemoteApiMethod) -> Self {
         Self {
             repo: Some(repo.to_string()),
             method: Some(method),
@@ -273,11 +273,11 @@ fn health_handler(state: State) -> (State, &'static str) {
     }
 }
 
-async fn handler_wrapper<Handler: EdenApiHandler>(
+async fn handler_wrapper<Handler: SaplingRemoteApiHandler>(
     mut state: State,
 ) -> Result<(State, Response<Body>), (State, GothamHandlerError)>
 where
-    <Handler as EdenApiHandler>::Request: std::fmt::Debug,
+    <Handler as SaplingRemoteApiHandler>::Request: std::fmt::Debug,
 {
     let (future_stats, res) = async {
         let path = Handler::PathExtractor::take_from(&mut state);
@@ -301,7 +301,7 @@ where
             rd.add_request(&request);
         }
 
-        let ectx = EdenApiContext::new(rctx, sctx, repo, path, query);
+        let ectx = SaplingRemoteApiContext::new(rctx, sctx, repo, path, query);
 
         match Handler::handler(ectx, request).await {
             Ok(responses) => Ok(encode_response_stream(
@@ -326,7 +326,7 @@ where
     let ctx = RequestContext::borrow_from(state).ctx.clone();
     let (sender, receiver) = oneshot::channel::<()>();
 
-    // EdenApi doesn't fill these in until the end of the request, so we need
+    // SaplingRemoteApi doesn't fill these in until the end of the request, so we need
     // to add them now.   A future improvement is to put these on the scuba
     // sample builder earlier on so we can clone it.
     let mut base_scuba = ctx.scuba().clone();
@@ -336,8 +336,11 @@ where
     );
 
     if let Some(info) = state.try_borrow::<HandlerInfo>() {
-        base_scuba.add_opt(EdenApiScubaKey::Repo, info.repo.clone());
-        base_scuba.add_opt(EdenApiScubaKey::Method, info.method.map(|m| m.to_string()));
+        base_scuba.add_opt(SaplingRemoteApiScubaKey::Repo, info.repo.clone());
+        base_scuba.add_opt(
+            SaplingRemoteApiScubaKey::Method,
+            info.method.map(|m| m.to_string()),
+        );
     }
 
     if let Some(metadata_state) = MetadataState::try_borrow_from(state) {
@@ -397,9 +400,9 @@ where
     C: gotham::pipeline::PipelineHandleChain<P> + Copy + Send + Sync + 'static,
     P: std::panic::RefUnwindSafe + Send + Sync + 'static,
 {
-    fn setup<Handler: EdenApiHandler>(route: &mut RouterBuilder<C, P>)
+    fn setup<Handler: SaplingRemoteApiHandler>(route: &mut RouterBuilder<C, P>)
     where
-        <Handler as EdenApiHandler>::Request: std::fmt::Debug,
+        <Handler as SaplingRemoteApiHandler>::Request: std::fmt::Debug,
     {
         route
             .request(

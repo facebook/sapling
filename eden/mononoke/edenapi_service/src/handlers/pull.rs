@@ -25,8 +25,8 @@ use types::HgId;
 
 use crate::context::ServerContext;
 use crate::errors::MononokeErrorExt;
-use crate::handlers::EdenApiMethod;
 use crate::handlers::HandlerInfo;
+use crate::handlers::SaplingRemoteApiMethod;
 use crate::middleware::request_dumper::RequestDumper;
 use crate::utils::cbor;
 use crate::utils::get_repo;
@@ -45,7 +45,10 @@ pub struct PullLazyParams {
 pub async fn pull_lazy(state: &mut State) -> Result<BytesBody<Bytes>, HttpError> {
     let params = PullLazyParams::take_from(state);
 
-    state.put(HandlerInfo::new(&params.repo, EdenApiMethod::PullLazy));
+    state.put(HandlerInfo::new(
+        &params.repo,
+        SaplingRemoteApiMethod::PullLazy,
+    ));
     let request = parse_wire_request::<WirePullLazyRequest>(state).await?;
     if let Some(rd) = RequestDumper::try_borrow_mut_from(state) {
         rd.add_request(&request);
@@ -101,7 +104,7 @@ pub async fn pull_fast_forward_master(state: &mut State) -> Result<BytesBody<Byt
 
     state.put(HandlerInfo::new(
         &params.repo,
-        EdenApiMethod::PullFastForwardMaster,
+        SaplingRemoteApiMethod::PullFastForwardMaster,
     ));
     let request = parse_wire_request::<WirePullFastForwardRequest>(state).await?;
     if let Some(rd) = RequestDumper::try_borrow_mut_from(state) {

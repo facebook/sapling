@@ -148,7 +148,7 @@ where
                         }
                         // We end the stream early to signal that we have an unexpected error.
                         // Avoiding the error would make it too similar to "application" errors
-                        // which are commonly omitted in the EdenApi response stream.
+                        // which are commonly omitted in the SaplingRemoteApi response stream.
                         Poll::Ready(None)
                     }
                 }

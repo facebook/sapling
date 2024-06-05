@@ -43,7 +43,7 @@ use crate::Result;
 /// Non-lazy, pure Rust, local repo implementation.
 ///
 /// Mainly useful as a simple "server repo" in tests that can replace ssh remote
-/// repos and exercise EdenApi features.
+/// repos and exercise SaplingRemoteApi features.
 ///
 /// Format-wise, an eager repo includes:
 ///
@@ -245,7 +245,7 @@ impl EagerRepo {
 
         // "eagercompat" is a revlog repo secretly using an eager store under the hood.
         // It's requirements don't match our expectations, so return early. This is mainly
-        // so we can access the EagerRepo EdenApi trait implementation.
+        // so we can access the EagerRepo SaplingRemoteApi trait implementation.
         if has_eagercompat_requirement(&store_dir) {
             return Ok(repo);
         }
@@ -301,7 +301,7 @@ impl EagerRepo {
 
         if let Some(path) = value.strip_prefix("ssh://user@dummy/") {
             // Allow instantiating EagerRepo for dummyssh servers. This is so we can get a
-            // working EdenApi for server repos in legacy tests.
+            // working SaplingRemoteApi for server repos in legacy tests.
             if let Ok(tmp) = std::env::var("TESTTMP") {
                 let path = Path::new(&tmp).join(path);
                 if let Ok(Some(ident)) = identity::sniff_dir(&path) {
@@ -348,7 +348,7 @@ impl EagerRepo {
 
     // The following APIs provide low-level ways to read or write the repo.
     //
-    // They are used for push before EdenApi provides push related APIs.
+    // They are used for push before SaplingRemoteApi provides push related APIs.
 
     /// Insert SHA1 blob to zstore.
     /// In hg's case, the `data` is `min(p1, p2) + max(p1, p2) + text`.

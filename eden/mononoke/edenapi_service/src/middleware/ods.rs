@@ -17,8 +17,8 @@ use hyper::StatusCode;
 use permission_checker::MononokeIdentitySetExt;
 use stats::prelude::*;
 
-use crate::handlers::EdenApiMethod;
 use crate::handlers::HandlerInfo;
+use crate::handlers::SaplingRemoteApiMethod;
 
 define_stats! {
     prefix = "mononoke.edenapi.request";
@@ -85,7 +85,7 @@ fn log_stats(state: &mut State, status: StatusCode) -> Option<()> {
         if let Some(duration) = info.duration {
             let dur_ms = duration.as_millis() as i64;
 
-            use EdenApiMethod::*;
+            use SaplingRemoteApiMethod::*;
             match method {
                 CloudUpdateReferences => {
                     STATS::cloud_update_references_duration_ms.add_value(dur_ms)

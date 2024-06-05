@@ -589,7 +589,7 @@ mod h2m {
                 .await;
 
                 let client_info = client_info.unwrap_or_else(|| {
-                    ClientInfo::default_with_entry_point(ClientEntryPoint::EdenApi)
+                    ClientInfo::default_with_entry_point(ClientEntryPoint::SaplingRemoteApi)
                 });
                 metadata.add_client_info(client_info);
 
@@ -617,8 +617,9 @@ mod h2m {
         )
         .await;
 
-        let client_info = client_info
-            .unwrap_or_else(|| ClientInfo::default_with_entry_point(ClientEntryPoint::EdenApi));
+        let client_info = client_info.unwrap_or_else(|| {
+            ClientInfo::default_with_entry_point(ClientEntryPoint::SaplingRemoteApi)
+        });
         metadata.add_client_info(client_info);
 
         Ok(metadata)

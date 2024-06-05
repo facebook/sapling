@@ -12,9 +12,9 @@ use types::Key;
 
 use super::RetryableStreamRequest;
 use crate::client::Client;
-use crate::errors::EdenApiError;
+use crate::errors::SaplingRemoteApiError;
 use crate::response::Response;
-use crate::types::EdenApiServerError;
+use crate::types::SaplingRemoteApiServerError;
 use crate::types::TreeAttributes;
 use crate::types::TreeEntry;
 
@@ -35,9 +35,9 @@ impl RetryableTrees {
 
 #[async_trait]
 impl RetryableStreamRequest for RetryableTrees {
-    type Item = Result<TreeEntry, EdenApiServerError>;
+    type Item = Result<TreeEntry, SaplingRemoteApiServerError>;
 
-    async fn perform(&self, client: Client) -> Result<Response<Self::Item>, EdenApiError> {
+    async fn perform(&self, client: Client) -> Result<Response<Self::Item>, SaplingRemoteApiError> {
         let keys: Vec<Key> = self.keys.iter().cloned().collect();
         client.fetch_trees(keys, self.attributes.clone()).await
     }

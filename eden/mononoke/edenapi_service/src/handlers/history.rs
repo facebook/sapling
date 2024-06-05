@@ -21,10 +21,10 @@ use mercurial_types::HgNodeHash;
 use mononoke_api_hg::HgRepoContext;
 use types::Key;
 
-use super::handler::EdenApiContext;
-use super::EdenApiHandler;
-use super::EdenApiMethod;
+use super::handler::SaplingRemoteApiContext;
 use super::HandlerResult;
+use super::SaplingRemoteApiHandler;
+use super::SaplingRemoteApiMethod;
 use crate::errors::ErrorKind;
 use crate::utils::to_mpath;
 
@@ -36,16 +36,16 @@ const MAX_CONCURRENT_FETCHES_PER_REQUEST: usize = 10;
 pub struct HistoryHandler;
 
 #[async_trait]
-impl EdenApiHandler for HistoryHandler {
+impl SaplingRemoteApiHandler for HistoryHandler {
     type Request = HistoryRequest;
     type Response = HistoryResponseChunk;
 
     const HTTP_METHOD: hyper::Method = hyper::Method::POST;
-    const API_METHOD: EdenApiMethod = EdenApiMethod::History;
+    const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::History;
     const ENDPOINT: &'static str = "/history";
 
     async fn handler(
-        ectx: EdenApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
+        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
         let repo = ectx.repo();

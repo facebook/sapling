@@ -25,15 +25,18 @@ use url::Url;
 
 use crate::client::Client;
 use crate::errors::ConfigError;
-use crate::errors::EdenApiError;
-use crate::EdenApi;
+use crate::errors::SaplingRemoteApiError;
+use crate::SaplingRemoteApi;
 
-/// External function that constructs other kinds of `EdenApi` from config.
+/// External function that constructs other kinds of `SaplingRemoteApi` from config.
 static CUSTOM_BUILD_FUNCS: Lazy<
     RwLock<
         Vec<
             Box<
-                dyn (Fn(&dyn configmodel::Config) -> Result<Option<Arc<dyn EdenApi>>, EdenApiError>)
+                dyn (Fn(
+                        &dyn configmodel::Config,
+                    )
+                        -> Result<Option<Arc<dyn SaplingRemoteApi>>, SaplingRemoteApiError>)
                     + Send
                     + Sync
                     + 'static,
@@ -50,7 +53,7 @@ pub struct Builder<'a> {
 
 impl<'a> Builder<'a> {
     /// Populate a `Builder` from a Mercurial configuration.
-    pub fn from_config(config: &'a dyn configmodel::Config) -> Result<Self, EdenApiError> {
+    pub fn from_config(config: &'a dyn configmodel::Config) -> Result<Self, SaplingRemoteApiError> {
         let builder = Self {
             config,
             repo_name: None,
@@ -65,7 +68,7 @@ impl<'a> Builder<'a> {
     }
 
     /// Build the client.
-    pub fn build(self) -> Result<Arc<dyn EdenApi>, EdenApiError> {
+    pub fn build(self) -> Result<Arc<dyn SaplingRemoteApi>, SaplingRemoteApiError> {
         {
             // Hook in other EdenAPI implementations such as eagerepo (used for tests).
             let funcs = CUSTOM_BUILD_FUNCS.read();
@@ -85,10 +88,12 @@ impl<'a> Builder<'a> {
         Ok(Arc::new(builder.build()?))
     }
 
-    /// Register a customized builder that can produce a non-HTTP `EdenApi` from config.
+    /// Register a customized builder that can produce a non-HTTP `SaplingRemoteApi` from config.
     pub fn register_customize_build_func<F>(func: F)
     where
-        F: (Fn(&dyn configmodel::Config) -> Result<Option<Arc<dyn EdenApi>>, EdenApiError>)
+        F: (Fn(
+                &dyn configmodel::Config,
+            ) -> Result<Option<Arc<dyn SaplingRemoteApi>>, SaplingRemoteApiError>)
             + Send
             + Sync
             + 'static,
@@ -135,12 +140,12 @@ impl HttpClientBuilder {
     }
 
     /// Build the HTTP client.
-    pub fn build(self) -> Result<Client, EdenApiError> {
+    pub fn build(self) -> Result<Client, SaplingRemoteApiError> {
         self.try_into().map(Client::with_config)
     }
 
     /// Populate a `HttpClientBuilder` from a Mercurial configuration.
-    pub fn from_config(config: &dyn configmodel::Config) -> Result<Self, EdenApiError> {
+    pub fn from_config(config: &dyn configmodel::Config) -> Result<Self, SaplingRemoteApiError> {
         // XXX: Ideally, the repo name would be a required field, obtained from a `Repo` object from
         // the `clidispatch` crate. Unforunately, not all callsites presently have access to a
         // populated `Repo` object, and it isn't trivial to just initialize one (requires a path to
@@ -204,7 +209,7 @@ impl HttpClientBuilder {
             "1.1" => HttpVersion::V11,
             "2" => HttpVersion::V2,
             x => {
-                return Err(EdenApiError::BadConfig(ConfigError::Invalid(
+                return Err(SaplingRemoteApiError::BadConfig(ConfigError::Invalid(
                     "edenapi.http-version".into(),
                     anyhow!("invalid http version {}", x),
                 )));
@@ -407,7 +412,7 @@ pub(crate) struct Config {
 }
 
 impl TryFrom<HttpClientBuilder> for Config {
-    type Error = EdenApiError;
+    type Error = SaplingRemoteApiError;
 
     fn try_from(builder: HttpClientBuilder) -> Result<Self, Self::Error> {
         let HttpClientBuilder {

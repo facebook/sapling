@@ -20,21 +20,21 @@ use mononoke_api::ChangesetFileOrdering;
 use types::RepoPathBuf;
 use vec1::Vec1;
 
-use super::handler::EdenApiContext;
-use super::EdenApiHandler;
-use super::EdenApiMethod;
+use super::handler::SaplingRemoteApiContext;
 use super::HandlerResult;
+use super::SaplingRemoteApiHandler;
+use super::SaplingRemoteApiMethod;
 use crate::errors::ErrorKind;
 
 pub struct SuffixQueryHandler;
 
 #[async_trait]
-impl EdenApiHandler for SuffixQueryHandler {
+impl SaplingRemoteApiHandler for SuffixQueryHandler {
     type Request = SuffixQueryRequest;
     type Response = SuffixQueryResponse;
 
     const HTTP_METHOD: hyper::Method = hyper::Method::POST;
-    const API_METHOD: EdenApiMethod = EdenApiMethod::SuffixQuery;
+    const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::SuffixQuery;
     const ENDPOINT: &'static str = "/suffix_query";
 
     fn sampling_rate(_request: &Self::Request) -> NonZeroU64 {
@@ -42,7 +42,7 @@ impl EdenApiHandler for SuffixQueryHandler {
     }
 
     async fn handler(
-        ectx: EdenApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
+        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
         let repo = ectx.repo();

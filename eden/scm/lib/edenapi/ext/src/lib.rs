@@ -10,7 +10,7 @@
 // It's not implemented like that because trait implementations can't be split in
 // multiple files, so this is instead implemented as many functions in different files.
 // Always use the format:
-// fn my_function(api: &(impl EdenApi + ?Sized), other_args...) -> ... {...}
+// fn my_function(api: &(impl SaplingRemoteApi + ?Sized), other_args...) -> ... {...}
 // this way the function can be called from inside any trait that extends EdenAPI.
 
 mod files;

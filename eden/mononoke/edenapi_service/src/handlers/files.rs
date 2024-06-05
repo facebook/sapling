@@ -53,11 +53,11 @@ use rate_limiting::Metric;
 use serde::Deserialize;
 use types::Key;
 
-use super::handler::EdenApiContext;
-use super::EdenApiHandler;
-use super::EdenApiMethod;
+use super::handler::SaplingRemoteApiContext;
 use super::HandlerInfo;
 use super::HandlerResult;
+use super::SaplingRemoteApiHandler;
+use super::SaplingRemoteApiMethod;
 use crate::context::ServerContext;
 use crate::errors::ErrorKind;
 use crate::utils::cbor_stream_filtered_errors;
@@ -85,12 +85,12 @@ pub struct UploadFileQueryString {
 pub struct Files2Handler;
 
 #[async_trait]
-impl EdenApiHandler for Files2Handler {
+impl SaplingRemoteApiHandler for Files2Handler {
     type Request = FileRequest;
     type Response = FileResponse;
 
     const HTTP_METHOD: hyper::Method = hyper::Method::POST;
-    const API_METHOD: EdenApiMethod = EdenApiMethod::Files2;
+    const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::Files2;
     const ENDPOINT: &'static str = "/files2";
 
     fn sampling_rate(_request: &Self::Request) -> NonZeroU64 {
@@ -98,7 +98,7 @@ impl EdenApiHandler for Files2Handler {
     }
 
     async fn handler(
-        ectx: EdenApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
+        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
         let repo = ectx.repo();
@@ -234,7 +234,10 @@ pub async fn upload_file(state: &mut State) -> Result<impl TryIntoResponse, Http
     let params = UploadFileParams::take_from(state);
     let query_string = UploadFileQueryString::take_from(state);
 
-    state.put(HandlerInfo::new(&params.repo, EdenApiMethod::UploadFile));
+    state.put(HandlerInfo::new(
+        &params.repo,
+        SaplingRemoteApiMethod::UploadFile,
+    ));
 
     let rctx = RequestContext::borrow_from(state).clone();
     let sctx = ServerContext::borrow_from(state);
@@ -332,16 +335,16 @@ async fn store_hg_filenode(
 pub struct UploadHgFilenodesHandler;
 
 #[async_trait]
-impl EdenApiHandler for UploadHgFilenodesHandler {
+impl SaplingRemoteApiHandler for UploadHgFilenodesHandler {
     type Request = Batch<UploadHgFilenodeRequest>;
     type Response = UploadTokensResponse;
 
     const HTTP_METHOD: hyper::Method = hyper::Method::POST;
-    const API_METHOD: EdenApiMethod = EdenApiMethod::UploadHgFilenodes;
+    const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::UploadHgFilenodes;
     const ENDPOINT: &'static str = "/upload/filenodes";
 
     async fn handler(
-        ectx: EdenApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
+        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
         let repo = ectx.repo();
@@ -359,16 +362,16 @@ impl EdenApiHandler for UploadHgFilenodesHandler {
 pub struct DownloadFileHandler;
 
 #[async_trait]
-impl EdenApiHandler for DownloadFileHandler {
+impl SaplingRemoteApiHandler for DownloadFileHandler {
     type Request = UploadToken;
     type Response = Bytes;
 
     const HTTP_METHOD: hyper::Method = hyper::Method::POST;
-    const API_METHOD: EdenApiMethod = EdenApiMethod::DownloadFile;
+    const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::DownloadFile;
     const ENDPOINT: &'static str = "/download/file";
 
     async fn handler(
-        ectx: EdenApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
+        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
         let repo = ectx.repo();

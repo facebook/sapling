@@ -12,7 +12,7 @@ use types::Key;
 
 use super::RetryableStreamRequest;
 use crate::client::Client;
-use crate::errors::EdenApiError;
+use crate::errors::SaplingRemoteApiError;
 use crate::response::Response;
 use crate::types::FileResponse;
 use crate::types::FileSpec;
@@ -32,7 +32,7 @@ impl RetryableFileAttrs {
 impl RetryableStreamRequest for RetryableFileAttrs {
     type Item = FileResponse;
 
-    async fn perform(&self, client: Client) -> Result<Response<Self::Item>, EdenApiError> {
+    async fn perform(&self, client: Client) -> Result<Response<Self::Item>, SaplingRemoteApiError> {
         let reqs = self.reqs.values().cloned().collect();
         client.fetch_files_attrs(reqs).await
     }

@@ -57,12 +57,12 @@ use crate::ContentDataStore;
 use crate::ContentMetadata;
 use crate::ContentStore;
 use crate::Delta;
-use crate::EdenApiTreeStore;
 use crate::HgIdMutableDeltaStore;
 use crate::LegacyStore;
 use crate::LocalStore;
 use crate::Metadata;
 use crate::RepackLocation;
+use crate::SaplingRemoteApiTreeStore;
 use crate::StoreKey;
 use crate::StoreResult;
 use crate::StoreType;
@@ -87,9 +87,9 @@ pub struct TreeStore {
     /// will the written to indexedlog_cache.
     pub cache_to_local_cache: bool,
 
-    /// An EdenApi Client, EdenApiTreeStore provides the tree-specific subset of EdenApi functionality
+    /// An SaplingRemoteApi Client, SaplingRemoteApiTreeStore provides the tree-specific subset of SaplingRemoteApi functionality
     /// used by TreeStore.
-    pub edenapi: Option<Arc<EdenApiTreeStore>>,
+    pub edenapi: Option<Arc<SaplingRemoteApiTreeStore>>,
 
     /// Hook into the legacy storage architecture, if we fall back to this and succeed, we
     /// should alert / log something, as this should never happen if TreeStore is implemented
@@ -233,7 +233,7 @@ impl TreeStore {
                         for entry in response.entries {
                             let entry = entry?;
                             let key = entry.key.clone();
-                            let entry = LazyTree::EdenApi(entry);
+                            let entry = LazyTree::SaplingRemoteApi(entry);
 
                             if let Some(ref aux_cache) = aux_cache {
                                 let aux_data = entry.aux_data();
@@ -253,7 +253,7 @@ impl TreeStore {
                         let _ = metrics.edenapi.time_from_duration(start_time.elapsed());
                     }
                 } else {
-                    tracing::debug!("no EdenApi associated with TreeStore");
+                    tracing::debug!("no SaplingRemoteApi associated with TreeStore");
                 }
             }
 
@@ -695,7 +695,7 @@ impl TreeEntry for ScmStoreTreeEntry {
     fn file_aux_iter(&self) -> anyhow::Result<BoxIterator<anyhow::Result<(HgId, FileAuxData)>>> {
         let maybe_iter = (|| -> Option<BoxIterator<anyhow::Result<(HgId, FileAuxData)>>> {
             let entry = match &self.tree {
-                LazyTree::EdenApi(entry) => entry,
+                LazyTree::SaplingRemoteApi(entry) => entry,
                 _ => return None,
             };
             let children = entry.children.as_ref()?;

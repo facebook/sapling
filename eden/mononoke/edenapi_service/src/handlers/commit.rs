@@ -79,11 +79,11 @@ use serde::Deserialize;
 use types::HgId;
 use types::Parents;
 
-use super::handler::EdenApiContext;
-use super::EdenApiHandler;
-use super::EdenApiMethod;
+use super::handler::SaplingRemoteApiContext;
 use super::HandlerInfo;
 use super::HandlerResult;
+use super::SaplingRemoteApiHandler;
+use super::SaplingRemoteApiMethod;
 use crate::context::ServerContext;
 use crate::errors::ErrorKind;
 use crate::middleware::request_dumper::RequestDumper;
@@ -139,12 +139,12 @@ async fn translate_location(
 }
 
 #[async_trait]
-impl EdenApiHandler for LocationToHashHandler {
+impl SaplingRemoteApiHandler for LocationToHashHandler {
     type Request = CommitLocationToHashRequestBatch;
     type Response = CommitLocationToHashResponse;
 
     const HTTP_METHOD: hyper::Method = hyper::Method::POST;
-    const API_METHOD: EdenApiMethod = EdenApiMethod::CommitLocationToHash;
+    const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::CommitLocationToHash;
     const ENDPOINT: &'static str = "/commit/location_to_hash";
 
     fn sampling_rate(_request: &Self::Request) -> NonZeroU64 {
@@ -152,7 +152,7 @@ impl EdenApiHandler for LocationToHashHandler {
     }
 
     async fn handler(
-        ectx: EdenApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
+        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
         let repo = ectx.repo();
@@ -195,7 +195,7 @@ pub async fn hash_to_location(state: &mut State) -> Result<impl TryIntoResponse,
 
     state.put(HandlerInfo::new(
         &params.repo,
-        EdenApiMethod::CommitHashToLocation,
+        SaplingRemoteApiMethod::CommitHashToLocation,
     ));
 
     ScubaMiddlewareState::try_set_sampling_rate(state, nonzero_ext::nonzero!(256_u64));
@@ -237,7 +237,7 @@ pub async fn revlog_data(state: &mut State) -> Result<impl TryIntoResponse, Http
 
     state.put(HandlerInfo::new(
         &params.repo,
-        EdenApiMethod::CommitRevlogData,
+        SaplingRemoteApiMethod::CommitRevlogData,
     ));
 
     let sctx = ServerContext::borrow_from(state);
@@ -273,16 +273,16 @@ async fn commit_revlog_data(
 pub struct HashLookupHandler;
 
 #[async_trait]
-impl EdenApiHandler for HashLookupHandler {
+impl SaplingRemoteApiHandler for HashLookupHandler {
     type Request = Batch<CommitHashLookupRequest>;
     type Response = CommitHashLookupResponse;
 
     const HTTP_METHOD: hyper::Method = hyper::Method::POST;
-    const API_METHOD: EdenApiMethod = EdenApiMethod::CommitHashLookup;
+    const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::CommitHashLookup;
     const ENDPOINT: &'static str = "/commit/hash_lookup";
 
     async fn handler(
-        ectx: EdenApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
+        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
         let repo = ectx.repo();
@@ -309,16 +309,16 @@ impl EdenApiHandler for HashLookupHandler {
 pub struct UploadHgChangesetsHandler;
 
 #[async_trait]
-impl EdenApiHandler for UploadHgChangesetsHandler {
+impl SaplingRemoteApiHandler for UploadHgChangesetsHandler {
     type Request = UploadHgChangesetsRequest;
     type Response = UploadTokensResponse;
 
     const HTTP_METHOD: hyper::Method = hyper::Method::POST;
-    const API_METHOD: EdenApiMethod = EdenApiMethod::UploadHgChangesets;
+    const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::UploadHgChangesets;
     const ENDPOINT: &'static str = "/upload/changesets";
 
     async fn handler(
-        ectx: EdenApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
+        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
         let repo = ectx.repo();
@@ -361,17 +361,17 @@ impl EdenApiHandler for UploadHgChangesetsHandler {
 pub struct UploadBonsaiChangesetHandler;
 
 #[async_trait]
-impl EdenApiHandler for UploadBonsaiChangesetHandler {
+impl SaplingRemoteApiHandler for UploadBonsaiChangesetHandler {
     type QueryStringExtractor = UploadBonsaiChangesetQueryString;
     type Request = UploadBonsaiChangesetRequest;
     type Response = UploadTokensResponse;
 
     const HTTP_METHOD: hyper::Method = hyper::Method::POST;
-    const API_METHOD: EdenApiMethod = EdenApiMethod::UploadBonsaiChangeset;
+    const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::UploadBonsaiChangeset;
     const ENDPOINT: &'static str = "/upload/changeset/bonsai";
 
     async fn handler(
-        ectx: EdenApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
+        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
         let repo = ectx.repo();
@@ -435,16 +435,16 @@ impl EdenApiHandler for UploadBonsaiChangesetHandler {
 pub struct FetchSnapshotHandler;
 
 #[async_trait]
-impl EdenApiHandler for FetchSnapshotHandler {
+impl SaplingRemoteApiHandler for FetchSnapshotHandler {
     type Request = FetchSnapshotRequest;
     type Response = FetchSnapshotResponse;
 
     const HTTP_METHOD: hyper::Method = hyper::Method::POST;
-    const API_METHOD: EdenApiMethod = EdenApiMethod::FetchSnapshot;
+    const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::FetchSnapshot;
     const ENDPOINT: &'static str = "/snapshot";
 
     async fn handler(
-        ectx: EdenApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
+        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
         let repo = ectx.repo();
@@ -525,16 +525,16 @@ impl EdenApiHandler for FetchSnapshotHandler {
 pub struct AlterSnapshotHandler;
 
 #[async_trait]
-impl EdenApiHandler for AlterSnapshotHandler {
+impl SaplingRemoteApiHandler for AlterSnapshotHandler {
     type Request = AlterSnapshotRequest;
     type Response = AlterSnapshotResponse;
 
     const HTTP_METHOD: hyper::Method = hyper::Method::POST;
-    const API_METHOD: EdenApiMethod = EdenApiMethod::AlterSnapshot;
+    const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::AlterSnapshot;
     const ENDPOINT: &'static str = "/snapshot/alter";
 
     async fn handler(
-        ectx: EdenApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
+        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
         let repo = ectx.repo();
@@ -578,16 +578,16 @@ impl EdenApiHandler for AlterSnapshotHandler {
 pub struct EphemeralPrepareHandler;
 
 #[async_trait]
-impl EdenApiHandler for EphemeralPrepareHandler {
+impl SaplingRemoteApiHandler for EphemeralPrepareHandler {
     type Request = EphemeralPrepareRequest;
     type Response = EphemeralPrepareResponse;
 
     const HTTP_METHOD: hyper::Method = hyper::Method::POST;
-    const API_METHOD: EdenApiMethod = EdenApiMethod::EphemeralPrepare;
+    const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::EphemeralPrepare;
     const ENDPOINT: &'static str = "/ephemeral/prepare";
 
     async fn handler(
-        ectx: EdenApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
+        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
         let repo = ectx.repo();
@@ -610,16 +610,16 @@ impl EdenApiHandler for EphemeralPrepareHandler {
 pub struct GraphHandlerV2;
 
 #[async_trait]
-impl EdenApiHandler for GraphHandlerV2 {
+impl SaplingRemoteApiHandler for GraphHandlerV2 {
     type Request = CommitGraphRequest;
     type Response = CommitGraphEntry;
 
     const HTTP_METHOD: hyper::Method = hyper::Method::POST;
-    const API_METHOD: EdenApiMethod = EdenApiMethod::CommitGraphV2;
+    const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::CommitGraphV2;
     const ENDPOINT: &'static str = "/commit/graph_v2";
 
     async fn handler(
-        ectx: EdenApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
+        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
         let repo = ectx.repo();
@@ -683,16 +683,16 @@ impl EdenApiHandler for GraphHandlerV2 {
 pub struct GraphSegmentsHandler;
 
 #[async_trait]
-impl EdenApiHandler for GraphSegmentsHandler {
+impl SaplingRemoteApiHandler for GraphSegmentsHandler {
     type Request = CommitGraphSegmentsRequest;
     type Response = CommitGraphSegmentsEntry;
 
     const HTTP_METHOD: hyper::Method = hyper::Method::POST;
-    const API_METHOD: EdenApiMethod = EdenApiMethod::CommitGraphSegments;
+    const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::CommitGraphSegments;
     const ENDPOINT: &'static str = "/commit/graph_segments";
 
     async fn handler(
-        ectx: EdenApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
+        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
         let repo = ectx.repo();
@@ -738,16 +738,16 @@ impl EdenApiHandler for GraphSegmentsHandler {
 pub struct CommitMutationsHandler;
 
 #[async_trait]
-impl EdenApiHandler for CommitMutationsHandler {
+impl SaplingRemoteApiHandler for CommitMutationsHandler {
     type Request = CommitMutationsRequest;
     type Response = CommitMutationsResponse;
 
     const HTTP_METHOD: hyper::Method = hyper::Method::POST;
-    const API_METHOD: EdenApiMethod = EdenApiMethod::CommitMutations;
+    const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::CommitMutations;
     const ENDPOINT: &'static str = "/commit/mutations";
 
     async fn handler(
-        ectx: EdenApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
+        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
         let repo = ectx.repo();
@@ -775,16 +775,16 @@ impl EdenApiHandler for CommitMutationsHandler {
 pub struct CommitTranslateId;
 
 #[async_trait]
-impl EdenApiHandler for CommitTranslateId {
+impl SaplingRemoteApiHandler for CommitTranslateId {
     type Request = CommitTranslateIdRequest;
     type Response = CommitTranslateIdResponse;
 
     const HTTP_METHOD: hyper::Method = hyper::Method::POST;
-    const API_METHOD: EdenApiMethod = EdenApiMethod::CommitTranslateId;
+    const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::CommitTranslateId;
     const ENDPOINT: &'static str = "/commit/translate_id";
 
     async fn handler(
-        ectx: EdenApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
+        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
         let from_repo = match request.from_repo {

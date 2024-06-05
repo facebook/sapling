@@ -12,7 +12,7 @@ use anyhow::Context;
 use anyhow::Result;
 use cloned::cloned;
 use crossbeam::channel;
-use edenapi::api::EdenApi;
+use edenapi::api::SaplingRemoteApi;
 use edenapi_types::AnyFileContentId;
 use edenapi_types::AnyId;
 use edenapi_types::FileType;
@@ -171,7 +171,7 @@ pub async fn check_files(
 }
 
 pub async fn download_files(
-    api: &(impl EdenApi + ?Sized),
+    api: &(impl SaplingRemoteApi + ?Sized),
     root: &RepoPathBuf,
     files: impl IntoIterator<Item = (RepoPathBuf, UploadToken, FileType)>,
 ) -> Result<()> {

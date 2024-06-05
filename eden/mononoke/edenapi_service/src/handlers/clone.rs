@@ -22,8 +22,8 @@ use types::HgId;
 
 use crate::context::ServerContext;
 use crate::errors::MononokeErrorExt;
-use crate::handlers::EdenApiMethod;
 use crate::handlers::HandlerInfo;
+use crate::handlers::SaplingRemoteApiMethod;
 use crate::utils::cbor;
 use crate::utils::get_repo;
 
@@ -35,7 +35,10 @@ pub struct CloneParams {
 pub async fn clone_data(state: &mut State) -> Result<BytesBody<Bytes>, HttpError> {
     let params = CloneParams::take_from(state);
 
-    state.put(HandlerInfo::new(&params.repo, EdenApiMethod::Clone));
+    state.put(HandlerInfo::new(
+        &params.repo,
+        SaplingRemoteApiMethod::Clone,
+    ));
 
     let sctx = ServerContext::borrow_from(state);
     let rctx = RequestContext::borrow_from(state).clone();

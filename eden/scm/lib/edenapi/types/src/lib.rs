@@ -184,29 +184,29 @@ pub struct InvalidHgId {
 #[derive(Clone, Debug, Error, Eq, PartialEq, Serialize)]
 #[error("Error fetching key {key:?}: {err}")]
 #[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
-pub struct EdenApiServerError {
-    pub err: EdenApiServerErrorKind,
+pub struct SaplingRemoteApiServerError {
+    pub err: SaplingRemoteApiServerErrorKind,
     pub key: Option<Key>,
 }
 
-impl EdenApiServerError {
-    pub fn new(err: impl std::fmt::Debug) -> EdenApiServerError {
-        EdenApiServerError {
-            err: EdenApiServerErrorKind::OpaqueError(format!("{:?}", err)),
+impl SaplingRemoteApiServerError {
+    pub fn new(err: impl std::fmt::Debug) -> SaplingRemoteApiServerError {
+        SaplingRemoteApiServerError {
+            err: SaplingRemoteApiServerErrorKind::OpaqueError(format!("{:?}", err)),
             key: None,
         }
     }
 
-    pub fn with_key(key: Key, err: impl std::fmt::Debug) -> EdenApiServerError {
-        EdenApiServerError {
-            err: EdenApiServerErrorKind::OpaqueError(format!("{:?}", err)),
+    pub fn with_key(key: Key, err: impl std::fmt::Debug) -> SaplingRemoteApiServerError {
+        SaplingRemoteApiServerError {
+            err: SaplingRemoteApiServerErrorKind::OpaqueError(format!("{:?}", err)),
             key: Some(key),
         }
     }
 
-    pub fn with_path(path: RepoPathBuf, err: impl std::fmt::Debug) -> EdenApiServerError {
-        EdenApiServerError {
-            err: EdenApiServerErrorKind::OpaqueError(format!("{:?}", err)),
+    pub fn with_path(path: RepoPathBuf, err: impl std::fmt::Debug) -> SaplingRemoteApiServerError {
+        SaplingRemoteApiServerError {
+            err: SaplingRemoteApiServerErrorKind::OpaqueError(format!("{:?}", err)),
             key: Some(Key {
                 path,
                 hgid: *HgId::null_id(),
@@ -214,9 +214,9 @@ impl EdenApiServerError {
         }
     }
 
-    pub fn with_hgid(hgid: HgId, err: impl std::fmt::Debug) -> EdenApiServerError {
-        EdenApiServerError {
-            err: EdenApiServerErrorKind::OpaqueError(format!("{:?}", err)),
+    pub fn with_hgid(hgid: HgId, err: impl std::fmt::Debug) -> SaplingRemoteApiServerError {
+        SaplingRemoteApiServerError {
+            err: SaplingRemoteApiServerErrorKind::OpaqueError(format!("{:?}", err)),
             key: Some(Key {
                 hgid,
                 path: RepoPathBuf::new(),
@@ -227,7 +227,7 @@ impl EdenApiServerError {
 
 #[derive(Clone, Debug, Error, Eq, PartialEq, Serialize)]
 #[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
-pub enum EdenApiServerErrorKind {
+pub enum SaplingRemoteApiServerErrorKind {
     #[error("EdenAPI server returned an error with message: {0}")]
     OpaqueError(String),
 }

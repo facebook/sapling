@@ -26,12 +26,12 @@ use crate::wire::is_default;
 use crate::wire::ToApi;
 use crate::wire::ToWire;
 use crate::wire::WireDirectoryMetadata;
-use crate::wire::WireEdenApiServerError;
 use crate::wire::WireFileMetadata;
 use crate::wire::WireKey;
 use crate::wire::WireParents;
+use crate::wire::WireSaplingRemoteApiServerError;
 use crate::wire::WireToApiConversionError;
-use crate::EdenApiServerError;
+use crate::SaplingRemoteApiServerError;
 
 #[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
 pub struct WireTreeEntry {
@@ -48,10 +48,10 @@ pub struct WireTreeEntry {
     children: Option<Vec<WireTreeChildEntry>>,
 
     #[serde(rename = "4", default, skip_serializing_if = "is_default")]
-    pub error: Option<WireEdenApiServerError>,
+    pub error: Option<WireSaplingRemoteApiServerError>,
 }
 
-impl ToWire for Result<TreeEntry, EdenApiServerError> {
+impl ToWire for Result<TreeEntry, SaplingRemoteApiServerError> {
     type Wire = WireTreeEntry;
 
     fn to_wire(self) -> Self::Wire {
@@ -73,12 +73,12 @@ impl ToWire for Result<TreeEntry, EdenApiServerError> {
 }
 
 impl ToApi for WireTreeEntry {
-    type Api = Result<TreeEntry, EdenApiServerError>;
+    type Api = Result<TreeEntry, SaplingRemoteApiServerError>;
     type Error = WireToApiConversionError;
 
     fn to_api(self) -> Result<Self::Api, Self::Error> {
         Ok(if let (key, Some(err)) = (self.key.clone(), self.error) {
-            Err(EdenApiServerError {
+            Err(SaplingRemoteApiServerError {
                 key: key.to_api()?,
                 err: err.to_api()?,
             })
@@ -105,13 +105,13 @@ pub struct WireTreeChildEntry {
     file_metadata: Option<WireFileMetadata>,
 
     #[serde(rename = "4", default, skip_serializing_if = "is_default")]
-    error: Option<WireEdenApiServerError>,
+    error: Option<WireSaplingRemoteApiServerError>,
 
     #[serde(rename = "5", default, skip_serializing_if = "is_default")]
     directory_metadata: Option<WireDirectoryMetadata>,
 }
 
-impl ToWire for Result<TreeChildEntry, EdenApiServerError> {
+impl ToWire for Result<TreeChildEntry, SaplingRemoteApiServerError> {
     type Wire = WireTreeChildEntry;
 
     fn to_wire(self) -> Self::Wire {
@@ -138,12 +138,12 @@ impl ToWire for Result<TreeChildEntry, EdenApiServerError> {
 }
 
 impl ToApi for WireTreeChildEntry {
-    type Api = Result<TreeChildEntry, EdenApiServerError>;
+    type Api = Result<TreeChildEntry, SaplingRemoteApiServerError>;
     type Error = WireToApiConversionError;
 
     fn to_api(self) -> Result<Self::Api, Self::Error> {
         Ok(if let (key, Some(err)) = (self.key.clone(), self.error) {
-            Err(EdenApiServerError {
+            Err(SaplingRemoteApiServerError {
                 key: key.to_api()?,
                 err: err.to_api()?,
             })

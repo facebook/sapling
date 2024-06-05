@@ -56,9 +56,9 @@ use crate::scmstore::StoreFile;
 use crate::util;
 use crate::ContentHash;
 use crate::ContentStore;
-use crate::EdenApiFileStore;
 use crate::ExtStoredPolicy;
 use crate::Metadata;
+use crate::SaplingRemoteApiFileStore;
 use crate::StoreKey;
 
 pub struct FetchState {
@@ -173,7 +173,7 @@ impl FetchState {
     ) -> Result<LazyFile> {
         let cache_entry = file.indexedlog_cache_entry(key.clone())?.ok_or_else(|| {
             anyhow!(
-                "expected LazyFile::EdenApi, other LazyFile variants should not be written to cache"
+                "expected LazyFile::SaplingRemoteApi, other LazyFile variants should not be written to cache"
             )
         })?;
         indexedlog_cache.put_entry(cache_entry)?;
@@ -513,11 +513,11 @@ impl FetchState {
             } else if let Some(indexedlog_cache) = indexedlog_cache.as_ref() {
                 file.content = Some(Self::evict_to_cache(
                     key,
-                    LazyFile::EdenApi(entry),
+                    LazyFile::SaplingRemoteApi(entry),
                     indexedlog_cache,
                 )?);
             } else {
-                file.content = Some(LazyFile::EdenApi(entry));
+                file.content = Some(LazyFile::SaplingRemoteApi(entry));
             }
         }
 
@@ -526,7 +526,7 @@ impl FetchState {
 
     pub(crate) fn fetch_edenapi(
         &mut self,
-        store: &EdenApiFileStore,
+        store: &SaplingRemoteApiFileStore,
         indexedlog_cache: Option<Arc<IndexedLogHgIdDataStore>>,
         lfs_cache: Option<Arc<LfsStore>>,
         aux_cache: Option<Arc<AuxStore>>,
@@ -609,7 +609,7 @@ impl FetchState {
         // Record found entries
         let mut unknown_error: Option<ClonableError> = None;
         for res in stream_to_iter(entries) {
-            // TODO(meyer): This outer EdenApi error with no key sucks
+            // TODO(meyer): This outer SaplingRemoteApi error with no key sucks
             let (key, res) = match res {
                 Ok(result) => match result.map_err(|e| e.tag_network()) {
                     Ok(result) => result,

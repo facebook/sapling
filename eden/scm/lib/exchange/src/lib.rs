@@ -17,7 +17,7 @@ use dag::VertexName;
 use edenapi::configmodel::Config;
 use edenapi::configmodel::ConfigExt;
 use edenapi::types::CommitGraphSegments;
-use edenapi::EdenApi;
+use edenapi::SaplingRemoteApi;
 use metalog::CommitOptions;
 use metalog::MetaLog;
 use tracing::instrument;
@@ -39,7 +39,7 @@ pub fn convert_to_remote(config: &dyn Config, bookmark: &str) -> Result<String> 
 #[instrument(skip_all, fields(?bookmark_names))]
 pub fn clone(
     config: &dyn Config,
-    edenapi: Arc<dyn EdenApi>,
+    edenapi: Arc<dyn SaplingRemoteApi>,
     metalog: &mut MetaLog,
     commits: &mut Box<dyn DagCommits + Send + 'static>,
     bookmark_names: Vec<String>,
@@ -104,7 +104,7 @@ pub fn clone(
 #[instrument(skip_all)]
 pub fn fast_pull(
     config: &dyn Config,
-    edenapi: Arc<dyn EdenApi>,
+    edenapi: Arc<dyn SaplingRemoteApi>,
     commits: &mut Box<dyn DagCommits + Send + 'static>,
     common: Vec<HgId>,
     missing: Vec<HgId>,

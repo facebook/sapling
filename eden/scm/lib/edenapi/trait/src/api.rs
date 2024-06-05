@@ -30,7 +30,6 @@ use edenapi_types::CommitLocationToHashResponse;
 use edenapi_types::CommitMutationsResponse;
 use edenapi_types::CommitRevlogData;
 use edenapi_types::CommitTranslateIdResponse;
-use edenapi_types::EdenApiServerError;
 use edenapi_types::EphemeralPrepareResponse;
 use edenapi_types::FetchSnapshotRequest;
 use edenapi_types::FetchSnapshotResponse;
@@ -43,6 +42,7 @@ use edenapi_types::HistoryEntry;
 use edenapi_types::LandStackResponse;
 use edenapi_types::LookupResponse;
 use edenapi_types::ReferencesData;
+use edenapi_types::SaplingRemoteApiServerError;
 use edenapi_types::SetBookmarkResponse;
 use edenapi_types::SuffixQueryResponse;
 use edenapi_types::TreeAttributes;
@@ -58,67 +58,68 @@ use minibytes::Bytes;
 use types::HgId;
 use types::Key;
 
-use crate::errors::EdenApiError;
+use crate::errors::SaplingRemoteApiError;
 use crate::response::Response;
 use crate::response::ResponseMeta;
 
 #[async_trait]
-pub trait EdenApi: Send + Sync + 'static {
-    /// Returns the URL to describe the EdenApi. The URL is intended
+pub trait SaplingRemoteApi: Send + Sync + 'static {
+    /// Returns the URL to describe the SaplingRemoteApi. The URL is intended
     /// to match configs like `paths.default`.
     fn url(&self) -> Option<String> {
         None
     }
 
-    async fn health(&self) -> Result<ResponseMeta, EdenApiError> {
-        Err(EdenApiError::NotSupported)
+    async fn health(&self) -> Result<ResponseMeta, SaplingRemoteApiError> {
+        Err(SaplingRemoteApiError::NotSupported)
     }
 
-    async fn capabilities(&self) -> Result<Vec<String>, EdenApiError> {
-        Err(EdenApiError::NotSupported)
+    async fn capabilities(&self) -> Result<Vec<String>, SaplingRemoteApiError> {
+        Err(SaplingRemoteApiError::NotSupported)
     }
 
-    async fn files(&self, keys: Vec<Key>) -> Result<Response<FileResponse>, EdenApiError> {
+    async fn files(&self, keys: Vec<Key>) -> Result<Response<FileResponse>, SaplingRemoteApiError> {
         let _ = keys;
-        Err(EdenApiError::NotSupported)
+        Err(SaplingRemoteApiError::NotSupported)
     }
 
     async fn files_attrs(
         &self,
         reqs: Vec<FileSpec>,
-    ) -> Result<Response<FileResponse>, EdenApiError> {
+    ) -> Result<Response<FileResponse>, SaplingRemoteApiError> {
         let _ = reqs;
-        Err(EdenApiError::NotSupported)
+        Err(SaplingRemoteApiError::NotSupported)
     }
 
     async fn history(
         &self,
         keys: Vec<Key>,
         length: Option<u32>,
-    ) -> Result<Response<HistoryEntry>, EdenApiError> {
+    ) -> Result<Response<HistoryEntry>, SaplingRemoteApiError> {
         let _ = (keys, length);
-        Err(EdenApiError::NotSupported)
+        Err(SaplingRemoteApiError::NotSupported)
     }
 
     async fn trees(
         &self,
         keys: Vec<Key>,
         attributes: Option<TreeAttributes>,
-    ) -> Result<Response<Result<TreeEntry, EdenApiServerError>>, EdenApiError> {
+    ) -> Result<Response<Result<TreeEntry, SaplingRemoteApiServerError>>, SaplingRemoteApiError>
+    {
         let _ = (keys, attributes);
-        Err(EdenApiError::NotSupported)
+        Err(SaplingRemoteApiError::NotSupported)
     }
 
     async fn commit_revlog_data(
         &self,
         hgids: Vec<HgId>,
-    ) -> Result<Response<CommitRevlogData>, EdenApiError> {
+    ) -> Result<Response<CommitRevlogData>, SaplingRemoteApiError> {
         let _ = hgids;
-        Err(EdenApiError::NotSupported)
+        Err(SaplingRemoteApiError::NotSupported)
     }
 
-    async fn clone_data(&self) -> Result<CloneData<HgId>, EdenApiError> {
-        Err(EdenApiError::NotSupported)
+    async fn clone_data(&self) -> Result<CloneData<HgId>, SaplingRemoteApiError> {
+        Err(SaplingRemoteApiError::NotSupported)
     }
 
     /// Provide data to complete a lazy pull. `common` defines known heads,
@@ -127,34 +128,34 @@ pub trait EdenApi: Send + Sync + 'static {
         &self,
         common: Vec<HgId>,
         missing: Vec<HgId>,
-    ) -> Result<CloneData<HgId>, EdenApiError> {
+    ) -> Result<CloneData<HgId>, SaplingRemoteApiError> {
         let _ = (common, missing);
-        Err(EdenApiError::NotSupported)
+        Err(SaplingRemoteApiError::NotSupported)
     }
 
     async fn pull_fast_forward_master(
         &self,
         old_master: HgId,
         new_master: HgId,
-    ) -> Result<CloneData<HgId>, EdenApiError> {
+    ) -> Result<CloneData<HgId>, SaplingRemoteApiError> {
         self.pull_lazy(vec![old_master], vec![new_master]).await
     }
 
     async fn commit_location_to_hash(
         &self,
         requests: Vec<CommitLocationToHashRequest>,
-    ) -> Result<Vec<CommitLocationToHashResponse>, EdenApiError> {
+    ) -> Result<Vec<CommitLocationToHashResponse>, SaplingRemoteApiError> {
         let _ = requests;
-        Err(EdenApiError::NotSupported)
+        Err(SaplingRemoteApiError::NotSupported)
     }
 
     async fn commit_hash_to_location(
         &self,
         master_heads: Vec<HgId>,
         hgids: Vec<HgId>,
-    ) -> Result<Vec<CommitHashToLocationResponse>, EdenApiError> {
+    ) -> Result<Vec<CommitHashToLocationResponse>, SaplingRemoteApiError> {
         let _ = (master_heads, hgids);
-        Err(EdenApiError::NotSupported)
+        Err(SaplingRemoteApiError::NotSupported)
     }
 
     /// Return a subset of commits that are known by the server.
@@ -162,9 +163,9 @@ pub trait EdenApi: Send + Sync + 'static {
     async fn commit_known(
         &self,
         hgids: Vec<HgId>,
-    ) -> Result<Vec<CommitKnownResponse>, EdenApiError> {
+    ) -> Result<Vec<CommitKnownResponse>, SaplingRemoteApiError> {
         let _ = hgids;
-        Err(EdenApiError::NotSupported)
+        Err(SaplingRemoteApiError::NotSupported)
     }
 
     /// Return part of the commit graph that are ancestors of `heads`,
@@ -179,9 +180,9 @@ pub trait EdenApi: Send + Sync + 'static {
         &self,
         heads: Vec<HgId>,
         common: Vec<HgId>,
-    ) -> Result<Vec<CommitGraphEntry>, EdenApiError> {
+    ) -> Result<Vec<CommitGraphEntry>, SaplingRemoteApiError> {
         let _ = (heads, common);
-        Err(EdenApiError::NotSupported)
+        Err(SaplingRemoteApiError::NotSupported)
     }
 
     /// Returns a segmented representation of the part of the commit graph
@@ -193,23 +194,26 @@ pub trait EdenApi: Send + Sync + 'static {
         &self,
         heads: Vec<HgId>,
         common: Vec<HgId>,
-    ) -> Result<Vec<CommitGraphSegmentsEntry>, EdenApiError> {
+    ) -> Result<Vec<CommitGraphSegmentsEntry>, SaplingRemoteApiError> {
         let _ = (heads, common);
-        Err(EdenApiError::NotSupported)
+        Err(SaplingRemoteApiError::NotSupported)
     }
 
     /// Return matching full hashes of hex hash prefix
     async fn hash_prefixes_lookup(
         &self,
         prefixes: Vec<String>,
-    ) -> Result<Vec<CommitHashLookupResponse>, EdenApiError> {
+    ) -> Result<Vec<CommitHashLookupResponse>, SaplingRemoteApiError> {
         let _ = prefixes;
-        Err(EdenApiError::NotSupported)
+        Err(SaplingRemoteApiError::NotSupported)
     }
 
-    async fn bookmarks(&self, bookmarks: Vec<String>) -> Result<Vec<BookmarkEntry>, EdenApiError> {
+    async fn bookmarks(
+        &self,
+        bookmarks: Vec<String>,
+    ) -> Result<Vec<BookmarkEntry>, SaplingRemoteApiError> {
         let _ = bookmarks;
-        Err(EdenApiError::NotSupported)
+        Err(SaplingRemoteApiError::NotSupported)
     }
 
     /// Create, delete, or move a bookmark
@@ -223,9 +227,9 @@ pub trait EdenApi: Send + Sync + 'static {
         to: Option<HgId>,
         from: Option<HgId>,
         pushvars: HashMap<String, String>,
-    ) -> Result<SetBookmarkResponse, EdenApiError> {
+    ) -> Result<SetBookmarkResponse, SaplingRemoteApiError> {
         let _ = (bookmark, to, from, pushvars);
-        Err(EdenApiError::NotSupported)
+        Err(SaplingRemoteApiError::NotSupported)
     }
 
     /// Land a stack of commits, rebasing them onto the specified bookmark
@@ -243,9 +247,9 @@ pub trait EdenApi: Send + Sync + 'static {
         head: HgId,
         base: HgId,
         pushvars: HashMap<String, String>,
-    ) -> Result<LandStackResponse, EdenApiError> {
+    ) -> Result<LandStackResponse, SaplingRemoteApiError> {
         let _ = (bookmark, head, base, pushvars);
-        Err(EdenApiError::NotSupported)
+        Err(SaplingRemoteApiError::NotSupported)
     }
 
     /// Lookup items and return signed upload tokens if an item has been uploaded
@@ -255,9 +259,9 @@ pub trait EdenApi: Send + Sync + 'static {
         items: Vec<AnyId>,
         bubble_id: Option<NonZeroU64>,
         copy_from_bubble_id: Option<NonZeroU64>,
-    ) -> Result<Vec<LookupResponse>, EdenApiError> {
+    ) -> Result<Vec<LookupResponse>, SaplingRemoteApiError> {
         let _ = (items, bubble_id, copy_from_bubble_id);
-        Err(EdenApiError::NotSupported)
+        Err(SaplingRemoteApiError::NotSupported)
     }
 
     /// Upload files content
@@ -266,27 +270,27 @@ pub trait EdenApi: Send + Sync + 'static {
         data: Vec<(AnyFileContentId, Bytes)>,
         bubble_id: Option<NonZeroU64>,
         copy_from_bubble_id: Option<NonZeroU64>,
-    ) -> Result<Response<UploadToken>, EdenApiError> {
+    ) -> Result<Response<UploadToken>, SaplingRemoteApiError> {
         let _ = (data, bubble_id, copy_from_bubble_id);
-        Err(EdenApiError::NotSupported)
+        Err(SaplingRemoteApiError::NotSupported)
     }
 
     /// Upload list of hg filenodes
     async fn upload_filenodes_batch(
         &self,
         items: Vec<HgFilenodeData>,
-    ) -> Result<Response<UploadTokensResponse>, EdenApiError> {
+    ) -> Result<Response<UploadTokensResponse>, SaplingRemoteApiError> {
         let _ = items;
-        Err(EdenApiError::NotSupported)
+        Err(SaplingRemoteApiError::NotSupported)
     }
 
     /// Upload list of trees
     async fn upload_trees_batch(
         &self,
         items: Vec<UploadTreeEntry>,
-    ) -> Result<Response<UploadTreeResponse>, EdenApiError> {
+    ) -> Result<Response<UploadTreeResponse>, SaplingRemoteApiError> {
         let _ = items;
-        Err(EdenApiError::NotSupported)
+        Err(SaplingRemoteApiError::NotSupported)
     }
 
     /// Upload list of changesets
@@ -294,60 +298,60 @@ pub trait EdenApi: Send + Sync + 'static {
         &self,
         changesets: Vec<UploadHgChangeset>,
         mutations: Vec<HgMutationEntryContent>,
-    ) -> Result<Response<UploadTokensResponse>, EdenApiError> {
+    ) -> Result<Response<UploadTokensResponse>, SaplingRemoteApiError> {
         let _ = (changesets, mutations);
-        Err(EdenApiError::NotSupported)
+        Err(SaplingRemoteApiError::NotSupported)
     }
 
     async fn upload_bonsai_changeset(
         &self,
         changeset: BonsaiChangesetContent,
         bubble_id: Option<NonZeroU64>,
-    ) -> Result<UploadTokensResponse, EdenApiError> {
+    ) -> Result<UploadTokensResponse, SaplingRemoteApiError> {
         let _ = (changeset, bubble_id);
-        Err(EdenApiError::NotSupported)
+        Err(SaplingRemoteApiError::NotSupported)
     }
 
     async fn ephemeral_prepare(
         &self,
         custom_duration: Option<Duration>,
         labels: Option<Vec<String>>,
-    ) -> Result<EphemeralPrepareResponse, EdenApiError> {
+    ) -> Result<EphemeralPrepareResponse, SaplingRemoteApiError> {
         let _ = (custom_duration, labels);
-        Err(EdenApiError::NotSupported)
+        Err(SaplingRemoteApiError::NotSupported)
     }
 
     /// Fetch information about the requested snapshot
     async fn fetch_snapshot(
         &self,
         request: FetchSnapshotRequest,
-    ) -> Result<FetchSnapshotResponse, EdenApiError> {
+    ) -> Result<FetchSnapshotResponse, SaplingRemoteApiError> {
         let _ = request;
-        Err(EdenApiError::NotSupported)
+        Err(SaplingRemoteApiError::NotSupported)
     }
 
     /// Alter the properties of an existing snapshot
     async fn alter_snapshot(
         &self,
         request: AlterSnapshotRequest,
-    ) -> Result<AlterSnapshotResponse, EdenApiError> {
+    ) -> Result<AlterSnapshotResponse, SaplingRemoteApiError> {
         let _ = request;
-        Err(EdenApiError::NotSupported)
+        Err(SaplingRemoteApiError::NotSupported)
     }
 
     /// Download single file from upload token
-    async fn download_file(&self, token: UploadToken) -> Result<Bytes, EdenApiError> {
+    async fn download_file(&self, token: UploadToken) -> Result<Bytes, SaplingRemoteApiError> {
         let _ = token;
-        Err(EdenApiError::NotSupported)
+        Err(SaplingRemoteApiError::NotSupported)
     }
 
     /// Download mutation info related to given commits
     async fn commit_mutations(
         &self,
         commits: Vec<HgId>,
-    ) -> Result<Vec<CommitMutationsResponse>, EdenApiError> {
+    ) -> Result<Vec<CommitMutationsResponse>, SaplingRemoteApiError> {
         let _ = commits;
-        Err(EdenApiError::NotSupported)
+        Err(SaplingRemoteApiError::NotSupported)
     }
 
     /// Translate commit IDs to a different commit ID scheme
@@ -357,15 +361,15 @@ pub trait EdenApi: Send + Sync + 'static {
         scheme: CommitIdScheme,
         from_repo: Option<String>,
         to_repo: Option<String>,
-    ) -> Result<Response<CommitTranslateIdResponse>, EdenApiError> {
+    ) -> Result<Response<CommitTranslateIdResponse>, SaplingRemoteApiError> {
         let _ = (commits, scheme, from_repo, to_repo);
-        Err(EdenApiError::NotSupported)
+        Err(SaplingRemoteApiError::NotSupported)
     }
 
     /// Fetch metadata describing the last commit to modify each line in given file(s)
-    async fn blame(&self, files: Vec<Key>) -> Result<Response<BlameResult>, EdenApiError> {
+    async fn blame(&self, files: Vec<Key>) -> Result<Response<BlameResult>, SaplingRemoteApiError> {
         let _ = files;
-        Err(EdenApiError::NotSupported)
+        Err(SaplingRemoteApiError::NotSupported)
     }
 
     /// Retrieves users workspace from commit cloud
@@ -373,25 +377,25 @@ pub trait EdenApi: Send + Sync + 'static {
         &self,
         workspace: String,
         reponame: String,
-    ) -> Result<WorkspaceData, EdenApiError> {
+    ) -> Result<WorkspaceData, SaplingRemoteApiError> {
         let _ = (workspace, reponame);
-        Err(EdenApiError::NotSupported)
+        Err(SaplingRemoteApiError::NotSupported)
     }
 
     async fn cloud_references(
         &self,
         data: GetReferencesParams,
-    ) -> Result<ReferencesData, EdenApiError> {
+    ) -> Result<ReferencesData, SaplingRemoteApiError> {
         let _ = data;
-        Err(EdenApiError::NotSupported)
+        Err(SaplingRemoteApiError::NotSupported)
     }
 
     async fn cloud_update_references(
         &self,
         data: UpdateReferencesParams,
-    ) -> Result<ReferencesData, EdenApiError> {
+    ) -> Result<ReferencesData, SaplingRemoteApiError> {
         let _ = data;
-        Err(EdenApiError::NotSupported)
+        Err(SaplingRemoteApiError::NotSupported)
     }
 
     /// Fetch files matching the given suffixes on the given commit
@@ -399,8 +403,8 @@ pub trait EdenApi: Send + Sync + 'static {
         &self,
         commit: CommitId,
         suffixes: Vec<String>,
-    ) -> Result<Response<SuffixQueryResponse>, EdenApiError> {
+    ) -> Result<Response<SuffixQueryResponse>, SaplingRemoteApiError> {
         let _ = (commit, suffixes);
-        Err(EdenApiError::NotSupported)
+        Err(SaplingRemoteApiError::NotSupported)
     }
 }

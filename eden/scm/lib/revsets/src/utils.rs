@@ -18,7 +18,7 @@ use dag::ops::IdConvert;
 use dag::DagAlgorithm;
 use dag::Id;
 use dag::Vertex;
-use edenapi::EdenApi;
+use edenapi::SaplingRemoteApi;
 use metalog::MetaLog;
 use refencode::decode_bookmarks;
 use refencode::decode_remotenames;
@@ -37,7 +37,7 @@ struct LookupArgs<'a> {
     metalog: &'a MetaLog,
     treestate: Option<&'a TreeState>,
     config: &'a dyn Config,
-    edenapi: Option<&'a dyn EdenApi>,
+    edenapi: Option<&'a dyn SaplingRemoteApi>,
 }
 
 pub fn resolve_single(
@@ -47,7 +47,7 @@ pub fn resolve_single(
     dag: &dyn DagAlgorithm,
     metalog: &MetaLog,
     treestate: Option<&TreeState>,
-    edenapi: Option<&dyn EdenApi>,
+    edenapi: Option<&dyn SaplingRemoteApi>,
 ) -> Result<HgId> {
     let args = LookupArgs {
         config,

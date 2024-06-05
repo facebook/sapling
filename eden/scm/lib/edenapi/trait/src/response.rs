@@ -16,7 +16,7 @@ use http_client::AsyncResponse as AsyncHttpResponse;
 use http_client::Response as HttpResponse;
 use http_client::Stats;
 
-use crate::errors::EdenApiError;
+use crate::errors::SaplingRemoteApiError;
 
 const SERVER_HEADER: &str = "server";
 const REQUEST_ID_HEADER: &str = "x-request-id";
@@ -28,8 +28,10 @@ const MONONOKE_HOST: &str = "x-mononoke-host";
 
 /// A generic `Stream` of "entries" representing the deserialized content
 /// of a streaming response from the server.
-pub type Entries<T> = Pin<Box<dyn Stream<Item = Result<T, EdenApiError>> + Send + 'static>>;
-pub type StatsFuture = Pin<Box<dyn Future<Output = Result<Stats, EdenApiError>> + Send + 'static>>;
+pub type Entries<T> =
+    Pin<Box<dyn Stream<Item = Result<T, SaplingRemoteApiError>> + Send + 'static>>;
+pub type StatsFuture =
+    Pin<Box<dyn Future<Output = Result<Stats, SaplingRemoteApiError>> + Send + 'static>>;
 
 /// The result of a data fetching operation, which may have involved
 /// several individual HTTP requests.
@@ -54,23 +56,23 @@ impl<T: Send + 'static> Response<T> {
     }
 
     /// Flatten the response into a `Vec`.
-    pub async fn flatten(self) -> Result<Vec<T>, EdenApiError> {
+    pub async fn flatten(self) -> Result<Vec<T>, SaplingRemoteApiError> {
         self.entries.try_collect().await
     }
 
     /// Read one (and presumably the only) item from the response
-    pub async fn single(mut self) -> Result<T, EdenApiError> {
+    pub async fn single(mut self) -> Result<T, SaplingRemoteApiError> {
         self.entries
             .try_next()
             .await
-            .and_then(|opt| opt.ok_or(EdenApiError::NoResponse))
+            .and_then(|opt| opt.ok_or(SaplingRemoteApiError::NoResponse))
     }
 
     /// Wrap entries stream via then().
     pub fn then<Fut, F>(self, f: F) -> Self
     where
-        Fut: Future<Output = Result<T, EdenApiError>> + Send + 'static,
-        F: Fn(Result<T, EdenApiError>) -> Fut + Send + 'static,
+        Fut: Future<Output = Result<T, SaplingRemoteApiError>> + Send + 'static,
+        F: Fn(Result<T, SaplingRemoteApiError>) -> Fut + Send + 'static,
     {
         Self {
             entries: self.entries.then(f).boxed(),

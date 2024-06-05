@@ -20,12 +20,12 @@ pub use edenapi_trait::ResponseMeta;
 pub use edenapi_types as types;
 pub use http_client::Stats;
 
-pub use crate::api::EdenApi;
+pub use crate::api::SaplingRemoteApi;
 pub use crate::builder::Builder;
 pub use crate::builder::HttpClientBuilder;
 pub use crate::client::Client;
 pub use crate::errors::ConfigError;
-pub use crate::errors::EdenApiError;
+pub use crate::errors::SaplingRemoteApiError;
 pub use crate::response::BlockingResponse;
 
-pub type Result<T> = std::result::Result<T, EdenApiError>;
+pub type Result<T> = std::result::Result<T, SaplingRemoteApiError>;

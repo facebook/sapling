@@ -21,7 +21,7 @@ use cpython_ext::PyCell;
 use cpython_ext::PyPathBuf;
 use cpython_ext::ResultPyErrExt;
 use edenapi::Builder;
-use edenapi::EdenApi;
+use edenapi::SaplingRemoteApi;
 use edenapi_ext::check_files;
 use edenapi_ext::download_files;
 use edenapi_ext::upload_snapshot;
@@ -66,12 +66,12 @@ use minibytes::Bytes;
 use pyconfigloader::config;
 use pyrevisionstore::edenapifilestore;
 use pyrevisionstore::edenapitreestore;
-use revisionstore::EdenApiFileStore;
-use revisionstore::EdenApiTreeStore;
+use revisionstore::SaplingRemoteApiFileStore;
+use revisionstore::SaplingRemoteApiTreeStore;
 use types::HgId;
 use types::RepoPathBuf;
 
-use crate::pyext::EdenApiPyExt;
+use crate::pyext::SaplingRemoteApiPyExt;
 use crate::stats::stats;
 use crate::util::to_path;
 
@@ -79,9 +79,9 @@ use crate::util::to_path;
 //
 // This is basically just FFI boilerplate. The actual functionality
 // is implemented as the default implementations of the methods in
-// the `EdenApiPyExt` trait.
+// the `SaplingRemoteApiPyExt` trait.
 py_class!(pub class client |py| {
-    data inner: Arc<dyn EdenApi>;
+    data inner: Arc<dyn SaplingRemoteApi>;
 
     def __new__(
         _cls,
@@ -228,7 +228,7 @@ py_class!(pub class client |py| {
         &self
     ) -> PyResult<edenapifilestore> {
         let edenapi = self.extract_inner(py);
-        let store = EdenApiFileStore::new(edenapi);
+        let store = SaplingRemoteApiFileStore::new(edenapi);
 
         edenapifilestore::new(py, store)
     }
@@ -237,7 +237,7 @@ py_class!(pub class client |py| {
         &self
     ) -> PyResult<edenapitreestore> {
         let edenapi = self.extract_inner(py);
-        let store = EdenApiTreeStore::new(edenapi);
+        let store = SaplingRemoteApiTreeStore::new(edenapi);
 
         edenapitreestore::new(py, store)
     }
@@ -570,7 +570,7 @@ py_class!(pub class client |py| {
 });
 
 impl ExtractInnerRef for client {
-    type Inner = Arc<dyn EdenApi>;
+    type Inner = Arc<dyn SaplingRemoteApi>;
 
     fn extract_inner_ref<'a>(&'a self, py: Python<'a>) -> &'a Self::Inner {
         self.inner(py)
@@ -578,7 +578,7 @@ impl ExtractInnerRef for client {
 }
 
 impl client {
-    pub fn from_edenapi(py: Python, client: Arc<dyn EdenApi>) -> PyResult<Self> {
+    pub fn from_edenapi(py: Python, client: Arc<dyn SaplingRemoteApi>) -> PyResult<Self> {
         Self::create_instance(py, client)
     }
 }

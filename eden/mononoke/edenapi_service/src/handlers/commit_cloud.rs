@@ -16,26 +16,26 @@ use futures::FutureExt;
 use futures::StreamExt;
 use mononoke_api_hg::HgRepoContext;
 
-use super::handler::EdenApiContext;
-use super::EdenApiHandler;
-use super::EdenApiMethod;
+use super::handler::SaplingRemoteApiContext;
 use super::HandlerResult;
+use super::SaplingRemoteApiHandler;
+use super::SaplingRemoteApiMethod;
 use crate::errors::ErrorKind;
 pub struct CommitCloudWorkspace;
 pub struct CommitCloudReferences;
 pub struct CommitCloudUpdateReferences;
 
 #[async_trait]
-impl EdenApiHandler for CommitCloudWorkspace {
+impl SaplingRemoteApiHandler for CommitCloudWorkspace {
     type Request = CloudWorkspaceRequest;
     type Response = WorkspaceData;
 
     const HTTP_METHOD: hyper::Method = hyper::Method::POST;
-    const API_METHOD: EdenApiMethod = EdenApiMethod::CloudWorkspace;
+    const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::CloudWorkspace;
     const ENDPOINT: &'static str = "/cloud/workspace";
 
     async fn handler(
-        ectx: EdenApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
+        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
         let repo = ectx.repo();
@@ -67,16 +67,16 @@ async fn get_workspace(
 }
 
 #[async_trait]
-impl EdenApiHandler for CommitCloudReferences {
+impl SaplingRemoteApiHandler for CommitCloudReferences {
     type Request = GetReferencesParams;
     type Response = ReferencesData;
 
     const HTTP_METHOD: hyper::Method = hyper::Method::POST;
-    const API_METHOD: EdenApiMethod = EdenApiMethod::CloudReferences;
+    const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::CloudReferences;
     const ENDPOINT: &'static str = "/cloud/references";
 
     async fn handler(
-        ectx: EdenApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
+        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
         let repo = ectx.repo();
@@ -93,16 +93,16 @@ async fn get_references(
 }
 
 #[async_trait]
-impl EdenApiHandler for CommitCloudUpdateReferences {
+impl SaplingRemoteApiHandler for CommitCloudUpdateReferences {
     type Request = UpdateReferencesParams;
     type Response = ReferencesData;
 
     const HTTP_METHOD: hyper::Method = hyper::Method::POST;
-    const API_METHOD: EdenApiMethod = EdenApiMethod::CloudUpdateReferences;
+    const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::CloudUpdateReferences;
     const ENDPOINT: &'static str = "/cloud/update_references";
 
     async fn handler(
-        ectx: EdenApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
+        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
         let repo = ectx.repo();

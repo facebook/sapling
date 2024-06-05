@@ -39,7 +39,6 @@ use edenapi::types::CommitLocationToHashRequest;
 use edenapi::types::CommitLocationToHashResponse;
 use edenapi::types::CommitMutationsResponse;
 use edenapi::types::CommitRevlogData;
-use edenapi::types::EdenApiServerError;
 use edenapi::types::Extra;
 use edenapi::types::FileAuxData;
 use edenapi::types::FileContent;
@@ -59,6 +58,7 @@ use edenapi::types::LookupResult;
 use edenapi::types::NodeInfo;
 use edenapi::types::Parents;
 use edenapi::types::RepoPathBuf;
+use edenapi::types::SaplingRemoteApiServerError;
 use edenapi::types::SetBookmarkResponse;
 use edenapi::types::TreeAttributes;
 use edenapi::types::TreeChildEntry;
@@ -70,10 +70,10 @@ use edenapi::types::UploadTokenData;
 use edenapi::types::UploadTokensResponse;
 use edenapi::types::UploadTreeEntry;
 use edenapi::types::UploadTreeResponse;
-use edenapi::EdenApi;
-use edenapi::EdenApiError;
 use edenapi::Response;
 use edenapi::ResponseMeta;
+use edenapi::SaplingRemoteApi;
+use edenapi::SaplingRemoteApiError;
 use edenapi_trait as edenapi;
 use futures::stream::BoxStream;
 use futures::stream::TryStreamExt;
@@ -94,15 +94,15 @@ use crate::EagerRepo;
 impl EagerRepo {
     /// Load file/tree store changes from disk.
     ///
-    /// This is intended to be used by EdenApi impls so content fetched
-    /// via EdenApi (during testing) is always fresh.
+    /// This is intended to be used by SaplingRemoteApi impls so content fetched
+    /// via SaplingRemoteApi (during testing) is always fresh.
     pub(crate) fn refresh_for_api(&self) {
         let _ = self.store.flush();
     }
 }
 
 #[async_trait::async_trait]
-impl EdenApi for EagerRepo {
+impl SaplingRemoteApi for EagerRepo {
     fn url(&self) -> Option<String> {
         Some(format!("eager:{}", self.dir.display()))
     }
@@ -111,7 +111,7 @@ impl EdenApi for EagerRepo {
         Ok(default_response_meta())
     }
 
-    async fn capabilities(&self) -> Result<Vec<String>, EdenApiError> {
+    async fn capabilities(&self) -> Result<Vec<String>, SaplingRemoteApiError> {
         Ok(vec![
             "segmented-changelog".to_string(),
             "commit-graph-segments".to_string(),
@@ -244,7 +244,7 @@ impl EdenApi for EagerRepo {
         &self,
         keys: Vec<Key>,
         attributes: Option<TreeAttributes>,
-    ) -> edenapi::Result<Response<Result<TreeEntry, EdenApiServerError>>> {
+    ) -> edenapi::Result<Response<Result<TreeEntry, SaplingRemoteApiServerError>>> {
         debug!("trees {} {:?}", debug_key_list(&keys), attributes);
         self.refresh_for_api();
         let mut values = Vec::new();
@@ -268,7 +268,8 @@ impl EdenApi for EagerRepo {
             }
 
             if attributes.child_metadata {
-                let mut children: Vec<Result<TreeChildEntry, EdenApiServerError>> = Vec::new();
+                let mut children: Vec<Result<TreeChildEntry, SaplingRemoteApiServerError>> =
+                    Vec::new();
 
                 let tree_entry =
                     manifest_tree::TreeEntry(extract_body(&data), SerializationFormat::Hg);
@@ -276,7 +277,8 @@ impl EdenApi for EagerRepo {
                     let child = match child {
                         Ok(child) => child,
                         Err(err) => {
-                            children.push(Err(EdenApiServerError::with_key(key.clone(), err)));
+                            children
+                                .push(Err(SaplingRemoteApiServerError::with_key(key.clone(), err)));
                             continue;
                         }
                     };
@@ -340,9 +342,9 @@ impl EdenApi for EagerRepo {
         &self,
         common: Vec<HgId>,
         missing: Vec<HgId>,
-    ) -> Result<dag::CloneData<HgId>, EdenApiError> {
+    ) -> Result<dag::CloneData<HgId>, SaplingRemoteApiError> {
         ::fail::fail_point!("eagerepo::api::pulllazy", |_| {
-            Err(EdenApiError::NotSupported)
+            Err(SaplingRemoteApiError::NotSupported)
         });
 
         debug!("pull_lazy");
@@ -476,7 +478,7 @@ impl EdenApi for EagerRepo {
         &self,
         heads: Vec<HgId>,
         common: Vec<HgId>,
-    ) -> Result<Vec<CommitGraphEntry>, EdenApiError> {
+    ) -> Result<Vec<CommitGraphEntry>, SaplingRemoteApiError> {
         debug!(
             "commit_graph {} {}",
             debug_hgid_list(&heads),
@@ -518,9 +520,9 @@ impl EdenApi for EagerRepo {
         &self,
         heads: Vec<HgId>,
         common: Vec<HgId>,
-    ) -> Result<Vec<CommitGraphSegmentsEntry>, EdenApiError> {
+    ) -> Result<Vec<CommitGraphSegmentsEntry>, SaplingRemoteApiError> {
         ::fail::fail_point!("eagerepo::api::commitgraphsegments", |_| {
-            Err(EdenApiError::NotSupported)
+            Err(SaplingRemoteApiError::NotSupported)
         });
 
         debug!(
@@ -571,14 +573,14 @@ impl EdenApi for EagerRepo {
         to: Option<HgId>,
         from: Option<HgId>,
         _pushvars: HashMap<String, String>,
-    ) -> Result<SetBookmarkResponse, EdenApiError> {
+    ) -> Result<SetBookmarkResponse, SaplingRemoteApiError> {
         debug!("bookmarks {:?} -> {:?}", from, to);
         self.refresh_for_api();
 
         let mut bms = self.get_bookmarks_map().map_err(map_crate_err)?;
 
         if to.is_none() && from.is_none() {
-            return Err(EdenApiError::HttpError {
+            return Err(SaplingRemoteApiError::HttpError {
                 status: StatusCode::BAD_REQUEST,
                 message: "must specify one of 'to' or 'from'".to_string(),
                 headers: Default::default(),
@@ -589,7 +591,7 @@ impl EdenApi for EagerRepo {
         if let Some(from) = from {
             match bms.get(&bookmark) {
                 None => {
-                    return Err(EdenApiError::HttpError {
+                    return Err(SaplingRemoteApiError::HttpError {
                         status: StatusCode::NOT_FOUND,
                         message: format!("bookmark {bookmark} doesn't exist"),
                         headers: Default::default(),
@@ -598,7 +600,7 @@ impl EdenApi for EagerRepo {
                 }
                 Some(node) => {
                     if *node != from {
-                        return Err(EdenApiError::HttpError {
+                        return Err(SaplingRemoteApiError::HttpError {
                             status: StatusCode::BAD_REQUEST,
                             message: format!(
                                 "bookmark {bookmark}'s current value is {node}, not {from}"
@@ -610,7 +612,7 @@ impl EdenApi for EagerRepo {
                 }
             }
         } else if bms.contains_key(&bookmark) {
-            return Err(EdenApiError::HttpError {
+            return Err(SaplingRemoteApiError::HttpError {
                 status: StatusCode::BAD_REQUEST,
                 message: format!("bookmark {bookmark} already exists"),
                 headers: Default::default(),
@@ -634,17 +636,17 @@ impl EdenApi for EagerRepo {
     async fn hash_prefixes_lookup(
         &self,
         prefixes: Vec<String>,
-    ) -> Result<Vec<CommitHashLookupResponse>, EdenApiError> {
+    ) -> Result<Vec<CommitHashLookupResponse>, SaplingRemoteApiError> {
         self.refresh_for_api();
         let dag = self.dag().await;
         prefixes
             .into_iter()
             .map(
-                move |prefix| -> Result<CommitHashLookupResponse, EdenApiError> {
+                move |prefix| -> Result<CommitHashLookupResponse, SaplingRemoteApiError> {
                     let req = make_hash_lookup_request(prefix.clone())?;
                     let resp =
                         non_blocking_result(dag.vertexes_by_hex_prefix(prefix.as_bytes(), 100))
-                            .map_err(|e| EdenApiError::Other(e.into()));
+                            .map_err(|e| SaplingRemoteApiError::Other(e.into()));
                     resp.and_then(|vertexes| {
                         Ok(CommitHashLookupResponse {
                             request: req,
@@ -665,7 +667,7 @@ impl EdenApi for EagerRepo {
     async fn commit_mutations(
         &self,
         mut commits: Vec<HgId>,
-    ) -> Result<Vec<CommitMutationsResponse>, EdenApiError> {
+    ) -> Result<Vec<CommitMutationsResponse>, SaplingRemoteApiError> {
         commits.sort();
         debug!("commit_mutations {}", debug_hgid_list(&commits));
         self.refresh_for_api();
@@ -707,7 +709,7 @@ impl EdenApi for EagerRepo {
         data: Vec<(AnyFileContentId, Bytes)>,
         bubble_id: Option<NonZeroU64>,
         copy_from_bubble_id: Option<NonZeroU64>,
-    ) -> Result<Response<UploadToken>, EdenApiError> {
+    ) -> Result<Response<UploadToken>, SaplingRemoteApiError> {
         debug!(?data, "process_files_upload");
 
         self.refresh_for_api();
@@ -746,7 +748,7 @@ impl EdenApi for EagerRepo {
     async fn upload_filenodes_batch(
         &self,
         items: Vec<HgFilenodeData>,
-    ) -> Result<Response<UploadTokensResponse>, EdenApiError> {
+    ) -> Result<Response<UploadTokensResponse>, SaplingRemoteApiError> {
         debug!(?items, "upload_filenodes_batch");
 
         self.refresh_for_api();
@@ -802,7 +804,7 @@ impl EdenApi for EagerRepo {
     async fn upload_trees_batch(
         &self,
         items: Vec<UploadTreeEntry>,
-    ) -> Result<Response<UploadTreeResponse>, EdenApiError> {
+    ) -> Result<Response<UploadTreeResponse>, SaplingRemoteApiError> {
         debug!(?items, "upload_trees_batch");
 
         self.refresh_for_api();
@@ -845,12 +847,12 @@ impl EdenApi for EagerRepo {
         &self,
         changesets: Vec<UploadHgChangeset>,
         mutations: Vec<HgMutationEntryContent>,
-    ) -> Result<Response<UploadTokensResponse>, EdenApiError> {
+    ) -> Result<Response<UploadTokensResponse>, SaplingRemoteApiError> {
         debug!(?changesets, ?mutations, "upload_changesets");
         self.refresh_for_api();
 
         ::fail::fail_point!("eagerepo::api::uploadchangesets", |_| {
-            Err(EdenApiError::HttpError {
+            Err(SaplingRemoteApiError::HttpError {
                 status: StatusCode::INTERNAL_SERVER_ERROR,
                 message: "failpoint".to_string(),
                 headers: Default::default(),
@@ -912,7 +914,7 @@ impl EdenApi for EagerRepo {
             let mut mut_store = self.mut_store.lock().await;
             for m in mutations {
                 if let Err(err) = mut_store.add(&edenapi_mutation_to_local(m)) {
-                    return Err(EdenApiError::HttpError {
+                    return Err(SaplingRemoteApiError::HttpError {
                         status: StatusCode::INTERNAL_SERVER_ERROR,
                         message: format!("error inserting mutation entry: {:?}", err),
                         headers: Default::default(),
@@ -932,7 +934,7 @@ impl EdenApi for EagerRepo {
         items: Vec<AnyId>,
         bubble_id: Option<NonZeroU64>,
         copy_from_bubble_id: Option<NonZeroU64>,
-    ) -> Result<Vec<LookupResponse>, EdenApiError> {
+    ) -> Result<Vec<LookupResponse>, SaplingRemoteApiError> {
         debug!(?items, "lookup_batch");
 
         self.refresh_for_api();
@@ -970,7 +972,7 @@ impl EdenApi for EagerRepo {
                     });
                 }
                 Err(e) => {
-                    return Err(EdenApiError::HttpError {
+                    return Err(SaplingRemoteApiError::HttpError {
                         status: StatusCode::INTERNAL_SERVER_ERROR,
                         message: format!("{:?}", e),
                         headers: Default::default(),
@@ -1075,7 +1077,7 @@ impl EagerRepo {
         match self.get_sha1_blob(id) {
             Ok(None) => {
                 trace!(" not found: {}", id.to_hex());
-                Err(EdenApiError::HttpError {
+                Err(SaplingRemoteApiError::HttpError {
                     status: StatusCode::NOT_FOUND,
                     message: format!("{} cannot be found", id.to_hex()),
                     headers: Default::default(),
@@ -1086,7 +1088,7 @@ impl EagerRepo {
                 trace!(" found: {}, {} bytes", id.to_hex(), data.len());
                 Ok(data)
             }
-            Err(e) => Err(EdenApiError::HttpError {
+            Err(e) => Err(SaplingRemoteApiError::HttpError {
                 status: StatusCode::INTERNAL_SERVER_ERROR,
                 message: format!("{:?}", e),
                 headers: Default::default(),
@@ -1104,7 +1106,7 @@ impl EagerRepo {
         let actual_id = match self.add_sha1_blob(blob.as_ref()) {
             Ok(actual_id) => actual_id,
             Err(e) => {
-                return Err(EdenApiError::HttpError {
+                return Err(SaplingRemoteApiError::HttpError {
                     status: StatusCode::INTERNAL_SERVER_ERROR,
                     message: format!("{:?}", e),
                     headers: Default::default(),
@@ -1113,7 +1115,7 @@ impl EagerRepo {
             }
         };
         if id != actual_id {
-            return Err(EdenApiError::HttpError {
+            return Err(SaplingRemoteApiError::HttpError {
                 status: StatusCode::BAD_REQUEST,
                 message: "content hash mismatch".to_string(),
                 headers: Default::default(),
@@ -1125,17 +1127,19 @@ impl EagerRepo {
     }
 
     async fn flush_for_api(&self, handler: &str) -> edenapi::Result<()> {
-        self.flush().await.map_err(|err| EdenApiError::HttpError {
-            status: StatusCode::INTERNAL_SERVER_ERROR,
-            message: format!("error flushing dag/store: {:?}", err),
-            headers: Default::default(),
-            url: self.url(handler),
-        })
+        self.flush()
+            .await
+            .map_err(|err| SaplingRemoteApiError::HttpError {
+                status: StatusCode::INTERNAL_SERVER_ERROR,
+                message: format!("error flushing dag/store: {:?}", err),
+                headers: Default::default(),
+                url: self.url(handler),
+            })
     }
 
     /// Not implement error.
-    fn not_implemented_error(&self, message: String, handler: &str) -> EdenApiError {
-        EdenApiError::HttpError {
+    fn not_implemented_error(&self, message: String, handler: &str) -> SaplingRemoteApiError {
+        SaplingRemoteApiError::HttpError {
             status: StatusCode::NOT_IMPLEMENTED,
             message,
             headers: Default::default(),
@@ -1164,22 +1168,24 @@ impl EagerRepo {
     }
 }
 
-/// Optionally build `EdenApi` from config.
+/// Optionally build `SaplingRemoteApi` from config.
 ///
-/// If the config does not specify eagerepo-based `EdenApi`, return `Ok(None)`.
-pub fn edenapi_from_config(config: &dyn Config) -> edenapi::Result<Option<Arc<dyn EdenApi>>> {
+/// If the config does not specify eagerepo-based `SaplingRemoteApi`, return `Ok(None)`.
+pub fn edenapi_from_config(
+    config: &dyn Config,
+) -> edenapi::Result<Option<Arc<dyn SaplingRemoteApi>>> {
     for (section, name) in [("paths", "default"), ("edenapi", "url")] {
         if let Ok(value) = config.get_or_default::<String>(section, name) {
             trace!(
                 target: "eagerepo::edenapi_from_config",
-                "attempt to create EagerRepo as EdenApi from config {}.{}={}",
+                "attempt to create EagerRepo as SaplingRemoteApi from config {}.{}={}",
                 section,
                 name,
                 &value
             );
             if let Some(path) = EagerRepo::url_to_dir(&value) {
-                let repo =
-                    EagerRepo::open(&path).map_err(|e| edenapi::EdenApiError::Other(e.into()))?;
+                let repo = EagerRepo::open(&path)
+                    .map_err(|e| edenapi::SaplingRemoteApiError::Other(e.into()))?;
                 return Ok(Some(Arc::new(repo)));
             }
         }
@@ -1245,7 +1251,7 @@ fn convert_to_response<T: Send + Sync + 'static>(values: Vec<edenapi::Result<T>>
 
 fn check_convert_to_hgid<'a>(vertexes: impl Iterator<Item = &'a Vertex>) -> edenapi::Result<()> {
     for v in vertexes {
-        let _ = HgId::from_slice(v.as_ref()).map_err(|e| EdenApiError::Other(e.into()))?;
+        let _ = HgId::from_slice(v.as_ref()).map_err(|e| SaplingRemoteApiError::Other(e.into()))?;
     }
     Ok(())
 }
@@ -1269,12 +1275,12 @@ fn convert_clone_data(
     Ok(clone_data)
 }
 
-fn map_dag_err(e: dag::Error) -> EdenApiError {
-    EdenApiError::Other(e.into())
+fn map_dag_err(e: dag::Error) -> SaplingRemoteApiError {
+    SaplingRemoteApiError::Other(e.into())
 }
 
-fn map_crate_err(e: crate::Error) -> EdenApiError {
-    EdenApiError::Other(e.into())
+fn map_crate_err(e: crate::Error) -> SaplingRemoteApiError {
+    SaplingRemoteApiError::Other(e.into())
 }
 
 fn debug_key_list(keys: &[Key]) -> String {

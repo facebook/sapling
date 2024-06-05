@@ -17,9 +17,9 @@ use progress_model::ProgressBar;
 use tracing::field;
 
 use super::hgid_keys;
-use super::EdenApiRemoteStore;
-use super::EdenApiStoreKind;
 use super::File;
+use super::SaplingRemoteApiRemoteStore;
+use super::SaplingRemoteApiStoreKind;
 use super::Tree;
 use crate::datastore::HgIdDataStore;
 use crate::datastore::HgIdMutableDeltaStore;
@@ -30,26 +30,26 @@ use crate::localstore::LocalStore;
 use crate::types::StoreKey;
 use crate::util;
 
-/// A data store backed by an `EdenApiRemoteStore` and a mutable store.
+/// A data store backed by an `SaplingRemoteApiRemoteStore` and a mutable store.
 ///
 /// Data will be fetched over the network via the remote store and stored in the
 /// mutable store before being returned to the caller. This type is not exported
 /// because it is intended to be used as a trait object.
-pub(super) struct EdenApiDataStore<T> {
-    remote: Arc<EdenApiRemoteStore<T>>,
+pub(super) struct SaplingRemoteApiDataStore<T> {
+    remote: Arc<SaplingRemoteApiRemoteStore<T>>,
     store: Arc<dyn HgIdMutableDeltaStore>,
 }
 
-impl<T: EdenApiStoreKind> EdenApiDataStore<T> {
+impl<T: SaplingRemoteApiStoreKind> SaplingRemoteApiDataStore<T> {
     pub(super) fn new(
-        remote: Arc<EdenApiRemoteStore<T>>,
+        remote: Arc<SaplingRemoteApiRemoteStore<T>>,
         store: Arc<dyn HgIdMutableDeltaStore>,
     ) -> Self {
         Self { remote, store }
     }
 }
 
-impl RemoteDataStore for EdenApiDataStore<File> {
+impl RemoteDataStore for SaplingRemoteApiDataStore<File> {
     fn prefetch(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
         let client = self.remote.client.clone();
         let hgidkeys = hgid_keys(keys);
@@ -119,7 +119,7 @@ impl RemoteDataStore for EdenApiDataStore<File> {
     }
 }
 
-impl RemoteDataStore for EdenApiDataStore<Tree> {
+impl RemoteDataStore for SaplingRemoteApiDataStore<Tree> {
     fn prefetch(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
         let client = self.remote.client.clone();
         let hgidkeys = hgid_keys(keys);
@@ -169,7 +169,7 @@ impl RemoteDataStore for EdenApiDataStore<Tree> {
     }
 }
 
-impl HgIdDataStore for EdenApiDataStore<File> {
+impl HgIdDataStore for SaplingRemoteApiDataStore<File> {
     fn get(&self, key: StoreKey) -> Result<StoreResult<Vec<u8>>> {
         self.prefetch(&[key.clone()])?;
         self.store.get(key)
@@ -185,7 +185,7 @@ impl HgIdDataStore for EdenApiDataStore<File> {
     }
 }
 
-impl HgIdDataStore for EdenApiDataStore<Tree> {
+impl HgIdDataStore for SaplingRemoteApiDataStore<Tree> {
     fn get(&self, key: StoreKey) -> Result<StoreResult<Vec<u8>>> {
         self.prefetch(&[key.clone()])?;
         self.store.get(key)
@@ -201,7 +201,7 @@ impl HgIdDataStore for EdenApiDataStore<Tree> {
     }
 }
 
-impl<T: EdenApiStoreKind> LocalStore for EdenApiDataStore<T> {
+impl<T: SaplingRemoteApiStoreKind> LocalStore for SaplingRemoteApiDataStore<T> {
     fn get_missing(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
         Ok(keys.to_vec())
     }
@@ -241,8 +241,8 @@ mod tests {
         let d = delta("1234", None, k.clone());
         let files = hashmap! { k.clone() => d.data.clone() };
 
-        let client = FakeEdenApi::new().files(files).into_arc();
-        let remote_files = EdenApiRemoteStore::<File>::new(client);
+        let client = FakeSaplingRemoteApi::new().files(files).into_arc();
+        let remote_files = SaplingRemoteApiRemoteStore::<File>::new(client);
 
         // Set up local cache store to write received data.
         let mut store = FileStore::empty();
@@ -288,8 +288,8 @@ mod tests {
         let d = delta("1234", None, k.clone());
         let files = hashmap! { k.clone() => d.data.clone() };
 
-        let client = FakeEdenApi::new().files(files).into_arc();
-        let remote_files = EdenApiRemoteStore::<File>::new(client);
+        let client = FakeSaplingRemoteApi::new().files(files).into_arc();
+        let remote_files = SaplingRemoteApiRemoteStore::<File>::new(client);
 
         // Set up local cache store to write received data.
         let mut store = FileStore::empty();
@@ -335,8 +335,8 @@ mod tests {
         let d = delta("1234", None, k.clone());
         let trees = hashmap! { k.clone() => d.data.clone() };
 
-        let client = FakeEdenApi::new().trees(trees).into_arc();
-        let remote_trees = EdenApiRemoteStore::<Tree>::new(client);
+        let client = FakeSaplingRemoteApi::new().trees(trees).into_arc();
+        let remote_trees = SaplingRemoteApiRemoteStore::<Tree>::new(client);
 
         // Set up local cache store to write received data.
         let mut store = TreeStore::empty();
@@ -381,8 +381,8 @@ mod tests {
         let d = delta("1234", None, k.clone());
         let trees = hashmap! { k.clone() => d.data.clone() };
 
-        let client = FakeEdenApi::new().trees(trees).into_arc();
-        let remote_trees = EdenApiRemoteStore::<Tree>::new(client);
+        let client = FakeSaplingRemoteApi::new().trees(trees).into_arc();
+        let remote_trees = SaplingRemoteApiRemoteStore::<Tree>::new(client);
 
         // Set up local cache store to write received data.
         let mut store = TreeStore::empty();
@@ -422,8 +422,8 @@ mod tests {
 
     #[test]
     fn test_not_found() -> Result<()> {
-        let client = FakeEdenApi::new().into_arc();
-        let remote_trees = EdenApiRemoteStore::<Tree>::new(client);
+        let client = FakeSaplingRemoteApi::new().into_arc();
+        let remote_trees = SaplingRemoteApiRemoteStore::<Tree>::new(client);
 
         // Set up local cache store to write received data.
         let mut store = TreeStore::empty();
@@ -447,8 +447,8 @@ mod tests {
         let d = delta("1234", None, k.clone());
         let files = hashmap! { k.clone() => d.data };
 
-        let client = FakeEdenApi::new().files(files).into_arc();
-        let remote_files = EdenApiRemoteStore::<File>::new(client);
+        let client = FakeSaplingRemoteApi::new().files(files).into_arc();
+        let remote_files = SaplingRemoteApiRemoteStore::<File>::new(client);
 
         // Set up local cache store to write received data.
         let mut store = FileStore::empty();
@@ -483,7 +483,7 @@ mod tests {
             )?,
         };
 
-        // Test that we can read aux data from EdenApi
+        // Test that we can read aux data from SaplingRemoteApi
         let fetched = store
             .fetch(
                 std::iter::once(k.clone()),
@@ -494,7 +494,7 @@ mod tests {
             .expect("key not found");
         assert_eq!(fetched.aux_data().expect("no aux data found"), expected);
 
-        // Disable EdenApi and local cache, make sure we can read from aux cache.
+        // Disable SaplingRemoteApi and local cache, make sure we can read from aux cache.
         store.edenapi = None;
         store.indexedlog_cache = None;
         let fetched = store

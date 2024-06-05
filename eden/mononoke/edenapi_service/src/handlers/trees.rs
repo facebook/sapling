@@ -14,8 +14,8 @@ use edenapi_types::wire::WireTreeRequest;
 use edenapi_types::AnyId;
 use edenapi_types::Batch;
 use edenapi_types::DirectoryMetadata;
-use edenapi_types::EdenApiServerError;
 use edenapi_types::FileAuxData;
+use edenapi_types::SaplingRemoteApiServerError;
 use edenapi_types::TreeAttributes;
 use edenapi_types::TreeChildEntry;
 use edenapi_types::TreeEntry;
@@ -53,11 +53,11 @@ use serde::Deserialize;
 use types::Key;
 use types::RepoPathBuf;
 
-use super::handler::EdenApiContext;
-use super::EdenApiHandler;
-use super::EdenApiMethod;
+use super::handler::SaplingRemoteApiContext;
 use super::HandlerInfo;
 use super::HandlerResult;
+use super::SaplingRemoteApiHandler;
+use super::SaplingRemoteApiMethod;
 use crate::context::ServerContext;
 use crate::errors::ErrorKind;
 use crate::middleware::request_dumper::RequestDumper;
@@ -80,7 +80,10 @@ pub struct TreeParams {
 pub async fn trees(state: &mut State) -> Result<impl TryIntoResponse, HttpError> {
     let params = TreeParams::take_from(state);
 
-    state.put(HandlerInfo::new(&params.repo, EdenApiMethod::Trees));
+    state.put(HandlerInfo::new(
+        &params.repo,
+        SaplingRemoteApiMethod::Trees,
+    ));
 
     let rctx = RequestContext::borrow_from(state).clone();
     let sctx = ServerContext::borrow_from(state);
@@ -92,7 +95,7 @@ pub async fn trees(state: &mut State) -> Result<impl TryIntoResponse, HttpError>
     };
 
     if request.attributes.child_metadata && request.attributes.augmented_trees {
-        return Err(HttpError::e400(EdenApiServerError::new(
+        return Err(HttpError::e400(SaplingRemoteApiServerError::new(
             ErrorKind::InvalidRequest(
                 "Augmented trees and child metadata cannot be requested at the same time"
                     .to_string(),
@@ -112,12 +115,12 @@ pub async fn trees(state: &mut State) -> Result<impl TryIntoResponse, HttpError>
 fn fetch_all_trees(
     repo: HgRepoContext,
     request: TreeRequest,
-) -> impl Stream<Item = Result<TreeEntry, EdenApiServerError>> {
+) -> impl Stream<Item = Result<TreeEntry, SaplingRemoteApiServerError>> {
     let ctx = repo.ctx().clone();
 
     let fetches = request.keys.into_iter().map(move |key| {
         fetch_tree(repo.clone(), key.clone(), request.attributes)
-            .map(|r| r.map_err(|e| EdenApiServerError::with_key(key, e)))
+            .map(|r| r.map_err(|e| SaplingRemoteApiServerError::with_key(key, e)))
     });
 
     stream::iter(fetches)
@@ -225,9 +228,9 @@ async fn fetch_tree(
             .increment_counter(PerfCounterType::EdenapiTreesAuxData);
 
         if let Some(entries) = fetch_child_metadata_entries(&repo, &ctx).await? {
-            let children: Vec<Result<TreeChildEntry, EdenApiServerError>> = entries
+            let children: Vec<Result<TreeChildEntry, SaplingRemoteApiServerError>> = entries
                 .buffer_unordered(MAX_CONCURRENT_METADATA_FETCHES_PER_TREE_FETCH)
-                .map(|r| r.map_err(|e| EdenApiServerError::with_key(key.clone(), e)))
+                .map(|r| r.map_err(|e| SaplingRemoteApiServerError::with_key(key.clone(), e)))
                 .collect()
                 .await;
 
@@ -314,16 +317,16 @@ async fn store_tree(
 pub struct UploadTreesHandler;
 
 #[async_trait]
-impl EdenApiHandler for UploadTreesHandler {
+impl SaplingRemoteApiHandler for UploadTreesHandler {
     type Request = Batch<UploadTreeRequest>;
     type Response = UploadTreeResponse;
 
     const HTTP_METHOD: hyper::Method = hyper::Method::POST;
-    const API_METHOD: EdenApiMethod = EdenApiMethod::UploadTrees;
+    const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::UploadTrees;
     const ENDPOINT: &'static str = "/upload/trees";
 
     async fn handler(
-        ectx: EdenApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
+        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
         let repo = ectx.repo();

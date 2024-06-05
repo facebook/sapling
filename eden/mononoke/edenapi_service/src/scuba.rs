@@ -16,7 +16,7 @@ use scuba_ext::MononokeScubaSampleBuilder;
 use crate::handlers::HandlerInfo;
 
 #[derive(Copy, Clone, Debug)]
-pub enum EdenApiScubaKey {
+pub enum SaplingRemoteApiScubaKey {
     Repo,
     Method,
     User,
@@ -24,7 +24,7 @@ pub enum EdenApiScubaKey {
     HandlerErrorCount,
 }
 
-impl AsRef<str> for EdenApiScubaKey {
+impl AsRef<str> for SaplingRemoteApiScubaKey {
     fn as_ref(&self) -> &'static str {
         match self {
             Self::Repo => "repo",
@@ -36,20 +36,20 @@ impl AsRef<str> for EdenApiScubaKey {
     }
 }
 
-impl From<EdenApiScubaKey> for String {
-    fn from(key: EdenApiScubaKey) -> Self {
+impl From<SaplingRemoteApiScubaKey> for String {
+    fn from(key: SaplingRemoteApiScubaKey) -> Self {
         key.as_ref().to_string()
     }
 }
 
 #[derive(Clone)]
-pub struct EdenApiScubaHandler {
+pub struct SaplingRemoteApiScubaHandler {
     request_context: Option<RequestContext>,
     handler_info: Option<HandlerInfo>,
     client_username: Option<String>,
 }
 
-impl ScubaHandler for EdenApiScubaHandler {
+impl ScubaHandler for SaplingRemoteApiScubaHandler {
     fn from_state(state: &State) -> Self {
         Self {
             request_context: state.try_borrow::<RequestContext>().cloned(),
@@ -62,11 +62,14 @@ impl ScubaHandler for EdenApiScubaHandler {
     }
 
     fn log_processed(self, info: &PostResponseInfo, mut scuba: MononokeScubaSampleBuilder) {
-        scuba.add_opt(EdenApiScubaKey::User, self.client_username);
+        scuba.add_opt(SaplingRemoteApiScubaKey::User, self.client_username);
 
         if let Some(info) = self.handler_info {
-            scuba.add_opt(EdenApiScubaKey::Repo, info.repo.clone());
-            scuba.add_opt(EdenApiScubaKey::Method, info.method.map(|m| m.to_string()));
+            scuba.add_opt(SaplingRemoteApiScubaKey::Repo, info.repo.clone());
+            scuba.add_opt(
+                SaplingRemoteApiScubaKey::Method,
+                info.method.map(|m| m.to_string()),
+            );
         }
 
         if let Some(ctx) = self.request_context {
@@ -74,10 +77,13 @@ impl ScubaHandler for EdenApiScubaHandler {
         }
 
         if let Some(err) = info.first_error() {
-            scuba.add(EdenApiScubaKey::HandlerError, format!("{:?}", err));
+            scuba.add(SaplingRemoteApiScubaKey::HandlerError, format!("{:?}", err));
         }
 
-        scuba.add(EdenApiScubaKey::HandlerErrorCount, info.error_count());
+        scuba.add(
+            SaplingRemoteApiScubaKey::HandlerErrorCount,
+            info.error_count(),
+        );
 
         scuba.add("log_tag", "EdenAPI Request Processed");
         scuba.log();

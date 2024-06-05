@@ -25,26 +25,26 @@ use mercurial_types::HgNodeHash;
 use mononoke_api_hg::HgRepoContext;
 use repo_identity::RepoIdentityRef;
 
-use super::handler::EdenApiContext;
-use super::EdenApiHandler;
-use super::EdenApiMethod;
+use super::handler::SaplingRemoteApiContext;
 use super::HandlerResult;
+use super::SaplingRemoteApiHandler;
+use super::SaplingRemoteApiMethod;
 use crate::errors::ErrorKind;
 
 /// Rebase a stack of commits onto a bookmark, and update the bookmark to the top of the newly-rebased stack.
 pub struct LandStackHandler;
 
 #[async_trait]
-impl EdenApiHandler for LandStackHandler {
+impl SaplingRemoteApiHandler for LandStackHandler {
     type Request = LandStackRequest;
     type Response = LandStackResponse;
 
     const HTTP_METHOD: hyper::Method = hyper::Method::POST;
-    const API_METHOD: EdenApiMethod = EdenApiMethod::LandStack;
+    const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::LandStack;
     const ENDPOINT: &'static str = "/land";
 
     async fn handler(
-        ectx: EdenApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
+        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
         Ok(stream::once(land_stack_response(

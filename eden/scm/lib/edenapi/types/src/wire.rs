@@ -145,7 +145,7 @@ pub use crate::wire::tree::WireTreeRequest;
 pub use crate::wire::tree::WireUploadTreeEntry;
 pub use crate::wire::tree::WireUploadTreeRequest;
 pub use crate::wire::tree::WireUploadTreeResponse;
-use crate::EdenApiServerErrorKind;
+use crate::SaplingRemoteApiServerErrorKind;
 
 #[derive(Copy, Clone, Debug, Error)]
 #[error("invalid byte slice length, expected {expected_len} found {found_len}")]
@@ -361,7 +361,7 @@ impl ToApi for WrapNonZero<u64> {
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
-pub enum WireEdenApiServerError {
+pub enum WireSaplingRemoteApiServerError {
     #[serde(rename = "1")]
     OpaqueError(String),
 
@@ -369,30 +369,30 @@ pub enum WireEdenApiServerError {
     Unknown,
 }
 
-impl ToWire for EdenApiServerErrorKind {
-    type Wire = WireEdenApiServerError;
+impl ToWire for SaplingRemoteApiServerErrorKind {
+    type Wire = WireSaplingRemoteApiServerError;
 
     fn to_wire(self) -> Self::Wire {
-        use EdenApiServerErrorKind::*;
+        use SaplingRemoteApiServerErrorKind::*;
         match self {
-            OpaqueError(s) => WireEdenApiServerError::OpaqueError(s),
+            OpaqueError(s) => WireSaplingRemoteApiServerError::OpaqueError(s),
         }
     }
 }
 
-impl ToApi for WireEdenApiServerError {
-    type Api = EdenApiServerErrorKind;
+impl ToApi for WireSaplingRemoteApiServerError {
+    type Api = SaplingRemoteApiServerErrorKind;
     type Error = WireToApiConversionError;
 
     fn to_api(self) -> Result<Self::Api, Self::Error> {
-        use WireEdenApiServerError::*;
+        use WireSaplingRemoteApiServerError::*;
         Ok(match self {
             Unknown => {
                 return Err(WireToApiConversionError::UnrecognizedEnumVariant(
-                    "WireEdenApiServerError",
+                    "WireSaplingRemoteApiServerError",
                 ));
             }
-            OpaqueError(s) => EdenApiServerErrorKind::OpaqueError(s),
+            OpaqueError(s) => SaplingRemoteApiServerErrorKind::OpaqueError(s),
         })
     }
 }
@@ -612,7 +612,7 @@ pub mod local_tests {
         WireRepoPathBuf,
         WireParents,
         WireRevisionstoreMetadata,
-        WireEdenApiServerError,
+        WireSaplingRemoteApiServerError,
         WireDagId,
     );
 }

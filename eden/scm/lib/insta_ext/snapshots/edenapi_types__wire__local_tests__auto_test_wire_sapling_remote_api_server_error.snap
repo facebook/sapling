@@ -1,0 +1,6 @@
+---
+source: mod.rs
+expression: "WireSaplingRemoteApiServerError::arbitrary(&mut g)"
+
+---
+{"1":""}

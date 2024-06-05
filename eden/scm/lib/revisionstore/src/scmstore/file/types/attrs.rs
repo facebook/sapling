@@ -11,7 +11,7 @@ use std::ops::BitOrAssign;
 use std::ops::Not;
 use std::ops::Sub;
 
-use edenapi_types::FileAttributes as EdenApiFileAttributes;
+use edenapi_types::FileAttributes as SaplingRemoteApiFileAttributes;
 use serde::Deserialize;
 use serde::Serialize;
 
@@ -23,9 +23,9 @@ pub struct FileAttributes {
     pub aux_data: bool,
 }
 
-impl From<FileAttributes> for EdenApiFileAttributes {
+impl From<FileAttributes> for SaplingRemoteApiFileAttributes {
     fn from(v: FileAttributes) -> Self {
-        EdenApiFileAttributes {
+        SaplingRemoteApiFileAttributes {
             content: v.content,
             aux_data: v.aux_data,
         }
