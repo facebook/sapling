@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+#![feature(iter_array_chunks)]
 #![feature(trait_upcasting)]
 
 use std::collections::HashSet;
@@ -46,6 +47,7 @@ macro_rules! impl_commit_graph_tests {
             test_skip_tree,
             test_p1_linear_tree,
             test_ancestors_difference,
+            test_ancestors_difference_segment_slices,
             test_find_by_prefix,
             test_add_recursive,
             test_add_recursive_many_changesets,
@@ -417,6 +419,65 @@ pub async fn test_p1_linear_tree(
     assert_p1_linear_lowest_common_ancestor(&graph, &ctx, "D", "C", Some("C")).await?;
     assert_p1_linear_lowest_common_ancestor(&graph, &ctx, "N", "K", None).await?;
     assert_p1_linear_lowest_common_ancestor(&graph, &ctx, "A", "I", Some("A")).await?;
+
+    Ok(())
+}
+
+pub async fn test_ancestors_difference_segment_slices(
+    ctx: CoreContext,
+    storage: Arc<dyn CommitGraphStorageTest>,
+) -> Result<()> {
+    let graph = from_dag(
+        &ctx,
+        r"
+         A-B-C-D-G-H---J-K
+            \   /   \ /
+             E-F     I
+
+         L-M-N-O-P-Q-R-S-T-U
+         ",
+        storage.clone(),
+    )
+    .await?;
+    storage.flush();
+
+    assert_ancestors_difference_segment_slices(
+        &graph,
+        &ctx,
+        &["K"],
+        &[],
+        3,
+        &[
+            &["A", "B", "C"],
+            &["D"],
+            &["E", "F"],
+            &["G", "H", "I"],
+            &["J", "K"],
+        ],
+    )
+    .await?;
+
+    assert_ancestors_difference_segment_slices(
+        &graph,
+        &ctx,
+        &["K", "U"],
+        &[],
+        3,
+        &[
+            &["L", "M", "N"],
+            &["O", "P", "Q"],
+            &["R", "S", "T"],
+            &["U"],
+            &["A", "B"],
+            &["C", "D"],
+            &["E"],
+            &["F"],
+            &["G", "H"],
+            &["I"],
+            &["J", "K"],
+        ],
+    )
+    .await?;
 
     Ok(())
 }

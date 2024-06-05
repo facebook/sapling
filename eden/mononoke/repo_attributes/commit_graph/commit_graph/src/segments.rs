@@ -25,6 +25,7 @@ use commit_graph_types::storage::PrefetchEdge;
 use commit_graph_types::storage::PrefetchTarget;
 use context::CoreContext;
 use futures::stream;
+use futures::stream::BoxStream;
 use futures::StreamExt;
 use futures::TryStreamExt;
 use futures_stats::TimedTryFutureExt;
@@ -493,6 +494,40 @@ impl CommitGraph {
         }
 
         Ok((segments, locations))
+    }
+
+    /// Returns a stream of expanded changeset segments representing all ancestors of heads,
+    /// excluding all ancestors of commons.
+    /// Each slice is contained within a segment (it represents a linear set of changesets)
+    /// Each segment slice is no longer than `slice_size`
+    /// The ordering of the output is topological, both for the stream and the Vec
+    pub async fn ancestors_difference_segment_slices(
+        &self,
+        ctx: &CoreContext,
+        heads: Vec<ChangesetId>,
+        common: Vec<ChangesetId>,
+        slice_size: u64,
+    ) -> Result<BoxStream<'static, Result<Vec<ChangesetId>>>> {
+        cloned!(self as graph, ctx);
+        let (segmented_slices, _boundary_changesets) = graph
+            .segmented_slice_ancestors(&ctx, heads, common, slice_size)
+            .await?;
+        Ok(stream::iter(
+            segmented_slices
+                .into_iter()
+                .flat_map(|segmented_slice| segmented_slice.segments),
+        )
+        .then(move |segment| {
+            cloned!(graph, ctx);
+            async move {
+                Ok(graph
+                    .range_stream(&ctx, segment.base, segment.head)
+                    .await?
+                    .collect::<Vec<_>>()
+                    .await)
+            }
+        })
+        .boxed())
     }
 
     /// Returns a list of segments representing all ancestors of heads, excluding

@@ -37,6 +37,23 @@ pub fn name_cs_id(name: &str) -> ChangesetId {
     ChangesetId::from_bytes(bytes).expect("Changeset ID should be valid")
 }
 
+pub fn cs_id_name(cs_id: ChangesetId) -> String {
+    cs_id
+        .to_string()
+        .chars()
+        .array_chunks::<2>()
+        .filter_map(|chunk| match chunk {
+            ['0', '0'] => None,
+            _ => {
+                let chunk = chunk.into_iter().collect::<String>();
+                Some(char::from(
+                    u8::from_str_radix(&chunk, 16).expect("Changeset Id should come from ASCII"),
+                ))
+            }
+        })
+        .collect::<String>()
+}
+
 /// Generate a fake changeset node for graph testing purposes by using the raw
 /// bytes of the changeset name, padded with zeroes.
 pub fn name_cs_node(
@@ -213,6 +230,34 @@ pub async fn assert_ancestors_difference(
             .into_iter()
             .map(name_cs_id)
             .collect::<HashSet<_>>()
+    );
+    Ok(())
+}
+
+pub async fn assert_ancestors_difference_segment_slices(
+    graph: &CommitGraph,
+    ctx: &CoreContext,
+    heads: &[&str],
+    common: &[&str],
+    slice_size: u64,
+    ancestors_difference_segment_slices: &[&[&str]],
+) -> Result<()> {
+    let heads = heads.iter().copied().map(name_cs_id).collect();
+    let common = common.iter().copied().map(name_cs_id).collect();
+
+    assert_eq!(
+        graph
+            .ancestors_difference_segment_slices(ctx, heads, common, slice_size)
+            .await?
+            .try_collect::<Vec<_>>()
+            .await?
+            .into_iter()
+            .map(|slice| { slice.into_iter().map(cs_id_name).collect::<Vec<_>>() })
+            .collect::<Vec<_>>(),
+        ancestors_difference_segment_slices
+            .iter()
+            .map(|slice| { slice.iter().map(|s| s.to_string()).collect::<Vec<_>>() })
+            .collect::<Vec<_>>()
     );
     Ok(())
 }
