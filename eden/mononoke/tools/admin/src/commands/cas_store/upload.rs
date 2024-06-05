@@ -9,6 +9,9 @@ use std::str::FromStr;
 
 use anyhow::anyhow;
 use anyhow::Result;
+#[cfg(not(fbcode_build))]
+use cas_client::DummyCasClient;
+#[cfg(fbcode_build)]
 use cas_client::RemoteExecutionCasdClient;
 use changesets_uploader::CasChangesetsUploader;
 use clap::Args;
@@ -38,6 +41,10 @@ pub async fn cas_store_upload(
     repo: &Repo,
     args: CasStoreUploadArgs,
 ) -> Result<()> {
+    #[cfg(not(fbcode_build))]
+    let cas_changesets_uploader = CasChangesetsUploader::new(DummyCasClient {});
+
+    #[cfg(fbcode_build)]
     let cas_changesets_uploader = CasChangesetsUploader::new(RemoteExecutionCasdClient::new(
         ctx.fb,
         ctx,
