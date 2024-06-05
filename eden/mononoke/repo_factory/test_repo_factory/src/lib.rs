@@ -831,10 +831,17 @@ impl TestRepoFactory {
     }
 
     /// Commit cloud
-    pub fn commit_cloud(&self, _repo_identity: &RepoIdentity) -> Result<ArcCommitCloud> {
+    pub fn commit_cloud(
+        &self,
+        _repo_identity: &RepoIdentity,
+        bonsai_hg_mapping: &ArcBonsaiHgMapping,
+        repo_derived_data: &ArcRepoDerivedData,
+    ) -> Result<ArcCommitCloud> {
         Ok(Arc::new(commit_cloud::CommitCloud {
             storage: SqlCommitCloudBuilder::from_sql_connections(self.metadata_db.clone())
                 .new(false),
+            bonsai_hg_mapping: bonsai_hg_mapping.clone(),
+            repo_derived_data: repo_derived_data.clone(),
         }))
     }
 }

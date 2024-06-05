@@ -1729,7 +1729,12 @@ impl RepoFactory {
         Ok(Arc::new(DeletionLog { sql_deletion_log }))
     }
 
-    pub async fn commit_cloud(&self, repo_config: &ArcRepoConfig) -> Result<ArcCommitCloud> {
+    pub async fn commit_cloud(
+        &self,
+        repo_config: &ArcRepoConfig,
+        bonsai_hg_mapping: &ArcBonsaiHgMapping,
+        repo_derived_data: &ArcRepoDerivedData,
+    ) -> Result<ArcCommitCloud> {
         let sql_commit_cloud = self
             .open_sql::<SqlCommitCloudBuilder>(repo_config)
             .await
@@ -1739,6 +1744,8 @@ impl RepoFactory {
                 &repo_config.storage_config.metadata,
                 MetadataDatabaseConfig::Remote(_)
             )),
+            bonsai_hg_mapping: bonsai_hg_mapping.clone(),
+            repo_derived_data: repo_derived_data.clone(),
         }))
     }
 }

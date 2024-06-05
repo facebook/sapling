@@ -9,11 +9,16 @@
 pub mod references;
 pub mod sql;
 pub mod workspace;
+use std::sync::Arc;
+
+use bonsai_hg_mapping::BonsaiHgMapping;
 use edenapi_types::GetReferencesParams;
 use edenapi_types::ReferencesData;
 use edenapi_types::UpdateReferencesParams;
+use facet::facet;
 use mononoke_types::Timestamp;
 use references::update_references_data;
+use repo_derived_data::ArcRepoDerivedData;
 
 use crate::references::cast_references_data;
 use crate::references::fetch_references;
@@ -21,9 +26,12 @@ use crate::sql::ops::Get;
 use crate::sql::ops::Insert;
 use crate::sql::ops::SqlCommitCloud;
 use crate::sql::versions_ops::WorkspaceVersion;
-#[facet::facet]
+
+#[facet]
 pub struct CommitCloud {
     pub storage: SqlCommitCloud,
+    pub bonsai_hg_mapping: Arc<dyn BonsaiHgMapping>,
+    pub repo_derived_data: ArcRepoDerivedData,
 }
 
 #[derive(Debug, Clone)]

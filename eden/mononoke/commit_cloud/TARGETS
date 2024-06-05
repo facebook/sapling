@@ -19,11 +19,13 @@ rust_library(
         "fbsource//third-party/rust:serde_json",
         "//common/rust/shed/facet:facet",
         "//common/rust/shed/sql:sql",
+        "//eden/mononoke/bonsai_hg_mapping:bonsai_hg_mapping",
         "//eden/mononoke/common/rust/sql_ext:sql_ext",
         "//eden/mononoke/common/sql_construct:sql_construct",
         "//eden/mononoke/mercurial:mercurial_types",
         "//eden/mononoke/metaconfig:metaconfig_types",
         "//eden/mononoke/mononoke_types:mononoke_types",
+        "//eden/mononoke/repo_attributes/repo_derived_data:repo_derived_data",
         "//eden/scm/lib/edenapi/types:edenapi_types",
     ],
 )
