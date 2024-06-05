@@ -15,6 +15,9 @@ export const platform: ServerPlatform = {
       case 'platform/openFile': {
         break;
       }
+      case 'platform/openFiles': {
+        break;
+      }
     }
   },
 };

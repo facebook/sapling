@@ -91,6 +91,8 @@ export const vscodeWebviewPlatform: Platform = {
   },
   openFile: (path, options) =>
     window.clientToServerAPI?.postMessage({type: 'platform/openFile', path, options}),
+  openFiles: (paths, options) =>
+    window.clientToServerAPI?.postMessage({type: 'platform/openFiles', paths, options}),
   canCustomizeFileOpener: false,
   openDiff: (path: RepoRelativePath, comparison: Comparison) =>
     window.clientToServerAPI?.postMessage({type: 'platform/openDiff', path, comparison}),

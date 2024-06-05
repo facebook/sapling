@@ -10,6 +10,7 @@ import type {RepositoryContext} from './serverTypes';
 import type {
   AbsolutePath,
   PlatformSpecificClientToServerMessages,
+  RepoRelativePath,
   ServerToClientMessage,
 } from 'isl/src/types';
 
@@ -69,50 +70,62 @@ export const browserServerPlatform: ServerPlatform = {
         break;
       }
       case 'platform/openFile': {
-        (async () => {
-          if (repo == null || ctx == null) {
-            return;
-          }
-          const opener = await repo.getConfig(ctx, 'isl.open-file-cmd');
-          const absPath: AbsolutePath = pathModule.join(repo.info.repoRoot, message.path);
-          let args: Array<string> = [];
-          if (opener) {
-            // opener should be either a JSON string (wrapped in quotes) or a JSON array of strings,
-            // to include arguments
-            try {
-              const jsonOpenerArgs = JSON.parse(opener);
-              args = Array.isArray(jsonOpenerArgs)
-                ? [...jsonOpenerArgs, absPath]
-                : [jsonOpenerArgs, absPath];
-            } catch {
-              // if it's not JSON, it should be a regular string
-              args = [opener, absPath];
-            }
-          } else {
-            // by default, use OS-builtin open command to open files
-            // (which may open different file extensions with different programs)
-            switch (process.platform) {
-              case 'darwin':
-                args = ['/usr/bin/open', absPath];
-                break;
-              case 'win32':
-                args = ['notepad.exe', absPath];
-                break;
-              case 'linux':
-                args = ['xdg-open', absPath];
-                break;
-            }
-          }
-          repo.initialConnectionContext.logger.log('open file', absPath);
-          if (args.length > 0) {
-            spawnInBackground(repo, args);
-          }
-        })();
+        openFile(repo, ctx, message.path);
+        break;
+      }
+      case 'platform/openFiles': {
+        for (const path of message.paths) {
+          openFile(repo, ctx, path);
+        }
         break;
       }
     }
   },
 };
+
+async function openFile(
+  repo: Repository | undefined,
+  ctx: RepositoryContext | undefined,
+  path: RepoRelativePath,
+) {
+  if (repo == null || ctx == null) {
+    return;
+  }
+  const opener = await repo.getConfig(ctx, 'isl.open-file-cmd');
+  const absPath: AbsolutePath = pathModule.join(repo.info.repoRoot, path);
+  let args: Array<string> = [];
+  if (opener) {
+    // opener should be either a JSON string (wrapped in quotes) or a JSON array of strings,
+    // to include arguments
+    try {
+      const jsonOpenerArgs = JSON.parse(opener);
+      args = Array.isArray(jsonOpenerArgs)
+        ? [...jsonOpenerArgs, absPath]
+        : [jsonOpenerArgs, absPath];
+    } catch {
+      // if it's not JSON, it should be a regular string
+      args = [opener, absPath];
+    }
+  } else {
+    // by default, use OS-builtin open command to open files
+    // (which may open different file extensions with different programs)
+    switch (process.platform) {
+      case 'darwin':
+        args = ['/usr/bin/open', absPath];
+        break;
+      case 'win32':
+        args = ['notepad.exe', absPath];
+        break;
+      case 'linux':
+        args = ['xdg-open', absPath];
+        break;
+    }
+  }
+  repo.initialConnectionContext.logger.log('open file', absPath);
+  if (args.length > 0) {
+    spawnInBackground(repo, args);
+  }
+}
 
 /**
  * Because the ISL server is likely running in the background and is

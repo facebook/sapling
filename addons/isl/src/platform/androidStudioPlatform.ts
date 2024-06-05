@@ -37,6 +37,12 @@ const androidStudioPlatform: Platform = {
     // TODO: support line numbers
     window.__IdeBridge.openFileInAndroidStudio(_path);
   },
+  openFiles: (paths: Array<RepoRelativePath>, _options: {line?: OneIndexedLineNumber}) => {
+    for (const path of paths) {
+      // TODO: support line numbers
+      window.__IdeBridge.openFileInAndroidStudio(path);
+    }
+  },
   canCustomizeFileOpener: false,
   upsellExternalMergeTool: false,
 

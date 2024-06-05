@@ -74,8 +74,15 @@ export const getVSCodePlatform = (context: vscode.ExtensionContext): ServerPlatf
   ) => {
     try {
       switch (message.type) {
+        case 'platform/openFiles': {
+          for (const path of message.paths) {
+            // don't use preview mode for opening multiple files, since they would overwrite each other
+            openFile(repo, path, message.options?.line, /* preview */ false);
+          }
+          break;
+        }
         case 'platform/openFile': {
-          openFile(repo, message.path, message.options?.line, false);
+          openFile(repo, message.path, message.options?.line, undefined);
           break;
         }
         case 'platform/openDiff': {

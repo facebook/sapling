@@ -503,6 +503,11 @@ export type OneIndexedLineNumber = Exclude<number, 0>;
  */
 export type PlatformSpecificClientToServerMessages =
   | {type: 'platform/openFile'; path: RepoRelativePath; options?: {line?: OneIndexedLineNumber}}
+  | {
+      type: 'platform/openFiles';
+      paths: Array<RepoRelativePath>;
+      options?: {line?: OneIndexedLineNumber};
+    }
   | {type: 'platform/openContainingFolder'; path: RepoRelativePath}
   | {type: 'platform/openDiff'; path: RepoRelativePath; comparison: Comparison}
   | {type: 'platform/openExternal'; url: string}
