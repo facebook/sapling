@@ -7,7 +7,7 @@
  * @jest-environment jsdom
  */
 
-import {useDeepMemo, useThrottledEffect} from '../hooks';
+import {useDeepMemo, usePrevious, useThrottledEffect} from '../hooks';
 import {fireEvent, render, screen, act} from '@testing-library/react';
 import '@testing-library/jest-dom';
 import {useState} from 'react';
@@ -112,5 +112,27 @@ describe('useDeepMemo', () => {
     expect(myExpensiveFunc).toHaveBeenCalledTimes(4);
     rerender(<MyComponent dep={[1, 2, 3]} />);
     expect(myExpensiveFunc).toHaveBeenCalledTimes(4);
+  });
+});
+
+describe('usePrevious', () => {
+  it('keeps previous value', () => {
+    function MyComponent({dep}: {dep: number}) {
+      const last = usePrevious(dep);
+      return (
+        <div>
+          {dep}, {last ?? 'undefined'}
+        </div>
+      );
+    }
+
+    const {rerender} = render(<MyComponent dep={1} />);
+    expect(screen.getByText('1, undefined')).toBeInTheDocument();
+    rerender(<MyComponent dep={2} />);
+    expect(screen.getByText('2, 1')).toBeInTheDocument();
+    rerender(<MyComponent dep={2} />); // rerenders still show previous different value
+    expect(screen.getByText('2, 1')).toBeInTheDocument();
+    rerender(<MyComponent dep={3} />);
+    expect(screen.getByText('3, 2')).toBeInTheDocument();
   });
 });
