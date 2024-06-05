@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.1.51
+
+### Jun 3 2024
+
+- Fix fields in the commit info view sometimes not focusing when you start editing them
+- Pressing the spacebar while a commit field is focused will now start editing the field
+- Add a config to turn off condensing stacks of obsolete commits
+- Show unsaved files under uncommitted changes, with actions to save all
+- When committing / amending, warn if there are unsaved files that are part of the repo, with option to save all
+- Add "only fill empty fields" option when filling a commit message from a previous commit, and make this the default
+- "Open all files" now won't open generated files by default, unless all changes are to generated files
+- "Open all files" when `workbench.editor.enablePreview` is true now skips using preview mode so more than one file is opened
+- Show number of selected changes that will be amended / commit, like "2/3"
+- Add context menu option to browse your repo at a given public commit, if enabled by the `fbcodereview.code-browser-url` config
+- Similarly, add context menu action to copy a file's url when right clicking on a file, if the `fbcodereview.code-browser-url` config is set up
+- Improve colors in high contrast themes (notably lines connecting to "You are here")
+- Fix commit info view fields not always tokenizing the last token
+
 ## 0.1.50
 
 ### May 15 2024
