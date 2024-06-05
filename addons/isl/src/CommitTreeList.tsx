@@ -20,7 +20,7 @@ import {StackActions} from './StackActions';
 import {Tooltip, DOCUMENTATION_DELAY} from './Tooltip';
 import {YOU_ARE_HERE_VIRTUAL_COMMIT} from './dag/virtualCommit';
 import {T, t} from './i18n';
-import {atomFamilyWeak} from './jotaiUtils';
+import {atomFamilyWeak, localStorageBackedAtom} from './jotaiUtils';
 import {CreateEmptyInitialCommitOperation} from './operations/CreateEmptyInitialCommitOperation';
 import {inlineProgressByHash, useRunOperation} from './operationsState';
 import {dagWithPreviews, treeWithPreviews, useMarkOperationsCompleted} from './previews';
@@ -59,9 +59,15 @@ const dagWithYouAreHere = atom(get => {
   return dag;
 });
 
+export const condenseObsoleteStacks = localStorageBackedAtom<boolean | null>(
+  'isl.condense-obsolete-stacks',
+  true,
+);
+
 const renderSubsetUnionSelection = atom(get => {
   const dag = get(dagWithYouAreHere);
-  const subset = dag.subsetForRendering();
+  const condense = get(condenseObsoleteStacks);
+  const subset = dag.subsetForRendering(undefined, /* condenseObsoleteStacks */ condense !== false);
   // If selectedCommits includes commits unknown to dag (ex. in tests), ignore them to avoid errors.
   const selection = dag.present(get(selectedCommits));
   return subset.union(selection);

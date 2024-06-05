@@ -220,13 +220,9 @@ export class Dag extends SelfUpdate<CommitDagRecord> {
    * - Unnamed public commits that do not have direct draft children.
    */
   subsetForRendering = cachedMethod(this.subsetForRenderingImpl, {cache: subsetForRenderingCache});
-  private subsetForRenderingImpl(set?: SetLike): HashSet {
+  private subsetForRenderingImpl(set?: SetLike, condenseObsoleteStacks: boolean = true): HashSet {
     const all = set === undefined ? this.all() : HashSet.fromHashes(set);
     const draft = this.draft(all);
-    const obsolete = this.obsolete(all);
-    const toKeep = this.parents(draft.subtract(obsolete))
-      .union(this.roots(obsolete))
-      .union(this.heads(obsolete));
     const unamedPublic = this.filter(
       i =>
         i.phase === 'public' &&
@@ -237,7 +233,14 @@ export class Dag extends SelfUpdate<CommitDagRecord> {
       all,
     );
     const toHidePublic = unamedPublic.subtract(this.parents(draft));
-    const toHide = obsolete.subtract(toKeep).union(toHidePublic);
+    let toHide = toHidePublic;
+    if (condenseObsoleteStacks) {
+      const obsolete = this.obsolete(all);
+      const toKeep = this.parents(draft.subtract(obsolete))
+        .union(this.roots(obsolete))
+        .union(this.heads(obsolete));
+      toHide = obsolete.subtract(toKeep).union(toHidePublic);
+    }
     return all.subtract(toHide);
   }
 

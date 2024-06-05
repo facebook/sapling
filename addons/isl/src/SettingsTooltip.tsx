@@ -9,6 +9,7 @@ import type {ThemeColor} from './theme';
 import type {PreferredSubmitCommand} from './types';
 import type {ReactNode} from 'react';
 
+import {condenseObsoleteStacks} from './CommitTreeList';
 import {Column, Row} from './ComponentUtils';
 import {confirmShouldSubmitEnabledAtom} from './ConfirmSubmitStack';
 import {DropdownField, DropdownFields} from './DropdownFields';
@@ -114,7 +115,10 @@ function SettingsDropdown({
         <ZoomUISetting />
       </Setting>
       <Setting title={<T>Commits</T>}>
-        <RenderCompactSetting />
+        <Column alignStart>
+          <RenderCompactSetting />
+          <CondenseObsoleteSetting />
+        </Column>
       </Setting>
       <Setting title={<T>Conflicts</T>}>
         <AutoResolveSettingCheckbox />
@@ -228,6 +232,25 @@ function RenderCompactSetting() {
           setValue(checked);
         }}>
         <T>Compact Mode</T>
+      </Checkbox>
+    </Tooltip>
+  );
+}
+
+function CondenseObsoleteSetting() {
+  const [value, setValue] = useAtom(condenseObsoleteStacks);
+  return (
+    <Tooltip
+      title={t(
+        'Visually condense a continuous stack of obsolete commits into just the top and bottom commits.',
+      )}>
+      <Checkbox
+        data-testid="condense-obsolete-stacks"
+        checked={value !== false}
+        onChange={checked => {
+          setValue(checked);
+        }}>
+        <T>Condense Obsolete Stacks</T>
       </Checkbox>
     </Tooltip>
   );
