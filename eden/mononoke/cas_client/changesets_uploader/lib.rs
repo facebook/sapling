@@ -9,7 +9,11 @@
 
 mod errors;
 
+use std::sync::Arc;
+
 use anyhow::Error;
+use atomic_counter::AtomicCounter;
+use atomic_counter::RelaxedCounter;
 use blobstore::Loadable;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
 use cas_client::CasClient;
@@ -254,14 +258,23 @@ where
                 hg_cs_id
             );
             let start_time = std::time::Instant::now();
+            let progress_counter: Arc<RelaxedCounter> = Arc::new(Default::default());
             hg_cs
                 .manifestid()
                 .list_leaf_entries(ctx.clone(), repo.repo_blobstore_arc())
-                .map_ok(move |(_, entry)| async move {
-                    let blobstore = repo.repo_blobstore();
-                    self.client
-                        .upload_file_content(ctx, &blobstore, &entry.1, None, true)
-                        .await
+                .map_ok(move |(_, entry)| {
+                    let progress_counter = progress_counter.clone();
+                    async move {
+                        let blobstore = repo.repo_blobstore();
+                        self.client
+                            .upload_file_content(ctx, &blobstore, &entry.1, None, true)
+                            .await?;
+                        progress_counter.inc();
+                        if progress_counter.get() % 200 == 0 {
+                            debug!(ctx.logger(), "Uploaded {} blobs", progress_counter.get());
+                        }
+                        Ok::<(), Error>(())
+                    }
                 })
                 .try_buffered(MAX_CONCURRENT_UPLOADS)
                 .try_collect()
