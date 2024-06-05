@@ -256,20 +256,19 @@ describe('Generated Files', () => {
     }
 
     it('No generated files, opens all files', async () => {
-      const openSpy = jest.spyOn(foundPlatform, 'openFile').mockImplementation(() => {});
+      const openSpy = jest.spyOn(foundPlatform, 'openFiles').mockImplementation(() => {});
       await simulateCommitWithFiles({
         'file_partial.txt': GeneratedStatus.PartiallyGenerated,
         'file_manual.txt': GeneratedStatus.Manual,
       });
 
       fireEvent.click(screen.getByText('Open All Files'));
-      expect(openSpy).toHaveBeenCalledTimes(2);
-      expect(openSpy).toHaveBeenCalledWith('file_partial.txt');
-      expect(openSpy).toHaveBeenCalledWith('file_manual.txt');
+      expect(openSpy).toHaveBeenCalledTimes(1);
+      expect(openSpy).toHaveBeenCalledWith(['file_partial.txt', 'file_manual.txt']);
     });
 
     it('Some generated files, opens all non-generated files', async () => {
-      const openSpy = jest.spyOn(foundPlatform, 'openFile').mockImplementation(() => {});
+      const openSpy = jest.spyOn(foundPlatform, 'openFiles').mockImplementation(() => {});
       await simulateCommitWithFiles({
         'file_gen.txt': GeneratedStatus.Generated,
         'file_partial.txt': GeneratedStatus.PartiallyGenerated,
@@ -277,22 +276,20 @@ describe('Generated Files', () => {
       });
 
       fireEvent.click(screen.getByText('Open Non-Generated Files'));
-      expect(openSpy).toHaveBeenCalledTimes(2);
-      expect(openSpy).toHaveBeenCalledWith('file_partial.txt');
-      expect(openSpy).toHaveBeenCalledWith('file_manual.txt');
+      expect(openSpy).toHaveBeenCalledTimes(1);
+      expect(openSpy).toHaveBeenCalledWith(['file_partial.txt', 'file_manual.txt']);
     });
 
     it('All generated files, opens all files', async () => {
-      const openSpy = jest.spyOn(foundPlatform, 'openFile').mockImplementation(() => {});
+      const openSpy = jest.spyOn(foundPlatform, 'openFiles').mockImplementation(() => {});
       await simulateCommitWithFiles({
         'file_gen1.txt': GeneratedStatus.Generated,
         'file_gen2.txt': GeneratedStatus.Generated,
       });
 
       fireEvent.click(screen.getByText('Open All Files'));
-      expect(openSpy).toHaveBeenCalledTimes(2);
-      expect(openSpy).toHaveBeenCalledWith('file_gen1.txt');
-      expect(openSpy).toHaveBeenCalledWith('file_gen2.txt');
+      expect(openSpy).toHaveBeenCalledTimes(1);
+      expect(openSpy).toHaveBeenCalledWith(['file_gen1.txt', 'file_gen2.txt']);
     });
   });
 });

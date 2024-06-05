@@ -403,9 +403,7 @@ function OpenAllFilesButton({commit}: {commit: CommitInfo}) {
                 file =>
                   statuses[file.path] == null || statuses[file.path] !== GeneratedStatus.Generated,
               );
-          for (const file of toOpen) {
-            platform.openFile(file.path);
-          }
+          platform.openFiles(toOpen.map(file => file.path));
         }}>
         <Icon icon="go-to-file" slot="start" />
         {someAreGenerated && !allAreGenerated ? (
