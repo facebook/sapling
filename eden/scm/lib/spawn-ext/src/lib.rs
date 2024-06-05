@@ -407,12 +407,13 @@ mod tests {
 
     #[test]
     fn test_shell() {
-        let stdout = Command::new_shell("echo foo").output().unwrap().stdout;
-
-        if cfg!(windows) {
-            assert_eq!(stdout, b"foo\r\n");
-        } else {
-            assert_eq!(stdout, b"foo\n");
+        let out = Command::new_shell("echo foo").output().unwrap();
+        // If the command failed, then skip the test (ex. might be executed in a restricted
+        // environment).
+        if !out.status.success() {
+            return;
         }
+        let expected: &[u8] = if cfg!(windows) { b"foo\r\n" } else { b"foo\n" };
+        assert_eq!(out.stdout, expected, "stderr is {:?}", out.stderr);
     }
 }
