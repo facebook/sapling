@@ -19,18 +19,22 @@ use blobstore::Loadable;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
 use cas_client::CasClient;
 use changesets::ChangesetsRef;
+use cloned::cloned;
 use context::CoreContext;
 pub use errors::CasChangesetUploaderErrorKind;
 use futures::future;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use futures::try_join;
+use futures::FutureExt;
 use manifest::find_intersection_of_diffs;
+use manifest::AsyncManifest;
 use manifest::Diff;
 use manifest::Entry;
 use manifest::ManifestOps;
 use mercurial_types::HgAugmentedManifestId;
 use mercurial_types::HgChangesetId;
+use mercurial_types::HgManifestId;
 use mononoke_types::ChangesetId;
 use repo_blobstore::RepoBlobstoreArc;
 use scm_client::ScmCasClient;
@@ -38,7 +42,9 @@ use scm_client::UploadOutcome;
 use slog::debug;
 use stats::prelude::*;
 
-const MAX_CONCURRENT_UPLOADS: usize = 500;
+const MAX_CONCURRENT_MANIFESTS: usize = 100;
+const MAX_CONCURRENT_FILES_PER_MANIFEST: usize = 20;
+const DEBUG_LOG_INTERVAL: usize = 10000;
 
 #[derive(Default, Debug)]
 struct DebugUploadCounters {
@@ -60,6 +66,27 @@ impl Display for DebugUploadCounters {
 impl DebugUploadCounters {
     pub fn sum(&self) -> usize {
         self.uploaded.get() + self.already_present.get()
+    }
+
+    pub fn tick(&self, ctx: &CoreContext, outcome: UploadOutcome) {
+        match outcome {
+            UploadOutcome::Uploaded => {
+                self.uploaded.inc();
+            }
+            UploadOutcome::AlreadyPresent => {
+                self.already_present.inc();
+            }
+        }
+        self.maybe_log(ctx, DEBUG_LOG_INTERVAL);
+    }
+
+    pub fn maybe_log<'a>(&self, ctx: &'a CoreContext, limit: usize) {
+        if self.sum() % limit == 0 {
+            self.log(ctx);
+        }
+    }
+    pub fn log<'a>(&self, ctx: &'a CoreContext) {
+        debug!(ctx.logger(), "{}", *self);
     }
 }
 
@@ -88,12 +115,12 @@ where
         }
     }
 
-    async fn get_augmented_manifest_id_from_changeset<'a>(
+    async fn get_manifest_id_from_changeset<'a>(
         &self,
         ctx: &'a CoreContext,
         repo: &impl Repo,
         changeset_id: &ChangesetId,
-    ) -> Result<(HgChangesetId, HgAugmentedManifestId), CasChangesetUploaderErrorKind> {
+    ) -> Result<(HgChangesetId, HgManifestId), CasChangesetUploaderErrorKind> {
         let hg_cs_id = repo
             .bonsai_hg_mapping()
             .get_hg_from_bonsai(ctx, *changeset_id)
@@ -108,8 +135,7 @@ where
             .await
             .map_err(|e| CasChangesetUploaderErrorKind::Error(e.into()))?
             .manifestid();
-        let hg_augmented_manifest = HgAugmentedManifestId::new(hg_manifest.into_nodehash());
-        Ok((hg_cs_id, hg_augmented_manifest))
+        Ok((hg_cs_id, hg_manifest))
     }
 
     /// Upload a given Changeset to a CAS backend.
@@ -262,91 +288,103 @@ where
         changeset_id: &ChangesetId,
         blobs_only: bool,
     ) -> Result<(), CasChangesetUploaderErrorKind> {
-        if blobs_only {
-            let hg_cs_id = repo
-                .bonsai_hg_mapping()
-                .get_hg_from_bonsai(ctx, *changeset_id)
-                .await
-                .map(|cs| {
-                    cs.ok_or(CasChangesetUploaderErrorKind::InvalidChangeset(
-                        changeset_id.clone(),
-                    ))
-                })??;
-            let hg_cs = hg_cs_id
-                .load(ctx, &repo.repo_blobstore())
-                .await
-                .map_err(|e| CasChangesetUploaderErrorKind::Error(e.into()))?;
-            debug!(
-                ctx.logger(),
-                "Uploading all blobs recursively for [changeset id: {}, hg changeset id: {}]",
-                changeset_id,
-                hg_cs_id
-            );
-            let start_time = std::time::Instant::now();
-            let progress_counter: Arc<DebugUploadCounters> = Arc::new(Default::default());
-            hg_cs
-                .manifestid()
-                .list_leaf_entries(ctx.clone(), repo.repo_blobstore_arc())
-                .map_ok(move |(_, entry)| {
-                    let progress_counter = progress_counter.clone();
-                    async move {
-                        let blobstore = repo.repo_blobstore();
-                        let outcome = self
-                            .client
-                            .upload_file_content(ctx, &blobstore, &entry.1, None, true)
-                            .await?;
-                        match outcome {
-                            UploadOutcome::Uploaded => {
-                                progress_counter.uploaded.inc();
-                            }
-                            UploadOutcome::AlreadyPresent => {
-                                progress_counter.already_present.inc();
-                            }
-                        }
-                        if progress_counter.sum() % 500 == 0 {
-                            debug!(ctx.logger(), "{}", *progress_counter);
-                        }
-                        Ok::<(), Error>(())
-                    }
-                })
-                .try_buffer_unordered(MAX_CONCURRENT_UPLOADS)
-                .try_collect()
-                .await?;
-            debug!(
-                ctx.logger(),
-                "Upload of blobs from changeset {} to CAS (recursively) took {} seconds, corresponding hg changeset is {}",
-                changeset_id,
-                start_time.elapsed().as_secs_f64(),
-                hg_cs_id,
-            );
-            STATS::uploaded_changesets_recursive.add_value(1);
-            return Ok(());
-        }
-
-        let (hg_cs_id, hg_augmented_manifest) = self
-            .get_augmented_manifest_id_from_changeset(ctx, repo, changeset_id)
+        let start_time = std::time::Instant::now();
+        let progress_counter: Arc<DebugUploadCounters> = Arc::new(Default::default());
+        let final_progress_counter = progress_counter.clone();
+        let (hg_cs_id, hg_manifest_id) = self
+            .get_manifest_id_from_changeset(ctx, repo, changeset_id)
             .await?;
+
+        let hg_augmented_manifest_id: HgAugmentedManifestId =
+            HgAugmentedManifestId::new(hg_manifest_id.into_nodehash());
         debug!(
             ctx.logger(),
-            "Uploading data recursively for root augmented manifest: {}, changeset id: {}, hg changeset id: {}",
-            hg_augmented_manifest,
+            "Uploading data recursively for [root augmented manifest: {}, changeset id: {}, hg changeset id: {}]",
+            hg_augmented_manifest_id,
             changeset_id,
             hg_cs_id
         );
-        let start_time = std::time::Instant::now();
-        self.client
-            .upload_root_augmented_tree_recursive(
-                ctx,
-                &repo.repo_blobstore(),
-                &hg_augmented_manifest,
-            )
-            .await?;
+
+        // We will traverse over Mercurial manifests for now, as augmented manifests haven't been
+        // derived yet and don't yet implement AsyncManifest.  This will be trivial to swap in later.
+        bounded_traversal::bounded_traversal_stream(
+            MAX_CONCURRENT_MANIFESTS,
+            Some(hg_manifest_id),
+            |hg_manifest_id| {
+                cloned!(progress_counter);
+                async move {
+                    if !blobs_only {
+                        let hg_augmented_manifest_id: HgAugmentedManifestId =
+                            HgAugmentedManifestId::new(hg_manifest_id.into_nodehash());
+                        let outcome = self
+                            .client
+                            .upload_augmented_tree(
+                                ctx,
+                                repo.repo_blobstore(),
+                                &hg_augmented_manifest_id,
+                                None,
+                                true,
+                            )
+                            .await?;
+                        progress_counter.tick(ctx, outcome);
+                        if outcome == UploadOutcome::AlreadyPresent {
+                            return anyhow::Ok(((), vec![]));
+                        }
+                    }
+                    let hg_manifest = hg_manifest_id.load(ctx, repo.repo_blobstore()).await?;
+                    let mut children = Vec::new();
+                    hg_manifest
+                        .list(ctx, repo.repo_blobstore())
+                        .await?
+                        .try_for_each_concurrent(
+                            MAX_CONCURRENT_FILES_PER_MANIFEST,
+                            |(_elem, entry)| match entry {
+                                Entry::Tree(tree) => {
+                                    children.push(tree);
+                                    future::ok(()).left_future()
+                                }
+                                Entry::Leaf(leaf) => {
+                                    cloned!(progress_counter);
+                                    async move {
+                                        let outcome = self
+                                            .client
+                                            .upload_file_content(
+                                                ctx,
+                                                repo.repo_blobstore(),
+                                                &leaf.1,
+                                                None,
+                                                true,
+                                            )
+                                            .await?;
+                                        progress_counter.tick(ctx, outcome);
+
+                                        Ok(())
+                                    }
+                                    .right_future()
+                                }
+                            },
+                        )
+                        .await?;
+                    Ok(((), children))
+                }
+                .boxed()
+            },
+        )
+        .try_collect::<Vec<()>>()
+        .await?;
+
+        final_progress_counter.log(ctx);
         debug!(
             ctx.logger(),
-            "Upload of (bonsai) changeset {} to CAS (recursively) took {} seconds, corresponding hg changeset is {}",
+            "Upload of (bonsai) changeset {} to CAS (recursively) took {:.2} seconds, corresponding hg changeset is {}. Upload included {}.",
             changeset_id,
             start_time.elapsed().as_secs_f64(),
             hg_cs_id,
+            if blobs_only {
+                "blobs only"
+            } else {
+                "augmented trees and blobs"
+            },
         );
         STATS::uploaded_changesets_recursive.add_value(1);
         Ok(())
