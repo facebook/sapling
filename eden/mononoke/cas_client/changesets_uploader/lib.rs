@@ -309,7 +309,7 @@ where
                         Ok::<(), Error>(())
                     }
                 })
-                .try_buffered(MAX_CONCURRENT_UPLOADS)
+                .try_buffer_unordered(MAX_CONCURRENT_UPLOADS)
                 .try_collect()
                 .await?;
             debug!(
