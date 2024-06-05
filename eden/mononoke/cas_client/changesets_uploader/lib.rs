@@ -9,6 +9,7 @@
 
 mod errors;
 
+use std::fmt::Display;
 use std::sync::Arc;
 
 use anyhow::Error;
@@ -33,10 +34,34 @@ use mercurial_types::HgChangesetId;
 use mononoke_types::ChangesetId;
 use repo_blobstore::RepoBlobstoreArc;
 use scm_client::ScmCasClient;
+use scm_client::UploadOutcome;
 use slog::debug;
 use stats::prelude::*;
 
 const MAX_CONCURRENT_UPLOADS: usize = 500;
+
+#[derive(Default, Debug)]
+struct DebugUploadCounters {
+    uploaded: RelaxedCounter,
+    already_present: RelaxedCounter,
+}
+
+impl Display for DebugUploadCounters {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(
+            f,
+            "Uploaded: {}, Already present: {}",
+            self.uploaded.get(),
+            self.already_present.get()
+        )
+    }
+}
+
+impl DebugUploadCounters {
+    pub fn sum(&self) -> usize {
+        self.uploaded.get() + self.already_present.get()
+    }
+}
 
 define_stats! {
     prefix = "mononoke.cas_changesets_uploader";
@@ -258,7 +283,7 @@ where
                 hg_cs_id
             );
             let start_time = std::time::Instant::now();
-            let progress_counter: Arc<RelaxedCounter> = Arc::new(Default::default());
+            let progress_counter: Arc<DebugUploadCounters> = Arc::new(Default::default());
             hg_cs
                 .manifestid()
                 .list_leaf_entries(ctx.clone(), repo.repo_blobstore_arc())
@@ -266,12 +291,20 @@ where
                     let progress_counter = progress_counter.clone();
                     async move {
                         let blobstore = repo.repo_blobstore();
-                        self.client
+                        let outcome = self
+                            .client
                             .upload_file_content(ctx, &blobstore, &entry.1, None, true)
                             .await?;
-                        progress_counter.inc();
-                        if progress_counter.get() % 500 == 0 {
-                            debug!(ctx.logger(), "Uploaded {} blobs", progress_counter.get());
+                        match outcome {
+                            UploadOutcome::Uploaded => {
+                                progress_counter.uploaded.inc();
+                            }
+                            UploadOutcome::AlreadyPresent => {
+                                progress_counter.already_present.inc();
+                            }
+                        }
+                        if progress_counter.sum() % 500 == 0 {
+                            debug!(ctx.logger(), "{}", *progress_counter);
                         }
                         Ok::<(), Error>(())
                     }

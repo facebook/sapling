@@ -39,6 +39,12 @@ define_stats! {
 const MAX_CONCURRENT_UPLOADS_TREES: usize = 200;
 const MAX_CONCURRENT_UPLOADS_FILES: usize = 100;
 
+#[derive(Debug, PartialEq)]
+pub enum UploadOutcome {
+    Uploaded,
+    AlreadyPresent,
+}
+
 pub struct ScmCasClient<Client>
 where
     Client: CasClient,
@@ -68,10 +74,10 @@ where
         filenode_id: &HgFileNodeId,
         digest: Option<&MononokeDigest>,
         prior_lookup: bool,
-    ) -> Result<(), Error> {
+    ) -> Result<UploadOutcome, Error> {
         if let Some(digest) = digest {
             if prior_lookup && self.lookup_digest(digest).await? {
-                return Ok(());
+                return Ok(UploadOutcome::AlreadyPresent);
             }
         }
         let fetch_key = filenode_id.load(ctx, blobstore).await?.content_id();
@@ -85,7 +91,7 @@ where
                     ))?;
                 let digest = MononokeDigest(meta.seeded_blake3, meta.total_size);
                 if prior_lookup && self.lookup_digest(&digest).await? {
-                    return Ok(());
+                    return Ok(UploadOutcome::AlreadyPresent);
                 }
                 digest
             }
@@ -98,7 +104,7 @@ where
 
         self.client.streaming_upload_blob(&digest, stream).await?;
         STATS::uploaded_files_count.add_value(1);
-        Ok(())
+        Ok(UploadOutcome::Uploaded)
     }
 
     /// Upload a given file to a CAS backend (by Content Id)
@@ -108,13 +114,13 @@ where
         blobstore: &'a impl Blobstore,
         content_id: &ContentId,
         prior_lookup: bool,
-    ) -> Result<(), Error> {
+    ) -> Result<UploadOutcome, Error> {
         let meta = filestore::get_metadata(blobstore, ctx, &content_id.to_owned().into())
             .await?
             .ok_or(ErrorKind::ContentMissingInBlobstore(content_id.clone()))?;
         let digest = MononokeDigest(meta.seeded_blake3, meta.total_size);
         if prior_lookup && self.lookup_digest(&digest).await? {
-            return Ok(());
+            return Ok(UploadOutcome::AlreadyPresent);
         }
         self.client
             .streaming_upload_blob(
@@ -125,7 +131,7 @@ where
             )
             .await?;
         STATS::uploaded_files_count.add_value(1);
-        Ok(())
+        Ok(UploadOutcome::Uploaded)
     }
 
     /// Upload given file contents to a Cas backend (batched API)
@@ -140,11 +146,12 @@ where
         blobstore: &'a impl Blobstore,
         ids: Vec<(HgFileNodeId, Option<MononokeDigest>)>,
         prior_lookup: bool,
-    ) -> Vec<Result<HgFileNodeId, Error>> {
+    ) -> Vec<Result<(HgFileNodeId, UploadOutcome), Error>> {
         let uploads = ids.into_iter().map(move |id| async move {
-            self.upload_file_content(ctx, blobstore, &id.0, id.1.as_ref(), prior_lookup)
+            let outcome = self
+                .upload_file_content(ctx, blobstore, &id.0, id.1.as_ref(), prior_lookup)
                 .await?;
-            Ok(id.0)
+            Ok((id.0, outcome))
         });
         stream::iter(uploads)
             .buffer_unordered(MAX_CONCURRENT_UPLOADS_FILES)
@@ -160,11 +167,12 @@ where
         blobstore: &'a impl Blobstore,
         ids: Vec<ContentId>,
         prior_lookup: bool,
-    ) -> Vec<Result<ContentId, Error>> {
+    ) -> Vec<Result<(ContentId, UploadOutcome), Error>> {
         stream::iter(ids.into_iter().map(move |id| async move {
-            self.upload_file_by_content_id(ctx, blobstore, &id, prior_lookup)
+            let outcome = self
+                .upload_file_by_content_id(ctx, blobstore, &id, prior_lookup)
                 .await?;
-            Ok(id)
+            Ok((id, outcome))
         }))
         .buffer_unordered(MAX_CONCURRENT_UPLOADS_FILES)
         .collect()
@@ -177,7 +185,7 @@ where
         blobstore: &'a impl Blobstore,
         ids: Vec<(HgFileNodeId, Option<MononokeDigest>)>,
         prior_lookup: bool,
-    ) -> Result<Vec<HgFileNodeId>, Error> {
+    ) -> Result<Vec<(HgFileNodeId, UploadOutcome)>, Error> {
         self.upload_file_contents(ctx, blobstore, ids, prior_lookup)
             .await
             .into_iter()
@@ -190,7 +198,7 @@ where
         blobstore: &'a impl Blobstore,
         ids: Vec<ContentId>,
         prior_lookup: bool,
-    ) -> Result<Vec<ContentId>, Error> {
+    ) -> Result<Vec<(ContentId, UploadOutcome)>, Error> {
         self.upload_files_by_content_id(ctx, blobstore, ids, prior_lookup)
             .await
             .into_iter()
@@ -207,11 +215,11 @@ where
         manifest_id: &HgAugmentedManifestId,
         digest: Option<&MononokeDigest>,
         prior_lookup: bool,
-    ) -> Result<(), Error> {
+    ) -> Result<UploadOutcome, Error> {
         let mut digest_checked = false;
         if let Some(digest) = digest {
             if prior_lookup && self.lookup_digest(digest).await? {
-                return Ok(());
+                return Ok(UploadOutcome::AlreadyPresent);
             }
             digest_checked = true;
         }
@@ -221,7 +229,7 @@ where
             augmented_manifest_envelope.augmented_manifest_size(),
         );
         if !digest_checked && prior_lookup && self.lookup_digest(&digest).await? {
-            return Ok(());
+            return Ok(UploadOutcome::AlreadyPresent);
         }
         let bytes_stream =
             augmented_manifest_envelope.into_content_addressed_manifest_blob(ctx, blobstore);
@@ -229,7 +237,7 @@ where
             .streaming_upload_blob(&digest, bytes_stream)
             .await?;
         STATS::uploaded_manifests_count.add_value(1);
-        Ok(())
+        Ok(UploadOutcome::Uploaded)
     }
 
     /// Upload given augmented trees to a Cas backend (batched API)
@@ -244,11 +252,12 @@ where
         blobstore: &'a impl Blobstore,
         manifest_ids: Vec<(HgAugmentedManifestId, Option<MononokeDigest>)>,
         prior_lookup: bool,
-    ) -> Vec<Result<HgAugmentedManifestId, Error>> {
+    ) -> Vec<Result<(HgAugmentedManifestId, UploadOutcome), Error>> {
         let uploads = manifest_ids.into_iter().map(move |id| async move {
-            self.upload_augmented_tree(ctx, blobstore, &id.0, id.1.as_ref(), prior_lookup)
+            let outcome = self
+                .upload_augmented_tree(ctx, blobstore, &id.0, id.1.as_ref(), prior_lookup)
                 .await?;
-            Ok(id.0)
+            Ok((id.0, outcome))
         });
         stream::iter(uploads)
             .buffer_unordered(MAX_CONCURRENT_UPLOADS_TREES)
@@ -262,7 +271,7 @@ where
         blobstore: &'a impl Blobstore,
         manifest_ids: Vec<(HgAugmentedManifestId, Option<MononokeDigest>)>,
         prior_lookup: bool,
-    ) -> Result<Vec<HgAugmentedManifestId>, Error> {
+    ) -> Result<Vec<(HgAugmentedManifestId, UploadOutcome)>, Error> {
         self.upload_augmented_trees(ctx, blobstore, manifest_ids, prior_lookup)
             .await
             .into_iter()
@@ -320,18 +329,19 @@ where
             );
 
             // Fetch all children of the uploaded manifests chunk
-            let fetches = uploaded_manifest_ids
-                .into_iter()
-                .map(move |manifest_id| async move {
-                    let manifest = manifest_id.load(ctx, blobstore).await?.augmented_manifest;
-                    let childrens: Vec<HgAugmentedManifestEntry> = manifest
-                        .into_subentries(ctx, blobstore)
-                        // strip the paths
-                        .map(|res| res.map(|(_k, v)| v))
-                        .try_collect()
-                        .await?;
-                    Ok::<Vec<HgAugmentedManifestEntry>, Error>(childrens)
-                });
+            let fetches =
+                uploaded_manifest_ids
+                    .into_iter()
+                    .map(move |(manifest_id, _)| async move {
+                        let manifest = manifest_id.load(ctx, blobstore).await?.augmented_manifest;
+                        let childrens: Vec<HgAugmentedManifestEntry> = manifest
+                            .into_subentries(ctx, blobstore)
+                            // strip the paths
+                            .map(|res| res.map(|(_k, v)| v))
+                            .try_collect()
+                            .await?;
+                        Ok::<Vec<HgAugmentedManifestEntry>, Error>(childrens)
+                    });
 
             let children: Vec<HgAugmentedManifestEntry> = stream::iter(fetches)
                 .buffer_unordered(MAX_CONCURRENT_UPLOADS_TREES)
