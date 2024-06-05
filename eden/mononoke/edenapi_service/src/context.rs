@@ -13,7 +13,7 @@ use std::sync::Mutex;
 use gotham_derive::StateData;
 use mononoke_api::Mononoke;
 
-/// Struct containing the EdenAPI server's global shared state.
+/// Struct containing the SaplingRemoteAPI server's global shared state.
 /// Intended to be exposed throughout the server by being inserted into
 /// the `State` for each request via Gotham's `StateMiddleware`. As such,
 /// this type is designed to be cheaply clonable, with all cloned sharing
@@ -38,7 +38,7 @@ impl ServerContext {
     }
 
     /// Get a reference to the Mononoke API. This is the main way that
-    /// the EdenAPI server should interact with the Mononoke backend.
+    /// the SaplingRemoteAPI server should interact with the Mononoke backend.
     pub fn mononoke_api(&self) -> Arc<Mononoke> {
         self.inner.lock().expect("lock poisoned").mononoke.clone()
     }

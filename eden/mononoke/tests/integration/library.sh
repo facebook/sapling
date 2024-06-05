@@ -1723,7 +1723,7 @@ function hgmn {
 }
 
 # Run an hg binary configured with the settings require to talk to Mononoke
-# via EdenAPI
+# via SaplingRemoteAPI
 function hgedenapi {
   hgmn \
     --config "edenapi.url=https://localhost:$MONONOKE_SOCKET/edenapi" \

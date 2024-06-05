@@ -202,7 +202,7 @@ where
 
         if let Some(edenapi_path_and_query) = edenapi_path_and_query {
             let pq = http::uri::PathAndQuery::from_str(edenapi_path_and_query)
-                .context("Error translating EdenAPI request path")
+                .context("Error translating SaplingRemoteAPI request path")
                 .map_err(HttpError::internal)?;
             return self.handle_eden_api_request(req, pq, body).await;
         }
@@ -358,7 +358,7 @@ where
         uri_parts.path_and_query = Some(pq);
 
         req.uri = Uri::from_parts(uri_parts)
-            .context("Error translating EdenAPI request")
+            .context("Error translating SaplingRemoteAPI request")
             .map_err(HttpError::internal)?;
 
         if let Err(e) = bump_qps(&req.headers, self.acceptor().qps.as_deref()) {

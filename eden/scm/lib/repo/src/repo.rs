@@ -278,21 +278,21 @@ impl Repo {
         self.store_path.join("metalog")
     }
 
-    /// Constructs the EdenAPI client. Errors out if the EdenAPI should not be
+    /// Constructs the SaplingRemoteAPI client. Errors out if the SaplingRemoteAPI should not be
     /// constructed.
     ///
-    /// Use `optional_eden_api` if `EdenAPI` is optional.
+    /// Use `optional_eden_api` if `SaplingRemoteAPI` is optional.
     pub fn eden_api(&self) -> Result<Arc<dyn SaplingRemoteApi>, SaplingRemoteApiError> {
         match self.optional_eden_api()? {
             Some(v) => Ok(v),
             None => Err(SaplingRemoteApiError::Other(anyhow!(
-                "EdenAPI is requested but not available for this repo"
+                "SaplingRemoteAPI is requested but not available for this repo"
             ))),
         }
     }
 
     /// Private API used by `optional_eden_api` that bypasses checks about whether
-    /// EdenAPI should be used or not.
+    /// SaplingRemoteAPI should be used or not.
     fn force_construct_eden_api(&self) -> Result<Arc<dyn SaplingRemoteApi>, SaplingRemoteApiError> {
         let eden_api = self.eden_api.get_or_try_init(
             || -> Result<Arc<dyn SaplingRemoteApi>, SaplingRemoteApiError> {
@@ -305,9 +305,9 @@ impl Repo {
         Ok(eden_api.clone())
     }
 
-    /// Constructs EdenAPI client if it should be constructed.
+    /// Constructs SaplingRemoteAPI client if it should be constructed.
     ///
-    /// Returns `None` if EdenAPI should not be used.
+    /// Returns `None` if SaplingRemoteAPI should not be used.
     pub fn optional_eden_api(
         &self,
     ) -> Result<Option<Arc<dyn SaplingRemoteApi>>, SaplingRemoteApiError> {
@@ -334,7 +334,7 @@ impl Repo {
                     tracing::trace!(target: "repo::eden_api", "using EagerRepo at {}", &path);
                     return Ok(Some(self.force_construct_eden_api()?));
                 }
-                // Legacy tests are incompatible with EdenAPI.
+                // Legacy tests are incompatible with SaplingRemoteAPI.
                 // They use None or file or ssh scheme with dummyssh.
                 if path.starts_with("file:") {
                     tracing::trace!(target: "repo::eden_api", "disabled because paths.default is not set");
@@ -347,9 +347,9 @@ impl Repo {
                         }
                     }
                 }
-                // Explicitly set EdenAPI URLs.
+                // Explicitly set SaplingRemoteAPI URLs.
                 // Ideally we can make paths.default derive the edenapi URLs. But "push" is not on
-                // EdenAPI yet. So we have to wait.
+                // SaplingRemoteAPI yet. So we have to wait.
                 if self.config.get_nonempty("edenapi", "url").is_none()
                     || self
                         .config

@@ -75,7 +75,7 @@ use crate::pyext::SaplingRemoteApiPyExt;
 use crate::stats::stats;
 use crate::util::to_path;
 
-// Python wrapper around an EdenAPI client.
+// Python wrapper around an SaplingRemoteAPI client.
 //
 // This is basically just FFI boilerplate. The actual functionality
 // is implemented as the default implementations of the methods in

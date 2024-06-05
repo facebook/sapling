@@ -19,7 +19,7 @@ Initialize test repo.
   8b2dca0c8a726d66bf26d47835a356cc4286facd
   $ hg bookmark master -r tip
 
-Start up EdenAPI server.
+Start up SaplingRemoteAPI server.
   $ setup_mononoke_config
   $ start_and_wait_for_mononoke_server
 

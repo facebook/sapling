@@ -541,7 +541,7 @@ impl FetchState {
         let mut fetching_keys: HashSet<Key> = pending.iter().cloned().collect();
 
         let count = pending.len();
-        debug!("Fetching EdenAPI - Count = {}", count);
+        debug!("Fetching SaplingRemoteAPI - Count = {}", count);
 
         let mut found = 0;
         let mut found_pointers = 0;
@@ -702,7 +702,7 @@ impl FetchState {
         }
 
         // We subtract any lfs pointers that were found -- these requests were
-        // fulfiled by LFS, not EdenAPI
+        // fulfiled by LFS, not SaplingRemoteAPI
         self.metrics.edenapi.fetch(count - found_pointers);
         self.metrics.edenapi.err(errors);
         self.metrics.edenapi.hit(found);

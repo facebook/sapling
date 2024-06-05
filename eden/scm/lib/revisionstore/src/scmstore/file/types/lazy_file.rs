@@ -56,7 +56,7 @@ impl LazyFile {
             LazyFile::Lfs(content, _) => FileAuxData::from_content(content),
             LazyFile::SaplingRemoteApi(entry) if entry.aux_data.is_some() => {
                 FileAuxData::try_from(entry.aux_data().cloned().ok_or_else(|| {
-                    anyhow::anyhow!("Invalid EdenAPI entry in LazyFile. Aux data is empty")
+                    anyhow::anyhow!("Invalid SaplingRemoteAPI entry in LazyFile. Aux data is empty")
                 })?)?
             }
             _ => {

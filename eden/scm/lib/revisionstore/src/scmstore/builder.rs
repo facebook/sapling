@@ -518,7 +518,7 @@ impl<'a> TreeStoreBuilder<'a> {
         })
     }
 
-    #[context("failed to build EdenAPI from config")]
+    #[context("failed to build SaplingRemoteAPI from config")]
     fn build_edenapi(&self) -> Result<Arc<SaplingRemoteApiTreeStore>> {
         let client = Builder::from_config(self.config)?.build()?;
 

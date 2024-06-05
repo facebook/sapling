@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-//! Types shared between the EdenAPI client and server.
+//! Types shared between the SaplingRemoteAPI client and server.
 //!
 //! This crate exists primarily to provide a lightweight place to
 //! put types that need to be used by both the client and server.
@@ -228,6 +228,6 @@ impl SaplingRemoteApiServerError {
 #[derive(Clone, Debug, Error, Eq, PartialEq, Serialize)]
 #[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub enum SaplingRemoteApiServerErrorKind {
-    #[error("EdenAPI server returned an error with message: {0}")]
+    #[error("SaplingRemoteAPI server returned an error with message: {0}")]
     OpaqueError(String),
 }

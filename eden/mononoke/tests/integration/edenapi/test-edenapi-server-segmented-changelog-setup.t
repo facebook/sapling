@@ -57,7 +57,7 @@ Blobimport test repo.
   $ quiet default_setup_blobimport "blob_files"
   $ quiet segmented_changelog_tailer_reseed --repo repo --head=$F
 
-Start up EdenAPI server.
+Start up SaplingRemoteAPI server.
   $ cat >> "$TESTTMP/mononoke-config/repos/repo/server.toml" <<CONFIG
   > [segmented_changelog_config]
   > enabled=true

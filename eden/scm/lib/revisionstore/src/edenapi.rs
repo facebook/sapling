@@ -37,7 +37,7 @@ use history::SaplingRemoteApiHistoryStore;
 pub type SaplingRemoteApiFileStore = SaplingRemoteApiRemoteStore<File>;
 pub type SaplingRemoteApiTreeStore = SaplingRemoteApiRemoteStore<Tree>;
 
-/// A shim around an EdenAPI client that implements the various traits of
+/// A shim around an SaplingRemoteAPI client that implements the various traits of
 /// Mercurial's storage layer, allowing a type that implements `SaplingRemoteApi` to be
 /// used alongside other Mercurial data and history stores.
 ///
@@ -52,7 +52,7 @@ pub struct SaplingRemoteApiRemoteStore<T> {
 }
 
 impl<T: SaplingRemoteApiStoreKind> SaplingRemoteApiRemoteStore<T> {
-    /// Create a new SaplingRemoteApiRemoteStore using the given EdenAPI client.
+    /// Create a new SaplingRemoteAPIRemoteStore using the given SaplingRemoteAPI client.
     ///
     /// The current design of the storage layer also requires a distinction
     /// between stores that provide file data and stores that provide tree data.
@@ -107,7 +107,7 @@ impl HgIdRemoteStore for SaplingRemoteApiRemoteStore<Tree> {
         self: Arc<Self>,
         _store: Arc<dyn HgIdMutableHistoryStore>,
     ) -> Arc<dyn RemoteHistoryStore> {
-        unimplemented!("EdenAPI does not support fetching tree history")
+        unimplemented!("SaplingRemoteAPI does not support fetching tree history")
     }
 }
 
@@ -154,7 +154,7 @@ impl SaplingRemoteApiTreeStore {
 }
 
 /// Trait that provides a common interface for calling the `files` and `trees`
-/// methods on an EdenAPI client.
+/// methods on an SaplingRemoteAPI client.
 #[async_trait]
 pub trait SaplingRemoteApiStoreKind: Send + Sync + 'static {
     async fn prefetch_files(
@@ -197,7 +197,7 @@ impl SaplingRemoteApiStoreKind for Tree {
 }
 
 /// Return only the HgId keys from the given iterator.
-/// EdenAPI cannot fetch content-addressed LFS blobs.
+/// SaplingRemoteAPI cannot fetch content-addressed LFS blobs.
 fn hgid_keys<'a>(keys: impl IntoIterator<Item = &'a StoreKey>) -> Vec<Key> {
     keys.into_iter()
         .filter_map(|k| match k {

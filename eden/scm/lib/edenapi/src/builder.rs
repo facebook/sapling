@@ -45,7 +45,7 @@ static CUSTOM_BUILD_FUNCS: Lazy<
     >,
 > = Lazy::new(Default::default);
 
-/// Builder for creating new EdenAPI clients.
+/// Builder for creating new SaplingRemoteAPI clients.
 pub struct Builder<'a> {
     config: &'a dyn configmodel::Config,
     repo_name: Option<String>,
@@ -70,7 +70,7 @@ impl<'a> Builder<'a> {
     /// Build the client.
     pub fn build(self) -> Result<Arc<dyn SaplingRemoteApi>, SaplingRemoteApiError> {
         {
-            // Hook in other EdenAPI implementations such as eagerepo (used for tests).
+            // Hook in other SaplingRemoteAPI implementations such as eagerepo (used for tests).
             let funcs = CUSTOM_BUILD_FUNCS.read();
             for func in funcs.iter() {
                 if let Some(client) = func(self.config)? {
@@ -107,7 +107,7 @@ impl<'a> Builder<'a> {
     }
 }
 
-/// Builder for creating new HTTP EdenAPI clients.
+/// Builder for creating new HTTP SaplingRemoteAPI clients.
 ///
 /// You probably want to use [`Builder`] instead.
 #[derive(Debug, Default)]

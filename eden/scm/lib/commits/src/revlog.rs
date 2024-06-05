@@ -68,7 +68,7 @@ impl RevlogCommits {
 #[async_trait::async_trait]
 impl AppendCommits for RevlogCommits {
     async fn add_commits(&mut self, commits: &[HgCommit]) -> Result<()> {
-        // Topo sort nodes since EdenAPI returns nodes sorted lexically.
+        // Topo sort nodes since SaplingRemoteAPI returns nodes sorted lexically.
         // We try to keep a stable order relative to the input since revlog
         // insertion order can affect tests.
 

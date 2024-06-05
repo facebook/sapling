@@ -78,7 +78,7 @@ use crate::util::to_keys;
 use crate::util::to_keys_with_parents;
 use crate::util::to_trees_upload_items;
 
-/// Extension trait allowing EdenAPI methods to be called from Python code.
+/// Extension trait allowing SaplingRemoteAPI methods to be called from Python code.
 ///
 /// One nice benefit of making this a trait instead of directly implementing
 /// the methods inside a `py_class!` macro invocation is that tools like

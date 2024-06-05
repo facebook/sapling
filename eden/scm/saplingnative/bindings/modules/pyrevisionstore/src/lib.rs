@@ -847,7 +847,7 @@ impl ExtractInnerRef for pyremotestore {
     }
 }
 
-// Python wrapper around an EdenAPI-backed remote store for files.
+// Python wrapper around an SaplingRemoteAPI-backed remote store for files.
 //
 // This type exists for the sole purpose of allowing an `SaplingRemoteApiFileStore`
 // to be passed from Rust to Python and back into Rust. It cannot be created
@@ -870,7 +870,7 @@ impl ExtractInnerRef for edenapifilestore {
     }
 }
 
-// Python wrapper around an EdenAPI-backed remote store for trees.
+// Python wrapper around an SaplingRemoteAPI-backed remote store for trees.
 //
 // This type exists for the sole purpose of allowing an `SaplingRemoteApiTreeStore`
 // to be passed from Rust to Python and back into Rust. It cannot be created

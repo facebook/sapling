@@ -215,7 +215,7 @@ impl HybridCommits {
         })
     }
 
-    /// Enable fetching commit hashes lazily via EdenAPI.
+    /// Enable fetching commit hashes lazily via SaplingRemoteAPI.
     pub fn enable_lazy_commit_hashes(&mut self) {
         let mut disabled_names: HashSet<Vertex> = Default::default();
         if let Ok(env) = std::env::var(EDENSCM_DISABLE_REMOTE_RESOLVE) {
@@ -244,7 +244,7 @@ impl HybridCommits {
             remote_name_current: Default::default(),
         };
         self.commits.dag.set_remote_protocol(Arc::new(protocol));
-        self.lazy_hash_desc = "lazy, using EdenAPI".to_string();
+        self.lazy_hash_desc = "lazy, using SaplingRemoteAPI".to_string();
     }
 
     /// Enable fetching commit hashes lazily via another "segments".
@@ -516,7 +516,7 @@ Feature Providers:
     IdMap
   Commit Data (user, message):
     Zstore (incomplete, draft)
-    EdenAPI (remaining, public)
+    SaplingRemoteAPI (remaining, public)
     Revlog {}
 Commit Hashes: {}
 "#,

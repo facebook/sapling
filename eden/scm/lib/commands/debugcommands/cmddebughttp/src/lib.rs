@@ -23,7 +23,7 @@ pub fn aliases() -> &'static str {
 }
 
 pub fn doc() -> &'static str {
-    "check whether the EdenAPI server is reachable"
+    "check whether the SaplingRemoteAPI server is reachable"
 }
 
 pub fn synopsis() -> Option<&'static str> {

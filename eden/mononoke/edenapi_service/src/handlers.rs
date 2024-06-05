@@ -83,7 +83,7 @@ use self::handler::SaplingRemoteApiContext;
 
 const REPORTING_LOOP_WAIT: u64 = 5;
 
-/// Enum identifying the EdenAPI method that each handler corresponds to.
+/// Enum identifying the SaplingRemoteAPI method that each handler corresponds to.
 /// Used to identify the handler for logging and stats collection.
 #[derive(Copy, Clone)]
 pub enum SaplingRemoteApiMethod {
@@ -360,7 +360,7 @@ where
             let mut scuba = base_scuba.clone();
             ctx.perf_counters().insert_perf_counters(&mut scuba);
             scuba.log_with_msg(
-                "Long running EdenAPI request",
+                "Long running SaplingRemoteAPI request",
                 format!("{}", start.elapsed().as_micros_unchecked()),
             );
         }
@@ -374,7 +374,7 @@ where
     Monitor::new(stream, sender)
 }
 
-/// Encode a stream of EdenAPI responses into its final on-wire representation.
+/// Encode a stream of SaplingRemoteAPI responses into its final on-wire representation.
 ///
 /// This involves converting each item to its wire format, CBOR serializing them, and then
 /// optionally compressing the resulting byte stream based on the specified Content-Encoding.

@@ -5,13 +5,13 @@
  * GNU General Public License version 2.
  */
 
-//! This module has auto-implemented functions that expand on EdenAPI functionalities.
-// Think of it as a EdenAPIExt trait full of auto-implemented functions.
+//! This module has auto-implemented functions that expand on SaplingRemoteAPI functionalities.
+// Think of it as a SaplingRemoteAPIExt trait full of auto-implemented functions.
 // It's not implemented like that because trait implementations can't be split in
 // multiple files, so this is instead implemented as many functions in different files.
 // Always use the format:
 // fn my_function(api: &(impl SaplingRemoteApi + ?Sized), other_args...) -> ... {...}
-// this way the function can be called from inside any trait that extends EdenAPI.
+// this way the function can be called from inside any trait that extends SaplingRemoteAPI.
 
 mod files;
 mod snapshot;

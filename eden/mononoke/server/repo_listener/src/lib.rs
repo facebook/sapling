@@ -92,7 +92,7 @@ pub async fn create_repo_listeners<'a>(
             &common_config,
             readonly,
         )
-        .context("Error instantiating EdenAPI")?
+        .context("Error instantiating SaplingRemoteAPI")?
     };
 
     connection_acceptor(

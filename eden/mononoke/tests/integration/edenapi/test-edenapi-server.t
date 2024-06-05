@@ -6,7 +6,7 @@
 
   $ . "${TEST_FIXTURES}/library.sh"
 
-Start up EdenAPI server.
+Start up SaplingRemoteAPI server.
   $ setup_mononoke_config
   $ start_and_wait_for_mononoke_server
 List repos.

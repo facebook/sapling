@@ -36,7 +36,7 @@ import testing repo to mononoke
   $ blobimport repo-hg/.hg repo
 
 
-Start up EdenAPI server.
+Start up SaplingRemoteAPI server.
   $ start_and_wait_for_mononoke_server
 Check response.
   $ hgedenapi debugapi -e bookmarks -i '["alpha", "beta", "unknown"]'

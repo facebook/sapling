@@ -292,7 +292,7 @@ py_class!(pub class commits |py| {
     /// This is similar to doublewrite backend, except that commit text fallback is edenapi,
     /// not revlog, despite the revlog might have the data.
     ///
-    /// If lazyhash is True, enable lazy commit hashes or EdenAPI.
+    /// If lazyhash is True, enable lazy commit hashes or SaplingRemoteAPI.
     ///
     /// If lazyhashdir is set, enable lazy commit hashes backed by the given segments dir
     /// (for testing).

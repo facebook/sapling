@@ -114,7 +114,7 @@ impl RemoteDataStore for SaplingRemoteApiDataStore<File> {
     }
 
     fn upload(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
-        // XXX: EdenAPI does not presently support uploads.
+        // XXX: SaplingRemoteAPI does not presently support uploads.
         Ok(keys.to_vec())
     }
 }
@@ -164,7 +164,7 @@ impl RemoteDataStore for SaplingRemoteApiDataStore<Tree> {
     }
 
     fn upload(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
-        // XXX: EdenAPI does not presently support uploads.
+        // XXX: SaplingRemoteAPI does not presently support uploads.
         Ok(keys.to_vec())
     }
 }
@@ -236,7 +236,7 @@ mod tests {
 
     #[test]
     fn test_get_file() -> Result<()> {
-        // Set up mocked EdenAPI file and tree stores.
+        // Set up mocked SaplingRemoteAPI file and tree stores.
         let k = key("a", "def6f29d7b61f9cb70b2f14f79cd5c43c38e21b2");
         let d = delta("1234", None, k.clone());
         let files = hashmap! { k.clone() => d.data.clone() };
@@ -283,7 +283,7 @@ mod tests {
 
     #[test]
     fn test_get_file_remote_only() -> Result<()> {
-        // Set up mocked EdenAPI file and tree stores.
+        // Set up mocked SaplingRemoteAPI file and tree stores.
         let k = key("a", "def6f29d7b61f9cb70b2f14f79cd5c43c38e21b2");
         let d = delta("1234", None, k.clone());
         let files = hashmap! { k.clone() => d.data.clone() };
@@ -330,7 +330,7 @@ mod tests {
 
     #[test]
     fn test_get_tree() -> Result<()> {
-        // Set up mocked EdenAPI file and tree stores.
+        // Set up mocked SaplingRemoteAPI file and tree stores.
         let k = key("a", "def6f29d7b61f9cb70b2f14f79cd5c43c38e21b2");
         let d = delta("1234", None, k.clone());
         let trees = hashmap! { k.clone() => d.data.clone() };
@@ -376,7 +376,7 @@ mod tests {
 
     #[test]
     fn test_get_tree_remote_only() -> Result<()> {
-        // Set up mocked EdenAPI file and tree stores.
+        // Set up mocked SaplingRemoteAPI file and tree stores.
         let k = key("a", "def6f29d7b61f9cb70b2f14f79cd5c43c38e21b2");
         let d = delta("1234", None, k.clone());
         let trees = hashmap! { k.clone() => d.data.clone() };
@@ -442,7 +442,7 @@ mod tests {
 
     #[test]
     fn test_get_aux_cache() -> Result<()> {
-        // Set up mocked EdenAPI file and tree stores.
+        // Set up mocked SaplingRemoteAPI file and tree stores.
         let k = key("a", "def6f29d7b61f9cb70b2f14f79cd5c43c38e21b2");
         let d = delta("1234", None, k.clone());
         let files = hashmap! { k.clone() => d.data };

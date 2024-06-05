@@ -99,7 +99,7 @@ pub struct TreeStore {
     /// A FileStore, which can be used for fetching and caching file aux data for a tree.
     pub filestore: Option<Arc<FileStore>>,
 
-    /// Whether we should request extra children metadata from EdenAPI and write back to
+    /// Whether we should request extra children metadata from SaplingRemoteAPI and write back to
     /// filestore's aux cache.
     pub tree_metadata_mode: TreeMetadataMode,
 

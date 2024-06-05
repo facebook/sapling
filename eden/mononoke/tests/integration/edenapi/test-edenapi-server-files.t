@@ -27,7 +27,7 @@ Blobimport test repo.
   $ cd ..
   $ blobimport repo-hg/.hg repo
 
-Start up EdenAPI server.
+Start up SaplingRemoteAPI server.
   $ setup_mononoke_config
   $ start_and_wait_for_mononoke_server
 Create and send file request.

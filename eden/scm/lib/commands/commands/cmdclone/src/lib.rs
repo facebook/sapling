@@ -781,7 +781,7 @@ pub fn doc() -> &'static str {
     Scp-like URLs of the form ``user@host:path`` are converted to
     ``ssh://user@host/path``.
 
-    Other URL schemes are assumed to point to an EdenAPI capable repo.
+    Other URL schemes are assumed to point to an SaplingRemoteAPI capable repo.
 
     The ``--git`` option forces the source to be interpreted as a Git repo.
 

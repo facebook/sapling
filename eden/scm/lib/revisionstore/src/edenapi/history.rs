@@ -26,7 +26,7 @@ use crate::types::StoreKey;
 /// A history store backed by an `SaplingRemoteApiRemoteStore` and a mutable store.
 ///
 /// This type can only be created from an `SaplingRemoteApiRemoteStore<File>`; attempting
-/// to create one from a remote store for trees will panic since EdenAPI does
+/// to create one from a remote store for trees will panic since SaplingRemoteAPI does
 /// not support fetching tree history.
 ///
 /// Data will be fetched over the network via the remote store and stored in the
@@ -100,7 +100,7 @@ mod tests {
 
     #[test]
     fn test_file_history() -> Result<()> {
-        // Set up mocked EdenAPI store.
+        // Set up mocked SaplingRemoteAPI store.
         let k = key("a", "1");
         let n = NodeInfo {
             parents: [key("b", "2"), null_key("a")],
@@ -145,7 +145,7 @@ mod tests {
             IndexedLogHgIdHistoryStore::new(&tmp, &empty_config(), StoreType::Shared).unwrap(),
         );
 
-        // EdenAPI does not support fetching tree history, so it should
+        // SaplingRemoteAPI does not support fetching tree history, so it should
         // not be possible to get a history store from a tree store.
         // The following line should panic.
         let _ = remote.historystore(local);

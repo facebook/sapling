@@ -57,7 +57,7 @@ pub enum Caching {
 /// Which derived data types should the cache wait for before
 /// exposing the bookmark move to the users.
 pub enum BookmarkCacheDerivedData {
-    /// Only wait for hg derived data - the option used mainly by Mononoke EdenAPI Server.
+    /// Only wait for hg derived data - the option used mainly by Mononoke SaplingRemoteAPI Server.
     HgOnly,
     /// Only wait for git derived data - the option used mainly by Mononoke Git Server.
     GitOnly,

@@ -18,7 +18,7 @@ use types::Key;
 
 /// Enum to add context to server errors.
 ///
-/// Most of the functions in the EdenAPI server return `anyhow::Error`
+/// Most of the functions in the SaplingRemoteAPI server return `anyhow::Error`
 /// as their error type. The intention of `ErrorKind` is to be used
 /// in conjunction with `anyhow::Context` to annotate the error with
 /// the appropriate context. In that sense, this type should be used
