@@ -7,7 +7,8 @@
   $ . "${TEST_FIXTURES}/library.sh"
 
 setup configuration
-  $ setup_mononoke_config
+  $ setconfig push.edenapi=true
+  $ ENABLE_API_WRITES=1 setup_mononoke_config
   $ cd "$TESTTMP/mononoke-config"
   $ cat >> repos/repo/server.toml <<CONFIG
   > [[bookmarks]]
@@ -66,223 +67,114 @@ clone
 
 fast-forward the bookmark
   $ hg up -q $B
-  $ hgmn push -r . --to main
-  pushing rev 112478962961 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark main
-  searching for changes
-  no changes found
-  updating bookmark main
+  $ hgedenapi push -r . --to main
+  pushing rev 112478962961 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark main
+  moving remote bookmark main from 426bada5c675 to 112478962961
 
 fast-forward the bookmark over a commit that fails the hook
   $ hg up -q $D
-  $ hgmn push -r . --to main
-  pushing rev 7ff4b7c298ec to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark main
-  searching for changes
-  no changes found
-  remote: Command failed
-  remote:   Error:
-  remote:     hooks failed:
-  remote:     limit_filesize for 5e6585e50f1bf5a236028609e131851379bb311a: File size limit is 10 bytes. You tried to push file large that is over the limit (14 bytes). This limit is enforced for files matching the following regex: ".*". See https://fburl.com/landing_big_diffs for instructions.
-  remote: 
-  remote:   Root cause:
-  remote:     hooks failed:
-  remote:     limit_filesize for 5e6585e50f1bf5a236028609e131851379bb311a: File size limit is 10 bytes. You tried to push file large that is over the limit (14 bytes). This limit is enforced for files matching the following regex: ".*". See https://fburl.com/landing_big_diffs for instructions.
-  remote: 
-  remote:   Debug context:
-  remote:     "hooks failed:\nlimit_filesize for 5e6585e50f1bf5a236028609e131851379bb311a: File size limit is 10 bytes. You tried to push file large that is over the limit (14 bytes). This limit is enforced for files matching the following regex: \".*\". See https://fburl.com/landing_big_diffs for instructions."
-  abort: unexpected EOL, expected netstring digit
+  $ hgedenapi push -r . --to main
+  pushing rev 7ff4b7c298ec to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark main
+  moving remote bookmark main from 112478962961 to 7ff4b7c298ec
+  abort: server error: hooks failed:
+    limit_filesize for 365e543af2aaf5cca34cf47377a8aee88b5597d45160996bf6434703fca8f8ff: File size limit is 10 bytes. You tried to push file large that is over the limit (14 bytes). This limit is enforced for files matching the following regex: ".*". See https://fburl.com/landing_big_diffs for instructions.
   [255]
 
 bypass the hook, the push will now work
-  $ hgmn push -r . --to main --pushvar ALLOW_LARGE_FILES=true
-  pushing rev 7ff4b7c298ec to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark main
-  searching for changes
-  no changes found
-  updating bookmark main
+  $ hgedenapi push -r . --to main --pushvar ALLOW_LARGE_FILES=true
+  pushing rev 7ff4b7c298ec to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark main
+  moving remote bookmark main from 112478962961 to 7ff4b7c298ec
 
 attempt a non-fast-forward move, it should fail
   $ hg up -q $F
-  $ hgmn push -r . --to main
-  pushing rev af09fbbc2f05 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark main
-  searching for changes
-  no changes found
-  remote: Command failed
-  remote:   Error:
-  remote:     While doing a bookmark-only pushrebase
-  remote: 
-  remote:   Root cause:
-  remote:     Non fast-forward bookmark move of 'main' from cbe5624248da659ef8f938baaf65796e68252a0a735e885a814b94f38b901d5b to 2b7843b3fb41a99743420b26286cc5e7bc94ebf7576eaf1bbceb70cd36ffe8b0
-  remote: 
-  remote:   Caused by:
-  remote:     Failed to fast-forward bookmark (set pushvar NON_FAST_FORWARD=true for a non-fast-forward move)
-  remote:   Caused by:
-  remote:     Non fast-forward bookmark move of 'main' from cbe5624248da659ef8f938baaf65796e68252a0a735e885a814b94f38b901d5b to 2b7843b3fb41a99743420b26286cc5e7bc94ebf7576eaf1bbceb70cd36ffe8b0
-  remote: 
-  remote:   Debug context:
-  remote:     Error {
-  remote:         context: "While doing a bookmark-only pushrebase",
-  remote:         source: Error {
-  remote:             context: "Failed to fast-forward bookmark (set pushvar NON_FAST_FORWARD=true for a non-fast-forward move)",
-  remote:             source: NonFastForwardMove {
-  remote:                 bookmark: BookmarkKey {
-  remote:                     name: BookmarkName {
-  remote:                         bookmark: "main",
-  remote:                     },
-  remote:                     category: Branch,
-  remote:                 },
-  remote:                 from: ChangesetId(
-  remote:                     Blake2(cbe5624248da659ef8f938baaf65796e68252a0a735e885a814b94f38b901d5b),
-  remote:                 ),
-  remote:                 to: ChangesetId(
-  remote:                     Blake2(2b7843b3fb41a99743420b26286cc5e7bc94ebf7576eaf1bbceb70cd36ffe8b0),
-  remote:                 ),
-  remote:             },
-  remote:         },
-  remote:     }
-  abort: unexpected EOL, expected netstring digit
+  $ hgedenapi push -r . --to main
+  pushing rev af09fbbc2f05 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark main
+  abort: non-fast-forward push to remote bookmark main from 7ff4b7c298ec to af09fbbc2f05 (set pushvar NON_FAST_FORWARD=true for a non-fast-forward move)
   [255]
 specify the pushvar to allow the non-fast-forward move.
-  $ hgmn push -r . --to main --pushvar NON_FAST_FORWARD=true
-  pushing rev af09fbbc2f05 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark main
-  searching for changes
-  no changes found
-  remote: Command failed
-  remote:   Error:
-  remote:     hooks failed:
-  remote:     limit_filesize for 18c1f749e0296aca8bbb023822506c1eff9bc8a9: File size limit is 10 bytes. You tried to push file large that is over the limit (14 bytes). This limit is enforced for files matching the following regex: ".*". See https://fburl.com/landing_big_diffs for instructions.
-  remote: 
-  remote:   Root cause:
-  remote:     hooks failed:
-  remote:     limit_filesize for 18c1f749e0296aca8bbb023822506c1eff9bc8a9: File size limit is 10 bytes. You tried to push file large that is over the limit (14 bytes). This limit is enforced for files matching the following regex: ".*". See https://fburl.com/landing_big_diffs for instructions.
-  remote: 
-  remote:   Debug context:
-  remote:     "hooks failed:\nlimit_filesize for 18c1f749e0296aca8bbb023822506c1eff9bc8a9: File size limit is 10 bytes. You tried to push file large that is over the limit (14 bytes). This limit is enforced for files matching the following regex: \".*\". See https://fburl.com/landing_big_diffs for instructions."
-  abort: unexpected EOL, expected netstring digit
+  $ hgedenapi push -r . --to main --pushvar NON_FAST_FORWARD=true
+  pushing rev af09fbbc2f05 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark main
+  moving remote bookmark main from 7ff4b7c298ec to af09fbbc2f05
+  abort: server error: hooks failed:
+    limit_filesize for 9c3ef8778600f6cd1c20c8a098bbb93a4d1b30fee00ff001e37ffff1908c920d: File size limit is 10 bytes. You tried to push file large that is over the limit (14 bytes). This limit is enforced for files matching the following regex: ".*". See https://fburl.com/landing_big_diffs for instructions.
   [255]
 
 bypass the hook too, and it should work
-  $ hgmn push -r . --to main --pushvar NON_FAST_FORWARD=true --pushvar ALLOW_LARGE_FILES=true
-  pushing rev af09fbbc2f05 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark main
-  searching for changes
-  no changes found
-  updating bookmark main
+  $ hgedenapi push -r . --to main --pushvar NON_FAST_FORWARD=true --pushvar ALLOW_LARGE_FILES=true
+  pushing rev af09fbbc2f05 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark main
+  moving remote bookmark main from 7ff4b7c298ec to af09fbbc2f05
 
-Noopp bookmark-only push doesn't need to bypass hooks to go through.
+Noop bookmark-only push doesn't need to bypass hooks to go through.
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select count(*) from bookmarks_update_log";
   7
-  $ hgmn push -r . --to main
-  pushing rev af09fbbc2f05 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark main
-  searching for changes
-  no changes found
-  updating bookmark main
+The server side bookmark value can be stable due to data derivation, let's workaround it by reading from local
+  $ hgedenapi push -r . --to main --config push.use_local_bookmark_value=True
+  pushing rev af09fbbc2f05 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark main
+  moving remote bookmark main from af09fbbc2f05 to af09fbbc2f05
+tofix: skip updating bookmark if the `from` and `to` values are the same
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select count(*) from bookmarks_update_log";
-  7
+  8
 
 attempt a move to a completely unrelated commit (no common ancestor), with an ancestor that
 fails the hook
   $ hg up -q $Z
-  $ hgmn push -r . --to main --pushvar NON_FAST_FORWARD=true
-  pushing rev e3295448b1ef to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark main
-  searching for changes
-  no changes found
-  remote: Command failed
-  remote:   Error:
-  remote:     hooks failed:
-  remote:     limit_filesize for 1cb9b9c4b7dd2e82083766050d166fffe209df6a: File size limit is 10 bytes. You tried to push file large that is over the limit (14 bytes). This limit is enforced for files matching the following regex: ".*". See https://fburl.com/landing_big_diffs for instructions.
-  remote: 
-  remote:   Root cause:
-  remote:     hooks failed:
-  remote:     limit_filesize for 1cb9b9c4b7dd2e82083766050d166fffe209df6a: File size limit is 10 bytes. You tried to push file large that is over the limit (14 bytes). This limit is enforced for files matching the following regex: ".*". See https://fburl.com/landing_big_diffs for instructions.
-  remote: 
-  remote:   Debug context:
-  remote:     "hooks failed:\nlimit_filesize for 1cb9b9c4b7dd2e82083766050d166fffe209df6a: File size limit is 10 bytes. You tried to push file large that is over the limit (14 bytes). This limit is enforced for files matching the following regex: \".*\". See https://fburl.com/landing_big_diffs for instructions."
-  abort: unexpected EOL, expected netstring digit
+  $ hgedenapi push -r . --to main --pushvar NON_FAST_FORWARD=true
+  pushing rev e3295448b1ef to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark main
+  moving remote bookmark main from af09fbbc2f05 to e3295448b1ef
+  abort: server error: hooks failed:
+    limit_filesize for e9bcd19d2580895e76b4e228c3df2ae8d3f2863894ba4d2e9dea3004bdd5abb8: File size limit is 10 bytes. You tried to push file large that is over the limit (14 bytes). This limit is enforced for files matching the following regex: ".*". See https://fburl.com/landing_big_diffs for instructions.
   [255]
 
 bypass the hook, and it should work
-  $ hgmn push -r . --to main --pushvar NON_FAST_FORWARD=true --pushvar ALLOW_LARGE_FILES=true
-  pushing rev e3295448b1ef to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark main
-  searching for changes
-  no changes found
-  updating bookmark main
+  $ hgedenapi push -r . --to main --pushvar NON_FAST_FORWARD=true --pushvar ALLOW_LARGE_FILES=true
+  pushing rev e3295448b1ef to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark main
+  moving remote bookmark main from af09fbbc2f05 to e3295448b1ef
 
 pushing another bookmark to the same commit shouldn't require running that hook
   $ hg up -q $X
-  $ hgmn push -r . --to other --create
-  pushing rev ba2b7fa7166d to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark other
-  searching for changes
-  no changes found
-  exporting bookmark other
+  $ hgedenapi push -r . --to other --create
+  pushing rev ba2b7fa7166d to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark other
+  creating remote bookmark other
   $ hg up -q $Z
-  $ hgmn push -r . --to other
-  pushing rev e3295448b1ef to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark other
-  searching for changes
-  no changes found
-  updating bookmark other
+  $ hgedenapi push -r . --to other
+  pushing rev e3295448b1ef to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark other
+  moving remote bookmark other from ba2b7fa7166d to e3295448b1ef
 
 but pushing to another commit will run the hook
   $ hg up -q $C
-  $ hgmn push -r . --to other --pushvar NON_FAST_FORWARD=true
-  pushing rev 5e6585e50f1b to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark other
-  searching for changes
-  no changes found
-  remote: Command failed
-  remote:   Error:
-  remote:     hooks failed:
-  remote:     limit_filesize for 5e6585e50f1bf5a236028609e131851379bb311a: File size limit is 10 bytes. You tried to push file large that is over the limit (14 bytes). This limit is enforced for files matching the following regex: ".*". See https://fburl.com/landing_big_diffs for instructions.
-  remote: 
-  remote:   Root cause:
-  remote:     hooks failed:
-  remote:     limit_filesize for 5e6585e50f1bf5a236028609e131851379bb311a: File size limit is 10 bytes. You tried to push file large that is over the limit (14 bytes). This limit is enforced for files matching the following regex: ".*". See https://fburl.com/landing_big_diffs for instructions.
-  remote: 
-  remote:   Debug context:
-  remote:     "hooks failed:\nlimit_filesize for 5e6585e50f1bf5a236028609e131851379bb311a: File size limit is 10 bytes. You tried to push file large that is over the limit (14 bytes). This limit is enforced for files matching the following regex: \".*\". See https://fburl.com/landing_big_diffs for instructions."
-  abort: unexpected EOL, expected netstring digit
+  $ hgedenapi push -r . --to other --pushvar NON_FAST_FORWARD=true
+  pushing rev 5e6585e50f1b to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark other
+  moving remote bookmark other from e3295448b1ef to 5e6585e50f1b
+  abort: server error: hooks failed:
+    limit_filesize for 365e543af2aaf5cca34cf47377a8aee88b5597d45160996bf6434703fca8f8ff: File size limit is 10 bytes. You tried to push file large that is over the limit (14 bytes). This limit is enforced for files matching the following regex: ".*". See https://fburl.com/landing_big_diffs for instructions.
   [255]
 
 bypassing that also works
-  $ hgmn push -r . --to other --pushvar NON_FAST_FORWARD=true --pushvar ALLOW_LARGE_FILES=true
-  pushing rev 5e6585e50f1b to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark other
-  searching for changes
-  no changes found
-  updating bookmark other
+  $ hgedenapi push -r . --to other --pushvar NON_FAST_FORWARD=true --pushvar ALLOW_LARGE_FILES=true
+  pushing rev 5e6585e50f1b to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark other
+  moving remote bookmark other from e3295448b1ef to 5e6585e50f1b
 
 we can now extend that bookmark further without a bypass needed
   $ hg up -q $D
-  $ hgmn push -r . --to other
-  pushing rev 7ff4b7c298ec to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark other
-  searching for changes
-  no changes found
-  updating bookmark other
+  $ hgedenapi push -r . --to other
+  pushing rev 7ff4b7c298ec to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark other
+  moving remote bookmark other from 5e6585e50f1b to 7ff4b7c298ec
 
 create a new bookmark at this location - it should fail because of the hook
-  $ hgmn push -r . --to created --create
-  pushing rev 7ff4b7c298ec to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark created
-  searching for changes
-  no changes found
-  remote: Command failed
-  remote:   Error:
-  remote:     hooks failed:
-  remote:     limit_filesize for 5e6585e50f1bf5a236028609e131851379bb311a: File size limit is 10 bytes. You tried to push file large that is over the limit (14 bytes). This limit is enforced for files matching the following regex: ".*". See https://fburl.com/landing_big_diffs for instructions.
-  remote: 
-  remote:   Root cause:
-  remote:     hooks failed:
-  remote:     limit_filesize for 5e6585e50f1bf5a236028609e131851379bb311a: File size limit is 10 bytes. You tried to push file large that is over the limit (14 bytes). This limit is enforced for files matching the following regex: ".*". See https://fburl.com/landing_big_diffs for instructions.
-  remote: 
-  remote:   Debug context:
-  remote:     "hooks failed:\nlimit_filesize for 5e6585e50f1bf5a236028609e131851379bb311a: File size limit is 10 bytes. You tried to push file large that is over the limit (14 bytes). This limit is enforced for files matching the following regex: \".*\". See https://fburl.com/landing_big_diffs for instructions."
-  abort: unexpected EOL, expected netstring digit
+  $ hgedenapi push -r . --to created --create
+  pushing rev 7ff4b7c298ec to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark created
+  creating remote bookmark created
+  abort: failed to create remote bookmark:
+    remote server error: hooks failed:
+    limit_filesize for 365e543af2aaf5cca34cf47377a8aee88b5597d45160996bf6434703fca8f8ff: File size limit is 10 bytes. You tried to push file large that is over the limit (14 bytes). This limit is enforced for files matching the following regex: ".*". See https://fburl.com/landing_big_diffs for instructions.
   [255]
 
 bypass the hook to allow the creation
-  $ hgmn push -r . --to created --create --pushvar ALLOW_LARGE_FILES=true
-  pushing rev 7ff4b7c298ec to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark created
-  searching for changes
-  no changes found
-  exporting bookmark created
+  $ hgedenapi push -r . --to created --create --pushvar ALLOW_LARGE_FILES=true
+  pushing rev 7ff4b7c298ec to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark created
+  creating remote bookmark created
 
 we can, however, create a bookmark at the same location as main
-  $ hgmn push -r $Z --to main-copy --create
-  pushing rev e3295448b1ef to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark main-copy
-  searching for changes
-  no changes found
-  exporting bookmark main-copy
+  $ hgedenapi push -r $Z --to main-copy --create
+  pushing rev e3295448b1ef to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark main-copy
+  creating remote bookmark main-copy
