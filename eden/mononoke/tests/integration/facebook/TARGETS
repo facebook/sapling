@@ -248,6 +248,7 @@ dott_test(
         "//eden/mononoke/mononoke_hg_sync_job:mononoke_hg_sync_job",
         "//eden/mononoke/scs/client:scsc",
         "//eden/mononoke/scs_server:scs_server",
+        "//eden/mononoke/tools/admin:newadmin",
         "//eden/mononoke/tools/testtool:testtool",
     ],
 )

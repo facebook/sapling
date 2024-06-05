@@ -1995,6 +1995,24 @@ impl RepoContext {
             .derive_bulk(ctx, csids, rederivation, derivable_types)
             .await?)
     }
+
+    pub async fn is_derived(
+        &self,
+        ctx: &CoreContext,
+        csid: ChangesetId,
+        derivable_type: DerivableType,
+    ) -> Result<bool, MononokeError> {
+        // We don't need to expose rederivation to users of the repo api
+        // That's a lower level concept that clients like the derived data backfiller
+        // can get straight from the derived data manager
+        let rederivation = None;
+        Ok(self
+            .repo
+            .repo_derived_data()
+            .manager()
+            .is_derived(ctx, csid, rederivation, derivable_type)
+            .await?)
+    }
 }
 
 impl PartialEq for RepoContext {

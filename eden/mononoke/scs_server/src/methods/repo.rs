@@ -8,6 +8,7 @@
 use std::collections::BTreeMap;
 
 use bookmarks::BookmarkKey;
+use borrowed::borrowed;
 use bytes::Bytes;
 use context::CoreContext;
 use derived_data_manager::DerivableType;
@@ -741,12 +742,12 @@ impl SourceControlServiceImpl {
     /// are ready to be used later without incurring a performance penalty for repeated
     /// preparation.
     ///
-    /// For now, concretely, "preparing" means deriving the fsnode data for a batch of commits.
+    /// For now, concretely, "preparing" means deriving the provided derived data type for a batch of commits.
     ///
-    /// * The provided batch of commits must be in topological order.
-    /// * The dependencies and ancestors of all commits in the batch must have already been derived.
+    /// * The dependencies and ancestors of most commits in the batch must have already been derived.
     ///
-    /// If these conditions are not met, an error will be returned.
+    /// If these conditions are not met, this endpoint may take an unbounded time to derive all
+    /// ancestors and timeout.
     pub(crate) async fn repo_prepare_commits(
         &self,
         ctx: CoreContext,
@@ -771,10 +772,54 @@ impl SourceControlServiceImpl {
                     .ok_or_else(|| errors::commit_not_found(commit.to_string()))
             })
             .collect::<Result<Vec<_>, _>>()?;
-
-        // Derive data of the requested type for the batch of desired commits
         let derived_data_type = DerivableType::from_request(&params.derived_data_type)?;
-        repo.derive_bulk(&ctx, csids, &[derived_data_type]).await?;
+
+        // Find any ancestor that's not derived
+        // * First, find the last derived changesets that are ancestors of the changesets we want
+        //   to derive
+        let last_derived = repo
+            .commit_graph()
+            .ancestors_frontier_with(&ctx, csids.clone(), |csid| {
+                borrowed!(ctx, repo, derived_data_type);
+                async move {
+                    repo.is_derived(ctx, csid, *derived_data_type)
+                        .await
+                        .map_err(|e| e.into())
+                }
+            })
+            .await
+            .map_err(Into::<MononokeError>::into)?;
+
+        const CONCURRENCY: u64 = 1000;
+        // * Then, find all underived changesets since the ones that we just identified as the last
+        //   derived changesets.
+        // * This commit graph API endpoint gives us a topologically sorted stream of topologically
+        //   sorted chunks where we now that a chunk will never overlap two segments in the commit
+        //   graph.
+        //   This way to split the commits maximizes the consistency of chunk sizes.
+        //   This means that we will have even chunks that don't cross merge commit boundaries,
+        //   which is the most efficient way to call `derive_bulk` as that would have to cut chunks
+        //   at merge boundaries if this property wasn't provided, leading to chunks of uneven size
+        //   and variability in the gains from batching.
+        repo.commit_graph()
+            .ancestors_difference_segment_slices(
+                &ctx,
+                csids.clone(),
+                last_derived.clone(),
+                CONCURRENCY,
+            )
+            .await
+            .map_err(Into::<MononokeError>::into)?
+            .try_for_each(|chunk| {
+                borrowed!(ctx, repo, derived_data_type);
+                async move {
+                    repo.derive_bulk(ctx, chunk.to_vec(), &[*derived_data_type])
+                        .await?;
+                    Ok(())
+                }
+            })
+            .await
+            .map_err(Into::<MononokeError>::into)?;
 
         Ok(thrift::RepoPrepareCommitsResponse {
             ..Default::default()
