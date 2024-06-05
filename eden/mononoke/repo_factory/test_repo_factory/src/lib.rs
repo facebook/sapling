@@ -842,6 +842,7 @@ impl TestRepoFactory {
                 .new(false),
             bonsai_hg_mapping: bonsai_hg_mapping.clone(),
             repo_derived_data: repo_derived_data.clone(),
+            core_ctx: self.ctx.clone(),
         }))
     }
 }

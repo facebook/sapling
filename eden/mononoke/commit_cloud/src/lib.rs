@@ -12,6 +12,7 @@ pub mod workspace;
 use std::sync::Arc;
 
 use bonsai_hg_mapping::BonsaiHgMapping;
+use context::CoreContext;
 use edenapi_types::GetReferencesParams;
 use edenapi_types::ReferencesData;
 use edenapi_types::UpdateReferencesParams;
@@ -32,6 +33,7 @@ pub struct CommitCloud {
     pub storage: SqlCommitCloud,
     pub bonsai_hg_mapping: Arc<dyn BonsaiHgMapping>,
     pub repo_derived_data: ArcRepoDerivedData,
+    pub core_ctx: CoreContext,
 }
 
 #[derive(Debug, Clone)]
@@ -109,8 +111,15 @@ impl CommitCloud {
 
         let raw_references_data = fetch_references(ctx.clone(), &self.storage).await?;
 
-        let references_data =
-            cast_references_data(raw_references_data, latest_version, version_timestamp).await?;
+        let references_data = cast_references_data(
+            raw_references_data,
+            latest_version,
+            version_timestamp,
+            self.bonsai_hg_mapping.clone(),
+            self.repo_derived_data.clone(),
+            &self.core_ctx,
+        )
+        .await?;
 
         Ok(references_data)
     }
@@ -137,8 +146,15 @@ impl CommitCloud {
         let new_version = latest_version + 1;
         if params.version < latest_version {
             let raw_references_data = fetch_references(ctx.clone(), &self.storage).await?;
-            return cast_references_data(raw_references_data, latest_version, version_timestamp)
-                .await;
+            return cast_references_data(
+                raw_references_data,
+                latest_version,
+                version_timestamp,
+                self.bonsai_hg_mapping.clone(),
+                self.repo_derived_data.clone(),
+                &self.core_ctx,
+            )
+            .await;
         }
 
         update_references_data(&self.storage, params, &ctx).await?;

@@ -6,12 +6,16 @@
  */
 
 use std::collections::HashMap;
+use std::sync::Arc;
 
+use bonsai_hg_mapping::BonsaiHgMapping;
+use context::CoreContext;
 use edenapi_types::cloud::RemoteBookmark;
 use edenapi_types::HgId;
 use edenapi_types::ReferencesData;
 use edenapi_types::UpdateReferencesParams;
 use mononoke_types::Timestamp;
+use repo_derived_data::ArcRepoDerivedData;
 
 use crate::references::heads::update_heads;
 use crate::references::heads::WorkspaceHead;
@@ -68,6 +72,9 @@ pub(crate) async fn cast_references_data(
     raw_references_data: RawReferencesData,
     latest_version: u64,
     version_timestamp: i64,
+    _bonsai_hg_mapping: Arc<dyn BonsaiHgMapping>,
+    _repo_derived_data: ArcRepoDerivedData,
+    _core_ctx: &CoreContext,
 ) -> Result<ReferencesData, anyhow::Error> {
     let mut heads: Vec<HgId> = Vec::new();
     let mut bookmarks: HashMap<String, HgId> = HashMap::new();
