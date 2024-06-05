@@ -3,7 +3,7 @@ load("@fbcode_macros//build_defs:python_binary.bzl", "python_binary")
 load("@fbcode_macros//build_defs:python_unittest.bzl", "python_unittest")
 load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
 load("//eden:defs.bzl", "get_integration_test_env_and_deps")
-load("//eden/scm/tests:targets.bzl", "get_blocklist", "get_hg_run_tests_excluded", "get_hg_watchman_run_tests_excluded")
+load("//eden/scm/tests:targets.bzl", "get_blocklist", "get_hg_edenfs_watchman_run_tests_included", "get_hg_run_tests_excluded", "get_hg_watchman_run_tests_excluded")
 
 oncall("mercurial_release")
 
@@ -149,6 +149,31 @@ python_unittest(
         "//eden/scm/tests:dummyssh3": "dummyssh3.par",
         "//eden/scm:hg": "hg.sh",
         "//eden/scm:hgpython": "hgpython.sh",
+    },
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//libfb/py:parutil",
+    ],
+)
+
+# Order is important, we want HGTEST_RUN_TESTS_PY from the Eden env var dict
+EW_ENV = dict(W_ENV)
+
+EW_ENV.update(E_ENV)
+
+EW_ENV["HGTEST_INCLUDED"] = get_hg_edenfs_watchman_run_tests_included()
+
+python_unittest(
+    # @autodeps-skip
+    name = "hg_edenfs_watchman_run_tests",
+    srcs = SRCS,
+    env = EW_ENV,
+    resources = {
+        "//eden/scm/tests:dummyssh3": "dummyssh3.par",
+        "//eden/scm:hg": "hg.sh",
+        "//eden/scm:hgpython": "hgpython.sh",
+        "//watchman:watchman": "watchman",
     },
     supports_static_listing = False,
     runtime_deps = artifacts["deps"],

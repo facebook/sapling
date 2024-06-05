@@ -78,6 +78,10 @@ def get_hg_watchman_run_tests_excluded():
     excluded = excluded_t_tests() + excluded_watchman_t_tests()
     return "test_(%s)" % "|".join(excluded)
 
+def get_hg_edenfs_watchman_run_tests_included():
+    included = []
+    return "test_(%s)" % "|".join(included)
+
 def get_blocklist():
     blocklist_prefix = "$(location //eden/scm/fb/tests:blocklists)/core.tests.blacklist."
     if read_bool("fbcode", "mode_win_enabled", False):
