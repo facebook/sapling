@@ -1448,6 +1448,11 @@ class Test(unittest.TestCase):
             ),
             # [ipv4]
             (rb"([^0-9])%s" % re.escape(_bytespath(self._localip())), rb"\1$LOCALIP"),
+            # localhost:port
+            (
+                rb"([^0-9])localhost:[0-9]+",
+                rb"\1localhost:$LOCAL_PORT",
+            ),
             (rb"\bHG_TXNID=TXN:[a-f0-9]{40}\b", rb"HG_TXNID=TXN:$ID$"),
         ]
         r.append((_bytespath(self._escapepath(self._testtmp)), b"$TESTTMP"))
