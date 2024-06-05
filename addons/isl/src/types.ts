@@ -642,6 +642,7 @@ export type LocalStorageName =
   | 'isl.debug-react-tools'
   | 'isl.debug-redux-tools'
   | 'isl.condense-obsolete-stacks'
+  | 'isl.split-suggestion-enabled'
   | 'isl.comparison-display-mode'
   | 'isl.expand-generated-files'
   | 'isl-color-theme'

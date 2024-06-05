@@ -11,6 +11,7 @@ import {Internal} from '../Internal';
 import {Divider} from '../components/Divider';
 import GatedComponent from '../components/GatedComponent';
 import {T, t} from '../i18n';
+import {localStorageBackedAtom} from '../jotaiUtils';
 import {
   MAX_FILES_ALLOWED_FOR_DIFF_STAT,
   SLOC_THRESHOLD_FOR_SPLIT_SUGGESTIONS,
@@ -18,7 +19,13 @@ import {
 import {useFetchSignificantLinesOfCode} from '../sloc/useFetchSignificantLinesOfCode';
 import {SplitButton} from '../stackEdit/ui/SplitButton';
 import {type CommitInfo} from '../types';
+import {useAtomValue} from 'jotai';
 import {Icon} from 'shared/Icon';
+
+export const splitSuggestionEnabled = localStorageBackedAtom<boolean>(
+  'isl.split-suggestion-enabled',
+  true,
+);
 
 function SplitSuggestionImpl({commit}: {commit: CommitInfo}) {
   const significantLinesOfCode = useFetchSignificantLinesOfCode(commit);
@@ -51,7 +58,8 @@ function SplitSuggestionImpl({commit}: {commit: CommitInfo}) {
 }
 
 export default function SplitSuggestion({commit}: {commit: CommitInfo}) {
-  if (commit.totalFileCount > MAX_FILES_ALLOWED_FOR_DIFF_STAT) {
+  const enabled = useAtomValue(splitSuggestionEnabled);
+  if (!enabled || commit.totalFileCount > MAX_FILES_ALLOWED_FOR_DIFF_STAT) {
     return null;
   }
   // using a gated component here to avoid exposing when diff size is too big  to show the split suggestion

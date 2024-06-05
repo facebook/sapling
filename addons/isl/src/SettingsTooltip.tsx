@@ -9,11 +9,13 @@ import type {ThemeColor} from './theme';
 import type {PreferredSubmitCommand} from './types';
 import type {ReactNode} from 'react';
 
+import {splitSuggestionEnabled} from './CommitInfoView/SplitSuggestion';
 import {condenseObsoleteStacks} from './CommitTreeList';
 import {Column, Row} from './ComponentUtils';
 import {confirmShouldSubmitEnabledAtom} from './ConfirmSubmitStack';
 import {DropdownField, DropdownFields} from './DropdownFields';
 import {useShowKeyboardShortcutsHelp} from './ISLShortcuts';
+import {Internal} from './Internal';
 import {Kbd} from './Kbd';
 import {Link} from './Link';
 import {RestackBehaviorSetting} from './RestackBehavior';
@@ -26,6 +28,7 @@ import {overrideDisabledSubmitModes} from './codeReview/github/branchPrState';
 import {Button} from './components/Button';
 import {Checkbox} from './components/Checkbox';
 import {Dropdown} from './components/Dropdown';
+import GatedComponent from './components/GatedComponent';
 import {debugToolsEnabledState} from './debug/DebugToolsState';
 import {externalMergeToolAtom} from './externalMergeTool';
 import {t, T} from './i18n';
@@ -118,6 +121,9 @@ function SettingsDropdown({
         <Column alignStart>
           <RenderCompactSetting />
           <CondenseObsoleteSetting />
+          <GatedComponent featureFlag={Internal.featureFlags?.ShowSplitSuggestion}>
+            <SplitSuggestionSetting />
+          </GatedComponent>
         </Column>
       </Setting>
       <Setting title={<T>Conflicts</T>}>
@@ -251,6 +257,22 @@ function CondenseObsoleteSetting() {
           setValue(checked);
         }}>
         <T>Condense Obsolete Stacks</T>
+      </Checkbox>
+    </Tooltip>
+  );
+}
+
+function SplitSuggestionSetting() {
+  const [value, setValue] = useAtom(splitSuggestionEnabled);
+  return (
+    <Tooltip title={t('Suggest splitting up large commits with a banner')}>
+      <Checkbox
+        data-testid="split-suggestion-enabled"
+        checked={value}
+        onChange={checked => {
+          setValue(checked);
+        }}>
+        <T>Show Split Suggestion</T>
       </Checkbox>
     </Tooltip>
   );
