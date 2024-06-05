@@ -172,7 +172,7 @@ impl ShardedHgAugmentedManifest {
     // entry-value ::= <cas-blake3-hex> ' ' <size-dec> ' ' <sha1-hex>
     //               | <cas-blake3-hex> ' ' <size-dec>
     //
-    // tree ::= <version> ' ' <sha1-hex> ' ' <computed_sha1-hex (if different) or -> ' ' <p1-hex> ' ' <p2-hex> '\n' <entry>*
+    // tree ::= <version> ' ' <sha1-hex> ' ' <computed_sha1-hex (if different) or -> ' ' <p1-hex or -> ' ' <p2-hex or -> '\n' <entry>*
 
     fn serialize_content_addressed_prefix(&self) -> Result<Bytes> {
         let mut buf = Vec::with_capacity(41 * 4); // 40 for a hex hash and a separator
@@ -216,10 +216,14 @@ impl ShardedHgAugmentedManifest {
         w.write_all(b" ")?;
         if let Some(p1) = self.p1 {
             w.write_all(p1.to_hex().as_bytes())?;
+        } else {
+            w.write_all(b"-")?;
         }
         w.write_all(b" ")?;
         if let Some(p2) = self.p2 {
             w.write_all(p2.to_hex().as_bytes())?;
+        } else {
+            w.write_all(b"-")?;
         }
         w.write_all(b"\n")?;
         Ok(())
