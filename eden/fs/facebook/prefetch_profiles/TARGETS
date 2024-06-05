@@ -28,21 +28,6 @@ python_binary(
     ],
 )
 
-python_binary(
-    name = "generate_fbobjc_specs",
-    srcs = ["generate_fbobjc_specs.py"],
-    compatible_with = [
-        "ovr_config//os:linux",
-    ],
-    main_function = "eden.fs.facebook.prefetch_profiles.generate_fbobjc_specs.main",
-    deps = [
-        ":prefetch_profile_util",
-        "//libfb/py:employee",
-        "//libfb/py/thrift_clients:oncall_thrift_client",
-        "//rfe/py/lib:sql",
-    ],
-)
-
 python_library(
     name = "glob_filenames_main",
     srcs = [
