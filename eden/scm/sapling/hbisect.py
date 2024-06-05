@@ -170,92 +170,42 @@ def _bisect2(repo, state):
     good = dag.sort(state["good"])
     bad = dag.sort(state["bad"])
 
-    # bad-to-good: find first good; bad (roots) is not candidate:
-    #
-    #   C good (candidate)
-    #   |
-    #   B maybe good (candidate)
-    #   |
-    #   A bad (NOT candidate)
-    #
-    # good-to-bad: find first bad; good (roots) is not candidate:
-    #
-    #   C bad (candidate)
-    #   |
-    #   B maybe bad (candidate)
-    #   |
-    #   A good (NOT candidate)
     badtogood = len(dag.only(good, bad)) > 0
     if badtogood:
         roots, heads = bad, good
     else:
         roots, heads = good, bad
+
+    # rootnode and headnode are for display purpose only.
     rootnode = roots.first()  # DESC order, first = max
     headnode = heads.last()  # DESC order, last = min
-    heads = dag.roots(dag.range(heads, heads))
-    roots = dag.headsancestors(roots)
-    # see "NOT candidate" above for why "- roots".
-    candidate = cl.dageval(lambda: range(roots, heads) - roots)
-    total = len(candidate)
-    if total == 0:
-        if (
-            len(state["bad"]) == 1
-            and len(state["good"]) == 1
-            and state["bad"] != state["good"]
-        ):
-            raise error.Abort(_("starting revisions are not directly related"))
-        raise error.Abort(_("inconsistent state, %s is good and bad") % short(headnode))
 
-    # Here we only skip concrete commits. If "skip" is a lazy set we handle it later
-    # to avoid O(skip) or O(candidate) complexity - both of them could be large sets.
-    unskipped = candidate - skip
+    bestnode, untested, first_heads = dag.suggest_bisect(roots, heads, skip)
+    total = len(untested) + 1
+    if bestnode is None:
+        if not untested:
+            if len(good) == 1 and len(bad) == 1 and len(dag.range(roots, heads)) < 1:
+                raise error.Abort(_("starting revisions are not directly related"))
+            overlap = first_heads & dag.ancestors(roots)
+            if overlap:
+                raise error.Abort(
+                    _("inconsistent state, %s is good and bad") % short(overlap.first())
+                )
 
-    # got conclusion, or all skipped
-    if total == 1 or len(unskipped) == 0:
-        return (list(candidate), 0, badtogood, headnode, rootnode)
-
-    # Find a node in "unskipped" that will cut down search in half.
-    # The algorithm works similarly to setdiscover.py:
-    # 1. pick a node in "remaining"
-    #
-    #    heads
-    #     :
-    #    pick
-    #     :
-    #    roots
-    #
-    # 2. if "pick" is too closer to "roots", remove "ancestors(pick)"
-    #    from "remaining", since they will be worse.
-    # 3. if "pick" is too far from "roots" (closer to "heads"), remove
-    #    "descendants(pick)" from "remaining", similarily.
-    # 4. repeat from 1 until "remaining" is empty or "pick" is perfect.
-    perfect = len(unskipped) / 2
-    bestdelta = len(unskipped)
-    bestnode = unskipped.first()
-    remaining = unskipped
-    heads = dag.headsancestors(unskipped)
-    while len(remaining) > 0:
-        node = remaining.skip(len(remaining) // 2).first()
-        count = len(dag.ancestors([node]) & remaining)
-        delta = abs(count - perfect)
-        # update best?
-        if delta < bestdelta:
-            bestdelta = delta
-            bestnode = node
-        if delta < 1:
-            break
-        if count > perfect:
-            # skip descendants(node)
-            remaining = remaining - dag.range([node], heads)
-        else:
-            # skip ancestors(node)
-            remaining = remaining - dag.ancestors([node])
+        return (
+            list((first_heads + untested).iterrev()),
+            0,
+            badtogood,
+            headnode,
+            rootnode,
+        )
 
     # Handle a lazy skip_revs.
     if skip_needs_extra_check:
         # To avoid applying the (potentially slow) lazy skip calculation to the
         # entire "roots::heads" (or "unskipped") set, we test the lazy skip
         # condition around the "bestnode" commit.
+        unskipped = untested - skip
         ancestors = dag.ancestors([bestnode]) & unskipped
         not_ancestors = unskipped - ancestors
         zip_set = ancestors.union_zip(not_ancestors.reverse())
