@@ -83,15 +83,18 @@ import {
 import {DiffStats, PendingDiffStats} from './DiffStats';
 import {FillCommitMessage} from './FillCommitMessage';
 import SplitSuggestion from './SplitSuggestion';
-import {CommitTitleByline, getTopmostEditedField, Section, SmallCapsTitle} from './utils';
+import {CommitTitleByline, getFieldToAutofocus, Section, SmallCapsTitle} from './utils';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
+import deepEqual from 'fast-deep-equal';
 import {useAtom, useAtomValue} from 'jotai';
 import {useAtomCallback} from 'jotai/utils';
 import {useCallback, useEffect, useMemo} from 'react';
 import {ComparisonType} from 'shared/Comparison';
 import {useContextMenu} from 'shared/ContextMenu';
 import {Icon} from 'shared/Icon';
+import {usePrevious} from 'shared/hooks';
 import {firstLine, notEmpty, nullthrows} from 'shared/utils';
+
 import './CommitInfoView.css';
 
 export function CommitInfoSidebar() {
@@ -184,6 +187,7 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
   const isAmendDisabled = mode === 'amend' && (isPublic || isObsoleted);
 
   const fieldsBeingEdited = useAtomValue(unsavedFieldsBeingEdited(hashOrHead));
+  const previousFieldsBeingEdited = usePrevious(fieldsBeingEdited, deepEqual);
 
   useFetchActiveDiffDetails(commit.diffId);
 
@@ -227,7 +231,12 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
     }));
   };
 
-  const topmostEditedField = getTopmostEditedField(schema, fieldsBeingEdited);
+  const fieldToAutofocus = getFieldToAutofocus(
+    schema,
+    fieldsBeingEdited,
+    previousFieldsBeingEdited,
+  );
+
   const isSplitSuggestionSupported = provider?.isSplitSuggestionSupported() ?? false;
   const selectedFiles = uncommittedChanges.filter(f =>
     selection.isFullyOrPartiallySelected(f.path),
@@ -280,7 +289,7 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
                 key={field.key}
                 field={field}
                 content={parsedFields[field.key as keyof CommitMessageFields]}
-                autofocus={topmostEditedField === field.key}
+                autofocus={fieldToAutofocus === field.key}
                 readonly={isOptimistic || isAmendDisabled || isObsoleted}
                 isBeingEdited={fieldsBeingEdited[field.key]}
                 startEditingField={() => startEditingField(field.key)}

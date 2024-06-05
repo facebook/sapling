@@ -74,12 +74,16 @@ export function Section({
   );
 }
 
-export function getTopmostEditedField(
+export function getFieldToAutofocus(
   fields: Array<FieldConfig>,
   fieldsBeingEdited: FieldsBeingEdited,
+  lastFieldsBeingEdited: FieldsBeingEdited | undefined,
 ): keyof CommitMessageFields | undefined {
   for (const field of fields) {
-    if (fieldsBeingEdited[field.key]) {
+    const isNewlyBeingEdited =
+      fieldsBeingEdited[field.key] &&
+      (lastFieldsBeingEdited == null || !lastFieldsBeingEdited[field.key]);
+    if (isNewlyBeingEdited) {
       return field.key;
     }
   }

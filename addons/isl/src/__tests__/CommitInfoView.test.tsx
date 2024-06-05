@@ -539,8 +539,20 @@ describe('CommitInfoView', () => {
           });
         });
 
-        it('focuses topmost field (title) when both title and description start being edited simultaneously', async () => {
+        it('focuses topmost field when all fields start being edited', async () => {
+          act(() => {
+            simulateUncommittedChangedFiles({value: [{path: 'src/file1.js', status: 'M'}]});
+          });
           // edit fields, then switch selected commit and switch back to edit both fields together
+          fireEvent.click(screen.getByText('Amend as...', {exact: false}));
+
+          await waitFor(() => {
+            expect(getTitleEditor()).toHaveFocus();
+            expect(getDescriptionEditor()).not.toHaveFocus();
+          });
+        });
+
+        it('focuses topmost edited field when loading from saved state', async () => {
           clickToEditTitle();
           clickToEditDescription();
           {
