@@ -628,6 +628,7 @@ export default class ServerToClientAPI {
             .then(value => {
               this.postMessage({
                 type: 'fetchedPendingSignificantLinesOfCode',
+                requestId: data.requestId,
                 hash: data.hash,
                 linesOfCode: {value},
               });
@@ -636,6 +637,7 @@ export default class ServerToClientAPI {
               this.postMessage({
                 type: 'fetchedPendingSignificantLinesOfCode',
                 hash: data.hash,
+                requestId: data.requestId,
                 linesOfCode: {error: err as Error},
               });
             });

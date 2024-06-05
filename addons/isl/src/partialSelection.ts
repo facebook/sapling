@@ -6,6 +6,7 @@
  */
 
 import type {RepoRelativePath} from './types';
+import type {Getter} from 'jotai';
 import type {Hash, RepoPath} from 'shared/types/common';
 import type {ExportFile, ImportCommit} from 'shared/types/stack';
 
@@ -17,7 +18,7 @@ import {latestUncommittedChangesTimestamp} from './serverAPIState';
 import {ChunkSelectState} from './stackEdit/chunkSelectState';
 import {assert} from './utils';
 import Immutable from 'immutable';
-import {useAtom, useAtomValue} from 'jotai';
+import {atom, useAtom, useAtomValue} from 'jotai';
 import {RateLimiter} from 'shared/RateLimiter';
 import {SelfUpdate} from 'shared/immutableExt';
 
@@ -506,7 +507,21 @@ export class UseUncommittedSelection {
   }
 }
 
-/** Get the uncommitted selection state. */
+export const isFullyOrPartiallySelected = atom(get => {
+  const sel = get(uncommittedSelection);
+  const uncommittedChanges = get(uncommittedChangesWithPreviews);
+  const epoch = get(latestUncommittedChangesTimestamp);
+  const dag = get(dagWithPreviews);
+  const wdirHash = dag.resolve('.')?.hash ?? '';
+  const getPaths = () => uncommittedChanges.map(c => c.path);
+  const emptyFunction = () => {};
+  // NOTE: Usually UseUncommittedSelection is only used in React, but this is
+  // a private shortcut path to get the logic outside React.
+  const selection = new UseUncommittedSelection(sel, emptyFunction, wdirHash, getPaths, epoch);
+  return selection.isFullyOrPartiallySelected.bind(selection);
+});
+
+/** react hook to get the uncommitted selection state. */
 export function useUncommittedSelection() {
   const [selection, setSelection] = useAtom(uncommittedSelection);
   const uncommittedChanges = useAtomValue(uncommittedChangesWithPreviews);

@@ -5,17 +5,17 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {ChangedFile, CommitInfo, Hash} from '../types';
+import type {CommitInfo} from '../types';
 
 import serverAPI from '../ClientToServerAPI';
 import {commitInfoViewCurrentCommits} from '../CommitInfoView/CommitInfoState';
-import {getGeneratedFilesFrom, useGeneratedFileStatuses} from '../GeneratedFile';
-import {tracker} from '../analytics';
+import {getGeneratedFilesFrom} from '../GeneratedFile';
 import {atomFamilyWeak, lazyAtom} from '../jotaiUtils';
+import {isFullyOrPartiallySelected} from '../partialSelection';
+import {uncommittedChangesWithPreviews} from '../previews';
 import {GeneratedStatus} from '../types';
 import {MAX_FILES_ALLOWED_FOR_DIFF_STAT} from './diffStatConstants';
-import {useAtomValue} from 'jotai';
-import {useState, useEffect} from 'react';
+import {atom, useAtomValue} from 'jotai';
 
 const commitSloc = atomFamilyWeak((hash: string) => {
   return lazyAtom(async get => {
@@ -51,70 +51,62 @@ const commitSloc = atomFamilyWeak((hash: string) => {
   }, undefined);
 });
 
-function fetchPendingSignificantLinesOfCode(hash: Hash, includedFiles: string[]) {
-  // since pending changes can change, we aren't using a cache here to ensure the data is always current
-  serverAPI.postMessage({
-    type: 'fetchPendingSignificantLinesOfCode',
-    hash,
-    includedFiles,
-  });
+let requestId = 0;
+const pendingChangesSloc = atomFamilyWeak((hash: string) => {
+  // this atom makes use of the fact that jotai will only use the most recently created promise (ignoring older promises)
+  // to avoid race conditions when the response from an older request is sent after a newer one
+  // so for example:
+  // requestId A (slow) => Server (sleeps 5 sec)
+  // requestId B (fast) => Server responds immediately, client updates
+  // requestId A (slow) => Server responds, client ignores
+  return atom(async get => {
+    const commits = get(commitInfoViewCurrentCommits);
+    if (commits == null || commits.length > 1) {
+      return undefined;
+    }
+    const [commit] = commits;
+    if (commit.totalFileCount > MAX_FILES_ALLOWED_FOR_DIFF_STAT) {
+      return undefined;
+    }
+    const isPathFullorPartiallySelected = get(isFullyOrPartiallySelected);
 
-  return serverAPI
-    .nextMessageMatching(
-      'fetchedPendingSignificantLinesOfCode',
-      message => message.type === 'fetchedPendingSignificantLinesOfCode' && message.hash === hash,
-    )
-    .then(result => result.linesOfCode);
-}
+    const uncommittedChanges = get(uncommittedChangesWithPreviews);
+    const selectedFiles = uncommittedChanges.reduce((selected, f) => {
+      if (!f.path.match(/__generated__/) && isPathFullorPartiallySelected(f.path)) {
+        selected.push(f.path);
+      }
+      return selected;
+    }, [] as string[]);
+
+    if (selectedFiles.length > MAX_FILES_ALLOWED_FOR_DIFF_STAT) {
+      return undefined;
+    }
+
+    if (selectedFiles.length === 0) {
+      return 0;
+    }
+    requestId += 1;
+    serverAPI.postMessage({
+      type: 'fetchPendingSignificantLinesOfCode',
+      hash,
+      includedFiles: selectedFiles,
+      requestId,
+    });
+
+    const pendingLoc = await serverAPI
+      .nextMessageMatching(
+        'fetchedPendingSignificantLinesOfCode',
+        message => message.requestId == requestId && message.hash === hash,
+      )
+      .then(result => result.linesOfCode);
+    return pendingLoc.value;
+  });
+});
 
 export function useFetchSignificantLinesOfCode(commit: CommitInfo) {
-  const significantLinesOfCode = useAtomValue(commitSloc(commit.hash));
-  return significantLinesOfCode;
+  return useAtomValue(commitSloc(commit.hash));
 }
 
-export function useFetchPendingSignificantLinesOfCode(
-  commit: CommitInfo,
-  selectedFiles: ChangedFile[],
-) {
-  const filesToQueryGeneratedStatus = selectedFiles.map(f => f.path);
-  const generatedStatuses = useGeneratedFileStatuses(filesToQueryGeneratedStatus);
-
-  const [significantLinesOfCode, setSignificantLinesOfCode] = useState<number | undefined>(
-    undefined,
-  );
-  useEffect(() => {
-    if (
-      commit.totalFileCount > MAX_FILES_ALLOWED_FOR_DIFF_STAT ||
-      selectedFiles.length > MAX_FILES_ALLOWED_FOR_DIFF_STAT
-    ) {
-      setSignificantLinesOfCode(undefined);
-      return;
-    }
-    if (selectedFiles.length === 0) {
-      setSignificantLinesOfCode(0);
-      return;
-    }
-    const includedFiles = selectedFiles.reduce<string[]>((filtered, f) => {
-      //only include non generated files
-      if (generatedStatuses[f.path] === GeneratedStatus.Manual) {
-        filtered.push(f.path);
-      }
-      return filtered;
-    }, []);
-    fetchPendingSignificantLinesOfCode(commit.hash, includedFiles).then(result => {
-      if (result.error != null) {
-        tracker.error('FetchPendingSloc', 'FetchError', result.error, {
-          extras: {
-            commitHash: commit.hash,
-          },
-        });
-        return;
-      }
-      if (result.value != null) {
-        setSignificantLinesOfCode(result.value);
-      }
-    });
-  }, [selectedFiles, commit.hash, generatedStatuses, commit.totalFileCount]);
-
-  return significantLinesOfCode;
+export function useFetchPendingSignificantLinesOfCode(commit: CommitInfo) {
+  return useAtomValue(pendingChangesSloc(commit.hash));
 }

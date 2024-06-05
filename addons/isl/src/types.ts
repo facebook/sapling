@@ -704,6 +704,7 @@ export type ClientToServerMessage =
   | {type: 'fetchSignificantLinesOfCode'; hash: Hash; excludedFiles: string[]}
   | {
       type: 'fetchPendingSignificantLinesOfCode';
+      requestId: number;
       hash: Hash;
       includedFiles: string[];
     };
@@ -785,7 +786,12 @@ export type ServerToClientMessage =
   | OperationProgressEvent
   | PlatformSpecificServerToClientMessages
   | {type: 'fetchedSignificantLinesOfCode'; hash: Hash; linesOfCode: Result<number>}
-  | {type: 'fetchedPendingSignificantLinesOfCode'; hash: Hash; linesOfCode: Result<number>};
+  | {
+      type: 'fetchedPendingSignificantLinesOfCode';
+      requestId: number;
+      hash: Hash;
+      linesOfCode: Result<number>;
+    };
 
 export type Disposable = {
   dispose(): void;

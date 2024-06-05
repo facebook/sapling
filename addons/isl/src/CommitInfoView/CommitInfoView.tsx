@@ -316,7 +316,7 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
             </SmallCapsTitle>
             {uncommittedChanges.length > 0 ? (
               <GatedComponent featureFlag={Internal.featureFlags?.ShowSplitSuggestion}>
-                <PendingDiffStats commit={commit} selectedFiles={selectedFiles} />
+                <PendingDiffStats commit={commit} />
               </GatedComponent>
             ) : null}
             {uncommittedChanges.length === 0 ? (

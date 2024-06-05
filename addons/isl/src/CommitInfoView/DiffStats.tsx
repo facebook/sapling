@@ -5,9 +5,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {ChangedFile, CommitInfo} from '../types';
+import type {CommitInfo} from '../types';
 
 import {Row} from '../ComponentUtils';
+import {SuspenseBoundary} from '../SuspenseBoundary';
 import {Tooltip} from '../Tooltip';
 import {T, t} from '../i18n';
 import {
@@ -28,25 +29,52 @@ const styles = stylex.create({
     gap: 'var(--halfpad)',
   },
 });
-
+export function LoadingDiffStatsView() {
+  return (
+    <DiffStatsView>
+      <Icon icon="loading" size="XS" />
+      <T>lines</T>
+    </DiffStatsView>
+  );
+}
 export function DiffStats({commit}: Props) {
   const significantLinesOfCode = useFetchSignificantLinesOfCode(commit);
-  return <DiffStatsView significantLinesOfCode={significantLinesOfCode} />;
+  return <ResolvedDiffStatsView significantLinesOfCode={significantLinesOfCode} />;
 }
 
-export function PendingDiffStats({commit, selectedFiles}: Props & {selectedFiles: ChangedFile[]}) {
-  const significantLinesOfCode = useFetchPendingSignificantLinesOfCode(commit, selectedFiles);
-  return <DiffStatsView significantLinesOfCode={significantLinesOfCode} />;
+export function PendingDiffStats({commit}: Props) {
+  return (
+    <SuspenseBoundary fallback={<LoadingDiffStatsView />}>
+      <PendingDiffStatsView commit={commit} />
+    </SuspenseBoundary>
+  );
 }
 
-function DiffStatsView({significantLinesOfCode}: {significantLinesOfCode?: number}) {
+export function PendingDiffStatsView({commit}: Props) {
+  const significantLinesOfCode = useFetchPendingSignificantLinesOfCode(commit);
+  return <ResolvedDiffStatsView significantLinesOfCode={significantLinesOfCode} />;
+}
+
+function ResolvedDiffStatsView({
+  significantLinesOfCode,
+}: {
+  significantLinesOfCode: number | undefined;
+}) {
   if (significantLinesOfCode == null) {
     return null;
   }
   return (
+    <DiffStatsView>
+      <T replace={{$num: significantLinesOfCode}}>$num lines</T>
+    </DiffStatsView>
+  );
+}
+
+function DiffStatsView({children}: {children: React.ReactNode}) {
+  return (
     <Row xstyle={styles.locInfo}>
       <Icon icon="code" />
-      <T replace={{$num: significantLinesOfCode}}>$num lines</T>
+      {children}
       <Tooltip
         title={t(
           'This number reflects significant lines of code: non-blank, non-generated additions + deletions',
