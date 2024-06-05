@@ -14,6 +14,7 @@ use std::time::Instant;
 
 use anyhow::anyhow;
 use anyhow::format_err;
+use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use bookmarks::BookmarkKey;
@@ -53,7 +54,6 @@ use mononoke_types::FileType;
 use mononoke_types::NonRootMPath;
 use mononoke_types::RepositoryId;
 use movers::Mover;
-use slog::debug;
 use slog::info;
 use synced_commit_mapping::SyncedCommitMapping;
 use synced_commit_mapping::SyncedCommitMappingEntry;
@@ -69,6 +69,8 @@ use crate::commit_syncer::CommitSyncer;
 use crate::git_submodules::rewrite_commit_with_submodule_expansion;
 use crate::git_submodules::SubmoduleExpansionData;
 use crate::git_submodules::SubmodulePath;
+use crate::reporting::log_debug;
+use crate::reporting::log_warning;
 use crate::sync_config_version_utils::get_mapping_change_version;
 use crate::types::ErrorKind;
 use crate::types::Repo;
@@ -523,16 +525,22 @@ where
     {
         target_bookmark_version
     } else {
-        debug!(
-            ctx.logger(),
-            "target bookmark version: none, parent version: {}", parent_version,
+        log_debug(
+            ctx,
+            format!(
+                "target bookmark version: none, parent version: {}",
+                parent_version,
+            ),
         );
         // If we don't have a version for the target bookmark, we can't do anything.
         return Ok((parent_version, HashMap::new()));
     };
-    debug!(
-        ctx.logger(),
-        "target bookmark version: {}, parent version: {}", target_bookmark_version, parent_version,
+    log_debug(
+        ctx,
+        format!(
+            "target bookmark version: {}, parent version: {}",
+            target_bookmark_version, parent_version,
+        ),
     );
 
     if parent_version == target_bookmark_version {
@@ -544,9 +552,7 @@ where
     // Let's first validate that the target bookmark is still working-copy equivalent to what the
     // parent of the commit we'd like to sync
     let backsyncer = commit_syncer.reverse()?;
-    let small_csid_equivalent_to_target_bookmark = if let Some(
-        small_csid_equivalent_to_target_bookmark,
-    ) = backsyncer
+    let mb_small_csid_equivalent_to_target_bookmark = backsyncer
         .sync_commit(
             ctx,
             target_bookmark_csid,
@@ -554,12 +560,18 @@ where
             CommitSyncContext::XRepoSyncJob,
             false,
         )
-        .await?
+        .await
+        .context("Failed to backsync commit and to verify wc equivalence")?;
+
+    let small_csid_equivalent_to_target_bookmark = if let Some(
+        small_csid_equivalent_to_target_bookmark,
+    ) =
+        mb_small_csid_equivalent_to_target_bookmark
     {
         small_csid_equivalent_to_target_bookmark
     } else {
-        debug!(
-            ctx.logger(),
+        log_warning(
+            ctx,
             "target bookmark is not wc-equivalent to synced commit, falling back to parent_version",
         );
         return Ok((parent_version, HashMap::new()));
@@ -580,20 +592,23 @@ where
             parent_mapping.insert(*target_parent_csid, target_bookmark_csid);
         }
     }
-    debug!(ctx.logger(), "parent_mapping: {:?}", parent_mapping,);
+    log_debug(ctx, format!("parent_mapping: {:?}", parent_mapping));
 
     if parent_mapping.is_empty() {
         // None of the parents are ancestors of current position of target_bookmark. Perhaps
         // our view of target bookmark is stale. It's better to avoid changing version.
-        debug!(
-            ctx.logger(),
+        log_debug(
+            ctx,
             "parent mapping is empty, falling back to parent_version",
         );
         Ok((parent_version, parent_mapping))
     } else if parent_mapping.len() == 1 {
-        debug!(
-            ctx.logger(),
-            "all validations passed, using target_bookmark_version: {}", target_bookmark_version,
+        log_debug(
+            ctx,
+            format!(
+                "all validations passed, using target_bookmark_version: {}",
+                target_bookmark_version
+            ),
         );
         // There's exactly one parent that's ancestor of target_bookmark.
         // let's assume that the target_bookmark is still equivalent to what it represents.

@@ -231,6 +231,7 @@ Before config change
   Checking if a14dee507f7605083e9a99901971ac7c5558d8b28d7d01090bd2cff2432fa707 is already synced 2->0
   Changing mapping version during pushrebase to new_version
   1 unsynced ancestors of a14dee507f7605083e9a99901971ac7c5558d8b28d7d01090bd2cff2432fa707
+  target bookmark is not wc-equivalent to synced commit, falling back to parent_version
   UNSAFE: changing mapping version during pushrebase to new_version
   syncing a14dee507f7605083e9a99901971ac7c5558d8b28d7d01090bd2cff2432fa707 via pushrebase for master_bookmark
   changeset a14dee507f7605083e9a99901971ac7c5558d8b28d7d01090bd2cff2432fa707 synced as 402c52f0f2156a83bf5354aae35c3cae55e92b23da3ed61bc10ee7960e172c8e in *ms (glob)
@@ -372,6 +373,7 @@ Before config change
   Checking if 1d0bbdb162c2887a5b93893d7a48fd852a304ab58be2245899bb795e80aa10e9 is already synced 3->0
   Changing mapping version during pushrebase to another_version
   1 unsynced ancestors of 1d0bbdb162c2887a5b93893d7a48fd852a304ab58be2245899bb795e80aa10e9
+  target bookmark is not wc-equivalent to synced commit, falling back to parent_version
   UNSAFE: changing mapping version during pushrebase to another_version
   syncing 1d0bbdb162c2887a5b93893d7a48fd852a304ab58be2245899bb795e80aa10e9 via pushrebase for master_bookmark
   changeset 1d0bbdb162c2887a5b93893d7a48fd852a304ab58be2245899bb795e80aa10e9 synced as 76b08a5702ff09571621ca88b107d886963d2c8265f508edc6e4d8f95777fd3e in *ms (glob)
