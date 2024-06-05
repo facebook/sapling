@@ -16,7 +16,7 @@
 from __future__ import absolute_import
 
 import collections
-from typing import Optional, Sized
+from typing import Optional, Sized, Tuple
 
 import bindings
 
@@ -146,7 +146,8 @@ def _bisect2(repo, state):
     """bisect algorithm based on segmented changelog"""
 
     # States:
-    # - skip_revs: user provided "skip" revset. Might be expensive/lazy (no fastlen()).
+    # - skip: user provided "skip" nodes. Not lazy.
+    # - skip_revs: user provided "skip" revset. Might be expensive/lazy.
     # - good: marked as good nodes
     # - bad: marked as bad ndoes
     # - badtogood: True if bad is root, good is head; False if bad is head
@@ -157,16 +158,7 @@ def _bisect2(repo, state):
     # - bestnode: the best node to test next
     cl = repo.changelog
     dag = cl.dag
-    skip_revs = _state_to_revs(repo, state, "skip")
-    if skip_revs.fastlen() is not None:
-        # skip is equvilent to skip_revs
-        skip = cl.tonodes(skip_revs)
-        skip_needs_extra_check = False
-    else:
-        # skip_revs might be a large lazy set. We don't want O(skip_revs).
-        # skip is not equvilent to skip_revs and needs special handling
-        skip = dag.sort([])
-        skip_needs_extra_check = True
+    skip, skip_revs = _state_to_nodes_revs(repo, state, "skip")
     good = dag.sort(state["good"])
     bad = dag.sort(state["bad"])
 
@@ -201,7 +193,7 @@ def _bisect2(repo, state):
         )
 
     # Handle a lazy skip_revs.
-    if skip_needs_extra_check:
+    if skip_revs is not None:
         # To avoid applying the (potentially slow) lazy skip calculation to the
         # entire "roots::heads" (or "unskipped") set, we test the lazy skip
         # condition around the "bestnode" commit.
@@ -317,6 +309,31 @@ def checkstate(state) -> bool:
         raise error.Abort(_("cannot bisect (no known good revisions)"))
     else:
         raise error.Abort(_("cannot bisect (no known bad revisions)"))
+
+
+def _state_to_nodes_revs(
+    repo, state, kind
+) -> Tuple["bindings.dag.nameset", Optional["sapling.smartset.abstractsmartset"]]:
+    """Return (nodes, revset | None).
+    'nodes' is the non-lazy Rust set, 'revset' could be a 'lazy' set.
+    """
+    items = state[kind]
+    nodes = []
+    revset_exprs = []
+
+    for item in items:
+        if isinstance(item, bytes):
+            nodes.append(item)
+        elif item.startswith("revset:"):
+            revset_exprs.append(item[7:])
+        else:
+            raise error.Abort(_("invalid node: %s, kind: %s") % (item, kind))
+
+    lazy_set = None
+    if revset_exprs:
+        lazy_set = repo.revs("%lr", revset_exprs)
+
+    return repo.changelog.dag.sort(nodes), lazy_set
 
 
 def _state_to_revs(repo, state, kind):
