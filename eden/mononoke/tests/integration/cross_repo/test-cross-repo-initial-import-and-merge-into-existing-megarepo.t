@@ -457,8 +457,9 @@ so they'll be dumped to files to keep this (already long) integration test short
 
 
 -- Merge repo A into the large repo
-  $ CONFIG_VERSION_NAME="$SUBMODULE_NOOP_VERSION_NAME" MASTER_BOOKMARK="master_bookmark" \
-  > merge_repo_a_to_large_repo &> $TESTTMP/merge_repo_a_to_large_repo.out
+  $ NOOP_CONFIG_VERSION_NAME="$SUBMODULE_NOOP_VERSION_NAME" \
+  > CONFIG_VERSION_NAME="$AFTER_SUBMODULE_REPO_VERSION_NAME" \
+  > MASTER_BOOKMARK="master_bookmark" merge_repo_a_to_large_repo &> $TESTTMP/merge_repo_a_to_large_repo.out
 
 -- Set up live forward syncer, which should sync all commits in submodule repo's
 -- heads/master bookmark to large repo's master bookmark via pushrebase
@@ -473,7 +474,7 @@ so they'll be dumped to files to keep this (already long) integration test short
   $ PREV_BOOK_VALUE=$(get_bookmark_value_edenapi $SMALL_REPO_NAME $MASTER_BOOKMARK)
   $ REPONAME=$LARGE_REPO_NAME hgmn push -r . --to $MASTER_BOOKMARK -q
   $ log_globalrev -r $MASTER_BOOKMARK -l 10
-  @  after merging submodule expansion [public;globalrev=;9b3e6a908bd8] default/master_bookmark
+  @  after merging submodule expansion [public;globalrev=;fc38939a64e4] default/master_bookmark
   │
   ~
 
@@ -485,7 +486,9 @@ so they'll be dumped to files to keep this (already long) integration test short
   $ cd "$TESTTMP/small-hg-client"
   $ REPONAME=$SMALL_REPO_NAME hgmn pull -q
   $ log_globalrev -l 30
-  o  after merging submodule expansion [public;globalrev=;71beb2542fe4] default/master_bookmark
+  o  after merging submodule expansion [public;globalrev=;b7aa7a11fd87] default/master_bookmark
+  │
+  o  Added git repo C as submodule directly in A [public;globalrev=1000157985;0358f874af49]
   │
   o  [MEGAREPO GRADUAL MERGE] gradual merge (0) [public;globalrev=1000157984;63782775678a]
   │
@@ -527,8 +530,8 @@ so they'll be dumped to files to keep this (already long) integration test short
   $ hg ci -Aqm "after live sync and changes to submodule repo"
   $ PREV_BOOK_VALUE=$(get_bookmark_value_edenapi $SMALL_REPO_NAME $MASTER_BOOKMARK)
   $ REPONAME=$LARGE_REPO_NAME hgmn push -r . --to $MASTER_BOOKMARK -q
-  $ log_globalrev -r $MASTER_BOOKMARK -l 10
-  o  after live sync and changes to submodule repo [public;globalrev=1000157985;cb738ed9087e] default/master_bookmark
+  $ log_globalrev -r $MASTER_BOOKMARK -l 30
+  o  after live sync and changes to submodule repo [public;globalrev=1000157986;a45b87d659b7] default/master_bookmark
   │
   ~
 -- wait a second to give backsyncer some time to catch up
@@ -540,13 +543,15 @@ so they'll be dumped to files to keep this (already long) integration test short
   $ cd "$TESTTMP/small-hg-client"
   $ REPONAME=$SMALL_REPO_NAME hgmn pull -q
   $ hg log -G -T "{desc} [{node|short}]\n" -l 30 --stat
-  o  after live sync and changes to submodule repo [bb0acd17a23e]
+  o  after live sync and changes to submodule repo [0c7defa2d3a8]
   │   file.txt |  2 +-
   │   1 files changed, 1 insertions(+), 1 deletions(-)
   │
-  o  after merging submodule expansion [71beb2542fe4]
+  o  after merging submodule expansion [b7aa7a11fd87]
   │   baz |  2 +-
   │   1 files changed, 1 insertions(+), 1 deletions(-)
+  │
+  o  Added git repo C as submodule directly in A [0358f874af49]
   │
   o  [MEGAREPO GRADUAL MERGE] gradual merge (0) [63782775678a]
   │

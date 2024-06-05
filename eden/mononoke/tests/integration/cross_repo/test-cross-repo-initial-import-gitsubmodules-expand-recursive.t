@@ -111,15 +111,29 @@ Import all git repos into Mononoke
   
   
   NOTE: Importing repos in reverse dependency order, C, B then A
+  
+  GIT_REPO_A_HEAD: eef414bd5fc8f7dcc129318276af6945117fe32bb5cfda6b0e6d43036107f61c
+  
+  GIT_REPO_A_HEAD_PARENT: c33eeb91423c021a4d9d57f2efbb08185c77d89b9141433c666b84240395f0c5
 
 Merge repo A into the large repo
   $ merge_repo_a_to_large_repo
   
   
   NOTE: Importing repo A commits into large repo
+  IMPORT_CONFIG_VERSION_NAME: INITIAL_IMPORT_SYNC_CONFIG
+  FINAL_CONFIG_VERSION_NAME: INITIAL_IMPORT_SYNC_CONFIG
+  Large repo MASTER_BOOKMARK_NAME: master
+  
+  GIT_REPO_A_HEAD: eef414bd5fc8f7dcc129318276af6945117fe32bb5cfda6b0e6d43036107f61c
+  
+  GIT_REPO_A_HEAD_PARENT: c33eeb91423c021a4d9d57f2efbb08185c77d89b9141433c666b84240395f0c5
+  
+  
+  NOTE: Running initial import
   Starting session with id * (glob)
   Checking if * (glob)
-  Syncing eef414bd5fc8f7dcc129318276af6945117fe32bb5cfda6b0e6d43036107f61c for inital import
+  Syncing c33eeb91423c021a4d9d57f2efbb08185c77d89b9141433c666b84240395f0c5 for inital import
   Source repo: small_repo / Target repo: large_repo
   Found * unsynced ancestors (glob)
   changeset * synced as * in * (glob)
@@ -129,29 +143,50 @@ Merge repo A into the large repo
   NOTE: Large repo bookmarks
   54a6db91baf1c10921369339b50e5a174a7ca82e master
   
+  IMPORTED_HEAD: 6e3217760eada6926186d7cb48f4f24bd8a734ad615aec528065a0912dec6cba
+  
+  
   
   NOTE: Creating gradual merge commit
   using repo "large_repo" repoid RepositoryId(10)
-  changeset resolved as: ChangesetId(Blake2(9f66c500dd865669c0458820af27352ec9af5efe19714dd0400d4055d5310bcf))
   changeset resolved as: ChangesetId(Blake2(6e3217760eada6926186d7cb48f4f24bd8a734ad615aec528065a0912dec6cba))
+  changeset resolved as: ChangesetId(Blake2(b43576e9e9685513cf91adbe5fb817cbe2837ba9a4dca12a4c64a6aebfe09780))
   Finding all commits to merge...
   2 total commits to merge
   Finding commits that haven't been merged yet...
   changeset resolved as: ChangesetId(Blake2(b006a2b1425af8612bc80ff4aa9fa8a1a2c44936ad167dd21cb9af2a9a0248c4))
   merging 1 commits
-  Preparing to merge 9f66c500dd865669c0458820af27352ec9af5efe19714dd0400d4055d5310bcf
+  Preparing to merge 6e3217760eada6926186d7cb48f4f24bd8a734ad615aec528065a0912dec6cba
   changeset resolved as: ChangesetId(Blake2(b006a2b1425af8612bc80ff4aa9fa8a1a2c44936ad167dd21cb9af2a9a0248c4))
-  Created merge changeset 671ade4dbbb1c68e733c4e2fb59a2cd39cf72ea66f898f092e128e9dce1b135f
-  Generated hg changeset 6a66af335e25a2fbbe762dd9de5253bfdf973fb5
+  Created merge changeset 0e686785fb529cc8c6cba55b905da5a55bb53b32056a139b9912e50c3d36d26d
+  Generated hg changeset 2b82a445059af7e1904a0b7a0d73a92b32e06f3e
   Now running pushrebase...
-  Pushrebased to 671ade4dbbb1c68e733c4e2fb59a2cd39cf72ea66f898f092e128e9dce1b135f
+  Pushrebased to 0e686785fb529cc8c6cba55b905da5a55bb53b32056a139b9912e50c3d36d26d
   
-  SYNCHED_HEAD: 9f66c500dd865669c0458820af27352ec9af5efe19714dd0400d4055d5310bcf
   
-  @    6a66af335e25 [MEGAREPO GRADUAL MERGE] gradual merge (0)
-  ├─╮   smallrepofolder1/.gitmodules                             |  6 ++++++
+  NOTE: Changing commit sync mapping version
+  Starting session with id * (glob)
+  changeset resolved as: ChangesetId(Blake2(eef414bd5fc8f7dcc129318276af6945117fe32bb5cfda6b0e6d43036107f61c))
+  Checking if eef414bd5fc8f7dcc129318276af6945117fe32bb5cfda6b0e6d43036107f61c is already synced 11->10
+  Changing mapping version during pushrebase to INITIAL_IMPORT_SYNC_CONFIG
+  1 unsynced ancestors of eef414bd5fc8f7dcc129318276af6945117fe32bb5cfda6b0e6d43036107f61c
+  UNSAFE: changing mapping version during pushrebase to INITIAL_IMPORT_SYNC_CONFIG
+  syncing eef414bd5fc8f7dcc129318276af6945117fe32bb5cfda6b0e6d43036107f61c via pushrebase for master
+  changeset eef414bd5fc8f7dcc129318276af6945117fe32bb5cfda6b0e6d43036107f61c synced as aab4b2b2a2fa16ef36968a6f3c98f89f27726b30f817ca7211b84055c4e3fed4 in * (glob)
+  successful sync
+  
+  SYNCED_HEAD: aab4b2b2a2fa16ef36968a6f3c98f89f27726b30f817ca7211b84055c4e3fed4
+  
+  @  9a84b278c0f9 Added git repo C as submodule directly in A
+  │   smallrepofolder1/.gitmodules              |  3 +++
+  │   smallrepofolder1/.x-repo-submodule-repo_c |  1 +
+  │   smallrepofolder1/repo_c/choo              |  1 +
+  │   smallrepofolder1/repo_c/hoo/qux           |  1 +
+  │   4 files changed, 6 insertions(+), 0 deletions(-)
+  │
+  o    2b82a445059a [MEGAREPO GRADUAL MERGE] gradual merge (0)
+  ├─╮   smallrepofolder1/.gitmodules                             |  3 +++
   │ │   smallrepofolder1/.x-repo-submodule-git-repo-b            |  1 +
-  │ │   smallrepofolder1/.x-repo-submodule-repo_c                |  1 +
   │ │   smallrepofolder1/duplicates/x                            |  1 +
   │ │   smallrepofolder1/duplicates/y                            |  1 +
   │ │   smallrepofolder1/duplicates/z                            |  1 +
@@ -162,17 +197,8 @@ Merge repo A into the large repo
   │ │   smallrepofolder1/git-repo-b/git-repo-c/choo              |  1 +
   │ │   smallrepofolder1/git-repo-b/git-repo-c/hoo/qux           |  1 +
   │ │   smallrepofolder1/regular_dir/aardvar                     |  1 +
-  │ │   smallrepofolder1/repo_c/choo                             |  1 +
-  │ │   smallrepofolder1/repo_c/hoo/qux                          |  1 +
   │ │   smallrepofolder1/root_file                               |  1 +
-  │ │   16 files changed, 23 insertions(+), 0 deletions(-)
-  │ │
-  │ o  93d781922882 Added git repo C as submodule directly in A
-  │ │   smallrepofolder1/.gitmodules              |  3 +++
-  │ │   smallrepofolder1/.x-repo-submodule-repo_c |  1 +
-  │ │   smallrepofolder1/repo_c/choo              |  1 +
-  │ │   smallrepofolder1/repo_c/hoo/qux           |  1 +
-  │ │   4 files changed, 6 insertions(+), 0 deletions(-)
+  │ │   13 files changed, 17 insertions(+), 0 deletions(-)
   │ │
   │ o  1f9d3769f8c2 Added git repo B as submodule in A
   │ │   smallrepofolder1/.gitmodules                             |  3 +++
@@ -240,9 +266,9 @@ Merge repo A into the large repo
   
   
   NOTE: Count underived data types
-  9f66c500dd865669c0458820af27352ec9af5efe19714dd0400d4055d5310bcf: 0
-  9f66c500dd865669c0458820af27352ec9af5efe19714dd0400d4055d5310bcf: 0
-  9f66c500dd865669c0458820af27352ec9af5efe19714dd0400d4055d5310bcf: 0
+  aab4b2b2a2fa16ef36968a6f3c98f89f27726b30f817ca7211b84055c4e3fed4: 0
+  aab4b2b2a2fa16ef36968a6f3c98f89f27726b30f817ca7211b84055c4e3fed4: 0
+  aab4b2b2a2fa16ef36968a6f3c98f89f27726b30f817ca7211b84055c4e3fed4: 0
 
 Make changes to submodule and make sure they're synced properly
   $ make_changes_to_git_repos_a_b_c
@@ -319,16 +345,16 @@ forward synced to the large repo
   $ hg co -q master
 
   $ hg log --graph -T '{node} {desc}\n' -r "all()"
-  @  3fafe9ae1f322ab664bdf968b4678085a110c55f Remove repo C submodule from repo A
+  @  c10f082fbef14d4eb82073a1578effe603e36ee7 Remove repo C submodule from repo A
   │
-  o  966d27bdf05c9c50d2e6e52390ef539e7ed88347 Update submodule B in repo A
+  o  46557285148375de0b93927ba58cde48a120c4d8 Update submodule B in repo A
   │
-  o  e21dab0d1f381cd1d46cd735013714d34bf02eaf Change directly in A
+  o  27380bc5553eb680703c330fc83a614c6c10034c Change directly in A
   │
-  o    6a66af335e25a2fbbe762dd9de5253bfdf973fb5 [MEGAREPO GRADUAL MERGE] gradual merge (0)
+  o  9a84b278c0f94d79a1a2b700ae51ebc9c122cd0b Added git repo C as submodule directly in A
+  │
+  o    2b82a445059af7e1904a0b7a0d73a92b32e06f3e [MEGAREPO GRADUAL MERGE] gradual merge (0)
   ├─╮
-  │ o  93d78192288211ec611cde910d9ed46df80c9fd4 Added git repo C as submodule directly in A
-  │ │
   │ o  1f9d3769f8c22b50db3ed0105c9d0e9490bbe7e9 Added git repo B as submodule in A
   │ │
   │ o  e2c69ce8cc11691984e50e6023f4bbf4271aa4c3 Add regular_dir/aardvar
@@ -341,7 +367,7 @@ forward synced to the large repo
 Check that deletions were made properly, i.e. submodule in repo_c was entirely
 deleted and the files deleted in repo B were deleted inside its copy.
   $ hg show --stat -T 'commit: {node}\n{desc}\n' .
-  commit: 3fafe9ae1f322ab664bdf968b4678085a110c55f
+  commit: c10f082fbef14d4eb82073a1578effe603e36ee7
   Remove repo C submodule from repo A
    smallrepofolder1/.gitmodules              |  3 ---
    smallrepofolder1/.x-repo-submodule-repo_c |  1 -
@@ -392,7 +418,7 @@ TODO(T174902563): Fix deletion of submodules in EXPAND submodule action.
 Check that the diff that updates the submodule generates the correct delta
 (i.e. instead of copying the entire working copy of the submodule every time)
   $ hg show --stat -T 'commit: {node}\n{desc}\n' .^
-  commit: 966d27bdf05c9c50d2e6e52390ef539e7ed88347
+  commit: 46557285148375de0b93927ba58cde48a120c4d8
   Update submodule B in repo A
    smallrepofolder1/.x-repo-submodule-git-repo-b            |  2 +-
    smallrepofolder1/.x-repo-submodule-repo_c                |  2 +-
@@ -413,7 +439,7 @@ Also check that our two binaries that can verify working copy are able to deal w
 
 The check-push-redirection-prereqs should behave the same both ways but let's verify it (we had bugs where it didn't)
 (those outputs are still not correct but that's expected)
-  $ quiet_grep "all is well" -- megarepo_tool_multirepo --source-repo-id $SUBMODULE_REPO_ID --target-repo-id $LARGE_REPO_ID check-push-redirection-prereqs "heads/master" "master" "$LATEST_CONFIG_VERSION_NAME" | strip_glog | tee $TESTTMP/push_redir_prereqs_small_large
+  $ quiet_grep "all is well" -- with_stripped_logs megarepo_tool_multirepo --source-repo-id $SUBMODULE_REPO_ID --target-repo-id $LARGE_REPO_ID check-push-redirection-prereqs "heads/master" "master" "$LATEST_CONFIG_VERSION_NAME" | strip_glog | tee $TESTTMP/push_redir_prereqs_small_large
   all is well!
   $ quiet_grep "all is well" -- megarepo_tool_multirepo --source-repo-id $LARGE_REPO_ID --target-repo-id $SUBMODULE_REPO_ID check-push-redirection-prereqs "master" "heads/master" "$LATEST_CONFIG_VERSION_NAME" | strip_glog | tee $TESTTMP/push_redir_prereqs_large_small
   all is well!
@@ -425,7 +451,7 @@ Let's corrupt the expansion and check if validation complains
   $ echo corrupt > smallrepofolder1/.x-repo-submodule-git-repo-b
   $ hg commit -m "submodule corruption"
   $ hg push -q --to master
-  $ quiet_grep "mismatch" -- megarepo_tool_multirepo --source-repo-id $SUBMODULE_REPO_ID --target-repo-id $LARGE_REPO_ID check-push-redirection-prereqs "heads/master" "master" "$LATEST_CONFIG_VERSION_NAME" | strip_glog | tee $TESTTMP/push_redir_prereqs_small_large
+  $ quiet_grep "mismatch" -- with_stripped_logs megarepo_tool_multirepo --source-repo-id $SUBMODULE_REPO_ID --target-repo-id $LARGE_REPO_ID check-push-redirection-prereqs "heads/master" "master" "$LATEST_CONFIG_VERSION_NAME" | strip_glog | tee $TESTTMP/push_redir_prereqs_small_large
   submodule expansion mismatch: Failed to fetch content from content id 06a434694d9172d617062abd92f015f73978fb17dd6bcc54e708cd2c6f247970 file containing the submodule's git commit hash
 
   $ quiet_grep "mismatch" -- megarepo_tool_multirepo --source-repo-id $LARGE_REPO_ID --target-repo-id $SUBMODULE_REPO_ID check-push-redirection-prereqs "master" "heads/master" "$LATEST_CONFIG_VERSION_NAME" | sort | tee $TESTTMP/push_redir_prereqs_large_small
@@ -457,38 +483,38 @@ Let's corrupt the expansion and check if validation complains
 -- EXPECT: all of them should return the same value as mapping check using admin
 
 -- Commit: Change directly in A
-  $ check_mapping_and_run_xrepo_lookup_large_to_small e21dab0d1f381cd1d46cd735013714d34bf02eaf
+  $ check_mapping_and_run_xrepo_lookup_large_to_small 27380bc5553eb680703c330fc83a614c6c10034c
   Check mapping in database with Mononoke admin
-  changeset resolved as: ChangesetId(Blake2(e43bc530a8d68be3efffb4923154d9af94e4b5b3b6c72df66d9788f168da6f80))
+  changeset resolved as: ChangesetId(Blake2(6c74b3e9f4ac9ae9ded1cc12d02fa23912926e30f60bc7c45595ad2db88c50af))
   RewrittenAs([(ChangesetId(Blake2(4aee0499ea629ebcd9d0e4be89267d7a4eab5e72f988c20a392d59081db0c32a)), CommitSyncConfigVersion("INITIAL_IMPORT_SYNC_CONFIG"))])
   
   
   Call hgedenapi committranslateids
-  [{"commit": {"Hg": bin("e21dab0d1f381cd1d46cd735013714d34bf02eaf")},
+  [{"commit": {"Hg": bin("27380bc5553eb680703c330fc83a614c6c10034c")},
     "translated": {"Bonsai": bin("4aee0499ea629ebcd9d0e4be89267d7a4eab5e72f988c20a392d59081db0c32a")}}]
 
 -- Commit: Update submodule B in repo A
-  $ check_mapping_and_run_xrepo_lookup_large_to_small 966d27bdf05c9c50d2e6e52390ef539e7ed88347
+  $ check_mapping_and_run_xrepo_lookup_large_to_small 46557285148375de0b93927ba58cde48a120c4d8
   Check mapping in database with Mononoke admin
-  changeset resolved as: ChangesetId(Blake2(4f4d70c002c11a4299d391722c27b696413cb39baaf25845ee75470ec02341fc))
+  changeset resolved as: ChangesetId(Blake2(6b141d0416df9f0e3054b38047779bb899972180d86bab364216c5f6ab04d402))
   RewrittenAs([(ChangesetId(Blake2(b86f7426fc1fe95e22b6bef591e7ba9c8385b86f7b85abd3a377f941d39522af)), CommitSyncConfigVersion("INITIAL_IMPORT_SYNC_CONFIG"))])
   
   
   Call hgedenapi committranslateids
-  [{"commit": {"Hg": bin("966d27bdf05c9c50d2e6e52390ef539e7ed88347")},
+  [{"commit": {"Hg": bin("46557285148375de0b93927ba58cde48a120c4d8")},
     "translated": {"Bonsai": bin("b86f7426fc1fe95e22b6bef591e7ba9c8385b86f7b85abd3a377f941d39522af")}}]
 
 -- Check an original commit from small repo (before merge)
--- Commit: Added git repo C as submodule directly in A
-  $ check_mapping_and_run_xrepo_lookup_large_to_small 93d78192288211ec611cde910d9ed46df80c9fd4
+-- Commit: Add regular_dir/aardvar
+  $ check_mapping_and_run_xrepo_lookup_large_to_small e2c69ce8cc11691984e50e6023f4bbf4271aa4c3
   Check mapping in database with Mononoke admin
-  changeset resolved as: ChangesetId(Blake2(9f66c500dd865669c0458820af27352ec9af5efe19714dd0400d4055d5310bcf))
-  RewrittenAs([(ChangesetId(Blake2(eef414bd5fc8f7dcc129318276af6945117fe32bb5cfda6b0e6d43036107f61c)), CommitSyncConfigVersion("INITIAL_IMPORT_SYNC_CONFIG"))])
+  changeset resolved as: ChangesetId(Blake2(b43576e9e9685513cf91adbe5fb817cbe2837ba9a4dca12a4c64a6aebfe09780))
+  RewrittenAs([(ChangesetId(Blake2(856b09638e2550d912282c5a9e8bd47fdf1a899545f9f4a05430a8dc7be1f768)), CommitSyncConfigVersion("INITIAL_IMPORT_SYNC_CONFIG"))])
   
   
   Call hgedenapi committranslateids
-  [{"commit": {"Hg": bin("93d78192288211ec611cde910d9ed46df80c9fd4")},
-    "translated": {"Bonsai": bin("eef414bd5fc8f7dcc129318276af6945117fe32bb5cfda6b0e6d43036107f61c")}}]
+  [{"commit": {"Hg": bin("e2c69ce8cc11691984e50e6023f4bbf4271aa4c3")},
+    "translated": {"Bonsai": bin("856b09638e2550d912282c5a9e8bd47fdf1a899545f9f4a05430a8dc7be1f768")}}]
 
 
 
@@ -506,18 +532,18 @@ Let's corrupt the expansion and check if validation complains
   > }
 
   $ hg_log
-  o  904d89930e20 submodule corruption
+  o  7ac324cc4ce2 submodule corruption
   │
-  @  3fafe9ae1f32 Remove repo C submodule from repo A
+  @  c10f082fbef1 Remove repo C submodule from repo A
   │
-  o  966d27bdf05c Update submodule B in repo A
+  o  465572851483 Update submodule B in repo A
   │
-  o  e21dab0d1f38 Change directly in A
+  o  27380bc5553e Change directly in A
   │
-  o    6a66af335e25 [MEGAREPO GRADUAL MERGE] gradual merge (0)
+  o  9a84b278c0f9 Added git repo C as submodule directly in A
+  │
+  o    2b82a445059a [MEGAREPO GRADUAL MERGE] gradual merge (0)
   ├─╮
-  │ o  93d781922882 Added git repo C as submodule directly in A
-  │ │
   │ o  1f9d3769f8c2 Added git repo B as submodule in A
   │ │
   │ o  e2c69ce8cc11 Add regular_dir/aardvar
@@ -581,7 +607,7 @@ Let's corrupt the expansion and check if validation complains
   $ hgmn commit -A -m "Changing large repo file" 
   $ backsync_get_info_and_derive_data
   Processing commit: Changing large repo file
-  Commit hash: c96ebcf44276a8d93be4e1ee18fa69eb8c370a48
+  Commit hash: 7dc2c0583a5055929fd772d94a6db6b9a3680ff8
   Success!
   
   
@@ -604,7 +630,7 @@ Let's corrupt the expansion and check if validation complains
   $ hgmn commit -A -m "Changing small repo in large repo (not submodule)" 
   $ backsync_get_info_and_derive_data
   Processing commit: Changing small repo in large repo (not submodule)
-  Commit hash: 0f70e42ae585a33bec651a5a275b84b85594b7c6
+  Commit hash: fac42b07b3b39cfb46f5eba3eb736126231ba3c6
   Success!
   
   
@@ -633,7 +659,7 @@ TODO(T179530927): properly support backsyncing with submodule expansion
   adding smallrepofolder1/git-repo-b/foo
   $ backsync_get_info_and_derive_data
   Processing commit: Changing submodule expansion in large repo
-  Commit hash: 89bb486311105dca437ea01f1d74ae37de3d2a06
+  Commit hash: 229fe03c0d3780e5de559833a6ba5d0d32b99451
   *error: Changeset can't be synced from large to small repo because it modifies the expansion of submodules* (glob)
   [255]
  
@@ -644,7 +670,7 @@ TODO(T179530927): properly support backsyncing with submodule expansion
   $ hgmn commit -A -m "Changing recursive submodule expansion in large repo" 
   $ backsync_get_info_and_derive_data
   Processing commit: Changing recursive submodule expansion in large repo
-  Commit hash: 5c1362308c9da907edab995ce89475c94471d780
+  Commit hash: d06cd21a6e1a520d6e9cc193cc9ab92b06afc199
   *error: Changeset can't be synced from large to small repo because it modifies the expansion of submodules* (glob)
   [255]
 
@@ -654,7 +680,7 @@ TODO(T179530927): properly support backsyncing with submodule expansion
   $ hgmn commit -q -A -m "Deleting repo_b submodule metadata file" 
   $ backsync_get_info_and_derive_data
   Processing commit: Deleting repo_b submodule metadata file
-  Commit hash: dcbba251e8b4472cd3273b239043fa7278f377c2
+  Commit hash: b25d2d2919aa11229071ca224d2c4e837689b46b
   *error: Changeset can't be synced from large to small repo because it modifies the expansion of submodules* (glob)
   [255]
 
@@ -665,7 +691,7 @@ TODO(T179530927): properly support backsyncing with submodule expansion
   $ hgmn commit -q -A -m "Deleting repo_c recursive submodule metadata file" 
   $ backsync_get_info_and_derive_data
   Processing commit: Deleting repo_c recursive submodule metadata file
-  Commit hash: 2e08e5dcf8bcc9196ff897eb93ff01ec3f8384bc
+  Commit hash: 1b19032a7f306819fc67546816bbea178842e152
   *error: Changeset can't be synced from large to small repo because it modifies the expansion of submodules* (glob)
   [255]
 
@@ -676,7 +702,7 @@ TODO(T179530927): properly support backsyncing with submodule expansion
   $ hgmn commit -q -A -m "Change repo_b submodule metadata file" 
   $ backsync_get_info_and_derive_data
   Processing commit: Change repo_b submodule metadata file
-  Commit hash: e819cd7b037da2b4311f2a0c11360501c5feab7a
+  Commit hash: 7a6d0f4b7ea2434a68dc45f56b56f4d26abf293d
   *error: Changeset can't be synced from large to small repo because it modifies the expansion of submodules* (glob)
   [255]
 
@@ -687,7 +713,7 @@ TODO(T179530927): properly support backsyncing with submodule expansion
   $ hgmn commit -q -A -m "Change repo_c recursive submodule metadata file" 
   $ backsync_get_info_and_derive_data
   Processing commit: Change repo_c recursive submodule metadata file
-  Commit hash: 314076ad733cd3481928e8c6ee2f60eb0fc105a3
+  Commit hash: 4740fc3bcff4482a13dbb8bf161a7e9f5b75d188
   *error: Changeset can't be synced from large to small repo because it modifies the expansion of submodules* (glob)
   [255]
 
@@ -699,7 +725,7 @@ TODO(T179530927): properly support backsyncing with submodule expansion
   $ hgmn commit -q -A -m "Delete repo_b submodule expansion" 
   $ backsync_get_info_and_derive_data
   Processing commit: Delete repo_b submodule expansion
-  Commit hash: 16fbd31058621a0d871b1c67884df8028d9d4a52
+  Commit hash: 0c5b59e1b3503d556f04f7fe5b9f2b5edef25a91
   *error: Changeset can't be synced from large to small repo because it modifies the expansion of submodules* (glob)
   [255]
 
@@ -709,45 +735,45 @@ TODO(T179530927): properly support backsyncing with submodule expansion
   $ hgmn commit -q -A -m "Delete repo_c recursive submodule expansion" 
   $ backsync_get_info_and_derive_data
   Processing commit: Delete repo_c recursive submodule expansion
-  Commit hash: 3524f01b068091beefa2caab9a5361c5657e2a06
+  Commit hash: ea09438156c0b7290bcc655c6b11e3de39956241
   *error: Changeset can't be synced from large to small repo because it modifies the expansion of submodules* (glob)
   [255]
 
 
 
   $ hg_log -r "sort(all(), desc)"
-  @  3524f01b0680 Delete repo_c recursive submodule expansion
+  @  ea09438156c0 Delete repo_c recursive submodule expansion
   │
-  │ o  16fbd3105862 Delete repo_b submodule expansion
+  │ o  0c5b59e1b350 Delete repo_b submodule expansion
   ├─╯
-  │ o  314076ad733c Change repo_c recursive submodule metadata file
+  │ o  4740fc3bcff4 Change repo_c recursive submodule metadata file
   ├─╯
-  │ o  e819cd7b037d Change repo_b submodule metadata file
+  │ o  7a6d0f4b7ea2 Change repo_b submodule metadata file
   ├─╯
-  │ o  2e08e5dcf8bc Deleting repo_c recursive submodule metadata file
+  │ o  1b19032a7f30 Deleting repo_c recursive submodule metadata file
   ├─╯
-  │ o  dcbba251e8b4 Deleting repo_b submodule metadata file
+  │ o  b25d2d2919aa Deleting repo_b submodule metadata file
   ├─╯
-  │ o  5c1362308c9d Changing recursive submodule expansion in large repo
+  │ o  d06cd21a6e1a Changing recursive submodule expansion in large repo
   ├─╯
-  │ o  89bb48631110 Changing submodule expansion in large repo
+  │ o  229fe03c0d37 Changing submodule expansion in large repo
   ├─╯
-  o  0f70e42ae585 Changing small repo in large repo (not submodule)
+  o  fac42b07b3b3 Changing small repo in large repo (not submodule)
   │
-  o  c96ebcf44276 Changing large repo file
+  o  7dc2c0583a50 Changing large repo file
   │
-  │ o  904d89930e20 submodule corruption
+  │ o  7ac324cc4ce2 submodule corruption
   ├─╯
-  o  3fafe9ae1f32 Remove repo C submodule from repo A
+  o  c10f082fbef1 Remove repo C submodule from repo A
   │
-  o  966d27bdf05c Update submodule B in repo A
+  o  465572851483 Update submodule B in repo A
   │
-  o  e21dab0d1f38 Change directly in A
+  o  27380bc5553e Change directly in A
   │
-  o    6a66af335e25 [MEGAREPO GRADUAL MERGE] gradual merge (0)
+  o  9a84b278c0f9 Added git repo C as submodule directly in A
+  │
+  o    2b82a445059a [MEGAREPO GRADUAL MERGE] gradual merge (0)
   ├─╮
-  │ o  93d781922882 Added git repo C as submodule directly in A
-  │ │
   │ o  1f9d3769f8c2 Added git repo B as submodule in A
   │ │
   │ o  e2c69ce8cc11 Add regular_dir/aardvar

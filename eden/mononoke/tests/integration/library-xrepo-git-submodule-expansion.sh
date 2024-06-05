@@ -96,7 +96,11 @@ function setup_git_repos_a_b_c {
 
 
 function gitimport_repos_a_b_c {
+  # Commit that will be synced after the merge to change the commit sync mapping
   export GIT_REPO_A_HEAD;
+  # Commit that will be used in the initial import and merged with large repo's
+  # master bookmark
+  export GIT_REPO_A_HEAD_PARENT;
   print_section "Importing repos in reverse dependency order, C, B then A"
 
   REPOID="$REPO_C_ID" quiet gitimport "$GIT_REPO_C" --bypass-derived-data-backfilling \
@@ -111,34 +115,57 @@ function gitimport_repos_a_b_c {
 
   GIT_REPO_A_HEAD=$(rg ".*Ref: \"refs/heads/master\": Some\(ChangesetId\(Blake2\((\w+).+" -or '$1' "$TESTTMP/gitimport_output")
 
+  GIT_REPO_A_HEAD_PARENT=$(mononoke_newadmin fetch -R "$SUBMODULE_REPO_NAME" -i "$GIT_REPO_A_HEAD" --json | jq -r .parents[0])
+
+
+  printf "\nGIT_REPO_A_HEAD: %s\n" "$GIT_REPO_A_HEAD"
+  printf "\nGIT_REPO_A_HEAD_PARENT: %s\n" "$GIT_REPO_A_HEAD_PARENT"
 }
 
 function merge_repo_a_to_large_repo {
+  IMPORT_CONFIG_VERSION_NAME=${NOOP_CONFIG_VERSION_NAME:-$LATEST_CONFIG_VERSION_NAME}
   FINAL_CONFIG_VERSION_NAME=${CONFIG_VERSION_NAME:-$LATEST_CONFIG_VERSION_NAME}
   MASTER_BOOKMARK_NAME=${MASTER_BOOKMARK:-master}
 
   print_section "Importing repo A commits into large repo"
+
+  echo "IMPORT_CONFIG_VERSION_NAME: $IMPORT_CONFIG_VERSION_NAME"
+  echo "FINAL_CONFIG_VERSION_NAME: $FINAL_CONFIG_VERSION_NAME"
+  echo "Large repo MASTER_BOOKMARK_NAME: $MASTER_BOOKMARK_NAME"
+
+  printf "\nGIT_REPO_A_HEAD: %s\n" "$GIT_REPO_A_HEAD"
+  printf "\nGIT_REPO_A_HEAD_PARENT: %s\n" "$GIT_REPO_A_HEAD_PARENT"
+
+  print_section "Running initial import"
+
   # shellcheck disable=SC2153
   with_stripped_logs mononoke_x_repo_sync "$SUBMODULE_REPO_ID" "$LARGE_REPO_ID" initial-import \
-    --no-progress-bar --derivation-batch-size 2 -i "$GIT_REPO_A_HEAD" \
-    --version-name "$FINAL_CONFIG_VERSION_NAME" 2>&1 | tee "$TESTTMP/initial_import_output"
+    --no-progress-bar --derivation-batch-size 2 -i "$GIT_REPO_A_HEAD_PARENT" \
+    --version-name "$IMPORT_CONFIG_VERSION_NAME" 2>&1 | tee "$TESTTMP/initial_import_output"
 
   print_section "Large repo bookmarks"
   mononoke_newadmin bookmarks -R "$LARGE_REPO_NAME" list -S hg
 
 
-  SYNCED_HEAD=$(rg ".+synced as (\w+) in.+" -or '$1' "$TESTTMP/initial_import_output")
-  PARENT=$(mononoke_newadmin fetch -R "$LARGE_REPO_NAME"  -i "$SYNCED_HEAD" --json | jq -r .parents[0])
+  IMPORTED_HEAD=$(rg ".+synced as (\w+) in.+" -or '$1' "$TESTTMP/initial_import_output")
+  printf "\nIMPORTED_HEAD: %s\n\n" "$IMPORTED_HEAD"
+  COMMIT_DATE="1985-09-04T00:00:00.00Z"
+
+  PARENT=$(mononoke_newadmin fetch -R "$LARGE_REPO_NAME"  -i "$IMPORTED_HEAD" --json | jq -r .parents[0])
 
   print_section "Creating gradual merge commit"
-  COMMIT_DATE="1985-09-04T00:00:00.00Z"
   REPOID="$LARGE_REPO_ID" with_stripped_logs megarepo_tool gradual-merge \
-    test_user "gradual merge" --pre-deletion-commit "$PARENT" \
-     --last-deletion-commit "$SYNCED_HEAD"  --bookmark "$MASTER_BOOKMARK_NAME" --limit 1 \
-     --commit-date-rfc3339 "$COMMIT_DATE"
+    test_user "gradual merge" --last-deletion-commit "$IMPORTED_HEAD" \
+     --pre-deletion-commit "$PARENT"  --bookmark "$MASTER_BOOKMARK_NAME" --limit 1 \
+     --commit-date-rfc3339 "$COMMIT_DATE" 2>&1 | tee "$TESTTMP/gradual_merge.out"
 
+  print_section "Changing commit sync mapping version"
+  with_stripped_logs mononoke_x_repo_sync "$SUBMODULE_REPO_ID" "$LARGE_REPO_ID" once \
+    --commit "$GIT_REPO_A_HEAD" --unsafe-change-version-to "$FINAL_CONFIG_VERSION_NAME"\
+    --target-bookmark "$MASTER_BOOKMARK_NAME" 2>&1 | tee "$TESTTMP/xrepo_mapping_change.out"
 
-  printf "\nSYNCHED_HEAD: %s\n\n" "$SYNCED_HEAD"
+  SYNCED_HEAD=$(rg ".+synced as (\w+) in.+" -or '$1' "$TESTTMP/xrepo_mapping_change.out")
+  printf "\nSYNCED_HEAD: %s\n\n" "$SYNCED_HEAD"
 
   clone_and_log_large_repo "$SYNCED_HEAD"
 
@@ -213,7 +240,6 @@ function make_changes_to_git_repos_a_b_c {
   git log --oneline
 
   GIT_REPO_A_HEAD=$(git rev-parse HEAD)
-
 }
 
 
