@@ -482,7 +482,7 @@ so they'll be dumped to files to keep this (already long) integration test short
 -- Check if changes were backsynced properly  
   $ cd "$TESTTMP/small-hg-client"
   $ REPONAME=$SMALL_REPO_NAME hgmn pull -q
-  $ log_globalrev -l 5
+  $ log_globalrev -l 30
   o  after merging submodule expansion [public;globalrev=;71beb2542fe4] default/master_bookmark
   │
   o  [MEGAREPO GRADUAL MERGE] gradual merge (0) [public;globalrev=1000157984;63782775678a]
@@ -493,7 +493,26 @@ so they'll be dumped to files to keep this (already long) integration test short
   │
   o  after mapping change from small [public;globalrev=1000157976;ecca553b5690]
   │
-  ~
+  │ @  after mapping change from small [draft;globalrev=;a4c70b6f0c57]
+  ├─╯
+  o  ID [public;globalrev=1000157975;8d707fde6f5e]
+  │
+  o  after merge from small [public;globalrev=1000157974;c17052372d27]
+  │
+  │ o  after merge from small [draft;globalrev=;14c64221d993]
+  ├─╯
+  o  after merge [public;globalrev=1000157973;3381b75593e5]
+  │
+  o  [MEGAREPO GRADUAL MERGE] gradual merge (0) [public;globalrev=1000157972;9351f7816915]
+  │
+  o  before merge [public;globalrev=1000157971;61807722d4ec]
+  │
+  o  L_D [public;globalrev=1000157970;0f80c2748608]
+  │
+  o  first post-move commit [public;globalrev=;11f848659bfc]
+  │
+  o  pre-move commit [public;globalrev=;fc7ae591de0e]
+  $
 
 -- Make changes to the git repos and sync them to the submodule repo merged into
 -- the large repo.
@@ -518,7 +537,7 @@ so they'll be dumped to files to keep this (already long) integration test short
 -- Check if changes were backsynced properly to small repo
   $ cd "$TESTTMP/small-hg-client"
   $ REPONAME=$SMALL_REPO_NAME hgmn pull -q
-  $ hg log -G -T "{desc} [{node|short}]\n" -l 5 --stat
+  $ hg log -G -T "{desc} [{node|short}]\n" -l 30 --stat
   o  after live sync and changes to submodule repo [bb0acd17a23e]
   │   file.txt |  2 +-
   │   1 files changed, 1 insertions(+), 1 deletions(-)
@@ -533,4 +552,43 @@ so they'll be dumped to files to keep this (already long) integration test short
   │
   o  [MEGAREPO GRADUAL MERGE] another merge (0) [6db37bb0eca0]
   │
-  ~
+  o  after mapping change from small [ecca553b5690]
+  │   bar |  1 +
+  │   1 files changed, 1 insertions(+), 0 deletions(-)
+  │
+  │ @  after mapping change from small [a4c70b6f0c57]
+  ├─╯   bar |  1 +
+  │     1 files changed, 1 insertions(+), 0 deletions(-)
+  │
+  o  ID [8d707fde6f5e]
+  │
+  o  after merge from small [c17052372d27]
+  │   baz |  2 +-
+  │   1 files changed, 1 insertions(+), 1 deletions(-)
+  │
+  │ o  after merge from small [14c64221d993]
+  ├─╯   baz |  2 +-
+  │     1 files changed, 1 insertions(+), 1 deletions(-)
+  │
+  o  after merge [3381b75593e5]
+  │   baz |  1 +
+  │   1 files changed, 1 insertions(+), 0 deletions(-)
+  │
+  o  [MEGAREPO GRADUAL MERGE] gradual merge (0) [9351f7816915]
+  │
+  o  before merge [61807722d4ec]
+  │   bla |  1 +
+  │   1 files changed, 1 insertions(+), 0 deletions(-)
+  │
+  o  L_D [0f80c2748608]
+  │   file.txt |  2 +-
+  │   1 files changed, 1 insertions(+), 1 deletions(-)
+  │
+  o  first post-move commit [11f848659bfc]
+  │   filetoremove |  1 +
+  │   1 files changed, 1 insertions(+), 0 deletions(-)
+  │
+  o  pre-move commit [fc7ae591de0e]
+      file.txt |  1 +
+      1 files changed, 1 insertions(+), 0 deletions(-)
+  
