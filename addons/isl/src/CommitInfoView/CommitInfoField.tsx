@@ -201,8 +201,9 @@ function ClickToEditField({
       onKeyPress={
         startEditingField != null && kind !== 'read-only'
           ? e => {
-              if (e.key === 'Enter') {
+              if (e.key === 'Enter' || e.key === ' ') {
                 startEditingField();
+                e.preventDefault();
               }
             }
           : undefined
