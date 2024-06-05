@@ -14,8 +14,9 @@ use mononoke_types::MononokeDigest;
 
 use crate::CasClient;
 
+#[derive(Default)]
 pub struct DummyCasClient<'a> {
-    _marker: PhantomData<&'a ()>,
+    marker: PhantomData<&'a ()>,
 }
 
 /// A CasClient that does nothing. All operations are essentially a no-op.

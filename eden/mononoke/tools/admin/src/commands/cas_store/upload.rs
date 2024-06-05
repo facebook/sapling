@@ -42,7 +42,7 @@ pub async fn cas_store_upload(
     args: CasStoreUploadArgs,
 ) -> Result<()> {
     #[cfg(not(fbcode_build))]
-    let cas_changesets_uploader = CasChangesetsUploader::new(DummyCasClient {});
+    let cas_changesets_uploader = CasChangesetsUploader::new(DummyCasClient::default());
 
     #[cfg(fbcode_build)]
     let cas_changesets_uploader = CasChangesetsUploader::new(RemoteExecutionCasdClient::new(
