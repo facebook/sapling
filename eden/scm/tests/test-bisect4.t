@@ -83,6 +83,12 @@ Linear:
     A06
     A07
 
+- Distribution
+  $ sl debugbisectall -r $A01::$A20
+     4 | 13: A02 A03 A04 A05 A06 A07 A08 A11 A12 A13 A16 A17 A18
+     5 |  6: A09 A10 A14 A15 A19 A20
+  p50=4  p75=5  p90=5  average=4.32 steps
+
 Two branches with different lengths:
 
   $ newrepo
@@ -192,3 +198,43 @@ Two branches with different lengths:
     #4  choose B01,  3 remaining, marked as good
     The first good revision is:
     B01
+
+- Distribution
+  $ sl debugbisectall -r $X::$Y
+     4 |  1: B01
+     5 | 30: A01 A02 A03 A04 A05 A06 A07 A08 A09 A10 B02 B03 B04 B05 B06 B07 B08 B09 B10 B11 B12 B13 B14 B15 B16 B17 B18 B19 B20 Y
+  p50=5  p75=5  p90=5  average=4.97 steps
+
+More complex graph
+
+  $ newrepo
+  $ drawdag << 'EOF'
+  >     F20
+  >      :
+  >     F10
+  >      : \
+  >     F01 \
+  >     /    |
+  >   E20    |
+  >    :     |
+  >   E10   D20
+  >    : \   :
+  >    :  \  :
+  >   E01  \ :
+  >   / \   D10
+  > B20 C20  :
+  >  :   :   :
+  > B01 C01 D01
+  >   \ /  /
+  >   A20 /
+  >    : /
+  >   A10
+  >    :
+  >   A01
+  > EOF
+
+  $ sl debugbisectall -r $A01::$F20
+     6 | 16: A02 A17 B12 C01 D01 D02 D03 D06 D07 D08 D11 D12 D13 D16 D17 D18
+     7 | 89: A03 A04 A05 A06 A07 A08 A09 A10 A11 A12 A13 A14 A15 A16 A18 A19 A20 B01 B02 B03 B04 B05 B06 B07 B08 B09 B10 B11 B13 B14 B15 B16 B17 B18 B19 B20 C02 C03 C04 C05 C06 C07 C08 C09 C10 C11 C12 C13 C14 C15 C16 C17 C18 C19 C20 D04 D05 D09 D10 D14 D15 D19 D20 E01 E02 E03 E04 E05 E06 E07 E08 E11 E12 E13 E16 E17 E18 F01 F02 F03 F06 F07 F08 F11 F12 F13 F16 F17 F18
+     8 | 14: E09 E10 E14 E15 E19 E20 F04 F05 F09 F10 F14 F15 F19 F20
+  p50=7  p75=7  p90=8  average=6.98 steps

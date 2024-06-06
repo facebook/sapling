@@ -363,6 +363,42 @@ def debugbisect(ui, repo, **opts):
 
 
 @command(
+    "debugbisectall",
+    [
+        ("r", "range", [], _("bisect range")),
+        ("s", "skip", [], _("(non-lazy) skip set")),
+    ],
+)
+def debugbisectall(ui, repo, **opts):
+    """enumerate all "first bad" commits, show bisect step distribution"""
+    cl = repo.changelog
+    dag = cl.dag
+    range = cl.tonodes(scmutil.revrange(repo, opts["range"]))
+    skip = cl.tonodes(scmutil.revrange(repo, opts["skip"]))
+
+    first_bad_candidates = range - skip - dag.roots(range)
+    step_to_desc_list = collections.defaultdict(list)
+    counts = []
+    for first_bad in first_bad_candidates:
+        bad = dag.range([first_bad], range)
+        step_count = len(list(_runbisect(repo, range, bad, skip))) - 1
+        step_to_desc_list[step_count].append(
+            repo[first_bad].description().splitlines()[0]
+        )
+        counts.append(step_count)
+    for step_count, desc_list in sorted(step_to_desc_list.items()):
+        desc_list.sort()
+        ui.write(" %3d |%3d: %s\n" % (step_count, len(desc_list), " ".join(desc_list)))
+    if counts:
+        counts.sort()
+        p = lambda n: counts[min(len(counts) * n // 100, len(counts) - 1)]
+        avg = sum(counts) / len(counts)
+        ui.write(
+            "p50=%d  p75=%d  p90=%d  average=%.2f steps\n" % (p(50), p(75), p(90), avg)
+        )
+
+
+@command(
     "debugbuilddag",
     [
         ("m", "mergeable-file", None, _("add single file mergeable changes")),
