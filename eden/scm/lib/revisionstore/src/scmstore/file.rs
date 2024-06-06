@@ -675,7 +675,7 @@ impl LocalStore for FileStore {
             .fetch(
                 keys.iter().cloned().filter_map(|sk| sk.maybe_into_key()),
                 FileAttributes::CONTENT,
-                FetchMode::LocalOnly,
+                FetchMode::LocalOnly | FetchMode::IGNORE_RESULT,
             )
             .missing()?
             .into_iter()
