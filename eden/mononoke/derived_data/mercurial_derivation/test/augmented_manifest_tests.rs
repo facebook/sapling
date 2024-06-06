@@ -5,9 +5,12 @@
  * GNU General Public License version 2.
  */
 
+use std::sync::Arc;
+
 use anyhow::Result;
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
+use cacheblob::MemWritesBlobstore;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::stream::TryStreamExt;
@@ -33,6 +36,18 @@ async fn get_manifests(
         .load(ctx, repo.repo_blobstore())
         .await?
         .manifestid();
+
+    // First derive the manifest in full using a temporary side blobstore.
+    let blobstore = Arc::new(MemWritesBlobstore::new(repo.repo_blobstore().clone()));
+    let full_aug_id = derive_hg_augmented_manifest::derive_from_full_hg_manifest(
+        ctx.clone(),
+        blobstore.clone(),
+        hg_id,
+    )
+    .await?;
+    let full_aug = full_aug_id.load(ctx, &blobstore).await?;
+
+    // Now derive the manifest using the parents in the main blobstore.
     let aug_id = derive_hg_augmented_manifest::derive_from_hg_manifest_and_parents(
         ctx,
         repo.repo_blobstore(),
@@ -40,6 +55,11 @@ async fn get_manifests(
         parents,
     )
     .await?;
+    let aug = aug_id.load(ctx, repo.repo_blobstore()).await?;
+
+    // Check that the two manifests are the same.
+    assert_eq!(aug, full_aug);
+
     Ok((hg_id, aug_id))
 }
 

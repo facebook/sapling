@@ -5,11 +5,14 @@
  * GNU General Public License version 2.
  */
 
+use std::sync::Arc;
+
 use anyhow::anyhow;
 use anyhow::Result;
 use blobstore::Blobstore;
 use blobstore::Storable;
 use blobstore::StoreLoadable;
+use cloned::cloned;
 use context::CoreContext;
 use either::Either;
 use filestore::FetchKey;
@@ -18,6 +21,7 @@ use futures::future::FutureExt;
 use futures::stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
+use manifest::derive_manifest_from_predecessor;
 use manifest::Entry;
 use manifest::ManifestComparison;
 use mercurial_types::sharded_augmented_manifest::HgAugmentedDirectoryNode;
@@ -306,4 +310,84 @@ pub async fn derive_from_hg_manifest_and_parents(
     )
     .await?;
     Ok(root)
+}
+
+pub async fn derive_from_full_hg_manifest(
+    ctx: CoreContext,
+    blobstore: Arc<dyn Blobstore>,
+    hg_manifest_id: HgManifestId,
+) -> Result<HgAugmentedManifestId> {
+    let root_entry = derive_manifest_from_predecessor(
+        ctx.clone(),
+        blobstore.clone(),
+        hg_manifest_id,
+        {
+            cloned!(ctx, blobstore);
+            move |tree_info| {
+                cloned!(ctx, blobstore);
+                async move {
+                    let hg_manifest = tree_info.predecessor.load(&ctx, &blobstore).await?;
+                    let entries = tree_info.subentries.into_iter().map(|(elem, ((), entry))| {
+                        let entry = match entry {
+                            Entry::Tree(tree) => HgAugmentedManifestEntry::DirectoryNode(tree),
+                            Entry::Leaf(leaf) => HgAugmentedManifestEntry::FileNode(leaf),
+                        };
+                        (elem, entry)
+                    });
+                    let subentries =
+                        ShardedMapV2Node::from_entries(&ctx, &blobstore, entries).await?;
+                    let augmented_manifest = ShardedHgAugmentedManifest {
+                        hg_node_id: tree_info.predecessor.into_nodehash(),
+                        p1: hg_manifest.p1(),
+                        p2: hg_manifest.p2(),
+                        computed_node_id: hg_manifest.computed_node_id(),
+                        subentries,
+                    };
+                    let (augmented_manifest_id, augmented_manifest_size) = augmented_manifest
+                        .clone()
+                        .compute_content_addressed_digest(&ctx, &blobstore)
+                        .await?;
+                    let envelope = HgAugmentedManifestEnvelope {
+                        augmented_manifest_id,
+                        augmented_manifest_size,
+                        augmented_manifest,
+                    };
+                    envelope.store(&ctx, &blobstore).await?;
+                    let entry = HgAugmentedDirectoryNode {
+                        treenode: tree_info.predecessor.into_nodehash(),
+                        augmented_manifest_id,
+                        augmented_manifest_size,
+                    };
+                    Ok(((), entry))
+                }
+            }
+        },
+        {
+            cloned!(ctx, blobstore);
+            move |leaf_info| {
+                cloned!(ctx, blobstore);
+                async move {
+                    let (file_type, filenode_id) = leaf_info.predecessor;
+                    let filenode = filenode_id.load(&ctx, &blobstore).await?;
+                    let metadata = filestore::get_metadata(
+                        &blobstore,
+                        &ctx,
+                        &FetchKey::Canonical(filenode.content_id()),
+                    )
+                    .await?
+                    .ok_or_else(|| anyhow!("Missing metadata for {}", filenode_id))?;
+                    let hg_augmented_file_leaf_node = HgAugmentedFileLeafNode {
+                        file_type,
+                        filenode: filenode_id.into_nodehash(),
+                        total_size: metadata.total_size,
+                        content_blake3: metadata.seeded_blake3,
+                        content_sha1: metadata.sha1,
+                    };
+                    Ok(((), hg_augmented_file_leaf_node))
+                }
+            }
+        },
+    )
+    .await?;
+    Ok(HgAugmentedManifestId::new(root_entry.treenode))
 }

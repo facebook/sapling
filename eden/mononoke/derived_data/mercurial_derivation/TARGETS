@@ -72,6 +72,7 @@ rust_unittest(
         "//eden/mononoke/blobrepo:blobrepo_hg",
         "//eden/mononoke/blobrepo:repo_blobstore",
         "//eden/mononoke/blobstore:blobstore",
+        "//eden/mononoke/blobstore:cacheblob",
         "//eden/mononoke/blobstore:delayblob",
         "//eden/mononoke/blobstore:memblob",
         "//eden/mononoke/bonsai_hg_mapping:bonsai_hg_mapping",
