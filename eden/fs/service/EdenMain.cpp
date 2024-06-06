@@ -14,7 +14,7 @@
 #include <fb303/TFunctionStatHandler.h>
 #include <folly/Conv.h>
 #include <folly/MapUtil.h>
-#include <folly/experimental/FunctionScheduler.h>
+#include <folly/executors/FunctionScheduler.h>
 #include <folly/init/Init.h>
 #include <folly/logging/Init.h>
 #include <folly/logging/LogConfigParser.h>

@@ -45,7 +45,7 @@ cpp_library(
         "//folly:conv",
         "//folly:map_util",
         "//folly:stop_watch",
-        "//folly/experimental:function_scheduler",
+        "//folly/executors:function_scheduler",
         "//folly/init:init",
         "//folly/logging:init",
         "//folly/logging:logging",
