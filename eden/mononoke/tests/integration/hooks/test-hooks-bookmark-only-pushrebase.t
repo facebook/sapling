@@ -89,7 +89,8 @@ attempt a non-fast-forward move, it should fail
   $ hg up -q $F
   $ hgedenapi push -r . --to main
   pushing rev af09fbbc2f05 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark main
-  abort: non-fast-forward push to remote bookmark main from 7ff4b7c298ec to af09fbbc2f05 (set pushvar NON_FAST_FORWARD=true for a non-fast-forward move)
+  abort: non-fast-forward push to remote bookmark main from 7ff4b7c298ec to af09fbbc2f05
+  (add '--force' or set pushvar NON_FAST_FORWARD=true for a non-fast-forward move)
   [255]
 specify the pushvar to allow the non-fast-forward move.
   $ hgedenapi push -r . --to main --pushvar NON_FAST_FORWARD=true

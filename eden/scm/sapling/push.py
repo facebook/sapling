@@ -164,11 +164,9 @@ def plain_push(repo, edenapi, bookmark, to_node, curr_bookmark_val, force, oparg
         if not is_ancestor:
             if not is_true(pushvars.get("NON_FAST_FORWARD")):
                 raise error.Abort(
-                    _(
-                        "non-fast-forward push to remote bookmark %s from %s to %s "
-                        "(set pushvar NON_FAST_FORWARD=true for a non-fast-forward move)"
-                    )
+                    _("non-fast-forward push to remote bookmark %s from %s to %s")
                     % (bookmark, short(from_node), short(to_node)),
+                    hint="add '--force' or set pushvar NON_FAST_FORWARD=true for a non-fast-forward move",
                 )
 
     repo.ui.status(
