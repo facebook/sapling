@@ -226,6 +226,142 @@ def debugbindag(ui, repo, rev=None, output=None) -> None:
     util.writefile(output or "dag.out", data)
 
 
+def _runbisect(repo, range, bad, skip, node_to_infos=None):
+    """run bisect till completion. yield (i, action, state, nodes, candidate_count, isgood)
+
+    i: iteration count, starts from 1
+    action: 'good' | 'bad' | 'skip' | 'done'
+    state: hbisect state
+    nodes: candidates picked by hbisect.bisect
+    candidate_count: count of remaining candiates
+    isgood: returned by hbisect.bisect
+
+    node_to_infos: optional defaultdict(list), node -> bisect info
+    """
+    import itertools
+
+    from .. import hbisect
+
+    cl = repo.changelog
+    dag = cl.dag
+
+    good = range - bad - skip
+
+    heads = dag.heads(range)
+    roots = dag.roots(range)
+
+    if len(heads) != 1 or len(roots) != 1:
+        raise error.ProgrammingError(
+            "bisect range must have exactly one head and one root"
+        )
+
+    head = heads[0]
+    root = roots[0]
+
+    if (
+        len(bad & dag.sort([head, root])) != 1
+        or len(good & dag.sort([head, root])) != 1
+    ):
+        raise error.ProgrammingError("head and root must be one good one bad")
+
+    if head in bad:
+        first_good, first_bad = root, head
+    else:
+        first_good, first_bad = head, root
+
+    if node_to_infos is not None:
+        node_to_infos[first_good].append("initial good")
+        node_to_infos[first_bad].append("initial bad")
+
+    hbisect.resetstate(repo)
+    state = hbisect.load_state(repo)
+    state["good"] = [first_good]
+    state["bad"] = [first_bad]
+
+    # matches the main "bisect" command implementation, but works in a loop
+    for i in itertools.count(1):
+        nodes, candidate_count, isgood, badnode, goodnode = hbisect.bisect(repo, state)
+
+        if candidate_count == 0:
+            yield i, "done", state, nodes, candidate_count, isgood
+            break
+
+        assert len(nodes) == 1  # only a single node can be tested next
+        node = nodes[0]
+
+        if node in good:
+            action = "good"
+        elif node in bad:
+            action = "bad"
+        else:
+            assert node in skip
+            action = "skip"
+
+        state["current"] = [node]
+        state[action].append(node)
+        if node_to_infos is not None:
+            node_to_infos[node].append(f"#{i} {action}")
+        yield i, action, state, nodes, candidate_count, isgood
+
+
+@command(
+    "debugbisect",
+    [
+        ("r", "range", [], _("bisect range")),
+        ("b", "bad", [], _("bad set")),
+        ("s", "skip", [], _("(non-lazy) skip set")),
+    ],
+)
+def debugbisect(ui, repo, **opts):
+    """show bisect steps given a bisect range"""
+    import textwrap
+
+    from .. import hbisect, templatekw
+
+    cl = repo.changelog
+    range = cl.tonodes(scmutil.revrange(repo, opts["range"]))
+    bad = cl.tonodes(scmutil.revrange(repo, opts["bad"]))
+    skip = cl.tonodes(scmutil.revrange(repo, opts["skip"]))
+
+    node_to_infos = collections.defaultdict(list)
+    displayer = cmdutil.show_changeset(ui, repo, {"template": "{desc|firstline}\n"})
+
+    # matches the main "bisect" command implementation, but works in a loop
+    ui.pushbuffer()
+    for i, action, state, nodes, candidate_count, isgood in _runbisect(
+        repo, range, bad, skip, node_to_infos
+    ):
+        if action == "done":
+            hbisect.printresult(ui, repo, state, displayer, nodes, isgood)
+        else:
+            assert len(nodes) == 1
+            node = nodes[0]
+            ui.write(
+                f"#{'%-2d' % i} choose {repo[node].description().splitlines()[0]},{'%3d' % candidate_count} remaining, marked as {action}\n"
+            )
+    steps = textwrap.indent(ui.popbuffer(), "  ")
+
+    # Draw a graph of chosen nodes.
+    @templatekw.templatekeyword("debugbisect")
+    def debugbisect(repo, ctx, templ, **args):
+        return " ".join(node_to_infos.get(ctx.node()) or [])
+
+    ui.pushbuffer()
+    cmdutil.graphlog(
+        ui,
+        repo,
+        [],
+        {
+            "rev": [hex(n) for n in node_to_infos],
+            "template": "{desc|firstline}: {debugbisect}",
+        },
+    )
+    graph = textwrap.indent(ui.popbuffer(), "  ")
+    templatekw.keywords.pop("debugbisect", None)
+
+    ui.write("Graph:\n%s\nSteps:\n%s" % (graph.rstrip(), steps))
+
+
 @command(
     "debugbuilddag",
     [
