@@ -12,7 +12,6 @@ mod errors;
 use std::fmt::Display;
 use std::sync::Arc;
 
-use anyhow::Error;
 use atomic_counter::AtomicCounter;
 use atomic_counter::RelaxedCounter;
 use blobstore::Loadable;
@@ -149,7 +148,7 @@ where
         repo: &impl Repo,
         changeset_id: &ChangesetId,
         blobs_only: bool,
-    ) -> Result<(), Error> {
+    ) -> Result<(), CasChangesetUploaderErrorKind> {
         let hg_cs_id = repo
             .bonsai_hg_mapping()
             .get_hg_from_bonsai(ctx, *changeset_id)
@@ -161,7 +160,10 @@ where
             })??;
 
         let blobstore = repo.repo_blobstore_arc();
-        let hg_cs = hg_cs_id.load(ctx, &blobstore).await?;
+        let hg_cs = hg_cs_id
+            .load(ctx, &blobstore)
+            .await
+            .map_err(|e| CasChangesetUploaderErrorKind::Error(e.into()))?;
 
         // Diff hg manifest with parents
         let diff_stream = match (
@@ -172,8 +174,9 @@ where
                 let p1_hg_cs = p1.load(ctx, &blobstore);
                 let p2_hg_cs = p2.load(ctx, &blobstore);
                 let hg_cs = hg_cs_id.load(ctx, &blobstore);
-                let (p1_hg_cs, p2_hg_cs, hg_cs) =
-                    future::try_join3(p1_hg_cs, p2_hg_cs, hg_cs).await?;
+                let (p1_hg_cs, p2_hg_cs, hg_cs) = future::try_join3(p1_hg_cs, p2_hg_cs, hg_cs)
+                    .await
+                    .map_err(|e| CasChangesetUploaderErrorKind::Error(e.into()))?;
 
                 find_intersection_of_diffs(
                     ctx.clone(),
@@ -182,7 +185,7 @@ where
                     vec![p1_hg_cs.manifestid(), p2_hg_cs.manifestid()],
                 )
                 .map_ok(move |(_, entry)| entry)
-                .map_err(|e| CasChangesetUploaderErrorKind::DiffChangesetFailed(e.to_string()))
+                .map_err(CasChangesetUploaderErrorKind::DiffChangesetFailed)
                 .boxed()
             }
 
@@ -190,7 +193,8 @@ where
                 let blobstore = repo.repo_blobstore();
                 let parent_hg_cs = p.load(ctx, &blobstore);
                 let hg_cs = hg_cs_id.load(ctx, &blobstore);
-                let (parent_hg_cs, hg_cs) = try_join!(parent_hg_cs, hg_cs)?;
+                let (parent_hg_cs, hg_cs) = try_join!(parent_hg_cs, hg_cs)
+                    .map_err(|e| CasChangesetUploaderErrorKind::Error(e.into()))?;
 
                 parent_hg_cs
                     .manifestid()
@@ -201,17 +205,20 @@ where
                         Diff::Changed(_, _, entry) => Some(entry),
                     })
                     .try_filter_map(future::ok)
-                    .map_err(|e| CasChangesetUploaderErrorKind::DiffChangesetFailed(e.to_string()))
+                    .map_err(CasChangesetUploaderErrorKind::DiffChangesetFailed)
                     .boxed()
             }
 
             (None, None) => {
-                let hg_cs = hg_cs_id.load(ctx, &repo.repo_blobstore()).await?;
+                let hg_cs = hg_cs_id
+                    .load(ctx, &repo.repo_blobstore())
+                    .await
+                    .map_err(|e| CasChangesetUploaderErrorKind::Error(e.into()))?;
                 hg_cs
                     .manifestid()
                     .list_all_entries(ctx.clone(), repo.repo_blobstore_arc())
                     .map_ok(move |(_, entry)| entry)
-                    .map_err(|e| CasChangesetUploaderErrorKind::DiffChangesetFailed(e.to_string()))
+                    .map_err(CasChangesetUploaderErrorKind::DiffChangesetFailed)
                     .boxed()
             }
         }
@@ -325,7 +332,13 @@ where
                                 None,
                                 true,
                             )
-                            .await?;
+                            .await
+                            .map_err(|error| {
+                                CasChangesetUploaderErrorKind::TreeUploadFailed(
+                                    hg_augmented_manifest_id,
+                                    error,
+                                )
+                            })?;
                         progress_counter.tick(ctx, outcome);
                         if outcome == UploadOutcome::AlreadyPresent {
                             return anyhow::Ok(((), vec![]));
@@ -355,9 +368,13 @@ where
                                                 None,
                                                 true,
                                             )
-                                            .await?;
+                                            .await
+                                            .map_err(|error| {
+                                                CasChangesetUploaderErrorKind::FileUploadFailed(
+                                                    leaf.1, error,
+                                                )
+                                            })?;
                                         progress_counter.tick(ctx, outcome);
-
                                         Ok(())
                                     }
                                     .right_future()
