@@ -34,11 +34,14 @@ use edenapi::types::CommitGraphSegments;
 use edenapi::types::CommitGraphSegmentsEntry;
 use edenapi::types::CommitHashLookupResponse;
 use edenapi::types::CommitHashToLocationResponse;
+use edenapi::types::CommitId;
+use edenapi::types::CommitIdScheme;
 use edenapi::types::CommitKnownResponse;
 use edenapi::types::CommitLocationToHashRequest;
 use edenapi::types::CommitLocationToHashResponse;
 use edenapi::types::CommitMutationsResponse;
 use edenapi::types::CommitRevlogData;
+use edenapi::types::CommitTranslateIdResponse;
 use edenapi::types::Extra;
 use edenapi::types::FileAuxData;
 use edenapi::types::FileContent;
@@ -983,6 +986,74 @@ impl SaplingRemoteApi for EagerRepo {
         }
 
         Ok(res)
+    }
+
+    async fn commit_translate_id(
+        &self,
+        commits: Vec<CommitId>,
+        scheme: CommitIdScheme,
+        from_repo: Option<String>,
+        to_repo: Option<String>,
+    ) -> Result<Response<CommitTranslateIdResponse>, SaplingRemoteApiError> {
+        if std::env::var_os("TESTTMP").is_none() {
+            return Err(SaplingRemoteApiError::NotSupported);
+        }
+
+        // Implement a dummy "Bonsai" translation for testing.
+
+        if from_repo.is_some() || to_repo.is_some() {
+            return Err(SaplingRemoteApiError::HttpError {
+                status: StatusCode::BAD_REQUEST,
+                message: "from_repo and to_repo not supported".to_string(),
+                headers: Default::default(),
+                url: self.url("commit_translate_id"),
+            });
+        }
+
+        if !matches!(scheme, CommitIdScheme::Hg | CommitIdScheme::Bonsai) {
+            return Err(SaplingRemoteApiError::HttpError {
+                status: StatusCode::BAD_REQUEST,
+                message: "only hg and bonsai supported".to_string(),
+                headers: Default::default(),
+                url: self.url("commit_translate_id"),
+            });
+        }
+
+        let mut res = Vec::new();
+        for commit in commits {
+            let translated = match &commit {
+                CommitId::Hg(hg) => {
+                    if scheme == CommitIdScheme::Hg {
+                        commit.clone()
+                    } else {
+                        let mut fake_bonsai = [0u8; 32];
+                        fake_bonsai[..20].copy_from_slice(hg.as_ref());
+                        CommitId::Bonsai(fake_bonsai.into())
+                    }
+                }
+                CommitId::Bonsai(bz) => {
+                    if scheme == CommitIdScheme::Hg {
+                        let mut hg = [0u8; 20];
+                        hg[..].copy_from_slice(&bz.as_ref()[..20]);
+                        CommitId::Hg(hg.into())
+                    } else {
+                        commit.clone()
+                    }
+                }
+                _ => {
+                    return Err(SaplingRemoteApiError::HttpError {
+                        status: StatusCode::BAD_REQUEST,
+                        message: "only hg and bonsai supported".to_string(),
+                        headers: Default::default(),
+                        url: self.url("commit_translate_id"),
+                    });
+                }
+            };
+
+            res.push(Ok(CommitTranslateIdResponse { commit, translated }));
+        }
+
+        Ok(convert_to_response(res))
     }
 }
 
