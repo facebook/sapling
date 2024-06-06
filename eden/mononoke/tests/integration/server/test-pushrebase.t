@@ -214,7 +214,7 @@ Push a merge commit with both parents not ancestors of destination bookmark
   $
 
   $ hgedenapi push -r . --to master_bookmark
-  fallback reason: merge commit is not supported by SaplingRemoteApi push yet
+  fallback reason: merge commit is not supported by EdenApi push yet
   pushing rev fad460d85200 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   adding changesets
@@ -274,7 +274,7 @@ Push-rebase of a commit with p2 being the ancestor of the destination bookmark
 
 - Actually test the push
   $ hgedenapi push -r . --to master_bookmark
-  fallback reason: merge commit is not supported by SaplingRemoteApi push yet
+  fallback reason: merge commit is not supported by EdenApi push yet
   pushing rev e3db177db1d1 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   adding changesets
