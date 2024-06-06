@@ -17,6 +17,7 @@ use changeset_info::ChangesetInfo;
 use context::CoreContext;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
+use mononoke_types::MPath;
 use mononoke_types::NonRootMPath;
 
 use crate::errors::HookFileContentProviderError;
@@ -63,6 +64,14 @@ pub trait HookFileContentProvider: Send + Sync {
         bookmark: BookmarkKey,
         paths: Vec<NonRootMPath>,
     ) -> Result<HashMap<NonRootMPath, ChangesetInfo>, HookFileContentProviderError>;
+
+    /// Find the count of child entries in a set of paths
+    async fn directory_sizes<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        changeset_id: ChangesetId,
+        paths: Vec<MPath>,
+    ) -> Result<HashMap<MPath, u64>, HookFileContentProviderError>;
 }
 
 #[derive(Clone, Debug)]

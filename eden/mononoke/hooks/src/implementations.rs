@@ -15,6 +15,7 @@ mod block_files;
 pub(crate) mod deny_files;
 mod limit_commit_message_length;
 pub(crate) mod limit_commit_size;
+mod limit_directory_size;
 pub(crate) mod limit_filesize;
 mod limit_path_length;
 pub(crate) mod no_bad_extensions;
@@ -55,8 +56,10 @@ pub async fn make_changeset_hook(
                 limit_commit_message_length::LimitCommitMessageLengthHook::new(&params.config)?;
             Some(b(hook))
         }
-
         "limit_commit_size" => Some(b(limit_commit_size::LimitCommitSizeHook::new(
+            &params.config,
+        )?)),
+        "limit_directory_size" => Some(b(limit_directory_size::LimitDirectorySizeHook::new(
             &params.config,
         )?)),
         "require_commit_message_pattern" => Some(b(

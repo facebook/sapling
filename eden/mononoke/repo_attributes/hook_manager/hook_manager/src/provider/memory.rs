@@ -15,6 +15,7 @@ use changeset_info::ChangesetInfo;
 use context::CoreContext;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
+use mononoke_types::MPath;
 use mononoke_types::NonRootMPath;
 
 use crate::errors::HookFileContentProviderError;
@@ -114,6 +115,18 @@ impl HookFileContentProvider for InMemoryHookFileContentProvider {
     ) -> Result<HashMap<NonRootMPath, ChangesetInfo>, HookFileContentProviderError> {
         Err(
             anyhow!("`latest_changes` is not implemented for `InMemoryHookFileContentProvider`")
+                .into(),
+        )
+    }
+
+    async fn directory_sizes<'a>(
+        &'a self,
+        _ctx: &'a CoreContext,
+        _changeset_id: ChangesetId,
+        _paths: Vec<MPath>,
+    ) -> Result<HashMap<MPath, u64>, HookFileContentProviderError> {
+        Err(
+            anyhow!("`directory_sizes` is not implemented for `InMemoryHookFileContentProvider`")
                 .into(),
         )
     }

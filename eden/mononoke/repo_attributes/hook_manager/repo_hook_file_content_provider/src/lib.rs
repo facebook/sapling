@@ -36,6 +36,7 @@ use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
+use mononoke_types::MPath;
 use mononoke_types::ManifestUnodeId;
 use mononoke_types::NonRootMPath;
 use repo_blobstore::ArcRepoBlobstore;
@@ -44,6 +45,7 @@ use repo_blobstore::RepoBlobstoreArc;
 use repo_derived_data::ArcRepoDerivedData;
 use repo_derived_data::RepoDerivedData;
 use repo_derived_data::RepoDerivedDataArc;
+use skeleton_manifest::RootSkeletonManifestId;
 use unodes::RootUnodeManifestId;
 
 pub struct RepoHookFileContentProvider {
@@ -236,6 +238,39 @@ impl HookFileContentProvider for RepoHookFileContentProvider {
             .try_collect::<HashMap<_, _>>()
             .map_err(HookFileContentProviderError::from)
             .await
+    }
+
+    async fn directory_sizes<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        changeset_id: ChangesetId,
+        paths: Vec<MPath>,
+    ) -> Result<HashMap<MPath, u64>, HookFileContentProviderError> {
+        let sk_mf = self
+            .repo_derived_data
+            .derive::<RootSkeletonManifestId>(ctx, changeset_id)
+            .await
+            .with_context(|| format!("Error deriving skeleton manifest for {}", changeset_id))?
+            .skeleton_manifest_id()
+            .clone();
+        sk_mf
+            .find_entries(ctx.clone(), self.repo_blobstore.clone(), paths)
+            .try_filter_map(|(path, entry)| async move {
+                match entry {
+                    Entry::Tree(tree_id) => {
+                        let tree = tree_id.load(ctx, &self.repo_blobstore).await?;
+                        let summary = tree.summary();
+                        Ok(Some((
+                            path,
+                            summary.child_files_count + summary.child_dirs_count,
+                        )))
+                    }
+                    _ => Ok(None),
+                }
+            })
+            .try_collect()
+            .await
+            .map_err(HookFileContentProviderError::from)
     }
 }
 

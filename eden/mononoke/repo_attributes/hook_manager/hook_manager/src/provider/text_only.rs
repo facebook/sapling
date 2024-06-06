@@ -15,6 +15,7 @@ use changeset_info::ChangesetInfo;
 use context::CoreContext;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
+use mononoke_types::MPath;
 use mononoke_types::NonRootMPath;
 
 use crate::errors::HookFileContentProviderError;
@@ -91,6 +92,15 @@ impl<T: HookFileContentProvider + 'static> HookFileContentProvider
         paths: Vec<NonRootMPath>,
     ) -> Result<HashMap<NonRootMPath, ChangesetInfo>, HookFileContentProviderError> {
         self.inner.latest_changes(ctx, bookmark, paths).await
+    }
+
+    async fn directory_sizes<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        changeset_id: ChangesetId,
+        paths: Vec<MPath>,
+    ) -> Result<HashMap<MPath, u64>, HookFileContentProviderError> {
+        self.inner.directory_sizes(ctx, changeset_id, paths).await
     }
 }
 
