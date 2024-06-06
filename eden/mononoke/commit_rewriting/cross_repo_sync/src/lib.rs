@@ -44,6 +44,7 @@ pub use commit_syncers_lib::get_small_and_large_repos;
 pub use commit_syncers_lib::get_version_and_parent_map_for_sync_via_pushrebase;
 pub use commit_syncers_lib::rewrite_commit;
 pub use commit_syncers_lib::submodule_metadata_file_prefix_and_dangling_pointers;
+pub use commit_syncers_lib::unsafe_get_parent_map_for_target_bookmark_rewrite;
 pub use commit_syncers_lib::update_mapping_with_version;
 pub use commit_syncers_lib::CommitSyncRepos;
 pub use commit_syncers_lib::Syncers;

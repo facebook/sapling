@@ -52,6 +52,17 @@ pub struct OnceCommandArgs {
     // Performs mapping version change.
     #[clap(long = "unsafe-change-version-to")]
     pub new_version: Option<String>,
+    // ************************************************************************
+    // THIS IS UNSAFE AND SHOULD ONLY BE USED IF YOU KNOW WHAT YOU ARE DOING.
+    // MAKE SURE YOU RUN WORKING COPY VALIDATION BEFORE USING THIS FLAG.
+    //
+    // Forces the commit to be synced to the target bookmark, instead of the
+    // synced version of its parent.
+    //
+    // Can only be used if a new mapping version if specified.
+    // ************************************************************************
+    #[clap(long, requires("new_version"))]
+    pub unsafe_force_rewrite_parent_to_target_bookmark: bool,
 }
 
 #[derive(Debug, Args, Clone)]

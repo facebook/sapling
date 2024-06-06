@@ -31,6 +31,7 @@ use cross_repo_sync::log_info;
 use cross_repo_sync::log_trace;
 use cross_repo_sync::log_warning;
 use cross_repo_sync::run_and_log_stats_to_scuba;
+use cross_repo_sync::unsafe_get_parent_map_for_target_bookmark_rewrite;
 use cross_repo_sync::CandidateSelectionHint;
 use cross_repo_sync::CommitSyncContext;
 use cross_repo_sync::CommitSyncOutcome;
@@ -138,6 +139,7 @@ where
         pushrebase_rewrite_dates,
         Some(entry.timestamp),
         &None,
+        false,
     )
     .await
     // Note: counter update might fail after a successful sync
@@ -159,6 +161,7 @@ pub async fn sync_commit_and_ancestors<M: SyncedCommitMapping + Clone + 'static,
     pushrebase_rewrite_dates: PushrebaseRewriteDates,
     bookmark_update_timestamp: Option<Timestamp>,
     unsafe_change_mapping_version_during_pushrebase: &Option<CommitSyncConfigVersion>,
+    unsafe_force_rewrite_parent_to_target_bookmark: bool,
 ) -> Result<SyncResult, Error>
 where
     R: Repo,
@@ -171,10 +174,13 @@ where
     log_debug(ctx, format!("Targeting bookmark {0:#?}", target_bookmark));
 
     if let Some(new_version) = unsafe_change_mapping_version_during_pushrebase {
-        log_info(
+        log_warning(
             ctx,
             format!("Changing mapping version during pushrebase to {new_version}"),
         );
+    };
+    if unsafe_force_rewrite_parent_to_target_bookmark {
+        log_warning(ctx, "UNSAFE: Bypass working copy validation is enabled!");
     };
 
     let hint = match target_bookmark {
@@ -230,14 +236,36 @@ where
             }
 
             log_debug(ctx, "obtaining version for the sync...");
-            let (version, parent_mapping) = get_version_and_parent_map_for_sync_via_pushrebase(
-                ctx,
-                commit_syncer,
-                target_bookmark,
-                version,
-                &synced_ancestors_versions,
-            )
-            .await?;
+
+            let (version, parent_mapping) = match (
+                unsafe_change_mapping_version_during_pushrebase,
+                unsafe_force_rewrite_parent_to_target_bookmark,
+            ) {
+                // `unsafe_force_rewrite_parent_to_target_bookmark` can only be
+                // used when a new mapping version is also manually specified,
+                // because some validation is skipped **because we know the
+                // mapping version that will be used in the end**.
+                (Some(new_version), true) => {
+                    let parent_map = unsafe_get_parent_map_for_target_bookmark_rewrite(
+                        ctx,
+                        commit_syncer,
+                        target_bookmark,
+                        &synced_ancestors_versions,
+                    )
+                    .await?;
+                    (new_version.clone(), parent_map)
+                }
+                _ => {
+                    get_version_and_parent_map_for_sync_via_pushrebase(
+                        ctx,
+                        commit_syncer,
+                        target_bookmark,
+                        version,
+                        &synced_ancestors_versions,
+                    )
+                    .await?
+                }
+            };
 
             return sync_commits_via_pushrebase(
                 ctx,

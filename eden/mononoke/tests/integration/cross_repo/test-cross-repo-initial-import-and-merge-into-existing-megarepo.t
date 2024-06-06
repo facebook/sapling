@@ -474,7 +474,7 @@ so they'll be dumped to files to keep this (already long) integration test short
   $ PREV_BOOK_VALUE=$(get_bookmark_value_edenapi $SMALL_REPO_NAME $MASTER_BOOKMARK)
   $ REPONAME=$LARGE_REPO_NAME hgmn push -r . --to $MASTER_BOOKMARK -q
   $ log_globalrev -r $MASTER_BOOKMARK -l 10
-  @  after merging submodule expansion [public;globalrev=;fc38939a64e4] default/master_bookmark
+  @  after merging submodule expansion [public;globalrev=;ffe35354096c] default/master_bookmark
   │
   ~
 
@@ -485,10 +485,16 @@ so they'll be dumped to files to keep this (already long) integration test short
 -- Check if changes were backsynced properly  
   $ cd "$TESTTMP/small-hg-client"
   $ REPONAME=$SMALL_REPO_NAME hgmn pull -q
-  $ log_globalrev -l 30
-  o  after merging submodule expansion [public;globalrev=;b7aa7a11fd87] default/master_bookmark
+  $ log_globalrev -l 10
+  o  after merging submodule expansion [public;globalrev=;5bc83a834e83] default/master_bookmark
   │
-  o  Added git repo C as submodule directly in A [public;globalrev=1000157985;0358f874af49]
+  o  Added git repo C as submodule directly in A [public;globalrev=1000157988;69712c3f21b2]
+  │
+  o  [MEGAREPO GRADUAL MERGE] gradual merge (3) [public;globalrev=1000157987;29f4bdf73e54]
+  │
+  o  [MEGAREPO GRADUAL MERGE] gradual merge (2) [public;globalrev=1000157986;be3eeaa0b9a0]
+  │
+  o  [MEGAREPO GRADUAL MERGE] gradual merge (1) [public;globalrev=1000157985;f5cb09a7ec32]
   │
   o  [MEGAREPO GRADUAL MERGE] gradual merge (0) [public;globalrev=1000157984;63782775678a]
   │
@@ -498,26 +504,11 @@ so they'll be dumped to files to keep this (already long) integration test short
   │
   o  after mapping change from small [public;globalrev=1000157976;ecca553b5690]
   │
-  │ @  after mapping change from small [draft;globalrev=;a4c70b6f0c57]
-  ├─╯
-  o  ID [public;globalrev=1000157975;8d707fde6f5e]
-  │
-  o  after merge from small [public;globalrev=1000157974;c17052372d27]
-  │
-  │ o  after merge from small [draft;globalrev=;14c64221d993]
-  ├─╯
-  o  after merge [public;globalrev=1000157973;3381b75593e5]
-  │
-  o  [MEGAREPO GRADUAL MERGE] gradual merge (0) [public;globalrev=1000157972;9351f7816915]
-  │
-  o  before merge [public;globalrev=1000157971;61807722d4ec]
-  │
-  o  L_D [public;globalrev=1000157970;0f80c2748608]
-  │
-  o  first post-move commit [public;globalrev=;11f848659bfc]
-  │
-  o  pre-move commit [public;globalrev=;fc7ae591de0e]
+  ~
   $
+  @  after mapping change from small [draft;globalrev=;a4c70b6f0c57]
+  │
+  ~
 
 -- Make changes to the git repos and sync them to the submodule repo merged into
 -- the large repo.
@@ -531,7 +522,7 @@ so they'll be dumped to files to keep this (already long) integration test short
   $ PREV_BOOK_VALUE=$(get_bookmark_value_edenapi $SMALL_REPO_NAME $MASTER_BOOKMARK)
   $ REPONAME=$LARGE_REPO_NAME hgmn push -r . --to $MASTER_BOOKMARK -q
   $ log_globalrev -r $MASTER_BOOKMARK -l 30
-  o  after live sync and changes to submodule repo [public;globalrev=1000157986;a45b87d659b7] default/master_bookmark
+  o  after live sync and changes to submodule repo [public;globalrev=1000157989;cf2c14f12677] default/master_bookmark
   │
   ~
 -- wait a second to give backsyncer some time to catch up
@@ -543,15 +534,21 @@ so they'll be dumped to files to keep this (already long) integration test short
   $ cd "$TESTTMP/small-hg-client"
   $ REPONAME=$SMALL_REPO_NAME hgmn pull -q
   $ hg log -G -T "{desc} [{node|short}]\n" -l 30 --stat
-  o  after live sync and changes to submodule repo [0c7defa2d3a8]
+  o  after live sync and changes to submodule repo [7bea9eac2447]
   │   file.txt |  2 +-
   │   1 files changed, 1 insertions(+), 1 deletions(-)
   │
-  o  after merging submodule expansion [b7aa7a11fd87]
+  o  after merging submodule expansion [5bc83a834e83]
   │   baz |  2 +-
   │   1 files changed, 1 insertions(+), 1 deletions(-)
   │
-  o  Added git repo C as submodule directly in A [0358f874af49]
+  o  Added git repo C as submodule directly in A [69712c3f21b2]
+  │
+  o  [MEGAREPO GRADUAL MERGE] gradual merge (3) [29f4bdf73e54]
+  │
+  o  [MEGAREPO GRADUAL MERGE] gradual merge (2) [be3eeaa0b9a0]
+  │
+  o  [MEGAREPO GRADUAL MERGE] gradual merge (1) [f5cb09a7ec32]
   │
   o  [MEGAREPO GRADUAL MERGE] gradual merge (0) [63782775678a]
   │

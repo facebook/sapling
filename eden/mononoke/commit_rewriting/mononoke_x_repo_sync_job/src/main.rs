@@ -125,6 +125,7 @@ async fn run_in_single_commit_mode<M: SyncedCommitMapping + Clone + 'static>(
     common_bookmarks: HashSet<BookmarkKey>,
     pushrebase_rewrite_dates: PushrebaseRewriteDates,
     new_version: Option<CommitSyncConfigVersion>,
+    unsafe_force_rewrite_parent_to_target_bookmark: bool,
 ) -> Result<(), Error> {
     info!(
         ctx.logger(),
@@ -152,6 +153,7 @@ async fn run_in_single_commit_mode<M: SyncedCommitMapping + Clone + 'static>(
         pushrebase_rewrite_dates,
         None,
         &new_version,
+        unsafe_force_rewrite_parent_to_target_bookmark,
     )
     .await;
 
@@ -588,6 +590,7 @@ async fn async_main<'a>(app: MononokeApp, ctx: CoreContext) -> Result<(), Error>
                 common_bookmarks,
                 pushrebase_rewrite_dates,
                 new_version,
+                once_cmd_args.unsafe_force_rewrite_parent_to_target_bookmark,
             )
             .await
         }

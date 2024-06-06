@@ -70,6 +70,7 @@ use crate::git_submodules::rewrite_commit_with_submodule_expansion;
 use crate::git_submodules::SubmoduleExpansionData;
 use crate::git_submodules::SubmodulePath;
 use crate::reporting::log_debug;
+use crate::reporting::log_info;
 use crate::reporting::log_warning;
 use crate::sync_config_version_utils::get_mapping_change_version;
 use crate::types::ErrorKind;
@@ -500,6 +501,14 @@ pub async fn get_version_and_parent_map_for_sync_via_pushrebase<
 where
     R: Repo,
 {
+    log_debug(
+        ctx,
+        format!(
+            "Getting version and parent map for target bookmark {}, parent version {} and synced_ancestors_versions {2:#?}",
+            target_bookmark, &parent_version, synced_ancestors_versions,
+        ),
+    );
+
     // Killswitch to disable this logic alltogether.
     if let Ok(true) = justknobs::eval(
         "scm/mononoke:xrepo_disable_forward_sync_over_mapping_change",
@@ -577,6 +586,13 @@ where
         return Ok((parent_version, HashMap::new()));
     };
 
+    log_debug(
+        ctx,
+        format!(
+            "small_csid_equivalent_to_target_bookmark: {small_csid_equivalent_to_target_bookmark}"
+        ),
+    );
+
     let mut parent_mapping = HashMap::new();
     for (source_parent_csid, (target_parent_csid, _version)) in
         synced_ancestors_versions.rewritten_ancestors.iter()
@@ -613,6 +629,83 @@ where
         // There's exactly one parent that's ancestor of target_bookmark.
         // let's assume that the target_bookmark is still equivalent to what it represents.
         Ok((target_bookmark_version, parent_mapping))
+    } else {
+        // There are at least two synced parents that are ancestors of target_bookmark. This
+        // practically mean we have a diamond merge at hand.
+        Err(anyhow!(
+            "Diamond merges are not supported for pushrebase sync"
+        ))
+    }
+}
+
+/// Similar to `get_version_and_parent_map_for_sync_via_pushrebase`, but should
+/// be used in **VERY SPECIFIC** situations (e.g. repo merges) where we want
+/// to change the mapping version AND **WE ARE SURE THAT THE TARGET BOOKMARK IS
+/// WORKING COPY EQUIVALENT TO THE COMMIT WE'RE SYNCING**.
+pub async fn unsafe_get_parent_map_for_target_bookmark_rewrite<
+    'a,
+    M: SyncedCommitMapping + Clone + 'static,
+    R,
+>(
+    ctx: &'a CoreContext,
+    commit_syncer: &CommitSyncer<M, R>,
+    target_bookmark: &Target<BookmarkKey>,
+    synced_ancestors_versions: &SyncedAncestorsVersions,
+) -> Result<HashMap<ChangesetId, ChangesetId>, Error>
+where
+    R: Repo,
+{
+    log_warning(
+        ctx,
+        format!(
+            "Building parent override map without working copy validation to sync using synced_ancestors_versions {:#?}",
+            synced_ancestors_versions,
+        ),
+    );
+
+    let target_repo = commit_syncer.get_target_repo();
+    // Value for the target bookmark. This is not a part of transaction and we're ok with the fact
+    // it might be a bit stale.
+    let target_bookmark_csid = target_repo
+        .bookmarks()
+        .get(ctx.clone(), &target_bookmark.0)
+        .await?
+        .ok_or_else(|| anyhow!("Bookmark {} does not exist", target_bookmark.0))?;
+
+    log_debug(ctx, format!("target bookmark csid: {target_bookmark_csid}"));
+
+    let mut parent_mapping = HashMap::new();
+    for (_source_parent_csid, (target_parent_csid, _version)) in
+        synced_ancestors_versions.rewritten_ancestors.iter()
+    {
+        // If the bookmark value is descendant of our parent it should have equivalent working
+        // copy.
+        if target_repo
+            .commit_graph()
+            .is_ancestor(ctx, *target_parent_csid, target_bookmark_csid)
+            .await?
+        {
+            parent_mapping.insert(*target_parent_csid, target_bookmark_csid);
+        }
+    }
+    log_debug(ctx, format!("parent_mapping: {:?}", parent_mapping));
+
+    if parent_mapping.is_empty() {
+        // None of the parents are ancestors of current position of target_bookmark. Perhaps
+        // our view of target bookmark is stale. It's better to avoid changing version.
+        log_warning(ctx, "parent mapping is empty");
+        Ok(parent_mapping)
+    } else if parent_mapping.len() == 1 {
+        log_info(
+            ctx,
+            format!(
+                "all validations passed with parent_mapping {0:#?}",
+                &parent_mapping,
+            ),
+        );
+        // There's exactly one parent that's ancestor of target_bookmark.
+        // let's assume that the target_bookmark is still equivalent to what it represents.
+        Ok(parent_mapping)
     } else {
         // There are at least two synced parents that are ancestors of target_bookmark. This
         // practically mean we have a diamond merge at hand.

@@ -117,13 +117,14 @@ Import all git repos into Mononoke
   GIT_REPO_A_HEAD_PARENT: c33eeb91423c021a4d9d57f2efbb08185c77d89b9141433c666b84240395f0c5
 
 Merge repo A into the large repo
-  $ merge_repo_a_to_large_repo
+  $ REPO_A_FOLDER="smallrepofolder1" merge_repo_a_to_large_repo
   
   
   NOTE: Importing repo A commits into large repo
   IMPORT_CONFIG_VERSION_NAME: INITIAL_IMPORT_SYNC_CONFIG
   FINAL_CONFIG_VERSION_NAME: INITIAL_IMPORT_SYNC_CONFIG
   Large repo MASTER_BOOKMARK_NAME: master
+  SMALL_REPO_FOLDER: smallrepofolder1
   
   GIT_REPO_A_HEAD: eef414bd5fc8f7dcc129318276af6945117fe32bb5cfda6b0e6d43036107f61c
   
@@ -147,21 +148,99 @@ Merge repo A into the large repo
   
   
   
-  NOTE: Creating gradual merge commit
+  NOTE: Creating deletion commits
   using repo "large_repo" repoid RepositoryId(10)
   changeset resolved as: ChangesetId(Blake2(6e3217760eada6926186d7cb48f4f24bd8a734ad615aec528065a0912dec6cba))
-  changeset resolved as: ChangesetId(Blake2(b43576e9e9685513cf91adbe5fb817cbe2837ba9a4dca12a4c64a6aebfe09780))
+  Gathering working copy files under [NonRootMPath("smallrepofolder1")]
+  13 paths to be deleted
+  Starting deletion
+  Chunking mpaths
+  Done chunking working copy contents
+  Creating delete commit #0 with ChangesetArgs { author: "test_user", message: "[MEGAREPO DELETE] deletion commits for merge into large repo (0)", datetime: DateTime(1985-09-04T00:00:00+00:00), bookmark: None, mark_public: false } (deleting 2 files)
+  Done creating delete commit #0
+  Creating delete commit #1 with ChangesetArgs { author: "test_user", message: "[MEGAREPO DELETE] deletion commits for merge into large repo (1)", datetime: DateTime(1985-09-04T00:00:00+00:00), bookmark: None, mark_public: false } (deleting 2 files)
+  Done creating delete commit #1
+  Creating delete commit #2 with ChangesetArgs { author: "test_user", message: "[MEGAREPO DELETE] deletion commits for merge into large repo (2)", datetime: DateTime(1985-09-04T00:00:00+00:00), bookmark: None, mark_public: false } (deleting 2 files)
+  Done creating delete commit #2
+  Creating delete commit #3 with ChangesetArgs { author: "test_user", message: "[MEGAREPO DELETE] deletion commits for merge into large repo (3)", datetime: DateTime(1985-09-04T00:00:00+00:00), bookmark: None, mark_public: false } (deleting 2 files)
+  Done creating delete commit #3
+  Creating delete commit #4 with ChangesetArgs { author: "test_user", message: "[MEGAREPO DELETE] deletion commits for merge into large repo (4)", datetime: DateTime(1985-09-04T00:00:00+00:00), bookmark: None, mark_public: false } (deleting 2 files)
+  Done creating delete commit #4
+  Creating delete commit #5 with ChangesetArgs { author: "test_user", message: "[MEGAREPO DELETE] deletion commits for merge into large repo (5)", datetime: DateTime(1985-09-04T00:00:00+00:00), bookmark: None, mark_public: false } (deleting 2 files)
+  Done creating delete commit #5
+  Creating delete commit #6 with ChangesetArgs { author: "test_user", message: "[MEGAREPO DELETE] deletion commits for merge into large repo (6)", datetime: DateTime(1985-09-04T00:00:00+00:00), bookmark: None, mark_public: false } (deleting 1 files)
+  Done creating delete commit #6
+  Deletion finished
+  Listing commits in an ancestor-descendant order
+  158d79bf40963db4463d2beb6b001fb718fcf363ad668baf3246639e4ee7ea0e
+  871ceefaa2ea1ee69cd3c4fcd7f76c2b5cffb5bfa267209a05c6f9153b7a3446
+  56b639bf49f98ba2edec100f4e1336d915edaa8e6c64583f04b0a8b5411dff46
+  c197e1b3d74f56ddc1138c60bde466a42b878029761e16ee600aa63ed00d1b92
+  d0f6b855e26e616df8bd56db4829a69cd8a8d918a84b2e43f2d5503a672d4136
+  e59127e0c8706790dd084a50a93990d7a7d506634bf45772747ef278618fc70d
+  1501ae2b26ebd41f647827f99dbe66969a4ce4d2a05802b664bf24a98263018f
+  
+  LAST_DELETION_COMMIT: 1501ae2b26ebd41f647827f99dbe66969a4ce4d2a05802b664bf24a98263018f
+  
+  
+  
+  NOTE: Creating gradual merge commit
+  using repo "large_repo" repoid RepositoryId(10)
+  changeset resolved as: ChangesetId(Blake2(1501ae2b26ebd41f647827f99dbe66969a4ce4d2a05802b664bf24a98263018f))
+  changeset resolved as: ChangesetId(Blake2(6e3217760eada6926186d7cb48f4f24bd8a734ad615aec528065a0912dec6cba))
   Finding all commits to merge...
-  2 total commits to merge
+  8 total commits to merge
   Finding commits that haven't been merged yet...
   changeset resolved as: ChangesetId(Blake2(b006a2b1425af8612bc80ff4aa9fa8a1a2c44936ad167dd21cb9af2a9a0248c4))
-  merging 1 commits
-  Preparing to merge 6e3217760eada6926186d7cb48f4f24bd8a734ad615aec528065a0912dec6cba
+  merging 8 commits
+  Preparing to merge 1501ae2b26ebd41f647827f99dbe66969a4ce4d2a05802b664bf24a98263018f
   changeset resolved as: ChangesetId(Blake2(b006a2b1425af8612bc80ff4aa9fa8a1a2c44936ad167dd21cb9af2a9a0248c4))
-  Created merge changeset 0e686785fb529cc8c6cba55b905da5a55bb53b32056a139b9912e50c3d36d26d
-  Generated hg changeset 2b82a445059af7e1904a0b7a0d73a92b32e06f3e
+  Created merge changeset b951335783b358e94a4fee905ba8cecb6ec56f3482ec5a7ea29071ce5671ff7f
+  Generated hg changeset aea509f84730e4e33ee5818d074ef07ab2e84767
   Now running pushrebase...
-  Pushrebased to 0e686785fb529cc8c6cba55b905da5a55bb53b32056a139b9912e50c3d36d26d
+  Pushrebased to b951335783b358e94a4fee905ba8cecb6ec56f3482ec5a7ea29071ce5671ff7f
+  Preparing to merge e59127e0c8706790dd084a50a93990d7a7d506634bf45772747ef278618fc70d
+  changeset resolved as: ChangesetId(Blake2(b951335783b358e94a4fee905ba8cecb6ec56f3482ec5a7ea29071ce5671ff7f))
+  Created merge changeset 55a1f856eff2495cc1b11577c6fe2cf503bcbe8c813fbe3f8b187a2b1057e0e1
+  Generated hg changeset c40e45f2cc7cf814695c23f13cf7e07a5fda1545
+  Now running pushrebase...
+  Pushrebased to 55a1f856eff2495cc1b11577c6fe2cf503bcbe8c813fbe3f8b187a2b1057e0e1
+  Preparing to merge d0f6b855e26e616df8bd56db4829a69cd8a8d918a84b2e43f2d5503a672d4136
+  changeset resolved as: ChangesetId(Blake2(55a1f856eff2495cc1b11577c6fe2cf503bcbe8c813fbe3f8b187a2b1057e0e1))
+  Created merge changeset 1f473d38f5233bdb2fd606c0b99ce723077bbc4235a9384af07a29cba260a817
+  Generated hg changeset b019b0d36eb2dd282ce738ec13fdbf3be30a77d4
+  Now running pushrebase...
+  Pushrebased to 1f473d38f5233bdb2fd606c0b99ce723077bbc4235a9384af07a29cba260a817
+  Preparing to merge c197e1b3d74f56ddc1138c60bde466a42b878029761e16ee600aa63ed00d1b92
+  changeset resolved as: ChangesetId(Blake2(1f473d38f5233bdb2fd606c0b99ce723077bbc4235a9384af07a29cba260a817))
+  Created merge changeset e8895bbde976c22c3c2e86b3a366e857c867782845a35affbd387ec67fdb7b08
+  Generated hg changeset 19d222a5612c8212fb1d5c9ba457254e9bb8c94c
+  Now running pushrebase...
+  Pushrebased to e8895bbde976c22c3c2e86b3a366e857c867782845a35affbd387ec67fdb7b08
+  Preparing to merge 56b639bf49f98ba2edec100f4e1336d915edaa8e6c64583f04b0a8b5411dff46
+  changeset resolved as: ChangesetId(Blake2(e8895bbde976c22c3c2e86b3a366e857c867782845a35affbd387ec67fdb7b08))
+  Created merge changeset 5ed0ad43effc02129e6999075a6e1b0da9c981ef4775e0e99a295d2df1003664
+  Generated hg changeset 3d5d1c2ca8842a63492b00b98510a9f6c641136c
+  Now running pushrebase...
+  Pushrebased to 5ed0ad43effc02129e6999075a6e1b0da9c981ef4775e0e99a295d2df1003664
+  Preparing to merge 871ceefaa2ea1ee69cd3c4fcd7f76c2b5cffb5bfa267209a05c6f9153b7a3446
+  changeset resolved as: ChangesetId(Blake2(5ed0ad43effc02129e6999075a6e1b0da9c981ef4775e0e99a295d2df1003664))
+  Created merge changeset d4a7ef49f849a0768c0c4145e1d9e50eaefb0202fdcc6c333cdfb073eb23e377
+  Generated hg changeset 67ce5c45ccfe824e860656b64370092aa899329a
+  Now running pushrebase...
+  Pushrebased to d4a7ef49f849a0768c0c4145e1d9e50eaefb0202fdcc6c333cdfb073eb23e377
+  Preparing to merge 158d79bf40963db4463d2beb6b001fb718fcf363ad668baf3246639e4ee7ea0e
+  changeset resolved as: ChangesetId(Blake2(d4a7ef49f849a0768c0c4145e1d9e50eaefb0202fdcc6c333cdfb073eb23e377))
+  Created merge changeset eae1a40ede9abfef4c165886c5300a1779ac8404b91e7352c12d4d17717b50e6
+  Generated hg changeset eb7057489fd5d07098a7dce76303fb661f9ff21b
+  Now running pushrebase...
+  Pushrebased to eae1a40ede9abfef4c165886c5300a1779ac8404b91e7352c12d4d17717b50e6
+  Preparing to merge 6e3217760eada6926186d7cb48f4f24bd8a734ad615aec528065a0912dec6cba
+  changeset resolved as: ChangesetId(Blake2(eae1a40ede9abfef4c165886c5300a1779ac8404b91e7352c12d4d17717b50e6))
+  Created merge changeset a8d6e2b05a2537c2ac36f5e5a1bc706c15e34e456f9488ccfa9e9ac09b00b283
+  Generated hg changeset c0240984981f6f70094e0cd4f42d1e33c4c86a69
+  Now running pushrebase...
+  Pushrebased to a8d6e2b05a2537c2ac36f5e5a1bc706c15e34e456f9488ccfa9e9ac09b00b283
   
   
   NOTE: Changing commit sync mapping version
@@ -169,62 +248,143 @@ Merge repo A into the large repo
   changeset resolved as: ChangesetId(Blake2(eef414bd5fc8f7dcc129318276af6945117fe32bb5cfda6b0e6d43036107f61c))
   Checking if eef414bd5fc8f7dcc129318276af6945117fe32bb5cfda6b0e6d43036107f61c is already synced 11->10
   Changing mapping version during pushrebase to INITIAL_IMPORT_SYNC_CONFIG
+  UNSAFE: Bypass working copy validation is enabled!
   1 unsynced ancestors of eef414bd5fc8f7dcc129318276af6945117fe32bb5cfda6b0e6d43036107f61c
+  Building parent override map without working copy validation to sync using synced_ancestors_versions SyncedAncestorsVersions {
+      versions: {
+          CommitSyncConfigVersion(
+              "INITIAL_IMPORT_SYNC_CONFIG",
+          ),
+      },
+      rewritten_ancestors: {
+          ChangesetId(
+              Blake2(c33eeb91423c021a4d9d57f2efbb08185c77d89b9141433c666b84240395f0c5),
+          ): (
+              ChangesetId(
+                  Blake2(6e3217760eada6926186d7cb48f4f24bd8a734ad615aec528065a0912dec6cba),
+              ),
+              CommitSyncConfigVersion(
+                  "INITIAL_IMPORT_SYNC_CONFIG",
+              ),
+          ),
+      },
+  }
+  all validations passed with parent_mapping {
+      ChangesetId(
+          Blake2(6e3217760eada6926186d7cb48f4f24bd8a734ad615aec528065a0912dec6cba),
+      ): ChangesetId(
+          Blake2(a8d6e2b05a2537c2ac36f5e5a1bc706c15e34e456f9488ccfa9e9ac09b00b283),
+      ),
+  }
   UNSAFE: changing mapping version during pushrebase to INITIAL_IMPORT_SYNC_CONFIG
   syncing eef414bd5fc8f7dcc129318276af6945117fe32bb5cfda6b0e6d43036107f61c via pushrebase for master
-  changeset eef414bd5fc8f7dcc129318276af6945117fe32bb5cfda6b0e6d43036107f61c synced as aab4b2b2a2fa16ef36968a6f3c98f89f27726b30f817ca7211b84055c4e3fed4 in * (glob)
+  changeset eef414bd5fc8f7dcc129318276af6945117fe32bb5cfda6b0e6d43036107f61c synced as 04190d634e49d29bf87edffb012f42f9f5e49b5b66e99714f17fcd4ef3f3e294 in * (glob)
   successful sync
   
-  SYNCED_HEAD: aab4b2b2a2fa16ef36968a6f3c98f89f27726b30f817ca7211b84055c4e3fed4
+  SYNCED_HEAD: 04190d634e49d29bf87edffb012f42f9f5e49b5b66e99714f17fcd4ef3f3e294
   
-  @  9a84b278c0f9 Added git repo C as submodule directly in A
+  @  e2b260a2b04f Added git repo C as submodule directly in A
   │   smallrepofolder1/.gitmodules              |  3 +++
   │   smallrepofolder1/.x-repo-submodule-repo_c |  1 +
   │   smallrepofolder1/repo_c/choo              |  1 +
   │   smallrepofolder1/repo_c/hoo/qux           |  1 +
   │   4 files changed, 6 insertions(+), 0 deletions(-)
   │
-  o    2b82a445059a [MEGAREPO GRADUAL MERGE] gradual merge (0)
-  ├─╮   smallrepofolder1/.gitmodules                             |  3 +++
-  │ │   smallrepofolder1/.x-repo-submodule-git-repo-b            |  1 +
-  │ │   smallrepofolder1/duplicates/x                            |  1 +
-  │ │   smallrepofolder1/duplicates/y                            |  1 +
-  │ │   smallrepofolder1/duplicates/z                            |  1 +
-  │ │   smallrepofolder1/git-repo-b/.gitmodules                  |  3 +++
-  │ │   smallrepofolder1/git-repo-b/.x-repo-submodule-git-repo-c |  1 +
-  │ │   smallrepofolder1/git-repo-b/bar/zoo                      |  1 +
-  │ │   smallrepofolder1/git-repo-b/foo                          |  1 +
-  │ │   smallrepofolder1/git-repo-b/git-repo-c/choo              |  1 +
-  │ │   smallrepofolder1/git-repo-b/git-repo-c/hoo/qux           |  1 +
-  │ │   smallrepofolder1/regular_dir/aardvar                     |  1 +
-  │ │   smallrepofolder1/root_file                               |  1 +
-  │ │   13 files changed, 17 insertions(+), 0 deletions(-)
+  o    c0240984981f [MEGAREPO GRADUAL MERGE] gradual merge (7)
+  ├─╮   smallrepofolder1/.gitmodules                  |  3 +++
+  │ │   smallrepofolder1/.x-repo-submodule-git-repo-b |  1 +
+  │ │   2 files changed, 4 insertions(+), 0 deletions(-)
   │ │
-  │ o  1f9d3769f8c2 Added git repo B as submodule in A
-  │ │   smallrepofolder1/.gitmodules                             |  3 +++
-  │ │   smallrepofolder1/.x-repo-submodule-git-repo-b            |  1 +
-  │ │   smallrepofolder1/git-repo-b/.gitmodules                  |  3 +++
-  │ │   smallrepofolder1/git-repo-b/.x-repo-submodule-git-repo-c |  1 +
-  │ │   smallrepofolder1/git-repo-b/bar/zoo                      |  1 +
-  │ │   smallrepofolder1/git-repo-b/foo                          |  1 +
-  │ │   smallrepofolder1/git-repo-b/git-repo-c/choo              |  1 +
-  │ │   smallrepofolder1/git-repo-b/git-repo-c/hoo/qux           |  1 +
-  │ │   8 files changed, 12 insertions(+), 0 deletions(-)
-  │ │
-  │ o  e2c69ce8cc11 Add regular_dir/aardvar
-  │ │   smallrepofolder1/regular_dir/aardvar |  1 +
-  │ │   1 files changed, 1 insertions(+), 0 deletions(-)
-  │ │
-  │ o  df9086c77129 Add root_file
-  │     smallrepofolder1/duplicates/x |  1 +
-  │     smallrepofolder1/duplicates/y |  1 +
-  │     smallrepofolder1/duplicates/z |  1 +
-  │     smallrepofolder1/root_file    |  1 +
-  │     4 files changed, 4 insertions(+), 0 deletions(-)
-  │
-  o  54a6db91baf1 L_A
-      file_in_large_repo.txt |  1 +
-      1 files changed, 1 insertions(+), 0 deletions(-)
+  │ o    eb7057489fd5 [MEGAREPO GRADUAL MERGE] gradual merge (6)
+  │ ├─╮   smallrepofolder1/duplicates/x |  1 +
+  │ │ │   smallrepofolder1/duplicates/y |  1 +
+  │ │ │   2 files changed, 2 insertions(+), 0 deletions(-)
+  │ │ │
+  │ │ o    67ce5c45ccfe [MEGAREPO GRADUAL MERGE] gradual merge (5)
+  │ │ ├─╮   smallrepofolder1/duplicates/z           |  1 +
+  │ │ │ │   smallrepofolder1/git-repo-b/.gitmodules |  3 +++
+  │ │ │ │   2 files changed, 4 insertions(+), 0 deletions(-)
+  │ │ │ │
+  │ │ │ o    3d5d1c2ca884 [MEGAREPO GRADUAL MERGE] gradual merge (4)
+  │ │ │ ├─╮   smallrepofolder1/git-repo-b/.x-repo-submodule-git-repo-c |  1 +
+  │ │ │ │ │   smallrepofolder1/git-repo-b/bar/zoo                      |  1 +
+  │ │ │ │ │   2 files changed, 2 insertions(+), 0 deletions(-)
+  │ │ │ │ │
+  │ │ │ │ o    19d222a5612c [MEGAREPO GRADUAL MERGE] gradual merge (3)
+  │ │ │ │ ├─╮   smallrepofolder1/git-repo-b/foo             |  1 +
+  │ │ │ │ │ │   smallrepofolder1/git-repo-b/git-repo-c/choo |  1 +
+  │ │ │ │ │ │   2 files changed, 2 insertions(+), 0 deletions(-)
+  │ │ │ │ │ │
+  │ │ │ │ │ o    b019b0d36eb2 [MEGAREPO GRADUAL MERGE] gradual merge (2)
+  │ │ │ │ │ ├─╮   smallrepofolder1/git-repo-b/git-repo-c/hoo/qux |  1 +
+  │ │ │ │ │ │ │   smallrepofolder1/regular_dir/aardvar           |  1 +
+  │ │ │ │ │ │ │   2 files changed, 2 insertions(+), 0 deletions(-)
+  │ │ │ │ │ │ │
+  │ │ │ │ │ │ o    c40e45f2cc7c [MEGAREPO GRADUAL MERGE] gradual merge (1)
+  │ │ │ │ │ │ ├─╮   smallrepofolder1/root_file |  1 +
+  │ │ │ │ │ │ │ │   1 files changed, 1 insertions(+), 0 deletions(-)
+  │ │ │ │ │ │ │ │
+  │ │ │ │ │ │ │ o    aea509f84730 [MEGAREPO GRADUAL MERGE] gradual merge (0)
+  │ │ │ │ │ │ │ ├─╮
+  │ │ │ │ │ │ │ │ o  10dab983a27f [MEGAREPO DELETE] deletion commits for merge into large repo (6)
+  │ │ │ │ │ │ ├───╯   smallrepofolder1/root_file |  1 -
+  │ │ │ │ │ │ │ │     1 files changed, 0 insertions(+), 1 deletions(-)
+  │ │ │ │ │ │ │ │
+  │ │ │ │ │ │ o │  9f34257829fb [MEGAREPO DELETE] deletion commits for merge into large repo (5)
+  │ │ │ │ │ ├─╯ │   smallrepofolder1/git-repo-b/git-repo-c/hoo/qux |  1 -
+  │ │ │ │ │ │   │   smallrepofolder1/regular_dir/aardvar           |  1 -
+  │ │ │ │ │ │   │   2 files changed, 0 insertions(+), 2 deletions(-)
+  │ │ │ │ │ │   │
+  │ │ │ │ │ o   │  b3109b39500f [MEGAREPO DELETE] deletion commits for merge into large repo (4)
+  │ │ │ │ ├─╯   │   smallrepofolder1/git-repo-b/foo             |  1 -
+  │ │ │ │ │     │   smallrepofolder1/git-repo-b/git-repo-c/choo |  1 -
+  │ │ │ │ │     │   2 files changed, 0 insertions(+), 2 deletions(-)
+  │ │ │ │ │     │
+  │ │ │ │ o     │  43f727449960 [MEGAREPO DELETE] deletion commits for merge into large repo (3)
+  │ │ │ ├─╯     │   smallrepofolder1/git-repo-b/.x-repo-submodule-git-repo-c |  1 -
+  │ │ │ │       │   smallrepofolder1/git-repo-b/bar/zoo                      |  1 -
+  │ │ │ │       │   2 files changed, 0 insertions(+), 2 deletions(-)
+  │ │ │ │       │
+  │ │ │ o       │  9d59171d496f [MEGAREPO DELETE] deletion commits for merge into large repo (2)
+  │ │ ├─╯       │   smallrepofolder1/duplicates/z           |  1 -
+  │ │ │         │   smallrepofolder1/git-repo-b/.gitmodules |  3 ---
+  │ │ │         │   2 files changed, 0 insertions(+), 4 deletions(-)
+  │ │ │         │
+  │ │ o         │  5d6979a70f2b [MEGAREPO DELETE] deletion commits for merge into large repo (1)
+  │ ├─╯         │   smallrepofolder1/duplicates/x |  1 -
+  │ │           │   smallrepofolder1/duplicates/y |  1 -
+  │ │           │   2 files changed, 0 insertions(+), 2 deletions(-)
+  │ │           │
+  │ o           │  c1f01db6a932 [MEGAREPO DELETE] deletion commits for merge into large repo (0)
+  ├─╯           │   smallrepofolder1/.gitmodules                  |  3 ---
+  │             │   smallrepofolder1/.x-repo-submodule-git-repo-b |  1 -
+  │             │   2 files changed, 0 insertions(+), 4 deletions(-)
+  │             │
+  o             │  1f9d3769f8c2 Added git repo B as submodule in A
+  │             │   smallrepofolder1/.gitmodules                             |  3 +++
+  │             │   smallrepofolder1/.x-repo-submodule-git-repo-b            |  1 +
+  │             │   smallrepofolder1/git-repo-b/.gitmodules                  |  3 +++
+  │             │   smallrepofolder1/git-repo-b/.x-repo-submodule-git-repo-c |  1 +
+  │             │   smallrepofolder1/git-repo-b/bar/zoo                      |  1 +
+  │             │   smallrepofolder1/git-repo-b/foo                          |  1 +
+  │             │   smallrepofolder1/git-repo-b/git-repo-c/choo              |  1 +
+  │             │   smallrepofolder1/git-repo-b/git-repo-c/hoo/qux           |  1 +
+  │             │   8 files changed, 12 insertions(+), 0 deletions(-)
+  │             │
+  o             │  e2c69ce8cc11 Add regular_dir/aardvar
+  │             │   smallrepofolder1/regular_dir/aardvar |  1 +
+  │             │   1 files changed, 1 insertions(+), 0 deletions(-)
+  │             │
+  o             │  df9086c77129 Add root_file
+                │   smallrepofolder1/duplicates/x |  1 +
+                │   smallrepofolder1/duplicates/y |  1 +
+                │   smallrepofolder1/duplicates/z |  1 +
+                │   smallrepofolder1/root_file    |  1 +
+                │   4 files changed, 4 insertions(+), 0 deletions(-)
+                │
+                o  54a6db91baf1 L_A
+                    file_in_large_repo.txt |  1 +
+                    1 files changed, 1 insertions(+), 0 deletions(-)
   
   
   
@@ -265,10 +425,13 @@ Merge repo A into the large repo
   9 directories, 17 files
   
   
+  NOTE: Deriving all data types
+  
+  
   NOTE: Count underived data types
-  aab4b2b2a2fa16ef36968a6f3c98f89f27726b30f817ca7211b84055c4e3fed4: 0
-  aab4b2b2a2fa16ef36968a6f3c98f89f27726b30f817ca7211b84055c4e3fed4: 0
-  aab4b2b2a2fa16ef36968a6f3c98f89f27726b30f817ca7211b84055c4e3fed4: 0
+  04190d634e49d29bf87edffb012f42f9f5e49b5b66e99714f17fcd4ef3f3e294: 0
+  04190d634e49d29bf87edffb012f42f9f5e49b5b66e99714f17fcd4ef3f3e294: 0
+  04190d634e49d29bf87edffb012f42f9f5e49b5b66e99714f17fcd4ef3f3e294: 0
 
 Make changes to submodule and make sure they're synced properly
   $ make_changes_to_git_repos_a_b_c
@@ -345,29 +508,57 @@ forward synced to the large repo
   $ hg co -q master
 
   $ hg log --graph -T '{node} {desc}\n' -r "all()"
-  @  c10f082fbef14d4eb82073a1578effe603e36ee7 Remove repo C submodule from repo A
+  @  d246b01a5a5baff205958295aa764916ae288291 Remove repo C submodule from repo A
   │
-  o  46557285148375de0b93927ba58cde48a120c4d8 Update submodule B in repo A
+  o  d3dae76d4349c88c24d60fe533bd9fbd02ddd5ae Update submodule B in repo A
   │
-  o  27380bc5553eb680703c330fc83a614c6c10034c Change directly in A
+  o  ada44b220ff885a5757bf80bee03e64f0b0e063d Change directly in A
   │
-  o  9a84b278c0f94d79a1a2b700ae51ebc9c122cd0b Added git repo C as submodule directly in A
+  o  e2b260a2b04f485be16d9a59594dce5f2b652ea2 Added git repo C as submodule directly in A
   │
-  o    2b82a445059af7e1904a0b7a0d73a92b32e06f3e [MEGAREPO GRADUAL MERGE] gradual merge (0)
+  o    c0240984981f6f70094e0cd4f42d1e33c4c86a69 [MEGAREPO GRADUAL MERGE] gradual merge (7)
   ├─╮
-  │ o  1f9d3769f8c22b50db3ed0105c9d0e9490bbe7e9 Added git repo B as submodule in A
-  │ │
-  │ o  e2c69ce8cc11691984e50e6023f4bbf4271aa4c3 Add regular_dir/aardvar
-  │ │
-  │ o  df9086c771290c305c738040313bf1cc5759eba9 Add root_file
-  │
-  o  54a6db91baf1c10921369339b50e5a174a7ca82e L_A
+  │ o    eb7057489fd5d07098a7dce76303fb661f9ff21b [MEGAREPO GRADUAL MERGE] gradual merge (6)
+  │ ├─╮
+  │ │ o    67ce5c45ccfe824e860656b64370092aa899329a [MEGAREPO GRADUAL MERGE] gradual merge (5)
+  │ │ ├─╮
+  │ │ │ o    3d5d1c2ca8842a63492b00b98510a9f6c641136c [MEGAREPO GRADUAL MERGE] gradual merge (4)
+  │ │ │ ├─╮
+  │ │ │ │ o    19d222a5612c8212fb1d5c9ba457254e9bb8c94c [MEGAREPO GRADUAL MERGE] gradual merge (3)
+  │ │ │ │ ├─╮
+  │ │ │ │ │ o    b019b0d36eb2dd282ce738ec13fdbf3be30a77d4 [MEGAREPO GRADUAL MERGE] gradual merge (2)
+  │ │ │ │ │ ├─╮
+  │ │ │ │ │ │ o    c40e45f2cc7cf814695c23f13cf7e07a5fda1545 [MEGAREPO GRADUAL MERGE] gradual merge (1)
+  │ │ │ │ │ │ ├─╮
+  │ │ │ │ │ │ │ o    aea509f84730e4e33ee5818d074ef07ab2e84767 [MEGAREPO GRADUAL MERGE] gradual merge (0)
+  │ │ │ │ │ │ │ ├─╮
+  │ │ │ │ │ │ │ │ o  10dab983a27fce66a4c9852d40c4fd36618d63a7 [MEGAREPO DELETE] deletion commits for merge into large repo (6)
+  │ │ │ │ │ │ ├───╯
+  │ │ │ │ │ │ o │  9f34257829fbf29611c4bdc4b4e48c993c72d2e6 [MEGAREPO DELETE] deletion commits for merge into large repo (5)
+  │ │ │ │ │ ├─╯ │
+  │ │ │ │ │ o   │  b3109b39500ffcbb09a22bea594d32957e28b0e3 [MEGAREPO DELETE] deletion commits for merge into large repo (4)
+  │ │ │ │ ├─╯   │
+  │ │ │ │ o     │  43f727449960cc7effbf84da6e54a6daf4f77d99 [MEGAREPO DELETE] deletion commits for merge into large repo (3)
+  │ │ │ ├─╯     │
+  │ │ │ o       │  9d59171d496f660ee0276013e446d5687b69394f [MEGAREPO DELETE] deletion commits for merge into large repo (2)
+  │ │ ├─╯       │
+  │ │ o         │  5d6979a70f2b49a7fe30cabdbb771804bec798ae [MEGAREPO DELETE] deletion commits for merge into large repo (1)
+  │ ├─╯         │
+  │ o           │  c1f01db6a93222463fad3133b5eb89809d414cde [MEGAREPO DELETE] deletion commits for merge into large repo (0)
+  ├─╯           │
+  o             │  1f9d3769f8c22b50db3ed0105c9d0e9490bbe7e9 Added git repo B as submodule in A
+  │             │
+  o             │  e2c69ce8cc11691984e50e6023f4bbf4271aa4c3 Add regular_dir/aardvar
+  │             │
+  o             │  df9086c771290c305c738040313bf1cc5759eba9 Add root_file
+                │
+                o  54a6db91baf1c10921369339b50e5a174a7ca82e L_A
   
 
 Check that deletions were made properly, i.e. submodule in repo_c was entirely
 deleted and the files deleted in repo B were deleted inside its copy.
   $ hg show --stat -T 'commit: {node}\n{desc}\n' .
-  commit: c10f082fbef14d4eb82073a1578effe603e36ee7
+  commit: d246b01a5a5baff205958295aa764916ae288291
   Remove repo C submodule from repo A
    smallrepofolder1/.gitmodules              |  3 ---
    smallrepofolder1/.x-repo-submodule-repo_c |  1 -
@@ -418,7 +609,7 @@ TODO(T174902563): Fix deletion of submodules in EXPAND submodule action.
 Check that the diff that updates the submodule generates the correct delta
 (i.e. instead of copying the entire working copy of the submodule every time)
   $ hg show --stat -T 'commit: {node}\n{desc}\n' .^
-  commit: 46557285148375de0b93927ba58cde48a120c4d8
+  commit: d3dae76d4349c88c24d60fe533bd9fbd02ddd5ae
   Update submodule B in repo A
    smallrepofolder1/.x-repo-submodule-git-repo-b            |  2 +-
    smallrepofolder1/.x-repo-submodule-repo_c                |  2 +-
@@ -441,7 +632,8 @@ The check-push-redirection-prereqs should behave the same both ways but let's ve
 (those outputs are still not correct but that's expected)
   $ quiet_grep "all is well" -- with_stripped_logs megarepo_tool_multirepo --source-repo-id $SUBMODULE_REPO_ID --target-repo-id $LARGE_REPO_ID check-push-redirection-prereqs "heads/master" "master" "$LATEST_CONFIG_VERSION_NAME" | strip_glog | tee $TESTTMP/push_redir_prereqs_small_large
   all is well!
-  $ quiet_grep "all is well" -- megarepo_tool_multirepo --source-repo-id $LARGE_REPO_ID --target-repo-id $SUBMODULE_REPO_ID check-push-redirection-prereqs "master" "heads/master" "$LATEST_CONFIG_VERSION_NAME" | strip_glog | tee $TESTTMP/push_redir_prereqs_large_small
+
+  $ quiet_grep "all is well" -- with_stripped_logs megarepo_tool_multirepo --source-repo-id $LARGE_REPO_ID --target-repo-id $SUBMODULE_REPO_ID check-push-redirection-prereqs "master" "heads/master" "$LATEST_CONFIG_VERSION_NAME" | strip_glog | tee $TESTTMP/push_redir_prereqs_large_small
   all is well!
   $ diff -wbBdu $TESTTMP/push_redir_prereqs_small_large $TESTTMP/push_redir_prereqs_large_small
 
@@ -451,7 +643,7 @@ Let's corrupt the expansion and check if validation complains
   $ echo corrupt > smallrepofolder1/.x-repo-submodule-git-repo-b
   $ hg commit -m "submodule corruption"
   $ hg push -q --to master
-  $ quiet_grep "mismatch" -- with_stripped_logs megarepo_tool_multirepo --source-repo-id $SUBMODULE_REPO_ID --target-repo-id $LARGE_REPO_ID check-push-redirection-prereqs "heads/master" "master" "$LATEST_CONFIG_VERSION_NAME" | strip_glog | tee $TESTTMP/push_redir_prereqs_small_large
+  $ quiet_grep "mismatch" -- megarepo_tool_multirepo --source-repo-id $SUBMODULE_REPO_ID --target-repo-id $LARGE_REPO_ID check-push-redirection-prereqs "heads/master" "master" "$LATEST_CONFIG_VERSION_NAME" | strip_glog | tee $TESTTMP/push_redir_prereqs_small_large
   submodule expansion mismatch: Failed to fetch content from content id 06a434694d9172d617062abd92f015f73978fb17dd6bcc54e708cd2c6f247970 file containing the submodule's git commit hash
 
   $ quiet_grep "mismatch" -- megarepo_tool_multirepo --source-repo-id $LARGE_REPO_ID --target-repo-id $SUBMODULE_REPO_ID check-push-redirection-prereqs "master" "heads/master" "$LATEST_CONFIG_VERSION_NAME" | sort | tee $TESTTMP/push_redir_prereqs_large_small
@@ -483,25 +675,25 @@ Let's corrupt the expansion and check if validation complains
 -- EXPECT: all of them should return the same value as mapping check using admin
 
 -- Commit: Change directly in A
-  $ check_mapping_and_run_xrepo_lookup_large_to_small 27380bc5553eb680703c330fc83a614c6c10034c
+  $ check_mapping_and_run_xrepo_lookup_large_to_small ada44b220ff885a5757bf80bee03e64f0b0e063d
   Check mapping in database with Mononoke admin
-  changeset resolved as: ChangesetId(Blake2(6c74b3e9f4ac9ae9ded1cc12d02fa23912926e30f60bc7c45595ad2db88c50af))
+  changeset resolved as: ChangesetId(Blake2(b382cdfd9ad4ee0cc977e2263ff392900cd41b1141ddf046cf93d5ef1136f0e7))
   RewrittenAs([(ChangesetId(Blake2(4aee0499ea629ebcd9d0e4be89267d7a4eab5e72f988c20a392d59081db0c32a)), CommitSyncConfigVersion("INITIAL_IMPORT_SYNC_CONFIG"))])
   
   
   Call hgedenapi committranslateids
-  [{"commit": {"Hg": bin("27380bc5553eb680703c330fc83a614c6c10034c")},
+  [{"commit": {"Hg": bin("ada44b220ff885a5757bf80bee03e64f0b0e063d")},
     "translated": {"Bonsai": bin("4aee0499ea629ebcd9d0e4be89267d7a4eab5e72f988c20a392d59081db0c32a")}}]
 
 -- Commit: Update submodule B in repo A
-  $ check_mapping_and_run_xrepo_lookup_large_to_small 46557285148375de0b93927ba58cde48a120c4d8
+  $ check_mapping_and_run_xrepo_lookup_large_to_small d3dae76d4349c88c24d60fe533bd9fbd02ddd5ae
   Check mapping in database with Mononoke admin
-  changeset resolved as: ChangesetId(Blake2(6b141d0416df9f0e3054b38047779bb899972180d86bab364216c5f6ab04d402))
+  changeset resolved as: ChangesetId(Blake2(0617acae68a70aff4e62d0afc707785bd7b0318f912d9a83c35f99d6e0c79158))
   RewrittenAs([(ChangesetId(Blake2(b86f7426fc1fe95e22b6bef591e7ba9c8385b86f7b85abd3a377f941d39522af)), CommitSyncConfigVersion("INITIAL_IMPORT_SYNC_CONFIG"))])
   
   
   Call hgedenapi committranslateids
-  [{"commit": {"Hg": bin("46557285148375de0b93927ba58cde48a120c4d8")},
+  [{"commit": {"Hg": bin("d3dae76d4349c88c24d60fe533bd9fbd02ddd5ae")},
     "translated": {"Bonsai": bin("b86f7426fc1fe95e22b6bef591e7ba9c8385b86f7b85abd3a377f941d39522af")}}]
 
 -- Check an original commit from small repo (before merge)
@@ -515,7 +707,6 @@ Let's corrupt the expansion and check if validation complains
   Call hgedenapi committranslateids
   [{"commit": {"Hg": bin("e2c69ce8cc11691984e50e6023f4bbf4271aa4c3")},
     "translated": {"Bonsai": bin("856b09638e2550d912282c5a9e8bd47fdf1a899545f9f4a05430a8dc7be1f768")}}]
-
 
 
 -- ------------------------------------------------------------------------------
@@ -532,25 +723,53 @@ Let's corrupt the expansion and check if validation complains
   > }
 
   $ hg_log
-  o  7ac324cc4ce2 submodule corruption
+  o  cd7933d8ab7a submodule corruption
   │
-  @  c10f082fbef1 Remove repo C submodule from repo A
+  @  d246b01a5a5b Remove repo C submodule from repo A
   │
-  o  465572851483 Update submodule B in repo A
+  o  d3dae76d4349 Update submodule B in repo A
   │
-  o  27380bc5553e Change directly in A
+  o  ada44b220ff8 Change directly in A
   │
-  o  9a84b278c0f9 Added git repo C as submodule directly in A
+  o  e2b260a2b04f Added git repo C as submodule directly in A
   │
-  o    2b82a445059a [MEGAREPO GRADUAL MERGE] gradual merge (0)
+  o    c0240984981f [MEGAREPO GRADUAL MERGE] gradual merge (7)
   ├─╮
-  │ o  1f9d3769f8c2 Added git repo B as submodule in A
-  │ │
-  │ o  e2c69ce8cc11 Add regular_dir/aardvar
-  │ │
-  │ o  df9086c77129 Add root_file
-  │
-  o  54a6db91baf1 L_A
+  │ o    eb7057489fd5 [MEGAREPO GRADUAL MERGE] gradual merge (6)
+  │ ├─╮
+  │ │ o    67ce5c45ccfe [MEGAREPO GRADUAL MERGE] gradual merge (5)
+  │ │ ├─╮
+  │ │ │ o    3d5d1c2ca884 [MEGAREPO GRADUAL MERGE] gradual merge (4)
+  │ │ │ ├─╮
+  │ │ │ │ o    19d222a5612c [MEGAREPO GRADUAL MERGE] gradual merge (3)
+  │ │ │ │ ├─╮
+  │ │ │ │ │ o    b019b0d36eb2 [MEGAREPO GRADUAL MERGE] gradual merge (2)
+  │ │ │ │ │ ├─╮
+  │ │ │ │ │ │ o    c40e45f2cc7c [MEGAREPO GRADUAL MERGE] gradual merge (1)
+  │ │ │ │ │ │ ├─╮
+  │ │ │ │ │ │ │ o    aea509f84730 [MEGAREPO GRADUAL MERGE] gradual merge (0)
+  │ │ │ │ │ │ │ ├─╮
+  │ │ │ │ │ │ │ │ o  10dab983a27f [MEGAREPO DELETE] deletion commits for merge into large repo (6)
+  │ │ │ │ │ │ ├───╯
+  │ │ │ │ │ │ o │  9f34257829fb [MEGAREPO DELETE] deletion commits for merge into large repo (5)
+  │ │ │ │ │ ├─╯ │
+  │ │ │ │ │ o   │  b3109b39500f [MEGAREPO DELETE] deletion commits for merge into large repo (4)
+  │ │ │ │ ├─╯   │
+  │ │ │ │ o     │  43f727449960 [MEGAREPO DELETE] deletion commits for merge into large repo (3)
+  │ │ │ ├─╯     │
+  │ │ │ o       │  9d59171d496f [MEGAREPO DELETE] deletion commits for merge into large repo (2)
+  │ │ ├─╯       │
+  │ │ o         │  5d6979a70f2b [MEGAREPO DELETE] deletion commits for merge into large repo (1)
+  │ ├─╯         │
+  │ o           │  c1f01db6a932 [MEGAREPO DELETE] deletion commits for merge into large repo (0)
+  ├─╯           │
+  o             │  1f9d3769f8c2 Added git repo B as submodule in A
+  │             │
+  o             │  e2c69ce8cc11 Add regular_dir/aardvar
+  │             │
+  o             │  df9086c77129 Add root_file
+                │
+                o  54a6db91baf1 L_A
   
 
   $ tree
@@ -607,7 +826,7 @@ Let's corrupt the expansion and check if validation complains
   $ hgmn commit -A -m "Changing large repo file" 
   $ backsync_get_info_and_derive_data
   Processing commit: Changing large repo file
-  Commit hash: 7dc2c0583a5055929fd772d94a6db6b9a3680ff8
+  Commit hash: 48021e7aeafd324f9976f551aea60aa88dd9f61a
   Success!
   
   
@@ -630,7 +849,7 @@ Let's corrupt the expansion and check if validation complains
   $ hgmn commit -A -m "Changing small repo in large repo (not submodule)" 
   $ backsync_get_info_and_derive_data
   Processing commit: Changing small repo in large repo (not submodule)
-  Commit hash: fac42b07b3b39cfb46f5eba3eb736126231ba3c6
+  Commit hash: 35e70dc7f37c3f51876a0f017a733a13809bef32
   Success!
   
   
@@ -659,7 +878,7 @@ TODO(T179530927): properly support backsyncing with submodule expansion
   adding smallrepofolder1/git-repo-b/foo
   $ backsync_get_info_and_derive_data
   Processing commit: Changing submodule expansion in large repo
-  Commit hash: 229fe03c0d3780e5de559833a6ba5d0d32b99451
+  Commit hash: db55fcf4988d8cc9dd6416ba487ae81d33a42bd5
   *error: Changeset can't be synced from large to small repo because it modifies the expansion of submodules* (glob)
   [255]
  
@@ -670,7 +889,7 @@ TODO(T179530927): properly support backsyncing with submodule expansion
   $ hgmn commit -A -m "Changing recursive submodule expansion in large repo" 
   $ backsync_get_info_and_derive_data
   Processing commit: Changing recursive submodule expansion in large repo
-  Commit hash: d06cd21a6e1a520d6e9cc193cc9ab92b06afc199
+  Commit hash: dc66187b1f1b6f752b611d8c6401bdf4141263f3
   *error: Changeset can't be synced from large to small repo because it modifies the expansion of submodules* (glob)
   [255]
 
@@ -680,7 +899,7 @@ TODO(T179530927): properly support backsyncing with submodule expansion
   $ hgmn commit -q -A -m "Deleting repo_b submodule metadata file" 
   $ backsync_get_info_and_derive_data
   Processing commit: Deleting repo_b submodule metadata file
-  Commit hash: b25d2d2919aa11229071ca224d2c4e837689b46b
+  Commit hash: fe1dbb2ac6e376f872c9b8add908feb87cc29b22
   *error: Changeset can't be synced from large to small repo because it modifies the expansion of submodules* (glob)
   [255]
 
@@ -691,7 +910,7 @@ TODO(T179530927): properly support backsyncing with submodule expansion
   $ hgmn commit -q -A -m "Deleting repo_c recursive submodule metadata file" 
   $ backsync_get_info_and_derive_data
   Processing commit: Deleting repo_c recursive submodule metadata file
-  Commit hash: 1b19032a7f306819fc67546816bbea178842e152
+  Commit hash: d617f2af29e47136e0a6ef94cbe950f5a595e6b6
   *error: Changeset can't be synced from large to small repo because it modifies the expansion of submodules* (glob)
   [255]
 
@@ -702,7 +921,7 @@ TODO(T179530927): properly support backsyncing with submodule expansion
   $ hgmn commit -q -A -m "Change repo_b submodule metadata file" 
   $ backsync_get_info_and_derive_data
   Processing commit: Change repo_b submodule metadata file
-  Commit hash: 7a6d0f4b7ea2434a68dc45f56b56f4d26abf293d
+  Commit hash: 5985da70f061dd858117a3245fcbe204978e74e4
   *error: Changeset can't be synced from large to small repo because it modifies the expansion of submodules* (glob)
   [255]
 
@@ -713,7 +932,7 @@ TODO(T179530927): properly support backsyncing with submodule expansion
   $ hgmn commit -q -A -m "Change repo_c recursive submodule metadata file" 
   $ backsync_get_info_and_derive_data
   Processing commit: Change repo_c recursive submodule metadata file
-  Commit hash: 4740fc3bcff4482a13dbb8bf161a7e9f5b75d188
+  Commit hash: 790afb00eb683346ab34c4d059d9c6bcfe204992
   *error: Changeset can't be synced from large to small repo because it modifies the expansion of submodules* (glob)
   [255]
 
@@ -725,7 +944,7 @@ TODO(T179530927): properly support backsyncing with submodule expansion
   $ hgmn commit -q -A -m "Delete repo_b submodule expansion" 
   $ backsync_get_info_and_derive_data
   Processing commit: Delete repo_b submodule expansion
-  Commit hash: 0c5b59e1b3503d556f04f7fe5b9f2b5edef25a91
+  Commit hash: 3b874eef36932dd81043218728942692ac15ed82
   *error: Changeset can't be synced from large to small repo because it modifies the expansion of submodules* (glob)
   [255]
 
@@ -735,50 +954,78 @@ TODO(T179530927): properly support backsyncing with submodule expansion
   $ hgmn commit -q -A -m "Delete repo_c recursive submodule expansion" 
   $ backsync_get_info_and_derive_data
   Processing commit: Delete repo_c recursive submodule expansion
-  Commit hash: ea09438156c0b7290bcc655c6b11e3de39956241
+  Commit hash: 2cca54b932cd84ca0469ed3f7e971455ad0e7bd7
   *error: Changeset can't be synced from large to small repo because it modifies the expansion of submodules* (glob)
   [255]
 
 
 
   $ hg_log -r "sort(all(), desc)"
-  @  ea09438156c0 Delete repo_c recursive submodule expansion
+  @  2cca54b932cd Delete repo_c recursive submodule expansion
   │
-  │ o  0c5b59e1b350 Delete repo_b submodule expansion
+  │ o  3b874eef3693 Delete repo_b submodule expansion
   ├─╯
-  │ o  4740fc3bcff4 Change repo_c recursive submodule metadata file
+  │ o  790afb00eb68 Change repo_c recursive submodule metadata file
   ├─╯
-  │ o  7a6d0f4b7ea2 Change repo_b submodule metadata file
+  │ o  5985da70f061 Change repo_b submodule metadata file
   ├─╯
-  │ o  1b19032a7f30 Deleting repo_c recursive submodule metadata file
+  │ o  d617f2af29e4 Deleting repo_c recursive submodule metadata file
   ├─╯
-  │ o  b25d2d2919aa Deleting repo_b submodule metadata file
+  │ o  fe1dbb2ac6e3 Deleting repo_b submodule metadata file
   ├─╯
-  │ o  d06cd21a6e1a Changing recursive submodule expansion in large repo
+  │ o  dc66187b1f1b Changing recursive submodule expansion in large repo
   ├─╯
-  │ o  229fe03c0d37 Changing submodule expansion in large repo
+  │ o  db55fcf4988d Changing submodule expansion in large repo
   ├─╯
-  o  fac42b07b3b3 Changing small repo in large repo (not submodule)
+  o  35e70dc7f37c Changing small repo in large repo (not submodule)
   │
-  o  7dc2c0583a50 Changing large repo file
+  o  48021e7aeafd Changing large repo file
   │
-  │ o  7ac324cc4ce2 submodule corruption
+  │ o  cd7933d8ab7a submodule corruption
   ├─╯
-  o  c10f082fbef1 Remove repo C submodule from repo A
+  o  d246b01a5a5b Remove repo C submodule from repo A
   │
-  o  465572851483 Update submodule B in repo A
+  o  d3dae76d4349 Update submodule B in repo A
   │
-  o  27380bc5553e Change directly in A
+  o  ada44b220ff8 Change directly in A
   │
-  o  9a84b278c0f9 Added git repo C as submodule directly in A
+  o  e2b260a2b04f Added git repo C as submodule directly in A
   │
-  o    2b82a445059a [MEGAREPO GRADUAL MERGE] gradual merge (0)
+  o    c0240984981f [MEGAREPO GRADUAL MERGE] gradual merge (7)
   ├─╮
-  │ o  1f9d3769f8c2 Added git repo B as submodule in A
-  │ │
-  │ o  e2c69ce8cc11 Add regular_dir/aardvar
-  │ │
-  │ o  df9086c77129 Add root_file
-  │
-  o  54a6db91baf1 L_A
+  │ o    eb7057489fd5 [MEGAREPO GRADUAL MERGE] gradual merge (6)
+  │ ├─╮
+  │ │ o    67ce5c45ccfe [MEGAREPO GRADUAL MERGE] gradual merge (5)
+  │ │ ├─╮
+  │ │ │ o    3d5d1c2ca884 [MEGAREPO GRADUAL MERGE] gradual merge (4)
+  │ │ │ ├─╮
+  │ │ │ │ o    19d222a5612c [MEGAREPO GRADUAL MERGE] gradual merge (3)
+  │ │ │ │ ├─╮
+  │ │ │ │ │ o    b019b0d36eb2 [MEGAREPO GRADUAL MERGE] gradual merge (2)
+  │ │ │ │ │ ├─╮
+  │ │ │ │ │ │ o    c40e45f2cc7c [MEGAREPO GRADUAL MERGE] gradual merge (1)
+  │ │ │ │ │ │ ├─╮
+  │ │ │ │ │ │ │ o    aea509f84730 [MEGAREPO GRADUAL MERGE] gradual merge (0)
+  │ │ │ │ │ │ │ ├─╮
+  │ │ │ │ │ │ │ │ o  10dab983a27f [MEGAREPO DELETE] deletion commits for merge into large repo (6)
+  │ │ │ │ │ │ ├───╯
+  │ │ │ │ │ │ o │  9f34257829fb [MEGAREPO DELETE] deletion commits for merge into large repo (5)
+  │ │ │ │ │ ├─╯ │
+  │ │ │ │ │ o   │  b3109b39500f [MEGAREPO DELETE] deletion commits for merge into large repo (4)
+  │ │ │ │ ├─╯   │
+  │ │ │ │ o     │  43f727449960 [MEGAREPO DELETE] deletion commits for merge into large repo (3)
+  │ │ │ ├─╯     │
+  │ │ │ o       │  9d59171d496f [MEGAREPO DELETE] deletion commits for merge into large repo (2)
+  │ │ ├─╯       │
+  │ │ o         │  5d6979a70f2b [MEGAREPO DELETE] deletion commits for merge into large repo (1)
+  │ ├─╯         │
+  │ o           │  c1f01db6a932 [MEGAREPO DELETE] deletion commits for merge into large repo (0)
+  ├─╯           │
+  o             │  1f9d3769f8c2 Added git repo B as submodule in A
+  │             │
+  o             │  e2c69ce8cc11 Add regular_dir/aardvar
+  │             │
+  o             │  df9086c77129 Add root_file
+                │
+                o  54a6db91baf1 L_A
   

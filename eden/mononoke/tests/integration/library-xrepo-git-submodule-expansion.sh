@@ -126,12 +126,14 @@ function merge_repo_a_to_large_repo {
   IMPORT_CONFIG_VERSION_NAME=${NOOP_CONFIG_VERSION_NAME:-$LATEST_CONFIG_VERSION_NAME}
   FINAL_CONFIG_VERSION_NAME=${CONFIG_VERSION_NAME:-$LATEST_CONFIG_VERSION_NAME}
   MASTER_BOOKMARK_NAME=${MASTER_BOOKMARK:-master}
+  SMALL_REPO_FOLDER=${REPO_A_FOLDER:-$SUBMODULE_REPO_NAME}
 
   print_section "Importing repo A commits into large repo"
 
   echo "IMPORT_CONFIG_VERSION_NAME: $IMPORT_CONFIG_VERSION_NAME"
   echo "FINAL_CONFIG_VERSION_NAME: $FINAL_CONFIG_VERSION_NAME"
   echo "Large repo MASTER_BOOKMARK_NAME: $MASTER_BOOKMARK_NAME"
+  echo "SMALL_REPO_FOLDER: $SMALL_REPO_FOLDER"
 
   printf "\nGIT_REPO_A_HEAD: %s\n" "$GIT_REPO_A_HEAD"
   printf "\nGIT_REPO_A_HEAD_PARENT: %s\n" "$GIT_REPO_A_HEAD_PARENT"
@@ -146,22 +148,30 @@ function merge_repo_a_to_large_repo {
   print_section "Large repo bookmarks"
   mononoke_newadmin bookmarks -R "$LARGE_REPO_NAME" list -S hg
 
-
   IMPORTED_HEAD=$(rg ".+synced as (\w+) in.+" -or '$1' "$TESTTMP/initial_import_output")
   printf "\nIMPORTED_HEAD: %s\n\n" "$IMPORTED_HEAD"
+
   COMMIT_DATE="1985-09-04T00:00:00.00Z"
 
-  PARENT=$(mononoke_newadmin fetch -R "$LARGE_REPO_NAME"  -i "$IMPORTED_HEAD" --json | jq -r .parents[0])
+  print_section "Creating deletion commits"
+  REPOID="$LARGE_REPO_ID" with_stripped_logs megarepo_tool gradual-delete test_user \
+         "deletion commits for merge into large repo" \
+          "$IMPORTED_HEAD" "$SMALL_REPO_FOLDER" --even-chunk-size 2 \
+          --commit-date-rfc3339 "$COMMIT_DATE" 2>&1 | tee "$TESTTMP/gradual_delete.out"
+
+  LAST_DELETION_COMMIT=$(tail -n1 "$TESTTMP/gradual_delete.out")
+  printf "\nLAST_DELETION_COMMIT: %s\n\n" "$LAST_DELETION_COMMIT"
 
   print_section "Creating gradual merge commit"
   REPOID="$LARGE_REPO_ID" with_stripped_logs megarepo_tool gradual-merge \
-    test_user "gradual merge" --last-deletion-commit "$IMPORTED_HEAD" \
-     --pre-deletion-commit "$PARENT"  --bookmark "$MASTER_BOOKMARK_NAME" --limit 1 \
+    test_user "gradual merge" --last-deletion-commit "$LAST_DELETION_COMMIT" \
+     --pre-deletion-commit "$IMPORTED_HEAD"  --bookmark "$MASTER_BOOKMARK_NAME" --limit 10 \
      --commit-date-rfc3339 "$COMMIT_DATE" 2>&1 | tee "$TESTTMP/gradual_merge.out"
 
   print_section "Changing commit sync mapping version"
-  with_stripped_logs mononoke_x_repo_sync "$SUBMODULE_REPO_ID" "$LARGE_REPO_ID" once \
-    --commit "$GIT_REPO_A_HEAD" --unsafe-change-version-to "$FINAL_CONFIG_VERSION_NAME"\
+  with_stripped_logs mononoke_x_repo_sync "$SUBMODULE_REPO_ID" "$LARGE_REPO_ID" \
+    once --unsafe-force-rewrite-parent-to-target-bookmark --commit "$GIT_REPO_A_HEAD" \
+    --unsafe-change-version-to "$FINAL_CONFIG_VERSION_NAME" \
     --target-bookmark "$MASTER_BOOKMARK_NAME" 2>&1 | tee "$TESTTMP/xrepo_mapping_change.out"
 
   SYNCED_HEAD=$(rg ".+synced as (\w+) in.+" -or '$1' "$TESTTMP/xrepo_mapping_change.out")
@@ -175,8 +185,12 @@ function merge_repo_a_to_large_repo {
   tree -a -I ".hg" | tee "${TESTTMP}/large_repo_tree_1"
 
 
+  sleep 2;
+  print_section "Deriving all data types"
+  mononoke_newadmin derived-data -R "$LARGE_REPO_NAME" \
+    derive -i "$SYNCED_HEAD" --all-types
+
   print_section "Count underived data types"
-  sleep 1;
   mononoke_newadmin derived-data -R "$LARGE_REPO_NAME" \
     count-underived -i "$SYNCED_HEAD" -T fsnodes
 
