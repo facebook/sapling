@@ -207,10 +207,10 @@ function mononoke {
   GLOG_minloglevel=5 \
     "$MONONOKE_SERVER" "$@" \
     --scribe-logging-directory "$TESTTMP/scribe_logs" \
-    --ca-pem "$TEST_CERTDIR/root-ca.crt" \
-    --private-key "$TEST_CERTDIR/localhost.key" \
-    --cert "$TEST_CERTDIR/localhost.crt" \
-    --ssl-ticket-seeds "$TEST_CERTDIR/server.pem.seeds" \
+    --tls-ca "$TEST_CERTDIR/root-ca.crt" \
+    --tls-private-key "$TEST_CERTDIR/localhost.key" \
+    --tls-certificate "$TEST_CERTDIR/localhost.crt" \
+    --tls-ticket-seeds "$TEST_CERTDIR/server.pem.seeds" \
     --land-service-client-cert="$TEST_CERTDIR/proxy.crt" \
     --land-service-client-private-key="$TEST_CERTDIR/proxy.key" \
     --debug \
