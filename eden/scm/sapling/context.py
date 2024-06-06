@@ -2363,9 +2363,7 @@ class overlayworkingctx(committablectx):
             if self._cache[path]["exists"]:
                 return self._cache[path]["flags"]
             else:
-                raise error.ProgrammingError(
-                    "No such file or directory: %s" % self._path
-                )
+                raise error.ProgrammingError("No such file or directory: %s" % path)
         else:
             return self._wrappedctx[path].flags()
 
@@ -2424,9 +2422,7 @@ class overlayworkingctx(committablectx):
             if self._cache[path]["exists"]:
                 return len(self._cache[path]["data"])
             else:
-                raise error.ProgrammingError(
-                    "No such file or directory: %s" % self._path
-                )
+                raise error.ProgrammingError("No such file or directory: %s" % path)
         return self._wrappedctx[path].size()
 
     def tomemctx(
@@ -2760,7 +2756,7 @@ class memctx(committablectx):
         date=None,
         extra=None,
         branch=None,
-        editor=False,
+        editor=None,
         loginfo=None,
         mutinfo=None,
     ):
