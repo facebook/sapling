@@ -130,6 +130,11 @@ pub async fn fetch_non_blob_git_object<B>(
 where
     B: Blobstore + Clone,
 {
+    // In git, empty tree is a special object: it's present in every git repo and not persisted in
+    // the storage.
+    if git_hash == gix_hash::ObjectId::empty_tree(gix_hash::Kind::Sha1) {
+        return Ok(gix_object::Object::Tree(gix_object::Tree::empty()));
+    }
     let raw_bytes = fetch_non_blob_git_object_bytes(ctx, blobstore, git_hash).await?;
     let object = gix_object::ObjectRef::from_loose(raw_bytes.as_ref()).map_err(|e| {
         GitError::InvalidContent(
