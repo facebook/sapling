@@ -36,6 +36,9 @@ pub(super) struct DeriveArgs {
     /// Whether the changesets need to be rederived or not
     #[clap(long)]
     pub(crate) rederive: bool,
+    /// Whether to derive from the predecessor of this derived data type
+    #[clap(long)]
+    from_predecessor: bool,
 }
 
 pub(super) async fn derive(ctx: &mut CoreContext, repo: &Repo, args: DeriveArgs) -> Result<()> {
@@ -55,7 +58,15 @@ pub(super) async fn derive(ctx: &mut CoreContext, repo: &Repo, args: DeriveArgs)
     };
 
     for derived_data_type in derived_data_types {
-        derive_data_type(ctx, repo, derived_data_type, csids, args.rederive).await?;
+        derive_data_type(
+            ctx,
+            repo,
+            derived_data_type,
+            csids,
+            args.rederive,
+            args.from_predecessor,
+        )
+        .await?;
     }
 
     Ok(())
@@ -67,6 +78,7 @@ async fn derive_data_type(
     derived_data_type: DerivableType,
     csids: &[ChangesetId],
     rederive: bool,
+    from_predecessor: bool,
 ) -> Result<()> {
     let derived_utils = derived_data_utils(ctx.fb, repo, derived_data_type)?;
 
@@ -82,10 +94,17 @@ async fn derive_data_type(
 
     for csid in csids {
         trace!(ctx.logger(), "deriving {}", csid);
-        let (stats, res) = derived_utils
-            .derive(ctx.clone(), repo.repo_derived_data.clone(), *csid)
-            .try_timed()
-            .await?;
+        let (stats, res) = if from_predecessor {
+            derived_utils
+                .derive_from_predecessor(ctx.clone(), repo.repo_derived_data.clone(), *csid)
+                .try_timed()
+                .await?
+        } else {
+            derived_utils
+                .derive(ctx.clone(), repo.repo_derived_data.clone(), *csid)
+                .try_timed()
+                .await?
+        };
         trace!(
             ctx.logger(),
             "derived {} for {} in {}ms, {:?}",
