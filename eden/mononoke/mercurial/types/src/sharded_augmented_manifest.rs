@@ -14,8 +14,10 @@ use anyhow::Result;
 use async_trait::async_trait;
 use blake3::Hasher as Blake3Hasher;
 use blobstore::Blobstore;
+use blobstore::BlobstoreBytes;
 use blobstore::Loadable;
 use blobstore::LoadableError;
+use blobstore::Storable;
 use bytes::Bytes;
 use context::CoreContext;
 use futures::future;
@@ -610,6 +612,25 @@ impl Loadable for HgAugmentedManifestId {
         HgAugmentedManifestEnvelope::load(ctx, blobstore, id)
             .await?
             .ok_or_else(|| LoadableError::Missing(id.blobstore_key()))
+    }
+}
+
+#[async_trait]
+impl Storable for HgAugmentedManifestEnvelope {
+    type Key = HgAugmentedManifestId;
+
+    async fn store<'a, B: Blobstore>(
+        self,
+        ctx: &'a CoreContext,
+        blobstore: &'a B,
+    ) -> Result<Self::Key> {
+        let key = HgAugmentedManifestId::new(self.augmented_manifest.hg_node_id);
+        let blob = BlobstoreBytes::from_bytes(self.into_blob());
+        blobstore
+            .put(ctx, key.blobstore_key(), blob)
+            .await
+            .context("Failed to store augmented manifest")?;
+        Ok(key)
     }
 }
 
