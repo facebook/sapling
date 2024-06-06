@@ -26,6 +26,7 @@ from . import (
     extensions,
     hintutil,
     minirst,
+    node,
     parser,
     patch,
     pycompat,
@@ -1116,6 +1117,18 @@ def showsmallcommitmeta(context, mapping, args):
     try:
         return commitmeta.read(ctx.node(), category)
     except KeyError:
+        return ""
+
+
+@templatefunc("commitid(scheme)")
+def translatecommitid(context, mapping, args):
+    to_scheme = evalstring(context, mapping, args[0])
+    repo = mapping["repo"]
+    ctx = mapping["ctx"]
+    translated = repo.commitscheme.translate(ctx.hex(), to_scheme, from_scheme="local")
+    if translated:
+        return node.hex(translated)
+    else:
         return ""
 
 

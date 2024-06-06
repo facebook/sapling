@@ -20,6 +20,10 @@
   [{"commit": {"Bonsai": bin("1f7b0de80e118a7ffde47b646b0d4e9ab57252fd000000000000000000000000")},
     "translated": {"Hg": bin("1f7b0de80e118a7ffde47b646b0d4e9ab57252fd")}}]
 
+Can use template func to translate:
+  $ hg log -r . -T '{commitid("bonsai")}\n'
+  1f7b0de80e118a7ffde47b646b0d4e9ab57252fd000000000000000000000000
+
 Can use (bogus) Bonsai hash:
   $ SL_LOG=eagerepo=debug hg log -r 1f7b0de80e118a7ffde47b646b0d4e9ab57252fd000000000000000000000000
   DEBUG eagerepo::api: files [Bonsai(BonsaiChangesetId("1f7b0de80e118a7ffde47b646b0d4e9ab57252fd000000000000000000000000"))] -> Hg
