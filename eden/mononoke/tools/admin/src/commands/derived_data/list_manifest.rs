@@ -26,6 +26,12 @@ use manifest::Entry;
 use manifest::ManifestOps;
 use manifest::PathOrPrefix;
 use manifest::StoreLoadable;
+use mercurial_derivation::MappedHgChangesetId;
+use mercurial_derivation::RootHgAugmentedManifestId;
+use mercurial_types::sharded_augmented_manifest::HgAugmentedFileLeafNode;
+use mercurial_types::HgAugmentedManifestId;
+use mercurial_types::HgFileNodeId;
+use mercurial_types::HgManifestId;
 use mononoke_app::args::ChangesetArgs;
 use mononoke_types::deleted_manifest_common::DeletedManifestCommon;
 use mononoke_types::deleted_manifest_v2::DeletedManifestV2;
@@ -33,6 +39,7 @@ use mononoke_types::fsnode::FsnodeFile;
 use mononoke_types::path::MPath;
 use mononoke_types::ChangesetId;
 use mononoke_types::DeletedManifestV2Id;
+use mononoke_types::FileType;
 use mononoke_types::FileUnodeId;
 use mononoke_types::FsnodeId;
 use mononoke_types::MPathElement;
@@ -53,6 +60,8 @@ enum ListManifestType {
     Fsnodes,
     Unodes,
     DeletedManifests,
+    HgManifests,
+    HgAugmentedManifests,
 }
 
 #[derive(Args)]
@@ -152,6 +161,31 @@ impl Listable for Entry<ManifestUnodeId, FileUnodeId> {
         match self {
             Entry::Tree(tree) => tree.to_string(),
             Entry::Leaf(file) => file.to_string(),
+        }
+    }
+}
+
+impl Listable for Entry<HgAugmentedManifestId, HgAugmentedFileLeafNode> {
+    fn list_item(self) -> String {
+        match self {
+            Entry::Tree(tree) => tree.to_string(),
+            Entry::Leaf(leaf) => format!(
+                "{}\ttype={}\tsize={}\tblake3={}\tsha1={}",
+                leaf.filenode,
+                leaf.file_type,
+                leaf.total_size,
+                leaf.content_blake3,
+                leaf.content_sha1,
+            ),
+        }
+    }
+}
+
+impl Listable for Entry<HgManifestId, (FileType, HgFileNodeId)> {
+    fn list_item(self) -> String {
+        match self {
+            Entry::Tree(tree) => tree.to_string(),
+            Entry::Leaf((file_type, filenode)) => format!("{}\ttype={}", filenode, file_type,),
         }
     }
 }
@@ -350,6 +384,24 @@ pub(super) async fn list_manifest(
                 *fetch_or_derive_root::<RootUnodeManifestId>(ctx, repo, cs_id, args.derive)
                     .await?
                     .manifest_unode_id();
+            list(ctx, repo, root_id, path, args.directory, args.recursive).await?
+        }
+        ListManifestType::HgManifests => {
+            let hg_changeset_id =
+                fetch_or_derive_root::<MappedHgChangesetId>(ctx, repo, cs_id, args.derive)
+                    .await?
+                    .hg_changeset_id();
+            let root_id = hg_changeset_id
+                .load(ctx, repo.repo_blobstore())
+                .await?
+                .manifestid();
+            list(ctx, repo, root_id, path, args.directory, args.recursive).await?
+        }
+        ListManifestType::HgAugmentedManifests => {
+            let root_id =
+                fetch_or_derive_root::<RootHgAugmentedManifestId>(ctx, repo, cs_id, args.derive)
+                    .await?
+                    .hg_augmented_manifest_id();
             list(ctx, repo, root_id, path, args.directory, args.recursive).await?
         }
         ListManifestType::DeletedManifests => {
