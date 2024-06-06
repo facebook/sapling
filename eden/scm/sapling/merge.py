@@ -1294,10 +1294,13 @@ def updateone(repo, fctxfunc, wctx, f, flags, backup=False, backgroundclose=Fals
         # They are handled separately.
         return 0
     wctx[f].clearunknown()
-    data = fctx.data()
-    wctx[f].write(data, flags, backgroundclose=backgroundclose)
+    wctx[f].write(fctx, flags, backgroundclose=backgroundclose)
 
-    return len(data)
+    if fctx.flags() == "m":
+        # size() doesn't seem to work for submodules
+        return len(fctx.data())
+    else:
+        return fctx.size()
 
 
 def batchget(repo, mctx, wctx, actions):
@@ -1467,7 +1470,7 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
             if wctx[f0].lexists():
                 repo.ui.note(_("moving %s to %s\n") % (f0, f))
                 wctx[f].audit()
-                wctx[f].write(wctx.filectx(f0).data(), wctx.filectx(f0).flags())
+                wctx[f].write(wctx.filectx(f0), wctx.filectx(f0).flags())
                 wctx[f0].remove()
             z += 1
             prog.value = (z, f)
@@ -1544,7 +1547,7 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
             f0, flags = args
             repo.ui.note(_("moving %s to %s\n") % (f0, f))
             wctx[f].audit()
-            wctx[f].write(wctx.filectx(f0).data(), flags)
+            wctx[f].write(wctx.filectx(f0), flags)
             wctx[f0].remove()
             updated += 1
 
@@ -1555,7 +1558,7 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
             prog.value = (z, f)
             f0, flags = args
             repo.ui.note(_("getting %s to %s\n") % (f0, f))
-            wctx[f].write(mctx.filectx(f0).data(), flags)
+            wctx[f].write(mctx.filectx(f0), flags)
             updated += 1
 
         # exec

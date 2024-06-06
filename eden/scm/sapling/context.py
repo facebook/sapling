@@ -19,7 +19,7 @@ import os
 import re
 import stat
 import sys
-from typing import Callable, List, Tuple
+from typing import Callable, List, Tuple, Union
 
 import bindings
 
@@ -27,7 +27,6 @@ from . import (
     annotate,
     encoding,
     error,
-    extensions,
     fileset,
     git,
     match as matchmod,
@@ -56,6 +55,15 @@ from .node import (
     wdirrev,
 )
 from .pycompat import encodeutf8, isint, range
+
+filectx_or_bytes = Union["basefilectx", bytes]
+
+
+def filedata(data: filectx_or_bytes) -> bytes:
+    if isinstance(data, bytes):
+        return data
+    else:
+        return data.data()
 
 
 propertycache = util.propertycache
@@ -815,6 +823,9 @@ class basefilectx:
     @propertycache
     def _flags(self):
         return self._changectx.flags(self._path)
+
+    def data(self) -> bytes:
+        raise NotImplementedError()
 
     def flags(self):
         return self._flags
@@ -2213,9 +2224,11 @@ class workingfilectx(committablefilectx):
         """wraps unlink for a repo's working directory"""
         self._repo.wvfs.unlinkpath(self._path, ignoremissing=ignoremissing)
 
-    def write(self, data, flags, backgroundclose=False):
+    def write(self, data: filectx_or_bytes, flags, backgroundclose=False):
         """wraps repo.wwrite"""
-        self._repo.wwrite(self._path, data, flags, backgroundclose=backgroundclose)
+        self._repo.wwrite(
+            self._path, filedata(data), flags, backgroundclose=backgroundclose
+        )
 
     def markcopied(self, src):
         """marks this file a copy of `src`"""
@@ -2377,10 +2390,12 @@ class overlayworkingctx(committablectx):
         except error.ManifestLookupError:
             return False
 
-    def write(self, path, data, flags=""):
+    def write(self, path, data: filectx_or_bytes, flags=""):
         if data is None:
             raise error.ProgrammingError("data must be non-None")
-        self._markdirty(path, exists=True, data=data, date=util.makedate(), flags=flags)
+        self._markdirty(
+            path, exists=True, data=filedata(data), date=util.makedate(), flags=flags
+        )
 
     def setflags(self, path, l, x):
         self._markdirty(
@@ -2588,7 +2603,7 @@ class overlayworkingfilectx(committablefilectx):
     def setflags(self, islink, isexec):
         return self._parent.setflags(self._path, islink, isexec)
 
-    def write(self, data, flags, backgroundclose=False):
+    def write(self, data: filectx_or_bytes, flags, backgroundclose=False):
         return self._parent.write(self._path, data, flags)
 
     def remove(self, ignoremissing=False):
@@ -3041,9 +3056,9 @@ class memfilectx(committablefilectx):
         # need to figure out what to do here
         del self._changectx[self._path]
 
-    def write(self, data, flags):
+    def write(self, data: filectx_or_bytes, flags):
         """wraps repo.wwrite"""
-        self._data = data
+        self._data = filedata(data)
 
 
 class overlayfilectx(committablefilectx):
@@ -3282,7 +3297,7 @@ class arbitraryfilectx:
     def remove(self):
         util.unlink(self._path)
 
-    def write(self, data, flags):
+    def write(self, data: filectx_or_bytes, flags):
         assert not flags
-        with open(self._path, "w") as f:
-            f.write(data)
+        with open(self._path, "wb") as f:
+            f.write(filedata(data))
