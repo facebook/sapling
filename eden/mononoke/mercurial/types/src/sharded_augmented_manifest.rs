@@ -515,7 +515,7 @@ impl_typed_hash! {
     thrift_hash_type => mononoke_types::thrift::id::ShardedMapV2NodeId,
     value_type => ShardedMapV2Node<HgAugmentedManifestEntry>,
     context_type => ShardedMapV2NodeHgAugmentedManifestContext,
-    context_key => "augmf.map2node",
+    context_key => "hgaugmentedmanifest.map2node",
 }
 
 impl ShardedMapV2Value for HgAugmentedManifestEntry {

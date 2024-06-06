@@ -35,7 +35,7 @@ use crate::HgParents;
 use crate::MPathElement;
 use crate::Type;
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct ManifestContent {
     pub files: SortedVectorMap<MPathElement, Entry<HgManifestId, (FileType, HgFileNodeId)>>,
 }
@@ -155,7 +155,7 @@ pub async fn fetch_manifest_envelope_opt<B: Blobstore>(
     ))
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct HgBlobManifest {
     node_id: HgNodeHash,
     p1: Option<HgNodeHash>,

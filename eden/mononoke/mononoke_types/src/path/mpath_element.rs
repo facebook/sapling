@@ -314,6 +314,12 @@ impl MPathElementPrefix {
     pub fn to_element(&self) -> Result<MPathElement> {
         MPathElement::new_from_slice(self.0.as_ref())
     }
+
+    pub fn join_into_element(self, suffix: impl AsRef<[u8]>) -> Result<MPathElement> {
+        let mut element = self.0;
+        element.extend_from_slice(suffix.as_ref());
+        MPathElement::from_smallvec(element)
+    }
 }
 
 impl AsRef<[u8]> for MPathElementPrefix {

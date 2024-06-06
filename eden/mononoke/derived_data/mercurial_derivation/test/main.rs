@@ -7,6 +7,7 @@
 
 #![cfg_attr(not(fbcode_build), allow(unused_crate_dependencies))]
 
+mod augmented_manifest_tests;
 mod file_history_test;
 mod tracing_blobstore;
 mod utils;
