@@ -11,6 +11,10 @@ pub use derive_batch::ManifestChanges;
 
 pub use crate::bonsai::bonsai_diff;
 pub use crate::bonsai::BonsaiDiffFileChange;
+pub use crate::comparison::compare_manifest;
+pub use crate::comparison::compare_manifest_tree;
+pub use crate::comparison::Comparison;
+pub use crate::comparison::ManifestComparison;
 pub use crate::derive::derive_manifest;
 pub use crate::derive::derive_manifest_with_io_sender;
 pub use crate::derive::flatten_subentries;
@@ -40,6 +44,7 @@ pub use crate::types::Traced;
 pub use crate::types::TrieMapOps;
 
 mod bonsai;
+mod comparison;
 mod derive;
 mod derive_batch;
 mod derive_from_predecessor;

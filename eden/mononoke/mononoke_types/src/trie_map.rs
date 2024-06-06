@@ -80,6 +80,17 @@ impl<V> TrieMap<V> {
         }
     }
 
+    pub fn extract_prefix(self, prefix: &[u8]) -> Option<Self> {
+        let mut node = self;
+        for next_byte in prefix {
+            match node.edges.remove(next_byte) {
+                Some(child) => node = child,
+                None => return None,
+            }
+        }
+        Some(node)
+    }
+
     /// Returns a tuple of the longest common prefix of all entries in the TrieMap,
     /// and the TrieMap with the longest common prefix removed.
     // Example input:

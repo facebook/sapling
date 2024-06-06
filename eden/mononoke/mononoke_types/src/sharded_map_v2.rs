@@ -199,7 +199,7 @@ impl<Value: ShardedMapV2Value> LoadableShardedMapV2Node<Value> {
         }
     }
 
-    fn size(&self) -> usize {
+    pub fn size(&self) -> usize {
         match self {
             LoadableShardedMapV2Node::Inlined(inlined) => inlined.size(),
             LoadableShardedMapV2Node::Stored(stored) => stored.size,

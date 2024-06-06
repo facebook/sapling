@@ -62,6 +62,8 @@ pub trait TrieMapOps<Store, Value>: Sized {
         ctx: &CoreContext,
         blobstore: &Store,
     ) -> Result<BoxStream<'async_trait, Result<(SmallVec<[u8; 24]>, Value)>>>;
+
+    fn is_empty(&self) -> bool;
 }
 
 #[async_trait]
@@ -80,6 +82,10 @@ impl<Store, V: Send> TrieMapOps<Store, V> for TrieMap<V> {
         _blobstore: &Store,
     ) -> Result<BoxStream<'async_trait, Result<(SmallVec<[u8; 24]>, V)>>> {
         Ok(stream::iter(self).map(Ok).boxed())
+    }
+
+    fn is_empty(&self) -> bool {
+        self.is_empty()
     }
 }
 
@@ -116,6 +122,10 @@ impl<Store: Blobstore> TrieMapOps<Store, Entry<TestShardedManifestDirectory, ()>
             .map_ok(|(k, v)| (k, convert_test_sharded_manifest(v)))
             .boxed())
     }
+
+    fn is_empty(&self) -> bool {
+        self.size() == 0
+    }
 }
 
 #[async_trait]
@@ -143,6 +153,10 @@ impl<Store: Blobstore> TrieMapOps<Store, Entry<BssmV3Directory, ()>>
             .into_entries(ctx, blobstore)
             .map_ok(|(k, v)| (k, bssm_v3_to_mf_entry(v)))
             .boxed())
+    }
+
+    fn is_empty(&self) -> bool {
+        self.size() == 0
     }
 }
 

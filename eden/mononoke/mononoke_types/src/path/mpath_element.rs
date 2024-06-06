@@ -310,6 +310,10 @@ impl MPathElementPrefix {
         MPathElement::check_len(p)?;
         Ok(())
     }
+
+    pub fn to_element(&self) -> Result<MPathElement> {
+        MPathElement::new_from_slice(self.0.as_ref())
+    }
 }
 
 impl AsRef<[u8]> for MPathElementPrefix {

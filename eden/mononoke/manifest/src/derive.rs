@@ -143,8 +143,7 @@ where
     Leaf: Send + 'static,
     IntermediateLeafId: Send + From<LeafId> + 'static + fmt::Debug + Clone + Eq + Hash,
     TreeId: StoreLoadable<Store> + Clone + Eq + Hash + fmt::Debug + Send + Sync + 'static,
-    TreeId::Value: Manifest<Store, TreeId = TreeId, LeafId = LeafId>,
-    <TreeId as StoreLoadable<Store>>::Value: Send + Sync,
+    TreeId::Value: Manifest<Store, TreeId = TreeId, LeafId = LeafId> + Send + Sync,
     T: Fn(
             TreeInfo<
                 TreeId,
@@ -235,8 +234,7 @@ where
     Leaf: Send + 'static,
     IntermediateLeafId: Send + From<LeafId> + 'static + Eq + Hash + Clone + fmt::Debug,
     TreeId: StoreLoadable<Store> + Clone + Eq + Hash + fmt::Debug + Send + Sync + 'static,
-    TreeId::Value: Manifest<Store, TreeId = TreeId, LeafId = LeafId>,
-    <TreeId as StoreLoadable<Store>>::Value: Send + Sync,
+    TreeId::Value: Manifest<Store, TreeId = TreeId, LeafId = LeafId> + Send + Sync,
     T: Fn(
             TreeInfo<
                 TreeId,
@@ -399,8 +397,7 @@ where
     IntermediateLeafId: Send + From<LeafId> + 'static + Eq + Hash + fmt::Debug + Clone,
     Store: Sync + Send + Clone + 'static,
     TreeId: StoreLoadable<Store> + Clone + Eq + Hash + fmt::Debug + Send + Sync + 'static,
-    TreeId::Value: Manifest<Store, TreeId = TreeId, LeafId = LeafId>,
-    <TreeId as StoreLoadable<Store>>::Value: Send + Sync,
+    TreeId::Value: Manifest<Store, TreeId = TreeId, LeafId = LeafId> + Send + Sync,
     T: Fn(
             TreeInfo<
                 TreeId,
