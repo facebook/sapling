@@ -1,4 +1,3 @@
-
 #require no-eden
 
 # Copyright (c) Meta Platforms, Inc. and affiliates.
@@ -7,7 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
   $ enable morestatus 
-  $ setconfig morestatus.show=true experimental.bisect2=true
+  $ setconfig morestatus.show=true
   $ eagerepo
   $ hg init repo
   $ cd repo

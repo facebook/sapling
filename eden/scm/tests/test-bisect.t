@@ -1,7 +1,5 @@
 #require no-eden
 
-  $ setconfig experimental.bisect2=true
-
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 # Copyright (c) Mercurial Contributors.
 #

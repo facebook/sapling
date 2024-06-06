@@ -51,6 +51,7 @@ filter=blob:none
 filtersuspectsymlink=true
 
 [experimental]
+bisect2=true
 exportstack-max-bytes=1M
 
 log-implicit-follow-threshold=10000
