@@ -206,7 +206,12 @@ impl SaplingRemoteApi for EagerRepo {
             if !visited.insert(key.clone()) {
                 continue;
             }
-            let data = self.get_sha1_blob_for_api(key.hgid, "history")?;
+
+            // Don't report missing files as errors. This matches Mononoke's behavior.
+            let Some(data) = self.opt_sha1_blob_for_api(key.hgid, "history")? else {
+                continue;
+            };
+
             // NOTE: Order of p1, p2 are not preserved, unlike revlog hg.
             // It should be okay correctness-wise.
             let (p1, p2) = extract_p1_p2(&data);
@@ -1147,19 +1152,31 @@ fn changeset_to_text(mut cs: HgChangesetContent) -> anyhow::Result<Vec<u8>> {
 impl EagerRepo {
     fn get_sha1_blob_for_api(&self, id: HgId, handler: &str) -> edenapi::Result<minibytes::Bytes> {
         // Emulate the HTTP errors.
+        match self.opt_sha1_blob_for_api(id, handler)? {
+            None => Err(SaplingRemoteApiError::HttpError {
+                status: StatusCode::NOT_FOUND,
+                message: format!("{} cannot be found", id.to_hex()),
+                headers: Default::default(),
+                url: self.url(handler),
+            }),
+            Some(data) => Ok(data),
+        }
+    }
+
+    fn opt_sha1_blob_for_api(
+        &self,
+        id: HgId,
+        handler: &str,
+    ) -> edenapi::Result<Option<minibytes::Bytes>> {
+        // Emulate the HTTP errors.
         match self.get_sha1_blob(id) {
             Ok(None) => {
                 trace!(" not found: {}", id.to_hex());
-                Err(SaplingRemoteApiError::HttpError {
-                    status: StatusCode::NOT_FOUND,
-                    message: format!("{} cannot be found", id.to_hex()),
-                    headers: Default::default(),
-                    url: self.url(handler),
-                })
+                Ok(None)
             }
             Ok(Some(data)) => {
                 trace!(" found: {}, {} bytes", id.to_hex(), data.len());
-                Ok(data)
+                Ok(Some(data))
             }
             Err(e) => Err(SaplingRemoteApiError::HttpError {
                 status: StatusCode::INTERNAL_SERVER_ERROR,
