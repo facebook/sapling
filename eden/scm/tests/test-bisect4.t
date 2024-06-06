@@ -7,6 +7,16 @@ Linear:
   > A01..A20
   > EOF
 
+- Immediately end:
+  $ sl debugbisect -r $A01::$A02 --bad $A02
+  Graph:
+    o  A02: initial bad
+    │
+    o  A01: initial good
+  Steps:
+    The first bad revision is:
+    A02
+
 - Good to bad
   $ sl debugbisect -r $A01::$A20 --bad $A16::$A20
   Graph:
