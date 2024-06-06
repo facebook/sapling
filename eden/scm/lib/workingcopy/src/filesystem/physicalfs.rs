@@ -126,6 +126,7 @@ fn create_treestate(dot_dir: &Path, case_sensitive: bool) -> Result<TreeState> {
 }
 
 impl FileSystem for PhysicalFileSystem {
+    #[tracing::instrument(skip_all)]
     fn pending_changes(
         &self,
         ctx: &CoreContext,

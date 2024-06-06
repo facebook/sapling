@@ -68,6 +68,7 @@ fn create_treestate(dot_dir: &std::path::Path, case_sensitive: bool) -> Result<T
 }
 
 impl FileSystem for EdenFileSystem {
+    #[tracing::instrument(skip_all)]
     fn pending_changes(
         &self,
         _ctx: &CoreContext,

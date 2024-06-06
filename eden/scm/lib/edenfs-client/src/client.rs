@@ -93,6 +93,7 @@ impl EdenFsClient {
     }
 
     /// Get file status. Normalized to non-Thrift types.
+    #[tracing::instrument(skip(self))]
     pub fn get_status(
         &self,
         commit: HgId,
@@ -135,6 +136,7 @@ impl EdenFsClient {
     }
 
     /// Get the raw journal position. Useful to check whether there are file changes.
+    #[tracing::instrument(skip(self))]
     pub fn get_journal_position(&self) -> anyhow::Result<(i64, i64)> {
         let thrift_client = block_on(self.get_thrift_client())?;
         let position = extract_error(block_on(
@@ -146,6 +148,7 @@ impl EdenFsClient {
     }
 
     /// Set the working copy (dirstate) parents.
+    #[tracing::instrument(skip(self))]
     pub fn set_parents(&self, p1: HgId, p2: Option<HgId>, p1_tree: HgId) -> anyhow::Result<()> {
         let thrift_client = block_on(self.get_thrift_client())?;
         let parents = edenfs::WorkingDirectoryParents {
@@ -174,6 +177,7 @@ impl EdenFsClient {
     /// The client might want to write pending draft changes to disk
     /// so edenfs can find the new files during checkout.
     /// Normalize to non-Thrift types.
+    #[tracing::instrument(skip(self))]
     pub fn checkout(
         &self,
         node: HgId,
