@@ -33,6 +33,7 @@ from . import (
     changegroup,
     changelog2,
     color,
+    commitscheme,
     connectionpool,
     context,
     dirstate as dirstatemod,
@@ -1456,6 +1457,10 @@ class localrepository:
                 )
 
         return dirstate_reimplementation.eden_dirstate(self, self.ui, self.root)
+
+    @util.propertycache
+    def commitscheme(self):
+        return commitscheme.schemes(self)
 
     def _dirstatevalidate(self, node: bytes) -> bytes:
         self.changelog.rev(node)

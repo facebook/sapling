@@ -1,3 +1,5 @@
+  $ setconfig 'commit-scheme.bonsai.re=^[a-f0-9]{64}$'
+
   $ newclientrepo
   $ touch foo
   $ hg commit -Aqm foo
@@ -17,3 +19,15 @@
   $ hg debugapi -e committranslateids -i '[{"Bonsai": "1f7b0de80e118a7ffde47b646b0d4e9ab57252fd000000000000000000000000"}]' -i "'Hg'"
   [{"commit": {"Bonsai": bin("1f7b0de80e118a7ffde47b646b0d4e9ab57252fd000000000000000000000000")},
     "translated": {"Hg": bin("1f7b0de80e118a7ffde47b646b0d4e9ab57252fd")}}]
+
+Can use (bogus) Bonsai hash:
+  $ SL_LOG=eagerepo=debug hg log -r 1f7b0de80e118a7ffde47b646b0d4e9ab57252fd000000000000000000000000
+  DEBUG eagerepo::api: files [Bonsai(BonsaiChangesetId("1f7b0de80e118a7ffde47b646b0d4e9ab57252fd000000000000000000000000"))] -> Hg
+  commit:      1f7b0de80e11
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     foo
+
+  $ hg pull -r 1f7b0de80e118a7ffde47b646b0d4e9ab57252fd000000000000000000000000
+  rewriting pull rev '1f7b0de80e118a7ffde47b646b0d4e9ab57252fd000000000000000000000000' into '1f7b0de80e118a7ffde47b646b0d4e9ab57252fd'
+  pulling from test:repo1_server

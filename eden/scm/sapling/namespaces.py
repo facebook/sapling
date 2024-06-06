@@ -157,6 +157,25 @@ def titles(repo):
     )
 
 
+@builtinnamespace("commitscheme", priority=100)
+def commitscheme(repo):
+    def namemap(repo, name):
+        if local := repo.commitscheme.translate(name, "local"):
+            return [local]
+        else:
+            return []
+
+    return namespace(
+        templatename="commitscheme",
+        logname="commitscheme",
+        colorname="commitscheme",
+        listnames=lambda repo: [],
+        namemap=namemap,
+        nodemap=lambda repo, node: [],
+        builtin=True,
+    )
+
+
 class namespaces:
     """provides an interface to register and operate on multiple namespaces. See
     the namespace class below for details on the namespace object.

@@ -995,6 +995,8 @@ impl SaplingRemoteApi for EagerRepo {
         from_repo: Option<String>,
         to_repo: Option<String>,
     ) -> Result<Response<CommitTranslateIdResponse>, SaplingRemoteApiError> {
+        debug!("files {commits:?} -> {scheme:?}");
+
         if std::env::var_os("TESTTMP").is_none() {
             return Err(SaplingRemoteApiError::NotSupported);
         }

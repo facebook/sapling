@@ -255,6 +255,24 @@ def _pullhoistnames(repo, x):
             return pullattempt(bookmarknames=[x])
 
 
+@builtinautopullpredicate("commitschemes", priority=100, rewritepullrev=True)
+def _commitscheme(repo, x, rewritepullrev=False):
+    # Translate commit of a foreign scheme to local repo's scheme.
+    if not repo.commitscheme.possible_schemes(x):
+        return None
+
+    def generateattempt() -> Optional[pullattempt]:
+        localnode = repo.commitscheme.translate(x, "local")
+        if not localnode:
+            return None
+        return pullattempt(headnodes=[localnode])
+
+    if rewritepullrev:
+        return generateattempt()
+    else:
+        return deferredpullattempt(generate=generateattempt)
+
+
 def loadpredicate(ui, extname, registrarobj):
     for name, func in pycompat.iteritems(registrarobj._table):
         if name in _table:

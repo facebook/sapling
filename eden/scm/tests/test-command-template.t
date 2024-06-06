@@ -3683,6 +3683,8 @@
     r2
    titles color=titles builtin=True
     
+   commitscheme color=commitscheme builtin=True
+    
   
   1
    bookmarks color=bookmark builtin=True
@@ -3696,6 +3698,8 @@
    revnames color=revname builtin=False
     r1
    titles color=titles builtin=True
+    
+   commitscheme color=commitscheme builtin=True
     
   
   0
@@ -3711,6 +3715,8 @@
     r0
    titles color=titles builtin=True
     
+   commitscheme color=commitscheme builtin=True
+    
 
 # revert side effect of loading the revnames extension
 
@@ -3723,6 +3729,7 @@
   remotebookmarks: 
   hoistednames: 
   titles: 
+  commitscheme: 
   $ hg log -r2 -T '{namespaces % "{namespace}:\n{names % " {name}\n"}"}'
   bookmarks:
    bar
@@ -3733,6 +3740,7 @@
   remotebookmarks:
   hoistednames:
   titles:
+  commitscheme:
   $ hg log -r2 -T '{get(namespaces, "bookmarks") % "{name}\n"}'
   bar
   foo
