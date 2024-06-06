@@ -450,6 +450,56 @@ impl<Value: ShardedMapV2Value> ShardedMapV2Node<Value> {
         }
     }
 
+    /// Returns the value corresponding to the given key, or None if there's no value
+    /// corresponding to it.
+    #[async_recursion]
+    pub async fn get_partial_map(
+        &self,
+        ctx: &CoreContext,
+        blobstore: &impl Blobstore,
+        key: &[u8],
+    ) -> Result<Option<LoadableShardedMapV2Node<Value>>> {
+        if let Some(remaining_prefix) = self.prefix.strip_prefix(key) {
+            // If the key is a prefix of this node, then the partial map corresponding
+            // to the key is this node itself (possibly with the prefix adjusted).
+            let mut node = self.clone();
+            node.prefix = remaining_prefix.into();
+            return Ok(Some(LoadableShardedMapV2Node::Inlined(node)));
+        }
+
+        // If the key starts with the prefix of this node then strip it, otherwise
+        // there's no value corresponding to this key.
+        let key = match key.strip_prefix(self.prefix.as_ref()) {
+            None => {
+                return Ok(None);
+            }
+            Some(key) => key,
+        };
+
+        // The key should not be empty, as we would have returned an exact match above.
+        debug_assert!(!key.is_empty());
+        let (first, rest) = key.split_first().expect("No exact match possible");
+
+        let child = match self.children.get(first) {
+            None => {
+                return Ok(None);
+            }
+            Some(child) => child,
+        };
+
+        match child {
+            LoadableShardedMapV2Node::Inlined(inlined) => {
+                inlined.get_partial_map(ctx, blobstore, rest).await
+            }
+            LoadableShardedMapV2Node::Stored(ShardedMapV2StoredNode { id, .. }) => {
+                id.load(ctx, blobstore)
+                    .await?
+                    .get_partial_map(ctx, blobstore, rest)
+                    .await
+            }
+        }
+    }
+
     /// Returns an ordered stream over all key-value pairs in the map.
     pub fn into_entries<'a>(
         self,
