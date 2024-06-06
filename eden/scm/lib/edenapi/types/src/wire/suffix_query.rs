@@ -7,8 +7,6 @@
 
 pub use crate::suffix_query::WireSuffixQueryRequest;
 pub use crate::suffix_query::WireSuffixQueryResponse;
-use crate::ToApi;
-use crate::ToWire;
 
 #[cfg(test)]
 mod tests {
