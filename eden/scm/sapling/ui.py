@@ -613,10 +613,11 @@ class ui:
         self._bufferstates.append((error, subproc, labeled))
         self._bufferapplylabels = labeled
 
-    def popbuffer(self) -> str:
+    def popbuffer(self, errors="strict") -> str:
         """pop the last buffer and return the buffered output
 
-        Throws if any element of the buffer is not str.
+        Content written by `ui.writebytes` gets utf-8 decoded based on the
+        `errors` handler. See `str.decode` for valid values of `errors`.
         """
         self._bufferstates.pop()
         if self._bufferstates:
@@ -625,14 +626,14 @@ class ui:
             self._bufferapplylabels = None
 
         buf = self._buffers.pop()
-        if any(not isinstance(s, str) for s in buf):
-            raise error.ProgrammingError("popbuffer cannot be used on bytes buffer")
-        return "".join(buf)
+        return "".join(
+            (b if isinstance(b, str) else b.decode(errors=errors)) for b in buf
+        )
 
     def popbufferbytes(self) -> bytes:
         """pop the last buffer and return the buffered output
 
-        Throws if any element of the buffer is not bytes.
+        Content written by `ui.write` gets utf-8 encoded.
         """
         self._bufferstates.pop()
         if self._bufferstates:
@@ -641,9 +642,7 @@ class ui:
             self._bufferapplylabels = None
 
         buf = self._buffers.pop()
-        if any(not isinstance(s, bytes) for s in buf):
-            raise error.ProgrammingError("popbufferbytes cannot be used on str buffer")
-        return b"".join(buf)
+        return b"".join((b if isinstance(b, bytes) else b.encode()) for b in buf)
 
     def popbufferlist(self) -> "List[Union[str, bytes]]":
         """pop the last buffer and return the buffered output as a list
