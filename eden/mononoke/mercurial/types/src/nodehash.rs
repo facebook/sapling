@@ -459,10 +459,6 @@ impl Display for HgManifestId {
 pub struct HgAugmentedManifestId(HgNodeHash);
 
 impl HgAugmentedManifestId {
-    pub fn into_nodehash(self) -> HgNodeHash {
-        self.0
-    }
-
     pub const fn new(hash: HgNodeHash) -> Self {
         HgAugmentedManifestId(hash)
     }
@@ -471,8 +467,20 @@ impl HgAugmentedManifestId {
         HgNodeHash::from_bytes(bytes).map(HgAugmentedManifestId)
     }
 
+    pub fn from_thrift(thrift_hash: thrift::HgNodeHash) -> Result<Self> {
+        HgNodeHash::from_thrift(thrift_hash).map(HgAugmentedManifestId)
+    }
+
     pub fn as_bytes(&self) -> &[u8] {
         self.0.as_bytes()
+    }
+
+    pub fn into_nodehash(self) -> HgNodeHash {
+        self.0
+    }
+
+    pub fn into_thrift(self) -> thrift::HgNodeHash {
+        self.into_nodehash().into_thrift()
     }
 
     #[inline]

@@ -30,4 +30,5 @@ enum DerivedDataType {
   TEST_MANIFEST = 15,
   TEST_SHARDED_MANIFEST = 16,
   BSSM_V3 = 17,
+  HG_AUGMENTED_MANIFEST = 18,
 } (rust.exhaustive)

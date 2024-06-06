@@ -59,6 +59,7 @@ use itertools::Itertools;
 use lazy_static::lazy_static;
 use lock_ext::LockExt;
 use mercurial_derivation::MappedHgChangesetId;
+use mercurial_derivation::RootHgAugmentedManifestId;
 use metaconfig_types::BlameVersion;
 use mononoke_types::ChangesetId;
 use mononoke_types::DerivableType;
@@ -80,6 +81,7 @@ pub const POSSIBLE_DERIVED_TYPE_NAMES: &[&str] = &[
     RootUnodeManifestId::NAME,
     RootFastlog::NAME,
     MappedHgChangesetId::NAME,
+    RootHgAugmentedManifestId::NAME,
     RootFsnodeId::NAME,
     RootBlameV2::NAME,
     ChangesetInfo::NAME,
@@ -120,6 +122,7 @@ lazy_static! {
         let unodes = RootUnodeManifestId::VARIANT;
         let fastlog = RootFastlog::VARIANT;
         let hgchangeset = MappedHgChangesetId::VARIANT;
+        let hg_augmented_mf = RootHgAugmentedManifestId::VARIANT;
         let fsnodes = RootFsnodeId::VARIANT;
         let blame = RootBlameV2::VARIANT;
         let changesets_info = ChangesetInfo::VARIANT;
@@ -136,6 +139,7 @@ lazy_static! {
         let mut dag = HashMap::new();
 
         dag.insert(hgchangeset, vec![]);
+        dag.insert(hg_augmented_mf, vec![hgchangeset]);
         dag.insert(unodes, vec![]);
         dag.insert(blame, vec![unodes]);
         dag.insert(fastlog, vec![unodes]);
@@ -526,6 +530,11 @@ fn derived_data_utils_impl(
         MappedHgChangesetId::VARIANT => Ok(Arc::new(
             DerivedUtilsFromManager::<MappedHgChangesetId>::new(repo, config, enabled_config_name),
         )),
+        RootHgAugmentedManifestId::VARIANT => Ok(Arc::new(DerivedUtilsFromManager::<
+            RootHgAugmentedManifestId,
+        >::new(
+            repo, config, enabled_config_name
+        ))),
         RootFsnodeId::VARIANT => Ok(Arc::new(DerivedUtilsFromManager::<RootFsnodeId>::new(
             repo,
             config,
@@ -1071,6 +1080,11 @@ pub async fn check_derived(
         }
         DerivableType::HgChangesets => {
             ddm.fetch_derived::<MappedHgChangesetId>(ctx, head_cs_id, None)
+                .map_ok(|res| res.is_some())
+                .await
+        }
+        DerivableType::HgAugmentedManifests => {
+            ddm.fetch_derived::<RootHgAugmentedManifestId>(ctx, head_cs_id, None)
                 .map_ok(|res| res.is_some())
                 .await
         }

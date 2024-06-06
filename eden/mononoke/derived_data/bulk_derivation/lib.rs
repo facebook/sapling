@@ -27,6 +27,7 @@ use git_types::MappedGitCommitId;
 use git_types::RootGitDeltaManifestId;
 use git_types::TreeHandle;
 use mercurial_derivation::MappedHgChangesetId;
+use mercurial_derivation::RootHgAugmentedManifestId;
 use mononoke_types::ChangesetId;
 use skeleton_manifest::RootSkeletonManifestId;
 use test_manifest::RootTestManifestDirectory;
@@ -101,6 +102,14 @@ impl BulkDerivation for DerivedDataManager {
                         }
                         DerivableType::HgChangesets => {
                             self.derive_exactly_batch::<MappedHgChangesetId>(
+                                ctx,
+                                csids,
+                                rederivation,
+                            )
+                            .await
+                        }
+                        DerivableType::HgAugmentedManifests => {
+                            self.derive_exactly_batch::<RootHgAugmentedManifestId>(
                                 ctx,
                                 csids,
                                 rederivation,
@@ -207,6 +216,10 @@ impl BulkDerivation for DerivedDataManager {
                 .is_some(),
             DerivableType::HgChangesets => self
                 .fetch_derived::<MappedHgChangesetId>(ctx, csid, rederivation)
+                .await?
+                .is_some(),
+            DerivableType::HgAugmentedManifests => self
+                .fetch_derived::<RootHgAugmentedManifestId>(ctx, csid, rederivation)
                 .await?
                 .is_some(),
             DerivableType::Fsnodes => self

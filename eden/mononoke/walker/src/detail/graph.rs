@@ -1199,6 +1199,7 @@ mod tests {
             DerivableType::TestManifests,
             DerivableType::TestShardedManifests,
             DerivableType::BssmV3,
+            DerivableType::HgAugmentedManifests,
         ]);
         let mut missing = HashSet::new();
         for t in a {
