@@ -44,6 +44,9 @@ rust_library(
     name = "mercurial_types",
     srcs = glob(["types/src/**/*.rs"]),
     autocargo = {"cargo_toml_dir": "types"},
+    named_deps = {
+        "blake3-constants": "//blake3:blake3-constants-rust-nothrift",
+    },
     test_deps = [
         "fbsource//third-party/rust:tokio",
         "//common/rust/shed/fbinit:fbinit",
@@ -63,6 +66,7 @@ rust_library(
         "fbsource//third-party/rust:async-stream",
         "fbsource//third-party/rust:async-trait",
         "fbsource//third-party/rust:bitflags",
+        "fbsource//third-party/rust:blake3",
         "fbsource//third-party/rust:bytes",
         "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:itertools",

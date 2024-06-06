@@ -12,11 +12,13 @@ use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
+use blake3::Hasher as Blake3Hasher;
 use blobstore::Blobstore;
 use blobstore::Loadable;
 use blobstore::LoadableError;
 use bytes::Bytes;
 use context::CoreContext;
+use futures::future;
 use futures::stream;
 use futures::stream::BoxStream;
 use futures::stream::StreamExt;
@@ -297,6 +299,64 @@ impl ShardedHgAugmentedManifest {
                     }),
             )
             .boxed()
+    }
+
+    pub async fn compute_content_addressed_digest(
+        self,
+        ctx: &CoreContext,
+        blobstore: &impl Blobstore,
+    ) -> Result<(Blake3, u64)> {
+        let mut calculator = AugmentedManifestDigestCalculator::new();
+        self.write_content_addressed_prefix(&mut calculator)?;
+        self.subentries
+            .into_entries(ctx, blobstore)
+            .and_then(
+                |(path, entry)| async move { Ok((MPathElement::from_smallvec(path)?, entry)) },
+            )
+            .try_for_each(|(path, entry)| {
+                future::ready(Self::write_content_addressed_entry(
+                    &path,
+                    &entry,
+                    &mut calculator,
+                ))
+            })
+            .await?;
+        calculator.finalize()
+    }
+}
+
+struct AugmentedManifestDigestCalculator {
+    hasher: Blake3Hasher,
+    size: u64,
+}
+
+impl AugmentedManifestDigestCalculator {
+    fn new() -> Self {
+        #[cfg(fbcode_build)]
+        let key = blake3_constants::BLAKE3_HASH_KEY;
+        #[cfg(not(fbcode_build))]
+        let key = b"20220728-2357111317192329313741#";
+        Self {
+            hasher: Blake3Hasher::new_keyed(key),
+            size: 0,
+        }
+    }
+
+    fn finalize(self) -> Result<(Blake3, u64)> {
+        let hash = Blake3::from_bytes(self.hasher.finalize().as_bytes())?;
+        Ok((hash, self.size))
+    }
+}
+
+impl Write for AugmentedManifestDigestCalculator {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        self.hasher.update(buf);
+        self.size += buf.len() as u64;
+        Ok(buf.len())
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        Ok(())
     }
 }
 
