@@ -340,9 +340,6 @@ where
                                 )
                             })?;
                         progress_counter.tick(ctx, outcome);
-                        if outcome == UploadOutcome::AlreadyPresent {
-                            return anyhow::Ok(((), vec![]));
-                        }
                     }
                     let hg_manifest = hg_manifest_id.load(ctx, repo.repo_blobstore()).await?;
                     let mut children = Vec::new();
@@ -382,7 +379,7 @@ where
                             },
                         )
                         .await?;
-                    Ok(((), children))
+                    anyhow::Ok(((), children))
                 }
                 .boxed()
             },
