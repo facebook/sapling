@@ -686,6 +686,15 @@ impl From<GitSha1> for EdenapiCommitId {
     }
 }
 
+#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub struct MononokeDigest(pub Blake3, pub u64);
+
+impl std::fmt::Display for MononokeDigest {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}:{}", self.0, self.1)
+    }
+}
+
 #[cfg(test)]
 mod test {
     use quickcheck::quickcheck;

@@ -45,6 +45,6 @@ impl<'a> CasClient for DummyCasClient<'a> {
         &self,
         digests: &'b [MononokeDigest],
     ) -> Result<Vec<MononokeDigest>, Error> {
-        Ok(digests.iter().cloned().collect())
+        Ok(digests.to_vec())
     }
 }
