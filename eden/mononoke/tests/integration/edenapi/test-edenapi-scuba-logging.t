@@ -31,7 +31,7 @@ Run a few requests that use different codepaths for logging server-side
   $ hgedenapi debugapi -e commitgraph2 -i "['$C']" -i "['$A']" --sort > /dev/null
 
 
-  $ cat "$SCUBA" | summarize_scuba_json "SaplingRemoteAPI.*" \
+  $ cat "$SCUBA" | summarize_scuba_json "EdenAPI.*" \
   >     .normal.log_tag .normal.http_method .normal.http_path \
   >     .int.poll_count .int.poll_time_us \
   >     .int.max_poll_time_us
