@@ -173,21 +173,31 @@ def plain_push(repo, edenapi, bookmark, to_node, curr_bookmark_val, force, oparg
         _("moving remote bookmark %s from %s to %s\n")
         % (bookmark, short(from_node), short(to_node))
     )
-    result = edenapi.setbookmark(bookmark, to_node, from_node, pushvars)["data"]
-    if "Err" in result:
-        hint = gen_hint(
-            repo.ui,
-            edenapi,
-            bookmark,
-            curr_bookmark_val,
-            _("bookmark %s has changed since your last pull") % bookmark,
-        )
-        raise error.Abort(
-            _("server error: %s") % result["Err"]["message"],
-            hint=hint,
-        )
 
-    record_remote_bookmark(repo, bookmark, to_node)
+    if not _is_noop_plain_push(repo, from_node, to_node):
+        result = edenapi.setbookmark(bookmark, to_node, from_node, pushvars)["data"]
+        if "Err" in result:
+            hint = gen_hint(
+                repo.ui,
+                edenapi,
+                bookmark,
+                curr_bookmark_val,
+                _("bookmark %s has changed since your last pull") % bookmark,
+            )
+            raise error.Abort(
+                _("server error: %s") % result["Err"]["message"],
+                hint=hint,
+            )
+
+        record_remote_bookmark(repo, bookmark, to_node)
+
+
+def _is_noop_plain_push(repo, from_node, to_node):
+    if from_node == to_node:
+        repo.ui.debug("noop plain push\n")
+        return True
+    else:
+        return False
 
 
 def push_rebase(repo, dest, head_node, stack_nodes, remote_bookmark, opargs=None):

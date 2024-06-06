@@ -112,9 +112,8 @@ The server side bookmark value can be stable due to data derivation, let's worka
   $ hgedenapi push -r . --to main --config push.use_local_bookmark_value=True
   pushing rev af09fbbc2f05 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark main
   moving remote bookmark main from af09fbbc2f05 to af09fbbc2f05
-tofix: skip updating bookmark if the `from` and `to` values are the same
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select count(*) from bookmarks_update_log";
-  8
+  7
 
 attempt a move to a completely unrelated commit (no common ancestor), with an ancestor that
 fails the hook
