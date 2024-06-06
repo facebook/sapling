@@ -19,7 +19,7 @@ import os
 import re
 import stat
 import sys
-from typing import Callable, List, Tuple, Union
+from typing import Callable, List, Optional, Tuple, Union
 
 import bindings
 
@@ -2285,7 +2285,7 @@ class overlayworkingctx(committablectx):
         if self.isdirty(path):
             if self._cache[path]["exists"]:
                 if self._cache[path]["data"] is not None:
-                    return self._cache[path]["data"]
+                    return filedata(self._cache[path]["data"])
                 else:
                     # Must fallback here, too, because we only set flags.
                     return self._wrappedctx[path].data()
@@ -2393,9 +2393,7 @@ class overlayworkingctx(committablectx):
     def write(self, path, data: filectx_or_bytes, flags=""):
         if data is None:
             raise error.ProgrammingError("data must be non-None")
-        self._markdirty(
-            path, exists=True, data=filedata(data), date=util.makedate(), flags=flags
-        )
+        self._markdirty(path, exists=True, data=data, date=util.makedate(), flags=flags)
 
     def setflags(self, path, l, x):
         self._markdirty(
@@ -2416,7 +2414,7 @@ class overlayworkingctx(committablectx):
             # If this path exists and is a symlink, "follow" it by calling
             # exists on the destination path.
             if self._cache[path]["exists"] and "l" in self._cache[path]["flags"]:
-                return self.exists(self._cache[path]["data"].strip())
+                return self.exists(filedata(self._cache[path]["data"]).strip())
             else:
                 return self._cache[path]["exists"]
 
@@ -2435,7 +2433,7 @@ class overlayworkingctx(committablectx):
     def size(self, path):
         if self.isdirty(path):
             if self._cache[path]["exists"]:
-                return len(self._cache[path]["data"])
+                return len(filedata(self._cache[path]["data"]))
             else:
                 raise error.ProgrammingError("No such file or directory: %s" % path)
         return self._wrappedctx[path].size()
@@ -2481,6 +2479,7 @@ class overlayworkingctx(committablectx):
                     self.data(path),
                     copied=self._cache[path]["copied"],
                     flags=self.flags(path),
+                    filenode=self._cache[path]["filenode"],
                 )
             else:
                 # Returning None, but including the path in `files`, is
@@ -2527,7 +2526,8 @@ class overlayworkingctx(committablectx):
             try:
                 underlying = self._wrappedctx[path]
                 if (
-                    underlying.data() == cache["data"]
+                    cache["data"] is not None
+                    and underlying.data() == filedata(cache["data"])
                     and underlying.flags() == cache["flags"]
                 ):
                     keys.append(path)
@@ -2539,13 +2539,26 @@ class overlayworkingctx(committablectx):
             del self._cache[path]
         return keys
 
-    def _markdirty(self, path, exists, data=None, date=None, flags="", copied=None):
+    def _markdirty(
+        self,
+        path,
+        exists,
+        data: Optional[filectx_or_bytes] = None,
+        date=None,
+        flags="",
+        copied=None,
+    ):
+        filenode = None
+        if isinstance(data, basefilectx):
+            filenode = data.filenode()
+
         self._cache[path] = {
             "exists": exists,
             "data": data,
             "date": date,
             "flags": flags,
             "copied": copied,
+            "filenode": filenode,
         }
 
     def filectx(self, path, filelog=None):
@@ -3024,6 +3037,7 @@ class memfilectx(committablefilectx):
         isexec=False,
         copied=None,
         flags=None,
+        filenode=None,
     ):
         """
         path is the normalized file path relative to repository root.
@@ -3035,6 +3049,7 @@ class memfilectx(committablefilectx):
         revision being committed, or None."""
         super(memfilectx, self).__init__(repo, path, None, changectx)
         self._data = data
+        self._filenode = filenode
         if flags is None:
             self._flags = (islink and "l" or "") + (isexec and "x" or "")
         else:
@@ -3059,6 +3074,9 @@ class memfilectx(committablefilectx):
     def write(self, data: filectx_or_bytes, flags):
         """wraps repo.wwrite"""
         self._data = filedata(data)
+
+    def filenode(self):
+        return self._filenode
 
 
 class overlayfilectx(committablefilectx):
