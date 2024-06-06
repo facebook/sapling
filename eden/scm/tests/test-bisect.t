@@ -1,5 +1,6 @@
-
 #require no-eden
+
+  $ setconfig experimental.bisect2=true
 
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 # Copyright (c) Mercurial Contributors.
@@ -256,47 +257,47 @@
 # bisect reverse test
 
   $ hg bisect -r
-  $ hg bisect -b null
+  $ hg bisect -b 'roots(all())'
   $ hg bisect -g tip
-  Testing changeset e7fa0811edb0 (32 changesets remaining, ~5 tests)
+  Testing changeset e7fa0811edb0 (31 changesets remaining, ~4 tests)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg bisect -g
-  Testing changeset 03750880c6b5 (16 changesets remaining, ~4 tests)
+  Testing changeset 03750880c6b5 (15 changesets remaining, ~3 tests)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 # skip
 
   $ hg bisect -s
-  Testing changeset a3d5c6fdf0d3 (16 changesets remaining, ~4 tests)
+  Testing changeset 453eb4dba229 (15 changesets remaining, ~3 tests)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg bisect -g
-  Testing changeset db07c04beaca (7 changesets remaining, ~2 tests)
+  Testing changeset 9b2ba8336a65 (8 changesets remaining, ~3 tests)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg bisect -g
-  Testing changeset b99c7b9c8e11 (3 changesets remaining, ~1 tests)
+  Testing changeset db07c04beaca (4 changesets remaining, ~2 tests)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg bisect -b
-  Testing changeset 5cd978ea5149 (2 changesets remaining, ~1 tests)
+  Testing changeset b53bea5e2fcb (2 changesets remaining, ~1 tests)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg bisect -g
   The first good revision is:
-  commit:      5cd978ea5149
+  commit:      b53bea5e2fcb
   user:        test
-  date:        Thu Jan 01 00:00:01 1970 +0000
-  summary:     msg 1
+  date:        Thu Jan 01 00:00:03 1970 +0000
+  summary:     msg 3
 
   $ hg bisect -r
   $ hg bisect -g tip
   $ hg bisect -b tip
-  abort: inconsistent state, 31:58c80a7c8a40 is good and bad
+  abort: inconsistent state, 58c80a7c8a40 is good and bad
   [255]
 
   $ hg bisect -r
-  $ hg bisect -g null
+  $ hg bisect -g 'roots(all())'
   $ hg bisect -bU tip
-  Testing changeset e7fa0811edb0 (32 changesets remaining, ~5 tests)
+  Testing changeset e7fa0811edb0 (31 changesets remaining, ~4 tests)
   $ hg id
-  5cd978ea5149
+  b53bea5e2fcb
 
 # Issue1228: hg bisect crashes when you skip the last rev in bisection
 # Issue1182: hg bisect exception
