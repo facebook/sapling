@@ -326,6 +326,7 @@ dott_test(
         "//eden/mononoke:mononoke",
         "//eden/mononoke/git/gitimport:gitimport",
         "//eden/mononoke/tools/admin:newadmin",
+        "//eden/mononoke/tools/testtool:testtool",
     ],
 )
 
