@@ -156,7 +156,7 @@ def _flattenresponse(response: Sized, sort: bool = False):
     optionalrepo=True,
 )
 def debugapi(ui, repo=None, **opts) -> None:
-    """send an EdenAPI request and print its output
+    """send an SaplingRemoteAPI request and print its output
 
     The endpoint name is the method name defined on the edenapi object.
 

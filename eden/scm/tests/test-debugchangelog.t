@@ -285,7 +285,7 @@ Revlog -> Lazy:
   $ cd $TESTTMP/revlogrepo
   $ setconfig paths.default=test:server1
 
-(Migration requires EdenAPI)
+(Migration requires SaplingRemoteAPI)
 
   $ hg debugchangelog --migrate lazy -v --config paths.default=$TESTTMP/a
   cannot migrate to lazy backend without edenapi
@@ -305,9 +305,9 @@ Revlog -> Lazy:
       IdMap
     Commit Data (user, message):
       Zstore (incomplete, draft)
-      EdenAPI (remaining, public)
+      SaplingRemoteAPI (remaining, public)
       Revlog (not used)
-  Commit Hashes: lazy, using EdenAPI
+  Commit Hashes: lazy, using SaplingRemoteAPI
 
   $ cp -R . ~/repo-lazy2
 
@@ -373,7 +373,7 @@ Lazy -> Lazy text
       IdMap
     Commit Data (user, message):
       Zstore (incomplete, draft)
-      EdenAPI (remaining, public)
+      SaplingRemoteAPI (remaining, public)
       Revlog (not used)
   Commit Hashes: not lazy
   $ hg log -Gr: -T '{desc}'

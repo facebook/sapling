@@ -44,7 +44,7 @@ Add drafts:
   > master   desc(B)
   > EOS
 
-Prepare another test case backed by a server repo that speaks EdenAPI
+Prepare another test case backed by a server repo that speaks SaplingRemoteAPI
 
   $ newremoterepo
   $ setconfig paths.default=test:e

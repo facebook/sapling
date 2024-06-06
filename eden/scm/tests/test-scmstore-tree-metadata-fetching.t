@@ -26,7 +26,7 @@ Sanity check that children metadata isn't fetched by default:
       },
       StoreTree {
           content: Some(
-              EdenApi(
+              SaplingRemoteApi(
                   TreeEntry {
                       key: Key {
                           path: RepoPathBuf(
@@ -60,7 +60,7 @@ Fetch a tree with children metadata:
       },
       StoreTree {
           content: Some(
-              EdenApi(
+              SaplingRemoteApi(
                   TreeEntry {
                       key: Key {
                           path: RepoPathBuf(
@@ -154,7 +154,7 @@ Fetch mode can also trigger tree metadata fetch:
       },
       StoreTree {
           content: Some(
-              EdenApi(
+              SaplingRemoteApi(
                   TreeEntry {
                       key: Key {
                           path: RepoPathBuf(
