@@ -25,10 +25,13 @@ use futures::stream;
 use futures::stream::BoxStream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
+use manifest::AsyncManifest;
+use manifest::Entry;
 use mononoke_types::hash::Blake2;
 use mononoke_types::hash::Blake3;
 use mononoke_types::hash::Sha1;
 use mononoke_types::impl_typed_hash;
+use mononoke_types::sharded_map_v2::LoadableShardedMapV2Node;
 use mononoke_types::sharded_map_v2::Rollup;
 use mononoke_types::sharded_map_v2::ShardedMapV2Node;
 use mononoke_types::sharded_map_v2::ShardedMapV2Value;
@@ -115,6 +118,18 @@ impl ShardedHgAugmentedManifest {
     ) -> BoxStream<'a, Result<(MPathElement, HgAugmentedManifestEntry)>> {
         self.subentries
             .into_entries(ctx, blobstore)
+            .and_then(|(k, v)| async move { anyhow::Ok((MPathElement::from_smallvec(k)?, v)) })
+            .boxed()
+    }
+
+    pub fn into_subentries_skip<'a>(
+        self,
+        ctx: &'a CoreContext,
+        blobstore: &'a impl Blobstore,
+        skip: usize,
+    ) -> BoxStream<'a, Result<(MPathElement, HgAugmentedManifestEntry)>> {
+        self.subentries
+            .into_entries_skip(ctx, blobstore, skip)
             .and_then(|(k, v)| async move { anyhow::Ok((MPathElement::from_smallvec(k)?, v)) })
             .boxed()
     }
@@ -631,6 +646,113 @@ impl Storable for HgAugmentedManifestEnvelope {
             .await
             .context("Failed to store augmented manifest")?;
         Ok(key)
+    }
+}
+
+fn convert_hg_augmented_manifest_entry(
+    entry: HgAugmentedManifestEntry,
+) -> Entry<HgAugmentedManifestId, HgAugmentedFileLeafNode> {
+    match entry {
+        HgAugmentedManifestEntry::FileNode(file) => Entry::Leaf(file),
+        HgAugmentedManifestEntry::DirectoryNode(directory) => {
+            Entry::Tree(HgAugmentedManifestId::new(directory.treenode))
+        }
+    }
+}
+
+#[async_trait]
+impl<Store: Blobstore> AsyncManifest<Store> for HgAugmentedManifestEnvelope {
+    type TreeId = HgAugmentedManifestId;
+
+    type LeafId = HgAugmentedFileLeafNode;
+
+    type TrieMapType = LoadableShardedMapV2Node<HgAugmentedManifestEntry>;
+
+    async fn list(
+        &self,
+        ctx: &CoreContext,
+        blobstore: &Store,
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>
+    {
+        anyhow::Ok(
+            self.augmented_manifest
+                .clone()
+                .into_subentries(ctx, blobstore)
+                .map_ok(|(path, entry)| (path, convert_hg_augmented_manifest_entry(entry)))
+                .boxed(),
+        )
+    }
+
+    async fn list_prefix(
+        &self,
+        ctx: &CoreContext,
+        blobstore: &Store,
+        prefix: &[u8],
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>
+    {
+        anyhow::Ok(
+            self.augmented_manifest
+                .clone()
+                .into_prefix_subentries(ctx, blobstore, prefix)
+                .map_ok(|(path, entry)| (path, convert_hg_augmented_manifest_entry(entry)))
+                .boxed(),
+        )
+    }
+
+    async fn list_prefix_after(
+        &self,
+        ctx: &CoreContext,
+        blobstore: &Store,
+        prefix: &[u8],
+        after: &[u8],
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>
+    {
+        anyhow::Ok(
+            self.augmented_manifest
+                .clone()
+                .into_prefix_subentries_after(ctx, blobstore, prefix, after)
+                .map_ok(|(path, entry)| (path, convert_hg_augmented_manifest_entry(entry)))
+                .boxed(),
+        )
+    }
+
+    async fn list_skip(
+        &self,
+        ctx: &CoreContext,
+        blobstore: &Store,
+        skip: usize,
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>
+    {
+        anyhow::Ok(
+            self.augmented_manifest
+                .clone()
+                .into_subentries_skip(ctx, blobstore, skip)
+                .map_ok(|(path, entry)| (path, convert_hg_augmented_manifest_entry(entry)))
+                .boxed(),
+        )
+    }
+
+    async fn lookup(
+        &self,
+        ctx: &CoreContext,
+        blobstore: &Store,
+        name: &MPathElement,
+    ) -> Result<Option<Entry<Self::TreeId, Self::LeafId>>> {
+        Ok(self
+            .augmented_manifest
+            .lookup(ctx, blobstore, name)
+            .await?
+            .map(convert_hg_augmented_manifest_entry))
+    }
+
+    async fn into_trie_map(
+        self,
+        _ctx: &CoreContext,
+        _blobstore: &Store,
+    ) -> Result<Self::TrieMapType> {
+        Ok(LoadableShardedMapV2Node::Inlined(
+            self.augmented_manifest.subentries,
+        ))
     }
 }
 
