@@ -219,11 +219,11 @@ fn minimize_file_change_set<I: IntoIterator<Item = (NonRootMPath, FileChange)>>(
     let (adds, removes): (Vec<_>, Vec<_>) = file_changes
         .into_iter()
         .partition(|(_, fc)| fc.is_changed());
-    let adds: HashMap<NonRootMPath, FileChange> = adds.into_iter().collect();
+    let mut adds: SortedVectorMap<NonRootMPath, FileChange> = adds.into_iter().collect();
 
     let prefix_path_was_added = |removed_path: NonRootMPath| {
         removed_path
-            .into_parent_dir_iter()
+            .into_non_root_ancestors()
             .any(|parent_dir| adds.contains_key(&parent_dir))
     };
 
@@ -231,7 +231,7 @@ fn minimize_file_change_set<I: IntoIterator<Item = (NonRootMPath, FileChange)>>(
         .into_iter()
         .filter(|(ref mpath, _)| !prefix_path_was_added(mpath.clone()));
     let mut result: SortedVectorMap<_, _> = filtered_removes.collect();
-    result.extend(adds);
+    result.append(&mut adds);
     result
 }
 

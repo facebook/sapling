@@ -413,12 +413,10 @@ impl MPath {
         context.finish()
     }
 
-    /// Get an iterator over the parent directories of this `MPath`
-    /// Note: it contains the `self` as the first element
-    pub fn into_parent_dir_iter(self) -> ParentDirIterator {
-        ParentDirIterator {
-            current: self.into_optional_non_root_path(),
-        }
+    /// Returns an iterator of the path and each of its ancestor directories, up
+    /// to and including the root.
+    pub fn into_ancestors(self) -> MPathAncestors {
+        MPathAncestors { next: Some(self) }
     }
 
     pub fn into_optional_non_root_path(self) -> Option<NonRootMPath> {
@@ -869,12 +867,10 @@ impl NonRootMPath {
         context.finish()
     }
 
-    /// Get an iterator over the parent directories of this `MPath`
-    /// Note: it contains the `self` as the first element
-    pub fn into_parent_dir_iter(self) -> ParentDirIterator {
-        ParentDirIterator {
-            current: Some(self),
-        }
+    /// Returns an iterator of the path and each of its ancestor directories, up
+    /// to but not includling the root.
+    pub fn into_non_root_ancestors(self) -> NonRootMPathAncestors {
+        NonRootMPathAncestors { next: Some(self) }
     }
 
     pub fn matches_regex(&self, re: &Regex) -> bool {
@@ -973,24 +969,35 @@ impl Arbitrary for NonRootMPath {
     }
 }
 
-/// Iterator over parent directories of a given `NonRootMPath`
-pub struct ParentDirIterator {
-    current: Option<NonRootMPath>,
+/// Iterator over the a path's ancestors.
+pub struct MPathAncestors {
+    next: Option<MPath>,
 }
 
-impl Iterator for ParentDirIterator {
+impl Iterator for MPathAncestors {
+    type Item = MPath;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let parent = self
+            .next
+            .as_ref()?
+            .split_dirname()
+            .map(|(parent, _)| parent);
+        std::mem::replace(&mut self.next, parent)
+    }
+}
+
+/// Iterator over the a path's non-root ancestors.
+pub struct NonRootMPathAncestors {
+    next: Option<NonRootMPath>,
+}
+
+impl Iterator for NonRootMPathAncestors {
     type Item = NonRootMPath;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let maybe_current = self.current.take();
-        match maybe_current {
-            None => None,
-            Some(current) => {
-                let (maybe_dirname, _) = current.split_dirname();
-                self.current = maybe_dirname;
-                Some(current)
-            }
-        }
+        let parent = self.next.as_ref()?.split_dirname().0;
+        std::mem::replace(&mut self.next, parent)
     }
 }
 
@@ -1548,19 +1555,43 @@ mod test {
     }
 
     #[test]
-    fn parent_dir_iterator() {
+    fn ancestors() {
+        fn path(p: &str) -> MPath {
+            MPath::new(p).unwrap()
+        }
+
+        fn collect_ancestors(p: &str) -> Vec<MPath> {
+            path(p).into_ancestors().collect()
+        }
+
+        assert_eq!(collect_ancestors("a"), vec![path("a"), MPath::ROOT]);
+        assert_eq!(
+            collect_ancestors("a/b"),
+            vec![path("a/b"), path("a"), MPath::ROOT]
+        );
+        assert_eq!(
+            collect_ancestors("a/b/c"),
+            vec![path("a/b/c"), path("a/b"), path("a"), MPath::ROOT]
+        );
+    }
+
+    #[test]
+    fn non_root_ancestors() {
         fn path(p: &str) -> NonRootMPath {
             NonRootMPath::new(p).unwrap()
         }
 
-        fn parent_vec(p: &str) -> Vec<NonRootMPath> {
-            path(p).into_parent_dir_iter().collect()
+        fn collect_non_root_ancestors(p: &str) -> Vec<NonRootMPath> {
+            path(p).into_non_root_ancestors().collect()
         }
 
-        assert_eq!(parent_vec("a"), vec![path("a")]);
-        assert_eq!(parent_vec("a/b"), vec![path("a/b"), path("a")]);
+        assert_eq!(collect_non_root_ancestors("a"), vec![path("a")]);
         assert_eq!(
-            parent_vec("a/b/c"),
+            collect_non_root_ancestors("a/b"),
+            vec![path("a/b"), path("a")]
+        );
+        assert_eq!(
+            collect_non_root_ancestors("a/b/c"),
             vec![path("a/b/c"), path("a/b"), path("a")]
         );
     }
