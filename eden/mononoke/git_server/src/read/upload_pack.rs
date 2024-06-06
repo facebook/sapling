@@ -164,7 +164,7 @@ async fn git_commits(
 ) -> Result<impl Iterator<Item = ObjectId>, Error> {
     bonsai_git_mappings_by_bonsai(&context.ctx, &context.repo, bonsais)
         .await
-        .map(|entries| entries.into_iter().map(|(_, oid)| oid))
+        .map(|entries| entries.into_values())
         .with_context(|| {
             format!(
                 "Failed to fetch bonsai_git_mapping for repo {}",
