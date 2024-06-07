@@ -86,6 +86,10 @@ impl CoreMemIdMap {
         Ok(result)
     }
 
+    pub fn lookup_range(&self, low: Id, high: Id) -> impl Iterator<Item = (&Id, &VertexName)> {
+        self.id2name.range(low..=high)
+    }
+
     pub fn has_vertex_name(&self, name: &VertexName) -> bool {
         self.name2id.contains_key(name)
     }

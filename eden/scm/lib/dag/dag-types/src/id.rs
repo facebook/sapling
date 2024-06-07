@@ -270,6 +270,22 @@ impl ops::Sub<u64> for Id {
     }
 }
 
+impl ops::Add<u8> for Group {
+    type Output = Group;
+
+    fn add(self, other: u8) -> Self {
+        Self(self.0 + other as usize)
+    }
+}
+
+impl ops::Sub<u8> for Group {
+    type Output = Group;
+
+    fn sub(self, other: u8) -> Self {
+        Self(self.0 - other as usize)
+    }
+}
+
 // Consider replacing this with iter::Step once it's stable.
 pub struct IdIter {
     current: Id,

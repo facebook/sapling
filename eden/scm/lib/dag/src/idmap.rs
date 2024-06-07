@@ -430,36 +430,54 @@ mod tests {
         map.insert(Id(15), b"jkl2").unwrap_err(); // reassign jkl2 to master group - error.
         map.insert(id + 3, b"abc").unwrap_err(); // reassign abc to non-master group - error.
 
+        // The 3rd group.
+        map.insert(vid(0), b"xy").unwrap();
+        map.insert(vid(0), b"xy").unwrap();
+
+        map.insert(vid(0), b"xyz").unwrap_err();
+        map.insert(vid(1), b"xy").unwrap_err();
+        map.insert(nid(1), b"xy").unwrap_err();
+
+        map.insert(vid(1), b"xyz").unwrap();
+        map.insert(vid(2), b"jkl3").unwrap();
+
         // Test hex lookup.
         assert_eq!(0x6a, b'j');
         assert_eq!(
             r(map.vertexes_by_hex_prefix(b"6a", 3)).unwrap(),
             [
+                VertexName::from(&b"jkl3"[..]),
                 VertexName::from(&b"jkl"[..]),
-                VertexName::from(&b"jkl2"[..])
+                VertexName::from(&b"jkl2"[..]),
             ]
         );
         assert_eq!(
             r(map.vertexes_by_hex_prefix(b"6a", 1)).unwrap(),
-            [VertexName::from(&b"jkl"[..])]
+            [VertexName::from(&b"jkl3"[..])]
         );
         assert!(r(map.vertexes_by_hex_prefix(b"6b", 1)).unwrap().is_empty());
+
+        assert_eq!(0x78, b'x');
+        assert_eq!(
+            r(map.vertexes_by_hex_prefix(b"78", 3)).unwrap(),
+            [VertexName::from(&b"xy"[..]), VertexName::from(&b"xyz"[..])]
+        );
 
         for _ in 0..=1 {
             assert_eq!(map.find_name_by_id(Id(1)).unwrap().unwrap(), b"abc");
             assert_eq!(map.find_name_by_id(Id(2)).unwrap().unwrap(), b"def");
             assert!(map.find_name_by_id(Id(3)).unwrap().is_none());
             assert_eq!(map.find_name_by_id(Id(10)).unwrap().unwrap(), b"ghi");
+            assert_eq!(map.find_name_by_id(vid(1)).unwrap().unwrap(), b"xyz");
 
             assert_eq!(map.find_id_by_name(b"abc").unwrap().unwrap().0, 1);
             assert_eq!(map.find_id_by_name(b"def").unwrap().unwrap().0, 2);
             assert_eq!(map.find_id_by_name(b"ghi").unwrap().unwrap().0, 10);
             assert_eq!(map.find_id_by_name(b"jkl").unwrap().unwrap(), id);
-            assert_eq!(
-                format!("{:?}", map.find_id_by_name(b"jkl2").unwrap().unwrap()),
-                "N1"
-            );
-            assert!(map.find_id_by_name(b"jkl3").unwrap().is_none());
+            assert_eq!(map.find_id_by_name(b"jkl2").unwrap().unwrap(), nid(1));
+            assert_eq!(map.find_id_by_name(b"jkl3").unwrap().unwrap(), vid(2));
+
+            assert!(map.find_id_by_name(b"jkl4").unwrap().is_none());
         }
 
         // Test Debug
@@ -471,6 +489,9 @@ mod tests {
   ghi: 10,
   jkl: N0,
   jkl2: N1,
+  xy: V0,
+  xyz: V1,
+  jkl3: V2,
 }
 "#
         );
@@ -509,6 +530,9 @@ mod tests {
             (nid(5), b"n5"),
             (nid(12), b"n12"),
             (nid(20), b"n20"),
+            (vid(0), b"v0"),
+            (vid(1), b"v1"),
+            (vid(10), b"v10"),
         ];
         for (id, name) in items {
             r(map.insert(*id, name)).unwrap();
@@ -566,9 +590,24 @@ mod tests {
         let removed = r(map.remove_range(nid(20), nid(10000))).unwrap();
         assert_eq!(f(removed), "[n20]");
         assert_eq!(deleted(&map), "[1, 2, 3, 9, 11, N2, N3, N4, N20]");
+
+        let removed = r(map.remove_range(vid(0), vid(1))).unwrap();
+        assert_eq!(f(removed), "[v0, v1]");
+        assert_eq!(deleted(&map), "[1, 2, 3, 9, 11, N2, N3, N4, N20, V0, V1]");
+
+        let removed = r(map.remove_range(vid(0), vid(10000))).unwrap();
+        assert_eq!(f(removed), "[v10]");
+        assert_eq!(
+            deleted(&map),
+            "[1, 2, 3, 9, 11, N2, N3, N4, N20, V0, V1, V10]"
+        );
     }
 
     fn nid(i: u64) -> Id {
         Group::NON_MASTER.min_id() + i
+    }
+
+    fn vid(i: u64) -> Id {
+        Group::VIRTUAL.min_id() + i
     }
 }

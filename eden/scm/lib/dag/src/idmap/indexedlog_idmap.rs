@@ -8,7 +8,6 @@
 use std::fmt;
 use std::fs;
 use std::fs::File;
-use std::io::Read;
 use std::path::Path;
 use std::path::PathBuf;
 
@@ -19,6 +18,7 @@ use indexedlog::log;
 use vlqencoding::VLQDecode;
 use vlqencoding::VLQEncode;
 
+use super::mem_idmap::CoreMemIdMap;
 use super::IdMapWrite;
 use crate::errors::bug;
 use crate::errors::programming;
@@ -41,6 +41,8 @@ pub struct IdMap {
     path: PathBuf,
     map_id: String,
     map_version: VerLink,
+    // Extra state for ids in the VIRTUAL group. Never write to disk.
+    virtual_map: CoreMemIdMap,
 }
 
 impl IdMap {
@@ -86,6 +88,7 @@ impl TryClone for IdMap {
             path: self.path.clone(),
             map_id: self.map_id.clone(),
             map_version: self.map_version.clone(),
+            virtual_map: self.virtual_map.clone(),
         };
         Ok(result)
     }
@@ -101,6 +104,7 @@ impl IdMap {
             path,
             map_id,
             map_version,
+            virtual_map: Default::default(),
         })
     }
 
@@ -167,6 +171,9 @@ impl IdMap {
 
     /// Find name by a specified integer id.
     pub fn find_name_by_id(&self, id: Id) -> Result<Option<&[u8]>> {
+        if id.is_virtual() {
+            return Ok(self.virtual_map.lookup_vertex_name(id).map(|v| v.as_ref()));
+        }
         let key = id.0.to_be_bytes();
         let key = self.log.lookup(Self::INDEX_ID_TO_NAME, key)?.nth(0);
         match key {
@@ -183,6 +190,9 @@ impl IdMap {
 
     /// Find VertexName by a specified integer id.
     pub fn find_vertex_name_by_id(&self, id: Id) -> Result<Option<VertexName>> {
+        if id.is_virtual() {
+            return Ok(self.virtual_map.lookup_vertex_name(id).cloned());
+        }
         self.find_name_by_id(id)
             .map(|v| v.map(|n| VertexName(self.log.slice_to_bytes(n))))
     }
@@ -190,23 +200,32 @@ impl IdMap {
     /// Find the integer id matching the given name.
     pub fn find_id_by_name(&self, name: &[u8]) -> Result<Option<Id>> {
         for group in Group::ALL.iter() {
-            let mut group_name = Vec::with_capacity(Group::BYTES + name.len());
-            group_name.extend_from_slice(&group.bytes());
-            group_name.extend_from_slice(name);
-            let key = self
-                .log
-                .lookup(Self::INDEX_GROUP_NAME_TO_ID, group_name)?
-                .nth(0);
-            match key {
-                Some(Ok(mut entry)) => {
-                    if entry.len() < 8 {
-                        return bug("index key should have 8 bytes at least");
-                    }
-                    let id = Id(entry.read_u64::<BigEndian>().unwrap());
-                    return Ok(Some(id));
+            if *group == Group::VIRTUAL {
+                if let Some(found_id) = self
+                    .virtual_map
+                    .lookup_vertex_id(&VertexName::copy_from(name))
+                {
+                    return Ok(Some(found_id));
                 }
-                None => {}
-                Some(Err(err)) => return Err(err.into()),
+            } else {
+                let mut group_name = Vec::with_capacity(Group::BYTES + name.len());
+                group_name.extend_from_slice(&group.bytes());
+                group_name.extend_from_slice(name);
+                let key = self
+                    .log
+                    .lookup(Self::INDEX_GROUP_NAME_TO_ID, group_name)?
+                    .nth(0);
+                match key {
+                    Some(Ok(mut entry)) => {
+                        if entry.len() < 8 {
+                            return bug("index key should have 8 bytes at least");
+                        }
+                        let id = Id(entry.read_u64::<BigEndian>().unwrap());
+                        return Ok(Some(id));
+                    }
+                    None => {}
+                    Some(Err(err)) => return Err(err.into()),
+                }
             }
         }
         Ok(None)
@@ -259,6 +278,13 @@ impl IdMap {
             }
         }
 
+        if id.is_virtual() {
+            self.virtual_map
+                .insert_vertex_id_name(id, VertexName::copy_from(name));
+            self.map_version.bump();
+            return Ok(());
+        }
+
         let mut data = Vec::with_capacity(8 + Group::BYTES + name.len());
         data.extend_from_slice(&id.0.to_be_bytes());
         data.extend_from_slice(&id.group().bytes());
@@ -275,46 +301,58 @@ impl IdMap {
 
     /// Find all (id, name) pairs in the `low..=high` range.
     fn find_range(&self, low: Id, high: Id) -> Result<Vec<(Id, &[u8])>> {
-        let low = low.0.to_be_bytes();
-        let high = high.0.to_be_bytes();
-        let range = &low[..]..=&high[..];
+        let low_bytes = low.0.to_be_bytes();
+        let high_bytes = high.0.to_be_bytes();
+        let range = &low_bytes[..]..=&high_bytes[..];
         let mut items = Vec::new();
-        for entry in self.log.lookup_range(Self::INDEX_ID_TO_NAME, range)? {
-            let (key, values) = entry?;
-            let key: [u8; 8] = match key.as_ref().try_into() {
-                Ok(key) => key,
-                Err(_) => {
-                    return bug("find_range got non-u64 keys in INDEX_ID_TO_NAME");
+        if !low.is_virtual() {
+            for entry in self.log.lookup_range(Self::INDEX_ID_TO_NAME, range)? {
+                let (key, values) = entry?;
+                let key: [u8; 8] = match key.as_ref().try_into() {
+                    Ok(key) => key,
+                    Err(_) => {
+                        return bug("find_range got non-u64 keys in INDEX_ID_TO_NAME");
+                    }
+                };
+                let id = Id(u64::from_be_bytes(key));
+                for value in values {
+                    let value = value?;
+                    if value.len() < 8 {
+                        return bug(format!(
+                            "find_range got entry {:?} shorter than expected",
+                            &value
+                        ));
+                    }
+                    let name: &[u8] = &value[9..];
+                    items.push((id, name));
                 }
-            };
-            let id = Id(u64::from_be_bytes(key));
-            for value in values {
-                let value = value?;
-                if value.len() < 8 {
-                    return bug(format!(
-                        "find_range got entry {:?} shorter than expected",
-                        &value
-                    ));
-                }
-                let name: &[u8] = &value[9..];
-                items.push((id, name));
+            }
+        }
+        if high.is_virtual() {
+            for (id, name) in self.virtual_map.lookup_range(low, high) {
+                items.push((*id, name.as_ref()))
             }
         }
         Ok(items)
     }
 
     fn remove_range(&mut self, low: Id, high: Id) -> Result<Vec<VertexName>> {
-        // Step 1: Find (id, name) pairs in the range.
-        let items = self.find_range(low, high)?;
-        let names = items
-            .iter()
-            .map(|(_, bytes)| VertexName::copy_from(bytes))
-            .collect();
-        // Step 2: Write a "delete" entry to delete those indexes.
-        // The indexedlog index function (defined by log_open_options())
-        // will handle it.
-        let data = encode_deletion_entry(&items);
-        self.log.append(data)?;
+        let mut names = Vec::new();
+        if !low.is_virtual() {
+            // Step 1: Find (id, name) pairs in the range except for virtual items.
+            debug_assert!(Group::ALL.contains(&(Group::VIRTUAL - 1)));
+            let items = self.find_range(low, (Group::VIRTUAL - 1).max_id().min(high))?;
+            names.extend(items.iter().map(|(_, bytes)| VertexName::copy_from(bytes)));
+            // Step 2: Write a "delete" entry to delete those indexes.
+            // The indexedlog index function (defined by log_open_options())
+            // will handle it.
+            let data = encode_deletion_entry(&items);
+            self.log.append(data)?;
+        }
+        // Step 3: Remove entries in the virutal_map.
+        if high.is_virtual() {
+            names.extend(self.virtual_map.remove_range(low, high)?);
+        }
         // New map is not an "append-only" version of the previous map.
         // Re-create the VerLink to mark it as incompatible.
         self.map_version = VerLink::new();
@@ -325,21 +363,28 @@ impl IdMap {
     fn find_names_by_hex_prefix(&self, hex_prefix: &[u8], limit: usize) -> Result<Vec<VertexName>> {
         let mut result = Vec::with_capacity(limit);
         for group in Group::ALL.iter().rev() {
-            let mut prefix = Vec::with_capacity(Group::BYTES * 2 + hex_prefix.len());
-            prefix.extend_from_slice(&group.hex_bytes());
-            prefix.extend_from_slice(hex_prefix);
-            for entry in self
-                .log
-                .lookup_prefix_hex(Self::INDEX_GROUP_NAME_TO_ID, prefix)?
-            {
-                let (k, _v) = entry?;
-                let vertex = VertexName(self.log.slice_to_bytes(&k[Group::BYTES..]));
-                if !result.contains(&vertex) {
-                    result.push(vertex);
+            if *group == Group::VIRTUAL {
+                result.extend(self.virtual_map.lookup_vertexes_by_hex_prefix(
+                    hex_prefix,
+                    limit.saturating_sub(result.len()),
+                )?);
+            } else {
+                let mut prefix = Vec::with_capacity(Group::BYTES * 2 + hex_prefix.len());
+                prefix.extend_from_slice(&group.hex_bytes());
+                prefix.extend_from_slice(hex_prefix);
+                for entry in self
+                    .log
+                    .lookup_prefix_hex(Self::INDEX_GROUP_NAME_TO_ID, prefix)?
+                {
+                    let (k, _v) = entry?;
+                    let vertex = VertexName(self.log.slice_to_bytes(&k[Group::BYTES..]));
+                    if !result.contains(&vertex) {
+                        result.push(vertex);
+                    }
                 }
-                if result.len() >= limit {
-                    return Ok(result);
-                }
+            }
+            if result.len() >= limit {
+                break;
             }
         }
         Ok(result)
@@ -387,20 +432,14 @@ fn decode_deletion_entry(data: &[u8]) -> Result<Vec<(Id, &[u8])>> {
 impl fmt::Debug for IdMap {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "IdMap {{\n")?;
-        for data in self.log.iter() {
-            if let Ok(mut data) = data {
-                let id = data.read_u64::<BigEndian>().unwrap();
-                let _group = data.read_u8().unwrap();
-                let mut name = Vec::with_capacity(20);
-                data.read_to_end(&mut name).unwrap();
-                let name = if name.len() >= 20 {
-                    VertexName::from(name).to_hex()
-                } else {
-                    String::from_utf8_lossy(&name).to_string()
-                };
-                let id = Id(id);
-                write!(f, "  {}: {},\n", name, id)?;
-            }
+        let vec = self.find_range(Id::MIN, Id::MAX).map_err(|_| fmt::Error)?;
+        for (id, name) in vec {
+            let name = if name.len() >= 20 {
+                VertexName::copy_from(name).to_hex()
+            } else {
+                String::from_utf8_lossy(&name).to_string()
+            };
+            write!(f, "  {}: {},\n", name, id)?;
         }
         write!(f, "}}\n")?;
         Ok(())
