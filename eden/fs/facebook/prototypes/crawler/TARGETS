@@ -8,7 +8,6 @@ rust_binary(
     srcs = glob(["src/**/*.rs"]),
     named_deps = {
         "edenfs": "//eden/fs/service:thrift-rust",
-        # "edenfs_clients": "//eden/fs/service:thrift-rust-clients",
     },
     deps = [
         "fbsource//third-party/rust:anyhow",
@@ -18,8 +17,7 @@ rust_binary(
         "//buck2/app/buck2_eden:buck2_eden",
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/fbinit:fbinit-tokio",
-        # "//common/rust/shed/fbthrift_ext:socket",
+        "//eden/fs/cli_rs/edenfs-utils:edenfs-utils",
         "//remote_execution/client_lib/wrappers/rust:re_client_lib",
-        # "//thrift/lib/rust:fbthrift",
     ],
 )
