@@ -123,7 +123,7 @@ pub fn server_namedag(
 fn head_with_options(head: &ChangesetId) -> (VertexName, VertexOptions) {
     let mut options = VertexOptions::default();
     options.reserve_size = 1 << 26;
-    options.highest_group = Group::MASTER;
+    options.desired_group = Group::MASTER;
     (vertex_name_from_cs_id(head), options)
 }
 

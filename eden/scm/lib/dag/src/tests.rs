@@ -769,7 +769,7 @@ fn test_namedag_reassign_master() -> crate::Result<()> {
 
     // Second flush, making B master without adding new vertexes.
     let heads =
-        VertexListWithOptions::from(vec![VertexName::from("B")]).with_highest_group(Group::MASTER);
+        VertexListWithOptions::from(vec![VertexName::from("B")]).with_desired_group(Group::MASTER);
     r(dag.flush(&heads)).unwrap();
     assert_eq!(format!("{:?}", r(dag.vertex_id("A".into()))?), "0");
     assert_eq!(format!("{:?}", r(dag.vertex_id("B".into()))?), "1");

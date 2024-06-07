@@ -50,7 +50,7 @@ pub fn main() {
         let tmp = tempdir().unwrap();
         let mut dag = Dag::open(tmp.path()).unwrap();
         let heads =
-            VertexListWithOptions::from(vec![tip.clone()]).with_highest_group(Group::MASTER);
+            VertexListWithOptions::from(vec![tip.clone()]).with_desired_group(Group::MASTER);
         elapsed(|| {
             nbr(dag.import_pull_data(clone_data.clone(), &heads)).unwrap();
             assert_graph_size(&dag);

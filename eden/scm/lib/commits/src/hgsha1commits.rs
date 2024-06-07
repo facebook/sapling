@@ -117,7 +117,7 @@ impl AppendCommits for HgCommits {
 
     async fn flush(&mut self, master_heads: &[Vertex]) -> Result<()> {
         self.flush_commit_data().await?;
-        let heads = VertexListWithOptions::from(master_heads).with_highest_group(Group::MASTER);
+        let heads = VertexListWithOptions::from(master_heads).with_desired_group(Group::MASTER);
         self.dag.flush(&heads).await?;
         Ok(())
     }

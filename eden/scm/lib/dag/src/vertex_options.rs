@@ -35,14 +35,21 @@ pub struct VertexOptions {
     #[serde(default = "Default::default")]
     pub reserve_size: u32,
 
-    /// The highest [`Group`] for this vertex. If set to `NON_MASTER` then
-    /// this vertex could end up in `MASTER` or `NON_MASTER`. If set to
-    /// `MASTER` then this vertex will end up in `MASTER` group.
-    #[serde(default = "default_highest_group")]
-    pub highest_group: Group,
+    /// The desired [`Group`] for this vertex. Note a vertex's group can be
+    /// moved down (ex. `NON_MASTER` to `MASTER`) but not moved up
+    /// (ex. `MASTER` to `NON_MASTER`).
+    /// - If the vertex does not exist, it will be inserted into the
+    ///   `desired_group`.
+    /// - If the vertex is already in a lower group than `desired_group`,
+    ///   the vertex will stay in that lower group unchanged.
+    /// - If the vertex is in a higher group than `desired_group`,
+    ///   the implementation (ex. `add_heads_and_flush`) might move the vertex
+    ///   (and its ancestors) to a lower group, or error out.
+    #[serde(default = "default_desired_group")]
+    pub desired_group: Group,
 }
 
-const fn default_highest_group() -> Group {
+const fn default_desired_group() -> Group {
     Group::NON_MASTER
 }
 
@@ -50,7 +57,7 @@ impl Default for VertexOptions {
     fn default() -> Self {
         Self {
             reserve_size: 0,
-            highest_group: default_highest_group(),
+            desired_group: default_desired_group(),
         }
     }
 }
@@ -96,12 +103,12 @@ impl VertexListWithOptions {
         self.list.iter().map(|i| i.0.clone()).collect()
     }
 
-    /// Get the vertexes, filter by the `highest_group` option.
+    /// Get the vertexes, filter by the `desired_group` option.
     pub fn vertexes_by_group(&self, group: Group) -> Vec<VertexName> {
         self.list
             .iter()
             .filter_map(|(v, o)| {
-                if o.highest_group == group {
+                if o.desired_group == group {
                     Some(v.clone())
                 } else {
                     None
@@ -120,10 +127,10 @@ impl VertexListWithOptions {
         self.list.push(head_opts);
     }
 
-    /// Set the `highest_group` option for all vertexes.
-    pub fn with_highest_group(mut self, group: Group) -> Self {
+    /// Set the `desired_group` option for all vertexes.
+    pub fn with_desired_group(mut self, group: Group) -> Self {
         for (_v, opts) in self.list.iter_mut() {
-            opts.highest_group = group;
+            opts.desired_group = group;
         }
         self
     }

@@ -423,18 +423,18 @@ where
         self.populate_missing_vertexes_for_add_heads(parents, &heads.vertexes())
             .await?;
 
-        // heads might require highest_group = MASTER. That might trigger
+        // heads might require desired_group = MASTER. That might trigger
         // id re-assigning if the NON_MASTER group is not empty. For simplicity,
         // we don't want to deal with id reassignment here.
         //
         // Practically, there are 2 use-cases:
-        // - Server wants highest_group = MASTER and it does not use NON_MASTER.
-        // - Client only needs highest_group = NON_MASTER (default) here.
+        // - Server wants desired_group = MASTER and it does not use NON_MASTER.
+        // - Client only needs desired_group = NON_MASTER (default) here.
         //
         // Support both cases. That is:
-        // - If highest_group = MASTER is specified, then NON_MASTER group
+        // - If desired_group = MASTER is specified, then NON_MASTER group
         //   must be empty to ensure no id reassignment (checked below).
-        // - If highest_group = MASTER is not used, then it's okay whatever.
+        // - If desired_group = MASTER is not used, then it's okay whatever.
         let master_heads = heads.vertexes_by_group(Group::MASTER);
         if !master_heads.is_empty() {
             let all = self.dag.all()?;
@@ -444,9 +444,9 @@ where
             };
             if has_non_master {
                 return programming(concat!(
-                    "add_heads() called with highest_group = MASTER but NON_MASTER group is not empty. ",
+                    "add_heads() called with desired_group = MASTER but NON_MASTER group is not empty. ",
                     "To avoid id reassignment this is not supported. ",
-                    "Pass highest_group = NON_MASTER, and call flush() (common on client use-case), ",
+                    "Pass desired_group = NON_MASTER, and call flush() (common on client use-case), ",
                     "or avoid inserting to NON_MASTER group (common on server use-case).",
                 ));
             }
@@ -469,14 +469,14 @@ where
         let mut reserved = calculate_initial_reserved(self, &covered, heads).await?;
         for (head, opts) in heads.vertex_options() {
             let need_assigning = match self
-                .vertex_id_with_max_group(&head, opts.highest_group)
+                .vertex_id_with_max_group(&head, opts.desired_group)
                 .await?
             {
                 Some(id) => !self.dag.contains_id(id)?,
                 None => true,
             };
             if need_assigning {
-                let group = opts.highest_group;
+                let group = opts.desired_group;
                 let prepared_segments = self
                     .assign_head(head.clone(), parents, group, &mut covered, &reserved)
                     .await?;
@@ -2414,7 +2414,7 @@ where
             let mut reserved = calculate_initial_reserved(self, &covered, heads).await?;
             for group in [Group::MASTER, Group::NON_MASTER] {
                 for (vertex, opts) in heads.vertex_options() {
-                    if opts.highest_group != group {
+                    if opts.desired_group != group {
                         continue;
                     }
                     // Important: do not call self.map.assign_head. It does not trigger
@@ -2504,7 +2504,7 @@ async fn calculate_initial_reserved(
             continue;
         }
         if let Some(id) = map
-            .vertex_id_with_max_group(&vertex, opts.highest_group)
+            .vertex_id_with_max_group(&vertex, opts.desired_group)
             .await?
         {
             update_reserved(&mut reserved, covered, id + 1, opts.reserve_size);

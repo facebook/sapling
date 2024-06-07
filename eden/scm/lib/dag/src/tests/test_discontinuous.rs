@@ -199,7 +199,7 @@ fn reserved_head(s: &'static str, reserve_size: u32) -> (Vertex, VertexOptions) 
         Vertex::from(s),
         VertexOptions {
             reserve_size,
-            highest_group: Group::MASTER,
+            desired_group: Group::MASTER,
             ..Default::default()
         },
     )

@@ -76,7 +76,7 @@ pub fn clone(
     } else {
         // All lazy heads should be in the MASTER group.
         let head_opts =
-            VertexListWithOptions::from(head_vertexes).with_highest_group(Group::MASTER);
+            VertexListWithOptions::from(head_vertexes).with_desired_group(Group::MASTER);
         block_on(commits.import_pull_data(clone_data, &head_opts))??;
     }
 
@@ -126,7 +126,7 @@ pub fn fast_pull(
     let segment_count = pull_data.flat_segments.segment_count();
     block_on(commits.import_pull_data(
         pull_data,
-        &VertexListWithOptions::from(missing_vertexes).with_highest_group(Group::MASTER),
+        &VertexListWithOptions::from(missing_vertexes).with_desired_group(Group::MASTER),
     ))??;
     Ok((commit_count, segment_count as u64))
 }

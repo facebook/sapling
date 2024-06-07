@@ -198,7 +198,7 @@ fn sync_from_git(
     let parents: Box<dyn Fn(Vertex) -> dag::Result<Vec<Vertex>> + Send + Sync> =
         Box::new(parent_func);
     let heads = VertexListWithOptions::from(master_heads.clone())
-        .with_highest_group(Group::MASTER)
+        .with_desired_group(Group::MASTER)
         .chain(non_master_heads.clone());
     non_blocking_result(dag.add_heads_and_flush(&parents, &heads))?;
 

@@ -309,7 +309,7 @@ impl AppendCommits for GitSegmentedCommits {
     }
 
     async fn flush(&mut self, master_heads: &[Vertex]) -> Result<()> {
-        let heads = VertexListWithOptions::from(master_heads).with_highest_group(Group::MASTER);
+        let heads = VertexListWithOptions::from(master_heads).with_desired_group(Group::MASTER);
         self.dag.flush(&heads).await?;
         Ok(())
     }

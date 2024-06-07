@@ -100,7 +100,7 @@ impl<T: AsRef<[usize]> + Send + Sync + Clone + 'static> GeneralTestContext<T> {
         let parents_map: Box<dyn Fn(VertexName) -> dag::Result<Vec<VertexName>> + Send + Sync> =
             Box::new(parents_by_name);
         let heads = VertexListWithOptions::from(master_names)
-            .with_highest_group(Group::MASTER)
+            .with_desired_group(Group::MASTER)
             .chain(head_names);
         non_blocking_result(dag.add_heads_and_flush(&parents_map, &heads)).unwrap();
 

@@ -279,7 +279,7 @@ fn bench_many_heads_namedag() {
     let master_heads: Vec<VertexName> =
         vec![VertexName::copy_from(format!("{}", M - 1).as_bytes())];
     let heads = VertexListWithOptions::from(master_heads)
-        .with_highest_group(Group::MASTER)
+        .with_desired_group(Group::MASTER)
         .chain(non_master_heads);
     let dag_dir = tempdir().unwrap();
     let mut dag = NameDag::open(dag_dir.path()).unwrap();

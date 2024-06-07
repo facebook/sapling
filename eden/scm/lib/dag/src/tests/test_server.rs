@@ -41,7 +41,7 @@ async fn test_idmap_more_entries_than_iddag() {
                  E"#,
     );
     let heads = VertexListWithOptions::from(&["G".into(), "K".into()][..])
-        .with_highest_group(Group::MASTER);
+        .with_desired_group(Group::MASTER);
     dag.dag.add_heads(&draw, &heads).await.unwrap();
 
     // C, D, E, H, I are inserted to the IdDag respecting their IdMap values.
@@ -65,7 +65,7 @@ async fn test_idmap_more_entries_conflict_with_assign_head() {
     IdMapWrite::insert(map, Id(2), b"C").await.unwrap();
 
     let draw = DrawDag::from("B--D");
-    let heads = VertexListWithOptions::from(&["D".into()][..]).with_highest_group(Group::MASTER);
+    let heads = VertexListWithOptions::from(&["D".into()][..]).with_desired_group(Group::MASTER);
     dag.dag.add_heads(&draw, &heads).await.unwrap();
 
     // D takes id 3, skips the taken id 2.

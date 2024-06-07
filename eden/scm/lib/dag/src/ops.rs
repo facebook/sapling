@@ -407,7 +407,7 @@ pub trait DagPersistent {
             .try_collect::<Vec<_>>()
             .await?;
         let heads = VertexListWithOptions::from(master_heads)
-            .with_highest_group(Group::MASTER)
+            .with_desired_group(Group::MASTER)
             .chain(non_master_heads);
         self.add_heads_and_flush(&dag.dag_snapshot()?, &heads).await
     }

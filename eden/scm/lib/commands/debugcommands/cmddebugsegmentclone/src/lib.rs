@@ -97,7 +97,7 @@ pub fn run(ctx: ReqCtx<StatusOpts>) -> Result<u8> {
             .context("error importing segmented changelog")?;
 
         let heads =
-            VertexListWithOptions::from(vec![master.clone()]).with_highest_group(Group::MASTER);
+            VertexListWithOptions::from(vec![master.clone()]).with_desired_group(Group::MASTER);
         block_on(namedag.flush(&heads)).context("error writing segmented changelog to disk")?;
 
         let mut remotenames_path = dot_path.clone();

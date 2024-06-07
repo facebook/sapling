@@ -179,7 +179,7 @@ async fn test_add_heads() {
 
     let mut client = server.client_cloned_data().await;
     let heads = VertexListWithOptions::from(&["K".into()][..])
-        .with_highest_group(Group::MASTER)
+        .with_desired_group(Group::MASTER)
         .chain(&["G".into()][..]);
     client
         .dag
@@ -204,7 +204,7 @@ async fn test_basic_pull() {
     let missing = server.dag.only("D".into(), "B".into()).await.unwrap();
     let pull_data = server.dag.export_pull_data(&missing).await.unwrap();
 
-    let heads = VertexListWithOptions::from(&["D".into()][..]).with_highest_group(Group::MASTER);
+    let heads = VertexListWithOptions::from(&["D".into()][..]).with_desired_group(Group::MASTER);
     client
         .dag
         .import_pull_data(pull_data, &heads)
@@ -221,7 +221,7 @@ async fn test_pull_from_empty_assign_from_zero() {
     let mut client = server.client().await;
     let missing = server.dag.only("D".into(), Set::empty()).await.unwrap();
     let pull_data = server.dag.export_pull_data(&missing).await.unwrap();
-    let heads = VertexListWithOptions::from(&["D".into()][..]).with_highest_group(Group::MASTER);
+    let heads = VertexListWithOptions::from(&["D".into()][..]).with_desired_group(Group::MASTER);
     client
         .dag
         .import_pull_data(pull_data, &heads)
@@ -533,7 +533,7 @@ async fn test_flush_no_over_fetch() {
 
     // Flush with a master head. Should not fetch anything.
     let heads = VertexListWithOptions::from(vec![VertexName::copy_from(b"E")])
-        .with_highest_group(Group::MASTER);
+        .with_desired_group(Group::MASTER);
     client.dag.flush(&heads).await.unwrap();
     assert_eq!(client.output(), [] as [&str; 0]);
 

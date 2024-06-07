@@ -145,7 +145,7 @@ pub(crate) async fn subdag(
     // resulting subdag might preserve the same order with the original dag.
     let heads: Vec<VertexName> = heads.iter_rev().await?.try_collect().await?;
     // MASTER group enables the ONLY_HEAD segment flag. It improves graph query performance.
-    let heads = VertexListWithOptions::from(heads).with_highest_group(Group::MASTER);
+    let heads = VertexListWithOptions::from(heads).with_desired_group(Group::MASTER);
     dag.add_heads(&parents, &heads).await?;
     Ok(dag)
 }

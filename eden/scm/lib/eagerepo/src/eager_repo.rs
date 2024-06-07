@@ -337,7 +337,7 @@ impl EagerRepo {
                     break;
                 }
             }
-            VertexListWithOptions::from(heads).with_highest_group(Group::MASTER)
+            VertexListWithOptions::from(heads).with_desired_group(Group::MASTER)
         };
         self.dag.lock().await.flush(&master_heads).await?;
         let opts = CommitOptions::default();
