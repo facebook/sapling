@@ -44,7 +44,7 @@ macro_rules! delegate {
                         $crate::Result<Option<$crate::Id>>
                     > + Send + 's>> where Self: 's
             {
-                self.$($t)*.vertex_id_with_max_group(name, $crate::Group::NON_MASTER)
+                self.$($t)*.vertex_id_optional(name)
             }
             fn contains_vertex_id_locally<'a: 's, 'b: 's, 's>(&'a self, ids: &'b [$crate::Id])
                 -> std::pin::Pin<Box<dyn std::future::Future<Output=

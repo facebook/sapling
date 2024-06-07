@@ -154,6 +154,7 @@ impl Group {
     pub const VIRTUAL: Self = Self(2);
 
     pub const ALL: [Self; 3] = [Self::MASTER, Self::NON_MASTER, Self::VIRTUAL];
+    pub const MAX: Self = Self::ALL[Self::COUNT - 1];
 
     pub const COUNT: usize = Self::ALL.len();
 

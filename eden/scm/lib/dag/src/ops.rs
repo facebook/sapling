@@ -485,7 +485,7 @@ pub trait IdConvert: PrefixLookup + Sync {
     async fn contains_vertex_name_locally(&self, name: &[VertexName]) -> Result<Vec<bool>>;
 
     async fn vertex_id_optional(&self, name: &VertexName) -> Result<Option<Id>> {
-        self.vertex_id_with_max_group(name, Group::NON_MASTER).await
+        self.vertex_id_with_max_group(name, Group::MAX).await
     }
 
     /// Convert [`Id`]s to [`VertexName`]s in batch.
