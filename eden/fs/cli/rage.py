@@ -766,7 +766,7 @@ def trace_running_edenfs(
 
 def print_recent_events(processor: str, out: IO[bytes], dry_run: bool) -> None:
     section_title("EdenFS recent events", out)
-    for opt in ["thrift", "hg", "inode"]:
+    for opt in ["thrift", "sl", "inode"]:
         trace_cmd = [
             "edenfsctl",
             "trace",

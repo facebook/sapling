@@ -43,9 +43,9 @@ def execute_cmd(arg_list: List[Union[pathlib.Path, str]]) -> int:
         )
 
 
-@trace_cmd("hg", "Trace hg object fetches")
-class TraceHgCommand(Subcmd):
-    DESCRIPTION = """Trace EdenFS object fetches from Mercurial.
+@trace_cmd("sl", "Trace sapling object fetches", aliases=["hg"])
+class TraceSlCommand(Subcmd):
+    DESCRIPTION = """Trace EdenFS object fetches from Sapling.
 
 With the --retroactive flag, this will print a list of the past N object fetches.
 By default, it will print up to N=100 events, but this can be configured with the
@@ -101,7 +101,7 @@ Fetched Source in Sapling (--verbose):
             "--retroactive",
             action="store_true",
             default=False,
-            help="Provide stored hg events (from a buffer) across past changes",
+            help="Provide stored sapling events (from a buffer) across past changes",
         )
 
     async def run(self, args: argparse.Namespace) -> int:
@@ -166,7 +166,7 @@ activitybuffer-max-events = 100
 Loading an inode refers to fetching state for the inode to store into memory.
 While loading can some times cause fetching data contents for an inode, this is
 not always the case, and fetching can sometimes happen in other cases. Content
-data fetches from hg servers can be traced with the eden trace hg command. Note:
+data fetches from sapling servers can be traced with the eden trace sl command. Note:
 loading an inode will cause its parent inode to be loaded if it isn't already.
 
 Materializing an inode refers to modifying the inode's data such that no source
