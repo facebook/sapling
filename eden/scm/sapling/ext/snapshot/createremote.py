@@ -181,6 +181,9 @@ def createremote(ui, repo, **opts) -> None:
         wctx = repo[None]
 
         hgparents = parentsfromwctx(ui, wctx)
+        if hgparents is None:
+            raise error.Abort(_("snapshot creation requires working copy checkout"))
+
         _backupparents(repo, wctx)
 
         (time, tz) = wctx.date()
