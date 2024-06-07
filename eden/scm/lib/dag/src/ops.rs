@@ -316,8 +316,19 @@ impl Parents for std::collections::HashMap<VertexName, Vec<VertexName>> {
 /// Add vertexes recursively to the DAG.
 #[async_trait::async_trait]
 pub trait DagAddHeads {
-    /// Add vertexes and their ancestors to the DAG. This does not persistent
-    /// changes to disk.
+    /// Add non-lazy vertexes and their ancestors in memory.
+    ///
+    /// Does not persist changes to disk. Use `add_heads_and_flush` to persist.
+    /// Use `import_pull_data` to add lazy segments to the DAG.
+    ///
+    /// `heads` must use non-MASTER (NON_MASTER, VIRTUAL) groups as
+    /// `desired_group`. `heads` are imported in the given order.
+    ///
+    /// | Method              | Allowed groups      | Persist | Lazy |
+    /// |---------------------|---------------------|---------|------|
+    /// | add_heads           | NON_MASTER, VIRTUAL | No      | No   |
+    /// | add_heads_and_flush | MASTER              | Yes     | No   |
+    /// | import_pull_data    | MASTER              | Yes     | Yes  |
     async fn add_heads(
         &mut self,
         parents: &dyn Parents,
@@ -328,11 +339,10 @@ pub trait DagAddHeads {
 /// Remove vertexes and their descendants from the DAG.
 #[async_trait::async_trait]
 pub trait DagStrip {
-    /// Remove the given `set` and their descendants.
+    /// Remove the given `set` and their descendants on disk.
     ///
-    /// This will reload the DAG from its source (ex. filesystem) and writes
-    /// changes back with a lock so there are no other processes adding
-    /// new descendants of the stripped set.
+    /// Reload and persist changes to disk (with lock) immediately.
+    /// Errors out if pending changes in NON_MASTER were added by `add_heads`.
     ///
     /// After strip, the `self` graph might contain new vertexes because of
     /// the reload.
@@ -343,6 +353,10 @@ pub trait DagStrip {
 #[async_trait::async_trait]
 pub trait DagImportCloneData {
     /// Updates the DAG using a `CloneData` object.
+    ///
+    /// This predates `import_pull_data`. New logic should use the general
+    /// purpose `import_pull_data` instead. Clone is just a special case of
+    /// pull.
     async fn import_clone_data(&mut self, clone_data: CloneData<VertexName>) -> Result<()>;
 }
 
@@ -350,9 +364,23 @@ pub trait DagImportCloneData {
 /// Ids in the passed CloneData might not match ids in existing DAG.
 #[async_trait::async_trait]
 pub trait DagImportPullData {
-    /// Updates the DAG using a `CloneData` object.
+    /// Imports lazy segments ("name" partially known, "shape" known) on disk.
     ///
-    /// Only import the given `heads`.
+    /// Reload and persist changes to disk (with lock) immediately.
+    /// Errors out if pending changes in NON_MASTER were added by `add_heads`.
+    /// Errors out if `clone_data` overlaps with the existing graph.
+    ///
+    /// `heads` must use MASTER as `desired_group`. `heads` are imported
+    /// in the given order (useful to distinguish between primary and secondary
+    /// branches, and specify their gaps in the id ranges, to reduce
+    /// fragmentation).
+    ///
+    /// `heads` with `reserve_size > 0` must be passed in even if they
+    /// already exist and are not being added, for the id reservation to work
+    /// correctly.
+    ///
+    /// If `clone_data` includes parts not covered by `heads` and their
+    /// ancestors, those parts will be ignored.
     async fn import_pull_data(
         &mut self,
         clone_data: CloneData<VertexName>,
@@ -378,13 +406,35 @@ pub trait DagExportPullData {
 pub trait DagPersistent {
     /// Write in-memory DAG to disk. This might also pick up changes to
     /// the DAG by other processes.
+    ///
+    /// Calling `add_heads` followed by `flush` is like calling
+    /// `add_heads_and_flush` with the `master_heads` passed to `flush` concated
+    /// with `heads` from `add_heads`. `add_heads` followed by `flush` is more
+    /// flexible but less performant than `add_heads_and_flush`.
     async fn flush(&mut self, master_heads: &VertexListWithOptions) -> Result<()>;
 
     /// Write in-memory IdMap that caches Id <-> Vertex translation from
     /// remote service to disk.
     async fn flush_cached_idmap(&self) -> Result<()>;
 
-    /// A faster path for add_heads, followed by flush.
+    /// Add non-lazy vertexes, their ancestors, and vertexes added previously by
+    /// `add_heads` on disk.
+    ///
+    /// Reload and persist changes to disk (with lock) immediately.
+    /// Does not error out if pending changes were added by `add_heads`.
+    ///
+    /// `heads` should not use `VIRTUAL` as `desired_group`. `heads` are
+    /// imported in the given order, followed by `heads` previously added
+    /// by `add_heads`.
+    ///
+    /// `heads` with `reserve_size > 0` must be passed in even if they
+    /// already exist and are not being added, for the id reservation to work
+    /// correctly.
+    ///
+    /// `add_heads_and_flush` is faster than `add_heads`. But `add_heads` can
+    /// be useful for the VIRTUAL group, and when the final group is not yet
+    /// decided (ex. the MASTER group is decided by remotenames info but
+    /// remotenames is not yet known at `add_heads` time).
     async fn add_heads_and_flush(
         &mut self,
         parent_names_func: &dyn Parents,

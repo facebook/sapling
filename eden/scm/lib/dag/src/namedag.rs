@@ -173,10 +173,7 @@ where
     P: Open<OpenTarget = Self> + Send + Sync + 'static,
     S: TryClone + StorageVersion + Persist + Send + Sync + 'static,
 {
-    /// Add vertexes and their ancestors to the on-disk DAG.
-    ///
-    /// This is similar to calling `add_heads` followed by `flush`.
-    /// But is faster.
+    // See docstring in ops.rs for details.
     async fn add_heads_and_flush(
         &mut self,
         parents: &dyn Parents,
@@ -402,16 +399,7 @@ where
     P: TryClone + Send + Sync + 'static,
     S: TryClone + Send + Sync + 'static,
 {
-    /// Add vertexes and their ancestors to the in-memory DAG.
-    ///
-    /// This does not write to disk. Use `add_heads_and_flush` to add heads
-    /// and write to disk more efficiently.
-    ///
-    /// The added vertexes are immediately query-able.
-    ///
-    /// Note: heads with `reserve_size > 0` must be passed in even if they
-    /// already exist and are not being added to the graph for the id
-    /// reservation to work correctly.
+    // See docstring in ops.rs for details.
     async fn add_heads(
         &mut self,
         parents: &dyn Parents,
@@ -423,18 +411,33 @@ where
         self.populate_missing_vertexes_for_add_heads(parents, &heads.vertexes())
             .await?;
 
-        // heads might require desired_group = MASTER. That might trigger
-        // id re-assigning if the NON_MASTER group is not empty. For simplicity,
-        // we don't want to deal with id reassignment here.
+        // This API takes `heads` with "desired_group"s. When a head already exists in a lower
+        // group than its "desired_group" we need to remove the higher-group id and re-assign
+        // the head and its ancestors to the lower group.
         //
-        // Practically, there are 2 use-cases:
-        // - Server wants desired_group = MASTER and it does not use NON_MASTER.
-        // - Client only needs desired_group = NON_MASTER (default) here.
+        // For simplicity, add_heads is *append-only* and does not want to deal with the
+        // reassignment. So if you have code like:
         //
-        // Support both cases. That is:
-        // - If desired_group = MASTER is specified, then NON_MASTER group
-        //   must be empty to ensure no id reassignment (checked below).
-        // - If desired_group = MASTER is not used, then it's okay whatever.
+        //    let set1 = dag.range(x, y); // set1 is associated with the current dag, "dag v1".
+        //    dag.add_heads(...);
+        //    let set2 = dag.range(p, q); // set2 is associated with the updated dag, "dag v2".
+        //    let set3 = set2 & set1;
+        //
+        // The `set3` understands that the "dag v2" is a superset of "dag v1" (because add_heads
+        // does not strip ids), and can use fast paths - it can assume same ids in set2 and set3
+        // mean the same vertexes and ensure set3 is associated with "dag v2". If `add_heads`
+        // strips out commits, then the fast paths (note: not just for set3, also p and q) cannot
+        // be used.
+        //
+        // Practically, `heads` match one of these patterns:
+        // - (This use-case is going away): desired_group = MASTER for all heads. This is used by
+        //   old Mononoke server-side logic. The server only indexes the "main" branch. All vertexes
+        //   are in the MASTER group. To avoid misuse by the client-side, we check that there
+        //   is nothing outisde the MASTER group.
+        // - desired_group = NON_MASTER for all heads. This is used by Sapling client.
+        //   It might use desired_group = MASTER on add_heads_and_flush, but not here.
+        //
+        // In the future, desired_group might be VIRTUAL and needs special care.
         let master_heads = heads.vertexes_by_group(Group::MASTER);
         if !master_heads.is_empty() {
             let all = self.dag.all()?;
@@ -695,6 +698,7 @@ where
     P: Open<OpenTarget = Self> + TryClone + Send + Sync + 'static,
     S: TryClone + Persist + Send + Sync + 'static,
 {
+    // See docstring in ops.py for details.
     async fn import_pull_data(
         &mut self,
         clone_data: CloneData<VertexName>,
