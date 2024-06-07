@@ -269,6 +269,9 @@ impl<Store: IdDagStore> IdDag<Store> {
         };
         let mut last_high = None;
         for seg in &outcome.segments {
+            if seg.low.is_virtual() {
+                continue;
+            }
             if let Some(last_high) = last_high {
                 if last_high >= seg.low {
                     return bug(format!(
