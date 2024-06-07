@@ -138,10 +138,6 @@ DEFINE_string(
     "This flag will only be used on the first invocation");
 
 DEFINE_int64(
-    unload_interval_minutes,
-    0,
-    "Frequency in minutes of background inode unloading");
-DEFINE_int64(
     start_delay_minutes,
     10,
     "Initial delay before first background inode unload");
@@ -748,7 +744,7 @@ void EdenServer::startPeriodicTasks() {
   // so using unloadChildrenNow just to validate the behaviour. We will have to
   // modify current unloadChildrenNow function to unload inodes based on the
   // last access time.
-  if (FLAGS_unload_interval_minutes > 0) {
+  if (config->periodicUnloadIntervalMinutes.getValue() > 0) {
     scheduleInodeUnload(std::chrono::minutes(FLAGS_start_delay_minutes));
   }
 #endif
@@ -877,8 +873,10 @@ void EdenServer::unloadInodes() {
       mount.getInodeMap()->recordPeriodicInodeUnload(unloaded);
     }
   }
-
-  scheduleInodeUnload(std::chrono::minutes(FLAGS_unload_interval_minutes));
+  scheduleInodeUnload(
+      std::chrono::minutes(serverState_->getReloadableConfig()
+                               ->getEdenConfig()
+                               ->periodicUnloadIntervalMinutes.getValue()));
 }
 
 void EdenServer::scheduleInodeUnload(std::chrono::milliseconds timeout) {

@@ -1038,6 +1038,15 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
+   *  The interval for backgroung periodic unloading of inodes from inodeMap.
+   * The value is in minutes.
+   */
+  ConfigSetting<uint32_t> periodicUnloadIntervalMinutes{
+      "experimental:periodic-inode-map-unload-interval",
+      0,
+      this};
+
+  /**
    * Controls whether EdenFS eagerly invalidates directories during checkout or
    * whether it only does when children were modified.
    *
