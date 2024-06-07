@@ -198,6 +198,7 @@ export const stackEditState = (() => {
             commits: hashes.size,
             fileStacks: stack.fileStacks.size,
             fileStackRevs: stack.fileStacks.reduce((acc, f) => acc + f.source.revLength, 0),
+            splitFromSuggestion: currentMetrics.splitFromSuggestion,
           };
           currentMetricsStartTime = Date.now();
           // Cannot write to self (`stackEditState`) here.
@@ -456,4 +457,5 @@ export function sendStackEditMetrics(save = true) {
   const tracker = getTracker();
   const duration = Date.now() - currentMetricsStartTime;
   tracker?.track('StackEditMetrics', {duration, extras: {...currentMetrics, save}});
+  currentMetrics.splitFromSuggestion = 0; // Reset for next time.
 }
