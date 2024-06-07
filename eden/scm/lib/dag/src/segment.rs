@@ -188,8 +188,9 @@ impl Segment {
         high: Id,
         parents: &[Id],
     ) -> Self {
-        debug_assert!(high >= low);
-        debug_assert!(parents.iter().all(|&p| p < low));
+        assert_eq!(low.group(), high.group());
+        assert!(high >= low);
+        assert!(parents.iter().all(|&p| p < low));
         let mut buf = Vec::with_capacity(1 + 8 + (parents.len() + 2) * 4);
         buf.write_u8(flags.bits()).unwrap();
         buf.write_u8(level).unwrap();
@@ -291,30 +292,41 @@ pub(crate) fn hex(bytes: &[u8]) -> String {
 
 #[cfg(test)]
 mod tests {
+    use dag_types::Group;
     use quickcheck::quickcheck;
 
     use super::*;
 
     #[test]
     fn test_segment_roundtrip() {
-        fn prop(has_root: bool, level: Level, range1: u64, range2: u64, parents: Vec<u64>) -> bool {
+        fn prop(
+            has_root: bool,
+            level: Level,
+            group: u8,
+            range1: u64,
+            range2: u64,
+            parents: Vec<u64>,
+        ) -> bool {
             let flags = if has_root {
                 SegmentFlags::HAS_ROOT
             } else {
                 SegmentFlags::empty()
             };
-            let low = u64::min(range1, range2);
-            let high = u64::max(range1, range2);
-            let parents: Vec<Id> = parents.into_iter().filter(|&p| p < low).map(Id).collect();
-            let low = Id(low);
-            let high = Id(high);
+            let group = Group::ALL[(group as usize) % Group::ALL.len()];
+            let range = group.max_id().0 - group.min_id().0;
+            let mut low = group.min_id() + (range1 % range);
+            let mut high = group.min_id() + (range2 % range);
+            if high < low {
+                (low, high) = (high, low);
+            }
+            let parents: Vec<Id> = parents.into_iter().filter(|&p| p < low.0).map(Id).collect();
             let node = Segment::new(flags, level, low, high, &parents);
             node.flags().unwrap() == flags
                 && node.level().unwrap() == level
                 && node.span().unwrap() == (low..=high).into()
                 && node.parents().unwrap() == parents
         }
-        quickcheck(prop as fn(bool, Level, u64, u64, Vec<u64>) -> bool);
+        quickcheck(prop as fn(bool, Level, u8, u64, u64, Vec<u64>) -> bool);
     }
 
     #[test]
