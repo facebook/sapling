@@ -1517,7 +1517,7 @@ where
         let overlay = self.overlay_map.read().unwrap();
         let mut names = Vec::with_capacity(ids.len());
         for &id in ids {
-            if let Some(name) = overlay.lookup_vertex_name(id) {
+            if let Some(name) = overlay.lookup_vertex_name(id).cloned() {
                 names.push(name);
             } else {
                 return id.not_found();
@@ -2152,7 +2152,13 @@ where
         match self.map.vertex_name(id).await {
             Ok(name) => Ok(name),
             Err(crate::Error::IdNotFound(_)) if self.is_vertex_lazy() => {
-                if let Some(name) = self.overlay_map.read().unwrap().lookup_vertex_name(id) {
+                if let Some(name) = self
+                    .overlay_map
+                    .read()
+                    .unwrap()
+                    .lookup_vertex_name(id)
+                    .cloned()
+                {
                     return Ok(name);
                 }
                 // Only ids <= max(MASTER group) can be lazy.
@@ -2238,7 +2244,7 @@ where
             {
                 let map = self.overlay_map.read().unwrap();
                 for (r, id) in list.iter_mut().zip(ids) {
-                    if let Some(name) = map.lookup_vertex_name(*id) {
+                    if let Some(name) = map.lookup_vertex_name(*id).cloned() {
                         *r = Ok(name);
                     }
                 }
