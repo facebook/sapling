@@ -213,7 +213,7 @@ def _picktool(repo, ui, mctx):
         return tool
 
     def supportscd(tool):
-        return tool in internals and internals[tool].mergetype == nomerge
+        return tool in internals and internals[tool].handlesall
 
     def check(tool, pat, symlink, binary, changedelete):
         tmsg = tool
@@ -794,20 +794,26 @@ def _imergediff(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None)
     )
 
 
-@internaltool("merge-local", mergeonly, precheck=_ismergeable)
-def _imergelocal(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
+@internaltool("merge-local", mergeonly, handlesall=True)
+def _imergelocal(*args, labels=None):
     """
     Like :merge, but resolve all conflicts non-interactively in favor
     of the local `p1()` changes."""
-    return _merge(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels, "local")
+    if not _ismergeable(*args[:-1], warn=False):
+        return False, *_ilocal(*args[:-1], labels)
+
+    return _merge(*args, labels, "local")
 
 
-@internaltool("merge-other", mergeonly, precheck=_ismergeable)
-def _imergeother(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
+@internaltool("merge-other", mergeonly, handlesall=True)
+def _imergeother(*args, labels=None):
     """
     Like :merge, but resolve all conflicts non-interactively in favor
     of the other `p2()` changes."""
-    return _merge(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels, "other")
+    if not _ismergeable(*args[:-1], warn=False):
+        return False, *_iother(*args[:-1], labels)
+
+    return _merge(*args, labels, "other")
 
 
 @internaltool("dump", fullmerge)

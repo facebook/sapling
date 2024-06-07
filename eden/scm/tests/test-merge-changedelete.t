@@ -30,6 +30,7 @@ Make sure HGMERGE doesn't interfere with the test
   > }
 
   $ configure modern
+  $ enable rebase
   $ newclientrepo repo
   $ setconfig commands.update.check=none
 
@@ -1080,3 +1081,29 @@ Test transitions between different merge tools
   --- diff of status ---
   (status identical)
   
+
+:merge-local and :merge-other should resolve change/delete conflicts:
+  $ newclientrepo
+  $ drawdag <<EOS
+  > B  # B/file = (removed)
+  > |
+  > | C # C/file = bar\n
+  > |/
+  > A  # A/file = foo\n
+  > EOS
+
+Take p1 (file deleted):
+  $ hg go -q $C
+  $ hg rebase -qd $B --tool :merge-local
+  $ hg st
+  $ cat file
+  cat: file: $ENOENT$
+  [1]
+
+Take p1 (contents "bar\n"):
+  $ hg go -q $C
+  $ hg rebase -qd $B --tool :merge-other
+  $ hg st
+  $ cat file
+  bar
+

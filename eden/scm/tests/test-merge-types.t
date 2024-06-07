@@ -1,5 +1,3 @@
-
-
 #require symlink execbit no-eden
 
   $ eagerepo
@@ -117,10 +115,8 @@ Symlink is other parent, executable is local:
   picked tool ':merge-local' for path=a binary=False symlink=True changedelete=False
   merging a
   my a@3574f3e69b1c+ other a@521a1e40188f ancestor a@c334dc3be0da
-  warning: internal :merge-local cannot merge symlinks for a
-  0 files updated, 0 files merged, 0 files removed, 1 files unresolved
-  use 'hg resolve' to retry unresolved file merges or 'hg goto -C .' to abandon
-  [1]
+  0 files updated, 1 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
 
   $ tellmeabout a
   a: file, exe
@@ -141,16 +137,11 @@ Symlink is other parent, executable is local:
   picked tool ':merge-other' for path=a binary=False symlink=True changedelete=False
   merging a
   my a@3574f3e69b1c+ other a@521a1e40188f ancestor a@c334dc3be0da
-  warning: internal :merge-other cannot merge symlinks for a
-  0 files updated, 0 files merged, 0 files removed, 1 files unresolved
-  use 'hg resolve' to retry unresolved file merges or 'hg goto -C .' to abandon
-  [1]
+  0 files updated, 1 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
 
   $ tellmeabout a
-  a: file, exe
-  >>>
-  a
-  <<<
+  a -> symlink: link
 
 Update to link without local change should get us a symlink (issue3316):
 
@@ -159,7 +150,6 @@ Update to link without local change should get us a symlink (issue3316):
   $ hg up 'desc(symlink)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg st
-  ? a.orig
 
 Update to link with local change should cause a merge prompt (issue3200):
 
@@ -471,3 +461,26 @@ h: l vs l, different
   h -> 1: link
 
   $ cd ..
+
+
+Make sure we don't merge symlinks:
+  $ newrepo
+  $ drawdag <<EOS
+  > B   # B/link = foo\ntwo\nthree (symlink)
+  > |
+  > | C # C/link = one\ntwo\nbar (symlink)
+  > |/
+  > A   # A/link = one\ntwo\nthree (symlink)
+  $ hg go -q $B
+  $ hg merge -q --tool :merge-other
+  $ tellmeabout link
+  link -> one
+  two
+  bar: link
+
+  $ hg go -qC $B
+  $ hg merge -q --tool :merge-local
+  $ tellmeabout link
+  link -> foo
+  two
+  three: link
