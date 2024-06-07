@@ -11,6 +11,7 @@ rust_binary(
     },
     deps = [
         "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:hex",
         "fbsource//third-party/rust:log",
         "fbsource//third-party/rust:tokio",
         "//buck2/app/buck2_core:buck2_core",
