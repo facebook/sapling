@@ -7,7 +7,6 @@
 
 use std::collections::BTreeSet;
 use std::collections::BinaryHeap;
-use std::collections::HashMap;
 use std::collections::VecDeque;
 use std::fmt;
 use std::fmt::Debug;
@@ -1832,24 +1831,6 @@ pub enum FirstAncestorConstraint {
 }
 
 impl<Store: IdDagStore> IdDag<Store> {
-    /// Export non-master DAG as parent_id_func on HashMap.
-    ///
-    /// This can be expensive if there are a lot of non-master ids.
-    /// It is currently only used to rebuild non-master groups after
-    /// id re-assignment.
-    pub fn non_master_parent_ids(&self) -> Result<HashMap<Id, Vec<Id>>> {
-        let mut parents = HashMap::new();
-        let start = Group::NON_MASTER.min_id();
-        for seg in self.next_segments(start, 0)? {
-            let span = seg.span()?;
-            parents.insert(span.low, seg.parents()?);
-            for i in (span.low + 1).to(span.high) {
-                parents.insert(i, vec![i - 1]);
-            }
-        }
-        Ok(parents)
-    }
-
     /// Remove `set` and their descendants. Return `descendents(set)`.
     ///
     /// The returned `descendants(set)` is usually used to remove
