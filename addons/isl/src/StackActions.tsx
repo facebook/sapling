@@ -297,7 +297,7 @@ function StackEditButton({info}: {info: DagCommitInfo}): React.ReactElement | nu
     <HighlightCommitsWhileHovering key="submit-stack" toHighlight={highlight}>
       <Tooltip title={title} delayMs={tooltipDelay} placement="bottom">
         <VSCodeButton
-          className={`edit-stack-button ${disabled && 'disabled'}`}
+          className={`edit-stack-button${disabled ? ' disabled' : ''}`}
           disabled={disabled}
           appearance="icon"
           onClick={async () => {
