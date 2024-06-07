@@ -907,8 +907,7 @@ impl Redirection {
                 println!("Attempting to remove forcefully.");
                 if forcefully_remove_dir_all(&self.expand_repo_path(checkout)).is_err() {
                     return Err(EdenFsError::Other(anyhow!(
-                        "Cannot redirect {} because it is a non-empty directory (full path {}).  An error occured when removing; \
-                you will have to remove manually and retry.",
+                        "Cannot redirect {} because it is a non-empty directory (full path {}).\nHint: You can use --force to attempt to remove it with its contents or review its contents manually and remove it if that is appropriate and then try again.",
                         self.repo_path.display(),
                         self.expand_repo_path(checkout).display()
                     )));
