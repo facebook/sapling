@@ -15,15 +15,19 @@ use bonsai_git_mapping::BonsaiGitMappingEntry;
 use bonsai_git_mapping::BonsaiGitMappingRef;
 use bonsai_git_mapping::BonsaisOrGitShas;
 use bonsai_tag_mapping::BonsaiTagMappingRef;
+use borrowed::borrowed;
 use bulk_derivation::BulkDerivation;
 use bytes::Bytes;
 use changesets::ChangesetsRef;
 use cloned::cloned;
+use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use filestore::FilestoreConfigRef;
 use filestore::StoreRequest;
 use futures::stream;
 use futures::stream::Stream;
+use futures::StreamExt;
+use futures::TryStreamExt;
 use futures_stats::TimedTryFutureExt;
 use gix_hash::ObjectId;
 use import_tools::BackfillDerivation;
@@ -87,6 +91,7 @@ impl<R> DirectUploader<R> {
 impl<R> GitUploader for DirectUploader<R>
 where
     R: ChangesetsRef
+        + CommitGraphRef
         + RepoBlobstoreRef
         + BonsaiGitMappingRef
         + BonsaiTagMappingRef
@@ -273,6 +278,7 @@ where
             .iter()
             .map(|entry| entry.bcs_id)
             .collect::<Vec<_>>();
+        let batch_size = csids.len();
         let config = self.inner.repo_derived_data().active_config();
 
         // Derive all types that don't depend on GitCommit
@@ -284,11 +290,50 @@ where
                 _ => true,
             })
             .collect::<Vec<_>>();
-        self.inner
-            .repo_derived_data()
-            .manager()
-            .derive_bulk(ctx, csids.clone(), None, &non_git_types)
+        // Find the derivation frontier to be resilient to restarts when backfillng wasn't properly
+        // caught up
+        let last_derived = self
+            .inner
+            .commit_graph()
+            .ancestors_frontier_with(ctx, csids.clone(), |csid| {
+                borrowed!(ctx);
+                cloned!(non_git_types);
+                async move {
+                    Ok(stream::iter(non_git_types)
+                        .all(|ddt| async move {
+                            self.inner
+                                .repo_derived_data()
+                                .manager()
+                                .is_derived(ctx, csid, None, ddt.clone())
+                                .await
+                                .unwrap_or(false)
+                        })
+                        .await)
+                }
+            })
             .await?;
+        self.inner
+            .commit_graph()
+            .ancestors_difference_segment_slices(
+                ctx,
+                csids.clone(),
+                last_derived.clone(),
+                batch_size as u64,
+            )
+            .await?
+            .try_for_each(|chunk| {
+                borrowed!(non_git_types);
+                async move {
+                    self.inner
+                        .repo_derived_data()
+                        .manager()
+                        .derive_bulk(ctx, chunk, None, non_git_types)
+                        .await?;
+                    Ok(())
+                }
+            })
+            .await?;
+
         // Upload all bonsai git mappings.
         // This is done instead of deriving git commits. It is not equivalent as roundtrip from
         // git to bonsai and back is not guaranteed.
