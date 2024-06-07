@@ -42,6 +42,7 @@ use slog::debug;
 use stats::prelude::*;
 
 const MAX_CONCURRENT_MANIFESTS: usize = 100;
+const MAX_CONCURRENT_MANIFESTS_TREES_ONLY: usize = 500;
 const MAX_CONCURRENT_FILES_PER_MANIFEST: usize = 20;
 const DEBUG_LOG_INTERVAL: usize = 10000;
 
@@ -333,8 +334,13 @@ where
 
         // We will traverse over Mercurial manifests for now, as augmented manifests haven't been
         // derived yet and don't yet implement AsyncManifest.  This will be trivial to swap in later.
+        let max_concurrent_manifests = if matches!(upload_policy, UploadPolicy::TreesOnly) {
+            MAX_CONCURRENT_MANIFESTS_TREES_ONLY
+        } else {
+            MAX_CONCURRENT_MANIFESTS
+        };
         bounded_traversal::bounded_traversal_stream(
-            MAX_CONCURRENT_MANIFESTS,
+            max_concurrent_manifests,
             Some(hg_manifest_id),
             |hg_manifest_id| {
                 cloned!(progress_counter);
