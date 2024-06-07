@@ -98,17 +98,17 @@ def translateandpull(
     )
 
     # Get the list of heads to pull
-    headsdates = cloudrefs.headdates
-    headstranslatequeue = {}
+    headdates = cloudrefs.headdates
+    headstranslatequeue = []
     maxage = None if full else ui.configint("commitcloud", "max_sync_age", None)
-    for head in headsdates:
-        mindate = 0
-        if maxage is not None and maxage >= 0:
-            mindate = time.time() - maxage * 86400
-        if cloudrefs.headdates[head] >= mindate and megarepo.may_need_xrepotranslate(
-            repo, head
-        ):
-            headstranslatequeue[head] = headsdates[head]
+    mindate = 0
+    if maxage is not None and maxage >= 0:
+        mindate = time.time() - maxage * 86400
+    headstranslatequeue = [
+        head
+        for head, headdate in headdates.items()
+        if headdate >= mindate and megarepo.may_need_xrepotranslate(repo, head)
+    ]
 
     # Get list of bookmarks to translate
     bookmarks = cloudrefs.bookmarks
@@ -125,10 +125,9 @@ def translateandpull(
         )
 
     # Translate heads
-    newheads = {}
-    for head in headstranslatequeue:
-        newhead = megarepo.xrepotranslate(repo, head).hex()
-        newheads[newhead] = headstranslatequeue[head]
+    newheads = [
+        megarepo.xrepotranslate(repo, head).hex() for head in headstranslatequeue
+    ]
 
     # Translate bookmarks
     newbookmarks = {}
@@ -142,7 +141,7 @@ def translateandpull(
 
 def dedupechanges(ui, heads, newheads, bookmarks, newbookmarks):
 
-    uniquenewheads = [head for head in newheads.keys() if head not in heads]
+    uniquenewheads = [head for head in newheads if head not in heads]
 
     uniquenewbookmarks = {}
     bookmarkstodelete = []
