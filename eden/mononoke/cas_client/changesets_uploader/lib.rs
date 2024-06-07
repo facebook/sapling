@@ -51,6 +51,13 @@ struct DebugUploadCounters {
     already_present: RelaxedCounter,
 }
 
+#[derive(Debug, PartialEq, Clone)]
+pub enum UploadPolicy {
+    All,
+    BlobsOnly,
+    TreesOnly,
+}
+
 impl Display for DebugUploadCounters {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
         write!(
@@ -147,7 +154,7 @@ where
         ctx: &'a CoreContext,
         repo: &impl Repo,
         changeset_id: &ChangesetId,
-        blobs_only: bool,
+        upload_policy: UploadPolicy,
     ) -> Result<(), CasChangesetUploaderErrorKind> {
         let hg_cs_id = repo
             .bonsai_hg_mapping()
@@ -261,17 +268,29 @@ where
             files_list.len(),
         );
 
-        if blobs_only {
-            self.client
-                .ensure_upload_file_contents(ctx, &blobstore, files_list, true)
-                .await?;
-        } else {
-            try_join!(
-                self.client
-                    .ensure_upload_augmented_trees(ctx, &blobstore, manifests_list, true),
+        match upload_policy {
+            UploadPolicy::BlobsOnly => {
                 self.client
                     .ensure_upload_file_contents(ctx, &blobstore, files_list, true)
-            )?;
+                    .await?;
+            }
+            UploadPolicy::TreesOnly => {
+                self.client
+                    .ensure_upload_augmented_trees(ctx, &blobstore, manifests_list, true)
+                    .await?;
+            }
+            UploadPolicy::All => {
+                try_join!(
+                    self.client.ensure_upload_augmented_trees(
+                        ctx,
+                        &blobstore,
+                        manifests_list,
+                        true
+                    ),
+                    self.client
+                        .ensure_upload_file_contents(ctx, &blobstore, files_list, true)
+                )?;
+            }
         }
 
         debug!(
@@ -293,7 +312,7 @@ where
         ctx: &'a CoreContext,
         repo: &impl Repo,
         changeset_id: &ChangesetId,
-        blobs_only: bool,
+        upload_policy: UploadPolicy,
     ) -> Result<(), CasChangesetUploaderErrorKind> {
         let start_time = std::time::Instant::now();
         let progress_counter: Arc<DebugUploadCounters> = Arc::new(Default::default());
@@ -319,8 +338,9 @@ where
             Some(hg_manifest_id),
             |hg_manifest_id| {
                 cloned!(progress_counter);
+                let upload_policy = upload_policy.clone();
                 async move {
-                    if !blobs_only {
+                    if !matches!(upload_policy, UploadPolicy::BlobsOnly) {
                         let hg_augmented_manifest_id: HgAugmentedManifestId =
                             HgAugmentedManifestId::new(hg_manifest_id.into_nodehash());
                         let outcome = self
@@ -341,6 +361,7 @@ where
                             })?;
                         progress_counter.tick(ctx, outcome);
                     }
+                    //}
                     let hg_manifest = hg_manifest_id.load(ctx, repo.repo_blobstore()).await?;
                     let mut children = Vec::new();
                     hg_manifest
@@ -355,23 +376,26 @@ where
                                 }
                                 Entry::Leaf(leaf) => {
                                     cloned!(progress_counter);
+                                    let upload_policy = upload_policy.clone();
                                     async move {
-                                        let outcome = self
-                                            .client
-                                            .upload_file_content(
-                                                ctx,
-                                                repo.repo_blobstore(),
-                                                &leaf.1,
-                                                None,
-                                                true,
-                                            )
-                                            .await
-                                            .map_err(|error| {
-                                                CasChangesetUploaderErrorKind::FileUploadFailed(
-                                                    leaf.1, error,
+                                        if !matches!(upload_policy, UploadPolicy::TreesOnly) {
+                                            let outcome = self
+                                                .client
+                                                .upload_file_content(
+                                                    ctx,
+                                                    repo.repo_blobstore(),
+                                                    &leaf.1,
+                                                    None,
+                                                    true,
                                                 )
-                                            })?;
-                                        progress_counter.tick(ctx, outcome);
+                                                .await
+                                                .map_err(|error| {
+                                                    CasChangesetUploaderErrorKind::FileUploadFailed(
+                                                        leaf.1, error,
+                                                    )
+                                                })?;
+                                            progress_counter.tick(ctx, outcome);
+                                        }
                                         Ok(())
                                     }
                                     .right_future()
@@ -394,11 +418,11 @@ where
             changeset_id,
             start_time.elapsed().as_secs_f64(),
             hg_cs_id,
-            if blobs_only {
-                "blobs only"
-            } else {
-                "augmented trees and blobs"
-            },
+            match upload_policy {
+                UploadPolicy::BlobsOnly => "blobs only",
+                UploadPolicy::TreesOnly => "augmented trees only",
+                UploadPolicy::All => "augmented trees and blobs",
+            }
         );
         STATS::uploaded_changesets_recursive.add_value(1);
         Ok(())
