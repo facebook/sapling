@@ -17,7 +17,6 @@ thrift_library(
     ],
     py3_namespace = "scm.service.thrift",
     py_base_module = "scm.service.thrift",
-    py_remote_service_router = True,
     rust_deps = [
         "fbsource//third-party/rust:bytes",
         "fbsource//third-party/rust:smallvec",
