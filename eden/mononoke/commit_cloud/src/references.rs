@@ -8,13 +8,14 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
+use anyhow::anyhow;
 use bonsai_hg_mapping::BonsaiHgMapping;
+use changeset_info::ChangesetInfo;
 use context::CoreContext;
 use edenapi_types::cloud::RemoteBookmark;
 use edenapi_types::HgId;
 use edenapi_types::ReferencesData;
 use edenapi_types::UpdateReferencesParams;
-use mononoke_types::Timestamp;
 use repo_derived_data::ArcRepoDerivedData;
 
 use crate::references::heads::update_heads;
@@ -72,21 +73,36 @@ pub(crate) async fn cast_references_data(
     raw_references_data: RawReferencesData,
     latest_version: u64,
     version_timestamp: i64,
-    _bonsai_hg_mapping: Arc<dyn BonsaiHgMapping>,
-    _repo_derived_data: ArcRepoDerivedData,
-    _core_ctx: &CoreContext,
+    bonsai_hg_mapping: Arc<dyn BonsaiHgMapping>,
+    repo_derived_data: ArcRepoDerivedData,
+    core_ctx: &CoreContext,
 ) -> Result<ReferencesData, anyhow::Error> {
     let mut heads: Vec<HgId> = Vec::new();
     let mut bookmarks: HashMap<String, HgId> = HashMap::new();
     let mut heads_dates: HashMap<HgId, i64> = HashMap::new();
     let mut remote_bookmarks: Vec<RemoteBookmark> = Vec::new();
     let mut snapshots: Vec<HgId> = Vec::new();
-    let _timestamp: i64 = 0;
 
     for head in raw_references_data.heads {
         heads.push(head.commit.into());
-        // TODO: Retrieve this information from SCS.
-        heads_dates.insert(head.commit.into(), Timestamp::now().timestamp_nanos());
+        let bonsai = bonsai_hg_mapping
+            .get_bonsai_from_hg(core_ctx, head.commit)
+            .await?;
+        match bonsai {
+            Some(bonsai) => {
+                let cs_info = repo_derived_data
+                    .derive::<ChangesetInfo>(core_ctx, bonsai.clone())
+                    .await?;
+                let cs_date = cs_info.author_date();
+                heads_dates.insert(head.commit.into(), cs_date.as_chrono().timestamp());
+            }
+            None => {
+                return Err(anyhow!(
+                    "Changeset {} not found in bonsai mapping",
+                    head.commit
+                ));
+            }
+        }
     }
     for bookmark in raw_references_data.local_bookmarks {
         bookmarks.insert(bookmark.name.clone(), bookmark.commit.into());
