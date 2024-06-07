@@ -6,25 +6,30 @@
 
   $ . "${TEST_FIXTURES}/library.sh"
 
-Set up local hgrc and Mononoke config.
-  $ setup_common_config
-  $ setup_configerator_configs
-  $ cd $TESTTMP
+setup configuration
 
-Initialize test repo.
-  $ hginit_treemanifest repo
-  $ cd repo
-  $ mkcommit "base_commit"
-  $ hg log -T '{node}\n'
-  8b2dca0c8a726d66bf26d47835a356cc4286facd
-  $ hg bookmark master -r tip
+  $ REPOID=0 REPONAME=repo setup_common_config blob_files
 
-Start up SaplingRemoteAPI server.
-  $ setup_mononoke_config
-  $ start_and_wait_for_mononoke_server
+setup repo
+  $ testtool_drawdag -R repo --derive-all << EOF
+  > A-B-C
+  > # bookmark: A main
+  > EOF
+  A=aa53d24251ff3f54b1b2c29ae02826701b2abeb0079f1bb13b8434b54cd87675
+  B=f8c75e41a0c4d29281df765f39de47bca1dcadfdc55ada4ccc2f6df567201658
+  C=e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2
+  $ start_and_wait_for_mononoke_server 
+  $ hgedenapi clone -q  "mononoke://$(mononoke_address)/repo" client1
+  $ cd client1
+  $ hg -q co main
+  $ hg log -T "{node}"
+  20ca2a4749a439b459125ef0f6a4f26e88ee7538 (no-eol)
+  $ mononoke_newadmin convert -R repo --from hg --to bonsai 20ca2a4749a439b459125ef0f6a4f26e88ee7538
+  aa53d24251ff3f54b1b2c29ae02826701b2abeb0079f1bb13b8434b54cd87675
+
 
 Check response.
-  $ hgedenapi debugapi -e cloudupdatereferences -i "{'workspace':'user/integrationtest/default','reponame':'repo','version':0, 'removed_heads':[], 'new_heads':[ '8b2dca0c8a726d66bf26d47835a356cc4286facd'], 'updated_bookmarks':[('master', '8b2dca0c8a726d66bf26d47835a356cc4286facd')], 'removed_bookmarks':[], 'new_snapshots':[], 'removed_snapshots':[]}"
+  $ hgedenapi debugapi -e cloudupdatereferences -i "{'workspace':'user/integrationtest/default','reponame':'repo','version':0, 'removed_heads':[], 'new_heads':[ '20ca2a4749a439b459125ef0f6a4f26e88ee7538'], 'updated_bookmarks':[('main', '20ca2a4749a439b459125ef0f6a4f26e88ee7538')], 'removed_bookmarks':[], 'new_snapshots':[], 'removed_snapshots':[]}"
   {"heads": None,
    "version": 1,
    "bookmarks": None,
@@ -34,14 +39,13 @@ Check response.
    "remote_bookmarks": None}
 
   $ hgedenapi debugapi -e cloudreferences -i "{'workspace':'user/integrationtest/default','reponame':'repo','version':0}"
-  {"heads": [bin("8b2dca0c8a726d66bf26d47835a356cc4286facd")],
+  {"heads": [bin("20ca2a4749a439b459125ef0f6a4f26e88ee7538")],
    "version": 1,
-   "bookmarks": {"master": bin("8b2dca0c8a726d66bf26d47835a356cc4286facd")},
+   "bookmarks": {"main": bin("20ca2a4749a439b459125ef0f6a4f26e88ee7538")},
    "snapshots": [],
    "timestamp": *, (glob)
-   "heads_dates": {bin("8b2dca0c8a726d66bf26d47835a356cc4286facd"): *}, (glob)
+   "heads_dates": {bin("20ca2a4749a439b459125ef0f6a4f26e88ee7538"): 0},
    "remote_bookmarks": []}
-
   $ hgedenapi debugapi -e cloudworkspace -i "'user/integrationtest/default'" -i "'repo'"
   {"name": "user/integrationtest/default",
    "version": 1,
