@@ -246,3 +246,26 @@ def firstline(msg: str) -> str:
     end = match.start() if match else len(msg)
     end = min(end, _MAX_FIRSTLINE_LEN)
     return msg[:end]
+
+
+def title_and_body(msg: str) -> Tuple[str, str]:
+    r"""Returns the title and body of a commit message.
+
+    >>> title_and_body("foobar")
+    ('foobar', '')
+    >>> title_and_body("foo\nbar")
+    ('foo', 'bar')
+    >>> title_and_body("foo\r\nbar")
+    ('foo', 'bar')
+    >>> title_and_body("x" * (_MAX_FIRSTLINE_LEN + 1)) == ("x" * _MAX_FIRSTLINE_LEN, "x")
+    True
+    """
+    title = firstline(msg)
+    rest = msg[len(title) :]
+    if rest.startswith("\n"):
+        body = rest[1:]
+    elif rest.startswith("\r\n"):
+        body = rest[2:]
+    else:
+        body = rest
+    return (title, body)
