@@ -7,7 +7,7 @@ from ghstack import github_gh_cli
 from sapling import extensions
 from sapling.ext.github import submit
 from sapling.ext.github.mock_utils import mock_run_git_command, MockGitHubServer
-from sapling.ext.github.pull_request_body import firstline
+from sapling.ext.github.pull_request_body import title_and_body
 
 # An extension to mock network requests by replacing the `github_gh_cli.make_request`
 # and `submit.run_git_command` with the corresponding wrapper functions. Check `uisetup`
@@ -29,8 +29,8 @@ def setup_mock_github_server(ui) -> MockGitHubServer:
 
     single = ui.config("github", "pr-workflow") == "single"
 
-    for idx, (num, body) in enumerate(prs):
-        title = firstline(body)
+    for idx, (num, msg) in enumerate(prs):
+        title, body = title_and_body(msg)
         head = f"pr{num}"
 
         base = "main"
@@ -48,7 +48,7 @@ def setup_mock_github_server(ui) -> MockGitHubServer:
         github_server.expect_get_pr_details_request(num).and_respond(pr_id)
 
         github_server.expect_update_pr_request(
-            pr_id, num, body, base=base, stack_pr_ids=[pr[0] for pr in prs]
+            pr_id, num, msg, base=base, stack_pr_ids=[pr[0] for pr in prs]
         ).and_respond()
 
     github_server.expect_get_username_request().and_respond()

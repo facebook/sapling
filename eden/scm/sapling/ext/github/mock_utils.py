@@ -14,7 +14,7 @@ from sapling import error
 
 from sapling.ext.github.consts import query
 from sapling.ext.github.gh_submit import PullRequestState
-from sapling.ext.github.pull_request_body import firstline
+from sapling.ext.github.pull_request_body import title_and_body
 from sapling.result import Ok, Result
 
 from .consts import GITHUB_HOSTNAME
@@ -281,7 +281,7 @@ class MockGitHubServer:
         self,
         pr_id: str,
         pr_number: int,
-        body: str,
+        commit_msg: str,
         base: str = "main",
         owner: str = OWNER,
         name: str = REPO_NAME,
@@ -295,15 +295,15 @@ class MockGitHubServer:
             pr_list = [
                 f"* __->__ #{n}" if n == pr_number else f"* #{n}" for n in stack_pr_ids
             ]
-            body += (
-                ("" if body.endswith("\n") else "\n") + "---\n"
+            commit_msg += (
+                ("" if commit_msg.endswith("\n") else "\n") + "---\n"
                 "[//]: # (BEGIN SAPLING FOOTER)\n"
                 "Stack created with [Sapling](https://sapling-scm.com). Best reviewed"
                 f" with [ReviewStack](https://reviewstack.dev/{owner}/{name}/pull/{pr_number}).\n"
                 + "\n".join(pr_list)
             )
 
-        title = firstline(body)
+        title, body = title_and_body(commit_msg)
         params: ParamsType = {
             "query": query.GRAPHQL_UPDATE_PULL_REQUEST,
             "pullRequestId": pr_id,

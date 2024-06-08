@@ -37,7 +37,6 @@ def create_pull_request_title_and_body(
     The original commit message.
     >>> reviewstack_url = "https://reviewstack.dev/facebook/sapling/pull/42"
     >>> print(body.replace(reviewstack_url, "{reviewstack_url}"))
-    The original commit message.
     Second line of message.
     ---
     [//]: # (BEGIN SAPLING FOOTER)
@@ -55,8 +54,9 @@ def create_pull_request_title_and_body(
     ...     pr_numbers_index,
     ...     contributor_repo,
     ... )
-    >>> print(body.replace(reviewstack_url, "{reviewstack_url}"))
+    >>> print(title)
     The original commit message.
+    >>> print(body.replace(reviewstack_url, "{reviewstack_url}"))
     Second line of message.
     <BLANKLINE>
     ---
@@ -70,8 +70,9 @@ def create_pull_request_title_and_body(
     Disable reviewstack message:
     >>> title, body = create_pull_request_title_and_body(commit_msg, pr_numbers_and_num_commits,
     ...     pr_numbers_index, contributor_repo, reviewstack=False)
-    >>> print(body)
+    >>> print(title)
     The original commit message.
+    >>> print(body)
     Second line of message.
     <BLANKLINE>
     ---
@@ -83,16 +84,17 @@ def create_pull_request_title_and_body(
 
     Single commit stack:
     >>> title, body = create_pull_request_title_and_body("Foo", [(1, 1)], 0, contributor_repo)
-    >>> print(body.replace(reviewstack_url, "{reviewstack_url}"))
+    >>> print(title)
     Foo
+    >>> print(body.replace(reviewstack_url, "{reviewstack_url}"))
+    <BLANKLINE>
     """
     owner, name = repository.get_upstream_owner_and_name()
     pr = pr_numbers_and_num_commits[pr_numbers_index][0]
 
     if title is None:
-        title = firstline(commit_msg)
-        body = commit_msg[len(title) + 1 :]
-    body = _strip_stack_information(commit_msg)
+        title, body = title_and_body(commit_msg)
+    body = _strip_stack_information(body)
     extra = []
     if len(pr_numbers_and_num_commits) > 1:
         if reviewstack:
@@ -105,7 +107,7 @@ def create_pull_request_title_and_body(
         )
         extra.append(bulleted_list)
     if extra:
-        if not body.endswith("\n"):
+        if body and not body.endswith("\n"):
             body += "\n"
         body += "\n".join([_HORIZONTAL_RULE, _SAPLING_FOOTER_MARKER] + extra)
     return title, body
