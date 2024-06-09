@@ -63,6 +63,7 @@ use edenapi::types::Parents;
 use edenapi::types::RepoPathBuf;
 use edenapi::types::SaplingRemoteApiServerError;
 use edenapi::types::SetBookmarkResponse;
+use edenapi::types::SuffixQueryResponse;
 use edenapi::types::TreeAttributes;
 use edenapi::types::TreeChildEntry;
 use edenapi::types::TreeChildFileEntry;
@@ -1060,6 +1061,34 @@ impl SaplingRemoteApi for EagerRepo {
             res.push(Ok(CommitTranslateIdResponse { commit, translated }));
         }
 
+        Ok(convert_to_response(res))
+    }
+
+    async fn suffix_query(
+        &self,
+        commit: CommitId,
+        suffixes: Vec<String>,
+    ) -> Result<Response<SuffixQueryResponse>, SaplingRemoteApiError> {
+        debug!("suffix_query");
+        // TODO(T189729875) Make this react to commited files
+        //let files = self.files();
+        let _ = commit;
+        let mut res = vec![];
+        for suffix in suffixes {
+            match suffix.clone().as_str() {
+                ".txt" => {
+                    let from_string = RepoPathBuf::from_string("foo.txt".to_string());
+                    let file_path = from_string.unwrap();
+                    res.push(Ok(SuffixQueryResponse { file_path }));
+                }
+                ".rs" => {
+                    let from_string = RepoPathBuf::from_string("bar.rs".to_string());
+                    let file_path = from_string.unwrap();
+                    res.push(Ok(SuffixQueryResponse { file_path }));
+                }
+                _ => {}
+            }
+        }
         Ok(convert_to_response(res))
     }
 }
