@@ -1368,6 +1368,14 @@ class EdenConfig : private ConfigSettingManager {
       true,
       this};
 
+  /**
+   * Controls whether EdenFS uses EdenAPI to make suffix queries
+   */
+  ConfigSetting<bool> enableEdenAPISuffixQuery{
+      "glob:use-edenapi-suffix-query",
+      false,
+      this};
+
   // [doctor]
 
   /**

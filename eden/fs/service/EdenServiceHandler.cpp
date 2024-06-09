@@ -3170,13 +3170,6 @@ EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
     backgroundFuture = makeNotReadyImmediateFuture();
   }
 
-  std::unique_ptr<SuffixGlobRequestScope> suffixGlobRequestScope;
-  if (!suffixGlobs.empty()) {
-    auto suffixGlobLogString = globber.logString(suffixGlobs);
-    suffixGlobRequestScope = std::make_unique<SuffixGlobRequestScope>(
-        suffixGlobLogString, server_->getServerState(), context);
-  }
-
   maybeLogExpensiveGlob(
       *params->globs(),
       *params->searchRoot_ref(),
@@ -3184,6 +3177,22 @@ EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
       context,
       server_->getServerState());
 
+  std::unique_ptr<SuffixGlobRequestScope> suffixGlobRequestScope;
+  if (!suffixGlobs.empty()) {
+    auto suffixGlobLogString = globber.logString(suffixGlobs);
+    suffixGlobRequestScope = std::make_unique<SuffixGlobRequestScope>(
+        suffixGlobLogString, server_->getServerState(), context);
+
+    // Only use BSSM if there are only suffix queries
+    if (server_->getServerState()
+            ->getEdenConfig()
+            ->enableEdenAPISuffixQuery.getValue() &&
+        nonSuffixGlobs.empty()) {
+      // Do things here
+    }
+  }
+
+  // If no suffixes, or if suffixes failed
   auto globFut = std::move(backgroundFuture)
                      .thenValue([mountHandle,
                                  serverState = server_->getServerState(),
