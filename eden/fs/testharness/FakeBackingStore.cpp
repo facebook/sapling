@@ -178,11 +178,14 @@ FakeBackingStore::getBlobMetadata(
 
 ImmediateFuture<BackingStore::GetGlobFilesResult>
 FakeBackingStore::getGlobFiles(
-    const RootId& /* id */,
-    const std::vector<std::string>& /* globs */) {
-  // TODO: Make this return things when you write the tests
+    const RootId& id,
+    const std::vector<std::string>& globs) {
+  // Since unordered map can't take a vec for testing purposes only use the
+  // first entry in the query
+  auto suffixQuery = std::pair<RootId, std::string>(id, globs[0]);
+  auto glob = getStoredGlob(suffixQuery)->get();
   return ImmediateFuture<GetGlobFilesResult>{
-      GetGlobFilesResult{std::make_unique<Glob>()}};
+      GetGlobFilesResult{std::make_unique<Glob>(glob)}};
 }
 
 Blob FakeBackingStore::makeBlob(folly::StringPiece contents) {
@@ -390,6 +393,19 @@ StoredHash* FakeBackingStore::putCommit(
   return putCommit(RootId(commitStr.str()), builder);
 }
 
+StoredGlob* FakeBackingStore::putGlob(
+    std::pair<RootId, std::string> suffixQuery,
+    std::unique_ptr<Glob> contents) {
+  auto data = data_.wlock();
+  auto storedGlob = std::make_unique<StoredGlob>(std::move(*contents));
+  auto ret = data->globs.emplace(suffixQuery, std::move(storedGlob));
+  if (!ret.second) {
+    throw std::domain_error(folly::to<std::string>(
+        "glob results for query ", suffixQuery.second, " already exists"));
+  }
+  return ret.first->second.get();
+}
+
 StoredTree* FakeBackingStore::getStoredTree(ObjectId hash) {
   auto data = data_.rlock();
   auto it = data->trees.find(hash);
@@ -404,6 +420,17 @@ StoredBlob* FakeBackingStore::getStoredBlob(ObjectId hash) {
   auto it = data->blobs.find(hash);
   if (it == data->blobs.end()) {
     throw std::domain_error(fmt::format("stored blob {} not found", hash));
+  }
+  return it->second.get();
+}
+
+StoredGlob* FakeBackingStore::getStoredGlob(
+    std::pair<RootId, std::string> suffixQuery) {
+  auto data = data_.rlock();
+  auto it = data->globs.find(suffixQuery);
+  if (it == data->globs.end()) {
+    throw std::domain_error(
+        fmt::format("stored glob {} not found", suffixQuery));
   }
   return it->second.get();
 }

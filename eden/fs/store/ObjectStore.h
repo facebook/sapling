@@ -255,6 +255,14 @@ class ObjectStore : public IObjectStore,
       const ObjectFetchContextPtr& context) const;
 
   /**
+   * Get file paths matching the given globs
+   */
+  ImmediateFuture<std::unique_ptr<Glob>> getGlobFiles(
+      const RootId& id,
+      const std::vector<std::string>& globs,
+      const ObjectFetchContextPtr& context) const;
+
+  /**
    * Get the BackingStore used by this ObjectStore
    */
   const std::shared_ptr<BackingStore>& getBackingStore() const {
@@ -342,6 +350,11 @@ class ObjectStore : public IObjectStore,
 
   folly::SemiFuture<BackingStore::GetBlobMetaResult> getBlobMetadataImpl(
       const ObjectId& id,
+      const ObjectFetchContextPtr& context) const;
+
+  ImmediateFuture<std::unique_ptr<Glob>> getGlobFilesImpl(
+      const RootId& id,
+      const std::vector<std::string>& globs,
       const ObjectFetchContextPtr& context) const;
 
   /**

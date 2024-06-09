@@ -102,6 +102,14 @@ struct ObjectStoreTest : ::testing::Test {
     return storedTree->get().getHash();
   }
 
+  void putReadyGlob(
+      std::pair<RootId, std::string> suffixQuery,
+      std::unique_ptr<Glob> globPtr) {
+    StoredGlob* storedGlob =
+        fakeBackingStore->putGlob(suffixQuery, std::move(globPtr));
+    storedGlob->setReady();
+  }
+
   RefPtr<LoggingFetchContext> loggingContext =
       makeRefPtr<LoggingFetchContext>();
   const ObjectFetchContextPtr& context =
@@ -504,4 +512,28 @@ TEST_F(
   EXPECT_TRUE(std::move(fut).get(0ms));
   EXPECT_EQ(context->getFetchCount(), 2);
 }
+
+TEST_F(ObjectStoreTest, glob_files_test) {
+  RootId rootId{"00000000000000000000"};
+  auto glob = std::make_unique<Glob>();
+  glob->matchingFiles_ref()->push_back("foo.txt");
+  glob->matchingFiles_ref()->push_back("bar.txt");
+  putReadyGlob(std::pair<RootId, std::string>(rootId, ".txt"), std::move(glob));
+
+  auto context = makeRefPtr<FetchContext>();
+  auto globs = std::vector<std::string>{".txt"};
+
+  auto fut = objectStore->getGlobFiles(
+      rootId, globs, context.as<ObjectFetchContext>());
+  auto result = std::move(fut).get(0ms);
+  EXPECT_TRUE(result);
+  EXPECT_EQ(result->matchingFiles().value().size(), 2);
+  auto sorted_result = result->matchingFiles().value();
+  std::sort(sorted_result.begin(), sorted_result.end());
+  auto expected_result = std::vector<std::string>{"bar.txt", "foo.txt"};
+  for (int i = 0; i < 2; i++) {
+    EXPECT_EQ(sorted_result[i], expected_result[i]);
+  }
+}
+
 } // namespace facebook::eden

@@ -661,6 +661,23 @@ ImmediateFuture<bool> ObjectStore::areBlobsEqual(
       });
 }
 
+ImmediateFuture<std::unique_ptr<Glob>> ObjectStore::getGlobFiles(
+    const RootId& id,
+    const std::vector<std::string>& globs,
+    const ObjectFetchContextPtr& context) const {
+  return ImmediateFuture{getGlobFilesImpl(id, globs, context)};
+}
+
+ImmediateFuture<std::unique_ptr<Glob>> ObjectStore::getGlobFilesImpl(
+    const RootId& id,
+    const std::vector<std::string>& globs,
+    const ObjectFetchContextPtr& /*context*/) const {
+  return backingStore_->getGlobFiles(id, globs).thenValue(
+      [id](BackingStore::GetGlobFilesResult result) {
+        return std::move(result.glob);
+      });
+}
+
 ObjectComparison ObjectStore::compareObjectsById(
     const ObjectId& one,
     const ObjectId& two) const {
