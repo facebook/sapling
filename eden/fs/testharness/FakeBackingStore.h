@@ -134,7 +134,7 @@ class FakeBackingStore final : public BackingStore {
    */
   StoredGlob* putGlob(
       std::pair<RootId, std::string> suffixQuery,
-      std::unique_ptr<Glob> contents);
+      std::vector<std::string> contents);
 
   /**
    * Look up a StoredTree.

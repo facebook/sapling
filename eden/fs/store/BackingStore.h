@@ -19,7 +19,6 @@
 #include "eden/fs/model/ObjectId.h"
 #include "eden/fs/model/RootId.h"
 #include "eden/fs/model/TreeFwd.h"
-#include "eden/fs/service/gen-cpp2/eden_types.h"
 #include "eden/fs/store/BackingStoreType.h"
 #include "eden/fs/store/ImportPriority.h"
 #include "eden/fs/store/ObjectFetchContext.h"
@@ -141,7 +140,8 @@ class BackingStore : public RootIdCodec, public ObjectIdCodec {
      * and will return an error. This will trigger the client to fallback to
      * looking up the globs locally.
      */
-    std::unique_ptr<Glob> glob;
+    std::vector<std::string> globFiles;
+    RootId rootId;
   };
 
   virtual void periodicManagementTask() {}

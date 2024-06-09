@@ -15,6 +15,7 @@ cpp_library(
         "Blob.h",
         "BlobMetadata.h",
         "EntryAttributeFlags.h",
+        "GlobEntry.h",
     ],
     deps = [
         "//eden/common/utils:enum",

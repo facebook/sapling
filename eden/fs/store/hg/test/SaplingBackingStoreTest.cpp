@@ -212,12 +212,10 @@ TEST_F(SaplingBackingStoreNoFaultInjectorTest, getGlobFilesMultiple) {
   auto suffixes = std::vector<std::string>{".txt"};
   auto globFiles =
       queuedBackingStore->getGlobFiles(commit1, suffixes).get(kTestTimeout);
-  auto paths = globFiles.glob->matchingFiles().value();
-  auto commitIds = globFiles.glob->originHashes().value();
+  auto paths = globFiles.globFiles;
+  auto commitId = queuedBackingStore->renderRootId(globFiles.rootId);
 
-  for (auto commitId : commitIds) {
-    EXPECT_EQ(commitId, queuedBackingStore->renderRootId(commit1));
-  }
+  EXPECT_EQ(commitId, queuedBackingStore->renderRootId(commit1));
 
   // TODO(T189729875) Make it check the files created during setup
   // The globFiles SaplingRemoteAPI endpoint is currently mocked out so files
@@ -234,12 +232,10 @@ TEST_F(SaplingBackingStoreNoFaultInjectorTest, getGlobFilesSingle) {
   auto suffixes = std::vector<std::string>{".rs"};
   auto globFiles =
       queuedBackingStore->getGlobFiles(commit1, suffixes).get(kTestTimeout);
-  auto paths = globFiles.glob->matchingFiles().value();
-  auto commitIds = globFiles.glob->originHashes().value();
+  auto paths = globFiles.globFiles;
+  auto commitId = queuedBackingStore->renderRootId(globFiles.rootId);
 
-  for (auto commitId : commitIds) {
-    EXPECT_EQ(commitId, queuedBackingStore->renderRootId(commit1));
-  }
+  EXPECT_EQ(commitId, queuedBackingStore->renderRootId(commit1));
 
   // TODO(T189729875) Make it check the files created during setup
   // The globFiles SaplingRemoteAPI endpoint is currently mocked out so files
@@ -253,12 +249,10 @@ TEST_F(SaplingBackingStoreNoFaultInjectorTest, getGlobFilesNone) {
   auto suffixes = std::vector<std::string>{".bzl"};
   auto globFiles =
       queuedBackingStore->getGlobFiles(commit1, suffixes).get(kTestTimeout);
-  auto paths = globFiles.glob->matchingFiles().value();
-  auto commitIds = globFiles.glob->originHashes().value();
+  auto paths = globFiles.globFiles;
+  auto commitId = queuedBackingStore->renderRootId(globFiles.rootId);
 
-  for (auto commitId : commitIds) {
-    EXPECT_EQ(commitId, queuedBackingStore->renderRootId(commit1));
-  }
+  EXPECT_EQ(commitId, queuedBackingStore->renderRootId(commit1));
 
   // TODO(T189729875) Make it check the files created during setup
   // The globFiles SaplingRemoteAPI endpoint is currently mocked out so files
@@ -270,12 +264,10 @@ TEST_F(SaplingBackingStoreNoFaultInjectorTest, getGlobFilesNested) {
   auto suffixes = std::vector<std::string>{".cpp"};
   auto globFiles =
       queuedBackingStore->getGlobFiles(commit1, suffixes).get(kTestTimeout);
-  auto paths = globFiles.glob->matchingFiles().value();
-  auto commitIds = globFiles.glob->originHashes().value();
+  auto paths = globFiles.globFiles;
+  auto commitId = queuedBackingStore->renderRootId(globFiles.rootId);
 
-  for (auto commitId : commitIds) {
-    EXPECT_EQ(commitId, queuedBackingStore->renderRootId(commit1));
-  }
+  EXPECT_EQ(commitId, queuedBackingStore->renderRootId(commit1));
 
   // TODO(T189729875) Make it check the files created during setup
   // The globFiles SaplingRemoteAPI endpoint is currently mocked out so files

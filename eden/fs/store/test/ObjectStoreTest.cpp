@@ -104,7 +104,7 @@ struct ObjectStoreTest : ::testing::Test {
 
   void putReadyGlob(
       std::pair<RootId, std::string> suffixQuery,
-      std::unique_ptr<Glob> globPtr) {
+      std::vector<std::string> globPtr) {
     StoredGlob* storedGlob =
         fakeBackingStore->putGlob(suffixQuery, std::move(globPtr));
     storedGlob->setReady();
@@ -515,9 +515,7 @@ TEST_F(
 
 TEST_F(ObjectStoreTest, glob_files_test) {
   RootId rootId{"00000000000000000000"};
-  auto glob = std::make_unique<Glob>();
-  glob->matchingFiles_ref()->push_back("foo.txt");
-  glob->matchingFiles_ref()->push_back("bar.txt");
+  auto glob = std::vector<std::string>{"foo.txt", "bar.txt"};
   putReadyGlob(std::pair<RootId, std::string>(rootId, ".txt"), std::move(glob));
 
   auto context = makeRefPtr<FetchContext>();
@@ -526,9 +524,8 @@ TEST_F(ObjectStoreTest, glob_files_test) {
   auto fut = objectStore->getGlobFiles(
       rootId, globs, context.as<ObjectFetchContext>());
   auto result = std::move(fut).get(0ms);
-  EXPECT_TRUE(result);
-  EXPECT_EQ(result->matchingFiles().value().size(), 2);
-  auto sorted_result = result->matchingFiles().value();
+  EXPECT_EQ(result.globFiles.size(), 2);
+  auto sorted_result = result.globFiles;
   std::sort(sorted_result.begin(), sorted_result.end());
   auto expected_result = std::vector<std::string>{"bar.txt", "foo.txt"};
   for (int i = 0; i < 2; i++) {

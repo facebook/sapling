@@ -1972,20 +1972,16 @@ SaplingBackingStore::getGlobFiles(
   auto globFilesResult = store_.getGlobFiles(id.value(), globs);
 
   if (globFilesResult.hasValue()) {
+    std::vector<std::string> files;
     auto globFiles = globFilesResult.value()->files;
-    auto glob = std::make_unique<Glob>();
     for (auto& file : globFiles) {
-      glob->matchingFiles_ref()->emplace_back(file);
-
-      // TODO:: Handle Dtype
-
-      glob->originHashes_ref()->emplace_back(renderRootId(id));
+      files.emplace_back(file);
     }
     stats_->addDuration(
         &SaplingBackingStoreStats::fetchGlobFiles, watch.elapsed());
     stats_->increment(&SaplingBackingStoreStats::fetchGlobFilesSuccess);
-    return GetGlobFilesResult{
-        BackingStore::GetGlobFilesResult{std::move(glob)}};
+
+    return GetGlobFilesResult{BackingStore::GetGlobFilesResult{files, id}};
   } else {
     stats_->increment(&SaplingBackingStoreStats::fetchGlobFilesFailure);
     return GetGlobFilesResult{globFilesResult.exception()};

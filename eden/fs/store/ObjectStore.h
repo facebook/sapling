@@ -257,7 +257,7 @@ class ObjectStore : public IObjectStore,
   /**
    * Get file paths matching the given globs
    */
-  ImmediateFuture<std::unique_ptr<Glob>> getGlobFiles(
+  ImmediateFuture<BackingStore::GetGlobFilesResult> getGlobFiles(
       const RootId& id,
       const std::vector<std::string>& globs,
       const ObjectFetchContextPtr& context) const;
@@ -352,7 +352,7 @@ class ObjectStore : public IObjectStore,
       const ObjectId& id,
       const ObjectFetchContextPtr& context) const;
 
-  ImmediateFuture<std::unique_ptr<Glob>> getGlobFilesImpl(
+  ImmediateFuture<BackingStore::GetGlobFilesResult> getGlobFilesImpl(
       const RootId& id,
       const std::vector<std::string>& globs,
       const ObjectFetchContextPtr& context) const;

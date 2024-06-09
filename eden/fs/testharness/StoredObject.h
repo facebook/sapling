@@ -15,14 +15,13 @@ namespace facebook::eden {
 class Blob;
 class ObjectId;
 class Tree;
-class Glob;
 
 template <typename T>
 class StoredObject;
 using StoredBlob = StoredObject<const Blob>;
 using StoredHash = StoredObject<ObjectId>;
 using StoredTree = StoredObject<const Tree>;
-using StoredGlob = StoredObject<const Glob>;
+using StoredGlob = StoredObject<const std::vector<std::string>>;
 
 /**
  * A helper class for TestBackingStore.

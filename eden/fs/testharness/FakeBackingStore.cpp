@@ -185,7 +185,7 @@ FakeBackingStore::getGlobFiles(
   auto suffixQuery = std::pair<RootId, std::string>(id, globs[0]);
   auto glob = getStoredGlob(suffixQuery)->get();
   return ImmediateFuture<GetGlobFilesResult>{
-      GetGlobFilesResult{std::make_unique<Glob>(glob)}};
+      GetGlobFilesResult{std::move(glob), id}};
 }
 
 Blob FakeBackingStore::makeBlob(folly::StringPiece contents) {
@@ -395,9 +395,9 @@ StoredHash* FakeBackingStore::putCommit(
 
 StoredGlob* FakeBackingStore::putGlob(
     std::pair<RootId, std::string> suffixQuery,
-    std::unique_ptr<Glob> contents) {
+    std::vector<std::string> contents) {
   auto data = data_.wlock();
-  auto storedGlob = std::make_unique<StoredGlob>(std::move(*contents));
+  auto storedGlob = std::make_unique<StoredGlob>(std::move(contents));
   auto ret = data->globs.emplace(suffixQuery, std::move(storedGlob));
   if (!ret.second) {
     throw std::domain_error(folly::to<std::string>(
