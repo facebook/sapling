@@ -251,6 +251,15 @@ impl BackingStore {
         self.inner.load().flush();
     }
 
+    #[instrument(level = "debug", skip(self))]
+    pub fn get_glob_files(
+        &self,
+        commit_id: [u8; 20],
+        suffixes: &Vec<String>,
+    ) -> Result<Vec<String>> {
+        Ok(vec!["Stub".to_string()])
+    }
+
     // Fully reload the stores if:
     //   - a touch file has a newer mtime than last time we checked, or
     //   - the touch file exists and didn't exist last time, or
