@@ -1967,6 +1967,7 @@ ImmediateFuture<BackingStore::GetGlobFilesResult>
 SaplingBackingStore::getGlobFiles(
     const RootId& id,
     const std::vector<std::string>& globs) {
+  folly::stop_watch<std::chrono::milliseconds> watch;
   using GetGlobFilesResult = folly::Try<GetGlobFilesResult>;
   auto globFilesResult = store_.getGlobFiles(id.value(), globs);
 
@@ -1980,9 +1981,13 @@ SaplingBackingStore::getGlobFiles(
 
       glob->originHashes_ref()->emplace_back(renderRootId(id));
     }
+    stats_->addDuration(
+        &SaplingBackingStoreStats::fetchGlobFiles, watch.elapsed());
+    stats_->increment(&SaplingBackingStoreStats::fetchGlobFilesSuccess);
     return GetGlobFilesResult{
         BackingStore::GetGlobFilesResult{std::move(glob)}};
   } else {
+    stats_->increment(&SaplingBackingStoreStats::fetchGlobFilesFailure);
     return GetGlobFilesResult{globFilesResult.exception()};
   }
 }
