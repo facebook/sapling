@@ -81,7 +81,8 @@ class HgRepo {
    */
   void hgInit(
       AbsolutePathPiece cacheDirectory,
-      std::vector<std::string> extraArgs = {});
+      std::vector<std::string> extraArgs = {},
+      bool isEagerRepo = true);
 
   /**
    * Call "hg clone" to create the repository.
