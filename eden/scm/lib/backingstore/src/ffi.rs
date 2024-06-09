@@ -92,11 +92,6 @@ pub(crate) mod ffi {
         // TODO: cri: ClientRequestInfo
     }
 
-    pub struct GlobFilesRequest {
-        commit_id: [u8; 20],
-        suffixes: Vec<String>,
-    }
-
     pub struct GlobFilesResponse {
         files: Vec<String>,
     }
@@ -198,7 +193,8 @@ pub(crate) mod ffi {
 
         pub fn sapling_backingstore_get_glob_files(
             store: &BackingStore,
-            request: &GlobFilesRequest,
+            commit_id: &[u8],
+            suffixes: Vec<String>,
         ) -> Result<SharedPtr<GlobFilesResponse>>;
     }
 }
@@ -343,10 +339,11 @@ pub fn sapling_backingstore_flush(store: &BackingStore) {
 
 pub fn sapling_backingstore_get_glob_files(
     store: &BackingStore,
-    request: &ffi::GlobFilesRequest,
+    commit_id: &[u8],
+    suffixes: Vec<String>,
 ) -> Result<SharedPtr<ffi::GlobFilesResponse>> {
     let files = store
-        .get_glob_files(request.commit_id, &request.suffixes)
-        .expect("failed to retrieve glob files");
+        .get_glob_files(commit_id, suffixes)
+        .and_then(|opt| opt.ok_or_else(|| Error::msg("failed to retrieve glob file")))?;
     Ok(SharedPtr::new(ffi::GlobFilesResponse { files }))
 }
