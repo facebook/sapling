@@ -40,7 +40,7 @@ struct TestRepo {
   Hash20 manifest1;
 
   TestRepo() {
-    repo.hgInit(testPath + "cache"_pc);
+    repo.hgInit(testPath + "cache"_pc, {}, /* isEagerRepo */ true);
 
     repo.mkdir("foo");
     repo.writeFile("foo/bar.txt", "bar\n");
@@ -106,6 +106,7 @@ struct SaplingBackingStoreWithFaultInjectorTest : SaplingBackingStoreTestBase {
           std::make_unique<BackingStoreLogger>(),
           &faultInjector);
 };
+
 struct SaplingBackingStoreWithFaultInjectorIgnoreConfigTest
     : SaplingBackingStoreTestBase {
   std::shared_ptr<TestConfigSource> testConfigSource{
@@ -204,6 +205,87 @@ TEST_F(SaplingBackingStoreWithFaultInjectorTest, getBlob) {
 
       EXPECT_EQ(blob->getContents().cloneAsValue().moveToFbString(), "bar\n");
     }
+  }
+}
+
+TEST_F(SaplingBackingStoreNoFaultInjectorTest, getGlobFilesMultiple) {
+  auto suffixes = std::vector<std::string>{".txt"};
+  auto globFiles =
+      queuedBackingStore->getGlobFiles(commit1, suffixes).get(kTestTimeout);
+  auto paths = globFiles.glob->matchingFiles().value();
+  auto commitIds = globFiles.glob->originHashes().value();
+
+  for (auto commitId : commitIds) {
+    EXPECT_EQ(commitId, queuedBackingStore->renderRootId(commit1));
+  }
+
+  // TODO(T189729875) Make it check the files created during setup
+  // The globFiles SaplingRemoteAPI endpoint is currently mocked out so files
+  // returned are always the same dependent on the given suffix.
+  std::sort(paths.begin(), paths.end());
+  auto expected_result = std::vector<std::string>{"baz.txt", "foo.txt"};
+  EXPECT_EQ(paths.size(), 2);
+  for (int i = 0; i < 2; i++) {
+    EXPECT_EQ(paths[i], expected_result[i]);
+  }
+}
+
+TEST_F(SaplingBackingStoreNoFaultInjectorTest, getGlobFilesSingle) {
+  auto suffixes = std::vector<std::string>{".rs"};
+  auto globFiles =
+      queuedBackingStore->getGlobFiles(commit1, suffixes).get(kTestTimeout);
+  auto paths = globFiles.glob->matchingFiles().value();
+  auto commitIds = globFiles.glob->originHashes().value();
+
+  for (auto commitId : commitIds) {
+    EXPECT_EQ(commitId, queuedBackingStore->renderRootId(commit1));
+  }
+
+  // TODO(T189729875) Make it check the files created during setup
+  // The globFiles SaplingRemoteAPI endpoint is currently mocked out so files
+  // returned are always the same dependent on the given suffix.
+  std::sort(paths.begin(), paths.end());
+  auto expected_result = std::vector<std::string>{"bar.rs"};
+  EXPECT_EQ(paths.size(), 1);
+  EXPECT_EQ(paths[0], expected_result[0]);
+}
+TEST_F(SaplingBackingStoreNoFaultInjectorTest, getGlobFilesNone) {
+  auto suffixes = std::vector<std::string>{".bzl"};
+  auto globFiles =
+      queuedBackingStore->getGlobFiles(commit1, suffixes).get(kTestTimeout);
+  auto paths = globFiles.glob->matchingFiles().value();
+  auto commitIds = globFiles.glob->originHashes().value();
+
+  for (auto commitId : commitIds) {
+    EXPECT_EQ(commitId, queuedBackingStore->renderRootId(commit1));
+  }
+
+  // TODO(T189729875) Make it check the files created during setup
+  // The globFiles SaplingRemoteAPI endpoint is currently mocked out so files
+  // returned are always the same dependent on the given suffix.
+  EXPECT_EQ(paths.size(), 0);
+}
+
+TEST_F(SaplingBackingStoreNoFaultInjectorTest, getGlobFilesNested) {
+  auto suffixes = std::vector<std::string>{".cpp"};
+  auto globFiles =
+      queuedBackingStore->getGlobFiles(commit1, suffixes).get(kTestTimeout);
+  auto paths = globFiles.glob->matchingFiles().value();
+  auto commitIds = globFiles.glob->originHashes().value();
+
+  for (auto commitId : commitIds) {
+    EXPECT_EQ(commitId, queuedBackingStore->renderRootId(commit1));
+  }
+
+  // TODO(T189729875) Make it check the files created during setup
+  // The globFiles SaplingRemoteAPI endpoint is currently mocked out so files
+  // returned are always the same dependent on the given suffix.
+  std::sort(paths.begin(), paths.end());
+  auto expected_result =
+      std::vector<std::string>{"fuji/peak.cpp", "ranier.cpp"};
+  EXPECT_EQ(paths.size(), 2);
+  for (int i = 0; i < 2; i++) {
+    EXPECT_EQ(paths[i], expected_result[i]);
   }
 }
 

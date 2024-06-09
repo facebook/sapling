@@ -1076,8 +1076,19 @@ impl SaplingRemoteApi for EagerRepo {
         let mut res = vec![];
         for suffix in suffixes {
             match suffix.clone().as_str() {
+                ".cpp" => {
+                    let from_string = RepoPathBuf::from_string("ranier.cpp".to_string());
+                    let file_path = from_string.unwrap();
+                    res.push(Ok(SuffixQueryResponse { file_path }));
+                    let from_string = RepoPathBuf::from_string("fuji/peak.cpp".to_string());
+                    let file_path = from_string.unwrap();
+                    res.push(Ok(SuffixQueryResponse { file_path }));
+                }
                 ".txt" => {
                     let from_string = RepoPathBuf::from_string("foo.txt".to_string());
+                    let file_path = from_string.unwrap();
+                    res.push(Ok(SuffixQueryResponse { file_path }));
+                    let from_string = RepoPathBuf::from_string("baz.txt".to_string());
                     let file_path = from_string.unwrap();
                     res.push(Ok(SuffixQueryResponse { file_path }));
                 }
