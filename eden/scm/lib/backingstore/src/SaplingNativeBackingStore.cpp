@@ -199,6 +199,29 @@ void SaplingNativeBackingStore::getBlobMetadataBatch(
       std::move(resolver));
 }
 
+folly::Try<std::shared_ptr<GlobFilesResponse>>
+SaplingNativeBackingStore::getGlobFiles(
+    // Human Readable 40b commit id
+    std::string_view commit_id,
+    const std::vector<std::string>& suffixes) {
+  rust::Vec<rust::String> rust_suffixes;
+  std::copy(
+      suffixes.begin(), suffixes.end(), std::back_inserter(rust_suffixes));
+
+  auto br = folly::ByteRange(commit_id);
+  return folly::makeTryWith([&] {
+    auto globFiles = sapling_backingstore_get_glob_files(
+        *store_.get(),
+        rust::Slice<const uint8_t>{br.data(), br.size()},
+        rust_suffixes);
+
+    XCHECK(
+        globFiles.get(),
+        "sapling_backingstore_get_glob_files returned a nullptr, but did not throw an exception.");
+    return globFiles;
+  });
+}
+
 void SaplingNativeBackingStore::flush() {
   XLOG(DBG7) << "Flushing backing store";
 

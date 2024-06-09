@@ -1702,6 +1702,7 @@ impl SaplingRemoteApi for Client {
         commit: CommitId,
         suffixes: Vec<String>,
     ) -> Result<Response<SuffixQueryResponse>, SaplingRemoteApiError> {
+        // Clone required here due to closure possibly being run more than once
         self.with_retry(|this| {
             this.suffix_query_attempt(commit.clone(), suffixes.clone())
                 .boxed()
