@@ -59,6 +59,10 @@ class EmptyBackingStore final : public BijectiveBackingStore {
       const ObjectId& /*id*/,
       const ObjectFetchContextPtr& /*context*/) override;
 
+  ImmediateFuture<GetGlobFilesResult> getGlobFiles(
+      const RootId& id,
+      const std::vector<std::string>& globs) override;
+
   LocalStoreCachingPolicy localStoreCachingPolicy_ =
       LocalStoreCachingPolicy::NoCaching;
 };

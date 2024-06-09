@@ -375,6 +375,15 @@ folly::SemiFuture<folly::Unit> FilteredBackingStore::prefetchBlobs(
       [unfilteredIds = std::move(unfilteredIds)]() {});
 }
 
+ImmediateFuture<BackingStore::GetGlobFilesResult>
+FilteredBackingStore::getGlobFiles(
+    const RootId& /* id */,
+    const std::vector<std::string>& /* globs */) {
+  // TODO T188269931: Implement filters for Globs
+  return folly::makeFuture<GetGlobFilesResult>(std::runtime_error(
+      "getGlobFiles() is not implemented on filteredBackingStore"));
+}
+
 void FilteredBackingStore::periodicManagementTask() {
   backingStore_->periodicManagementTask();
 }

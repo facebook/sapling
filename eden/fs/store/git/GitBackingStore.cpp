@@ -256,6 +256,13 @@ GitBackingStore::getBlobMetadata(
       nullptr, ObjectFetchContext::Origin::NotFetched};
 }
 
+ImmediateFuture<BackingStore::GetGlobFilesResult> GitBackingStore::getGlobFiles(
+    const RootId& /* id */,
+    const std::vector<std::string>& /* globs */) {
+  return folly::makeFuture<GetGlobFilesResult>(
+      std::runtime_error("getGlobFiles() is not supported on git"));
+};
+
 git_oid GitBackingStore::root2Oid(const RootId& rootId) {
   auto& value = rootId.value();
   CHECK_EQ(40, value.size());

@@ -1963,6 +1963,30 @@ folly::SemiFuture<folly::Unit> SaplingBackingStore::prefetchBlobs(
       .semi();
 }
 
+ImmediateFuture<BackingStore::GetGlobFilesResult>
+SaplingBackingStore::getGlobFiles(
+    const RootId& id,
+    const std::vector<std::string>& globs) {
+  using GetGlobFilesResult = folly::Try<GetGlobFilesResult>;
+  auto globFilesResult = store_.getGlobFiles(id.value(), globs);
+
+  if (globFilesResult.hasValue()) {
+    auto globFiles = globFilesResult.value()->files;
+    auto glob = std::make_unique<Glob>();
+    for (auto& file : globFiles) {
+      glob->matchingFiles_ref()->emplace_back(file);
+
+      // TODO:: Handle Dtype
+
+      glob->originHashes_ref()->emplace_back(renderRootId(id));
+    }
+    return GetGlobFilesResult{
+        BackingStore::GetGlobFilesResult{std::move(glob)}};
+  } else {
+    return GetGlobFilesResult{globFilesResult.exception()};
+  }
+}
+
 void SaplingBackingStore::logMissingProxyHash() {
   auto now = std::chrono::steady_clock::now();
 

@@ -283,6 +283,8 @@ class SaplingBackingStore final : public BackingStore {
   FRIEND_TEST(SaplingBackingStoreWithFaultInjectorTest, getTree);
   FRIEND_TEST(SaplingBackingStoreNoFaultInjectorTest, getBlob);
   FRIEND_TEST(SaplingBackingStoreWithFaultInjectorTest, getBlob);
+  FRIEND_TEST(SaplingBackingStoreNoFaultInjectorTest, globFiles);
+  FRIEND_TEST(SaplingBackingStoreWithFaultInjectorTest, getGlobFiles);
   FRIEND_TEST(SaplingBackingStoreWithFaultInjectorTest, getTreeBatch);
   FRIEND_TEST(
       SaplingBackingStoreWithFaultInjectorIgnoreConfigTest,
@@ -477,6 +479,10 @@ class SaplingBackingStore final : public BackingStore {
       std::vector<std::shared_ptr<SaplingImportRequest>>&& requests);
   void processBlobMetaImportRequests(
       std::vector<std::shared_ptr<SaplingImportRequest>>&& requests);
+
+  ImmediateFuture<GetGlobFilesResult> getGlobFiles(
+      const RootId& id,
+      const std::vector<std::string>& globs) override;
 
   /**
    * The worker runloop function.

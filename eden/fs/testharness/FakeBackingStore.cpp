@@ -176,6 +176,15 @@ FakeBackingStore::getBlobMetadata(
       .semi();
 }
 
+ImmediateFuture<BackingStore::GetGlobFilesResult>
+FakeBackingStore::getGlobFiles(
+    const RootId& /* id */,
+    const std::vector<std::string>& /* globs */) {
+  // TODO: Make this return things when you write the tests
+  return ImmediateFuture<GetGlobFilesResult>{
+      GetGlobFilesResult{std::make_unique<Glob>()}};
+}
+
 Blob FakeBackingStore::makeBlob(folly::StringPiece contents) {
   return Blob{IOBuf{IOBuf::COPY_BUFFER, ByteRange{contents}}};
 }

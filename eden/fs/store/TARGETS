@@ -140,6 +140,7 @@ cpp_library(
         "//eden/common/utils:path",
         "//eden/fs/model:model",
         "//eden/fs/model:model-fwd",
+        "//eden/fs/service:thrift-cpp2-types",
         "//folly:range",
         "//folly/futures:core",
         "//folly/memory:not_null",

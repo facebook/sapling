@@ -147,6 +147,10 @@ class FilteredBackingStore
       ObjectIdRange ids,
       const ObjectFetchContextPtr& context) override;
 
+  ImmediateFuture<GetGlobFilesResult> getGlobFiles(
+      const RootId& id,
+      const std::vector<std::string>& globs) override;
+
   /*
    * Does the actual filtering logic for tree and root-tree objects.
    */

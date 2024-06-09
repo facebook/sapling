@@ -190,6 +190,7 @@ class FakeBackingStore final : public BackingStore {
   FRIEND_TEST(FakeBackingStoreTest, getBlob);
   FRIEND_TEST(FakeBackingStoreTest, getTree);
   FRIEND_TEST(FakeBackingStoreTest, getRootTree);
+  FRIEND_TEST(FakeBackingStoreTest, getGlobFiles);
 
   ImmediateFuture<GetRootTreeResult> getRootTree(
       const RootId& commitID,
@@ -208,6 +209,9 @@ class FakeBackingStore final : public BackingStore {
   folly::SemiFuture<GetBlobMetaResult> getBlobMetadata(
       const ObjectId& id,
       const ObjectFetchContextPtr& context) override;
+  ImmediateFuture<GetGlobFilesResult> getGlobFiles(
+      const RootId& id,
+      const std::vector<std::string>& globs) override;
 
   LocalStoreCachingPolicy localStoreCachingPolicy_;
   std::shared_ptr<ServerState> serverState_;

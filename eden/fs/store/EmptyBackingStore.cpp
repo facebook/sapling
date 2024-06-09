@@ -66,4 +66,12 @@ SemiFuture<BackingStore::GetBlobMetaResult> EmptyBackingStore::getBlobMetadata(
       std::domain_error("empty backing store"));
 }
 
+ImmediateFuture<BackingStore::GetGlobFilesResult>
+EmptyBackingStore::getGlobFiles(
+    const RootId& /* id */,
+    const std::vector<std::string>& /* globs */) {
+  return makeSemiFuture<GetGlobFilesResult>(
+      std::domain_error("empty backing store"));
+}
+
 } // namespace facebook::eden
