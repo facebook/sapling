@@ -54,6 +54,8 @@ target_link_libraries(
   PRIVATE
     eden_nfs_nfsd_rpc
     Folly::folly
+  PUBLIC
+    eden_utils
 )
 
 
@@ -113,6 +115,7 @@ target_link_libraries(
   PUBLIC
     eden_nfs_nfsd_rpc
     eden_inodes_inodenumber
+    eden_utils
 )
 
 add_subdirectory(portmap)

@@ -50,6 +50,7 @@ target_include_directories(
 target_link_libraries(
   backingstore
   PUBLIC
+  edencommon::edencommon_os
   rust_backingstore
   fmt::fmt
   Folly::folly
