@@ -78,7 +78,7 @@ def debugrebuildchangelog(ui, repo, **opts) -> None:
         )
         vertexopts = {
             "reserve_size": 0,
-            "highest_group": 0,
+            "desired_group": 0,
         }
         data = api.pulllazy([], [main_node])
         hgcommits.importpulldata(data, [(main_node, vertexopts)])
