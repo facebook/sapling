@@ -134,6 +134,8 @@ Python utility:
   
   # The repository is in an unfinished *merge* state.
   # No unresolved merge conflicts.
+  # To continue:                hg continue, then hg commit
+  # To abort:                   hg goto --clean .    (warning: this will discard uncommitted changes)
 
 # The state is confusing, but 'hg continue' can resolve it.
 
