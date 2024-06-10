@@ -45,8 +45,10 @@ pub async fn update_remote_bookmarks(
             removed_bookmarks: removed_commits,
         };
 
-        Delete::<WorkspaceRemoteBookmark>::delete(
+        txn = Delete::<WorkspaceRemoteBookmark>::delete(
             sql_commit_cloud,
+            txn,
+            cri,
             ctx.reponame.clone(),
             ctx.workspace.clone(),
             delete_args,

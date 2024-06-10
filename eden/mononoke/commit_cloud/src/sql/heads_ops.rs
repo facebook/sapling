@@ -101,17 +101,20 @@ impl Delete<WorkspaceHead> for SqlCommitCloud {
     type DeleteArgs = DeleteArgs;
     async fn delete(
         &self,
+        txn: Transaction,
+        cri: Option<&ClientRequestInfo>,
         reponame: String,
         workspace: String,
         args: Self::DeleteArgs,
-    ) -> anyhow::Result<()> {
-        DeleteHead::query(
-            &self.connections.write_connection,
+    ) -> anyhow::Result<Transaction> {
+        let (txn, _) = DeleteHead::maybe_traced_query_with_transaction(
+            txn,
+            cri,
             &reponame,
             &workspace,
             &list_as_bytes(args.removed_commits, self.uses_mysql)?,
         )
         .await?;
-        Ok(())
+        Ok(txn)
     }
 }

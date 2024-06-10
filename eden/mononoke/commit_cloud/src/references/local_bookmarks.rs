@@ -43,8 +43,10 @@ pub async fn update_bookmarks(
             removed_bookmarks: removed_commits,
         };
 
-        Delete::<WorkspaceLocalBookmark>::delete(
+        txn = Delete::<WorkspaceLocalBookmark>::delete(
             sql_commit_cloud,
+            txn,
+            cri,
             ctx.reponame.clone(),
             ctx.workspace.clone(),
             delete_args,

@@ -37,8 +37,10 @@ pub async fn update_snapshots(
                 .collect::<Vec<HgChangesetId>>(),
         };
 
-        Delete::<WorkspaceSnapshot>::delete(
+        txn = Delete::<WorkspaceSnapshot>::delete(
             sql_commit_cloud,
+            txn,
+            cri,
             ctx.reponame.clone(),
             ctx.workspace.clone(),
             delete_args,

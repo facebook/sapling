@@ -39,8 +39,10 @@ pub async fn update_heads(
                 .collect::<Vec<HgChangesetId>>(),
         };
 
-        Delete::<WorkspaceHead>::delete(
+        txn = Delete::<WorkspaceHead>::delete(
             sql_commit_cloud,
+            txn,
+            cri,
             ctx.reponame.clone(),
             ctx.workspace.clone(),
             delete_args,

@@ -94,14 +94,18 @@ async fn test_snapshots(_fb: FacebookInit) -> anyhow::Result<()> {
     assert_eq!(res.len(), 2);
 
     let removed_commits = vec![snapshot1.commit];
-
-    Delete::<WorkspaceSnapshot>::delete(
+    txn = sql.connections.write_connection.start_transaction().await?;
+    txn = Delete::<WorkspaceSnapshot>::delete(
         &sql,
+        txn,
+        None,
         reponame.clone(),
         workspace.clone(),
         DeleteArgs { removed_commits },
     )
     .await?;
+    txn.commit().await?;
+
     let res: Vec<WorkspaceSnapshot> = sql.get(reponame.clone(), workspace.clone()).await?;
 
     assert_eq!(res, vec![snapshot2]);
@@ -149,14 +153,18 @@ async fn test_heads(_fb: FacebookInit) -> anyhow::Result<()> {
     let res: Vec<WorkspaceHead> = sql.get(reponame.clone(), workspace.clone()).await?;
     assert_eq!(res.len(), 2);
     let removed_commits = vec![head1.commit];
-
-    Delete::<WorkspaceHead>::delete(
+    txn = sql.connections.write_connection.start_transaction().await?;
+    txn = Delete::<WorkspaceHead>::delete(
         &sql,
+        txn,
+        None,
         reponame.clone(),
         workspace.clone(),
         DeleteArgs { removed_commits },
     )
     .await?;
+    txn.commit().await?;
+
     let res: Vec<WorkspaceHead> = sql.get(reponame.clone(), workspace.clone()).await?;
 
     assert_eq!(res, vec![head2]);
@@ -208,14 +216,17 @@ async fn test_local_bookmarks(_fb: FacebookInit) -> anyhow::Result<()> {
     assert_eq!(res.len(), 2);
 
     let removed_bookmarks = vec![bookmark1.commit.clone()];
-
-    Delete::<WorkspaceLocalBookmark>::delete(
+    txn = sql.connections.write_connection.start_transaction().await?;
+    txn = Delete::<WorkspaceLocalBookmark>::delete(
         &sql,
+        txn,
+        None,
         reponame.clone(),
         workspace.clone(),
         DeleteArgs { removed_bookmarks },
     )
     .await?;
+    txn.commit().await?;
     let res: Vec<WorkspaceLocalBookmark> = sql.get(reponame.clone(), workspace.clone()).await?;
     assert_eq!(res, vec![bookmark2]);
 
@@ -269,14 +280,17 @@ async fn test_remote_bookmarks(_fb: FacebookInit) -> anyhow::Result<()> {
     assert_eq!(res.len(), 2);
 
     let removed_bookmarks = vec!["remote/my_bookmark1".to_owned()];
-
-    Delete::<WorkspaceRemoteBookmark>::delete(
+    txn = sql.connections.write_connection.start_transaction().await?;
+    txn = Delete::<WorkspaceRemoteBookmark>::delete(
         &sql,
+        txn,
+        None,
         reponame.clone(),
         workspace.clone(),
         DeleteArgs { removed_bookmarks },
     )
     .await?;
+    txn.commit().await?;
 
     let res: Vec<WorkspaceRemoteBookmark> = sql.get(reponame.clone(), workspace.clone()).await?;
 
@@ -399,8 +413,11 @@ async fn test_history(_fb: FacebookInit) -> anyhow::Result<()> {
     txn.commit().await?;
 
     // Delete first history entry, validate only second entry is left
-    Delete::<WorkspaceHistory>::delete(
+    txn = sql.connections.write_connection.start_transaction().await?;
+    txn = Delete::<WorkspaceHistory>::delete(
         &sql,
+        txn,
+        None,
         reponame.clone(),
         workspace.clone(),
         DeleteArgs {
@@ -410,6 +427,7 @@ async fn test_history(_fb: FacebookInit) -> anyhow::Result<()> {
         },
     )
     .await?;
+    txn.commit().await?;
 
     let res: Vec<GetOutput> = sql
         .get(

@@ -72,10 +72,12 @@ pub trait Delete<T = Self> {
     type DeleteArgs;
     async fn delete(
         &self,
+        txn: Transaction,
+        cri: Option<&ClientRequestInfo>,
         reponame: String,
         workspace: String,
         args: Self::DeleteArgs,
-    ) -> anyhow::Result<()>;
+    ) -> anyhow::Result<Transaction>;
 }
 
 trait SqlCommitCloudOps<T> = Get<T> + Update<T> + Insert<T> + Delete<T>;

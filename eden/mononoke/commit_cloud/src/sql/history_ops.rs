@@ -170,12 +170,15 @@ impl Delete<WorkspaceHistory> for SqlCommitCloud {
 
     async fn delete(
         &self,
+        txn: Transaction,
+        cri: Option<&ClientRequestInfo>,
         reponame: String,
         workspace: String,
         args: Self::DeleteArgs,
-    ) -> anyhow::Result<()> {
-        DeleteHistory::query(
-            &self.connections.write_connection,
+    ) -> anyhow::Result<Transaction> {
+        let (txn, _) = DeleteHistory::maybe_traced_query_with_transaction(
+            txn,
+            cri,
             &reponame,
             &workspace,
             &args.keep_days,
@@ -183,7 +186,7 @@ impl Delete<WorkspaceHistory> for SqlCommitCloud {
             &args.delete_limit,
         )
         .await?;
-        Ok(())
+        Ok(txn)
     }
 }
 

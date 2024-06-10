@@ -109,17 +109,20 @@ impl Delete<WorkspaceRemoteBookmark> for SqlCommitCloud {
     type DeleteArgs = DeleteArgs;
     async fn delete(
         &self,
+        txn: Transaction,
+        cri: Option<&ClientRequestInfo>,
         reponame: String,
         workspace: String,
         args: Self::DeleteArgs,
-    ) -> anyhow::Result<()> {
-        DeleteRemoteBookmark::query(
-            &self.connections.write_connection,
+    ) -> anyhow::Result<Transaction> {
+        let (txn, _) = DeleteRemoteBookmark::maybe_traced_query_with_transaction(
+            txn,
+            cri,
             &reponame,
             &workspace,
             args.removed_bookmarks.as_slice(),
         )
         .await?;
-        Ok(())
+        Ok(txn)
     }
 }
