@@ -15,7 +15,7 @@ bookmarks = { version = "0.1.0", path = "../../bookmarks" }
 bookmarks_cache = { version = "0.1.0", path = "../../bookmarks/bookmarks_cache" }
 buffered_weighted = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 bytes = { version = "1.6.0", features = ["serde"] }
-clap = { version = "4.5.4", features = ["derive", "env", "string", "unicode", "wrap_help"] }
+clap = { version = "4.5.6", features = ["derive", "env", "string", "unicode", "wrap_help"] }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 commit_graph = { version = "0.1.0", path = "../../repo_attributes/commit_graph/commit_graph" }
 commit_graph_types = { version = "0.1.0", path = "../../repo_attributes/commit_graph/commit_graph_types" }
