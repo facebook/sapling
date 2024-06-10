@@ -476,3 +476,19 @@ Test update_distance logging:
    INFO update_size: update_distance=1
   $ LOG=update_size=trace hg go -q null
    INFO update_size: update_distance=2
+
+#if unix-permissions no-eden
+# Test output when there are lots of filesystem errors:
+
+  $ newclientrepo
+  $ mkdir dir
+  $ for i in `seq 10`; do touch dir/file_$i; done
+  $ hg commit -Aqm foo
+  $ hg go -q null
+  $ mkdir dir
+  $ chmod 444 dir
+# XXX fixme
+  $ hg go tip
+  abort: Can't clear conflicts after handling error "Permission denied (os error 13)"Can't clear conflicts after handling error "Permission denied (os error 13)"Can't clear conflicts after handling error "Permission denied (os error 13)"Can't clear conflicts after handling error "Permission denied (os error 13)"Can't clear conflicts after handling error "Permission denied (os error 13)"Can't clear conflicts after handling error "Permission denied (os error 13)"Can't clear conflicts after handling error "Permission denied (os error 13)"Can't clear conflicts after handling error "Permission denied (os error 13)"Can't clear conflicts after handling error "Permission denied (os error 13)"Can't clear conflicts after handling error "Permission denied (os error 13)": error lstating * in clear_conflicts: Permission denied (os error 13) (glob)
+  [255]
+#endif
