@@ -362,10 +362,8 @@ impl LocalStore for IndexedLogHgIdDataStore {
                         warn!("Force missing: {}", k.path);
                         return true;
                     }
-                    match Entry::from_log(k.hgid.as_ref(), &self.store) {
-                        Ok(None) | Err(_) => true,
-                        Ok(Some(_)) => false,
-                    }
+
+                    !self.contains(&k.hgid).unwrap_or(false)
                 }
                 StoreKey::Content(_, _) => true,
             })
