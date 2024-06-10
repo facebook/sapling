@@ -19,7 +19,8 @@
   > }
   > EOF
 
-  $ init_large_small_repo
+  $ setconfig push.edenapi=true
+  $ ENABLE_API_WRITES=1 init_large_small_repo
   Adding synced mapping entry
   Starting Mononoke server
 
@@ -27,8 +28,8 @@
   $ cd "$TESTTMP/small-hg-client"
   $ REPONAME=small-mon hgmn up -q master_bookmark
   $ echo 2 > 2 && hg addremove -q && hg ci -q -m newcommit
-  $ REPONAME=small-mon hgmn push -r . --to master_bookmark 2>&1 | grep updating
-  updating bookmark master_bookmark
+  $ REPONAME=small-mon hgedenapi push -r . --to master_bookmark 2>&1 | grep 'updated remote bookmark'
+  updated remote bookmark master_bookmark to ce81c7d38286
 -- newcommit was correctly pushed to master_bookmark
   $ log -r master_bookmark
   @  newcommit [public;rev=2;ce81c7d38286] default/master_bookmark
@@ -67,8 +68,8 @@
   $ echo 3 > 3 && hg addremove 3 && hg ci -m 'first unbound commit'
   $ echo 4 > 4 && hg addremove 4 && hg ci -m 'second unbound commit'
   $ SMALL_NODE="$(hg log -r tip -T '{node}')"
-  $ REPONAME=small-mon hgmn push -r . --to master_bookmark 2>&1 | grep updating
-  updating bookmark master_bookmark
+  $ REPONAME=small-mon hgedenapi push -r . --to master_bookmark 2>&1 | grep 'updated remote bookmark'
+  updated remote bookmark master_bookmark to 2c39dde79608
   $ cd "$TESTTMP"/large-hg-client
   $ REPONAME=large-mon hgmn pull -q &> /dev/null
   $ log -r master_bookmark
@@ -83,8 +84,8 @@
   $ REPONAME=large-mon hgmn up master_bookmark -q
   $ echo 'largerepocontent' > smallrepofolder/2
   $ hg ci -m 'large repo unbound commit'
-  $ REPONAME=large-mon hgmn push -r . --to master_bookmark 2>&1 | grep updating
-  updating bookmark master_bookmark
+  $ REPONAME=large-mon hgedenapi push -r . --to master_bookmark 2>&1 | grep 'updated remote bookmark'
+  updated remote bookmark master_bookmark to c4fabb2e572b
   $ log -r master_bookmark
   @  large repo unbound commit [public;rev=4;c4fabb2e572b] default/master_bookmark
   │
@@ -118,14 +119,14 @@
   2 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ REPONAME=large-mon hgmn ci -m 'rebinding'
-  $ REPONAME=large-mon hgmn push -r . --to master_bookmark -q
+  $ REPONAME=large-mon hgedenapi push -r . --to master_bookmark -q
   $ LARGE_REBINDING="$(hg log -r master_bookmark -T '{node}')"
 
 -- Step 4. create a commit that fixes working copy in the small repo and push it
   $ cd "$TESTTMP/small-hg-client"
   $ echo 'largerepocontent' > 2
   $ hg ci -qm 'rebinding'
-  $ REPONAME=small-mon hgmn push -r . --to master_bookmark -q
+  $ REPONAME=small-mon hgedenapi push -r . --to master_bookmark -q
   $ SMALL_REBINDING="$(hg log -r master_bookmark -T '{node}')"
 
 -- Step 5. mark commits that fix working copy as rewritten
@@ -157,7 +158,7 @@
   $ echo 'newfile' > newfile
   $ hg add newfile
   $ hg ci -qm 'after rebinding'
-  $ REPONAME=small-mon hgmn push -r . --to master_bookmark -q
+  $ REPONAME=small-mon hgedenapi push -r . --to master_bookmark -q
   $ hg log -r master_bookmark
   commit:      ad40a9a26fbd
   bookmark:    default/master_bookmark
@@ -181,7 +182,7 @@
   $ REPONAME=large-mon hgmn up master_bookmark -q
   $ echo 'largenewcontent' > smallrepofolder/2
   $ hg ci -qm 'after rebinding from large'
-  $ REPONAME=large-mon hgmn push -r . --to master_bookmark -q
+  $ REPONAME=large-mon hgedenapi push -r . --to master_bookmark -q
 
 -- we do not have backsyncer running, so in order to see the change
 -- from small repo we need to do a push
@@ -189,13 +190,17 @@
   $ REPONAME=small-mon hgmn up -q master_bookmark
   $ echo 'newcontent' > 3
   $ hg ci -qm 'one more after rebinding'
-  $ REPONAME=small-mon hgmn push -r . --to master_bookmark
-  pushing rev 9cb648e934be to destination mononoke://$LOCALIP:$LOCAL_PORT/small-mon bookmark master_bookmark
-  searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
-  updating bookmark master_bookmark
+  $ REPONAME=small-mon hgedenapi push -r . --to master_bookmark
+  pushing rev 9cb648e934be to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
+  edenapi: queue 1 commit for upload
+  edenapi: queue 1 file for upload
+  edenapi: uploaded 1 file
+  edenapi: queue 1 tree for upload
+  edenapi: uploaded 1 tree
+  edenapi: uploaded 1 changeset
+  pushrebasing stack (ad40a9a26fbd, 9cb648e934be] (1 commit) to remote bookmark master_bookmark
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  updated remote bookmark master_bookmark to 9f6b8b8acc0b
   $ hg log -r master_bookmark
   commit:      9f6b8b8acc0b
   bookmark:    default/master_bookmark
