@@ -2271,6 +2271,9 @@ class overlayworkingctx(committablectx):
     def __init__(self, repo):
         super(overlayworkingctx, self).__init__(repo)
         self._repo = repo
+        self._reuse_filenode = repo.ui.configbool(
+            "experimental", "reuse-filenodes", True
+        )
         self.clean()
 
     def setbase(self, wrappedctx):
@@ -2549,7 +2552,7 @@ class overlayworkingctx(committablectx):
         copied=None,
     ):
         filenode = None
-        if isinstance(data, basefilectx):
+        if self._reuse_filenode and isinstance(data, basefilectx):
             filenode = data.filenode()
 
         self._cache[path] = {

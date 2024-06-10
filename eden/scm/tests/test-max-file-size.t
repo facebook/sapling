@@ -1,5 +1,7 @@
 #debugruntest-compatible
 
+  $ enable rebase
+
   $ setconfig commit.file-size-limit=5
   $ setconfig devel.hard-file-size-limit=10
 
@@ -37,3 +39,18 @@ Above hard limit:
 Can still override:
 
   $ hg commit -m toobig --config commit.file-size-limit=1KB --config devel.hard-file-size-limit=1KB
+
+
+Rebasing shouldn't require re-overriding:
+
+  $ newclientrepo
+  $ drawdag <<EOS
+  > B
+  > |
+  > A
+  > EOS
+  $ hg go -q $A
+  $ echo toobig > foo
+  $ hg commit -Aqm foo --config commit.file-size-limit=1KB
+  $ hg rebase -d $B --config rebase.experimental.inmemory=true
+  rebasing 802aace8cbe9 "foo"

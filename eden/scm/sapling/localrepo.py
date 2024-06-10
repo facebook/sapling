@@ -2623,23 +2623,35 @@ class localrepository:
         if (
             metamatched
             and node is not None
-            # some filectxs do not support rawdata or flags
-            and hasattr(fctx, "rawdata")
-            and hasattr(fctx, "rawflags")
-            # some (external) filelogs do not have addrawrevision
-            and hasattr(flog, "addrawrevision")
-            # parents must match to be able to reuse rawdata
+            # "nodemap" is a remotefilelog detail
+            and hasattr(flog, "nodemap")
             and fctx.filelog().parents(node) == (fparent1, fparent2)
         ):
-            # node is different from fparents, no need to check manifest flag
-            changelist.append(fname)
             if node in flog.nodemap:
+                changelist.append(fname)
                 self.ui.debug("reusing %s filelog node (exact match)\n" % fname)
                 return node
-            self.ui.debug("reusing %s filelog rawdata\n" % fname)
-            return flog.addrawrevision(
-                fctx.rawdata(), tr, linkrev, fparent1, fparent2, node, fctx.rawflags()
-            )
+
+            if (
+                # some filectxs do not support rawdata or flags
+                hasattr(fctx, "rawdata")
+                and hasattr(fctx, "rawflags")
+                # some (external) filelogs do not have addrawrevision
+                and hasattr(flog, "addrawrevision")
+                # parents must match to be able to reuse rawdata
+            ):
+                # node is different from fparents, no need to check manifest flag
+                changelist.append(fname)
+                self.ui.debug("reusing %s filelog rawdata\n" % fname)
+                return flog.addrawrevision(
+                    fctx.rawdata(),
+                    tr,
+                    linkrev,
+                    fparent1,
+                    fparent2,
+                    node,
+                    fctx.rawflags(),
+                )
 
         # is the file changed?
         text = fctx.data()
