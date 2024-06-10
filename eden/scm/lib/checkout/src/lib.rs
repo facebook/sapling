@@ -7,6 +7,7 @@
 
 use std::collections::HashMap;
 use std::fmt;
+use std::fmt::Display;
 use std::fs::File;
 use std::io::BufRead;
 use std::io::BufReader;
@@ -1355,26 +1356,34 @@ pub(crate) fn check_conflicts(
     conflicts.sort();
 
     if !conflicts.is_empty() {
-        let limit = 5;
-
-        let len = conflicts.len();
-        conflicts.truncate(limit);
-        let mut conflicts = conflicts
-            .into_iter()
-            .map(|c| c.to_string())
-            .collect::<Vec<_>>();
-        if len > limit {
-            conflicts.push(format!("...and {} more", len - limit));
-        }
-
         bail!(
             "{:?} conflicting file changes:\n {}\n{}",
-            len,
-            conflicts.join("\n "),
+            conflicts.len(),
+            truncated_error_list(&conflicts, 5).join("\n "),
             "(commit, shelve, goto --clean to discard all your changes, or goto --merge to merge them)",
         );
     }
     Ok(())
+}
+
+fn truncated_error_list(
+    errors: impl IntoIterator<Item = impl Display>,
+    limit: usize,
+) -> Vec<String> {
+    let mut output = Vec::with_capacity(limit);
+
+    let mut dropped = 0;
+    for error in errors {
+        if output.len() < limit {
+            output.push(format!("{error}"));
+        } else {
+            dropped += 1;
+        }
+    }
+    if dropped > 0 {
+        output.push(format!("...and {dropped} more"));
+    }
+    output
 }
 
 #[instrument(skip_all)]
