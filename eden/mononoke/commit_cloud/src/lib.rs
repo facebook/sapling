@@ -20,6 +20,7 @@ use facet::facet;
 use mononoke_types::Timestamp;
 use references::update_references_data;
 use repo_derived_data::ArcRepoDerivedData;
+use workspace::sanity_check_workspace_name;
 
 use crate::references::cast_references_data;
 use crate::references::fetch_references;
@@ -128,6 +129,19 @@ impl CommitCloud {
         &self,
         params: UpdateReferencesParams,
     ) -> anyhow::Result<ReferencesData> {
+        if params.workspace.is_empty() || params.reponame.is_empty() {
+            return Err(anyhow::anyhow!(
+                "'update_references' failed: empty repo_name or workspace"
+            ));
+        }
+
+        if params.version == 0 && !sanity_check_workspace_name(&params.workspace) {
+            return Err(anyhow::anyhow!(
+                "'update_references' failed: creating a new workspace with name '{}' is not allowed",
+                params.workspace
+            ));
+        }
+
         let ctx = CommitCloudContext {
             workspace: params.workspace.clone(),
             reponame: params.reponame.clone(),

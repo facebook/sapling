@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use regex::Regex;
+
 use crate::references::heads::WorkspaceHead;
 use crate::references::history::WorkspaceHistory;
 use crate::references::local_bookmarks::WorkspaceLocalBookmark;
@@ -16,4 +18,64 @@ pub(crate) struct WorkspaceContents {
     local_bookmarks: Vec<WorkspaceLocalBookmark>,
     remote_bookmarks: Vec<WorkspaceRemoteBookmark>,
     history: WorkspaceHistory,
+}
+
+const WORKSPACE_NAME_PATTERN: &str = r"user/([^/]+)/.+";
+const EMAIL_PATTERN: &str = r"^([a-zA-Z0-9_\-.]+)@([a-zA-Z0-9_\-.]+)\.([a-zA-Z]{2,5})$";
+const LINUX_USER_PATTERN: &str = r"^[a-z_]([a-z0-9_-]{0,31}|[a-z0-9_-]{0,30}\\$)$";
+
+fn is_valid_workspace_structure(name: &str) -> (bool, Option<String>) {
+    let validator =
+        Regex::new(WORKSPACE_NAME_PATTERN).expect("Error while creating workspace regex");
+    let owner = validator
+        .captures(name)
+        .and_then(|caps| caps.get(1).map(|match_| match_.as_str().to_string()));
+    (validator.is_match(name), owner)
+}
+fn is_valid_email(email: &str) -> bool {
+    let validator = Regex::new(EMAIL_PATTERN).expect("Error while creating email regex");
+    validator.is_match(email)
+}
+fn is_valid_linux_user(user: &str) -> bool {
+    let validator = Regex::new(LINUX_USER_PATTERN).expect("Error while creating linux user regex");
+    validator.is_match(user)
+}
+
+pub fn sanity_check_workspace_name(name: &str) -> bool {
+    let (valid, owner) = is_valid_workspace_structure(name);
+    if let Some(owner) = owner {
+        return valid && (is_valid_email(&owner) || is_valid_linux_user(&owner));
+    }
+    false
+}
+
+#[cfg(test)]
+mod test {
+    use crate::workspace::sanity_check_workspace_name;
+
+    #[test]
+    fn test_invalid_workspace_names() {
+        assert!(!sanity_check_workspace_name("user_testuser_default"));
+        assert!(!sanity_check_workspace_name("user_testuser/default"));
+        assert!(!sanity_check_workspace_name("user/testuser_default"));
+        assert!(!sanity_check_workspace_name("user/testuser@/default"));
+        assert!(!sanity_check_workspace_name(
+            "user/test user@oculus.com/default"
+        ));
+        assert!(!sanity_check_workspace_name("user/[[[user@fb.com/default"));
+    }
+
+    #[test]
+    fn test_valid_workspace_names() {
+        assert!(sanity_check_workspace_name("user/testuser/default"));
+        assert!(sanity_check_workspace_name(
+            "user/testuser@oculus.com/default"
+        ));
+        assert!(sanity_check_workspace_name(
+            "user/testuser@oculus.com/othername"
+        ));
+        assert!(sanity_check_workspace_name(
+            "user/testuser@oculus.com/other name with spaces"
+        ));
+    }
 }
