@@ -1739,7 +1739,7 @@ def cloudimport(ui, repo, **opts):
     )
     currentworkspace = workspace.currentworkspace(repo)
     currentrepo = ccutil.getreponame(repo)
-
+    start = util.timer()
     # Translate heads and bookmarks
     full = opts.get("full")
     newheads, newbookmarks = megarepoimport.translateandpull(
@@ -1775,3 +1775,6 @@ def cloudimport(ui, repo, **opts):
     # update local workspace
     if currentrepo == destinationrepo and currentworkspace == destinationworkspace:
         cloudsync(ui, repo, workspace=currentworkspace)
+
+    elapsed = util.timer() - start
+    ui.status_err(_("finished in %0.2f sec\n") % elapsed)
