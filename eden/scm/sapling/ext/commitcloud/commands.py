@@ -1754,7 +1754,6 @@ def cloudimport(ui, repo, **opts):
         serv,
         full,
     )
-
     # update the destination workspace
     destcloudrefs = serv.getreferences(destinationrepo, destinationworkspace, 0)
     # Dedupe changes to avoid unnecessary updates
@@ -1763,6 +1762,7 @@ def cloudimport(ui, repo, **opts):
             ui, destcloudrefs.heads, newheads, destcloudrefs.bookmarks, newbookmarks
         )
     )
+
     serv.updatereferences(
         destinationrepo,
         destinationworkspace,

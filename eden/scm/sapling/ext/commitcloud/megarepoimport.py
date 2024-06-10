@@ -14,6 +14,9 @@ from sapling.i18n import _
 from . import service, sync, syncstate, util as ccutil, workspace
 
 
+hg_commit_scheme = "Hg"
+
+
 def validateimportparams(ui, repo, opts):
     destinationworkspace = opts.get("destination")
     rawdestinationworkspace = opts.get("raw_destination")
@@ -119,15 +122,13 @@ def translateandpull(
 
     if not headstranslatequeue and not bookmarkstranslatequeue:
         raise error.Abort(
-            _("nothing to sync translate between workspaces %s and %s")
+            _("nothing to import from %s to %s")
             % (sourceworkspace, destinationworkspace),
             component="commitcloud",
         )
 
     # Translate heads
-    newheads = [
-        megarepo.xrepotranslate(repo, head).hex() for head in headstranslatequeue
-    ]
+    newheads = batchtranslate(repo, headstranslatequeue, sourcerepo, destinationrepo)
 
     # Translate bookmarks
     newbookmarks = {}
@@ -136,12 +137,13 @@ def translateandpull(
             repo, bookmarkstranslatequeue[bookmark]
         )
         newbookmarks[bookmark] = newbookmarknode
+
     return newheads, newbookmarks
 
 
 def dedupechanges(ui, heads, newheads, bookmarks, newbookmarks):
 
-    uniquenewheads = [head for head in newheads if head not in heads]
+    uniquenewheads = [head.hex() for head in newheads if head.hex() not in heads]
 
     uniquenewbookmarks = {}
     bookmarkstodelete = []
@@ -160,3 +162,80 @@ def dedupechanges(ui, heads, newheads, bookmarks, newbookmarks):
             uniquenewbookmarks[key] = value
 
     return uniquenewheads, uniquenewbookmarks, bookmarkstodelete
+
+
+# Translate heads in batches
+# This has a caveat which is that you need to import a workspace from the dest repo.
+# E.g If you're importing repo1 workspace into repo2 workspace you need to run the import command in repo2, otherwise it'll fail
+# Warning: This does not support translating diffs or bookmarks
+def batchtranslate(repo, commits, srcrepo, dstrepo):
+
+    # Translation service not available
+    if not repo.nullableedenapi:
+        raise error.Abort(
+            _("edenapi required for cross-repo translation"),
+        )
+
+    # We can safely assume src and dst are different given that was handled before
+    if ccutil.getreponame(repo) != dstrepo:
+        raise error.Abort(
+            _("import command must be run from destination repo"),
+            component="commitcloud",
+            hint=_(
+                "try running this command from a %s checkout - you're in a %s checkout"
+            )
+            % (dstrepo, ccutil.getreponame(repo)),
+        )
+    # Check if source repo is available for transparent lookup.
+    elif srcrepo not in repo.ui.configlist("megarepo", "transparent-lookup"):
+        raise error.Abort(
+            _("mapping from %s to %s is not supported") % (srcrepo, dstrepo),
+            component="commitcloud",
+        )
+
+    # Generate batches
+    batchsize = 10
+    batches = [commits[i : i + batchsize] for i in range(0, len(commits), batchsize)]
+
+    translated_nodes = []
+
+    for batch in batches:
+        translatequeue = []
+        for commit in batch:
+
+            # Get xnode value
+            xnode = None
+            if len(commit) == 40:
+                xnode = bytes.fromhex(commit)
+            else:
+                continue
+
+            # Commit should be translated
+            repo.ui.status_err(_("translating %s from repo %s\n") % (commit, srcrepo))
+            translatequeue.append(xnode)
+
+        # Call translation api
+        translated = list(
+            repo.edenapi.committranslateids(
+                [{hg_commit_scheme: head} for head in translatequeue],
+                hg_commit_scheme,
+                fromrepo=srcrepo,
+                torepo=dstrepo,
+            )
+        )
+
+        # Process each translated node
+        for translation in translated:
+            if (
+                "translated" in translation
+                and hg_commit_scheme in translation["translated"]
+            ):
+                localnode = translation["translated"][hg_commit_scheme]
+                originalnode = translation["commit"][hg_commit_scheme]
+                repo.ui.note_err(
+                    _("translated %s@%s to %s\n")
+                    % (originalnode.hex(), srcrepo, localnode.hex())
+                )
+                translated_nodes.append(localnode)
+
+    return translated_nodes
