@@ -233,6 +233,13 @@ impl IndexedLogHgIdHistoryStore {
             }
         }
     }
+
+    /// Check whether index contains `key`.
+    pub fn contains(&self, key: &Key) -> Result<bool> {
+        let index_key = Entry::key_to_index_key(key);
+        let log = self.log.read();
+        log.contains(0, index_key)
+    }
 }
 
 impl LocalStore for IndexedLogHgIdHistoryStore {
@@ -240,9 +247,9 @@ impl LocalStore for IndexedLogHgIdHistoryStore {
         Ok(keys
             .iter()
             .filter(|k| match k {
-                StoreKey::HgId(k) => match Entry::from_log(k, &self.log) {
-                    Ok(None) | Err(_) => true,
-                    Ok(Some(_)) => false,
+                StoreKey::HgId(k) => match self.contains(k) {
+                    Ok(contains) => !contains,
+                    Err(_) => true,
                 },
                 StoreKey::Content(_, _) => true,
             })
