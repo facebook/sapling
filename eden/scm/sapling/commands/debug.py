@@ -3866,6 +3866,7 @@ def debugruntest(ui, *paths, **opts) -> int:
     [
         ("l", "line", 1, _("line number (starts with 1)")),
         ("c", "case", "", _("test case")),
+        ("", "record-if-needed", False, _("record test state if not already present")),
     ],
     _("TEST_FILE"),
     norepo=True,
@@ -3880,10 +3881,20 @@ def debugrestoretest(ui, test_file, **opts):
 
     metalog = record.try_locate_metalog(filename, testcase, loc)
     if metalog is None:
-        raise error.Abort(
-            _("no recording found for test"),
-            hint=_("use '@prog@ .t --record' to record a test run"),
-        )
+        if opts.get("record_if_needed"):
+            ui.status_err(_("recording test state\n"))
+            ui.pushbuffer()
+            debugruntest(ui, test_file, record=True)
+            output = ui.popbuffer(errors="backslashreplace")
+            metalog = record.try_locate_metalog(filename, testcase, loc)
+            if metalog is None:
+                ui.status_err(_("output from recording: %s\n") % output)
+                raise error.Abort(_("still no recording"))
+        else:
+            raise error.Abort(
+                _("no recording found for test"),
+                hint=_("use '@prog@ .t --record' to record a test run"),
+            )
     script_path = record.restore_state_script(metalog)
     if ui.formatted:
         ui.status_err(("Run or source the script to enter the testing environment:\n"))
