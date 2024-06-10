@@ -38,6 +38,12 @@ use crate::pythonutil::to_path;
 pub trait HgIdHistoryStorePyExt {
     fn get_missing_py(&self, py: Python, keys: &mut PyIterator) -> PyResult<PyList>;
     fn get_node_info_py(&self, py: Python, name: &PyPathBuf, node: &PyBytes) -> PyResult<PyTuple>;
+    fn get_local_node_info_py(
+        &self,
+        py: Python,
+        name: &PyPathBuf,
+        node: &PyBytes,
+    ) -> PyResult<Option<PyTuple>>;
     fn refresh_py(&self, py: Python) -> PyResult<PyNone>;
 }
 
@@ -99,6 +105,20 @@ impl<T: HgIdHistoryStore + ?Sized> HgIdHistoryStorePyExt for T {
             .ok_or_else(|| key_error(py, &StoreKey::hgid(key.clone())))?;
 
         Ok(from_node_info(py, &key, &info))
+    }
+
+    fn get_local_node_info_py(
+        &self,
+        py: Python,
+        name: &PyPathBuf,
+        node: &PyBytes,
+    ) -> PyResult<Option<PyTuple>> {
+        let key = to_key(py, name, node)?;
+        let info = py
+            .allow_threads(|| self.get_local_node_info(&key))
+            .map_pyerr(py)?;
+
+        Ok(info.map(|info| from_node_info(py, &key, &info)))
     }
 
     fn refresh_py(&self, py: Python) -> PyResult<PyNone> {

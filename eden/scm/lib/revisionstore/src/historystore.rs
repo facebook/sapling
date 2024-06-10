@@ -19,6 +19,14 @@ use crate::types::StoreKey;
 pub trait HgIdHistoryStore: LocalStore + Send + Sync {
     fn get_node_info(&self, key: &Key) -> Result<Option<NodeInfo>>;
     fn refresh(&self) -> Result<()>;
+
+    fn get_local_node_info(&self, key: &Key) -> Result<Option<NodeInfo>> {
+        if self.contains(&key.into())? {
+            self.get_node_info(key)
+        } else {
+            Ok(None)
+        }
+    }
 }
 
 pub trait HgIdMutableHistoryStore: HgIdHistoryStore + Send + Sync {

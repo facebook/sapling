@@ -1045,6 +1045,10 @@ py_class!(class metadatastore |py| {
         self.store(py).get_node_info_py(py, &name, node)
     }
 
+    def getlocalnodeinfo(&self, name: PyPathBuf, node: &PyBytes) -> PyResult<Option<PyTuple>> {
+        self.store(py).get_local_node_info_py(py, &name, node)
+    }
+
     def getmissing(&self, keys: &PyObject) -> PyResult<PyList> {
         self.store(py).get_missing_py(py, &mut keys.iter(py)?)
     }
