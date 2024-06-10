@@ -16,6 +16,7 @@ anyhow = "1.0.75"
 async-trait = "0.1.71"
 bonsai_hg_mapping = { version = "0.1.0", path = "../bonsai_hg_mapping" }
 changeset_info = { version = "0.1.0", path = "../derived_data/changeset_info" }
+clientinfo = { version = "0.1.0", path = "../../scm/lib/clientinfo" }
 context = { version = "0.1.0", path = "../server/context" }
 edenapi_types = { version = "0.1.0", path = "../../scm/lib/edenapi/types" }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

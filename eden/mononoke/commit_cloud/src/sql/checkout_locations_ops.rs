@@ -9,9 +9,11 @@ use std::path::PathBuf;
 
 use ::sql_ext::mononoke_queries;
 use async_trait::async_trait;
+use clientinfo::ClientRequestInfo;
 use mercurial_types::HgChangesetId;
 use mononoke_types::Timestamp;
 use sql::Connection;
+use sql::Transaction;
 
 use crate::sql::ops::Get;
 use crate::sql::ops::Insert;
@@ -119,12 +121,15 @@ impl Get<WorkspaceCheckoutLocation> for SqlCommitCloud {
 impl Insert<WorkspaceCheckoutLocation> for SqlCommitCloud {
     async fn insert(
         &self,
+        txn: Transaction,
+        cri: Option<&ClientRequestInfo>,
         reponame: String,
         workspace: String,
         data: WorkspaceCheckoutLocation,
-    ) -> anyhow::Result<()> {
-        InsertCheckoutLocations::query(
-            &self.connections.write_connection,
+    ) -> anyhow::Result<Transaction> {
+        let (txn, _) = InsertCheckoutLocations::maybe_traced_query_with_transaction(
+            txn,
+            cri,
             &reponame,
             &workspace,
             &data.hostname,
@@ -135,7 +140,7 @@ impl Insert<WorkspaceCheckoutLocation> for SqlCommitCloud {
             &data.timestamp,
         )
         .await?;
-        Ok(())
+        Ok(txn)
     }
 }
 

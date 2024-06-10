@@ -7,10 +7,12 @@
 
 use std::collections::HashMap;
 
+use clientinfo::ClientRequestInfo;
 use edenapi_types::HgId;
 use mercurial_types::HgChangesetId;
 use serde::Deserialize;
 use serde::Serialize;
+use sql::Transaction;
 
 use crate::sql::local_bookmarks_ops::DeleteArgs;
 use crate::sql::ops::Delete;
@@ -26,10 +28,12 @@ pub struct WorkspaceLocalBookmark {
 
 pub async fn update_bookmarks(
     sql_commit_cloud: &SqlCommitCloud,
+    mut txn: Transaction,
+    cri: Option<&ClientRequestInfo>,
     ctx: CommitCloudContext,
     updated_bookmarks: HashMap<String, HgId>,
     removed_bookmarks: Vec<HgId>,
-) -> anyhow::Result<()> {
+) -> anyhow::Result<Transaction> {
     if !removed_bookmarks.is_empty() {
         let removed_commits = removed_bookmarks
             .into_iter()
@@ -47,10 +51,11 @@ pub async fn update_bookmarks(
         )
         .await?;
     }
-
     for (name, book) in updated_bookmarks {
-        Insert::<WorkspaceLocalBookmark>::insert(
+        txn = Insert::<WorkspaceLocalBookmark>::insert(
             sql_commit_cloud,
+            txn,
+            cri,
             ctx.reponame.clone(),
             ctx.workspace.clone(),
             WorkspaceLocalBookmark {
@@ -61,5 +66,5 @@ pub async fn update_bookmarks(
         .await?;
     }
 
-    Ok(())
+    Ok(txn)
 }

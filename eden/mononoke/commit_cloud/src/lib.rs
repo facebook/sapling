@@ -156,20 +156,35 @@ impl CommitCloud {
             )
             .await;
         }
+        let mut txn = self
+            .storage
+            .connections
+            .write_connection
+            .start_transaction()
+            .await?;
+        let cri = self.core_ctx.client_request_info();
 
-        update_references_data(&self.storage, params, &ctx).await?;
+        txn = update_references_data(&self.storage, txn, cri, params, &ctx).await?;
         let new_version_timestamp = Timestamp::now();
+
         let args = WorkspaceVersion {
             workspace: ctx.workspace.clone(),
             version: new_version,
             timestamp: new_version_timestamp,
             archived: false,
         };
-        let _ = &self
-            .storage
-            .insert(ctx.reponame.clone(), ctx.workspace.clone(), args.clone())
-            .await?;
 
+        txn = self
+            .storage
+            .insert(
+                txn,
+                cri,
+                ctx.reponame.clone(),
+                ctx.workspace.clone(),
+                args.clone(),
+            )
+            .await?;
+        txn.commit().await?;
         Ok(ReferencesData {
             version: new_version,
             heads: None,

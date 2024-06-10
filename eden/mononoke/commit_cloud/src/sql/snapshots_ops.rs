@@ -7,7 +7,9 @@
 
 use ::sql_ext::mononoke_queries;
 use async_trait::async_trait;
+use clientinfo::ClientRequestInfo;
 use mercurial_types::HgChangesetId;
+use sql::Transaction;
 
 use crate::references::snapshots::WorkspaceSnapshot;
 use crate::sql::ops::Delete;
@@ -64,18 +66,21 @@ impl Get<WorkspaceSnapshot> for SqlCommitCloud {
 impl Insert<WorkspaceSnapshot> for SqlCommitCloud {
     async fn insert(
         &self,
+        txn: Transaction,
+        cri: Option<&ClientRequestInfo>,
         reponame: String,
         workspace: String,
         data: WorkspaceSnapshot,
-    ) -> anyhow::Result<()> {
-        InsertSnapshot::query(
-            &self.connections.write_connection,
+    ) -> anyhow::Result<Transaction> {
+        let (txn, _) = InsertSnapshot::maybe_traced_query_with_transaction(
+            txn,
+            cri,
             &reponame,
             &workspace,
             &changeset_as_bytes(&data.commit, self.uses_mysql)?,
         )
         .await?;
-        Ok(())
+        Ok(txn)
     }
 }
 

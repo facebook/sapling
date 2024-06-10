@@ -14,8 +14,7 @@ use sql_ext::SqlConnections;
 use crate::sql::ops::SqlCommitCloud;
 
 pub struct SqlCommitCloudBuilder {
-    #[allow(unused)]
-    pub(crate) connections: SqlConnections,
+    pub connections: SqlConnections,
 }
 
 impl SqlConstruct for SqlCommitCloudBuilder {

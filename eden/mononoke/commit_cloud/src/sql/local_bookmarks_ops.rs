@@ -7,8 +7,10 @@
 
 use ::sql_ext::mononoke_queries;
 use async_trait::async_trait;
+use clientinfo::ClientRequestInfo;
 use mercurial_types::HgChangesetId;
 use sql::Connection;
+use sql::Transaction;
 
 use crate::references::local_bookmarks::WorkspaceLocalBookmark;
 use crate::sql::ops::Delete;
@@ -69,19 +71,22 @@ impl Get<WorkspaceLocalBookmark> for SqlCommitCloud {
 impl Insert<WorkspaceLocalBookmark> for SqlCommitCloud {
     async fn insert(
         &self,
+        txn: Transaction,
+        cri: Option<&ClientRequestInfo>,
         reponame: String,
         workspace: String,
         data: WorkspaceLocalBookmark,
-    ) -> anyhow::Result<()> {
-        InsertLocalBookmark::query(
-            &self.connections.write_connection,
+    ) -> anyhow::Result<Transaction> {
+        let (txn, _) = InsertLocalBookmark::maybe_traced_query_with_transaction(
+            txn,
+            cri,
             &reponame,
             &workspace,
             &data.name,
             &changeset_as_bytes(&data.commit, self.uses_mysql)?,
         )
         .await?;
-        Ok(())
+        Ok(txn)
     }
 }
 

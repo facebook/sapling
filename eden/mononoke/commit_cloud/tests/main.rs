@@ -38,9 +38,12 @@ async fn test_checkout_locations(_fb: FacebookInit) -> anyhow::Result<()> {
         unixname: "testuser".to_owned(),
     };
     let expected = args.clone();
+    let mut txn = sql.connections.write_connection.start_transaction().await?;
 
-    sql.insert(reponame.clone(), workspace.clone(), args)
+    txn = sql
+        .insert(txn, None, reponame.clone(), workspace.clone(), args)
         .await?;
+    txn.commit().await?;
 
     let res: Vec<WorkspaceCheckoutLocation> = sql.get(reponame, workspace).await?;
 
@@ -54,6 +57,7 @@ async fn test_snapshots(_fb: FacebookInit) -> anyhow::Result<()> {
     use commit_cloud::sql::snapshots_ops::DeleteArgs;
 
     let sql = SqlCommitCloudBuilder::with_sqlite_in_memory()?.new(false);
+
     let reponame = "test_repo".to_owned();
     let workspace = "user_testuser_default".to_owned();
 
@@ -64,12 +68,27 @@ async fn test_snapshots(_fb: FacebookInit) -> anyhow::Result<()> {
     let snapshot2 = WorkspaceSnapshot {
         commit: HgChangesetId::from_str("3e0e761030db6e479a7fb58b12881883f9f8c63f").unwrap(),
     };
-
-    sql.insert(reponame.clone(), workspace.clone(), snapshot1.clone())
+    let mut txn = sql.connections.write_connection.start_transaction().await?;
+    txn = sql
+        .insert(
+            txn,
+            None,
+            reponame.clone(),
+            workspace.clone(),
+            snapshot1.clone(),
+        )
         .await?;
 
-    sql.insert(reponame.clone(), workspace.clone(), snapshot2.clone())
+    txn = sql
+        .insert(
+            txn,
+            None,
+            reponame.clone(),
+            workspace.clone(),
+            snapshot2.clone(),
+        )
         .await?;
+    txn.commit().await?;
 
     let res: Vec<WorkspaceSnapshot> = sql.get(reponame.clone(), workspace.clone()).await?;
     assert_eq!(res.len(), 2);
@@ -105,12 +124,27 @@ async fn test_heads(_fb: FacebookInit) -> anyhow::Result<()> {
     let head2 = WorkspaceHead {
         commit: HgChangesetId::from_str("3e0e761030db6e479a7fb58b12881883f9f8c63f").unwrap(),
     };
-
-    sql.insert(reponame.clone(), workspace.clone(), head1.clone())
+    let mut txn = sql.connections.write_connection.start_transaction().await?;
+    txn = sql
+        .insert(
+            txn,
+            None,
+            reponame.clone(),
+            workspace.clone(),
+            head1.clone(),
+        )
         .await?;
 
-    sql.insert(reponame.clone(), workspace.clone(), head2.clone())
+    txn = sql
+        .insert(
+            txn,
+            None,
+            reponame.clone(),
+            workspace.clone(),
+            head2.clone(),
+        )
         .await?;
+    txn.commit().await?;
 
     let res: Vec<WorkspaceHead> = sql.get(reponame.clone(), workspace.clone()).await?;
     assert_eq!(res.len(), 2);
@@ -149,12 +183,27 @@ async fn test_local_bookmarks(_fb: FacebookInit) -> anyhow::Result<()> {
         commit: HgChangesetId::from_str("3e0e761030db6e479a7fb58b12881883f9f8c63f").unwrap(),
     };
 
-    sql.insert(reponame.clone(), workspace.clone(), bookmark1.clone())
+    let mut txn = sql.connections.write_connection.start_transaction().await?;
+    txn = sql
+        .insert(
+            txn,
+            None,
+            reponame.clone(),
+            workspace.clone(),
+            bookmark1.clone(),
+        )
         .await?;
 
-    sql.insert(reponame.clone(), workspace.clone(), bookmark2.clone())
+    txn = sql
+        .insert(
+            txn,
+            None,
+            reponame.clone(),
+            workspace.clone(),
+            bookmark2.clone(),
+        )
         .await?;
-
+    txn.commit().await?;
     let res: Vec<WorkspaceLocalBookmark> = sql.get(reponame.clone(), workspace.clone()).await?;
     assert_eq!(res.len(), 2);
 
@@ -193,11 +242,27 @@ async fn test_remote_bookmarks(_fb: FacebookInit) -> anyhow::Result<()> {
         remote: "remote".to_owned(),
     };
 
-    sql.insert(reponame.clone(), workspace.clone(), bookmark1.clone())
+    let mut txn = sql.connections.write_connection.start_transaction().await?;
+    txn = sql
+        .insert(
+            txn,
+            None,
+            reponame.clone(),
+            workspace.clone(),
+            bookmark1.clone(),
+        )
         .await?;
 
-    sql.insert(reponame.clone(), workspace.clone(), bookmark2.clone())
+    txn = sql
+        .insert(
+            txn,
+            None,
+            reponame.clone(),
+            workspace.clone(),
+            bookmark2.clone(),
+        )
         .await?;
+    txn.commit().await?;
 
     let res: Vec<WorkspaceRemoteBookmark> = sql.get(reponame.clone(), workspace.clone()).await?;
 
@@ -234,9 +299,11 @@ async fn test_versions(_fb: FacebookInit) -> anyhow::Result<()> {
         archived: false,
     };
 
-    sql.insert(reponame.clone(), workspace.clone(), args.clone())
+    let mut txn = sql.connections.write_connection.start_transaction().await?;
+    txn = sql
+        .insert(txn, None, reponame.clone(), workspace.clone(), args.clone())
         .await?;
-
+    txn.commit().await?;
     let res: Vec<WorkspaceVersion> = sql.get(reponame.clone(), workspace.clone()).await?;
     assert_eq!(vec![args], res);
 
@@ -280,9 +347,18 @@ async fn test_history(_fb: FacebookInit) -> anyhow::Result<()> {
         remote_bookmarks: vec![remote_bookmark1.clone()],
     };
 
+    let mut txn = sql.connections.write_connection.start_transaction().await?;
     // Insert a history entry, retrieve it and cast it to Rust struct
-    sql.insert(reponame.clone(), workspace.clone(), args1.clone())
+    txn = sql
+        .insert(
+            txn,
+            None,
+            reponame.clone(),
+            workspace.clone(),
+            args1.clone(),
+        )
         .await?;
+    txn.commit().await?;
 
     let res: Vec<GetOutput> = sql
         .get(
@@ -310,9 +386,17 @@ async fn test_history(_fb: FacebookInit) -> anyhow::Result<()> {
         local_bookmarks: vec![local_bookmark1],
         remote_bookmarks: vec![remote_bookmark1],
     };
-
-    sql.insert(reponame.clone(), workspace.clone(), args2.clone())
+    txn = sql.connections.write_connection.start_transaction().await?;
+    txn = sql
+        .insert(
+            txn,
+            None,
+            reponame.clone(),
+            workspace.clone(),
+            args2.clone(),
+        )
         .await?;
+    txn.commit().await?;
 
     // Delete first history entry, validate only second entry is left
     Delete::<WorkspaceHistory>::delete(

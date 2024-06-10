@@ -5,10 +5,12 @@
  * GNU General Public License version 2.
  */
 
+use clientinfo::ClientRequestInfo;
 use edenapi_types::HgId;
 use mercurial_types::HgChangesetId;
 use serde::Deserialize;
 use serde::Serialize;
+use sql::Transaction;
 
 use crate::sql::heads_ops::DeleteArgs;
 use crate::sql::ops::Delete;
@@ -23,10 +25,12 @@ pub struct WorkspaceHead {
 
 pub async fn update_heads(
     sql_commit_cloud: &SqlCommitCloud,
+    mut txn: Transaction,
+    cri: Option<&ClientRequestInfo>,
     ctx: CommitCloudContext,
     removed_heads: Vec<HgId>,
     new_heads: Vec<HgId>,
-) -> anyhow::Result<()> {
+) -> anyhow::Result<Transaction> {
     if !removed_heads.is_empty() {
         let delete_args = DeleteArgs {
             removed_commits: removed_heads
@@ -43,10 +47,11 @@ pub async fn update_heads(
         )
         .await?;
     }
-
     for head in new_heads {
-        Insert::<WorkspaceHead>::insert(
+        txn = Insert::<WorkspaceHead>::insert(
             sql_commit_cloud,
+            txn,
+            cri,
             ctx.reponame.clone(),
             ctx.workspace.clone(),
             WorkspaceHead {
@@ -56,5 +61,5 @@ pub async fn update_heads(
         .await?;
     }
 
-    Ok(())
+    Ok(txn)
 }

@@ -7,7 +7,9 @@
 
 use ::sql_ext::mononoke_queries;
 use async_trait::async_trait;
+use clientinfo::ClientRequestInfo;
 use mononoke_types::Timestamp;
+use sql::Transaction;
 
 use crate::references::heads::WorkspaceHead;
 use crate::references::history::WorkspaceHistory;
@@ -189,20 +191,23 @@ impl Delete<WorkspaceHistory> for SqlCommitCloud {
 impl Insert<WorkspaceHistory> for SqlCommitCloud {
     async fn insert(
         &self,
+        txn: Transaction,
+        cri: Option<&ClientRequestInfo>,
         reponame: String,
         workspace: String,
         data: WorkspaceHistory,
-    ) -> anyhow::Result<()> {
+    ) -> anyhow::Result<Transaction> {
         let mut heads_bytes: Vec<u8> = Vec::new();
         serde_json::to_writer(&mut heads_bytes, &data.heads).unwrap();
         let mut bookmarks_bytes: Vec<u8> = Vec::new();
         serde_json::to_writer(&mut bookmarks_bytes, &data.local_bookmarks).unwrap();
         let mut remotebookmarks_bytes: Vec<u8> = Vec::new();
         serde_json::to_writer(&mut remotebookmarks_bytes, &data.remote_bookmarks).unwrap();
-
+        let res_txn;
         if data.timestamp.is_none() {
-            InsertHistoryNoTimestamp::query(
-                &self.connections.write_connection,
+            (res_txn, _) = InsertHistoryNoTimestamp::maybe_traced_query_with_transaction(
+                txn,
+                cri,
                 &reponame,
                 &workspace,
                 &data.version,
@@ -211,10 +216,10 @@ impl Insert<WorkspaceHistory> for SqlCommitCloud {
                 &remotebookmarks_bytes,
             )
             .await?;
-            Ok(())
         } else {
-            InsertHistory::query(
-                &self.connections.write_connection,
+            (res_txn, _) = InsertHistory::maybe_traced_query_with_transaction(
+                txn,
+                cri,
                 &reponame,
                 &workspace,
                 &data.version,
@@ -224,8 +229,8 @@ impl Insert<WorkspaceHistory> for SqlCommitCloud {
                 &data.timestamp.unwrap(),
             )
             .await?;
-            Ok(())
         }
+        Ok(res_txn)
     }
 }
 

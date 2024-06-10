@@ -5,9 +5,11 @@
  * GNU General Public License version 2.
  */
 
+use clientinfo::ClientRequestInfo;
 use mercurial_types::HgChangesetId;
 use serde::Deserialize;
 use serde::Serialize;
+use sql::Transaction;
 
 use crate::references::RemoteBookmark;
 use crate::sql::ops::Delete;
@@ -24,10 +26,12 @@ pub struct WorkspaceRemoteBookmark {
 
 pub async fn update_remote_bookmarks(
     sql_commit_cloud: &SqlCommitCloud,
+    mut txn: Transaction,
+    cri: Option<&ClientRequestInfo>,
     ctx: CommitCloudContext,
     updated_remote_bookmarks: Option<Vec<RemoteBookmark>>,
     removed_remote_bookmarks: Option<Vec<RemoteBookmark>>,
-) -> anyhow::Result<()> {
+) -> anyhow::Result<Transaction> {
     if removed_remote_bookmarks
         .clone()
         .is_some_and(|x| !x.is_empty())
@@ -49,11 +53,12 @@ pub async fn update_remote_bookmarks(
         )
         .await?;
     }
-
     for book in updated_remote_bookmarks.unwrap_or_default() {
         //TODO: Resolve remote bookmarks if no node available (e.g. master)
-        Insert::<WorkspaceRemoteBookmark>::insert(
+        txn = Insert::<WorkspaceRemoteBookmark>::insert(
             sql_commit_cloud,
+            txn,
+            cri,
             ctx.reponame.clone(),
             ctx.workspace.clone(),
             WorkspaceRemoteBookmark {
@@ -65,5 +70,5 @@ pub async fn update_remote_bookmarks(
         .await?;
     }
 
-    Ok(())
+    Ok(txn)
 }

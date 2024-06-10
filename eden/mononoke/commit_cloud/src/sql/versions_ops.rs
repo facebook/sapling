@@ -7,8 +7,10 @@
 
 use ::sql_ext::mononoke_queries;
 use async_trait::async_trait;
+use clientinfo::ClientRequestInfo;
 use mononoke_types::Timestamp;
 use sql::Connection;
+use sql::Transaction;
 
 use crate::sql::ops::Get;
 use crate::sql::ops::Insert;
@@ -79,19 +81,22 @@ impl Get<WorkspaceVersion> for SqlCommitCloud {
 impl Insert<WorkspaceVersion> for SqlCommitCloud {
     async fn insert(
         &self,
+        txn: Transaction,
+        cri: Option<&ClientRequestInfo>,
         reponame: String,
         workspace: String,
         data: WorkspaceVersion,
-    ) -> anyhow::Result<()> {
-        InsertVersion::query(
-            &self.connections.write_connection,
+    ) -> anyhow::Result<Transaction> {
+        let (txn, _) = InsertVersion::maybe_traced_query_with_transaction(
+            txn,
+            cri,
             &reponame,
             &workspace,
             &data.version,
             &data.timestamp,
         )
         .await?;
-        Ok(())
+        Ok(txn)
     }
 }
 

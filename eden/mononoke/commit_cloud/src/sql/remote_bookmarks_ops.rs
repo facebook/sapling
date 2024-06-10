@@ -6,6 +6,8 @@
  */
 
 use async_trait::async_trait;
+use clientinfo::ClientRequestInfo;
+use sql::Transaction;
 use sql_ext::mononoke_queries;
 
 use crate::references::remote_bookmarks::WorkspaceRemoteBookmark;
@@ -68,12 +70,15 @@ impl Get<WorkspaceRemoteBookmark> for SqlCommitCloud {
 impl Insert<WorkspaceRemoteBookmark> for SqlCommitCloud {
     async fn insert(
         &self,
+        txn: Transaction,
+        cri: Option<&ClientRequestInfo>,
         reponame: String,
         workspace: String,
         data: WorkspaceRemoteBookmark,
-    ) -> anyhow::Result<()> {
-        InsertRemoteBookmark::query(
-            &self.connections.write_connection,
+    ) -> anyhow::Result<Transaction> {
+        let (txn, _) = InsertRemoteBookmark::maybe_traced_query_with_transaction(
+            txn,
+            cri,
             &reponame,
             &workspace,
             &data.remote,
@@ -81,7 +86,7 @@ impl Insert<WorkspaceRemoteBookmark> for SqlCommitCloud {
             &changeset_as_bytes(&data.commit, self.uses_mysql)?,
         )
         .await?;
-        Ok(())
+        Ok(txn)
     }
 }
 

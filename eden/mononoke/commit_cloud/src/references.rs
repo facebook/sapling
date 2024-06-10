@@ -11,12 +11,14 @@ use std::sync::Arc;
 use anyhow::anyhow;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use changeset_info::ChangesetInfo;
+use clientinfo::ClientRequestInfo;
 use context::CoreContext;
 use edenapi_types::cloud::RemoteBookmark;
 use edenapi_types::HgId;
 use edenapi_types::ReferencesData;
 use edenapi_types::UpdateReferencesParams;
 use repo_derived_data::ArcRepoDerivedData;
+use sql::Transaction;
 
 use crate::references::heads::update_heads;
 use crate::references::heads::WorkspaceHead;
@@ -133,30 +135,47 @@ pub(crate) async fn cast_references_data(
 
 pub(crate) async fn update_references_data(
     sql: &SqlCommitCloud,
+    txn: Transaction,
+    cri: Option<&ClientRequestInfo>,
     params: UpdateReferencesParams,
     ctx: &CommitCloudContext,
-) -> anyhow::Result<()> {
-    update_heads(sql, ctx.clone(), params.removed_heads, params.new_heads).await?;
-    update_bookmarks(
+) -> anyhow::Result<Transaction> {
+    let mut txn = txn;
+    txn = update_heads(
         sql,
+        txn,
+        cri,
+        ctx.clone(),
+        params.removed_heads,
+        params.new_heads,
+    )
+    .await?;
+    txn = update_bookmarks(
+        sql,
+        txn,
+        cri,
         ctx.clone(),
         params.updated_bookmarks,
         params.removed_bookmarks,
     )
     .await?;
-    update_remote_bookmarks(
+    txn = update_remote_bookmarks(
         sql,
+        txn,
+        cri,
         ctx.clone(),
         params.updated_remote_bookmarks,
         params.removed_remote_bookmarks,
     )
     .await?;
-    update_snapshots(
+    txn = update_snapshots(
         sql,
+        txn,
+        cri,
         ctx.clone(),
         params.new_snapshots,
         params.removed_snapshots,
     )
     .await?;
-    Ok(())
+    Ok(txn)
 }

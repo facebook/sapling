@@ -5,8 +5,10 @@
  * GNU General Public License version 2.
  */
 
+use clientinfo::ClientRequestInfo;
 use edenapi_types::HgId;
 use mercurial_types::HgChangesetId;
+use sql::Transaction;
 
 use crate::sql::ops::Delete;
 use crate::sql::ops::Insert;
@@ -21,10 +23,12 @@ pub struct WorkspaceSnapshot {
 
 pub async fn update_snapshots(
     sql_commit_cloud: &SqlCommitCloud,
+    mut txn: Transaction,
+    cri: Option<&ClientRequestInfo>,
     ctx: CommitCloudContext,
     new_snapshots: Vec<HgId>,
     removed_snapshots: Vec<HgId>,
-) -> anyhow::Result<()> {
+) -> anyhow::Result<Transaction> {
     if !removed_snapshots.is_empty() {
         let delete_args = DeleteArgs {
             removed_commits: removed_snapshots
@@ -41,10 +45,11 @@ pub async fn update_snapshots(
         )
         .await?;
     }
-
     for snapshot in new_snapshots {
-        Insert::<WorkspaceSnapshot>::insert(
+        txn = Insert::<WorkspaceSnapshot>::insert(
             sql_commit_cloud,
+            txn,
+            cri,
             ctx.reponame.clone(),
             ctx.workspace.clone(),
             WorkspaceSnapshot {
@@ -54,5 +59,5 @@ pub async fn update_snapshots(
         .await?;
     }
 
-    Ok(())
+    Ok(txn)
 }
