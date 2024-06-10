@@ -190,6 +190,9 @@ impl IdMap {
 
     /// Find VertexName by a specified integer id.
     pub fn find_vertex_name_by_id(&self, id: Id) -> Result<Option<VertexName>> {
+        if !id.is_valid() {
+            return Ok(None);
+        }
         if id.is_virtual() {
             return Ok(self.virtual_map.lookup_vertex_name(id).cloned());
         }

@@ -185,14 +185,23 @@ impl Group {
             unreachable!()
         }
     }
+
+    /// Test if the `Group` is valid.
+    pub fn is_valid(self) -> bool {
+        self.0 <= Self::MAX.0
+    }
 }
 
 impl Id {
     /// The [`Group`] of an Id.
     pub fn group(self) -> Group {
         let group = (self.0 >> (64 - Group::BITS)) as usize;
-        debug_assert!(group < Group::COUNT);
         Group(group)
+    }
+
+    /// Test if the `Id` is valid.
+    pub fn is_valid(self) -> bool {
+        self.group().is_valid()
     }
 
     /// Similar to `self..=other`.
