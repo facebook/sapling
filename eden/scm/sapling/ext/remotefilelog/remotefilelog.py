@@ -77,6 +77,14 @@ class remotefilelog:
         if node is None:
             node = revlog.hash(text, p1, p2)
 
+        if (
+            self.repo.ui.configbool("experimental", "reuse-filenodes", True)
+            and node in self.nodemap
+            and self._localparentsmatch(node, p1, p2)
+        ):
+            self.repo.ui.debug("reusing remotefilelog node %s\n" % hex(node))
+            return node
+
         meta, metaoffset = filelog.parsemeta(text)
         rawtext, validatehash = self._processflags(text, flags, "write")
 
@@ -122,6 +130,19 @@ class remotefilelog:
             cachedelta,
             _metatuple=(meta, metaoffset),
         )
+
+    def _localparentsmatch(self, node, p1, p2) -> bool:
+        localinfo = self.repo.fileslog.metadatastore.getlocalnodeinfo(
+            self.filename, node
+        )
+        if localinfo is None:
+            return False
+
+        lp1, lp2, _, copyfrom = localinfo
+        if copyfrom:
+            lp1 = nullid
+
+        return (p1, p2) == (lp1, lp2)
 
     def addrawrevision(
         self,

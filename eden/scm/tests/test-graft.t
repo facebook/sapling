@@ -198,6 +198,7 @@
    ancestor: 4c60f11aa304, local: 6b9e5368ca4e+, remote: 5345cd5c0f38
   committing files:
   e
+  reusing remotefilelog node bc7ebe2d260cff30d2a39a130d84add36216f791
   committing manifest
   committing changelog
   $ HGEDITOR=cat hg graft 4 3 --log --debug
