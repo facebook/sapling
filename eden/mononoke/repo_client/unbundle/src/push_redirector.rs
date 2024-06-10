@@ -713,7 +713,7 @@ impl<R: Repo> PushRedirector<R> {
         maybe_commit_sync_outcome
             .ok_or_else(|| {
                 format_err!(
-                    "Unexpected absence of CommitSyncOutcome for {} in {:?}",
+                    "Changeset: unexpected absence of CommitSyncOutcome for {} in {:?}",
                     cs_id,
                     syncer
                 )
@@ -721,7 +721,7 @@ impl<R: Repo> PushRedirector<R> {
             .and_then(|commit_sync_outcome| match commit_sync_outcome {
                 CommitSyncOutcome::RewrittenAs(rewritten, _) => Ok(rewritten),
                 cso => Err(format_err!(
-                    "Unexpected CommitSyncOutcome for {} in {:?}: {:?}",
+                    "Changeset: unexpected CommitSyncOutcome for {} in {:?}: {:?}",
                     cs_id,
                     syncer,
                     cso

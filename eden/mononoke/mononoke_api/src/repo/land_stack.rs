@@ -50,7 +50,7 @@ impl RepoContext {
             .await?
         {
             None => anyhow::bail!(
-                "Unexpected absence of CommitSyncOutcome for {} in {:?}",
+                "Bookmark: unexpected absence of CommitSyncOutcome for {} in {:?}",
                 large_cs_id,
                 syncer
             ),
@@ -61,7 +61,7 @@ impl RepoContext {
                 Ok(Small(Some(small_cs_id)))
             }
             Some(outcome) => anyhow::bail!(
-                "Unexpected CommitSyncOutcome for {} in {:?}: {:?}",
+                "Bookmark: unexpected CommitSyncOutcome for {} in {:?}: {:?}",
                 large_cs_id,
                 syncer,
                 outcome
