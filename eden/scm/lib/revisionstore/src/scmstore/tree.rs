@@ -527,10 +527,10 @@ impl LocalStore for TreeStore {
                 .filter(|sk| {
                     match sk
                         .maybe_as_key()
-                        .map(|k| indexedlog_cache.get_raw_entry(&k.hgid))
+                        .map(|k| IndexedLogHgIdDataStore::contains(indexedlog_cache, &k.hgid))
                     {
-                        Some(Ok(Some(_))) => false,
-                        None | Some(Err(_)) | Some(Ok(None)) => true,
+                        Some(Ok(contains)) => !contains,
+                        None | Some(Err(_)) => true,
                     }
                 })
                 .collect()
@@ -544,10 +544,10 @@ impl LocalStore for TreeStore {
                 .filter(|sk| {
                     match sk
                         .maybe_as_key()
-                        .map(|k| indexedlog_local.get_raw_entry(&k.hgid))
+                        .map(|k| IndexedLogHgIdDataStore::contains(indexedlog_local, &k.hgid))
                     {
-                        Some(Ok(Some(_))) => false,
-                        None | Some(Err(_)) | Some(Ok(None)) => true,
+                        Some(Ok(contains)) => !contains,
+                        None | Some(Err(_)) => true,
                     }
                 })
                 .collect()
