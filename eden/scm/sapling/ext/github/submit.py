@@ -288,17 +288,15 @@ async def rewrite_pull_request_body(
 
     title = None
     if ui.configbool("github", "preserve-pull-request-description"):
-        commit_msg = pr.body
-        title = pr.title
+        commit_msg_or_title_body = (pr.title, pr.body)
     else:
-        commit_msg = head_commit_data.get_msg()
+        commit_msg_or_title_body = head_commit_data.get_msg()
 
     title, body = create_pull_request_title_and_body(
-        commit_msg,
+        commit_msg_or_title_body,
         pr_numbers_and_num_commits,
         index,
         repository,
-        title,
         reviewstack=ui.configbool("github", "pull-request-include-reviewstack"),
     )
 

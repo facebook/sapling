@@ -4,7 +4,7 @@
 # GNU General Public License version 2.
 
 import re
-from typing import List, Optional, Tuple
+from typing import List, Tuple, Union
 
 from .gh_submit import Repository
 
@@ -13,11 +13,10 @@ _SAPLING_FOOTER_MARKER = "[//]: # (BEGIN SAPLING FOOTER)"
 
 
 def create_pull_request_title_and_body(
-    commit_msg: str,
+    commit_msg_or_title_body: Union[str, Tuple[str, str]],
     pr_numbers_and_num_commits: List[Tuple[int, int]],
     pr_numbers_index: int,
     repository: Repository,
-    title: Optional[str] = None,
     reviewstack: bool = True,
 ) -> Tuple[str, str]:
     r"""Returns (title, body) for the pull request.
@@ -88,12 +87,20 @@ def create_pull_request_title_and_body(
     Foo
     >>> print(body.replace(reviewstack_url, "{reviewstack_url}"))
     <BLANKLINE>
+    >>> title, body = create_pull_request_title_and_body(("Foo", "Bar"), [(1, 1)], 0, contributor_repo)
+    >>> print(title)
+    Foo
+    >>> print(body.replace(reviewstack_url, "{reviewstack_url}"))
+    Bar
     """
     owner, name = repository.get_upstream_owner_and_name()
     pr = pr_numbers_and_num_commits[pr_numbers_index][0]
 
-    if title is None:
-        title, body = title_and_body(commit_msg)
+    try:
+        title, body = commit_msg_or_title_body
+    except ValueError:
+        title, body = title_and_body(commit_msg_or_title_body)
+
     body = _strip_stack_information(body)
     extra = []
     if len(pr_numbers_and_num_commits) > 1:
