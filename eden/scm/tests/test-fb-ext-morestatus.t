@@ -155,8 +155,8 @@ Test rebase state
   # To continue:                hg rebase --continue
   # To abort:                   hg rebase --abort
   # 
-  # Rebasing from 2977a57ce863 (remove content)
-  #            to 79361b8cdbb5 (add content)
+  # Rebasing 2977a57ce863 (remove content)
+  #       to 79361b8cdbb5 (add content)
 
 
 Test status in rebase state with resolved files
@@ -172,8 +172,8 @@ Test status in rebase state with resolved files
   # To continue:                hg rebase --continue
   # To abort:                   hg rebase --abort
   # 
-  # Rebasing from 2977a57ce863 (remove content)
-  #            to 79361b8cdbb5 (add content)
+  # Rebasing 2977a57ce863 (remove content)
+  #       to 79361b8cdbb5 (add content)
 
 
 Test hg status is normal after rebase abort

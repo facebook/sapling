@@ -87,12 +87,17 @@ def rebasemsg(repo, ui):
     if srcnode != nodeutil.nullid:
         src = repo[srcnode]
         dst = repo[dstnode]
-        msg = _("\nRebasing from %s (%s)\n           to %s (%s)") % (
-            src,
-            src.shortdescription(),
-            dst,
-            dst.shortdescription(),
+
+        # fmt: off
+        msg = _(
+            "\n"
+            "Rebasing %s (%s)\n"
+            "      to %s (%s)"
+        ) % (
+            src, src.shortdescription(),
+            dst, dst.shortdescription(),
         )
+        # fmt: on
         ui.write_err(prefixlines(msg))
 
 
