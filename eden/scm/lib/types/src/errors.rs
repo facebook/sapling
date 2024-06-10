@@ -45,6 +45,8 @@ where
 mod tests {
     use std::io;
 
+    use anyhow::anyhow;
+
     use super::*;
 
     #[test]
@@ -66,5 +68,24 @@ mod tests {
 
         let wrapped: Error = KeyError(with_context).into();
         assert!(is_network_error(&wrapped));
+    }
+
+    #[test]
+    fn test_debug_output() {
+        let inner_error = anyhow!(io::Error::from(io::ErrorKind::Other)).context("some context");
+        let network = NetworkError::wrap(inner_error);
+
+        // FIXME - duplicate output.
+        assert_eq!(
+            format!("{network:?}"),
+            "Network Error: some context
+
+Caused by:
+    other error
+
+Caused by:
+    0: some context
+    1: other error"
+        );
     }
 }
