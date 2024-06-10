@@ -1,10 +1,9 @@
-#chg-compatible
-#debugruntest-incompatible
+#require no-eden
 
   $ configure modernclient
-  $ enable dirsync
+  $ enable dirsync undo
 
-  $ newclientrepo repo
+  $ newclientrepo
   $ setconfig ui.verbose=true
   $ readconfig <<EOF
   > [dirsync]
@@ -224,11 +223,8 @@ Test amending a change where there has already been a sync before
   -a
   +c
 
-  $ cd ..
-
 Test syncing multiple mirror groups across more than 2 directories
-  $ rm -rf repo
-  $ newclientrepo repo
+  $ newclientrepo
   $ readconfig <<EOF
   > [dirsync]
   > group1.dir1 = dir1/
@@ -278,11 +274,8 @@ Test syncing multiple mirror groups across more than 2 directories
   @@ -0,0 +1,1 @@
   +a
 
-  $ cd ..
-
 Test that rebasing applies the same change to both
-  $ rm -rf repo
-  $ newclientrepo repo
+  $ newclientrepo
   $ readconfig <<EOF
   > [dirsync]
   > group1.dir1 = dir1/
@@ -300,7 +293,6 @@ Test that rebasing applies the same change to both
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ echo b > dir1/a
   $ hg commit --config extensions.dirsync=! -m "edit dir1/a with sync on"
-  $ cp -R . ../repo1
   $ hg rebase --config extensions.rebase= -d 'max(desc(add))'
   rebasing * "edit dir1/a with sync on" (glob)
   mirrored changes in 'dir1/a' to 'dir2/a'
@@ -318,10 +310,8 @@ Test that rebasing applies the same change to both
   -a
   +b
 
-  $ cd ..
-
 The same test as the above. But uses in-memory rebase
-  $ cd repo1
+  $ hg undo -q
   $ setconfig rebase.experimental.inmemory=True
   $ hg rebase --config extensions.rebase= -d 'max(desc(add))'
   rebasing * "edit dir1/a with sync on" (glob)
@@ -340,11 +330,8 @@ The same test as the above. But uses in-memory rebase
   -a
   +b
 
-  $ cd ..
-
 Test committing part of the working copy
-  $ rm -rf repo
-  $ newclientrepo repo
+  $ newclientrepo
   $ readconfig <<EOF
   > [dirsync]
   > group1.dir1 = dir1/
@@ -443,11 +430,8 @@ Test quiet non-conflicting edits
   -aa
   +aaa
 
-  $ cd ..
-
 Test deleting file with missing mirror
-  $ rm -rf repo
-  $ newclientrepo repo
+  $ newclientrepo
   $ mkdir dir1
   $ echo a > dir1/a
   $ hg add dir1
@@ -471,11 +455,8 @@ Test deleting file with missing mirror
   @@ -1,1 +0,0 @@
   -a
 
-  $ cd ..
-
 Test modifying file with missing mirror
-  $ rm -rf repo
-  $ newclientrepo repo
+  $ newclientrepo
   $ mkdir dir1
   $ echo a > dir1/a
   $ hg add dir1
@@ -507,11 +488,8 @@ Test modifying file with missing mirror
   @@ -0,0 +1,1 @@
   +a2
 
-  $ cd ..
-
 Test updating missing mirror
-  $ rm -rf repo
-  $ newclientrepo repo
+  $ newclientrepo
   $ mkdir dir1
   $ echo a > dir1/a
   $ hg add dir1
@@ -544,11 +522,8 @@ Test updating missing mirror
   @@ -0,0 +1,1 @@
   +a2
 
-  $ cd ..
-
 Dont mirror during shelve
-  $ rm -rf repo
-  $ newclientrepo repo
+  $ newclientrepo
   $ enable shelve
   $ readconfig <<EOF
   > [dirsync]
@@ -571,12 +546,9 @@ Dont mirror during shelve
   $ hg status
   M dir1/a
 
-  $ cd ..
-
 Test .hgdirsync in the working copy
 
-  $ rm -rf repo
-  $ newclientrepo repo
+  $ newclientrepo
   $ readconfig <<EOF
   > [dirsync]
   > group1.dir1 = dir1/
@@ -660,11 +632,9 @@ Only the ".hgdirsync" at the top of the repo is effective
   mirrored changes in 'dir1/c' to 'dir6/c'
   mirrored changes in 'dir1/c' to 'dir7/c'
 
-  $ cd ../..
-
 Rule order matters. Only the first one gets executed.
 
-  $ newclientrepo repo-order1
+  $ newclientrepo
   $ cat >> .hgdirsync <<'EOF'
   > a.dir1 = a/
   > a.dir2 = b/
@@ -677,7 +647,7 @@ Rule order matters. Only the first one gets executed.
   adding a/c/1
   mirrored adding 'a/c/1' to 'b/c/1'
 
-  $ newclientrepo repo-order2
+  $ newclientrepo
   $ cat >> .hgdirsync <<'EOF'
   > c.dir1 = a/c/
   > c.dir2 = c/
@@ -691,7 +661,7 @@ Rule order matters. Only the first one gets executed.
   mirrored adding 'a/c/1' to 'c/1'
 
 Test excluding a subdirectory from dirsync
-  $ newclientrepo exclusion
+  $ newclientrepo
   $ cat >> .hgdirsync <<'EOF'
   > a.dir1 = a/
   > exclude.a.dir1 = a/excl
@@ -708,7 +678,7 @@ Test excluding a subdirectory from dirsync
   mirrored adding 'a/c/1' to 'b/c/1'
 
 Test that excludes override all other rules
-  $ newclientrepo exclusion-override
+  $ newclientrepo
   $ cat >> .hgdirsync <<'EOF'
   > a.dir1 = a/
   > exclude.a.dir1 = a/excl
@@ -729,7 +699,7 @@ Test that excludes override all other rules
   mirrored adding 'a/c/1' to 'b/c/1'
 
 Test that excludes only work when specified for every destination
-  $ newclientrepo exclusion-total
+  $ newclientrepo
   $ cat >> .hgdirsync <<'EOF'
   > a.dir1 = a/
   > a.dir2 = b/

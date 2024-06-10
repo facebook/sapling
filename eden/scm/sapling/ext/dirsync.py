@@ -55,6 +55,7 @@ from sapling import (
     tracing,
     util,
 )
+from sapling.ext import shelve as shelvemod
 from sapling.i18n import _
 from sapling.node import bin
 from sapling.scmutil import status
@@ -71,15 +72,8 @@ _nodemirrored = {}  # {node: {path}}, for syncing from commit to wvfs
 def extsetup(ui) -> None:
     extensions.wrapfunction(localrepo.localrepository, "commitctx", _commitctx)
 
-    def wrapshelve(loaded=False):
-        try:
-            shelvemod = extensions.find("shelve")
-            extensions.wrapcommand(shelvemod.cmdtable, "shelve", _bypassdirsync)
-            extensions.wrapcommand(shelvemod.cmdtable, "unshelve", _bypassdirsync)
-        except KeyError:
-            pass
-
-    extensions.afterloaded("shelve", wrapshelve)
+    extensions.wrapcommand(shelvemod.cmdtable, "shelve", _bypassdirsync)
+    extensions.wrapcommand(shelvemod.cmdtable, "unshelve", _bypassdirsync)
 
     extensions.wrapfilecache(localrepo.localrepository, "dirstate", _wrapdirstate)
 
