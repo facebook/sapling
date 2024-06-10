@@ -64,15 +64,15 @@ These fail:
   nothing to rebase
 
   $ hg rebase --continue --abort
-  abort: cannot use both abort and continue
+  abort: can only use one of the following: abort, continue or quit
   [255]
 
   $ hg rebase --continue --collapse
-  abort: cannot use collapse with continue or abort
+  abort: cannot use collapse with continue, abort or quit
   [255]
 
   $ hg rebase --continue --dest 4
-  abort: abort and continue do not allow specifying revisions
+  abort: abort, continue and quit do not allow specifying revisions
   [255]
 
   $ hg rebase --base 5 --source 4

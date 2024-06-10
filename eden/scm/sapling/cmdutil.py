@@ -720,16 +720,22 @@ To mark files as resolved:  hg resolve --mark FILE"""
     return _commentlines(msg)
 
 
-def _helpmessage(continuecmd, abortcmd):
-    msg = _("To continue:                %s\n" "To abort:                   %s") % (
-        continuecmd,
-        abortcmd,
-    )
+def _helpmessage(continuecmd, abortcmd, quitcmd=None):
+    items = [
+        _("To continue:                %s") % continuecmd,
+        _("To abort:                   %s") % abortcmd,
+        _("To quit:                    %s") % quitcmd if quitcmd else None,
+    ]
+    msg = "\n".join(filter(None, items))
     return _commentlines(msg)
 
 
 def _rebasemsg():
-    return _helpmessage(_("@prog@ rebase --continue"), _("@prog@ rebase --abort"))
+    return _helpmessage(
+        _("@prog@ rebase --continue"),
+        _("@prog@ rebase --abort"),
+        _("@prog@ rebase --quit"),
+    )
 
 
 def _histeditmsg():

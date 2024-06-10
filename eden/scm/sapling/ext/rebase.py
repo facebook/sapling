@@ -414,7 +414,7 @@ class rebaseruntime:
         if not mutation.enabled(self.repo):
             _checkobsrebase(self.repo, self.ui, obsoleteset, skippedset)
 
-    def _prepareabortorcontinue(self, isabort):
+    def _prepareabortcontinueorquit(self, isabort, quitf):
         try:
             self.restorestatus()
             if self.collapsef:
@@ -442,6 +442,8 @@ class rebaseruntime:
                 self.state,
                 activebookmark=self.activebookmark,
             )
+        if quitf:
+            return quit_rebase(self.repo, activebookmark=self.activebookmark)
 
     def _preparenewrebase(self, destmap):
         if not destmap:
@@ -1075,6 +1077,14 @@ def _simplemerge(ui, basectx, ctx, p1ctx, manifestbuilder):
         ("a", "abort", False, _("abort an interrupted rebase")),
         (
             "",
+            "quit",
+            False,
+            _(
+                "quit an interrupted rebase and keep the already rebased commits (EXPERIMENTAL)"
+            ),
+        ),
+        (
+            "",
             "noconflict",
             False,
             _("cancel the rebase if there are conflicts (EXPERIMENTAL)"),
@@ -1209,7 +1219,12 @@ def rebase(ui, repo, templ=None, **opts):
     if not opts.get("date"):
         opts["date"] = _defaultdate(ui)
 
-    if not (opts.get("continue") or opts.get("abort") or opts.get("restack")):
+    if not (
+        opts.get("continue")
+        or opts.get("abort")
+        or opts.get("restack")
+        or opts.get("quit")
+    ):
         # 'hg rebase' w/o args should do nothing
         if not opts.get("dest"):
             raise error.Abort("you must specify a destination (-d) for the rebase")
@@ -1240,8 +1255,8 @@ def rebase(ui, repo, templ=None, **opts):
         whynotimm = None
 
         # in-memory rebase is not compatible with resuming rebases.
-        if opts.get("continue") or opts.get("abort"):
-            whynotimm = "--continue or --abort passed"
+        if opts.get("continue") or opts.get("abort") or opts.get("quit"):
+            whynotimm = "--continue, --abort or --quit passed"
 
         # in-memory rebase cannot currently run within a parent transaction,
         # since the restarting logic will fail the entire transaction.
@@ -1317,8 +1332,9 @@ def _origrebase(ui, repo, rbsrt, **opts):
         # search default destination in this space
         # used in the 'hg pull --rebase' case, see issue 5214.
         destspace = opts.get("_destspace")
-        contf = opts.get("continue")
-        abortf = opts.get("abort")
+        contf = opts.get("continue", False)
+        abortf = opts.get("abort", False)
+        quitf = opts.get("quit", False)
         if opts.get("interactive"):
             try:
                 if extensions.find("histedit"):
@@ -1338,22 +1354,24 @@ def _origrebase(ui, repo, rbsrt, **opts):
         if rbsrt.collapsemsg and not rbsrt.collapsef:
             raise error.Abort(_("message can only be specified with collapse"))
 
-        if contf or abortf:
-            if contf and abortf:
-                raise error.Abort(_("cannot use both abort and continue"))
+        if contf or abortf or quitf:
+            if (contf + abortf + quitf) > 1:
+                raise error.Abort(
+                    _("can only use one of the following: abort, continue or quit")
+                )
             if rbsrt.collapsef:
-                raise error.Abort(_("cannot use collapse with continue or abort"))
+                raise error.Abort(_("cannot use collapse with continue, abort or quit"))
             if srcf or basef or dests:
                 raise error.Abort(
-                    _("abort and continue do not allow specifying revisions")
+                    _("abort, continue and quit do not allow specifying revisions")
                 )
-            if abortf and opts.get("tool", False):
+            if (abortf or quitf) and opts.get("tool", False):
                 ui.warn(_("tool option will be ignored\n"))
             if contf:
                 ms = mergemod.mergestate.read(repo)
                 mergeutil.checkunresolved(ms)
 
-            retcode = rbsrt._prepareabortorcontinue(abortf)
+            retcode = rbsrt._prepareabortcontinueorquit(abortf, quitf)
             if retcode is not None:
                 return retcode
         else:
@@ -2225,6 +2243,19 @@ def abort(repo, originalwd, destmap, state, activebookmark=None) -> int:
         clearstatus(repo)
         clearcollapsemsg(repo)
         repo.ui.warn(_("rebase aborted\n"))
+    return 0
+
+
+def quit_rebase(repo, activebookmark=None) -> int:
+    """Quit an interrupted rebase and keep the already rebased commits."""
+    try:
+        mergemod.goto(repo, repo["."].rev(), force=True)
+        if activebookmark and activebookmark in repo._bookmarks:
+            bookmarks.activate(repo, activebookmark)
+    finally:
+        clearstatus(repo)
+        clearcollapsemsg(repo)
+        repo.ui.warn(_("rebase quited\n"))
     return 0
 
 

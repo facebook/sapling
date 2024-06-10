@@ -73,16 +73,23 @@ To mark files as resolved:  @prog@ resolve --mark FILE"""
     ui.warn(prefixlines(msg))
 
 
-def helpmessage(ui, continuecmd, abortcmd):
-    msg = _("To continue:                %s\n" "To abort:                   %s") % (
-        continuecmd,
-        abortcmd,
-    )
+def helpmessage(ui, continuecmd, abortcmd, quitcmd=None):
+    items = [
+        _("To continue:                %s") % continuecmd,
+        _("To abort:                   %s") % abortcmd,
+        _("To quit:                    %s") % quitcmd if quitcmd else None,
+    ]
+    msg = "\n".join(filter(None, items))
     ui.warn(prefixlines(msg))
 
 
 def rebasemsg(repo, ui):
-    helpmessage(ui, _("@prog@ rebase --continue"), _("@prog@ rebase --abort"))
+    helpmessage(
+        ui,
+        _("@prog@ rebase --continue"),
+        _("@prog@ rebase --abort"),
+        _("@prog@ rebase --quit"),
+    )
     dstnode, srcnode = repo.dirstate.parents()
     if srcnode != nodeutil.nullid:
         src = repo[srcnode]

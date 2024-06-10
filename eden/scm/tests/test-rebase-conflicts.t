@@ -76,6 +76,7 @@ Conflicting rebase:
   
   # To continue:                hg rebase --continue
   # To abort:                   hg rebase --abort
+  # To quit:                    hg rebase --quit
 
 Try to continue without solving the conflict:
 
