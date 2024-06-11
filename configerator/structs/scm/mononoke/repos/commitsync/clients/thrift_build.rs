@@ -6,9 +6,9 @@ use std::path::Path;
 use thrift_compiler::Config;
 use thrift_compiler::GenContext;
 const CRATEMAP: &str = "\
-commitsync crate //configerator/structs/scm/mononoke/repos:commitsync-rust
-repos repos //configerator/structs/scm/mononoke/repos:repos-rust
-rust rust //thrift/annotation:rust-rust
+configerator/structs/scm/mononoke/repos/commitsync.thrift crate //configerator/structs/scm/mononoke/repos:commitsync-rust
+configerator/structs/scm/mononoke/repos/repos.thrift repos //configerator/structs/scm/mononoke/repos:repos-rust
+thrift/annotation/rust.thrift rust //thrift/annotation:rust-rust
 ";
 #[rustfmt::skip]
 fn main() {

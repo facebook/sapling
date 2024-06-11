@@ -6,8 +6,8 @@ use std::path::Path;
 use thrift_compiler::Config;
 use thrift_compiler::GenContext;
 const CRATEMAP: &str = "\
-megarepo_configs megarepo_configs //configerator/structs/scm/mononoke/megarepo:megarepo_configs-rust
-version_cconf_index crate //configerator/structs/scm/mononoke/megarepo:version_cconf_index-rust
+configerator/structs/scm/mononoke/megarepo/megarepo_configs.thrift megarepo_configs //configerator/structs/scm/mononoke/megarepo:megarepo_configs-rust
+configerator/structs/scm/mononoke/megarepo/version_cconf_index.thrift crate //configerator/structs/scm/mononoke/megarepo:version_cconf_index-rust
 ";
 #[rustfmt::skip]
 fn main() {

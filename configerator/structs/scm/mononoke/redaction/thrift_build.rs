@@ -6,8 +6,8 @@ use std::path::Path;
 use thrift_compiler::Config;
 use thrift_compiler::GenContext;
 const CRATEMAP: &str = "\
-redaction_set crate //configerator/structs/scm/mononoke/redaction:redaction_set-rust
-rust rust //thrift/annotation:rust-rust
+configerator/structs/scm/mononoke/redaction/redaction_set.thrift crate //configerator/structs/scm/mononoke/redaction:redaction_set-rust
+thrift/annotation/rust.thrift rust //thrift/annotation:rust-rust
 ";
 #[rustfmt::skip]
 fn main() {

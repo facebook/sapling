@@ -6,8 +6,8 @@ use std::path::Path;
 use thrift_compiler::Config;
 use thrift_compiler::GenContext;
 const CRATEMAP: &str = "\
-hg_mutation_entry crate //eden/mononoke/mercurial/mutation/if:hg_mutation_entry_thrift-rust
-mercurial_thrift mercurial_thrift //eden/mononoke/mercurial/types/if:mercurial-thrift-rust
+eden/mononoke/mercurial/mutation/if/hg_mutation_entry.thrift crate //eden/mononoke/mercurial/mutation/if:hg_mutation_entry_thrift-rust
+eden/mononoke/mercurial/types/if/mercurial_thrift.thrift mercurial_thrift //eden/mononoke/mercurial/types/if:mercurial-thrift-rust
 ";
 #[rustfmt::skip]
 fn main() {

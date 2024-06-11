@@ -6,11 +6,11 @@ use std::path::Path;
 use thrift_compiler::Config;
 use thrift_compiler::GenContext;
 const CRATEMAP: &str = "\
-derived_data_type derived_data_type_if //eden/mononoke/derived_data/if:derived_data_type_if-rust
-fb303_core fb303_core //fb303/thrift:fb303_core-rust
-megarepo_configs megarepo_configs //configerator/structs/scm/mononoke/megarepo:megarepo_configs-rust
-source_control crate //eden/mononoke/scs/if:source_control-rust
-thrift thrift //thrift/annotation:thrift-rust
+configerator/structs/scm/mononoke/megarepo/megarepo_configs.thrift megarepo_configs //configerator/structs/scm/mononoke/megarepo:megarepo_configs-rust
+eden/mononoke/derived_data/if/derived_data_type.thrift derived_data_type_if //eden/mononoke/derived_data/if:derived_data_type_if-rust
+eden/mononoke/scs/if/source_control.thrift crate //eden/mononoke/scs/if:source_control-rust
+fb303/thrift/fb303_core.thrift fb303_core //fb303/thrift:fb303_core-rust
+thrift/annotation/thrift.thrift thrift //thrift/annotation:thrift-rust
 ";
 #[rustfmt::skip]
 fn main() {

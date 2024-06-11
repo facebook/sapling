@@ -6,7 +6,7 @@ use std::path::Path;
 use thrift_compiler::Config;
 use thrift_compiler::GenContext;
 const CRATEMAP: &str = "\
-eden_config crate //eden/fs/config:config_thrift-rust
+eden/fs/config/eden_config.thrift crate //eden/fs/config:config_thrift-rust
 ";
 #[rustfmt::skip]
 fn main() {

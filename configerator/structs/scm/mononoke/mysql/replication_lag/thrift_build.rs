@@ -6,8 +6,8 @@ use std::path::Path;
 use thrift_compiler::Config;
 use thrift_compiler::GenContext;
 const CRATEMAP: &str = "\
-config crate //configerator/structs/scm/mononoke/mysql/replication_lag:replication_lag_config-rust
-rust rust //thrift/annotation:rust-rust
+configerator/structs/scm/mononoke/mysql/replication_lag/config.thrift crate //configerator/structs/scm/mononoke/mysql/replication_lag:replication_lag_config-rust
+thrift/annotation/rust.thrift rust //thrift/annotation:rust-rust
 ";
 #[rustfmt::skip]
 fn main() {

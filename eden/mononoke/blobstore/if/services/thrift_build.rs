@@ -6,7 +6,7 @@ use std::path::Path;
 use thrift_compiler::Config;
 use thrift_compiler::GenContext;
 const CRATEMAP: &str = "\
-memcache_lock crate //eden/mononoke/blobstore/if:memcache-lock-thrift-rust
+eden/mononoke/blobstore/if/memcache_lock.thrift crate //eden/mononoke/blobstore/if:memcache-lock-thrift-rust
 ";
 #[rustfmt::skip]
 fn main() {

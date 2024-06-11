@@ -6,7 +6,7 @@ use std::path::Path;
 use thrift_compiler::Config;
 use thrift_compiler::GenContext;
 const CRATEMAP: &str = "\
-packfile_thrift crate //eden/mononoke/git/packfile/if:packfile-thrift-rust
+eden/mononoke/git/packfile/if/packfile_thrift.thrift crate //eden/mononoke/git/packfile/if:packfile-thrift-rust
 ";
 #[rustfmt::skip]
 fn main() {

@@ -6,7 +6,7 @@ use std::path::Path;
 use thrift_compiler::Config;
 use thrift_compiler::GenContext;
 const CRATEMAP: &str = "\
-hgclient crate //configerator/structs/scm/hg/hgclientconf:config-rust
+configerator/structs/scm/hg/hgclientconf/hgclient.thrift crate //configerator/structs/scm/hg/hgclientconf:config-rust
 ";
 #[rustfmt::skip]
 fn main() {

@@ -6,24 +6,24 @@ use std::path::Path;
 use thrift_compiler::Config;
 use thrift_compiler::GenContext;
 const CRATEMAP: &str = "\
-blame crate //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
-bonsai crate //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
-bssm crate //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
-changeset_info crate //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
-content crate //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
-data crate //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
-deleted_manifest crate //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
-fastlog crate //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
-fsnodes crate //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
-id crate //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
-path crate //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
-raw_bundle2 crate //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
-redaction crate //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
-sharded_map crate //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
-skeleton_manifest crate //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
-test_manifest crate //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
-time crate //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
-unodes crate //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
+eden/mononoke/mononoke_types/serialization/blame.thrift crate //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
+eden/mononoke/mononoke_types/serialization/bonsai.thrift crate //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
+eden/mononoke/mononoke_types/serialization/bssm.thrift crate //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
+eden/mononoke/mononoke_types/serialization/changeset_info.thrift crate //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
+eden/mononoke/mononoke_types/serialization/content.thrift crate //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
+eden/mononoke/mononoke_types/serialization/data.thrift crate //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
+eden/mononoke/mononoke_types/serialization/deleted_manifest.thrift crate //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
+eden/mononoke/mononoke_types/serialization/fastlog.thrift crate //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
+eden/mononoke/mononoke_types/serialization/fsnodes.thrift crate //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
+eden/mononoke/mononoke_types/serialization/id.thrift crate //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
+eden/mononoke/mononoke_types/serialization/path.thrift crate //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
+eden/mononoke/mononoke_types/serialization/raw_bundle2.thrift crate //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
+eden/mononoke/mononoke_types/serialization/redaction.thrift crate //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
+eden/mononoke/mononoke_types/serialization/sharded_map.thrift crate //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
+eden/mononoke/mononoke_types/serialization/skeleton_manifest.thrift crate //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
+eden/mononoke/mononoke_types/serialization/test_manifest.thrift crate //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
+eden/mononoke/mononoke_types/serialization/time.thrift crate //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
+eden/mononoke/mononoke_types/serialization/unodes.thrift crate //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
 ";
 #[rustfmt::skip]
 fn main() {

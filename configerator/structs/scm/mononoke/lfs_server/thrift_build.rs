@@ -6,9 +6,9 @@ use std::path::Path;
 use thrift_compiler::Config;
 use thrift_compiler::GenContext;
 const CRATEMAP: &str = "\
-lfs_server crate //configerator/structs/scm/mononoke/lfs_server:lfs_server_config-rust
-ratelimits rate_limiting_config //configerator/structs/scm/mononoke/ratelimiting:rate_limiting_config-rust
-rust rust //thrift/annotation:rust-rust
+configerator/structs/scm/mononoke/lfs_server/lfs_server.thrift crate //configerator/structs/scm/mononoke/lfs_server:lfs_server_config-rust
+configerator/structs/scm/mononoke/ratelimiting/ratelimits.thrift rate_limiting_config //configerator/structs/scm/mononoke/ratelimiting:rate_limiting_config-rust
+thrift/annotation/rust.thrift rust //thrift/annotation:rust-rust
 ";
 #[rustfmt::skip]
 fn main() {

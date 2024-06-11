@@ -6,7 +6,7 @@ use std::path::Path;
 use thrift_compiler::Config;
 use thrift_compiler::GenContext;
 const CRATEMAP: &str = "\
-derived_data_type crate //eden/mononoke/derived_data/if:derived_data_type_if-rust
+eden/mononoke/derived_data/if/derived_data_type.thrift crate //eden/mononoke/derived_data/if:derived_data_type_if-rust
 ";
 #[rustfmt::skip]
 fn main() {

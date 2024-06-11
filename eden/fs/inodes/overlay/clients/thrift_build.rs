@@ -6,7 +6,7 @@ use std::path::Path;
 use thrift_compiler::Config;
 use thrift_compiler::GenContext;
 const CRATEMAP: &str = "\
-overlay crate //eden/fs/inodes/overlay:serialization-rust
+eden/fs/inodes/overlay/overlay.thrift crate //eden/fs/inodes/overlay:serialization-rust
 ";
 #[rustfmt::skip]
 fn main() {
