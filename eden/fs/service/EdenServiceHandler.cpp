@@ -54,6 +54,7 @@
 #include "eden/fs/journal/JournalDelta.h"
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/BlobMetadata.h"
+#include "eden/fs/model/GlobEntry.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/TreeEntry.h"
@@ -3151,20 +3152,6 @@ EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
   auto& context = helper->getFetchContext();
   auto isBackground = *params->background();
 
-  static const re2::RE2 suffixRegex("\\*\\*/\\*\\.[A-z0-9]+");
-  std::vector<std::string> suffixGlobs;
-  std::vector<std::string> nonSuffixGlobs;
-
-  // Copying to new vectors, since we want to keep the original around
-  // in case we need to fall back to the legacy pathway
-  for (const auto& glob : *params->globs_ref()) {
-    if (re2::RE2::FullMatch(glob, suffixRegex)) {
-      suffixGlobs.push_back(glob);
-    } else {
-      nonSuffixGlobs.push_back(glob);
-    }
-  }
-
   ImmediateFuture<folly::Unit> backgroundFuture{std::in_place};
   if (isBackground) {
     backgroundFuture = makeNotReadyImmediateFuture();
@@ -3178,33 +3165,142 @@ EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
       server_->getServerState());
 
   std::unique_ptr<SuffixGlobRequestScope> suffixGlobRequestScope;
-  if (!suffixGlobs.empty()) {
-    auto suffixGlobLogString = globber.logString(suffixGlobs);
-    suffixGlobRequestScope = std::make_unique<SuffixGlobRequestScope>(
-        suffixGlobLogString, server_->getServerState(), context);
+  auto edenConfig = server_->getServerState()->getEdenConfig();
 
-    // Only use BSSM if there are only suffix queries
-    if (server_->getServerState()
-            ->getEdenConfig()
-            ->enableEdenAPISuffixQuery.getValue() &&
-        nonSuffixGlobs.empty()) {
-      // Do things here
+  auto globFilesOrErrorFuture =
+      std::move(backgroundFuture).thenValue([](auto&&) {
+        return folly::Try<std::unique_ptr<Glob>>{newEdenError(
+            EINVAL,
+            EdenErrorType::ARGUMENT_ERROR,
+            "No suffix queries in input globs, using fallback.")};
+      });
+  if (edenConfig->enableEdenAPISuffixQuery.getValue()) {
+    // Matches **/*.suffix
+    // Captures the .suffix
+    static const re2::RE2 suffixRegex("\\*\\*/\\*(\\.[A-z0-9]+)");
+    std::vector<std::string> suffixGlobs;
+    std::vector<std::string> nonSuffixGlobs;
+
+    // Copying to new vectors, since we want to keep the original around
+    // in case we need to fall back to the legacy pathway
+    for (const auto& glob : *params->globs_ref()) {
+      std::string capture;
+      if (re2::RE2::FullMatch(glob, suffixRegex, &capture)) {
+        suffixGlobs.push_back(capture);
+      } else {
+        nonSuffixGlobs.push_back(glob);
+      }
+    }
+
+    if (!suffixGlobs.empty() && nonSuffixGlobs.empty()) {
+      // Only use BSSM if there are only suffix queries
+      XLOG(DBG3)
+          << "globFiles request is only suffix globs, offloading to EdenAPI";
+      auto suffixGlobLogString = globber.logString(suffixGlobs);
+      suffixGlobRequestScope = std::make_unique<SuffixGlobRequestScope>(
+          suffixGlobLogString, server_->getServerState(), context);
+
+      // Do this again because the previous value has been consumed
+      ImmediateFuture<folly::Unit> backgroundFuture2{std::in_place};
+      if (isBackground) {
+        backgroundFuture2 = makeNotReadyImmediateFuture();
+      }
+
+      // Attempt to resolve all EdenAPI futures. If any of
+      // them result in an error we will fall back to local lookup
+      auto combinedFuture =
+          std::move(backgroundFuture2)
+              .thenValue([revisions = params->revisions_ref().value(),
+                          mountHandle,
+                          suffixGlobs = std::move(suffixGlobs),
+                          context = context.copy()](auto&&) mutable {
+                auto& store = mountHandle.getObjectStore();
+                auto rootId =
+                    mountHandle.getEdenMountPtr()->getCheckedOutRootId();
+                std::vector<ImmediateFuture<BackingStore::GetGlobFilesResult>>
+                    globFilesResultFutures;
+                for (auto& id : revisions) {
+                  // ID is either a 20b binary hash or a 40b human readable
+                  // text version globFiles takes as input the human readable
+                  // version, so convert using the store's parse method
+                  globFilesResultFutures.push_back(store.getGlobFiles(
+                      store.parseRootId(id), suffixGlobs, context));
+                }
+                if (revisions.empty()) {
+                  // Use current commit hash
+                  XLOG(DBG3) << "No commit hash in input, using current hash";
+                  globFilesResultFutures.push_back(store.getGlobFiles(
+                      rootId, std::move(suffixGlobs), context));
+                }
+                return collectAllSafe(std::move(globFilesResultFutures));
+              });
+
+      globFilesOrErrorFuture =
+          std::move(combinedFuture)
+              .thenValue([mountHandle,
+                          wantDtype = params->wantDtype_ref().value(),
+                          includeDotfiles =
+                              params->includeDotfiles_ref().value()](
+                             auto&& globResults) mutable {
+                // Offload suffix queries to EdenAPI
+                // params ignored in this pathway:
+                // Commands related to prefetching or the working copy
+                //   - prefetchFiles
+                //   - suppressFileList
+                //   - prefetchMetadata
+                //   - Sync
+                // - searchRoot - root is always the repository root
+                // - predictiveGlob - This pathway only accepts suffixes
+                // - listOnlyFiles - Only files will be returned
+                auto edenMount = mountHandle.getEdenMountPtr();
+                std::vector<ImmediateFuture<GlobEntry>> globEntryFuts;
+                for (auto& glob : globResults) {
+                  auto originHash =
+                      mountHandle.getObjectStore().renderRootId(glob.rootId);
+                  for (auto& entry : glob.globFiles) {
+                    globEntryFuts.emplace_back(
+                        ImmediateFuture<GlobEntry>{folly::Try<GlobEntry>{
+                            GlobEntry{entry, DT_UNKNOWN, originHash}}});
+                  }
+                }
+                return collectAllSafe(std::move(globEntryFuts))
+                    .thenValue([wantDtype](auto&& globEntries) {
+                      auto glob = std::make_unique<Glob>();
+                      for (GlobEntry& globEntry : globEntries) {
+                        glob->matchingFiles_ref().value().emplace_back(
+                            globEntry.file);
+                        if (wantDtype) {
+                          glob->dtypes_ref().value().emplace_back(
+                              globEntry.dType);
+                        }
+                        glob->originHashes_ref().value().emplace_back(
+                            globEntry.originHash);
+                      }
+                      return std::move(glob);
+                    });
+              });
     }
   }
-
-  // If no suffixes, or if suffixes failed
-  auto globFut = std::move(backgroundFuture)
-                     .thenValue([mountHandle,
+  auto globFut = std::move(globFilesOrErrorFuture)
+                     .thenError([mountHandle,
                                  serverState = server_->getServerState(),
                                  globs = std::move(*params->globs()),
                                  globber = std::move(globber),
                                  &context](auto&&) mutable {
+                       // Fallback to local if
+                       // - No suffixes given, or the config is diabled
+                       // and globFilesOrErrorFuture is the default value
+                       // - An error was encountered while using the
+                       // SaplingRemoteAPI method
+                       XLOG(DBG3) << "Using local globFiles";
+                       // TODO: Insert ODS log for globs here
                        return globber.glob(
                            mountHandle.getEdenMountPtr(),
                            serverState,
                            std::move(globs),
                            context);
                      });
+
   globFut = std::move(globFut).ensure(
       [mountHandle,
        helper = std::move(helper),
@@ -4818,7 +4914,7 @@ EdenServiceHandler::streamStartStatus() {
       // We raced with eden start completing. Let's re-collect the status and
       // return as if EdenFS has completed. The EdenFS status should be set
       // before the startup logger completes, so at this point the status
-      // should be something other than starting. Client should not nessecarily
+      // should be something other than starting. Client should not necessarily
       // rely on this though.
       fillDaemonInfo(result);
       return {
