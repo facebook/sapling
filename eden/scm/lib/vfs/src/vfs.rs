@@ -62,7 +62,7 @@ impl VFS {
     pub fn new(root: PathBuf) -> Result<Self> {
         let auditor = PathAuditor::new(&root);
         let fs_type =
-            fstype(&root).with_context(|| format!("Can't construct a VFS for {:?}", root))?;
+            fstype(&root).with_context(|| format!("can't construct a VFS for {:?}", root))?;
         let supports_symlinks = supports_symlinks(root.as_path())?;
         let supports_executables = supports_executables(&fs_type);
         let case_sensitive = case_sensitive(&root, &fs_type)?;
@@ -133,26 +133,26 @@ impl VFS {
             let metadata = match symlink_metadata(&path_buf) {
                 Ok(metadata) => metadata,
                 Err(err) if err.kind() == ErrorKind::NotFound => break,
-                Err(err) => bail!("error lstating {:?} in clear_conflicts: {}", path_buf, err),
+                Err(err) => return Err(err).with_context(|| format!("can't lstat {:?}", path_buf)),
             };
 
             let file_type = metadata.file_type();
             if file_type.is_file() || file_type.is_symlink() {
                 remove_file(&path_buf)
-                    .with_context(|| format!("Can't remove file {:?}", path_buf))?;
+                    .with_context(|| format!("can't remove file {:?}", path_buf))?;
                 break;
             }
 
             // If the full destination is a directory, clear it out.
             if file_type.is_dir() && path_buf == full_path {
                 remove_dir_all(&path_buf)
-                    .with_context(|| format!("Can't remove directory {:?}", path_buf))?;
+                    .with_context(|| format!("can't remove directory {:?}", path_buf))?;
                 break;
             }
         }
 
         let dir = full_path.parent().unwrap();
-        create_dir_all(dir).with_context(|| format!("Can't create directory {:?}", dir))?;
+        create_dir_all(dir).with_context(|| format!("can't create directory {:?}", dir))?;
 
         Ok(())
     }
@@ -190,7 +190,7 @@ impl VFS {
         }
 
         f.write_all(content)
-            .with_context(|| format!("Can't write to {:?}", filepath))?;
+            .with_context(|| format!("can't write to {:?}", filepath))?;
         Ok(content.len())
     }
 
@@ -213,7 +213,7 @@ impl VFS {
         let mode = if flag { 0o755 } else { 0o644 };
         let perms = Permissions::from_mode(mode);
         set_permissions(filepath, perms)
-            .with_context(|| format!("Can't update exec flag({}) on {:?}", flag, filepath))?;
+            .with_context(|| format!("can't update exec flag({}) on {:?}", flag, filepath))?;
         Ok(())
     }
 
@@ -221,7 +221,7 @@ impl VFS {
     /// is the symlink destination for these.
     fn plain_symlink_file(link_name: &Path, link_dest: &Path) -> Result<()> {
         let link_dest = match link_dest.to_str() {
-            None => bail!("Not a valid UTF-8 path: {:?}", link_dest),
+            None => bail!("not a valid UTF-8 path: {:?}", link_dest),
             Some(s) => s,
         };
 
@@ -248,7 +248,7 @@ impl VFS {
             Self::plain_symlink_file(link_name, link_dest)
         };
 
-        result.with_context(|| format!("Can't create symlink '{:?} -> {:?}'", link_name, link_dest))
+        result.with_context(|| format!("can't symlink {:?} to {:?}", link_name, link_dest))
     }
 
     /// Write a symlink file at `filepath`. The destination is represented by `content`.
@@ -262,11 +262,7 @@ impl VFS {
     /// Overwrite the content of the file at `path` with `data`. The number of bytes written on
     /// disk will be returned.
     fn write_inner(&self, path: &RepoPath, data: &[u8], flags: UpdateFlag) -> Result<usize> {
-        let filepath = self
-            .inner
-            .auditor
-            .audit(path)
-            .with_context(|| format!("Can't write into {}", path))?;
+        let filepath = self.inner.auditor.audit(path)?;
 
         match flags {
             UpdateFlag::Regular => self.write_mode(&filepath, data, false),
@@ -287,21 +283,16 @@ impl VFS {
                 // failures not due to a conflicting file would show up here again, so let's not worry
                 // about it.
                 self.clear_conflicts(path).with_context(|| {
-                    format!("Can't clear conflicts after handling error \"{:?}\"", e)
+                    format!("can't clear conflicts after handling error \"{:?}\"", e)
                 })?;
-                self.write_inner(path, data, flag).with_context(|| {
-                    format!("Can't write '{:?}' after handling error \"{:?}\"", path, e)
-                })
+
+                self.write_inner(path, data, flag)
             }
         }
     }
 
     pub fn set_executable(&self, path: &RepoPath, flag: bool) -> Result<()> {
-        let filepath = self
-            .inner
-            .auditor
-            .audit(path)
-            .with_context(|| format!("Can't write into {}", path))?;
+        let filepath = self.inner.auditor.audit(path)?;
 
         self.set_exec(&filepath, flag)
     }
@@ -348,7 +339,7 @@ impl VFS {
                     };
                     p.as_bytes().to_vec()
                 }
-                None => bail!("invalid path during vfs::read '{:?}'", filepath),
+                None => bail!("invalid path during vfs::read {:?}", filepath),
             }
         } else {
             std::fs::read(filepath)?
@@ -362,7 +353,7 @@ impl VFS {
             let file_type = metadata.file_type();
             if file_type.is_file() || file_type.is_symlink() {
                 let result = remove_file(filepath)
-                    .with_context(|| format!("Can't remove file {:?}", filepath));
+                    .with_context(|| format!("can't remove file {:?}", filepath));
                 if let Err(e) = result {
                     if let Some(io_error) = e.downcast_ref::<io::Error>() {
                         ensure!(io_error.kind() == ErrorKind::NotFound, e);

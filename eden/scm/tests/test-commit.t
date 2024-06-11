@@ -671,11 +671,7 @@ verify pathauditor blocks evil filepaths
   [255]
 #else
   $ hg co --clean tip
-  abort: Can't write 'RepoPath(".h\u{200c}g/hgrc")' after handling error "Can't write into .h‌g/hgrc
-  
-  Caused by:
-      0: Invalid component in ".h‌g/hgrc"
-      1: Invalid path component ".hg"": Invalid path component ".hg"
+  abort: invalid component in ".h‌g/hgrc": invalid path component ".hg"
   [255]
 #endif
 

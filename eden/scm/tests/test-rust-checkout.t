@@ -115,7 +115,7 @@ Don't fail with open files that can't be deleted:
     with open("unlink_fail/foo"), open("unlink_fail/bar"):
 
       $ hg go $B
-      update failed to remove foo: Can't remove file "*foo": The process cannot access the file because it is being used by another process. (os error 32)! (glob) (windows !) (no-eden !)
+      update failed to remove foo: can't remove file "*foo": The process cannot access the file because it is being used by another process. (os error 32)! (glob) (windows !) (no-eden !)
       2 files updated, 0 files merged, 1 files removed, 0 files unresolved
 
 
@@ -489,6 +489,6 @@ Test update_distance logging:
   $ chmod 444 dir
 # XXX fixme
   $ hg go tip
-  abort: Can't clear conflicts after handling error "Permission denied (os error 13)"Can't clear conflicts after handling error "Permission denied (os error 13)"Can't clear conflicts after handling error "Permission denied (os error 13)"Can't clear conflicts after handling error "Permission denied (os error 13)"Can't clear conflicts after handling error "Permission denied (os error 13)"Can't clear conflicts after handling error "Permission denied (os error 13)"Can't clear conflicts after handling error "Permission denied (os error 13)"Can't clear conflicts after handling error "Permission denied (os error 13)"Can't clear conflicts after handling error "Permission denied (os error 13)"Can't clear conflicts after handling error "Permission denied (os error 13)": error lstating * in clear_conflicts: Permission denied (os error 13) (glob)
+  abort: can't clear conflicts after handling error "Permission denied (os error 13)"can't clear conflicts after handling error "Permission denied (os error 13)"can't clear conflicts after handling error "Permission denied (os error 13)"can't clear conflicts after handling error "Permission denied (os error 13)"can't clear conflicts after handling error "Permission denied (os error 13)"can't clear conflicts after handling error "Permission denied (os error 13)"can't clear conflicts after handling error "Permission denied (os error 13)"can't clear conflicts after handling error "Permission denied (os error 13)"can't clear conflicts after handling error "Permission denied (os error 13)"can't clear conflicts after handling error "Permission denied (os error 13)": Permission denied (os error 13)
   [255]
 #endif

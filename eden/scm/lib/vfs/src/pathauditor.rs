@@ -53,9 +53,9 @@ const IGNORED_HFS_CHARS: [char; 16] = [
 
 #[derive(thiserror::Error, Debug)]
 pub enum AuditError {
-    #[error("Can't read/write file through ancestor symlink \"{0}\"")]
+    #[error("can't read/write file through ancestor symlink \"{0}\"")]
     ThroughSymlink(RepoPathBuf),
-    #[error("Invalid path component \"{0}\"")]
+    #[error("invalid path component \"{0}\"")]
     InvalidComponent(String),
 }
 
@@ -85,7 +85,7 @@ impl PathAuditor {
     /// Make sure that it is safe to write/remove `path` from the repo.
     pub fn audit(&self, path: &RepoPath) -> Result<PathBuf> {
         audit_invalid_components(path.as_str())
-            .with_context(|| format!("Invalid component in \"{}\"", path))?;
+            .with_context(|| format!("invalid component in \"{}\"", path))?;
 
         let mut needs_recording_index = std::usize::MAX;
         for (i, parent) in path.reverse_parents().enumerate() {
@@ -93,7 +93,7 @@ impl PathAuditor {
             if !self.audited.contains_key(parent) {
                 // If fast check failed, do the stat syscall.
                 self.audit_fs(parent)
-                    .with_context(|| format!("Can't audit path \"{}\"", parent))?;
+                    .with_context(|| format!("path \"{}\" failed audit", path))?;
 
                 // If it passes the audit, we can't record them as audited just yet, since a parent
                 // may still fail the audit. Later we'll loop through and record successful audits.
