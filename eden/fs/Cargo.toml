@@ -11,7 +11,7 @@ minijail = { git = "https://chromium.googlesource.com/chromiumos/platform/minija
 perf-event = { version = "0.4", git = "https://github.com/krallin/perf-event.git", rev = "86224a9bc025d5d19f719542f27c8c629a08b167" }
 perf-event-open-sys = { version = "4.0", git = "https://github.com/krallin/perf-event.git", rev = "86224a9bc025d5d19f719542f27c8c629a08b167" }
 quickcheck = { git = "https://github.com/jakoschiko/quickcheck", rev = "6ecdf5bb4b0132ce66670b4d46453aa022ea892c" }
-riscv = { git = "https://github.com/rust-embedded/riscv.git", rev = "e9f43ae4722cfcdda67d36fdfcf462a0f12e9928" }
+riscv = { git = "https://github.com/rust-embedded/riscv.git", rev = "28e9b02d45827055188be0dbd1f800ba64bc75e6" }
 
 [workspace]
 members = [
