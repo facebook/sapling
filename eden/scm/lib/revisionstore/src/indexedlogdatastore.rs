@@ -892,7 +892,7 @@ mod tests {
         // Note: We don't fully respect ExtStoredPolicy in scmstore. We try to resolve the pointer,
         // and if we can't we no longer return the serialized pointer. Thus, this fails with
         // "unknown metadata" trying to deserialize a malformed LFS pointer.
-        assert!(format!("{:#?}", missing[&lfs_key][0]).contains("unknown metadata"));
+        assert!(format!("{:#?}", missing[&lfs_key]).contains("unknown metadata"));
         Ok(())
     }
 
@@ -951,7 +951,7 @@ mod tests {
             content
         );
 
-        assert_eq!(missing[&lfs_key].len(), 1);
+        assert!(missing.contains_key(&lfs_key));
         Ok(())
     }
 }

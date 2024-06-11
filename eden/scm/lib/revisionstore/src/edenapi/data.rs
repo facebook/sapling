@@ -218,7 +218,6 @@ mod tests {
     use tempfile::TempDir;
     use types::fetch_mode::FetchMode;
     use types::testutil::*;
-    use types::Sha256;
 
     use super::*;
     use crate::edenapi::File;

@@ -2855,7 +2855,7 @@ mod tests {
 
             let cachedir = TempDir::new()?;
             let lfsdir = TempDir::new()?;
-            let mut server = mockito::Server::new();
+            let server = mockito::Server::new();
             let config = make_lfs_config(&server, &cachedir, "test_lfs_proxy_no_http");
 
             set_var("https_proxy", "fwdproxy:8082");

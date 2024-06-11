@@ -141,7 +141,7 @@ fn fetch_files(
     let mut stdout = io.output();
 
     let mut fetch_and_display_successes =
-        |keys: Vec<Key>, attrs: FileAttributes| -> HashMap<Key, Vec<Error>> {
+        |keys: Vec<Key>, attrs: FileAttributes| -> HashMap<Key, Error> {
             let fetch_result = store.fetch(keys, attrs, fetch_mode);
 
             let (found, missing, _errors) = fetch_result.consume();
@@ -179,11 +179,8 @@ fn fetch_files(
         );
     }
 
-    for (key, errors) in missing.into_iter() {
-        write!(
-            stdout,
-            "Failed to fetch file: {key:#?}\nError: {errors:?}\n"
-        )?;
+    for (key, err) in missing.into_iter() {
+        write!(stdout, "Failed to fetch file: {key:#?}\nError: {err:?}\n")?;
     }
 
     Ok(())

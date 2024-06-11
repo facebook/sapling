@@ -8,6 +8,8 @@
 use anyhow::Error;
 use thiserror::Error;
 
+use crate::Key;
+
 #[derive(Debug, Error)]
 #[error("Key Error: {0:?}")]
 pub struct KeyError(#[source] Error);
@@ -17,6 +19,10 @@ impl KeyError {
         KeyError(err)
     }
 }
+
+#[derive(Debug, Error)]
+#[error("{0}: {1:#}")]
+pub struct KeyedError(pub Key, #[source] pub Error);
 
 /// NeworkError is a wrapper/tagging error meant for libraries to use
 /// to mark errors that may imply a network problem.
