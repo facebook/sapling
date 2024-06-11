@@ -31,30 +31,30 @@ fn main() {
     let out_dir = env::var_os("OUT_DIR").expect("OUT_DIR env not provided");
     let cratemap_path = Path::new(&out_dir).join("cratemap");
     fs::write(cratemap_path, CRATEMAP).expect("Failed to write cratemap");
-    let mut conf = Config::from_env(GenContext::Mocks)
-        .expect("Failed to instantiate thrift_compiler::Config");
-    conf.base_path("../../../../..");
-    conf.types_crate("mononoke_types_serialization__types");
-    conf.clients_crate("mononoke_types_serialization__clients");
-    let srcs: &[&str] = &[
-        "../blame.thrift",
-        "../bonsai.thrift",
-        "../bssm.thrift",
-        "../changeset_info.thrift",
-        "../content.thrift",
-        "../data.thrift",
-        "../deleted_manifest.thrift",
-        "../fastlog.thrift",
-        "../fsnodes.thrift",
-        "../id.thrift",
-        "../path.thrift",
-        "../raw_bundle2.thrift",
-        "../redaction.thrift",
-        "../sharded_map.thrift",
-        "../skeleton_manifest.thrift",
-        "../test_manifest.thrift",
-        "../time.thrift",
-        "../unodes.thrift",
-    ];
-    conf.run(srcs).expect("Failed while running thrift compilation");
+    Config::from_env(GenContext::Mocks)
+        .expect("Failed to instantiate thrift_compiler::Config")
+        .base_path("../../../../..")
+        .types_crate("mononoke_types_serialization__types")
+        .clients_crate("mononoke_types_serialization__clients")
+        .run([
+            "../blame.thrift",
+            "../bonsai.thrift",
+            "../bssm.thrift",
+            "../changeset_info.thrift",
+            "../content.thrift",
+            "../data.thrift",
+            "../deleted_manifest.thrift",
+            "../fastlog.thrift",
+            "../fsnodes.thrift",
+            "../id.thrift",
+            "../path.thrift",
+            "../raw_bundle2.thrift",
+            "../redaction.thrift",
+            "../sharded_map.thrift",
+            "../skeleton_manifest.thrift",
+            "../test_manifest.thrift",
+            "../time.thrift",
+            "../unodes.thrift",
+        ])
+        .expect("Failed while running thrift compilation");
 }

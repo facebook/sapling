@@ -15,12 +15,12 @@ fn main() {
     let out_dir = env::var_os("OUT_DIR").expect("OUT_DIR env not provided");
     let cratemap_path = Path::new(&out_dir).join("cratemap");
     fs::write(cratemap_path, CRATEMAP).expect("Failed to write cratemap");
-    let mut conf = Config::from_env(GenContext::Mocks)
-        .expect("Failed to instantiate thrift_compiler::Config");
-    conf.base_path("../../../../../../..");
-    conf.types_crate("replication_lag_config__types");
-    conf.clients_crate("replication_lag_config__clients");
-    conf.options("serde");
-    let srcs: &[&str] = &["../config.thrift"];
-    conf.run(srcs).expect("Failed while running thrift compilation");
+    Config::from_env(GenContext::Mocks)
+        .expect("Failed to instantiate thrift_compiler::Config")
+        .base_path("../../../../../../..")
+        .types_crate("replication_lag_config__types")
+        .clients_crate("replication_lag_config__clients")
+        .options("serde")
+        .run(["../config.thrift"])
+        .expect("Failed while running thrift compilation");
 }
