@@ -82,7 +82,7 @@
     ("/dev/null" . font-lock-constant-face)
 
     ;; Output suffix things like "(glob)" are builtin.
-    ("^.*?[^[:space:]].*?\\(\\(\\s-+([^', )]+\\(?: !\\)?)\\)+\\) $" (1 font-lock-builtin-face))
+    ("^.*?[^[:space:]].*?\\(\\(\\s-+([^', )]+\\(?: !\\)?)\\)+\\)$" (1 font-lock-builtin-face))
 
     ;; Hashes are warning face.
     ("[0-9a-f]\\{12,40\\}" . font-lock-warning-face)))
@@ -156,7 +156,7 @@ Add prefix arg to run with --fix.
           (setq args (list run-tests-py
                            "--noprogress"
                            "--maxdifflines" "10000"
-                           "--with-hg" dot-t-sl-command
+                           "--with-hg" (executable-find dot-t-sl-command)
                            "--chg"))
           (when (save-excursion (goto-char (point-min)) (search-forward "#require fsmonitor" nil t))
             (setq args (append args '("--watchman")))))
