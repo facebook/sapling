@@ -153,6 +153,15 @@ impl SaplingRemoteApi for EagerRepo {
     }
 
     async fn files_attrs(&self, reqs: Vec<FileSpec>) -> edenapi::Result<Response<FileResponse>> {
+        ::fail::fail_point!("eagerepo::api::files_attrs", |_| {
+            Err(SaplingRemoteApiError::HttpError {
+                status: StatusCode::INTERNAL_SERVER_ERROR,
+                message: "failpoint".to_string(),
+                headers: Default::default(),
+                url: self.url("files_attrs"),
+            })
+        });
+
         debug!("files_attrs {}", debug_spec_list(&reqs));
         self.refresh_for_api();
         let mut values = Vec::with_capacity(reqs.len());
