@@ -53,6 +53,7 @@ use treestate::dirstate;
 use treestate::filestate::FileStateV2;
 use treestate::filestate::StateFlags;
 use treestate::treestate::TreeState;
+use types::errors::KeyedError;
 use types::fetch_mode::FetchMode;
 use types::hgid::MF_ADDED_NODE_ID;
 use types::hgid::MF_MODIFIED_NODE_ID;
@@ -146,6 +147,9 @@ pub struct CheckoutStats {
     pub remove_failed: Vec<(RepoPathBuf, Error)>,
     set_exec_failed: Vec<(RepoPathBuf, Error)>,
     write_failed: Vec<(RepoPathBuf, Error)>,
+
+    /// Store fetch errors
+    fetch_failed: Vec<(RepoPathBuf, Error)>,
 
     /// Errors not associated with a path.
     other_failed: Vec<Error>,
@@ -365,7 +369,15 @@ impl CheckoutPlan {
             // Turn errors into CheckoutStats.
             while let Ok((maybe_work, err)) = err_rx.recv() {
                 match maybe_work {
-                    None => stats.other_failed.push(err),
+                    None => {
+                        if let Some(KeyedError(key, _)) =
+                            err.chain().filter_map(|err| err.downcast_ref()).next()
+                        {
+                            stats.fetch_failed.push((key.path.clone(), err));
+                        } else {
+                            stats.other_failed.push(err)
+                        }
+                    }
                     Some(Work::Remove(path)) => stats.remove_failed.push((path, err)),
                     Some(Work::SetExec(path, _)) => stats.set_exec_failed.push((path, err)),
                     Some(Work::Write(key, _, _)) => stats.write_failed.push((key.path, err)),
@@ -377,6 +389,7 @@ impl CheckoutPlan {
                 &mut stats.write_failed,
                 &mut stats.set_exec_failed,
                 &mut stats.remove_failed,
+                &mut stats.fetch_failed,
             ] {
                 errs.sort_by(|(path_a, _), (path_b, _)| path_a.cmp(path_b));
             }
@@ -642,6 +655,7 @@ impl CheckoutPlan {
 impl CheckoutStats {
     fn is_fatal(&self) -> bool {
         !self.write_failed.is_empty()
+            || !self.fetch_failed.is_empty()
             || !self.other_failed.is_empty()
             || !self.set_exec_failed.is_empty()
     }
@@ -705,13 +719,41 @@ impl fmt::Display for CheckoutStats {
             )?;
         }
 
+        if !self.fetch_failed.is_empty() {
+            if printed_something {
+                write!(f, "\n")?;
+            }
+            printed_something = true;
+
+            write!(
+                f,
+                "error fetching files:\n {}",
+                truncated_error_list(
+                    self.fetch_failed
+                        .iter()
+                        .filter_map(|(_path, err)| {
+                            err.chain()
+                                .filter_map(|err| err.downcast_ref::<KeyedError>())
+                                .next()
+                        })
+                        .map(|KeyedError(key, err)| format!("{key}: {err}")),
+                    5
+                )
+                .join("\n "),
+            )?;
+        }
+
         if !self.other_failed.is_empty() {
             if printed_something {
                 write!(f, "\n")?;
             }
-            for err in &self.other_failed {
-                write!(f, "checkout error: {}", err)?;
-            }
+
+            write!(
+                f,
+                "checkout errors:\n {}",
+                truncated_error_list(self.other_failed.iter().map(|err| format!("{err:#}")), 5)
+                    .join("\n "),
+            )?;
         }
 
         Ok(())

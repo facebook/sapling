@@ -22,7 +22,8 @@ Bare clone the repo
 
 Set a failpoint to force incomplete checkout.
   $ FAILPOINTS=checkout-post-progress=return hg checkout tip
-  abort: checkout error: Error set by checkout-post-progress FAILPOINTS
+  abort: checkout errors:
+   Error set by checkout-post-progress FAILPOINTS
   [255]
 
 Verify we see the warning for other commands

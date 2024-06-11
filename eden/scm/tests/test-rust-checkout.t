@@ -77,7 +77,8 @@ Can continue interrupted checkout:
 
   $ hg go -q null
   $ FAILPOINTS=checkout-post-progress=return hg go $A
-  abort: checkout error: Error set by checkout-post-progress FAILPOINTS
+  abort: checkout errors:
+   Error set by checkout-post-progress FAILPOINTS
   [255]
 
   $ hg whereami
@@ -508,49 +509,14 @@ Test update_distance logging:
   $ hg book master
   $ cd ~/broken_client
   $ hg pull -q
-# XXX fixme
   $ FAILPOINTS=eagerepo::api::files_attrs=return hg go master
-  abort: checkout error: Key fetch failed *: [Network Error: server responded 500 Internal Server Error for eager://$TESTTMP/broken_server/files_attrs: failpoint. Headers: {} (glob)
-  
-  Caused by:
-      0: Network Error: server responded 500 Internal Server Error for eager://$TESTTMP/broken_server/files_attrs: failpoint. Headers: {}
-      1: server responded 500 Internal Server Error for eager://$TESTTMP/broken_server/files_attrs: failpoint. Headers: {}]checkout error: Key fetch failed *: [Network Error: server responded 500 Internal Server Error for eager://$TESTTMP/broken_server/files_attrs: failpoint. Headers: {} (glob)
-  
-  Caused by:
-      0: Network Error: server responded 500 Internal Server Error for eager://$TESTTMP/broken_server/files_attrs: failpoint. Headers: {}
-      1: server responded 500 Internal Server Error for eager://$TESTTMP/broken_server/files_attrs: failpoint. Headers: {}]checkout error: Key fetch failed *: [Network Error: server responded 500 Internal Server Error for eager://$TESTTMP/broken_server/files_attrs: failpoint. Headers: {} (glob)
-  
-  Caused by:
-      0: Network Error: server responded 500 Internal Server Error for eager://$TESTTMP/broken_server/files_attrs: failpoint. Headers: {}
-      1: server responded 500 Internal Server Error for eager://$TESTTMP/broken_server/files_attrs: failpoint. Headers: {}]checkout error: Key fetch failed *: [Network Error: server responded 500 Internal Server Error for eager://$TESTTMP/broken_server/files_attrs: failpoint. Headers: {} (glob)
-  
-  Caused by:
-      0: Network Error: server responded 500 Internal Server Error for eager://$TESTTMP/broken_server/files_attrs: failpoint. Headers: {}
-      1: server responded 500 Internal Server Error for eager://$TESTTMP/broken_server/files_attrs: failpoint. Headers: {}]checkout error: Key fetch failed *: [Network Error: server responded 500 Internal Server Error for eager://$TESTTMP/broken_server/files_attrs: failpoint. Headers: {} (glob)
-  
-  Caused by:
-      0: Network Error: server responded 500 Internal Server Error for eager://$TESTTMP/broken_server/files_attrs: failpoint. Headers: {}
-      1: server responded 500 Internal Server Error for eager://$TESTTMP/broken_server/files_attrs: failpoint. Headers: {}]checkout error: Key fetch failed *: [Network Error: server responded 500 Internal Server Error for eager://$TESTTMP/broken_server/files_attrs: failpoint. Headers: {} (glob)
-  
-  Caused by:
-      0: Network Error: server responded 500 Internal Server Error for eager://$TESTTMP/broken_server/files_attrs: failpoint. Headers: {}
-      1: server responded 500 Internal Server Error for eager://$TESTTMP/broken_server/files_attrs: failpoint. Headers: {}]checkout error: Key fetch failed *: [Network Error: server responded 500 Internal Server Error for eager://$TESTTMP/broken_server/files_attrs: failpoint. Headers: {} (glob)
-  
-  Caused by:
-      0: Network Error: server responded 500 Internal Server Error for eager://$TESTTMP/broken_server/files_attrs: failpoint. Headers: {}
-      1: server responded 500 Internal Server Error for eager://$TESTTMP/broken_server/files_attrs: failpoint. Headers: {}]checkout error: Key fetch failed *: [Network Error: server responded 500 Internal Server Error for eager://$TESTTMP/broken_server/files_attrs: failpoint. Headers: {} (glob)
-  
-  Caused by:
-      0: Network Error: server responded 500 Internal Server Error for eager://$TESTTMP/broken_server/files_attrs: failpoint. Headers: {}
-      1: server responded 500 Internal Server Error for eager://$TESTTMP/broken_server/files_attrs: failpoint. Headers: {}]checkout error: Key fetch failed *: [Network Error: server responded 500 Internal Server Error for eager://$TESTTMP/broken_server/files_attrs: failpoint. Headers: {} (glob)
-  
-  Caused by:
-      0: Network Error: server responded 500 Internal Server Error for eager://$TESTTMP/broken_server/files_attrs: failpoint. Headers: {}
-      1: server responded 500 Internal Server Error for eager://$TESTTMP/broken_server/files_attrs: failpoint. Headers: {}]checkout error: Key fetch failed *: [Network Error: server responded 500 Internal Server Error for eager://$TESTTMP/broken_server/files_attrs: failpoint. Headers: {} (glob)
-  
-  Caused by:
-      0: Network Error: server responded 500 Internal Server Error for eager://$TESTTMP/broken_server/files_attrs: failpoint. Headers: {}
-      1: server responded 500 Internal Server Error for eager://$TESTTMP/broken_server/files_attrs: failpoint. Headers: {}]
+  abort: error fetching files:
+   b80de5d138758541c5f05265ad144ab9fa86d1db file_1: Network Error: server responded 500 Internal Server Error for eager://$TESTTMP/broken_server/files_attrs: failpoint. Headers: {}
+   b80de5d138758541c5f05265ad144ab9fa86d1db file_10: Network Error: server responded 500 Internal Server Error for eager://$TESTTMP/broken_server/files_attrs: failpoint. Headers: {}
+   b80de5d138758541c5f05265ad144ab9fa86d1db file_2: Network Error: server responded 500 Internal Server Error for eager://$TESTTMP/broken_server/files_attrs: failpoint. Headers: {}
+   b80de5d138758541c5f05265ad144ab9fa86d1db file_3: Network Error: server responded 500 Internal Server Error for eager://$TESTTMP/broken_server/files_attrs: failpoint. Headers: {}
+   b80de5d138758541c5f05265ad144ab9fa86d1db file_4: Network Error: server responded 500 Internal Server Error for eager://$TESTTMP/broken_server/files_attrs: failpoint. Headers: {}
+   ...and 5 more
   [255]
 
 #endif
