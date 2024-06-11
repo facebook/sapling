@@ -83,6 +83,11 @@ class Watchman:
             self.socket,
             "version",
         ]
+        self.generate_watchman_cli_wrapper(
+            Path(self._watchman_dir),
+            [self._watchman_bin, "--no-spawn", "--no-local", "--sockname", self.socket],
+            env,
+        )
         deadline = time.time() + 30
         watchmanavailable = False
         lastoutput = ""
@@ -112,3 +117,27 @@ class Watchman:
         if process is not None:
             process.terminate()
             process.kill()
+
+    def generate_watchman_cli_wrapper(self, watchmanpath: Path, cmd, env):
+        cmd = [str(s) for s in cmd]
+        binpath = watchmanpath.parents[1] / "install" / "bin" / "watchmanscript"
+        env = env.copy()
+        # These two are annoying to escape, so let's just get rid of them
+        env.pop("HGTEST_EXCLUDED", None)
+        env.pop("HGTEST_INCLUDED", None)
+        if not os.name == "nt":
+            with open(binpath, "w") as f:
+                f.write("#!/usr/bin/env bash\n")
+                for k, v in env.items():
+                    f.write(f"export {k}={repr(v)}\n")
+                f.write(" ".join(cmd) + ' "$@"\n')
+            os.chmod(binpath, 0o775)
+        else:
+            with open(str(binpath) + ".bat", "w") as f:
+                f.write("@echo off\n")
+                for k, v in env.items():
+                    f.write(f"set {k}={v}\n")
+                cmd[0] = f'"{cmd[0]}"'
+                fullpath = (" ".join(cmd)).strip()
+                f.write(f"{fullpath} %*\n")
+                f.write("exit /B %errorlevel%\n")

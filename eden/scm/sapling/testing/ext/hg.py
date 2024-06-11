@@ -141,6 +141,10 @@ def testsetup(t: TestTmp):
 
     if use_watchman:
         watchman_sock = os.getenv("WATCHMAN_SOCK")
+        t.requireexe(
+            "watchman",
+            fullpath=t.path.parents[2] / "install" / "bin" / "watchmanscript",
+        )
         if watchman_sock:
             environ["WATCHMAN_SOCK"] = watchman_sock
             environ["HGFSMONITOR_TESTS"] = "1"
