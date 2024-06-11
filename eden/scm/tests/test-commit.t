@@ -671,7 +671,8 @@ verify pathauditor blocks evil filepaths
   [255]
 #else
   $ hg co --clean tip
-  abort: invalid component in ".h‌g/hgrc": invalid path component ".hg"
+  abort: error writing files:
+   .h‌g/hgrc: invalid component in ".h‌g/hgrc": invalid path component ".hg"
   [255]
 #endif
 

@@ -487,8 +487,13 @@ Test update_distance logging:
   $ hg go -q null
   $ mkdir dir
   $ chmod 444 dir
-# XXX fixme
   $ hg go tip
-  abort: can't clear conflicts after handling error "Permission denied (os error 13)"can't clear conflicts after handling error "Permission denied (os error 13)"can't clear conflicts after handling error "Permission denied (os error 13)"can't clear conflicts after handling error "Permission denied (os error 13)"can't clear conflicts after handling error "Permission denied (os error 13)"can't clear conflicts after handling error "Permission denied (os error 13)"can't clear conflicts after handling error "Permission denied (os error 13)"can't clear conflicts after handling error "Permission denied (os error 13)"can't clear conflicts after handling error "Permission denied (os error 13)"can't clear conflicts after handling error "Permission denied (os error 13)": Permission denied (os error 13)
+  abort: error writing files:
+   dir/file_1: can't clear conflicts after handling error "Permission denied (os error 13)": can't lstat "$TESTTMP/*/dir/file_1": Permission denied (os error 13) (glob)
+   dir/file_10: can't clear conflicts after handling error "Permission denied (os error 13)": can't lstat "$TESTTMP/*/dir/file_10": Permission denied (os error 13) (glob)
+   dir/file_2: can't clear conflicts after handling error "Permission denied (os error 13)": can't lstat "$TESTTMP/*/dir/file_2": Permission denied (os error 13) (glob)
+   dir/file_3: can't clear conflicts after handling error "Permission denied (os error 13)": can't lstat "$TESTTMP/*/dir/file_3": Permission denied (os error 13) (glob)
+   dir/file_4: can't clear conflicts after handling error "Permission denied (os error 13)": can't lstat "$TESTTMP/*/dir/file_4": Permission denied (os error 13) (glob)
+   ...and 5 more
   [255]
 #endif

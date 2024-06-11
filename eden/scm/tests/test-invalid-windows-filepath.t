@@ -8,7 +8,7 @@ Make sure that Windows is unable to check out paths with `..\` in their path.
   $ tar -xf $TESTDIR/brokengitrepo.tar.gz -C $TESTTMP/brokengitrepo
 #if windows
   $ hg clone --git "$TESTTMP/brokengitrepo" brokencopy 2>&1 | grep UncategorizedNativeError
-  error.UncategorizedNativeError: *windowstroublemaker.txt* (glob)
+  error.UncategorizedNativeError: *error writing files* (glob)
 
 #else
   $ hg clone --git "$TESTTMP/brokengitrepo" brokencopy

@@ -48,6 +48,7 @@ Verify we can disable resumable checkouts
   $ chmod -R a-w dir2
   $ hg checkout tip --config checkout.resumable=False
   abort: * (glob)
+   dir2/x: Permission denied (os error 13) (unix-permissions !)
   [255]
   $ chmod -R a+w dir2
   $ test -f .hg/updateprogress

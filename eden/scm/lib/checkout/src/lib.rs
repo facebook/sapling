@@ -372,6 +372,15 @@ impl CheckoutPlan {
                 }
             }
 
+            // Sort errors for stable output order.
+            for errs in [
+                &mut stats.write_failed,
+                &mut stats.set_exec_failed,
+                &mut stats.remove_failed,
+            ] {
+                errs.sort_by(|(path_a, _), (path_b, _)| path_a.cmp(path_b));
+            }
+
             let is_fatal = stats.is_fatal();
             tracing::debug!(is_fatal = is_fatal, "apply_store");
             if is_fatal {
@@ -640,32 +649,76 @@ impl CheckoutStats {
 
 impl fmt::Display for CheckoutStats {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        for (_path, err) in &self.write_failed {
-            err.fmt(f)?;
+        let mut printed_something = false;
+
+        if !self.write_failed.is_empty() {
+            printed_something = true;
+
+            write!(
+                f,
+                "error writing files:\n {}",
+                truncated_error_list(
+                    self.write_failed
+                        .iter()
+                        .map(|(path, err)| format!("{path}: {err:#}")),
+                    5
+                )
+                .join("\n "),
+            )?;
         }
-        for (_path, err) in &self.set_exec_failed {
-            err.fmt(f)?;
+
+        if !self.set_exec_failed.is_empty() {
+            if printed_something {
+                write!(f, "\n")?;
+            }
+            printed_something = true;
+
+            write!(
+                f,
+                "error setting execute bit:\n {}",
+                truncated_error_list(
+                    self.set_exec_failed
+                        .iter()
+                        .map(|(path, err)| format!("{path}: {err:#}")),
+                    5
+                )
+                .join("\n "),
+            )?;
         }
-        for (_path, err) in &self.remove_failed {
-            err.fmt(f)?;
+
+        if !self.remove_failed.is_empty() {
+            if printed_something {
+                write!(f, "\n")?;
+            }
+            printed_something = true;
+
+            write!(
+                f,
+                "error removing files:\n {}",
+                truncated_error_list(
+                    self.remove_failed
+                        .iter()
+                        .map(|(path, err)| format!("{path}: {err:#}")),
+                    5
+                )
+                .join("\n "),
+            )?;
         }
-        for err in &self.other_failed {
-            write!(f, "checkout error: {}", err)?;
+
+        if !self.other_failed.is_empty() {
+            if printed_something {
+                write!(f, "\n")?;
+            }
+            for err in &self.other_failed {
+                write!(f, "checkout error: {}", err)?;
+            }
         }
+
         Ok(())
     }
 }
 
-impl std::error::Error for CheckoutStats {
-    // Consider impl sources() after
-    // https://github.com/rust-lang/rust/issues/58520
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        if let Some((_path, err)) = self.write_failed.first() {
-            return Some(err.root_cause());
-        }
-        None
-    }
-}
+impl std::error::Error for CheckoutStats {}
 
 impl CheckoutProgress {
     pub fn new(path: &Path, vfs: VFS) -> Result<Self> {
