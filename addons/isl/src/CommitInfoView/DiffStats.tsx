@@ -8,7 +8,7 @@
 import type {CommitInfo} from '../types';
 
 import {Row} from '../ComponentUtils';
-import {SuspenseBoundary} from '../SuspenseBoundary';
+import {ErrorBoundary} from '../ErrorNotice';
 import {Tooltip} from '../Tooltip';
 import {T, t} from '../i18n';
 import {
@@ -42,16 +42,19 @@ export function DiffStats({commit}: Props) {
   return <ResolvedDiffStatsView significantLinesOfCode={significantLinesOfCode} />;
 }
 
-export function PendingDiffStats({commit}: Props) {
+export function PendingDiffStats() {
   return (
-    <SuspenseBoundary fallback={<LoadingDiffStatsView />}>
-      <PendingDiffStatsView commit={commit} />
-    </SuspenseBoundary>
+    <ErrorBoundary>
+      <PendingDiffStatsView />
+    </ErrorBoundary>
   );
 }
 
-export function PendingDiffStatsView({commit}: Props) {
-  const significantLinesOfCode = useFetchPendingSignificantLinesOfCode(commit);
+export function PendingDiffStatsView() {
+  const significantLinesOfCode = useFetchPendingSignificantLinesOfCode();
+  if (significantLinesOfCode == null) {
+    return <LoadingDiffStatsView />;
+  }
   return <ResolvedDiffStatsView significantLinesOfCode={significantLinesOfCode} />;
 }
 
