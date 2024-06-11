@@ -37,19 +37,19 @@ class Watchman:
             self.socket = Path("\\\\.\\pipe\\watchman-test-%s" % uuid.uuid4().hex)
             self._close_fds = False
         else:
-            self.socket = Path(os.path.join(self._watchman_dir, "sock"))
+            self.socket = self._watchman_dir / "sock"
             self._close_fds = True
 
-        self.config = Path(os.path.join(self._watchman_dir, "config.json"))
+        self.config = self._watchman_dir / "config.json"
 
     def start(self) -> None:
         with open(self.config, "w", encoding="utf8") as f:
             f.write('{"min_acceptable_nice_value": 999}')
 
-        clilogfile = os.path.join(self._watchman_dir, "cli-log")
-        logfile = os.path.join(self._watchman_dir, "log")
-        pidfile = os.path.join(self._watchman_dir, "pid")
-        statefile = os.path.join(self._watchman_dir, "state")
+        clilogfile = str(self._watchman_dir / "cli-log")
+        logfile = str(self._watchman_dir / "log")
+        pidfile = str(self._watchman_dir / "pid")
+        statefile = str(self._watchman_dir / "state")
 
         env = os.environ.copy()
         env["WATCHMAN_CONFIG_FILE"] = str(self.config)
@@ -84,7 +84,7 @@ class Watchman:
             "version",
         ]
         self.generate_watchman_cli_wrapper(
-            Path(self._watchman_dir),
+            self._watchman_dir,
             [self._watchman_bin, "--no-spawn", "--no-local", "--sockname", self.socket],
             env,
         )

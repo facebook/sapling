@@ -1205,7 +1205,7 @@ class Test(unittest.TestCase):
             shortname = hashlib.sha1(_bytespath("%s" % name)).hexdigest()[:6]
             self._watchmandir = os.path.join(self._threadtmp, "%s.watchman" % shortname)
             os.mkdir(self._watchmandir)
-            self._watchmanproc = Watchman(self._watchman, self._watchmandir)
+            self._watchmanproc = Watchman(self._watchman, Path(self._watchmandir))
             try:
                 self._watchmanproc.start()
             except WatchmanTimeout:
