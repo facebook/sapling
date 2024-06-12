@@ -5,6 +5,9 @@
  * GNU General Public License version 2.
  */
 
+use std::io::Result;
+use std::io::Write;
+
 use crate::Blake3;
 use crate::FileType;
 use crate::HgId;
@@ -39,4 +42,24 @@ pub struct AugmentedTreeEntry {
     pub p1: Option<HgId>,
     pub p2: Option<HgId>,
     pub subentries: Vec<(RepoPathBuf, AugmentedTreeChildEntry)>,
+}
+
+impl AugmentedTreeEntry {
+    pub fn write_sapling_tree_blob(self, mut w: impl Write) -> Result<()> {
+        for (path, subentry) in self.subentries.iter() {
+            w.write_all(path.as_ref())?;
+            w.write_all(b"\0")?;
+            match subentry {
+                AugmentedTreeChildEntry::DirectoryNode(directory) => {
+                    w.write_all(b"t")?;
+                    w.write_all(directory.treenode.to_hex().as_bytes())?;
+                }
+                AugmentedTreeChildEntry::FileNode(file) => {
+                    w.write_all(file.filenode.to_hex().as_bytes())?;
+                }
+            };
+            w.write_all(b"\n")?;
+        }
+        Ok(())
+    }
 }
