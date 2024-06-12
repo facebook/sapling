@@ -10,6 +10,7 @@ from bindings import clientinfo as clientinfomod
 # Standard Library
 
 from sapling import error
+from sapling.pycompat import ensurestr
 
 from . import baseservice
 
@@ -172,8 +173,12 @@ class EdenApiService(baseservice.BaseService):
 
     def getworkspace(self, reponame, workspacename):
         self.ui.debug("Calling 'cloudworkspace' on edenapi\n", component="commitcloud")
-        stream = self.repo.edenapi.cloudworkspace(workspacename, reponame)
-        return list(stream)
+        response = self.repo.edenapi.cloudworkspace(workspacename, reponame)
+        return baseservice.WorkspaceInfo(
+            name=ensurestr(response["name"]),
+            archived=bool(response["archived"]),
+            version=int(response["version"]),
+        )
 
     def updateworkspacearchive(self, reponame, workspace, archived):
         """Archive or Restore the given workspace"""
