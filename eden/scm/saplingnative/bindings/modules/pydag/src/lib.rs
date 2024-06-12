@@ -7,7 +7,13 @@
 
 #![allow(non_camel_case_types)]
 
+use std::sync::Arc;
+
+use configmodel::Config;
+use configmodel::ConfigExt;
 use cpython::*;
+use cpython_ext::convert::ImplInto;
+use cpython_ext::PyNone;
 use cpython_ext::PyPath;
 use cpython_ext::ResultPyErrExt;
 use dag::Repair;
@@ -55,6 +61,13 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     // Repair NameDag storage.
     m.add(py, "repair", py_fn!(py, repair(path: &PyPath)))?;
 
+    // Configure related settings.
+    m.add(
+        py,
+        "configure",
+        py_fn!(py, configure(config: ImplInto<Arc<dyn Config + Send + Sync>>)),
+    )?;
+
     impl_into::register(py);
 
     Ok(m)
@@ -67,4 +80,15 @@ fn describe_bytes(py: Python, bytes: PyBytes) -> PyResult<String> {
 
 fn repair(py: Python, path: &PyPath) -> PyResult<String> {
     dag::NameDag::repair(path).map_pyerr(py)
+}
+
+fn configure(py: Python, config: ImplInto<Arc<dyn Config + Send + Sync>>) -> PyResult<PyNone> {
+    let config = config.into();
+    let use_legacy_order = config
+        .get_or_default::<bool>("experimental", "pydag-use-legacy-union-order")
+        .map_pyerr(py)?;
+    if use_legacy_order {
+        nameset::USE_LEGACY_UNION_ORDER.store(true, std::sync::atomic::Ordering::Release);
+    }
+    Ok(PyNone)
 }

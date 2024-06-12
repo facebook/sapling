@@ -7,6 +7,8 @@
 
 use std::cell::RefCell;
 use std::collections::HashMap;
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
 
 use async_runtime::try_block_unless_interrupted as block_on;
 use cpython::*;
@@ -22,6 +24,8 @@ use types::hgid::NULL_ID;
 
 use crate::dagalgo::dagalgo;
 use crate::parents::parents;
+
+pub(crate) static USE_LEGACY_UNION_ORDER: AtomicBool = AtomicBool::new(false);
 
 /// A wrapper around [`Set`] with Python integration added.
 ///
@@ -52,12 +56,19 @@ py_class!(pub class nameset |py| {
         Ok(format!("{:?}", self.inner(py)))
     }
 
+    // Unlike "|", "+" preserves order, unless USE_LEGACY_UNION_ORDER is true.
     def __add__(lhs, rhs) -> PyResult<Names> {
         let lhs = Names::extract(py, lhs)?;
         let rhs = Names::extract(py, rhs)?;
-        Ok(Names(lhs.0.union(&rhs.0)))
+        let set = if USE_LEGACY_UNION_ORDER.load(Ordering::Acquire) {
+            lhs.0.union(&rhs.0)
+        } else {
+            lhs.0.union_preserving_order(&rhs.0)
+        };
+        Ok(Names(set))
     }
 
+    // Unlike "+", "|" does not preserve order.
     def __or__(lhs, rhs) -> PyResult<Names> {
         let lhs = Names::extract(py, lhs)?;
         let rhs = Names::extract(py, rhs)?;

@@ -25,6 +25,7 @@ rust_python_library(
         "fbsource//third-party/rust:parking_lot",
         "//eden/scm/lib/async-runtime:async-runtime",
         "//eden/scm/lib/commits:commits",
+        "//eden/scm/lib/config/model:configmodel",
         "//eden/scm/lib/cpython-ext:cpython-ext",
         "//eden/scm/lib/dag:dag",
         "//eden/scm/lib/minibytes:minibytes",

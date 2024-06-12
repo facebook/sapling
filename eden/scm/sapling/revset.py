@@ -914,7 +914,7 @@ def children(repo, subset, x):
 
     # rust changelog alternative path
     cl = repo.changelog
-    nodes = repo.dageval(lambda dag: dag.children(cl.tonodes(s)) & (draft() + public()))
+    nodes = repo.dageval(lambda dag: dag.children(cl.tonodes(s)) & (draft() | public()))
     return subset & cl.torevset(nodes)
 
 
@@ -1300,7 +1300,7 @@ def getall(repo, subset, x):
 
     # rust changelog alternative path
     cl = repo.changelog
-    return subset & cl.torevset(repo.dageval(lambda: public() + draft()), reverse=True)
+    return subset & cl.torevset(repo.dageval(lambda: public() | draft()), reverse=True)
 
 
 @predicate("_all()", safe=True)

@@ -784,6 +784,7 @@ def runcommand(
 
     try:
         hintutil.loadhintconfig(lui)
+        bindings.dag.configure(lui._rcfg)
         ui.log("jobid", jobid=encoding.environ.get("HG_JOB_ID", "unknown"))
         ret = _runcommand(ui, options, cmd, d)
 
