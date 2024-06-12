@@ -282,9 +282,17 @@ mononoke_queries! {
     }
 
     read SelectAllPublic(repo_id: RepositoryId) -> (ChangesetId, ) {
-        "SELECT cs_id
-         FROM phases
-         WHERE repo_id = {repo_id}
-           AND phase = 'Public'"
+        mysql(
+            "SELECT cs_id
+            FROM phases
+            WHERE repo_id = {repo_id}
+                AND phase = 'Public'"
+        )
+        sqlite(
+            "SELECT cs_id
+            FROM phases
+            WHERE repo_id = {repo_id}
+                AND phase like 'Public'"
+        )
     }
 }
