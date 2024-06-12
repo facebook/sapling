@@ -438,22 +438,6 @@ where
         //   It might use desired_group = MASTER on add_heads_and_flush, but not here.
         //
         // In the future, desired_group might be VIRTUAL and needs special care.
-        let master_heads = heads.vertexes_by_group(Group::MASTER);
-        if !master_heads.is_empty() {
-            let all = self.dag.all()?;
-            let has_non_master = match all.max() {
-                Some(id) => id.group() == Group::NON_MASTER,
-                None => false,
-            };
-            if has_non_master {
-                return programming(concat!(
-                    "add_heads() called with desired_group = MASTER but NON_MASTER group is not empty. ",
-                    "To avoid id reassignment this is not supported. ",
-                    "Pass desired_group = NON_MASTER, and call flush() (common on client use-case), ",
-                    "or avoid inserting to NON_MASTER group (common on server use-case).",
-                ));
-            }
-        }
 
         // Performance-wise, add_heads + flush is slower than
         // add_heads_and_flush.
@@ -471,15 +455,28 @@ where
         let mut covered = self.dag().all_ids_in_groups(&Group::ALL)?;
         let mut reserved = calculate_initial_reserved(self, &covered, heads).await?;
         for (head, opts) in heads.vertex_options() {
-            let need_assigning = match self
-                .vertex_id_with_max_group(&head, opts.desired_group)
-                .await?
-            {
-                Some(id) => !self.dag.contains_id(id)?,
+            let need_assigning = match self.vertex_id_optional(&head).await? {
+                Some(id) => {
+                    if id.group() > opts.desired_group {
+                        return programming(format!(
+                            "add_heads: cannot re-assign {:?}:{:?} from {} to {} (desired), use add_heads_and_flush instead",
+                            head,
+                            id,
+                            id.group(),
+                            opts.desired_group
+                        ));
+                    } else {
+                        // In some cases (ex. old Mononoke use-case), the id exists in IdMap but
+                        // not IdDag. Still need to assign the id to IdDag.
+                        !self.dag.contains_id(id)?
+                    }
+                }
                 None => true,
             };
             if need_assigning {
                 let group = opts.desired_group;
+                // If any ancestors have incompatible group (ex. desired = MASTER, ancestor has
+                // NON_MASTER), then `assign_head` below will report an error.
                 let prepared_segments = self
                     .assign_head(head.clone(), parents, group, &mut covered, &reserved)
                     .await?;

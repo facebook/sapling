@@ -29,6 +29,9 @@ mod drawdag;
 mod test_dag;
 
 #[cfg(test)]
+mod test_add_heads;
+
+#[cfg(test)]
 mod test_bisect;
 
 #[cfg(test)]
