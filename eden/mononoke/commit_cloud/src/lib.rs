@@ -24,10 +24,10 @@ use workspace::sanity_check_workspace_name;
 
 use crate::references::cast_references_data;
 use crate::references::fetch_references;
+use crate::references::versions::WorkspaceVersion;
 use crate::sql::ops::Get;
 use crate::sql::ops::Insert;
 use crate::sql::ops::SqlCommitCloud;
-use crate::sql::versions_ops::WorkspaceVersion;
 
 #[facet]
 pub struct CommitCloud {

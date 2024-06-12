@@ -12,18 +12,11 @@ use mononoke_types::Timestamp;
 use sql::Connection;
 use sql::Transaction;
 
+use crate::references::versions::WorkspaceVersion;
 use crate::sql::ops::Get;
 use crate::sql::ops::Insert;
 use crate::sql::ops::SqlCommitCloud;
 use crate::sql::ops::Update;
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct WorkspaceVersion {
-    pub workspace: String,
-    pub version: u64,
-    pub timestamp: Timestamp,
-    pub archived: bool,
-}
 
 mononoke_queries! {
     read GetVersion(reponame: String, workspace: String) -> (String, u64, bool, Timestamp){

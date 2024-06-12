@@ -37,6 +37,8 @@ pub mod history;
 pub mod local_bookmarks;
 pub mod remote_bookmarks;
 pub mod snapshots;
+pub mod versions;
+
 // Workspace information as we retrieve it form the database
 #[derive(Debug, Clone)]
 pub struct RawReferencesData {

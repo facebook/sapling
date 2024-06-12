@@ -16,7 +16,6 @@ use commit_cloud::sql::builder::SqlCommitCloudBuilder;
 use commit_cloud::sql::checkout_locations_ops::WorkspaceCheckoutLocation;
 use commit_cloud::sql::ops::Delete;
 use commit_cloud::sql::ops::Insert;
-use commit_cloud::sql::versions_ops::WorkspaceVersion;
 use fbinit::FacebookInit;
 use mercurial_types::HgChangesetId;
 use mononoke_types::Timestamp;
@@ -301,6 +300,7 @@ async fn test_remote_bookmarks(_fb: FacebookInit) -> anyhow::Result<()> {
 
 #[fbinit::test]
 async fn test_versions(_fb: FacebookInit) -> anyhow::Result<()> {
+    use commit_cloud::references::versions::WorkspaceVersion;
     use commit_cloud::sql::ops::Get;
     let sql = SqlCommitCloudBuilder::with_sqlite_in_memory()?.new(false);
     let reponame = "test_repo".to_owned();
