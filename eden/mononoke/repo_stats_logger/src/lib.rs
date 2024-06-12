@@ -20,6 +20,7 @@ use futures::future::abortable;
 use futures::future::AbortHandle;
 use mononoke_types::ChangesetId;
 use repo_derived_data::ArcRepoDerivedData;
+use slog::warn;
 use slog::Logger;
 use stats::define_stats;
 use stats::prelude::DynamicSingletonCounter;
@@ -56,47 +57,20 @@ impl RepoStatsLogger {
                 let interval = Duration::from_secs(60);
                 tokio::time::sleep(interval).await;
 
-                match bookmarks.get(ctx.clone(), &master).await {
-                    Ok(Some(cs_id)) => {
-                        match Self::get_repo_objects_count(
-                            &ctx,
-                            repo_blobstore.clone(),
-                            repo_derived_data.clone(),
-                            cs_id,
-                        )
-                        .await
-                        {
-                            Ok(count) => {
-                                STATS::repo_objects_count.set_value(
-                                    fb,
-                                    count,
-                                    (repo_name.clone(),),
-                                );
-                            }
-                            Err(e) => {
-                                slog::warn!(
-                                    ctx.logger(),
-                                    "Reading fsnodes for {}: {}",
-                                    repo_name,
-                                    e
-                                );
-                            }
-                        }
+                match Self::get_repo_objects_count(
+                    &ctx,
+                    &master,
+                    bookmarks.clone(),
+                    repo_blobstore.clone(),
+                    repo_derived_data.clone(),
+                )
+                .await
+                {
+                    Ok(count) => {
+                        STATS::repo_objects_count.set_value(fb, count, (repo_name.clone(),));
                     }
                     Err(e) => {
-                        slog::warn!(ctx.logger(), "Finding bookmark for {}: {}", repo_name, e);
-                        STATS::repo_objects_count.set_value(
-                            fb,
-                            DEFAULT_REPO_OBJECTS_COUNT,
-                            (repo_name.clone(),),
-                        );
-                    }
-                    _ => {
-                        STATS::repo_objects_count.set_value(
-                            fb,
-                            DEFAULT_REPO_OBJECTS_COUNT,
-                            (repo_name.clone(),),
-                        );
+                        warn!(ctx.logger(), "Finding bookmark for {}: {}", repo_name, e);
                     }
                 }
             }
@@ -109,6 +83,27 @@ impl RepoStatsLogger {
     }
 
     async fn get_repo_objects_count(
+        ctx: &CoreContext,
+        master: &BookmarkKey,
+        bookmarks: ArcBookmarks,
+        repo_blobstore: Arc<dyn Blobstore>,
+        repo_derived_data: ArcRepoDerivedData,
+    ) -> Result<i64, Error> {
+        let maybe_bookmark = bookmarks.get(ctx.clone(), master).await?;
+        if let Some(cs_id) = maybe_bookmark {
+            Self::get_descendant_count(
+                ctx,
+                repo_blobstore.clone(),
+                repo_derived_data.clone(),
+                cs_id,
+            )
+            .await
+        } else {
+            Ok(DEFAULT_REPO_OBJECTS_COUNT)
+        }
+    }
+
+    async fn get_descendant_count(
         ctx: &CoreContext,
         repo_blobstore: Arc<dyn Blobstore>,
         repo_derived_data: ArcRepoDerivedData,
