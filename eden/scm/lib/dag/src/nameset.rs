@@ -14,6 +14,7 @@ use std::borrow::Cow;
 use std::cmp;
 use std::fmt;
 use std::fmt::Debug;
+use std::ops::Add;
 use std::ops::BitAnd;
 use std::ops::BitOr;
 use std::ops::Deref;
@@ -308,8 +309,8 @@ impl NameSet {
         ))
     }
 
-    /// Calculates the union of two sets.
-    pub fn union(&self, other: &NameSet) -> NameSet {
+    /// Union fast paths. Handles when one set is "FULL" or "EMPTY".
+    fn union_fast_paths(&self, other: &Self) -> Option<Self> {
         if (self.hints().contains(Flags::FULL)
             && self.hints().dag_version() >= other.hints().dag_version()
             && other.hints().dag_version() > None)
@@ -318,7 +319,7 @@ impl NameSet {
             tracing::debug!(
                 target: "dag::algo::union",
                 "union(x={:.6?}, y={:.6?}) = x (fast path 1)", self, other);
-            return self.clone();
+            return Some(self.clone());
         }
         if self.hints().contains(Flags::EMPTY)
             || (other.hints().contains(Flags::FULL)
@@ -328,7 +329,15 @@ impl NameSet {
             tracing::debug!(
                 target: "dag::algo::union",
                 "union(x={:.6?}, y={:.6?}) = y (fast path 2)", self, other);
-            return other.clone();
+            return Some(other.clone());
+        }
+        None
+    }
+
+    /// Calculates the union of two sets. Iteration order might get lost.
+    pub fn union(&self, other: &NameSet) -> NameSet {
+        if let Some(set) = self.union_fast_paths(other) {
+            return set;
         }
         if let (Some(this), Some(other)) = (
             self.as_any().downcast_ref::<IdStaticSet>(),
@@ -355,6 +364,15 @@ impl NameSet {
         tracing::warn!(
             target: "dag::algo::union",
             "union(x={:.6?}, y={:.6?}) (slow path)", self, other);
+        Self::from_query(union::UnionSet::new(self.clone(), other.clone()))
+    }
+
+    /// Union, but preserve the iteration order (self first, other next).
+    pub fn union_preserving_order(&self, other: &Self) -> Self {
+        if let Some(set) = self.union_fast_paths(other) {
+            return set;
+        }
+        tracing::debug!(target: "dag::algo::union_preserving_order", "union(x={:.6?}, y={:.6?})", self, other);
         Self::from_query(union::UnionSet::new(self.clone(), other.clone()))
     }
 
@@ -542,6 +560,14 @@ impl BitOr for NameSet {
 
     fn bitor(self, other: Self) -> Self {
         self.union(&other)
+    }
+}
+
+impl Add for NameSet {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        self.union_preserving_order(&rhs)
     }
 }
 
