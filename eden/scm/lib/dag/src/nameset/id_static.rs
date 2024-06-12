@@ -285,11 +285,7 @@ impl AsyncNameSetQuery for IdStaticSet {
     }
 
     async fn contains(&self, name: &VertexName) -> Result<bool> {
-        let result = match self
-            .map
-            .vertex_id_with_max_group(name, Group::NON_MASTER)
-            .await?
-        {
+        let result = match self.map.vertex_id_with_max_group(name, Group::MAX).await? {
             Some(id) => self.spans.contains(id),
             None => false,
         };

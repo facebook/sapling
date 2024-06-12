@@ -146,4 +146,19 @@ impl VertexListWithOptions {
         }
         self
     }
+
+    /// Length of the `VertexListWithOptions`.
+    pub fn len(&self) -> usize {
+        self.list.len()
+    }
+
+    /// Minimal `desired_group` from all heads. `None` for empty heads list.
+    pub fn min_desired_group(&self) -> Option<Group> {
+        self.list.iter().map(|v| v.1.desired_group).min()
+    }
+
+    /// Maximum `desired_group` from all heads. `None` for empty heads list.
+    pub fn max_desired_group(&self) -> Option<Group> {
+        self.list.iter().map(|v| v.1.desired_group).max()
+    }
 }

@@ -243,7 +243,7 @@ where
         }
         // Previous version of the API requires `master_heads: &[Vertex]`.
         // Warn about possible misuses.
-        if !heads.vertexes_by_group(Group::NON_MASTER).is_empty() {
+        if heads.vertexes_by_group(Group::MASTER).len() != heads.len() {
             return programming(format!(
                 "NameDag::flush({:?}) is probably misused (group is not master)",
                 heads
@@ -489,7 +489,7 @@ where
             }
         }
 
-        // Update segments in the NON_MASTER group.
+        // Update high level segments from the flat segments just inserted.
         self.dag
             .build_segments_from_prepared_flat_segments(&outcome)?;
 
@@ -707,15 +707,13 @@ where
                 &self.pending_heads.vertexes(),
             ));
         }
-        let non_master_heads = heads.vertexes_by_group(Group::NON_MASTER);
-        if !non_master_heads.is_empty() {
-            return programming(format!(
-                concat!(
-                    "import_pull_data called with non-master heads ({:?}). ",
-                    "This is unsupported because the pull data is lazy and can only be inserted to the master group.",
-                ),
-                non_master_heads
-            ));
+        if let Some(group) = heads.max_desired_group() {
+            if group != Group::MASTER {
+                return programming(concat!(
+                    "import_pull_data should only take MASTER group heads. ",
+                    "Only MASTER group can contain lazy vertexes like what pull_data uses."
+                ));
+            }
         }
 
         for id in clone_data.flat_segments.parents_head_and_roots() {
@@ -952,7 +950,7 @@ where
                 let high_vertex = server.name_by_id(server_high);
                 let client_high_id = new
                     .map
-                    .vertex_id_with_max_group(&high_vertex, Group::NON_MASTER)
+                    .vertex_id_with_max_group(&high_vertex, Group::MAX)
                     .await?;
                 match client_high_id {
                     Some(id) if id.group() == Group::MASTER => {
@@ -961,7 +959,7 @@ where
                         continue;
                     }
                     Some(id) => {
-                        // `id` in NON_MASTER group. This should not really happen because we have
+                        // `id` in non-MASTER group. This should not really happen because we have
                         // checked all "roots" are missing in the local graph. See `NeedSlowPath`
                         // above.
                         let e = NeedSlowPath(format!(
@@ -1374,7 +1372,7 @@ where
             // as a remote "contains" check.
             if root_parents_id_set
                 .iter_desc()
-                .all(|i| i.group() == Group::NON_MASTER)
+                .all(|i| i.group() > Group::MASTER)
             {
                 tracing::debug!(target: "dag::definitelymissing", "root {:?} is not assigned (non-lazy parent)", &root);
                 unassigned_roots.push(root);
@@ -2115,6 +2113,7 @@ where
             Ok(Some(id)) => Ok(Some(id)),
             Err(err) => Err(err),
             Ok(None) if self.is_vertex_lazy() => {
+                // Not exist in max_group from local data.
                 if let Some(id) = self.overlay_map.read().unwrap().lookup_vertex_id(name) {
                     return Ok(Some(id));
                 }
@@ -2126,14 +2125,14 @@ where
                 {
                     return Ok(None);
                 }
-                if max_group == Group::MASTER
+                if max_group != Group::MAX
                     && self
                         .map
-                        .vertex_id_with_max_group(name, Group::NON_MASTER)
+                        .vertex_id_with_max_group(name, Group::MAX)
                         .await?
                         .is_some()
                 {
-                    // If the vertex exists in the non-master group. Then it must be missing in the
+                    // If the vertex exists in the non-master groups. Then it must be missing in the
                     // master group.
                     return Ok(None);
                 }
@@ -2413,7 +2412,7 @@ where
             let mut outcome = PreparedFlatSegments::default();
             let mut covered = self.dag().all_ids_in_groups(&Group::ALL)?;
             let mut reserved = calculate_initial_reserved(self, &covered, heads).await?;
-            for group in [Group::MASTER, Group::NON_MASTER] {
+            for group in Group::ALL {
                 for (vertex, opts) in heads.vertex_options() {
                     if opts.desired_group != group {
                         continue;

@@ -277,11 +277,7 @@ impl AsyncNameSetQuery for IdLazySet {
     }
 
     async fn contains(&self, name: &VertexName) -> Result<bool> {
-        let id = match self
-            .map
-            .vertex_id_with_max_group(name, Group::NON_MASTER)
-            .await?
-        {
+        let id = match self.map.vertex_id_with_max_group(name, Group::MAX).await? {
             None => {
                 return Ok(false);
             }
@@ -321,11 +317,7 @@ impl AsyncNameSetQuery for IdLazySet {
     }
 
     async fn contains_fast(&self, name: &VertexName) -> Result<Option<bool>> {
-        let id = match self
-            .map
-            .vertex_id_with_max_group(name, Group::NON_MASTER)
-            .await?
-        {
+        let id = match self.map.vertex_id_with_max_group(name, Group::MAX).await? {
             None => {
                 return Ok(Some(false));
             }
