@@ -80,6 +80,7 @@ dott_test(
         "//eden/mononoke:blobstore_healer",
         "//eden/mononoke:mononoke",
         "//eden/mononoke/git/gitimport:gitimport",
+        "//eden/mononoke/tools/testtool:testtool",
     ],
 )
 
