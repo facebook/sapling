@@ -30,7 +30,6 @@ changesets_creation = { version = "0.1.0", path = "../../changesets/changesets_c
 changesets_impl = { version = "0.1.0", path = "../../changesets/changesets_impl" }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 commit_graph = { version = "0.1.0", path = "../../repo_attributes/commit_graph/commit_graph" }
-commit_graph_types = { version = "0.1.0", path = "../../repo_attributes/commit_graph/commit_graph_types" }
 commit_transformation = { version = "0.1.0", path = "../../megarepo_api/commit_transformation" }
 context = { version = "0.1.0", path = "../../server/context" }
 derivative = "2.2"

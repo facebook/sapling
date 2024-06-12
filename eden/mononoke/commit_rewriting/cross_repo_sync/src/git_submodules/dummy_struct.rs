@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::HashMap;
-
 use ::sql::Transaction;
 use anyhow::Error;
 use anyhow::Result;
@@ -15,10 +13,6 @@ use bonsai_git_mapping::AddGitMappingErrorKind;
 use bonsai_git_mapping::BonsaiGitMapping;
 use bonsai_git_mapping::BonsaiGitMappingEntry;
 use bonsai_git_mapping::BonsaisOrGitShas;
-use commit_graph_types::edges::ChangesetEdges;
-use commit_graph_types::storage::CommitGraphStorage;
-use commit_graph_types::storage::FetchedChangesetEdges;
-use commit_graph_types::storage::Prefetch;
 use context::CoreContext;
 use filenodes::FilenodeInfo;
 use filenodes::FilenodeRange;
@@ -27,12 +21,8 @@ use filenodes::Filenodes;
 use filenodes::PreparedFilenode;
 use mercurial_types::HgFileNodeId;
 use mononoke_types::hash::GitSha1;
-use mononoke_types::ChangesetId;
-use mononoke_types::ChangesetIdPrefix;
-use mononoke_types::ChangesetIdsResolvedFromPrefix;
 use mononoke_types::RepoPath;
 use mononoke_types::RepositoryId;
-use vec1::Vec1;
 
 /// Struct created to satisfy the type system when creating a `RepoDerivedData`
 /// for the `InMemoryRepo`.
@@ -126,72 +116,6 @@ impl BonsaiGitMapping for DummyStruct {
         _high: GitSha1,
         _limit: usize,
     ) -> Result<Vec<GitSha1>, Error> {
-        unimplemented!()
-    }
-}
-
-#[async_trait]
-impl CommitGraphStorage for DummyStruct {
-    fn repo_id(&self) -> RepositoryId {
-        unimplemented!()
-    }
-
-    async fn add(&self, _ctx: &CoreContext, _edges: ChangesetEdges) -> Result<bool> {
-        unimplemented!()
-    }
-
-    async fn add_many(
-        &self,
-        _ctx: &CoreContext,
-        _many_edges: Vec1<ChangesetEdges>,
-    ) -> Result<usize> {
-        unimplemented!()
-    }
-
-    async fn fetch_edges(&self, _ctx: &CoreContext, _cs_id: ChangesetId) -> Result<ChangesetEdges> {
-        unimplemented!()
-    }
-
-    async fn maybe_fetch_edges(
-        &self,
-        _ctx: &CoreContext,
-        _cs_id: ChangesetId,
-    ) -> Result<Option<ChangesetEdges>> {
-        unimplemented!()
-    }
-
-    async fn fetch_many_edges(
-        &self,
-        _ctx: &CoreContext,
-        _cs_ids: &[ChangesetId],
-        _prefetch: Prefetch,
-    ) -> Result<HashMap<ChangesetId, FetchedChangesetEdges>> {
-        unimplemented!()
-    }
-
-    async fn maybe_fetch_many_edges(
-        &self,
-        _ctx: &CoreContext,
-        _cs_ids: &[ChangesetId],
-        _prefetch: Prefetch,
-    ) -> Result<HashMap<ChangesetId, FetchedChangesetEdges>> {
-        unimplemented!()
-    }
-
-    async fn find_by_prefix(
-        &self,
-        _ctx: &CoreContext,
-        _cs_prefix: ChangesetIdPrefix,
-        _limit: usize,
-    ) -> Result<ChangesetIdsResolvedFromPrefix> {
-        unimplemented!()
-    }
-
-    async fn fetch_children(
-        &self,
-        _ctx: &CoreContext,
-        _cs_id: ChangesetId,
-    ) -> Result<Vec<ChangesetId>> {
         unimplemented!()
     }
 }

@@ -108,8 +108,8 @@ impl InMemoryRepo {
         let filenodes = Arc::new(DummyStruct);
         let bonsai_git_mapping = Arc::new(DummyStruct);
 
-        let commit_graph_storage = Arc::new(DummyStruct);
-        let commit_graph = CommitGraph::new(commit_graph_storage);
+        let commit_graph =
+            Arc::new(<CommitGraph as Clone>::clone(repo.commit_graph()).with_memwrites_storage());
 
         let lease = orig_derived_data.lease().clone();
 

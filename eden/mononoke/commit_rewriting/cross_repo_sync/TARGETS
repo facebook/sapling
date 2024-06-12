@@ -85,7 +85,6 @@ rust_library(
         "//eden/mononoke/pushrebase:pushrebase_hooks",
         "//eden/mononoke/pushrebase_mutation_mapping:pushrebase_mutation_mapping",
         "//eden/mononoke/repo_attributes/commit_graph/commit_graph:commit_graph",
-        "//eden/mononoke/repo_attributes/commit_graph/commit_graph_types:commit_graph_types",
         "//eden/mononoke/repo_attributes/repo_bookmark_attrs:repo_bookmark_attrs",
         "//eden/mononoke/repo_attributes/repo_cross_repo:repo_cross_repo",
         "//eden/mononoke/repo_attributes/repo_derived_data:repo_derived_data",
