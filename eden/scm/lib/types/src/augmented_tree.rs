@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use crate::Blake3;
 use crate::FileType;
 use crate::HgId;
 use crate::Id20;
@@ -14,7 +15,7 @@ use crate::RepoPathBuf;
 pub struct AugmentedFileNode {
     pub file_type: FileType,
     pub filenode: HgId,
-    // pub content_blake3: Blake3,
+    pub content_blake3: Blake3,
     pub content_sha1: Id20,
     pub total_size: u64,
 }
@@ -22,7 +23,7 @@ pub struct AugmentedFileNode {
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub struct AugmentedDirectoryNode {
     pub treenode: HgId,
-    // pub augmented_manifest_id: Blake3,
+    pub augmented_manifest_id: Blake3,
     pub augmented_manifest_size: u64,
 }
 

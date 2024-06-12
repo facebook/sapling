@@ -8,6 +8,7 @@
 //! Common types used by sibling crates
 
 pub mod augmented_tree;
+pub mod blake3;
 pub mod errors;
 pub mod fetch_mode;
 pub mod hash;
@@ -26,6 +27,7 @@ pub mod workingcopy_client;
 
 pub use crate::augmented_tree::AugmentedTreeChildEntry;
 pub use crate::augmented_tree::AugmentedTreeEntry;
+pub use crate::blake3::Blake3;
 pub use crate::hgid::HgId;
 pub use crate::key::Key;
 pub use crate::node::Node;
