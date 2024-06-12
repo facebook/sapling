@@ -45,7 +45,23 @@ pub struct AugmentedTreeEntry {
 }
 
 impl AugmentedTreeEntry {
-    pub fn write_sapling_tree_blob(self, mut w: impl Write) -> Result<()> {
+    pub fn sapling_tree_blob_size(&self) -> usize {
+        let mut capacity: usize = 0;
+        for (path, subentry) in self.subentries.iter() {
+            capacity += path.len() + 2;
+            match subentry {
+                AugmentedTreeChildEntry::DirectoryNode(directory) => {
+                    capacity += HgId::hex_len() + 1;
+                }
+                AugmentedTreeChildEntry::FileNode(file) => {
+                    capacity += HgId::hex_len();
+                }
+            };
+        }
+        capacity
+    }
+
+    pub fn write_sapling_tree_blob(&self, mut w: impl Write) -> Result<()> {
         for (path, subentry) in self.subentries.iter() {
             w.write_all(path.as_ref())?;
             w.write_all(b"\0")?;

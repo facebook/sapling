@@ -223,6 +223,10 @@ impl RepoPathBuf {
         }
         self.0.push_str(s);
     }
+
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
 }
 
 impl Ord for RepoPathBuf {

@@ -15,14 +15,19 @@ use serde_derive::Serialize;
 use thiserror::Error;
 use type_macros::auto_wire;
 use types::hgid::HgId;
+use types::hgid::NULL_ID;
 use types::key::Key;
 use types::parents::Parents;
+use types::AugmentedTreeChildEntry;
 use types::AugmentedTreeEntry;
 
+use crate::Blake3;
 use crate::DirectoryMetadata;
+use crate::FileAuxData;
 use crate::FileMetadata;
 use crate::InvalidHgId;
 use crate::SaplingRemoteApiServerError;
+use crate::Sha1;
 use crate::UploadToken;
 
 #[derive(Debug, Error)]
@@ -39,6 +44,9 @@ pub enum TreeError {
 
     #[error("TreeEntry missing field '{0}'")]
     MissingField(&'static str),
+
+    #[error("TreeEntry failed to convert from AugmentedTreeEntry: '{0}'")]
+    AugmentedTreeConversionError(String),
 }
 
 impl TreeError {
@@ -179,9 +187,60 @@ impl TreeChildEntry {
     }
 }
 
-impl From<AugmentedTreeEntry> for TreeEntry {
-    fn from(_aug_tree: AugmentedTreeEntry) -> Self {
-        unimplemented!("TreeEntry::from(AugmentedTreeEntry) is not implemented");
+impl TryFrom<AugmentedTreeEntry> for TreeEntry {
+    type Error = TreeError;
+    fn try_from(aug_tree: AugmentedTreeEntry) -> Result<Self, Self::Error> {
+        let mut entry: TreeEntry = TreeEntry::new(Key {
+            hgid: aug_tree.hg_node_id,
+            ..Default::default()
+        });
+        let mut buf: Vec<u8> = Vec::with_capacity(aug_tree.sapling_tree_blob_size());
+        aug_tree
+            .write_sapling_tree_blob(&mut buf)
+            .map_err(|e| TreeError::AugmentedTreeConversionError(e.to_string()))?;
+        entry.with_data(Some(buf.into()));
+        entry.with_parents(Some(Parents::new(
+            aug_tree.p1.unwrap_or(NULL_ID),
+            aug_tree.p2.unwrap_or(NULL_ID),
+        )));
+        entry.with_children(Some(
+            aug_tree
+                .subentries
+                .into_iter()
+                .map(|(path, augmented_entry)| match augmented_entry {
+                    AugmentedTreeChildEntry::FileNode(file) => Ok(TreeChildEntry::new_file_entry(
+                        Key {
+                            hgid: file.filenode,
+                            path,
+                        },
+                        FileAuxData {
+                            blake3: Blake3::from_byte_array(file.content_blake3.into_byte_array()), // zero-copy conversion
+                            sha1: Sha1::from_byte_array(file.content_sha1.into_byte_array()),
+                            total_size: file.total_size,
+                        }
+                        .into(),
+                    )),
+                    AugmentedTreeChildEntry::DirectoryNode(tree) => {
+                        Ok(TreeChildEntry::new_directory_entry(
+                            Key {
+                                hgid: tree.treenode,
+                                path,
+                            },
+                            DirectoryMetadata {
+                                augmented_manifest_id: Blake3::from_byte_array(
+                                    tree.augmented_manifest_id.into_byte_array(),
+                                ), // zero-copy conversion
+                                augmented_manifest_size: tree.augmented_manifest_size,
+                            },
+                        ))
+                    }
+                })
+                .collect::<Result<Vec<_>, TreeError>>()?
+                .into_iter()
+                .map(Ok)
+                .collect(),
+        ));
+        Ok(entry)
     }
 }
 
