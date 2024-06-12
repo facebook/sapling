@@ -9,11 +9,9 @@ rust_library(
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:futures",
-        "fbsource//third-party/rust:slog",
         "fbsource//third-party/rust:tokio",
         "//common/rust/shed/facet:facet",
         "//common/rust/shed/fbinit:fbinit",
-        "//common/rust/shed/slog_glog_fmt:slog_glog_fmt",
-        "//eden/mononoke/server/context:context",
+        "//common/rust/shed/stats:stats",
     ],
 )

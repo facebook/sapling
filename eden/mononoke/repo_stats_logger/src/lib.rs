@@ -8,11 +8,18 @@
 use std::time::Duration;
 
 use anyhow::Error;
-use context::CoreContext;
-use fbinit::expect_init;
+use fbinit::FacebookInit;
 use futures::future::abortable;
 use futures::future::AbortHandle;
-use slog::info;
+use stats::define_stats;
+use stats::prelude::DynamicSingletonCounter;
+
+define_stats! {
+    prefix = "mononoke.app.repo.stats";
+    repo_objects_count: dynamic_singleton_counter("{}.objects.count", (repo_name: String)),
+}
+
+const DEFAULT_REPO_OBJECTS_COUNT: i64 = 1_000_000;
 
 #[derive(Clone)]
 #[facet::facet]
@@ -21,19 +28,17 @@ pub struct RepoStatsLogger {
 }
 
 impl RepoStatsLogger {
-    pub async fn new(repo_name: String) -> Result<Self, Error> {
-        // This code is called without a request so it can't take a CoreContext; we roll up our own.
-        let fb = expect_init();
-        let logger = slog::Logger::root(slog_glog_fmt::default_drain(), slog::o!());
-        let ctx = CoreContext::new_for_bulk_processing(fb, logger);
-        let name = repo_name.clone();
-
+    pub async fn new(fb: FacebookInit, repo_name: String) -> Result<Self, Error> {
         let fut = async move {
             loop {
                 let jitter = Duration::from_secs(60);
                 tokio::time::sleep(jitter).await;
 
-                info!(ctx.logger(), "RepoStatsLogger for {}", name);
+                STATS::repo_objects_count.set_value(
+                    fb,
+                    DEFAULT_REPO_OBJECTS_COUNT,
+                    (repo_name.clone(),),
+                );
             }
         };
 

@@ -784,7 +784,8 @@ impl RepoFactory {
     }
 
     pub async fn repo_stats_logger(&self, name: &str) -> Result<ArcRepoStatsLogger> {
-        let repo_stats_logger = Arc::new(RepoStatsLogger::new(name.to_string()).await?);
+        let repo_stats_logger =
+            Arc::new(RepoStatsLogger::new(self.env.fb, name.to_string()).await?);
 
         Ok(repo_stats_logger)
     }
