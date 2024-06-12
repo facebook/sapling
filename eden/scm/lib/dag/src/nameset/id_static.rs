@@ -231,6 +231,30 @@ impl IdStaticSet {
             None => Ok(None),
         }
     }
+
+    pub(crate) fn slice_spans(mut self, skip: u64, take: u64) -> Self {
+        let (skip, take) = if self.reversed {
+            let len = self.spans.count();
+            // [---take1----][skip]
+            // [skip2][take2][skip]
+            // [--------len-------]
+            let take1 = len.saturating_sub(skip);
+            let take2 = take1.min(take);
+            let skip2 = take1 - take2;
+            (skip2, take2)
+        } else {
+            // [skip][take][---]
+            // [------len------]
+            (skip, take)
+        };
+        match (skip, take) {
+            (0, u64::MAX) => {}
+            (0, _) => self.spans = self.spans.take(take),
+            (_, u64::MAX) => self.spans = self.spans.skip(skip),
+            _ => self.spans = self.spans.skip(skip).take(take),
+        }
+        self
+    }
 }
 
 #[async_trait::async_trait]
@@ -313,39 +337,13 @@ impl AsyncNameSetQuery for IdStaticSet {
     }
 
     fn specialized_take(&self, take: u64) -> Option<NameSet> {
-        let spans = if self.reversed {
-            let len = self.spans.count();
-            // [--skip-][take]
-            // [-----len-----]
-            let skip = len.saturating_sub(take);
-            self.spans.skip(skip).take(take)
-        } else {
-            // [take][-------]
-            // [-----len-----]
-            self.spans.take(take)
-        };
-        Some(NameSet::from_query(Self {
-            spans,
-            ..self.clone()
-        }))
+        Some(NameSet::from_query(self.clone().slice_spans(0, take)))
     }
 
     fn specialized_skip(&self, skip: u64) -> Option<NameSet> {
-        let spans = if self.reversed {
-            let len = self.spans.count();
-            // [--take-][skip]
-            // [-----len-----]
-            let take = len.saturating_sub(skip);
-            self.spans.take(take)
-        } else {
-            // [skip][-------]
-            // [-----len-----]
-            self.spans.skip(skip)
-        };
-        Some(NameSet::from_query(Self {
-            spans,
-            ..self.clone()
-        }))
+        Some(NameSet::from_query(
+            self.clone().slice_spans(skip, u64::MAX),
+        ))
     }
 }
 
