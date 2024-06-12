@@ -13,6 +13,7 @@ rust_library(
         "fbsource//third-party/rust:tokio",
         "//common/rust/shed/facet:facet",
         "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/justknobs_stub:justknobs",
         "//common/rust/shed/stats:stats",
         "//eden/mononoke/blobstore:blobstore",
         "//eden/mononoke/bookmarks:bookmarks",

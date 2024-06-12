@@ -57,20 +57,37 @@ impl RepoStatsLogger {
                 let interval = Duration::from_secs(60);
                 tokio::time::sleep(interval).await;
 
-                match Self::get_repo_objects_count(
-                    &ctx,
-                    &master,
-                    bookmarks.clone(),
-                    repo_blobstore.clone(),
-                    repo_derived_data.clone(),
-                )
-                .await
+                if justknobs::eval("scm/mononoke:scs_enable_repo_stats_logger", None, None)
+                    .unwrap_or(false)
                 {
-                    Ok(count) => {
-                        STATS::repo_objects_count.set_value(fb, count, (repo_name.clone(),));
-                    }
-                    Err(e) => {
-                        warn!(ctx.logger(), "Finding bookmark for {}: {}", repo_name, e);
+                    let default_repo_object_count = justknobs::get_as::<i64>(
+                        "scm/mononoke:scs_default_repo_objects_count",
+                        None,
+                    )
+                    .unwrap_or(DEFAULT_REPO_OBJECTS_COUNT);
+
+                    match Self::get_repo_objects_count(
+                        &ctx,
+                        &master,
+                        bookmarks.clone(),
+                        repo_blobstore.clone(),
+                        repo_derived_data.clone(),
+                        default_repo_object_count,
+                    )
+                    .await
+                    {
+                        Ok(count) => {
+                            let over = justknobs::get_as::<i64>(
+                                "scm/mononoke:scs_override_repo_objects_count",
+                                Some(&repo_name),
+                            )
+                            .unwrap_or(0);
+                            let count = if over > 0 { over } else { count };
+                            STATS::repo_objects_count.set_value(fb, count, (repo_name.clone(),));
+                        }
+                        Err(e) => {
+                            warn!(ctx.logger(), "Finding bookmark for {}: {}", repo_name, e);
+                        }
                     }
                 }
             }
@@ -88,6 +105,7 @@ impl RepoStatsLogger {
         bookmarks: ArcBookmarks,
         repo_blobstore: Arc<dyn Blobstore>,
         repo_derived_data: ArcRepoDerivedData,
+        default_repo_object_count: i64,
     ) -> Result<i64, Error> {
         let maybe_bookmark = bookmarks.get(ctx.clone(), master).await?;
         if let Some(cs_id) = maybe_bookmark {
@@ -99,7 +117,7 @@ impl RepoStatsLogger {
             )
             .await
         } else {
-            Ok(DEFAULT_REPO_OBJECTS_COUNT)
+            Ok(default_repo_object_count)
         }
     }
 
