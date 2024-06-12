@@ -538,12 +538,11 @@ impl NameSet {
     /// Converts to `(IdSet, IdConvert)` pair in O(1). If the underlying set
     /// cannot provide such information in O(1), return `None`.
     ///
-    /// Useful if the callsite wants to have random access (ex.  bisect) and
-    /// control how to resolve in batches.
+    /// Useful if the callsite wants to have random access (ex.pathhistory)
+    /// and control how to resolve in batches.
     pub fn to_id_set_and_id_map_in_o1(&self) -> Option<(IdSet, Arc<dyn IdConvert + Send + Sync>)> {
-        let id_map = self.id_map()?;
-        let id_set = self.as_any().downcast_ref::<IdStaticSet>()?.spans.clone();
-        Some((id_set, id_map))
+        let id_set = self.specialized_flatten_id()?.into_owned();
+        Some((id_set.spans, id_set.map))
     }
 }
 
