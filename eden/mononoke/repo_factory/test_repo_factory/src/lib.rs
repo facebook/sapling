@@ -105,6 +105,8 @@ use repo_permission_checker::ArcRepoPermissionChecker;
 use repo_sparse_profiles::ArcRepoSparseProfiles;
 use repo_sparse_profiles::RepoSparseProfiles;
 use repo_sparse_profiles::SqlSparseProfilesSizes;
+use repo_stats_logger::ArcRepoStatsLogger;
+use repo_stats_logger::RepoStatsLogger;
 use requests_table::SqlLongRunningRequestsQueue;
 use scuba_ext::MononokeScubaSampleBuilder;
 use segmented_changelog::new_test_segmented_changelog;
@@ -844,5 +846,10 @@ impl TestRepoFactory {
             repo_derived_data: repo_derived_data.clone(),
             core_ctx: self.ctx.clone(),
         }))
+    }
+
+    /// Function to create a logger for repos stats
+    pub async fn repo_stats_logger(&self) -> Result<ArcRepoStatsLogger> {
+        Ok(Arc::new(RepoStatsLogger::noop()))
     }
 }

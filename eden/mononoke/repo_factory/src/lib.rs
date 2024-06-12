@@ -166,6 +166,8 @@ use repo_permission_checker::ProdRepoPermissionChecker;
 use repo_sparse_profiles::ArcRepoSparseProfiles;
 use repo_sparse_profiles::RepoSparseProfiles;
 use repo_sparse_profiles::SqlSparseProfilesSizes;
+use repo_stats_logger::ArcRepoStatsLogger;
+use repo_stats_logger::RepoStatsLogger;
 use requests_table::ArcLongRunningRequestsQueue;
 use requests_table::SqlLongRunningRequestsQueue;
 use scuba_ext::MononokeScubaSampleBuilder;
@@ -779,6 +781,12 @@ impl RepoFactory {
             repo_identity.name().to_string(),
             repo_config.commit_graph_config.scuba_table.as_deref(),
         )?))
+    }
+
+    pub async fn repo_stats_logger(&self, name: &str) -> Result<ArcRepoStatsLogger> {
+        let repo_stats_logger = Arc::new(RepoStatsLogger::new(name.to_string()).await?);
+
+        Ok(repo_stats_logger)
     }
 
     pub fn changeset_fetcher(

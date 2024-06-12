@@ -144,6 +144,7 @@ use repo_permission_checker::RepoPermissionChecker;
 use repo_sparse_profiles::ArcRepoSparseProfiles;
 use repo_sparse_profiles::RepoSparseProfiles;
 use repo_sparse_profiles::RepoSparseProfilesArc;
+use repo_stats_logger::RepoStatsLogger;
 use segmented_changelog::CloneData;
 use segmented_changelog::DisabledSegmentedChangelog;
 use segmented_changelog::Location;
@@ -256,6 +257,9 @@ pub struct Repo {
 
     #[facet]
     pub filestore_config: FilestoreConfig,
+
+    #[facet]
+    pub repo_stats_logger: RepoStatsLogger,
 }
 
 impl AsBlobRepo for Repo {
@@ -427,6 +431,7 @@ impl Repo {
             hook_manager: self.hook_manager.clone(),
             repo_handler_base: self.repo_handler_base.clone(),
             filestore_config: self.filestore_config.clone(),
+            repo_stats_logger: self.repo_stats_logger.clone(),
         }
     }
 
@@ -515,6 +520,8 @@ impl Repo {
         let warm_bookmarks_cache = warm_bookmarks_cache_builder.build().await?;
         let filestore_config = Arc::new(FilestoreConfig::no_chunking_filestore());
 
+        let repo_stats_logger = Arc::new(RepoStatsLogger::noop());
+
         Ok(Self {
             name: name.clone(),
             inner,
@@ -522,6 +529,7 @@ impl Repo {
             hook_manager,
             repo_handler_base,
             filestore_config,
+            repo_stats_logger,
         })
     }
 
