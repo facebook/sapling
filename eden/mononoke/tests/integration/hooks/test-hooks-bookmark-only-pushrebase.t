@@ -59,6 +59,10 @@ blobimport
 
 start mononoke
   $ start_and_wait_for_mononoke_server
+
+Remove the phase information. See D58415927 for an explanation as to why that is necessary
+  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "DELETE FROM phases where repo_id >= 0";
+
 clone
   $ hgclone_treemanifest ssh://user@dummy/repo-hg repo2 --noupdate --config extensions.remotenames= -q
   $ cd repo2

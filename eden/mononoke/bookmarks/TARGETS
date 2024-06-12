@@ -203,6 +203,7 @@ rust_library(
         "fbsource//third-party/rust:thiserror",
         ":bookmarks",
         ":bookmarks_types",
+        "//common/rust/shed/borrowed:borrowed",
         "//common/rust/shed/cloned:cloned",
         "//common/rust/shed/futures_ext:futures_ext",
         "//common/rust/shed/futures_stats:futures_stats",

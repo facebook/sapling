@@ -16,6 +16,7 @@ use blobstore::Loadable;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks_types::BookmarkKey;
 use bookmarks_types::BookmarkKind;
+use borrowed::borrowed;
 use bytes::Bytes;
 use context::CoreContext;
 use cross_repo_sync::CHANGE_XREPO_MAPPING_EXTRA;
@@ -147,6 +148,42 @@ impl AffectedChangesets {
             .try_collect()
             .await?;
         excludes.extend(base);
+
+        if justknobs::eval(
+            "scm/mononoke:bookmarks_movement_use_precise_boundary",
+            None,
+            None,
+        )
+        .unwrap_or(false)
+        {
+            // Optimization: instead of finding the difference between the head of the bookmark being
+            // pushed and the hooks_skip_ancestors of this bookmark, also exclude any public bookmark
+            // by adding the public frontier to the excludes.
+            // This optimization is necessary for pushes to long branches that are far away from
+            // their hooks_skip_ancestors.
+            // That is a scenario that happens since we imported some large git repos such as
+            // "chromium/src"
+            let public_frontier = repo
+                .commit_graph()
+                .ancestors_frontier_with(ctx, vec![head], |csid| {
+                    borrowed!(ctx, repo);
+                    async move {
+                        Ok(repo
+                            .phases()
+                            .get_cached_public(ctx, vec![csid])
+                            .await?
+                            .contains(&csid))
+                    }
+                })
+                .await?
+                .into_iter()
+                .filter(|csid| {
+                    // We still want to run checks on head, for instance to check write permissions
+                    *csid != head
+                })
+                .collect::<HashSet<_>>();
+            excludes.extend(public_frontier);
+        }
 
         let range = repo
             .commit_graph()
