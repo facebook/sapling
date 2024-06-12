@@ -270,6 +270,13 @@ class ObjectStore : public IObjectStore,
   }
 
   /**
+   * Get the TreeCache used by this ObjectStore
+   */
+  const std::shared_ptr<TreeCache>& getTreeCache() const {
+    return treeCache_;
+  }
+
+  /**
    * Convenience wrapper around BackingStore::compareObjectsById.  See
    * `BackingStorecompareObjectsById`'s documentation for more details.
    */

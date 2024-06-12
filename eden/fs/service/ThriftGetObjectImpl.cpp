@@ -46,4 +46,37 @@ BlobMetadataWithOrigin transformToBlobMetadataFromOrigin(
   return result;
 }
 
+ScmTreeWithOrigin transformToTreeFromOrigin(
+    std::shared_ptr<EdenMount> edenMount,
+    const ObjectId& id,
+    const folly::Try<std::shared_ptr<const Tree>>& tree,
+    DataFetchOrigin origin) {
+  ScmTreeOrError treeOrError;
+  if (tree.hasValue()) {
+    if (!tree.value()) {
+      treeOrError.error_ref() = newEdenError(
+          ENOENT,
+          EdenErrorType::POSIX_ERROR,
+          "no tree found for id ",
+          edenMount->getObjectStore()->renderObjectId(id));
+    } else {
+      for (const auto& entry : *(tree.value())) {
+        const auto& [name, treeEntry] = entry;
+        treeOrError.treeEntries_ref().ensure().emplace_back();
+        auto& out = treeOrError.treeEntries_ref()->back();
+        out.name_ref() = name.asString();
+        out.mode_ref() = modeFromTreeEntryType(treeEntry.getType());
+        out.id_ref() =
+            edenMount->getObjectStore()->renderObjectId(treeEntry.getHash());
+      }
+    }
+  } else {
+    treeOrError.error_ref() = newEdenError(tree.exception());
+  }
+  ScmTreeWithOrigin result;
+  result.scmTreeData() = std::move(treeOrError);
+  result.origin() = std::move(origin);
+  return result;
+}
+
 } // namespace facebook::eden

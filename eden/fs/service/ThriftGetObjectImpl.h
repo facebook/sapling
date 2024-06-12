@@ -79,6 +79,12 @@ ScmBlobWithOrigin transformToBlobFromOrigin(
   return result;
 }
 
+ScmTreeWithOrigin transformToTreeFromOrigin(
+    std::shared_ptr<EdenMount> edenMount,
+    const ObjectId& id,
+    const folly::Try<std::shared_ptr<const Tree>>& tree,
+    DataFetchOrigin origin);
+
 namespace detail {
 /**
  * Our various methods to get blob metadata through out EdenFS

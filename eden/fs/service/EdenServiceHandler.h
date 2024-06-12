@@ -279,6 +279,10 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
   semifuture_debugGetBlobMetadata(
       std::unique_ptr<DebugGetBlobMetadataRequest> request) override;
 
+  folly::SemiFuture<std::unique_ptr<DebugGetScmTreeResponse>>
+  semifuture_debugGetTree(
+      std::unique_ptr<DebugGetScmTreeRequest> request) override;
+
   void debugInodeStatus(
       std::vector<TreeInodeDebugInfo>& inodeInfo,
       std::unique_ptr<std::string> mountPoint,

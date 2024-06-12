@@ -21,10 +21,15 @@ from facebook.eden.ttypes import (
     DebugGetBlobMetadataResponse,
     DebugGetScmBlobRequest,
     DebugGetScmBlobResponse,
+    DebugGetScmTreeRequest,
+    DebugGetScmTreeResponse,
     MountId,
     ScmBlobMetadata,
     ScmBlobOrError,
     ScmBlobWithOrigin,
+    ScmTreeEntry,
+    ScmTreeOrError,
+    ScmTreeWithOrigin,
     SyncBehavior,
 )
 
@@ -311,33 +316,181 @@ class DebugBlobMetadataHgTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
 
             self.assertEqual(5, len(response.metadatas))
             for metadata in response.metadatas:
-                if metadata.origin == DataFetchOrigin.MEMORY_CACHE:
-                    self.assertEqual(4, metadata.metadata.get_metadata().size)
-                    self.assertEqual(
-                        b"\x007\xc9\xb5h<\x0e\x8d\x8c\xa6qM\xb2\xf1Q\x9b#.\x10\xe2",
-                        metadata.metadata.get_metadata().contentsSha1,
+                self.assertEqual(
+                    4,
+                    metadata.metadata.get_metadata().size,
+                    f"wrong size for origin={DataFetchOrigin._VALUES_TO_NAMES[metadata.origin]}",
+                )
+                self.assertEqual(
+                    b"\x007\xc9\xb5h<\x0e\x8d\x8c\xa6qM\xb2\xf1Q\x9b#.\x10\xe2",
+                    metadata.metadata.get_metadata().contentsSha1,
+                    f"wrong contentsSha1 for origin={DataFetchOrigin._VALUES_TO_NAMES[metadata.origin]}",
+                )
+
+
+@testcase.eden_nfs_repo_test
+class DebugTreeHgTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
+    def populate_repo(self) -> None:
+        self.repo.write_file("testDir/testTree/binary", b"\xff\xfe\xfd\xfc")
+        self.repo.commit("Initial commit.")
+
+    def assert_tree_not_available(
+        self, client: EdenClient, tree_id: bytes, origin: int
+    ) -> None:
+        response = client.debugGetTree(
+            DebugGetScmTreeRequest(
+                MountId(self.mount.encode()),
+                tree_id,
+                origin,
+            )
+        )
+        print(response)
+        # this should not error
+        response.trees[0].scmTreeData.get_error()
+
+    def assert_tree_available(
+        self,
+        client: EdenClient,
+        tree_id: bytes,
+        origin: DataFetchOrigin,
+        name: bytes,
+        mode: int,
+        thrift_obj_id: bytes,
+    ) -> None:
+        response = client.debugGetTree(
+            DebugGetScmTreeRequest(
+                MountId(self.mount.encode()),
+                tree_id,
+                origin,
+            )
+        )
+        print(f"response of debugGetTree: {response}")
+        self.assertEqual(
+            DebugGetScmTreeResponse(
+                [
+                    ScmTreeWithOrigin(
+                        scmTreeData=ScmTreeOrError(
+                            [ScmTreeEntry(name=name, mode=mode, id=thrift_obj_id)]
+                        ),
+                        origin=origin,
                     )
-                elif metadata.origin == DataFetchOrigin.DISK_CACHE:
-                    self.assertEqual(4, metadata.metadata.get_metadata().size)
+                ]
+            ),
+            response,
+        )
+
+    def test_debug_tree_locations(self) -> None:
+        with self.eden.get_thrift_client_legacy() as client:
+            debugInfo = client.debugInodeStatus(
+                os.fsencode(self.mount),
+                b"testDir/testTree",
+                flags=0,
+                sync=SyncBehavior(),
+            )
+
+        print(f"debug info: {debugInfo}")
+        """
+        [TreeInodeDebugInfo(
+            inodeNumber=24,
+            path=b'testDir/testTree',
+            materialized=False,
+            treeHash=b'6e6f3da79253c3861bd140490d95cbe2c9323de8:testDir/testTree',
+            entries=[TreeInodeEntryDebugInfo(
+                name=b'binary',
+                inodeNumber=25,
+                mode=32768,
+                loaded=False,
+                materialized=False,
+                hash=b'4bee6c9836b6c191a528063745ded4a1a17cdedd:testDir/testTree/binary',
+                fileSize=4)],
+            refcount=0)]
+        """
+        self.assertEqual(1, len(debugInfo))
+        treeInfo = debugInfo[0]
+        treeEntriesInfo = treeInfo.entries
+        self.assertEqual(1, len(treeEntriesInfo))
+
+        treeEntry = treeEntriesInfo[0]
+
+        self.eden.run_cmd("gc", cwd=self.mount)  # this clears cache in disk
+        self.eden.restart()  # this clears cache in memory
+
+        with self.eden.get_thrift_client_legacy() as client:
+            # not present in the local storage yet
+            for origin in [DataFetchOrigin.MEMORY_CACHE, DataFetchOrigin.DISK_CACHE]:
+                self.assert_tree_not_available(client, treeInfo.treeHash, origin)
+
+            debugInfo = client.debugInodeStatus(
+                os.fsencode(self.mount),
+                b"testDir/testTree",
+                flags=0,
+                sync=SyncBehavior(),
+            )
+
+            # "fetch from network"
+            self.assert_tree_available(
+                client,
+                treeInfo.treeHash,
+                DataFetchOrigin.ANYWHERE,
+                treeEntry.name,
+                treeEntry.mode | 0o644,
+                treeEntry.hash,
+            )
+
+            # now its available locally.
+            for fromWhere in [
+                DataFetchOrigin.MEMORY_CACHE,
+                DataFetchOrigin.DISK_CACHE,
+                DataFetchOrigin.LOCAL_BACKING_STORE,
+            ]:
+                self.assert_tree_available(
+                    client,
+                    treeInfo.treeHash,
+                    fromWhere,
+                    treeEntry.name,
+                    treeEntry.mode | 0o644,
+                    treeEntry.hash,
+                )
+
+            # check a request from multiple places:
+            response = client.debugGetTree(
+                DebugGetScmTreeRequest(
+                    MountId(self.mount.encode()),
+                    treeInfo.treeHash,
+                    DataFetchOrigin.MEMORY_CACHE
+                    | DataFetchOrigin.DISK_CACHE
+                    | DataFetchOrigin.LOCAL_BACKING_STORE
+                    | DataFetchOrigin.REMOTE_BACKING_STORE
+                    | DataFetchOrigin.ANYWHERE,
+                )
+            )
+            self.assertEqual(5, len(response.trees))
+
+            for tree in response.trees:
+                # It seems from a unit test, we can't get the tree from remote backing store.
+                # error example:
+                """
+                ScmTreeWithOrigin(
+                        scmTreeData=ScmTreeOrError(
+                    error=EdenError(
+                          message=('rust::cxxbridge1::Error: Key fetch failed '
+                           '6e6f3da79253c3861bd140490d95cbe2c9323de8 : [server did not provide content]'),
+                          errorType=4)),
+                origin=16)
+                """
+                if tree.origin == DataFetchOrigin.REMOTE_BACKING_STORE:
+                    tree.scmTreeData.get_error()
+                else:
                     self.assertEqual(
-                        b"\x007\xc9\xb5h<\x0e\x8d\x8c\xa6qM\xb2\xf1Q\x9b#.\x10\xe2",
-                        metadata.metadata.get_metadata().contentsSha1,
-                    )
-                elif metadata.origin == DataFetchOrigin.LOCAL_BACKING_STORE:
-                    self.assertEqual(4, metadata.metadata.get_metadata().size)
-                    self.assertEqual(
-                        b"\x007\xc9\xb5h<\x0e\x8d\x8c\xa6qM\xb2\xf1Q\x9b#.\x10\xe2",
-                        metadata.metadata.get_metadata().contentsSha1,
-                    )
-                elif metadata.origin == DataFetchOrigin.REMOTE_BACKING_STORE:
-                    self.assertEqual(4, metadata.metadata.get_metadata().size)
-                    self.assertEqual(
-                        b"\x007\xc9\xb5h<\x0e\x8d\x8c\xa6qM\xb2\xf1Q\x9b#.\x10\xe2",
-                        metadata.metadata.get_metadata().contentsSha1,
-                    )
-                elif metadata.origin == DataFetchOrigin.ANYWHERE:
-                    self.assertEqual(4, metadata.metadata.get_metadata().size)
-                    self.assertEqual(
-                        b"\x007\xc9\xb5h<\x0e\x8d\x8c\xa6qM\xb2\xf1Q\x9b#.\x10\xe2",
-                        metadata.metadata.get_metadata().contentsSha1,
+                        ScmTreeOrError(
+                            [
+                                ScmTreeEntry(
+                                    name=treeEntry.name,
+                                    mode=treeEntry.mode | 0o644,
+                                    id=treeEntry.hash,
+                                )
+                            ]
+                        ),
+                        tree.scmTreeData,
+                        f"unexpected response {tree.scmTreeData} for origin {DataFetchOrigin._VALUES_TO_NAMES[tree.origin]}",
                     )

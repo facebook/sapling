@@ -29,6 +29,7 @@
 #include <thrift/lib/cpp/util/EnumUtils.h>
 #include <thrift/lib/cpp2/server/ThriftServer.h>
 
+#include "ThriftGetObjectImpl.h"
 #include "eden/common/telemetry/SessionInfo.h"
 #include "eden/common/telemetry/Tracing.h"
 #include "eden/common/utils/Bug.h"
@@ -3909,6 +3910,105 @@ EdenServiceHandler::semifuture_debugGetBlobMetadata(
                    response->metadatas() = std::move(blobs);
                    return response;
                  }))
+      .semi();
+}
+
+folly::SemiFuture<std::unique_ptr<DebugGetScmTreeResponse>>
+EdenServiceHandler::semifuture_debugGetTree(
+    std::unique_ptr<DebugGetScmTreeRequest> request) {
+  const auto& mountid = request->mountId();
+  const auto& idStr = request->id();
+  const auto& origins = request->origins();
+  auto helper =
+      INSTRUMENT_THRIFT_CALL(DBG2, *mountid, logHash(*idStr), *origins);
+
+  auto mountHandle = lookupMount(*mountid);
+  auto edenMount = mountHandle.getEdenMountPtr();
+  auto id = edenMount->getObjectStore()->parseObjectId(*idStr);
+  auto originFlags = DataFetchOriginFlags::raw(*origins);
+  auto store = edenMount->getObjectStore();
+
+  std::vector<ImmediateFuture<ScmTreeWithOrigin>> treeFutures;
+
+  if (originFlags.contains(FROMWHERE_MEMORY_CACHE)) {
+    treeFutures.emplace_back(transformToTreeFromOrigin(
+        edenMount,
+        id,
+        folly::Try<std::shared_ptr<const Tree>>{store->getTreeCache()->get(id)},
+        DataFetchOrigin::MEMORY_CACHE));
+  }
+
+  if (originFlags.contains(FROMWHERE_DISK_CACHE)) {
+    auto localStore = server_->getLocalStore();
+    treeFutures.emplace_back(localStore->getTree(id).thenTry(
+        [edenMount, id, store](auto&& tree) mutable {
+          return transformToTreeFromOrigin(
+              std::move(edenMount),
+              id,
+              std::move(tree),
+              DataFetchOrigin::DISK_CACHE);
+        }));
+  }
+
+  if (originFlags.contains(FROMWHERE_LOCAL_BACKING_STORE)) {
+    auto proxyHash = HgProxyHash::load(
+        server_->getLocalStore().get(),
+        id,
+        "debugGetTree",
+        *server_->getServerState()->getStats());
+
+    auto backingStore = edenMount->getObjectStore()->getBackingStore();
+    std::shared_ptr<SaplingBackingStore> saplingBackingStore =
+        castToSaplingBackingStore(backingStore, edenMount->getPath());
+
+    treeFutures.emplace_back(transformToTreeFromOrigin(
+        edenMount,
+        id,
+        folly::Try<std::shared_ptr<const Tree>>{
+            saplingBackingStore->getTreeLocal(id, proxyHash)},
+        DataFetchOrigin::LOCAL_BACKING_STORE));
+  }
+
+  if (originFlags.contains(FROMWHERE_REMOTE_BACKING_STORE)) {
+    auto proxyHash = HgProxyHash::load(
+        server_->getLocalStore().get(),
+        id,
+        "debugGetTree",
+        *server_->getServerState()->getStats());
+    auto backingStore = edenMount->getObjectStore()->getBackingStore();
+    std::shared_ptr<SaplingBackingStore> saplingBackingStore =
+        castToSaplingBackingStore(backingStore, edenMount->getPath());
+    treeFutures.emplace_back(transformToTreeFromOrigin(
+        edenMount,
+        id,
+        saplingBackingStore->getTreeRemote(
+            proxyHash.path().copy(),
+            proxyHash.revHash(),
+            id,
+            helper->getFetchContext()),
+        DataFetchOrigin::REMOTE_BACKING_STORE));
+  }
+
+  if (originFlags.contains(FROMWHERE_ANYWHERE)) {
+    treeFutures.emplace_back(store->getTree(id, helper->getFetchContext())
+                                 .thenTry([edenMount, id](auto&& tree) mutable {
+                                   return transformToTreeFromOrigin(
+                                       std::move(edenMount),
+                                       id,
+                                       std::move(tree),
+                                       DataFetchOrigin::ANYWHERE);
+                                 }));
+  }
+
+  return wrapImmediateFuture(
+             std::move(helper),
+             collectAllSafe(std::move(treeFutures))
+                 .thenValue([](std::vector<ScmTreeWithOrigin> trees) {
+                   auto response = std::make_unique<DebugGetScmTreeResponse>();
+                   response->trees() = std::move(trees);
+                   return response;
+                 }))
+      .ensure([mountHandle] {})
       .semi();
 }
 
