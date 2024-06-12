@@ -416,6 +416,7 @@ members = [
   "repo_attributes/commit_graph/commit_graph_types/if/mocks",
   "repo_attributes/commit_graph/commit_graph_types/if/services",
   "repo_attributes/commit_graph/in_memory_commit_graph_storage",
+  "repo_attributes/commit_graph/memwrites_commit_graph_storage",
   "repo_attributes/commit_graph/preloaded_commit_graph_storage",
   "repo_attributes/commit_graph/sql_commit_graph_storage",
   "repo_attributes/deletion_log",

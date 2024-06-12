@@ -40,6 +40,7 @@ use futures::StreamExt;
 use futures::TryFutureExt;
 use futures::TryStreamExt;
 use itertools::Itertools;
+use memwrites_commit_graph_storage::MemWritesCommitGraphStorage;
 use mononoke_types::ChangesetId;
 use mononoke_types::ChangesetIdPrefix;
 use mononoke_types::ChangesetIdsResolvedFromPrefix;
@@ -71,6 +72,12 @@ pub struct CommitGraph {
 impl CommitGraph {
     pub fn new(storage: Arc<dyn CommitGraphStorage>) -> CommitGraph {
         CommitGraph { storage }
+    }
+
+    pub fn with_memwrites_storage(self) -> Self {
+        Self {
+            storage: Arc::new(MemWritesCommitGraphStorage::new(self.storage)),
+        }
     }
 
     /// Add a new changeset to the commit graph.
