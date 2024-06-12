@@ -41,7 +41,7 @@ use edenapi_types::HgMutationEntryContent;
 use edenapi_types::HistoryEntry;
 use edenapi_types::LandStackResponse;
 use edenapi_types::LookupResponse;
-use edenapi_types::ReferencesData;
+use edenapi_types::ReferencesDataResponse;
 use edenapi_types::SaplingRemoteApiServerError;
 use edenapi_types::SetBookmarkResponse;
 use edenapi_types::SuffixQueryResponse;
@@ -385,7 +385,7 @@ pub trait SaplingRemoteApi: Send + Sync + 'static {
     async fn cloud_references(
         &self,
         data: GetReferencesParams,
-    ) -> Result<ReferencesData, SaplingRemoteApiError> {
+    ) -> Result<ReferencesDataResponse, SaplingRemoteApiError> {
         let _ = data;
         Err(SaplingRemoteApiError::NotSupported)
     }
@@ -393,7 +393,7 @@ pub trait SaplingRemoteApi: Send + Sync + 'static {
     async fn cloud_update_references(
         &self,
         data: UpdateReferencesParams,
-    ) -> Result<ReferencesData, SaplingRemoteApiError> {
+    ) -> Result<ReferencesDataResponse, SaplingRemoteApiError> {
         let _ = data;
         Err(SaplingRemoteApiError::NotSupported)
     }

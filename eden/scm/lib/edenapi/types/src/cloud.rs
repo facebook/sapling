@@ -14,6 +14,8 @@ use serde_derive::Serialize;
 use type_macros::auto_wire;
 use types::HgId;
 
+use crate::ServerError;
+
 #[auto_wire]
 #[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
 #[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
@@ -128,4 +130,14 @@ pub struct ClientInfo {
     pub reporoot: String,
     #[id(2)]
     pub version: u64,
+}
+
+#[auto_wire]
+#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Serialize, Deserialize)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
+pub struct ReferencesDataResponse {
+    #[id(0)]
+    #[no_default]
+    pub data: Result<ReferencesData, ServerError>,
 }

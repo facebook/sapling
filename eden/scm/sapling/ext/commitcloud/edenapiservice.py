@@ -44,7 +44,7 @@ class EdenApiService(baseservice.BaseService):
                 "client_info": None,
             }
         )
-        version = response["version"]
+        version = self._getversionfromdata(response)
 
         if version == 0:
             self.ui.debug(
@@ -67,6 +67,9 @@ class EdenApiService(baseservice.BaseService):
             % (version, baseversion),
             component="commitcloud",
         )
+        if "data" in response:
+            response = response["data"]["Ok"]
+
         return self._makereferences(self._castreferences(response))
 
     def updatereferences(
@@ -220,3 +223,13 @@ class EdenApiService(baseservice.BaseService):
         refs["snapshots"] = snapshots
         refs["heads"] = heads
         return refs
+
+    def _getversionfromdata(self, response):
+        if "data" in response:
+            if "Ok" in response["data"]:
+                version = response["data"]["Ok"]["version"]
+            else:
+                raise error.Abort(response["data"]["Err"]["message"])
+        else:
+            version = response["version"]
+        return version

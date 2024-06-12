@@ -76,6 +76,7 @@ pub use crate::bookmark::SetBookmarkResponse;
 pub use crate::cloud::CloudWorkspaceRequest;
 pub use crate::cloud::GetReferencesParams;
 pub use crate::cloud::ReferencesData;
+pub use crate::cloud::ReferencesDataResponse;
 pub use crate::cloud::UpdateReferencesParams;
 pub use crate::cloud::WorkspaceData;
 pub use crate::commit::make_hash_lookup_request;

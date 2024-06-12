@@ -27,25 +27,25 @@ setup repo
   $ mononoke_newadmin convert -R repo --from hg --to bonsai 20ca2a4749a439b459125ef0f6a4f26e88ee7538
   aa53d24251ff3f54b1b2c29ae02826701b2abeb0079f1bb13b8434b54cd87675
 
-
 Check response.
   $ hgedenapi debugapi -e cloudupdatereferences -i "{'workspace':'user/integrationtest/default','reponame':'repo','version':0, 'removed_heads':[], 'new_heads':[ '20ca2a4749a439b459125ef0f6a4f26e88ee7538'], 'updated_bookmarks':[('main', '20ca2a4749a439b459125ef0f6a4f26e88ee7538')], 'removed_bookmarks':[], 'new_snapshots':[], 'removed_snapshots':[]}"
-  {"heads": None,
-   "version": 1,
-   "bookmarks": None,
-   "snapshots": None,
-   "timestamp": *, (glob)
-   "heads_dates": None,
-   "remote_bookmarks": None}
+  {"data": {"Ok": {"heads": None,
+                   "version": 1,
+                   "bookmarks": None,
+                   "snapshots": None,
+                   "timestamp": *, (glob)
+                   "heads_dates": None,
+                   "remote_bookmarks": None}}}
 
   $ hgedenapi debugapi -e cloudreferences -i "{'workspace':'user/integrationtest/default','reponame':'repo','version':0}"
-  {"heads": [bin("20ca2a4749a439b459125ef0f6a4f26e88ee7538")],
-   "version": 1,
-   "bookmarks": {"main": bin("20ca2a4749a439b459125ef0f6a4f26e88ee7538")},
-   "snapshots": [],
-   "timestamp": *, (glob)
-   "heads_dates": {bin("20ca2a4749a439b459125ef0f6a4f26e88ee7538"): 0},
-   "remote_bookmarks": []}
+  {"data": {"Ok": {"heads": [bin("20ca2a4749a439b459125ef0f6a4f26e88ee7538")],
+                   "version": 1,
+                   "bookmarks": {"main": bin("20ca2a4749a439b459125ef0f6a4f26e88ee7538")},
+                   "snapshots": [],
+                   "timestamp": *, (glob)
+                   "heads_dates": {bin("20ca2a4749a439b459125ef0f6a4f26e88ee7538"): 0},
+                   "remote_bookmarks": []}}}
+
   $ hgedenapi debugapi -e cloudworkspace -i "'user/integrationtest/default'" -i "'repo'"
   {"name": "user/integrationtest/default",
    "version": 1,

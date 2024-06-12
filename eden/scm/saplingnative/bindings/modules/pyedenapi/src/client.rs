@@ -51,7 +51,7 @@ use edenapi_types::HgMutationEntryContent;
 use edenapi_types::HistoryEntry;
 use edenapi_types::Key;
 use edenapi_types::LandStackResponse;
-use edenapi_types::ReferencesData;
+use edenapi_types::ReferencesDataResponse;
 use edenapi_types::SetBookmarkResponse;
 use edenapi_types::SnapshotRawData;
 use edenapi_types::SuffixQueryResponse;
@@ -557,13 +557,13 @@ py_class!(pub class client |py| {
     }
 
     def cloudreferences(&self, data: Serde<GetReferencesParams>)
-        -> PyResult<Serde<ReferencesData>>
+        -> PyResult<Serde<ReferencesDataResponse>>
     {
         self.inner(py).as_ref().cloud_references_py(data, py)
     }
 
     def cloudupdatereferences(&self, data: Serde<UpdateReferencesParams>)
-        -> PyResult<Serde<ReferencesData>>
+        -> PyResult<Serde<ReferencesDataResponse>>
     {
         self.inner(py).as_ref().cloud_update_references_py(data, py)
     }

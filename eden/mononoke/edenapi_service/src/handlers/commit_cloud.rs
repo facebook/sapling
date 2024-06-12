@@ -5,11 +5,13 @@
  * GNU General Public License version 2.
  */
 
+use anyhow::Error;
 use async_trait::async_trait;
+use edenapi_types::cloud::ReferencesDataResponse;
 use edenapi_types::cloud::WorkspaceData;
 use edenapi_types::CloudWorkspaceRequest;
 use edenapi_types::GetReferencesParams;
-use edenapi_types::ReferencesData;
+use edenapi_types::ServerError;
 use edenapi_types::UpdateReferencesParams;
 use futures::stream;
 use futures::FutureExt;
@@ -69,7 +71,7 @@ async fn get_workspace(
 #[async_trait]
 impl SaplingRemoteApiHandler for CommitCloudReferences {
     type Request = GetReferencesParams;
-    type Response = ReferencesData;
+    type Response = ReferencesDataResponse;
 
     const HTTP_METHOD: hyper::Method = hyper::Method::POST;
     const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::CloudReferences;
@@ -88,14 +90,19 @@ impl SaplingRemoteApiHandler for CommitCloudReferences {
 async fn get_references(
     request: GetReferencesParams,
     repo: HgRepoContext,
-) -> anyhow::Result<ReferencesData> {
-    Ok(repo.cloud_references(request).await?)
+) -> anyhow::Result<ReferencesDataResponse, Error> {
+    Ok(ReferencesDataResponse {
+        data: repo
+            .cloud_references(request)
+            .await
+            .map_err(ServerError::from),
+    })
 }
 
 #[async_trait]
 impl SaplingRemoteApiHandler for CommitCloudUpdateReferences {
     type Request = UpdateReferencesParams;
-    type Response = ReferencesData;
+    type Response = ReferencesDataResponse;
 
     const HTTP_METHOD: hyper::Method = hyper::Method::POST;
     const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::CloudUpdateReferences;
@@ -114,6 +121,11 @@ impl SaplingRemoteApiHandler for CommitCloudUpdateReferences {
 async fn update_references(
     request: UpdateReferencesParams,
     repo: HgRepoContext,
-) -> anyhow::Result<ReferencesData> {
-    Ok(repo.cloud_update_references(request).await?)
+) -> anyhow::Result<ReferencesDataResponse, Error> {
+    Ok(ReferencesDataResponse {
+        data: repo
+            .cloud_update_references(request)
+            .await
+            .map_err(ServerError::from),
+    })
 }

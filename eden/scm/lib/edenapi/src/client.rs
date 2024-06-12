@@ -72,7 +72,7 @@ use edenapi_types::LookupRequest;
 use edenapi_types::LookupResponse;
 use edenapi_types::LookupResult;
 use edenapi_types::PushVar;
-use edenapi_types::ReferencesData;
+use edenapi_types::ReferencesDataResponse;
 use edenapi_types::SaplingRemoteApiServerError;
 use edenapi_types::ServerError;
 use edenapi_types::SetBookmarkRequest;
@@ -1674,27 +1674,27 @@ impl SaplingRemoteApi for Client {
     async fn cloud_references(
         &self,
         data: GetReferencesParams,
-    ) -> Result<ReferencesData, SaplingRemoteApiError> {
+    ) -> Result<ReferencesDataResponse, SaplingRemoteApiError> {
         let url = self.build_url(paths::CLOUD_REFERENCES)?;
         let request = self
             .configure_request(self.inner.client.post(url))?
             .cbor(&data.to_wire())
             .map_err(SaplingRemoteApiError::RequestSerializationFailed)?;
 
-        self.fetch_single::<ReferencesData>(request).await
+        self.fetch_single::<ReferencesDataResponse>(request).await
     }
 
     async fn cloud_update_references(
         &self,
         data: UpdateReferencesParams,
-    ) -> Result<ReferencesData, SaplingRemoteApiError> {
+    ) -> Result<ReferencesDataResponse, SaplingRemoteApiError> {
         let url = self.build_url(paths::CLOUD_UPDATE_REFERENCES)?;
         let request = self
             .configure_request(self.inner.client.post(url))?
             .cbor(&data.to_wire())
             .map_err(SaplingRemoteApiError::RequestSerializationFailed)?;
 
-        self.fetch_single::<ReferencesData>(request).await
+        self.fetch_single::<ReferencesDataResponse>(request).await
     }
 
     async fn suffix_query(

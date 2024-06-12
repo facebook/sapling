@@ -50,7 +50,7 @@ use edenapi_types::HistoryEntry;
 use edenapi_types::IndexableId;
 use edenapi_types::LandStackResponse;
 use edenapi_types::LookupResult;
-use edenapi_types::ReferencesData;
+use edenapi_types::ReferencesDataResponse;
 use edenapi_types::SaplingRemoteApiServerError;
 use edenapi_types::SetBookmarkResponse;
 use edenapi_types::TreeAttributes;
@@ -731,7 +731,7 @@ pub trait SaplingRemoteApiPyExt: SaplingRemoteApi {
         &self,
         data: Serde<GetReferencesParams>,
         py: Python,
-    ) -> PyResult<Serde<ReferencesData>> {
+    ) -> PyResult<Serde<ReferencesDataResponse>> {
         py.allow_threads(|| block_unless_interrupted(self.cloud_references(data.0)))
             .map_pyerr(py)?
             .map_pyerr(py)
@@ -742,7 +742,7 @@ pub trait SaplingRemoteApiPyExt: SaplingRemoteApi {
         &self,
         data: Serde<UpdateReferencesParams>,
         py: Python,
-    ) -> PyResult<Serde<ReferencesData>> {
+    ) -> PyResult<Serde<ReferencesDataResponse>> {
         let responses = py
             .allow_threads(|| block_unless_interrupted(self.cloud_update_references(data.0)))
             .map_pyerr(py)?
