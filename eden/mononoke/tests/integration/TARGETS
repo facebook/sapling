@@ -41,7 +41,6 @@ buck_filegroup(
 )
 
 python_binary(
-    # @autodeps-skip
     name = "integration_runner_real",
     srcs = ["integration_runner_real.py"],
     main_function = "eden.mononoke.tests.integration.integration_runner_real.run",
