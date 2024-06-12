@@ -6,12 +6,14 @@
  */
 
 use std::any::Any;
+use std::borrow::Cow;
 use std::cmp::Ordering;
 use std::fmt;
 
 use futures::StreamExt;
 
 use super::hints::Flags;
+use super::id_static::IdStaticSet;
 use super::AsyncNameSetQuery;
 use super::BoxVertexStream;
 use super::Hints;
@@ -234,6 +236,13 @@ impl AsyncNameSetQuery for IntersectionSet {
 
     fn hints(&self) -> &Hints {
         &self.hints
+    }
+
+    fn specialized_flatten_id(&self) -> Option<Cow<IdStaticSet>> {
+        let lhs = self.lhs.specialized_flatten_id()?;
+        let rhs = self.rhs.specialized_flatten_id()?;
+        let result = IdStaticSet::from_edit_spans(&lhs, &rhs, |a, b| a.intersection(b))?;
+        Some(Cow::Owned(result))
     }
 }
 

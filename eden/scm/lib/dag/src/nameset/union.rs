@@ -6,6 +6,7 @@
  */
 
 use std::any::Any;
+use std::borrow::Cow;
 use std::fmt;
 use std::task::Poll;
 
@@ -14,6 +15,7 @@ use futures::StreamExt;
 use serde::Deserialize;
 
 use super::hints::Flags;
+use super::id_static::IdStaticSet;
 use super::AsyncNameSetQuery;
 use super::BoxVertexStream;
 use super::Hints;
@@ -169,6 +171,17 @@ impl AsyncNameSetQuery for UnionSet {
 
     fn hints(&self) -> &Hints {
         &self.hints
+    }
+
+    fn specialized_flatten_id(&self) -> Option<Cow<IdStaticSet>> {
+        let mut result = self.sets[0].specialized_flatten_id()?;
+        for set in &self.sets[1..] {
+            let other = set.specialized_flatten_id()?;
+            result = Cow::Owned(IdStaticSet::from_edit_spans(&result, &other, |a, b| {
+                a.union(b)
+            })?);
+        }
+        Some(result)
     }
 }
 

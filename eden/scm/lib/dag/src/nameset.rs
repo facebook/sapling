@@ -10,6 +10,7 @@
 //! See [`NameSet`] for the main structure.
 
 use std::any::Any;
+use std::borrow::Cow;
 use std::cmp;
 use std::fmt;
 use std::fmt::Debug;
@@ -440,6 +441,8 @@ impl NameSet {
     /// Convert the current set into a flat static set so it can be used in some
     /// fast paths. This is useful for some common sets like `obsolete()` that
     /// might be represented by a complex expression.
+    ///
+    /// By flattening, the iteration order might be lost.
     pub async fn flatten(&self) -> Result<NameSet> {
         match (self.id_map(), self.dag()) {
             (Some(id_map), Some(dag)) => {
@@ -454,6 +457,8 @@ impl NameSet {
     }
 
     /// Convert this set to a static id set.
+    ///
+    /// By flattening, the iteration order might be lost.
     pub async fn flatten_id(
         &self,
         id_map: Arc<dyn IdConvert + Send + Sync>,
@@ -661,6 +666,11 @@ pub trait AsyncNameSetQuery: Any + Debug + Send + Sync {
     /// Returns `None` to use the general purpose implementation.
     fn specialized_skip(&self, n: u64) -> Option<NameSet> {
         let _ = n;
+        None
+    }
+
+    /// Specialized "flatten_id" implementation.
+    fn specialized_flatten_id(&self) -> Option<Cow<IdStaticSet>> {
         None
     }
 }
@@ -1405,6 +1415,18 @@ pub(crate) mod tests {
             "contains_fast() should not return true for names not returned by iter() (set: {:?})",
             &query
         );
+        if let Some(flatten_id) = query.specialized_flatten_id() {
+            let iter = r(AsyncNameSetQuery::iter(&*flatten_id))?;
+            let mut flatten_names = r(iter.try_collect::<Vec<_>>())?;
+            flatten_names.sort_unstable();
+            let mut sorted_names = names.clone();
+            sorted_names.sort_unstable();
+            assert_eq!(
+                &sorted_names, &flatten_names,
+                "specialized_flatten_id() should return a same set, order could be different (set: {:?})",
+                &query
+            );
+        }
         let reversed: Vec<VertexName> = ni(query.iter_rev())?.collect::<Result<Vec<_>>>()?;
         if let Some(reversed_set) = query.specialized_reverse() {
             let iter = reversed_set.iter()?;

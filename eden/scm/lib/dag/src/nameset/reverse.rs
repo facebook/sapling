@@ -6,9 +6,11 @@
  */
 
 use std::any::Any;
+use std::borrow::Cow;
 use std::fmt;
 
 use super::hints::Flags;
+use super::id_static::IdStaticSet;
 use super::AsyncNameSetQuery;
 use super::BoxVertexStream;
 use super::Hints;
@@ -92,6 +94,12 @@ impl AsyncNameSetQuery for ReverseSet {
 
     fn specialized_reverse(&self) -> Option<NameSet> {
         Some(self.inner.clone())
+    }
+
+    fn specialized_flatten_id(&self) -> Option<Cow<IdStaticSet>> {
+        let inner = self.inner.specialized_flatten_id()?;
+        let result = inner.into_owned().reversed();
+        Some(Cow::Owned(result))
     }
 }
 

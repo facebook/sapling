@@ -6,6 +6,8 @@
  */
 
 use std::any::Any;
+use std::borrow::Cow;
+use std::cmp;
 use std::fmt;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
@@ -191,6 +193,30 @@ impl IdStaticSet {
         }
     }
 
+    /// If `lhs` and `rhs` are compatible, return a new IdStaticSet with:
+    /// - `map` and `dag` set to the newer version of `lhs` and `rhs`.
+    /// - `spans` set to `edit_spans(&lhs.spans, &rhs.spans)`.
+    /// Otherwise return `None`.
+    pub(crate) fn from_edit_spans(
+        lhs: &Self,
+        rhs: &Self,
+        edit_spans: fn(&IdSet, &IdSet) -> IdSet,
+    ) -> Option<Self> {
+        let order = lhs.map.map_version().partial_cmp(rhs.map.map_version())?;
+        let spans = edit_spans(&lhs.spans, &rhs.spans);
+        let picked = match order {
+            cmp::Ordering::Less => rhs,
+            cmp::Ordering::Greater | cmp::Ordering::Equal => lhs,
+        };
+        let (map, dag) = (picked.map.clone(), picked.dag.clone());
+        let mut result = Self::from_spans_idmap_dag(spans, map, dag);
+        // Match iteration order of the left side.
+        if lhs.is_reversed() {
+            result = result.reversed();
+        }
+        Some(result)
+    }
+
     /// Change the iteration order between (DESC default) and ASC.
     pub fn reversed(mut self) -> Self {
         self.reversed = !self.reversed;
@@ -344,6 +370,11 @@ impl AsyncNameSetQuery for IdStaticSet {
         Some(NameSet::from_query(
             self.clone().slice_spans(skip, u64::MAX),
         ))
+    }
+
+    /// Specialized "flatten_id" implementation.
+    fn specialized_flatten_id(&self) -> Option<Cow<IdStaticSet>> {
+        Some(Cow::Borrowed(self))
     }
 }
 

@@ -6,6 +6,7 @@
  */
 
 use std::any::Any;
+use std::borrow::Cow;
 use std::collections::HashSet;
 use std::fmt;
 use std::sync::atomic::AtomicBool;
@@ -22,6 +23,7 @@ use tracing::trace;
 use tracing::Level;
 
 use super::hints::Flags;
+use super::id_static::IdStaticSet;
 use super::AsyncNameSetQuery;
 use super::BoxVertexStream;
 use super::Hints;
@@ -339,6 +341,28 @@ impl AsyncNameSetQuery for SliceSet {
 
     fn hints(&self) -> &Hints {
         &self.hints
+    }
+
+    fn specialized_flatten_id(&self) -> Option<Cow<IdStaticSet>> {
+        // Attention! `inner` might have lost order. So we might not have a fast path.
+        // For example, this is flawed:
+        let inner = self.inner.specialized_flatten_id()?.into_owned();
+        let sensitive_flags = Flags::ID_DESC | Flags::ID_ASC;
+        let expected_flags = self.hints().flags() & sensitive_flags;
+        let mut can_use_fast_path = true;
+        if self.skip_count == 0 && inner.spans.count() <= self.take_count.unwrap_or(u64::MAX) {
+            can_use_fast_path = true
+        } else if expected_flags.is_empty() {
+            can_use_fast_path = false;
+        } else if (inner.hints().flags() & sensitive_flags) != expected_flags {
+            can_use_fast_path = false;
+        }
+        if can_use_fast_path {
+            let result = inner.slice_spans(self.skip_count, self.take_count.unwrap_or(u64::MAX));
+            Some(Cow::Owned(result))
+        } else {
+            None
+        }
     }
 }
 
