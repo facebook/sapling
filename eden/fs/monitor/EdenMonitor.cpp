@@ -26,6 +26,11 @@
 #include <systemd/sd-daemon.h> // @manual
 #endif
 
+#ifndef _WIN32
+#include <sys/types.h>
+#include <sys/wait.h>
+#endif
+
 using apache::thrift::HeaderClientChannel;
 using folly::AsyncSocket;
 using folly::Future;
@@ -253,6 +258,16 @@ void EdenMonitor::signalReceived(int sig) {
     case SIGCHLD:
       XLOG(DBG2) << "got SIGCHLD";
       edenfs_->checkLiveness();
+#ifndef _WIN32
+      {
+        // Clean up zombie processes (ex. `sl debugrefreshconfig`).
+        int status;
+        pid_t pid;
+        while ((pid = waitpid(-1, &status, WNOHANG)) > 0) {
+          XLOG(DBG3) << "waited pid " << pid << " status " << status;
+        }
+      }
+#endif
       return;
     case SIGHUP:
       performSelfRestart();
