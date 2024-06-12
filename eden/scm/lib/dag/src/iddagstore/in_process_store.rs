@@ -34,8 +34,7 @@ use crate::Result;
 
 #[derive(Clone)]
 pub struct InProcessStore {
-    master_segments: Vec<Segment>,
-    non_master_segments: Vec<Segment>,
+    segments: [Vec<Segment>; Group::COUNT],
     // level -> head -> serialized Segment
     level_head_index: Vec<BTreeMap<Id, StoreId>>,
     // (child-group, parent) -> child (in a flat segment).
@@ -52,6 +51,7 @@ pub struct InProcessStore {
 enum StoreId {
     Master(usize),
     NonMaster(usize),
+    Virtual(usize),
 }
 
 impl IdDagStore for InProcessStore {
@@ -132,12 +132,16 @@ impl IdDagStore for InProcessStore {
 
         let store_id = match high.group() {
             Group::MASTER => {
-                self.master_segments.push(segment);
-                StoreId::Master(self.master_segments.len() - 1)
+                self.segments[0].push(segment);
+                StoreId::Master(self.segments[0].len() - 1)
+            }
+            Group::NON_MASTER => {
+                self.segments[1].push(segment);
+                StoreId::NonMaster(self.segments[1].len() - 1)
             }
             _ => {
-                self.non_master_segments.push(segment);
-                StoreId::NonMaster(self.non_master_segments.len() - 1)
+                self.segments[2].push(segment);
+                StoreId::Virtual(self.segments[2].len() - 1)
             }
         };
         if level == 0 {
@@ -350,15 +354,17 @@ impl InProcessStore {
 
     fn get_segment(&self, store_id: &StoreId) -> Segment {
         match store_id {
-            &StoreId::Master(offset) => self.master_segments[offset].clone(),
-            &StoreId::NonMaster(offset) => self.non_master_segments[offset].clone(),
+            &StoreId::Master(offset) => self.segments[0][offset].clone(),
+            &StoreId::NonMaster(offset) => self.segments[1][offset].clone(),
+            &StoreId::Virtual(offset) => self.segments[2][offset].clone(),
         }
     }
 
     fn set_segment(&mut self, store_id: &StoreId, segment: Segment) {
         match store_id {
-            &StoreId::Master(offset) => self.master_segments[offset] = segment,
-            &StoreId::NonMaster(offset) => self.non_master_segments[offset] = segment,
+            &StoreId::Master(offset) => self.segments[0][offset] = segment,
+            &StoreId::NonMaster(offset) => self.segments[1][offset] = segment,
+            &StoreId::Virtual(offset) => self.segments[2][offset] = segment,
         }
     }
 }
@@ -366,8 +372,7 @@ impl InProcessStore {
 impl InProcessStore {
     pub fn new() -> Self {
         InProcessStore {
-            master_segments: Vec::new(),
-            non_master_segments: Vec::new(),
+            segments: [Vec::new(), Vec::new(), Vec::new()],
             level_head_index: Vec::new(),
             parent_index: BTreeMap::new(),
             id_set_by_group: [IdSet::empty(), IdSet::empty(), IdSet::empty()],
@@ -382,15 +387,14 @@ impl Serialize for InProcessStore {
         S: Serializer,
     {
         let mut seq = serializer.serialize_seq(Some(
-            self.master_segments.len() + self.non_master_segments.len()
-                - self.removed_store_ids.len(),
+            self.segments[0].len() + self.segments[1].len() - self.removed_store_ids.len(),
         ))?;
-        for (i, e) in self.master_segments.iter().enumerate() {
+        for (i, e) in self.segments[0].iter().enumerate() {
             if !self.removed_store_ids.contains(&StoreId::Master(i)) {
                 seq.serialize_element(e)?;
             }
         }
-        for (i, e) in self.non_master_segments.iter().enumerate() {
+        for (i, e) in self.segments[1].iter().enumerate() {
             if !self.removed_store_ids.contains(&StoreId::NonMaster(i)) {
                 seq.serialize_element(e)?;
             }
