@@ -17,6 +17,7 @@ use type_macros::auto_wire;
 use types::hgid::HgId;
 use types::key::Key;
 use types::parents::Parents;
+use types::AugmentedTreeEntry;
 
 use crate::DirectoryMetadata;
 use crate::FileMetadata;
@@ -175,6 +176,12 @@ impl TreeChildEntry {
             key,
             directory_metadata: Some(metadata),
         })
+    }
+}
+
+impl From<AugmentedTreeEntry> for TreeEntry {
+    fn from(_aug_tree: AugmentedTreeEntry) -> Self {
+        unimplemented!("TreeEntry::from(AugmentedTreeEntry) is not implemented");
     }
 }
 
