@@ -6,6 +6,8 @@
  */
 
 use std::collections::HashMap;
+use std::ops::Deref;
+use std::ops::DerefMut;
 use std::sync::Arc;
 use std::sync::Mutex;
 
@@ -452,6 +454,20 @@ impl TestDag {
             let v2 = self.dag.vertex_name(id).await.unwrap();
             assert_eq!(v, v2);
         }
+    }
+}
+
+impl Deref for TestDag {
+    type Target = NameDag;
+
+    fn deref(&self) -> &Self::Target {
+        &self.dag
+    }
+}
+
+impl DerefMut for TestDag {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.dag
     }
 }
 
