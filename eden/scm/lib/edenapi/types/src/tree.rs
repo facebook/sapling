@@ -71,6 +71,7 @@ pub struct TreeEntry {
     pub data: Option<Bytes>,
     pub parents: Option<Parents>,
     pub children: Option<Vec<Result<TreeChildEntry, SaplingRemoteApiServerError>>>,
+    pub directory_metadata: Option<DirectoryMetadata>,
 }
 
 impl TreeEntry {
@@ -96,6 +97,11 @@ impl TreeEntry {
         children: Option<Vec<Result<TreeChildEntry, SaplingRemoteApiServerError>>>,
     ) -> &'a mut Self {
         self.children = children;
+        self
+    }
+
+    pub fn with_directory_metadata(mut self, directory_metadata: DirectoryMetadata) -> Self {
+        self.directory_metadata = Some(directory_metadata);
         self
     }
 
@@ -147,6 +153,10 @@ impl TreeEntry {
     /// Get this entry's data without verifying the hgid hash.
     pub fn data_unchecked(&self) -> Option<Bytes> {
         self.data.clone()
+    }
+
+    pub fn directory_metadata(&self) -> Option<&DirectoryMetadata> {
+        self.directory_metadata.as_ref()
     }
 }
 
@@ -254,6 +264,7 @@ impl Arbitrary for TreeEntry {
             parents: Arbitrary::arbitrary(g),
             // Recursive TreeEntry in children causes stack overflow in QuickCheck
             children: None,
+            directory_metadata: None,
         }
     }
 }

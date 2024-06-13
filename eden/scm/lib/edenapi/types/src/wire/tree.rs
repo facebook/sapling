@@ -49,6 +49,9 @@ pub struct WireTreeEntry {
 
     #[serde(rename = "4", default, skip_serializing_if = "is_default")]
     pub error: Option<WireSaplingRemoteApiServerError>,
+
+    #[serde(rename = "5", default, skip_serializing_if = "is_default")]
+    pub directory_metadata: Option<WireDirectoryMetadata>,
 }
 
 impl ToWire for Result<TreeEntry, SaplingRemoteApiServerError> {
@@ -62,6 +65,7 @@ impl ToWire for Result<TreeEntry, SaplingRemoteApiServerError> {
                 parents: t.parents.to_wire(),
                 children: t.children.to_wire(),
                 error: None,
+                directory_metadata: t.directory_metadata.to_wire(),
             },
             Err(e) => WireTreeEntry {
                 key: e.key.to_wire(),
@@ -91,6 +95,7 @@ impl ToApi for WireTreeEntry {
                 data: self.data,
                 parents: self.parents.to_api()?,
                 children: self.children.to_api()?,
+                directory_metadata: self.directory_metadata.to_api()?,
             })
         })
     }
@@ -289,6 +294,7 @@ impl Arbitrary for WireTreeEntry {
             children: None,
             // TODO
             error: None,
+            directory_metadata: Arbitrary::arbitrary(g),
         }
     }
 }
