@@ -5,8 +5,12 @@
  * GNU General Public License version 2.
  */
 
+use std::io::BufRead;
 use std::io::Result;
 use std::io::Write;
+
+use anyhow::anyhow;
+use anyhow::Error;
 
 use crate::Blake3;
 use crate::FileType;
@@ -14,7 +18,7 @@ use crate::HgId;
 use crate::Id20;
 use crate::RepoPathBuf;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct AugmentedFileNode {
     pub file_type: FileType,
     pub filenode: HgId,
@@ -30,7 +34,7 @@ pub struct AugmentedDirectoryNode {
     pub augmented_manifest_size: u64,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum AugmentedTreeChildEntry {
     FileNode(AugmentedFileNode),
     DirectoryNode(AugmentedDirectoryNode),
@@ -50,10 +54,10 @@ impl AugmentedTreeEntry {
         for (path, subentry) in self.subentries.iter() {
             capacity += path.len() + 2;
             match subentry {
-                AugmentedTreeChildEntry::DirectoryNode(directory) => {
+                AugmentedTreeChildEntry::DirectoryNode(_) => {
                     capacity += HgId::hex_len() + 1;
                 }
-                AugmentedTreeChildEntry::FileNode(file) => {
+                AugmentedTreeChildEntry::FileNode(_) => {
                     capacity += HgId::hex_len();
                 }
             };
@@ -77,5 +81,254 @@ impl AugmentedTreeEntry {
             w.write_all(b"\n")?;
         }
         Ok(())
+    }
+
+    // The format of the content addressed manifest blob is as follows:
+    //
+    // entry ::= <path> '\0' <hg-node-hex> <type> ' ' <entry-value> '\n'
+    //
+    // entry-value ::= <cas-blake3-hex> ' ' <size-dec> ' ' <sha1-hex>
+    //               | <cas-blake3-hex> ' ' <size-dec>
+    //
+    // tree ::= <version> ' ' <sha1-hex> ' ' <computed_sha1-hex (if different) or '-'> ' ' <p1-hex or '-'> ' ' <p2-hex or '-'> '\n' <entry>*
+
+    /// Constructs an AugmentedTreeEntry from serialised blob in the format used by Mononoke to store the Augmented Trees in CAS.
+    pub fn try_deserialize(mut reader: impl BufRead) -> anyhow::Result<Self, Error> {
+        let mut line = String::new();
+        reader.read_line(&mut line)?;
+        let mut header = line.split(' ');
+
+        let version = header
+            .next()
+            .ok_or(anyhow!("augmented tree: missing version"))?;
+        if version != "v1" {
+            return Err(anyhow!("augmented tree: unsupported version"));
+        }
+
+        let hg_node_id = HgId::from_hex(
+            header
+                .next()
+                .ok_or(anyhow!("augmented tree: missing node id"))?
+                .as_ref(),
+        )?;
+
+        // Sapling do not use computed nodeid.
+        let _computed_nodeid = header
+            .next()
+            .ok_or(anyhow!("augmented tree: missing computed node id"))?;
+
+        let p1 = header.next().ok_or(anyhow!("augmented tree: missing p1"))?;
+        let p1 = if p1 == "-" {
+            None
+        } else {
+            Some(HgId::from_hex(p1.as_ref())?)
+        };
+
+        let p2 = header
+            .next()
+            .ok_or(anyhow!("augmented tree: missing p2"))?
+            .trim();
+        let p2 = if p2 == "-" {
+            None
+        } else {
+            Some(HgId::from_hex(p2.as_ref())?)
+        };
+
+        anyhow::Ok(Self {
+            hg_node_id,
+            p1,
+            p2,
+            subentries: reader
+                .lines()
+                .map(|line| {
+                    let line = line?;
+                    let line = line.trim();
+                    let mut parts = line.split(' ');
+                    let idpath = parts.next().ok_or(anyhow!(
+                        "augmented tree: missing path/id part in a child entry"
+                    ))?;
+                    let (path, id) = idpath
+                        .split_once('\0')
+                        .ok_or(anyhow!("augmented tree: invalid format of a child entry"))?;
+
+                    let mut id = id.to_string();
+                    let path = RepoPathBuf::from_utf8(path.into())?;
+                    let flag = id.pop().ok_or(anyhow!(
+                        "augmented tree: missing flag part in a child entry"
+                    ))?;
+                    let hgid = HgId::from_hex(id.as_ref())?;
+                    let blake3 = parts.next().ok_or(anyhow!(
+                        "augmented tree: missing blake3 part in a child entry"
+                    ))?;
+                    let blake3 = Blake3::from_hex(blake3.as_ref())?;
+
+                    let size = parts
+                        .next()
+                        .ok_or(anyhow!(
+                            "augmented tree: missing size part in a child entry"
+                        ))?
+                        .trim();
+                    let size = size.parse::<u64>()?;
+
+                    match flag {
+                        'r' => {
+                            let sha1 = parts
+                                .next()
+                                .ok_or(anyhow!(
+                                    "augmented tree: missing sha1 part in a child entry"
+                                ))?
+                                .trim();
+
+                            let sha1 = Id20::from_hex(sha1.as_ref())?;
+
+                            Ok((
+                                path,
+                                AugmentedTreeChildEntry::FileNode(AugmentedFileNode {
+                                    file_type: FileType::Regular,
+                                    filenode: hgid,
+                                    content_blake3: blake3,
+                                    content_sha1: sha1,
+                                    total_size: size,
+                                }),
+                            ))
+                        }
+                        't' => Ok((
+                            path,
+                            AugmentedTreeChildEntry::DirectoryNode(AugmentedDirectoryNode {
+                                treenode: hgid,
+                                augmented_manifest_id: blake3,
+                                augmented_manifest_size: size,
+                            }),
+                        )),
+                        _ => Err(anyhow!("augmented tree: invalid flag in a child entry")),
+                    }
+                })
+                .collect::<anyhow::Result<Vec<(RepoPathBuf, AugmentedTreeChildEntry)>, Error>>()?,
+        })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use assert_matches::assert_matches;
+
+    use super::*;
+
+    #[test]
+    fn test_augmented_manifest_parsing() {
+        let mut reader = std::io::Cursor::new(concat!(
+            "v1 1111111111111111111111111111111111111111 - 2222222222222222222222222222222222222222 3333333333333333333333333333333333333333\n",
+            "a.rs\x004444444444444444444444444444444444444444r 4444444444444444444444444444444444444444444444444444444444444444 10 4444444444444444444444444444444444444444\n",
+            "b.rs\x002222222222222222222222222222222222222222r 2222222222222222222222222222222222222222222222222222222222222222 1000 2121212121212121212121212121212121212121\n",
+            "dir_1\x003333333333333333333333333333333333333333t 3333333333333333333333333333333333333333333333333333333333333333 10\n",
+            "dir_2\x001111111111111111111111111111111111111111t 1111111111111111111111111111111111111111111111111111111111111111 10000\n"
+        ));
+        let augmented_tree_entry =
+            AugmentedTreeEntry::try_deserialize(&mut reader).expect("parsing failed");
+
+        assert_eq!(augmented_tree_entry.subentries.len(), 4);
+        let mut buf: Vec<u8> = Vec::with_capacity(1024);
+        augmented_tree_entry
+            .write_sapling_tree_blob(&mut buf)
+            .expect("writing failed");
+        assert_eq!(
+            std::str::from_utf8(&buf),
+            Ok(concat!(
+                "a.rs\x004444444444444444444444444444444444444444\n",
+                "b.rs\x002222222222222222222222222222222222222222\n",
+                "dir_1\x00t3333333333333333333333333333333333333333\n",
+                "dir_2\x00t1111111111111111111111111111111111111111\n"
+            ))
+        );
+        // validate that the size calculation is correct
+        assert_eq!(buf.len(), augmented_tree_entry.sapling_tree_blob_size());
+    }
+
+    #[test]
+    fn test_augmented_manifest_parsing_2() {
+        // test on a real example from the repo
+        let mut reader = std::io::Cursor::new(concat!(
+            "v1 2d6429cc6d9576d412493d30c700c58a4ac38fbe - 5d09d8b81f6c097d294cb081389428baa9ef96f4 -\n",
+            "AssetWithZoneReclassifications.php\x002f09c0be8738b7256452133d790cc39f9da885b8r 8b2e323f74febd9dce4583c5af41b76d6cc79c8fc87b2400aa090df5af497a35 1137 7a207d1d8ae552303b111bd6030b074a673b918f\n",
+            "ZoneAssetReclassificationsAnnotation.php\x00a7006d0256d90b83b8e8834e3a8d74a57f669364r c3bb30c1b5462c56d178c457a43a30655c305780ae5b2b6fd5711a9288ddd5ae 2940 ba9327007f237bd7f2453ff02aadc1449ac483b9\n",
+            "ZonePolicySetGenerator.php\x0032c4117a356ddd5a284dd55866e4c609e4002c99r eb0c0415ecb4c5461eda8cd52b0d8a5a4bad3ea8bad56b9ad5e6f78ded05de35 6569 b67a3f5383d979f780844812b947b77b4348e475\n",
+            "__tests__\x009f0e8ffab4c1e1adfdea446d3c91b3c8ad525685t 8be9967f8ce1a6c8799f372acb81f57208a7eee78a6e60b6fa6426785fee31d6 248\n",
+            "bounded_policies\x00e057d09012b275e5aa8f3d31ecb334ea7bd0e2dft 79d40367d5845d90c764b4febd8f4671d84645ca749156e11bdf4ed4683fdf3d 274\n",
+            "config\x00ef0295d493a767db31bd2ad6e3c118a5ec2dc094t c1ca36f561ced429b3fdcbb46ea9959cd0db0f1d8c2a06a217aefcacdec53656 1139\n",
+            "enforcement\x00519f107814932a6aaedf68e82a673710461c1a16t 7f275e452b69bdec740341663d123665d48d68ef20d3fd64bf66747c9cd291b3 1872\n",
+            "integration\x0019ff1a891b88dad37743bb22fe29709b15ac195dt 1657e8938e7b48109879d1fcc649c80384e7dcec735bc7361dae86677f6b888f 415\n",
+            "reclassifications\x00f1e2432047947bb339f2d6a2608eca729703bb65t a35546f72429461323d102a6ddfca129e8c7b74fd7cb9b76ec0efa9b4abf250d 649\n",
+            "row_level_policy\x000238567d1c15525d8b2f2d366bd4aa306e20d8dft 3291f1c1ae09629423da93672b2fc52f009ab372a68d57844fef6d7c523d4527 937\n"
+        ));
+        let augmented_tree_entry =
+            AugmentedTreeEntry::try_deserialize(&mut reader).expect("parsing failed");
+
+        assert_eq!(augmented_tree_entry.subentries.len(), 10);
+        assert_eq!(
+            augmented_tree_entry.hg_node_id,
+            HgId::from_hex(b"2d6429cc6d9576d412493d30c700c58a4ac38fbe").unwrap()
+        );
+        assert_eq!(
+            augmented_tree_entry.p1,
+            Some(HgId::from_hex(b"5d09d8b81f6c097d294cb081389428baa9ef96f4").unwrap())
+        );
+        let first_child = augmented_tree_entry.subentries.first().unwrap();
+        assert_eq!(
+            first_child.0,
+            RepoPathBuf::from_utf8(r"AssetWithZoneReclassifications.php".into()).unwrap()
+        );
+        assert_matches!(first_child.1, AugmentedTreeChildEntry::FileNode(_));
+        assert_matches!(
+            augmented_tree_entry
+                .subentries
+                .get(2)
+                .expect("index 2 out of range")
+                .1,
+            AugmentedTreeChildEntry::FileNode(_)
+        );
+        assert_matches!(
+            augmented_tree_entry
+                .subentries
+                .get(3)
+                .expect("index 3 out of range")
+                .1,
+            AugmentedTreeChildEntry::DirectoryNode(_)
+        );
+        assert_eq!(
+            augmented_tree_entry
+                .subentries
+                .get(3)
+                .expect("index 3 out of range")
+                .1,
+            AugmentedTreeChildEntry::DirectoryNode(AugmentedDirectoryNode {
+                treenode: HgId::from_hex(b"9f0e8ffab4c1e1adfdea446d3c91b3c8ad525685").unwrap(),
+                augmented_manifest_id: Blake3::from_hex(
+                    b"8be9967f8ce1a6c8799f372acb81f57208a7eee78a6e60b6fa6426785fee31d6"
+                )
+                .unwrap(),
+                augmented_manifest_size: 248,
+            })
+        );
+
+        let mut buf: Vec<u8> = Vec::with_capacity(1024);
+        augmented_tree_entry
+            .write_sapling_tree_blob(&mut buf)
+            .expect("writing failed");
+        assert_eq!(
+            std::str::from_utf8(&buf),
+            Ok(concat!(
+                "AssetWithZoneReclassifications.php\x002f09c0be8738b7256452133d790cc39f9da885b8\n",
+                "ZoneAssetReclassificationsAnnotation.php\x00a7006d0256d90b83b8e8834e3a8d74a57f669364\n",
+                "ZonePolicySetGenerator.php\x0032c4117a356ddd5a284dd55866e4c609e4002c99\n",
+                "__tests__\x00t9f0e8ffab4c1e1adfdea446d3c91b3c8ad525685\n",
+                "bounded_policies\x00te057d09012b275e5aa8f3d31ecb334ea7bd0e2df\n",
+                "config\x00tef0295d493a767db31bd2ad6e3c118a5ec2dc094\n",
+                "enforcement\x00t519f107814932a6aaedf68e82a673710461c1a16\n",
+                "integration\x00t19ff1a891b88dad37743bb22fe29709b15ac195d\n",
+                "reclassifications\x00tf1e2432047947bb339f2d6a2608eca729703bb65\n",
+                "row_level_policy\x00t0238567d1c15525d8b2f2d366bd4aa306e20d8df\n"
+            ))
+        );
+        assert_eq!(buf.len(), augmented_tree_entry.sapling_tree_blob_size());
     }
 }
