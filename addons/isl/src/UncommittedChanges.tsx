@@ -31,6 +31,7 @@ import {
   commitMessageFieldsSchema,
   commitMessageFieldsToString,
 } from './CommitInfoView/CommitMessageFields';
+import {PendingDiffStats} from './CommitInfoView/DiffStats';
 import {temporaryCommitTitle} from './CommitTitle';
 import {OpenComparisonViewButton} from './ComparisonView/OpenComparisonViewButton';
 import {Row} from './ComponentUtils';
@@ -44,6 +45,7 @@ import {tracker} from './analytics';
 import {latestCommitMessageFields} from './codeReview/CodeReviewInfo';
 import {Badge} from './components/Badge';
 import {Button} from './components/Button';
+import GatedComponent from './components/GatedComponent';
 import {islDrawerState} from './drawerState';
 import {externalMergeToolAtom} from './externalMergeTool';
 import {T, t} from './i18n';
@@ -711,6 +713,11 @@ export function UncommittedChanges({place}: {place: Place}) {
       <UnsavedFilesCount />
       {conflicts != null || place !== 'main' ? null : (
         <div className="button-rows">
+          <GatedComponent featureFlag={Internal.featureFlags?.ShowSplitSuggestion}>
+            <div className="button-row">
+              <PendingDiffStats showWarning={true} />
+            </div>
+          </GatedComponent>
           <div className="button-row">
             <span className="quick-commit-inputs">
               <VSCodeButton

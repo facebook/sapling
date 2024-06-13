@@ -17,6 +17,7 @@ import {
 } from '../sloc/useFetchSignificantLinesOfCode';
 import * as stylex from '@stylexjs/stylex';
 import {Icon} from 'shared/Icon';
+import {SLOC_THRESHOLD_FOR_SPLIT_SUGGESTIONS} from '../sloc/diffStatConstants';
 
 type Props = {commit: CommitInfo};
 const styles = stylex.create({
@@ -42,38 +43,59 @@ export function DiffStats({commit}: Props) {
   return <ResolvedDiffStatsView significantLinesOfCode={significantLinesOfCode} />;
 }
 
-export function PendingDiffStats() {
+export function PendingDiffStats({showWarning = false}: {showWarning?: boolean}) {
   return (
     <ErrorBoundary>
-      <PendingDiffStatsView />
+      <PendingDiffStatsView showWarning={showWarning} />
     </ErrorBoundary>
   );
 }
 
-export function PendingDiffStatsView() {
+export function PendingDiffStatsView({showWarning = false}: {showWarning?: boolean}) {
   const significantLinesOfCode = useFetchPendingSignificantLinesOfCode();
   if (significantLinesOfCode == null) {
     return <LoadingDiffStatsView />;
   }
-  return <ResolvedDiffStatsView significantLinesOfCode={significantLinesOfCode} />;
+  return (
+    <ResolvedDiffStatsView
+      significantLinesOfCode={significantLinesOfCode}
+      showWarning={showWarning}
+    />
+  );
 }
 
 function ResolvedDiffStatsView({
   significantLinesOfCode,
+  showWarning,
 }: {
   significantLinesOfCode: number | undefined;
+  showWarning?: boolean;
 }) {
   if (significantLinesOfCode == null) {
     return null;
   }
+  const extras =
+    showWarning && significantLinesOfCode > SLOC_THRESHOLD_FOR_SPLIT_SUGGESTIONS ? (
+      <Tooltip
+        title={t(
+          //formatting this on multiple lines to look good in the tooltip
+          `Consider unselecting some of these changes.
+
+Small Diffs lead to less SEVs & quicker review times.
+`,
+        )}>
+        <Icon icon="warning" color="yellow" />
+      </Tooltip>
+    ) : null;
+
   return (
-    <DiffStatsView>
+    <DiffStatsView extras={extras}>
       <T replace={{$num: significantLinesOfCode}}>$num lines</T>
     </DiffStatsView>
   );
 }
 
-function DiffStatsView({children}: {children: React.ReactNode}) {
+function DiffStatsView({extras, children}: {extras?: React.ReactNode; children: React.ReactNode}) {
   return (
     <Row xstyle={styles.locInfo}>
       <Icon icon="code" />
@@ -84,6 +106,7 @@ function DiffStatsView({children}: {children: React.ReactNode}) {
         )}>
         <Icon icon="info" />
       </Tooltip>
+      {extras}
     </Row>
   );
 }
