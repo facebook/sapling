@@ -9,7 +9,7 @@ import type {CommitInfo, DiffId} from '../types';
 import type {CommitInfoMode, EditedMessage} from './CommitInfoState';
 import type {CommitMessageFields, FieldConfig, FieldsBeingEdited} from './types';
 
-import {Banner, BannerKind} from '../Banner';
+import {Banner, BannerKind, BannerTooltip} from '../Banner';
 import {ChangedFilesWithFetching} from '../ChangedFilesWithFetching';
 import serverAPI from '../ClientToServerAPI';
 import {Commit} from '../Commit';
@@ -446,15 +446,15 @@ function areTextFieldsUnchanged(
 
 function FoldPreviewBanner() {
   return (
-    <Banner
-      kind={BannerKind.green}
-      icon={<Icon icon="info" />}
+    <BannerTooltip
       tooltip={t(
         'This is the commit message after combining these commits with the fold command. ' +
           'You can edit this message before confirming and running fold.',
       )}>
-      <T>Previewing result of combined commits</T>
-    </Banner>
+      <Banner kind={BannerKind.green} icon={<Icon icon="info" />}>
+        <T>Previewing result of combined commits</T>
+      </Banner>
+    </BannerTooltip>
   );
 }
 
@@ -511,13 +511,13 @@ function ShowingRemoteMessageBanner({
     return null;
   }
   return (
-    <>
+    <BannerTooltip
+      tooltip={t(
+        'Viewing the newer commit message from $provider. This message will be used when your code is landed. You can also load the local message instead.',
+        {replace: {$provider: provider.label}},
+      )}>
       <Banner
         icon={<Icon icon="info" />}
-        tooltip={t(
-          'Viewing the newer commit message from $provider. This message will be used when your code is landed. You can also load the local message instead.',
-          {replace: {$provider: provider.label}},
-        )}
         alwaysShowButtons
         buttons={
           <VSCodeButton
@@ -531,7 +531,7 @@ function ShowingRemoteMessageBanner({
         }>
         <T replace={{$provider: provider.label}}>Showing latest commit message from $provider</T>
       </Banner>
-    </>
+    </BannerTooltip>
   );
 }
 

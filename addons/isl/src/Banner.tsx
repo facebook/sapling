@@ -23,17 +23,15 @@ export function Banner({
   children,
   icon,
   buttons,
-  tooltip,
   alwaysShowButtons,
 }: {
   kind?: BannerKind;
   children: ReactNode;
   icon?: ReactNode;
   buttons?: ReactNode;
-  tooltip?: string;
   alwaysShowButtons?: boolean;
 }) {
-  const content = (
+  return (
     <div className={`banner banner-${kind ?? 'default'}`}>
       <div className="banner-content">
         {icon ?? null} {children}
@@ -45,12 +43,12 @@ export function Banner({
       )}
     </div>
   );
-  if (tooltip) {
-    return (
-      <Tooltip trigger="hover" placement="bottom" title={tooltip}>
-        {content}
-      </Tooltip>
-    );
-  }
-  return content;
+}
+
+export function BannerTooltip({tooltip, children}: {tooltip: string; children: ReactNode}) {
+  return (
+    <Tooltip trigger="hover" placement="bottom" title={tooltip}>
+      {children}
+    </Tooltip>
+  );
 }
