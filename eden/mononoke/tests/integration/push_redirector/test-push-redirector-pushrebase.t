@@ -6,6 +6,7 @@
 
   $ export COMMIT_SCRIBE_CATEGORY=mononoke_commits
   $ export BOOKMARK_SCRIBE_CATEGORY=mononoke_bookmark
+  $ export MONONOKE_TEST_SCRIBE_LOGGING_DIRECTORY=$TESTTMP/scribe_logs/
   $ . "${TEST_FIXTURES}/library.sh"
   $ . "${TEST_FIXTURES}/library-push-redirector.sh"
 
@@ -21,7 +22,8 @@
   > }
   > EOF
 
-  $ init_large_small_repo
+  $ setconfig push.edenapi=true
+  $ ENABLE_API_WRITES=1 init_large_small_repo
   Adding synced mapping entry
   Starting Mononoke server
 
@@ -29,9 +31,11 @@ Normal pushrebase with one commit
   $ cd "$TESTTMP/small-hg-client"
   $ REPONAME=small-mon hgmn up -q master_bookmark
   $ echo 2 > 2 && hg addremove -q && hg ci -q -m newcommit
-  $ REPONAME=small-mon quiet hgmn push -r . --to master_bookmark
+  $ REPONAME=small-mon quiet hgedenapi push -r . --to master_bookmark
 -- Check scribe category
   $ cat "$TESTTMP/scribe_logs/$COMMIT_SCRIBE_CATEGORY" | jq '.repo_name, .changeset_id'
+  "small-mon"
+  "93637f57d04a2cb4852f044e4bfa7c7f961a7f6813ac4369a05dfbfe86bc531e"
   "large-mon"
   "b83fcdec86997308b73b957a3037979c1d1d670929d02b663a183789dfd5a3fa"
   "small-mon"
@@ -63,8 +67,8 @@ Normal pushrebase with one commit
 
 Bookmark-only pushrebase (Create a new bookmark, do not push commits)
   $ cd "$TESTTMP/small-hg-client"
-  $ REPONAME=small-mon hgmn push -r master_bookmark^ --to master_bookmark_2 --create 2>&1 | grep exporting
-  exporting bookmark master_bookmark_2
+  $ REPONAME=small-mon hgedenapi push -r master_bookmark^ --to master_bookmark_2 --create 2>&1 | grep 'creating remote bookmark'
+  creating remote bookmark master_bookmark_2
   $ hg book --all
   no bookmarks set
      default/master_bookmark   ce81c7d38286
@@ -73,8 +77,8 @@ Bookmark-only pushrebase (Create a new bookmark, do not push commits)
 Noop bookmark-only pushrebase
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select count(*) from bookmarks_update_log";
   6
-  $ REPONAME=small-mon hgmn push -r master_bookmark^ --to master_bookmark_2 |& grep updating
-  updating bookmark master_bookmark_2
+  $ REPONAME=small-mon hgedenapi push -r master_bookmark^ --to master_bookmark_2 |& grep 'moving remote bookmark'
+  moving remote bookmark master_bookmark_2 from 11f848659bfc to 11f848659bfc
   $ hg book --all
   no bookmarks set
      default/master_bookmark   ce81c7d38286
@@ -94,9 +98,8 @@ Noop bookmark-only pushrebase
 
 Delete a bookmark
   $ cd "$TESTTMP/small-hg-client"
-  $ REPONAME=small-mon quiet_grep deleting -- hgmn push --delete master_bookmark_2
+  $ REPONAME=small-mon quiet_grep deleting -- hgedenapi push --delete master_bookmark_2
   deleting remote bookmark master_bookmark_2
-  [1]
   $ hg book --all
   no bookmarks set
      default/master_bookmark   ce81c7d38286
@@ -114,13 +117,17 @@ Normal pushrebase with many commits
   $ createfile 6 && hg ci -qm "In every kind of mischief mellow"
   $ createfile 7 && hg ci -qm "The staunchest tramp to ply his trade"
 
-  $ REPONAME=small-mon hgmn push --to master_bookmark
-  pushing rev beb30dc3a35c to destination mononoke://$LOCALIP:$LOCAL_PORT/small-mon bookmark master_bookmark
-  searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
-  updating bookmark master_bookmark
+  $ REPONAME=small-mon hgedenapi push --to master_bookmark
+  pushing rev beb30dc3a35c to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
+  edenapi: queue 4 commits for upload
+  edenapi: queue 4 files for upload
+  edenapi: uploaded 4 files
+  edenapi: queue 4 trees for upload
+  edenapi: uploaded 4 trees
+  edenapi: uploaded 4 changesets
+  pushrebasing stack (ce81c7d38286, beb30dc3a35c] (4 commits) to remote bookmark master_bookmark
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  updated remote bookmark master_bookmark to beb30dc3a35c
   $ log -r master_bookmark
   @  The staunchest tramp to ply his trade [public;rev=6;beb30dc3a35c] default/master_bookmark
   │
@@ -141,8 +148,8 @@ Pushrebase, which copies and removes files
   $ hg mv 5 5.renamed -q
   $ hg cp 6 subdir/6.copy -q
   $ REPONAME=small-mon hgmn ci -m "Moves, renames and copies"
-  $ REPONAME=small-mon hgmn push --to master_bookmark 2>&1 | grep updating
-  updating bookmark master_bookmark
+  $ REPONAME=small-mon hgedenapi push --to master_bookmark 2>&1 | grep 'updated remote bookmark'
+  updated remote bookmark master_bookmark to b888ee4f19b5
   $ log -r master_bookmark
   @  Moves, renames and copies [public;rev=7;b888ee4f19b5] default/master_bookmark
   │
@@ -162,8 +169,8 @@ Pushrebase, which replaces a directory with a file
   $ hg rm subdir
   removing subdir/6.copy
   $ createfile subdir && hg ci -qm "Replace a directory with a file"
-  $ REPONAME=small-mon hgmn push --to master_bookmark 2>&1 | grep updating
-  updating bookmark master_bookmark
+  $ REPONAME=small-mon hgedenapi push --to master_bookmark 2>&1 | grep 'updated remote bookmark'
+  updated remote bookmark master_bookmark to e72ee383159a
   $ log -r master_bookmark
   @  Replace a directory with a file [public;rev=8;e72ee383159a] default/master_bookmark
   │
@@ -182,7 +189,7 @@ Normal pushrebase to a prefixed bookmark
   $ cd "$TESTTMP/small-hg-client"
   $ REPONAME=small-mon hgmn up -q master_bookmark^
   $ createfile epicfail && hg ci -qm "The epicness of this fail is great"
-  $ REPONAME=small-mon hgmn push --to master_bookmark_2 --create -q
+  $ REPONAME=small-mon hgedenapi push --to master_bookmark_2 --create -q
   $ log -r master_bookmark_2
   @  The epicness of this fail is great [public;rev=9;8d22dc8b8a89] default/master_bookmark_2
   │
@@ -199,8 +206,8 @@ Normal pushrebase to a prefixed bookmark
   $ cd "$TESTTMP/small-hg-client"
   $ REPONAME=small-mon hgmn up -q master_bookmark_2
   $ echo "more epicness" >> epicfail && hg ci -m "The epicness of this fail is greater"
-  $ REPONAME=small-mon hgmn push --to master_bookmark_2 2>&1 | grep updating
-  updating bookmark master_bookmark_2
+  $ REPONAME=small-mon hgedenapi push --to master_bookmark_2 2>&1 | grep 'updated remote bookmark'
+  updated remote bookmark master_bookmark_2 to bd5577e4b538
   $ log -r master_bookmark_2
   @  The epicness of this fail is greater [public;rev=10;bd5577e4b538] default/master_bookmark_2
   │
@@ -220,8 +227,8 @@ Pushrebase with a rename between a shifted and a non-shifted behavior
   $ REPONAME=small-mon hgmn up -q master_bookmark
   $ createfile non_path_shifting/filetomove && createfile filetonotmove
   $ hg ci -qm "But since it is for you, I vow To slap Aeneas down to hell"
-  $ REPONAME=small-mon hgmn push --to master_bookmark 2>&1 | grep updating
-  updating bookmark master_bookmark
+  $ REPONAME=small-mon hgedenapi push --to master_bookmark 2>&1 | grep 'updated remote bookmark'
+  updated remote bookmark master_bookmark to 6e3fc27a15b1
 -- let's sync it, make sure everything is fine
   $ cd "$TESTTMP/large-hg-client"
   $ REPONAME=large-mon hgmn pull -q
@@ -235,8 +242,8 @@ Pushrebase with a rename between a shifted and a non-shifted behavior
   $ REPONAME=small-mon hgmn up -q master_bookmark
   $ hg mv non_path_shifting/filetomove filetomove
   $ hg ci -qm "I shall delay no longer now But knock him for a fare-you-well."
-  $ REPONAME=small-mon hgmn push --to master_bookmark 2>&1 | grep updating
-  updating bookmark master_bookmark
+  $ REPONAME=small-mon hgedenapi push --to master_bookmark 2>&1 | grep 'updated remote bookmark'
+  updated remote bookmark master_bookmark to 4273bf9c3d03
 -- let's also sync it to the large repo
   $ cd "$TESTTMP/large-hg-client"
   $ REPONAME=large-mon hgmn pull -q
@@ -253,8 +260,8 @@ Pushrebase with a rename between a shifted and a non-shifted behavior
   $ REPONAME=small-mon hgmn up -q master_bookmark
   $ hg mv filetomove non_path_shifting/filetomove
   $ hg ci -qm "Now Dido was in such great sorrow All day she neither drank nor ate"
-  $ REPONAME=small-mon hgmn push --to master_bookmark 2>&1 | grep updating
-  updating bookmark master_bookmark
+  $ REPONAME=small-mon hgedenapi push --to master_bookmark 2>&1 | grep 'updated remote bookmark'
+  updated remote bookmark master_bookmark to eb96c35ce02c
 -- let's also sync it to the large repo
   $ cd "$TESTTMP/large-hg-client"
   $ REPONAME=large-mon hgmn pull -q
@@ -272,8 +279,8 @@ Pushrebase, which replaces a file with a directory
   $ hg rm subdir
   $ mkdir subdir
   $ createfile subdir/greatfile && hg ci -qm "Replace a file with a directory"
-  $ REPONAME=small-mon hgmn push --to master_bookmark 2>&1 | grep updating
-  updating bookmark master_bookmark
+  $ REPONAME=small-mon hgedenapi push --to master_bookmark 2>&1 | grep 'updated remote bookmark'
+  updated remote bookmark master_bookmark to 4d2fda63b03e
   $ log -r master_bookmark
   @  Replace a file with a directory [public;rev=14;4d2fda63b03e] default/master_bookmark
   │

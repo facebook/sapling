@@ -7,10 +7,13 @@
 
 use std::collections::HashMap;
 
+use anyhow::format_err;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks_movement::CreateBookmarkOp;
 use bytes::Bytes;
+use cross_repo_sync::CandidateSelectionHint;
+use cross_repo_sync::CommitSyncContext;
 use hook_manager::manager::HookManagerRef;
 use mononoke_types::ChangesetId;
 
@@ -53,8 +56,21 @@ impl RepoContext {
             }
             let ctx = self.ctx();
             let target = redirector
-                .get_small_to_large_commit_equivalent(ctx, target)
-                .await?;
+                .small_to_large_commit_syncer
+                .sync_commit(
+                    ctx,
+                    target,
+                    CandidateSelectionHint::Only,
+                    CommitSyncContext::PushRedirector,
+                    false,
+                )
+                .await?
+                .ok_or_else(|| {
+                    format_err!(
+                        "Error in create_bookmark absence of corresponding commit in target repo for {}",
+                        target,
+                    )
+                })?;
             let log_id =
                 make_create_op(&large_bookmark, target, pushvars, affected_changesets_limit)
                     .run(

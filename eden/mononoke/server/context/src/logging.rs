@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::env;
 use std::sync::atomic::AtomicU32;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
@@ -50,12 +51,18 @@ pub struct LoggingContainer {
 
 impl LoggingContainer {
     pub fn new(fb: FacebookInit, logger: Logger, scuba: MononokeScubaSampleBuilder) -> Self {
+        let scribe_logging_directory = env::var("MONONOKE_TEST_SCRIBE_LOGGING_DIRECTORY").ok();
+        let scribe = if let Some(dir_path) = scribe_logging_directory {
+            Scribe::new_to_file(dir_path.into())
+        } else {
+            Scribe::new(fb)
+        };
         Self {
             logger,
             scuba: Arc::new(scuba),
             perf_counters: Default::default(),
             sampling_key: None,
-            scribe: Scribe::new(fb),
+            scribe,
         }
     }
 
