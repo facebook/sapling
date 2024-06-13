@@ -24,6 +24,8 @@
   $ git add file1
   $ git commit -qam "Add file1"
   $ git tag -a -m"new tag" first_tag
+  $ git tag -a -m "changing tag" changing_tag
+  $ tagged_commit=$(git rev-parse HEAD)
 # Create a recursive tag to check if it gets imported
   $ git config advice.nestedTag false
   $ git tag -a recursive_tag -m "this recursive tag points to first_tag" $(git rev-parse first_tag)
@@ -42,6 +44,7 @@
   Ref: "refs/heads/master": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)))
   Ref: "refs/remotes/origin/HEAD": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)))
   Ref: "refs/remotes/origin/master": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)))
+  Ref: "refs/tags/changing_tag": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)))
   Ref: "refs/tags/first_tag": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)))
   Ref: "refs/tags/recursive_tag": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)))
 
@@ -112,6 +115,7 @@
   Ref: "refs/heads/master": Some(ChangesetId(Blake2(da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c)))
   Ref: "refs/remotes/origin/HEAD": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)))
   Ref: "refs/remotes/origin/master": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)))
+  Ref: "refs/tags/changing_tag": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)))
   Ref: "refs/tags/first_tag": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)))
   Ref: "refs/tags/recursive_tag": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)))
 
@@ -145,6 +149,7 @@
   Ref: "refs/heads/master": Some(ChangesetId(Blake2(da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c)))
   Ref: "refs/remotes/origin/HEAD": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)))
   Ref: "refs/remotes/origin/master": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)))
+  Ref: "refs/tags/changing_tag": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)))
   Ref: "refs/tags/first_tag": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)))
   Ref: "refs/tags/recursive_tag": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)))
 
@@ -152,6 +157,7 @@
   $ cd "$GIT_REPO"
   $ git tag -a empty_tag -m ""
   $ git tag simple_tag
+
 # Check its ref can be parsed
   $ cd "$TESTTMP"
   $ with_stripped_logs gitimport "$GIT_REPO" --generate-bookmarks full-repo
@@ -160,6 +166,7 @@
   Ref: "refs/heads/master": Some(ChangesetId(Blake2(da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c)))
   Ref: "refs/remotes/origin/HEAD": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)))
   Ref: "refs/remotes/origin/master": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)))
+  Ref: "refs/tags/changing_tag": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)))
   Ref: "refs/tags/empty_tag": Some(ChangesetId(Blake2(da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c)))
   Ref: "refs/tags/first_tag": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)))
   Ref: "refs/tags/recursive_tag": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)))
@@ -169,6 +176,7 @@
   All repos initialized. It took: 0 seconds
   Bookmark: "heads/master": ChangesetId(Blake2(da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c)) (created)
   Bookmark: "heads/master": ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)) (moved from ChangesetId(Blake2(da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c)))
+  Bookmark: "tags/changing_tag": ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)) (created)
   Bookmark: "tags/empty_tag": ChangesetId(Blake2(da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c)) (created)
   Bookmark: "tags/first_tag": ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)) (created)
   Bookmark: "tags/recursive_tag": ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)) (created)
@@ -178,6 +186,7 @@
 # The id of the blob should be the same as the tag object id
   $ ls $TESTTMP/blobstore/blobs | grep "git_object"
   blob-repo0000.git_object.18b57eb6e2869701c04ee36399fcde1a824a00dd
+  blob-repo0000.git_object.5733f87f2aa7e68c86273960497f2d81e11c6c8e
   blob-repo0000.git_object.7327e6c9b533787eeb80877d557d50f39c480f54
   blob-repo0000.git_object.8963e1f55d1346a07c3aec8c8fc72bf87d0452b1
   blob-repo0000.git_object.8ce3eae44760b500bf3f2c3922a95dcd3c908e9e
@@ -189,6 +198,7 @@
   $ ls $TESTTMP/blobstore/blobs | grep "git_packfile_base_item"
   blob-repo0000.git_packfile_base_item.18b57eb6e2869701c04ee36399fcde1a824a00dd
   blob-repo0000.git_packfile_base_item.433eb172726bc7b6d60e8d68efb0f0ef4e67a667
+  blob-repo0000.git_packfile_base_item.5733f87f2aa7e68c86273960497f2d81e11c6c8e
   blob-repo0000.git_packfile_base_item.7327e6c9b533787eeb80877d557d50f39c480f54
   blob-repo0000.git_packfile_base_item.8963e1f55d1346a07c3aec8c8fc72bf87d0452b1
   blob-repo0000.git_packfile_base_item.8ce3eae44760b500bf3f2c3922a95dcd3c908e9e
@@ -202,11 +212,13 @@
   $ cd "$GIT_REPO"
   $ git rev-list --objects --all | git cat-file --batch-check='%(objectname) %(objecttype) %(rest)' | grep -e '^[^ ]* tag' | cut -d" " -f1,9- | sort
   18b57eb6e2869701c04ee36399fcde1a824a00dd
+  5733f87f2aa7e68c86273960497f2d81e11c6c8e
   8963e1f55d1346a07c3aec8c8fc72bf87d0452b1
   fb02ed046a1e75fe2abb8763f7c715496ae36353
 
 # Generating bookmarks should also capture the tag mapping in bonsai_tag_mapping table
-  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "SELECT tag_name, hex(changeset_id) as cs_id, hex(tag_hash) as tag_hash, target_is_tag FROM bonsai_tag_mapping"
+  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "SELECT tag_name, hex(changeset_id) as cs_id, hex(tag_hash) as tag_hash, target_is_tag FROM bonsai_tag_mapping ORDER BY tag_name"
+  tags/changing_tag|68710F4158EB1188BBAC3955AEA66A944818578BCE93514E68CD627752243BE9|5733F87F2AA7E68C86273960497F2D81E11C6C8E|0
   tags/empty_tag|D5BE6FDF77FC73EE5E3A4BAB1ADBB4772829E06C0F104E6CC0D70CABF1EBFF4B|FB02ED046A1E75FE2ABB8763F7C715496AE36353|0
   tags/first_tag|5CA579C0E3EBEA708371B65CE559E5A51B231AD1B6F3CDFD874CA27362A2A6A8|8963E1F55D1346A07C3AEC8C8FC72BF87D0452B1|0
   tags/recursive_tag|1AB4E7C855BE1F10B2A3E48A398B7B068EFB96EE81A75B8F74654B521D28A988|18B57EB6E2869701C04EE36399FCDE1A824A00DD|1
@@ -237,6 +249,11 @@
   Changeset pointed to by the tag bookmark tags/simple_tag
   da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c
 
+# Change the value of changing_tag but keep it pointing to the same commit with the same name
+  $ git tag -d changing_tag
+  Deleted tag 'changing_tag' (was 5733f87)
+  $ git tag -a -m "changing it again" changing_tag $tagged_commit
+
 # Importing a second time should still work
   $ with_stripped_logs gitimport "$GIT_REPO" --generate-bookmarks full-repo
   using repo "repo" repoid RepositoryId(0)
@@ -244,6 +261,7 @@
   Ref: "refs/heads/master": Some(ChangesetId(Blake2(da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c)))
   Ref: "refs/remotes/origin/HEAD": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)))
   Ref: "refs/remotes/origin/master": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)))
+  Ref: "refs/tags/changing_tag": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)))
   Ref: "refs/tags/empty_tag": Some(ChangesetId(Blake2(da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c)))
   Ref: "refs/tags/first_tag": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)))
   Ref: "refs/tags/recursive_tag": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)))
@@ -253,11 +271,18 @@
   All repos initialized. It took: 0 seconds
   Bookmark: "heads/master": ChangesetId(Blake2(da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c)) (moved from ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)))
   Bookmark: "heads/master": ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)) (moved from ChangesetId(Blake2(da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c)))
+  Bookmark: "tags/changing_tag": ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)) (already up-to-date)
   Bookmark: "tags/empty_tag": ChangesetId(Blake2(da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c)) (already up-to-date)
   Bookmark: "tags/first_tag": ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)) (already up-to-date)
   Bookmark: "tags/recursive_tag": ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)) (already up-to-date)
   Bookmark: "tags/simple_tag": ChangesetId(Blake2(da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c)) (already up-to-date)
 
+# Generating bookmarks should also capture the tag mapping in bonsai_tag_mapping table. Note that changing_tag has changed in hash
+  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "SELECT tag_name, hex(changeset_id) as cs_id, hex(tag_hash) as tag_hash, target_is_tag FROM bonsai_tag_mapping ORDER BY tag_name"
+  tags/changing_tag|3EA206D29D695D32C490FF0B2E8136B7ACF63783467515DB9C5DDB86122AD025|E73C25830B102663DB6F17C054C0EE3F9A93C04A|0
+  tags/empty_tag|D5BE6FDF77FC73EE5E3A4BAB1ADBB4772829E06C0F104E6CC0D70CABF1EBFF4B|FB02ED046A1E75FE2ABB8763F7C715496AE36353|0
+  tags/first_tag|5CA579C0E3EBEA708371B65CE559E5A51B231AD1B6F3CDFD874CA27362A2A6A8|8963E1F55D1346A07C3AEC8C8FC72BF87D0452B1|0
+  tags/recursive_tag|1AB4E7C855BE1F10B2A3E48A398B7B068EFB96EE81A75B8F74654B521D28A988|18B57EB6E2869701C04EE36399FCDE1A824A00DD|1
 
 # Start Mononoke
   $ start_and_wait_for_mononoke_server
@@ -283,6 +308,7 @@
   $ hg bookmarks --all
   no bookmarks set
      default/heads/master      b48ed4600785
+     default/tags/changing_tag b48ed4600785
      default/tags/empty_tag    e7f52161c612
      default/tags/first_tag    b48ed4600785
      default/tags/recursive_tag b48ed4600785

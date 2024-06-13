@@ -91,10 +91,6 @@
 # Ensure that there are no differences between the set of objects by diffing both object list files
   $ diff -w $TESTTMP/new_object_list $TESTTMP/object_list
 
-# Do the insane thing [https://fburl.com/ib98kv6c]. Make first-tag into a recursive tag that points to the previous version of itself
-  $ cd "$GIT_REPO_ORIGIN"
-  $ git tag -a first_tag -f -m "new tag" $(git rev-parse first_tag)
-  Updated tag 'first_tag' (was 8963e1f)
 # Capture all the known Git objects from the repo
   $ git rev-list --objects --all | git cat-file --batch-check='%(objectname) %(objecttype) %(rest)' | sort > $TESTTMP/object_list
 # Import it into Mononoke

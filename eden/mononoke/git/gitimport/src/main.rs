@@ -48,6 +48,7 @@ use mononoke_app::fb303::AliveService;
 use mononoke_app::fb303::Fb303AppExtension;
 use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
+use mononoke_types::hash::GitSha1;
 use mononoke_types::ChangesetId;
 use mononoke_types::DerivableType;
 use repo_authorization::AuthorizationContext;
@@ -351,6 +352,15 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
                 .build()
                 .await
                 .context("failed to build RepoContext")?;
+            let existing_tags = repo
+                .inner()
+                .bonsai_tag_mapping
+                .get_all_entries()
+                .await
+                .context("Failed to fetch bonsai tag mapping")?
+                .into_iter()
+                .map(|entry| (entry.tag_name, entry.tag_hash))
+                .collect::<HashMap<_, _>>();
             for (maybe_tag_id, name, changeset) in
                 mapping
                     .iter()
@@ -370,8 +380,16 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
                     // Skip the HEAD revision: it shouldn't be imported as a bookmark in mononoke
                     continue;
                 }
-                let upload_if_tag = async {
-                    if let Some(tag_id) = maybe_tag_id {
+                if let Some(tag_id) = maybe_tag_id {
+                    let new_or_updated_tag = existing_tags.get(&name).map_or(true, |tag_hash| {
+                        if let Ok(new_hash) = GitSha1::from_object_id(tag_id) {
+                            *tag_hash != new_hash
+                        } else {
+                            false
+                        }
+                    });
+                    // Only upload the tag if it's new or has changed.
+                    if new_or_updated_tag {
                         // The ref getting imported is a tag, so store the raw git Tag object.
                         upload_git_tag(&ctx, &uploader, path, &prefs, tag_id).await?;
                         // Create the changeset corresponding to the commit pointed to by the tag.
@@ -380,8 +398,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
                         )
                         .await?;
                     }
-                    Ok::<_, Error>(())
-                };
+                }
                 let bookmark_key = BookmarkKey::new(&name)?;
 
                 let pushvars = if args.bypass_readonly {
@@ -401,7 +418,6 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
                     // The bookmark already exists. Instead of creating it, we need to move it.
                     Some(old_changeset) => {
                         if old_changeset != final_changeset {
-                            upload_if_tag.await?;
                             let allow_non_fast_forward = true;
                             repo_context
                                 .move_bookmark(
@@ -427,7 +443,6 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
                     }
                     // The bookmark doesn't yet exist. Create it.
                     None => {
-                        upload_if_tag.await?;
                         repo_context
                             .create_bookmark(
                                 &bookmark_key,
