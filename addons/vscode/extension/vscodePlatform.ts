@@ -217,10 +217,7 @@ export const getVSCodePlatform = (context: vscode.ExtensionContext): ServerPlatf
 });
 
 function getUnsavedFiles(repo: Repository): Array<vscode.TextDocument> {
-  return vscode.workspace.textDocuments
-    .filter(
-      document =>
-        (document.isDirty && repo.isPathInsideRepo(document.fileName)) || document.isUntitled,
-    )
-    .filter(document => document.isDirty || document.isUntitled);
+  return vscode.workspace.textDocuments.filter(
+    document => document.isDirty && repo.isPathInsideRepo(document.fileName),
+  );
 }
