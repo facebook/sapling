@@ -71,8 +71,7 @@ TEST_P(LocalStoreTest, testReadAndWriteBlob) {
   store_->putBlob(hash, &inBlob);
 
   auto outBlob = store_->getBlob(hash).get(10s);
-  EXPECT_EQ(
-      contents, outBlob->getContents().clone()->moveToFbString().toStdString());
+  EXPECT_EQ(contents, outBlob->getContents().clone()->to<std::string>());
 
   {
     auto retrievedMetadata = store_->getBlobMetadata(hash).get(10s);
