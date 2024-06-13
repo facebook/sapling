@@ -43,6 +43,10 @@ pub enum AugmentedTreeChildEntry {
 #[derive(Debug, Clone)]
 pub struct AugmentedTreeEntry {
     pub hg_node_id: HgId,
+    // The computed_hg_node_id can be used for sha1 hash validation of
+    // a sapling tree blob. This is only for the old root trees where
+    // hg_node_id can be different (hash of the content of flat manifest)
+    pub computed_hg_node_id: Option<HgId>,
     pub p1: Option<HgId>,
     pub p2: Option<HgId>,
     pub subentries: Vec<(RepoPathBuf, AugmentedTreeChildEntry)>,
@@ -95,7 +99,14 @@ impl AugmentedTreeEntry {
     /// Methods estimates the size of the serialize in bytes, so that it can be used to preallocate memory.
     pub fn augmented_tree_blob_size(&self) -> usize {
         let mut size: usize = 3;
-        size += HgId::hex_len() + 3;
+        size += HgId::hex_len();
+        size += 1;
+        if let Some(_computed_nodeid) = self.computed_hg_node_id {
+            size += HgId::hex_len();
+        } else {
+            size += 1;
+        }
+        size += 1;
         if let Some(_p1) = &self.p1 {
             size += HgId::hex_len();
         } else {
@@ -130,7 +141,13 @@ impl AugmentedTreeEntry {
     pub fn try_serialize(&self, mut w: impl Write) -> Result<()> {
         w.write_all(b"v1 ")?;
         w.write_all(self.hg_node_id.to_hex().as_ref())?;
-        w.write_all(b" - ")?; // computed nodeid placeholder
+        w.write_all(b" ")?;
+        if let Some(computed_nodeid) = self.computed_hg_node_id {
+            w.write_all(computed_nodeid.to_hex().as_ref())?;
+        } else {
+            w.write_all(b"-")?;
+        }
+        w.write_all(b" ")?;
         if let Some(p1) = &self.p1 {
             w.write_all(p1.to_hex().as_ref())?;
         } else {
@@ -191,10 +208,15 @@ impl AugmentedTreeEntry {
                 .as_ref(),
         )?;
 
-        // Sapling do not use computed nodeid.
-        let _computed_nodeid = header
+        let computed_hg_node_id = header
             .next()
             .ok_or(anyhow!("augmented tree: missing computed node id"))?;
+
+        let computed_hg_node_id = if computed_hg_node_id == "-" {
+            None
+        } else {
+            Some(HgId::from_hex(computed_hg_node_id.as_ref())?)
+        };
 
         let p1 = header.next().ok_or(anyhow!("augmented tree: missing p1"))?;
         let p1 = if p1 == "-" {
@@ -215,6 +237,7 @@ impl AugmentedTreeEntry {
 
         anyhow::Ok(Self {
             hg_node_id,
+            computed_hg_node_id,
             p1,
             p2,
             subentries: reader
@@ -437,5 +460,29 @@ mod tests {
 
         assert_eq!(std::str::from_utf8(&buf), Ok(tree));
         assert_eq!(augmented_tree_entry.augmented_tree_blob_size(), tree.len());
+    }
+
+    #[test]
+    fn test_augmented_manifest_parsing_computed_hg_node_id() {
+        let mut reader = std::io::Cursor::new(concat!(
+            "v1 1111111111111111111111111111111111111111 4444444444444444444444444444444444444444 2222222222222222222222222222222222222222 3333333333333333333333333333333333333333\n",
+            "a.rs\x004444444444444444444444444444444444444444r 4444444444444444444444444444444444444444444444444444444444444444 10 4444444444444444444444444444444444444444\n",
+            "b.rs\x002222222222222222222222222222222222222222r 2222222222222222222222222222222222222222222222222222222222222222 1000 2121212121212121212121212121212121212121\n",
+            "dir_1\x003333333333333333333333333333333333333333t 3333333333333333333333333333333333333333333333333333333333333333 10\n",
+            "dir_2\x001111111111111111111111111111111111111111t 1111111111111111111111111111111111111111111111111111111111111111 10000\n"
+        ));
+        let augmented_tree_entry =
+            AugmentedTreeEntry::try_deserialize(&mut reader).expect("parsing failed");
+
+        assert_eq!(augmented_tree_entry.subentries.len(), 4);
+        assert_eq!(
+            augmented_tree_entry.computed_hg_node_id,
+            Some(HgId::from_hex(b"4444444444444444444444444444444444444444").expect("bad hgid"))
+        );
+        let mut buf: Vec<u8> = Vec::with_capacity(1024);
+        augmented_tree_entry
+            .try_serialize(&mut buf)
+            .expect("writing failed");
+        assert_eq!(buf.len(), augmented_tree_entry.augmented_tree_blob_size());
     }
 }
