@@ -7,6 +7,7 @@
 
 use std::collections::HashMap;
 
+use anyhow::format_err;
 use anyhow::Context;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateReason;
@@ -15,6 +16,8 @@ use bookmarks_movement::BookmarkUpdatePolicy;
 use bookmarks_movement::BookmarkUpdateTargets;
 use bookmarks_movement::UpdateBookmarkOp;
 use bytes::Bytes;
+use cross_repo_sync::CandidateSelectionHint;
+use cross_repo_sync::CommitSyncContext;
 use hook_manager::manager::HookManagerRef;
 use mononoke_types::ChangesetId;
 
@@ -83,10 +86,25 @@ impl RepoContext {
                 )));
             }
             let ctx = self.ctx();
-            let (target, old_target) = futures::try_join!(
-                redirector.get_small_to_large_commit_equivalent(ctx, target),
-                redirector.get_small_to_large_commit_equivalent(ctx, old_target),
-            )?;
+            let target = redirector
+                .small_to_large_commit_syncer
+                .sync_commit(
+                    ctx,
+                    target,
+                    CandidateSelectionHint::Only,
+                    CommitSyncContext::PushRedirector,
+                    false,
+                )
+                .await?
+                .ok_or_else(|| {
+                    format_err!(
+                        "Error in move_bookmark absence of corresponding commit in target repo for {}",
+                        target,
+                    )
+                })?;
+            let old_target = redirector
+                .get_small_to_large_commit_equivalent(ctx, old_target)
+                .await?;
             let log_id = make_move_op(
                 &large_bookmark,
                 target,

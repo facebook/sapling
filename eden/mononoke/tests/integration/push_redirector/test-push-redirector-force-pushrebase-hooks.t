@@ -19,7 +19,8 @@
   > }
   > EOF
 
-  $ create_large_small_repo
+  $ setconfig push.edenapi=true
+  $ ENABLE_API_WRITES=1 create_large_small_repo
   Adding synced mapping entry
   $ cd "$TESTTMP/mononoke-config"
   $ cat >> repos/large-mon/server.toml << CONFIG
@@ -51,17 +52,15 @@ We can't force pushrebase to a shared bookmark, so create a test bookmark that o
 to the small repo
   $ cd "$TESTTMP/small-hg-client"
   $ REPONAME=small-mon hgmn up -q master_bookmark
-  $ REPONAME=small-mon hgmn push -r . --to test_bookmark --create
-  pushing rev 11f848659bfc to destination mononoke://$LOCALIP:$LOCAL_PORT/small-mon bookmark test_bookmark
-  searching for changes
-  no changes found
-  exporting bookmark test_bookmark
+  $ REPONAME=small-mon hgedenapi push -r . --to test_bookmark --create
+  pushing rev 11f848659bfc to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark test_bookmark
+  creating remote bookmark test_bookmark
 
 Force pushrebase to the small repo with one commit succeeds, and does not get
 blocked by deny_files
   $ echo 2 > 2 && hg addremove -q && hg ci -q -m newcommit
-  $ REPONAME=small-mon hgmn push -r . --to test_bookmark --force 2>&1 | grep updating
-  updating bookmark test_bookmark
+  $ REPONAME=small-mon hgedenapi push -r . --to test_bookmark --force 2>&1 | grep moving
+  moving remote bookmark test_bookmark from 11f848659bfc to ce81c7d38286
 -- newcommit was correctly pushed to test_bookmark
   $ log -r test_bookmark
   @  newcommit [public;rev=2;ce81c7d38286] default/test_bookmark
@@ -87,21 +86,16 @@ Note that the node is from the small repo, even though the hook is in the large 
   $ echo 2 > f/.git/HEAD && hg addremove -q && hg ci -q -m .git
   $ hg log -T"small_node: {node}\n" -r .
   small_node: 6e6a22d48eb51db1e7b8af685d9c99c0d7f10f70
-  $ REPONAME=small-mon hgmn push -r . --to test_bookmark --force
-  pushing rev 6e6a22d48eb5 to destination mononoke://$LOCALIP:$LOCAL_PORT/small-mon bookmark test_bookmark
-  searching for changes
-  remote: Command failed
-  remote:   Error:
-  remote:     hooks failed:
-  remote:     deny_files for 6e6a22d48eb51db1e7b8af685d9c99c0d7f10f70: Denied filename 'smallrepofolder/f/.git/HEAD' matched name pattern '/[.]git/'. Rename or remove this file and try again.
-  remote: 
-  remote:   Root cause:
-  remote:     hooks failed:
-  remote:     deny_files for 6e6a22d48eb51db1e7b8af685d9c99c0d7f10f70: Denied filename 'smallrepofolder/f/.git/HEAD' matched name pattern '/[.]git/'. Rename or remove this file and try again.
-  remote: 
-  remote:   Debug context:
-  remote:     "hooks failed:\ndeny_files for 6e6a22d48eb51db1e7b8af685d9c99c0d7f10f70: Denied filename 'smallrepofolder/f/.git/HEAD' matched name pattern '/[.]git/'. Rename or remove this file and try again."
-  abort: unexpected EOL, expected netstring digit
+  $ REPONAME=small-mon hgedenapi push -r . --to test_bookmark --force
+  pushing rev 6e6a22d48eb5 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark test_bookmark
+  edenapi: queue 1 commit for upload
+  edenapi: queue 0 files for upload
+  edenapi: queue 3 trees for upload
+  edenapi: uploaded 3 trees
+  edenapi: uploaded 1 changeset
+  moving remote bookmark test_bookmark from ce81c7d38286 to 6e6a22d48eb5
+  abort: server error: hooks failed:
+    deny_files for b5ac9b3203d4aef816083f98fd6f169d701c6ae41d08e49d9abc6b0ae5318bbe: Denied filename 'smallrepofolder/f/.git/HEAD' matched name pattern '/[.]git/'. Rename or remove this file and try again.
   [255]
 
 Create a commit in the large repo that triggers deny_files.  Since we haven't enabled the hook
@@ -114,13 +108,17 @@ there, we are ok to create it.  Create a commit on top of that that is backsynce
   $ hg log -T "large_node: {node}\n" -r .
   large_node: d967862de4d54c47ba51e0259fb1f72d881efd73
   $ echo 3 > smallrepofolder/largerepofile && hg addremove -q && hg ci -q -m backsync
-  $ REPONAME=large-mon hgmn push --to master_bookmark
-  pushing rev 148264a57519 to destination mononoke://$LOCALIP:$LOCAL_PORT/large-mon bookmark master_bookmark
-  searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
-  updating bookmark master_bookmark
+  $ REPONAME=large-mon hgedenapi push --to master_bookmark
+  pushing rev 148264a57519 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
+  edenapi: queue 2 commits for upload
+  edenapi: queue 1 file for upload
+  edenapi: uploaded 1 file
+  edenapi: queue 5 trees for upload
+  edenapi: uploaded 5 trees
+  edenapi: uploaded 2 changesets
+  pushrebasing stack (bfcfb674663c, 148264a57519] (2 commits) to remote bookmark master_bookmark
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  updated remote bookmark master_bookmark to 148264a57519
   $ backsync_large_to_small 2>&1 | grep "syncing bookmark"
   * syncing bookmark master_bookmark to * (glob)
   $ flush_mononoke_bookmarks
@@ -139,20 +137,9 @@ Note that since the large repo commit doesn't map to the small repo, we see the 
 changeset id.
 
   $ REPONAME=small-mon hgmn up -q master_bookmark
-  $ REPONAME=small-mon hgmn push -r . --to test_bookmark --pushvar NON_FAST_FORWARD=true
-  pushing rev cd9bfa9f25eb to destination mononoke://$LOCALIP:$LOCAL_PORT/small-mon bookmark test_bookmark
-  searching for changes
-  no changes found
-  remote: Command failed
-  remote:   Error:
-  remote:     hooks failed:
-  remote:     deny_files for d967862de4d54c47ba51e0259fb1f72d881efd73: Denied filename 'x/.git/HEAD' matched name pattern '/[.]git/'. Rename or remove this file and try again.
-  remote: 
-  remote:   Root cause:
-  remote:     hooks failed:
-  remote:     deny_files for d967862de4d54c47ba51e0259fb1f72d881efd73: Denied filename 'x/.git/HEAD' matched name pattern '/[.]git/'. Rename or remove this file and try again.
-  remote: 
-  remote:   Debug context:
-  remote:     "hooks failed:\ndeny_files for d967862de4d54c47ba51e0259fb1f72d881efd73: Denied filename 'x/.git/HEAD' matched name pattern '/[.]git/'. Rename or remove this file and try again."
-  abort: unexpected EOL, expected netstring digit
+  $ REPONAME=small-mon hgedenapi push -r . --to test_bookmark --pushvar NON_FAST_FORWARD=true
+  pushing rev cd9bfa9f25eb to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark test_bookmark
+  moving remote bookmark test_bookmark from ce81c7d38286 to cd9bfa9f25eb
+  abort: server error: hooks failed:
+    deny_files for df2c680c0ed6920fdfde5c9b67edf6272517fae607109ef7e9adaa33a3da113a: Denied filename 'x/.git/HEAD' matched name pattern '/[.]git/'. Rename or remove this file and try again.
   [255]
