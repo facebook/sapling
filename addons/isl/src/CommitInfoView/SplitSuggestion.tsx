@@ -10,6 +10,7 @@ import {Column} from '../ComponentUtils';
 import {Internal} from '../Internal';
 import {Tooltip} from '../Tooltip';
 import {tracker} from '../analytics';
+import {codeReviewProvider, diffSummary} from '../codeReview/CodeReviewInfo';
 import {Button} from '../components/Button';
 import {Divider} from '../components/Divider';
 import GatedComponent from '../components/GatedComponent';
@@ -122,7 +123,6 @@ function SplitSuggestionImpl({commit}: {commit: CommitInfo}) {
   const mode = useAtomValue(commitMode);
   const significantLinesOfCode = useFetchSignificantLinesOfCode(commit) ?? -1;
   const uncommittedChanges = useAtomValue(uncommittedChangesWithPreviews);
-  console.log('SplitSuggestionImpl', significantLinesOfCode > SLOC_THRESHOLD_FOR_SPLIT_SUGGESTIONS);
   // no matter what if the commit is over the threshold, we show the split suggestion
   if (significantLinesOfCode > SLOC_THRESHOLD_FOR_SPLIT_SUGGESTIONS) {
     return (
@@ -150,7 +150,26 @@ function SplitSuggestionImpl({commit}: {commit: CommitInfo}) {
 
 export default function SplitSuggestion({commit}: {commit: CommitInfo}) {
   const enabled = useAtomValue(splitSuggestionEnabled);
-  if (!enabled || commit.totalFileCount > MAX_FILES_ALLOWED_FOR_DIFF_STAT) {
+
+  const provider = useAtomValue(codeReviewProvider);
+  const diffInfoResult = useAtomValue(diffSummary(commit.diffId));
+
+  if (commit.diffId != null) {
+    if (diffInfoResult.error || diffInfoResult?.value == null) {
+      // don't show the suggestion until the diff is loaded to be sure it's not closed.
+      return null;
+    }
+    const info = diffInfoResult.value;
+    if (provider?.isDiffClosed(info)) {
+      return null;
+    }
+  }
+
+  if (
+    !enabled ||
+    commit.totalFileCount > MAX_FILES_ALLOWED_FOR_DIFF_STAT ||
+    commit.phase === 'public'
+  ) {
     return null;
   }
   // using a gated component here to avoid exposing when diff size is too big  to show the split suggestion
