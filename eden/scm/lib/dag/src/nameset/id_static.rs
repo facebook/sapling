@@ -389,6 +389,10 @@ pub(crate) mod tests {
     use super::super::tests::*;
     use super::super::NameSet;
     use super::*;
+    use crate::nameset::difference::DifferenceSet;
+    use crate::nameset::intersection::IntersectionSet;
+    use crate::nameset::slice::SliceSet;
+    use crate::nameset::union::UnionSet;
     use crate::tests::build_segments;
     use crate::DagAlgorithm;
     use crate::NameDag;
@@ -442,6 +446,182 @@ pub(crate) mod tests {
             check_invariants(cd.deref())?;
             // should not be "<difference <...> <...>>"
             assert_eq!(format!("{:?}", &cd), "<spans [C:D+2:3]>");
+
+            Ok(())
+        })
+    }
+
+    #[test]
+    fn test_dag_fast_path_set_ops() -> Result<()> {
+        with_dag(|dag| {
+            let abcd = r(dag.ancestors("D".into()))?.reverse();
+            let unordered = abcd.take(2).union_zip(&abcd.skip(3));
+
+            assert_eq!(
+                format!("{:?}", abcd.intersection(&unordered)),
+                "<and <spans [A:D+0:3] +> <or <spans [A:B+0:1] +> <spans [D+3] +> (order=Zip)>>"
+            );
+            assert_eq!(
+                format!("{:?}", abcd.difference(&unordered)),
+                "<diff <spans [A:D+0:3] +> <or <spans [A:B+0:1] +> <spans [D+3] +> (order=Zip)>>"
+            );
+            assert_eq!(
+                format!("{:?}", abcd.union(&unordered)),
+                "<or <spans [A:D+0:3] +> <or <spans [A:B+0:1] +> <spans [D+3] +> (order=Zip)>>"
+            );
+            assert_eq!(
+                format!("{:?}", abcd.union_preserving_order(&unordered)),
+                "<or <spans [A:D+0:3] +> <or <spans [A:B+0:1] +> <spans [D+3] +> (order=Zip)>>"
+            );
+
+            Ok(())
+        })
+    }
+
+    /// Show set iteration and flatten set iteration for debugging purpose.
+    fn dbg_flat(set: &NameSet) -> String {
+        let flat = set.specialized_flatten_id();
+        let flat_str = match flat {
+            Some(flat) => format!(
+                " flat:{}",
+                fmt_iter(&NameSet::from_query(flat.into_owned()))
+            ),
+            None => String::new(),
+        };
+        format!("{}{}", fmt_iter(set), flat_str)
+    }
+
+    // Construct diff, intersection, union sets directly to bypass fast paths.
+    fn set_ops(a: &NameSet, b: &NameSet) -> (NameSet, NameSet, NameSet) {
+        let difference = DifferenceSet::new(a.clone(), b.clone());
+        let intersection = IntersectionSet::new(a.clone(), b.clone());
+        let union = UnionSet::new(a.clone(), b.clone());
+        (
+            NameSet::from_query(difference),
+            NameSet::from_query(intersection),
+            NameSet::from_query(union),
+        )
+    }
+
+    #[test]
+    fn test_dag_specialized_flatten_id_fast_path_with_set_ops() -> Result<()> {
+        with_dag(|dag| {
+            let mut abcd = "A B C D"
+                .split_whitespace()
+                .map(|s: &'static str| r(dag.sort(&s.into())).unwrap())
+                .collect::<Vec<_>>();
+            let d = abcd.pop().unwrap();
+            let c = abcd.pop().unwrap();
+            let b = abcd.pop().unwrap();
+            let a = abcd.pop().unwrap();
+
+            let acb = a.union_preserving_order(&b.union_preserving_order(&c).reverse());
+            let bcd = b.union_preserving_order(&c).union_preserving_order(&d);
+
+            // All set operations can use fast paths.
+            let diff = acb.difference(&bcd);
+            let intersect = acb.intersection(&bcd);
+            let union1 = diff.union_preserving_order(&intersect);
+            let reversed1 = union1.reverse();
+            let union2 = reversed1.union_zip(&diff);
+            let reversed2 = union2.reverse();
+
+            // Show the values of the sets.
+            assert_eq!(dbg_flat(&diff), "[A] flat:[A]");
+            assert_eq!(dbg_flat(&intersect), "[C, B] flat:[C, B]");
+            assert_eq!(dbg_flat(&union1), "[A, C, B] flat:[C, B, A]");
+            assert_eq!(dbg_flat(&reversed1), "[B, C, A] flat:[A, B, C]");
+            assert_eq!(dbg_flat(&union2), "[B, C, A] flat:[A, B, C]");
+            assert_eq!(dbg_flat(&reversed2), "[A, C, B] flat:[C, B, A]");
+
+            // Show the debug format. This shows whether internal structure is flattened or not.
+            assert_eq!(
+                wrap_dbg_lines(&reversed2),
+                r#"
+                <reverse
+                  <or
+                    <reverse
+                      <or
+                        <diff
+                          <or <spans [A+0]> <reverse <or <spans [B+1]> <spans [C+2]>>>>
+                          <or <or <spans [B+1]> <spans [C+2]>> <spans [D+3]>>>
+                        <and
+                          <or <spans [A+0]> <reverse <or <spans [B+1]> <spans [C+2]>>>>
+                          <or <or <spans [B+1]> <spans [C+2]>> <spans [D+3]>>>>>
+                    <diff
+                      <or <spans [A+0]> <reverse <or <spans [B+1]> <spans [C+2]>>>>
+                      <or <or <spans [B+1]> <spans [C+2]>> <spans [D+3]>>> (order=Zip)>>"#
+            );
+
+            // Flattened turns the tree into a single set.
+            let flattened = reversed2.specialized_flatten_id().unwrap();
+            assert_eq!(format!("{:?}", &flattened), "<spans [A:C+0:2]>");
+
+            Ok(())
+        })
+    }
+
+    #[test]
+    fn test_dag_specialized_flatten_id_fast_path_with_slices() -> Result<()> {
+        // SliceSet cannot use fast paths easily. It must check the order.
+        with_dag(|dag| {
+            let abcd = r(dag.ancestors("D".into()))?.reverse();
+            let abefg = r(dag.ancestors("G".into()))?.reverse();
+
+            let slice12 = |a: &NameSet| -> NameSet {
+                NameSet::from_query(SliceSet::new(a.clone(), 1, Some(2)))
+            };
+
+            let (d, i, u) = set_ops(&abcd, &abefg);
+            assert_eq!(dbg_flat(&d), "[C, D] flat:[C, D]");
+            assert_eq!(dbg_flat(&i), "[A, B] flat:[A, B]");
+            assert_eq!(
+                dbg_flat(&u),
+                "[A, B, C, D, E, F, G] flat:[A, B, C, D, E, F, G]"
+            );
+            assert_eq!(dbg_flat(&slice12(&d)), "[D] flat:[D]");
+            assert_eq!(dbg_flat(&slice12(&i)), "[B] flat:[B]");
+            assert_eq!(dbg_flat(&slice12(&u)), "[B, C]"); // no fast path for union_preserving_order
+
+            // Make abcd and abefg use different order.
+            let (d, i, u) = set_ops(&abcd.reverse(), &abefg);
+            assert_eq!(dbg_flat(&d), "[D, C] flat:[D, C]");
+            assert_eq!(dbg_flat(&i), "[B, A] flat:[B, A]");
+            assert_eq!(
+                dbg_flat(&u),
+                "[D, C, B, A, E, F, G] flat:[G, F, E, D, C, B, A]"
+            );
+            assert_eq!(dbg_flat(&slice12(&d)), "[C] flat:[C]");
+            assert_eq!(dbg_flat(&slice12(&i)), "[A] flat:[A]");
+            assert_eq!(dbg_flat(&slice12(&u)), "[C, B]"); // no fast path for union_preserving_order
+
+            // Set without either order.
+            let unordered = abcd.skip(1).take(2).union_zip(&abefg.take(2));
+            assert!(
+                !unordered
+                    .hints()
+                    .flags()
+                    .intersects(Flags::ID_ASC | Flags::ID_DESC)
+            );
+            assert_eq!(dbg_flat(&unordered), "[B, A, C] flat:[A, B, C]");
+
+            // S & unordered; or S - unordered can preserve order and maintain fast path.
+            assert_eq!(
+                dbg_flat(&slice12(&abcd.intersection(&unordered))),
+                "[B, C] flat:[B, C]"
+            );
+            assert_eq!(
+                dbg_flat(&slice12(&abefg.difference(&unordered))),
+                "[F, G] flat:[F, G]"
+            );
+
+            // S + unordered (any order) usually does not have a fast path.
+            assert_eq!(
+                dbg_flat(&slice12(&abcd.union_preserving_order(&unordered))),
+                "[B, C]"
+            );
+            assert_eq!(dbg_flat(&slice12(&abcd.union_zip(&unordered))), "[B, C]");
+            assert_eq!(dbg_flat(&slice12(&abcd.union(&unordered))), "[B, C]");
 
             Ok(())
         })
@@ -680,5 +860,90 @@ pub(crate) mod tests {
 
     fn has_ancestors_flag(set: NameSet) -> bool {
         set.hints().contains(Flags::ANCESTORS)
+    }
+
+    /// Break <nested <nested <nested ... >>> into multi-lines.
+    fn wrap_dbg_lines(dbg: &dyn fmt::Debug) -> String {
+        #[derive(Default, Debug)]
+        struct Fmt<'a> {
+            head: &'a str,
+            tail: &'a str,
+            body: Vec<Fmt<'a>>,
+            len: usize,
+        }
+
+        fn indent(s: &str, prefix: &str) -> String {
+            format!(
+                "\n{}{}",
+                prefix,
+                s.trim().replace('\n', &format!("\n{}", prefix))
+            )
+        }
+
+        impl<'a> Fmt<'a> {
+            // to_parse -> (Fmt, rest)
+            fn parse(mut s: &'a str) -> (Self, &'a str) {
+                let mut out = Self::default();
+                let mut seen_left = false;
+                let mut i = 0;
+                while i < s.len() {
+                    let ch = s.as_bytes()[i];
+                    match ch {
+                        b'<' => {
+                            if seen_left {
+                                if out.head.is_empty() {
+                                    out.head = &s[..i].trim();
+                                    out.len += out.head.len();
+                                }
+                                let (nested, rest) = Self::parse(&s[i..]);
+                                out.len += nested.len;
+                                out.body.push(nested);
+                                s = rest;
+                                i = 0;
+                                continue;
+                            } else {
+                                seen_left = true;
+                                i += 1;
+                            }
+                        }
+                        b'>' => {
+                            out.tail = &s[..i + 1].trim();
+                            out.len += out.tail.len();
+                            if out.head.is_empty() {
+                                (out.head, out.tail) = out.tail.split_once(' ').unwrap();
+                            }
+                            let rest = &s[i + 1..];
+                            return (out, rest);
+                        }
+                        _ => i += 1,
+                    }
+                }
+                panic!("unbalanced <> in fmt string");
+            }
+
+            fn pretty(&self) -> String {
+                let mut out = String::new();
+                let need_wrap = !self.body.is_empty() && self.len > 80;
+                out.push_str(self.head);
+                for f in &self.body {
+                    let mut s = f.pretty();
+                    if need_wrap {
+                        s = indent(&s, "  ");
+                    } else {
+                        s = format!(" {}", s);
+                    }
+                    out.push_str(&s);
+                }
+                if self.tail != ">" {
+                    out.push(' ');
+                }
+                out.push_str(self.tail);
+                out
+            }
+        }
+
+        let s = format!("{:?}", dbg);
+        let f = Fmt::parse(&s).0;
+        indent(&f.pretty(), "                ")
     }
 }
