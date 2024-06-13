@@ -103,12 +103,16 @@ struct Iter {
     inner_iter: BoxVertexStream,
     set: SliceSet,
     index: u64,
+    ended: bool,
 }
 
 const SKIP_CACHE_SIZE_THRESHOLD: u64 = 1000;
 
 impl Iter {
     async fn next(&mut self) -> Option<Result<VertexName>> {
+        if self.ended {
+            return None;
+        }
         if self.set.is_take_cache_complete() {
             // Fast path - no need to use inner_iter.
             let index = self.index.max(self.set.skip_count);
@@ -175,6 +179,11 @@ impl Iter {
                     true
                 }
             };
+
+            if next.is_none() {
+                self.ended = true;
+            }
+
             if should_take {
                 return next.map(Ok);
             } else {
@@ -225,6 +234,7 @@ impl AsyncNameSetQuery for SliceSet {
             inner_iter,
             set: self.clone(),
             index: 0,
+            ended: false,
         };
         Ok(iter.into_stream())
     }
