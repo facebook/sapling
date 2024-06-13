@@ -29,6 +29,7 @@ export type TrackEventName =
   | 'ArcStableForCommand'
   | 'ArcStableServerStablesCommand'
   | 'BulkRebaseOperation'
+  | 'BookmarkCreateOperation'
   | 'BookmarkDeleteOperation'
   | 'CommitOperation'
   | 'CommitFileSubsetOperation'

@@ -10,7 +10,7 @@ import type {CommitInfo, SuccessorInfo} from './types';
 import type {ReactNode} from 'react';
 import type {ContextMenuItem} from 'shared/ContextMenu';
 
-import {Bookmarks} from './Bookmark';
+import {Bookmarks, createBookmarkAtCommit} from './Bookmark';
 import {openBrowseUrlForHash, supportsBrowseUrlForHash} from './BrowseRepo';
 import {hasUnsavedEditedCommitMessage} from './CommitInfoView/CommitInfoState';
 import {currentComparisonMode} from './ComparisonView/atoms';
@@ -248,6 +248,12 @@ export const Commit = memo(
             onClick: hasUncommittedChanges ? () => null : handleSplit,
           });
         }
+        items.push({
+          label: <T>Create Bookmark...</T>,
+          onClick: () => {
+            createBookmarkAtCommit(commit);
+          },
+        });
         items.push({
           label: hasChildren ? <T>Hide Commit and Descendants</T> : <T>Hide Commit</T>,
           onClick: () =>
