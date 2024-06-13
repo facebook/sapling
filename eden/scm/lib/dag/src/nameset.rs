@@ -210,7 +210,8 @@ impl NameSet {
         }
         if let (Some(this), Some(other)) = (
             self.as_any().downcast_ref::<IdStaticSet>(),
-            other.as_any().downcast_ref::<IdStaticSet>(),
+            // xs - ys; the order of ys does not matter
+            other.specialized_flatten_id(),
         ) {
             let order = this.map.map_version().partial_cmp(other.map.map_version());
             if order.is_some() {
@@ -277,7 +278,8 @@ impl NameSet {
         }
         if let (Some(this), Some(other)) = (
             self.as_any().downcast_ref::<IdStaticSet>(),
-            other.as_any().downcast_ref::<IdStaticSet>(),
+            // xs & ys; the order of ys does not matter
+            other.specialized_flatten_id(),
         ) {
             let order = this.map.map_version().partial_cmp(other.map.map_version());
             if let Some(order) = order {
@@ -339,18 +341,23 @@ impl NameSet {
         if let Some(set) = self.union_fast_paths(other) {
             return set;
         }
+
+        // This fast path aggressively flatten the sets. It does not preserve order.
         if let (Some(this), Some(other)) = (
-            self.as_any().downcast_ref::<IdStaticSet>(),
-            other.as_any().downcast_ref::<IdStaticSet>(),
+            self.specialized_flatten_id(),
+            other.specialized_flatten_id(),
         ) {
             let order = this.map.map_version().partial_cmp(other.map.map_version());
             if let Some(order) = order {
                 // Fast path for IdStaticSet
-                let result = Self::from_spans_idmap_dag(
+                let mut result = Self::from_spans_idmap_dag(
                     this.spans.union(&other.spans),
                     pick(order, &this.map, &other.map).clone(),
                     pick(order, &this.dag, &other.dag).clone(),
                 );
+                if this.is_reversed() {
+                    result = result.reverse();
+                }
                 tracing::debug!(
                     target: "dag::algo::union",
                     "union(x={:.6?}, y={:.6?}) = {:.6?} (fast path 3)",

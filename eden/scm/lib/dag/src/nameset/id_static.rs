@@ -457,18 +457,34 @@ pub(crate) mod tests {
             let abcd = r(dag.ancestors("D".into()))?.reverse();
             let unordered = abcd.take(2).union_zip(&abcd.skip(3));
 
+            // Intersection and difference can flatten the "unordered" set because rhs order does
+            // not matter.
             assert_eq!(
                 format!("{:?}", abcd.intersection(&unordered)),
-                "<and <spans [A:D+0:3] +> <or <spans [A:B+0:1] +> <spans [D+3] +> (order=Zip)>>"
+                "<spans [D+3, A:B+0:1] +>"
             );
             assert_eq!(
                 format!("{:?}", abcd.difference(&unordered)),
-                "<diff <spans [A:D+0:3] +> <or <spans [A:B+0:1] +> <spans [D+3] +> (order=Zip)>>"
+                "<spans [C+2] +>"
+            );
+
+            // but lhs order matters.
+            assert_eq!(
+                format!("{:?}", unordered.intersection(&abcd)),
+                "<and <or <spans [A:B+0:1] +> <spans [D+3] +> (order=Zip)> <spans [A:D+0:3] +>>"
             );
             assert_eq!(
-                format!("{:?}", abcd.union(&unordered)),
-                "<or <spans [A:D+0:3] +> <or <spans [A:B+0:1] +> <spans [D+3] +> (order=Zip)>>"
+                format!("{:?}", unordered.difference(&abcd)),
+                "<diff <or <spans [A:B+0:1] +> <spans [D+3] +> (order=Zip)> <spans [A:D+0:3] +>>"
             );
+
+            // Union drops order (by flattening) aggresively on both sides.
+            assert_eq!(
+                format!("{:?}", abcd.union(&unordered)),
+                "<spans [A:D+0:3] +>"
+            );
+
+            // Union (preserving order) cannot flatten sets for fast paths.
             assert_eq!(
                 format!("{:?}", abcd.union_preserving_order(&unordered)),
                 "<or <spans [A:D+0:3] +> <or <spans [A:B+0:1] +> <spans [D+3] +> (order=Zip)>>"
@@ -621,7 +637,12 @@ pub(crate) mod tests {
                 "[B, C]"
             );
             assert_eq!(dbg_flat(&slice12(&abcd.union_zip(&unordered))), "[B, C]");
-            assert_eq!(dbg_flat(&slice12(&abcd.union(&unordered))), "[B, C]");
+
+            // "union" does not promise order and might have a fast path.
+            assert_eq!(
+                dbg_flat(&slice12(&abcd.union(&unordered))),
+                "[B, C] flat:[B, C]"
+            );
 
             Ok(())
         })

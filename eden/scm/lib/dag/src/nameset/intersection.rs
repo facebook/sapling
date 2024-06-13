@@ -93,7 +93,8 @@ impl StopCondition {
 
 impl IntersectionSet {
     pub fn new(lhs: NameSet, rhs: NameSet) -> Self {
-        // More efficient if `lhs` is smaller. Swap `lhs` and `rhs` if `lhs` is `FULL`.
+        // More efficient if `lhs` is smaller. But `lhs` order matters.
+        // Swap `lhs` and `rhs` if `lhs` is `FULL`.
         let (lhs, rhs) = if lhs.hints().contains(Flags::FULL)
             && !rhs.hints().contains(Flags::FULL)
             && !rhs.hints().contains(Flags::FILTER)
