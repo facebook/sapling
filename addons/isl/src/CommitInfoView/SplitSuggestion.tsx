@@ -90,9 +90,11 @@ function SuggestionBanner({
             <DismissSuggestionButton />
           </>
         }>
-        <Column alignStart style={{gap: 0}}>
-          <Tooltip title={tooltip}>{children}</Tooltip>
-        </Column>
+        <Tooltip title={tooltip}>
+          <Column alignStart style={{gap: 0}}>
+            {children}
+          </Column>
+        </Tooltip>
       </Banner>
     </>
   );
@@ -153,7 +155,6 @@ export default function SplitSuggestion({commit}: {commit: CommitInfo}) {
 
   const provider = useAtomValue(codeReviewProvider);
   const diffInfoResult = useAtomValue(diffSummary(commit.diffId));
-
   if (commit.diffId != null) {
     if (diffInfoResult.error || diffInfoResult?.value == null) {
       // don't show the suggestion until the diff is loaded to be sure it's not closed.
