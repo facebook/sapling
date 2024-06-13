@@ -32,7 +32,7 @@ use parking_lot::RwLockWriteGuard;
 use tracing::debug;
 
 /// Simple wrapper around either an `IndexedLog` or a `RotateLog`. This abstracts whether a store
-/// is local (`IndexedLog`) or shared (`RotateLog`) so that higher level stores don't have to deal
+/// is permanent (`IndexedLog`) or rotated (`RotateLog`) so that higher level stores don't have to deal
 /// with the subtle differences.
 pub struct Store {
     inner: RwLock<Inner>,
@@ -42,14 +42,14 @@ pub struct Store {
 }
 
 pub enum Inner {
-    Local(Log),
-    Shared(RotateLog),
+    Permanent(Log),
+    Rotated(RotateLog),
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum StoreType {
-    Local,
-    Shared,
+    Permanent,
+    Rotated,
 }
 
 impl Store {
@@ -61,8 +61,8 @@ impl Store {
         self.inner.write()
     }
 
-    pub fn is_local(&self) -> bool {
-        self.read().is_local()
+    pub fn is_permanent(&self) -> bool {
+        self.read().is_permanent()
     }
 
     /// Add the buffer to the store.
@@ -108,9 +108,9 @@ impl Store {
 }
 
 impl Inner {
-    pub fn is_local(&self) -> bool {
+    pub fn is_permanent(&self) -> bool {
         match self {
-            Self::Local(_) => true,
+            Self::Permanent(_) => true,
             _ => false,
         }
     }
@@ -120,8 +120,8 @@ impl Inner {
     pub fn lookup(&self, index_id: usize, key: impl AsRef<[u8]>) -> Result<LookupIter> {
         let key = key.as_ref();
         match self {
-            Self::Local(log) => Ok(LookupIter::Local(log.lookup(index_id, key)?)),
-            Self::Shared(log) => Ok(LookupIter::Shared(
+            Self::Permanent(log) => Ok(LookupIter::Permanent(log.lookup(index_id, key)?)),
+            Self::Rotated(log) => Ok(LookupIter::Rotated(
                 log.lookup(index_id, Bytes::copy_from_slice(key))?,
             )),
         }
@@ -135,39 +135,39 @@ impl Inner {
     /// Add the buffer to the store.
     pub fn append(&mut self, buf: impl AsRef<[u8]>) -> Result<()> {
         match self {
-            Self::Local(log) => Ok(log.append(buf)?),
-            Self::Shared(log) => Ok(log.append(buf)?),
+            Self::Permanent(log) => Ok(log.append(buf)?),
+            Self::Rotated(log) => Ok(log.append(buf)?),
         }
     }
 
     pub fn iter(&self) -> Box<dyn Iterator<Item = IndexedlogResult<&[u8]>> + '_> {
         match self {
-            Self::Local(log) => Box::new(log.iter()),
-            Self::Shared(log) => Box::new(log.iter()),
+            Self::Permanent(log) => Box::new(log.iter()),
+            Self::Rotated(log) => Box::new(log.iter()),
         }
     }
 
     /// Attempt to make slice backed by the mmap buffer to avoid heap allocation.
     pub fn slice_to_bytes(&self, slice: &[u8]) -> Bytes {
         match self {
-            Self::Local(log) => log.slice_to_bytes(slice),
-            Self::Shared(log) => log.slice_to_bytes(slice),
+            Self::Permanent(log) => log.slice_to_bytes(slice),
+            Self::Rotated(log) => log.slice_to_bytes(slice),
         }
     }
 
     pub fn flush(&mut self) -> Result<()> {
         match self {
-            Self::Local(log) => {
+            Self::Permanent(log) => {
                 log.sync()?;
             }
-            Self::Shared(log) => {
+            Self::Rotated(log) => {
                 if let Err(err) = log.sync() {
                     if !err.is_corruption() && err.io_error_kind() == ErrorKind::NotFound {
                         // File-not-found errors can happen when the hg cache
                         // was blown away during command execution. Ignore the
                         // error since failed cache writes won't cause incorrect
                         // behavior and do not have to abort the command.
-                        tracing::warn!(%err, "ignoring error flushing shared indexedlog");
+                        tracing::warn!(%err, "ignoring error flushing rotated indexedlog");
                     } else {
                         return Err(err.into());
                     }
@@ -179,16 +179,16 @@ impl Inner {
 
     fn is_changed_on_disk(&self) -> bool {
         match self {
-            Self::Local(log) => log.is_changed_on_disk(),
-            Self::Shared(log) => log.is_changed_on_disk(),
+            Self::Permanent(log) => log.is_changed_on_disk(),
+            Self::Rotated(log) => log.is_changed_on_disk(),
         }
     }
 }
 
 /// Iterator returned from `Self::lookup`.
 pub enum LookupIter<'a> {
-    Local(LogLookupIter<'a>),
-    Shared(RotateLogLookupIter<'a>),
+    Permanent(LogLookupIter<'a>),
+    Rotated(RotateLogLookupIter<'a>),
 }
 
 impl<'a> Iterator for LookupIter<'a> {
@@ -196,8 +196,8 @@ impl<'a> Iterator for LookupIter<'a> {
 
     fn next(&mut self) -> Option<Self::Item> {
         match self {
-            LookupIter::Local(iter) => iter.next().map(|res| res.map_err(Into::into)),
-            LookupIter::Shared(iter) => iter.next().map(|res| res.map_err(Into::into)),
+            LookupIter::Permanent(iter) => iter.next().map(|res| res.map_err(Into::into)),
+            LookupIter::Rotated(iter) => iter.next().map(|res| res.map_err(Into::into)),
         }
     }
 }
@@ -205,8 +205,8 @@ impl<'a> Iterator for LookupIter<'a> {
 impl<'a> LookupIter<'a> {
     pub fn is_empty(self) -> Result<bool> {
         match self {
-            LookupIter::Local(log) => Ok(log.is_empty()),
-            LookupIter::Shared(log) => Ok(log.is_empty()?),
+            LookupIter::Permanent(log) => Ok(log.is_empty()),
+            LookupIter::Rotated(log) => Ok(log.is_empty()?),
         }
     }
 }
@@ -234,13 +234,13 @@ impl StoreOpenOptions {
         }
     }
 
-    /// When the store is local, control how many logs will be kept in the `RotateLog`.
+    /// When the store is rotated, control how many logs will be kept in the `RotateLog`.
     pub fn max_log_count(mut self, count: u8) -> Self {
         self.max_log_count = Some(count);
         self
     }
 
-    /// When the store is local, control how big each of the individual logs in the `RotateLog`
+    /// When the store is rotated, control how big each of the individual logs in the `RotateLog`
     /// will be.
     pub fn max_bytes_per_log(mut self, bytes: u64) -> Self {
         self.max_bytes_per_log = Some(bytes);
@@ -264,22 +264,22 @@ impl StoreOpenOptions {
         self
     }
 
-    fn into_local_open_options(self) -> log::OpenOptions {
+    fn into_permanent_open_options(self) -> log::OpenOptions {
         log::OpenOptions::new()
             .create(self.create)
             .index_defs(self.indexes)
             .auto_sync_threshold(self.auto_sync_threshold)
     }
 
-    /// Create a local `Store`.
+    /// Create a permanent `Store`.
     ///
-    /// Data added to a local store will never be rotated out, and `fsync(2)` is used to guarantee
+    /// Data added to the store will never be rotated out, and `fsync(2)` is used to guarantee
     /// data consistency.
-    pub fn local(self, path: impl AsRef<Path>) -> Result<Store> {
+    pub fn permanent(self, path: impl AsRef<Path>) -> Result<Store> {
         let sync_if_changed_on_disk = self.sync_if_changed_on_disk;
         Ok(Store {
-            inner: RwLock::new(Inner::Local(
-                self.into_local_open_options()
+            inner: RwLock::new(Inner::Permanent(
+                self.into_permanent_open_options()
                     .open_with_repair(path.as_ref())?,
             )),
             auto_sync_count: AtomicU64::new(0),
@@ -290,7 +290,7 @@ impl StoreOpenOptions {
     /// Convert a `StoreOpenOptions` to a `rotate::OpenOptions`.
     ///
     /// Should only be used to implement `indexedlog::DefaultOpenOptions`
-    pub fn into_shared_open_options(self) -> rotate::OpenOptions {
+    pub fn into_rotated_open_options(self) -> rotate::OpenOptions {
         let mut opts = rotate::OpenOptions::new()
             .create(self.create)
             .auto_sync_threshold(self.auto_sync_threshold)
@@ -307,13 +307,13 @@ impl StoreOpenOptions {
         opts
     }
 
-    /// Create a shared `Store`
+    /// Create a rotated `Store`
     ///
-    /// Data added to a shared store will be rotated out depending on the values of `max_log_count`
+    /// Data added to a rotated store will be rotated out depending on the values of `max_log_count`
     /// and `max_bytes_per_log`.
-    pub fn shared(self, path: impl AsRef<Path>) -> Result<Store> {
+    pub fn rotated(self, path: impl AsRef<Path>) -> Result<Store> {
         let sync_if_changed_on_disk = self.sync_if_changed_on_disk;
-        let opts = self.into_shared_open_options();
+        let opts = self.into_rotated_open_options();
         let mut rotate_log = opts.open_with_repair(path.as_ref())?;
         // Attempt to clean up old logs that might be left around. On Windows, other
         // Mercurial processes that have the store opened might prevent their removal.
@@ -322,29 +322,29 @@ impl StoreOpenOptions {
             debug!("Unable to remove old indexedlogutil logs: {:?}", err);
         }
         Ok(Store {
-            inner: RwLock::new(Inner::Shared(rotate_log)),
+            inner: RwLock::new(Inner::Rotated(rotate_log)),
             auto_sync_count: AtomicU64::new(0),
             sync_if_changed_on_disk,
         })
     }
 
-    /// Attempts to repair corruption in a local indexedlog store.
+    /// Attempts to repair corruption in a permanent indexedlog store.
     ///
     /// Note, this may delete data, though it should only delete data that is unreadable.
     #[allow(dead_code)]
-    pub fn repair_local(self, path: PathBuf) -> Result<String> {
-        self.into_local_open_options()
+    pub fn repair_permanent(self, path: PathBuf) -> Result<String> {
+        self.into_permanent_open_options()
             .repair(path)
             .map_err(|e| e.into())
     }
 
-    /// Attempts to repair corruption in a shared rotatelog store.
+    /// Attempts to repair corruption in a rotated rotatelog store.
     ///
     /// Note, this may delete data, though that should be fine since a rotatelog is free to delete
     /// data already.
     #[allow(dead_code)]
-    pub fn repair_shared(self, path: PathBuf) -> Result<String> {
-        self.into_shared_open_options()
+    pub fn repair_rotated(self, path: PathBuf) -> Result<String> {
+        self.into_rotated_open_options()
             .repair(path)
             .map_err(|e| e.into())
     }
@@ -359,12 +359,12 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_local() -> Result<()> {
+    fn test_permanent() -> Result<()> {
         let dir = TempDir::new()?;
 
         let store = StoreOpenOptions::new(&BTreeMap::<&str, &str>::new())
             .index("hex", |_| vec![IndexOutput::Reference(0..2)])
-            .local(&dir)?;
+            .permanent(&dir)?;
 
         store.append(b"aabcd")?;
 
@@ -376,12 +376,12 @@ mod tests {
     }
 
     #[test]
-    fn test_shared() -> Result<()> {
+    fn test_rotated() -> Result<()> {
         let dir = TempDir::new()?;
 
         let store = StoreOpenOptions::new(&BTreeMap::<&str, &str>::new())
             .index("hex", |_| vec![IndexOutput::Reference(0..2)])
-            .shared(&dir)?;
+            .rotated(&dir)?;
 
         store.append(b"aabcd")?;
 
@@ -393,14 +393,14 @@ mod tests {
     }
 
     #[test]
-    fn test_local_no_rotate() -> Result<()> {
+    fn test_permanent_no_rotate() -> Result<()> {
         let dir = TempDir::new()?;
 
         let store = StoreOpenOptions::new(&BTreeMap::<&str, &str>::new())
             .index("hex", |_| vec![IndexOutput::Reference(0..2)])
             .max_log_count(1)
             .max_bytes_per_log(10)
-            .local(&dir)?;
+            .permanent(&dir)?;
 
         store.append(b"aabcd")?;
         store.append(b"abbcd")?;
@@ -414,14 +414,14 @@ mod tests {
     }
 
     #[test]
-    fn test_shared_rotate() -> Result<()> {
+    fn test_rotated_rotate() -> Result<()> {
         let dir = TempDir::new()?;
 
         let store = StoreOpenOptions::new(&BTreeMap::<&str, &str>::new())
             .index("hex", |_| vec![IndexOutput::Reference(0..2)])
             .max_log_count(1)
             .max_bytes_per_log(10)
-            .shared(&dir)?;
+            .rotated(&dir)?;
 
         store.append(b"aabcd")?;
         store.append(b"abbcd")?;
@@ -443,11 +443,11 @@ mod tests {
 
         let store1 = StoreOpenOptions::new(&config)
             .index("hex", |_| vec![IndexOutput::Reference(0..2)])
-            .local(&dir)?;
+            .permanent(&dir)?;
 
         let store2 = StoreOpenOptions::new(&config)
             .index("hex", |_| vec![IndexOutput::Reference(0..2)])
-            .local(&dir)?;
+            .permanent(&dir)?;
 
         store1.append(b"aabcd")?;
         store1.flush()?;
@@ -482,11 +482,11 @@ mod tests {
 
         let store1 = StoreOpenOptions::new(&BTreeMap::<&str, &str>::new())
             .index("hex", |_| vec![IndexOutput::Reference(0..2)])
-            .local(&dir)?;
+            .permanent(&dir)?;
 
         let store2 = StoreOpenOptions::new(&BTreeMap::<&str, &str>::new())
             .index("hex", |_| vec![IndexOutput::Reference(0..2)])
-            .local(&dir)?;
+            .permanent(&dir)?;
 
         store1.append(b"aabcd")?;
         store1.flush()?;

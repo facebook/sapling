@@ -231,7 +231,7 @@ pub(crate) struct LfsPointersEntry {
 
 impl DefaultOpenOptions<rotate::OpenOptions> for LfsPointersStore {
     fn default_open_options() -> rotate::OpenOptions {
-        Self::default_store_open_options(&BTreeMap::<&str, &str>::new()).into_shared_open_options()
+        Self::default_store_open_options(&BTreeMap::<&str, &str>::new()).into_rotated_open_options()
     }
 }
 
@@ -265,16 +265,18 @@ impl LfsPointersStore {
         Ok(open_options)
     }
 
-    /// Create a local `LfsPointersStore`.
-    fn local(path: &Path, config: &dyn Config) -> Result<Self> {
+    /// Create a permanent `LfsPointersStore`.
+    fn permanent(path: &Path, config: &dyn Config) -> Result<Self> {
         let path = get_lfs_pointers_path(path)?;
-        Ok(Self(LfsPointersStore::open_options(config)?.local(path)?))
+        Ok(Self(
+            LfsPointersStore::open_options(config)?.permanent(path)?,
+        ))
     }
 
-    /// Create a shared `LfsPointersStore`.
-    fn shared(path: &Path, config: &dyn Config) -> Result<Self> {
+    /// Create a rotated `LfsPointersStore`.
+    fn rotated(path: &Path, config: &dyn Config) -> Result<Self> {
         let path = get_lfs_pointers_path(path)?;
-        Ok(Self(LfsPointersStore::open_options(config)?.shared(path)?))
+        Ok(Self(LfsPointersStore::open_options(config)?.rotated(path)?))
     }
 
     /// Read an entry from the slice and deserialize it.
@@ -331,7 +333,7 @@ struct LfsIndexedLogBlobsEntry {
 
 impl DefaultOpenOptions<rotate::OpenOptions> for LfsIndexedLogBlobsStore {
     fn default_open_options() -> rotate::OpenOptions {
-        Self::default_store_open_options(&BTreeMap::<&str, &str>::new()).into_shared_open_options()
+        Self::default_store_open_options(&BTreeMap::<&str, &str>::new()).into_rotated_open_options()
     }
 }
 
@@ -365,10 +367,10 @@ impl LfsIndexedLogBlobsStore {
         Ok(open_options)
     }
 
-    pub fn shared(path: &Path, config: &dyn Config) -> Result<Self> {
+    pub fn rotated(path: &Path, config: &dyn Config) -> Result<Self> {
         let path = get_lfs_blobs_path(path)?;
         Ok(Self {
-            inner: LfsIndexedLogBlobsStore::open_options(config)?.shared(path)?,
+            inner: LfsIndexedLogBlobsStore::open_options(config)?.rotated(path)?,
             chunk_size: LfsIndexedLogBlobsStore::chunk_size(config)?,
         })
     }
@@ -488,15 +490,15 @@ impl LfsIndexedLogBlobsStore {
 }
 
 impl LfsBlobsStore {
-    /// Store the local blobs in their loose format, ie: one file on disk per LFS blob.
-    pub fn local(path: &Path) -> Result<Self> {
+    /// Store the blobs in their loose format, ie: one file on disk per LFS blob.
+    pub fn loose_objects(path: &Path) -> Result<Self> {
         Ok(LfsBlobsStore::Loose(get_lfs_objects_path(path)?, true))
     }
 
-    /// Store the shared blobs in an `IndexedLog`, but still allow reading blobs in their loose
+    /// Store the blobs in a rotated `IndexedLog`, but still allow reading blobs in their loose
     /// format.
-    pub fn shared(path: &Path, config: &dyn Config) -> Result<Self> {
-        let indexedlog = Box::new(LfsBlobsStore::IndexedLog(LfsIndexedLogBlobsStore::shared(
+    pub fn rotated_or_loose_objects(path: &Path, config: &dyn Config) -> Result<Self> {
+        let indexedlog = Box::new(LfsBlobsStore::IndexedLog(LfsIndexedLogBlobsStore::rotated(
             path, config,
         )?));
         let loose = Box::new(LfsBlobsStore::Loose(get_lfs_objects_path(path)?, false));
@@ -639,21 +641,21 @@ impl LfsStore {
         Ok(Self { pointers, blobs })
     }
 
-    /// Create a new local `LfsStore`.
+    /// Create a new permanent `LfsStore`.
     ///
-    /// Local stores will `fsync(2)` data to disk, and will never rotate data out of the store.
-    pub fn local(path: impl AsRef<Path>, config: &dyn Config) -> Result<Self> {
+    /// Permanent stores will `fsync(2)` data to disk, and will never rotate data out of the store.
+    pub fn permanent(path: impl AsRef<Path>, config: &dyn Config) -> Result<Self> {
         let path = path.as_ref();
-        let pointers = LfsPointersStore::local(path, config)?;
-        let blobs = LfsBlobsStore::local(path)?;
+        let pointers = LfsPointersStore::permanent(path, config)?;
+        let blobs = LfsBlobsStore::loose_objects(path)?;
         LfsStore::new(pointers, blobs)
     }
 
-    /// Create a new shared `LfsStore`.
-    pub fn shared(path: impl AsRef<Path>, config: &dyn Config) -> Result<Self> {
+    /// Create a new rotated `LfsStore`.
+    pub fn rotated(path: impl AsRef<Path>, config: &dyn Config) -> Result<Self> {
         let path = path.as_ref();
-        let pointers = LfsPointersStore::shared(path, config)?;
-        let blobs = LfsBlobsStore::shared(path, config)?;
+        let pointers = LfsPointersStore::rotated(path, config)?;
+        let blobs = LfsBlobsStore::rotated_or_loose_objects(path, config)?;
         LfsStore::new(pointers, blobs)
     }
 
@@ -1786,23 +1788,26 @@ impl RemoteDataStore for LfsRemoteStore {
         let mut not_found = Vec::new();
 
         let stores = if let Some(local_store) = self.remote.local.as_ref() {
-            vec![self.remote.shared.clone(), local_store.clone()]
+            vec![
+                (self.remote.shared.clone(), false),
+                (local_store.clone(), true),
+            ]
         } else {
-            vec![self.remote.shared.clone()]
+            vec![(self.remote.shared.clone(), false)]
         };
 
         let mut obj_set = HashMap::new();
         let objs = keys
             .iter()
             .map(|k| {
-                for store in &stores {
+                for (store, is_local) in &stores {
                     if let Some(pointer) = store.pointers.entry(k)? {
                         if let Some(content_hash) =
                             pointer.content_hashes.get(&ContentHashType::Sha256)
                         {
                             obj_set.insert(
                                 content_hash.clone().unwrap_sha256(),
-                                (k.clone(), store.pointers.0.is_local()),
+                                (k.clone(), *is_local),
                             );
                             return Ok(Some((
                                 content_hash.clone().unwrap_sha256(),
@@ -2123,11 +2128,11 @@ mod tests {
     use crate::testutil::TestBlob;
 
     #[test]
-    fn test_new_shared() -> Result<()> {
+    fn test_new_rotated() -> Result<()> {
         let dir = TempDir::new()?;
         let server = mockito::Server::new();
         let config = make_lfs_config(&server, &dir, "test_new_shared");
-        let _ = LfsStore::shared(&dir, &config)?;
+        let _ = LfsStore::rotated(&dir, &config)?;
 
         let mut lfs_dir = dir.as_ref().to_owned();
         lfs_dir.push("lfs");
@@ -2138,11 +2143,11 @@ mod tests {
     }
 
     #[test]
-    fn test_new_local() -> Result<()> {
+    fn test_new_permanent() -> Result<()> {
         let dir = TempDir::new()?;
         let server = mockito::Server::new();
         let config = make_lfs_config(&server, &dir, "test_new_local");
-        let _ = LfsStore::local(&dir, &config)?;
+        let _ = LfsStore::permanent(&dir, &config)?;
 
         let mut lfs_dir = dir.as_ref().to_owned();
         lfs_dir.push("lfs");
@@ -2157,7 +2162,7 @@ mod tests {
         let dir = TempDir::new()?;
         let server = mockito::Server::new();
         let config = make_lfs_config(&server, &dir, "test_add");
-        let store = LfsStore::shared(&dir, &config)?;
+        let store = LfsStore::rotated(&dir, &config)?;
 
         let k1 = key("a", "2");
         let delta = Delta {
@@ -2169,7 +2174,7 @@ mod tests {
         store.add(&delta, &Default::default())?;
         store.flush()?;
 
-        let indexedlog_blobs = LfsIndexedLogBlobsStore::shared(dir.path(), &config)?;
+        let indexedlog_blobs = LfsIndexedLogBlobsStore::rotated(dir.path(), &config)?;
         let hash = ContentHash::sha256(&delta.data).unwrap_sha256();
 
         assert!(indexedlog_blobs.contains(&hash)?);
@@ -2187,7 +2192,7 @@ mod tests {
         let dir = TempDir::new()?;
         let server = mockito::Server::new();
         let config = make_lfs_config(&server, &dir, "test_loose");
-        let blob_store = LfsBlobsStore::shared(dir.path(), &config)?;
+        let blob_store = LfsBlobsStore::rotated_or_loose_objects(dir.path(), &config)?;
         let loose_store = LfsBlobsStore::loose(get_lfs_objects_path(dir.path())?);
 
         let data = Bytes::from(&[1, 2, 3, 4][..]);
@@ -2205,7 +2210,7 @@ mod tests {
         let dir = TempDir::new()?;
         let server = mockito::Server::new();
         let config = make_lfs_config(&server, &dir, "test_add_get_missing");
-        let store = LfsStore::shared(&dir, &config)?;
+        let store = LfsStore::rotated(&dir, &config)?;
 
         let k1 = key("a", "2");
         let delta = Delta {
@@ -2229,7 +2234,7 @@ mod tests {
         let dir = TempDir::new()?;
         let server = mockito::Server::new();
         let config = make_lfs_config(&server, &dir, "test_add_get");
-        let store = LfsStore::shared(&dir, &config)?;
+        let store = LfsStore::rotated(&dir, &config)?;
 
         let k1 = key("a", "2");
         let delta = Delta {
@@ -2251,7 +2256,7 @@ mod tests {
         let server = mockito::Server::new();
         let config = make_lfs_config(&server, &dir, "test_invalid_hash");
 
-        let store = LfsIndexedLogBlobsStore::shared(dir.path(), &config)?;
+        let store = LfsIndexedLogBlobsStore::rotated(dir.path(), &config)?;
 
         let bad_hash = ContentHash::sha256(&Bytes::from_static(b"wrong")).unwrap_sha256();
         let data = Bytes::from_static(b"oops");
@@ -2270,7 +2275,7 @@ mod tests {
         let server = mockito::Server::new();
         let config = make_lfs_config(&server, &dir, "test_invalid_hash");
 
-        let store = LfsIndexedLogBlobsStore::shared(dir.path(), &config)?;
+        let store = LfsIndexedLogBlobsStore::rotated(dir.path(), &config)?;
 
         let data = Bytes::from_static(b"data");
         let hash = ContentHash::sha256(&data).unwrap_sha256();
@@ -2305,7 +2310,7 @@ mod tests {
         let mut config = make_lfs_config(&server, &dir, "test_add_get_split");
         setconfig(&mut config, "lfs", "blobschunksize", "2");
 
-        let store = LfsStore::shared(&dir, &config)?;
+        let store = LfsStore::rotated(&dir, &config)?;
 
         let k1 = key("a", "2");
         let delta = Delta {
@@ -2333,7 +2338,7 @@ mod tests {
         let server = mockito::Server::new();
         let config = make_lfs_config(&server, &dir, "test_partial_blob");
 
-        let store = LfsIndexedLogBlobsStore::shared(dir.path(), &config)?;
+        let store = LfsIndexedLogBlobsStore::rotated(dir.path(), &config)?;
 
         let data = Bytes::from(&[1, 2, 3, 4][..]);
         let partial = data.slice(2..);
@@ -2359,7 +2364,7 @@ mod tests {
         let server = mockito::Server::new();
         let config = make_lfs_config(&server, &dir, "test_full_chunked");
 
-        let store = LfsIndexedLogBlobsStore::shared(dir.path(), &config)?;
+        let store = LfsIndexedLogBlobsStore::rotated(dir.path(), &config)?;
 
         let data = Bytes::from(&[1, 2, 3, 4, 5, 6, 7][..]);
         let sha256 = ContentHash::sha256(&data).unwrap_sha256();
@@ -2402,7 +2407,7 @@ mod tests {
         let server = mockito::Server::new();
         let config = make_lfs_config(&server, &dir, "test_overlapped_chunked");
 
-        let store = LfsIndexedLogBlobsStore::shared(dir.path(), &config)?;
+        let store = LfsIndexedLogBlobsStore::rotated(dir.path(), &config)?;
 
         let data = Bytes::from(&[1, 2, 3, 4, 5, 6, 7][..]);
         let sha256 = ContentHash::sha256(&data).unwrap_sha256();
@@ -2466,7 +2471,7 @@ mod tests {
         let dir = TempDir::new()?;
         let server = mockito::Server::new();
         let config = make_lfs_config(&server, &dir, "test_add_get_copyform");
-        let store = LfsStore::shared(&dir, &config)?;
+        let store = LfsStore::rotated(&dir, &config)?;
 
         let k1 = key("a", "2");
         let delta = Delta {
@@ -2493,7 +2498,7 @@ mod tests {
         let dir = TempDir::new()?;
         let server = mockito::Server::new();
         let config = make_lfs_config(&server, &dir, "test_multiplexer_smaller_than_threshold");
-        let lfs = Arc::new(LfsStore::shared(&dir, &config)?);
+        let lfs = Arc::new(LfsStore::rotated(&dir, &config)?);
 
         let dir = TempDir::new()?;
         let indexedlog_config = IndexedLogHgIdDataStoreConfig {
@@ -2506,7 +2511,7 @@ mod tests {
             &dir,
             ExtStoredPolicy::Ignore,
             &indexedlog_config,
-            StoreType::Shared,
+            StoreType::Rotated,
         )?);
 
         let multiplexer = LfsMultiplexer::new(lfs, indexedlog.clone(), 10);
@@ -2532,7 +2537,7 @@ mod tests {
         let dir = TempDir::new()?;
         let server = mockito::Server::new();
         let config = make_lfs_config(&server, &dir, "test_multiplexer_larger_than_threshold");
-        let lfs = Arc::new(LfsStore::shared(&dir, &config)?);
+        let lfs = Arc::new(LfsStore::rotated(&dir, &config)?);
 
         let dir = TempDir::new()?;
         let indexedlog_config = IndexedLogHgIdDataStoreConfig {
@@ -2545,7 +2550,7 @@ mod tests {
             &dir,
             ExtStoredPolicy::Ignore,
             &indexedlog_config,
-            StoreType::Shared,
+            StoreType::Rotated,
         )?);
 
         let multiplexer = LfsMultiplexer::new(lfs, indexedlog.clone(), 4);
@@ -2571,7 +2576,7 @@ mod tests {
         let lfsdir = TempDir::new()?;
         let server = mockito::Server::new();
         let config = make_lfs_config(&server, &lfsdir, "test_multiplexer_add_pointer");
-        let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
+        let lfs = Arc::new(LfsStore::rotated(&lfsdir, &config)?);
 
         let dir = TempDir::new()?;
         let indexedlog_config = IndexedLogHgIdDataStoreConfig {
@@ -2584,7 +2589,7 @@ mod tests {
             &dir,
             ExtStoredPolicy::Ignore,
             &indexedlog_config,
-            StoreType::Shared,
+            StoreType::Rotated,
         )?);
 
         let multiplexer = LfsMultiplexer::new(lfs, indexedlog.clone(), 4);
@@ -2626,7 +2631,7 @@ mod tests {
 
         multiplexer.flush()?;
 
-        let lfs = LfsStore::shared(&lfsdir, &config)?;
+        let lfs = LfsStore::rotated(&lfsdir, &config)?;
         let entry = lfs.pointers.get(&k)?;
 
         assert!(entry.is_some());
@@ -2650,7 +2655,7 @@ mod tests {
         let lfsdir = TempDir::new()?;
         let server = mockito::Server::new();
         let config = make_lfs_config(&server, &lfsdir, "test_multiplexer_add_copy_pointer");
-        let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
+        let lfs = Arc::new(LfsStore::rotated(&lfsdir, &config)?);
 
         let dir = TempDir::new()?;
         let indexedlog_config = IndexedLogHgIdDataStoreConfig {
@@ -2663,7 +2668,7 @@ mod tests {
             &dir,
             ExtStoredPolicy::Ignore,
             &indexedlog_config,
-            StoreType::Shared,
+            StoreType::Rotated,
         )?);
 
         let multiplexer = LfsMultiplexer::new(lfs, indexedlog.clone(), 4);
@@ -2708,7 +2713,7 @@ mod tests {
 
         multiplexer.flush()?;
 
-        let lfs = LfsStore::shared(&lfsdir, &config)?;
+        let lfs = LfsStore::rotated(&lfsdir, &config)?;
         let entry = lfs.pointers.get(&k)?;
 
         assert!(entry.is_some());
@@ -2732,7 +2737,7 @@ mod tests {
         let lfsdir = TempDir::new()?;
         let server = mockito::Server::new();
         let config = make_lfs_config(&server, &lfsdir, "test_multiplexer_blob_with_header");
-        let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
+        let lfs = Arc::new(LfsStore::rotated(&lfsdir, &config)?);
 
         let dir = TempDir::new()?;
         let indexedlog_config = IndexedLogHgIdDataStoreConfig {
@@ -2745,7 +2750,7 @@ mod tests {
             &dir,
             ExtStoredPolicy::Ignore,
             &indexedlog_config,
-            StoreType::Shared,
+            StoreType::Rotated,
         )?);
 
         let blob = Bytes::from(&b"\x01\nTHIS IS A BLOB WITH A HEADER"[..]);
@@ -2835,7 +2840,7 @@ mod tests {
 
             let _m2 = get_lfs_download_mock(&mut server, 200, blob);
 
-            let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
+            let lfs = Arc::new(LfsStore::rotated(&lfsdir, &config)?);
             let remote = LfsRemote::new(lfs, None, &config)?;
 
             let objs = [(blob.sha, blob.size)]
@@ -2860,7 +2865,7 @@ mod tests {
 
             set_var("https_proxy", "fwdproxy:8082");
 
-            let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
+            let lfs = Arc::new(LfsStore::rotated(&lfsdir, &config)?);
             let remote = LfsRemote::new(lfs, None, &config)?;
 
             let blob = example_blob();
@@ -2888,7 +2893,7 @@ mod tests {
 
             set_var("https_proxy", "http://fwdproxy:8082");
 
-            let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
+            let lfs = Arc::new(LfsStore::rotated(&lfsdir, &config)?);
             let remote = LfsRemote::new(lfs, None, &config)?;
 
             let blob = example_blob();
@@ -2920,7 +2925,7 @@ mod tests {
             set_var("http_proxy", "http://shouldnt-touch-this:8082");
             set_var("NO_PROXY", "localhost,127.0.0.1");
 
-            let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
+            let lfs = Arc::new(LfsStore::rotated(&lfsdir, &config)?);
             let remote = LfsRemote::new(lfs, None, &config)?;
 
             let objs = [(blob.sha, blob.size)]
@@ -2947,7 +2952,7 @@ mod tests {
             let lfsdir = TempDir::new()?;
             let mut config = make_lfs_config(server, &cachedir, "test_download");
             configure(&mut config);
-            let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
+            let lfs = Arc::new(LfsStore::rotated(&lfsdir, &config)?);
             let remote = LfsRemote::new(lfs, None, &config)?;
 
             let _mocks: Vec<_> = blobs
@@ -3062,7 +3067,7 @@ mod tests {
             let mut config = make_lfs_config(&server, &cachedir, "test_lfs_invalid_http");
             setconfig(&mut config, "lfs", "http-version", "3");
 
-            let lfs = Arc::new(LfsStore::shared(&lfsdir, &config).unwrap());
+            let lfs = Arc::new(LfsStore::rotated(&lfsdir, &config).unwrap());
             let result = LfsRemote::new(lfs, None, &config);
 
             assert!(result.is_err());
@@ -3081,7 +3086,7 @@ mod tests {
 
             setconfig(&mut config, "lfs", "requesttimeout", "0");
 
-            let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
+            let lfs = Arc::new(LfsStore::rotated(&lfsdir, &config)?);
             let remote = LfsRemote::new(lfs, None, &config)?;
 
             let blob = (
@@ -3113,7 +3118,7 @@ mod tests {
             let _m1 = get_lfs_batch_mock(&mut server, 200, &[blob]);
             let _m2 = get_lfs_download_mock(&mut server, 200, blob);
 
-            let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
+            let lfs = Arc::new(LfsStore::rotated(&lfsdir, &config)?);
             let remote = Arc::new(LfsRemote::new(lfs.clone(), None, &config)?);
 
             let key = key("a/b", "1234");
@@ -3174,7 +3179,7 @@ mod tests {
                 .with_status(410)
                 .create();
 
-            let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
+            let lfs = Arc::new(LfsStore::rotated(&lfsdir, &config)?);
             let remote = LfsRemote::new(lfs, None, &config)?;
 
             let objs = [(blob.sha, blob.size)]
@@ -3203,7 +3208,7 @@ mod tests {
         let mut config = make_lfs_config(&server, &cachedir, "test_lfs_remote_file");
 
         let lfsdir = TempDir::new()?;
-        let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
+        let lfs = Arc::new(LfsStore::rotated(&lfsdir, &config)?);
 
         let remote = TempDir::new()?;
         let remote_lfs_file_store = LfsBlobsStore::Loose(remote.path().to_path_buf(), false);
@@ -3263,8 +3268,8 @@ mod tests {
         let mut config = make_lfs_config(&server, &cachedir, "test_lfs_upload_remote_file");
 
         let lfsdir = TempDir::new()?;
-        let shared_lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
-        let local_lfs = Arc::new(LfsStore::local(&lfsdir, &config)?);
+        let shared_lfs = Arc::new(LfsStore::rotated(&lfsdir, &config)?);
+        let local_lfs = Arc::new(LfsStore::permanent(&lfsdir, &config)?);
 
         let remote_dir = TempDir::new()?;
         let remote_lfs_file_store = LfsBlobsStore::Loose(remote_dir.path().to_path_buf(), false);
@@ -3320,8 +3325,8 @@ mod tests {
         let mut config = make_lfs_config(&server, &cachedir, "test_lfs_upload_move_to_shared");
 
         let lfsdir = TempDir::new()?;
-        let shared_lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
-        let local_lfs = Arc::new(LfsStore::local(&lfsdir, &config)?);
+        let shared_lfs = Arc::new(LfsStore::rotated(&lfsdir, &config)?);
+        let local_lfs = Arc::new(LfsStore::permanent(&lfsdir, &config)?);
 
         let k1 = key("a", "2");
         let delta = Delta {
@@ -3359,7 +3364,7 @@ mod tests {
         let dir = TempDir::new()?;
         let server = mockito::Server::new();
         let config = make_lfs_config(&server, &dir, "test_blob");
-        let store = LfsStore::shared(&dir, &config)?;
+        let store = LfsStore::rotated(&dir, &config)?;
 
         let data = Bytes::from(&[1, 2, 3, 4][..]);
         let k1 = key("a", "2");
@@ -3382,7 +3387,7 @@ mod tests {
         let dir = TempDir::new()?;
         let server = mockito::Server::new();
         let config = make_lfs_config(&server, &dir, "test_metadata");
-        let store = LfsStore::shared(&dir, &config)?;
+        let store = LfsStore::rotated(&dir, &config)?;
 
         let k1 = key("a", "2");
         let data = Bytes::from(&[1, 2, 3, 4][..]);
@@ -3416,13 +3421,13 @@ mod tests {
         let mut config =
             make_lfs_config(&server, &cachedir, "test_lfs_skips_server_for_empty_batch");
 
-        let store = Arc::new(LfsStore::local(&lfsdir, &config)?);
+        let store = Arc::new(LfsStore::permanent(&lfsdir, &config)?);
 
         // 192.0.2.0 won't be routable, since that's TEST-NET-1. This test will fail if we attempt
         // to connect.
         setconfig(&mut config, "lfs", "url", "http://192.0.2.0/");
 
-        let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
+        let lfs = Arc::new(LfsStore::rotated(&lfsdir, &config)?);
         let remote = Arc::new(LfsRemote::new(lfs, None, &config)?);
 
         let resp = remote.datastore(store).prefetch(&[]);
@@ -3496,7 +3501,7 @@ mod tests {
             setconfig(&mut config, "lfs", "backofftimes", backoff_config);
 
             let lfsdir = TempDir::new()?;
-            let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
+            let lfs = Arc::new(LfsStore::rotated(&lfsdir, &config)?);
             let remote = LfsRemote::new(lfs, None, &config)?;
             let objs = [(blobs[0].sha, blobs[0].size)]
                 .iter()

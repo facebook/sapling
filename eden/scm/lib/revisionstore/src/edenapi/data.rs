@@ -257,7 +257,7 @@ mod tests {
             &tmp,
             ExtStoredPolicy::Ignore,
             &config,
-            StoreType::Shared,
+            StoreType::Rotated,
         )?);
         store.indexedlog_cache = Some(cache.clone());
         store.edenapi = Some(remote_files);
@@ -304,7 +304,7 @@ mod tests {
             &tmp,
             ExtStoredPolicy::Ignore,
             &config,
-            StoreType::Shared,
+            StoreType::Rotated,
         )?);
         store.indexedlog_cache = Some(cache.clone());
         store.edenapi = Some(remote_files);
@@ -351,7 +351,7 @@ mod tests {
             &tmp,
             ExtStoredPolicy::Ignore,
             &config,
-            StoreType::Shared,
+            StoreType::Rotated,
         )?);
         store.indexedlog_cache = Some(cache.clone());
         store.edenapi = Some(remote_trees);
@@ -397,7 +397,7 @@ mod tests {
             &tmp,
             ExtStoredPolicy::Ignore,
             &config,
-            StoreType::Shared,
+            StoreType::Rotated,
         )?);
         store.indexedlog_cache = Some(cache.clone());
         store.edenapi = Some(remote_trees);
@@ -455,7 +455,7 @@ mod tests {
 
         // Empty aux cache
         let tmp = TempDir::new()?;
-        let aux_cache = Arc::new(AuxStore::new(&tmp, &empty_config(), StoreType::Shared)?);
+        let aux_cache = Arc::new(AuxStore::new(&tmp, &empty_config(), StoreType::Rotated)?);
         store.aux_cache = Some(aux_cache);
 
         // Empty content cache
@@ -470,7 +470,7 @@ mod tests {
             &tmp,
             ExtStoredPolicy::Ignore,
             &config,
-            StoreType::Shared,
+            StoreType::Rotated,
         )?);
         store.indexedlog_cache = Some(cache.clone());
 

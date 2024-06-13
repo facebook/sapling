@@ -70,7 +70,7 @@ pub fn run(ctx: ReqCtx<DebugstoreOpts>, repo: &mut Repo) -> Result<u8> {
             datastore_path,
             ExtStoredPolicy::Use,
             &indexedlog_config,
-            StoreType::Local,
+            StoreType::Permanent,
         )
         .unwrap(),
     );

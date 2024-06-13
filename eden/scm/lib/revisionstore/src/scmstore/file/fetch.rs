@@ -37,7 +37,6 @@ use crate::fetch_logger::FetchLogger;
 use crate::indexedlogauxstore::AuxStore;
 use crate::indexedlogdatastore::Entry;
 use crate::indexedlogdatastore::IndexedLogHgIdDataStore;
-use crate::indexedlogutil::StoreType;
 use crate::lfs::LfsPointersEntry;
 use crate::lfs::LfsRemoteInner;
 use crate::lfs::LfsStore;
@@ -48,6 +47,7 @@ use crate::scmstore::fetch::FetchErrors;
 use crate::scmstore::fetch::KeyFetchError;
 use crate::scmstore::file::metrics::FileStoreFetchMetrics;
 use crate::scmstore::file::LazyFile;
+use crate::scmstore::metrics::StoreLocation;
 use crate::scmstore::value::StoreValue;
 use crate::scmstore::FileAttributes;
 use crate::scmstore::FileAuxData;
@@ -215,7 +215,7 @@ impl FetchState {
         &mut self,
         store: &IndexedLogHgIdDataStore,
         lfs_store: Option<&LfsStore>,
-        typ: StoreType,
+        loc: StoreLocation,
     ) {
         let pending = self.pending_nonlfs(FileAttributes::CONTENT);
         if pending.is_empty() {
@@ -226,9 +226,9 @@ impl FetchState {
 
         debug!(
             "Checking store Indexedlog ({cache}) for {key}{more}",
-            cache = match typ {
-                StoreType::Shared => "cache",
-                StoreType::Local => "local",
+            cache = match loc {
+                StoreLocation::Cache => "cache",
+                StoreLocation::Local => "local",
             },
             key = pending[0],
             more = if pending.len() > 1 {
@@ -244,7 +244,7 @@ impl FetchState {
         let mut error: Option<String> = None;
         let mut lfs_pointers_to_upgrade = Vec::new();
 
-        self.metrics.indexedlog.store(typ).fetch(pending.len());
+        self.metrics.indexedlog.store(loc).fetch(pending.len());
 
         self.common
             .iter_pending(FileAttributes::CONTENT, self.compute_aux_data, |key| {
@@ -265,7 +265,7 @@ impl FetchState {
 
                 match res {
                     Ok(Some(entry)) => {
-                        self.metrics.indexedlog.store(typ).hit(1);
+                        self.metrics.indexedlog.store(loc).hit(1);
                         found += 1;
 
                         if entry.metadata().is_lfs() && self.lfs_enabled {
@@ -281,10 +281,10 @@ impl FetchState {
                         }
                     }
                     Ok(None) => {
-                        self.metrics.indexedlog.store(typ).miss(1);
+                        self.metrics.indexedlog.store(loc).miss(1);
                     }
                     Err(err) => {
-                        self.metrics.indexedlog.store(typ).err(1);
+                        self.metrics.indexedlog.store(loc).err(1);
                         errors += 1;
                         if error.is_none() {
                             error.replace(format!("{}: {}", key, err));
@@ -300,7 +300,7 @@ impl FetchState {
 
         self.metrics
             .indexedlog
-            .store(typ)
+            .store(loc)
             .time_from_duration(fetch_start.elapsed())
             .ok();
 
@@ -320,7 +320,7 @@ impl FetchState {
         }
     }
 
-    pub(crate) fn fetch_aux_indexedlog(&mut self, store: &AuxStore, typ: StoreType) {
+    pub(crate) fn fetch_aux_indexedlog(&mut self, store: &AuxStore, loc: StoreLocation) {
         let fetch_start = std::time::Instant::now();
 
         let mut found = 0;
@@ -346,15 +346,15 @@ impl FetchState {
                 };
                 match res {
                     Ok(Some(aux)) => {
-                        self.metrics.aux.store(typ).hit(1);
+                        self.metrics.aux.store(loc).hit(1);
                         found += 1;
                         return Some(aux.into());
                     }
                     Ok(None) => {
-                        self.metrics.aux.store(typ).miss(1);
+                        self.metrics.aux.store(loc).miss(1);
                     }
                     Err(err) => {
-                        self.metrics.aux.store(typ).err(1);
+                        self.metrics.aux.store(loc).err(1);
                         errors += 1;
                         if error.is_none() {
                             error.replace(format!("{}: {}", key, err));
@@ -372,17 +372,17 @@ impl FetchState {
 
         debug!(
             "Checking store AUX ({cache}) - Count = {count}",
-            cache = match typ {
-                StoreType::Shared => "cache",
-                StoreType::Local => "local",
+            cache = match loc {
+                StoreLocation::Cache => "cache",
+                StoreLocation::Local => "local",
             },
         );
 
-        self.metrics.aux.store(typ).fetch(count);
+        self.metrics.aux.store(loc).fetch(count);
 
         self.metrics
             .aux
-            .store(typ)
+            .store(loc)
             .time_from_duration(fetch_start.elapsed())
             .ok();
 
@@ -407,7 +407,7 @@ impl FetchState {
         }
     }
 
-    pub(crate) fn fetch_lfs(&mut self, store: &LfsStore, typ: StoreType) {
+    pub(crate) fn fetch_lfs(&mut self, store: &LfsStore, loc: StoreLocation) {
         let pending = self.pending_storekey(FileAttributes::CONTENT);
         if pending.is_empty() {
             return;
@@ -417,9 +417,9 @@ impl FetchState {
 
         debug!(
             "Checking store LFS ({cache}) - Count = {count}",
-            cache = match typ {
-                StoreType::Shared => "cache",
-                StoreType::Local => "local",
+            cache = match loc {
+                StoreLocation::Cache => "cache",
+                StoreLocation::Local => "local",
             },
             count = pending.len()
         );
@@ -429,7 +429,7 @@ impl FetchState {
         let mut errors = 0;
         let mut error: Option<String> = None;
 
-        self.metrics.lfs.store(typ).fetch(pending.len());
+        self.metrics.lfs.store(loc).fetch(pending.len());
         for store_key in pending.into_iter() {
             let key = store_key.clone().maybe_into_key().expect(
                 "no Key present in StoreKey, even though this should be guaranteed by pending_all",
@@ -437,7 +437,7 @@ impl FetchState {
             match store.fetch_available(&store_key, self.fetch_mode.ignore_result()) {
                 Ok(Some(entry)) => {
                     // TODO(meyer): Make found behavior w/r/t LFS pointers and content consistent
-                    self.metrics.lfs.store(typ).hit(1);
+                    self.metrics.lfs.store(loc).hit(1);
                     if let LfsStoreEntry::PointerOnly(_) = &entry {
                         found_pointers += 1;
                     } else {
@@ -446,10 +446,10 @@ impl FetchState {
                     self.found_lfs(key, entry)
                 }
                 Ok(None) => {
-                    self.metrics.lfs.store(typ).miss(1);
+                    self.metrics.lfs.store(loc).miss(1);
                 }
                 Err(err) => {
-                    self.metrics.lfs.store(typ).err(1);
+                    self.metrics.lfs.store(loc).err(1);
                     errors += 1;
                     if error.is_none() {
                         error.replace(format!("{}: {}", key, err));
@@ -461,7 +461,7 @@ impl FetchState {
 
         self.metrics
             .lfs
-            .store(typ)
+            .store(loc)
             .time_from_duration(fetch_start.elapsed())
             .ok();
 
@@ -947,7 +947,7 @@ impl FetchState {
                     if new.attrs().has(self.common.request_attrs) {
                         tracing::debug!("marking complete");
 
-                        self.metrics.aux.store(StoreType::Shared).computed(1);
+                        self.metrics.aux.store(StoreLocation::Cache).computed(1);
 
                         if let Some(aux_cache) = aux_cache {
                             if let Some(aux_data) = new.aux_data {

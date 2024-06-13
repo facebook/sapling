@@ -144,8 +144,8 @@ impl AuxStore {
         let open_options = AuxStore::open_options(config)?;
 
         let log = match store_type {
-            StoreType::Local => open_options.local(&path),
-            StoreType::Shared => open_options.shared(&path),
+            StoreType::Permanent => open_options.permanent(&path),
+            StoreType::Rotated => open_options.rotated(&path),
         }?;
 
         Ok(AuxStore(log))
@@ -258,7 +258,7 @@ mod tests {
     #[test]
     fn test_empty() -> Result<()> {
         let tempdir = TempDir::new()?;
-        let store = AuxStore::new(&tempdir, &empty_config(), StoreType::Shared)?;
+        let store = AuxStore::new(&tempdir, &empty_config(), StoreType::Rotated)?;
         store.flush()?;
         Ok(())
     }
@@ -266,7 +266,7 @@ mod tests {
     #[test]
     fn test_add_get() -> Result<()> {
         let tempdir = TempDir::new().unwrap();
-        let store = AuxStore::new(&tempdir, &empty_config(), StoreType::Shared)?;
+        let store = AuxStore::new(&tempdir, &empty_config(), StoreType::Rotated)?;
 
         let entry = Entry {
             total_size: 1,
@@ -287,7 +287,7 @@ mod tests {
     #[test]
     fn test_lookup_failure() -> Result<()> {
         let tempdir = TempDir::new().unwrap();
-        let store = AuxStore::new(&tempdir, &empty_config(), StoreType::Shared)?;
+        let store = AuxStore::new(&tempdir, &empty_config(), StoreType::Rotated)?;
 
         let entry = Entry {
             total_size: 1,
@@ -310,7 +310,7 @@ mod tests {
     #[test]
     fn test_corrupted() -> Result<()> {
         let tempdir = TempDir::new()?;
-        let store = AuxStore::new(&tempdir, &empty_config(), StoreType::Shared)?;
+        let store = AuxStore::new(&tempdir, &empty_config(), StoreType::Rotated)?;
 
         let k = key("a", "2");
         let entry = Entry {
@@ -329,7 +329,7 @@ mod tests {
         rotate_log_path.push("log");
         remove_file(rotate_log_path)?;
 
-        let store = AuxStore::new(&tempdir, &empty_config(), StoreType::Shared)?;
+        let store = AuxStore::new(&tempdir, &empty_config(), StoreType::Rotated)?;
 
         let k = key("a", "3");
         let entry = Entry {
@@ -349,7 +349,7 @@ mod tests {
     #[test]
     fn test_scmstore_read() -> Result<()> {
         let tmp = TempDir::new()?;
-        let aux = Arc::new(AuxStore::new(&tmp, &empty_config(), StoreType::Shared)?);
+        let aux = Arc::new(AuxStore::new(&tmp, &empty_config(), StoreType::Rotated)?);
 
         let entry = Entry {
             total_size: 1,
@@ -397,14 +397,14 @@ mod tests {
             &tmp,
             ExtStoredPolicy::Ignore,
             &config,
-            StoreType::Shared,
+            StoreType::Rotated,
         )?);
 
         content.add(&d, &meta).unwrap();
         content.flush().unwrap();
 
         let tmp = TempDir::new()?;
-        let aux = Arc::new(AuxStore::new(&tmp, &empty_config(), StoreType::Shared)?);
+        let aux = Arc::new(AuxStore::new(&tmp, &empty_config(), StoreType::Rotated)?);
 
         // Set up local-only FileStore
         let mut store = FileStore::empty();

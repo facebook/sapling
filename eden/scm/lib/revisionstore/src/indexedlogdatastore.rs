@@ -214,8 +214,8 @@ impl IndexedLogHgIdDataStore {
         let open_options = IndexedLogHgIdDataStore::open_options(config, log_config);
 
         let log = match store_type {
-            StoreType::Local => open_options.local(&path),
-            StoreType::Shared => open_options.shared(&path),
+            StoreType::Permanent => open_options.permanent(&path),
+            StoreType::Rotated => open_options.rotated(&path),
         }?;
 
         Ok(IndexedLogHgIdDataStore {
@@ -262,11 +262,11 @@ impl IndexedLogHgIdDataStore {
         store_type: StoreType,
     ) -> Result<String> {
         match store_type {
-            StoreType::Local => {
-                IndexedLogHgIdDataStore::open_options(config, log_config).repair_local(path)
+            StoreType::Permanent => {
+                IndexedLogHgIdDataStore::open_options(config, log_config).repair_permanent(path)
             }
-            StoreType::Shared => {
-                IndexedLogHgIdDataStore::open_options(config, log_config).repair_shared(path)
+            StoreType::Rotated => {
+                IndexedLogHgIdDataStore::open_options(config, log_config).repair_rotated(path)
             }
         }
     }
@@ -459,7 +459,7 @@ mod tests {
             &tempdir,
             ExtStoredPolicy::Use,
             &config,
-            StoreType::Shared,
+            StoreType::Rotated,
         )
         .unwrap();
         log.flush().unwrap();
@@ -478,7 +478,7 @@ mod tests {
             &tempdir,
             ExtStoredPolicy::Use,
             &config,
-            StoreType::Shared,
+            StoreType::Rotated,
         )
         .unwrap();
 
@@ -506,7 +506,7 @@ mod tests {
             &tempdir,
             ExtStoredPolicy::Use,
             &config,
-            StoreType::Shared,
+            StoreType::Rotated,
         )
         .unwrap();
 
@@ -530,7 +530,7 @@ mod tests {
             &tempdir,
             ExtStoredPolicy::Use,
             &config,
-            StoreType::Shared,
+            StoreType::Rotated,
         )
         .unwrap();
         let read_data = log.get(StoreKey::hgid(delta.key)).unwrap();
@@ -550,7 +550,7 @@ mod tests {
             &tempdir,
             ExtStoredPolicy::Use,
             &config,
-            StoreType::Shared,
+            StoreType::Rotated,
         )
         .unwrap();
 
@@ -571,7 +571,7 @@ mod tests {
             &tempdir,
             ExtStoredPolicy::Use,
             &config,
-            StoreType::Shared,
+            StoreType::Rotated,
         )?;
 
         let delta = Delta {
@@ -598,7 +598,7 @@ mod tests {
             &tempdir,
             ExtStoredPolicy::Use,
             &config,
-            StoreType::Shared,
+            StoreType::Rotated,
         )?;
 
         let k = key("a", "2");
@@ -627,7 +627,7 @@ mod tests {
             &tempdir,
             ExtStoredPolicy::Use,
             &config,
-            StoreType::Shared,
+            StoreType::Rotated,
         )?;
 
         let k = key("a", "2");
@@ -658,7 +658,7 @@ mod tests {
             &tempdir,
             ExtStoredPolicy::Use,
             &config,
-            StoreType::Shared,
+            StoreType::Rotated,
         )?;
         let k = key("a", "3");
         let delta = Delta {
@@ -688,7 +688,7 @@ mod tests {
             &tempdir,
             ExtStoredPolicy::Ignore,
             &config,
-            StoreType::Shared,
+            StoreType::Rotated,
         )?;
 
         let delta = Delta {
@@ -724,7 +724,7 @@ mod tests {
             &tempdir,
             ExtStoredPolicy::Use,
             &config,
-            StoreType::Shared,
+            StoreType::Rotated,
         )?;
 
         let delta = Delta {
@@ -768,7 +768,7 @@ mod tests {
             &tmp,
             ExtStoredPolicy::Ignore,
             &config,
-            StoreType::Shared,
+            StoreType::Rotated,
         )?);
 
         local.add(&d, &meta).unwrap();
@@ -810,7 +810,7 @@ mod tests {
             &tmp,
             ExtStoredPolicy::Ignore,
             &config,
-            StoreType::Shared,
+            StoreType::Rotated,
         )?);
 
         // Set up local-only FileStore
@@ -847,7 +847,7 @@ mod tests {
             &tempdir,
             ExtStoredPolicy::Use,
             &config,
-            StoreType::Shared,
+            StoreType::Rotated,
         )?;
 
         let lfs_key = key("a", "1");
@@ -909,7 +909,7 @@ mod tests {
             &tempdir,
             ExtStoredPolicy::Ignore,
             &config,
-            StoreType::Shared,
+            StoreType::Rotated,
         )?;
 
         let lfs_key = key("a", "1");

@@ -207,7 +207,7 @@ mod tests {
             &tempdir,
             ExtStoredPolicy::Ignore,
             &config,
-            StoreType::Shared,
+            StoreType::Rotated,
         )?;
         let mut multiplex = MultiplexDeltaStore::new();
         multiplex.add_store(Box::new(&mut log));
@@ -240,7 +240,7 @@ mod tests {
             &tempdir,
             ExtStoredPolicy::Ignore,
             &config,
-            StoreType::Shared,
+            StoreType::Rotated,
         )?;
         let mut pack = MutableDataPack::new(&tempdir, DataPackVersion::One);
         let mut multiplex: MultiplexDeltaStore<Box<dyn HgIdMutableDeltaStore>> =

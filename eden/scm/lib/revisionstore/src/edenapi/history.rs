@@ -116,7 +116,7 @@ mod tests {
         let local = Arc::new(IndexedLogHgIdHistoryStore::new(
             &tmp,
             &empty_config(),
-            StoreType::Shared,
+            StoreType::Rotated,
         )?);
 
         // Set up `SaplingRemoteApiHistoryStore`.
@@ -142,7 +142,7 @@ mod tests {
         // Set up local mutable store to write received data.
         let tmp = TempDir::new().unwrap();
         let local = Arc::new(
-            IndexedLogHgIdHistoryStore::new(&tmp, &empty_config(), StoreType::Shared).unwrap(),
+            IndexedLogHgIdHistoryStore::new(&tmp, &empty_config(), StoreType::Rotated).unwrap(),
         );
 
         // SaplingRemoteAPI does not support fetching tree history, so it should

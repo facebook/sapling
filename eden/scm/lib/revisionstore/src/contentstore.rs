@@ -109,14 +109,14 @@ impl ContentStore {
             config,
             get_indexedlogdatastore_path(&shared_path)?,
             &log_config,
-            StoreType::Shared,
+            StoreType::Rotated,
         )?;
         if let Some(local_path) = local_path {
             repair_str += &IndexedLogHgIdDataStore::repair(
                 config,
                 get_indexedlogdatastore_path(local_path)?,
                 &log_config,
-                StoreType::Local,
+                StoreType::Permanent,
             )?;
         }
         repair_str += &LfsStore::repair(shared_path)?;
@@ -407,7 +407,7 @@ impl<'a> ContentStoreBuilder<'a> {
                     get_indexedlogdatastore_path(&cache_path)?,
                     extstored_policy,
                     &config,
-                    StoreType::Shared,
+                    StoreType::Rotated,
                 )?)
             };
 
@@ -424,7 +424,7 @@ impl<'a> ContentStoreBuilder<'a> {
         let shared_lfs_store = if let Some(shared_lfs_shared) = self.shared_lfs_shared {
             shared_lfs_shared
         } else {
-            Arc::new(LfsStore::shared(&cache_path, self.config)?)
+            Arc::new(LfsStore::rotated(&cache_path, self.config)?)
         };
         blob_stores.add(shared_lfs_store.clone());
 
@@ -479,7 +479,7 @@ impl<'a> ContentStoreBuilder<'a> {
                             get_indexedlogdatastore_path(local_path.as_ref().unwrap())?,
                             extstored_policy,
                             &config,
-                            StoreType::Local,
+                            StoreType::Permanent,
                         )?)
                     };
 
@@ -501,7 +501,7 @@ impl<'a> ContentStoreBuilder<'a> {
                 let local_lfs_store = if let Some(shared_lfs_local) = self.shared_lfs_local {
                     shared_lfs_local
                 } else {
-                    Arc::new(LfsStore::local(local_path.unwrap(), self.config)?)
+                    Arc::new(LfsStore::permanent(local_path.unwrap(), self.config)?)
                 };
                 blob_stores.add(local_lfs_store.clone());
                 datastore.add(local_lfs_store.clone());
@@ -871,7 +871,7 @@ mod tests {
             get_indexedlogdatastore_path(&localdir)?,
             ExtStoredPolicy::Use,
             &indexed_log_config,
-            StoreType::Local,
+            StoreType::Permanent,
         )?;
         assert_eq!(
             store.get(StoreKey::hgid(k1))?,
@@ -956,7 +956,7 @@ mod tests {
         let localdir = TempDir::new()?;
         let config = make_config(&cachedir);
 
-        let lfs_store = LfsStore::local(&localdir, &config)?;
+        let lfs_store = LfsStore::permanent(&localdir, &config)?;
         let k1 = key("a", "2");
         let delta = Delta {
             data: Bytes::from(&[1, 2, 3, 4][..]),
@@ -983,7 +983,7 @@ mod tests {
         let mut lfs_cache_dir = cachedir.path().to_path_buf();
         lfs_cache_dir.push("test");
         create_dir(&lfs_cache_dir)?;
-        let lfs_store = LfsStore::shared(&lfs_cache_dir, &config)?;
+        let lfs_store = LfsStore::rotated(&lfs_cache_dir, &config)?;
         let k1 = key("a", "2");
         let delta = Delta {
             data: Bytes::from(&[1, 2, 3, 4][..]),
@@ -1074,7 +1074,7 @@ mod tests {
         store.add(&delta, &Default::default())?;
         store.flush()?;
 
-        let lfs_store = LfsStore::local(&localdir, &config)?;
+        let lfs_store = LfsStore::permanent(&localdir, &config)?;
         let stored = lfs_store.get(StoreKey::hgid(k1))?;
         assert_eq!(stored, StoreResult::Found(delta.data.as_ref().to_vec()));
         Ok(())

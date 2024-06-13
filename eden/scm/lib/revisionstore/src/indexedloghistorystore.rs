@@ -196,8 +196,8 @@ impl IndexedLogHgIdHistoryStore {
     pub fn new(path: impl AsRef<Path>, config: &dyn Config, store_type: StoreType) -> Result<Self> {
         let open_options = Self::open_options(config)?;
         let log = match store_type {
-            StoreType::Local => open_options.local(&path),
-            StoreType::Shared => open_options.shared(&path),
+            StoreType::Permanent => open_options.permanent(&path),
+            StoreType::Rotated => open_options.rotated(&path),
         }?;
         Ok(IndexedLogHgIdHistoryStore { log })
     }
@@ -225,11 +225,11 @@ impl IndexedLogHgIdHistoryStore {
 
     pub fn repair(path: PathBuf, config: &dyn Config, store_type: StoreType) -> Result<String> {
         match store_type {
-            StoreType::Local => {
-                IndexedLogHgIdHistoryStore::open_options(config)?.repair_local(path)
+            StoreType::Permanent => {
+                IndexedLogHgIdHistoryStore::open_options(config)?.repair_permanent(path)
             }
-            StoreType::Shared => {
-                IndexedLogHgIdHistoryStore::open_options(config)?.repair_shared(path)
+            StoreType::Rotated => {
+                IndexedLogHgIdHistoryStore::open_options(config)?.repair_rotated(path)
             }
         }
     }
@@ -312,7 +312,7 @@ mod tests {
     #[test]
     fn test_empty() -> Result<()> {
         let tempdir = TempDir::new()?;
-        let log = IndexedLogHgIdHistoryStore::new(&tempdir, &empty_config(), StoreType::Shared)?;
+        let log = IndexedLogHgIdHistoryStore::new(&tempdir, &empty_config(), StoreType::Rotated)?;
         log.flush()?;
         Ok(())
     }
@@ -320,7 +320,7 @@ mod tests {
     #[test]
     fn test_add() -> Result<()> {
         let tempdir = TempDir::new()?;
-        let log = IndexedLogHgIdHistoryStore::new(&tempdir, &empty_config(), StoreType::Shared)?;
+        let log = IndexedLogHgIdHistoryStore::new(&tempdir, &empty_config(), StoreType::Rotated)?;
         let k = key("a", "1");
         let nodeinfo = NodeInfo {
             parents: [key("a", "2"), null_key("a")],
@@ -335,7 +335,7 @@ mod tests {
     #[test]
     fn test_add_get_node_info() -> Result<()> {
         let tempdir = TempDir::new()?;
-        let log = IndexedLogHgIdHistoryStore::new(&tempdir, &empty_config(), StoreType::Shared)?;
+        let log = IndexedLogHgIdHistoryStore::new(&tempdir, &empty_config(), StoreType::Rotated)?;
         let k = key("a", "1");
         let nodeinfo = NodeInfo {
             parents: [key("a", "2"), null_key("a")],
@@ -344,7 +344,7 @@ mod tests {
         log.add(&k, &nodeinfo)?;
         log.flush()?;
 
-        let log = IndexedLogHgIdHistoryStore::new(&tempdir, &empty_config(), StoreType::Shared)?;
+        let log = IndexedLogHgIdHistoryStore::new(&tempdir, &empty_config(), StoreType::Rotated)?;
         let read_nodeinfo = log.get_node_info(&k)?;
         assert_eq!(Some(nodeinfo), read_nodeinfo);
         Ok(())
@@ -353,7 +353,7 @@ mod tests {
     #[test]
     fn test_corrupted() -> Result<()> {
         let tempdir = TempDir::new()?;
-        let log = IndexedLogHgIdHistoryStore::new(&tempdir, &empty_config(), StoreType::Shared)?;
+        let log = IndexedLogHgIdHistoryStore::new(&tempdir, &empty_config(), StoreType::Rotated)?;
         let mut rng = ChaChaRng::from_seed([0u8; 32]);
 
         let nodes = get_nodes(&mut rng);
@@ -369,7 +369,7 @@ mod tests {
         rotate_log_path.push("log");
         remove_file(rotate_log_path)?;
 
-        let log = IndexedLogHgIdHistoryStore::new(&tempdir, &empty_config(), StoreType::Shared)?;
+        let log = IndexedLogHgIdHistoryStore::new(&tempdir, &empty_config(), StoreType::Rotated)?;
         for (key, info) in nodes.iter() {
             log.add(key, info)?;
         }
@@ -382,7 +382,7 @@ mod tests {
     #[test]
     fn test_iter() -> Result<()> {
         let tempdir = TempDir::new()?;
-        let log = IndexedLogHgIdHistoryStore::new(&tempdir, &empty_config(), StoreType::Shared)?;
+        let log = IndexedLogHgIdHistoryStore::new(&tempdir, &empty_config(), StoreType::Rotated)?;
         let k = key("a", "1");
         let nodeinfo = NodeInfo {
             parents: [key("a", "2"), null_key("a")],

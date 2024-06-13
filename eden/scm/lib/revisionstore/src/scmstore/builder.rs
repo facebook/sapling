@@ -179,7 +179,7 @@ impl<'a> FileStoreBuilder<'a> {
                 get_indexedlogdatastore_path(local_path)?,
                 self.get_extstored_policy()?,
                 &config,
-                StoreType::Local,
+                StoreType::Permanent,
             )?))
         } else {
             None
@@ -212,7 +212,7 @@ impl<'a> FileStoreBuilder<'a> {
             get_indexedlogdatastore_path(cache_path)?,
             self.get_extstored_policy()?,
             &config,
-            StoreType::Shared,
+            StoreType::Rotated,
         )?)))
     }
 
@@ -227,7 +227,7 @@ impl<'a> FileStoreBuilder<'a> {
         Ok(Some(Arc::new(AuxStore::new(
             cache_path,
             self.config,
-            StoreType::Shared,
+            StoreType::Rotated,
         )?)))
     }
 
@@ -239,7 +239,7 @@ impl<'a> FileStoreBuilder<'a> {
 
         Ok(if let Some(local_path) = self.local_path.clone() {
             let local_path = get_local_path(local_path, &self.suffix)?;
-            Some(Arc::new(LfsStore::local(local_path, self.config)?))
+            Some(Arc::new(LfsStore::permanent(local_path, self.config)?))
         } else {
             None
         })
@@ -256,7 +256,7 @@ impl<'a> FileStoreBuilder<'a> {
             None => return Ok(None),
         };
 
-        Ok(Some(Arc::new(LfsStore::shared(cache_path, self.config)?)))
+        Ok(Some(Arc::new(LfsStore::rotated(cache_path, self.config)?)))
     }
 
     #[context("failed to build config revisionstore")]
@@ -539,7 +539,7 @@ impl<'a> TreeStoreBuilder<'a> {
                 get_indexedlogdatastore_path(local_path)?,
                 ExtStoredPolicy::Use,
                 &config,
-                StoreType::Local,
+                StoreType::Permanent,
             )?))
         } else {
             None
@@ -573,7 +573,7 @@ impl<'a> TreeStoreBuilder<'a> {
             get_indexedlogdatastore_path(cache_path)?,
             ExtStoredPolicy::Use,
             &config,
-            StoreType::Shared,
+            StoreType::Rotated,
         )?)))
     }
 

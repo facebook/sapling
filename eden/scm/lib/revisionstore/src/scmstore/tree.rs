@@ -49,6 +49,7 @@ use crate::scmstore::fetch::FetchErrors;
 use crate::scmstore::fetch::FetchResults;
 use crate::scmstore::fetch::KeyFetchError;
 use crate::scmstore::file::FileStore;
+use crate::scmstore::metrics::StoreLocation;
 use crate::scmstore::tree::types::LazyTree;
 use crate::scmstore::tree::types::StoreTree;
 use crate::scmstore::tree::types::TreeAttributes;
@@ -65,7 +66,6 @@ use crate::RepackLocation;
 use crate::SaplingRemoteApiTreeStore;
 use crate::StoreKey;
 use crate::StoreResult;
-use crate::StoreType;
 
 #[derive(Clone, Debug)]
 pub enum TreeMetadataMode {
@@ -160,9 +160,9 @@ impl TreeStore {
             let mut metrics = TreeStoreFetchMetrics::default();
 
             if fetch_local {
-                for (log, store_type) in [
-                    (&indexedlog_cache, StoreType::Shared),
-                    (&indexedlog_local, StoreType::Local),
+                for (log, location) in [
+                    (&indexedlog_cache, StoreLocation::Cache),
+                    (&indexedlog_local, StoreLocation::Local),
                 ] {
                     if let Some(log) = log {
                         let start_time = Instant::now();
@@ -172,7 +172,7 @@ impl TreeStore {
                             .map(|(key, _attrs)| key.clone())
                             .collect();
 
-                        let store_metrics = metrics.indexedlog.store(store_type);
+                        let store_metrics = metrics.indexedlog.store(location);
                         let fetch_count = pending.len();
 
                         store_metrics.fetch(fetch_count);
@@ -180,7 +180,7 @@ impl TreeStore {
                         let mut found_count: usize = 0;
                         for key in pending.into_iter() {
                             if let Some(entry) = log.get_entry(key)? {
-                                tracing::trace!("{:?} found in {:?}", &entry.key(), store_type);
+                                tracing::trace!("{:?} found in {:?}", &entry.key(), location);
                                 common
                                     .found(entry.key().clone(), LazyTree::IndexedLog(entry).into());
                                 found_count += 1;

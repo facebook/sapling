@@ -7,8 +7,6 @@
 
 use std::ops::AddAssign;
 
-use crate::indexedlogutil::StoreType;
-
 #[derive(Clone, Debug, Default)]
 pub struct FetchMetrics {
     /// Number of requests / batches
@@ -118,11 +116,17 @@ pub struct LocalAndCacheFetchMetrics {
     cache: FetchMetrics,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum StoreLocation {
+    Local,
+    Cache,
+}
+
 impl LocalAndCacheFetchMetrics {
-    pub(crate) fn store(&mut self, typ: StoreType) -> &mut FetchMetrics {
-        match typ {
-            StoreType::Local => &mut self.local,
-            StoreType::Shared => &mut self.cache,
+    pub(crate) fn store(&mut self, loc: StoreLocation) -> &mut FetchMetrics {
+        match loc {
+            StoreLocation::Local => &mut self.local,
+            StoreLocation::Cache => &mut self.cache,
         }
     }
 

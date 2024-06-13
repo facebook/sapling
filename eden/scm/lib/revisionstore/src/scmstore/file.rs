@@ -46,7 +46,6 @@ use crate::fetch_logger::FetchLogger;
 use crate::indexedlogauxstore::AuxStore;
 use crate::indexedlogdatastore::Entry;
 use crate::indexedlogdatastore::IndexedLogHgIdDataStore;
-use crate::indexedlogutil::StoreType;
 use crate::lfs::lfs_from_hg_file_blob;
 use crate::lfs::LfsPointersEntry;
 use crate::lfs::LfsRemote;
@@ -54,6 +53,7 @@ use crate::lfs::LfsStore;
 use crate::remotestore::HgIdRemoteStore;
 use crate::scmstore::activitylogger::ActivityLogger;
 use crate::scmstore::fetch::FetchResults;
+use crate::scmstore::metrics::StoreLocation;
 use crate::ContentDataStore;
 use crate::ContentMetadata;
 use crate::ContentStore;
@@ -206,14 +206,14 @@ impl FileStore {
 
             if fetch_local {
                 if let Some(ref aux_cache) = aux_cache {
-                    state.fetch_aux_indexedlog(aux_cache, StoreType::Shared);
+                    state.fetch_aux_indexedlog(aux_cache, StoreLocation::Cache);
                 }
 
                 if let Some(ref indexedlog_cache) = indexedlog_cache {
                     state.fetch_indexedlog(
                         indexedlog_cache,
                         lfs_cache.as_ref().map(|v| v.as_ref()),
-                        StoreType::Shared,
+                        StoreLocation::Cache,
                     );
                 }
 
@@ -221,16 +221,16 @@ impl FileStore {
                     state.fetch_indexedlog(
                         indexedlog_local,
                         lfs_local.as_ref().map(|v| v.as_ref()),
-                        StoreType::Local,
+                        StoreLocation::Local,
                     );
                 }
 
                 if let Some(ref lfs_cache) = lfs_cache {
-                    state.fetch_lfs(lfs_cache, StoreType::Shared);
+                    state.fetch_lfs(lfs_cache, StoreLocation::Cache);
                 }
 
                 if let Some(ref lfs_local) = lfs_local {
-                    state.fetch_lfs(lfs_local, StoreType::Local);
+                    state.fetch_lfs(lfs_local, StoreLocation::Local);
                 }
             }
 

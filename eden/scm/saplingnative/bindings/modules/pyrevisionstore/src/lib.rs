@@ -391,7 +391,7 @@ py_class!(class indexedlogdatastore |py| {
                 path.as_path(),
                 ExtStoredPolicy::Ignore,
                 &config,
-                StoreType::Local,
+                StoreType::Permanent,
             ).map_pyerr(py)?),
         )
     }
@@ -435,7 +435,7 @@ py_class!(class indexedloghistorystore |py| {
         let config = config.get_cfg(py);
         indexedloghistorystore::create_instance(
             py,
-            Box::new(IndexedLogHgIdHistoryStore::new(path.as_path(), &config, StoreType::Local).map_pyerr(py)?),
+            Box::new(IndexedLogHgIdHistoryStore::new(path.as_path(), &config, StoreType::Permanent).map_pyerr(py)?),
         )
     }
 
@@ -481,7 +481,7 @@ fn make_mutabledeltastore(
             indexedlogpath.as_path(),
             ExtStoredPolicy::Ignore,
             &config,
-            StoreType::Local,
+            StoreType::Permanent,
         )?)
     } else {
         return Err(format_err!("Foo"));
