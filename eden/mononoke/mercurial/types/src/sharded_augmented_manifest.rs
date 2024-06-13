@@ -185,16 +185,14 @@ impl ShardedHgAugmentedManifest {
         self.computed_node_id
     }
 
-    // TODO(liubovd): serialize the file_header_metadata blob
-
     // The format of the content addressed manifest blob is as follows:
     //
     // entry ::= <path> '\0' <hg-node-hex> <type> ' ' <entry-value> '\n'
     //
-    // entry-value ::= <cas-blake3-hex> ' ' <size-dec> ' ' <sha1-hex>
+    // entry-value ::= <cas-blake3-hex> ' ' <size-dec> ' ' <sha1-hex> ' ' <base64(file_header_metadata) (if present) or '-'>
     //               | <cas-blake3-hex> ' ' <size-dec>
     //
-    // tree ::= <version> ' ' <sha1-hex> ' ' <computed_sha1-hex (if different) or -> ' ' <p1-hex or -> ' ' <p2-hex or -> '\n' <entry>*
+    // tree ::= <version> ' ' <sha1-hex> ' ' <computed_sha1-hex (if different) or '-'> ' ' <p1-hex or '-'> ' ' <p2-hex or '-'> '\n' <entry>*
 
     fn serialize_content_addressed_prefix(&self) -> Result<Bytes> {
         let mut buf = Vec::with_capacity(41 * 4); // 40 for a hex hash and a separator
@@ -293,6 +291,12 @@ impl ShardedHgAugmentedManifest {
         if let HgAugmentedManifestEntry::FileNode(ref file) = augmented_manifest_entry {
             w.write_all(b" ")?;
             w.write_all(file.content_sha1.to_hex().as_bytes())?;
+            w.write_all(b" ")?;
+            if let Some(file_header_metadata) = &file.file_header_metadata {
+                w.write_all(base64::encode(file_header_metadata).as_ref())?;
+            } else {
+                w.write_all(b"-")?;
+            }
         }
         Ok(())
     }
@@ -836,7 +840,9 @@ mod sharded_augmented_manifest_tests {
                     content_blake3: blake3_fours(),
                     content_sha1: sha1_fours(),
                     total_size: 10,
-                    file_header_metadata: None,
+                    file_header_metadata: Some(Bytes::from(
+                        "\x01\ncopy: fbcode/eden/scm/lib/revisionstore/TARGETS\ncopyrev: a459504f676a5fec5ab3d1a14f4616430391c03e\n\x01\n",
+                    )),
                 }),
             ),
             (
@@ -884,7 +890,13 @@ mod sharded_augmented_manifest_tests {
                 .await,
             Bytes::from(
                 #[allow(clippy::octal_escapes)]
-                "v1 1111111111111111111111111111111111111111 - 2222222222222222222222222222222222222222 3333333333333333333333333333333333333333\na.rs\04444444444444444444444444444444444444444r 4444444444444444444444444444444444444444444444444444444444444444 10 4444444444444444444444444444444444444444\nb.rs\02222222222222222222222222222222222222222r 2222222222222222222222222222222222222222222222222222222222222222 1000 2121212121212121212121212121212121212121\ndir_1\03333333333333333333333333333333333333333t 3333333333333333333333333333333333333333333333333333333333333333 10\ndir_2\01111111111111111111111111111111111111111t 1111111111111111111111111111111111111111111111111111111111111111 10000\n"
+                concat!(
+                    "v1 1111111111111111111111111111111111111111 - 2222222222222222222222222222222222222222 3333333333333333333333333333333333333333\n",
+                    "a.rs\04444444444444444444444444444444444444444r 4444444444444444444444444444444444444444444444444444444444444444 10 4444444444444444444444444444444444444444 AQpjb3B5OiBmYmNvZGUvZWRlbi9zY20vbGliL3JldmlzaW9uc3RvcmUvVEFSR0VUUwpjb3B5cmV2OiBhNDU5NTA0ZjY3NmE1ZmVjNWFiM2QxYTE0ZjQ2MTY0MzAzOTFjMDNlCgEK\n",
+                    "b.rs\02222222222222222222222222222222222222222r 2222222222222222222222222222222222222222222222222222222222222222 1000 2121212121212121212121212121212121212121 -\n",
+                    "dir_1\03333333333333333333333333333333333333333t 3333333333333333333333333333333333333333333333333333333333333333 10\n",
+                    "dir_2\01111111111111111111111111111111111111111t 1111111111111111111111111111111111111111111111111111111111111111 10000\n"
+                )
             )
         );
 
