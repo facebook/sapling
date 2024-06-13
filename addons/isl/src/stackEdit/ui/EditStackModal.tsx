@@ -64,7 +64,7 @@ function LoadedSplitModal() {
   return (
     <Modal dataTestId="interactive-split-modal">
       <SplitStackEditPanel />
-      <Row style={{padding: 'var(--pad) 0', justifyContent: 'flex-end'}}>
+      <Row style={{padding: 'var(--pad) 0', justifyContent: 'flex-end', zIndex: 1}}>
         <StackEditConfirmButtons />
       </Row>
     </Modal>
