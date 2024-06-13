@@ -28,6 +28,7 @@
 .banner > .banner-buttons {
   opacity: 0%;
   transition: opacity 0.2s;
+  display: flex;
 }
 .banner > .banner-buttons-visible,
 .banner:hover > .banner-buttons {

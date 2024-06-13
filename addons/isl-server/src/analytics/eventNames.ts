@@ -148,7 +148,8 @@ export type TrackEventName =
   | 'SlocCommand'
   | 'SplitSuggestionError'
   | 'SplitOpenFromSplitSuggestion'
-  | 'PendingSlocCommand';
+  | 'PendingSlocCommand'
+  | 'SplitSuggestionsDismissedForSevenDays';
 
 export type TrackErrorName =
   | 'BlameError'

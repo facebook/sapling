@@ -637,6 +637,7 @@ export type LocalStorageName =
   | 'isl.bookmarks'
   | 'isl.ui-zoom'
   | 'isl.has-shown-getting-started'
+  | 'isl.dismissed-split-suggestion'
   | 'isl.amend-autorestack'
   | 'isl.dismissed-alerts'
   | 'isl.debug-react-tools'

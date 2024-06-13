@@ -5,13 +5,17 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {Banner, BannerKind} from '../Banner';
+import {Banner, BannerKind, BannerTooltip} from '../Banner';
 import {Column} from '../ComponentUtils';
 import {Internal} from '../Internal';
+import {Tooltip} from '../Tooltip';
+import {tracker} from '../analytics';
+import {Button} from '../components/Button';
 import {Divider} from '../components/Divider';
 import GatedComponent from '../components/GatedComponent';
 import {T, t} from '../i18n';
 import {localStorageBackedAtom} from '../jotaiUtils';
+import platform from '../platform';
 import {uncommittedChangesWithPreviews} from '../previews';
 import {
   MAX_FILES_ALLOWED_FOR_DIFF_STAT,
@@ -24,15 +28,41 @@ import {
 import {SplitButton} from '../stackEdit/ui/SplitButton';
 import {type CommitInfo} from '../types';
 import {commitMode} from './CommitInfoState';
-import {useAtomValue} from 'jotai';
-import {Suspense} from 'react';
+import {useAtom, useAtomValue} from 'jotai';
 import {Icon} from 'shared/Icon';
 
 export const splitSuggestionEnabled = localStorageBackedAtom<boolean>(
   'isl.split-suggestion-enabled',
   true,
 );
+const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
+const dismissedAtom = localStorageBackedAtom<number | null>(`isl.dismissed-split-suggestion`, null);
 
+function useDismissed() {
+  const [dismissed, setDismissed] = useAtom(dismissedAtom);
+  const isDismissed = () =>
+    dismissed != null && new Date(dismissed) > new Date(Date.now() - SEVEN_DAYS);
+
+  return {isDismissed, setDismissed};
+}
+
+function DismissSuggestionButton() {
+  const {setDismissed} = useDismissed();
+  return (
+    <Tooltip title={t('Dismiss this suggestion for 7 days')}>
+      <Button
+        onClick={async () => {
+          const ok = await platform.confirm(t('Dismiss this suggestion for 7 days?'));
+          if (ok) {
+            tracker.track('SplitSuggestionsDismissedForSevenDays');
+            setDismissed(Date.now());
+          }
+        }}>
+        <Icon icon="close" />
+      </Button>
+    </Tooltip>
+  );
+}
 function SuggestionBanner({
   tooltip,
   buttons,
@@ -42,17 +72,25 @@ function SuggestionBanner({
   buttons?: React.ReactNode;
   children: React.ReactNode;
 }) {
+  const {isDismissed} = useDismissed();
+  if (isDismissed()) {
+    return null;
+  }
   return (
     <>
       <Divider />
       <Banner
-        tooltip={tooltip}
         kind={BannerKind.default}
         icon={<Icon size="M" icon="lightbulb" color="blue" />}
         alwaysShowButtons
-        buttons={buttons}>
+        buttons={
+          <>
+            {buttons}
+            <DismissSuggestionButton />
+          </>
+        }>
         <Column alignStart style={{gap: 0}}>
-          {children}
+          <Tooltip title={tooltip}>{children}</Tooltip>
         </Column>
       </Banner>
     </>
@@ -84,7 +122,7 @@ function SplitSuggestionImpl({commit}: {commit: CommitInfo}) {
   const mode = useAtomValue(commitMode);
   const significantLinesOfCode = useFetchSignificantLinesOfCode(commit) ?? -1;
   const uncommittedChanges = useAtomValue(uncommittedChangesWithPreviews);
-
+  console.log('SplitSuggestionImpl', significantLinesOfCode > SLOC_THRESHOLD_FOR_SPLIT_SUGGESTIONS);
   // no matter what if the commit is over the threshold, we show the split suggestion
   if (significantLinesOfCode > SLOC_THRESHOLD_FOR_SPLIT_SUGGESTIONS) {
     return (
