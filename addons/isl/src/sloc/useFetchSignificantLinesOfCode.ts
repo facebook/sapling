@@ -18,6 +18,7 @@ import {MAX_FILES_ALLOWED_FOR_DIFF_STAT} from './diffStatConstants';
 import {atom, useAtom, useAtomValue} from 'jotai';
 import {loadable} from 'jotai/utils';
 import {useRef} from 'react';
+import {pageVisibility} from '../codeReview/CodeReviewInfo';
 
 const commitSloc = atomFamilyWeak((hash: string) => {
   return lazyAtom(async get => {
@@ -61,8 +62,11 @@ const pendingChangesSlocAtom = atom(async get => {
   // requestId A (slow) => Server (sleeps 5 sec)
   // requestId B (fast) => Server responds immediately, client updates
   // requestId A (slow) => Server responds, client ignores
+
+  // we don't want to fetch the pending changes if the page is hidden
+  const pageIsHidden = get(pageVisibility) === 'hidden';
   const commits = get(commitInfoViewCurrentCommits);
-  if (commits == null || commits.length > 1) {
+  if (pageIsHidden || commits == null || commits.length > 1) {
     return undefined;
   }
   const [commit] = commits;
