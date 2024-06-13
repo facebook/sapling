@@ -105,7 +105,7 @@ impl AsyncNameSetQuery for ReverseSet {
 
 impl fmt::Debug for ReverseSet {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.write_str("<reverse")?;
+        f.write_str("<reverse ")?;
         self.inner.fmt(f)?;
         f.write_str(">")
     }
