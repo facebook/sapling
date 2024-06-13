@@ -20,7 +20,8 @@
   > }
   > EOF
 
-  $ PUSHREBASE_REWRITE_DATES=1 init_large_small_repo
+  $ setconfig push.edenapi=true
+  $ ENABLE_API_WRITES=1 PUSHREBASE_REWRITE_DATES=1 init_large_small_repo
   Adding synced mapping entry
   Starting Mononoke server
 
@@ -34,8 +35,8 @@
   $ cd "$TESTTMP/small-hg-client"
   $ REPONAME=small-mon hgmn up -q master_bookmark
   $ echo 2 > 2 && hg addremove -q && hg ci -q -m newcommit
-  $ REPONAME=small-mon hgmn push -r . --to master_bookmark 2>&1 | grep updating
-  updating bookmark master_bookmark
+  $ REPONAME=small-mon hgedenapi push -r . --to master_bookmark 2>&1 | grep "updated remote bookmark" 
+  updated remote bookmark master_bookmark to * (glob)
 -- newcommit was correctly pushed to master_bookmark (we need to update, as it's a new commit with date rewriting)
   $ REPONAME=small-mon hgmn up -q master_bookmark
   $ log -r master_bookmark
@@ -62,7 +63,7 @@
   $ echo 1 > empty && hg add empty && hg ci -m empty
   $ hg revert -r .^ empty
   $ hg commit --amend
-  $ REPONAME=large-mon hgmn push -r . --to master_bookmark -q
+  $ REPONAME=large-mon hgedenapi push -r . --to master_bookmark -q
   $ backsync_large_to_small 2>&1 | grep "syncing bookmark"
   * syncing bookmark master_bookmark to * (glob)
 
