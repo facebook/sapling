@@ -61,6 +61,7 @@ pub struct HgAugmentedFileLeafNode {
     pub content_blake3: Blake3,
     pub content_sha1: Sha1,
     pub total_size: u64,
+    pub file_header_metadata: Option<Bytes>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
@@ -183,6 +184,8 @@ impl ShardedHgAugmentedManifest {
     pub fn computed_node_id(&self) -> HgNodeHash {
         self.computed_node_id
     }
+
+    // TODO(liubovd): serialize the file_header_metadata blob
 
     // The format of the content addressed manifest blob is as follows:
     //
@@ -394,6 +397,7 @@ impl ThriftConvert for HgAugmentedFileLeafNode {
             content_blake3: Blake3::from_thrift(t.content_blake3)?,
             content_sha1: Sha1::from_bytes(t.content_sha1.0)?,
             total_size: t.total_size as u64,
+            file_header_metadata: t.file_header_metadata.map(Bytes::from),
         })
     }
 
@@ -404,6 +408,7 @@ impl ThriftConvert for HgAugmentedFileLeafNode {
             content_blake3: self.content_blake3.into_thrift(),
             content_sha1: self.content_sha1.into_thrift(),
             total_size: self.total_size as i64,
+            file_header_metadata: self.file_header_metadata.map(Bytes::into),
         }
     }
 }
@@ -831,6 +836,7 @@ mod sharded_augmented_manifest_tests {
                     content_blake3: blake3_fours(),
                     content_sha1: sha1_fours(),
                     total_size: 10,
+                    file_header_metadata: None,
                 }),
             ),
             (
@@ -841,6 +847,7 @@ mod sharded_augmented_manifest_tests {
                     content_blake3: blake3_twos(),
                     content_sha1: sha1_twos(),
                     total_size: 1000,
+                    file_header_metadata: None,
                 }),
             ),
             (

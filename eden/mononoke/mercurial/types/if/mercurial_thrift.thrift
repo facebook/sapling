@@ -60,6 +60,8 @@ struct HgAugmentedFileLeaf {
   // Expected to match the size of the raw blob.
   4: i64 total_size;
   5: id.Sha1 content_sha1;
+  // File's metadata blob (that includes "copy from" information)
+  6: optional binary file_header_metadata;
 } (rust.exhaustive)
 
 struct HgAugmentedDirectoryNode {

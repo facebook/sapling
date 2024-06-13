@@ -246,6 +246,11 @@ pub async fn derive_from_hg_manifest_and_parents(
                                     total_size: metadata.total_size,
                                     content_blake3: metadata.seeded_blake3,
                                     content_sha1: metadata.sha1,
+                                    file_header_metadata: if filenode.metadata().is_empty() {
+                                        None
+                                    } else {
+                                        Some(filenode.metadata().clone())
+                                    },
                                 }),
                             ))
                         })
@@ -382,6 +387,11 @@ pub async fn derive_from_full_hg_manifest(
                         total_size: metadata.total_size,
                         content_blake3: metadata.seeded_blake3,
                         content_sha1: metadata.sha1,
+                        file_header_metadata: if filenode.metadata().is_empty() {
+                            None
+                        } else {
+                            Some(filenode.metadata().clone())
+                        },
                     };
                     Ok(((), hg_augmented_file_leaf_node))
                 }
