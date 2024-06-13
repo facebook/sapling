@@ -12,8 +12,9 @@
 
 setup configuration
   $ REPOTYPE="blob_files"
-  $ REPOID=$LARGE_REPO_ID REPONAME=large-mon setup_common_config $REPOTYPE
-  $ REPOID=$SMALL_REPO_ID REPONAME=small-mon-1 setup_common_config $REPOTYPE
+  $ setconfig push.edenapi=true
+  $ ENABLE_API_WRITES=1 REPOID=$LARGE_REPO_ID REPONAME=large-mon setup_common_config $REPOTYPE
+  $ ENABLE_API_WRITES=1 REPOID=$SMALL_REPO_ID REPONAME=small-mon-1 setup_common_config $REPOTYPE
 
   $ cat >> "$TESTTMP/mononoke-config/common/commitsyncmap.toml" <<EOF
   > [megarepo_test]
@@ -170,8 +171,8 @@ Normal pushrebase with one commit
   $ cd "$TESTTMP/small-hg-client-1"
   $ REPONAME=small-mon-1 hgmn up -q master_bookmark
   $ echo 2 > 2 && hg addremove -q && hg ci -q -m newcommit
-  $ REPONAME=small-mon-1 hgmn push -r . --to master_bookmark 2>&1 | grep updating
-  updating bookmark master_bookmark
+  $ REPONAME=small-mon-1 hgedenapi push -r . --to master_bookmark 2>&1 | grep "updated remote bookmark"
+  updated remote bookmark master_bookmark to 6989db12d1e5
 -- newcommit was correctly pushed to master_bookmark
   $ log -r master_bookmark
   @  newcommit [public;rev=2;6989db12d1e5] default/master_bookmark
@@ -201,7 +202,7 @@ Live change of the config, without Mononoke restart
   $ echo 1 >> 1 && hg add 1 && hg ci -m 'change of mapping'
   $ hg revert -r .^ 1
   $ hg commit --amend
-  $ REPONAME=small-mon-1  hgmn push -r . --to master_bookmark -q
+  $ REPONAME=small-mon-1  hgedenapi push -r . --to master_bookmark -q
   $ quiet_grep "all is well" -- megarepo_tool_multirepo --source-repo-id $REPOIDLARGE --target-repo-id $REPOIDSMALL1 check-push-redirection-prereqs master_bookmark master_bookmark TEST_VERSION_NAME_LIVE_V1
   * all is well! (glob)
   $ quiet_grep "all is well" -- megarepo_tool_multirepo --source-repo-id $REPOIDLARGE --target-repo-id $REPOIDSMALL1 check-push-redirection-prereqs master_bookmark master_bookmark TEST_VERSION_NAME_LIVE_V2
@@ -228,28 +229,16 @@ Live change of the config, without Mononoke restart
 Do a push it should fail because we disallow pushing over a changeset that changes the mapping
   $ mkdir -p special
   $ echo f > special/f && hg ci -Aqm post_config_change_commit
-  $ REPONAME=small-mon-1 hgmn push -r . --to master_bookmark
-  pushing rev 318b198c67b1 to destination mononoke://$LOCALIP:$LOCAL_PORT/small-mon-1 bookmark master_bookmark
-  searching for changes
-  remote: Command failed
-  remote:   Error:
-  remote:     Pushrebase failed: Force failed pushrebase, please do a manual rebase. (Bonsai changeset id that triggered it is *) (glob)
-  remote: 
-  remote:   Root cause:
-  remote:     Force failed pushrebase, please do a manual rebase. (Bonsai changeset id that triggered it is *) (glob)
-  remote: 
-  remote:   Caused by:
-  remote:     Force failed pushrebase, please do a manual rebase. (Bonsai changeset id that triggered it is *) (glob)
-  remote: 
-  remote:   Debug context:
-  remote:     PushrebaseError(
-  remote:         ForceFailPushrebase(
-  remote:             ChangesetId(
-  remote:                 Blake2(*), (glob)
-  remote:             ),
-  remote:         ),
-  remote:     )
-  abort: unexpected EOL, expected netstring digit
+  $ REPONAME=small-mon-1 hgedenapi push -r . --to master_bookmark
+  pushing rev 318b198c67b1 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
+  edenapi: queue 1 commit for upload
+  edenapi: queue 1 file for upload
+  edenapi: uploaded 1 file
+  edenapi: queue 2 trees for upload
+  edenapi: uploaded 2 trees
+  edenapi: uploaded 1 changeset
+  pushrebasing stack (ef1b32df8f95, 318b198c67b1] (1 commit) to remote bookmark master_bookmark
+  abort: Server error: invalid request: Pushrebase failed: Force failed pushrebase, please do a manual rebase. (Bonsai changeset id that triggered it is *) (glob)
   [255]
 
 Again, normal pushrebase with one commit
@@ -267,8 +256,8 @@ Again, normal pushrebase with one commit
   
   $ mkdir -p special
   $ echo f > special/f && hg ci -Aqm post_config_change_commit
-  $ REPONAME=small-mon-1 hgmn push -r . --to master_bookmark 2>&1 | grep updating
-  updating bookmark master_bookmark
+  $ REPONAME=small-mon-1 hgedenapi push -r . --to master_bookmark 2>&1 | grep "updated remote bookmark"
+  updated remote bookmark master_bookmark to * (glob)
 
 -- in the large repo, new commit touched an after_change path
   $ cd "$TESTTMP"/large-hg-client

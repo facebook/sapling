@@ -7,10 +7,11 @@
   $ . "${TEST_FIXTURES}/library.sh"
 
 setup configuration
+  $ setconfig push.edenapi=true
   $ REPOTYPE="blob_files"
-  $ REPOID=0 REPONAME=large-mon setup_common_config $REPOTYPE
-  $ REPOID=1 REPONAME=small-mon-1 setup_common_config $REPOTYPE
-  $ REPOID=2 REPONAME=small-mon-2 setup_common_config $REPOTYPE
+  $ ENABLE_API_WRITES=1 REPOID=0 REPONAME=large-mon setup_common_config $REPOTYPE
+  $ ENABLE_API_WRITES=1 REPOID=1 REPONAME=small-mon-1 setup_common_config $REPOTYPE
+  $ ENABLE_API_WRITES=1 REPOID=2 REPONAME=small-mon-2 setup_common_config $REPOTYPE
   $ cat >> "$TESTTMP/mononoke-config/common/commitsyncmap.toml" <<EOF
   > [megarepo_test]
   > large_repo_id = 0
@@ -219,8 +220,8 @@ Normal pushrebase with one commit
   $ cd "$TESTTMP/small-hg-client-1"
   $ REPONAME=small-mon-1 hgmn up -q master_bookmark
   $ echo 2 > 2 && hg addremove -q && hg ci -q -m newcommit
-  $ REPONAME=small-mon-1 hgmn push -r . --to master_bookmark 2>&1 | grep updating
-  updating bookmark master_bookmark
+  $ REPONAME=small-mon-1 hgedenapi push -r . --to master_bookmark 2>&1 | grep "updated remote bookmark"
+  updated remote bookmark master_bookmark to 6989db12d1e5
 -- newcommit was correctly pushed to master_bookmark
   $ log -r master_bookmark
   @  newcommit [public;rev=2;6989db12d1e5] default/master_bookmark
@@ -246,7 +247,7 @@ At the same time, the tailed repo gets new commits
   $ REPONAME=small-mon-2 hgmn up -q master_bookmark
   $ createfile file2_1
   $ hg ci -qm "Post-merge commit 1"
-  $ REPONAME=small-mon-2 hgmn push --to master_bookmark -q
+  $ REPONAME=small-mon-2 hgedenapi push --to master_bookmark -q
 -- tailer puts this commit into a large repo
   $ mononoke_x_repo_sync $REPOIDSMALL2 $REPOIDLARGE once --target-bookmark master_bookmark --commit master_bookmark 2>&1 | grep "synced as"
   * changeset 46d7f49c05a72a305692183a11274a0fbbdc4f8a4b53ca759fb3d257ba54184e synced as 3a9ffb4771519f86b79729a543da084c6a70ff385933aed540e2112a049a0697 * (glob)
@@ -255,23 +256,13 @@ Force pushrebase should fail, because it pushes to a shared bookmark
   $ cd "$TESTTMP/small-hg-client-1"
   $ REPONAME=small-mon-1 hgmn up -q master_bookmark^
   $ echo 3 > 3 && hg add 3 && hg ci -q -m "non-forward move"
-  $ REPONAME=small-mon-1 hgmn push --to master_bookmark --force --pushvar NON_FAST_FORWARD=true >/dev/null
+  $ REPONAME=small-mon-1 hgedenapi push --to master_bookmark --force --pushvar NON_FAST_FORWARD=true >/dev/null
   pushing * (glob)
-  searching * (glob)
-  remote: Command failed
-  remote:   Error:
-  remote:     cannot force pushrebase to shared bookmark master_bookmark
-  remote: 
-  remote:   Root cause:
-  remote:     cannot force pushrebase to shared bookmark master_bookmark
-  remote: 
-  remote:   Debug context:
-  remote:     "cannot force pushrebase to shared bookmark master_bookmark"
-  abort: unexpected EOL, expected netstring digit
+  abort: server error: invalid request: Cannot move shared bookmark 'master_bookmark' from small repo
   [255]
 
 Non-shared bookmark should work
-  $ REPONAME=small-mon-1 hgmn push --to master_bookmark_non_fast_forward --force --create -q
+  $ REPONAME=small-mon-1 hgedenapi push --to master_bookmark_non_fast_forward --force --create -q
 -- it should also be present in a large repo
   $ cd "$TESTTMP/large-hg-client"
   $ REPONAME=large-mon hgmn pull -q
@@ -282,8 +273,8 @@ Non-shared bookmark should work
 
 Bookmark-only pushrebase (Create a new bookmark, do not push commits)
   $ cd "$TESTTMP/small-hg-client-1"
-  $ REPONAME=small-mon-1 hgmn push -r master_bookmark^ --to master_bookmark_2 --create 2>&1 | grep exporting
-  exporting bookmark master_bookmark_2
+  $ REPONAME=small-mon-1 hgedenapi push -r master_bookmark^ --to master_bookmark_2 --create 2>&1 | grep creating
+  creating remote bookmark master_bookmark_2
   $ hg book --all
   no bookmarks set
      default/master_bookmark   6989db12d1e5
@@ -302,9 +293,8 @@ Bookmark-only pushrebase (Create a new bookmark, do not push commits)
 
 Delete a bookmark
   $ cd "$TESTTMP/small-hg-client-1"
-  $ REPONAME=small-mon-1 quiet_grep deleting -- hgmn push --delete master_bookmark_2
+  $ REPONAME=small-mon-1 quiet_grep deleting -- hgedenapi push --delete master_bookmark_2
   deleting remote bookmark master_bookmark_2
-  [1]
   $ hg book --all
   no bookmarks set
      default/master_bookmark   6989db12d1e5
