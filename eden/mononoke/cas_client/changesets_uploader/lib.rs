@@ -367,7 +367,6 @@ where
                             })?;
                         progress_counter.tick(ctx, outcome);
                     }
-                    //}
                     let hg_manifest = hg_manifest_id.load(ctx, repo.repo_blobstore()).await?;
                     let mut children = Vec::new();
                     hg_manifest
@@ -375,7 +374,7 @@ where
                         .await?
                         .try_for_each_concurrent(
                             MAX_CONCURRENT_FILES_PER_MANIFEST,
-                            |(_elem, entry)| match entry {
+                            |(elem, entry)| match entry {
                                 Entry::Tree(tree) => {
                                     children.push(tree);
                                     future::ok(()).left_future()
@@ -397,7 +396,7 @@ where
                                                 .await
                                                 .map_err(|error| {
                                                     CasChangesetUploaderErrorKind::FileUploadFailed(
-                                                        leaf.1, error,
+                                                        leaf.1, elem, error,
                                                     )
                                                 })?;
                                             progress_counter.tick(ctx, outcome);
