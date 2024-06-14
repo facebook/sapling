@@ -100,7 +100,10 @@ impl TreeEntry {
         self
     }
 
-    pub fn with_directory_metadata(mut self, directory_metadata: DirectoryMetadata) -> Self {
+    pub fn with_directory_metadata<'a>(
+        &'a mut self,
+        directory_metadata: DirectoryMetadata,
+    ) -> &'a mut Self {
         self.directory_metadata = Some(directory_metadata);
         self
     }

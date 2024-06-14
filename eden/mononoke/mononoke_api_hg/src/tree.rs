@@ -23,6 +23,7 @@ use mercurial_types::HgParents;
 use mercurial_types::HgPreloadedAugmentedManifest;
 use mononoke_api::errors::MononokeError;
 use mononoke_types::file_change::FileType;
+use mononoke_types::hash::Blake3;
 use mononoke_types::MPathElement;
 use repo_blobstore::RepoBlobstoreRef;
 use revisionstore_types::Metadata;
@@ -98,16 +99,20 @@ impl HgAugmentedTreeContext {
         let ctx = repo.ctx();
         let blobstore = repo.blob_repo().repo_blobstore();
         let envelope = augmented_manifest_id.load(ctx, blobstore).await?;
-        let preloaded_manifest = HgPreloadedAugmentedManifest::load_from_sharded(
-            envelope.augmented_manifest,
-            ctx,
-            blobstore,
-        )
-        .await?;
+        let preloaded_manifest =
+            HgPreloadedAugmentedManifest::load_from_sharded(envelope, ctx, blobstore).await?;
         Ok(Some(Self {
             repo,
             preloaded_manifest,
         }))
+    }
+
+    pub fn augmented_manifest_id(&self) -> Blake3 {
+        self.preloaded_manifest.augmented_manifest_id
+    }
+
+    pub fn augmented_manifest_size(&self) -> u64 {
+        self.preloaded_manifest.augmented_manifest_size
     }
 
     pub fn augmented_children_entries(&self) -> impl Iterator<Item = &HgAugmentedManifestEntry> {

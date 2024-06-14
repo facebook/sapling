@@ -10,14 +10,15 @@ use blobstore::Blobstore;
 use bytes::Bytes;
 use context::CoreContext;
 use futures::TryStreamExt;
+use mononoke_types::hash::Blake3;
 use mononoke_types::MPathElement;
 
 use crate::manifest::Type as HgManifestType;
 use crate::HgAugmentedManifestEntry;
+use crate::HgAugmentedManifestEnvelope;
 /// This is temporary type to preload Augmented Manifest and build manifest blobs in sapling native format
 /// The type will be used to convert an HgAugmentedManifest entry into an SaplingRemoteApi TreeEntry.
 use crate::HgNodeHash;
-use crate::ShardedHgAugmentedManifest;
 
 pub type HgAugmentedManifestMetadata = HgAugmentedManifestEntry;
 
@@ -27,6 +28,8 @@ pub struct HgPreloadedAugmentedManifest {
     pub hg_node_id: HgNodeHash,
     pub p1: Option<HgNodeHash>,
     pub p2: Option<HgNodeHash>,
+    pub augmented_manifest_id: Blake3,
+    pub augmented_manifest_size: u64,
     pub contents: Bytes,
     pub children_augmented_metadata: Vec<HgAugmentedManifestMetadata>,
 }
@@ -62,15 +65,18 @@ fn serrialize_manifest(
 
 impl HgPreloadedAugmentedManifest {
     pub async fn load_from_sharded<'a>(
-        sharded_manifest: ShardedHgAugmentedManifest,
+        sharded_manifest: HgAugmentedManifestEnvelope,
         ctx: &'a CoreContext,
         blobstore: &'a impl Blobstore,
     ) -> Result<Self> {
-        let hg_node_id = sharded_manifest.hg_node_id;
-        let p1 = sharded_manifest.p1;
-        let p2 = sharded_manifest.p2;
+        let augmented_manifest_id = sharded_manifest.augmented_manifest_id;
+        let augmented_manifest_size = sharded_manifest.augmented_manifest_size;
+        let hg_node_id = sharded_manifest.augmented_manifest.hg_node_id;
+        let p1 = sharded_manifest.augmented_manifest.p1;
+        let p2 = sharded_manifest.augmented_manifest.p2;
 
         let data: Vec<(MPathElement, HgAugmentedManifestEntry)> = sharded_manifest
+            .augmented_manifest
             .into_subentries(ctx, blobstore)
             .try_collect()
             .await?;
@@ -79,6 +85,8 @@ impl HgPreloadedAugmentedManifest {
             hg_node_id,
             p1,
             p2,
+            augmented_manifest_id,
+            augmented_manifest_size,
             children_augmented_metadata: data.iter().map(|(_, entry)| entry.clone()).collect(),
             contents: serrialize_manifest(&data)?,
         })

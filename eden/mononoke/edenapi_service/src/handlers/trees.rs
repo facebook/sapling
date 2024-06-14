@@ -142,7 +142,8 @@ async fn fetch_tree(
 
     if attributes.augmented_trees {
         // Augmented Trees always come with the hg manifest blob, parents,
-        // and child metadata in the augmented trees format.
+        // and child metadata in the augmented trees format. Augmented tree digest
+        // for the tree itself is also always present.
         let id = HgAugmentedManifestId::new(HgNodeHash::from(key.hgid));
         repo.ctx()
             .perf_counters()
@@ -155,6 +156,11 @@ async fn fetch_tree(
             .with_context(|| ErrorKind::KeyDoesNotExist(key.clone()))?;
 
         entry.with_parents(Some(ctx.hg_parents().into()));
+
+        entry.with_directory_metadata(DirectoryMetadata {
+            augmented_manifest_id: ctx.augmented_manifest_id().clone().into(),
+            augmented_manifest_size: ctx.augmented_manifest_size(),
+        });
 
         entry.with_children(Some(
             ctx.augmented_children_entries()
