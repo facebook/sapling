@@ -170,12 +170,16 @@ impl Listable for Entry<HgAugmentedManifestId, HgAugmentedFileLeafNode> {
         match self {
             Entry::Tree(tree) => tree.to_string(),
             Entry::Leaf(leaf) => format!(
-                "{}\ttype={}\tsize={}\tblake3={}\tsha1={}",
+                "{}\ttype={}\tsize={}\tblake3={}\tsha1={}{}",
                 leaf.filenode,
                 leaf.file_type,
                 leaf.total_size,
                 leaf.content_blake3,
                 leaf.content_sha1,
+                match leaf.file_header_metadata {
+                    None => String::new(),
+                    Some(data) => format!("\tmetadata=<{} bytes>", data.len()),
+                }
             ),
         }
     }
