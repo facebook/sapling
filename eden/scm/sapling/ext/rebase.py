@@ -414,7 +414,7 @@ class rebaseruntime:
         if not mutation.enabled(self.repo):
             _checkobsrebase(self.repo, self.ui, obsoleteset, skippedset)
 
-    def _prepareabortcontinueorquit(self, isabort, quitf):
+    def _prepareabortcontinueorquit(self, isabort, isquit):
         try:
             self.restorestatus()
             if self.collapsef:
@@ -442,7 +442,7 @@ class rebaseruntime:
                 self.state,
                 activebookmark=self.activebookmark,
             )
-        if quitf:
+        if isquit:
             return quit_rebase(self.repo, activebookmark=self.activebookmark)
 
     def _preparenewrebase(self, destmap):
