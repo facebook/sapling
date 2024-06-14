@@ -36,7 +36,7 @@ export const submittableSelection = atom(get => {
   }
 
   const dag = get(dagWithPreviews);
-  const commits = dag.getBatch(dag.sortAsc(selection));
+  const commits = dag.getBatch(dag.sortAsc(dag.present(selection)));
   const submittable =
     (diffSummaries.value != null
       ? provider?.getSubmittableDiffs(commits, diffSummaries.value)

@@ -69,7 +69,7 @@ export function getFoldableRange(selection: Set<Hash>, dag: Dag): Array<CommitIn
   ) {
     return undefined;
   }
-  return dag.getBatch(dag.sortAsc(selection, {gap: false}));
+  return dag.getBatch(dag.sortAsc(set, {gap: false}));
 }
 
 export function FoldButton({commit}: {commit?: CommitInfo}) {
