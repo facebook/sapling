@@ -82,6 +82,7 @@
 #include "eden/fs/store/PathLoader.h"
 #include "eden/fs/store/ScmStatusDiffCallback.h"
 #include "eden/fs/store/TreeCache.h"
+#include "eden/fs/store/TreeLookupProcessor.h"
 #include "eden/fs/store/filter/GlobFilter.h"
 #include "eden/fs/store/hg/SaplingBackingStore.h"
 #include "eden/fs/telemetry/LogEvent.h"
@@ -3241,8 +3242,8 @@ EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
               .thenValue([mountHandle,
                           wantDtype = params->wantDtype_ref().value(),
                           includeDotfiles =
-                              params->includeDotfiles_ref().value()](
-                             auto&& globResults) mutable {
+                              params->includeDotfiles_ref().value(),
+                          &context](auto&& globResults) mutable {
                 // Offload suffix queries to EdenAPI
                 // params ignored in this pathway:
                 // Commands related to prefetching or the working copy
@@ -3256,12 +3257,48 @@ EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
                 auto edenMount = mountHandle.getEdenMountPtr();
                 std::vector<ImmediateFuture<GlobEntry>> globEntryFuts;
                 for (auto& glob : globResults) {
-                  auto originHash =
+                  std::string originHash =
                       mountHandle.getObjectStore().renderRootId(glob.rootId);
                   for (auto& entry : glob.globFiles) {
-                    globEntryFuts.emplace_back(
-                        ImmediateFuture<GlobEntry>{folly::Try<GlobEntry>{
-                            GlobEntry{entry, DT_UNKNOWN, originHash}}});
+                    if (wantDtype) {
+                      // TODO(T192408118) get the root tree a single time per
+                      // glob instead of per-entry
+                      globEntryFuts.emplace_back(
+                          edenMount->getObjectStore()
+                              ->getRootTree(
+                                  std::move(glob.rootId), context.copy())
+                              .thenValue(
+                                  [entry, edenMount, context = context.copy()](
+                                      auto&& tree) mutable {
+                                    auto stringPiece =
+                                        folly::StringPiece{entry};
+                                    return ::facebook::eden::getTreeOrTreeEntry(
+                                        std::move(tree.tree),
+                                        RelativePath{stringPiece},
+                                        edenMount->getObjectStore(),
+                                        std::move(context));
+                                  })
+                              .thenValue([entry, originHash](
+                                             auto&& treeEntry) mutable {
+                                if (TreeEntry* treeEntryPtr =
+                                        std::get_if<TreeEntry>(&treeEntry)) {
+                                  auto dtype = treeEntryPtr->getDtype();
+                                  return ImmediateFuture<GlobEntry>{GlobEntry{
+                                      std::move(entry),
+                                      static_cast<OsDtype>(dtype),
+                                      std::move(originHash)}};
+                                } else {
+                                  EDEN_BUG()
+                                      << "Received a Tree when expecting TreeEntry for path "
+                                      << entry;
+                                }
+                              })
+                              .ensure([entry] {}));
+                    } else {
+                      globEntryFuts.emplace_back(ImmediateFuture<GlobEntry>{
+                          folly::Try<GlobEntry>{GlobEntry{
+                              std::move(entry), DT_UNKNOWN, originHash}}});
+                    }
                   }
                 }
                 return collectAllSafe(std::move(globEntryFuts))
@@ -3271,6 +3308,16 @@ EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
                         glob->matchingFiles_ref().value().emplace_back(
                             globEntry.file);
                         if (wantDtype) {
+                          // This can happen if a file is missing on disk but
+                          // exists on the server. Instead of silently failing
+                          // use the local lookup.
+                          if (globEntry.dType == DT_UNKNOWN) {
+                            throw newEdenError(
+                                ENOENT,
+                                EdenErrorType::POSIX_ERROR,
+                                "could not get Dtype for file ",
+                                globEntry.file);
+                          }
                           glob->dtypes_ref().value().emplace_back(
                               globEntry.dType);
                         }
