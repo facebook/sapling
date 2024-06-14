@@ -1,4 +1,4 @@
-#require no-eden no-windows
+#require no-eden no-windows no-fsmonitor
 
 Prepare a simple test:
 
