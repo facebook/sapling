@@ -1423,6 +1423,8 @@ class PrjFSStressTornReads(EdenHgTestCase):
         read_thread = Thread(target=read_file)
         read_thread.start()
 
+        self.wait_on_fault_hit(key_class="PrjfsDispatcherImpl::read")
+
         try:
             self.repo.update(self.short_file_commit)
         except Exception:

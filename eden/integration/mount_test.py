@@ -19,6 +19,7 @@ from facebook.eden.ttypes import (
     EdenError,
     EdenErrorType,
     FaultDefinition,
+    GetBlockedFaultsRequest,
     MountState,
     ResetParentCommitsParams,
     SyncBehavior,
@@ -152,16 +153,16 @@ class MountTest(testcase.EdenRepoTest):
                 return None
 
             poll_until(mount_started, timeout=30)
+            self.wait_on_fault_hit(key_class="mount")
             self.assertEqual({self.mount: "INITIALIZING"}, self.eden.list_cmd_simple())
 
             # Most thrift calls to access the mount should be disallowed while it is
             # still initializing.
             self._assert_thrift_calls_fail_during_mount_init(client)
 
-            # Unblock mounting and wait for the mount to transition to running
             client.unblockFault(UnblockFaultArg(keyClass="mount", keyValueRegex=".*"))
-
             self._wait_for_mount_running(client)
+
             self.assertEqual({self.mount: "RUNNING"}, self.eden.list_cmd_simple())
 
             mount_proc.wait()

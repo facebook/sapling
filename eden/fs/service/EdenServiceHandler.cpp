@@ -4882,6 +4882,7 @@ std::optional<folly::exception_wrapper> getFaultError(
 } // namespace
 
 void EdenServiceHandler::injectFault(unique_ptr<FaultDefinition> fault) {
+  auto helper = INSTRUMENT_THRIFT_CALL(DBG2);
   auto& injector = server_->getServerState()->getFaultInjector();
   if (*fault->block_ref()) {
     injector.injectBlock(
@@ -4930,12 +4931,14 @@ void EdenServiceHandler::injectFault(unique_ptr<FaultDefinition> fault) {
 }
 
 bool EdenServiceHandler::removeFault(unique_ptr<RemoveFaultArg> fault) {
+  auto helper = INSTRUMENT_THRIFT_CALL(DBG2);
   auto& injector = server_->getServerState()->getFaultInjector();
   return injector.removeFault(
       *fault->keyClass_ref(), *fault->keyValueRegex_ref());
 }
 
 int64_t EdenServiceHandler::unblockFault(unique_ptr<UnblockFaultArg> info) {
+  auto helper = INSTRUMENT_THRIFT_CALL(DBG2);
   auto& injector = server_->getServerState()->getFaultInjector();
   auto error = getFaultError(info->errorType_ref(), info->errorMessage_ref());
 
@@ -4960,6 +4963,16 @@ int64_t EdenServiceHandler::unblockFault(unique_ptr<UnblockFaultArg> info) {
   } else {
     return injector.unblock(keyClass, keyValueRegex);
   }
+}
+
+void EdenServiceHandler::getBlockedFaults(
+    GetBlockedFaultsResponse& out,
+    std::unique_ptr<GetBlockedFaultsRequest> request) {
+  auto helper = INSTRUMENT_THRIFT_CALL(DBG2);
+  auto& injector = server_->getServerState()->getFaultInjector();
+  auto result = injector.getBlockedFaults(*request->keyclass_ref());
+
+  out.keyValues() = std::move(result);
 }
 
 void EdenServiceHandler::reloadConfig() {

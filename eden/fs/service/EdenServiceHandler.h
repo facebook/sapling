@@ -376,6 +376,9 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
   void injectFault(std::unique_ptr<FaultDefinition> fault) override;
   bool removeFault(std::unique_ptr<RemoveFaultArg> fault) override;
   int64_t unblockFault(std::unique_ptr<UnblockFaultArg> info) override;
+  void getBlockedFaults(
+      GetBlockedFaultsResponse& out,
+      std::unique_ptr<GetBlockedFaultsRequest> request) override;
 
   folly::SemiFuture<std::unique_ptr<SetPathObjectIdResult>>
   semifuture_setPathObjectId(
