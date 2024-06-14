@@ -36,6 +36,7 @@ rust_library(
     test_labels = ["tpx-rust-no-backtrace-workaround"],
     deps = [
         "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:base64",
         "fbsource//third-party/rust:bitflags",
         "fbsource//third-party/rust:byteorder",
         "fbsource//third-party/rust:lazy_static",

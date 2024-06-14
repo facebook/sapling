@@ -26,7 +26,6 @@ pub struct AugmentedFileNode {
     pub content_blake3: Blake3,
     pub content_sha1: Id20,
     pub total_size: u64,
-    // TODO (liubovd): add serialization and deserialization support for the new field.
     pub file_header_metadata: Option<Bytes>,
 }
 
@@ -94,12 +93,12 @@ impl AugmentedTreeEntry {
     //
     // entry ::= <path> '\0' <hg-node-hex> <type> ' ' <entry-value> '\n'
     //
-    // entry-value ::= <cas-blake3-hex> ' ' <size-dec> ' ' <sha1-hex>
+    // entry-value ::= <cas-blake3-hex> ' ' <size-dec> ' ' <sha1-hex> ' ' <base64(file_header_metadata) (if present) or '-'>
     //               | <cas-blake3-hex> ' ' <size-dec>
     //
     // tree ::= <version> ' ' <sha1-hex> ' ' <computed_sha1-hex (if different) or '-'> ' ' <p1-hex or '-'> ' ' <p2-hex or '-'> '\n' <entry>*
 
-    /// Methods estimates the size of the serialize in bytes, so that it can be used to preallocate memory.
+    /// Method estimates the size of the serialize in bytes, so that it can be used to preallocate memory.
     pub fn augmented_tree_blob_size(&self) -> usize {
         let mut size: usize = 3;
         size += HgId::hex_len();
@@ -129,6 +128,13 @@ impl AugmentedTreeEntry {
                     size += HgId::hex_len() + Blake3::hex_len() + 3;
                     size += f.total_size.to_string().len() + 1;
                     size += Id20::hex_len();
+                    size += 1;
+                    if let Some(file_header_metadata) = &f.file_header_metadata {
+                        let n = file_header_metadata.len();
+                        size += ((n + 2) / 3) * 4; // base64 encoding overhead
+                    } else {
+                        size += 1;
+                    };
                 }
                 AugmentedTreeChildEntry::DirectoryNode(d) => {
                     size += HgId::hex_len() + Blake3::hex_len() + 3;
@@ -176,6 +182,12 @@ impl AugmentedTreeEntry {
                     w.write_all(file.total_size.to_string().as_bytes())?;
                     w.write_all(b" ")?;
                     w.write_all(file.content_sha1.to_hex().as_ref())?;
+                    w.write_all(b" ")?;
+                    if let Some(file_header_metadata) = &file.file_header_metadata {
+                        w.write_all(base64::encode(file_header_metadata).as_bytes())?;
+                    } else {
+                        w.write_all(b"-")?;
+                    };
                 }
                 AugmentedTreeChildEntry::DirectoryNode(directory) => {
                     w.write_all(directory.treenode.to_hex().as_ref())?;
@@ -286,6 +298,19 @@ impl AugmentedTreeEntry {
 
                             let sha1 = Id20::from_hex(sha1.as_ref())?;
 
+                            let file_header_metadata = parts
+                            .next()
+                            .ok_or(anyhow!(
+                                "augmented tree: missing file_header_metadata part in a child entry"
+                            ))?
+                            .trim();
+
+                            let file_header_metadata = if file_header_metadata == "-" {
+                                None
+                            } else {
+                                Some(Bytes::from(base64::decode(file_header_metadata)?))
+                            };
+
                             Ok((
                                 path,
                                 AugmentedTreeChildEntry::FileNode(AugmentedFileNode {
@@ -294,7 +319,7 @@ impl AugmentedTreeEntry {
                                     content_blake3: blake3,
                                     content_sha1: sha1,
                                     total_size: size,
-                                    file_header_metadata: None,
+                                    file_header_metadata,
                                 }),
                             ))
                         }
@@ -324,8 +349,8 @@ mod tests {
     fn test_augmented_manifest_parsing() {
         let mut reader = std::io::Cursor::new(concat!(
             "v1 1111111111111111111111111111111111111111 - 2222222222222222222222222222222222222222 3333333333333333333333333333333333333333\n",
-            "a.rs\x004444444444444444444444444444444444444444r 4444444444444444444444444444444444444444444444444444444444444444 10 4444444444444444444444444444444444444444\n",
-            "b.rs\x002222222222222222222222222222222222222222r 2222222222222222222222222222222222222222222222222222222222222222 1000 2121212121212121212121212121212121212121\n",
+            "a.rs\x004444444444444444444444444444444444444444r 4444444444444444444444444444444444444444444444444444444444444444 10 4444444444444444444444444444444444444444 -\n",
+            "b.rs\x002222222222222222222222222222222222222222r 2222222222222222222222222222222222222222222222222222222222222222 1000 2121212121212121212121212121212121212121 -\n",
             "dir_1\x003333333333333333333333333333333333333333t 3333333333333333333333333333333333333333333333333333333333333333 10\n",
             "dir_2\x001111111111111111111111111111111111111111t 1111111111111111111111111111111111111111111111111111111111111111 10000\n"
         ));
@@ -355,9 +380,9 @@ mod tests {
         // test on a real example from the repo
         let mut reader = std::io::Cursor::new(concat!(
             "v1 2d6429cc6d9576d412493d30c700c58a4ac38fbe - 5d09d8b81f6c097d294cb081389428baa9ef96f4 -\n",
-            "AssetWithZoneReclassifications.php\x002f09c0be8738b7256452133d790cc39f9da885b8r 8b2e323f74febd9dce4583c5af41b76d6cc79c8fc87b2400aa090df5af497a35 1137 7a207d1d8ae552303b111bd6030b074a673b918f\n",
-            "ZoneAssetReclassificationsAnnotation.php\x00a7006d0256d90b83b8e8834e3a8d74a57f669364r c3bb30c1b5462c56d178c457a43a30655c305780ae5b2b6fd5711a9288ddd5ae 2940 ba9327007f237bd7f2453ff02aadc1449ac483b9\n",
-            "ZonePolicySetGenerator.php\x0032c4117a356ddd5a284dd55866e4c609e4002c99r eb0c0415ecb4c5461eda8cd52b0d8a5a4bad3ea8bad56b9ad5e6f78ded05de35 6569 b67a3f5383d979f780844812b947b77b4348e475\n",
+            "AssetWithZoneReclassifications.php\x002f09c0be8738b7256452133d790cc39f9da885b8r 8b2e323f74febd9dce4583c5af41b76d6cc79c8fc87b2400aa090df5af497a35 1137 7a207d1d8ae552303b111bd6030b074a673b918f -\n",
+            "ZoneAssetReclassificationsAnnotation.php\x00a7006d0256d90b83b8e8834e3a8d74a57f669364r c3bb30c1b5462c56d178c457a43a30655c305780ae5b2b6fd5711a9288ddd5ae 2940 ba9327007f237bd7f2453ff02aadc1449ac483b9 -\n",
+            "ZonePolicySetGenerator.php\x0032c4117a356ddd5a284dd55866e4c609e4002c99r eb0c0415ecb4c5461eda8cd52b0d8a5a4bad3ea8bad56b9ad5e6f78ded05de35 6569 b67a3f5383d979f780844812b947b77b4348e475 -\n",
             "__tests__\x009f0e8ffab4c1e1adfdea446d3c91b3c8ad525685t 8be9967f8ce1a6c8799f372acb81f57208a7eee78a6e60b6fa6426785fee31d6 248\n",
             "bounded_policies\x00e057d09012b275e5aa8f3d31ecb334ea7bd0e2dft 79d40367d5845d90c764b4febd8f4671d84645ca749156e11bdf4ed4683fdf3d 274\n",
             "config\x00ef0295d493a767db31bd2ad6e3c118a5ec2dc094t c1ca36f561ced429b3fdcbb46ea9959cd0db0f1d8c2a06a217aefcacdec53656 1139\n",
@@ -442,9 +467,9 @@ mod tests {
     fn test_augmented_manifest_parsing_roundtrips() {
         let tree = concat!(
             "v1 2d6429cc6d9576d412493d30c700c58a4ac38fbe - 5d09d8b81f6c097d294cb081389428baa9ef96f4 -\n",
-            "AssetWithZoneReclassifications.php\x002f09c0be8738b7256452133d790cc39f9da885b8r 8b2e323f74febd9dce4583c5af41b76d6cc79c8fc87b2400aa090df5af497a35 1137 7a207d1d8ae552303b111bd6030b074a673b918f\n",
-            "ZoneAssetReclassificationsAnnotation.php\x00a7006d0256d90b83b8e8834e3a8d74a57f669364r c3bb30c1b5462c56d178c457a43a30655c305780ae5b2b6fd5711a9288ddd5ae 2940 ba9327007f237bd7f2453ff02aadc1449ac483b9\n",
-            "ZonePolicySetGenerator.php\x0032c4117a356ddd5a284dd55866e4c609e4002c99r eb0c0415ecb4c5461eda8cd52b0d8a5a4bad3ea8bad56b9ad5e6f78ded05de35 6569 b67a3f5383d979f780844812b947b77b4348e475\n",
+            "AssetWithZoneReclassifications.php\x002f09c0be8738b7256452133d790cc39f9da885b8r 8b2e323f74febd9dce4583c5af41b76d6cc79c8fc87b2400aa090df5af497a35 1137 7a207d1d8ae552303b111bd6030b074a673b918f -\n",
+            "ZoneAssetReclassificationsAnnotation.php\x00a7006d0256d90b83b8e8834e3a8d74a57f669364r c3bb30c1b5462c56d178c457a43a30655c305780ae5b2b6fd5711a9288ddd5ae 2940 ba9327007f237bd7f2453ff02aadc1449ac483b9 -\n",
+            "ZonePolicySetGenerator.php\x0032c4117a356ddd5a284dd55866e4c609e4002c99r eb0c0415ecb4c5461eda8cd52b0d8a5a4bad3ea8bad56b9ad5e6f78ded05de35 6569 b67a3f5383d979f780844812b947b77b4348e475 -\n",
             "__tests__\x009f0e8ffab4c1e1adfdea446d3c91b3c8ad525685t 8be9967f8ce1a6c8799f372acb81f57208a7eee78a6e60b6fa6426785fee31d6 248\n",
             "bounded_policies\x00e057d09012b275e5aa8f3d31ecb334ea7bd0e2dft 79d40367d5845d90c764b4febd8f4671d84645ca749156e11bdf4ed4683fdf3d 274\n",
             "config\x00ef0295d493a767db31bd2ad6e3c118a5ec2dc094t c1ca36f561ced429b3fdcbb46ea9959cd0db0f1d8c2a06a217aefcacdec53656 1139\n",
@@ -470,8 +495,8 @@ mod tests {
     fn test_augmented_manifest_parsing_computed_hg_node_id() {
         let mut reader = std::io::Cursor::new(concat!(
             "v1 1111111111111111111111111111111111111111 4444444444444444444444444444444444444444 2222222222222222222222222222222222222222 3333333333333333333333333333333333333333\n",
-            "a.rs\x004444444444444444444444444444444444444444r 4444444444444444444444444444444444444444444444444444444444444444 10 4444444444444444444444444444444444444444\n",
-            "b.rs\x002222222222222222222222222222222222222222r 2222222222222222222222222222222222222222222222222222222222222222 1000 2121212121212121212121212121212121212121\n",
+            "a.rs\x004444444444444444444444444444444444444444r 4444444444444444444444444444444444444444444444444444444444444444 10 4444444444444444444444444444444444444444 -\n",
+            "b.rs\x002222222222222222222222222222222222222222r 2222222222222222222222222222222222222222222222222222222222222222 1000 2121212121212121212121212121212121212121 -\n",
             "dir_1\x003333333333333333333333333333333333333333t 3333333333333333333333333333333333333333333333333333333333333333 10\n",
             "dir_2\x001111111111111111111111111111111111111111t 1111111111111111111111111111111111111111111111111111111111111111 10000\n"
         ));
@@ -483,6 +508,46 @@ mod tests {
             augmented_tree_entry.computed_hg_node_id,
             Some(HgId::from_hex(b"4444444444444444444444444444444444444444").expect("bad hgid"))
         );
+        let mut buf: Vec<u8> = Vec::with_capacity(1024);
+        augmented_tree_entry
+            .try_serialize(&mut buf)
+            .expect("writing failed");
+        assert_eq!(buf.len(), augmented_tree_entry.augmented_tree_blob_size());
+    }
+
+    #[test]
+    fn test_augmented_manifest_parsing_file_header_metadata() {
+        let mut reader = std::io::Cursor::new(concat!(
+            "v1 1111111111111111111111111111111111111111 4444444444444444444444444444444444444444 2222222222222222222222222222222222222222 3333333333333333333333333333333333333333\n",
+            "a.rs\x004444444444444444444444444444444444444444r 4444444444444444444444444444444444444444444444444444444444444444 10 4444444444444444444444444444444444444444 AQpjb3B5OiBmYmNvZGUvZWRlbi9zY20vbGliL3JldmlzaW9uc3RvcmUvVEFSR0VUUwpjb3B5cmV2OiBhNDU5NTA0ZjY3NmE1ZmVjNWFiM2QxYTE0ZjQ2MTY0MzAzOTFjMDNlCgEK\n",
+            "b.rs\x002222222222222222222222222222222222222222r 2222222222222222222222222222222222222222222222222222222222222222 1000 2121212121212121212121212121212121212121 -\n",
+            "dir_1\x003333333333333333333333333333333333333333t 3333333333333333333333333333333333333333333333333333333333333333 10\n",
+            "dir_2\x001111111111111111111111111111111111111111t 1111111111111111111111111111111111111111111111111111111111111111 10000\n"
+        ));
+        let augmented_tree_entry =
+            AugmentedTreeEntry::try_deserialize(&mut reader).expect("parsing failed");
+
+        assert_eq!(augmented_tree_entry.subentries.len(), 4);
+
+        assert_eq!(
+            augmented_tree_entry.subentries.first().unwrap().1,
+            AugmentedTreeChildEntry::FileNode(AugmentedFileNode {
+                file_type: FileType::Regular,
+                filenode: HgId::from_hex(b"4444444444444444444444444444444444444444")
+                    .expect("bad hgid"),
+                content_blake3: Blake3::from_hex(
+                    b"4444444444444444444444444444444444444444444444444444444444444444"
+                )
+                .expect("bad blake3"),
+                content_sha1: Id20::from_hex(b"4444444444444444444444444444444444444444")
+                    .expect("bad id20"),
+                total_size: 10,
+                file_header_metadata: Some(Bytes::from(
+                    "\x01\ncopy: fbcode/eden/scm/lib/revisionstore/TARGETS\ncopyrev: a459504f676a5fec5ab3d1a14f4616430391c03e\n\x01\n"
+                ))
+            })
+        );
+
         let mut buf: Vec<u8> = Vec::with_capacity(1024);
         augmented_tree_entry
             .try_serialize(&mut buf)
