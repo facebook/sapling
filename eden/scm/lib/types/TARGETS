@@ -48,6 +48,7 @@ rust_library(
         "fbsource//third-party/rust:sha1",
         "fbsource//third-party/rust:thiserror",
         "//common/rust/shed/quickcheck_arbitrary_derive:quickcheck_arbitrary_derive",
+        "//eden/scm/lib/minibytes:minibytes",
         "//eden/scm/lib/util:util",
         "//eden/scm/lib/vlqencoding:vlqencoding",
     ],

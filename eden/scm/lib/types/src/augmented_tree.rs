@@ -11,6 +11,7 @@ use std::io::Write;
 
 use anyhow::anyhow;
 use anyhow::Error;
+use minibytes::Bytes;
 
 use crate::Blake3;
 use crate::FileType;
@@ -25,6 +26,8 @@ pub struct AugmentedFileNode {
     pub content_blake3: Blake3,
     pub content_sha1: Id20,
     pub total_size: u64,
+    // TODO (liubovd): add serialization and deserialization support for the new field.
+    pub file_header_metadata: Option<Bytes>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
@@ -291,6 +294,7 @@ impl AugmentedTreeEntry {
                                     content_blake3: blake3,
                                     content_sha1: sha1,
                                     total_size: size,
+                                    file_header_metadata: None,
                                 }),
                             ))
                         }
