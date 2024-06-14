@@ -6,6 +6,7 @@
 # pyre-strict
 
 import argparse
+import json
 import os
 import sys
 from pathlib import Path
@@ -123,6 +124,24 @@ class GlobCmd(Subcmd):
 
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         _add_common_arguments(parser)
+        parser.add_argument(
+            "--json",
+            help="Return results as JSON",
+            default=False,
+            action="store_true",
+        )
+        parser.add_argument(
+            "--verbose",
+            help="Display additional data",
+            default=False,
+            action="store_true",
+        )
+        parser.add_argument(
+            "--list-origin-hash",
+            help="Display the origin hash of the matching files.",
+            default=False,
+            action="store_true",
+        )
 
     def run(self, args: argparse.Namespace) -> int:
         checkout_and_patterns = _find_checkout_and_patterns(args)
@@ -139,8 +158,32 @@ class GlobCmd(Subcmd):
                     listOnlyFiles=args.list_only_files,
                 )
             )
-            for name in result.matchingFiles:
-                _println(os.fsdecode(name))
+            if args.json:
+                _println(
+                    json.dumps(
+                        {
+                            "matching_files": [
+                                os.fsdecode(name) for name in result.matchingFiles
+                            ],
+                            "origin_hashes": [
+                                ohash.hex() for ohash in result.originHashes
+                            ],
+                        }
+                    )
+                )
+            else:
+                if args.list_origin_hash:
+                    for name, ohash in zip(result.matchingFiles, result.originHashes):
+                        _println(f"{os.fsdecode(name)}@{ohash.hex()}")
+                else:
+                    for name in result.matchingFiles:
+                        _println(os.fsdecode(name))
+                if args.verbose:
+                    _println(
+                        f"Num matching files: {len(result.matchingFiles)}\n"
+                        f"Num dtypes: {len(result.dtypes)}\n"
+                        f"Num origin hashes: {len(result.originHashes)}"
+                    )
         return 0
 
 
