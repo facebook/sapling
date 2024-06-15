@@ -102,9 +102,7 @@ impl storemodel::KeyStore for ArcFileStore {
         keys: Vec<Key>,
         fetch_mode: FetchMode,
     ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, Bytes)>>> {
-        let fetched = self
-            .0
-            .fetch(keys.into_iter(), FileAttributes::CONTENT, fetch_mode);
+        let fetched = self.0.fetch(keys, FileAttributes::CONTENT, fetch_mode);
         let iter = fetched
             .into_iter()
             .map(|result| -> anyhow::Result<(Key, Bytes)> {
@@ -141,11 +139,9 @@ impl storemodel::FileStore for ArcFileStore {
         &self,
         keys: Vec<Key>,
     ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, Key)>>> {
-        let fetched = self.0.fetch(
-            keys.into_iter(),
-            FileAttributes::CONTENT,
-            FetchMode::AllowRemote,
-        );
+        let fetched = self
+            .0
+            .fetch(keys, FileAttributes::CONTENT, FetchMode::AllowRemote);
         let iter = fetched
             .into_iter()
             .filter_map(|result| -> Option<anyhow::Result<(Key, Key)>> {
@@ -179,9 +175,7 @@ impl storemodel::FileStore for ArcFileStore {
         keys: Vec<Key>,
         fetch_mode: FetchMode,
     ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, FileAuxData)>>> {
-        let fetched = self
-            .0
-            .fetch(keys.into_iter(), FileAttributes::AUX, fetch_mode);
+        let fetched = self.0.fetch(keys, FileAttributes::AUX, fetch_mode);
         let iter = fetched
             .into_iter()
             .map(|entry| -> anyhow::Result<(Key, FileAuxData)> {

@@ -875,7 +875,7 @@ mod tests {
         store.lfs_threshold_bytes = Some(123);
 
         let fetched = store.fetch(
-            vec![lfs_key.clone(), nonlfs_key.clone()].into_iter(),
+            vec![lfs_key.clone(), nonlfs_key.clone()],
             FileAttributes::CONTENT,
             FetchMode::AllowRemote,
         );
@@ -937,7 +937,7 @@ mod tests {
         store.lfs_threshold_bytes = Some(123);
 
         let fetched = store.fetch(
-            vec![lfs_key.clone(), nonlfs_key.clone()].into_iter(),
+            vec![lfs_key.clone(), nonlfs_key.clone()],
             FileAttributes::CONTENT,
             FetchMode::AllowRemote,
         );

@@ -338,7 +338,7 @@ impl LocalStore for MutableDataPack {
             Ok(keys
                 .iter()
                 .filter(|k| match k {
-                    StoreKey::HgId(k) => pack.mem_index.get(&k.hgid).is_none(),
+                    StoreKey::HgId(k) => !pack.mem_index.contains_key(&k.hgid),
                     StoreKey::Content(_, _) => true,
                 })
                 .cloned()

@@ -51,13 +51,12 @@ impl LazyFile {
 
     /// Compute's the aux data associated with this file from the content.
     pub(crate) fn aux_data(&mut self) -> Result<FileAuxData> {
-        // TODO(meyer): Implement the rest of the aux data fields
         let aux_data = match self {
             LazyFile::Lfs(content, _) => FileAuxData::from_content(content),
             LazyFile::SaplingRemoteApi(entry) if entry.aux_data.is_some() => {
-                FileAuxData::try_from(entry.aux_data().cloned().ok_or_else(|| {
+                entry.aux_data().cloned().ok_or_else(|| {
                     anyhow::anyhow!("Invalid SaplingRemoteAPI entry in LazyFile. Aux data is empty")
-                })?)?
+                })?
             }
             _ => {
                 let content = self.file_content()?;
