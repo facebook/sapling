@@ -705,7 +705,10 @@ impl TreeEntry for ScmStoreTreeEntry {
                     TreeChildEntry::File(v) => v,
                     _ => return None,
                 };
-                Some(Ok((file_entry.key.hgid, file_entry.file_metadata?.into())))
+                Some(Ok((
+                    file_entry.key.hgid,
+                    file_entry.file_metadata.clone()?.into(),
+                )))
             });
             Some(Box::new(iter))
         })();

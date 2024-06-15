@@ -95,7 +95,7 @@ impl LazyTree {
                                 };
                                 // TODO: Also return directory aux data.
                                 if let TreeChildEntry::File(file_entry) = child_entry {
-                                    file_entry.file_metadata.map(|file_metadata| {
+                                    file_entry.file_metadata.clone().map(|file_metadata| {
                                         (file_entry.key.hgid, file_metadata.into())
                                     })
                                 } else {

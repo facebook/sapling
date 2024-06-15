@@ -230,6 +230,13 @@ impl TryFrom<AugmentedTreeEntry> for TreeEntry {
                             blake3: Blake3::from_byte_array(file.content_blake3.into_byte_array()), // zero-copy conversion
                             sha1: Sha1::from_byte_array(file.content_sha1.into_byte_array()),
                             total_size: file.total_size,
+                            file_header_metadata: {
+                                if let Some(metadata) = file.file_header_metadata {
+                                    Some(metadata.into_vec().into()) // converts minibytes::Bytes to bytes::Bytes
+                                } else {
+                                    Some(Bytes::new()) // in FileAuxData None would mean file_header_metadata is not fetched/not known if it is present
+                                }
+                            },
                         }
                         .into(),
                     )),

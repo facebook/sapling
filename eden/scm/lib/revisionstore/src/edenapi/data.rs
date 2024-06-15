@@ -480,6 +480,7 @@ mod tests {
             blake3: Blake3::from_str(
                 "2078b4229b5353de0268efc7f64b68f3c99fb8829e9c052117b4e1e090b2603a",
             )?,
+            file_header_metadata: None,
         };
 
         // Test that we can read aux data from SaplingRemoteApi

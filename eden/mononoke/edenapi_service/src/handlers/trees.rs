@@ -174,6 +174,9 @@ async fn fetch_tree(
                             blake3: file.content_blake3.clone().into(),
                             sha1: file.content_sha1.clone().into(),
                             total_size: file.total_size.clone(),
+                            file_header_metadata: Some(
+                                file.file_header_metadata.clone().unwrap_or(Bytes::new()),
+                            ),
                         }
                         .into(),
                     )),
@@ -298,6 +301,7 @@ async fn fetch_child_file_metadata(
             total_size: metadata.total_size,
             sha1: metadata.sha1.into(),
             blake3: metadata.seeded_blake3.into(),
+            file_header_metadata: None,
         }
         .into(),
     ))

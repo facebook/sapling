@@ -950,7 +950,7 @@ impl FetchState {
                         self.metrics.aux.store(StoreLocation::Cache).computed(1);
 
                         if let Some(aux_cache) = aux_cache {
-                            if let Some(aux_data) = new.aux_data {
+                            if let Some(ref aux_data) = new.aux_data {
                                 let _ = aux_cache.put(key.hgid, &aux_data);
                             }
                         }

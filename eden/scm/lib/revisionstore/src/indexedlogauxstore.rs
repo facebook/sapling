@@ -93,6 +93,8 @@ fn deserialize(bytes: Bytes) -> Result<Option<(HgId, FileAuxData)>> {
                 total_size,
                 sha1: sha1.into(),
                 blake3,
+                // TODO(liubovd) support serialization and deserialization of the new field
+                file_header_metadata: None,
             },
         )))
     } else {
@@ -115,6 +117,8 @@ fn deserialize(bytes: Bytes) -> Result<Option<(HgId, FileAuxData)>> {
                 total_size,
                 sha1: sha1.into(),
                 blake3: blake3.into(),
+                // TODO(liubovd) support serialization and deserialization of the new field
+                file_header_metadata: None,
             },
         )))
     }
@@ -402,6 +406,7 @@ mod tests {
             blake3: Blake3::from_str(
                 "2078b4229b5353de0268efc7f64b68f3c99fb8829e9c052117b4e1e090b2603a",
             )?,
+            file_header_metadata: None,
         };
         // Attempt fetch.
         let fetched = store

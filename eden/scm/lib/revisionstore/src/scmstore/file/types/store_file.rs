@@ -47,6 +47,7 @@ impl StoreValue for StoreFile {
 impl StoreFile {
     pub fn aux_data(&self) -> Result<FileAuxData> {
         self.aux_data
+            .clone()
             .ok_or_else(|| anyhow!("no aux data available"))
     }
 

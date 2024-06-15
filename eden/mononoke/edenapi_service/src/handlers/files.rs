@@ -196,6 +196,8 @@ async fn fetch_file(
             total_size: content_metadata.total_size,
             sha1: content_metadata.sha1.into(),
             blake3: content_metadata.seeded_blake3.into(),
+            // TODO: implement support for file header metadata
+            file_header_metadata: None,
         });
     }
 

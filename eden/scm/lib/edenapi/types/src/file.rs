@@ -63,8 +63,7 @@ impl FileError {
 
 /// File "aux data", requires an additional mononoke blobstore lookup. See mononoke_types::ContentMetadataV2.
 #[auto_wire]
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Serialize)]
-#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
+#[derive(Clone, Debug, Default, Eq, PartialEq, Serialize)]
 pub struct FileAuxData {
     #[id(0)]
     pub total_size: u64,
@@ -74,6 +73,10 @@ pub struct FileAuxData {
     // #[id(3)] # deprecated
     #[id(4)]
     pub blake3: Blake3,
+    // None 'file_header_metadata' would mean file_header_metadata is not fetched/not known if it is present
+    // Empty metadata would be translated into empty blob
+    #[id(5)]
+    pub file_header_metadata: Option<Bytes>,
 }
 
 /// File content
@@ -189,6 +192,7 @@ impl FileAuxData {
             total_size,
             sha1,
             blake3,
+            file_header_metadata: None, // can't be calculated
         }
     }
 }
@@ -280,6 +284,19 @@ impl Arbitrary for FileContent {
         Self {
             hg_file_blob: Bytes::from(bytes),
             metadata: Arbitrary::arbitrary(g),
+        }
+    }
+}
+
+#[cfg(any(test, feature = "for-tests"))]
+impl Arbitrary for FileAuxData {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
+        let bytes: Vec<u8> = Arbitrary::arbitrary(g);
+        Self {
+            total_size: Arbitrary::arbitrary(g),
+            sha1: Arbitrary::arbitrary(g),
+            blake3: Arbitrary::arbitrary(g),
+            file_header_metadata: Some(Bytes::from(bytes)),
         }
     }
 }

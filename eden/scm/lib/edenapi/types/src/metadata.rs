@@ -8,6 +8,9 @@
 use std::fmt;
 use std::str::FromStr;
 
+use bytes::Bytes;
+#[cfg(any(test, feature = "for-tests"))]
+use quickcheck::Arbitrary;
 #[cfg(any(test, feature = "for-tests"))]
 use quickcheck_arbitrary_derive::Arbitrary;
 use serde_derive::Deserialize;
@@ -32,8 +35,7 @@ pub struct DirectoryMetadata {
 
 /// File entry metadata
 #[auto_wire]
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize)]
-#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize)]
 pub struct FileMetadata {
     // #[id(0)] # deprecated
     #[id(1)] //  deprecated, the field to be removed after 06/15/2024
@@ -50,6 +52,10 @@ pub struct FileMetadata {
     pub content_sha256: Sha256,
     #[id(6)]
     pub content_blake3: Blake3,
+    // None 'file_header_metadata' would mean file_header_metadata is not fetched/not known if it is present
+    // Empty metadata would be translated into empty blob
+    #[id(7)]
+    pub file_header_metadata: Option<Bytes>,
 }
 
 impl From<FileMetadata> for FileAuxData {
@@ -58,6 +64,7 @@ impl From<FileMetadata> for FileAuxData {
             total_size: val.size,
             sha1: val.content_sha1,
             blake3: val.content_blake3,
+            file_header_metadata: val.file_header_metadata,
         }
     }
 }
@@ -68,7 +75,23 @@ impl From<FileAuxData> for FileMetadata {
             size: aux.total_size,
             content_sha1: aux.sha1,
             content_blake3: aux.blake3,
+            file_header_metadata: aux.file_header_metadata,
             ..Default::default()
+        }
+    }
+}
+
+#[cfg(any(test, feature = "for-tests"))]
+impl Arbitrary for FileMetadata {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
+        let bytes: Vec<u8> = Arbitrary::arbitrary(g);
+        Self {
+            content_id: Arbitrary::arbitrary(g), // deprecated
+            size: Arbitrary::arbitrary(g),
+            content_sha1: Arbitrary::arbitrary(g),
+            content_sha256: Arbitrary::arbitrary(g), // deprecated
+            content_blake3: Arbitrary::arbitrary(g),
+            file_header_metadata: Some(Bytes::from(bytes)),
         }
     }
 }
