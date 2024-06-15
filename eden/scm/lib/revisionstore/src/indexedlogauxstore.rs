@@ -45,21 +45,6 @@ pub(crate) type Entry = FileAuxData;
 ///       (v0) also contained content_id hash and blake3 hash was optional,
 ///       also, size field was close to the end, just before the blake3
 pub(crate) fn serialize(this: &FileAuxData, hgid: HgId) -> Result<Bytes> {
-    // Write an original format for the migration period.
-    // version 0
-    let mut buf = Vec::new();
-    buf.write_all(hgid.as_ref())?;
-    buf.write_u8(0)?; // write version
-    buf.write_all(edenapi_types::ContentId::default().as_ref())?;
-    buf.write_all(this.sha1.as_ref())?;
-    buf.write_all(edenapi_types::Sha256::default().as_ref())?;
-    buf.write_vlq(this.total_size)?;
-    buf.write_u8(1)?; // A value of 1 indicates the blake3 hash is present
-    buf.write_all(this.blake3.as_ref())?;
-    Ok(buf.into())
-
-    // TODO(liubovd): finish roll out of the new format after 05-22-2024
-    /* New format (tested)
     let mut buf = Vec::new();
     buf.write_all(hgid.as_ref())?;
     buf.write_u8(2)?; // write version
@@ -67,7 +52,6 @@ pub(crate) fn serialize(this: &FileAuxData, hgid: HgId) -> Result<Bytes> {
     buf.write_all(this.sha1.as_ref())?;
     buf.write_all(this.blake3.as_ref())?;
     Ok(buf.into())
-    */
 }
 
 fn deserialize(bytes: Bytes) -> Result<Option<(HgId, FileAuxData)>> {
