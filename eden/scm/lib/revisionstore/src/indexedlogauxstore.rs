@@ -51,6 +51,11 @@ pub(crate) fn serialize(this: &FileAuxData, hgid: HgId) -> Result<Bytes> {
     buf.write_vlq(this.total_size)?;
     buf.write_all(this.sha1.as_ref())?;
     buf.write_all(this.blake3.as_ref())?;
+    if let Some(ref file_header_metadata) = this.file_header_metadata {
+        buf.write_u8(1)?; // write flag that it is present
+        buf.write_vlq(file_header_metadata.len())?; // write size of file_header_metadata blob
+        buf.write_all(file_header_metadata.as_ref())?;
+    }
     Ok(buf.into())
 }
 
@@ -111,14 +116,28 @@ fn deserialize(bytes: Bytes) -> Result<Option<(HgId, FileAuxData)>> {
 
         let mut blake3 = [0u8; 32];
         cur.read_exact(&mut blake3)?;
+
+        let mut file_header_metadata = None;
+        let remaining = cur.position() < bytes.len() as u64;
+        if remaining && cur.read_u8()? == 1 {
+            // read size
+            let size: u64 = cur.read_vlq()?;
+            // read file header metadata blob
+            if cur.position() + size <= bytes.len() as u64 {
+                let mut buf = vec![0u8; size as usize];
+                cur.read_exact(&mut buf)?;
+                file_header_metadata = Some(buf.into());
+            } else {
+                bail!("auxstore entry is truncated/corrupted");
+            };
+        }
         Ok(Some((
             hgid,
             FileAuxData {
                 total_size,
                 sha1: sha1.into(),
                 blake3: blake3.into(),
-                // TODO(liubovd) support serialization and deserialization of the new field
-                file_header_metadata: None,
+                file_header_metadata,
             },
         )))
     }
@@ -526,7 +545,8 @@ mod tests {
 
     #[test]
     /// Test that we can deserialize correctly the v2 format
-    fn test_deserialize_old_entry_v2() -> Result<()> {
+    /// This test also covers the case where the file header metadata wasn't written at all (so adding it is forward and backward compatible)
+    fn test_deserialize_entry_v2() -> Result<()> {
         let mut buf = Vec::new();
         buf.write_all(
             key("a", "def6f29d7b61f9cb70b2f14f79cd5c43c38e21b2")
@@ -540,13 +560,49 @@ mod tests {
             Blake3::from_str("2078b4229b5353de0268efc7f64b68f3c99fb8829e9c052117b4e1e090b2603a")?
                 .as_ref(),
         )?;
-
         assert!(
             deserialize(buf.into())
-                .expect("Failed to deserialize old format entry")
+                .expect("Failed to deserialize entry")
                 .is_some(),
         );
+        Ok(())
+    }
 
+    #[test]
+    /// Test that we can deserialize and store values with file header metadata
+    fn test_deserialize_with_file_header_metadata() -> Result<()> {
+        let hg_id = HgId::from_hex(b"def6f29d7b61f9cb70b2f14f79cd5c43c38e21b2")?;
+        let test_entry = Entry {
+            total_size: 4,
+            sha1: Sha1::from_str("7110eda4d09e062aa5e4a390b0a572ac0d2c0220")?,
+            blake3: Blake3::from_str(
+                "2078b4229b5353de0268efc7f64b68f3c99fb8829e9c052117b4e1e090b2603a",
+            )?,
+            file_header_metadata: Some("\x01\ncopy: aaa/bbb/ccc/ddd/test_file.php\ncopyrev: 79c2d9e37f2f90e2ee3cb05762224eea0b864e12\n\x01\n".into()),
+        };
+        let bytes = serialize(&test_entry, hg_id)?;
+        let (hg_id1, test_entry1) = deserialize(bytes)?.expect("Failed to deserialize entry");
+        assert_eq!(hg_id, hg_id1);
+        assert_eq!(test_entry, test_entry1);
+        Ok(())
+    }
+
+    #[test]
+    /// Test that we can deserialize and store values with empty file header metadata
+    fn test_deserialize_with_empty_file_header_metadata() -> Result<()> {
+        let hg_id = HgId::from_hex(b"def6f29d7b61f9cb70b2f14f79cd5c43c38e21b2")?;
+        let test_entry = Entry {
+            total_size: 4,
+            sha1: Sha1::from_str("7110eda4d09e062aa5e4a390b0a572ac0d2c0220")?,
+            blake3: Blake3::from_str(
+                "2078b4229b5353de0268efc7f64b68f3c99fb8829e9c052117b4e1e090b2603a",
+            )?,
+            file_header_metadata: None,
+        };
+        let bytes = serialize(&test_entry, hg_id)?;
+        let (hg_id1, test_entry1) = deserialize(bytes)?.expect("Failed to deserialize entry");
+        assert_eq!(hg_id, hg_id1);
+        assert_eq!(test_entry, test_entry1);
         Ok(())
     }
 }
