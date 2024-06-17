@@ -8,7 +8,6 @@
 import type {CommitMessageFields} from './CommitInfoView/types';
 import type {UseUncommittedSelection} from './partialSelection';
 import type {ChangedFile, ChangedFileType, MergeConflicts, RepoRelativePath} from './types';
-import type {MutableRefObject} from 'react';
 import type {Comparison} from 'shared/Comparison';
 
 import {Avatar} from './Avatar';
@@ -46,6 +45,7 @@ import {latestCommitMessageFields} from './codeReview/CodeReviewInfo';
 import {Badge} from './components/Badge';
 import {Button} from './components/Button';
 import GatedComponent from './components/GatedComponent';
+import {TextField} from './components/TextField';
 import {islDrawerState} from './drawerState';
 import {externalMergeToolAtom} from './externalMergeTool';
 import {T, t} from './i18n';
@@ -80,7 +80,7 @@ import {selectedCommits} from './selection';
 import {latestHeadCommit, uncommittedChangesFetchError} from './serverAPIState';
 import {GeneratedStatus} from './types';
 import * as stylex from '@stylexjs/stylex';
-import {VSCodeButton, VSCodeTextField} from '@vscode/webview-ui-toolkit/react';
+import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {useAtom, useAtomValue} from 'jotai';
 import React, {useCallback, useMemo, useEffect, useRef, useState} from 'react';
 import {ComparisonType} from 'shared/Comparison';
@@ -459,7 +459,7 @@ export function UncommittedChanges({place}: {place: Place}) {
   const conflicts = useAtomValue(optimisticMergeConflicts);
 
   const selection = useUncommittedSelection();
-  const commitTitleRef = useRef<HTMLTextAreaElement | undefined>(null);
+  const commitTitleRef = useRef<HTMLInputElement>(null);
 
   const runOperation = useRunOperation();
 
@@ -504,7 +504,7 @@ export function UncommittedChanges({place}: {place: Place}) {
       return;
     }
 
-    const titleEl = commitTitleRef.current as HTMLInputElement | null;
+    const titleEl = commitTitleRef.current;
     const title = titleEl?.value || template?.Title || temporaryCommitTitle();
     // use the template, unless a specific quick title is given
     const fields: CommitMessageFields = {...template, Title: title};
@@ -562,7 +562,7 @@ export function UncommittedChanges({place}: {place: Place}) {
   ) : null;
 
   const onShelve = () => {
-    const title = (commitTitleRef.current as HTMLInputElement | null)?.value || undefined;
+    const title = commitTitleRef.current?.value || undefined;
     const allFiles = uncommittedChanges.map(file => file.path);
     const operation = getShelveOperation(title, selection.selection, allFiles);
     runOperation(operation);
@@ -728,10 +728,10 @@ export function UncommittedChanges({place}: {place: Place}) {
                 <Icon slot="start" icon="plus" />
                 <T>Commit</T>
               </VSCodeButton>
-              <VSCodeTextField
+              <TextField
                 data-testid="quick-commit-title"
                 placeholder="Title"
-                ref={commitTitleRef as MutableRefObject<null>}
+                ref={commitTitleRef}
                 onKeyPress={e => {
                   if (e.key === 'Enter' && !(e.ctrlKey || e.metaKey || e.altKey || e.shiftKey)) {
                     onConfirmQuickCommit();
