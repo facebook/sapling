@@ -26,12 +26,14 @@ import {useGeneratedFileStatuses} from '../../GeneratedFile';
 import {Subtle} from '../../Subtle';
 import {Tooltip} from '../../Tooltip';
 import {tracker} from '../../analytics';
+import {TextField} from '../../components/TextField';
 import {t, T} from '../../i18n';
 import {GeneratedStatus} from '../../types';
 import {isAbsent} from '../commitStackState';
 import {computeLinesForFileStackEditor} from './FileStackEditorLines';
 import {bumpStackEditMetric, SplitRangeRecord, useStackEditState} from './stackEditState';
-import {VSCodeButton, VSCodeTextField} from '@vscode/webview-ui-toolkit/react';
+import * as stylex from '@stylexjs/stylex';
+import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {Set as ImSet, Range} from 'immutable';
 import {useAtomValue} from 'jotai';
 import {useRef, useState, useEffect, useMemo} from 'react';
@@ -42,6 +44,12 @@ import {useThrottledEffect} from 'shared/hooks';
 import {firstLine, nullthrows} from 'shared/utils';
 
 import './SplitStackEditPanel.css';
+
+const styles = stylex.create({
+  full: {
+    width: '100%',
+  },
+});
 
 export function SplitStackEditPanel() {
   const stackEdit = useStackEditState();
@@ -673,12 +681,13 @@ function EditableCommitTitle(props: MaybeEditableCommitTitleProps) {
     }
   };
   return (
-    <VSCodeTextField
+    <TextField
+      containerXstyle={styles.full}
       readOnly={props.readOnly}
       value={existingTitle}
       title={t('Edit commit title')}
       style={{width: 'calc(100% - var(--pad))'}}
-      onInput={e => handleEdit((e.target as unknown as {value: string})?.value)}
+      onInput={e => handleEdit(e.currentTarget?.value)}
     />
   );
 }

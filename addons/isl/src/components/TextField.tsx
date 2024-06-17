@@ -11,6 +11,7 @@ import type {ForwardedRef, ReactNode} from 'react';
 import {Column} from '../ComponentUtils';
 import * as stylex from '@stylexjs/stylex';
 import {forwardRef, useId} from 'react';
+import {notEmpty} from 'shared/utils';
 
 const styles = stylex.create({
   root: {
@@ -43,21 +44,24 @@ export const TextField = forwardRef(
     {
       children,
       xstyle,
+      containerXstyle,
       value,
       width,
       ...rest
     }: {
       children?: ReactNode;
       xstyle?: stylex.StyleXStyles;
+      containerXstyle?: stylex.StyleXStyles;
       value?: string;
       width?: string;
       placeholder?: string;
+      readOnly?: boolean;
     } & ReactProps<HTMLInputElement>,
     ref: ForwardedRef<HTMLInputElement>,
   ) => {
     const id = useId();
     return (
-      <Column xstyle={styles.root} style={{width}}>
+      <Column xstyle={[styles.root, containerXstyle].filter(notEmpty)} style={{width}}>
         {children && (
           <label htmlFor={id} {...stylex.props(styles.label)}>
             {children}
