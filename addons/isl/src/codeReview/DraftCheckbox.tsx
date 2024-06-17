@@ -8,10 +8,10 @@
 import type {CommitInfo} from '../types';
 
 import {Tooltip} from '../Tooltip';
+import {Checkbox} from '../components/Checkbox';
 import {t, T} from '../i18n';
 import {configBackedAtom} from '../jotaiUtils';
 import {codeReviewProvider} from './CodeReviewInfo';
-import {VSCodeCheckbox} from '@vscode/webview-ui-toolkit/react';
 import {useAtom, useAtomValue} from 'jotai';
 
 export const submitAsDraft = configBackedAtom<boolean>('isl.submitAsDraft', false);
@@ -37,10 +37,7 @@ export function SubmitAsDraftCheckbox({
     return null;
   }
   return (
-    <VSCodeCheckbox
-      className="submit-as-draft-checkbox"
-      checked={isDraft}
-      onChange={e => setIsDraft((e.target as HTMLInputElement).checked)}>
+    <Checkbox checked={isDraft} onChange={checked => setIsDraft(checked)}>
       <Tooltip
         title={
           forceShow
@@ -52,6 +49,6 @@ export function SubmitAsDraftCheckbox({
         }>
         <T>Submit as Draft</T>
       </Tooltip>
-    </VSCodeCheckbox>
+    </Checkbox>
   );
 }
