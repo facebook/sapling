@@ -652,7 +652,12 @@ pub trait IdDagAlgorithm: IdDagStore {
                     to_visit.push(parent);
                 }
             } else {
-                return bug("flat segments are expected to cover everything but they are not");
+                // The current design requires flat segments to cover all Ids.
+                // Potentially they can be made lazy. But that would be a large change.
+                return bug(format!(
+                    "flat segments should cover all Ids but {:?} is not covered",
+                    id
+                ));
             }
         }
 
