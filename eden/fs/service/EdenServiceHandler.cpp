@@ -3105,7 +3105,7 @@ EdenServiceHandler::semifuture_predictiveGlobFiles(
   }
 
   auto& fetchContext = helper->getPrefetchFetchContext();
-  bool background = *params->background();
+  bool isBackground = *params->background();
 
   auto future =
       ImmediateFuture{
@@ -3133,8 +3133,31 @@ EdenServiceHandler::semifuture_predictiveGlobFiles(
             }
             return tryGlob;
           });
-  return detachIfBackgrounded(std::move(future), serverState, background)
-      .semi();
+
+  if (server_->getServerState()
+          ->getEdenConfig()
+          ->runSerialPrefetch.getValue()) {
+    // The glob code has a very large fan-out that can easily overload the
+    // Thrift CPU worker pool. To combat with that, we limit the execution to a
+    // single thread by using `folly::SerialExecutor` so the glob queries will
+    // not overload the executor.
+    auto serial = folly::SerialExecutor::create(
+        server_->getServer()->getThreadManager().get());
+
+    if (isBackground) {
+      folly::futures::detachOn(serial, std::move(future).semi());
+      future = ImmediateFuture<std::unique_ptr<Glob>>(std::make_unique<Glob>());
+    }
+
+    if (future.isReady()) {
+      return std::move(future).semi();
+    }
+
+    return std::move(future).semi().via(serial);
+  } else {
+    return detachIfBackgrounded(std::move(future), serverState, isBackground)
+        .semi();
+  }
 }
 
 folly::SemiFuture<std::unique_ptr<Glob>>
