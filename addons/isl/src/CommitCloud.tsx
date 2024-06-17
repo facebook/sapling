@@ -14,6 +14,7 @@ import {EducationInfoTip} from './Education';
 import {ErrorNotice, InlineErrorBadge} from './ErrorNotice';
 import {Subtle} from './Subtle';
 import {Tooltip} from './Tooltip';
+import {Button} from './components/Button';
 import {Dropdown} from './components/Dropdown';
 import {TextField} from './components/TextField';
 import {T, t} from './i18n';
@@ -26,7 +27,6 @@ import {CommitPreview, dagWithPreviews, useMostRecentPendingOperation} from './p
 import {RelativeDate} from './relativeDate';
 import {CommitCloudBackupStatus} from './types';
 import {registerDisposable} from './utils';
-import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {atom, useAtom, useAtomValue} from 'jotai';
 import {useCallback, useEffect, useRef, useState} from 'react';
 import {Icon} from 'shared/Icon';
@@ -134,21 +134,21 @@ export function CommitCloudInfo() {
               </T>
             </Subtle>
             <FlexSpacer />
-            <VSCodeButton
+            <Button
               onClick={() => {
                 runOperation(new CommitCloudSyncOperation()).then(() => {
                   refreshCommitCloudStatus();
                 });
               }}
               disabled={isRunningSync}
-              appearance="icon">
+              icon>
               {isRunningSync ? (
                 <Icon icon="loading" slot="start" />
               ) : (
                 <Icon icon="sync" slot="start" />
               )}
               <T>Sync now</T>
-            </VSCodeButton>
+            </Button>
           </>
         )}
       </div>
@@ -185,8 +185,8 @@ export function CommitCloudInfo() {
                 options={cloudSyncState?.value.workspaceChoices ?? []}
               />
               {enteredWorkspaceName == null ? (
-                <VSCodeButton
-                  appearance="icon"
+                <Button
+                  icon
                   onClick={e => {
                     setEnteredWorkspaceName('');
                     e.preventDefault();
@@ -194,7 +194,7 @@ export function CommitCloudInfo() {
                   }}>
                   <Icon icon="plus" slot="start" />
                   <T>Add Workspace</T>
-                </VSCodeButton>
+                </Button>
               ) : (
                 <div className="commit-cloud-new-workspace-input">
                   <TextField
@@ -202,17 +202,16 @@ export function CommitCloudInfo() {
                     onInput={e => setEnteredWorkspaceName((e.target as HTMLInputElement).value)}>
                     <T>New Workspace Name</T>
                   </TextField>
-                  <VSCodeButton
-                    appearance="secondary"
+                  <Button
                     onClick={e => {
                       setEnteredWorkspaceName(null);
                       e.preventDefault();
                       e.stopPropagation();
                     }}>
                     <T>Cancel</T>
-                  </VSCodeButton>
-                  <VSCodeButton
-                    appearance="primary"
+                  </Button>
+                  <Button
+                    primary
                     disabled={!enteredWorkspaceName}
                     onClick={e => {
                       if (!enteredWorkspaceName) {
@@ -239,7 +238,7 @@ export function CommitCloudInfo() {
                       e.stopPropagation();
                     }}>
                     <T>Create</T>
-                  </VSCodeButton>
+                  </Button>
                 </div>
               )}
             </div>
