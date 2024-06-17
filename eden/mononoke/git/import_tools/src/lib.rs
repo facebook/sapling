@@ -204,12 +204,10 @@ pub async fn is_annotated_tag(
 }
 
 pub fn stored_tag_name(tag_name: String) -> String {
-    // If the tag is a namespaced tag, do not add the 'tags/' prefix
-    if tag_name.starts_with("namespaces/") {
-        tag_name
-    } else {
-        format!("tags/{}", tag_name)
-    }
+    tag_name
+        .strip_prefix("refs/")
+        .map(|s| s.to_string())
+        .unwrap_or(tag_name)
 }
 
 pub async fn create_changeset_for_annotated_tag<Uploader: GitUploader>(
