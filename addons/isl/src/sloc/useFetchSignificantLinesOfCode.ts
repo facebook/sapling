@@ -10,15 +10,15 @@ import type {CommitInfo} from '../types';
 import serverAPI from '../ClientToServerAPI';
 import {commitInfoViewCurrentCommits} from '../CommitInfoView/CommitInfoState';
 import {getGeneratedFilesFrom} from '../GeneratedFile';
+import {pageVisibility} from '../codeReview/CodeReviewInfo';
 import {atomFamilyWeak, lazyAtom} from '../jotaiUtils';
 import {isFullyOrPartiallySelected} from '../partialSelection';
 import {uncommittedChangesWithPreviews} from '../previews';
 import {GeneratedStatus} from '../types';
 import {MAX_FILES_ALLOWED_FOR_DIFF_STAT} from './diffStatConstants';
-import {atom, useAtom, useAtomValue} from 'jotai';
+import {atom, useAtomValue} from 'jotai';
 import {loadable} from 'jotai/utils';
 import {useRef} from 'react';
-import {pageVisibility} from '../codeReview/CodeReviewInfo';
 
 const commitSloc = atomFamilyWeak((hash: string) => {
   return lazyAtom(async get => {

@@ -168,7 +168,7 @@ describe('CommitInfoView', () => {
             linesOfCode: {value: 123},
           });
         });
-        let diffStats = await screen.findByText(/123 lines/);
+        let diffStats = await withinCommitInfo().findByText(/123 lines/);
         expect(diffStats).toBeInTheDocument();
         fireEvent.click(withinCommitInfo().getByRole('checkbox', {name: /unselect src\/file1/i}));
 
@@ -188,7 +188,7 @@ describe('CommitInfoView', () => {
           });
         });
 
-        diffStats = await screen.findByText(/48 lines/);
+        diffStats = await withinCommitInfo().findByText(/48 lines/);
         expect(diffStats).toBeInTheDocument();
 
         //testing that quick and slow requests are handled correctly
@@ -225,7 +225,7 @@ describe('CommitInfoView', () => {
           });
         });
 
-        diffStats = await screen.findByText(/55 lines/);
+        diffStats = await withinCommitInfo().findByText(/55 lines/);
         expect(diffStats).toBeInTheDocument();
       });
 
