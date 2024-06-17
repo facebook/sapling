@@ -35,6 +35,7 @@ import {
 } from './codeReview/CodeReviewInfo';
 import {DiffFollower, DiffInfo} from './codeReview/DiffBadge';
 import {SyncStatus, syncStatusAtom} from './codeReview/syncStatus';
+import {Button} from './components/Button';
 import {FoldButton, useRunFoldPreview} from './fold';
 import {findPublicBaseAncestor} from './getCommitTree';
 import {t, T} from './i18n';
@@ -60,10 +61,10 @@ import {useConfirmUnsavedEditsBeforeSplit} from './stackEdit/ui/ConfirmUnsavedEd
 import {SplitButton} from './stackEdit/ui/SplitButton';
 import {editingStackIntentionHashes} from './stackEdit/ui/stackEditState';
 import {copyAndShowToast} from './toast';
+import {spacing} from './tokens.stylex';
 import {succeedableRevset} from './types';
 import {short} from './utils';
 import * as stylex from '@stylexjs/stylex';
-import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {atom, useAtomValue, useSetAtom} from 'jotai';
 import {useAtomCallback} from 'jotai/utils';
 import React, {memo} from 'react';
@@ -273,13 +274,11 @@ export const Commit = memo(
     if (previewType === CommitPreview.REBASE_ROOT) {
       commitActions.push(
         <React.Fragment key="rebase">
-          <VSCodeButton
-            appearance="secondary"
-            onClick={() => handlePreviewedOperation(/* cancel */ true)}>
+          <Button onClick={() => handlePreviewedOperation(/* cancel */ true)}>
             <T>Cancel</T>
-          </VSCodeButton>
-          <VSCodeButton
-            appearance="primary"
+          </Button>
+          <Button
+            primary
             onClick={() => {
               handlePreviewedOperation(/* cancel */ false);
 
@@ -295,17 +294,15 @@ export const Commit = memo(
               }
             }}>
             <T>Run Rebase</T>
-          </VSCodeButton>
+          </Button>
         </React.Fragment>,
       );
     } else if (previewType === CommitPreview.HIDDEN_ROOT) {
       commitActions.push(
         <React.Fragment key="hide">
-          <VSCodeButton
-            appearance="secondary"
-            onClick={() => handlePreviewedOperation(/* cancel */ true)}>
+          <Button onClick={() => handlePreviewedOperation(/* cancel */ true)}>
             <T>Cancel</T>
-          </VSCodeButton>
+          </Button>
           <ConfirmHideButton onClick={() => handlePreviewedOperation(/* cancel */ false)} />
         </React.Fragment>,
       );
@@ -328,9 +325,9 @@ export const Commit = memo(
               'Update files in the working copy to match this commit. Mark this commit as the "current commit".',
             )}
             delayMs={250}>
-            <VSCodeButton
-              appearance="secondary"
+            <Button
               aria-label={t('Go to commit "$title"', {replace: {$title: commit.title}})}
+              xstyle={styles.gotoButton}
               onClick={async event => {
                 event.stopPropagation(); // don't toggle selection by letting click propagate onto selection target.
 
@@ -350,8 +347,9 @@ export const Commit = memo(
                 // (since the head commit is the default thing shown in the sidebar)
                 writeAtom(selectedCommits, new Set());
               }}>
-              <T>Goto</T> <Icon icon="newline" />
-            </VSCodeButton>
+              <T>Goto</T>
+              <Icon icon="newline" />
+            </Button>
           </Tooltip>
         </span>,
       );
@@ -451,6 +449,9 @@ const styles = stylex.create({
     fontWeight: 'bold',
     fontSize: '90%',
   },
+  gotoButton: {
+    gap: spacing.half,
+  },
 });
 
 function CommitLabel({children}: {children?: ReactNode}) {
@@ -474,8 +475,8 @@ function OpenCommitInfoButton({
 }) {
   return (
     <Tooltip title={t("Open commit's details in sidebar")} delayMs={250}>
-      <VSCodeButton
-        appearance="icon"
+      <Button
+        icon
         onClick={e => {
           revealCommit();
           e.stopPropagation();
@@ -485,7 +486,7 @@ function OpenCommitInfoButton({
         aria-label={t('Open commit "$title"', {replace: {$title: commit.title}})}
         data-testid="open-commit-info-button">
         <Icon icon="chevron-right" />
-      </VSCodeButton>
+      </Button>
     </Tooltip>
   );
 }
@@ -493,9 +494,9 @@ function OpenCommitInfoButton({
 function ConfirmHideButton({onClick}: {onClick: () => unknown}) {
   const ref = useAutofocusRef() as React.MutableRefObject<null>;
   return (
-    <VSCodeButton ref={ref} appearance="primary" onClick={onClick}>
+    <Button ref={ref} primary onClick={onClick}>
       <T>Hide</T>
-    </VSCodeButton>
+    </Button>
   );
 }
 
@@ -505,12 +506,12 @@ function ConfirmCombineButtons() {
 
   return (
     <>
-      <VSCodeButton appearance="secondary" onClick={cancel}>
+      <Button onClick={cancel}>
         <T>Cancel</T>
-      </VSCodeButton>
-      <VSCodeButton ref={ref} appearance="primary" onClick={run}>
+      </Button>
+      <Button ref={ref} primary onClick={run}>
         <T>Run Combine</T>
-      </VSCodeButton>
+      </Button>
     </>
   );
 }

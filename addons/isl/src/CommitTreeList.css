@@ -237,10 +237,6 @@
   }
 }
 
-.goto-button .codicon {
-  margin-left: var(--halfpad);
-}
-
 .goto-button,
 .open-commit-info-button {
   opacity: 0;
