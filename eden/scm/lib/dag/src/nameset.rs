@@ -623,6 +623,9 @@ pub trait AsyncNameSetQuery: Any + Debug + Send + Sync {
     /// This function has some built-in fast paths.
     /// For individual set types, override count_slow, size_hint instead of count.
     async fn count(&self) -> Result<u64> {
+        if let Some(flat) = self.specialized_flatten_id() {
+            return flat.count_slow().await;
+        }
         self.count_slow().await
     }
 

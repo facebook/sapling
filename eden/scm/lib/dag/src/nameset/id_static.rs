@@ -305,6 +305,13 @@ impl AsyncNameSetQuery for IdStaticSet {
         Ok(iter.into_box_stream())
     }
 
+    // Usually, the "count" should not be manually implemented so the universal fast path can
+    // apply. However, the IdStaticSet does not need a separate "universal fast path".
+    // So let's just override the "count".
+    async fn count(&self) -> Result<u64> {
+        Ok(self.spans.count())
+    }
+
     async fn count_slow(&self) -> Result<u64> {
         Ok(self.spans.count())
     }
@@ -382,6 +389,7 @@ impl AsyncNameSetQuery for IdStaticSet {
 #[allow(clippy::redundant_clone)]
 pub(crate) mod tests {
     use std::ops::Deref;
+    use std::sync::atomic::Ordering::Acquire;
 
     use futures::TryStreamExt;
     use nonblocking::non_blocking_result as r;
@@ -468,7 +476,7 @@ pub(crate) mod tests {
                 "<spans [C+2] +>"
             );
 
-            // but lhs order matters.
+            // but lhs order matters (no fast path if lhs order is to be preserved).
             assert_eq!(
                 format!("{:?}", unordered.intersection(&abcd)),
                 "<and <or <spans [A:B+0:1] +> <spans [D+3] +> (order=Zip)> <spans [A:D+0:3] +>>"
@@ -549,6 +557,22 @@ pub(crate) mod tests {
             assert_eq!(dbg_flat(&reversed1), "[B, C, A] flat:[A, B, C]");
             assert_eq!(dbg_flat(&union2), "[B, C, A] flat:[A, B, C]");
             assert_eq!(dbg_flat(&reversed2), "[A, C, B] flat:[C, B, A]");
+
+            // The union2 should use a fast path to "count".
+            let count1 = union2
+                .as_any()
+                .downcast_ref::<UnionSet>()
+                .unwrap()
+                .test_slow_count
+                .load(Acquire);
+            let _ = r(union2.count())?;
+            let count2 = union2
+                .as_any()
+                .downcast_ref::<UnionSet>()
+                .unwrap()
+                .test_slow_count
+                .load(Acquire);
+            assert_eq!(count1, count2, "union.count() should not use slow path");
 
             // Show the debug format. This shows whether internal structure is flattened or not.
             assert_eq!(

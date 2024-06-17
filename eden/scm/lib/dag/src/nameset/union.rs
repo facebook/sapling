@@ -44,6 +44,9 @@ pub struct UnionSet {
     sets: [NameSet; 2],
     hints: Hints,
     order: UnionOrder,
+    // Count of the "count_slow" calls.
+    #[cfg(test)]
+    pub(crate) test_slow_count: std::sync::atomic::AtomicU64,
 }
 
 impl UnionSet {
@@ -65,6 +68,8 @@ impl UnionSet {
             sets: [lhs, rhs],
             hints,
             order: UnionOrder::FirstSecond,
+            #[cfg(test)]
+            test_slow_count: std::sync::atomic::AtomicU64::new(0),
         }
     }
 
@@ -124,6 +129,9 @@ impl AsyncNameSetQuery for UnionSet {
     }
 
     async fn count_slow(&self) -> Result<u64> {
+        #[cfg(test)]
+        self.test_slow_count
+            .fetch_add(1, std::sync::atomic::Ordering::AcqRel);
         debug_assert_eq!(self.sets.len(), 2);
         // This is more efficient if sets[0] is a large set that has a fast path
         // for "count()".
