@@ -74,7 +74,6 @@ export function SubmitSelectionButton({commit}: {commit?: CommitInfo}) {
       })}>
       <HighlightCommitsWhileHovering toHighlight={submittable}>
         <OperationDisabledButton
-          appearance="secondary"
           runOperation={() => {
             const updateMessage = readAtom(multiSubmitUpdateMessage(submittable));
             // clear update message on submit

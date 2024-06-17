@@ -104,7 +104,6 @@ export function CleanupAllButton() {
           });
         }}
         icon={<Icon icon="eye-closed" slot="start" />}
-        appearance="secondary"
         disabled={disabled}>
         <T>Clean up all</T>
       </OperationDisabledButton>

@@ -689,7 +689,6 @@ function ActionsBar({
             trigger={areImageUploadsOngoing || !anythingToCommit ? 'hover' : 'disabled'}>
             <OperationDisabledButton
               contextKey={isCommitMode ? 'commit' : 'amend'}
-              appearance="secondary"
               disabled={!anythingToCommit || editedMessage == null || areImageUploadsOngoing}
               runOperation={async () => {
                 if (!isCommitMode) {
@@ -737,7 +736,6 @@ function ActionsBar({
             }>
             <OperationDisabledButton
               contextKey={`amend-message-${commit.hash}`}
-              appearance="secondary"
               data-testid="amend-message-button"
               disabled={!isAnythingBeingEdited || editedMessage == null || areImageUploadsOngoing}
               runOperation={async () => {
@@ -790,6 +788,7 @@ function ActionsBar({
             }
             placement="top">
             <OperationDisabledButton
+              kind="primary"
               contextKey={`submit-${commit.isDot ? 'head' : commit.hash}`}
               disabled={
                 !canSubmitWithCodeReviewProvider ||

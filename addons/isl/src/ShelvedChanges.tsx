@@ -114,7 +114,7 @@ function ShelvedChangesList({dismiss}: {dismiss: () => void}) {
                   <FlexSpacer />
                   <Tooltip title={t('Remove from the list of shelved changes')}>
                     <OperationDisabledButton
-                      appearance="icon"
+                      kind="icon"
                       contextKey={`delete-shelve-${change.hash}`}
                       data-testid={`delete-shelve-${change.hash}`}
                       className="unshelve-button"
@@ -129,7 +129,7 @@ function ShelvedChangesList({dismiss}: {dismiss: () => void}) {
                       'Apply these changes without removing this from your list of shelved changes',
                     )}>
                     <OperationDisabledButton
-                      appearance="icon"
+                      kind="icon"
                       contextKey={`unshelve-keep-${change.hash}`}
                       className="unshelve-button"
                       runOperation={() => {
@@ -145,7 +145,6 @@ function ShelvedChangesList({dismiss}: {dismiss: () => void}) {
                       'Apply these changes and remove this from your list of shelved changes',
                     )}>
                     <OperationDisabledButton
-                      appearance="secondary"
                       contextKey={`unshelve-${change.hash}`}
                       className="unshelve-button"
                       runOperation={() => {

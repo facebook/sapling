@@ -7,11 +7,12 @@
 
 import type {Operation} from './operations/Operation';
 import type {PrimitiveAtom} from 'jotai';
+import type {ComponentProps} from 'react';
 
+import {Button} from './components/Button';
 import {atomFamilyWeak} from './jotaiUtils';
 import {useRunOperation} from './operationsState';
 import {useMostRecentPendingOperation} from './previews';
-import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {atom, useAtom} from 'jotai';
 import {Icon} from 'shared/Icon';
 import {isPromise} from 'shared/utils';
@@ -40,7 +41,6 @@ export function OperationDisabledButton({
   icon,
   ...rest
 }: {
-  appearance?: 'primary' | 'secondary' | 'icon';
   contextKey: string;
   runOperation: () =>
     | Operation
@@ -51,7 +51,7 @@ export function OperationDisabledButton({
   disabled?: boolean;
   icon?: React.ReactNode;
   className?: string;
-}) {
+} & (Omit<ComponentProps<typeof Button>, 'icon' | 'primary'> & {kind?: string})) {
   const actuallyRunOperation = useRunOperation();
   const pendingOperation = useMostRecentPendingOperation();
   const [triggeredOperationId, setTriggeredOperationId] = useAtom(
@@ -61,7 +61,7 @@ export function OperationDisabledButton({
     pendingOperation != null && triggeredOperationId?.includes(pendingOperation.id);
 
   return (
-    <VSCodeButton
+    <Button
       {...rest}
       disabled={isRunningThisOperation || disabled}
       onClick={async () => {
@@ -83,7 +83,7 @@ export function OperationDisabledButton({
       }}>
       {isRunningThisOperation ? <Icon icon="loading" slot="start" /> : icon ?? null}
       {children}
-    </VSCodeButton>
+    </Button>
   );
 }
 

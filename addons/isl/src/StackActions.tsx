@@ -129,7 +129,7 @@ export function StackActions({hash}: {hash: Hash}): React.ReactElement | null {
             <OperationDisabledButton
               // Use the diffId in the key so that only this "resubmit stack" button shows the spinner.
               contextKey={`resubmit-stack-on-${info.diffId}`}
-              appearance="icon"
+              kind="icon"
               icon={icon}
               runOperation={async () => {
                 const confirmation = await confirmShouldSubmit('resubmit', resubmittableStack);
@@ -199,7 +199,7 @@ export function StackActions({hash}: {hash: Hash}): React.ReactElement | null {
           <HighlightCommitsWhileHovering toHighlight={submittableStack}>
             <OperationDisabledButton
               contextKey={contextKey}
-              appearance="icon"
+              kind="icon"
               icon={<Icon icon="cloud-upload" slot="start" />}
               runOperation={async () => {
                 const allCommits = submittableStack;
