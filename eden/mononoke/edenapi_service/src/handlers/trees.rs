@@ -94,15 +94,6 @@ pub async fn trees(state: &mut State) -> Result<impl TryIntoResponse, HttpError>
         rd.add_request(&request);
     };
 
-    if request.attributes.child_metadata && request.attributes.augmented_trees {
-        return Err(HttpError::e400(SaplingRemoteApiServerError::new(
-            ErrorKind::InvalidRequest(
-                "Augmented trees and child metadata cannot be requested at the same time"
-                    .to_string(),
-            ),
-        )));
-    }
-
     ScubaMiddlewareState::try_set_sampling_rate(state, nonzero_ext::nonzero!(256_u64));
 
     Ok(custom_cbor_stream(
@@ -141,9 +132,6 @@ async fn fetch_tree(
     let mut entry = TreeEntry::new(key.clone());
 
     if attributes.augmented_trees {
-        // Augmented Trees always come with the hg manifest blob, parents,
-        // and child metadata in the augmented trees format. Augmented tree digest
-        // for the tree itself is also always present.
         let id = HgAugmentedManifestId::new(HgNodeHash::from(key.hgid));
         repo.ctx()
             .perf_counters()
@@ -155,53 +143,64 @@ async fn fetch_tree(
             .with_context(|| ErrorKind::TreeFetchFailed(key.clone()))?
             .with_context(|| ErrorKind::KeyDoesNotExist(key.clone()))?;
 
-        entry.with_parents(Some(ctx.hg_parents().into()));
-
         entry.with_directory_metadata(DirectoryMetadata {
             augmented_manifest_id: ctx.augmented_manifest_id().clone().into(),
             augmented_manifest_size: ctx.augmented_manifest_size(),
         });
 
-        entry.with_children(Some(
-            ctx.augmented_children_entries()
-                .map(|augmented_entry| match augmented_entry {
-                    HgAugmentedManifestEntry::FileNode(file) => Ok(TreeChildEntry::new_file_entry(
-                        Key {
-                            hgid: file.filenode.into(),
-                            ..Default::default()
-                        },
-                        FileAuxData {
-                            blake3: file.content_blake3.clone().into(),
-                            sha1: file.content_sha1.clone().into(),
-                            total_size: file.total_size.clone(),
-                            file_header_metadata: Some(
-                                file.file_header_metadata.clone().unwrap_or(Bytes::new()),
-                            ),
+        if attributes.parents {
+            entry.with_parents(Some(ctx.hg_parents().into()));
+        }
+
+        if attributes.child_metadata {
+            entry.with_children(Some(
+                ctx.augmented_children_entries()
+                    .map(|augmented_entry| match augmented_entry {
+                        HgAugmentedManifestEntry::FileNode(file) => {
+                            Ok(TreeChildEntry::new_file_entry(
+                                Key {
+                                    hgid: file.filenode.into(),
+                                    ..Default::default()
+                                },
+                                FileAuxData {
+                                    blake3: file.content_blake3.clone().into(),
+                                    sha1: file.content_sha1.clone().into(),
+                                    total_size: file.total_size.clone(),
+                                    file_header_metadata: Some(
+                                        file.file_header_metadata.clone().unwrap_or(Bytes::new()),
+                                    ),
+                                }
+                                .into(),
+                            ))
                         }
-                        .into(),
-                    )),
-                    HgAugmentedManifestEntry::DirectoryNode(tree) => {
-                        Ok(TreeChildEntry::new_directory_entry(
-                            Key {
-                                hgid: tree.treenode.into(),
-                                ..Default::default()
-                            },
-                            DirectoryMetadata {
-                                augmented_manifest_id: tree.augmented_manifest_id.clone().into(),
-                                augmented_manifest_size: tree.augmented_manifest_size.clone(),
-                            },
-                        ))
-                    }
-                })
-                .collect(),
-        ));
+                        HgAugmentedManifestEntry::DirectoryNode(tree) => {
+                            Ok(TreeChildEntry::new_directory_entry(
+                                Key {
+                                    hgid: tree.treenode.into(),
+                                    ..Default::default()
+                                },
+                                DirectoryMetadata {
+                                    augmented_manifest_id: tree
+                                        .augmented_manifest_id
+                                        .clone()
+                                        .into(),
+                                    augmented_manifest_size: tree.augmented_manifest_size.clone(),
+                                },
+                            ))
+                        }
+                    })
+                    .collect(),
+            ));
+        }
 
-        let (data, _) = ctx
-            .content()
-            .await
-            .with_context(|| ErrorKind::TreeFetchFailed(key.clone()))?;
+        if attributes.manifest_blob {
+            let (data, _) = ctx
+                .content()
+                .await
+                .with_context(|| ErrorKind::TreeFetchFailed(key.clone()))?;
 
-        entry.with_data(Some(data));
+            entry.with_data(Some(data));
+        }
 
         return Ok(entry);
     }
