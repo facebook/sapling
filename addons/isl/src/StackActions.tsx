@@ -17,6 +17,7 @@ import {showSuggestedRebaseForStack, SuggestedRebaseButton} from './SuggestedReb
 import {Tooltip, DOCUMENTATION_DELAY} from './Tooltip';
 import {codeReviewProvider, allDiffSummaries} from './codeReview/CodeReviewInfo';
 import {SyncStatus, syncStatusAtom} from './codeReview/syncStatus';
+import {Button} from './components/Button';
 import {T, t} from './i18n';
 import {IconStack} from './icons/IconStack';
 import {useRunOperation} from './operationsState';
@@ -26,7 +27,6 @@ import {useConfirmUnsavedEditsBeforeSplit} from './stackEdit/ui/ConfirmUnsavedEd
 import {StackEditIcon} from './stackEdit/ui/StackEditIcon';
 import {editingStackIntentionHashes, loadingStackState} from './stackEdit/ui/stackEditState';
 import {succeedableRevset} from './types';
-import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {useAtom, useAtomValue} from 'jotai';
 import {type ContextMenuItem, useContextMenu} from 'shared/ContextMenu';
 import {Icon} from 'shared/Icon';
@@ -237,9 +237,9 @@ export function StackActions({hash}: {hash: Hash}): React.ReactElement | null {
   }
   const moreActionsButton =
     moreActions.length === 0 ? null : (
-      <VSCodeButton key="more-actions" appearance="icon" onClick={contextMenu}>
+      <Button key="more-actions" icon onClick={contextMenu}>
         <Icon icon="ellipsis" />
-      </VSCodeButton>
+      </Button>
     );
   return (
     <div className="commit-tree-stack-actions" data-testid="commit-tree-stack-actions">
@@ -296,10 +296,10 @@ function StackEditButton({info}: {info: DagCommitInfo}): React.ReactElement | nu
   return (
     <HighlightCommitsWhileHovering key="submit-stack" toHighlight={highlight}>
       <Tooltip title={title} delayMs={tooltipDelay} placement="bottom">
-        <VSCodeButton
+        <Button
           className={`edit-stack-button${disabled ? ' disabled' : ''}`}
           disabled={disabled}
-          appearance="icon"
+          icon
           onClick={async () => {
             if (!(await confirmUnsavedEditsBeforeSplit(stackCommits, 'edit_stack'))) {
               return;
@@ -308,7 +308,7 @@ function StackEditButton({info}: {info: DagCommitInfo}): React.ReactElement | nu
           }}>
           {icon}
           <T>Edit stack</T>
-        </VSCodeButton>
+        </Button>
       </Tooltip>
     </HighlightCommitsWhileHovering>
   );

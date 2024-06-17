@@ -18,11 +18,11 @@ import {SettingsGearButton} from './SettingsTooltip';
 import {ShelvedChangesMenu} from './ShelvedChanges';
 import {DOCUMENTATION_DELAY, Tooltip} from './Tooltip';
 import {tracker} from './analytics';
+import {Button} from './components/Button';
 import {DebugToolsButton} from './debug/DebugToolsButton';
 import {t} from './i18n';
 import {maybeRemoveForgottenOperation, useClearAllOptimisticState} from './operationsState';
 import {haveCommitsLoadedYet, haveRemotePath, isFetchingCommits} from './serverAPIState';
-import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {useAtomValue} from 'jotai';
 import {Icon} from 'shared/Icon';
 import {clearTrackedCache} from 'shared/LRU';
@@ -69,8 +69,7 @@ function RefreshButton() {
       delayMs={DOCUMENTATION_DELAY}
       placement="bottom"
       title={t('Re-fetch latest commits and uncommitted changes.')}>
-      <VSCodeButton
-        appearance="secondary"
+      <Button
         onClick={() => {
           tracker.track('ClickedRefresh');
           clearOptimisticState();
@@ -81,7 +80,7 @@ function RefreshButton() {
         }}
         data-testid="refresh-button">
         <Icon icon="refresh" />
-      </VSCodeButton>
+      </Button>
     </Tooltip>
   );
 }

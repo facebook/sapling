@@ -5,8 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
+import {Button} from './components/Button';
 import {Icon} from 'shared/Icon';
+
 import './Modal.css';
 
 export function Modal({
@@ -50,9 +51,9 @@ export function Modal({
       <div className={`modal-contents ${className ?? ''}`} style={style}>
         {dismiss != null ? (
           <div className="dismiss-modal">
-            <VSCodeButton appearance="icon" onClick={dismiss}>
+            <Button icon onClick={dismiss}>
               <Icon icon="x" />
-            </VSCodeButton>
+            </Button>
           </div>
         ) : null}
         {children}

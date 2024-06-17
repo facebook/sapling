@@ -9,8 +9,8 @@ import type {Deferred} from 'shared/utils';
 
 import {useCommand} from './ISLShortcuts';
 import {Modal} from './Modal';
+import {Button} from './components/Button';
 import {writeAtom} from './jotaiUtils';
-import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {atom, useAtom, useSetAtom} from 'jotai';
 import React, {useCallback, useEffect, useRef} from 'react';
 import {Icon} from 'shared/Icon';
@@ -90,8 +90,8 @@ export function ModalContainer() {
             const label = typeof button === 'object' ? button.label : button;
             const isPrimary = typeof button === 'object' && button.primary != null;
             return (
-              <VSCodeButton
-                appearance={isPrimary ? 'primary' : 'secondary'}
+              <Button
+                kind={isPrimary ? 'primary' : undefined}
                 onClick={() => {
                   modal.deferred.resolve(button);
                   setModal({...modal, visible: false});
@@ -99,7 +99,7 @@ export function ModalContainer() {
                 ref={isPrimary ? primaryButtonRef : undefined}
                 key={index}>
                 {label}
-              </VSCodeButton>
+              </Button>
             );
           })}
         </div>

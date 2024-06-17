@@ -6,9 +6,9 @@
  */
 
 import {Tooltip} from '../Tooltip';
+import {Button} from '../components/Button';
 import {t} from '../i18n';
 import {debugToolsEnabledState} from './DebugToolsState';
-import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {useAtomValue} from 'jotai';
 import {lazy, Suspense} from 'react';
 import {Icon} from 'shared/Icon';
@@ -31,9 +31,9 @@ export function DebugToolsButton() {
       trigger="click"
       group="topbar"
       placement="bottom">
-      <VSCodeButton appearance="icon">
+      <Button icon>
         <Icon icon="pulse" />
-      </VSCodeButton>
+      </Button>
     </Tooltip>
   );
 }

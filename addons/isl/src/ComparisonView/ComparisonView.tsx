@@ -16,6 +16,7 @@ import {ErrorBoundary, ErrorNotice} from '../ErrorNotice';
 import {useGeneratedFileStatuses} from '../GeneratedFile';
 import {Subtle} from '../Subtle';
 import {Tooltip} from '../Tooltip';
+import {Button} from '../components/Button';
 import {Dropdown} from '../components/Dropdown';
 import {RadioGroup} from '../components/Radio';
 import {T, t} from '../i18n';
@@ -25,7 +26,6 @@ import {latestHeadCommit} from '../serverAPIState';
 import {GeneratedStatus} from '../types';
 import {SplitDiffView} from './SplitDiffView';
 import {currentComparisonMode} from './atoms';
-import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {useAtom, useAtomValue, useSetAtom} from 'jotai';
 import {useEffect, useMemo, useState} from 'react';
 import {
@@ -272,11 +272,11 @@ function ComparisonViewHeader({
           <Tooltip
             delayMs={1000}
             title={t('Reload this comparison. Comparisons do not refresh automatically.')}>
-            <VSCodeButton appearance="secondary" onClick={reloadComparison}>
+            <Button onClick={reloadComparison}>
               <Icon icon="refresh" data-testid="comparison-refresh-button" />
-            </VSCodeButton>
+            </Button>
           </Tooltip>
-          <VSCodeButton
+          <Button
             onClick={() => {
               for (const file of data?.value ?? []) {
                 if (file.newFileName) {
@@ -285,11 +285,11 @@ function ComparisonViewHeader({
               }
             }}
             disabled={isLoading || allFilesExpanded}
-            appearance="icon">
+            icon>
             <Icon icon="unfold" slot="start" />
             <T>Expand all files</T>
-          </VSCodeButton>
-          <VSCodeButton
+          </Button>
+          <Button
             onClick={() => {
               for (const file of data?.value ?? []) {
                 if (file.newFileName) {
@@ -297,24 +297,24 @@ function ComparisonViewHeader({
                 }
               }
             }}
-            appearance="icon"
+            icon
             disabled={isLoading || noFilesExpanded}>
             <Icon icon="fold" slot="start" />
             <T>Collapse all files</T>
-          </VSCodeButton>
+          </Button>
           <Tooltip trigger="click" component={() => <ComparisonSettingsDropdown />}>
-            <VSCodeButton appearance="icon">
+            <Button icon>
               <Icon icon="ellipsis" />
-            </VSCodeButton>
+            </Button>
           </Tooltip>
           {isLoading ? <Icon icon="loading" data-testid="comparison-loading" /> : null}
         </span>
-        <VSCodeButton
+        <Button
           data-testid="close-comparison-view-button"
-          appearance="icon"
+          icon
           onClick={() => setComparisonMode(previous => ({...previous, visible: false}))}>
           <Icon icon="x" />
-        </VSCodeButton>
+        </Button>
       </div>
     </>
   );

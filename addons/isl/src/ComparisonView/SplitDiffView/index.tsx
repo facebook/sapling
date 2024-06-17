@@ -12,12 +12,12 @@ import type {ParsedDiff} from 'shared/patch/parse';
 
 import {generatedStatusDescription} from '../../GeneratedFile';
 import {Tooltip} from '../../Tooltip';
+import {Button} from '../../components/Button';
 import {T, t} from '../../i18n';
 import platform from '../../platform';
 import {GeneratedStatus} from '../../types';
 import {FileHeader, diffTypeToIconType} from './SplitDiffFileHeader';
 import {SplitDiffTable} from './SplitDiffHunk';
-import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {useState} from 'react';
 import {Icon} from 'shared/Icon';
 
@@ -46,9 +46,9 @@ export function SplitDiffView({
       <FileStatusBanner key="generated" color={'modified'}>
         <div>{generatedStatusDescription(generatedStatus)}</div>
         {isContentCollapsed ? (
-          <VSCodeButton appearance="icon" onClick={() => setIsContentCollapsed(false)}>
+          <Button icon onClick={() => setIsContentCollapsed(false)}>
             <T>Show anyway</T>
-          </VSCodeButton>
+          </Button>
         ) : null}
       </FileStatusBanner>,
     );
@@ -59,25 +59,25 @@ export function SplitDiffView({
     <>
       {platform.openDiff == null ? null : (
         <Tooltip title={t('Open diff view for file')} placement={'bottom'}>
-          <VSCodeButton
-            appearance="icon"
+          <Button
+            icon
             className="split-diff-view-file-header-open-diff-button"
             onClick={() => {
               platform.openDiff?.(path, ctx.id.comparison);
             }}>
             <Icon icon="git-pull-request-go-to-changes" />
-          </VSCodeButton>
+          </Button>
         </Tooltip>
       )}
       <Tooltip title={t('Open file')} placement={'bottom'}>
-        <VSCodeButton
-          appearance="icon"
+        <Button
+          icon
           className="split-diff-view-file-header-open-button"
           onClick={() => {
             platform.openFile(path);
           }}>
           <Icon icon="go-to-file" />
-        </VSCodeButton>
+        </Button>
       </Tooltip>
     </>
   );

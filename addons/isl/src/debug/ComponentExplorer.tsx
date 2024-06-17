@@ -5,9 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import {Button} from '../components/Button';
 import {T} from '../i18n';
 import {useModal} from '../useModal';
-import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {Suspense, lazy} from 'react';
 import {Icon} from 'shared/Icon';
 
@@ -16,7 +16,7 @@ const ComponentExplorerModal = lazy(() => import('./ComponentExplorerModal'));
 export function ComponentExplorerButton({dismiss}: {dismiss: () => unknown}) {
   const showModal = useModal();
   return (
-    <VSCodeButton
+    <Button
       onClick={() => {
         dismiss();
         showModal({
@@ -32,9 +32,8 @@ export function ComponentExplorerButton({dismiss}: {dismiss: () => unknown}) {
             </Suspense>
           ),
         });
-      }}
-      appearance="secondary">
+      }}>
       <T>Open Component Explorer</T>
-    </VSCodeButton>
+    </Button>
   );
 }
