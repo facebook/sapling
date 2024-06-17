@@ -2884,103 +2884,73 @@ folly::SemiFuture<folly::Unit> EdenServiceHandler::semifuture_removeRecursively(
 }
 
 namespace {
-ImmediateFuture<std::unique_ptr<Glob>> detachIfBackgrounded(
-    ImmediateFuture<std::unique_ptr<Glob>> globFuture,
+
+template <typename ReturnType>
+ImmediateFuture<std::unique_ptr<ReturnType>> detachIfBackgrounded(
+    ImmediateFuture<std::unique_ptr<ReturnType>> future,
     const std::shared_ptr<ServerState>& serverState,
     bool background) {
   if (!background) {
-    return globFuture;
+    return future;
   } else {
     folly::futures::detachOn(
-        serverState->getThreadPool().get(), std::move(globFuture).semi());
-    return ImmediateFuture<std::unique_ptr<Glob>>(std::make_unique<Glob>());
+        serverState->getThreadPool().get(), std::move(future).semi());
+    return ImmediateFuture<std::unique_ptr<ReturnType>>(
+        std::make_unique<ReturnType>());
   }
 }
 
-folly::SemiFuture<std::unique_ptr<Glob>> serialDetachIfBackgrounded(
-    ImmediateFuture<std::unique_ptr<Glob>> globFuture,
+template <typename ReturnType>
+folly::SemiFuture<std::unique_ptr<ReturnType>> serialDetachIfBackgrounded(
+    ImmediateFuture<std::unique_ptr<ReturnType>> future,
     const std::shared_ptr<apache::thrift::ThriftServer>& thriftServer,
     bool background) {
   auto serial =
       folly::SerialExecutor::create(thriftServer->getThreadManager().get());
 
   if (background) {
-    folly::futures::detachOn(serial, std::move(globFuture).semi());
-    globFuture =
-        ImmediateFuture<std::unique_ptr<Glob>>(std::make_unique<Glob>());
+    folly::futures::detachOn(serial, std::move(future).semi());
+    future = ImmediateFuture<std::unique_ptr<ReturnType>>(
+        std::make_unique<ReturnType>());
   }
 
-  if (globFuture.isReady()) {
-    return std::move(globFuture).semi();
+  if (future.isReady()) {
+    return std::move(future).semi();
   }
 
-  return std::move(globFuture).semi().via(serial);
-}
-
-ImmediateFuture<std::unique_ptr<PrefetchResult>> detachIfBackgrounded(
-    ImmediateFuture<std::unique_ptr<PrefetchResult>> globFuture,
-    const std::shared_ptr<ServerState>& serverState,
-    bool background) {
-  if (!background) {
-    return globFuture;
-  } else {
-    folly::futures::detachOn(
-        serverState->getThreadPool().get(), std::move(globFuture).semi());
-    return ImmediateFuture<std::unique_ptr<PrefetchResult>>(
-        std::make_unique<PrefetchResult>());
-  }
-}
-
-folly::SemiFuture<std::unique_ptr<PrefetchResult>> serialDetachIfBackgrounded(
-    ImmediateFuture<std::unique_ptr<PrefetchResult>> globFuture,
-    const std::shared_ptr<apache::thrift::ThriftServer>& thriftServer,
-    bool background) {
-  auto serial =
-      folly::SerialExecutor::create(thriftServer->getThreadManager().get());
-
-  if (background) {
-    folly::futures::detachOn(serial, std::move(globFuture).semi());
-    globFuture = ImmediateFuture<std::unique_ptr<PrefetchResult>>(
-        std::make_unique<PrefetchResult>());
-  }
-
-  if (globFuture.isReady()) {
-    return std::move(globFuture).semi();
-  }
-
-  return std::move(globFuture).semi().via(serial);
+  return std::move(future).semi().via(serial);
 }
 
 ImmediateFuture<folly::Unit> detachIfBackgrounded(
-    ImmediateFuture<folly::Unit> globFuture,
+    ImmediateFuture<folly::Unit> future,
     const std::shared_ptr<ServerState>& serverState,
     bool background) {
   if (!background) {
-    return globFuture;
+    return future;
   } else {
     folly::futures::detachOn(
-        serverState->getThreadPool().get(), std::move(globFuture).semi());
+        serverState->getThreadPool().get(), std::move(future).semi());
     return ImmediateFuture<folly::Unit>(folly::unit);
   }
 }
 
 folly::SemiFuture<folly::Unit> serialDetachIfBackgrounded(
-    ImmediateFuture<folly::Unit> globFuture,
+    ImmediateFuture<folly::Unit> future,
     const std::shared_ptr<apache::thrift::ThriftServer>& thriftServer,
     bool background) {
   auto serial =
       folly::SerialExecutor::create(thriftServer->getThreadManager().get());
 
   if (background) {
-    folly::futures::detachOn(serial, std::move(globFuture).semi());
-    globFuture = ImmediateFuture<folly::Unit>(folly::unit);
+    folly::futures::detachOn(serial, std::move(future).semi());
+    future = ImmediateFuture<folly::Unit>(folly::unit);
   }
 
-  if (globFuture.isReady()) {
-    return std::move(globFuture).semi();
+  if (future.isReady()) {
+    return std::move(future).semi();
   }
 
-  return std::move(globFuture).semi().via(serial);
+  return std::move(future).semi().via(serial);
 }
 
 void maybeLogExpensiveGlob(
@@ -3200,10 +3170,11 @@ EdenServiceHandler::semifuture_predictiveGlobFiles(
     // Thrift CPU worker pool. To combat with that, we limit the execution to a
     // single thread by using `folly::SerialExecutor` so the glob queries will
     // not overload the executor.
-    return serialDetachIfBackgrounded(
+    return serialDetachIfBackgrounded<Glob>(
         std::move(future), server_->getServer(), isBackground);
   } else {
-    return detachIfBackgrounded(std::move(future), serverState, isBackground)
+    return detachIfBackgrounded<Glob>(
+               std::move(future), serverState, isBackground)
         .semi();
   }
 }
@@ -3442,7 +3413,7 @@ EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
        params = std::move(params),
        suffixGlobRequestScope = std::move(suffixGlobRequestScope)] {});
 
-  globFut = detachIfBackgrounded(
+  globFut = detachIfBackgrounded<Glob>(
       std::move(globFut), server_->getServerState(), isBackground);
 
   if (globFut.isReady()) {
@@ -3590,10 +3561,10 @@ EdenServiceHandler::semifuture_prefetchFilesV2(
     // Thrift CPU worker pool. To combat with that, we limit the execution to a
     // single thread by using `folly::SerialExecutor` so the glob queries will
     // not overload the executor.
-    return serialDetachIfBackgrounded(
+    return serialDetachIfBackgrounded<PrefetchResult>(
         std::move(prefetchResult), server_->getServer(), isBackground);
   } else {
-    return detachIfBackgrounded(
+    return detachIfBackgrounded<PrefetchResult>(
                std::move(prefetchResult),
                server_->getServerState(),
                isBackground)
