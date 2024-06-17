@@ -16,12 +16,12 @@ import {Row} from '../../ComponentUtils';
 import {DragHandle} from '../../DragHandle';
 import {DraggingOverlay} from '../../DraggingOverlay';
 import {Tooltip} from '../../Tooltip';
+import {Button} from '../../components/Button';
 import {t, T} from '../../i18n';
 import {SplitCommitIcon} from '../../icons/SplitCommitIcon';
 import {reorderedRevs} from '../commitStackState';
 import {ReorderState} from '../reorderState';
 import {bumpStackEditMetric, useStackEditState} from './stackEditState';
-import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {is} from 'immutable';
 import {useRef, useState} from 'react';
 import {Icon} from 'shared/Icon';
@@ -196,9 +196,9 @@ export function StackEditCommit({
                 'Cannot move up if this commit is at the top, or if the next commit depends on this commit',
               )
         }>
-        <VSCodeButton disabled={!canMoveUp} onClick={handleMoveUp} appearance="icon">
+        <Button disabled={!canMoveUp} onClick={handleMoveUp} icon>
           <Icon icon="chevron-up" />
-        </VSCodeButton>
+        </Button>
       </Tooltip>
       <Tooltip
         title={
@@ -208,9 +208,9 @@ export function StackEditCommit({
                 'Cannot move up if this commit is at the bottom, or if this commit depends on its parent',
               )
         }>
-        <VSCodeButton disabled={!canMoveDown} onClick={handleMoveDown} appearance="icon">
+        <Button disabled={!canMoveDown} onClick={handleMoveDown} icon>
           <Icon icon="chevron-down" />
-        </VSCodeButton>
+        </Button>
       </Tooltip>
       <Tooltip
         title={
@@ -218,9 +218,9 @@ export function StackEditCommit({
             ? t('Fold the commit with its parent')
             : t('Can not fold with parent if this commit is at the bottom')
         }>
-        <VSCodeButton disabled={!canFold} onClick={handleFoldDown} appearance="icon">
+        <Button disabled={!canFold} onClick={handleFoldDown} icon>
           <Icon icon="fold-down" />
-        </VSCodeButton>
+        </Button>
       </Tooltip>
       <Tooltip
         title={
@@ -228,9 +228,9 @@ export function StackEditCommit({
             ? t('Drop the commit in the stack')
             : t('Cannot drop this commit because it has dependencies')
         }>
-        <VSCodeButton disabled={!canDrop} onClick={handleDrop} appearance="icon">
+        <Button disabled={!canDrop} onClick={handleDrop} icon>
           <Icon icon="close" />
-        </VSCodeButton>
+        </Button>
       </Tooltip>
     </div>
   );
@@ -238,10 +238,10 @@ export function StackEditCommit({
   const rightSideButtons = (
     <div className="stack-edit-right-side-buttons">
       <Tooltip title={t('Start interactive split for this commit')}>
-        <VSCodeButton onClick={handleSplit} appearance="icon">
+        <Button onClick={handleSplit} icon>
           <SplitCommitIcon slot="start" />
           <T>Split</T>
-        </VSCodeButton>
+        </Button>
       </Tooltip>
     </div>
   );

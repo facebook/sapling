@@ -12,6 +12,7 @@ import {
   getDefaultEditedCommitMessage,
 } from '../../CommitInfoView/CommitInfoState';
 import {Tooltip, DOCUMENTATION_DELAY} from '../../Tooltip';
+import {Button} from '../../components/Button';
 import {T, t} from '../../i18n';
 import {writeAtom} from '../../jotaiUtils';
 import {ImportStackOperation} from '../../operations/ImportStackOperation';
@@ -26,7 +27,6 @@ import {
   sendStackEditMetrics,
   useStackEditState,
 } from './stackEditState';
-import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {useAtom, useAtomValue} from 'jotai';
 import {useCallback} from 'react';
 import {Icon} from 'shared/Icon';
@@ -117,9 +117,9 @@ export function StackEditConfirmButtons(): React.ReactElement {
           )
         }
         placement="bottom">
-        <VSCodeButton appearance="icon" disabled={!canUndo} onClick={handleUndo}>
+        <Button icon disabled={!canUndo} onClick={handleUndo}>
           <Icon icon="discard" />
-        </VSCodeButton>
+        </Button>
       </Tooltip>
       <Tooltip
         component={() =>
@@ -132,20 +132,17 @@ export function StackEditConfirmButtons(): React.ReactElement {
           )
         }
         placement="bottom">
-        <VSCodeButton appearance="icon" disabled={!canRedo} onClick={handleRedo}>
+        <Button icon disabled={!canRedo} onClick={handleRedo}>
           <Icon icon="redo" />
-        </VSCodeButton>
+        </Button>
       </Tooltip>
       <Tooltip
         title={stackIntention === 'split' ? t('Cancel split') : t('Discard stack editing changes')}
         delayMs={DOCUMENTATION_DELAY}
         placement="bottom">
-        <VSCodeButton
-          className="cancel-edit-stack-button"
-          appearance="secondary"
-          onClick={handleCancel}>
+        <Button className="cancel-edit-stack-button" onClick={handleCancel}>
           <T>Cancel</T>
-        </VSCodeButton>
+        </Button>
       </Tooltip>
       <Tooltip
         title={
@@ -153,13 +150,13 @@ export function StackEditConfirmButtons(): React.ReactElement {
         }
         delayMs={DOCUMENTATION_DELAY}
         placement="bottom">
-        <VSCodeButton
+        <Button
           className="confirm-edit-stack-button"
           data-testid="confirm-edit-stack-button"
-          appearance="primary"
+          primary
           onClick={handleSaveChanges}>
           {stackIntention === 'split' ? <T>Split</T> : <T>Save changes</T>}
-        </VSCodeButton>
+        </Button>
       </Tooltip>
     </>
   );
