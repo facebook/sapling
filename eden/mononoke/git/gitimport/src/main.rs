@@ -156,6 +156,14 @@ struct GitimportArgs {
     /// commits which are not derived may create high load for the derived data service
     #[clap(long)]
     bypass_derived_data_backfilling: bool,
+    /// The refs to exclude while importing the repo. Can be used to skip cross-synced refs to avoid
+    /// race condition with live gitimport
+    #[clap(long, use_value_delimiter = true, value_delimiter = ',')]
+    exclude_refs: Vec<String>,
+    /// The refs to be included while importing the repo. When provided, gitimport will only import the
+    /// explicitly specified refs
+    #[clap(long, use_value_delimiter = true, value_delimiter = ',')]
+    include_refs: Vec<String>,
 }
 
 #[derive(Subcommand)]
@@ -225,7 +233,6 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
     } else {
         repo
     };
-
     let backfill_derivation = if args.bypass_derived_data_backfilling {
         if args.generate_bookmarks {
             warn!(
@@ -365,7 +372,14 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
                 mapping
                     .iter()
                     .filter_map(|(maybe_tag_id, name, changeset)| {
-                        changeset.map(|cs| (maybe_tag_id, name, cs))
+                        // Exclude the ref if its specified in the exclude-list OR if its not explicitly specified in the include-list (if exists)
+                        let exclude_ref = args.exclude_refs.contains(name)
+                            || !(args.include_refs.is_empty() || args.include_refs.contains(name));
+                        if exclude_ref {
+                            None
+                        } else {
+                            changeset.map(|cs| (maybe_tag_id, name, cs))
+                        }
                     })
             {
                 let final_changeset = changeset.clone();
