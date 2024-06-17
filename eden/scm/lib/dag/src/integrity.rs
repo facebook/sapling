@@ -247,7 +247,7 @@ where
                     continue;
                 }
             };
-            let other_count = set.count().await? as u64;
+            let other_count = set.count_slow().await? as u64;
             if other_count != this_count {
                 add_problem(format!(
                     "length mismatch: {} != {}",
@@ -256,7 +256,7 @@ where
             }
 
             // Check that merge can only be at most 1 (`root`).
-            let other_merges = other.merges(set).await?.count().await?;
+            let other_merges = other.merges(set).await?.count_slow().await?;
             let this_merges = if parents.len() > 1 { 1 } else { 0 };
             if other_merges != this_merges {
                 add_problem(format!(

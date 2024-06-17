@@ -280,7 +280,7 @@ mod tests {
         assert_eq!(shorten_iter(ni(set.iter())), ["33", "44"]);
         assert_eq!(shorten_iter(ni(set.iter_rev())), ["44", "33"]);
         assert!(!nb(set.is_empty())?);
-        assert_eq!(nb(set.count())?, 2);
+        assert_eq!(nb(set.count_slow())?, 2);
         assert_eq!(shorten_name(nb(set.first())?.unwrap()), "33");
         assert_eq!(shorten_name(nb(set.last())?.unwrap()), "44");
         for &b in b"\x11\x22\x55\x66".iter() {
@@ -339,7 +339,7 @@ mod tests {
             let set = intersection(&a, &b);
             check_invariants(&set).unwrap();
 
-            let count = nb(set.count()).unwrap() as usize;
+            let count = nb(set.count_slow()).unwrap() as usize;
             assert!(count <= a.len(), "len({:?}) = {} should <= len({:?})" , &set, count, &a);
             assert!(count <= b.len(), "len({:?}) = {} should <= len({:?})" , &set, count, &b);
 

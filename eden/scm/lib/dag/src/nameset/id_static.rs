@@ -305,7 +305,7 @@ impl AsyncNameSetQuery for IdStaticSet {
         Ok(iter.into_box_stream())
     }
 
-    async fn count(&self) -> Result<u64> {
+    async fn count_slow(&self) -> Result<u64> {
         Ok(self.spans.count())
     }
 

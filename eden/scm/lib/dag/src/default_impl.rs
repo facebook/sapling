@@ -251,7 +251,7 @@ pub(crate) async fn first_ancestors(
     set: NameSet,
 ) -> Result<NameSet> {
     let mut to_visit: Vec<VertexName> = {
-        let mut list = Vec::with_capacity(set.count().await?.try_into()?);
+        let mut list = Vec::with_capacity(set.count_slow().await?.try_into()?);
         let mut iter = set.iter().await?;
         while let Some(next) = iter.next().await {
             let vertex = next?;
@@ -353,7 +353,7 @@ pub(crate) async fn common_ancestors(
     this: &(impl DagAlgorithm + ?Sized),
     set: NameSet,
 ) -> Result<NameSet> {
-    let result = match set.count().await? {
+    let result = match set.count_slow().await? {
         0 => set,
         1 => this.ancestors(set).await?,
         _ => {
@@ -428,7 +428,7 @@ pub(crate) async fn hint_subdag_for_insertion(
     scope: &NameSet,
     heads: &[VertexName],
 ) -> Result<MemNameDag> {
-    let count = scope.count().await?;
+    let count = scope.count_slow().await?;
     tracing::trace!("hint_subdag_for_insertion: pending vertexes: {}", count);
 
     // ScopedParents only contains parents within "scope".

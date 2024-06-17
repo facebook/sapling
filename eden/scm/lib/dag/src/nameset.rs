@@ -618,8 +618,19 @@ pub trait AsyncNameSetQuery: Any + Debug + Send + Sync {
         Ok(Box::pin(futures::stream::iter(items.into_iter().rev())))
     }
 
-    /// Number of names in this set.
+    /// Number of names in this set. Do not override.
+    ///
+    /// This function has some built-in fast paths.
+    /// For individual set types, override count_slow, size_hint instead of count.
     async fn count(&self) -> Result<u64> {
+        self.count_slow().await
+    }
+
+    /// "Slow" count implementation. Intended to be overridden.
+    ///
+    /// This is intended to be implemented by individual set types as fallbacks
+    /// when the universal fast paths do not work.
+    async fn count_slow(&self) -> Result<u64> {
         let mut iter = self.iter().await?;
         let mut count = 0;
         while let Some(item) = iter.next().await {
@@ -750,7 +761,7 @@ impl<T: AsyncNameSetQuery> SyncNameSetQuery for T {
     }
 
     fn count(&self) -> Result<u64> {
-        non_blocking(AsyncNameSetQuery::count(self))?
+        non_blocking(AsyncNameSetQuery::count_slow(self))?
     }
 
     fn first(&self) -> Result<Option<VertexName>> {
@@ -792,7 +803,7 @@ impl SyncNameSetQuery for NameSet {
     }
 
     fn count(&self) -> Result<u64> {
-        non_blocking(AsyncNameSetQuery::count(self.0.deref()))?
+        non_blocking(AsyncNameSetQuery::count_slow(self.0.deref()))?
     }
 
     fn first(&self) -> Result<Option<VertexName>> {
@@ -1360,7 +1371,7 @@ pub(crate) mod tests {
             })
             .collect();
         let is_empty = nb(query.is_empty())?;
-        let count = nb(query.count())?;
+        let count = nb(query.count_slow())?;
         let (size_hint_min, size_hint_max) = nb(query.size_hint());
         let first = nb(query.first())?;
         let last = nb(query.last())?;

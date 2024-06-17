@@ -121,7 +121,7 @@ pub async fn filter_known<'a>(
     let mut known = Set::empty();
 
     for i in 1usize.. {
-        let remaining_old_len = remaining.count().await?;
+        let remaining_old_len = remaining.count_slow().await?;
         if remaining_old_len == 0 {
             break;
         }
@@ -157,11 +157,11 @@ pub async fn filter_known<'a>(
         let new_unknown = subdag.descendants(new_unknown).await?;
 
         remaining = remaining.difference(&new_known.union(&new_unknown));
-        let remaining_new_len = remaining.count().await?;
+        let remaining_new_len = remaining.count_slow().await?;
 
-        let known_old_len = known.count().await?;
+        let known_old_len = known.count_slow().await?;
         known = known.union(&new_known);
-        let known_new_len = known.count().await?;
+        let known_new_len = known.count_slow().await?;
 
         tracing::trace!(
             target: "dag::utils::filter_known",

@@ -120,8 +120,8 @@ impl AsyncNameSetQuery for MetaSet {
         self.evaluate().await?.iter_rev().await
     }
 
-    async fn count(&self) -> Result<u64> {
-        self.evaluate().await?.count().await
+    async fn count_slow(&self) -> Result<u64> {
+        self.evaluate().await?.count_slow().await
     }
 
     async fn size_hint(&self) -> (u64, Option<u64>) {

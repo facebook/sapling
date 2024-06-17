@@ -173,7 +173,7 @@ impl AsyncNameSetQuery for LazySet {
         Ok(Box::pin(stream))
     }
 
-    async fn count(&self) -> Result<u64> {
+    async fn count_slow(&self) -> Result<u64> {
         let inner = self.load_all().await?;
         Ok(inner.visited.len().try_into()?)
     }
@@ -258,7 +258,7 @@ mod tests {
             ["55", "77", "22", "33", "11"]
         );
         assert!(!nb(set.is_empty())?);
-        assert_eq!(nb(set.count())?, 5);
+        assert_eq!(nb(set.count_slow())?, 5);
         assert_eq!(shorten_name(nb(set.first())?.unwrap()), "11");
         assert_eq!(shorten_name(nb(set.last())?.unwrap()), "55");
         Ok(())
@@ -268,7 +268,7 @@ mod tests {
     fn test_debug() {
         let set = lazy_set(b"");
         assert_eq!(format!("{:?}", &set), "<lazy [] + ? more>");
-        nb(set.count()).unwrap();
+        nb(set.count_slow()).unwrap();
         assert_eq!(format!("{:?}", &set), "<lazy []>");
 
         let set = lazy_set(b"\x11\x33\x22");
@@ -292,7 +292,7 @@ mod tests {
         assert!(!nb(set.is_empty())?);
         assert_eq!(nb(set.size_hint()), (1, None));
         // count() reads all items.
-        assert_eq!(nb(set.count())?, 3);
+        assert_eq!(nb(set.count_slow())?, 3);
         assert_eq!(nb(set.size_hint()), (3, Some(3)));
         Ok(())
     }
@@ -302,7 +302,7 @@ mod tests {
             let set = lazy_set(&a);
             check_invariants(&set).unwrap();
 
-            let count = nb(set.count()).unwrap() as usize;
+            let count = nb(set.count_slow()).unwrap() as usize;
             assert!(count <= a.len());
 
             let set2: HashSet<_> = a.iter().cloned().collect();

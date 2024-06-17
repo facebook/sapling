@@ -123,7 +123,7 @@ impl AsyncNameSetQuery for UnionSet {
         (min_size, max_size)
     }
 
-    async fn count(&self) -> Result<u64> {
+    async fn count_slow(&self) -> Result<u64> {
         debug_assert_eq!(self.sets.len(), 2);
         // This is more efficient if sets[0] is a large set that has a fast path
         // for "count()".

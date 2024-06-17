@@ -27,7 +27,7 @@ pub fn main() {
     let expected_count = clone_data.flat_segments.vertex_count();
 
     let assert_graph_size = |dag: &Dag| {
-        let actual_count = nbr(async { dag.all().await.unwrap().count().await }).unwrap();
+        let actual_count = nbr(async { dag.all().await.unwrap().count_slow().await }).unwrap();
         assert_eq!(actual_count, expected_count);
     };
 
