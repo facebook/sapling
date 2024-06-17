@@ -284,7 +284,6 @@ impl IdMap {
         if id.is_virtual() {
             self.virtual_map
                 .insert_vertex_id_name(id, VertexName::copy_from(name));
-            self.map_version.bump();
             return Ok(());
         }
 

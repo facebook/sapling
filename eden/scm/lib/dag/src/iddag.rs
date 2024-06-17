@@ -160,7 +160,9 @@ impl<Store: IdDagStore> IdDag<Store> {
         high: Id,
         parents: &[Id],
     ) -> Result<()> {
-        self.version.bump();
+        if !low.is_virtual() {
+            self.version.bump();
+        }
         self.store.insert(flags, level, low, high, parents)
     }
 

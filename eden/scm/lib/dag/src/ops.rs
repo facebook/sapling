@@ -236,6 +236,8 @@ pub trait DagAlgorithm: Send + Sync {
     fn dag_id(&self) -> &str;
 
     /// Version of the dag. Useful to figure out compatibility between two dags.
+    ///
+    /// For performance, this does not include changes to the VIRTUAL group.
     fn dag_version(&self) -> &VerLink;
 }
 
@@ -562,6 +564,8 @@ pub trait IdConvert: PrefixLookup + Sync {
     fn map_id(&self) -> &str;
 
     /// Version of the map. Useful to figure out compatibility between two maps.
+    ///
+    /// For performance, this does not include changes to the VIRTUAL group.
     fn map_version(&self) -> &VerLink;
 }
 
