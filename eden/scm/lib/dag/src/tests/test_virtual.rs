@@ -81,6 +81,17 @@ fn test_virtual_group_reinsert_is_noop() -> Result<()> {
 }
 
 #[test]
+fn test_virtual_group_skipped_from_all_and_dirty() -> Result<()> {
+    let mut dag = TestDag::new();
+    dag.insert_virtual("A-B");
+    let all = r(dag.all())?;
+    assert!(r(all.is_empty())?);
+    let dirty = r(dag.dirty())?;
+    assert!(r(dirty.is_empty())?);
+    Ok(())
+}
+
+#[test]
 fn test_virtual_group_does_not_block_write_operations() -> Result<()> {
     let mut dag = TestDag::draw("A..C");
     dag.insert_virtual("C..E");

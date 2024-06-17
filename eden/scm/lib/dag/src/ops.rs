@@ -55,6 +55,8 @@ pub trait DagAlgorithm: Send + Sync {
     async fn parent_names(&self, name: VertexName) -> Result<Vec<VertexName>>;
 
     /// Returns a set that covers all vertexes tracked by this DAG.
+    ///
+    /// Does not include VIRTUAL vertexes.
     async fn all(&self) -> Result<NameSet>;
 
     /// Returns a set that covers all vertexes in the master group.
@@ -209,6 +211,8 @@ pub trait DagAlgorithm: Send + Sync {
     ) -> Result<(Option<VertexName>, NameSet, NameSet)>;
 
     /// Vertexes buffered in memory, not yet written to disk.
+    ///
+    /// Does not include VIRTUAL vertexes.
     async fn dirty(&self) -> Result<NameSet>;
 
     /// Returns true if the vertex names might need to be resolved remotely.

@@ -588,7 +588,8 @@ impl<Store: IdDagStore> IdDag<Store> {
 pub trait IdDagAlgorithm: IdDagStore {
     /// Return a [`IdSet`] that covers all ids stored in this [`IdDag`].
     fn all(&self) -> Result<IdSet> {
-        self.all_ids_in_groups(&Group::ALL)
+        // Intentionally skip the VIRTUAL group.
+        self.all_ids_in_groups(&[Group::MASTER, Group::NON_MASTER])
     }
 
     /// Return a [`IdSet`] that covers all ids stored in the master group.
