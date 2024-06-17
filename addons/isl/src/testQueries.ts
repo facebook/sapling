@@ -13,8 +13,6 @@ import {readAtom} from './jotaiUtils';
 import {individualToggleKey} from './selection';
 import {expectMessageSentToServer} from './testUtils';
 import {screen, within, fireEvent, waitFor, act} from '@testing-library/react';
-import {wait} from '@testing-library/user-event/dist/utils';
-import {nextTick} from 'shared/testUtils';
 import {nullthrows} from 'shared/utils';
 
 export const CommitTreeListTestUtils = {
@@ -130,34 +128,22 @@ export const CommitInfoTestUtils = {
     });
   },
 
-  /** Get the outer custom element for the title editor (actually just a div in tests) */
-  getTitleWrapper(): HTMLDivElement {
-    const title = screen.getByTestId('commit-info-title-field') as HTMLDivElement;
+  /** Get the textarea for the title editor */
+  getTitleEditor(): HTMLTextAreaElement {
+    const title = screen.getByTestId('commit-info-title-field') as HTMLTextAreaElement;
     expect(title).toBeInTheDocument();
     return title;
   },
-  /** Get the inner textarea for the title editor (inside the fake shadow dom) */
-  getTitleEditor(): HTMLTextAreaElement {
-    const textarea = CommitInfoTestUtils.getTitleWrapper();
-    return (textarea as unknown as {control: HTMLTextAreaElement}).control;
-  },
 
-  /** Get the outer custom element for the description editor (actually just a div in tests)
-   * For internal builds, this points to the "summary" editor instead of the "description" editor
-   */
-  getDescriptionWrapper(): HTMLDivElement {
-    const description = screen.getByTestId(
-      isInternalMessageFields() ? 'commit-info-summary-field' : 'commit-info-description-field',
-    ) as HTMLDivElement;
-    expect(description).toBeInTheDocument();
-    return description;
-  },
-  /** Get the inner textarea for the description editor (inside the fake shadow dom)
+  /** Get the textarea for the description editor
    * For internal builds, this points to the "summary" editor instead of the "description" editor
    */
   getDescriptionEditor(): HTMLTextAreaElement {
-    const textarea = CommitInfoTestUtils.getDescriptionWrapper();
-    return (textarea as unknown as {control: HTMLTextAreaElement}).control;
+    const description = screen.getByTestId(
+      isInternalMessageFields() ? 'commit-info-summary-field' : 'commit-info-description-field',
+    ) as HTMLTextAreaElement;
+    expect(description).toBeInTheDocument();
+    return description;
   },
 
   /** Get the input element for a given field's editor, according to the field key in the FieldConfig (actually just a div in tests) */

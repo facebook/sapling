@@ -6,7 +6,7 @@
  */
 
 import type {Result} from '../types';
-import type {MutableRefObject} from 'react';
+import type {RefObject} from 'react';
 import type {Comparison} from 'shared/Comparison';
 
 import {ErrorNotice} from '../ErrorNotice';
@@ -23,7 +23,6 @@ import {
   commitMode,
   latestCommitMessageFieldsWithEdits,
 } from './CommitInfoState';
-import {getInnerTextareaForVSCodeTextArea} from './utils';
 import {VSCodeButton, VSCodeTextArea} from '@vscode/webview-ui-toolkit/react';
 import {atom, useAtom, useAtomValue, useSetAtom} from 'jotai';
 import {useCallback} from 'react';
@@ -41,7 +40,7 @@ export function GenerateAICommitMessageButton({
   textAreaRef,
   appendToTextArea,
 }: {
-  textAreaRef: MutableRefObject<unknown>;
+  textAreaRef: RefObject<HTMLTextAreaElement>;
   appendToTextArea: (toAdd: string) => unknown;
 }) {
   const currentCommit = useAtomValue(commitInfoViewCurrentCommits)?.[0];
@@ -87,7 +86,7 @@ export function GenerateAICommitMessageButton({
           <GenerateAICommitMessageModal
             dismiss={dismiss}
             hashKey={hashKey}
-            textArea={getInnerTextareaForVSCodeTextArea(textAreaRef.current as HTMLElement)}
+            textArea={textAreaRef.current}
             appendToTextArea={appendToTextArea}
           />
         )}

@@ -5,9 +5,11 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {TextAreaProps} from '../components/TextArea';
+
+import {TextArea} from '../components/TextArea';
 import {assert} from '../utils';
-import {VSCodeTextArea} from '@vscode/webview-ui-toolkit/react';
-import {forwardRef, type ForwardedRef, useEffect, type MutableRefObject} from 'react';
+import {forwardRef, type ForwardedRef, useEffect} from 'react';
 
 /**
  * Wrap `VSCodeTextArea` to auto-resize to minimum height and optionally disallow newlines.
@@ -15,11 +17,11 @@ import {forwardRef, type ForwardedRef, useEffect, type MutableRefObject} from 'r
  */
 export const MinHeightTextField = forwardRef(
   (
-    props: React.ComponentProps<typeof VSCodeTextArea> & {
-      onInput: (event: {target: {value: string}}) => unknown;
+    props: TextAreaProps & {
+      onInput: (event: {currentTarget: HTMLTextAreaElement}) => unknown;
       keepNewlines?: boolean;
     },
-    ref: ForwardedRef<typeof VSCodeTextArea>,
+    ref: ForwardedRef<HTMLTextAreaElement>,
   ) => {
     const {onInput, keepNewlines, ...rest} = props;
 
@@ -28,8 +30,7 @@ export const MinHeightTextField = forwardRef(
 
     // whenever the value is changed, recompute & apply the minimum height
     useEffect(() => {
-      const r = ref as MutableRefObject<typeof VSCodeTextArea>;
-      const current = r?.current as unknown as HTMLInputElement;
+      const current = ref?.current;
       // height must be applied to textarea INSIDE shadowRoot of the VSCodeTextArea
       const innerTextArea = current?.shadowRoot?.querySelector('textarea');
       if (innerTextArea) {
@@ -47,20 +48,20 @@ export const MinHeightTextField = forwardRef(
     }, [props.value, ref]);
 
     return (
-      <VSCodeTextArea
+      <TextArea
         ref={ref}
         {...rest}
         className={`min-height-text-area${rest.className ? ' ' + rest.className : ''}`}
         onInput={e => {
-          const newValue = (e.target as HTMLInputElement)?.value;
+          const newValue = e.currentTarget?.value;
           const result = keepNewlines
             ? newValue
             : // remove newlines so this acts like a textField rather than a textArea
               newValue.replace(/(\r|\n)/g, '');
           onInput({
-            target: {
+            currentTarget: {
               value: result,
-            },
+            } as HTMLTextAreaElement,
           });
         }}
       />

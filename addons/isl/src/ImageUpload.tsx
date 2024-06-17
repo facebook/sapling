@@ -5,8 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {RefObject} from 'react';
+
 import clientToServerAPI from './ClientToServerAPI';
-import {getInnerTextareaForVSCodeTextArea} from './CommitInfoView/utils';
 import {InlineErrorBadge} from './ErrorNotice';
 import {Tooltip} from './Tooltip';
 import {T, t} from './i18n';
@@ -15,7 +16,7 @@ import platform from './platform';
 import {replaceInTextArea, insertAtCursor} from './textareaUtils';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {atom, useAtomValue} from 'jotai';
-import {type MutableRefObject, useState, type ReactNode, useId} from 'react';
+import {useState, type ReactNode, useId} from 'react';
 import {Icon} from 'shared/Icon';
 import {randomId} from 'shared/utils';
 
@@ -77,7 +78,7 @@ export async function uploadFile(file: File): Promise<string> {
 /**
  * Summary of ongoing image uploads. Click to cancel all ongoing uploads.
  */
-export function PendingImageUploads({textAreaRef}: {textAreaRef: MutableRefObject<unknown>}) {
+export function PendingImageUploads({textAreaRef}: {textAreaRef: RefObject<HTMLTextAreaElement>}) {
   const numPending = useAtomValue(numPendingImageUploads);
   const unresolvedErrors = useAtomValue(unresolvedErroredImagedUploads);
   const [isHovering, setIsHovering] = useState(false);
@@ -104,7 +105,7 @@ export function PendingImageUploads({textAreaRef}: {textAreaRef: MutableRefObjec
         ) as Record<number, ImageUploadStatus>,
       };
 
-      const textArea = getInnerTextareaForVSCodeTextArea(textAreaRef.current as HTMLElement | null);
+      const textArea = textAreaRef.current;
       if (textArea) {
         for (const id of canceledIds) {
           const placeholder = placeholderForImageUpload(id);
@@ -223,22 +224,22 @@ export function FilePicker({uploadFiles}: {uploadFiles: (files: Array<File>) => 
 }
 
 export function useUploadFilesCallback(
-  ref: MutableRefObject<unknown>,
-  onInput: (event: {target: HTMLInputElement}) => unknown,
+  ref: RefObject<HTMLTextAreaElement>,
+  onInput: (e: {currentTarget: HTMLTextAreaElement}) => unknown,
 ) {
   return async (files: Array<File>) => {
     // capture snapshot of next before doing async work
     // we need to account for all files in this batch
     let {next} = readAtom(imageUploadState);
 
-    const textArea = getInnerTextareaForVSCodeTextArea(ref.current as HTMLElement);
+    const textArea = ref.current;
     if (textArea != null) {
       // manipulating the text area directly does not emit change events,
       // we need to simulate those ourselves so that controlled text areas
       // update their underlying store
       const emitChangeEvent = () => {
         onInput({
-          target: textArea as unknown as HTMLInputElement,
+          currentTarget: textArea,
         });
       };
 
