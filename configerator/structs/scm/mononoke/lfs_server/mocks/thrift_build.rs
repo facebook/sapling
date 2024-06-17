@@ -8,7 +8,10 @@ use thrift_compiler::GenContext;
 const CRATEMAP: &str = "\
 configerator/structs/scm/mononoke/lfs_server/lfs_server.thrift crate //configerator/structs/scm/mononoke/lfs_server:lfs_server_config-rust
 configerator/structs/scm/mononoke/ratelimiting/ratelimits.thrift rate_limiting_config //configerator/structs/scm/mononoke/ratelimiting:rate_limiting_config-rust
+thrift/annotation/cpp.thrift rate_limiting_config->cpp //thrift/annotation:cpp-rust
 thrift/annotation/rust.thrift rust //thrift/annotation:rust-rust
+thrift/annotation/scope.thrift rust->scope //thrift/annotation:scope-rust
+thrift/annotation/thrift.thrift rate_limiting_config->cpp->thrift //thrift/annotation:thrift-rust
 ";
 #[rustfmt::skip]
 fn main() {

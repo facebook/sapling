@@ -10,6 +10,8 @@ configerator/structs/scm/mononoke/megarepo/megarepo_configs.thrift megarepo_conf
 eden/mononoke/derived_data/if/derived_data_type.thrift derived_data_type_if //eden/mononoke/derived_data/if:derived_data_type_if-rust
 eden/mononoke/scs/if/source_control.thrift crate //eden/mononoke/scs/if:source_control-rust
 fb303/thrift/fb303_core.thrift fb303_core //fb303/thrift:fb303_core-rust
+thrift/annotation/rust.thrift megarepo_configs->rust //thrift/annotation:rust-rust
+thrift/annotation/scope.thrift thrift->scope //thrift/annotation:scope-rust
 thrift/annotation/thrift.thrift thrift //thrift/annotation:thrift-rust
 ";
 #[rustfmt::skip]

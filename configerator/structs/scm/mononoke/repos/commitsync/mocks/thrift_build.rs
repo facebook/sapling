@@ -9,6 +9,7 @@ const CRATEMAP: &str = "\
 configerator/structs/scm/mononoke/repos/commitsync.thrift crate //configerator/structs/scm/mononoke/repos:commitsync-rust
 configerator/structs/scm/mononoke/repos/repos.thrift repos //configerator/structs/scm/mononoke/repos:repos-rust
 thrift/annotation/rust.thrift rust //thrift/annotation:rust-rust
+thrift/annotation/scope.thrift rust->scope //thrift/annotation:scope-rust
 ";
 #[rustfmt::skip]
 fn main() {

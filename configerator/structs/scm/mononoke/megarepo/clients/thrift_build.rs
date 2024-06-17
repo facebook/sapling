@@ -8,6 +8,7 @@ use thrift_compiler::GenContext;
 const CRATEMAP: &str = "\
 configerator/structs/scm/mononoke/megarepo/megarepo_configs.thrift crate //configerator/structs/scm/mononoke/megarepo:megarepo_configs-rust
 thrift/annotation/rust.thrift rust //thrift/annotation:rust-rust
+thrift/annotation/scope.thrift rust->scope //thrift/annotation:scope-rust
 ";
 #[rustfmt::skip]
 fn main() {
