@@ -6,21 +6,20 @@
  */
 
 import type {CommitInfo} from './types';
-import type {MutableRefObject} from 'react';
 
 import {Commit} from './Commit';
 import {FlexSpacer} from './ComponentUtils';
 import {Tooltip} from './Tooltip';
-import {VSCodeCheckbox} from './VSCodeCheckbox';
 import {codeReviewProvider} from './codeReview/CodeReviewInfo';
 import {submitAsDraft, SubmitAsDraftCheckbox} from './codeReview/DraftCheckbox';
+import {Button} from './components/Button';
+import {Checkbox} from './components/Checkbox';
 import {Divider} from './components/Divider';
 import {TextField} from './components/TextField';
 import {t, T} from './i18n';
 import {configBackedAtom, readAtom} from './jotaiUtils';
 import {CommitPreview} from './previews';
 import {useModal} from './useModal';
-import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {useAtom, useAtomValue} from 'jotai';
 import {useState} from 'react';
 import {useAutofocusRef} from 'shared/hooks';
@@ -103,7 +102,7 @@ function ConfirmModalContent({
   const [updateMessage, setUpdateMessage] = useState('');
   const commitsWithDiffs = stack.filter(commit => commit.diffId != null);
 
-  const submitRef = useAutofocusRef();
+  const submitRef = useAutofocusRef<HTMLButtonElement>();
 
   const provider = useAtomValue(codeReviewProvider);
   return (
@@ -138,19 +137,19 @@ function ConfirmModalContent({
               'Your last setting will control if it is submitted as a draft. ' +
               'You can change this from settings.',
           )}>
-          <VSCodeCheckbox
+          <Checkbox
             checked={!showSubmitConfirmation}
-            onChange={e => setShowSubmitConfirmation(!(e.target as HTMLInputElement).checked)}>
+            onChange={checked => setShowSubmitConfirmation(!checked)}>
             <T>Don't show again</T>
-          </VSCodeCheckbox>
+          </Checkbox>
         </Tooltip>
         <FlexSpacer />
-        <VSCodeButton appearance="secondary" onClick={() => returnResultAndDismiss(undefined)}>
+        <Button onClick={() => returnResultAndDismiss(undefined)}>
           <T>Cancel</T>
-        </VSCodeButton>
-        <VSCodeButton
-          ref={submitRef as MutableRefObject<null>}
-          appearance="primary"
+        </Button>
+        <Button
+          ref={submitRef}
+          primary
           onClick={() =>
             returnResultAndDismiss({
               submitAsDraft: shouldSubmitAsDraft,
@@ -158,7 +157,7 @@ function ConfirmModalContent({
             })
           }>
           <T>Submit</T>
-        </VSCodeButton>
+        </Button>
       </div>
     </div>
   );

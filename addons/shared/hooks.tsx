@@ -54,8 +54,8 @@ export function useDeepMemo<T>(construct: () => T, dependencies: React.Dependenc
 /**
  * Returns a react ref that you can pass to an element to autofocus it on mount.
  */
-export function useAutofocusRef(): React.MutableRefObject<HTMLElement | null> {
-  const ref = useRef<HTMLElement | null>(null);
+export function useAutofocusRef<T extends HTMLElement>(): React.MutableRefObject<T | null> {
+  const ref = useRef<T | null>(null);
   useEffect(() => {
     if (ref.current != null) {
       ref.current.focus();
