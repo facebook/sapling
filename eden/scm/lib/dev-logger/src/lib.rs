@@ -20,6 +20,7 @@
 //! // Set RUST_LOG=info and run the test.
 //! ```
 
+use std::env;
 use std::io;
 use std::sync::Arc;
 use std::sync::Mutex;
@@ -33,8 +34,12 @@ use tracing_subscriber::EnvFilter;
 /// Initialize tracing and env_logger for adhoc logging (ex. in a library test)
 /// purpose.
 pub fn init() {
+    let env_name = ["SL_LOG", "RUST_LOG", "LOG"]
+        .into_iter()
+        .find(|name| env::var_os(name).is_some())
+        .unwrap_or("LOG");
     let builder = Subscriber::builder()
-        .with_env_filter(EnvFilter::from_env("LOG"))
+        .with_env_filter(EnvFilter::from_env(env_name))
         .with_ansi(false)
         .with_target(false)
         .without_time()
