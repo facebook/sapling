@@ -7,18 +7,18 @@
 
 import type {ReactNode} from 'react';
 
+import {Button} from '../components/Button';
 import {T} from '../i18n';
-import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {useLayoutEffect, useState, useRef} from 'react';
 import {Icon} from 'shared/Icon';
 
 import './SeeMoreContainer.css';
 
-const MAX_NON_EXPANDBLE_HEIGHT_PX = 275;
+const MAX_NON_EXPANDBLE_HEIGHT_PX = 375;
 
 export function SeeMoreContainer({
   children,
-  maxHeight,
+  maxHeight = MAX_NON_EXPANDBLE_HEIGHT_PX,
   className,
 }: {
   children: ReactNode;
@@ -31,7 +31,7 @@ export function SeeMoreContainer({
 
   useLayoutEffect(() => {
     const element = ref.current;
-    if (element != null && element.scrollHeight > (maxHeight ?? MAX_NON_EXPANDBLE_HEIGHT_PX)) {
+    if (element != null && element.scrollHeight > maxHeight) {
       shouldShowExpandButton === false && setShouldShowExpandbutton(true);
     } else {
       shouldShowExpandButton === true && setShouldShowExpandbutton(false);
@@ -50,10 +50,10 @@ export function SeeMoreContainer({
       </div>
       {shouldShowExpandButton ? (
         <div className={`see-${isExpanded ? 'less' : 'more'}-button`}>
-          <VSCodeButton appearance="icon" onClick={() => setIsExpanded(val => !val)}>
+          <Button icon onClick={() => setIsExpanded(val => !val)}>
             <Icon icon={isExpanded ? 'fold-up' : 'fold-down'} slot="start" />
             {isExpanded ? <T>See less</T> : <T>See more</T>}
-          </VSCodeButton>
+          </Button>
         </div>
       ) : null}
     </div>
