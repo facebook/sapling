@@ -40,6 +40,7 @@ use crate::segment::PreparedFlatSegments;
 use crate::segment::Segment;
 use crate::segment::SegmentFlags;
 use crate::spanset;
+use crate::spanset::Span;
 use crate::types_ext::PreparedFlatSegmentsExt;
 use crate::Error::Programming;
 use crate::IdSegment;
@@ -270,9 +271,6 @@ impl<Store: IdDagStore> IdDag<Store> {
         };
         let mut last_high = None;
         for seg in &outcome.segments {
-            if seg.low.is_virtual() {
-                continue;
-            }
             if let Some(last_high) = last_high {
                 if last_high >= seg.low {
                     return bug(format!(
@@ -319,6 +317,9 @@ impl<Store: IdDagStore> IdDag<Store> {
         level: Level,
         inserted_lower_level_id_set: &IdSet,
     ) -> Result<(usize, IdSet)> {
+        // Exclude VIRTUAL spans.
+        let inserted_lower_level_id_set = inserted_lower_level_id_set
+            .difference(&Span::new(Group::VIRTUAL.min_id(), Group::VIRTUAL.max_id()).into());
         let mut inserted_id_set = IdSet::empty();
         if level == 0 {
             // Do nothing. Level 0 is not considered high level.

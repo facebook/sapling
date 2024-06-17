@@ -61,6 +61,15 @@ fn test_virtual_group_preserve_verlinks() -> Result<()> {
 }
 
 #[test]
+fn test_virtual_group_can_be_queried() -> Result<()> {
+    let mut dag = TestDag::draw("A..C");
+    dag.insert_virtual("C..E");
+    let ancestors = r(dag.ancestors("D".into()))?;
+    assert_eq!(format!("{:?}", ancestors), "<spans [D+V0, A:C+N0:N2]>");
+    Ok(())
+}
+
+#[test]
 fn test_virtual_group_reinsert_is_noop() -> Result<()> {
     let mut dag = TestDag::draw("A");
     dag.insert_virtual("A-B");
