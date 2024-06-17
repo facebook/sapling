@@ -15,11 +15,12 @@ import {VSCodeCheckbox} from './VSCodeCheckbox';
 import {codeReviewProvider} from './codeReview/CodeReviewInfo';
 import {submitAsDraft, SubmitAsDraftCheckbox} from './codeReview/DraftCheckbox';
 import {Divider} from './components/Divider';
+import {TextField} from './components/TextField';
 import {t, T} from './i18n';
 import {configBackedAtom, readAtom} from './jotaiUtils';
 import {CommitPreview} from './previews';
 import {useModal} from './useModal';
-import {VSCodeButton, VSCodeTextField} from '@vscode/webview-ui-toolkit/react';
+import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {useAtom, useAtomValue} from 'jotai';
 import {useState} from 'react';
 import {useAutofocusRef} from 'shared/hooks';
@@ -119,12 +120,12 @@ function ConfirmModalContent({
           ))}
         </div>
         {provider?.supportsUpdateMessage !== true || commitsWithDiffs.length === 0 ? null : (
-          <VSCodeTextField
+          <TextField
             value={updateMessage}
             data-testid="submit-update-message-input"
-            onChange={e => setUpdateMessage((e.target as HTMLInputElement).value)}>
+            onChange={e => setUpdateMessage(e.currentTarget.value)}>
             Update Message
-          </VSCodeTextField>
+          </TextField>
         )}
         <SubmitAsDraftCheckbox commitsToBeSubmit={stack} />
       </div>
