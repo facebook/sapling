@@ -390,12 +390,11 @@ where
             target: BonsaiAnnotatedTagTarget::Changeset(target_changeset_id),
             pgp_signature: tag.pgp_signature.take(),
         };
-        let tag_name = format!("tags/{}", tag.name);
         create_annotated_tag(
             ctx,
             &*self.inner,
             Some(tag.oid),
-            tag_name,
+            tag.name,
             tag.author.take(),
             tag.author_date.take().map(|date| date.into()),
             tag.message,

@@ -170,7 +170,12 @@ impl BookmarkKey {
     /// Determine if the current BookmarkKey represents a tag (since BookmarkCategory
     /// is not reliable)
     pub fn is_tag(&self) -> bool {
-        self.name().as_str().starts_with("tags/")
+        let ref_name = self.name().as_str();
+        if let Some(stripped_ref) = ref_name.strip_prefix("namespaces/") {
+            stripped_ref.contains("refs/tags/")
+        } else {
+            ref_name.starts_with("tags/")
+        }
     }
 }
 

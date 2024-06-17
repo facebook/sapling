@@ -203,17 +203,27 @@ pub async fn is_annotated_tag(
         .is_some())
 }
 
+pub fn stored_tag_name(tag_name: String) -> String {
+    // If the tag is a namespaced tag, do not add the 'tags/' prefix
+    if tag_name.starts_with("namespaces/") {
+        tag_name
+    } else {
+        format!("tags/{}", tag_name)
+    }
+}
+
 pub async fn create_changeset_for_annotated_tag<Uploader: GitUploader>(
     ctx: &CoreContext,
     uploader: &Uploader,
     path: &Path,
     prefs: &GitimportPreferences,
     tag_id: &ObjectId,
+    maybe_tag_name: Option<String>,
     original_changeset_id: &ChangesetId,
 ) -> Result<ChangesetId, Error> {
     let reader = GitRepoReader::new(&prefs.git_command_path, path).await?;
     // Get the parsed Git Tag
-    let tag_metadata = TagMetadata::new(ctx, *tag_id, &reader)
+    let tag_metadata = TagMetadata::new(ctx, *tag_id, maybe_tag_name, &reader)
         .await
         .with_context(|| format_err!("Failed to create TagMetadata from git tag {}", tag_id))?;
     // Create the corresponding changeset for the Git Tag at Mononoke end

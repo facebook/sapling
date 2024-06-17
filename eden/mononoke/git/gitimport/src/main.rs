@@ -408,7 +408,13 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
                         upload_git_tag(&ctx, &uploader, path, &prefs, tag_id).await?;
                         // Create the changeset corresponding to the commit pointed to by the tag.
                         create_changeset_for_annotated_tag(
-                            &ctx, &uploader, path, &prefs, tag_id, changeset,
+                            &ctx,
+                            &uploader,
+                            path,
+                            &prefs,
+                            tag_id,
+                            Some(name.clone()),
+                            changeset,
                         )
                         .await?;
                     }

@@ -314,6 +314,7 @@ impl TagMetadata {
     pub async fn new(
         ctx: &CoreContext,
         oid: ObjectId,
+        maybe_tag_name: Option<String>,
         reader: &GitRepoReader,
     ) -> Result<Self, Error> {
         let Tag {
@@ -333,7 +334,10 @@ impl TagMetadata {
             .take()
             .map(|tagger| format_signature(tagger.to_ref()));
         let message = decode_message(&message, &None, ctx.logger())?;
-        let name = decode_message(&name, &None, ctx.logger())?;
+        let name = match maybe_tag_name {
+            Some(name) => name,
+            None => decode_message(&name, &None, ctx.logger())?,
+        };
         let pgp_signature = pgp_signature
             .take()
             .map(|signature| Bytes::from(signature.to_vec()));
