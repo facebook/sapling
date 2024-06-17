@@ -72,7 +72,7 @@ impl RepoStatsLogger {
                         default_repo_objects_count
                     );
 
-                    match Self::get_repo_objects_count(
+                    match get_repo_objects_count(
                         &ctx,
                         &bookmark_name,
                         bookmarks.clone(),
@@ -105,44 +105,6 @@ impl RepoStatsLogger {
         Ok(Self { abort_handle })
     }
 
-    async fn get_repo_objects_count(
-        ctx: &CoreContext,
-        bookmark_name: &BookmarkKey,
-        bookmarks: ArcBookmarks,
-        repo_blobstore: Arc<dyn Blobstore>,
-        repo_derived_data: ArcRepoDerivedData,
-        default_repo_object_count: i64,
-    ) -> Result<i64, Error> {
-        let maybe_bookmark = bookmarks.get(ctx.clone(), bookmark_name).await?;
-        if let Some(cs_id) = maybe_bookmark {
-            Self::get_descendant_count(
-                ctx,
-                repo_blobstore.clone(),
-                repo_derived_data.clone(),
-                cs_id,
-            )
-            .await
-        } else {
-            Ok(default_repo_object_count)
-        }
-    }
-
-    async fn get_descendant_count(
-        ctx: &CoreContext,
-        repo_blobstore: Arc<dyn Blobstore>,
-        repo_derived_data: ArcRepoDerivedData,
-        cs_id: ChangesetId,
-    ) -> Result<i64, Error> {
-        let root_fsnode_id = repo_derived_data.derive::<RootFsnodeId>(ctx, cs_id).await?;
-        let count = root_fsnode_id
-            .fsnode_id()
-            .load(ctx, &repo_blobstore)
-            .await?
-            .summary()
-            .descendant_files_count;
-        Ok(i64::try_from(count).expect("file count overflows i64"))
-    }
-
     // A null implementation that does nothing. Useful for tests.
     pub fn noop() -> Self {
         Self {
@@ -169,6 +131,44 @@ fn get_repo_default_objects_count(repo_config: Arc<metaconfig_types::RepoConfig>
         .default_objects_count
         .clone()
         .unwrap_or(default_repo_object_count)
+}
+
+async fn get_repo_objects_count(
+    ctx: &CoreContext,
+    bookmark_name: &BookmarkKey,
+    bookmarks: ArcBookmarks,
+    repo_blobstore: Arc<dyn Blobstore>,
+    repo_derived_data: ArcRepoDerivedData,
+    default_repo_object_count: i64,
+) -> Result<i64, Error> {
+    let maybe_bookmark = bookmarks.get(ctx.clone(), bookmark_name).await?;
+    if let Some(cs_id) = maybe_bookmark {
+        get_descendant_count(
+            ctx,
+            repo_blobstore.clone(),
+            repo_derived_data.clone(),
+            cs_id,
+        )
+        .await
+    } else {
+        Ok(default_repo_object_count)
+    }
+}
+
+async fn get_descendant_count(
+    ctx: &CoreContext,
+    repo_blobstore: Arc<dyn Blobstore>,
+    repo_derived_data: ArcRepoDerivedData,
+    cs_id: ChangesetId,
+) -> Result<i64, Error> {
+    let root_fsnode_id = repo_derived_data.derive::<RootFsnodeId>(ctx, cs_id).await?;
+    let count = root_fsnode_id
+        .fsnode_id()
+        .load(ctx, &repo_blobstore)
+        .await?
+        .summary()
+        .descendant_files_count;
+    Ok(i64::try_from(count).expect("file count overflows i64"))
 }
 
 impl Drop for RepoStatsLogger {
