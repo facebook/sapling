@@ -44,7 +44,7 @@ export function SubmitUpdateMessageInput({commits}: {commits: Array<CommitInfo>}
     <MinHeightTextField
       ref={ref}
       keepNewlines
-      xstyle={styles.full}
+      containerXstyle={styles.full}
       value={message}
       onInput={e => setMessage(e.currentTarget.value)}>
       <T>Update Message</T>

@@ -11,6 +11,7 @@ import {TextArea} from '../components/TextArea';
 import {assert} from '../utils';
 import * as stylex from '@stylexjs/stylex';
 import {forwardRef, type ForwardedRef, useEffect} from 'react';
+import {notEmpty} from 'shared/utils';
 
 const styles = stylex.create({
   minHeight: {
@@ -28,10 +29,12 @@ export const MinHeightTextField = forwardRef(
     props: TextAreaProps & {
       onInput: (event: {currentTarget: HTMLTextAreaElement}) => unknown;
       keepNewlines?: boolean;
+      xstyle?: stylex.StyleXStyles;
+      containerXstyle?: stylex.StyleXStyles;
     },
     ref: ForwardedRef<HTMLTextAreaElement>,
   ) => {
-    const {onInput, keepNewlines, ...rest} = props;
+    const {onInput, keepNewlines, xstyle, ...rest} = props;
 
     // ref could also be a callback ref; don't bother supporting that right now.
     assert(typeof ref === 'object', 'MinHeightTextArea requires ref object');
@@ -57,7 +60,7 @@ export const MinHeightTextField = forwardRef(
       <TextArea
         ref={ref}
         {...rest}
-        xstyle={styles.minHeight}
+        xstyle={[styles.minHeight, xstyle].filter(notEmpty)}
         onInput={e => {
           const newValue = e.currentTarget?.value;
           const result = keepNewlines
