@@ -93,8 +93,10 @@ export const Button = forwardRef(
       children,
       xstyle,
       kind,
+      className,
       ...rest
     }: {
+      className?: string;
       children?: ReactNode;
       disabled?: boolean;
       xstyle?: stylex.StyleXStyles;
@@ -125,6 +127,14 @@ export const Button = forwardRef(
   ) => {
     const primary = kind === 'primary' || primaryProp === true;
     const icon = kind === 'icon' || iconProp === true;
+    const {className: stylexClassName, ...otherStylex} = stylex.props(
+      layout.flexRow,
+      buttonStyles.button,
+      primary && buttonStyles.primary,
+      icon && buttonStyles.icon,
+      disabled && buttonStyles.disabled,
+      xstyle,
+    );
     return (
       <button
         tabIndex={disabled ? -1 : 0}
@@ -133,14 +143,8 @@ export const Button = forwardRef(
           disabled !== true && onClick?.(e);
         }}
         ref={ref}
-        {...stylex.props(
-          layout.flexRow,
-          buttonStyles.button,
-          primary && buttonStyles.primary,
-          icon && buttonStyles.icon,
-          disabled && buttonStyles.disabled,
-          xstyle,
-        )}
+        className={stylexClassName + (className ? ' ' + className : '')}
+        {...otherStylex}
         disabled={disabled}
         {...rest}>
         {children}
