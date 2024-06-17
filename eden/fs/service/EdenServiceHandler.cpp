@@ -2897,6 +2897,26 @@ ImmediateFuture<std::unique_ptr<Glob>> detachIfBackgrounded(
   }
 }
 
+folly::SemiFuture<std::unique_ptr<Glob>> serialDetachIfBackgrounded(
+    ImmediateFuture<std::unique_ptr<Glob>> globFuture,
+    const std::shared_ptr<apache::thrift::ThriftServer>& thriftServer,
+    bool background) {
+  auto serial =
+      folly::SerialExecutor::create(thriftServer->getThreadManager().get());
+
+  if (background) {
+    folly::futures::detachOn(serial, std::move(globFuture).semi());
+    globFuture =
+        ImmediateFuture<std::unique_ptr<Glob>>(std::make_unique<Glob>());
+  }
+
+  if (globFuture.isReady()) {
+    return std::move(globFuture).semi();
+  }
+
+  return std::move(globFuture).semi().via(serial);
+}
+
 ImmediateFuture<std::unique_ptr<PrefetchResult>> detachIfBackgrounded(
     ImmediateFuture<std::unique_ptr<PrefetchResult>> globFuture,
     const std::shared_ptr<ServerState>& serverState,
@@ -2911,6 +2931,26 @@ ImmediateFuture<std::unique_ptr<PrefetchResult>> detachIfBackgrounded(
   }
 }
 
+folly::SemiFuture<std::unique_ptr<PrefetchResult>> serialDetachIfBackgrounded(
+    ImmediateFuture<std::unique_ptr<PrefetchResult>> globFuture,
+    const std::shared_ptr<apache::thrift::ThriftServer>& thriftServer,
+    bool background) {
+  auto serial =
+      folly::SerialExecutor::create(thriftServer->getThreadManager().get());
+
+  if (background) {
+    folly::futures::detachOn(serial, std::move(globFuture).semi());
+    globFuture = ImmediateFuture<std::unique_ptr<PrefetchResult>>(
+        std::make_unique<PrefetchResult>());
+  }
+
+  if (globFuture.isReady()) {
+    return std::move(globFuture).semi();
+  }
+
+  return std::move(globFuture).semi().via(serial);
+}
+
 ImmediateFuture<folly::Unit> detachIfBackgrounded(
     ImmediateFuture<folly::Unit> globFuture,
     const std::shared_ptr<ServerState>& serverState,
@@ -2922,6 +2962,25 @@ ImmediateFuture<folly::Unit> detachIfBackgrounded(
         serverState->getThreadPool().get(), std::move(globFuture).semi());
     return ImmediateFuture<folly::Unit>(folly::unit);
   }
+}
+
+folly::SemiFuture<folly::Unit> serialDetachIfBackgrounded(
+    ImmediateFuture<folly::Unit> globFuture,
+    const std::shared_ptr<apache::thrift::ThriftServer>& thriftServer,
+    bool background) {
+  auto serial =
+      folly::SerialExecutor::create(thriftServer->getThreadManager().get());
+
+  if (background) {
+    folly::futures::detachOn(serial, std::move(globFuture).semi());
+    globFuture = ImmediateFuture<folly::Unit>(folly::unit);
+  }
+
+  if (globFuture.isReady()) {
+    return std::move(globFuture).semi();
+  }
+
+  return std::move(globFuture).semi().via(serial);
 }
 
 void maybeLogExpensiveGlob(
@@ -3141,19 +3200,8 @@ EdenServiceHandler::semifuture_predictiveGlobFiles(
     // Thrift CPU worker pool. To combat with that, we limit the execution to a
     // single thread by using `folly::SerialExecutor` so the glob queries will
     // not overload the executor.
-    auto serial = folly::SerialExecutor::create(
-        server_->getServer()->getThreadManager().get());
-
-    if (isBackground) {
-      folly::futures::detachOn(serial, std::move(future).semi());
-      future = ImmediateFuture<std::unique_ptr<Glob>>(std::make_unique<Glob>());
-    }
-
-    if (future.isReady()) {
-      return std::move(future).semi();
-    }
-
-    return std::move(future).semi().via(serial);
+    return serialDetachIfBackgrounded(
+        std::move(future), server_->getServer(), isBackground);
   } else {
     return detachIfBackgrounded(std::move(future), serverState, isBackground)
         .semi();
@@ -3465,19 +3513,8 @@ folly::SemiFuture<folly::Unit> EdenServiceHandler::semifuture_prefetchFiles(
     // Thrift CPU worker pool. To combat with that, we limit the execution to a
     // single thread by using `folly::SerialExecutor` so the glob queries will
     // not overload the executor.
-    auto serial = folly::SerialExecutor::create(
-        server_->getServer()->getThreadManager().get());
-
-    if (isBackground) {
-      folly::futures::detachOn(serial, std::move(globFut).semi());
-      globFut = ImmediateFuture<folly::Unit>(folly::unit);
-    }
-
-    if (globFut.isReady()) {
-      return std::move(globFut).semi();
-    }
-
-    return std::move(globFut).semi().via(serial);
+    return serialDetachIfBackgrounded(
+        std::move(globFut), server_->getServer(), isBackground);
   } else {
     return detachIfBackgrounded(
                std::move(globFut), server_->getServerState(), isBackground)
@@ -3553,20 +3590,8 @@ EdenServiceHandler::semifuture_prefetchFilesV2(
     // Thrift CPU worker pool. To combat with that, we limit the execution to a
     // single thread by using `folly::SerialExecutor` so the glob queries will
     // not overload the executor.
-    auto serial = folly::SerialExecutor::create(
-        server_->getServer()->getThreadManager().get());
-
-    if (isBackground) {
-      folly::futures::detachOn(serial, std::move(prefetchResult).semi());
-      prefetchResult = ImmediateFuture<std::unique_ptr<PrefetchResult>>(
-          std::make_unique<PrefetchResult>());
-    }
-
-    if (prefetchResult.isReady()) {
-      return std::move(prefetchResult).semi();
-    }
-
-    return std::move(prefetchResult).semi().via(serial);
+    return serialDetachIfBackgrounded(
+        std::move(prefetchResult), server_->getServer(), isBackground);
   } else {
     return detachIfBackgrounded(
                std::move(prefetchResult),
