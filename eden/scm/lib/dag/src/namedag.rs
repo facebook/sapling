@@ -15,6 +15,8 @@ use std::env::var;
 use std::fmt;
 use std::io;
 use std::ops::Deref;
+use std::sync::atomic::AtomicUsize;
+use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::sync::RwLock;
@@ -145,6 +147,16 @@ where
     /// A negative cache. Vertexes that are looked up remotely, and the remote
     /// confirmed the vertexes are outside the master group.
     missing_vertexes_confirmed_by_remote: Arc<RwLock<HashSet<VertexName>>>,
+
+    /// Internal stats (for testing).
+    pub(crate) internal_stats: DagInternalStats,
+}
+
+/// Statistics of dag internals. Useful to check if fast paths are used.
+#[derive(Debug, Default)]
+pub struct DagInternalStats {
+    /// Bumps when sort(set) takes O(set) slow path.
+    pub sort_slow_path_count: AtomicUsize,
 }
 
 impl<D, M, P, S> AbstractNameDag<D, M, P, S>
@@ -1219,6 +1231,7 @@ where
                     missing_vertexes_confirmed_by_remote: Arc::clone(
                         &self.missing_vertexes_confirmed_by_remote,
                     ),
+                    internal_stats: Default::default(),
                 };
                 let result = Arc::new(cloned);
                 *snapshot = Some(Arc::clone(&result));
@@ -1735,23 +1748,39 @@ where
             && matches!(hints.id_map_version(), Some(v) if v <= self.map_version())
         {
             tracing::debug!(target: "dag::algo::sort", "sort({:6?}) (fast path)", set);
-            Ok(set.clone())
-        } else {
-            tracing::warn!(target: "dag::algo::sort", "sort({:6?}) (slow path)", set);
-            let flags = extract_ancestor_flag_if_compatible(set.hints(), self.dag_version());
-            let mut spans = IdSet::empty();
-            let mut iter = set.iter().await?.chunks(1 << 17);
-            while let Some(names) = iter.next().await {
-                let names = names.into_iter().collect::<Result<Vec<_>>>()?;
-                let ids = self.vertex_id_batch(&names).await?;
-                for id in ids {
-                    spans.push(id?);
+            return Ok(set.clone());
+        } else if let Some(flat_set) = set.specialized_flatten_id() {
+            let dag_version = flat_set.dag.dag_version();
+            if dag_version <= self.dag_version() {
+                let mut flat_set = flat_set.into_owned();
+                if flat_set.is_reversed() {
+                    flat_set = flat_set.reversed();
                 }
+                flat_set.map = self.id_map_snapshot()?;
+                flat_set.dag = self.dag_snapshot()?;
+                tracing::debug!(target: "dag::algo::sort", "sort({:6?}) (fast path 2)", set);
+                return Ok(NameSet::from_query(flat_set));
+            } else {
+                tracing::info!(target: "dag::algo::sort", "sort({:6?}) (cannot use fast path 2 due to mismatched version)", set);
             }
-            let result = NameSet::from_spans_dag(spans, self)?;
-            result.hints().add_flags(flags);
-            Ok(result)
         }
+        tracing::warn!(target: "dag::algo::sort", "sort({:6?}) (slow path)", set);
+        self.internal_stats
+            .sort_slow_path_count
+            .fetch_add(1, Ordering::Release);
+        let flags = extract_ancestor_flag_if_compatible(set.hints(), self.dag_version());
+        let mut spans = IdSet::empty();
+        let mut iter = set.iter().await?.chunks(1 << 17);
+        while let Some(names) = iter.next().await {
+            let names = names.into_iter().collect::<Result<Vec<_>>>()?;
+            let ids = self.vertex_id_batch(&names).await?;
+            for id in ids {
+                spans.push(id?);
+            }
+        }
+        let result = NameSet::from_spans_dag(spans, self)?;
+        result.hints().add_flags(flags);
+        Ok(result)
     }
 
     /// Get ordered parent vertexes.

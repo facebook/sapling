@@ -230,6 +230,7 @@ impl IdStaticSet {
         self
     }
 
+    /// Returns true if this set is in ASC order; false if in DESC order.
     pub(crate) fn is_reversed(&self) -> bool {
         self.reversed
     }
@@ -574,6 +575,12 @@ pub(crate) mod tests {
                 .load(Acquire);
             assert_eq!(count1, count2, "union.count() should not use slow path");
 
+            // dag.sort(reversed2) should have a fast path.
+            let count1 = dag.internal_stats.sort_slow_path_count.load(Acquire);
+            let _ = r(dag.sort(&reversed2))?;
+            let count2 = dag.internal_stats.sort_slow_path_count.load(Acquire);
+            assert_eq!(count1, count2, "dag.sort() should not use slow path");
+
             // Show the debug format. This shows whether internal structure is flattened or not.
             assert_eq!(
                 wrap_dbg_lines(&reversed2),
@@ -734,6 +741,16 @@ pub(crate) mod tests {
                 assert_eq!(f(a1() & e()), "<empty>");
                 assert_eq!(f(a1() | e()), "<spans [A:G+0:6]>");
                 assert_eq!(f(a1() - e()), "<spans [A:G+0:6]>");
+
+                // dag.sort() has to use slow path for an incompatible set.
+                let count1 = dag1.internal_stats.sort_slow_path_count.load(Acquire);
+                let _ = r(dag1.sort(&abefg))?;
+                let count2 = dag1.internal_stats.sort_slow_path_count.load(Acquire);
+                assert_eq!(
+                    count1 + 1,
+                    count2,
+                    "dag.sort() should use slow path for incompatible set"
+                );
 
                 Ok(())
             })
