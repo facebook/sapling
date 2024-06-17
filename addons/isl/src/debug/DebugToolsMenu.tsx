@@ -19,6 +19,7 @@ import {Tooltip} from '../Tooltip';
 import {enableReactTools, enableReduxTools} from '../atoms/debugToolAtoms';
 import {holdingCtrlAtom} from '../atoms/keyboardAtoms';
 import {Badge} from '../components/Badge';
+import {Button} from '../components/Button';
 import {Checkbox} from '../components/Checkbox';
 import {DagCommitInfo} from '../dag/dagCommitInfo';
 import {useHeartbeat} from '../heartbeat';
@@ -41,7 +42,6 @@ import {isDev} from '../utils';
 import {ComponentExplorerButton} from './ComponentExplorer';
 import {readInterestingAtoms, serializeAtomsState} from './getInterestingAtoms';
 import * as stylex from '@stylexjs/stylex';
-import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {atom, useAtom, useAtomValue} from 'jotai';
 import {useState, useCallback, useEffect} from 'react';
 
@@ -109,38 +109,36 @@ function InternalState() {
             'Capture a snapshot of selected Jotai atom states, log it to the dev tools console.\n\n' +
               'Hold Ctrl to use serailzied JSON instead of Javascript objects.',
           )}>
-          <VSCodeButton onClick={generate} appearance="secondary">
+          <Button onClick={generate}>
             {needSerialize ? <T>Take Snapshot (JSON)</T> : <T>Take Snapshot (objects)</T>}
-          </VSCodeButton>
+          </Button>
         </Tooltip>
         <Tooltip
           placement="bottom"
           title={t(
             'Log persisted state (localStorage or vscode storage) to the dev tools console.',
           )}>
-          <VSCodeButton
+          <Button
             onClick={() => {
               console.log('persisted state:', platform.getAllPersistedState());
               showToast('logged persisted state to console!');
-            }}
-            appearance="secondary">
+            }}>
             <T>Log Persisted State</T>
-          </VSCodeButton>
+          </Button>
         </Tooltip>
         <Tooltip
           placement="bottom"
           title={t(
             'Clear any persisted state (localStorage or vscode storage). Usually only matters after restarting.',
           )}>
-          <VSCodeButton
+          <Button
             onClick={() => {
               platform.clearPersistedState();
               console.log('--- cleared isl persisted state ---');
               showToast('cleared persisted state');
-            }}
-            appearance="secondary">
+            }}>
             <T>Clear Persisted State</T>
-          </VSCodeButton>
+          </Button>
         </Tooltip>
       </Row>
       {isDev && (
@@ -321,7 +319,7 @@ function ForceDisconnectButton() {
     return null;
   }
   return (
-    <VSCodeButton
+    <Button
       onClick={() => forceDisconnect(duration)}
       onWheel={e => {
         // deltaY is usually -100 +100 per event.
@@ -332,10 +330,9 @@ function ForceDisconnectButton() {
         } else if (dy < 0) {
           setDuration(v => Math.min(v - dy * scale, 300000));
         }
-      }}
-      appearance="secondary">
+      }}>
       <T replace={{$sec: (duration / 1000).toFixed(1)}}>Force disconnect for $sec seconds</T>
-    </VSCodeButton>
+    </Button>
   );
 }
 
@@ -344,12 +341,11 @@ function NopOperationButtons() {
   return (
     <>
       {[2, 5, 10].map(durationSeconds => (
-        <VSCodeButton
+        <Button
           key={durationSeconds}
-          onClick={() => runOperation(new NopOperation(durationSeconds))}
-          appearance="secondary">
+          onClick={() => runOperation(new NopOperation(durationSeconds))}>
           <T replace={{$sec: durationSeconds}}>Nop $sec s</T>
-        </VSCodeButton>
+        </Button>
       ))}
     </>
   );
