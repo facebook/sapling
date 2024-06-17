@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
+import {Button} from '../components/Button';
 import {Icon} from 'shared/Icon';
 
 export function TokensList({
@@ -37,15 +37,15 @@ export function TokensList({
             }>
             {token}
             {onClickX == null ? null : (
-              <VSCodeButton
-                appearance="icon"
+              <Button
+                icon
                 data-testid="token-x"
                 onClick={e => {
                   onClickX?.(token);
                   e.stopPropagation();
                 }}>
                 <Icon icon="x" />
-              </VSCodeButton>
+              </Button>
             )}
           </span>
         ))}

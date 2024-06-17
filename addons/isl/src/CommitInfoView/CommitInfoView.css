@@ -310,7 +310,7 @@
   text-decoration: underline;
 }
 
-.commit-info-tokenized-field .token vscode-button {
+.commit-info-tokenized-field .token button {
   margin-right: calc(-1 * var(--pad));
 }
 

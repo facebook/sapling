@@ -37,6 +37,7 @@ import {
 import {submitAsDraft, SubmitAsDraftCheckbox} from '../codeReview/DraftCheckbox';
 import {overrideDisabledSubmitModes} from '../codeReview/github/branchPrState';
 import {Badge} from '../components/Badge';
+import {Button} from '../components/Button';
 import {Divider} from '../components/Divider';
 import GatedComponent from '../components/GatedComponent';
 import {RadioGroup} from '../components/Radio';
@@ -84,7 +85,6 @@ import {DiffStats, PendingDiffStats} from './DiffStats';
 import {FillCommitMessage} from './FillCommitMessage';
 import SplitSuggestion from './SplitSuggestion';
 import {CommitTitleByline, getFieldToAutofocus, Section, SmallCapsTitle} from './utils';
-import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import deepEqual from 'fast-deep-equal';
 import {useAtom, useAtomValue} from 'jotai';
 import {useAtomCallback} from 'jotai/utils';
@@ -399,8 +399,8 @@ function OpenAllFilesButton({commit}: {commit: CommitInfo}) {
           ? t('Open all non-generated files for editing')
           : t('Opens all files for editing.\nNote: All files are generated.')
       }>
-      <VSCodeButton
-        appearance="icon"
+      <Button
+        icon
         onClick={() => {
           tracker.track('OpenAllFiles');
           const statuses = getCachedGeneratedFileStatuses(
@@ -420,7 +420,7 @@ function OpenAllFilesButton({commit}: {commit: CommitInfo}) {
         ) : (
           <T>Open All Files</T>
         )}
-      </VSCodeButton>
+      </Button>
     </Tooltip>
   );
 }
@@ -520,14 +520,14 @@ function ShowingRemoteMessageBanner({
         icon={<Icon icon="info" />}
         alwaysShowButtons
         buttons={
-          <VSCodeButton
-            appearance="icon"
+          <Button
+            icon
             data-testid="message-sync-banner-context-menu"
             onClick={e => {
               contextMenu(e);
             }}>
             <Icon icon="ellipsis" />
-          </VSCodeButton>
+          </Button>
         }>
         <T replace={{$provider: provider.label}}>Showing latest commit message from $provider</T>
       </Banner>
@@ -540,12 +540,12 @@ function FoldPreviewActions() {
   return (
     <div className="commit-info-actions-bar" data-testid="commit-info-actions-bar">
       <div className="commit-info-actions-bar-right">
-        <VSCodeButton appearance="secondary" onClick={cancel}>
+        <Button onClick={cancel}>
           <T>Cancel</T>
-        </VSCodeButton>
-        <VSCodeButton appearance="primary" onClick={run}>
+        </Button>
+        <Button primary onClick={run}>
           <T>Run Combine</T>
-        </VSCodeButton>
+        </Button>
       </div>
     </div>
   );
@@ -668,9 +668,9 @@ function ActionsBar({
       </div>
       <div className="commit-info-actions-bar-right">
         {isAnythingBeingEdited && !isCommitMode ? (
-          <VSCodeButton appearance="secondary" onClick={() => clearEditedCommitMessage()}>
+          <Button onClick={() => clearEditedCommitMessage()}>
             <T>Cancel</T>
-          </VSCodeButton>
+          </Button>
         ) : null}
 
         {showCommitOrAmend ? (
