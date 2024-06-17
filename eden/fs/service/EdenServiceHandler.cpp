@@ -3260,6 +3260,23 @@ EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
                   std::string originHash =
                       mountHandle.getObjectStore().renderRootId(glob.rootId);
                   for (auto& entry : glob.globFiles) {
+                    if (!includeDotfiles) {
+                      bool skip_due_to_dotfile = false;
+                      auto rp = RelativePath(std::string_view{entry});
+                      for (auto component : rp.components()) {
+                        // Use facebook::eden string_view
+                        if (string_view{component.view()}.starts_with(".")) {
+                          XLOG(DBG4) << "Skipping dotfile: " << component.view()
+                                     << " in " << entry;
+                          skip_due_to_dotfile = true;
+                          break;
+                        }
+                      }
+                      if (skip_due_to_dotfile) {
+                        continue;
+                      }
+                    }
+
                     if (wantDtype) {
                       // TODO(T192408118) get the root tree a single time per
                       // glob instead of per-entry
@@ -3292,8 +3309,7 @@ EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
                                       << "Received a Tree when expecting TreeEntry for path "
                                       << entry;
                                 }
-                              })
-                              .ensure([entry] {}));
+                              }));
                     } else {
                       globEntryFuts.emplace_back(ImmediateFuture<GlobEntry>{
                           folly::Try<GlobEntry>{GlobEntry{

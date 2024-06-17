@@ -1093,6 +1093,27 @@ impl SaplingRemoteApi for EagerRepo {
                     let file_path = from_string.unwrap();
                     res.push(Ok(SuffixQueryResponse { file_path }));
                 }
+                ".dot" => {
+                    let from_string = RepoPathBuf::from_string("throw.dot".to_string());
+                    let file_path = from_string.unwrap();
+                    res.push(Ok(SuffixQueryResponse { file_path }));
+                    let from_string = RepoPathBuf::from_string(".more.dot".to_string());
+                    let file_path = from_string.unwrap();
+                    res.push(Ok(SuffixQueryResponse { file_path }));
+                    let from_string = RepoPathBuf::from_string(".stop.dot".to_string());
+                    let file_path = from_string.unwrap();
+                    res.push(Ok(SuffixQueryResponse { file_path }));
+                    let from_string = RepoPathBuf::from_string(".dps/very.dot".to_string());
+                    let file_path = from_string.unwrap();
+                    res.push(Ok(SuffixQueryResponse { file_path }));
+                    let from_string =
+                        RepoPathBuf::from_string("slowly/.and.by.slow.dot".to_string());
+                    let file_path = from_string.unwrap();
+                    res.push(Ok(SuffixQueryResponse { file_path }));
+                    let from_string = RepoPathBuf::from_string("i/.mean/slow.dot".to_string());
+                    let file_path = from_string.unwrap();
+                    res.push(Ok(SuffixQueryResponse { file_path }));
+                }
                 ".txt" => {
                     let from_string = RepoPathBuf::from_string("foo.txt".to_string());
                     let file_path = from_string.unwrap();
