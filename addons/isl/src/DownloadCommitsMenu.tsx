@@ -11,6 +11,7 @@ import {useCommandEvent} from './ISLShortcuts';
 import {Internal} from './Internal';
 import {Kbd} from './Kbd';
 import {Tooltip} from './Tooltip';
+import {Button} from './components/Button';
 import {Checkbox} from './components/Checkbox';
 import {Divider} from './components/Divider';
 import {TextField} from './components/TextField';
@@ -26,7 +27,6 @@ import {useRunOperation} from './operationsState';
 import {dagWithPreviews} from './previews';
 import {forceFetchCommit} from './serverAPIState';
 import {succeedableRevset, exactRevset} from './types';
-import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {useAtom} from 'jotai';
 import {useEffect, useRef, useState} from 'react';
 import {Icon} from 'shared/Icon';
@@ -51,9 +51,9 @@ export function DownloadCommitsTooltipButton() {
           </T>
         </div>
       }>
-      <VSCodeButton appearance="icon" data-testid="download-commits-tooltip-button">
+      <Button icon data-testid="download-commits-tooltip-button">
         <Icon icon="cloud-download" />
-      </VSCodeButton>
+      </Button>
     </Tooltip>
   );
 }
@@ -173,13 +173,12 @@ function DownloadCommitsTooltip({dismiss}: {dismiss: () => unknown}) {
             }}
             ref={downloadDiffTextArea}
           />
-          <VSCodeButton
-            appearance="secondary"
+          <Button
             data-testid="download-commit-button"
             disabled={enteredRevset.trim().length === 0}
             onClick={doCommitDownload}>
             <T>Pull</T>
-          </VSCodeButton>
+          </Button>
         </div>
         <div className="download-commits-input-row">
           <Tooltip title={t('After downloading this commit, also go there')}>

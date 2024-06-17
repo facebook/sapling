@@ -37,7 +37,6 @@ import {readAtom} from './jotaiUtils';
 import {latestDag} from './serverAPIState';
 import {spacing} from './tokens.stylex';
 import * as stylex from '@stylexjs/stylex';
-import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {atom, useAtom, useAtomValue} from 'jotai';
 import React, {useState} from 'react';
 import {Icon} from 'shared/Icon';
@@ -80,9 +79,9 @@ export function BookmarksManagerMenu() {
         </T>
       }
       additionalToggles={additionalToggles}>
-      <VSCodeButton appearance="icon" data-testid="bookmarks-manager-button">
+      <Button icon data-testid="bookmarks-manager-button">
         <Icon icon="bookmark" />
-      </VSCodeButton>
+      </Button>
     </Tooltip>
   );
 }

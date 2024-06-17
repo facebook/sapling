@@ -13,6 +13,7 @@ import {Delayed} from './Delayed';
 import {Subtle} from './Subtle';
 import {Tooltip} from './Tooltip';
 import {codeReviewProvider} from './codeReview/CodeReviewInfo';
+import {Button} from './components/Button';
 import {T, t} from './i18n';
 import {
   EXIT_CODE_FORGET,
@@ -24,7 +25,6 @@ import {repositoryInfo} from './serverAPIState';
 import {processTerminalLines} from './terminalOutput';
 import {CommandRunner} from './types';
 import {short} from './utils';
-import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {useAtomValue} from 'jotai';
 import {Icon} from 'shared/Icon';
 import './CommandHistoryAndProgress.css';
@@ -127,8 +127,7 @@ export function CommandHistoryAndProgress() {
     const hideUntil = new Date((progress.startTime?.getTime() || 0) + slowThreshold);
     abort = (
       <Delayed hideUntil={hideUntil}>
-        <VSCodeButton
-          appearance="secondary"
+        <Button
           data-testid="abort-button"
           disabled={progress.aborting}
           onClick={() => {
@@ -136,7 +135,7 @@ export function CommandHistoryAndProgress() {
           }}>
           <Icon slot="start" icon={progress.aborting ? 'loading' : 'stop-circle'} />
           <T>Abort</T>
-        </VSCodeButton>
+        </Button>
       </Delayed>
     );
   } else if (progress.exitCode === 0) {
