@@ -58,7 +58,7 @@ cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimen
 changesets = { version = "0.1.0", path = "changesets" }
 check_git_wc = { version = "0.1.0", path = "git/check_git_wc" }
 clap = { version = "4.5.6", features = ["derive", "env", "string", "unicode", "wrap_help"] }
-clap-old = { package = "clap", version = "2.34.0" }
+clap_old = { package = "clap", version = "2.34.0" }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 cmdlib = { version = "0.1.0", path = "cmdlib" }
 cmdlib_logging = { version = "0.1.0", path = "cmdlib/log" }
@@ -68,8 +68,8 @@ facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust
 failure_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
-futures-old = { package = "futures", version = "0.1.31" }
 futures-util = "0.3.30"
+futures_old = { package = "futures", version = "0.1.31" }
 git2 = "0.14"
 lock_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 mercurial_derivation = { version = "0.1.0", path = "derived_data/mercurial_derivation" }
