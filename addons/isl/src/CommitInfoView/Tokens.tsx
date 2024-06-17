@@ -63,7 +63,7 @@ export function extractTokens(raw: string): [Array<string>, string] {
   const remaining = tokens.length === 0 ? raw : tokens.pop();
   return [
     deduplicate(tokens.map(token => token.trim())).filter(token => token !== ''),
-    remaining ?? '',
+    remaining?.trimStart() ?? '',
   ];
 }
 
