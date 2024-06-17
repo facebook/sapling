@@ -466,7 +466,7 @@ impl Client {
     pub(crate) async fn fetch_trees(
         &self,
         keys: Vec<Key>,
-        mut attributes: Option<TreeAttributes>,
+        attributes: Option<TreeAttributes>,
     ) -> Result<Response<Result<TreeEntry, SaplingRemoteApiServerError>>, SaplingRemoteApiError>
     {
         tracing::info!("Requesting fetching of {} tree(s)", keys.len());
@@ -477,13 +477,14 @@ impl Client {
 
         let url = self.build_url(paths::TREES)?;
 
-        // Request trees served by the new Augmented Manifest format if the arributes are either not set or at least the manifest blob is requested.
-        // We don't care if parents or metadata are requested since the augmented trees will always provide them.
-        if self.config().augmented_trees
-            && (attributes.is_none() || attributes.as_ref().unwrap().manifest_blob)
-        {
-            attributes = Some(TreeAttributes::augmented_trees())
-        }
+        let mut attrs = attributes.clone().unwrap_or_default();
+        // Inject augmented trees attribute if configured.
+        attrs = TreeAttributes {
+            manifest_blob: attrs.manifest_blob,
+            parents: attrs.parents,
+            child_metadata: attrs.child_metadata,
+            augmented_trees: attrs.augmented_trees || self.config().augmented_trees,
+        };
 
         let try_route_consistently = self.config().try_route_consistently;
         let min_batch_size: Option<usize> = self.config().min_batch_size;
@@ -496,7 +497,7 @@ impl Client {
             |keys| {
                 let req = TreeRequest {
                     keys,
-                    attributes: attributes.clone().unwrap_or_default(),
+                    attributes: attrs,
                 };
                 self.log_request(&req, "trees");
                 req
