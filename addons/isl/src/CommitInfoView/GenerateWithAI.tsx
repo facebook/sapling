@@ -13,6 +13,7 @@ import {ErrorNotice} from '../ErrorNotice';
 import {Internal} from '../Internal';
 import {Tooltip} from '../Tooltip';
 import {tracker} from '../analytics';
+import {TextArea} from '../components/TextArea';
 import {useFeatureFlagSync} from '../featureFlags';
 import {T, t} from '../i18n';
 import {atomFamilyWeak, atomLoadableWithRefresh, readAtom} from '../jotaiUtils';
@@ -23,7 +24,7 @@ import {
   commitMode,
   latestCommitMessageFieldsWithEdits,
 } from './CommitInfoState';
-import {VSCodeButton, VSCodeTextArea} from '@vscode/webview-ui-toolkit/react';
+import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {atom, useAtom, useAtomValue, useSetAtom} from 'jotai';
 import {useCallback} from 'react';
 import {ComparisonType} from 'shared/Comparison';
@@ -214,7 +215,7 @@ function GenerateAICommitMessageModal({
         <ErrorNotice error={error} title={t('Unable to generate commit message')}></ErrorNotice>
       ) : (
         <div className="generated-message-textarea-container">
-          <VSCodeTextArea
+          <TextArea
             readOnly
             value={content.state === 'hasData' ? content.data.value ?? '' : ''}
             rows={14}
