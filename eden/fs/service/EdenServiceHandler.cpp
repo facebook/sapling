@@ -3413,20 +3413,12 @@ EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
        params = std::move(params),
        suffixGlobRequestScope = std::move(suffixGlobRequestScope)] {});
 
-  globFut = detachIfBackgrounded<Glob>(
-      std::move(globFut), server_->getServerState(), isBackground);
-
-  if (globFut.isReady()) {
-    return std::move(globFut).semi();
-  }
-
   // The glob code has a very large fan-out that can easily overload the Thrift
   // CPU worker pool. To combat with that, we limit the execution to a single
   // thread by using `folly::SerialExecutor` so the glob queries will not
   // overload the executor.
-  auto serial = folly::SerialExecutor::create(
-      server_->getServer()->getThreadManager().get());
-  return std::move(globFut).semi().via(serial);
+  return serialDetachIfBackgrounded<Glob>(
+      std::move(globFut), server_->getServer(), isBackground);
 }
 
 // DEPRECATED. Use semifuture_prefetchFilesV2 instead.
