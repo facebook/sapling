@@ -51,6 +51,7 @@ export const TextField = forwardRef(
       xstyle?: stylex.StyleXStyles;
       value?: string;
       width?: string;
+      placeholder?: string;
     } & ReactProps<HTMLInputElement>,
     ref: ForwardedRef<HTMLInputElement>,
   ) => {
