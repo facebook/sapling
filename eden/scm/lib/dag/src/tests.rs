@@ -53,6 +53,9 @@ mod test_discontinuous;
 mod test_server;
 
 #[cfg(test)]
+mod test_virtual;
+
+#[cfg(test)]
 pub mod dummy_dag;
 
 #[cfg(test)]

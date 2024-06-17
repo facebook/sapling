@@ -106,7 +106,8 @@ where
     /// Lazily calculated.
     snapshot: RwLock<Option<Arc<Self>>>,
 
-    /// Heads added via `add_heads` that are not flushed yet.
+    /// Non-virtual heads added via `add_heads` that are not flushed yet.
+    /// They can be flushed by `flush()`.
     pending_heads: VertexListWithOptions,
 
     /// Path used to open this `NameDag`.
@@ -436,8 +437,6 @@ where
         //   is nothing outisde the MASTER group.
         // - desired_group = NON_MASTER for all heads. This is used by Sapling client.
         //   It might use desired_group = MASTER on add_heads_and_flush, but not here.
-        //
-        // In the future, desired_group might be VIRTUAL and needs special care.
 
         // Performance-wise, add_heads + flush is slower than
         // add_heads_and_flush.
@@ -485,7 +484,9 @@ where
                     let low = self.map.vertex_id(head.clone()).await? + 1;
                     update_reserved(&mut reserved, &covered, low, opts.reserve_size);
                 }
-                self.pending_heads.push((head, opts));
+                if group != Group::VIRTUAL {
+                    self.pending_heads.push((head, opts));
+                }
             }
         }
 
