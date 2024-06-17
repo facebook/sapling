@@ -10,6 +10,7 @@ import type {CommitInfo, ExactRevset, Hash, SucceedableRevset} from './types';
 
 import {Subtle} from './Subtle';
 import {tracker} from './analytics';
+import {Button} from './components/Button';
 import {findPublicBaseAncestor} from './getCommitTree';
 import {T, t} from './i18n';
 import {atomFamilyWeak, readAtom} from './jotaiUtils';
@@ -21,7 +22,6 @@ import {dagWithPreviews} from './previews';
 import {RelativeDate} from './relativeDate';
 import {commitsShownRange, latestDag} from './serverAPIState';
 import {succeedableRevset} from './types';
-import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {atom} from 'jotai';
 import {useContextMenu} from 'shared/ContextMenu';
 import {Icon} from 'shared/Icon';
@@ -140,7 +140,7 @@ export function SuggestedRebaseButton({
     );
   });
   return (
-    <VSCodeButton appearance={isBulk ? 'secondary' : 'icon'} onClick={showContextMenu}>
+    <Button icon={!isBulk} onClick={showContextMenu}>
       <Icon icon="git-pull-request" slot="start" />
       {isAllDraftCommits ? (
         <T>Rebase all onto&hellip;</T>
@@ -149,7 +149,7 @@ export function SuggestedRebaseButton({
       ) : (
         <T>Rebase onto&hellip;</T>
       )}
-    </VSCodeButton>
+    </Button>
   );
 }
 

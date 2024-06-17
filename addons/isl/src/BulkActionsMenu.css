@@ -5,6 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-.bulk-actions-dropdown vscode-button {
+.bulk-actions-dropdown vscode-button,
+.bulk-actions-dropdown button {
   min-width: 250px;
+  justify-content: center;
 }
