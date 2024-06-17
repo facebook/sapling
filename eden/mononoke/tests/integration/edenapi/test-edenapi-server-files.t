@@ -50,4 +50,5 @@ Check files in response.
                       "parents": None,
                       "aux_data": {"sha1": bin("4fe2b8dd12cd9cd6a413ea960cd8c09c25f19527"),
                                    "blake3": bin("7e9a0ce0d68016f0502ac50ff401830c7e2e9c894b43b242439f90f99af8835a"),
-                                   "total_size": 13}}}}]
+                                   "total_size": 13,
+                                   "file_header_metadata": None}}}}]

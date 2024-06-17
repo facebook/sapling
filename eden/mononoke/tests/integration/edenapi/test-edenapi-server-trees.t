@@ -56,7 +56,9 @@ Create and send tree request.
                                                     "content_id": bin("0000000000000000000000000000000000000000000000000000000000000000"),
                                                     "content_sha1": bin("4fe2b8dd12cd9cd6a413ea960cd8c09c25f19527"),
                                                     "content_blake3": bin("7e9a0ce0d68016f0502ac50ff401830c7e2e9c894b43b242439f90f99af8835a"),
-                                                    "content_sha256": bin("0000000000000000000000000000000000000000000000000000000000000000")}}}}]},
+                                                    "content_sha256": bin("0000000000000000000000000000000000000000000000000000000000000000"),
+                                                    "file_header_metadata": None}}}}],
+    "directory_metadata": None},
    {"key": {"node": bin("c8743b14e0789cc546125213c18a18d813862db5"),
             "path": ""},
     "data": b"copy.txt\017b8d4e3bafd4ec4812ad7c930aace9bf07ab033\ntest.txt\0186cafa3319c24956783383dc44c5cbc68c5a0ca\n",
@@ -67,14 +69,17 @@ Create and send tree request.
                                                     "content_id": bin("0000000000000000000000000000000000000000000000000000000000000000"),
                                                     "content_sha1": bin("4fe2b8dd12cd9cd6a413ea960cd8c09c25f19527"),
                                                     "content_blake3": bin("7e9a0ce0d68016f0502ac50ff401830c7e2e9c894b43b242439f90f99af8835a"),
-                                                    "content_sha256": bin("0000000000000000000000000000000000000000000000000000000000000000")}}}},
+                                                    "content_sha256": bin("0000000000000000000000000000000000000000000000000000000000000000"),
+                                                    "file_header_metadata": None}}}},
                  {"Ok": {"File": {"key": {"node": bin("186cafa3319c24956783383dc44c5cbc68c5a0ca"),
                                           "path": "test.txt"},
                                   "file_metadata": {"size": 13,
                                                     "content_id": bin("0000000000000000000000000000000000000000000000000000000000000000"),
                                                     "content_sha1": bin("4fe2b8dd12cd9cd6a413ea960cd8c09c25f19527"),
                                                     "content_blake3": bin("7e9a0ce0d68016f0502ac50ff401830c7e2e9c894b43b242439f90f99af8835a"),
-                                                    "content_sha256": bin("0000000000000000000000000000000000000000000000000000000000000000")}}}}]}]
+                                                    "content_sha256": bin("0000000000000000000000000000000000000000000000000000000000000000"),
+                                                    "file_header_metadata": None}}}}],
+    "directory_metadata": None}]
 
   $ cat > attrs << EOF
   > {
@@ -86,4 +91,4 @@ Create and send tree request.
   > EOF
 
   $ hgedenapi debugapi -e trees -f keys -f attrs --sort 2>&1 | grep 'internal error: Blob is missing'
-      0: internal error: Blob is missing: hgaugmentedmanifest.sha1.15024c4dc4a27b572d623db342ae6a08d7f7adec
+      0: internal error: Blob is missing: * (glob)
