@@ -786,6 +786,7 @@ impl RepoFactory {
     pub async fn repo_stats_logger(
         &self,
         repo_identity: &ArcRepoIdentity,
+        repo_config: &ArcRepoConfig,
         bookmarks: &ArcBookmarks,
         repo_blobstore: &ArcRepoBlobstore,
         repo_derived_data: &ArcRepoDerivedData,
@@ -795,6 +796,7 @@ impl RepoFactory {
                 self.env.fb,
                 self.env.logger.clone(),
                 repo_identity.name().to_string(),
+                repo_config.clone(),
                 bookmarks.clone(),
                 repo_blobstore.clone(),
                 repo_derived_data.clone(),

@@ -18,6 +18,7 @@ rust_library(
         "//eden/mononoke/blobstore:blobstore",
         "//eden/mononoke/bookmarks:bookmarks",
         "//eden/mononoke/derived_data:fsnodes",
+        "//eden/mononoke/metaconfig:metaconfig_types",
         "//eden/mononoke/mononoke_types:mononoke_types",
         "//eden/mononoke/repo_attributes/repo_derived_data:repo_derived_data",
         "//eden/mononoke/server/context:context",

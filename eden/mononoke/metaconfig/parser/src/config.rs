@@ -227,6 +227,8 @@ fn parse_with_repo_definition(
         git_concurrency,
         metadata_logger_config,
         zelos_config,
+        bookmark_name_for_objects_count,
+        default_objects_count,
         ..
     } = named_repo_config;
 
@@ -391,6 +393,8 @@ fn parse_with_repo_definition(
         git_concurrency,
         metadata_logger_config,
         zelos_config,
+        bookmark_name_for_objects_count,
+        default_objects_count,
     })
 }
 
@@ -938,7 +942,7 @@ mod test {
             [metadata_logger_config]
             bookmarks = ["master", "release"]
             sleep_interval_secs = 100
-            
+
             [deep_sharding_config.status]
         "#;
         let fbsource_repo_def = r#"
@@ -1348,6 +1352,8 @@ mod test {
                     sleep_interval_secs: 100,
                 },
                 zelos_config: None,
+                bookmark_name_for_objects_count: None,
+                default_objects_count: None,
             },
         );
 
@@ -1426,6 +1432,8 @@ mod test {
                 git_concurrency: None,
                 metadata_logger_config: MetadataLoggerConfig::default(),
                 zelos_config: None,
+                bookmark_name_for_objects_count: None,
+                default_objects_count: None,
             },
         );
         assert_eq!(

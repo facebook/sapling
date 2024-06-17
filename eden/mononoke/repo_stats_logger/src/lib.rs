@@ -18,8 +18,10 @@ use fbinit::FacebookInit;
 use fsnodes::RootFsnodeId;
 use futures::future::abortable;
 use futures::future::AbortHandle;
+use metaconfig_types::ArcRepoConfig;
 use mononoke_types::ChangesetId;
 use repo_derived_data::ArcRepoDerivedData;
+use slog::info;
 use slog::warn;
 use slog::Logger;
 use stats::define_stats;
@@ -43,36 +45,40 @@ impl RepoStatsLogger {
         fb: FacebookInit,
         logger: Logger,
         repo_name: String,
+        repo_config: ArcRepoConfig,
         bookmarks: ArcBookmarks,
         repo_blobstore: Arc<dyn Blobstore>,
         repo_derived_data: ArcRepoDerivedData,
     ) -> Result<Self, Error> {
         let ctx = CoreContext::new_for_bulk_processing(fb, logger.clone());
 
-        // XXX Not all repos have a master bookmark. Make it configurable?
-        let master = BookmarkKey::new("master")?;
-
         let fut = async move {
             loop {
                 let interval = Duration::from_secs(60);
                 tokio::time::sleep(interval).await;
 
+                let repo_config = repo_config.clone();
                 if justknobs::eval("scm/mononoke:scs_enable_repo_stats_logger", None, None)
                     .unwrap_or(false)
                 {
-                    let default_repo_object_count = justknobs::get_as::<i64>(
-                        "scm/mononoke:scs_default_repo_objects_count",
-                        None,
-                    )
-                    .unwrap_or(DEFAULT_REPO_OBJECTS_COUNT);
+                    let bookmark_name =
+                        get_repo_bookmark_name(repo_config.clone()).expect("invalid bookmark name");
+                    let default_repo_objects_count = get_repo_default_objects_count(repo_config);
+                    info!(
+                        ctx.logger(),
+                        "repo {} bookmark {} default_repo_objects_count {}",
+                        repo_name,
+                        bookmark_name,
+                        default_repo_objects_count
+                    );
 
                     match Self::get_repo_objects_count(
                         &ctx,
-                        &master,
+                        &bookmark_name,
                         bookmarks.clone(),
                         repo_blobstore.clone(),
                         repo_derived_data.clone(),
-                        default_repo_object_count,
+                        default_repo_objects_count,
                     )
                     .await
                     {
@@ -101,13 +107,13 @@ impl RepoStatsLogger {
 
     async fn get_repo_objects_count(
         ctx: &CoreContext,
-        master: &BookmarkKey,
+        bookmark_name: &BookmarkKey,
         bookmarks: ArcBookmarks,
         repo_blobstore: Arc<dyn Blobstore>,
         repo_derived_data: ArcRepoDerivedData,
         default_repo_object_count: i64,
     ) -> Result<i64, Error> {
-        let maybe_bookmark = bookmarks.get(ctx.clone(), master).await?;
+        let maybe_bookmark = bookmarks.get(ctx.clone(), bookmark_name).await?;
         if let Some(cs_id) = maybe_bookmark {
             Self::get_descendant_count(
                 ctx,
@@ -143,6 +149,26 @@ impl RepoStatsLogger {
             abort_handle: AbortHandle::new_pair().0,
         }
     }
+}
+
+fn get_repo_bookmark_name(
+    repo_config: Arc<metaconfig_types::RepoConfig>,
+) -> Result<BookmarkKey, Error> {
+    let bookmark_name = repo_config
+        .bookmark_name_for_objects_count
+        .clone()
+        .unwrap_or("master".to_string());
+    BookmarkKey::new(bookmark_name)
+}
+
+fn get_repo_default_objects_count(repo_config: Arc<metaconfig_types::RepoConfig>) -> i64 {
+    let default_repo_object_count =
+        justknobs::get_as::<i64>("scm/mononoke:scs_default_repo_objects_count", None)
+            .unwrap_or(DEFAULT_REPO_OBJECTS_COUNT);
+    repo_config
+        .default_objects_count
+        .clone()
+        .unwrap_or(default_repo_object_count)
 }
 
 impl Drop for RepoStatsLogger {
