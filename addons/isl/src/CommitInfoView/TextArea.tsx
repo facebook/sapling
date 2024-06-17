@@ -21,6 +21,10 @@ import {GenerateAICommitMessageButton} from './GenerateWithAI';
 import {MinHeightTextField} from './MinHeightTextField';
 import {useRef, useEffect} from 'react';
 
+function moveCursorToEnd(element: HTMLTextAreaElement) {
+  element.setSelectionRange(element.value.length, element.value.length);
+}
+
 export function CommitInfoTextArea({
   kind,
   fieldConfig,
@@ -39,7 +43,8 @@ export function CommitInfoTextArea({
   const ref = useRef<HTMLTextAreaElement>(null);
   useEffect(() => {
     if (ref.current && autoFocus) {
-      ref.current?.focus();
+      ref.current.focus();
+      moveCursorToEnd(ref.current);
     }
   }, [autoFocus, ref]);
   const Component = kind === 'field' || kind === 'title' ? MinHeightTextField : TextArea;
