@@ -181,7 +181,9 @@ impl IdMapWrite for MemIdMap {
         Ok(())
     }
     async fn remove_range(&mut self, low: Id, high: Id) -> Result<Vec<VertexName>> {
-        self.map_version = VerLink::new();
+        if !(low.is_virtual() && high.is_virtual()) {
+            self.map_version = VerLink::new();
+        }
         self.core.remove_range(low, high)
     }
 }

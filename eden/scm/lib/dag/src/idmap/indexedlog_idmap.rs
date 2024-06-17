@@ -350,14 +350,14 @@ impl IdMap {
             // will handle it.
             let data = encode_deletion_entry(&items);
             self.log.append(data)?;
+            // New map is not an "append-only" version of the previous map.
+            // Re-create the VerLink to mark it as incompatible.
+            self.map_version = VerLink::new();
         }
         // Step 3: Remove entries in the virutal_map.
         if high.is_virtual() {
             names.extend(self.virtual_map.remove_range(low, high)?);
         }
-        // New map is not an "append-only" version of the previous map.
-        // Re-create the VerLink to mark it as incompatible.
-        self.map_version = VerLink::new();
         Ok(names)
     }
 

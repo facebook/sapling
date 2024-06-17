@@ -1930,7 +1930,17 @@ impl<Store: IdDagStore> IdDag<Store> {
         }
 
         // strip() is not an append-only change. Use an incompatible version.
-        self.version = VerLink::new();
+        // However, if it's just for the VIRTUAL group, then do not bump version.
+        let need_version_bump = match (
+            set.min().map(|id| id.group()),
+            set.max().map(|id| id.group()),
+        ) {
+            (Some(Group::VIRTUAL), Some(Group::VIRTUAL)) => false,
+            _ => true,
+        };
+        if need_version_bump {
+            self.version = VerLink::new();
+        }
 
         Ok(set)
     }
