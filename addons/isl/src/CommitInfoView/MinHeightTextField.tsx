@@ -9,11 +9,19 @@ import type {TextAreaProps} from '../components/TextArea';
 
 import {TextArea} from '../components/TextArea';
 import {assert} from '../utils';
+import * as stylex from '@stylexjs/stylex';
 import {forwardRef, type ForwardedRef, useEffect} from 'react';
 
+const styles = stylex.create({
+  minHeight: {
+    overflow: 'hidden',
+    minHeight: '26px',
+  },
+});
+
 /**
- * Wrap `VSCodeTextArea` to auto-resize to minimum height and optionally disallow newlines.
- * Like a `VSCodeTextField` that has text wrap inside.
+ * Wrap `TextArea` to auto-resize to minimum height and optionally disallow newlines.
+ * Like a `TextField` that has text wrap inside.
  */
 export const MinHeightTextField = forwardRef(
   (
@@ -30,20 +38,18 @@ export const MinHeightTextField = forwardRef(
 
     // whenever the value is changed, recompute & apply the minimum height
     useEffect(() => {
-      const current = ref?.current;
-      // height must be applied to textarea INSIDE shadowRoot of the VSCodeTextArea
-      const innerTextArea = current?.shadowRoot?.querySelector('textarea');
-      if (innerTextArea) {
+      const textarea = ref?.current;
+      if (textarea) {
         const resize = () => {
-          innerTextArea.style.height = '';
-          const scrollheight = innerTextArea.scrollHeight;
-          innerTextArea.style.height = `${scrollheight}px`;
-          innerTextArea.rows = 1;
+          textarea.style.height = '';
+          const scrollheight = textarea.scrollHeight;
+          textarea.style.height = `${scrollheight}px`;
+          textarea.rows = 1;
         };
         resize();
         const obs = new ResizeObserver(resize);
-        obs.observe(innerTextArea);
-        return () => obs.unobserve(innerTextArea);
+        obs.observe(textarea);
+        return () => obs.unobserve(textarea);
       }
     }, [props.value, ref]);
 
@@ -51,7 +57,7 @@ export const MinHeightTextField = forwardRef(
       <TextArea
         ref={ref}
         {...rest}
-        className={`min-height-text-area${rest.className ? ' ' + rest.className : ''}`}
+        xstyle={styles.minHeight}
         onInput={e => {
           const newValue = e.currentTarget?.value;
           const result = keepNewlines

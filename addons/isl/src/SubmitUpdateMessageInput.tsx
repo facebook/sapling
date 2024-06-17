@@ -11,8 +11,15 @@ import {diffUpdateMessagesState} from './CommitInfoView/CommitInfoState';
 import {MinHeightTextField} from './CommitInfoView/MinHeightTextField';
 import {codeReviewProvider} from './codeReview/CodeReviewInfo';
 import {T} from './i18n';
+import * as stylex from '@stylexjs/stylex';
 import {useAtom, useAtomValue} from 'jotai';
 import {useRef} from 'react';
+
+const styles = stylex.create({
+  full: {
+    width: '100%',
+  },
+});
 
 export function multiSubmitUpdateMessage(commits: Array<CommitInfo>) {
   // Combine hashes to key the typed update message.
@@ -37,9 +44,9 @@ export function SubmitUpdateMessageInput({commits}: {commits: Array<CommitInfo>}
     <MinHeightTextField
       ref={ref}
       keepNewlines
-      style={{width: '100%'}}
+      xstyle={styles.full}
       value={message}
-      onInput={(e: KeyboardEvent) => setMessage((e.target as HTMLInputElement).value)}>
+      onInput={e => setMessage(e.currentTarget.value)}>
       <T>Update Message</T>
     </MinHeightTextField>
   );
