@@ -317,26 +317,26 @@ export function ChangedFiles(props: {
             hasAdditionalPages ? (
               <div className="changed-files-pages-buttons">
                 <Tooltip title={t('See previous page of files')}>
-                  <VSCodeButton
+                  <Button
                     data-testid="changed-files-previous-page"
-                    appearance="icon"
+                    icon
                     disabled={pageNum === 0}
                     onClick={() => {
                       setPageNum(old => old - 1);
                     }}>
                     <Icon icon="arrow-left" />
-                  </VSCodeButton>
+                  </Button>
                 </Tooltip>
                 <Tooltip title={t('See next page of files')}>
-                  <VSCodeButton
+                  <Button
                     data-testid="changed-files-next-page"
-                    appearance="icon"
+                    icon
                     disabled={isLastPage}
                     onClick={() => {
                       setPageNum(old => old + 1);
                     }}>
                     <Icon icon="arrow-right" />
-                  </VSCodeButton>
+                  </Button>
                 </Tooltip>
               </div>
             ) : null
@@ -541,8 +541,8 @@ export function UncommittedChanges({place}: {place: Place}) {
     <Tooltip
       delayMs={DOCUMENTATION_DELAY}
       title={t('Add all untracked files and remove all missing files.')}>
-      <VSCodeButton
-        appearance="icon"
+      <Button
+        icon
         key="addremove"
         data-testid="addremove-button"
         onClick={() => {
@@ -557,7 +557,7 @@ export function UncommittedChanges({place}: {place: Place}) {
         }}>
         <Icon slot="start" icon="expand-all" />
         <T>Add/Remove</T>
-      </VSCodeButton>
+      </Button>
     </Tooltip>
   ) : null;
 
@@ -605,8 +605,8 @@ export function UncommittedChanges({place}: {place: Place}) {
                     : ComparisonType.UncommittedChanges,
               }}
             />
-            <VSCodeButton
-              appearance="icon"
+            <Button
+              icon
               key="select-all"
               disabled={allFilesSelected}
               onClick={() => {
@@ -614,9 +614,9 @@ export function UncommittedChanges({place}: {place: Place}) {
               }}>
               <Icon slot="start" icon="check-all" />
               <T>Select All</T>
-            </VSCodeButton>
-            <VSCodeButton
-              appearance="icon"
+            </Button>
+            <Button
+              icon
               key="deselect-all"
               data-testid="deselect-all-button"
               disabled={noFilesSelected}
@@ -625,15 +625,15 @@ export function UncommittedChanges({place}: {place: Place}) {
               }}>
               <Icon slot="start" icon="close-all" />
               <T>Deselect All</T>
-            </VSCodeButton>
+            </Button>
             {addremoveButton}
             <Tooltip
               delayMs={DOCUMENTATION_DELAY}
               title={t(
                 'Discard selected uncommitted changes, including untracked files.\n\nNote: Changes will be irreversibly lost.',
               )}>
-              <VSCodeButton
-                appearance="icon"
+              <Button
+                icon
                 disabled={noFilesSelected}
                 data-testid={'discard-all-selected-button'}
                 onClick={() => {
@@ -685,7 +685,7 @@ export function UncommittedChanges({place}: {place: Place}) {
                 }}>
                 <Icon slot="start" icon="trashcan" />
                 <T>Discard</T>
-              </VSCodeButton>
+              </Button>
             </Tooltip>
           </>
         )}
@@ -720,14 +720,14 @@ export function UncommittedChanges({place}: {place: Place}) {
           </GatedComponent>
           <div className="button-row">
             <span className="quick-commit-inputs">
-              <VSCodeButton
-                appearance="icon"
+              <Button
+                icon
                 disabled={noFilesSelected}
                 data-testid="quick-commit-button"
                 onClick={onConfirmQuickCommit}>
                 <Icon slot="start" icon="plus" />
                 <T>Commit</T>
-              </VSCodeButton>
+              </Button>
               <TextField
                 data-testid="quick-commit-title"
                 placeholder="Title"
@@ -739,33 +739,33 @@ export function UncommittedChanges({place}: {place: Place}) {
                 }}
               />
             </span>
-            <VSCodeButton
-              appearance="icon"
+            <Button
+              icon
               className="show-on-hover"
               onClick={() => {
                 openCommitForm('commit');
               }}>
               <Icon slot="start" icon="edit" />
               <T>Commit as...</T>
-            </VSCodeButton>
+            </Button>
             <Tooltip
               title={t(
                 'Save selected uncommitted changes for later unshelving. Removes these changes from the working copy.',
               )}>
-              <VSCodeButton
+              <Button
                 disabled={noFilesSelected || hasChunkSelection}
-                appearance="icon"
+                icon
                 className="show-on-hover"
                 onClick={onShelve}>
                 <Icon slot="start" icon="archive" />
                 <T>Shelve</T>
-              </VSCodeButton>
+              </Button>
             </Tooltip>
           </div>
           {canAmend && (
             <div className="button-row">
-              <VSCodeButton
-                appearance="icon"
+              <Button
+                icon
                 disabled={noFilesSelected || !headCommit}
                 data-testid="uncommitted-changes-quick-amend-button"
                 onClick={async () => {
@@ -787,16 +787,16 @@ export function UncommittedChanges({place}: {place: Place}) {
                 }}>
                 <Icon slot="start" icon="debug-step-into" />
                 <T>Amend</T>
-              </VSCodeButton>
-              <VSCodeButton
-                appearance="icon"
+              </Button>
+              <Button
+                icon
                 className="show-on-hover"
                 onClick={() => {
                   openCommitForm('amend');
                 }}>
                 <Icon slot="start" icon="edit" />
                 <T>Amend as...</T>
-              </VSCodeButton>
+              </Button>
             </div>
           )}
         </div>
