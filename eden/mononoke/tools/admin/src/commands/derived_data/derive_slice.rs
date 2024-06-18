@@ -147,17 +147,25 @@ async fn inner_derive_slice(
                     .collect::<Vec<_>>()
                     .await;
 
-                let (derive_segment_stats, _) = derived_utils
-                    .derive_exactly_batch(ctx.clone(), repo_derived_data.clone(), segment_cs_ids)
-                    .try_timed()
-                    .await?;
+                let mut derive_segment_completion_time = std::time::Duration::from_millis(0);
+                for chunk in segment_cs_ids.chunks(20) {
+                    let (derive_batch_stats, _) = derived_utils
+                        .derive_exactly_batch(
+                            ctx.clone(),
+                            repo_derived_data.clone(),
+                            chunk.to_vec(),
+                        )
+                        .try_timed()
+                        .await?;
+                    derive_segment_completion_time += derive_batch_stats.completion_time;
+                }
 
                 debug!(
                     ctx.logger(),
                     "derived segment from {} to {} in {}ms",
                     segment.base,
                     segment.head,
-                    derive_segment_stats.completion_time.as_millis(),
+                    derive_segment_completion_time.as_millis(),
                 );
 
                 Ok(())
