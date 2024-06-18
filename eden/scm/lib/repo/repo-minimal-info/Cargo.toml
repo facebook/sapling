@@ -8,6 +8,7 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.75"
 fs-err = { version = "2.6.0", features = ["tokio"] }
+gitcompat = { version = "0.1.0", path = "../../gitcompat" }
 identity = { version = "0.1.0", path = "../../identity" }
 phf = { version = "0.11", features = ["macros"] }
 util = { version = "0.1.0", path = "../../util" }

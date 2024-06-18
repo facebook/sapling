@@ -16,6 +16,7 @@ use anyhow::Result;
 use constants::SUPPORTED_DEFAULT_REQUIREMENTS;
 use constants::SUPPORTED_STORE_REQUIREMENTS;
 use fs_err as fs;
+use gitcompat::utils::follow_dotgit_path;
 pub use requirements::Requirements;
 
 /// RepoMinimalInfo contains:
@@ -51,13 +52,21 @@ impl RepoMinimalInfo {
             None => bail!("repository {} not found!", path.display()),
         };
 
-        let dot_hg_path = path.join(ident.dot_dir());
-
-        let (shared_path, shared_ident) = match read_sharedpath(&dot_hg_path)? {
-            Some((path, ident)) => (path, ident),
-            None => (path.clone(), ident.clone()),
+        let (dot_git_path, dot_hg_path) = if ident.dot_dir() == ".git/sl" {
+            let dot_git_path = follow_dotgit_path(path.join(".git"));
+            let dot_dir = "sl";
+            let dot_sl_path = dot_git_path.join(dot_dir);
+            (Some(dot_git_path), dot_sl_path)
+        } else {
+            (None, path.join(ident.dot_dir()))
         };
-        let shared_dot_hg_path = shared_path.join(shared_ident.dot_dir());
+
+        let (shared_dot_hg_path, shared_path, shared_ident) =
+            match (read_sharedpath(&dot_hg_path)?, dot_git_path) {
+                (Some((path, ident)), _) => (path.join(ident.dot_dir()), path, ident),
+                (None, None) => (path.join(ident.dot_dir()), path.clone(), ident),
+                (None, Some(_dot_git_path)) => (dot_hg_path.clone(), path.clone(), ident),
+            };
         let store_path = shared_dot_hg_path.join("store");
 
         let requirements = Requirements::open(
