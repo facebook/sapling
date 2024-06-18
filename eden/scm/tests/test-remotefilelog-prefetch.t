@@ -79,6 +79,7 @@ Now we do have aux data locally:
               total_size: 1,
               sha1: Sha1("6dcd4ce23d88e2ee9568ba546c007c63d9131c1b"),
               blake3: Blake3("5ad3ba58a716e5fc04296ac9af7a1420f726b401fdf16d270beb5b6b30bc0cda"),
+              file_header_metadata: None,
           },
       ),
   }
@@ -123,6 +124,7 @@ Fetching only aux data does not trigger a remote query:
               total_size: 1,
               sha1: Sha1("ae4f281df5a5d0ff3cad6371f76d5c29b6d953ec"),
               blake3: Blake3("5667f2421ac250c4bb9af657b5ead3cdbd940bfbc350b2bfee47454643832b48"),
+              file_header_metadata: None,
           },
       ),
   }
