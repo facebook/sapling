@@ -208,7 +208,7 @@ ImmediateFuture<ObjectStore::GetRootTreeResult> ObjectStore::getRootTree(
           [this, rootId](const folly::exception_wrapper& ew)
               -> ImmediateFuture<ObjectStore::GetRootTreeResult> {
             stats_->increment(&ObjectStoreStats::getRootTreeFailed);
-            XLOG(DBG2) << "unable to find root tree " << rootId.value();
+            XLOGF(DBG4, "unable to find root tree {}", rootId.value());
             return makeImmediateFuture<ObjectStore::GetRootTreeResult>(ew);
           })
       .ensure([scope = std::move(statScope)] {});
@@ -325,7 +325,7 @@ folly::SemiFuture<BackingStore::GetTreeResult> ObjectStore::getTreeImpl(
                     [self, id](const folly::exception_wrapper& ew)
                         -> ImmediateFuture<BackingStore::GetTreeResult> {
                       self->stats_->increment(&ObjectStoreStats::getTreeFailed);
-                      XLOG(DBG2) << "unable to find tree " << id;
+                      XLOGF(DBG4, "unable to find tree {}", id);
                       return makeImmediateFuture<BackingStore::GetTreeResult>(
                           ew);
                     });
@@ -410,7 +410,7 @@ folly::SemiFuture<BackingStore::GetBlobResult> ObjectStore::getBlobImpl(
                     [self, id](const folly::exception_wrapper& ew)
                         -> ImmediateFuture<BackingStore::GetBlobResult> {
                       self->stats_->increment(&ObjectStoreStats::getBlobFailed);
-                      XLOG(DBG2) << "unable to find blob " << id;
+                      XLOGF(DBG4, "unable to find blob {}", id);
                       return makeImmediateFuture<BackingStore::GetBlobResult>(
                           ew);
                     });
@@ -482,7 +482,7 @@ ImmediateFuture<BlobMetadata> ObjectStore::getBlobMetadata(
               -> ImmediateFuture<BlobMetadata> {
             if (!result.blobMeta) {
               self->stats_->increment(&ObjectStoreStats::getBlobMetadataFailed);
-              XLOG(DBG2) << "unable to find aux data for " << id;
+              XLOGF(DBG4, "unable to find aux data for {}", id);
               throwf<std::domain_error>("aux data {} not found", id);
             }
             auto metadata = std::move(result.blobMeta);
@@ -593,7 +593,7 @@ ObjectStore::getBlobMetadataImpl(
                         -> ImmediateFuture<BackingStore::GetBlobMetaResult> {
                       self->stats_->increment(
                           &ObjectStoreStats::getBlobMetadataFailed);
-                      XLOG(DBG2) << "unable to find aux data for " << id;
+                      XLOGF(DBG4, "unable to find aux data for {}", id);
                       return makeImmediateFuture<
                           BackingStore::GetBlobMetaResult>(ew);
                     });
