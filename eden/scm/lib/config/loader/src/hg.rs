@@ -1304,11 +1304,13 @@ mod tests {
 
         let dir = TempDir::with_prefix("test_load.").unwrap();
 
-        let repo_rc = dir.path().join(".hg/hgrc");
+        let repo_rc = dir.path().join(".sl/config");
         write_file(repo_rc, "[s]\na=orig\nb=orig\nc=orig");
 
         let other_rc = dir.path().join("other.rc");
         write_file(other_rc.clone(), "[s]\na=other\nb=other");
+
+        write_file(dir.path().join(".sl/requires"), "treestate\n");
 
         let repo = RepoMinimalInfo::from_repo_root(dir.path().to_path_buf()).unwrap();
 

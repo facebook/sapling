@@ -88,6 +88,9 @@ struct RepoIdentity {
     /// Directory used by `sniff_dir`. Reuse `dot_dir` if `None`.
     sniff_dot_dir: Option<&'static str>,
 
+    /// Files under the "sniff dot dir". They must exist to validate the sniff.
+    sniff_dot_dir_required_files: &'static [&'static str],
+
     /// Affects `sniff_root`. Lower number wins.
     /// For example, `a/.sl` with priority 0 and `a/b/.git/sl` with priority 10,
     /// `a/.sl` wins even if it's not the inner-most directory.
@@ -360,6 +363,7 @@ const HG: Identity = Identity {
         dot_dir: ".hg",
         config_repo_file: "hgrc",
         sniff_dot_dir: None,
+        sniff_dot_dir_required_files: &["requires"],
         sniff_root_priority: 0,
         sniff_initial_cli_names: None,
     },
@@ -386,6 +390,7 @@ const SL: Identity = Identity {
         dot_dir: ".sl",
         config_repo_file: "config",
         sniff_dot_dir: None,
+        sniff_dot_dir_required_files: &["requires"],
         sniff_root_priority: 0,
         sniff_initial_cli_names: None,
     },
@@ -396,6 +401,7 @@ const SL_GIT: Identity = Identity {
     repo: &RepoIdentity {
         dot_dir: if cfg!(windows) { ".git\\sl" } else { ".git/sl" },
         sniff_dot_dir: Some(".git"),
+        sniff_dot_dir_required_files: &[],
         sniff_root_priority: 10, // lowest
         sniff_initial_cli_names: Some("sl"),
         ..*SL.repo
@@ -422,6 +428,7 @@ const TEST: Identity = Identity {
         dot_dir: ".test",
         config_repo_file: "config",
         sniff_dot_dir: None,
+        sniff_dot_dir_required_files: &[],
         sniff_root_priority: 5,
         sniff_initial_cli_names: None,
     },
@@ -538,9 +545,9 @@ pub fn cli_name() -> &'static str {
 /// "{path}/.sl" directories, yielding the sniffed Identity, if any.
 /// Only permissions errors are propagated.
 pub fn sniff_dir(path: &Path) -> Result<Option<Identity>> {
-    for id in all().iter().chain(EXTRA_SNIFF_IDENTS) {
+    'outer_loop: for id in all().iter().chain(EXTRA_SNIFF_IDENTS) {
         if let Some(cli_names) = id.repo.sniff_initial_cli_names {
-            // Support bypassing the check via PLAINEXCEPT=sniff. This can be useful for ISL.
+            // Support bypassing the CLI name check via PLAINEXCEPT=sniff. This can be useful for ISL.
             let mut bypass_check = false;
             if let Ok(except) = try_env_var("PLAINEXCEPT") {
                 if except.contains("sniff") {
@@ -563,6 +570,17 @@ pub fn sniff_dir(path: &Path) -> Result<Option<Identity>> {
                             .unwrap_or_default()
                             .starts_with(b"gitdir: ")) =>
             {
+                // Check sniff_dot_dir_required_files.
+                // This does not follow ".git" as a file yet.
+                if md.is_dir() {
+                    for path in id.repo.sniff_dot_dir_required_files {
+                        let path = test_path.join(path);
+                        if matches!(path.try_exists(), Ok(false)) {
+                            // Reject this as a dotdir.
+                            continue 'outer_loop;
+                        }
+                    }
+                }
                 tracing::debug!(id=%id, path=%path.display(), "sniffed repo dir");
 
                 // Combine DEFAULT's user facing attributes w/ id's repo attributes.
@@ -713,6 +731,7 @@ mod test {
         {
             let root = dir.path().join("default");
             fs::create_dir_all(root.join(default().dot_dir()))?;
+            write_required_files(&root, default());
 
             assert_eq!(sniff_dir(&root)?.unwrap(), default());
         }
@@ -895,6 +914,7 @@ mod test {
 
         fs::create_dir_all(dir.join(TEST.repo.sniff_dot_dir()))?;
         fs::create_dir_all(dir_a.join(SL.repo.sniff_dot_dir()))?;
+        write_required_files(&dir_a, SL);
         fs::create_dir_all(dir_b.join(TEST.repo.sniff_dot_dir()))?;
         fs::create_dir_all(&dir_c)?;
 
@@ -912,6 +932,26 @@ mod test {
     }
 
     #[test]
+    fn test_sniff_required_files() -> Result<()> {
+        // a/.sl: valid (contains "requires")
+        // a/b/.sl: invalid (no "requires")
+        let dir = tempfile::tempdir()?;
+        let dir = dir.path();
+
+        let dir_a = dir.join("a");
+        let dir_a_b = dir_a.join("b");
+        fs::create_dir_all(dir_a_b.join(SL.dot_dir()))?;
+        fs::create_dir_all(dir_a.join(SL.dot_dir()))?;
+        fs::write(dir_a.join(SL.dot_dir()).join("requires"), b"store")?;
+
+        // sniff_root should ignore a/b/.sl (no "requires") and use a/.sl (has "requires").
+        let sniffed_path = sniff_root(&dir_a_b)?.unwrap().0;
+        assert_eq!(sniffed_path, dir_a);
+
+        Ok(())
+    }
+
+    #[test]
     fn test_split_rcpath() {
         let rcpath = [
             "sys=111", "user=222", "sys=333", "user=444", "555", "foo=666",
@@ -920,5 +960,11 @@ mod test {
         let t = |prefix_list| -> Vec<&str> { split_rcpath(&rcpath, prefix_list).collect() };
         assert_eq!(t(&["sys", ""]), ["111", "333", "555", "foo=666"]);
         assert_eq!(t(&["user"]), ["222", "444"]);
+    }
+
+    fn write_required_files(dir: &Path, ident: Identity) {
+        for path in ident.repo.sniff_dot_dir_required_files {
+            fs::write(dir.join(ident.repo.sniff_dot_dir()).join(path), b"x").unwrap();
+        }
     }
 }
