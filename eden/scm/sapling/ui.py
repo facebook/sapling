@@ -1582,6 +1582,14 @@ class ui:
 
         self._logsample(service, *origmsg, **opts)
 
+    def log_exception(self, *msg, **opts):
+        """A wrapper around log() that automatically adds common fields for exceptions metrics"""
+        common_fields = {
+            "client_correlator": bindings.clientinfo.get_client_correlator().decode(),
+        }
+        opts.update(common_fields)
+        self.log("exceptions", *msg, **opts)
+
     def deprecate(
         self, name, message, maxlevel=deprecationlevel.Log, startstr=None, endstr=None
     ):
