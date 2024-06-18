@@ -40,3 +40,45 @@ body[data-vscode-theme-kind='vscode-high-contrast'] .inline-badge.badge-primary 
   background-color: var(--background);
   outline: 1px solid var(--vscode-button-border);
 }
+
+/* Match VS Code Webview UI Toolkit variables with vscode theme colors. */
+body {
+  --background: var(--vscode-editor-background);
+  --focus-border: var(--vscode-focusBorder);
+  --foreground: var(--vscode-foreground);
+  --scrollbar-slider-background: var(--vscode-scrollbarSlider-background);
+  --scrollbar-slider-hover-background: var(--vscode-scrollbarSlider-hoverBackground);
+  --scrollbar-slider-active-background: var(--vscode-scrollbarSlider-activeBackground);
+  --badge-background: var(--vscode-badge-background);
+  --badge-foreground: var(--vscode-badge-foreground);
+  --button-border: var(--vscode-button-border);
+  /* --button-icon-background: var(--vscode-button-icon-background);
+  --button-icon-hover-background: var(--vscode-button-icon-hover-background); */
+  --button-primary-background: var(--vscode-button-background);
+  --button-primary-foreground: var(--vscode-button-foreground);
+  --button-primary-hover-background: var(--vscode-button-hoverBackground);
+  --button-secondary-background: var(--vscode-button-secondaryBackground);
+  --button-secondary-foreground: var(--vscode-button-secondaryForeground);
+  --button-secondary-hover-background: var(--vscode-button-secondaryHoverBackground);
+  --checkbox-background: var(--vscode-checkbox-background);
+  --checkbox-border: var(--vscode-checkbox-border);
+  --checkbox-foreground: var(--vscode-checkbox-foreground);
+  --list-active-selection-background: var(--vscode-list-activeSelectionBackground);
+  --list-active-selection-foreground: var(--vscode-list-activeSelectionForeground);
+  --list-hover-background: var(--vscode-list-hoverBackground);
+  --divider-background: var(--vscode-settings-dropdownListBorder);
+  --dropdown-background: var(--vscode-dropdown-background);
+  --dropdown-border: var(--vscode-dropdown-border);
+  --dropdown-foreground: var(--vscode-dropdown-foreground);
+  --input-background: var(--vscode-input-background);
+  --input-foreground: var(--vscode-input-foreground);
+  --input-placeholder-foreground: var(--vscode-input-placeholderForeground);
+  --link-active-foreground: var(--vscode-textLink-activeForeground);
+  --link-foreground: var(--vscode-textLink-foreground);
+  --progress-background: var(--vscode-progressBar-background);
+  --panel-tab-active-border: var(--vscode-panelTitle-activeBorder);
+  --panel-tab-active-foreground: var(--vscode-panelTitle-activeForeground);
+  --panel-tab-foreground: var(--vscode-panelTitle-inactiveForeground);
+  --panel-view-background: var(--vscode-panel-background);
+  --panel-view-border: var(--vscode-panel-border);
+}

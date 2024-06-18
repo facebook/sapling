@@ -9,8 +9,8 @@ import App from './App';
 import 'react';
 import ReactDOM from 'react-dom/client';
 
-// @vscode/webview-ui-toolkit doesn't ship with light theme variables,
-// we need to include them ourselves in non-vscode renders of <App />.
+// Include CSS variables we use, originally from vscode-webview-ui-toolkit
+import './themeDarkVariables.css';
 import './themeLightVariables.css';
 
 // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
