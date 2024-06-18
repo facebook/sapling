@@ -446,6 +446,7 @@ members = [
   "repo_factory",
   "repo_factory/test_repo_factory",
   "repo_import",
+  "repo_metadata_info",
   "repo_stats_logger",
   "revset",
   "revset/revset-test-helper",
