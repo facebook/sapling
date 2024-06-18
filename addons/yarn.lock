@@ -1782,36 +1782,6 @@
     "@jridgewell/resolve-uri" "^3.0.3"
     "@jridgewell/sourcemap-codec" "^1.4.10"
 
-"@microsoft/fast-element@^1.10.4", "@microsoft/fast-element@^1.6.2", "@microsoft/fast-element@^1.9.0":
-  version "1.10.4"
-  resolved "https://registry.npmjs.org/@microsoft/fast-element/-/fast-element-1.10.4.tgz"
-  integrity sha512-SD0L3Kt++VSTqdkmGupB5tNaSLboEB7H/rh70a4eECpzCQewEzjd85jVNpgab1A8n5d3N9sPwZGIyfiUN6x4hg==
-
-"@microsoft/fast-foundation@^2.38.0", "@microsoft/fast-foundation@^2.41.1":
-  version "2.46.11"
-  resolved "https://registry.npmjs.org/@microsoft/fast-foundation/-/fast-foundation-2.46.11.tgz"
-  integrity sha512-5ehg6l2g/PsAR+90EEWSR7QAiAKsdscAnP6upE2ysp2U1luER4tAVDIP2wGQneLhaHq2i4Htnb4t+K1dcrw6AQ==
-  dependencies:
-    "@microsoft/fast-element" "^1.10.4"
-    "@microsoft/fast-web-utilities" "^5.4.1"
-    tabbable "^5.2.0"
-    tslib "^1.13.0"
-
-"@microsoft/fast-react-wrapper@^0.1.18":
-  version "0.1.48"
-  resolved "https://registry.npmjs.org/@microsoft/fast-react-wrapper/-/fast-react-wrapper-0.1.48.tgz"
-  integrity sha512-9NvEjru9Kn5ZKjomAMX6v+eF0DR+eDkxKDwDfi+Wb73kTbrNzcnmlwd4diN15ygH97kldgj2+lpvI4CKLQQWLg==
-  dependencies:
-    "@microsoft/fast-element" "^1.9.0"
-    "@microsoft/fast-foundation" "^2.41.1"
-
-"@microsoft/fast-web-utilities@^5.4.1":
-  version "5.4.1"
-  resolved "https://registry.npmjs.org/@microsoft/fast-web-utilities/-/fast-web-utilities-5.4.1.tgz"
-  integrity sha512-ReWYncndjV3c8D8iq9tp7NcFNc1vbVHvcBFPME2nNFKNbS1XCesYZGlIlf3ot5EmuOXPlrzUHOWzQ2vFpIkqDg==
-  dependencies:
-    exenv-es6 "^1.1.1"
-
 "@n1ru4l/graphql-live-query@^0.9.0":
   version "0.9.0"
   resolved "https://registry.npmjs.org/@n1ru4l/graphql-live-query/-/graphql-live-query-0.9.0.tgz"
@@ -2515,15 +2485,6 @@
   version "0.0.33"
   resolved "https://registry.yarnpkg.com/@vscode/codicons/-/codicons-0.0.33.tgz#a56243ab5492801fff04e53c0aab0d18a6521751"
   integrity sha512-VdgpnD75swH9hpXjd34VBgQ2w2quK63WljodlUcOoJDPKiV+rPjHrcUc2sjLCNKxhl6oKqmsZgwOWcDAY2GKKQ==
-
-"@vscode/webview-ui-toolkit@1.2.2":
-  version "1.2.2"
-  resolved "https://registry.yarnpkg.com/@vscode/webview-ui-toolkit/-/webview-ui-toolkit-1.2.2.tgz#f071ec7434b2733d1c724fa874341ec20998f930"
-  integrity sha512-xIQoF4FC3Xh6d7KNKIoIezSiFWYFuf6gQMdDyKueKBFGeKwaHWEn+dY2g3makvvEsNMEDji/woEwvg9QSbuUsw==
-  dependencies:
-    "@microsoft/fast-element" "^1.6.2"
-    "@microsoft/fast-foundation" "^2.38.0"
-    "@microsoft/fast-react-wrapper" "^0.1.18"
 
 "@webassemblyjs/ast@1.11.1":
   version "1.11.1"
@@ -4182,11 +4143,6 @@ execa@5.1.1, execa@^5.0.0:
     onetime "^5.1.2"
     signal-exit "^3.0.3"
     strip-final-newline "^2.0.0"
-
-exenv-es6@^1.1.1:
-  version "1.1.1"
-  resolved "https://registry.npmjs.org/exenv-es6/-/exenv-es6-1.1.1.tgz"
-  integrity sha512-vlVu3N8d6yEMpMsEm+7sUBAI81aqYYuEvfK0jNqmdb/OPXzzH7QWDDnVjMvDSY47JdHEqx/dfC/q8WkfoTmpGQ==
 
 exit@^0.1.2:
   version "0.1.2"
@@ -7221,11 +7177,6 @@ sync-fetch@0.4.1, sync-fetch@^0.4.0:
     buffer "^5.7.1"
     node-fetch "^2.6.1"
 
-tabbable@^5.2.0:
-  version "5.3.3"
-  resolved "https://registry.npmjs.org/tabbable/-/tabbable-5.3.3.tgz"
-  integrity sha512-QD9qKY3StfbZqWOPLp0++pOrAVb/HbUi5xCc8cUo4XjP19808oaMiDzn0leBY5mCespIBM0CIZePzZjgzR83kA==
-
 tapable@^2.1.1, tapable@^2.2.0:
   version "2.2.1"
   resolved "https://registry.npmjs.org/tapable/-/tapable-2.2.1.tgz"
@@ -7431,11 +7382,6 @@ tsconfig-paths@^3.14.1:
     json5 "^1.0.1"
     minimist "^1.2.6"
     strip-bom "^3.0.0"
-
-tslib@^1.13.0:
-  version "1.14.1"
-  resolved "https://registry.npmjs.org/tslib/-/tslib-1.14.1.tgz"
-  integrity sha512-Xni35NKzjgMrwevysHTCArtLDpPvye8zV/0E4EyYn43P7/7qvQwPh9BGkHewbMulVntbigmcT7rdX3BNo9wRJg==
 
 tslib@^2, tslib@^2.0.3, tslib@^2.1.0, tslib@^2.4.0, tslib@~2.4.0:
   version "2.4.0"

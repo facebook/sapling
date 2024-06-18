@@ -80,7 +80,6 @@ import {selectedCommits} from './selection';
 import {latestHeadCommit, uncommittedChangesFetchError} from './serverAPIState';
 import {GeneratedStatus} from './types';
 import * as stylex from '@stylexjs/stylex';
-import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {useAtom, useAtomValue} from 'jotai';
 import React, {useCallback, useMemo, useEffect, useRef, useState} from 'react';
 import {ComparisonType} from 'shared/Comparison';
