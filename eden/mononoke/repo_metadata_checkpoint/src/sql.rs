@@ -16,11 +16,11 @@ use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::mononoke_queries;
 use sql_ext::SqlConnections;
 
-use super::RepoMetadataInfo;
-use super::RepoMetadataInfoEntry;
+use super::RepoMetadataCheckpoint;
+use super::RepoMetadataCheckpointEntry;
 
 mononoke_queries! {
-    write AddOrUpdateRepoMetadataInfo(values: (
+    write AddOrUpdateRepoMetadataCheckpoint(values: (
         repo_id: RepositoryId,
         bookmark_name: String,
         changeset_id: ChangesetId,
@@ -48,17 +48,17 @@ mononoke_queries! {
     }
 }
 
-pub struct SqlRepoMetadataInfo {
+pub struct SqlRepoMetadataCheckpoint {
     connections: SqlConnections,
     repo_id: RepositoryId,
 }
 
 #[derive(Clone)]
-pub struct SqlRepoMetadataInfoBuilder {
+pub struct SqlRepoMetadataCheckpointBuilder {
     connections: SqlConnections,
 }
 
-impl SqlConstruct for SqlRepoMetadataInfoBuilder {
+impl SqlConstruct for SqlRepoMetadataCheckpointBuilder {
     const LABEL: &'static str = "repo_metadata_info";
 
     const CREATION_QUERY: &'static str = include_str!("../schemas/sqlite-repo-metadata-info.sql");
@@ -68,11 +68,11 @@ impl SqlConstruct for SqlRepoMetadataInfoBuilder {
     }
 }
 
-impl SqlConstructFromMetadataDatabaseConfig for SqlRepoMetadataInfoBuilder {}
+impl SqlConstructFromMetadataDatabaseConfig for SqlRepoMetadataCheckpointBuilder {}
 
-impl SqlRepoMetadataInfoBuilder {
-    pub fn build(self, repo_id: RepositoryId) -> SqlRepoMetadataInfo {
-        SqlRepoMetadataInfo {
+impl SqlRepoMetadataCheckpointBuilder {
+    pub fn build(self, repo_id: RepositoryId) -> SqlRepoMetadataCheckpoint {
+        SqlRepoMetadataCheckpoint {
             connections: self.connections,
             repo_id,
         }
@@ -80,14 +80,14 @@ impl SqlRepoMetadataInfoBuilder {
 }
 
 #[async_trait]
-impl RepoMetadataInfo for SqlRepoMetadataInfo {
+impl RepoMetadataCheckpoint for SqlRepoMetadataCheckpoint {
     /// The repository for which this entry has been created
     fn repo_id(&self) -> RepositoryId {
         self.repo_id
     }
 
     /// Fetch all the metadata info entries for the given repo
-    async fn get_all_entries(&self) -> Result<Vec<RepoMetadataInfoEntry>> {
+    async fn get_all_entries(&self) -> Result<Vec<RepoMetadataCheckpointEntry>> {
         let results = SelectAllEntries::query(&self.connections.read_connection, &self.repo_id)
             .await
             .with_context(|| {
@@ -97,7 +97,11 @@ impl RepoMetadataInfo for SqlRepoMetadataInfo {
         let values = results
             .into_iter()
             .map(|(bookmark_name, changeset_id, last_updated_timestamp)| {
-                RepoMetadataInfoEntry::new(changeset_id, bookmark_name, last_updated_timestamp)
+                RepoMetadataCheckpointEntry::new(
+                    changeset_id,
+                    bookmark_name,
+                    last_updated_timestamp,
+                )
             })
             .collect::<Vec<_>>();
         return Ok(values);
@@ -105,7 +109,10 @@ impl RepoMetadataInfo for SqlRepoMetadataInfo {
 
     /// Fetch the repo metadata entries corresponding to the input bookmark name
     /// for the given repo
-    async fn get_entry(&self, bookmark_name: String) -> Result<Option<RepoMetadataInfoEntry>> {
+    async fn get_entry(
+        &self,
+        bookmark_name: String,
+    ) -> Result<Option<RepoMetadataCheckpointEntry>> {
         let results = SelectEntryByBookmark::query(
             &self.connections.read_connection,
             &self.repo_id,
@@ -128,13 +135,17 @@ impl RepoMetadataInfo for SqlRepoMetadataInfo {
         }
         Ok(results.into_iter().next().map(
             |(bookmark_name, changeset_id, last_updated_timestamp)| {
-                RepoMetadataInfoEntry::new(changeset_id, bookmark_name, last_updated_timestamp)
+                RepoMetadataCheckpointEntry::new(
+                    changeset_id,
+                    bookmark_name,
+                    last_updated_timestamp,
+                )
             },
         ))
     }
 
     /// Add new or update existing repo metadata entries for the given repo
-    async fn add_or_update_entries(&self, entries: Vec<RepoMetadataInfoEntry>) -> Result<()> {
+    async fn add_or_update_entries(&self, entries: Vec<RepoMetadataCheckpointEntry>) -> Result<()> {
         let converted_entries: Vec<_> = entries
             .iter()
             .map(|entry| {
@@ -146,7 +157,7 @@ impl RepoMetadataInfo for SqlRepoMetadataInfo {
                 )
             })
             .collect();
-        AddOrUpdateRepoMetadataInfo::query(
+        AddOrUpdateRepoMetadataCheckpoint::query(
             &self.connections.write_connection,
             converted_entries.as_slice(),
         )

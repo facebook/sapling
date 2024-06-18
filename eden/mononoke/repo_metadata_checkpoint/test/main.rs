@@ -12,17 +12,17 @@ use fbinit::FacebookInit;
 use mononoke_types::Timestamp;
 use mononoke_types_mocks::changesetid as bonsai;
 use mononoke_types_mocks::repo::REPO_ZERO;
-use repo_metadata_info::RepoMetadataInfo;
-use repo_metadata_info::RepoMetadataInfoEntry;
-use repo_metadata_info::SqlRepoMetadataInfoBuilder;
+use repo_metadata_info::RepoMetadataCheckpoint;
+use repo_metadata_info::RepoMetadataCheckpointEntry;
+use repo_metadata_info::SqlRepoMetadataCheckpointBuilder;
 use sql_construct::SqlConstruct;
 
 #[fbinit::test]
 async fn test_add_and_get(_: FacebookInit) -> Result<(), Error> {
-    let metadata_info = SqlRepoMetadataInfoBuilder::with_sqlite_in_memory()?.build(REPO_ZERO);
+    let metadata_info = SqlRepoMetadataCheckpointBuilder::with_sqlite_in_memory()?.build(REPO_ZERO);
     let bookmark_name = "JustABookmark";
     let timestamp = Timestamp::now();
-    let entry = RepoMetadataInfoEntry {
+    let entry = RepoMetadataCheckpointEntry {
         changeset_id: bonsai::ONES_CSID,
         bookmark_name: bookmark_name.to_string(),
         last_updated_timestamp: timestamp,
@@ -46,10 +46,10 @@ async fn test_add_and_get(_: FacebookInit) -> Result<(), Error> {
 
 #[fbinit::test]
 async fn test_update_and_get(_: FacebookInit) -> Result<(), Error> {
-    let metadata_info = SqlRepoMetadataInfoBuilder::with_sqlite_in_memory()?.build(REPO_ZERO);
+    let metadata_info = SqlRepoMetadataCheckpointBuilder::with_sqlite_in_memory()?.build(REPO_ZERO);
     let bookmark_name = "JustABookmark";
     let timestamp = Timestamp::now();
-    let entry = RepoMetadataInfoEntry {
+    let entry = RepoMetadataCheckpointEntry {
         changeset_id: bonsai::ONES_CSID,
         bookmark_name: bookmark_name.to_string(),
         last_updated_timestamp: timestamp,
@@ -63,7 +63,7 @@ async fn test_update_and_get(_: FacebookInit) -> Result<(), Error> {
 
     // Update the changeset id and try storing the same entry
     let updated_timestamp = Timestamp::now();
-    let new_entry = RepoMetadataInfoEntry {
+    let new_entry = RepoMetadataCheckpointEntry {
         changeset_id: bonsai::TWOS_CSID,
         bookmark_name: bookmark_name.to_string(),
         last_updated_timestamp: updated_timestamp,
@@ -83,7 +83,7 @@ async fn test_update_and_get(_: FacebookInit) -> Result<(), Error> {
 
 #[fbinit::test]
 async fn test_get_without_add(_: FacebookInit) -> Result<(), Error> {
-    let metadata_info = SqlRepoMetadataInfoBuilder::with_sqlite_in_memory()?.build(REPO_ZERO);
+    let metadata_info = SqlRepoMetadataCheckpointBuilder::with_sqlite_in_memory()?.build(REPO_ZERO);
     let result = metadata_info.get_entry("master".to_string()).await?;
     assert_eq!(result, None);
 
@@ -95,13 +95,13 @@ async fn test_get_without_add(_: FacebookInit) -> Result<(), Error> {
 
 #[fbinit::test]
 async fn test_get_multiple(_: FacebookInit) -> Result<(), Error> {
-    let metadata_info = SqlRepoMetadataInfoBuilder::with_sqlite_in_memory()?.build(REPO_ZERO);
-    let entry = RepoMetadataInfoEntry {
+    let metadata_info = SqlRepoMetadataCheckpointBuilder::with_sqlite_in_memory()?.build(REPO_ZERO);
+    let entry = RepoMetadataCheckpointEntry {
         changeset_id: bonsai::ONES_CSID,
         bookmark_name: "master".to_string(),
         last_updated_timestamp: Timestamp::now(),
     };
-    let another_entry = RepoMetadataInfoEntry {
+    let another_entry = RepoMetadataCheckpointEntry {
         changeset_id: bonsai::TWOS_CSID,
         bookmark_name: "release".to_string(),
         last_updated_timestamp: Timestamp::now(),
