@@ -26,7 +26,11 @@ rust_unittest(
     crate = "repo_metadata_info_test",
     deps = [
         "fbsource//third-party/rust:anyhow",
+        ":repo_metadata_info",
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/fbinit:fbinit-tokio",
+        "//eden/mononoke/common/sql_construct:sql_construct",
+        "//eden/mononoke/mononoke_types:mononoke_types",
+        "//eden/mononoke/mononoke_types:mononoke_types-mocks",
     ],
 )
