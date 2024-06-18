@@ -17,6 +17,7 @@ import {ButtonDropdown} from '../components/ButtonDropdown';
 import {Checkbox} from '../components/Checkbox';
 import {Divider} from '../components/Divider';
 import {Dropdown} from '../components/Dropdown';
+import {Panels} from '../components/Panels';
 import {RadioGroup} from '../components/Radio';
 import {Tag} from '../components/Tag';
 import {TextArea} from '../components/TextArea';
@@ -53,6 +54,7 @@ export default function ComponentExplorer(_: {dismiss: (_: unknown) => unknown})
       label: 'Action 2',
     },
   ];
+  const [activePanel, setActivePanel] = useState<'fruit' | 'vegetables'>('fruit');
   const [buttonDropdownChoice, setButtonDropdownChoice] = useState(buttonDropdownOptions[0]);
   return (
     <div {...stylex.props(styles.container)}>
@@ -256,6 +258,16 @@ export default function ComponentExplorer(_: {dismiss: (_: unknown) => unknown})
             title="Error Notice"
             description="description"
             details="details / stack trace"
+          />
+        </Row>
+        <Row>
+          <Panels
+            active={activePanel}
+            panels={{
+              fruit: {label: 'Fruit', render: () => <div>Apple</div>},
+              vegetables: {label: 'Vegetables', render: () => <div>Broccoli</div>},
+            }}
+            onSelect={setActivePanel}
           />
         </Row>
         <GroupName>Spacing</GroupName>
