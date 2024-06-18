@@ -78,6 +78,7 @@ pub enum ErrorKind {
     CloudWorkspaceNotFound(String),
     #[error("CommitId not found: {0}")]
     CommitIdNotFound(CommitId),
+    #[allow(dead_code)]
     #[error("Invalid Request, reason: {0}")]
     InvalidRequest(String),
 }
