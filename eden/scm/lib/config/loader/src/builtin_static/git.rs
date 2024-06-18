@@ -58,4 +58,7 @@ rename.default=origin
 
 [smartlog]
 repos=origin/
+
+[extensions]
+sparse=!
 "#);
