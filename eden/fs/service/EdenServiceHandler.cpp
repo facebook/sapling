@@ -4473,10 +4473,22 @@ void EdenServiceHandler::stopRecordingBackingStoreFetch(
   for (const auto& backingStore : server_->getBackingStores()) {
     auto filePaths = backingStore->stopRecordingFetch();
 
+    std::shared_ptr<SaplingBackingStore> saplingBackingStore{nullptr};
+
+    // If FilteredFS is enabled, we'll see a FilteredBackingStore first
+    auto filteredBackingStore =
+        std::dynamic_pointer_cast<FilteredBackingStore>(backingStore);
+    if (filteredBackingStore) {
+      // FilteredBackingStore -> SaplingBackingStore
+      saplingBackingStore = std::dynamic_pointer_cast<SaplingBackingStore>(
+          filteredBackingStore->getBackingStore());
+    } else {
+      // BackingStore -> SaplingBackingStore
+      saplingBackingStore =
+          std::dynamic_pointer_cast<SaplingBackingStore>(backingStore);
+    }
+
     // recording is only implemented for SaplingBackingStore at the moment
-    // BackingStore -> SaplingBackingStore
-    auto saplingBackingStore =
-        std::dynamic_pointer_cast<SaplingBackingStore>(backingStore);
     if (saplingBackingStore) {
       (*results.fetchedFilePaths_ref())["SaplingBackingStore"].insert(
           filePaths.begin(), filePaths.end());
