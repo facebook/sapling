@@ -10,11 +10,11 @@ import type {RefObject} from 'react';
 import clientToServerAPI from './ClientToServerAPI';
 import {InlineErrorBadge} from './ErrorNotice';
 import {Tooltip} from './Tooltip';
+import {Button} from './components/Button';
 import {T, t} from './i18n';
 import {readAtom, writeAtom} from './jotaiUtils';
 import platform from './platform';
 import {replaceInTextArea, insertAtCursor} from './textareaUtils';
-import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {atom, useAtomValue} from 'jotai';
 import {useState, type ReactNode, useId} from 'react';
 import {Icon} from 'shared/Icon';
@@ -137,12 +137,9 @@ export function PendingImageUploads({textAreaRef}: {textAreaRef: RefObject<HTMLT
     content = (
       <span className="upload-status-error">
         <Tooltip title={t('Click to dismiss error')}>
-          <VSCodeButton
-            appearance="icon"
-            onClick={onDismissErrors}
-            data-testid="dismiss-upload-errors">
+          <Button icon onClick={onDismissErrors} data-testid="dismiss-upload-errors">
             <Icon icon="close" />
-          </VSCodeButton>
+          </Button>
         </Tooltip>
         <InlineErrorBadge error={unresolvedErrors[0].error} title={<T>Image upload failed</T>}>
           <T count={unresolvedErrors.length}>imageUploadFailed</T>
@@ -152,17 +149,17 @@ export function PendingImageUploads({textAreaRef}: {textAreaRef: RefObject<HTMLT
   } else if (numPending > 0) {
     if (isHovering) {
       content = (
-        <VSCodeButton appearance="icon">
+        <Button icon>
           <Icon icon="stop-circle" slot="start" />
           <T>Click to cancel</T>
-        </VSCodeButton>
+        </Button>
       );
     } else {
       content = (
-        <VSCodeButton appearance="icon">
+        <Button icon>
           <Icon icon="loading" slot="start" />
           <T count={numPending}>numImagesUploading</T>
-        </VSCodeButton>
+        </Button>
       );
     }
   }
@@ -201,8 +198,8 @@ export function FilePicker({uploadFiles}: {uploadFiles: (files: Array<File>) => 
           title={t(
             'Choose image or video files to upload. Drag & Drop and Pasting images or videos is also supported.',
           )}>
-          <VSCodeButton
-            appearance="icon"
+          <Button
+            icon
             data-testid="attach-file-button"
             onClick={e => {
               if (platform.chooseFile != null) {
@@ -216,7 +213,7 @@ export function FilePicker({uploadFiles}: {uploadFiles: (files: Array<File>) => 
               }
             }}>
             <PaperclipIcon />
-          </VSCodeButton>
+          </Button>
         </Tooltip>
       </label>
     </span>

@@ -7,12 +7,12 @@
 
 import {DOCUMENTATION_DELAY, Tooltip} from './Tooltip';
 import {codeReviewProvider, diffSummary} from './codeReview/CodeReviewInfo';
+import {Button} from './components/Button';
 import {t, T} from './i18n';
 import {UncommitOperation} from './operations/Uncommit';
 import {useRunOperation} from './operationsState';
 import foundPlatform from './platform';
 import {dagWithPreviews} from './previews';
-import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {useAtomValue} from 'jotai';
 import {Icon} from 'shared/Icon';
 
@@ -39,7 +39,7 @@ export function UncommitButton() {
       title={t(
         'Remove this commit, but keep its changes as uncommitted changes, as if you never ran commit.',
       )}>
-      <VSCodeButton
+      <Button
         onClick={async () => {
           const confirmed = await foundPlatform.confirm(
             t('Are you sure you want to Uncommit?'),
@@ -52,10 +52,10 @@ export function UncommitButton() {
           }
           runOperation(new UncommitOperation(headCommit));
         }}
-        appearance="icon">
+        icon>
         <Icon icon="debug-step-out" slot="start" />
         <T>Uncommit</T>
-      </VSCodeButton>
+      </Button>
     </Tooltip>
   );
 }

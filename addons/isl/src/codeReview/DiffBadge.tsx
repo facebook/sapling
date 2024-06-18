@@ -14,6 +14,7 @@ import {Internal} from '../Internal';
 import {Link} from '../Link';
 import {Tooltip} from '../Tooltip';
 import {clipboardCopyLink, clipboardCopyText} from '../clipboard';
+import {Button} from '../components/Button';
 import {T, t} from '../i18n';
 import {CircleEllipsisIcon} from '../icons/CircleEllipsisIcon';
 import {CircleExclamationIcon} from '../icons/CircleExclamationIcon';
@@ -27,7 +28,6 @@ import {DiffCommentsDetails} from './DiffComments';
 import {openerUrlForDiffUrl} from './github/GitHubUrlOpener';
 import {SyncStatus, syncStatusAtom} from './syncStatus';
 import * as stylex from '@stylexjs/stylex';
-import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {useAtomValue} from 'jotai';
 import {Component, Suspense, useState} from 'react';
 import {Icon} from 'shared/Icon';
@@ -198,8 +198,8 @@ function DownloadNewVersionButton({
 
   return (
     <Tooltip title={tooltip}>
-      <VSCodeButton
-        appearance="icon"
+      <Button
+        icon
         onClick={async () => {
           if (bothChanged) {
             const confirmed = await platform.confirm(tooltip);
@@ -215,7 +215,7 @@ function DownloadNewVersionButton({
         }}>
         <Icon icon="cloud-download" slot="start" />
         <T>Download New Version</T>
-      </VSCodeButton>
+      </Button>
     </Tooltip>
   );
 }
@@ -233,8 +233,8 @@ function ResubmitSyncButton({
   return (
     <Tooltip
       title={t('This commit has changed locally since it was last submitted. Click to resubmit.')}>
-      <VSCodeButton
-        appearance="icon"
+      <Button
+        icon
         data-testid="commit-submit-button"
         onClick={async () => {
           const confirmation = await confirmShouldSubmit('submit', [commit]);
@@ -250,7 +250,7 @@ function ResubmitSyncButton({
         }}>
         <Icon icon="cloud-upload" slot="start" />
         <T>Submit</T>
-      </VSCodeButton>
+      </Button>
     </Tooltip>
   );
 }
@@ -283,12 +283,12 @@ function DiffComments({diff, diffId}: {diff: DiffSummary; diffId: DiffId}) {
   }
   return (
     <Tooltip trigger="click" component={() => <DiffCommentsDetails diffId={diffId} />}>
-      <VSCodeButton appearance="icon">
+      <Button icon>
         <span className="diff-comments-count">
           {diff.commentCount}
           <Icon icon={diff.anyUnresolvedComments ? 'comment-unresolved' : 'comment'} />
         </span>
-      </VSCodeButton>
+      </Button>
     </Tooltip>
   );
 }

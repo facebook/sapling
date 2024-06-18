@@ -17,12 +17,12 @@ import {
 } from '../../CommitInfoView/CommitInfoState';
 import {commitMessageFieldsSchema} from '../../CommitInfoView/CommitMessageFields';
 import {FlexSpacer} from '../../ComponentUtils';
+import {Button} from '../../components/Button';
 import {Divider} from '../../components/Divider';
 import {T, t} from '../../i18n';
 import {readAtom, writeAtom} from '../../jotaiUtils';
 import {CommitPreview} from '../../previews';
 import {useModal} from '../../useModal';
-import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {useAtomValue} from 'jotai';
 import {useCallback} from 'react';
 import {Icon} from 'shared/Icon';
@@ -137,11 +137,10 @@ function PreSplitUnsavedEditsConfirmationModal({
         <Divider />
         <div className="use-modal-buttons">
           <FlexSpacer />
-          <VSCodeButton appearance="secondary" onClick={() => returnResultAndDismiss(false)}>
+          <Button onClick={() => returnResultAndDismiss(false)}>
             <T>Cancel</T>
-          </VSCodeButton>
-          <VSCodeButton
-            appearance="secondary"
+          </Button>
+          <Button
             onClick={() => {
               for (const [commit] of editedCommits) {
                 resetEditedCommitMessage(commit);
@@ -149,16 +148,16 @@ function PreSplitUnsavedEditsConfirmationModal({
               returnResultAndDismiss(true); // continue with split
             }}>
             <T>Discard Edits</T>
-          </VSCodeButton>
-          <VSCodeButton
+          </Button>
+          <Button
             ref={saveButtonRef as MutableRefObject<null>}
-            appearance="primary"
+            primary
             onClick={() => {
               // Unsaved edits will be automatically loaded by the split as the commits' text
               returnResultAndDismiss(true); // continue with split
             }}>
             <T>Save Edits</T>
-          </VSCodeButton>
+          </Button>
         </div>
       </>
     </div>

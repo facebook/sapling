@@ -45,6 +45,10 @@ export const colors = stylex.defineVars({
 
   errorFg: '#f3674f',
   errorBg: '#f3674f20',
+
+  landFg: 'white',
+  landBg: '#24853c',
+  landHoverBg: '#207134',
 });
 
 // if using a light theme, we apply a stylex theme to override color variables above
@@ -81,6 +85,10 @@ export const light = stylex.createTheme(colors, {
 
   errorFg: '#e35941ff',
   errorBg: '#e3594120',
+
+  landFg: 'white',
+  landBg: '#24853c',
+  landHoverBg: '#207134',
 });
 
 export const spacing = stylex.defineVars({
