@@ -236,6 +236,8 @@ cpp_library(
             "windows",
             [
                 "//eden/fs/prjfs:prjfs",
+                "//c2p/secure_thrift/cpp/client:secure_thrift",
+                "//smart/edenfs/edenfs_service:service-if-cpp2-clients",
             ],
         ),
     ],
@@ -364,6 +366,7 @@ cpp_library(
         (
             "windows",
             [
+                ":edenfs_smartplatform_service",
                 "//eden/fs/notifications:windows_notifier",
             ],
         ),
