@@ -16,6 +16,7 @@ rust_library(
         "fbsource//third-party/rust:regex",
         "fbsource//third-party/rust:slog",
         "fbsource//third-party/rust:tokio",
+        "//common/rust/gflags:gflags",
         "//common/rust/ratelim:ratelim",
         "//common/rust/shed/cached_config:cached_config",
         "//common/rust/shed/facet:facet",

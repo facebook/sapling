@@ -82,7 +82,7 @@ mod additional {
 
         fn arg_defaults(&self) -> Vec<(&'static str, String)> {
             if let Some(default) = self.default {
-                vec![("test-arg", default.to_string())]
+                vec![("test_arg", default.to_string())]
             } else {
                 Vec::new()
             }

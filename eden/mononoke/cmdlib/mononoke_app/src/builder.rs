@@ -60,6 +60,7 @@ use crate::app::MononokeApp;
 use crate::args::parse_config_spec_to_path;
 use crate::args::AclArgs;
 use crate::args::ConfigArgs;
+use crate::args::GFlagsArgs;
 use crate::args::JustKnobsArgs;
 use crate::args::MysqlArgs;
 use crate::args::RuntimeArgs;
@@ -119,6 +120,9 @@ pub struct EnvironmentArgs {
 
     #[clap(flatten, next_help_heading = "MEGAREPO OPTIONS")]
     megarepo_configs_args: MegarepoConfigsArgs,
+
+    #[clap(flatten, next_help_heading = "GFLAGS")]
+    gflags_args: GFlagsArgs,
 }
 
 impl MononokeAppBuilder {
@@ -281,7 +285,10 @@ impl MononokeAppBuilder {
             remote_derivation_args,
             rendezvous_args,
             just_knobs_args,
+            gflags_args,
         } = env_args;
+
+        gflags_args.propagate(self.fb)?;
 
         let log_level = logging_args.create_log_level();
         #[cfg(fbcode_build)]

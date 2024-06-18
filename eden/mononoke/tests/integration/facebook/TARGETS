@@ -232,6 +232,18 @@ dott_test(
 )
 
 dott_test(
+    name = "tools-example",
+    dott_files = glob(
+        [
+            "test-tools-example*.t",
+        ],
+    ),
+    deps = [
+        "//eden/mononoke/tools/example:example",
+    ],
+)
+
+dott_test(
     name = "scs",
     disable_all_network_access_target = False,
     dott_files = glob(

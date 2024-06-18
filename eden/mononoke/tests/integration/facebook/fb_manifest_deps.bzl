@@ -38,6 +38,7 @@ MONONOKE_TARGETS_TO_ENV = {
     "//eden/mononoke/scs_server:scs_server": "SCS_SERVER",
     "//eden/mononoke/streaming_clone:new_streaming_clone": "MONONOKE_STREAMING_CLONE",
     "//eden/mononoke/tools/admin:newadmin": "MONONOKE_NEWADMIN",
+    "//eden/mononoke/tools/example:example": "MONONOKE_EXAMPLE",
     "//eden/mononoke/tools/facebook/backfill_bonsai_blob_mapping:backfill_bonsai_blob_mapping": "MONONOKE_BACKFILL_BONSAI_BLOB_MAPPING",
     "//eden/mononoke/tools/facebook/repo_metadata_logger:repo_metadata_logger": "REPO_METADATA_LOGGER",
     "//eden/mononoke/tools/import:import": "MONONOKE_IMPORT",
