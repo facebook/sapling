@@ -29,7 +29,7 @@ export class OperationQueue {
       operation: RunnableOperation,
       handleProgress: OperationCommandProgressReporter,
       signal: AbortSignal,
-    ) => Promise<void>,
+    ) => Promise<unknown>,
   ) {}
 
   private queuedOperations: Array<RunnableOperation & {tracker: ServerSideTracker}> = [];

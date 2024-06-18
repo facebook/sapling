@@ -236,7 +236,7 @@ export class Repository {
         operation: RunnableOperation,
         handleCommandProgress,
         signal: AbortSignal,
-      ): Promise<void> => {
+      ): Promise<unknown> => {
         const {cwd} = ctx;
         if (operation.runner === CommandRunner.Sapling) {
           return this.runOperation(ctx, operation, handleCommandProgress, signal);
@@ -258,14 +258,10 @@ export class Repository {
           );
         } else if (operation.runner === CommandRunner.InternalArcanist) {
           const normalizedArgs = this.normalizeOperationArgs(cwd, operation.args);
-          return (
-            void Internal.runArcanistCommand?.(
-              cwd,
-              normalizedArgs,
-              handleCommandProgress,
-              signal,
-            ) ?? Promise.resolve()
-          );
+          if (Internal.runArcanistCommand == null) {
+            return Promise.reject(Error('InternalArcanist runner is not supported'));
+          }
+          return Internal.runArcanistCommand(cwd, normalizedArgs, handleCommandProgress, signal);
         }
         return Promise.resolve();
       },
