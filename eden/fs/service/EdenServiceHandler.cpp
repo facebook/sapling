@@ -2904,9 +2904,16 @@ template <typename ReturnType>
 folly::SemiFuture<std::unique_ptr<ReturnType>> serialDetachIfBackgrounded(
     ImmediateFuture<std::unique_ptr<ReturnType>> future,
     const std::shared_ptr<apache::thrift::ThriftServer>& thriftServer,
+    const std::shared_ptr<const EdenConfig>& edenConfig,
     bool background) {
-  auto serial =
-      folly::SerialExecutor::create(thriftServer->getThreadManager().get());
+  folly::Executor::KeepAlive<> serial;
+  if (edenConfig->thriftUseSmallSerialExecutor.getValue()) {
+    serial = folly::SmallSerialExecutor::create(
+        thriftServer->getThreadManager().get());
+  } else {
+    serial =
+        folly::SerialExecutor::create(thriftServer->getThreadManager().get());
+  }
 
   if (background) {
     folly::futures::detachOn(serial, std::move(future).semi());
@@ -2937,9 +2944,16 @@ ImmediateFuture<folly::Unit> detachIfBackgrounded(
 folly::SemiFuture<folly::Unit> serialDetachIfBackgrounded(
     ImmediateFuture<folly::Unit> future,
     const std::shared_ptr<apache::thrift::ThriftServer>& thriftServer,
+    const std::shared_ptr<const EdenConfig>& edenConfig,
     bool background) {
-  auto serial =
-      folly::SerialExecutor::create(thriftServer->getThreadManager().get());
+  folly::Executor::KeepAlive<> serial;
+  if (edenConfig->thriftUseSmallSerialExecutor.getValue()) {
+    serial = folly::SmallSerialExecutor::create(
+        thriftServer->getThreadManager().get());
+  } else {
+    serial =
+        folly::SerialExecutor::create(thriftServer->getThreadManager().get());
+  }
 
   if (background) {
     folly::futures::detachOn(serial, std::move(future).semi());
@@ -3171,7 +3185,10 @@ EdenServiceHandler::semifuture_predictiveGlobFiles(
     // single thread by using `folly::SerialExecutor` so the glob queries will
     // not overload the executor.
     return serialDetachIfBackgrounded<Glob>(
-        std::move(future), server_->getServer(), isBackground);
+        std::move(future),
+        server_->getServer(),
+        server_->getServerState()->getEdenConfig(),
+        isBackground);
   } else {
     return detachIfBackgrounded<Glob>(
                std::move(future), serverState, isBackground)
@@ -3418,7 +3435,10 @@ EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
   // thread by using `folly::SerialExecutor` so the glob queries will not
   // overload the executor.
   return serialDetachIfBackgrounded<Glob>(
-      std::move(globFut), server_->getServer(), isBackground);
+      std::move(globFut),
+      server_->getServer(),
+      server_->getServerState()->getEdenConfig(),
+      isBackground);
 }
 
 // DEPRECATED. Use semifuture_prefetchFilesV2 instead.
@@ -3477,7 +3497,10 @@ folly::SemiFuture<folly::Unit> EdenServiceHandler::semifuture_prefetchFiles(
     // single thread by using `folly::SerialExecutor` so the glob queries will
     // not overload the executor.
     return serialDetachIfBackgrounded(
-        std::move(globFut), server_->getServer(), isBackground);
+        std::move(globFut),
+        server_->getServer(),
+        server_->getServerState()->getEdenConfig(),
+        isBackground);
   } else {
     return detachIfBackgrounded(
                std::move(globFut), server_->getServerState(), isBackground)
@@ -3554,7 +3577,10 @@ EdenServiceHandler::semifuture_prefetchFilesV2(
     // single thread by using `folly::SerialExecutor` so the glob queries will
     // not overload the executor.
     return serialDetachIfBackgrounded<PrefetchResult>(
-        std::move(prefetchResult), server_->getServer(), isBackground);
+        std::move(prefetchResult),
+        server_->getServer(),
+        server_->getServerState()->getEdenConfig(),
+        isBackground);
   } else {
     return detachIfBackgrounded<PrefetchResult>(
                std::move(prefetchResult),

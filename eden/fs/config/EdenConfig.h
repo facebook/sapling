@@ -296,6 +296,14 @@ class EdenConfig : private ConfigSettingManager {
       std::chrono::seconds(30),
       this};
 
+  /**
+   * Use a SmallSerialExecutor for serial Thrift requests.
+   */
+  ConfigSetting<bool> thriftUseSmallSerialExecutor{
+      "thrift:use-small-serial-executor",
+      true,
+      this};
+
   // [ssl]
 
   ConfigSetting<AbsolutePath> clientCertificate{
