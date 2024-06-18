@@ -827,8 +827,7 @@ def runcommand(
 
 def _log_exception(lui, e):
     try:
-        lui.log(
-            "exceptions",
+        lui.log_exception(
             exception_type=type(e).__name__,
             exception_msg=str(e),
             source="log_exception",
@@ -836,8 +835,7 @@ def _log_exception(lui, e):
     except Exception as e:
         try:
             wrapped = error.ProgrammingError("failed to log exception: {!r}".format(e))
-            lui.log(
-                "exceptions",
+            lui.log_exception(
                 exception_type=type(wrapped).__name__,
                 exception_msg=str(wrapped),
                 source="log_exception_wrapped",

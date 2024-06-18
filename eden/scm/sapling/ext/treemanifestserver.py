@@ -2207,8 +2207,7 @@ def pull(orig, ui, repo, *pats, **opts):
         except Exception as ex:
             # Errors are not fatal.
             ui.warn(_("failed to prefetch trees after pull: %s\n") % ex)
-            ui.log(
-                "exceptions",
+            ui.log_exception(
                 exception_type=type(ex).__name__,
                 exception_msg=str(ex),
                 fatal="false",

@@ -61,8 +61,7 @@ def _handlecommandexception(orig, ui):
     ui.log("command_exception", "%s\n%s\n", warning, trace)
     exctype = sys.exc_info()[0]
     exctypename = "None" if exctype is None else exctype.__name__
-    ui.log(
-        "hgerrors",
+    ui.log_exception(
         "exception has occurred: %s",
         warning,
         exception_type=exctypename,
