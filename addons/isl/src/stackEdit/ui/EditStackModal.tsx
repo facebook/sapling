@@ -9,17 +9,30 @@ import {Row, FlexSpacer, ScrollY, Center} from '../../ComponentUtils';
 import {ErrorNotice} from '../../ErrorNotice';
 import {Modal} from '../../Modal';
 import {tracker} from '../../analytics';
-import {T, t} from '../../i18n';
+import {Panels} from '../../components/Panels';
+import {t} from '../../i18n';
 import {SplitStackEditPanel, SplitStackToolbar} from './SplitStackEditPanel';
 import {StackEditConfirmButtons} from './StackEditConfirmButtons';
 import {StackEditSubTree} from './StackEditSubTree';
 import {loadingStackState, editingStackIntentionHashes} from './stackEditState';
-import {VSCodePanels, VSCodePanelTab, VSCodePanelView} from '@vscode/webview-ui-toolkit/react';
+import * as stylex from '@stylexjs/stylex';
 import {useAtom, useAtomValue} from 'jotai';
 import {useState} from 'react';
 import {Icon} from 'shared/Icon';
 
-import './EditStackModal.css';
+const styles = stylex.create({
+  container: {
+    minWidth: '500px',
+    minHeight: '300px',
+  },
+  loading: {
+    paddingBottom: 'calc(24px + 2 * var(--pad))',
+  },
+  tab: {
+    fontSize: '110%',
+    padding: 'var(--halfpad) calc(2 * var(--pad))',
+  },
+});
 
 /// Show a <Modal /> when editing a stack.
 export function MaybeEditStackModal() {
@@ -43,9 +56,8 @@ export function MaybeEditStackModal() {
         setStackIntention(['general', new Set()]);
       }}>
       <Center
-        // add spacing to account for action buttons, so the modal is the same size during and after loading
-        style={{paddingBottom: 'calc(24px + 2 * var(--pad))'}}
-        className={stackIntention === 'split' ? 'interactive-split' : 'edit-stack-modal-panels'}>
+        xstyle={[stackIntention === 'general' && styles.container, styles.loading]}
+        className={stackIntention === 'split' ? 'interactive-split' : undefined}>
         {loadingState.state === 'hasError' ? (
           <ErrorNotice error={new Error(loadingState.error)} title={t('Loading stack failed')} />
         ) : (
@@ -73,62 +85,42 @@ function LoadedSplitModal() {
 
 /** A Modal for general stack editing UI. */
 function LoadedEditStackModal() {
-  type Tab = 'commits' | 'files' | 'split';
+  const panels = {
+    commits: {
+      label: t('Commits'),
+      render: () => (
+        <ScrollY maxSize="calc((100vh / var(--zoom)) - 200px)">
+          <StackEditSubTree
+            activateSplitTab={() => {
+              setActiveTab('split');
+              tracker.track('StackEditInlineSplitButton');
+            }}
+          />
+        </ScrollY>
+      ),
+    },
+    split: {
+      label: t('Split'),
+      render: () => <SplitStackEditPanel />,
+    },
+    // TODO: reenable the "files" tab
+    // files: {label: t('Files'), render: () => <FileStackEditPanel />},
+  } as const;
+  type Tab = keyof typeof panels;
   const [activeTab, setActiveTab] = useState<Tab>('commits');
-  const getPanelViewStyle = (tab: string): React.CSSProperties => {
-    return {
-      overflow: 'unset',
-      display: 'block',
-      padding: tab === activeTab ? 'var(--pad) 0 0 0' : '0',
-    };
-  };
 
   return (
     <Modal>
-      <VSCodePanels
-        className="edit-stack-modal-panels"
-        activeid={`tab-${activeTab}`}
-        style={{
-          // Allow dropdown to show content.
-          overflow: 'unset',
+      <Panels
+        active={activeTab}
+        panels={panels}
+        onSelect={tab => {
+          setActiveTab(tab);
+          tracker.track('StackEditChangeTab', {extras: {tab}});
         }}
-        onChange={e => {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const tab: Tab | undefined = (e.target as any)?.activetab?.id?.replace('tab-', '');
-          tab && setActiveTab(tab);
-          tab && tracker.track('StackEditChangeTab', {extras: {tab}});
-        }}>
-        <VSCodePanelTab id="tab-commits">
-          <T>Commits</T>
-        </VSCodePanelTab>
-        {/* TODO: reenable the "files" tab */}
-        {/* <VSCodePanelTab id="tab-files">
-          <T>Files</T>
-        </VSCodePanelTab> */}
-        <VSCodePanelTab id="tab-split">
-          <T>Split</T>
-        </VSCodePanelTab>
-        <VSCodePanelView style={getPanelViewStyle('commits')} id="view-commits">
-          {/* Skip rendering (which might trigger slow dependency calculation) if the tab is inactive */}
-          <ScrollY maxSize="calc((100vh / var(--zoom)) - 200px)">
-            {activeTab === 'commits' && (
-              <StackEditSubTree
-                activateSplitTab={() => {
-                  setActiveTab('split');
-                  tracker.track('StackEditInlineSplitButton');
-                }}
-              />
-            )}
-          </ScrollY>
-        </VSCodePanelView>
-        {/* TODO: reenable the "files" tab */}
-        {/* <VSCodePanelView style={getPanelViewStyle('files')} id="view-files">
-          {activeTab === 'files' && <FileStackEditPanel />}
-        </VSCodePanelView> */}
-        <VSCodePanelView style={getPanelViewStyle('split')} id="view-split">
-          {activeTab === 'split' && <SplitStackEditPanel />}
-        </VSCodePanelView>
-      </VSCodePanels>
+        xstyle={styles.container}
+        tabXstyle={styles.tab}
+      />
       <Row style={{padding: 'var(--pad) 0', justifyContent: 'flex-end'}}>
         {activeTab === 'split' && <SplitStackToolbar />}
         <FlexSpacer />

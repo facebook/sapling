@@ -44,8 +44,13 @@ export function LargeSpinner() {
 }
 
 export function Center(props: ContainerProps) {
-  const {className, ...rest} = props;
-  return <div {...stylexPropsWithClassName(styles.center, className)} {...rest} />;
+  const {className, xstyle, ...rest} = props;
+  return (
+    <div
+      {...stylexPropsWithClassName([styles.center, xstyle].filter(notEmpty), className)}
+      {...rest}
+    />
+  );
 }
 
 /** Flexbox container with horizontal children. */
