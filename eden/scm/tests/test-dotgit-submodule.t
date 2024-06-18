@@ -44,3 +44,9 @@ FIXME: sub should only appear once
   -Subproject commit 838d36ce8147047ed2fb694a88ea81cdfa5041b0
   +Subproject commit 7e03c5d593048a97b91470d7c33dc07e007aa5a4
 
+Status from submodule:
+
+  $ cd sub
+  $ touch c
+  $ sl status
+  ? c

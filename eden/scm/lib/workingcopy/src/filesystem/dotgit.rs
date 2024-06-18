@@ -162,12 +162,7 @@ impl FileSystem for DotGitFileSystem {
         manifests: &[Arc<TreeManifest>],
         dot_dir: &'static str,
     ) -> Result<Option<DynMatcher>> {
-        crate::sparse::sparse_matcher(
-            &self.vfs,
-            manifests,
-            self.store.clone(),
-            &self.vfs.root().join(dot_dir),
-        )
+        Ok(None)
     }
 
     fn set_parents(&self, p1: HgId, p2: Option<HgId>, p1_tree: Option<HgId>) -> Result<()> {
