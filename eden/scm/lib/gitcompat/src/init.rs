@@ -20,6 +20,7 @@ use tracing::debug;
 use types::HgId;
 
 use crate::rungit::RunGitOptions;
+use crate::utils::follow_dotgit_path;
 
 /// Initialize Sapling's dotdir inside `.git/`. Write requirements. Update config files from
 /// translated Git config.
@@ -28,11 +29,12 @@ use crate::rungit::RunGitOptions;
 /// `dot_dir` is expected to be something like `<prefix>/.git/sl`.
 pub fn maybe_init_inside_dotgit(root_path: &Path, ident: Identity) -> Result<()> {
     let dot_dir = ident.dot_dir();
-    if !dot_dir.starts_with(".git") {
+    if dot_dir != ".git/sl" {
         return Ok(());
     }
 
-    let dot_dir = root_path.join(dot_dir);
+    let dot_git_path = follow_dotgit_path(root_path.join(".git"));
+    let dot_dir = dot_git_path.join("sl");
     let store_dir = dot_dir.join("store");
     if !store_dir.is_dir() {
         fs::create_dir_all(&store_dir)?;
@@ -54,10 +56,8 @@ pub fn maybe_init_inside_dotgit(root_path: &Path, ident: Identity) -> Result<()>
 
     // Sync git config to "config-git-user", "config-git-repo".
     // Skip if file mtime is up to date (since shelling out to `git config` might take time).
-    let dot_git_path = root_path.join(".git");
-    let dot_sl_path = root_path.join(dot_dir);
-    let user_config_path = translated_git_user_config_path(&dot_sl_path, ident);
-    let repo_config_path = translated_git_repo_config_path(&dot_sl_path, ident);
+    let user_config_path = translated_git_user_config_path(&dot_dir, ident);
+    let repo_config_path = translated_git_repo_config_path(&dot_dir, ident);
     let git_repo_mtime = git_repo_config_mtime(&dot_git_path);
     let git_user_mtime = git_user_config_mtime();
 
