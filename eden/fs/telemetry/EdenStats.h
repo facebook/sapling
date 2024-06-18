@@ -52,6 +52,11 @@ class EdenStats : public RefCounted {
     (getStatsForCurrentThread<T>().*counter).addValue(value);
   }
 
+  template <typename T>
+  std::string_view getName(StatsGroupBase::Counter T::*counter) {
+    return (getStatsForCurrentThread<T>().*counter).getName();
+  }
+
   /**
    * Aggregates thread-locals into fb303's ServiceData.
    *

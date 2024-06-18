@@ -4683,10 +4683,10 @@ void EdenServiceHandler::getStatInfo(
     result.mountPointJournalInfo_ref() = mountPointJournalInfo;
   }
 
+  auto counters = fb303::ServiceData::get()->getCounters();
   if (statsMask & eden_constants::STATS_COUNTERS_) {
     // Get the counters and set number of inodes unloaded by periodic unload
     // job.
-    auto counters = fb303::ServiceData::get()->getCounters();
     result.counters_ref() = counters;
     size_t periodicUnloadCount{0};
     for (auto& handle : server_->getMountPoints()) {
@@ -4722,7 +4722,7 @@ void EdenServiceHandler::getStatInfo(
   }
 
   if (statsMask & eden_constants::STATS_CACHE_STATS_) {
-    const auto blobCacheStats = server_->getBlobCache()->getStats();
+    const auto blobCacheStats = server_->getBlobCache()->getStats(counters);
     result.blobCacheStats_ref() = CacheStats{};
     result.blobCacheStats_ref()->entryCount_ref() = blobCacheStats.objectCount;
     result.blobCacheStats_ref()->totalSizeInBytes_ref() =
@@ -4733,7 +4733,7 @@ void EdenServiceHandler::getStatInfo(
         blobCacheStats.evictionCount;
     result.blobCacheStats_ref()->dropCount_ref() = blobCacheStats.dropCount;
 
-    const auto treeCacheStats = server_->getTreeCache()->getStats();
+    const auto treeCacheStats = server_->getTreeCache()->getStats(counters);
     result.treeCacheStats_ref() = CacheStats{};
     result.treeCacheStats_ref()->entryCount_ref() = treeCacheStats.objectCount;
     result.treeCacheStats_ref()->totalSizeInBytes_ref() =
@@ -4742,6 +4742,7 @@ void EdenServiceHandler::getStatInfo(
     result.treeCacheStats_ref()->missCount_ref() = treeCacheStats.missCount;
     result.treeCacheStats_ref()->evictionCount_ref() =
         treeCacheStats.evictionCount;
+    result.treeCacheStats_ref()->dropCount_ref() = treeCacheStats.dropCount;
   }
 }
 

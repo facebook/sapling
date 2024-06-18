@@ -180,7 +180,6 @@ ObjectCache<ObjectType, Flavor, ObjectCacheStats>::getImpl(
   if (!item) {
     XLOG(DBG6) << "ObjectCache::getImpl missed";
     state.stats->increment(&ObjectCacheStats::getMiss);
-    ++state.missCount;
 
   } else {
     XLOG(DBG6) << "ObjectCache::getImpl hit";
@@ -192,7 +191,6 @@ ObjectCache<ObjectType, Flavor, ObjectCacheStats>::getImpl(
         state.evictionQueue,
         state.evictionQueue.iterator_to(*item));
     state.stats->increment(&ObjectCacheStats::getHit);
-    ++state.hitCount;
   }
 
   return item;
@@ -357,15 +355,32 @@ template <
     ObjectCacheFlavor Flavor,
     typename ObjectCacheStats>
 typename ObjectCache<ObjectType, Flavor, ObjectCacheStats>::Stats
-ObjectCache<ObjectType, Flavor, ObjectCacheStats>::getStats() const {
+ObjectCache<ObjectType, Flavor, ObjectCacheStats>::getStats(
+    const std::map<std::string, int64_t>& counters) const {
   auto state = state_.lock();
   Stats stats;
+  // Explicitly don't call getTotalSizeBytes or getObjectCount helpers here to
+  // avoid double-locking state_
   stats.objectCount = state->items.size();
   stats.totalSizeInBytes = state->totalSize;
-  stats.hitCount = state->hitCount;
-  stats.missCount = state->missCount;
-  stats.evictionCount = state->evictionCount;
-  stats.dropCount = state->dropCount;
+  auto getCounterValue = [&counters](const std::string_view& name) -> int64_t {
+    std::string_view kStatsCountSuffix{".count"};
+    auto it = counters.find(fmt::format("{}{}", name, kStatsCountSuffix));
+    if (it != counters.end()) {
+      return it->second;
+    } else {
+      return 0;
+    }
+  };
+
+  stats.hitCount =
+      getCounterValue(state->stats->getName(&ObjectCacheStats::getHit));
+  stats.missCount =
+      getCounterValue(state->stats->getName(&ObjectCacheStats::getMiss));
+  stats.evictionCount =
+      getCounterValue(state->stats->getName(&ObjectCacheStats::insertEviction));
+  stats.dropCount =
+      getCounterValue(state->stats->getName(&ObjectCacheStats::objectDrop));
   return stats;
 }
 
@@ -401,7 +416,6 @@ void ObjectCache<ObjectType, Flavor, ObjectCacheStats>::dropInterestHandle(
   if (--item->referenceCount == 0) {
     state->evictionQueue.erase(state->evictionQueue.iterator_to(*item));
     state->stats->increment(&ObjectCacheStats::objectDrop);
-    ++state->dropCount;
     evictItem(*state, *item);
   }
 }
@@ -432,7 +446,6 @@ void ObjectCache<ObjectType, Flavor, ObjectCacheStats>::evictOne(
   const auto& front = state.evictionQueue.front();
   state.evictionQueue.pop_front();
   state.stats->increment(&ObjectCacheStats::insertEviction);
-  ++state.evictionCount;
   evictItem(state, front);
 }
 

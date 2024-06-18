@@ -260,7 +260,7 @@ class ObjectCache : public std::enable_shared_from_this<
    * Return information about the current size of the cache and the total number
    * of hits and misses.
    */
-  Stats getStats() const;
+  Stats getStats(const std::map<std::string, int64_t>& counters) const;
 
  protected:
   explicit ObjectCache(
@@ -318,10 +318,6 @@ class ObjectCache : public std::enable_shared_from_this<
     folly::CountedIntrusiveList<CacheItem, &CacheItem::hook> evictionQueue;
 
     EdenStatsPtr stats;
-    uint64_t hitCount{0};
-    uint64_t missCount{0};
-    uint64_t evictionCount{0};
-    uint64_t dropCount{0};
   };
 
   /**
