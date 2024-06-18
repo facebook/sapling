@@ -22,8 +22,8 @@ export const vars = {
   fg: 'var(--foreground)',
   border: 'var(--contrast-border)',
   /** very bright border, usually only set in high-contrast themes */
-  activeBorder: 'var(--contrast-active-border)',
-  focusBorder: 'var(--focus-border)',
+  activeBorder: 'var(--contrast-active-border, transparent)',
+  focusBorder: 'var(--focus-border, transparent)',
 };
 
 export const buttonStyles = stylex.create({
@@ -60,7 +60,7 @@ export const buttonStyles = stylex.create({
     borderColor: colors.subtleHoverDarken,
     background: {
       default: colors.subtleHoverDarken,
-      ':hover': 'var(--button-icon-hover-background)',
+      ':hover': 'var(--button-icon-hover-background, rgba(90, 93, 94, 0.31))',
     },
     borderRadius: '5px',
     color: vars.fg,
