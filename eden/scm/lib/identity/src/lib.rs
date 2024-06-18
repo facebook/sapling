@@ -551,10 +551,18 @@ pub fn sniff_dir(path: &Path) -> Result<Option<Identity>> {
                 continue;
             }
         }
-        let test_path = path.join(id.repo.sniff_dot_dir());
+        let sniff_dot_dir = id.repo.sniff_dot_dir();
+        let test_path = path.join(sniff_dot_dir);
         tracing::trace!(path=%path.display(), "sniffing dir");
         match fs::metadata(&test_path) {
-            Ok(md) if md.is_dir() => {
+            Ok(md)
+                if md.is_dir()
+                    || (md.is_file()
+                        && sniff_dot_dir == ".git"
+                        && fs::read(&test_path)
+                            .unwrap_or_default()
+                            .starts_with(b"gitdir: ")) =>
+            {
                 tracing::debug!(id=%id, path=%path.display(), "sniffed repo dir");
 
                 // Combine DEFAULT's user facing attributes w/ id's repo attributes.
