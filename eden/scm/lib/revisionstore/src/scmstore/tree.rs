@@ -24,6 +24,7 @@ use anyhow::Result;
 use clientinfo::get_client_request_info_thread_local;
 use clientinfo::set_client_request_info_thread_local;
 use crossbeam::channel::unbounded;
+pub use edenapi_types::DirectoryMetadata as TreeAuxData;
 use edenapi_types::FileAuxData;
 use edenapi_types::TreeChildEntry;
 use minibytes::Bytes;
@@ -47,6 +48,7 @@ use crate::scmstore::fetch::FetchResults;
 use crate::scmstore::fetch::KeyFetchError;
 use crate::scmstore::file::FileStore;
 use crate::scmstore::metrics::StoreLocation;
+use crate::scmstore::tree::types::AuxData;
 use crate::scmstore::tree::types::LazyTree;
 use crate::scmstore::tree::types::StoreTree;
 use crate::scmstore::tree::types::TreeAttributes;
@@ -139,6 +141,7 @@ impl TreeStore {
         let contentstore = self.contentstore.clone();
         let cache_to_local_cache = self.cache_to_local_cache;
         let aux_cache = self.filestore.as_ref().and_then(|fs| fs.aux_cache.clone());
+        let tree_aux_store = self.tree_aux_store.clone();
 
         let fetch_children_metadata = match self.tree_metadata_mode {
             TreeMetadataMode::Always => true,
@@ -238,11 +241,23 @@ impl TreeStore {
                             let key = entry.key.clone();
                             let entry = LazyTree::SaplingRemoteApi(entry);
 
-                            if let Some(ref aux_cache) = aux_cache {
+                            if aux_cache.is_some() || tree_aux_store.is_some() {
                                 let aux_data = entry.aux_data();
                                 for (hgid, aux) in aux_data.into_iter() {
-                                    tracing::trace!(?hgid, "writing to aux cache");
-                                    aux_cache.put(hgid, &aux)?;
+                                    match aux {
+                                        AuxData::File(file_aux) => {
+                                            if let Some(aux_cache) = aux_cache.as_ref() {
+                                                tracing::trace!(?hgid, "writing to aux cache");
+                                                aux_cache.put(hgid, &file_aux)?;
+                                            }
+                                        }
+                                        AuxData::Tree(tree_aux) => {
+                                            if let Some(tree_aux_store) = tree_aux_store.as_ref() {
+                                                tracing::trace!(?hgid, "writing to tree aux store");
+                                                tree_aux_store.put(hgid, &tree_aux)?;
+                                            }
+                                        }
+                                    }
                                 }
                             }
                             if indexedlog_cache.is_some() && cache_to_local_cache {
@@ -375,6 +390,10 @@ impl TreeStore {
 
         if let Some(ref indexedlog_cache) = self.indexedlog_cache {
             indexedlog_cache.flush_log().map_err(&mut handle_error);
+        }
+
+        if let Some(ref tree_aux_store) = self.tree_aux_store {
+            tree_aux_store.flush().map_err(&mut handle_error);
         }
 
         let mut metrics = self.metrics.write();
@@ -584,6 +603,9 @@ impl HgIdMutableDeltaStore for TreeStore {
         }
         if let Some(ref indexedlog_cache) = self.indexedlog_cache {
             indexedlog_cache.flush_log()?;
+        }
+        if let Some(ref tree_aux_store) = self.tree_aux_store {
+            tree_aux_store.flush()?;
         }
         Ok(None)
     }

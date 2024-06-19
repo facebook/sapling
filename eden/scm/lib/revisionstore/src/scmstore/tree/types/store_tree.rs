@@ -13,7 +13,7 @@ use anyhow::Result;
 use manifest_tree::TreeEntry as ManifestTreeEntry;
 use types::HgId;
 
-use crate::scmstore::file::FileAuxData;
+use crate::scmstore::tree::types::AuxData;
 use crate::scmstore::tree::types::LazyTree;
 use crate::scmstore::tree::types::TreeAttributes;
 use crate::scmstore::value::StoreValue;
@@ -31,7 +31,7 @@ impl StoreTree {
             .manifest_tree_entry()
     }
 
-    pub fn aux_data(&self) -> Result<HashMap<HgId, FileAuxData>> {
+    pub fn aux_data(&self) -> Result<HashMap<HgId, AuxData>> {
         Ok(self
             .content
             .as_ref()

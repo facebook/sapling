@@ -18,6 +18,7 @@ use types::Key;
 
 use crate::indexedlogdatastore::Entry;
 use crate::scmstore::file::FileAuxData;
+use crate::scmstore::tree::TreeAuxData;
 use crate::Metadata;
 
 /// A minimal tree enum that simply wraps the possible underlying tree types,
@@ -32,6 +33,11 @@ pub(crate) enum LazyTree {
 
     /// An SaplingRemoteApi TreeEntry.
     SaplingRemoteApi(TreeEntry),
+}
+
+pub enum AuxData {
+    File(FileAuxData),
+    Tree(TreeAuxData),
 }
 
 impl LazyTree {
@@ -75,7 +81,7 @@ impl LazyTree {
         Ok(ManifestTreeEntry(self.hg_content()?, format))
     }
 
-    pub fn aux_data(&self) -> HashMap<HgId, FileAuxData> {
+    pub fn aux_data(&self) -> HashMap<HgId, AuxData> {
         use LazyTree::*;
         match self {
             SaplingRemoteApi(entry) => {
@@ -86,20 +92,26 @@ impl LazyTree {
                         childrens
                             .iter()
                             .filter_map(|entry| {
-                                let child_entry = match entry {
-                                    Err(err) => {
+                                let child_entry = entry
+                                    .as_ref()
+                                    .inspect_err(|err| {
                                         tracing::warn!("Error fetching child entry: {:?}", err);
-                                        return None;
-                                    }
-                                    Ok(file_entry) => file_entry,
-                                };
-                                // TODO: Also return directory aux data.
-                                if let TreeChildEntry::File(file_entry) = child_entry {
-                                    file_entry.file_metadata.clone().map(|file_metadata| {
-                                        (file_entry.key.hgid, file_metadata.into())
                                     })
-                                } else {
-                                    None
+                                    .ok()?;
+                                match child_entry {
+                                    TreeChildEntry::File(file_entry) => {
+                                        file_entry.file_metadata.clone().map(|file_metadata| {
+                                            (
+                                                file_entry.key.hgid,
+                                                AuxData::File(file_metadata.into()),
+                                            )
+                                        })
+                                    }
+                                    TreeChildEntry::Directory(dir_entry) => {
+                                        dir_entry.directory_metadata.map(|dir_metadata| {
+                                            (dir_entry.key.hgid, AuxData::Tree(dir_metadata.into()))
+                                        })
+                                    }
                                 }
                             })
                             .collect::<HashMap<_, _>>()
