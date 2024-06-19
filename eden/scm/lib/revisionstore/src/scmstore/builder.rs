@@ -24,6 +24,7 @@ use crate::fetch_logger::FetchLogger;
 use crate::indexedlogauxstore::AuxStore;
 use crate::indexedlogdatastore::IndexedLogHgIdDataStore;
 use crate::indexedlogdatastore::IndexedLogHgIdDataStoreConfig;
+use crate::indexedlogtreeauxstore::TreeAuxStore;
 use crate::indexedlogutil::StoreType;
 use crate::lfs::LfsRemote;
 use crate::lfs::LfsStore;
@@ -35,6 +36,7 @@ use crate::scmstore::TreeStore;
 use crate::util::get_indexedlogdatastore_aux_path;
 use crate::util::get_indexedlogdatastore_path;
 use crate::util::get_local_path;
+use crate::util::get_tree_aux_store_path;
 use crate::ContentStore;
 use crate::ExtStoredPolicy;
 use crate::SaplingRemoteApiFileStore;
@@ -446,6 +448,7 @@ pub struct TreeStoreBuilder<'a> {
     indexedlog_cache: Option<Arc<IndexedLogHgIdDataStore>>,
     edenapi: Option<Arc<SaplingRemoteApiTreeStore>>,
     contentstore: Option<Arc<ContentStore>>,
+    tree_aux_store: Option<Arc<TreeAuxStore>>,
     filestore: Option<Arc<FileStore>>,
 }
 
@@ -460,6 +463,7 @@ impl<'a> TreeStoreBuilder<'a> {
             indexedlog_cache: None,
             edenapi: None,
             contentstore: None,
+            tree_aux_store: None,
             filestore: None,
         }
     }
@@ -506,6 +510,11 @@ impl<'a> TreeStoreBuilder<'a> {
 
     pub fn filestore(mut self, filestore: Arc<FileStore>) -> Self {
         self.filestore = Some(filestore);
+        self
+    }
+
+    pub fn tree_aux_store(mut self, tree_aux_store: Arc<TreeAuxStore>) -> Self {
+        self.tree_aux_store = Some(tree_aux_store);
         self
     }
 
@@ -577,6 +586,29 @@ impl<'a> TreeStoreBuilder<'a> {
         )?)))
     }
 
+    #[context("failed to build tree aux store")]
+    pub fn build_tree_aux_store(&self) -> Result<Option<Arc<TreeAuxStore>>> {
+        if let Some(local_path) = self.local_path.clone() {
+            let local_path = get_local_path(local_path, &self.suffix)?;
+
+            // The TreeAuxStore is a mapping from HgId to augmented
+            // manifest digest, and is used to convert from Hg tree
+            // ids in order to make augmented manifest lookups.
+            //
+            // It is technically a cache, however we do not want to put
+            // it in the shared cache directory to avoid the risk of
+            // poisoning by other shared cache users.  As such, we
+            // create it as a rotated log, but in the local store.
+            Ok(Some(Arc::new(TreeAuxStore::new(
+                self.config,
+                get_tree_aux_store_path(local_path)?,
+                StoreType::Rotated,
+            )?)))
+        } else {
+            Ok(None)
+        }
+    }
+
     #[context("failed to build revision store")]
     pub fn build(mut self) -> Result<TreeStore> {
         // TODO(meyer): Clean this up, just copied and pasted from the other version & did some ugly hacks to get this
@@ -600,6 +632,20 @@ impl<'a> TreeStoreBuilder<'a> {
             Some(indexedlog_cache)
         } else {
             self.build_indexedlog_cache()?
+        };
+
+        tracing::trace!(target: "revisionstore::treestore", "processing tree_aux_store");
+        let tree_aux_store = if self
+            .config
+            .get_or("scmstore", "store-tree-aux-data", || true)?
+        {
+            if let Some(tree_aux_store) = self.tree_aux_store.take() {
+                Some(tree_aux_store)
+            } else {
+                self.build_tree_aux_store()?
+            }
+        } else {
+            None
         };
 
         tracing::trace!(target: "revisionstore::treestore", "processing edenapi");
@@ -637,6 +683,7 @@ impl<'a> TreeStoreBuilder<'a> {
             cache_to_local_cache: true,
             edenapi,
             contentstore,
+            tree_aux_store,
             filestore: self.filestore,
             tree_metadata_mode,
             flush_on_drop: true,

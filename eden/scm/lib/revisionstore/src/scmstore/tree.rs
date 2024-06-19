@@ -21,22 +21,18 @@ use ::types::RepoPath;
 use anyhow::anyhow;
 use anyhow::bail;
 use anyhow::Result;
+use clientinfo::get_client_request_info_thread_local;
+use clientinfo::set_client_request_info_thread_local;
 use crossbeam::channel::unbounded;
 use edenapi_types::FileAuxData;
 use edenapi_types::TreeChildEntry;
 use minibytes::Bytes;
 use once_cell::sync::OnceCell;
 use parking_lot::RwLock;
-use storemodel::SerializationFormat;
-use tracing::field;
-
-mod metrics;
-pub mod types;
-
-use clientinfo::get_client_request_info_thread_local;
-use clientinfo::set_client_request_info_thread_local;
 use storemodel::BoxIterator;
+use storemodel::SerializationFormat;
 use storemodel::TreeEntry;
+use tracing::field;
 
 use self::metrics::TreeStoreFetchMetrics;
 pub use self::metrics::TreeStoreMetrics;
@@ -44,6 +40,7 @@ use crate::datastore::HgIdDataStore;
 use crate::datastore::RemoteDataStore;
 use crate::indexedlogdatastore::Entry;
 use crate::indexedlogdatastore::IndexedLogHgIdDataStore;
+use crate::indexedlogtreeauxstore::TreeAuxStore;
 use crate::scmstore::fetch::CommonFetchState;
 use crate::scmstore::fetch::FetchErrors;
 use crate::scmstore::fetch::FetchResults;
@@ -66,6 +63,9 @@ use crate::RepackLocation;
 use crate::SaplingRemoteApiTreeStore;
 use crate::StoreKey;
 use crate::StoreResult;
+
+mod metrics;
+pub mod types;
 
 #[derive(Clone, Debug)]
 pub enum TreeMetadataMode {
@@ -98,6 +98,9 @@ pub struct TreeStore {
 
     /// A FileStore, which can be used for fetching and caching file aux data for a tree.
     pub filestore: Option<Arc<FileStore>>,
+
+    /// A TreeAuxStore, for storing directory metadata about each tree.
+    pub tree_aux_store: Option<Arc<TreeAuxStore>>,
 
     /// Whether we should request extra children metadata from SaplingRemoteAPI and write back to
     /// filestore's aux cache.
@@ -351,6 +354,7 @@ impl TreeStore {
             edenapi: None,
             contentstore: None,
             filestore: None,
+            tree_aux_store: None,
             flush_on_drop: true,
             tree_metadata_mode: TreeMetadataMode::Never,
             metrics: Default::default(),
@@ -412,6 +416,7 @@ impl LegacyStore for TreeStore {
             edenapi: None,
             contentstore: None,
             filestore: None,
+            tree_aux_store: None,
             flush_on_drop: true,
             tree_metadata_mode: TreeMetadataMode::Never,
             metrics: self.metrics.clone(),

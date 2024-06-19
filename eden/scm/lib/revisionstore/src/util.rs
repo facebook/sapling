@@ -86,6 +86,14 @@ pub fn get_indexedloghistorystore_path(path: impl AsRef<Path>) -> Result<PathBuf
     Ok(path)
 }
 
+#[context("get_tree_aux_store_path")]
+pub fn get_tree_aux_store_path(path: impl AsRef<Path>) -> Result<PathBuf> {
+    let mut path = path.as_ref().to_owned();
+    path.push("treeaux");
+    create_dir(&path)?;
+    Ok(path)
+}
+
 #[context("get_packs_path")]
 pub fn get_packs_path(path: impl AsRef<Path>, suffix: &Option<PathBuf>) -> Result<PathBuf> {
     let mut path = path.as_ref().to_owned();

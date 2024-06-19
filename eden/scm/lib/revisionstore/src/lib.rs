@@ -146,6 +146,7 @@ pub mod historypack;
 pub mod historystore;
 pub mod indexedlogauxstore;
 pub mod indexedlogdatastore;
+pub mod indexedlogtreeauxstore;
 pub mod localstore;
 pub mod multiplexstore;
 pub mod mutabledatapack;
