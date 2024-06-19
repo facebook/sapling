@@ -23,6 +23,7 @@ use gotham_ext::middleware::HttpScubaKey;
 use gotham_ext::middleware::ScubaMiddlewareState;
 use gotham_ext::response::EmptyBody;
 use gotham_ext::response::TryIntoResponse;
+use gotham_ext::util::read_header_value;
 use http::header::CONTENT_LENGTH;
 use hyper::Body;
 use mononoke_types::hash::GitSha1;
@@ -34,7 +35,6 @@ use stats::prelude::*;
 use crate::errors::ErrorKind;
 use crate::lfs_server_context::RepositoryRequestContext;
 use crate::middleware::LfsMethod;
-use crate::util::read_header_value;
 
 define_stats! {
     prefix ="mononoke.lfs.git_upload_blob";

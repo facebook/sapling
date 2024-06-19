@@ -81,7 +81,6 @@ mod popularity;
 mod scuba;
 mod service;
 mod upload;
-mod util;
 
 const SERVICE_NAME: &str = "mononoke_lfs_server";
 

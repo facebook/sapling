@@ -12,10 +12,10 @@ use clientinfo::CLIENT_INFO_HEADER;
 use gotham::state::State;
 use gotham_ext::middleware::PostResponseInfo;
 use gotham_ext::middleware::ScubaHandler;
+use gotham_ext::util::read_header_value_ignore_err;
 use scuba_ext::MononokeScubaSampleBuilder;
 
 use crate::middleware::RequestContext;
-use crate::util::read_header_value_ignore_err;
 
 struct ClientInfoHeader(ClientInfo);
 

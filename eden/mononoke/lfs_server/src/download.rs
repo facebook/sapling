@@ -26,6 +26,7 @@ use gotham_ext::response::ResponseStream;
 use gotham_ext::response::ResponseTryStreamExt;
 use gotham_ext::response::StreamBody;
 use gotham_ext::response::TryIntoResponse;
+use gotham_ext::util::is_identity_subset;
 use http::header::HeaderMap;
 use http::header::RANGE;
 use mononoke_types::hash::Sha256;
@@ -41,7 +42,6 @@ use crate::errors::ErrorKind;
 use crate::lfs_server_context::RepositoryRequestContext;
 use crate::middleware::LfsMethod;
 use crate::scuba::LfsScubaKey;
-use crate::util::is_identity_subset;
 
 define_stats! {
     prefix = "mononoke.lfs.download";
