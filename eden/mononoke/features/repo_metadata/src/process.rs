@@ -32,6 +32,7 @@ use mononoke_types::FsnodeId;
 use mononoke_types::ManifestUnodeId;
 
 use crate::types::BlamedTextFileMetadata;
+use crate::types::ChangeType;
 use crate::types::DirectoryMetadata;
 use crate::types::FileMetadata;
 use crate::types::ItemHistory;
@@ -127,6 +128,7 @@ async fn process_tree(
         child_dirs_count: summary.child_dirs_count,
         descendant_files_count: summary.descendant_files_count,
         descendant_files_total_size: summary.descendant_files_total_size,
+        change_type: ChangeType::Unknown,
     }))
 }
 

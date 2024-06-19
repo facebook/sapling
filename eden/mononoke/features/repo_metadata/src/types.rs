@@ -38,6 +38,18 @@ pub enum MetadataItem {
 }
 
 #[derive(Debug)]
+pub enum ChangeType {
+    /// The state of this item is not known
+    Unknown,
+    /// The item was added as per the current commit
+    Added,
+    /// The item was deleted as per the current commit
+    Deleted,
+    /// The item was modified as per the current commit
+    Modified,
+}
+
+#[derive(Debug)]
 pub struct ItemHistory {
     /// The last time this item was modified
     pub last_author: String,
@@ -55,6 +67,8 @@ pub struct FileMetadata {
     pub file_size: u64,
     /// Whether this file is marked as executable
     pub is_executable: bool,
+    /// The type of change for this file
+    pub change_type: ChangeType,
 }
 
 #[derive(Debug)]
@@ -73,6 +87,8 @@ pub struct DirectoryMetadata {
     pub descendant_files_count: u64,
     /// The total size of the files in this directory and all of its recursive subdirectories
     pub descendant_files_total_size: u64,
+    /// The type of change for this directory
+    pub change_type: ChangeType,
 }
 
 #[derive(Debug)]
@@ -140,6 +156,7 @@ impl FileMetadata {
             },
             file_size: fsnode_file.size(),
             is_executable: *fsnode_file.file_type() == FileType::Executable,
+            change_type: ChangeType::Unknown,
         }
     }
 }
