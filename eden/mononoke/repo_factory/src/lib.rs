@@ -161,6 +161,8 @@ use repo_lock::AlwaysLockedRepoLock;
 use repo_lock::ArcRepoLock;
 use repo_lock::MutableRepoLock;
 use repo_lock::SqlRepoLock;
+use repo_metadata_checkpoint::ArcRepoMetadataCheckpoint;
+use repo_metadata_checkpoint::SqlRepoMetadataCheckpointBuilder;
 use repo_permission_checker::ArcRepoPermissionChecker;
 use repo_permission_checker::ProdRepoPermissionChecker;
 use repo_sparse_profiles::ArcRepoSparseProfiles;
@@ -676,6 +678,9 @@ pub enum RepoFactoryError {
     #[error("Error opening git-symbolic-refs")]
     GitSymbolicRefs,
 
+    #[error("Error opening repo-metadata-checkpoint")]
+    RepoMetadataCheckpoint,
+
     #[error("Error opening pushrebase mutation mapping")]
     PushrebaseMutationMapping,
 
@@ -988,6 +993,19 @@ impl RepoFactory {
             .build(repo_identity.id());
         // Caching is not enabled for now, but can be added later if required.
         Ok(Arc::new(git_symbolic_refs))
+    }
+
+    pub async fn repo_metadata_checkpoint(
+        &self,
+        repo_config: &ArcRepoConfig,
+        repo_identity: &ArcRepoIdentity,
+    ) -> Result<ArcRepoMetadataCheckpoint> {
+        let repo_metadata_info = self
+            .open_sql::<SqlRepoMetadataCheckpointBuilder>(repo_config)
+            .await
+            .context(RepoFactoryError::RepoMetadataCheckpoint)?
+            .build(repo_identity.id());
+        Ok(Arc::new(repo_metadata_info))
     }
 
     pub async fn pushrebase_mutation_mapping(

@@ -24,6 +24,7 @@ rust_library(
         "//eden/mononoke/mononoke_types:mononoke_types",
         "//eden/mononoke/repo_attributes/repo_derived_data:repo_derived_data",
         "//eden/mononoke/repo_attributes/repo_identity:repo_identity",
+        "//eden/mononoke/repo_metadata_checkpoint:repo_metadata_checkpoint",
         "//eden/mononoke/server/context:context",
     ] + ([] if rust_oss.is_oss_build() else [
         "//dsi/logger/configs/SCMRepoMetadataLoggerConfig:s_c_m_repo_metadata_rust_logger",

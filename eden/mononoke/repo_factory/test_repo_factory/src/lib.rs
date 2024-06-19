@@ -100,6 +100,8 @@ use repo_identity::RepoIdentity;
 use repo_lock::AlwaysUnlockedRepoLock;
 use repo_lock::ArcRepoLock;
 use repo_lock::SqlRepoLock;
+use repo_metadata_checkpoint::ArcRepoMetadataCheckpoint;
+use repo_metadata_checkpoint::SqlRepoMetadataCheckpointBuilder;
 use repo_permission_checker::AlwaysAllowRepoPermissionChecker;
 use repo_permission_checker::ArcRepoPermissionChecker;
 use repo_sparse_profiles::ArcRepoSparseProfiles;
@@ -513,6 +515,17 @@ impl TestRepoFactory {
     ) -> Result<ArcBonsaiTagMapping> {
         Ok(Arc::new(
             SqlBonsaiTagMappingBuilder::from_sql_connections(self.metadata_db.clone())
+                .build(repo_identity.id()),
+        ))
+    }
+
+    /// Construct Repo Metadata Checkpoint using the in-memory metadata
+    pub fn repo_metadata_checkpoint(
+        &self,
+        repo_identity: &ArcRepoIdentity,
+    ) -> Result<ArcRepoMetadataCheckpoint> {
+        Ok(Arc::new(
+            SqlRepoMetadataCheckpointBuilder::from_sql_connections(self.metadata_db.clone())
                 .build(repo_identity.id()),
         ))
     }

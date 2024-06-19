@@ -12,9 +12,9 @@ use fbinit::FacebookInit;
 use mononoke_types::Timestamp;
 use mononoke_types_mocks::changesetid as bonsai;
 use mononoke_types_mocks::repo::REPO_ZERO;
-use repo_metadata_info::RepoMetadataCheckpoint;
-use repo_metadata_info::RepoMetadataCheckpointEntry;
-use repo_metadata_info::SqlRepoMetadataCheckpointBuilder;
+use repo_metadata_checkpoint::RepoMetadataCheckpoint;
+use repo_metadata_checkpoint::RepoMetadataCheckpointEntry;
+use repo_metadata_checkpoint::SqlRepoMetadataCheckpointBuilder;
 use sql_construct::SqlConstruct;
 
 #[fbinit::test]

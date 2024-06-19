@@ -5,7 +5,7 @@ load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
 oncall("mononoke")
 
 rust_library(
-    name = "repo_metadata_info",
+    name = "repo_metadata_checkpoint",
     srcs = glob([
         "src/**/*.rs",
         "schemas/**/*.sql",
@@ -21,12 +21,12 @@ rust_library(
 )
 
 rust_unittest(
-    name = "repo_metadata_info_test",
+    name = "repo_metadata_checkpoint_test",
     srcs = glob(["test/**/*.rs"]),
-    crate = "repo_metadata_info_test",
+    crate = "repo_metadata_checkpoint_test",
     deps = [
         "fbsource//third-party/rust:anyhow",
-        ":repo_metadata_info",
+        ":repo_metadata_checkpoint",
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/fbinit:fbinit-tokio",
         "//eden/mononoke/common/sql_construct:sql_construct",

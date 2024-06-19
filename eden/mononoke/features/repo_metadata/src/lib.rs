@@ -23,6 +23,7 @@ use metaconfig_types::RepoConfigRef;
 use repo_blobstore::RepoBlobstoreArc;
 use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentityRef;
+use repo_metadata_checkpoint::RepoMetadataCheckpointRef;
 
 use crate::process::process_bookmark;
 use crate::types::MetadataItem;
@@ -31,6 +32,7 @@ pub trait Repo = RepoConfigRef
     + RepoIdentityRef
     + RepoBlobstoreArc
     + RepoDerivedDataRef
+    + RepoMetadataCheckpointRef
     + BookmarksRef
     + Send
     + Sync;
