@@ -36,7 +36,7 @@ use commit_graph_types::edges::ChangesetEdges;
 use commit_graph_types::storage::CommitGraphStorage;
 use commit_graph_types::storage::FetchedChangesetEdges;
 use commit_graph_types::storage::Prefetch;
-use commit_graph_types::storage::PrefetchEdge;
+use commit_graph_types::storage::PrefetchTarget;
 use context::CoreContext;
 use fbthrift::compact_protocol;
 use maplit::hashset;
@@ -260,9 +260,11 @@ impl EntityStore<CachedPrefetchedChangesetEdges> for CacheRequest<'_> {
 
     fn keygen(&self) -> &KeyGen {
         if self.memcache_prefetch {
-            match self.prefetch.target_edge() {
-                Some(PrefetchEdge::FirstParent) => &self.caching_storage.keygen_prefetch_p1_linear,
-                Some(PrefetchEdge::SkipTreeSkewAncestor) => {
+            match self.prefetch.target() {
+                Some(PrefetchTarget::LinearAncestors { .. }) => {
+                    &self.caching_storage.keygen_prefetch_p1_linear
+                }
+                Some(PrefetchTarget::SkipTreeSkewAncestors { .. }) => {
                     &self.caching_storage.keygen_prefetch_skip_tree
                 }
                 None => &self.caching_storage.keygen_single,

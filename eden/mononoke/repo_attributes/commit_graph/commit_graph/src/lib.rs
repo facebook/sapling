@@ -28,7 +28,6 @@ use commit_graph_types::segments::SegmentDescription;
 use commit_graph_types::segments::SegmentedSliceDescription;
 use commit_graph_types::storage::CommitGraphStorage;
 use commit_graph_types::storage::Prefetch;
-use commit_graph_types::storage::PrefetchEdge;
 use commit_graph_types::storage::PrefetchTarget;
 use context::CoreContext;
 use futures::stream;
@@ -342,8 +341,7 @@ impl CommitGraph {
                         .fetch_many_edges(
                             ctx,
                             &cs_ids_to_lower,
-                            Prefetch::Hint(PrefetchTarget {
-                                edge: PrefetchEdge::FirstParent,
+                            Prefetch::Hint(PrefetchTarget::LinearAncestors {
                                 generation: FIRST_GENERATION,
                                 steps: max_remaining_distance + 1,
                             }),

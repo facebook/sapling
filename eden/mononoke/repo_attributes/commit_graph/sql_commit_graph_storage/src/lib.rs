@@ -26,7 +26,7 @@ use commit_graph_types::edges::ChangesetParents;
 use commit_graph_types::storage::CommitGraphStorage;
 use commit_graph_types::storage::FetchedChangesetEdges;
 use commit_graph_types::storage::Prefetch;
-use commit_graph_types::storage::PrefetchEdge;
+use commit_graph_types::storage::PrefetchTarget;
 use context::CoreContext;
 use context::PerfCounterType;
 use mononoke_types::ChangesetId;
@@ -1007,30 +1007,29 @@ impl SqlCommitGraphStorage {
         }
 
         if let Some(target) = prefetch.target() {
-            let steps = std::cmp::min(
-                target.steps,
+            let steps_limit =
                 justknobs::get_as::<u64>("scm/mononoke:commit_graph_prefetch_step_limit", None)
-                    .unwrap_or(DEFAULT_PREFETCH_STEP_LIMIT),
-            );
-            let fetched_edges = match target.edge {
-                PrefetchEdge::FirstParent => {
+                    .unwrap_or(DEFAULT_PREFETCH_STEP_LIMIT);
+
+            let fetched_edges = match target {
+                PrefetchTarget::LinearAncestors { steps, generation } => {
                     SelectManyChangesetsWithFirstParentPrefetch::maybe_traced_query(
                         &self.read_connection.conn,
                         ctx.client_request_info(),
                         &self.repo_id,
-                        &steps,
-                        &target.generation.value(),
+                        &std::cmp::min(steps, steps_limit),
+                        &generation.value(),
                         cs_ids,
                     )
                     .await?
                 }
-                PrefetchEdge::SkipTreeSkewAncestor => {
+                PrefetchTarget::SkipTreeSkewAncestors { steps, generation } => {
                     SelectManyChangesetsWithSkipTreeSkewAncestorPrefetch::maybe_traced_query(
                         &self.read_connection.conn,
                         ctx.client_request_info(),
                         &self.repo_id,
-                        &steps,
-                        &target.generation.value(),
+                        &std::cmp::min(steps, steps_limit),
+                        &generation.value(),
                         cs_ids,
                     )
                     .await?

@@ -21,7 +21,6 @@ use commit_graph_types::segments::ChangesetSegmentParent;
 use commit_graph_types::segments::Location;
 use commit_graph_types::storage::CommitGraphStorage;
 use commit_graph_types::storage::Prefetch;
-use commit_graph_types::storage::PrefetchEdge;
 use commit_graph_types::storage::PrefetchTarget;
 use context::CoreContext;
 use futures::stream;
@@ -969,8 +968,7 @@ impl CommitGraph {
         for index in 1..count {
             let ancestor_edges = self
                 .storage
-                .fetch_many_edges(ctx, &[ancestor], Prefetch::Hint(PrefetchTarget {
-                    edge: PrefetchEdge::FirstParent,
+                .fetch_many_edges(ctx, &[ancestor], Prefetch::Hint(PrefetchTarget::LinearAncestors {
                     generation: FIRST_GENERATION,
                     steps: count - index,
                 }))
