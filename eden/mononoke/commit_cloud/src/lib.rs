@@ -76,12 +76,11 @@ impl CommitCloud {
 
         let mut latest_version: u64 = 0;
         let mut version_timestamp: i64 = 0;
-        let maybeworkspace = self
-            .get_workspace(&ctx.workspace.clone(), &ctx.reponame.clone())
-            .await?;
-        if !maybeworkspace.is_empty() {
-            latest_version = maybeworkspace[0].version;
-            version_timestamp = maybeworkspace[0].timestamp.timestamp_nanos();
+        let maybeworkspace =
+            WorkspaceVersion::fetch_from_db(&self.storage, &ctx.workspace, &ctx.reponame).await?;
+        if let Some(workspace_version) = maybeworkspace {
+            latest_version = workspace_version.version;
+            version_timestamp = workspace_version.timestamp.timestamp_nanos();
         }
         if base_version > latest_version && latest_version == 0 {
             return Err(anyhow::anyhow!(
@@ -149,13 +148,12 @@ impl CommitCloud {
         let mut latest_version: u64 = 0;
         let mut version_timestamp: i64 = 0;
 
-        let maybeworkspace = self
-            .get_workspace(&ctx.workspace.clone(), &ctx.reponame.clone())
-            .await?;
+        let maybeworkspace =
+            WorkspaceVersion::fetch_from_db(&self.storage, &ctx.workspace, &ctx.reponame).await?;
 
-        if !maybeworkspace.is_empty() {
-            latest_version = maybeworkspace[0].version;
-            version_timestamp = maybeworkspace[0].timestamp.timestamp_nanos();
+        if let Some(workspace_version) = maybeworkspace {
+            latest_version = workspace_version.version;
+            version_timestamp = workspace_version.timestamp.timestamp_nanos();
         }
         let new_version = latest_version + 1;
         if params.version < latest_version {
