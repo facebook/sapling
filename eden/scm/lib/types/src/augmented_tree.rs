@@ -11,6 +11,7 @@ use std::io::Write;
 
 use anyhow::anyhow;
 use anyhow::Error;
+use blake3::Hasher as Blake3Hasher;
 use minibytes::Bytes;
 
 use crate::Blake3;
@@ -337,6 +338,47 @@ impl AugmentedTreeEntry {
                 .collect::<anyhow::Result<Vec<(RepoPathBuf, AugmentedTreeChildEntry)>, Error>>()?,
         })
     }
+
+    pub fn compute_content_addressed_digest(self) -> anyhow::Result<(Blake3, u64)> {
+        let mut calculator = AugmentedManifestDigestCalculator::new();
+        self.try_serialize(&mut calculator)?;
+        calculator.finalize()
+    }
+}
+
+struct AugmentedManifestDigestCalculator {
+    hasher: Blake3Hasher,
+    size: u64,
+}
+
+impl AugmentedManifestDigestCalculator {
+    fn new() -> Self {
+        #[cfg(fbcode_build)]
+        let key = blake3_constants::BLAKE3_HASH_KEY;
+        #[cfg(not(fbcode_build))]
+        let key = b"20220728-2357111317192329313741#";
+        Self {
+            hasher: Blake3Hasher::new_keyed(key),
+            size: 0,
+        }
+    }
+
+    fn finalize(self) -> anyhow::Result<(Blake3, u64)> {
+        let hash = Blake3::from_slice(self.hasher.finalize().as_bytes())?;
+        Ok((hash, self.size))
+    }
+}
+
+impl Write for AugmentedManifestDigestCalculator {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        self.hasher.update(buf);
+        self.size += buf.len() as u64;
+        Ok(buf.len())
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -553,5 +595,28 @@ mod tests {
             .try_serialize(&mut buf)
             .expect("writing failed");
         assert_eq!(buf.len(), augmented_tree_entry.augmented_tree_blob_size());
+    }
+
+    #[test]
+    fn test_augmented_tree_digest_calculation() {
+        let mut reader = std::io::Cursor::new(concat!(
+            "v1 1111111111111111111111111111111111111111 - 2222222222222222222222222222222222222222 3333333333333333333333333333333333333333\n",
+            "a.rs\x004444444444444444444444444444444444444444r 4444444444444444444444444444444444444444444444444444444444444444 10 4444444444444444444444444444444444444444 -\n",
+            "b.rs\x002222222222222222222222222222222222222222r 2222222222222222222222222222222222222222222222222222222222222222 1000 2121212121212121212121212121212121212121 -\n",
+            "dir_1\x003333333333333333333333333333333333333333t 3333333333333333333333333333333333333333333333333333333333333333 10\n",
+            "dir_2\x001111111111111111111111111111111111111111t 1111111111111111111111111111111111111111111111111111111111111111 10000\n"
+        ));
+        let augmented_tree_entry =
+            AugmentedTreeEntry::try_deserialize(&mut reader).expect("parsing failed");
+        let (hash, size) = augmented_tree_entry
+            .compute_content_addressed_digest()
+            .expect("digest calculation failed");
+        assert_eq!(
+            (hash.to_hex().as_str(), size),
+            (
+                "163e6a8b60b1f0c7042adbdfcc932f11ff3de5003905ab4c5d564431c31e6f32",
+                681
+            )
+        );
     }
 }

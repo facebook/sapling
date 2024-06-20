@@ -20,6 +20,9 @@ rust_library(
     },
     crate_root = "src/lib.rs",
     features = ["for-tests"],
+    named_deps = {
+        "blake3-constants": "//blake3:blake3-constants-rust-nothrift",
+    },
     test_deps = [
         "fbsource//third-party/rust:assert_matches",
         "fbsource//third-party/rust:lazy_static",
@@ -38,6 +41,7 @@ rust_library(
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:base64",
         "fbsource//third-party/rust:bitflags",
+        "fbsource//third-party/rust:blake3",
         "fbsource//third-party/rust:byteorder",
         "fbsource//third-party/rust:lazy_static",
         "fbsource//third-party/rust:quickcheck",
