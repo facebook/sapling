@@ -147,7 +147,12 @@ pub struct SymlinkMetadata {
 }
 
 impl FileMetadata {
-    pub(crate) fn new(path: MPath, info: ChangesetInfo, fsnode_file: FsnodeFile) -> Self {
+    pub(crate) fn new(
+        path: MPath,
+        info: ChangesetInfo,
+        fsnode_file: FsnodeFile,
+        change_type: ChangeType,
+    ) -> Self {
         Self {
             path,
             history: ItemHistory {
@@ -156,7 +161,7 @@ impl FileMetadata {
             },
             file_size: fsnode_file.size(),
             is_executable: *fsnode_file.file_type() == FileType::Executable,
-            change_type: ChangeType::Unknown,
+            change_type,
         }
     }
 }

@@ -7,10 +7,11 @@ oncall("mononoke")
 rust_library(
     name = "repo_metadata",
     srcs = glob(["src/**/*.rs"]),
-    deps = [
+    deps = ([
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:bytes",
         "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:clap",
         "//eden/mononoke/blobrepo:repo_blobstore",
         "//eden/mononoke/blobstore:blobstore",
         "//eden/mononoke/bookmarks:bookmarks",
@@ -26,7 +27,8 @@ rust_library(
         "//eden/mononoke/repo_attributes/repo_identity:repo_identity",
         "//eden/mononoke/repo_metadata_checkpoint:repo_metadata_checkpoint",
         "//eden/mononoke/server/context:context",
+        "//eden/mononoke/derived_data:unodes",
     ] + ([] if rust_oss.is_oss_build() else [
         "//dsi/logger/configs/SCMRepoMetadataLoggerConfig:s_c_m_repo_metadata_rust_logger",
-    ]),
+    ])),
 )

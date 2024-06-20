@@ -12,21 +12,17 @@ mod log;
 mod process;
 mod types;
 
+use std::fmt::Display;
+
 use anyhow::Result;
 use bookmarks::BookmarksRef;
-use context::CoreContext;
-use futures::stream;
-use futures::Stream;
-use futures::StreamExt;
-use futures::TryStreamExt;
 use metaconfig_types::RepoConfigRef;
 use repo_blobstore::RepoBlobstoreArc;
 use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentityRef;
 use repo_metadata_checkpoint::RepoMetadataCheckpointRef;
 
-use crate::process::process_bookmark;
-use crate::types::MetadataItem;
+pub use crate::process::repo_metadata_for_bookmark;
 
 pub trait Repo = RepoConfigRef
     + RepoIdentityRef
@@ -37,14 +33,21 @@ pub trait Repo = RepoConfigRef
     + Send
     + Sync;
 
-/// Returns a stream of metadata about all files and directories in the repo.
-pub fn repo_metadata<'a>(
-    ctx: &'a CoreContext,
-    repo: &'a impl Repo,
-) -> impl Stream<Item = Result<MetadataItem>> + 'a {
-    let bookmarks_to_log = &repo.repo_config().metadata_logger_config.bookmarks;
-    stream::iter(bookmarks_to_log)
-        .map(|bookmark| process_bookmark(ctx, repo, bookmark))
-        .buffered(100)
-        .try_flatten()
+/// Enum determining the mode in which the metadata logger should run
+#[derive(Debug, Default, Clone, Copy, clap::ValueEnum, PartialEq, Eq)]
+pub enum RepoMetadataLoggerMode {
+    /// Run the metadata logger for the entire working copy of the repo
+    #[default]
+    Full,
+    /// Run the metadata logger for the incremental changes in the working copy of the repo
+    Incremental,
+}
+
+impl Display for RepoMetadataLoggerMode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+        match self {
+            RepoMetadataLoggerMode::Full => write!(f, "full"),
+            RepoMetadataLoggerMode::Incremental => write!(f, "incremental"),
+        }
+    }
 }

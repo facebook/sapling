@@ -463,6 +463,7 @@ impl<
             (Some(Entry::Leaf(m_leaf)), Some(Entry::Leaf(n_leaf))) => {
                 Ok(Some(Entry::Leaf(CombinedId(m_leaf, n_leaf))))
             }
+            (None, None) => Ok(None),
             _ => bail!("Found non-matching entry types during lookup for {}", name),
         }
     }
