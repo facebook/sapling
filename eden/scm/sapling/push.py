@@ -261,18 +261,19 @@ def push_rebase(repo, dest, head_node, stack_nodes, remote_bookmark, opargs=None
         # change below.
         repo.changelog.filternodes(list(old_to_new_hgids.values()))
 
-        if wnode in old_to_new_hgids:
-            ui.note(_("moving working copy parent\n"))
-            hg.update(repo, old_to_new_hgids[wnode])
+        if not ui.configbool("push", "skip-cleanup-commits"):
+            if wnode in old_to_new_hgids:
+                ui.note(_("moving working copy parent\n"))
+                hg.update(repo, old_to_new_hgids[wnode])
 
-        replacements = {old: [new] for old, new in old_to_new_hgids.items()}
-        scmutil.cleanupnodes(repo, replacements, "pushrebase")
+            replacements = {old: [new] for old, new in old_to_new_hgids.items()}
+            scmutil.cleanupnodes(repo, replacements, "pushrebase")
 
-        entries = [
-            mutation.createsyntheticentry(repo, [node], new_node, "pushrebase")
-            for (node, new_node) in old_to_new_hgids.items()
-        ]
-        mutation.recordentries(repo, entries, skipexisting=False)
+            entries = [
+                mutation.createsyntheticentry(repo, [node], new_node, "pushrebase")
+                for (node, new_node) in old_to_new_hgids.items()
+            ]
+            mutation.recordentries(repo, entries, skipexisting=False)
 
         ui.status(_("updated remote bookmark %s to %s\n") % (bookmark, short(new_head)))
         return 0
