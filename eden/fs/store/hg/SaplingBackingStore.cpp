@@ -626,31 +626,20 @@ void SaplingBackingStore::getBlobBatch(
       [&](size_t index, folly::Try<std::unique_ptr<folly::IOBuf>> content) {
         if (content.hasException()) {
           XLOGF(
-              DBG6,
+              DBG4,
               "Failed to import node={} from EdenAPI (batch {}/{}): {}",
               folly::hexlify(requests[index].node),
               index,
               requests.size(),
               content.exception().what().toStdString());
+          return;
         } else {
           XLOGF(
-              DBG6,
+              DBG4,
               "Imported node={} from EdenAPI (batch: {}/{})",
               folly::hexlify(requests[index].node),
               index,
               requests.size());
-        }
-
-        if (content.hasException()) {
-          if (structuredLogger_) {
-            structuredLogger_->logEvent(FetchMiss{
-                store_.getRepoName(),
-                FetchMiss::Blob,
-                content.exception().what().toStdString(),
-                false});
-          }
-
-          return;
         }
 
         const auto& nodeId = requests[index].node;
@@ -811,31 +800,20 @@ void SaplingBackingStore::getTreeBatch(
           folly::Try<std::shared_ptr<sapling::Tree>> content) mutable {
         if (content.hasException()) {
           XLOGF(
-              DBG6,
+              DBG4,
               "Failed to import node={} from EdenAPI (batch tree {}/{}): {}",
               folly::hexlify(requests[index].node),
               index,
               requests.size(),
               content.exception().what().toStdString());
+          return;
         } else {
           XLOGF(
-              DBG6,
+              DBG4,
               "Imported node={} from EdenAPI (batch tree: {}/{})",
               folly::hexlify(requests[index].node),
               index,
               requests.size());
-        }
-
-        if (content.hasException()) {
-          if (structuredLogger_) {
-            structuredLogger_->logEvent(FetchMiss{
-                store_.getRepoName(),
-                FetchMiss::Tree,
-                content.exception().what().toStdString(),
-                false});
-          }
-
-          return;
         }
 
         const auto& nodeId = requests[index].node;
@@ -1066,7 +1044,7 @@ void SaplingBackingStore::getBlobMetadataBatch(
           folly::Try<std::shared_ptr<sapling::FileAuxData>> auxTry) {
         if (auxTry.hasException()) {
           XLOGF(
-              DBG6,
+              DBG4,
               "Failed to import metadata node={} from EdenAPI (batch {}/{}): {}",
               folly::hexlify(requests[index].node),
               index,
@@ -1074,7 +1052,7 @@ void SaplingBackingStore::getBlobMetadataBatch(
               auxTry.exception().what().toStdString());
         } else {
           XLOGF(
-              DBG6,
+              DBG4,
               "Imported metadata node={} from EdenAPI (batch: {}/{})",
               folly::hexlify(requests[index].node),
               index,
@@ -1082,7 +1060,8 @@ void SaplingBackingStore::getBlobMetadataBatch(
         }
 
         if (auxTry.hasException()) {
-          if (structuredLogger_) {
+          if (structuredLogger_ &&
+              fetch_mode != sapling::FetchMode::RemoteOnly) {
             structuredLogger_->logEvent(FetchMiss{
                 store_.getRepoName(),
                 FetchMiss::BlobMetadata,
