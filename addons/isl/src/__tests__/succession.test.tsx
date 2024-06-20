@@ -40,8 +40,10 @@ describe('succession', () => {
 
   describe('edited commit message', () => {
     it('uses succession to maintain edited commit message', () => {
-      CommitInfoTestUtils.clickToEditTitle();
-      CommitInfoTestUtils.clickToEditDescription();
+      act(() => {
+        CommitInfoTestUtils.clickToEditTitle();
+        CommitInfoTestUtils.clickToEditDescription();
+      });
 
       CommitInfoTestUtils.expectIsEditingTitle();
       CommitInfoTestUtils.expectIsEditingDescription();
@@ -98,8 +100,10 @@ describe('succession', () => {
       expect(CommitInfoTestUtils.withinCommitInfo().getByText('Commit X2')).toBeInTheDocument();
 
       // Resulting commit being viewed should be editable: clicking the edit buttons work.
-      CommitInfoTestUtils.clickToEditTitle();
-      CommitInfoTestUtils.clickToEditDescription();
+      act(() => {
+        CommitInfoTestUtils.clickToEditTitle();
+        CommitInfoTestUtils.clickToEditDescription();
+      });
       CommitInfoTestUtils.expectIsEditingTitle();
       CommitInfoTestUtils.expectIsEditingDescription();
     });

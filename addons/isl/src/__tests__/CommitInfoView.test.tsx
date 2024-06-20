@@ -553,8 +553,10 @@ describe('CommitInfoView', () => {
         });
 
         it('focuses topmost edited field when loading from saved state', async () => {
-          clickToEditTitle();
-          clickToEditDescription();
+          act(() => {
+            clickToEditTitle();
+            clickToEditDescription();
+          });
           {
             act(() => {
               userEvent.type(getTitleEditor(), ' hello new title');
@@ -622,15 +624,19 @@ describe('CommitInfoView', () => {
           it('enables metaedit button if fields are edited', () => {
             clickToSelectCommit('a');
 
-            clickToEditTitle();
-            clickToEditDescription();
+            act(() => {
+              clickToEditTitle();
+              clickToEditDescription();
+            });
           });
 
           it('runs metaedit', async () => {
             clickToSelectCommit('a');
 
-            clickToEditTitle();
-            clickToEditDescription();
+            act(() => {
+              clickToEditTitle();
+              clickToEditDescription();
+            });
 
             {
               act(() => {
@@ -669,8 +675,10 @@ describe('CommitInfoView', () => {
           it('disables metaedit button with spinner while running', async () => {
             clickToSelectCommit('a');
 
-            clickToEditTitle();
-            clickToEditDescription();
+            act(() => {
+              clickToEditTitle();
+              clickToEditDescription();
+            });
             {
               act(() => {
                 userEvent.type(getTitleEditor(), ' hello new title');
@@ -699,8 +707,10 @@ describe('CommitInfoView', () => {
               }),
             );
 
-            clickToEditTitle();
-            clickToEditDescription();
+            act(() => {
+              clickToEditTitle();
+              clickToEditDescription();
+            });
 
             {
               act(() => {
@@ -834,8 +844,10 @@ describe('CommitInfoView', () => {
               within(screen.getByTestId('commit-info-actions-bar')).queryByText('Amend'),
             ).toBeInTheDocument();
 
-            clickToEditTitle();
-            clickToEditDescription();
+            act(() => {
+              clickToEditTitle();
+              clickToEditDescription();
+            });
 
             // no uncommitted changes, and message is being changed
             expect(
@@ -1008,8 +1020,10 @@ describe('CommitInfoView', () => {
 
       describe('edited messages indicator', () => {
         it('does not show edited message indicator when fields are not actually changed', () => {
-          clickToEditTitle();
-          clickToEditDescription();
+          act(() => {
+            clickToEditTitle();
+            clickToEditDescription();
+          });
           expectIsEditingTitle();
           expectIsEditingDescription();
 
@@ -1027,8 +1041,10 @@ describe('CommitInfoView', () => {
         });
 
         it('shows edited message indicator when title changed', () => {
-          clickToEditTitle();
-          clickToEditDescription();
+          act(() => {
+            clickToEditTitle();
+            clickToEditDescription();
+          });
 
           expect(screen.queryByTestId('unsaved-message-indicator')).not.toBeInTheDocument();
 
@@ -1045,8 +1061,10 @@ describe('CommitInfoView', () => {
         });
 
         it('shows edited message indicator when description changed', () => {
-          clickToEditTitle();
-          clickToEditDescription();
+          act(() => {
+            clickToEditTitle();
+            clickToEditDescription();
+          });
 
           expect(screen.queryByTestId('unsaved-message-indicator')).not.toBeInTheDocument();
 
@@ -1065,8 +1083,10 @@ describe('CommitInfoView', () => {
         it('appears for other commits', () => {
           clickToSelectCommit('a');
 
-          clickToEditTitle();
-          clickToEditDescription();
+          act(() => {
+            clickToEditTitle();
+            clickToEditDescription();
+          });
 
           expect(screen.queryByTestId('unsaved-message-indicator')).not.toBeInTheDocument();
 
@@ -1180,8 +1200,10 @@ describe('CommitInfoView', () => {
         });
 
         it('does not cancel if you do not confirm', async () => {
-          clickToEditTitle();
-          clickToEditDescription();
+          act(() => {
+            clickToEditTitle();
+            clickToEditDescription();
+          });
           const confirmSpy = jest
             .spyOn(platform, 'confirm')
             .mockImplementation(() => Promise.resolve(false));
@@ -1249,8 +1271,10 @@ describe('CommitInfoView', () => {
         it('renders metaedit operation smoothly', async () => {
           clickToSelectCommit('a');
 
-          clickToEditTitle();
-          clickToEditDescription();
+          act(() => {
+            clickToEditTitle();
+            clickToEditDescription();
+          });
           act(() => {
             userEvent.type(getTitleEditor(), ' with change!');
             userEvent.type(getDescriptionEditor(), '\nmore stuff!');
@@ -1363,8 +1387,10 @@ describe('CommitInfoView', () => {
             });
           });
 
-          clickToEditTitle();
-          clickToEditDescription();
+          act(() => {
+            clickToEditTitle();
+            clickToEditDescription();
+          });
           // now you can edit just fine
           expectIsEditingTitle();
           expectIsEditingDescription();
@@ -1377,8 +1403,10 @@ describe('CommitInfoView', () => {
             }),
           );
 
-          clickToEditTitle();
-          clickToEditDescription();
+          act(() => {
+            clickToEditTitle();
+            clickToEditDescription();
+          });
           act(() => {
             userEvent.type(getTitleEditor(), ' Hey');
             userEvent.type(getDescriptionEditor(), '\nHello');
