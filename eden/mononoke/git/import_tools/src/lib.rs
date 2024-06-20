@@ -281,9 +281,14 @@ pub async fn gitimport_acc<Uploader: GitUploader>(
     };
     let dry_run = prefs.dry_run;
 
-    let reader = GitRepoReader::new(&prefs.git_command_path, path).await?;
+    let reader = GitRepoReader::new(&prefs.git_command_path, path)
+        .await
+        .context("GitRepoReader::new")?;
     let roots = target.get_roots();
-    let all_commits = target.list_commits(&prefs.git_command_path, path).await?;
+    let all_commits = target
+        .list_commits(&prefs.git_command_path, path)
+        .await
+        .context("target.list_commits")?;
     let nb_commits_to_import = all_commits.len();
     if 0 == nb_commits_to_import {
         info!(ctx.logger(), "Nothing to import for repo {}.", repo_name);
@@ -302,7 +307,12 @@ pub async fn gitimport_acc<Uploader: GitUploader>(
         .map(|v| v.into_iter().cloned().collect::<Vec<_>>())
         .map(|oids| {
             borrowed!(uploader);
-            async move { uploader.preload_uploaded_commits(ctx, &oids).await }
+            async move {
+                uploader
+                    .preload_uploaded_commits(ctx, &oids)
+                    .await
+                    .context("preload_uploaded_commits")
+            }
         })
         .buffered(prefs.concurrency)
         .try_collect::<Vec<_>>()
@@ -343,7 +353,7 @@ pub async fn gitimport_acc<Uploader: GitUploader>(
                         .with_context(|| format!("While extracting {}", oid))?;
 
                     let diff = extracted_commit.diff(&ctx, &reader, submodules);
-                    let file_changes = find_file_changes(&ctx, &lfs, &reader, uploader, diff, GitObjectStorageType::PackfileItemsAndRawObjects).await?;
+                    let file_changes = find_file_changes(&ctx, &lfs, &reader, uploader, diff, GitObjectStorageType::PackfileItemsAndRawObjects).await.context("find_file_changes")?;
                     Result::<_, Error>::Ok((extracted_commit, file_changes))
                     }
                 })
@@ -451,7 +461,7 @@ pub async fn gitimport_acc<Uploader: GitUploader>(
                         file_changes,
                         dry_run,
                     )
-                    .await?;
+                    .await.context("generate_changeset_for_commit")?;
                 acc.write().expect("lock poisoned").insert(oid, bcs_id);
 
                 let git_sha1 = oid_to_sha1(&oid)?;
@@ -473,7 +483,7 @@ pub async fn gitimport_acc<Uploader: GitUploader>(
         .map(|v| v.into_iter().collect::<Result<Vec<_>, Error>>())
         .try_for_each(|v| async {
             cloned!(backfill_derivation, ctx, uploader);
-            task::spawn(async move { uploader.finalize_batch(&ctx, dry_run, backfill_derivation, v).await }).await?
+            task::spawn(async move { uploader.finalize_batch(&ctx, dry_run, backfill_derivation, v).await.context("finalize_batch") }).await?
         })
         .await?;
 
