@@ -8,7 +8,8 @@
   $ setconfig ui.ignorerevnum=false
 
 setup configuration
-  $ setup_common_config "blob_files"
+  $ setconfig push.edenapi=true
+  $ ENABLE_API_WRITES=1 setup_common_config "blob_files"
   $ cd $TESTTMP
 
 setup common configuration
@@ -42,13 +43,16 @@ create a commit with mutation extras
       f0161ad23099c690115006c21e96f780f5d740b6
   
 pushrebase it directly onto master - it will be rewritten without the mutation extras
-  $ hgmn push -r . --to master
-  pushing rev 6ad95cdc8ab9 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master
-  searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
-  updating bookmark master
+  $ hgedenapi push -r . --to master --config push.skip-cleanup-commits=true
+  pushing rev 6ad95cdc8ab9 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master
+  edenapi: queue 1 commit for upload
+  edenapi: queue 1 file for upload
+  edenapi: uploaded 1 file
+  edenapi: queue 1 tree for upload
+  edenapi: uploaded 1 tree
+  edenapi: uploaded 1 changeset
+  pushrebasing stack (d20a80d4def3, 6ad95cdc8ab9] (1 commit) to remote bookmark master
+  updated remote bookmark master to a05b3505b7d1
 
   $ tglog
   o  a05b3505b7d1 '1a'
@@ -70,13 +74,16 @@ create another commit on the base commit with mutation extras
       1b9fe529321657f93e84f23afaf9c855b9af34ff
   
 pushrebase it onto master - it will be rebased and rewritten without the mutation extras
-  $ hgmn push -r . --to master
-  pushing rev fd935a5d42c4 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master
-  searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
-  updating bookmark master
+  $ hgedenapi push -r . --to master --config push.skip-cleanup-commits=true
+  pushing rev fd935a5d42c4 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master
+  edenapi: queue 1 commit for upload
+  edenapi: queue 1 file for upload
+  edenapi: uploaded 1 file
+  edenapi: queue 1 tree for upload
+  edenapi: uploaded 1 tree
+  edenapi: uploaded 1 changeset
+  pushrebasing stack (d20a80d4def3, fd935a5d42c4] (1 commit) to remote bookmark master
+  updated remote bookmark master to 7042a534cddc
 
   $ tglog
   o  7042a534cddc '2a'
