@@ -12,6 +12,7 @@ mod checkpoints;
 mod children;
 mod common_base;
 mod descendants;
+mod is_ancestor;
 mod range_stream;
 mod segments;
 mod slice_ancestors;
@@ -33,6 +34,7 @@ use clap::Subcommand;
 use commit_graph::CommitGraph;
 use common_base::CommonBaseArgs;
 use descendants::DescendantsArgs;
+use is_ancestor::IsAncestorArgs;
 use metaconfig_types::RepoConfig;
 use mononoke_app::args::RepoArgs;
 use mononoke_app::MononokeApp;
@@ -78,6 +80,8 @@ pub enum CommitGraphSubcommand {
     /// Display segments representing ancestors of one set of commits (heads), excluding
     /// ancestors of another set of commits (common) in reverse topological order.
     Segments(SegmentsArgs),
+    /// Check if a commit is an ancestor of another commit.
+    IsAncestor(IsAncestorArgs),
 }
 
 #[facet::container]
@@ -142,5 +146,8 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
             descendants::descendants(&ctx, &repo, args).await
         }
         CommitGraphSubcommand::Segments(args) => segments::segments(&ctx, &repo, args).await,
+        CommitGraphSubcommand::IsAncestor(args) => {
+            is_ancestor::is_ancestor(&ctx, &repo, args).await
+        }
     }
 }
