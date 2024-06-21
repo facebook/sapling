@@ -726,21 +726,12 @@ mod tests {
     use super::BString;
     use super::Logger;
 
-    const ASCII_BSTR: &[u8] = b"Hello, World!".as_slice();
-    const ASCII_STR: &str = "Hello, World!";
-    const UTF8_UNICODE_BSTR: &[u8] =
-        b"Hello, \xce\xba\xe1\xbd\xb9\xcf\x83\xce\xbc\xce\xB5!".as_slice();
-    const UTF8_UNICODE_STR: &str = "Hello, κόσμε!";
-    const LATIN1_ACCENTED_BSTR: &[u8] = b"Hello, R\xe9mi-\xc9tienne!".as_slice();
-    const UTF8_ACCENTED_BSTR: &[u8] = b"Hello, R\xc3\xa9mi-\xc3\x89tienne!".as_slice();
-    const BROKEN_LATIN1_FROM_UTF8_ACCENTED_STR: &str = "Hello, RÃ©mi-Ã‰tienne!";
-    const UTF8_ACCENTED_STR: &str = "Hello, Rémi-Étienne!";
-    const UTF8_ACCENTED_STR_WITH_REPLACEMENT_CHARACTER: &str = "Hello, R�mi-�tienne!";
-
     fn should_decode_into(message: &[u8], encoding: &Option<BString>, expected: &str) {
         let logger = Logger::root(slog::Discard, o!());
         let m = decode_message(message, encoding, &logger);
-        assert!(m.is_ok());
+        if m.is_err() {
+            panic!("{:?}", m);
+        }
         assert_eq!(expected, &m.unwrap())
     }
     fn should_fail_to_decode(message: &[u8], encoding: &Option<BString>) {
@@ -752,47 +743,56 @@ mod tests {
     #[test]
     fn test_decode_commit_message_given_invalid_encoding_should_fail() {
         should_fail_to_decode(
-            ASCII_BSTR,
+            b"Hello, World!",
             &Some(BString::from("not a valid encoding label")),
         );
     }
     #[test]
     fn test_decode_commit_message_given_ascii_as_utf8() {
         for encoding in [None, Some(BString::from("utf-8"))] {
-            should_decode_into(ASCII_BSTR, &encoding, ASCII_STR);
+            should_decode_into(b"Hello, World!", &encoding, "Hello, World!");
         }
     }
     #[test]
     fn test_decode_commit_message_given_valid_utf8() {
         for encoding in [None, Some(BString::from("utf-8"))] {
-            should_decode_into(UTF8_UNICODE_BSTR, &encoding, UTF8_UNICODE_STR);
-            should_decode_into(UTF8_ACCENTED_BSTR, &encoding, UTF8_ACCENTED_STR);
+            should_decode_into(
+                b"Hello, \xce\xba\xe1\xbd\xb9\xcf\x83\xce\xbc\xce\xB5!",
+                &encoding,
+                "Hello, κόσμε!",
+            );
+            should_decode_into(
+                b"Hello, R\xc3\xa9mi-\xc3\x89tienne!", // UTF-8 encoded
+                &encoding,                             // UTF-8 encoding
+                "Hello, Rémi-Étienne!",                // Legibly decoded
+            );
         }
     }
     #[test]
     fn test_decode_commit_message_given_malformed_utf8() {
         for encoding in [None, Some(BString::from("utf-8"))] {
             should_decode_into(
-                LATIN1_ACCENTED_BSTR,
-                &encoding,
-                UTF8_ACCENTED_STR_WITH_REPLACEMENT_CHARACTER,
+                b"Hello, R\xe9mi-\xc9tienne!", // Latin 1 encoded
+                &encoding,                     // UTF-8 encoding
+                "Hello, R�mi-�tienne!", // We have to use replacement characters to encode this
+                                        // latin1 string in UTF-8
             );
         }
     }
     #[test]
     fn test_decode_commit_message_given_valid_latin1() {
         should_decode_into(
-            LATIN1_ACCENTED_BSTR,
-            &Some(BString::from("iso-8859-1")),
-            UTF8_ACCENTED_STR,
+            b"Hello, R\xe9mi-\xc9tienne!",      // Latin 1 encoded
+            &Some(BString::from("iso-8859-1")), // Latin 1 encoding
+            "Hello, Rémi-Étienne!",             // We decode just fine into legible UTF-8
         );
     }
     #[test]
     fn test_decode_commit_message_given_malformed_latin1() {
         should_decode_into(
-            UTF8_ACCENTED_BSTR,
-            &Some(BString::from("iso-8859-1")),
-            BROKEN_LATIN1_FROM_UTF8_ACCENTED_STR,
+            b"Hello, R\xc3\xa9mi-\xc3\x89tienne!".as_slice(), // UTF-8 encoded
+            &Some(BString::from("iso-8859-1")),               // Latin 1 encoding
+            "Hello, RÃ©mi-Ã‰tienne!", // Broken decoding, this is the best we can do
         );
     }
 }
