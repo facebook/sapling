@@ -49,13 +49,26 @@ class PrjfsRequestContext : public RequestContext {
     return folly::ReadMostlyWeakPtr<PrjfsChannelInner>{channel_};
   }
 
-  ImmediateFuture<folly::Unit> catchErrors(ImmediateFuture<folly::Unit>&& fut) {
-    return std::move(fut).thenTry([this](folly::Try<folly::Unit>&& try_) {
-      auto result = tryToHResult(try_);
-      if (result != S_OK) {
-        sendError(result);
-      }
-    });
+  ImmediateFuture<folly::Unit> catchErrors(
+      ImmediateFuture<folly::Unit>&& fut,
+      EdenStatsPtr stats,
+      StatsGroupBase::Counter PrjfsStats::*countSuccessful,
+      StatsGroupBase::Counter PrjfsStats::*countFailure) {
+    return std::move(fut).thenTry(
+        [this, stats = std::move(stats), countSuccessful, countFailure](
+            folly::Try<folly::Unit>&& try_) {
+          auto result = tryToHResult(try_);
+          if (result != S_OK) {
+            if (stats && countFailure) {
+              stats->increment(countFailure);
+            }
+            sendError(result);
+          } else {
+            if (stats && countSuccessful) {
+              stats->increment(countSuccessful);
+            }
+          }
+        });
   }
 
   void sendSuccess() const {
