@@ -16,7 +16,8 @@
   $ hg commit -m test
   $ rm .hg/requires
   $ hg tip
-  abort: legacy dirstate implementations are no longer supported!
+  abort: '$TESTTMP/t' is not inside a repository, but this command requires a repository!
+  (use 'cd' to go to a directory inside a repository and try again)
   [255]
   $ echo indoor-pool > .hg/requires
   $ hg tip
