@@ -847,7 +847,7 @@ impl SaplingRemoteApi for EagerRepo {
             res.push(Ok(UploadTreeResponse {
                 token: UploadToken {
                     data: UploadTokenData {
-                        id: AnyId::HgFilenodeId(tree.node_id),
+                        id: AnyId::HgTreeId(tree.node_id),
                         bubble_id: None,
                         metadata: None,
                     },
