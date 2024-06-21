@@ -406,6 +406,21 @@ fn format_signature(sig: gix_actor::SignatureRef) -> String {
     format!("{} <{}>", sig.name, sig.email)
 }
 
+pub fn decode_with_bom<'a>(
+    encoding: &'static Encoding,
+    bytes: &'a [u8],
+) -> (std::borrow::Cow<'a, str>, &'static Encoding, bool) {
+    // Sniff the BOM to see if it overrides the encoding we think we should use
+    let encoding = match Encoding::for_bom(bytes) {
+        Some((encoding, _bom_length)) => encoding,
+        None => encoding,
+    };
+    // If the encoding is UTF_8, we need to keep the BOM as valid UTF_8 should be
+    // round-trippable
+    let (cow, had_errors) = encoding.decode_without_bom_handling(bytes);
+    (cow, encoding, had_errors)
+}
+
 /// Decode a git commit message
 ///
 /// Git choses to keep the raw user-provided bytes for the commit message.
@@ -426,6 +441,7 @@ fn decode_message(
     encoding: &Option<BString>,
     logger: &Logger,
 ) -> Result<String, Error> {
+    let explicit_encoding_provided = encoding.is_some();
     let mut encoding_or_utf8 = encoding.clone().unwrap_or_else(|| BString::from("utf-8"));
     // remove single quotes so that "'utf8'" will be accepted
     encoding_or_utf8.retain(|c| *c != 39);
@@ -436,9 +452,9 @@ fn decode_message(
             String::from_utf8_lossy(&encoding_or_utf8)
         )
     })?;
-    let (decoded, actual_encoding, replacement) = encoding.decode(message);
+    let (decoded, actual_encoding, replacement) = decode_with_bom(encoding, message);
     let message = decoded.to_string();
-    if actual_encoding != encoding {
+    if explicit_encoding_provided && actual_encoding != encoding {
         // Decode performs BOM sniffing to detect the actual encoding for this byte string.
         // We expect it to match the encoding declared in the commit metadata.
         bail!("Unexpected encoding: expected {encoding:?}, got {actual_encoding:?}");
@@ -793,6 +809,63 @@ mod tests {
             b"Hello, R\xc3\xa9mi-\xc3\x89tienne!".as_slice(), // UTF-8 encoded
             &Some(BString::from("iso-8859-1")),               // Latin 1 encoding
             "Hello, RÃ©mi-Ã‰tienne!", // Broken decoding, this is the best we can do
+        );
+    }
+    #[test]
+    fn test_decode_utf8_with_bom() {
+        // We can sniff the UTF-8 BOM mark
+        assert_eq!(
+            encoding_rs::Encoding::for_bom(b"\xef\xbb\xbf"),
+            Some((encoding_rs::UTF_8, 3))
+        );
+        for encoding in [None, Some(BString::from("utf-8"))] {
+            should_decode_into(
+                b"\xef\xbb\xbfHello, World!",
+                &encoding,
+                "\u{feff}Hello, World!",
+            );
+        }
+    }
+    #[test]
+    fn test_decode_non_utf8_with_bom() {
+        // We can sniff the UTF-16BE BOM mark
+        assert_eq!(
+            encoding_rs::Encoding::for_bom(b"\xfe\xff"),
+            Some((encoding_rs::UTF_16BE, 2))
+        );
+        for encoding in [None, Some(BString::from("utf-16be"))] {
+            should_decode_into(
+                b"\xfe\xff\xd8\x34\xdd\x1e\x00 \x00H\x00i\x00!",
+                &encoding,
+                "\u{feff}𝄞 Hi!",
+            );
+        }
+        // Mismatch between the encoding in the BOM and the declared encoding
+        should_fail_to_decode(
+            b"\xfe\xff\xd8\x34\xdd\x1e\x00 \x00H\x00i\x00!",
+            &Some(BString::from("utf-8")),
+        );
+    }
+    #[test]
+    fn test_decode_gb18030_with_bom_shows_the_limits_of_our_implementation() {
+        // b"\x84\x31\x95\x33" is the BOM mark that indicates a GB18030 encoding. An encoding for
+        // chinese characters.
+        // Currently, BOM-sniffing doesn't work for this esoteric encoding due to limitations of
+        // encoding_rs.
+        // This means we would need for the encoding to be explicitly specified to be able to
+        // decode such strings without falling back to replacement characters
+        assert_eq!(encoding_rs::Encoding::for_bom(b"\x84\x31\x95\x33"), None);
+        should_decode_into(b"\x84\x31\x95\x33Hello, \xfe\x55!", &None, "�1�3Hello, �U!");
+        // Explicit gb18030 encoding
+        should_decode_into(
+            b"\x84\x31\x95\x33Hello, \xfe\x55!",
+            &Some(BString::from("gb18030")),
+            "\u{feff}Hello, 㑳!",
+        );
+        should_decode_into(
+            b"\x84\x31\x95\x33Hello, \xfe\x55!", // GB18030 encoded
+            &Some(BString::from("utf-8")),       // UTF-8 encoding
+            "�1�3Hello, �U!",                    // We have to use replacement characters
         );
     }
 }
