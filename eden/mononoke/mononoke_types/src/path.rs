@@ -35,6 +35,7 @@ use crate::errors::MononokeTypeError;
 use crate::hash::Blake2;
 use crate::hash::Context;
 use crate::thrift;
+use crate::ThriftConvert;
 
 pub mod mpath_element;
 
@@ -235,13 +236,6 @@ impl MPath {
         self.elements.is_empty()
     }
 
-    pub fn from_thrift(mpath: thrift::path::MPath) -> Result<Self> {
-        let elements: Result<Vec<_>> = mpath.0.into_iter().map(MPathElement::from_thrift).collect();
-        let elements = elements?;
-
-        Ok(Self { elements })
-    }
-
     pub fn join<'a, Elements: IntoIterator<Item = &'a MPathElement>>(
         &self,
         another: Elements,
@@ -385,15 +379,6 @@ impl MPath {
         self.elements
             .split_first()
             .map(|(first, rest)| (first, Self::from_elements(rest.iter())))
-    }
-
-    pub fn into_thrift(self) -> thrift::path::MPath {
-        thrift::path::MPath(
-            self.elements
-                .into_iter()
-                .map(|elem| elem.into_thrift())
-                .collect(),
-        )
     }
 
     pub fn get_path_hash(&self) -> MPathHash {
@@ -876,6 +861,31 @@ impl NonRootMPath {
     pub fn matches_regex(&self, re: &Regex) -> bool {
         let s: String = format!("{}", self);
         re.is_match(&s)
+    }
+}
+
+impl ThriftConvert for MPath {
+    const NAME: &'static str = "MPath";
+    type Thrift = thrift::path::MPath;
+
+    fn from_thrift(thrift: Self::Thrift) -> Result<Self> {
+        let elements: Result<Vec<_>> = thrift
+            .0
+            .into_iter()
+            .map(MPathElement::from_thrift)
+            .collect();
+        let elements = elements?;
+
+        Ok(Self { elements })
+    }
+
+    fn into_thrift(self) -> Self::Thrift {
+        thrift::path::MPath(
+            self.elements
+                .into_iter()
+                .map(|elem| elem.into_thrift())
+                .collect(),
+        )
     }
 }
 
