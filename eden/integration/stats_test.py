@@ -43,28 +43,44 @@ class GenericStatsTest(testcase.EdenRepoTest):
         path = Path(self.mount) / "file"
         path.read_bytes()
 
-        counter_name = self.protocol_type() + ".read_us.count"
-        self.poll_until_counter_condition(
-            lambda counters_after: self.assertGreater(
-                counters_after[counter_name],
-                counters_before.get(counter_name, 0),
-                f"Reading {path} should increment {counter_name}",
+        counter_names = [
+            self.protocol_type() + ".read_us.count",
+            self.protocol_type() + ".lookup_us.count",
+            self.protocol_type() + ".read_successful.count",
+            self.protocol_type() + ".lookup_successful.count",
+        ]
+        for counter_name in counter_names:
+            self.poll_until_counter_condition(
+                lambda counters_after, counter_name=counter_name: self.assertGreater(
+                    counters_after[counter_name],
+                    counters_before.get(counter_name, 0),
+                    f"Reading {path} should increment {counter_name}",
+                )
             )
-        )
 
     def test_writing_untracked_file_bumps_write_counter(self) -> None:
         counters_before = self.get_counters()
         path = Path(self.mount) / "new_file"
         path.write_bytes(b"hello")
 
-        counter_name = self.protocol_type() + ".write_us.count"
-        self.poll_until_counter_condition(
-            lambda counters_after: self.assertGreater(
-                counters_after[counter_name],
-                counters_before.get(counter_name, 0),
-                f"Writing to {path} should increment {counter_name}",
+        counter_names = [
+            self.protocol_type() + ".write_us.count",
+            self.protocol_type() + ".lookup_us.count",
+            self.protocol_type() + ".getattr_us.count",
+            self.protocol_type() + ".create_us.count",
+            self.protocol_type() + ".write_successful.count",
+            self.protocol_type() + ".lookup_successful.count",
+            self.protocol_type() + ".getattr_successful.count",
+            self.protocol_type() + ".create_successful.count",
+        ]
+        for counter_name in counter_names:
+            self.poll_until_counter_condition(
+                lambda counters_after, counter_name=counter_name: self.assertGreater(
+                    counters_after[counter_name],
+                    counters_before.get(counter_name, 0),
+                    f"Writing to {path} should increment {counter_name}",
+                )
             )
-        )
 
     def test_summary_counters_available(self) -> None:
         mountName = PurePath(self.mount).name
@@ -170,6 +186,139 @@ class ObjectCacheStatsTest(testcase.EdenRepoTest):
 
         final_count = self.get_counters().get(MEMORY_COUNTER, 0)
         self.assertTrue(final_count > initial_count)
+
+
+@testcase.eden_test
+class FSChannelStatsTest(testcase.EdenRepoTest):
+    def protocol_type(self) -> str:
+        if sys.platform == "linux" or sys.platform == "darwin":
+            return "nfs" if self.use_nfs() else "fuse"
+        else:
+            return "prjfs"
+
+    def getFuseCounters(self) -> typing.List[str]:
+        return [
+            "lookup_",
+            "forget_",
+            "getattr_",
+            "setattr_",
+            "readlink_",
+            "mknod_",
+            "mkdir_",
+            "unlink_",
+            "rmdir_",
+            "symlink_",
+            "rename_",
+            "link_",
+            "open_",
+            "read_",
+            "write_",
+            "flush_",
+            "release_",
+            "fsync_",
+            "opendir_",
+            "readdir_",
+            "releasedir_",
+            "fsyncdir_",
+            "statfs_",
+            "setxattr_",
+            "getxattr_",
+            "listxattr_",
+            "removexattr_",
+            "access_",
+            "create_",
+            "bmap_",
+            "forgetmulti_",
+            "fallocate_",
+        ]
+
+    def getNfsCounters(self) -> typing.List[str]:
+        return [
+            "null_",
+            "getattr_",
+            "setattr_",
+            "lookup_",
+            "access_",
+            "readlink_",
+            "read_",
+            "write_",
+            "create_",
+            "mkdir_",
+            "symlink_",
+            "mknod_",
+            "remove_",
+            "rmdir_",
+            "rename_",
+            "link_",
+            "readdir_",
+            "readdirplus_",
+            "fsstat_",
+            "fsinfo_",
+            "pathconf_",
+            "commit_",
+        ]
+
+    def getPrjfsCounters(self) -> typing.List[str]:
+        return [
+            "filesystem_sync_",
+            "newFileCreated_",
+            "fileOverwritten_",
+            "fileHandleClosedFileModified_",
+            "fileRenamed_",
+            "preDelete_",
+            "preRenamed_",
+            "fileHandleClosedFileDeleted_",
+            "preSetHardlink_",
+            "preConvertToFull_",
+            "opendir_",
+            "readdir_",
+            "lookup_",
+            "access_",
+            "read_",
+            "remove_cached_file_",
+            "add_directory_placeholder_",
+        ]
+
+    def test_fschannel_counters_available(self) -> None:
+        counters = self.get_counters()
+        template_duration = self.protocol_type() + ".{}us.count"
+        template_successful = self.protocol_type() + ".{}successful.count"
+        template_failure = self.protocol_type() + ".{}failure.count"
+        if sys.platform == "linux":
+            platform_counters = self.getFuseCounters()
+        if sys.platform == "win32":
+            platform_counters = self.getPrjfsCounters()
+        if sys.platform == "darwin":
+            platform_counters = self.getNfsCounters()
+        for counter in platform_counters:
+            duration_counter_name = template_duration.format(counter)
+            successful_counter_name = template_successful.format(counter)
+            failure_counter_name = template_failure.format(counter)
+            self.assertIn(
+                duration_counter_name,
+                counters,
+                f"{duration_counter_name} should be available",
+            )
+            self.assertIn(
+                successful_counter_name,
+                counters,
+                f"{successful_counter_name} should be available",
+            )
+            self.assertIn(
+                failure_counter_name,
+                counters,
+                f"{failure_counter_name} should be available",
+            )
+
+    def create_repo(self, name: str) -> HgRepository:
+        return self.create_hg_repo(name)
+
+    def populate_repo(self) -> None:
+        # This file evades EdenFS' automatic prefetching by being two levels
+        # inside the root.
+        self.repo.write_file("dir/subdir/file", "hello world!\n")
+
+        self.repo.commit("Initial commit.")
 
 
 @testcase.eden_nfs_repo_test
