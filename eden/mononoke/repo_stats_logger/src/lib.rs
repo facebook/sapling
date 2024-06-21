@@ -21,6 +21,7 @@ use futures::future::AbortHandle;
 use metaconfig_types::ArcRepoConfig;
 use mononoke_types::ChangesetId;
 use repo_derived_data::ArcRepoDerivedData;
+use sharding_ext::encode_repo_name;
 use slog::info;
 use slog::warn;
 use slog::Logger;
@@ -61,13 +62,15 @@ impl RepoStatsLogger {
                 if justknobs::eval("scm/mononoke:scs_enable_repo_stats_logger", None, None)
                     .unwrap_or(false)
                 {
+                    let repo_key = encode_repo_name(&repo_name);
                     let bookmark_name =
                         get_repo_bookmark_name(repo_config.clone()).expect("invalid bookmark name");
                     let default_repo_objects_count = get_repo_default_objects_count(repo_config);
                     info!(
                         ctx.logger(),
-                        "repo {} bookmark {} default_repo_objects_count {}",
+                        "repo {} {} bookmark {} default_repo_objects_count {}",
                         repo_name,
+                        repo_key,
                         bookmark_name,
                         default_repo_objects_count
                     );
@@ -89,7 +92,7 @@ impl RepoStatsLogger {
                             )
                             .unwrap_or(0);
                             let count = if over > 0 { over } else { count };
-                            STATS::repo_objects_count.set_value(fb, count, (repo_name.clone(),));
+                            STATS::repo_objects_count.set_value(fb, count, (repo_key,));
                         }
                         Err(e) => {
                             warn!(ctx.logger(), "Finding bookmark for {}: {}", repo_name, e);

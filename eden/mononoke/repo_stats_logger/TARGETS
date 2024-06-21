@@ -17,6 +17,7 @@ rust_library(
         "//common/rust/shed/stats:stats",
         "//eden/mononoke/blobstore:blobstore",
         "//eden/mononoke/bookmarks:bookmarks",
+        "//eden/mononoke/cmdlib/sharding_ext:sharding_ext",
         "//eden/mononoke/derived_data:fsnodes",
         "//eden/mononoke/metaconfig:metaconfig_types",
         "//eden/mononoke/mononoke_types:mononoke_types",
