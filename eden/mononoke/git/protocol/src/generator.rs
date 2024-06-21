@@ -379,7 +379,7 @@ async fn trees_and_blobs_count(
                 // Get the FxHashSet of the tree and blob object Ids that will be included
                 // in the packfile
                 let objects = delta_manifest
-                    .into_subentries(&ctx, &blobstore)
+                    .into_entries(&ctx, &blobstore)
                     .try_filter_map(|(path, entry)| {
                         cloned!(filter);
                         async move {
@@ -959,7 +959,7 @@ async fn tree_and_blob_packfile_items(
     // not the actual object so its safe to load them all into memory instead of chaining streams
     // which significantly slows down the entire process.
     let entries = delta_manifest
-        .into_subentries(&ctx, &blobstore)
+        .into_entries(&ctx, &blobstore)
         .map_ok(|(path, entry)| (changeset_id, path, entry))
         .try_collect::<Vec<_>>()
         .await?;

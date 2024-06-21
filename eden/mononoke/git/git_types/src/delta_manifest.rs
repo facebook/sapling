@@ -120,7 +120,7 @@ impl GitDeltaManifest {
         Ok(())
     }
 
-    pub fn into_subentries<'a>(
+    pub fn into_entries<'a>(
         self,
         ctx: &'a CoreContext,
         blobstore: &'a impl Blobstore,
@@ -134,7 +134,7 @@ impl GitDeltaManifest {
             .boxed()
     }
 
-    pub fn into_filtered_subentries<'a>(
+    pub fn into_filtered_entries<'a>(
         self,
         ctx: &'a CoreContext,
         blobstore: &'a impl Blobstore,
@@ -153,7 +153,7 @@ impl GitDeltaManifest {
             .boxed()
     }
 
-    pub fn into_prefix_subentries<'a>(
+    pub fn into_prefix_entries<'a>(
         self,
         ctx: &'a CoreContext,
         blobstore: &'a impl Blobstore,
@@ -516,7 +516,7 @@ impl Arbitrary for ObjectEntry {
 
 /// Enum representing the types of Git objects that can be present
 /// in a GitDeltaManifest
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub enum ObjectKind {
     Blob,
     Tree,

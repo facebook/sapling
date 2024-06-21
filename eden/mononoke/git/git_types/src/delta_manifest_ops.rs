@@ -75,7 +75,7 @@ pub trait GitDeltaManifestOps {
     /// Returns a stream of the subentries of the GitDeltaManifest. There should
     /// be an entry for each object at a path that differs from the corresponding
     /// object at the same path in one of the parents.
-    fn into_subentries<'a>(
+    fn into_entries<'a>(
         self,
         ctx: &'a CoreContext,
         blobstore: &'a impl Blobstore,
@@ -85,12 +85,12 @@ pub trait GitDeltaManifestOps {
 impl GitDeltaManifestOps for GitDeltaManifest {
     type GitDeltaManifestEntryType = GitDeltaManifestEntry;
 
-    fn into_subentries<'a>(
+    fn into_entries<'a>(
         self,
         ctx: &'a CoreContext,
         blobstore: &'a impl Blobstore,
     ) -> impl Stream<Item = Result<(MPath, GitDeltaManifestEntry)>> + Send + 'a {
-        GitDeltaManifest::into_subentries(self, ctx, blobstore)
+        GitDeltaManifest::into_entries(self, ctx, blobstore)
     }
 }
 

@@ -737,7 +737,7 @@ mod test {
             .collect::<HashSet<_>>();
         let matched_entries = delta_manifest
             .clone()
-            .into_subentries(&ctx, &blobstore)
+            .into_entries(&ctx, &blobstore)
             .try_filter(|(path, _)| future::ready(expected_paths.contains(path)))
             .try_collect::<HashMap<_, _>>()
             .await?;
@@ -762,7 +762,7 @@ mod test {
             .collect::<HashSet<_>>();
         let matched_entries = delta_manifest
             .clone()
-            .into_subentries(&ctx, &blobstore)
+            .into_entries(&ctx, &blobstore)
             .try_filter(|(path, _)| future::ready(expected_paths.contains(path)))
             .try_collect::<HashMap<_, _>>()
             .await?;
@@ -806,7 +806,7 @@ mod test {
             .collect::<HashSet<_>>();
         let matched_entries = delta_manifest
             .clone()
-            .into_subentries(&ctx, &blobstore)
+            .into_entries(&ctx, &blobstore)
             .try_filter(|(path, _)| future::ready(expected_paths.contains(path)))
             .try_collect::<HashMap<_, _>>()
             .await?;
@@ -841,7 +841,7 @@ mod test {
             .collect::<HashSet<_>>();
         let matched_entries = delta_manifest
             .clone()
-            .into_subentries(&ctx, &blobstore)
+            .into_entries(&ctx, &blobstore)
             .try_filter(|(path, _)| future::ready(expected_paths.contains(path)))
             .try_collect::<HashMap<_, _>>()
             .await?;
@@ -877,7 +877,7 @@ mod test {
             .collect::<HashSet<_>>();
         let matched_entries = delta_manifest
             .clone()
-            .into_subentries(&ctx, &blobstore)
+            .into_entries(&ctx, &blobstore)
             .try_filter(|(path, _)| future::ready(expected_paths.contains(path)))
             .try_collect::<HashMap<_, _>>()
             .await?;
@@ -905,7 +905,7 @@ mod test {
             .collect::<HashSet<_>>();
         let matched_entries = delta_manifest
             .clone()
-            .into_subentries(&ctx, &blobstore)
+            .into_entries(&ctx, &blobstore)
             .try_filter(|(path, _)| future::ready(expected_paths.contains(path)))
             .try_collect::<HashMap<_, _>>()
             .await?;
@@ -930,7 +930,7 @@ mod test {
             .collect::<HashSet<_>>();
         let matched_entries = delta_manifest
             .clone()
-            .into_subentries(&ctx, &blobstore)
+            .into_entries(&ctx, &blobstore)
             .try_filter(|(path, _)| future::ready(expected_paths.contains(path)))
             .try_collect::<HashMap<_, _>>()
             .await?;
@@ -966,7 +966,7 @@ mod test {
         .collect::<HashSet<_>>();
         let matched_entries = delta_manifest
             .clone()
-            .into_subentries(&ctx, &blobstore)
+            .into_entries(&ctx, &blobstore)
             .try_filter(|(path, _)| future::ready(expected_paths.contains(path)))
             .try_collect::<HashMap<_, _>>()
             .await?;
