@@ -6,7 +6,8 @@
 
   $ . "${TEST_FIXTURES}/library.sh"
 
-  $ DISALLOW_NON_PUSHREBASE=1 POPULATE_GIT_MAPPING=1 EMIT_OBSMARKERS=1 BLOB_TYPE="blob_files" default_setup
+  $ setconfig push.edenapi=true
+  $ ENABLE_API_WRITES=1 DISALLOW_NON_PUSHREBASE=1 POPULATE_GIT_MAPPING=1 EMIT_OBSMARKERS=1 BLOB_TYPE="blob_files" default_setup
   hg repo
   o  C [draft;rev=2;26805aba1e60]
   │
@@ -22,53 +23,25 @@
 Push commit
   $ touch file1
   $ hg ci -Aqm commit1 --extra hg-git-rename-source=git --extra convert_revision=1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a
-  $ hgmn push -q -r . --to master_bookmark
+  $ hgedenapi push -q -r . --to master_bookmark
 
 Push another commit
   $ touch file2
   $ hg ci -Aqm commit2 --extra hg-git-rename-source=git --extra convert_revision=2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b
-  $ hgmn push -q -r . --to master_bookmark
+  $ hgedenapi push -q -r . --to master_bookmark
 
 Push another commit that conflicts
   $ touch file3
   $ hg ci -Aqm commit3 --extra hg-git-rename-source=git --extra convert_revision=2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b
-  $ hgmn push -r . --to master_bookmark
-  pushing rev 7fc28fc53a18 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
-  searching for changes
-  remote: Command failed
-  remote:   Error:
-  remote:     Pushrebase failed: Conflicting mapping Some(BonsaiGitMappingEntry { git_sha1: GitSha1(2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b), bcs_id: ChangesetId(Blake2(e37e13b17b5c2b37965b2a9591a64cb2c44a68fd10f1362a595da8c6e4eefa41)) }) detected while inserting git mappings (tried inserting: [BonsaiGitMappingEntry { git_sha1: GitSha1(2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b), bcs_id: ChangesetId(Blake2(3fa7acdeb82ac4f96a7bf1e7b5fa8f661c9921954a46164cbbfa828c0485595b)) }])
-  remote: 
-  remote:   Root cause:
-  remote:     Conflicting mapping Some(BonsaiGitMappingEntry { git_sha1: GitSha1(2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b), bcs_id: ChangesetId(Blake2(e37e13b17b5c2b37965b2a9591a64cb2c44a68fd10f1362a595da8c6e4eefa41)) }) detected while inserting git mappings (tried inserting: [BonsaiGitMappingEntry { git_sha1: GitSha1(2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b), bcs_id: ChangesetId(Blake2(3fa7acdeb82ac4f96a7bf1e7b5fa8f661c9921954a46164cbbfa828c0485595b)) }])
-  remote: 
-  remote:   Caused by:
-  remote:     Conflicting mapping Some(BonsaiGitMappingEntry { git_sha1: GitSha1(2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b), bcs_id: ChangesetId(Blake2(e37e13b17b5c2b37965b2a9591a64cb2c44a68fd10f1362a595da8c6e4eefa41)) }) detected while inserting git mappings (tried inserting: [BonsaiGitMappingEntry { git_sha1: GitSha1(2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b), bcs_id: ChangesetId(Blake2(3fa7acdeb82ac4f96a7bf1e7b5fa8f661c9921954a46164cbbfa828c0485595b)) }])
-  remote: 
-  remote:   Debug context:
-  remote:     PushrebaseError(
-  remote:         Error(
-  remote:             Conflict(
-  remote:                 Some(
-  remote:                     BonsaiGitMappingEntry {
-  remote:                         git_sha1: GitSha1(2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b),
-  remote:                         bcs_id: ChangesetId(
-  remote:                             Blake2(e37e13b17b5c2b37965b2a9591a64cb2c44a68fd10f1362a595da8c6e4eefa41),
-  remote:                         ),
-  remote:                     },
-  remote:                 ),
-  remote:                 [
-  remote:                     BonsaiGitMappingEntry {
-  remote:                         git_sha1: GitSha1(2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b),
-  remote:                         bcs_id: ChangesetId(
-  remote:                             Blake2(3fa7acdeb82ac4f96a7bf1e7b5fa8f661c9921954a46164cbbfa828c0485595b),
-  remote:                         ),
-  remote:                     },
-  remote:                 ],
-  remote:             ),
-  remote:         ),
-  remote:     )
-  abort: unexpected EOL, expected netstring digit
+  $ hgedenapi push -r . --to master_bookmark
+  pushing rev 7fc28fc53a18 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
+  edenapi: queue 1 commit for upload
+  edenapi: queue 0 files for upload
+  edenapi: queue 1 tree for upload
+  edenapi: uploaded 1 tree
+  edenapi: uploaded 1 changeset
+  pushrebasing stack (9dde85abe808, 7fc28fc53a18] (1 commit) to remote bookmark master_bookmark
+  abort: Server error: invalid request: Pushrebase failed: Conflicting mapping Some(BonsaiGitMappingEntry { git_sha1: GitSha1(2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b), bcs_id: ChangesetId(Blake2(e37e13b17b5c2b37965b2a9591a64cb2c44a68fd10f1362a595da8c6e4eefa41)) }) detected while inserting git mappings (tried inserting: [BonsaiGitMappingEntry { git_sha1: GitSha1(2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b), bcs_id: ChangesetId(Blake2(3fa7acdeb82ac4f96a7bf1e7b5fa8f661c9921954a46164cbbfa828c0485595b)) }])
   [255]
 
 Force-push a commit
@@ -77,13 +50,14 @@ Force-push a commit
   [2388bc] commit1
   $ touch file4
   $ hg ci -Aqm commit4 --extra hg-git-rename-source=git --extra convert_revision=4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d
-  $ hgmn push -r . --to master_bookmark --force
-  pushing rev 1b5b68e81ae5 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
-  searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
-  updating bookmark master_bookmark
+  $ hgedenapi push -r . --to master_bookmark --force
+  pushing rev 1b5b68e81ae5 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
+  edenapi: queue 1 commit for upload
+  edenapi: queue 0 files for upload
+  edenapi: queue 1 tree for upload
+  edenapi: uploaded 1 tree
+  edenapi: uploaded 1 changeset
+  moving remote bookmark master_bookmark from 9dde85abe808 to 1b5b68e81ae5
 
 Check that mappings are populated
   $ get_bonsai_git_mapping

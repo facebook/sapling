@@ -8,7 +8,8 @@
 
 Setup
 
-  $ setup_common_config "blob_files"
+  $ setconfig push.edenapi=true
+  $ ENABLE_API_WRITES=1 setup_common_config "blob_files"
   $ cat >> repos/repo/server.toml << EOF
   > [[bookmarks]]
   > regex=".*"
@@ -31,6 +32,7 @@ Setup
   > [extensions]
   > amend=
   > pushrebase =
+  > remotenames=
   > EOF
 
 Prepare the server-side repo
@@ -66,9 +68,9 @@ Prepare the client-side repo
 
 Push
 
-  $ hgmn push -r C --to date-rewrite -q
-  $ hgmn push -r D --to no-date-rewrite -q
-  $ hgmn push -r E --to use-repo-config -q
+  $ hgedenapi push -r C --to date-rewrite -q
+  $ hgedenapi push -r D --to no-date-rewrite -q
+  $ hgedenapi push -r E --to use-repo-config -q
 
 Check result
 

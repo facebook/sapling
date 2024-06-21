@@ -7,7 +7,8 @@
   $ . "${TEST_FIXTURES}/library.sh"
 
 setup configuration
-  $ setup_common_config "blob_files"
+  $ setconfig push.edenapi=true
+  $ ENABLE_API_WRITES=1 setup_common_config "blob_files"
   $ cd $TESTTMP
 
 setup common configuration
@@ -63,17 +64,14 @@ Create a copy on a client and push it
   $ hg up -q tip
   $ hg cp A D
   $ hg ci -m 'make a copy'
-  $ hgmn push -r . --to master_bookmark
-  pushing rev 726a45528732 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
-  searching for changes
-  remote: Command failed
-  remote:   Error:
-  remote:     pushrebase failed Conflicts([PushrebaseConflict { left: NonRootMPath("A"), right: NonRootMPath("A") }])
-  remote: 
-  remote:   Root cause:
-  remote:     pushrebase failed Conflicts([PushrebaseConflict { left: NonRootMPath("A"), right: NonRootMPath("A") }])
-  remote: 
-  remote:   Debug context:
-  remote:     "pushrebase failed Conflicts([PushrebaseConflict { left: NonRootMPath(\"A\"), right: NonRootMPath(\"A\") }])"
-  abort: unexpected EOL, expected netstring digit
+  $ hgedenapi push -r . --to master_bookmark
+  pushing rev 726a45528732 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
+  edenapi: queue 1 commit for upload
+  edenapi: queue 1 file for upload
+  edenapi: uploaded 1 file
+  edenapi: queue 1 tree for upload
+  edenapi: uploaded 1 tree
+  edenapi: uploaded 1 changeset
+  pushrebasing stack (26805aba1e60, 726a45528732] (1 commit) to remote bookmark master_bookmark
+  abort: Server error: Conflicts while pushrebasing: [PushrebaseConflict { left: NonRootMPath("A"), right: NonRootMPath("A") }]
   [255]

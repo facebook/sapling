@@ -6,7 +6,8 @@
 
   $ . "${TEST_FIXTURES}/library.sh"
 
-  $ BLOB_TYPE="blob_sqlite" default_setup
+  $ setconfig push.edenapi=true
+  $ ENABLE_API_WRITES=1 BLOB_TYPE="blob_sqlite" default_setup
   hg repo
   o  C [draft;rev=2;26805aba1e60]
   │
@@ -32,13 +33,15 @@ Push single empty commit
   
   
   
-  $ hgmn push -r . --to master_bookmark
-  pushing rev 4d5799789652 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
-  searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
-  updating bookmark master_bookmark
+  $ hgedenapi push -r . --to master_bookmark
+  pushing rev 4d5799789652 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
+  edenapi: queue 1 commit for upload
+  edenapi: queue 0 files for upload
+  edenapi: queue 0 trees for upload
+  edenapi: uploaded 1 changeset
+  pushrebasing stack (426bada5c675, 4d5799789652] (1 commit) to remote bookmark master_bookmark
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  updated remote bookmark master_bookmark to 13b7fc3111fb
 
 Push empty and non-empty commit in a stack
   $ hg up -q "min(all())"
@@ -46,13 +49,17 @@ Push empty and non-empty commit in a stack
   $ echo 2 > 2 && hg add 2 && hg ci -m 2
   $ hg revert -r .^ 2
   $ hg commit --amend
-  $ hgmn push -r . --to master_bookmark
-  pushing rev 22c3c2036561 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
-  searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
-  updating bookmark master_bookmark
+  $ hgedenapi push -r . --to master_bookmark
+  pushing rev 22c3c2036561 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
+  edenapi: queue 2 commits for upload
+  edenapi: queue 1 file for upload
+  edenapi: uploaded 1 file
+  edenapi: queue 1 tree for upload
+  edenapi: uploaded 1 tree
+  edenapi: uploaded 2 changesets
+  pushrebasing stack (426bada5c675, 22c3c2036561] (2 commits) to remote bookmark master_bookmark
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  updated remote bookmark master_bookmark to e16fec5713c0
 
 Push stack of empty commits
   $ hgmn up -q tip
@@ -62,10 +69,12 @@ Push stack of empty commits
   $ echo 1 > 111 && hg add 111 && hg ci -m emptystack2
   $ hg revert -r .^ 111
   $ hg commit --amend
-  $ hgmn push -r . --to master_bookmark
-  pushing rev aeb4783bffb3 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
-  searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
-  updating bookmark master_bookmark
+  $ hgedenapi push -r . --to master_bookmark
+  pushing rev aeb4783bffb3 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
+  edenapi: queue 2 commits for upload
+  edenapi: queue 0 files for upload
+  edenapi: queue 0 trees for upload
+  edenapi: uploaded 2 changesets
+  pushrebasing stack (e16fec5713c0, aeb4783bffb3] (2 commits) to remote bookmark master_bookmark
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  updated remote bookmark master_bookmark to aeb4783bffb3

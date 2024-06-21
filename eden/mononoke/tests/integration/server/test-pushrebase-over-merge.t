@@ -6,7 +6,8 @@
 
   $ . "${TEST_FIXTURES}/library.sh"
   $ setconfig ui.ignorerevnum=false
-  $ BLOB_TYPE="blob_files" default_setup
+  $ setconfig push.edenapi=true
+  $ ENABLE_API_WRITES=1 BLOB_TYPE="blob_files" default_setup
   hg repo
   o  C [draft;rev=2;26805aba1e60]
   │
@@ -39,14 +40,14 @@ Try to push merge commit
   o  A [public;rev=0;426bada5c675]
   $
 
-  $ hgmn push -r . --to master_bookmark -q
+  $ hgedenapi push -r . --to master_bookmark -q
 
 Now try to push over a merge commit
   $ hgmn up -q 0
   $ echo 'somefile' > somefile
   $ hg add somefile
   $ hg ci -m 'pushrebase over merge'
-  $ hgmn push -r . --to master_bookmark -q
+  $ hgedenapi push -r . --to master_bookmark -q
   $ hg log -r master_bookmark
   commit:      c8a34708eb3a
   bookmark:    default/master_bookmark

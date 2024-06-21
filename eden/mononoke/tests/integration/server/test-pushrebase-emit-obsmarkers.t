@@ -8,7 +8,8 @@
 
 setup configuration
   $ export EMIT_OBSMARKERS=1
-  $ setup_common_config
+  $ setconfig push.edenapi=true
+  $ ENABLE_API_WRITES=1 setup_common_config
   $ cd $TESTTMP
 
 setup common configuration
@@ -63,14 +64,17 @@ Push commits that will be obsoleted
   ├─╯
   o  A [public;rev=0;426bada5c675]
   $
-  $ hgmn push -r . --to master_bookmark
-  pushing rev 0c67ec8c24b9 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
-  searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
-  updating bookmark master_bookmark
+  $ hgedenapi push -r . --to master_bookmark
+  pushing rev 0c67ec8c24b9 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
+  edenapi: queue 2 commits for upload
+  edenapi: queue 2 files for upload
+  edenapi: uploaded 2 files
+  edenapi: queue 2 trees for upload
+  edenapi: uploaded 2 trees
+  edenapi: uploaded 2 changesets
+  pushrebasing stack (426bada5c675, 0c67ec8c24b9] (2 commits) to remote bookmark master_bookmark
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  updated remote bookmark master_bookmark to dc31470c8386
   $ log -r "all()"
   @  2 [public;rev=6;dc31470c8386] default/master_bookmark
   │
@@ -99,13 +103,17 @@ Push commits that will not be obsoleted
   │
   o  A [public;rev=0;426bada5c675]
   $
-  $ hgmn push -r . --to master_bookmark
-  pushing rev 6398085ceb9d to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
-  searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
-  updating bookmark master_bookmark
+  $ hgedenapi push -r . --to master_bookmark
+  pushing rev 6398085ceb9d to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
+  edenapi: queue 1 commit for upload
+  edenapi: queue 1 file for upload
+  edenapi: uploaded 1 file
+  edenapi: queue 1 tree for upload
+  edenapi: uploaded 1 tree
+  edenapi: uploaded 1 changeset
+  pushrebasing stack (dc31470c8386, 6398085ceb9d] (1 commit) to remote bookmark master_bookmark
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  updated remote bookmark master_bookmark to 6398085ceb9d
   $ log -r "all()"
   @  3 [public;rev=7;6398085ceb9d] default/master_bookmark
   │

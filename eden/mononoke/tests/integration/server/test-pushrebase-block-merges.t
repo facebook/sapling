@@ -9,7 +9,8 @@
 
 setup configuration
   $ export BLOCK_MERGES=1
-  $ setup_common_config
+  $ setconfig push.edenapi=true
+  $ ENABLE_API_WRITES=1 setup_common_config
   $ cd $TESTTMP
 
 setup common configuration
@@ -70,7 +71,8 @@ Try to push merge commit
   o  A [public;rev=0;426bada5c675]
   $
 
-  $ hgmn push -r . --to master_bookmark
+  $ hgedenapi push -r . --to master_bookmark
+  fallback reason: merge commit is not supported by EdenApi push yet
   pushing rev 3e1c4ca1f9be to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   remote: Command failed

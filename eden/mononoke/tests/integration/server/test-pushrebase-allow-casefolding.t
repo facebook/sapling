@@ -6,7 +6,8 @@
 
   $ . "${TEST_FIXTURES}/library.sh"
 
-  $ DISALLOW_NON_PUSHREBASE=1 ALLOW_CASEFOLDING=1 BLOB_TYPE="blob_files" default_setup
+  $ setconfig push.edenapi=true
+  $ ENABLE_API_WRITES=1 DISALLOW_NON_PUSHREBASE=1 ALLOW_CASEFOLDING=1 BLOB_TYPE="blob_files" default_setup
   hg repo
   o  C [draft;rev=2;26805aba1e60]
   │
@@ -24,4 +25,4 @@ Create commit which only differs in case
   $ hg ci -Aqm commit1
 
 Push the commit, showing the flag has worked
-  $ hgmn push -q -r . --to master_bookmark || (sed -nr -e 's/, uuid:.*//' -e 's/^.*\] (Caused by.*)/\1/p' "$TESTTMP"/mononoke.out | strip_glog; exit 1)
+  $ hgedenapi push -q -r . --to master_bookmark || (sed -nr -e 's/, uuid:.*//' -e 's/^.*\] (Caused by.*)/\1/p' "$TESTTMP"/mononoke.out | strip_glog; exit 1)

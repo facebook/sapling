@@ -6,7 +6,8 @@
 
   $ . "${TEST_FIXTURES}/library.sh"
 
-  $ DISALLOW_NON_PUSHREBASE=1 GLOBALREVS_PUBLISHING_BOOKMARK=master_bookmark EMIT_OBSMARKERS=1 BLOB_TYPE="blob_files" default_setup
+  $ setconfig push.edenapi=true
+  $ ENABLE_API_WRITES=1 DISALLOW_NON_PUSHREBASE=1 GLOBALREVS_PUBLISHING_BOOKMARK=master_bookmark EMIT_OBSMARKERS=1 BLOB_TYPE="blob_files" default_setup
   hg repo
   o  C [draft;rev=2;26805aba1e60]
   │
@@ -22,7 +23,7 @@
 Push commit, check a globalrev was assigned
   $ touch file1
   $ hg ci -Aqm commit1
-  $ hgmn push -q -r . --to master_bookmark
+  $ hgedenapi push -q -r . --to master_bookmark
   $ hg log -r . -T '{extras % "{extra}\n"}'
   branch=default
   global_rev=1000147970
@@ -32,7 +33,7 @@ Push commit, check a globalrev was assigned
 Push another commit, check that the globalrev is incrementing
   $ touch file2
   $ hg ci -Aqm commit2
-  $ hgmn push -q -r . --to master_bookmark
+  $ hgedenapi push -q -r . --to master_bookmark
   $ hg log -r . -T '{extras % "{extra}\n"}'
   branch=default
   global_rev=1000147971
@@ -41,13 +42,13 @@ Push another commit, check that the globalrev is incrementing
 
 
 Check that we create a new bookmark that is a descendant of the globalrev bookmark
-  $ hgmn push -q -r '.^' --to other_bookmark --create
+  $ hgedenapi push -q -r '.^' --to other_bookmark --create
   $ hgmn bookmarks --remote
      default/master_bookmark   7a3a1e2e51f5
      default/other_bookmark    2fa5be0dd895
 
 Check that we update bookmark to a descendant of the globalrev bookmark
-  $ hgmn push -q -r . --to other_bookmark --force
+  $ hgedenapi push -q -r . --to other_bookmark --force
   $ hgmn bookmarks --remote
      default/master_bookmark   7a3a1e2e51f5
      default/other_bookmark    7a3a1e2e51f5
@@ -55,115 +56,30 @@ Check that we update bookmark to a descendant of the globalrev bookmark
 Check that we cannot pushrebase on that bookmark
   $ touch file3
   $ hg ci -Aqm commit3
-  $ hgmn push -r . --to other_bookmark
-  pushing rev 9596b4eb01f6 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark other_bookmark
-  searching for changes
-  remote: Command failed
-  remote:   Error:
-  remote:     This repository uses Globalrevs. Pushrebase is only allowed onto the bookmark 'master_bookmark', this push was for 'other_bookmark'
-  remote: 
-  remote:   Root cause:
-  remote:     This repository uses Globalrevs. Pushrebase is only allowed onto the bookmark 'master_bookmark', this push was for 'other_bookmark'
-  remote: 
-  remote:   Debug context:
-  remote:     PushrebaseHooksError(
-  remote:         PushrebaseInvalidGlobalrevsBookmark {
-  remote:             bookmark: BookmarkKey {
-  remote:                 name: BookmarkName {
-  remote:                     bookmark: "other_bookmark",
-  remote:                 },
-  remote:                 category: Branch,
-  remote:             },
-  remote:             globalrevs_publishing_bookmark: BookmarkKey {
-  remote:                 name: BookmarkName {
-  remote:                     bookmark: "master_bookmark",
-  remote:                 },
-  remote:                 category: Branch,
-  remote:             },
-  remote:         },
-  remote:     )
-  abort: unexpected EOL, expected netstring digit
+  $ hgedenapi push -r . --to other_bookmark
+  pushing rev 9596b4eb01f6 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark other_bookmark
+  edenapi: queue 1 commit for upload
+  edenapi: queue 0 files for upload
+  edenapi: queue 1 tree for upload
+  edenapi: uploaded 1 tree
+  edenapi: uploaded 1 changeset
+  pushrebasing stack (7a3a1e2e51f5, 9596b4eb01f6] (1 commit) to remote bookmark other_bookmark
+  abort: Server error: invalid request: This repository uses Globalrevs. Pushrebase is only allowed onto the bookmark 'master_bookmark', this push was for 'other_bookmark'
   [255]
 
 Check that we cannot push to that bookmark if the commit is not a descendant
   $ touch file3
   $ hg ci -Aqm commit3
   [1]
-  $ hgmn push -r . --to other_bookmark --force
-  pushing rev 9596b4eb01f6 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark other_bookmark
-  searching for changes
-  remote: Command failed
-  remote:   Error:
-  remote:     While doing a force pushrebase
-  remote: 
-  remote:   Root cause:
-  remote:     Bookmark 'other_bookmark' can only be moved to ancestors of 'master_bookmark'
-  remote: 
-  remote:   Caused by:
-  remote:     Failed to move bookmark
-  remote:   Caused by:
-  remote:     Bookmark 'other_bookmark' can only be moved to ancestors of 'master_bookmark'
-  remote: 
-  remote:   Debug context:
-  remote:     Error {
-  remote:         context: "While doing a force pushrebase",
-  remote:         source: Error {
-  remote:             context: "Failed to move bookmark",
-  remote:             source: RequiresAncestorOf {
-  remote:                 bookmark: BookmarkKey {
-  remote:                     name: BookmarkName {
-  remote:                         bookmark: "other_bookmark",
-  remote:                     },
-  remote:                     category: Branch,
-  remote:                 },
-  remote:                 descendant_bookmark: BookmarkKey {
-  remote:                     name: BookmarkName {
-  remote:                         bookmark: "master_bookmark",
-  remote:                     },
-  remote:                     category: Branch,
-  remote:                 },
-  remote:             },
-  remote:         },
-  remote:     }
-  abort: unexpected EOL, expected netstring digit
+  $ hgedenapi push -r . --to other_bookmark --force
+  pushing rev 9596b4eb01f6 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark other_bookmark
+  moving remote bookmark other_bookmark from 7a3a1e2e51f5 to 9596b4eb01f6
+  abort: server error: invalid request: Bookmark 'other_bookmark' can only be moved to ancestors of 'master_bookmark'
   [255]
 
 Check that we cannot do a regular push to the globalrev bookmark either
-  $ hgmn push -r . --to master_bookmark --force
-  pushing rev 9596b4eb01f6 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
-  searching for changes
-  remote: Command failed
-  remote:   Error:
-  remote:     While doing a force pushrebase
-  remote: 
-  remote:   Root cause:
-  remote:     Bookmark 'master_bookmark' can only be moved to ancestors of 'master_bookmark'
-  remote: 
-  remote:   Caused by:
-  remote:     Failed to move bookmark
-  remote:   Caused by:
-  remote:     Bookmark 'master_bookmark' can only be moved to ancestors of 'master_bookmark'
-  remote: 
-  remote:   Debug context:
-  remote:     Error {
-  remote:         context: "While doing a force pushrebase",
-  remote:         source: Error {
-  remote:             context: "Failed to move bookmark",
-  remote:             source: RequiresAncestorOf {
-  remote:                 bookmark: BookmarkKey {
-  remote:                     name: BookmarkName {
-  remote:                         bookmark: "master_bookmark",
-  remote:                     },
-  remote:                     category: Branch,
-  remote:                 },
-  remote:                 descendant_bookmark: BookmarkKey {
-  remote:                     name: BookmarkName {
-  remote:                         bookmark: "master_bookmark",
-  remote:                     },
-  remote:                     category: Branch,
-  remote:                 },
-  remote:             },
-  remote:         },
-  remote:     }
-  abort: unexpected EOL, expected netstring digit
+  $ hgedenapi push -r . --to master_bookmark --force
+  pushing rev 9596b4eb01f6 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
+  moving remote bookmark master_bookmark from 7a3a1e2e51f5 to 9596b4eb01f6
+  abort: server error: invalid request: Bookmark 'master_bookmark' can only be moved to ancestors of 'master_bookmark'
   [255]
