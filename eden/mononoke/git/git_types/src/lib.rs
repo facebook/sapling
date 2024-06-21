@@ -19,6 +19,7 @@ mod commit;
 mod delta;
 mod delta_manifest;
 mod delta_manifest_ops;
+mod delta_manifest_v2;
 mod derive_commit;
 mod derive_delta_manifest;
 mod derive_tree;
