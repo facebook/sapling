@@ -1375,12 +1375,24 @@ PrjfsDispatcherImpl::waitForPendingNotifications() {
   // ProjectedFS queue and therefore may still be pending when the future
   // complete. This is expected and therefore not a bug.
   folly::stop_watch<std::chrono::microseconds> timer{};
-  return ImmediateFuture{
-      folly::via(getNotificationExecutor(), [this, timer = std::move(timer)]() {
-        this->mount_->getStats()->addDuration(
-            &PrjfsStats::filesystemSync, timer.elapsed());
-        return folly::unit;
-      }).semi()};
+  return ImmediateFuture{folly::via(
+                             getNotificationExecutor(),
+                             [this, timer = std::move(timer)]() {
+                               this->mount_->getStats()->addDuration(
+                                   &PrjfsStats::filesystemSync,
+                                   timer.elapsed());
+                               this->mount_->getStats()->increment(
+                                   &PrjfsStats::filesystemSyncSuccessful);
+                               return folly::unit;
+                             })
+                             .semi()}
+      .thenError(
+          [this](const folly::exception_wrapper& ew)
+              -> ImmediateFuture<folly::Unit> {
+            this->mount_->getStats()->increment(
+                &PrjfsStats::filesystemSyncFailure);
+            ew.throw_exception();
+          });
 }
 
 } // namespace facebook::eden

@@ -918,9 +918,11 @@ folly::Try<folly::Unit> removeCachedFileImpl(
         result == HRESULT_FROM_WIN32(ERROR_PATH_NOT_FOUND)) {
       // The file or a directory in the path is not cached, ignore.
     } else if (result == HRESULT_FROM_WIN32(ERROR_DIR_NOT_EMPTY)) {
+      inner->getStats()->increment(&PrjfsStats::removeCachedFileFailure);
       return folly::Try<folly::Unit>{
           std::system_error(ENOTEMPTY, std::generic_category())};
     } else {
+      inner->getStats()->increment(&PrjfsStats::removeCachedFileFailure);
       return folly::Try<folly::Unit>{makeHResultErrorExplicit(
           result,
           fmt::format(
@@ -930,6 +932,7 @@ folly::Try<folly::Unit> removeCachedFileImpl(
     }
   }
 
+  inner->getStats()->increment(&PrjfsStats::removeCachedFileSuccessful);
   return folly::Try<folly::Unit>{folly::unit};
 }
 
@@ -1814,6 +1817,7 @@ folly::Try<folly::Unit> PrjfsChannel::addDirectoryPlaceholder(
       // trigger a recursive lookup call and fail, raising this error. This is
       // harmless and thus we can just ignore.
     } else {
+      inner->getStats()->increment(&PrjfsStats::addDirectoryPlaceholderFailure);
       return folly::Try<folly::Unit>{makeHResultErrorExplicit(
           result,
           fmt::format(
@@ -1823,6 +1827,7 @@ folly::Try<folly::Unit> PrjfsChannel::addDirectoryPlaceholder(
     }
   }
 
+  inner->getStats()->increment(&PrjfsStats::addDirectoryPlaceholderSuccessful);
   return folly::Try<folly::Unit>{folly::unit};
 }
 
