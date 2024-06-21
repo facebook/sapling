@@ -75,7 +75,7 @@ cpp_library(
 python_binary(
     name = "gen_version_py_bin",
     srcs = ["gen_version.py"],
-    main_module = "eden/scm/gen_version",
+    main_module = "eden.scm.gen_version",
 )
 
 # Pure Python first party modules
