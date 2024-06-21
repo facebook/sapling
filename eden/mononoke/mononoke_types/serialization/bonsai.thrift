@@ -62,14 +62,14 @@ struct BonsaiChangeset {
   5: optional time.DateTime committer_date;
   6: string message;
   // Extra headers specifically for mercurial
-  7: map_string_binary_6626 hg_extra;
+  7: HgExtra hg_extra;
   // @lint-ignore THRIFTCHECKS bad-key-type
-  8: map_NonRootMPath_FileChangeOpt_5342 file_changes;
+  8: FileChanges file_changes;
   // Changeset is a snapshot iff this field is present
   9: optional SnapshotState snapshot_state;
   // Extra headers specifically for git. Both the key and the value
   // in these headers can be byte strings
-  10: optional map_SmallBinary_LargeBinary_9715 git_extra_headers;
+  10: optional GitExtraHeaders git_extra_headers;
   // SHA1 hash representing a git tree object. If this changeset
   // corresponds to a Git tree object, then this field will have
   // value, otherwise it would be omitted.
@@ -149,10 +149,10 @@ struct CopyInfo {
 // The following were automatically generated and may benefit from renaming.
 typedef map<path.NonRootMPath, FileChangeOpt> (
   rust.type = "sorted_vector_map::SortedVectorMap",
-) map_NonRootMPath_FileChangeOpt_5342
+) FileChanges
 typedef map<data.SmallBinary, data.LargeBinary> (
   rust.type = "sorted_vector_map::SortedVectorMap",
-) map_SmallBinary_LargeBinary_9715
+) GitExtraHeaders
 typedef map<string, binary> (
   rust.type = "sorted_vector_map::SortedVectorMap",
-) map_string_binary_6626
+) HgExtra
