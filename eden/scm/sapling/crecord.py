@@ -27,10 +27,6 @@ from .i18n import _
 
 stringio = util.stringio
 
-# This is required for ncurses to display non-ASCII characters in default user
-# locale encoding correctly.  --immerrr
-locale.setlocale(locale.LC_ALL, "")
-
 # patch comments based on the git one
 diffhelptext: str = _(
     """# To remove '-' lines, make them ' ' lines (context).
