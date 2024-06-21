@@ -1695,12 +1695,16 @@ struct HandlerEntry {
       Handler h,
       FormatArgs format,
       NfsStats::DurationPtr d,
+      NfsStats::CounterPtr cS,
+      NfsStats::CounterPtr cF,
       AccessType at = AccessType::FsChannelOther,
       SamplingGroup samplingGroup = SamplingGroup::DropAll)
       : name(n),
         handler(h),
         formatArgs(format),
         duration{d},
+        countSuccessful{cS},
+        countFailure{cF},
         accessType(at),
         samplingGroup{samplingGroup} {}
 
@@ -1708,6 +1712,8 @@ struct HandlerEntry {
   Handler handler = nullptr;
   FormatArgs formatArgs = nullptr;
   NfsStats::DurationPtr duration = nullptr;
+  NfsStats::CounterPtr countSuccessful = nullptr;
+  NfsStats::CounterPtr countFailure = nullptr;
   AccessType accessType = AccessType::FsChannelOther;
   SamplingGroup samplingGroup = SamplingGroup::DropAll;
 };
@@ -1718,42 +1724,59 @@ constexpr auto kNfs3dHandlers = [] {
 
   std::array<HandlerEntry, 22> handlers;
   handlers[folly::to_underlying(nfsv3Procs::null)] = {
-      "NULL", &Nfsd3ServerProcessor::null, formatNull, &NfsStats::nfsNull};
+      "NULL",
+      &Nfsd3ServerProcessor::null,
+      formatNull,
+      &NfsStats::nfsNull,
+      &NfsStats::nfsNullSuccessful,
+      &NfsStats::nfsNullFailure};
   handlers[folly::to_underlying(nfsv3Procs::getattr)] = {
       "GETATTR",
       &Nfsd3ServerProcessor::getattr,
       formatGetattr,
       &NfsStats::nfsGetattr,
+      &NfsStats::nfsGetattrSuccessful,
+      &NfsStats::nfsGetattrFailure,
       Read};
   handlers[folly::to_underlying(nfsv3Procs::setattr)] = {
       "SETATTR",
       &Nfsd3ServerProcessor::setattr,
       formatSetattr,
       &NfsStats::nfsSetattr,
+      &NfsStats::nfsSetattrSuccessful,
+      &NfsStats::nfsSetattrFailure,
       Write};
   handlers[folly::to_underlying(nfsv3Procs::lookup)] = {
       "LOOKUP",
       &Nfsd3ServerProcessor::lookup,
       formatLookup,
       &NfsStats::nfsLookup,
+      &NfsStats::nfsLookupSuccessful,
+      &NfsStats::nfsLookupFailure,
       Read};
   handlers[folly::to_underlying(nfsv3Procs::access)] = {
       "ACCESS",
       &Nfsd3ServerProcessor::access,
       formatAccess,
       &NfsStats::nfsAccess,
+      &NfsStats::nfsAccessSuccessful,
+      &NfsStats::nfsAccessFailure,
       Read};
   handlers[folly::to_underlying(nfsv3Procs::readlink)] = {
       "READLINK",
       &Nfsd3ServerProcessor::readlink,
       formatReadlink,
       &NfsStats::nfsReadlink,
+      &NfsStats::nfsReadlinkSuccessful,
+      &NfsStats::nfsReadlinkFailure,
       Read};
   handlers[folly::to_underlying(nfsv3Procs::read)] = {
       "READ",
       &Nfsd3ServerProcessor::read,
       formatRead,
       &NfsStats::nfsRead,
+      &NfsStats::nfsReadSuccessful,
+      &NfsStats::nfsReadFailure,
       Read,
       SamplingGroup::Three};
   handlers[folly::to_underlying(nfsv3Procs::write)] = {
@@ -1761,6 +1784,8 @@ constexpr auto kNfs3dHandlers = [] {
       &Nfsd3ServerProcessor::write,
       formatWrite,
       &NfsStats::nfsWrite,
+      &NfsStats::nfsWriteSuccessful,
+      &NfsStats::nfsWriteFailure,
       Write,
       SamplingGroup::Two};
   handlers[folly::to_underlying(nfsv3Procs::create)] = {
@@ -1768,81 +1793,109 @@ constexpr auto kNfs3dHandlers = [] {
       &Nfsd3ServerProcessor::create,
       formatCreate,
       &NfsStats::nfsCreate,
+      &NfsStats::nfsCreateSuccessful,
+      &NfsStats::nfsCreateFailure,
       Write};
   handlers[folly::to_underlying(nfsv3Procs::mkdir)] = {
       "MKDIR",
       &Nfsd3ServerProcessor::mkdir,
       formatMkdir,
       &NfsStats::nfsMkdir,
+      &NfsStats::nfsMkdirSuccessful,
+      &NfsStats::nfsMkdirFailure,
       Write};
   handlers[folly::to_underlying(nfsv3Procs::symlink)] = {
       "SYMLINK",
       &Nfsd3ServerProcessor::symlink,
       formatSymlink,
       &NfsStats::nfsSymlink,
+      &NfsStats::nfsSymlinkSuccessful,
+      &NfsStats::nfsSymlinkFailure,
       Write};
   handlers[folly::to_underlying(nfsv3Procs::mknod)] = {
       "MKNOD",
       &Nfsd3ServerProcessor::mknod,
       formatMknod,
       &NfsStats::nfsMknod,
+      &NfsStats::nfsMknodSuccessful,
+      &NfsStats::nfsMknodFailure,
       Write};
   handlers[folly::to_underlying(nfsv3Procs::remove)] = {
       "REMOVE",
       &Nfsd3ServerProcessor::remove,
       formatRemove,
       &NfsStats::nfsRemove,
+      &NfsStats::nfsRemoveSuccessful,
+      &NfsStats::nfsRemoveFailure,
       Write};
   handlers[folly::to_underlying(nfsv3Procs::rmdir)] = {
       "RMDIR",
       &Nfsd3ServerProcessor::rmdir,
       formatRmdir,
       &NfsStats::nfsRmdir,
+      &NfsStats::nfsRmdirSuccessful,
+      &NfsStats::nfsRmdirFailure,
       Write};
   handlers[folly::to_underlying(nfsv3Procs::rename)] = {
       "RENAME",
       &Nfsd3ServerProcessor::rename,
       formatRename,
       &NfsStats::nfsRename,
+      &NfsStats::nfsRenameSuccessful,
+      &NfsStats::nfsRenameFailure,
       Write};
   handlers[folly::to_underlying(nfsv3Procs::link)] = {
       "LINK",
       &Nfsd3ServerProcessor::link,
       formatLink,
       &NfsStats::nfsLink,
+      &NfsStats::nfsLinkSuccessful,
+      &NfsStats::nfsLinkFailure,
       Write};
   handlers[folly::to_underlying(nfsv3Procs::readdir)] = {
       "READDIR",
       &Nfsd3ServerProcessor::readdir,
       formatReaddir,
       &NfsStats::nfsReaddir,
+      &NfsStats::nfsReaddirSuccessful,
+      &NfsStats::nfsReaddirFailure,
       Read};
   handlers[folly::to_underlying(nfsv3Procs::readdirplus)] = {
       "READDIRPLUS",
       &Nfsd3ServerProcessor::readdirplus,
       formatReaddirplus,
       &NfsStats::nfsReaddirplus,
+      &NfsStats::nfsReaddirplusSuccessful,
+      &NfsStats::nfsReaddirplusFailure,
       Read};
   handlers[folly::to_underlying(nfsv3Procs::fsstat)] = {
       "FSSTAT",
       &Nfsd3ServerProcessor::fsstat,
       formatFsstat,
-      &NfsStats::nfsFsstat};
+      &NfsStats::nfsFsstat,
+      &NfsStats::nfsFsstatSuccessful,
+      &NfsStats::nfsFsstatFailure};
   handlers[folly::to_underlying(nfsv3Procs::fsinfo)] = {
       "FSINFO",
       &Nfsd3ServerProcessor::fsinfo,
       formatFsinfo,
-      &NfsStats::nfsFsinfo};
+      &NfsStats::nfsFsinfo,
+      &NfsStats::nfsFsinfoSuccessful,
+      &NfsStats::nfsFsinfoFailure};
   handlers[folly::to_underlying(nfsv3Procs::pathconf)] = {
       "PATHCONF",
       &Nfsd3ServerProcessor::pathconf,
       formatPathconf,
-      &NfsStats::nfsPathconf};
+      &NfsStats::nfsPathconf,
+      &NfsStats::nfsPathconfSuccessful,
+      &NfsStats::nfsPathconfFailure};
   handlers[folly::to_underlying(nfsv3Procs::commit)] = {
       "COMMIT",
       &Nfsd3ServerProcessor::commit,
       formatCommit,
       &NfsStats::nfsCommit,
+      &NfsStats::nfsCommitSuccessful,
+      &NfsStats::nfsCommitFailure,
       Write};
 
   return handlers;
@@ -1929,7 +1982,6 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::dispatchRpc(
       xid, handlerEntry.name, processAccessLog_);
   context->startRequest(
       dispatcher_->getStats().copy(), handlerEntry.duration, nullRequestWatch);
-
   // The data that contextRef reference to is alive for the duration of the
   // handler function and is deleted when context unique_ptr goes out of the
   // scope at the `ensure` lambda.
@@ -1937,11 +1989,16 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::dispatchRpc(
            return (this->*handlerEntry.handler)(
                std::move(deser), std::move(ser), *context);
          })
-      .thenTry([&handlerEntry](folly::Try<folly::Unit>&& res) {
+      .thenTry([this, &handlerEntry](folly::Try<folly::Unit>&& res) {
         if (res.hasException()) {
+          if (dispatcher_->getStats() && handlerEntry.countFailure) {
+            dispatcher_->getStats()->increment(handlerEntry.countFailure);
+          }
           if (auto* err = res.exception().get_exception<RpcParsingError>()) {
             err->setProcedureContext(std::string{handlerEntry.name});
           }
+        } else if (dispatcher_->getStats() && handlerEntry.countSuccessful) {
+          dispatcher_->getStats()->increment(handlerEntry.countSuccessful);
         }
         return std::move(res);
       })
