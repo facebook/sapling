@@ -234,13 +234,13 @@ struct HandlerEntry {
       StringPiece n,
       Handler h,
       FuseArgRenderer r,
-      FuseStats::DurationPtr s,
+      FuseStats::DurationPtr d,
       AccessType at = AccessType::FsChannelOther,
       SamplingGroup samplingGroup = SamplingGroup::DropAll)
       : name{n},
         handler{h},
         argRenderer{r},
-        stat{s},
+        duration{d},
         samplingGroup{samplingGroup},
         accessType{at} {}
 
@@ -266,7 +266,7 @@ struct HandlerEntry {
   StringPiece name;
   Handler handler = nullptr;
   FuseArgRenderer argRenderer = nullptr;
-  FuseStats::DurationPtr stat = nullptr;
+  FuseStats::DurationPtr duration = nullptr;
   SamplingGroup samplingGroup = SamplingGroup::DropAll;
   AccessType accessType = AccessType::FsChannelOther;
 };
@@ -1817,7 +1817,7 @@ void FuseChannel::processSession() {
                   folly::makeFutureWith([&] {
                     request->startRequest(
                         dispatcher_->getStats().copy(),
-                        handlerEntry->stat,
+                        handlerEntry->duration,
                         *(liveRequestWatches_.get()));
                     auto fut = (this->*handlerEntry->handler)(
                         *request, request->getReq(), arg);

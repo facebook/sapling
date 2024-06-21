@@ -1694,20 +1694,20 @@ struct HandlerEntry {
       folly::StringPiece n,
       Handler h,
       FormatArgs format,
-      NfsStats::DurationPtr s,
+      NfsStats::DurationPtr d,
       AccessType at = AccessType::FsChannelOther,
       SamplingGroup samplingGroup = SamplingGroup::DropAll)
       : name(n),
         handler(h),
         formatArgs(format),
-        stat{s},
+        duration{d},
         accessType(at),
         samplingGroup{samplingGroup} {}
 
   folly::StringPiece name;
   Handler handler = nullptr;
   FormatArgs formatArgs = nullptr;
-  NfsStats::DurationPtr stat = nullptr;
+  NfsStats::DurationPtr duration = nullptr;
   AccessType accessType = AccessType::FsChannelOther;
   SamplingGroup samplingGroup = SamplingGroup::DropAll;
 };
@@ -1928,7 +1928,7 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::dispatchRpc(
   auto context = std::make_unique<NfsRequestContext>(
       xid, handlerEntry.name, processAccessLog_);
   context->startRequest(
-      dispatcher_->getStats().copy(), handlerEntry.stat, nullRequestWatch);
+      dispatcher_->getStats().copy(), handlerEntry.duration, nullRequestWatch);
 
   // The data that contextRef reference to is alive for the duration of the
   // handler function and is deleted when context unique_ptr goes out of the
