@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::io::Write;
 use std::str::FromStr;
 
 use anyhow::Context;
@@ -13,8 +14,14 @@ use async_trait::async_trait;
 use blobstore::Blobstore;
 use blobstore::Loadable;
 use blobstore::LoadableError;
+use blobstore::Storable;
 use bytes::Bytes;
+use bytes::BytesMut;
 use context::CoreContext;
+use flate2::write::ZlibEncoder;
+use flate2::Compression;
+use futures::future;
+use futures::stream;
 use futures::stream::BoxStream;
 use futures::StreamExt;
 use futures::TryStreamExt;
@@ -179,6 +186,107 @@ pub struct GDMV2Instructions {
     pub uncompressed_size: u64,
     pub compressed_size: u64,
     pub instruction_bytes: GDMV2InstructionBytes,
+}
+
+impl GDMV2Instructions {
+    pub async fn from_raw_delta(
+        ctx: &CoreContext,
+        blobstore: &impl Blobstore,
+        delta: Vec<u8>,
+        chunk_size: u64,
+        max_inlinable_size: u64,
+    ) -> Result<Self> {
+        let raw_instruction_bytes = delta;
+        let uncompressed_size = raw_instruction_bytes.len() as u64;
+
+        // Zlib encode the instructions before writing to the store
+        let mut encoder = ZlibEncoder::new(Vec::new(), Compression::default());
+        encoder
+            .write_all(&raw_instruction_bytes)
+            .context("Failure in writing raw delta instruction bytes to ZLib buffer")?;
+        let compressed_instruction_bytes = encoder
+            .finish()
+            .context("Failure in ZLib encoding delta instruction bytes")?;
+        let compressed_size = compressed_instruction_bytes.len() as u64;
+
+        let size = filestore::ExpectedSize::new(compressed_size);
+        let raw_instructions_stream =
+            stream::once(future::ok(Bytes::from(compressed_instruction_bytes)));
+        let chunk_stream = filestore::make_chunks(raw_instructions_stream, size, Some(chunk_size));
+
+        let instruction_bytes = match chunk_stream {
+            filestore::Chunks::Inline(fallible_bytes) => {
+                if compressed_size <= max_inlinable_size {
+                    GDMV2InstructionBytes::Inlined(
+                        fallible_bytes
+                            .await
+                            .context("Error in getting inlined bytes from chunk stream")?,
+                    )
+                } else {
+                    GDMV2InstructionBytes::Chunked(vec![
+                        GDMV2InstructionsChunk(
+                            fallible_bytes
+                                .await
+                                .context("Error in getting bytes from chunk stream")?,
+                        )
+                        .into_blob()
+                        .store(ctx, blobstore)
+                        .await?,
+                    ])
+                }
+            }
+            filestore::Chunks::Chunked(_, bytes_stream) => {
+                GDMV2InstructionBytes::Chunked(
+                    bytes_stream
+                        .enumerate()
+                        .map(|(idx, fallible_bytes)| async move {
+                            let instructions_chunk =
+                                GDMV2InstructionsChunk(fallible_bytes.with_context(|| {
+                                    format!(
+                                        "Error in getting bytes from chunk {} in chunked stream",
+                                        idx
+                                    )
+                                })?);
+                            instructions_chunk.into_blob().store(ctx, blobstore).await
+                        })
+                        .buffer_unordered(24) // Same as the concurrency used for filestore
+                        .try_collect::<Vec<_>>()
+                        .await?,
+                )
+            }
+        };
+
+        Ok(Self {
+            uncompressed_size,
+            compressed_size,
+            instruction_bytes,
+        })
+    }
+}
+
+impl GDMV2InstructionBytes {
+    pub async fn into_raw_bytes(
+        self,
+        ctx: &CoreContext,
+        blobstore: &impl Blobstore,
+    ) -> Result<Bytes> {
+        match self {
+            GDMV2InstructionBytes::Inlined(bytes) => Ok(bytes),
+            GDMV2InstructionBytes::Chunked(chunks) => {
+                Ok(stream::iter(chunks)
+                    .map(|chunk: GDMV2InstructionsChunkId| async move {
+                        chunk.load(ctx, blobstore).await
+                    })
+                    .buffered(24)
+                    .try_fold(BytesMut::new(), |mut acc, chunk| async move {
+                        acc.extend_from_slice(&chunk.0);
+                        Ok(acc)
+                    })
+                    .await?
+                    .freeze())
+            }
+        }
+    }
 }
 
 #[derive(ThriftConvert, Clone, Debug, Eq, PartialEq, Hash)]
