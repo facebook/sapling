@@ -6,10 +6,12 @@
 
   $ export COMMIT_SCRIBE_CATEGORY=mononoke_commits
   $ export BOOKMARK_SCRIBE_CATEGORY=mononoke_bookmark
+  $ export MONONOKE_TEST_SCRIBE_LOGGING_DIRECTORY=$TESTTMP/scribe_logs/
   $ . "${TEST_FIXTURES}/library.sh"
 
 setup configuration
-  $ INFINITEPUSH_NAMESPACE_REGEX='^scratch/.+$' setup_common_config
+  $ setconfig push.edenapi=true
+  $ ENABLE_API_WRITES=1 INFINITEPUSH_NAMESPACE_REGEX='^scratch/.+$' setup_common_config
   $ cd $TESTTMP
 
 setup repo
@@ -59,27 +61,40 @@ create new commits in repo2 and check that they are seen as outgoing
   $ echo "b file content" > b_dir/b
   $ hg add b_dir/b
   $ hg ci -mb
-  $ hgmn push -r . --to master_bookmark --create --config extensions.remotenames= --config extensions.pushrebase=
-  pushing rev bb0985934a0f to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
-  searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
-  updating bookmark master_bookmark
+  $ hgedenapi push -r . --to master_bookmark --create --config extensions.remotenames= --config extensions.pushrebase=
+  pushing rev bb0985934a0f to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
+  edenapi: queue 1 commit for upload
+  edenapi: queue 2 files for upload
+  edenapi: uploaded 2 files
+  edenapi: queue 2 trees for upload
+  edenapi: uploaded 2 trees
+  edenapi: uploaded 1 changeset
+  pushrebasing stack (0e7ec5675652, bb0985934a0f] (1 commit) to remote bookmark master_bookmark
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  updated remote bookmark master_bookmark to bb0985934a0f
 
   $ cat "$TESTTMP/scribe_logs/$COMMIT_SCRIBE_CATEGORY" | jq .repo_id
   0
+  0
   $ cat "$TESTTMP/scribe_logs/$COMMIT_SCRIBE_CATEGORY" | jq .repo_name
   "repo"
+  "repo"
   $ cat "$TESTTMP/scribe_logs/$COMMIT_SCRIBE_CATEGORY" | jq .bookmark
+  null
   "master_bookmark"
   $ cat "$TESTTMP/scribe_logs/$COMMIT_SCRIBE_CATEGORY" | jq .generation
   2
+  2
   $ cat "$TESTTMP/scribe_logs/$COMMIT_SCRIBE_CATEGORY" | jq .changeset_id
+  "022352db2112d2f43ca2635686a6275ade50d612865551fa8d1f392b375e412e"
   "022352db2112d2f43ca2635686a6275ade50d612865551fa8d1f392b375e412e"
   $ cat "$TESTTMP/scribe_logs/$COMMIT_SCRIBE_CATEGORY" | jq .bubble_id
   null
+  null
   $ cat "$TESTTMP/scribe_logs/$COMMIT_SCRIBE_CATEGORY" | jq .parents
+  [
+    "30c62517c166c69dc058930d510a6924d03d917d4e3a1354213faf4594d6e473"
+  ]
   [
     "30c62517c166c69dc058930d510a6924d03d917d4e3a1354213faf4594d6e473"
   ]
@@ -89,7 +104,9 @@ The timestamp is not stable, so count its digits instead to ensure it is not nul
   10
   $ cat "$TESTTMP/scribe_logs/$COMMIT_SCRIBE_CATEGORY" | jq .changed_files_count
   2
+  2
   $ cat "$TESTTMP/scribe_logs/$COMMIT_SCRIBE_CATEGORY" | jq .changed_files_size
+  34
   34
   $ rm "$TESTTMP/scribe_logs/$COMMIT_SCRIBE_CATEGORY"
 
@@ -112,16 +129,20 @@ The timestamp is not stable, so count its digits instead to ensure it is not nul
   $ echo forcepushrebase > forcepushrebase
   $ hg add -q forcepushrebase
   $ hg ci -m forcepushrebase
-  $ hgmn push -r . --to forcepushrebase --create --force --config extensions.remotenames= --config extensions.pushrebase=
-  pushing rev 0c1e5152244c to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark forcepushrebase
-  searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
-  exporting bookmark forcepushrebase
+  $ hgedenapi push -r . --to forcepushrebase --create --force --config extensions.remotenames= --config extensions.pushrebase=
+  pushing rev 0c1e5152244c to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark forcepushrebase
+  edenapi: queue 1 commit for upload
+  edenapi: queue 1 file for upload
+  edenapi: uploaded 1 file
+  edenapi: queue 1 tree for upload
+  edenapi: uploaded 1 tree
+  edenapi: uploaded 1 changeset
+  creating remote bookmark forcepushrebase
   $ cat "$TESTTMP/scribe_logs/$COMMIT_SCRIBE_CATEGORY" | jq .bookmark
+  null
   "forcepushrebase"
   $ cat "$TESTTMP/scribe_logs/$COMMIT_SCRIBE_CATEGORY" | jq .changeset_id
+  "cf79ab3ba838b597ca4973ba397b4b687f54d9eed2f0edc4f950f3b80a68f8b3"
   "cf79ab3ba838b597ca4973ba397b4b687f54d9eed2f0edc4f950f3b80a68f8b3"
   $ rm "$TESTTMP/scribe_logs/$COMMIT_SCRIBE_CATEGORY"
 
@@ -138,14 +159,14 @@ The timestamp is not stable, so count its digits instead to ensure it is not nul
   $ cat "$TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY" | jq .operation
   "create"
   $ cat "$TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY" | jq .update_reason
-  "pushrebase"
+  "apirequest"
   $ rm "$TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY"
 
 Use normal push (non-pushrebase).  Since we are not pushing to a public bookmark, this is draft.
   $ echo push > push
   $ hg add -q push
   $ hg ci -m 'commit'
-  $ hgmn push --force
+  $ hgedenapi push --force
   pushing to mononoke://$LOCALIP:$LOCAL_PORT/repo
   searching for changes
 
@@ -172,7 +193,7 @@ Stop tracking master_bookmark
   $ echo infinitepush > infinitepush
   $ hg add -q infinitepush
   $ hg ci -m 'infinitepush'
-  $ hgmn push mononoke://$(mononoke_address)/repo -r . --to "scratch/123" --create
+  $ hgedenapi push mononoke://$(mononoke_address)/repo -r . --to "scratch/123" --create
   pushing to mononoke://$LOCALIP:$LOCAL_PORT/repo
   searching for changes
   $ cat "$TESTTMP/scribe_logs/$COMMIT_SCRIBE_CATEGORY" | jq 'select(.is_public == false)' | jq .bookmark
@@ -201,7 +222,7 @@ Update the scratch/123 bookmark
   $ echo new_commit > new_commit
   $ hg add -q new_commit
   $ hg ci -m 'new commit'
-  $ hgmn push mononoke://$(mononoke_address)/repo -r . --to "scratch/123"
+  $ hgedenapi push mononoke://$(mononoke_address)/repo -r . --to "scratch/123"
   pushing to mononoke://$LOCALIP:$LOCAL_PORT/repo
   searching for changes
   $ cat "$TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY" | jq .repo_name
@@ -222,12 +243,8 @@ Update the scratch/123 bookmark
 
 Delete the master_bookmark
 
-  $ hgmn push --delete master_bookmark --config extensions.remotenames= --config extensions.pushrebase=
-  pushing to mononoke://$LOCALIP:$LOCAL_PORT/repo
-  searching for changes
-  no changes found
+  $ hgedenapi push --delete master_bookmark --config extensions.remotenames= --config extensions.pushrebase=
   deleting remote bookmark master_bookmark
-  [1]
 
   $ cat "$TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY" | jq .repo_name
   "repo"
@@ -242,5 +259,5 @@ Delete the master_bookmark
   $ cat "$TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY" | jq .operation
   "delete"
   $ cat "$TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY" | jq .update_reason
-  "pushrebase"
+  "apirequest"
   $ rm "$TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY"
