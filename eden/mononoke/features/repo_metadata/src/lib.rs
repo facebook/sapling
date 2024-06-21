@@ -15,7 +15,6 @@ mod types;
 use std::fmt::Display;
 
 use anyhow::Result;
-use bookmarks::BookmarksRef;
 use metaconfig_types::RepoConfigRef;
 use repo_blobstore::RepoBlobstoreArc;
 use repo_derived_data::RepoDerivedDataRef;
@@ -29,7 +28,6 @@ pub trait Repo = RepoConfigRef
     + RepoBlobstoreArc
     + RepoDerivedDataRef
     + RepoMetadataCheckpointRef
-    + BookmarksRef
     + Send
     + Sync;
 

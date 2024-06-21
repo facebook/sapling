@@ -23,6 +23,8 @@ rust_binary(
         "//dsi/logger/configs/SCMRepoMetadataLoggerConfig:s_c_m_repo_metadata_rust_logger",
         "//eden/mononoke/blobrepo:repo_blobstore",
         "//eden/mononoke/bookmarks:bookmarks",
+        "//eden/mononoke/bookmarks:bookmarks_cache",
+        "//eden/mononoke/cmdlib:environment",
         "//eden/mononoke/cmdlib/mononoke_app:mononoke_app",
         "//eden/mononoke/cmdlib/sharding:executor_lib",
         "//eden/mononoke/cmdlib/sharding_ext:sharding_ext",
