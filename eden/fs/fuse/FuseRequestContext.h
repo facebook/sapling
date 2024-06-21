@@ -81,10 +81,20 @@ class FuseRequestContext : public RequestContext {
    */
   folly::Future<folly::Unit> catchErrors(
       folly::Future<folly::Unit>&& fut,
-      Notifier* FOLLY_NULLABLE notifier) {
-    return std::move(fut).thenTryInline([this, notifier](
+      Notifier* FOLLY_NULLABLE notifier,
+      EdenStatsPtr stats,
+      StatsGroupBase::Counter FuseStats::*countSuccessful,
+      StatsGroupBase::Counter FuseStats::*countFailure) {
+    return std::move(fut).thenTryInline([this,
+                                         notifier,
+                                         stats = std::move(stats),
+                                         countSuccessful,
+                                         countFailure](
                                             folly::Try<folly::Unit>&& try_) {
       if (try_.hasException()) {
+        if (stats && countFailure) {
+          stats->increment(countFailure);
+        }
         if (auto* futureTimeoutErr =
                 try_.tryGetExceptionObject<folly::FutureTimeout>()) {
           timeoutErrorHandler(*futureTimeoutErr, notifier);
@@ -96,6 +106,10 @@ class FuseRequestContext : public RequestContext {
         } else {
           genericErrorHandler(
               std::runtime_error{"unknown exception type"}, notifier);
+        }
+      } else {
+        if (stats && countSuccessful) {
+          stats->increment(countSuccessful);
         }
       }
     });

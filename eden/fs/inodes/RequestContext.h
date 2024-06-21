@@ -133,7 +133,7 @@ class RequestContext {
 
   void startRequest(
       EdenStatsPtr stats,
-      DurationFn stat,
+      DurationFn durationFn,
       std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>
           requestWatches);
 
