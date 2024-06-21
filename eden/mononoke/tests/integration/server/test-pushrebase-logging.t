@@ -8,7 +8,9 @@
 
   $ enable pushrebase remotenames
   $ export COMMIT_SCRIBE_CATEGORY=public_commit
-  $ setup_common_config
+  $ export MONONOKE_TEST_SCRIBE_LOGGING_DIRECTORY=$TESTTMP/scribe_logs/
+  $ setconfig push.edenapi=true
+  $ ENABLE_API_WRITES=1 setup_common_config
   $ testtool_drawdag -R repo --derive-all --print-hg-hashes <<EOF
   > A-B-C
   > # bookmark: C main
@@ -29,10 +31,35 @@ Create two commits that will be rebased during pushrebase, each with different f
   $ hg ci -Aqm commit2
 
 Push the commits
-  $ hgmn push -q -r . --to main
+  $ tglog
+  @  bb28139b0362 'commit2'
+  │
+  o  a5f354cc1e5c 'commit1'
+  │
+  │ o  d3b399ca8757 'C'
+  │ │
+  │ o  80521a640a0c 'B'
+  ├─╯
+  o  20ca2a4749a4 'A'
+  
+  $ hgedenapi push -q -r . --to main
+
+  $ tglog
+  @  d6637437d715 'commit2'
+  │
+  o  0007004744d1 'commit1'
+  │
+  o  d3b399ca8757 'C'
+  │
+  o  80521a640a0c 'B'
+  │
+  o  20ca2a4749a4 'A'
+  
 
 Check the logs, ensure that each commit (based on its generation number) has the right changed files count
 and size.
   $ jq < $TESTTMP/scribe_logs/$COMMIT_SCRIBE_CATEGORY -c '[.generation, .changed_files_count, .changed_files_size]' | sort
+  [2,1,2]
+  [3,2,4]
   [4,1,2]
   [5,2,4]
