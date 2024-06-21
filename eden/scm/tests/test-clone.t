@@ -474,6 +474,7 @@ Test clone from the repository in (emulated) revlog format 0 (issue4203):
 
   $ mkdir issue4203
   $ mkdir -p src/.hg
+  $ touch src/.hg/requires
   $ echo foo > src/foo
   $ hg -R src add src/foo
   abort: legacy dirstate implementations are no longer supported!
@@ -628,4 +629,3 @@ Warning not printed if working directory isn't empty
 #endif
 
   $ cd ..
-
