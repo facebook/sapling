@@ -8,7 +8,8 @@
 
 setup configuration
 
-  $ DISALLOW_NON_PUSHREBASE=1 setup_common_config
+  $ setconfig push.edenapi=true
+  $ ENABLE_API_WRITES=1 DISALLOW_NON_PUSHREBASE=1 setup_common_config
 
   $ cd $TESTTMP
 
@@ -47,7 +48,7 @@ create new hg commits
   adding b
 
 try doing a non-pushrebase push with the new commits
-  $ hgmn push --force
+  $ hgedenapi push --force
   pushing to mononoke://$LOCALIP:$LOCAL_PORT/repo
   searching for changes
   remote: Command failed
@@ -74,10 +75,14 @@ try doing a non-pushrebase push with the new commits
   [255]
 
 try doing a pushrebase push with the new commits
-  $ hgmn push mononoke://$(mononoke_address)/repo --config extensions.pushrebase= --config extensions.remotenames= --to master_bookmark
-  pushing rev 95415a1a54e2 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
-  searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
-  updating bookmark master_bookmark
+  $ hgedenapi push mononoke://$(mononoke_address)/repo --config extensions.pushrebase= --config extensions.remotenames= --to master_bookmark
+  pushing rev 95415a1a54e2 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
+  edenapi: queue 1 commit for upload
+  edenapi: queue 1 file for upload
+  edenapi: uploaded 1 file
+  edenapi: queue 1 tree for upload
+  edenapi: uploaded 1 tree
+  edenapi: uploaded 1 changeset
+  pushrebasing stack (0e7ec5675652, 95415a1a54e2] (1 commit) to remote bookmark master_bookmark
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  updated remote bookmark master_bookmark to 95415a1a54e2
