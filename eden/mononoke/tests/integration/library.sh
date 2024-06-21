@@ -450,6 +450,7 @@ function repo_metadata_logger {
   GLOG_minloglevel=5 "$REPO_METADATA_LOGGER" \
     "${CACHE_ARGS[@]}" \
     "${COMMON_ARGS[@]}" \
+    --scuba-dataset "file://$TESTTMP/metadata_logger_scuba_logs" \
     --mononoke-config-path "$TESTTMP"/mononoke-config "$@"
 }
 

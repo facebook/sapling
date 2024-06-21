@@ -28,6 +28,7 @@ rust_binary(
         "//eden/mononoke/cmdlib/mononoke_app:mononoke_app",
         "//eden/mononoke/cmdlib/sharding:executor_lib",
         "//eden/mononoke/cmdlib/sharding_ext:sharding_ext",
+        "//eden/mononoke/common/scuba_ext:scuba_ext",
         "//eden/mononoke/features/repo_metadata:repo_metadata",
         "//eden/mononoke/metaconfig:metaconfig_types",
         "//eden/mononoke/mononoke_types:mononoke_types",
