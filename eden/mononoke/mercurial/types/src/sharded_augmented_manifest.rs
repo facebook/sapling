@@ -531,6 +531,8 @@ impl ShardedMapV2Value for HgAugmentedManifestEntry {
     type NodeId = ShardedMapV2NodeHgAugmentedManifestId;
     type Context = ShardedMapV2NodeHgAugmentedManifestContext;
     type RollupData = ShardedHgAugmentedManifestRollupCount;
+
+    const WEIGHT_LIMIT: usize = 2000;
 }
 
 impl Rollup<HgAugmentedManifestEntry> for ShardedHgAugmentedManifestRollupCount {

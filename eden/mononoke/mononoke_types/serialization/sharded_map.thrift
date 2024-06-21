@@ -101,8 +101,6 @@ union ShardedMapNode {
   2: ShardedMapTerminalNode terminal;
 }
 
-const i32 SHARDED_MAP_V2_WEIGHT_LIMIT = 2000;
-
 typedef data.LargeBinary ShardedMapV2Value
 typedef data.LargeBinary ShardedMapV2RollupData
 

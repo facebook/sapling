@@ -108,6 +108,8 @@ impl ShardedMapV2Value for TestShardedManifestEntry {
     type NodeId = ShardedMapV2NodeTestShardedManifestId;
     type Context = ShardedMapV2NodeTestShardedManifestContext;
     type RollupData = MaxBasenameLength;
+
+    const WEIGHT_LIMIT: usize = 5;
 }
 
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, Ord, PartialOrd)]

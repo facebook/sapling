@@ -45,6 +45,11 @@ pub trait ShardedMapV2Value: ThriftConvert + Debug + Hash + Clone + Send + Sync 
     type Context: IdContext<Id = Self::NodeId>;
     type RollupData: Rollup<Self>;
 
+    // The maximum allowed weight for a sharded map node. The weight of a node is defined as
+    // the sum of weights of all its inlined children, plus the count of its non-inlined children,
+    // plus the weight of its value if it contains one itself.
+    const WEIGHT_LIMIT: usize;
+
     /// The weight of a ShardedMapV2 value. In most cases this should always 1 so this is
     /// the default implementation. Only cases that have high variance between the sizes
     /// of values should override this.
@@ -240,16 +245,6 @@ impl<Value: ShardedMapV2Value> LoadableShardedMapV2Node<Value> {
 }
 
 impl<Value: ShardedMapV2Value> ShardedMapV2Node<Value> {
-    fn weight_limit() -> Result<usize> {
-        if cfg!(test) {
-            Ok(5)
-        } else {
-            thrift::sharded_map::SHARDED_MAP_V2_WEIGHT_LIMIT
-                .try_into()
-                .context("Failed to parse weight limit")
-        }
-    }
-
     pub fn weight(&self) -> usize {
         *self.weight.get_or_init(|| {
             self.value.as_ref().map_or(0, |v| v.weight())
@@ -348,11 +343,6 @@ impl<Value: ShardedMapV2Value> ShardedMapV2Node<Value> {
             None => None,
         };
 
-        // The weight of a node is defined as the sum of weights of all its inlined children,
-        // plus the count of its non-inlined children, plus one if it contains a value itself.
-
-        let weight_limit = Self::weight_limit()?;
-
         // Assume that all children are not going to be inlined, then the weight of the
         // node will be the number of children plus one if the current node has a value.
         let weight = &mut (current_value.as_ref().map_or(0, |v| v.weight()) + children.len());
@@ -374,7 +364,7 @@ impl<Value: ShardedMapV2Value> ShardedMapV2Node<Value> {
         let children_futures = children_pre_inlining
             .into_iter()
             .map(|(next_byte, child)| {
-                if *weight + child.weight() - 1 <= weight_limit {
+                if *weight + child.weight() - 1 <= Value::WEIGHT_LIMIT {
                     // Below limit: inline it.
                     *weight += child.weight() - 1;
                     Either::Left(async move {
@@ -833,6 +823,8 @@ mod test {
         type NodeId = ShardedMapV2NodeTestId;
         type Context = ShardedMapV2NodeTestContext;
         type RollupData = MaxTestValue;
+
+        const WEIGHT_LIMIT: usize = 5;
     }
 
     impl Rollup<TestValue> for MaxTestValue {
@@ -1118,12 +1110,10 @@ mod test {
             let min_possible_weight =
                 map.value.as_ref().map_or(0, |v| v.weight()) + map.children.len();
 
-            let weight_limit = ShardedMapV2Node::<TestValue>::weight_limit()?;
-
             // Bypass the weight limit check if map's weight is the minimum possible (i.e. all children are stored),
             // this is to avoid failing in quickcheck tests in which sometimes a node will have more than weight
             // limit number of children.
-            if map.weight() > weight_limit && map.weight() != min_possible_weight {
+            if map.weight() > TestValue::WEIGHT_LIMIT && map.weight() != min_possible_weight {
                 bail!("weight of sharded map node exceeds the limit");
             }
 

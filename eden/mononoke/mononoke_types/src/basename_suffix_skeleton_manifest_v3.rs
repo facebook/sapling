@@ -81,6 +81,8 @@ impl ShardedMapV2Value for BssmV3Entry {
     type Context = ShardedMapV2NodeBssmV3Context;
     type RollupData = BssmV3RollupCount;
 
+    const WEIGHT_LIMIT: usize = 2000;
+
     // The weight function is overrided because the sharded map is stored
     // inlined in BssmV3Directory. So the weight of the sharded map
     // should be propagated to make sure each sharded map blob stays
