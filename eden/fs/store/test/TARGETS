@@ -45,10 +45,10 @@ cpp_unittest(
         "//eden/fs/testharness:test_util",
         "//folly:varint",
         "//folly/executors:manual_executor",
-        "//folly/experimental:test_util",
         "//folly/io:iobuf",
         "//folly/portability:gtest",
         "//folly/test:test_utils",
+        "//folly/testing:test_util",
     ],
 )
 

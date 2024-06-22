@@ -9,11 +9,11 @@
 
 #include <folly/Varint.h>
 #include <folly/executors/ManualExecutor.h>
-#include <folly/experimental/TestUtil.h>
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
 #include <folly/portability/GTest.h>
 #include <folly/test/TestUtils.h>
+#include <folly/testing/TestUtil.h>
 
 #include "eden/common/telemetry/NullStructuredLogger.h"
 #include "eden/common/utils/FaultInjector.h"

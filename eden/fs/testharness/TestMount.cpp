@@ -9,11 +9,11 @@
 
 #include <folly/FileUtil.h>
 #include <folly/executors/ManualExecutor.h>
-#include <folly/experimental/TestUtil.h>
 #include <folly/io/IOBuf.h>
 #include <folly/logging/xlog.h>
 #include <folly/portability/GFlags.h>
 #include <folly/portability/GTest.h>
+#include <folly/testing/TestUtil.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 

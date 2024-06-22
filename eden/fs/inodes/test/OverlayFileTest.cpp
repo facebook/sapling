@@ -17,8 +17,8 @@
 #include <folly/Expected.h>
 #include <folly/FileUtil.h>
 #include <folly/Range.h>
-#include <folly/experimental/TestUtil.h>
 #include <folly/portability/GTest.h>
+#include <folly/testing/TestUtil.h>
 #include <algorithm>
 #include <chrono>
 

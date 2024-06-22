@@ -11,9 +11,9 @@
 #include "eden/fs/telemetry/EdenStats.h"
 
 #include <folly/chrono/Conv.h>
-#include <folly/experimental/TestUtil.h>
 #include <folly/portability/GTest.h>
 #include <folly/test/TestUtils.h>
+#include <folly/testing/TestUtil.h>
 
 using namespace facebook::eden;
 

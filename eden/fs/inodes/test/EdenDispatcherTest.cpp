@@ -9,9 +9,9 @@
 
 #include "eden/fs/fuse/FuseDispatcher.h"
 
-#include <folly/experimental/TestUtil.h>
 #include <folly/portability/GTest.h>
 #include <folly/test/TestUtils.h>
+#include <folly/testing/TestUtil.h>
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"

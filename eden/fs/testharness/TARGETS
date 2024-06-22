@@ -32,11 +32,11 @@ cpp_library(
         "//eden/fs/telemetry:stats",
         "//eden/fs/utils:eden_error",
         "//folly:file_util",
-        "//folly/experimental:test_util",
         "//folly/io:iobuf",
         "//folly/logging:logging",
         "//folly/portability:gflags",
         "//folly/portability:gtest",
+        "//folly/testing:test_util",
     ],
     exported_deps = [
         ":fake_clock",
@@ -278,7 +278,7 @@ cpp_library(
     exported_deps = [
         "//eden/common/utils:path",
         "//eden/fs/service:startup_status_subscriber",
-        "//folly/experimental:test_util",
+        "//folly/testing:test_util",
     ],
 )
 

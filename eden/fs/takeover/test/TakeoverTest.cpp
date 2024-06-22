@@ -6,12 +6,12 @@
  */
 
 #include <folly/Exception.h>
-#include <folly/experimental/TestUtil.h>
 #include <folly/futures/Future.h>
 #include <folly/futures/Promise.h>
 #include <folly/portability/GMock.h>
 #include <folly/portability/GTest.h>
 #include <folly/test/TestUtils.h>
+#include <folly/testing/TestUtil.h>
 
 #include <eden/fs/takeover/gen-cpp2/takeover_types.h>
 #include "eden/fs/takeover/TakeoverClient.h"

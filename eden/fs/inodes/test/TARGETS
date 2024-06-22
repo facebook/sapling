@@ -82,9 +82,9 @@ cpp_unittest(
         "//eden/fs/testharness:fake_backing_store_and_tree_builder",
         "//eden/fs/testharness:stored_object",
         "//eden/fs/testharness:test_mount",
-        "//folly/experimental:test_util",
         "//folly/portability:gtest",
         "//folly/test:test_utils",
+        "//folly/testing:test_util",
     ],
 )
 
@@ -177,10 +177,10 @@ cpp_unittest(
         "//folly:conv",
         "//folly:exception",
         "//folly:range",
-        "//folly/experimental:test_util",
         "//folly/portability:gmock",
         "//folly/portability:gtest",
         "//folly/test:test_utils",
+        "//folly/testing:test_util",
     ],
 )
 
@@ -207,9 +207,9 @@ cpp_unittest(
         "//eden/fs/testharness:test_checks",
         "//eden/fs/testharness:test_mount",
         "//folly:exception",
-        "//folly/experimental:test_util",
         "//folly/portability:gtest",
         "//folly/test:test_utils",
+        "//folly/testing:test_util",
     ],
 )
 
@@ -252,9 +252,9 @@ cpp_unittest(
         "//eden/fs/inodes:inodes",
         "//eden/fs/telemetry:stats",
         "//folly/chrono:conv",
-        "//folly/experimental:test_util",
         "//folly/portability:gtest",
         "//folly/test:test_utils",
+        "//folly/testing:test_util",
     ],
 )
 
@@ -329,11 +329,11 @@ cpp_unittest(
         "//folly:file_util",
         "//folly:range",
         "//folly/executors:cpu_thread_pool_executor",
-        "//folly/experimental:test_util",
         "//folly/logging/test:test_handler",
         "//folly/portability:gtest",
         "//folly/synchronization/test:barrier",
         "//folly/test:test_utils",
+        "//folly/testing:test_util",
     ],
 )
 
@@ -354,8 +354,8 @@ cpp_unittest(
         "//folly:expected",
         "//folly:file_util",
         "//folly:range",
-        "//folly/experimental:test_util",
         "//folly/portability:gtest",
+        "//folly/testing:test_util",
     ],
 )
 

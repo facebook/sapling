@@ -45,10 +45,10 @@ cpp_unittest(
         "//folly:range",
         "//folly:try",
         "//folly/executors:cpu_thread_pool_executor",
-        "//folly/experimental:test_util",
         "//folly/logging:logging",
         "//folly/portability:gmock",
         "//folly/portability:gtest",
+        "//folly/testing:test_util",
     ],
 )
 

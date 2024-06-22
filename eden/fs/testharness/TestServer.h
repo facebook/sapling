@@ -9,7 +9,7 @@
 
 #include <memory>
 
-#include <folly/experimental/TestUtil.h>
+#include <folly/testing/TestUtil.h>
 
 #include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/service/StartupStatusSubscriber.h"

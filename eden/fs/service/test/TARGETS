@@ -17,11 +17,11 @@ cpp_unittest(
         "//folly:exception",
         "//folly:file",
         "//folly:file_util",
-        "//folly/experimental:test_util",
         "//folly/init:init",
         "//folly/logging:logging",
         "//folly/portability:gmock",
         "//folly/portability:gtest",
+        "//folly/testing:test_util",
     ],
 )
 

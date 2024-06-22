@@ -16,9 +16,9 @@ cpp_unittest(
         "//folly:file",
         "//folly:file_util",
         "//folly:range",
-        "//folly/experimental:test_util",
         "//folly/portability:gtest",
         "//folly/test:test_utils",
+        "//folly/testing:test_util",
     ],
     external_deps = [
         ("boost", None, "boost_algorithm"),

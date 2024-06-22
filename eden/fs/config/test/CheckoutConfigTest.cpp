@@ -7,9 +7,9 @@
 
 #include "eden/fs/config/CheckoutConfig.h"
 
-#include <folly/experimental/TestUtil.h>
 #include <folly/portability/GTest.h>
 #include <folly/test/TestUtils.h>
+#include <folly/testing/TestUtil.h>
 
 #include "eden/common/utils/FileUtils.h"
 #include "eden/common/utils/PathFuncs.h"

@@ -14,10 +14,10 @@ cpp_unittest(
         "//eden/fs/takeover:serialization-cpp2-types",
         "//eden/fs/takeover:takeover",
         "//folly:exception",
-        "//folly/experimental:test_util",
         "//folly/futures:core",
         "//folly/portability:gmock",
         "//folly/portability:gtest",
         "//folly/test:test_utils",
+        "//folly/testing:test_util",
     ],
 )
