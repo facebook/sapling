@@ -117,6 +117,7 @@ Check that preexisting directory is not removed in failure case
 
 Check that prexisting repo is not modified
   $ mkdir $TESTTMP/failure-clone/.hg
+  $ touch $TESTTMP/failure-clone/.hg/requires
   $ hg clone -Uq test:e1 $TESTTMP/failure-clone
   TRACE cmdclone: performing rust clone
   abort: .hg directory already exists at clone destination $TESTTMP/failure-clone
