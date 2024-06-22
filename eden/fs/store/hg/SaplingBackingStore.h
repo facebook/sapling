@@ -276,6 +276,15 @@ class SaplingBackingStore final : public BackingStore {
     return localStoreCachingPolicy_;
   }
 
+  std::vector<HgImportTraceEvent> getOutstandingHgEvents() const {
+    auto lockedEventsMap = outstandingHgEvents_.rlock();
+    std::vector<HgImportTraceEvent> events;
+    for (const auto& eventMap : *lockedEventsMap) {
+      events.push_back(eventMap.second);
+    }
+    return events;
+  }
+
   int64_t dropAllPendingRequestsFromQueue() override;
 
  private:

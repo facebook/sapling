@@ -305,6 +305,10 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
   void debugOutstandingThriftRequests(
       std::vector<ThriftRequestMetadata>& outstandingCalls) override;
 
+  void debugOutstandingHgEvents(
+      std::vector<HgEvent>& outstandingEvents,
+      std::unique_ptr<std::string> mountPoint) override;
+
   void debugStartRecordingActivity(
       ActivityRecorderResult& result,
       std::unique_ptr<std::string> mountPoint,

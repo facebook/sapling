@@ -1498,8 +1498,9 @@ apache::thrift::ServerStream<FsEvent> EdenServiceHandler::traceFsEvents(
  * Helper function to get a cast a BackingStore shared_ptr to a
  * SaplingBackingStore shared_ptr. Returns an error if the type of backingStore
  * provided is not truly an SaplingBackingStore. Used in
- * EdenServiceHandler::traceHgEvents and
- * EdenServiceHandler::getRetroactiveHgEvents.
+ * EdenServiceHandler::traceHgEvents,
+ * EdenServiceHandler::getRetroactiveHgEvents and
+ * EdenServiceHandler::debugOutstandingHgEvents.
  */
 std::shared_ptr<SaplingBackingStore> castToSaplingBackingStore(
     std::shared_ptr<BackingStore>& backingStore,
@@ -1535,8 +1536,9 @@ std::shared_ptr<SaplingBackingStore> castToSaplingBackingStore(
 
 /**
  * Helper function to convert an HgImportTraceEvent to a thrift HgEvent type.
- * Used in EdenServiceHandler::traceHgEvents and
- * EdenServiceHandler::getRetroactiveHgEvents.
+ * Used in EdenServiceHandler::traceHgEvents,
+ * EdenServiceHandler::getRetroactiveHgEvents and
+ * EdenServiceHandler::debugOutstandingHgEvents.
  */
 void convertHgImportTraceEventToHgEvent(
     const HgImportTraceEvent& event,
@@ -4351,7 +4353,30 @@ void EdenServiceHandler::debugOutstandingThriftRequests(
 
   const auto requestsLockedPtr = outstandingThriftRequests_.rlock();
   for (const auto& item : *requestsLockedPtr) {
-    outstandingRequests.push_back(populateThriftRequestMetadata(item.second));
+    outstandingRequests.emplace_back(
+        populateThriftRequestMetadata(item.second));
+  }
+}
+
+void EdenServiceHandler::debugOutstandingHgEvents(
+    std::vector<HgEvent>& outstandingEvents,
+    std::unique_ptr<std::string> mountPoint) {
+  auto helper = INSTRUMENT_THRIFT_CALL(DBG2);
+
+  auto mountHandle = lookupMount(mountPoint);
+
+  auto backingStore = mountHandle.getObjectStore().getBackingStore();
+  std::shared_ptr<SaplingBackingStore> saplingBackingStore =
+      castToSaplingBackingStore(
+          backingStore, mountHandle.getEdenMount().getPath());
+  const auto hgEvents = saplingBackingStore->getOutstandingHgEvents();
+
+  auto processInfoCache =
+      mountHandle.getEdenMount().getServerState()->getProcessInfoCache();
+  for (const auto& event : hgEvents) {
+    HgEvent thriftEvent;
+    convertHgImportTraceEventToHgEvent(event, *processInfoCache, thriftEvent);
+    outstandingEvents.emplace_back(thriftEvent);
   }
 }
 
@@ -4910,7 +4935,7 @@ void EdenServiceHandler::getRetroactiveThriftRequestEvents(
   for (auto const& event : bufferEvents) {
     ThriftRequestEvent thriftEvent;
     convertThriftRequestTraceEventToThriftRequestEvent(event, thriftEvent);
-    thriftEvents.push_back(std::move(thriftEvent));
+    thriftEvents.emplace_back(std::move(thriftEvent));
   }
 
   result.events() = std::move(thriftEvents);
@@ -4932,7 +4957,7 @@ void EdenServiceHandler::getRetroactiveHgEvents(
     HgEvent thriftEvent{};
     convertHgImportTraceEventToHgEvent(
         event, *server_->getServerState()->getProcessInfoCache(), thriftEvent);
-    thriftEvents.push_back(std::move(thriftEvent));
+    thriftEvents.emplace_back(std::move(thriftEvent));
   }
 
   result.events() = std::move(thriftEvents);
@@ -4958,7 +4983,7 @@ void EdenServiceHandler::getRetroactiveInodeEvents(
     InodeEvent thriftEvent{};
     ConvertInodeTraceEventToThriftInodeEvent(event, thriftEvent);
     thriftEvent.path() = event.getPath();
-    thriftEvents.push_back(std::move(thriftEvent));
+    thriftEvents.emplace_back(std::move(thriftEvent));
   }
 
   result.events() = std::move(thriftEvents);
