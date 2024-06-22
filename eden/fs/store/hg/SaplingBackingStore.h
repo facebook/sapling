@@ -541,6 +541,17 @@ class SaplingBackingStore final : public BackingStore {
       const SaplingImportObject& requestType);
 
   /**
+   * Processes hg events from the trace bus by subscribing it.
+   * Adds/Updates/Removes event to the outstanding hg events based on event
+   * type-
+   *   If queued, it will be added to the outstanding hg events.
+   *   If started, it will update the existing queued event.
+   *   If finished, it will remove the event from outstanding hg events.
+   * And, adds event to the activity buffer.
+   */
+  void processHgEvent(const HgImportTraceEvent& event);
+
+  /**
    * isRecordingFetch_ indicates if SaplingBackingStore is recording paths
    * for fetched files. Initially we don't record paths. When
    * startRecordingFetch() is called, isRecordingFetch_ is set to true and
@@ -620,6 +631,9 @@ class SaplingBackingStore final : public BackingStore {
       liveBatchedBlobMetaWatches_;
 
   std::unique_ptr<SaplingBackingStoreOptions> runtimeOptions_;
+
+  folly::Synchronized<std::unordered_map<uint64_t, HgImportTraceEvent>>
+      outstandingHgEvents_;
 
   ActivityBuffer<HgImportTraceEvent> activityBuffer_;
 

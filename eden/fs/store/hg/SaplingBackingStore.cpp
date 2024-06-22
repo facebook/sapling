@@ -291,9 +291,7 @@ SaplingBackingStore::SaplingBackingStore(
 
   hgTraceHandle_ = traceBus_->subscribeFunction(
       folly::to<std::string>("hg-activitybuffer-", getRepoName().value_or("")),
-      [this](const HgImportTraceEvent& event) {
-        activityBuffer_.addEvent(event);
-      });
+      [this](const HgImportTraceEvent& event) { this->processHgEvent(event); });
 }
 
 /**
@@ -344,9 +342,7 @@ SaplingBackingStore::SaplingBackingStore(
 
   hgTraceHandle_ = traceBus_->subscribeFunction(
       folly::to<std::string>("hg-activitybuffer-", getRepoName().value_or("")),
-      [this](const HgImportTraceEvent& event) {
-        activityBuffer_.addEvent(event);
-      });
+      [this](const HgImportTraceEvent& event) { this->processHgEvent(event); });
 }
 
 SaplingBackingStore::~SaplingBackingStore() {
@@ -354,6 +350,24 @@ SaplingBackingStore::~SaplingBackingStore() {
   for (auto& thread : threads_) {
     thread.join();
   }
+}
+
+void SaplingBackingStore::processHgEvent(const HgImportTraceEvent& event) {
+  switch (event.eventType) {
+    case HgImportTraceEvent::QUEUE:
+      // Create a new queued event
+    case HgImportTraceEvent::START:
+      // Override the queued event with start event
+      outstandingHgEvents_.wlock()->insert_or_assign(event.unique, event);
+      break;
+    case HgImportTraceEvent::FINISH:
+      outstandingHgEvents_.wlock()->erase(event.unique);
+      break;
+    default:
+      EDEN_BUG() << "Unknown Hg trace event type: "
+                 << enumValue(event.eventType);
+  }
+  activityBuffer_.addEvent(event);
 }
 
 void SaplingBackingStore::processBlobImportRequests(
