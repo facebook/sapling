@@ -7,7 +7,8 @@
   $ . "${TEST_FIXTURES}/library.sh"
 
 setup configuration
-  $ setup_common_config
+  $ setconfig push.edenapi=true
+  $ ENABLE_API_WRITES=1 setup_common_config
 
   $ cd $TESTTMP
 
@@ -50,42 +51,31 @@ create new commit in repo2 and check that push fails
   $ hg add b_dir/b
   $ hg ci -mb --extra "change-xrepo-mapping-to-version=somemapping"
 
-  $ hgmn push mononoke://$(mononoke_address)/repo -r . --to master_bookmark --config extensions.remotenames=
-  pushing rev 9c40727be57c to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
-  searching for changes
-  remote: Command failed
-  remote:   Error:
-  remote:     While doing a push
-  remote: 
-  remote:   Root cause:
-  remote:     Disallowed extra change-xrepo-mapping-to-version is set on * (glob)
-  remote: 
-  remote:   Caused by:
-  remote:     Failed to fast-forward bookmark (set pushvar NON_FAST_FORWARD=true for a non-fast-forward move)
-  remote:   Caused by:
-  remote:     Disallowed extra change-xrepo-mapping-to-version is set on * (glob)
-  remote: 
-  remote:   Debug context:
-  remote:     Error {
-  remote:         context: "While doing a push",
-  remote:         source: Error {
-  remote:             context: "Failed to fast-forward bookmark (set pushvar NON_FAST_FORWARD=true for a non-fast-forward move)",
-  remote:             source: Error(
-  remote:                 "Disallowed extra change-xrepo-mapping-to-version is set on *", (glob)
-  remote:             ),
-  remote:         },
-  remote:     }
-  abort: unexpected EOL, expected netstring digit
+  $ hgedenapi push mononoke://$(mononoke_address)/repo -r . --to master_bookmark --config extensions.remotenames=
+  pushing rev 9c40727be57c to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
+  edenapi: queue 1 commit for upload
+  edenapi: queue 2 files for upload
+  edenapi: uploaded 2 files
+  edenapi: queue 2 trees for upload
+  edenapi: uploaded 2 trees
+  edenapi: uploaded 1 changeset
+  pushrebasing stack (0e7ec5675652, 9c40727be57c] (1 commit) to remote bookmark master_bookmark
+  abort: Server error: internal error: Disallowed extra change-xrepo-mapping-to-version is set on 603d7b6d937e2a896edcfcf17dcf76bb8dfc644510db19b359bfb056d6299c5e.
+  
+  Caused by:
+      0: Disallowed extra change-xrepo-mapping-to-version is set on 603d7b6d937e2a896edcfcf17dcf76bb8dfc644510db19b359bfb056d6299c5e.
+      1: Disallowed extra change-xrepo-mapping-to-version is set on 603d7b6d937e2a896edcfcf17dcf76bb8dfc644510db19b359bfb056d6299c5e.
   [255]
 
   $ killandwait $MONONOKE_PID
   $ cd "$TESTTMP"
   $ rm -rf "$TESTTMP/mononoke-config"
-  $ ALLOW_CHANGE_XREPO_MAPPING_EXTRA=true setup_common_config
+  $ ENABLE_API_WRITES=1 ALLOW_CHANGE_XREPO_MAPPING_EXTRA=true setup_common_config
   $ mononoke
   $ wait_for_mononoke
   $ cd "$TESTTMP/repo2"
-  $ hgmn push mononoke://$(mononoke_address)/repo -r . --to master_bookmark --config extensions.remotenames=
-  pushing rev 9c40727be57c to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
-  searching for changes
-  updating bookmark master_bookmark
+  $ hgedenapi push mononoke://$(mononoke_address)/repo -r . --to master_bookmark --config extensions.remotenames=
+  pushing rev 9c40727be57c to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
+  pushrebasing stack (0e7ec5675652, 9c40727be57c] (1 commit) to remote bookmark master_bookmark
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  updated remote bookmark master_bookmark to 9c40727be57c
