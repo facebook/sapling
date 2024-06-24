@@ -5,9 +5,10 @@
  * GNU General Public License version 2.
  */
 
-use s_c_m_repo_metadata_rust_logger::SCMRepoMetadataLogger;
+use s_c_m_repo_metadata_v2_rust_logger::SCMRepoMetadataV2Logger;
 
 use crate::types::BlamedTextFileMetadata;
+use crate::types::ChangeType;
 use crate::types::DirectoryMetadata;
 use crate::types::FileMetadata;
 use crate::types::ItemHistory;
@@ -16,7 +17,7 @@ use crate::types::SymlinkMetadata;
 use crate::types::TextFileMetadata;
 
 impl MetadataItem {
-    pub fn set_fields(&self, logger: &mut SCMRepoMetadataLogger) {
+    pub fn set_fields(&self, logger: &mut SCMRepoMetadataV2Logger) {
         match self {
             MetadataItem::Directory(metadata) => {
                 metadata.set_fields(logger);
@@ -38,14 +39,14 @@ impl MetadataItem {
 }
 
 impl ItemHistory {
-    fn set_fields(&self, logger: &mut SCMRepoMetadataLogger) {
+    fn set_fields(&self, logger: &mut SCMRepoMetadataV2Logger) {
         logger.set_last_author(self.last_author.to_string());
         logger.set_last_modified_timestamp(self.last_modified_timestamp.timestamp_secs());
     }
 }
 
 impl FileMetadata {
-    fn set_fields(&self, logger: &mut SCMRepoMetadataLogger) {
+    fn set_fields(&self, logger: &mut SCMRepoMetadataV2Logger) {
         logger.set_is_file(true);
         logger.set_is_directory(false);
 
@@ -53,11 +54,12 @@ impl FileMetadata {
         self.history.set_fields(logger);
         logger.set_file_size(self.file_size as i64);
         logger.set_executable(self.is_executable);
+        self.change_type.set_fields(logger);
     }
 }
 
 impl DirectoryMetadata {
-    fn set_fields(&self, logger: &mut SCMRepoMetadataLogger) {
+    fn set_fields(&self, logger: &mut SCMRepoMetadataV2Logger) {
         logger.set_is_file(false);
         logger.set_is_directory(true);
         logger.set_is_symlink(false);
@@ -69,11 +71,12 @@ impl DirectoryMetadata {
         logger.set_child_dirs_count(self.child_dirs_count as i64);
         logger.set_descendant_files_count(self.descendant_files_count as i64);
         logger.set_descendant_files_total_size(self.descendant_files_total_size as i64);
+        self.change_type.set_fields(logger);
     }
 }
 
 impl TextFileMetadata {
-    fn set_fields(&self, logger: &mut SCMRepoMetadataLogger) {
+    fn set_fields(&self, logger: &mut SCMRepoMetadataV2Logger) {
         logger.set_is_symlink(false);
 
         self.file_metadata.set_fields(logger);
@@ -88,7 +91,7 @@ impl TextFileMetadata {
 }
 
 impl BlamedTextFileMetadata {
-    fn set_fields(&self, logger: &mut SCMRepoMetadataLogger) {
+    fn set_fields(&self, logger: &mut SCMRepoMetadataV2Logger) {
         self.text_file_metadata.set_fields(logger);
         logger.set_approx_commit_count(self.approx_commit_count as i64);
         logger.set_distinct_range_count(self.distinct_range_count as i64);
@@ -109,10 +112,27 @@ impl BlamedTextFileMetadata {
 }
 
 impl SymlinkMetadata {
-    fn set_fields(&self, logger: &mut SCMRepoMetadataLogger) {
+    fn set_fields(&self, logger: &mut SCMRepoMetadataV2Logger) {
         logger.set_is_symlink(true);
 
         self.file_metadata.set_fields(logger);
         logger.set_symlink_target(self.symlink_target.clone());
+    }
+}
+
+impl ChangeType {
+    fn set_fields(&self, logger: &mut SCMRepoMetadataV2Logger) {
+        match self {
+            ChangeType::Unknown => {}
+            ChangeType::Added => {
+                logger.set_is_added(true);
+            }
+            ChangeType::Deleted => {
+                logger.set_is_deleted(true);
+            }
+            ChangeType::Modified => {
+                logger.set_is_modified(true);
+            }
+        }
     }
 }

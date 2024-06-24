@@ -29,6 +29,6 @@ rust_library(
         "//eden/mononoke/server/context:context",
         "//eden/mononoke/derived_data:unodes",
     ] + ([] if rust_oss.is_oss_build() else [
-        "//dsi/logger/configs/SCMRepoMetadataLoggerConfig:s_c_m_repo_metadata_rust_logger",
+        "//dsi/logger/configs/SCMRepoMetadataV2LoggerConfig:s_c_m_repo_metadata_v2_rust_logger",
     ])),
 )
