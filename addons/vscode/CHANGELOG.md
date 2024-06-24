@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.1.52
+
+### Jun 24 2024
+
+- Fix extra spaces when typing in a TextField
+- Made styling of some components more consistent
+- Don't consider Untitled files as unsaved
+- Fix split confirmation buttons to the top so they can always be clicked on small screens
+- Added ability to create a bookmark from the context menu
+- Fix a crash when selecting an optimistic commit in some cases
+- Made the size of the description in the Commit Info sidebar more consistent
+
 ## 0.1.51
 
 ### Jun 3 2024
