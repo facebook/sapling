@@ -71,15 +71,6 @@ pub const TAG_REF: &str = "tag";
 pub const BRANCH_REF_PREFIX: &str = "refs/heads/";
 pub const TAG_REF_PREFIX: &str = "refs/tags/";
 
-/// Enum that represents the types of Git object that are to be stored
-/// in Mononoke
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum GitObjectStorageType {
-    #[allow(dead_code)]
-    RawObjectsOnly,
-    PackfileItemsAndRawObjects,
-}
-
 // TODO: Try to produce copy-info?
 async fn find_file_changes<S, U>(
     ctx: &CoreContext,
@@ -87,7 +78,6 @@ async fn find_file_changes<S, U>(
     reader: &GitRepoReader,
     uploader: U,
     changes: S,
-    object_storage_type: GitObjectStorageType,
 ) -> Result<SortedVectorMap<NonRootMPath, U::Change>, Error>
 where
     S: Stream<Item = Result<BonsaiDiffFileChange<GitLeaf>, Error>>,
@@ -114,34 +104,19 @@ where
                                     .parsed
                                     .try_into_blob()
                                     .map_err(|_| format_err!("{} is not a blob", oid))?;
-                                if let GitObjectStorageType::PackfileItemsAndRawObjects =
-                                    object_storage_type
-                                {
-                                    let upload_packfile =
-                                        uploader.upload_packfile_base_item(&ctx, oid, object.raw);
-                                    let upload_git_blob = uploader.upload_file(
-                                        &ctx,
-                                        &lfs,
-                                        &path,
-                                        ty,
-                                        oid,
-                                        Bytes::from(blob.data),
-                                    );
-                                    let (_, change) = try_join!(upload_packfile, upload_git_blob)?;
-                                    anyhow::Ok((path, change))
-                                } else {
-                                    uploader
-                                        .upload_file(
-                                            &ctx,
-                                            &lfs,
-                                            &path,
-                                            ty,
-                                            oid,
-                                            Bytes::from(blob.data),
-                                        )
-                                        .await
-                                        .map(|change| (path, change))
-                                }
+
+                                let upload_packfile =
+                                    uploader.upload_packfile_base_item(&ctx, oid, object.raw);
+                                let upload_git_blob = uploader.upload_file(
+                                    &ctx,
+                                    &lfs,
+                                    &path,
+                                    ty,
+                                    oid,
+                                    Bytes::from(blob.data),
+                                );
+                                let (_, change) = try_join!(upload_packfile, upload_git_blob)?;
+                                anyhow::Ok((path, change))
                             }
                         }
                         BonsaiDiffFileChange::Deleted(path) => Ok((path, U::deleted())),
@@ -353,7 +328,7 @@ pub async fn gitimport_acc<Uploader: GitUploader>(
                         .with_context(|| format!("While extracting {}", oid))?;
 
                     let diff = extracted_commit.diff(&ctx, &reader, submodules);
-                    let file_changes = find_file_changes(&ctx, &lfs, &reader, uploader, diff, GitObjectStorageType::PackfileItemsAndRawObjects).await.context("find_file_changes")?;
+                    let file_changes = find_file_changes(&ctx, &lfs, &reader, uploader, diff).await.context("find_file_changes")?;
                     Result::<_, Error>::Ok((extracted_commit, file_changes))
                     }
                 })
@@ -671,15 +646,7 @@ pub async fn import_tree_as_single_bonsai_changeset(
         .with_context(|| format!("While extracting {}", git_cs_id))?;
 
     let diff = extracted_commit.diff_root(ctx, &reader, prefs.submodules);
-    let file_changes = find_file_changes(
-        ctx,
-        &prefs.lfs,
-        &reader,
-        uploader.clone(),
-        diff,
-        GitObjectStorageType::PackfileItemsAndRawObjects,
-    )
-    .await?;
+    let file_changes = find_file_changes(ctx, &prefs.lfs, &reader, uploader.clone(), diff).await?;
 
     // Before generating the corresponding changeset at Mononoke end, upload the raw git commit.
     uploader
