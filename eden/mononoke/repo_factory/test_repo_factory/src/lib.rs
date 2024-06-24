@@ -64,6 +64,7 @@ use metaconfig_types::ArcRepoConfig;
 use metaconfig_types::BlameVersion;
 use metaconfig_types::DerivedDataConfig;
 use metaconfig_types::DerivedDataTypesConfig;
+use metaconfig_types::GitDeltaManifestV2Config;
 use metaconfig_types::HookManagerParams;
 use metaconfig_types::InfinitepushNamespace;
 use metaconfig_types::InfinitepushParams;
@@ -169,6 +170,11 @@ pub fn default_test_repo_config() -> RepoConfig {
             .collect(),
         unode_version: UnodeVersion::V2,
         blame_version: BlameVersion::V2,
+        git_delta_manifest_v2_config: Some(GitDeltaManifestV2Config {
+            max_inlined_object_size: 100,
+            max_inlined_delta_size: 100,
+            delta_chunk_size: 1000,
+        }),
         ..Default::default()
     };
     RepoConfig {

@@ -407,6 +407,9 @@ pub struct DerivedDataTypesConfig {
 
     /// What `GitDeltaManifest` version should be used.
     pub git_delta_manifest_version: GitDeltaManifestVersion,
+
+    /// Config for git delta manifest v2
+    pub git_delta_manifest_v2_config: Option<GitDeltaManifestV2Config>,
 }
 
 /// What type of unode derived data to generate
@@ -431,6 +434,17 @@ pub enum GitDeltaManifestVersion {
     /// GitDeltaManifest v1
     #[default]
     V1,
+}
+
+/// Config for git delta manifest v2
+#[derive(Eq, Clone, Copy, Debug, Default, PartialEq)]
+pub struct GitDeltaManifestV2Config {
+    /// Maximum size allowed for an inlined full object.
+    pub max_inlined_object_size: usize,
+    /// Maximum size allowed for an inlined delta.
+    pub max_inlined_delta_size: u64,
+    /// Chunk size for delta instructions.
+    pub delta_chunk_size: u64,
 }
 
 impl RepoConfig {

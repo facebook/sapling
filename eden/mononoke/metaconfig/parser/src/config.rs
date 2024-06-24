@@ -1266,6 +1266,7 @@ mod test {
                         hg_set_committer_extra: false,
                         blame_version: BlameVersion::V2,
                         git_delta_manifest_version: Default::default(),
+                        git_delta_manifest_v2_config: Default::default(),
                     },],
                     scuba_table: None,
                 },

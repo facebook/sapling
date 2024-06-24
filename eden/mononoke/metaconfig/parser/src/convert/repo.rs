@@ -25,6 +25,7 @@ use metaconfig_types::CrossRepoCommitValidation;
 use metaconfig_types::DerivedDataConfig;
 use metaconfig_types::DerivedDataTypesConfig;
 use metaconfig_types::GitConcurrencyParams;
+use metaconfig_types::GitDeltaManifestV2Config;
 use metaconfig_types::GitDeltaManifestVersion;
 use metaconfig_types::GlobalrevConfig;
 use metaconfig_types::HgSyncConfig;
@@ -71,6 +72,7 @@ use repos::RawCrossRepoCommitValidationConfig;
 use repos::RawDerivedDataConfig;
 use repos::RawDerivedDataTypesConfig;
 use repos::RawGitConcurrencyParams;
+use repos::RawGitDeltaManifestV2Config;
 use repos::RawHgSyncConfig;
 use repos::RawHookConfig;
 use repos::RawHookManagerParams;
@@ -489,6 +491,10 @@ impl Convert for RawDerivedDataTypesConfig {
             Some(1) => GitDeltaManifestVersion::V1,
             Some(version) => return Err(anyhow!("unknown git delta manifest version {}", version)),
         };
+        let git_delta_manifest_v2_config = self
+            .git_delta_manifest_v2_config
+            .map(|raw| raw.convert())
+            .transpose()?;
         Ok(DerivedDataTypesConfig {
             types,
             mapping_key_prefixes,
@@ -497,6 +503,19 @@ impl Convert for RawDerivedDataTypesConfig {
             hg_set_committer_extra: self.hg_set_committer_extra.unwrap_or(false),
             blame_version,
             git_delta_manifest_version,
+            git_delta_manifest_v2_config,
+        })
+    }
+}
+
+impl Convert for RawGitDeltaManifestV2Config {
+    type Output = GitDeltaManifestV2Config;
+
+    fn convert(self) -> Result<Self::Output> {
+        Ok(GitDeltaManifestV2Config {
+            max_inlined_object_size: self.max_inlined_object_size as usize,
+            max_inlined_delta_size: self.max_inlined_delta_size as u64,
+            delta_chunk_size: self.delta_chunk_size as u64,
         })
     }
 }
