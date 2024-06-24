@@ -25,6 +25,7 @@ use futures::stream;
 use futures::stream::StreamExt;
 use git_types::MappedGitCommitId;
 use git_types::RootGitDeltaManifestId;
+use git_types::RootGitDeltaManifestV2Id;
 use git_types::TreeHandle;
 use mercurial_derivation::MappedHgChangesetId;
 use mercurial_derivation::RootHgAugmentedManifestId;
@@ -160,6 +161,14 @@ impl BulkDerivation for DerivedDataManager {
                             )
                             .await
                         }
+                        DerivableType::GitDeltaManifestsV2 => {
+                            self.derive_exactly_batch::<RootGitDeltaManifestV2Id>(
+                                ctx,
+                                csids,
+                                rederivation,
+                            )
+                            .await
+                        }
                         DerivableType::BssmV3 => {
                             self.derive_exactly_batch::<RootBssmV3DirectoryId>(
                                 ctx,
@@ -252,6 +261,10 @@ impl BulkDerivation for DerivedDataManager {
                 .is_some(),
             DerivableType::GitDeltaManifests => self
                 .fetch_derived::<RootGitDeltaManifestId>(ctx, csid, rederivation)
+                .await?
+                .is_some(),
+            DerivableType::GitDeltaManifestsV2 => self
+                .fetch_derived::<RootGitDeltaManifestV2Id>(ctx, csid, rederivation)
                 .await?
                 .is_some(),
             DerivableType::BssmV3 => self

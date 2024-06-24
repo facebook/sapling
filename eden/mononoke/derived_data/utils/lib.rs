@@ -54,6 +54,7 @@ use futures::TryStreamExt;
 use futures_stats::TimedTryFutureExt;
 use git_types::MappedGitCommitId;
 use git_types::RootGitDeltaManifestId;
+use git_types::RootGitDeltaManifestV2Id;
 use git_types::TreeHandle;
 use itertools::Itertools;
 use lazy_static::lazy_static;
@@ -92,6 +93,7 @@ pub const POSSIBLE_DERIVED_TYPE_NAMES: &[&str] = &[
     RootDeletedManifestV2Id::NAME,
     RootBssmV3DirectoryId::NAME,
     RootGitDeltaManifestId::NAME,
+    RootGitDeltaManifestV2Id::NAME,
     RootTestManifestDirectory::NAME,
     RootTestShardedManifestDirectory::NAME,
 ];
@@ -110,6 +112,7 @@ pub const POSSIBLE_DERIVED_TYPES: &[DerivableType] = &[
     RootDeletedManifestV2Id::VARIANT,
     RootBssmV3DirectoryId::VARIANT,
     RootGitDeltaManifestId::VARIANT,
+    RootGitDeltaManifestV2Id::VARIANT,
     RootTestManifestDirectory::VARIANT,
     RootTestShardedManifestDirectory::VARIANT,
 ];
@@ -131,6 +134,7 @@ lazy_static! {
         let skeleton_mf = RootSkeletonManifestId::VARIANT;
         let bssm_v3 = RootBssmV3DirectoryId::VARIANT;
         let git_delta_manifest = RootGitDeltaManifestId::VARIANT;
+        let git_delta_manifest_v2 = RootGitDeltaManifestV2Id::VARIANT;
         let git_commit = MappedGitCommitId::VARIANT;
         let git_tree = TreeHandle::VARIANT;
         let test_mf = RootTestManifestDirectory::VARIANT;
@@ -152,6 +156,7 @@ lazy_static! {
         dag.insert(git_tree, vec![]);
         dag.insert(git_commit, vec![git_tree]);
         dag.insert(git_delta_manifest, vec![git_tree, git_commit, unodes]);
+        dag.insert(git_delta_manifest_v2, vec![git_tree, git_commit]);
         dag.insert(test_mf, vec![]);
         dag.insert(test_sharded_mf, vec![]);
 
@@ -575,6 +580,11 @@ fn derived_data_utils_impl(
         )),
         RootGitDeltaManifestId::VARIANT => Ok(Arc::new(DerivedUtilsFromManager::<
             RootGitDeltaManifestId,
+        >::new(
+            repo, config, enabled_config_name
+        ))),
+        RootGitDeltaManifestV2Id::VARIANT => Ok(Arc::new(DerivedUtilsFromManager::<
+            RootGitDeltaManifestV2Id,
         >::new(
             repo, config, enabled_config_name
         ))),
@@ -1126,6 +1136,11 @@ pub async fn check_derived(
         }
         DerivableType::GitDeltaManifests => {
             ddm.fetch_derived::<RootGitDeltaManifestId>(ctx, head_cs_id, None)
+                .map_ok(|res| res.is_some())
+                .await
+        }
+        DerivableType::GitDeltaManifestsV2 => {
+            ddm.fetch_derived::<RootGitDeltaManifestV2Id>(ctx, head_cs_id, None)
                 .map_ok(|res| res.is_some())
                 .await
         }

@@ -164,7 +164,9 @@ pub struct TestRepoFactory {
 /// This configuration enables all derived data types at the latest version.
 pub fn default_test_repo_config() -> RepoConfig {
     let derived_data_types_config = DerivedDataTypesConfig {
-        types: DerivableType::iter().collect(),
+        types: DerivableType::iter()
+            .filter(|t| *t != DerivableType::GitDeltaManifestsV2)
+            .collect(),
         unode_version: UnodeVersion::V2,
         blame_version: BlameVersion::V2,
         ..Default::default()

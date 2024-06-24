@@ -1196,6 +1196,7 @@ mod tests {
             DerivableType::GitTrees,
             DerivableType::GitCommits,
             DerivableType::GitDeltaManifests,
+            DerivableType::GitDeltaManifestsV2,
             DerivableType::TestManifests,
             DerivableType::TestShardedManifests,
             DerivableType::BssmV3,
