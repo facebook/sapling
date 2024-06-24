@@ -127,7 +127,7 @@ async fn test_submodule_expansion_basic(fb: FacebookInit) -> Result<()> {
 
     let large_repo_changesets = get_all_changeset_data_from_repo(&ctx, &large_repo).await?;
 
-    derive_all_data_types_for_repo(&ctx, &large_repo, &large_repo_changesets).await?;
+    derive_all_enabled_types_for_repo(&ctx, &large_repo, &large_repo_changesets).await?;
 
     let expected_cs_id =
         ChangesetId::from_str("eb139e09af89e542b3d0d272857e7400ba721e814e3a06d94c85dfcea8e0c124")
@@ -265,7 +265,7 @@ async fn test_recursive_submodule_expansion_basic(fb: FacebookInit) -> Result<()
     let large_repo_changesets = get_all_changeset_data_from_repo(&ctx, &large_repo).await?;
     println!("large_repo_changesets: {:#?}\n\n", &large_repo_changesets);
 
-    derive_all_data_types_for_repo(&ctx, &large_repo, &large_repo_changesets).await?;
+    derive_all_enabled_types_for_repo(&ctx, &large_repo, &large_repo_changesets).await?;
 
     let expected_cs_id =
         ChangesetId::from_str("7b95de313bd54b4654e3aae74d5f444cd6db44504f6808cb7f138f42fc61f6e7")
@@ -355,7 +355,7 @@ async fn test_submodule_deletion(fb: FacebookInit) -> Result<()> {
 
     let large_repo_changesets = get_all_changeset_data_from_repo(&ctx, &large_repo).await?;
 
-    derive_all_data_types_for_repo(&ctx, &large_repo, &large_repo_changesets).await?;
+    derive_all_enabled_types_for_repo(&ctx, &large_repo, &large_repo_changesets).await?;
 
     check_mapping(
         ctx.clone(),
@@ -451,7 +451,7 @@ async fn test_recursive_submodule_deletion(fb: FacebookInit) -> Result<()> {
     let large_repo_changesets = get_all_changeset_data_from_repo(&ctx, &large_repo).await?;
     println!("large_repo_changesets: {:#?}\n\n", &large_repo_changesets);
 
-    derive_all_data_types_for_repo(&ctx, &large_repo, &large_repo_changesets).await?;
+    derive_all_enabled_types_for_repo(&ctx, &large_repo, &large_repo_changesets).await?;
 
     compare_expected_changesets(
         large_repo_changesets.last_chunk::<1>().unwrap(),
@@ -592,7 +592,7 @@ async fn test_deleting_submodule_but_keeping_directory(fb: FacebookInit) -> Resu
     println!("large_repo_cs_id: {0:#?}", large_repo_cs_id);
 
     let large_repo_changesets = get_all_changeset_data_from_repo(&ctx, &large_repo).await?;
-    derive_all_data_types_for_repo(&ctx, &large_repo, &large_repo_changesets).await?;
+    derive_all_enabled_types_for_repo(&ctx, &large_repo, &large_repo_changesets).await?;
     compare_expected_changesets_from_basic_setup(
         &large_repo_changesets,
         &[
@@ -816,7 +816,7 @@ async fn test_deleting_recursive_submodule_but_keeping_directory(fb: FacebookIni
     println!("large_repo_cs_id: {0:#?}", large_repo_cs_id);
 
     let large_repo_changesets = get_all_changeset_data_from_repo(&ctx, &large_repo).await?;
-    derive_all_data_types_for_repo(&ctx, &large_repo, &large_repo_changesets).await?;
+    derive_all_enabled_types_for_repo(&ctx, &large_repo, &large_repo_changesets).await?;
 
     compare_expected_changesets(
         large_repo_changesets.last_chunk::<2>().unwrap(),
@@ -946,7 +946,7 @@ async fn test_implicitly_deleting_submodule(fb: FacebookInit) -> Result<()> {
     println!("large_repo_cs_id: {}", large_repo_cs_id);
 
     let large_repo_changesets = get_all_changeset_data_from_repo(&ctx, &large_repo).await?;
-    derive_all_data_types_for_repo(&ctx, &large_repo, &large_repo_changesets).await?;
+    derive_all_enabled_types_for_repo(&ctx, &large_repo, &large_repo_changesets).await?;
 
     compare_expected_changesets_from_basic_setup(
         &large_repo_changesets,
@@ -1048,7 +1048,7 @@ async fn test_implicit_deletions_inside_submodule_repo(fb: FacebookInit) -> Resu
         .ok_or(anyhow!("Failed to sync commit"))?;
 
     let large_repo_changesets = get_all_changeset_data_from_repo(&ctx, &large_repo).await?;
-    derive_all_data_types_for_repo(&ctx, &large_repo, &large_repo_changesets).await?;
+    derive_all_enabled_types_for_repo(&ctx, &large_repo, &large_repo_changesets).await?;
 
     let expected_cs_id =
         ChangesetId::from_str("7fc76cfa1906ccc74f86322cf529c5508867b5cfef8b80fb65a425e835f4b92b")
@@ -1173,7 +1173,7 @@ async fn test_implicitly_deleting_file_with_submodule(fb: FacebookInit) -> Resul
 
     let large_repo_changesets = get_all_changeset_data_from_repo(&ctx, &large_repo).await?;
 
-    derive_all_data_types_for_repo(&ctx, &large_repo, large_repo_changesets.as_slice()).await?;
+    derive_all_enabled_types_for_repo(&ctx, &large_repo, large_repo_changesets.as_slice()).await?;
 
     let expected_cs_id =
         ChangesetId::from_str("a586b2e4b85ef2ab37aa37a78711d82a10733098975c2ea352f3d80729d5cd6f")
@@ -1299,7 +1299,7 @@ async fn test_adding_submodule_on_existing_directory(fb: FacebookInit) -> Result
 
     let large_repo_changesets = get_all_changeset_data_from_repo(&ctx, &large_repo).await?;
 
-    derive_all_data_types_for_repo(&ctx, &large_repo, large_repo_changesets.as_slice()).await?;
+    derive_all_enabled_types_for_repo(&ctx, &large_repo, large_repo_changesets.as_slice()).await?;
 
     let expected_cs_id =
         ChangesetId::from_str("349e55c3d49f9c4841e218c49fb3bee3e6ea29fa8a95774df22f7cd307a109ad")
@@ -1413,7 +1413,7 @@ async fn test_submodule_expansion_crashes_when_dep_not_available(fb: FacebookIni
     // Get all the changesets in the large repo
     let large_repo_changesets = get_all_changeset_data_from_repo(&ctx, &large_repo).await?;
 
-    derive_all_data_types_for_repo(&ctx, &large_repo, large_repo_changesets.as_slice()).await?;
+    derive_all_enabled_types_for_repo(&ctx, &large_repo, large_repo_changesets.as_slice()).await?;
 
     // And confirm that nothing was synced, i.e. all changesets are from the basic
     // setup.
@@ -1886,7 +1886,7 @@ async fn test_expanding_known_dangling_submodule_pointers(fb: FacebookInit) -> R
     let large_repo_changesets = get_all_changeset_data_from_repo(&ctx, &large_repo).await?;
 
     // Ensure everything can be derived successfully
-    derive_all_data_types_for_repo(&ctx, &large_repo, &large_repo_changesets).await?;
+    derive_all_enabled_types_for_repo(&ctx, &large_repo, &large_repo_changesets).await?;
 
     compare_expected_changesets(
         large_repo_changesets.last_chunk::<4>().unwrap(),

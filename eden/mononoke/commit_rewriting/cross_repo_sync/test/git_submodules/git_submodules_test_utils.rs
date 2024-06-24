@@ -671,14 +671,21 @@ pub(crate) async fn check_submodule_metadata_file_in_large_repo<'a>(
     Ok(())
 }
 
-/// Derive all the derived data types for all changesets in a repo.
+/// Derive all enabled derived data types for all changesets in a repo.
 /// This should be used in all tests with the large repo, to make sure that
 /// commits synced to the large repo won't break the derivation of any type.
-pub(crate) async fn derive_all_data_types_for_repo(
+pub(crate) async fn derive_all_enabled_types_for_repo(
     ctx: &CoreContext,
     repo: &TestRepo,
     all_changesets: &[ChangesetData],
 ) -> Result<()> {
+    let enabled_types = repo
+        .repo_derived_data()
+        .active_config()
+        .types
+        .iter()
+        .copied()
+        .collect::<Vec<_>>();
     let _ = repo
         .repo_derived_data()
         .manager()
@@ -686,7 +693,7 @@ pub(crate) async fn derive_all_data_types_for_repo(
             ctx,
             all_changesets.iter().map(|cs_data| cs_data.cs_id).collect(),
             None,
-            DerivableType::iter().collect::<Vec<_>>().as_slice(),
+            &enabled_types,
         )
         .await?;
 
