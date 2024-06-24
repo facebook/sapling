@@ -155,12 +155,14 @@ async fn fetch_tree(
         if attributes.child_metadata {
             entry.with_children(Some(
                 ctx.augmented_children_entries()
-                    .map(|augmented_entry| match augmented_entry {
+                    .map(|(path, augmented_entry)| match augmented_entry {
                         HgAugmentedManifestEntry::FileNode(file) => {
                             Ok(TreeChildEntry::new_file_entry(
                                 Key {
                                     hgid: file.filenode.into(),
-                                    ..Default::default()
+                                    path: RepoPathBuf::from_string(path.to_string()).map_err(
+                                        |e| SaplingRemoteApiServerError::with_key(key.clone(), e),
+                                    )?,
                                 },
                                 FileAuxData {
                                     blake3: file.content_blake3.clone().into(),
@@ -177,7 +179,9 @@ async fn fetch_tree(
                             Ok(TreeChildEntry::new_directory_entry(
                                 Key {
                                     hgid: tree.treenode.into(),
-                                    ..Default::default()
+                                    path: RepoPathBuf::from_string(path.to_string()).map_err(
+                                        |e| SaplingRemoteApiServerError::with_key(key.clone(), e),
+                                    )?,
                                 },
                                 DirectoryMetadata {
                                     augmented_manifest_id: tree

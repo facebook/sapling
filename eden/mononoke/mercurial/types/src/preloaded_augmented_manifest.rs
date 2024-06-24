@@ -31,7 +31,7 @@ pub struct HgPreloadedAugmentedManifest {
     pub augmented_manifest_id: Blake3,
     pub augmented_manifest_size: u64,
     pub contents: Bytes,
-    pub children_augmented_metadata: Vec<HgAugmentedManifestMetadata>,
+    pub children_augmented_metadata: Vec<(MPathElement, HgAugmentedManifestMetadata)>,
 }
 
 // Each manifest revision contains a list of the file revisions in each changeset, in the form:
@@ -75,11 +75,14 @@ impl HgPreloadedAugmentedManifest {
         let p1 = sharded_manifest.augmented_manifest.p1;
         let p2 = sharded_manifest.augmented_manifest.p2;
 
-        let data: Vec<(MPathElement, HgAugmentedManifestEntry)> = sharded_manifest
-            .augmented_manifest
-            .into_subentries(ctx, blobstore)
-            .try_collect()
-            .await?;
+        let children_augmented_metadata: Vec<(MPathElement, HgAugmentedManifestEntry)> =
+            sharded_manifest
+                .augmented_manifest
+                .into_subentries(ctx, blobstore)
+                .try_collect()
+                .await?;
+
+        let contents = serrialize_manifest(&children_augmented_metadata)?;
 
         Ok(Self {
             hg_node_id,
@@ -87,8 +90,8 @@ impl HgPreloadedAugmentedManifest {
             p2,
             augmented_manifest_id,
             augmented_manifest_size,
-            children_augmented_metadata: data.iter().map(|(_, entry)| entry.clone()).collect(),
-            contents: serrialize_manifest(&data)?,
+            children_augmented_metadata,
+            contents,
         })
     }
 }

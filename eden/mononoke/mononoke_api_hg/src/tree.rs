@@ -115,7 +115,9 @@ impl HgAugmentedTreeContext {
         self.preloaded_manifest.augmented_manifest_size
     }
 
-    pub fn augmented_children_entries(&self) -> impl Iterator<Item = &HgAugmentedManifestEntry> {
+    pub fn augmented_children_entries(
+        &self,
+    ) -> impl Iterator<Item = &(MPathElement, HgAugmentedManifestEntry)> {
         self.preloaded_manifest.children_augmented_metadata.iter()
     }
 
