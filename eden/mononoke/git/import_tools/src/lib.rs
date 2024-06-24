@@ -99,7 +99,8 @@ where
                                     .await
                                     .map(|change| (path, change))
                             } else {
-                                let object = reader.get_object(&oid).await?;
+                                let object =
+                                    reader.get_object(&oid).await.context("reader.get_object")?;
                                 let blob = object
                                     .parsed
                                     .try_into_blob()

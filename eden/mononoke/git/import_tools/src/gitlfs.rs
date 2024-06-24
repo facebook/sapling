@@ -10,6 +10,7 @@ use std::str;
 use std::sync::Arc;
 
 use anyhow::format_err;
+use anyhow::Context;
 use anyhow::Error;
 use bytes::Bytes;
 use context::CoreContext;
@@ -163,7 +164,11 @@ impl GitImportLfs {
         let uri = [&inner.lfs_server, "/", &metadata.sha256.to_string()]
             .concat()
             .parse::<Uri>()?;
-        let resp = inner.client.get(uri.clone()).await?;
+        let resp = inner
+            .client
+            .get(uri.clone())
+            .await
+            .with_context(|| format!("fetch_bytes_internal {}", uri))?;
 
         if resp.status().is_success() {
             let bytes = resp.into_body().map_err(Error::from);

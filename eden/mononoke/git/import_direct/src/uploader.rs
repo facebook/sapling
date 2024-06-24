@@ -186,7 +186,8 @@ where
                 &StoreRequest::new(oid_bytes.len() as u64),
                 stream::once(async move { Ok(oid_bytes) }),
             )
-            .await?
+            .await
+            .context("filestore (upload submodule)")?
         } else if let Some(lfs_meta) = lfs.is_lfs_file(&git_bytes, oid) {
             let blobstore = self.inner.repo_blobstore();
             let filestore_config = *self.inner.filestore_config();
@@ -202,12 +203,15 @@ where
                         lfs_meta.sha256.to_brief(),
                         lfs_meta.size,
                     );
-                    filestore::store(&blobstore, filestore_config, &ctx, &req, bstream).await
+                    filestore::store(&blobstore, filestore_config, &ctx, &req, bstream)
+                        .await
+                        .context("filestore (lfs)")
                 },
             )
             .await?
         } else {
-            let (req, bstream) = git_store_request(ctx, oid, git_bytes)?;
+            let (req, bstream) =
+                git_store_request(ctx, oid, git_bytes).context("git_store_request")?;
             filestore::store(
                 self.inner.repo_blobstore(),
                 *self.inner.filestore_config(),
@@ -215,7 +219,8 @@ where
                 &req,
                 bstream,
             )
-            .await?
+            .await
+            .context("filestore (upload regular)")?
         };
         debug!(
             ctx.logger(),
