@@ -64,10 +64,14 @@ Check response.
                     "message": "InternalError(InternalError(Workspace user/doesnotexist/default has been removed or renamed))"}}}
 
   $ hgedenapi debugapi -e cloudworkspace -i "'user/integrationtest/default'" -i "'repo'"
-  {"name": "user/integrationtest/default",
-   "version": 1,
-   "archived": False,
-   "reponame": "repo",
-   "timestamp": *} (glob)
+  {"data": {"Ok": {"name": "user/integrationtest/default",
+                   "version": 1,
+                   "archived": False,
+                   "reponame": "repo",
+                   "timestamp": *}}} (glob)
+
+  $ hgedenapi debugapi -e cloudworkspace -i "'user/thisdoesnot/exist'" -i "'repo'"
+  {"data": {"Err": {"code": 0,
+                    "message": "InternalError(InternalError(Workspace user/thisdoesnot/exist does not exist))"}}}
 
  

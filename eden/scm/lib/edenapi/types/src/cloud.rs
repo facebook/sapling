@@ -141,3 +141,13 @@ pub struct ReferencesDataResponse {
     #[no_default]
     pub data: Result<ReferencesData, ServerError>,
 }
+
+#[auto_wire]
+#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Serialize, Deserialize)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
+pub struct WorkspaceDataResponse {
+    #[id(0)]
+    #[no_default]
+    pub data: Result<WorkspaceData, ServerError>,
+}

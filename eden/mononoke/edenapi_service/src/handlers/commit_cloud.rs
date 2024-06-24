@@ -8,7 +8,7 @@
 use anyhow::Error;
 use async_trait::async_trait;
 use edenapi_types::cloud::ReferencesDataResponse;
-use edenapi_types::cloud::WorkspaceData;
+use edenapi_types::cloud::WorkspaceDataResponse;
 use edenapi_types::CloudWorkspaceRequest;
 use edenapi_types::GetReferencesParams;
 use edenapi_types::ServerError;
@@ -22,7 +22,6 @@ use super::handler::SaplingRemoteApiContext;
 use super::HandlerResult;
 use super::SaplingRemoteApiHandler;
 use super::SaplingRemoteApiMethod;
-use crate::errors::ErrorKind;
 pub struct CommitCloudWorkspace;
 pub struct CommitCloudReferences;
 pub struct CommitCloudUpdateReferences;
@@ -30,7 +29,7 @@ pub struct CommitCloudUpdateReferences;
 #[async_trait]
 impl SaplingRemoteApiHandler for CommitCloudWorkspace {
     type Request = CloudWorkspaceRequest;
-    type Response = WorkspaceData;
+    type Response = WorkspaceDataResponse;
 
     const HTTP_METHOD: hyper::Method = hyper::Method::POST;
     const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::CloudWorkspace;
@@ -49,23 +48,13 @@ impl SaplingRemoteApiHandler for CommitCloudWorkspace {
 async fn get_workspace(
     request: CloudWorkspaceRequest,
     repo: HgRepoContext,
-) -> anyhow::Result<WorkspaceData> {
-    let version = repo
-        .cloud_workspace(&request.workspace, &request.reponame)
-        .await?;
-    if !version.is_empty() {
-        let data = WorkspaceData {
-            name: request.workspace,
-            reponame: request.reponame,
-            version: version[0].version,
-            archived: version[0].archived,
-            timestamp: version[0].timestamp.timestamp_nanos(),
-        };
-        return Ok(data);
-    }
-    Err(anyhow::anyhow!(ErrorKind::CloudWorkspaceNotFound(
-        request.workspace
-    )))
+) -> anyhow::Result<WorkspaceDataResponse> {
+    Ok(WorkspaceDataResponse {
+        data: repo
+            .cloud_workspace(&request.workspace, &request.reponame)
+            .await
+            .map_err(ServerError::from),
+    })
 }
 
 #[async_trait]

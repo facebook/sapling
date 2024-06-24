@@ -58,7 +58,7 @@ use edenapi_types::TreeEntry;
 use edenapi_types::UpdateReferencesParams;
 use edenapi_types::UploadHgChangeset;
 use edenapi_types::UploadToken;
-use edenapi_types::WorkspaceData;
+use edenapi_types::WorkspaceDataResponse;
 use futures::prelude::*;
 use hgstore::split_hg_file_metadata;
 use progress_model::ProgressBar;
@@ -719,7 +719,7 @@ pub trait SaplingRemoteApiPyExt: SaplingRemoteApi {
         workspace: String,
         reponame: String,
         py: Python,
-    ) -> PyResult<Serde<WorkspaceData>> {
+    ) -> PyResult<Serde<WorkspaceDataResponse>> {
         let responses = py
             .allow_threads(|| block_unless_interrupted(self.cloud_workspace(workspace, reponame)))
             .map_pyerr(py)?

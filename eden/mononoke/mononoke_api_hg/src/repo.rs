@@ -28,7 +28,6 @@ use bytes::Bytes;
 use changeset_fetcher::ChangesetFetcherRef;
 use changesets::ChangesetInsert;
 use changesets::ChangesetsRef;
-use commit_cloud::references::versions::WorkspaceVersion;
 use commit_cloud::CommitCloudRef;
 use commit_graph::CommitGraphRef;
 use context::CoreContext;
@@ -37,6 +36,7 @@ use edenapi_types::GetReferencesParams;
 use edenapi_types::ReferencesData;
 use edenapi_types::UpdateReferencesParams;
 use edenapi_types::UploadToken;
+use edenapi_types::WorkspaceData;
 use ephemeral_blobstore::Bubble;
 use ephemeral_blobstore::BubbleId;
 use ephemeral_blobstore::RepoEphemeralStore;
@@ -1056,7 +1056,7 @@ impl HgRepoContext {
         &self,
         workspace: &str,
         reponame: &str,
-    ) -> Result<Vec<WorkspaceVersion>, MononokeError> {
+    ) -> Result<WorkspaceData, MononokeError> {
         Ok(self
             .blob_repo()
             .commit_cloud()

@@ -53,7 +53,7 @@ use edenapi_types::UploadToken;
 use edenapi_types::UploadTokensResponse;
 use edenapi_types::UploadTreeEntry;
 use edenapi_types::UploadTreeResponse;
-use edenapi_types::WorkspaceData;
+use edenapi_types::WorkspaceDataResponse;
 use minibytes::Bytes;
 use types::HgId;
 use types::Key;
@@ -377,7 +377,7 @@ pub trait SaplingRemoteApi: Send + Sync + 'static {
         &self,
         workspace: String,
         reponame: String,
-    ) -> Result<WorkspaceData, SaplingRemoteApiError> {
+    ) -> Result<WorkspaceDataResponse, SaplingRemoteApiError> {
         let _ = (workspace, reponame);
         Err(SaplingRemoteApiError::NotSupported)
     }

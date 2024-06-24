@@ -60,7 +60,7 @@ use edenapi_types::TreeEntry;
 use edenapi_types::UpdateReferencesParams;
 use edenapi_types::UploadSnapshotResponse;
 use edenapi_types::UploadToken;
-use edenapi_types::WorkspaceData;
+use edenapi_types::WorkspaceDataResponse;
 use futures::TryStreamExt;
 use minibytes::Bytes;
 use pyconfigloader::config;
@@ -536,7 +536,7 @@ py_class!(pub class client |py| {
     }
 
     def cloudworkspace(&self, workspace: String, reponame : String)
-        -> PyResult<Serde<WorkspaceData>>
+        -> PyResult<Serde<WorkspaceDataResponse>>
     {
         self.inner(py).as_ref().cloud_workspace_py(workspace,reponame, py)
     }

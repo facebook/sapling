@@ -79,6 +79,7 @@ pub use crate::cloud::ReferencesData;
 pub use crate::cloud::ReferencesDataResponse;
 pub use crate::cloud::UpdateReferencesParams;
 pub use crate::cloud::WorkspaceData;
+pub use crate::cloud::WorkspaceDataResponse;
 pub use crate::commit::make_hash_lookup_request;
 pub use crate::commit::AlterSnapshotRequest;
 pub use crate::commit::AlterSnapshotResponse;

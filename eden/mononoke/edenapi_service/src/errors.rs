@@ -74,8 +74,6 @@ pub enum ErrorKind {
         "Invalid file content upload token in 'upload/filenodes' request for filenode: {0}, reason: {1}"
     )]
     UploadHgFilenodeRequestInvalidToken(HgId, String),
-    #[error("Workspace not found in commit cloud: {0}")]
-    CloudWorkspaceNotFound(String),
     #[error("CommitId not found: {0}")]
     CommitIdNotFound(CommitId),
     #[allow(dead_code)]

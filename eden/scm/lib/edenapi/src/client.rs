@@ -95,7 +95,7 @@ use edenapi_types::UploadTokensResponse;
 use edenapi_types::UploadTreeEntry;
 use edenapi_types::UploadTreeRequest;
 use edenapi_types::UploadTreeResponse;
-use edenapi_types::WorkspaceData;
+use edenapi_types::WorkspaceDataResponse;
 use futures::future::BoxFuture;
 use futures::prelude::*;
 use hg_http::http_client;
@@ -1657,7 +1657,7 @@ impl SaplingRemoteApi for Client {
         &self,
         workspace: String,
         reponame: String,
-    ) -> Result<WorkspaceData, SaplingRemoteApiError> {
+    ) -> Result<WorkspaceDataResponse, SaplingRemoteApiError> {
         tracing::info!("Requesting workspace {} in repo {} ", workspace, reponame);
         let url = self.build_url(paths::CLOUD_WORKSPACE)?;
         let workspace_req = CloudWorkspaceRequest {
@@ -1669,7 +1669,7 @@ impl SaplingRemoteApi for Client {
             .cbor(&workspace_req.to_wire())
             .map_err(SaplingRemoteApiError::RequestSerializationFailed)?;
 
-        self.fetch_single::<WorkspaceData>(request).await
+        self.fetch_single::<WorkspaceDataResponse>(request).await
     }
 
     async fn cloud_references(

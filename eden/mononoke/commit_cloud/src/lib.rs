@@ -16,6 +16,7 @@ use context::CoreContext;
 use edenapi_types::GetReferencesParams;
 use edenapi_types::ReferencesData;
 use edenapi_types::UpdateReferencesParams;
+use edenapi_types::WorkspaceData;
 use facet::facet;
 use mononoke_types::Timestamp;
 use references::update_references_data;
@@ -55,12 +56,19 @@ impl CommitCloud {
         &self,
         workspace: &str,
         reponame: &str,
-    ) -> anyhow::Result<Vec<WorkspaceVersion>> {
-        let workspace: anyhow::Result<Vec<WorkspaceVersion>> = self
-            .storage
-            .get(reponame.to_owned(), workspace.to_owned())
-            .await;
-        workspace
+    ) -> anyhow::Result<WorkspaceData> {
+        if workspace.is_empty() || reponame.is_empty() {
+            return Err(anyhow::anyhow!(
+                "'get_workspace' failed: empty repo_name or workspace"
+            ));
+        }
+
+        let maybeworkspace =
+            WorkspaceVersion::fetch_from_db(&self.storage, workspace, reponame).await?;
+        if let Some(res) = maybeworkspace {
+            return Ok(res.into_workspace_data(reponame));
+        }
+        Err(anyhow::anyhow!("Workspace {} does not exist", workspace))
     }
 
     pub async fn get_references(

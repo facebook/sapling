@@ -174,6 +174,13 @@ class EdenApiService(baseservice.BaseService):
     def getworkspace(self, reponame, workspacename):
         self.ui.debug("Calling 'cloudworkspace' on edenapi\n", component="commitcloud")
         response = self.repo.edenapi.cloudworkspace(workspacename, reponame)
+
+        if "data" in response:
+            if "Ok" in response["data"]:
+                response = response["data"]["Ok"]
+            else:
+                raise error.Abort(response["data"]["Err"]["message"])
+
         return baseservice.WorkspaceInfo(
             name=ensurestr(response["name"]),
             archived=bool(response["archived"]),

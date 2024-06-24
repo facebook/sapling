@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use edenapi_types::WorkspaceData;
 use mononoke_types::Timestamp;
 
 use crate::Get;
@@ -27,5 +28,17 @@ impl WorkspaceVersion {
         Get::<WorkspaceVersion>::get(sql, reponame.to_owned(), workspace.to_owned())
             .await
             .map(|versions| versions.into_iter().next())
+    }
+}
+
+impl WorkspaceVersion {
+    pub fn into_workspace_data(self, reponame: &str) -> WorkspaceData {
+        WorkspaceData {
+            name: self.workspace,
+            version: self.version,
+            timestamp: self.timestamp.timestamp_nanos(),
+            archived: self.archived,
+            reponame: reponame.to_owned(),
+        }
     }
 }
