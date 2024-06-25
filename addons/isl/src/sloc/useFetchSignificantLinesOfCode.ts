@@ -6,6 +6,8 @@
  */
 
 import type {CommitInfo} from '../types';
+import type {Atom} from 'jotai';
+import type {Loadable} from 'jotai/vanilla/utils/loadable';
 
 import serverAPI from '../ClientToServerAPI';
 import {commitInfoViewCurrentCommits} from '../CommitInfoView/CommitInfoState';
@@ -112,18 +114,24 @@ export function useFetchSignificantLinesOfCode(commit: CommitInfo) {
   return useAtomValue(commitSloc(commit.hash));
 }
 
-export function useFetchPendingSignificantLinesOfCode() {
+function useFetchWithPrevious(
+  atom: Atom<Loadable<Promise<number | undefined>>>,
+): number | undefined {
   const previous = useRef<number | undefined>(undefined);
-  const pendingChanges = useAtomValue(pendingChangesSloc);
-  if (pendingChanges.state === 'hasError') {
-    throw pendingChanges.error;
+  const results = useAtomValue(atom);
+  if (results.state === 'hasError') {
+    throw results.error;
   }
-  if (pendingChanges.state === 'loading') {
+  if (results.state === 'loading') {
     //using the previous value in the loading state to avoid flickering / jankiness in the UI
     return previous.current;
   }
 
-  previous.current = pendingChanges.data;
+  previous.current = results.data;
 
-  return pendingChanges.data;
+  return results.data;
+}
+
+export function useFetchPendingSignificantLinesOfCode() {
+  return useFetchWithPrevious(pendingChangesSloc);
 }
