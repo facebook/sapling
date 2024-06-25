@@ -1915,6 +1915,8 @@ pub struct CommitGraphConfig {
     pub scuba_table: Option<String>,
     /// Blobstore key for a preloaded commit graph
     pub preloaded_commit_graph_blobstore_key: Option<String>,
+    /// Whether to disable commit_graph_v2 queries that specify an empty common set for this repo.
+    pub disable_commit_graph_v2_with_empty_common: bool,
 }
 
 /// Configuration for the repo metadata logger

@@ -1337,6 +1337,7 @@ mod test {
                 commit_graph_config: CommitGraphConfig {
                     scuba_table: Some("commit_graph".to_string()),
                     preloaded_commit_graph_blobstore_key: None,
+                    disable_commit_graph_v2_with_empty_common: false,
                 },
                 deep_sharding_config: Some(ShardingModeConfig { status: hashmap!() }),
                 everstore_local_path: None,

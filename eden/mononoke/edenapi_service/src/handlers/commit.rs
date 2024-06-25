@@ -634,6 +634,19 @@ impl SaplingRemoteApiHandler for GraphHandlerV2 {
             .map(|hg_id| HgChangesetId::new(HgNodeHash::from(hg_id)))
             .collect();
 
+        if common.is_empty()
+            && repo
+                .repo()
+                .config()
+                .commit_graph_config
+                .disable_commit_graph_v2_with_empty_common
+        {
+            Err(anyhow!(
+                "Commit graph v2 with empty common is not allowed for repo {}",
+                repo.repo().name(),
+            ))?
+        }
+
         if justknobs::eval(
             "scm/mononoke:enable_streaming_commit_graph_edenapi_endpoint",
             None,

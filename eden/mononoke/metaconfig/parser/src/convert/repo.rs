@@ -761,6 +761,8 @@ impl Convert for RawCommitGraphConfig {
         Ok(CommitGraphConfig {
             scuba_table: self.scuba_table,
             preloaded_commit_graph_blobstore_key: self.preloaded_commit_graph_blobstore_key,
+            disable_commit_graph_v2_with_empty_common: self
+                .disable_commit_graph_v2_with_empty_common,
         })
     }
 }
