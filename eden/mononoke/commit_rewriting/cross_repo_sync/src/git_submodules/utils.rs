@@ -231,21 +231,6 @@ where
     }
 }
 
-pub(crate) async fn list_all_paths(
-    ctx: &CoreContext,
-    repo: &impl Repo,
-    changeset: ChangesetId,
-) -> Result<impl Stream<Item = Result<NonRootMPath>>> {
-    let fsnode_id = repo
-        .repo_derived_data()
-        .derive::<RootFsnodeId>(ctx, changeset)
-        .await?
-        .into_fsnode_id();
-    Ok(fsnode_id
-        .list_leaf_entries(ctx.clone(), repo.repo_blobstore_arc())
-        .map_ok(|(path, _)| path))
-}
-
 pub(crate) async fn list_non_submodule_files_under<R>(
     ctx: &CoreContext,
     repo: &R,
