@@ -54,6 +54,7 @@ const CommitInfoExtRecord = Record<CommitInfoExtProps>({
   remoteBookmarks: [],
   successorInfo: undefined,
   closestPredecessors: undefined,
+  optimisticRevset: undefined,
   filesSample: [],
   totalFileCount: 0,
   diffId: undefined,

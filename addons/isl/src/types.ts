@@ -252,6 +252,12 @@ export type CommitInfo = {
    * there are multiple predecessors.
    */
   closestPredecessors?: ReadonlyArray<Hash>;
+  /**
+   * If this is a fake optimistic commit created by a running Operation,
+   * this is the revset that can be used by sl to find the real commit.
+   * This is only valid after the operation which creates this commit has completed.
+   */
+  optimisticRevset?: Revset;
   /** only a subset of the total files for this commit */
   filesSample: ReadonlyArray<ChangedFile>;
   totalFileCount: number;

@@ -161,8 +161,9 @@ export function latestSuccessor(ctx: Dag, oldRevset: SucceedableRevset | ExactRe
 export function latestSuccessorUnlessExplicitlyObsolete(
   commit: Readonly<CommitInfo>,
 ): SucceedableRevset | ExactRevset {
+  const hash = commit.optimisticRevset ?? commit.hash;
   if (commit.successorInfo?.type != null) {
-    return exactRevset(commit.hash);
+    return exactRevset(hash);
   }
-  return succeedableRevset(commit.hash);
+  return succeedableRevset(hash);
 }
