@@ -6,12 +6,15 @@
  */
 
 import type {Dag} from '../previews';
-import type {CommandArg, ExactRevset, Hash, SucceedableRevset} from '../types';
+import type {CommandArg, ExactRevset, Hash, OptimisticRevset, SucceedableRevset} from '../types';
 
 import {Operation} from './Operation';
 
 export class AmendMessageOperation extends Operation {
-  constructor(public revset: SucceedableRevset | ExactRevset, public message: string) {
+  constructor(
+    public revset: SucceedableRevset | ExactRevset | OptimisticRevset,
+    public message: string,
+  ) {
     super('AmendMessageOperation');
   }
 
@@ -19,6 +22,9 @@ export class AmendMessageOperation extends Operation {
 
   /** If the input revset refers to a specific commit hash, return it */
   getCommitHash(): Hash | undefined {
+    if (this.revset.type === 'optimistic-revset') {
+      return this.revset.fake;
+    }
     if (/[a-fA-F0-9]{12,40}/.test(this.revset.revset)) {
       return this.revset.revset;
     }

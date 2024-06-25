@@ -286,7 +286,11 @@ export type FilesSample = {
   totalFileCount: number;
 };
 
+/** A revset that selects for a commit which we only have a fake optimistic preview of */
+export type OptimisticRevset = {type: 'optimistic-revset'; revset: Revset; fake: string};
+/** A revset that selects for the latest version of a commit hash */
 export type SucceedableRevset = {type: 'succeedable-revset'; revset: Revset};
+/** A revset that selects for a specific commit, without considering any successors */
 export type ExactRevset = {type: 'exact-revset'; revset: Revset};
 
 /**
@@ -305,7 +309,8 @@ export type CommandArg =
   | {type: 'repo-relative-file'; path: RepoRelativePath}
   | {type: 'config'; key: string; value: string}
   | ExactRevset
-  | SucceedableRevset;
+  | SucceedableRevset
+  | OptimisticRevset;
 
 /**
  * What process to execute a given operation in, such as `sl`
@@ -329,6 +334,16 @@ export enum CommandRunner {
  */
 export function succeedableRevset(revset: Revset): SucceedableRevset {
   return {type: 'succeedable-revset', revset};
+}
+
+/**
+ * {@link CommandArg} representing a hash or revset for a fake optimistic commit.
+ * This enables queued commands to act on optimistic state without knowing
+ * the optimistic commit's hashes directly, and without knowing a predecessor hash at all.
+ * The fake optimistic commit hash is also stored to know what the revset refers to.
+ */
+export function optimisticRevset(revset: Revset, fake: string): OptimisticRevset {
+  return {type: 'optimistic-revset', revset, fake};
 }
 
 /**

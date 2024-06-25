@@ -6,7 +6,7 @@
  */
 
 import type {Operation} from './operations/Operation';
-import type {CommitInfo, ExactRevset, Hash, SucceedableRevset} from './types';
+import type {CommitInfo, ExactRevset, Hash, OptimisticRevset, SucceedableRevset} from './types';
 
 import {Subtle} from './Subtle';
 import {tracker} from './analytics';
@@ -101,7 +101,7 @@ export function SuggestedRebaseButton({
   afterRun,
 }:
   | {
-      source: SucceedableRevset | ExactRevset;
+      source: SucceedableRevset | ExactRevset | OptimisticRevset;
       sources?: undefined;
       afterRun?: () => unknown;
     }
@@ -161,7 +161,7 @@ export function SuggestedRebaseButton({
  */
 export function getSuggestedRebaseOperation(
   dest: CommitInfo,
-  source: SucceedableRevset | ExactRevset | Array<SucceedableRevset> | undefined,
+  source: SucceedableRevset | ExactRevset | OptimisticRevset | Array<SucceedableRevset> | undefined,
 ): Operation {
   const destination = dest.remoteBookmarks?.[0] ?? dest.hash;
   const isBulk = source != null && Array.isArray(source);

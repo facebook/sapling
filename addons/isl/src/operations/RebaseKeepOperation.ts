@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {ExactRevset, SucceedableRevset} from '../types';
+import type {ExactRevset, OptimisticRevset, SucceedableRevset} from '../types';
 
 import {Operation} from './Operation';
 
@@ -14,8 +14,8 @@ import {Operation} from './Operation';
  * Note: does not use the latest successor by default, rather the exact source revset. */
 export class RebaseKeepOperation extends Operation {
   constructor(
-    protected source: SucceedableRevset | ExactRevset,
-    protected destination: SucceedableRevset | ExactRevset,
+    protected source: SucceedableRevset | ExactRevset | OptimisticRevset,
+    protected destination: SucceedableRevset | ExactRevset | OptimisticRevset,
   ) {
     super('RebaseKeepOperation');
   }

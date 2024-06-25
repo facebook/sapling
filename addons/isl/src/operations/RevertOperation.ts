@@ -12,6 +12,7 @@ import type {
 import type {
   CommandArg,
   ExactRevset,
+  OptimisticRevset,
   RepoRelativePath,
   SucceedableRevset,
   UncommittedChanges,
@@ -24,7 +25,7 @@ export class RevertOperation extends Operation {
 
   constructor(
     private files: Array<RepoRelativePath>,
-    private revset?: SucceedableRevset | ExactRevset,
+    private revset?: SucceedableRevset | ExactRevset | OptimisticRevset,
   ) {
     super('RevertOperation');
   }

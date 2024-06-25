@@ -492,7 +492,7 @@ function ShowingRemoteMessageBanner({
         onClick: () => {
           runOperation(
             new AmendMessageOperation(
-              succeedableRevset(commit.hash),
+              latestSuccessorUnlessExplicitlyObsolete(commit),
               commitMessageFieldsToString(schema, latestFields),
             ),
           );

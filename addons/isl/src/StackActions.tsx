@@ -229,6 +229,7 @@ export function StackActions({hash}: {hash: Hash}): React.ReactElement | null {
     actions.push(<CleanupButton key="cleanup" commit={info} hasChildren={hasChildren} />);
     // cleanup button implies no need to rebase this stack
   } else if (suggestedRebase) {
+    // FIXME: Support optimistic commits, requires CommitInfo instead of just Hash
     actions.push(<SuggestedRebaseButton key="suggested-rebase" source={succeedableRevset(hash)} />);
   }
 

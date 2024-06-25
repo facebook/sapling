@@ -6,11 +6,17 @@
  */
 
 import type {Dag} from './dag/dag';
-import type {CommitInfo, ExactRevset, SmartlogCommits, SucceedableRevset} from './types';
+import type {
+  CommitInfo,
+  ExactRevset,
+  OptimisticRevset,
+  SmartlogCommits,
+  SucceedableRevset,
+} from './types';
 
 import {MutationDag} from './dag/mutation_dag';
 import {writeAtom} from './jotaiUtils';
-import {exactRevset, succeedableRevset} from './types';
+import {exactRevset, optimisticRevset, succeedableRevset} from './types';
 import {registerCleanup} from './utils';
 import {atom} from 'jotai';
 
@@ -144,8 +150,11 @@ registerCleanup(
  *
  * Note: if an ExactRevset is passed, don't look up the successor.
  */
-export function latestSuccessor(ctx: Dag, oldRevset: SucceedableRevset | ExactRevset): string {
-  let hash = oldRevset.revset;
+export function latestSuccessor(
+  ctx: Dag,
+  oldRevset: SucceedableRevset | ExactRevset | OptimisticRevset,
+): string {
+  let hash = oldRevset.type === 'optimistic-revset' ? oldRevset.fake : oldRevset.revset;
   if (oldRevset.type === 'exact-revset') {
     return hash;
   }
@@ -160,10 +169,12 @@ export function latestSuccessor(ctx: Dag, oldRevset: SucceedableRevset | ExactRe
  */
 export function latestSuccessorUnlessExplicitlyObsolete(
   commit: Readonly<CommitInfo>,
-): SucceedableRevset | ExactRevset {
-  const hash = commit.optimisticRevset ?? commit.hash;
-  if (commit.successorInfo?.type != null) {
-    return exactRevset(hash);
+): SucceedableRevset | ExactRevset | OptimisticRevset {
+  if (commit.optimisticRevset != null) {
+    return optimisticRevset(commit.optimisticRevset, commit.hash);
   }
-  return succeedableRevset(hash);
+  if (commit.successorInfo?.type != null) {
+    return exactRevset(commit.hash);
+  }
+  return succeedableRevset(commit.hash);
 }

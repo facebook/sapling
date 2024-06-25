@@ -613,6 +613,8 @@ export class Repository {
             return [arg.revset];
           case 'succeedable-revset':
             return [`max(successors(${arg.revset}))`];
+          case 'optimistic-revset':
+            return [`max(successors(${arg.revset}))`];
         }
       }
       if (illegalArgs.has(arg)) {

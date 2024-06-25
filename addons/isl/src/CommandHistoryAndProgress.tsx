@@ -69,6 +69,7 @@ function OperationDescription(props: {
                   return arg.path;
                 case 'exact-revset':
                 case 'succeedable-revset':
+                case 'optimistic-revset':
                   return props.long
                     ? arg.revset
                     : // truncate full commit hashes to short representation visually

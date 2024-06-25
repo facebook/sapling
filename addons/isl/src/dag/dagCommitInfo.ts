@@ -149,6 +149,10 @@ export class DagCommitInfo extends SelfUpdate<CommitInfoExtRecord> {
     return this.inner.closestPredecessors;
   }
 
+  get optimisticRevset(): string | undefined {
+    return this.inner.optimisticRevset;
+  }
+
   get filesSample(): ReadonlyArray<ChangedFile> {
     return this.inner.filesSample;
   }

@@ -6,7 +6,7 @@
  */
 
 import type {Dag} from '../previews';
-import type {ExactRevset, SucceedableRevset} from '../types';
+import type {ExactRevset, OptimisticRevset, SucceedableRevset} from '../types';
 
 import {latestSuccessor} from '../SuccessionTracker';
 import {YOU_ARE_HERE_VIRTUAL_COMMIT} from '../dag/virtualCommit';
@@ -15,7 +15,7 @@ import {CommitPreview} from '../previews';
 import {Operation} from './Operation';
 
 export class GotoOperation extends Operation {
-  constructor(private destination: SucceedableRevset | ExactRevset) {
+  constructor(private destination: SucceedableRevset | ExactRevset | OptimisticRevset) {
     super('GotoOperation');
   }
 

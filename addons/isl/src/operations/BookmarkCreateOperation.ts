@@ -6,7 +6,7 @@
  */
 
 import type {Dag} from '../previews';
-import type {ExactRevset, SucceedableRevset} from '../types';
+import type {ExactRevset, OptimisticRevset, SucceedableRevset} from '../types';
 
 import {Operation} from './Operation';
 
@@ -14,7 +14,10 @@ export class BookmarkCreateOperation extends Operation {
   /**
    * @param bookmark local bookmark name to create. Should NOT be a remote bookmark or stable location.
    */
-  constructor(private revset: ExactRevset | SucceedableRevset, private bookmark: string) {
+  constructor(
+    private revset: SucceedableRevset | ExactRevset | OptimisticRevset,
+    private bookmark: string,
+  ) {
     super('BookmarkCreateOperation');
   }
 

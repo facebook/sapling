@@ -6,13 +6,13 @@
  */
 
 import type {Dag} from '../previews';
-import type {ExactRevset, SucceedableRevset} from '../types';
+import type {ExactRevset, OptimisticRevset, SucceedableRevset} from '../types';
 
 import {CommitPreview} from '../previews';
 import {Operation} from './Operation';
 
 export class HideOperation extends Operation {
-  constructor(private source: ExactRevset | SucceedableRevset) {
+  constructor(private source: SucceedableRevset | ExactRevset | OptimisticRevset) {
     super('HideOperation');
   }
 
@@ -22,8 +22,12 @@ export class HideOperation extends Operation {
     return ['hide', '--rev', this.source];
   }
 
+  private hash() {
+    return this.source.type === 'optimistic-revset' ? this.source.fake : this.source.revset;
+  }
+
   previewDag(dag: Dag): Dag {
-    const hash = this.source.revset;
+    const hash = this.hash();
     const toHide = dag.descendants(hash);
     return dag.replaceWith(toHide, (h, c) => {
       const previewType = h === hash ? CommitPreview.HIDDEN_ROOT : CommitPreview.HIDDEN_DESCENDANT;
@@ -32,7 +36,7 @@ export class HideOperation extends Operation {
   }
 
   optimisticDag(dag: Dag): Dag {
-    const hash = this.source.revset;
+    const hash = this.hash();
     const toHide = dag.descendants(hash);
     const toCleanup = dag.parents(hash);
     // If the head is being hidden, we need to move the head to the parent.

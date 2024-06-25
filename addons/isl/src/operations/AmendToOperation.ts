@@ -12,6 +12,7 @@ import type {
 import type {
   CommandArg,
   ExactRevset,
+  OptimisticRevset,
   RepoRelativePath,
   SucceedableRevset,
   UncommittedChanges,
@@ -25,7 +26,7 @@ export class AmendToOperation extends Operation {
    * @param message if provided, update commit description to use this title & description
    */
   constructor(
-    private commit: SucceedableRevset | ExactRevset,
+    private commit: SucceedableRevset | ExactRevset | OptimisticRevset,
     private filePathsToAmend?: Array<RepoRelativePath>,
   ) {
     super('AmendToOperation');

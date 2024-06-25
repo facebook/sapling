@@ -7,7 +7,7 @@
 
 import type {DagCommitInfo} from '../dag/dagCommitInfo';
 import type {Dag} from '../previews';
-import type {ExactRevset, Hash, SucceedableRevset} from '../types';
+import type {ExactRevset, Hash, OptimisticRevset, SucceedableRevset} from '../types';
 
 import {latestSuccessor} from '../SuccessionTracker';
 import {t} from '../i18n';
@@ -17,8 +17,8 @@ import deepEqual from 'fast-deep-equal';
 
 export class RebaseOperation extends Operation {
   constructor(
-    private source: ExactRevset | SucceedableRevset,
-    private destination: ExactRevset | SucceedableRevset,
+    private source: SucceedableRevset | ExactRevset | OptimisticRevset,
+    private destination: SucceedableRevset | ExactRevset | OptimisticRevset,
   ) {
     super('RebaseOperation');
   }
