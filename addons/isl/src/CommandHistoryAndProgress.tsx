@@ -74,8 +74,10 @@ function OperationDescription(props: {
                     ? arg.revset
                     : // truncate full commit hashes to short representation visually
                     // revset could also be a remote bookmark, so only do this if it looks like a hash
-                    /[a-z0-9]{40}/.test(arg.revset)
+                    /^[a-z0-9]{40}$/.test(arg.revset)
                     ? short(arg.revset)
+                    : arg.revset.length > 80
+                    ? arg.revset.slice(0, 80) + '...'
                     : arg.revset;
               }
             }
