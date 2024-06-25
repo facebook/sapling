@@ -715,6 +715,12 @@ export type ClientToServerMessage =
       requestId: number;
       hash: Hash;
       includedFiles: string[];
+    }
+  | {
+      type: 'fetchPendingAmendSignificantLinesOfCode';
+      requestId: number;
+      hash: Hash;
+      includedFiles: string[];
     };
 
 export type SubscriptionResultsData = {
@@ -799,8 +805,13 @@ export type ServerToClientMessage =
       requestId: number;
       hash: Hash;
       linesOfCode: Result<number>;
+    }
+  | {
+      type: 'fetchedPendingAmendSignificantLinesOfCode';
+      requestId: number;
+      hash: Hash;
+      linesOfCode: Result<number>;
     };
-
 export type Disposable = {
   dispose(): void;
 };

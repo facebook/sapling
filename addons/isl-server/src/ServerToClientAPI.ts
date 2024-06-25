@@ -663,6 +663,28 @@ export default class ServerToClientAPI {
             });
         }
         break;
+      case 'fetchPendingAmendSignificantLinesOfCode':
+        {
+          repo
+            .fetchPendingAmendSignificantLinesOfCode(ctx, data.hash, data.includedFiles)
+            .then(value => {
+              this.postMessage({
+                type: 'fetchedPendingAmendSignificantLinesOfCode',
+                requestId: data.requestId,
+                hash: data.hash,
+                linesOfCode: {value},
+              });
+            })
+            .catch(err => {
+              this.postMessage({
+                type: 'fetchedPendingAmendSignificantLinesOfCode',
+                hash: data.hash,
+                requestId: data.requestId,
+                linesOfCode: {error: err as Error},
+              });
+            });
+        }
+        break;
       case 'fetchCommitChangedFiles': {
         repo
           .getAllChangedFiles(ctx, data.hash)

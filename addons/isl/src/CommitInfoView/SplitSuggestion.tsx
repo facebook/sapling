@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {Banner, BannerKind, BannerTooltip} from '../Banner';
+import {Banner, BannerKind} from '../Banner';
 import {Column} from '../ComponentUtils';
 import {Internal} from '../Internal';
 import {Tooltip} from '../Tooltip';
@@ -23,6 +23,7 @@ import {
   SLOC_THRESHOLD_FOR_SPLIT_SUGGESTIONS,
 } from '../sloc/diffStatConstants';
 import {
+  useFetchPendingAmendSignificantLinesOfCode,
   useFetchPendingSignificantLinesOfCode,
   useFetchSignificantLinesOfCode,
 } from '../sloc/useFetchSignificantLinesOfCode';
@@ -121,12 +122,38 @@ function NewCommitSuggestion() {
   }
 }
 
+function AmendSuggestion() {
+  const pendingAmendSignificantLinesOfCode = useFetchPendingAmendSignificantLinesOfCode();
+
+  if (pendingAmendSignificantLinesOfCode == null) {
+    return null;
+  }
+  if (pendingAmendSignificantLinesOfCode > SLOC_THRESHOLD_FOR_SPLIT_SUGGESTIONS) {
+    return (
+      <SuggestionBanner
+        tooltip={t(
+          'Amending these changes would put the commit at $sloc significant lines of code (top 10%)',
+          {replace: {$sloc: String(pendingAmendSignificantLinesOfCode)}},
+        )}>
+        <b>
+          <T>Consider unselecting some of these changes</T>
+        </b>
+        <T>Small Diffs lead to less SEVs & quicker review times</T>
+      </SuggestionBanner>
+    );
+  }
+}
+
 function SplitSuggestionImpl({commit}: {commit: CommitInfo}) {
   const mode = useAtomValue(commitMode);
   const significantLinesOfCode = useFetchSignificantLinesOfCode(commit) ?? -1;
   const uncommittedChanges = useAtomValue(uncommittedChangesWithPreviews);
+
   // no matter what if the commit is over the threshold, we show the split suggestion
-  if (significantLinesOfCode > SLOC_THRESHOLD_FOR_SPLIT_SUGGESTIONS) {
+  if (
+    uncommittedChanges.length === 0 &&
+    significantLinesOfCode > SLOC_THRESHOLD_FOR_SPLIT_SUGGESTIONS
+  ) {
     return (
       <SuggestionBanner
         tooltip={t('This commit has $sloc significant lines of code (top 10%)', {
@@ -140,10 +167,16 @@ function SplitSuggestionImpl({commit}: {commit: CommitInfo}) {
       </SuggestionBanner>
     );
   }
+  // if there are no uncommitted changes, we don't show the suggestion
+  if (uncommittedChanges.length === 0) {
+    return null;
+  }
 
   // if there are uncommitted changes, let's (maybe) show the suggestion to make a new commit
-  if (uncommittedChanges.length > 0 && mode === 'commit') {
+  if (mode === 'commit') {
     return <NewCommitSuggestion />;
+  } else {
+    return <AmendSuggestion />;
   }
 
   // no need to show any suggestion

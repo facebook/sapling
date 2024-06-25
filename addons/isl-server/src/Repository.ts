@@ -1105,7 +1105,35 @@ export class Repository {
     ctx.logger.info('Fetched SLOC for commit:', hash, output, `SLOC: ${sloc}`);
     return sloc;
   }
+  public async fetchPendingAmendSignificantLinesOfCode(
+    ctx: RepositoryContext,
+    hash: Hash,
+    includedFiles: string[],
+  ): Promise<number> {
+    if (includedFiles.length === 0) {
+      return 0; // don't bother running sl diff if there are no files to include
+    }
+    const inclusions = includedFiles.flatMap(file => [
+      '-I',
+      absolutePathForFileInRepo(file, this) ?? file,
+    ]);
 
+    const output = (
+      await this.runCommand(
+        ['diff', '--stat', '-B', '-X', '**__generated__**', ...inclusions, '-r', '.^'],
+        'PendingSlocCommand',
+        ctx,
+      )
+    ).stdout;
+
+    if (output.trim() === '') {
+      return 0;
+    }
+    const sloc = this.parseSlocFrom(output);
+
+    ctx.logger.info('Fetched Pending AMEND SLOC for commit:', hash, output, `SLOC: ${sloc}`);
+    return sloc;
+  }
   public async fetchPendingSignificantLinesOfCode(
     ctx: RepositoryContext,
     hash: Hash,
