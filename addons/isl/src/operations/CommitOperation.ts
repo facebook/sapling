@@ -112,7 +112,7 @@ export class CommitOperation extends Operation {
       return dag;
     }
 
-    const now = new Date();
+    const now = new Date(Date.now());
 
     // The fake optimistic commit can be resolved into a real commit by taking the
     // first child of the given parent that's created after the commit operation was created.

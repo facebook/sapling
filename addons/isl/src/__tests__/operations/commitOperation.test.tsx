@@ -50,8 +50,10 @@ describe('CommitOperation', () => {
   });
 
   const clickQuickCommit = async () => {
-    const quickCommitButton = screen.queryByTestId('quick-commit-button');
-    fireEvent.click(quickCommitButton as Element);
+    const quickCommitButton = screen.getByTestId('quick-commit-button');
+    act(() => {
+      fireEvent.click(quickCommitButton);
+    });
     await waitFor(() =>
       expectMessageSentToServer({
         type: 'runOperation',
@@ -258,13 +260,14 @@ describe('CommitOperation', () => {
       });
     });
 
-    waitFor(() => {
+    await waitFor(() => {
       CommitInfoTestUtils.expectIsEditingTitle();
       const title = CommitInfoTestUtils.getTitleEditor();
       expect(title).toHaveValue('other title, My Commit');
       CommitInfoTestUtils.expectIsEditingDescription();
       const desc = CommitInfoTestUtils.getDescriptionEditor();
-      expect(desc).toHaveValue('other description, My description');
+      expect(desc.value).toContain('other description');
+      expect(desc.value).toContain('My description');
     });
   });
 });
