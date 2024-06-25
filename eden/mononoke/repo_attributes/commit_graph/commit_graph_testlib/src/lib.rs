@@ -18,7 +18,12 @@ use commit_graph::CommitGraph;
 use commit_graph_types::storage::CommitGraphStorage;
 use commit_graph_types::storage::Prefetch;
 use context::CoreContext;
+use futures::FutureExt;
 use in_memory_commit_graph_storage::InMemoryCommitGraphStorage;
+use justknobs::test_helpers::with_just_knobs_async;
+use justknobs::test_helpers::JustKnobsInMemory;
+use justknobs::test_helpers::KnobVal;
+use maplit::hashmap;
 use maplit::hashset;
 use mononoke_types::ChangesetIdPrefix;
 use mononoke_types::ChangesetIdsResolvedFromPrefix;
@@ -44,6 +49,8 @@ macro_rules! impl_commit_graph_tests {
         $crate::impl_commit_graph_tests_internal!(
             $test_runner,
             test_storage_store_and_fetch,
+            test_is_ancestor_exact_prefetching,
+            test_is_ancestor_skew_ancestors_prefetching,
             test_skip_tree,
             test_p1_linear_tree,
             test_ancestors_difference,
@@ -141,6 +148,127 @@ pub async fn test_storage_store_and_fetch(
             .as_slice(),
         &[name_cs_id("D"), name_cs_id("F")]
     );
+
+    // Check some underlying storage details.
+    assert_eq!(
+        storage
+            .maybe_fetch_edges(&ctx, name_cs_id("A"))
+            .await?
+            .unwrap()
+            .merge_ancestor,
+        None
+    );
+    assert_eq!(
+        storage
+            .maybe_fetch_edges(&ctx, name_cs_id("C"))
+            .await?
+            .unwrap()
+            .merge_ancestor,
+        Some(name_cs_node("A", 1, 0, 0))
+    );
+    assert_eq!(
+        storage
+            .maybe_fetch_edges(&ctx, name_cs_id("I"))
+            .await?
+            .unwrap()
+            .merge_ancestor,
+        Some(name_cs_node("G", 5, 1, 4))
+    );
+
+    // fetch_many_edges and maybe_fetch_many_edges return the same result if none of the changesets
+    // are missing.
+    assert_eq!(
+        storage
+            .fetch_many_edges(
+                &ctx,
+                &[name_cs_id("A"), name_cs_id("C"), name_cs_id("I")],
+                Prefetch::None
+            )
+            .await?,
+        storage
+            .maybe_fetch_many_edges(
+                &ctx,
+                &[name_cs_id("A"), name_cs_id("C"), name_cs_id("I")],
+                Prefetch::None
+            )
+            .await?,
+    );
+
+    // fetch_many_edges returns an error if any of the changesets are missing.
+    assert!(
+        storage
+            .fetch_many_edges(
+                &ctx,
+                &[name_cs_id("Z"), name_cs_id("A"), name_cs_id("B")],
+                Prefetch::None
+            )
+            .await
+            .is_err()
+    );
+
+    // maybe_fetch_many_edges ignores missing changesets ("Z" in this case).
+    assert_eq!(
+        storage
+            .maybe_fetch_many_edges(
+                &ctx,
+                &[
+                    name_cs_id("Z"),
+                    name_cs_id("A"),
+                    name_cs_id("C"),
+                    name_cs_id("I")
+                ],
+                Prefetch::None
+            )
+            .await?
+            .into_keys()
+            .collect::<HashSet<_>>(),
+        hashset! {name_cs_id("A"), name_cs_id("C"), name_cs_id("I")},
+    );
+
+    Ok(())
+}
+
+pub async fn test_is_ancestor_exact_prefetching(
+    ctx: CoreContext,
+    storage: Arc<dyn CommitGraphStorageTest>,
+) -> Result<()> {
+    with_just_knobs_async(
+        JustKnobsInMemory::new(hashmap![
+            "scm/mononoke:commit_graph_use_skip_tree_exact_prefetching".to_string() => KnobVal::Bool(true)
+        ]),
+        test_is_ancestor_impl(ctx, storage).boxed(),
+    )
+    .await
+}
+
+pub async fn test_is_ancestor_skew_ancestors_prefetching(
+    ctx: CoreContext,
+    storage: Arc<dyn CommitGraphStorageTest>,
+) -> Result<()> {
+    with_just_knobs_async(
+        JustKnobsInMemory::new(hashmap![
+            "scm/mononoke:commit_graph_use_skip_tree_exact_prefetching".to_string() => KnobVal::Bool(false)
+        ]),
+        test_is_ancestor_impl(ctx, storage).boxed(),
+    )
+    .await
+}
+
+async fn test_is_ancestor_impl(
+    ctx: CoreContext,
+    storage: Arc<dyn CommitGraphStorageTest>,
+) -> Result<()> {
+    let graph = from_dag(
+        &ctx,
+        r"
+             A-B-C-D-G-H-I
+              \     /
+               E---F
+         ",
+        storage.clone(),
+    )
+    .await?;
+    storage.flush();
 
     assert!(
         graph
@@ -241,82 +369,6 @@ pub async fn test_storage_store_and_fetch(
                 vec![name_cs_id("G"), name_cs_id("H")]
             )
             .await?
-    );
-
-    // Check some underlying storage details.
-    assert_eq!(
-        storage
-            .maybe_fetch_edges(&ctx, name_cs_id("A"))
-            .await?
-            .unwrap()
-            .merge_ancestor,
-        None
-    );
-    assert_eq!(
-        storage
-            .maybe_fetch_edges(&ctx, name_cs_id("C"))
-            .await?
-            .unwrap()
-            .merge_ancestor,
-        Some(name_cs_node("A", 1, 0, 0))
-    );
-    assert_eq!(
-        storage
-            .maybe_fetch_edges(&ctx, name_cs_id("I"))
-            .await?
-            .unwrap()
-            .merge_ancestor,
-        Some(name_cs_node("G", 5, 1, 4))
-    );
-
-    // fetch_many_edges and maybe_fetch_many_edges return the same result if none of the changesets
-    // are missing.
-    assert_eq!(
-        storage
-            .fetch_many_edges(
-                &ctx,
-                &[name_cs_id("A"), name_cs_id("C"), name_cs_id("I")],
-                Prefetch::None
-            )
-            .await?,
-        storage
-            .maybe_fetch_many_edges(
-                &ctx,
-                &[name_cs_id("A"), name_cs_id("C"), name_cs_id("I")],
-                Prefetch::None
-            )
-            .await?,
-    );
-
-    // fetch_many_edges returns an error if any of the changesets are missing.
-    assert!(
-        storage
-            .fetch_many_edges(
-                &ctx,
-                &[name_cs_id("Z"), name_cs_id("A"), name_cs_id("B")],
-                Prefetch::None
-            )
-            .await
-            .is_err()
-    );
-
-    // maybe_fetch_many_edges ignores missing changesets ("Z" in this case).
-    assert_eq!(
-        storage
-            .maybe_fetch_many_edges(
-                &ctx,
-                &[
-                    name_cs_id("Z"),
-                    name_cs_id("A"),
-                    name_cs_id("C"),
-                    name_cs_id("I")
-                ],
-                Prefetch::None
-            )
-            .await?
-            .into_keys()
-            .collect::<HashSet<_>>(),
-        hashset! {name_cs_id("A"), name_cs_id("C"), name_cs_id("I")},
     );
 
     Ok(())
