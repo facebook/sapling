@@ -47,12 +47,6 @@ pub enum PrefetchTarget {
         /// Prefetch up to this many steps.
         steps: u64,
     },
-    /// Prefetch along the skip tree following exactly what the skew binary
-    /// algorithm would do to get to the target generation.
-    ExactSkipTreeAncestors {
-        /// Prefetch as far back as this generation.
-        generation: Generation,
-    },
 }
 
 /// Indication for additional changesets to be fetched for subsequent
@@ -85,11 +79,6 @@ impl Prefetch {
             generation,
             steps: 32,
         })
-    }
-
-    /// Prepare prefetching for skew-binary traversal over the skip tree.
-    pub fn for_exact_skip_tree_traversal(generation: Generation) -> Self {
-        Prefetch::Hint(PrefetchTarget::ExactSkipTreeAncestors { generation })
     }
 
     /// Prepare prefetching for linear traversal of the p1 history.

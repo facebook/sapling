@@ -17,7 +17,6 @@ rust_library(
         "fbsource//third-party/rust:smallvec",
         "fbsource//third-party/rust:vec1",
         "//common/rust/shed/cloned:cloned",
-        "//common/rust/shed/justknobs_stub:justknobs",
         "//eden/mononoke/mononoke_types:mononoke_types",
         "//eden/mononoke/repo_attributes/commit_graph/commit_graph:commit_graph",
         "//eden/mononoke/repo_attributes/commit_graph/commit_graph_types:commit_graph_types",
