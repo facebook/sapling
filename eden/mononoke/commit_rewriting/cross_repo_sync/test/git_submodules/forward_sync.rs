@@ -500,6 +500,105 @@ async fn test_recursive_submodule_deletion(fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
+/// Test that deleting a submodule with a recursive submodule properly deletes
+/// both and their metadata files.
+#[fbinit::test]
+async fn test_submodule_with_recursive_submodule_deletion(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb.clone());
+    let (repo_c, repo_c_cs_map) = build_repo_c(fb).await?;
+    let c_master_mapped_git_commit = repo_c
+        .repo_derived_data()
+        .derive::<MappedGitCommitId>(&ctx, repo_c_cs_map["C_B"])
+        .await?;
+    let c_master_git_sha1 = *c_master_mapped_git_commit.oid();
+
+    let repo_c_submodule_path_in_repo_b = NonRootMPath::new("submodules/repo_c")?;
+    let (repo_b, _repo_b_cs_map) =
+        build_repo_b_with_c_submodule(fb, c_master_git_sha1, &repo_c_submodule_path_in_repo_b)
+            .await?;
+
+    let repo_c_submodule_path =
+        NonRootMPath::new(REPO_B_SUBMODULE_PATH)?.join(&repo_c_submodule_path_in_repo_b);
+    let SubmoduleSyncTestData {
+        repo_a_info: (repo_a, repo_a_cs_map),
+        large_repo_info: (_large_repo, _large_repo_master),
+        commit_syncer,
+        ..
+    } = build_submodule_sync_test_data(
+        fb,
+        &repo_b,
+        vec![
+            (NonRootMPath::new(REPO_B_SUBMODULE_PATH)?, repo_b.clone()),
+            (repo_c_submodule_path, repo_c.clone()),
+        ],
+    )
+    .await?;
+
+    const MESSAGE: &str = "Delete repo_b submodule";
+
+    let repo_a_cs_id = CreateCommitContext::new(&ctx, &repo_a, vec![repo_a_cs_map["A_C"]])
+        .set_message(MESSAGE)
+        .delete_file(REPO_B_SUBMODULE_PATH)
+        .commit()
+        .await?;
+
+    let sync_result = sync_to_master(ctx.clone(), &commit_syncer, repo_a_cs_id).await;
+    // .context("sync_to_master failed")
+    // .and_then(|res| res.ok_or(anyhow!("No commit was synced")))?;
+
+    // TODO: properly delete the recursive submodule and its metadata file
+    assert!(sync_result.is_err_and(|err| {
+        err.chain().any(|e| {
+            // Make sure that we're throwing because the submodule repo is not available
+            e.to_string()
+                .contains("Expansion of submodule submodules/repo_b/submodules/repo_c changed without updating its metadata file repo_a/submodules/repo_b/submodules/.x-repo-submodule-repo_c")
+        })
+    }));
+
+    // let large_repo_changesets = get_all_changeset_data_from_repo(&ctx, &large_repo).await?;
+    // println!("large_repo_changesets: {:#?}\n\n", &large_repo_changesets);
+
+    // derive_all_enabled_types_for_repo(&ctx, &large_repo, &large_repo_changesets).await?;
+
+    // compare_expected_changesets(
+    //     large_repo_changesets.last_chunk::<1>().unwrap(),
+    //     &[ExpectedChangeset::new_by_file_change(
+    //         MESSAGE,
+    //         vec![],
+    //         // Files being deleted
+    //         vec![
+    //             "repo_a/submodules/.x-repo-submodule-repo_b",
+    //             "repo_a/submodules/repo_b/B_A",
+    //             "repo_a/submodules/repo_b/B_B",
+    //             // NOTE: repo_c submodule metadata file has to be deleted too
+    //            "repo_a/submodules/repo_b/submodules/.x-repo-submodule-repo_c",
+    //            "repo_a/submodules/repo_b/submodules/repo_c/C_A",
+    //            "repo_a/submodules/repo_b/submodules/repo_c/C_B",
+    //         ],
+    //     )],
+    // )?;
+
+    // assert_working_copy_matches_expected(
+    //     &ctx,
+    //     &large_repo,
+    //     large_repo_cs_id,
+    //     vec!["large_repo_root", "repo_a/A_A", "repo_a/A_B", "repo_a/A_C"],
+    // )
+    // .await?;
+
+    // let expected_cs_id = large_repo_cs_id;
+
+    // check_mapping(
+    //     ctx.clone(),
+    //     &commit_syncer,
+    //     repo_a_cs_id,
+    //     Some(expected_cs_id),
+    // )
+    // .await;
+
+    Ok(())
+}
+
 /// Test a scenario where users stop using a repository as submodule but keep
 /// its contents as static copies in the same path.
 /// This should be a valid bonsai, where the removal of the submodule metadata
