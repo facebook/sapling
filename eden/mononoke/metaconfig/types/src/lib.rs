@@ -434,6 +434,8 @@ pub enum GitDeltaManifestVersion {
     /// GitDeltaManifest v1
     #[default]
     V1,
+    /// GitDeltaManifest v2
+    V2,
 }
 
 /// Config for git delta manifest v2

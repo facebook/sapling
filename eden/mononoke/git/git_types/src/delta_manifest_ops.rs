@@ -30,10 +30,14 @@ use repo_derived_data::RepoDerivedData;
 use crate::delta::DeltaInstructionChunkIdPrefix;
 use crate::delta_manifest::GitDeltaManifest;
 use crate::delta_manifest::ObjectKind;
+use crate::delta_manifest_v2::GDMV2DeltaEntry;
+use crate::delta_manifest_v2::GDMV2Entry;
+use crate::delta_manifest_v2::GitDeltaManifestV2;
 use crate::fetch_delta_instructions;
 use crate::GitDeltaManifestEntry;
 use crate::ObjectDelta;
 use crate::RootGitDeltaManifestId;
+use crate::RootGitDeltaManifestV2Id;
 
 /// Fetches GitDeltaManifest for a given changeset with the given version.
 /// Derives the GitDeltaManifest if not present.
@@ -69,6 +73,30 @@ pub async fn fetch_git_delta_manifest(
                     })?,
             ))
         }
+        GitDeltaManifestVersion::V2 => {
+            let root_mf_id = derived_data
+                .derive::<RootGitDeltaManifestV2Id>(ctx, cs_id)
+                .await
+                .with_context(|| {
+                    format!(
+                        "Error in deriving RootGitDeltaManifestV2Id for changeset {:?}",
+                        cs_id
+                    )
+                })?;
+
+            Ok(Box::new(
+                root_mf_id
+                    .manifest_id()
+                    .load(ctx, blobstore)
+                    .await
+                    .with_context(|| {
+                        format!(
+                            "Error in loading GitDeltaManifestV2 from root id {:?}",
+                            root_mf_id
+                        )
+                    })?,
+            ))
+        }
     }
 }
 
@@ -91,6 +119,22 @@ impl GitDeltaManifestOps for GitDeltaManifest {
         blobstore: &'a Arc<dyn Blobstore>,
     ) -> BoxStream<'a, Result<(MPath, Box<dyn GitDeltaManifestEntryOps + Send>)>> {
         GitDeltaManifest::into_entries(*self, ctx, blobstore)
+            .map_ok(
+                |(path, entry)| -> (_, Box<dyn GitDeltaManifestEntryOps + Send>) {
+                    (path, Box::new(entry))
+                },
+            )
+            .boxed()
+    }
+}
+
+impl GitDeltaManifestOps for GitDeltaManifestV2 {
+    fn into_entries<'a>(
+        self: Box<Self>,
+        ctx: &'a CoreContext,
+        blobstore: &'a Arc<dyn Blobstore>,
+    ) -> BoxStream<'a, Result<(MPath, Box<dyn GitDeltaManifestEntryOps + Send>)>> {
+        GitDeltaManifestV2::into_entries(*self, ctx, blobstore)
             .map_ok(
                 |(path, entry)| -> (_, Box<dyn GitDeltaManifestEntryOps + Send>) {
                     (path, Box::new(entry))
@@ -142,6 +186,32 @@ impl GitDeltaManifestEntryOps for GitDeltaManifestEntry {
 
     fn full_object_inlined_bytes(&self) -> Option<Bytes> {
         None
+    }
+
+    fn deltas(&self) -> Box<dyn Iterator<Item = &(dyn ObjectDeltaOps + Sync)> + '_> {
+        Box::new(
+            self.deltas
+                .iter()
+                .map(|delta| delta as &(dyn ObjectDeltaOps + Sync)),
+        )
+    }
+}
+
+impl GitDeltaManifestEntryOps for GDMV2Entry {
+    fn full_object_size(&self) -> u64 {
+        self.full_object.size
+    }
+
+    fn full_object_oid(&self) -> ObjectId {
+        self.full_object.oid
+    }
+
+    fn full_object_kind(&self) -> ObjectKind {
+        self.full_object.kind
+    }
+
+    fn full_object_inlined_bytes(&self) -> Option<Bytes> {
+        self.full_object.inlined_bytes.clone()
     }
 
     fn deltas(&self) -> Box<dyn Iterator<Item = &(dyn ObjectDeltaOps + Sync)> + '_> {
@@ -237,5 +307,46 @@ impl ObjectDeltaOps for ObjectDelta {
         .freeze();
 
         Ok(bytes)
+    }
+}
+
+#[async_trait]
+impl ObjectDeltaOps for GDMV2DeltaEntry {
+    fn instructions_uncompressed_size(&self) -> u64 {
+        self.instructions.uncompressed_size
+    }
+
+    fn instructions_compressed_size(&self) -> u64 {
+        self.instructions.compressed_size
+    }
+
+    fn base_object_oid(&self) -> ObjectId {
+        self.base_object.oid
+    }
+
+    fn base_object_path(&self) -> &MPath {
+        &self.base_object_path
+    }
+
+    fn base_object_kind(&self) -> ObjectKind {
+        self.base_object.kind
+    }
+
+    fn base_object_size(&self) -> u64 {
+        self.base_object.size
+    }
+
+    async fn instruction_bytes(
+        &self,
+        ctx: &CoreContext,
+        blobstore: &Arc<dyn Blobstore>,
+        _cs_id: ChangesetId,
+        _path: MPath,
+    ) -> Result<Bytes> {
+        self.instructions
+            .instruction_bytes
+            .clone()
+            .into_raw_bytes(ctx, blobstore)
+            .await
     }
 }
