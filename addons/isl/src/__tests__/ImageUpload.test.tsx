@@ -420,7 +420,7 @@ describe('Image upload inside TextArea ', () => {
           operation: expect.objectContaining({
             args: expect.arrayContaining([
               'commit',
-              expect.stringMatching('hi\n+(Summary: )?hey\nhttps://image.example.com/1111'),
+              expect.stringMatching('hi\n+(Summary:\n)?hey\nhttps://image.example.com/1111'),
             ]),
           }),
         }),

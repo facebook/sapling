@@ -112,9 +112,9 @@ export function commitMessageFieldsToString(
   return schema
     .filter(config => config.key === 'Title' || isFieldNonEmpty(fields[config.key]))
     .map(config => {
+      const sep = config.type === 'field' ? ': ' : ':\n'; // long fields have keys on their own line, but fields can use the same line
       // stringified messages of the form Key: value, except the title or generic description don't need a label
-      const prefix =
-        config.key === 'Title' || config.key === 'Description' ? '' : config.key + ': ';
+      const prefix = config.key === 'Title' || config.key === 'Description' ? '' : config.key + sep;
 
       if (config.key === 'Title') {
         const value = fields[config.key] as string;

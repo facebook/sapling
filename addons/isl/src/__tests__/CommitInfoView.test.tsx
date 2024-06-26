@@ -567,7 +567,7 @@ describe('CommitInfoView', () => {
                     succeedableRevset('a'),
                     '--message',
                     expect.stringMatching(
-                      /^My Commit hello new title\n+Summary: First commit in the stack\nhello new text/,
+                      /^My Commit hello new title\n+(Summary:\s+)?First commit in the stack\nhello new text/,
                     ),
                   ],
                   id: expect.anything(),
@@ -637,7 +637,7 @@ describe('CommitInfoView', () => {
                     '--addremove',
                     '--message',
                     expect.stringMatching(
-                      /^Head Commit hello new title\n+Summary: stacked commit\nhello new text/,
+                      /^Head Commit hello new title\n+(Summary:\s+)?stacked commit\nhello new text/,
                     ),
                   ],
                   id: expect.anything(),
@@ -872,7 +872,7 @@ describe('CommitInfoView', () => {
                   'commit',
                   '--addremove',
                   '--message',
-                  expect.stringMatching(/^new commit title\n+(Summary: )?my description/),
+                  expect.stringMatching(/^new commit title\n+(Summary:\s+)?my description/),
                 ],
                 id: expect.anything(),
                 runner: CommandRunner.Sapling,
