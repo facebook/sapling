@@ -656,7 +656,7 @@ impl BonsaiDerivable for RootGitDeltaManifestId {
 impl_bonsai_derived_via_manager!(RootGitDeltaManifestId);
 
 #[cfg(test)]
-mod test {
+mod tests {
     use std::collections::HashSet;
     use std::str::FromStr;
 

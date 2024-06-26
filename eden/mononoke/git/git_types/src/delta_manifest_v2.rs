@@ -405,3 +405,51 @@ impl BlobstoreValue for GitDeltaManifestV2 {
         Self::from_bytes(blob.data())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use delayblob::DelayedBlobstore;
+    use fbinit::FacebookInit;
+    use flate2::write::ZlibDecoder;
+    use memblob::Memblob;
+
+    use super::*;
+
+    #[fbinit::test]
+    #[should_panic]
+    async fn test_gdm_v2_delta_instructions_round_trip(fb: FacebookInit) {
+        let ctx = CoreContext::test_mock(fb);
+        let blobstore = DelayedBlobstore::new(
+            Memblob::default(),
+            rand_distr::Normal::new(0.005, 0.005).unwrap(),
+            rand_distr::Normal::new(0.05, 0.05).unwrap(),
+        );
+
+        let delta = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+        let chunk_size = 1;
+        let max_inlinable_size = 0;
+
+        let gdm_v2_instructions = GDMV2Instructions::from_raw_delta(
+            &ctx,
+            &blobstore,
+            delta.clone(),
+            chunk_size,
+            max_inlinable_size,
+        )
+        .await
+        .unwrap();
+
+        let delta_bytes = gdm_v2_instructions
+            .instruction_bytes
+            .into_raw_bytes(&ctx, &blobstore)
+            .await
+            .unwrap();
+
+        let round_trip_delta = vec![];
+        let mut decoder = ZlibDecoder::new(round_trip_delta);
+        decoder.write_all(delta_bytes.as_ref()).unwrap();
+        let round_trip_delta = decoder.finish().unwrap();
+
+        assert_eq!(delta, round_trip_delta);
+    }
+}
