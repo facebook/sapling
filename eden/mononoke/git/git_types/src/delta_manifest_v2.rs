@@ -249,7 +249,7 @@ impl GDMV2Instructions {
                                 })?);
                             instructions_chunk.into_blob().store(ctx, blobstore).await
                         })
-                        .buffer_unordered(24) // Same as the concurrency used for filestore
+                        .buffered(24) // Same as the concurrency used for filestore
                         .try_collect::<Vec<_>>()
                         .await?,
                 )
@@ -416,7 +416,6 @@ mod tests {
     use super::*;
 
     #[fbinit::test]
-    #[should_panic]
     async fn test_gdm_v2_delta_instructions_round_trip(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
         let blobstore = DelayedBlobstore::new(
