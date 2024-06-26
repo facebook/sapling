@@ -1618,7 +1618,7 @@ impl CommitGraphStorage for SqlCommitGraphStorage {
     ) -> Result<ChangesetIdsResolvedFromPrefix> {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
-        let mut fetched_ids = SelectChangesetsInRange::maybe_traced_query(
+        let fetched_ids = SelectChangesetsInRange::maybe_traced_query(
             &self.read_connection.conn,
             ctx.client_request_info(),
             &self.repo_id,

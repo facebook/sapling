@@ -48,6 +48,7 @@ use mononoke_types::FIRST_GENERATION;
 use smallvec::smallvec;
 
 pub use crate::ancestors_stream::AncestorsStreamBuilder;
+pub use crate::compat::ParentsFetcher;
 
 mod ancestors_stream;
 mod compat;
@@ -69,8 +70,17 @@ pub struct CommitGraph {
 }
 
 impl CommitGraph {
-    pub fn new(storage: Arc<dyn CommitGraphStorage>) -> CommitGraph {
-        CommitGraph { storage }
+    pub fn new(storage: Arc<dyn CommitGraphStorage>) -> Self {
+        Self { storage }
+    }
+
+    pub fn clone_with_replaced_storage(
+        &self,
+        replace_fn: impl FnOnce(Arc<dyn CommitGraphStorage>) -> Arc<dyn CommitGraphStorage>,
+    ) -> Self {
+        Self {
+            storage: replace_fn(self.storage.clone()),
+        }
     }
 
     pub fn with_memwrites_storage(self) -> Self {

@@ -14,14 +14,12 @@ use anyhow::Result;
 use async_trait::async_trait;
 use buffered_commit_graph_storage::BufferedCommitGraphStorage;
 use changeset_fetcher::ArcChangesetFetcher;
-use changeset_fetcher::ChangesetFetcher;
 use commit_graph_types::edges::ChangesetEdges;
 use commit_graph_types::edges::ChangesetParents;
 use commit_graph_types::storage::CommitGraphStorage;
 use commit_graph_types::storage::Prefetch;
 use context::CoreContext;
 use mononoke_types::ChangesetId;
-use mononoke_types::Generation;
 use smallvec::SmallVec;
 use smallvec::ToSmallVec;
 use vec1::Vec1;
@@ -36,7 +34,7 @@ impl CommitGraph {
     pub async fn add_recursive(
         &self,
         ctx: &CoreContext,
-        changeset_fetcher: ArcChangesetFetcher,
+        parents_fetcher: impl ParentsFetcher,
         changesets: Vec1<(ChangesetId, ChangesetParents)>,
     ) -> Result<usize> {
         let mut edges_map: HashMap<ChangesetId, ChangesetEdges> = Default::default();
@@ -81,8 +79,8 @@ impl CommitGraph {
                     // iteration.
                     search_stack.push((
                         parent,
-                        changeset_fetcher
-                            .get_parents(ctx, parent)
+                        parents_fetcher
+                            .fetch_parents(ctx, parent)
                             .await
                             .with_context(|| "during commit_graph::add_recursive (get_parents)")?
                             .to_smallvec(),
@@ -106,18 +104,43 @@ impl CommitGraph {
 }
 
 #[async_trait]
-impl ChangesetFetcher for CommitGraph {
-    async fn get_generation_number(
+pub trait ParentsFetcher: Send + Sync {
+    async fn fetch_parents(
         &self,
         ctx: &CoreContext,
         cs_id: ChangesetId,
-    ) -> Result<Generation> {
-        self.changeset_generation(ctx, cs_id).await
-    }
+    ) -> Result<Vec<ChangesetId>>;
+}
 
-    async fn get_parents(&self, ctx: &CoreContext, cs_id: ChangesetId) -> Result<Vec<ChangesetId>> {
-        self.changeset_parents(ctx, cs_id)
-            .await
-            .map(SmallVec::into_vec)
+#[async_trait]
+impl ParentsFetcher for ArcChangesetFetcher {
+    async fn fetch_parents(
+        &self,
+        ctx: &CoreContext,
+        cs_id: ChangesetId,
+    ) -> Result<Vec<ChangesetId>> {
+        self.get_parents(ctx, cs_id).await
+    }
+}
+
+#[async_trait]
+impl ParentsFetcher for CommitGraph {
+    async fn fetch_parents(
+        &self,
+        ctx: &CoreContext,
+        cs_id: ChangesetId,
+    ) -> Result<Vec<ChangesetId>> {
+        Ok(self.changeset_parents(ctx, cs_id).await?.into_vec())
+    }
+}
+
+#[async_trait]
+impl<T: ParentsFetcher> ParentsFetcher for Arc<T> {
+    async fn fetch_parents(
+        &self,
+        ctx: &CoreContext,
+        cs_id: ChangesetId,
+    ) -> Result<Vec<ChangesetId>> {
+        T::fetch_parents(self.as_ref(), ctx, cs_id).await
     }
 }

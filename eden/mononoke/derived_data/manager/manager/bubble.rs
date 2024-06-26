@@ -8,6 +8,7 @@
 use std::sync::Arc;
 
 use changesets::ChangesetsArc;
+use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use ephemeral_blobstore::Bubble;
 use ephemeral_blobstore::EphemeralChangesets;
@@ -48,9 +49,10 @@ impl DerivedDataManager {
         self,
         bubble: Bubble,
         // Perhaps this can be fetched from inside the manager in the future
-        container: &(impl ChangesetsArc + RepoIdentityRef + RepoBlobstoreRef),
+        container: &(impl CommitGraphRef + ChangesetsArc + RepoIdentityRef + RepoBlobstoreRef),
     ) -> Self {
         let changesets = Arc::new(bubble.changesets(container));
+        let commit_graph = Arc::new(bubble.commit_graph(container));
         let wrapped_blobstore = bubble.wrap_repo_blobstore(self.inner.repo_blobstore.clone());
         let mut derivation_context = self.inner.derivation_context.clone();
         derivation_context.bonsai_hg_mapping = None;
@@ -64,6 +66,7 @@ impl DerivedDataManager {
                     manager: Self {
                         inner: Arc::new(DerivedDataManagerInner {
                             changesets: changesets.clone(),
+                            commit_graph,
                             repo_blobstore: wrapped_blobstore,
                             derivation_context,
                             ..self.inner.as_ref().clone()
