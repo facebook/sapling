@@ -155,6 +155,16 @@ impl DerivedDataManager {
         }
     }
 
+    // For dangerous-override: allow replacement of commit graph
+    pub fn with_replaced_commit_graph(&self, commit_graph: Arc<CommitGraph>) -> Self {
+        Self {
+            inner: Arc::new(DerivedDataManagerInner {
+                commit_graph,
+                ..self.inner.as_ref().clone()
+            }),
+        }
+    }
+
     // For dangerous-override: allow replacement of bonsai-hg-mapping
     pub fn with_replaced_bonsai_hg_mapping(
         &self,

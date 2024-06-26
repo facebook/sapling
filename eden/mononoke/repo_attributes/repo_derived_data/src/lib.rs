@@ -108,6 +108,14 @@ impl RepoDerivedData {
         }
     }
 
+    // For dangerous-override: allow replacement of commit_graph
+    pub fn with_replaced_commit_graph(&self, commit_graph: Arc<CommitGraph>) -> Self {
+        Self {
+            config: self.config.clone(),
+            manager: self.manager.with_replaced_commit_graph(commit_graph),
+        }
+    }
+
     // For dangerous-override: allow replacement of bonsai-hg-mapping
     pub fn with_replaced_bonsai_hg_mapping(
         &self,
