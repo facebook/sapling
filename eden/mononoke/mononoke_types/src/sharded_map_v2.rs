@@ -717,6 +717,45 @@ impl<Value: ShardedMapV2Value> ShardedMapV2Node<Value> {
             },
         )
     }
+
+    /// Returns an unordered stream over all key-value pairs in the map.
+    pub fn into_entries_unordered<'a>(
+        self,
+        ctx: &'a CoreContext,
+        blobstore: &'a impl Blobstore,
+        concurrency: usize,
+    ) -> impl Stream<Item = Result<(SmallBinary, Value)>> + 'a {
+        bounded_traversal::bounded_traversal_stream(
+            concurrency,
+            vec![(SmallBinary::new(), LoadableShardedMapV2Node::Inlined(self))],
+            move |(mut accumulated_prefix, current_node): (
+                SmallBinary,
+                LoadableShardedMapV2Node<Value>,
+            )| {
+                async move {
+                    let Self {
+                        prefix,
+                        value,
+                        children,
+                        ..
+                    } = current_node.load(ctx, blobstore).await?;
+
+                    accumulated_prefix.extend(prefix);
+
+                    Ok((
+                        value.map(|value| (accumulated_prefix.clone(), *value)),
+                        children.into_iter().map(move |(byte, child)| {
+                            let mut accumulated_prefix = accumulated_prefix.clone();
+                            accumulated_prefix.push(byte);
+                            (accumulated_prefix, child)
+                        }),
+                    ))
+                }
+                .boxed()
+            },
+        )
+        .try_filter_map(futures::future::ok)
+    }
 }
 
 impl<Value: ShardedMapV2Value> ThriftConvert for ShardedMapV2Node<Value> {
@@ -965,6 +1004,18 @@ mod test {
             map: ShardedMapV2Node<TestValue>,
         ) -> Result<Vec<(String, u32)>> {
             map.into_entries(&self.0, &self.1)
+                .and_then(
+                    |(key, value)| async move { Ok((String::from_utf8(key.to_vec())?, value.0)) },
+                )
+                .try_collect::<Vec<_>>()
+                .await
+        }
+
+        async fn into_entries_unordered(
+            &self,
+            map: ShardedMapV2Node<TestValue>,
+        ) -> Result<Vec<(String, u32)>> {
+            map.into_entries_unordered(&self.0, &self.1, 100)
                 .and_then(
                     |(key, value)| async move { Ok((String::from_utf8(key.to_vec())?, value.0)) },
                 )
@@ -1558,7 +1609,18 @@ mod test {
                         .collect::<BTreeMap<_, _>>();
                     if roundtrip_map != values {
                         return Err(anyhow!(
-                            "sharded map entries do not round trip back to original values"
+                            "sharded map entries do not round trip back to original values (using into_entries)"
+                        ));
+                    }
+
+                    let rountrip_unordered_map = helper
+                        .into_entries_unordered(map.clone())
+                        .await?
+                        .into_iter()
+                        .collect::<BTreeMap<_, _>>();
+                    if rountrip_unordered_map != values {
+                        return Err(anyhow!(
+                            "sharded map entries do not round trip back to original values (using into_entries_unordered)"
                         ));
                     }
 
