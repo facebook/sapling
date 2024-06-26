@@ -489,9 +489,7 @@ pub(crate) fn add_new_commit_sync_config_version_with_submodule_deps(
 /// Derived data types that should be enabled in all test repos
 pub(crate) fn derived_data_available_config() -> HashMap<String, DerivedDataTypesConfig> {
     let derived_data_types_config = DerivedDataTypesConfig {
-        types: DerivableType::iter()
-            .filter(|t| *t != DerivableType::GitDeltaManifestsV2)
-            .collect(),
+        types: DerivableType::iter().collect(),
         ..Default::default()
     };
 

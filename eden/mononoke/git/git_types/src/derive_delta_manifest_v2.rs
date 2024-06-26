@@ -5,13 +5,21 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+use std::io::Write;
+use std::sync::Arc;
+
 use anyhow::anyhow;
+use anyhow::bail;
+use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use async_trait::async_trait;
 use blobstore::Blobstore;
 use blobstore::BlobstoreBytes;
 use blobstore::BlobstoreGetData;
+use blobstore::Storable;
+use bytes::Bytes;
 use context::CoreContext;
 use derived_data::impl_bonsai_derived_via_manager;
 use derived_data_manager::dependencies;
@@ -19,13 +27,36 @@ use derived_data_manager::BonsaiDerivable;
 use derived_data_manager::DerivableType;
 use derived_data_manager::DerivationContext;
 use derived_data_service_if as thrift;
+use flate2::write::ZlibEncoder;
+use flate2::Compression;
+use futures::stream;
+use futures::try_join;
+use futures::StreamExt;
+use futures::TryStreamExt;
+use itertools::Itertools;
+use manifest::Diff;
+use manifest::ManifestOps;
+use metaconfig_types::GitDeltaManifestV2Config;
+use mononoke_types::path::MPath;
+use mononoke_types::BlobstoreValue;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::ThriftConvert;
+use packfile::types::BaseObject;
+use packfile::types::GitPackfileBaseItem;
 
+use crate::delta_manifest_v2::GDMV2DeltaEntry;
+use crate::delta_manifest_v2::GDMV2Entry;
+use crate::delta_manifest_v2::GDMV2Instructions;
+use crate::delta_manifest_v2::GDMV2ObjectEntry;
+use crate::delta_manifest_v2::GitDeltaManifestV2;
 use crate::delta_manifest_v2::GitDeltaManifestV2Id;
+use crate::store::fetch_git_object_bytes;
+use crate::store::GitIdentifier;
+use crate::store::HeaderState;
 use crate::MappedGitCommitId;
 use crate::TreeHandle;
+use crate::TreeMember;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
 pub struct RootGitDeltaManifestV2Id(GitDeltaManifestV2Id);
@@ -37,7 +68,7 @@ impl RootGitDeltaManifestV2Id {
 }
 
 pub fn format_key(derivation_ctx: &DerivationContext, changeset_id: ChangesetId) -> String {
-    let root_prefix = "derived_root_gdm2_test3.";
+    let root_prefix = "derived_root_gdm2.";
     let key_prefix = derivation_ctx.mapping_key_prefix::<RootGitDeltaManifestV2Id>();
     format!("{}{}{}", root_prefix, key_prefix, changeset_id)
 }
@@ -63,11 +94,253 @@ impl From<RootGitDeltaManifestV2Id> for BlobstoreBytes {
 }
 
 async fn derive_single(
-    _ctx: &CoreContext,
-    _derivation_ctx: &DerivationContext,
-    _bonsai: BonsaiChangeset,
+    ctx: &CoreContext,
+    derivation_ctx: &DerivationContext,
+    bonsai: BonsaiChangeset,
 ) -> Result<RootGitDeltaManifestV2Id> {
-    unimplemented!("git_delta_manifest_v2 derivation is not implemented")
+    let blobstore = derivation_ctx.blobstore();
+    let config = &derivation_ctx
+        .config()
+        .git_delta_manifest_v2_config
+        .ok_or_else(|| anyhow!("Can't derive GitDeltaManifestV2 without its config"))?;
+    let cs_id = bonsai.get_changeset_id();
+
+    let (current_tree, parent_trees) = try_join!(
+        derivation_ctx.fetch_dependency::<TreeHandle>(ctx, cs_id),
+        stream::iter(bonsai.parents())
+            .map(|parent| async move {
+                derivation_ctx
+                    .fetch_dependency::<TreeHandle>(ctx, parent)
+                    .await
+            })
+            .buffered(10)
+            .try_collect::<Vec<_>>()
+    )?;
+
+    let entries = if parent_trees.is_empty() {
+        gdm_v2_entries_root(ctx, blobstore, current_tree).await?
+    } else {
+        gdm_v2_entries_non_root(ctx, blobstore, config, current_tree, parent_trees).await?
+    };
+
+    let manifest = GitDeltaManifestV2::from_entries(ctx, blobstore, entries).await?;
+    let mf_id = manifest.into_blob().store(ctx, blobstore).await?;
+
+    Ok(RootGitDeltaManifestV2Id(mf_id))
+}
+
+async fn gdm_v2_entries_root(
+    ctx: &CoreContext,
+    blobstore: &Arc<dyn Blobstore>,
+    current_tree: TreeHandle,
+) -> Result<Vec<(MPath, GDMV2Entry)>> {
+    // For root commits we store an entry for each object in the tree with
+    // no deltas.
+    current_tree
+        .list_all_entries(ctx.clone(), blobstore.clone())
+        .map_ok(|(path, entry)| async move {
+            let member = TreeMember::from(entry);
+
+            Ok((
+                path,
+                GDMV2Entry {
+                    full_object: GDMV2ObjectEntry::from_tree_member(&member, None)?,
+                    deltas: vec![],
+                },
+            ))
+        })
+        .try_buffered(100)
+        .try_collect::<Vec<_>>()
+        .await
+}
+
+async fn gdm_v2_entries_non_root(
+    ctx: &CoreContext,
+    blobstore: &Arc<dyn Blobstore>,
+    config: &GitDeltaManifestV2Config,
+    current_tree: TreeHandle,
+    parent_trees: Vec<TreeHandle>,
+) -> Result<Vec<(MPath, GDMV2Entry)>> {
+    let parent_count = parent_trees.len();
+    let diffs = group_diffs_by_path(ctx, blobstore, current_tree, parent_trees).await?;
+
+    stream::iter(diffs)
+        .map(|(path, diffs)| async move {
+            // If this object is not different from all parents then we don't need
+            // to store an entry for it.
+            if diffs.len() < parent_count {
+                return Ok(None);
+            }
+
+            let new_member = match diffs.first() {
+                Some((_, new_member)) => new_member.clone(),
+                None => bail!("Expected at least one diff entry for every grouped path (while deriving GitDeltaManifestV2)")
+            };
+
+            // If the entry corresponds to a submodule (and shows up as a commit), then we ignore it
+            if new_member.filemode() == crate::mode::GIT_FILEMODE_COMMIT {
+                return Ok(None);
+            }
+
+            let deltas = stream::iter(diffs)
+                .map(|(old_member, new_member)| create_delta_entry(ctx, blobstore, config, path.clone(), old_member, new_member))
+                .buffered(10)
+                .try_filter_map(futures::future::ok)
+                .try_collect::<Vec<_>>()
+                .await?;
+
+            // If the object doesn't have any deltas and isn't too big, then we can inline it
+            // into the GDMV2Entry after converting it into a packfile item.
+            let inlined_bytes = if deltas.is_empty() {
+                let new_object_bytes = fetch_git_object_bytes(
+                    ctx,
+                    blobstore.clone(),
+                    &GitIdentifier::Rich(*new_member.oid()),
+                    HeaderState::Included,
+                ).await?;
+
+                if new_object_bytes.len() <= config.max_inlined_object_size {
+                    let packfile_item: GitPackfileBaseItem = BaseObject::new(new_object_bytes)?.try_into()?;
+                    Some(packfile_item.into_blobstore_bytes().into_bytes())
+                } else {
+                    None
+                }
+            } else {
+                None
+            };
+
+            Ok(Some((path, GDMV2Entry {
+                full_object: GDMV2ObjectEntry::from_tree_member(&new_member, inlined_bytes)?,
+                deltas,
+            })))
+        })
+        .buffered(100)
+        .try_filter_map(futures::future::ok)
+        .try_collect::<Vec<_>>()
+        .await
+}
+
+/// Diffs the current tree against all parent trees and returns a grouping of the diffs by path.
+/// For each diff we store a tuple of the old and new tree members.
+async fn group_diffs_by_path(
+    ctx: &CoreContext,
+    blobstore: &Arc<dyn Blobstore>,
+    current_tree: TreeHandle,
+    parent_trees: Vec<TreeHandle>,
+) -> Result<HashMap<MPath, Vec<(Option<TreeMember>, TreeMember)>>> {
+    Ok(stream::iter(parent_trees)
+        .map(|parent_tree| async move {
+            parent_tree
+                .diff(ctx.clone(), blobstore.clone(), current_tree)
+                .try_filter_map(|diff| async move {
+                    match diff {
+                        Diff::Changed(path, old_entry, new_entry) => {
+                            let old_member = TreeMember::from(old_entry);
+                            let new_member = TreeMember::from(new_entry);
+
+                            if old_member.oid() == new_member.oid() {
+                                Ok(None)
+                            } else {
+                                Ok(Some((path, (Some(old_member), new_member))))
+                            }
+                        }
+                        Diff::Added(path, new_entry) => {
+                            Ok(Some((path, (None, TreeMember::from(new_entry)))))
+                        }
+                        _ => Ok(None),
+                    }
+                })
+                .try_collect::<Vec<_>>()
+                .await
+        })
+        .buffered(10)
+        .try_collect::<Vec<_>>()
+        .await?
+        .into_iter()
+        .flatten()
+        .into_group_map())
+}
+
+async fn create_delta_entry(
+    ctx: &CoreContext,
+    blobstore: &Arc<dyn Blobstore>,
+    config: &GitDeltaManifestV2Config,
+    path: MPath,
+    old_member: Option<TreeMember>,
+    new_member: TreeMember,
+) -> Result<Option<GDMV2DeltaEntry>> {
+    let old_member = match old_member {
+        Some(member) => member,
+        None => {
+            return Ok(None);
+        }
+    };
+
+    let old_git_ident = GitIdentifier::Rich(*old_member.oid());
+    let new_git_ident = GitIdentifier::Rich(*new_member.oid());
+
+    let (old_object, new_object) = try_join!(
+        fetch_git_object_bytes(
+            ctx,
+            blobstore.clone(),
+            &old_git_ident,
+            HeaderState::Excluded,
+        ),
+        fetch_git_object_bytes(
+            ctx,
+            blobstore.clone(),
+            &new_git_ident,
+            HeaderState::Excluded,
+        ),
+    )?;
+
+    let raw_delta = if let Some(delta) =
+        tokio::task::spawn(compute_raw_delta(old_object, new_object)).await??
+    {
+        delta
+    } else {
+        return Ok(None);
+    };
+
+    Ok(Some(GDMV2DeltaEntry {
+        base_object: GDMV2ObjectEntry::from_tree_member(&old_member, None)?,
+        base_object_path: path,
+        instructions: GDMV2Instructions::from_raw_delta(
+            ctx,
+            blobstore,
+            raw_delta,
+            config.delta_chunk_size,
+            config.max_inlined_delta_size,
+        )
+        .await?,
+    }))
+}
+
+async fn compute_raw_delta(old_object: Bytes, new_object: Bytes) -> Result<Option<Vec<u8>>> {
+    if old_object.is_empty() || new_object.is_empty() {
+        return Ok(None);
+    }
+
+    // zlib compress actual object to see how big of a delta makes sense
+    let mut encoder = ZlibEncoder::new(vec![], Compression::default());
+    encoder
+        .write_all(&new_object)
+        .context("Failure in writing raw delta instruction bytes to ZLib buffer (while deriving GitDeltaManifestV2)")?;
+    let new_object_compressed_len = encoder
+        .finish()
+        .context(
+            "Failure in ZLib encoding delta instruction bytes (while deriving GitDeltaManifestV2)",
+        )?
+        .len();
+
+    if let Ok(raw_delta) = git_delta::git_delta(&old_object, &new_object, new_object_compressed_len)
+    {
+        Ok(Some(raw_delta))
+    } else {
+        // if the delta is larger than max_delta above will fail and we'll fail back to
+        // serving the full object
+        Ok(None)
+    }
 }
 
 #[async_trait]
@@ -142,3 +415,344 @@ impl BonsaiDerivable for RootGitDeltaManifestV2Id {
 }
 
 impl_bonsai_derived_via_manager!(RootGitDeltaManifestV2Id);
+
+#[cfg(test)]
+mod test {
+    use std::collections::HashSet;
+    use std::str::FromStr;
+
+    use anyhow::format_err;
+    use anyhow::Context;
+    use anyhow::Result;
+    use async_compression::tokio::write::ZlibDecoder;
+    use blobstore::Loadable;
+    use bookmarks::BookmarkKey;
+    use bookmarks::BookmarksRef;
+    use commit_graph::CommitGraphRef;
+    use derived_data::BonsaiDerived;
+    use fbinit::FacebookInit;
+    use fixtures::TestRepoFixture;
+    use futures::future;
+    use futures_util::stream::TryStreamExt;
+    use mononoke_types::ChangesetIdPrefix;
+    use repo_blobstore::RepoBlobstoreRef;
+    use repo_derived_data::RepoDerivedDataRef;
+    use repo_identity::RepoIdentityRef;
+    use tokio::io::AsyncWriteExt;
+
+    use super::*;
+
+    /// This function generates GitDeltaManifestV2 for each bonsai commit in the fixture starting from
+    /// the fixture's master Bonsai bookmark. It validates that the derivation is successful and returns
+    /// the GitDeltaManifestV2 and Bonsai Changeset ID corresponding to the master bookmark
+    async fn common_gdm_v2_validation(
+        repo: &(
+             impl BookmarksRef
+             + RepoBlobstoreRef
+             + RepoDerivedDataRef
+             + RepoIdentityRef
+             + CommitGraphRef
+             + Send
+             + Sync
+         ),
+        ctx: &CoreContext,
+    ) -> Result<(RootGitDeltaManifestV2Id, ChangesetId)> {
+        let cs_id = repo
+            .bookmarks()
+            .get(ctx.clone(), &BookmarkKey::from_str("master")?)
+            .await?
+            .ok_or_else(|| format_err!("no master"))?;
+        // Validate that the derivation of the GitDeltaManifestV2 for the head commit succeeds
+        let root_mf_id = RootGitDeltaManifestV2Id::derive(ctx, repo, cs_id).await?;
+        // Validate the derivation of all the commits in this repo succeeds
+        let all_cs_ids = repo
+            .commit_graph()
+            .find_by_prefix(ctx, ChangesetIdPrefix::from_bytes("").unwrap(), 1000)
+            .await?
+            .to_vec();
+        repo.commit_graph()
+            .process_topologically(ctx, all_cs_ids, |cs_id| async move {
+                RootGitDeltaManifestV2Id::derive(ctx, repo, cs_id).await?;
+                Ok(())
+            })
+            .await
+            .with_context(|| {
+                format!(
+                    "Failed to derive GitDeltaManifestV2 for commits in repo {}",
+                    repo.repo_identity().name()
+                )
+            })?;
+
+        Ok((root_mf_id, cs_id))
+    }
+
+    #[fbinit::test]
+    async fn delta_manifest_v2_linear(fb: FacebookInit) -> Result<()> {
+        let repo = fixtures::Linear::getrepo(fb).await;
+        let ctx = CoreContext::test_mock(fb);
+        let blobstore = repo.repo_blobstore();
+        let (master_mf_id, _) = common_gdm_v2_validation(&repo, &ctx).await?;
+        let gdm_v2 = master_mf_id.0.load(&ctx, blobstore).await?;
+        let expected_paths = vec![MPath::ROOT, MPath::new("10")?] //MPath::ROOT for root directory
+            .into_iter()
+            .collect::<HashSet<_>>();
+        let matched_entries = gdm_v2
+            .into_entries(&ctx, blobstore)
+            .try_filter(|(path, _)| future::ready(expected_paths.contains(path)))
+            .try_collect::<HashMap<_, _>>()
+            .await?;
+        // Ensure that the delta manifest contains entries for the paths that were added/modified as part of this commit
+        assert_eq!(matched_entries.len(), expected_paths.len());
+        // Since the file 10 was modified, we should have a delta variant for it. Additionally, the root directory is always modified so it should
+        // have a delta variant as well
+        assert!(matched_entries.values().all(|entry| entry.has_deltas()));
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn delta_manifest_v2_branch_even(fb: FacebookInit) -> Result<()> {
+        let repo = fixtures::BranchEven::getrepo(fb).await;
+        let ctx = CoreContext::test_mock(fb);
+        let blobstore = repo.repo_blobstore();
+        let (master_mf_id, _) = common_gdm_v2_validation(&repo, &ctx).await?;
+        let gdm_v2 = master_mf_id.0.load(&ctx, blobstore).await?;
+        let expected_paths = vec![MPath::ROOT, MPath::new("base")?] //MPath::ROOT for root directory
+            .into_iter()
+            .collect::<HashSet<_>>();
+        let matched_entries = gdm_v2
+            .into_entries(&ctx, &blobstore)
+            .try_filter(|(path, _)| future::ready(expected_paths.contains(path)))
+            .try_collect::<HashMap<_, _>>()
+            .await?;
+        // Ensure that the delta manifest contains entries for the paths that were added/modified as part of this commit
+        assert_eq!(matched_entries.len(), expected_paths.len());
+        // Since the file base was modified, we should have a delta variant for it. Additionally, the root directory is always modified so it should
+        // have a delta variant as well
+        assert!(matched_entries.values().all(|entry| entry.has_deltas()));
+        // Since the file "base" was modified, ensure that the delta variant for its entry points to the right changeset
+        let entry = matched_entries
+            .get(&MPath::new("base")?)
+            .expect("Expected entry for path 'base'");
+        // There should only be one delta base for the file "base"
+        assert_eq!(entry.deltas.len(), 1);
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn delta_manifest_v2_branch_uneven(fb: FacebookInit) -> Result<()> {
+        let repo = fixtures::BranchUneven::getrepo(fb).await;
+        let ctx = CoreContext::test_mock(fb);
+        let blobstore = repo.repo_blobstore();
+        let (master_mf_id, _) = common_gdm_v2_validation(&repo, &ctx).await?;
+        let gdm_v2 = master_mf_id.0.load(&ctx, blobstore).await?;
+        let expected_paths = vec![MPath::ROOT, MPath::new("5")?] //MPath::ROOT for root directory
+            .into_iter()
+            .collect::<HashSet<_>>();
+        let matched_entries = gdm_v2
+            .into_entries(&ctx, blobstore)
+            .try_filter(|(path, _)| future::ready(expected_paths.contains(path)))
+            .try_collect::<HashMap<_, _>>()
+            .await?;
+        // Ensure that the delta manifest contains entries for the paths that were added/modified as part of this commit
+        assert_eq!(matched_entries.len(), expected_paths.len());
+        // Ensure that the root entry has a delta variant
+        assert!(
+            matched_entries
+                .get(&MPath::ROOT)
+                .expect("Expected root entry to exist")
+                .has_deltas()
+        );
+        // Since the file 5 was added in this commit, it should NOT have a delta variant
+        assert!(
+            !matched_entries
+                .get(&MPath::new("5")?)
+                .expect("Expected file 5 entry to exist")
+                .has_deltas()
+        );
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn delta_manifest_v2_branch_wide(fb: FacebookInit) -> Result<()> {
+        let repo = fixtures::BranchWide::getrepo(fb).await;
+        let ctx = CoreContext::test_mock(fb);
+        let blobstore = repo.repo_blobstore();
+        let (master_mf_id, _) = common_gdm_v2_validation(&repo, &ctx).await?;
+        let gdm_v2 = master_mf_id.0.load(&ctx, blobstore).await?;
+        let expected_paths = vec![MPath::ROOT, MPath::new("3")?] //MPath::ROOT for root directory
+            .into_iter()
+            .collect::<HashSet<_>>();
+        let matched_entries = gdm_v2
+            .into_entries(&ctx, &blobstore)
+            .try_filter(|(path, _)| future::ready(expected_paths.contains(path)))
+            .try_collect::<HashMap<_, _>>()
+            .await?;
+        // Ensure that the delta manifest contains entries for the paths that were added/modified as part of this commit
+        assert_eq!(matched_entries.len(), expected_paths.len());
+        // Ensure that the root entry has a delta variant
+        assert!(
+            matched_entries
+                .get(&MPath::ROOT)
+                .expect("Expected root entry to exist")
+                .has_deltas()
+        );
+        // Since the file 3 was added in this commit, it should NOT have a delta variant
+        assert!(
+            !matched_entries
+                .get(&MPath::new("3")?)
+                .expect("Expected file 3 entry to exist")
+                .has_deltas()
+        );
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn delta_manifest_v2_merge_even(fb: FacebookInit) -> Result<()> {
+        let repo = fixtures::MergeEven::getrepo(fb).await;
+        let ctx = CoreContext::test_mock(fb);
+        let blobstore = repo.repo_blobstore();
+        let (master_mf_id, _) = common_gdm_v2_validation(&repo, &ctx).await?;
+        let gdm_v2 = master_mf_id.0.load(&ctx, blobstore).await?;
+        let expected_paths = vec![MPath::ROOT, MPath::new("base")?] //MPath::ROOT for root directory
+            .into_iter()
+            .collect::<HashSet<_>>();
+        let matched_entries = gdm_v2
+            .clone()
+            .into_entries(&ctx, blobstore)
+            .try_filter(|(path, _)| future::ready(expected_paths.contains(path)))
+            .try_collect::<HashMap<_, _>>()
+            .await?;
+        assert!(matched_entries.is_empty());
+        // The commit has a change for path "branch" as well. However, both parents of the merge commit have the same version
+        // of the file, so there should not be any entry for it in the manifest
+        let branch_entry = gdm_v2
+            .lookup(&ctx, &blobstore, &MPath::new("branch")?)
+            .await?;
+        assert!(branch_entry.is_none());
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn delta_manifest_v2_many_files_dirs(fb: FacebookInit) -> Result<()> {
+        let repo = fixtures::ManyFilesDirs::getrepo(fb).await;
+        let ctx = CoreContext::test_mock(fb);
+        let blobstore = repo.repo_blobstore();
+        let (master_mf_id, _) = common_gdm_v2_validation(&repo, &ctx).await?;
+        let gdm_v2 = master_mf_id.0.load(&ctx, blobstore).await?;
+        let expected_paths = vec![MPath::ROOT, MPath::new("1")?] //MPath::ROOT for root directory
+            .into_iter()
+            .collect::<HashSet<_>>();
+        let matched_entries = gdm_v2
+            .into_entries(&ctx, blobstore)
+            .try_filter(|(path, _)| future::ready(expected_paths.contains(path)))
+            .try_collect::<HashMap<_, _>>()
+            .await?;
+        // Ensure that the delta manifest contains entries for the paths that were added/modified as part of this commit
+        assert_eq!(matched_entries.len(), expected_paths.len());
+        // Since the commit is a root commit, i.e. has no parents, all changes introduced by this commit should be considered new additions and should
+        // not have any delta variant associated with it
+        assert!(matched_entries.values().all(|entry| !entry.has_deltas()));
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn delta_manifest_v2_merge_uneven(fb: FacebookInit) -> Result<()> {
+        let repo = fixtures::MergeUneven::getrepo(fb).await;
+        let ctx = CoreContext::test_mock(fb);
+        let blobstore = repo.repo_blobstore();
+        let (master_mf_id, _) = common_gdm_v2_validation(&repo, &ctx).await?;
+        let gdm_v2 = master_mf_id.0.load(&ctx, blobstore).await?;
+        let matched_entries = gdm_v2
+            .clone()
+            .into_entries(&ctx, blobstore)
+            .try_collect::<HashMap<_, _>>()
+            .await?;
+        assert!(matched_entries.is_empty());
+        // The commit has a change for path "branch" as well. However, both parents of the merge commit have the same version
+        // of the file, so there should not be any entry for it in the manifest
+        let branch_entry = gdm_v2
+            .lookup(&ctx, &blobstore, &MPath::new("branch")?)
+            .await?;
+        assert!(branch_entry.is_none());
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn delta_manifest_v2_merge_multiple_files(fb: FacebookInit) -> Result<()> {
+        let repo = fixtures::MergeMultipleFiles::getrepo(fb).await;
+        let ctx = CoreContext::test_mock(fb);
+        let blobstore = repo.repo_blobstore();
+        let (master_mf_id, _) = common_gdm_v2_validation(&repo, &ctx).await?;
+        let gdm_v2 = master_mf_id.0.load(&ctx, blobstore).await?;
+        let expected_paths = vec![
+            MPath::ROOT,
+            MPath::new("2")?,
+            MPath::new("3")?,
+            MPath::new("4")?,
+        ] //MPath::ROOT for root directory
+        .into_iter()
+        .collect::<HashSet<_>>();
+        let matched_entries = gdm_v2
+            .clone()
+            .into_entries(&ctx, blobstore)
+            .try_filter(|(path, _)| future::ready(expected_paths.contains(path)))
+            .try_collect::<HashMap<_, _>>()
+            .await?;
+
+        // Ensure that the delta manifest contains entries for the paths that were added/modified as part of this commit
+        assert_eq!(matched_entries.len(), expected_paths.len());
+        // The commit has a change for path "branch" as well. However, both parents of the merge commit have the same version
+        // of the file, so there should not be any entry for it in the manifest
+        let branch_entry = gdm_v2
+            .lookup(&ctx, blobstore, &MPath::new("branch")?)
+            .await?;
+        assert!(branch_entry.is_none());
+        // Files 1, 2, 4 and 5 should show up as added entries without any delta variants since they are present in one parent branch
+        // and not in the other
+        let added_paths = vec![
+            MPath::new("1")?,
+            MPath::new("2")?,
+            MPath::new("4")?,
+            MPath::new("5")?,
+        ]
+        .into_iter()
+        .collect::<HashSet<_>>();
+        assert!(
+            matched_entries
+                .iter()
+                .filter(|(path, _)| added_paths.contains(path))
+                .all(|(_, entry)| !entry.has_deltas())
+        );
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn delta_manifest_v2_instructions_encoding(fb: FacebookInit) -> Result<()> {
+        let repo = fixtures::Linear::getrepo(fb).await;
+        let ctx = CoreContext::test_mock(fb);
+        let blobstore = repo.repo_blobstore();
+        let (master_mf_id, _) = common_gdm_v2_validation(&repo, &ctx).await?;
+        let gdm_v2 = master_mf_id.0.load(&ctx, &blobstore).await?;
+        let entry = gdm_v2
+            .lookup(&ctx, &blobstore, &MPath::new("10")?)
+            .await?
+            .expect("Expected entry for path '10'");
+        let delta = entry
+            .deltas
+            .into_iter()
+            .next()
+            .expect("Expected a delta variant for path '10'");
+        // We can't make any assertions about the size of the delta instructions since they can be larger than the
+        // size of the actual object itself if the object is too small
+        let bytes = delta
+            .instructions
+            .instruction_bytes
+            .into_raw_bytes(&ctx, blobstore)
+            .await?;
+
+        let mut decoder = ZlibDecoder::new(vec![]);
+        decoder.write_all(bytes.as_ref()).await?;
+
+        Ok(())
+    }
+}

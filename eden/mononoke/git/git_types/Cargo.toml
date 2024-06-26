@@ -30,6 +30,7 @@ gix-actor = "0.24"
 gix-diff = "0.33"
 gix-hash = "0.11"
 gix-object = "0.33"
+itertools = "0.11.0"
 manifest = { version = "0.1.0", path = "../../manifest" }
 megarepo_error = { version = "0.1.0", path = "../../megarepo_api/megarepo_error" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
@@ -50,6 +51,7 @@ async-compression = { version = "0.4.9", features = ["brotli", "bzip2", "deflate
 bonsai_hg_mapping = { version = "0.1.0", path = "../../bonsai_hg_mapping" }
 bookmarks = { version = "0.1.0", path = "../../bookmarks" }
 changesets = { version = "0.1.0", path = "../../changesets" }
+commit_graph = { version = "0.1.0", path = "../../repo_attributes/commit_graph/commit_graph" }
 fbinit = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit-tokio = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fixtures = { version = "0.1.0", path = "../../tests/fixtures" }
