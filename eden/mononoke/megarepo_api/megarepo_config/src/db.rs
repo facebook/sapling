@@ -9,6 +9,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 use bookmarks::BookmarkKey;
 use context::CoreContext;
+use megarepo_configs::Source;
 use megarepo_configs::SyncConfigVersion;
 use mononoke_types::RepositoryId;
 
@@ -28,7 +29,7 @@ pub trait MegarepoSyncConfig: Send + Sync {
         repo_id: &RepositoryId,
         bookmark: &BookmarkKey,
         version: &SyncConfigVersion,
-        serialized_config: &str,
+        sources: Vec<Source>,
     ) -> Result<RowId>;
 
     /// Get the full request object entry by id

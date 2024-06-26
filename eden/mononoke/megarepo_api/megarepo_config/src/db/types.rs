@@ -7,6 +7,7 @@
 
 use anyhow::Result;
 use bookmarks::BookmarkName;
+use megarepo_configs::Source;
 use megarepo_configs::SyncConfigVersion;
 use mononoke_types::RepositoryId;
 use sql::mysql;
@@ -53,5 +54,5 @@ pub struct MegarepoSyncConfigEntry {
     pub repo_id: RepositoryId,
     pub bookmark: BookmarkName,
     pub version: SyncConfigVersion,
-    pub serialized_config: String,
+    pub sources: Vec<Source>,
 }

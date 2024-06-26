@@ -6,11 +6,13 @@
  */
 
 use anyhow::bail;
+use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarkName;
 use context::CoreContext;
+use megarepo_configs::Source;
 use megarepo_configs::SyncConfigVersion;
 use mononoke_types::RepositoryId;
 use sql_construct::SqlConstruct;
@@ -47,15 +49,17 @@ mononoke_queries! {
 
 fn row_to_entry(
     row: (RowId, RepositoryId, BookmarkName, SyncConfigVersion, String),
-) -> MegarepoSyncConfigEntry {
-    let (id, repo_id, bookmark, version, serialized_config) = row;
-    MegarepoSyncConfigEntry {
+) -> Result<MegarepoSyncConfigEntry> {
+    let (id, repo_id, bookmark, version, contents) = row;
+    let sources: Vec<Source> = fbthrift::simplejson_protocol::deserialize(contents)
+        .context("failed to deserialize existing config")?;
+    Ok(MegarepoSyncConfigEntry {
         id,
         repo_id,
         bookmark,
         version,
-        serialized_config,
-    }
+        sources,
+    })
 }
 
 #[derive(Clone)]
@@ -71,14 +75,17 @@ impl MegarepoSyncConfig for SqlMegarepoSyncConfig {
         repo_id: &RepositoryId,
         bookmark: &BookmarkKey,
         version: &SyncConfigVersion,
-        serialized_config: &str,
+        sources: Vec<Source>,
     ) -> Result<RowId> {
+        let contents =
+            String::from_utf8(fbthrift::simplejson_protocol::serialize(&sources).to_vec())
+                .context("failed to serialize SyncTargetConfig")?;
         let res = AddRepoConfig::query(
             &self.connections.write_connection,
             repo_id,
             bookmark.name(),
             version,
-            &serialized_config,
+            &contents.as_str(),
         )
         .await?;
 
@@ -101,7 +108,7 @@ impl MegarepoSyncConfig for SqlMegarepoSyncConfig {
         let rows = TestGetRepoConfigById::query(&self.connections.read_connection, id).await?;
         match rows.into_iter().next() {
             None => Ok(None),
-            Some(row) => Ok(Some(row_to_entry(row))),
+            Some(row) => Ok(Some(row_to_entry(row)?)),
         }
     }
 }
@@ -135,7 +142,7 @@ mod test {
                 &RepositoryId::new(0),
                 &BookmarkKey::new("book")?,
                 &SyncConfigVersion::new(),
-                "anything",
+                vec![],
             )
             .await?;
 
@@ -146,7 +153,7 @@ mod test {
         assert_eq!(entry.repo_id, RepositoryId::new(0));
         assert_eq!(entry.bookmark, *BookmarkKey::new("book")?.name());
         assert_eq!(entry.version, SyncConfigVersion::new());
-        assert_eq!(entry.serialized_config, "anything");
+        assert_eq!(entry.sources, vec![]);
 
         Ok(())
     }
