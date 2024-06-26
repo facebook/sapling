@@ -12,6 +12,8 @@ pub mod workspace;
 use std::sync::Arc;
 
 use bonsai_hg_mapping::BonsaiHgMapping;
+#[cfg(fbcode_build)]
+use commit_cloud_intern_utils::notification::NotificationData;
 use context::CoreContext;
 use edenapi_types::GetReferencesParams;
 use edenapi_types::ReferencesData;
@@ -164,6 +166,9 @@ impl CommitCloud {
             version_timestamp = workspace_version.timestamp.timestamp_nanos();
         }
         let new_version = latest_version + 1;
+        #[cfg(fbcode_build)]
+        let _notification =
+            NotificationData::from_update_references_params(params.clone(), new_version);
         if params.version < latest_version {
             let raw_references_data = fetch_references(ctx.clone(), &self.storage).await?;
             return cast_references_data(
@@ -184,7 +189,7 @@ impl CommitCloud {
             .await?;
         let cri = self.core_ctx.client_request_info();
 
-        txn = update_references_data(&self.storage, txn, cri, params, &ctx).await?;
+        txn = update_references_data(&self.storage, txn, cri, params.clone(), &ctx).await?;
         let new_version_timestamp = Timestamp::now();
 
         let args = WorkspaceVersion {

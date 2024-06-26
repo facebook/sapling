@@ -1,0 +1,13 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("mononoke")
+
+rust_library(
+    name = "commit_cloud_intern_utils",
+    srcs = glob([
+        "*.rs",
+    ]),
+    deps = [
+        "//eden/scm/lib/edenapi/types:edenapi_types",
+    ],
+)

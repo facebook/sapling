@@ -24,6 +24,7 @@ rust_library(
         "//eden/mononoke/common/rust/sql_ext:sql_ext",
         "//eden/mononoke/common/sql_construct:sql_construct",
         "//eden/mononoke/derived_data:changeset_info",
+        "//eden/mononoke/facebook/commit_cloud:commit_cloud_intern_utils",
         "//eden/mononoke/mercurial:mercurial_types",
         "//eden/mononoke/metaconfig:metaconfig_types",
         "//eden/mononoke/mononoke_types:mononoke_types",
