@@ -106,8 +106,16 @@ rust_library(
 
 rust_library(
     name = "megarepo_config",
-    srcs = glob(["megarepo_config/src/**/*.rs"]),
+    srcs = glob([
+        "megarepo_config/src/**/*.rs",
+        "megarepo_config/schemas/**/*.sql",
+    ]),
     autocargo = {"cargo_toml_dir": "megarepo_config"},
+    test_deps = [
+        "fbsource//third-party/rust:tokio",
+        "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/fbinit:fbinit-tokio",
+    ],
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:async-trait",
@@ -121,9 +129,15 @@ rust_library(
         ":configo_client",
         ":megarepo_error",
         "//common/rust/shed/cached_config:cached_config",
+        "//common/rust/shed/facet:facet",
         "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/sql:sql",
         "//configerator/structs/scm/mononoke/megarepo:megarepo_configs-rust",
         "//configerator/structs/scm/mononoke/megarepo:version_cconf_index-rust",
+        "//eden/mononoke/bookmarks:bookmarks",
+        "//eden/mononoke/common/rust/sql_ext:sql_ext",
+        "//eden/mononoke/common/sql_construct:sql_construct",
+        "//eden/mononoke/mononoke_types:mononoke_types",
         "//eden/mononoke/server/context:context",
         "//thrift/lib/rust:fbthrift",
     ],

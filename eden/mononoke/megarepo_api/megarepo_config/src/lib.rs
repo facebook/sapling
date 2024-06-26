@@ -25,6 +25,8 @@ pub use megarepo_configs::Target;
 pub use megarepo_configs::WithExtraMoveCommit;
 use megarepo_error::MegarepoError;
 #[cfg(fbcode_build)]
+mod db;
+#[cfg(fbcode_build)]
 mod facebook;
 #[cfg(not(fbcode_build))]
 mod oss;
