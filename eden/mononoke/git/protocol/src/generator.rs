@@ -42,7 +42,6 @@ use git_types::mode;
 use git_types::upload_packfile_base_item;
 use git_types::DeltaObjectKind;
 use git_types::GitDeltaManifestEntryOps;
-use git_types::GitDeltaManifestOps;
 use git_types::GitIdentifier;
 use git_types::HeaderState;
 use git_types::ObjectDeltaOps;
@@ -379,7 +378,7 @@ async fn trees_and_blobs_count(
                 // Get the FxHashSet of the tree and blob object Ids that will be included
                 // in the packfile
                 let objects = delta_manifest
-                    .into_entries(&ctx, &blobstore)
+                    .into_entries(&ctx, &blobstore.boxed())
                     .try_filter_map(|(path, entry)| {
                         cloned!(filter);
                         async move {
@@ -388,7 +387,7 @@ async fn trees_and_blobs_count(
                             if !filter_object(filter.clone(), &path, kind, size) {
                                 return Ok(None);
                             }
-                            let delta = delta_base(&entry, delta_inclusion, filter);
+                            let delta = delta_base(entry.as_ref(), delta_inclusion, filter);
                             let output = (
                                 entry.full_object_oid(),
                                 delta.map(|delta| delta.base_object_oid()),
@@ -436,7 +435,7 @@ async fn trees_and_blobs_count(
 }
 
 fn delta_below_threshold(
-    delta: &impl ObjectDeltaOps,
+    delta: &dyn ObjectDeltaOps,
     full_object_size: u64,
     inclusion_threshold: f32,
 ) -> bool {
@@ -445,10 +444,10 @@ fn delta_below_threshold(
 }
 
 fn delta_base(
-    entry: &impl GitDeltaManifestEntryOps,
+    entry: &(dyn GitDeltaManifestEntryOps + Send),
     delta_inclusion: DeltaInclusion,
     filter: Arc<Option<FetchFilter>>,
-) -> Option<impl ObjectDeltaOps + Send> {
+) -> Option<&(dyn ObjectDeltaOps + Sync)> {
     match delta_inclusion {
         DeltaInclusion::Include {
             inclusion_threshold,
@@ -470,11 +469,22 @@ fn delta_base(
                 delta_below_threshold(*delta, entry.full_object_size(), inclusion_threshold)
                     && filter_object(filter, path, kind, size)
                     && !is_self_delta
-            })
-            .cloned(),
+            }),
         // Can't use the delta variant if the request prevents us from using it
         DeltaInclusion::Exclude => None,
     }
+}
+
+fn delta_weight(
+    entry: &(dyn GitDeltaManifestEntryOps + Send),
+    delta_inclusion: DeltaInclusion,
+    filter: Arc<Option<FetchFilter>>,
+) -> usize {
+    let delta = delta_base(entry, delta_inclusion, filter);
+    let weight = delta.as_ref().map_or(entry.full_object_size(), |delta| {
+        delta.instructions_compressed_size()
+    }) as usize;
+    std::cmp::max(weight / THRESHOLD_BYTES, 1)
 }
 
 fn to_commit_stream(commits: Vec<ChangesetId>) -> BoxStream<'static, Result<ChangesetId>> {
@@ -946,7 +956,9 @@ async fn tree_and_blob_packfile_items(
     derived_data: ArcRepoDerivedData,
     git_delta_manifest_version: GitDeltaManifestVersion,
     changeset_id: ChangesetId,
-) -> Result<BoxStream<'static, Result<(ChangesetId, MPath, impl GitDeltaManifestEntryOps)>>> {
+) -> Result<
+    BoxStream<'static, Result<(ChangesetId, MPath, Box<dyn GitDeltaManifestEntryOps + Send>)>>,
+> {
     let delta_manifest = fetch_git_delta_manifest(
         &ctx,
         &derived_data,
@@ -959,7 +971,7 @@ async fn tree_and_blob_packfile_items(
     // not the actual object so its safe to load them all into memory instead of chaining streams
     // which significantly slows down the entire process.
     let entries = delta_manifest
-        .into_entries(&ctx, &blobstore)
+        .into_entries(&ctx, &blobstore.boxed())
         .map_ok(|(path, entry)| (changeset_id, path, entry))
         .try_collect::<Vec<_>>()
         .await?;
@@ -968,16 +980,18 @@ async fn tree_and_blob_packfile_items(
 
 async fn boundary_stream(
     fetch_container: FetchContainer,
-) -> Result<BoxStream<'static, Result<(ChangesetId, MPath, impl GitDeltaManifestEntryOps)>>> {
+) -> Result<
+    BoxStream<'static, Result<(ChangesetId, MPath, Box<dyn GitDeltaManifestEntryOps + Send>)>>,
+> {
     let objects = boundary_trees_and_blobs(fetch_container)
         .await?
         .into_iter()
         .map(|full_entry| {
-            Ok((
-                full_entry.cs_id.clone(),
-                full_entry.path.clone(),
-                full_entry.into_delta_manifest_entry(),
-            ))
+            let cs_id = full_entry.cs_id;
+            let path = full_entry.path.clone();
+            let delta_manifest_entry: Box<dyn GitDeltaManifestEntryOps + Send> =
+                Box::new(full_entry.into_delta_manifest_entry());
+            Ok((cs_id, path, delta_manifest_entry))
         });
     Ok(stream::iter(objects).boxed())
 }
@@ -987,11 +1001,7 @@ async fn packfile_stream_from_objects<'a>(
     base_set: Arc<FxHashSet<ObjectId>>,
     object_stream: BoxStream<
         'a,
-        Result<(
-            ChangesetId,
-            MPath,
-            impl GitDeltaManifestEntryOps + Send + 'a,
-        )>,
+        Result<(ChangesetId, MPath, Box<dyn GitDeltaManifestEntryOps + Send>)>,
     >,
 ) -> BoxStream<'a, Result<PackfileItem>> {
     let FetchContainer {
@@ -1028,18 +1038,14 @@ async fn packfile_stream_from_objects<'a>(
             match result {
                 Err(err) => (0, Either::Left(future::err(err))),
                 std::result::Result::Ok((changeset_id, path, entry)) => {
-                    cloned!(ctx, blobstore);
-                    let filter = delta_filter.clone();
-                    let delta = delta_base(&entry, delta_inclusion, filter);
-                    let weight = delta.as_ref().map_or(entry.full_object_size(), |delta| {
-                        delta.instructions_compressed_size()
-                    }) as usize;
-                    let weight = std::cmp::max(weight / THRESHOLD_BYTES, 1);
+                    cloned!(ctx, blobstore, delta_filter as filter);
+                    let weight = delta_weight(entry.as_ref(), delta_inclusion, filter.clone());
                     let fetch_future = async move {
+                        let delta = delta_base(entry.as_ref(), delta_inclusion, filter);
                         match delta {
                             Some(delta) => {
                                 let instruction_bytes = delta
-                                    .instruction_bytes(&ctx, &blobstore, changeset_id, path)
+                                    .instruction_bytes(&ctx, &blobstore.boxed(), changeset_id, path)
                                     .await?;
 
                                 let packfile_item = PackfileItem::new_delta(

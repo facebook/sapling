@@ -6,6 +6,7 @@
  */
 
 use std::iter::Iterator;
+use std::sync::Arc;
 
 use anyhow::Context;
 use anyhow::Result;
@@ -15,10 +16,12 @@ use blobstore::Loadable;
 use bytes::Bytes;
 use bytes::BytesMut;
 use context::CoreContext;
-use futures::Stream;
+use futures::stream::BoxStream;
+use futures::StreamExt;
 use futures::TryStreamExt;
 use gix_hash::ObjectId;
 use metaconfig_types::GitDeltaManifestVersion;
+use mononoke_types::hash::GitSha1;
 use mononoke_types::hash::RichGitSha1;
 use mononoke_types::path::MPath;
 use mononoke_types::ChangesetId;
@@ -40,7 +43,7 @@ pub async fn fetch_git_delta_manifest(
     blobstore: &impl Blobstore,
     git_delta_manifest_version: GitDeltaManifestVersion,
     cs_id: ChangesetId,
-) -> Result<impl GitDeltaManifestOps + Send + Sync> {
+) -> Result<Box<dyn GitDeltaManifestOps + Send + Sync>> {
     match git_delta_manifest_version {
         GitDeltaManifestVersion::V1 => {
             let root_mf_id = derived_data
@@ -53,52 +56,52 @@ pub async fn fetch_git_delta_manifest(
                     )
                 })?;
 
-            Ok(root_mf_id
-                .manifest_id()
-                .load(ctx, blobstore)
-                .await
-                .with_context(|| {
-                    format!(
-                        "Error in loading Git Delta Manifest from root id {:?}",
-                        root_mf_id
-                    )
-                })?)
+            Ok(Box::new(
+                root_mf_id
+                    .manifest_id()
+                    .load(ctx, blobstore)
+                    .await
+                    .with_context(|| {
+                        format!(
+                            "Error in loading GitDeltaManifest from root id {:?}",
+                            root_mf_id
+                        )
+                    })?,
+            ))
         }
     }
 }
 
 /// Trait representing a version of GitDeltaManifest.
 pub trait GitDeltaManifestOps {
-    /// The type of the subentries of the GitDeltaManifest.
-    type GitDeltaManifestEntryType: GitDeltaManifestEntryOps + Send + Sync;
-
-    /// Returns a stream of the subentries of the GitDeltaManifest. There should
+    /// Returns a stream of the entries of the GitDeltaManifest. There should
     /// be an entry for each object at a path that differs from the corresponding
     /// object at the same path in one of the parents.
     fn into_entries<'a>(
-        self,
+        self: Box<Self>,
         ctx: &'a CoreContext,
-        blobstore: &'a impl Blobstore,
-    ) -> impl Stream<Item = Result<(MPath, Self::GitDeltaManifestEntryType)>> + Send + 'a;
+        blobstore: &'a Arc<dyn Blobstore>,
+    ) -> BoxStream<'a, Result<(MPath, Box<dyn GitDeltaManifestEntryOps + Send>)>>;
 }
 
 impl GitDeltaManifestOps for GitDeltaManifest {
-    type GitDeltaManifestEntryType = GitDeltaManifestEntry;
-
     fn into_entries<'a>(
-        self,
+        self: Box<Self>,
         ctx: &'a CoreContext,
-        blobstore: &'a impl Blobstore,
-    ) -> impl Stream<Item = Result<(MPath, GitDeltaManifestEntry)>> + Send + 'a {
-        GitDeltaManifest::into_entries(self, ctx, blobstore)
+        blobstore: &'a Arc<dyn Blobstore>,
+    ) -> BoxStream<'a, Result<(MPath, Box<dyn GitDeltaManifestEntryOps + Send>)>> {
+        GitDeltaManifest::into_entries(*self, ctx, blobstore)
+            .map_ok(
+                |(path, entry)| -> (_, Box<dyn GitDeltaManifestEntryOps + Send>) {
+                    (path, Box::new(entry))
+                },
+            )
+            .boxed()
     }
 }
 
 /// Trait representing a subentry of a GitDeltaManifest.
 pub trait GitDeltaManifestEntryOps {
-    /// The type of the deltas of the subentry.
-    type ObjectDeltaType: ObjectDeltaOps + Clone + Send + Sync;
-
     /// Returns the size of the full object.
     fn full_object_size(&self) -> u64;
 
@@ -109,15 +112,22 @@ pub trait GitDeltaManifestEntryOps {
     fn full_object_kind(&self) -> ObjectKind;
 
     /// Returns the RichGitSha1 of the full object.
-    fn full_object_rich_git_sha1(&self) -> Result<RichGitSha1>;
+    fn full_object_rich_git_sha1(&self) -> Result<RichGitSha1> {
+        let sha1 = GitSha1::from_bytes(self.full_object_oid().as_bytes())?;
+        let ty = match self.full_object_kind() {
+            ObjectKind::Blob => "blob",
+            ObjectKind::Tree => "tree",
+        };
+        Ok(RichGitSha1::from_sha1(sha1, ty, self.full_object_size()))
+    }
+
+    fn full_object_inlined_bytes(&self) -> Option<Bytes>;
 
     /// Returns an iterator over the deltas of the subentry.
-    fn deltas(&self) -> impl Iterator<Item = &Self::ObjectDeltaType>;
+    fn deltas(&self) -> Box<dyn Iterator<Item = &(dyn ObjectDeltaOps + Sync)> + '_>;
 }
 
 impl GitDeltaManifestEntryOps for GitDeltaManifestEntry {
-    type ObjectDeltaType = ObjectDelta;
-
     fn full_object_size(&self) -> u64 {
         self.full.size
     }
@@ -130,12 +140,16 @@ impl GitDeltaManifestEntryOps for GitDeltaManifestEntry {
         self.full.kind
     }
 
-    fn full_object_rich_git_sha1(&self) -> Result<RichGitSha1> {
-        self.full.as_rich_git_sha1()
+    fn full_object_inlined_bytes(&self) -> Option<Bytes> {
+        None
     }
 
-    fn deltas(&self) -> impl Iterator<Item = &ObjectDelta> {
-        self.deltas.iter()
+    fn deltas(&self) -> Box<dyn Iterator<Item = &(dyn ObjectDeltaOps + Sync)> + '_> {
+        Box::new(
+            self.deltas
+                .iter()
+                .map(|delta| delta as &(dyn ObjectDeltaOps + Sync)),
+        )
     }
 }
 
@@ -164,7 +178,7 @@ pub trait ObjectDeltaOps {
     async fn instruction_bytes(
         &self,
         ctx: &CoreContext,
-        blobstore: &impl Blobstore,
+        blobstore: &Arc<dyn Blobstore>,
         cs_id: ChangesetId,
         path: MPath,
     ) -> Result<Bytes>;
@@ -199,7 +213,7 @@ impl ObjectDeltaOps for ObjectDelta {
     async fn instruction_bytes(
         &self,
         ctx: &CoreContext,
-        blobstore: &impl Blobstore,
+        blobstore: &Arc<dyn Blobstore>,
         cs_id: ChangesetId,
         path: MPath,
     ) -> Result<Bytes> {
