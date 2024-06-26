@@ -5,12 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {MutAtom} from '../jotaiUtils';
-
 import App from '../App';
-import {Internal} from '../Internal';
-import {featureFlag} from '../featureFlags';
-import {writeAtom} from '../jotaiUtils';
 import platform from '../platform';
 import {CommitInfoTestUtils, CommitTreeListTestUtils, ignoreRTL} from '../testQueries';
 import {
@@ -23,7 +18,6 @@ import {
   simulateMessageFromServer,
   openCommitInfoSidebar,
   waitForWithTick,
-  getLastMessagesSentToServer,
 } from '../testUtils';
 import {CommandRunner, succeedableRevset} from '../types';
 import {fireEvent, render, screen, waitFor, within, act} from '@testing-library/react';
@@ -104,68 +98,6 @@ describe('CommitInfoView', () => {
         expect(withinCommitInfo().queryByText('Head Commit')).not.toBeInTheDocument();
       });
 
-      describe('split suggestions', () => {
-        beforeEach(() => {
-          act(() => {
-            simulateMessageFromServer({
-              type: 'repoInfo',
-              info: {
-                type: 'success',
-                command: 'sl',
-                repoRoot: '/path/to/testrepo',
-                dotdir: '/path/to/testrepo/.sl',
-                codeReviewSystem: {
-                  type: 'phabricator',
-                  repo: 'test',
-                },
-                pullRequestDomain: undefined,
-                preferredSubmitCommand: 'pr',
-              },
-            });
-            writeAtom(
-              featureFlag(Internal.featureFlags?.ShowSplitSuggestion) as MutAtom<boolean>,
-              true,
-            );
-            clickToSelectCommit('a');
-          });
-        });
-        it('shows split suggestion on commit over the threshold', async () => {
-          expectMessageSentToServer({
-            type: 'fetchSignificantLinesOfCode',
-            hash: 'a',
-            excludedFiles: [],
-          });
-
-          act(() => {
-            simulateMessageFromServer({
-              type: 'fetchedSignificantLinesOfCode',
-              hash: 'a',
-              linesOfCode: {value: 123},
-            });
-          });
-
-          expect(await screen.findByText(/Consider splitting up this commit/i)).toBeInTheDocument();
-        });
-
-        it('does not show split suggestions on commit under the threshold', async () => {
-          expectMessageSentToServer({
-            type: 'fetchSignificantLinesOfCode',
-            hash: 'a',
-            excludedFiles: [],
-          });
-
-          act(() => {
-            simulateMessageFromServer({
-              type: 'fetchedSignificantLinesOfCode',
-              hash: 'a',
-              linesOfCode: {value: 87},
-            });
-          });
-          expect(await screen.findByText(/87 lines/i)).toBeInTheDocument();
-          expect(screen.queryByText(/Consider splitting up this commit/i)).not.toBeInTheDocument();
-        });
-      });
-
       it('cannot select public commits', () => {
         clickToSelectCommit('1');
 
@@ -201,94 +133,6 @@ describe('CommitInfoView', () => {
       it('shows uncommitted changes for head commit', () => {
         expect(withinCommitInfo().queryByText(ignoreRTL('file1.js'))).toBeInTheDocument();
         expect(withinCommitInfo().queryByText(ignoreRTL('file2.js'))).toBeInTheDocument();
-      });
-
-      it('shows diff stats on uncommitted changes', async () => {
-        act(() => {
-          writeAtom(
-            featureFlag(Internal.featureFlags?.ShowSplitSuggestion) as MutAtom<boolean>,
-            true,
-          );
-        });
-
-        expectMessageSentToServer({
-          type: 'fetchPendingSignificantLinesOfCode',
-          hash: 'b',
-          includedFiles: ['src/file1.js', 'src/file2.js'],
-          requestId: expect.anything(),
-        });
-
-        const [json] = getLastMessagesSentToServer(2);
-        const msg = JSON.parse(json as string) as {requestId: number};
-        let {requestId} = msg;
-
-        act(() => {
-          simulateMessageFromServer({
-            type: 'fetchedPendingSignificantLinesOfCode',
-            requestId,
-            hash: 'b',
-            linesOfCode: {value: 123},
-          });
-        });
-        let diffStats = await withinCommitInfo().findByText(/123 lines/);
-        expect(diffStats).toBeInTheDocument();
-        fireEvent.click(withinCommitInfo().getByRole('checkbox', {name: /unselect src\/file1/i}));
-
-        requestId += 1;
-        expectMessageSentToServer({
-          type: 'fetchPendingSignificantLinesOfCode',
-          hash: 'b',
-          includedFiles: ['src/file2.js'],
-          requestId,
-        });
-        act(() => {
-          simulateMessageFromServer({
-            type: 'fetchedPendingSignificantLinesOfCode',
-            requestId,
-            hash: 'b',
-            linesOfCode: {value: 48},
-          });
-        });
-
-        diffStats = await withinCommitInfo().findByText(/48 lines/);
-        expect(diffStats).toBeInTheDocument();
-
-        //testing that quick and slow requests are handled correctly
-        fireEvent.click(withinCommitInfo().getByRole('checkbox', {name: /select src\/file1/i}));
-        fireEvent.click(withinCommitInfo().getByRole('checkbox', {name: /unselect src\/file1/i}));
-
-        const slowRequestId = requestId + 1;
-        expectMessageSentToServer({
-          type: 'fetchPendingSignificantLinesOfCode',
-          hash: 'b',
-          includedFiles: ['src/file1.js', 'src/file2.js'],
-          requestId: slowRequestId,
-        });
-
-        const fastRequestId = requestId + 2;
-        expectMessageSentToServer({
-          type: 'fetchPendingSignificantLinesOfCode',
-          hash: 'b',
-          includedFiles: ['src/file2.js'],
-          requestId: fastRequestId,
-        });
-        act(() => {
-          simulateMessageFromServer({
-            type: 'fetchedPendingSignificantLinesOfCode',
-            requestId: fastRequestId,
-            hash: 'b',
-            linesOfCode: {value: 55},
-          });
-          simulateMessageFromServer({
-            type: 'fetchedPendingSignificantLinesOfCode',
-            requestId: slowRequestId,
-            hash: 'b',
-            linesOfCode: {value: 66}, // the slow one should never be rendered
-          });
-        });
-
-        diffStats = await withinCommitInfo().findByText(/55 lines/);
-        expect(diffStats).toBeInTheDocument();
       });
 
       it('shows file actions on uncommitted changes in commit info view', () => {
