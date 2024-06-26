@@ -6,8 +6,10 @@
  */
 
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use async_trait::async_trait;
+use blobstore_factory::ReadOnlyStorage;
 use cached_config::ConfigStore;
 use context::CoreContext;
 use fbinit::FacebookInit;
@@ -15,8 +17,10 @@ use megarepo_configs::SyncConfigVersion;
 use megarepo_configs::SyncTargetConfig;
 use megarepo_configs::Target;
 use megarepo_error::MegarepoError;
+use metaconfig_types::RepoConfig;
 use slog::info;
 use slog::Logger;
+use sql_ext::facebook::MysqlOptions;
 
 mod paths;
 mod reader;
@@ -32,17 +36,25 @@ pub struct CfgrMononokeMegarepoConfigs {
 }
 
 impl CfgrMononokeMegarepoConfigs {
-    pub fn new(
+    pub async fn new(
         fb: FacebookInit,
         logger: &Logger,
+        mysql_options: MysqlOptions,
+        readonly_storage: ReadOnlyStorage,
         config_store: ConfigStore,
         test_write_path: Option<PathBuf>,
     ) -> Result<Self, MegarepoError> {
         info!(logger, "Creating a new CfgrMononokeMegarepoConfigs");
+
         let writer = if let Some(write_path) = test_write_path {
-            CfgrMononokeMegarepoConfigsWriter::new_test(write_path)?
+            CfgrMononokeMegarepoConfigsWriter::new_test(
+                fb,
+                mysql_options,
+                readonly_storage,
+                write_path,
+            )?
         } else {
-            CfgrMononokeMegarepoConfigsWriter::new(fb)?
+            CfgrMononokeMegarepoConfigsWriter::new(fb, mysql_options, readonly_storage)?
         };
         Ok(Self {
             reader: CfgrMononokeMegarepoConfigsReader::new(config_store)?,
@@ -76,8 +88,11 @@ impl MononokeMegarepoConfigs for CfgrMononokeMegarepoConfigs {
     async fn add_config_version(
         &self,
         ctx: CoreContext,
+        repo_config: Arc<RepoConfig>,
         config: SyncTargetConfig,
     ) -> Result<(), MegarepoError> {
-        self.writer.add_config_version(ctx, config).await
+        self.writer
+            .add_config_version(ctx, repo_config, config)
+            .await
     }
 }

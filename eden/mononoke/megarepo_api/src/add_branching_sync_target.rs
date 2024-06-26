@@ -12,6 +12,7 @@ use megarepo_config::MononokeMegarepoConfigs;
 use megarepo_config::SyncTargetConfig;
 use megarepo_config::Target;
 use megarepo_error::MegarepoError;
+use metaconfig_types::RepoConfigArc;
 use mononoke_api::Mononoke;
 use mononoke_types::ChangesetId;
 
@@ -50,10 +51,11 @@ impl<'a> AddBranchingSyncTarget<'a> {
         let repo = self
             .find_repo_by_id(ctx, sync_target_config.target.repo_id)
             .await?;
+        let repo_config = repo.repo().repo_config_arc();
         let bookmark = sync_target_config.target.bookmark.clone();
 
         self.megarepo_configs
-            .add_config_version(ctx.clone(), sync_target_config)
+            .add_config_version(ctx.clone(), repo_config, sync_target_config)
             .await?;
         self.create_bookmark(ctx, repo.inner_repo(), bookmark, branching_point)
             .await?;

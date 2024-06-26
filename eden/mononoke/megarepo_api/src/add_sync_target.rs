@@ -21,6 +21,7 @@ use megarepo_config::MononokeMegarepoConfigs;
 use megarepo_config::SyncTargetConfig;
 use megarepo_error::MegarepoError;
 use megarepo_mapping::SourceName;
+use metaconfig_types::RepoConfigArc;
 use mononoke_api::Mononoke;
 use mononoke_api::RepoContext;
 use mononoke_types::ChangesetId;
@@ -173,8 +174,9 @@ impl<'a> AddSyncTarget<'a> {
 
         scuba.log_with_msg("Derived data", None);
 
+        let repo_config = repo.repo().repo_config_arc();
         self.megarepo_configs
-            .add_config_version(ctx.clone(), sync_target_config.clone())
+            .add_config_version(ctx.clone(), repo_config, sync_target_config.clone())
             .await?;
 
         self.create_bookmark(

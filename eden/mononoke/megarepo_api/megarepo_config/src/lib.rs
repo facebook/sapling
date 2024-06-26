@@ -9,6 +9,7 @@
 
 use std::path::Path;
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use async_trait::async_trait;
 use clap::ArgAction;
@@ -35,6 +36,7 @@ mod verification;
 
 #[cfg(fbcode_build)]
 pub use facebook::CfgrMononokeMegarepoConfigs;
+use metaconfig_types::RepoConfig;
 #[cfg(not(fbcode_build))]
 pub use oss::CfgrMononokeMegarepoConfigs;
 pub use test_impl::TestMononokeMegarepoConfigs;
@@ -109,6 +111,7 @@ pub trait MononokeMegarepoConfigs: Send + Sync {
     async fn add_config_version(
         &self,
         ctx: CoreContext,
+        repo_config: Arc<RepoConfig>,
         config: SyncTargetConfig,
     ) -> Result<(), MegarepoError>;
 }

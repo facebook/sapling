@@ -10,6 +10,7 @@ license = "GPLv2+"
 [dependencies]
 anyhow = "1.0.75"
 async-trait = "0.1.71"
+blobstore_factory = { version = "0.1.0", path = "../../blobstore/factory" }
 bookmarks = { version = "0.1.0", path = "../../bookmarks" }
 cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 clap = { version = "4.5.6", features = ["derive", "env", "string", "unicode", "wrap_help"] }
@@ -20,9 +21,11 @@ faster-hex = "0.6.1"
 fbinit = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
+futures_watchdog = { version = "0.1.0", path = "../../common/futures_watchdog" }
 maplit = "1.0"
 megarepo_configs = { version = "0.1.0", path = "../../../../configerator/structs/scm/mononoke/megarepo" }
 megarepo_error = { version = "0.1.0", path = "../megarepo_error" }
+metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 sha1 = "0.10.5"
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }

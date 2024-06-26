@@ -154,20 +154,28 @@ impl MegarepoApi {
 
         let megarepo_configs: Arc<dyn MononokeMegarepoConfigs> = match &env.megarepo_configs_options
         {
-            MononokeMegarepoConfigsOptions::Prod => Arc::new(CfgrMononokeMegarepoConfigs::new(
-                fb,
-                &logger,
-                env.config_store.clone(),
-                None,
-            )?),
-            MononokeMegarepoConfigsOptions::IntegrationTest(path) => {
-                Arc::new(CfgrMononokeMegarepoConfigs::new(
+            MononokeMegarepoConfigsOptions::Prod => Arc::new(
+                CfgrMononokeMegarepoConfigs::new(
                     fb,
                     &logger,
+                    env.mysql_options.clone(),
+                    env.readonly_storage,
+                    env.config_store.clone(),
+                    None,
+                )
+                .await?,
+            ),
+            MononokeMegarepoConfigsOptions::IntegrationTest(path) => Arc::new(
+                CfgrMononokeMegarepoConfigs::new(
+                    fb,
+                    &logger,
+                    env.mysql_options.clone(),
+                    env.readonly_storage,
                     env.config_store.clone(),
                     Some(path.clone()),
-                )?)
-            }
+                )
+                .await?,
+            ),
             MononokeMegarepoConfigsOptions::UnitTest => {
                 Arc::new(TestMononokeMegarepoConfigs::new(&logger))
             }

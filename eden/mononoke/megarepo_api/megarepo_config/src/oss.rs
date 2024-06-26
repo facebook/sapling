@@ -6,8 +6,10 @@
  */
 
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use async_trait::async_trait;
+use blobstore_factory::ReadOnlyStorage;
 use cached_config::ConfigStore;
 use context::CoreContext;
 use fbinit::FacebookInit;
@@ -15,8 +17,10 @@ use megarepo_configs::SyncConfigVersion;
 use megarepo_configs::SyncTargetConfig;
 use megarepo_configs::Target;
 use megarepo_error::MegarepoError;
+use metaconfig_types::RepoConfig;
 use slog::warn;
 use slog::Logger;
+use sql_ext::facebook::MysqlOptions;
 
 use crate::MononokeMegarepoConfigs;
 
@@ -28,9 +32,11 @@ use crate::MononokeMegarepoConfigs;
 pub struct CfgrMononokeMegarepoConfigs;
 
 impl CfgrMononokeMegarepoConfigs {
-    pub fn new(
+    pub async fn new(
         _fb: FacebookInit,
         logger: &Logger,
+        _mysql_options: MysqlOptions,
+        _readonly_storage: ReadOnlyStorage,
         _config_store: ConfigStore,
         _test_write_path: Option<PathBuf>,
     ) -> Result<Self, MegarepoError> {
@@ -67,6 +73,7 @@ impl MononokeMegarepoConfigs for CfgrMononokeMegarepoConfigs {
     async fn add_config_version(
         &self,
         _ctx: CoreContext,
+        _repo_config: Arc<RepoConfig>,
         _config: SyncTargetConfig,
     ) -> Result<(), MegarepoError> {
         unimplemented!("OSS CfgrMononokeMegarepoConfigs::add_config_version")

@@ -13,9 +13,10 @@ use megarepo_configs::Source;
 use megarepo_configs::SyncConfigVersion;
 use mononoke_types::RepositoryId;
 
-mod store;
+pub mod store;
 mod types;
 
+pub use crate::db::store::SqlMegarepoSyncConfig;
 pub use crate::db::types::MegarepoSyncConfigEntry;
 pub use crate::db::types::RowId;
 
