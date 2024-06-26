@@ -46,6 +46,7 @@ mononoke_app::subcommands! {
     mod hg_sync;
     mod list_repos;
     mod locking;
+    mod megarepo;
     mod mutable_counters;
     mod mutable_renames;
     mod redaction;

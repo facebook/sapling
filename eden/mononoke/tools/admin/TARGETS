@@ -39,6 +39,7 @@ rust_binary(
     ],
     deps = [
         "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:async-recursion",
         "fbsource//third-party/rust:async-stream",
         "fbsource//third-party/rust:async-trait",
         "fbsource//third-party/rust:bytes",
@@ -112,6 +113,7 @@ rust_binary(
         "//eden/mononoke/manifest:manifest",
         "//eden/mononoke/megarepo_api:async_requests",
         "//eden/mononoke/megarepo_api:megarepo_api",
+        "//eden/mononoke/megarepo_api:megarepo_config",
         "//eden/mononoke/megarepo_api:megarepo_error",
         "//eden/mononoke/mercurial:mercurial_types",
         "//eden/mononoke/metaconfig:metaconfig_types",
