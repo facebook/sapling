@@ -1058,15 +1058,26 @@ async fn packfile_stream_from_objects<'a>(
                             }
                             None => {
                                 // Use the full object instead
-                                base_packfile_item(
-                                    ctx.clone(),
-                                    blobstore.clone(),
-                                    ObjectIdentifierType::AllObjects(GitIdentifier::Rich(
-                                        entry.full_object_rich_git_sha1()?,
-                                    )),
-                                    packfile_item_inclusion,
-                                )
-                                .await
+                                if let Some(inlined_bytes) =
+                                    entry.full_object_inlined_bytes()
+                                {
+                                    PackfileItem::new_base(inlined_bytes).with_context(|| {
+                                        format!(
+                                            "Error in creating packfile item from git object bytes for {:?}",
+                                            entry.full_object_oid(),
+                                        )
+                                    })
+                                } else {
+                                    base_packfile_item(
+                                        ctx.clone(),
+                                        blobstore.clone(),
+                                        ObjectIdentifierType::AllObjects(GitIdentifier::Rich(
+                                            entry.full_object_rich_git_sha1()?,
+                                        )),
+                                        packfile_item_inclusion,
+                                    )
+                                    .await
+                                }
                             }
                         }
                     };
