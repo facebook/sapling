@@ -991,6 +991,12 @@ scuba_local_path="$SCUBA_LOGGING_PATH"
 CONFIG
 fi
 
+if [[ -n "${HOOKS_SCUBA_LOGGING_PATH:-}" ]]; then
+  cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
+scuba_table_hooks="file://$HOOKS_SCUBA_LOGGING_PATH"
+CONFIG
+fi
+
 if [[ -n "${ENFORCE_LFS_ACL_CHECK:-}" ]]; then
   cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
 enforce_lfs_acl_check=true
@@ -1855,7 +1861,7 @@ EOF
 
 # Does all the setup necessary for hook tests
 function hook_test_setup() {
-  setup_mononoke_config
+  HOOKS_SCUBA_LOGGING_PATH="$TESTTMP/hooks-scuba.json" setup_mononoke_config
   cd "$TESTTMP/mononoke-config" || exit 1
 
   reponame_urlencoded="$(urlencode encode "$REPONAME")"

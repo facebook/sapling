@@ -258,6 +258,7 @@ impl HookManager {
                 scuba,
                 cross_repo_push_source,
                 push_authored_by,
+                hook.get_config().log_only,
             ) {
                 futs.push(future);
             }
@@ -322,8 +323,9 @@ impl<'a> HookInstance<'a> {
         cs_id: ChangesetId,
         cross_repo_push_source: CrossRepoPushSource,
         push_authored_by: PushAuthoredBy,
+        log_only: bool,
     ) -> Result<HookOutcome, Error> {
-        let (stats, result) = match self {
+        let (stats, mut result) = match self {
             Self::Changeset(hook) => {
                 hook.run(
                     ctx,
@@ -373,14 +375,21 @@ impl<'a> HookInstance<'a> {
         let mut failed_hooks = 0;
         let mut stderr = None;
 
-        match result.as_ref().map(HookOutcome::get_execution) {
-            Ok(HookExecution::Accepted) => {
-                // Nothing to do
-            }
-            Ok(HookExecution::Rejected(info)) => {
-                failed_hooks = 1;
-                stderr = Some(info.long_description.clone());
-            }
+        match result.as_mut() {
+            Ok(outcome) => match outcome.get_execution() {
+                HookExecution::Accepted => {
+                    // Nothing to do
+                }
+                HookExecution::Rejected(info) if log_only => {
+                    scuba.add("log_only_rejection", info.long_description.clone());
+                    // Convert to accepted as we are only logging.
+                    outcome.set_execution(HookExecution::Accepted);
+                }
+                HookExecution::Rejected(info) => {
+                    failed_hooks = 1;
+                    stderr = Some(info.long_description.clone());
+                }
+            },
             Err(e) => {
                 errorcode = 1;
                 stderr = Some(format!("{:?}", e));
@@ -429,6 +438,7 @@ impl Hook {
         scuba: MononokeScubaSampleBuilder,
         cross_repo_push_source: CrossRepoPushSource,
         push_authored_by: PushAuthoredBy,
+        log_only: bool,
     ) -> impl Iterator<Item = impl Future<Output = Result<HookOutcome, Error>> + 'cs> + 'cs {
         let mut futures = Vec::new();
 
@@ -445,6 +455,7 @@ impl Hook {
                 cs_id,
                 cross_repo_push_source,
                 push_authored_by,
+                log_only,
             )),
             Self::File(hook, _) => {
                 futures.extend(cs.simplified_file_changes().map(move |(path, change)| {
@@ -458,6 +469,7 @@ impl Hook {
                         cs_id,
                         cross_repo_push_source,
                         push_authored_by,
+                        log_only,
                     )
                 }))
             }

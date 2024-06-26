@@ -170,6 +170,13 @@ impl HookOutcome {
         }
     }
 
+    pub fn set_execution(&mut self, new_exec: HookExecution) {
+        match self {
+            HookOutcome::ChangesetHook(_, exec) => *exec = new_exec,
+            HookOutcome::FileHook(_, exec) => *exec = new_exec,
+        }
+    }
+
     pub fn into_rejection(self) -> Option<HookRejection> {
         match self {
             HookOutcome::ChangesetHook(_, HookExecution::Accepted)

@@ -160,6 +160,7 @@ impl Convert for RawHookConfig {
         let config = HookConfig {
             bypass,
             options: self.config_json,
+            log_only: self.log_only.unwrap_or_default(),
             strings: self.config_strings.unwrap_or_default(),
             ints: self.config_ints.unwrap_or_default(),
             ints_64: self.config_ints_64.unwrap_or_default(),

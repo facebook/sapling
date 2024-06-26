@@ -854,6 +854,7 @@ mod test {
             [[hooks]]
             name="hook2a"
             implementation="hook2"
+            log_only=true
             config_ints={ int1 = 44 }
             config_ints_64={ int2 = 42 }
             [hooks.config_string_lists]
@@ -1167,6 +1168,7 @@ mod test {
                         config: HookConfig {
                             bypass: Some(HookBypass::new_with_commit_msg("@allow_hook1".into())),
                             options: Some(r#"{"test": "abcde"}"#.to_string()),
+                            log_only: false,
                             strings: hashmap! {},
                             ints: hashmap! {},
                             ints_64: hashmap! {},
@@ -1181,6 +1183,7 @@ mod test {
                         config: HookConfig {
                             bypass: None,
                             options: None,
+                            log_only: true,
                             strings: hashmap! {},
                             ints: hashmap! {
                                 "int1".into() => 44,

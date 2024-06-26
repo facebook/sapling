@@ -638,6 +638,8 @@ pub struct HookConfig {
     pub bypass: Option<HookBypass>,
     /// Configuration options (in JSON format)
     pub options: Option<String>,
+    /// Whether this hook is log-only
+    pub log_only: bool,
 
     // Deprecated config options
     /// Map of config to it's value. Values here are strings
