@@ -37,6 +37,21 @@ EOF
     wait_for_mononoke
 }
 
+function empty_snapshot_repo_setup {
+    ENABLE_API_WRITES=true INFINITEPUSH_ALLOW_WRITES=true setup_common_config
+    cd "$TESTTMP"
+    cat >> "$HGRCPATH" <<EOF
+[extensions]
+snapshot =
+commitcloud =
+infinitepush =
+amend =
+EOF
+
+    hginit_treemanifest repo
+    cd repo
+}
+
 function base_commit_and_snapshot {
     export BASE_SNAPSHOT_COMMIT
     export BASE_SNAPSHOT
