@@ -80,7 +80,7 @@ impl GitDeltaManifestV2 {
         blobstore: &'a impl Blobstore,
     ) -> BoxStream<'a, Result<(MPath, GDMV2Entry)>> {
         self.entries
-            .into_entries(ctx, blobstore)
+            .into_entries_unordered(ctx, blobstore, 200)
             .and_then(|(bytes, entry)| async move {
                 let path = MPath::from_null_separated_bytes(bytes.to_vec())?;
                 anyhow::Ok((path, entry))
