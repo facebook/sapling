@@ -104,6 +104,68 @@ describe('CommitInfoView', () => {
         expect(withinCommitInfo().queryByText('Head Commit')).not.toBeInTheDocument();
       });
 
+      describe('split suggestions', () => {
+        beforeEach(() => {
+          act(() => {
+            simulateMessageFromServer({
+              type: 'repoInfo',
+              info: {
+                type: 'success',
+                command: 'sl',
+                repoRoot: '/path/to/testrepo',
+                dotdir: '/path/to/testrepo/.sl',
+                codeReviewSystem: {
+                  type: 'phabricator',
+                  repo: 'test',
+                },
+                pullRequestDomain: undefined,
+                preferredSubmitCommand: 'pr',
+              },
+            });
+            writeAtom(
+              featureFlag(Internal.featureFlags?.ShowSplitSuggestion) as MutAtom<boolean>,
+              true,
+            );
+            clickToSelectCommit('a');
+          });
+        });
+        it('shows split suggestion on commit over the threshold', async () => {
+          expectMessageSentToServer({
+            type: 'fetchSignificantLinesOfCode',
+            hash: 'a',
+            excludedFiles: [],
+          });
+
+          act(() => {
+            simulateMessageFromServer({
+              type: 'fetchedSignificantLinesOfCode',
+              hash: 'a',
+              linesOfCode: {value: 123},
+            });
+          });
+
+          expect(await screen.findByText(/Consider splitting up this commit/i)).toBeInTheDocument();
+        });
+
+        it('does not show split suggestions on commit under the threshold', async () => {
+          expectMessageSentToServer({
+            type: 'fetchSignificantLinesOfCode',
+            hash: 'a',
+            excludedFiles: [],
+          });
+
+          act(() => {
+            simulateMessageFromServer({
+              type: 'fetchedSignificantLinesOfCode',
+              hash: 'a',
+              linesOfCode: {value: 87},
+            });
+          });
+          expect(await screen.findByText(/87 lines/i)).toBeInTheDocument();
+          expect(screen.queryByText(/Consider splitting up this commit/i)).not.toBeInTheDocument();
+        });
+      });
+
       it('cannot select public commits', () => {
         clickToSelectCommit('1');
 
