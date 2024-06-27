@@ -138,7 +138,7 @@ class EdenApiService(baseservice.BaseService):
                 "clientinfo": None,
             }
         )
-        newversion = response["version"]
+        newversion = self._getversionfromdata(response)
 
         self.ui.debug(
             "'update_references' accepted update, old version is %d, new version is %d\n"
