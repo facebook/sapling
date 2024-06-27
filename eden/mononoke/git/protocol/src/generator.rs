@@ -57,6 +57,7 @@ use metaconfig_types::RepoConfigRef;
 use mononoke_types::hash::GitSha1;
 use mononoke_types::path::MPath;
 use mononoke_types::ChangesetId;
+use packfile::types::GitPackfileBaseItem;
 use packfile::types::PackfileItem;
 use repo_blobstore::ArcRepoBlobstore;
 use repo_blobstore::RepoBlobstore;
@@ -1042,14 +1043,16 @@ async fn packfile_item_for_delta_manifest_entry(
         None => {
             // Use the full object instead
             if let Some(inlined_bytes) = entry.full_object_inlined_bytes() {
-                Ok(Some(PackfileItem::new_base(inlined_bytes).with_context(
-                    || {
-                        format!(
-                            "Error in creating packfile item from git object bytes for {:?}",
-                            entry.full_object_oid(),
-                        )
-                    },
-                )?))
+                Ok(Some(PackfileItem::new_encoded_base(
+                    GitPackfileBaseItem::from_encoded_bytes(inlined_bytes)
+                        .with_context(|| {
+                            format!(
+                                "Error in creating GitPackfileBaseItem from encoded bytes for {:?}",
+                                entry.full_object_oid(),
+                            )
+                        })?
+                        .try_into()?,
+                )))
             } else {
                 Ok(Some(
                     base_packfile_item(
@@ -1215,12 +1218,16 @@ async fn packfile_stream_from_objects<'a>(
                                 if let Some(inlined_bytes) =
                                     entry.full_object_inlined_bytes()
                                 {
-                                    PackfileItem::new_base(inlined_bytes).with_context(|| {
-                                        format!(
-                                            "Error in creating packfile item from git object bytes for {:?}",
-                                            entry.full_object_oid(),
-                                        )
-                                    })
+                                    Ok(PackfileItem::new_encoded_base(
+                                        GitPackfileBaseItem::from_encoded_bytes(inlined_bytes)
+                                            .with_context(|| {
+                                                format!(
+                                                    "Error in creating GitPackfileBaseItem from encoded bytes for {:?}",
+                                                    entry.full_object_oid(),
+                                                )
+                                            })?
+                                            .try_into()?,
+                                    ))
                                 } else {
                                     base_packfile_item(
                                         ctx.clone(),
