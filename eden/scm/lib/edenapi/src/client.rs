@@ -1676,6 +1676,11 @@ impl SaplingRemoteApi for Client {
         &self,
         data: GetReferencesParams,
     ) -> Result<ReferencesDataResponse, SaplingRemoteApiError> {
+        tracing::info!(
+            "Requesting cloud references for the workspace '{}' in the repo '{}' ",
+            data.workspace,
+            data.reponame
+        );
         let url = self.build_url(paths::CLOUD_REFERENCES)?;
         let request = self
             .configure_request(self.inner.client.post(url))?
@@ -1689,6 +1694,11 @@ impl SaplingRemoteApi for Client {
         &self,
         data: UpdateReferencesParams,
     ) -> Result<ReferencesDataResponse, SaplingRemoteApiError> {
+        tracing::info!(
+            "Requesting update cloud references for the workspace '{}' in the repo '{}'",
+            data.workspace,
+            data.reponame
+        );
         let url = self.build_url(paths::CLOUD_UPDATE_REFERENCES)?;
         let request = self
             .configure_request(self.inner.client.post(url))?
