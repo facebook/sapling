@@ -131,8 +131,12 @@ class EdenApiService(baseservice.BaseService):
                 "new_heads": newheads,
                 "removed_bookmarks": oldbookmarks,
                 "updated_bookmarks": newbookmarks,
-                "removed_remote_bookmarks": oldremotebookmarks,
-                "updated_remote_bookmarks": newremotebookmarks,
+                "removed_remote_bookmarks": self._makeremotebookmarks(
+                    oldremotebookmarks
+                ),
+                "updated_remote_bookmarks": self._makeremotebookmarks(
+                    newremotebookmarks
+                ),
                 "new_snapshots": [],
                 "removed_snapshots": [],
                 "clientinfo": None,
