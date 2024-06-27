@@ -5,7 +5,9 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::VecDeque;
 use std::sync::Arc;
+use std::task::Poll;
 
 use anyhow::anyhow;
 use anyhow::Context;
@@ -30,6 +32,7 @@ use futures::future;
 use futures::future::Either;
 use futures::stream;
 use futures::stream::BoxStream;
+use futures::stream::FuturesOrdered;
 use futures::StreamExt as _;
 use futures::TryStreamExt;
 use git_symbolic_refs::GitSymbolicRefsRef;
@@ -475,7 +478,7 @@ fn delta_base(
     }
 }
 
-fn delta_weight(
+fn entry_weight(
     entry: &(dyn GitDeltaManifestEntryOps + Send),
     delta_inclusion: DeltaInclusion,
     filter: Arc<Option<FetchFilter>>,
@@ -949,16 +952,14 @@ async fn base_packfile_item(
     }
 }
 
-/// Fetch the stream of blob and tree objects as delta manifest entries for the given changeset
-async fn tree_and_blob_packfile_items(
+/// Fetch the delta manifest entries for the given changeset
+async fn changeset_delta_manifest_entries(
     ctx: Arc<CoreContext>,
     blobstore: ArcRepoBlobstore,
     derived_data: ArcRepoDerivedData,
     git_delta_manifest_version: GitDeltaManifestVersion,
     changeset_id: ChangesetId,
-) -> Result<
-    BoxStream<'static, Result<(ChangesetId, MPath, Box<dyn GitDeltaManifestEntryOps + Send>)>>,
-> {
+) -> Result<Vec<(ChangesetId, MPath, Box<dyn GitDeltaManifestEntryOps + Send>)>> {
     let delta_manifest = fetch_git_delta_manifest(
         &ctx,
         &derived_data,
@@ -970,12 +971,11 @@ async fn tree_and_blob_packfile_items(
     // Most delta manifests would contain tens of entries. These entries are just metadata and
     // not the actual object so its safe to load them all into memory instead of chaining streams
     // which significantly slows down the entire process.
-    let entries = delta_manifest
+    delta_manifest
         .into_entries(&ctx, &blobstore.boxed())
         .map_ok(|(path, entry)| (changeset_id, path, entry))
         .try_collect::<Vec<_>>()
-        .await?;
-    Ok(stream::iter(entries.into_iter().map(Ok)).boxed())
+        .await
 }
 
 async fn boundary_stream(
@@ -994,6 +994,160 @@ async fn boundary_stream(
             Ok((cs_id, path, delta_manifest_entry))
         });
     Ok(stream::iter(objects).boxed())
+}
+
+/// Fetch the packfile item for the given delta manifest entry
+async fn packfile_item_for_delta_manifest_entry(
+    fetch_container: FetchContainer,
+    base_set: Arc<FxHashSet<ObjectId>>,
+    cs_id: ChangesetId,
+    path: MPath,
+    entry: Box<dyn GitDeltaManifestEntryOps + Send>,
+) -> Result<Option<PackfileItem>> {
+    let FetchContainer {
+        ctx,
+        blobstore,
+        delta_inclusion,
+        filter,
+        packfile_item_inclusion,
+        ..
+    } = fetch_container;
+
+    let object_id = entry.full_object_oid();
+    let (kind, size) = (entry.full_object_kind(), entry.full_object_size());
+    if base_set.contains(&object_id) {
+        // This object is already present at the client, so do not include it in the packfile
+        return Ok(None);
+    }
+    if !filter_object(filter.clone(), &path, kind, size) {
+        // This object does not pass the filter specified by the client, so do not include it in the packfile
+        return Ok(None);
+    }
+
+    let delta = delta_base(entry.as_ref(), delta_inclusion, filter);
+    match delta {
+        Some(delta) => {
+            let instruction_bytes = delta
+                .instruction_bytes(&ctx, &blobstore.boxed(), cs_id, path)
+                .await?;
+
+            let packfile_item = PackfileItem::new_delta(
+                entry.full_object_oid(),
+                delta.base_object_oid(),
+                delta.instructions_uncompressed_size(),
+                instruction_bytes,
+            );
+            Ok(Some(packfile_item))
+        }
+        None => {
+            // Use the full object instead
+            if let Some(inlined_bytes) = entry.full_object_inlined_bytes() {
+                Ok(Some(PackfileItem::new_base(inlined_bytes).with_context(
+                    || {
+                        format!(
+                            "Error in creating packfile item from git object bytes for {:?}",
+                            entry.full_object_oid(),
+                        )
+                    },
+                )?))
+            } else {
+                Ok(Some(
+                    base_packfile_item(
+                        ctx.clone(),
+                        blobstore.clone(),
+                        ObjectIdentifierType::AllObjects(GitIdentifier::Rich(
+                            entry.full_object_rich_git_sha1()?,
+                        )),
+                        packfile_item_inclusion,
+                    )
+                    .await?,
+                ))
+            }
+        }
+    }
+}
+
+/// Creates a stream of packfile items for the given changesets
+fn packfile_stream_from_changesets<'a>(
+    fetch_container: FetchContainer,
+    base_set: Arc<FxHashSet<ObjectId>>,
+    cs_ids: Vec<ChangesetId>,
+) -> BoxStream<'a, Result<PackfileItem>> {
+    let FetchContainer {
+        ctx,
+        blobstore,
+        derived_data,
+        concurrency,
+        ..
+    } = fetch_container.clone();
+
+    // Finding the packfiles items for each commit requires calling two functions:
+    // 1) changeset_delta_manifest_entries: ChangesetId -> Vec<(ChangesetId, MPath, dyn GitDeltaManifestEntry)>
+    // 2) packfile_item_for_delta_manifest_entry: (ChangesetId, MPath, dyn GitDeltaManifestEntry) -> Option<PackfileItem>
+    //
+    // Because changeset_delta_manifest_entries returns multiple entries, creating a stream that chains these two functions using stream
+    // combinators is not trivial, at least not without chaining multiple calls to `buffered` which is problematic because when the second
+    // layer of buffering is full the first layer of buffering doesn't get polled until a future in the second layer completes.
+    //
+    // The implementation below is almost equivalent to using two layers of `buffered`, except that each time we poll the stream
+    // we always poll the first layer (delta_manifest_entries_futures). Storing any completed future output in a `VecDeque`
+    // buffer (delta_manifest_entries_buffer).
+
+    let mut cs_ids = cs_ids.into_iter().collect::<VecDeque<_>>();
+    let mut delta_manifest_entries_buffer = VecDeque::new();
+    let mut delta_manifest_entries_futures = FuturesOrdered::new();
+    let mut packfile_items_futures = FuturesOrdered::new();
+
+    stream::poll_fn(move |cx| {
+        if cs_ids.is_empty()
+            && delta_manifest_entries_futures.is_empty()
+            && delta_manifest_entries_buffer.is_empty()
+            && packfile_items_futures.is_empty()
+        {
+            return Poll::Ready(None);
+        }
+
+        while delta_manifest_entries_futures.len() + delta_manifest_entries_buffer.len()
+            < 2 * concurrency.trees_and_blobs
+        {
+            if let Some(cs_id) = cs_ids.pop_front() {
+                delta_manifest_entries_futures.push_back(changeset_delta_manifest_entries(
+                    ctx.clone(),
+                    blobstore.clone(),
+                    derived_data.clone(),
+                    fetch_container.git_delta_manifest_version,
+                    cs_id,
+                ));
+            } else {
+                break;
+            }
+        }
+
+        while let Poll::Ready(Some(entries)) = delta_manifest_entries_futures.poll_next_unpin(cx) {
+            let entries = entries?;
+            for entry in entries {
+                delta_manifest_entries_buffer.push_back(entry);
+            }
+        }
+
+        while packfile_items_futures.len() < concurrency.trees_and_blobs {
+            if let Some((cs_id, path, entry)) = delta_manifest_entries_buffer.pop_front() {
+                packfile_items_futures.push_back(packfile_item_for_delta_manifest_entry(
+                    fetch_container.clone(),
+                    base_set.clone(),
+                    cs_id,
+                    path,
+                    entry,
+                ));
+            } else {
+                break;
+            }
+        }
+
+        packfile_items_futures.poll_next_unpin(cx)
+    })
+    .try_filter_map(futures::future::ok)
+    .boxed()
 }
 
 async fn packfile_stream_from_objects<'a>(
@@ -1039,7 +1193,7 @@ async fn packfile_stream_from_objects<'a>(
                 Err(err) => (0, Either::Left(future::err(err))),
                 std::result::Result::Ok((changeset_id, path, entry)) => {
                     cloned!(ctx, blobstore, delta_filter as filter);
-                    let weight = delta_weight(entry.as_ref(), delta_inclusion, filter.clone());
+                    let weight = entry_weight(entry.as_ref(), delta_inclusion, filter.clone());
                     let fetch_future = async move {
                         let delta = delta_base(entry.as_ref(), delta_inclusion, filter);
                         match delta {
@@ -1093,7 +1247,7 @@ async fn packfile_stream_from_objects<'a>(
 /// In case the packfile item can be represented as a delta, then use the detla variant instead of the raw object
 async fn tree_and_blob_packfile_stream<'a>(
     fetch_container: FetchContainer,
-    target_commits: BoxStream<'a, Result<ChangesetId>>,
+    target_commits: Vec<ChangesetId>,
     base_set: Arc<FxHashSet<ObjectId>>,
     tree_and_blob_shas: Vec<ObjectId>,
 ) -> Result<BoxStream<'a, Result<PackfileItem>>> {
@@ -1107,42 +1261,69 @@ async fn tree_and_blob_packfile_stream<'a>(
         packfile_item_inclusion,
         ..
     } = fetch_container.clone();
-    let (spare_blobstore, spare_ctx) = (blobstore.clone(), ctx.clone());
-    let packfile_item_stream = target_commits
-        .map_ok(move |changeset_id| {
-            let blobstore = blobstore.clone();
-            let derived_data = derived_data.clone();
-            let ctx = ctx.clone();
-            tree_and_blob_packfile_items(
-                ctx,
-                blobstore,
-                derived_data,
-                fetch_container.git_delta_manifest_version,
-                changeset_id,
-            )
+
+    let boundary_packfile_item_stream = boundary_stream(fetch_container.clone())
+        .await?
+        .map_ok({
+            cloned!(fetch_container, base_set);
+            move |(changeset_id, path, entry)| {
+                cloned!(fetch_container, base_set);
+                async move {
+                    packfile_item_for_delta_manifest_entry(
+                        fetch_container,
+                        base_set,
+                        changeset_id,
+                        path,
+                        entry,
+                    )
+                    .await
+                }
+            }
         })
-        .try_buffered(concurrency.trees_and_blobs * 2)
-        .try_flatten()
+        .try_buffered(concurrency.trees_and_blobs)
+        .try_filter_map(futures::future::ok)
         .boxed();
 
-    let boundary_packfile_item_stream = packfile_stream_from_objects(
-        fetch_container.clone(),
-        base_set.clone(),
-        boundary_stream(fetch_container.clone()).await?,
-    )
-    .await;
-
-    let packfile_item_stream = packfile_stream_from_objects(
-        fetch_container.clone(),
-        base_set.clone(),
-        packfile_item_stream,
-    )
-    .await;
+    let packfile_item_stream =
+        if justknobs::eval("scm/mononoke:use_optimized_git_packfile_stream", None, None)? {
+            packfile_stream_from_changesets(fetch_container, base_set, target_commits)
+        } else {
+            let packfile_item_stream = stream::iter(target_commits)
+                .map(Ok)
+                .map_ok({
+                    cloned!(ctx, blobstore, derived_data);
+                    move |changeset_id| {
+                        cloned!(ctx, blobstore, derived_data);
+                        async move {
+                            Ok(stream::iter(
+                                changeset_delta_manifest_entries(
+                                    ctx,
+                                    blobstore,
+                                    derived_data,
+                                    fetch_container.git_delta_manifest_version,
+                                    changeset_id,
+                                )
+                                .await?,
+                            )
+                            .map(Ok))
+                        }
+                    }
+                })
+                .try_buffered(concurrency.trees_and_blobs * 2)
+                .try_flatten()
+                .boxed();
+            packfile_stream_from_objects(
+                fetch_container.clone(),
+                base_set.clone(),
+                packfile_item_stream,
+            )
+            .await
+            .boxed()
+        };
 
     let requested_trees_and_blobs = stream::iter(tree_and_blob_shas.into_iter().map(Ok))
         .map_ok(move |oid| {
-            let blobstore = spare_blobstore.clone();
-            let ctx = spare_ctx.clone();
+            cloned!(ctx, blobstore);
             async move {
                 base_packfile_item(
                     ctx,
@@ -1412,7 +1593,7 @@ pub async fn generate_pack_item_stream<'a>(
     // we have already counted these items as part of object count.
     let tree_and_blob_stream = tree_and_blob_packfile_stream(
         fetch_container.clone(),
-        to_commit_stream(target_commits.clone()),
+        target_commits.clone(),
         Arc::new(base_set),
         vec![],
     )
@@ -1532,7 +1713,7 @@ pub async fn fetch_response<'a>(
         translated_sha_heads.non_tag_non_commit_oids.len();
     let tree_and_blob_stream = tree_and_blob_packfile_stream(
         fetch_container.clone(),
-        to_commit_stream(target_commits.clone()),
+        target_commits.clone(),
         Arc::new(base_set),
         translated_sha_heads.non_tag_non_commit_oids,
     )
