@@ -1,32 +1,8 @@
 load("@fbcode//eden:defs.bzl", "get_dev_edenfsctl_env", "get_oss_suffix")
-load("@fbcode_macros//build_defs:native_rules.bzl", "buck_command_alias", "buck_genrule")
-load("@fbcode_macros//build_defs:python_binary.bzl", "python_binary")
+load("@fbcode_macros//build_defs:native_rules.bzl", "buck_command_alias")
 load("@fbcode_macros//build_defs:rust_binary.bzl", "rust_binary")
-load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
 
 oncall("scm_client_infra")
-
-python_binary(
-    name = "gen_wrapper_location",
-    srcs = ["facebook/gen_wrapper_location.py"],
-    main_function = "eden.fs.cli_rs.facebook.gen_wrapper_location.main_2",
-)
-
-buck_genrule(
-    name = "gen_wrapper_location-path.rs",
-    out = "path.rs",
-    cmd = "$(exe :gen_wrapper_location) \"$OUT\" \"$(exe_target //eden/fs/cli_rs/edenfsctl:edenfsctl)\" \"$(exe_target //eden/fs/cli:edenfsctl)\"",
-)
-
-rust_library(
-    name = "wrapper_location",
-    autocargo = {
-        "ignore_rule": True,
-    },
-    mapped_srcs = {
-        ":gen_wrapper_location-path.rs": "lib.rs",
-    },
-)
 
 rust_binary(
     name = "edenfsctl-wrapper",
@@ -35,7 +11,13 @@ rust_binary(
         "ignore_rule": True,
     },
     crate_root = "facebook/edenfsctl.rs",
-    deps = [":wrapper_location"],
+    resources = {
+        "edenfsctl": "//eden/fs/cli_rs/edenfsctl:edenfsctl",
+        "edenfsctl_python": "//eden/fs/cli:edenfsctl",
+    },
+    deps = [
+        "//common/rust/buck_resources:buck_resources",
+    ],
 )
 
 rust_binary(
@@ -49,8 +31,12 @@ rust_binary(
         "ovr_config//os:macos",
     ],
     crate_root = "facebook/edenfsctl.rs",
+    resources = {
+        "edenfsctl": "//eden/fs/cli_rs/edenfsctl:edenfsctl",
+        "edenfsctl_python": "//eden/fs/cli:edenfsctl",
+    },
     deps = [
-        ":wrapper_location",
+        "//common/rust/buck_resources:buck_resources",
         "//eden/fs/privhelper:privhelper",
     ],
 )
@@ -63,23 +49,14 @@ rust_binary(
 # EDENFS_PRIVHELPER_PATH environment variable.
 buck_command_alias(
     name = "edenfsctl-run",
-    env = get_dev_edenfsctl_env({
-        # Add those so that they get materialized.
-        "__EDENFSCTL_PYTHON": "$(exe_target //eden/fs/cli:edenfsctl)",
-        "__EDENFSCTL_RUST": "$(exe_target //eden/fs/cli_rs/edenfsctl:edenfsctl)",
-    }),
+    env = get_dev_edenfsctl_env(),
     exe = ":edenfsctl-wrapper",
 )
 
 buck_command_alias(
     name = "edenfsctl-run-oss",
     env = get_dev_edenfsctl_env(
-        {
-            # Add those so that they get materialized.
-            "__EDENFSCTL_PYTHON": "$(exe_target //eden/fs/cli:edenfsctl)",
-            "__EDENFSCTL_RUST": "$(exe_target //eden/fs/cli_rs/edenfsctl:edenfsctl)",
-        },
-        get_oss_suffix(),
+        suffix = get_oss_suffix(),
     ),
     exe = ":edenfsctl-wrapper",
 )
@@ -96,8 +73,6 @@ buck_command_alias(
     env = get_dev_edenfsctl_env({
         # Add those so that they get materialized.
         "EDENFS_PRIVHELPER_PATH": "$(location //eden/fs/service:edenfs_privhelper)",
-        "__EDENFSCTL_PYTHON": "$(exe_target //eden/fs/cli:edenfsctl-with-privhelper)",
-        "__EDENFSCTL_RUST": "$(exe_target //eden/fs/cli_rs/edenfsctl:edenfsctl)",
     }),
     exe = ":edenfsctl-wrapper-with-privhelper",
 )
