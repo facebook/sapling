@@ -26,9 +26,9 @@ mononoke_queries! {
 
     // We have to check the version again inside the transaction because in rare case
     // it could be modified by another transaction fail the transaction in such cases
-    write InsertVersion(reponame: String, workspace: String, version: u64, timestamp: Timestamp) {
+    write InsertVersion(reponame: String, workspace: String, version: u64, timestamp: Timestamp, now: Timestamp) {
         none,
-        mysql("INSERT INTO versions (`reponame`, `workspace`, `version`, `timestamp`) VALUES ({reponame}, {workspace}, {version}, {timestamp}) \
+        mysql("INSERT INTO versions (`reponame`, `workspace`, `version`, `timestamp`) VALUES ({reponame}, {workspace}, {version}, COALESCE({timestamp},{now})) \
         ON DUPLICATE KEY UPDATE timestamp = current_timestamp, version = \
           IF(version + 1 = VALUES(version), \
             VALUES(version), \
@@ -38,7 +38,7 @@ mononoke_queries! {
           )")
         sqlite("INSERT INTO versions (`reponame`, `workspace`, `version`, `timestamp`)
         VALUES ({reponame}, {workspace}, {version}, {timestamp})
-        ON CONFLICT(`reponame`, `workspace`)  DO UPDATE SET`timestamp` = CURRENT_TIMESTAMP,
+        ON CONFLICT(`reponame`, `workspace`)  DO UPDATE SET`timestamp` = {now} , 
         `version` = CASE
             WHEN `version` + 1 = {version} THEN {version}
             ELSE
@@ -46,6 +46,7 @@ mononoke_queries! {
                 (SELECT name FROM sqlite_master WHERE type='table' LIMIT 2)
             END")
     }
+
 }
 
 #[async_trait]
@@ -87,6 +88,7 @@ impl Insert<WorkspaceVersion> for SqlCommitCloud {
             &workspace,
             &data.version,
             &data.timestamp,
+            &Timestamp::now(),
         )
         .await?;
         Ok(txn)

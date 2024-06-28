@@ -305,11 +305,11 @@ async fn test_versions(_fb: FacebookInit) -> anyhow::Result<()> {
     let sql = SqlCommitCloudBuilder::with_sqlite_in_memory()?.new(false);
     let reponame = "test_repo".to_owned();
     let workspace = "user_testuser_default".to_owned();
-
+    let initial_timestamp = Timestamp::now();
     let args = WorkspaceVersion {
         workspace: workspace.clone(),
         version: 1,
-        timestamp: Timestamp::now(),
+        timestamp: initial_timestamp,
         archived: false,
     };
 
@@ -320,6 +320,28 @@ async fn test_versions(_fb: FacebookInit) -> anyhow::Result<()> {
     txn.commit().await?;
     let res: Vec<WorkspaceVersion> = sql.get(reponame.clone(), workspace.clone()).await?;
     assert_eq!(vec![args], res);
+
+    // Test version conflict
+    let args2 = WorkspaceVersion {
+        workspace: workspace.clone(),
+        version: 2,
+        timestamp: Timestamp::now(),
+        archived: false,
+    };
+
+    txn = sql.connections.write_connection.start_transaction().await?;
+    txn = sql
+        .insert(
+            txn,
+            None,
+            reponame.clone(),
+            workspace.clone(),
+            args2.clone(),
+        )
+        .await?;
+    txn.commit().await?;
+    let res2: Vec<WorkspaceVersion> = sql.get(reponame.clone(), workspace.clone()).await?;
+    assert!(res2[0].timestamp > initial_timestamp);
 
     Ok(())
 }
