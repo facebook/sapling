@@ -44,9 +44,10 @@ impl TestMononokeMegarepoConfigs {
 
 #[async_trait]
 impl MononokeMegarepoConfigs for TestMononokeMegarepoConfigs {
-    fn get_target_config_versions(
+    async fn get_target_config_versions(
         &self,
         _ctx: CoreContext,
+        _repo_config: Arc<RepoConfig>,
         _target: Target,
     ) -> Result<Vec<SyncConfigVersion>, MegarepoError> {
         unimplemented!("TestMononokeMegarepoConfigs::get_target_config_versions")

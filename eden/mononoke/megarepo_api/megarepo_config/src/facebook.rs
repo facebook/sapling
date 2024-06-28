@@ -49,15 +49,20 @@ impl CfgrMononokeMegarepoConfigs {
         let writer = if let Some(write_path) = test_write_path {
             CfgrMononokeMegarepoConfigsWriter::new_test(
                 fb,
-                mysql_options,
+                mysql_options.clone(),
                 readonly_storage,
                 write_path,
             )?
         } else {
-            CfgrMononokeMegarepoConfigsWriter::new(fb, mysql_options, readonly_storage)?
+            CfgrMononokeMegarepoConfigsWriter::new(fb, mysql_options.clone(), readonly_storage)?
         };
         Ok(Self {
-            reader: CfgrMononokeMegarepoConfigsReader::new(config_store)?,
+            reader: CfgrMononokeMegarepoConfigsReader::new(
+                fb,
+                mysql_options,
+                readonly_storage,
+                config_store,
+            )?,
             writer,
         })
     }
@@ -66,12 +71,15 @@ impl CfgrMononokeMegarepoConfigs {
 #[async_trait]
 impl MononokeMegarepoConfigs for CfgrMononokeMegarepoConfigs {
     /// Get all the versions for a given Target
-    fn get_target_config_versions(
+    async fn get_target_config_versions(
         &self,
         ctx: CoreContext,
+        repo_config: Arc<RepoConfig>,
         target: Target,
     ) -> Result<Vec<SyncConfigVersion>, MegarepoError> {
-        self.reader.get_target_config_versions(ctx, target)
+        self.reader
+            .get_target_config_versions(ctx, repo_config, target)
+            .await
     }
 
     /// Get a SyncTargetConfig by its version

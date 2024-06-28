@@ -93,9 +93,10 @@ impl MononokeMegarepoConfigsOptions {
 #[async_trait]
 pub trait MononokeMegarepoConfigs: Send + Sync {
     /// Get all the versions for a given Target
-    fn get_target_config_versions(
+    async fn get_target_config_versions(
         &self,
         ctx: CoreContext,
+        repo_config: Arc<RepoConfig>,
         target: Target,
     ) -> Result<Vec<SyncConfigVersion>, MegarepoError>;
 
