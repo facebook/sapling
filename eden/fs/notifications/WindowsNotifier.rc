@@ -11,6 +11,7 @@ IDI_WNOTIFICATIONICON       ICON         "edenw256.ico"
 IDI_ONOTIFICATIONICON       ICON         "edeno256.ico"
 IDI_GNOTIFICATIONICON       ICON         "edeng256.ico"
 IDI_RNOTIFICATIONICON       ICON         "edenr256.ico"
+IDI_BNOTIFICATIONICON       ICON         "edenb256.ico"
 
 // Manifest
 // 24 == RT_MANIFEST and 1 == exe manifest

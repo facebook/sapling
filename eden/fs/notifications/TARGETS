@@ -15,6 +15,7 @@ buck_genrule(
     srcs = [
         "WindowsNotifier.rc",
         "WindowsNotifierConstants.h",
+        "edenb256.ico",
         "edenfs.exe.manifest",
         "edeng256.ico",
         "edeno256.ico",

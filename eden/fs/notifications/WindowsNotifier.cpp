@@ -100,6 +100,32 @@ WindowsNotifier* getWindowsNotifier(HWND hwnd) {
       GetWindowLongPtr(hwnd, GWLP_USERDATA), "GetWindowLongPtr failed"));
 }
 
+bool isDarkTheme() {
+  DWORD value = 0;
+  DWORD size = sizeof(value);
+  if (RegGetValueW(
+          HKEY_CURRENT_USER,
+          L"Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize",
+          L"AppsUseLightTheme",
+          RRF_RT_REG_DWORD | RRF_ZEROONFAILURE,
+          NULL,
+          &value,
+          &size) != ERROR_SUCCESS ||
+      value == 0) {
+    return true; // dark theme is enabled.
+  } else {
+    return false; // light theme is default on Windows 11 and later.
+  }
+}
+
+int getDefaultIcon() {
+  if (isDarkTheme()) {
+    return IDI_WNOTIFICATIONICON;
+  } else {
+    return IDI_BNOTIFICATIONICON;
+  }
+}
+
 void registerWindowClass(
     LPCWSTR pszClassName,
     LPCWSTR pszMenuName,
@@ -135,7 +161,7 @@ void addNotificationIcon(HWND hwnd) {
   iconData.hIcon = checkNonZero(
       static_cast<HICON>(LoadImage(
           GetModuleHandle(NULL),
-          MAKEINTRESOURCE(IDI_WNOTIFICATIONICON),
+          MAKEINTRESOURCE(getDefaultIcon()),
           IMAGE_ICON,
           32,
           32,
@@ -531,6 +557,13 @@ void cacheIconImages() {
       32,
       32,
       LR_DEFAULTCOLOR | LR_SHARED);
+  LoadImage(
+      GetModuleHandle(NULL),
+      MAKEINTRESOURCE(IDI_BNOTIFICATIONICON),
+      IMAGE_ICON,
+      32,
+      32,
+      LR_DEFAULTCOLOR | LR_SHARED);
 }
 
 } // namespace
@@ -599,7 +632,7 @@ void WindowsNotifier::updateIconColor(size_t numActive) {
   if (numActive > 0) {
     changeIconColor(IDI_ONOTIFICATIONICON);
   } else {
-    changeIconColor(IDI_WNOTIFICATIONICON);
+    changeIconColor(getDefaultIcon());
   }
 }
 
