@@ -82,7 +82,7 @@ Fetch a tree with children metadata:
                                       TreeChildFileEntry {
                                           key: Key {
                                               path: RepoPathBuf(
-                                                  "dir/file1",
+                                                  "file1",
                                               ),
                                               hgid: HgId("a58629e4c3c5a5d14b5810b2e35681bb84319167"),
                                           },
@@ -104,7 +104,7 @@ Fetch a tree with children metadata:
                                       TreeChildFileEntry {
                                           key: Key {
                                               path: RepoPathBuf(
-                                                  "dir/file2",
+                                                  "file2",
                                               ),
                                               hgid: HgId("ecbe8b3047eb5d9bb298f516d451f64491812e07"),
                                           },
@@ -180,7 +180,7 @@ Fetch mode can also trigger tree metadata fetch:
                                       TreeChildFileEntry {
                                           key: Key {
                                               path: RepoPathBuf(
-                                                  "dir/file1",
+                                                  "file1",
                                               ),
                                               hgid: HgId("a58629e4c3c5a5d14b5810b2e35681bb84319167"),
                                           },
@@ -202,7 +202,7 @@ Fetch mode can also trigger tree metadata fetch:
                                       TreeChildFileEntry {
                                           key: Key {
                                               path: RepoPathBuf(
-                                                  "dir/file2",
+                                                  "file2",
                                               ),
                                               hgid: HgId("ecbe8b3047eb5d9bb298f516d451f64491812e07"),
                                           },

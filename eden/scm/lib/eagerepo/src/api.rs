@@ -350,7 +350,8 @@ impl SaplingRemoteApi for EagerRepo {
                                 let aux_data = FileAuxData::from_content(&file_body);
                                 children.push(Ok(TreeChildEntry::File(TreeChildFileEntry {
                                     key: Key::new(
-                                        key.path.join(child.component.as_ref()),
+                                        RepoPathBuf::from_string(child.component.to_string())
+                                            .map_err(anyhow::Error::from)?,
                                         child.hgid,
                                     ),
                                     file_metadata: Some(FileMetadata::from(aux_data)),
