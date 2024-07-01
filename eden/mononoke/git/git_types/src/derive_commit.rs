@@ -198,13 +198,16 @@ mod test {
     use bonsai_git_mapping::BonsaiGitMappingRef;
     use bookmarks::BookmarkKey;
     use bookmarks::BookmarksRef;
-    use changesets::ChangesetsRef;
+    use commit_graph::CommitGraphRef;
     use derived_data::BonsaiDerived;
     use fbinit::FacebookInit;
     use fixtures::TestRepoFixture;
-    use futures_util::stream::TryStreamExt;
+    use futures::stream;
+    use futures::StreamExt;
+    use futures::TryStreamExt;
     use maplit::hashmap;
     use mononoke_types::hash::GitSha1;
+    use mononoke_types::ChangesetIdPrefix;
     use repo_blobstore::RepoBlobstoreArc;
     use repo_derived_data::RepoDerivedDataRef;
 
@@ -278,7 +281,7 @@ mod test {
         repo: impl BookmarksRef
         + RepoBlobstoreArc
         + RepoDerivedDataRef
-        + ChangesetsRef
+        + CommitGraphRef
         + BonsaiGitMappingRef
         + Send
         + Sync,
@@ -295,9 +298,14 @@ mod test {
         MappedGitCommitId::derive(&ctx, &repo, bcs_id).await?;
         // All the generated git commit IDs would be stored in BonsaiGitMapping. For all such commits, validate
         // parity with its Bonsai counterpart.
-        repo.changesets()
-            .list_enumeration_range(&ctx, 0, u64::MAX, None, false)
-            .try_filter_map(|(bcs_id, _)| {
+        let all_changesets = repo
+            .commit_graph()
+            .find_by_prefix(&ctx, ChangesetIdPrefix::from_bytes("").unwrap(), 100000)
+            .await?
+            .to_vec();
+        stream::iter(all_changesets)
+            .map(Ok)
+            .try_filter_map(|bcs_id| {
                 let repo = &repo;
                 let ctx: &CoreContext = &ctx;
                 async move {
