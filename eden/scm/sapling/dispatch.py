@@ -939,7 +939,9 @@ def _dispatch(req):
 
         cmd, func, args, options, cmdoptions, foundaliases = _parse(lui, args)
 
-        tracing.debug(target="command_info", command=cmd)
+        tracing.debug(
+            target="command_info", command=getattr(func, "legacyname", None) or cmd
+        )
 
         lui.cmdname = ui.cmdname = cmd
         lui.cmdtype = ui.cmdtype = getattr(func, "cmdtype", None)

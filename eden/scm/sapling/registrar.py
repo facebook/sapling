@@ -239,6 +239,7 @@ class command(_funcregistrarbase):
         func.subcommandcategories = []
         func.subonly = subonly
         func.namesforhooks = list(filter(None, [primaryname, legacyname]))
+        func.legacyname = legacyname
 
         if name in self._table:
             # If the command already was in the table it is because it was an existing Rust command.
