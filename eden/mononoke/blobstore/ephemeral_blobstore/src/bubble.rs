@@ -441,14 +441,17 @@ impl Bubble {
 
     pub fn repo_view(
         &self,
-        container: &(impl RepoBlobstoreRef + RepoIdentityArc + ChangesetsArc + RepoConfigArc),
+        container: &(
+             impl RepoBlobstoreRef + RepoIdentityArc + ChangesetsArc + CommitGraphRef + RepoConfigArc
+         ),
     ) -> EphemeralRepoView {
         let repo_blobstore = self.wrap_repo_blobstore(container.repo_blobstore().clone());
         let repo_identity = container.repo_identity_arc();
         let repo_config = container.repo_config_arc();
         EphemeralRepoView {
             repo_blobstore: Arc::new(repo_blobstore.clone()),
-            changesets: Arc::new(self.changesets_with_blobstore(repo_blobstore, container)),
+            changesets: Arc::new(self.changesets_with_blobstore(repo_blobstore.clone(), container)),
+            commit_graph: Arc::new(self.commit_graph_with_blobstore(repo_blobstore, container)),
             repo_identity,
             repo_config,
         }

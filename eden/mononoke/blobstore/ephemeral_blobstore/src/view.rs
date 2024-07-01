@@ -6,6 +6,7 @@
  */
 
 use changesets::Changesets;
+use commit_graph::CommitGraph;
 use metaconfig_types::RepoConfig;
 use repo_blobstore::RepoBlobstore;
 use repo_identity::RepoIdentity;
@@ -17,6 +18,9 @@ pub struct EphemeralRepoView {
 
     #[facet]
     pub(crate) changesets: dyn Changesets,
+
+    #[facet]
+    pub(crate) commit_graph: CommitGraph,
 
     #[facet]
     pub(crate) repo_identity: RepoIdentity,
