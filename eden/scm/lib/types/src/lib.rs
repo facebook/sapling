@@ -27,6 +27,7 @@ pub mod workingcopy_client;
 
 pub use crate::augmented_tree::AugmentedTreeChildEntry;
 pub use crate::augmented_tree::AugmentedTreeEntry;
+pub use crate::augmented_tree::AugmentedTreeEntryWithDigest;
 pub use crate::blake3::Blake3;
 pub use crate::hgid::HgId;
 pub use crate::key::Key;

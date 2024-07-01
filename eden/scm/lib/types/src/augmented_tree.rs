@@ -43,7 +43,7 @@ pub enum AugmentedTreeChildEntry {
     DirectoryNode(AugmentedDirectoryNode),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct AugmentedTreeEntry {
     pub hg_node_id: HgId,
     // The computed_hg_node_id can be used for sha1 hash validation of
@@ -339,19 +339,19 @@ impl AugmentedTreeEntry {
         })
     }
 
-    pub fn compute_content_addressed_digest(self) -> anyhow::Result<(Blake3, u64)> {
-        let mut calculator = AugmentedManifestDigestCalculator::new();
+    pub fn compute_content_addressed_digest(&self) -> anyhow::Result<(Blake3, u64)> {
+        let mut calculator = AugmentedTreeEntryDigestCalculator::new();
         self.try_serialize(&mut calculator)?;
         calculator.finalize()
     }
 }
 
-struct AugmentedManifestDigestCalculator {
+struct AugmentedTreeEntryDigestCalculator {
     hasher: Blake3Hasher,
     size: u64,
 }
 
-impl AugmentedManifestDigestCalculator {
+impl AugmentedTreeEntryDigestCalculator {
     fn new() -> Self {
         #[cfg(fbcode_build)]
         let key = blake3_constants::BLAKE3_HASH_KEY;
@@ -369,7 +369,7 @@ impl AugmentedManifestDigestCalculator {
     }
 }
 
-impl Write for AugmentedManifestDigestCalculator {
+impl Write for AugmentedTreeEntryDigestCalculator {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
         self.hasher.update(buf);
         self.size += buf.len() as u64;
@@ -378,6 +378,56 @@ impl Write for AugmentedManifestDigestCalculator {
 
     fn flush(&mut self) -> std::io::Result<()> {
         Ok(())
+    }
+}
+
+// The type for storing AugmentedTreeEntries together with its digest.
+#[derive(Debug, Clone, PartialEq)]
+pub struct AugmentedTreeEntryWithDigest {
+    pub augmented_manifest_id: Blake3,
+    pub augmented_manifest_size: u64,
+    pub augmented_tree: AugmentedTreeEntry,
+}
+
+impl AugmentedTreeEntryWithDigest {
+    pub fn serialized_tree_blob_size(&self) -> usize {
+        self.augmented_tree.augmented_tree_blob_size()
+            + Blake3::hex_len()
+            + self.augmented_manifest_size.to_string().len()
+            + 2
+    }
+
+    pub fn try_serialize(&self, mut w: impl Write) -> Result<()> {
+        // Prepend the augmented manifest id and size header to the blob.
+        w.write_all(self.augmented_manifest_id.to_hex().as_bytes())?;
+        w.write_all(b" ")?;
+        w.write_all(self.augmented_manifest_size.to_string().as_ref())?;
+        w.write_all(b"\n")?;
+        self.augmented_tree.try_serialize(&mut w)
+    }
+
+    pub fn try_deserialize(mut reader: impl BufRead) -> anyhow::Result<Self, Error> {
+        let mut line = String::new();
+        reader.read_line(&mut line)?;
+        let mut header = line.split(' ');
+        let augmented_manifest_id = Blake3::from_hex(
+            header
+                .next()
+                .ok_or(anyhow!("augmented tree: missing augmented_manifest_id"))?
+                .trim()
+                .as_ref(),
+        )?;
+        let augmented_manifest_size = header
+            .next()
+            .ok_or(anyhow!("augmented tree: missing augmented_manifest_size"))?
+            .trim()
+            .parse::<u64>()?;
+        let augmented_tree = AugmentedTreeEntry::try_deserialize(reader)?;
+        anyhow::Ok(Self {
+            augmented_manifest_id,
+            augmented_tree,
+            augmented_manifest_size,
+        })
     }
 }
 
@@ -618,5 +668,49 @@ mod tests {
                 681
             )
         );
+    }
+
+    #[test]
+    fn test_augmented_tree_with_digest_parsing_roundtrip() {
+        let mut reader = std::io::Cursor::new(concat!(
+            "v1 1111111111111111111111111111111111111111 - 2222222222222222222222222222222222222222 3333333333333333333333333333333333333333\n",
+            "a.rs\x004444444444444444444444444444444444444444r 4444444444444444444444444444444444444444444444444444444444444444 10 4444444444444444444444444444444444444444 -\n",
+            "b.rs\x002222222222222222222222222222222222222222r 2222222222222222222222222222222222222222222222222222222222222222 1000 2121212121212121212121212121212121212121 -\n",
+            "dir_1\x003333333333333333333333333333333333333333t 3333333333333333333333333333333333333333333333333333333333333333 10\n",
+            "dir_2\x001111111111111111111111111111111111111111t 1111111111111111111111111111111111111111111111111111111111111111 10000\n"
+        ));
+
+        // Parse initial augmented tree entry.
+        let augmented_tree_entry =
+            AugmentedTreeEntry::try_deserialize(&mut reader).expect("parsing failed");
+
+        // Calculate digest
+        let (hash, size) = augmented_tree_entry
+            .compute_content_addressed_digest()
+            .expect("digest calculation failed");
+
+        // Create augmented tree entry with digest.
+        let augmented_tree_with_digest = AugmentedTreeEntryWithDigest {
+            augmented_manifest_id: hash,
+            augmented_manifest_size: size,
+            augmented_tree: augmented_tree_entry,
+        };
+
+        // Serialize and deserialize, check the stucts are identical.
+        let mut buf: Vec<u8> = Vec::with_capacity(1024);
+        augmented_tree_with_digest
+            .try_serialize(&mut buf)
+            .expect("writing failed");
+
+        // Check the size of serialized tree blob is correct.
+        assert_eq!(
+            buf.len(),
+            augmented_tree_with_digest.serialized_tree_blob_size()
+        );
+
+        let reader1 = std::io::Cursor::new(buf);
+        let augmented_tree_with_digest2 =
+            AugmentedTreeEntryWithDigest::try_deserialize(reader1).expect("parsing failed");
+        assert_eq!(augmented_tree_with_digest, augmented_tree_with_digest2);
     }
 }
