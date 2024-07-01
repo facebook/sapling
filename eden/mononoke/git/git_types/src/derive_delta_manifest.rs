@@ -667,13 +667,15 @@ mod tests {
     use bonsai_hg_mapping::BonsaiHgMappingArc;
     use bookmarks::BookmarkKey;
     use bookmarks::BookmarksRef;
-    use changesets::ChangesetsRef;
+    use commit_graph::CommitGraphRef;
     use derived_data::BonsaiDerived;
     use fbinit::FacebookInit;
     use fixtures::TestRepoFixture;
     use futures::future;
-    use futures_util::stream::TryStreamExt;
+    use futures::StreamExt;
+    use futures::TryStreamExt;
     use mercurial_types::HgChangesetId;
+    use mononoke_types::ChangesetIdPrefix;
     use repo_blobstore::RepoBlobstoreArc;
     use repo_derived_data::RepoDerivedDataRef;
     use repo_identity::RepoIdentityRef;
@@ -690,7 +692,7 @@ mod tests {
         + RepoBlobstoreArc
         + RepoDerivedDataRef
         + RepoIdentityRef
-        + ChangesetsRef
+        + CommitGraphRef
         + Send
         + Sync,
         ctx: CoreContext,
@@ -703,10 +705,13 @@ mod tests {
         // Validate that the derivation of the Git Delta Manifest for the head commit succeeds
         let root_mf_id = RootGitDeltaManifestId::derive(&ctx, &repo, bcs_id).await?;
         // Validate the derivation of all the commits in this repo succeeds
-        let result = repo
-            .changesets()
-            .list_enumeration_range(&ctx, 0, u64::MAX, None, false)
-            .map_ok(|(bcs_id, _)| {
+        let all_changesets = repo
+            .commit_graph()
+            .find_by_prefix(&ctx, ChangesetIdPrefix::from_bytes("").unwrap(), 100000)
+            .await?
+            .to_vec();
+        let result = stream::iter(all_changesets)
+            .map(|bcs_id| {
                 let repo = &repo;
                 let ctx: &CoreContext = &ctx;
                 async move {
@@ -714,7 +719,7 @@ mod tests {
                     Ok(mf_id)
                 }
             })
-            .try_buffer_unordered(100)
+            .buffer_unordered(100)
             .try_collect::<Vec<_>>()
             .await;
         assert!(
