@@ -223,6 +223,7 @@ impl fmt::Display for KeyFetchError {
     }
 }
 
+#[derive(Debug)]
 pub(crate) struct FetchErrors {
     /// Errors encountered for specific keys
     pub(crate) fetch_errors: HashMap<Key, Error>,

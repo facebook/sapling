@@ -110,6 +110,9 @@ pub struct TreeStore {
 
     pub flush_on_drop: bool,
 
+    /// Whether to fetch trees aux data from remote (provided by the augmented trees)
+    pub fetch_tree_aux_data: bool,
+
     pub(crate) metrics: Arc<RwLock<TreeStoreMetrics>>,
 }
 
@@ -148,6 +151,7 @@ impl TreeStore {
             TreeMetadataMode::Never => false,
             TreeMetadataMode::OptIn => fetch_mode.contains(FetchMode::PREFETCH),
         };
+        let fetch_tree_aux_data = self.fetch_tree_aux_data.clone();
 
         let fetch_local = fetch_mode.contains(FetchMode::LOCAL);
         let fetch_remote = fetch_mode.contains(FetchMode::REMOTE);
@@ -231,7 +235,7 @@ impl TreeStore {
                             manifest_blob: true,
                             parents: true,
                             child_metadata: fetch_children_metadata,
-                            augmented_trees: false,
+                            augmented_trees: fetch_tree_aux_data,
                         };
                         let response = edenapi
                             .trees_blocking(pending, Some(attributes))
@@ -372,6 +376,7 @@ impl TreeStore {
             tree_aux_store: None,
             flush_on_drop: true,
             tree_metadata_mode: TreeMetadataMode::Never,
+            fetch_tree_aux_data: false,
             metrics: Default::default(),
         }
     }
@@ -438,6 +443,7 @@ impl LegacyStore for TreeStore {
             tree_aux_store: None,
             flush_on_drop: true,
             tree_metadata_mode: TreeMetadataMode::Never,
+            fetch_tree_aux_data: false,
             metrics: self.metrics.clone(),
         })
     }

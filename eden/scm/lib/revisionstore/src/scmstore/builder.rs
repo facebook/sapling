@@ -676,6 +676,16 @@ impl<'a> TreeStoreBuilder<'a> {
             _ => TreeMetadataMode::Never,
         };
 
+        let fetch_tree_aux_data = self
+            .config
+            .get_or_default::<bool>("scmstore", "fetch-tree-aux-data")?;
+
+        if fetch_tree_aux_data && tree_aux_store.is_none() {
+            tracing::warn!(
+                "fetch-tree-aux-data is set, but store-tree-aux-data is not set resulting in no tree aux data locally cached"
+            );
+        }
+
         tracing::trace!(target: "revisionstore::treestore", "constructing TreeStore");
         Ok(TreeStore {
             indexedlog_local,
@@ -686,6 +696,7 @@ impl<'a> TreeStoreBuilder<'a> {
             tree_aux_store,
             filestore: self.filestore,
             tree_metadata_mode,
+            fetch_tree_aux_data,
             flush_on_drop: true,
             metrics: Default::default(),
         })
