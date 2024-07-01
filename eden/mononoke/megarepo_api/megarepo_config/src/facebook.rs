@@ -70,18 +70,6 @@ impl CfgrMononokeMegarepoConfigs {
 
 #[async_trait]
 impl MononokeMegarepoConfigs for CfgrMononokeMegarepoConfigs {
-    /// Get all the versions for a given Target
-    async fn get_target_config_versions(
-        &self,
-        ctx: CoreContext,
-        repo_config: Arc<RepoConfig>,
-        target: Target,
-    ) -> Result<Vec<SyncConfigVersion>, MegarepoError> {
-        self.reader
-            .get_target_config_versions(ctx, repo_config, target)
-            .await
-    }
-
     /// Get a SyncTargetConfig by its version
     async fn get_config_by_version(
         &self,
