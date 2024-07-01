@@ -51,6 +51,7 @@ use megarepo_mapping::CommitRemappingState;
 use megarepo_mapping::SourceName;
 use mercurial_derivation::DeriveHgChangeset;
 use mercurial_types::HgFileNodeId;
+use metaconfig_types::RepoConfigArc;
 use mononoke_api::path::MononokePathPrefixes;
 use mononoke_api::ChangesetContext;
 use mononoke_api::Mononoke;
@@ -979,12 +980,18 @@ pub trait MegarepoOp {
         megarepo_configs: &Arc<dyn MononokeMegarepoConfigs>,
         sync_target_config: &SyncTargetConfig,
     ) -> Result<(), MegarepoError> {
+        let repo = self
+            .find_repo_by_id(ctx, sync_target_config.target.repo_id)
+            .await?;
+        let repo_config = repo.repo().repo_config_arc();
         let existing_config = megarepo_configs
             .get_config_by_version(
                 ctx.clone(),
+                repo_config,
                 sync_target_config.target.clone(),
                 sync_target_config.version.clone(),
             )
+            .await
             .with_context(|| {
                 format!(
                     "while checking existence of {} config",
@@ -1176,12 +1183,16 @@ pub(crate) async fn find_target_sync_config<'a>(
     let state =
         CommitRemappingState::read_state_from_commit(ctx, target_repo, target_cs_id).await?;
 
+    let repo_config = target_repo.repo_config_arc();
     // We have a target config version - let's fetch target config itself.
-    let target_config = megarepo_configs.get_config_by_version(
-        ctx.clone(),
-        target.clone(),
-        state.sync_config_version().clone(),
-    )?;
+    let target_config = megarepo_configs
+        .get_config_by_version(
+            ctx.clone(),
+            repo_config,
+            target.clone(),
+            state.sync_config_version().clone(),
+        )
+        .await?;
 
     Ok((state, target_config))
 }

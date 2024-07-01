@@ -53,9 +53,10 @@ impl MononokeMegarepoConfigs for TestMononokeMegarepoConfigs {
         unimplemented!("TestMononokeMegarepoConfigs::get_target_config_versions")
     }
 
-    fn get_config_by_version(
+    async fn get_config_by_version(
         &self,
         _ctx: CoreContext,
+        _repo_config: Arc<RepoConfig>,
         target: Target,
         version: SyncConfigVersion,
     ) -> Result<SyncTargetConfig, MegarepoError> {

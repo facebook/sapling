@@ -101,9 +101,10 @@ pub trait MononokeMegarepoConfigs: Send + Sync {
     ) -> Result<Vec<SyncConfigVersion>, MegarepoError>;
 
     /// Get a SyncTargetConfig by its version
-    fn get_config_by_version(
+    async fn get_config_by_version(
         &self,
         ctx: CoreContext,
+        repo_config: Arc<RepoConfig>,
         target: Target,
         version: SyncConfigVersion,
     ) -> Result<SyncTargetConfig, MegarepoError>;

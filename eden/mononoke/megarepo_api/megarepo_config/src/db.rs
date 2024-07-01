@@ -48,4 +48,12 @@ pub trait MegarepoSyncConfig: Send + Sync {
         repo_id: &RepositoryId,
         bookmark: &BookmarkKey,
     ) -> Result<Vec<MegarepoSyncConfigEntry>>;
+
+    async fn get_repo_config_by_version(
+        &self,
+        ctx: &CoreContext,
+        repo_id: &RepositoryId,
+        bookmark: &BookmarkKey,
+        version: &SyncConfigVersion,
+    ) -> Result<Option<MegarepoSyncConfigEntry>>;
 }

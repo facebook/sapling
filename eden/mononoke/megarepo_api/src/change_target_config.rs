@@ -26,6 +26,7 @@ use megarepo_config::Target;
 use megarepo_error::MegarepoError;
 use megarepo_mapping::CommitRemappingState;
 use megarepo_mapping::SourceName;
+use metaconfig_types::RepoConfigArc;
 use mononoke_api::Mononoke;
 use mononoke_api::RepoContext;
 use mononoke_types::ChangesetId;
@@ -221,12 +222,19 @@ impl<'a> ChangeTargetConfig<'a> {
         )
         .await?;
 
+        let repo = self.find_repo_by_id(&ctx, target.repo_id).await?;
+        let repo_config = repo.repo().repo_config_arc();
+
         // Contruct the new config structure and the remapping state
-        let new_config = self.megarepo_configs.get_config_by_version(
-            ctx.clone(),
-            target.clone(),
-            new_version.clone(),
-        )?;
+        let new_config = self
+            .megarepo_configs
+            .get_config_by_version(
+                ctx.clone(),
+                repo_config,
+                target.clone(),
+                new_version.clone(),
+            )
+            .await?;
         let new_remapping_state = CommitRemappingState::new(
             changesets_to_merge.clone(),
             new_version,

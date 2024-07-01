@@ -14,12 +14,14 @@ use maplit::btreemap;
 use megarepo_config::MononokeMegarepoConfigs;
 use megarepo_config::Target;
 use megarepo_mapping::SourceName;
+use metaconfig_types::RepoConfigArc;
 use tests_utils::bookmark;
 use tests_utils::resolve_cs_id;
 use tests_utils::CreateCommitContext;
 
 use crate::add_branching_sync_target::AddBranchingSyncTarget;
 use crate::add_sync_target::AddSyncTarget;
+use crate::common::MegarepoOp;
 use crate::megarepo_test_utils::MegarepoTest;
 use crate::megarepo_test_utils::SyncTargetConfigBuilder;
 
@@ -49,11 +51,17 @@ async fn test_add_branching_sync_target_success(fb: FacebookInit) -> Result<(), 
 
     let configs_storage: Arc<dyn MononokeMegarepoConfigs> = Arc::new(test.configs_storage.clone());
 
-    let sync_target_config =
-        test.configs_storage
-            .get_config_by_version(ctx.clone(), target.clone(), version.clone())?;
     let add_sync_target =
         AddSyncTarget::new(&configs_storage, &test.mononoke, &test.mutable_renames);
+    let repo = add_sync_target
+        .find_repo_by_id(&ctx, target.repo_id)
+        .await?;
+    let repo_config = repo.repo().repo_config_arc();
+
+    let sync_target_config = test
+        .configs_storage
+        .get_config_by_version(ctx.clone(), repo_config, target.clone(), version.clone())
+        .await?;
     add_sync_target
         .run(
             &ctx,
@@ -135,11 +143,17 @@ async fn test_add_branching_sync_target_wrong_branch(fb: FacebookInit) -> Result
 
     let configs_storage: Arc<dyn MononokeMegarepoConfigs> = Arc::new(test.configs_storage.clone());
 
-    let sync_target_config =
-        test.configs_storage
-            .get_config_by_version(ctx.clone(), target.clone(), version.clone())?;
     let add_sync_target =
         AddSyncTarget::new(&configs_storage, &test.mononoke, &test.mutable_renames);
+    let repo = add_sync_target
+        .find_repo_by_id(&ctx, target.repo_id)
+        .await?;
+    let repo_config = repo.repo().repo_config_arc();
+
+    let sync_target_config = test
+        .configs_storage
+        .get_config_by_version(ctx.clone(), repo_config, target.clone(), version.clone())
+        .await?;
     add_sync_target
         .run(
             &ctx,
@@ -172,13 +186,22 @@ async fn test_add_branching_sync_target_wrong_branch(fb: FacebookInit) -> Result
 
     let configs_storage: Arc<dyn MononokeMegarepoConfigs> = Arc::new(test.configs_storage.clone());
 
-    let sync_target_config = test.configs_storage.get_config_by_version(
-        ctx.clone(),
-        alt_target.clone(),
-        alt_version.clone(),
-    )?;
     let add_sync_target =
         AddSyncTarget::new(&configs_storage, &test.mononoke, &test.mutable_renames);
+    let repo = add_sync_target
+        .find_repo_by_id(&ctx, target.repo_id)
+        .await?;
+    let repo_config = repo.repo().repo_config_arc();
+
+    let sync_target_config = test
+        .configs_storage
+        .get_config_by_version(
+            ctx.clone(),
+            repo_config,
+            alt_target.clone(),
+            alt_version.clone(),
+        )
+        .await?;
     add_sync_target
         .run(
             &ctx,

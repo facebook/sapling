@@ -83,13 +83,17 @@ impl MononokeMegarepoConfigs for CfgrMononokeMegarepoConfigs {
     }
 
     /// Get a SyncTargetConfig by its version
-    fn get_config_by_version(
+    async fn get_config_by_version(
         &self,
         ctx: CoreContext,
+        repo_config: Arc<RepoConfig>,
         target: Target,
         version: SyncConfigVersion,
     ) -> Result<SyncTargetConfig, MegarepoError> {
-        self.reader.get_config_by_version(ctx, target, version)
+        let get_config_by_version =
+            self.reader
+                .get_config_by_version(ctx, repo_config, target, version);
+        get_config_by_version.await
     }
 
     /// Add a new unused SyncTargetConfig

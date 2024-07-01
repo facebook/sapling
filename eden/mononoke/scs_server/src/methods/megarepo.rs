@@ -120,11 +120,14 @@ impl SourceControlServiceImpl {
         // it was written. Let's try reading a few times before returning
         let mut latest_error = None;
         for _ in 0..10 {
-            let res = megarepo_configs.get_config_by_version(
-                ctx.clone(),
-                new_config.target.clone(),
-                new_config.version.clone(),
-            );
+            let res = megarepo_configs
+                .get_config_by_version(
+                    ctx.clone(),
+                    Arc::new(target_repo_config.clone()),
+                    new_config.target.clone(),
+                    new_config.version.clone(),
+                )
+                .await;
             match res {
                 Ok(_) => {
                     latest_error = None;

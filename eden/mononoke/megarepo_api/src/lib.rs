@@ -93,6 +93,7 @@ pub trait Repo = BonsaiHgMappingRef
     + MutableRenamesRef
     + RepoBlobstoreArc
     + RepoBlobstoreRef
+    + RepoConfigArc
     + RepoConfigRef
     + RepoDerivedDataRef
     + RepoIdentityRef

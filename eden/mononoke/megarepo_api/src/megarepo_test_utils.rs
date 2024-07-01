@@ -27,6 +27,7 @@ use megarepo_mapping::Source;
 use megarepo_mapping::SourceMappingRules;
 use megarepo_mapping::SourceName;
 use megarepo_mapping::SyncTargetConfig;
+use metaconfig_types::RepoConfigArc;
 use mononoke_api::Mononoke;
 use mononoke_api::Repo;
 use mononoke_types::ChangesetId;
@@ -40,6 +41,7 @@ use tests_utils::resolve_cs_id;
 use tests_utils::CreateCommitContext;
 
 pub struct MegarepoTest {
+    pub repo: Repo,
     pub blobrepo: BlobRepo,
     pub megarepo_mapping: Arc<MegarepoMapping>,
     pub mononoke: Arc<Mononoke>,
@@ -58,10 +60,12 @@ impl MegarepoTest {
         let mutable_renames = factory.mutable_renames(&repo_identity)?;
         let repo: Repo = factory.build().await?;
         let blobrepo = repo.blob_repo().clone();
-        let mononoke = Arc::new(Mononoke::new_test(vec![("repo".to_string(), repo)]).await?);
+        let mononoke =
+            Arc::new(Mononoke::new_test(vec![("repo".to_string(), repo.clone())]).await?);
         let configs_storage = TestMononokeMegarepoConfigs::new(ctx.logger());
 
         Ok(Self {
+            repo,
             blobrepo,
             megarepo_mapping,
             mononoke,
@@ -87,11 +91,12 @@ impl MegarepoTest {
         version: &SyncConfigVersion,
         target: &Target,
     ) -> Result<ChangesetId, Error> {
-        let initial_config = self.configs_storage.get_config_by_version(
-            ctx.clone(),
-            target.clone(),
-            version.clone(),
-        )?;
+        let repo_config = self.repo.repo_config_arc();
+
+        let initial_config = self
+            .configs_storage
+            .get_config_by_version(ctx.clone(), repo_config, target.clone(), version.clone())
+            .await?;
 
         let mut init_target_cs = CreateCommitContext::new_root(ctx, &self.blobrepo);
 

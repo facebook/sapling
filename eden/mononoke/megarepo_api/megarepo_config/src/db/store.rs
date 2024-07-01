@@ -59,6 +59,19 @@ mononoke_queries! {
         ORDER BY version ASC, id ASC
         "
     }
+
+    read GetRepoConfigByVersion(repo_id: RepositoryId, bookmark: BookmarkName, version: SyncConfigVersion) -> (
+        RowId,
+        RepositoryId,
+        BookmarkName,
+        SyncConfigVersion,
+        String,
+    ) {
+        "SELECT id, repo_id, bookmark, version, serialized_config
+        FROM megarepo_sync_config
+        WHERE repo_id = {repo_id} AND bookmark = {bookmark} AND version = {version}
+        "
+    }
 }
 
 fn row_to_entry(
@@ -137,6 +150,26 @@ impl MegarepoSyncConfig for SqlMegarepoSyncConfig {
             .into_iter()
             .map(row_to_entry)
             .collect::<Result<Vec<_>>>()
+    }
+
+    async fn get_repo_config_by_version(
+        &self,
+        _ctx: &CoreContext,
+        repo_id: &RepositoryId,
+        bookmark: &BookmarkKey,
+        version: &SyncConfigVersion,
+    ) -> Result<Option<MegarepoSyncConfigEntry>> {
+        let rows = GetRepoConfigByVersion::query(
+            &self.connections.read_connection,
+            repo_id,
+            bookmark.name(),
+            version,
+        )
+        .await?;
+        match rows.into_iter().next() {
+            None => Ok(None),
+            Some(row) => Ok(Some(row_to_entry(row)?)),
+        }
     }
 }
 
@@ -247,6 +280,49 @@ mod test {
         assert_eq!(entry.repo_id, RepositoryId::new(2));
         assert_eq!(entry.bookmark, *BookmarkKey::new("main")?.name());
         assert_eq!(entry.version, "ijkl");
+        assert_eq!(entry.sources, vec![]);
+
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn test_get_config_by_version(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let config = SqlMegarepoSyncConfig::with_sqlite_in_memory()?;
+        config
+            .add_repo_config(
+                &ctx,
+                &RepositoryId::new(0),
+                &BookmarkKey::new("book")?,
+                &"12345678".to_string(),
+                vec![],
+            )
+            .await?;
+
+        let entry = config
+            .get_repo_config_by_version(
+                &ctx,
+                &RepositoryId::new(404),
+                &BookmarkKey::new("book")?,
+                &"12345678".to_string(),
+            )
+            .await?;
+        assert!(entry.is_none());
+
+        let entry = config
+            .get_repo_config_by_version(
+                &ctx,
+                &RepositoryId::new(0),
+                &BookmarkKey::new("book")?,
+                &"12345678".to_string(),
+            )
+            .await?;
+        assert!(entry.is_some());
+
+        let entry = entry.unwrap();
+        assert_eq!(entry.repo_id, RepositoryId::new(0));
+        assert_eq!(entry.bookmark, *BookmarkKey::new("book")?.name());
+        assert_eq!(entry.version, "12345678");
         assert_eq!(entry.sources, vec![]);
 
         Ok(())
