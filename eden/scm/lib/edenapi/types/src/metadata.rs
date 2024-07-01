@@ -38,18 +38,14 @@ pub struct DirectoryMetadata {
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize)]
 pub struct FileMetadata {
     // #[id(0)] # deprecated
-    #[id(1)] //  deprecated, the field to be removed after 06/15/2024
-    #[no_default]
-    pub content_id: ContentId,
+    // #[id(1)] # deprecated
     // #[id(2)] # deprecated
     #[id(3)]
     #[no_default] // for compatibility, to be removed after 06/15/2024
     pub size: u64,
     #[id(4)]
     pub content_sha1: Sha1,
-    #[id(5)] // deprecated, the field to be removed after 06/15/2024
-    #[no_default]
-    pub content_sha256: Sha256,
+    // #[id(5)] # deprecated
     #[id(6)]
     pub content_blake3: Blake3,
     // None 'file_header_metadata' would mean file_header_metadata is not fetched/not known if it is present
@@ -76,7 +72,6 @@ impl From<FileAuxData> for FileMetadata {
             content_sha1: aux.sha1,
             content_blake3: aux.blake3,
             file_header_metadata: aux.file_header_metadata,
-            ..Default::default()
         }
     }
 }
@@ -86,10 +81,8 @@ impl Arbitrary for FileMetadata {
     fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         let bytes: Vec<u8> = Arbitrary::arbitrary(g);
         Self {
-            content_id: Arbitrary::arbitrary(g), // deprecated
             size: Arbitrary::arbitrary(g),
             content_sha1: Arbitrary::arbitrary(g),
-            content_sha256: Arbitrary::arbitrary(g), // deprecated
             content_blake3: Arbitrary::arbitrary(g),
             file_header_metadata: Some(Bytes::from(bytes)),
         }

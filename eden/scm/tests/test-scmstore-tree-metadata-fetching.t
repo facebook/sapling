@@ -88,10 +88,8 @@ Fetch a tree with children metadata:
                                           },
                                           file_metadata: Some(
                                               FileMetadata {
-                                                  content_id: ContentId("0000000000000000000000000000000000000000000000000000000000000000"),
                                                   size: 5,
                                                   content_sha1: Sha1("60b27f004e454aca81b0480209cce5081ec52390"),
-                                                  content_sha256: Sha256("0000000000000000000000000000000000000000000000000000000000000000"),
                                                   content_blake3: Blake3("0a370c8c0d1deeea00890dfa7b6c52a863d45d95ab472fae5510e4aacf674fd4"),
                                                   file_header_metadata: None,
                                               },
@@ -110,10 +108,8 @@ Fetch a tree with children metadata:
                                           },
                                           file_metadata: Some(
                                               FileMetadata {
-                                                  content_id: ContentId("0000000000000000000000000000000000000000000000000000000000000000"),
                                                   size: 5,
                                                   content_sha1: Sha1("cb99b709a1978bd205ab9dfd4c5aaa1fc91c7523"),
-                                                  content_sha256: Sha256("0000000000000000000000000000000000000000000000000000000000000000"),
                                                   content_blake3: Blake3("aab0b64d0a516f16e06cd7571dece3e6cc6f57ca2462ce69872d3d7e6664e7da"),
                                                   file_header_metadata: None,
                                               },
@@ -186,10 +182,8 @@ Fetch mode can also trigger tree metadata fetch:
                                           },
                                           file_metadata: Some(
                                               FileMetadata {
-                                                  content_id: ContentId("0000000000000000000000000000000000000000000000000000000000000000"),
                                                   size: 5,
                                                   content_sha1: Sha1("60b27f004e454aca81b0480209cce5081ec52390"),
-                                                  content_sha256: Sha256("0000000000000000000000000000000000000000000000000000000000000000"),
                                                   content_blake3: Blake3("0a370c8c0d1deeea00890dfa7b6c52a863d45d95ab472fae5510e4aacf674fd4"),
                                                   file_header_metadata: None,
                                               },
@@ -208,10 +202,8 @@ Fetch mode can also trigger tree metadata fetch:
                                           },
                                           file_metadata: Some(
                                               FileMetadata {
-                                                  content_id: ContentId("0000000000000000000000000000000000000000000000000000000000000000"),
                                                   size: 5,
                                                   content_sha1: Sha1("cb99b709a1978bd205ab9dfd4c5aaa1fc91c7523"),
-                                                  content_sha256: Sha256("0000000000000000000000000000000000000000000000000000000000000000"),
                                                   content_blake3: Blake3("aab0b64d0a516f16e06cd7571dece3e6cc6f57ca2462ce69872d3d7e6664e7da"),
                                                   file_header_metadata: None,
                                               },
