@@ -6,9 +6,6 @@
  */
 
 mod ancestors_difference;
-mod backfill;
-mod backfill_one;
-mod checkpoints;
 mod children;
 mod common_base;
 mod descendants;
@@ -20,8 +17,6 @@ mod update_preloaded;
 
 use ancestors_difference::AncestorsDifferenceArgs;
 use anyhow::Result;
-use backfill::BackfillArgs;
-use backfill_one::BackfillOneArgs;
 use bonsai_git_mapping::BonsaiGitMapping;
 use bonsai_globalrev_mapping::BonsaiGlobalrevMapping;
 use bonsai_hg_mapping::BonsaiHgMapping;
@@ -57,10 +52,6 @@ pub struct CommandArgs {
 
 #[derive(Subcommand)]
 pub enum CommitGraphSubcommand {
-    /// Backfill commit graph entries
-    Backfill(BackfillArgs),
-    /// Backfill a commit and all of its missing ancestors.
-    BackfillOne(BackfillOneArgs),
     /// Display ids of all commits that are ancestors of one set of commits (heads),
     /// excluding ancestors of another set of commits (common) in reverse topological order.
     AncestorsDifference(AncestorsDifferenceArgs),
@@ -122,10 +113,6 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
     let repo: Repo = app.open_repo(&args.repo).await?;
 
     match args.subcommand {
-        CommitGraphSubcommand::Backfill(args) => backfill::backfill(&ctx, &app, &repo, args).await,
-        CommitGraphSubcommand::BackfillOne(args) => {
-            backfill_one::backfill_one(&ctx, &repo, args).await
-        }
         CommitGraphSubcommand::AncestorsDifference(args) => {
             ancestors_difference::ancestors_difference(&ctx, &repo, args).await
         }
