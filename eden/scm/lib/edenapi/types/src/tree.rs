@@ -228,8 +228,8 @@ impl TryFrom<AugmentedTreeEntry> for TreeEntry {
                             path,
                         },
                         FileAuxData {
-                            blake3: Blake3::from_byte_array(file.content_blake3.into_byte_array()), // zero-copy conversion
-                            sha1: Sha1::from_byte_array(file.content_sha1.into_byte_array()),
+                            blake3: Blake3::from_another(file.content_blake3),
+                            sha1: Sha1::from_another(file.content_sha1),
                             total_size: file.total_size,
                             file_header_metadata: {
                                 if let Some(metadata) = file.file_header_metadata {
@@ -248,9 +248,9 @@ impl TryFrom<AugmentedTreeEntry> for TreeEntry {
                                 path,
                             },
                             DirectoryMetadata {
-                                augmented_manifest_id: Blake3::from_byte_array(
-                                    tree.augmented_manifest_id.into_byte_array(),
-                                ), // zero-copy conversion
+                                augmented_manifest_id: Blake3::from_another(
+                                    tree.augmented_manifest_id,
+                                ),
                                 augmented_manifest_size: tree.augmented_manifest_size,
                             },
                         ))

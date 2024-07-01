@@ -123,6 +123,10 @@ impl<I, const N: usize> AbstractHashType<I, N> {
         self.0
     }
 
+    pub fn from_another<S>(another: AbstractHashType<S, N>) -> Self {
+        Self::from_byte_array(another.into())
+    }
+
     pub fn to_hex(&self) -> String {
         to_hex(self.0.as_ref())
     }
