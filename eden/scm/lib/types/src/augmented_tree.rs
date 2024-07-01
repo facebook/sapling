@@ -78,8 +78,8 @@ impl AugmentedTreeEntry {
             w.write_all(b"\0")?;
             match subentry {
                 AugmentedTreeChildEntry::DirectoryNode(directory) => {
-                    w.write_all(b"t")?;
                     w.write_all(directory.treenode.to_hex().as_bytes())?;
+                    w.write_all(b"t")?;
                 }
                 AugmentedTreeChildEntry::FileNode(file) => {
                     w.write_all(file.filenode.to_hex().as_bytes())?;
@@ -459,8 +459,8 @@ mod tests {
             Ok(concat!(
                 "a.rs\x004444444444444444444444444444444444444444\n",
                 "b.rs\x002222222222222222222222222222222222222222\n",
-                "dir_1\x00t3333333333333333333333333333333333333333\n",
-                "dir_2\x00t1111111111111111111111111111111111111111\n"
+                "dir_1\x003333333333333333333333333333333333333333t\n",
+                "dir_2\x001111111111111111111111111111111111111111t\n"
             ))
         );
         // validate that the size calculation is correct
@@ -543,13 +543,13 @@ mod tests {
                 "AssetWithZoneReclassifications.php\x002f09c0be8738b7256452133d790cc39f9da885b8\n",
                 "ZoneAssetReclassificationsAnnotation.php\x00a7006d0256d90b83b8e8834e3a8d74a57f669364\n",
                 "ZonePolicySetGenerator.php\x0032c4117a356ddd5a284dd55866e4c609e4002c99\n",
-                "__tests__\x00t9f0e8ffab4c1e1adfdea446d3c91b3c8ad525685\n",
-                "bounded_policies\x00te057d09012b275e5aa8f3d31ecb334ea7bd0e2df\n",
-                "config\x00tef0295d493a767db31bd2ad6e3c118a5ec2dc094\n",
-                "enforcement\x00t519f107814932a6aaedf68e82a673710461c1a16\n",
-                "integration\x00t19ff1a891b88dad37743bb22fe29709b15ac195d\n",
-                "reclassifications\x00tf1e2432047947bb339f2d6a2608eca729703bb65\n",
-                "row_level_policy\x00t0238567d1c15525d8b2f2d366bd4aa306e20d8df\n"
+                "__tests__\x009f0e8ffab4c1e1adfdea446d3c91b3c8ad525685t\n",
+                "bounded_policies\x00e057d09012b275e5aa8f3d31ecb334ea7bd0e2dft\n",
+                "config\x00ef0295d493a767db31bd2ad6e3c118a5ec2dc094t\n",
+                "enforcement\x00519f107814932a6aaedf68e82a673710461c1a16t\n",
+                "integration\x0019ff1a891b88dad37743bb22fe29709b15ac195dt\n",
+                "reclassifications\x00f1e2432047947bb339f2d6a2608eca729703bb65t\n",
+                "row_level_policy\x000238567d1c15525d8b2f2d366bd4aa306e20d8dft\n"
             ))
         );
         assert_eq!(buf.len(), augmented_tree_entry.sapling_tree_blob_size());

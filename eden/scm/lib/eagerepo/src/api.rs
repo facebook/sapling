@@ -79,7 +79,6 @@ use edenapi::ResponseMeta;
 use edenapi::SaplingRemoteApi;
 use edenapi::SaplingRemoteApiError;
 use edenapi_trait as edenapi;
-use edenapi_trait::types::DirectoryMetadata;
 use futures::stream::BoxStream;
 use futures::stream::TryStreamExt;
 use futures::StreamExt;
@@ -269,39 +268,39 @@ impl SaplingRemoteApi for EagerRepo {
         self.refresh_for_api();
         let mut values = Vec::new();
         let attributes = attributes.unwrap_or_default();
-        for key in keys {
-            if attributes.augmented_trees {
-                let augmented_tree_with_digest =
-                    AugmentedTreeEntryWithDigest::try_deserialize(std::io::Cursor::new(
-                        self.get_augmented_tree_blob_with_digest_for_api(key.hgid, "trees")
-                            .await?,
-                    ))?;
-                let dir_meta = DirectoryMetadata {
-                    augmented_manifest_id: edenapi::types::Blake3::from_byte_array(
-                        augmented_tree_with_digest
-                            .augmented_manifest_id
-                            .into_byte_array(),
-                    ),
-                    augmented_manifest_size: augmented_tree_with_digest.augmented_manifest_size,
-                };
-                let mut converted_entry: TreeEntry =
-                    TreeEntry::try_from(augmented_tree_with_digest.augmented_tree)
-                        .map_err(|err| SaplingRemoteApiServerError::with_key(key.clone(), err))?;
-
-                converted_entry.with_directory_metadata(dir_meta);
-
-                // Clean up fields that were not requested
-                if !attributes.manifest_blob {
-                    converted_entry.with_data(None);
+        if attributes.augmented_trees {
+            for key in keys {
+                match self
+                    .get_augmented_tree_blob_with_digest_for_api(key.hgid, "trees")
+                    .await
+                {
+                    Ok(tree) => {
+                        let augmented_tree_with_digest =
+                            AugmentedTreeEntryWithDigest::try_deserialize(std::io::Cursor::new(
+                                tree,
+                            ))?;
+                        let mut converted_entry: TreeEntry =
+                            TreeEntry::try_from(augmented_tree_with_digest).map_err(|err| {
+                                SaplingRemoteApiServerError::with_key(key.clone(), err)
+                            })?;
+                        // Clean up fields that were not requested, since the augmented trees format contains
+                        // everything by default
+                        if !attributes.manifest_blob {
+                            converted_entry.with_data(None);
+                        }
+                        if !attributes.parents {
+                            converted_entry.with_parents(None);
+                        }
+                        if !attributes.child_metadata {
+                            converted_entry.with_children(None);
+                        }
+                        values.push(Ok(Ok(converted_entry)));
+                    }
+                    Err(e) => values.push(Err(e)),
                 }
-                if !attributes.parents {
-                    converted_entry.with_parents(None);
-                }
-                if !attributes.child_metadata {
-                    converted_entry.with_children(None);
-                }
-                values.push(Ok(Ok(converted_entry)));
-            } else {
+            }
+        } else {
+            for key in keys {
                 let data = self.get_sha1_blob_for_api(key.hgid, "trees")?;
                 let mut entry = TreeEntry {
                     key: key.clone(),
@@ -1332,10 +1331,9 @@ impl EagerRepo {
         handler: &str,
     ) -> edenapi::Result<Option<minibytes::Bytes>> {
         // Emulate the HTTP errors.
-        match self.get_augmented_tree_blob(id) {
+        match self.derive_augmented_tree_recursively(id) {
             Ok(None) => {
                 trace!(" not found: {}", id.to_hex());
-                // TODO: try to derive it recursively from the sapling manifest
                 Ok(None)
             }
             Ok(Some(data)) => {

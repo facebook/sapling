@@ -25,6 +25,8 @@ pub mod sha;
 pub mod tree;
 pub mod workingcopy_client;
 
+pub use crate::augmented_tree::AugmentedDirectoryNode;
+pub use crate::augmented_tree::AugmentedFileNode;
 pub use crate::augmented_tree::AugmentedTreeChildEntry;
 pub use crate::augmented_tree::AugmentedTreeEntry;
 pub use crate::augmented_tree::AugmentedTreeEntryWithDigest;

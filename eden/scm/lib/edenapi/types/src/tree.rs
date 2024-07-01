@@ -20,6 +20,7 @@ use types::key::Key;
 use types::parents::Parents;
 use types::AugmentedTreeChildEntry;
 use types::AugmentedTreeEntry;
+use types::AugmentedTreeEntryWithDigest;
 
 use crate::Blake3;
 use crate::DirectoryMetadata;
@@ -260,6 +261,21 @@ impl TryFrom<AugmentedTreeEntry> for TreeEntry {
                 .map(Ok)
                 .collect(),
         ));
+        Ok(entry)
+    }
+}
+
+impl TryFrom<AugmentedTreeEntryWithDigest> for TreeEntry {
+    type Error = TreeError;
+    fn try_from(aug_tree_with_digest: AugmentedTreeEntryWithDigest) -> Result<Self, Self::Error> {
+        let mut entry: TreeEntry = TreeEntry::try_from(aug_tree_with_digest.augmented_tree)?;
+        let dir_meta = DirectoryMetadata {
+            augmented_manifest_id: Blake3::from_byte_array(
+                aug_tree_with_digest.augmented_manifest_id.into_byte_array(),
+            ),
+            augmented_manifest_size: aug_tree_with_digest.augmented_manifest_size,
+        };
+        entry.with_directory_metadata(dir_meta);
         Ok(entry)
     }
 }

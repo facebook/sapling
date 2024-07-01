@@ -34,11 +34,23 @@ use mutationstore::MutationStore;
 use parking_lot::lock_api::RwLockReadGuard;
 use parking_lot::RawRwLock;
 use parking_lot::RwLock;
+use storemodel::types::AugmentedDirectoryNode;
+use storemodel::types::AugmentedFileNode;
+use storemodel::types::AugmentedTreeChildEntry;
+use storemodel::types::AugmentedTreeEntry;
+use storemodel::types::AugmentedTreeEntryWithDigest;
+use storemodel::types::HgId;
+use storemodel::types::Parents;
+use storemodel::types::RepoPathBuf;
+use storemodel::FileAuxData;
 use storemodel::SerializationFormat;
 use zstore::Id20;
 use zstore::Zstore;
 
 use crate::Result;
+
+const HG_PARENTS_LEN: usize = HgId::len() * 2;
+const HG_LEN: usize = HgId::len();
 
 /// Non-lazy, pure Rust, local repo implementation.
 ///
@@ -378,6 +390,110 @@ impl EagerRepo {
     /// Read SHA1 blob from zstore for augmented trees.
     pub fn get_augmented_tree_blob(&self, id: Id20) -> Result<Option<Bytes>> {
         self.secondary_tree_store.get_sha1_blob(id)
+    }
+
+    /// Extract parents out of a SHA1 manifest blob, returns the remaining data.
+    fn extract_parents_from_tree_data(data: Bytes) -> Result<(Parents, Bytes)> {
+        let p2 = HgId::from_slice(&data[..HG_LEN]).map_err(anyhow::Error::from)?;
+        let p1 = HgId::from_slice(&data[HG_LEN..HG_PARENTS_LEN]).map_err(anyhow::Error::from)?;
+        Ok((Parents::new(p1, p2), data.slice(HG_PARENTS_LEN..)))
+    }
+
+    /// Parse a file blob into raw data and copy_from metadata.
+    fn parse_file_blob(data: Bytes) -> Result<(Bytes, Bytes)> {
+        // drop the p1/p2 info
+        let data = data.slice(HG_PARENTS_LEN..);
+        let (raw_data, copy_from) =
+            hgstore::split_hg_file_metadata(&data).map_err(anyhow::Error::from)?;
+        Ok((raw_data, copy_from))
+    }
+
+    /// Calculate augmented trees recursively
+    pub fn derive_augmented_tree_recursively(&self, id: Id20) -> Result<Option<Bytes>> {
+        match self.secondary_tree_store.get_sha1_blob(id)? {
+            Some(t) => Ok(Some(t)),
+            None => {
+                let sapling_manifest = self.get_sha1_blob(id)?;
+                if sapling_manifest.is_none() {
+                    // Can't really calculate because corresponding sapling manifest is missing
+                    return Ok(None);
+                }
+                let sapling_manifest = sapling_manifest.unwrap();
+                let (parents, data) = Self::extract_parents_from_tree_data(sapling_manifest)?;
+                let tree_entry = manifest_tree::TreeEntry(data, SerializationFormat::Hg);
+                let mut subentries: Vec<(RepoPathBuf, AugmentedTreeChildEntry)> = Vec::new();
+                for child in tree_entry.elements() {
+                    let child = child?;
+                    let hgid = child.hgid;
+                    let entry: AugmentedTreeChildEntry = match child.flag {
+                        Flag::Directory => {
+                            let subtree_bytes = self.derive_augmented_tree_recursively(hgid)?;
+                            if subtree_bytes.is_none() {
+                                return Ok(None); // Can't calculate because subtree's data is missing.
+                            }
+                            let subtree = AugmentedTreeEntryWithDigest::try_deserialize(
+                                std::io::Cursor::new(subtree_bytes.unwrap()),
+                            )?;
+                            AugmentedTreeChildEntry::DirectoryNode(AugmentedDirectoryNode {
+                                treenode: hgid,
+                                augmented_manifest_id: subtree.augmented_manifest_id,
+                                augmented_manifest_size: subtree.augmented_manifest_size,
+                            })
+                        }
+                        Flag::File(file_type) => {
+                            let bytes = self.get_sha1_blob(hgid)?;
+                            if bytes.is_none() {
+                                return Ok(None); // Can't calculate because file is missing.
+                            }
+                            let (raw_data, copy_from) = Self::parse_file_blob(bytes.unwrap())?;
+                            let aux_data = FileAuxData::from_content(&raw_data);
+                            AugmentedTreeChildEntry::FileNode(AugmentedFileNode {
+                                file_type,
+                                filenode: hgid,
+                                content_blake3: aux_data.blake3.into_byte_array().into(),
+                                content_sha1: aux_data.sha1.into_byte_array().into(),
+                                total_size: aux_data.total_size,
+                                file_header_metadata: if copy_from.is_empty() {
+                                    None
+                                } else {
+                                    Some(copy_from)
+                                },
+                            })
+                        }
+                    };
+                    let path = RepoPathBuf::from_string(child.component.to_string())
+                        .map_err(anyhow::Error::from)?;
+                    subentries.push((path, entry));
+                }
+
+                let aug_tree = AugmentedTreeEntry {
+                    hg_node_id: id,
+                    computed_hg_node_id: None,
+                    p1: parents.p1().copied(),
+                    p2: parents.p2().copied(),
+                    subentries,
+                };
+
+                let digest = aug_tree.compute_content_addressed_digest()?;
+
+                let aug_tree_with_digest = AugmentedTreeEntryWithDigest {
+                    augmented_manifest_id: digest.0,
+                    augmented_manifest_size: digest.1,
+                    augmented_tree: aug_tree,
+                };
+
+                let mut buf: Vec<u8> =
+                    Vec::with_capacity(aug_tree_with_digest.serialized_tree_blob_size());
+                aug_tree_with_digest
+                    .try_serialize(&mut buf)
+                    .expect("writing failed");
+
+                // Store the augmented tree in zstore
+                self.add_augmented_tree_blob(id, &buf)?;
+
+                Ok(Some(Bytes::from(buf)))
+            }
+        }
     }
 
     /// Insert a commit. Return the commit hash.
