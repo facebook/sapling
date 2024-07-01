@@ -14,7 +14,9 @@ use anyhow::anyhow;
 use anyhow::Result;
 use cloned::cloned;
 use commit_graph::AncestorsStreamBuilder;
+use commit_graph::BaseCommitGraphWriter;
 use commit_graph::CommitGraph;
+use commit_graph::CommitGraphWriter;
 use commit_graph_types::edges::ChangesetNode;
 use commit_graph_types::segments::BoundaryChangesets;
 use commit_graph_types::segments::SegmentDescription;
@@ -80,7 +82,9 @@ pub async fn from_dag(
 ) -> Result<CommitGraph> {
     let mut added: BTreeMap<String, ChangesetId> = BTreeMap::new();
     let dag = drawdag::parse(dag);
-    let graph = CommitGraph::new(storage.clone());
+
+    let graph = CommitGraph::new(storage);
+    let graph_writer = BaseCommitGraphWriter::new(graph.clone());
 
     while added.len() < dag.len() {
         let mut made_progress = false;
@@ -98,7 +102,7 @@ pub async fn from_dag(
             let parent_ids = parents.iter().map(|parent| added[parent].clone()).collect();
 
             let cs_id = name_cs_id(name);
-            graph.add(ctx, cs_id, parent_ids).await?;
+            graph_writer.add(ctx, cs_id, parent_ids).await?;
             added.insert(name.clone(), cs_id);
             made_progress = true;
         }

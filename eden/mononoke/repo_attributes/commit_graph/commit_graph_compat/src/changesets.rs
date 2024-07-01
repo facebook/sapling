@@ -17,18 +17,14 @@ use changesets::ChangesetEntry;
 use changesets::ChangesetInsert;
 use changesets::Changesets;
 use changesets::SortOrder;
-use commit_graph::ArcCommitGraph;
-use commit_graph_types::edges::ChangesetParents;
+use commit_graph::ArcCommitGraphWriter;
 use context::CoreContext;
-use fbinit::FacebookInit;
 use futures::stream::BoxStream;
-use futures_stats::TimedTryFutureExt;
 use mononoke_types::ChangesetId;
 use mononoke_types::ChangesetIdPrefix;
 use mononoke_types::ChangesetIdsResolvedFromPrefix;
 use mononoke_types::Generation;
 use mononoke_types::RepositoryId;
-use scuba_ext::MononokeScubaSampleBuilder;
 use smallvec::SmallVec;
 use vec1::vec1;
 use vec1::Vec1;
@@ -36,85 +32,24 @@ use vec1::Vec1;
 pub struct ChangesetsCommitGraphCompat {
     changesets: ArcChangesets,
     changeset_fetcher: ArcChangesetFetcher,
-    commit_graph: ArcCommitGraph,
-    repo_name: String,
-    scuba: MononokeScubaSampleBuilder,
+    commit_graph_writer: ArcCommitGraphWriter,
 }
 
 impl ChangesetsCommitGraphCompat {
     pub fn new(
-        fb: FacebookInit,
         changesets: ArcChangesets,
-        commit_graph: ArcCommitGraph,
-        repo_name: String,
-        scuba_table: Option<&str>,
+        commit_graph_writer: ArcCommitGraphWriter,
     ) -> Result<Self> {
         let changeset_fetcher = Arc::new(SimpleChangesetFetcher::new(
             changesets.clone(),
             changesets.repo_id(),
         ));
 
-        let scuba = match scuba_table {
-            Some(scuba_table) => MononokeScubaSampleBuilder::new(fb, scuba_table).with_context(
-                || "Couldn't create scuba sample builder for table mononoke_commit_graph",
-            )?,
-            None => MononokeScubaSampleBuilder::with_discard(),
-        };
-
         Ok(Self {
             changesets,
             changeset_fetcher,
-            commit_graph,
-            repo_name,
-            scuba,
+            commit_graph_writer,
         })
-    }
-
-    async fn maybe_write_to_new_commit_graph(
-        &self,
-        ctx: &CoreContext,
-        css: Vec1<(ChangesetId, ChangesetParents)>,
-    ) -> Result<()> {
-        let mut scuba = self.scuba.clone();
-
-        scuba.add_common_server_data();
-        if let Some(client_info) = ctx.client_request_info() {
-            scuba.add_client_request_info(client_info);
-        }
-        // Only the last id, which is good enough for logging.
-        scuba.add("changeset_id", css.last().0.to_string());
-        scuba.add("changeset_count", css.len());
-        scuba.add("repo_name", self.repo_name.as_str());
-
-        // We use add_recursive because some parents might be missing
-        // from the new commit graph.
-        match self
-            .commit_graph
-            .add_recursive(ctx, self.changeset_fetcher.clone(), css)
-            .try_timed()
-            .await
-        {
-            Err(err) => {
-                scuba.add("error", err.to_string());
-                scuba.log_with_msg("Insertion failed", None);
-
-                Err(err).with_context(
-                    || "during commit_graph_compat::Changesets::maybe_write_to_new_commit_graph",
-                )?
-            }
-            Ok((stats, added_to_commit_graph)) => {
-                scuba.add("time_s", stats.completion_time.as_secs_f64());
-                scuba.add("num_added", added_to_commit_graph);
-
-                if added_to_commit_graph > 0 {
-                    scuba.log_with_msg("Insertion succeeded", None);
-                } else {
-                    scuba.log_with_msg("Changesets already stored", None);
-                }
-
-                Ok(())
-            }
-        }
     }
 }
 
@@ -127,8 +62,9 @@ impl Changesets for ChangesetsCommitGraphCompat {
     async fn add(&self, ctx: &CoreContext, cs: ChangesetInsert) -> Result<bool> {
         let (added_to_changesets, _) = futures::try_join!(
             self.changesets.add(ctx, cs.clone()),
-            self.maybe_write_to_new_commit_graph(
+            self.commit_graph_writer.add_recursive(
                 ctx,
+                Arc::new(self.changeset_fetcher.clone()),
                 vec1![(cs.cs_id, SmallVec::from_vec(cs.parents))],
             )
         )
@@ -143,8 +79,9 @@ impl Changesets for ChangesetsCommitGraphCompat {
     ) -> Result<()> {
         futures::try_join!(
             self.changesets.add_many(ctx, css.clone()),
-            self.maybe_write_to_new_commit_graph(
+            self.commit_graph_writer.add_recursive(
                 ctx,
+                Arc::new(self.changeset_fetcher.clone()),
                 css.mapped(|(cs, _gen)| (cs.cs_id, SmallVec::from_vec(cs.parents))),
             )
         )

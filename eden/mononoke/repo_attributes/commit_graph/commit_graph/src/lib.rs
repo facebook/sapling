@@ -49,12 +49,19 @@ use smallvec::smallvec;
 
 pub use crate::ancestors_stream::AncestorsStreamBuilder;
 pub use crate::compat::ParentsFetcher;
+pub use crate::writer::ArcCommitGraphWriter;
+pub use crate::writer::BaseCommitGraphWriter;
+pub use crate::writer::CommitGraphWriter;
+pub use crate::writer::CommitGraphWriterArc;
+pub use crate::writer::CommitGraphWriterRef;
+pub use crate::writer::LoggingCommitGraphWriter;
 
 mod ancestors_stream;
 mod compat;
 mod core;
 mod frontier;
 mod segments;
+mod writer;
 
 /// Commit Graph.
 ///
@@ -93,7 +100,7 @@ impl CommitGraph {
     ///
     /// Returns true if a new changeset was inserted, or false if the
     /// changeset already existed.
-    pub async fn add(
+    pub(crate) async fn add(
         &self,
         ctx: &CoreContext,
         cs_id: ChangesetId,

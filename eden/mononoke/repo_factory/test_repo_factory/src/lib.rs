@@ -38,6 +38,8 @@ use changesets_impl::SqlChangesetsBuilder;
 use commit_cloud::sql::builder::SqlCommitCloudBuilder;
 use commit_cloud::ArcCommitCloud;
 use commit_graph::ArcCommitGraph;
+use commit_graph::ArcCommitGraphWriter;
+use commit_graph::BaseCommitGraphWriter;
 use commit_graph::CommitGraph;
 use commit_graph_compat::ChangesetsCommitGraphCompat;
 use context::CoreContext;
@@ -411,8 +413,7 @@ impl TestRepoFactory {
     pub fn changesets(
         &self,
         repo_identity: &ArcRepoIdentity,
-        commit_graph: &ArcCommitGraph,
-        repo_config: &ArcRepoConfig,
+        commit_graph_writer: &ArcCommitGraphWriter,
     ) -> Result<ArcChangesets> {
         let changesets = Arc::new(
             SqlChangesetsBuilder::from_sql_connections(self.metadata_db.clone())
@@ -420,11 +421,8 @@ impl TestRepoFactory {
         );
 
         Ok(Arc::new(ChangesetsCommitGraphCompat::new(
-            self.fb,
             changesets,
-            commit_graph.clone(),
-            repo_identity.name().to_string(),
-            repo_config.commit_graph_config.scuba_table.as_deref(),
+            commit_graph_writer.clone(),
         )?))
     }
 
@@ -824,6 +822,16 @@ impl TestRepoFactory {
             SqlCommitGraphStorageBuilder::from_sql_connections(self.metadata_db.clone())
                 .build(RendezVousOptions::for_test(), repo_identity.id());
         Ok(Arc::new(CommitGraph::new(Arc::new(sql_storage))))
+    }
+
+    /// Commit graph writer
+    pub fn commit_graph_writer(
+        &self,
+        commit_graph: &ArcCommitGraph,
+    ) -> Result<ArcCommitGraphWriter> {
+        Ok(Arc::new(BaseCommitGraphWriter::new(CommitGraph::clone(
+            commit_graph,
+        ))))
     }
 
     /// Warm bookmarks cache

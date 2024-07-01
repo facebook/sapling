@@ -31,10 +31,10 @@ impl CommitGraph {
     /// if not found in the storage, and recursively tries to add them.
     ///
     /// Changesets should be sorted in topological order.
-    pub async fn add_recursive(
+    pub(crate) async fn add_recursive(
         &self,
         ctx: &CoreContext,
-        parents_fetcher: impl ParentsFetcher,
+        parents_fetcher: Arc<dyn ParentsFetcher>,
         changesets: Vec1<(ChangesetId, ChangesetParents)>,
     ) -> Result<usize> {
         let mut edges_map: HashMap<ChangesetId, ChangesetEdges> = Default::default();

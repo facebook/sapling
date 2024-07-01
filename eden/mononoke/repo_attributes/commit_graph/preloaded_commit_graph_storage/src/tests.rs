@@ -8,7 +8,9 @@
 use std::sync::Arc;
 
 use anyhow::Result;
+use commit_graph::BaseCommitGraphWriter;
 use commit_graph::CommitGraph;
+use commit_graph::CommitGraphWriter;
 use commit_graph_testlib::utils::from_dag;
 use commit_graph_testlib::utils::name_cs_id;
 use commit_graph_types::edges::ChangesetEdges;
@@ -134,7 +136,9 @@ async fn test_preloaded_commit_graph_storage(fb: FacebookInit) -> Result<()> {
     )?;
 
     let graph = CommitGraph::new(preloaded_storage.clone());
-    graph
+    let graph_writer = BaseCommitGraphWriter::new(graph.clone());
+
+    graph_writer
         .add(&ctx, name_cs_id("J"), [name_cs_id("I")].into())
         .await?;
 

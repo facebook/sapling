@@ -6,7 +6,9 @@
  */
 
 use anyhow::Error;
+use commit_graph::BaseCommitGraphWriter;
 use commit_graph::CommitGraph;
+use commit_graph::CommitGraphWriter;
 use fbinit::FacebookInit;
 use in_memory_commit_graph_storage::InMemoryCommitGraphStorage;
 use mononoke_types_mocks::changesetid::ONES_CSID;
@@ -20,9 +22,12 @@ use super::*;
 async fn setup_commit_graph(ctx: &CoreContext) -> Result<CommitGraph, Error> {
     let storage = InMemoryCommitGraphStorage::new(REPO_ZERO);
     let commit_graph = CommitGraph::new(Arc::new(storage));
+    let commit_graph_writer = BaseCommitGraphWriter::new(commit_graph.clone());
 
-    commit_graph.add(ctx, ONES_CSID, vec![].into()).await?;
-    commit_graph
+    commit_graph_writer
+        .add(ctx, ONES_CSID, vec![].into())
+        .await?;
+    commit_graph_writer
         .add(ctx, TWOS_CSID, vec![ONES_CSID].into())
         .await?;
 

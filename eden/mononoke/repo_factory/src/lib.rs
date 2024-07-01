@@ -76,7 +76,10 @@ use commit_cloud::sql::builder::SqlCommitCloudBuilder;
 use commit_cloud::ArcCommitCloud;
 use commit_cloud::CommitCloud;
 use commit_graph::ArcCommitGraph;
+use commit_graph::ArcCommitGraphWriter;
+use commit_graph::BaseCommitGraphWriter;
 use commit_graph::CommitGraph;
+use commit_graph::LoggingCommitGraphWriter;
 use commit_graph_compat::ChangesetsCommitGraphCompat;
 use commit_graph_types::storage::CommitGraphStorage;
 use context::CoreContext;
@@ -761,7 +764,7 @@ impl RepoFactory {
         &self,
         repo_identity: &ArcRepoIdentity,
         repo_config: &ArcRepoConfig,
-        commit_graph: &ArcCommitGraph,
+        commit_graph_writer: &ArcCommitGraphWriter,
     ) -> Result<ArcChangesets> {
         let builder = self
             .open_sql::<SqlChangesetsBuilder>(repo_config)
@@ -780,11 +783,8 @@ impl RepoFactory {
             };
 
         Ok(Arc::new(ChangesetsCommitGraphCompat::new(
-            self.env.fb,
             possibly_cached_changesets,
-            commit_graph.clone(),
-            repo_identity.name().to_string(),
-            repo_config.commit_graph_config.scuba_table.as_deref(),
+            commit_graph_writer.clone(),
         )?))
     }
 
@@ -1745,6 +1745,28 @@ impl RepoFactory {
             }
             None => Ok(Arc::new(CommitGraph::new(maybe_cached_storage))),
         }
+    }
+
+    pub async fn commit_graph_writer(
+        &self,
+        repo_identity: &ArcRepoIdentity,
+        repo_config: &ArcRepoConfig,
+        commit_graph: &ArcCommitGraph,
+    ) -> Result<ArcCommitGraphWriter> {
+        let scuba_table = repo_config.commit_graph_config.scuba_table.as_deref();
+        let scuba = match scuba_table {
+            Some(scuba_table) => MononokeScubaSampleBuilder::new(self.env.fb, scuba_table)
+                .with_context(
+                    || "Couldn't create scuba sample builder for table mononoke_commit_graph",
+                )?,
+            None => MononokeScubaSampleBuilder::with_discard(),
+        };
+
+        Ok(Arc::new(LoggingCommitGraphWriter::new(
+            Arc::new(BaseCommitGraphWriter::new(CommitGraph::clone(commit_graph))),
+            scuba,
+            repo_identity.name().to_string(),
+        )))
     }
 
     pub async fn bonsai_blob_mapping(

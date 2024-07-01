@@ -14,7 +14,9 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use cloned::cloned;
+use commit_graph::BaseCommitGraphWriter;
 use commit_graph::CommitGraph;
+use commit_graph::CommitGraphWriter;
 use commit_graph_types::storage::CommitGraphStorage;
 use commit_graph_types::storage::Prefetch;
 use context::CoreContext;
@@ -745,8 +747,10 @@ pub async fn test_add_recursive(
     );
 
     let graph = CommitGraph::new(storage.clone());
+    let graph_writer = BaseCommitGraphWriter::new(graph.clone());
+
     assert_eq!(
-        graph
+        graph_writer
             .add_recursive(
                 &ctx,
                 reference_graph.clone(),
@@ -756,7 +760,7 @@ pub async fn test_add_recursive(
         9
     );
     assert_eq!(
-        graph
+        graph_writer
             .add_recursive(
                 &ctx,
                 reference_graph,
@@ -821,8 +825,10 @@ pub async fn test_add_recursive_many_changesets(
     );
 
     let graph = CommitGraph::new(storage.clone());
+    let graph_writer = BaseCommitGraphWriter::new(graph.clone());
+
     assert_eq!(
-        graph
+        graph_writer
             .add_recursive(
                 &ctx,
                 reference_graph.clone(),
@@ -861,7 +867,7 @@ pub async fn test_add_recursive_many_changesets(
     );
 
     assert_eq!(
-        graph
+        graph_writer
             .add_recursive(
                 &ctx,
                 reference_graph.clone(),

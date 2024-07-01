@@ -27,6 +27,7 @@ use children::ChildrenArgs;
 use clap::Parser;
 use clap::Subcommand;
 use commit_graph::CommitGraph;
+use commit_graph::CommitGraphWriter;
 use common_base::CommonBaseArgs;
 use descendants::DescendantsArgs;
 use is_ancestor::IsAncestorArgs;
@@ -85,6 +86,9 @@ pub struct Repo {
 
     #[facet]
     commit_graph: CommitGraph,
+
+    #[facet]
+    commit_graph_writer: dyn CommitGraphWriter,
 
     #[facet]
     config: RepoConfig,
