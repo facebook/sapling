@@ -70,6 +70,9 @@ use crate::Result;
 pub struct EagerRepo {
     pub(crate) dag: Mutex<Dag>,
     pub(crate) store: EagerRepoStore,
+    // Additional store for the Augmented Trees, since they are addressed by
+    // the same sha1 hashes, making it impossible to store in the primary store
+    pub(crate) secondary_tree_store: EagerRepoStore,
     metalog: RwLock<MetaLog>,
     pub(crate) dir: PathBuf,
     pub(crate) mut_store: Mutex<MutationStore>,
@@ -232,12 +235,15 @@ impl EagerRepo {
         let store_dir = hg_dir.join("store");
         let dag = Dag::open(store_dir.join("segments").join("v1"))?;
         let store = EagerRepoStore::open(&store_dir.join("hgcommits").join("v1"))?;
+        let secondary_tree_store =
+            EagerRepoStore::open(&store_dir.join("augmentedtrees").join("v1"))?;
         let metalog = MetaLog::open(store_dir.join("metalog"), None)?;
         let mut_store = MutationStore::open(store_dir.join("mutation"))?;
 
         let repo = Self {
             dag: Mutex::new(dag),
             store,
+            secondary_tree_store,
             metalog: RwLock::new(metalog),
             dir: dir.to_path_buf(),
             mut_store: Mutex::new(mut_store),
@@ -328,6 +334,7 @@ impl EagerRepo {
     /// Write pending changes to disk.
     pub async fn flush(&self) -> Result<()> {
         self.store.flush()?;
+        self.secondary_tree_store.flush()?;
         let master_heads = {
             let books = self.get_bookmarks_map()?;
             let mut heads = Vec::new();
@@ -360,6 +367,17 @@ impl EagerRepo {
     /// Read SHA1 blob from zstore.
     pub fn get_sha1_blob(&self, id: Id20) -> Result<Option<Bytes>> {
         self.store.get_sha1_blob(id)
+    }
+
+    /// Insert SHA1 blob to zstore for augmented trees.
+    /// These blobs are not content addressed
+    pub fn add_augmented_tree_blob(&self, id: Id20, data: &[u8]) -> Result<()> {
+        self.secondary_tree_store.add_arbitrary_blob(id, data)
+    }
+
+    /// Read SHA1 blob from zstore for augmented trees.
+    pub fn get_augmented_tree_blob(&self, id: Id20) -> Result<Option<Bytes>> {
+        self.secondary_tree_store.get_sha1_blob(id)
     }
 
     /// Insert a commit. Return the commit hash.

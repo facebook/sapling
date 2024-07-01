@@ -1326,12 +1326,46 @@ impl EagerRepo {
         Ok(())
     }
 
+    fn opt_augmented_tree_blob_with_digest_for_api(
+        &self,
+        id: HgId,
+        handler: &str,
+    ) -> edenapi::Result<Option<minibytes::Bytes>> {
+        // Emulate the HTTP errors.
+        match self.get_augmented_tree_blob(id) {
+            Ok(None) => {
+                trace!(" not found: {}", id.to_hex());
+                // TODO: try to derive it recursively from the sapling manifest
+                Ok(None)
+            }
+            Ok(Some(data)) => {
+                trace!(" found: {}, {} bytes", id.to_hex(), data.len());
+                Ok(Some(data))
+            }
+            Err(e) => Err(SaplingRemoteApiError::HttpError {
+                status: StatusCode::INTERNAL_SERVER_ERROR,
+                message: format!("{:?}", e),
+                headers: Default::default(),
+                url: self.url(handler),
+            }),
+        }
+    }
+
     async fn get_augmented_tree_blob_with_digest_for_api(
         &self,
-        _id: HgId,
-        _handler: &str,
+        id: HgId,
+        handler: &str,
     ) -> edenapi::Result<minibytes::Bytes> {
-        unimplemented!()
+        // Emulate the HTTP errors.
+        match self.opt_augmented_tree_blob_with_digest_for_api(id, handler)? {
+            None => Err(SaplingRemoteApiError::HttpError {
+                status: StatusCode::NOT_FOUND,
+                message: format!("{} cannot be found", id.to_hex()),
+                headers: Default::default(),
+                url: self.url(handler),
+            }),
+            Some(data) => Ok(data),
+        }
     }
 
     async fn flush_for_api(&self, handler: &str) -> edenapi::Result<()> {
