@@ -32,7 +32,6 @@ rust_library(
         "//eden/mononoke/blobstore:ephemeral_blobstore",
         "//eden/mononoke/bookmarks:bookmarks",
         "//eden/mononoke/bookmarks:bookmarks_types",
-        "//eden/mononoke/changesets:changesets",
         "//eden/mononoke/common/logger_ext:logger_ext",
         "//eden/mononoke/metaconfig:metaconfig_types",
         "//eden/mononoke/mononoke_types:mononoke_types",
