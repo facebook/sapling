@@ -13,8 +13,8 @@ use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use blobstore::Loadable;
-use changesets::ChangesetsRef;
 use clap::Args;
+use commit_graph::CommitGraphRef;
 use commit_id::parse_commit_id;
 use context::CoreContext;
 use futures::stream;
@@ -121,7 +121,7 @@ pub async fn copy_immutable_impl(
     .await?;
 
     repo.mutable_renames()
-        .add_or_overwrite_renames(ctx, repo.changesets(), entries)
+        .add_or_overwrite_renames(ctx, repo.commit_graph(), entries)
         .await?;
     Ok(())
 }

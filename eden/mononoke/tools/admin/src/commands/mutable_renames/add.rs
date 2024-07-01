@@ -10,8 +10,8 @@ use std::collections::HashMap;
 use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
-use changesets::ChangesetsRef;
 use clap::Args;
+use commit_graph::CommitGraphRef;
 use commit_id::parse_commit_id;
 use context::CoreContext;
 use futures::TryStreamExt;
@@ -189,7 +189,7 @@ pub async fn add(ctx: &CoreContext, repo: &Repo, add_args: AddArgs) -> Result<()
 
     if !add_args.dry_run {
         repo.mutable_renames()
-            .add_or_overwrite_renames(ctx, repo.changesets(), entries)
+            .add_or_overwrite_renames(ctx, repo.commit_graph(), entries)
             .await?;
     }
     Ok(())

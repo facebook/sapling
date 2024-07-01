@@ -1198,9 +1198,9 @@ mod test {
     use bonsai_hg_mapping::BonsaiHgMapping;
     use bookmarks::Bookmarks;
     use changesets::Changesets;
-    use changesets::ChangesetsRef;
     use commit_graph::CommitGraph;
     use commit_graph::CommitGraphArc;
+    use commit_graph::CommitGraphRef;
     use context::CoreContext;
     use fastlog::RootFastlog;
     use fbinit::FacebookInit;
@@ -1993,7 +1993,7 @@ mod test {
         mutable_renames
             .add_or_overwrite_renames(
                 ctx,
-                repo.changesets(),
+                repo.commit_graph(),
                 vec![
                     MutableRenameEntry::new(
                         third_bcs_id,
@@ -2175,7 +2175,7 @@ mod test {
         mutable_renames
             .add_or_overwrite_renames(
                 ctx,
-                repo.changesets(),
+                repo.commit_graph(),
                 vec![
                     MutableRenameEntry::new(
                         third_bcs_id,

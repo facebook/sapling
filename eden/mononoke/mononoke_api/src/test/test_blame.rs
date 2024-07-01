@@ -196,11 +196,7 @@ async fn add_mutable_rename(
     )?;
 
     mutable_renames
-        .add_or_overwrite_renames(
-            repo.ctx(),
-            repo.changesets(None).await?.as_ref(),
-            vec![rename_entry],
-        )
+        .add_or_overwrite_renames(repo.ctx(), repo.commit_graph(), vec![rename_entry])
         .await
 }
 

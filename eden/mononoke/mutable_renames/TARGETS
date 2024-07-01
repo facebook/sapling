@@ -12,9 +12,8 @@ rust_library(
     test_deps = [
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/fbinit:fbinit-tokio",
-        "//eden/mononoke/changesets:changesets_impl",
-        "//eden/mononoke/common/rendezvous:rendezvous",
         "//eden/mononoke/mononoke_types:mononoke_types-mocks",
+        "//eden/mononoke/repo_attributes/commit_graph/in_memory_commit_graph_storage:in_memory_commit_graph_storage",
     ],
     deps = [
         "fbsource//third-party/rust:abomonation",
@@ -28,7 +27,6 @@ rust_library(
         "//common/rust/shed/justknobs_stub:justknobs",
         "//common/rust/shed/memcache_stub:memcache",
         "//common/rust/shed/sql:sql",
-        "//eden/mononoke/changesets:changesets",
         "//eden/mononoke/common/path_hash:path_hash",
         "//eden/mononoke/common/rust/caching_ext:caching_ext",
         "//eden/mononoke/common/rust/sql_ext:sql_ext",
@@ -36,6 +34,7 @@ rust_library(
         "//eden/mononoke/manifest:manifest",
         "//eden/mononoke/mononoke_types:mononoke_types",
         "//eden/mononoke/mutable_renames/if:mutable-rename-thrift-rust",
+        "//eden/mononoke/repo_attributes/commit_graph/commit_graph:commit_graph",
         "//eden/mononoke/server/context:context",
         "//thrift/lib/rust:fbthrift",
     ],

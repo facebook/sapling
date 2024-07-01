@@ -6,36 +6,27 @@
  */
 
 use anyhow::Error;
-use changesets::ChangesetInsert;
-use changesets::Changesets;
-use changesets_impl::SqlChangesets;
-use changesets_impl::SqlChangesetsBuilder;
+use commit_graph::CommitGraph;
 use fbinit::FacebookInit;
+use in_memory_commit_graph_storage::InMemoryCommitGraphStorage;
 use mononoke_types_mocks::changesetid::ONES_CSID;
 use mononoke_types_mocks::changesetid::TWOS_CSID;
 use mononoke_types_mocks::hash::ONES;
 use mononoke_types_mocks::hash::TWOS;
 use mononoke_types_mocks::repo::REPO_ZERO;
-use rendezvous::RendezVousOptions;
 
 use super::*;
 
-async fn setup_changesets(ctx: &CoreContext) -> Result<SqlChangesets, Error> {
-    let changesets = SqlChangesetsBuilder::with_sqlite_in_memory()?
-        .build(RendezVousOptions::for_test(), REPO_ZERO);
+async fn setup_commit_graph(ctx: &CoreContext) -> Result<CommitGraph, Error> {
+    let storage = InMemoryCommitGraphStorage::new(REPO_ZERO);
+    let commit_graph = CommitGraph::new(Arc::new(storage));
 
-    let ones = ChangesetInsert {
-        cs_id: ONES_CSID,
-        parents: vec![],
-    };
-    let twos = ChangesetInsert {
-        cs_id: TWOS_CSID,
-        parents: vec![ONES_CSID],
-    };
+    commit_graph.add(ctx, ONES_CSID, vec![].into()).await?;
+    commit_graph
+        .add(ctx, TWOS_CSID, vec![ONES_CSID].into())
+        .await?;
 
-    changesets.add(ctx, ones).await?;
-    changesets.add(ctx, twos).await?;
-    Ok(changesets)
+    Ok(commit_graph)
 }
 
 #[fbinit::test]
@@ -43,7 +34,7 @@ async fn test_simple(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let store = SqlMutableRenamesStore::with_sqlite_in_memory()?;
     let mutable_renames = MutableRenames::new_test(RepositoryId::new(0), store);
-    let changesets = setup_changesets(&ctx).await?;
+    let commit_graph = setup_commit_graph(&ctx).await?;
 
     let dst_path = MPath::new("dstpath")?;
     let src_path = MPath::new("srcpath")?;
@@ -56,7 +47,7 @@ async fn test_simple(fb: FacebookInit) -> Result<(), Error> {
     )?;
 
     mutable_renames
-        .add_or_overwrite_renames(&ctx, &changesets, vec![entry.clone()])
+        .add_or_overwrite_renames(&ctx, &commit_graph, vec![entry.clone()])
         .await?;
     let res = mutable_renames
         .get_rename(&ctx, TWOS_CSID, dst_path)
@@ -71,7 +62,7 @@ async fn test_insert_multiple(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let store = SqlMutableRenamesStore::with_sqlite_in_memory()?;
     let mutable_renames = MutableRenames::new_test(RepositoryId::new(0), store);
-    let changesets = setup_changesets(&ctx).await?;
+    let commit_graph = setup_commit_graph(&ctx).await?;
 
     let first_dst_path = MPath::new("first_dstpath")?;
     let first_src_path = MPath::new("second_srcpath")?;
@@ -96,7 +87,7 @@ async fn test_insert_multiple(fb: FacebookInit) -> Result<(), Error> {
     mutable_renames
         .add_or_overwrite_renames(
             &ctx,
-            &changesets,
+            &commit_graph,
             vec![first_entry.clone(), second_entry.clone()],
         )
         .await?;
@@ -119,7 +110,7 @@ async fn test_overwrite(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let store = SqlMutableRenamesStore::with_sqlite_in_memory()?;
     let mutable_renames = MutableRenames::new_test(RepositoryId::new(0), store);
-    let changesets = setup_changesets(&ctx).await?;
+    let commit_graph = setup_commit_graph(&ctx).await?;
 
     let dst_path = MPath::new("first_dstpath")?;
     let first_src_path = MPath::new("first_srcpath")?;
@@ -132,7 +123,7 @@ async fn test_overwrite(fb: FacebookInit) -> Result<(), Error> {
     )?;
 
     mutable_renames
-        .add_or_overwrite_renames(&ctx, &changesets, vec![first_entry.clone()])
+        .add_or_overwrite_renames(&ctx, &commit_graph, vec![first_entry.clone()])
         .await?;
 
     let second_src_path = MPath::new("second_srcpath")?;
@@ -146,7 +137,7 @@ async fn test_overwrite(fb: FacebookInit) -> Result<(), Error> {
 
     assert_ne!(first_entry, second_entry);
     mutable_renames
-        .add_or_overwrite_renames(&ctx, &changesets, vec![second_entry.clone()])
+        .add_or_overwrite_renames(&ctx, &commit_graph, vec![second_entry.clone()])
         .await?;
 
     let res = mutable_renames

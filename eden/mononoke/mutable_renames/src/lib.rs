@@ -8,11 +8,10 @@
 use std::collections::HashSet;
 use std::sync::Arc;
 
-use anyhow::anyhow;
 use anyhow::bail;
 use anyhow::Error;
 use caching_ext::CacheHandlerFactory;
-use changesets::Changesets;
+use commit_graph::CommitGraph;
 use context::CoreContext;
 use context::PerfCounterType;
 use futures::try_join;
@@ -167,7 +166,7 @@ impl MutableRenames {
     pub async fn add_or_overwrite_renames(
         &self,
         ctx: &CoreContext,
-        changesets: &dyn Changesets,
+        commit_graph: &CommitGraph,
         renames: Vec<MutableRenameEntry>,
     ) -> Result<(), Error> {
         ctx.perf_counters()
@@ -177,11 +176,11 @@ impl MutableRenames {
         // descendant of its dst. If so, we reject this as we cannot sanely
         // handle cycles in history
         for (src, dst) in renames.iter().map(|mre| (mre.src_cs_id, mre.dst_cs_id)) {
-            let (src_entry, dst_entry) =
-                try_join!(changesets.get(ctx, src), changesets.get(ctx, dst))?;
-            let src_entry = src_entry.ok_or_else(|| anyhow!("Commit {} does not exist", src))?;
-            let dst_entry = dst_entry.ok_or_else(|| anyhow!("Commit {} does not exist", dst))?;
-            if src_entry.gen >= dst_entry.gen {
+            let (src_generation, dst_generation) = try_join!(
+                commit_graph.changeset_generation(ctx, src),
+                commit_graph.changeset_generation(ctx, dst)
+            )?;
+            if src_generation >= dst_generation {
                 // The source commit could potentially be a descendant of the target
                 // Ideally, we'd do a proper check here to see if this forms a loop
                 // in history, allowing for both mutable and immutable history
@@ -189,8 +188,8 @@ impl MutableRenames {
                 // For now, though, just bail
                 bail!(
                     "{} is a potential descendant of {} - rejecting to avoid loops in history",
-                    src_entry.cs_id,
-                    dst_entry.cs_id
+                    src,
+                    dst,
                 );
             }
         }

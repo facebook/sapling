@@ -20,7 +20,7 @@ use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks::BookmarksRef;
 use bytes::Bytes;
-use changesets::Changesets;
+use commit_graph::CommitGraph;
 use commit_transformation::create_directory_source_to_target_multi_mover;
 use commit_transformation::create_source_to_target_multi_mover;
 use commit_transformation::DirectoryMultiMover;
@@ -640,7 +640,7 @@ pub trait MegarepoOp {
         scuba.log_with_msg("Started saving mutable renames", None);
         self.save_mutable_renames(
             ctx,
-            repo.changesets(),
+            repo.commit_graph(),
             mutable_renames,
             moved_commits.iter().map(|(_, css)| &css.mutable_renames),
         )
@@ -653,14 +653,14 @@ pub trait MegarepoOp {
     async fn save_mutable_renames<'a>(
         &'a self,
         ctx: &'a CoreContext,
-        changesets: &'a dyn Changesets,
+        commit_graph: &'a CommitGraph,
         mutable_renames: &'a Arc<MutableRenames>,
         entries_iter: impl Iterator<Item = &'a Vec<MutableRenameEntry>> + Send + 'async_trait,
     ) -> Result<(), Error> {
         for entries in entries_iter {
             for chunk in entries.chunks(100) {
                 mutable_renames
-                    .add_or_overwrite_renames(ctx, changesets, chunk.to_vec())
+                    .add_or_overwrite_renames(ctx, commit_graph, chunk.to_vec())
                     .await?;
             }
         }

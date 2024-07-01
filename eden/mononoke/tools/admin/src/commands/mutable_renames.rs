@@ -17,10 +17,10 @@ use bonsai_git_mapping::BonsaiGitMapping;
 use bonsai_globalrev_mapping::BonsaiGlobalrevMapping;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use bonsai_svnrev_mapping::BonsaiSvnrevMapping;
-use changesets::Changesets;
 use check_commit::CheckCommitArgs;
 use clap::Parser;
 use clap::Subcommand;
+use commit_graph::CommitGraph;
 use copy_immutable::CopyImmutableArgs;
 use get::GetArgs;
 use mononoke_app::args::RepoArgs;
@@ -63,7 +63,7 @@ pub struct Repo {
     mutable_renames: MutableRenames,
 
     #[facet]
-    changesets: dyn Changesets,
+    commit_graph: CommitGraph,
 }
 
 #[derive(Subcommand)]
