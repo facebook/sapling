@@ -340,7 +340,9 @@ impl SaplingRemoteApi for EagerRepo {
                             Flag::File(_) => {
                                 let file_with_parents =
                                     self.get_sha1_blob_for_api(child.hgid, "trees (aux)")?;
-                                let file_body = extract_body(&file_with_parents);
+                                let file_body_without_parents = extract_body(&file_with_parents);
+                                let (file_body, _copy_from) =
+                                    hgstore::split_hg_file_metadata(&file_body_without_parents)?;
 
                                 let aux_data = FileAuxData::from_content(&file_body);
                                 children.push(Ok(TreeChildEntry::File(TreeChildFileEntry {
