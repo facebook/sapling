@@ -431,13 +431,14 @@ impl EagerRepo {
                             if subtree_bytes.is_none() {
                                 return Ok(None); // Can't calculate because subtree's data is missing.
                             }
-                            let subtree = AugmentedTreeEntryWithDigest::try_deserialize(
-                                std::io::Cursor::new(subtree_bytes.unwrap()),
-                            )?;
+                            let (augmented_manifest_id, augmented_manifest_size) =
+                                AugmentedTreeEntryWithDigest::try_deserialize_digest(
+                                    &mut std::io::Cursor::new(subtree_bytes.unwrap()),
+                                )?;
                             AugmentedTreeChildEntry::DirectoryNode(AugmentedDirectoryNode {
                                 treenode: hgid,
-                                augmented_manifest_id: subtree.augmented_manifest_id,
-                                augmented_manifest_size: subtree.augmented_manifest_size,
+                                augmented_manifest_id,
+                                augmented_manifest_size,
                             })
                         }
                         Flag::File(file_type) => {

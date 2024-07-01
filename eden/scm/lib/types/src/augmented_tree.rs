@@ -407,6 +407,18 @@ impl AugmentedTreeEntryWithDigest {
     }
 
     pub fn try_deserialize(mut reader: impl BufRead) -> anyhow::Result<Self, Error> {
+        let (augmented_manifest_id, augmented_manifest_size) =
+            Self::try_deserialize_digest(&mut reader)?;
+        let augmented_tree = AugmentedTreeEntry::try_deserialize(reader)?;
+        anyhow::Ok(Self {
+            augmented_manifest_id,
+            augmented_tree,
+            augmented_manifest_size,
+        })
+    }
+
+    /// Deserializes just the header of an AugmentedTreeEntryWithDigest.
+    pub fn try_deserialize_digest<R: BufRead>(reader: &mut R) -> anyhow::Result<(Blake3, u64)> {
         let mut line = String::new();
         reader.read_line(&mut line)?;
         let mut header = line.split(' ');
@@ -422,12 +434,7 @@ impl AugmentedTreeEntryWithDigest {
             .ok_or(anyhow!("augmented tree: missing augmented_manifest_size"))?
             .trim()
             .parse::<u64>()?;
-        let augmented_tree = AugmentedTreeEntry::try_deserialize(reader)?;
-        anyhow::Ok(Self {
-            augmented_manifest_id,
-            augmented_tree,
-            augmented_manifest_size,
-        })
+        Ok((augmented_manifest_id, augmented_manifest_size))
     }
 }
 
