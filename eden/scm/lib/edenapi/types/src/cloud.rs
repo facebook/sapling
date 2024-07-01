@@ -151,3 +151,9 @@ pub struct WorkspaceDataResponse {
     #[no_default]
     pub data: Result<WorkspaceData, ServerError>,
 }
+
+impl RemoteBookmark {
+    pub fn full_name(&self) -> String {
+        format!("{}/{}", self.remote, self.name)
+    }
+}

@@ -39,7 +39,7 @@ pub async fn update_remote_bookmarks(
         let removed_commits = removed_remote_bookmarks
             .unwrap()
             .into_iter()
-            .map(|b| b.remote + &b.name)
+            .map(|b| b.full_name())
             .collect::<Vec<_>>();
         let delete_args = DeleteArgs {
             removed_bookmarks: removed_commits,
