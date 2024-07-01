@@ -73,19 +73,35 @@ setup common configuration for these tests
   > record = true
   > enabled = true
   > date = 0 0
-  > [commitcloud]
-  > hostname = testhost
-  > servicetype = local
-  > servicelocation = $TESTTMP
-  > owner_team = The Test Team
-  > updateonmove = true
-  > usehttpupload = true
-  > remotebookmarkssync = true
   > [pull]
   > httphashprefix = true
   > httpbookmarks = true
   > [exchange]
   > httpcommitlookup = true
+  > EOF
+
+#testcases http edenapi
+
+#if http
+  $ cat >> $HGRCPATH <<EOF
+  > [commitcloud]
+  > servicetype = local
+  > EOF
+#else 
+  $ cat >> $HGRCPATH <<EOF
+  > [commitcloud]
+  > servicetype = edenapi
+  > fallback = local
+  > EOF
+#endif
+
+  $ cat >> $HGRCPATH <<EOF
+  > hostname = testhost
+  > servicelocation = $TESTTMP
+  > owner_team = The Test Team
+  > updateonmove = true
+  > usehttpupload = true
+  > remotebookmarkssync = true
   > EOF
 
 setup repo
