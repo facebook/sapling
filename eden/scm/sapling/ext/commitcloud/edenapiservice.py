@@ -36,7 +36,9 @@ class EdenApiService(baseservice.BaseService):
         baseversion,
         clientinfo=None,
     ):
-        self.ui.debug("Calling 'get_references' on edenapi\n", component="commitcloud")
+        self.ui.debug(
+            "sending 'get_references' request on edenapi\n", component="commitcloud"
+        )
         response = self.repo.edenapi.cloudreferences(
             {
                 "workspace": workspace,
@@ -87,7 +89,9 @@ class EdenApiService(baseservice.BaseService):
         clientinfo=None,
         logopts={},
     ):
-        self.ui.debug("sending 'update_references' request\n", component="commitcloud")
+        self.ui.debug(
+            "sending 'update_references' request on edenapi\n", component="commitcloud"
+        )
         oldheads = oldheads or []
         newheads = newheads or []
         oldbookmarks = oldbookmarks or []
@@ -176,7 +180,9 @@ class EdenApiService(baseservice.BaseService):
         self.fallback(reponame, prefix)
 
     def getworkspace(self, reponame, workspacename):
-        self.ui.debug("Calling 'cloudworkspace' on edenapi\n", component="commitcloud")
+        self.ui.debug(
+            "sending 'get_workspace' request on edenapi\n", component="commitcloud"
+        )
         response = self.repo.edenapi.cloudworkspace(workspacename, reponame)
 
         if "data" in response:
