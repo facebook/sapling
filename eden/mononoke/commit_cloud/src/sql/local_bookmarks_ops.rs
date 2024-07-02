@@ -8,7 +8,6 @@
 use ::sql_ext::mononoke_queries;
 use async_trait::async_trait;
 use clientinfo::ClientRequestInfo;
-use mercurial_types::HgChangesetId;
 use sql::Connection;
 use sql::Transaction;
 
@@ -20,10 +19,9 @@ use crate::sql::ops::SqlCommitCloud;
 use crate::sql::ops::Update;
 use crate::sql::utils::changeset_as_bytes;
 use crate::sql::utils::changeset_from_bytes;
-use crate::sql::utils::list_as_bytes;
 
 pub struct DeleteArgs {
-    pub removed_bookmarks: Vec<HgChangesetId>,
+    pub removed_bookmarks: Vec<String>,
 }
 
 mononoke_queries! {
@@ -31,10 +29,10 @@ mononoke_queries! {
         mysql("SELECT `name`, `node` FROM `bookmarks` WHERE `reponame`={reponame} AND `workspace`={workspace}")
         sqlite("SELECT `name`, `commit` FROM `workspacebookmarks` WHERE `reponame`={reponame} AND `workspace`={workspace}")
     }
-    write DeleteLocalBookmark(reponame: String, workspace: String, >list removed_bookmarks: Vec<u8>) {
+    write DeleteLocalBookmark(reponame: String, workspace: String, >list removed_bookmarks: String) {
         none,
-        mysql("DELETE FROM `bookmarks` WHERE `reponame`={reponame} AND `workspace`={workspace} AND `node` IN {removed_bookmarks}")
-        sqlite("DELETE FROM `workspacebookmarks` WHERE `reponame`={reponame} AND `workspace`={workspace} AND `commit` IN {removed_bookmarks}")
+        mysql("DELETE FROM `bookmarks` WHERE `reponame`={reponame} AND `workspace`={workspace} AND `name` IN {removed_bookmarks}")
+        sqlite("DELETE FROM `workspacebookmarks` WHERE `reponame`={reponame} AND `workspace`={workspace} AND `name` IN {removed_bookmarks}")
     }
     write InsertLocalBookmark(reponame: String, workspace: String, name: String, commit: Vec<u8>) {
         none,
@@ -121,7 +119,7 @@ impl Delete<WorkspaceLocalBookmark> for SqlCommitCloud {
             cri,
             &reponame,
             &workspace,
-            &list_as_bytes(args.removed_bookmarks, self.uses_mysql)?,
+            &args.removed_bookmarks,
         )
         .await?;
         Ok(txn)

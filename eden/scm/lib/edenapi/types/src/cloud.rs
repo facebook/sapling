@@ -61,7 +61,7 @@ pub struct UpdateReferencesParams {
     #[id(5)]
     pub updated_bookmarks: HashMap<String, HgId>,
     #[id(6)]
-    pub removed_bookmarks: Vec<HgId>,
+    pub removed_bookmarks: Vec<String>,
     #[id(7)]
     pub updated_remote_bookmarks: Option<Vec<RemoteBookmark>>,
     #[id(8)]

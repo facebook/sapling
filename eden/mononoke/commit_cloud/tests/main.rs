@@ -214,7 +214,7 @@ async fn test_local_bookmarks(_fb: FacebookInit) -> anyhow::Result<()> {
     let res: Vec<WorkspaceLocalBookmark> = sql.get(reponame.clone(), workspace.clone()).await?;
     assert_eq!(res.len(), 2);
 
-    let removed_bookmarks = vec![bookmark1.commit.clone()];
+    let removed_bookmarks = vec![bookmark1.name.clone()];
     txn = sql.connections.write_connection.start_transaction().await?;
     txn = Delete::<WorkspaceLocalBookmark>::delete(
         &sql,

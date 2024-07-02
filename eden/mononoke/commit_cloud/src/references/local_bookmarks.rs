@@ -32,16 +32,10 @@ pub async fn update_bookmarks(
     cri: Option<&ClientRequestInfo>,
     ctx: CommitCloudContext,
     updated_bookmarks: HashMap<String, HgId>,
-    removed_bookmarks: Vec<HgId>,
+    removed_bookmarks: Vec<String>,
 ) -> anyhow::Result<Transaction> {
     if !removed_bookmarks.is_empty() {
-        let removed_commits = removed_bookmarks
-            .into_iter()
-            .map(|id| id.into())
-            .collect::<Vec<HgChangesetId>>();
-        let delete_args = DeleteArgs {
-            removed_bookmarks: removed_commits,
-        };
+        let delete_args = DeleteArgs { removed_bookmarks };
 
         txn = Delete::<WorkspaceLocalBookmark>::delete(
             sql_commit_cloud,
