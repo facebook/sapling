@@ -22,6 +22,7 @@ use bookmarks::BookmarkPagination;
 use bookmarks::BookmarkPrefix;
 use bookmarks::BookmarksRef;
 use bookmarks_cache::BookmarksCacheRef;
+use buffered_weighted::MemoryBound;
 use buffered_weighted::StreamExt as _;
 use bytes::Bytes;
 use cloned::cloned;
@@ -487,8 +488,19 @@ fn entry_weight(
     let delta = delta_base(entry, delta_inclusion, filter);
     let weight = delta.as_ref().map_or(entry.full_object_size(), |delta| {
         delta.instructions_compressed_size()
-    }) as usize;
-    std::cmp::max(weight / THRESHOLD_BYTES, 1)
+    });
+    weight as usize
+}
+
+fn scaled_entry_weight(
+    entry: &(dyn GitDeltaManifestEntryOps + Send),
+    delta_inclusion: DeltaInclusion,
+    filter: Arc<Option<FetchFilter>>,
+) -> usize {
+    std::cmp::max(
+        entry_weight(entry, delta_inclusion, filter) / THRESHOLD_BYTES,
+        1,
+    )
 }
 
 fn to_commit_stream(commits: Vec<ChangesetId>) -> BoxStream<'static, Result<ChangesetId>> {
@@ -1080,6 +1092,8 @@ fn packfile_stream_from_changesets<'a>(
         ctx,
         blobstore,
         derived_data,
+        delta_inclusion,
+        filter,
         concurrency,
         ..
     } = fetch_container.clone();
@@ -1134,6 +1148,21 @@ fn packfile_stream_from_changesets<'a>(
         }
 
         while packfile_items_futures.len() < concurrency.trees_and_blobs {
+            if let Some((_, _, entry)) = delta_manifest_entries_buffer.front() {
+                // If the next future will tip memory usage over the memory bound then don't start polling it,
+                // unless `packfile_items_futures` is empty in which case we add the future regardless to make
+                // sure we always make progress.
+                if !packfile_items_futures.is_empty()
+                    && !MemoryBound::new(Some(concurrency.memory_bound)).within_bound(entry_weight(
+                        entry.as_ref(),
+                        delta_inclusion,
+                        filter.clone(),
+                    ))
+                {
+                    break;
+                }
+            }
+
             if let Some((cs_id, path, entry)) = delta_manifest_entries_buffer.pop_front() {
                 packfile_items_futures.push_back(packfile_item_for_delta_manifest_entry(
                     fetch_container.clone(),
@@ -1196,7 +1225,7 @@ async fn packfile_stream_from_objects<'a>(
                 Err(err) => (0, Either::Left(future::err(err))),
                 std::result::Result::Ok((changeset_id, path, entry)) => {
                     cloned!(ctx, blobstore, delta_filter as filter);
-                    let weight = entry_weight(entry.as_ref(), delta_inclusion, filter.clone());
+                    let weight = scaled_entry_weight(entry.as_ref(), delta_inclusion, filter.clone());
                     let fetch_future = async move {
                         let delta = delta_base(entry.as_ref(), delta_inclusion, filter);
                         match delta {
