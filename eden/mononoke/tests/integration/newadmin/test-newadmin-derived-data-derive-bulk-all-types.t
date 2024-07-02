@@ -41,14 +41,16 @@ derive the first few commits:
 
 add a more complex graph of changesets:
   $ testtool_drawdag -R repo <<EOF
-  > C-D-E
+  > C-D-E-F-G
   > # exists: C e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2
   > EOF
   C=e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2
   D=f41e886d61d03021b73d006acf237244086eb7a5d9c7989e44e59b76d3c3f2b5
   E=3a2426d009267ba6f83945ecb29f63116a21984fb62df772d3bbe0143163b8fd
+  F=65174a97145838cb665e879e8cf2be219d324dc498997c1116a1aff67bff4823
+  G=45fbf5ae6a45ed445a0fba067297780f4533d8f92901e499510e1dc268a69f97
 
-  $ mononoke_newadmin derived-data -R repo derive-bulk --all-types --start $C --end $E
+  $ mononoke_newadmin derived-data -R repo derive-bulk --all-types --start $C --end $G --chunk-size 2
 
   $ mononoke_newadmin derived-data -R repo exists -i $E -T blame
   Derived: 3a2426d009267ba6f83945ecb29f63116a21984fb62df772d3bbe0143163b8fd
@@ -68,3 +70,22 @@ add a more complex graph of changesets:
   Derived: 3a2426d009267ba6f83945ecb29f63116a21984fb62df772d3bbe0143163b8fd
   $ mononoke_newadmin derived-data -R repo exists -i $E -T skeleton_manifests
   Derived: 3a2426d009267ba6f83945ecb29f63116a21984fb62df772d3bbe0143163b8fd
+
+  $ mononoke_newadmin derived-data -R repo exists -i $G -T blame
+  Derived: 45fbf5ae6a45ed445a0fba067297780f4533d8f92901e499510e1dc268a69f97
+  $ mononoke_newadmin derived-data -R repo exists -i $G -T changeset_info
+  Derived: 45fbf5ae6a45ed445a0fba067297780f4533d8f92901e499510e1dc268a69f97
+  $ mononoke_newadmin derived-data -R repo exists -i $G -T deleted_manifest
+  Derived: 45fbf5ae6a45ed445a0fba067297780f4533d8f92901e499510e1dc268a69f97
+  $ mononoke_newadmin derived-data -R repo exists -i $G -T fastlog
+  Derived: 45fbf5ae6a45ed445a0fba067297780f4533d8f92901e499510e1dc268a69f97
+  $ mononoke_newadmin derived-data -R repo exists -i $G -T filenodes
+  Derived: 45fbf5ae6a45ed445a0fba067297780f4533d8f92901e499510e1dc268a69f97
+  $ mononoke_newadmin derived-data -R repo exists -i $G -T fsnodes
+  Derived: 45fbf5ae6a45ed445a0fba067297780f4533d8f92901e499510e1dc268a69f97
+  $ mononoke_newadmin derived-data -R repo exists -i $G -T unodes
+  Derived: 45fbf5ae6a45ed445a0fba067297780f4533d8f92901e499510e1dc268a69f97
+  $ mononoke_newadmin derived-data -R repo exists -i $G -T hgchangesets
+  Derived: 45fbf5ae6a45ed445a0fba067297780f4533d8f92901e499510e1dc268a69f97
+  $ mononoke_newadmin derived-data -R repo exists -i $G -T skeleton_manifests
+  Derived: 45fbf5ae6a45ed445a0fba067297780f4533d8f92901e499510e1dc268a69f97

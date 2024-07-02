@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::num::NonZeroUsize;
+
 use anyhow::anyhow;
 use anyhow::Result;
 use bulk_derivation::BulkDerivation;
@@ -29,12 +31,15 @@ pub(super) struct DeriveBulkArgs {
     /// Whether all enabled derived data types should be derived
     #[clap(long, required = true, group = "types to derive")]
     all_types: bool,
-    /// Commit ID of the start of the range.
+    /// Commit ID of the start of the range
     #[clap(long)]
     start: ChangesetId,
     /// Commit ID of the end of the range
     #[clap(long)]
     end: ChangesetId,
+    /// Chunk changeset range into chunks of this size
+    #[clap(long)]
+    chunk_size: Option<NonZeroUsize>,
 }
 
 pub(super) async fn derive_bulk(
@@ -83,10 +88,25 @@ pub(super) async fn derive_bulk(
         csids.len(),
         derived_data_types.len()
     );
-    repo.repo_derived_data()
-        .manager()
-        .derive_bulk(ctx, csids, None, &derived_data_types)
-        .await?;
+    if let Some(chunk_size) = args.chunk_size {
+        for csid_chunk in csids.chunks(chunk_size.get()) {
+            trace!(
+                ctx.logger(),
+                "deriving chunk of {} commits to {}",
+                csid_chunk.len(),
+                csid_chunk.last().expect("chunk should have at least one"),
+            );
+            repo.repo_derived_data()
+                .manager()
+                .derive_bulk(ctx, csid_chunk.to_vec(), None, &derived_data_types)
+                .await?;
+        }
+    } else {
+        repo.repo_derived_data()
+            .manager()
+            .derive_bulk(ctx, csids, None, &derived_data_types)
+            .await?;
+    }
 
     Ok(())
 }
