@@ -19,9 +19,11 @@ Populate test repo
   $ echo "test content" > test.txt
   $ hg commit -Aqm "add test.txt"
   $ ROOT_MFID_1=$(hg log -r . -T '{manifest}')
+  $ HG_ID_1=$(hg log -r . -T '{node}')
   $ hg cp test.txt copy.txt
   $ hg commit -Aqm "copy test.txt to test2.txt"
   $ ROOT_MFID_2=$(hg log -r . -T '{manifest}')
+  $ HG_ID_2=$(hg log -r . -T '{node}')
 
 Blobimport test repo.
   $ cd ..
@@ -77,12 +79,45 @@ Create and send tree request.
 
   $ cat > attrs << EOF
   > {
-  >     "manifest_blob": False,
-  >     "parents": False,
-  >     "child_metadata": False,
+  >     "manifest_blob": True,
+  >     "parents": True,
+  >     "child_metadata": True,
   >     "augmented_trees": True
   > }
   > EOF
 
   $ hgedenapi debugapi -e trees -f keys -f attrs --sort 2>&1 | grep 'internal error: Blob is missing'
       0: internal error: Blob is missing: * (glob)
+
+  $ mononoke_newadmin derived-data -R repo derive --derived-data-types hg_augmented_manifests --hg-id $HG_ID_1 --hg-id $HG_ID_2 --from-predecessor
+  $ hgedenapi debugapi -e trees -f keys -f attrs
+  [{"key": {"node": bin("15024c4dc4a27b572d623db342ae6a08d7f7adec"),
+            "path": ""},
+    "data": b"test.txt\0186cafa3319c24956783383dc44c5cbc68c5a0ca\n",
+    "parents": None,
+    "children": [{"Ok": {"File": {"key": {"node": bin("186cafa3319c24956783383dc44c5cbc68c5a0ca"),
+                                          "path": "test.txt"},
+                                  "file_metadata": {"size": 13,
+                                                    "content_sha1": bin("4fe2b8dd12cd9cd6a413ea960cd8c09c25f19527"),
+                                                    "content_blake3": bin("7e9a0ce0d68016f0502ac50ff401830c7e2e9c894b43b242439f90f99af8835a"),
+                                                    "file_header_metadata": b""}}}}],
+    "directory_metadata": {"augmented_manifest_id": bin("b607f9f2497ec96ef5f73f363886a3df48759ea864bff648e0f8de382236f71e"),
+                           "augmented_manifest_size": 212}},
+   {"key": {"node": bin("c8743b14e0789cc546125213c18a18d813862db5"),
+            "path": ""},
+    "data": b"copy.txt\017b8d4e3bafd4ec4812ad7c930aace9bf07ab033\ntest.txt\0186cafa3319c24956783383dc44c5cbc68c5a0ca\n",
+    "parents": bin("15024c4dc4a27b572d623db342ae6a08d7f7adec"),
+    "children": [{"Ok": {"File": {"key": {"node": bin("17b8d4e3bafd4ec4812ad7c930aace9bf07ab033"),
+                                          "path": "copy.txt"},
+                                  "file_metadata": {"size": 13,
+                                                    "content_sha1": bin("4fe2b8dd12cd9cd6a413ea960cd8c09c25f19527"),
+                                                    "content_blake3": bin("7e9a0ce0d68016f0502ac50ff401830c7e2e9c894b43b242439f90f99af8835a"),
+                                                    "file_header_metadata": b"\x01\ncopy: test.txt\ncopyrev: 186cafa3319c24956783383dc44c5cbc68c5a0ca\n\x01\n"}}}},
+                 {"Ok": {"File": {"key": {"node": bin("186cafa3319c24956783383dc44c5cbc68c5a0ca"),
+                                          "path": "test.txt"},
+                                  "file_metadata": {"size": 13,
+                                                    "content_sha1": bin("4fe2b8dd12cd9cd6a413ea960cd8c09c25f19527"),
+                                                    "content_blake3": bin("7e9a0ce0d68016f0502ac50ff401830c7e2e9c894b43b242439f90f99af8835a"),
+                                                    "file_header_metadata": b""}}}}],
+    "directory_metadata": {"augmented_manifest_id": bin("f5d56263e1ffc9a4bf1e637a5d7c5245dfd89ec7b9109147cc7dcc5187e8a73f"),
+                           "augmented_manifest_size": 504}}]

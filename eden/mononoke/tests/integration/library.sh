@@ -1192,6 +1192,7 @@ types=[
   "git_trees",
   "unodes",
   "hgchangesets",
+  "hg_augmented_manifests",
   "skeleton_manifests",
   "bssm_v3",
   "test_manifests",
