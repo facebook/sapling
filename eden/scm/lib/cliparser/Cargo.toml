@@ -8,7 +8,7 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.75"
-cpython = { version = "0.7.1", features = ["python3-sys"], optional = true, default-features = false }
+cpython = { version = "0.7.2", features = ["python3-sys"], optional = true, default-features = false }
 indexmap = { version = "2.2.6", features = ["arbitrary", "rayon", "serde"] }
 serde = { version = "1.0.185", features = ["derive", "rc"] }
 shlex = "1.3"

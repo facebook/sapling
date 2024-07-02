@@ -6,7 +6,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-cpython = { version = "0.7.1", features = ["python3-sys"], default-features = false }
+cpython = { version = "0.7.2", features = ["python3-sys"], default-features = false }
 cpython_ext = { version = "0.1.0", path = "../../lib/cpython-ext" }
 paste = "1.0.14"
 pyatexit = { version = "0.1.0", path = "modules/pyatexit" }

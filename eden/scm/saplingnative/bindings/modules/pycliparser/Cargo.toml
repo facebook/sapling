@@ -9,5 +9,5 @@ edition = "2021"
 clidispatch = { version = "0.1.0", path = "../../../../lib/clidispatch" }
 cliparser = { version = "0.1.0", path = "../../../../lib/cliparser", features = ["python"] }
 configmodel = { version = "0.1.0", path = "../../../../lib/config/model" }
-cpython = { version = "0.7.1", default-features = false }
+cpython = { version = "0.7.2", default-features = false }
 pyconfigloader = { version = "0.1.0", path = "../pyconfigloader" }

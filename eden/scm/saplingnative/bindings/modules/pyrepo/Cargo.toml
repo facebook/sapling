@@ -9,7 +9,7 @@ edition = "2021"
 checkout = { version = "0.1.0", path = "../../../../lib/checkout" }
 configmodel = { version = "0.1.0", path = "../../../../lib/config/model" }
 context = { version = "0.1.0", path = "../../../../lib/context" }
-cpython = { version = "0.7.1", default-features = false }
+cpython = { version = "0.7.2", default-features = false }
 cpython_ext = { version = "0.1.0", path = "../../../../lib/cpython-ext" }
 parking_lot = { version = "0.12.1", features = ["send_guard"] }
 pyconfigloader = { version = "0.1.0", path = "../pyconfigloader" }

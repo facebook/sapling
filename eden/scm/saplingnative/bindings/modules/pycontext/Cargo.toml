@@ -8,7 +8,7 @@ edition = "2021"
 [dependencies]
 configset = { version = "0.1.0", path = "../../../../lib/config/set" }
 context = { version = "0.1.0", path = "../../../../lib/context" }
-cpython = { version = "0.7.1", default-features = false }
+cpython = { version = "0.7.2", default-features = false }
 cpython_ext = { version = "0.1.0", path = "../../../../lib/cpython-ext" }
 io = { version = "0.1.0", path = "../../../../lib/io" }
 pyconfigloader = { version = "0.1.0", path = "../pyconfigloader" }

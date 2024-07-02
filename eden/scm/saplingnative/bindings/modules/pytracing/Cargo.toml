@@ -6,12 +6,12 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-cpython = { version = "0.7.1", default-features = false }
+cpython = { version = "0.7.2", default-features = false }
 cpython_ext = { version = "0.1.0", path = "../../../../lib/cpython-ext" }
 lazy_static = "1.4"
 mincode = { version = "0.1.0", path = "../../../../lib/mincode" }
 parking_lot = { version = "0.12.1", features = ["send_guard"] }
-python3-sys = "0.7.1"
+python3-sys = "0.7.2"
 serde_json = { version = "1.0.100", features = ["float_roundtrip", "unbounded_depth"] }
 tracing = { version = "0.1.40", features = ["attributes"] }
 tracing-collector = { version = "0.1.0", path = "../../../../lib/tracing-collector" }

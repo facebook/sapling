@@ -9,7 +9,7 @@ edition = "2021"
 anyhow = "1.0.75"
 async-runtime = { version = "0.1.0", path = "../../../../lib/async-runtime" }
 byteorder = "1.3"
-cpython = { version = "0.7.1", default-features = false }
+cpython = { version = "0.7.2", default-features = false }
 cpython_ext = { version = "0.1.0", path = "../../../../lib/cpython-ext" }
 mutationstore = { version = "0.1.0", path = "../../../../lib/mutationstore" }
 pydag = { version = "0.1.0", path = "../pydag" }
