@@ -285,7 +285,7 @@ impl SaplingRemoteApi for EagerRepo {
                             })?;
                         // Match the key in the response and in the request!
                         // TreeEntry produced from the augmented tree format doesn't contain path for itself, only for the children.
-                        converted_entry.key = key.clone();
+                        converted_entry.key = key;
                         // Clean up fields that were not requested, since the augmented trees format contains
                         // everything by default
                         if !attributes.manifest_blob {
