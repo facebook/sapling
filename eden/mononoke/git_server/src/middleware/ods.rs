@@ -31,6 +31,8 @@ define_stats! {
     clone_duration_ms: dynamic_histogram("{}.clone_ms", (repo: String); 100, 0, 5000, Average, Sum, Count; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
     pull_duration_ms: dynamic_histogram("{}.pull_ms", (repo: String); 100, 0, 5000, Average, Sum, Count; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
     ls_refs_duration_ms: dynamic_histogram("{}.ls_refs_ms", (repo: String); 100, 0, 5000, Average, Sum, Count; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
+    advertise_read_duration_ms: dynamic_histogram("{}.advertise_read_ms", (repo: String); 100, 0, 5000, Average, Sum, Count; P 50; P 75; P 95; P 97; P 99),
+    advertise_write_duration_ms: dynamic_histogram("{}.advertise_write_ms", (repo: String); 100, 0, 5000, Average, Sum, Count; P 50; P 75; P 95; P 97; P 99),
 }
 
 fn log_stats(state: &mut State, status: StatusCode) -> Option<()> {
@@ -59,6 +61,12 @@ fn log_stats(state: &mut State, status: StatusCode) -> Option<()> {
                 Pull => STATS::pull_duration_ms.add_value(dur_ms, (repo.clone(),)),
                 Clone => STATS::clone_duration_ms.add_value(dur_ms, (repo.clone(),)),
                 LsRefs => STATS::ls_refs_duration_ms.add_value(dur_ms, (repo.clone(),)),
+                AdvertiseRead => {
+                    STATS::advertise_read_duration_ms.add_value(dur_ms, (repo.clone(),))
+                }
+                AdvertiseWrite => {
+                    STATS::advertise_write_duration_ms.add_value(dur_ms, (repo.clone(),))
+                }
             }
         }
 

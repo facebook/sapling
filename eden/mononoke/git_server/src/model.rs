@@ -14,7 +14,6 @@ use gotham_derive::StateData;
 use gotham_derive::StaticResponseExtender;
 pub use method::GitMethod;
 pub use method::GitMethodInfo;
-pub use method::GitMethodVariant;
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize, StateData, StaticResponseExtender)]
@@ -28,6 +27,7 @@ pub struct ServiceType {
     Debug,
     Deserialize,
     Clone,
+    Copy,
     StateData
 )]
 #[serde(rename_all = "kebab-case")]

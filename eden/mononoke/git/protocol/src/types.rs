@@ -306,6 +306,14 @@ impl LsRefsRequest {
             tag_inclusion,
         }
     }
+
+    pub fn advertisement() -> Self {
+        Self {
+            requested_symrefs: RequestedSymrefs::ExcludeAll,
+            requested_refs: RequestedRefs::all(),
+            tag_inclusion: TagInclusion::Peeled,
+        }
+    }
 }
 
 /// The request parameters used to specify the constraints that need to be
@@ -393,7 +401,7 @@ pub struct LsRefsResponse {
     pub included_refs: HashMap<String, RefTarget>,
 }
 
-fn ref_line(name: &str, target: &RefTarget) -> String {
+pub fn ref_line(name: &str, target: &RefTarget) -> String {
     match target.metadata() {
         None => {
             format!("{} {}", target.as_object_id().to_hex(), name)

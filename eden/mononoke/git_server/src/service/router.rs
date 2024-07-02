@@ -20,7 +20,6 @@ use gotham::router::Router;
 use gotham::state::State;
 use gotham_ext::middleware::ScubaMiddlewareState;
 use gotham_ext::response::build_error_response;
-use gotham_ext::response::build_response;
 
 use super::error_formatter::GitErrorFormatter;
 use crate::model::GitServerContext;
@@ -32,7 +31,13 @@ fn capability_advertisement_handler(mut state: State) -> Pin<Box<HandlerFuture>>
     async move {
         let (future_stats, res) = read::capability_advertisement(&mut state).timed().await;
         ScubaMiddlewareState::try_set_future_stats(&mut state, &future_stats);
-        build_response(res, state, &GitErrorFormatter)
+        match res {
+            Ok(res) => Ok((state, res)),
+            Err(err) => {
+                println!("Encountered error {:?}", err);
+                build_error_response(err, state, &GitErrorFormatter)
+            }
+        }
     }
     .boxed()
 }

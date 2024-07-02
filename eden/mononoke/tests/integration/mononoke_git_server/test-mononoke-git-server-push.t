@@ -33,19 +33,24 @@
   Cloning into 'repo-git'...
   done.
 
-# Capture all the known Git objects from the repo
-  $ cd $GIT_REPO
-  $ git rev-list --objects --all | git cat-file --batch-check='%(objectname) %(objecttype) %(rest)' | sort > $TESTTMP/object_list
-
 # Import it into Mononoke
   $ cd "$TESTTMP"
   $ quiet gitimport "$GIT_REPO" --derive-hg --generate-bookmarks full-repo
 
 # Start up the Mononoke Git Service
   $ mononoke_git_service
-# Attempt to Clone the Git repo from Mononoke as "localhost" who does NOT have read access. This should fail with 403 unauthorized error
-  $ git_client_as localhost clone $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git
+# Clone the Git repo from Mononoke
+  $ git_client clone $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git
   Cloning into 'repo'...
-  remote: Operation not permitted
-  fatal: unable to access 'https://*/repos/git/ro/repo.git/': The requested URL returned error: 403 (glob)
-  [128]
+
+# Add some new commits to the cloned repo and push it to remote
+  $ cd repo
+  $ echo "newly added file" > new_file
+  $ git add .
+  $ git commit -qam "Commit with newly added file"
+
+# Only the advertisement of write path is supported till now. So the below should fail with HTTP 404 error
+# due to lack for receive-pack endpoint
+  $ GIT_TRACE_PACKET=true GIT_TRACE=true GIT_CURL_VERBOSE=true git_client push 2> >(grep "HTTP 404")
+  error: RPC failed; HTTP 404 curl 22 The requested URL returned error: 404
+  [1]
