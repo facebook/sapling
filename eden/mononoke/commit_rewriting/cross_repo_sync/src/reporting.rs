@@ -142,7 +142,7 @@ where
 pub fn _log_critical<S: Into<String>>(ctx: &CoreContext, msg: S) {
     log_with_level(ctx, slog::Level::Critical, msg);
 }
-pub fn _log_error<S: Into<String>>(ctx: &CoreContext, msg: S) {
+pub fn log_error<S: Into<String>>(ctx: &CoreContext, msg: S) {
     log_with_level(ctx, slog::Level::Error, msg);
 }
 

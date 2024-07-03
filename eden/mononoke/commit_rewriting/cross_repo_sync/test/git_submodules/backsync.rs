@@ -15,6 +15,7 @@ use blobstore::Loadable;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use git_types::MappedGitCommitId;
+use mononoke_types::BonsaiChangeset;
 use mononoke_types::NonRootMPath;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataRef;
@@ -135,8 +136,18 @@ async fn test_changing_submodule_expansion_without_metadata_file_fails_validatio
     )
     .await;
 
-    let expected_err_msg = "Expansion of submodule submodules/repo_b changed without updating its metadata file repo_a/submodules/.x-repo-submodule-repo_b";
-    assert!(validation_res.is_err_and(|e| { e.to_string().contains(expected_err_msg) }));
+    let expected_err_msg = concat!(
+        "Expansion of submodule submodules/repo_b changed without updating ",
+        "its metadata file repo_a/submodules/.x-repo-submodule-repo_b"
+    );
+
+    assert_validation_error(
+        validation_res,
+        vec![
+            "Validation of submodule submodules/repo_b failed",
+            expected_err_msg,
+        ],
+    );
 
     Ok(())
 }
@@ -193,8 +204,15 @@ async fn test_changing_submodule_metadata_pointer_without_expansion_fails_valida
     )
     .await;
 
-    let expected_err_msg = "Files present in the expansion are unaccounted for";
-    assert!(validation_res.is_err_and(|e| { e.to_string().contains(expected_err_msg) }));
+    let expected_err_msg = "Files present in expansion are unaccounted for";
+
+    assert_validation_error(
+        validation_res,
+        vec![
+            "Validation of submodule submodules/repo_b failed",
+            expected_err_msg,
+        ],
+    );
 
     Ok(())
 }
@@ -253,8 +271,18 @@ async fn test_changing_submodule_metadata_pointer_to_git_commit_from_another_rep
     .await;
     println!("Validation result: {0:#?}", &validation_res);
 
-    let expected_err_msg = "Failed to get changeset id from git submodule commit hash 76ba5635bc159cfa5ac555d95974116bc94473f0 in repo repo_b";
-    assert!(validation_res.is_err_and(|e| { e.to_string().contains(expected_err_msg) }));
+    let expected_err_msg = concat!(
+        "Failed to get changeset id from git submodule ",
+        "commit hash 76ba5635bc159cfa5ac555d95974116bc94473f0 in repo repo_b"
+    );
+
+    assert_validation_error(
+        validation_res,
+        vec![
+            "Validation of submodule submodules/repo_b failed",
+            expected_err_msg,
+        ],
+    );
 
     Ok(())
 }
@@ -357,8 +385,28 @@ async fn test_deleting_submodule_expansion_without_metadata_file_fails_validatio
 
     println!("Validation result: {0:#?}", &validation_res);
 
-    let expected_err_msg = "Expansion of submodule submodules/repo_b changed without updating its metadata file repo_a/submodules/.x-repo-submodule-repo_b";
-    assert!(validation_res.is_err_and(|e| { e.to_string().contains(expected_err_msg) }));
+    let expected_err_msg = concat!(
+        "Expansion of submodule submodules/repo_b changed without updating ",
+        "its metadata file repo_a/submodules/.x-repo-submodule-repo_b"
+    );
+
+    assert_validation_error(
+        validation_res,
+        vec![
+            "Validation of submodule submodules/repo_b failed",
+            expected_err_msg,
+        ],
+    );
 
     Ok(())
+}
+
+/// Takes a Result that's expected to be a submodule expansion validation error
+/// and assert it matches the expectations (e.g. error message, contexts).
+fn assert_validation_error(result: Result<BonsaiChangeset>, expected_msgs: Vec<&str>) {
+    assert!(result.is_err_and(|e| {
+        let error_msgs = e.chain().map(|e| e.to_string()).collect::<Vec<_>>();
+        println!("Error messages: {:#?}", error_msgs);
+        error_msgs == expected_msgs
+    }));
 }

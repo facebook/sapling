@@ -11,7 +11,6 @@ use std::collections::HashSet;
 use std::sync::Arc;
 
 use anyhow::anyhow;
-use anyhow::ensure;
 use anyhow::Context;
 use anyhow::Result;
 use async_recursion::async_recursion;
@@ -51,6 +50,7 @@ use crate::git_submodules::utils::list_non_submodule_files_under;
 use crate::git_submodules::utils::root_fsnode_id_from_submodule_git_commit;
 use crate::git_submodules::utils::x_repo_submodule_metadata_file_basename;
 use crate::reporting::log_debug;
+use crate::reporting::log_error;
 use crate::reporting::run_and_log_stats_to_scuba;
 use crate::types::Repo;
 
@@ -89,6 +89,7 @@ pub async fn validate_all_submodule_expansions<'a, R: Repo>(
                     ),
                 )
                 .await
+                .with_context(|| format!("Validation of submodule {submodule_path} failed"))
             }
         })
         .await?;
@@ -625,24 +626,52 @@ where
         )
         .await?;
 
+    /// Helper to assert that there are no unexpected files/directories in
+    /// the submodule manifest or expansion manifests, and log/display these
+    /// entries if they're there.
+    fn check_for_unexpected_entries<T>(
+        ctx: &CoreContext,
+        entries: HashMap<MPathElement, T>,
+        entry_kind: &str,
+        location: &str,
+    ) -> Result<()>
+    where
+        T: std::fmt::Debug,
+    {
+        if entries.is_empty() {
+            // No unexpected entries
+            return Ok(());
+        }
+
+        let unexpected_entries = entries.keys().sorted().collect::<Vec<_>>();
+        log_error(
+            ctx,
+            format!(
+                "{entry_kind} unaccounted for in {location}: {:#?}",
+                unexpected_entries
+            ),
+        );
+
+        Err(anyhow!(
+            "{entry_kind} present in {location} are unaccounted for"
+        ))
+    }
+
     // STEP 5: ensure that all the paths in the submodule manifest were accounted
     // for.
-    ensure!(
-        final_submodule_dirs.is_empty(),
-        "Some directories present in submodule manifest are unaccounted for"
-    );
-    ensure!(
-        final_submodule_files.is_empty(),
-        "Some files present in submodule manifest are unaccounted for"
-    );
+    check_for_unexpected_entries(
+        ctx,
+        final_submodule_dirs,
+        "Directories",
+        "submodule manifest",
+    )?;
+
+    check_for_unexpected_entries(ctx, final_submodule_files, "Files", "submodule manifest")?;
 
     // Do the same for all the files in the expansion that don't exist in
     // the submodule manifest, because they should be metadata files that were
     // fetched to expand their submodule.
-    ensure!(
-        final_expansion_only_files.is_empty(),
-        "Files present in the expansion are unaccounted for"
-    );
+    check_for_unexpected_entries(ctx, final_expansion_only_files, "Files", "expansion")?;
 
     // STEP 6: actually perform the recursive validation calls
     stream::iter(entries_to_validate)
