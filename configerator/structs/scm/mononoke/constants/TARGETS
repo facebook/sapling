@@ -1,0 +1,18 @@
+load("@fbcode_macros//build_defs:thrift_library.bzl", "thrift_library")
+
+oncall("source_control")
+
+thrift_library(
+    name = "constants",
+    languages = [
+        "py",
+        "rust",
+    ],
+    py_base_module = "configerator.mononoke",
+    thrift_py_options = "json",
+    thrift_rust_options = "serde",
+    thrift_srcs = {"constants.thrift": None},
+    deps = [
+        "//configerator/structs/scm/mononoke/sharding:sharding",
+    ],
+)
