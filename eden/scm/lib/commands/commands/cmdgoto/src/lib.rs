@@ -73,10 +73,12 @@ pub fn run(ctx: ReqCtx<GotoOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Resu
 
     if repo.config().get("commands", "update.check").as_deref() == Some("none") {
         // This is equivalent to --merge, which we don't support.
+        tracing::debug!(target: "checkout_info", checkout_detail="update.check");
         fallback!("commands.update.check=none");
     }
 
     if wc.parents()?.len() > 1 {
+        tracing::debug!(target: "checkout_info", checkout_detail="merge");
         fallback!("multiple working copy parents");
     }
 
