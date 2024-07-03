@@ -91,6 +91,7 @@ mod scuba;
 mod service;
 mod sharding;
 mod util;
+mod write;
 
 const SERVICE_NAME: &str = "mononoke_git_server";
 const SM_CLEANUP_TIMEOUT_SECS: u64 = 60;

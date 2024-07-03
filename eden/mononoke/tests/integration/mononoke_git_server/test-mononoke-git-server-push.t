@@ -48,9 +48,29 @@
   $ echo "newly added file" > new_file
   $ git add .
   $ git commit -qam "Commit with newly added file"
+  $ git checkout -b new_branch
+  Switched to a new branch 'new_branch'
+  $ echo "new file on new branch" > another_new_file
+  $ git add .
+  $ git commit -qam "New commit on new branch"
 
-# Only the advertisement of write path is supported till now. So the below should fail with HTTP 404 error
-# due to lack for receive-pack endpoint
-  $ GIT_TRACE_PACKET=true GIT_TRACE=true GIT_CURL_VERBOSE=true git_client push 2> >(grep "HTTP 404")
-  error: RPC failed; HTTP 404 curl 22 The requested URL returned error: 404
-  [1]
+# Even though we support all Git endpoints, the git-receive-pack endpoint simply accepts pushes without
+# moving the bookmarks in the backend.
+  $ git_client push --all
+  To https://*/repos/git/ro/repo.git (glob)
+     e8615d6..e8b927e  master -> master
+   * [new branch]      new_branch -> new_branch
+
+# Cloning the repo in a new folder will not get the latest changes since we didn't really accept the push
+  $ cd "$TESTTMP"
+  $ git_client clone $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git new_repo
+  Cloning into 'new_repo'...
+  $ cd new_repo
+
+# When trying to list refs, note that new_branch is not present since the server never accepted it
+  $ git show-ref | sort
+  8963e1f55d1346a07c3aec8c8fc72bf87d0452b1 refs/tags/first_tag
+  e8615d6f149b876be0a2f30a1c5bf0c42bf8e136 refs/heads/master
+  e8615d6f149b876be0a2f30a1c5bf0c42bf8e136 refs/remotes/origin/HEAD
+  e8615d6f149b876be0a2f30a1c5bf0c42bf8e136 refs/remotes/origin/master
+  fb02ed046a1e75fe2abb8763f7c715496ae36353 refs/tags/empty_tag

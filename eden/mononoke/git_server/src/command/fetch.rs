@@ -212,7 +212,7 @@ impl FilterArgs {
     }
 }
 
-fn parse_oid(data: &[u8], oid_type: &[u8]) -> Result<ObjectId> {
+pub fn parse_oid(data: &[u8], oid_type: &[u8]) -> Result<ObjectId> {
     ObjectId::from_hex(data).with_context(|| {
         format!(
             "Invalid {:?}object id {:?} received during fetch request",

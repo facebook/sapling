@@ -5,9 +5,6 @@
  * GNU General Public License version 2.
  */
 
-mod capability_advertisement;
-mod upload_pack;
+mod receive_pack;
 
-pub use capability_advertisement::capability_advertisement;
-pub use upload_pack::get_body;
-pub use upload_pack::upload_pack;
+pub use receive_pack::receive_pack;

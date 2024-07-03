@@ -311,7 +311,7 @@ impl Iterator for FetchResponseHeaders {
     }
 }
 
-async fn get_body(state: &mut State) -> Result<Bytes, HttpError> {
+pub async fn get_body(state: &mut State) -> Result<Bytes, HttpError> {
     Body::take_from(state)
         .try_concat_body(&HeaderMap::new())
         .map_err(HttpError::e500)?
@@ -348,6 +348,9 @@ pub async fn upload_pack(state: &mut State) -> Result<Response<Body>, HttpError>
             let output = output.map_err(HttpError::e500)?.try_into_response(state);
             output.map_err(HttpError::e500)
         }
+        Command::Push(_) => Err(HttpError::e500(anyhow::anyhow!(
+            "Push command directed to incorrect upload-pack handler"
+        ))),
     }
 }
 

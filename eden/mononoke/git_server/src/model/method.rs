@@ -12,7 +12,7 @@ use gotham_derive::StateData;
 use crate::command::Command;
 
 /// Enum representing the method (and the corresponding handler) supported by the Git Server
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub enum GitMethod {
     /// Method responsible for advertising the server capabilities for git-upload-pack to the client
     AdvertiseRead,
@@ -24,14 +24,14 @@ pub enum GitMethod {
     Clone,
     /// Method responsible for listing all known refs to the client
     LsRefs,
+    /// Method responsible for pushing changes to the repo
+    Push,
 }
 
 impl GitMethod {
     /// Returns true if the method is read-only
     pub fn is_read_only(&self) -> bool {
-        // Since the current version of Mononoke Git server does not support pushes, all
-        // its methods are read-only
-        true
+        *self != Self::Push
     }
 }
 
@@ -43,6 +43,7 @@ impl fmt::Display for GitMethod {
             Self::LsRefs => "ls-refs",
             Self::AdvertiseRead => "advertise-read",
             Self::AdvertiseWrite => "advertise-write",
+            Self::Push => "push",
         };
         write!(f, "{}", name)
     }
@@ -119,6 +120,7 @@ impl GitMethodInfo {
                 }
                 (method, variants)
             }
+            Command::Push(_) => (GitMethod::Push, vec![GitMethodVariant::Standard]),
         };
         GitMethodInfo {
             method,

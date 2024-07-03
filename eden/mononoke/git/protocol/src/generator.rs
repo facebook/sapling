@@ -1773,10 +1773,6 @@ pub async fn fetch_response<'a>(
     .await
     .context("Error while generating tag packfile item stream during fetch")?;
     // Compute the overall object count by summing the trees, blobs, tags and commits count
-    println!(
-        "trees_and_blobs_count: {}, commits_count: {}, tags_count: {}",
-        trees_and_blobs_count, commits_count, tags_count
-    );
     let object_count = commits_count
         + trees_and_blobs_count
         + tags_count
