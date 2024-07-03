@@ -880,6 +880,11 @@ impl SourceControlService for SourceControlServiceThriftImpl {
             params: thrift::CommitHistoryParams,
         ) -> Result<thrift::CommitHistoryResponse, service::CommitHistoryExn>;
 
+        async fn commit_linear_history(
+            commit: thrift::CommitSpecifier,
+            params: thrift::CommitLinearHistoryParams,
+        ) -> Result<thrift::CommitLinearHistoryResponse, service::CommitLinearHistoryExn>;
+
         async fn commit_list_descendant_bookmarks(
             commit: thrift::CommitSpecifier,
             params: thrift::CommitListDescendantBookmarksParams,

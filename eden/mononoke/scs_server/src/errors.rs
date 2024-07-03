@@ -263,6 +263,7 @@ impl_into_thrift_error!(service::CommitCompareExn);
 impl_into_thrift_error!(service::CommitIsAncestorOfExn);
 impl_into_thrift_error!(service::CommitFindFilesExn);
 impl_into_thrift_error!(service::CommitHistoryExn);
+impl_into_thrift_error!(service::CommitLinearHistoryExn);
 impl_into_thrift_error!(service::CommitListDescendantBookmarksExn);
 impl_into_thrift_error!(service::CommitRunHooksExn);
 impl_into_thrift_error!(service::CommitPathExistsExn);

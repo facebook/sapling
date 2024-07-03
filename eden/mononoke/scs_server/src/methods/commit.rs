@@ -872,6 +872,15 @@ impl SourceControlServiceImpl {
         })
     }
 
+    pub async fn commit_linear_history(
+        &self,
+        _ctx: CoreContext,
+        _commit: thrift::CommitSpecifier,
+        _params: thrift::CommitLinearHistoryParams,
+    ) -> Result<thrift::CommitLinearHistoryResponse, errors::ServiceError> {
+        unimplemented!("commit_linear_history is not implemented yet")
+    }
+
     pub(crate) async fn commit_list_descendant_bookmarks(
         &self,
         ctx: CoreContext,

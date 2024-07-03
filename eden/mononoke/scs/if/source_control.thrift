@@ -1279,6 +1279,41 @@ struct CommitHistoryParams {
   8: optional CommitId exclude_changeset_and_ancestors;
 }
 
+/// Parameters for the `commit_linear_history` method.
+///
+/// By default, this will include all commits that are linear ancestors of
+/// the target commit. Linear ancestors are commits that can be reached by
+/// following by following the first parent of the commit (including the
+/// commit itself). This can be filtered in a number of ways:
+///
+/// * `descendants_of` will restrict traversal to only those commits which
+///   are linear descendants of the given commit, i.e. commits that can
+///   reach the given commit by following the first parent.
+///
+/// * `exclude_changeset_and_ancestors` will prune traversal at the given
+///   commit and any of its linear ancestors.
+///
+/// These options can be combined.  In particular, since `descendants_of`
+/// is an inclusive range of commits, and `exclude_changeset_and_ancestors`
+/// excludes the target commits, a half-open range of commits
+/// `(ancestor, descendant]` can be obtained by setting both of these to
+/// the ancestor commit.
+struct CommitLinearHistoryParams {
+  /// Return history in the given format.
+  1: HistoryFormat format;
+  /// Number of commits to return in the history.
+  2: i32 limit;
+  /// Number of commits to skip before listing the history.
+  3: i32 skip;
+  /// Commit identity schemes to return in the commit information.
+  6: set<CommitIdentityScheme> identity_schemes;
+  /// Include only commits that are linear descendants of the given commit
+  /// (including the commit itself)
+  7: optional CommitId descendants_of;
+  /// Exclude commit and all of its linear ancestor from results.
+  8: optional CommitId exclude_changeset_and_ancestors;
+}
+
 const i64 COMMIT_LIST_DESCENDANT_BOOKMARKS_MAX_LIMIT = 10000;
 
 struct CommitListDescendantBookmarksParams {
@@ -1828,6 +1863,10 @@ struct CommitFindFilesResponse {
 }
 
 struct CommitHistoryResponse {
+  1: History history;
+}
+
+struct CommitLinearHistoryResponse {
   1: History history;
 }
 
@@ -2418,6 +2457,15 @@ service SourceControlService extends fb303_core.BaseService {
   CommitHistoryResponse commit_history(
     1: CommitSpecifier commit,
     2: CommitHistoryParams params,
+  ) throws (
+    1: RequestError request_error,
+    2: InternalError internal_error,
+    3: OverloadError overload_error,
+  );
+
+  CommitLinearHistoryResponse commit_linear_history(
+    1: CommitSpecifier commit,
+    2: CommitLinearHistoryParams params,
   ) throws (
     1: RequestError request_error,
     2: InternalError internal_error,

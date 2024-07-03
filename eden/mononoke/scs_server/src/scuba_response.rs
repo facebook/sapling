@@ -112,6 +112,8 @@ impl AddScubaResponse for thrift::CommitLookupPushrebaseHistoryResponse {}
 
 impl AddScubaResponse for thrift::CommitHistoryResponse {}
 
+impl AddScubaResponse for thrift::CommitLinearHistoryResponse {}
+
 impl AddScubaResponse for thrift::CommitListDescendantBookmarksResponse {}
 
 impl AddScubaResponse for thrift::CommitRunHooksResponse {}

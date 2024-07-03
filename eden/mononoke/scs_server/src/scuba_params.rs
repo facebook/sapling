@@ -342,6 +342,24 @@ impl AddScubaParams for thrift::CommitHistoryParams {
     }
 }
 
+impl AddScubaParams for thrift::CommitLinearHistoryParams {
+    fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
+        scuba.add("param_format", self.format.to_string());
+        scuba.add("param_skip", self.skip);
+        scuba.add("param_limit", self.limit);
+        if let Some(descendants_of) = &self.descendants_of {
+            scuba.add("param_descendants_of", descendants_of.to_string());
+        }
+        if let Some(exclude_changeset_and_ancestors) = &self.exclude_changeset_and_ancestors {
+            scuba.add(
+                "param_exclude_changeset_and_ancestors",
+                exclude_changeset_and_ancestors.to_string(),
+            );
+        }
+        self.identity_schemes.add_scuba_params(scuba);
+    }
+}
+
 impl AddScubaParams for thrift::CommitListDescendantBookmarksParams {
     fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
         scuba.add("param_include_scratch", self.include_scratch as i32);
