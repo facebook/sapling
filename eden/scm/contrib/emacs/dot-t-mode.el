@@ -157,7 +157,8 @@ Add prefix arg to run with --fix.
                            "--noprogress"
                            "--maxdifflines" "10000"
                            "--with-hg" (executable-find dot-t-sl-command)
-                           "--chg"))
+                           ;; "--chg" ; makes tests hang for some reason
+                           ))
           (when (save-excursion (goto-char (point-min)) (search-forward "#require fsmonitor" nil t))
             (setq args (append args '("--watchman")))))
       (setq args (list dot-t-sl-command
