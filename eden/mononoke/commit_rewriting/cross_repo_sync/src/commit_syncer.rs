@@ -28,6 +28,7 @@ use futures::future::TryFutureExt;
 use futures::stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
+use futures::FutureExt;
 use live_commit_sync_config::LiveCommitSyncConfig;
 use maplit::hashmap;
 use maplit::hashset;
@@ -213,6 +214,7 @@ where
                 ancestor_selection_hint,
                 disable_lease,
             )
+            .boxed()
             .await;
         let elapsed = before.elapsed();
         log_rewrite(
@@ -257,6 +259,7 @@ where
                 commit_sync_context,
                 expected_version,
             )
+            .boxed()
             .await;
         let elapsed = before.elapsed();
         log_rewrite(
@@ -304,6 +307,7 @@ where
                 maybe_parents,
                 sync_config_version,
             )
+            .boxed()
             .await;
         let elapsed = before.elapsed();
         log_rewrite(
@@ -350,6 +354,7 @@ where
                 change_mapping_version,
                 parent_mapping,
             )
+            .boxed()
             .await;
         let elapsed = before.elapsed();
 
@@ -422,6 +427,7 @@ where
             Source(self.repos.get_source_repo().repo_identity().id()),
             Target(self.repos.get_target_repo().repo_identity().id()),
         )
+        .boxed()
         .await
     }
 
@@ -433,6 +439,7 @@ where
             source_repo.repo_identity().id(),
             target_repo.repo_identity().id(),
         )
+        .boxed()
         .await
     }
 
@@ -450,6 +457,7 @@ where
             self.repos.get_direction(),
             Arc::clone(&self.live_commit_sync_config),
         )
+        .boxed()
         .await
     }
 
@@ -467,6 +475,7 @@ where
             self.repos.get_direction(),
             Arc::clone(&self.live_commit_sync_config),
         )
+        .boxed()
         .await
     }
 
@@ -486,6 +495,7 @@ where
             self.repos.get_direction(),
             Arc::clone(&self.live_commit_sync_config),
         )
+        .boxed()
         .await
     }
 
@@ -494,6 +504,7 @@ where
             Arc::clone(&self.live_commit_sync_config),
             self.get_small_repo().repo_identity().id(),
         )
+        .boxed()
         .await
     }
 
@@ -508,6 +519,7 @@ where
             source_repo.repo_identity().id(),
             target_repo.repo_identity().id(),
         )
+        .boxed()
         .await
     }
 
@@ -519,6 +531,7 @@ where
             source_repo.repo_identity().id(),
             target_repo.repo_identity().id(),
         )
+        .boxed()
         .await
     }
 
@@ -531,6 +544,7 @@ where
             self.get_target_repo_id(),
             version,
         )
+        .boxed()
         .await
     }
 
@@ -538,7 +552,7 @@ where
         &self,
         bookmark: &BookmarkKey,
     ) -> Result<Option<BookmarkKey>, Error> {
-        Ok(self.get_bookmark_renamer().await?(bookmark))
+        Ok(self.get_bookmark_renamer().boxed().await?(bookmark))
     }
 
     pub async fn commit_sync_outcome_exists<'a>(
@@ -555,6 +569,7 @@ where
             self.repos.get_direction(),
             Arc::clone(&self.live_commit_sync_config),
         )
+        .boxed()
         .await
     }
 

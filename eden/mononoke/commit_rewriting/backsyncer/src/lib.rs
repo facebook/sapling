@@ -242,6 +242,7 @@ where
             log_entries_limit,
             Freshness::MostRecent,
         )
+        .boxed()
         .try_collect()
         .await?;
 
@@ -267,6 +268,7 @@ where
             disable_lease,
             commit_only_backsync_future,
         )
+        .boxed()
         .await
     }
 }

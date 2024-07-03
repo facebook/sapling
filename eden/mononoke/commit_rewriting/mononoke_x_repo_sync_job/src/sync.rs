@@ -45,6 +45,7 @@ use futures::future::try_join_all;
 use futures::stream;
 use futures::stream::TryStreamExt;
 use futures::try_join;
+use futures::FutureExt;
 use futures::StreamExt;
 use futures_stats::TimedFutureExt;
 use futures_stats::TimedTryFutureExt;
@@ -101,7 +102,7 @@ where
     log_info(ctx, format!("processing log entry #{}", entry.id));
     let source_bookmark = Source(entry.bookmark_name);
     let target_bookmark = Target(
-        commit_syncer.get_bookmark_renamer().await?(&source_bookmark)
+        commit_syncer.get_bookmark_renamer().boxed().await?(&source_bookmark)
             .ok_or_else(|| format_err!("unexpected empty bookmark rename"))?,
     );
     scuba_sample
@@ -122,6 +123,7 @@ where
                 common_pushrebase_bookmarks,
                 Some(entry.timestamp),
             )
+            .boxed()
             .await?;
 
             return Ok(SyncResult::Synced(vec![]));
@@ -141,6 +143,7 @@ where
         &None,
         false,
     )
+    .boxed()
     .await
     // Note: counter update might fail after a successful sync
 }
@@ -190,6 +193,7 @@ where
                 Target(commit_syncer.get_target_repo().clone()),
             )
             .try_into_desired_relationship(ctx)
+            .boxed()
             .await?
             .ok_or_else(||
                 anyhow!(
@@ -202,7 +206,9 @@ where
     log_debug(ctx, "finding unsynced ancestors from source repo...");
 
     let (unsynced_ancestors, synced_ancestors_versions) =
-        find_toposorted_unsynced_ancestors(ctx, commit_syncer, to_cs_id.clone(), hint).await?;
+        find_toposorted_unsynced_ancestors(ctx, commit_syncer, to_cs_id.clone(), hint)
+            .boxed()
+            .await?;
 
     let version = if !synced_ancestors_versions.has_ancestor_with_a_known_outcome() {
         return Ok(SyncResult::SkippedNoKnownVersion);
@@ -252,6 +258,7 @@ where
                         target_bookmark,
                         &synced_ancestors_versions,
                     )
+                    .boxed()
                     .await?;
                     (new_version.clone(), parent_map)
                 }
@@ -263,6 +270,7 @@ where
                         version,
                         &synced_ancestors_versions,
                     )
+                    .boxed()
                     .await?
                 }
             };
@@ -280,6 +288,7 @@ where
                 unsafe_change_mapping_version_during_pushrebase,
                 parent_mapping,
             )
+            .boxed()
             .await
             .map(SyncResult::Synced);
         }
@@ -296,6 +305,7 @@ where
             &version,
             bookmark_update_timestamp,
         )
+        .boxed()
         .await?;
         res.extend(synced);
     }
@@ -309,6 +319,7 @@ where
             target_bookmark,
             remapped_cs_id,
         )
+        .boxed()
         .await?;
     }
     Ok(SyncResult::Synced(res))
@@ -699,6 +710,7 @@ where
                 Some(config_version.clone()),
             )
             .timed()
+            .boxed()
             .await;
         let mb_synced = mb_synced?;
         let synced = mb_synced
@@ -760,6 +772,7 @@ where
             Some(config_version),
         )
         .timed()
+        .boxed()
         .await;
 
     let maybe_cs_id: Option<ChangesetId> = result?;
