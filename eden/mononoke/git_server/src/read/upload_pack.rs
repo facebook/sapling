@@ -19,15 +19,12 @@ use gix_hash::ObjectId;
 use gotham::mime;
 use gotham::state::FromState;
 use gotham::state::State;
-use gotham_ext::body_ext::BodyExt;
 use gotham_ext::error::HttpError;
 use gotham_ext::response::BytesBody;
-use gotham_ext::response::EmptyBody;
 use gotham_ext::response::ResponseStream;
 use gotham_ext::response::ResponseTryStreamExt;
 use gotham_ext::response::StreamBody;
 use gotham_ext::response::TryIntoResponse;
-use http::HeaderMap;
 use hyper::Body;
 use hyper::Response;
 use mononoke_types::ChangesetId;
@@ -61,6 +58,8 @@ use crate::model::RepositoryParams;
 use crate::model::RepositoryRequestContext;
 use crate::model::ResponseType;
 use crate::model::Service;
+use crate::util::empty_body;
+use crate::util::get_body;
 
 /// The header for the packfile section of the response
 const PACKFILE_HEADER: &[u8] = b"packfile";
@@ -311,21 +310,11 @@ impl Iterator for FetchResponseHeaders {
     }
 }
 
-pub async fn get_body(state: &mut State) -> Result<Bytes, HttpError> {
-    Body::take_from(state)
-        .try_concat_body(&HeaderMap::new())
-        .map_err(HttpError::e500)?
-        .await
-        .map_err(HttpError::e500)
-}
-
 pub async fn upload_pack(state: &mut State) -> Result<Response<Body>, HttpError> {
     let body_bytes = get_body(state).await?;
     // We got a flush line packet to keep the connection alive. Just return Ok.
     if body_bytes == packetline::FLUSH_LINE {
-        return EmptyBody::new()
-            .try_into_response(state)
-            .map_err(HttpError::e500);
+        return empty_body(state);
     }
     let request_command =
         RequestCommand::parse_from_packetline(&body_bytes).map_err(HttpError::e400)?;

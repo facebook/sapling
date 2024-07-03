@@ -5,52 +5,27 @@
  * GNU General Public License version 2.
  */
 
-use std::str::FromStr;
-
-use anyhow::Error;
+use bytes::Bytes;
 use gotham::state::FromState;
 use gotham::state::State;
-use http::header::AsHeaderName;
-use http::header::HeaderMap;
-use permission_checker::MononokeIdentitySet;
+use gotham_ext::body_ext::BodyExt;
+use gotham_ext::error::HttpError;
+use gotham_ext::response::EmptyBody;
+use gotham_ext::response::TryIntoResponse;
+use http::HeaderMap;
+use http::Response;
+use hyper::Body;
 
-pub fn _read_header_value<K, T>(state: &State, header: K) -> Option<Result<T, Error>>
-where
-    K: AsHeaderName,
-    T: FromStr,
-    <T as FromStr>::Err: std::error::Error + Send + Sync + 'static,
-{
-    let headers = HeaderMap::try_borrow_from(state)?;
-    let val = headers.get(header)?;
-    let val = std::str::from_utf8(val.as_bytes())
-        .map_err(Error::from)
-        .and_then(|val| T::from_str(val).map_err(Error::from));
-    Some(val)
+pub async fn get_body(state: &mut State) -> Result<Bytes, HttpError> {
+    Body::take_from(state)
+        .try_concat_body(&HeaderMap::new())
+        .map_err(HttpError::e500)?
+        .await
+        .map_err(HttpError::e500)
 }
 
-pub fn _read_header_value_ignore_err<K, T>(state: &State, header: K) -> Option<T>
-where
-    K: AsHeaderName,
-    T: FromStr,
-    <T as FromStr>::Err: std::error::Error + Send + Sync + 'static,
-{
-    let headers = HeaderMap::try_borrow_from(state)?;
-    let val = headers.get(header)?;
-    let val = std::str::from_utf8(val.as_bytes()).ok()?;
-
-    T::from_str(val).ok()
-}
-
-pub fn _is_identity_subset<'a>(
-    subset_idents: impl IntoIterator<Item = &'a MononokeIdentitySet>,
-    client_idents: Option<&MononokeIdentitySet>,
-) -> bool {
-    let client_idents = match client_idents {
-        Some(idents) => idents,
-        None => return false,
-    };
-
-    subset_idents
-        .into_iter()
-        .any(|subset_ids| subset_ids.is_subset(client_idents))
+pub fn empty_body(state: &mut State) -> Result<Response<Body>, HttpError> {
+    EmptyBody::new()
+        .try_into_response(state)
+        .map_err(HttpError::e500)
 }

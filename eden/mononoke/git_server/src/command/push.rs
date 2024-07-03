@@ -5,6 +5,9 @@
  * GNU General Public License version 2.
  */
 
+use std::str::from_utf8;
+
+use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
 use gix_hash::ObjectId;
@@ -21,6 +24,31 @@ const ATOMIC: &str = "atomic";
 const DELETE_REFS: &str = "delete-refs";
 const QUIET: &str = "quiet";
 
+/// Enum representing the object format for hashes
+#[derive(Clone, Debug, Copy)]
+pub enum ObjectFormat {
+    /// Use Sha1 hashes for Git objects
+    Sha1,
+    /// Use Sha256 hashes for Git objects
+    Sha256,
+}
+
+impl ObjectFormat {
+    fn parse(format: &str) -> Result<Self> {
+        match format {
+            "sha1" => Ok(Self::Sha1),
+            "sha256" => Ok(Self::Sha256),
+            format => bail!("Invalid object format: {}", format),
+        }
+    }
+}
+
+impl Default for ObjectFormat {
+    fn default() -> Self {
+        Self::Sha1
+    }
+}
+
 /// Struct representing the move of a ref/bookmark from "from" commit ID to "to" commit ID
 #[derive(Clone, Debug)]
 pub struct RefUpdate {
@@ -31,8 +59,8 @@ pub struct RefUpdate {
 
 impl RefUpdate {
     fn parse(input: &[u8]) -> Result<Self> {
-        let parsed_input = std::str::from_utf8(input)
-            .context("Failure in converting ref-update line into UTF-8 string")?;
+        let parsed_input =
+            from_utf8(input).context("Failure in converting ref-update line into UTF-8 string")?;
         let mut parts = parsed_input.split_whitespace();
         match (parts.next(), parts.next(), parts.next()) {
             (Some(from), Some(to), Some(ref_name)) => {
@@ -44,7 +72,7 @@ impl RefUpdate {
                     to: to_oid,
                 })
             }
-            split_parts => anyhow::bail!("Invalid format for ref-update: {:?}", split_parts),
+            split_parts => bail!("Invalid format for ref-update: {:?}", split_parts),
         }
     }
 }
@@ -63,17 +91,17 @@ pub struct PushSettings {
     /// output
     pub quiet: bool,
     /// The format of the object hashes, defaults to sha1
-    pub object_format: String,
+    pub object_format: ObjectFormat,
 }
 
 impl PushSettings {
     fn parse(input: &[u8]) -> Result<Self> {
         let mut settings = Self::default();
-        let parsed_input = std::str::from_utf8(input)
-            .context("Failure in converting push settings into UTF-8 string")?;
+        let parsed_input =
+            from_utf8(input).context("Failure in converting push settings into UTF-8 string")?;
         for setting in parsed_input.split_whitespace() {
             if let Some(object_format) = setting.strip_prefix(OBJECT_FORMAT) {
-                settings.object_format = object_format.to_string();
+                settings.object_format = ObjectFormat::parse(object_format)?;
             }
             match setting {
                 REPORT_STATUS => settings.report_status = true,
@@ -90,7 +118,7 @@ impl PushSettings {
 impl Default for PushSettings {
     fn default() -> Self {
         Self {
-            object_format: "sha1".to_string(),
+            object_format: ObjectFormat::default(),
             report_status: true,
             delete_refs: false,
             atomic: false,
@@ -128,13 +156,10 @@ impl<'a> PushArgs<'a> {
                     (Some(ref_update), None) => {
                         push_args.ref_updates.push(RefUpdate::parse(ref_update)?);
                     }
-                    _ => anyhow::bail!(
-                        "Incorrect format for push args: {:?}",
-                        std::str::from_utf8(data)
-                    ),
+                    _ => bail!("Incorrect format for push args: {:?}", from_utf8(data)),
                 }
             } else {
-                anyhow::bail!(
+                bail!(
                     "Unexpected token {:?} in packetline during push arg parsing",
                     token
                 );
