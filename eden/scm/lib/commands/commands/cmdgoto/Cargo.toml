@@ -15,7 +15,7 @@ configmodel = { version = "0.1.0", path = "../../../config/model" }
 fs-err = { version = "2.6.0", features = ["tokio"] }
 repo = { version = "0.1.0", path = "../../../repo", features = ["wdir"] }
 repostate = { version = "0.1.0", path = "../../../workingcopy/repostate" }
-tracing = { version = "0.1.40", features = ["attributes"] }
+tracing = { version = "0.1.40", features = ["attributes", "valuable"] }
 util = { version = "0.1.0", path = "../../../util" }
 workingcopy = { version = "0.1.0", path = "../../../workingcopy" }
 

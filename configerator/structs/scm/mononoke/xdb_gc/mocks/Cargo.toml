@@ -24,7 +24,7 @@ futures = { version = "0.3.30", features = ["async-await", "compat"] }
 rust = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 rust_clients = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 rust_mocks = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
-tracing = { version = "0.1.40", features = ["attributes"] }
+tracing = { version = "0.1.40", features = ["attributes", "valuable"] }
 xdb_gc_structs__clients = { package = "xdb_gc_structs_clients", version = "0.1.0", path = "../clients" }
 xdb_gc_structs__types = { package = "xdb_gc_structs", version = "0.1.0", path = ".." }
 

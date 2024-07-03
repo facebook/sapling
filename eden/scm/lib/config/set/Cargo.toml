@@ -10,7 +10,7 @@ configmodel = { version = "0.1.0", path = "../model" }
 hgrc-parser = { version = "0.1.0", path = "../hgrc-parser" }
 indexmap = { version = "2.2.6", features = ["arbitrary", "rayon", "serde"] }
 minibytes = { version = "0.1.0", path = "../../minibytes" }
-tracing = { version = "0.1.40", features = ["attributes"] }
+tracing = { version = "0.1.40", features = ["attributes", "valuable"] }
 util = { version = "0.1.0", path = "../../util" }
 
 [dev-dependencies]

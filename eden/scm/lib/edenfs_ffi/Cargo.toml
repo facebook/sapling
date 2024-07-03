@@ -21,7 +21,7 @@ pathmatcher = { version = "0.1.0", path = "../pathmatcher" }
 repo = { version = "0.1.0", path = "../repo" }
 sparse = { version = "0.1.0", path = "../sparse" }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main", optional = true }
-tracing = { version = "0.1.40", features = ["attributes"] }
+tracing = { version = "0.1.40", features = ["attributes", "valuable"] }
 types = { version = "0.1.0", path = "../types" }
 
 [build-dependencies]

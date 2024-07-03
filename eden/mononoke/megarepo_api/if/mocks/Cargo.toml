@@ -29,7 +29,7 @@ mononoke_types_serialization_mocks = { version = "0.1.0", path = "../../../monon
 source_control = { version = "0.1.0", path = "../../../scs/if" }
 source_control_clients = { version = "0.1.0", path = "../../../scs/if/clients" }
 source_control_mocks = { version = "0.1.0", path = "../../../scs/if/mocks" }
-tracing = { version = "0.1.40", features = ["attributes"] }
+tracing = { version = "0.1.40", features = ["attributes", "valuable"] }
 
 [build-dependencies]
 thrift_compiler = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

@@ -23,7 +23,7 @@ fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbth
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
 serialization__clients = { package = "serialization_clients", version = "0.1.0", path = "../clients" }
 serialization__types = { package = "serialization", version = "0.1.0", path = ".." }
-tracing = { version = "0.1.40", features = ["attributes"] }
+tracing = { version = "0.1.40", features = ["attributes", "valuable"] }
 
 [build-dependencies]
 thrift_compiler = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

@@ -11,5 +11,5 @@ cpython = { version = "0.7.2", default-features = false }
 cpython_ext = { version = "0.1.0", path = "../../../../lib/cpython-ext" }
 io = { version = "0.1.0", path = "../../../../lib/io" }
 pathmatcher = { version = "0.1.0", path = "../../../../lib/pathmatcher" }
-tracing = { version = "0.1.40", features = ["attributes"] }
+tracing = { version = "0.1.40", features = ["attributes", "valuable"] }
 types = { version = "0.1.0", path = "../../../../lib/types" }

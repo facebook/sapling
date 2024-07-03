@@ -12,6 +12,6 @@ filetime = "0.2.9"
 fs-err = { version = "2.6.0", features = ["tokio"] }
 identity = { version = "0.1.0", path = "../identity" }
 spawn-ext = { version = "0.1.0", path = "../spawn-ext" }
-tracing = { version = "0.1.40", features = ["attributes"] }
+tracing = { version = "0.1.40", features = ["attributes", "valuable"] }
 treestate = { version = "0.1.0", path = "../treestate" }
 types = { version = "0.1.0", path = "../types" }
