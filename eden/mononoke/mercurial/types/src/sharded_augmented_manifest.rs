@@ -769,11 +769,14 @@ impl<Store: Blobstore> AsyncManifest<Store> for HgAugmentedManifestEnvelope {
 
 #[cfg(test)]
 mod sharded_augmented_manifest_tests {
+    use std::io::Cursor;
+
     use bytes::BytesMut;
     use fbinit::FacebookInit;
     use fixtures::Linear;
     use fixtures::TestRepoFixture;
     use repo_blobstore::RepoBlobstoreArc;
+    use types::AugmentedTreeEntry;
 
     use super::*;
 
@@ -884,12 +887,14 @@ mod sharded_augmented_manifest_tests {
             subentries: ShardedMapV2Node::from_entries(&ctx, &blobstore, subentries).await?,
         };
 
+        let bytes = augmented_manifest
+            .into_content_addressed_manifest_blob(&ctx, &blobstore)
+            .map(|b| b.unwrap())
+            .collect::<BytesMut>()
+            .await;
+
         assert_eq!(
-            augmented_manifest
-                .into_content_addressed_manifest_blob(&ctx, &blobstore)
-                .map(|b| b.unwrap())
-                .collect::<BytesMut>()
-                .await,
+            bytes,
             Bytes::from(concat!(
                 "v1 1111111111111111111111111111111111111111 - 2222222222222222222222222222222222222222 3333333333333333333333333333333333333333\n",
                 "a.rs\x004444444444444444444444444444444444444444r 4444444444444444444444444444444444444444444444444444444444444444 10 4444444444444444444444444444444444444444 AQpjb3B5OiBmYmNvZGUvZWRlbi9zY20vbGliL3JldmlzaW9uc3RvcmUvVEFSR0VUUwpjb3B5cmV2OiBhNDU5NTA0ZjY3NmE1ZmVjNWFiM2QxYTE0ZjQ2MTY0MzAzOTFjMDNlCgEK\n",
@@ -898,6 +903,9 @@ mod sharded_augmented_manifest_tests {
                 "dir_2\x001111111111111111111111111111111111111111t 1111111111111111111111111111111111111111111111111111111111111111 10000\n"
             ))
         );
+
+        // Check compatibility with the Sapling Type, to make sure Sapling can deserialize
+        assert!(AugmentedTreeEntry::try_deserialize(Cursor::new(bytes)).is_ok());
 
         Ok(())
     }
