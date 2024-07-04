@@ -75,6 +75,7 @@ macro_rules! impl_commit_graph_tests {
             test_process_topologically,
             test_minimize_frontier,
             test_ancestors_within_distance,
+            test_linear_ancestors_stream,
         );
     };
 }
@@ -1741,6 +1742,122 @@ pub async fn test_ancestors_within_distance(
     )
     .await?;
     assert_ancestors_within_distance(&ctx, &graph, vec![], 100, vec![]).await?;
+
+    Ok(())
+}
+
+pub async fn test_linear_ancestors_stream(
+    ctx: CoreContext,
+    storage: Arc<dyn CommitGraphStorageTest>,
+) -> Result<()> {
+    let graph = from_dag(
+        &ctx,
+        r"
+        P     O
+        |     |
+        N     |
+        |\    |
+        | \   M
+        |  \  |
+        J   \ |   L
+        |    \|  /
+        |     K /
+        |  Q  |/
+        | /   I
+        |/ G  |
+        E  |  H
+        |  F /
+        D  |/ 
+        |  |
+        C /
+        |/
+        B
+        |
+        A
+        ",
+        storage.clone(),
+    )
+    .await?;
+    storage.flush();
+
+    assert_linear_ancestors_stream(
+        &ctx,
+        &graph,
+        "P",
+        None,
+        None,
+        None,
+        vec!["P", "N", "J", "E", "D", "C", "B", "A"],
+    )
+    .await?;
+
+    assert_linear_ancestors_stream(
+        &ctx,
+        &graph,
+        "P",
+        Some("L"),
+        None,
+        None,
+        vec!["P", "N", "J", "E", "D", "C"],
+    )
+    .await?;
+
+    assert_linear_ancestors_stream(
+        &ctx,
+        &graph,
+        "P",
+        Some("O"),
+        None,
+        None,
+        vec!["P", "N", "J", "E", "D", "C"],
+    )
+    .await?;
+
+    assert_linear_ancestors_stream(
+        &ctx,
+        &graph,
+        "P",
+        Some("Q"),
+        None,
+        None,
+        vec!["P", "N", "J"],
+    )
+    .await?;
+
+    assert_linear_ancestors_stream(
+        &ctx,
+        &graph,
+        "P",
+        None,
+        Some("E"),
+        None,
+        vec!["P", "N", "J", "E"],
+    )
+    .await?;
+
+    assert_linear_ancestors_stream(
+        &ctx,
+        &graph,
+        "P",
+        Some("Q"),
+        Some("E"),
+        None,
+        vec!["P", "N", "J"],
+    )
+    .await?;
+
+    assert_linear_ancestors_stream(&ctx, &graph, "P", None, Some("F"), None, vec![]).await?;
+
+    assert_linear_ancestors_stream(
+        &ctx,
+        &graph,
+        "P",
+        Some("L"),
+        None,
+        Some(2),
+        vec!["J", "E", "D", "C"],
+    )
+    .await?;
 
     Ok(())
 }

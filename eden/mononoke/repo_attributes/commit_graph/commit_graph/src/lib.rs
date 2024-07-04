@@ -49,6 +49,7 @@ use smallvec::smallvec;
 
 pub use crate::ancestors_stream::AncestorsStreamBuilder;
 pub use crate::compat::ParentsFetcher;
+pub use crate::linear::LinearAncestorsStreamBuilder;
 pub use crate::writer::ArcCommitGraphWriter;
 pub use crate::writer::BaseCommitGraphWriter;
 pub use crate::writer::CommitGraphWriter;
@@ -60,6 +61,7 @@ mod ancestors_stream;
 mod compat;
 mod core;
 mod frontier;
+mod linear;
 mod segments;
 mod writer;
 

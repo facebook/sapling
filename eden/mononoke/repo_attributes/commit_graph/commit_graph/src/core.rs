@@ -351,4 +351,13 @@ impl CommitGraph {
         )
         .await
     }
+
+    pub(crate) async fn changeset_node(
+        &self,
+        ctx: &CoreContext,
+        cs_id: ChangesetId,
+    ) -> Result<ChangesetNode> {
+        let edges = self.storage.fetch_edges(ctx, cs_id).await?;
+        Ok(edges.node)
+    }
 }
