@@ -51,6 +51,12 @@ DEFINE_string(
 DEFINE_int32(startupLoggerFd, -1, "The control pipe for startup logging");
 
 namespace {
+// Holds the path to the log file that the daemon is writing to.
+// NOTE: This variable should only ever be written to once in the lifetime
+// of the daemon. This is because the SIGHUP signal handler expects logPath_
+// to be immutable.
+std::optional<std::string> logPath_;
+
 void writeMessageToFile(folly::File&, folly::StringPiece);
 } // namespace
 
@@ -117,9 +123,10 @@ DaemonStartupLogger::DaemonStartupLogger(
     : StartupLogger(std::move(startupStatusChannel)) {}
 
 void DaemonStartupLogger::successImpl() {
-  if (!logPath_.empty()) {
+  if (logPath_.has_value()) {
     writeMessage(
-        folly::LogLevel::INFO, fmt::format("Logs available at {}", logPath_));
+        folly::LogLevel::INFO,
+        fmt::format("Logs available at {}", logPath_.value()));
   }
   sendResult(0);
 }
@@ -279,13 +286,78 @@ DaemonStartupLogger::ChildHandler DaemonStartupLogger::spawnImpl(
   return ChildHandler{std::move(proc), std::move(exitStatusPipe.read)};
 }
 
-#ifndef _WIN32
 namespace {
-void handleSigHup(int /*signum*/) {
-  // Do nothing yet.
+#ifndef _WIN32
+void write_cstr(int fileno, const char* str) {
+  if (str == nullptr) {
+    return;
+  }
+
+  (void)write(fileno, str, strlen(str));
 }
-} // namespace
+
+void handleSigHup(int /*signum*/) {
+  // We cannot reuse redirectOutput() due to limitations when handling signals.
+  // Full rules: https://man7.org/linux/man-pages/man7/signal-safety.7.html
+  if (!logPath_.has_value()) {
+    return;
+  }
+  int fileno = open(
+      logPath_.value().c_str(),
+      O_APPEND | O_CREAT | O_WRONLY | O_CLOEXEC,
+      0644);
+  if (fileno == -1) {
+    int err = errno;
+    write_cstr(STDERR_FILENO, "Failed to reopen ");
+    write_cstr(fileno, logPath_.value().c_str());
+    write_cstr(fileno, ": ");
+#ifdef __APPLE__
+    // On macOS, strerrrodesc_np is not defined. We use sys_errlist instead
+    write_cstr(fileno, sys_errlist[err]);
+#else
+    write_cstr(fileno, strerrordesc_np(err));
+#endif
+    write_cstr(fileno, "\n");
+    return;
+  }
+
+  int res = dup2(fileno, STDOUT_FILENO);
+  if (res == -1) {
+    int err = errno;
+    write_cstr(fileno, "Failed to redirect stdout to ");
+    write_cstr(fileno, logPath_.value().c_str());
+    write_cstr(fileno, ": ");
+#ifdef __APPLE__
+    // On macOS, strerrrodesc_np is not defined. We use sys_errlist instead
+    write_cstr(fileno, sys_errlist[err]);
+#else
+    write_cstr(fileno, strerrordesc_np(err));
+#endif
+    write_cstr(fileno, "\n");
+    close(fileno);
+    return;
+  }
+
+  res = dup2(fileno, STDERR_FILENO);
+  if (res == -1) {
+    // stdout was successfully redirected; we can keep the log file open but
+    // report an error in the logs
+    int err = errno;
+    write_cstr(fileno, "Failed to redirect stderr to ");
+    write_cstr(fileno, logPath_.value().c_str());
+    write_cstr(fileno, ": ");
+#ifdef __APPLE__
+    // On macOS, strerrrodesc_np is not defined. We use sys_errlist instead
+    write_cstr(fileno, sys_errlist[err]);
+#else
+    write_cstr(fileno, strerrordesc_np(err));
+#endif
+    write_cstr(fileno, "\n");
+  }
+  close(fileno);
+}
 #endif // !_WIN32
+} // namespace
 
 void DaemonStartupLogger::initClient(
     folly::StringPiece logPath,
@@ -342,6 +414,9 @@ void DaemonStartupLogger::runParentProcess(
 
 void DaemonStartupLogger::redirectOutput(StringPiece logPath) {
   try {
+    // As mentioned above, the value of logPath_ must only be set once and
+    // henceforth be immutable for the duration of the daemon's lifetime.
+    XCHECK(!logPath_.has_value());
     logPath_ = logPath.str();
 
     // Save a copy of the original stderr descriptors, so we can still write

@@ -147,4 +147,12 @@ class ServiceLogRealEdenFSTest(ServiceLogTestBase):
 
         # retrigger an EdenFS thrift call and ensure the daemon logged to the reopened logs
         self.get_running_daemon_pid()
-        self.assertEqual(0, os.stat(self.log_file_path).st_size)
+        self.assertLess(
+            0,
+            os.stat(self.log_file_path).st_size,
+            f"{self.log_file_path} should be written to after SIGHUP",
+        )
+
+        # This is the error for failing to redirect stderr or stdout during
+        # signal handling. Ensure it's not present in the logs.
+        self.assertNotIn("Failed to redirect", self.log_file_path.read_text())

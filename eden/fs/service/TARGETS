@@ -261,6 +261,9 @@ cpp_library(
     headers = [
         "StartupLogger.h",
     ],
+    compiler_flags = [
+        "-D_GNU_SOURCE",
+    ],
     deps = [
         ":init",
         ":startup_status_subscriber",
