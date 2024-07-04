@@ -28,6 +28,7 @@ use mononoke_api::ChangesetDiffItem;
 use mononoke_api::ChangesetFileOrdering;
 use mononoke_api::ChangesetHistoryOptions;
 use mononoke_api::ChangesetId;
+use mononoke_api::ChangesetLinearHistoryOptions;
 use mononoke_api::ChangesetPathContentContext;
 use mononoke_api::ChangesetPathDiffContext;
 use mononoke_api::ChangesetSpecifier;
@@ -874,11 +875,61 @@ impl SourceControlServiceImpl {
 
     pub async fn commit_linear_history(
         &self,
-        _ctx: CoreContext,
-        _commit: thrift::CommitSpecifier,
-        _params: thrift::CommitLinearHistoryParams,
+        ctx: CoreContext,
+        commit: thrift::CommitSpecifier,
+        params: thrift::CommitLinearHistoryParams,
     ) -> Result<thrift::CommitLinearHistoryResponse, errors::ServiceError> {
-        unimplemented!("commit_linear_history is not implemented yet")
+        let (repo, changeset) = self.repo_changeset(ctx, &commit).await?;
+        let (descendants_of, exclude_changeset_and_ancestors) = try_join!(
+            async {
+                if let Some(descendants_of) = &params.descendants_of {
+                    Ok::<_, errors::ServiceError>(Some(
+                        self.changeset_id(&repo, descendants_of).await?,
+                    ))
+                } else {
+                    Ok(None)
+                }
+            },
+            async {
+                if let Some(exclude_changeset_and_ancestors) =
+                    &params.exclude_changeset_and_ancestors
+                {
+                    Ok::<_, errors::ServiceError>(Some(
+                        self.changeset_id(&repo, exclude_changeset_and_ancestors)
+                            .await?,
+                    ))
+                } else {
+                    Ok(None)
+                }
+            }
+        )?;
+
+        let limit: usize = check_range_and_convert("limit", params.limit, 0..)?;
+        let skip: u64 = check_range_and_convert("skip", params.skip, 0..)?;
+
+        let history_stream = changeset
+            .linear_history(ChangesetLinearHistoryOptions {
+                descendants_of,
+                exclude_changeset_and_ancestors,
+                skip,
+            })
+            .await?;
+        let history = collect_history(
+            history_stream,
+            // We set the skip to 0 as skipping is already done as part of ChangesetContext::linear_history.
+            0,
+            limit,
+            None,
+            None,
+            params.format,
+            &params.identity_schemes,
+        )
+        .await?;
+
+        Ok(thrift::CommitLinearHistoryResponse {
+            history,
+            ..Default::default()
+        })
     }
 
     pub(crate) async fn commit_list_descendant_bookmarks(

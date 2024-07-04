@@ -29,6 +29,7 @@ use cloned::cloned;
 use commit_graph::AncestorsStreamBuilder;
 use commit_graph::CommitGraphArc;
 use commit_graph::CommitGraphRef;
+use commit_graph::LinearAncestorsStreamBuilder;
 use context::CoreContext;
 use deleted_manifest::DeletedManifestOps;
 use deleted_manifest::RootDeletedManifestIdCommon;
@@ -135,6 +136,13 @@ pub struct ChangesetHistoryOptions {
     pub until_timestamp: Option<i64>,
     pub descendants_of: Option<ChangesetId>,
     pub exclude_changeset_and_ancestors: Option<ChangesetId>,
+}
+
+#[derive(Default)]
+pub struct ChangesetLinearHistoryOptions {
+    pub descendants_of: Option<ChangesetId>,
+    pub exclude_changeset_and_ancestors: Option<ChangesetId>,
+    pub skip: u64,
 }
 
 #[derive(Clone)]
@@ -1172,6 +1180,41 @@ impl ChangesetContext {
         }
 
         let cs_ids_stream = ancestors_stream_builder.build().await?;
+
+        Ok(cs_ids_stream
+            .map_err(MononokeError::from)
+            .and_then(move |cs_id| async move {
+                Ok::<_, MononokeError>(ChangesetContext::new(self.repo().clone(), cs_id))
+            })
+            .boxed())
+    }
+
+    pub async fn linear_history(
+        &self,
+        opts: ChangesetLinearHistoryOptions,
+    ) -> Result<BoxStream<'_, Result<ChangesetContext, MononokeError>>, MononokeError> {
+        let mut linear_ancestors_stream_builder = LinearAncestorsStreamBuilder::new(
+            self.repo().repo().commit_graph_arc(),
+            self.ctx().clone(),
+            self.id(),
+        )
+        .await?;
+
+        if let Some(exclude_changeset_and_ancestors) = opts.exclude_changeset_and_ancestors {
+            linear_ancestors_stream_builder = linear_ancestors_stream_builder
+                .exclude_ancestors_of(exclude_changeset_and_ancestors)
+                .await?;
+        }
+
+        if let Some(descendants_of) = opts.descendants_of {
+            linear_ancestors_stream_builder = linear_ancestors_stream_builder
+                .descendants_of(descendants_of)
+                .await?;
+        }
+
+        linear_ancestors_stream_builder = linear_ancestors_stream_builder.skip(opts.skip);
+
+        let cs_ids_stream = linear_ancestors_stream_builder.build().await?;
 
         Ok(cs_ids_stream
             .map_err(MononokeError::from)

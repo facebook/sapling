@@ -22,6 +22,7 @@ use tests_utils::CreateCommitContext;
 
 use crate::ChangesetHistoryOptions;
 use crate::ChangesetId;
+use crate::ChangesetLinearHistoryOptions;
 use crate::ChangesetPathHistoryOptions;
 use crate::RepoContext;
 
@@ -553,7 +554,7 @@ async fn commit_history(fb: FacebookInit) -> Result<()> {
         .await?;
     assert_history(&ctx, repo.repo().commit_graph(), history, hashset! {}).await?;
 
-    // Setting both descendendants_of and exclude_changeset_and_ancestors
+    // Setting both descendants_of and exclude_changeset_and_ancestors
     // lets us filter out the descendant.
     let cs = repo
         .changeset(changesets["c2"])
@@ -580,6 +581,205 @@ async fn commit_history(fb: FacebookInit) -> Result<()> {
             changesets["e3"],
             changesets["a4"],
             changesets["b3"],
+            changesets["c1"],
+            changesets["e1"],
+            changesets["m1"],
+        },
+    )
+    .await?;
+
+    Ok(())
+}
+
+#[fbinit::test]
+async fn commit_linear_history(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let (repo, changesets) = init_repo(&ctx).await?;
+
+    let cs = repo
+        .changeset(changesets["c2"])
+        .await?
+        .expect("changeset exists");
+
+    // The commit history includes all commits, including empty ones.
+    let history: Vec<_> = cs
+        .linear_history(Default::default())
+        .await?
+        .and_then(|cs| async move { Ok(cs.id()) })
+        .try_collect()
+        .await?;
+    assert_history(
+        &ctx,
+        repo.repo().commit_graph(),
+        history,
+        hashset! {
+            changesets["c2"],
+            changesets["m2"],
+            changesets["e2"],
+            changesets["a4"],
+            changesets["c1"],
+            changesets["e1"],
+            changesets["m1"],
+            changesets["b2"],
+            changesets["b1"],
+        },
+    )
+    .await?;
+
+    // The commit history of an empty commit starts with itself.
+    let cs = repo
+        .changeset(changesets["e1"])
+        .await?
+        .expect("changeset exists");
+    let history: Vec<_> = cs
+        .linear_history(Default::default())
+        .await?
+        .and_then(|cs| async move { Ok(cs.id()) })
+        .try_collect()
+        .await?;
+    assert_history(
+        &ctx,
+        repo.repo().commit_graph(),
+        history,
+        hashset! {
+            changesets["e1"],
+            changesets["m1"],
+            changesets["b2"],
+            changesets["b1"],
+        },
+    )
+    .await?;
+
+    // Setting descendendants_of omits some commits.
+    let cs = repo
+        .changeset(changesets["c2"])
+        .await?
+        .expect("changeset exists");
+    let history: Vec<_> = cs
+        .linear_history(ChangesetLinearHistoryOptions {
+            descendants_of: Some(changesets["b2"]),
+            ..Default::default()
+        })
+        .await?
+        .and_then(|cs| async move { Ok(cs.id()) })
+        .try_collect()
+        .await?;
+    assert_history(
+        &ctx,
+        repo.repo().commit_graph(),
+        history,
+        hashset! {
+            changesets["c2"],
+            changesets["m2"],
+            changesets["e2"],
+            changesets["a4"],
+            changesets["c1"],
+            changesets["e1"],
+            changesets["m1"],
+            changesets["b2"],
+        },
+    )
+    .await?;
+
+    // Setting exclude_changeset omits some commits.
+    let cs = repo
+        .changeset(changesets["c2"])
+        .await?
+        .expect("changeset exists");
+    let history: Vec<_> = cs
+        .linear_history(ChangesetLinearHistoryOptions {
+            exclude_changeset_and_ancestors: Some(changesets["b2"]),
+            ..Default::default()
+        })
+        .await?
+        .and_then(|cs| async move { Ok(cs.id()) })
+        .try_collect()
+        .await?;
+    assert_history(
+        &ctx,
+        repo.repo().commit_graph(),
+        history,
+        hashset! {
+            changesets["c2"],
+            changesets["m2"],
+            changesets["e2"],
+            changesets["a4"],
+            changesets["c1"],
+            changesets["e1"],
+            changesets["m1"],
+        },
+    )
+    .await?;
+
+    let cs = repo
+        .changeset(changesets["m2"])
+        .await?
+        .expect("changeset exists");
+    let history: Vec<_> = cs
+        .linear_history(ChangesetLinearHistoryOptions {
+            exclude_changeset_and_ancestors: Some(changesets["c2"]),
+            ..Default::default()
+        })
+        .await?
+        .and_then(|cs| async move { Ok(cs.id()) })
+        .try_collect()
+        .await?;
+    assert_history(&ctx, repo.repo().commit_graph(), history, hashset! {}).await?;
+
+    // Setting both descendants_of and exclude_changeset_and_ancestors
+    // lets us filter out the descendant.
+    let cs = repo
+        .changeset(changesets["c2"])
+        .await?
+        .expect("changeset exists");
+    let history: Vec<_> = cs
+        .linear_history(ChangesetLinearHistoryOptions {
+            descendants_of: Some(changesets["b2"]),
+            exclude_changeset_and_ancestors: Some(changesets["b2"]),
+            ..Default::default()
+        })
+        .await?
+        .and_then(|cs| async move { Ok(cs.id()) })
+        .try_collect()
+        .await?;
+    assert_history(
+        &ctx,
+        repo.repo().commit_graph(),
+        history,
+        hashset! {
+            changesets["c2"],
+            changesets["m2"],
+            changesets["e2"],
+            changesets["a4"],
+            changesets["c1"],
+            changesets["e1"],
+            changesets["m1"],
+        },
+    )
+    .await?;
+
+    // Setting skip parameter to skip the first three commits.
+    let cs = repo
+        .changeset(changesets["c2"])
+        .await?
+        .expect("changeset exists");
+    let history: Vec<_> = cs
+        .linear_history(ChangesetLinearHistoryOptions {
+            descendants_of: Some(changesets["b2"]),
+            exclude_changeset_and_ancestors: Some(changesets["b2"]),
+            skip: 3,
+            ..Default::default()
+        })
+        .await?
+        .and_then(|cs| async move { Ok(cs.id()) })
+        .try_collect()
+        .await?;
+    assert_history(
+        &ctx,
+        repo.repo().commit_graph(),
+        history,
+        hashset! {
+            changesets["a4"],
             changesets["c1"],
             changesets["e1"],
             changesets["m1"],
