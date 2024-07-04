@@ -1304,7 +1304,7 @@ struct CommitLinearHistoryParams {
   /// Number of commits to return in the history.
   2: i32 limit;
   /// Number of commits to skip before listing the history.
-  3: i32 skip;
+  3: i64 skip;
   /// Commit identity schemes to return in the commit information.
   6: set<CommitIdentityScheme> identity_schemes;
   /// Include only commits that are linear descendants of the given commit
