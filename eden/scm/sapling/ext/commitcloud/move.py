@@ -51,7 +51,7 @@ def moveorhide(
     ui = repo.ui
 
     with progress.spinner(ui, _("fetching commit cloud workspace")):
-        serv = service.get(ui)
+        serv = service.get(ui, repo)
         slinfo = serv.getsmartlog(reponame, workspacename, repo, 0)
         firstpublic, revdag = serv.makedagwalker(slinfo, repo)
         cloudrefs = serv.getreferences(reponame, workspacename, 0)

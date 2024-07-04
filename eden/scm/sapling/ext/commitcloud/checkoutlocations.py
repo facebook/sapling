@@ -24,7 +24,7 @@ def send(ui, repo, parent1, **kwargs):
             workspacename = workspace.defaultworkspace(ui)
         if workspacename is None:
             return
-        serv = service.get(ui)
+        serv = service.get(ui, repo)
         hostname = socket.gethostname()
         sharedpath = repo.sharedpath
         checkoutpath = repo.path

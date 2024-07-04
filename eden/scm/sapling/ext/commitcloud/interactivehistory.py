@@ -24,7 +24,7 @@ def showhistory(ui, repo, reponame, workspacename, templatealias, **opts) -> Non
             self.reponame = reponame
             self.workspacename = workspacename
             self.opts = opts
-            self.serv = service.get(ui)
+            self.serv = service.get(ui, repo)
             self.servlock = threading.Lock()
             self.renderevent = threading.Event()
             self.running = True
