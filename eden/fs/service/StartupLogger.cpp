@@ -279,6 +279,14 @@ DaemonStartupLogger::ChildHandler DaemonStartupLogger::spawnImpl(
   return ChildHandler{std::move(proc), std::move(exitStatusPipe.read)};
 }
 
+#ifndef _WIN32
+namespace {
+void handleSigHup(int /*signum*/) {
+  // Do nothing yet.
+}
+} // namespace
+#endif // !_WIN32
+
 void DaemonStartupLogger::initClient(
     folly::StringPiece logPath,
     FileDescriptor&& pipe) {
@@ -294,6 +302,17 @@ void DaemonStartupLogger::initClient(
   XDCHECK(!logPath.empty());
   pipe_ = std::move(pipe);
   redirectOutput(logPath);
+
+#ifndef _WIN32
+  // We use SIGHUP to signal when the log file has been rotated.
+  // Install a signal handler so that we can continue writing logs to the new
+  // log file that was created during rotation.
+  struct sigaction action = {};
+  action.sa_handler = handleSigHup;
+  sigemptyset(&action.sa_mask);
+  folly::checkUnixError(
+      sigaction(SIGHUP, &action, nullptr), "failed to set SIGHUP handler");
+#endif // !_WIN32
 }
 
 void DaemonStartupLogger::runParentProcess(
