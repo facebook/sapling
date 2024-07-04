@@ -14,8 +14,8 @@ use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::mononoke_queries;
 use sql_ext::SqlConnections;
 
-use crate::PushRedirection;
-use crate::PushRedirectionEntry;
+use crate::PushRedirectionConfig;
+use crate::PushRedirectionConfigEntry;
 use crate::RowId;
 
 mononoke_queries! {
@@ -54,9 +54,9 @@ mononoke_queries! {
     }
 }
 
-fn row_to_entry(row: (RowId, RepositoryId, bool, bool)) -> PushRedirectionEntry {
+fn row_to_entry(row: (RowId, RepositoryId, bool, bool)) -> PushRedirectionConfigEntry {
     let (id, repo_id, draft_push, public_push) = row;
-    PushRedirectionEntry {
+    PushRedirectionConfigEntry {
         id,
         repo_id,
         draft_push,
@@ -64,17 +64,17 @@ fn row_to_entry(row: (RowId, RepositoryId, bool, bool)) -> PushRedirectionEntry 
     }
 }
 
-pub struct SqlPushRedirection {
+pub struct SqlPushRedirectionConfig {
     connections: SqlConnections,
     repo_id: RepositoryId,
 }
 
 #[derive(Clone)]
-pub struct SqlPushRedirectionBuilder {
+pub struct SqlPushRedirectionConfigBuilder {
     connections: SqlConnections,
 }
 
-impl SqlConstruct for SqlPushRedirectionBuilder {
+impl SqlConstruct for SqlPushRedirectionConfigBuilder {
     const LABEL: &'static str = "pushredirect";
 
     const CREATION_QUERY: &'static str = include_str!("../schemas/sqlite-pushredirect.sql");
@@ -84,21 +84,21 @@ impl SqlConstruct for SqlPushRedirectionBuilder {
     }
 }
 
-impl SqlPushRedirectionBuilder {
-    pub fn build(self, repo_id: RepositoryId) -> SqlPushRedirection {
-        let SqlPushRedirectionBuilder { connections } = self;
+impl SqlPushRedirectionConfigBuilder {
+    pub fn build(self, repo_id: RepositoryId) -> SqlPushRedirectionConfig {
+        let SqlPushRedirectionConfigBuilder { connections } = self;
 
-        SqlPushRedirection {
+        SqlPushRedirectionConfig {
             connections,
             repo_id,
         }
     }
 }
 
-impl SqlConstructFromMetadataDatabaseConfig for SqlPushRedirectionBuilder {}
+impl SqlConstructFromMetadataDatabaseConfig for SqlPushRedirectionConfigBuilder {}
 
 #[async_trait]
-impl PushRedirection for SqlPushRedirection {
+impl PushRedirectionConfig for SqlPushRedirectionConfig {
     async fn set(&self, _ctx: &CoreContext, draft_push: bool, public_push: bool) -> Result<()> {
         Set::query(
             &self.connections.write_connection,
@@ -110,7 +110,7 @@ impl PushRedirection for SqlPushRedirection {
         Ok(())
     }
 
-    async fn get(&self, _ctx: &CoreContext) -> Result<Option<PushRedirectionEntry>> {
+    async fn get(&self, _ctx: &CoreContext) -> Result<Option<PushRedirectionConfigEntry>> {
         let rows = Get::query(&self.connections.read_connection, &self.repo_id).await?;
         Ok(rows.into_iter().next().map(row_to_entry))
     }
@@ -125,7 +125,7 @@ mod test {
     #[fbinit::test]
     async fn test_set(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
-        let builder = SqlPushRedirectionBuilder::with_sqlite_in_memory()?;
+        let builder = SqlPushRedirectionConfigBuilder::with_sqlite_in_memory()?;
         let push = builder.clone().build(RepositoryId::new(1));
 
         // insert one
@@ -160,7 +160,7 @@ mod test {
     #[fbinit::test]
     async fn test_get(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
-        let builder = SqlPushRedirectionBuilder::with_sqlite_in_memory()?;
+        let builder = SqlPushRedirectionConfigBuilder::with_sqlite_in_memory()?;
         let push = builder.build(RepositoryId::new(3));
 
         let entry = push.get(&ctx).await?;

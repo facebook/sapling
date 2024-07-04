@@ -11,7 +11,7 @@ use clap::Args;
 use context::CoreContext;
 use mononoke_app::args::RepoArgs;
 use mononoke_app::MononokeApp;
-use pushredirect::PushRedirection;
+use pushredirect::PushRedirectionConfig;
 use repo_identity::RepoIdentity;
 use repo_identity::RepoIdentityRef;
 use slog::info;
@@ -28,7 +28,7 @@ pub struct Repo {
     repo_identity: RepoIdentity,
 
     #[facet]
-    pub push_redirect_config: dyn PushRedirection,
+    pub push_redirect_config: dyn PushRedirectionConfig,
 }
 
 pub(super) async fn show(ctx: &CoreContext, app: MononokeApp, args: ShowArgs) -> Result<()> {

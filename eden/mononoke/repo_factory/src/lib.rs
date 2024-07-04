@@ -142,8 +142,8 @@ use phases::ArcPhases;
 use preloaded_commit_graph_storage::PreloadedCommitGraphStorage;
 use pushrebase_mutation_mapping::ArcPushrebaseMutationMapping;
 use pushrebase_mutation_mapping::SqlPushrebaseMutationMappingConnection;
-use pushredirect::ArcPushRedirection;
-use pushredirect::SqlPushRedirectionBuilder;
+use pushredirect::ArcPushRedirectionConfig;
+use pushredirect::SqlPushRedirectionConfigBuilder;
 use readonlyblob::ReadOnlyBlobstore;
 use redactedblobstore::ArcRedactionConfigBlobstore;
 use redactedblobstore::RedactedBlobs;
@@ -1823,9 +1823,9 @@ impl RepoFactory {
         &self,
         repo_identity: &ArcRepoIdentity,
         repo_config: &ArcRepoConfig,
-    ) -> Result<ArcPushRedirection> {
+    ) -> Result<ArcPushRedirectionConfig> {
         let builder = self
-            .open_sql::<SqlPushRedirectionBuilder>(repo_config)
+            .open_sql::<SqlPushRedirectionConfigBuilder>(repo_config)
             .await
             .context(RepoFactoryError::PushRedirectConfig)?;
 

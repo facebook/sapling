@@ -46,7 +46,7 @@ impl FromValue for RowId {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct PushRedirectionEntry {
+pub struct PushRedirectionConfigEntry {
     pub id: RowId,
     pub repo_id: RepositoryId,
     pub draft_push: bool,

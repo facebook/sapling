@@ -86,9 +86,9 @@ use newfilenodes::NewFilenodesBuilder;
 use phases::ArcPhases;
 use pushrebase_mutation_mapping::ArcPushrebaseMutationMapping;
 use pushrebase_mutation_mapping::SqlPushrebaseMutationMappingConnection;
-use pushredirect::ArcPushRedirection;
-use pushredirect::NoopPushRedirection;
-use pushredirect::PushRedirection;
+use pushredirect::ArcPushRedirectionConfig;
+use pushredirect::NoopPushRedirectionConfig;
+use pushredirect::PushRedirectionConfig;
 use redactedblobstore::RedactedBlobs;
 use regex::Regex;
 use rendezvous::RendezVousOptions;
@@ -163,7 +163,7 @@ pub struct TestRepoFactory {
     permission_checker: Option<ArcRepoPermissionChecker>,
     derived_data_lease: Option<Box<dyn Fn() -> Arc<dyn LeaseOps> + Send + Sync>>,
     filenodes_override: Option<Box<dyn Fn(ArcFilenodes) -> ArcFilenodes + Send + Sync>>,
-    push_redirect_config: Option<Arc<dyn PushRedirection>>,
+    push_redirect_config: Option<Arc<dyn PushRedirectionConfig>>,
 }
 
 /// The default configuration for test repositories.
@@ -886,7 +886,7 @@ impl TestRepoFactory {
     }
 
     /// Function to create an object to configure push redirection
-    pub async fn push_redirect_config(&self) -> Result<ArcPushRedirection> {
-        Ok(Arc::new(NoopPushRedirection {}))
+    pub async fn push_redirect_config(&self) -> Result<ArcPushRedirectionConfig> {
+        Ok(Arc::new(NoopPushRedirectionConfig {}))
     }
 }

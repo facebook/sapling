@@ -12,29 +12,29 @@ use context::CoreContext;
 mod store;
 mod types;
 
-pub use crate::store::SqlPushRedirection;
-pub use crate::store::SqlPushRedirectionBuilder;
-pub use crate::types::PushRedirectionEntry;
+pub use crate::store::SqlPushRedirectionConfig;
+pub use crate::store::SqlPushRedirectionConfigBuilder;
+pub use crate::types::PushRedirectionConfigEntry;
 pub use crate::types::RowId;
 
 #[facet::facet]
 #[async_trait]
-pub trait PushRedirection: Send + Sync {
+pub trait PushRedirectionConfig: Send + Sync {
     async fn set(&self, ctx: &CoreContext, draft_push: bool, public_push: bool) -> Result<()>;
 
-    async fn get(&self, ctx: &CoreContext) -> Result<Option<PushRedirectionEntry>>;
+    async fn get(&self, ctx: &CoreContext) -> Result<Option<PushRedirectionConfigEntry>>;
 }
 
 #[derive(Clone)]
-pub struct NoopPushRedirection {}
+pub struct NoopPushRedirectionConfig {}
 
 #[async_trait]
-impl PushRedirection for NoopPushRedirection {
+impl PushRedirectionConfig for NoopPushRedirectionConfig {
     async fn set(&self, _ctx: &CoreContext, _draft_push: bool, _public_push: bool) -> Result<()> {
         Ok(())
     }
 
-    async fn get(&self, _ctx: &CoreContext) -> Result<Option<PushRedirectionEntry>> {
+    async fn get(&self, _ctx: &CoreContext) -> Result<Option<PushRedirectionConfigEntry>> {
         Ok(None)
     }
 }

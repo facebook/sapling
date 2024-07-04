@@ -149,6 +149,25 @@ impl CfgrLiveCommitSyncConfig {
         })
     }
 
+    // This is temporary while we migrate every callsite.
+    pub fn new_with_xdb(logger: &Logger, config_store: &ConfigStore) -> Result<Self, Error> {
+        debug!(logger, "Initializing CfgrLiveCommitSyncConfig");
+        let config_handle_for_push_redirection =
+            config_store.get_config_handle(CONFIGERATOR_PUSHREDIRECT_ENABLE.to_string())?;
+        debug!(logger, "Initialized PushRedirect configerator config");
+        let config_handle_for_all_versions =
+            config_store.get_config_handle(CONFIGERATOR_ALL_COMMIT_SYNC_CONFIGS.to_string())?;
+        debug!(
+            logger,
+            "Initialized all commit sync versions configerator config"
+        );
+        debug!(logger, "Done initializing CfgrLiveCommitSyncConfig");
+        Ok(Self {
+            config_handle_for_all_versions,
+            config_handle_for_push_redirection,
+        })
+    }
+
     async fn get_push_redirection_repo_state(
         &self,
         _ctx: &CoreContext,
