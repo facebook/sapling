@@ -438,11 +438,25 @@ pub async fn test_p1_linear_tree(
     let graph = from_dag(
         &ctx,
         r"
-         A-B-C-D-G-H---J-K
-            \   /   \ /
-             E-F     I
-
-         L-M-N-O-P-Q-R-S-T-U
+         K         V
+         |         |
+         J         U
+         |         |
+         I         T
+         |\        |
+         | \       S
+         F  |      |
+         |\ |  L   R
+         | \|  |   |
+         E  H /    Q
+         |  |/     |
+         D  G      P
+         |  |      |
+         C /       O
+         |/        |
+         B         N
+         |         |
+         A         M
          ",
         storage.clone(),
     )
@@ -453,26 +467,32 @@ pub async fn test_p1_linear_tree(
     assert_p1_linear_skew_ancestor(&storage, &ctx, "B", Some("A")).await?;
     assert_p1_linear_skew_ancestor(&storage, &ctx, "C", Some("B")).await?;
     assert_p1_linear_skew_ancestor(&storage, &ctx, "D", Some("A")).await?;
-    assert_p1_linear_skew_ancestor(&storage, &ctx, "E", Some("B")).await?;
-    assert_p1_linear_skew_ancestor(&storage, &ctx, "F", Some("A")).await?;
-    assert_p1_linear_skew_ancestor(&storage, &ctx, "G", Some("D")).await?;
-    assert_p1_linear_skew_ancestor(&storage, &ctx, "H", Some("G")).await?;
+    assert_p1_linear_skew_ancestor(&storage, &ctx, "E", Some("D")).await?;
+    assert_p1_linear_skew_ancestor(&storage, &ctx, "F", Some("E")).await?;
+    assert_p1_linear_skew_ancestor(&storage, &ctx, "G", Some("B")).await?;
+    assert_p1_linear_skew_ancestor(&storage, &ctx, "H", Some("A")).await?;
     assert_p1_linear_skew_ancestor(&storage, &ctx, "I", Some("D")).await?;
-    assert_p1_linear_skew_ancestor(&storage, &ctx, "J", Some("D")).await?;
-    assert_p1_linear_skew_ancestor(&storage, &ctx, "K", Some("A")).await?;
+    assert_p1_linear_skew_ancestor(&storage, &ctx, "J", Some("A")).await?;
+    assert_p1_linear_skew_ancestor(&storage, &ctx, "K", Some("J")).await?;
 
-    assert_p1_linear_level_ancestor(&graph, &ctx, "S", 4, Some("P")).await?;
-    assert_p1_linear_level_ancestor(&graph, &ctx, "U", 7, Some("S")).await?;
-    assert_p1_linear_level_ancestor(&graph, &ctx, "T", 7, Some("S")).await?;
-    assert_p1_linear_level_ancestor(&graph, &ctx, "O", 2, Some("N")).await?;
-    assert_p1_linear_level_ancestor(&graph, &ctx, "N", 3, None).await?;
-    assert_p1_linear_level_ancestor(&graph, &ctx, "K", 2, Some("C")).await?;
+    assert_p1_linear_level_ancestor(&graph, &ctx, "S", 3, Some("P")).await?;
+    assert_p1_linear_level_ancestor(&graph, &ctx, "U", 6, Some("S")).await?;
+    assert_p1_linear_level_ancestor(&graph, &ctx, "T", 6, Some("S")).await?;
+    assert_p1_linear_level_ancestor(&graph, &ctx, "O", 1, Some("N")).await?;
+    assert_p1_linear_level_ancestor(&graph, &ctx, "N", 2, None).await?;
+    assert_p1_linear_level_ancestor(&graph, &ctx, "K", 1, Some("B")).await?;
+    assert_p1_linear_level_ancestor(&graph, &ctx, "H", 2, Some("G")).await?;
+    assert_p1_linear_level_ancestor(&graph, &ctx, "J", 3, Some("D")).await?;
 
-    assert_p1_linear_lowest_common_ancestor(&graph, &ctx, "D", "F", Some("B")).await?;
-    assert_p1_linear_lowest_common_ancestor(&graph, &ctx, "K", "I", Some("H")).await?;
-    assert_p1_linear_lowest_common_ancestor(&graph, &ctx, "D", "C", Some("C")).await?;
-    assert_p1_linear_lowest_common_ancestor(&graph, &ctx, "N", "K", None).await?;
-    assert_p1_linear_lowest_common_ancestor(&graph, &ctx, "A", "I", Some("A")).await?;
+    // Bug! The p1 linear lowest common ancestor of F and D is D. B is their skip tree lowest common ancestor.
+    assert_p1_linear_lowest_common_ancestor(&graph, &ctx, "F", "D", Some("B")).await?;
+
+    assert_p1_linear_lowest_common_ancestor(&graph, &ctx, "E", "H", Some("B")).await?;
+    assert_p1_linear_lowest_common_ancestor(&graph, &ctx, "K", "I", Some("I")).await?;
+    assert_p1_linear_lowest_common_ancestor(&graph, &ctx, "I", "H", Some("B")).await?;
+    assert_p1_linear_lowest_common_ancestor(&graph, &ctx, "L", "H", Some("G")).await?;
+    assert_p1_linear_lowest_common_ancestor(&graph, &ctx, "L", "F", Some("B")).await?;
+    assert_p1_linear_lowest_common_ancestor(&graph, &ctx, "F", "R", None).await?;
 
     Ok(())
 }
