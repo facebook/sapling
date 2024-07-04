@@ -315,6 +315,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                     logger.clone(),
                     internal_identity,
                     ClientEntryPoint::LfsServer,
+                    false,
                 ))
                 .add(PostResponseMiddleware::with_config(config_handle))
                 .add(<ScubaMiddleware<LfsScubaHandler>>::new(scuba_logger))

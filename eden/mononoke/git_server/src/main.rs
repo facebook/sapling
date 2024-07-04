@@ -299,6 +299,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                     logger.clone(),
                     common.internal_identity.clone(),
                     ClientEntryPoint::MononokeGitServer,
+                    false,
                 ))
                 .add(RequestContentEncodingMiddleware {})
                 .add(RequestContextMiddleware::new(

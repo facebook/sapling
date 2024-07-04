@@ -34,6 +34,7 @@ use super::Middleware;
 use crate::socket_data::TlsCertificateIdentities;
 use crate::state_ext::StateExt;
 
+const INGRESS_LEAF_CERT_HEADER: &str = "X-Amzn-Mtls-Clientcert-Leaf";
 const ENCODED_CLIENT_IDENTITY: &str = "x-fb-validated-client-encoded-identity";
 const CLIENT_IP: &str = "tfb-orig-client-ip";
 const CLIENT_PORT: &str = "tfb-orig-client-port";
@@ -53,6 +54,7 @@ pub struct MetadataMiddleware {
     logger: Logger,
     internal_identity: Identity,
     entry_point: ClientEntryPoint,
+    mtls_disabled: bool,
 }
 
 impl MetadataMiddleware {
@@ -61,12 +63,14 @@ impl MetadataMiddleware {
         logger: Logger,
         internal_identity: Identity,
         entry_point: ClientEntryPoint,
+        mtls_disabled: bool,
     ) -> Self {
         Self {
             fb,
             logger,
             internal_identity,
             entry_point,
+            mtls_disabled,
         }
     }
 
@@ -123,6 +127,15 @@ fn request_identities_from_headers(headers: &HeaderMap) -> Option<MononokeIdenti
     MononokeIdentity::try_from_json_encoded(&json_identities).ok()
 }
 
+fn ingress_request_identities_from_headers(headers: &HeaderMap) -> Option<MononokeIdentitySet> {
+    let encoded_cert = headers.get(INGRESS_LEAF_CERT_HEADER)?;
+    let cert = openssl::x509::X509::from_pem(
+        &percent_decode(encoded_cert.as_bytes()).collect::<Vec<u8>>(),
+    )
+    .ok()?;
+    MononokeIdentity::try_from_x509(&cert).ok()
+}
+
 #[async_trait::async_trait]
 impl Middleware for MetadataMiddleware {
     async fn inbound(&self, state: &mut State) -> Option<Response<Body>> {
@@ -138,7 +151,9 @@ impl Middleware for MetadataMiddleware {
                 metadata.add_revproxy_region(revproxy_region);
             }
 
-            let maybe_identities = {
+            let maybe_identities = if self.mtls_disabled {
+                ingress_request_identities_from_headers(headers)
+            } else {
                 let maybe_cat_idents =
                     match try_get_cats_idents(self.fb, headers, &self.internal_identity) {
                         Err(e) => {

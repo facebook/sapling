@@ -62,6 +62,7 @@ pub fn build(
     configs: Arc<MononokeConfigs>,
     common_config: &CommonConfig,
     readonly: bool,
+    mtls_disabled: bool,
 ) -> Result<SaplingRemoteApi, Error> {
     let ctx = ServerContext::new(mononoke, will_exit);
 
@@ -85,6 +86,7 @@ pub fn build(
             logger.clone(),
             common_config.internal_identity.clone(),
             ClientEntryPoint::SaplingRemoteApi,
+            mtls_disabled,
         ))
         .add(ServerIdentityMiddleware::new(HeaderValue::from_static(
             "edenapi_server",

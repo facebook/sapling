@@ -92,6 +92,7 @@ pub async fn create_repo_listeners<'a>(
             configs.clone(),
             &common_config,
             readonly,
+            mtls_disabled,
         )
         .context("Error instantiating SaplingRemoteAPI")?
     };
