@@ -86,6 +86,14 @@ pub(super) struct CommandArgs {
     #[clap(long)]
     /// Follow mutable overrides to the history that make it more user friendly and 'correct'
     follow_mutable_history: bool,
+    /// Show only the linear history of the commit, ignoring merge commits.
+    #[clap(
+        long,
+        conflicts_with = "after",
+        conflicts_with = "before",
+        conflicts_with = "path"
+    )]
+    linear: bool,
 }
 
 struct LogOutput {
@@ -209,18 +217,31 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
                 .history
         }
         None => {
-            let params = thrift::CommitHistoryParams {
-                format: thrift::HistoryFormat::COMMIT_INFO,
-                limit,
-                skip,
-                before_timestamp,
-                after_timestamp,
-                identity_schemes,
-                descendants_of,
-                exclude_changeset_and_ancestors,
-                ..Default::default()
-            };
-            conn.commit_history(&commit, &params).await?.history
+            if args.linear {
+                let params = thrift::CommitLinearHistoryParams {
+                    format: thrift::HistoryFormat::COMMIT_INFO,
+                    limit,
+                    skip: skip as i64,
+                    identity_schemes,
+                    descendants_of,
+                    exclude_changeset_and_ancestors,
+                    ..Default::default()
+                };
+                conn.commit_linear_history(&commit, &params).await?.history
+            } else {
+                let params = thrift::CommitHistoryParams {
+                    format: thrift::HistoryFormat::COMMIT_INFO,
+                    limit,
+                    skip,
+                    before_timestamp,
+                    after_timestamp,
+                    identity_schemes,
+                    descendants_of,
+                    exclude_changeset_and_ancestors,
+                    ..Default::default()
+                };
+                conn.commit_history(&commit, &params).await?.history
+            }
         }
     };
 
