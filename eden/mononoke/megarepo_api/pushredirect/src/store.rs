@@ -64,41 +64,17 @@ fn row_to_entry(row: (RowId, RepositoryId, bool, bool)) -> PushRedirectionEntry 
     }
 }
 
-#[derive(Clone)]
 pub struct SqlPushRedirection {
-    pub(crate) connections: SqlConnections,
+    connections: SqlConnections,
+    repo_id: RepositoryId,
 }
 
-#[async_trait]
-impl PushRedirection for SqlPushRedirection {
-    async fn set(
-        &self,
-        _ctx: &CoreContext,
-        repo_id: &RepositoryId,
-        draft_push: bool,
-        public_push: bool,
-    ) -> Result<()> {
-        Set::query(
-            &self.connections.write_connection,
-            repo_id,
-            &draft_push,
-            &public_push,
-        )
-        .await?;
-        Ok(())
-    }
-
-    async fn get(
-        &self,
-        _ctx: &CoreContext,
-        repo_id: &RepositoryId,
-    ) -> Result<Option<PushRedirectionEntry>> {
-        let rows = Get::query(&self.connections.read_connection, repo_id).await?;
-        Ok(rows.into_iter().next().map(row_to_entry))
-    }
+#[derive(Clone)]
+pub struct SqlPushRedirectionBuilder {
+    connections: SqlConnections,
 }
 
-impl SqlConstruct for SqlPushRedirection {
+impl SqlConstruct for SqlPushRedirectionBuilder {
     const LABEL: &'static str = "pushredirect";
 
     const CREATION_QUERY: &'static str = include_str!("../schemas/sqlite-pushredirect.sql");
@@ -108,7 +84,37 @@ impl SqlConstruct for SqlPushRedirection {
     }
 }
 
-impl SqlConstructFromMetadataDatabaseConfig for SqlPushRedirection {}
+impl SqlPushRedirectionBuilder {
+    pub fn build(self, repo_id: RepositoryId) -> SqlPushRedirection {
+        let SqlPushRedirectionBuilder { connections } = self;
+
+        SqlPushRedirection {
+            connections,
+            repo_id,
+        }
+    }
+}
+
+impl SqlConstructFromMetadataDatabaseConfig for SqlPushRedirectionBuilder {}
+
+#[async_trait]
+impl PushRedirection for SqlPushRedirection {
+    async fn set(&self, _ctx: &CoreContext, draft_push: bool, public_push: bool) -> Result<()> {
+        Set::query(
+            &self.connections.write_connection,
+            &self.repo_id,
+            &draft_push,
+            &public_push,
+        )
+        .await?;
+        Ok(())
+    }
+
+    async fn get(&self, _ctx: &CoreContext) -> Result<Option<PushRedirectionEntry>> {
+        let rows = Get::query(&self.connections.read_connection, &self.repo_id).await?;
+        Ok(rows.into_iter().next().map(row_to_entry))
+    }
+}
 
 #[cfg(test)]
 mod test {
@@ -119,27 +125,30 @@ mod test {
     #[fbinit::test]
     async fn test_set(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
-        let push = SqlPushRedirection::with_sqlite_in_memory()?;
+        let builder = SqlPushRedirectionBuilder::with_sqlite_in_memory()?;
+        let push = builder.clone().build(RepositoryId::new(1));
 
         // insert one
-        push.set(&ctx, &RepositoryId::new(1), true, false).await?;
-        let entry = push.get(&ctx, &RepositoryId::new(1)).await?;
+        push.set(&ctx, true, false).await?;
+        let entry = push.get(&ctx).await?;
         assert!(entry.is_some());
         let entry = entry.unwrap();
         assert!(entry.draft_push);
         assert!(!entry.public_push);
 
+        let push = builder.build(RepositoryId::new(2));
+
         // insert another
-        push.set(&ctx, &RepositoryId::new(2), false, true).await?;
-        let entry = push.get(&ctx, &RepositoryId::new(2)).await?;
+        push.set(&ctx, false, true).await?;
+        let entry = push.get(&ctx).await?;
         assert!(entry.is_some());
         let entry = entry.unwrap();
         assert!(!entry.draft_push);
         assert!(entry.public_push);
 
         // update it
-        push.set(&ctx, &RepositoryId::new(2), true, true).await?;
-        let entry = push.get(&ctx, &RepositoryId::new(2)).await?;
+        push.set(&ctx, true, true).await?;
+        let entry = push.get(&ctx).await?;
         assert!(entry.is_some());
         let entry = entry.unwrap();
         assert!(entry.draft_push);
@@ -151,13 +160,14 @@ mod test {
     #[fbinit::test]
     async fn test_get(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
-        let push = SqlPushRedirection::with_sqlite_in_memory()?;
+        let builder = SqlPushRedirectionBuilder::with_sqlite_in_memory()?;
+        let push = builder.build(RepositoryId::new(3));
 
-        let entry = push.get(&ctx, &RepositoryId::new(3)).await?;
+        let entry = push.get(&ctx).await?;
         assert!(entry.is_none());
 
-        push.set(&ctx, &RepositoryId::new(3), true, true).await?;
-        let entry = push.get(&ctx, &RepositoryId::new(3)).await?;
+        push.set(&ctx, true, true).await?;
+        let entry = push.get(&ctx).await?;
         assert!(entry.is_some());
         let entry = entry.unwrap();
         assert!(entry.draft_push);

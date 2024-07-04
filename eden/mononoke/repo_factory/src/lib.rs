@@ -143,7 +143,7 @@ use preloaded_commit_graph_storage::PreloadedCommitGraphStorage;
 use pushrebase_mutation_mapping::ArcPushrebaseMutationMapping;
 use pushrebase_mutation_mapping::SqlPushrebaseMutationMappingConnection;
 use pushredirect::ArcPushRedirection;
-use pushredirect::SqlPushRedirection;
+use pushredirect::SqlPushRedirectionBuilder;
 use readonlyblob::ReadOnlyBlobstore;
 use redactedblobstore::ArcRedactionConfigBlobstore;
 use redactedblobstore::RedactedBlobs;
@@ -1821,13 +1821,16 @@ impl RepoFactory {
 
     pub async fn push_redirect_config(
         &self,
+        repo_identity: &ArcRepoIdentity,
         repo_config: &ArcRepoConfig,
     ) -> Result<ArcPushRedirection> {
-        Ok(Arc::new(
-            self.open_sql::<SqlPushRedirection>(repo_config)
-                .await
-                .context(RepoFactoryError::PushRedirectConfig)?,
-        ))
+        let builder = self
+            .open_sql::<SqlPushRedirectionBuilder>(repo_config)
+            .await
+            .context(RepoFactoryError::PushRedirectConfig)?;
+
+        let push_redirect_config = builder.build(repo_identity.id());
+        Ok(Arc::new(push_redirect_config))
     }
 }
 

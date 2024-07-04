@@ -38,7 +38,7 @@ pub(super) async fn show(ctx: &CoreContext, app: MononokeApp, args: ShowArgs) ->
         .context("Failed to open repo")?;
     let repo_id = &repo.repo_identity().id();
 
-    match repo.push_redirect_config.get(ctx, repo_id).await? {
+    match repo.push_redirect_config.get(ctx).await? {
         Some(res) => {
             info!(
                 ctx.logger(),

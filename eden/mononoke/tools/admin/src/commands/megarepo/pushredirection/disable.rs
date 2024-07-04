@@ -42,7 +42,7 @@ pub(super) async fn disable(ctx: &CoreContext, app: MononokeApp, args: DisableAr
         .context("Failed to open repo")?;
     let repo_id = &repo.repo_identity().id();
 
-    match repo.push_redirect_config.get(ctx, repo_id).await? {
+    match repo.push_redirect_config.get(ctx).await? {
         Some(res) => {
             info!(
                 ctx.logger(),
@@ -66,11 +66,7 @@ pub(super) async fn disable(ctx: &CoreContext, app: MononokeApp, args: DisableAr
         info!(ctx.logger(), "dry run mode, exiting");
         Ok(())
     } else {
-        match repo
-            .push_redirect_config
-            .set(ctx, &repo.repo_identity().id(), false, false)
-            .await
-        {
+        match repo.push_redirect_config.set(ctx, false, false).await {
             Ok(_) => {
                 info!(ctx.logger(), "OK");
                 Ok(())

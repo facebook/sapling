@@ -49,7 +49,7 @@ pub(super) async fn enable(ctx: &CoreContext, app: MononokeApp, args: EnableArgs
         .context("Failed to open repo")?;
     let repo_id = &repo.repo_identity().id();
 
-    match repo.push_redirect_config.get(ctx, repo_id).await? {
+    match repo.push_redirect_config.get(ctx).await? {
         Some(res) => {
             info!(
                 ctx.logger(),
@@ -75,12 +75,7 @@ pub(super) async fn enable(ctx: &CoreContext, app: MononokeApp, args: EnableArgs
     } else {
         match repo
             .push_redirect_config
-            .set(
-                ctx,
-                &repo.repo_identity().id(),
-                args.draft_push,
-                args.public_push,
-            )
+            .set(ctx, args.draft_push, args.public_push)
             .await
         {
             Ok(_) => {
