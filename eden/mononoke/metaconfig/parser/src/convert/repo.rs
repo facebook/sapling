@@ -497,6 +497,14 @@ impl Convert for RawDerivedDataTypesConfig {
             .git_delta_manifest_v2_config
             .map(|raw| raw.convert())
             .transpose()?;
+
+        let derivation_batch_sizes = self
+            .derivation_batch_sizes
+            .unwrap_or_default()
+            .into_iter()
+            .map(|(k, v)| Ok((DerivableType::from_name(&k)?, v.try_into()?)))
+            .collect::<Result<_>>()?;
+
         Ok(DerivedDataTypesConfig {
             types,
             mapping_key_prefixes,
@@ -506,6 +514,7 @@ impl Convert for RawDerivedDataTypesConfig {
             blame_version,
             git_delta_manifest_version,
             git_delta_manifest_v2_config,
+            derivation_batch_sizes,
         })
     }
 }

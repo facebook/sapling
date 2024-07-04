@@ -410,6 +410,9 @@ pub struct DerivedDataTypesConfig {
 
     /// Config for git delta manifest v2
     pub git_delta_manifest_v2_config: Option<GitDeltaManifestV2Config>,
+
+    /// For each Derived Data Type, what batch size should we use during derivation?
+    pub derivation_batch_sizes: HashMap<DerivableType, usize>,
 }
 
 /// What type of unode derived data to generate
