@@ -17,6 +17,14 @@
 #include "eden/common/utils/RefPtr.h"
 #include "eden/fs/eden-config.h"
 
+/**
+ * All the EdenFS stats are documented in the EdenFS wiki
+ * https://www.internalfb.com/intern/wiki/EdenFS/Development_Tips/EdenFS_ODS_Counters_and_Duration/
+ * as well as the .md files in eden/fs/docs/stats/EdenStats.md
+ * if you are adding or editing stats, please consider updating
+ * the wiki and the .md files.
+ */
+
 namespace facebook::eden {
 
 struct FuseStats;
