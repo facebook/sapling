@@ -484,9 +484,7 @@ pub async fn test_p1_linear_tree(
     assert_p1_linear_level_ancestor(&graph, &ctx, "H", 2, Some("G")).await?;
     assert_p1_linear_level_ancestor(&graph, &ctx, "J", 3, Some("D")).await?;
 
-    // Bug! The p1 linear lowest common ancestor of F and D is D. B is their skip tree lowest common ancestor.
-    assert_p1_linear_lowest_common_ancestor(&graph, &ctx, "F", "D", Some("B")).await?;
-
+    assert_p1_linear_lowest_common_ancestor(&graph, &ctx, "F", "D", Some("D")).await?;
     assert_p1_linear_lowest_common_ancestor(&graph, &ctx, "E", "H", Some("B")).await?;
     assert_p1_linear_lowest_common_ancestor(&graph, &ctx, "K", "I", Some("I")).await?;
     assert_p1_linear_lowest_common_ancestor(&graph, &ctx, "I", "H", Some("B")).await?;
