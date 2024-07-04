@@ -40,7 +40,7 @@ Run the x-repo with submodules setup
   > "$SUBMODULE_REPO_ID" "{\"git-repo-b\": $REPO_B_ID, \"git-repo-b/git-repo-c\": $REPO_C_ID, \"repo_c\": $REPO_C_ID}"
 
 
-Create a commit in the large repo
+-- Create a commit in the large repo
   $ testtool_drawdag -R "$LARGE_REPO_NAME" --no-default-files <<EOF
   > L_A
   > # modify: L_A "file_in_large_repo.txt" "first file"
@@ -48,7 +48,7 @@ Create a commit in the large repo
   > EOF
   L_A=b006a2b1425af8612bc80ff4aa9fa8a1a2c44936ad167dd21cb9af2a9a0248c4
 
-Setup git repos A, B and C
+-- Setup git repos A, B and C
   $ setup_git_repos_a_b_c
   
   
@@ -106,7 +106,7 @@ Setup git repos A, B and C
   
   7 directories, 11 files
 
-Import all git repos into Mononoke
+-- Import all git repos into Mononoke
   $ gitimport_repos_a_b_c
   
   
@@ -116,7 +116,7 @@ Import all git repos into Mononoke
   
   GIT_REPO_A_HEAD_PARENT: c33eeb91423c021a4d9d57f2efbb08185c77d89b9141433c666b84240395f0c5
 
-Merge repo A into the large repo
+-- Merge repo A into the large repo
   $ REPO_A_FOLDER="smallrepofolder1" merge_repo_a_to_large_repo
   
   
@@ -433,7 +433,7 @@ Merge repo A into the large repo
   04190d634e49d29bf87edffb012f42f9f5e49b5b66e99714f17fcd4ef3f3e294: 0
   04190d634e49d29bf87edffb012f42f9f5e49b5b66e99714f17fcd4ef3f3e294: 0
 
-Make changes to submodule and make sure they're synced properly
+-- Make changes to submodule and make sure they're synced properly
   $ make_changes_to_git_repos_a_b_c
   
   
@@ -482,7 +482,7 @@ Make changes to submodule and make sure they're synced properly
   $ mononoke_newadmin bookmarks -R "$SUBMODULE_REPO_NAME" list -S hg
   heads/master
 
-Import the changes from the git repos B and C into their Mononoke repos
+-- Import the changes from the git repos B and C into their Mononoke repos
   $ REPOID="$REPO_C_ID" QUIET_LOGGING_LOG_FILE="$TESTTMP/gitimport_repo_c.out"  \
   > quiet gitimport "$GIT_REPO_C" --bypass-derived-data-backfilling \
   > --bypass-readonly --generate-bookmarks missing-for-commit "$GIT_REPO_C_HEAD"
@@ -496,8 +496,8 @@ heads/master bookmark to large repo's master bookmark via pushrebase
   $ touch $TESTTMP/xreposync.out
   $ with_stripped_logs mononoke_x_repo_sync_forever "$SUBMODULE_REPO_ID" "$LARGE_REPO_ID" 
 
-Import the changes from git repo A into its Mononoke repo. They should be automatically
-forward synced to the large repo
+-- Import the changes from git repo A into its Mononoke repo. They should be automatically
+-- forward synced to the large repo
   $ REPOID="$SUBMODULE_REPO_ID" with_stripped_logs gitimport "$GIT_REPO_A" --bypass-derived-data-backfilling \
   > --bypass-readonly --generate-bookmarks missing-for-commit "$GIT_REPO_A_HEAD" > $TESTTMP/gitimport_output
 
@@ -555,8 +555,8 @@ forward synced to the large repo
                 o  54a6db91baf1c10921369339b50e5a174a7ca82e L_A
   
 
-Check that deletions were made properly, i.e. submodule in repo_c was entirely
-deleted and the files deleted in repo B were deleted inside its copy.
+-- Check that deletions were made properly, i.e. submodule in repo_c was entirely
+-- deleted and the files deleted in repo B were deleted inside its copy.
   $ hg show --stat -T 'commit: {node}\n{desc}\n' .
   commit: d246b01a5a5baff205958295aa764916ae288291
   Remove repo C submodule from repo A
@@ -606,8 +606,8 @@ TODO(T174902563): Fix deletion of submodules in EXPAND submodule action.
   9 directories, 17 files                                         |  6 directories, 14 files
   [1]
 
-Check that the diff that updates the submodule generates the correct delta
-(i.e. instead of copying the entire working copy of the submodule every time)
+-- Check that the diff that updates the submodule generates the correct delta
+-- (i.e. instead of copying the entire working copy of the submodule every time)
   $ hg show --stat -T 'commit: {node}\n{desc}\n' .^
   commit: d3dae76d4349c88c24d60fe533bd9fbd02ddd5ae
   Update submodule B in repo A
@@ -625,11 +625,11 @@ Check that the diff that updates the submodule generates the correct delta
   $ cat smallrepofolder1/.x-repo-submodule-git-repo-b
   0597690a839ce11a250139dae33ee85d9772a47a (no-eol)
 
-Also check that our two binaries that can verify working copy are able to deal with expansions
+-- Also check that our two binaries that can verify working copy are able to deal with expansions
   $ REPOIDLARGE=$LARGE_REPO_ID REPOIDSMALL=$SUBMODULE_REPO_ID verify_wc master |& strip_glog
 
-The check-push-redirection-prereqs should behave the same both ways but let's verify it (we had bugs where it didn't)
-(those outputs are still not correct but that's expected)
+-- The check-push-redirection-prereqs should behave the same both ways but let's verify it (we had bugs where it didn't)
+-- (those outputs are still not correct but that's expected)
   $ quiet_grep "all is well" -- with_stripped_logs megarepo_tool_multirepo --source-repo-id $SUBMODULE_REPO_ID --target-repo-id $LARGE_REPO_ID check-push-redirection-prereqs "heads/master" "master" "$LATEST_CONFIG_VERSION_NAME" | strip_glog | tee $TESTTMP/push_redir_prereqs_small_large
   all is well!
 
@@ -637,8 +637,8 @@ The check-push-redirection-prereqs should behave the same both ways but let's ve
   all is well!
   $ diff -wbBdu $TESTTMP/push_redir_prereqs_small_large $TESTTMP/push_redir_prereqs_large_small
 
-Let's corrupt the expansion and check if validation complains
-(those outputs are still not correct but that's expected)
+-- Let's corrupt the expansion and check if validation complains
+-- (those outputs are still not correct but that's expected)
   $ echo corrupt > smallrepofolder1/git-repo-b/git-repo-c/choo3 
   $ echo corrupt > smallrepofolder1/.x-repo-submodule-git-repo-b
   $ hg commit -m "submodule corruption"
