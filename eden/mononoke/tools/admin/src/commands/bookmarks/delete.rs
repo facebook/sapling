@@ -79,7 +79,7 @@ pub async fn delete(
         kind, delete_args.name, old_value,
     );
 
-    if let Err(e) = check_bookmark_sync_config(repo, &delete_args.name, kind) {
+    if let Err(e) = check_bookmark_sync_config(ctx, repo, &delete_args.name, kind).await {
         if delete_args.force_megarepo {
             println!("Deleting bookmark in megarepo-synced repository (--force-megarepo)");
             println!("Waiting 3 seconds. Ctrl-C now if you did not intend this - risk of SEV!");

@@ -134,7 +134,7 @@ impl<'op> CreateBookmarkOp<'op> {
             .require_bookmark_modify(ctx, repo, self.bookmark)
             .await?;
 
-        check_bookmark_sync_config(repo, self.bookmark, kind)?;
+        check_bookmark_sync_config(ctx, repo, self.bookmark, kind).await?;
 
         self.affected_changesets
             .check_restrictions(

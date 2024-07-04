@@ -139,7 +139,8 @@ pub(crate) async fn ensure_ancestor_of(
         .await?)
 }
 
-pub fn check_bookmark_sync_config(
+pub async fn check_bookmark_sync_config(
+    _ctx: &CoreContext,
     repo: &(impl RepoIdentityRef + RepoCrossRepoRef),
     bookmark: &BookmarkKey,
     kind: BookmarkKind,

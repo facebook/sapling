@@ -87,7 +87,7 @@ pub async fn set(ctx: &CoreContext, repo: &Repo, set_args: BookmarksSetArgs) -> 
         }
     }
 
-    if let Err(e) = check_bookmark_sync_config(repo, &set_args.name, kind) {
+    if let Err(e) = check_bookmark_sync_config(ctx, repo, &set_args.name, kind).await {
         if set_args.force_megarepo {
             println!("Moving bookmark in megarepo-synced repository (--force-megarepo)");
             println!("Waiting 3 seconds. Ctrl-C now if you did not intend this - risk of SEV!");
