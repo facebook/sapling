@@ -52,6 +52,7 @@ use sharding_ext::RepoShard;
 use slog::error;
 use slog::info;
 use slog::o;
+use slog::warn;
 use slog::Logger;
 
 const SM_CLEANUP_TIMEOUT_SECS: u64 = 120;
@@ -281,6 +282,11 @@ fn main(fb: FacebookInit) -> Result<()> {
                 .ok_or(AlpnError::NOACK)
         });
 
+        if args.tls_args.disable_mtls {
+            warn!(root_log, "MTLS has been disabled!");
+            builder.set_verify(openssl::ssl::SslVerifyMode::NONE)
+        }
+
         builder.build()
     };
 
@@ -379,6 +385,7 @@ fn main(fb: FacebookInit) -> Result<()> {
                 bound_addr_file,
                 env.acl_provider.as_ref(),
                 args.readonly.readonly,
+                args.tls_args.disable_mtls,
             )
             .await
         }

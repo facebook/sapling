@@ -129,6 +129,7 @@ pub async fn connection_acceptor(
     bound_addr_path: Option<PathBuf>,
     acl_provider: &dyn AclProvider,
     readonly: bool,
+    mtls_disabled: bool,
 ) -> Result<()> {
     let enable_http_control_api = common_config.enable_http_control_api;
 
@@ -180,6 +181,7 @@ pub async fn connection_acceptor(
         configs,
         common_config,
         readonly,
+        mtls_disabled,
     });
 
     loop {
@@ -221,6 +223,7 @@ pub struct Acceptor {
     pub configs: Arc<MononokeConfigs>,
     pub common_config: CommonConfig,
     pub readonly: bool,
+    pub mtls_disabled: bool,
 }
 
 /// Details for a socket we've just opened.
@@ -235,6 +238,7 @@ pub struct PendingConnection {
 pub struct AcceptedConnection {
     pub pending: PendingConnection,
     pub is_trusted: bool,
+    pub mtls_disabled: bool,
     pub identities: Arc<MononokeIdentitySet>,
 }
 
@@ -278,21 +282,31 @@ async fn handle_connection(conn: PendingConnection, sock: TcpStream) -> Result<(
         .await
         .context("Failed to perform tls handshake")?;
 
-    let identities = match ssl_socket.ssl().peer_certificate() {
-        Some(cert) => MononokeIdentity::try_from_x509(&cert),
-        None => Err(ErrorKind::ConnectionNoClientCertificate.into()),
-    }?;
+    let conn = match conn.acceptor.mtls_disabled {
+        true => AcceptedConnection {
+            pending: conn,
+            is_trusted: false,
+            mtls_disabled: true,
+            identities: Arc::new(MononokeIdentitySet::new()),
+        },
+        false => {
+            let identities = match ssl_socket.ssl().peer_certificate() {
+                Some(cert) => MononokeIdentity::try_from_x509(&cert),
+                None => Err(ErrorKind::ConnectionNoClientCertificate.into()),
+            }?;
 
-    let is_trusted = conn
-        .acceptor
-        .security_checker
-        .check_if_trusted(&identities)
-        .await;
-
-    let conn = AcceptedConnection {
-        pending: conn,
-        is_trusted,
-        identities: Arc::new(identities),
+            let is_trusted = conn
+                .acceptor
+                .security_checker
+                .check_if_trusted(&identities)
+                .await;
+            AcceptedConnection {
+                pending: conn,
+                is_trusted,
+                mtls_disabled: false,
+                identities: Arc::new(identities),
+            }
+        }
     };
 
     let ssl_socket = QuietShutdownStream::new(ssl_socket);

@@ -26,4 +26,6 @@ pub struct TLSArgs {
     /// TLS Ticket Seeds
     #[clap(long)]
     pub tls_ticket_seeds: Option<String>,
+    #[clap(long)]
+    pub disable_mtls: bool,
 }
