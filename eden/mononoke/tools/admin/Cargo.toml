@@ -87,6 +87,7 @@ print_graph = { version = "0.1.0", path = "../../cmdlib/displaying/graph" }
 protocol = { version = "0.1.0", path = "../../git/protocol" }
 pushrebase = { version = "0.1.0", path = "../../pushrebase" }
 pushrebase_mutation_mapping = { version = "0.1.0", path = "../../pushrebase_mutation_mapping" }
+pushredirect = { version = "0.1.0", path = "../../megarepo_api/pushredirect" }
 redactedblobstore = { version = "0.1.0", path = "../../blobstore/redactedblobstore" }
 redaction = { version = "0.1.0", path = "../../features/redaction" }
 regex = "1.9.2"

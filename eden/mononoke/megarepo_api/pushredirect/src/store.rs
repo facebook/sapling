@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::bail;
 use anyhow::Result;
 use async_trait::async_trait;
 use context::CoreContext;
@@ -50,10 +49,8 @@ mononoke_queries! {
 
     write Set(repo_id: RepositoryId, draft_push: bool, public_push: bool) {
         none,
-        "REPLACE INTO pushredirect
-          (repo_id, draft_push, public_push)
-          VALUES ({repo_id}, {draft_push}, {public_push})
-         "
+        mysql("INSERT INTO pushredirect (repo_id, draft_push, public_push) VALUES ({repo_id}, {draft_push}, {public_push}) ON DUPLICATE KEY UPDATE draft_push = {draft_push}, public_push = {public_push}")
+        sqlite("REPLACE INTO pushredirect (repo_id, draft_push, public_push) VALUES ({repo_id}, {draft_push}, {public_push})")
     }
 }
 
@@ -80,31 +77,15 @@ impl PushRedirection for SqlPushRedirection {
         repo_id: &RepositoryId,
         draft_push: bool,
         public_push: bool,
-    ) -> Result<RowId> {
-        let res = Set::query(
+    ) -> Result<()> {
+        Set::query(
             &self.connections.write_connection,
             repo_id,
             &draft_push,
             &public_push,
         )
         .await?;
-
-        match res.last_insert_id() {
-            Some(last_insert_id) if res.affected_rows() == 1 => Ok(RowId(last_insert_id)),
-            _ => bail!("Failed to update {}", repo_id),
-        }
-    }
-
-    async fn test_get_by_id(
-        &self,
-        _ctx: &CoreContext,
-        id: &RowId,
-    ) -> Result<Option<PushRedirectionEntry>> {
-        let rows = TestGet::query(&self.connections.read_connection, id).await?;
-        match rows.into_iter().next() {
-            None => Ok(None),
-            Some(row) => Ok(Some(row_to_entry(row))),
-        }
+        Ok(())
     }
 
     async fn get(
@@ -136,22 +117,32 @@ mod test {
     use super::*;
 
     #[fbinit::test]
-    async fn test_add(fb: FacebookInit) -> Result<()> {
+    async fn test_set(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let push = SqlPushRedirection::with_sqlite_in_memory()?;
 
-        let id = push.set(&ctx, &RepositoryId::new(1), true, false).await?;
-        let entry = push.test_get_by_id(&ctx, &id).await?;
+        // insert one
+        push.set(&ctx, &RepositoryId::new(1), true, false).await?;
+        let entry = push.get(&ctx, &RepositoryId::new(1)).await?;
         assert!(entry.is_some());
         let entry = entry.unwrap();
         assert!(entry.draft_push);
         assert!(!entry.public_push);
 
-        let id = push.set(&ctx, &RepositoryId::new(2), false, true).await?;
-        let entry = push.test_get_by_id(&ctx, &id).await?;
+        // insert another
+        push.set(&ctx, &RepositoryId::new(2), false, true).await?;
+        let entry = push.get(&ctx, &RepositoryId::new(2)).await?;
         assert!(entry.is_some());
         let entry = entry.unwrap();
         assert!(!entry.draft_push);
+        assert!(entry.public_push);
+
+        // update it
+        push.set(&ctx, &RepositoryId::new(2), true, true).await?;
+        let entry = push.get(&ctx, &RepositoryId::new(2)).await?;
+        assert!(entry.is_some());
+        let entry = entry.unwrap();
+        assert!(entry.draft_push);
         assert!(entry.public_push);
 
         Ok(())

@@ -142,6 +142,8 @@ use phases::ArcPhases;
 use preloaded_commit_graph_storage::PreloadedCommitGraphStorage;
 use pushrebase_mutation_mapping::ArcPushrebaseMutationMapping;
 use pushrebase_mutation_mapping::SqlPushrebaseMutationMappingConnection;
+use pushredirect::ArcPushRedirection;
+use pushredirect::SqlPushRedirection;
 use readonlyblob::ReadOnlyBlobstore;
 use redactedblobstore::ArcRedactionConfigBlobstore;
 use redactedblobstore::RedactedBlobs;
@@ -732,14 +734,17 @@ pub enum RepoFactoryError {
     #[error("Error creating repo handler base")]
     RepoHandlerBase,
 
-    #[error("Error openning bonsai blob mapping DB")]
+    #[error("Error opening bonsai blob mapping DB")]
     BonsaiBlobMapping,
 
-    #[error("Error openning deletion log DB")]
+    #[error("Error opening deletion log DB")]
     SqlDeletionLog,
 
-    #[error("Error openning commit cloud DB")]
+    #[error("Error opening commit cloud DB")]
     SqlCommitCloud,
+
+    #[error("Error opening push redirector DB")]
+    PushRedirectConfig,
 }
 
 #[facet::factory(name: String, repo_config_param: RepoConfig, common_config_param: CommonConfig)]
@@ -1812,6 +1817,17 @@ impl RepoFactory {
             repo_derived_data: repo_derived_data.clone(),
             core_ctx: self.ctx(None),
         }))
+    }
+
+    pub async fn push_redirect_config(
+        &self,
+        repo_config: &ArcRepoConfig,
+    ) -> Result<ArcPushRedirection> {
+        Ok(Arc::new(
+            self.open_sql::<SqlPushRedirection>(repo_config)
+                .await
+                .context(RepoFactoryError::PushRedirectConfig)?,
+        ))
     }
 }
 

@@ -105,6 +105,7 @@ rust_binary(
         "//eden/mononoke/megarepo_api:megarepo_api",
         "//eden/mononoke/megarepo_api:megarepo_config",
         "//eden/mononoke/megarepo_api:megarepo_error",
+        "//eden/mononoke/megarepo_api:pushredirect",
         "//eden/mononoke/mercurial:mercurial_types",
         "//eden/mononoke/metaconfig:metaconfig_types",
         "//eden/mononoke/mononoke_api:mononoke_api",

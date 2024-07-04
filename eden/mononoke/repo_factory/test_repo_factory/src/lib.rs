@@ -86,6 +86,9 @@ use newfilenodes::NewFilenodesBuilder;
 use phases::ArcPhases;
 use pushrebase_mutation_mapping::ArcPushrebaseMutationMapping;
 use pushrebase_mutation_mapping::SqlPushrebaseMutationMappingConnection;
+use pushredirect::ArcPushRedirection;
+use pushredirect::NoopPushRedirection;
+use pushredirect::PushRedirection;
 use redactedblobstore::RedactedBlobs;
 use regex::Regex;
 use rendezvous::RendezVousOptions;
@@ -160,6 +163,7 @@ pub struct TestRepoFactory {
     permission_checker: Option<ArcRepoPermissionChecker>,
     derived_data_lease: Option<Box<dyn Fn() -> Arc<dyn LeaseOps> + Send + Sync>>,
     filenodes_override: Option<Box<dyn Fn(ArcFilenodes) -> ArcFilenodes + Send + Sync>>,
+    push_redirect_config: Option<Arc<dyn PushRedirection>>,
 }
 
 /// The default configuration for test repositories.
@@ -293,6 +297,7 @@ impl TestRepoFactory {
             filenodes_override: None,
             live_commit_sync_config: None,
             bookmarks_cache: None,
+            push_redirect_config: None,
         })
     }
 
@@ -878,5 +883,10 @@ impl TestRepoFactory {
     /// Function to create a logger for repos stats
     pub async fn repo_stats_logger(&self) -> Result<ArcRepoStatsLogger> {
         Ok(Arc::new(RepoStatsLogger::noop()))
+    }
+
+    /// Function to create an object to configure push redirection
+    pub async fn push_redirect_config(&self) -> Result<ArcPushRedirection> {
+        Ok(Arc::new(NoopPushRedirection {}))
     }
 }

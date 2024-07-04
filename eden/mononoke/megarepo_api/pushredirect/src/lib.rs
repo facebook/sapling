@@ -13,6 +13,7 @@ use mononoke_types::RepositoryId;
 mod store;
 mod types;
 
+pub use crate::store::SqlPushRedirection;
 pub use crate::types::PushRedirectionEntry;
 pub use crate::types::RowId;
 
@@ -25,19 +26,35 @@ pub trait PushRedirection: Send + Sync {
         repo_id: &RepositoryId,
         draft_push: bool,
         public_push: bool,
-    ) -> Result<RowId>;
-
-    /// Get the full entry by id
-    /// It is mainly intended to be used in tests.
-    async fn test_get_by_id(
-        &self,
-        ctx: &CoreContext,
-        id: &RowId,
-    ) -> Result<Option<PushRedirectionEntry>>;
+    ) -> Result<()>;
 
     async fn get(
         &self,
         ctx: &CoreContext,
         repo_id: &RepositoryId,
     ) -> Result<Option<PushRedirectionEntry>>;
+}
+
+#[derive(Clone)]
+pub struct NoopPushRedirection {}
+
+#[async_trait]
+impl PushRedirection for NoopPushRedirection {
+    async fn set(
+        &self,
+        _ctx: &CoreContext,
+        _repo_id: &RepositoryId,
+        _draft_push: bool,
+        _public_push: bool,
+    ) -> Result<()> {
+        Ok(())
+    }
+
+    async fn get(
+        &self,
+        _ctx: &CoreContext,
+        _repo_id: &RepositoryId,
+    ) -> Result<Option<PushRedirectionEntry>> {
+        Ok(None)
+    }
 }

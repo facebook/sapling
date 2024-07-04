@@ -7,19 +7,22 @@
 
 use anyhow::Context;
 use anyhow::Result;
-use clap::ArgAction;
 use clap::Args;
 use context::CoreContext;
 use mononoke_app::args::RepoArgs;
 use mononoke_app::MononokeApp;
+use pushredirect::PushRedirection;
 use repo_identity::RepoIdentity;
+use repo_identity::RepoIdentityRef;
+use slog::error;
+use slog::info;
 
 #[derive(Args)]
 pub(super) struct DisableArgs {
     #[clap(flatten)]
     repo: RepoArgs,
 
-    #[arg(short, long, default_value_t = false, action = ArgAction::Set)]
+    #[arg(short = 'n', long)]
     dry_run: bool,
 }
 
@@ -27,13 +30,55 @@ pub(super) struct DisableArgs {
 pub struct Repo {
     #[facet]
     repo_identity: RepoIdentity,
+
+    #[facet]
+    pub push_redirect_config: dyn PushRedirection,
 }
 
-pub(super) async fn disable(_ctx: &CoreContext, app: MononokeApp, args: DisableArgs) -> Result<()> {
+pub(super) async fn disable(ctx: &CoreContext, app: MononokeApp, args: DisableArgs) -> Result<()> {
     let repo: Repo = app
         .open_repo(&args.repo)
         .await
         .context("Failed to open repo")?;
+    let repo_id = &repo.repo_identity().id();
 
-    Ok(())
+    match repo.push_redirect_config.get(ctx, repo_id).await? {
+        Some(res) => {
+            info!(
+                ctx.logger(),
+                "{}: draft={} public={}", res.repo_id, res.draft_push, res.public_push,
+            );
+        }
+        None => {
+            info!(
+                ctx.logger(),
+                "{}: not in the db, default draft=false public=false", repo_id,
+            );
+        }
+    }
+    info!(
+        ctx.logger(),
+        "{} set draft=false public=false",
+        if args.dry_run { "would" } else { "will" }
+    );
+
+    if args.dry_run {
+        info!(ctx.logger(), "dry run mode, exiting");
+        Ok(())
+    } else {
+        match repo
+            .push_redirect_config
+            .set(ctx, &repo.repo_identity().id(), false, false)
+            .await
+        {
+            Ok(_) => {
+                info!(ctx.logger(), "OK");
+                Ok(())
+            }
+            Err(e) => {
+                error!(ctx.logger(), "Failed to disable push redirection: {}", e);
+                Err(e)
+            }
+        }
+    }
 }
