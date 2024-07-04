@@ -8,4 +8,5 @@
 #![feature(trait_alias)]
 
 pub mod generator;
+pub mod pack_processor;
 pub mod types;

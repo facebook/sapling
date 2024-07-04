@@ -24,8 +24,10 @@ futures = { version = "0.3.30", features = ["async-await", "compat"] }
 git_symbolic_refs = { version = "0.1.0", path = "../../git_symbolic_refs" }
 git_types = { version = "0.1.0", path = "../git_types" }
 gix-date = "0.7"
+gix-features = { version = "0.32", features = ["parallel", "rustsha1"] }
 gix-hash = "0.11"
 gix-object = "0.33"
+gix-pack = "0.40"
 justknobs = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 manifest = { version = "0.1.0", path = "../../manifest" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
@@ -36,4 +38,5 @@ repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
 repo_derived_data = { version = "0.1.0", path = "../../repo_attributes/repo_derived_data" }
 repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity" }
 rustc-hash = "1.1.0"
+tempfile = "3.8"
 tokio = { version = "1.37.0", features = ["full", "test-util", "tracing"] }

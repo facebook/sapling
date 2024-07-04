@@ -6,6 +6,7 @@
  */
 
 use bytes::Bytes;
+use futures::TryStreamExt;
 use gotham::mime;
 use gotham::state::FromState;
 use gotham::state::State;
@@ -16,6 +17,7 @@ use hyper::Body;
 use hyper::Response;
 use packetline::encode::flush_to_write;
 use packetline::encode::write_text_packetline;
+use protocol::pack_processor::parse_pack;
 
 use crate::command::Command;
 use crate::command::RequestCommand;
@@ -44,7 +46,7 @@ async fn push<'a>(
     request_command: RequestCommand<'a>,
 ) -> anyhow::Result<Response<Body>> {
     let repo_name = RepositoryParams::borrow_from(state).repo_name();
-    let _request_context = RepositoryRequestContext::instantiate(
+    let request_context = RepositoryRequestContext::instantiate(
         state,
         GitMethodInfo::from_command(&request_command.command, repo_name),
     )
@@ -52,6 +54,15 @@ async fn push<'a>(
     // TODO(rajshar): Implement the actual push logic
     let mut output = vec![];
     if let Command::Push(push_args) = request_command.command {
+        // Parse the packfile provided as part of the push and verify that its valid
+        let _parsed_objects = parse_pack(
+            push_args.pack_file,
+            &request_context.ctx,
+            request_context.repo.repo_blobstore.clone(),
+        )
+        .await?
+        .try_collect::<Vec<_>>()
+        .await?;
         write_text_packetline(OK_HEADER, &mut output).await?;
         for ref_update in push_args.ref_updates {
             write_text_packetline(

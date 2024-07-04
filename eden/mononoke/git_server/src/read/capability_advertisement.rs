@@ -35,7 +35,8 @@ const UPLOAD_PACK_CAPABILITIES: &[&str] = &[
     "ref-in-want",
     "object-format=sha1",
 ];
-const RECEIVE_PACK_CAPABILITIES: &str = "report-status atomic delete-refs quiet object-format=sha1";
+const RECEIVE_PACK_CAPABILITIES: &str =
+    "report-status atomic delete-refs quiet ofs-delta object-format=sha1";
 
 const VERSION: &str = "2";
 
