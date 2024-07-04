@@ -222,7 +222,7 @@ impl<'a> ChangeTargetConfig<'a> {
         )
         .await?;
 
-        let repo = self.find_repo_by_id(&ctx, target.repo_id).await?;
+        let repo = self.find_repo_by_id(ctx, target.repo_id).await?;
         let repo_config = repo.repo().repo_config_arc();
 
         // Contruct the new config structure and the remapping state

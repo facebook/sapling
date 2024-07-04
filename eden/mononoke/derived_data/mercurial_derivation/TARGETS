@@ -56,7 +56,6 @@ rust_unittest(
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:ascii",
-        "fbsource//third-party/rust:assert_matches",
         "fbsource//third-party/rust:async-trait",
         "fbsource//third-party/rust:bytes",
         "fbsource//third-party/rust:futures",
@@ -69,7 +68,6 @@ rust_unittest(
         "//common/rust/shed/fbinit:fbinit-tokio",
         "//common/rust/shed/sql:sql",
         "//eden/mononoke/blobrepo:blobrepo",
-        "//eden/mononoke/blobrepo:blobrepo_errors",
         "//eden/mononoke/blobrepo:blobrepo_hg",
         "//eden/mononoke/blobrepo:repo_blobstore",
         "//eden/mononoke/blobstore:blobstore",

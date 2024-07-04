@@ -127,7 +127,9 @@ function clone_and_log_large_repo {
 
   for LARGE_BCS_ID in "${LARGE_BCS_IDS[@]}"; do
     LARGE_CS_ID=$(mononoke_newadmin convert --from bonsai --to hg -R "$LARGE_REPO_NAME" "$LARGE_BCS_ID" --derive)
-    hg pull -q -r "$LARGE_CS_ID"
+    if [ -n "$LARGE_CS_ID" ]; then
+      hg pull -q -r "$LARGE_CS_ID"
+    fi
   done
 
   hg log --graph -T '{node|short} {desc}\n' --stat -r "sort(all(), desc)"

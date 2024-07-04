@@ -286,17 +286,6 @@ pub trait DerivedUtils: Send + Sync + 'static {
     /// Get a name for this type of derived data
     fn variant(&self) -> DerivableType;
 
-    /// Find all underived ancestors of the target changeset id.
-    ///
-    /// Returns a map from underived commit to its underived
-    /// parents, suitable for input to toposort.
-    async fn find_underived<'a>(
-        &'a self,
-        ctx: &'a CoreContext,
-        _repo: &'a RepoDerivedData,
-        csid: ChangesetId,
-    ) -> Result<HashMap<ChangesetId, Vec<ChangesetId>>>;
-
     async fn is_derived(&self, ctx: &CoreContext, csid: ChangesetId) -> Result<bool>;
 }
 
@@ -445,18 +434,6 @@ where
 
     fn variant(&self) -> DerivableType {
         Derivable::VARIANT
-    }
-
-    async fn find_underived<'a>(
-        &'a self,
-        ctx: &'a CoreContext,
-        _repo: &'a RepoDerivedData,
-        csid: ChangesetId,
-    ) -> Result<HashMap<ChangesetId, Vec<ChangesetId>>> {
-        let utils = Arc::new(self.clone());
-        self.manager
-            .find_underived::<Derivable>(ctx, csid, None, Some(utils))
-            .await
     }
 
     async fn is_derived(&self, ctx: &CoreContext, csid: ChangesetId) -> Result<bool> {
@@ -1423,15 +1400,6 @@ mod tests {
 
         fn variant(&self) -> DerivableType {
             self.deriver.variant()
-        }
-
-        async fn find_underived<'a>(
-            &'a self,
-            _ctx: &'a CoreContext,
-            _repo: &'a RepoDerivedData,
-            _csid: ChangesetId,
-        ) -> Result<HashMap<ChangesetId, Vec<ChangesetId>>> {
-            unimplemented!()
         }
 
         async fn is_derived(&self, _ctx: &CoreContext, _csid: ChangesetId) -> Result<bool> {

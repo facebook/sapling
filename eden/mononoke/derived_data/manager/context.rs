@@ -37,7 +37,7 @@ pub struct DerivationContext {
     pub(crate) filenodes: Option<Arc<dyn Filenodes>>,
     config_name: String,
     config: DerivedDataTypesConfig,
-    rederivation: Option<Arc<dyn Rederivation>>,
+    pub(crate) rederivation: Option<Arc<dyn Rederivation>>,
     pub(crate) blobstore: Arc<dyn Blobstore>,
 
     /// Write cache layered over the blobstore.  This is the same object
@@ -272,24 +272,16 @@ impl DerivationContext {
             .map_or("", String::as_str)
     }
 
-    pub(crate) fn needs_rederive<Derivable>(&self, csid: ChangesetId) -> bool
+    /// Batch size for a particular derived data type.
+    pub fn batch_size<Derivable>(&self) -> u64
     where
         Derivable: BonsaiDerivable,
     {
-        if let Some(rederivation) = self.rederivation.as_ref() {
-            rederivation.needs_rederive(Derivable::VARIANT, csid) == Some(true)
-        } else {
-            false
-        }
-    }
-
-    pub(crate) fn mark_derived<Derivable>(&self, csid: ChangesetId)
-    where
-        Derivable: BonsaiDerivable,
-    {
-        if let Some(rederivation) = self.rederivation.as_ref() {
-            rederivation.mark_derived(Derivable::VARIANT, csid);
-        }
+        const DEFAULT_BATCH_SIZE: u64 = 20;
+        self.config()
+            .derivation_batch_sizes
+            .get(&Derivable::VARIANT)
+            .map_or(DEFAULT_BATCH_SIZE, |size| *size as u64)
     }
 
     /// Enable write batching for this derivation context.

@@ -22,11 +22,9 @@ use ::manifest::Entry;
 use ::manifest::Manifest;
 use ::manifest::ManifestOps;
 use anyhow::Error;
-use assert_matches::assert_matches;
 #[cfg(fbcode_build)]
 use async_trait::async_trait;
 use blobrepo::BlobRepo;
-use blobrepo_errors::ErrorKind;
 use blobrepo_hg::repo_commit::compute_changed_files;
 use blobrepo_hg::repo_commit::UploadEntries;
 use blobstore::Loadable;
@@ -1669,11 +1667,7 @@ mod octopus_merges {
             .map(|_| ())
             .expect_err("Derivation should fail on conflict");
 
-        assert_matches!(
-            err.downcast_ref::<ErrorKind>(),
-            Some(ErrorKind::UnresolvedConflicts(_, _))
-        );
-
+        assert!(format!("{err:?}").contains("Unresolved conflict"));
         Ok(())
     }
 
@@ -1707,10 +1701,7 @@ mod octopus_merges {
             .map(|_| ())
             .expect_err("Derivation should fail on conflict");
 
-        assert_matches!(
-            err.downcast_ref::<ErrorKind>(),
-            Some(ErrorKind::UnresolvedConflicts(_, _))
-        );
+        assert!(format!("{err:?}").contains("Unresolved conflict"));
 
         Ok(())
     }

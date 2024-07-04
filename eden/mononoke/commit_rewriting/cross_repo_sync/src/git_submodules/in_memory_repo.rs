@@ -121,7 +121,7 @@ impl InMemoryRepo {
             repo_identity.id(),
             repo_identity.name().to_string(),
             in_memory_changesets.clone(),
-            commit_graph.into(),
+            commit_graph,
             Arc::new(bonsai_hg_mapping),
             bonsai_git_mapping,
             filenodes,

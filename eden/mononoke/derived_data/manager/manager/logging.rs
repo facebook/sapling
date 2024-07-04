@@ -19,10 +19,8 @@ use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::warn;
-use time_ext::DurationExt;
 
 use super::derive::DerivationOutcome;
-use super::util::DiscoveryStats;
 use super::DerivedDataManager;
 use crate::derivable::BonsaiDerivable;
 use crate::error::DerivationError;
@@ -99,11 +97,6 @@ impl<Derivable: BonsaiDerivable> DerivedDataScuba<Derivable> {
     /// Add metadata to the logger
     pub fn add_metadata(&mut self, metadata: &Metadata) {
         self.scuba.add_metadata(metadata);
-    }
-
-    /// Add statistics from derivation discovery to the scuba logger.
-    pub(super) fn add_discovery_stats(&mut self, discovery_stats: &DiscoveryStats) {
-        discovery_stats.add_scuba_fields(&mut self.scuba);
     }
 
     /// Log the start of derivation to both the request and derived data scuba
@@ -267,17 +260,12 @@ impl DerivedDataManager {
         match result {
             Ok(derivation_outcome) => {
                 scuba.add("derived", derivation_outcome.count);
-                scuba.add(
-                    "find_underived_completion_time_ms",
-                    derivation_outcome.find_underived_time.as_millis_unchecked(),
-                );
                 warn!(
                     ctx.logger(),
-                    "slow derivation of {} for {}, took {:.2?} (find_underived: {:.2?}), derived {} changesets",
+                    "slow derivation of {} for {}, took {:.2?}, derived {} changesets",
                     Derivable::NAME,
                     csid,
                     stats.completion_time,
-                    derivation_outcome.find_underived_time,
                     derivation_outcome.count,
                 );
             }

@@ -29,11 +29,8 @@ use derived_data_service_if::DerivedDataType;
 use derived_data_service_if::RequestError;
 use derived_data_service_if::RequestErrorReason;
 use derived_data_service_if::RequestStatus;
-use either::Either;
 use futures::future::FutureExt;
-use futures::future::TryFutureExt;
 use futures::stream;
-use futures::stream::FuturesUnordered;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use futures_stats::TimedFutureExt;
@@ -41,7 +38,6 @@ use futures_stats::TimedTryFutureExt;
 use mononoke_types::ChangesetId;
 use mononoke_types::DerivableType;
 use slog::debug;
-use topo_sort::TopoSortedDagTraversal;
 
 use super::DerivationAssignment;
 use super::DerivedDataManager;
@@ -49,7 +45,6 @@ use crate::context::DerivationContext;
 use crate::derivable::BonsaiDerivable;
 use crate::derivable::DerivationDependencies;
 use crate::error::DerivationError;
-use crate::manager::util::DiscoveryStats;
 
 /// Trait to allow determination of rederivation.
 pub trait Rederivation: Send + Sync + 'static {
@@ -121,75 +116,6 @@ impl DerivedDataManager {
         Ok(())
     }
 
-    /// Find ancestors of the target changeset that are underived.
-    async fn find_underived_inner<Derivable>(
-        &self,
-        ctx: &CoreContext,
-        csid: ChangesetId,
-        limit: Option<u64>,
-        derivation_ctx: &DerivationContext,
-    ) -> Result<HashMap<ChangesetId, Vec<ChangesetId>>>
-    where
-        Derivable: BonsaiDerivable,
-    {
-        let underived_commits_parents: HashMap<ChangesetId, Vec<ChangesetId>> =
-            bounded_traversal::bounded_traversal_dag_limited(
-                    100,
-                    csid,
-                    move |csid: ChangesetId| {
-                        async move {
-                            if derivation_ctx
-                                .fetch_derived::<Derivable>(ctx, csid)
-                                .await?
-                                .is_some()
-                            {
-                                Ok((None, Vec::new()))
-                            } else {
-                                let parents = self
-                                    .changesets()
-                                    .get(ctx, csid)
-                                    .await?
-                                    .ok_or_else(|| anyhow!("changeset not found: {}", csid))?
-                                    .parents;
-                                Ok((Some((csid, parents.clone())), parents))
-                            }
-                        }
-                        .boxed()
-                    },
-                    move |out, results: bounded_traversal::Iter<HashMap<ChangesetId, Vec<ChangesetId>>>| {
-                        async move {
-                            anyhow::Ok(results
-                                .chain(std::iter::once(out.into_iter().collect()))
-                                .reduce(|mut acc, item| {
-                                    acc.extend(item);
-                                    acc
-                                })
-                                .unwrap_or_else(HashMap::new))
-                        }
-                        .boxed()
-                    },
-                    limit,
-                )
-                    .await?
-                    // If we visited no nodes, then we want an empty hashmap
-                    .unwrap_or_else(HashMap::new);
-
-        // Remove parents that have already been derived.
-        let underived_commits_parents = underived_commits_parents
-            .iter()
-            .map(|(csid, parents)| {
-                let parents = parents
-                    .iter()
-                    .filter(|p| underived_commits_parents.contains_key(p))
-                    .cloned()
-                    .collect::<Vec<_>>();
-                (*csid, parents)
-            })
-            .collect::<HashMap<_, _>>();
-
-        Ok(underived_commits_parents)
-    }
-
     /// Find which ancestors of `csid` are not yet derived, and necessary for
     /// the derivation of `csid` to complete, and derive them.
     async fn derive_underived<Derivable>(
@@ -201,110 +127,48 @@ impl DerivedDataManager {
     where
         Derivable: BonsaiDerivable,
     {
-        let (find_underived_stats, dag_traversal) = async {
-            self.find_underived_inner::<Derivable>(ctx, target_csid, None, derivation_ctx.as_ref())
-                .await
-                .context("Finding underived commits")
-        }
-        .try_timed()
-        .await?;
-
-        let discovery_stats = DiscoveryStats {
-            find_underived_completion_time: find_underived_stats.completion_time,
-            commits_discovered: dag_traversal.len() as u32,
-        };
-        let mut derived_data_scuba = self.derived_data_scuba::<Derivable>();
-        derived_data_scuba.add_discovery_stats(&discovery_stats);
-        let mut dag_traversal = TopoSortedDagTraversal::new(dag_traversal);
-
-        let buffer_size = self.max_parallel_derivations();
-        let mut derivations = FuturesUnordered::new();
-        let mut completed_count = 0;
-        let mut target_derived = None;
-        while !dag_traversal.is_empty() || !derivations.is_empty() {
-            let free = buffer_size.saturating_sub(derivations.len());
-            // TODO (Pierre):
-            // This is suboptimal: We spawn derivations for one csid at a time.
-            // We should leverage the batching provided by `derive_exactly_batch`.
-            // This comment was written during a refactoring change, so the existing behaviour was
-            // preserved to avoid mixing refactoring and behavioural changes.
-            derivations.extend(dag_traversal.drain(free).map(|csid| {
-                cloned!(ctx, derivation_ctx);
-                let manager = self.clone();
-                let derivation = async move {
-                    let lease_key =
-                        format!("repo{}.{}.{}", manager.repo_id(), Derivable::NAME, csid);
-                    // TODO (Pierre):
-                    // Here, the `needs_rederive` check is only needed in case we are racing with
-                    // something else that is deriving the same changesets as we are, since we
-                    // found these changesets at the beginning of this function by finding
-                    // underived changesets.
-                    // Arguably, it can be removed entirely and just do the work.
-                    // This was modified in a refactoring, so it was preserved to avoid mixing
-                    // refactoring and behavioural changes.
-                    let guard = async {
-                        if derivation_ctx.needs_rederive::<Derivable>(csid) {
-                            // We are rederiving this changeset, so do not try to take the lease,
-                            // as doing so will drop out immediately because the data is already
-                            // derived
-                            None
-                        } else {
-                            Some(
-                                manager
-                                    .lease()
-                                    .try_acquire_in_loop(&ctx, &lease_key, || async {
-                                        Derivable::fetch(&ctx, &derivation_ctx, csid).await
-                                    })
-                                    .await,
-                            )
-                        }
-                    };
-                    let derived = if let Some(Ok(Either::Left(fetched))) = guard.await {
-                        // Something else completed derivation
-                        fetched
-                    } else {
-                        let rederivation = None;
-                        manager
-                            .derive_exactly_batch::<Derivable>(&ctx, vec![csid], rederivation)
-                            .await?;
-                        Derivable::fetch(&ctx, &derivation_ctx, csid)
-                            .await?
-                            .ok_or_else(|| {
-                                anyhow!("derivation completed but data could not be fetched")
-                            })?
-                    };
-                    Ok::<_, DerivationError>((csid, derived))
-                };
-                tokio::spawn(derivation).map_err(Error::from)
-            }));
-            if let Some(derivation_result) = derivations.try_next().await? {
-                let (derived_csid, derived) = derivation_result?;
-                if derived_csid == target_csid {
-                    target_derived = Some(derived);
+        let last_derived = self
+            .commit_graph()
+            .ancestors_frontier_with(ctx, vec![target_csid], |csid| {
+                borrowed!(ctx);
+                cloned!(derivation_ctx);
+                async move {
+                    Ok(derivation_ctx
+                        .fetch_derived::<Derivable>(ctx, csid)
+                        .await?
+                        .is_some())
                 }
-                dag_traversal.visited(derived_csid);
-                completed_count += 1;
-                derivation_ctx.mark_derived::<Derivable>(derived_csid);
-            }
-        }
-
-        let derived = match target_derived {
-            Some(derived) => derived,
-            None => {
-                // We didn't find the derived data during derivation, as
-                // possibly it was already derived, so just try to fetch it.
-                derivation_ctx
-                    .fetch_derived(ctx, target_csid)
-                    .await?
-                    .ok_or_else(|| anyhow!("failed to derive target"))?
-            }
-        };
-
-        Ok(DerivationOutcome {
-            derived,
-            count: completed_count,
-            find_underived_time: find_underived_stats.completion_time,
-        })
+            })
+            .await
+            .map_err(Into::<DerivationError>::into)?;
+        let batch_size = derivation_ctx.batch_size::<Derivable>();
+        let count = self
+            .commit_graph()
+            .ancestors_difference_segments(ctx, vec![target_csid], last_derived.clone())
+            .await?
+            .into_iter()
+            .map(|segment| segment.length)
+            .sum();
+        let rederivation = derivation_ctx.rederivation.clone();
+        self.commit_graph()
+            .ancestors_difference_segment_slices(ctx, vec![target_csid], last_derived, batch_size)
+            .await
+            .map_err(Into::<DerivationError>::into)?
+            .try_for_each(|batch| {
+                borrowed!(ctx, self as ddm);
+                cloned!(rederivation);
+                async move {
+                    ddm.derive_exactly_batch::<Derivable>(ctx, batch.to_vec(), rederivation)
+                        .await?;
+                    Ok(())
+                }
+            })
+            .await
+            .map_err(Into::<DerivationError>::into)?;
+        let derived = Derivable::fetch(ctx, &derivation_ctx, target_csid)
+            .await?
+            .ok_or_else(|| anyhow!("We just derived it! Fetching it should not return None"))?;
+        Ok(DerivationOutcome { derived, count })
     }
 
     /// Count how many ancestors of `csid` are not yet derived.
@@ -335,56 +199,35 @@ impl DerivedDataManager {
         Derivable: BonsaiDerivable,
     {
         self.check_enabled::<Derivable>()?;
-        let derivation_ctx = self.derivation_context(rederivation);
-        let underived = self
-            .find_underived_inner::<Derivable>(ctx, csid, limit, &derivation_ctx)
-            .await?;
-        Ok(underived.len() as u64)
-    }
-
-    /// Find which ancestors of `csid` are not yet derived.
-    ///
-    /// Searches backwards looking for the most recent ancestors which have
-    /// been derived, and returns all of their descendants up to the target
-    /// changeset.
-    ///
-    /// Note that gapped derivation may mean that some of the ancestors
-    /// of those changesets may also be underived.  These changesets are not
-    /// necessary to derive data for the target changeset, and so will
-    /// not be included.
-    ///
-    /// Returns a map of underived changesets to their underived parents,
-    /// suitable for input to toposort.
-    pub async fn find_underived<Derivable>(
-        &self,
-        ctx: &CoreContext,
-        csid: ChangesetId,
-        limit: Option<u64>,
-        rederivation: Option<Arc<dyn Rederivation>>,
-    ) -> Result<HashMap<ChangesetId, Vec<ChangesetId>>>
-    where
-        Derivable: BonsaiDerivable,
-    {
-        self.get_manager(ctx, csid)
+        let last_derived = self
+            .commit_graph()
+            .ancestors_frontier_with(ctx, vec![csid], |csid| {
+                borrowed!(self as ddm, ctx);
+                cloned!(rederivation);
+                async move {
+                    Ok(ddm
+                        .fetch_derived::<Derivable>(ctx, csid, rederivation)
+                        .await?
+                        .is_some())
+                }
+            })
+            .await
+            .map_err(Into::<DerivationError>::into)?;
+        let underived_count = self
+            .commit_graph()
+            .ancestors_difference_segments(ctx, vec![csid], last_derived)
             .await?
-            .find_underived_impl::<Derivable>(ctx, csid, limit, rederivation)
-            .await
-    }
-
-    async fn find_underived_impl<Derivable>(
-        &self,
-        ctx: &CoreContext,
-        csid: ChangesetId,
-        limit: Option<u64>,
-        rederivation: Option<Arc<dyn Rederivation>>,
-    ) -> Result<HashMap<ChangesetId, Vec<ChangesetId>>>
-    where
-        Derivable: BonsaiDerivable,
-    {
-        self.check_enabled::<Derivable>()?;
-        let derivation_ctx = self.derivation_context(rederivation);
-        self.find_underived_inner::<Derivable>(ctx, csid, limit, &derivation_ctx)
-            .await
+            .into_iter()
+            .map(|segment| segment.length)
+            .sum();
+        // The limit is somewhat ficticious. Since underived_count is cheap to calculate, we don't
+        // actually need to do magic to only partially evaluate the sum
+        if let Some(limit) = limit {
+            if underived_count > limit {
+                return Ok(limit);
+            }
+        }
+        Ok(underived_count)
     }
 
     /// Derive or retrieve derived data for a changeset.
@@ -1019,9 +862,6 @@ pub(super) struct DerivationOutcome<Derivable> {
 
     /// Number of changesets that were derived.
     pub(super) count: u64,
-
-    /// Time take to find the underived changesets.
-    pub(super) find_underived_time: Duration,
 }
 
 enum DerivationState {

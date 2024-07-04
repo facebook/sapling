@@ -28,7 +28,6 @@ use async_trait::async_trait;
 use blame::RootBlameV2;
 use blobrepo::BlobRepo;
 use blobrepo_override::DangerousOverride;
-use blobstore::StoreLoadable;
 use bookmarks::BookmarkCategory;
 use bookmarks::BookmarkKind;
 use bookmarks::BookmarkPagination;
@@ -77,11 +76,8 @@ use futures::stream::TryStreamExt;
 use futures_stats::TimedFutureExt;
 use futures_stats::TimedTryFutureExt;
 use mononoke_api_types::InnerRepo;
-use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
-use mononoke_types::DateTime;
 use mononoke_types::DerivableType;
-use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataArc;
 use repo_derived_data::RepoDerivedDataRef;
 use repo_factory::RepoFactoryBuilder;
@@ -93,7 +89,6 @@ use slog::Logger;
 use stats::prelude::*;
 use time_ext::DurationExt;
 use tokio::runtime::Runtime;
-use topo_sort::sort_topological;
 use wait_for_replication::WaitForReplication;
 
 mod commit_discovery;
@@ -105,7 +100,6 @@ use commit_discovery::CommitDiscoveryOptions;
 
 define_stats! {
     prefix = "mononoke.derived_data";
-    oldest_underived_secs: dynamic_singleton_counter("{}.oldest_underived_secs", (reponame: String)),
     derivation_time_ms: dynamic_timeseries("{}.derivation_time_ms", (reponame: String); Average, Sum),
     derivation_idle_time_ms: dynamic_timeseries("{}.idle_time_ms", (reponame: String); Sum),
 }
@@ -1416,38 +1410,6 @@ async fn tail_batch_iteration<'a>(
     Ok(())
 }
 
-async fn find_oldest_underived(
-    ctx: &CoreContext,
-    repo: &BlobRepo,
-    derive: &dyn DerivedUtils,
-    csids: Vec<ChangesetId>,
-) -> Result<Option<BonsaiChangeset>> {
-    let underived_ancestors = stream::iter(csids)
-        .map(|csid| {
-            Ok(async move {
-                let underived = derive
-                    .find_underived(ctx, repo.repo_derived_data(), csid)
-                    .await?;
-                let underived = sort_topological(&underived)
-                    .ok_or_else(|| anyhow!("commit graph has cycles!"))?;
-                // The first element is the first underived ancestor in
-                // toposorted order.  Let's use it as a proxy for the oldest
-                // underived commit.
-                match underived.first() {
-                    Some(csid) => Ok(Some(csid.load(ctx, repo.repo_blobstore()).await?)),
-                    None => Ok::<_, Error>(None),
-                }
-            })
-        })
-        .try_buffer_unordered(100)
-        .try_collect::<Vec<_>>()
-        .await?;
-    Ok(underived_ancestors
-        .into_iter()
-        .flatten()
-        .min_by_key(|bcs| *bcs.author_date()))
-}
-
 async fn tail_one_iteration(
     ctx: &CoreContext,
     repo: &BlobRepo,
@@ -1475,14 +1437,7 @@ async fn tail_one_iteration(
                         .pending(ctx.clone(), (*repo).repo_derived_data_arc(), heads)
                         .await?;
 
-                    let oldest_underived =
-                        find_oldest_underived(ctx, repo, derive.as_ref(), pending.clone()).await?;
-                    let now = DateTime::now();
-                    let oldest_underived_age = oldest_underived.map_or(0, |oldest_underived| {
-                        now.timestamp_secs() - oldest_underived.author_date().timestamp_secs()
-                    });
-
-                    Result::<_>::Ok((derive, pending, oldest_underived_age))
+                    Result::<_>::Ok((derive, pending))
                 }
             }
         })
@@ -1490,18 +1445,7 @@ async fn tail_one_iteration(
 
     let pending = future::try_join_all(find_pending_futs).await?;
 
-    // Log oldest underived ancestor to ods
-    let mut oldest_underived_age = 0;
-    for (_, _, cur_oldest_underived_age) in &pending {
-        oldest_underived_age = ::std::cmp::max(oldest_underived_age, *cur_oldest_underived_age);
-    }
-    STATS::oldest_underived_secs.set_value(
-        ctx.fb,
-        oldest_underived_age,
-        (repo.repo_identity().name().to_string(),),
-    );
-
-    let pending_futs = pending.into_iter().map(|(derive, pending, _)| {
+    let pending_futs = pending.into_iter().map(|(derive, pending)| {
         pending
             .into_iter()
             .map(|csid| derive.derive(ctx.clone(), (*repo).repo_derived_data_arc(), csid))
