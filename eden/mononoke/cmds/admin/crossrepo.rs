@@ -310,9 +310,13 @@ async fn run_pushredirection_subcommand<'a>(
             )
             .await?;
 
-            if live_commit_sync_config.push_redirector_enabled_for_public(
-                commit_syncer.get_small_repo().repo_identity().id(),
-            ) {
+            if live_commit_sync_config
+                .push_redirector_enabled_for_public(
+                    &ctx,
+                    commit_syncer.get_small_repo().repo_identity().id(),
+                )
+                .await
+            {
                 return Err(format_err!(
                     "not allowed to run {} if pushredirection is enabled",
                     PREPARE_ROLLOUT_SUBCOMMAND
@@ -377,9 +381,13 @@ async fn run_pushredirection_subcommand<'a>(
                 return Ok(());
             }
 
-            if live_commit_sync_config.push_redirector_enabled_for_public(
-                commit_syncer.get_small_repo().repo_identity().id(),
-            ) {
+            if live_commit_sync_config
+                .push_redirector_enabled_for_public(
+                    &ctx,
+                    commit_syncer.get_small_repo().repo_identity().id(),
+                )
+                .await
+            {
                 return Err(format_err!(
                     "not allowed to run {} if pushredirection is enabled",
                     CHANGE_MAPPING_VERSION_SUBCOMMAND
@@ -486,7 +494,11 @@ async fn change_mapping_via_extras<'a>(
 ) -> Result<(), Error> {
     // XXX(mitrandir): remove this check once this mode works regardless of sync direction
     if !live_commit_sync_config
-        .push_redirector_enabled_for_public(commit_syncer.get_small_repo().repo_identity().id())
+        .push_redirector_enabled_for_public(
+            ctx,
+            commit_syncer.get_small_repo().repo_identity().id(),
+        )
+        .await
         && std::env::var("MONONOKE_ADMIN_ALWAYS_ALLOW_MAPPING_CHANGE_VIA_EXTRA").is_err()
     {
         return Err(format_err!(
@@ -545,7 +557,8 @@ async fn change_mapping_via_extras<'a>(
         &large_bookmark,
         &repo_config.pushrebase,
         None,
-    )?;
+    )
+    .await?;
 
     let bcs = large_cs_id
         .load(ctx, &large_repo.repo_blobstore().clone())

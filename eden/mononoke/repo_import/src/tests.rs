@@ -499,7 +499,7 @@ mod tests {
 
         insert_repo_config(0, &mut repos);
         assert!(
-            get_large_repo_config_if_pushredirected(&repo0, &live_commit_sync_config, &repos)
+            get_large_repo_config_if_pushredirected(&ctx, &repo0, &live_commit_sync_config, &repos)
                 .await?
                 .is_none()
         );
@@ -508,7 +508,7 @@ mod tests {
 
         insert_repo_config(1, &mut repos);
         assert!(
-            get_large_repo_config_if_pushredirected(&repo1, &live_commit_sync_config, &repos)
+            get_large_repo_config_if_pushredirected(&ctx, &repo1, &live_commit_sync_config, &repos)
                 .await?
                 .is_some()
         );
@@ -517,7 +517,7 @@ mod tests {
 
         insert_repo_config(2, &mut repos);
         assert!(
-            get_large_repo_config_if_pushredirected(&repo2, &live_commit_sync_config, &repos)
+            get_large_repo_config_if_pushredirected(&ctx, &repo2, &live_commit_sync_config, &repos)
                 .await?
                 .is_none()
         );

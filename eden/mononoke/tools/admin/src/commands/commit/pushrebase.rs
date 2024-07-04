@@ -60,6 +60,7 @@ pub async fn pushrebase(
         &repo.repo_config().pushrebase,
         None,
     )
+    .await
     .map_err(Error::from)?;
 
     let bonsais = stream::iter(csids)

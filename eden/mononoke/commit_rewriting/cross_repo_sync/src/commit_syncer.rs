@@ -851,7 +851,7 @@ where
             submodule_deps,
             large_repo: large_in_memory_repo,
         }
-        .unsafe_sync_commit_in_memory(cs, commit_sync_context, expected_version)
+        .unsafe_sync_commit_in_memory(ctx, cs, commit_sync_context, expected_version)
         .await?
         .write(ctx, self)
         .await
@@ -1134,7 +1134,8 @@ where
                         large_repo_id: self.repos.get_target_repo().repo_identity().id(),
                         version_name: version.clone(),
                     }),
-                )?;
+                )
+                .await?;
 
                 debug!(ctx.logger(), "Starting pushrebase...");
                 let pushrebase_res = do_pushrebase_bonsai(

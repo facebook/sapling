@@ -274,8 +274,9 @@ async fn run_in_tailing_mode<M: SyncedCommitMapping + Clone + 'static>(
                 let scuba_sample = base_scuba_sample.clone();
                 // We only care about public pushes because draft pushes are not in the bookmark
                 // update log at all.
-                let enabled =
-                    live_commit_sync_config.push_redirector_enabled_for_public(source_repo_id);
+                let enabled = live_commit_sync_config
+                    .push_redirector_enabled_for_public(ctx, source_repo_id)
+                    .await;
 
                 // Pushredirection is enabled - we need to disable forward sync in that case
                 if enabled {

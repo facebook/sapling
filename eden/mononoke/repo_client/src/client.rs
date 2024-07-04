@@ -871,7 +871,7 @@ impl RepoClient {
         }
     }
 
-    fn maybe_get_pushredirector_for_action(
+    async fn maybe_get_pushredirector_for_action(
         &self,
         ctx: &CoreContext,
         action: &unbundle::PostResolveAction,
@@ -893,9 +893,15 @@ impl RepoClient {
 
         let repo_id = self.repo.blob_repo().repo_identity().id();
         let redirect = match action {
-            InfinitePush(_) => live_commit_sync_config.push_redirector_enabled_for_draft(repo_id),
+            InfinitePush(_) => {
+                live_commit_sync_config
+                    .push_redirector_enabled_for_draft(ctx, repo_id)
+                    .await
+            }
             Push(_) | PushRebase(_) | BookmarkOnlyPushRebase(_) => {
-                live_commit_sync_config.push_redirector_enabled_for_public(repo_id)
+                live_commit_sync_config
+                    .push_redirector_enabled_for_public(ctx, repo_id)
+                    .await
             }
         };
 
@@ -1574,7 +1580,10 @@ impl HgCommands for RepoClient {
                     maybe_validate_pushed_bonsais(&ctx, repo.as_blob_repo(), &maybereplaydata)
                         .await?;
 
-                    match client.maybe_get_pushredirector_for_action(&ctx, &action)? {
+                    match client
+                        .maybe_get_pushredirector_for_action(&ctx, &action)
+                        .await?
+                    {
                         Some(push_redirector) => {
                             // Push-redirection will cause
                             // hooks to be run in the large

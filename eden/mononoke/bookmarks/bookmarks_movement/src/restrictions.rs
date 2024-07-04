@@ -140,7 +140,7 @@ pub(crate) async fn ensure_ancestor_of(
 }
 
 pub async fn check_bookmark_sync_config(
-    _ctx: &CoreContext,
+    ctx: &CoreContext,
     repo: &(impl RepoIdentityRef + RepoCrossRepoRef),
     bookmark: &BookmarkKey,
     kind: BookmarkKind,
@@ -150,7 +150,8 @@ pub async fn check_bookmark_sync_config(
             if repo
                 .repo_cross_repo()
                 .live_commit_sync_config()
-                .push_redirector_enabled_for_public(repo.repo_identity().id())
+                .push_redirector_enabled_for_public(ctx, repo.repo_identity().id())
+                .await
             {
                 return Err(BookmarkMovementError::PushRedirectorEnabledForPublishing {
                     bookmark: bookmark.clone(),
@@ -161,7 +162,8 @@ pub async fn check_bookmark_sync_config(
             if repo
                 .repo_cross_repo()
                 .live_commit_sync_config()
-                .push_redirector_enabled_for_draft(repo.repo_identity().id())
+                .push_redirector_enabled_for_draft(ctx, repo.repo_identity().id())
+                .await
             {
                 return Err(BookmarkMovementError::PushRedirectorEnabledForScratch {
                     bookmark: bookmark.clone(),

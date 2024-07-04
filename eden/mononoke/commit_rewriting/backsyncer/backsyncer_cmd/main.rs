@@ -319,7 +319,9 @@ where
         }
         // We only care about public pushes because draft pushes are not in the bookmark
         // update log at all.
-        let enabled = live_commit_sync_config.push_redirector_enabled_for_public(target_repo_id);
+        let enabled = live_commit_sync_config
+            .push_redirector_enabled_for_public(&ctx, target_repo_id)
+            .await;
 
         if enabled {
             let delay = calculate_delay(&ctx, &commit_syncer, &target_repo_dbs).await?;

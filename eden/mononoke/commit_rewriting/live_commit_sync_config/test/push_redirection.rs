@@ -35,7 +35,7 @@ const PUSHREDIRECTOR_BOTH_ENABLED: &str = r#"{
 
 #[fbinit::test]
 async fn test_enabling_push_redirection(fb: FacebookInit) {
-    let (_ctx, test_source, _store, live_commit_sync_config) =
+    let (ctx, test_source, _store, live_commit_sync_config) =
         get_ctx_source_store_and_live_config(fb, EMPTY_PUSHREDIRECTOR, EMTPY_COMMIT_SYNC_ALL);
     let repo_1 = RepositoryId::new(1);
 
@@ -48,8 +48,16 @@ async fn test_enabling_push_redirection(fb: FacebookInit) {
 
     // Check that push-redirection of public commits has been picked up
     ensure_all_updated();
-    assert!(!live_commit_sync_config.push_redirector_enabled_for_draft(repo_1));
-    assert!(live_commit_sync_config.push_redirector_enabled_for_public(repo_1));
+    assert!(
+        !live_commit_sync_config
+            .push_redirector_enabled_for_draft(&ctx, repo_1)
+            .await
+    );
+    assert!(
+        live_commit_sync_config
+            .push_redirector_enabled_for_public(&ctx, repo_1)
+            .await
+    );
 
     // Enable push-redirection of public and draft commits
     test_source.insert_config(
@@ -60,6 +68,14 @@ async fn test_enabling_push_redirection(fb: FacebookInit) {
 
     // Check that push-redirection of public and draft commits has been picked up
     ensure_all_updated();
-    assert!(live_commit_sync_config.push_redirector_enabled_for_draft(repo_1));
-    assert!(live_commit_sync_config.push_redirector_enabled_for_public(repo_1));
+    assert!(
+        live_commit_sync_config
+            .push_redirector_enabled_for_draft(&ctx, repo_1)
+            .await
+    );
+    assert!(
+        live_commit_sync_config
+            .push_redirector_enabled_for_public(&ctx, repo_1)
+            .await
+    );
 }

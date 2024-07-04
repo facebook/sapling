@@ -150,6 +150,7 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
     // TODO(T182311609): add docs
     pub(crate) async fn unsafe_sync_commit_in_memory(
         self,
+        ctx: &CoreContext,
         cs: BonsaiChangeset,
         commit_sync_context: CommitSyncContext,
         expected_version: Option<CommitSyncConfigVersion>,
@@ -159,14 +160,20 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
         )?;
 
         let commit_rewritten_to_empty = self
-            .get_empty_rewritten_commit_action(&maybe_mapping_change_version, commit_sync_context);
+            .get_empty_rewritten_commit_action(
+                ctx,
+                &maybe_mapping_change_version,
+                commit_sync_context,
+            )
+            .await;
 
         // We are using the state of pushredirection to determine which repo is "source of truth" for the contents
         // if it's the small repo we can't be rewriting the "mapping change" commits as even if we
         // do they won't be synced back.
         let pushredirection_disabled = !self
             .live_commit_sync_config
-            .push_redirector_enabled_for_public(self.target_repo_id.0);
+            .push_redirector_enabled_for_public(ctx, self.target_repo_id.0)
+            .await;
 
         // During backsyncing we provide an option to skip empty commits but we
         // can only do that when they're not changing the mapping.
@@ -205,7 +212,7 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
                 .await
         } else {
             // Syncing merge doesn't take rewrite_opts because merges are always rewritten.
-            self.sync_merge_in_memory(cs, commit_sync_context, expected_version)
+            self.sync_merge_in_memory(ctx, cs, commit_sync_context, expected_version)
                 .await
         }
     }
@@ -418,6 +425,7 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
     ///    source of truth otherwise it would break forward syncer.
     async fn sync_merge_in_memory(
         self,
+        ctx: &CoreContext,
         cs: BonsaiChangeset,
         commit_sync_context: CommitSyncContext,
         expected_version: Option<CommitSyncConfigVersion>,
@@ -543,7 +551,8 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
             let is_backsync_when_small_is_source_of_truth = !self.small_to_large
                 && !self
                     .live_commit_sync_config
-                    .push_redirector_enabled_for_public(self.target_repo_id.0);
+                    .push_redirector_enabled_for_public(ctx, self.target_repo_id.0)
+                    .await;
             let rewrite_res = rewrite_commit(
                 self.ctx,
                 cs,
@@ -619,14 +628,16 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
 
     /// Determine what should happen to commits that would be empty when synced
     /// to the target repo.
-    fn get_empty_rewritten_commit_action(
+    async fn get_empty_rewritten_commit_action(
         &self,
+        ctx: &CoreContext,
         maybe_mapping_change_version: &Option<CommitSyncConfigVersion>,
         commit_sync_context: CommitSyncContext,
     ) -> CommitRewrittenToEmpty {
         let pushredirection_disabled = !self
             .live_commit_sync_config
-            .push_redirector_enabled_for_public(self.target_repo_id.0);
+            .push_redirector_enabled_for_public(ctx, self.target_repo_id.0)
+            .await;
         // If a commit is changing mapping let's always rewrite it to
         // small repo regardless if outcome is empty. This is to ensure
         // that efter changing mapping there's a commit in small repo

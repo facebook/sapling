@@ -50,7 +50,7 @@ pub enum PushrebaseHooksError {
 
 /// Get a Vec of the relevant pushrebase hooks for PushrebaseParams, using this repo when
 /// required by those hooks.
-pub fn get_pushrebase_hooks(
+pub async fn get_pushrebase_hooks(
     ctx: &CoreContext,
     repo: &(
          impl BonsaiGitMappingArc
@@ -73,7 +73,8 @@ pub fn get_pushrebase_hooks(
                 // Only add hook if pushes are being redirected
                 repo.repo_cross_repo()
                     .live_commit_sync_config()
-                    .push_redirector_enabled_for_public(small_repo_id)
+                    .push_redirector_enabled_for_public(ctx, small_repo_id)
+                    .await
             } else {
                 true
             };

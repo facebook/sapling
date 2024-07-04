@@ -169,7 +169,8 @@ impl<'op> PushrebaseOntoBookmarkOp<'op> {
             self.bookmark,
             &repo.repo_config().pushrebase,
             None,
-        )?;
+        )
+        .await?;
 
         // For pushrebase, we check the repo lock once at the beginning of the
         // pushrebase operation, and then once more as part of the pushrebase
