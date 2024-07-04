@@ -63,16 +63,26 @@ class GenericStatsTest(testcase.EdenRepoTest):
         path = Path(self.mount) / "new_file"
         path.write_bytes(b"hello")
 
-        counter_names = [
-            self.protocol_type() + ".write_us.count",
-            self.protocol_type() + ".lookup_us.count",
-            self.protocol_type() + ".getattr_us.count",
-            self.protocol_type() + ".create_us.count",
-            self.protocol_type() + ".write_successful.count",
-            self.protocol_type() + ".lookup_successful.count",
-            self.protocol_type() + ".getattr_successful.count",
-            self.protocol_type() + ".create_successful.count",
-        ]
+        if self.protocol_type() == "prjfs":
+            counter_names = [
+                self.protocol_type() + ".newFileCreated_us.count",
+                self.protocol_type() + ".fileHandleClosedFileModified_us.count",
+                self.protocol_type() + ".lookup_us.count",
+                self.protocol_type() + ".newFileCreated_successful.count",
+                self.protocol_type() + ".fileHandleClosedFileModified_successful.count",
+                self.protocol_type() + ".lookup_successful.count",
+            ]
+        else:
+            counter_names = [
+                self.protocol_type() + ".write_us.count",
+                self.protocol_type() + ".lookup_us.count",
+                self.protocol_type() + ".getattr_us.count",
+                self.protocol_type() + ".create_us.count",
+                self.protocol_type() + ".write_successful.count",
+                self.protocol_type() + ".lookup_successful.count",
+                self.protocol_type() + ".getattr_successful.count",
+                self.protocol_type() + ".create_successful.count",
+            ]
         for counter_name in counter_names:
             self.poll_until_counter_condition(
                 lambda counters_after, counter_name=counter_name: self.assertGreater(

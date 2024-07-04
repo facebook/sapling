@@ -84,7 +84,6 @@ if sys.platform == "win32":
         "start_test.StartTest": True,
         "start_test.StartWithRepoTestHg": True,
         "stats_test.GenericStatsTest": [
-            "test_writing_untracked_file_bumps_write_counter",  # counter not implemented for PrjFS (T147665665)
             "test_summary_counters_available",  # counter not implemented for PrjFS (T147669123)
         ],
         "stats_test.ObjectCacheStatsTest": [
