@@ -206,7 +206,7 @@ async fn bookmark_info(app: ScscApp, args: CommandArgs, repo: thrift::RepoSpecif
     let response = conn.repo_bookmark_info(&repo, &params).await?;
     let info = response
         .info
-        .ok_or_else(|| anyhow!("Bookmark doesn't exit"))?;
+        .ok_or_else(|| anyhow!("Bookmark doesn't exist"))?;
 
     let info = BookmarkInfo::try_from(&info)?;
     let output = BookmarkInfoOutput {
