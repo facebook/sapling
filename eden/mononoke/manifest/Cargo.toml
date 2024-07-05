@@ -34,4 +34,6 @@ fbinit-tokio = { version = "0.1.2", git = "https://github.com/facebookexperiment
 memblob = { version = "0.1.0", path = "../blobstore/memblob" }
 mononoke_types-mocks = { version = "0.1.0", path = "../mononoke_types/mocks" }
 pretty_assertions = { version = "1.2", features = ["alloc"], default-features = false }
+quickcheck = "1.0"
+quickcheck_async = "0.1.1"
 serde_cbor = "0.11"
