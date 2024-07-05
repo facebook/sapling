@@ -49,6 +49,8 @@ use serde_derive::Deserialize;
 use serde_derive::Serialize;
 use smallvec::SmallVec;
 
+use crate::sorted_vector_trie_map::SortedVectorTrieMap;
+
 #[async_trait]
 pub trait TrieMapOps<Store, Value>: Sized {
     async fn expand(
@@ -237,7 +239,7 @@ pub trait Manifest: Sync + Sized + 'static {
 impl<M: Manifest + Send, Store: Send + Sync> AsyncManifest<Store> for M {
     type TreeId = <Self as Manifest>::TreeId;
     type LeafId = <Self as Manifest>::LeafId;
-    type TrieMapType = TrieMap<Entry<Self::TreeId, Self::LeafId>>;
+    type TrieMapType = SortedVectorTrieMap<Entry<Self::TreeId, Self::LeafId>>;
 
     async fn list(
         &self,
@@ -308,7 +310,10 @@ impl<M: Manifest + Send, Store: Send + Sync> AsyncManifest<Store> for M {
         _ctx: &CoreContext,
         _blobstore: &Store,
     ) -> Result<Self::TrieMapType> {
-        Ok(Manifest::list(&self).collect())
+        let entries = Manifest::list(&self)
+            .map(|(k, v)| (k.to_smallvec(), v))
+            .collect();
+        Ok(SortedVectorTrieMap::new(entries))
     }
 }
 

@@ -35,6 +35,7 @@ use manifest::flatten_subentries;
 use manifest::Entry;
 use manifest::LeafInfo;
 use manifest::ManifestChanges;
+use manifest::SortedVectorTrieMap;
 use manifest::TreeInfo;
 use mononoke_types::fsnode::Fsnode;
 use mononoke_types::fsnode::FsnodeDirectory;
@@ -53,7 +54,6 @@ use mononoke_types::FileType;
 use mononoke_types::FsnodeId;
 use mononoke_types::MPathElement;
 use mononoke_types::NonRootMPath;
-use mononoke_types::TrieMap;
 use sorted_vector_map::SortedVectorMap;
 
 use crate::FsnodeDerivationError;
@@ -309,7 +309,7 @@ async fn create_fsnode(
         FsnodeId,
         (ContentId, FileType),
         Option<FsnodeSummary>,
-        TrieMap<Entry<FsnodeId, FsnodeFile>>,
+        SortedVectorTrieMap<Entry<FsnodeId, FsnodeFile>>,
     >,
 ) -> Result<(Option<FsnodeSummary>, FsnodeId)> {
     let entries = collect_fsnode_subentries(

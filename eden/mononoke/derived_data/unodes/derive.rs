@@ -29,6 +29,7 @@ use manifest::flatten_subentries;
 use manifest::Entry;
 use manifest::LeafInfo;
 use manifest::ManifestChanges;
+use manifest::SortedVectorTrieMap;
 use manifest::TreeInfo;
 use mononoke_types::path::MPath;
 use mononoke_types::unode::FileUnode;
@@ -44,7 +45,6 @@ use mononoke_types::MPathElement;
 use mononoke_types::MPathHash;
 use mononoke_types::ManifestUnodeId;
 use mononoke_types::NonRootMPath;
-use mononoke_types::TrieMap;
 use sorted_vector_map::SortedVectorMap;
 
 use crate::ErrorKind;
@@ -179,7 +179,7 @@ async fn create_unode_manifest(
         ManifestUnodeId,
         FileUnodeId,
         (),
-        TrieMap<Entry<ManifestUnodeId, FileUnodeId>>,
+        SortedVectorTrieMap<Entry<ManifestUnodeId, FileUnodeId>>,
     >,
 ) -> Result<((), ManifestUnodeId), Error> {
     let mut subentries = SortedVectorMap::new();
