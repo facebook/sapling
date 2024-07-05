@@ -12,6 +12,7 @@ import {OSSCommitMessageFieldSchema} from './CommitInfoView/OSSCommitMessageFiel
 import {readAtom} from './jotaiUtils';
 import {individualToggleKey} from './selection';
 import {expectMessageSentToServer} from './testUtils';
+import {assert} from './utils';
 import {screen, within, fireEvent, waitFor, act} from '@testing-library/react';
 import {nullthrows} from 'shared/utils';
 
@@ -146,6 +147,14 @@ export const CommitInfoTestUtils = {
     return description;
   },
 
+  /** Get the textarea for the test plan editor. Unavailable in OSS tests (use internal-only tests). */
+  getTestPlanEditor(): HTMLTextAreaElement {
+    assert(isInternalMessageFields(), 'Cannot edit test plan in OSS');
+    const testPlan = screen.getByTestId('commit-info-test-plan-field') as HTMLTextAreaElement;
+    expect(testPlan).toBeInTheDocument();
+    return testPlan;
+  },
+
   /** Get the input element for a given field's editor, according to the field key in the FieldConfig (actually just a div in tests) */
   getFieldEditor(key: string): HTMLDivElement {
     const renderKey = key.toLowerCase().replace(/\s/g, '-');
@@ -174,6 +183,14 @@ export const CommitInfoTestUtils = {
       );
       expect(description).toBeInTheDocument();
       fireEvent.click(description);
+    });
+  },
+  clickToEditTestPlan() {
+    assert(isInternalMessageFields(), 'Cannot edit test plan in OSS');
+    act(() => {
+      const testPlan = screen.getByTestId('commit-info-rendered-test-plan');
+      expect(testPlan).toBeInTheDocument();
+      fireEvent.click(testPlan);
     });
   },
 
