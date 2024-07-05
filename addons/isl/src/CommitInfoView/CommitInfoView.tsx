@@ -651,7 +651,7 @@ function ActionsBar({
   const forceEnableSubmit = useAtomValue(overrideDisabledSubmitModes);
   const submitDisabledReason = forceEnableSubmit ? undefined : provider?.submitDisabledReason?.();
 
-  const ongoingImageUploads = useAtomValue(numPendingImageUploads);
+  const ongoingImageUploads = useAtomValue(numPendingImageUploads(undefined));
   const areImageUploadsOngoing = ongoingImageUploads > 0;
 
   // Generally "Amend"/"Commit" for head commit, but if there's no changes while amending, just use "Amend message"
