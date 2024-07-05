@@ -1378,15 +1378,17 @@ impl RepoFactory {
         &self,
         repo_identity: &ArcRepoIdentity,
         synced_commit_mapping: &ArcSyncedCommitMapping,
+        push_redirection_config: &ArcPushRedirectionConfig,
     ) -> Result<ArcRepoCrossRepo> {
         let sync_lease = create_commit_syncer_lease(self.env.fb, self.env.caching)?;
         let logger = self
             .env
             .logger
             .new(o!("repo" => repo_identity.name().to_string()));
-        let live_commit_sync_config = Arc::new(CfgrLiveCommitSyncConfig::new(
+        let live_commit_sync_config = Arc::new(CfgrLiveCommitSyncConfig::new_with_xdb(
             &logger,
             &self.env.config_store,
+            push_redirection_config.clone(),
         )?);
 
         Ok(Arc::new(RepoCrossRepo::new(
@@ -1819,7 +1821,7 @@ impl RepoFactory {
         }))
     }
 
-    pub async fn push_redirect_config(
+    pub async fn push_redirection_config(
         &self,
         repo_identity: &ArcRepoIdentity,
         repo_config: &ArcRepoConfig,
@@ -1829,8 +1831,8 @@ impl RepoFactory {
             .await
             .context(RepoFactoryError::PushRedirectConfig)?;
 
-        let push_redirect_config = builder.build(repo_identity.id());
-        Ok(Arc::new(push_redirect_config))
+        let push_redirection_config = builder.build(repo_identity.id());
+        Ok(Arc::new(push_redirection_config))
     }
 }
 

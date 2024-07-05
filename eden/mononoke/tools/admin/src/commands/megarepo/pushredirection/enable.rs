@@ -39,7 +39,7 @@ pub struct Repo {
     repo_identity: RepoIdentity,
 
     #[facet]
-    pub push_redirect_config: dyn PushRedirectionConfig,
+    pub push_redirection_config: dyn PushRedirectionConfig,
 }
 
 pub(super) async fn enable(ctx: &CoreContext, app: MononokeApp, args: EnableArgs) -> Result<()> {
@@ -49,7 +49,7 @@ pub(super) async fn enable(ctx: &CoreContext, app: MononokeApp, args: EnableArgs
         .context("Failed to open repo")?;
     let repo_id = &repo.repo_identity().id();
 
-    match repo.push_redirect_config.get(ctx).await? {
+    match repo.push_redirection_config.get(ctx).await? {
         Some(res) => {
             info!(
                 ctx.logger(),
@@ -74,7 +74,7 @@ pub(super) async fn enable(ctx: &CoreContext, app: MononokeApp, args: EnableArgs
         Ok(())
     } else {
         match repo
-            .push_redirect_config
+            .push_redirection_config
             .set(ctx, args.draft_push, args.public_push)
             .await
         {

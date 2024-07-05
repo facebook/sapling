@@ -23,10 +23,14 @@ use metaconfig_types::CommitSyncConfig;
 use metaconfig_types::CommitSyncConfigVersion;
 use metaconfig_types::CommonCommitSyncConfig;
 use mononoke_types::RepositoryId;
+use pushredirect::NoopPushRedirectionConfig;
+use pushredirect::PushRedirectionConfig;
 use pushredirect_enable::MononokePushRedirectEnable;
 use pushredirect_enable::PushRedirectEnableState;
 use slog::debug;
 use slog::error;
+use slog::info;
+use slog::warn;
 use slog::Logger;
 use thiserror::Error;
 
@@ -128,6 +132,7 @@ pub trait LiveCommitSyncConfig: Send + Sync {
 pub struct CfgrLiveCommitSyncConfig {
     config_handle_for_all_versions: ConfigHandle<RawCommitSyncAllVersions>,
     config_handle_for_push_redirection: ConfigHandle<MononokePushRedirectEnable>,
+    push_redirect_config: Arc<dyn PushRedirectionConfig>,
 }
 
 impl CfgrLiveCommitSyncConfig {
@@ -142,15 +147,21 @@ impl CfgrLiveCommitSyncConfig {
             logger,
             "Initialized all commit sync versions configerator config"
         );
+        let push_redirect_config = Arc::new(NoopPushRedirectionConfig {});
         debug!(logger, "Done initializing CfgrLiveCommitSyncConfig");
         Ok(Self {
             config_handle_for_all_versions,
             config_handle_for_push_redirection,
+            push_redirect_config,
         })
     }
 
     // This is temporary while we migrate every callsite.
-    pub fn new_with_xdb(logger: &Logger, config_store: &ConfigStore) -> Result<Self, Error> {
+    pub fn new_with_xdb(
+        logger: &Logger,
+        config_store: &ConfigStore,
+        push_redirect_config: Arc<dyn PushRedirectionConfig>,
+    ) -> Result<Self, Error> {
         debug!(logger, "Initializing CfgrLiveCommitSyncConfig");
         let config_handle_for_push_redirection =
             config_store.get_config_handle(CONFIGERATOR_PUSHREDIRECT_ENABLE.to_string())?;
@@ -165,16 +176,50 @@ impl CfgrLiveCommitSyncConfig {
         Ok(Self {
             config_handle_for_all_versions,
             config_handle_for_push_redirection,
+            push_redirect_config,
         })
     }
 
     async fn get_push_redirection_repo_state(
         &self,
-        _ctx: &CoreContext,
+        ctx: &CoreContext,
         repo_id: RepositoryId,
     ) -> Option<PushRedirectEnableState> {
-        let config = self.config_handle_for_push_redirection.get();
-        config.per_repo.get(&(repo_id.id() as i64)).cloned()
+        if let Ok(true) = justknobs::eval("scm/mononoke:pushredirect_use_xdb", None, None) {
+            let cfg = self.push_redirect_config.get(ctx).await;
+            match cfg {
+                Ok(cfg) => {
+                    if let Some(cfg) = cfg {
+                        info!(
+                            ctx.logger(),
+                            "Found push redirection config for repo {}", repo_id
+                        );
+                        return Some(PushRedirectEnableState {
+                            draft_push: cfg.draft_push,
+                            public_push: cfg.public_push,
+                        });
+                    }
+                    // if not found we'll just fall back to the previous implementation
+                }
+                Err(e) => {
+                    warn!(
+                        ctx.logger(),
+                        "Failed to fetch push redirection config: {}", e
+                    );
+                }
+            }
+        }
+
+        if let Ok(false) =
+            justknobs::eval("scm/mononoke:pushredirect_disable_configerator", None, None)
+        {
+            let config = self.config_handle_for_push_redirection.get();
+            return config.per_repo.get(&(repo_id.id() as i64)).cloned();
+        }
+
+        // This can happen if configerator is disabled and we didn't find an entry in the XDB. Once we finish the migration
+        // to XDB, we can simplify.
+        None
     }
 
     fn related_to_repo(
