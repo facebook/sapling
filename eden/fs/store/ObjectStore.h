@@ -178,6 +178,8 @@ class ObjectStore : public IObjectStore,
       const ObjectId& id,
       const ObjectFetchContextPtr& context) const override;
 
+  // TODO(T192128228): Add GetTreeMetadata method for caching purposes
+
   /**
    * Prefetch all the blobs represented by the HashRange.
    *

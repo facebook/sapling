@@ -1222,6 +1222,15 @@ std::string SaplingBackingStore::staticRenderObjectId(
   return fmt::format("proxy-{}", folly::hexlify(objectId.getBytes()));
 }
 
+folly::SemiFuture<BackingStore::GetTreeMetaResult>
+SaplingBackingStore::getTreeMetadata(
+    const ObjectId& /*id*/,
+    const ObjectFetchContextPtr& /*context*/) {
+  return folly::makeSemiFuture<BackingStore::GetTreeMetaResult>(
+      std::domain_error(
+          "getTreeMetadata is not yet implemented for SaplingBackingStores"));
+}
+
 folly::SemiFuture<BackingStore::GetTreeResult> SaplingBackingStore::getTree(
     const ObjectId& id,
     const ObjectFetchContextPtr& context) {

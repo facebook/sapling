@@ -135,6 +135,10 @@ class FilteredBackingStore
       const ObjectId& id,
       const ObjectFetchContextPtr& context) override;
 
+  folly::SemiFuture<GetTreeMetaResult> getTreeMetadata(
+      const ObjectId& id,
+      const ObjectFetchContextPtr& context) override;
+
   folly::SemiFuture<GetBlobResult> getBlob(
       const ObjectId& id,
       const ObjectFetchContextPtr& context) override;

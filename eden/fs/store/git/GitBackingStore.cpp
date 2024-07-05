@@ -145,6 +145,15 @@ ImmediateFuture<BackingStore::GetRootTreeResult> GitBackingStore::getRootTree(
   return GetRootTreeResult{getTreeImpl(treeID), treeID};
 }
 
+folly::SemiFuture<BackingStore::GetTreeMetaResult>
+GitBackingStore::getTreeMetadata(
+    const ObjectId& /*id*/,
+    const ObjectFetchContextPtr& /*context*/) {
+  return folly::makeSemiFuture<BackingStore::GetTreeMetaResult>(
+      std::domain_error(
+          "getTreeMetadata is not implemented for GitBackingStores"));
+}
+
 SemiFuture<BackingStore::GetTreeResult> GitBackingStore::getTree(
     const ObjectId& id,
     const ObjectFetchContextPtr& /*context*/) {

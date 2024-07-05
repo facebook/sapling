@@ -19,6 +19,7 @@
 #include "eden/fs/model/ObjectId.h"
 #include "eden/fs/model/RootId.h"
 #include "eden/fs/model/TreeFwd.h"
+#include "eden/fs/model/TreeMetadataFwd.h"
 #include "eden/fs/store/BackingStoreType.h"
 #include "eden/fs/store/ImportPriority.h"
 #include "eden/fs/store/ObjectFetchContext.h"
@@ -65,6 +66,7 @@ class BackingStore : public RootIdCodec, public ObjectIdCodec {
     Trees = 1 << 0,
     Blobs = 1 << 1,
     BlobMetadata = 1 << 2,
+    // TODO(T192128228): Add caching policy for TreeMetadata
     TreesAndBlobMetadata = Trees | BlobMetadata,
     Anything = Trees | Blobs | BlobMetadata,
   };
@@ -98,6 +100,18 @@ class BackingStore : public RootIdCodec, public ObjectIdCodec {
     /** The retrieved tree. */
     folly::not_null<TreePtr> tree;
     /** The fetch origin of the tree. */
+    ObjectFetchContext::Origin origin;
+  };
+
+  /**
+   * Return value of the getTreeMetadata method.
+   */
+  struct GetTreeMetaResult {
+    /**
+     * The retrieved tree metadata.
+     */
+    TreeMetadataPtr treeMeta;
+    /** The fetch origin of the tree metadata. */
     ObjectFetchContext::Origin origin;
   };
 
@@ -230,6 +244,15 @@ class BackingStore : public RootIdCodec, public ObjectIdCodec {
    * Return the tree and where it was found.
    */
   virtual folly::SemiFuture<GetTreeResult> getTree(
+      const ObjectId& id,
+      const ObjectFetchContextPtr& context) = 0;
+
+  /**
+   * Fetch the tree metadata from the backing store.
+   *
+   * Return the tree metadata and where it was found.
+   */
+  virtual folly::SemiFuture<GetTreeMetaResult> getTreeMetadata(
       const ObjectId& id,
       const ObjectFetchContextPtr& context) = 0;
 

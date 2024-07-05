@@ -124,6 +124,14 @@ SemiFuture<BackingStore::GetTreeResult> FakeBackingStore::getTree(
       .semi();
 }
 
+SemiFuture<BackingStore::GetTreeMetaResult> FakeBackingStore::getTreeMetadata(
+    const ObjectId& /*id*/,
+    const ObjectFetchContextPtr& /*context*/) {
+  return folly::makeSemiFuture<BackingStore::GetTreeMetaResult>(
+      std::domain_error(
+          "GetTreeMetadata not implemented for FakeBackingStore"));
+}
+
 SemiFuture<BackingStore::GetBlobResult> FakeBackingStore::getBlob(
     const ObjectId& id,
     const ObjectFetchContextPtr& /*context*/) {

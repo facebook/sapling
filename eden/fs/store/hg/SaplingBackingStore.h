@@ -390,6 +390,10 @@ class SaplingBackingStore final : public BackingStore {
       const HgProxyHash& proxyHash,
       const ObjectFetchContextPtr& context);
 
+  folly::SemiFuture<GetTreeMetaResult> getTreeMetadata(
+      const ObjectId& /*id*/,
+      const ObjectFetchContextPtr& /*context*/) override;
+
   folly::SemiFuture<GetBlobResult> getBlob(
       const ObjectId& id,
       const ObjectFetchContextPtr& context) override;
