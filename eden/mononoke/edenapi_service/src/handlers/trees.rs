@@ -143,7 +143,7 @@ async fn fetch_tree(
             .with_context(|| ErrorKind::TreeFetchFailed(key.clone()))?
             .with_context(|| ErrorKind::KeyDoesNotExist(key.clone()))?;
 
-        entry.with_directory_metadata(DirectoryMetadata {
+        entry.with_tree_aux_data(DirectoryMetadata {
             augmented_manifest_id: ctx.augmented_manifest_id().clone().into(),
             augmented_manifest_size: ctx.augmented_manifest_size(),
         });

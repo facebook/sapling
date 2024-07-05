@@ -161,6 +161,7 @@ pub use crate::token::UploadTokenData;
 pub use crate::token::UploadTokenMetadata;
 pub use crate::token::UploadTokenSignature;
 pub use crate::tree::TreeAttributes;
+pub use crate::tree::TreeAuxData;
 pub use crate::tree::TreeChildDirectoryEntry;
 pub use crate::tree::TreeChildEntry;
 pub use crate::tree::TreeChildFileEntry;

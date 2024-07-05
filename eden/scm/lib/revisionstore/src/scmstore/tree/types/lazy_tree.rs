@@ -108,7 +108,7 @@ impl LazyTree {
                                         })
                                     }
                                     TreeChildEntry::Directory(dir_entry) => {
-                                        dir_entry.directory_metadata.map(|dir_metadata| {
+                                        dir_entry.tree_aux_data.map(|dir_metadata| {
                                             (dir_entry.key.hgid, AuxData::Tree(dir_metadata.into()))
                                         })
                                     }

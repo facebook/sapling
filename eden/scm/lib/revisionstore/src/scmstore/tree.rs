@@ -24,8 +24,8 @@ use anyhow::Result;
 use clientinfo::get_client_request_info_thread_local;
 use clientinfo::set_client_request_info_thread_local;
 use crossbeam::channel::unbounded;
-pub use edenapi_types::DirectoryMetadata as TreeAuxData;
 use edenapi_types::FileAuxData;
+use edenapi_types::TreeAuxData;
 use edenapi_types::TreeChildEntry;
 use minibytes::Bytes;
 use once_cell::sync::OnceCell;
@@ -748,7 +748,7 @@ impl TreeEntry for ScmStoreTreeEntry {
         Ok(maybe_iter.unwrap_or_else(|| Box::new(std::iter::empty())))
     }
 
-    fn directory_metadata_iter(
+    fn tree_aux_data_iter(
         &self,
     ) -> anyhow::Result<BoxIterator<anyhow::Result<(HgId, TreeAuxData)>>> {
         let maybe_iter = (|| -> Option<BoxIterator<anyhow::Result<(HgId, TreeAuxData)>>> {
@@ -764,16 +764,16 @@ impl TreeEntry for ScmStoreTreeEntry {
                     TreeChildEntry::Directory(v) => v,
                     _ => return None,
                 };
-                let directory_metadata = directory_entry
-                    .directory_metadata
+                let tree_aux_data = directory_entry
+                    .tree_aux_data
                     .ok_or_else(|| {
                         anyhow::anyhow!(format!(
-                            "directory metadata is missing for key: {}",
+                            "tree aux data is missing for key: {}",
                             directory_entry.key
                         ))
                     })
                     .ok()?;
-                Some(Ok((directory_entry.key.hgid, directory_metadata)))
+                Some(Ok((directory_entry.key.hgid, tree_aux_data)))
             });
             Some(Box::new(iter))
         })();
@@ -781,13 +781,13 @@ impl TreeEntry for ScmStoreTreeEntry {
     }
 
     /// Get the directory aux data of the tree.
-    fn metadata(&self) -> anyhow::Result<Option<TreeAuxData>> {
+    fn aux_data(&self) -> anyhow::Result<Option<TreeAuxData>> {
         let entry = match &self.tree {
             LazyTree::SaplingRemoteApi(entry) => entry,
             // TODO: We should also support fetching tree metadata from local cache
             _ => return Ok(None),
         };
-        Ok(entry.directory_metadata)
+        Ok(entry.tree_aux_data)
     }
 }
 

@@ -60,7 +60,7 @@ Create and send tree request.
                                                     "content_blake3": bin("7e9a0ce0d68016f0502ac50ff401830c7e2e9c894b43b242439f90f99af8835a"),
                                                     "content_sha256": bin("0000000000000000000000000000000000000000000000000000000000000000"),
                                                     "file_header_metadata": None}}}}],
-    "directory_metadata": None},
+    "tree_aux_data": None},
    {"key": {"node": bin("c8743b14e0789cc546125213c18a18d813862db5"),
             "path": ""},
     "data": b"copy.txt\017b8d4e3bafd4ec4812ad7c930aace9bf07ab033\ntest.txt\0186cafa3319c24956783383dc44c5cbc68c5a0ca\n",
@@ -81,7 +81,7 @@ Create and send tree request.
                                                     "content_blake3": bin("7e9a0ce0d68016f0502ac50ff401830c7e2e9c894b43b242439f90f99af8835a"),
                                                     "content_sha256": bin("0000000000000000000000000000000000000000000000000000000000000000"),
                                                     "file_header_metadata": None}}}}],
-    "directory_metadata": None}]
+    "tree_aux_data": None}]
 
   $ cat > attrs << EOF
   > {
@@ -117,8 +117,8 @@ Create and send tree request.
                                                     "content_blake3": bin("7e9a0ce0d68016f0502ac50ff401830c7e2e9c894b43b242439f90f99af8835a"),
                                                     "content_sha256": bin("0000000000000000000000000000000000000000000000000000000000000000"),
                                                     "file_header_metadata": b""}}}}],
-    "directory_metadata": {"augmented_manifest_id": bin("f5d56263e1ffc9a4bf1e637a5d7c5245dfd89ec7b9109147cc7dcc5187e8a73f"),
-                           "augmented_manifest_size": 504}},
+    "tree_aux_data": {"augmented_manifest_id": bin("f5d56263e1ffc9a4bf1e637a5d7c5245dfd89ec7b9109147cc7dcc5187e8a73f"),
+                      "augmented_manifest_size": 504}},
    {"key": {"node": bin("15024c4dc4a27b572d623db342ae6a08d7f7adec"),
             "path": ""},
     "data": b"test.txt\0186cafa3319c24956783383dc44c5cbc68c5a0ca\n",
@@ -131,5 +131,5 @@ Create and send tree request.
                                                     "content_blake3": bin("7e9a0ce0d68016f0502ac50ff401830c7e2e9c894b43b242439f90f99af8835a"),
                                                     "content_sha256": bin("0000000000000000000000000000000000000000000000000000000000000000"),
                                                     "file_header_metadata": b""}}}}],
-    "directory_metadata": {"augmented_manifest_id": bin("b607f9f2497ec96ef5f73f363886a3df48759ea864bff648e0f8de382236f71e"),
-                           "augmented_manifest_size": 212}}]
+    "tree_aux_data": {"augmented_manifest_id": bin("b607f9f2497ec96ef5f73f363886a3df48759ea864bff648e0f8de382236f71e"),
+                      "augmented_manifest_size": 212}}]

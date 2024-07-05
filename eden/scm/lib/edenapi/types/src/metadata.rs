@@ -33,6 +33,8 @@ pub struct DirectoryMetadata {
     pub augmented_manifest_size: u64,
 }
 
+pub type WireTreeAuxData = WireDirectoryMetadata;
+
 /// File entry metadata
 #[auto_wire]
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize)]

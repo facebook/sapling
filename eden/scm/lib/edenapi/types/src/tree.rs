@@ -31,6 +31,8 @@ use crate::SaplingRemoteApiServerError;
 use crate::Sha1;
 use crate::UploadToken;
 
+pub type TreeAuxData = DirectoryMetadata;
+
 #[derive(Debug, Error)]
 pub enum TreeError {
     #[error(transparent)]
@@ -72,7 +74,7 @@ pub struct TreeEntry {
     pub data: Option<Bytes>,
     pub parents: Option<Parents>,
     pub children: Option<Vec<Result<TreeChildEntry, SaplingRemoteApiServerError>>>,
-    pub directory_metadata: Option<DirectoryMetadata>,
+    pub tree_aux_data: Option<TreeAuxData>,
 }
 
 impl TreeEntry {
@@ -101,11 +103,8 @@ impl TreeEntry {
         self
     }
 
-    pub fn with_directory_metadata<'a>(
-        &'a mut self,
-        directory_metadata: DirectoryMetadata,
-    ) -> &'a mut Self {
-        self.directory_metadata = Some(directory_metadata);
+    pub fn with_tree_aux_data<'a>(&'a mut self, tree_aux_data: TreeAuxData) -> &'a mut Self {
+        self.tree_aux_data = Some(tree_aux_data);
         self
     }
 
@@ -159,8 +158,8 @@ impl TreeEntry {
         self.data.clone()
     }
 
-    pub fn directory_metadata(&self) -> Option<&DirectoryMetadata> {
-        self.directory_metadata.as_ref()
+    pub fn tree_aux_data(&self) -> Option<&TreeAuxData> {
+        self.tree_aux_data.as_ref()
     }
 }
 
@@ -182,7 +181,7 @@ pub struct TreeChildFileEntry {
 #[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct TreeChildDirectoryEntry {
     pub key: Key,
-    pub directory_metadata: Option<DirectoryMetadata>,
+    pub tree_aux_data: Option<TreeAuxData>,
 }
 
 impl TreeChildEntry {
@@ -193,10 +192,10 @@ impl TreeChildEntry {
         })
     }
 
-    pub fn new_directory_entry(key: Key, metadata: DirectoryMetadata) -> Self {
+    pub fn new_directory_entry(key: Key, aux_data: TreeAuxData) -> Self {
         TreeChildEntry::Directory(TreeChildDirectoryEntry {
             key,
-            directory_metadata: Some(metadata),
+            tree_aux_data: Some(aux_data),
         })
     }
 }
@@ -275,7 +274,7 @@ impl TryFrom<AugmentedTreeEntryWithDigest> for TreeEntry {
             ),
             augmented_manifest_size: aug_tree_with_digest.augmented_manifest_size,
         };
-        entry.with_directory_metadata(dir_meta);
+        entry.with_tree_aux_data(dir_meta);
         Ok(entry)
     }
 }
@@ -290,7 +289,7 @@ impl Arbitrary for TreeEntry {
             parents: Arbitrary::arbitrary(g),
             // Recursive TreeEntry in children causes stack overflow in QuickCheck
             children: None,
-            directory_metadata: None,
+            tree_aux_data: None,
         }
     }
 }

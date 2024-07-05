@@ -43,7 +43,7 @@ Sanity check that children metadata isn't fetched by default:
                           None,
                       ),
                       children: None,
-                      directory_metadata: Some(
+                      tree_aux_data: Some(
                           DirectoryMetadata {
                               augmented_manifest_id: Blake3("3db383bed414336a1d6673620506fa927a6c53f9052390487f11821b2547b585"),
                               augmented_manifest_size: 481,
@@ -93,7 +93,7 @@ Fetch a tree with children metadata, make sure directories aux data also returne
                                               ),
                                               hgid: HgId("ac934ed5f01e06c92b6c95661b2ccaf2a734509f"),
                                           },
-                                          directory_metadata: Some(
+                                          tree_aux_data: Some(
                                               DirectoryMetadata {
                                                   augmented_manifest_id: Blake3("16f534257ecef0fc9254628292cd025db76e73e1c013419fca0b7f02f9fb91c6"),
                                                   augmented_manifest_size: 208,
@@ -152,7 +152,7 @@ Fetch a tree with children metadata, make sure directories aux data also returne
                               ),
                           ],
                       ),
-                      directory_metadata: Some(
+                      tree_aux_data: Some(
                           DirectoryMetadata {
                               augmented_manifest_id: Blake3("3db383bed414336a1d6673620506fa927a6c53f9052390487f11821b2547b585"),
                               augmented_manifest_size: 481,
@@ -220,7 +220,7 @@ Fetch mode can also trigger tree metadata fetch:
                                               ),
                                               hgid: HgId("ac934ed5f01e06c92b6c95661b2ccaf2a734509f"),
                                           },
-                                          directory_metadata: Some(
+                                          tree_aux_data: Some(
                                               DirectoryMetadata {
                                                   augmented_manifest_id: Blake3("16f534257ecef0fc9254628292cd025db76e73e1c013419fca0b7f02f9fb91c6"),
                                                   augmented_manifest_size: 208,
@@ -279,7 +279,7 @@ Fetch mode can also trigger tree metadata fetch:
                               ),
                           ],
                       ),
-                      directory_metadata: Some(
+                      tree_aux_data: Some(
                           DirectoryMetadata {
                               augmented_manifest_id: Blake3("3db383bed414336a1d6673620506fa927a6c53f9052390487f11821b2547b585"),
                               augmented_manifest_size: 481,

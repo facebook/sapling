@@ -111,7 +111,7 @@ Test APIs:
                                    "high": 0,
                                    "parents": []}]}}
 
-  $ hg debugapi -e trees  -i '[("", "41b34f08c1356f6ad068e9ab9b43d984245111aa")]' -i '{"manifest_blob": True, "parents": True, "child_metadata": True, "augmented_trees":True }' 
+  $ hg debugapi -e trees  -i '[("", "41b34f08c1356f6ad068e9ab9b43d984245111aa")]' -i '{"manifest_blob": True, "parents": True, "child_metadata": True, "augmented_trees":True }'
   [{"key": {"node": bin("41b34f08c1356f6ad068e9ab9b43d984245111aa"),
             "path": ""},
     "data": b"A\0005d992c5dcf32993668f7cede29d296c494a5d9\n",
@@ -124,10 +124,10 @@ Test APIs:
                                                     "content_blake3": bin("5ad3ba58a716e5fc04296ac9af7a1420f726b401fdf16d270beb5b6b30bc0cda"),
                                                     "content_sha256": bin("0000000000000000000000000000000000000000000000000000000000000000"),
                                                     "file_header_metadata": b""}}}}],
-    "directory_metadata": {"augmented_manifest_id": bin("f0aef0c3978f2947b763a1f87ff5c68611125192cca9d0e95cb18787740eae3b"),
-                           "augmented_manifest_size": 204}}]
-  
-  $ hg debugapi -e trees  -i '[("", "41b34f08c1356f6ad068e9ab9b43d984245111aa")]' -i '{"manifest_blob": True, "parents": True, "child_metadata": True}' 
+    "tree_aux_data": {"augmented_manifest_id": bin("f0aef0c3978f2947b763a1f87ff5c68611125192cca9d0e95cb18787740eae3b"),
+                      "augmented_manifest_size": 204}}]
+
+  $ hg debugapi -e trees  -i '[("", "41b34f08c1356f6ad068e9ab9b43d984245111aa")]' -i '{"manifest_blob": True, "parents": True, "child_metadata": True}'
   [{"key": {"node": bin("41b34f08c1356f6ad068e9ab9b43d984245111aa"),
             "path": ""},
     "data": b"A\0005d992c5dcf32993668f7cede29d296c494a5d9\n",
@@ -140,4 +140,4 @@ Test APIs:
                                                     "content_blake3": bin("5ad3ba58a716e5fc04296ac9af7a1420f726b401fdf16d270beb5b6b30bc0cda"),
                                                     "content_sha256": bin("0000000000000000000000000000000000000000000000000000000000000000"),
                                                     "file_header_metadata": None}}}}],
-    "directory_metadata": None}]
+    "tree_aux_data": None}]

@@ -26,8 +26,8 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use edenapi_trait::SaplingRemoteApi;
-use edenapi_types::DirectoryMetadata;
 pub use edenapi_types::FileAuxData;
+pub use edenapi_types::TreeAuxData;
 pub use futures;
 use metalog::MetaLog;
 pub use minibytes;
@@ -296,16 +296,16 @@ pub trait TreeEntry: Send + 'static {
         Ok(Box::new(std::iter::empty()))
     }
 
-    /// Iterate through the child directory metadata if they are available.
+    /// Iterate through the child tree aux data if they are available.
     /// For performance reasons, the iteration is on `HgId`.
-    fn directory_metadata_iter(
+    fn tree_aux_data_iter(
         &self,
-    ) -> anyhow::Result<BoxIterator<anyhow::Result<(HgId, DirectoryMetadata)>>> {
+    ) -> anyhow::Result<BoxIterator<anyhow::Result<(HgId, TreeAuxData)>>> {
         Ok(Box::new(std::iter::empty()))
     }
 
-    /// Get the directory metadata data of the tree.
-    fn metadata(&self) -> anyhow::Result<Option<DirectoryMetadata>> {
+    /// Get the tree aux data data of the tree.
+    fn aux_data(&self) -> anyhow::Result<Option<TreeAuxData>> {
         Ok(None)
     }
 }
@@ -371,33 +371,33 @@ pub trait TreeStore: KeyStore {
         self
     }
 
-    /// Get directory metadata for a single tree.
+    /// Get tree aux data for a single tree.
     /// Returns `None` if the information is unavailable locally.
-    fn get_local_directory_metadata(
+    fn get_local_tree_aux_data(
         &self,
         path: &RepoPath,
         id: HgId,
-    ) -> anyhow::Result<Option<DirectoryMetadata>> {
+    ) -> anyhow::Result<Option<TreeAuxData>> {
         match self.get_local_tree(path, id)? {
             None => Ok(None),
-            Some(e) => e.metadata(),
+            Some(e) => e.aux_data(),
         }
     }
 
-    /// Get directory metadata for the given trees.
+    /// Get tree aux data for the given trees.
     /// Contact remote server on demand. Might block.
-    fn get_directory_metadata_iter(
+    fn get_tree_aux_data_iter(
         &self,
         keys: Vec<Key>,
         fetch_mode: FetchMode,
-    ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, DirectoryMetadata)>>> {
+    ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, TreeAuxData)>>> {
         let iter = self
             .get_tree_iter(keys, fetch_mode)?
             .map(|entry| match entry {
                 Err(e) => Err(e),
                 Ok((key, data)) => {
-                    let metadata = data.metadata()?.ok_or_else(|| {
-                        anyhow::anyhow!(format!("directory metadata is missing for key: {}", key))
+                    let metadata = data.aux_data()?.ok_or_else(|| {
+                        anyhow::anyhow!(format!("tree aux data is missing for key: {}", key))
                     })?;
                     Ok((key, metadata))
                 }
@@ -405,22 +405,22 @@ pub trait TreeStore: KeyStore {
         Ok(Box::new(iter))
     }
 
-    /// Get directory metadata for the given tree.
+    /// Get tree aux data for the given tree.
     /// Contact remote server on demand. Might block.
-    /// When fetching data for many trees, use `get_directory_metadata_iter`
+    /// When fetching data for many trees, use `get_tree_aux_data_iter`
     /// instead of calling this in a loop.
-    fn get_directory_metadata(
+    fn get_tree_aux_data(
         &self,
         path: &RepoPath,
         id: HgId,
         fetch_mode: FetchMode,
-    ) -> anyhow::Result<DirectoryMetadata> {
+    ) -> anyhow::Result<TreeAuxData> {
         let key = Key::new(path.to_owned(), id);
         match self.get_tree_iter(vec![key.clone()], fetch_mode)?.next() {
             None => Err(anyhow::format_err!("{}@{}: not found remotely", path, id)),
             Some(Err(e)) => Err(e),
-            Some(Ok((_k, tree))) => tree.metadata()?.ok_or_else(|| {
-                anyhow::anyhow!(format!("directory metadata is missing for key: {}", key))
+            Some(Ok((_k, tree))) => tree.aux_data()?.ok_or_else(|| {
+                anyhow::anyhow!(format!("tree aux data is missing for key: {}", key))
             }),
         }
     }

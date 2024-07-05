@@ -25,12 +25,12 @@ pub use crate::tree::WireUploadTreeResponse;
 use crate::wire::is_default;
 use crate::wire::ToApi;
 use crate::wire::ToWire;
-use crate::wire::WireDirectoryMetadata;
 use crate::wire::WireFileMetadata;
 use crate::wire::WireKey;
 use crate::wire::WireParents;
 use crate::wire::WireSaplingRemoteApiServerError;
 use crate::wire::WireToApiConversionError;
+use crate::wire::WireTreeAuxData;
 use crate::SaplingRemoteApiServerError;
 
 #[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
@@ -51,7 +51,7 @@ pub struct WireTreeEntry {
     pub error: Option<WireSaplingRemoteApiServerError>,
 
     #[serde(rename = "5", default, skip_serializing_if = "is_default")]
-    pub directory_metadata: Option<WireDirectoryMetadata>,
+    pub tree_aux_data: Option<WireTreeAuxData>,
 }
 
 impl ToWire for Result<TreeEntry, SaplingRemoteApiServerError> {
@@ -65,7 +65,7 @@ impl ToWire for Result<TreeEntry, SaplingRemoteApiServerError> {
                 parents: t.parents.to_wire(),
                 children: t.children.to_wire(),
                 error: None,
-                directory_metadata: t.directory_metadata.to_wire(),
+                tree_aux_data: t.tree_aux_data.to_wire(),
             },
             Err(e) => WireTreeEntry {
                 key: e.key.to_wire(),
@@ -95,7 +95,7 @@ impl ToApi for WireTreeEntry {
                 data: self.data,
                 parents: self.parents.to_api()?,
                 children: self.children.to_api()?,
-                directory_metadata: self.directory_metadata.to_api()?,
+                tree_aux_data: self.tree_aux_data.to_api()?,
             })
         })
     }
@@ -113,7 +113,7 @@ pub struct WireTreeChildEntry {
     error: Option<WireSaplingRemoteApiServerError>,
 
     #[serde(rename = "5", default, skip_serializing_if = "is_default")]
-    directory_metadata: Option<WireDirectoryMetadata>,
+    tree_aux_data: Option<WireTreeAuxData>,
 }
 
 impl ToWire for Result<TreeChildEntry, SaplingRemoteApiServerError> {
@@ -124,13 +124,13 @@ impl ToWire for Result<TreeChildEntry, SaplingRemoteApiServerError> {
             Ok(TreeChildEntry::File(t)) => WireTreeChildEntry {
                 key: Some(t.key.to_wire()),
                 file_metadata: t.file_metadata.to_wire(),
-                directory_metadata: None,
+                tree_aux_data: None,
                 error: None,
             },
             Ok(TreeChildEntry::Directory(t)) => WireTreeChildEntry {
                 key: Some(t.key.to_wire()),
                 file_metadata: None,
-                directory_metadata: t.directory_metadata.to_wire(),
+                tree_aux_data: t.tree_aux_data.to_wire(),
                 error: None,
             },
             Err(e) => WireTreeChildEntry {
@@ -167,7 +167,7 @@ impl ToApi for WireTreeChildEntry {
                             .key
                             .to_api()?
                             .ok_or(WireToApiConversionError::CannotPopulateRequiredField("key"))?,
-                        directory_metadata: self.directory_metadata.to_api()?,
+                        tree_aux_data: self.tree_aux_data.to_api()?,
                     })
                 },
             )
@@ -294,7 +294,7 @@ impl Arbitrary for WireTreeEntry {
             children: None,
             // TODO
             error: None,
-            directory_metadata: Arbitrary::arbitrary(g),
+            tree_aux_data: Arbitrary::arbitrary(g),
         }
     }
 }
