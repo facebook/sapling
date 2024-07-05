@@ -51,6 +51,7 @@ use crate::git_submodules::utils::root_fsnode_id_from_submodule_git_commit;
 use crate::git_submodules::utils::x_repo_submodule_metadata_file_basename;
 use crate::reporting::log_debug;
 use crate::reporting::log_error;
+use crate::reporting::log_trace;
 use crate::reporting::run_and_log_stats_to_scuba;
 use crate::types::Repo;
 
@@ -267,6 +268,10 @@ async fn validate_submodule_expansion<'a, R: Repo>(
     if submodule_fsnode_id == expansion_fsnode_id {
         // If fsnodes are an exact match, there are no recursive submodules and the
         // working copy is the same.
+        log_trace(
+            ctx,
+            "Root submodule expansion fsnode is the same as submodule repo's fsnode",
+        );
         return Ok(bonsai);
     };
 
@@ -625,6 +630,28 @@ where
             },
         )
         .await?;
+
+    log_trace(
+        ctx,
+        format!(
+            "Remaining directories in submodule's manifest: {:#?}",
+            final_submodule_dirs
+        ),
+    );
+    log_trace(
+        ctx,
+        format!(
+            "Remaining files in submodule's manifest: {:#?}",
+            final_submodule_files
+        ),
+    );
+    log_trace(
+        ctx,
+        format!(
+            "Remaining files in expansion's manifest: {:#?}",
+            final_expansion_only_files
+        ),
+    );
 
     /// Helper to assert that there are no unexpected files/directories in
     /// the submodule manifest or expansion manifests, and log/display these
