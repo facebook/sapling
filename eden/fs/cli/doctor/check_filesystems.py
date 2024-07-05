@@ -30,14 +30,15 @@ from eden.fs.cli.doctor.problem import (
 from eden.fs.cli.doctor.util import CheckoutInfo
 from eden.fs.cli.filesystem import FsUtil
 from eden.fs.cli.prjfs import PRJ_FILE_STATE
-from eden.thrift.legacy import EdenClient
 from facebook.eden.constants import DIS_REQUIRE_LOADED, DIS_REQUIRE_MATERIALIZED
 from facebook.eden.ttypes import (
     DebugInvalidateRequest,
     EdenError,
+    GetCurrentSnapshotInfoRequest,
     GetScmStatusParams,
     MatchFileSystemRequest,
     MountId,
+    RootIdOptions,
     ScmFileStatus,
     SyncBehavior,
     TimeSpec,
@@ -845,11 +846,20 @@ class HgStatusAndDiffMismatch(PathsProblem):
 
 def get_modified_files(instance: EdenInstance, checkout: EdenCheckout) -> List[Path]:
     with instance.get_thrift_client_legacy(timeout=60.0) as client:
+        # We are required to pass the active FilterId to getScmStatusV2. We
+        # can find the active FilterId with GetCurrentSnapshotInfo
+        snapshot_info = client.getCurrentSnapshotInfo(
+            GetCurrentSnapshotInfoRequest(MountId(bytes(checkout.path)))
+        )
+        active_filter = snapshot_info.filterId
+        rootId = RootIdOptions()
+        if active_filter is not None:
+            rootId = RootIdOptions(filterId=active_filter)
         status = client.getScmStatusV2(
             GetScmStatusParams(
                 mountPoint=bytes(checkout.path),
                 commit=checkout.get_snapshot().working_copy_parent.encode(),
-                rootIdOptions=None,
+                rootIdOptions=rootId,
             )
         )
 
@@ -884,11 +894,6 @@ def get_hg_diff(checkout: EdenCheckout) -> Set[Path]:
 def check_hg_status_match_hg_diff(
     tracker: ProblemTracker, instance: EdenInstance, checkout: EdenCheckout
 ) -> None:
-    if checkout.get_config().scm_type == "filteredhg":
-        # TODO(cuev): This check is currently broken on FilteredHg because we
-        # don't pass the active filter to the getScmStatusV2 call in
-        # get_modified_files. We will skip the check until we fix it.
-        return
     try:
         modified_files = get_modified_files(instance, checkout)
     except InProgressCheckoutError:
