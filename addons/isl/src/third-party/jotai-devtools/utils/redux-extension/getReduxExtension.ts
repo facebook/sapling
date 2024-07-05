@@ -1,3 +1,6 @@
+// Ignore nocheck warning in third-party
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-nocheck
 import { isDev as __DEV__ } from '../../../../utils';
 
 // Original but incomplete type of the redux extension package

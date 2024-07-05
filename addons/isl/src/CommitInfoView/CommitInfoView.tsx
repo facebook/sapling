@@ -325,7 +325,7 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
             </SmallCapsTitle>
             {uncommittedChanges.length > 0 ? (
               <GatedComponent featureFlag={Internal.featureFlags?.ShowSplitSuggestion}>
-                <PendingDiffStats commit={commit} />
+                <PendingDiffStats />
               </GatedComponent>
             ) : null}
             {uncommittedChanges.length === 0 ? (

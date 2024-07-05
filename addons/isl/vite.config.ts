@@ -67,7 +67,7 @@ export default defineConfig({
     {
       name: 'emit-file-list',
       apply: 'build',
-      writeBundle(options: {dir: string}, bundle: Record<string, unknown>) {
+      writeBundle(options: {dir: string | undefined}, bundle: Record<string, unknown>) {
         const outputDir = options.dir || 'dist';
         const fileList = Object.keys(bundle)
           .filter(file => file !== '.vite/manifest.json')
