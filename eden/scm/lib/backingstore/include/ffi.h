@@ -18,6 +18,7 @@ class SaplingFetchError : public std::runtime_error {
 };
 
 struct Tree;
+struct TreeAuxData;
 struct Blob;
 struct FileAuxData;
 
@@ -31,6 +32,19 @@ struct GetTreeBatchResolver {
       : resolve{std::move(resolve)} {}
 
   folly::FunctionRef<void(size_t, folly::Try<std::shared_ptr<Tree>>)> resolve;
+};
+
+/**
+ * Resolver used in the processing of getTreeMetadataBatch requests.
+ */
+struct GetTreeAuxBatchResolver {
+  explicit GetTreeAuxBatchResolver(
+      folly::FunctionRef<void(size_t, folly::Try<std::shared_ptr<TreeAuxData>>)>
+          resolve)
+      : resolve{std::move(resolve)} {}
+
+  folly::FunctionRef<void(size_t, folly::Try<std::shared_ptr<TreeAuxData>>)>
+      resolve;
 };
 
 /**
@@ -64,6 +78,12 @@ void sapling_backingstore_get_tree_batch_handler(
     size_t index,
     rust::String error,
     std::shared_ptr<Tree> tree);
+
+void sapling_backingstore_get_tree_aux_batch_handler(
+    std::shared_ptr<GetTreeAuxBatchResolver> resolver,
+    size_t index,
+    rust::String error,
+    std::shared_ptr<TreeAuxData> aux);
 
 void sapling_backingstore_get_blob_batch_handler(
     std::shared_ptr<GetBlobBatchResolver> resolver,

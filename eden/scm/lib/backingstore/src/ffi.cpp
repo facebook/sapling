@@ -31,6 +31,23 @@ void sapling_backingstore_get_tree_batch_handler(
       }));
 }
 
+void sapling_backingstore_get_tree_aux_batch_handler(
+    std::shared_ptr<GetTreeAuxBatchResolver> resolver,
+    size_t index,
+    rust::String error,
+    std::shared_ptr<TreeAuxData> aux) {
+  using ResolveResult = folly::Try<std::shared_ptr<TreeAuxData>>;
+
+  resolver->resolve(
+      index, folly::makeTryWith([&] {
+        if (error.empty()) {
+          return ResolveResult{aux};
+        } else {
+          return ResolveResult{SaplingFetchError{std::string(error)}};
+        }
+      }));
+}
+
 void sapling_backingstore_get_blob_batch_handler(
     std::shared_ptr<GetBlobBatchResolver> resolver,
     size_t index,

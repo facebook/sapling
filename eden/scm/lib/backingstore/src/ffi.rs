@@ -15,6 +15,7 @@ use anyhow::Error;
 use anyhow::Result;
 use cxx::SharedPtr;
 use storemodel::FileAuxData as ScmStoreFileAuxData;
+use storemodel::TreeAuxData as ScmStoreTreeAuxData;
 use types::fetch_mode::FetchMode;
 use types::Key;
 
@@ -85,6 +86,11 @@ pub(crate) mod ffi {
         entries: Vec<TreeEntry>,
     }
 
+    pub struct TreeAuxData {
+        total_size: u64,
+        content_blake3: [u8; 32],
+    }
+
     pub struct Request {
         node: *const u8,
         cause: FetchCause,
@@ -110,6 +116,7 @@ pub(crate) mod ffi {
         include!("eden/scm/lib/backingstore/include/ffi.h");
 
         type GetTreeBatchResolver;
+        type GetTreeAuxBatchResolver;
         type GetBlobBatchResolver;
         type GetFileAuxBatchResolver;
 
@@ -118,6 +125,13 @@ pub(crate) mod ffi {
             index: usize,
             error: String,
             tree: SharedPtr<Tree>,
+        );
+
+        unsafe fn sapling_backingstore_get_tree_aux_batch_handler(
+            resolve_state: SharedPtr<GetTreeAuxBatchResolver>,
+            index: usize,
+            error: String,
+            tree: SharedPtr<TreeAuxData>,
         );
 
         unsafe fn sapling_backingstore_get_blob_batch_handler(
@@ -161,6 +175,19 @@ pub(crate) mod ffi {
             requests: &[Request],
             fetch_mode: FetchMode,
             resolver: SharedPtr<GetTreeBatchResolver>,
+        );
+
+        pub fn sapling_backingstore_get_tree_aux(
+            store: &BackingStore,
+            node: &[u8],
+            fetch_mode: FetchMode,
+        ) -> Result<SharedPtr<TreeAuxData>>;
+
+        pub fn sapling_backingstore_get_tree_aux_batch(
+            store: &BackingStore,
+            requests: &[Request],
+            fetch_mode: FetchMode,
+            resolver: SharedPtr<GetTreeAuxBatchResolver>,
         );
 
         pub fn sapling_backingstore_get_blob(
@@ -264,6 +291,50 @@ pub fn sapling_backingstore_get_tree_batch(
             Err(error) => (format!("{:?}", error), SharedPtr::null()),
         };
         unsafe { ffi::sapling_backingstore_get_tree_batch_handler(resolver, idx, error, tree) };
+    });
+}
+
+pub fn sapling_backingstore_get_tree_aux(
+    store: &BackingStore,
+    node: &[u8],
+    fetch_mode: ffi::FetchMode,
+) -> Result<SharedPtr<ffi::TreeAuxData>> {
+    Ok(SharedPtr::new(
+        store
+            .get_tree(node, FetchMode::from(fetch_mode))
+            .and_then(|opt| opt.ok_or_else(|| Error::msg("no tree found")))?
+            .aux_data()
+            .and_then(|aux_data| aux_data.ok_or_else(|| Error::msg("no aux data found for tree")))?
+            .into(),
+    ))
+}
+
+pub fn sapling_backingstore_get_tree_aux_batch(
+    store: &BackingStore,
+    requests: &[ffi::Request],
+    fetch_mode: ffi::FetchMode,
+    resolver: SharedPtr<ffi::GetTreeAuxBatchResolver>,
+) {
+    let keys: Vec<Key> = requests.iter().map(|req| req.key()).collect();
+
+    store.get_tree_batch(keys, FetchMode::from(fetch_mode), |idx, result| {
+        let maybe_tree_entry =
+            result.and_then(|opt| opt.ok_or_else(|| Error::msg("no trees found")));
+        let tree_entry = match maybe_tree_entry {
+            Ok(tree) => tree,
+            _ => return,
+        };
+        let result: Result<Option<ScmStoreTreeAuxData>> = tree_entry.aux_data();
+        let resolver = resolver.clone();
+        let (error, aux) = match result {
+            Ok(Some(aux)) => (String::default(), SharedPtr::new(aux.into())),
+            Err(error) => (format!("{:?}", error), SharedPtr::null()),
+            Ok(None) => (
+                String::from("no aux data found for tree"),
+                SharedPtr::null(),
+            ),
+        };
+        unsafe { ffi::sapling_backingstore_get_tree_aux_batch_handler(resolver, idx, error, aux) };
     });
 }
 
