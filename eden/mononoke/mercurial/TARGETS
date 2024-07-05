@@ -81,6 +81,7 @@ rust_library(
         "fbsource//third-party/rust:thiserror",
         "fbsource//third-party/rust:tokio",
         "//common/rust/shed/cloned:cloned",
+        "//common/rust/shed/futures_ext:futures_ext",
         "//common/rust/shed/futures_stats:futures_stats",
         "//common/rust/shed/quickcheck_arbitrary_derive:quickcheck_arbitrary_derive",
         "//common/rust/shed/sorted_vector_map:sorted_vector_map",

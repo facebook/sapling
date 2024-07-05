@@ -25,6 +25,7 @@ use futures::stream;
 use futures::stream::BoxStream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
+use futures_ext::FbStreamExt;
 use manifest::AsyncManifest;
 use manifest::Entry;
 use mononoke_types::hash::Blake2;
@@ -337,6 +338,7 @@ impl ShardedHgAugmentedManifest {
             .and_then(
                 |(path, entry)| async move { Ok((MPathElement::from_smallvec(path)?, entry)) },
             )
+            .yield_periodically()
             .try_for_each(|(path, entry)| {
                 future::ready(Self::write_content_addressed_entry(
                     &path,
