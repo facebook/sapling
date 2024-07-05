@@ -16,6 +16,7 @@ cpp_library(
         "BlobMetadata.h",
         "EntryAttributeFlags.h",
         "GlobEntry.h",
+        "TreeMetadata.h",
     ],
     deps = [
         "//eden/common/utils:enum",
@@ -62,5 +63,6 @@ cpp_library(
         "BlobFwd.h",
         "BlobMetadataFwd.h",
         "TreeFwd.h",
+        "TreeMetadataFwd.h",
     ],
 )
