@@ -26,6 +26,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use edenapi_trait::SaplingRemoteApi;
+use edenapi_types::DirectoryMetadata;
 pub use edenapi_types::FileAuxData;
 pub use futures;
 use metalog::MetaLog;
@@ -294,6 +295,19 @@ pub trait TreeEntry: Send + 'static {
     fn file_aux_iter(&self) -> anyhow::Result<BoxIterator<anyhow::Result<(HgId, FileAuxData)>>> {
         Ok(Box::new(std::iter::empty()))
     }
+
+    /// Iterate through the child directory metadata if they are available.
+    /// For performance reasons, the iteration is on `HgId`.
+    fn directory_metadata_iter(
+        &self,
+    ) -> anyhow::Result<BoxIterator<anyhow::Result<(HgId, DirectoryMetadata)>>> {
+        Ok(Box::new(std::iter::empty()))
+    }
+
+    /// Get the directory metadata data of the tree.
+    fn metadata(&self) -> anyhow::Result<Option<DirectoryMetadata>> {
+        Ok(None)
+    }
 }
 
 /// The `TreeStore` is an abstraction layer for the tree manifest that decouples how or where the
@@ -355,6 +369,60 @@ pub trait TreeStore: KeyStore {
         Self: Sized,
     {
         self
+    }
+
+    /// Get directory metadata for a single tree.
+    /// Returns `None` if the information is unavailable locally.
+    fn get_local_directory_metadata(
+        &self,
+        path: &RepoPath,
+        id: HgId,
+    ) -> anyhow::Result<Option<DirectoryMetadata>> {
+        match self.get_local_tree(path, id)? {
+            None => Ok(None),
+            Some(e) => e.metadata(),
+        }
+    }
+
+    /// Get directory metadata for the given trees.
+    /// Contact remote server on demand. Might block.
+    fn get_directory_metadata_iter(
+        &self,
+        keys: Vec<Key>,
+        fetch_mode: FetchMode,
+    ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, DirectoryMetadata)>>> {
+        let iter = self
+            .get_tree_iter(keys, fetch_mode)?
+            .map(|entry| match entry {
+                Err(e) => Err(e),
+                Ok((key, data)) => {
+                    let metadata = data.metadata()?.ok_or_else(|| {
+                        anyhow::anyhow!(format!("directory metadata is missing for key: {}", key))
+                    })?;
+                    Ok((key, metadata))
+                }
+            });
+        Ok(Box::new(iter))
+    }
+
+    /// Get directory metadata for the given tree.
+    /// Contact remote server on demand. Might block.
+    /// When fetching data for many trees, use `get_directory_metadata_iter`
+    /// instead of calling this in a loop.
+    fn get_directory_metadata(
+        &self,
+        path: &RepoPath,
+        id: HgId,
+        fetch_mode: FetchMode,
+    ) -> anyhow::Result<DirectoryMetadata> {
+        let key = Key::new(path.to_owned(), id);
+        match self.get_tree_iter(vec![key.clone()], fetch_mode)?.next() {
+            None => Err(anyhow::format_err!("{}@{}: not found remotely", path, id)),
+            Some(Err(e)) => Err(e),
+            Some(Ok((_k, tree))) => tree.metadata()?.ok_or_else(|| {
+                anyhow::anyhow!(format!("directory metadata is missing for key: {}", key))
+            }),
+        }
     }
 }
 

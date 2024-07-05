@@ -747,6 +747,48 @@ impl TreeEntry for ScmStoreTreeEntry {
         })();
         Ok(maybe_iter.unwrap_or_else(|| Box::new(std::iter::empty())))
     }
+
+    fn directory_metadata_iter(
+        &self,
+    ) -> anyhow::Result<BoxIterator<anyhow::Result<(HgId, TreeAuxData)>>> {
+        let maybe_iter = (|| -> Option<BoxIterator<anyhow::Result<(HgId, TreeAuxData)>>> {
+            let entry = match &self.tree {
+                LazyTree::SaplingRemoteApi(entry) => entry,
+                // TODO: We should also support fetching tree metadata from local cache
+                _ => return None,
+            };
+            let children = entry.children.as_ref()?;
+            let iter = children.iter().filter_map(|child| {
+                let child = child.as_ref().ok()?;
+                let directory_entry = match child {
+                    TreeChildEntry::Directory(v) => v,
+                    _ => return None,
+                };
+                let directory_metadata = directory_entry
+                    .directory_metadata
+                    .ok_or_else(|| {
+                        anyhow::anyhow!(format!(
+                            "directory metadata is missing for key: {}",
+                            directory_entry.key
+                        ))
+                    })
+                    .ok()?;
+                Some(Ok((directory_entry.key.hgid, directory_metadata)))
+            });
+            Some(Box::new(iter))
+        })();
+        Ok(maybe_iter.unwrap_or_else(|| Box::new(std::iter::empty())))
+    }
+
+    /// Get the directory aux data of the tree.
+    fn metadata(&self) -> anyhow::Result<Option<TreeAuxData>> {
+        let entry = match &self.tree {
+            LazyTree::SaplingRemoteApi(entry) => entry,
+            // TODO: We should also support fetching tree metadata from local cache
+            _ => return Ok(None),
+        };
+        Ok(entry.directory_metadata)
+    }
 }
 
 impl storemodel::TreeStore for TreeStore {
