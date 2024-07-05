@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::borrow::Cow;
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use anyhow::anyhow;
@@ -33,6 +35,8 @@ use mercurial_types::HgManifestId;
 use mercurial_types::ShardedHgAugmentedManifest;
 use mononoke_types::hash::Blake3;
 use mononoke_types::sharded_map_v2::ShardedMapV2Node;
+use mononoke_types::ContentId;
+use mononoke_types::ContentMetadataV2;
 use mononoke_types::MPathElement;
 use mononoke_types::TrieMap;
 
@@ -42,6 +46,7 @@ pub async fn derive_from_hg_manifest_and_parents(
     blobstore: &(impl Blobstore + 'static),
     hg_manifest_id: HgManifestId,
     parents: Vec<HgAugmentedManifestId>,
+    content_metadata_cache: &HashMap<ContentId, ContentMetadataV2>,
 ) -> Result<HgAugmentedManifestId> {
     let parents = parents.into_iter().map(Some).collect::<Vec<_>>();
     let (_, root, _, _) = bounded_traversal::bounded_traversal(
@@ -231,13 +236,10 @@ pub async fn derive_from_hg_manifest_and_parents(
                     .map(|(elem, file_type, filenode_id)| {
                         anyhow::Ok(async move {
                             let filenode = filenode_id.load(ctx, blobstore).await?;
-                            let metadata = filestore::get_metadata(
-                                blobstore,
-                                ctx,
-                                &FetchKey::Canonical(filenode.content_id()),
-                            )
-                            .await?
-                            .ok_or_else(|| anyhow!("Missing metadata for {}", filenode_id))?;
+                            let content_id = filenode.content_id();
+                            let metadata =
+                                get_metadata(ctx, blobstore, content_metadata_cache, content_id)
+                                    .await?;
                             Ok((
                                 elem,
                                 HgAugmentedManifestEntry::FileNode(HgAugmentedFileLeafNode {
@@ -315,6 +317,24 @@ pub async fn derive_from_hg_manifest_and_parents(
     )
     .await?;
     Ok(root)
+}
+
+async fn get_metadata<'a>(
+    ctx: &CoreContext,
+    blobstore: &impl Blobstore,
+    content_metadata_cache: &'a HashMap<ContentId, ContentMetadataV2>,
+    content_id: ContentId,
+) -> Result<Cow<'a, ContentMetadataV2>> {
+    Ok(match content_metadata_cache.get(&content_id) {
+        Some(metadata) => Cow::Borrowed(metadata),
+        None => {
+            let metadata =
+                filestore::get_metadata(blobstore, ctx, &FetchKey::Canonical(content_id))
+                    .await?
+                    .ok_or_else(|| anyhow!("Missing metadata for {}", content_id))?;
+            Cow::Owned(metadata)
+        }
+    })
 }
 
 pub async fn derive_from_full_hg_manifest(

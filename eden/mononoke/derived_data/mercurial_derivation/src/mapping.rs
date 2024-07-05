@@ -6,6 +6,7 @@
  */
 
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::sync::Arc;
 
 use anyhow::anyhow;
@@ -13,6 +14,7 @@ use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
+use blobstore::Blobstore;
 use blobstore::BlobstoreBytes;
 use blobstore::BlobstoreGetData;
 use blobstore::StoreLoadable;
@@ -24,11 +26,12 @@ use derived_data::batch::FileConflicts;
 use derived_data::batch::SplitOptions;
 use derived_data::batch::DEFAULT_STACK_FILE_CHANGES_LIMIT;
 use derived_data::impl_bonsai_derived_via_manager;
+use derived_data::prefetch_content_metadata;
 use derived_data_manager::dependencies;
 use derived_data_manager::BonsaiDerivable;
 use derived_data_manager::DerivableType;
 use derived_data_manager::DerivationContext;
-use futures::future::try_join_all;
+use futures::future;
 use mercurial_types::HgAugmentedManifestId;
 use mercurial_types::HgChangesetId;
 use mononoke_types::BonsaiChangeset;
@@ -113,7 +116,7 @@ impl BonsaiDerivable for MappedHgChangesetId {
 
         let mut bonsais = bonsais;
         for stack in linear_stacks {
-            let derived_parents = try_join_all(
+            let derived_parents = future::try_join_all(
                 stack
                     .parents
                     .into_iter()
@@ -299,23 +302,35 @@ impl BonsaiDerivable for RootHgAugmentedManifestId {
         bonsai: BonsaiChangeset,
         parents: Vec<Self>,
     ) -> Result<Self> {
-        let hg_changeset_id = derivation_ctx
-            .fetch_dependency::<MappedHgChangesetId>(ctx, bonsai.get_changeset_id())
-            .await?
-            .hg_changeset_id();
-        let hg_manifest_id = hg_changeset_id
-            .load(ctx, derivation_ctx.blobstore())
-            .await?
-            .manifestid();
+        let blobstore = derivation_ctx.blobstore();
+
+        let hg_manifest_id_fut = async {
+            let hg_changeset_id = derivation_ctx
+                .fetch_dependency::<MappedHgChangesetId>(ctx, bonsai.get_changeset_id())
+                .await?
+                .hg_changeset_id();
+            Ok(hg_changeset_id.load(ctx, blobstore).await?.manifestid())
+        };
+
+        let content_ids = bonsai
+            .file_changes()
+            .filter_map(|(_path, change)| change.simplify().map(|change| change.content_id()))
+            .collect::<HashSet<_>>();
+        let content_metadata_fut = prefetch_content_metadata(ctx, blobstore, content_ids);
+
+        let (hg_manifest_id, content_metadata) =
+            future::try_join(hg_manifest_id_fut, content_metadata_fut).await?;
+
         let parents = parents
             .into_iter()
             .map(|parent| parent.hg_augmented_manifest_id())
             .collect();
         let root = crate::derive_hg_augmented_manifest::derive_from_hg_manifest_and_parents(
             ctx,
-            derivation_ctx.blobstore(),
+            blobstore,
             hg_manifest_id,
             parents,
+            &content_metadata,
         )
         .await?;
         Ok(Self(root))

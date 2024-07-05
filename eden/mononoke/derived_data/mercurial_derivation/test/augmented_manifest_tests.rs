@@ -53,6 +53,7 @@ async fn get_manifests(
         repo.repo_blobstore(),
         hg_id,
         parents,
+        &Default::default(),
     )
     .await?;
     let aug = aug_id.load(ctx, repo.repo_blobstore()).await?;

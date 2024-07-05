@@ -13,7 +13,7 @@ use blame::fetch_content_for_blame;
 use blobstore::Loadable;
 use cloned::cloned;
 use context::CoreContext;
-use fsnodes::prefetch_content_metadata;
+use derived_data::prefetch_content_metadata;
 use futures::future;
 use futures::future::try_join3;
 use futures::future::try_join4;

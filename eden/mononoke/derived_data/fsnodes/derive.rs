@@ -20,10 +20,9 @@ use blobstore::Loadable;
 use borrowed::borrowed;
 use cloned::cloned;
 use context::CoreContext;
+use derived_data::prefetch_content_metadata;
 use derived_data_manager::DerivationContext;
 use digest::Digest;
-use filestore::get_metadata;
-use filestore::FetchKey;
 use futures::channel::mpsc;
 use futures::future::BoxFuture;
 use futures::future::FutureExt;
@@ -79,7 +78,7 @@ pub(crate) async fn derive_fsnodes_stack(
                     content_id_and_file_type.map(|(content_id, _file_type)| content_id)
                 })
         })
-        .collect();
+        .collect::<HashSet<_>>();
 
     let prefetched_content_metadata =
         Arc::new(prefetch_content_metadata(ctx, &blobstore, content_ids).await?);
@@ -137,7 +136,7 @@ pub(crate) async fn derive_fsnode(
         .filter_map(|(_mpath, content_id_and_file_type)| {
             content_id_and_file_type.map(|(content_id, _file_type)| content_id)
         })
-        .collect();
+        .collect::<HashSet<_>>();
 
     let prefetched_content_metadata =
         Arc::new(prefetch_content_metadata(ctx, &blobstore, content_ids).await?);
@@ -184,28 +183,6 @@ pub(crate) async fn derive_fsnode(
             Ok(tree_id)
         }
     }
-}
-
-// Prefetch metadata for all content IDs introduced by a changeset.
-pub async fn prefetch_content_metadata(
-    ctx: &CoreContext,
-    blobstore: &impl Blobstore,
-    content_ids: HashSet<ContentId>,
-) -> Result<HashMap<ContentId, ContentMetadataV2>> {
-    content_ids
-        .into_iter()
-        .map({
-            move |content_id| async move {
-                match get_metadata(blobstore, ctx, &FetchKey::Canonical(content_id)).await? {
-                    Some(metadata) => Ok(Some((content_id, metadata))),
-                    None => Ok(None),
-                }
-            }
-        })
-        .collect::<FuturesUnordered<_>>()
-        .try_filter_map(|maybe_metadata| async move { Ok(maybe_metadata) })
-        .try_collect()
-        .await
 }
 
 /// Collect all the subentries for a new fsnode, re-using entries the parent

@@ -52,11 +52,21 @@
 //! let values: Vec<DerivedDataType> = manager.fetch_derived_batch(ctx, cs_ids, None).await?;
 //! ```
 
+use std::collections::HashMap;
+
 use anyhow::Error;
+use anyhow::Result;
 use async_trait::async_trait;
+use blobstore::Blobstore;
 use context::CoreContext;
 use context::SessionClass;
+use filestore::FetchKey;
+use futures::stream;
+use futures::stream::StreamExt;
+use futures::stream::TryStreamExt;
 use mononoke_types::ChangesetId;
+use mononoke_types::ContentId;
+use mononoke_types::ContentMetadataV2;
 use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentityRef;
 
@@ -185,4 +195,29 @@ pub fn override_ctx(mut ctx: CoreContext, repo: impl RepoIdentityRef) -> CoreCon
     } else {
         ctx
     }
+}
+
+/// Prefetch content metadata for a set of content ids.
+pub async fn prefetch_content_metadata(
+    ctx: &CoreContext,
+    blobstore: &impl Blobstore,
+    content_ids: impl IntoIterator<Item = ContentId>,
+) -> Result<HashMap<ContentId, ContentMetadataV2>> {
+    stream::iter(content_ids)
+        .map({
+            move |content_id| {
+                Ok(async move {
+                    match filestore::get_metadata(blobstore, ctx, &FetchKey::Canonical(content_id))
+                        .await?
+                    {
+                        Some(metadata) => Ok(Some((content_id, metadata))),
+                        None => Ok(None),
+                    }
+                })
+            }
+        })
+        .try_buffered(100)
+        .try_filter_map(|maybe_metadata| async move { Ok(maybe_metadata) })
+        .try_collect()
+        .await
 }
