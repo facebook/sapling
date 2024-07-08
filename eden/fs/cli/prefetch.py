@@ -10,7 +10,7 @@ import json
 import os
 import sys
 from pathlib import Path
-from typing import List, NamedTuple
+from typing import List, NamedTuple, Optional
 
 from facebook.eden.ttypes import GlobParams, PrefetchParams
 from thrift.Thrift import TApplicationException
@@ -65,6 +65,31 @@ def _add_common_arguments(parser: argparse.ArgumentParser) -> None:
         default=False,
         action="store_true",
     )
+
+
+def parseDtype(dtype: Optional[int]) -> str:
+    match dtype:
+        case None:
+            return "Unrequested"
+        case 0:
+            return "Unknown"
+        case 1:
+            return "Fifo"
+        case 2:
+            return "Char"
+        case 4:
+            return "Dir"
+        case 6:
+            return "Block"
+        case 8:
+            return "Regular"
+        case 10:
+            return "Symlink"
+        case 12:
+            return "Socket"
+        case 14:
+            return "Whiteout"
+    return "Unknown"
 
 
 class CheckoutAndPatterns(NamedTuple):
@@ -142,6 +167,12 @@ class GlobCmd(Subcmd):
             default=False,
             action="store_true",
         )
+        parser.add_argument(
+            "--dtype",
+            help="Display the dtype of the matching files.",
+            default=False,
+            action="store_true",
+        )
 
     def run(self, args: argparse.Namespace) -> int:
         checkout_and_patterns = _find_checkout_and_patterns(args)
@@ -154,6 +185,7 @@ class GlobCmd(Subcmd):
                     includeDotfiles=args.include_dot_files,
                     prefetchFiles=False,
                     suppressFileList=False,
+                    wantDtype=args.dtype,
                     searchRoot=os.fsencode(checkout_and_patterns.rel_path),
                     listOnlyFiles=args.list_only_files,
                 )
@@ -165,6 +197,7 @@ class GlobCmd(Subcmd):
                             "matching_files": [
                                 os.fsdecode(name) for name in result.matchingFiles
                             ],
+                            "dtype": [parseDtype(dtype) for dtype in result.dtypes],
                             "origin_hashes": [
                                 ohash.hex() for ohash in result.originHashes
                             ],
@@ -172,12 +205,31 @@ class GlobCmd(Subcmd):
                     )
                 )
             else:
-                if args.list_origin_hash:
-                    for name, ohash in zip(result.matchingFiles, result.originHashes):
-                        _println(f"{os.fsdecode(name)}@{ohash.hex()}")
+                # Name and origin hashes should be the same size.
+                # If dtype is set then it should also be the same size, otherwise 0
+                if len(result.matchingFiles) != len(result.originHashes):
+                    _println("Error globbing files: mismatched results")
+                    return 1
+                if args.dtype:
+                    if len(result.dtypes) != len(result.matchingFiles):
+                        _println("Error globbing files: mismatched results")
+                        return 1
+                    entries = zip(
+                        result.matchingFiles, result.dtypes, result.originHashes
+                    )
                 else:
-                    for name in result.matchingFiles:
-                        _println(os.fsdecode(name))
+                    entries = zip(
+                        result.matchingFiles,
+                        [None] * len(result.matchingFiles),
+                        result.originHashes,
+                    )
+                for name, dtype, ohash in entries:
+                    baseString = os.fsdecode(name)
+                    if args.list_origin_hash:
+                        baseString += f"@{ohash.hex()}"
+                    if args.dtype:
+                        baseString += f" {parseDtype(dtype)}"
+                    _println(os.fsdecode(baseString))
                 if args.verbose:
                     _println(
                         f"Num matching files: {len(result.matchingFiles)}\n"
