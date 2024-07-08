@@ -15,6 +15,7 @@ use changesets::Changesets;
 use commit_graph::CommitGraph;
 use context::CoreContext;
 use derived_data_remote::DerivationClient;
+use ephemeral_blobstore::BubbleId;
 use filenodes::Filenodes;
 use metaconfig_types::DerivedDataTypesConfig;
 use mononoke_types::ChangesetId;
@@ -44,6 +45,7 @@ pub struct DerivedDataManager {
 pub struct DerivedDataManagerInner {
     repo_id: RepositoryId,
     repo_name: String,
+    bubble_id: Option<BubbleId>,
     changesets: Arc<dyn Changesets>,
     commit_graph: Arc<CommitGraph>,
     repo_blobstore: RepoBlobstore,
@@ -102,6 +104,7 @@ impl DerivedDataManager {
             inner: Arc::new(DerivedDataManagerInner {
                 repo_id,
                 repo_name,
+                bubble_id: None,
                 changesets,
                 commit_graph,
                 repo_blobstore: repo_blobstore.clone(),
@@ -216,6 +219,10 @@ impl DerivedDataManager {
 
     pub fn repo_name(&self) -> &str {
         self.inner.repo_name.as_str()
+    }
+
+    pub fn bubble_id(&self) -> Option<BubbleId> {
+        self.inner.bubble_id
     }
 
     pub fn changesets(&self) -> &dyn Changesets {

@@ -376,6 +376,7 @@ impl DerivedDataManager {
                     type_name: Derivable::NAME.to_string(),
                 },
                 changeset_id: csid.as_ref().to_vec(),
+                bubble_id: self.bubble_id().map(|bubble_id| bubble_id.into()),
                 config_name: self.config_name(),
                 derivation_type: DerivationType::derive_underived(DeriveUnderived {}),
             };

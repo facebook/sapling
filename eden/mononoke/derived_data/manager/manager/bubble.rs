@@ -65,6 +65,7 @@ impl DerivedDataManager {
                 secondary: Some(SecondaryManagerData {
                     manager: Self {
                         inner: Arc::new(DerivedDataManagerInner {
+                            bubble_id: Some(bubble.bubble_id()),
                             changesets: changesets.clone(),
                             commit_graph,
                             repo_blobstore: wrapped_blobstore,

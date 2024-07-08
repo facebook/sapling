@@ -46,6 +46,7 @@ struct DeriveRequest {
   3: binary changeset_id;
   4: string config_name;
   5: DerivationType derivation_type;
+  6: optional i64 bubble_id;
 } (rust.exhaustive)
 
 struct DeriveResponse {

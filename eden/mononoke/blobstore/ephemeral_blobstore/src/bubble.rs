@@ -107,6 +107,12 @@ impl From<BubbleId> for NonZeroU64 {
     }
 }
 
+impl From<BubbleId> for i64 {
+    fn from(bubble_id: BubbleId) -> Self {
+        bubble_id.0.get() as i64
+    }
+}
+
 impl ConvIr<BubbleId> for BubbleId {
     fn new(v: Value) -> Result<Self, FromValueError> {
         let from_u64 = |id, v| match NonZeroU64::new(id) {
