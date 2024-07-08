@@ -616,6 +616,9 @@ edenapi.cacerts=$TEST_CERTDIR/root-ca.crt
 
 [checkout]
 use-rust=false
+
+[workingcopy]
+rust-checkout=false
 EOF
 }
 

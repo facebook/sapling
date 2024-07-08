@@ -11,6 +11,7 @@
 
   $ eagerepo
   $ setconfig devel.segmented-changelog-rev-compat=true
+  $ setconfig workingcopy.rust-checkout=true
   $ cat >> $HGRCPATH << 'EOF'
   > [extensions]
   > amend=

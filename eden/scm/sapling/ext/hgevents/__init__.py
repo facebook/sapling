@@ -145,8 +145,17 @@ def wrapgoto(
     orig,
     repo,
     node,
+    force=False,
+    updatecheck=None,
     **kwargs,
 ):
+    if repo.ui.configbool("workingcopy", "rust-checkout") and (
+        force or updatecheck != "none"
+    ):
+        # Rust handles "hg.update" events, so skip "hg.update" below if we are
+        # going to be using Rust.
+        return orig(repo, node, force=force, updatecheck=updatecheck, **kwargs)
+
     distance = 0
     oldnode = repo["."].node()
     newnode = repo[node].node()
@@ -160,11 +169,7 @@ def wrapgoto(
         distance=distance,
         metadata={"merge": False},
     ):
-        return orig(
-            repo,
-            node,
-            **kwargs,
-        )
+        return orig(repo, node, force=force, updatecheck=updatecheck, **kwargs)
 
 
 def _xmerge(origfunc, repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):

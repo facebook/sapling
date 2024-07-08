@@ -1910,9 +1910,6 @@ def goto(
     labels=None,
     updatecheck=None,
 ):
-    _logupdatedistance(repo.ui, repo, node)
-    _prefetchlazychildren(repo, node)
-
     if not force:
         # TODO: remove the default once all callers that pass force=False pass
         # a value for updatecheck. We may want to allow updatecheck='abort' to
@@ -1920,6 +1917,25 @@ def goto(
         if updatecheck is None:
             updatecheck = "none"
         assert updatecheck in ("none", "noconflict")
+
+    if repo.ui.configbool("workingcopy", "rust-checkout") and (
+        force or updatecheck != "none"
+    ):
+        target = repo[node]
+        ret = repo._rsrepo.goto(
+            ctx=repo.ui.rustcontext(),
+            target=target.node(),
+            bookmark={"action": "none"},
+            mode="revert_conflicts" if force else "abort_if_conflicts",
+            report_mode="quiet",
+        )
+        if git.isgitformat(repo):
+            git.submodulecheckout(target, force=force)
+        repo.setparents(target.node())
+        return ret
+
+    _logupdatedistance(repo.ui, repo, node)
+    _prefetchlazychildren(repo, node)
 
     if (
         edenfs.requirement in repo.requirements
