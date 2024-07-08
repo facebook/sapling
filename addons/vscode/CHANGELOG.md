@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.53
+
+### Jul 8 2024
+
+- Handle acting on optimistic commits without errors
+- Improve how long arguments to commands are rendered
+
 ## 0.1.52
 
 ### Jun 24 2024
