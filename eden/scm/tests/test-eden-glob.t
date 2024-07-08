@@ -19,8 +19,8 @@ test eden glob
 
   $ eden debug logging eden/fs/service=DBG4 > /dev/null
   $ eden glob '**/*.txt' --list-only-files
-  foo.txt
   baz.txt
+  foo.txt
   $ mkdir depth1
   $ cd depth1
 # return nothing due to not being in repo root
@@ -34,12 +34,12 @@ test eden glob
   throw.dot
   $ cd ../..
   $ eden glob **/*.dot --include-dot-files --list-only-files
-  throw.dot
+  .dps/very.dot
   .more.dot
   .stop.dot
-  .dps/very.dot
-  slowly/.and.by.slow.dot
   i/.mean/slow.dot
+  slowly/.and.by.slow.dot
+  throw.dot
   $ eden glob **/*.local --list-only-files
   $ touch local.local
   $ eden glob **/*.local --list-only-files

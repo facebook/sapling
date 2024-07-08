@@ -3508,6 +3508,12 @@ EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
                     .thenValue([wantDtype](auto&& globEntries) {
                       XLOG(DBG4) << "Building Glob";
                       auto glob = std::make_unique<Glob>();
+                      std::sort(
+                          globEntries.begin(),
+                          globEntries.end(),
+                          [](GlobEntry a, GlobEntry b) {
+                            return a.file < b.file;
+                          });
                       for (GlobEntry& globEntry : globEntries) {
                         glob->matchingFiles_ref().value().emplace_back(
                             globEntry.file);

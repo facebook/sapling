@@ -79,7 +79,10 @@ def get_hg_watchman_run_tests_excluded():
     return "test_(%s)" % "|".join(excluded)
 
 def get_hg_edenfs_watchman_run_tests_included():
-    included = []
+    included = [
+        "eden_watchman_edenapi_glob_t",
+        "eden_watchman_noedenapi_glob_t",
+    ]
     return "test_(%s)" % "|".join(included)
 
 def get_blocklist():
