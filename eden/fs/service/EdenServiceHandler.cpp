@@ -3276,10 +3276,22 @@ EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
               .thenValue([revisions = params->revisions_ref().value(),
                           mountHandle,
                           suffixGlobs = std::move(suffixGlobs),
+                          serverState = server_->getServerState(),
+                          includeDotfiles = *params->includeDotfiles(),
                           context = context.copy()](auto&&) mutable {
                 auto& store = mountHandle.getObjectStore();
-                auto rootId =
-                    mountHandle.getEdenMountPtr()->getCheckedOutRootId();
+                const auto& edenMount = mountHandle.getEdenMountPtr();
+                const auto& rootInode = mountHandle.getRootInode();
+
+                if (revisions.empty()) {
+                  return getLocalGlobResults(
+                      edenMount,
+                      serverState,
+                      includeDotfiles,
+                      suffixGlobs,
+                      rootInode,
+                      context);
+                }
                 std::vector<ImmediateFuture<BackingStore::GetGlobFilesResult>>
                     globFilesResultFutures;
                 for (auto& id : revisions) {
@@ -3289,18 +3301,13 @@ EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
                   globFilesResultFutures.push_back(store.getGlobFiles(
                       store.parseRootId(id), suffixGlobs, context));
                 }
-                if (revisions.empty()) {
-                  // Use current commit hash
-                  XLOG(DBG3) << "No commit hash in input, using current hash";
-                  globFilesResultFutures.push_back(store.getGlobFiles(
-                      rootId, std::move(suffixGlobs), context));
-                }
                 return collectAllSafe(std::move(globFilesResultFutures));
               });
 
       globFilesOrErrorFuture =
           std::move(combinedFuture)
               .thenValue([mountHandle,
+                          rootInode = mountHandle.getRootInode(),
                           wantDtype = params->wantDtype_ref().value(),
                           includeDotfiles =
                               params->includeDotfiles_ref().value(),
@@ -3339,37 +3346,70 @@ EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
                     }
 
                     if (wantDtype) {
-                      // TODO(T192408118) get the root tree a single time per
-                      // glob instead of per-entry
-                      globEntryFuts.emplace_back(
-                          edenMount->getObjectStore()
-                              ->getRootTree(
-                                  std::move(glob.rootId), context.copy())
-                              .thenValue(
-                                  [entry, edenMount, context = context.copy()](
-                                      auto&& tree) mutable {
-                                    auto stringPiece =
-                                        folly::StringPiece{entry};
-                                    return ::facebook::eden::getTreeOrTreeEntry(
-                                        std::move(tree.tree),
-                                        RelativePath{stringPiece},
-                                        edenMount->getObjectStore(),
-                                        std::move(context));
-                                  })
-                              .thenValue([entry, originHash](
-                                             auto&& treeEntry) mutable {
-                                if (TreeEntry* treeEntryPtr =
-                                        std::get_if<TreeEntry>(&treeEntry)) {
-                                  auto dtype = treeEntryPtr->getDtype();
+                      ImmediateFuture<GlobEntry> entryFuture{std::in_place};
+                      if (glob.isLocal) {
+                        entryFuture =
+                            rootInode
+                                ->getChildRecursive(
+                                    RelativePathPiece{entry}, context)
+                                .thenValue([entry, originHash](
+                                               InodePtr child) mutable {
                                   return ImmediateFuture<GlobEntry>{GlobEntry{
                                       std::move(entry),
-                                      static_cast<OsDtype>(dtype),
+                                      static_cast<OsDtype>(child->getType()),
                                       std::move(originHash)}};
-                                } else {
-                                  EDEN_BUG()
-                                      << "Received a Tree when expecting TreeEntry for path "
-                                      << entry;
-                                }
+                                });
+                      } else {
+                        // TODO(T192408118) get the root tree a single time per
+                        // glob instead of per-entry
+                        entryFuture =
+                            edenMount->getObjectStore()
+                                ->getRootTree(
+                                    std::move(glob.rootId), context.copy())
+                                .thenValue([entry,
+                                            edenMount,
+                                            context = context.copy()](
+                                               auto&& tree) mutable {
+                                  auto stringPiece = folly::StringPiece{entry};
+                                  return ::facebook::eden::getTreeOrTreeEntry(
+                                      std::move(tree.tree),
+                                      RelativePath{stringPiece},
+                                      edenMount->getObjectStore(),
+                                      std::move(context));
+                                })
+                                .thenValue([entry, originHash](
+                                               auto&& treeEntry) mutable {
+                                  if (TreeEntry* treeEntryPtr =
+                                          std::get_if<TreeEntry>(&treeEntry)) {
+                                    auto dtype = treeEntryPtr->getDtype();
+                                    return ImmediateFuture<GlobEntry>{GlobEntry{
+                                        std::move(entry),
+                                        static_cast<OsDtype>(dtype),
+                                        std::move(originHash)}};
+                                  } else {
+                                    EDEN_BUG()
+                                        << "Received a Tree when expecting TreeEntry for path "
+                                        << entry;
+                                  }
+                                });
+                      }
+                      globEntryFuts.emplace_back(
+                          std::move(entryFuture)
+                              .thenError([entry,
+                                          originHash,
+                                          isLocal = glob.isLocal](
+                                             const folly::exception_wrapper&
+                                                 ex) mutable {
+                                XLOGF(
+                                    ERR,
+                                    "Error for getting file dtypes for {} file {}: {}",
+                                    isLocal ? "local" : "remote",
+                                    entry,
+                                    ex.what());
+                                return ImmediateFuture<GlobEntry>{GlobEntry{
+                                    std::move(entry),
+                                    DT_UNKNOWN,
+                                    std::move(originHash)}};
                               }));
                     } else {
                       globEntryFuts.emplace_back(ImmediateFuture<GlobEntry>{
@@ -3380,6 +3420,7 @@ EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
                 }
                 return collectAllSafe(std::move(globEntryFuts))
                     .thenValue([wantDtype](auto&& globEntries) {
+                      XLOG(DBG4) << "Building Glob";
                       auto glob = std::make_unique<Glob>();
                       for (GlobEntry& globEntry : globEntries) {
                         glob->matchingFiles_ref().value().emplace_back(
@@ -3401,30 +3442,33 @@ EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
                         glob->originHashes_ref().value().emplace_back(
                             globEntry.originHash);
                       }
-                      return std::move(glob);
+                      return glob;
                     });
               });
     }
   }
-  auto globFut = std::move(globFilesOrErrorFuture)
-                     .thenError([mountHandle,
-                                 serverState = server_->getServerState(),
-                                 globs = std::move(*params->globs()),
-                                 globber = std::move(globber),
-                                 &context](auto&&) mutable {
-                       // Fallback to local if
-                       // - No suffixes given, or the config is diabled
-                       // and globFilesOrErrorFuture is the default value
-                       // - An error was encountered while using the
-                       // SaplingRemoteAPI method
-                       XLOG(DBG3) << "Using local globFiles";
-                       // TODO: Insert ODS log for globs here
-                       return globber.glob(
-                           mountHandle.getEdenMountPtr(),
-                           serverState,
-                           std::move(globs),
-                           context);
-                     });
+  auto globFut =
+      std::move(globFilesOrErrorFuture)
+          .thenError([mountHandle,
+                      serverState = server_->getServerState(),
+                      globs = std::move(*params->globs()),
+                      globber = std::move(globber),
+                      &context](const folly::exception_wrapper& ex) mutable {
+            // Fallback to local if
+            // - No suffixes given, or the config is diabled
+            // and globFilesOrErrorFuture is the default value
+            // - An error was encountered while using the
+            // SaplingRemoteAPI method
+            XLOG(DBG3) << "Encountered error when evaluating globFiles: "
+                       << ex.what();
+
+            // TODO: Insert ODS log for globs here
+            return globber.glob(
+                mountHandle.getEdenMountPtr(),
+                serverState,
+                std::move(globs),
+                context);
+          });
 
   globFut = std::move(globFut).ensure(
       [mountHandle,

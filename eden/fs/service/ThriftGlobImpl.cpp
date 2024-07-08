@@ -11,10 +11,13 @@
 #include <folly/logging/xlog.h>
 #include <memory>
 #include "eden/common/utils/UnboundedQueueExecutor.h"
+#include "eden/fs/config/EdenConfig.h"
+#include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/GlobNode.h"
 #include "eden/fs/inodes/ServerState.h"
 #include "eden/fs/inodes/TreeInode.h"
+#include "eden/fs/model/LocalFiles.h"
 #include "eden/fs/model/RootId.h"
 #include "eden/fs/service/gen-cpp2/eden_types.h"
 #include "eden/fs/store/ObjectFetchContext.h"
@@ -45,6 +48,92 @@ void compileGlobs(const std::vector<std::string>& globs, GlobNodeImpl& root) {
   } catch (const std::system_error& exc) {
     throw newEdenError(exc);
   }
+}
+
+ImmediateFuture<std::unique_ptr<LocalFiles>> computeLocalFiles(
+    const std::shared_ptr<EdenMount>& edenMount,
+    const std::shared_ptr<ServerState>& serverState,
+    bool includeDotfiles,
+    const RootId& rootId,
+    const TreeInodePtr& rootInode,
+    const std::vector<std::string>& suffixGlobs,
+    const ObjectFetchContextPtr& context) {
+  auto enforceParents = serverState->getReloadableConfig()
+                            ->getEdenConfig()
+                            ->enforceParents.getValue();
+  bool caseSensitive =
+      serverState->getEdenConfig()->globUseMountCaseSensitivity.getValue();
+
+  return edenMount
+      ->diff(
+          rootInode,
+          rootId,
+          // Default uncancellable token
+          folly::CancellationToken(),
+          context,
+          /*listIgnored=*/true,
+          enforceParents)
+      .thenValue([rootId,
+                  edenMount,
+                  caseSensitive,
+                  suffixGlobs,
+                  includeDotfiles](auto&& status) {
+        if (!status->errors_ref().value().empty()) {
+          XLOG(DBG4) << "Error getting local changes";
+          throw newEdenError(
+              EINVAL,
+              EdenErrorType::POSIX_ERROR,
+              "unable to look up local files");
+        }
+        std::vector<GlobMatcher> globMatchers{};
+        GlobOptions options = includeDotfiles ? GlobOptions::DEFAULT
+                                              : GlobOptions::IGNORE_DOTFILES;
+        if (caseSensitive) {
+          if (edenMount->getCheckoutConfig()->getCaseSensitive() ==
+              CaseSensitivity::Insensitive) {
+            options |= GlobOptions::CASE_INSENSITIVE;
+          }
+        }
+        for (auto& glob : suffixGlobs) {
+          auto expectGlobMatcher = GlobMatcher::create("**/*" + glob, options);
+          if (expectGlobMatcher.hasValue()) {
+            globMatchers.push_back(expectGlobMatcher.value());
+          } else {
+            XLOG(ERR) << "Invalid glob: " << glob;
+          }
+        }
+
+        std::unique_ptr<LocalFiles> localFiles = std::make_unique<LocalFiles>();
+        for (auto const& [pathString, scmFileStatus] :
+             status->entries_ref().value()) {
+          if (scmFileStatus == ScmFileStatus::ADDED) {
+            for (auto& matcher : globMatchers) {
+              if (matcher.match(pathString)) {
+                localFiles->addedFiles.insert(pathString);
+              }
+            }
+            // Globbing is not applied on non-added files
+            // since they'll use the globbed results from
+            // the server vs a set which should be faster
+            // than globbing every change
+          } else if (scmFileStatus == ScmFileStatus::REMOVED) {
+            // Don't return files that have been deleted
+            // locally
+            localFiles->removedFiles.insert(pathString);
+          } else if (scmFileStatus == ScmFileStatus::MODIFIED) {
+            for (auto& matcher : globMatchers) {
+              if (matcher.match(pathString)) {
+                localFiles->modifiedFiles.insert(pathString);
+              }
+            }
+          } else if (scmFileStatus == ScmFileStatus::IGNORED) {
+            // Not doing anything with these for now, just putting
+            // it here for completeness
+            localFiles->ignoredFiles.insert(pathString);
+          }
+        }
+        return localFiles;
+      });
 }
 } // namespace
 
@@ -268,6 +357,61 @@ ImmediateFuture<std::unique_ptr<Glob>> ThriftGlobImpl::glob(
               });
 
   return prefetchFuture;
+}
+
+ImmediateFuture<std::vector<BackingStore::GetGlobFilesResult>>
+getLocalGlobResults(
+    const std::shared_ptr<EdenMount>& edenMount,
+    const std::shared_ptr<ServerState>& serverState,
+    bool includeDotfiles,
+    const std::vector<std::string>& suffixGlobs,
+    const TreeInodePtr& rootInode,
+    const ObjectFetchContextPtr& context) {
+  // Use current commit hash
+  XLOG(DBG3) << "No commit hash in input, using current hash";
+  auto rootId = edenMount->getCheckedOutRootId();
+  auto& store = edenMount->getObjectStore();
+  return store->getGlobFiles(rootId, suffixGlobs, context)
+      .thenValue([edenMount,
+                  serverState,
+                  includeDotfiles,
+                  rootId,
+                  rootInode,
+                  suffixGlobs,
+                  context = context.copy()](auto&& remoteGlobFiles) mutable {
+        return computeLocalFiles(
+                   edenMount,
+                   serverState,
+                   includeDotfiles,
+                   rootId,
+                   rootInode,
+                   suffixGlobs,
+                   context)
+            .thenValue([remoteGlobFiles = std::move(remoteGlobFiles),
+                        rootId](std::unique_ptr<LocalFiles>&& localFiles) {
+              BackingStore::GetGlobFilesResult filteredRemoteGlobFiles;
+              filteredRemoteGlobFiles.rootId = remoteGlobFiles.rootId;
+              for (auto& entry : remoteGlobFiles.globFiles) {
+                if (localFiles->removedFiles.count(entry) == 1 ||
+                    localFiles->addedFiles.count(entry) == 1 ||
+                    localFiles->modifiedFiles.count(entry) == 1) {
+                  continue;
+                }
+                filteredRemoteGlobFiles.globFiles.emplace_back(entry);
+              }
+              BackingStore::GetGlobFilesResult localGlobFiles;
+              localGlobFiles.isLocal = true;
+              localGlobFiles.rootId = rootId;
+              for (auto& entry : localFiles->addedFiles) {
+                localGlobFiles.globFiles.emplace_back(entry);
+              }
+              for (auto& entry : localFiles->modifiedFiles) {
+                localGlobFiles.globFiles.emplace_back(entry);
+              }
+              return std::vector<BackingStore::GetGlobFilesResult>{
+                  filteredRemoteGlobFiles, localGlobFiles};
+            });
+      });
 }
 
 std::string ThriftGlobImpl::logString() {

@@ -31,3 +31,7 @@ test eden glob
   .dps/very.dot
   slowly/.and.by.slow.dot
   i/.mean/slow.dot
+  $ eden glob **/*.local
+  $ touch local.local
+  $ eden glob **/*.local
+  local.local

@@ -16,6 +16,7 @@ cpp_library(
         "BlobMetadata.h",
         "EntryAttributeFlags.h",
         "GlobEntry.h",
+        "LocalFiles.h",
         "TreeMetadata.h",
     ],
     deps = [

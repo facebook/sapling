@@ -15,6 +15,7 @@
 
 #include "eden/common/utils/ImmediateFuture.h"
 #include "eden/common/utils/RefPtr.h"
+#include "eden/fs/inodes/TreeInode.h"
 
 #include "eden/fs/utils/GlobNodeImpl.h"
 
@@ -54,5 +55,17 @@ class ThriftGlobImpl {
   std::vector<std::string> rootHashes_;
   folly::StringPiece searchRootUser_;
 };
+
+// TODO: shared_ptr<EdenMount> is not sufficient to ensure an EdenMount is
+// usable for the duration of this glob. Either pass EdenMountHandle or
+// .ensure() the lifetime of EdenMountHandle outlives the call.
+ImmediateFuture<std::vector<BackingStore::GetGlobFilesResult>>
+getLocalGlobResults(
+    const std::shared_ptr<EdenMount>& edenMount,
+    const std::shared_ptr<ServerState>& serverState,
+    bool includeDotfiles,
+    const std::vector<std::string>& suffixGlobs,
+    const TreeInodePtr& rootInode,
+    const ObjectFetchContextPtr& context);
 
 } // namespace facebook::eden

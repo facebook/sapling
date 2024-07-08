@@ -156,6 +156,7 @@ class BackingStore : public RootIdCodec, public ObjectIdCodec {
      */
     std::vector<std::string> globFiles;
     RootId rootId;
+    bool isLocal = false;
   };
 
   virtual void periodicManagementTask() {}
