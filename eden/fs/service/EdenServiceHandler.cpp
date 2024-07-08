@@ -440,6 +440,60 @@ class SuffixGlobRequestScope {
   const ObjectFetchContextPtr& context_;
   folly::stop_watch<std::chrono::microseconds> itcTimer_ = {};
 }; // namespace
+
+/**
+ * Lives as long as a glob files request and primarily exists to record logging
+ * and telemetry.
+ */
+class GlobFilesRequestScope {
+ public:
+  GlobFilesRequestScope(GlobFilesRequestScope&&) = delete;
+  GlobFilesRequestScope& operator=(GlobFilesRequestScope&&) = delete;
+
+  explicit GlobFilesRequestScope(
+      const std::shared_ptr<ServerState>& serverState)
+      : serverState_{serverState} {}
+
+  ~GlobFilesRequestScope() {
+    // Logging completion time for the request
+    auto elapsed = itcTimer_.elapsed();
+    auto duration = std::chrono::duration<double>{elapsed}.count();
+    XLOG(WARN) << "EdenFS completed globFiles request in " << duration << "s"
+               << " using " << (local ? "Local" : "SaplingRemoteAPI")
+               << (fallback ? " Fallback" : "");
+    if (local) {
+      serverState_->getStats()->addDuration(
+          &ThriftStats::globFilesLocalDuration, elapsed);
+      serverState_->getStats()->increment(&ThriftStats::globFilesLocal);
+    } else {
+      if (fallback) {
+        serverState_->getStats()->addDuration(
+            &ThriftStats::globFilesSaplingRemoteAPIFallbackDuration, elapsed);
+        serverState_->getStats()->increment(
+            &ThriftStats::globFilesSaplingRemoteAPIFallback);
+      } else {
+        serverState_->getStats()->addDuration(
+            &ThriftStats::globFilesSaplingRemoteAPISuccessDuration, elapsed);
+        serverState_->getStats()->increment(
+            &ThriftStats::globFilesSaplingRemoteAPISuccess);
+      }
+    }
+  }
+
+  void setLocal(bool isLocal) {
+    local = isLocal;
+  }
+
+  void setFallback(bool isFallback) {
+    fallback = isFallback;
+  }
+
+ private:
+  bool local = true;
+  bool fallback = false;
+  const std::shared_ptr<ServerState>& serverState_;
+  folly::stop_watch<std::chrono::microseconds> itcTimer_ = {};
+}; // namespace
 #undef EDEN_MICRO
 
 RelativePath relpathFromUserPath(StringPiece userPath) {
@@ -3281,6 +3335,9 @@ EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
   bool useSaplingRemoteAPISuffixes = shouldUseSaplingRemoteAPI(
       edenConfig->enableEdenAPISuffixQuery.getValue(), *params);
 
+  auto globFilesRequestScope =
+      std::make_shared<GlobFilesRequestScope>(server_->getServerState());
+
   if (useSaplingRemoteAPISuffixes) {
     // Matches **/*.suffix
     // Captures the .suffix
@@ -3301,6 +3358,7 @@ EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
 
     if (!suffixGlobs.empty() && nonSuffixGlobs.empty()) {
       // Only use BSSM if there are only suffix queries
+      globFilesRequestScope->setLocal(false);
       XLOG(DBG3)
           << "globFiles request is only suffix globs, offloading to EdenAPI";
       auto suffixGlobLogString = globber.logString(suffixGlobs);
@@ -3476,6 +3534,7 @@ EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
                     });
               })
               .thenError([mountHandle,
+                          globFilesRequestScope,
                           serverState = server_->getServerState(),
                           globs = std::move(*params->globs()),
                           globber = std::move(globber),
@@ -3486,7 +3545,7 @@ EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
                 XLOG(DBG3) << "Encountered error when evaluating globFiles: "
                            << ex.what();
                 XLOG(DBG3) << "Using local globFiles";
-                // TODO: Insert ODS log for globs here
+                globFilesRequestScope->setFallback(true);
                 return globber.glob(
                     mountHandle.getEdenMountPtr(),
                     serverState,
@@ -3532,7 +3591,8 @@ EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
       [mountHandle,
        helper = std::move(helper),
        params = std::move(params),
-       suffixGlobRequestScope = std::move(suffixGlobRequestScope)] {});
+       suffixGlobRequestScope = std::move(suffixGlobRequestScope),
+       globFilesRequestScope = std::move(globFilesRequestScope)] {});
 
   // The glob code has a very large fan-out that can easily overload the Thrift
   // CPU worker pool. To combat with that, we limit the execution to a single

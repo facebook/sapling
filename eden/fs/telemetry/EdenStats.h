@@ -537,6 +537,18 @@ struct ThriftStats : StatsGroup<ThriftStats> {
 
   Duration streamSelectedChangesSince{
       "thrift.StreamingEdenService.streamSelectedChangesSince.streaming_time_us"};
+
+  Counter globFilesSaplingRemoteAPISuccess{
+      "thrift.EdenServiceHandler.glob_files.sapling_remote_api_success"};
+  Counter globFilesSaplingRemoteAPIFallback{
+      "thrift.EdenServiceHandler.glob_files.sapling_remote_api_fallback"};
+  Counter globFilesLocal{"thrift.EdenServiceHandler.glob_files.local_success"};
+  Duration globFilesSaplingRemoteAPISuccessDuration{
+      "thrift.EdenServiceHandler.glob_files.sapling_remote_api_success_duration_us"};
+  Duration globFilesSaplingRemoteAPIFallbackDuration{
+      "thrift.EdenServiceHandler.glob_files.sapling_remote_api_fallback_duration_us"};
+  Duration globFilesLocalDuration{
+      "thrift.EdenServiceHandler.glob_files.local_duration_us"};
 };
 
 struct OverlayStats : StatsGroup<OverlayStats> {
