@@ -19,16 +19,16 @@ def get(ui, repo=None):
     elif servicetype == "remote":
         return httpsservice.HttpsCommitCloudService(ui)
     elif servicetype == "edenapi":
-        fallback = ui.config("commitcloud", "fallback")
-        fallback_service = (
+        fallbackcfg = ui.config("commitcloud", "fallback")
+        fallback = (
             localservice.LocalService(ui)
-            if fallback == "local"
+            if fallbackcfg == "local"
             else httpsservice.HttpsCommitCloudService(ui)
         )
         return edenapiservice.EdenApiService(
             ui,
             repo,
-            fallback_service,
+            fallback,
         )
     else:
         msg = "Unrecognized commitcloud.servicetype: %s" % servicetype

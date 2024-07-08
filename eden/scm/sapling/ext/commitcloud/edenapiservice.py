@@ -18,13 +18,13 @@ from . import baseservice
 class EdenApiService(baseservice.BaseService):
     """Remote commit-cloud service implemented using edenapi."""
 
-    def __init__(self, ui, repo, fallback_service):
+    def __init__(self, ui, repo, fallback):
         self.ui = ui
         if repo is None:
             raise error.Abort("Tried to start edenapiservice with no repo object")
         self.repo = repo
         self.repo.edenapi.capabilities()  # Check edenapi is reachable
-        self.fallback_service = fallback_service
+        self.fallback = fallback
 
     def check(self):
         return True
@@ -160,24 +160,24 @@ class EdenApiService(baseservice.BaseService):
         )
 
     def getsmartlog(self, reponame, workspace, repo, limit, flags=[]):
-        self.fallback.getsmartlog(reponame, workspace, repo, limit, flags)
+        return self.fallback.getsmartlog(reponame, workspace, repo, limit, flags)
 
     def getsmartlogbyversion(
         self, reponame, workspace, repo, date, version, limit, flags=[]
     ):
-        self.fallback.getsmartlogbyversion(
+        return self.fallback.getsmartlogbyversion(
             reponame, workspace, repo, date, version, limit, flags=[]
         )
 
     def updatecheckoutlocations(
         self, reponame, workspace, hostname, commit, checkoutpath, sharedpath, unixname
     ):
-        self.fallback.updatecheckoutlocations(
+        return self.fallback.updatecheckoutlocations(
             reponame, workspace, hostname, commit, checkoutpath, sharedpath, unixname
         )
 
     def getworkspaces(self, reponame, prefix):
-        self.fallback(reponame, prefix)
+        return self.fallback(reponame, prefix)
 
     def getworkspace(self, reponame, workspacename):
         self.ui.debug(
@@ -199,23 +199,23 @@ class EdenApiService(baseservice.BaseService):
 
     def updateworkspacearchive(self, reponame, workspace, archived):
         """Archive or Restore the given workspace"""
-        self.fallback.updateworkspacearchive(reponame, workspace, archived)
+        return self.fallback.updateworkspacearchive(reponame, workspace, archived)
 
     def renameworkspace(self, reponame, workspace, new_workspace):
         """Rename the given workspace"""
-        self.fallback.renameworkspace(reponame, workspace, new_workspace)
+        return self.fallback.renameworkspace(reponame, workspace, new_workspace)
 
     def shareworkspace(self, reponame, workspace):
         """Enable sharing for the given workspace"""
-        self.fallback.shareworkspace(reponame, workspace)
+        return self.fallback.shareworkspace(reponame, workspace)
 
     def rollbackworkspace(self, reponame, workspace, version):
         """Rollback the given workspace to a specific version"""
-        self.fallback.rollbackworkspace(reponame, workspace, version)
+        return self.fallback.rollbackworkspace(reponame, workspace, version)
 
     def cleanupworkspace(self, reponame, workspace):
         """Cleanup unnecessary remote bookmarks from the given workspace"""
-        self.fallback.cleanupworkspace(reponame, workspace)
+        return self.fallback.cleanupworkspace(reponame, workspace)
 
     def _castreferences(self, refs):
         """
