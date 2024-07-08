@@ -173,6 +173,12 @@ class GlobCmd(Subcmd):
             default=False,
             action="store_true",
         )
+        parser.add_argument(
+            "--revision",
+            help="Revisions to search within. Can be used multiple times",
+            default=[],
+            action="append",
+        )
 
     def run(self, args: argparse.Namespace) -> int:
         checkout_and_patterns = _find_checkout_and_patterns(args)
@@ -188,6 +194,7 @@ class GlobCmd(Subcmd):
                     wantDtype=args.dtype,
                     searchRoot=os.fsencode(checkout_and_patterns.rel_path),
                     listOnlyFiles=args.list_only_files,
+                    revisions=args.revision,
                 )
             )
             if args.json:
