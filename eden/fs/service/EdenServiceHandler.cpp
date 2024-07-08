@@ -458,6 +458,51 @@ facebook::eden::InodePtr inodeFromUserPath(
   return mount.getInodeSlow(relPath, context).get();
 }
 
+bool shouldUseSaplingRemoteAPI(
+    bool useSaplingRemoteAPISuffixes,
+    const GlobParams& params) {
+  // The following parameters will default to local lookup
+  // Commands related to prefetching or the working copy
+  //   - prefetchFiles
+  //   - suppressFileList
+  // - searchRoot - root is always the repository root
+  // - predictiveGlob - This pathway only accepts suffixes
+  // - listOnlyFiles - Only files will be returned
+  // Ignore
+  //   - prefetchMetadata, it is explicitly called
+  // out as having no effect
+  //   - sync, not used globFiles. If sync behavior is desired
+  //   use synchronizeWorkingCopy
+
+  // Handle unsupported flags
+  if (*params.prefetchFiles() || *params.suppressFileList()) {
+    XLOG(DBG3)
+        << "globFiles request cannot be offloaded to SaplingRemoteAPI due to prefetching: prefetchFiles="
+        << *params.prefetchFiles()
+        << ", suppressFileList=" << *params.suppressFileList()
+        << ". Falling back to local pathway";
+    useSaplingRemoteAPISuffixes = false;
+  } else if (
+      !((*params.searchRoot()).empty()) && !(*params.searchRoot() == ".")) {
+    // searchRoot is relative to root
+    XLOG(DBG3)
+        << "globFiles request cannot be offloaded to SaplingRemoteAPI due to searchRoot '"
+        << *params.searchRoot() << "'" << " not being mount root '.'"
+        << ", falling back to local pathway";
+    useSaplingRemoteAPISuffixes = false;
+  } else if (params.predictiveGlob()) {
+    XLOG(DBG3)
+        << "globFiles request cannot be offloaded to SaplingRemoteAPI due to predictiveGlob, falling back to local pathway";
+    useSaplingRemoteAPISuffixes = false;
+  } else if (!(*params.listOnlyFiles())) {
+    XLOG(DBG3)
+        << "globFiles request cannot be offloaded to SaplingRemoteAPI due to asking for files and directories, falling back to local pathway";
+    useSaplingRemoteAPISuffixes = false;
+  }
+
+  return useSaplingRemoteAPISuffixes;
+}
+
 } // namespace
 
 // INSTRUMENT_THRIFT_CALL returns a unique pointer to
@@ -3232,7 +3277,11 @@ EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
 
   ImmediateFuture<unique_ptr<Glob>> globFut{std::in_place};
 
-  if (edenConfig->enableEdenAPISuffixQuery.getValue()) {
+  // Offload suffix queries to EdenAPI
+  bool useSaplingRemoteAPISuffixes = shouldUseSaplingRemoteAPI(
+      edenConfig->enableEdenAPISuffixQuery.getValue(), *params);
+
+  if (useSaplingRemoteAPISuffixes) {
     // Matches **/*.suffix
     // Captures the .suffix
     static const re2::RE2 suffixRegex("\\*\\*/\\*(\\.[A-z0-9]+)");
@@ -3301,16 +3350,6 @@ EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
                           includeDotfiles =
                               params->includeDotfiles_ref().value(),
                           &context](auto&& globResults) mutable {
-                // Offload suffix queries to EdenAPI
-                // params ignored in this pathway:
-                // Commands related to prefetching or the working copy
-                //   - prefetchFiles
-                //   - suppressFileList
-                //   - prefetchMetadata
-                //   - Sync
-                // - searchRoot - root is always the repository root
-                // - predictiveGlob - This pathway only accepts suffixes
-                // - listOnlyFiles - Only files will be returned
                 auto edenMount = mountHandle.getEdenMountPtr();
                 std::vector<ImmediateFuture<GlobEntry>> globEntryFuts;
                 for (auto& glob : globResults) {
