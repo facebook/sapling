@@ -13,6 +13,11 @@ setup backing repo
   $ eden --home-dir $TESTTMP restart 2>1 > /dev/null
 #endif
   $ newclientrepo
+  $ drawdag <<'EOS'
+  > B
+  > |
+  > A
+  > EOS
 
 # EdenAPI eagerepo implementation for glob is currently mocked out so don't need to add things to repo yet
 test eden glob
@@ -48,5 +53,17 @@ Test local files
   local.local
 # Test that local files do not show up when using revision
   $ eden glob **/*.local --list-only-files --revision 0000000000000000000000000000000000000000
+
 # Test that local file dtype changes register
+  $ hg checkout $A > /dev/null
+  $ touch bar.rs
+  $ hg add bar.rs
+  $ hg amend 2> /dev/null
+  $ hg checkout 072da8606ee7 > /dev/null
   $ eden glob **/*.rs --dtype --list-only-files
+  bar.rs Regular
+  $ mv bar.rs barlink.rs
+  $ ln -s barlink.rs bar.rs
+  $ eden glob **/*.rs --dtype --list-only-files
+  bar.rs Symlink
+  barlink.rs Regular
