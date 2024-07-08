@@ -40,7 +40,13 @@ test eden glob
   i/.mean/slow.dot
   slowly/.and.by.slow.dot
   throw.dot
+
+Test local files
   $ eden glob **/*.local --list-only-files
   $ touch local.local
   $ eden glob **/*.local --list-only-files
   local.local
+# Test that local files do not show up when using revision
+  $ eden glob **/*.local --list-only-files --revision 0000000000000000000000000000000000000000
+# Test that local file dtype changes register
+  $ eden glob **/*.rs --dtype --list-only-files
