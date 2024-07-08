@@ -132,6 +132,7 @@ pub enum ClientEntryPoint {
     #[serde(rename = "EdenApiReplay", alias = "SaplingRemoteApiReplay")]
     SaplingRemoteApiReplay,
     MononokeHgSync,
+    MononokeCasSync,
     CurlTest,
     MirrorHgCommits,
     StreamingClone,
@@ -215,6 +216,7 @@ impl Display for ClientEntryPoint {
             ClientEntryPoint::RemoteGitImport => "remote_git_import",
             ClientEntryPoint::SaplingRemoteApiReplay => "eden_api_replay",
             ClientEntryPoint::MononokeHgSync => "hg_sync",
+            ClientEntryPoint::MononokeCasSync => "mononoke_re_cas_sync",
             ClientEntryPoint::CurlTest => "curl_test",
             ClientEntryPoint::MirrorHgCommits => "mirror_hg_commits",
             ClientEntryPoint::StreamingClone => "streaming_clone",
@@ -253,6 +255,7 @@ impl TryFrom<&str> for ClientEntryPoint {
             "remote_git_import" => Ok(ClientEntryPoint::RemoteGitImport),
             "eden_api_replay" => Ok(ClientEntryPoint::SaplingRemoteApiReplay),
             "hg_sync" => Ok(ClientEntryPoint::MononokeHgSync),
+            "mononoke_re_cas_sync" => Ok(ClientEntryPoint::MononokeCasSync),
             "curl_test" => Ok(ClientEntryPoint::CurlTest),
             "mirror_hg_commits" => Ok(ClientEntryPoint::MirrorHgCommits),
             "streaming_clone" => Ok(ClientEntryPoint::StreamingClone),
