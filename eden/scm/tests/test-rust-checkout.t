@@ -41,16 +41,14 @@ Respect merge marker file:
   [1]
 
   $ hg go $B
-  abort: goto --merge in progress
-  (use 'hg goto --continue' to continue or
-       'hg goto --clean' to abort - WARNING: will destroy uncommitted changes)
+  abort: outstanding merge conflicts
+  (use 'hg resolve --list' to list, 'hg resolve --mark FILE' to mark resolved)
   [255]
 
 Run it again to make sure we didn't clear out state file:
   $ hg go $B
-  abort: goto --merge in progress
-  (use 'hg goto --continue' to continue or
-       'hg goto --clean' to abort - WARNING: will destroy uncommitted changes)
+  abort: outstanding merge conflicts
+  (use 'hg resolve --list' to list, 'hg resolve --mark FILE' to mark resolved)
   [255]
 
   $ hg go --continue
