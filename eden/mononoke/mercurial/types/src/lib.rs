@@ -110,6 +110,7 @@ pub use crate::nodehash::NULL_HASH;
 pub use crate::preloaded_augmented_manifest::HgPreloadedAugmentedManifest;
 pub use crate::remotefilelog::convert_parents_to_remotefilelog_format;
 pub use crate::remotefilelog::HgFileHistoryEntry;
+pub use crate::sharded_augmented_manifest::fetch_augmented_manifest_envelope_opt;
 pub use crate::sharded_augmented_manifest::HgAugmentedManifestEntry;
 pub use crate::sharded_augmented_manifest::HgAugmentedManifestEnvelope;
 pub use crate::sharded_augmented_manifest::ShardedHgAugmentedManifest;

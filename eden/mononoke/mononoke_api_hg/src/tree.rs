@@ -6,10 +6,10 @@
  */
 
 use async_trait::async_trait;
-use blobstore::Loadable;
 use bytes::Bytes;
 use manifest::Entry;
 use manifest::Manifest;
+use mercurial_types::fetch_augmented_manifest_envelope_opt;
 use mercurial_types::fetch_manifest_envelope;
 use mercurial_types::fetch_manifest_envelope_opt;
 use mercurial_types::HgAugmentedManifestEntry;
@@ -98,13 +98,18 @@ impl HgAugmentedTreeContext {
     ) -> Result<Option<Self>, MononokeError> {
         let ctx = repo.ctx();
         let blobstore = repo.blob_repo().repo_blobstore();
-        let envelope = augmented_manifest_id.load(ctx, blobstore).await?;
-        let preloaded_manifest =
-            HgPreloadedAugmentedManifest::load_from_sharded(envelope, ctx, blobstore).await?;
-        Ok(Some(Self {
-            repo,
-            preloaded_manifest,
-        }))
+        let envelope =
+            fetch_augmented_manifest_envelope_opt(ctx, blobstore, augmented_manifest_id).await?;
+        if let Some(envelope) = envelope {
+            let preloaded_manifest =
+                HgPreloadedAugmentedManifest::load_from_sharded(envelope, ctx, blobstore).await?;
+            Ok(Some(Self {
+                repo,
+                preloaded_manifest,
+            }))
+        } else {
+            Ok(None)
+        }
     }
 
     pub fn augmented_manifest_id(&self) -> Blake3 {

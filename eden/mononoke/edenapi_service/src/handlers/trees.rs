@@ -13,10 +13,10 @@ use context::PerfCounterType;
 use edenapi_types::wire::WireTreeRequest;
 use edenapi_types::AnyId;
 use edenapi_types::Batch;
-use edenapi_types::DirectoryMetadata;
 use edenapi_types::FileAuxData;
 use edenapi_types::SaplingRemoteApiServerError;
 use edenapi_types::TreeAttributes;
+use edenapi_types::TreeAuxData;
 use edenapi_types::TreeChildEntry;
 use edenapi_types::TreeEntry;
 use edenapi_types::TreeRequest;
@@ -137,76 +137,97 @@ async fn fetch_tree(
             .perf_counters()
             .increment_counter(PerfCounterType::EdenapiAugmentedTrees);
 
-        let ctx = id
+        let maybe_ctx = id
             .context(repo.clone())
             .await
-            .with_context(|| ErrorKind::TreeFetchFailed(key.clone()))?
-            .with_context(|| ErrorKind::KeyDoesNotExist(key.clone()))?;
+            .with_context(|| ErrorKind::TreeFetchFailed(key.clone()))?;
 
-        entry.with_tree_aux_data(DirectoryMetadata {
-            augmented_manifest_id: ctx.augmented_manifest_id().clone().into(),
-            augmented_manifest_size: ctx.augmented_manifest_size(),
-        });
+        if let Some(ctx) = maybe_ctx {
+            entry.with_tree_aux_data(TreeAuxData {
+                augmented_manifest_id: ctx.augmented_manifest_id().clone().into(),
+                augmented_manifest_size: ctx.augmented_manifest_size(),
+            });
 
-        if attributes.parents {
-            entry.with_parents(Some(ctx.hg_parents().into()));
+            if attributes.parents {
+                entry.with_parents(Some(ctx.hg_parents().into()));
+            }
+
+            if attributes.child_metadata {
+                entry.with_children(Some(
+                    ctx.augmented_children_entries()
+                        .map(|(path, augmented_entry)| match augmented_entry {
+                            HgAugmentedManifestEntry::FileNode(file) => {
+                                Ok(TreeChildEntry::new_file_entry(
+                                    Key {
+                                        hgid: file.filenode.into(),
+                                        path: RepoPathBuf::from_string(path.to_string()).map_err(
+                                            |e| {
+                                                SaplingRemoteApiServerError::with_key(
+                                                    key.clone(),
+                                                    e,
+                                                )
+                                            },
+                                        )?,
+                                    },
+                                    FileAuxData {
+                                        blake3: file.content_blake3.clone().into(),
+                                        sha1: file.content_sha1.clone().into(),
+                                        total_size: file.total_size.clone(),
+                                        file_header_metadata: Some(
+                                            file.file_header_metadata
+                                                .clone()
+                                                .unwrap_or(Bytes::new()),
+                                        ),
+                                    }
+                                    .into(),
+                                ))
+                            }
+                            HgAugmentedManifestEntry::DirectoryNode(tree) => {
+                                Ok(TreeChildEntry::new_directory_entry(
+                                    Key {
+                                        hgid: tree.treenode.into(),
+                                        path: RepoPathBuf::from_string(path.to_string()).map_err(
+                                            |e| {
+                                                SaplingRemoteApiServerError::with_key(
+                                                    key.clone(),
+                                                    e,
+                                                )
+                                            },
+                                        )?,
+                                    },
+                                    TreeAuxData {
+                                        augmented_manifest_id: tree
+                                            .augmented_manifest_id
+                                            .clone()
+                                            .into(),
+                                        augmented_manifest_size: tree
+                                            .augmented_manifest_size
+                                            .clone(),
+                                    },
+                                ))
+                            }
+                        })
+                        .collect(),
+                ));
+            }
+
+            if attributes.manifest_blob {
+                let (data, _) = ctx
+                    .content()
+                    .await
+                    .with_context(|| ErrorKind::TreeFetchFailed(key.clone()))?;
+
+                entry.with_data(Some(data));
+            }
+
+            return Ok(entry);
+        } else {
+            // If we don't have an augmented tree, fallback to the old way of fetching trees
+            // Log the fallback to scuba
+            repo.ctx()
+                .perf_counters()
+                .increment_counter(PerfCounterType::EdenapiAugmentedTreesFallback);
         }
-
-        if attributes.child_metadata {
-            entry.with_children(Some(
-                ctx.augmented_children_entries()
-                    .map(|(path, augmented_entry)| match augmented_entry {
-                        HgAugmentedManifestEntry::FileNode(file) => {
-                            Ok(TreeChildEntry::new_file_entry(
-                                Key {
-                                    hgid: file.filenode.into(),
-                                    path: RepoPathBuf::from_string(path.to_string()).map_err(
-                                        |e| SaplingRemoteApiServerError::with_key(key.clone(), e),
-                                    )?,
-                                },
-                                FileAuxData {
-                                    blake3: file.content_blake3.clone().into(),
-                                    sha1: file.content_sha1.clone().into(),
-                                    total_size: file.total_size.clone(),
-                                    file_header_metadata: Some(
-                                        file.file_header_metadata.clone().unwrap_or(Bytes::new()),
-                                    ),
-                                }
-                                .into(),
-                            ))
-                        }
-                        HgAugmentedManifestEntry::DirectoryNode(tree) => {
-                            Ok(TreeChildEntry::new_directory_entry(
-                                Key {
-                                    hgid: tree.treenode.into(),
-                                    path: RepoPathBuf::from_string(path.to_string()).map_err(
-                                        |e| SaplingRemoteApiServerError::with_key(key.clone(), e),
-                                    )?,
-                                },
-                                DirectoryMetadata {
-                                    augmented_manifest_id: tree
-                                        .augmented_manifest_id
-                                        .clone()
-                                        .into(),
-                                    augmented_manifest_size: tree.augmented_manifest_size.clone(),
-                                },
-                            ))
-                        }
-                    })
-                    .collect(),
-            ));
-        }
-
-        if attributes.manifest_blob {
-            let (data, _) = ctx
-                .content()
-                .await
-                .with_context(|| ErrorKind::TreeFetchFailed(key.clone()))?;
-
-            entry.with_data(Some(data));
-        }
-
-        return Ok(entry);
     }
 
     let id = HgManifestId::from_node_hash(HgNodeHash::from(key.hgid));
@@ -280,7 +301,7 @@ async fn fetch_child_metadata_entries<'a>(
                         // This API never returned any directory metadata
                         Entry::Tree(child_id) => TreeChildEntry::new_directory_entry(
                             Key::new(name, child_id.into_nodehash().into()),
-                            DirectoryMetadata::default(),
+                            TreeAuxData::default(),
                         ),
                     })
                 }

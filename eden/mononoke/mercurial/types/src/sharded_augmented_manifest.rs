@@ -627,6 +627,34 @@ impl HgAugmentedManifestEnvelope {
     }
 }
 
+pub async fn fetch_augmented_manifest_envelope_opt<B: Blobstore>(
+    ctx: &CoreContext,
+    blobstore: &B,
+    augmented_node_id: HgAugmentedManifestId,
+) -> Result<Option<HgAugmentedManifestEnvelope>> {
+    if augmented_node_id == HgAugmentedManifestId::new(NULL_HASH) {
+        return Ok(None);
+    }
+    let blobstore_key = augmented_node_id.blobstore_key();
+    let bytes = blobstore
+        .get(ctx, &blobstore_key)
+        .await
+        .context("While fetching augmented manifest envelope blob")?;
+    let blobstore_bytes = match bytes {
+        Some(bytes) => bytes,
+        None => return Ok(None),
+    };
+    let envelope = HgAugmentedManifestEnvelope::from_blob(blobstore_bytes.into_raw_bytes())?;
+    if augmented_node_id.into_nodehash() != envelope.augmented_manifest.hg_node_id() {
+        bail!(
+            "Manifest ID mismatch (requested: {}, got: {})",
+            augmented_node_id,
+            envelope.augmented_manifest.hg_node_id()
+        );
+    }
+    Ok(Some(envelope))
+}
+
 #[async_trait]
 impl Loadable for HgAugmentedManifestId {
     type Value = HgAugmentedManifestEnvelope;
