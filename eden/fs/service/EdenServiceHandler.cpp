@@ -3442,6 +3442,8 @@ EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
                         glob->originHashes_ref().value().emplace_back(
                             globEntry.originHash);
                       }
+                      XLOG(DBG4)
+                          << "Glob successfuly created, returning SaplingRemoteAPI results";
                       return glob;
                     });
               });
@@ -3461,7 +3463,7 @@ EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
             // SaplingRemoteAPI method
             XLOG(DBG3) << "Encountered error when evaluating globFiles: "
                        << ex.what();
-
+            XLOG(DBG3) << "Using local globFiles";
             // TODO: Insert ODS log for globs here
             return globber.glob(
                 mountHandle.getEdenMountPtr(),

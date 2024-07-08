@@ -95,8 +95,10 @@ ImmediateFuture<std::unique_ptr<LocalFiles>> computeLocalFiles(
           }
         }
         for (auto& glob : suffixGlobs) {
+          XLOG(DBG4) << "Creating glob matcher for glob: " << glob;
           auto expectGlobMatcher = GlobMatcher::create("**/*" + glob, options);
           if (expectGlobMatcher.hasValue()) {
+            XLOG(DBG4) << "Successfuly created glob matcher for glob: " << glob;
             globMatchers.push_back(expectGlobMatcher.value());
           } else {
             XLOG(ERR) << "Invalid glob: " << glob;
