@@ -159,6 +159,7 @@ impl TreeStore {
         tracing::debug!(
             ?fetch_mode,
             fetch_children_metadata,
+            fetch_tree_aux_data,
             fetch_local,
             fetch_remote,
             keys_len
