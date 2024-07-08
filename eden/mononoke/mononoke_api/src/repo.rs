@@ -952,7 +952,11 @@ impl RepoContext {
         bubble_id: Option<BubbleId>,
     ) -> Result<Arc<dyn Changesets>, MononokeError> {
         Ok(match bubble_id {
-            Some(id) => Arc::new(self.open_bubble(id).await?.changesets(self.blob_repo())),
+            Some(id) => Arc::new(
+                self.open_bubble(id)
+                    .await?
+                    .repo_changesets(self.blob_repo()),
+            ),
             None => self.blob_repo().changesets_arc(),
         })
     }

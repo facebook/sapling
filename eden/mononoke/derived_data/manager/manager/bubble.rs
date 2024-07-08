@@ -7,14 +7,10 @@
 
 use std::sync::Arc;
 
-use changesets::ChangesetsArc;
-use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use ephemeral_blobstore::Bubble;
 use ephemeral_blobstore::EphemeralChangesets;
 use mononoke_types::ChangesetId;
-use repo_blobstore::RepoBlobstoreRef;
-use repo_identity::RepoIdentityRef;
 
 use super::DerivationAssigner;
 use super::DerivationAssignment;
@@ -45,14 +41,17 @@ impl DerivationAssigner for BubbleAssigner {
 }
 
 impl DerivedDataManager {
-    pub fn for_bubble(
-        self,
-        bubble: Bubble,
-        // Perhaps this can be fetched from inside the manager in the future
-        container: &(impl CommitGraphRef + ChangesetsArc + RepoIdentityRef + RepoBlobstoreRef),
-    ) -> Self {
-        let changesets = Arc::new(bubble.changesets(container));
-        let commit_graph = Arc::new(bubble.commit_graph(container));
+    pub fn for_bubble(self, bubble: Bubble) -> Self {
+        let changesets = Arc::new(bubble.changesets(
+            self.repo_id(),
+            self.repo_blobstore().clone(),
+            self.changesets_arc(),
+        ));
+        let commit_graph = Arc::new(bubble.commit_graph(
+            self.repo_id(),
+            self.repo_blobstore().clone(),
+            self.commit_graph(),
+        ));
         let wrapped_blobstore = bubble.wrap_repo_blobstore(self.inner.repo_blobstore.clone());
         let mut derivation_context = self.inner.derivation_context.clone();
         derivation_context.bonsai_hg_mapping = None;

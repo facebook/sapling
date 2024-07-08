@@ -172,8 +172,8 @@ impl BlobRepo {
 
     pub fn with_bubble(&self, bubble: Bubble) -> Self {
         let blobstore = bubble.wrap_repo_blobstore(self.repo_blobstore().clone());
-        let changesets = Arc::new(bubble.changesets(self));
-        let commit_graph = Arc::new(bubble.commit_graph(self));
+        let changesets = Arc::new(bubble.repo_changesets(self));
+        let commit_graph = Arc::new(bubble.repo_commit_graph(self));
         let changeset_fetcher =
             SimpleChangesetFetcher::new(changesets.clone(), self.repo_identity().id());
         let new_manager = self
@@ -181,7 +181,7 @@ impl BlobRepo {
             .repo_derived_data
             .manager()
             .clone()
-            .for_bubble(bubble, self);
+            .for_bubble(bubble);
         let repo_derived_data = self.inner.repo_derived_data.with_manager(new_manager);
         let mut inner = (*self.inner).clone();
         inner.repo_derived_data = Arc::new(repo_derived_data);
