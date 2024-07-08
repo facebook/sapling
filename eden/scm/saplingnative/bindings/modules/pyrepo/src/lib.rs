@@ -251,7 +251,8 @@ py_class!(pub class repo |py| {
         report_mode: Serde<ReportMode>,
     ) -> PyResult<(usize, usize, usize, usize)> {
         let repo = self.inner(py).read();
-        let wc = repo.working_copy().map_pyerr(py)?;
+        let wc = self.workingcopy(py)?.get_wc(py);
+        let wc = wc.write();
         checkout::checkout(
             &ctx.0,
             &repo,

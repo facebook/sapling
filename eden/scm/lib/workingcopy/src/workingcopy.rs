@@ -41,6 +41,7 @@ use status::FileStatus;
 use status::Status;
 use status::StatusBuilder;
 use storemodel::FileStore;
+use tracing::debug;
 use treestate::filestate::StateFlags;
 use treestate::tree::VisitorResult;
 use treestate::treestate::TreeState;
@@ -647,6 +648,8 @@ impl<'a> LockedWorkingCopy<'a> {
     }
 
     pub fn set_parents(&self, parents: Vec<HgId>, parent_tree_hash: Option<HgId>) -> Result<()> {
+        debug!(?parents);
+
         let p1 = parents
             .first()
             .context("At least one parent is required for setting parents")?

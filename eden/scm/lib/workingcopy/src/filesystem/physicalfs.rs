@@ -21,6 +21,7 @@ use pathmatcher::DynMatcher;
 use pathmatcher::Matcher;
 use repolock::RepoLocker;
 use storemodel::FileStore;
+use tracing::debug;
 use treestate::dirstate::Dirstate;
 use treestate::dirstate::TreeStateFields;
 use treestate::filestate::StateFlags;
@@ -135,6 +136,11 @@ impl FileSystem for PhysicalFileSystem {
         ignore_dirs: Vec<PathBuf>,
         include_ignored: bool,
     ) -> Result<Box<dyn Iterator<Item = Result<PendingChange>>>> {
+        debug!(
+            "working copy parents: {:?}",
+            self.treestate.lock().parents().collect::<Vec<_>>()
+        );
+
         let walker = Walker::new(
             self.vfs.root().to_path_buf(),
             self.dot_dir.clone(),
