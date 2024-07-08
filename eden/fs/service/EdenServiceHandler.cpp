@@ -3230,13 +3230,8 @@ EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
   std::unique_ptr<SuffixGlobRequestScope> suffixGlobRequestScope;
   auto edenConfig = server_->getServerState()->getEdenConfig();
 
-  auto globFilesOrErrorFuture =
-      std::move(backgroundFuture).thenValue([](auto&&) {
-        return folly::Try<std::unique_ptr<Glob>>{newEdenError(
-            EINVAL,
-            EdenErrorType::ARGUMENT_ERROR,
-            "No suffix queries in input globs, using fallback.")};
-      });
+  ImmediateFuture<unique_ptr<Glob>> globFut{std::in_place};
+
   if (edenConfig->enableEdenAPISuffixQuery.getValue()) {
     // Matches **/*.suffix
     // Captures the .suffix
@@ -3263,16 +3258,10 @@ EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
       suffixGlobRequestScope = std::make_unique<SuffixGlobRequestScope>(
           suffixGlobLogString, server_->getServerState(), context);
 
-      // Do this again because the previous value has been consumed
-      ImmediateFuture<folly::Unit> backgroundFuture2{std::in_place};
-      if (isBackground) {
-        backgroundFuture2 = makeNotReadyImmediateFuture();
-      }
-
       // Attempt to resolve all EdenAPI futures. If any of
       // them result in an error we will fall back to local lookup
       auto combinedFuture =
-          std::move(backgroundFuture2)
+          std::move(backgroundFuture)
               .thenValue([revisions = params->revisions_ref().value(),
                           mountHandle,
                           suffixGlobs = std::move(suffixGlobs),
@@ -3304,7 +3293,7 @@ EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
                 return collectAllSafe(std::move(globFilesResultFutures));
               });
 
-      globFilesOrErrorFuture =
+      globFut =
           std::move(combinedFuture)
               .thenValue([mountHandle,
                           rootInode = mountHandle.getRootInode(),
@@ -3446,31 +3435,59 @@ EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
                           << "Glob successfuly created, returning SaplingRemoteAPI results";
                       return glob;
                     });
+              })
+              .thenError([mountHandle,
+                          serverState = server_->getServerState(),
+                          globs = std::move(*params->globs()),
+                          globber = std::move(globber),
+                          &context](
+                             const folly::exception_wrapper& ex) mutable {
+                // Fallback to local if an error was encountered while using the
+                // SaplingRemoteAPI method
+                XLOG(DBG3) << "Encountered error when evaluating globFiles: "
+                           << ex.what();
+                XLOG(DBG3) << "Using local globFiles";
+                // TODO: Insert ODS log for globs here
+                return globber.glob(
+                    mountHandle.getEdenMountPtr(),
+                    serverState,
+                    std::move(globs),
+                    context);
               });
+    } else {
+      globFut = std::move(backgroundFuture)
+                    .thenValue([mountHandle,
+                                serverState = server_->getServerState(),
+                                globs = std::move(*params->globs()),
+                                globber = std::move(globber),
+                                &context](auto&&) mutable {
+                      XLOG(DBG3)
+                          << "No suffixes, or mixed suffixes and non-suffixes";
+                      XLOG(DBG3) << "Using local globFiles";
+                      // TODO: Insert ODS log for globs here
+                      return globber.glob(
+                          mountHandle.getEdenMountPtr(),
+                          serverState,
+                          std::move(globs),
+                          context);
+                    });
     }
+  } else {
+    globFut = std::move(backgroundFuture)
+                  .thenValue([mountHandle,
+                              serverState = server_->getServerState(),
+                              globs = std::move(*params->globs()),
+                              globber = std::move(globber),
+                              &context](auto&&) mutable {
+                    XLOG(DBG3) << "Using local globFiles";
+                    // TODO: Insert ODS log for globs here
+                    return globber.glob(
+                        mountHandle.getEdenMountPtr(),
+                        serverState,
+                        std::move(globs),
+                        context);
+                  });
   }
-  auto globFut =
-      std::move(globFilesOrErrorFuture)
-          .thenError([mountHandle,
-                      serverState = server_->getServerState(),
-                      globs = std::move(*params->globs()),
-                      globber = std::move(globber),
-                      &context](const folly::exception_wrapper& ex) mutable {
-            // Fallback to local if
-            // - No suffixes given, or the config is diabled
-            // and globFilesOrErrorFuture is the default value
-            // - An error was encountered while using the
-            // SaplingRemoteAPI method
-            XLOG(DBG3) << "Encountered error when evaluating globFiles: "
-                       << ex.what();
-            XLOG(DBG3) << "Using local globFiles";
-            // TODO: Insert ODS log for globs here
-            return globber.glob(
-                mountHandle.getEdenMountPtr(),
-                serverState,
-                std::move(globs),
-                context);
-          });
 
   globFut = std::move(globFut).ensure(
       [mountHandle,
