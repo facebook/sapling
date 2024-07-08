@@ -15,15 +15,17 @@ from sapling.pycompat import ensurestr
 from . import baseservice
 
 
-class EdenApiService(baseservice.BaseService):
-    """Remote commit-cloud service implemented using edenapi."""
+class SaplingRemoteAPIService(baseservice.BaseService):
+    """Remote commit-cloud service implemented using Sapling Remote API."""
 
     def __init__(self, ui, repo, fallback):
         self.ui = ui
         if repo is None:
-            raise error.Abort("Tried to start edenapiservice with no repo object")
+            raise error.Abort(
+                "Tried to start Sapling Remote API service with no repo object"
+            )
         self.repo = repo
-        self.repo.edenapi.capabilities()  # Check edenapi is reachable
+        self.repo.edenapi.capabilities()  # Check Sapling Remote API is reachable
         self.fallback = fallback
 
     def check(self):
@@ -37,7 +39,8 @@ class EdenApiService(baseservice.BaseService):
         clientinfo=None,
     ):
         self.ui.debug(
-            "sending 'get_references' request on edenapi\n", component="commitcloud"
+            "sending 'get_references' request on Sapling Remote API\n",
+            component="commitcloud",
         )
         response = self.repo.edenapi.cloudreferences(
             {
@@ -90,7 +93,8 @@ class EdenApiService(baseservice.BaseService):
         logopts={},
     ):
         self.ui.debug(
-            "sending 'update_references' request on edenapi\n", component="commitcloud"
+            "sending 'update_references' request on Sapling Remote API\n",
+            component="commitcloud",
         )
         oldheads = oldheads or []
         newheads = newheads or []
@@ -181,7 +185,8 @@ class EdenApiService(baseservice.BaseService):
 
     def getworkspace(self, reponame, workspacename):
         self.ui.debug(
-            "sending 'get_workspace' request on edenapi\n", component="commitcloud"
+            "sending 'get_workspace' request on Sapling Remote API\n",
+            component="commitcloud",
         )
         response = self.repo.edenapi.cloudworkspace(workspacename, reponame)
 

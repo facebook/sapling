@@ -9,7 +9,7 @@ import socket
 
 from sapling import error
 
-from . import edenapiservice, httpsservice, localservice
+from . import httpsservice, localservice, saplingremoteapiservice
 
 
 def get(ui, repo=None):
@@ -18,14 +18,14 @@ def get(ui, repo=None):
         return localservice.LocalService(ui)
     elif servicetype == "remote":
         return httpsservice.HttpsCommitCloudService(ui)
-    elif servicetype == "edenapi":
+    elif servicetype == "saplingremoteapi" or servicetype == "edenapi":
         fallbackcfg = ui.config("commitcloud", "fallback")
         fallback = (
             localservice.LocalService(ui)
             if fallbackcfg == "local"
             else httpsservice.HttpsCommitCloudService(ui)
         )
-        return edenapiservice.EdenApiService(
+        return saplingremoteapiservice.SaplingRemoteAPIService(
             ui,
             repo,
             fallback,
