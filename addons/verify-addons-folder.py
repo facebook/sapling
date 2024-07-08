@@ -100,6 +100,7 @@ async def run_isl_integration_tests():
 async def lint_and_test(cwd: Path):
     await asyncio.gather(
         run(["yarn", "run", "eslint"], cwd=cwd),
+        run(["yarn", "run", "tsc", "--noEmit"], cwd=cwd),
         run(["yarn", "test", "--watchAll=false"], cwd=cwd),
     )
 
