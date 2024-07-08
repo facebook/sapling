@@ -215,6 +215,10 @@ impl WorkingCopy {
         })
     }
 
+    pub fn is_locked(&self) -> bool {
+        self.locker.working_copy_locked(&self.dot_hg_path)
+    }
+
     pub fn treestate(&self) -> Arc<Mutex<TreeState>> {
         self.treestate.clone()
     }

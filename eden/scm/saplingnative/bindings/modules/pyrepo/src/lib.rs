@@ -253,6 +253,7 @@ py_class!(pub class repo |py| {
         let repo = self.inner(py).read();
         let wc = self.workingcopy(py)?.get_wc(py);
         let wc = wc.write();
+        let flush_dirstate = !wc.is_locked();
         checkout::checkout(
             &ctx.0,
             &repo,
@@ -261,6 +262,7 @@ py_class!(pub class repo |py| {
             bookmark.0,
             mode.0,
             report_mode.0,
+            flush_dirstate,
         ).map(|opt_stats| {
             let (updated, removed) = opt_stats.unwrap_or_default();
             (updated, 0, removed, 0)

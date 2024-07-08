@@ -1019,6 +1019,7 @@ pub fn checkout(
     bookmark_action: BookmarkAction,
     update_mode: CheckoutMode,
     report_mode: ReportMode,
+    flush_dirstate: bool,
 ) -> Result<Option<(usize, usize)>> {
     if update_mode == CheckoutMode::MergeConflicts {
         unimplemented!("Rust checkout doesn't support merging files");
@@ -1064,7 +1065,14 @@ pub fn checkout(
     let stats = if repo.requirements.contains("eden") {
         #[cfg(feature = "eden")]
         {
-            edenfs::edenfs_checkout(ctx, repo, wc, target_commit, revert_conflicts)?;
+            edenfs::edenfs_checkout(
+                ctx,
+                repo,
+                wc,
+                target_commit,
+                revert_conflicts,
+                flush_dirstate,
+            )?;
             None
         }
 
@@ -1077,6 +1085,7 @@ pub fn checkout(
             wc,
             target_commit,
             revert_conflicts,
+            flush_dirstate,
         )?)
     };
 
@@ -1250,6 +1259,7 @@ pub fn filesystem_checkout(
     wc: &LockedWorkingCopy,
     target_commit: HgId,
     revert_conflicts: bool,
+    flush_dirstate: bool,
 ) -> Result<(usize, usize)> {
     let current_commit = wc.first_parent()?;
 
@@ -1343,7 +1353,9 @@ pub fn filesystem_checkout(
     // 5. Update the treestate parents, dirstate
     wc.set_parents(vec![target_commit], None)?;
     record_updates(&plan, wc.vfs(), &mut ts.lock())?;
-    dirstate::flush(wc.vfs().root(), &mut ts.lock(), repo.locker(), None, None)?;
+    if flush_dirstate {
+        dirstate::flush(wc.vfs().root(), &mut ts.lock(), repo.locker(), None, None)?;
+    }
 
     util::file::unlink_if_exists(&updatestate_path)?;
     if let Some(progress_path) = progress_path {

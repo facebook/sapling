@@ -78,6 +78,7 @@ pub fn init_working_copy(
             checkout::BookmarkAction::None,
             checkout::CheckoutMode::AbortIfConflicts,
             checkout::ReportMode::Minimal,
+            true,
         ) {
             if ctx.config.get_or_default("checkout", "resumable")? {
                 ctx.logger.info(format!(

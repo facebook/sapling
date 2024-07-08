@@ -146,6 +146,7 @@ pub fn edenfs_checkout(
     wc: &LockedWorkingCopy,
     target_commit: HgId,
     revert_conflicts: bool,
+    flush_dirstate: bool,
 ) -> anyhow::Result<()> {
     // TODO (sggutier): try to unify these steps with the non-edenfs version of checkout
     let target_commit_tree_hash = repo.tree_resolver()?.get_root_id(&target_commit)?;
@@ -163,12 +164,17 @@ pub fn edenfs_checkout(
     }
 
     wc.set_parents(vec![target_commit], Some(target_commit_tree_hash))?;
-    wc.treestate().lock().flush()?;
+    if flush_dirstate {
+        wc.treestate().lock().flush()?;
+    }
+
     // Clear the update state
     let updatestate_path = wc.dot_hg_path().join("updatestate");
     util::file::unlink_if_exists(updatestate_path)?;
+
     // Run EdenFS specific "hooks"
     edenfs_redirect_fixup(&ctx.logger, repo.config(), wc)?;
+
     Ok(())
 }
 

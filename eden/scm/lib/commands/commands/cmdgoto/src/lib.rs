@@ -214,6 +214,7 @@ pub fn run(ctx: ReqCtx<GotoOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Resu
         },
         checkout_mode,
         ReportMode::Always,
+        true,
     )?;
 
     Ok(0)
