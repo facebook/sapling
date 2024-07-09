@@ -271,6 +271,7 @@ def hg(stdin: BinaryIO, stdout: BinaryIO, stderr: BinaryIO, env: Env) -> int:
             pycompat.sysargv = env.args
             util._reloadenv()
             exitcode = bindings.commands.run(env.args, stdin, stdout, stderr)
+            bindings.atexit.drop_queued()
             return exitcode
     finally:
         # See above. This avoids leaking file descriptions that prevents
