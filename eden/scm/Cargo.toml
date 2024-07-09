@@ -15,6 +15,7 @@ members = [
   "lib/backingstore/benches",
   "lib/blackbox",
   "lib/blackbox/serde_alt",
+  "lib/cas-client",
   "lib/cats",
   "lib/checkout",
   "lib/clidispatch",
