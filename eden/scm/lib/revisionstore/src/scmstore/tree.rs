@@ -131,7 +131,7 @@ pub struct TreeStore {
 impl Drop for TreeStore {
     fn drop(&mut self) {
         if self.flush_on_drop {
-            let _ = self.flush();
+            let _ = TreeStore::flush(self);
         }
     }
 }
@@ -546,7 +546,7 @@ impl LegacyStore for TreeStore {
             };
 
             match location {
-                RepackLocation::Local => self.add(&delta, &meta),
+                RepackLocation::Local => HgIdMutableDeltaStore::add(self, &delta, &meta),
                 RepackLocation::Shared => self.get_shared_mutable().add(&delta, &meta),
             }
         }
@@ -688,6 +688,44 @@ impl HgIdMutableDeltaStore for TreeStore {
         if let Some(ref tree_aux_store) = self.tree_aux_store {
             tree_aux_store.flush()?;
         }
+        Ok(None)
+    }
+}
+
+impl HgIdHistoryStore for TreeStore {
+    fn get_node_info(&self, key: &Key) -> Result<Option<NodeInfo>> {
+        self.fetch_batch(
+            std::iter::once(key.clone()),
+            TreeAttributes::PARENTS,
+            FetchMode::AllowRemote,
+        )
+        .single()
+        .map(|t| {
+            t.and_then(|t| {
+                t.parents.map(|p| NodeInfo {
+                    parents: p.to_keys(),
+                    linknode: NULL_ID,
+                })
+            })
+        })
+    }
+
+    fn refresh(&self) -> Result<()> {
+        self.refresh()
+    }
+}
+
+impl HgIdMutableHistoryStore for TreeStore {
+    fn add(&self, key: &Key, info: &NodeInfo) -> Result<()> {
+        if let Some(historystore_local) = &self.historystore_local {
+            historystore_local.add(key, info)
+        } else {
+            bail!("no local history store configured");
+        }
+    }
+
+    fn flush(&self) -> Result<Option<Vec<PathBuf>>> {
+        self.flush()?;
         Ok(None)
     }
 }

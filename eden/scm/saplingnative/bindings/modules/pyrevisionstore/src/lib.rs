@@ -1347,17 +1347,17 @@ py_class!(pub class treescmstore |py| {
 
     def getmissing(&self, keys: &PyObject) -> PyResult<PyList> {
         let store = self.store(py);
-        store.get_missing_py(py, &mut keys.iter(py)?)
+        HgIdDataStorePyExt::get_missing_py(store, py, &mut keys.iter(py)?)
     }
 
     def add(&self, name: PyPathBuf, node: &PyBytes, deltabasenode: &PyBytes, delta: &PyBytes, metadata: Option<PyDict> = None) -> PyResult<PyObject> {
         let store = self.store(py);
-        store.add_py(py, &name, node, deltabasenode, delta, metadata)
+        HgIdMutableDeltaStorePyExt::add_py(store, py, &name, node, deltabasenode, delta, metadata)
     }
 
     def flush(&self) -> PyResult<Option<Vec<PyPathBuf>>> {
         let store = self.store(py);
-        store.flush_py(py)
+        HgIdMutableDeltaStorePyExt::flush_py(store, py)
     }
 
     def prefetch(&self, keys: PyList) -> PyResult<PyObject> {
@@ -1367,7 +1367,7 @@ py_class!(pub class treescmstore |py| {
 
     def markforrefresh(&self) -> PyResult<PyNone> {
         let store = self.store(py);
-        store.refresh_py(py)
+        HgIdDataStorePyExt::refresh_py(store, py)
     }
 
     def upload(&self, keys: PyList) -> PyResult<PyList> {
