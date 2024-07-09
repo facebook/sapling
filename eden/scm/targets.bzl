@@ -46,3 +46,6 @@ def gen_hgpython():
             "fbcode//eden/scm:hg",
         ],
     )
+
+def is_experimental_cas_build():
+    return read_bool("sl", "cas", False)

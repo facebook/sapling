@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::sync::Arc;
+
 use anyhow::anyhow;
 use anyhow::Result;
 use cas_client::CasClient;
@@ -25,6 +27,10 @@ use types::Blake3;
 pub struct ThinCasClient {
     client: REClient,
     metadata: RemoteExecutionMetadata,
+}
+
+pub fn construct(config: &dyn Config) -> Result<Arc<dyn CasClient>> {
+    ThinCasClient::from_config(config).map(|c| Arc::new(c) as Arc<dyn CasClient>)
 }
 
 impl ThinCasClient {

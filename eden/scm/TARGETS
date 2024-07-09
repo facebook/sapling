@@ -3,7 +3,7 @@
 # fix the mercurial code to use fbcode-relative includes.
 #
 
-load("@fbcode//eden/scm:targets.bzl", "gen_hgpython")
+load("@fbcode//eden/scm:targets.bzl", "gen_hgpython", "is_experimental_cas_build")
 load("@fbcode//target_determinator/macros:ci_hint.bzl", "ci_hint")
 load("@fbcode_macros//build_defs:cpp_binary.bzl", "cpp_binary")
 load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
@@ -181,7 +181,7 @@ rust_binary(
     features = [
         "fb",
         "with_chg",
-    ],
+    ] + (["cas"] if is_experimental_cas_build() else []),
     link_style = "static",
     linker_flags = select({
         "DEFAULT": [],
@@ -228,7 +228,10 @@ rust_binary(
         "//eden/scm/lib/util/atexit:atexit",
     ] + ([] if rust_oss.is_oss_build() else [
         "//common/rust/shed/fbinit:fbinit",
-    ]),
+    ]) + ([
+        "//eden/scm/lib/cas-client:cas-client",
+        "//eden/scm/lib/cas-client/thin-client:thin-cas-client",
+    ] if is_experimental_cas_build() else []),
 )
 
 # Try to override target depth so //eden/scm/tests:hg_run_tests and other
