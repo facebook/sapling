@@ -10,6 +10,7 @@ use serde_derive::Serialize;
 
 use crate::hgid::HgId;
 use crate::hgid::NULL_ID;
+use crate::Key;
 
 /// Enum representing a Mercurial hgid's parents.
 ///
@@ -80,6 +81,14 @@ impl Parents {
             Parents::None | Parents::One(_) => None,
             Parents::Two(_, ref p2) => Some(p2),
         }
+    }
+
+    pub fn to_keys(&self) -> [Key; 2] {
+        let (p1, p2) = self.into_nodes();
+        [
+            Key::new(Default::default(), p1),
+            Key::new(Default::default(), p2),
+        ]
     }
 }
 

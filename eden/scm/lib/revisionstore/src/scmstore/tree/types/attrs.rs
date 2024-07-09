@@ -7,6 +7,7 @@
 
 use std::ops::BitAnd;
 use std::ops::BitOr;
+use std::ops::BitOrAssign;
 use std::ops::Not;
 use std::ops::Sub;
 
@@ -71,6 +72,12 @@ impl BitOr for TreeAttributes {
             content: self.content | rhs.content,
             parents: self.parents | rhs.parents,
         }
+    }
+}
+
+impl BitOrAssign for TreeAttributes {
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self = *self | rhs
     }
 }
 

@@ -701,6 +701,10 @@ impl<'a> TreeStoreBuilder<'a> {
             (None, None)
         };
 
+        let prefetch_tree_parents = self
+            .config
+            .get_or_default("scmstore", "prefetch-tree-parents")?;
+
         tracing::trace!(target: "revisionstore::treestore", "processing contentstore");
         let contentstore = if self
             .config
@@ -738,6 +742,7 @@ impl<'a> TreeStoreBuilder<'a> {
             tree_aux_store,
             historystore_local,
             historystore_cache,
+            prefetch_tree_parents,
             filestore: self.filestore,
             tree_metadata_mode,
             fetch_tree_aux_data,

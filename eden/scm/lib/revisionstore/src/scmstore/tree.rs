@@ -11,10 +11,13 @@ use std::sync::Arc;
 use std::time::Instant;
 
 use ::types::fetch_mode::FetchMode;
+use ::types::hgid::NULL_ID;
 use ::types::tree::TreeItemFlag;
 use ::types::HgId;
 use ::types::Key;
 use ::types::Node;
+use ::types::NodeInfo;
+use ::types::Parents;
 use ::types::PathComponent;
 use ::types::PathComponentBuf;
 use ::types::RepoPath;
@@ -57,6 +60,7 @@ use crate::ContentDataStore;
 use crate::ContentMetadata;
 use crate::ContentStore;
 use crate::Delta;
+use crate::HgIdHistoryStore;
 use crate::HgIdMutableDeltaStore;
 use crate::HgIdMutableHistoryStore;
 use crate::IndexedLogHgIdHistoryStore;
@@ -113,6 +117,9 @@ pub struct TreeStore {
     pub historystore_local: Option<Arc<IndexedLogHgIdHistoryStore>>,
     pub historystore_cache: Option<Arc<IndexedLogHgIdHistoryStore>>,
 
+    /// Write tree parents to history cache even if parents weren't requested.
+    pub prefetch_tree_parents: bool,
+
     pub flush_on_drop: bool,
 
     /// Whether to fetch trees aux data from remote (provided by the augmented trees)
@@ -147,6 +154,9 @@ impl TreeStore {
         let indexedlog_local = self.indexedlog_local.clone();
         let edenapi = self.edenapi.clone();
 
+        let historystore_cache = self.historystore_cache.clone();
+        let historystore_local = self.historystore_local.clone();
+
         let contentstore = self.contentstore.clone();
         let cache_to_local_cache = self.cache_to_local_cache;
         let aux_cache = self.filestore.as_ref().and_then(|fs| fs.aux_cache.clone());
@@ -158,6 +168,7 @@ impl TreeStore {
             TreeMetadataMode::OptIn => fetch_mode.contains(FetchMode::PREFETCH),
         };
         let fetch_tree_aux_data = self.fetch_tree_aux_data.clone();
+        let fetch_parents = attrs.parents || self.prefetch_tree_parents;
 
         let fetch_local = fetch_mode.contains(FetchMode::LOCAL);
         let fetch_remote = fetch_mode.contains(FetchMode::REMOTE);
@@ -209,12 +220,39 @@ impl TreeStore {
                         let _ = store_metrics.time_from_duration(start_time.elapsed());
                     }
                 }
+
+                for (name, log) in [
+                    ("cache", &historystore_cache),
+                    ("local", &historystore_local),
+                ] {
+                    if let Some(log) = log {
+                        let pending: Vec<_> = common
+                            .pending(TreeAttributes::PARENTS, false)
+                            .map(|(key, _attrs)| key.clone())
+                            .collect();
+                        for key in pending.into_iter() {
+                            if let Some(entry) = log.get_node_info(&key)? {
+                                tracing::trace!("{:?} found parents in {name}", key);
+                                common.found(
+                                    key,
+                                    StoreTree {
+                                        content: None,
+                                        parents: Some(Parents::new(
+                                            entry.parents[0].hgid,
+                                            entry.parents[1].hgid,
+                                        )),
+                                    },
+                                );
+                            }
+                        }
+                    }
+                }
             }
 
             if fetch_remote {
                 if let Some(ref edenapi) = edenapi {
                     let pending: Vec<_> = common
-                        .pending(TreeAttributes::CONTENT, false)
+                        .pending(TreeAttributes::CONTENT | TreeAttributes::PARENTS, false)
                         .map(|(key, _attrs)| key.clone())
                         .collect();
                     if !pending.is_empty() {
@@ -240,6 +278,7 @@ impl TreeStore {
 
                         let attributes = edenapi_types::TreeAttributes {
                             manifest_blob: true,
+                            // We use parents to check hash integrity.
                             parents: true,
                             child_metadata: fetch_children_metadata,
                             augmented_trees: fetch_tree_aux_data,
@@ -272,11 +311,27 @@ impl TreeStore {
                                     }
                                 }
                             }
+
                             if indexedlog_cache.is_some() && cache_to_local_cache {
                                 if let Some(entry) = entry.indexedlog_cache_entry(key.clone())? {
                                     indexedlog_cache.as_ref().unwrap().put_entry(entry)?;
                                 }
                             }
+
+                            if fetch_parents {
+                                if let Some(historystore_cache) = &historystore_cache {
+                                    if let Some(parents) = entry.parents() {
+                                        historystore_cache.add(
+                                            &key,
+                                            &NodeInfo {
+                                                parents: parents.to_keys(),
+                                                linknode: NULL_ID,
+                                            },
+                                        )?;
+                                    }
+                                }
+                            }
+
                             common.found(key, entry.into());
                         }
                         util::record_edenapi_stats(&span, &response.stats);
@@ -384,6 +439,7 @@ impl TreeStore {
             tree_metadata_mode: TreeMetadataMode::Never,
             fetch_tree_aux_data: false,
             metrics: Default::default(),
+            prefetch_tree_parents: false,
         }
     }
 
@@ -461,6 +517,7 @@ impl LegacyStore for TreeStore {
             tree_metadata_mode: TreeMetadataMode::Never,
             fetch_tree_aux_data: false,
             metrics: self.metrics.clone(),
+            prefetch_tree_parents: false,
         })
     }
 

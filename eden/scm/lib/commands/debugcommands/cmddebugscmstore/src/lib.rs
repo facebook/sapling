@@ -47,6 +47,9 @@ define_flags! {
         /// Only fetch AUX data (don't request file content).
         aux_only: bool,
 
+        /// Request tree parents.
+        tree_parents: bool,
+
         /// Revision for positional file paths.
         #[short('r')]
         #[argtype("REV")]
@@ -123,7 +126,13 @@ pub fn run(ctx: ReqCtx<DebugScmStoreOpts>, repo: &mut Repo) -> Result<u8> {
             fetch_mode,
             ctx.opts.aux_only,
         )?,
-        FetchType::Tree => fetch_trees(&ctx.core.io, &fresh_repo, keys, fetch_mode)?,
+        FetchType::Tree => fetch_trees(
+            &ctx.core.io,
+            &fresh_repo,
+            keys,
+            fetch_mode,
+            ctx.opts.tree_parents,
+        )?,
     }
 
     Ok(0)
@@ -187,13 +196,24 @@ fn fetch_files(
     Ok(())
 }
 
-fn fetch_trees(io: &IO, repo: &Repo, keys: Vec<Key>, fetch_mode: FetchMode) -> Result<()> {
+fn fetch_trees(
+    io: &IO,
+    repo: &Repo,
+    keys: Vec<Key>,
+    fetch_mode: FetchMode,
+    tree_parents: bool,
+) -> Result<()> {
     repo.tree_store()?;
     let store = repo.tree_scm_store().unwrap();
 
     let mut stdout = io.output();
 
-    let fetch_result = store.fetch_batch(keys.into_iter(), TreeAttributes::CONTENT, fetch_mode);
+    let mut attrs = TreeAttributes::CONTENT;
+    if tree_parents {
+        attrs |= TreeAttributes::PARENTS;
+    }
+
+    let fetch_result = store.fetch_batch(keys.into_iter(), attrs, fetch_mode);
 
     let (found, missing, _errors) = fetch_result.consume();
     for complete in found.into_iter() {
