@@ -552,12 +552,7 @@ class remotefileslog(filelog.fileslog):
 
         mask = os.umask(0o002)
         try:
-            sharedonlycontentstore = revisionstore.filescmstore(
-                None,
-                repo.ui._rcfg,
-                sharedonlyremotestore,
-                edenapistore,
-            )
+            sharedonlycontentstore = self.filestore.getsharedmutable()
             sharedonlymetadatastore = revisionstore.metadatastore(
                 None,
                 repo.ui._rcfg,

@@ -461,36 +461,17 @@ impl FileStore {
         clone.contentstore = Some(cs);
         clone
     }
-}
 
-impl FileStore {
-    pub(crate) fn get_file_content_impl(
-        &self,
-        key: &Key,
-        fetch_mode: FetchMode,
-    ) -> Result<Option<Bytes>> {
-        self.metrics.write().api.hg_getfilecontent.call(0);
-        self.fetch(
-            std::iter::once(key.clone()),
-            FileAttributes::CONTENT,
-            fetch_mode,
-        )
-        .single()?
-        .map(|entry| entry.content.unwrap().file_content())
-        .transpose()
-    }
-}
-
-impl LegacyStore for FileStore {
-    /// Returns only the local cache / shared stores, in place of the local-only stores, such that writes will go directly to the local cache.
-    /// For compatibility with ContentStore::get_shared_mutable
-    fn get_shared_mutable(&self) -> Arc<dyn HgIdMutableDeltaStore> {
+    /// Returns only the local cache / shared stores, in place of the local-only stores,
+    /// such that writes will go directly to the local cache.
+    pub fn with_shared_only(&self) -> Self {
         // this is infallible in ContentStore so panic if there are no shared/cache stores.
         assert!(
             self.indexedlog_cache.is_some() || self.lfs_cache.is_some(),
             "cannot get shared_mutable, no shared / local cache stores available"
         );
-        Arc::new(FileStore {
+
+        Self {
             extstored_policy: self.extstored_policy.clone(),
             lfs_threshold_bytes: self.lfs_threshold_bytes.clone(),
             edenapi_retries: self.edenapi_retries.clone(),
@@ -520,7 +501,32 @@ impl LegacyStore for FileStore {
 
             // Conservatively flushing on drop here, didn't see perf problems and might be needed by Python
             flush_on_drop: true,
-        })
+        }
+    }
+}
+
+impl FileStore {
+    pub(crate) fn get_file_content_impl(
+        &self,
+        key: &Key,
+        fetch_mode: FetchMode,
+    ) -> Result<Option<Bytes>> {
+        self.metrics.write().api.hg_getfilecontent.call(0);
+        self.fetch(
+            std::iter::once(key.clone()),
+            FileAttributes::CONTENT,
+            fetch_mode,
+        )
+        .single()?
+        .map(|entry| entry.content.unwrap().file_content())
+        .transpose()
+    }
+}
+
+impl LegacyStore for FileStore {
+    /// For compatibility with ContentStore::get_shared_mutable
+    fn get_shared_mutable(&self) -> Arc<dyn HgIdMutableDeltaStore> {
+        Arc::new(self.with_shared_only())
     }
 
     fn get_file_content(&self, key: &Key) -> Result<Option<Bytes>> {
