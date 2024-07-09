@@ -8,4 +8,5 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.75"
 async-trait = "0.1.71"
+configmodel = { version = "0.1.0", path = "../config/model" }
 types = { version = "0.1.0", path = "../types" }

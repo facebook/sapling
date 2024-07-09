@@ -5,7 +5,24 @@
  * GNU General Public License version 2.
  */
 
+use std::sync::Arc;
+use std::sync::OnceLock;
+
+use configmodel::Config;
 pub use types::CasDigest;
+
+type Constructor = fn(&dyn Config) -> anyhow::Result<Arc<dyn CasClient>>;
+
+static CONSTRUCTOR: OnceLock<Constructor> = OnceLock::new();
+
+pub fn register_constructor(c: Constructor) {
+    // panic if called twice
+    CONSTRUCTOR.set(c).unwrap()
+}
+
+pub fn new(config: &dyn Config) -> anyhow::Result<Option<Arc<dyn CasClient>>> {
+    CONSTRUCTOR.get().map(|c| c(config)).transpose()
+}
 
 #[async_trait::async_trait]
 pub trait CasClient: Sync + Send {
