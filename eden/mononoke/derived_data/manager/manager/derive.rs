@@ -468,11 +468,17 @@ impl DerivedDataManager {
                             if let Some(req_err) = cause.downcast_ref::<RequestError>() {
                                 if matches!(req_err.reason, RequestErrorReason::commit_not_found(_))
                                 {
-                                    derived_data_scuba.log_remote_derivation_end(
-                                        ctx,
-                                        Some(String::from("Commit Not Found Response")),
-                                    );
-                                    return Ok(None);
+                                    if justknobs::eval(
+                                        "scm/mononoke:derived_data_enable_local_fallback_for_ephemeral_bubbles",
+                                        None,
+                                        Some(self.repo_name()),
+                                    )? {
+                                        derived_data_scuba.log_remote_derivation_end(
+                                            ctx,
+                                            Some(String::from("Commit Not Found Response")),
+                                        );
+                                        return Ok(None);
+                                    }
                                 }
                             }
                         }

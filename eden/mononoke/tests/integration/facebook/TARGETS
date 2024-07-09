@@ -66,6 +66,7 @@ dott_test(
     dott_files = glob(["test-derived-data-service*.t"]),
     deps = [
         "//eden/mononoke:blobimport",
+        "//eden/mononoke:mononoke",
         "//eden/mononoke/facebook/derived_data_service:2ds_client",
         "//eden/mononoke/facebook/derived_data_service:derivation_worker",
         "//eden/mononoke/facebook/derived_data_service:derived_data_service",
