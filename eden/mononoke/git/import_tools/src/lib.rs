@@ -7,7 +7,7 @@
 
 #![feature(try_blocks)]
 
-mod git_reader;
+pub mod git_reader;
 mod gitimport_objects;
 mod gitlfs;
 
@@ -49,9 +49,9 @@ use tokio::io::BufReader;
 use tokio::process::Command;
 use tokio::task;
 
+use crate::git_reader::GitReader;
 pub use crate::git_reader::GitRepoReader;
 pub use crate::gitimport_objects::oid_to_sha1;
-use crate::gitimport_objects::read_raw_object;
 pub use crate::gitimport_objects::BackfillDerivation;
 pub use crate::gitimport_objects::CommitMetadata;
 pub use crate::gitimport_objects::ExtractedCommit;
@@ -74,16 +74,17 @@ pub const BRANCH_REF_PREFIX: &str = "refs/heads/";
 pub const TAG_REF_PREFIX: &str = "refs/tags/";
 
 // TODO: Try to produce copy-info?
-async fn find_file_changes<S, U>(
+async fn find_file_changes<S, U, R>(
     ctx: &CoreContext,
     lfs: &GitImportLfs,
-    reader: &GitRepoReader,
+    reader: &R,
     uploader: U,
     changes: S,
 ) -> Result<SortedVectorMap<NonRootMPath, U::Change>>
 where
     S: Stream<Item = Result<BonsaiDiffFileChange<GitLeaf>>>,
     U: GitUploader,
+    R: GitReader,
 {
     changes
         .map_ok(|change| async {
@@ -161,26 +162,6 @@ impl GitimportAccumulator {
     }
 }
 
-pub async fn is_annotated_tag(
-    path: &Path,
-    prefs: &GitimportPreferences,
-    object_id: &ObjectId,
-) -> Result<bool> {
-    let reader = GitRepoReader::new(&prefs.git_command_path, path).await?;
-    Ok(reader
-        .get_object(object_id)
-        .await
-        .with_context(|| {
-            format_err!(
-                "Failed to fetch git object {} for checking if its a tag",
-                object_id,
-            )
-        })?
-        .parsed
-        .as_tag()
-        .is_some())
-}
-
 pub fn stored_tag_name(tag_name: String) -> String {
     tag_name
         .strip_prefix("refs/")
@@ -210,15 +191,14 @@ pub async fn create_changeset_for_annotated_tag<Uploader: GitUploader>(
     Ok(changeset_id)
 }
 
-pub async fn upload_git_tag<Uploader: GitUploader>(
+pub async fn upload_git_tag<Uploader: GitUploader, Reader: GitReader>(
     ctx: &CoreContext,
     uploader: &Uploader,
-    path: &Path,
-    prefs: &GitimportPreferences,
+    reader: &Reader,
     tag_id: &ObjectId,
 ) -> Result<()> {
-    let reader = GitRepoReader::new(&prefs.git_command_path, path).await?;
-    let tag_bytes = read_raw_object(&reader, tag_id)
+    let tag_bytes = reader
+        .read_raw_object(tag_id)
         .await
         .with_context(|| format_err!("Failed to fetch git tag {}", tag_id))?;
     let raw_tag_bytes = tag_bytes.clone();
@@ -278,13 +258,13 @@ pub async fn gitimport_acc<Uploader: GitUploader>(
     import_commit_contents(ctx, repo_name, all_commits, roots, uploader, reader, prefs).await
 }
 
-pub async fn import_commit_contents<Uploader: GitUploader>(
+pub async fn import_commit_contents<Uploader: GitUploader, Reader: GitReader>(
     ctx: &CoreContext,
     repo_name: String,
     all_commits: Vec<Result<ObjectId>>,
     roots: &HashMap<ObjectId, ChangesetId>,
     uploader: &Uploader,
-    reader: GitRepoReader,
+    reader: Reader,
     prefs: &GitimportPreferences,
 ) -> Result<GitimportAccumulator> {
     let nb_commits_to_import = all_commits.len();
@@ -388,7 +368,7 @@ pub async fn import_commit_contents<Uploader: GitUploader>(
                         async move {
                             tokio::spawn(async move {
                                 let tree_for_commit =
-                                    read_raw_object(&reader, &entry.0).await.with_context(|| {
+                                    reader.read_raw_object(&entry.0).await.with_context(|| {
                                         format_err!(
                                             "Failed to fetch git tree {} for commit {}",
                                             entry.0,

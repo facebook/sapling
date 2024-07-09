@@ -13,7 +13,6 @@ use std::process::Stdio;
 
 use anyhow::anyhow;
 use anyhow::bail;
-use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
@@ -31,7 +30,6 @@ use gix_object::bstr::BString;
 use gix_object::tree;
 use gix_object::Commit;
 use gix_object::Tag;
-use gix_object::Tree;
 use manifest::bonsai_diff;
 use manifest::find_intersection_of_diffs;
 use manifest::BonsaiDiffFileChange;
@@ -54,6 +52,7 @@ use tokio::io::BufReader;
 use tokio::process::Child;
 use tokio::process::Command;
 
+use crate::git_reader::GitReader;
 use crate::git_reader::GitRepoReader;
 use crate::gitlfs::GitImportLfs;
 
@@ -91,19 +90,11 @@ impl<const SUBMODULES: bool> Manifest for GitManifest<SUBMODULES> {
     }
 }
 
-async fn read_tree(reader: &GitRepoReader, oid: &gix_hash::oid) -> Result<Tree, Error> {
-    let object = reader.get_object(oid).await?;
-    object
-        .parsed
-        .try_into_tree()
-        .map_err(|_| format_err!("{} is not a tree", oid))
-}
-
-async fn load_git_tree<const SUBMODULES: bool>(
+async fn load_git_tree<const SUBMODULES: bool, Reader: GitReader>(
     oid: &gix_hash::oid,
-    reader: &GitRepoReader,
+    reader: &Reader,
 ) -> Result<GitManifest<SUBMODULES>, Error> {
-    let tree = read_tree(reader, oid).await?;
+    let tree = reader.read_tree(oid).await?;
 
     let elements = tree
         .entries
@@ -153,15 +144,18 @@ async fn load_git_tree<const SUBMODULES: bool>(
 }
 
 #[async_trait]
-impl<const SUBMODULES: bool> StoreLoadable<GitRepoReader> for GitTree<SUBMODULES> {
+impl<const SUBMODULES: bool, Reader> StoreLoadable<Reader> for GitTree<SUBMODULES>
+where
+    Reader: GitReader,
+{
     type Value = GitManifest<SUBMODULES>;
 
     async fn load<'a>(
         &'a self,
         _ctx: &'a CoreContext,
-        reader: &'a GitRepoReader,
+        reader: &'a Reader,
     ) -> Result<Self::Value, LoadableError> {
-        load_git_tree::<SUBMODULES>(&self.0, reader)
+        load_git_tree::<SUBMODULES, Reader>(&self.0, reader)
             .await
             .map_err(LoadableError::from)
     }
@@ -311,11 +305,11 @@ pub struct TagMetadata {
 }
 
 impl TagMetadata {
-    pub async fn new(
+    pub async fn new<Reader: GitReader>(
         ctx: &CoreContext,
         oid: ObjectId,
         maybe_tag_name: Option<String>,
-        reader: &GitRepoReader,
+        reader: &Reader,
     ) -> Result<Self, Error> {
         let Tag {
             name,
@@ -324,7 +318,7 @@ impl TagMetadata {
             message,
             mut pgp_signature,
             ..
-        } = read_tag(reader, &oid).await?;
+        } = reader.read_tag(&oid).await?;
 
         let author_date = tagger
             .take()
@@ -370,36 +364,6 @@ pub struct ExtractedCommit {
     pub tree_oid: ObjectId,
     pub parent_tree_oids: HashSet<ObjectId>,
     pub original_commit: Bytes,
-}
-
-pub(crate) async fn read_tag(reader: &GitRepoReader, oid: &gix_hash::oid) -> Result<Tag, Error> {
-    let object = reader.get_object(oid).await?;
-    object
-        .parsed
-        .try_into_tag()
-        .map_err(|_| format_err!("{} is not a tag", oid))
-}
-
-pub(crate) async fn read_commit(
-    reader: &GitRepoReader,
-    oid: &gix_hash::oid,
-) -> Result<Commit, Error> {
-    let object = reader.get_object(oid).await?;
-    object
-        .parsed
-        .try_into_commit()
-        .map_err(|_| format_err!("{} is not a commit", oid))
-}
-
-pub(crate) async fn read_raw_object(
-    reader: &GitRepoReader,
-    oid: &gix_hash::oid,
-) -> Result<Bytes, Error> {
-    reader
-        .get_object(oid)
-        .await
-        .map(|obj| obj.raw)
-        .with_context(|| format!("Error while fetching Git object for ID {}", oid))
 }
 
 fn format_signature(sig: gix_actor::SignatureRef) -> String {
@@ -471,10 +435,10 @@ fn decode_message(
 }
 
 impl ExtractedCommit {
-    pub async fn new(
+    pub async fn new<Reader: GitReader>(
         ctx: &CoreContext,
         oid: ObjectId,
-        reader: &GitRepoReader,
+        reader: &Reader,
     ) -> Result<Self, Error> {
         let Commit {
             tree,
@@ -485,13 +449,13 @@ impl ExtractedCommit {
             message,
             extra_headers,
             ..
-        } = read_commit(reader, &oid).await?;
+        } = reader.read_commit(&oid).await?;
 
         let tree_oid = tree;
         let parent_tree_oids = {
             let mut trees = HashSet::new();
             for parent in &parents {
-                let commit = read_commit(reader, parent).await?;
+                let commit = reader.read_commit(parent).await?;
                 trees.insert(commit.tree);
             }
             trees
@@ -512,7 +476,7 @@ impl ExtractedCommit {
                 )
             })
             .collect();
-        let original_commit = read_raw_object(reader, &oid).await?;
+        let original_commit = reader.read_raw_object(&oid).await?;
         Result::<_, Error>::Ok(ExtractedCommit {
             original_commit,
             metadata: CommitMetadata {
@@ -532,10 +496,10 @@ impl ExtractedCommit {
 
     /// Generic version of `diff` based on whether submodules are
     /// included or not.
-    fn diff_for_submodules<const SUBMODULES: bool>(
+    fn diff_for_submodules<const SUBMODULES: bool, Reader: GitReader>(
         &self,
         ctx: &CoreContext,
-        reader: &GitRepoReader,
+        reader: &Reader,
     ) -> impl Stream<Item = Result<BonsaiDiffFileChange<GitLeaf>, Error>> {
         let tree = GitTree::<SUBMODULES>(self.tree_oid);
         let parent_trees = self
@@ -549,26 +513,27 @@ impl ExtractedCommit {
 
     /// Compare the commit against its parents and return all bonsai changes
     /// that it includes.
-    pub fn diff(
+    pub fn diff<Reader: GitReader>(
         &self,
         ctx: &CoreContext,
-        reader: &GitRepoReader,
+        reader: &Reader,
         submodules: bool,
     ) -> impl Stream<Item = Result<BonsaiDiffFileChange<GitLeaf>, Error>> {
         if submodules {
-            self.diff_for_submodules::<true>(ctx, reader).left_stream()
+            self.diff_for_submodules::<true, Reader>(ctx, reader)
+                .left_stream()
         } else {
-            self.diff_for_submodules::<false>(ctx, reader)
+            self.diff_for_submodules::<false, Reader>(ctx, reader)
                 .right_stream()
         }
     }
 
     /// Compare the tree for the commit against its parents and return all the trees and subtrees
     /// that have changed w.r.t its parents
-    pub fn changed_trees(
+    pub fn changed_trees<Reader: GitReader>(
         &self,
         ctx: &CoreContext,
-        reader: &GitRepoReader,
+        reader: &Reader,
     ) -> impl Stream<Item = Result<GitTree<true>, Error>> {
         // When doing manifest diff over trees, submodules enabled or disabled doesn't matter
         let tree = GitTree::<true>(self.tree_oid);

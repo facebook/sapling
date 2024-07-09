@@ -36,6 +36,7 @@ use import_tools::create_changeset_for_annotated_tag;
 use import_tools::import_tree_as_single_bonsai_changeset;
 use import_tools::upload_git_tag;
 use import_tools::BackfillDerivation;
+use import_tools::GitRepoReader;
 use import_tools::GitimportPreferences;
 use import_tools::GitimportTarget;
 use linked_hash_map::LinkedHashMap;
@@ -368,6 +369,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
                 .into_iter()
                 .map(|entry| (entry.tag_name, entry.tag_hash))
                 .collect::<HashMap<_, _>>();
+            let reader = GitRepoReader::new(&prefs.git_command_path, path).await?;
             for (maybe_tag_id, name, changeset) in
                 mapping
                     .iter()
@@ -405,7 +407,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
                     // Only upload the tag if it's new or has changed.
                     if new_or_updated_tag {
                         // The ref getting imported is a tag, so store the raw git Tag object.
-                        upload_git_tag(&ctx, &uploader, path, &prefs, tag_id).await?;
+                        upload_git_tag(&ctx, &uploader, &reader, tag_id).await?;
                         // Create the changeset corresponding to the commit pointed to by the tag.
                         create_changeset_for_annotated_tag(
                             &ctx,
