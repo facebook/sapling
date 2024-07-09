@@ -48,11 +48,6 @@ pub fn args() -> Result<Vec<String>> {
 }
 
 fn last_chance_to_abort(early: &HgGlobalOpts, full: &HgGlobalOpts) -> Result<()> {
-    abort_if!(
-        full.profile,
-        "--profile does not support Rust commands (yet)"
-    );
-
     if full.help {
         return Err(errors::UnknownCommand("--help".to_string()).into());
     }
