@@ -100,13 +100,13 @@ WindowsNotifier* getWindowsNotifier(HWND hwnd) {
       GetWindowLongPtr(hwnd, GWLP_USERDATA), "GetWindowLongPtr failed"));
 }
 
-bool isDarkTheme() {
+bool isTaskbarDarkTheme() {
   DWORD value = 0;
   DWORD size = sizeof(value);
   if (RegGetValueW(
           HKEY_CURRENT_USER,
           L"Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize",
-          L"AppsUseLightTheme",
+          L"SystemUsesLightTheme",
           RRF_RT_REG_DWORD | RRF_ZEROONFAILURE,
           NULL,
           &value,
@@ -119,7 +119,7 @@ bool isDarkTheme() {
 }
 
 int getDefaultIcon() {
-  if (isDarkTheme()) {
+  if (isTaskbarDarkTheme()) {
     return IDI_WNOTIFICATIONICON;
   } else {
     return IDI_BNOTIFICATIONICON;
