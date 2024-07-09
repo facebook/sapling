@@ -9,7 +9,6 @@ license = "GPLv2+"
 
 [dependencies]
 anyhow = "1.0.75"
-async-recursion = "1.0.2"
 async-stream = "0.3"
 async_requests = { version = "0.1.0", path = "../../megarepo_api/async_requests" }
 blobstore = { version = "0.1.0", path = "../../blobstore" }
@@ -69,7 +68,6 @@ gix-object = "0.33"
 itertools = "0.11.0"
 manifest = { version = "0.1.0", path = "../../manifest" }
 megarepo_api = { version = "0.1.0", path = "../../megarepo_api" }
-megarepo_config = { version = "0.1.0", path = "../../megarepo_api/megarepo_config" }
 megarepo_error = { version = "0.1.0", path = "../../megarepo_api/megarepo_error" }
 mercurial_derivation = { version = "0.1.0", path = "../../derived_data/mercurial_derivation" }
 mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
