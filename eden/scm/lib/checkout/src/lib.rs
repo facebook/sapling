@@ -73,7 +73,6 @@ use crate::watchman_state::WatchmanStateChange;
 mod actions;
 #[allow(dead_code)]
 mod conflict;
-#[cfg(feature = "eden")]
 pub mod edenfs;
 pub mod errors;
 #[allow(dead_code)]
@@ -1062,22 +1061,16 @@ pub fn checkout(
         }
     }
 
-    let stats = if repo.requirements.contains("eden") {
-        #[cfg(feature = "eden")]
-        {
-            edenfs::edenfs_checkout(
-                ctx,
-                repo,
-                wc,
-                target_commit,
-                revert_conflicts,
-                flush_dirstate,
-            )?;
-            None
-        }
-
-        #[cfg(not(feature = "eden"))]
-        bail!("checkout() called on eden working copy on non-eden build");
+    let stats = if repo.requirements.contains("eden") || repo.requirements.contains("dotgit") {
+        edenfs::edenfs_checkout(
+            ctx,
+            repo,
+            wc,
+            target_commit,
+            revert_conflicts,
+            flush_dirstate,
+        )?;
+        None
     } else {
         Some(filesystem_checkout(
             ctx,

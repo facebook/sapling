@@ -2,6 +2,7 @@
 
   $ . $TESTDIR/git.sh
   $ setconfig diff.git=true ui.allowemptycommit=true
+  $ setconfig workingcopy.rust-checkout=true
 
 Prepare git repo
 

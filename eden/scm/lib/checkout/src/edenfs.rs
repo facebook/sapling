@@ -172,8 +172,11 @@ pub fn edenfs_checkout(
     let updatestate_path = wc.dot_hg_path().join("updatestate");
     util::file::unlink_if_exists(updatestate_path)?;
 
-    // Run EdenFS specific "hooks"
-    edenfs_redirect_fixup(&ctx.logger, repo.config(), wc)?;
+    #[cfg(feature = "eden")]
+    if repo.requirements.contains("eden") {
+        // Run EdenFS specific "hooks"
+        edenfs_redirect_fixup(&ctx.logger, repo.config(), wc)?;
+    }
 
     Ok(())
 }
@@ -293,6 +296,7 @@ fn clear_edenfs_dirstate(wc: &LockedWorkingCopy) -> anyhow::Result<()> {
 ///
 /// Otherwise, run in foreground. This is needed for automation that relies
 /// on `checkout HASH` to setup critical repo redirections.
+#[cfg(feature = "eden")]
 pub fn edenfs_redirect_fixup(
     lgr: &TermLogger,
     config: &dyn Config,
@@ -319,6 +323,7 @@ pub fn edenfs_redirect_fixup(
 }
 
 /// Whether the edenfs redirect directories look okay, or None if redirect is unnecessary.
+#[cfg(feature = "eden")]
 fn is_edenfs_redirect_okay(wc: &WorkingCopy) -> anyhow::Result<Option<bool>> {
     let vfs = wc.vfs();
     let mut redirections = HashMap::new();
@@ -386,6 +391,7 @@ fn is_edenfs_redirect_okay(wc: &WorkingCopy) -> anyhow::Result<Option<bool>> {
 }
 
 /// abort if there is a ConflictType.ERROR type of conflicts
+#[cfg(feature = "eden")]
 pub fn abort_on_eden_conflict_error(
     config: &dyn Config,
     conflicts: Vec<CheckoutConflict>,
@@ -405,5 +411,15 @@ pub fn abort_on_eden_conflict_error(
             });
         }
     }
+    Ok(())
+}
+
+// Dot-git doesn't currently return any conflicts so just leave empty for now.
+#[cfg(not(feature = "eden"))]
+pub fn abort_on_eden_conflict_error(
+    config: &dyn Config,
+    conflicts: Vec<CheckoutConflict>,
+) -> Result<(), EdenConflictError> {
+    let (_, _) = (config, conflicts);
     Ok(())
 }
