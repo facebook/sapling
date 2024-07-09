@@ -15,6 +15,8 @@ use anyhow::Error;
 use backsyncer::format_counter as format_backsyncer_counter;
 use blobrepo::save_bonsai_changesets;
 use blobstore::Loadable;
+use blobstore_factory::MetadataSqlFactory;
+use blobstore_factory::ReadOnlyStorage;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateLogRef;
 use bookmarks::BookmarkUpdateReason;
@@ -74,6 +76,7 @@ use mononoke_types::RepositoryId;
 use mutable_counters::MutableCountersRef;
 use pushrebase::do_pushrebase_bonsai;
 use pushrebase::FAIL_PUSHREBASE_EXTRA;
+use pushredirect::SqlPushRedirectionConfigBuilder;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
 use slog::info;
@@ -144,7 +147,6 @@ pub async fn subcommand_crossrepo<'a>(
     sub_m: &'a ArgMatches<'_>,
 ) -> Result<(), SubcommandError> {
     let config_store = matches.config_store();
-    let live_commit_sync_config = CfgrLiveCommitSyncConfig::new(&logger, config_store)?;
 
     let ctx = CoreContext::new_with_logger_and_client_info(
         fb,
@@ -158,6 +160,9 @@ pub async fn subcommand_crossrepo<'a>(
 
             let submodule_deps = SubmoduleDeps::NotNeeded;
 
+            let live_commit_sync_config =
+                get_live_commit_sync_config(&ctx, fb, matches, source_repo.repo_identity().id())
+                    .await?;
             let common_config =
                 live_commit_sync_config.get_common_config(source_repo.repo_identity().id())?;
             let commit_sync_repos =
@@ -209,7 +214,7 @@ pub async fn subcommand_crossrepo<'a>(
         }
         (VERIFY_BOOKMARKS_SUBCOMMAND, Some(sub_sub_m)) => {
             let (source_repo, target_repo, mapping) =
-                get_source_target_repos_and_mapping(fb, logger, matches).await?;
+                get_source_target_repos_and_mapping::<CrossRepo>(fb, logger, matches).await?;
 
             let mode = if sub_sub_m.is_present(UPDATE_LARGE_REPO_BOOKMARKS) {
                 VerifyRunMode::UpdateLargeRepoBookmarks {
@@ -228,6 +233,9 @@ pub async fn subcommand_crossrepo<'a>(
                 VerifyRunMode::JustVerify
             };
 
+            let live_commit_sync_config =
+                get_live_commit_sync_config(&ctx, fb, matches, source_repo.repo_identity().id())
+                    .await?;
             subcommand_verify_bookmarks(
                 ctx,
                 source_repo,
@@ -240,9 +248,14 @@ pub async fn subcommand_crossrepo<'a>(
             .await
         }
         (SUBCOMMAND_CONFIG, Some(sub_sub_m)) => {
+            let live_commit_sync_config = CfgrLiveCommitSyncConfig::new(&logger, config_store)?;
             run_config_sub_subcommand(matches, sub_sub_m, live_commit_sync_config).await
         }
         (PUSHREDIRECTION_SUBCOMMAND, Some(sub_sub_m)) => {
+            let source_repo_id =
+                args::not_shardmanager_compatible::get_source_repo_id(config_store, matches)?;
+            let live_commit_sync_config =
+                get_live_commit_sync_config(&ctx, fb, matches, source_repo_id).await?;
             run_pushredirection_subcommand(
                 fb,
                 ctx,
@@ -254,6 +267,10 @@ pub async fn subcommand_crossrepo<'a>(
             .await
         }
         (INSERT_SUBCOMMAND, Some(sub_sub_m)) => {
+            let source_repo_id =
+                args::not_shardmanager_compatible::get_source_repo_id(config_store, matches)?;
+            let live_commit_sync_config =
+                get_live_commit_sync_config(&ctx, fb, matches, source_repo_id).await?;
             run_insert_subcommand(ctx, matches, sub_sub_m, live_commit_sync_config).await
         }
         _ => Err(SubcommandError::InvalidArgs),
@@ -1561,6 +1578,34 @@ async fn get_large_to_small_commit_syncer<'a>(
     )
     .await?
     .large_to_small)
+}
+
+async fn get_live_commit_sync_config<'a>(
+    ctx: &'a CoreContext,
+    fb: FacebookInit,
+    matches: &'a MononokeMatches<'_>,
+    repo_id: RepositoryId,
+) -> Result<CfgrLiveCommitSyncConfig, Error> {
+    let config_store = matches.config_store();
+    let mysql_options = matches.mysql_options();
+    let (_, config) = args::get_config_by_repoid(config_store, matches, repo_id)?;
+    let readonly_storage = ReadOnlyStorage(false);
+    let sql_factory: MetadataSqlFactory = MetadataSqlFactory::new(
+        fb,
+        config.storage_config.metadata,
+        mysql_options.clone(),
+        readonly_storage,
+    )
+    .await?;
+    let builder = sql_factory
+        .open::<SqlPushRedirectionConfigBuilder>()
+        .await?;
+    let push_redirection_config = builder.build(repo_id);
+    CfgrLiveCommitSyncConfig::new_with_xdb(
+        ctx.logger(),
+        config_store,
+        Arc::new(push_redirection_config),
+    )
 }
 
 #[cfg(test)]

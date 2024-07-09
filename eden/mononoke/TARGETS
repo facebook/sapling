@@ -234,6 +234,7 @@ rust_binary(
         "//eden/mononoke/filenodes:filenodes",
         "//eden/mononoke/filestore:filestore",
         "//eden/mononoke/manifest:manifest",
+        "//eden/mononoke/megarepo_api:pushredirect",
         "//eden/mononoke/mercurial:mercurial_types",
         "//eden/mononoke/metaconfig:metaconfig_types",
         "//eden/mononoke/mononoke_api/types:mononoke_api_types",
