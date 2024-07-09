@@ -448,25 +448,13 @@ mod tests {
     fn test_debug() {
         let orig = NameSet::from("a b c d e f g h i");
         let set = SliceSet::new(orig.clone(), 0, None);
-        assert_eq!(
-            format!("{:?}", set),
-            "<slice <static [a, b, c] + 6 more> [..]>"
-        );
+        assert_eq!(dbg(set), "<slice <static [a, b, c] + 6 more> [..]>");
         let set = SliceSet::new(orig.clone(), 4, None);
-        assert_eq!(
-            format!("{:?}", set),
-            "<slice <static [a, b, c] + 6 more> [4..]>"
-        );
+        assert_eq!(dbg(set), "<slice <static [a, b, c] + 6 more> [4..]>");
         let set = SliceSet::new(orig.clone(), 4, Some(4));
-        assert_eq!(
-            format!("{:?}", set),
-            "<slice <static [a, b, c] + 6 more> [4..8]>"
-        );
+        assert_eq!(dbg(set), "<slice <static [a, b, c] + 6 more> [4..8]>");
         let set = SliceSet::new(orig.clone(), 0, Some(4));
-        assert_eq!(
-            format!("{:?}", set),
-            "<slice <static [a, b, c] + 6 more> [..4]>"
-        );
+        assert_eq!(dbg(set), "<slice <static [a, b, c] + 6 more> [..4]>");
     }
 
     #[test]

@@ -18,6 +18,7 @@ use crate::ops::DagExportPullData;
 use crate::ops::DagImportPullData;
 use crate::ops::DagPersistent;
 use crate::ops::IdConvert;
+use crate::tests::dbg;
 use crate::Group;
 use crate::Id;
 use crate::Set;
@@ -55,7 +56,7 @@ async fn test_sparse_dag() {
         // Note: some ids (ex. 11) does not have matching name in its IdMap.
         // The server-side non-master (X) is not cloned.
         assert_eq!(
-            format!("{:?}", &client.dag),
+            dbg(&client.dag),
             r#"Max Level: 0
  Level 0
   Group Master:
@@ -92,10 +93,7 @@ async fn test_sparse_dag() {
             let iter = all.iter().await.unwrap();
             iter.try_collect().await.unwrap()
         };
-        assert_eq!(
-            format!("{:?}", all),
-            "[M, E, D, C, B, J, L, K, I, H, G, F, A]"
-        );
+        assert_eq!(dbg(all), "[M, E, D, C, B, J, L, K, I, H, G, F, A]");
 
         assert_eq!(
             client.output(),
@@ -701,8 +699,8 @@ async fn test_resolve_mixed_result() {
             .with_remote(&server);
         let ids = client.dag.vertex_id_batch(&names).await;
         assert_eq!(
-            format!("{:?}", ids),
-            "Ok([Ok(0), Ok(1), Ok(2), Ok(3), Ok(4), Ok(5), Ok(6), Ok(7), Err(VertexNotFound(I)), Err(VertexNotFound(J)), Err(VertexNotFound(X))])",
+            dbg(ids),
+            "Ok([Ok(0), Ok(1), Ok(2), Ok(3), Ok(4), Ok(5), Ok(6), Ok(7), Err(VertexNotFound(I)), Err(VertexNotFound(J)), Err(VertexNotFound(X))])"
         );
         assert_eq!(
             client.output(),

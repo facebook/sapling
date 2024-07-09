@@ -132,16 +132,13 @@ mod tests {
     #[test]
     fn test_debug() {
         let set = static_set(b"");
-        assert_eq!(format!("{:?}", set), "<empty>");
+        assert_eq!(dbg(set), "<empty>");
 
         let set = static_set(b"\x11\x33\x22");
-        assert_eq!(format!("{:?}", set), "<static [1111, 3333, 2222]>");
+        assert_eq!(dbg(set), "<static [1111, 3333, 2222]>");
 
         let set = static_set(b"\xaa\x00\xaa\xdd\xee\xdd\x11\x22");
-        assert_eq!(
-            format!("{:?}", &set),
-            "<static [aaaa, 0000, dddd] + 3 more>"
-        );
+        assert_eq!(dbg(&set), "<static [aaaa, 0000, dddd] + 3 more>");
         // {:#?} can be used to show commits in multi-line.
         assert_eq!(
             format!("{:#?}", &set),

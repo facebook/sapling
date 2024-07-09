@@ -896,6 +896,7 @@ pub(crate) mod tests {
     use nonblocking::non_blocking_result as r;
 
     use super::*;
+    pub(crate) use crate::tests::dbg;
     use crate::Id;
 
     pub(crate) fn nb<F, R>(future: F) -> R
@@ -1063,7 +1064,7 @@ pub(crate) mod tests {
                     .intersection(&NameSet::from_static_names(vec![to_name(2), to_name(3)])),
             );
         assert_eq!(
-            format!("{:?}", &set),
+            dbg(&set),
             "<diff <or <static [0202]> <static [0101]>> <and <static [0303]> <static [0202, 0303]>>>"
         );
         assert_eq!(
@@ -1096,10 +1097,7 @@ pub(crate) mod tests {
                 &NameSet::from_static_names(vec![to_name(3)])
                     .intersection(&NameSet::from_static_names(vec![to_name(2), to_name(3)])),
             );
-        assert_eq!(
-            format!("{:?}", r(set.flatten()).unwrap()),
-            "<static [0202, 0101]>"
-        );
+        assert_eq!(dbg(r(set.flatten()).unwrap()), "<static [0202, 0101]>");
     }
 
     #[test]
@@ -1108,10 +1106,7 @@ pub(crate) mod tests {
         let set2 = NameSet::from_static_names(vec![to_name(5), to_name(6)]);
         let unioned = set1.union_zip(&set2);
         let names = unioned.iter().unwrap().collect::<Result<Vec<_>>>().unwrap();
-        assert_eq!(
-            format!("{:?}", names),
-            "[0101, 0505, 0202, 0606, 0303, 0404]"
-        );
+        assert_eq!(dbg(names), "[0101, 0505, 0202, 0606, 0303, 0404]");
     }
 
     #[test]
@@ -1127,7 +1122,7 @@ pub(crate) mod tests {
     #[test]
     fn test_skip_take_slow_path() {
         let s: NameSet = "a b c d".into();
-        let d = |set: NameSet| -> String { format!("{:?}", r(set.flatten_names()).unwrap()) };
+        let d = |set: NameSet| -> String { dbg(r(set.flatten_names()).unwrap()) };
         assert_eq!(d(s.take(2)), "<static [a, b]>");
         assert_eq!(d(s.skip(2)), "<static [c, d]>");
         assert_eq!(d(s.skip(1).take(2)), "<static [b, c]>");
@@ -1192,7 +1187,7 @@ pub(crate) mod tests {
         let c = move || c.clone();
         let d = move || d.clone();
         let f = |set: NameSet| {
-            let s = format!("{:?}", &set);
+            let s = dbg(&set);
             let v = set
                 .iter()
                 .unwrap()
@@ -1327,10 +1322,7 @@ pub(crate) mod tests {
                 );
                 assert!(filter.hints().flags().contains(Flags::FILTER));
                 assert!(!filter.hints().flags().contains(Flags::ANCESTORS));
-                assert_eq!(
-                    format!("{:?}", r(filter.flatten_names())),
-                    "Ok(<static [C, B]>)"
-                );
+                assert_eq!(dbg(r(filter.flatten_names())), "Ok(<static [C, B]>)");
             }
         })
     }
@@ -1341,7 +1333,7 @@ pub(crate) mod tests {
         let ba = ab.reverse();
         check_invariants(&*ba).unwrap();
         let names = ba.iter().unwrap().collect::<Result<Vec<_>>>().unwrap();
-        assert_eq!(format!("{:?}", names), "[b, a]");
+        assert_eq!(dbg(names), "[b, a]");
     }
 
     // Print hints for &, |, - operations.
@@ -1556,6 +1548,6 @@ pub(crate) mod tests {
     pub(crate) fn fmt_iter(set: &NameSet) -> String {
         let iter = r(AsyncNameSetQuery::iter(set.deref())).unwrap();
         let names = r(iter.try_collect::<Vec<_>>()).unwrap();
-        format!("{:?}", names)
+        dbg(names)
     }
 }

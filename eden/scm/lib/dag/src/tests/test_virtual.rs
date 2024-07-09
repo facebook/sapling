@@ -13,6 +13,7 @@ use nonblocking::non_blocking_result as r;
 use crate::ops::DagAddHeads;
 use crate::ops::DagPersistent;
 use crate::ops::IdConvert;
+use crate::tests::dbg;
 use crate::tests::DrawDag;
 use crate::tests::TestDag;
 use crate::DagAlgorithm;
@@ -65,7 +66,7 @@ fn test_virtual_group_can_be_queried() -> Result<()> {
     let mut dag = TestDag::draw("A..C");
     dag.insert_virtual("C..E");
     let ancestors = r(dag.ancestors("D".into()))?;
-    assert_eq!(format!("{:?}", ancestors), "<spans [D+V0, A:C+N0:N2]>");
+    assert_eq!(dbg(ancestors), "<spans [D+V0, A:C+N0:N2]>");
     Ok(())
 }
 

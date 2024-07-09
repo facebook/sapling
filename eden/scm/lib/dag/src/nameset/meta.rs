@@ -222,7 +222,7 @@ mod tests {
     #[test]
     fn test_debug() {
         let set = meta_set(&["1", "3", "2", "7", "5"]);
-        assert_eq!(format!("{:?}", &set), "<meta ?>");
+        assert_eq!(dbg(&set), "<meta ?>");
         r(set.evaluate()).unwrap();
         assert_eq!(
             format!("{:5?}", &set),

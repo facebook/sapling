@@ -1022,6 +1022,7 @@ mod tests {
     use std::collections::HashSet;
 
     use super::*;
+    use crate::tests::dbg;
 
     impl From<RangeInclusive<u64>> for Span {
         fn from(range: RangeInclusive<u64>) -> Span {
@@ -1063,7 +1064,7 @@ mod tests {
     #[test]
     fn test_from_sorted_spans_merge() {
         let s = SpanSet::from_sorted_spans(vec![4..=4, 3..=3, 1..=2]);
-        assert_eq!(format!("{:?}", s), "1..=4");
+        assert_eq!(dbg(s), "1..=4");
     }
 
     #[test]
@@ -1078,7 +1079,7 @@ mod tests {
     #[test]
     fn test_skip() {
         let set = SpanSet::from_spans(vec![1..=10, 20..=20, 31..=40]);
-        let skip = |n| format!("{:?}", set.skip(n));
+        let skip = |n| dbg(set.skip(n));
         assert_eq!(skip(0), "1..=10 20 31..=40");
         assert_eq!(skip(1), "1..=10 20 31..=39");
         assert_eq!(skip(9), "1..=10 20 31");
@@ -1094,7 +1095,7 @@ mod tests {
     #[test]
     fn test_take() {
         let set = SpanSet::from_spans(vec![1..=10, 20..=20, 31..=40]);
-        let take = |n| format!("{:?}", set.take(n));
+        let take = |n| dbg(set.take(n));
         assert_eq!(take(0), "");
         assert_eq!(take(1), "40");
         assert_eq!(take(9), "32..=40");

@@ -299,6 +299,7 @@ mod tests {
     use quickcheck::quickcheck;
 
     use super::*;
+    use crate::tests::dbg;
 
     #[test]
     fn test_segment_roundtrip() {
@@ -358,6 +359,6 @@ mod tests {
     fn test_invalid_fmt() {
         let bytes = Bytes::from_static(&[0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 0, 1, 10]);
         let segment = Segment(bytes);
-        assert_eq!(format!("{:?}", segment), "10-10[10] (Invalid Parent!!)");
+        assert_eq!(dbg(segment), "10-10[10] (Invalid Parent!!)");
     }
 }

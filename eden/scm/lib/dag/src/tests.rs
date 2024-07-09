@@ -20,6 +20,7 @@ use crate::ops::ImportAscii;
 use crate::render::render_namedag;
 use crate::DagAlgorithm;
 use crate::IdMap;
+#[cfg(test)]
 use crate::IdSet;
 use crate::NameDag;
 use crate::NameSet;
@@ -454,7 +455,7 @@ Lv1: R0-0[] R1-8[0]"#
     let request1: RequestLocationToName =
         r((&built.name_dag.map, &built.name_dag.dag).process(ids)).unwrap();
     assert_eq!(
-        replace(format!("{:?}", &request1)),
+        replace(dbg(&request1)),
         "RequestLocationToName { paths: [L~2, J~1(+5), D~1, B~1] }"
     );
 
@@ -466,14 +467,14 @@ Lv1: R0-0[] R1-8[0]"#
     let request2: RequestNameToLocation =
         r((&built.name_dag.map, &built.name_dag.dag).process(names)).unwrap();
     assert_eq!(
-        replace(format!("{:?}", &request2)),
+        replace(dbg(&request2)),
         "RequestNameToLocation { names: [A, B, C, E, F, G, H, I], heads: [L] }"
     );
 
     // RequestLocationToName -> ResponseIdNamePair
     let response1 = r((&built.name_dag.map, &built.name_dag.dag).process(request1)).unwrap();
     assert_eq!(
-        replace(format!("{:?}", &response1)),
+        replace(dbg(&response1)),
         "ResponseIdNamePair { path_names: [(L~2, [H]), (J~1(+5), [I, G, F, E, B]), (D~1, [C]), (B~1, [A])] }"
     );
 
@@ -481,7 +482,7 @@ Lv1: R0-0[] R1-8[0]"#
     // Only B, D, H, J, L are used since they are "universally known".
     let response2 = r((&built.name_dag.map, &built.name_dag.dag).process(request2)).unwrap();
     assert_eq!(
-        replace(format!("{:?}", &response2)),
+        replace(dbg(&response2)),
         "ResponseIdNamePair { path_names: [(B~1, [A]), (H~4, [B]), (D~1, [C]), (H~3, [E]), (H~2, [F]), (H~1, [G]), (L~2, [H]), (J~1, [I])] }"
     );
 
@@ -498,13 +499,13 @@ Lv1: R0-0[] R1-8[0]"#
         .write_sparse_idmap(&built.name_dag.map, &mut sparse_id_map))
     .unwrap();
     assert_eq!(
-        format!("{:?}", &sparse_id_map),
+        dbg(&sparse_id_map),
         "IdMap {\n  D: 2,\n  B: 3,\n  J: 8,\n  H: 9,\n  L: 11,\n}\n"
     );
     // Apply response2.
     r((&mut sparse_id_map, &built.name_dag.dag).process(response2)).unwrap();
     assert_eq!(
-        format!("{:?}", &sparse_id_map),
+        dbg(&sparse_id_map),
         r#"IdMap {
   A: 0,
   C: 1,
@@ -751,10 +752,7 @@ Lv0: RH0-6[] 7-10[5] H11-12[6, 10] N0-N3[1] N4-N5[N3, 9]"#
     );
 
     // Parent-child indexes work fine.
-    assert_eq!(
-        format!("{:?}", built.name_dag.dag.children_id(Id(5)).unwrap(),),
-        "6 7"
-    );
+    assert_eq!(dbg(built.name_dag.dag.children_id(Id(5)).unwrap(),), "6 7");
 }
 
 #[test]
@@ -764,22 +762,22 @@ fn test_namedag_reassign_master() -> crate::Result<()> {
     dag = from_ascii(dag, "A-B-C");
 
     // The in-memory DAG can answer parent_names questions.
-    assert_eq!(format!("{:?}", r(dag.parent_names("A".into()))?), "[]");
-    assert_eq!(format!("{:?}", r(dag.parent_names("C".into()))?), "[B]");
+    assert_eq!(dbg(r(dag.parent_names("A".into()))?), "[]");
+    assert_eq!(dbg(r(dag.parent_names("C".into()))?), "[B]");
 
     // First flush, A, B, C are non-master.
     r(dag.flush(&Default::default())).unwrap();
 
-    assert_eq!(format!("{:?}", r(dag.vertex_id("A".into()))?), "N0");
-    assert_eq!(format!("{:?}", r(dag.vertex_id("C".into()))?), "N2");
+    assert_eq!(dbg(r(dag.vertex_id("A".into()))?), "N0");
+    assert_eq!(dbg(r(dag.vertex_id("C".into()))?), "N2");
 
     // Second flush, making B master without adding new vertexes.
     let heads =
         VertexListWithOptions::from(vec![VertexName::from("B")]).with_desired_group(Group::MASTER);
     r(dag.flush(&heads)).unwrap();
-    assert_eq!(format!("{:?}", r(dag.vertex_id("A".into()))?), "0");
-    assert_eq!(format!("{:?}", r(dag.vertex_id("B".into()))?), "1");
-    assert_eq!(format!("{:?}", r(dag.vertex_id("C".into()))?), "N0");
+    assert_eq!(dbg(r(dag.vertex_id("A".into()))?), "0");
+    assert_eq!(dbg(r(dag.vertex_id("B".into()))?), "1");
+    assert_eq!(dbg(r(dag.vertex_id("C".into()))?), "N0");
 
     Ok(())
 }
@@ -816,7 +814,7 @@ fn test_namedag_reassign_non_master() {
     // Z can round-trip in IdMap.
     let z_id = r(t.dag.vertex_id("Z".into())).unwrap();
     let z_vertex = r(t.dag.vertex_name(z_id)).unwrap();
-    assert_eq!(format!("{:?}", z_vertex), "Z");
+    assert_eq!(dbg(z_vertex), "Z");
 }
 
 #[test]
@@ -925,17 +923,16 @@ Lv1: R0-7[]"#
 
     let dag = result.name_dag.dag;
 
-    let parents = |spans| -> String { format_set(dag.parents(IdSet::from_spans(spans)).unwrap()) };
-    let parent_ids = |id| -> String { format!("{:?}", dag.parent_ids(Id(id)).unwrap()) };
-    let first_ancestor_nth =
-        |id, n| -> String { format!("{:?}", dag.first_ancestor_nth(Id(id), n).unwrap()) };
+    let parents = |spans| -> String { dbg(dag.parents(IdSet::from_spans(spans)).unwrap()) };
+    let parent_ids = |id| -> String { dbg(dag.parent_ids(Id(id)).unwrap()) };
+    let first_ancestor_nth = |id, n| -> String { dbg(dag.first_ancestor_nth(Id(id), n).unwrap()) };
     let to_first_ancestor_nth = |id| -> String {
         let c = FirstAncestorConstraint::KnownUniversally {
             heads: Id(11).into(),
         };
         let res = dag.to_first_ancestor_nth(Id(id), c);
         match res {
-            Ok(s) => format!("{:?}", s),
+            Ok(s) => dbg(s),
             Err(e) => e.to_string(),
         }
     };
@@ -1003,8 +1000,7 @@ Lv1: R0-7[]"#
 fn test_children() {
     let result = build_segments(ASCII_DAG1, "L", 3);
     let dag = result.name_dag.dag;
-    let children =
-        |spans| -> String { format_set(dag.children(IdSet::from_spans(spans)).unwrap()) };
+    let children = |spans| -> String { dbg(dag.children(IdSet::from_spans(spans)).unwrap()) };
 
     // See test_parents above for the ASCII DAG.
 
@@ -1063,7 +1059,7 @@ Lv2: R0-2[] R3-6[] R7-9[]"#
     );
 
     let dag = result.name_dag.dag;
-    let heads = |spans| -> String { format_set(dag.heads(IdSet::from_spans(spans)).unwrap()) };
+    let heads = |spans| -> String { dbg(dag.heads(IdSet::from_spans(spans)).unwrap()) };
 
     assert_eq!(heads(vec![]), "");
     assert_eq!(heads(vec![0..=11]), "2 6 9 10 11");
@@ -1096,7 +1092,7 @@ Lv2: R0-2[] R3-6[] R7-7[]"#
     );
 
     let dag = result.name_dag.dag;
-    let roots = |spans| -> String { format_set(dag.roots(IdSet::from_spans(spans)).unwrap()) };
+    let roots = |spans| -> String { dbg(dag.roots(IdSet::from_spans(spans)).unwrap()) };
 
     assert_eq!(roots(vec![]), "");
     assert_eq!(roots(vec![0..=11]), "0 3 7 8 9");
@@ -1134,10 +1130,9 @@ Lv2: R0-3[] R4-6[1]"#
 
     let dag = result.name_dag.dag;
     let range = |roots, heads| -> String {
-        format_set(
-            dag.range(IdSet::from_spans(roots), IdSet::from_spans(heads))
-                .unwrap(),
-        )
+        dbg(dag
+            .range(IdSet::from_spans(roots), IdSet::from_spans(heads))
+            .unwrap())
     };
 
     assert_eq!(range(vec![6], vec![3]), "");
@@ -1367,10 +1362,6 @@ fn nameset(names: &str) -> NameSet {
         .map(|n| VertexName::copy_from(n.as_bytes()))
         .collect();
     NameSet::from_static_names(names)
-}
-
-fn format_set(set: IdSet) -> String {
-    format!("{:?}", set)
 }
 
 impl IdMap {

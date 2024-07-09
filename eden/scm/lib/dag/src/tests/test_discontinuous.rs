@@ -26,6 +26,7 @@
 use crate::ops::DagAddHeads;
 use crate::ops::DagAlgorithm;
 use crate::ops::DagPersistent;
+use crate::tests::dbg;
 use crate::tests::DrawDag;
 use crate::tests::TestDag;
 use crate::Group;
@@ -53,7 +54,7 @@ async fn test_simple_3_branches() {
 
     dag.dag.add_heads_and_flush(&draw, &heads).await.unwrap();
     assert_eq!(
-        format!("{:?}", &dag.dag),
+        dbg(&dag.dag),
         r#"Max Level: 0
  Level 0
   Group Master:
@@ -69,33 +70,33 @@ async fn test_simple_3_branches() {
     );
 
     assert_eq!(
-        format!("{:?}", dag.dag.ancestors("I".into()).await.unwrap()),
+        dbg(dag.dag.ancestors("I".into()).await.unwrap()),
         "<spans [G:I+106:108, A:C+0:2]>"
     );
     assert_eq!(
-        format!("{:?}", dag.dag.descendants("B".into()).await.unwrap()),
+        dbg(dag.dag.descendants("B".into()).await.unwrap()),
         "<spans [J:L+159:161, G:I+106:108, B:F+1:5]>"
     );
     assert_eq!(
-        format!("{:?}", dag.dag.range("C".into(), "K".into()).await.unwrap()),
+        dbg(dag.dag.range("C".into(), "K".into()).await.unwrap()),
         "<spans [J:K+159:160, G+106, C+2]>"
     );
     assert_eq!(
-        format!("{:?}", dag.dag.parents("G".into()).await.unwrap()),
+        dbg(dag.dag.parents("G".into()).await.unwrap()),
         "<spans [C+2]>"
     );
     assert_eq!(
-        format!("{:?}", dag.dag.children("C".into()).await.unwrap()),
+        dbg(dag.dag.children("C".into()).await.unwrap()),
         "<spans [G+106, D+3]>"
     );
 
     let all = dag.dag.all().await.unwrap();
     assert_eq!(
-        format!("{:?}", dag.dag.children(all.clone()).await.unwrap()),
+        dbg(dag.dag.children(all.clone()).await.unwrap()),
         "<spans [J:L+159:161, G:I+106:108, B:F+1:5]>"
     );
     assert_eq!(
-        format!("{:?}", dag.dag.parents(all.clone()).await.unwrap()),
+        dbg(dag.dag.parents(all.clone()).await.unwrap()),
         "<spans [J:K+159:160, G:H+106:107, A:E+0:4]>"
     );
     assert_eq!(
@@ -123,7 +124,7 @@ async fn test_grow_branches() {
     ]);
     dag.dag.add_heads_and_flush(&draw, &heads).await.unwrap();
     assert_eq!(
-        format!("{:?}", dag.dag.all().await.unwrap()),
+        dbg(dag.dag.all().await.unwrap()),
         "<spans [C0:C2+14:16, B0:B2+7:9, A0:A2+0:2]>"
     );
 
@@ -141,7 +142,7 @@ async fn test_grow_branches() {
     ]);
     dag.dag.add_heads_and_flush(&draw, &heads).await.unwrap();
     assert_eq!(
-        format!("{:?}", dag.dag.all().await.unwrap()),
+        dbg(dag.dag.all().await.unwrap()),
         "<spans [C0:C4+14:18, B0:B4+7:11, A0:A4+0:4]>"
     );
 
@@ -180,16 +181,13 @@ async fn test_reservation_on_existing_vertex() {
     );
     let heads = VertexListWithOptions::from(vec![reserved_head("A2", 4)]);
     dag.dag.add_heads_and_flush(&draw, &heads).await.unwrap();
-    assert_eq!(
-        format!("{:?}", dag.dag.all().await.unwrap()),
-        "<spans [A0:A2+0:2]>"
-    );
+    assert_eq!(dbg(dag.dag.all().await.unwrap()), "<spans [A0:A2+0:2]>");
 
     // A2: 4 is respected (3..=6 is reserved).
     let heads = VertexListWithOptions::from(vec![reserved_head("B2", 4), reserved_head("A2", 4)]);
     dag.dag.add_heads(&draw, &heads).await.unwrap();
     assert_eq!(
-        format!("{:?}", dag.dag.all().await.unwrap()),
+        dbg(dag.dag.all().await.unwrap()),
         "<spans [B0:B2+7:9, A0:A2+0:2]>"
     );
 }

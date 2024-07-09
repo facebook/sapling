@@ -444,17 +444,17 @@ pub(crate) mod tests {
             assert!(!nb(abcd.contains(&vec![b'E'].into()))?);
 
             // should not be "<and <...> <...>>"
-            assert_eq!(format!("{:?}", &ab), "<spans [A:B+0:1]>");
+            assert_eq!(dbg(&ab), "<spans [A:B+0:1]>");
 
             let abcdefg = abcd.union(&abefg);
             check_invariants(abcd.deref())?;
             // should not be "<or <...> <...>>"
-            assert_eq!(format!("{:?}", &abcdefg), "<spans [A:G+0:6]>");
+            assert_eq!(dbg(&abcdefg), "<spans [A:G+0:6]>");
 
             let cd = abcd.difference(&abefg);
             check_invariants(cd.deref())?;
             // should not be "<difference <...> <...>>"
-            assert_eq!(format!("{:?}", &cd), "<spans [C:D+2:3]>");
+            assert_eq!(dbg(&cd), "<spans [C:D+2:3]>");
 
             Ok(())
         })
@@ -469,33 +469,27 @@ pub(crate) mod tests {
             // Intersection and difference can flatten the "unordered" set because rhs order does
             // not matter.
             assert_eq!(
-                format!("{:?}", abcd.intersection(&unordered)),
+                dbg(abcd.intersection(&unordered)),
                 "<spans [D+3, A:B+0:1] +>"
             );
-            assert_eq!(
-                format!("{:?}", abcd.difference(&unordered)),
-                "<spans [C+2] +>"
-            );
+            assert_eq!(dbg(abcd.difference(&unordered)), "<spans [C+2] +>");
 
             // but lhs order matters (no fast path if lhs order is to be preserved).
             assert_eq!(
-                format!("{:?}", unordered.intersection(&abcd)),
+                dbg(unordered.intersection(&abcd)),
                 "<and <or <spans [A:B+0:1] +> <spans [D+3] +> (order=Zip)> <spans [A:D+0:3] +>>"
             );
             assert_eq!(
-                format!("{:?}", unordered.difference(&abcd)),
+                dbg(unordered.difference(&abcd)),
                 "<diff <or <spans [A:B+0:1] +> <spans [D+3] +> (order=Zip)> <spans [A:D+0:3] +>>"
             );
 
             // Union drops order (by flattening) aggresively on both sides.
-            assert_eq!(
-                format!("{:?}", abcd.union(&unordered)),
-                "<spans [A:D+0:3] +>"
-            );
+            assert_eq!(dbg(abcd.union(&unordered)), "<spans [A:D+0:3] +>");
 
             // Union (preserving order) cannot flatten sets for fast paths.
             assert_eq!(
-                format!("{:?}", abcd.union_preserving_order(&unordered)),
+                dbg(abcd.union_preserving_order(&unordered)),
                 "<or <spans [A:D+0:3] +> <or <spans [A:B+0:1] +> <spans [D+3] +> (order=Zip)>>"
             );
 
@@ -602,7 +596,7 @@ pub(crate) mod tests {
 
             // Flattened turns the tree into a single set.
             let flattened = reversed2.specialized_flatten_id().unwrap();
-            assert_eq!(format!("{:?}", &flattened), "<spans [A:C+0:2]>");
+            assert_eq!(dbg(&flattened), "<spans [A:C+0:2]>");
 
             Ok(())
         })
@@ -681,7 +675,7 @@ pub(crate) mod tests {
 
     #[test]
     fn test_dag_no_fast_paths() -> Result<()> {
-        let f = |s: NameSet| -> String { format!("{:?}", s) };
+        let f = |s: NameSet| -> String { dbg(s) };
         with_dag(|dag1| -> Result<()> {
             with_dag(|dag2| -> Result<()> {
                 let abcd = r(dag1.ancestors("D".into()))?;
@@ -694,7 +688,7 @@ pub(crate) mod tests {
                 check_invariants(ab.deref())?;
                 // should not be "<spans ...>"
                 assert_eq!(
-                    format!("{:?}", &ab),
+                    dbg(&ab),
                     "<and <spans [A:D+0:3]> <spans [E:G+4:6, A:B+0:1]>>"
                 );
 
@@ -702,7 +696,7 @@ pub(crate) mod tests {
                 check_invariants(abcd.deref())?;
                 // should not be "<spans ...>"
                 assert_eq!(
-                    format!("{:?}", &abcdefg),
+                    dbg(&abcdefg),
                     "<or <spans [A:D+0:3]> <spans [E:G+4:6, A:B+0:1]>>"
                 );
 
@@ -710,7 +704,7 @@ pub(crate) mod tests {
                 check_invariants(cd.deref())?;
                 // should not be "<spans ...>"
                 assert_eq!(
-                    format!("{:?}", &cd),
+                    dbg(&cd),
                     "<diff <spans [A:D+0:3]> <spans [E:G+4:6, A:B+0:1]>>"
                 );
 
@@ -761,14 +755,14 @@ pub(crate) mod tests {
     fn test_dag_all() -> Result<()> {
         with_dag(|dag| {
             let all = r(dag.all())?;
-            assert_eq!(format!("{:?}", &all), "<spans [A:G+0:6]>");
+            assert_eq!(dbg(&all), "<spans [A:G+0:6]>");
 
             let ac: NameSet = "A C".into();
             let ac = r(dag.sort(&ac))?;
 
             let intersection = all.intersection(&ac);
             // should not be "<and ...>"
-            assert_eq!(format!("{:?}", &intersection), "<spans [C+2, A+0]>");
+            assert_eq!(dbg(&intersection), "<spans [C+2, A+0]>");
             Ok(())
         })
     }
@@ -778,7 +772,7 @@ pub(crate) mod tests {
         with_dag(|dag| -> Result<()> {
             let set = "G C A E".into();
             let sorted = r(dag.sort(&set))?;
-            assert_eq!(format!("{:?}", &sorted), "<spans [G+6, E+4, C+2] + 1 span>");
+            assert_eq!(dbg(&sorted), "<spans [G+6, E+4, C+2] + 1 span>");
             Ok(())
         })
     }
@@ -794,9 +788,9 @@ pub(crate) mod tests {
                 .clone()
                 .reversed();
             check_invariants(&asc)?;
-            assert_eq!(format!("{:?}", &asc), "<spans [A:G+0:6] +>");
+            assert_eq!(dbg(&asc), "<spans [A:G+0:6] +>");
             assert_eq!(
-                format!("{:?}", r(r(asc.iter())?.try_collect::<Vec<_>>())?),
+                dbg(r(r(asc.iter())?.try_collect::<Vec<_>>())?),
                 "[A, B, C, D, E, F, G]"
             );
 
@@ -891,28 +885,25 @@ pub(crate) mod tests {
             bfg.hints().add_flags(Flags::ANCESTORS);
 
             // Fast paths are not used if the set is not "bound" to the dag.
-            assert_eq!(
-                format!("{:?}", r(dag.ancestors(bfg.clone()))?),
-                "<static [B, F, G]>"
-            );
-            assert_eq!(format!("{:?}", r(dag.heads(bfg.clone()))?), "<spans [G+6]>");
+            assert_eq!(dbg(r(dag.ancestors(bfg.clone()))?), "<static [B, F, G]>");
+            assert_eq!(dbg(r(dag.heads(bfg.clone()))?), "<spans [G+6]>");
 
             // Binding to the Dag enables fast paths.
             let bfg = r(dag.sort(&bfg))?;
             bfg.hints().add_flags(Flags::ANCESTORS);
             assert_eq!(
-                format!("{:?}", r(dag.ancestors(bfg.clone()))?),
+                dbg(r(dag.ancestors(bfg.clone()))?),
                 "<spans [F:G+5:6, B+1]>"
             );
 
             // 'heads' has a fast path that uses 'heads_ancestors' to do the calculation.
             // (in this case the result is incorrect because the hints are wrong).
-            assert_eq!(format!("{:?}", r(dag.heads(bfg.clone()))?), "<spans [G+6]>");
+            assert_eq!(dbg(r(dag.heads(bfg.clone()))?), "<spans [G+6]>");
 
             // 'ancestors' has a fast path that returns set as-is.
             // (in this case the result is incorrect because the hints are wrong).
             assert_eq!(
-                format!("{:?}", r(dag.ancestors(bfg.clone()))?),
+                dbg(r(dag.ancestors(bfg.clone()))?),
                 "<spans [F:G+5:6, B+1]>"
             );
 
@@ -925,7 +916,7 @@ pub(crate) mod tests {
     }
 
     /// Break <nested <nested <nested ... >>> into multi-lines.
-    fn wrap_dbg_lines(dbg: &dyn fmt::Debug) -> String {
+    fn wrap_dbg_lines(value: &dyn fmt::Debug) -> String {
         #[derive(Default, Debug)]
         struct Fmt<'a> {
             head: &'a str,
@@ -1004,7 +995,7 @@ pub(crate) mod tests {
             }
         }
 
-        let s = format!("{:?}", dbg);
+        let s = dbg(value);
         let f = Fmt::parse(&s).0;
         indent(&f.pretty(), "                ")
     }

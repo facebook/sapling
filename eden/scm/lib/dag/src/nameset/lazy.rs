@@ -267,17 +267,17 @@ mod tests {
     #[test]
     fn test_debug() {
         let set = lazy_set(b"");
-        assert_eq!(format!("{:?}", &set), "<lazy [] + ? more>");
+        assert_eq!(dbg(&set), "<lazy [] + ? more>");
         nb(set.count_slow()).unwrap();
-        assert_eq!(format!("{:?}", &set), "<lazy []>");
+        assert_eq!(dbg(&set), "<lazy []>");
 
         let set = lazy_set(b"\x11\x33\x22");
-        assert_eq!(format!("{:?}", &set), "<lazy [] + ? more>");
+        assert_eq!(dbg(&set), "<lazy [] + ? more>");
         let mut iter = ni(set.iter()).unwrap();
         iter.next();
-        assert_eq!(format!("{:?}", &set), "<lazy [1111] + ? more>");
+        assert_eq!(dbg(&set), "<lazy [1111] + ? more>");
         iter.next();
-        assert_eq!(format!("{:?}", &set), "<lazy [1111, 3333] + ? more>");
+        assert_eq!(dbg(&set), "<lazy [1111, 3333] + ? more>");
         iter.next();
         assert_eq!(format!("{:2.2?}", &set), "<lazy [11, 33]+ 1 + ? more>");
         iter.next();

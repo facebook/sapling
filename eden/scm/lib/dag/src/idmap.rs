@@ -406,6 +406,7 @@ mod tests {
     use crate::ops::Persist;
     #[cfg(feature = "indexedlog-backend")]
     use crate::ops::PrefixLookup;
+    use crate::tests::dbg;
     use crate::tests::nid;
     use crate::tests::vid;
 
@@ -484,7 +485,7 @@ mod tests {
 
         // Test Debug
         assert_eq!(
-            format!("{:?}", &map),
+            dbg(&map),
             r#"IdMap {
   abc: 1,
   def: 2,
@@ -568,13 +569,13 @@ mod tests {
                     }
                 }
             }
-            format!("{:?}", deleted_ids)
+            dbg(deleted_ids)
         };
 
         let f = |vs: Vec<VertexName>| -> String {
             let mut vs = vs;
             vs.sort_unstable();
-            format!("{:?}", vs)
+            dbg(vs)
         };
 
         let removed = r(map.remove_range(Id(1), Id(3))).unwrap();

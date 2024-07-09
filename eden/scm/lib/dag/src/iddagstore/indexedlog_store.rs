@@ -1012,7 +1012,7 @@ mod tests {
         }
 
         let all = iddag.all_ids_in_groups(&Group::ALL).unwrap();
-        assert_eq!(format!("{:?}", &all), "0..=20 N5..=N15");
+        assert_eq!(dbg(&all), "0..=20 N5..=N15");
 
         let state = dump_store_state(&iddag, &all);
         assert_eq!(state, "\nLv0: RH0-20[], N5-N15[10]\nP->C: 10->N5");

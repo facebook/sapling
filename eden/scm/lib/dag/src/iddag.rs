@@ -2166,7 +2166,7 @@ mod tests {
         dag.build_segments(Id(1001), &get_parents).unwrap();
         let all = dag.all().unwrap();
         // Id 0 is not referred.
-        assert_eq!(format!("{:?}", &all), "1..=1001");
+        assert_eq!(dbg(&all), "1..=1001");
         assert_eq!(all.count(), 1001);
 
         // Insert discontinuous segments.
@@ -2188,7 +2188,7 @@ mod tests {
         })
         .unwrap();
         let all = dag.all().unwrap();
-        assert_eq!(format!("{:?}", &all), "3 4 5 10..=20 30..=40");
+        assert_eq!(dbg(&all), "3 4 5 10..=20 30..=40");
         assert_eq!(all.count(), 25);
     }
 
@@ -2292,10 +2292,10 @@ mod tests {
         assert_eq!(iddag.max_level().unwrap(), 2);
 
         let all = iddag.all().unwrap();
-        assert_eq!(format!("{:?}", &all), "0..=10 N0..=N19");
+        assert_eq!(dbg(&all), "0..=10 N0..=N19");
 
         let roots = iddag.roots(all).unwrap();
-        assert_eq!(format!("{:?}", roots), "0 N0 N5 N10 N15");
+        assert_eq!(dbg(roots), "0 N0 N5 N10 N15");
     }
 
     #[test]
@@ -2342,7 +2342,7 @@ mod tests {
             all_after_remove.union(&removed).as_spans(),
             all_before_remove.as_spans()
         );
-        assert_eq!(format!("{:?}", &removed), "70..=100 201..=300 N0..=N100");
+        assert_eq!(dbg(&removed), "70..=100 201..=300 N0..=N100");
         assert_eq!(
             dump_store_state(&iddag.store, &all_before_remove),
             "\nLv0: RH0-69[], 101-200[50], N101-N200[50]\nP->C: 50->101, 50->N101"
@@ -2454,12 +2454,12 @@ mod tests {
             .back()
             .unwrap()
             .clone();
-        assert_eq!(format!("{:?}", &high_level_id_seg), "L2 0..=24 []R");
+        assert_eq!(dbg(&high_level_id_seg), "L2 0..=24 []R");
         let low_level_id_segs = iddag
             .id_segment_to_lower_level_id_segments(&high_level_id_seg)
             .unwrap();
         assert_eq!(
-            format!("{:?}", &low_level_id_segs),
+            dbg(&low_level_id_segs),
             "[L1 15..=24 [11, 14, 9], L1 0..=14 []R]"
         );
     }

@@ -126,10 +126,7 @@ mod tests {
         check_invariants(&set)?;
 
         let iter = nb(set.iter())?;
-        assert_eq!(
-            format!("{:?}", nb(iter.try_collect::<Vec<_>>())?),
-            "[d, c, b, a]"
-        );
+        assert_eq!(dbg(nb(iter.try_collect::<Vec<_>>())?), "[d, c, b, a]");
 
         Ok(())
     }

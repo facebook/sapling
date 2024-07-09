@@ -387,6 +387,7 @@ pub(crate) mod tests {
     use once_cell::sync::Lazy;
 
     use super::*;
+    use crate::tests::dbg;
     use crate::tests::nid;
 
     //  0--1--2--3--4--5--10--11--12--13--N0--N1--N2--N5--N6
@@ -485,12 +486,8 @@ pub(crate) mod tests {
         )
     }
 
-    fn fmt<T: fmt::Debug>(value: T) -> String {
-        format!("{:?}", value)
-    }
-
     fn fmt_iter<T: fmt::Debug>(iter: impl Iterator<Item = Result<T>>) -> Vec<String> {
-        iter.map(|i| fmt(i.unwrap())).collect()
+        iter.map(|i| dbg(i.unwrap())).collect()
     }
 
     fn insert_segments(store: &mut dyn IdDagStore, segments: Vec<&Segment>) {
@@ -575,9 +572,8 @@ pub(crate) mod tests {
     }
 
     fn test_all_ids_in_groups(store: &mut dyn IdDagStore) {
-        let all_id_str = |store: &dyn IdDagStore, groups| {
-            format!("{:?}", store.all_ids_in_groups(groups).unwrap())
-        };
+        let all_id_str =
+            |store: &dyn IdDagStore, groups| dbg(store.all_ids_in_groups(groups).unwrap());
 
         // Insert some discontinuous segments. Then query all_ids_in_groups.
         store.insert_segment(seg(ROOT, M, 10, 20, &[])).unwrap();
@@ -621,9 +617,8 @@ pub(crate) mod tests {
     }
 
     fn test_all_ids_in_segment_level(store: &mut dyn IdDagStore) {
-        let level_id_str = |store: &dyn IdDagStore, level| {
-            format!("{:?}", store.all_ids_in_segment_level(level).unwrap())
-        };
+        let level_id_str =
+            |store: &dyn IdDagStore, level| dbg(store.all_ids_in_segment_level(level).unwrap());
 
         // Insert some discontinuous segments. Then query all_ids_in_groups.
         insert_segments(
@@ -676,29 +671,29 @@ pub(crate) mod tests {
 
         // 0-10 and 11-15 are merged.
         let seg = store.find_segment_by_head_and_level(Id(10), 0).unwrap();
-        assert_eq!(fmt(seg), "None");
+        assert_eq!(dbg(seg), "None");
         let seg = store.find_segment_by_head_and_level(Id(15), 0).unwrap();
-        assert_eq!(fmt(seg), "Some(R0-15[])");
+        assert_eq!(dbg(seg), "Some(R0-15[])");
 
         // 20-30 and 31-35 are merged.
         let seg = store.find_segment_by_head_and_level(Id(30), 0).unwrap();
-        assert_eq!(fmt(seg), "None");
+        assert_eq!(dbg(seg), "None");
         let seg = store.find_segment_by_head_and_level(Id(35), 0).unwrap();
-        assert_eq!(fmt(seg), "Some(20-35[5])");
+        assert_eq!(dbg(seg), "Some(20-35[5])");
 
         // 0-10 and 11-15 are merged.
         let seg = store.find_flat_segment_including_id(Id(9)).unwrap();
-        assert_eq!(fmt(seg), "Some(R0-15[])");
+        assert_eq!(dbg(seg), "Some(R0-15[])");
         let seg = store.find_flat_segment_including_id(Id(14)).unwrap();
-        assert_eq!(fmt(seg), "Some(R0-15[])");
+        assert_eq!(dbg(seg), "Some(R0-15[])");
         let seg = store.find_flat_segment_including_id(Id(16)).unwrap();
-        assert_eq!(fmt(seg), "None");
+        assert_eq!(dbg(seg), "None");
 
         // 20-30 and 31-35 are merged.
         let seg = store.find_flat_segment_including_id(Id(35)).unwrap();
-        assert_eq!(fmt(seg), "Some(20-35[5])");
+        assert_eq!(dbg(seg), "Some(20-35[5])");
         let seg = store.find_flat_segment_including_id(Id(36)).unwrap();
-        assert_eq!(fmt(seg), "None");
+        assert_eq!(dbg(seg), "None");
 
         // Parent lookup.
         let iter = store.iter_flat_segments_with_parent(Id(5)).unwrap();
@@ -797,8 +792,7 @@ pub(crate) mod tests {
     fn test_store_iter_flat_segments_with_parent_span(store: &dyn IdDagStore) {
         let query = |span: Span| -> String {
             let iter = store.iter_flat_segments_with_parent_span(span).unwrap();
-            let mut answer_str_list: Vec<String> =
-                iter.map(|s| format!("{:?}", s.unwrap())).collect();
+            let mut answer_str_list: Vec<String> = iter.map(|s| dbg(s.unwrap())).collect();
             answer_str_list.sort_unstable();
             answer_str_list.join(" ")
         };
@@ -875,7 +869,7 @@ pub(crate) mod tests {
         }
 
         let all_before_delete = store.all_ids_in_groups(&Group::ALL).unwrap();
-        assert_eq!(format!("{:?}", &all_before_delete), "0..=15 N0..=N15");
+        assert_eq!(dbg(&all_before_delete), "0..=15 N0..=N15");
         assert_eq!(
             dump_store_state(store, &all_before_delete),
             r#"
@@ -891,10 +885,7 @@ P->C: 3->6, 4->6, 4->11, 12->N11, N3->N6, N4->N6, N4->N11"#
 
         // Check that the removed segments are actually removed.
         let all_after_delete = store.all_ids_in_groups(&Group::ALL).unwrap();
-        assert_eq!(
-            format!("{:?}", &all_after_delete),
-            "0..=5 11..=15 N0..=N5 N11..=N15"
-        );
+        assert_eq!(dbg(&all_after_delete), "0..=5 11..=15 N0..=N5 N11..=N15");
         assert_eq!(
             dump_store_state(store, &all_before_delete),
             r#"
@@ -929,7 +920,7 @@ P->C: 4->11, 12->N11, N4->N11"#
 
         let all_before_resize = store.all_ids_in_groups(&Group::ALL).unwrap();
         assert_eq!(
-            format!("{:?}", &all_before_resize),
+            dbg(&all_before_resize),
             "0..=100 200 N100..=N200 N300..=N400"
         );
         assert_eq!(
@@ -986,7 +977,7 @@ P->C: 50->N100, 50->N300"#
         // Check state after resize.
         let all_after_resize = store.all_ids_in_groups(&Group::ALL).unwrap();
         assert_eq!(
-            format!("{:?}", &all_after_resize),
+            dbg(&all_after_resize),
             "0..=50 200..=250 N100..=N250 N300..=N350"
         );
         let all = all_after_resize.union(&all_before_resize);
@@ -1009,7 +1000,7 @@ P->C: 50->N100, 50->N300"#
                 let segs = store.segments_in_span_ascending(span, level).unwrap();
                 for seg in segs {
                     if seg.level().unwrap() == level {
-                        level_segments.push(format!("{:?}", seg));
+                        level_segments.push(dbg(seg));
                     }
                 }
             }

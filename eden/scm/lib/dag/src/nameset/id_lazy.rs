@@ -483,21 +483,18 @@ pub(crate) mod tests {
     #[test]
     fn test_debug() {
         let set = lazy_set(&[0]);
-        assert_eq!(format!("{:?}", set), "<lazy [] + ? more>");
+        assert_eq!(dbg(&set), "<lazy [] + ? more>");
         nb(set.count_slow()).unwrap();
-        assert_eq!(format!("{:?}", set), "<lazy [0000000000000000+0]>");
+        assert_eq!(dbg(&set), "<lazy [0000000000000000+0]>");
 
         let set = lazy_set(&[1, 3, 2]);
-        assert_eq!(format!("{:?}", &set), "<lazy [] + ? more>");
+        assert_eq!(dbg(&set), "<lazy [] + ? more>");
         let mut iter = ni(set.iter()).unwrap();
         iter.next();
-        assert_eq!(
-            format!("{:?}", &set),
-            "<lazy [0100000000000000+1] + ? more>"
-        );
+        assert_eq!(dbg(&set), "<lazy [0100000000000000+1] + ? more>");
         iter.next();
         assert_eq!(
-            format!("{:?}", &set),
+            dbg(&set),
             "<lazy [0100000000000000+1, 0300000000000000+3] + ? more>"
         );
         iter.next();

@@ -37,6 +37,7 @@ mod tests {
 
     use super::super::id_static::tests::with_dag;
     use super::*;
+    use crate::tests::dbg;
     use crate::DagAlgorithm;
     use crate::Result;
 
@@ -47,9 +48,9 @@ mod tests {
             let set1 = r(dag.ancestors("G".into()))?;
             let spans: IdSet = (L, set1.as_any().downcast_ref::<IdStaticSet>().unwrap()).into();
             let set2: NameSet = (L, spans.clone(), dag).into();
-            assert_eq!(format!("{:?}", &set1), "<spans [E:G+4:6, A:B+0:1]>");
-            assert_eq!(format!("{:?}", &set2), "<spans [E:G+4:6, A:B+0:1]>");
-            assert_eq!(format!("{:?}", &spans), "0 1 4 5 6");
+            assert_eq!(dbg(&set1), "<spans [E:G+4:6, A:B+0:1]>");
+            assert_eq!(dbg(&set2), "<spans [E:G+4:6, A:B+0:1]>");
+            assert_eq!(dbg(&spans), "0 1 4 5 6");
             Ok(())
         })
     }

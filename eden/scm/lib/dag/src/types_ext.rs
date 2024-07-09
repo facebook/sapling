@@ -195,6 +195,6 @@ mod tests {
     }
 
     fn dbg(segs: &PreparedFlatSegments) -> Vec<String> {
-        segs.segments.iter().map(|s| format!("{:?}", s)).collect()
+        segs.segments.iter().map(|s| crate::tests::dbg(s)).collect()
     }
 }
