@@ -144,6 +144,9 @@ where
     /// and is intended to be implemented outside the `dag` crate.
     remote_protocol: Arc<dyn RemoteIdConvertProtocol>,
 
+    /// If set, clear and insert to the VIRTUAL group after reloading.
+    managed_virtual_group: Option<Arc<(Box<dyn Parents>, VertexListWithOptions /* derived */)>>,
+
     /// A negative cache. Vertexes that are looked up remotely, and the remote
     /// confirmed the vertexes are outside the master group.
     missing_vertexes_confirmed_by_remote: Arc<RwLock<HashSet<VertexName>>>,
@@ -1228,6 +1231,7 @@ where
                     overlay_map_id_set: self.overlay_map_id_set.clone(),
                     overlay_map_paths: Arc::clone(&self.overlay_map_paths),
                     remote_protocol: self.remote_protocol.clone(),
+                    managed_virtual_group: self.managed_virtual_group.clone(),
                     missing_vertexes_confirmed_by_remote: Arc::clone(
                         &self.missing_vertexes_confirmed_by_remote,
                     ),
