@@ -115,7 +115,6 @@ async fn import_config(ctx: &CoreContext, app: &MononokeApp, path: &PathBuf) -> 
         ctx.logger(),
         env.mysql_options.clone(),
         env.readonly_storage,
-        env.config_store.clone(),
         None,
     )
     .await

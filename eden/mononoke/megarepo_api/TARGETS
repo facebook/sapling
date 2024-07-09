@@ -128,7 +128,6 @@ rust_library(
         "fbsource//third-party/rust:tokio",
         ":configo_client",
         ":megarepo_error",
-        "//common/rust/shed/cached_config:cached_config",
         "//common/rust/shed/facet:facet",
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/sql:sql",

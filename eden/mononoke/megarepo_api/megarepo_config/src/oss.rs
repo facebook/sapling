@@ -10,7 +10,6 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use blobstore_factory::ReadOnlyStorage;
-use cached_config::ConfigStore;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use megarepo_configs::SyncConfigVersion;
@@ -37,7 +36,6 @@ impl CfgrMononokeMegarepoConfigs {
         logger: &Logger,
         _mysql_options: MysqlOptions,
         _readonly_storage: ReadOnlyStorage,
-        _config_store: ConfigStore,
         _test_write_path: Option<PathBuf>,
     ) -> Result<Self, MegarepoError> {
         warn!(

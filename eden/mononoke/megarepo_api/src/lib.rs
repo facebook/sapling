@@ -161,7 +161,6 @@ impl MegarepoApi {
                     &logger,
                     env.mysql_options.clone(),
                     env.readonly_storage,
-                    env.config_store.clone(),
                     None,
                 )
                 .await?,
@@ -172,7 +171,6 @@ impl MegarepoApi {
                     &logger,
                     env.mysql_options.clone(),
                     env.readonly_storage,
-                    env.config_store.clone(),
                     Some(path.clone()),
                 )
                 .await?,
