@@ -1477,3 +1477,16 @@ pub(crate) fn nid(i: u64) -> Id {
 pub(crate) fn vid(i: u64) -> Id {
     Group::VIRTUAL.min_id() + i
 }
+
+#[cfg(test)]
+pub(crate) fn dbg_iter<'a, T: std::fmt::Debug>(
+    iter: Box<dyn Iterator<Item = Result<T>> + 'a>,
+) -> String {
+    let v = iter.map(|s| s.unwrap()).collect::<Vec<_>>();
+    dbg(v)
+}
+
+#[cfg(test)]
+pub(crate) fn dbg<T: std::fmt::Debug>(t: T) -> String {
+    format!("{:?}", t)
+}

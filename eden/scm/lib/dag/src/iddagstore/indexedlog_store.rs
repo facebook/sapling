@@ -842,6 +842,8 @@ fn index_parent_key(parent_id: Id, child_id: Id) -> [u8; 17] {
 mod tests {
     use super::*;
     use crate::iddagstore::tests::dump_store_state;
+    use crate::tests::dbg;
+    use crate::tests::dbg_iter;
     use crate::tests::nid;
     use crate::tests::vid;
 
@@ -1197,14 +1199,5 @@ mod tests {
         );
 
         Ok(())
-    }
-
-    fn dbg_iter<'a, T: std::fmt::Debug>(iter: Box<dyn Iterator<Item = Result<T>> + 'a>) -> String {
-        let v = iter.map(|s| s.unwrap()).collect::<Vec<_>>();
-        dbg(v)
-    }
-
-    fn dbg<T: std::fmt::Debug>(t: T) -> String {
-        format!("{:?}", t)
     }
 }

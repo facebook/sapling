@@ -2068,6 +2068,8 @@ mod tests {
 
     use super::*;
     use crate::iddagstore::tests::dump_store_state;
+    use crate::tests::dbg;
+    use crate::tests::dbg_iter;
     use crate::tests::nid;
 
     #[test]
@@ -2460,14 +2462,5 @@ mod tests {
             format!("{:?}", &low_level_id_segs),
             "[L1 15..=24 [11, 14, 9], L1 0..=14 []R]"
         );
-    }
-
-    fn dbg_iter<'a, T: std::fmt::Debug>(iter: Box<dyn Iterator<Item = Result<T>> + 'a>) -> String {
-        let v = iter.map(|s| s.unwrap()).collect::<Vec<_>>();
-        dbg(v)
-    }
-
-    fn dbg<T: std::fmt::Debug>(t: T) -> String {
-        format!("{:?}", t)
     }
 }
