@@ -1264,6 +1264,7 @@ mod test {
                             DerivableType::Unodes,
                             DerivableType::BlameV2,
                         },
+                        ephemeral_bubbles_disabled_types: Default::default(),
                         mapping_key_prefixes: hashmap! {},
                         unode_version: UnodeVersion::V2,
                         blame_filesize_limit: Some(101),

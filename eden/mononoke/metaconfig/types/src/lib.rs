@@ -381,6 +381,9 @@ pub struct DerivedDataTypesConfig {
     /// The configured types.
     pub types: HashSet<DerivableType>,
 
+    /// Types that shouldn't be derived in ephemeral bubbles.
+    pub ephemeral_bubbles_disabled_types: HashSet<DerivableType>,
+
     /// Key prefixes for mappings.  These are used to generate unique
     /// mapping keys when rederiving existing derived data types.
     ///

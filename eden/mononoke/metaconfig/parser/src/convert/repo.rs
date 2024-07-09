@@ -469,6 +469,12 @@ impl Convert for RawDerivedDataTypesConfig {
             .into_iter()
             .map(|ty| DerivableType::from_name(&ty))
             .collect::<Result<_>>()?;
+        let ephemeral_bubbles_disabled_types = self
+            .ephemeral_bubbles_disabled_types
+            .unwrap_or_default()
+            .into_iter()
+            .map(|ty| DerivableType::from_name(&ty))
+            .collect::<Result<_>>()?;
         let mapping_key_prefixes = self
             .mapping_key_prefixes
             .into_iter()
@@ -507,6 +513,7 @@ impl Convert for RawDerivedDataTypesConfig {
 
         Ok(DerivedDataTypesConfig {
             types,
+            ephemeral_bubbles_disabled_types,
             mapping_key_prefixes,
             unode_version,
             blame_filesize_limit,

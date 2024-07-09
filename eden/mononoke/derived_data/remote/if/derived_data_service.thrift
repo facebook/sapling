@@ -193,6 +193,11 @@ struct DisabledDerivation {
   3: string repo_name;
 } (rust.exhaustive)
 
+struct TypeDisabledForEphemeralBubbles {
+  1: string type_name;
+  2: i32 repo_id;
+} (rust.exhaustive)
+
 struct DisabledFilenodes {} (rust.exhaustive)
 
 union RequestErrorReason {
@@ -202,6 +207,7 @@ union RequestErrorReason {
   4: UnknownDerivedDataConfig unknown_derived_data_config;
   5: UnknownDerivationType unknown_derivation_type;
   6: DisabledDerivation disabled_derivation;
+  7: TypeDisabledForEphemeralBubbles type_disabled_for_ephemeral_bubbles;
 }
 
 safe permanent client exception RequestError {
