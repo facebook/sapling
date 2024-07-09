@@ -473,6 +473,17 @@ WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) noexcept {
         DestroyWindow(hwnd);
         return 0;
 
+      case WM_SETTINGCHANGE:
+        if (wParam == 0 &&
+            lstrcmpW(L"ImmersiveColorSet", (LPCWSTR)lParam) == 0) {
+          // Theme has changed
+          auto notifier = getWindowsNotifier(hwnd);
+          notifier->updateIconColor(std::nullopt);
+        } else {
+          return DefWindowProc(hwnd, message, wParam, lParam);
+        }
+        return 0;
+
       default:
         return DefWindowProc(hwnd, message, wParam, lParam);
     }
