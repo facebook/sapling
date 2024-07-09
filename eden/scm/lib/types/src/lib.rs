@@ -9,6 +9,7 @@
 
 pub mod augmented_tree;
 pub mod blake3;
+pub mod cas;
 pub mod errors;
 pub mod fetch_mode;
 pub mod hash;
@@ -31,6 +32,7 @@ pub use crate::augmented_tree::AugmentedTreeChildEntry;
 pub use crate::augmented_tree::AugmentedTreeEntry;
 pub use crate::augmented_tree::AugmentedTreeEntryWithDigest;
 pub use crate::blake3::Blake3;
+pub use crate::cas::CasDigest;
 pub use crate::hgid::HgId;
 pub use crate::key::Key;
 pub use crate::node::Node;
