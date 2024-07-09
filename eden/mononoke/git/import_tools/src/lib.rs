@@ -12,6 +12,7 @@ mod gitimport_objects;
 mod gitlfs;
 
 use std::collections::BTreeMap;
+use std::collections::HashMap;
 use std::path::Path;
 use std::process::Stdio;
 use std::str;
@@ -21,6 +22,7 @@ use anyhow::bail;
 use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Error;
+use anyhow::Result;
 use borrowed::borrowed;
 use bytes::Bytes;
 use cloned::cloned;
@@ -78,9 +80,9 @@ async fn find_file_changes<S, U>(
     reader: &GitRepoReader,
     uploader: U,
     changes: S,
-) -> Result<SortedVectorMap<NonRootMPath, U::Change>, Error>
+) -> Result<SortedVectorMap<NonRootMPath, U::Change>>
 where
-    S: Stream<Item = Result<BonsaiDiffFileChange<GitLeaf>, Error>>,
+    S: Stream<Item = Result<BonsaiDiffFileChange<GitLeaf>>>,
     U: GitUploader,
 {
     changes
@@ -163,7 +165,7 @@ pub async fn is_annotated_tag(
     path: &Path,
     prefs: &GitimportPreferences,
     object_id: &ObjectId,
-) -> Result<bool, Error> {
+) -> Result<bool> {
     let reader = GitRepoReader::new(&prefs.git_command_path, path).await?;
     Ok(reader
         .get_object(object_id)
@@ -194,7 +196,7 @@ pub async fn create_changeset_for_annotated_tag<Uploader: GitUploader>(
     tag_id: &ObjectId,
     maybe_tag_name: Option<String>,
     original_changeset_id: &ChangesetId,
-) -> Result<ChangesetId, Error> {
+) -> Result<ChangesetId> {
     let reader = GitRepoReader::new(&prefs.git_command_path, path).await?;
     // Get the parsed Git Tag
     let tag_metadata = TagMetadata::new(ctx, *tag_id, maybe_tag_name, &reader)
@@ -214,7 +216,7 @@ pub async fn upload_git_tag<Uploader: GitUploader>(
     path: &Path,
     prefs: &GitimportPreferences,
     tag_id: &ObjectId,
-) -> Result<(), Error> {
+) -> Result<()> {
     let reader = GitRepoReader::new(&prefs.git_command_path, path).await?;
     let tag_bytes = read_raw_object(&reader, tag_id)
         .await
@@ -238,13 +240,7 @@ pub async fn upload_git_tag<Uploader: GitUploader>(
     Ok(())
 }
 
-pub async fn gitimport_acc<Uploader: GitUploader>(
-    ctx: &CoreContext,
-    path: &Path,
-    uploader: &Uploader,
-    target: &GitimportTarget,
-    prefs: &GitimportPreferences,
-) -> Result<GitimportAccumulator, Error> {
+fn repo_name(prefs: &GitimportPreferences, path: &Path) -> String {
     let repo_name = if let Some(name) = &prefs.gitrepo_name {
         String::from(name)
     } else {
@@ -255,8 +251,17 @@ pub async fn gitimport_acc<Uploader: GitUploader>(
         };
         String::from(name_path.to_string_lossy())
     };
-    let dry_run = prefs.dry_run;
+    repo_name
+}
 
+pub async fn gitimport_acc<Uploader: GitUploader>(
+    ctx: &CoreContext,
+    path: &Path,
+    uploader: &Uploader,
+    target: &GitimportTarget,
+    prefs: &GitimportPreferences,
+) -> Result<GitimportAccumulator> {
+    let repo_name = repo_name(prefs, path);
     let reader = GitRepoReader::new(&prefs.git_command_path, path)
         .await
         .context("GitRepoReader::new")?;
@@ -270,7 +275,20 @@ pub async fn gitimport_acc<Uploader: GitUploader>(
         info!(ctx.logger(), "Nothing to import for repo {}.", repo_name);
         return Ok(GitimportAccumulator::new());
     }
+    import_commit_contents(ctx, repo_name, all_commits, roots, uploader, reader, prefs).await
+}
 
+pub async fn import_commit_contents<Uploader: GitUploader>(
+    ctx: &CoreContext,
+    repo_name: String,
+    all_commits: Vec<Result<ObjectId>>,
+    roots: &HashMap<ObjectId, ChangesetId>,
+    uploader: &Uploader,
+    reader: GitRepoReader,
+    prefs: &GitimportPreferences,
+) -> Result<GitimportAccumulator> {
+    let nb_commits_to_import = all_commits.len();
+    let dry_run = prefs.dry_run;
     let acc = RwLock::new(GitimportAccumulator::new());
     let backfill_derivation = prefs.backfill_derivation.clone();
 
@@ -338,8 +356,7 @@ pub async fn gitimport_acc<Uploader: GitUploader>(
         })
         .try_buffered(prefs.concurrency)
         .and_then(|(extracted_commit, file_changes)| {
-            let acc = &acc;
-            let repo_name = &repo_name;
+            borrowed!(acc, repo_name: &str);
             cloned!(uploader, reader, ctx);
             async move {
                 let oid = extracted_commit.metadata.oid;
@@ -359,7 +376,7 @@ pub async fn gitimport_acc<Uploader: GitUploader>(
                                 )
                             })
                     })
-                    .collect::<Result<Vec<_>, _>>()
+                    .collect::<Result<Vec<_>>>()
                     .with_context(|| format_err!("While looking for parents of {}", oid))?;
 
                 // Before generating the corresponding changeset at Mononoke end, upload the raw git commit
@@ -456,7 +473,7 @@ pub async fn gitimport_acc<Uploader: GitUploader>(
         // Chunk together into Vec<std::result::Result<(bcs, oid), Error> >
         .chunks(prefs.concurrency)
         // Go from Vec<Result<X,Y>> -> Result<Vec<X>,Y>
-        .map(|v| v.into_iter().collect::<Result<Vec<_>, Error>>())
+        .map(|v| v.into_iter().collect::<Result<Vec<_>>>())
         .try_for_each(|v| async {
             cloned!(backfill_derivation, ctx, uploader);
             task::spawn(async move { uploader.finalize_batch(&ctx, dry_run, backfill_derivation, v).await.context("finalize_batch") }).await?
@@ -473,7 +490,7 @@ pub async fn gitimport(
     uploader: &impl GitUploader,
     target: &GitimportTarget,
     prefs: &GitimportPreferences,
-) -> Result<LinkedHashMap<ObjectId, ChangesetId>, Error> {
+) -> Result<LinkedHashMap<ObjectId, ChangesetId>> {
     Ok(gitimport_acc(ctx, path, uploader, target, prefs)
         .await?
         .inner)
@@ -501,7 +518,7 @@ pub async fn read_symref(
     symref_name: &str,
     path: &Path,
     prefs: &GitimportPreferences,
-) -> Result<GitSymbolicRefsEntry, Error> {
+) -> Result<GitSymbolicRefsEntry> {
     let mut command = Command::new(&prefs.git_command_path)
         .current_dir(path)
         .env_clear()
@@ -548,7 +565,7 @@ pub async fn resolve_rev(
     rev: &str,
     path: &Path,
     prefs: &GitimportPreferences,
-) -> Result<Option<ObjectId>, Error> {
+) -> Result<Option<ObjectId>> {
     let output = Command::new(&prefs.git_command_path)
         .current_dir(path)
         .env_clear()
@@ -573,7 +590,7 @@ pub async fn resolve_rev(
 pub async fn read_git_refs(
     path: &Path,
     prefs: &GitimportPreferences,
-) -> Result<BTreeMap<GitRef, ObjectId>, Error> {
+) -> Result<BTreeMap<GitRef, ObjectId>> {
     let reader = GitRepoReader::new(&prefs.git_command_path, path).await?;
 
     let mut command = Command::new(&prefs.git_command_path)
@@ -637,7 +654,7 @@ pub async fn import_tree_as_single_bonsai_changeset(
     uploader: impl GitUploader,
     git_cs_id: ObjectId,
     prefs: &GitimportPreferences,
-) -> Result<ChangesetId, Error> {
+) -> Result<ChangesetId> {
     let reader = GitRepoReader::new(&prefs.git_command_path, path).await?;
 
     let sha1 = oid_to_sha1(&git_cs_id)?;
