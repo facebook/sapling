@@ -212,12 +212,12 @@ mod tests {
     use std::collections::BTreeMap;
     use std::str::FromStr;
 
-    use edenapi_types::Blake3;
     use edenapi_types::Sha1;
     use maplit::hashmap;
     use tempfile::TempDir;
     use types::fetch_mode::FetchMode;
     use types::testutil::*;
+    use types::Blake3;
 
     use super::*;
     use crate::edenapi::File;

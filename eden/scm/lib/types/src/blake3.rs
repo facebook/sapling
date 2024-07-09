@@ -13,5 +13,5 @@ use crate::hash::HashTypeInfo;
 pub type Blake3 = AbstractHashType<Blake3TypeInfo, 32>;
 pub struct Blake3TypeInfo;
 impl HashTypeInfo for Blake3TypeInfo {
-    const HASH_TYPE_NAME: &'static str = "blake3";
+    const HASH_TYPE_NAME: &'static str = "Blake3";
 }

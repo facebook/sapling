@@ -238,7 +238,6 @@ mod tests {
     use std::str::FromStr;
     use std::sync::Arc;
 
-    use edenapi_types::Blake3;
     use edenapi_types::ContentId;
     use edenapi_types::Sha1;
     use edenapi_types::Sha256;
@@ -246,6 +245,7 @@ mod tests {
     use tempfile::TempDir;
     use types::fetch_mode::FetchMode;
     use types::testutil::*;
+    use types::Blake3;
 
     use super::*;
     use crate::indexedlogdatastore::IndexedLogHgIdDataStore;

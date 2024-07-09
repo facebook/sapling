@@ -16,11 +16,11 @@ use byteorder::BigEndian;
 use byteorder::ReadBytesExt;
 use byteorder::WriteBytesExt;
 use configmodel::Config;
-use edenapi_types::Blake3;
 use edenapi_types::DirectoryMetadata as TreeAuxData;
 use indexedlog::log::IndexOutput;
 use minibytes::Bytes;
 use types::hgid::ReadHgIdExt;
+use types::Blake3;
 use types::HgId;
 
 use crate::indexedlogutil::Store;

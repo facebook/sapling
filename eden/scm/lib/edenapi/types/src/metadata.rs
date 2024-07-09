@@ -16,6 +16,7 @@ use quickcheck_arbitrary_derive::Arbitrary;
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
 use type_macros::auto_wire;
+pub use types::Blake3;
 
 use crate::FileAuxData;
 use crate::ServerError;
@@ -100,7 +101,6 @@ impl Arbitrary for FileMetadata {
 
 sized_hash!(Sha1, 20);
 sized_hash!(Sha256, 32);
-sized_hash!(Blake3, 32);
 blake2_hash!(ContentId);
 blake2_hash!(FsnodeId);
 
