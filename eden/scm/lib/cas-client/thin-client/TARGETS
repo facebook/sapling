@@ -1,0 +1,17 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("sapling")
+
+rust_library(
+    name = "thin-cas-client",
+    srcs = glob(["src/**/*.rs"]),
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:async-trait",
+        "//common/rust/shed/fbinit:fbinit",
+        "//eden/scm/lib/cas-client:cas-client",
+        "//eden/scm/lib/config/model:configmodel",
+        "//eden/scm/lib/types:types",
+        "//remote_execution/client_lib/wrappers/rust:external_re_client_lib",
+    ],
+)
