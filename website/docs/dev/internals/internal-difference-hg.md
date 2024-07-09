@@ -73,7 +73,7 @@ that improves performance in a similar way.
 
 For repo references such as bookmarks and remote bookmarks, Mercurial tracks
 them in individual files like `.hg/bookmarks`. Sapling uses [MetaLog](./metalog)
-to track them so changes are across state files are atomic.
+to track them so changes across state files are atomic.
 
 
 ## Protocols
