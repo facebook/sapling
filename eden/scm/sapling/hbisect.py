@@ -16,13 +16,16 @@
 from __future__ import absolute_import
 
 import collections
-from typing import Optional, Sized, Tuple
+from typing import Optional, Sized, Tuple, TYPE_CHECKING
 
 import bindings
 
 from . import error, pycompat
 from .i18n import _
 from .node import hex, short
+
+if TYPE_CHECKING:
+    import sapling
 
 
 def bisect(repo, state):
@@ -36,115 +39,6 @@ def bisect(repo, state):
     'good' is True if bisect is searching for a first good changeset, False
     if searching for a first bad one.
     """
-    if repo.ui.configbool("experimental", "bisect2"):
-        return _bisect2(repo, state)
-    else:
-        return _bisect1(repo, state)
-
-
-def _bisect1(repo, state):
-    changelog = repo.changelog
-    clparents = changelog.parentrevs
-    skip = _state_to_revs(repo, state, "skip")
-
-    def buildancestors(bad, good):
-        badrev = min([changelog.rev(n) for n in bad])
-        goodrev = max([changelog.rev(n) for n in good])
-        ancestors = collections.defaultdict(lambda: None)
-        for rev in repo.revs("descendants(%ln) - ancestors(%ln)", good, good):
-            ancestors[rev] = []
-        if ancestors[badrev] is None:
-            return badrev, goodrev, None
-        return badrev, goodrev, ancestors
-
-    good = False
-    badrev, goodrev, ancestors = buildancestors(state["bad"], state["good"])
-    if not ancestors:  # looking for bad to good transition?
-        good = True
-        badrev, goodrev, ancestors = buildancestors(state["good"], state["bad"])
-    bad = changelog.node(badrev)
-    if not ancestors:  # now we're confused
-        if (
-            len(state["bad"]) == 1
-            and len(state["good"]) == 1
-            and state["bad"] != state["good"]
-        ):
-            raise error.Abort(_("starting revisions are not directly related"))
-        raise error.Abort(
-            _("inconsistent state, %s:%s is good and bad") % (badrev, short(bad))
-        )
-
-    badnode = changelog.node(badrev)
-    goodnode = changelog.node(goodrev)
-
-    # build children dict
-    children = {}
-    visit = collections.deque([badrev])
-    candidates = []
-    while visit:
-        rev = visit.popleft()
-        if ancestors[rev] == []:
-            candidates.append(rev)
-            for prev in clparents(rev):
-                if prev != -1:
-                    if prev in children:
-                        children[prev].append(rev)
-                    else:
-                        children[prev] = [rev]
-                        visit.append(prev)
-
-    candidates.sort()
-    # have we narrowed it down to one entry?
-    # or have all other possible candidates besides 'bad' have been skipped?
-    tot = len(candidates)
-    unskipped = {c for c in candidates if (c not in skip) and (c != badrev)}
-    if tot == 1 or not unskipped:
-        return ([changelog.node(c) for c in candidates], 0, good, badnode, goodnode)
-    unskipped.add(badrev)
-    perfect = tot // 2
-
-    # find the best node to test
-    best_rev = None
-    best_len = -1
-    poison = set()
-    for rev in candidates:
-        if rev in poison:
-            # poison children
-            poison.update(children.get(rev, []))
-            continue
-
-        a = ancestors[rev] or [rev]
-        ancestors[rev] = None
-
-        x = len(a)  # number of ancestors
-        y = tot - x  # number of non-ancestors
-        value = min(x, y)  # how good is this test?
-        if value > best_len and rev in unskipped:
-            best_len = value
-            best_rev = rev
-            if value == perfect:  # found a perfect candidate? quit early
-                break
-
-        if y < perfect and rev in unskipped:  # all downhill from here?
-            # poison children
-            poison.update(children.get(rev, []))
-            continue
-
-        for c in children.get(rev, []):
-            if ancestors[c]:
-                ancestors[c] = list(set(ancestors[c] + a))
-            else:
-                ancestors[c] = a + [c]
-
-    assert best_rev is not None
-    best_node = changelog.node(best_rev)
-
-    return ([best_node], tot, good, badnode, goodnode)
-
-
-def _bisect2(repo, state):
-    """bisect algorithm based on segmented changelog"""
-
     # States:
     # - skip: user provided "skip" nodes. Not lazy.
     # - skip_revs: user provided "skip" revset. Might be expensive/lazy.
