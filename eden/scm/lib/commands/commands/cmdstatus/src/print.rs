@@ -29,6 +29,8 @@ pub struct PrintConfig {
     /// If true, paths are printed relative to the root of the repository; otherwise, they are
     /// printed relative to getcwd(2).
     pub root_relative: bool,
+    /// Whether to override OS separator with "/".
+    pub slash: SlashBehavior,
 }
 
 /// This struct covers the possible set of values for `hg status`. Used in conjunction with
@@ -54,29 +56,70 @@ enum PrintGroup {
     Clean,
 }
 
+#[derive(Debug, Clone, Copy)]
+pub enum SlashBehavior {
+    // Previous inconsistent behavior.
+    BuggyRust,
+    // Use OS separator.
+    PlatformDefault,
+    // Use forward slash.
+    ForwardSlash,
+}
+
 /// Wrapper around an ordinary PathRelativizer that honors the --root-relative flag to `hg status`.
 struct HgStatusPathRelativizer {
     relativizer: Option<RepoPathRelativizer>,
+    slash: SlashBehavior,
 }
 
 impl HgStatusPathRelativizer {
     /// * `root_relative` true if --root-relative was specified.
     /// * `relativizer` comes from HgArgs.relativizer.
-    pub fn new(root_relative: bool, relativizer: RepoPathRelativizer) -> HgStatusPathRelativizer {
+    pub fn new(
+        root_relative: bool,
+        slash: SlashBehavior,
+        relativizer: RepoPathRelativizer,
+    ) -> HgStatusPathRelativizer {
         let relativizer = match (root_relative, relativizer) {
             (false, r) => Some(r),
             _ => None,
         };
-        HgStatusPathRelativizer { relativizer }
+        HgStatusPathRelativizer { relativizer, slash }
     }
 
     /// Returns a String that is suitable for display to the user.
     ///
     /// If `root_relative` is true, the path returned will be relative to the working directory.
     pub fn relativize(&self, repo_path: &RepoPath) -> String {
+        use SlashBehavior::*;
+
         let out = match self.relativizer {
-            Some(ref relativizer) => relativizer.relativize(repo_path),
-            None => repo_path.to_string(),
+            Some(ref relativizer) => {
+                let os_sep_path = relativizer.relativize(repo_path);
+                match self.slash {
+                    PlatformDefault | BuggyRust => os_sep_path,
+                    ForwardSlash => {
+                        if std::path::MAIN_SEPARATOR != '/' {
+                            os_sep_path.replace(std::path::MAIN_SEPARATOR, "/")
+                        } else {
+                            os_sep_path
+                        }
+                    }
+                }
+            }
+            None => {
+                let fwd_slash_path = repo_path.to_string();
+                match self.slash {
+                    PlatformDefault => {
+                        if std::path::MAIN_SEPARATOR != '/' {
+                            fwd_slash_path.replace('/', std::path::MAIN_SEPARATOR_STR)
+                        } else {
+                            fwd_slash_path
+                        }
+                    }
+                    ForwardSlash | BuggyRust => fwd_slash_path,
+                }
+            }
         };
 
         if !out.is_empty() {
@@ -143,7 +186,8 @@ pub fn print_status(
 ) -> Result<()> {
     formatter.begin_list()?;
 
-    let relativizer = HgStatusPathRelativizer::new(print_config.root_relative, relativizer);
+    let relativizer =
+        HgStatusPathRelativizer::new(print_config.root_relative, print_config.slash, relativizer);
     let mut print_group =
         |print_group, enabled: bool, group: &mut dyn Iterator<Item = &RepoPathBuf>| -> Result<()> {
             if !enabled {
@@ -235,6 +279,7 @@ impl Default for PrintConfig {
             copies: false,
             endl: '\n',
             root_relative: false,
+            slash: SlashBehavior::PlatformDefault,
         }
     }
 }

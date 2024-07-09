@@ -19,6 +19,7 @@ use cmdutil::WalkOpts;
 use configloader::configmodel::ConfigExt;
 use print::PrintConfig;
 use print::PrintConfigStatusTypes;
+use print::SlashBehavior;
 use repo::repo::Repo;
 use status::needs_morestatus_extension;
 use types::path::RepoPathRelativizer;
@@ -182,27 +183,34 @@ pub fn run(ctx: ReqCtx<StatusOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Re
             ignored: false,
         }
     };
+
+    let plain = hgplain::is_plain(None);
+
+    let slash = if !repo
+        .config()
+        // Escape hatch to keep existing behavior.
+        .get_or("experimental", "rust-status-slash", || true)?
+    {
+        SlashBehavior::BuggyRust
+    } else if plain || repo.config().get_or_default("ui", "slash")? {
+        SlashBehavior::ForwardSlash
+    } else {
+        SlashBehavior::PlatformDefault
+    };
+
     let print_config = PrintConfig {
         status_types,
         no_status: ctx.opts.no_status,
-        copies: ctx.opts.copies
-            || repo
-                .config()
-                .get_or::<bool>("ui", "statuscopies", || false)?,
+        copies: ctx.opts.copies || repo.config().get_or_default("ui", "statuscopies")?,
         endl: if ctx.opts.print0 { '\0' } else { '\n' },
-        root_relative: ctx
-            .opts
-            .root_relative
-            .unwrap_or_else(|| hgplain::is_plain(None)),
+        root_relative: ctx.opts.root_relative.unwrap_or(plain),
+        slash,
     };
 
     tracing::debug!(target: "status_info", status_mode="rust");
 
     let status = wc.status(&ctx.core, matcher.clone(), ignored)?;
 
-    // This should be passed the "full" matcher including
-    // ignores, sparse, etc., but in practice probably doesn't
-    // make a difference.
     let copymap = wc.copymap(matcher.clone())?.into_iter().collect();
 
     let relativizer = RepoPathRelativizer::new(cwd, repo.path());

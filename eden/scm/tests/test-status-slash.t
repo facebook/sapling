@@ -21,5 +21,4 @@
     ...                if got != want:
     ...                    bad.append(f"got {got}, wanted {want} for root_relative={root_relative} ui_slash={ui_slash} use_rust={use_rust} plain={plain}")
     >>> bad
-    ['got dir/file, wanted dir\\file for root_relative=True ui_slash=False use_rust=True plain=False', 'got dir\\file, wanted dir/file for root_relative=False ui_slash=True use_rust=True plain=True', 'got dir\\file, wanted dir/file for root_relative=False ui_slash=True use_rust=True plain=False', 'got dir\\file, wanted dir/file for root_relative=False ui_slash=False use_rust=True plain=True'] (windows !)
-    [] (no-windows !)
+    []
