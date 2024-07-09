@@ -234,7 +234,7 @@ where
         drop(map_lock);
         drop(lock);
 
-        self.persisted_id_set = self.dag.all_ids_in_groups(&Group::ALL)?;
+        self.persisted_id_set = self.dag.all_ids_in_groups(&Group::PERSIST)?;
         debug_assert_eq!(self.dirty().await?.count().await?, 0);
         Ok(())
     }
@@ -696,7 +696,7 @@ where
         self.state.persist(&lock)?;
 
         self.invalidate_overlay_map()?;
-        self.persisted_id_set = self.dag.all_ids_in_groups(&Group::ALL)?;
+        self.persisted_id_set = self.dag.all_ids_in_groups(&Group::PERSIST)?;
 
         Ok(())
     }

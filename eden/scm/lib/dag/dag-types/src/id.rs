@@ -153,6 +153,9 @@ impl Group {
     /// - Not lazy.
     pub const VIRTUAL: Self = Self(2);
 
+    /// Groups designed to be persisted to disk.
+    pub const PERSIST: [Self; 2] = [Self::MASTER, Self::NON_MASTER];
+
     pub const ALL: [Self; 3] = [Self::MASTER, Self::NON_MASTER, Self::VIRTUAL];
     pub const MAX: Self = Self::ALL[Self::COUNT - 1];
 
