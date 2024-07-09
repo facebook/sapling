@@ -404,6 +404,14 @@ where
         self.overlay_map = other.overlay_map.clone();
         self.overlay_map_paths = other.overlay_map_paths.clone();
     }
+
+    /// Set the remote protocol for converting between Id and Vertex remotely.
+    ///
+    /// This is usually used on "sparse" ("lazy") Dag where the IdMap is incomplete
+    /// for vertexes in the master groups.
+    pub fn set_remote_protocol(&mut self, protocol: Arc<dyn RemoteIdConvertProtocol>) {
+        self.remote_protocol = protocol;
+    }
 }
 
 #[async_trait::async_trait]
@@ -1250,14 +1258,6 @@ where
 
     pub fn map(&self) -> &M {
         &self.map
-    }
-
-    /// Set the remote protocol for converting between Id and Vertex remotely.
-    ///
-    /// This is usually used on "sparse" ("lazy") Dag where the IdMap is incomplete
-    /// for vertexes in the master groups.
-    pub fn set_remote_protocol(&mut self, protocol: Arc<dyn RemoteIdConvertProtocol>) {
-        self.remote_protocol = protocol;
     }
 
     pub(crate) fn get_remote_protocol(&self) -> Arc<dyn RemoteIdConvertProtocol> {
