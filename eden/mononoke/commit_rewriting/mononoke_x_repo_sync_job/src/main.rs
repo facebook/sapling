@@ -51,11 +51,11 @@ use anyhow::format_err;
 use anyhow::Error;
 use anyhow::Result;
 use backsyncer::format_counter as format_backsyncer_counter;
+use blobstore_factory::MetadataSqlFactory;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateLogRef;
 use bookmarks::BookmarksRef;
 use bookmarks::Freshness;
-use cached_config::ConfigStore;
 use clientinfo::ClientEntryPoint;
 use clientinfo::ClientInfo;
 use cmdlib::helpers;
@@ -80,6 +80,7 @@ use live_commit_sync_config::LiveCommitSyncConfig;
 use metaconfig_types::CommitSyncConfigVersion;
 use metadata::Metadata;
 use mononoke_api::Repo;
+use mononoke_app::args::AsRepoArg;
 use mononoke_app::args::MultiRepoArgs;
 use mononoke_app::fb303::AliveService;
 use mononoke_app::MononokeApp;
@@ -89,6 +90,7 @@ use mononoke_types::DerivableType;
 use mutable_counters::ArcMutableCounters;
 use mutable_counters::MutableCountersArc;
 use mutable_counters::MutableCountersRef;
+use pushredirect::SqlPushRedirectionConfigBuilder;
 use regex::Regex;
 use repo_identity::RepoIdentityRef;
 use scuba_ext::MononokeScubaSampleBuilder;
@@ -233,7 +235,7 @@ async fn run_in_initial_import_mode<M: SyncedCommitMapping + Clone + 'static>(
 
 enum TailingArgs<M, R> {
     CatchUpOnce(CommitSyncer<M, R>),
-    LoopForever(CommitSyncer<M, R>, ConfigStore),
+    LoopForever(CommitSyncer<M, R>),
 }
 
 async fn run_in_tailing_mode<M: SyncedCommitMapping + Clone + 'static>(
@@ -247,6 +249,7 @@ async fn run_in_tailing_mode<M: SyncedCommitMapping + Clone + 'static>(
     sleep_duration: Duration,
     maybe_bookmark_regex: Option<Regex>,
     pushrebase_rewrite_dates: PushrebaseRewriteDates,
+    live_commit_sync_config: Arc<CfgrLiveCommitSyncConfig>,
 ) -> Result<(), Error> {
     match tailing_args {
         TailingArgs::CatchUpOnce(commit_syncer) => {
@@ -265,9 +268,7 @@ async fn run_in_tailing_mode<M: SyncedCommitMapping + Clone + 'static>(
             )
             .await?;
         }
-        TailingArgs::LoopForever(commit_syncer, config_store) => {
-            let live_commit_sync_config =
-                Arc::new(CfgrLiveCommitSyncConfig::new(ctx.logger(), &config_store)?);
+        TailingArgs::LoopForever(commit_syncer) => {
             let source_repo_id = commit_syncer.get_source_repo().repo_identity().id();
 
             loop {
@@ -531,7 +532,23 @@ async fn async_main<'a>(app: MononokeApp, ctx: CoreContext) -> Result<(), Error>
     let syncers = create_commit_syncers_from_app_unredacted(&ctx, &app, &args.repo_args).await?;
     let commit_syncer = syncers.small_to_large;
 
-    let live_commit_sync_config = Arc::new(CfgrLiveCommitSyncConfig::new(logger, &config_store)?);
+    let (_, repo_config) = app.repo_config(args.repo_args.source_repo.as_repo_arg())?;
+    let sql_factory: MetadataSqlFactory = MetadataSqlFactory::new(
+        app.fb,
+        repo_config.storage_config.metadata.clone(),
+        app.mysql_options().clone(),
+        *app.readonly_storage(),
+    )
+    .await?;
+    let builder = sql_factory
+        .open::<SqlPushRedirectionConfigBuilder>()
+        .await?;
+    let push_redirection_config = builder.build(small_repo.blob_repo().repo_identity().id());
+    let live_commit_sync_config = Arc::new(CfgrLiveCommitSyncConfig::new_with_xdb(
+        logger,
+        &config_store,
+        Arc::new(push_redirection_config),
+    )?);
     let common_commit_sync_config =
         live_commit_sync_config.get_common_config(small_repo.blob_repo().repo_identity().id())?;
 
@@ -600,7 +617,7 @@ async fn async_main<'a>(app: MononokeApp, ctx: CoreContext) -> Result<(), Error>
             let tailing_args = if tail_cmd_args.catch_up_once {
                 TailingArgs::CatchUpOnce(commit_syncer)
             } else {
-                TailingArgs::LoopForever(commit_syncer, config_store.clone())
+                TailingArgs::LoopForever(commit_syncer)
             };
 
             let backpressure_params = BackpressureParams::new(&app, tail_cmd_args.clone()).await?;
@@ -625,6 +642,7 @@ async fn async_main<'a>(app: MononokeApp, ctx: CoreContext) -> Result<(), Error>
                 sleep_duration,
                 maybe_bookmark_regex,
                 pushrebase_rewrite_dates,
+                live_commit_sync_config,
             )
             .await
         }
