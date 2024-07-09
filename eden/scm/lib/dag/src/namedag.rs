@@ -272,12 +272,12 @@ where
         // Constructs a new graph so we can copy pending data from the existing graph.
         let mut new_name_dag: Self = self.path.open()?;
 
+        // Inherit the managed virtual group declaration.
+        new_name_dag.managed_virtual_group = self.managed_virtual_group.clone();
+
         let parents: &(dyn DagAlgorithm + Send + Sync) = self;
         let non_master_heads: VertexListWithOptions = self.pending_heads.clone();
-        let seg_size = self.dag.get_new_segment_size();
-        new_name_dag.dag.set_new_segment_size(seg_size);
-        new_name_dag.set_remote_protocol(self.remote_protocol.clone());
-        new_name_dag.maybe_reuse_caches_from(self);
+        new_name_dag.inherit_configurations_from(self);
         let heads = heads.clone().chain(non_master_heads);
         new_name_dag.add_heads_and_flush(&parents, &heads).await?;
         *self = new_name_dag;
@@ -307,7 +307,7 @@ where
         new.state.reload(&lock)?;
         new.map.reload(&map_lock)?;
         new.dag.reload(&dag_lock)?;
-        new.maybe_reuse_caches_from(self);
+        new.inherit_configurations_from(self);
         std::mem::swap(&mut to_insert, &mut *new.overlay_map_paths.lock().unwrap());
         new.flush_cached_idmap_with_lock(&map_lock).await?;
 
@@ -411,6 +411,15 @@ where
     /// for vertexes in the master groups.
     pub fn set_remote_protocol(&mut self, protocol: Arc<dyn RemoteIdConvertProtocol>) {
         self.remote_protocol = protocol;
+    }
+
+    /// Inherit configurations like `managed_virtual_group` from `original`.
+    fn inherit_configurations_from(&mut self, original: &Self) {
+        let seg_size = original.dag.get_new_segment_size();
+        self.dag.set_new_segment_size(seg_size);
+        self.set_remote_protocol(original.remote_protocol.clone());
+        self.managed_virtual_group = original.managed_virtual_group.clone();
+        self.maybe_reuse_caches_from(original)
     }
 }
 
@@ -542,8 +551,7 @@ where
         // the stripped segments.
         let mut new: Self = self.path.open()?;
         let (lock, map_lock, dag_lock) = new.reload()?;
-        new.set_remote_protocol(self.remote_protocol.clone());
-        new.maybe_reuse_caches_from(self);
+        new.inherit_configurations_from(self);
 
         new.strip_with_lock(set, &map_lock).await?;
         new.persist(lock, map_lock, dag_lock)?;
@@ -752,8 +760,7 @@ where
         // Constructs a new graph so we don't expose a broken `self` state on error.
         let mut new: Self = self.path.open()?;
         let (lock, map_lock, dag_lock) = new.reload()?;
-        new.set_remote_protocol(self.remote_protocol.clone());
-        new.maybe_reuse_caches_from(self);
+        new.inherit_configurations_from(self);
 
         // Parents that should exist in the local graph. Look them up in 1 round-trip
         // and insert to the local graph.
