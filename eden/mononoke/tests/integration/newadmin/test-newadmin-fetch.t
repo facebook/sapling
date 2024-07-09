@@ -39,6 +39,7 @@ setup configuration
           "inner": {
             "content_id": "eb56488e97bb4cf5eb17f05357b80108a4a71f6c3bab52dfcaec07161d105ec9",
             "file_type": "Regular",
+            "git_lfs": "FullContent",
             "size": 1
           }
         }

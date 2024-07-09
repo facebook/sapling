@@ -31,11 +31,32 @@ pub struct TrackedFileChange {
     copy_from: Option<(NonRootMPath, ChangesetId)>,
 }
 
+#[derive(
+    Debug,
+    Default,
+    Copy,
+    Clone,
+    Eq,
+    PartialEq,
+    Hash,
+    Serialize,
+    Deserialize
+)]
+/// Controls file representation when served over Git protocol
+pub enum GitLfs {
+    /// Full contents of the file should be served over Git protocol
+    #[default]
+    FullContent,
+    /// A Git-LFS pointer should be served over git protocol
+    GitLfsPointer,
+}
+
 #[derive(Debug, Clone, Eq, PartialEq, Hash, Serialize, Deserialize)]
 pub struct BasicFileChange {
     content_id: ContentId,
     file_type: FileType,
     size: u64,
+    git_lfs: GitLfs,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash, Serialize, Deserialize)]
@@ -59,6 +80,7 @@ impl TrackedFileChange {
                 content_id,
                 file_type,
                 size,
+                git_lfs: GitLfs::FullContent,
             },
             copy_from,
         }
@@ -84,6 +106,10 @@ impl TrackedFileChange {
                     file: file.into_thrift(),
                     cs_id: cs_id.into_thrift(),
                 }),
+            is_git_lfs: match self.inner.git_lfs {
+                GitLfs::GitLfsPointer => Some(true),
+                GitLfs::FullContent => None,
+            },
         }
     }
 
@@ -117,6 +143,11 @@ impl TrackedFileChange {
                     content_id: ContentId::from_thrift(fc.content_id)?,
                     file_type: FileType::from_thrift(fc.file_type)?,
                     size: fc.size as u64,
+                    git_lfs: match fc.is_git_lfs {
+                        Some(true) => GitLfs::GitLfsPointer,
+                        None => GitLfs::FullContent,
+                        Some(false) => bail!("is_git_lfs must be true or None"),
+                    },
                 },
                 copy_from: match fc.copy_from {
                     Some(copy_info) => Some((
@@ -143,6 +174,7 @@ impl BasicFileChange {
             content_id,
             file_type,
             size,
+            git_lfs: GitLfs::FullContent,
         }
     }
 
@@ -171,6 +203,7 @@ impl BasicFileChange {
             content_id: ContentId::from_thrift(uc.content_id)?,
             file_type: FileType::from_thrift(uc.file_type)?,
             size: uc.size as u64,
+            git_lfs: GitLfs::FullContent,
         })
     }
 }
@@ -192,6 +225,7 @@ impl FileChange {
             content_id,
             file_type,
             size,
+            git_lfs: GitLfs::FullContent,
         })
     }
 
@@ -507,8 +541,24 @@ mod test {
             file_type: thrift::bonsai::FileType::Regular,
             size: 0,
             copy_from: None,
+            is_git_lfs: None,
         };
         TrackedFileChange::from_thrift(thrift_fc, &NonRootMPath::new("foo").unwrap())
             .expect_err("unexpected OK - bad content ID");
+    }
+
+    #[test]
+    fn bad_lfs_filechange_thrift() {
+        let thrift_fc = thrift::bonsai::FileChange {
+            content_id: thrift::id::ContentId(thrift::id::Id::Blake2(thrift::id::Blake2(
+                vec![2; 32].into(),
+            ))),
+            file_type: thrift::bonsai::FileType::Regular,
+            size: 0,
+            copy_from: None,
+            is_git_lfs: Some(false),
+        };
+        TrackedFileChange::from_thrift(thrift_fc, &NonRootMPath::new("foo").unwrap())
+            .expect_err("unexpected OK - bad lfs flag");
     }
 }

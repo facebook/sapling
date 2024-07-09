@@ -137,6 +137,11 @@ struct FileChange {
   // size is a u64 stored as an i64
   3: i64 size;
   4: optional CopyInfo copy_from;
+  // Git LFS pointer:
+  //  * true means file is represented by LFS pointer in Git
+  //  * not set means file is represented by full text in Git
+  //  * false is invalid value and should not be ever used
+  5: optional bool is_git_lfs;
 } (rust.exhaustive)
 
 // This is only used optionally so it is OK to use `required` here.

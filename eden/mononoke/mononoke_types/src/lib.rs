@@ -69,6 +69,7 @@ pub use derivable_type::DerivableType;
 pub use file_change::BasicFileChange;
 pub use file_change::FileChange;
 pub use file_change::FileType;
+pub use file_change::GitLfs;
 pub use file_change::TrackedFileChange;
 pub use file_contents::ChunkedFileContents;
 pub use file_contents::ContentChunkPointer;
