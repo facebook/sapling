@@ -43,7 +43,7 @@
     ("^#\\w+" . font-lock-keyword-face)
 
     ;; Leading "$" and later "<", ">", "|", "&" and "$(" are keywords.
-    ("^\\s-+\\$"
+    ("^\\s-+\\$\\s-"
      (0 font-lock-keyword-face)
      ("\\([<>|&]\\)\\|\\(\\$\\)(" nil nil
       (1 font-lock-keyword-face nil t)
