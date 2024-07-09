@@ -16,6 +16,7 @@ use context::CoreContext;
 use derived_data_manager::DerivableType;
 use derived_data_manager::DerivedDataManager;
 use derived_data_utils::check_derived;
+use ephemeral_blobstore::BubbleId;
 use futures::future;
 use futures::future::FutureExt;
 use futures::join;
@@ -45,6 +46,7 @@ pub async fn build_underived_batched_graph<'a>(
     ddm: &'a DerivedDataManager,
     derived_data_type: DerivableType,
     head: ChangesetId,
+    bubble_id: Option<BubbleId>,
     batch_size: u64,
 ) -> Result<Option<EnqueueResponse>> {
     let repo_id = ddm.repo_id();
@@ -118,6 +120,7 @@ pub async fn build_underived_batched_graph<'a>(
                     derived_data_type.clone(),
                     root_cs_id.clone(),
                     head_cs_id,
+                    bubble_id,
                     deps.collect(),
                     ctx.metadata().client_info(),
                 )?;
@@ -155,7 +158,7 @@ pub async fn build_underived_batched_graph<'a>(
                                     None
                                 } else {
                                     // Items are different, we need to deduplicate or discard
-                                    let maybe_dedup = deduplicate(ctx, item, *existing, commit_graph.clone())
+                                    let maybe_dedup = deduplicate(ctx, item, *existing, bubble_id, commit_graph.clone())
                                         .await?;
                                     // We couldn't deduplicate because rejected commits are in the existing item
                                     // set watch for existing item
@@ -216,6 +219,7 @@ async fn deduplicate(
     ctx: &CoreContext,
     rejected: DerivationDagItem,
     existing: DerivationDagItem,
+    bubble_id: Option<BubbleId>,
     commit_graph: Arc<CommitGraph>,
 ) -> Result<Option<DerivationDagItem>> {
     assert_eq!(
@@ -261,6 +265,7 @@ async fn deduplicate(
             rejected.derived_data_type().clone(),
             dedup_root,
             dedup_head,
+            bubble_id,
             vec![existing.id().clone()],
             ctx.metadata().client_info(),
         )?;

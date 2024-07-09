@@ -15,6 +15,7 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use context::CoreContext;
 use derived_data_manager::DerivedDataManager;
+use ephemeral_blobstore::Bubble;
 use mononoke_types::RepositoryId;
 
 pub use crate::dag_items::DagItemId;
@@ -41,6 +42,8 @@ impl RepoDerivationQueues {
 
 #[async_trait]
 pub trait DerivationQueue {
+    fn for_bubble(&self, bubble: Bubble) -> Arc<dyn DerivationQueue + Send + Sync>;
+
     async fn enqueue(
         &self,
         ctx: &CoreContext,

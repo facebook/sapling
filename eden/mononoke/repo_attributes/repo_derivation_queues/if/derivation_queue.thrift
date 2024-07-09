@@ -12,4 +12,5 @@ struct DagItemInfo {
   1: id.ChangesetId head_cs_id;
   2: optional time.Timestamp enqueue_timestamp;
   3: optional string client_info;
+  4: optional i64 bubble_id;
 } (rust.exhaustive)

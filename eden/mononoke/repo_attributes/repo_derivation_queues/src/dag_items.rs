@@ -13,6 +13,7 @@ use anyhow::Result;
 use bytes::Bytes;
 use clientinfo::ClientInfo;
 use derived_data_manager::DerivableType;
+use ephemeral_blobstore::BubbleId;
 use fbthrift::compact_protocol;
 use mononoke_types::ChangesetId;
 use mononoke_types::RepositoryId;
@@ -70,15 +71,21 @@ impl DagItemId {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct DagItemInfo {
     head_cs_id: ChangesetId,
+    bubble_id: Option<BubbleId>,
     enqueue_timestamp: Option<Timestamp>,
     client_info: Option<ClientInfo>,
 }
 
 impl DagItemInfo {
-    fn new(head_cs_id: ChangesetId, client_info: Option<&ClientInfo>) -> Self {
+    fn new(
+        head_cs_id: ChangesetId,
+        bubble_id: Option<BubbleId>,
+        client_info: Option<&ClientInfo>,
+    ) -> Self {
         let enqueue_timestamp = Some(Timestamp::now());
         Self {
             head_cs_id,
+            bubble_id,
             enqueue_timestamp,
             client_info: client_info.cloned(),
         }
@@ -87,6 +94,7 @@ impl DagItemInfo {
     fn to_thrift(&self) -> derivation_queue_thrift::DagItemInfo {
         derivation_queue_thrift::DagItemInfo {
             head_cs_id: self.head_cs_id.into_thrift(),
+            bubble_id: self.bubble_id.map(|bubble_id| bubble_id.into()),
             enqueue_timestamp: self.enqueue_timestamp.map(Timestamp::into_thrift),
             client_info: self
                 .client_info
@@ -98,6 +106,13 @@ impl DagItemInfo {
     fn from_thrift(dag_item_info: derivation_queue_thrift::DagItemInfo) -> Result<Self> {
         Ok(Self {
             head_cs_id: ChangesetId::from_thrift(dag_item_info.head_cs_id)?,
+            bubble_id: dag_item_info
+                .bubble_id
+                .map(|bubble_id| {
+                    BubbleId::try_from(bubble_id)
+                        .map_err(|_| anyhow!("Invalid bubble id {}", bubble_id))
+                })
+                .transpose()?,
             enqueue_timestamp: dag_item_info.enqueue_timestamp.map(Timestamp::from_thrift),
             client_info: dag_item_info
                 .client_info
@@ -118,6 +133,7 @@ impl DagItemInfo {
                 head_cs_id,
                 enqueue_timestamp: None,
                 client_info: None,
+                bubble_id: None,
             })
         } else {
             // New format: deserialize thrift.
@@ -133,6 +149,7 @@ impl DerivationDagItem {
         derived_data_type: DerivableType,
         root_cs_id: ChangesetId,
         head_cs_id: ChangesetId,
+        bubble_id: Option<BubbleId>,
         deps: Vec<DagItemId>,
         client_info: Option<&ClientInfo>,
     ) -> Result<DerivationDagItem, InternalError> {
@@ -142,7 +159,7 @@ impl DerivationDagItem {
             derived_data_type,
             root_cs_id,
         };
-        let dag_item_info = DagItemInfo::new(head_cs_id, client_info);
+        let dag_item_info = DagItemInfo::new(head_cs_id, bubble_id, client_info);
         if deps.contains(&dag_item_id) {
             return Err(InternalError::CircularDependency(dag_item_id));
         }
@@ -179,6 +196,10 @@ impl DerivationDagItem {
 
     pub fn head_cs_id(&self) -> ChangesetId {
         self.dag_item_info.head_cs_id
+    }
+
+    pub fn bubble_id(&self) -> Option<BubbleId> {
+        self.dag_item_info.bubble_id
     }
 
     pub fn enqueue_timestamp(&self) -> Option<Timestamp> {

@@ -19,6 +19,7 @@ context = { version = "0.1.0", path = "../../server/context" }
 derivation_queue_thrift = { version = "0.1.0", path = "if" }
 derived_data_manager = { version = "0.1.0", path = "../../derived_data/manager" }
 derived_data_utils = { version = "0.1.0", path = "../../derived_data/utils" }
+ephemeral_blobstore = { version = "0.1.0", path = "../../blobstore/ephemeral_blobstore" }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }

@@ -17,6 +17,7 @@ rust_library(
         "//common/rust/shed/cloned:cloned",
         "//common/rust/shed/facet:facet",
         "//common/rust/zeus:zeus_client",
+        "//eden/mononoke/blobstore:ephemeral_blobstore",
         "//eden/mononoke/common/bounded_traversal:bounded_traversal",
         "//eden/mononoke/derived_data:derived_data_manager",
         "//eden/mononoke/derived_data:derived_data_utils",
