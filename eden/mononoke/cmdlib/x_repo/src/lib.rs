@@ -16,6 +16,7 @@ use std::sync::Arc;
 use anyhow::bail;
 use anyhow::Error;
 use anyhow::Result;
+use blobstore_factory::MetadataSqlFactory;
 use cacheblob::LeaseOps;
 use cmdlib::args;
 use cmdlib::args::MononokeMatches;
@@ -36,6 +37,7 @@ use live_commit_sync_config::CfgrLiveCommitSyncConfig;
 use live_commit_sync_config::LiveCommitSyncConfig;
 use mononoke_types::NonRootMPath;
 use mononoke_types::RepositoryId;
+use pushredirect::SqlPushRedirectionConfigBuilder;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use synced_commit_mapping::SqlSyncedCommitMapping;
 
@@ -164,8 +166,24 @@ async fn get_things_from_matches<R: Repo>(
 
     let (source_repo, target_repo) = try_join!(source_repo_fut, target_repo_fut)?;
 
+    let sql_factory: MetadataSqlFactory = MetadataSqlFactory::new(
+        ctx.fb,
+        source_repo_config.storage_config.metadata,
+        mysql_options.clone(),
+        blobstore_factory::ReadOnlyStorage(readonly_storage.0),
+    )
+    .await?;
+    let builder = sql_factory
+        .open::<SqlPushRedirectionConfigBuilder>()
+        .await?;
+    let push_redirection_config = builder.build(source_repo_id);
+
     let live_commit_sync_config: Arc<dyn LiveCommitSyncConfig> =
-        Arc::new(CfgrLiveCommitSyncConfig::new(ctx.logger(), config_store)?);
+        Arc::new(CfgrLiveCommitSyncConfig::new_with_xdb(
+            ctx.logger(),
+            config_store,
+            Arc::new(push_redirection_config),
+        )?);
 
     Ok((
         Source(source_repo),

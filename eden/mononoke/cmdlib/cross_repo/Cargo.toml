@@ -9,6 +9,7 @@ license = "GPLv2+"
 
 [dependencies]
 anyhow = "1.0.75"
+blobstore_factory = { version = "0.1.0", path = "../../blobstore/factory" }
 cacheblob = { version = "0.1.0", path = "../../blobstore/cacheblob" }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 context = { version = "0.1.0", path = "../../server/context" }
@@ -18,6 +19,7 @@ futures = { version = "0.3.30", features = ["async-await", "compat"] }
 live_commit_sync_config = { version = "0.1.0", path = "../../commit_rewriting/live_commit_sync_config" }
 mononoke_app = { version = "0.1.0", path = "../mononoke_app" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
+pushredirect = { version = "0.1.0", path = "../../megarepo_api/pushredirect" }
 repo_factory = { version = "0.1.0", path = "../../repo_factory" }
 sql_construct = { version = "0.1.0", path = "../../common/sql_construct" }
 synced_commit_mapping = { version = "0.1.0", path = "../../commit_rewriting/synced_commit_mapping" }

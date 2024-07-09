@@ -16,6 +16,7 @@ use std::sync::Arc;
 use anyhow::bail;
 use anyhow::Error;
 use anyhow::Result;
+use blobstore_factory::MetadataSqlFactory;
 use cacheblob::LeaseOps;
 use cloned::cloned;
 use context::CoreContext;
@@ -40,6 +41,7 @@ use mononoke_app::args::SourceAndTargetRepoArgs;
 use mononoke_app::MononokeApp;
 use mononoke_types::NonRootMPath;
 use mononoke_types::RepositoryId;
+use pushredirect::SqlPushRedirectionConfigBuilder;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use synced_commit_mapping::SqlSyncedCommitMapping;
 
@@ -182,8 +184,25 @@ async fn get_things_from_app<R: CrossRepo>(
         .await?
     };
 
+    let sql_factory: MetadataSqlFactory = MetadataSqlFactory::new(
+        app.fb,
+        source_repo_config.storage_config.metadata,
+        mysql_options.clone(),
+        blobstore_factory::ReadOnlyStorage(readonly_storage.0),
+    )
+    .await?;
+    let builder = sql_factory
+        .open::<SqlPushRedirectionConfigBuilder>()
+        .await?;
+    let source_repo_id = app.repo_id(repo_args.source_repo.as_repo_arg())?;
+    let push_redirection_config = builder.build(source_repo_id);
+
     let live_commit_sync_config: Arc<dyn LiveCommitSyncConfig> =
-        Arc::new(CfgrLiveCommitSyncConfig::new(ctx.logger(), config_store)?);
+        Arc::new(CfgrLiveCommitSyncConfig::new_with_xdb(
+            ctx.logger(),
+            config_store,
+            Arc::new(push_redirection_config),
+        )?);
 
     Ok((
         Source(source_repo),
