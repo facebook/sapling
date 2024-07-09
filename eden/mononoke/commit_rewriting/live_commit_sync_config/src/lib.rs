@@ -23,7 +23,6 @@ use metaconfig_types::CommitSyncConfig;
 use metaconfig_types::CommitSyncConfigVersion;
 use metaconfig_types::CommonCommitSyncConfig;
 use mononoke_types::RepositoryId;
-use pushredirect::NoopPushRedirectionConfig;
 use pushredirect::PushRedirectionConfig;
 use pushredirect_enable::MononokePushRedirectEnable;
 use pushredirect_enable::PushRedirectEnableState;
@@ -132,7 +131,7 @@ pub trait LiveCommitSyncConfig: Send + Sync {
 pub struct CfgrLiveCommitSyncConfig {
     config_handle_for_all_versions: ConfigHandle<RawCommitSyncAllVersions>,
     config_handle_for_push_redirection: ConfigHandle<MononokePushRedirectEnable>,
-    push_redirect_config: Arc<dyn PushRedirectionConfig>,
+    push_redirect_config: Option<Arc<dyn PushRedirectionConfig>>,
 }
 
 impl CfgrLiveCommitSyncConfig {
@@ -147,12 +146,11 @@ impl CfgrLiveCommitSyncConfig {
             logger,
             "Initialized all commit sync versions configerator config"
         );
-        let push_redirect_config = Arc::new(NoopPushRedirectionConfig {});
         debug!(logger, "Done initializing CfgrLiveCommitSyncConfig");
         Ok(Self {
             config_handle_for_all_versions,
             config_handle_for_push_redirection,
-            push_redirect_config,
+            push_redirect_config: None,
         })
     }
 
@@ -176,7 +174,7 @@ impl CfgrLiveCommitSyncConfig {
         Ok(Self {
             config_handle_for_all_versions,
             config_handle_for_push_redirection,
-            push_redirect_config,
+            push_redirect_config: Some(push_redirect_config),
         })
     }
 
@@ -185,8 +183,25 @@ impl CfgrLiveCommitSyncConfig {
         ctx: &CoreContext,
         repo_id: RepositoryId,
     ) -> Option<PushRedirectEnableState> {
-        if let Ok(true) = justknobs::eval("scm/mononoke:pushredirect_use_xdb", None, None) {
-            let cfg = self.push_redirect_config.get(ctx).await;
+        let (use_xdb, use_configerator) = if self.push_redirect_config.is_some() {
+            let use_xdb =
+                justknobs::eval("scm/mononoke:pushredirect_use_xdb", None, None).unwrap_or(false);
+            let use_configerator =
+                !justknobs::eval("scm/mononoke:pushredirect_disable_configerator", None, None)
+                    .unwrap_or(false);
+
+            (use_xdb, use_configerator)
+        } else {
+            (false, true)
+        };
+
+        if use_xdb {
+            let cfg = self
+                .push_redirect_config
+                .clone()
+                .expect("push_redirect_config should be available")
+                .get(ctx)
+                .await;
             match cfg {
                 Ok(cfg) => {
                     if let Some(cfg) = cfg {
@@ -210,9 +225,7 @@ impl CfgrLiveCommitSyncConfig {
             }
         }
 
-        if let Ok(false) =
-            justknobs::eval("scm/mononoke:pushredirect_disable_configerator", None, None)
-        {
+        if use_configerator {
             let config = self.config_handle_for_push_redirection.get();
             return config.per_repo.get(&(repo_id.id() as i64)).cloned();
         }
