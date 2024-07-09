@@ -7,6 +7,7 @@
 
 use dag_types::CloneData;
 use dag_types::Group;
+use dag_types::VertexName;
 use nonblocking::non_blocking as nb;
 use nonblocking::non_blocking_result as r;
 
@@ -97,22 +98,59 @@ fn test_virtual_group_does_not_block_write_operations() -> Result<()> {
     let mut dag = TestDag::draw("A..C");
     dag.insert_virtual("C..E");
 
-    // TODO: flush() should attempt to preserve virtual vertexes.
+    // flush() does not preserve `add_heads` virtual vertexes.
     nb(dag.flush("B"))?;
     assert!(!r(dag.contains_vertex_name(&"E".into()))?);
 
-    // TODO: add_heads_and_flush() should attempt to preserve virtual vertexes.
+    // add_heads_and_flush() does not preserve `add_heads` virtual vertexes.
+    dag.insert_virtual("C..E");
     let parents = DrawDag::from("");
     r(dag.add_heads_and_flush(&parents, &VertexListWithOptions::default()))?;
     assert!(!r(dag.contains_vertex_name(&"E".into()))?);
 
-    // TODO: import_pull_data() should attempt to preserve virtual vertexes.
+    // import_pull_data() does not preserve `add_heads` virtual vertexes.
+    dag.insert_virtual("C..E");
     let data = CloneData {
         flat_segments: Default::default(),
         idmap: Default::default(),
     };
     r(dag.import_pull_data(data, VertexListWithOptions::default()))?;
     assert!(!r(dag.contains_vertex_name(&"E".into()))?);
+
+    Ok(())
+}
+
+#[test]
+fn test_setting_managed_virtual_group_clears_existing_virtual_group() -> Result<()> {
+    let parents: Vec<(VertexName, Vec<VertexName>)> =
+        vec![("null".into(), vec![]), ("wdir".into(), vec!["B".into()])];
+
+    let mut dag = TestDag::draw("A..C");
+    dag.insert_virtual("C..E");
+
+    // set_managed_virtual_group() clears existing VIRTUAL.
+    r(dag.set_managed_virtual_group(Some(parents)))?;
+    assert!(!r(dag.contains_vertex_name(&"E".into()))?);
+    assert!(r(dag.contains_vertex_name(&"null".into()))?);
+    assert!(r(dag.contains_vertex_name(&"wdir".into()))?);
+
+    // flush() preserves `set_managed_virtual_group` items.
+    nb(dag.flush("B"))?;
+    assert!(r(dag.contains_vertex_name(&"wdir".into()))?);
+
+    // add_heads_and_flush() preserves `set_managed_virtual_group` items.
+    let parents = DrawDag::from("");
+    r(dag.add_heads_and_flush(&parents, &VertexListWithOptions::default()))?;
+    assert!(r(dag.contains_vertex_name(&"wdir".into()))?);
+
+    // import_pull_data() preserves `set_managed_virtual_group` items.
+    dag.insert_virtual("C..E");
+    let data = CloneData {
+        flat_segments: Default::default(),
+        idmap: Default::default(),
+    };
+    r(dag.import_pull_data(data, VertexListWithOptions::default()))?;
+    assert!(r(dag.contains_vertex_name(&"wdir".into()))?);
 
     Ok(())
 }

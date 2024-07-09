@@ -10,6 +10,7 @@
 //! Combination of IdMap and IdDag.
 
 use std::collections::BTreeMap;
+use std::collections::HashMap;
 use std::collections::HashSet;
 use std::env::var;
 use std::fmt;
@@ -80,6 +81,7 @@ use crate::Level;
 use crate::Result;
 use crate::VerLink;
 use crate::VertexListWithOptions;
+use crate::VertexOptions;
 
 mod builder;
 #[cfg(any(test, feature = "indexedlog-backend"))]
@@ -180,6 +182,76 @@ where
     }
 }
 
+impl<IS, M, P, S> AbstractNameDag<IdDag<IS>, M, P, S>
+where
+    IS: IdDagStore,
+    IdDag<IS>: TryClone,
+    M: Send + Sync + IdMapWrite + IdMapAssignHead + TryClone + 'static,
+    P: Send + Sync + TryClone + 'static,
+    S: Send + Sync + TryClone + 'static,
+{
+    /// Set the content of the VIRTUAL group that survives reloading.
+    ///
+    /// `items` is a list of vertexes and parents.
+    ///
+    /// Existing content of the VIRTUAL group will be cleared before inserting
+    /// `items`. So this API feels declarative. As a comparison, `add_heads`
+    /// is imperative.
+    ///
+    /// This function calls `maybe_recreate_virtual_group` immediately to clear
+    /// and update contents in the VIRTUAL group. `maybe_recreate_virtual_group`
+    /// will be called automatically after graph changing operations:
+    /// `add_heads_and_flush`, `strip`, `flush`, `import_pull_data`.
+    pub async fn set_managed_virtual_group(
+        &mut self,
+        items: Option<Vec<(VertexName, Vec<VertexName>)>>,
+    ) -> Result<()> {
+        self.managed_virtual_group = items.map(|items| {
+            // Calculate `Parents` and `VertexListWithOptions` so they can be
+            // used in `maybe_recreate_virtual_group`.
+            let opts = VertexOptions {
+                reserve_size: 0,
+                desired_group: Group::VIRTUAL,
+            };
+            let heads: VertexListWithOptions = items
+                .iter()
+                .map(|(v, _p)| (v.clone(), opts.clone()))
+                .collect::<Vec<_>>()
+                .into();
+            let parents: HashMap<VertexName, Vec<VertexName>> = items.into_iter().collect();
+            let parents: Box<dyn Parents> = Box::new(parents);
+            Arc::new((parents, heads))
+        });
+        self.maybe_recreate_virtual_group().await
+    }
+
+    /// Clear vertexes in the VIRTUAL group.
+    pub(crate) async fn clear_virtual_group(&mut self) -> Result<()> {
+        let id_set = self.dag.all_ids_in_groups(&[Group::VIRTUAL])?;
+        if !id_set.is_empty() {
+            let removed = self.dag.strip(id_set)?;
+            for span in removed.iter_span_desc() {
+                self.map.remove_range(span.low, span.high).await?;
+            }
+        }
+        Ok(())
+    }
+
+    /// If `managed_virtual_group` is set, clear the VIRTUAL group and re-insert
+    /// based on `managed_virtual_group`.
+    async fn maybe_recreate_virtual_group(&mut self) -> Result<()> {
+        if let Some(maintained_virtual_group) = self.managed_virtual_group.as_ref() {
+            let maintained_virtual_group = maintained_virtual_group.clone();
+            self.clear_virtual_group().await?;
+            let parents = &maintained_virtual_group.0;
+            let head_opts = &maintained_virtual_group.1;
+            // Insert to the VIRTUAL group, using the a precalculated insertion order.
+            self.add_heads(parents.as_ref(), head_opts).await?;
+        }
+        Ok(())
+    }
+}
+
 #[async_trait::async_trait]
 impl<IS, M, P, S> DagPersistent for AbstractNameDag<IdDag<IS>, M, P, S>
 where
@@ -201,6 +273,9 @@ where
                 &self.pending_heads.vertexes(),
             ));
         }
+
+        // Clear the VIRTUAL group. Their parents might have changed in incompatible ways.
+        self.clear_virtual_group().await?;
 
         // Take lock.
         //
@@ -235,7 +310,10 @@ where
         drop(lock);
 
         self.persisted_id_set = self.dag.all_ids_in_groups(&Group::PERSIST)?;
+        self.maybe_recreate_virtual_group().await?;
+
         debug_assert_eq!(self.dirty().await?.count().await?, 0);
+
         Ok(())
     }
 
@@ -272,14 +350,13 @@ where
         // Constructs a new graph so we can copy pending data from the existing graph.
         let mut new_name_dag: Self = self.path.open()?;
 
-        // Inherit the managed virtual group declaration.
-        new_name_dag.managed_virtual_group = self.managed_virtual_group.clone();
-
         let parents: &(dyn DagAlgorithm + Send + Sync) = self;
         let non_master_heads: VertexListWithOptions = self.pending_heads.clone();
         new_name_dag.inherit_configurations_from(self);
         let heads = heads.clone().chain(non_master_heads);
         new_name_dag.add_heads_and_flush(&parents, &heads).await?;
+        new_name_dag.maybe_recreate_virtual_group().await?;
+
         *self = new_name_dag;
         Ok(())
     }
@@ -617,6 +694,9 @@ where
 
         // Snapshot cannot be reused.
         self.invalidate_snapshot();
+
+        // Re-create the VIRTUAL group content.
+        self.maybe_recreate_virtual_group().await?;
 
         Ok(())
     }
@@ -1093,6 +1173,10 @@ where
         }
 
         new.persist(lock, map_lock, dag_lock)?;
+
+        // Update maintained VIRTUAL group.
+        new.maybe_recreate_virtual_group().await?;
+
         *self = new;
         Ok(())
     }

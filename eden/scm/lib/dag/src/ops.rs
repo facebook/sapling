@@ -330,11 +330,15 @@ pub trait DagAddHeads {
     /// `heads` must use non-MASTER (NON_MASTER, VIRTUAL) groups as
     /// `desired_group`. `heads` are imported in the given order.
     ///
-    /// | Method              | Allowed groups      | Persist | Lazy |
-    /// |---------------------|---------------------|---------|------|
-    /// | add_heads           | NON_MASTER, VIRTUAL | No      | No   |
-    /// | add_heads_and_flush | MASTER              | Yes     | No   |
-    /// | import_pull_data    | MASTER              | Yes     | Yes  |
+    /// | Method              | Allowed groups          | Persist | Lazy |
+    /// |---------------------|-------------------------|---------|------|
+    /// | add_heads           | NON_MASTER, VIRTUAL [1] | No      | No   |
+    /// | add_heads_and_flush | MASTER                  | Yes     | No   |
+    /// | import_pull_data    | MASTER                  | Yes     | Yes  |
+    ///
+    /// [1]: Changes to the VIRTUAL group may not survive reloading. Use
+    /// `set_managed_virtual_group` to "pin" content in VIRTUAL that survives
+    /// reloads.
     async fn add_heads(
         &mut self,
         parents: &dyn Parents,
