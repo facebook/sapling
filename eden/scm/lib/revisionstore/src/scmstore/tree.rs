@@ -308,16 +308,12 @@ impl TreeStore {
                                 StoreResult::Found(v) => Some(v),
                                 StoreResult::NotFound(_k) => None,
                             };
-                            let meta = match contentstore.get_meta(store_key)? {
-                                StoreResult::Found(v) => Some(v),
-                                StoreResult::NotFound(_k) => None,
-                            };
 
-                            if let (Some(blob), Some(meta)) = (blob, meta) {
+                            if let Some(blob) = blob {
                                 // We don't write to local indexedlog for contentstore fallbacks because
                                 // contentstore handles that internally.
                                 tracing::trace!("{:?} found in contentstore", &key);
-                                common.found(key, LazyTree::ContentStore(blob.into(), meta).into());
+                                common.found(key, LazyTree::ContentStore(blob.into()).into());
                             }
                         }
                     }
