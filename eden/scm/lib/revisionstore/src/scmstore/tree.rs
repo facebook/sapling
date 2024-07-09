@@ -58,6 +58,8 @@ use crate::ContentMetadata;
 use crate::ContentStore;
 use crate::Delta;
 use crate::HgIdMutableDeltaStore;
+use crate::HgIdMutableHistoryStore;
+use crate::IndexedLogHgIdHistoryStore;
 use crate::LegacyStore;
 use crate::LocalStore;
 use crate::Metadata;
@@ -107,6 +109,9 @@ pub struct TreeStore {
     /// Whether we should request extra children metadata from SaplingRemoteAPI and write back to
     /// filestore's aux cache.
     pub tree_metadata_mode: TreeMetadataMode,
+
+    pub historystore_local: Option<Arc<IndexedLogHgIdHistoryStore>>,
+    pub historystore_cache: Option<Arc<IndexedLogHgIdHistoryStore>>,
 
     pub flush_on_drop: bool,
 
@@ -371,6 +376,8 @@ impl TreeStore {
             cache_to_local_cache: true,
             edenapi: None,
             contentstore: None,
+            historystore_cache: None,
+            historystore_local: None,
             filestore: None,
             tree_aux_store: None,
             flush_on_drop: true,
@@ -398,6 +405,14 @@ impl TreeStore {
 
         if let Some(ref tree_aux_store) = self.tree_aux_store {
             tree_aux_store.flush().map_err(&mut handle_error);
+        }
+
+        if let Some(ref historystore_local) = self.historystore_local {
+            historystore_local.flush().map_err(&mut handle_error);
+        }
+
+        if let Some(ref historystore_cache) = self.historystore_cache {
+            historystore_cache.flush().map_err(&mut handle_error);
         }
 
         let mut metrics = self.metrics.write();
@@ -435,6 +450,8 @@ impl LegacyStore for TreeStore {
         Arc::new(TreeStore {
             indexedlog_local: self.indexedlog_cache.clone(),
             indexedlog_cache: None,
+            historystore_local: self.historystore_cache.clone(),
+            historystore_cache: None,
             cache_to_local_cache: false,
             edenapi: None,
             contentstore: None,

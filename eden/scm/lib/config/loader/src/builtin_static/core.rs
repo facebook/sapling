@@ -76,6 +76,9 @@ autopullhoistpattern=
 autopullpattern=re:^(?:default|remote)/[A-Za-z0-9._/-]+$
 hoist=default
 
+[scmstore]
+handle-tree-parents=true
+
 [filetype-patterns]
 **/BUCK=buck
 **.bzl=buck

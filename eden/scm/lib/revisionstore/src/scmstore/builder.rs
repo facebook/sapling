@@ -35,10 +35,12 @@ use crate::scmstore::FileStore;
 use crate::scmstore::TreeStore;
 use crate::util::get_indexedlogdatastore_aux_path;
 use crate::util::get_indexedlogdatastore_path;
+use crate::util::get_indexedloghistorystore_path;
 use crate::util::get_local_path;
 use crate::util::get_tree_aux_store_path;
 use crate::ContentStore;
 use crate::ExtStoredPolicy;
+use crate::IndexedLogHgIdHistoryStore;
 use crate::SaplingRemoteApiFileStore;
 use crate::SaplingRemoteApiTreeStore;
 
@@ -609,6 +611,33 @@ impl<'a> TreeStoreBuilder<'a> {
         }
     }
 
+    #[context("failed to build local history")]
+    pub fn build_historystore_local(&self) -> Result<Option<Arc<IndexedLogHgIdHistoryStore>>> {
+        Ok(if let Some(local_path) = &self.local_path {
+            Some(Arc::new(IndexedLogHgIdHistoryStore::new(
+                get_indexedloghistorystore_path(local_path)?,
+                self.config,
+                StoreType::Permanent,
+            )?))
+        } else {
+            None
+        })
+    }
+
+    #[context("failed to build shared history")]
+    pub fn build_historystore_cache(&self) -> Result<Option<Arc<IndexedLogHgIdHistoryStore>>> {
+        let cache_path = match cache_path(self.config, &None)? {
+            Some(p) => p,
+            None => return Ok(None),
+        };
+
+        Ok(Some(Arc::new(IndexedLogHgIdHistoryStore::new(
+            get_indexedloghistorystore_path(cache_path)?,
+            self.config,
+            StoreType::Rotated,
+        )?)))
+    }
+
     #[context("failed to build revision store")]
     pub fn build(mut self) -> Result<TreeStore> {
         // TODO(meyer): Clean this up, just copied and pasted from the other version & did some ugly hacks to get this
@@ -659,6 +688,19 @@ impl<'a> TreeStoreBuilder<'a> {
             None
         };
 
+        tracing::trace!(target: "revisionstore::treestore", "processing historystore");
+        let (historystore_local, historystore_cache) = if self
+            .config
+            .get_or_default("scmstore", "handle-tree-parents")?
+        {
+            (
+                self.build_historystore_local()?,
+                self.build_historystore_cache()?,
+            )
+        } else {
+            (None, None)
+        };
+
         tracing::trace!(target: "revisionstore::treestore", "processing contentstore");
         let contentstore = if self
             .config
@@ -694,6 +736,8 @@ impl<'a> TreeStoreBuilder<'a> {
             edenapi,
             contentstore,
             tree_aux_store,
+            historystore_local,
+            historystore_cache,
             filestore: self.filestore,
             tree_metadata_mode,
             fetch_tree_aux_data,
