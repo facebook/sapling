@@ -20,6 +20,7 @@ import struct
 
 from bindings import (
     checkout as nativecheckout,
+    error as rusterror,
     status as nativestatus,
     worker as rustworker,
     workingcopy as rustworkingcopy,
@@ -1922,17 +1923,20 @@ def goto(
         force or updatecheck != "none"
     ):
         target = repo[node]
-        ret = repo._rsrepo.goto(
-            ctx=repo.ui.rustcontext(),
-            target=target.node(),
-            bookmark={"action": "none"},
-            mode="revert_conflicts" if force else "abort_if_conflicts",
-            report_mode="quiet",
-        )
-        if git.isgitformat(repo):
-            git.submodulecheckout(target, force=force)
-        repo.setparents(target.node())
-        return ret
+        try:
+            ret = repo._rsrepo.goto(
+                ctx=repo.ui.rustcontext(),
+                target=target.node(),
+                bookmark={"action": "none"},
+                mode="revert_conflicts" if force else "abort_if_conflicts",
+                report_mode="quiet",
+            )
+            if git.isgitformat(repo):
+                git.submodulecheckout(target, force=force)
+            repo.setparents(target.node())
+            return ret
+        except rusterror.CheckoutConflictsError as ex:
+            abort_on_conflicts(ex.args[0])
 
     _logupdatedistance(repo.ui, repo, node)
     _prefetchlazychildren(repo, node)
@@ -2192,14 +2196,7 @@ def _update(
 
             paths = sorted(paths)
             if len(paths) > 0:
-                msg = _("%d conflicting file changes:\n") % len(paths)
-                for path in i18n.limititems(paths):
-                    msg += " %s\n" % path
-                hint = _(
-                    "commit, shelve, goto --clean to discard all your changes"
-                    ", or update --merge to merge them"
-                )
-                raise error.Abort(msg.strip(), hint=hint)
+                abort_on_conflicts(paths)
 
         # Convert to dictionary-of-lists format
         actions = dict((m, []) for m in "a am f g cd dc r rg dm dg m e k p pr".split())
@@ -2307,6 +2304,19 @@ def _update(
     repo.ui.log("update_size", update_filecount=sum(stats))
 
     return stats
+
+
+def abort_on_conflicts(paths):
+    msg = _("%d conflicting file changes:\n") % len(paths)
+    for path in i18n.limititems(paths):
+        msg += " %s\n" % path
+
+    hint = _(
+        "commit, shelve, goto --clean to discard all your changes"
+        ", or goto --merge to merge them"
+    )
+
+    raise error.Abort(msg.strip(), hint=hint)
 
 
 def getsparsematchers(repo, fp1, fp2):

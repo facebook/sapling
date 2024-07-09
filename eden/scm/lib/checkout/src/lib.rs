@@ -1433,6 +1433,24 @@ fn overlay_working_changes(
     Ok(())
 }
 
+#[derive(Debug)]
+pub struct CheckoutConflictsError {
+    pub conflicts: Vec<RepoPathBuf>,
+}
+
+impl std::fmt::Display for CheckoutConflictsError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{:?} conflicting file changes:\n {}\n(commit, shelve, goto --clean to discard all your changes, or goto --merge to merge them)",
+            self.conflicts.len(),
+            truncated_error_list(&self.conflicts, 5).join("\n "),
+        )
+    }
+}
+
+impl std::error::Error for CheckoutConflictsError {}
+
 pub(crate) fn check_conflicts(
     repo: &Repo,
     wc: &LockedWorkingCopy,
@@ -1455,15 +1473,11 @@ pub(crate) fn check_conflicts(
 
     conflicts.sort();
 
-    if !conflicts.is_empty() {
-        bail!(
-            "{:?} conflicting file changes:\n {}\n{}",
-            conflicts.len(),
-            truncated_error_list(&conflicts, 5).join("\n "),
-            "(commit, shelve, goto --clean to discard all your changes, or goto --merge to merge them)",
-        );
+    if conflicts.is_empty() {
+        Ok(())
+    } else {
+        Err(CheckoutConflictsError { conflicts }.into())
     }
-    Ok(())
 }
 
 fn truncated_error_list(

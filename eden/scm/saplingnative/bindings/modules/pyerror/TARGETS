@@ -22,6 +22,7 @@ rust_python_library(
     crate_root = "src/lib.rs",
     deps = [
         "//eden/scm/lib/auth:auth",
+        "//eden/scm/lib/checkout:checkout",
         "//eden/scm/lib/config/model:configmodel",
         "//eden/scm/lib/cpython-ext:cpython-ext",
         "//eden/scm/lib/dag:dag",

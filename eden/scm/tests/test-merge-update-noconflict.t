@@ -1,11 +1,22 @@
+#testcases rustcheckout pythoncheckout pythonrustcheckout
 
-#require no-eden
+#if rustcheckout
+  $ setconfig checkout.use-rust=true
+#endif
 
+#if pythoncheckout
+  $ setconfig checkout.use-rust=false
+  $ setconfig workingcopy.rust-checkout=false
+#endif
+
+#if pythonrustcheckout
+  $ setconfig checkout.use-rust=false
+  $ setconfig workingcopy.rust-checkout=true
+#endif
 
   $ eagerepo
   $ enable amend rebase
   $ setconfig commands.update.check=noconflict
-  $ setconfig checkout.use-rust=true
 
 Updating w/ noconflict prints the conflicting changes:
   $ newrepo

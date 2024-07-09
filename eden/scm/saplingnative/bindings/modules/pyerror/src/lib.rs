@@ -9,6 +9,7 @@ use cpython::*;
 use cpython_ext::error;
 
 py_exception!(error, CertificateError);
+py_exception!(error, CheckoutConflictsError);
 py_exception!(error, CommitLookupError, exc::KeyError);
 py_exception!(error, ConfigError);
 py_exception!(error, FetchError, exc::KeyError);
@@ -30,6 +31,11 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let m = PyModule::new(py, &name)?;
 
     m.add(py, "CertificateError", py.get_type::<CertificateError>())?;
+    m.add(
+        py,
+        "CheckoutConflictsError",
+        py.get_type::<CheckoutConflictsError>(),
+    )?;
     m.add(py, "CommitLookupError", py.get_type::<CommitLookupError>())?;
     m.add(py, "FetchError", py.get_type::<FetchError>())?;
     m.add(py, "HttpError", py.get_type::<HttpError>())?;
@@ -165,9 +171,7 @@ fn register_error_handlers() {
             }
         } else if let Some(e) = e.downcast_ref::<edenapi::types::ServerError>() {
             Some(PyErr::new::<HttpError, _>(py, e.to_string()))
-        } else if e.is::<auth::MissingCerts>() {
-            Some(PyErr::new::<CertificateError, _>(py, format!("{}", e)))
-        } else if e.is::<auth::X509Error>() {
+        } else if e.is::<auth::MissingCerts>() || e.is::<auth::X509Error>() {
             Some(PyErr::new::<CertificateError, _>(py, format!("{}", e)))
         } else if let Some(e) = e.downcast_ref::<revisionstore::scmstore::KeyFetchError>() {
             use revisionstore::scmstore::KeyFetchError::*;
@@ -183,6 +187,14 @@ fn register_error_handlers() {
                 .or_else(|| Some(PyErr::new::<HttpError, _>(py, e.0.to_string())))
         } else if e.is::<pathmatcher::Error>() {
             Some(PyErr::new::<PathMatcherError, _>(py, format!("{:?}", e)))
+        } else if let Some(e) = e.downcast_ref::<checkout::CheckoutConflictsError>() {
+            Some(PyErr::new::<CheckoutConflictsError, _>(
+                py,
+                e.conflicts
+                    .iter()
+                    .map(|p| p.to_string())
+                    .collect::<Vec<_>>(),
+            ))
         } else {
             e.downcast_ref::<cpython_ext::PyErr>()
                 .map(|e| e.clone(py).into())

@@ -7,6 +7,7 @@ edition = "2021"
 
 [dependencies]
 auth = { version = "0.1.0", path = "../../../../lib/auth" }
+checkout = { version = "0.1.0", path = "../../../../lib/checkout" }
 configmodel = { version = "0.1.0", path = "../../../../lib/config/model" }
 cpython = { version = "0.7.2", default-features = false }
 cpython_ext = { version = "0.1.0", path = "../../../../lib/cpython-ext" }
