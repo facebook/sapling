@@ -1,7 +1,7 @@
 load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
 load("//eden/scm:targets.bzl", "rust_python_library")
 
-oncall("mercurial_release")
+oncall("sapling")
 
 rust_python_library(
     name = "pyfs",

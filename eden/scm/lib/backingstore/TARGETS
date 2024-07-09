@@ -2,7 +2,7 @@ load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
 load("@fbcode_macros//build_defs:rust_cxx_bridge.bzl", "rust_cxx_bridge")
 load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
 
-oncall("mercurial_release")
+oncall("sapling")
 
 cpp_library(
     name = "sapling_native_backingstore-include",

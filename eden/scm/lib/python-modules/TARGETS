@@ -2,7 +2,7 @@ load("@fbcode_macros//build_defs:native_rules.bzl", "buck_genrule")
 load("@fbcode_macros//build_defs:python_binary.bzl", "python_binary")
 load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
 
-oncall("mercurial_release")
+oncall("sapling")
 
 buck_genrule(
     name = "gen=compiled.rs",

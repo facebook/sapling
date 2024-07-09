@@ -1,7 +1,7 @@
 load("@fbcode_macros//build_defs:rust_binary.bzl", "rust_binary")
 load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
 
-oncall("mercurial_release")
+oncall("sapling")
 
 rust_library(
     name = "mkscratch",

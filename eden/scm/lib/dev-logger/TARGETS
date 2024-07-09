@@ -2,7 +2,7 @@ load("@fbcode_macros//build_defs:rust_binary.bzl", "rust_binary")
 load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
 load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
 
-oncall("mercurial_release")
+oncall("sapling")
 
 rust_library(
     name = "dev-logger",

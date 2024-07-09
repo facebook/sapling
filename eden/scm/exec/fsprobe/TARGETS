@@ -1,6 +1,6 @@
 load("@fbcode_macros//build_defs:rust_binary.bzl", "rust_binary")
 
-oncall("mercurial_release")
+oncall("sapling")
 
 rust_binary(
     name = "fsprobe",

@@ -1,6 +1,6 @@
 load("@fbcode_macros//build_defs:rust_python_extension.bzl", "rust_python_extension")
 
-oncall("mercurial_release")
+oncall("sapling")
 
 rust_python_extension(
     name = "bindings",

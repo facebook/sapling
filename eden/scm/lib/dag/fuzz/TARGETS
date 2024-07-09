@@ -6,7 +6,7 @@ load(
 )
 load("//security/lionhead/harnesses:defs.bzl", "rust_libfuzzer_harness")
 
-oncall("mercurial_release")
+oncall("sapling")
 
 # Run this with: buck run -c rust.fuzzing=true :gca
 # See D13660487.

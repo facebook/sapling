@@ -1,6 +1,6 @@
 load("@fbcode_macros//build_defs:python_binary.bzl", "python_binary")
 
-oncall("mercurial_release")
+oncall("sapling")
 
 python_binary(
     name = "hgcache_size_logger",

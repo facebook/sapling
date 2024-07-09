@@ -1,6 +1,6 @@
 load("//eden/scm:targets.bzl", "rust_python_library")
 
-oncall("mercurial_release")
+oncall("sapling")
 
 rust_python_library(
     name = "pyrevisionstore",
