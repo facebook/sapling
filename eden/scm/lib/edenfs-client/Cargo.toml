@@ -11,6 +11,7 @@ async-runtime = { version = "0.1.0", path = "../async-runtime" }
 clientinfo = { version = "0.1.0", path = "../clientinfo" }
 fbthrift_socket = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fs-err = { version = "2.6.0", features = ["tokio"] }
+hg-metrics = { version = "0.1.0", path = "../hg-metrics" }
 identity = { version = "0.1.0", path = "../identity" }
 serde = { version = "1.0.185", features = ["derive", "rc"] }
 thrift-types = { version = "0.1.0", path = "../thrift-types" }

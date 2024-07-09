@@ -215,7 +215,8 @@ impl EdenFsClient {
         let result = thrift_result
             .into_iter()
             .filter_map(|c| CheckoutConflict::local_try_from(c).ok())
-            .collect();
+            .collect::<Vec<_>>();
+        hg_metrics::increment_counter("eden_conflict_count", result.len());
         Ok(result)
     }
 }
