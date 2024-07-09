@@ -184,9 +184,9 @@
     "vsce": "^2.15.0"
   },
   "devDependencies": {
-    "@stylexjs/stylex": "^0.4.1",
     "@rollup/plugin-json": "^6.1.0",
     "@rollup/plugin-replace": "^5.0.5",
+    "@stylexjs/stylex": "^0.4.1",
     "@types/circular-dependency-plugin": "^5.0.5",
     "@types/jest": "29.5.12",
     "@types/node": "^16.11.7",
@@ -201,7 +201,7 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "ts-jest": "29",
-    "ts-node": "^10.9.1",
+    "tsx": "^4.16.2",
     "typescript": "^5.4.5",
     "vite-plugin-stylex": "^0.4.1",
     "vscode-uri": "^3.0.6"
