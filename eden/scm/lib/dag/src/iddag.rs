@@ -2068,6 +2068,7 @@ mod tests {
 
     use super::*;
     use crate::iddagstore::tests::dump_store_state;
+    use crate::tests::nid;
 
     #[test]
     fn test_segment_basic_lookups() {
@@ -2468,9 +2469,5 @@ mod tests {
 
     fn dbg<T: std::fmt::Debug>(t: T) -> String {
         format!("{:?}", t)
-    }
-
-    fn nid(i: u64) -> Id {
-        Group::NON_MASTER.min_id() + i
     }
 }

@@ -406,6 +406,8 @@ mod tests {
     use crate::ops::Persist;
     #[cfg(feature = "indexedlog-backend")]
     use crate::ops::PrefixLookup;
+    use crate::tests::nid;
+    use crate::tests::vid;
 
     #[cfg(feature = "indexedlog-backend")]
     #[test]
@@ -601,13 +603,5 @@ mod tests {
             deleted(&map),
             "[1, 2, 3, 9, 11, N2, N3, N4, N20, V0, V1, V10]"
         );
-    }
-
-    fn nid(i: u64) -> Id {
-        Group::NON_MASTER.min_id() + i
-    }
-
-    fn vid(i: u64) -> Id {
-        Group::VIRTUAL.min_id() + i
     }
 }

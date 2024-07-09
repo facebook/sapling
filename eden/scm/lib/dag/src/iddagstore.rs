@@ -387,10 +387,8 @@ pub(crate) mod tests {
     use once_cell::sync::Lazy;
 
     use super::*;
+    use crate::tests::nid;
 
-    fn nid(id: u64) -> Id {
-        Group::NON_MASTER.min_id() + id
-    }
     //  0--1--2--3--4--5--10--11--12--13--N0--N1--N2--N5--N6
     //         \-6-7-8--9-/-----------------\-N3--N4--/
     static LEVEL0_HEAD2: Lazy<Segment> =

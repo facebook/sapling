@@ -238,6 +238,7 @@ impl IdDagStore for IndexedLogStore {
             .lookup_range(Self::INDEX_LEVEL_HEAD, &low[..]..&high[..])?;
         for entry in iter {
             let (_, entries) = entry?;
+            #[allow(clippy::never_loop)]
             for entry in entries {
                 let entry = entry?;
                 let seg = self.segment_from_slice(entry);
@@ -841,6 +842,8 @@ fn index_parent_key(parent_id: Id, child_id: Id) -> [u8; 17] {
 mod tests {
     use super::*;
     use crate::iddagstore::tests::dump_store_state;
+    use crate::tests::nid;
+    use crate::tests::vid;
 
     #[test]
     fn test_merge_persisted_segments() -> Result<()> {
@@ -1156,14 +1159,6 @@ mod tests {
             }
         }
         data
-    }
-
-    fn nid(id: u64) -> Id {
-        Group::NON_MASTER.min_id() + id
-    }
-
-    fn vid(id: u64) -> Id {
-        Group::VIRTUAL.min_id() + id
     }
 
     #[test]

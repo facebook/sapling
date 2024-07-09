@@ -1467,3 +1467,13 @@ pub fn test_generic_dag<D: DagAddHeads + DagAlgorithm + IdConvert + Send + Sync 
 fn render(dag: &(impl DagAlgorithm + ?Sized)) -> String {
     render_namedag(dag, |_| None).unwrap()
 }
+
+#[cfg(test)]
+pub(crate) fn nid(i: u64) -> Id {
+    Group::NON_MASTER.min_id() + i
+}
+
+#[cfg(test)]
+pub(crate) fn vid(i: u64) -> Id {
+    Group::VIRTUAL.min_id() + i
+}
