@@ -122,7 +122,11 @@ class WindowsNotifier : public Notifier {
   void registerInodePopulationReportCallback(
       std::function<std::vector<InodePopulationReport>()> callback) override;
 
-  void updateIconColor(size_t numActive);
+  /**
+   * Update tray icon color based on `numActive` (checkout in progress).
+   * If `numActive` is `nullopt`, use the last `numActive` instead.
+   */
+  void updateIconColor(std::optional<size_t> numActive);
 
  private:
   void appendInodePopulationReportMenu(HMENU hMenu);
@@ -141,6 +145,8 @@ class WindowsNotifier : public Notifier {
   // Should only be updated from event loop thread using
   // toggleNotificationsEnabled() to avoid potential race
   uint8_t notificationStatus_;
+  // Set by IDM_SIGNAL_CHECKOUT checkout signal.
+  size_t lastNumActive_;
 };
 
 } // namespace facebook::eden

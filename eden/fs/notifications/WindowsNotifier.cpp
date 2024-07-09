@@ -424,7 +424,7 @@ WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) noexcept {
           case IDM_SIGNAL_CHECKOUT: {
             auto notifier = getWindowsNotifier(hwnd);
             auto numActive = static_cast<size_t>(lParam);
-            notifier->updateIconColor(numActive);
+            notifier->updateIconColor(std::optional<size_t>(numActive));
             return 0;
           }
 
@@ -577,7 +577,8 @@ WindowsNotifier::WindowsNotifier(
           version == "(dev build)" ? std::nullopt
                                    : std::optional<Guid>(EMenuGuid)},
       version_{version},
-      startTime_{startTime} {
+      startTime_{startTime},
+      lastNumActive_{0} {
   cacheIconImages();
   // We only use 1 bit of the uint8_t to indicate notifs are enabled/disabled
   notificationStatus_ = notificationsEnabledInConfig()
@@ -626,10 +627,13 @@ void WindowsNotifier::registerInodePopulationReportCallback(
   inodePopulationReportsCallback_ = callback;
 }
 
-void WindowsNotifier::updateIconColor(size_t numActive) {
+void WindowsNotifier::updateIconColor(std::optional<size_t> numActive) {
+  if (numActive.has_value()) {
+    lastNumActive_ = numActive.value();
+  }
   // In-progress checkouts (orange) take priority over unhealthy EdenFS mounts
   // (red). Default to white if we're healthy and have no in-progress checkouts.
-  if (numActive > 0) {
+  if (lastNumActive_ > 0) {
     changeIconColor(IDI_ONOTIFICATIONICON);
   } else {
     changeIconColor(getDefaultIcon());
