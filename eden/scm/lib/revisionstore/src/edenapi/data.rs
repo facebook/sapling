@@ -227,6 +227,7 @@ mod tests {
     use crate::indexedlogdatastore::IndexedLogHgIdDataStoreConfig;
     use crate::indexedlogutil::StoreType;
     use crate::localstore::ExtStoredPolicy;
+    use crate::scmstore::tree::types::TreeAttributes;
     use crate::scmstore::FileAttributes;
     use crate::scmstore::FileAuxData;
     use crate::scmstore::FileStore;
@@ -358,7 +359,11 @@ mod tests {
 
         // Attempt fetch.
         let mut fetched = store
-            .fetch_batch(std::iter::once(k.clone()), FetchMode::AllowRemote)
+            .fetch_batch(
+                std::iter::once(k.clone()),
+                TreeAttributes::CONTENT,
+                FetchMode::AllowRemote,
+            )
             .single()?
             .expect("key not found");
         assert_eq!(
@@ -404,7 +409,11 @@ mod tests {
 
         // Attempt fetch.
         let mut fetched = store
-            .fetch_batch(std::iter::once(k.clone()), FetchMode::RemoteOnly)
+            .fetch_batch(
+                std::iter::once(k.clone()),
+                TreeAttributes::CONTENT,
+                FetchMode::RemoteOnly,
+            )
             .single()?
             .expect("key not found");
         assert_eq!(
@@ -431,7 +440,11 @@ mod tests {
         let k = key("a", "def6f29d7b61f9cb70b2f14f79cd5c43c38e21b2");
 
         // Attempt fetch.
-        let fetched = store.fetch_batch(std::iter::once(k.clone()), FetchMode::AllowRemote);
+        let fetched = store.fetch_batch(
+            std::iter::once(k.clone()),
+            TreeAttributes::CONTENT,
+            FetchMode::AllowRemote,
+        );
         let (found, missing, _errors) = fetched.consume();
         assert_eq!(found.len(), 0);
         assert_eq!(missing.into_keys().collect::<Vec<_>>(), vec![k]);

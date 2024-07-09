@@ -24,6 +24,7 @@ use manifest::FsNodeMetadata;
 use manifest::Manifest;
 use repo::repo::Repo;
 use revisionstore::scmstore::file_to_async_key_stream;
+use revisionstore::scmstore::tree::types::TreeAttributes;
 use revisionstore::scmstore::FileAttributes;
 use serde::de::value;
 use serde::de::value::StringDeserializer;
@@ -192,7 +193,7 @@ fn fetch_trees(io: &IO, repo: &Repo, keys: Vec<Key>, fetch_mode: FetchMode) -> R
 
     let mut stdout = io.output();
 
-    let fetch_result = store.fetch_batch(keys.into_iter(), fetch_mode);
+    let fetch_result = store.fetch_batch(keys.into_iter(), TreeAttributes::CONTENT, fetch_mode);
 
     let (found, missing, _errors) = fetch_result.consume();
     for complete in found.into_iter() {

@@ -15,6 +15,7 @@ use minibytes::Bytes;
 use storemodel::SerializationFormat;
 use types::HgId;
 use types::Key;
+use types::Parents;
 
 use crate::indexedlogdatastore::Entry;
 use crate::scmstore::file::FileAuxData;
@@ -79,6 +80,13 @@ impl LazyTree {
         // Currently revisionstore is only for hg format.
         let format = SerializationFormat::Hg;
         Ok(ManifestTreeEntry(self.hg_content()?, format))
+    }
+
+    pub(crate) fn parents(&self) -> Option<Parents> {
+        match &self {
+            Self::SaplingRemoteApi(entry) => entry.parents,
+            _ => None,
+        }
     }
 
     pub fn aux_data(&self) -> HashMap<HgId, AuxData> {

@@ -15,10 +15,14 @@ use crate::scmstore::attrs::StoreAttrs;
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TreeAttributes {
     pub content: bool,
+    pub parents: bool,
 }
 
 impl StoreAttrs for TreeAttributes {
-    const NONE: Self = TreeAttributes { content: false };
+    const NONE: Self = TreeAttributes {
+        content: false,
+        parents: false,
+    };
 
     /// Returns all the attributes which are present or can be computed from present attributes.
     fn with_computable(&self) -> TreeAttributes {
@@ -27,7 +31,14 @@ impl StoreAttrs for TreeAttributes {
 }
 
 impl TreeAttributes {
-    pub const CONTENT: Self = TreeAttributes { content: true };
+    pub const CONTENT: Self = TreeAttributes {
+        content: true,
+        parents: false,
+    };
+    pub const PARENTS: Self = TreeAttributes {
+        content: false,
+        parents: true,
+    };
 }
 
 impl Not for TreeAttributes {
@@ -36,6 +47,7 @@ impl Not for TreeAttributes {
     fn not(self) -> Self::Output {
         TreeAttributes {
             content: !self.content,
+            parents: !self.parents,
         }
     }
 }
@@ -46,6 +58,7 @@ impl BitAnd for TreeAttributes {
     fn bitand(self, rhs: Self) -> Self::Output {
         TreeAttributes {
             content: self.content & rhs.content,
+            parents: self.parents & rhs.parents,
         }
     }
 }
@@ -56,6 +69,7 @@ impl BitOr for TreeAttributes {
     fn bitor(self, rhs: Self) -> Self::Output {
         TreeAttributes {
             content: self.content | rhs.content,
+            parents: self.parents | rhs.parents,
         }
     }
 }

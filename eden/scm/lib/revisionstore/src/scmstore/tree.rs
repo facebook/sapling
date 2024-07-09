@@ -128,12 +128,13 @@ impl TreeStore {
     pub fn fetch_batch(
         &self,
         reqs: impl Iterator<Item = Key>,
+        attrs: TreeAttributes,
         fetch_mode: FetchMode,
     ) -> FetchResults<StoreTree> {
         let (found_tx, found_rx) = unbounded();
         let found_tx2 = found_tx.clone();
         let mut common: CommonFetchState<StoreTree> =
-            CommonFetchState::new(reqs, TreeAttributes::CONTENT, found_tx, fetch_mode);
+            CommonFetchState::new(reqs, attrs, found_tx, fetch_mode);
 
         let keys_len = common.pending_len();
 
@@ -238,6 +239,7 @@ impl TreeStore {
                             child_metadata: fetch_children_metadata,
                             augmented_trees: fetch_tree_aux_data,
                         };
+
                         let response = edenapi
                             .trees_blocking(pending, Some(attributes))
                             .map_err(|e| e.tag_network())?;
@@ -491,7 +493,7 @@ impl HgIdDataStore for TreeStore {
     fn get(&self, key: StoreKey) -> Result<StoreResult<Vec<u8>>> {
         Ok(
             match self
-                .fetch_batch(std::iter::once(key.clone()).filter_map(StoreKey::maybe_into_key), FetchMode::AllowRemote)
+                .fetch_batch(std::iter::once(key.clone()).filter_map(StoreKey::maybe_into_key), TreeAttributes::CONTENT, FetchMode::AllowRemote)
                 .single()?
             {
                 Some(entry) => StoreResult::Found(entry.content.expect("content attribute not found despite being requested and returned as complete").hg_content()?.into_vec()),
@@ -505,6 +507,7 @@ impl HgIdDataStore for TreeStore {
             match self
                 .fetch_batch(
                     std::iter::once(key.clone()).filter_map(StoreKey::maybe_into_key),
+                    TreeAttributes::CONTENT,
                     FetchMode::AllowRemote,
                 )
                 .single()?
@@ -531,6 +534,7 @@ impl RemoteDataStore for TreeStore {
         Ok(self
             .fetch_batch(
                 keys.iter().cloned().filter_map(StoreKey::maybe_into_key),
+                TreeAttributes::CONTENT,
                 FetchMode::AllowRemote,
             )
             .missing()?
@@ -638,7 +642,11 @@ impl storemodel::KeyStore for TreeStore {
         }
         let key = Key::new(path.to_owned(), node);
         match self
-            .fetch_batch(std::iter::once(key.clone()), FetchMode::LocalOnly)
+            .fetch_batch(
+                std::iter::once(key.clone()),
+                TreeAttributes::CONTENT,
+                FetchMode::LocalOnly,
+            )
             .single()?
         {
             Some(entry) => Ok(Some(entry.content.expect("no tree content").hg_content()?)),
@@ -657,7 +665,11 @@ impl storemodel::KeyStore for TreeStore {
         }
         let key = Key::new(path.to_owned(), node);
         match self
-            .fetch_batch(std::iter::once(key.clone()), fetch_mode)
+            .fetch_batch(
+                std::iter::once(key.clone()),
+                TreeAttributes::CONTENT,
+                fetch_mode,
+            )
             .single()?
         {
             Some(entry) => Ok(entry.content.expect("no tree content").hg_content()?),
@@ -670,7 +682,7 @@ impl storemodel::KeyStore for TreeStore {
         keys: Vec<Key>,
         fetch_mode: FetchMode,
     ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, Bytes)>>> {
-        let fetched = self.fetch_batch(keys.into_iter(), fetch_mode);
+        let fetched = self.fetch_batch(keys.into_iter(), TreeAttributes::CONTENT, fetch_mode);
         let iter = fetched
             .into_iter()
             .map(|entry| -> anyhow::Result<(Key, Bytes)> {
@@ -684,8 +696,12 @@ impl storemodel::KeyStore for TreeStore {
     }
 
     fn prefetch(&self, keys: Vec<Key>) -> Result<()> {
-        self.fetch_batch(keys.into_iter(), FetchMode::AllowRemote)
-            .consume();
+        self.fetch_batch(
+            keys.into_iter(),
+            TreeAttributes::CONTENT,
+            FetchMode::AllowRemote,
+        )
+        .consume();
         Ok(())
     }
 
@@ -794,7 +810,7 @@ impl storemodel::TreeStore for TreeStore {
         keys: Vec<Key>,
         fetch_mode: FetchMode,
     ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, Box<dyn TreeEntry>)>>> {
-        let fetched = self.fetch_batch(keys.into_iter(), fetch_mode);
+        let fetched = self.fetch_batch(keys.into_iter(), TreeAttributes::CONTENT, fetch_mode);
         let iter = fetched
             .into_iter()
             .map(|entry| -> anyhow::Result<(Key, Box<dyn TreeEntry>)> {
