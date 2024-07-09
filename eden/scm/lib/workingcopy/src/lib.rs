@@ -18,3 +18,5 @@ pub mod wait;
 pub mod walker;
 mod watchman_client;
 pub mod workingcopy;
+
+pub use workingcopy::WorkingCopy;

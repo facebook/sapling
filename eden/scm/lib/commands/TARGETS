@@ -112,6 +112,7 @@ rust_library(
         "//eden/scm/lib/commands/commands/cmdversion:cmdversion",
         "//eden/scm/lib/commands/commands/cmdwhereami:cmdwhereami",
         "//eden/scm/lib/commands/debugcommands/cmddebugargs:cmddebugargs",
+        "//eden/scm/lib/commands/debugcommands/cmddebugcas:cmddebugcas",
         "//eden/scm/lib/commands/debugcommands/cmddebugconfigtree:cmddebugconfigtree",
         "//eden/scm/lib/commands/debugcommands/cmddebugcurrentexe:cmddebugcurrentexe",
         "//eden/scm/lib/commands/debugcommands/cmddebugdumpindexedlog:cmddebugdumpindexedlog",

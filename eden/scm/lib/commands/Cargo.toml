@@ -14,6 +14,7 @@ cmdclone = { version = "0.1.0", path = "commands/cmdclone" }
 cmdconfig = { version = "0.1.0", path = "commands/cmdconfig" }
 cmdconfigfile = { version = "0.1.0", path = "commands/cmdconfigfile" }
 cmddebugargs = { version = "0.1.0", path = "debugcommands/cmddebugargs" }
+cmddebugcas = { version = "0.1.0", path = "debugcommands/cmddebugcas" }
 cmddebugconfigtree = { version = "0.1.0", path = "debugcommands/cmddebugconfigtree" }
 cmddebugcurrentexe = { version = "0.1.0", path = "debugcommands/cmddebugcurrentexe" }
 cmddebugdumpindexedlog = { version = "0.1.0", path = "debugcommands/cmddebugdumpindexedlog" }
