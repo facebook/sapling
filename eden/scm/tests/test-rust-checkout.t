@@ -170,22 +170,31 @@ Various invalid arg combos:
   [255]
 
   $ echo untracked > bar
+  $ hg rm B
   $ hg st
   M foo
+  R B
   ? bar
   $ hg go $A
-  abort: 2 conflicting file changes:
+  abort: 3 conflicting file changes: (no-eden !)
+  abort: 2 conflicting file changes: (eden !)
+   B (no-eden !)
    bar
    foo
   (commit, shelve, goto --clean to discard all your changes, or goto --merge to merge them)
   [255]
 
   $ hg go -q --clean $A
+FIXME: "B" shouldn't be in status
   $ hg st
+  R B (no-eden !)
   $ cat foo
   foo (no-eol)
   $ cat bar
   bar (no-eol)
+  $ cat B
+  cat: B: $ENOENT$
+  [1]
 
 --clean gets you out of merge state:
   $ newclientrepo
