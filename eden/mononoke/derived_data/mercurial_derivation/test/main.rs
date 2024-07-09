@@ -69,6 +69,7 @@ use mononoke_types::ChangesetId;
 use mononoke_types::DateTime;
 use mononoke_types::FileChange;
 use mononoke_types::FileContents;
+use mononoke_types::GitLfs;
 use repo_blobstore::RepoBlobstoreArc;
 use repo_blobstore::RepoBlobstoreRef;
 use scuba_ext::MononokeScubaSampleBuilder;
@@ -653,6 +654,7 @@ async fn make_file_change<'a>(
         FileType::Regular,
         content_size,
         None,
+        GitLfs::FullContent,
     ))
 }
 

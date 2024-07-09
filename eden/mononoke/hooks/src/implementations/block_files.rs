@@ -107,6 +107,7 @@ fn block_unacceptable_patterns<'a, 'b>(
 #[cfg(test)]
 mod test {
     use mononoke_types::FileType;
+    use mononoke_types::GitLfs;
     use mononoke_types_mocks::contentid::TWOS_CTID;
 
     use super::*;
@@ -121,7 +122,7 @@ mod test {
     }
 
     fn basic_change() -> BasicFileChange {
-        BasicFileChange::new(TWOS_CTID, FileType::Regular, 10)
+        BasicFileChange::new(TWOS_CTID, FileType::Regular, 10, GitLfs::FullContent)
     }
 
     fn mpath(s: &str) -> NonRootMPath {

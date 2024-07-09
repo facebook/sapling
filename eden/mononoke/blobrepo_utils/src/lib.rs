@@ -46,8 +46,13 @@ pub async fn convert_diff_result_into_file_change_for_diamond_merge(
             // the parents of the commit, so if we just fetch the latest copy
             // info for a file change, then it might point to one of the
             // ancestors of `onto`, but not necessarily to the onto.
-            let file_change =
-                FileChange::tracked(envelope.content_id(), ty, envelope.content_size(), None);
+            let file_change = FileChange::tracked(
+                envelope.content_id(),
+                ty,
+                envelope.content_size(),
+                None,
+                mononoke_types::GitLfs::FullContent,
+            );
             Ok((path, file_change))
         }
         BonsaiDiffFileChange::Deleted(path) => Ok((path, FileChange::Deletion)),

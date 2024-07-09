@@ -472,6 +472,7 @@ mod tests {
     use mononoke_types::DateTime;
     use mononoke_types::FileChange;
     use mononoke_types::FileContents;
+    use mononoke_types::GitLfs;
     use mononoke_types::RepoPath;
     use repo_derived_data::RepoDerivedDataRef;
     use test_repo_factory::TestRepoFactory;
@@ -955,7 +956,13 @@ mod tests {
                     let content =
                         FileContents::Bytes(Bytes::copy_from_slice(content.as_bytes())).into_blob();
                     let content_id = content.store(&ctx, &repo.repo_blobstore).await?;
-                    let file_change = FileChange::tracked(content_id, file_type, size as u64, None);
+                    let file_change = FileChange::tracked(
+                        content_id,
+                        file_type,
+                        size as u64,
+                        None,
+                        GitLfs::FullContent,
+                    );
                     res.insert(path, file_change);
                 }
                 None => {

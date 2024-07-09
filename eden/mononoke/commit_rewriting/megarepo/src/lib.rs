@@ -30,6 +30,7 @@ use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
 use mononoke_types::FileChange;
 use mononoke_types::FileType;
+use mononoke_types::GitLfs;
 use movers::Mover;
 use phases::PhasesRef;
 use repo_blobstore::RepoBlobstoreRef;
@@ -218,6 +219,7 @@ where
                     file_move.file_type,
                     file_move.file_size,
                     Some((file_move.old_path, parent_bcs_id)),
+                    GitLfs::FullContent,
                 );
                 file_changes.insert(to, fc);
             }

@@ -50,6 +50,7 @@ use mononoke_types::ChangesetId;
 use mononoke_types::DerivableType;
 use mononoke_types::FileChange;
 use mononoke_types::FileType;
+use mononoke_types::GitLfs;
 use mononoke_types::NonRootMPath;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataRef;
@@ -233,6 +234,7 @@ where
             ty,
             meta.total_size,
             None,
+            GitLfs::FullContent,
         ))
     }
 

@@ -39,6 +39,7 @@ use mononoke_types::FileChange;
 use mononoke_types::FileContents;
 use mononoke_types::FileType;
 use mononoke_types::FsnodeId;
+use mononoke_types::GitLfs;
 use mononoke_types::MPathElement;
 use mononoke_types::NonRootMPath;
 use movers::Mover;
@@ -419,6 +420,7 @@ async fn create_bonsai_for_dangling_submodule_pointer<R: Repo>(
         FileType::Regular,
         readme_file_size,
         None,
+        GitLfs::FullContent,
     );
     let file_changes: SortedVectorMap<NonRootMPath, FileChange> = vec![(
         NonRootMPath::new("README.TXT")?,

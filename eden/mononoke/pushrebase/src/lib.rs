@@ -96,6 +96,7 @@ use mononoke_types::ChangesetId;
 use mononoke_types::DateTime;
 use mononoke_types::FileChange;
 use mononoke_types::Generation;
+use mononoke_types::GitLfs;
 use mononoke_types::Timestamp;
 use pushrebase_hook::PushrebaseCommitHook;
 use pushrebase_hook::PushrebaseHook;
@@ -985,6 +986,7 @@ async fn rebase_changeset(
                             remapping.get(cs).map(|(cs, _)| cs).cloned().unwrap_or(*cs),
                         )
                     }),
+                    GitLfs::FullContent,
                 );
             }
             FileChange::Deletion
@@ -1280,6 +1282,7 @@ mod tests {
     use maplit::hashset;
     use mononoke_types::BonsaiChangesetMut;
     use mononoke_types::FileType;
+    use mononoke_types::GitLfs;
     use mononoke_types::PrefixTrie;
     use mononoke_types::RepositoryId;
     use mutable_counters::MutableCounters;
@@ -2339,6 +2342,7 @@ mod tests {
                 FileType::Executable,
                 file_1.size(),
                 /* copy_from */ None,
+                GitLfs::FullContent,
             );
 
             let bcs = CreateCommitContext::new(&ctx, &repo, vec![root])

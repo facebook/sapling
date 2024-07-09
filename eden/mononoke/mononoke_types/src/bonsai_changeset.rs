@@ -589,6 +589,7 @@ mod test {
 
     use super::*;
     use crate::file_change::FileType;
+    use crate::file_change::GitLfs;
     use crate::hash::Blake2;
     use crate::typed_hash::ContentId;
 
@@ -626,6 +627,7 @@ mod test {
                     FileType::Regular,
                     42,
                     None,
+                    GitLfs::FullContent,
                 ),
                 NonRootMPath::new("c/d").unwrap() => FileChange::tracked(
                     ContentId::from_byte_array([2; 32]),
@@ -635,6 +637,7 @@ mod test {
                         NonRootMPath::new("e/f").unwrap(),
                         ChangesetId::from_byte_array([3; 32]),
                     )),
+                    GitLfs::FullContent,
                 ),
                 NonRootMPath::new("g/h").unwrap() => FileChange::Deletion,
                 NonRootMPath::new("i/j").unwrap() => FileChange::Deletion,
@@ -701,6 +704,7 @@ mod test {
                     FileType::Regular,
                     42,
                     None,
+                    GitLfs::GitLfsPointer,
                 ),
                 NonRootMPath::new("b").unwrap() => FileChange::Deletion,
             ];
@@ -783,6 +787,7 @@ mod test {
                     FileType::Regular,
                     42,
                     None,
+                    GitLfs::FullContent,
                 ),
                 NonRootMPath::new("b").unwrap() => FileChange::Deletion,
             ],
@@ -841,6 +846,7 @@ mod test {
                     FileType::Regular,
                     42,
                     None,
+                    GitLfs::GitLfsPointer,
                 ),
                 NonRootMPath::new("b").unwrap() => FileChange::Deletion,
             ],
@@ -893,6 +899,7 @@ mod test {
                     FileType::Regular,
                     42,
                     None,
+                    GitLfs::FullContent,
                 ),
                 NonRootMPath::new("b").unwrap() => FileChange::Deletion,
             ],

@@ -30,6 +30,7 @@ use mononoke_types::ChangesetId;
 use mononoke_types::DateTime;
 use mononoke_types::FileChange;
 use mononoke_types::FileType;
+use mononoke_types::GitLfs;
 use mononoke_types::RepositoryId;
 use sorted_vector_map::SortedVectorMap;
 use test_repo_factory::TestRepoFactory;
@@ -60,8 +61,13 @@ pub async fn store_files(
                 )
                 .await
                 .unwrap();
-                let file_change =
-                    FileChange::tracked(metadata.content_id, FileType::Regular, size, None);
+                let file_change = FileChange::tracked(
+                    metadata.content_id,
+                    FileType::Regular,
+                    size,
+                    None,
+                    GitLfs::FullContent,
+                );
                 res.insert(path, file_change);
             }
             None => {

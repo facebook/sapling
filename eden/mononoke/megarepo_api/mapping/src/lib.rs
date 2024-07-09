@@ -32,6 +32,7 @@ use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
 use mononoke_types::FileChange;
 use mononoke_types::FileType;
+use mononoke_types::GitLfs;
 use mononoke_types::NonRootMPath;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataRef;
@@ -198,7 +199,13 @@ impl CommitRemappingState {
         let (content_id, size) = self.save(ctx, repo).await?;
         let path = NonRootMPath::new(REMAPPING_STATE_FILE)?;
 
-        let fc = FileChange::tracked(content_id, FileType::Regular, size, None);
+        let fc = FileChange::tracked(
+            content_id,
+            FileType::Regular,
+            size,
+            None,
+            GitLfs::FullContent,
+        );
         if bcs.file_changes.insert(path, fc).is_some() {
             return Err(anyhow!(
                 "New bonsai changeset already has {} file",

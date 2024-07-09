@@ -24,6 +24,7 @@ use mononoke_types::DateTime;
 use mononoke_types::FileChange;
 use mononoke_types::FileContents;
 use mononoke_types::FileType;
+use mononoke_types::GitLfs;
 use mononoke_types::MPathElement;
 use mononoke_types::NonRootMPath;
 use rand::seq::SliceRandom;
@@ -138,7 +139,13 @@ impl GenManifest {
                             store_changes.push(blob.store(ctx, blobstore));
                             file_changes.insert(
                                 path,
-                                FileChange::tracked(id, FileType::Regular, size, None),
+                                FileChange::tracked(
+                                    id,
+                                    FileType::Regular,
+                                    size,
+                                    None,
+                                    GitLfs::FullContent,
+                                ),
                             );
                         }
                     }

@@ -39,6 +39,7 @@ use mononoke_types::BonsaiChangesetMut;
 use mononoke_types::ChangesetId;
 use mononoke_types::DateTime as MononokeDateTime;
 use mononoke_types::FileChange;
+use mononoke_types::GitLfs;
 use mononoke_types::MPathElement;
 use mononoke_types::NonRootMPath;
 use repo_authorization::RepoWriteOperation;
@@ -286,6 +287,7 @@ impl CreateChange {
                 copy_info
                     .map(|copy_info| copy_info.into_file_change(parent_ids))
                     .transpose()?,
+                GitLfs::FullContent,
             )),
             CreateChange::Untracked(CreateChangeFile::Existing {
                 file_id,

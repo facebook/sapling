@@ -34,6 +34,7 @@ use mononoke_types::BonsaiChangeset;
 use mononoke_types::BonsaiChangesetMut;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileChange;
+use mononoke_types::GitLfs;
 use repo_blobstore::RepoBlobstore;
 use sorted_vector_map::SortedVectorMap;
 
@@ -153,7 +154,10 @@ async fn find_file_changes(
                     )
                     .await
                     .context("While fetching copy information")?;
-                    Ok((path, FileChange::tracked(content_id, ty, size, copyinfo)))
+                    Ok((
+                        path,
+                        FileChange::tracked(content_id, ty, size, copyinfo, GitLfs::FullContent),
+                    ))
                 }
                 BonsaiDiffFileChange::ChangedReusedId(path, ty, entry_id) => {
                     let file_node_id = HgFileNodeId::new(entry_id.into_nodehash());
@@ -165,7 +169,10 @@ async fn find_file_changes(
                     let content_id = envelope.content_id();
 
                     // Reused ID means copy info is *not* stored.
-                    Ok((path, FileChange::tracked(content_id, ty, size, None)))
+                    Ok((
+                        path,
+                        FileChange::tracked(content_id, ty, size, None, GitLfs::FullContent),
+                    ))
                 }
                 BonsaiDiffFileChange::Deleted(path) => Ok((path, FileChange::Deletion)),
             }

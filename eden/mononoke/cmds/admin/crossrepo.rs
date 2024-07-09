@@ -68,6 +68,7 @@ use mononoke_types::ChangesetId;
 use mononoke_types::DateTime;
 use mononoke_types::FileChange;
 use mononoke_types::FileType;
+use mononoke_types::GitLfs;
 use mononoke_types::NonRootMPath;
 use mononoke_types::RepositoryId;
 use mutable_counters::MutableCountersRef;
@@ -912,8 +913,13 @@ async fn create_file_changes(
         )
         .await?;
 
-        let file_change =
-            FileChange::tracked(content_metadata.content_id, FileType::Regular, size, None);
+        let file_change = FileChange::tracked(
+            content_metadata.content_id,
+            FileType::Regular,
+            size,
+            None,
+            GitLfs::FullContent,
+        );
 
         file_changes.insert(path, file_change);
     }

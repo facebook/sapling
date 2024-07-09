@@ -74,13 +74,14 @@ impl TrackedFileChange {
         file_type: FileType,
         size: u64,
         copy_from: Option<(NonRootMPath, ChangesetId)>,
+        git_lfs: GitLfs,
     ) -> Self {
         Self {
             inner: BasicFileChange {
                 content_id,
                 file_type,
                 size,
-                git_lfs: GitLfs::FullContent,
+                git_lfs,
             },
             copy_from,
         }
@@ -92,6 +93,7 @@ impl TrackedFileChange {
             self.inner.file_type,
             self.inner.size,
             copy_from,
+            self.inner.git_lfs,
         )
     }
 
@@ -169,12 +171,12 @@ impl TrackedFileChange {
 }
 
 impl BasicFileChange {
-    pub fn new(content_id: ContentId, file_type: FileType, size: u64) -> Self {
+    pub fn new(content_id: ContentId, file_type: FileType, size: u64, git_lfs: GitLfs) -> Self {
         Self {
             content_id,
             file_type,
             size,
-            git_lfs: GitLfs::FullContent,
+            git_lfs,
         }
     }
 
@@ -214,9 +216,10 @@ impl FileChange {
         file_type: FileType,
         size: u64,
         copy_from: Option<(NonRootMPath, ChangesetId)>,
+        git_lfs: GitLfs,
     ) -> Self {
         Self::Change(TrackedFileChange::new(
-            content_id, file_type, size, copy_from,
+            content_id, file_type, size, copy_from, git_lfs,
         ))
     }
 
@@ -323,6 +326,7 @@ impl FileChange {
             FileType::arbitrary(g),
             u64::arbitrary(g),
             copy_from,
+            GitLfs::FullContent,
         ))
     }
 }
@@ -339,6 +343,7 @@ impl Arbitrary for FileChange {
             FileType::arbitrary(g),
             u64::arbitrary(g),
             copy_from,
+            GitLfs::FullContent,
         ))
     }
 

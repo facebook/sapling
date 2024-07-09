@@ -26,6 +26,7 @@ use mononoke_types::BonsaiChangesetMut;
 use mononoke_types::DateTime;
 use mononoke_types::FileChange;
 use mononoke_types::FileType;
+use mononoke_types::GitLfs;
 use mononoke_types::NonRootMPath;
 use mononoke_types_mocks::contentid::ONES_CTID;
 use mononoke_types_mocks::contentid::THREES_CTID;
@@ -443,9 +444,9 @@ fn default_changeset() -> BonsaiChangeset {
         git_extra_headers: None,
         git_tree_hash: None,
         file_changes: sorted_vector_map!{
-            to_mpath("dir1/subdir1/subsubdir1/file_1") => FileChange::tracked(ONES_CTID, FileType::Symlink, 15, None),
-            to_mpath("dir1/subdir1/subsubdir2/file_1") => FileChange::tracked(TWOS_CTID, FileType::Regular, 17, None),
-            to_mpath("dir1/subdir1/subsubdir2/file_2") => FileChange::tracked(THREES_CTID, FileType::Regular, 2, None),
+            to_mpath("dir1/subdir1/subsubdir1/file_1") => FileChange::tracked(ONES_CTID, FileType::Symlink, 15, None, GitLfs::FullContent),
+            to_mpath("dir1/subdir1/subsubdir2/file_1") => FileChange::tracked(TWOS_CTID, FileType::Regular, 17, None, GitLfs::FullContent),
+            to_mpath("dir1/subdir1/subsubdir2/file_2") => FileChange::tracked(THREES_CTID, FileType::Regular, 2, None, GitLfs::FullContent),
         },
         is_snapshot: false,
         git_annotated_tag: None,

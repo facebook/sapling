@@ -41,6 +41,7 @@ use mononoke_types::ChangesetId;
 use mononoke_types::DateTime;
 use mononoke_types::FileChange;
 use mononoke_types::FileType;
+use mononoke_types::GitLfs;
 use mononoke_types::NonRootMPath;
 use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreArc;
@@ -453,7 +454,13 @@ impl CreateFileContext {
                     None => None,
                 };
 
-                FileChange::tracked(meta.content_id, file_type, meta.total_size, copy_info)
+                FileChange::tracked(
+                    meta.content_id,
+                    file_type,
+                    meta.total_size,
+                    copy_info,
+                    GitLfs::FullContent,
+                )
             }
             Self::FromFileChange(file_change) => file_change,
             Self::Deleted => FileChange::Deletion,
@@ -658,7 +665,13 @@ pub async fn store_files<T: AsRef<str>>(
                 .unwrap()
                 .content_id;
 
-                let file_change = FileChange::tracked(content_id, FileType::Regular, size, None);
+                let file_change = FileChange::tracked(
+                    content_id,
+                    FileType::Regular,
+                    size,
+                    None,
+                    GitLfs::FullContent,
+                );
                 res.insert(path, file_change);
             }
             None => {
@@ -689,7 +702,13 @@ pub async fn store_rename(
     .unwrap()
     .content_id;
 
-    let file_change = FileChange::tracked(content_id, FileType::Regular, size, Some(copy_src));
+    let file_change = FileChange::tracked(
+        content_id,
+        FileType::Regular,
+        size,
+        Some(copy_src),
+        GitLfs::FullContent,
+    );
     (path, file_change)
 }
 

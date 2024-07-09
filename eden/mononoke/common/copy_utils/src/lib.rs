@@ -27,6 +27,7 @@ use mononoke_types::BonsaiChangesetMut;
 use mononoke_types::ChangesetId;
 use mononoke_types::DateTime;
 use mononoke_types::FileChange;
+use mononoke_types::GitLfs;
 use mononoke_types::NonRootMPath;
 use regex::Regex;
 use repo_blobstore::RepoBlobstoreRef;
@@ -196,6 +197,7 @@ async fn create_changesets(
                         *fsnode_file.file_type(),
                         fsnode_file.size(),
                         copy_from,
+                        GitLfs::FullContent,
                     )
                 }
                 None => FileChange::Deletion,

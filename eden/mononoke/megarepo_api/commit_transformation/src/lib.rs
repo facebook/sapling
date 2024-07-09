@@ -845,6 +845,7 @@ mod test {
     use maplit::hashset;
     use mononoke_types::ContentId;
     use mononoke_types::FileType;
+    use mononoke_types::GitLfs;
     use test_repo_factory::TestRepoFactory;
     use tests_utils::list_working_copy_utf8;
     use tests_utils::CreateCommitContext;
@@ -947,6 +948,7 @@ mod test {
                     FileType::Regular,
                     0,
                     None,
+                    GitLfs::FullContent,
                 ),
                 None => FileChange::Deletion,
             }

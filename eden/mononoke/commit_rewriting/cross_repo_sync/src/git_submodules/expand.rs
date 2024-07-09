@@ -38,6 +38,7 @@ use mononoke_types::ContentId;
 use mononoke_types::FileChange;
 use mononoke_types::FileContents;
 use mononoke_types::FileType;
+use mononoke_types::GitLfs;
 use mononoke_types::NonRootMPath;
 use mononoke_types::RepositoryId;
 use mononoke_types::TrackedFileChange;
@@ -553,8 +554,13 @@ where
                             if file_type != FileType::GitSubmodule {
                                 // Non-submodule file changes just need to have the submodule
                                 // path in the source repo pre-pended to their path.
-                                let new_tfc =
-                                    TrackedFileChange::new(content_id, file_type, size, None);
+                                let new_tfc = TrackedFileChange::new(
+                                    content_id,
+                                    file_type,
+                                    size,
+                                    None,
+                                    GitLfs::FullContent,
+                                );
                                 let path_in_sm = submodule_path.0.join(&path);
 
                                 let fcs = vec![(path_in_sm, FileChange::Change(new_tfc))];
@@ -997,6 +1003,7 @@ async fn generate_additional_file_changes<'a, R: Repo>(
         FileType::Regular,
         metadata_file_size,
         None,
+        GitLfs::FullContent,
     );
     let mut all_changes = vec![(x_repo_sm_metadata_path, x_repo_sm_metadata_fc)];
 

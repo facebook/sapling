@@ -63,6 +63,7 @@ use mononoke_types::ChangesetId;
 use mononoke_types::DateTime;
 use mononoke_types::FileChange;
 use mononoke_types::FileType;
+use mononoke_types::GitLfs;
 use mononoke_types::NonRootMPath;
 use mononoke_types::RepositoryId;
 use mutable_renames::MutableRenameEntry;
@@ -252,7 +253,10 @@ pub trait MegarepoOp {
                     let size = envelope.content_size();
                     let content_id = envelope.content_id();
 
-                    Ok((path, FileChange::tracked(content_id, ty, size, None)))
+                    Ok((
+                        path,
+                        FileChange::tracked(content_id, ty, size, None, GitLfs::FullContent),
+                    ))
                 }
                 BonsaiDiffFileChange::Deleted(path) => Ok((path, FileChange::Deletion)),
             }
@@ -414,6 +418,7 @@ pub trait MegarepoOp {
                     *fsnode.file_type(),
                     fsnode.size(),
                     Some((path.clone(), cs_id)),
+                    GitLfs::FullContent,
                 );
 
                 (target, fc)
@@ -783,7 +788,13 @@ pub trait MegarepoOp {
                 );
                 fut.await?;
 
-                let fc = FileChange::tracked(content_id, FileType::Symlink, size, None);
+                let fc = FileChange::tracked(
+                    content_id,
+                    FileType::Symlink,
+                    size,
+                    None,
+                    GitLfs::FullContent,
+                );
 
                 Result::<_, Error>::Ok((path, fc))
             })
