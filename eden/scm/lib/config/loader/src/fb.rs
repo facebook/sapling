@@ -9,6 +9,7 @@
 
 /// Modify this module for dynamic (conditional) system config.
 pub(crate) mod dynamic_system;
+pub(crate) mod remote_config_snapshot;
 
 /// Modify this module for static (unconditional) system config.
 pub(crate) mod static_system;
