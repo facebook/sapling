@@ -5,9 +5,12 @@
  * GNU General Public License version 2.
  */
 
+use std::sync::Arc;
+
 use anyhow::format_err;
 use anyhow::Error;
 use anyhow::Result;
+use blobstore_factory::MetadataSqlFactory;
 use blobstore_factory::ReadOnlyStorage;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateLogId;
@@ -24,6 +27,7 @@ use mononoke_api_types::InnerRepo;
 use mononoke_app::args::RepoArg;
 use mononoke_app::MononokeApp;
 use mutable_counters::MutableCountersRef;
+use pushredirect::SqlPushRedirectionConfigBuilder;
 use repo_identity::RepoIdentityRef;
 use scuba_ext::MononokeScubaSampleBuilder;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
@@ -47,7 +51,22 @@ pub async fn get_validation_helpers<'a>(
     let repo_id = large_repo.blob_repo.repo_identity().id();
 
     let config_store = app.config_store();
-    let live_commit_sync_config = CfgrLiveCommitSyncConfig::new(ctx.logger(), config_store)?;
+    let sql_factory: MetadataSqlFactory = MetadataSqlFactory::new(
+        fb,
+        repo_config.storage_config.metadata.clone(),
+        mysql_options.clone(),
+        readonly_storage,
+    )
+    .await?;
+    let builder = sql_factory
+        .open::<SqlPushRedirectionConfigBuilder>()
+        .await?;
+    let push_redirection_config = builder.build(repo_id);
+    let live_commit_sync_config = CfgrLiveCommitSyncConfig::new_with_xdb(
+        ctx.logger(),
+        config_store,
+        Arc::new(push_redirection_config),
+    )?;
     let common_commit_sync_config = live_commit_sync_config.get_common_config(repo_id)?;
 
     let mapping = SqlSyncedCommitMapping::with_metadata_database_config(
