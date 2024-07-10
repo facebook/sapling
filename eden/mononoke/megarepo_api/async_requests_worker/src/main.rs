@@ -75,7 +75,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             .block_on(app.open_managed_repos(Some(ShardedService::AsyncRequestsWorker)))?
             .make_mononoke_api()?,
     );
-    let megarepo = Arc::new(runtime.block_on(MegarepoApi::new(&app, mononoke))?);
+    let megarepo = Arc::new(MegarepoApi::new(&app, mononoke)?);
 
     let tw_job_cluster = std::env::var("TW_JOB_CLUSTER");
     let tw_job_name = std::env::var("TW_JOB_NAME");

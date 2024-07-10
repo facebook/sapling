@@ -218,7 +218,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         .map(|_| ShardedService::SourceControlService);
     let repos_mgr = runtime.block_on(app.open_managed_repos(service_name))?;
     let mononoke = Arc::new(repos_mgr.make_mononoke_api()?);
-    let megarepo_api = Arc::new(runtime.block_on(MegarepoApi::new(&app, mononoke.clone()))?);
+    let megarepo_api = Arc::new(MegarepoApi::new(&app, mononoke.clone())?);
 
     let will_exit = Arc::new(AtomicBool::new(false));
 

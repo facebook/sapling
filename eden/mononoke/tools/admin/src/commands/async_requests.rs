@@ -59,9 +59,8 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
             .context("Failed to initialize Mononoke API")?
             .make_mononoke_api()?,
     );
-    let megarepo = MegarepoApi::new(&app, mononoke)
-        .await
-        .context("Failed to initialize MegarepoApi")?;
+    let megarepo = MegarepoApi::new(&app, mononoke).context("Failed to initialize MegarepoApi")?;
+
     let session = SessionContainer::new_with_defaults(app.environment().fb);
     let ctx = session.new_context(
         app.logger().clone(),

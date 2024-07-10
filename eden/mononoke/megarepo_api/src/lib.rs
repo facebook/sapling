@@ -148,7 +148,7 @@ pub struct MegarepoApi {
 }
 
 impl MegarepoApi {
-    pub async fn new(app: &MononokeApp, mononoke: Arc<Mononoke>) -> Result<Self, MegarepoError> {
+    pub fn new(app: &MononokeApp, mononoke: Arc<Mononoke>) -> Result<Self, MegarepoError> {
         let env = app.environment();
         let fb = env.fb;
         let logger = env.logger.new(o!("megarepo" => ""));
