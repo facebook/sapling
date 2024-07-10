@@ -40,7 +40,7 @@ impl StoreTree {
             .content
             .as_ref()
             .ok_or_else(|| anyhow!("no content available"))?
-            .aux_data())
+            .children_aux_data())
     }
 }
 
@@ -81,7 +81,7 @@ impl BitOr for StoreTree {
 impl From<LazyTree> for StoreTree {
     fn from(v: LazyTree) -> Self {
         let parents = v.parents();
-        let aux_data = v.tree_aux_data();
+        let aux_data = v.aux_data();
         StoreTree {
             content: Some(v),
             parents,

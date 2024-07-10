@@ -321,7 +321,7 @@ impl TreeStore {
                             let entry = LazyTree::SaplingRemoteApi(entry);
 
                             if aux_cache.is_some() || tree_aux_store.is_some() {
-                                let aux_data = entry.aux_data();
+                                let aux_data = entry.children_aux_data();
                                 for (hgid, aux) in aux_data.into_iter() {
                                     match aux {
                                         AuxData::File(file_aux) => {
