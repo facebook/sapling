@@ -65,6 +65,7 @@ use mutable_counters::ArcMutableCounters;
 use mutable_counters::MutableCounters;
 use mutable_counters::MutableCountersArc;
 use repo_blobstore::RepoBlobstore;
+use repo_derived_data::RepoDerivedData;
 use repo_identity::RepoIdentity;
 use retry::retry_always;
 use retry::RetryAttemptsCount;
@@ -122,6 +123,9 @@ pub struct Repo {
 
     #[facet]
     pub bonsai_hg_mapping: dyn BonsaiHgMapping,
+
+    #[facet]
+    pub repo_derived_data: RepoDerivedData,
 
     #[facet]
     pub mutable_counters: dyn MutableCounters,

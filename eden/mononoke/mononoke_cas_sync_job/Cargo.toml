@@ -31,10 +31,12 @@ fbinit = { version = "0.1.2", git = "https://github.com/facebookexperimental/rus
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
 futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures_watchdog = { version = "0.1.0", path = "../common/futures_watchdog" }
+mercurial_derivation = { version = "0.1.0", path = "../derived_data/mercurial_derivation" }
 metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 mutable_counters = { version = "0.1.0", path = "../mutable_counters" }
 repo_blobstore = { version = "0.1.0", path = "../blobrepo/repo_blobstore" }
+repo_derived_data = { version = "0.1.0", path = "../repo_attributes/repo_derived_data" }
 repo_identity = { version = "0.1.0", path = "../repo_attributes/repo_identity" }
 retry = { version = "0.1.0", path = "../common/retry" }
 scuba_ext = { version = "0.1.0", path = "../common/scuba_ext" }
