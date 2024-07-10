@@ -86,6 +86,7 @@ use mononoke_types::RepositoryId;
 use movers::DefaultAction;
 use movers::Mover;
 use pushrebase::do_pushrebase_bonsai;
+use pushredirect::PushRedirectionConfigArc;
 use segmented_changelog::seedheads_from_config;
 use segmented_changelog::SeedHead;
 use segmented_changelog::SegmentedChangelogTailer;
@@ -1089,7 +1090,11 @@ async fn repo_import(
         hg_sync_check_disabled: recovery_fields.hg_sync_check_disabled,
     };
 
-    let live_commit_sync_config = CfgrLiveCommitSyncConfig::new(ctx.logger(), &env.config_store)?;
+    let live_commit_sync_config = CfgrLiveCommitSyncConfig::new_with_xdb(
+        ctx.logger(),
+        &env.config_store,
+        repo.push_redirection_config_arc(),
+    )?;
 
     check_megarepo_large_repo_import_requirements(
         &ctx,
@@ -1545,7 +1550,11 @@ async fn check_additional_setup_steps(
         ));
     }
 
-    let live_commit_sync_config = CfgrLiveCommitSyncConfig::new(ctx.logger(), &env.config_store)?;
+    let live_commit_sync_config = CfgrLiveCommitSyncConfig::new_with_xdb(
+        ctx.logger(),
+        &env.config_store,
+        repo.push_redirection_config_arc(),
+    )?;
 
     let maybe_large_repo_config = get_large_repo_config_if_pushredirected(
         &ctx,

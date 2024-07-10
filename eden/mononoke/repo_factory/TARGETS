@@ -137,6 +137,7 @@ rust_library(
         "//eden/mononoke/filestore:filestore",
         "//eden/mononoke/git_symbolic_refs:git_symbolic_refs",
         "//eden/mononoke/megarepo_api:megarepo_mapping",
+        "//eden/mononoke/megarepo_api:pushredirect",
         "//eden/mononoke/megarepo_api:requests_table",
         "//eden/mononoke/mercurial:mercurial_mutation",
         "//eden/mononoke/metaconfig:metaconfig_types",

@@ -86,6 +86,8 @@ use newfilenodes::NewFilenodesBuilder;
 use phases::ArcPhases;
 use pushrebase_mutation_mapping::ArcPushrebaseMutationMapping;
 use pushrebase_mutation_mapping::SqlPushrebaseMutationMappingConnection;
+use pushredirect::ArcPushRedirectionConfig;
+use pushredirect::NoopPushRedirectionConfig;
 use redactedblobstore::RedactedBlobs;
 use regex::Regex;
 use rendezvous::RendezVousOptions;
@@ -878,5 +880,10 @@ impl TestRepoFactory {
     /// Function to create a logger for repos stats
     pub async fn repo_stats_logger(&self) -> Result<ArcRepoStatsLogger> {
         Ok(Arc::new(RepoStatsLogger::noop()))
+    }
+
+    /// Function to create an object to configure push redirection
+    pub async fn push_redirection_config(&self) -> Result<ArcPushRedirectionConfig> {
+        Ok(Arc::new(NoopPushRedirectionConfig {}))
     }
 }

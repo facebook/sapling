@@ -63,6 +63,7 @@ rust_binary(
         "//eden/mononoke/git/import_direct:import_direct",
         "//eden/mononoke/git/import_tools:import_tools",
         "//eden/mononoke/manifest:manifest",
+        "//eden/mononoke/megarepo_api:pushredirect",
         "//eden/mononoke/mercurial:mercurial_types",
         "//eden/mononoke/metaconfig:metaconfig_parser",
         "//eden/mononoke/metaconfig:metaconfig_types",

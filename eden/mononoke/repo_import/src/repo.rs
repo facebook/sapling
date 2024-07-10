@@ -22,6 +22,7 @@ use mononoke_types::RepositoryId;
 use mutable_counters::MutableCounters;
 use phases::Phases;
 use pushrebase_mutation_mapping::PushrebaseMutationMapping;
+use pushredirect::PushRedirectionConfig;
 use repo_blobstore::RepoBlobstore;
 use repo_bookmark_attrs::RepoBookmarkAttrs;
 use repo_cross_repo::RepoCrossRepo;
@@ -62,6 +63,9 @@ pub struct Repo {
 
     #[facet]
     config: RepoConfig,
+
+    #[facet]
+    push_redirection_config: dyn PushRedirectionConfig,
 }
 
 impl Repo {
