@@ -5,22 +5,6 @@ load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
 oncall("mononoke")
 
 rust_library(
-    name = "configo_client",
-    srcs = glob(["configo_client/src/**/*.rs"]),
-    autocargo = {"cargo_toml_dir": "configo_client"},
-    deps = [
-        "fbsource//third-party/rust:anyhow",
-        "fbsource//third-party/rust:slog",
-        "fbsource//third-party/rust:tokio",
-        ":megarepo_error",
-        "//common/rust/shed/fbinit:fbinit",
-        "//configerator/configo/if:configo-rust",
-        "//configerator/configo/if:configo-rust-clients",
-        "//configerator/configo/if:configo-rust-srclients",
-    ],
-)
-
-rust_library(
     name = "commit_transformation",
     srcs = glob(["commit_transformation/src/**/*.rs"]),
     autocargo = {"cargo_toml_dir": "commit_transformation"},
