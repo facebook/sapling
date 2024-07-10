@@ -56,6 +56,7 @@ use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use import_tools::GitimportPreferences;
 use import_tools::GitimportTarget;
+use import_tools::ReuploadCommits;
 use itertools::Itertools;
 use live_commit_sync_config::CfgrLiveCommitSyncConfig;
 use live_commit_sync_config::LiveCommitSyncConfig;
@@ -1196,10 +1197,8 @@ async fn repo_import(
         };
         let target = GitimportTarget::full();
         info!(ctx.logger(), "Started importing git commits to Mononoke");
-        let uploader = import_direct::DirectUploader::new(
-            repo.as_blob_repo().clone(),
-            import_direct::ReuploadCommits::Never,
-        );
+        let uploader =
+            import_direct::DirectUploader::new(repo.as_blob_repo().clone(), ReuploadCommits::Never);
         let import_map = import_tools::gitimport(&ctx, path, &uploader, &target, &prefs).await?;
         info!(ctx.logger(), "Added commits to Mononoke");
 

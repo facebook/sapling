@@ -6,8 +6,10 @@
  */
 
 #![feature(try_blocks)]
+#![feature(trait_alias)]
 
 pub mod git_reader;
+pub mod git_uploader;
 mod gitimport_objects;
 mod gitlfs;
 
@@ -51,6 +53,8 @@ use tokio::task;
 
 use crate::git_reader::GitReader;
 pub use crate::git_reader::GitRepoReader;
+pub use crate::git_uploader::GitUploader;
+pub use crate::git_uploader::ReuploadCommits;
 pub use crate::gitimport_objects::oid_to_sha1;
 pub use crate::gitimport_objects::BackfillDerivation;
 pub use crate::gitimport_objects::CommitMetadata;
@@ -58,7 +62,6 @@ pub use crate::gitimport_objects::ExtractedCommit;
 pub use crate::gitimport_objects::GitLeaf;
 pub use crate::gitimport_objects::GitManifest;
 pub use crate::gitimport_objects::GitTree;
-pub use crate::gitimport_objects::GitUploader;
 pub use crate::gitimport_objects::GitimportPreferences;
 pub use crate::gitimport_objects::GitimportTarget;
 pub use crate::gitimport_objects::TagMetadata;

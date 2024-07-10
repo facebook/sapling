@@ -39,6 +39,7 @@ use import_tools::BackfillDerivation;
 use import_tools::GitRepoReader;
 use import_tools::GitimportPreferences;
 use import_tools::GitimportTarget;
+use import_tools::ReuploadCommits;
 use linked_hash_map::LinkedHashMap;
 use mercurial_derivation::get_manifest_from_bonsai;
 use mercurial_derivation::DeriveHgChangeset;
@@ -206,9 +207,9 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
     let path = Path::new(&args.git_repository_path);
 
     let reupload = if args.reupload_commits {
-        import_direct::ReuploadCommits::Always
+        ReuploadCommits::Always
     } else {
-        import_direct::ReuploadCommits::Never
+        ReuploadCommits::Never
     };
 
     let repo: BlobRepo = app.open_repo(&args.repo_args).await?;
