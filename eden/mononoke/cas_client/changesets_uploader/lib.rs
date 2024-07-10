@@ -41,6 +41,12 @@ use scm_client::UploadOutcome;
 use slog::debug;
 use stats::prelude::*;
 
+#[cfg(fbcode_build)]
+pub type MononokeCasChangesetsUploader<'a> =
+    CasChangesetsUploader<cas_client::RemoteExecutionCasdClient<'a>>;
+#[cfg(not(fbcode_build))]
+pub type MononokeCasChangesetsUploader<'a> = CasChangesetsUploader<cas_client::DummyCasClient<'a>>;
+
 const MAX_CONCURRENT_MANIFESTS: usize = 100;
 const MAX_CONCURRENT_MANIFESTS_TREES_ONLY: usize = 500;
 const MAX_CONCURRENT_FILES_PER_MANIFEST: usize = 20;
