@@ -1216,6 +1216,13 @@ types=[
 CONFIG
 fi
 
+if [[ -n "${OTHER_DERIVED_DATA:-}" ]]; then
+  cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
+[derived_data_config.available_configs.other]
+types = $OTHER_DERIVED_DATA
+CONFIG
+fi
+
 if [[ -n "${BLAME_VERSION}" ]]; then
   cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
 blame_version = $BLAME_VERSION

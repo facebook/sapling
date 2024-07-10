@@ -10,6 +10,7 @@ mod errors;
 mod underived;
 
 use std::collections::HashMap;
+use std::iter::Iterator;
 use std::sync::Arc;
 
 use async_trait::async_trait;
@@ -37,6 +38,9 @@ impl RepoDerivationQueues {
     }
     pub fn queue(&self, config_name: &str) -> Option<Arc<dyn DerivationQueue + Send + Sync>> {
         self.configs_to_queues.get(config_name).cloned()
+    }
+    pub fn queues(&self) -> impl Iterator<Item = Arc<dyn DerivationQueue + Send + Sync>> + '_ {
+        self.configs_to_queues.values().cloned()
     }
 }
 
