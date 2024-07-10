@@ -408,17 +408,18 @@ pub async fn finalize_batch(
         .await?;
     // derive git delta manifests: note: GitCommit don't need to be explicitly
     // derived as they were already imported
-    let delta_manifest = backfill_derivation
+    let delta_manifests = backfill_derivation
         .types(&config.types)
         .into_iter()
         .filter(|dt| match dt {
             DerivableType::GitDeltaManifests => true,
+            DerivableType::GitDeltaManifestsV2 => true,
             _ => false,
         })
         .collect::<Vec<_>>();
     repo.repo_derived_data()
         .manager()
-        .derive_bulk(ctx, csids, None, &delta_manifest)
+        .derive_bulk(ctx, csids, None, &delta_manifests)
         .await?;
     Ok(())
 }
