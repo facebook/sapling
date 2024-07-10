@@ -5,6 +5,8 @@
 # directory of this source tree.
 
   $ . "${TEST_FIXTURES}/library.sh"
+  $ . "${TEST_FIXTURES}/library-push-redirector.sh"
+
   $ setup_common_config
   $ GIT_REPO="${TESTTMP}/repo-git"
   $ GIT_SUBMODULE_REPO="${TESTTMP}/repo-submodule"
@@ -21,16 +23,7 @@
   starting Mononoke
   cloning repo in hg client 'repo2'
   $ SKIP_CROSS_REPO_CONFIG=1 setup_configerator_configs
-  $ cat > "$PUSHREDIRECT_CONF/enable" <<EOF
-  > {
-  > "per_repo": {
-  >   "0": {
-  >      "draft_push": false,
-  >      "public_push": true
-  >    }
-  >   }
-  > }
-  > EOF
+  $ enable_pushredirect 0
 # Setup git repository to be used as submodule
   $ mkdir "$GIT_SUBMODULE_REPO"
   $ cd "$GIT_SUBMODULE_REPO"
@@ -83,7 +76,7 @@
   Cloning into '$TESTTMP/repo-git/repo-submodule'...
   done.
   $ git add .
-  $ git commit -am "Added git submodule" 
+  $ git commit -am "Added git submodule"
   [master 67328fd] Added git submodule
    2 files changed, 4 insertions(+)
    create mode 100644 .gitmodules
@@ -117,16 +110,7 @@
   Error: Execution failed
   [1]
 
-  $ cat > "$PUSHREDIRECT_CONF/enable" <<EOF
-  > {
-  > "per_repo": {
-  >   "0": {
-  >      "draft_push": false,
-  >      "public_push": false
-  >    }
-  >   }
-  > }
-  > EOF
+  $ enable_pushredirect 0 false false
 
   $ repo_import \
   > check-additional-setup-steps \

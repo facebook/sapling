@@ -8,16 +8,7 @@
   $ . "${TEST_FIXTURES}/library-push-redirector.sh"
 
   $ setup_configerator_configs
-  $ cat > "$PUSHREDIRECT_CONF/enable" <<EOF
-  > {
-  > "per_repo": {
-  >   "1": {
-  >      "draft_push": false,
-  >      "public_push": true
-  >    }
-  >   }
-  > }
-  > EOF
+  $ enable_pushredirect 1
 
   $ setconfig push.edenapi=true
   $ ENABLE_API_WRITES=1 create_large_small_repo

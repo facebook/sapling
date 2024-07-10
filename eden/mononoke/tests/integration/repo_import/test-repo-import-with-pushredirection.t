@@ -19,16 +19,7 @@ Before the change
   $ quiet mononoke_admin_source_target $REPOIDLARGE $REPOIDSMALL crossrepo \
   > pushredirection prepare-rollout
 
-  $ cat > "$PUSHREDIRECT_CONF/enable" <<EOF
-  > {
-  > "per_repo": {
-  >   "1": {
-  >      "draft_push": false,
-  >      "public_push": true
-  >    }
-  >   }
-  > }
-  > EOF
+  $ enable_pushredirect 1
 
   $ force_update_configerator
 
@@ -47,16 +38,7 @@ Before the change
   adding file changes
   exporting bookmark new_bookmark
 
-  $ cat > "$PUSHREDIRECT_CONF/enable" <<EOF
-  > {
-  > "per_repo": {
-  >   "1": {
-  >      "draft_push": false,
-  >      "public_push": false
-  >    }
-  >   }
-  > }
-  > EOF
+  $ enable_pushredirect 1 false false
 
 -- Make a version change
   $ update_commit_sync_map_first_option
@@ -67,16 +49,7 @@ Before the change
   $ mononoke_admin_source_target $REPOIDLARGE $REPOIDSMALL crossrepo \
   > pushredirection prepare-rollout &> /dev/null
 
-  $ cat > "$PUSHREDIRECT_CONF/enable" <<EOF
-  > {
-  > "per_repo": {
-  >   "1": {
-  >      "draft_push": false,
-  >      "public_push": true
-  >    }
-  >   }
-  > }
-  > EOF
+  $ enable_pushredirect 1 false true
   $ force_update_configerator
 
 -- Setup git repository

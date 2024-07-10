@@ -32,24 +32,9 @@
   > EOF
 
   $ setup_configerator_configs
-  $ cat > "$PUSHREDIRECT_CONF/enable" <<EOF
-  > {
-  > "per_repo": {
-  >   "1": {
-  >      "draft_push": false,
-  >      "public_push": true
-  >    },
-  >   "2": {
-  >      "draft_push": false,
-  >      "public_push": false
-  >    },
-  >   "3": {
-  >      "draft_push": false,
-  >      "public_push": false
-  >    }
-  >   }
-  > }
-  > EOF
+  $ enable_pushredirect 1
+  $ enable_pushredirect 2 false false
+  $ enable_pushredirect 3 false false
 
 -- Init the imported repos
   $ IMPORTED_REPO_NAME="imported_repo"

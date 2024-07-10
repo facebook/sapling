@@ -687,9 +687,9 @@ function init_two_small_one_large_repo() {
   # setup configuration
   # Disable bookmarks cache because bookmarks are modified by two separate processes
   REPOTYPE="blob_files"
-  REPOID=0 REPONAME=meg-mon setup_common_config $REPOTYPE
-  REPOID=1 REPONAME=fbs-mon setup_common_config $REPOTYPE
-  REPOID=2 REPONAME=ovr-mon setup_common_config $REPOTYPE
+  REPOID=0 REPONAME=meg-mon setup_common_config "$REPOTYPE"
+  REPOID=1 REPONAME=fbs-mon setup_common_config "$REPOTYPE"
+  REPOID=2 REPONAME=ovr-mon setup_common_config "$REPOTYPE"
 
   cat >> "$HGRCPATH" <<EOF
 [ui]
@@ -743,17 +743,25 @@ EOF
   hg book -r . master_bookmark
 
   # blobimport hg servers repos into Mononoke repos
-  cd "$TESTTMP"
+  cd "$TESTTMP" || exit 1
   REPOID=0 blobimport meg-hg-srv/.hg meg-mon
   REPOID=1 blobimport fbs-hg-srv/.hg fbs-mon
   REPOID=2 blobimport ovr-hg-srv/.hg ovr-mon
 }
 
 function enable_pushredirect {
-  repo_id=$1
-  shift
+  local repo_id=$1
+  local draft_push=${2:-false}
+  local public_push=${3:-true}
 
-  cat >"$PUSHREDIRECT_CONF/enable" << EOF
-{"per_repo": {"$repo_id": {"public_push": true, "draft_push": false}}}
+  cat > "$PUSHREDIRECT_CONF/enable" <<EOF
+{
+  "per_repo": {
+    "$repo_id": {
+      "draft_push": $draft_push,
+      "public_push": $public_push
+    }
+  }
+}
 EOF
 }

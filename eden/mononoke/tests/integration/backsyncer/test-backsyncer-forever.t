@@ -12,16 +12,7 @@
 We use multiplex blobstore here as this one provides logging that we test later.
   $ export MULTIPLEXED=1
   $ setup_configerator_configs
-  $ cat > "$PUSHREDIRECT_CONF/enable" <<EOF
-  > {
-  > "per_repo": {
-  >   "1": {
-  >      "draft_push": false,
-  >      "public_push": true
-  >    }
-  >   }
-  > }
-  > EOF
+  $ enable_pushredirect 1
 
 -- Init Mononoke thingies
   $ PUSHREBASE_REWRITE_DATES=1 init_large_small_repo

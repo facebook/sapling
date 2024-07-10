@@ -8,16 +8,7 @@
   $ . "${TEST_FIXTURES}/library-push-redirector.sh"
 
   $ setup_configerator_configs
-  $ cat > "$PUSHREDIRECT_CONF/enable" <<EOF
-  > {
-  > "per_repo": {
-  >   "1": {
-  >      "draft_push": false,
-  >      "public_push": true
-  >    }
-  >   }
-  > }
-  > EOF
+  $ enable_pushredirect 1
 
   $ setconfig push.edenapi=true
   $ ENABLE_API_WRITES=1 init_large_small_repo
@@ -50,16 +41,7 @@
 
 
 -- unbind repositories and wait until it propagates
-  $ cat > "$PUSHREDIRECT_CONF/enable" <<EOF
-  > {
-  > "per_repo": {
-  >   "1": {
-  >      "draft_push": false,
-  >      "public_push": false
-  >    }
-  >   }
-  > }
-  > EOF
+  $ enable_pushredirect 1 false false
   $ force_update_configerator
 
 -- do a push from small repo, make sure it is not pushredirected to large repo
@@ -138,16 +120,7 @@
 
 -- Step 6. Rebind repositories and wait until it propagates
   $ mononoke_admin_source_target 0 1 crossrepo pushredirection prepare-rollout &> /dev/null
-  $ cat > "$PUSHREDIRECT_CONF/enable" <<EOF
-  > {
-  > "per_repo": {
-  >   "1": {
-  >      "draft_push": false,
-  >      "public_push": true
-  >    }
-  >   }
-  > }
-  > EOF
+  $ enable_pushredirect 1
   $ force_update_configerator
 
 -- Verify it works fine

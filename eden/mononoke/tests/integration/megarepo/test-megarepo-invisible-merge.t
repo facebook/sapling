@@ -22,16 +22,7 @@ Setup repositories
   $ setup_configerator_configs
 -- initial push-redirection setup redirects ovrsource into megarepo,
 -- which is the large repo at this point
-  $ cat > "$PUSHREDIRECT_CONF/enable" <<EOF
-  > {
-  > "per_repo": {
-  >   "2": {
-  >      "draft_push": false,
-  >      "public_push": true
-  >    }
-  >   }
-  > }
-  > EOF
+  $ enable_pushredirect 2
 
   $ cat >> "$HGRCPATH" <<EOF
   > [ui]
@@ -184,16 +175,7 @@ Add a new config version to "all" configs, this new version has fbsource as larg
 -- This is an expected state of our configs at the last restart before
 -- the invisible merge
   $ cp "$TEST_FIXTURES/commitsync/flipped_config.json" "$COMMIT_SYNC_CONF/current"
-  $ cat > "$PUSHREDIRECT_CONF/enable" <<EOF
-  > {
-  > "per_repo": {
-  >   "2": {
-  >      "draft_push": false,
-  >      "public_push": false
-  >    }
-  >   }
-  > }
-  > EOF
+  $ enable_pushredirect 2 false false
   $ cp "$TEST_FIXTURES/commitsync/flipped_config.toml" "$TESTTMP/mononoke-config/common/commitsyncmap.toml"
 -- start mononoke
   $ mononoke
@@ -345,16 +327,7 @@ Set working copy equivalence between ovrsource master and fbsource master
 
 Set current version of CommitSyncConfig to be push-redirecting ovrsource
 into fbsource
-  $ cat > "$PUSHREDIRECT_CONF/enable" <<EOF
-  > {
-  > "per_repo": {
-  >   "2": {
-  >      "draft_push": false,
-  >      "public_push": true
-  >    }
-  >   }
-  > }
-  > EOF
+  $ enable_pushredirect 2
   $ force_update_configerator
 
 Perform ovrsource pushrebase, make sure it is push-redirected into Fbsource

@@ -22,16 +22,7 @@ Setup repositories
   $ setup_configerator_configs
 -- initial push-redirection setup redirects ovrsource into megarepo,
 -- which is the large repo at this point
-  $ cat > "$PUSHREDIRECT_CONF/enable" <<EOF
-  > {
-  > "per_repo": {
-  >   "2": {
-  >      "draft_push": false,
-  >      "public_push": true
-  >    }
-  >   }
-  > }
-  > EOF
+  $ enable_pushredirect 2 false true
 
   $ testtool_drawdag -R fbs-mon --no-default-files --print-hg-hashes <<'EOF'
   > FBS_C

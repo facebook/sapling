@@ -5,6 +5,7 @@
 # directory of this source tree.
 
   $ . "${TEST_FIXTURES}/library.sh"
+  $ . "${TEST_FIXTURES}/library-push-redirector.sh"
 
 setup configuration
   $ setconfig push.edenapi=true
@@ -37,16 +38,7 @@ setup configuration
 
 setup configerator configs
   $ setup_configerator_configs
-  $ cat > "$PUSHREDIRECT_CONF/enable" <<EOF
-  > {
-  > "per_repo": {
-  >   "1": {
-  >      "draft_push": false,
-  >      "public_push": true
-  >    }
-  >   }
-  > }
-  > EOF
+  $ enable_pushredirect 1
   $ cat > "$COMMIT_SYNC_CONF/current" <<EOF
   > {
   >   "repos": {

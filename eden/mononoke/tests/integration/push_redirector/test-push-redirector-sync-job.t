@@ -9,16 +9,7 @@
   $ enable remotenames
 
   $ setup_configerator_configs
-  $ cat > "$PUSHREDIRECT_CONF/enable" <<EOF
-  > {
-  > "per_repo": {
-  >   "1": {
-  >      "draft_push": false,
-  >      "public_push": true
-  >    }
-  >   }
-  > }
-  > EOF
+  $ enable_pushredirect 1
 
   $ setconfig push.edenapi=true
   $ ENABLE_API_WRITES=1 PUSHREBASE_REWRITE_DATES=1 init_large_small_repo
@@ -35,7 +26,7 @@
   $ cd "$TESTTMP/small-hg-client"
   $ REPONAME=small-mon hgmn up -q master_bookmark
   $ echo 2 > 2 && hg addremove -q && hg ci -q -m newcommit
-  $ REPONAME=small-mon hgedenapi push -r . --to master_bookmark 2>&1 | grep "updated remote bookmark" 
+  $ REPONAME=small-mon hgedenapi push -r . --to master_bookmark 2>&1 | grep "updated remote bookmark"
   updated remote bookmark master_bookmark to * (glob)
 -- newcommit was correctly pushed to master_bookmark (we need to update, as it's a new commit with date rewriting)
   $ REPONAME=small-mon hgmn up -q master_bookmark

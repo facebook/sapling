@@ -13,16 +13,7 @@
   $ export BOOKMARK_SCRIBE_CATEGORY=mononoke_bookmark
 
   $ setup_configerator_configs
-  $ cat > "$PUSHREDIRECT_CONF/enable" <<EOF
-  > {
-  > "per_repo": {
-  >   "1": {
-  >      "draft_push": false,
-  >      "public_push": true
-  >    }
-  >   }
-  > }
-  > EOF
+  $ enable_pushredirect 1
 
   $ init_large_small_repo
   Adding synced mapping entry
@@ -119,16 +110,7 @@ make it to the large repo.
   $ killandwait $MONONOKE_PID
   $ mononoke
   $ wait_for_mononoke
-  $ cat > "$PUSHREDIRECT_CONF/enable" <<EOF
-  > {
-  > "per_repo": {
-  >   "0": {
-  >      "draft_push": false,
-  >      "public_push": false
-  >    }
-  >   }
-  > }
-  > EOF
+  $ enable_pushredirect 0 false false
 
   $ cd "$TESTTMP/small-hg-client"
   $ hg commit --config ui.allowemptycommit=True -m "Empty5"

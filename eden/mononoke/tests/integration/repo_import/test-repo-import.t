@@ -5,6 +5,8 @@
 # directory of this source tree.
 
   $ . "${TEST_FIXTURES}/library.sh"
+  $ . "${TEST_FIXTURES}/library-push-redirector.sh"
+
   $ setup_common_config
   $ GIT_REPO="${TESTTMP}/repo-git"
   $ HG_REPO="${TESTTMP}/repo-hg"
@@ -20,16 +22,7 @@
   starting Mononoke
   cloning repo in hg client 'repo2'
   $ SKIP_CROSS_REPO_CONFIG=1 setup_configerator_configs
-  $ cat > "$PUSHREDIRECT_CONF/enable" <<EOF
-  > {
-  > "per_repo": {
-  >   "0": {
-  >      "draft_push": false,
-  >      "public_push": true
-  >    }
-  >   }
-  > }
-  > EOF
+  $ enable_pushredirect 0
 
 # Setup git repository
   $ mkdir "$GIT_REPO"
@@ -78,16 +71,7 @@
   Error: Execution failed
   [1]
 
-  $ cat > "$PUSHREDIRECT_CONF/enable" <<EOF
-  > {
-  > "per_repo": {
-  >   "0": {
-  >      "draft_push": false,
-  >      "public_push": false
-  >    }
-  >   }
-  > }
-  > EOF
+  $ enable_pushredirect 0 false false
 
   $ repo_import \
   > check-additional-setup-steps \
