@@ -1151,13 +1151,15 @@ pub fn checkout(
         wc.set_active_bookmark(new_bookmark)?;
     }
 
-    wc.journal.record_new_entry(
-        &ctx.raw_args,
-        "wdirparent",
-        ".",
-        &[source_commit],
-        &[target_commit],
-    )?;
+    if flush_dirstate {
+        wc.journal.record_new_entry(
+            &ctx.raw_args,
+            "wdirparent",
+            ".",
+            &[source_commit],
+            &[target_commit],
+        )?;
+    }
 
     state_change.mark_success();
 

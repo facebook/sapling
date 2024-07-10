@@ -2,6 +2,7 @@
 #inprocess-hg-incompatible
 
   $ enable rebase
+  $ setconfig workingcopy.rust-checkout=true
 
 Tests for the journal extension; records bookmark locations.
 
