@@ -100,6 +100,13 @@ Can be disabled
   abort: unknown revision 'foo'!
   [255]
 
+Works with "megarepo" extension
+BAD: currently broken
+
+  $ log foo --config extensions.megarepo= --config paths.default=test:repo1
+  abort: unknown revision 'foo'!
+  [255]
+
 Does not conflict with autopull
 
   $ hg bookmark -r 'desc(D)' main
