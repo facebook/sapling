@@ -6,6 +6,8 @@
  */
 
 use std::path::PathBuf;
+use std::sync::atomic::AtomicUsize;
+use std::sync::atomic::Ordering;
 use std::sync::Arc;
 
 use anyhow::Context;
@@ -102,10 +104,16 @@ async fn derive_boundaries(
     boundaries: BoundaryChangesets,
     boundaries_concurrency: usize,
 ) -> Result<()> {
+    let boundaries_count = boundaries.len();
+    debug!(
+        ctx.logger(),
+        "deriving {} boundaries (concurrency: {})", boundaries_count, boundaries_concurrency
+    );
+    let completed = Arc::new(AtomicUsize::new(0));
     stream::iter(boundaries)
         .map(Ok)
         .try_for_each_concurrent(boundaries_concurrency, |csid| {
-            cloned!(ctx, derived_utils, repo_derived_data);
+            cloned!(ctx, derived_utils, repo_derived_data, completed);
             async move {
                 task::spawn(async move {
                     let (derive_boundary_stats, res) = derived_utils
@@ -113,12 +121,15 @@ async fn derive_boundaries(
                         .try_timed()
                         .await?;
 
+                    let completed_count = completed.fetch_add(1, Ordering::SeqCst) + 1;
                     debug!(
                         ctx.logger(),
-                        "derived boundary {} in {}ms, {:?}",
+                        "derived boundary {} in {}ms, {:?} ({}/{})",
                         csid,
                         derive_boundary_stats.completion_time.as_millis(),
                         res,
+                        completed_count,
+                        boundaries_count,
                     );
 
                     Ok(())
@@ -135,10 +146,13 @@ async fn inner_derive_slice(
     repo_derived_data: ArcRepoDerivedData,
     derived_utils: Arc<dyn DerivedUtils>,
     slice_description: SegmentedSliceDescription,
+    slice_count: usize,
+    completed: Arc<AtomicUsize>,
 ) -> Result<()> {
-    let (stats, ()) = stream::iter(slice_description.segments)
+    let segment_count = slice_description.segments.len();
+    let (stats, ()) = stream::iter(slice_description.segments.into_iter().enumerate())
         .map(anyhow::Ok)
-        .try_for_each(|segment| {
+        .try_for_each(|(segment_index, segment)| {
             cloned!(ctx, commit_graph, derived_utils, repo_derived_data);
             async move {
                 let segment_cs_ids = commit_graph
@@ -146,6 +160,16 @@ async fn inner_derive_slice(
                     .await?
                     .collect::<Vec<_>>()
                     .await;
+
+                debug!(
+                    ctx.logger(),
+                    "deriving segment from {} to {} ({} commits, {}/{})",
+                    segment.base,
+                    segment.head,
+                    segment_cs_ids.len(),
+                    segment_index + 1,
+                    segment_count,
+                );
 
                 let mut derive_segment_completion_time = std::time::Duration::from_millis(0);
                 for chunk in segment_cs_ids.chunks(20) {
@@ -162,10 +186,12 @@ async fn inner_derive_slice(
 
                 debug!(
                     ctx.logger(),
-                    "derived segment from {} to {} in {}ms",
+                    "derived segment from {} to {} in {}ms ({}/{})",
                     segment.base,
                     segment.head,
                     derive_segment_completion_time.as_millis(),
+                    segment_index + 1,
+                    segment_count,
                 );
 
                 Ok(())
@@ -174,10 +200,13 @@ async fn inner_derive_slice(
         .try_timed()
         .await?;
 
+    let completed_count = completed.fetch_add(1, Ordering::SeqCst) + 1;
     debug!(
         ctx.logger(),
-        "derived slice in {}ms",
+        "derived slice in {}ms ({}/{})",
         stats.completion_time.as_millis(),
+        completed_count,
+        slice_count,
     );
 
     Ok(())
@@ -211,11 +240,17 @@ pub(super) async fn derive_slice(
         }
         DeriveSliceMode::Slices => {
             let slice_descriptions = parse_slice_descriptions(args.input_file).await?;
+            let slice_count = slice_descriptions.len();
+            let completed = Arc::new(AtomicUsize::new(0));
+            debug!(
+                ctx.logger(),
+                "deriving {} slices (concurrency: {})", slice_count, args.slice_concurrency
+            );
 
             stream::iter(slice_descriptions)
                 .map(Ok)
                 .try_for_each_concurrent(args.slice_concurrency, |slice_description| {
-                    cloned!(ctx, derived_utils);
+                    cloned!(ctx, derived_utils, completed);
                     let commit_graph = repo.commit_graph_arc();
                     let repo_derived_data = repo.repo_derived_data_arc();
                     async move {
@@ -226,6 +261,8 @@ pub(super) async fn derive_slice(
                                 repo_derived_data,
                                 derived_utils,
                                 slice_description,
+                                slice_count,
+                                completed,
                             )
                             .await
                         })
