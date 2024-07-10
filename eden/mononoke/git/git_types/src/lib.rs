@@ -31,6 +31,7 @@ mod store;
 mod tree;
 
 pub use delta_manifest::ObjectKind as DeltaObjectKind;
+pub use object::ObjectContent;
 pub use object::ObjectKind;
 
 pub use crate::blob::BlobHandle;

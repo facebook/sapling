@@ -5,7 +5,9 @@
  * GNU General Public License version 2.
  */
 
+use bytes::Bytes;
 use digest::Digest;
+use gix_object::Object;
 use mononoke_types::hash::RichGitSha1;
 use sha1::Sha1;
 
@@ -49,4 +51,10 @@ impl ObjectKind {
 
         RichGitSha1::from_byte_array(hash, self.as_str(), size)
     }
+}
+
+#[derive(Clone, Debug)]
+pub struct ObjectContent {
+    pub parsed: Object,
+    pub raw: Bytes,
 }

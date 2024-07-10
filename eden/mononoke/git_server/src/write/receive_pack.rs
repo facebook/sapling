@@ -6,7 +6,6 @@
  */
 
 use bytes::Bytes;
-use futures::TryStreamExt;
 use gotham::mime;
 use gotham::state::FromState;
 use gotham::state::State;
@@ -60,8 +59,6 @@ async fn push<'a>(
             &request_context.ctx,
             request_context.repo.repo_blobstore.clone(),
         )
-        .await?
-        .try_collect::<Vec<_>>()
         .await?;
         write_text_packetline(OK_HEADER, &mut output).await?;
         for ref_update in push_args.ref_updates {

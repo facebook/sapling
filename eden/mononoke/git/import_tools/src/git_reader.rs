@@ -19,10 +19,10 @@ use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
 use bytes::Bytes;
+use git_types::ObjectContent;
 use gix_hash::ObjectId;
 use gix_object::Commit;
 use gix_object::Kind;
-use gix_object::Object;
 use gix_object::ObjectRef;
 use gix_object::Tag;
 use gix_object::Tree;
@@ -36,12 +36,6 @@ use tokio::sync::mpsc;
 use tokio::sync::oneshot;
 
 type ObjectSender = oneshot::Sender<Result<ObjectContent>>;
-
-#[derive(Clone, Debug)]
-pub struct ObjectContent {
-    pub parsed: Object,
-    pub raw: Bytes,
-}
 
 #[async_trait]
 pub trait GitReader: Clone + Send + Sync + 'static {

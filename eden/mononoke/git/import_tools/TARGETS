@@ -35,6 +35,7 @@ rust_library(
         "//eden/mononoke/derived_data:bulk_derivation",
         "//eden/mononoke/derived_data:derived_data_manager",
         "//eden/mononoke/filestore:filestore",
+        "//eden/mononoke/git/git_types:git_types",
         "//eden/mononoke/git_symbolic_refs:git_symbolic_refs",
         "//eden/mononoke/manifest:manifest",
         "//eden/mononoke/mononoke_types:mononoke_types",

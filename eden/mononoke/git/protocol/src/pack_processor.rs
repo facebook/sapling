@@ -8,6 +8,7 @@
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::io::Write;
+use std::path::Path;
 use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 
@@ -18,15 +19,16 @@ use cloned::cloned;
 use context::CoreContext;
 use data::entry::Header::RefDelta;
 use futures::stream;
-use futures::Stream;
 use futures::StreamExt;
 use futures::TryStreamExt;
 use git_types::fetch_git_object_bytes;
 use git_types::GitIdentifier;
 use git_types::HeaderState;
+use git_types::ObjectContent;
 use gix_features::progress::Discard;
 use gix_hash::Kind;
 use gix_hash::ObjectId;
+use gix_object::encode::loose_header;
 use gix_object::ObjectRef;
 use gix_pack::cache::Never;
 use gix_pack::data;
@@ -34,8 +36,12 @@ use gix_pack::data::decode::entry::ResolvedBase;
 use gix_pack::data::input;
 use gix_pack::data::File;
 use mononoke_types::hash::GitSha1;
+use packfile::types::BaseObject;
 use repo_blobstore::RepoBlobstore;
+use rustc_hash::FxHashMap;
 use tempfile::Builder;
+
+use crate::PACKFILE_SUFFIX;
 
 type ObjectMap = HashMap<ObjectId, (Bytes, gix_object::Kind)>;
 
@@ -45,6 +51,17 @@ fn into_data_entry(pack_entry: input::Entry) -> data::Entry {
         decompressed_size: pack_entry.decompressed_size,
         data_offset: pack_entry.pack_offset + pack_entry.header_size as u64,
     }
+}
+
+/// Generates the full bytes of a git object including its header
+fn git_object_bytes(
+    headerless_object_bytes: Vec<u8>,
+    kind: gix_object::Kind,
+    size: usize,
+) -> Vec<u8> {
+    let mut object_bytes = loose_header(kind, size).into_vec();
+    object_bytes.extend(headerless_object_bytes);
+    object_bytes
 }
 
 fn resolve_delta(
@@ -104,19 +121,32 @@ async fn fetch_prereq_objects(
 }
 
 /// Method responsible for parsing the packfile provided as part of push, verifying its correctness
-/// and returning a stream of objects contained within the packfile
+/// and returning an object map containing all the objects present in packfile mapped to their IDs
 pub async fn parse_pack(
     pack_bytes: &[u8],
     ctx: &CoreContext,
     blobstore: Arc<RepoBlobstore>,
-) -> Result<impl Stream<Item = Result<Bytes>>> {
-    let mut raw_file = Builder::new().suffix(".pack").rand_bytes(8).tempfile()?;
+) -> Result<FxHashMap<ObjectId, ObjectContent>> {
+    let mut raw_file = Builder::new()
+        .suffix(PACKFILE_SUFFIX)
+        .rand_bytes(8)
+        .tempfile()?;
     raw_file.write_all(pack_bytes)?;
     raw_file.flush()?;
-    let pack_file = File::at(raw_file.path(), Kind::Sha1).with_context(|| {
+    let response = parse_stored_pack(raw_file.path(), ctx, blobstore).await;
+    raw_file.close().unwrap_or_default();
+    response
+}
+
+async fn parse_stored_pack(
+    pack_path: &Path,
+    ctx: &CoreContext,
+    blobstore: Arc<RepoBlobstore>,
+) -> Result<FxHashMap<ObjectId, ObjectContent>> {
+    let pack_file = File::at(pack_path, Kind::Sha1).with_context(|| {
         format!(
             "Error while opening packfile for push at {}",
-            raw_file.path().display()
+            pack_path.display()
         )
     })?;
     // Verify that the packfile is valid
@@ -127,7 +157,7 @@ pub async fn parse_pack(
     // Load all the prerequisite objects
     let prereq_objects = fetch_prereq_objects(&pack_file, ctx, blobstore.clone()).await?;
 
-    let stream = stream::iter(
+    stream::iter(
         pack_file
             .streaming_iter()
             .context("Failure in iterating packfile")?,
@@ -136,7 +166,7 @@ pub async fn parse_pack(
         Ok(entry) => {
             let mut output = vec![];
             let err_context = format!("Error in decoding packfile entry: {:?}", &entry.header);
-            pack_file
+            let outcome = pack_file
                 .decode_entry(
                     into_data_entry(entry),
                     &mut output,
@@ -144,10 +174,22 @@ pub async fn parse_pack(
                     &mut Never,
                 )
                 .context(err_context)?;
-            anyhow::Ok(Bytes::from(output))
+            let object_bytes = Bytes::from(git_object_bytes(
+                output,
+                outcome.kind,
+                outcome.object_size as usize,
+            ));
+            let base_object = BaseObject::new(object_bytes.clone())
+                .context("Error in converting bytes to git object")?;
+            let id = base_object.hash;
+            let object = ObjectContent {
+                parsed: base_object.object,
+                raw: object_bytes,
+            };
+            anyhow::Ok((id, object))
         }
         Err(e) => anyhow::bail!("Failure in iterating packfile entry: {:?}", e),
-    });
-    raw_file.close().unwrap_or_default();
-    Ok(stream)
+    })
+    .try_collect::<FxHashMap<_, _>>()
+    .await
 }
