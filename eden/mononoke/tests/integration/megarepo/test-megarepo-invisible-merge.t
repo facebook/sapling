@@ -112,7 +112,12 @@ Perform ovrsource pushrebase, make sure it is push-redirected into Megarepo
   $ cd "$TESTTMP/ovr-hg-cnt"
   $ REPONAME=ovr-mon hgmn up -q master_bookmark
   $ echo 1 > pushredirected_1 && hg addremove -q && hg ci -q -m pushredirected_1
-  $ REPONAME=ovr-mon hgmn push -r . --to master_bookmark 2>&1 | grep updating
+  $ REPONAME=ovr-mon hgmn push -r . --to master_bookmark
+  pushing rev bb12ff0dc64f to destination mononoke://$LOCALIP:$LOCAL_PORT/ovr-mon bookmark master_bookmark
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
   updating bookmark master_bookmark
 -- pushredirected_1 was correctly pushed to master_bookmark in ovrsource
   $ log -r master_bookmark
@@ -128,7 +133,9 @@ Perform ovrsource pushrebase, make sure it is push-redirected into Megarepo
   ~
 -- ensure that ovrsource root path ends up in megarepo's arvr-legacy
   $ REPONAME=meg-mon hgmn up master_bookmark -q
-  $ ls arvr-legacy | grep pushredirected
+  $ ls arvr-legacy
+  Research
+  otherfile_ovrsource
   pushredirected_1
 - compare the working copies
   $ REPOIDLARGE=$MEG_REPOID REPOIDSMALL=$OVR_REPOID verify_wc master_bookmark
@@ -136,7 +143,12 @@ Perform ovrsource pushrebase, make sure it is push-redirected into Megarepo
   $ cd "$TESTTMP/ovr-hg-cnt"
   $ REPONAME=ovr-mon hgmn up -q master_bookmark
   $ echo 2 > pushredirected_2 && hg addremove -q && hg ci -q -m pushredirected_2
-  $ REPONAME=ovr-mon hgmn push -r . --to master_bookmark 2>&1 | grep updating
+  $ REPONAME=ovr-mon hgmn push -r . --to master_bookmark
+  pushing rev 2d72ff1821dd to destination mononoke://$LOCALIP:$LOCAL_PORT/ovr-mon bookmark master_bookmark
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
   updating bookmark master_bookmark
 -- pushredirected_2 was correctly pushed to master_bookmark
   $ log -r master_bookmark
@@ -152,7 +164,9 @@ Perform ovrsource pushrebase, make sure it is push-redirected into Megarepo
   ~
 -- let's see what's where in megarepo
   $ REPONAME=meg-mon hgmn up master_bookmark -q
-  $ ls arvr-legacy | grep pushredirected
+  $ ls arvr-legacy
+  Research
+  otherfile_ovrsource
   pushredirected_1
   pushredirected_2
 - compare the working copies
@@ -299,11 +313,21 @@ Do the invisible merge by gradually merging TOMERGES into master
 Create special marker commits in both repos, which can be just marked as rewritten into each other
   $ cd "$TESTTMP/ovr-hg-cnt"
   $ hg ci -qm "pre push-redirection marker" --config ui.allowemptycommit=True
-  $ REPONAME=ovr-mon hgmn push -r . --to master_bookmark 2>&1 | grep updating
+  $ REPONAME=ovr-mon hgmn push -r . --to master_bookmark
+  pushing rev d4f961891514 to destination mononoke://$LOCALIP:$LOCAL_PORT/ovr-mon bookmark master_bookmark
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
   updating bookmark master_bookmark
   $ cd "$TESTTMP/fbs-hg-cnt"
   $ hg ci -qm "pre push-redirection marker" --config ui.allowemptycommit=True
-  $ REPONAME=fbs-mon hgmn push -r . --to master_bookmark 2>&1 | grep updating
+  $ REPONAME=fbs-mon hgmn push -r . --to master_bookmark
+  pushing rev 95ffa14a8361 to destination mononoke://$LOCALIP:$LOCAL_PORT/fbs-mon bookmark master_bookmark
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
   updating bookmark master_bookmark
 
 Set mutable counter for the backsyncer (we've synced everything up until now)
@@ -337,7 +361,12 @@ Perform ovrsource pushrebase, make sure it is push-redirected into Fbsource
   $ cd "$TESTTMP/ovr-hg-cnt"
   $ REPONAME=ovr-mon hgmn up -q master_bookmark
   $ echo 1 > pushredirected_3 && hg addremove -q && hg ci -q -m pushredirected_3
-  $ REPONAME=ovr-mon hgmn push -r . --to master_bookmark 2>&1 | grep updating
+  $ REPONAME=ovr-mon hgmn push -r . --to master_bookmark
+  pushing rev 4355e6b9eafb to destination mononoke://$LOCALIP:$LOCAL_PORT/ovr-mon bookmark master_bookmark
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
   updating bookmark master_bookmark
 -- pushredirected_3 was correctly pushed to master_bookmark in ovrsource
   $ log -r master_bookmark
@@ -356,7 +385,11 @@ Perform ovrsource pushrebase, make sure it is push-redirected into Fbsource
   ~
 -- ensure that ovrsource root path ends up in megarepo's arvr-legacy
   $ REPONAME=fbs-mon hgmn up master_bookmark -q
-  $ ls arvr-legacy | grep pushredirected_3
+  $ ls arvr-legacy
+  Research
+  otherfile_ovrsource
+  pushredirected_1
+  pushredirected_2
   pushredirected_3
 - compare the working copies
   $ REPOIDLARGE=$FBS_REPOID REPOIDSMALL=$OVR_REPOID verify_wc master_bookmark
