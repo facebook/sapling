@@ -114,6 +114,14 @@ impl ScopedDirLock {
             let path = dir.join(opts.file_name);
 
             // Write permission is used for mutable mmap.
+            // Read permission is to make some bogus NFS implementation happy:
+            //
+            //     # strace
+            //     openat(AT_FDCWD, "some/rlock", O_WRONLY|O_CREAT|O_CLOEXEC, 0666) = 11
+            //     flock(11, LOCK_SH)         = -1 EBADF (Bad file descriptor)
+            //
+            // Changing O_WRONLY to O_RDWR makes flock succeed. Not all NFS filesystems
+            // need this.
             #[allow(unused_mut)]
             let mut file = match fs::OpenOptions::new().read(true).write(true).open(&path) {
                 Ok(f) => f,
