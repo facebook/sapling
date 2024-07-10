@@ -13,6 +13,8 @@ use std::sync::Arc;
 
 use bonsai_hg_mapping::BonsaiHgMapping;
 #[cfg(fbcode_build)]
+use commit_cloud_intern_utils::interngraph_publisher::publish_single_update;
+#[cfg(fbcode_build)]
 use commit_cloud_intern_utils::notification::NotificationData;
 use context::CoreContext;
 use edenapi_types::GetReferencesParams;
@@ -165,10 +167,7 @@ impl CommitCloud {
             latest_version = workspace_version.version;
             version_timestamp = workspace_version.timestamp.timestamp_nanos();
         }
-        let new_version = latest_version + 1;
-        #[cfg(fbcode_build)]
-        let _notification =
-            NotificationData::from_update_references_params(params.clone(), new_version);
+
         if params.version < latest_version {
             let raw_references_data = fetch_references(ctx.clone(), &self.storage).await?;
             return cast_references_data(
@@ -181,6 +180,7 @@ impl CommitCloud {
             )
             .await;
         }
+
         let mut txn = self
             .storage
             .connections
@@ -189,8 +189,20 @@ impl CommitCloud {
             .await?;
         let cri = self.core_ctx.client_request_info();
 
-        txn = update_references_data(&self.storage, txn, cri, params.clone(), &ctx).await?;
+        let initiate_workspace = params.version == 0
+            && (params.new_heads.is_empty()
+                && params.updated_bookmarks.is_empty()
+                && !params
+                    .updated_remote_bookmarks
+                    .clone()
+                    .is_some_and(|x| !x.is_empty()));
+
+        if !initiate_workspace {
+            txn = update_references_data(&self.storage, txn, cri, params.clone(), &ctx).await?;
+        }
+
         let new_version_timestamp = Timestamp::now();
+        let new_version = latest_version + 1;
 
         let args = WorkspaceVersion {
             workspace: ctx.workspace.clone(),
@@ -209,7 +221,21 @@ impl CommitCloud {
                 args.clone(),
             )
             .await?;
+
         txn.commit().await?;
+
+        #[cfg(fbcode_build)]
+        if std::env::var_os("SANDCASTLE").map_or(true, |sc| sc != "1") && !initiate_workspace {
+            let notification =
+                NotificationData::from_update_references_params(params.clone(), new_version);
+            let _ = publish_single_update(
+                notification,
+                &ctx.workspace.clone(),
+                &ctx.reponame.clone(),
+                self.core_ctx.fb,
+            )
+            .await?;
+        }
         Ok(ReferencesData {
             version: new_version,
             heads: None,
