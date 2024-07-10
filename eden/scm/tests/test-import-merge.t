@@ -1,7 +1,7 @@
-#chg-compatible
-#debugruntest-incompatible
+#require no-eden
 
   $ configure modernclient
+  $ setconfig workingcopy.rust-checkout=true
 
   $ tipparents() {
   > hg parents --template "{node|short} {desc|firstline}\n" -r .
@@ -46,7 +46,7 @@ Test without --exact and diff.p1 == workingdir.p1
   > env | grep HGEDITFORM
   > echo merge > \$1
   > EOF
-  $ HGEDITOR="sh $TESTTMP/editor.sh" hg import --edit ../merge.nomsg.diff
+  $ HGEDITOR="sh '$TESTTMP/editor.sh'" hg import --edit ../merge.nomsg.diff
   applying ../merge.nomsg.diff
   HGEDITFORM=import.normal.merge
   $ tipparents
@@ -121,8 +121,8 @@ Test that --exact on a bad header doesn't corrupt the repo (issue3616)
   $ hg export 'desc(2)' > $TESTTMP/p
   $ head -7 $TESTTMP/p > ../a.patch
   $ hg export tip > out
-  >>> apatch = open("../a.patch", "ab")
-  >>> _ = apatch.write(b"".join(open("out", "rb").readlines()[7:]))
+  >>> with open("../a.patch", "ab") as apatch:
+  ...     _ = apatch.write(b"".join(open("out", "rb").readlines()[7:]))
 
   $ newclientrepo repor-clone test:repo3_server rev0
   $ hg pull -q -B rev1

@@ -1600,11 +1600,16 @@ fn record_updates(
         bar.increase_position(1);
     }
 
+    let mut max_mtime = None;
+
     for updated in plan
         .updated_content_files()
         .chain(plan.updated_meta_files())
     {
         let fstate = file_state(vfs, updated)?;
+        if fstate.mtime > max_mtime.unwrap_or(0) {
+            max_mtime = Some(fstate.mtime);
+        }
         treestate.insert(updated, &fstate)?;
         bar.increase_position(1);
     }
@@ -1620,6 +1625,10 @@ fn record_updates(
                 }
             }
         }
+    }
+
+    if let Some(max_mtime) = max_mtime {
+        treestate.invalidate_mtime(max_mtime)?;
     }
 
     Ok(())
