@@ -101,11 +101,9 @@ Can be disabled
   [255]
 
 Works with "megarepo" extension
-BAD: currently broken
 
   $ log foo --config extensions.megarepo= --config paths.default=test:repo1
-  abort: unknown revision 'foo'!
-  [255]
+  A: foo bar
 
 Does not conflict with autopull
 

@@ -92,9 +92,11 @@ def _xrepopull(repo, name, rewritepullrev=False) -> Optional[pullattempt]:
     if rewritepullrev:
         if repo.ui.configbool("megarepo", "rewrite-pull-rev", True):
             return generateattempt()
-    else:
+    elif may_need_xrepotranslate(repo, name):
+        # deferredpullattempt disables "titles" namespace!
         return deferredpullattempt(generate=generateattempt)
 
+    # Returning None allows "titles" namespace lookup.
     return None
 
 
