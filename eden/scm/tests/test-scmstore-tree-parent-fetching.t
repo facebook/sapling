@@ -47,5 +47,6 @@ We can fetch tree parents:
                   HgId("bef2f8ab81cdaf48e171ab7793b536eeeea649b8"),
               ),
           ),
+          aux_data: None,
       },
   )

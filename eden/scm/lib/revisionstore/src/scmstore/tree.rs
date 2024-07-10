@@ -241,6 +241,7 @@ impl TreeStore {
                                             entry.parents[0].hgid,
                                             entry.parents[1].hgid,
                                         )),
+                                        aux_data: None,
                                     },
                                 );
                             }

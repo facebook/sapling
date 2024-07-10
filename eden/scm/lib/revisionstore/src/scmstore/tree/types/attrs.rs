@@ -17,12 +17,14 @@ use crate::scmstore::attrs::StoreAttrs;
 pub struct TreeAttributes {
     pub content: bool,
     pub parents: bool,
+    pub aux_data: bool,
 }
 
 impl StoreAttrs for TreeAttributes {
     const NONE: Self = TreeAttributes {
         content: false,
         parents: false,
+        aux_data: false,
     };
 
     /// Returns all the attributes which are present or can be computed from present attributes.
@@ -35,10 +37,17 @@ impl TreeAttributes {
     pub const CONTENT: Self = TreeAttributes {
         content: true,
         parents: false,
+        aux_data: false,
     };
     pub const PARENTS: Self = TreeAttributes {
         content: false,
         parents: true,
+        aux_data: false,
+    };
+    pub const AUX_DATA: Self = TreeAttributes {
+        content: false,
+        parents: false,
+        aux_data: true,
     };
 }
 
@@ -49,6 +58,7 @@ impl Not for TreeAttributes {
         TreeAttributes {
             content: !self.content,
             parents: !self.parents,
+            aux_data: !self.aux_data,
         }
     }
 }
@@ -60,6 +70,7 @@ impl BitAnd for TreeAttributes {
         TreeAttributes {
             content: self.content & rhs.content,
             parents: self.parents & rhs.parents,
+            aux_data: self.aux_data & rhs.aux_data,
         }
     }
 }
@@ -71,6 +82,7 @@ impl BitOr for TreeAttributes {
         TreeAttributes {
             content: self.content | rhs.content,
             parents: self.parents | rhs.parents,
+            aux_data: self.aux_data | rhs.aux_data,
         }
     }
 }

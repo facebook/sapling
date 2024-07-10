@@ -46,6 +46,7 @@ Sanity check that children metadata isn't fetched by default:
               ),
           ),
           parents: None,
+          aux_data: None,
       },
   )
 
@@ -129,6 +130,7 @@ Fetch a tree with children metadata:
               ),
           ),
           parents: None,
+          aux_data: None,
       },
   )
 
@@ -228,5 +230,6 @@ Fetch mode can also trigger tree metadata fetch:
               ),
           ),
           parents: None,
+          aux_data: None,
       },
   )

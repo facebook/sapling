@@ -89,6 +89,13 @@ impl LazyTree {
         }
     }
 
+    pub(crate) fn tree_aux_data(&self) -> Option<TreeAuxData> {
+        match &self {
+            Self::SaplingRemoteApi(entry) => entry.tree_aux_data.clone(),
+            _ => None,
+        }
+    }
+
     pub fn aux_data(&self) -> HashMap<HgId, AuxData> {
         use LazyTree::*;
         match self {

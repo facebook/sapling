@@ -11,6 +11,7 @@ use std::ops::BitOr;
 use anyhow::anyhow;
 use anyhow::Result;
 use manifest_tree::TreeEntry as ManifestTreeEntry;
+use storemodel::TreeAuxData;
 use types::HgId;
 use types::Parents;
 
@@ -23,6 +24,7 @@ use crate::scmstore::value::StoreValue;
 pub struct StoreTree {
     pub(crate) content: Option<LazyTree>,
     pub(crate) parents: Option<Parents>,
+    pub(crate) aux_data: Option<TreeAuxData>,
 }
 
 impl StoreTree {
@@ -50,6 +52,7 @@ impl StoreValue for StoreTree {
         TreeAttributes {
             content: self.content.is_some(),
             parents: self.parents.is_some(),
+            aux_data: self.aux_data.is_some(),
         }
     }
 
@@ -58,6 +61,7 @@ impl StoreValue for StoreTree {
         StoreTree {
             content: if attrs.content { self.content } else { None },
             parents: if attrs.parents { self.parents } else { None },
+            aux_data: if attrs.aux_data { self.aux_data } else { None },
         }
     }
 }
@@ -69,6 +73,7 @@ impl BitOr for StoreTree {
         StoreTree {
             content: self.content.or(rhs.content),
             parents: self.parents.or(rhs.parents),
+            aux_data: self.aux_data.or(rhs.aux_data),
         }
     }
 }
@@ -76,9 +81,11 @@ impl BitOr for StoreTree {
 impl From<LazyTree> for StoreTree {
     fn from(v: LazyTree) -> Self {
         let parents = v.parents();
+        let aux_data = v.tree_aux_data();
         StoreTree {
             content: Some(v),
             parents,
+            aux_data,
         }
     }
 }
