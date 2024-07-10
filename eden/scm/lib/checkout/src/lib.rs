@@ -1345,7 +1345,7 @@ pub fn filesystem_checkout(
 
     // 5. Update the treestate parents, dirstate
     wc.set_parents(vec![target_commit], None)?;
-    record_updates(&plan, wc.vfs(), &mut ts.lock())?;
+    record_updates(&plan, wc.vfs(), &mut ts.lock(), &status, revert_conflicts)?;
     if flush_dirstate {
         dirstate::flush(wc.vfs().root(), &mut ts.lock(), repo.locker(), None, None)?;
     }
@@ -1584,7 +1584,13 @@ fn create_plan(
     Ok(plan)
 }
 
-fn record_updates(plan: &CheckoutPlan, vfs: &VFS, treestate: &mut TreeState) -> Result<()> {
+fn record_updates(
+    plan: &CheckoutPlan,
+    vfs: &VFS,
+    treestate: &mut TreeState,
+    status: &Status,
+    clean: bool,
+) -> Result<()> {
     let bar = ProgressBar::new_adhoc("recording", plan.all_files().count() as u64, "files");
 
     for removed in plan.removed_files() {
@@ -1599,6 +1605,19 @@ fn record_updates(plan: &CheckoutPlan, vfs: &VFS, treestate: &mut TreeState) -> 
         let fstate = file_state(vfs, updated)?;
         treestate.insert(updated, &fstate)?;
         bar.increase_position(1);
+    }
+
+    if clean {
+        for (p, s) in status.iter() {
+            if matches!(s, FileStatus::Deleted | FileStatus::Removed) {
+                // If a locally removed file wasn't updated via "sl go -C", that means it
+                // was also deleted in the destination. Nothing else will remove it from
+                // the treestate, so we do so here.
+                if !plan.update_content.contains_key(p) {
+                    treestate.remove(p)?;
+                }
+            }
+        }
     }
 
     Ok(())

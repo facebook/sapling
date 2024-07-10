@@ -175,9 +175,9 @@ Various invalid arg combos:
   M foo
   R B
   ? bar
+Eden doesn't report "B" as conflicting - seems harmless but technically incorrect (?)
   $ hg go $A
-  abort: 3 conflicting file changes: (no-eden !)
-  abort: 2 conflicting file changes: (eden !)
+  abort: * conflicting file changes: (glob)
    B (no-eden !)
    bar
    foo
@@ -185,9 +185,7 @@ Various invalid arg combos:
   [255]
 
   $ hg go -q --clean $A
-FIXME: "B" shouldn't be in status
   $ hg st
-  R B (no-eden !)
   $ cat foo
   foo (no-eol)
   $ cat bar
