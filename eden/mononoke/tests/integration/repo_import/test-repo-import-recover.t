@@ -93,7 +93,7 @@
   >    "git_merge_bcs_id": null,
   >    "git_merge_rev_id": "2c01e4a5658421e2bfcd08e31d9b69399319bcd3",
   >    "git_repo_path": "${TESTTMP}/repo-git",
-  >    "gitimport_bcs_ids": null, 
+  >    "gitimport_bcs_ids": null,
   >    "hg_sync_check_disabled": true,
   >    "import_stage": "GitImport",
   >    "imported_cs_id": null,

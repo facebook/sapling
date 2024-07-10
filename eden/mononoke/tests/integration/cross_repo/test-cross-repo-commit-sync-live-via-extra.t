@@ -50,7 +50,7 @@ Before the change
   $ echo b > non_path_shifting/bar
   $ hg ci -Aqm "before config change"
   $ REPONAME=small-mon hgmn push -r . --to master_bookmark -q
-  $ log 
+  $ log
   @  before config change [public;rev=2;bc6a206054d0] default/master_bookmark
   │
   o  first post-move commit [public;rev=1;11f848659bfc]

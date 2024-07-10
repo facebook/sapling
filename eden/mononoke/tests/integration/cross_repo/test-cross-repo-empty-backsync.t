@@ -32,7 +32,7 @@
   $ cd "$TESTTMP"/large-hg-client
   $ REPONAME="$LARGE_REPO_NAME" quiet hgmn up master_bookmark
   $ hg commit --config ui.allowemptycommit=True -m "Empty1"
-  $ REPONAME="$LARGE_REPO_NAME" quiet hgmn push -r . --to master_bookmark 
+  $ REPONAME="$LARGE_REPO_NAME" quiet hgmn push -r . --to master_bookmark
 
   $ quiet_grep "syncing bookmark" -- backsync_large_to_small
   * syncing bookmark master_bookmark to * (glob)
@@ -67,7 +67,7 @@
   $ flush_mononoke_bookmarks
 
   $ cd "$TESTTMP/small-hg-client"
-  $ REPONAME="$SMALL_REPO_NAME" quiet hgmn pull 
+  $ REPONAME="$SMALL_REPO_NAME" quiet hgmn pull
   $ log -r master_bookmark^::master_bookmark
   o  non-empty after empty2 [public;rev=3;*] default/master_bookmark (glob)
   │

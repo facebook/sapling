@@ -390,7 +390,7 @@ Before config change
   IH=390213545a07b8f0b3452f97e862443d56b58375
   II=6738aefcbd6e1d868fa73a489b55aab543fd0c53
   $ wait_for_bookmark_move_away_edenapi "$IMPORTED_REPO_NAME" heads/$MASTER_BOOKMARK  "$PREV_BOOK_VALUE"
-  $ quiet with_stripped_logs mononoke_x_repo_sync "$IMPORTED_REPO_ID"  "$LARGE_REPO_ID" tail --bookmark-regex "heads/$MASTER_BOOKMARK" --catch-up-once 
+  $ quiet with_stripped_logs mononoke_x_repo_sync "$IMPORTED_REPO_ID"  "$LARGE_REPO_ID" tail --bookmark-regex "heads/$MASTER_BOOKMARK" --catch-up-once
 
   $ FINAL_BOOK_VALUE=$(x_repo_lookup $IMPORTED_REPO_NAME $LARGE_REPO_NAME $II)
 
@@ -482,7 +482,7 @@ so they'll be dumped to files to keep this (already long) integration test short
 -- wait a second to give backsyncer some time to catch up
   $ wait_for_bookmark_move_away_edenapi $SMALL_REPO_NAME $MASTER_BOOKMARK  "$PREV_BOOK_VALUE"
 
--- Check if changes were backsynced properly  
+-- Check if changes were backsynced properly
   $ cd "$TESTTMP/small-hg-client"
   $ REPONAME=$SMALL_REPO_NAME hgmn pull -q
   $ log_globalrev -l 10
