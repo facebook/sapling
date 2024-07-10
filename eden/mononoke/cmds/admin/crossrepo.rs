@@ -248,8 +248,11 @@ pub async fn subcommand_crossrepo<'a>(
             .await
         }
         (SUBCOMMAND_CONFIG, Some(sub_sub_m)) => {
-            let live_commit_sync_config = CfgrLiveCommitSyncConfig::new(&logger, config_store)?;
-            run_config_sub_subcommand(matches, sub_sub_m, live_commit_sync_config).await
+            let config_store = matches.config_store();
+            let repo_id = args::not_shardmanager_compatible::get_repo_id(config_store, matches)?;
+            let live_commit_sync_config =
+                get_live_commit_sync_config(&ctx, fb, matches, repo_id).await?;
+            run_config_sub_subcommand(matches, sub_sub_m, repo_id, live_commit_sync_config).await
         }
         (PUSHREDIRECTION_SUBCOMMAND, Some(sub_sub_m)) => {
             let source_repo_id =
@@ -278,14 +281,11 @@ pub async fn subcommand_crossrepo<'a>(
 }
 
 async fn run_config_sub_subcommand<'a>(
-    matches: &'a MononokeMatches<'_>,
+    _matches: &'a MononokeMatches<'_>,
     config_subcommand_matches: &'a ArgMatches<'a>,
+    repo_id: RepositoryId,
     live_commit_sync_config: CfgrLiveCommitSyncConfig,
 ) -> Result<(), SubcommandError> {
-    let config_store = matches.config_store();
-
-    let repo_id = args::not_shardmanager_compatible::get_repo_id(config_store, matches)?;
-
     match config_subcommand_matches.subcommand() {
         (SUBCOMMAND_BY_VERSION, Some(sub_m)) => {
             let version_name: String = sub_m.value_of(ARG_VERSION_NAME).unwrap().to_string();
