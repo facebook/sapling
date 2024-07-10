@@ -141,7 +141,6 @@ E_ENV["HGTEST_RUN_TESTS_PY"] = "$(location :run_tests_py_eden)"
 E_ENV["HGTEST_USE_EDEN"] = "1"
 
 python_unittest(
-    # @autodeps-skip
     name = "hg_edenfs_run_tests",
     srcs = SRCS,
     env = E_ENV,
@@ -165,7 +164,6 @@ EW_ENV.update(E_ENV)
 EW_ENV["HGTEST_INCLUDED"] = get_hg_edenfs_watchman_run_tests_included()
 
 python_unittest(
-    # @autodeps-skip
     name = "hg_edenfs_watchman_run_tests",
     srcs = SRCS,
     env = EW_ENV,
