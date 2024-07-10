@@ -132,8 +132,8 @@ impl TryFrom<DeltaOidObject> for output::Entry {
 /// Struct representing a base Git object that can be included in packfiles
 #[derive(Debug)]
 pub struct BaseObject {
-    object: Object,
-    hash: ObjectId,
+    pub object: Object,
+    pub hash: ObjectId,
 }
 
 impl BaseObject {

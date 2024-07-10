@@ -24,6 +24,7 @@ use bonsai_git_mapping::BonsaiGitMapping;
 use bonsai_tag_mapping::BonsaiTagMapping;
 use bookmarks::Bookmarks;
 use bookmarks_cache::BookmarksCache;
+use changesets::Changesets;
 use clap::Parser;
 use clientinfo::ClientEntryPoint;
 use cloned::cloned;
@@ -35,6 +36,7 @@ use environment::BookmarkCacheKind;
 use environment::BookmarkCacheOptions;
 use executor_lib::args::ShardedExecutorArgs;
 use fbinit::FacebookInit;
+use filestore::FilestoreConfig;
 use futures::channel::oneshot;
 use futures::future::try_select;
 use futures::pin_mut;
@@ -139,6 +141,12 @@ pub struct Repo {
 
     #[facet]
     pub warm_bookmarks_cache: dyn BookmarksCache,
+
+    #[facet]
+    pub changesets: dyn Changesets,
+
+    #[facet]
+    pub filestore_config: FilestoreConfig,
 }
 
 /// Mononoke Git Server

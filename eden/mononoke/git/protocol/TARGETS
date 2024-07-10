@@ -27,6 +27,8 @@ rust_library(
         "//eden/mononoke/bonsai_tag_mapping:bonsai_tag_mapping",
         "//eden/mononoke/bookmarks:bookmarks",
         "//eden/mononoke/bookmarks:bookmarks_cache",
+        "//eden/mononoke/changesets:changesets",
+        "//eden/mononoke/filestore:filestore",
         "//eden/mononoke/git/git_types:git_types",
         "//eden/mononoke/git/packetline:packetline",
         "//eden/mononoke/git/packfile:packfile",

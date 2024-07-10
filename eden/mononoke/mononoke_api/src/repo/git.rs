@@ -16,10 +16,12 @@ use bonsai_tag_mapping::BonsaiTagMappingRef;
 use bookmarks::BookmarksRef;
 use bookmarks_cache::BookmarksCacheRef;
 use bytes::Bytes;
+use changesets::ChangesetsRef;
 use chrono::DateTime;
 use chrono::FixedOffset;
 use commit_graph::CommitGraphRef;
 use context::CoreContext;
+use filestore::FilestoreConfigRef;
 use git_symbolic_refs::GitSymbolicRefsRef;
 use git_types::GitError;
 use gix_hash::ObjectId;
@@ -310,6 +312,8 @@ pub trait Repo = RepoIdentityRef
     + BonsaiGitMappingRef
     + BonsaiTagMappingRef
     + RepoDerivedDataRef
+    + ChangesetsRef
+    + FilestoreConfigRef
     + GitSymbolicRefsRef
     + BookmarksCacheRef
     + CommitGraphRef

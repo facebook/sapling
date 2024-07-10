@@ -14,11 +14,11 @@ use mononoke_api::CoreContext;
 use packfile::bundle::BundleWriter;
 use packfile::pack::DeltaForm;
 use protocol::generator::generate_pack_item_stream;
-use protocol::generator::Repo;
 use protocol::types::DeltaInclusion;
 use protocol::types::PackItemStreamRequest;
 use protocol::types::PackfileItemInclusion;
 use protocol::types::TagInclusion;
+use protocol::Repo;
 use slog::info;
 
 pub async fn create_git_repo_on_disk(

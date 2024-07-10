@@ -13,20 +13,15 @@ use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Ok;
 use anyhow::Result;
-use bonsai_git_mapping::BonsaiGitMappingRef;
 use bonsai_git_mapping::BonsaisOrGitShas;
 use bonsai_tag_mapping::BonsaiTagMappingEntry;
-use bonsai_tag_mapping::BonsaiTagMappingRef;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarkPagination;
 use bookmarks::BookmarkPrefix;
-use bookmarks::BookmarksRef;
-use bookmarks_cache::BookmarksCacheRef;
 use buffered_weighted::MemoryBound;
 use buffered_weighted::StreamExt as _;
 use bytes::Bytes;
 use cloned::cloned;
-use commit_graph::CommitGraphRef;
 use commit_graph_types::frontier::AncestorsWithinDistance;
 use context::CoreContext;
 use futures::future;
@@ -36,7 +31,6 @@ use futures::stream::BoxStream;
 use futures::stream::FuturesOrdered;
 use futures::StreamExt as _;
 use futures::TryStreamExt;
-use git_symbolic_refs::GitSymbolicRefsRef;
 use git_types::fetch_git_delta_manifest;
 use git_types::fetch_git_object_bytes;
 use git_types::fetch_non_blob_git_object_bytes;
@@ -54,7 +48,6 @@ use git_types::TreeMember;
 use gix_hash::ObjectId;
 use manifest::ManifestOps;
 use metaconfig_types::GitDeltaManifestVersion;
-use metaconfig_types::RepoConfigRef;
 use mononoke_types::hash::GitSha1;
 use mononoke_types::path::MPath;
 use mononoke_types::ChangesetId;
@@ -62,12 +55,8 @@ use packfile::types::GitPackfileBaseItem;
 use packfile::types::PackfileItem;
 use repo_blobstore::ArcRepoBlobstore;
 use repo_blobstore::RepoBlobstore;
-use repo_blobstore::RepoBlobstoreArc;
 use repo_derived_data::ArcRepoDerivedData;
 use repo_derived_data::RepoDerivedData;
-use repo_derived_data::RepoDerivedDataArc;
-use repo_derived_data::RepoDerivedDataRef;
-use repo_identity::RepoIdentityRef;
 use rustc_hash::FxHashMap;
 use rustc_hash::FxHashSet;
 
@@ -90,27 +79,11 @@ use crate::types::ShallowInfoResponse;
 use crate::types::ShallowVariant;
 use crate::types::SymrefFormat;
 use crate::types::TagInclusion;
-
-const HEAD_REF: &str = "HEAD";
-const TAGS_PREFIX: &str = "tags/";
-const REF_PREFIX: &str = "refs/";
-
-// The threshold in bytes below which we consider a future cheap enough to have a weight of 1
-const THRESHOLD_BYTES: usize = 6000;
-
-pub trait Repo = RepoIdentityRef
-    + RepoBlobstoreArc
-    + RepoDerivedDataArc
-    + BookmarksRef
-    + BonsaiGitMappingRef
-    + BonsaiTagMappingRef
-    + RepoDerivedDataRef
-    + GitSymbolicRefsRef
-    + CommitGraphRef
-    + BookmarksCacheRef
-    + RepoConfigRef
-    + Send
-    + Sync;
+use crate::Repo;
+use crate::HEAD_REF;
+use crate::REF_PREFIX;
+use crate::TAGS_PREFIX;
+use crate::THRESHOLD_BYTES;
 
 /// Set of parameters that are needed by the generators used for constructing
 /// response for fetch request

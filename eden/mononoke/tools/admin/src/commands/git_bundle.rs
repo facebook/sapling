@@ -12,10 +12,12 @@ use bonsai_git_mapping::BonsaiGitMapping;
 use bonsai_tag_mapping::BonsaiTagMapping;
 use bookmarks::Bookmarks;
 use bookmarks_cache::BookmarksCache;
+use changesets::Changesets;
 use clap::Args;
 use clap::Parser;
 use clap::Subcommand;
 use commit_graph::CommitGraph;
+use filestore::FilestoreConfig;
 use git_symbolic_refs::GitSymbolicRefs;
 use metaconfig_types::RepoConfig;
 use mononoke_app::MononokeApp;
@@ -55,6 +57,10 @@ pub struct Repo {
     bookmark_cache: dyn BookmarksCache,
     #[facet]
     repo_config: RepoConfig,
+    #[facet]
+    pub changesets: dyn Changesets,
+    #[facet]
+    pub filestore_config: FilestoreConfig,
 }
 
 #[derive(Subcommand)]
