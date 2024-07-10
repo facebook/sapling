@@ -31,12 +31,11 @@ use crate::MononokeMegarepoConfigs;
 pub struct CfgrMononokeMegarepoConfigs;
 
 impl CfgrMononokeMegarepoConfigs {
-    pub async fn new(
+    pub fn new(
         _fb: FacebookInit,
         logger: &Logger,
         _mysql_options: MysqlOptions,
         _readonly_storage: ReadOnlyStorage,
-        _test_write_path: Option<PathBuf>,
     ) -> Result<Self, MegarepoError> {
         warn!(
             logger,

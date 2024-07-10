@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::path::PathBuf;
 use std::sync::Arc;
 
 use async_trait::async_trait;
@@ -21,7 +20,6 @@ use slog::info;
 use slog::Logger;
 use sql_ext::facebook::MysqlOptions;
 
-mod paths;
 mod reader;
 mod writer;
 
@@ -35,28 +33,21 @@ pub struct CfgrMononokeMegarepoConfigs {
 }
 
 impl CfgrMononokeMegarepoConfigs {
-    pub async fn new(
+    pub fn new(
         fb: FacebookInit,
         logger: &Logger,
         mysql_options: MysqlOptions,
         readonly_storage: ReadOnlyStorage,
-        test_write_path: Option<PathBuf>,
     ) -> Result<Self, MegarepoError> {
         info!(logger, "Creating a new CfgrMononokeMegarepoConfigs");
 
-        let writer = if let Some(write_path) = test_write_path {
-            CfgrMononokeMegarepoConfigsWriter::new_test(
+        Ok(Self {
+            reader: CfgrMononokeMegarepoConfigsReader::new(
                 fb,
                 mysql_options.clone(),
                 readonly_storage,
-                write_path,
-            )?
-        } else {
-            CfgrMononokeMegarepoConfigsWriter::new(fb, mysql_options.clone(), readonly_storage)?
-        };
-        Ok(Self {
-            reader: CfgrMononokeMegarepoConfigsReader::new(fb, mysql_options, readonly_storage)?,
-            writer,
+            )?,
+            writer: CfgrMononokeMegarepoConfigsWriter::new(fb, mysql_options, readonly_storage)?,
         })
     }
 }
