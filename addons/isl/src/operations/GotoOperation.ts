@@ -8,10 +8,10 @@
 import type {Dag} from '../previews';
 import type {ExactRevset, OptimisticRevset, SucceedableRevset} from '../types';
 
-import {latestSuccessor} from '../SuccessionTracker';
 import {YOU_ARE_HERE_VIRTUAL_COMMIT} from '../dag/virtualCommit';
 import {t} from '../i18n';
 import {CommitPreview} from '../previews';
+import {latestSuccessor} from '../successionUtils';
 import {Operation} from './Operation';
 
 export class GotoOperation extends Operation {

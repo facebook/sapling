@@ -6,18 +6,14 @@
  */
 
 import App from '../App';
-import {CommitInfoTestUtils} from '../testQueries';
 import {
   resetTestMessages,
   expectMessageSentToServer,
   simulateCommits,
   closeCommitInfoSidebar,
   TEST_COMMIT_HISTORY,
-  expectMessageNOTSentToServer,
-  openCommitInfoSidebar,
   COMMIT,
 } from '../testUtils';
-import {CommandRunner} from '../types';
 import {fireEvent, render, screen, act} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 

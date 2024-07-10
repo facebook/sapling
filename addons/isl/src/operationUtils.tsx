@@ -7,11 +7,11 @@
 
 import type {CommitInfo} from './types';
 
-import {latestSuccessorUnlessExplicitlyObsolete} from './SuccessionTracker';
 import {readAtom} from './jotaiUtils';
 import {AmendToOperation} from './operations/AmendToOperation';
 import {uncommittedSelection} from './partialSelection';
 import {dagWithPreviews, uncommittedChangesWithPreviews} from './previews';
+import {latestSuccessorUnlessExplicitlyObsolete} from './successionUtils';
 
 /**
  * Amend --to allows amending to a parent commit other than head.

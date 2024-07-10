@@ -6,7 +6,7 @@
  */
 
 import type {FieldConfig} from './types';
-import type {MutableRefObject, ReactNode, RefObject} from 'react';
+import type {ReactNode, RefObject} from 'react';
 
 import {
   useUploadFilesCallback,

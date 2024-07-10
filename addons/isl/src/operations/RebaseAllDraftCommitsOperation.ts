@@ -8,7 +8,7 @@
 import type {Dag} from '../previews';
 import type {ExactRevset, OptimisticRevset, SucceedableRevset} from '../types';
 
-import {latestSuccessor} from '../SuccessionTracker';
+import {latestSuccessor} from '../successionUtils';
 import {exactRevset} from '../types';
 import {Operation} from './Operation';
 

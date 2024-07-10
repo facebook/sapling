@@ -10,7 +10,6 @@ import type {ContextMenuItem} from 'shared/ContextMenu';
 
 import {bookmarksDataStorage} from './BookmarksData';
 import {Row} from './ComponentUtils';
-import {latestSuccessorUnlessExplicitlyObsolete} from './SuccessionTracker';
 import {Tooltip} from './Tooltip';
 import {tracker} from './analytics';
 import {Button} from './components/Button';
@@ -20,6 +19,7 @@ import {T, t} from './i18n';
 import {BookmarkCreateOperation} from './operations/BookmarkCreateOperation';
 import {BookmarkDeleteOperation} from './operations/BookmarkDeleteOperation';
 import {useRunOperation} from './operationsState';
+import {latestSuccessorUnlessExplicitlyObsolete} from './successionUtils';
 import {showModal} from './useModal';
 import * as stylex from '@stylexjs/stylex';
 import {useAtomValue} from 'jotai';

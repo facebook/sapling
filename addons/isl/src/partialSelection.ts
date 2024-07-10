@@ -6,7 +6,6 @@
  */
 
 import type {RepoRelativePath} from './types';
-import type {Getter} from 'jotai';
 import type {Hash, RepoPath} from 'shared/types/common';
 import type {ExportFile, ImportCommit} from 'shared/types/stack';
 
