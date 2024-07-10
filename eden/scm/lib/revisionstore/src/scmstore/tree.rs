@@ -473,7 +473,7 @@ impl TreeStore {
 
         let mut metrics = self.metrics.write();
         for (k, v) in metrics.metrics() {
-            hg_metrics::increment_counter(k, v);
+            hg_metrics::increment_counter(k, v as u64);
         }
         *metrics = Default::default();
 

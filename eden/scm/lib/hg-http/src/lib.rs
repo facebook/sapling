@@ -202,13 +202,13 @@ static PROGRESS_REPORTING_STATE: Lazy<Box<dyn Send + Sync>> = Lazy::new(|| {
 fn bump_counters(client_id: &str, stats: &Stats) {
     let n = |suffix: &'static str| -> String { format!("http.{}.{}", client_id, suffix) };
     // TODO: gauges: rx_bytes and tx_bytes; histograms: request_time_ms, response_delay_ms
-    increment_counter(n("total_rx_bytes"), stats.downloaded);
-    increment_counter(n("total_tx_bytes"), stats.uploaded);
-    increment_counter(n("num_requests"), stats.requests);
-    increment_counter(n("total_request_time_ms"), stats.time.as_millis() as usize);
+    increment_counter(n("total_rx_bytes"), stats.downloaded as u64);
+    increment_counter(n("total_tx_bytes"), stats.uploaded as u64);
+    increment_counter(n("num_requests"), stats.requests as u64);
+    increment_counter(n("total_request_time_ms"), stats.time.as_millis() as u64);
     increment_counter(
         n("total_response_delay_ms"),
-        stats.latency.as_millis() as usize,
+        stats.latency.as_millis() as u64,
     )
 }
 

@@ -7,17 +7,17 @@
 
 use std::borrow::Borrow;
 use std::collections::HashMap;
-use std::sync::atomic::AtomicUsize;
+use std::sync::atomic::AtomicU64;
 use std::sync::atomic::Ordering;
 
 use once_cell::sync::Lazy;
 use parking_lot::RwLock;
 
-pub fn increment_counter(key: impl Key, value: usize) {
+pub fn increment_counter(key: impl Key, value: u64) {
     METRICS.increment_counter(key, value)
 }
 
-pub fn summarize() -> HashMap<String, usize> {
+pub fn summarize() -> HashMap<String, u64> {
     METRICS.summarize()
 }
 
@@ -27,7 +27,7 @@ impl<T> Key for T where T: Into<String> + Borrow<str> {}
 pub static METRICS: Lazy<Metrics> = Lazy::new(Metrics::new);
 
 pub struct Metrics {
-    counters: RwLock<HashMap<String, AtomicUsize>>,
+    counters: RwLock<HashMap<String, AtomicU64>>,
 }
 
 impl Metrics {
@@ -37,7 +37,7 @@ impl Metrics {
         Self { counters }
     }
 
-    fn increment_counter(&self, key: impl Key, value: usize) {
+    fn increment_counter(&self, key: impl Key, value: u64) {
         {
             let counters = self.counters.read();
             if let Some(counter) = counters.get(key.borrow()) {
@@ -53,10 +53,10 @@ impl Metrics {
             .and_modify(|c| {
                 c.fetch_add(value, Ordering::Release);
             })
-            .or_insert_with(|| AtomicUsize::new(value));
+            .or_insert_with(|| AtomicU64::new(value));
     }
 
-    fn summarize(&self) -> HashMap<String, usize> {
+    fn summarize(&self) -> HashMap<String, u64> {
         let counters = self.counters.read();
         counters
             .iter()

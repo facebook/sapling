@@ -216,7 +216,7 @@ impl EdenFsClient {
             .into_iter()
             .filter_map(|c| CheckoutConflict::local_try_from(c).ok())
             .collect::<Vec<_>>();
-        hg_metrics::increment_counter("eden_conflict_count", result.len());
+        hg_metrics::increment_counter("eden_conflict_count", result.len() as u64);
         Ok(result)
     }
 }
