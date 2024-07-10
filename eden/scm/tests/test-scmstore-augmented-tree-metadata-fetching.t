@@ -387,7 +387,30 @@ Verify we do have tree locally, but don't have aux data locally:
 
 Can fetch remotely:
 
-  $ hg debugscmstore -r $A dir --mode=tree --aux-only
+  $ LOG=eagerepo=debug hg debugscmstore -r $A dir --mode=tree --aux-only
+  DEBUG eagerepo::api: trees * (glob)
+  Successfully fetched tree: (
+      Key {
+          path: RepoPathBuf(
+              "dir",
+          ),
+          hgid: HgId("2aabbe46539594a3aede2a262ebfbcd3107ad10c"),
+      },
+      StoreTree {
+          content: None,
+          parents: None,
+          aux_data: Some(
+              DirectoryMetadata {
+                  augmented_manifest_id: Blake3("3db383bed414336a1d6673620506fa927a6c53f9052390487f11821b2547b585"),
+                  augmented_manifest_size: 481,
+              },
+          ),
+      },
+  )
+
+Make sure repeat query doesn't trigger another edenapi fetch:
+
+  $ LOG=eagerepo=debug hg debugscmstore -r $A dir --mode=tree --aux-only
   Successfully fetched tree: (
       Key {
           path: RepoPathBuf(

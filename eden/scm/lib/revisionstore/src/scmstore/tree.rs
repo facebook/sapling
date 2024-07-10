@@ -338,6 +338,16 @@ impl TreeStore {
                                         }
                                     }
                                 }
+
+                                if let Some(aux_data) = entry.aux_data() {
+                                    if let Some(tree_aux_store) = tree_aux_store.as_ref() {
+                                        tracing::trace!(
+                                            hgid = %key.hgid,
+                                            "writing self to tree aux store"
+                                        );
+                                        tree_aux_store.put(key.hgid, &aux_data)?;
+                                    }
+                                }
                             }
 
                             if indexedlog_cache.is_some() && cache_to_local_cache {
