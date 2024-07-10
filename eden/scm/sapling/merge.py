@@ -1924,22 +1924,22 @@ def goto(
     ):
         target = repo[node]
         try:
-            # Trigger lazy loading of Python's treestate. If the below repo.setparents
-            # triggers loading, there will be an apparent mismatch between the dirstate
-            # read from disk and the in-memory-modified treestate.
-            repo.dirstate._map
-
-            ret = repo._rsrepo.goto(
-                ctx=repo.ui.rustcontext(),
-                target=target.node(),
-                bookmark={"action": "none"},
-                mode="revert_conflicts" if force else "abort_if_conflicts",
-                report_mode="quiet",
-            )
-            if git.isgitformat(repo):
-                git.submodulecheckout(target, force=force)
-            repo.setparents(target.node())
-            return ret
+            with repo.dirstate.parentchange():
+                # Trigger lazy loading of Python's treestate. If the below repo.setparents
+                # triggers loading, there will be an apparent mismatch between the dirstate
+                # read from disk and the in-memory-modified treestate.
+                repo.dirstate._map
+                ret = repo._rsrepo.goto(
+                    ctx=repo.ui.rustcontext(),
+                    target=target.node(),
+                    bookmark={"action": "none"},
+                    mode="revert_conflicts" if force else "abort_if_conflicts",
+                    report_mode="quiet",
+                )
+                if git.isgitformat(repo):
+                    git.submodulecheckout(target, force=force)
+                repo.setparents(target.node())
+                return ret
         except rusterror.CheckoutConflictsError as ex:
             abort_on_conflicts(ex.args[0])
 
