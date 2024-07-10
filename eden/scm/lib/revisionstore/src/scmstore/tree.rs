@@ -208,7 +208,7 @@ impl TreeStore {
                         let mut found_count: usize = 0;
                         for key in pending.into_iter() {
                             if let Some(entry) = log.get_entry(key)? {
-                                tracing::trace!("{:?} found in {:?}", &entry.key(), location);
+                                tracing::trace!("{:?} found in {:?}", entry.key(), location);
                                 common
                                     .found(entry.key().clone(), LazyTree::IndexedLog(entry).into());
                                 found_count += 1;
@@ -248,12 +248,37 @@ impl TreeStore {
                         }
                     }
                 }
+
+                if let Some(tree_aux_store) = &tree_aux_store {
+                    let pending: Vec<_> = common
+                        .pending(TreeAttributes::AUX_DATA, false)
+                        .map(|(key, _attrs)| key.clone())
+                        .collect();
+                    for key in pending.into_iter() {
+                        if let Some(entry) = tree_aux_store.get(&key.hgid)? {
+                            tracing::trace!(?key, ?entry, "found tree aux entry in cache");
+                            common.found(
+                                key.clone(),
+                                StoreTree {
+                                    content: None,
+                                    parents: None,
+                                    aux_data: Some(entry),
+                                },
+                            );
+                        }
+                    }
+                }
             }
 
             if fetch_remote {
                 if let Some(ref edenapi) = edenapi {
                     let pending: Vec<_> = common
-                        .pending(TreeAttributes::CONTENT | TreeAttributes::PARENTS, false)
+                        .pending(
+                            TreeAttributes::CONTENT
+                                | TreeAttributes::PARENTS
+                                | TreeAttributes::AUX_DATA,
+                            false,
+                        )
                         .map(|(key, _attrs)| key.clone())
                         .collect();
                     if !pending.is_empty() {
@@ -281,7 +306,9 @@ impl TreeStore {
                             manifest_blob: true,
                             // We use parents to check hash integrity.
                             parents: true,
+                            // Include file and tree aux data for entries, if available (tree aux data requires augmented_trees=true).
                             child_metadata: fetch_children_metadata,
+                            // Use pre-derived "augmented" tree data, which includes tree aux data.
                             augmented_trees: fetch_tree_aux_data,
                         };
 

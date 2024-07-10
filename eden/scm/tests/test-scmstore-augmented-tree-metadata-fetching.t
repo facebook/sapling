@@ -385,15 +385,24 @@ Verify we do have tree locally, but don't have aux data locally:
       "not found locally and not contacting server",
   )
 
-FIXME Can fetch remotely:
+Can fetch remotely:
 
   $ hg debugscmstore -r $A dir --mode=tree --aux-only
-  Failed to fetch tree: (
+  Successfully fetched tree: (
       Key {
           path: RepoPathBuf(
               "dir",
           ),
           hgid: HgId("2aabbe46539594a3aede2a262ebfbcd3107ad10c"),
       },
-      "server did not provide content",
+      StoreTree {
+          content: None,
+          parents: None,
+          aux_data: Some(
+              DirectoryMetadata {
+                  augmented_manifest_id: Blake3("3db383bed414336a1d6673620506fa927a6c53f9052390487f11821b2547b585"),
+                  augmented_manifest_size: 481,
+              },
+          ),
+      },
   )
