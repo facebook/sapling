@@ -44,7 +44,7 @@ define_flags! {
         /// Choose fetch mode (e.g. local_only or allow_remote)
         fetch_mode: Option<String>,
 
-        /// Only fetch AUX data (don't request file content).
+        /// Only fetch AUX data (don't request file/tree content).
         aux_only: bool,
 
         /// Request tree parents.
@@ -132,6 +132,7 @@ pub fn run(ctx: ReqCtx<DebugScmStoreOpts>, repo: &mut Repo) -> Result<u8> {
             keys,
             fetch_mode,
             ctx.opts.tree_parents,
+            ctx.opts.aux_only,
         )?,
     }
 
@@ -202,13 +203,18 @@ fn fetch_trees(
     keys: Vec<Key>,
     fetch_mode: FetchMode,
     tree_parents: bool,
+    aux_only: bool,
 ) -> Result<()> {
     repo.tree_store()?;
     let store = repo.tree_scm_store().unwrap();
 
     let mut stdout = io.output();
 
-    let mut attrs = TreeAttributes::CONTENT;
+    let mut attrs = if aux_only {
+        TreeAttributes::AUX_DATA
+    } else {
+        TreeAttributes::CONTENT
+    };
     if tree_parents {
         attrs |= TreeAttributes::PARENTS;
     }

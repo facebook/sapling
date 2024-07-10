@@ -296,3 +296,104 @@ Fetch mode can also trigger tree metadata fetch:
           aux_data: None,
       },
   )
+
+
+  $ newclientrepo client2 test:server
+  $ hg pull -q -r $A
+  $ setconfig remotefilelog.cachepath=$TESTTMP/cache4
+
+Show we can fetch tree aux data even if plain tree is already available locally.
+
+First fetch plain tree:
+  $ hg debugscmstore -r $A dir --mode=tree --config scmstore.fetch-tree-aux-data=false
+  Successfully fetched tree: (
+      Key {
+          path: RepoPathBuf(
+              "dir",
+          ),
+          hgid: HgId("2aabbe46539594a3aede2a262ebfbcd3107ad10c"),
+      },
+      StoreTree {
+          content: Some(
+              SaplingRemoteApi(
+                  TreeEntry {
+                      key: Key {
+                          path: RepoPathBuf(
+                              "dir",
+                          ),
+                          hgid: HgId("2aabbe46539594a3aede2a262ebfbcd3107ad10c"),
+                      },
+                      data: Some(
+                          b"dir\0ac934ed5f01e06c92b6c95661b2ccaf2a734509ft\nfile1\0a58629e4c3c5a5d14b5810b2e35681bb84319167\nfile2\0ecbe8b3047eb5d9bb298f516d451f64491812e07\n",
+                      ),
+                      parents: Some(
+                          None,
+                      ),
+                      children: None,
+                      tree_aux_data: None,
+                  },
+              ),
+          ),
+          parents: None,
+          aux_data: None,
+      },
+  )
+
+Verify we do have tree locally, but don't have aux data locally:
+  $ hg debugscmstore -r $A dir --mode=tree --fetch-mode=LOCAL
+  Successfully fetched tree: (
+      Key {
+          path: RepoPathBuf(
+              "dir",
+          ),
+          hgid: HgId("2aabbe46539594a3aede2a262ebfbcd3107ad10c"),
+      },
+      StoreTree {
+          content: Some(
+              IndexedLog(
+                  Entry {
+                      key: Key {
+                          path: RepoPathBuf(
+                              "dir",
+                          ),
+                          hgid: HgId("2aabbe46539594a3aede2a262ebfbcd3107ad10c"),
+                      },
+                      metadata: Metadata {
+                          size: None,
+                          flags: None,
+                      },
+                      content: OnceCell(Uninit),
+                      compressed_content: Some(
+                          b"\x8c\x00\x00\x00\xf1Mdir\x00ac934ed5f01e06c92b6c95661b2ccaf2a734509ft\nfile1\x00a58629e4c3c5a5d14b5810b2e35681bb84319167/\x00\xf0\x1c2\x00ecbe8b3047eb5d9bb298f516d451f64491812e07\n",
+                      ),
+                  },
+              ),
+          ),
+          parents: None,
+          aux_data: None,
+      },
+  )
+
+  $ hg debugscmstore -r $A dir --mode=tree --aux-only --fetch-mode=LOCAL
+  Failed to fetch tree: (
+      Key {
+          path: RepoPathBuf(
+              "dir",
+          ),
+          hgid: HgId("2aabbe46539594a3aede2a262ebfbcd3107ad10c"),
+      },
+      "not found locally and not contacting server",
+  )
+
+FIXME Can fetch remotely:
+
+  $ hg debugscmstore -r $A dir --mode=tree --aux-only
+  Failed to fetch tree: (
+      Key {
+          path: RepoPathBuf(
+              "dir",
+          ),
+          hgid: HgId("2aabbe46539594a3aede2a262ebfbcd3107ad10c"),
+      },
+      "server did not provide content",
+  )
