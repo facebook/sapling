@@ -154,6 +154,7 @@ export type TrackEventName =
 export type TrackErrorName =
   | 'BlameError'
   | 'DiffFetchFailed'
+  | 'EdenFsUnhealthy'
   | 'InvalidCwd'
   | 'InvalidCommand'
   | 'JfNotAuthenticated'

@@ -123,6 +123,7 @@ export type RepositoryError =
       command: string;
       path: string | undefined;
     }
+  | {type: 'edenFsUnhealthy'; cwd: string}
   | {type: 'cwdNotARepository'; cwd: string}
   | {type: 'cwdDoesNotExist'; cwd: string}
   | {

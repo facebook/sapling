@@ -492,6 +492,10 @@ export class Repository {
       };
     }
     if (repoRoot == null || dotdir == null) {
+      // A seemingly invalid repo may just be from EdenFS not running properly
+      if (await isUnhealthyEdenFs(cwd)) {
+        return {type: 'edenFsUnhealthy', cwd};
+      }
       return {type: 'cwdNotARepository', cwd};
     }
 
@@ -1407,4 +1411,8 @@ export function absolutePathForFileInRepo(
   } else {
     return null;
   }
+}
+
+function isUnhealthyEdenFs(cwd: string): Promise<boolean> {
+  return exists(path.join(cwd, 'README_EDEN.txt'));
 }

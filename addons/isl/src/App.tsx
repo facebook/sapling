@@ -208,6 +208,12 @@ function ISLNullState({repoError}: {repoError: RepositoryError}) {
           case 'cwdNotARepository':
             tracker.track('UIEmptyState', {extras: {cwd: repoError.cwd}, errorName: 'InvalidCwd'});
             break;
+          case 'edenFsUnhealthy':
+            tracker.track('UIEmptyState', {
+              extras: {cwd: repoError.cwd},
+              errorName: 'EdenFsUnhealthy',
+            });
+            break;
           case 'invalidCommand':
             tracker.track('UIEmptyState', {
               extras: {command: repoError.command},
@@ -290,6 +296,27 @@ function ISLNullState({repoError}: {repoError: RepositoryError}) {
               ]}
             />
           )}
+          <CwdSelections dismiss={() => null} />
+        </>
+      );
+    } else if (repoError.type === 'edenFsUnhealthy') {
+      content = (
+        <>
+          <ErrorNotice
+            title={<T replace={{$cwd: repoError.cwd}}>EdenFS is not running properly in $cwd</T>}
+            description={
+              <T replace={{$edenDoctor: <code>eden doctor</code>}}>
+                Try running $edenDoctor and reloading the ISL window
+              </T>
+            }
+            error={
+              new Error(
+                t('README_EDEN.txt found in $cwd', {
+                  replace: {$cwd: repoError.cwd},
+                }),
+              )
+            }
+          />
           <CwdSelections dismiss={() => null} />
         </>
       );
