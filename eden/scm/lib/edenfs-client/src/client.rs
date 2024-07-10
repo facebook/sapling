@@ -119,7 +119,10 @@ impl EdenFsClient {
             },
         )))?;
 
-        tracing::debug!(target: "measuredtimes", edenclientstatus_time=start_time.elapsed().as_millis() as u64);
+        hg_metrics::increment_counter(
+            "edenclientstatus_time",
+            start_time.elapsed().as_millis() as u64,
+        );
 
         let mut result = BTreeMap::new();
         for (path_bytes, status) in thrift_result.status.entries {
@@ -210,7 +213,10 @@ impl EdenFsClient {
             &params,
         )))?;
 
-        tracing::debug!(target: "measuredtimes", edenclientcheckout_time=start_time.elapsed().as_millis() as u64);
+        hg_metrics::increment_counter(
+            "edenclientcheckout_time",
+            start_time.elapsed().as_millis() as u64,
+        );
 
         let result = thrift_result
             .into_iter()
