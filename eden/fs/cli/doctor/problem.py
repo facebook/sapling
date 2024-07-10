@@ -161,6 +161,8 @@ class ProblemFixer(ProblemTracker):
         self.num_failed_fixes = 0
         self.num_manual_fixes = 0
         self.problem_types: Set[str] = set()
+        self.problem_failed_fixes: Set[str] = set()
+        self.problem_manual_fixes: Set[str] = set()
         self.problem_description: List[str] = []
 
     def add_problem_impl(self, problem: ProblemBase) -> None:
@@ -177,9 +179,18 @@ class ProblemFixer(ProblemTracker):
             self.fix_problem(problem)
         else:
             self.num_manual_fixes += 1
+            self.problem_manual_fixes.add(problem.__class__.__name__)
             msg = problem.get_manual_remediation_message()
             if msg:
                 self._filtered_out.write(problem.severity(), msg, end="\n\n")
+            else:
+                self._filtered_out.write(
+                    problem.severity(),
+                    f"Found problem with no documented fix: {problem.__class__.__name__}, please contact the eden team for support",
+                    fg=self._filtered_out.out.RED,
+                    end="\n\n",
+                    flush=True,
+                )
 
     def fix_problem(self, problem: FixableProblem) -> None:
         self._filtered_out.write(
@@ -201,11 +212,12 @@ class ProblemFixer(ProblemTracker):
             )
             self._filtered_out.write(
                 problem.severity(),
-                f"Failed to fix problem: {format_exception(ex, with_tb=True)}",
+                f"Failed to fix problem {problem.__class__.__name__}: {format_exception(ex, with_tb=True)}",
                 end="\n\n",
                 flush=True,
             )
             self.num_failed_fixes += 1
+            self.problem_failed_fixes.add(problem.__class__.__name__)
 
 
 class DryRunFixer(ProblemFixer):

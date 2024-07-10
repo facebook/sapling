@@ -471,7 +471,7 @@ Collect an 'eden rage' and ask in the EdenFS (Windows |macOS )?Users group if yo
                 "Watchman is watching /path/to/eden-mount with the wrong watcher type: "
                 '"inotify" instead of "eden"\n'
                 "Fixing watchman watch for /path/to/eden-mount...<red>error<reset>\n"
-                "Failed to fix problem: RemediationError: Failed to replace "
+                "Failed to fix problem IncorrectWatchmanWatch: RemediationError: Failed to replace "
                 'watchman watch for /path/to/eden-mount with an "eden" watcher'
             ),
             out,

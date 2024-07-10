@@ -434,6 +434,10 @@ class EdenDoctor(EdenDoctorChecker):
                 num_problems=fixer.num_problems,
                 problems=fixer.problem_types.union(fixer.ignored_problem_types),
                 problem_description=fixer.problem_description,
+                num_failed_fixes=fixer.num_failed_fixes,
+                num_manual_fixes=fixer.num_manual_fixes,
+                problem_failed_fixes=fixer.problem_failed_fixes,
+                problem_manual_fixes=fixer.problem_manual_fixes,
             )
 
         if fixer.num_problems == 0:

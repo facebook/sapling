@@ -61,6 +61,8 @@ The most common cause for this is if your ~/local symlink does not point to loca
 Checking {checkout.path}
 <yellow>- Found problem:<reset>
 The Mercurial data directory for {checkout.path}/.hg/sharedpath is at {instance.default_backing_repo}/.hg which is on a NFS filesystem. Accessing files and directories in this repository will be slow.
+<red>Found problem with no documented fix: MercurialDataOnNFS, please contact the eden team for support<reset>
+
 <yellow>Discovered 2 problems during --dry-run<reset>
 """
         self.assertEqual(expected, out.getvalue())
@@ -106,6 +108,8 @@ Checking {v.client_path}
         out = f"""Checking {v.client_path}
 <yellow>- Found problem:<reset>
 The Mercurial data directory for {v.client_path}/.hg/sharedpath is at {v.shared_path} which is on a NFS filesystem. Accessing files and directories in this repository will be slow.
+<red>Found problem with no documented fix: MercurialDataOnNFS, please contact the eden team for support<reset>
+
 <yellow>Discovered 1 problem during --dry-run<reset>
 """
         self.assertEqual(mock_is_nfs_mounted.call_count, 2)
@@ -131,6 +135,8 @@ The most common cause for this is if your ~/local symlink does not point to loca
 Checking {v.client_path}
 <yellow>- Found problem:<reset>
 The Mercurial data directory for {v.client_path}/.hg/sharedpath is at {v.shared_path} which is on a NFS filesystem. Accessing files and directories in this repository will be slow.
+<red>Found problem with no documented fix: MercurialDataOnNFS, please contact the eden team for support<reset>
+
 <yellow>Discovered 2 problems during --dry-run<reset>
 """
         self.assertEqual(mock_is_nfs_mounted.call_count, 2)
