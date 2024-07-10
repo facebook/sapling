@@ -149,8 +149,10 @@ def wrapgoto(
     updatecheck=None,
     **kwargs,
 ):
-    if repo.ui.configbool("workingcopy", "rust-checkout") and (
-        force or updatecheck != "none"
+    if (
+        repo.ui.configbool("checkout", "use-rust")
+        and repo.ui.configbool("workingcopy", "rust-checkout")
+        and (force or updatecheck != "none")
     ):
         # Rust handles "hg.update" events, so skip "hg.update" below if we are
         # going to be using Rust.

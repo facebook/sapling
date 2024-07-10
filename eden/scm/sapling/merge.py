@@ -1919,8 +1919,10 @@ def goto(
             updatecheck = "none"
         assert updatecheck in ("none", "noconflict")
 
-    if repo.ui.configbool("workingcopy", "rust-checkout") and (
-        force or updatecheck != "none"
+    if (
+        repo.ui.configbool("workingcopy", "rust-checkout")
+        and repo.ui.configbool("checkout", "use-rust")
+        and (force or updatecheck != "none")
     ):
         target = repo[node]
         try:
