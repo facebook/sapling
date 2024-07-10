@@ -5,11 +5,12 @@ oncall("mononoke")
 rust_library(
     name = "commit_cloud_intern_utils",
     srcs = glob([
-        "*.rs",
+        "**/*.rs",
     ]),
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:base64",
+        "fbsource//third-party/rust:regex",
         "fbsource//third-party/rust:reqwest",
         "fbsource//third-party/rust:serde",
         "fbsource//third-party/rust:serde_json",
