@@ -6,9 +6,9 @@
  */
 
 import {Tooltip} from './Tooltip';
-import {Dropdown} from './components/Dropdown';
 import {t, T} from './i18n';
 import {localStorageBackedAtom} from './jotaiUtils';
+import {Dropdown} from 'isl-components/Dropdown';
 import {useAtom} from 'jotai';
 
 export enum AmendRestackBehavior {

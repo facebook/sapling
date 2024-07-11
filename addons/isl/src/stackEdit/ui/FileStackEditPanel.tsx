@@ -10,11 +10,11 @@ import type {Mode} from './FileStackEditorLines';
 
 import {Row} from '../../ComponentUtils';
 import {EmptyState} from '../../EmptyState';
-import {Dropdown} from '../../components/Dropdown';
 import {t, T} from '../../i18n';
 import {FileStackEditorRow} from './FileStackEditor';
 import {bumpStackEditMetric, useStackEditState} from './stackEditState';
 import {Checkbox} from 'isl-components/Checkbox';
+import {Dropdown} from 'isl-components/Dropdown';
 import {RadioGroup} from 'isl-components/Radio';
 import {atom, useAtom} from 'jotai';
 import {useState} from 'react';
