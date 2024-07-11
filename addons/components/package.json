@@ -1,0 +1,22 @@
+{
+  "name": "isl-components",
+  "version": "0.1.0",
+  "private": true,
+  "devDependencies": {
+    "@testing-library/jest-dom": "^5.14.1",
+    "@testing-library/react": "^15.0.6",
+    "@testing-library/user-event": "^13.2.1",
+    "@types/react": "^18.3.1",
+    "@types/react-dom": "^18.3.0",
+    "react-dom": "^18.3.1",
+    "jest": "29.7.0"
+  },
+  "dependencies": {
+    "@vscode/codicons": "^0.0.33",
+    "react": "^18.3.1"
+  },
+  "scripts": {
+    "eslint": "eslint . github --ext .ts --ext .tsx",
+    "test": "jest"
+  }
+}
