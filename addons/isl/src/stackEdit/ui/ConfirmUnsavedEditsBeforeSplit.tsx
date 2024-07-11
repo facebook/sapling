@@ -17,12 +17,12 @@ import {
 } from '../../CommitInfoView/CommitInfoState';
 import {commitMessageFieldsSchema} from '../../CommitInfoView/CommitMessageFields';
 import {FlexSpacer} from '../../ComponentUtils';
-import {Button} from '../../components/Button';
 import {Divider} from '../../components/Divider';
 import {T, t} from '../../i18n';
 import {readAtom, writeAtom} from '../../jotaiUtils';
 import {CommitPreview} from '../../previews';
 import {useModal} from '../../useModal';
+import {Button} from 'isl-components/Button';
 import {useAtomValue} from 'jotai';
 import {useCallback} from 'react';
 import {Icon} from 'shared/Icon';

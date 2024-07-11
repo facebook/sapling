@@ -36,7 +36,6 @@ import {
 import {submitAsDraft, SubmitAsDraftCheckbox} from '../codeReview/DraftCheckbox';
 import {overrideDisabledSubmitModes} from '../codeReview/github/branchPrState';
 import {Badge} from '../components/Badge';
-import {Button} from '../components/Button';
 import {Divider} from '../components/Divider';
 import GatedComponent from '../components/GatedComponent';
 import {RadioGroup} from '../components/Radio';
@@ -86,6 +85,7 @@ import {FillCommitMessage} from './FillCommitMessage';
 import SplitSuggestion from './SplitSuggestion';
 import {CommitTitleByline, getFieldToAutofocus, Section, SmallCapsTitle} from './utils';
 import deepEqual from 'fast-deep-equal';
+import {Button} from 'isl-components/Button';
 import {useAtom, useAtomValue} from 'jotai';
 import {useAtomCallback} from 'jotai/utils';
 import {useCallback, useEffect, useMemo} from 'react';

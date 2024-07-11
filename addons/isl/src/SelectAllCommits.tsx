@@ -8,12 +8,12 @@
 import {useCommand} from './ISLShortcuts';
 import {Kbd} from './Kbd';
 import {Tooltip} from './Tooltip';
-import {Button} from './components/Button';
 import {islDrawerState} from './drawerState';
 import {t, T} from './i18n';
 import {readAtom, writeAtom} from './jotaiUtils';
 import {dagWithPreviews} from './previews';
 import {selectedCommits} from './selection';
+import {Button} from 'isl-components/Button';
 import {useCallback} from 'react';
 import {Icon} from 'shared/Icon';
 import {KeyCode, Modifier} from 'shared/KeyboardShortcuts';

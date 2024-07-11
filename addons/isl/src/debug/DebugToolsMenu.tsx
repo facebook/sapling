@@ -19,7 +19,6 @@ import {Tooltip} from '../Tooltip';
 import {enableReactTools, enableReduxTools} from '../atoms/debugToolAtoms';
 import {holdingCtrlAtom} from '../atoms/keyboardAtoms';
 import {Badge} from '../components/Badge';
-import {Button} from '../components/Button';
 import {Checkbox} from '../components/Checkbox';
 import {DagCommitInfo} from '../dag/dagCommitInfo';
 import {useHeartbeat} from '../heartbeat';
@@ -42,6 +41,7 @@ import {isDev} from '../utils';
 import {ComponentExplorerButton} from './ComponentExplorer';
 import {readInterestingAtoms, serializeAtomsState} from './getInterestingAtoms';
 import * as stylex from '@stylexjs/stylex';
+import {Button} from 'isl-components/Button';
 import {atom, useAtom, useAtomValue} from 'jotai';
 import {useState, useCallback, useEffect} from 'react';
 

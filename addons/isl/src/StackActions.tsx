@@ -17,7 +17,6 @@ import {showSuggestedRebaseForStack, SuggestedRebaseButton} from './SuggestedReb
 import {Tooltip, DOCUMENTATION_DELAY} from './Tooltip';
 import {codeReviewProvider, allDiffSummaries} from './codeReview/CodeReviewInfo';
 import {SyncStatus, syncStatusAtom} from './codeReview/syncStatus';
-import {Button} from './components/Button';
 import {T, t} from './i18n';
 import {IconStack} from './icons/IconStack';
 import {useRunOperation} from './operationsState';
@@ -27,6 +26,7 @@ import {useConfirmUnsavedEditsBeforeSplit} from './stackEdit/ui/ConfirmUnsavedEd
 import {StackEditIcon} from './stackEdit/ui/StackEditIcon';
 import {editingStackIntentionHashes, loadingStackState} from './stackEdit/ui/stackEditState';
 import {succeedableRevset} from './types';
+import {Button} from 'isl-components/Button';
 import {useAtom, useAtomValue} from 'jotai';
 import {type ContextMenuItem, useContextMenu} from 'shared/ContextMenu';
 import {Icon} from 'shared/Icon';

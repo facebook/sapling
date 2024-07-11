@@ -12,7 +12,6 @@ import {
   getDefaultEditedCommitMessage,
 } from '../../CommitInfoView/CommitInfoState';
 import {Tooltip, DOCUMENTATION_DELAY} from '../../Tooltip';
-import {Button} from '../../components/Button';
 import {T, t} from '../../i18n';
 import {writeAtom} from '../../jotaiUtils';
 import {ImportStackOperation} from '../../operations/ImportStackOperation';
@@ -27,6 +26,7 @@ import {
   sendStackEditMetrics,
   useStackEditState,
 } from './stackEditState';
+import {Button} from 'isl-components/Button';
 import {useAtom, useAtomValue} from 'jotai';
 import {useCallback} from 'react';
 import {Icon} from 'shared/Icon';

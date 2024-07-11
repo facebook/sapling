@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {Button} from '../components/Button';
+import {Button} from 'isl-components/Button';
 import {Icon} from 'shared/Icon';
 
 export function TokensList({

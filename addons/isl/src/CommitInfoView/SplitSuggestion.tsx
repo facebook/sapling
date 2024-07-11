@@ -11,7 +11,6 @@ import {Internal} from '../Internal';
 import {Tooltip} from '../Tooltip';
 import {tracker} from '../analytics';
 import {codeReviewProvider, diffSummary} from '../codeReview/CodeReviewInfo';
-import {Button} from '../components/Button';
 import {Divider} from '../components/Divider';
 import GatedComponent from '../components/GatedComponent';
 import {T, t} from '../i18n';
@@ -30,6 +29,7 @@ import {
 import {SplitButton} from '../stackEdit/ui/SplitButton';
 import {type CommitInfo} from '../types';
 import {commitMode} from './CommitInfoState';
+import {Button} from 'isl-components/Button';
 import {useAtom, useAtomValue} from 'jotai';
 import {Icon} from 'shared/Icon';
 

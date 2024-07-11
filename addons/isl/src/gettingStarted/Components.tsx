@@ -6,11 +6,11 @@
  */
 
 import {Link as LinkEl} from '../Link';
-import {Button} from '../components/Button';
 import {T} from '../i18n';
 import platform from '../platform';
 import {themeState} from '../theme';
 import {Ribbon} from './Ribbon';
+import {Button} from 'isl-components/Button';
 import {useAtomValue} from 'jotai';
 import {Icon} from 'shared/Icon';
 

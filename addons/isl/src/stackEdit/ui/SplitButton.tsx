@@ -10,12 +10,12 @@ import type {TrackEventName} from 'isl-server/src/analytics/eventNames';
 
 import {Tooltip} from '../../Tooltip';
 import {tracker} from '../../analytics';
-import {Button} from '../../components/Button';
 import {T, t} from '../../i18n';
 import {SplitCommitIcon} from '../../icons/SplitCommitIcon';
 import {uncommittedChangesWithPreviews} from '../../previews';
 import {useConfirmUnsavedEditsBeforeSplit} from './ConfirmUnsavedEditsBeforeSplit';
 import {bumpStackEditMetric, editingStackIntentionHashes} from './stackEditState';
+import {Button} from 'isl-components/Button';
 import {useAtomValue, useSetAtom} from 'jotai';
 
 /** Button to open split UI for the current commit. Expected to be shown on the head commit.

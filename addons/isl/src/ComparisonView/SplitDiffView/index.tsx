@@ -12,12 +12,12 @@ import type {ParsedDiff} from 'shared/patch/parse';
 
 import {generatedStatusDescription} from '../../GeneratedFile';
 import {Tooltip} from '../../Tooltip';
-import {Button} from '../../components/Button';
 import {T, t} from '../../i18n';
 import platform from '../../platform';
 import {GeneratedStatus} from '../../types';
 import {FileHeader, diffTypeToIconType} from './SplitDiffFileHeader';
 import {SplitDiffTable} from './SplitDiffHunk';
+import {Button} from 'isl-components/Button';
 import {useState} from 'react';
 import {Icon} from 'shared/Icon';
 

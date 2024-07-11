@@ -16,7 +16,6 @@ import {
   parseCommitMessageFields,
 } from './CommitInfoView/CommitMessageFields';
 import {Tooltip} from './Tooltip';
-import {Button} from './components/Button';
 import {T, t} from './i18n';
 import {readAtom, writeAtom} from './jotaiUtils';
 import {
@@ -28,6 +27,7 @@ import {operationBeingPreviewed, useRunPreviewedOperation} from './operationsSta
 import {type Dag, dagWithPreviews} from './previews';
 import {selectedCommits} from './selection';
 import {firstOfIterable} from './utils';
+import {Button} from 'isl-components/Button';
 import {atom, useAtomValue} from 'jotai';
 import {useCallback} from 'react';
 import {Icon} from 'shared/Icon';

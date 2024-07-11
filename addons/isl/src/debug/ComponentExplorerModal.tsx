@@ -12,8 +12,6 @@ import {ErrorNotice} from '../ErrorNotice';
 import {Link} from '../Link';
 import {Tooltip} from '../Tooltip';
 import {Badge} from '../components/Badge';
-import {Button} from '../components/Button';
-import {ButtonDropdown} from '../components/ButtonDropdown';
 import {Checkbox} from '../components/Checkbox';
 import {Divider} from '../components/Divider';
 import {Dropdown} from '../components/Dropdown';
@@ -27,6 +25,8 @@ import {T} from '../i18n';
 import {layout} from '../stylexUtils';
 import {colors, font, radius, spacing} from '../tokens.stylex';
 import * as stylex from '@stylexjs/stylex';
+import {Button} from 'isl-components/Button';
+import {ButtonDropdown} from 'isl-components/ButtonDropdown';
 import {useState, type ReactNode} from 'react';
 import {Icon} from 'shared/Icon';
 

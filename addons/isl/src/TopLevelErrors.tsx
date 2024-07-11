@@ -14,10 +14,10 @@ import {ErrorNotice} from './ErrorNotice';
 import {Internal} from './Internal';
 import {tracker} from './analytics';
 import {allDiffSummaries} from './codeReview/CodeReviewInfo';
-import {Button} from './components/Button';
 import {t, T} from './i18n';
 import platform from './platform';
 import {reconnectingStatus, repositoryInfo} from './serverAPIState';
+import {Button} from 'isl-components/Button';
 import {useAtomValue} from 'jotai';
 import {useThrottledEffect} from 'shared/hooks';
 

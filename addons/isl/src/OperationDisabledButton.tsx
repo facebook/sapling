@@ -9,10 +9,10 @@ import type {Operation} from './operations/Operation';
 import type {PrimitiveAtom} from 'jotai';
 import type {ComponentProps} from 'react';
 
-import {Button} from './components/Button';
 import {atomFamilyWeak} from './jotaiUtils';
 import {useRunOperation} from './operationsState';
 import {useMostRecentPendingOperation} from './previews';
+import {Button} from 'isl-components/Button';
 import {atom, useAtom} from 'jotai';
 import {Icon} from 'shared/Icon';
 import {isPromise} from 'shared/utils';

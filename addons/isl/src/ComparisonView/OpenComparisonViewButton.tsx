@@ -8,10 +8,10 @@
 import type {ReactNode} from 'react';
 import type {Comparison} from 'shared/Comparison';
 
-import {Button} from '../components/Button';
 import {T, t} from '../i18n';
 import {short} from '../utils';
 import {currentComparisonMode} from './atoms';
+import {Button} from 'isl-components/Button';
 import {useSetAtom} from 'jotai';
 import {ComparisonType} from 'shared/Comparison';
 import {Icon} from 'shared/Icon';

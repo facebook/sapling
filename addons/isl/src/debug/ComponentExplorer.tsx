@@ -5,9 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {Button} from '../components/Button';
 import {T} from '../i18n';
 import {useModal} from '../useModal';
+import {Button} from 'isl-components/Button';
 import {Suspense, lazy} from 'react';
 import {Icon} from 'shared/Icon';
 

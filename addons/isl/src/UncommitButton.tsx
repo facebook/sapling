@@ -7,12 +7,12 @@
 
 import {DOCUMENTATION_DELAY, Tooltip} from './Tooltip';
 import {codeReviewProvider, diffSummary} from './codeReview/CodeReviewInfo';
-import {Button} from './components/Button';
 import {t, T} from './i18n';
 import {UncommitOperation} from './operations/Uncommit';
 import {useRunOperation} from './operationsState';
 import foundPlatform from './platform';
 import {dagWithPreviews} from './previews';
+import {Button} from 'isl-components/Button';
 import {useAtomValue} from 'jotai';
 import {Icon} from 'shared/Icon';
 

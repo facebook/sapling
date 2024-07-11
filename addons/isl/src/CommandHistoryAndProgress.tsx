@@ -13,7 +13,6 @@ import {Delayed} from './Delayed';
 import {Subtle} from './Subtle';
 import {Tooltip} from './Tooltip';
 import {codeReviewProvider} from './codeReview/CodeReviewInfo';
-import {Button} from './components/Button';
 import {T, t} from './i18n';
 import {
   EXIT_CODE_FORGET,
@@ -25,6 +24,7 @@ import {repositoryInfo} from './serverAPIState';
 import {processTerminalLines} from './terminalOutput';
 import {CommandRunner} from './types';
 import {short} from './utils';
+import {Button} from 'isl-components/Button';
 import {useAtomValue} from 'jotai';
 import {Icon} from 'shared/Icon';
 import './CommandHistoryAndProgress.css';

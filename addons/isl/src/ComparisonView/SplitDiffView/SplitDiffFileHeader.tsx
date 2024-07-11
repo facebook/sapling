@@ -10,9 +10,9 @@ import type {DiffType} from 'shared/patch/parse';
 import type {RepoPath} from 'shared/types/common';
 
 import {Tooltip} from '../../Tooltip';
-import {Button} from '../../components/Button';
 import {t} from '../../i18n';
 import platform from '../../platform';
+import {Button} from 'isl-components/Button';
 import React from 'react';
 import {Icon} from 'shared/Icon';
 

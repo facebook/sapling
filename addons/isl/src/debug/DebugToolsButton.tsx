@@ -6,9 +6,9 @@
  */
 
 import {Tooltip} from '../Tooltip';
-import {Button} from '../components/Button';
 import {t} from '../i18n';
 import {debugToolsEnabledState} from './DebugToolsState';
+import {Button} from 'isl-components/Button';
 import {useAtomValue} from 'jotai';
 import {lazy, Suspense} from 'react';
 import {Icon} from 'shared/Icon';

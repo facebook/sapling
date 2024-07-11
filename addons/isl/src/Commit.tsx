@@ -34,7 +34,6 @@ import {
 } from './codeReview/CodeReviewInfo';
 import {DiffFollower, DiffInfo} from './codeReview/DiffBadge';
 import {SyncStatus, syncStatusAtom} from './codeReview/syncStatus';
-import {Button} from './components/Button';
 import {FoldButton, useRunFoldPreview} from './fold';
 import {findPublicBaseAncestor} from './getCommitTree';
 import {t, T} from './i18n';
@@ -65,6 +64,7 @@ import {spacing} from './tokens.stylex';
 import {succeedableRevset} from './types';
 import {short} from './utils';
 import * as stylex from '@stylexjs/stylex';
+import {Button} from 'isl-components/Button';
 import {atom, useAtomValue, useSetAtom} from 'jotai';
 import {useAtomCallback} from 'jotai/utils';
 import React, {memo} from 'react';

@@ -18,7 +18,6 @@ import {isHighlightedCommit} from './HighlightedCommits';
 import {RegularGlyph, RenderDag, YouAreHereGlyph} from './RenderDag';
 import {StackActions} from './StackActions';
 import {Tooltip, DOCUMENTATION_DELAY} from './Tooltip';
-import {Button} from './components/Button';
 import {YOU_ARE_HERE_VIRTUAL_COMMIT} from './dag/virtualCommit';
 import {T, t} from './i18n';
 import {atomFamilyWeak, localStorageBackedAtom} from './jotaiUtils';
@@ -39,6 +38,7 @@ import {
   latestUncommittedChangesData,
 } from './serverAPIState';
 import {MaybeEditStackModal} from './stackEdit/ui/EditStackModal';
+import {Button} from 'isl-components/Button';
 import {ErrorShortMessages} from 'isl-server/src/constants';
 import {atom, useAtomValue} from 'jotai';
 import {Icon} from 'shared/Icon';

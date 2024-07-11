@@ -16,7 +16,6 @@ import {ErrorBoundary, ErrorNotice} from '../ErrorNotice';
 import {useGeneratedFileStatuses} from '../GeneratedFile';
 import {Subtle} from '../Subtle';
 import {Tooltip} from '../Tooltip';
-import {Button} from '../components/Button';
 import {Dropdown} from '../components/Dropdown';
 import {RadioGroup} from '../components/Radio';
 import {T, t} from '../i18n';
@@ -26,6 +25,7 @@ import {latestHeadCommit} from '../serverAPIState';
 import {GeneratedStatus} from '../types';
 import {SplitDiffView} from './SplitDiffView';
 import {currentComparisonMode} from './atoms';
+import {Button} from 'isl-components/Button';
 import {useAtom, useAtomValue, useSetAtom} from 'jotai';
 import {useEffect, useMemo, useState} from 'react';
 import {

@@ -14,7 +14,6 @@ import {EducationInfoTip} from './Education';
 import {ErrorNotice, InlineErrorBadge} from './ErrorNotice';
 import {Subtle} from './Subtle';
 import {Tooltip} from './Tooltip';
-import {Button} from './components/Button';
 import {Dropdown} from './components/Dropdown';
 import {TextField} from './components/TextField';
 import {T, t} from './i18n';
@@ -27,6 +26,7 @@ import {CommitPreview, dagWithPreviews, useMostRecentPendingOperation} from './p
 import {RelativeDate} from './relativeDate';
 import {CommitCloudBackupStatus} from './types';
 import {registerDisposable} from './utils';
+import {Button} from 'isl-components/Button';
 import {atom, useAtom, useAtomValue} from 'jotai';
 import {useCallback, useEffect, useRef, useState} from 'react';
 import {Icon} from 'shared/Icon';

@@ -10,7 +10,6 @@ import type {CommitInfo, ExactRevset, Hash, OptimisticRevset, SucceedableRevset}
 
 import {Subtle} from './Subtle';
 import {tracker} from './analytics';
-import {Button} from './components/Button';
 import {findPublicBaseAncestor} from './getCommitTree';
 import {T, t} from './i18n';
 import {atomFamilyWeak, readAtom} from './jotaiUtils';
@@ -22,6 +21,7 @@ import {dagWithPreviews} from './previews';
 import {RelativeDate} from './relativeDate';
 import {commitsShownRange, latestDag} from './serverAPIState';
 import {succeedableRevset} from './types';
+import {Button} from 'isl-components/Button';
 import {atom} from 'jotai';
 import {useContextMenu} from 'shared/ContextMenu';
 import {Icon} from 'shared/Icon';
