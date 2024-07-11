@@ -12,6 +12,7 @@
     "jest": "29.7.0"
   },
   "dependencies": {
+    "@stylexjs/stylex": "^0.4.1",
     "@vscode/codicons": "^0.0.33",
     "react": "^18.3.1"
   },

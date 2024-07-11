@@ -21,6 +21,7 @@ module.exports = {
       workspaceRelative('isl/tsconfig.json'),
       workspaceRelative('isl-server/tsconfig.json'),
       workspaceRelative('shared/tsconfig.json'),
+      workspaceRelative('components/tsconfig.json'),
       workspaceRelative('textmate/tsconfig.json'),
       workspaceRelative('vscode/tsconfig.json'),
     ],

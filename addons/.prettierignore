@@ -14,3 +14,4 @@
 /textmate/dist/
 /shared/third-party/github/schema.docs.graphql
 /shared/coverage
+/components/coverage

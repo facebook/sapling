@@ -11,6 +11,7 @@ The code for ISL lives in the addons folder:
 | isl-server       | Back end, which runs sl commands / interacts with the repo |
 | isl-server/proxy | `sl web` CLI and server management                         |
 | shared           | Utils shared by other projects                             |
+| components       | Shareable component library                                |
 | vscode           | VS Code extension for Sapling, including ISL as a webview  |
 
 ## Development
