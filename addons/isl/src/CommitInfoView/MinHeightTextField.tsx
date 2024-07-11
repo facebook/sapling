@@ -5,11 +5,11 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {TextAreaProps} from '../components/TextArea';
+import type {TextAreaProps} from 'isl-components/TextArea';
 
-import {TextArea} from '../components/TextArea';
 import {assert} from '../utils';
 import * as stylex from '@stylexjs/stylex';
+import {TextArea} from 'isl-components/TextArea';
 import {forwardRef, type ForwardedRef, useEffect} from 'react';
 import {notEmpty} from 'shared/utils';
 

@@ -14,8 +14,6 @@ import {Tooltip} from '../Tooltip';
 import {Dropdown} from '../components/Dropdown';
 import {Panels} from '../components/Panels';
 import {RadioGroup} from '../components/Radio';
-import {TextArea} from '../components/TextArea';
-import {TextField} from '../components/TextField';
 import {Typeahead} from '../components/Typeahead';
 import {T} from '../i18n';
 import {layout} from '../stylexUtils';
@@ -27,6 +25,8 @@ import {ButtonDropdown} from 'isl-components/ButtonDropdown';
 import {Checkbox} from 'isl-components/Checkbox';
 import {Divider} from 'isl-components/Divider';
 import {Tag} from 'isl-components/Tag';
+import {TextArea} from 'isl-components/TextArea';
+import {TextField} from 'isl-components/TextField';
 import {useState, type ReactNode} from 'react';
 import {Icon} from 'shared/Icon';
 

@@ -10,7 +10,7 @@ import type {ReactProps} from '../ComponentUtils';
 
 import {extractTokens, TokensList, tokensToString} from '../CommitInfoView/Tokens';
 import {Subtle} from '../Subtle';
-import {TextField} from './TextField';
+import {TextField} from 'isl-components/TextField';
 import {useRef, useEffect, useState} from 'react';
 import {Icon} from 'shared/Icon';
 

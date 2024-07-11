@@ -13,7 +13,6 @@ import {ErrorNotice} from '../ErrorNotice';
 import {Internal} from '../Internal';
 import {Tooltip} from '../Tooltip';
 import {tracker} from '../analytics';
-import {TextArea} from '../components/TextArea';
 import {useFeatureFlagSync} from '../featureFlags';
 import {T, t} from '../i18n';
 import {atomFamilyWeak, atomLoadableWithRefresh, readAtom} from '../jotaiUtils';
@@ -25,6 +24,7 @@ import {
   latestCommitMessageFieldsWithEdits,
 } from './CommitInfoState';
 import {Button} from 'isl-components/Button';
+import {TextArea} from 'isl-components/TextArea';
 import {atom, useAtom, useAtomValue, useSetAtom} from 'jotai';
 import {useCallback} from 'react';
 import {ComparisonType} from 'shared/Comparison';

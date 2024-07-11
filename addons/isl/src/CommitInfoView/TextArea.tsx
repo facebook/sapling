@@ -15,10 +15,10 @@ import {
   PendingImageUploads,
 } from '../ImageUpload';
 import {Internal} from '../Internal';
-import {TextArea} from '../components/TextArea';
 import {insertAtCursor} from '../textareaUtils';
 import {GenerateAICommitMessageButton} from './GenerateWithAI';
 import {MinHeightTextField} from './MinHeightTextField';
+import {TextArea} from 'isl-components/TextArea';
 import {useRef, useEffect} from 'react';
 
 function moveCursorToEnd(element: HTMLTextAreaElement) {

@@ -26,7 +26,6 @@ import {useGeneratedFileStatuses} from '../../GeneratedFile';
 import {Subtle} from '../../Subtle';
 import {Tooltip} from '../../Tooltip';
 import {tracker} from '../../analytics';
-import {TextField} from '../../components/TextField';
 import {t, T} from '../../i18n';
 import {GeneratedStatus} from '../../types';
 import {isAbsent} from '../commitStackState';
@@ -35,6 +34,7 @@ import {bumpStackEditMetric, SplitRangeRecord, useStackEditState} from './stackE
 import * as stylex from '@stylexjs/stylex';
 import {Set as ImSet, Range} from 'immutable';
 import {Button} from 'isl-components/Button';
+import {TextField} from 'isl-components/TextField';
 import {useAtomValue} from 'jotai';
 import {useRef, useState, useEffect, useMemo} from 'react';
 import {useContextMenu} from 'shared/ContextMenu';
