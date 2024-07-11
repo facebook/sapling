@@ -1434,7 +1434,7 @@ pub async fn try_add_redirection(
     // because the symlinks contained in these lists should be the same. I.e.
     // if a symlink is configured, it is also effective.
     if _should_return_success_early(redir_type, &configured_redirs, &checkout.path(), repo_path)? {
-        println!("EdenFS managed symlink redirection already exists.");
+        eprintln!("EdenFS managed symlink redirection already exists.");
         return Ok(0);
     }
 
@@ -1475,7 +1475,7 @@ pub async fn try_add_redirection(
                 && !force_remount_bind_mounts
                 && *existing_redir_state != RedirectionState::NotMounted
             {
-                println!(
+                eprintln!(
                     "Skipping {}; it is already configured. (use \
                     --force-remount-bind-mounts to force reconfiguring this \
                     redirection.",
@@ -1490,7 +1490,7 @@ pub async fn try_add_redirection(
     // because symlinks should already fail if the target dir exists.
     if redir_type == RedirectionType::Bind && redir.repo_path().is_dir() {
         if !strict {
-            println!(
+            eprintln!(
                 "WARNING: {} already exists.\nMounting over \
                 an existing directory will overwrite its contents.\nYou can \
                 use --strict to prevent overwriting existing directories.\n",
@@ -1505,7 +1505,7 @@ pub async fn try_add_redirection(
                 send(EDEN_EVENTS_SCUBA.to_string(), sample);
             }
         } else {
-            println!(
+            eprintln!(
                 "Not adding redirection {} because \
                 the --strict option was used.\nIf you would like \
                 to add this redirection (not recommended), then \
