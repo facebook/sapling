@@ -233,6 +233,13 @@ mononoke_fbpkg(
     },
 )
 
+mononoke_fbpkg(
+    name = "mononoke.cas_sync_job",
+    path_actions = {
+        "mononoke_cas_sync_job": "//eden/mononoke/mononoke_cas_sync_job:mononoke_cas_sync_job",
+    },
+)
+
 tw.container(
     name = "tw.mononoke.git_server",
     features = [
