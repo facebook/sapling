@@ -5,7 +5,6 @@
 
 import importlib
 import sys
-from ctypes import ArgumentError
 
 
 class MercurialImporter:
@@ -38,7 +37,7 @@ class MercurialImporter:
                 realname = "sapling" + fullname[len(ln) :]
                 break
         else:
-            raise ArgumentError(
+            raise ImportError(
                 "MercurialImporter.load_module used for non-legacy module %s" % fullname
             )
 
