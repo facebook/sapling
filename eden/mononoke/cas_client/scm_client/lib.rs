@@ -60,6 +60,34 @@ where
         self.client.lookup_blob(digest).await
     }
 
+    async fn get_file_digest<'a>(
+        &self,
+        ctx: &'a CoreContext,
+        blobstore: &'a impl Blobstore,
+        content_id: &ContentId,
+    ) -> Result<MononokeDigest, Error> {
+        let meta = filestore::get_metadata(blobstore, ctx, &content_id.to_owned().into())
+            .await?
+            .ok_or(ErrorKind::ContentMissingInBlobstore(content_id.clone()))?;
+        Ok(MononokeDigest(meta.seeded_blake3, meta.total_size))
+    }
+
+    async fn fetch_upload_file<'a>(
+        &self,
+        ctx: &'a CoreContext,
+        blobstore: &'a impl Blobstore,
+        content_id: ContentId,  // for fetching
+        digest: MononokeDigest, // for uploading
+    ) -> Result<UploadOutcome, Error> {
+        let stream = filestore::fetch(blobstore, ctx.clone(), &content_id.into())
+            .await?
+            .ok_or(ErrorKind::MissingInBlobstore(content_id))?;
+
+        self.client.streaming_upload_blob(&digest, stream).await?;
+        STATS::uploaded_files_count.add_value(1);
+        Ok(UploadOutcome::Uploaded)
+    }
+
     /// Upload a given file to a CAS backend.
     /// Digest of a file can be known a priori (from Augmented Manifest, for example), but it is not required.
     /// Prior lookup flag is used to check if a digest already exists in the CAS backend before fetching data from Mononoke blobstore.
@@ -80,27 +108,15 @@ where
         let digest = match digest {
             Some(digest) => digest.clone(),
             None => {
-                let meta = filestore::get_metadata(blobstore, ctx, &fetch_key.into())
-                    .await?
-                    .ok_or(ErrorKind::ContentMetadataMissingInBlobstore(
-                        filenode_id.clone().into_nodehash(),
-                    ))?;
-                let digest = MononokeDigest(meta.seeded_blake3, meta.total_size);
+                let digest = self.get_file_digest(ctx, blobstore, &fetch_key).await?;
                 if prior_lookup && self.lookup_digest(&digest).await? {
                     return Ok(UploadOutcome::AlreadyPresent);
                 }
                 digest
             }
         };
-        let stream = filestore::fetch(blobstore, ctx.clone(), &fetch_key.into())
-            .await?
-            .ok_or(ErrorKind::MissingInBlobstore(
-                filenode_id.clone().into_nodehash(),
-            ))?;
-
-        self.client.streaming_upload_blob(&digest, stream).await?;
-        STATS::uploaded_files_count.add_value(1);
-        Ok(UploadOutcome::Uploaded)
+        self.fetch_upload_file(ctx, blobstore, fetch_key, digest)
+            .await
     }
 
     /// Upload a given file to a CAS backend (by Content Id)
@@ -111,23 +127,12 @@ where
         content_id: &ContentId,
         prior_lookup: bool,
     ) -> Result<UploadOutcome, Error> {
-        let meta = filestore::get_metadata(blobstore, ctx, &content_id.to_owned().into())
-            .await?
-            .ok_or(ErrorKind::ContentMissingInBlobstore(content_id.clone()))?;
-        let digest = MononokeDigest(meta.seeded_blake3, meta.total_size);
+        let digest = self.get_file_digest(ctx, blobstore, content_id).await?;
         if prior_lookup && self.lookup_digest(&digest).await? {
             return Ok(UploadOutcome::AlreadyPresent);
         }
-        self.client
-            .streaming_upload_blob(
-                &digest,
-                filestore::fetch(blobstore, ctx.clone(), &content_id.to_owned().into())
-                    .await?
-                    .ok_or(ErrorKind::ContentMissingInBlobstore(content_id.clone()))?,
-            )
-            .await?;
-        STATS::uploaded_files_count.add_value(1);
-        Ok(UploadOutcome::Uploaded)
+        self.fetch_upload_file(ctx, blobstore, content_id.clone(), digest)
+            .await
     }
 
     /// Upload given file contents to a Cas backend (batched API)
