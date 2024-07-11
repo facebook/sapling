@@ -10,7 +10,6 @@ import type {StyleXVar} from '@stylexjs/stylex/lib/StyleXTypes';
 import {Banner, BannerKind} from '../Banner';
 import {ErrorNotice} from '../ErrorNotice';
 import {Link} from '../Link';
-import {Tooltip} from '../Tooltip';
 import {Typeahead} from '../components/Typeahead';
 import {T} from '../i18n';
 import {layout} from '../stylexUtils';
@@ -27,6 +26,7 @@ import {RadioGroup} from 'isl-components/Radio';
 import {Tag} from 'isl-components/Tag';
 import {TextArea} from 'isl-components/TextArea';
 import {TextField} from 'isl-components/TextField';
+import {Tooltip} from 'isl-components/Tooltip';
 import {useState, type ReactNode} from 'react';
 import {Icon} from 'shared/Icon';
 

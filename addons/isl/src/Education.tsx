@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {Tooltip} from './Tooltip';
+import {Tooltip} from 'isl-components/Tooltip';
 import React from 'react';
 import {Icon} from 'shared/Icon';
 

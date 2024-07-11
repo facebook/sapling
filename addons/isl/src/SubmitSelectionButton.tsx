@@ -10,13 +10,13 @@ import type {CommitInfo} from './types';
 import {HighlightCommitsWhileHovering} from './HighlightedCommits';
 import {OperationDisabledButton} from './OperationDisabledButton';
 import {multiSubmitUpdateMessage} from './SubmitUpdateMessageInput';
-import {Tooltip} from './Tooltip';
 import {allDiffSummaries, codeReviewProvider} from './codeReview/CodeReviewInfo';
 import {submitAsDraft} from './codeReview/DraftCheckbox';
 import {t, T} from './i18n';
 import {readAtom, writeAtom} from './jotaiUtils';
 import {dagWithPreviews} from './previews';
 import {selectedCommits} from './selection';
+import {Tooltip} from 'isl-components/Tooltip';
 import {atom, useAtomValue} from 'jotai';
 
 /**

@@ -8,8 +8,6 @@
 import type {ReactNode} from 'react';
 
 import App from '../App';
-import {Tooltip} from '../Tooltip';
-import {ViewportOverlayRoot} from '../ViewportOverlay';
 import {
   resetTestMessages,
   expectMessageSentToServer,
@@ -19,6 +17,8 @@ import {
 } from '../testUtils';
 import {fireEvent, render, screen, within, act} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import {Tooltip} from 'isl-components/Tooltip';
+import {ViewportOverlayRoot} from 'isl-components/ViewportOverlay';
 
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 

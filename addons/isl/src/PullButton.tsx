@@ -9,7 +9,6 @@ import type {Operation} from './operations/Operation';
 
 import {fetchStableLocations} from './BookmarksData';
 import {Internal} from './Internal';
-import {DOCUMENTATION_DELAY, Tooltip} from './Tooltip';
 import {t, T} from './i18n';
 import {configBackedAtom} from './jotaiUtils';
 import {PullOperation} from './operations/PullOperation';
@@ -17,6 +16,7 @@ import {useRunOperation} from './operationsState';
 import {uncommittedChangesWithPreviews, useMostRecentPendingOperation} from './previews';
 import {Button} from 'isl-components/Button';
 import {ButtonDropdown} from 'isl-components/ButtonDropdown';
+import {DOCUMENTATION_DELAY, Tooltip} from 'isl-components/Tooltip';
 import {useAtom, useAtomValue} from 'jotai';
 import {Icon} from 'shared/Icon';
 

@@ -9,7 +9,6 @@ import type {CommitInfo} from '../types';
 
 import {Row} from '../ComponentUtils';
 import {ErrorBoundary} from '../ErrorNotice';
-import {Tooltip} from '../Tooltip';
 import {T, t} from '../i18n';
 import {SLOC_THRESHOLD_FOR_SPLIT_SUGGESTIONS} from '../sloc/diffStatConstants';
 import {
@@ -17,6 +16,7 @@ import {
   useFetchSignificantLinesOfCode,
 } from '../sloc/useFetchSignificantLinesOfCode';
 import * as stylex from '@stylexjs/stylex';
+import {Tooltip} from 'isl-components/Tooltip';
 import {Icon} from 'shared/Icon';
 
 type Props = {commit: CommitInfo};

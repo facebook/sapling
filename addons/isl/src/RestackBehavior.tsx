@@ -5,10 +5,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {Tooltip} from './Tooltip';
 import {t, T} from './i18n';
 import {localStorageBackedAtom} from './jotaiUtils';
 import {Dropdown} from 'isl-components/Dropdown';
+import {Tooltip} from 'isl-components/Tooltip';
 import {useAtom} from 'jotai';
 
 export enum AmendRestackBehavior {

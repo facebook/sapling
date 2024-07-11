@@ -7,8 +7,8 @@
 
 import type {DragHandler} from './DragHandle';
 
-import {ViewportOverlay} from './ViewportOverlay';
 import * as stylex from '@stylexjs/stylex';
+import {ViewportOverlay} from 'isl-components/ViewportOverlay';
 import React, {useEffect, useRef} from 'react';
 import {getZoomLevel} from 'shared/zoom';
 

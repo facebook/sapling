@@ -23,7 +23,6 @@ import {useTokenizedContentsOnceVisible} from '../../ComparisonView/SplitDiffVie
 import {Column, Row, ScrollX, ScrollY} from '../../ComponentUtils';
 import {EmptyState} from '../../EmptyState';
 import {useGeneratedFileStatuses} from '../../GeneratedFile';
-import {Tooltip} from '../../Tooltip';
 import {tracker} from '../../analytics';
 import {t, T} from '../../i18n';
 import {GeneratedStatus} from '../../types';
@@ -35,6 +34,7 @@ import {Set as ImSet, Range} from 'immutable';
 import {Button} from 'isl-components/Button';
 import {Subtle} from 'isl-components/Subtle';
 import {TextField} from 'isl-components/TextField';
+import {Tooltip} from 'isl-components/Tooltip';
 import {useAtomValue} from 'jotai';
 import {useRef, useState, useEffect, useMemo} from 'react';
 import {useContextMenu} from 'shared/ContextMenu';

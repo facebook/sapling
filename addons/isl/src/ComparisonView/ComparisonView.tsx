@@ -14,7 +14,6 @@ import serverAPI from '../ClientToServerAPI';
 import {EmptyState} from '../EmptyState';
 import {ErrorBoundary, ErrorNotice} from '../ErrorNotice';
 import {useGeneratedFileStatuses} from '../GeneratedFile';
-import {Tooltip} from '../Tooltip';
 import {T, t} from '../i18n';
 import {atomFamilyWeak, atomLoadableWithRefresh, localStorageBackedAtom} from '../jotaiUtils';
 import platform from '../platform';
@@ -26,6 +25,7 @@ import {Button} from 'isl-components/Button';
 import {Dropdown} from 'isl-components/Dropdown';
 import {RadioGroup} from 'isl-components/Radio';
 import {Subtle} from 'isl-components/Subtle';
+import {Tooltip} from 'isl-components/Tooltip';
 import {useAtom, useAtomValue, useSetAtom} from 'jotai';
 import {useEffect, useMemo, useState} from 'react';
 import {

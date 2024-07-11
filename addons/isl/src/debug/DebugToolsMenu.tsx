@@ -14,7 +14,6 @@ import {Column, Row} from '../ComponentUtils';
 import {DropdownField, DropdownFields} from '../DropdownFields';
 import {InlineErrorBadge} from '../ErrorNotice';
 import messageBus from '../MessageBus';
-import {Tooltip} from '../Tooltip';
 import {enableReactTools, enableReduxTools} from '../atoms/debugToolAtoms';
 import {holdingCtrlAtom} from '../atoms/keyboardAtoms';
 import {DagCommitInfo} from '../dag/dagCommitInfo';
@@ -42,6 +41,7 @@ import {Badge} from 'isl-components/Badge';
 import {Button} from 'isl-components/Button';
 import {Checkbox} from 'isl-components/Checkbox';
 import {Subtle} from 'isl-components/Subtle';
+import {Tooltip} from 'isl-components/Tooltip';
 import {atom, useAtom, useAtomValue} from 'jotai';
 import {useState, useCallback, useEffect} from 'react';
 

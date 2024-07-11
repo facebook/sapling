@@ -6,11 +6,11 @@
  */
 
 import {Internal} from '../Internal';
-import {Tooltip} from '../Tooltip';
 import {T, t} from '../i18n';
 import {localStorageBackedAtom} from '../jotaiUtils';
 import {Checkbox} from 'isl-components/Checkbox';
 import {Subtle} from 'isl-components/Subtle';
+import {Tooltip} from 'isl-components/Tooltip';
 import {useAtom} from 'jotai';
 
 export const shouldAutoResolveAllBeforeContinue = localStorageBackedAtom<boolean>(

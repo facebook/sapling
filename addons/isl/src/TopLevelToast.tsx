@@ -10,7 +10,7 @@ import {hideToast, toastQueueAtom} from './toast';
 import {useAtomValue} from 'jotai';
 
 import './TopLevelToast.css';
-import './Tooltip.css';
+import 'isl-components/Tooltip.css';
 
 export function TopLevelToast() {
   const toastQueue = useAtomValue(toastQueueAtom);

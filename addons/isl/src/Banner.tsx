@@ -7,7 +7,7 @@
 
 import type {ReactNode} from 'react';
 
-import {Tooltip} from './Tooltip';
+import {Tooltip} from 'isl-components/Tooltip';
 
 import './Banner.css';
 

@@ -10,7 +10,6 @@ import type {ContextMenuItem} from 'shared/ContextMenu';
 
 import {bookmarksDataStorage} from './BookmarksData';
 import {Row} from './ComponentUtils';
-import {Tooltip} from './Tooltip';
 import {tracker} from './analytics';
 import {T, t} from './i18n';
 import {BookmarkCreateOperation} from './operations/BookmarkCreateOperation';
@@ -22,6 +21,7 @@ import * as stylex from '@stylexjs/stylex';
 import {Button} from 'isl-components/Button';
 import {Tag} from 'isl-components/Tag';
 import {TextField} from 'isl-components/TextField';
+import {Tooltip} from 'isl-components/Tooltip';
 import {useAtomValue} from 'jotai';
 import {useState} from 'react';
 import {useContextMenu} from 'shared/ContextMenu';

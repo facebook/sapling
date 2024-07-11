@@ -10,12 +10,12 @@ import type {CommitMessageFields, FieldConfig, FieldsBeingEdited} from './types'
 import type {ReactNode} from 'react';
 
 import {InlineBadge} from '../InlineBadge';
-import {Tooltip} from '../Tooltip';
 import {YouAreHereLabel} from '../YouAreHereLabel';
 import {t, T} from '../i18n';
 import platform from '../platform';
 import {RelativeDate} from '../relativeDate';
 import {Subtle} from 'isl-components/Subtle';
+import {Tooltip} from 'isl-components/Tooltip';
 
 export function CommitTitleByline({commit}: {commit: CommitInfo}) {
   const createdByInfo = (

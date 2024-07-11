@@ -8,13 +8,13 @@
 import {Column} from './ComponentUtils';
 import {useCommand} from './ISLShortcuts';
 import {Kbd} from './Kbd';
-import {Tooltip} from './Tooltip';
 import {tracker} from './analytics';
 import {focusMode} from './atoms/FocusModeState';
 import {T} from './i18n';
 import {colors} from './tokens.stylex';
 import * as stylex from '@stylexjs/stylex';
 import {Button} from 'isl-components/Button';
+import {Tooltip} from 'isl-components/Tooltip';
 import {useAtom} from 'jotai';
 import {Icon} from 'shared/Icon';
 import {KeyCode, Modifier} from 'shared/KeyboardShortcuts';

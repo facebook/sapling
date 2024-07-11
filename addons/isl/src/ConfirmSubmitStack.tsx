@@ -9,7 +9,6 @@ import type {CommitInfo} from './types';
 
 import {Commit} from './Commit';
 import {FlexSpacer} from './ComponentUtils';
-import {Tooltip} from './Tooltip';
 import {codeReviewProvider} from './codeReview/CodeReviewInfo';
 import {submitAsDraft, SubmitAsDraftCheckbox} from './codeReview/DraftCheckbox';
 import {t, T} from './i18n';
@@ -20,6 +19,7 @@ import {Button} from 'isl-components/Button';
 import {Checkbox} from 'isl-components/Checkbox';
 import {Divider} from 'isl-components/Divider';
 import {TextField} from 'isl-components/TextField';
+import {Tooltip} from 'isl-components/Tooltip';
 import {useAtom, useAtomValue} from 'jotai';
 import {useState} from 'react';
 import {useAutofocusRef} from 'shared/hooks';

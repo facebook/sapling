@@ -9,12 +9,12 @@ import type {RefObject} from 'react';
 
 import clientToServerAPI from './ClientToServerAPI';
 import {InlineErrorBadge} from './ErrorNotice';
-import {Tooltip} from './Tooltip';
 import {T, t} from './i18n';
 import {atomFamilyWeak, readAtom, writeAtom} from './jotaiUtils';
 import platform from './platform';
 import {replaceInTextArea, insertAtCursor} from './textareaUtils';
 import {Button} from 'isl-components/Button';
+import {Tooltip} from 'isl-components/Tooltip';
 import {atom, useAtomValue} from 'jotai';
 import {useState, type ReactNode, useId} from 'react';
 import {Icon} from 'shared/Icon';

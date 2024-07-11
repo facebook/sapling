@@ -11,7 +11,6 @@ import type {Comparison} from 'shared/Comparison';
 
 import {ErrorNotice} from '../ErrorNotice';
 import {Internal} from '../Internal';
-import {Tooltip} from '../Tooltip';
 import {tracker} from '../analytics';
 import {useFeatureFlagSync} from '../featureFlags';
 import {T, t} from '../i18n';
@@ -25,6 +24,7 @@ import {
 } from './CommitInfoState';
 import {Button} from 'isl-components/Button';
 import {TextArea} from 'isl-components/TextArea';
+import {Tooltip} from 'isl-components/Tooltip';
 import {atom, useAtom, useAtomValue, useSetAtom} from 'jotai';
 import {useCallback} from 'react';
 import {ComparisonType} from 'shared/Comparison';

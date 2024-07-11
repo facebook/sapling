@@ -8,7 +8,6 @@
 import {Banner, BannerKind} from '../Banner';
 import {Column} from '../ComponentUtils';
 import {Internal} from '../Internal';
-import {Tooltip} from '../Tooltip';
 import {tracker} from '../analytics';
 import {codeReviewProvider, diffSummary} from '../codeReview/CodeReviewInfo';
 import GatedComponent from '../components/GatedComponent';
@@ -30,6 +29,7 @@ import {type CommitInfo} from '../types';
 import {commitMode} from './CommitInfoState';
 import {Button} from 'isl-components/Button';
 import {Divider} from 'isl-components/Divider';
+import {Tooltip} from 'isl-components/Tooltip';
 import {useAtom, useAtomValue} from 'jotai';
 import {Icon} from 'shared/Icon';
 

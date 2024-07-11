@@ -11,7 +11,6 @@ import type {CommitMessageFields, FieldConfig} from './types';
 
 import {FlexSpacer} from '../ComponentUtils';
 import {Internal} from '../Internal';
-import {DOCUMENTATION_DELAY, Tooltip} from '../Tooltip';
 import {tracker} from '../analytics';
 import {T, t} from '../i18n';
 import {readAtom, writeAtom} from '../jotaiUtils';
@@ -36,6 +35,7 @@ import {SmallCapsTitle} from './utils';
 import * as stylex from '@stylexjs/stylex';
 import {Button} from 'isl-components/Button';
 import {LinkButton} from 'isl-components/LinkButton';
+import {DOCUMENTATION_DELAY, Tooltip} from 'isl-components/Tooltip';
 import {useCallback} from 'react';
 import {useContextMenu} from 'shared/ContextMenu';
 import {Icon} from 'shared/Icon';

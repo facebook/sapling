@@ -9,7 +9,6 @@ import type {UICodeReviewProvider} from './codeReview/UICodeReviewProvider';
 import type {DiffSummary, CommitInfo, Hash} from './types';
 
 import {OperationDisabledButton} from './OperationDisabledButton';
-import {Tooltip} from './Tooltip';
 import {codeReviewProvider, allDiffSummaries} from './codeReview/CodeReviewInfo';
 import {t, T} from './i18n';
 import {HideOperation} from './operations/HideOperation';
@@ -17,6 +16,7 @@ import {useRunOperation} from './operationsState';
 import {type Dag, dagWithPreviews} from './previews';
 import {latestSuccessorUnlessExplicitlyObsolete} from './successionUtils';
 import {Button} from 'isl-components/Button';
+import {Tooltip} from 'isl-components/Tooltip';
 import {useAtomValue} from 'jotai';
 import {Icon} from 'shared/Icon';
 import {nullthrows} from 'shared/utils';

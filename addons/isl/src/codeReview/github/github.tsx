@@ -19,10 +19,10 @@ import type {ReactNode} from 'react';
 
 import {OSSCommitMessageFieldSchema} from '../../CommitInfoView/OSSCommitMessageFieldsSchema';
 import {Internal} from '../../Internal';
-import {Tooltip} from '../../Tooltip';
 import {t, T} from '../../i18n';
 import {GhStackSubmitOperation} from '../../operations/GhStackSubmitOperation';
 import {PrSubmitOperation} from '../../operations/PrSubmitOperation';
+import {Tooltip} from 'isl-components/Tooltip';
 import {PullRequestReviewDecision, PullRequestState} from 'isl-server/src/github/generated/graphql';
 import {Icon} from 'shared/Icon';
 import {MS_PER_DAY} from 'shared/constants';

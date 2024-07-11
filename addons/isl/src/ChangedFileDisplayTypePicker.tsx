@@ -6,10 +6,10 @@
  */
 
 import {Row} from './ComponentUtils';
-import {Tooltip} from './Tooltip';
 import {t, T} from './i18n';
 import {configBackedAtom} from './jotaiUtils';
 import {Button} from 'isl-components/Button';
+import {Tooltip} from 'isl-components/Tooltip';
 import {useAtom} from 'jotai';
 import {useContextMenu} from 'shared/ContextMenu';
 import {Icon} from 'shared/Icon';

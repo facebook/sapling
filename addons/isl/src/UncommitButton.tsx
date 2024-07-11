@@ -5,7 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {DOCUMENTATION_DELAY, Tooltip} from './Tooltip';
 import {codeReviewProvider, diffSummary} from './codeReview/CodeReviewInfo';
 import {t, T} from './i18n';
 import {UncommitOperation} from './operations/Uncommit';
@@ -13,6 +12,7 @@ import {useRunOperation} from './operationsState';
 import foundPlatform from './platform';
 import {dagWithPreviews} from './previews';
 import {Button} from 'isl-components/Button';
+import {DOCUMENTATION_DELAY, Tooltip} from 'isl-components/Tooltip';
 import {useAtomValue} from 'jotai';
 import {Icon} from 'shared/Icon';
 

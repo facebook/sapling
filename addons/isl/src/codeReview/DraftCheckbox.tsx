@@ -7,11 +7,11 @@
 
 import type {CommitInfo} from '../types';
 
-import {Tooltip} from '../Tooltip';
 import {t, T} from '../i18n';
 import {configBackedAtom} from '../jotaiUtils';
 import {codeReviewProvider} from './CodeReviewInfo';
 import {Checkbox} from 'isl-components/Checkbox';
+import {Tooltip} from 'isl-components/Tooltip';
 import {useAtom, useAtomValue} from 'jotai';
 
 export const submitAsDraft = configBackedAtom<boolean>('isl.submitAsDraft', false);

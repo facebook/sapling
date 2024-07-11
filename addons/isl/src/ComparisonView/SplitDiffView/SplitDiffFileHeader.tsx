@@ -9,10 +9,10 @@ import type {EnsureAssignedTogether} from 'shared/EnsureAssignedTogether';
 import type {DiffType} from 'shared/patch/parse';
 import type {RepoPath} from 'shared/types/common';
 
-import {Tooltip} from '../../Tooltip';
 import {t} from '../../i18n';
 import platform from '../../platform';
 import {Button} from 'isl-components/Button';
+import {Tooltip} from 'isl-components/Tooltip';
 import React from 'react';
 import {Icon} from 'shared/Icon';
 

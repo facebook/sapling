@@ -11,9 +11,9 @@ import {useCommandEvent} from './ISLShortcuts';
 import {Kbd} from './Kbd';
 import {SelectAllButton} from './SelectAllCommits';
 import {SuggestedRebaseButton} from './SuggestedRebase';
-import {Tooltip} from './Tooltip';
 import {T} from './i18n';
 import {Button} from 'isl-components/Button';
+import {Tooltip} from 'isl-components/Tooltip';
 import {Icon} from 'shared/Icon';
 import {KeyCode, Modifier} from 'shared/KeyboardShortcuts';
 
