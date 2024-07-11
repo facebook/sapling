@@ -11,8 +11,8 @@ import platform from './platform';
 import {registerDisposable} from './utils';
 import {atom} from 'jotai';
 
-import './themeLight.css';
-import './themeDark.css';
+import 'isl-components/theme/themeLight.css';
+import 'isl-components/theme/themeDark.css';
 
 const THEME_LOCAL_STORAGE_KEY = 'isl-color-theme';
 

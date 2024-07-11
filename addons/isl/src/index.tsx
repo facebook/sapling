@@ -10,8 +10,8 @@ import 'react';
 import ReactDOM from 'react-dom/client';
 
 // Include CSS variables we use, originally from vscode-webview-ui-toolkit
-import './themeDarkVariables.css';
-import './themeLightVariables.css';
+import 'isl-components/theme/themeDarkVariables.css';
+import 'isl-components/theme/themeLightVariables.css';
 
 // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 const root = ReactDOM.createRoot(document.getElementById('root')!);
