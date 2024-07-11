@@ -17,7 +17,6 @@ import {useGeneratedFileStatuses} from '../GeneratedFile';
 import {Subtle} from '../Subtle';
 import {Tooltip} from '../Tooltip';
 import {Dropdown} from '../components/Dropdown';
-import {RadioGroup} from '../components/Radio';
 import {T, t} from '../i18n';
 import {atomFamilyWeak, atomLoadableWithRefresh, localStorageBackedAtom} from '../jotaiUtils';
 import platform from '../platform';
@@ -26,6 +25,7 @@ import {GeneratedStatus} from '../types';
 import {SplitDiffView} from './SplitDiffView';
 import {currentComparisonMode} from './atoms';
 import {Button} from 'isl-components/Button';
+import {RadioGroup} from 'isl-components/Radio';
 import {useAtom, useAtomValue, useSetAtom} from 'jotai';
 import {useEffect, useMemo, useState} from 'react';
 import {

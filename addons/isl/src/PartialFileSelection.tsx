@@ -8,11 +8,11 @@
 import type {ChunkSelectState, LineRegion, SelectLine} from './stackEdit/chunkSelectState';
 import type {RangeInfo} from './stackEdit/ui/TextEditable';
 
-import {RadioGroup} from './components/Radio';
 import {t} from './i18n';
 import {TextEditable} from './stackEdit/ui/TextEditable';
 import {Set as ImSet} from 'immutable';
 import {Checkbox} from 'isl-components/Checkbox';
+import {RadioGroup} from 'isl-components/Radio';
 import {useRef, useState} from 'react';
 import {notEmpty} from 'shared/utils';
 

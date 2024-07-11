@@ -36,7 +36,6 @@ import {
 import {submitAsDraft, SubmitAsDraftCheckbox} from '../codeReview/DraftCheckbox';
 import {overrideDisabledSubmitModes} from '../codeReview/github/branchPrState';
 import GatedComponent from '../components/GatedComponent';
-import {RadioGroup} from '../components/Radio';
 import {FoldButton, useRunFoldPreview} from '../fold';
 import {t, T} from '../i18n';
 import {readAtom, writeAtom} from '../jotaiUtils';
@@ -86,6 +85,7 @@ import deepEqual from 'fast-deep-equal';
 import {Badge} from 'isl-components/Badge';
 import {Button} from 'isl-components/Button';
 import {Divider} from 'isl-components/Divider';
+import {RadioGroup} from 'isl-components/Radio';
 import {useAtom, useAtomValue} from 'jotai';
 import {useAtomCallback} from 'jotai/utils';
 import {useCallback, useEffect, useMemo} from 'react';
