@@ -436,8 +436,10 @@ class EdenDoctor(EdenDoctorChecker):
                 problem_description=fixer.problem_description,
                 num_failed_fixes=fixer.num_failed_fixes,
                 num_manual_fixes=fixer.num_manual_fixes,
+                num_no_fixes=fixer.num_no_fixes,
                 problem_failed_fixes=fixer.problem_failed_fixes,
                 problem_manual_fixes=fixer.problem_manual_fixes,
+                problem_no_fixes=fixer.problem_no_fixes,
             )
 
         if fixer.num_problems == 0:
@@ -474,6 +476,13 @@ class EdenDoctor(EdenDoctorChecker):
             else:
                 msg = f"{fixer.num_manual_fixes} issues require manual attention."
             out.writeln(msg, fg=out.YELLOW)
+
+        if fixer.num_no_fixes:
+            if fixer.num_no_fixes == 1:
+                msg = "No standard fix for 1 issue."
+            else:
+                msg = f"No standard fix for {fixer.num_no_fixes} issues."
+            out.writeln(msg, fg=out.RED)
 
         if fixer.num_fixed_problems == fixer.num_problems:
             return 0
