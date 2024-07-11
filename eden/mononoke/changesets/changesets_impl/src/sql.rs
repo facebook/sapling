@@ -298,6 +298,12 @@ impl Changesets for SqlChangesets {
     }
 
     async fn add_many(&self, ctx: &CoreContext, css: Vec1<ChangesetInsert>) -> Result<()> {
+        // If we're inserting a single changeset, use the faster single insertion method.
+        if css.len() == 1 {
+            self.add(ctx, css.split_off_first().0).await?;
+            return Ok(());
+        }
+
         STATS::adds.add_value(css.len() as i64);
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlWrites);
