@@ -7,14 +7,13 @@
 
 import type {ForwardedRef, ReactNode} from 'react';
 
-import {Column} from './utils';
+import {Column} from './Flex';
 import * as stylex from '@stylexjs/stylex';
 import {forwardRef, useId} from 'react';
 import {notEmpty} from 'shared/utils';
 
 const styles = stylex.create({
   root: {
-    alignItems: 'flex-start',
     gap: '2px',
   },
   label: {
@@ -52,7 +51,7 @@ export const TextArea = forwardRef(
   ) => {
     const id = useId();
     return (
-      <Column xstyle={[styles.root, containerXstyle].filter(notEmpty)}>
+      <Column xstyle={[styles.root, containerXstyle].filter(notEmpty)} alignStart>
         {children && (
           <label htmlFor={id} {...stylex.props(styles.label)}>
             {children}

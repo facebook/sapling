@@ -7,7 +7,7 @@
 
 import type {ReactNode} from 'react';
 
-import {Column, Row} from './utils';
+import {Column, Row} from './Flex';
 import {spacing} from './theme/tokens.stylex';
 import * as stylex from '@stylexjs/stylex';
 
@@ -52,7 +52,7 @@ export function Panels<T extends string>({
   onSelect: (item: T) => void;
 }) {
   return (
-    <Column alignStart xstyle={xstyle}>
+    <Column xstyle={xstyle} alignStart>
       <Row xstyle={styles.tabList} role="tablist">
         {(Object.entries(panels) as Array<[T, PanelInfo]>).map(([name, value]) => {
           return (

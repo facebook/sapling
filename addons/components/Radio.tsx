@@ -7,8 +7,8 @@
 
 import type react from 'react';
 
-import {Column} from './utils';
 import {Tooltip} from '../Tooltip';
+import {Column} from './Flex';
 import {layout} from './theme/layout';
 import {spacing} from './theme/tokens.stylex';
 import * as stylex from '@stylexjs/stylex';
@@ -18,9 +18,6 @@ import {useId} from 'react';
 import './Radio.css';
 
 const styles = stylex.create({
-  container: {
-    alignItems: 'flex-start',
-  },
   group: {
     appearance: 'none',
     border: 'none',
@@ -75,7 +72,7 @@ export function RadioGroup<T extends string>({
   return title == null ? (
     inner
   ) : (
-    <Column xstyle={styles.container}>
+    <Column alignStart>
       <strong>{title}</strong>
       {inner}
     </Column>
