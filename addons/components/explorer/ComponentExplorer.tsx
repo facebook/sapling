@@ -18,6 +18,7 @@ import {RadioGroup} from '../Radio';
 import {Tag} from '../Tag';
 import {TextArea} from '../TextArea';
 import {TextField} from '../TextField';
+import {Tooltip} from '../Tooltip';
 import {layout} from '../theme/layout';
 import {colors, font, radius, spacing} from '../theme/tokens.stylex';
 import * as stylex from '@stylexjs/stylex';
@@ -230,9 +231,9 @@ export function ComponentExplorer() {
           <TextField placeholder="placeholder" onChange={e => console.log(e.currentTarget.value)}>
             Text Field
           </TextField>
-          {/* <Tooltip trigger="manual" shouldShow={true} title="Tooltip" placement="bottom">
+          <Tooltip trigger="manual" shouldShow={true} title="Tooltip" placement="bottom">
             Thing
-          </Tooltip> */}
+          </Tooltip>
         </Row>
         {/* <Row>
           <span>Typeahead:</span>

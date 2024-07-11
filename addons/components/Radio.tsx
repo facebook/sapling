@@ -7,8 +7,8 @@
 
 import type react from 'react';
 
-import {Tooltip} from '../Tooltip';
 import {Column} from './Flex';
+import {Tooltip} from './Tooltip';
 import {layout} from './theme/layout';
 import {spacing} from './theme/tokens.stylex';
 import * as stylex from '@stylexjs/stylex';

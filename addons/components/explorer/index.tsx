@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import {ViewportOverlayRoot} from '../ViewportOverlay';
 import {ComponentExplorer} from './ComponentExplorer';
 import 'react';
 import ReactDOM from 'react-dom/client';
@@ -15,4 +16,9 @@ import './themeLightVariables.css';
 
 // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 const root = ReactDOM.createRoot(document.getElementById('root')!);
-root.render(<ComponentExplorer />);
+root.render(
+  <div>
+    <ComponentExplorer />
+    <ViewportOverlayRoot />
+  </div>,
+);
