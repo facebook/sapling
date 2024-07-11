@@ -7,7 +7,6 @@
 
 import type {RepositoryError} from './types';
 import type {ReactNode} from 'react';
-import type {Writable} from 'shared/typeUtils';
 
 import {CommandHistoryAndProgress} from './CommandHistoryAndProgress';
 import {CommitInfoSidebar} from './CommitInfoView/CommitInfoView';
@@ -37,11 +36,10 @@ import {DEFAULT_RESET_CSS} from './resetStyle';
 import {useMainContentWidth, zoomUISettingAtom} from './responsive';
 import {repositoryInfo} from './serverAPIState';
 import {themeState} from './theme';
-import {light} from './tokens.stylex';
 import {ModalContainer} from './useModal';
 import {usePromise} from './usePromise';
 import {isDev, isTest} from './utils';
-import * as stylex from '@stylexjs/stylex';
+import {ThemedComponentsRoot} from 'isl-components/ThemedComponentsRoot';
 import {Provider, atom, useAtomValue, useSetAtom, useStore} from 'jotai';
 import React, {useMemo} from 'react';
 import {ContextMenus} from 'shared/ContextMenu';
@@ -134,12 +132,11 @@ function ResetStyle() {
 function ISLRoot({children}: {children: ReactNode}) {
   const theme = useAtomValue(themeState);
   useAtomValue(zoomUISettingAtom);
-  const props = stylex.props(theme === 'light' && light);
-  // stylex would overwrite className
-  (props as Writable<typeof props>).className += ` isl-root ${theme}-theme`;
   return (
     <div onDragEnter={handleDragAndDrop} onDragOver={handleDragAndDrop}>
-      <div {...props}>{children}</div>
+      <ThemedComponentsRoot className="isl-root" theme={theme}>
+        {children}
+      </ThemedComponentsRoot>
     </div>
   );
 }

@@ -5,12 +5,12 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import {ThemedComponentsRoot} from '../ThemedComponentsRoot';
 import {ViewportOverlayRoot} from '../ViewportOverlay';
 import {ComponentExplorer} from './ComponentExplorer';
 import 'react';
 import ReactDOM from 'react-dom/client';
 
-import '../theme/index.css';
 import '../theme/themeDark.css';
 import '../theme/themeLight.css';
 
@@ -18,11 +18,13 @@ import '../theme/themeLight.css';
 import '../theme/themeDarkVariables.css';
 import '../theme/themeLightVariables.css';
 
+import '../theme/index.css';
+
 // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 const root = ReactDOM.createRoot(document.getElementById('root')!);
 root.render(
-  <div className="light-theme">
+  <ThemedComponentsRoot theme="light">
     <ComponentExplorer />
     <ViewportOverlayRoot />
-  </div>,
+  </ThemedComponentsRoot>,
 );
