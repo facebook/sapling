@@ -513,7 +513,10 @@ impl Persist for IdMap {
             let mut path = self.path.clone();
             path.push("wlock");
             File::open(&path).or_else(|_| {
+                // Some NFS implementation reports `EBADF` for `flock()` unless the file is opened
+                // with `O_RDWR`.
                 fs::OpenOptions::new()
+                    .read(true)
                     .write(true)
                     .create_new(true)
                     .open(&path)
