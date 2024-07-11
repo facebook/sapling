@@ -29,6 +29,7 @@ use bonsai_hg_mapping::BonsaiHgMapping;
 use bookmarks::BookmarkUpdateLog;
 use bookmarks::BookmarkUpdateLogEntry;
 use bookmarks::BookmarkUpdateLogId;
+use bookmarks::Freshness;
 use borrowed::borrowed;
 use changeset_fetcher::ChangesetFetcher;
 use changesets::Changesets;
@@ -577,10 +578,11 @@ where
                 match maybe_id {
                     Some(current_id) => {
                         let entries = bookmarks
-                            .read_next_bookmark_log_entries_same_bookmark_and_reason(
+                            .read_next_bookmark_log_entries(
                                 ctx.clone(),
                                 current_id,
                                 batch_size,
+                                Freshness::MostRecent,
                             )
                             .try_collect::<Vec<_>>()
                             .watched(ctx.logger())
