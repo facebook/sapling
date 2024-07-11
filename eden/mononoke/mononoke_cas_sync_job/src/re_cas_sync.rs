@@ -114,6 +114,7 @@ pub async fn try_sync_single_combined_entry<'a>(
         .collect();
     info!(ctx.logger(), "syncing log entries {:?} ...", ids);
 
+    let start_time = std::time::Instant::now();
     let queue: Vec<ChangesetId> = futures::stream::iter(combined_entry.components.clone())
         .map(|entry| async move { try_expand_entry(repo, ctx, entry).await })
         .buffered(DEFAULT_CONCURRENT_ENTRIES_FOR_COMMIT_GRAPH)
@@ -149,10 +150,11 @@ pub async fn try_sync_single_combined_entry<'a>(
 
     info!(
         ctx.logger(),
-        "log entries {:?} synced ({} commits uploaded, upload stats: {})",
+        "log entries {:?} synced ({} commits uploaded, upload stats: {}), took overall {:.3} sec",
         ids,
         uploaded_len,
         upload_stats,
+        start_time.elapsed().as_secs_f64(),
     );
     // TODO: add configurable retries.
     Ok(RetryAttemptsCount(DEFAULT_UPLOAD_RETRY_NUM))
