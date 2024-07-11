@@ -160,9 +160,11 @@ class ProblemFixer(ProblemTracker):
         self.num_fixed_problems = 0
         self.num_failed_fixes = 0
         self.num_manual_fixes = 0
+        self.num_no_fixes = 0
         self.problem_types: Set[str] = set()
         self.problem_failed_fixes: Set[str] = set()
         self.problem_manual_fixes: Set[str] = set()
+        self.problem_no_fixes: Set[str] = set()
         self.problem_description: List[str] = []
 
     def add_problem_impl(self, problem: ProblemBase) -> None:
@@ -178,12 +180,14 @@ class ProblemFixer(ProblemTracker):
         if isinstance(problem, FixableProblem):
             self.fix_problem(problem)
         else:
-            self.num_manual_fixes += 1
-            self.problem_manual_fixes.add(problem.__class__.__name__)
             msg = problem.get_manual_remediation_message()
             if msg:
+                self.num_manual_fixes += 1
+                self.problem_manual_fixes.add(problem.__class__.__name__)
                 self._filtered_out.write(problem.severity(), msg, end="\n\n")
             else:
+                self.num_no_fixes += 1
+                self.problem_no_fixes.add(problem.__class__.__name__)
                 self._filtered_out.write(
                     problem.severity(),
                     f"Found problem with no documented fix: {problem.__class__.__name__}, please contact the eden team for support",

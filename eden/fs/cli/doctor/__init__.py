@@ -927,10 +927,12 @@ The version of EdenFS that is running on your machine is:
     {running_version}
 This version is known to have issue:
     {reasons_string}
-
-Run `edenfsctl restart{"" if sys.platform == "win32" else " --graceful"}` to migrate to the newer version to avoid these issues.
 """
-        super().__init__(dedent(help_string), severity=ProblemSeverity.ADVICE)
+
+        remediation_string = 'Run `edenfsctl restart{"" if sys.platform == "win32" else " --graceful"}` to migrate to the newer version to avoid these issues.'
+        super().__init__(
+            dedent(help_string), remediation_string, severity=ProblemSeverity.ADVICE
+        )
 
 
 class OutOfDateVersion(Problem):
@@ -940,11 +942,16 @@ The version of EdenFS that is installed on your machine is:
     {installed_version}
 but the version of EdenFS that is currently running is:
     {running_version}
+"""
 
-Consider running `edenfsctl restart --graceful` to migrate to the newer version,
+        remediation_string = """Consider running `edenfsctl restart --graceful` to migrate to the newer version,
 which may have important bug fixes or performance improvements.
 """
-        super().__init__(dedent(help_string), severity=ProblemSeverity.ADVICE)
+        super().__init__(
+            dedent(help_string),
+            dedent(remediation_string),
+            severity=ProblemSeverity.ADVICE,
+        )
 
 
 def check_edenfs_version(tracker: ProblemTracker, instance: EdenInstance) -> None:
