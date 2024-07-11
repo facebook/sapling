@@ -9,8 +9,8 @@ import type {ReactProps} from './utils';
 import type {ForwardedRef} from 'react';
 import type {ExclusiveOr} from 'shared/typeUtils';
 
-import {layout} from '../stylexUtils';
-import {colors} from '../tokens.stylex';
+import {layout} from './theme/layout';
+import {colors} from './theme/tokens.stylex';
 import * as stylex from '@stylexjs/stylex';
 import {forwardRef, type ReactNode} from 'react';
 

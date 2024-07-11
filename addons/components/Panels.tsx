@@ -8,7 +8,7 @@
 import type {ReactNode} from 'react';
 
 import {Column, Row} from './utils';
-import {spacing} from '../tokens.stylex';
+import {spacing} from './theme/tokens.stylex';
 import * as stylex from '@stylexjs/stylex';
 
 const styles = stylex.create({

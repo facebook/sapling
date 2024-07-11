@@ -8,8 +8,8 @@
 import type {ReactProps} from './utils';
 import type react from 'react';
 
-import {layout} from '../stylexUtils';
-import {spacing} from '../tokens.stylex';
+import {layout} from './theme/layout';
+import {spacing} from './theme/tokens.stylex';
 import * as stylex from '@stylexjs/stylex';
 import {useEffect, useId, useRef} from 'react';
 

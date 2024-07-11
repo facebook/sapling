@@ -7,7 +7,7 @@
 
 import type {ReactNode} from 'react';
 
-import {colors, font} from '../tokens.stylex';
+import {colors, font} from './theme/tokens.stylex';
 import * as stylex from '@stylexjs/stylex';
 
 const styles = stylex.create({

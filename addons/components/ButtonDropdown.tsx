@@ -8,7 +8,7 @@
 import type {ReactNode} from 'react';
 
 import {themeNameState} from '../theme';
-import {colors, spacing} from '../tokens.stylex';
+import {colors, spacing} from './theme/tokens.stylex';
 import {Button, buttonStyles} from './Button';
 import * as stylex from '@stylexjs/stylex';
 import {useAtomValue} from 'jotai';
