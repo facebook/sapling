@@ -1306,6 +1306,11 @@ impl CommitGraphStorage for SqlCommitGraphStorage {
     }
 
     async fn add_many(&self, ctx: &CoreContext, many_edges: Vec1<ChangesetEdges>) -> Result<usize> {
+        // If we're inserting a single changeset, use the faster single insertion method.
+        if many_edges.len() == 1 {
+            return Ok(self.add(ctx, many_edges.split_off_first().0).await? as usize);
+        }
+
         // We need to be careful because there might be dependencies among the edges
         // Part 1 - Add all nodes without any edges, so we generate ids for them
         let transaction = self.write_connection.start_transaction().await?;
