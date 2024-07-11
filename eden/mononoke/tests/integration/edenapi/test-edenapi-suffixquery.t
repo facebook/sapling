@@ -47,3 +47,9 @@ API works:
   [{"file_path": "src/rust.rs"}]
   $ hgedenapi debugapi -e suffix_query -i "{'Hg': '$(hg whereami)'}" -i "['.cpp']" -i None
   []
+  $ touch src/nested.txt
+  $ hg add src/nested.txt
+  $ hg commit -m "mint"
+  $ hgedenapi push -q --to master
+  $ hgedenapi debugapi -e suffix_query -i "{'Hg': '$(hg whereami)'}" -i "['.txt']" -i "['src']"
+  [{"file_path": "src/nested.txt"}]
