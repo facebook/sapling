@@ -1,0 +1,62 @@
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+html .dark-theme,
+html .vscode-dark {
+  --scm-modified-foreground: #e2c08d;
+  --scm-added-foreground: #73c991;
+  --scm-removed-foreground: #f3674f;
+  --scm-missing-foreground: #b4eaed;
+  --selected-commit-background: rgba(255, 255, 255, 0.1);
+
+  --error-fg-color: #f3674f;
+  --error-bg-color: #f3674f20;
+
+  --tooltip-background: var(--vscode-editorWidget-background, #252526);
+  --tooltip-border: var(--vscode-editorWidget-border, #454545);
+
+  --hover-darken: rgba(255, 255, 255, 0.1);
+  --subtle-hover-darken: rgba(255, 255, 255, 0.03);
+  --highlight-foreground: #f0f0f0;
+
+  --selection-mix-mode: lighten;
+
+  /* github PR colors */
+  --github-badge-fg: white;
+  --github-open-bg: #238636;
+  --github-closed-bg: #da3633;
+  --github-merged-bg: #8957e5;
+  --github-neutral-bg: #6e7781;
+
+  /* Editor colors */
+  --diffEditor-foreground: rgb(201, 209, 217);
+  --diffEditor-insertedLineBackground: #5fff8422;
+  --diffEditor-insertedLineHighlightBackground: #5fff8433;
+  --diffEditor-removedLineBackground: #fa7e7c33;
+  --diffEditor-removedLineHighlightBackground: #fa7e7c55;
+  --diffEditor-modifiedLineBackground: #deb94033;
+  --diffEditor-modifiedLineHighlightBackground: #deb94066;
+  --editor-selectionBackground: #264f78;
+  --editor-changedBackground: hsla(212, 90%, 70%, 0.15);
+  --editor-changedHighlightBackground: hsla(212, 90%, 70%, 0.3);
+
+  --hint-background: rgba(252, 193, 43, 0.2);
+
+  --banner-fg: rgb(235, 236, 237);
+  --banner-warning-bg: #deb94066;
+  --banner-error-bg: #fa7e7c55;
+  --banner-default-bg: #45454577;
+  --banner-green-bg: #73a280;
+
+  /* Signal colors */
+  --signal-good-bg: #2da44e;
+  --signal-medium-bg: #e0d12d;
+  --signal-bad-bg: #cf222e;
+  --signal-fg: white;
+
+  --checkbox-border: var(--vscode-contrastBorder, rgba(255, 255, 255, 0.2));
+}
