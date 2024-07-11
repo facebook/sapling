@@ -138,3 +138,15 @@ fn test_replace_all() {
     let items = replace_all(items, &parse!(a ___1 b), &parse!(b ___1 a));
     assert_eq!(unparse(&items), "async fn foo ( b a ) R { b and a }");
 }
+
+#[test]
+fn test_replace_func() {
+    let items = parse!(x [a b] x [c d e] x);
+    let pat = parse!([___1]);
+    let replaced = replace_all(items, &pat, |m: &Match<String>| -> Vec<Item> {
+        let mut v: Vec<Item> = m.captures["___1"].clone();
+        v.reverse();
+        v
+    });
+    assert_eq!(unparse(&replaced), "x b a x e d c x");
+}

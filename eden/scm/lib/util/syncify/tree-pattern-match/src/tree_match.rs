@@ -36,9 +36,9 @@ type Captures<T> = HashMap<String, Vec<Item<T>>>;
 pub fn replace_all<T: fmt::Debug + Clone + PartialEq>(
     mut items: Vec<Item<T>>,
     pat: &[Item<T>],
-    replace: &[Item<T>],
+    replace: impl Replace<T>,
 ) -> Vec<Item<T>> {
-    replace_in_place(&mut items, pat, replace);
+    replace_in_place(&mut items, pat, &replace);
     items
 }
 
@@ -65,18 +65,50 @@ pub fn find_all<T: fmt::Debug + Clone + PartialEq>(
     result
 }
 
+/// Takes a single match and output its replacement.
+pub trait Replace<T> {
+    fn expand(&self, m: &Match<T>) -> Vec<Item<T>>;
+}
+
+impl<T: Clone> Replace<T> for &[Item<T>] {
+    fn expand(&self, m: &Match<T>) -> Vec<Item<T>> {
+        expand_replace(self, &m.captures)
+    }
+}
+
+impl<T: Clone> Replace<T> for &Vec<Item<T>> {
+    fn expand(&self, m: &Match<T>) -> Vec<Item<T>> {
+        expand_replace(self, &m.captures)
+    }
+}
+
+impl<T: Clone> Replace<T> for Vec<Item<T>> {
+    fn expand(&self, m: &Match<T>) -> Vec<Item<T>> {
+        expand_replace(self, &m.captures)
+    }
+}
+
+impl<T, F> Replace<T> for F
+where
+    F: Fn(&'_ Match<T>) -> Vec<Item<T>>,
+{
+    fn expand(&self, m: &Match<T>) -> Vec<Item<T>> {
+        (self)(m)
+    }
+}
+
 /// Replace matches in place.
 fn replace_in_place<T: fmt::Debug + Clone + PartialEq>(
     items: &mut Vec<Item<T>>,
     pat: &[Item<T>],
-    replace: &[Item<T>],
+    replace: &dyn Replace<T>,
 ) -> bool {
     let mut changed = false;
     let mut i = 0;
     while i < items.len() {
         if let Some(matched) = match_items(&items[i..], pat, true) {
             // Replace in place.
-            let replaced = expand_replace(replace, &matched.captures);
+            let replaced = replace.expand(&matched);
             let replaced_len = replaced.len();
             let new_items = {
                 let mut new_items = items[..i].to_vec();
