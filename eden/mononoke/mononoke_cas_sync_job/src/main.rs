@@ -188,6 +188,13 @@ impl MononokeCasSyncProcess {
                     .help("if current counter is not set then `start-id` will be used"),
             )
             .arg(
+                Arg::with_name("batch-size")
+                    .long("batch-size")
+                    .takes_value(true)
+                    .required(false)
+                    .help("how many entries from the bookmark update log to process in one batch"),
+            )
+            .arg(
                 Arg::with_name("loop-forever")
                     .long("loop-forever")
                     .takes_value(false)
@@ -558,6 +565,7 @@ fn loop_over_log_entries<'a, B>(
     start_id: BookmarkUpdateLogId,
     loop_forever: bool,
     scuba_sample: &'a MononokeScubaSampleBuilder,
+    batch_size: u64,
 ) -> impl Stream<Item = Result<Vec<BookmarkUpdateLogEntry>, Error>> + 'a
 where
     B: BookmarkUpdateLog + Clone,
@@ -572,7 +580,7 @@ where
                             .read_next_bookmark_log_entries_same_bookmark_and_reason(
                                 ctx.clone(),
                                 current_id,
-                                DEFAULT_BATCH_SIZE,
+                                batch_size,
                             )
                             .try_collect::<Vec<_>>()
                             .watched(ctx.logger())
@@ -675,6 +683,7 @@ async fn run<'a>(
         (MODE_SYNC_LOOP, Some(sub_m)) => {
             let loop_forever = sub_m.is_present("loop-forever");
             let start_id = args::get_u64_opt(&sub_m, "start-id");
+            let batch_size = args::get_u64(&sub_m, "batch-size", DEFAULT_BATCH_SIZE);
             let replayed_sync_counter = LatestReplayedSyncCounter::new(&repo)?;
             let exit_path: Option<PathBuf> = sub_m
                 .value_of("exit-file")
@@ -719,57 +728,60 @@ async fn run<'a>(
                 repo,
             );
 
-            loop_over_log_entries(ctx, &bookmarks, start_id, loop_forever, &scuba_sample)
-                .try_filter(|entries| future::ready(!entries.is_empty()))
-                .fuse()
-                .try_next_step(|entries| async move {
-                    let combined_entry = CombinedBookmarkUpdateLogEntry {
-                        components: entries
-                            .into_iter()
-                            .filter_map(|entry| {
-                                if entry.bookmark_name.as_str() == SUPPORTED_BOOKMARK {
-                                    Some(entry)
-                                } else {
-                                    None
-                                }
-                            })
-                            .collect::<Vec<_>>(),
-                    };
-                    if can_continue() && !combined_entry.components.is_empty() {
-                        let (stats, res) = try_sync_single_combined_entry(
-                            re_cas_client,
-                            repo,
-                            ctx,
-                            &combined_entry,
-                        )
-                        .watched(ctx.logger())
-                        .timed()
-                        .await;
-
-                        let res = bind_sync_result(&combined_entry.components, res);
-                        let res = match res {
-                            Ok(ok) => Ok((stats, ok)),
-                            Err(err) => Err((Some(stats), err)),
-                        };
-                        let res = reporting_handler(res).watched(ctx.logger()).await;
-                        let entry = outcome_handler(res).watched(ctx.logger()).await?;
-                        let next_id = get_id_to_search_after(&entry);
-                        let success = replayed_sync_counter
-                            .set_counter(ctx, next_id.try_into()?)
+            loop_over_log_entries(
+                ctx,
+                &bookmarks,
+                start_id,
+                loop_forever,
+                &scuba_sample,
+                batch_size,
+            )
+            .try_filter(|entries| future::ready(!entries.is_empty()))
+            .fuse()
+            .try_next_step(|entries| async move {
+                let combined_entry = CombinedBookmarkUpdateLogEntry {
+                    components: entries
+                        .into_iter()
+                        .filter_map(|entry| {
+                            if entry.bookmark_name.as_str() == SUPPORTED_BOOKMARK {
+                                Some(entry)
+                            } else {
+                                None
+                            }
+                        })
+                        .collect::<Vec<_>>(),
+                };
+                if can_continue() && !combined_entry.components.is_empty() {
+                    let (stats, res) =
+                        try_sync_single_combined_entry(re_cas_client, repo, ctx, &combined_entry)
                             .watched(ctx.logger())
-                            .await?;
+                            .timed()
+                            .await;
 
-                        if success {
-                            Ok(())
-                        } else {
-                            bail!("failed to update counter")
-                        }
-                    } else {
+                    let res = bind_sync_result(&combined_entry.components, res);
+                    let res = match res {
+                        Ok(ok) => Ok((stats, ok)),
+                        Err(err) => Err((Some(stats), err)),
+                    };
+                    let res = reporting_handler(res).watched(ctx.logger()).await;
+                    let entry = outcome_handler(res).watched(ctx.logger()).await?;
+                    let next_id = get_id_to_search_after(&entry);
+                    let success = replayed_sync_counter
+                        .set_counter(ctx, next_id.try_into()?)
+                        .watched(ctx.logger())
+                        .await?;
+
+                    if success {
                         Ok(())
+                    } else {
+                        bail!("failed to update counter")
                     }
-                })
-                .try_collect::<()>()
-                .await
+                } else {
+                    Ok(())
+                }
+            })
+            .try_collect::<()>()
+            .await
         }
         _ => bail!("incorrect mode of operation is specified"),
     }
