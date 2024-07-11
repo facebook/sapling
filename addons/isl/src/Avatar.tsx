@@ -7,10 +7,10 @@
 
 import type {DetailedHTMLProps} from 'react';
 
+import {colors, radius} from '../../components/theme/tokens.stylex';
 import serverAPI from './ClientToServerAPI';
 import {t} from './i18n';
 import {atomFamilyWeak, lazyAtom} from './jotaiUtils';
-import {colors, radius} from './tokens.stylex';
 import * as stylex from '@stylexjs/stylex';
 import {useAtomValue} from 'jotai';
 

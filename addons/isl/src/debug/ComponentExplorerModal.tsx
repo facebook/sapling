@@ -7,13 +7,13 @@
 
 import type {StyleXVar} from '@stylexjs/stylex/lib/StyleXTypes';
 
+import {colors, font, radius, spacing} from '../../../components/theme/tokens.stylex';
 import {Banner, BannerKind} from '../Banner';
 import {ErrorNotice} from '../ErrorNotice';
 import {Link} from '../Link';
 import {Typeahead} from '../components/Typeahead';
 import {T} from '../i18n';
 import {layout} from '../stylexUtils';
-import {colors, font, radius, spacing} from '../tokens.stylex';
 import * as stylex from '@stylexjs/stylex';
 import {Badge} from 'isl-components/Badge';
 import {Button} from 'isl-components/Button';

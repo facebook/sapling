@@ -8,6 +8,7 @@
 import type {DiffId, DiffComment, DiffCommentReaction} from '../types';
 import type {ParsedDiff} from 'shared/patch/parse';
 
+import {colors, font, radius, spacing} from '../../../components/theme/tokens.stylex';
 import {AvatarImg} from '../Avatar';
 import serverAPI from '../ClientToServerAPI';
 import {SplitDiffTable} from '../ComparisonView/SplitDiffView/SplitDiffHunk';
@@ -19,7 +20,6 @@ import {atomFamilyWeak, atomLoadableWithRefresh} from '../jotaiUtils';
 import foundPlatform from '../platform';
 import {RelativeDate} from '../relativeDate';
 import {layout} from '../stylexUtils';
-import {colors, font, radius, spacing} from '../tokens.stylex';
 import * as stylex from '@stylexjs/stylex';
 import {Subtle} from 'isl-components/Subtle';
 import {Tooltip} from 'isl-components/Tooltip';

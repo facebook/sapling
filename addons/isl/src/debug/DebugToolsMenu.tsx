@@ -9,6 +9,7 @@ import type {Heartbeat} from '../heartbeat';
 import type {ReactNode} from 'react';
 import type {ExclusiveOr} from 'shared/typeUtils';
 
+import {colors} from '../../../components/theme/tokens.stylex';
 import {debugLogMessageTraffic} from '../ClientToServerAPI';
 import {Column, Row} from '../ComponentUtils';
 import {DropdownField, DropdownFields} from '../DropdownFields';
@@ -32,7 +33,6 @@ import {
   repositoryInfo,
 } from '../serverAPIState';
 import {showToast} from '../toast';
-import {colors} from '../tokens.stylex';
 import {isDev} from '../utils';
 import {ComponentExplorerButton} from './ComponentExplorer';
 import {readInterestingAtoms, serializeAtomsState} from './getInterestingAtoms';

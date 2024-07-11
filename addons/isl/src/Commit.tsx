@@ -10,6 +10,7 @@ import type {CommitInfo, SuccessorInfo} from './types';
 import type {ReactNode} from 'react';
 import type {ContextMenuItem} from 'shared/ContextMenu';
 
+import {spacing} from '../../components/theme/tokens.stylex';
 import {Bookmarks, createBookmarkAtCommit} from './Bookmark';
 import {openBrowseUrlForHash, supportsBrowseUrlForHash} from './BrowseRepo';
 import {hasUnsavedEditedCommitMessage} from './CommitInfoView/CommitInfoState';
@@ -58,7 +59,6 @@ import {SplitButton} from './stackEdit/ui/SplitButton';
 import {editingStackIntentionHashes} from './stackEdit/ui/stackEditState';
 import {latestSuccessorUnlessExplicitlyObsolete} from './successionUtils';
 import {copyAndShowToast} from './toast';
-import {spacing} from './tokens.stylex';
 import {succeedableRevset} from './types';
 import {short} from './utils';
 import * as stylex from '@stylexjs/stylex';

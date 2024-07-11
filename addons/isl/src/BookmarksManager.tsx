@@ -10,6 +10,7 @@ import type {TypeaheadResult} from './CommitInfoView/types';
 import type {Result, StableInfo} from './types';
 import type {ReactNode} from 'react';
 
+import {spacing} from '../../components/theme/tokens.stylex';
 import {Banner, BannerKind} from './Banner';
 import {Bookmark} from './Bookmark';
 import {
@@ -31,7 +32,6 @@ import {Typeahead} from './components/Typeahead';
 import {T, t} from './i18n';
 import {readAtom} from './jotaiUtils';
 import {latestDag} from './serverAPIState';
-import {spacing} from './tokens.stylex';
 import * as stylex from '@stylexjs/stylex';
 import {Button} from 'isl-components/Button';
 import {Checkbox} from 'isl-components/Checkbox';

@@ -5,13 +5,13 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import {colors} from '../../components/theme/tokens.stylex';
 import {Column} from './ComponentUtils';
 import {useCommand} from './ISLShortcuts';
 import {Kbd} from './Kbd';
 import {tracker} from './analytics';
 import {focusMode} from './atoms/FocusModeState';
 import {T} from './i18n';
-import {colors} from './tokens.stylex';
 import * as stylex from '@stylexjs/stylex';
 import {Button} from 'isl-components/Button';
 import {Tooltip} from 'isl-components/Tooltip';

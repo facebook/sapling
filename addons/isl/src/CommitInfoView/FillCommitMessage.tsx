@@ -9,6 +9,7 @@ import type {CommitInfo} from '../types';
 import type {CommitInfoMode} from './CommitInfoState';
 import type {CommitMessageFields, FieldConfig} from './types';
 
+import {font, spacing} from '../../../components/theme/tokens.stylex';
 import {FlexSpacer} from '../ComponentUtils';
 import {Internal} from '../Internal';
 import {tracker} from '../analytics';
@@ -17,7 +18,6 @@ import {readAtom, writeAtom} from '../jotaiUtils';
 import foundPlatform from '../platform';
 import {dagWithPreviews} from '../previews';
 import {layout} from '../stylexUtils';
-import {font, spacing} from '../tokens.stylex';
 import {useModal} from '../useModal';
 import {
   getDefaultEditedCommitMessage,
