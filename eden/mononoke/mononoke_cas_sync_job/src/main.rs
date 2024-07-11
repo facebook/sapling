@@ -499,7 +499,7 @@ async fn try_sync_single_combined_entry<'a>(
     re_cas_client: &MononokeCasChangesetsUploader<'a>,
     repo: &'a Repo,
     ctx: &'a CoreContext,
-    combined_entry: &CombinedBookmarkUpdateLogEntry,
+    combined_entry: &'a CombinedBookmarkUpdateLogEntry,
 ) -> Result<RetryAttemptsCount, Error> {
     re_cas_sync::try_sync_single_combined_entry(re_cas_client, repo, ctx, combined_entry).await
 }
