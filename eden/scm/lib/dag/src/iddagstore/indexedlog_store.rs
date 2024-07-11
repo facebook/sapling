@@ -484,17 +484,14 @@ impl Persist for IndexedLogStore {
         // Take a filesystem lock. The file name 'lock' is taken by indexedlog
         // running on Windows, so we choose another file name here.
         let lock_file = {
-            let mut path = self.path.clone();
-            path.push("wlock");
-            File::open(&path).or_else(|_| {
-                // Some NFS implementation reports `EBADF` for `flock()` unless the file is opened
-                // with `O_RDWR`.
-                fs::OpenOptions::new()
-                    .read(true)
-                    .write(true)
-                    .create_new(true)
-                    .open(&path)
-            })?
+            let path = self.path.join("wlock");
+            // Some NFS implementation reports `EBADF` for `flock()` unless the file is opened
+            // with `O_RDWR`.
+            fs::OpenOptions::new()
+                .read(true)
+                .write(true)
+                .create(true)
+                .open(&path)?
         };
         lock_file.lock_exclusive()?;
         Ok(lock_file)

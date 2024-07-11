@@ -510,17 +510,14 @@ impl Persist for IdMap {
             return programming("lock() must be called without dirty in-memory entries");
         }
         let lock_file = {
-            let mut path = self.path.clone();
-            path.push("wlock");
-            File::open(&path).or_else(|_| {
-                // Some NFS implementation reports `EBADF` for `flock()` unless the file is opened
-                // with `O_RDWR`.
-                fs::OpenOptions::new()
-                    .read(true)
-                    .write(true)
-                    .create_new(true)
-                    .open(&path)
-            })?
+            let path = self.path.join("wlock");
+            // Some NFS implementation reports `EBADF` for `flock()` unless the file is opened
+            // with `O_RDWR`.
+            fs::OpenOptions::new()
+                .read(true)
+                .write(true)
+                .create(true)
+                .open(&path)?
         };
         lock_file.lock_exclusive()?;
         Ok(lock_file)
