@@ -21,7 +21,6 @@ use futures::stream::BoxStream;
 use mononoke_types::ChangesetId;
 use mononoke_types::ChangesetIdPrefix;
 use mononoke_types::ChangesetIdsResolvedFromPrefix;
-use mononoke_types::Generation;
 use mononoke_types::RepositoryId;
 use vec1::Vec1;
 
@@ -57,11 +56,7 @@ impl Changesets for MicrowaveChangesets {
         )
     }
 
-    async fn add_many(
-        &self,
-        _ctx: &CoreContext,
-        _css: Vec1<(ChangesetInsert, Generation)>,
-    ) -> Result<(), Error> {
+    async fn add_many(&self, _ctx: &CoreContext, _css: Vec1<ChangesetInsert>) -> Result<(), Error> {
         unimplemented!(
             "MicrowaveChangesets: unexpected add in repo {}",
             self.repo_id

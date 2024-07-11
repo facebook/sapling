@@ -36,7 +36,6 @@ use itertools::Itertools;
 use mononoke_types::ChangesetId;
 use mononoke_types::ChangesetIdPrefix;
 use mononoke_types::ChangesetIdsResolvedFromPrefix;
-use mononoke_types::Generation;
 use mononoke_types::RepositoryId;
 use readonlyblob::ReadOnlyBlobstore;
 use repo_blobstore::RepoBlobstore;
@@ -190,13 +189,9 @@ impl Changesets for InMemoryChangesets {
         self.sql_in_memory.add(ctx, cs).await
     }
 
-    async fn add_many(
-        &self,
-        ctx: &CoreContext,
-        css: Vec1<(ChangesetInsert, Generation)>,
-    ) -> Result<()> {
+    async fn add_many(&self, ctx: &CoreContext, css: Vec1<ChangesetInsert>) -> Result<()> {
         // If necessary, this can be optimised.
-        for (cs, _) in css {
+        for cs in css {
             self.add(ctx, cs).await?;
         }
         Ok(())

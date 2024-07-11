@@ -9,6 +9,7 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::sync::Arc;
 
+use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
@@ -296,14 +297,56 @@ impl Changesets for SqlChangesets {
         }
     }
 
-    async fn add_many(
-        &self,
-        ctx: &CoreContext,
-        css: Vec1<(ChangesetInsert, Generation)>,
-    ) -> Result<()> {
+    async fn add_many(&self, ctx: &CoreContext, css: Vec1<ChangesetInsert>) -> Result<()> {
         STATS::adds.add_value(css.len() as i64);
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlWrites);
+
+        // Find all parents that are already inserted in the database.
+        let mut existing_parents = css
+            .iter()
+            .flat_map(|entry| entry.parents.iter().copied())
+            .collect::<HashSet<_>>();
+        for entry in &css {
+            existing_parents.remove(&entry.cs_id);
+        }
+
+        // Find the generation numbers of the existing parents.
+        let mut generations = self
+            .get_many(ctx, existing_parents.into_iter().collect())
+            .await?
+            .into_iter()
+            .map(|entry| (entry.cs_id, entry.gen))
+            .collect::<HashMap<_, _>>();
+
+        // Calculate the generation numbers of the changesets using the generation numbers of their parents.
+        let css = css
+            .into_iter()
+            .map(|entry| {
+                let parents_generations = entry
+                    .parents
+                    .iter()
+                    .map(|parent| {
+                        generations.get(parent).ok_or_else(|| {
+                            anyhow!(
+                                "Missing changeset parent {} while calculating generation numbers (in SqlChangesets::add_many)",
+                                parent
+                            )
+                        })
+                    })
+                    .collect::<Result<Vec<_>>>()?;
+
+                let entry_generation = parents_generations
+                    .into_iter()
+                    .max()
+                    .unwrap_or(&0) + 1;
+
+                generations.insert(entry.cs_id, entry_generation);
+
+                Ok((entry, Generation::new(entry_generation)))
+            })
+            .collect::<Result<Vec<_>>>()?;
+
         let transaction = self.write_connection.start_transaction().await?;
         // Part 1 - Add all changesets to the SQL table.
         let (transaction, result) = InsertChangeset::query_with_transaction(

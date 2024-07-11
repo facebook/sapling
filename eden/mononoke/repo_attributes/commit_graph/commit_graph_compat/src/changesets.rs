@@ -23,7 +23,6 @@ use futures::stream::BoxStream;
 use mononoke_types::ChangesetId;
 use mononoke_types::ChangesetIdPrefix;
 use mononoke_types::ChangesetIdsResolvedFromPrefix;
-use mononoke_types::Generation;
 use mononoke_types::RepositoryId;
 use smallvec::SmallVec;
 use vec1::vec1;
@@ -72,17 +71,13 @@ impl Changesets for ChangesetsCommitGraphCompat {
         Ok(added_to_changesets)
     }
 
-    async fn add_many(
-        &self,
-        ctx: &CoreContext,
-        css: Vec1<(ChangesetInsert, Generation)>,
-    ) -> Result<()> {
+    async fn add_many(&self, ctx: &CoreContext, css: Vec1<ChangesetInsert>) -> Result<()> {
         futures::try_join!(
             self.changesets.add_many(ctx, css.clone()),
             self.commit_graph_writer.add_recursive(
                 ctx,
                 Arc::new(self.changeset_fetcher.clone()),
-                css.mapped(|(cs, _gen)| (cs.cs_id, SmallVec::from_vec(cs.parents))),
+                css.mapped(|cs| (cs.cs_id, SmallVec::from_vec(cs.parents))),
             )
         )
         .with_context(|| "during commit_graph_compat::Changesets::add")?;

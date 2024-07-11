@@ -40,7 +40,6 @@ use memcache::KeyGen;
 use mononoke_types::ChangesetId;
 use mononoke_types::ChangesetIdPrefix;
 use mononoke_types::ChangesetIdsResolvedFromPrefix;
-use mononoke_types::Generation;
 use mononoke_types::RepositoryId;
 use ref_cast::RefCast;
 use stats::prelude::*;
@@ -137,11 +136,7 @@ impl Changesets for CachingChangesets {
         self.changesets.add(ctx, cs).await
     }
 
-    async fn add_many(
-        &self,
-        ctx: &CoreContext,
-        css: Vec1<(ChangesetInsert, Generation)>,
-    ) -> Result<(), Error> {
+    async fn add_many(&self, ctx: &CoreContext, css: Vec1<ChangesetInsert>) -> Result<(), Error> {
         self.changesets.add_many(ctx, css).await
     }
 

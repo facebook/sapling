@@ -25,7 +25,6 @@ use futures::TryStreamExt;
 use maplit::hashset;
 use mononoke_types::ChangesetIdPrefix;
 use mononoke_types::ChangesetIdsResolvedFromPrefix;
-use mononoke_types::Generation;
 use mononoke_types_mocks::changesetid::*;
 use mononoke_types_mocks::repo::*;
 use pretty_assertions::assert_eq;
@@ -837,14 +836,9 @@ async fn test_add_many_fixture<F: fixtures::TestRepoFixture + Send, C: Changeset
         let insert_data: Vec<_> = all_changesets
             .clone()
             .into_iter()
-            .map(|entry| {
-                (
-                    ChangesetInsert {
-                        cs_id: entry.cs_id,
-                        parents: entry.parents,
-                    },
-                    Generation::new(entry.gen),
-                )
+            .map(|entry| ChangesetInsert {
+                cs_id: entry.cs_id,
+                parents: entry.parents,
             })
             .collect();
         let mid = insert_data.len() / 2;
