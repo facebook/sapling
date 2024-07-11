@@ -114,6 +114,10 @@ fn test_find_all_nested_captures() {
     let matches = find_all(&items, &pat);
     assert_eq!(matches.len(), 2);
     assert_eq!(matches[0].show(), ["___1 => a b", "___2 => c d"]);
+
+    let matches = find_all(&parse!(a b c d [ e f ]), &parse!(a ___1 d [ ___2 ]));
+    assert_eq!(matches.len(), 1);
+    assert_eq!(matches[0].show(), ["___1 => b c", "___2 => e f"]);
 }
 
 #[test]

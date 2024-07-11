@@ -150,11 +150,12 @@ fn match_items<T: fmt::Debug + Clone + PartialEq>(
         if let Item::Placeholder(ident_str) = pat_next {
             if ident_str.starts_with("___") {
                 // Multi-item match (*). We just "look ahead" for a short range.
-                let pat_rest = &pat[j + 1..];
+                let mut pat_rest = &pat[j + 1..];
                 let mut item_rest = &items[i..];
                 // Do not match groups, unless the placeholder wants.
                 if !is_placeholder_matching_tree(ident_str) {
                     item_rest = slice_trim_trees(item_rest);
+                    pat_rest = slice_trim_trees(pat_rest);
                 }
                 // No way to match if "item_rest" is shorter.
                 if pat_rest.len() > item_rest.len() {
@@ -174,7 +175,7 @@ fn match_items<T: fmt::Debug + Clone + PartialEq>(
                         // So items[..start] matches the placeholder.
                         captures.insert(ident_str.clone(), item_rest[..start].to_vec());
                         i += end;
-                        j = pat.len();
+                        j += pat_rest.len() + 1;
                         continue 'main_loop;
                     }
                     if !allow_remaining || start == 0 {
