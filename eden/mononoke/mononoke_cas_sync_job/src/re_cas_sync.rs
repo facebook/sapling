@@ -9,6 +9,7 @@ use anyhow::Error;
 use bookmarks::BookmarkUpdateLogEntry;
 use changesets_uploader::MononokeCasChangesetsUploader;
 use changesets_uploader::UploadPolicy;
+use changesets_uploader::UploadStats;
 use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use futures::stream;
@@ -45,12 +46,12 @@ pub async fn try_sync<'a>(
     repo: &'a Repo,
     ctx: &'a CoreContext,
     bcs_id: ChangesetId,
-) -> Result<ChangesetId, Error> {
+) -> Result<UploadStats, Error> {
     // Upload changeset to RE CAS.
-    re_cas_client
+    let stats = re_cas_client
         .upload_single_changeset(ctx, repo, &bcs_id, UploadPolicy::All)
         .await?;
-    Ok(bcs_id)
+    Ok(stats)
 }
 
 pub async fn try_expand_entry<'a>(
@@ -131,17 +132,27 @@ pub async fn try_sync_single_combined_entry<'a>(
         .await?;
 
     // Once everything is derived, the upload order does not matter.
-    let uploaded = stream::iter(derived)
+    let uploaded_len = derived.len();
+    let upload_stats = stream::iter(derived)
         .map(move |bcs_id| async move { try_sync(re_cas_client, repo, ctx, bcs_id).await })
         .buffer_unordered(DEFAULT_UPLOAD_CONCURRENT_COMMITS)
-        .try_collect::<Vec<ChangesetId>>()
-        .await?;
+        .try_collect::<Vec<_>>()
+        .await?
+        .into_iter()
+        .fold(
+            UploadStats::default(),
+            |acc: UploadStats, current: UploadStats| {
+                acc.add(current.as_ref());
+                acc
+            },
+        );
 
     info!(
         ctx.logger(),
-        "log entries {:?} synced ({} commits uploaded)",
+        "log entries {:?} synced ({} commits uploaded, upload stats: {})",
         ids,
-        uploaded.len()
+        uploaded_len,
+        upload_stats,
     );
     // TODO: add configurable retries.
     Ok(RetryAttemptsCount(DEFAULT_UPLOAD_RETRY_NUM))
