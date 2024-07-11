@@ -7,7 +7,7 @@
 
 import {ThemedComponentsRoot} from '../ThemedComponentsRoot';
 import {ViewportOverlayRoot} from '../ViewportOverlay';
-import {ComponentExplorer} from './ComponentExplorer';
+import ComponentExplorer from './ComponentExplorer';
 import 'react';
 import ReactDOM from 'react-dom/client';
 

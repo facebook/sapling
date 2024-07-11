@@ -35,7 +35,7 @@ const signalColors = ['signalGoodBg', 'signalMediumBg', 'signalBadBg'] as const;
 const paddings = ['none', 'quarter', 'half', 'pad', 'double', 'xlarge'] as const;
 const fontSizes = ['smaller', 'small', 'normal', 'big', 'bigger'] as const;
 
-export function ComponentExplorer() {
+export default function ComponentExplorer() {
   const [radioChoice, setRadioChoice] = useState('radio');
   const [checkbox1, setCheckbox1] = useState(false);
   const [checkbox2, setCheckbox2] = useState(true);
