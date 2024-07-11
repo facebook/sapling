@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {ReactProps} from '../ComponentUtils';
+import type {ReactProps} from './utils';
 import type {ReactNode} from 'react';
 
 import * as stylex from '@stylexjs/stylex';

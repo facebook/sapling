@@ -7,7 +7,7 @@
 
 import type react from 'react';
 
-import {Column} from '../ComponentUtils';
+import {Column} from './utils';
 import {Tooltip} from '../Tooltip';
 import {layout} from '../stylexUtils';
 import {spacing} from '../tokens.stylex';

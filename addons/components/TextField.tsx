@@ -5,10 +5,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {ReactProps} from '../ComponentUtils';
+import type {ReactProps} from './utils';
 import type {ForwardedRef, ReactNode} from 'react';
 
-import {Column} from '../ComponentUtils';
+import {Column} from './utils';
 import * as stylex from '@stylexjs/stylex';
 import {forwardRef, useId} from 'react';
 import {notEmpty} from 'shared/utils';

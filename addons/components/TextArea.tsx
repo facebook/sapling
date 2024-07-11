@@ -7,7 +7,7 @@
 
 import type {ForwardedRef, ReactNode} from 'react';
 
-import {Column} from '../ComponentUtils';
+import {Column} from './utils';
 import * as stylex from '@stylexjs/stylex';
 import {forwardRef, useId} from 'react';
 import {notEmpty} from 'shared/utils';

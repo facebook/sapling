@@ -7,7 +7,7 @@
 
 import type {ReactNode} from 'react';
 
-import {Column, Row} from '../ComponentUtils';
+import {Column, Row} from './utils';
 import {spacing} from '../tokens.stylex';
 import * as stylex from '@stylexjs/stylex';
 
