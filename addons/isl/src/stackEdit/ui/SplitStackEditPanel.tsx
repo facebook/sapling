@@ -23,7 +23,6 @@ import {useTokenizedContentsOnceVisible} from '../../ComparisonView/SplitDiffVie
 import {Column, Row, ScrollX, ScrollY} from '../../ComponentUtils';
 import {EmptyState} from '../../EmptyState';
 import {useGeneratedFileStatuses} from '../../GeneratedFile';
-import {Subtle} from '../../Subtle';
 import {Tooltip} from '../../Tooltip';
 import {tracker} from '../../analytics';
 import {t, T} from '../../i18n';
@@ -34,6 +33,7 @@ import {bumpStackEditMetric, SplitRangeRecord, useStackEditState} from './stackE
 import * as stylex from '@stylexjs/stylex';
 import {Set as ImSet, Range} from 'immutable';
 import {Button} from 'isl-components/Button';
+import {Subtle} from 'isl-components/Subtle';
 import {TextField} from 'isl-components/TextField';
 import {useAtomValue} from 'jotai';
 import {useRef, useState, useEffect, useMemo} from 'react';

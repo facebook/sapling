@@ -10,7 +10,6 @@ import type {ValidatedRepoInfo} from './types';
 import type {ReactNode} from 'react';
 
 import {Delayed} from './Delayed';
-import {Subtle} from './Subtle';
 import {Tooltip} from './Tooltip';
 import {codeReviewProvider} from './codeReview/CodeReviewInfo';
 import {T, t} from './i18n';
@@ -25,6 +24,7 @@ import {processTerminalLines} from './terminalOutput';
 import {CommandRunner} from './types';
 import {short} from './utils';
 import {Button} from 'isl-components/Button';
+import {Subtle} from 'isl-components/Subtle';
 import {useAtomValue} from 'jotai';
 import {Icon} from 'shared/Icon';
 import './CommandHistoryAndProgress.css';
