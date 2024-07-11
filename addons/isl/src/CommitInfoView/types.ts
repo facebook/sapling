@@ -14,27 +14,6 @@ export type TypeaheadKind =
   | 'meta-tag'
   | 'meta-diff'
   | 'meta-privacy-context';
-export type TypeaheadResult = {
-  /** The display text of the suggestion */
-  label: string;
-
-  /**
-   * Additional details to show de-emphasized next to the display name.
-   * If provided, this is shown visually instead of the value.
-   */
-  detail?: string;
-
-  /**
-   * The literal value of the suggestion, placed literally as text into the commit message.
-   * If `detail` is not provided, value is shown de-emphasized next to the display name.
-   */
-  value: string;
-
-  /**
-   * An optional image url representing this result. Usually, a user avatar.
-   */
-  image?: string;
-};
 
 /**
  * Which fields of the message should display as editors instead of rendered values.

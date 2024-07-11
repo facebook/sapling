@@ -12,7 +12,7 @@ import type {Logger} from './logger';
 import type {ServerPlatform} from './serverPlatform';
 import type {RepositoryContext} from './serverTypes';
 import type {ExecaError} from 'execa';
-import type {TypeaheadResult} from 'isl/src/CommitInfoView/types';
+import type {TypeaheadResult} from 'isl-components/Types';
 import type {Serializable} from 'isl/src/serialize';
 import type {
   ServerToClientMessage,

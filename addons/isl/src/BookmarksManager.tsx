@@ -6,8 +6,8 @@
  */
 
 import type {BookmarkKind} from './Bookmark';
-import type {TypeaheadResult} from './CommitInfoView/types';
 import type {Result, StableInfo} from './types';
+import type {TypeaheadResult} from 'isl-components/Types';
 import type {ReactNode} from 'react';
 
 import {spacing} from '../../components/theme/tokens.stylex';
@@ -21,14 +21,12 @@ import {
   removeManualStable,
 } from './BookmarksData';
 import serverAPI from './ClientToServerAPI';
-import {extractTokens} from './CommitInfoView/Tokens';
 import {Column, Row, ScrollY} from './ComponentUtils';
 import {DropdownFields} from './DropdownFields';
 import {InlineErrorBadge} from './ErrorNotice';
 import {useCommandEvent} from './ISLShortcuts';
 import {Internal} from './Internal';
 import {Kbd} from './Kbd';
-import {Typeahead} from './components/Typeahead';
 import {T, t} from './i18n';
 import {readAtom} from './jotaiUtils';
 import {latestDag} from './serverAPIState';
@@ -37,7 +35,9 @@ import {Button} from 'isl-components/Button';
 import {Checkbox} from 'isl-components/Checkbox';
 import {Icon} from 'isl-components/Icon';
 import {Subtle} from 'isl-components/Subtle';
+import {extractTokens} from 'isl-components/Tokens';
 import {Tooltip} from 'isl-components/Tooltip';
+import {Typeahead} from 'isl-components/Typeahead';
 import {atom, useAtom, useAtomValue} from 'jotai';
 import React, {useState} from 'react';
 import {KeyCode, Modifier} from 'shared/KeyboardShortcuts';

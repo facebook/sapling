@@ -20,6 +20,7 @@ import {Tag} from '../Tag';
 import {TextArea} from '../TextArea';
 import {TextField} from '../TextField';
 import {Tooltip} from '../Tooltip';
+import {Typeahead} from '../Typeahead';
 import {layout} from '../theme/layout';
 import {colors, font, radius, spacing} from '../theme/tokens.stylex';
 import * as stylex from '@stylexjs/stylex';
@@ -235,10 +236,10 @@ export function ComponentExplorer() {
             Thing
           </Tooltip>
         </Row>
-        {/* <Row>
+        <Row>
           <span>Typeahead:</span>
           <ExampleTypeahead />
-        </Row> */}
+        </Row>
 
         {/* <Row>
           <Banner>Banner</Banner>
@@ -348,40 +349,40 @@ function GroupName({children}: {children: ReactNode}) {
   return <div {...stylex.props(styles.groupName)}>{children}</div>;
 }
 
-// function ExampleTypeahead() {
-//   const [value, setValue] = useState('');
+function ExampleTypeahead() {
+  const [value, setValue] = useState('');
 
-//   const possibleValues = [
-//     'apple',
-//     'banana',
-//     'cherry',
-//     'date',
-//     'elderberry',
-//     'fig',
-//     'grape',
-//     'honeydew',
-//     'jackfruit',
-//     'kiwi',
-//   ];
-//   const fetchTokens = async (searchTerm: string) => {
-//     await new Promise(resolve => setTimeout(resolve, 500));
-//     return {
-//       values: possibleValues
-//         .filter(v => v.includes(searchTerm))
-//         .map(value => ({
-//           label: value,
-//           value,
-//         })),
-//       fetchStartTimestamp: Date.now(),
-//     };
-//   };
-//   return (
-//     <Typeahead
-//       tokenString={value}
-//       setTokenString={setValue}
-//       fetchTokens={fetchTokens}
-//       autoFocus={false}
-//       maxTokens={3}
-//     />
-//   );
-// }
+  const possibleValues = [
+    'apple',
+    'banana',
+    'cherry',
+    'date',
+    'elderberry',
+    'fig',
+    'grape',
+    'honeydew',
+    'jackfruit',
+    'kiwi',
+  ];
+  const fetchTokens = async (searchTerm: string) => {
+    await new Promise(resolve => setTimeout(resolve, 500));
+    return {
+      values: possibleValues
+        .filter(v => v.includes(searchTerm))
+        .map(value => ({
+          label: value,
+          value,
+        })),
+      fetchStartTimestamp: Date.now(),
+    };
+  };
+  return (
+    <Typeahead
+      tokenString={value}
+      setTokenString={setValue}
+      fetchTokens={fetchTokens}
+      autoFocus={false}
+      maxTokens={3}
+    />
+  );
+}

@@ -5,14 +5,14 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {TypeaheadResult} from '../CommitInfoView/types';
-import type {ReactProps} from '../ComponentUtils';
+import type {TypeaheadResult} from './Types';
+import type {ReactProps} from './utils';
 
-import {extractTokens, TokensList, tokensToString} from '../CommitInfoView/Tokens';
+import {Icon} from './Icon';
+import {extractTokens, TokensList, tokensToString} from './Tokens';
 import {Subtle} from 'isl-components/Subtle';
 import {TextField} from 'isl-components/TextField';
 import {useRef, useEffect, useState} from 'react';
-import {Icon} from 'shared/Icon';
 
 export function Typeahead({
   tokenString,

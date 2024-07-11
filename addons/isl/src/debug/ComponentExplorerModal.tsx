@@ -11,7 +11,6 @@ import {colors, font, radius, spacing} from '../../../components/theme/tokens.st
 import {Banner, BannerKind} from '../Banner';
 import {ErrorNotice} from '../ErrorNotice';
 import {Link} from '../Link';
-import {Typeahead} from '../components/Typeahead';
 import {T} from '../i18n';
 import {layout} from '../stylexUtils';
 import * as stylex from '@stylexjs/stylex';
@@ -28,6 +27,7 @@ import {Tag} from 'isl-components/Tag';
 import {TextArea} from 'isl-components/TextArea';
 import {TextField} from 'isl-components/TextField';
 import {Tooltip} from 'isl-components/Tooltip';
+import {Typeahead} from 'isl-components/Typeahead';
 import {useState, type ReactNode} from 'react';
 
 /* eslint-disable no-console */

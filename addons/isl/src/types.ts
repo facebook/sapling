@@ -5,9 +5,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {TypeaheadKind, TypeaheadResult} from './CommitInfoView/types';
+import type {TypeaheadKind} from './CommitInfoView/types';
 import type {InternalTypes} from './InternalTypes';
 import type {Serializable} from './serialize';
+import type {TypeaheadResult} from 'isl-components/Types';
 import type {TrackEventName} from 'isl-server/src/analytics/eventNames';
 import type {TrackDataWithEventName} from 'isl-server/src/analytics/types';
 import type {GitHubDiffSummary} from 'isl-server/src/github/githubCodeReviewProvider';
