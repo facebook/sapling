@@ -10,11 +10,13 @@ mod errors;
 use anyhow::Error;
 use blobstore::Blobstore;
 use blobstore::Loadable;
+use bytes::BytesMut;
 use cas_client::CasClient;
 use context::CoreContext;
 pub use errors::ErrorKind;
 use futures::stream;
 use futures::StreamExt;
+use futures::TryStreamExt;
 use mercurial_types::HgAugmentedManifestId;
 use mercurial_types::HgFileNodeId;
 use mononoke_types::ContentId;
@@ -34,6 +36,7 @@ define_stats! {
 
 const MAX_CONCURRENT_UPLOADS_TREES: usize = 200;
 const MAX_CONCURRENT_UPLOADS_FILES: usize = 100;
+const MAX_BYTES_FOR_INLINE_UPLOAD: u64 = 500000;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum UploadOutcome {
@@ -82,8 +85,14 @@ where
         let stream = filestore::fetch(blobstore, ctx.clone(), &content_id.into())
             .await?
             .ok_or(ErrorKind::MissingInBlobstore(content_id))?;
-
-        self.client.streaming_upload_blob(&digest, stream).await?;
+        if digest.1 <= MAX_BYTES_FOR_INLINE_UPLOAD {
+            let bytes_to_upload = stream.try_collect::<BytesMut>().await?;
+            self.client
+                .upload_blob(&digest, bytes_to_upload.into())
+                .await?;
+        } else {
+            self.client.streaming_upload_blob(&digest, stream).await?;
+        }
         STATS::uploaded_files_count.add_value(1);
         Ok(UploadOutcome::Uploaded)
     }
@@ -234,9 +243,16 @@ where
         }
         let bytes_stream =
             augmented_manifest_envelope.into_content_addressed_manifest_blob(ctx, blobstore);
-        self.client
-            .streaming_upload_blob(&digest, bytes_stream)
-            .await?;
+        if digest.1 <= MAX_BYTES_FOR_INLINE_UPLOAD {
+            let bytes_to_upload = bytes_stream.try_collect::<BytesMut>().await?;
+            self.client
+                .upload_blob(&digest, bytes_to_upload.into())
+                .await?;
+        } else {
+            self.client
+                .streaming_upload_blob(&digest, bytes_stream)
+                .await?;
+        }
         STATS::uploaded_manifests_count.add_value(1);
         Ok(UploadOutcome::Uploaded)
     }

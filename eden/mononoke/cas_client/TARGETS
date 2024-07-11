@@ -30,6 +30,7 @@ rust_library(
     autocargo = {"cargo_toml_dir": "scm_client"},
     deps = [
         "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:bytes",
         "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:thiserror",
         "//common/rust/shed/stats:stats",

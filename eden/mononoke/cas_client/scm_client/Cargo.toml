@@ -13,6 +13,7 @@ path = "lib.rs"
 [dependencies]
 anyhow = "1.0.75"
 blobstore = { version = "0.1.0", path = "../../blobstore" }
+bytes = { version = "1.6.0", features = ["serde"] }
 cas_client = { version = "0.1.0", path = "../client" }
 context = { version = "0.1.0", path = "../../server/context" }
 filestore = { version = "0.1.0", path = "../../filestore" }
