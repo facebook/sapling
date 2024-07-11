@@ -12,12 +12,12 @@ import type {Block, LineIdx} from 'shared/diff';
 
 import {CommitTitle} from '../../CommitTitle';
 import {Row, ScrollX, ScrollY} from '../../ComponentUtils';
-import {Checkbox} from '../../components/Checkbox';
 import {FlattenLine} from '../../linelog';
 import {computeLinesForFileStackEditor} from './FileStackEditorLines';
 import {TextEditable} from './TextEditable';
 import deepEqual from 'fast-deep-equal';
 import {Set as ImSet, Range, List} from 'immutable';
+import {Checkbox} from 'isl-components/Checkbox';
 import React, {useState, useRef, useEffect, useLayoutEffect} from 'react';
 import {mergeBlocks, collapseContextBlocks, diffBlocks, splitLines} from 'shared/diff';
 import {nullthrows} from 'shared/utils';

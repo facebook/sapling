@@ -8,9 +8,9 @@
 import {Internal} from '../Internal';
 import {Subtle} from '../Subtle';
 import {Tooltip} from '../Tooltip';
-import {Checkbox} from '../components/Checkbox';
 import {T, t} from '../i18n';
 import {localStorageBackedAtom} from '../jotaiUtils';
+import {Checkbox} from 'isl-components/Checkbox';
 import {useAtom} from 'jotai';
 
 export const shouldAutoResolveAllBeforeContinue = localStorageBackedAtom<boolean>(

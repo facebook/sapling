@@ -25,7 +25,6 @@ import {codeReviewProvider} from './codeReview/CodeReviewInfo';
 import {showDiffNumberConfig} from './codeReview/DiffBadge';
 import {SubmitAsDraftCheckbox} from './codeReview/DraftCheckbox';
 import {overrideDisabledSubmitModes} from './codeReview/github/branchPrState';
-import {Checkbox} from './components/Checkbox';
 import {Dropdown} from './components/Dropdown';
 import GatedComponent from './components/GatedComponent';
 import {debugToolsEnabledState} from './debug/DebugToolsState';
@@ -40,6 +39,7 @@ import {renderCompactAtom, useZoomShortcut, zoomUISettingAtom} from './responsiv
 import {repositoryInfo} from './serverAPIState';
 import {useThemeShortcut, themeState} from './theme';
 import {Button} from 'isl-components/Button';
+import {Checkbox} from 'isl-components/Checkbox';
 import {useAtom, useAtomValue} from 'jotai';
 import {Icon} from 'shared/Icon';
 import {KeyCode, Modifier} from 'shared/KeyboardShortcuts';

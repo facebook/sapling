@@ -18,7 +18,6 @@ import {Subtle} from '../Subtle';
 import {Tooltip} from '../Tooltip';
 import {enableReactTools, enableReduxTools} from '../atoms/debugToolAtoms';
 import {holdingCtrlAtom} from '../atoms/keyboardAtoms';
-import {Checkbox} from '../components/Checkbox';
 import {DagCommitInfo} from '../dag/dagCommitInfo';
 import {useHeartbeat} from '../heartbeat';
 import {t, T} from '../i18n';
@@ -42,6 +41,7 @@ import {readInterestingAtoms, serializeAtomsState} from './getInterestingAtoms';
 import * as stylex from '@stylexjs/stylex';
 import {Badge} from 'isl-components/Badge';
 import {Button} from 'isl-components/Button';
+import {Checkbox} from 'isl-components/Checkbox';
 import {atom, useAtom, useAtomValue} from 'jotai';
 import {useState, useCallback, useEffect} from 'react';
 

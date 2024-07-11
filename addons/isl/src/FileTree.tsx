@@ -12,9 +12,9 @@ import type {PathTree} from './pathTree';
 import type {Comparison} from 'shared/Comparison';
 
 import {File} from './ChangedFile';
-import {Checkbox} from './components/Checkbox';
 import {buildPathTree, calculateTreeSelectionStates} from './pathTree';
 import {Button} from 'isl-components/Button';
+import {Checkbox} from 'isl-components/Checkbox';
 import {useMemo, useState} from 'react';
 import {Icon} from 'shared/Icon';
 import {mapIterable} from 'shared/utils';
