@@ -7,11 +7,9 @@
 
 import type {ReactNode} from 'react';
 
-import {themeNameState} from '../theme';
-import {colors, spacing} from './theme/tokens.stylex';
 import {Button, buttonStyles} from './Button';
+import {colors, spacing} from './theme/tokens.stylex';
 import * as stylex from '@stylexjs/stylex';
-import {useAtomValue} from 'jotai';
 import {Icon} from 'shared/Icon';
 
 const styles = stylex.create({
@@ -111,11 +109,11 @@ export function ButtonDropdown<T extends {label: ReactNode; id: string}>({
   'data-testId'?: string;
 }) {
   const selectedOption = options.find(opt => opt.id === selected.id) ?? options[0];
-  const themeName = useAtomValue(themeNameState);
-  // Slightly hacky: in these themes, the border is too strong. Use the button border instead.
-  const useBuiltinBorder = ['Default Light Modern', 'Default Dark Modern'].includes(
-    themeName as string,
-  );
+  // const themeName = useAtomValue(themeNameState); // TODO
+  // // Slightly hacky: in these themes, the border is too strong. Use the button border instead.
+  // const useBuiltinBorder = ['Default Light Modern', 'Default Dark Modern'].includes(
+  //   themeName as string,
+  // );
   return (
     <div {...stylex.props(styles.container)}>
       <Button
@@ -131,7 +129,7 @@ export function ButtonDropdown<T extends {label: ReactNode; id: string}>({
           styles.select,
           kind === 'icon' && buttonStyles.icon,
           kind === 'icon' && styles.iconSelect,
-          useBuiltinBorder && styles.builtinButtonBorder,
+          // useBuiltinBorder && styles.builtinButtonBorder,
         )}
         disabled={pickerDisabled}
         value={selectedOption.id}

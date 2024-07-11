@@ -16,4 +16,9 @@ export default defineConfig({
   build: {
     outDir: 'build',
   },
+  server: {
+    // No need to open the browser, it's opened by `yarn serve` in `isl-server`.
+    open: false,
+    port: 3005,
+  },
 });

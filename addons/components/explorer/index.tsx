@@ -10,14 +10,18 @@ import {ComponentExplorer} from './ComponentExplorer';
 import 'react';
 import ReactDOM from 'react-dom/client';
 
+import '../theme/index.css';
+import '../theme/themeDark.css';
+import '../theme/themeLight.css';
+
 // Include CSS variables we use, originally from vscode-webview-ui-toolkit
-import './themeDarkVariables.css';
-import './themeLightVariables.css';
+import '../theme/themeDarkVariables.css';
+import '../theme/themeLightVariables.css';
 
 // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 const root = ReactDOM.createRoot(document.getElementById('root')!);
 root.render(
-  <div>
+  <div className="light-theme">
     <ComponentExplorer />
     <ViewportOverlayRoot />
   </div>,

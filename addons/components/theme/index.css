@@ -1,0 +1,43 @@
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+.dark-theme,
+.light-theme {
+  /**
+   * These CSS variables come from the VS Code webview UI toolkit:
+   * https://github.com/microsoft/vscode-webview-ui-toolkit/blob/main/src/design-tokens.ts
+   */
+  background-color: var(--background);
+  color: var(--foreground);
+
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu',
+    'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+
+  --pad: 10px;
+  --halfpad: 5px;
+
+  --vscode-button-height: 26px; /* height of vscode-button */
+  --vscode-icon-button-height: 22px; /* height of vscode-button with appearance="icon" */
+
+  --monospace-fontFamily: var(
+    --vscode-editor-font-family,
+    source-code-pro,
+    SFMono-Regular,
+    Consolas,
+    'Liberation Mono',
+    Menlo,
+    Courier,
+    monospace
+  );
+
+  --editor-font-size: var(--vscode-font-size, 13px);
+
+  height: calc(100vh / var(--zoom, 1));
+  max-height: calc(100vh / var(--zoom, 1));
+
+  zoom: var(--zoom, 1);
+}
