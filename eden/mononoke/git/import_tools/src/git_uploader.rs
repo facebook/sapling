@@ -39,6 +39,7 @@ use mononoke_types::GitLfs;
 use mononoke_types::NonRootMPath;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataRef;
+use repo_identity::RepoIdentityRef;
 use slog::debug;
 use slog::info;
 use sorted_vector_map::SortedVectorMap;
@@ -168,6 +169,7 @@ pub trait Repo = ChangesetsRef
     + BonsaiTagMappingRef
     + FilestoreConfigRef
     + RepoDerivedDataRef
+    + RepoIdentityRef
     + Clone
     + Send
     + Sync;

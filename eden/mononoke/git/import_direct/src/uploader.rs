@@ -42,6 +42,7 @@ use mononoke_types::FileType;
 use mononoke_types::NonRootMPath;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataRef;
+use repo_identity::RepoIdentityRef;
 use sorted_vector_map::SortedVectorMap;
 
 #[derive(Clone)]
@@ -73,6 +74,7 @@ where
         + BonsaiTagMappingRef
         + FilestoreConfigRef
         + RepoDerivedDataRef
+        + RepoIdentityRef
         + Clone
         + Send
         + Sync

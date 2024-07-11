@@ -310,6 +310,7 @@ mod tests {
     use repo_blobstore::RepoBlobstore;
     use repo_derived_data::RepoDerivedData;
     use repo_derived_data::RepoDerivedDataRef;
+    use repo_identity::RepoIdentity;
     use slog::info;
     use test_repo_factory::TestRepoFactory;
     use tests_utils::resolve_cs_id;
@@ -335,6 +336,8 @@ mod tests {
         changesets: dyn Changesets,
         #[facet]
         filenodes: dyn Filenodes,
+        #[facet]
+        repo_identity: RepoIdentity,
     }
 
     async fn verify_filenodes(

@@ -169,6 +169,7 @@ mod test {
     use repo_blobstore::RepoBlobstore;
     use repo_derived_data::RepoDerivedData;
     use repo_derived_data::RepoDerivedDataRef;
+    use repo_identity::RepoIdentity;
     use test_repo_factory::TestRepoFactory;
     use tests_utils::bookmark;
     use tests_utils::drawdag::create_from_dag;
@@ -193,6 +194,8 @@ mod test {
         filestore_config: FilestoreConfig,
         #[facet]
         changesets: dyn Changesets,
+        #[facet]
+        repo_identity: RepoIdentity,
     }
 
     #[fbinit::test]

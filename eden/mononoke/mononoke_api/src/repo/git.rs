@@ -206,7 +206,7 @@ where
 /// Free function for creating Mononoke counterpart of Git tree object
 pub async fn create_git_tree(
     ctx: &CoreContext,
-    repo: &(impl changesets::ChangesetsRef + repo_blobstore::RepoBlobstoreRef),
+    repo: &(impl ChangesetsRef + RepoBlobstoreRef + RepoIdentityRef),
     git_tree_hash: &gix_hash::oid,
 ) -> anyhow::Result<(), GitError> {
     let blobstore_key = format!(
@@ -254,7 +254,7 @@ pub async fn create_git_tree(
 /// Bookmarks of category `Branch` are never annotated.
 pub async fn create_annotated_tag(
     ctx: &CoreContext,
-    repo: &(impl changesets::ChangesetsRef + repo_blobstore::RepoBlobstoreRef + BonsaiTagMappingRef),
+    repo: &(impl ChangesetsRef + RepoBlobstoreRef + BonsaiTagMappingRef + RepoIdentityRef),
     tag_hash: Option<ObjectId>,
     name: String,
     author: Option<String>,

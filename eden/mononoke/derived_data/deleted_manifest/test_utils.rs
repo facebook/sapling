@@ -47,6 +47,7 @@ use repo_blobstore::RepoBlobstoreArc;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedData;
 use repo_derived_data::RepoDerivedDataRef;
+use repo_identity::RepoIdentity;
 use sorted_vector_map::SortedVectorMap;
 use tests_utils::CreateCommitContext;
 use unodes::RootUnodeManifestId;
@@ -73,6 +74,8 @@ pub(crate) struct TestRepo {
     commit_graph: CommitGraph,
     #[facet]
     changesets: dyn Changesets,
+    #[facet]
+    repo_identity: RepoIdentity,
 }
 
 /// Defines all common DM tests.

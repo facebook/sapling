@@ -26,6 +26,7 @@ use mononoke_types::ChangesetId;
 use pretty_assertions::assert_eq;
 use repo_blobstore::RepoBlobstore;
 use repo_derived_data::RepoDerivedData;
+use repo_identity::RepoIdentity;
 use test_repo_factory::TestRepoFactory;
 use tests_utils::drawdag::create_from_dag;
 
@@ -55,6 +56,9 @@ struct Repo {
 
     #[facet]
     changeset_fetcher: dyn ChangesetFetcher,
+
+    #[facet]
+    repo_identity: RepoIdentity,
 }
 
 fn path(p: &str) -> MPath {

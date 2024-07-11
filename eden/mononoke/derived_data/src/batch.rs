@@ -298,6 +298,7 @@ mod test {
     use repo_blobstore::RepoBlobstore;
     use repo_blobstore::RepoBlobstoreRef;
     use repo_derived_data::RepoDerivedData;
+    use repo_identity::RepoIdentity;
     use tests_utils::CreateCommitContext;
 
     use super::*;
@@ -316,6 +317,8 @@ mod test {
         filestore_config: FilestoreConfig,
         #[facet]
         changesets: dyn Changesets,
+        #[facet]
+        repo_identity: RepoIdentity,
     }
 
     #[fbinit::test]

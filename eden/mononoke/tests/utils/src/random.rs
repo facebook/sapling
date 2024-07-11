@@ -32,10 +32,11 @@ use rand::Rng;
 use rand_distr::Binomial;
 use rand_distr::Uniform;
 use repo_blobstore::RepoBlobstoreRef;
+use repo_identity::RepoIdentityRef;
 
 pub async fn create_random_stack(
     ctx: &CoreContext,
-    repo: &(impl RepoBlobstoreRef + ChangesetsRef),
+    repo: &(impl RepoBlobstoreRef + ChangesetsRef + RepoIdentityRef),
     rng: &mut impl Rng,
     parent: Option<ChangesetId>,
     changes_count: impl IntoIterator<Item = usize>,
@@ -111,7 +112,7 @@ impl GenManifest {
     async fn gen_stack(
         &mut self,
         ctx: &CoreContext,
-        repo: &(impl RepoBlobstoreRef + ChangesetsRef),
+        repo: &(impl RepoBlobstoreRef + ChangesetsRef + RepoIdentityRef),
         rng: &mut impl Rng,
         settings: &GenSettings,
         parent: Option<ChangesetId>,

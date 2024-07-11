@@ -219,6 +219,7 @@ mod test {
     use repo_blobstore::RepoBlobstore;
     use repo_blobstore::RepoBlobstoreRef;
     use repo_derived_data::RepoDerivedData;
+    use repo_identity::RepoIdentity;
     use tests_utils::list_working_copy_utf8;
     use tests_utils::CreateCommitContext;
 
@@ -247,6 +248,9 @@ mod test {
 
         #[facet]
         changeset_fetcher: dyn ChangesetFetcher,
+
+        #[facet]
+        repo_identity: RepoIdentity,
     }
 
     #[fbinit::test]

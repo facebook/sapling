@@ -26,6 +26,7 @@ use mononoke_types::ChangesetId;
 use mononoke_types::NonRootMPath;
 use repo_blobstore::RepoBlobstore;
 use repo_derived_data::RepoDerivedData;
+use repo_identity::RepoIdentity;
 use test_repo_factory::TestRepoFactory;
 use tests_utils::create_commit;
 use tests_utils::store_files;
@@ -50,6 +51,8 @@ struct TestRepo {
     commit_graph: CommitGraph,
     #[facet]
     changesets: dyn Changesets,
+    #[facet]
+    repo_identity: RepoIdentity,
 }
 
 // File with multiple changes and a merge

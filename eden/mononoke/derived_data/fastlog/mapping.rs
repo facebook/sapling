@@ -236,6 +236,7 @@ mod tests {
     use repo_blobstore::RepoBlobstore;
     use repo_derived_data::RepoDerivedData;
     use repo_derived_data::RepoDerivedDataRef;
+    use repo_identity::RepoIdentity;
 
     use super::*;
     use crate::fastlog_impl::fetch_fastlog_batch_by_unode_id;
@@ -258,6 +259,8 @@ mod tests {
         commit_graph: CommitGraph,
         #[facet]
         changesets: dyn Changesets,
+        #[facet]
+        repo_identity: RepoIdentity,
     }
 
     #[fbinit::test]

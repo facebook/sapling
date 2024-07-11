@@ -47,6 +47,8 @@ use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreArc;
 use repo_derived_data::RepoDerivedData;
 use repo_derived_data::RepoDerivedDataRef;
+use repo_identity::RepoIdentity;
+use repo_identity::RepoIdentityRef;
 
 pub mod drawdag;
 pub mod random;
@@ -57,6 +59,7 @@ pub trait Repo = BonsaiHgMappingRef
     + FilestoreConfigRef
     + RepoBlobstoreArc
     + RepoDerivedDataRef
+    + RepoIdentityRef
     + Send
     + Sync;
 
@@ -84,6 +87,9 @@ pub struct BasicTestRepo {
 
     #[facet]
     pub repo_derived_data: RepoDerivedData,
+
+    #[facet]
+    pub repo_identity: RepoIdentity,
 }
 
 pub async fn list_working_copy_utf8(

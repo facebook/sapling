@@ -737,7 +737,7 @@ pub async fn upload_commits<'a>(
     ctx: &'a CoreContext,
     rewritten_list: Vec<BonsaiChangeset>,
     source_repo: &'a (impl RepoBlobstoreRef + ChangesetsRef),
-    target_repo: &'a (impl RepoBlobstoreRef + ChangesetsRef + FilestoreConfigRef),
+    target_repo: &'a (impl RepoBlobstoreRef + ChangesetsRef + FilestoreConfigRef + RepoIdentityRef),
     submodule_content_ids: Vec<(Arc<impl RepoBlobstoreRef>, HashSet<ContentId>)>,
 ) -> Result<(), Error> {
     let mut files_to_sync = HashSet::new();

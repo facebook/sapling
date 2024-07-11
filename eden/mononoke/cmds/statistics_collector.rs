@@ -66,6 +66,7 @@ use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedData;
 use repo_derived_data::RepoDerivedDataRef;
+use repo_identity::RepoIdentity;
 use scuba_ext::MononokeScubaSampleBuilder;
 use sharding_ext::RepoShard;
 use slog::error;
@@ -93,6 +94,8 @@ pub struct Repo {
     commit_graph: CommitGraph,
     #[facet]
     filestore_config: FilestoreConfig,
+    #[facet]
+    repo_identity: RepoIdentity,
 }
 
 /// Tool to calculate repo statistic

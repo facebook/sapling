@@ -14,6 +14,9 @@ changesets = { version = "0.1.0", path = ".." }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 context = { version = "0.1.0", path = "../../server/context" }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
+justknobs = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
+repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity" }
 topo_sort = { version = "0.1.0", path = "../../common/topo_sort" }
+vec1 = { version = "1", features = ["serde"] }

@@ -35,6 +35,7 @@ use movers::Mover;
 use phases::PhasesRef;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataRef;
+use repo_identity::RepoIdentityRef;
 use slog::info;
 
 pub mod chunking;
@@ -63,6 +64,7 @@ pub trait Repo = BonsaiHgMappingRef
     + ChangesetsRef
     + PhasesRef
     + BookmarksRef
+    + RepoIdentityRef
     + Send
     + Sync
     + Clone;
@@ -269,6 +271,7 @@ mod test {
     use phases::Phases;
     use repo_blobstore::RepoBlobstore;
     use repo_derived_data::RepoDerivedData;
+    use repo_identity::RepoIdentity;
     use sorted_vector_map::sorted_vector_map;
     use tests_utils::resolve_cs_id;
 
@@ -290,6 +293,8 @@ mod test {
         filestore_config: FilestoreConfig,
         #[facet]
         pub phases: dyn Phases,
+        #[facet]
+        repo_identity: RepoIdentity,
     }
 
     use super::*;

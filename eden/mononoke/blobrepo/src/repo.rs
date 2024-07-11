@@ -214,7 +214,7 @@ impl AsBlobRepo for BlobRepo {
 pub async fn save_bonsai_changesets(
     bonsai_changesets: Vec<BonsaiChangeset>,
     ctx: CoreContext,
-    container: &(impl ChangesetsRef + RepoBlobstoreRef),
+    container: &(impl ChangesetsRef + RepoBlobstoreRef + RepoIdentityRef),
 ) -> Result<(), Error> {
     changesets_creation::save_changesets(&ctx, container, bonsai_changesets).await
 }

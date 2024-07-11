@@ -542,6 +542,7 @@ mod test {
     use mononoke_types::RepositoryId;
     use repo_blobstore::RepoBlobstore;
     use repo_derived_data::RepoDerivedData;
+    use repo_identity::RepoIdentity;
     use tests_utils::drawdag::create_from_dag;
 
     use super::*;
@@ -572,6 +573,9 @@ mod test {
 
         #[facet]
         pub commit_graph: CommitGraph,
+
+        #[facet]
+        pub repo_identity: RepoIdentity,
     }
 
     #[fbinit::test]

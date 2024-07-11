@@ -23,13 +23,20 @@ use mononoke_types::FileChange;
 use phases::PhasesRef;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataRef;
+use repo_identity::RepoIdentityRef;
 use slog::info;
 use sorted_vector_map::SortedVectorMap;
 
 use crate::chunking::Chunker;
 
-pub trait Repo =
-    ChangesetsRef + RepoBlobstoreRef + PhasesRef + BookmarksRef + RepoDerivedDataRef + Send + Sync;
+pub trait Repo = ChangesetsRef
+    + RepoBlobstoreRef
+    + PhasesRef
+    + BookmarksRef
+    + RepoDerivedDataRef
+    + RepoIdentityRef
+    + Send
+    + Sync;
 
 #[derive(Clone, Debug)]
 pub struct ChangesetArgs {
