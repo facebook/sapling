@@ -22,6 +22,7 @@ buck_genrule(
             "isl/**",
             "isl-server/**",
             "shared/**",
+            "components/**",
         ],
         exclude = [
             "**/node_modules/**",
