@@ -22,6 +22,8 @@ pub struct SuffixQueryRequest {
     pub commit: CommitId,
     #[id(1)]
     pub basename_suffixes: Vec<String>,
+    #[id(2)]
+    pub prefixes: Option<Vec<String>>,
 }
 
 #[auto_wire]

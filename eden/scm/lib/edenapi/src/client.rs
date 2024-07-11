@@ -836,6 +836,7 @@ impl Client {
         &self,
         commit: CommitId,
         suffixes: Vec<String>,
+        prefixes: Option<Vec<String>>,
     ) -> Result<Response<SuffixQueryResponse>, SaplingRemoteApiError> {
         tracing::info!(
             "Retrieving file paths matching {:?} in {}",
@@ -851,6 +852,7 @@ impl Client {
         let req = SuffixQueryRequest {
             commit,
             basename_suffixes: suffixes,
+            prefixes,
         };
 
         let requests = self
@@ -1712,10 +1714,11 @@ impl SaplingRemoteApi for Client {
         &self,
         commit: CommitId,
         suffixes: Vec<String>,
+        prefixes: Option<Vec<String>>,
     ) -> Result<Response<SuffixQueryResponse>, SaplingRemoteApiError> {
         // Clone required here due to closure possibly being run more than once
         self.with_retry(|this| {
-            this.suffix_query_attempt(commit.clone(), suffixes.clone())
+            this.suffix_query_attempt(commit.clone(), suffixes.clone(), prefixes.clone())
                 .boxed()
         })
         .await

@@ -17,6 +17,7 @@ use futures::StreamExt;
 use gotham_ext::error::HttpError;
 use itertools::EitherOrBoth;
 use mononoke_api::ChangesetFileOrdering;
+use mononoke_types::MPath;
 use types::RepoPathBuf;
 use vec1::Vec1;
 
@@ -46,6 +47,12 @@ impl SaplingRemoteApiHandler for SuffixQueryHandler {
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
         let repo = ectx.repo();
+        let prefixes = request.prefixes.map(|prefixes| {
+            prefixes
+                .into_iter()
+                .map(|prefix| MPath::try_from(&prefix).unwrap())
+                .collect()
+        });
         let suffixes = Vec1::try_from_vec(request.basename_suffixes)
             .with_context(|| anyhow!("No suffixes provided"))
             .map_err(HttpError::e400)?;
@@ -65,7 +72,7 @@ impl SaplingRemoteApiHandler for SuffixQueryHandler {
             // Will cause server to return 500 error.
             let matched_files = changeset
                 .find_files_with_bssm_v3(
-                    None,
+                    prefixes,
                     EitherOrBoth::Right(suffixes),
                     ChangesetFileOrdering::Unordered,
                 ).await?;

@@ -545,11 +545,13 @@ py_class!(pub class client |py| {
         &self,
         commit: Serde<CommitId>,
         suffixes: Serde<Vec<String>>,
+        prefixes: Serde<Option<Vec<String>>>,
     ) -> PyResult<TStream<anyhow::Result<Serde<SuffixQueryResponse>>>> {
         let api = self.inner(py).as_ref();
         let suffix_query_response = py.allow_threads(|| block_unless_interrupted(api.suffix_query(
             commit.0,
-            suffixes.0)))
+            suffixes.0,
+            prefixes.0)))
             .map_pyerr(py)?
             .map_pyerr(py)?
             .entries;

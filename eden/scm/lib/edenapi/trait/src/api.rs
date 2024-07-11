@@ -403,8 +403,9 @@ pub trait SaplingRemoteApi: Send + Sync + 'static {
         &self,
         commit: CommitId,
         suffixes: Vec<String>,
+        prefixes: Option<Vec<String>>,
     ) -> Result<Response<SuffixQueryResponse>, SaplingRemoteApiError> {
-        let _ = (commit, suffixes);
+        let _ = (commit, suffixes, prefixes);
         Err(SaplingRemoteApiError::NotSupported)
     }
 }

@@ -1122,11 +1122,12 @@ impl SaplingRemoteApi for EagerRepo {
         &self,
         commit: CommitId,
         suffixes: Vec<String>,
+        prefix: Option<Vec<String>>,
     ) -> Result<Response<SuffixQueryResponse>, SaplingRemoteApiError> {
         debug!("suffix_query");
         // TODO(T189729875) Make this react to commited files
         //let files = self.files();
-        let _ = commit;
+        let _ = (commit, prefix);
         let mut res = vec![];
         for suffix in suffixes {
             match suffix.clone().as_str() {
