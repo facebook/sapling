@@ -47,7 +47,7 @@ class SaplingRemoteAPIService(baseservice.BaseService):
                 "workspace": workspace,
                 "reponame": reponame,
                 "version": baseversion,
-                "client_info": None,
+                "client_info": clientinfo,
             }
         )
         version = self._getversionfromdata(response)
@@ -147,7 +147,7 @@ class SaplingRemoteAPIService(baseservice.BaseService):
                 ),
                 "new_snapshots": [],
                 "removed_snapshots": [],
-                "clientinfo": None,
+                "clientinfo": clientinfo,
             }
         )
         newversion = self._getversionfromdata(response)
