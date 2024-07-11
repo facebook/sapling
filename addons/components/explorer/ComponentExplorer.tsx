@@ -13,6 +13,7 @@ import {ButtonDropdown} from '../ButtonDropdown';
 import {Checkbox} from '../Checkbox';
 import {Divider} from '../Divider';
 import {Dropdown} from '../Dropdown';
+import {Icon} from '../Icon';
 import {Panels} from '../Panels';
 import {RadioGroup} from '../Radio';
 import {Tag} from '../Tag';
@@ -23,7 +24,6 @@ import {layout} from '../theme/layout';
 import {colors, font, radius, spacing} from '../theme/tokens.stylex';
 import * as stylex from '@stylexjs/stylex';
 import {useState, type ReactNode} from 'react';
-import {Icon} from 'shared/Icon';
 
 /* eslint-disable no-console */
 
