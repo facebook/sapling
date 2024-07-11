@@ -36,11 +36,11 @@ define_stats! {
 
 const MAX_CONCURRENT_UPLOADS_TREES: usize = 200;
 const MAX_CONCURRENT_UPLOADS_FILES: usize = 100;
-const MAX_BYTES_FOR_INLINE_UPLOAD: u64 = 500000;
+const MAX_BYTES_FOR_INLINE_UPLOAD: u64 = 500_000;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum UploadOutcome {
-    Uploaded,
+    Uploaded(u64),
     AlreadyPresent,
 }
 
@@ -94,7 +94,7 @@ where
             self.client.streaming_upload_blob(&digest, stream).await?;
         }
         STATS::uploaded_files_count.add_value(1);
-        Ok(UploadOutcome::Uploaded)
+        Ok(UploadOutcome::Uploaded(digest.1))
     }
 
     /// Upload a given file to a CAS backend.
@@ -254,7 +254,7 @@ where
                 .await?;
         }
         STATS::uploaded_manifests_count.add_value(1);
-        Ok(UploadOutcome::Uploaded)
+        Ok(UploadOutcome::Uploaded(digest.1))
     }
 
     /// Upload given augmented trees to a Cas backend (batched API)

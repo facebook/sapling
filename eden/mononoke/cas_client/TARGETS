@@ -50,6 +50,7 @@ rust_library(
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:atomic-counter",
+        "fbsource//third-party/rust:bytesize",
         "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:slog",
         "fbsource//third-party/rust:thiserror",

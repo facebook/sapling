@@ -16,6 +16,7 @@ use atomic_counter::AtomicCounter;
 use atomic_counter::RelaxedCounter;
 use blobstore::Loadable;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
+use bytesize::ByteSize;
 use cas_client::CasClient;
 use changesets::ChangesetsRef;
 use cloned::cloned;
@@ -55,6 +56,7 @@ const DEBUG_LOG_INTERVAL: usize = 10000;
 #[derive(Default, Debug)]
 pub struct UploadCounters {
     uploaded: RelaxedCounter,
+    uploaded_bytes: RelaxedCounter,
     already_present: RelaxedCounter,
 }
 
@@ -69,9 +71,10 @@ impl Display for UploadCounters {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
         write!(
             f,
-            "uploaded digests: {}, already present digests: {}",
+            "uploaded digests: {}, already present digests: {}, uploaded bytes: {}",
             self.uploaded.get(),
-            self.already_present.get()
+            self.already_present.get(),
+            ByteSize::b(self.uploaded_bytes.get() as u64).to_string_as(true)
         )
     }
 }
@@ -86,12 +89,14 @@ impl UploadCounters {
     pub fn add(&self, other: &UploadCounters) {
         self.uploaded.add(other.uploaded.get());
         self.already_present.add(other.already_present.get());
+        self.uploaded_bytes.add(other.uploaded_bytes.get());
     }
 
     pub fn tick(&self, ctx: &CoreContext, outcome: UploadOutcome) {
         match outcome {
-            UploadOutcome::Uploaded => {
+            UploadOutcome::Uploaded(size) => {
                 self.uploaded.inc();
+                self.uploaded_bytes.add(size as usize);
             }
             UploadOutcome::AlreadyPresent => {
                 self.already_present.inc();
