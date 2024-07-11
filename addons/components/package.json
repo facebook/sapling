@@ -10,6 +10,7 @@
     "@types/react": "^18.3.1",
     "@types/react-dom": "^18.3.0",
     "react-dom": "^18.3.1",
+    "shared": "0.1.0",
     "jest": "29.7.0",
     "vite-plugin-stylex": "^0.4.1"
   },
