@@ -23,7 +23,6 @@ import sys
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 
 import contextlib
-import ctypes.util
 import errno
 import glob
 import hashlib
@@ -616,6 +615,8 @@ class buildembedded(Command):
         pylibpath = pjoin(pyroot, pylibext)
         if not os.path.exists(pylibpath):
             # a fallback option
+            import ctypes.util
+
             pylibpath = ctypes.util.find_library(pylib)
         log.debug("Python dynamic library is copied from: %s" % pylibpath)
         copy_to(pylibpath, pjoin(dirtocopy, os.path.basename(pylibpath)))
