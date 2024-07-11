@@ -7,7 +7,7 @@
 
 import {spacing} from '../../components/theme/tokens.stylex';
 import * as stylex from '@stylexjs/stylex';
-import {Icon} from 'shared/Icon';
+import {Icon} from 'isl-components/Icon';
 import {notEmpty} from 'shared/utils';
 
 import './ComponentUtils.css';

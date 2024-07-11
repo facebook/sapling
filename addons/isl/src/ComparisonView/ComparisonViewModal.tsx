@@ -10,10 +10,10 @@ import type {Comparison} from 'shared/Comparison';
 import {useCommand} from '../ISLShortcuts';
 import {Modal} from '../Modal';
 import {currentComparisonMode} from './atoms';
+import {Icon} from 'isl-components/Icon';
 import {useAtom} from 'jotai';
 import {lazy, Suspense} from 'react';
 import {ComparisonType} from 'shared/Comparison';
-import {Icon} from 'shared/Icon';
 
 import './ComparisonView.css';
 

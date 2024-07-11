@@ -26,10 +26,10 @@ import {StackEditIcon} from './stackEdit/ui/StackEditIcon';
 import {editingStackIntentionHashes, loadingStackState} from './stackEdit/ui/stackEditState';
 import {succeedableRevset} from './types';
 import {Button} from 'isl-components/Button';
+import {Icon} from 'isl-components/Icon';
 import {Tooltip, DOCUMENTATION_DELAY} from 'isl-components/Tooltip';
 import {useAtom, useAtomValue} from 'jotai';
 import {type ContextMenuItem, useContextMenu} from 'shared/ContextMenu';
-import {Icon} from 'shared/Icon';
 
 import './StackActions.css';
 

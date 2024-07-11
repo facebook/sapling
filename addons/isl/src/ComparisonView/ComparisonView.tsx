@@ -23,6 +23,7 @@ import {SplitDiffView} from './SplitDiffView';
 import {currentComparisonMode} from './atoms';
 import {Button} from 'isl-components/Button';
 import {Dropdown} from 'isl-components/Dropdown';
+import {Icon} from 'isl-components/Icon';
 import {RadioGroup} from 'isl-components/Radio';
 import {Subtle} from 'isl-components/Subtle';
 import {Tooltip} from 'isl-components/Tooltip';
@@ -34,7 +35,6 @@ import {
   ComparisonType,
   comparisonStringKey,
 } from 'shared/Comparison';
-import {Icon} from 'shared/Icon';
 import {parsePatch} from 'shared/patch/parse';
 import {group, notEmpty} from 'shared/utils';
 

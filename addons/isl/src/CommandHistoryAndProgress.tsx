@@ -23,10 +23,10 @@ import {processTerminalLines} from './terminalOutput';
 import {CommandRunner} from './types';
 import {short} from './utils';
 import {Button} from 'isl-components/Button';
+import {Icon} from 'isl-components/Icon';
 import {Subtle} from 'isl-components/Subtle';
 import {Tooltip} from 'isl-components/Tooltip';
 import {useAtomValue} from 'jotai';
-import {Icon} from 'shared/Icon';
 import './CommandHistoryAndProgress.css';
 import {notEmpty, truncate} from 'shared/utils';
 

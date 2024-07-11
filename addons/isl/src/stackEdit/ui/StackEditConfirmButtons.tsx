@@ -26,10 +26,10 @@ import {
   useStackEditState,
 } from './stackEditState';
 import {Button} from 'isl-components/Button';
+import {Icon} from 'isl-components/Icon';
 import {Tooltip, DOCUMENTATION_DELAY} from 'isl-components/Tooltip';
 import {useAtom, useAtomValue} from 'jotai';
 import {useCallback} from 'react';
-import {Icon} from 'shared/Icon';
 
 export function StackEditConfirmButtons(): React.ReactElement {
   const [[stackIntention], setStackIntentionHashes] = useAtom(editingStackIntentionHashes);

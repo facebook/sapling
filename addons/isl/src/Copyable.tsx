@@ -7,9 +7,9 @@
 
 import {T} from './i18n';
 import platform from './platform';
+import {Icon} from 'isl-components/Icon';
 import {Tooltip} from 'isl-components/Tooltip';
 import {useEffect, useState} from 'react';
-import {Icon} from 'shared/Icon';
 
 import './Copyable.css';
 

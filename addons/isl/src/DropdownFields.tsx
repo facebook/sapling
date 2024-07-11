@@ -6,7 +6,7 @@
  */
 
 import {Divider} from 'isl-components/Divider';
-import {Icon} from 'shared/Icon';
+import {Icon} from 'isl-components/Icon';
 
 import './DropdownFields.css';
 

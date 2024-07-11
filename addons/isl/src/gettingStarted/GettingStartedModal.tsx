@@ -10,9 +10,9 @@ import {Modal} from '../Modal';
 import {localStorageBackedAtom} from '../jotaiUtils';
 import platform from '../platform';
 import {useModal} from '../useModal';
+import {Icon} from 'isl-components/Icon';
 import {useAtom} from 'jotai';
 import {Suspense, useEffect, useState} from 'react';
-import {Icon} from 'shared/Icon';
 
 export const hasShownGettingStarted = localStorageBackedAtom<boolean | null>(
   'isl.has-shown-getting-started',

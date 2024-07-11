@@ -22,9 +22,9 @@ import {t} from './i18n';
 import {maybeRemoveForgottenOperation, useClearAllOptimisticState} from './operationsState';
 import {haveCommitsLoadedYet, haveRemotePath, isFetchingCommits} from './serverAPIState';
 import {Button} from 'isl-components/Button';
+import {Icon} from 'isl-components/Icon';
 import {DOCUMENTATION_DELAY, Tooltip} from 'isl-components/Tooltip';
 import {useAtomValue} from 'jotai';
-import {Icon} from 'shared/Icon';
 import {clearTrackedCache} from 'shared/LRU';
 
 import './TopBar.css';

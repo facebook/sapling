@@ -9,8 +9,8 @@ import type {ReactNode} from 'react';
 
 import {T} from '../i18n';
 import {Button} from 'isl-components/Button';
+import {Icon} from 'isl-components/Icon';
 import {useLayoutEffect, useState, useRef} from 'react';
-import {Icon} from 'shared/Icon';
 
 import './SeeMoreContainer.css';
 

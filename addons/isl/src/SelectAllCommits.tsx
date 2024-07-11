@@ -13,9 +13,9 @@ import {readAtom, writeAtom} from './jotaiUtils';
 import {dagWithPreviews} from './previews';
 import {selectedCommits} from './selection';
 import {Button} from 'isl-components/Button';
+import {Icon} from 'isl-components/Icon';
 import {Tooltip} from 'isl-components/Tooltip';
 import {useCallback} from 'react';
-import {Icon} from 'shared/Icon';
 import {KeyCode, Modifier} from 'shared/KeyboardShortcuts';
 
 /** By default, "select all" selects draft, non-obsoleted commits. */

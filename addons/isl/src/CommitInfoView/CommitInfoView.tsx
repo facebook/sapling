@@ -83,6 +83,7 @@ import deepEqual from 'fast-deep-equal';
 import {Badge} from 'isl-components/Badge';
 import {Button} from 'isl-components/Button';
 import {Divider} from 'isl-components/Divider';
+import {Icon} from 'isl-components/Icon';
 import {RadioGroup} from 'isl-components/Radio';
 import {Subtle} from 'isl-components/Subtle';
 import {Tooltip} from 'isl-components/Tooltip';
@@ -91,7 +92,6 @@ import {useAtomCallback} from 'jotai/utils';
 import {useCallback, useEffect, useMemo} from 'react';
 import {ComparisonType} from 'shared/Comparison';
 import {useContextMenu} from 'shared/ContextMenu';
-import {Icon} from 'shared/Icon';
 import {usePrevious} from 'shared/hooks';
 import {firstLine, notEmpty, nullthrows} from 'shared/utils';
 

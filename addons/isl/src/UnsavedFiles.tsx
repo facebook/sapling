@@ -17,10 +17,10 @@ import foundPlatform from './platform';
 import {showModal} from './useModal';
 import {registerCleanup, registerDisposable} from './utils';
 import {Button} from 'isl-components/Button';
+import {Icon} from 'isl-components/Icon';
 import {Subtle} from 'isl-components/Subtle';
 import {atom, useAtomValue} from 'jotai';
 import {useContextMenu} from 'shared/ContextMenu';
-import {Icon} from 'shared/Icon';
 import {minimalDisambiguousPaths} from 'shared/minimalDisambiguousPaths';
 
 /**

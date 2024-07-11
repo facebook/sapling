@@ -37,13 +37,13 @@ import {ConflictType, succeedableRevset} from './types';
 import {usePromise} from './usePromise';
 import {Button} from 'isl-components/Button';
 import {Checkbox} from 'isl-components/Checkbox';
+import {Icon} from 'isl-components/Icon';
 import {Subtle} from 'isl-components/Subtle';
 import {Tooltip} from 'isl-components/Tooltip';
 import {useAtomValue} from 'jotai';
 import React from 'react';
 import {labelForComparison, revsetForComparison, ComparisonType} from 'shared/Comparison';
 import {useContextMenu} from 'shared/ContextMenu';
-import {Icon} from 'shared/Icon';
 import {isMac} from 'shared/OperatingSystem';
 import {basename, notEmpty} from 'shared/utils';
 

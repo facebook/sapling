@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import {Icon} from 'isl-components/Icon';
 import {useState} from 'react';
-import {Icon} from 'shared/Icon';
 import './Collapsable.css';
 
 export function Collapsable({

@@ -38,12 +38,12 @@ import {ModalContainer} from './useModal';
 import {usePromise} from './usePromise';
 import {isDev, isTest} from './utils';
 import {Button} from 'isl-components/Button';
+import {Icon} from 'isl-components/Icon';
 import {ThemedComponentsRoot} from 'isl-components/ThemedComponentsRoot';
 import {ViewportOverlayRoot} from 'isl-components/ViewportOverlay';
 import {Provider, atom, useAtomValue, useSetAtom, useStore} from 'jotai';
 import React, {useMemo} from 'react';
 import {ContextMenus} from 'shared/ContextMenu';
-import {Icon} from 'shared/Icon';
 import {useThrottledEffect} from 'shared/hooks';
 
 import './index.css';

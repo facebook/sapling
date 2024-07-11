@@ -21,6 +21,7 @@ import {ButtonDropdown} from 'isl-components/ButtonDropdown';
 import {Checkbox} from 'isl-components/Checkbox';
 import {Divider} from 'isl-components/Divider';
 import {Dropdown} from 'isl-components/Dropdown';
+import {Icon} from 'isl-components/Icon';
 import {Panels} from 'isl-components/Panels';
 import {RadioGroup} from 'isl-components/Radio';
 import {Tag} from 'isl-components/Tag';
@@ -28,7 +29,6 @@ import {TextArea} from 'isl-components/TextArea';
 import {TextField} from 'isl-components/TextField';
 import {Tooltip} from 'isl-components/Tooltip';
 import {useState, type ReactNode} from 'react';
-import {Icon} from 'shared/Icon';
 
 /* eslint-disable no-console */
 

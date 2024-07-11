@@ -38,10 +38,10 @@ import {
 } from './serverAPIState';
 import {MaybeEditStackModal} from './stackEdit/ui/EditStackModal';
 import {Button} from 'isl-components/Button';
+import {Icon} from 'isl-components/Icon';
 import {Tooltip, DOCUMENTATION_DELAY} from 'isl-components/Tooltip';
 import {ErrorShortMessages} from 'isl-server/src/constants';
 import {atom, useAtomValue} from 'jotai';
-import {Icon} from 'shared/Icon';
 
 import './CommitTreeList.css';
 

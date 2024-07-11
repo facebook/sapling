@@ -29,9 +29,9 @@ import {type CommitInfo} from '../types';
 import {commitMode} from './CommitInfoState';
 import {Button} from 'isl-components/Button';
 import {Divider} from 'isl-components/Divider';
+import {Icon} from 'isl-components/Icon';
 import {Tooltip} from 'isl-components/Tooltip';
 import {useAtom, useAtomValue} from 'jotai';
-import {Icon} from 'shared/Icon';
 
 export const splitSuggestionEnabled = localStorageBackedAtom<boolean>(
   'isl.split-suggestion-enabled',

@@ -16,8 +16,8 @@ import {CommitInfoTextArea} from './TextArea';
 import {CommitInfoTextField} from './TextField';
 import {extractTokens, TokensList} from './Tokens';
 import {getOnClickToken, Section, SmallCapsTitle} from './utils';
+import {Icon} from 'isl-components/Icon';
 import {Fragment} from 'react';
-import {Icon} from 'shared/Icon';
 
 export function CommitInfoField({
   field,

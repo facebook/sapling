@@ -22,9 +22,9 @@ import {ReorderState} from '../reorderState';
 import {bumpStackEditMetric, useStackEditState} from './stackEditState';
 import {is} from 'immutable';
 import {Button} from 'isl-components/Button';
+import {Icon} from 'isl-components/Icon';
 import {Tooltip} from 'isl-components/Tooltip';
 import {useRef, useState} from 'react';
-import {Icon} from 'shared/Icon';
 import {nullthrows} from 'shared/utils';
 
 import './StackEditSubTree.css';

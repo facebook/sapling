@@ -7,7 +7,7 @@
 
 import type {PointerEventHandler, ReactElement} from 'react';
 
-import {Icon} from 'shared/Icon';
+import {Icon} from 'isl-components/Icon';
 
 export type DragHandler = (x: number, y: number, isDragging: boolean) => void;
 

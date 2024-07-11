@@ -5,9 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import {Icon} from 'isl-components/Icon';
 import {Tooltip} from 'isl-components/Tooltip';
 import React from 'react';
-import {Icon} from 'shared/Icon';
 
 type EducationInfoTipProps = {children: React.ReactNode};
 

@@ -21,12 +21,12 @@ import {DeleteShelveOperation} from './operations/DeleteShelveOperation';
 import {UnshelveOperation} from './operations/UnshelveOperation';
 import {RelativeDate} from './relativeDate';
 import {Button} from 'isl-components/Button';
+import {Icon} from 'isl-components/Icon';
 import {Subtle} from 'isl-components/Subtle';
 import {Tooltip} from 'isl-components/Tooltip';
 import {useAtom} from 'jotai';
 import {useEffect} from 'react';
 import {ComparisonType} from 'shared/Comparison';
-import {Icon} from 'shared/Icon';
 import {KeyCode, Modifier} from 'shared/KeyboardShortcuts';
 
 import './ShelvedChanges.css';

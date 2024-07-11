@@ -8,10 +8,10 @@
 import {t} from '../i18n';
 import {debugToolsEnabledState} from './DebugToolsState';
 import {Button} from 'isl-components/Button';
+import {Icon} from 'isl-components/Icon';
 import {Tooltip} from 'isl-components/Tooltip';
 import {useAtomValue} from 'jotai';
 import {lazy, Suspense} from 'react';
-import {Icon} from 'shared/Icon';
 
 const DebugToolsMenu = lazy(() => import('./DebugToolsMenu'));
 

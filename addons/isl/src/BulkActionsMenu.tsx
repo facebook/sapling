@@ -13,8 +13,8 @@ import {SelectAllButton} from './SelectAllCommits';
 import {SuggestedRebaseButton} from './SuggestedRebase';
 import {T} from './i18n';
 import {Button} from 'isl-components/Button';
+import {Icon} from 'isl-components/Icon';
 import {Tooltip} from 'isl-components/Tooltip';
-import {Icon} from 'shared/Icon';
 import {KeyCode, Modifier} from 'shared/KeyboardShortcuts';
 
 import './BulkActionsMenu.css';

@@ -17,8 +17,8 @@ import SplitDiffRow, {BlankLineNumber} from './SplitDiffRow';
 import {useTableColumnSelection} from './copyFromSelectedColumn';
 import {useTokenizedContents, useTokenizedHunks} from './syntaxHighlighting';
 import {diffChars} from 'diff';
+import {Icon} from 'isl-components/Icon';
 import React, {useCallback, useState} from 'react';
-import {Icon} from 'shared/Icon';
 import organizeLinesIntoGroups from 'shared/SplitDiffView/organizeLinesIntoGroups';
 import {
   applyTokenizationToLine,

@@ -21,10 +21,10 @@ import {RelativeDate} from './relativeDate';
 import {commitsShownRange, latestDag} from './serverAPIState';
 import {succeedableRevset} from './types';
 import {Button} from 'isl-components/Button';
+import {Icon} from 'isl-components/Icon';
 import {Subtle} from 'isl-components/Subtle';
 import {atom} from 'jotai';
 import {useContextMenu} from 'shared/ContextMenu';
-import {Icon} from 'shared/Icon';
 
 import './SuggestedRebase.css';
 

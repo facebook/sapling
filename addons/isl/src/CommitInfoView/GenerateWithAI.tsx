@@ -23,12 +23,12 @@ import {
   latestCommitMessageFieldsWithEdits,
 } from './CommitInfoState';
 import {Button} from 'isl-components/Button';
+import {Icon} from 'isl-components/Icon';
 import {TextArea} from 'isl-components/TextArea';
 import {Tooltip} from 'isl-components/Tooltip';
 import {atom, useAtom, useAtomValue, useSetAtom} from 'jotai';
 import {useCallback} from 'react';
 import {ComparisonType} from 'shared/Comparison';
-import {Icon} from 'shared/Icon';
 import {useThrottledEffect} from 'shared/hooks';
 import {randomId, nullthrows} from 'shared/utils';
 

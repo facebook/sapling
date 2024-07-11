@@ -12,9 +12,9 @@ import {useRunOperation} from './operationsState';
 import foundPlatform from './platform';
 import {dagWithPreviews} from './previews';
 import {Button} from 'isl-components/Button';
+import {Icon} from 'isl-components/Icon';
 import {DOCUMENTATION_DELAY, Tooltip} from 'isl-components/Tooltip';
 import {useAtomValue} from 'jotai';
-import {Icon} from 'shared/Icon';
 
 export function UncommitButton() {
   const dag = useAtomValue(dagWithPreviews);

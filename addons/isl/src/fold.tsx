@@ -27,10 +27,10 @@ import {type Dag, dagWithPreviews} from './previews';
 import {selectedCommits} from './selection';
 import {firstOfIterable} from './utils';
 import {Button} from 'isl-components/Button';
+import {Icon} from 'isl-components/Icon';
 import {Tooltip} from 'isl-components/Tooltip';
 import {atom, useAtomValue} from 'jotai';
 import {useCallback} from 'react';
-import {Icon} from 'shared/Icon';
 
 /**
  * If the selected commits are linear, contiguous, and non-branching, they may be folded together.

@@ -27,10 +27,10 @@ import {openerUrlForDiffUrl} from './github/GitHubUrlOpener';
 import {SyncStatus, syncStatusAtom} from './syncStatus';
 import * as stylex from '@stylexjs/stylex';
 import {Button} from 'isl-components/Button';
+import {Icon} from 'isl-components/Icon';
 import {Tooltip} from 'isl-components/Tooltip';
 import {useAtomValue} from 'jotai';
 import {Component, Suspense, useState} from 'react';
-import {Icon} from 'shared/Icon';
 
 import './DiffBadge.css';
 

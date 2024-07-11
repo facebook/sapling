@@ -13,8 +13,8 @@ import {atomFamilyWeak} from './jotaiUtils';
 import {useRunOperation} from './operationsState';
 import {useMostRecentPendingOperation} from './previews';
 import {Button} from 'isl-components/Button';
+import {Icon} from 'isl-components/Icon';
 import {atom, useAtom} from 'jotai';
-import {Icon} from 'shared/Icon';
 import {isPromise} from 'shared/utils';
 
 /**

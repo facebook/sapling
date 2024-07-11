@@ -32,13 +32,13 @@ import {bumpStackEditMetric, SplitRangeRecord, useStackEditState} from './stackE
 import * as stylex from '@stylexjs/stylex';
 import {Set as ImSet, Range} from 'immutable';
 import {Button} from 'isl-components/Button';
+import {Icon} from 'isl-components/Icon';
 import {Subtle} from 'isl-components/Subtle';
 import {TextField} from 'isl-components/TextField';
 import {Tooltip} from 'isl-components/Tooltip';
 import {useAtomValue} from 'jotai';
 import {useRef, useState, useEffect, useMemo} from 'react';
 import {useContextMenu} from 'shared/ContextMenu';
-import {Icon} from 'shared/Icon';
 import {type LineIdx, splitLines, diffBlocks} from 'shared/diff';
 import {useThrottledEffect} from 'shared/hooks';
 import {firstLine, nullthrows} from 'shared/utils';

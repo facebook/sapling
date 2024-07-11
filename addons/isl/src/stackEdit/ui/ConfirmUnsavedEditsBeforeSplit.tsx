@@ -23,9 +23,9 @@ import {CommitPreview} from '../../previews';
 import {useModal} from '../../useModal';
 import {Button} from 'isl-components/Button';
 import {Divider} from 'isl-components/Divider';
+import {Icon} from 'isl-components/Icon';
 import {useAtomValue} from 'jotai';
 import {useCallback} from 'react';
-import {Icon} from 'shared/Icon';
 import {useAutofocusRef} from 'shared/hooks';
 
 import './ConfirmUnsavedEditsBeforeSplit.css';

@@ -8,8 +8,8 @@
 import {T} from '../i18n';
 import {useModal} from '../useModal';
 import {Button} from 'isl-components/Button';
+import {Icon} from 'isl-components/Icon';
 import {Suspense, lazy} from 'react';
-import {Icon} from 'shared/Icon';
 
 const ComponentExplorerModal = lazy(() => import('./ComponentExplorerModal'));
 

@@ -16,9 +16,9 @@ import {useRunOperation} from './operationsState';
 import {uncommittedChangesWithPreviews, useMostRecentPendingOperation} from './previews';
 import {Button} from 'isl-components/Button';
 import {ButtonDropdown} from 'isl-components/ButtonDropdown';
+import {Icon} from 'isl-components/Icon';
 import {DOCUMENTATION_DELAY, Tooltip} from 'isl-components/Tooltip';
 import {useAtom, useAtomValue} from 'jotai';
-import {Icon} from 'shared/Icon';
 
 import './PullButton.css';
 

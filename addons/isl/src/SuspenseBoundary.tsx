@@ -6,8 +6,8 @@
  */
 
 import {ErrorBoundary} from './ErrorNotice';
+import {Icon} from 'isl-components/Icon';
 import {Suspense} from 'react';
-import {Icon} from 'shared/Icon';
 
 /**
  * <ErrorBoundary> and <Suspense>, with a default fallback.

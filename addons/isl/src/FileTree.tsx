@@ -15,8 +15,8 @@ import {File} from './ChangedFile';
 import {buildPathTree, calculateTreeSelectionStates} from './pathTree';
 import {Button} from 'isl-components/Button';
 import {Checkbox} from 'isl-components/Checkbox';
+import {Icon} from 'isl-components/Icon';
 import {useMemo, useState} from 'react';
-import {Icon} from 'shared/Icon';
 import {mapIterable} from 'shared/utils';
 
 export function FileTreeFolderHeader({

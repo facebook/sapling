@@ -18,10 +18,10 @@ import {applicationinfo} from './serverAPIState';
 import * as stylex from '@stylexjs/stylex';
 import {Button} from 'isl-components/Button';
 import {Divider} from 'isl-components/Divider';
+import {Icon} from 'isl-components/Icon';
 import {Tooltip} from 'isl-components/Tooltip';
 import {useAtomValue} from 'jotai';
 import {Suspense} from 'react';
-import {Icon} from 'shared/Icon';
 
 import './BugButton.css';
 

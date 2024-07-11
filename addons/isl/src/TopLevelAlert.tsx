@@ -19,10 +19,10 @@ import {applicationinfo} from './serverAPIState';
 import {layout} from './stylexUtils';
 import * as stylex from '@stylexjs/stylex';
 import {Button} from 'isl-components/Button';
+import {Icon} from 'isl-components/Icon';
 import {Subtle} from 'isl-components/Subtle';
 import {atom, useAtom, useAtomValue} from 'jotai';
 import {useEffect} from 'react';
-import {Icon} from 'shared/Icon';
 
 const dismissedAlerts = localStorageBackedAtom<{[key: string]: boolean}>(
   'isl.dismissed-alerts',

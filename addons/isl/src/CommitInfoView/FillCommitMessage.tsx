@@ -34,11 +34,11 @@ import {
 import {SmallCapsTitle} from './utils';
 import * as stylex from '@stylexjs/stylex';
 import {Button} from 'isl-components/Button';
+import {Icon} from 'isl-components/Icon';
 import {LinkButton} from 'isl-components/LinkButton';
 import {DOCUMENTATION_DELAY, Tooltip} from 'isl-components/Tooltip';
 import {useCallback} from 'react';
 import {useContextMenu} from 'shared/ContextMenu';
-import {Icon} from 'shared/Icon';
 
 /**
  * The last entry in a tokenized field value is used as the value being typed in the editor.

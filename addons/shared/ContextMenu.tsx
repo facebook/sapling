@@ -5,9 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {Icon} from './Icon';
 import {findParentWithClassName} from './utils';
 import {getZoomLevel} from './zoom';
+import {Icon} from 'isl-components/Icon';
 import {atom, useAtom, useSetAtom} from 'jotai';
 import {useEffect, useRef, useState} from 'react';
 

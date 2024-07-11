@@ -16,9 +16,9 @@ import {useRunOperation} from './operationsState';
 import {type Dag, dagWithPreviews} from './previews';
 import {latestSuccessorUnlessExplicitlyObsolete} from './successionUtils';
 import {Button} from 'isl-components/Button';
+import {Icon} from 'isl-components/Icon';
 import {Tooltip} from 'isl-components/Tooltip';
 import {useAtomValue} from 'jotai';
-import {Icon} from 'shared/Icon';
 import {nullthrows} from 'shared/utils';
 
 export function isStackEligibleForCleanup(

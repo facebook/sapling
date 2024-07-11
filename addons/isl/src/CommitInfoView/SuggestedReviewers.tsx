@@ -15,9 +15,9 @@ import {atomFamilyWeak} from '../jotaiUtils';
 import {uncommittedChangesWithPreviews} from '../previews';
 import {commitByHash} from '../serverAPIState';
 import {commitInfoViewCurrentCommits, commitMode} from './CommitInfoState';
+import {Icon} from 'isl-components/Icon';
 import {atom, useAtomValue} from 'jotai';
 import {loadable} from 'jotai/utils';
-import {Icon} from 'shared/Icon';
 import {tryJsonParse} from 'shared/utils';
 
 import './SuggestedReviewers.css';

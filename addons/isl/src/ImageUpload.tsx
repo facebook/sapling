@@ -14,10 +14,10 @@ import {atomFamilyWeak, readAtom, writeAtom} from './jotaiUtils';
 import platform from './platform';
 import {replaceInTextArea, insertAtCursor} from './textareaUtils';
 import {Button} from 'isl-components/Button';
+import {Icon} from 'isl-components/Icon';
 import {Tooltip} from 'isl-components/Tooltip';
 import {atom, useAtomValue} from 'jotai';
 import {useState, type ReactNode, useId} from 'react';
-import {Icon} from 'shared/Icon';
 import {randomId} from 'shared/utils';
 
 export type ImageUploadStatus = {id: number; field: string} & (

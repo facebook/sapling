@@ -17,9 +17,9 @@ import {GeneratedStatus} from '../../types';
 import {FileHeader, diffTypeToIconType} from './SplitDiffFileHeader';
 import {SplitDiffTable} from './SplitDiffHunk';
 import {Button} from 'isl-components/Button';
+import {Icon} from 'isl-components/Icon';
 import {Tooltip} from 'isl-components/Tooltip';
 import {useState} from 'react';
-import {Icon} from 'shared/Icon';
 
 export function SplitDiffView({
   ctx,

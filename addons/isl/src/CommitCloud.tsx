@@ -24,12 +24,12 @@ import {CommitCloudBackupStatus} from './types';
 import {registerDisposable} from './utils';
 import {Button} from 'isl-components/Button';
 import {Dropdown} from 'isl-components/Dropdown';
+import {Icon} from 'isl-components/Icon';
 import {Subtle} from 'isl-components/Subtle';
 import {TextField} from 'isl-components/TextField';
 import {Tooltip} from 'isl-components/Tooltip';
 import {atom, useAtom, useAtomValue} from 'jotai';
 import {useCallback, useEffect, useRef, useState} from 'react';
-import {Icon} from 'shared/Icon';
 import {notEmpty} from 'shared/utils';
 
 import './CommitCloud.css';

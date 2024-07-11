@@ -35,11 +35,11 @@ import {latestDag} from './serverAPIState';
 import * as stylex from '@stylexjs/stylex';
 import {Button} from 'isl-components/Button';
 import {Checkbox} from 'isl-components/Checkbox';
+import {Icon} from 'isl-components/Icon';
 import {Subtle} from 'isl-components/Subtle';
 import {Tooltip} from 'isl-components/Tooltip';
 import {atom, useAtom, useAtomValue} from 'jotai';
 import React, {useState} from 'react';
-import {Icon} from 'shared/Icon';
 import {KeyCode, Modifier} from 'shared/KeyboardShortcuts';
 import {firstLine, notEmpty} from 'shared/utils';
 

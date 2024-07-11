@@ -11,8 +11,8 @@ import platform from '../platform';
 import {themeState} from '../theme';
 import {Ribbon} from './Ribbon';
 import {Button} from 'isl-components/Button';
+import {Icon} from 'isl-components/Icon';
 import {useAtomValue} from 'jotai';
-import {Icon} from 'shared/Icon';
 
 export function DismissButton({dismiss}: {dismiss: () => void}) {
   return (

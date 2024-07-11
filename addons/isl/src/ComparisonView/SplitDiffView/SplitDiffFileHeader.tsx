@@ -12,9 +12,9 @@ import type {RepoPath} from 'shared/types/common';
 import {t} from '../../i18n';
 import platform from '../../platform';
 import {Button} from 'isl-components/Button';
+import {Icon} from 'isl-components/Icon';
 import {Tooltip} from 'isl-components/Tooltip';
 import React from 'react';
-import {Icon} from 'shared/Icon';
 
 import './SplitDiffHunk.css';
 

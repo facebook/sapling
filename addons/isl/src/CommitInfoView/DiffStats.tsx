@@ -16,8 +16,8 @@ import {
   useFetchSignificantLinesOfCode,
 } from '../sloc/useFetchSignificantLinesOfCode';
 import * as stylex from '@stylexjs/stylex';
+import {Icon} from 'isl-components/Icon';
 import {Tooltip} from 'isl-components/Tooltip';
-import {Icon} from 'shared/Icon';
 
 type Props = {commit: CommitInfo};
 const styles = stylex.create({

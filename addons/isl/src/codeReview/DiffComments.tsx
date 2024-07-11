@@ -21,12 +21,12 @@ import foundPlatform from '../platform';
 import {RelativeDate} from '../relativeDate';
 import {layout} from '../stylexUtils';
 import * as stylex from '@stylexjs/stylex';
+import {Icon} from 'isl-components/Icon';
 import {Subtle} from 'isl-components/Subtle';
 import {Tooltip} from 'isl-components/Tooltip';
 import {useAtom} from 'jotai';
 import {useEffect} from 'react';
 import {ComparisonType} from 'shared/Comparison';
-import {Icon} from 'shared/Icon';
 import {group} from 'shared/utils';
 
 const diffCommentData = atomFamilyWeak((diffId: DiffId) =>

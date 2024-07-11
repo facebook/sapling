@@ -6,7 +6,7 @@
  */
 
 import {Button} from 'isl-components/Button';
-import {Icon} from 'shared/Icon';
+import {Icon} from 'isl-components/Icon';
 
 export function TokensList({
   tokens,
