@@ -44,6 +44,7 @@ FIXME: (recursive) alias expansion is not logged
   [legacy][connectionpool]
   [legacy][command_info]
   [legacy][metrics] {'metrics': {'scmstore': {'tree': * (glob) (?)
+  [legacy][metrics] {'metrics': {'scmstore': {'file': * (glob) (?)
   [commmand_finish] exited 0 in 0 ms, max RSS: 0 bytes
   [tracing] (binary data of * bytes) (glob)
   [command] [*, "blackbox"] started by uid 0 as pid 0 with nice 0 (glob)

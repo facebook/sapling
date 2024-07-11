@@ -167,11 +167,11 @@ Test command_duration is logged when ctrl-c'd:
 Test ui.metrics.gauge API
   $ cat > $TESTTMP/a.py << EOF
   > def reposetup(ui, repo):
-  >     ui.metrics.gauge("foo_a", 1)
-  >     ui.metrics.gauge("foo_b", 2)
-  >     ui.metrics.gauge("foo_b", len(repo))
-  >     ui.metrics.gauge("bar")
-  >     ui.metrics.gauge("bar")
+  >     ui.metrics.gauge("test_foo_a", 1)
+  >     ui.metrics.gauge("test_foo_b", 2)
+  >     ui.metrics.gauge("test_foo_b", len(repo))
+  >     ui.metrics.gauge("test_bar")
+  >     ui.metrics.gauge("test_bar")
   > EOF
   $ SCM_SAMPLING_FILEPATH=$TESTTMP/a.txt hg log -r null -T '.\n' --config extensions.gauge=$TESTTMP/a.py --config sampling.key.metrics=aaa
   .
@@ -186,11 +186,12 @@ Test ui.metrics.gauge API
   ...             data = obj["data"]
   ...             print("category: %s" % category)
   ...             for k, v in sorted(data.items()):
-  ...                 print("  %s=%s" % (k, v))
+  ...                 if "test" in k:
+  ...                     print("  %s=%s" % (k, v))
   category: aaa
-    bar=2
-    foo_a=1
-    foo_b=5
+    test_bar=2
+    test_foo_a=1
+    test_foo_b=5
 
 Counters get logged for native commands:
   $ SCM_SAMPLING_FILEPATH=$TESTTMP/native.txt hg debugmetrics --config sampling.key.metrics=aaa
@@ -205,10 +206,10 @@ Counters get logged for native commands:
     test_counter=1
 
 Metrics can be printed if devel.print-metrics is set:
-  $ hg log -r null -T '.\n' --config extensions.gauge=$TESTTMP/a.py --config devel.print-metrics= --config devel.skip-metrics=watchman
+  $ hg log -r null -T '.\n' --config extensions.gauge=$TESTTMP/a.py --config devel.print-metrics= --config devel.skip-metrics=scmstore,watchman
   .
   atexit handler executed
-  { metrics : { bar : 2,  foo : { a : 1,  b : 5}}}
+  { metrics : { test : { bar : 2,  foo : { a : 1,  b : 5}}}}
 
 Metrics is logged to blackbox:
 
@@ -218,9 +219,9 @@ Metrics is logged to blackbox:
   atexit handler executed
   $ hg blackbox --no-timestamp --no-sid --pattern '{"legacy_log":{"service":"metrics"}}' | grep foo
   atexit handler executed
-  [legacy][metrics] {'metrics': {'bar': 2, 'foo': {'a': 1, 'b': 5}}}
-  [legacy][metrics] {'metrics': {'bar': 2, 'foo': {'a': 1, 'b': 5}}}
-  [legacy][metrics] {'metrics': {'bar': 2, 'foo': {'a': 1, 'b': 5}}}
+  [legacy][metrics] {'metrics':*'test': {'bar': 2, 'foo': {'a': 1, 'b': 5}}}} (glob)
+  [legacy][metrics] {'metrics':*'test': {'bar': 2, 'foo': {'a': 1, 'b': 5}}}} (glob)
+  [legacy][metrics] {'metrics':*'test': {'bar': 2, 'foo': {'a': 1, 'b': 5}}}} (glob)
 
 Invalid format strings don't crash Mercurial
 

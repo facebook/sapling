@@ -878,11 +878,21 @@ class localrepository:
 
     def commitpending(self):
         # If we have any pending manifests, commit them to disk.
+        flush_rust = False
         if "manifestlog" in self.__dict__:
             self.manifestlog.commitpending()
+        else:
+            flush_rust = True
 
         if "fileslog" in self.__dict__:
             self.fileslog.commitpending()
+        else:
+            flush_rust = True
+
+        if flush_rust:
+            # We have have done a pure-Rust operation that wrote to caches.
+            # Flush via the Rust repo.
+            self._rsrepo.invalidatestores()
 
         if "changelog" in self.__dict__ and self.changelog.isvertexlazy():
             # Errors are not fatal. We lost some caches downloaded from the
