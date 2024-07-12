@@ -17,6 +17,7 @@ use async_trait::async_trait;
 use context::CoreContext;
 use derived_data_manager::DerivedDataManager;
 use ephemeral_blobstore::Bubble;
+use futures::stream::BoxStream;
 use mononoke_types::RepositoryId;
 
 pub use crate::dag_items::DagItemId;
@@ -111,5 +112,5 @@ pub enum DequeueResponse {
         ready_queue_watch:
             Box<dyn futures::future::Future<Output = anyhow::Result<()>> + Unpin + Send + Sync>,
     },
-    Items(Vec<DerivationDagItem>),
+    Items(BoxStream<'static, Result<DerivationDagItem, InternalError>>),
 }
