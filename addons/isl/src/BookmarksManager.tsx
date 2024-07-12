@@ -11,7 +11,6 @@ import type {TypeaheadResult} from 'isl-components/Types';
 import type {ReactNode} from 'react';
 
 import {spacing} from '../../components/theme/tokens.stylex';
-import {Banner, BannerKind} from './Banner';
 import {Bookmark} from './Bookmark';
 import {
   addManualStable,
@@ -31,6 +30,7 @@ import {T, t} from './i18n';
 import {readAtom} from './jotaiUtils';
 import {latestDag} from './serverAPIState';
 import * as stylex from '@stylexjs/stylex';
+import {Banner, BannerKind} from 'isl-components/Banner';
 import {Button} from 'isl-components/Button';
 import {Checkbox} from 'isl-components/Checkbox';
 import {Icon} from 'isl-components/Icon';

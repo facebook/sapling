@@ -9,7 +9,6 @@ import type {CommitInfo, DiffId} from '../types';
 import type {CommitInfoMode, EditedMessage} from './CommitInfoState';
 import type {CommitMessageFields, FieldConfig, FieldsBeingEdited} from './types';
 
-import {Banner, BannerKind, BannerTooltip} from '../Banner';
 import {ChangedFilesWithFetching} from '../ChangedFilesWithFetching';
 import serverAPI from '../ClientToServerAPI';
 import {Commit} from '../Commit';
@@ -81,6 +80,7 @@ import SplitSuggestion from './SplitSuggestion';
 import {CommitTitleByline, getFieldToAutofocus, Section, SmallCapsTitle} from './utils';
 import deepEqual from 'fast-deep-equal';
 import {Badge} from 'isl-components/Badge';
+import {Banner, BannerKind, BannerTooltip} from 'isl-components/Banner';
 import {Button} from 'isl-components/Button';
 import {Divider} from 'isl-components/Divider';
 import {Icon} from 'isl-components/Icon';

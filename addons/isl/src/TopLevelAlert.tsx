@@ -9,7 +9,6 @@ import type {Alert, AlertSeverity} from './types';
 import type {ReactNode} from 'react';
 
 import {colors, font, radius, spacing} from '../../components/theme/tokens.stylex';
-import {Banner, BannerKind} from './Banner';
 import serverAPI from './ClientToServerAPI';
 import {Link} from './Link';
 import {tracker} from './analytics';
@@ -18,6 +17,7 @@ import {localStorageBackedAtom, writeAtom} from './jotaiUtils';
 import {applicationinfo} from './serverAPIState';
 import {layout} from './stylexUtils';
 import * as stylex from '@stylexjs/stylex';
+import {Banner, BannerKind} from 'isl-components/Banner';
 import {Button} from 'isl-components/Button';
 import {Icon} from 'isl-components/Icon';
 import {Subtle} from 'isl-components/Subtle';

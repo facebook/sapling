@@ -8,6 +8,7 @@
 import type {StyleXVar} from '@stylexjs/stylex/lib/StyleXTypes';
 
 import {Badge} from '../Badge';
+import {Banner, BannerKind} from '../Banner';
 import {Button} from '../Button';
 import {ButtonDropdown} from '../ButtonDropdown';
 import {Checkbox} from '../Checkbox';
@@ -241,12 +242,12 @@ export default function ComponentExplorer() {
           <ExampleTypeahead />
         </Row>
 
-        {/* <Row>
+        <Row>
           <Banner>Banner</Banner>
           <Banner kind={BannerKind.warning}>Warning Banner</Banner>
           <Banner kind={BannerKind.error}>Error Banner</Banner>
           <Banner icon={<Icon icon="info" />}>Icon Banner</Banner>
-        </Row> */}
+        </Row>
         {/* <Row>
           <ErrorNotice
             title="Error Notice"

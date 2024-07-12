@@ -11,7 +11,6 @@ import type {ChangedFile, ChangedFileType, MergeConflicts, RepoRelativePath} fro
 import type {Comparison} from 'shared/Comparison';
 
 import {Avatar} from './Avatar';
-import {Banner, BannerKind} from './Banner';
 import {File} from './ChangedFile';
 import {
   ChangedFileDisplayTypePicker,
@@ -77,6 +76,7 @@ import {latestHeadCommit, uncommittedChangesFetchError} from './serverAPIState';
 import {GeneratedStatus} from './types';
 import * as stylex from '@stylexjs/stylex';
 import {Badge} from 'isl-components/Badge';
+import {Banner, BannerKind} from 'isl-components/Banner';
 import {Button} from 'isl-components/Button';
 import {Icon} from 'isl-components/Icon';
 import {TextField} from 'isl-components/TextField';

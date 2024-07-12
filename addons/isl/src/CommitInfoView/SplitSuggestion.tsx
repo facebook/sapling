@@ -5,7 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {Banner, BannerKind} from '../Banner';
 import {Column} from '../ComponentUtils';
 import {Internal} from '../Internal';
 import {tracker} from '../analytics';
@@ -27,6 +26,7 @@ import {
 import {SplitButton} from '../stackEdit/ui/SplitButton';
 import {type CommitInfo} from '../types';
 import {commitMode} from './CommitInfoState';
+import {Banner, BannerKind} from 'isl-components/Banner';
 import {Button} from 'isl-components/Button';
 import {Divider} from 'isl-components/Divider';
 import {Icon} from 'isl-components/Icon';
