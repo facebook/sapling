@@ -67,6 +67,23 @@ pub enum UploadPolicy {
     TreesOnly,
 }
 
+#[derive(Debug, PartialEq, Clone)]
+pub enum PriorLookupPolicy {
+    All,
+    BlobsOnly,
+    TreesOnly,
+    None,
+}
+
+impl PriorLookupPolicy {
+    pub fn enabled_trees(&self) -> bool {
+        matches!(self, PriorLookupPolicy::TreesOnly) || matches!(self, PriorLookupPolicy::All)
+    }
+    pub fn enabled_blobs(&self) -> bool {
+        matches!(self, PriorLookupPolicy::BlobsOnly) || matches!(self, PriorLookupPolicy::All)
+    }
+}
+
 impl Display for UploadCounters {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
         write!(
@@ -174,6 +191,7 @@ where
         repo: &impl Repo,
         changeset_id: &ChangesetId,
         upload_policy: UploadPolicy,
+        prior_lookup_policy: PriorLookupPolicy,
     ) -> Result<UploadStats, CasChangesetUploaderErrorKind> {
         let hg_cs_id = repo
             .bonsai_hg_mapping()
@@ -289,10 +307,13 @@ where
 
         let upload_counter: Arc<UploadCounters> = Arc::new(Default::default());
 
+        let blobs_lookup = prior_lookup_policy.enabled_blobs();
+        let trees_lookup = prior_lookup_policy.enabled_trees();
+
         match upload_policy {
             UploadPolicy::BlobsOnly => {
                 self.client
-                    .ensure_upload_file_contents(ctx, &blobstore, files_list, true)
+                    .ensure_upload_file_contents(ctx, &blobstore, files_list, blobs_lookup)
                     .await?
                     .into_iter()
                     .for_each(|(_, outcome)| {
@@ -301,7 +322,7 @@ where
             }
             UploadPolicy::TreesOnly => {
                 self.client
-                    .ensure_upload_augmented_trees(ctx, &blobstore, manifests_list, true)
+                    .ensure_upload_augmented_trees(ctx, &blobstore, manifests_list, trees_lookup)
                     .await?
                     .into_iter()
                     .for_each(|(_, outcome)| {
@@ -314,10 +335,14 @@ where
                         ctx,
                         &blobstore,
                         manifests_list,
-                        true
+                        trees_lookup
                     ),
-                    self.client
-                        .ensure_upload_file_contents(ctx, &blobstore, files_list, true)
+                    self.client.ensure_upload_file_contents(
+                        ctx,
+                        &blobstore,
+                        files_list,
+                        blobs_lookup
+                    )
                 )?;
 
                 outcomes_trees.into_iter().for_each(|(_, outcome)| {
@@ -350,6 +375,7 @@ where
         repo: &impl Repo,
         changeset_id: &ChangesetId,
         upload_policy: UploadPolicy,
+        prior_lookup_policy: PriorLookupPolicy,
     ) -> Result<UploadStats, CasChangesetUploaderErrorKind> {
         let start_time = std::time::Instant::now();
         let upload_counter: Arc<UploadCounters> = Arc::new(Default::default());
@@ -375,6 +401,10 @@ where
         } else {
             MAX_CONCURRENT_MANIFESTS
         };
+
+        let blobs_lookup = prior_lookup_policy.enabled_blobs();
+        let trees_lookup = prior_lookup_policy.enabled_trees();
+
         bounded_traversal::bounded_traversal_stream(
             max_concurrent_manifests,
             Some(hg_manifest_id),
@@ -392,7 +422,7 @@ where
                                 repo.repo_blobstore(),
                                 &hg_augmented_manifest_id,
                                 None,
-                                true,
+                                trees_lookup,
                             )
                             .await
                             .map_err(|error| {
@@ -427,7 +457,7 @@ where
                                                     repo.repo_blobstore(),
                                                     &leaf.1,
                                                     None,
-                                                    true,
+                                                    blobs_lookup,
                                                 )
                                                 .await
                                                 .map_err(|error| {

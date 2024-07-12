@@ -12,6 +12,7 @@ use cas_client::DummyCasClient;
 #[cfg(fbcode_build)]
 use cas_client::RemoteExecutionCasdClient;
 use changesets_uploader::CasChangesetsUploader;
+use changesets_uploader::PriorLookupPolicy;
 use changesets_uploader::UploadPolicy;
 use clap::Args;
 use context::CoreContext;
@@ -83,11 +84,23 @@ pub async fn cas_store_upload(
 
     if args.full {
         cas_changesets_uploader
-            .upload_single_changeset_recursively(ctx, repo, &changeset_id, upload_policy)
+            .upload_single_changeset_recursively(
+                ctx,
+                repo,
+                &changeset_id,
+                upload_policy,
+                PriorLookupPolicy::All,
+            )
             .await?;
     } else {
         cas_changesets_uploader
-            .upload_single_changeset(ctx, repo, &changeset_id, upload_policy)
+            .upload_single_changeset(
+                ctx,
+                repo,
+                &changeset_id,
+                upload_policy,
+                PriorLookupPolicy::All,
+            )
             .await?;
     }
 

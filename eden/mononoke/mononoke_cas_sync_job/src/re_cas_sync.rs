@@ -8,6 +8,7 @@
 use anyhow::Error;
 use bookmarks::BookmarkUpdateLogEntry;
 use changesets_uploader::MononokeCasChangesetsUploader;
+use changesets_uploader::PriorLookupPolicy;
 use changesets_uploader::UploadPolicy;
 use changesets_uploader::UploadStats;
 use commit_graph::CommitGraphRef;
@@ -48,8 +49,17 @@ pub async fn try_sync<'a>(
     bcs_id: ChangesetId,
 ) -> Result<UploadStats, Error> {
     // Upload changeset to RE CAS.
+    // Prior lookup for trees is not requested for performance,
+    // since the trees are delta in the incremental sync and should always be new
+    // and not present in the CAS before.
     let stats = re_cas_client
-        .upload_single_changeset(ctx, repo, &bcs_id, UploadPolicy::All)
+        .upload_single_changeset(
+            ctx,
+            repo,
+            &bcs_id,
+            UploadPolicy::All,
+            PriorLookupPolicy::BlobsOnly,
+        )
         .await?;
     Ok(stats)
 }
