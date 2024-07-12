@@ -283,12 +283,9 @@ pub fn remove_symlink(path: &Path) -> Result<()> {
 
 #[cfg(windows)]
 const PYTHON_CANDIDATES: &[&str] = &[
+    r"c:\tools\fb-python\fb-python312",
     r"c:\tools\fb-python\fb-python310",
-    r"c:\tools\fb-python\fb-python39",
-    r"c:\tools\fb-python\fb-python38",
     r"c:\Python310",
-    r"c:\Python39",
-    r"c:\Python38",
 ];
 
 #[cfg(windows)]
