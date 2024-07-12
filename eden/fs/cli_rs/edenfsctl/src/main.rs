@@ -42,7 +42,12 @@ fn python_fallback() -> Result<Command> {
             .next()
             .ok_or_else(|| anyhow!("invalid fallback environment variable: {:?}", args))?;
         let mut cmd = Command::new(binary);
+        #[cfg(windows)]
+        if binary.ends_with(".par") {
+            cmd = execute_par(binary.into())?;
+        }
         cmd.args(parts);
+        tracing::debug!("Using binary set by EDENFSCTL_REAL {:?}", &cmd);
         return Ok(cmd);
     }
 
