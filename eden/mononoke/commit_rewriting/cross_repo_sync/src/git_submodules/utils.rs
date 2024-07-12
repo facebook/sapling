@@ -456,12 +456,69 @@ async fn create_bonsai_for_dangling_submodule_pointer<R: Repo>(
 /// expand requires loading the repo of the submodules it depends on.
 ///
 /// This will read the commit sync config and will load the repos of all the
+/// submodules that the small repo ever depended on.
+///
+/// Only the small repo should have submodule dependencies in the commit sync
+/// config, but to avoid depending on the direction of the sync, we look for the
+/// deps of both source and target repos and join them.
+/// The large repo should always return an empty set.
+///
+/// TODO(T184633369): stop getting all dependencies from history and
+/// use only the most recent on. Maybe read the most recent commits and use
+/// their versions?
+pub async fn get_all_submodule_deps<R>(
+    ctx: &CoreContext,
+    source_repo: Arc<R>,
+    target_repo: Arc<R>,
+    repos: Arc<MononokeRepos<R>>,
+    live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
+) -> Result<SubmoduleDeps<R>>
+where
+    R: Repo,
+{
+    let source_repo_deps = get_all_possible_repo_submodule_deps(
+        ctx,
+        source_repo,
+        repos.clone(),
+        live_commit_sync_config.clone(),
+    )
+    .await?;
+
+    let target_repo_deps = get_all_possible_repo_submodule_deps(
+        ctx,
+        target_repo,
+        repos.clone(),
+        live_commit_sync_config,
+    )
+    .await?;
+
+    let final_submodule_deps = match (source_repo_deps.dep_map(), target_repo_deps.dep_map()) {
+        (Some(dep_map), None) => SubmoduleDeps::ForSync(dep_map.clone()),
+        (None, Some(dep_map)) => SubmoduleDeps::ForSync(dep_map.clone()),
+        (Some(source_dep_map), Some(target_dep_map)) => {
+            let final_dep_map = source_dep_map
+                .clone()
+                .into_iter()
+                .chain(target_dep_map.clone())
+                .collect();
+            SubmoduleDeps::ForSync(final_dep_map)
+        }
+        (None, None) => SubmoduleDeps::NotAvailable,
+    };
+
+    Ok(final_submodule_deps)
+}
+
+/// Syncing commits from/to repos that have git submodule actions set to
+/// expand requires loading the repo of the submodules it depends on.
+///
+/// This will read the commit sync config and will load the repos of all the
 /// submodules that the given repo ever depended on.
 ///
 /// TODO(T184633369): stop getting all dependencies from history and
 /// use only the most recent on. Maybe read the most recent commits and use
 /// their versions?
-pub async fn get_all_possible_repo_submodule_deps<R>(
+async fn get_all_possible_repo_submodule_deps<R>(
     ctx: &CoreContext,
     repo: Arc<R>,
     repos: Arc<MononokeRepos<R>>,

@@ -33,7 +33,7 @@ use context::CoreContext;
 use cross_repo_sync::create_commit_syncer_lease;
 use cross_repo_sync::create_commit_syncers;
 use cross_repo_sync::find_toposorted_unsynced_ancestors;
-use cross_repo_sync::get_all_possible_repo_submodule_deps;
+use cross_repo_sync::get_all_submodule_deps;
 use cross_repo_sync::rewrite_commit;
 use cross_repo_sync::CandidateSelectionHint;
 use cross_repo_sync::CommitSyncContext;
@@ -995,10 +995,16 @@ async fn get_pushredirected_vars(
     let repos = repos_manager.repos().clone();
 
     let repo_arc = Arc::new(repo.clone());
+    let large_repo_arc = Arc::new(large_repo.clone());
 
-    let submodule_deps =
-        get_all_possible_repo_submodule_deps(ctx, repo_arc, repos, live_commit_sync_config.clone())
-            .await?;
+    let submodule_deps = get_all_submodule_deps(
+        ctx,
+        repo_arc,
+        large_repo_arc,
+        repos,
+        live_commit_sync_config.clone(),
+    )
+    .await?;
 
     let mapping = open_sql::<SqlSyncedCommitMapping>(ctx.fb, repo.repo_id(), configs, env).await?;
     let syncers = create_commit_syncers(
@@ -1257,8 +1263,11 @@ async fn repo_import(
 
         let repo_arc = Arc::new(repo.clone());
 
-        let submodule_deps = get_all_possible_repo_submodule_deps(
+        let submodule_deps = get_all_submodule_deps(
             &ctx,
+            repo_arc.clone(),
+            // Only one repo here, so pass it again as target repo because it
+            // won't change the final submodule deps
             repo_arc,
             repos,
             Arc::new(live_commit_sync_config),
