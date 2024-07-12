@@ -61,6 +61,7 @@ use commit_cloud::CommitCloud;
 use commit_graph::CommitGraph;
 use commit_graph::CommitGraphRef;
 use context::CoreContext;
+use cross_repo_sync::get_all_possible_repo_submodule_deps;
 use cross_repo_sync::get_small_and_large_repos;
 use cross_repo_sync::CandidateSelectionHint;
 use cross_repo_sync::CommitSyncContext;
@@ -99,7 +100,6 @@ use live_commit_sync_config::LiveCommitSyncConfig;
 use mercurial_derivation::MappedHgChangesetId;
 use mercurial_mutation::HgMutationStore;
 use mercurial_types::Globalrev;
-use mercurial_types::NonRootMPath;
 use metaconfig_types::HookManagerParams;
 use metaconfig_types::InfinitepushNamespace;
 use metaconfig_types::InfinitepushParams;
@@ -152,7 +152,6 @@ use segmented_changelog::SegmentedChangelog;
 use segmented_changelog::SegmentedChangelogRef;
 use slog::debug;
 use slog::error;
-use slog::warn;
 use sql_construct::SqlConstruct;
 use sql_ext::facebook::MysqlOptions;
 use stats::prelude::*;
@@ -1709,102 +1708,6 @@ impl RepoContext {
         Ok(maybe_cs_id.map(|cs_id| ChangesetContext::new(other.clone(), cs_id)))
     }
 
-    /// Syncing commits from/to repos that have git submodule actions set to
-    /// expand requires loading the repo of the submodules it dependsnon.
-    ///
-    /// This will read the commit sync config and will load the repos of all the
-    /// submodules that the given repo ever depended on.
-    ///
-    /// TODO(T184633369): stop getting all dependencies from history and
-    /// use only the most recent on. Maybe read the most recent commits and use
-    /// their versions?
-    async fn get_all_possible_repo_submodule_deps(
-        &self,
-    ) -> Result<SubmoduleDeps<Repo>, MononokeError> {
-        let ctx = &self.ctx;
-        let repo = self.repo.as_ref();
-        let live_commit_sync_config = repo.live_commit_sync_config();
-
-        let source_repo_id = repo.repo_identity().id();
-
-        let source_repo_sync_configs = live_commit_sync_config
-            .get_all_commit_sync_config_versions(source_repo_id)
-            .await?;
-
-        let repo_deps_ids = source_repo_sync_configs
-            .into_values()
-            .filter_map(|mut cfg| {
-                cfg.small_repos
-                    .remove(&source_repo_id)
-                    .map(|small_repo_cfg| small_repo_cfg.submodule_config.submodule_dependencies)
-            })
-            .flatten()
-            .collect::<HashMap<_, _>>();
-
-        let submodule_deps_to_load = repo_deps_ids.len();
-
-        if submodule_deps_to_load == 0 {
-            // For repos without any submodule dependencies, we shouldn't expect any
-            // submodule expansion to be called, so return that submodule deps
-            // are not needed instead of returning an empty hash map.
-            return Ok(SubmoduleDeps::NotNeeded);
-        };
-
-        let repo_deps: HashMap<NonRootMPath, Arc<Repo>> = repo_deps_ids
-            .into_iter()
-            .filter_map(|(submodule_path, sm_repo_id)| {
-                let mb_sm_repo = self.repos.get_by_id(sm_repo_id.id());
-                match mb_sm_repo {
-                    Some(sm_repo) => Some((submodule_path, sm_repo)),
-                    None => {
-                        // We don't want to fail the entire request if a submodule
-                        // is not found **here**, because not all operations
-                        // that run this code path might actually need the submodule
-                        // deps and repos could be missing due to repo sharding.
-                        // But let's at least log a warning if this happen.
-                        warn!(
-                            ctx.logger(),
-                            "Failed to load submodule dependency at path {} with id {}",
-                            submodule_path.clone(),
-                            sm_repo_id.id()
-                        );
-
-                        ctx.scuba().clone().log_with_msg(
-                            "Failed to load submodule dependency in RepoContextBuilder",
-                            format!(
-                                "Submodule path: {}. Submodule repo id: {}",
-                                submodule_path.clone(),
-                                sm_repo_id.id()
-                            ),
-                        );
-                        None
-                    }
-                }
-            })
-            .collect();
-
-        if repo_deps.len() < submodule_deps_to_load {
-            warn!(
-                ctx.logger(),
-                "Submodule dependencies failed to load. {} were loaded instead of the required {}",
-                repo_deps.len(),
-                submodule_deps_to_load
-            );
-
-            ctx.scuba().clone().log_with_msg(
-                "Submodule dependencies failed to load",
-                format!(
-                    "{} were loaded instead of the required {}",
-                    repo_deps.len(),
-                    submodule_deps_to_load
-                ),
-            );
-            return Ok(SubmoduleDeps::NotAvailable);
-        }
-
-        Ok(SubmoduleDeps::ForSync(repo_deps))
-    }
-
     /// Only the small repo should have submodule dependencies in the commit sync
     /// config, but when `xrepo_commit_lookup`, we don't know if the small repo
     /// is the source (forward sync) or target (backsync).
@@ -1813,10 +1716,21 @@ impl RepoContext {
         &'a self,
         target_repo_ctx: &'a Self,
     ) -> Result<SubmoduleDeps<Repo>, MononokeError> {
-        let source_submodule_deps = self.get_all_possible_repo_submodule_deps().await?;
-        let target_submodule_deps = target_repo_ctx
-            .get_all_possible_repo_submodule_deps()
-            .await?;
+        let live_commit_sync_config = self.repo.live_commit_sync_config();
+        let source_submodule_deps = get_all_possible_repo_submodule_deps(
+            &self.ctx,
+            self.repo.clone(),
+            self.repos.clone(),
+            live_commit_sync_config.clone(),
+        )
+        .await?;
+        let target_submodule_deps = get_all_possible_repo_submodule_deps(
+            &self.ctx,
+            target_repo_ctx.repo.clone(),
+            self.repos.clone(),
+            live_commit_sync_config,
+        )
+        .await?;
 
         match (
             source_submodule_deps.dep_map(),

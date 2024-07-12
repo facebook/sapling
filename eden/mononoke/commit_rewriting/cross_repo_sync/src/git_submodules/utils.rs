@@ -25,10 +25,12 @@ use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use git_types::ObjectKind;
 use itertools::Itertools;
+use live_commit_sync_config::LiveCommitSyncConfig;
 use manifest::bonsai_diff;
 use manifest::BonsaiDiffFileChange;
 use manifest::Entry;
 use manifest::ManifestOps;
+use mononoke_repos::MononokeRepos;
 use mononoke_types::hash::GitSha1;
 use mononoke_types::hash::RichGitSha1;
 use mononoke_types::BlobstoreValue;
@@ -52,6 +54,7 @@ use crate::git_submodules::expand::SubmodulePath;
 use crate::git_submodules::in_memory_repo::InMemoryRepo;
 use crate::reporting::log_warning;
 use crate::types::Repo;
+use crate::SubmoduleDeps;
 
 /// Get the git hash from a submodule file, which represents the commit from the
 /// given submodule that the source repo depends on at that revision.
@@ -447,4 +450,106 @@ async fn create_bonsai_for_dangling_submodule_pointer<R: Repo>(
         .context("Failed to save bonsai for dangling submodule pointer expansion")?;
 
     Ok(exp_bonsai_cs_id)
+}
+
+/// Syncing commits from/to repos that have git submodule actions set to
+/// expand requires loading the repo of the submodules it depends on.
+///
+/// This will read the commit sync config and will load the repos of all the
+/// submodules that the given repo ever depended on.
+///
+/// TODO(T184633369): stop getting all dependencies from history and
+/// use only the most recent on. Maybe read the most recent commits and use
+/// their versions?
+pub async fn get_all_possible_repo_submodule_deps<R>(
+    ctx: &CoreContext,
+    repo: Arc<R>,
+    repos: Arc<MononokeRepos<R>>,
+    live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
+) -> Result<SubmoduleDeps<R>>
+where
+    R: Repo,
+{
+    let source_repo_id = repo.repo_identity().id();
+
+    let source_repo_sync_configs = live_commit_sync_config
+        .get_all_commit_sync_config_versions(source_repo_id)
+        .await?;
+
+    let repo_deps_ids = source_repo_sync_configs
+        .into_values()
+        .filter_map(|mut cfg| {
+            cfg.small_repos
+                .remove(&source_repo_id)
+                .map(|small_repo_cfg| small_repo_cfg.submodule_config.submodule_dependencies)
+        })
+        .flatten()
+        .collect::<HashMap<_, _>>();
+
+    let submodule_deps_to_load = repo_deps_ids.len();
+
+    if submodule_deps_to_load == 0 {
+        // For repos without any submodule dependencies, we shouldn't expect any
+        // submodule expansion to be called, so return that submodule deps
+        // are not needed instead of returning an empty hash map.
+        return Ok(SubmoduleDeps::NotNeeded);
+    };
+
+    let repo_deps: HashMap<NonRootMPath, Arc<R>> = repo_deps_ids
+        .into_iter()
+        .filter_map(|(submodule_path, sm_repo_id)| {
+            let mb_sm_repo = repos.get_by_id(sm_repo_id.id());
+            match mb_sm_repo {
+                Some(sm_repo) => Some((submodule_path, sm_repo)),
+                None => {
+                    // We don't want to fail the entire request if a submodule
+                    // is not found **here**, because not all operations
+                    // that run this code path might actually need the submodule
+                    // deps and repos could be missing due to repo sharding.
+                    // But let's at least log a warning if this happen.
+                    log_warning(
+                        ctx,
+                        format!(
+                            "Failed to load submodule dependency at path {} with id {}",
+                            submodule_path.clone(),
+                            sm_repo_id.id()
+                        ),
+                    );
+
+                    ctx.scuba().clone().log_with_msg(
+                        "Failed to load submodule dependency in RepoContextBuilder",
+                        format!(
+                            "Submodule path: {}. Submodule repo id: {}",
+                            submodule_path.clone(),
+                            sm_repo_id.id()
+                        ),
+                    );
+                    None
+                }
+            }
+        })
+        .collect();
+
+    if repo_deps.len() < submodule_deps_to_load {
+        log_warning(
+            ctx,
+            format!(
+                "Submodule dependencies failed to load. {} were loaded instead of the required {}",
+                repo_deps.len(),
+                submodule_deps_to_load
+            ),
+        );
+
+        ctx.scuba().clone().log_with_msg(
+            "Submodule dependencies failed to load",
+            format!(
+                "{} were loaded instead of the required {}",
+                repo_deps.len(),
+                submodule_deps_to_load
+            ),
+        );
+        return Ok(SubmoduleDeps::NotAvailable);
+    }
+
+    Ok(SubmoduleDeps::ForSync(repo_deps))
 }
