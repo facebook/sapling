@@ -5,9 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {Kbd} from './Kbd';
 import {t} from './i18n';
 import {useModal} from './useModal';
+import {Kbd} from 'isl-components/Kbd';
 import {useMemo} from 'react';
 import {makeCommandDispatcher, KeyCode, Modifier} from 'shared/KeyboardShortcuts';
 import {isMac} from 'shared/OperatingSystem';

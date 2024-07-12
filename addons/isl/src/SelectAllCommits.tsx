@@ -6,7 +6,6 @@
  */
 
 import {useCommand} from './ISLShortcuts';
-import {Kbd} from './Kbd';
 import {islDrawerState} from './drawerState';
 import {t, T} from './i18n';
 import {readAtom, writeAtom} from './jotaiUtils';
@@ -14,6 +13,7 @@ import {dagWithPreviews} from './previews';
 import {selectedCommits} from './selection';
 import {Button} from 'isl-components/Button';
 import {Icon} from 'isl-components/Icon';
+import {Kbd} from 'isl-components/Kbd';
 import {Tooltip} from 'isl-components/Tooltip';
 import {useCallback} from 'react';
 import {KeyCode, Modifier} from 'shared/KeyboardShortcuts';
