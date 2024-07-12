@@ -31,8 +31,6 @@
   > }
   > EOF
 
-
-
 -- Init the imported repos
   $ IMPORTED_REPO_NAME="imported_repo"
   $ REPOID="$IMPORTED_REPO_ID" REPONAME="$IMPORTED_REPO_NAME" setup_common_config "blob_files"
@@ -50,9 +48,25 @@
   $ large_small_setup
   Adding synced mapping entry
   $ setup_configerator_configs
-  $ enable_pushredirect 1
-  $ enable_pushredirect 2 false false
-  $ enable_pushredirect 3 false false
+  $ cat > "$PUSHREDIRECT_CONF/enable" <<EOF
+  > {
+  > "per_repo": {
+  >   "1": {
+  >      "draft_push": false,
+  >      "public_push": true
+  >    },
+  >   "2": {
+  >      "draft_push": false,
+  >      "public_push": false
+  >    },
+  >   "3": {
+  >      "draft_push": false,
+  >      "public_push": false
+  >    }
+  >   }
+  > }
+  > EOF
+
   $ start_large_small_repo
   Starting Mononoke server
   $ init_local_large_small_clones
