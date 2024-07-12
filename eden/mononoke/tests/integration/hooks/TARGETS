@@ -1,0 +1,21 @@
+load(
+    "//eden/mononoke/tests/integration/facebook:fb_manifest_deps.bzl",
+    "dott_test",
+)
+
+oncall("scm_server_infra")
+
+dott_test(
+    name = "hooks",
+    dott_files =
+        glob(
+            [
+                "*.t",
+            ],
+            exclude = ["test-hook-tailer.t"],
+        ),
+    deps = [
+        "//eden/mononoke:blobimport",
+        "//eden/mononoke:mononoke",
+    ],
+)

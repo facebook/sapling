@@ -1,0 +1,20 @@
+load(
+    "//eden/mononoke/tests/integration/facebook:fb_manifest_deps.bzl",
+    "dott_test",
+)
+
+oncall("scm_server_infra")
+
+dott_test(
+    name = "walker",
+    disable_all_network_access_target = False,
+    dott_files = glob(["*.t"]),
+    deps = [
+        "//eden/mononoke:admin",
+        "//eden/mononoke:blobimport",
+        "//eden/mononoke:packer",
+        "//eden/mononoke/tools/admin:newadmin",
+        "//eden/mononoke/tools/testtool:testtool",
+        "//eden/mononoke/walker:walker",
+    ],
+)

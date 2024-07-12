@@ -1,0 +1,21 @@
+load(
+    "//eden/mononoke/tests/integration/facebook:fb_manifest_deps.bzl",
+    "dott_test",
+)
+
+oncall("scm_server_infra")
+
+dott_test(
+    name = "repo_import",
+    dott_files = glob(["*.t"]),
+    deps = [
+        "//eden/mononoke:admin",
+        "//eden/mononoke:blobimport",
+        "//eden/mononoke:mononoke",
+        "//eden/mononoke:segmented_changelog_tailer",
+        "//eden/mononoke/commit_rewriting/backsyncer:backsyncer_cmd",
+        "//eden/mononoke/repo_import:repo_import",
+        "//eden/mononoke/tools/admin:newadmin",
+        "//eden/mononoke/tools/testtool:testtool",
+    ],
+)

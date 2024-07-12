@@ -1,0 +1,24 @@
+load(
+    "//eden/mononoke/tests/integration/facebook:fb_manifest_deps.bzl",
+    "dott_test",
+)
+
+oncall("scm_server_infra")
+
+dott_test(
+    name = "mononoke_hg_sync",
+    disable_all_network_access_target = False,
+    dott_files = glob([
+        "*.t",
+    ]),
+    deps = [
+        "//eden/mononoke:admin",
+        "//eden/mononoke:blobimport",
+        "//eden/mononoke:bonsai_verify",
+        "//eden/mononoke:mononoke",
+        "//eden/mononoke/lfs_server:lfs_server",
+        "//eden/mononoke/mononoke_hg_sync_job:mononoke_hg_sync_job",
+        "//eden/mononoke/tools/admin:newadmin",
+        "//eden/mononoke/tools/testtool:testtool",
+    ],
+)

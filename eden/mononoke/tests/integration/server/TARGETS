@@ -1,0 +1,45 @@
+load(
+    "//eden/mononoke/tests/integration/facebook:fb_manifest_deps.bzl",
+    "dott_test",
+)
+
+oncall("scm_server_infra")
+
+dott_test(
+    name = "server",
+    dott_files =
+        glob(
+            [
+                "*.t",
+            ],
+        ),
+    deps = [
+        "//eden/mononoke:admin",
+        "//eden/mononoke:blobimport",
+        "//eden/mononoke:mononoke",
+        # TODO: This is required for test-getpackv2-multibyte-filenames.t, as
+        # hg can't handle UTF-8 file names correctly. Once that is fixed, this
+        # dep can be removed.
+        "//eden/mononoke/git/gitimport:gitimport",
+        "//eden/mononoke/tests/integration:urlencode",
+        "//eden/mononoke/tools/admin:newadmin",
+        "//eden/mononoke/tools/testtool:testtool",
+        "//eden/mononoke:blobstore_healer",
+    ],
+)
+
+dott_test(
+    name = "server-mysql",
+    dott_files =
+        [
+            "test-infinitepush-mutation.t",
+            "test-pushrebase.t",
+            "test-server-init.t",
+            "test-server-lookup.t",
+        ],
+    use_mysql = True,
+    deps = [
+        "//eden/mononoke:blobimport",
+        "//eden/mononoke:mononoke",
+    ],
+)
