@@ -352,6 +352,7 @@ impl WorkingCopy {
                     && file.state.intersects(StateFlags::EXIST_NEXT)
             },
         )?;
+        tracing::trace!(target: "workingcopy::added_files", ?added_files);
         Ok(added_files)
     }
 

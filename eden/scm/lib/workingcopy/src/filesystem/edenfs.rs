@@ -87,13 +87,14 @@ impl FileSystem for EdenFileSystem {
         let status_map = self.client.get_status(p1, include_ignored)?;
         Ok(Box::new(status_map.into_iter().filter_map(
             move |(path, status)| {
-                tracing::trace!(%path, ?status, "eden status");
-
+                tracing::trace!(target: "workingcopy::filesystem::edenfs::status", %path, ?status, "eden status");
                 // EdenFS reports files that are present in the overlay but filtered from the repo
                 // as untracked. We "drop" any files that are excluded by the current filter.
-                match matcher.matches_file(&path) {
+                let mut matched = false;
+                let result = match matcher.matches_file(&path) {
                     Ok(true) => {
-                        match status {
+                        matched = true;
+                        match &status {
                             FileStatus::Removed => Some(Ok(PendingChange::Deleted(path))),
                             FileStatus::Ignored => Some(Ok(PendingChange::Ignored(path))),
                             FileStatus::Added => {
@@ -126,7 +127,16 @@ impl FileSystem for EdenFileSystem {
                         );
                         Some(Err(e))
                     }
+                };
+
+                if tracing::enabled!(tracing::Level::TRACE) {
+                    if let Some(result) = &result {
+                        let result = result.as_ref().ok();
+                        tracing::trace!(%matched, ?result, " processed eden status");
+                    }
                 }
+
+                result
             },
         )))
     }
