@@ -13,15 +13,11 @@ Repo setup:
   $ echo 1 >> normal/a
 
 status DIR should not show files outside DIR:
-FIXME: ignroed/b is shown
 
   $ sl status normal
   M normal/a
-  A ignored/b
 
 cp --after again should work fine:
-FIXME: it shows a confusing warning
 
   $ sl cp --after ignored/a ignored/b
-  ignored/b: not overwriting - ignored/b collides with ignored/a
 

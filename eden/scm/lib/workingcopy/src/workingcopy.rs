@@ -454,17 +454,6 @@ impl WorkingCopy {
                 ignore_dirs,
                 include_ignored,
             )?
-            .filter_map(|result| match result {
-                Ok(change_type) => match matcher.matches_file(change_type.get_path()) {
-                    Ok(true) => {
-                        tracing::trace!(?change_type, "pending change");
-                        Some(Ok(change_type))
-                    }
-                    Err(e) => Some(Err(e)),
-                    _ => None,
-                },
-                Err(e) => Some(Err(e)),
-            })
             // fs.pending_changes() won't return ignored files, but we want added ignored files to
             // show up in the results, so let's inject them here.
             .chain(added_files.into_iter().filter_map(|path| {
@@ -487,7 +476,18 @@ impl WorkingCopy {
                     Ok(_) => None,
                     Err(e) => Some(Err(e)),
                 }
-            }));
+            }))
+            .filter_map(|result| match result {
+                Ok(change_type) => match matcher.matches_file(change_type.get_path()) {
+                    Ok(true) => {
+                        tracing::trace!(?change_type, "pending change");
+                        Some(Ok(change_type))
+                    }
+                    Err(e) => Some(Err(e)),
+                    _ => None,
+                },
+                Err(e) => Some(Err(e)),
+            });
 
         let p1_manifest = manifests[0].as_ref();
         let mut status_builder = compute_status(
