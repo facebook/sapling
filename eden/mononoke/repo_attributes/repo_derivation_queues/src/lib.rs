@@ -77,6 +77,8 @@ pub trait DerivationQueue {
         item_id: DagItemId,
     ) -> Result<EnqueueResponse, InternalError>;
 
+    async fn summary(&self, ctx: &CoreContext) -> Result<DerivationQueueSummary, InternalError>;
+
     fn derived_data_manager(&self) -> &DerivedDataManager;
 
     fn repo_id(&self) -> RepositoryId;
@@ -113,4 +115,8 @@ pub enum DequeueResponse {
             Box<dyn futures::future::Future<Output = anyhow::Result<()>> + Unpin + Send + Sync>,
     },
     Items(BoxStream<'static, Result<DerivationDagItem, InternalError>>),
+}
+
+pub struct DerivationQueueSummary {
+    pub items: Vec<DerivationDagItem>,
 }
