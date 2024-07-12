@@ -99,9 +99,7 @@ impl<V: Clone> Iterator for SortedVectorTrieMap<V> {
 }
 
 #[async_trait]
-impl<Store, V: Clone + Send + Sync + std::fmt::Debug> TrieMapOps<Store, V>
-    for SortedVectorTrieMap<V>
-{
+impl<Store, V: Clone + Send + Sync> TrieMapOps<Store, V> for SortedVectorTrieMap<V> {
     async fn expand(
         self,
         _ctx: &CoreContext,
