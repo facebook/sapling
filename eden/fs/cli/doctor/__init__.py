@@ -470,6 +470,13 @@ class EdenDoctor(EdenDoctorChecker):
             out.writeln(
                 f"Failed to fix {problem_count(fixer.num_failed_fixes)}.", fg=out.RED
             )
+
+        if fixer.num_advisory_fixes:
+            out.writeln(
+                f"{fixer.num_advisory_fixes} issue{'' if fixer.num_advisory_fixes==1 else 's'} with recommended fixes.",
+                fg=out.YELLOW,
+            )
+
         if fixer.num_manual_fixes:
             if fixer.num_manual_fixes == 1:
                 msg = "1 issue requires manual attention."

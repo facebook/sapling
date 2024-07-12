@@ -161,10 +161,12 @@ class ProblemFixer(ProblemTracker):
         self.num_failed_fixes = 0
         self.num_manual_fixes = 0
         self.num_no_fixes = 0
+        self.num_advisory_fixes = 0
         self.problem_types: Set[str] = set()
         self.problem_failed_fixes: Set[str] = set()
         self.problem_manual_fixes: Set[str] = set()
         self.problem_no_fixes: Set[str] = set()
+        self.problem_advisory_fixes: Set[str] = set()
         self.problem_description: List[str] = []
 
     def add_problem_impl(self, problem: ProblemBase) -> None:
@@ -182,8 +184,12 @@ class ProblemFixer(ProblemTracker):
         else:
             msg = problem.get_manual_remediation_message()
             if msg:
-                self.num_manual_fixes += 1
-                self.problem_manual_fixes.add(problem.__class__.__name__)
+                if problem.severity() == ProblemSeverity.ADVICE:
+                    self.num_advisory_fixes += 1
+                    self.problem_advisory_fixes.add(problem.__class__.__name__)
+                else:
+                    self.num_manual_fixes += 1
+                    self.problem_manual_fixes.add(problem.__class__.__name__)
                 self._filtered_out.write(problem.severity(), msg, end="\n\n")
             else:
                 self.num_no_fixes += 1

@@ -785,7 +785,7 @@ which may have important bug fixes or performance improvements\.
 
 """,
         )
-        self.assert_results(fixer, num_problems=1, num_manual_fixes=1)
+        self.assert_results(fixer, num_problems=1, num_advisory_fixes=1)
 
     def _test_edenfs_version(
         self,
@@ -1597,7 +1597,7 @@ Try:
 - Checking your network connection's performance\.
 - Running `eden top` to check whether downloads are making progress\.
 
-<yellow>1 issue requires manual attention\.<reset>
+<yellow>1 issue with recommended fixes\.<reset>
 Collect an 'eden rage' and ask in the EdenFS (Windows |macOS )?Users group if you need help fixing issues with EdenFS:
 (https://fb\.workplace\.com/groups/eden\.users|https://fb\.workplace\.com/groups/edenfswindows|https://fb\.workplace\.com/groups/edenfsmacos)
 """,

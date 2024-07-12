@@ -36,11 +36,15 @@ class DoctorTestBase(unittest.TestCase, TemporaryDirectoryMixin):
         num_fixed_problems: int = 0,
         num_failed_fixes: int = 0,
         num_manual_fixes: int = 0,
+        num_no_fixes: int = 0,
+        num_advisory_fixes: int = 0,
     ) -> None:
         self.assertEqual(num_problems, fixer.num_problems)
         self.assertEqual(num_fixed_problems, fixer.num_fixed_problems)
         self.assertEqual(num_failed_fixes, fixer.num_failed_fixes)
         self.assertEqual(num_manual_fixes, fixer.num_manual_fixes)
+        self.assertEqual(num_no_fixes, fixer.num_no_fixes)
+        self.assertEqual(num_advisory_fixes, fixer.num_advisory_fixes)
 
     def assert_dirstate_p0(self, checkout: EdenCheckout, commit: str) -> None:
         dirstate_path = checkout.path / ".hg" / "dirstate"

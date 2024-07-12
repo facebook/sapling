@@ -42,7 +42,7 @@ class MultipleEdenfsRunningTest(DoctorTestBase):
         proc_utils.add_edenfs(456, "/home/someuser/.eden", set_lockfile=False)
         proc_utils.add_edenfs(789, "/home/someuser/.eden", set_lockfile=True)
         fixer, out = self.run_check(proc_utils, dry_run=False)
-        self.assert_results(fixer, num_problems=1, num_manual_fixes=1)
+        self.assert_results(fixer, num_problems=1, num_advisory_fixes=1)
         self.assertEqual(
             out,
             f"""\
@@ -113,7 +113,7 @@ kill -9 575204 675205
 
 """,
         )
-        self.assert_results(fixer, num_problems=1, num_manual_fixes=1)
+        self.assert_results(fixer, num_problems=1, num_advisory_fixes=1)
 
     def test_when_other_processes_with_similar_names_running(self) -> None:
         proc_utils = self.make_proc_utils()
@@ -139,7 +139,7 @@ kill -9 775310
 """,
             out,
         )
-        self.assert_results(fixer, num_problems=1, num_manual_fixes=1)
+        self.assert_results(fixer, num_problems=1, num_advisory_fixes=1)
 
     def test_when_only_valid_edenfs_process_running(self) -> None:
         proc_utils = self.make_proc_utils()
@@ -186,7 +186,7 @@ kill -9 5678 9876
 """,
             out,
         )
-        self.assert_results(fixer, num_problems=1, num_manual_fixes=1)
+        self.assert_results(fixer, num_problems=1, num_advisory_fixes=1)
 
     def test_when_differently_configured_edenfs_processes_running_with_rogue_pids(
         self,
@@ -200,7 +200,7 @@ kill -9 5678 9876
         proc_utils.add_edenfs(575405, "/tmp/config2/.eden", set_lockfile=False)
         fixer, out = self.run_check(proc_utils, dry_run=False)
 
-        self.assert_results(fixer, num_problems=1, num_manual_fixes=1)
+        self.assert_results(fixer, num_problems=1, num_advisory_fixes=1)
         self.assertEqual(
             out,
             f"""\
