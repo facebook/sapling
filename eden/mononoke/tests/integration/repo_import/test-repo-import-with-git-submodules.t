@@ -156,6 +156,9 @@
   GitRepo:$TESTTMP/repo-git commit 1 of 2 - Oid:ce435b03 => Bid:071d73e6
   GitRepo:$TESTTMP/repo-git commit 2 of 2 - Oid:67328fd4 => Bid:6f63fa96
   Added commits to Mononoke
+  Initializing repo: * (glob)
+  Initialized repo: * (glob)
+  All repos initialized. It took: * seconds (glob)
   Commit 1/2: Remapped ChangesetId(Blake2(071d73e6b97823ffbde324c6147a785013f479157ade3f83c9b016c8f40c09de)) => ChangesetId(Blake2(4f830791a5ae7a2981d6c252d2be0bd7ebd3b1090080074b4b4bae6deb250b4a))
   Commit 2/2: Remapped ChangesetId(Blake2(6f63fa96348a0854cd77a4b70f5b9b776e963735f92e283b67123161f1bc7bcd)) => ChangesetId(Blake2(a1740c3d4a0f8e012b12c0c93f5a69cc902fe7398d8f334ef202f33c32fc247c))
   Saving shifted bonsai changesets

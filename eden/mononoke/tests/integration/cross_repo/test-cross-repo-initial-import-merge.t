@@ -42,6 +42,11 @@ Create small repo commits
 
   $ with_stripped_logs mononoke_x_repo_sync "$SUBMODULE_REPO_ID"  "$LARGE_REPO_ID" initial-import --no-progress-bar -i "$M" --version-name "$LATEST_CONFIG_VERSION_NAME"
   Starting session with id * (glob)
+  Initializing repo: * (glob)
+  Initialized repo: * (glob)
+  Initializing repo: * (glob)
+  Initialized repo: * (glob)
+  All repos initialized. It took: 0 seconds
   Checking if 3eb23b278c44bf5d812c96f2a3211408d2a779b566984670127eebcd01fe459d is already synced 11->10
   Syncing 3eb23b278c44bf5d812c96f2a3211408d2a779b566984670127eebcd01fe459d for inital import
   Source repo: small_repo / Target repo: large_repo

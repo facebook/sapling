@@ -135,6 +135,15 @@ Before config change
 
   $ with_stripped_logs mononoke_x_repo_sync "$IMPORTED_REPO_ID"  "$LARGE_REPO_ID" initial-import -i "$IC" --version-name "imported_noop"
   Starting session with id * (glob)
+  Initializing repo: * (glob)
+  Initialized repo: * (glob)
+  Initializing repo: * (glob)
+  Initialized repo: * (glob)
+  Initializing repo: * (glob)
+  Initialized repo: * (glob)
+  Initializing repo: * (glob)
+  Initialized repo: * (glob)
+  All repos initialized. It took: 0 seconds
   Checking if 65f0b76c034d87adf7dac6f0b5a5442ab3f62edda21adb8e8ec57d1a99fb5905 is already synced 2->0
   Syncing 65f0b76c034d87adf7dac6f0b5a5442ab3f62edda21adb8e8ec57d1a99fb5905 for inital import
   Source repo: imported_repo / Target repo: large-mon
@@ -227,6 +236,15 @@ Before config change
   $ PREV_BOOK_VALUE=$(get_bookmark_value_edenapi $SMALL_REPO_NAME $MASTER_BOOKMARK)
   $ with_stripped_logs mononoke_x_repo_sync "$IMPORTED_REPO_ID"  "$LARGE_REPO_ID" once --commit "$ID" --unsafe-change-version-to "new_version" --target-bookmark $MASTER_BOOKMARK
   Starting session with id * (glob)
+  Initializing repo: * (glob)
+  Initialized repo: * (glob)
+  Initializing repo: * (glob)
+  Initialized repo: * (glob)
+  Initializing repo: * (glob)
+  Initialized repo: * (glob)
+  Initializing repo: * (glob)
+  Initialized repo: * (glob)
+  All repos initialized. It took: 0 seconds
   changeset resolved as: ChangesetId(Blake2(a14dee507f7605083e9a99901971ac7c5558d8b28d7d01090bd2cff2432fa707))
   Checking if a14dee507f7605083e9a99901971ac7c5558d8b28d7d01090bd2cff2432fa707 is already synced 2->0
   Changing mapping version during pushrebase to new_version
@@ -320,6 +338,15 @@ Before config change
 
   $ with_stripped_logs mononoke_x_repo_sync "$ANOTHER_REPO_ID"  "$LARGE_REPO_ID" initial-import -i "$AC" --version-name "another_noop"
   Starting session with id * (glob)
+  Initializing repo: * (glob)
+  Initialized repo: * (glob)
+  Initializing repo: * (glob)
+  Initialized repo: * (glob)
+  Initializing repo: * (glob)
+  Initialized repo: * (glob)
+  Initializing repo: * (glob)
+  Initialized repo: * (glob)
+  All repos initialized. It took: 0 seconds
   Checking if 156943c35cda314d72b0177b06d5edf3c92dc9c9505d7b3171b9230f7c1768bb is already synced 3->0
   Syncing 156943c35cda314d72b0177b06d5edf3c92dc9c9505d7b3171b9230f7c1768bb for inital import
   Source repo: another_repo / Target repo: large-mon
@@ -369,6 +396,15 @@ Before config change
   $ PREV_BOOK_VALUE=$(get_bookmark_value_edenapi $SMALL_REPO_NAME $MASTER_BOOKMARK)
   $ with_stripped_logs mononoke_x_repo_sync "$ANOTHER_REPO_ID"  "$LARGE_REPO_ID" once --commit "$AD" --unsafe-change-version-to "another_version" --target-bookmark $MASTER_BOOKMARK
   Starting session with id * (glob)
+  Initializing repo: * (glob)
+  Initialized repo: * (glob)
+  Initializing repo: * (glob)
+  Initialized repo: * (glob)
+  Initializing repo: * (glob)
+  Initialized repo: * (glob)
+  Initializing repo: * (glob)
+  Initialized repo: * (glob)
+  All repos initialized. It took: 0 seconds
   changeset resolved as: ChangesetId(Blake2(1d0bbdb162c2887a5b93893d7a48fd852a304ab58be2245899bb795e80aa10e9))
   Checking if 1d0bbdb162c2887a5b93893d7a48fd852a304ab58be2245899bb795e80aa10e9 is already synced 3->0
   Changing mapping version during pushrebase to another_version

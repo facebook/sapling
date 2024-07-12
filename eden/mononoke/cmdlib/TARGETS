@@ -146,7 +146,6 @@ rust_library(
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:futures",
-        "//common/rust/shed/cloned:cloned",
         "//common/rust/shed/facet:facet",
         "//eden/mononoke/blobstore:blobstore_factory",
         "//eden/mononoke/blobstore:cacheblob",
@@ -156,7 +155,6 @@ rust_library(
         "//eden/mononoke/commit_rewriting/synced_commit_mapping:synced_commit_mapping",
         "//eden/mononoke/common/sql_construct:sql_construct",
         "//eden/mononoke/megarepo_api:pushredirect",
-        "//eden/mononoke/mononoke_types:mononoke_types",
         "//eden/mononoke/repo_factory:repo_factory",
         "//eden/mononoke/server/context:context",
     ],

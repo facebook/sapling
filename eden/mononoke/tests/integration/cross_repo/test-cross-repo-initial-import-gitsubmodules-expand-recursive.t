@@ -133,6 +133,15 @@ Run the x-repo with submodules setup
   
   NOTE: Running initial import
   Starting session with id * (glob)
+  Initializing repo: * (glob)
+  Initialized repo: * (glob)
+  Initializing repo: * (glob)
+  Initialized repo: * (glob)
+  Initializing repo: * (glob)
+  Initialized repo: * (glob)
+  Initializing repo: * (glob)
+  Initialized repo: * (glob)
+  All repos initialized. It took: 0 seconds
   Checking if * (glob)
   Syncing c33eeb91423c021a4d9d57f2efbb08185c77d89b9141433c666b84240395f0c5 for inital import
   Source repo: small_repo / Target repo: large_repo
@@ -245,6 +254,15 @@ Run the x-repo with submodules setup
   
   NOTE: Changing commit sync mapping version
   Starting session with id * (glob)
+  Initializing repo: * (glob)
+  Initialized repo: * (glob)
+  Initializing repo: * (glob)
+  Initialized repo: * (glob)
+  Initializing repo: * (glob)
+  Initialized repo: * (glob)
+  Initializing repo: * (glob)
+  Initialized repo: * (glob)
+  All repos initialized. It took: 0 seconds
   changeset resolved as: ChangesetId(Blake2(eef414bd5fc8f7dcc129318276af6945117fe32bb5cfda6b0e6d43036107f61c))
   Checking if eef414bd5fc8f7dcc129318276af6945117fe32bb5cfda6b0e6d43036107f61c is already synced 11->10
   Changing mapping version during pushrebase to INITIAL_IMPORT_SYNC_CONFIG

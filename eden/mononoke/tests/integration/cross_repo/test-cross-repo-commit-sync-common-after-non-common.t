@@ -63,6 +63,11 @@
   Value of xreposync_from_1 in repo large-mon(Id: 0) set to 0
   $ with_stripped_logs mononoke_x_repo_sync 1 0 tail --catch-up-once
   Starting session with id * (glob)
+  Initializing repo: * (glob)
+  Initialized repo: * (glob)
+  Initializing repo: * (glob)
+  Initialized repo: * (glob)
+  All repos initialized. It took: 0 seconds
   queue size is 3
   processing log entry #1
   0 unsynced ancestors of 1ba347e63a4bf200944c22ade8dbea038dd271ef97af346ba4ccfaaefb10dd4d
@@ -106,6 +111,11 @@
   Updating publishing bookmark other_bookmark from 6899eb0af1d64df45683e6bf22c8b82593b22539dec09394f516f944f6fa8c12 to a9d1b36d3a6d37d43ff6cd7279e0e02a9f6e1930dc41e1ee129bdfd315572074
   $ mononoke_x_repo_sync 1 0 tail --catch-up-once  2>&1 | strip_glog
   Starting session with id * (glob)
+  Initializing repo: * (glob)
+  Initialized repo: * (glob)
+  Initializing repo: * (glob)
+  Initialized repo: * (glob)
+  All repos initialized. It took: 0 seconds
   queue size is 1
   processing log entry #4
   1 unsynced ancestors of a9d1b36d3a6d37d43ff6cd7279e0e02a9f6e1930dc41e1ee129bdfd315572074
@@ -126,6 +136,11 @@
   Updating publishing bookmark master_bookmark from 542a68bb4fd5a7ba5a047a0bb29a48d660c0ea5114688d00b11658313e8f1e6b to a9d1b36d3a6d37d43ff6cd7279e0e02a9f6e1930dc41e1ee129bdfd315572074
   $ mononoke_x_repo_sync 1 0 tail --catch-up-once  2>&1 | strip_glog
   Starting session with id * (glob)
+  Initializing repo: * (glob)
+  Initialized repo: * (glob)
+  Initializing repo: * (glob)
+  Initialized repo: * (glob)
+  All repos initialized. It took: 0 seconds
   queue size is 1
   processing log entry #5
   1 unsynced ancestors of a9d1b36d3a6d37d43ff6cd7279e0e02a9f6e1930dc41e1ee129bdfd315572074
@@ -163,6 +178,11 @@
   Updating publishing bookmark other_bookmark from a9d1b36d3a6d37d43ff6cd7279e0e02a9f6e1930dc41e1ee129bdfd315572074 to c8f423b81b6dc422d07144a05bde9fe8ff03a0c7aaf77840418b104125fff9c0
   $ mononoke_x_repo_sync 1 0 tail --catch-up-once  2>&1 | strip_glog
   * (glob)
+  Initializing repo: * (glob)
+  Initialized repo: * (glob)
+  Initializing repo: * (glob)
+  Initialized repo: * (glob)
+  All repos initialized. It took: 0 seconds
   queue size is 1
   processing log entry #6
   1 unsynced ancestors of c8f423b81b6dc422d07144a05bde9fe8ff03a0c7aaf77840418b104125fff9c0
