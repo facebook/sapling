@@ -459,8 +459,13 @@ class GlobFilesRequestScope {
 
   explicit GlobFilesRequestScope(
       const std::shared_ptr<ServerState>& serverState,
-      bool isOffloadable)
-      : serverState_{serverState}, isOffloadable_{isOffloadable} {}
+      bool isOffloadable,
+      std::string logString,
+      const ObjectFetchContextPtr& context)
+      : serverState_{serverState},
+        isOffloadable_{isOffloadable},
+        logString_{logString},
+        context_{context} {}
 
   ~GlobFilesRequestScope() {
     // Logging completion time for the request
@@ -469,6 +474,27 @@ class GlobFilesRequestScope {
     XLOG(DBG4) << "EdenFS completed globFiles request in " << duration << "s"
                << " using " << (local ? "Local" : "SaplingRemoteAPI")
                << (fallback ? " Fallback" : "");
+
+    // Log if this request is an expensive request
+    if (duration >= EXPENSIVE_GLOB_FILES_DURATION) {
+      std::string client_cmdline = "<unknown>";
+      if (auto clientPid = context_->getClientPid()) {
+        // TODO: we should look up client scope here instead of command line
+        // since it will give move context into the overarching process or
+        // system producing the expensive query
+        const ProcessInfo* processInfoPtr =
+            serverState_->getProcessInfoCache()
+                ->lookup(clientPid.value().get())
+                .get_optional();
+        if (processInfoPtr) {
+          client_cmdline = processInfoPtr->name;
+          std::replace(client_cmdline.begin(), client_cmdline.end(), '\0', ' ');
+        }
+      }
+
+      serverState_->getStructuredLogger()->logEvent(ExpensiveGlob{
+          duration, logString_, std::move(client_cmdline), local});
+    }
     if (local) {
       if (isOffloadable_) {
         serverState_->getStats()->addDuration(
@@ -506,6 +532,8 @@ class GlobFilesRequestScope {
   bool fallback = false;
   const std::shared_ptr<ServerState>& serverState_;
   bool isOffloadable_;
+  std::string logString_;
+  const ObjectFetchContextPtr& context_;
   folly::stop_watch<std::chrono::microseconds> itcTimer_ = {};
 }; // namespace
 #undef EDEN_MICRO
@@ -3100,16 +3128,18 @@ void maybeLogExpensiveGlob(
 
   if (shouldLogExpensiveGlob) {
     auto logString = globber.logString(globs);
-    std::string client_cmdline;
+    std::string client_cmdline = "<unknown>";
     if (auto clientPid = context->getClientPid()) {
       // TODO: we should look up client scope here instead of command line
       // since it will give move context into the overarching process or
       // system producing the expensive query
-      client_cmdline = serverState->getProcessInfoCache()
-                           ->lookup(clientPid.value().get())
-                           .get()
-                           .name;
-      std::replace(client_cmdline.begin(), client_cmdline.end(), '\0', ' ');
+      const ProcessInfo* processInfoPtr = serverState->getProcessInfoCache()
+                                              ->lookup(clientPid.value().get())
+                                              .get_optional();
+      if (processInfoPtr) {
+        client_cmdline = processInfoPtr->name;
+        std::replace(client_cmdline.begin(), client_cmdline.end(), '\0', ' ');
+      }
     }
 
     XLOG(WARN) << "EdenFS asked to evaluate expensive glob by caller "
@@ -3370,7 +3400,10 @@ EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
       (((*params->searchRoot()).empty()) || (*params->searchRoot() == "."));
 
   auto globFilesRequestScope = std::make_shared<GlobFilesRequestScope>(
-      server_->getServerState(), requestIsOffloadable);
+      server_->getServerState(),
+      requestIsOffloadable,
+      globber.logString(*params->globs()),
+      context);
 
   if (requestIsOffloadable) {
     XLOG(DBG5)

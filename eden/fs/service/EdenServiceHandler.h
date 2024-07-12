@@ -46,6 +46,8 @@ class UsageService;
 
 extern const char* const kServiceName;
 
+const int EXPENSIVE_GLOB_FILES_DURATION = 5;
+
 struct ThriftRequestTraceEvent : TraceEventBase {
   enum Type : unsigned char {
     START,
