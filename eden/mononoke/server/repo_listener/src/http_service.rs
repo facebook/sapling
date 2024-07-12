@@ -478,6 +478,8 @@ mod h2m {
     ) -> Result<Metadata> {
         let debug = headers.contains_key(HEADER_CLIENT_DEBUG);
 
+        let _ = conn.pending.acceptor.common_config; // Fix compiler warning in OSS build
+
         Ok(Metadata::new(
             Some(&generate_session_id().to_string()),
             (*conn.identities).clone(),

@@ -66,6 +66,7 @@ pub struct RequestContext {
     pub ctx: CoreContext,
     pub repository: Option<String>,
     pub method: Option<LfsMethod>,
+    #[allow(dead_code)]
     pub error_msg: Option<String>,
     pub should_log: bool,
 }

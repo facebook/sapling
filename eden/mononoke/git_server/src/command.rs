@@ -35,6 +35,7 @@ pub enum Command<'a> {
 #[derive(Debug, Clone)]
 pub struct RequestCommand<'a> {
     pub command: Command<'a>,
+    #[allow(dead_code)]
     pub capability_list: Vec<BString>,
 }
 

@@ -50,6 +50,7 @@ impl FromValue for RowId {
 
 #[derive(Clone, Debug)]
 pub struct MegarepoSyncConfigEntry {
+    #[allow(dead_code)]
     pub id: RowId,
     pub repo_id: RepositoryId,
     pub bookmark: BookmarkName,

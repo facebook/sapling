@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::HashSet;
-
 use blobstore::SizeMetadata;
 use metaconfig_types::BlobstoreId;
 use mononoke_types::Timestamp;
@@ -51,7 +49,6 @@ pub trait PackInfoLogger {
 /// What to log for packing and where to send it
 #[derive(Clone)]
 pub struct PackInfoLogOptions {
-    pub log_node_types: HashSet<NodeType>,
     pub log_dest: MononokeScubaSampleBuilder, // TODO(ahornby), add an enum once alternate destinations possible
 }
 

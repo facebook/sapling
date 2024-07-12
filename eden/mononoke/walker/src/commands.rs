@@ -36,7 +36,6 @@ pub struct JobWalkParams {
     pub quiet: bool,
     pub error_as_data_node_types: HashSet<NodeType>,
     pub error_as_data_edge_types: HashSet<EdgeType>,
-    pub repo_count: usize,
 }
 
 #[derive(Clone)]

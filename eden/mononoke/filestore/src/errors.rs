@@ -19,7 +19,9 @@ use crate::FetchKey;
 
 #[derive(Debug)]
 pub struct InvalidHash<T: Debug> {
+    #[allow(dead_code)]
     pub expected: T,
+    #[allow(dead_code)]
     pub effective: T,
 }
 

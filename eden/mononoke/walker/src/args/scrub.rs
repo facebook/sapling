@@ -66,7 +66,6 @@ impl ScrubPackLogArgs {
             }
 
             return Ok(Some(PackInfoLogOptions {
-                log_node_types,
                 log_dest: scuba_builder,
             }));
         }

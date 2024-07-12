@@ -244,7 +244,6 @@ pub async fn setup_common<'a>(
             quiet: common_args.quiet,
             error_as_data_node_types: error_as_data_node_types_for_all_repos,
             error_as_data_edge_types,
-            repo_count,
         },
         per_repo,
     })

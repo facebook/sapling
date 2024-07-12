@@ -651,6 +651,7 @@ async fn run<'a>(
 
     #[cfg(not(fbcode_build))]
     let re_cas_client = MononokeCasChangesetsUploader::new(cas_client::DummyCasClient::default());
+    let _ = fb;
 
     let resolved_repo = args::resolve_repo_by_name(matches.config_store(), matches, &repo_name)
         .with_context(|| format!("Invalid repo name provided: {}", &repo_name))?;

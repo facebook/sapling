@@ -53,7 +53,9 @@ impl Default for ObjectFormat {
 #[derive(Clone, Debug)]
 pub struct RefUpdate {
     pub ref_name: String,
+    #[allow(dead_code)]
     pub from: ObjectId,
+    #[allow(dead_code)]
     pub to: ObjectId,
 }
 

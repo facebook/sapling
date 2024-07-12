@@ -238,7 +238,6 @@ pub struct PendingConnection {
 pub struct AcceptedConnection {
     pub pending: PendingConnection,
     pub is_trusted: bool,
-    pub mtls_disabled: bool,
     pub identities: Arc<MononokeIdentitySet>,
 }
 
@@ -286,7 +285,6 @@ async fn handle_connection(conn: PendingConnection, sock: TcpStream) -> Result<(
         true => AcceptedConnection {
             pending: conn,
             is_trusted: false,
-            mtls_disabled: true,
             identities: Arc::new(MononokeIdentitySet::new()),
         },
         false => {
@@ -303,7 +301,6 @@ async fn handle_connection(conn: PendingConnection, sock: TcpStream) -> Result<(
             AcceptedConnection {
                 pending: conn,
                 is_trusted,
-                mtls_disabled: false,
                 identities: Arc::new(identities),
             }
         }
