@@ -394,7 +394,9 @@ class HgRepository(repobase.Repository):
             # Do not capture stdout or stderr when running "hg commit"
             # This allows its output to show up in the test logs.
             self.run_hg(
-                *args, stdout=None, stderr=None, env={"SL_LOG": "workingcopy=trace"}
+                *args,
+                stdout=None,
+                stderr=None,
             )
 
         # Get the commit ID and return it
