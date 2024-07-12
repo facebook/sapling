@@ -144,11 +144,7 @@ class EdenTestCase(EdenTestCaseBase):
 
         extra_config = self.edenfs_extra_config()
         if extra_config:
-            with open(self.eden.system_rc_path, "w") as edenfsrc:
-                for key, values in extra_config.items():
-                    edenfsrc.write(f"[{key}]\n")
-                    for setting in values:
-                        edenfsrc.write(f"{setting}\n")
+            self.write_configs(extra_config, self.eden.system_rc_path)
 
         # Default to using the Rust version of commands when running
         # integration tests. An empty edenfsctl_rollout file means that all
@@ -180,6 +176,15 @@ class EdenTestCase(EdenTestCaseBase):
             extra_args=extra_args,
             storage_engine=storage_engine,
         )
+
+    def write_configs(
+        self, config_dict: Dict[str, List[str]], config_file_path
+    ) -> None:
+        with open(config_file_path, "w") as edenfs_config_file:
+            for section_name, lines in config_dict.items():
+                edenfs_config_file.write(f"[{section_name}]\n")
+                for setting in lines:
+                    edenfs_config_file.write(f"{setting}\n")
 
     @property
     def eden_dir(self) -> str:

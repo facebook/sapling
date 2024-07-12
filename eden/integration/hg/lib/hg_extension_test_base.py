@@ -15,6 +15,7 @@ import os
 import re
 import sys
 import textwrap
+import time
 import typing
 from pathlib import Path
 from textwrap import dedent
@@ -85,6 +86,7 @@ class EdenHgTestCase(testcase.EdenTestCase, metaclass=abc.ABCMeta):
     inode_catalog_type: Optional[str] = None
     backing_store_type: Optional[str] = None
     adtl_repos: List[Tuple[hgrepo.HgRepository, Optional[hgrepo.HgRepository]]] = []
+    enable_status_cache: bool = False
 
     def setup_eden_test(self) -> None:
         super().setup_eden_test()
@@ -111,10 +113,12 @@ class EdenHgTestCase(testcase.EdenTestCase, metaclass=abc.ABCMeta):
 
     def edenfs_extra_config(self) -> Optional[Dict[str, List[str]]]:
         configs = super().edenfs_extra_config()
+        if configs is None:
+            configs = {}
         if (inode_catalog_type := self.inode_catalog_type) is not None:
-            if configs is None:
-                configs = {}
             configs["overlay"] = [f'inode-catalog-type = "{inode_catalog_type}"']
+        if self.enable_status_cache:
+            configs["hg"] = ["enable-scm-status-cache = true"]
         return configs
 
     def create_backing_repo(self) -> hgrepo.HgRepository:
@@ -281,6 +285,7 @@ class EdenHgTestCase(testcase.EdenTestCase, metaclass=abc.ABCMeta):
         op: Optional[str] = None,
         check_ignored: bool = True,
         rev: Optional[str] = None,
+        timeout_seconds: float = 1.0,
     ) -> None:
         """Asserts the output of `hg status` matches the expected state.
 
@@ -289,10 +294,23 @@ class EdenHgTestCase(testcase.EdenTestCase, metaclass=abc.ABCMeta):
         the status: 'M', 'A', 'R', '!', '?', 'I'.
 
         'C' is not currently supported.
+
+        Use timeout to wait for EdenFS pick up the working copy modifications.
+        For details of this see 'SyncBehavior' in eden.thrift
         """
-        actual_status = self.repo.status(include_ignored=check_ignored, rev=rev)
-        self.assertDictEqual(expected, actual_status, msg=msg)
-        self.assert_unfinished_operation(op)
+        poll_interval_seconds = 0.1
+        deadline = time.monotonic() + timeout_seconds
+        while True:
+            try:
+                actual_status = self.repo.status(include_ignored=check_ignored, rev=rev)
+                self.assertDictEqual(expected, actual_status, msg=msg)
+                self.assert_unfinished_operation(op)
+                break
+            except AssertionError as e:
+                if time.monotonic() >= deadline:
+                    raise e
+                time.sleep(poll_interval_seconds)
+                continue
 
     def assert_status_empty(
         self,
@@ -597,6 +615,29 @@ def _replicate_filteredhg_test(
         )
 
 
+def _replicate_status_cache_enabled_test(
+    test_class: Type[FilteredHgTestCase],
+) -> Iterable[Tuple[str, Type[FilteredHgTestCase]]]:
+    """
+    This takes whatever `_replicate_filteredhg_test` generates and adds
+    another layer of variants for the status cache enabled/disabled.
+    """
+    cache_config_variants: MixinList = [
+        ("WithStatusCacheDisabled", []),
+        ("WithStatusCacheEnabled", [StatusCacheEnabledTestMixin]),
+    ]
+    for hg_test_label, hg_test_class in _replicate_hg_test(test_class):
+        for cache_config_label, cache_config_mixins in cache_config_variants:
+
+            class VariantHgRepoTest(*cache_config_mixins, hg_test_class):
+                pass
+
+            yield (
+                f"{hg_test_label}{cache_config_label}",
+                typing.cast(Type[FilteredHgTestCase], VariantHgRepoTest),
+            )
+
+
 class InMemoryOverlayTestMixin:
     inode_catalog_type = "inmemory"
 
@@ -605,5 +646,10 @@ class FilteredTestMixin:
     backing_store_type = "filteredhg"
 
 
+class StatusCacheEnabledTestMixin:
+    enable_status_cache = True
+
+
 hg_test = testcase.test_replicator(_replicate_hg_test)
 filteredhg_test = testcase.test_replicator(_replicate_filteredhg_test)
+hg_cached_status_test = testcase.test_replicator(_replicate_status_cache_enabled_test)

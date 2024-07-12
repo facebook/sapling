@@ -1818,11 +1818,13 @@ ImmediateFuture<Unit> EdenMount::diff(
       auto curSequenceID = latestInfo.value().sequenceID;
       {
         auto lockedCachePtr = scmStatusCache_.rlock();
-        auto cachedStatusPtr = (*lockedCachePtr)->get(key);
-        if (cachedStatusPtr && cachedStatusPtr->seq == curSequenceID) {
-          getStats()->increment(&JournalStats::journalStatusCacheHit);
-          callback->setStatus(cachedStatusPtr->status);
-          return folly::unit;
+        if ((*lockedCachePtr)->contains(key)) {
+          auto cachedStatusPtr = (*lockedCachePtr)->get(key);
+          if (cachedStatusPtr->seq == curSequenceID) {
+            getStats()->increment(&JournalStats::journalStatusCacheHit);
+            callback->setStatus(cachedStatusPtr->status);
+            return folly::unit;
+          }
         }
         getStats()->increment(&JournalStats::journalStatusCacheMiss);
       }
