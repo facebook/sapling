@@ -9,7 +9,6 @@ import type {Heartbeat} from './heartbeat';
 
 import {Copyable} from './Copyable';
 import {DropdownFields} from './DropdownFields';
-import {ErrorBoundary, ErrorNotice} from './ErrorNotice';
 import {Internal} from './Internal';
 import {DEFAULT_HEARTBEAT_TIMEOUT_MS, useHeartbeat} from './heartbeat';
 import {t, T} from './i18n';
@@ -18,6 +17,7 @@ import {applicationinfo} from './serverAPIState';
 import * as stylex from '@stylexjs/stylex';
 import {Button} from 'isl-components/Button';
 import {Divider} from 'isl-components/Divider';
+import {ErrorBoundary, ErrorNotice} from 'isl-components/ErrorNotice';
 import {Icon} from 'isl-components/Icon';
 import {Tooltip} from 'isl-components/Tooltip';
 import {useAtomValue} from 'jotai';

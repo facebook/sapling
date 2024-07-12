@@ -13,7 +13,6 @@ import type {Hash} from './types';
 import serverAPI from './ClientToServerAPI';
 import {Commit, InlineProgressSpan} from './Commit';
 import {Center, LargeSpinner} from './ComponentUtils';
-import {ErrorNotice} from './ErrorNotice';
 import {isHighlightedCommit} from './HighlightedCommits';
 import {RegularGlyph, RenderDag, YouAreHereGlyph} from './RenderDag';
 import {StackActions} from './StackActions';
@@ -38,6 +37,7 @@ import {
 } from './serverAPIState';
 import {MaybeEditStackModal} from './stackEdit/ui/EditStackModal';
 import {Button} from 'isl-components/Button';
+import {ErrorNotice} from 'isl-components/ErrorNotice';
 import {Icon} from 'isl-components/Icon';
 import {Tooltip, DOCUMENTATION_DELAY} from 'isl-components/Tooltip';
 import {ErrorShortMessages} from 'isl-server/src/constants';

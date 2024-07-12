@@ -10,7 +10,6 @@ import {OpenComparisonViewButton} from './ComparisonView/OpenComparisonViewButto
 import {FlexSpacer, Row} from './ComponentUtils';
 import {DropdownFields} from './DropdownFields';
 import {EmptyState} from './EmptyState';
-import {ErrorNotice} from './ErrorNotice';
 import {useCommandEvent} from './ISLShortcuts';
 import {Kbd} from './Kbd';
 import {OperationDisabledButton} from './OperationDisabledButton';
@@ -21,6 +20,7 @@ import {DeleteShelveOperation} from './operations/DeleteShelveOperation';
 import {UnshelveOperation} from './operations/UnshelveOperation';
 import {RelativeDate} from './relativeDate';
 import {Button} from 'isl-components/Button';
+import {ErrorNotice} from 'isl-components/ErrorNotice';
 import {Icon} from 'isl-components/Icon';
 import {Subtle} from 'isl-components/Subtle';
 import {Tooltip} from 'isl-components/Tooltip';

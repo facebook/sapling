@@ -9,7 +9,6 @@ import type {Result} from '../types';
 import type {RefObject} from 'react';
 import type {Comparison} from 'shared/Comparison';
 
-import {ErrorNotice} from '../ErrorNotice';
 import {Internal} from '../Internal';
 import {tracker} from '../analytics';
 import {useFeatureFlagSync} from '../featureFlags';
@@ -23,6 +22,7 @@ import {
   latestCommitMessageFieldsWithEdits,
 } from './CommitInfoState';
 import {Button} from 'isl-components/Button';
+import {ErrorNotice} from 'isl-components/ErrorNotice';
 import {Icon} from 'isl-components/Icon';
 import {TextArea} from 'isl-components/TextArea';
 import {Tooltip} from 'isl-components/Tooltip';

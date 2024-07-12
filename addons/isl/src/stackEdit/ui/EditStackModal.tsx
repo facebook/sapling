@@ -6,7 +6,6 @@
  */
 
 import {Row, FlexSpacer, ScrollY, Center} from '../../ComponentUtils';
-import {ErrorNotice} from '../../ErrorNotice';
 import {Modal} from '../../Modal';
 import {tracker} from '../../analytics';
 import {t} from '../../i18n';
@@ -15,6 +14,7 @@ import {StackEditConfirmButtons} from './StackEditConfirmButtons';
 import {StackEditSubTree} from './StackEditSubTree';
 import {loadingStackState, editingStackIntentionHashes} from './stackEditState';
 import * as stylex from '@stylexjs/stylex';
+import {ErrorNotice} from 'isl-components/ErrorNotice';
 import {Icon} from 'isl-components/Icon';
 import {Panels} from 'isl-components/Panels';
 import {useAtom, useAtomValue} from 'jotai';

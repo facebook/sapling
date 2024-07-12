@@ -14,6 +14,7 @@ import {ButtonDropdown} from '../ButtonDropdown';
 import {Checkbox} from '../Checkbox';
 import {Divider} from '../Divider';
 import {Dropdown} from '../Dropdown';
+import {ErrorNotice} from '../ErrorNotice';
 import {Icon} from '../Icon';
 import {Panels} from '../Panels';
 import {RadioGroup} from '../Radio';
@@ -248,13 +249,13 @@ export default function ComponentExplorer() {
           <Banner kind={BannerKind.error}>Error Banner</Banner>
           <Banner icon={<Icon icon="info" />}>Icon Banner</Banner>
         </Row>
-        {/* <Row>
+        <Row>
           <ErrorNotice
             title="Error Notice"
             description="description"
             details="details / stack trace"
           />
-        </Row> */}
+        </Row>
         <Row>
           <Panels
             active={activePanel}

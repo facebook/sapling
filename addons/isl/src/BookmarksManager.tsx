@@ -22,7 +22,6 @@ import {
 import serverAPI from './ClientToServerAPI';
 import {Column, Row, ScrollY} from './ComponentUtils';
 import {DropdownFields} from './DropdownFields';
-import {InlineErrorBadge} from './ErrorNotice';
 import {useCommandEvent} from './ISLShortcuts';
 import {Internal} from './Internal';
 import {Kbd} from './Kbd';
@@ -33,6 +32,7 @@ import * as stylex from '@stylexjs/stylex';
 import {Banner, BannerKind} from 'isl-components/Banner';
 import {Button} from 'isl-components/Button';
 import {Checkbox} from 'isl-components/Checkbox';
+import {InlineErrorBadge} from 'isl-components/ErrorNotice';
 import {Icon} from 'isl-components/Icon';
 import {Subtle} from 'isl-components/Subtle';
 import {extractTokens} from 'isl-components/Tokens';

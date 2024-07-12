@@ -8,7 +8,6 @@
 import type {CommitInfo} from '../types';
 
 import {Row} from '../ComponentUtils';
-import {ErrorBoundary} from '../ErrorNotice';
 import {T, t} from '../i18n';
 import {SLOC_THRESHOLD_FOR_SPLIT_SUGGESTIONS} from '../sloc/diffStatConstants';
 import {
@@ -16,6 +15,7 @@ import {
   useFetchSignificantLinesOfCode,
 } from '../sloc/useFetchSignificantLinesOfCode';
 import * as stylex from '@stylexjs/stylex';
+import {ErrorBoundary} from 'isl-components/ErrorNotice';
 import {Icon} from 'isl-components/Icon';
 import {Tooltip} from 'isl-components/Tooltip';
 
