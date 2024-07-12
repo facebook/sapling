@@ -62,6 +62,9 @@ The list of all the EdenStats Counter/Duration are as follows:
     8. `Duration globFilesLocalDuration{"thrift.EdenServiceHandler.glob_files.local_duration_us"}` :
     Duration for how long it takes globFiles to execute in the indicated local pathway
 
+    9. `Duration globFilesLocalOffloadableDuration{"thrift.EdenServiceHandler.glob_files.local_offloadable_duration_us"}` :
+    Duration for how long it takes globFiles to execute a potentially offloadable request locally
+
 
 - InodeMapStats
     1. `Counter lookupTreeInodeHit{"inode_map.lookup_tree_inode_hit"}` :

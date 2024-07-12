@@ -49,11 +49,13 @@ struct SuffixGlob {
   double duration = 0.0;
   std::string glob_request;
   std::string client_cmdline;
+  bool is_local;
 
   void populate(DynamicEvent& event) const {
     event.addDouble("duration", duration);
     event.addString("glob_request", glob_request);
     event.addString("client_scope", client_cmdline);
+    event.addBool("is_local", is_local);
   }
 };
 

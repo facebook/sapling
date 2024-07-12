@@ -549,6 +549,8 @@ struct ThriftStats : StatsGroup<ThriftStats> {
       "thrift.EdenServiceHandler.glob_files.sapling_remote_api_fallback_duration_us"};
   Duration globFilesLocalDuration{
       "thrift.EdenServiceHandler.glob_files.local_duration_us"};
+  Duration globFilesLocalOffloadableDuration{
+      "thrift.EdenServiceHandler.glob_files.local_offloadable_duration_us"};
 };
 
 struct OverlayStats : StatsGroup<OverlayStats> {

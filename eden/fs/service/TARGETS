@@ -563,7 +563,7 @@ cpp_library(
     deps = [
         ":thrift-cpp2-types",
         "//eden/common/utils:utils",
-        "//eden/fs/inodes:inodes",
+        "//eden/fs/config:config",
         "//eden/fs/model:model",
         "//eden/fs/store:context",
         "//eden/fs/store:store",
@@ -574,6 +574,7 @@ cpp_library(
     exported_deps = [
         "//eden/common/utils:immediate_future",
         "//eden/common/utils:ref_ptr",
+        "//eden/fs/inodes:inodes",
         "//eden/fs/utils:glob",
         "//folly:range",
     ],

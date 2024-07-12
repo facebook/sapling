@@ -406,37 +406,44 @@ class SuffixGlobRequestScope {
   SuffixGlobRequestScope(
       std::string globberLogString,
       const std::shared_ptr<ServerState>& serverState,
+      bool isLocal,
       const ObjectFetchContextPtr& context)
       : globberLogString_{std::move(globberLogString)},
         serverState_{serverState},
+        isLocal_{isLocal},
         context_{context} {}
 
   ~SuffixGlobRequestScope() {
     // Logging completion time for the request
     auto elapsed = itcTimer_.elapsed();
     auto duration = std::chrono::duration<double>{elapsed}.count();
-    std::string client_cmdline;
+    std::string client_cmdline = "<unknown>";
     if (auto clientPid = context_->getClientPid()) {
       // TODO: we should look up client scope here instead of command line
       // since it will give move context into the overarching process or
       // system producing the expensive query
-      client_cmdline = serverState_->getProcessInfoCache()
-                           ->lookup(clientPid.value().get())
-                           .get()
-                           .name;
-      std::replace(client_cmdline.begin(), client_cmdline.end(), '\0', ' ');
+      // To avoid waiting on retrieving the ProcessInfo, only get the
+      // client_commandline if it's immediately available
+      const ProcessInfo* processInfoPtr = serverState_->getProcessInfoCache()
+                                              ->lookup(clientPid.value().get())
+                                              .get_optional();
+      if (processInfoPtr) {
+        client_cmdline = processInfoPtr->name;
+        std::replace(client_cmdline.begin(), client_cmdline.end(), '\0', ' ');
+      }
     }
 
-    XLOG(WARN) << "EdenFS asked to evaluate suffix glob by caller "
-               << client_cmdline << ":" << globberLogString_
+    XLOG(DBG4) << "EdenFS asked to evaluate suffix glob by caller '"
+               << client_cmdline << "':" << globberLogString_
                << ": duration=" << duration << "s";
-    serverState_->getStructuredLogger()->logEvent(
-        SuffixGlob{duration, globberLogString_, std::move(client_cmdline)});
+    serverState_->getStructuredLogger()->logEvent(SuffixGlob{
+        duration, globberLogString_, std::move(client_cmdline), isLocal_});
   }
 
  private:
   std::string globberLogString_;
   const std::shared_ptr<ServerState>& serverState_;
+  bool isLocal_;
   const ObjectFetchContextPtr& context_;
   folly::stop_watch<std::chrono::microseconds> itcTimer_ = {};
 }; // namespace
@@ -451,19 +458,25 @@ class GlobFilesRequestScope {
   GlobFilesRequestScope& operator=(GlobFilesRequestScope&&) = delete;
 
   explicit GlobFilesRequestScope(
-      const std::shared_ptr<ServerState>& serverState)
-      : serverState_{serverState} {}
+      const std::shared_ptr<ServerState>& serverState,
+      bool isOffloadable)
+      : serverState_{serverState}, isOffloadable_{isOffloadable} {}
 
   ~GlobFilesRequestScope() {
     // Logging completion time for the request
     auto elapsed = itcTimer_.elapsed();
     auto duration = std::chrono::duration<double>{elapsed}.count();
-    XLOG(WARN) << "EdenFS completed globFiles request in " << duration << "s"
+    XLOG(DBG4) << "EdenFS completed globFiles request in " << duration << "s"
                << " using " << (local ? "Local" : "SaplingRemoteAPI")
                << (fallback ? " Fallback" : "");
     if (local) {
-      serverState_->getStats()->addDuration(
-          &ThriftStats::globFilesLocalDuration, elapsed);
+      if (isOffloadable_) {
+        serverState_->getStats()->addDuration(
+            &ThriftStats::globFilesLocalOffloadableDuration, elapsed);
+      } else {
+        serverState_->getStats()->addDuration(
+            &ThriftStats::globFilesLocalDuration, elapsed);
+      }
       serverState_->getStats()->increment(&ThriftStats::globFilesLocal);
     } else {
       if (fallback) {
@@ -492,6 +505,7 @@ class GlobFilesRequestScope {
   bool local = true;
   bool fallback = false;
   const std::shared_ptr<ServerState>& serverState_;
+  bool isOffloadable_;
   folly::stop_watch<std::chrono::microseconds> itcTimer_ = {};
 }; // namespace
 #undef EDEN_MICRO
@@ -3335,36 +3349,45 @@ EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
   bool useSaplingRemoteAPISuffixes = shouldUseSaplingRemoteAPI(
       edenConfig->enableEdenAPISuffixQuery.getValue(), *params);
 
-  auto globFilesRequestScope =
-      std::make_shared<GlobFilesRequestScope>(server_->getServerState());
+  // Matches **/*.suffix
+  // Captures the .suffix
+  static const re2::RE2 suffixRegex("\\*\\*/\\*(\\.[A-z0-9]+)");
+  std::vector<std::string> suffixGlobs;
+  std::vector<std::string> nonSuffixGlobs;
+
+  // Copying to new vectors, since we want to keep the original around
+  // in case we need to fall back to the legacy pathway
+  for (const auto& glob : *params->globs_ref()) {
+    std::string capture;
+    if (re2::RE2::FullMatch(glob, suffixRegex, &capture)) {
+      suffixGlobs.push_back(capture);
+    } else {
+      nonSuffixGlobs.push_back(glob);
+    }
+  }
+
+  bool requestIsOffloadable = !suffixGlobs.empty() && nonSuffixGlobs.empty() &&
+      (((*params->searchRoot()).empty()) || (*params->searchRoot() == "."));
+
+  auto globFilesRequestScope = std::make_shared<GlobFilesRequestScope>(
+      server_->getServerState(), requestIsOffloadable);
+
+  if (requestIsOffloadable) {
+    XLOG(DBG5)
+        << "globFiles request is only suffix globs, can be offloaded to EdenAPI";
+    auto suffixGlobLogString = globber.logString(suffixGlobs);
+    suffixGlobRequestScope = std::make_unique<SuffixGlobRequestScope>(
+        suffixGlobLogString,
+        server_->getServerState(),
+        !useSaplingRemoteAPISuffixes,
+        context);
+  }
 
   if (useSaplingRemoteAPISuffixes) {
-    // Matches **/*.suffix
-    // Captures the .suffix
-    static const re2::RE2 suffixRegex("\\*\\*/\\*(\\.[A-z0-9]+)");
-    std::vector<std::string> suffixGlobs;
-    std::vector<std::string> nonSuffixGlobs;
-
-    // Copying to new vectors, since we want to keep the original around
-    // in case we need to fall back to the legacy pathway
-    for (const auto& glob : *params->globs_ref()) {
-      std::string capture;
-      if (re2::RE2::FullMatch(glob, suffixRegex, &capture)) {
-        suffixGlobs.push_back(capture);
-      } else {
-        nonSuffixGlobs.push_back(glob);
-      }
-    }
-
-    if (!suffixGlobs.empty() && nonSuffixGlobs.empty()) {
+    if (requestIsOffloadable) {
+      XLOG(DBG5) << "globFiles request offloaded to EdenAPI";
       // Only use BSSM if there are only suffix queries
       globFilesRequestScope->setLocal(false);
-      XLOG(DBG3)
-          << "globFiles request is only suffix globs, offloading to EdenAPI";
-      auto suffixGlobLogString = globber.logString(suffixGlobs);
-      suffixGlobRequestScope = std::make_unique<SuffixGlobRequestScope>(
-          suffixGlobLogString, server_->getServerState(), context);
-
       // Attempt to resolve all EdenAPI futures. If any of
       // them result in an error we will fall back to local lookup
       auto combinedFuture =
@@ -3420,7 +3443,7 @@ EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
                       for (auto component : rp.components()) {
                         // Use facebook::eden string_view
                         if (string_view{component.view()}.starts_with(".")) {
-                          XLOG(DBG4) << "Skipping dotfile: " << component.view()
+                          XLOG(DBG5) << "Skipping dotfile: " << component.view()
                                      << " in " << entry;
                           skip_due_to_dotfile = true;
                           break;
@@ -3506,7 +3529,7 @@ EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
                 }
                 return collectAllSafe(std::move(globEntryFuts))
                     .thenValue([wantDtype](auto&& globEntries) {
-                      XLOG(DBG4) << "Building Glob";
+                      XLOG(DBG5) << "Building Glob";
                       auto glob = std::make_unique<Glob>();
                       std::sort(
                           globEntries.begin(),
@@ -3534,7 +3557,7 @@ EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
                         glob->originHashes_ref().value().emplace_back(
                             globEntry.originHash);
                       }
-                      XLOG(DBG4)
+                      XLOG(DBG5)
                           << "Glob successfuly created, returning SaplingRemoteAPI results";
                       return glob;
                     });
