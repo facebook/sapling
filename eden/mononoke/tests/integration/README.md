@@ -19,6 +19,10 @@ Use:
 buck2 run //eden/mononoke/tests/integration/facebook:some_target -- TEST
 ```
 
+Use `--interactive` when running your tests this way in order to accept (or reject)
+changes to your `.t` files, or `--keep-tmpdir` to be able to see the files edited
+by your test after it runs.
+
 But! Keep reading: there are faster ways to run the tests if you're going to be
 iterating on something. You might as well read on while you wait for that build
 to complete.
@@ -61,16 +65,10 @@ of subdirectory followed by slash as a prefix, for example:
 
 Note that you can run this from anywhere in fbsource tree (so you can
 run it from the actual tests directory to get autocompletion or globbing on test
-names). The script defaults to using `buck2`, but you can set the `USEBUCK1` env
-var so it uses `buck1`.
+names).
 
-Every time you make changes to your code, `buck2 build` whatever you changed,
+Every time you make changes to your code, `buck build` whatever you changed,
 then re-run.
-
-Use `--interactive` when running your tests in order to accept (or reject)
-changes to your `.t` files, or `--keep-tmpdir` to be able to see the files edited
-by your test after it runs.
-
 
 ## Adding new tests:
 
