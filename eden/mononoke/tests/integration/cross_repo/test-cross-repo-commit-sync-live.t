@@ -9,14 +9,14 @@
   $ . "${TEST_FIXTURES}/library.sh"
   $ . "${TEST_FIXTURES}/library-push-redirector.sh"
 
-Setup configuration
+-- Init Mononoke thingies
+  $ create_large_small_repo
+  Adding synced mapping entry
   $ setup_configerator_configs
   $ enable_pushredirect 1 false false
-
--- Init Mononoke thingies
-  $ XREPOSYNC=1 init_large_small_repo
-  Adding synced mapping entry
+  $ XREPOSYNC=1 start_large_small_repo
   Starting Mononoke server
+  $ init_local_large_small_clones
 
 -- Start up the sync job in the background
   $ mononoke_x_repo_sync_forever $REPOIDSMALL $REPOIDLARGE

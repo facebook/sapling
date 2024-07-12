@@ -7,13 +7,14 @@
   $ . "${TEST_FIXTURES}/library.sh"
   $ . "${TEST_FIXTURES}/library-push-redirector.sh"
 
+  $ setconfig push.edenapi=true
+  $ ENABLE_API_WRITES=1 create_large_small_repo
+  Adding synced mapping entry
   $ setup_configerator_configs
   $ enable_pushredirect 1
-
-  $ setconfig push.edenapi=true
-  $ ENABLE_API_WRITES=1 init_large_small_repo
-  Adding synced mapping entry
+  $ start_large_small_repo
   Starting Mononoke server
+  $ init_local_large_small_clones
 
 -- normal pushrebase with one commit
   $ cd "$TESTTMP/small-hg-client"

@@ -8,13 +8,14 @@
 
   $ enable remotenames
 
+  $ setconfig push.edenapi=true
+  $ ENABLE_API_WRITES=1 PUSHREBASE_REWRITE_DATES=1 create_large_small_repo
+  Adding synced mapping entry
   $ setup_configerator_configs
   $ enable_pushredirect 1
-
-  $ setconfig push.edenapi=true
-  $ ENABLE_API_WRITES=1 PUSHREBASE_REWRITE_DATES=1 init_large_small_repo
-  Adding synced mapping entry
+  $ start_large_small_repo
   Starting Mononoke server
+  $ init_local_large_small_clones
 
 -- enable verification hook in small-hg-srv
   $ hg init "$TESTTMP/small-hg-srv"

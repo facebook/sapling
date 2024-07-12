@@ -8,7 +8,6 @@
   $ . "${TEST_FIXTURES}/library-push-redirector.sh"
 
   $ setup_configerator_configs
-  $ enable_pushredirect 1
 
   $ setconfig push.edenapi=true
   $ ENABLE_API_WRITES=1 create_large_small_repo
@@ -26,6 +25,7 @@
   >     "/[.]git/",
   >   ]
   > CONFIG
+  $ enable_pushredirect 1
   $ start_large_small_repo
   Starting Mononoke server
   $ init_local_large_small_clones

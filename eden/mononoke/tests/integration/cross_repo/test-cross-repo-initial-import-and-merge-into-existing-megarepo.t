@@ -31,10 +31,7 @@
   > }
   > EOF
 
-  $ setup_configerator_configs
-  $ enable_pushredirect 1
-  $ enable_pushredirect 2 false false
-  $ enable_pushredirect 3 false false
+
 
 -- Init the imported repos
   $ IMPORTED_REPO_NAME="imported_repo"
@@ -52,6 +49,10 @@
   $ large_small_megarepo_config
   $ large_small_setup
   Adding synced mapping entry
+  $ setup_configerator_configs
+  $ enable_pushredirect 1
+  $ enable_pushredirect 2 false false
+  $ enable_pushredirect 3 false false
   $ start_large_small_repo
   Starting Mononoke server
   $ init_local_large_small_clones

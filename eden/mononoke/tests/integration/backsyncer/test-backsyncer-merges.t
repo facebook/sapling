@@ -8,12 +8,13 @@
   $ export COMMIT_SCRIBE_CATEGORY=mononoke_commits
   $ export BOOKMARK_SCRIBE_CATEGORY=mononoke_bookmark
 
+  $ create_large_small_repo
+  Adding synced mapping entry
   $ setup_configerator_configs
   $ enable_pushredirect 1
-
-  $ init_large_small_repo
-  Adding synced mapping entry
+  $ start_large_small_repo
   Starting Mononoke server
+  $ init_local_large_small_clones
 
 Push a merge from a large repo
   $ cd "$TESTTMP/large-hg-client"

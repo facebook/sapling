@@ -11,13 +11,15 @@
 
 We use multiplex blobstore here as this one provides logging that we test later.
   $ export MULTIPLEXED=1
-  $ setup_configerator_configs
-  $ enable_pushredirect 1
 
 -- Init Mononoke thingies
-  $ PUSHREBASE_REWRITE_DATES=1 init_large_small_repo
+  $ PUSHREBASE_REWRITE_DATES=1 create_large_small_repo
   Adding synced mapping entry
+  $ setup_configerator_configs
+  $ enable_pushredirect 1
+  $ start_large_small_repo
   Starting Mononoke server
+  $ init_local_large_small_clones
 
 -- Start up the backsyncer in the background
   $ backsync_large_to_small_forever
