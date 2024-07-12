@@ -823,6 +823,41 @@ class EdenConfig : private ConfigSettingManager {
           std::make_shared<std::unordered_set<RelativePath>>(),
           this};
 
+  /**
+   * Should we use the cached `sl status` results or not
+   */
+  ConfigSetting<bool> hgEnableCachedResultForStatusRequest{
+      "hg:enable-scm-status-cache",
+      false,
+      this};
+
+  /**
+   *  The maximum size of SCM status cache in bytes:
+   *  1. Generally, a file path is about 50 chars long.
+   *  2. We only cache status when the number of diff files is less than 10k.
+   *  3. And we allow at most 5 such "huge" status
+   */
+  ConfigSetting<size_t> scmStatusCacheMaxSize{
+      "hg:scm-status-cache-max-size",
+      50 * 10 * 1024 * 5, // 2.5 MB
+      this};
+
+  /**
+   *  The minimum number of items to keep in SCM status cache
+   */
+  ConfigSetting<size_t> scmStatusCacheMininumItems{
+      "hg:scm-status-cache-min-items",
+      3,
+      this};
+
+  /**
+   *  The maximum number of entries we want to cache within a single status
+   */
+  ConfigSetting<size_t> scmStatusCacheMaxEntriesPerItem{
+      "hg:scm-status-cache-max-entires-per-item",
+      10000,
+      this};
+
   // [backingstore]
 
   /**

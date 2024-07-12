@@ -104,7 +104,7 @@ typename std::enable_if_t<
 ObjectCache<ObjectType, Flavor, ObjectCacheStats>::getInterestHandle(
     const ObjectId& hash,
     Interest interest) {
-  XLOG(DBG6) << "BlobCache::getInterestHandle " << hash;
+  XLOG(DBG6) << "ObjectCache::getInterestHandle " << hash;
   // Acquires ObjectCache's lock upon destruction by calling dropInterestHandle,
   // so ensure that, if an exception is thrown below, the ~ObjectInterestHandle
   // runs after the lock is released.
@@ -158,7 +158,7 @@ typename std::enable_if_t<
     typename ObjectCache<ObjectType, Flavor, ObjectCacheStats>::ObjectPtr>
 ObjectCache<ObjectType, Flavor, ObjectCacheStats>::getSimple(
     const ObjectId& hash) {
-  XLOG(DBG6) << "BlobCache::getSimple " << hash;
+  XLOG(DBG6) << "ObjectCache::getSimple " << hash;
   auto state = state_.lock();
 
   if (auto item = getImpl(hash, *state)) {
@@ -467,4 +467,19 @@ void ObjectCache<ObjectType, Flavor, ObjectCacheStats>::evictItem(
   state.items.erase(item.id);
   state.totalSize -= size;
 }
+
+template <
+    typename ObjectType,
+    ObjectCacheFlavor Flavor,
+    typename ObjectCacheStats>
+void ObjectCache<ObjectType, Flavor, ObjectCacheStats>::invalidate(
+    const ObjectId& id) noexcept {
+  XLOG(DBG6) << "ObjectCache::invalidate " << id;
+  auto state = state_.lock();
+
+  if (auto item = getImpl(id, *state)) {
+    state->evictionQueue.erase(state->evictionQueue.iterator_to(*item));
+    evictItem(*state, *item);
+  }
+};
 } // namespace facebook::eden

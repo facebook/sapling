@@ -268,6 +268,8 @@ class ObjectCache : public std::enable_shared_from_this<
       size_t minimumEntryCount,
       EdenStatsPtr stats);
 
+  void invalidate(const ObjectId& id) noexcept;
+
  private:
   /*
    * TODO: This data structure could be implemented more efficiently. But since

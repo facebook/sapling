@@ -40,6 +40,7 @@ struct InodeMapStats;
 struct InodeMetadataTableStats;
 struct BlobCacheStats;
 struct TreeCacheStats;
+struct ScmStatusCacheStats;
 struct FakeStats;
 
 class EdenStats : public RefCounted {
@@ -95,6 +96,7 @@ class EdenStats : public RefCounted {
   ThreadLocal<InodeMetadataTableStats> inodeMetadataTableStats_;
   ThreadLocal<BlobCacheStats> blobCacheStats_;
   ThreadLocal<TreeCacheStats> treeCacheStats_;
+  ThreadLocal<ScmStatusCacheStats> scmStatusCacheStats_;
   ThreadLocal<FakeStats> fakeStats_;
 };
 
@@ -171,6 +173,12 @@ inline BlobCacheStats& EdenStats::getStatsForCurrentThread<BlobCacheStats>() {
 template <>
 inline TreeCacheStats& EdenStats::getStatsForCurrentThread<TreeCacheStats>() {
   return *treeCacheStats_.get();
+}
+
+template <>
+inline ScmStatusCacheStats&
+EdenStats::getStatsForCurrentThread<ScmStatusCacheStats>() {
+  return *scmStatusCacheStats_.get();
 }
 
 template <>
@@ -528,6 +536,9 @@ struct SaplingBackingStoreStats : StatsGroup<SaplingBackingStoreStats> {
 struct JournalStats : StatsGroup<JournalStats> {
   Counter truncatedReads{"journal.truncated_reads"};
   Counter filesAccumulated{"journal.files_accumulated"};
+  Counter journalStatusCacheHit{"journal.status_cache_hit"};
+  Counter journalStatusCacheMiss{"journal.status_cache_miss"};
+  Counter journalStatusCacheSkip{"journal.status_cache_skip"};
   Duration accumulateRange{"journal.accumulate_range_us"};
 };
 
@@ -623,6 +634,13 @@ struct TreeCacheStats : StatsGroup<TreeCacheStats> {
   Counter getMiss{"tree_cache.get_miss"};
   Counter insertEviction{"tree_cache.insert_eviction"};
   Counter objectDrop{"tree_cache.object_drop"};
+};
+
+struct ScmStatusCacheStats : StatsGroup<TreeCacheStats> {
+  Counter getHit{"scm_status_cache.get_hit"};
+  Counter getMiss{"scm_status_cache.get_miss"};
+  Counter insertEviction{"scm_status_cache.insert_eviction"};
+  Counter objectDrop{"scm_status_cache.object_drop"};
 };
 
 /*

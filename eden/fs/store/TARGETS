@@ -209,6 +209,7 @@ cpp_library(
         "//eden/common/utils:ref_ptr",
         "//eden/common/utils:utils",
         "//eden/fs/config:config",
+        "//eden/fs/journal:journal",
         "//eden/fs/model:model",
         "//eden/fs/model:model-fwd",
         "//eden/fs/service:thrift-cpp2-types",
