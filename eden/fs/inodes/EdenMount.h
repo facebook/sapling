@@ -37,9 +37,12 @@
 #include "eden/fs/inodes/InodeTimestamps.h"
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/inodes/VirtualInode.h"
+#include "eden/fs/journal/JournalDelta.h"
 #include "eden/fs/model/RootId.h"
 #include "eden/fs/service/gen-cpp2/eden_types.h"
 #include "eden/fs/store/BlobAccess.h"
+#include "eden/fs/store/ScmStatusCache.h"
+#include "eden/fs/store/ScmStatusDiffCallback.h"
 #include "eden/fs/takeover/TakeoverData.h"
 #include "eden/fs/telemetry/ActivityBuffer.h"
 #include "eden/fs/telemetry/IActivityRecorder.h"
@@ -601,7 +604,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    *
    * The Journal is guaranteed to be valid for the lifetime of the EdenMount.
    */
-  Journal& getJournal() {
+  Journal& getJournal() const {
     return *journal_;
   }
 
@@ -1209,7 +1212,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    */
   FOLLY_NODISCARD ImmediateFuture<folly::Unit> diff(
       TreeInodePtr rootInode,
-      DiffCallback* callback,
+      ScmStatusDiffCallback* callback,
       const RootId& commitHash,
       bool listIgnored,
       bool enforceCurrentParent,
@@ -1444,6 +1447,8 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    * can be inline without having to include ServerState.h in this file.
    */
   std::shared_ptr<Clock> clock_;
+
+  mutable folly::Synchronized<std::shared_ptr<ScmStatusCache>> scmStatusCache_;
 };
 
 /**

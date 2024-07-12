@@ -40,6 +40,8 @@ class ScmStatusDiffCallback : public DiffCallback {
    * the diff operation has completed.
    */
   ScmStatus extractStatus();
+  void setStatus(ScmStatus status);
+  ScmStatus peekStatus() const;
 
  private:
   folly::Synchronized<ScmStatus> data_;

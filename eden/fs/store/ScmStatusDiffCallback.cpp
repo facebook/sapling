@@ -65,6 +65,14 @@ ScmStatus ScmStatusDiffCallback::extractStatus() {
   return std::move(*data);
 }
 
+ScmStatus ScmStatusDiffCallback::peekStatus() const {
+  return data_.copy();
+}
+
+void ScmStatusDiffCallback::setStatus(ScmStatus status) {
+  data_ = std::move(status);
+}
+
 char scmStatusCodeChar(ScmFileStatus code) {
   switch (code) {
     case ScmFileStatus::ADDED:

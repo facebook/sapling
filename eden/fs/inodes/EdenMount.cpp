@@ -59,7 +59,6 @@
 #include "eden/fs/store/DiffCallback.h"
 #include "eden/fs/store/DiffContext.h"
 #include "eden/fs/store/ObjectStore.h"
-#include "eden/fs/store/ScmStatusDiffCallback.h"
 #include "eden/fs/store/StatsFetchContext.h"
 #include "eden/fs/store/TreeLookupProcessor.h"
 #include "eden/fs/telemetry/LogEvent.h"
@@ -70,6 +69,7 @@
 #include "eden/fs/utils/NotImplemented.h"
 
 #include <chrono>
+#include <memory>
 
 using folly::Future;
 using folly::makeFuture;
@@ -292,7 +292,10 @@ EdenMount::EdenMount(
       inodeTraceBus_{TraceBus<InodeTraceEvent>::create(
           "inode",
           serverState_->getEdenConfig()->InodeTraceBusCapacity.getValue())},
-      clock_{serverState_->getClock()} {
+      clock_{serverState_->getClock()},
+      scmStatusCache_{ScmStatusCache::create(
+          serverState_->getReloadableConfig()->getEdenConfig().get(),
+          serverState_->getStats().copy())} {
   subscribeInodeActivityBuffer();
 }
 
@@ -1749,7 +1752,7 @@ ImmediateFuture<Unit> EdenMount::diff(
 
 ImmediateFuture<Unit> EdenMount::diff(
     TreeInodePtr rootInode,
-    DiffCallback* callback,
+    ScmStatusDiffCallback* callback,
     const RootId& commitHash,
     bool listIgnored,
     bool enforceCurrentParent,
@@ -1807,6 +1810,46 @@ ImmediateFuture<Unit> EdenMount::diff(
   // exists until the diff completes.
   auto stateHolder = [ctx = std::move(context), rootInode]() {};
 
+  // only check/update the cache if config is enabled
+  if (getEdenConfig()->hgEnableCachedResultForStatusRequest.getValue()) {
+    auto latestInfo = getJournal().getLatest();
+    if (latestInfo.has_value()) {
+      auto key = ScmStatusCache::makeKey(commitHash, listIgnored);
+      auto curSequenceID = latestInfo.value().sequenceID;
+      {
+        auto lockedCachePtr = scmStatusCache_.rlock();
+        auto cachedStatusPtr = (*lockedCachePtr)->get(key);
+        if (cachedStatusPtr && cachedStatusPtr->seq == curSequenceID) {
+          getStats()->increment(&JournalStats::journalStatusCacheHit);
+          callback->setStatus(cachedStatusPtr->status);
+          return folly::unit;
+        }
+        getStats()->increment(&JournalStats::journalStatusCacheMiss);
+      }
+
+      return diff(rootInode, ctxPtr, commitHash)
+          .thenValue([this, curSequenceID, callback, key = std::move(key)](
+                         auto&&) mutable {
+            auto lockedCachePtr = scmStatusCache_.wlock();
+            ScmStatus newStatus = callback->peekStatus();
+            if (newStatus.entries_ref().value().size() >
+                getEdenConfig()->scmStatusCacheMaxEntriesPerItem.getValue()) {
+              // we don't have a good way to invalidate a single cache entry but
+              // as long as we cap the total size it should be fine if we leave
+              // some expired entries behind.
+              getStats()->increment(&JournalStats::journalStatusCacheSkip);
+              return;
+            }
+            (*lockedCachePtr)
+                ->insert(
+                    std::move(key),
+                    std::make_shared<const SeqStatusPair>(
+                        curSequenceID, std::move(newStatus)));
+          })
+          .ensure(std::move(stateHolder));
+    }
+  }
+
   return diff(rootInode, ctxPtr, commitHash).ensure(std::move(stateHolder));
 }
 
@@ -1819,6 +1862,7 @@ ImmediateFuture<std::unique_ptr<ScmStatus>> EdenMount::diff(
     bool enforceCurrentParent) {
   auto callback = std::make_unique<ScmStatusDiffCallback>();
   auto callbackPtr = callback.get();
+
   return this
       ->diff(
           std::move(rootInode),
