@@ -52,8 +52,8 @@ is done per rule, in this case `server`:
 ./incremental_integration_run.sh server test1.t test2.t test3.t
 ```
 
-If your test group lies in the `facebook/` subdirectory, simply use the `facebook/`
-prefix, for example:
+If your test rule lives in a subdirectory - for example `facebook/`, simply use name
+of subdirectory followed by slash as a prefix, for example:
 
 ```sh
 ./incremental_integration_setup.sh facebook/snapshot
@@ -109,14 +109,10 @@ Notably, it:
 
 - Uses the actual test source files (and assets) from your fbcode working
   directory when running the runner directly (as documented above). This allows
-  `--interactive` to work seamlessly.
+  `--interactive` to work seamlessly. This works thanks to buck crating symlinks
+  to test files rather than copying them for test runs.
 - Stores the paths to all its dependencies in a manifest file (which is
   generated from Buck).
-
-However, when you're running tests using Buck, then the test runner will not use
-source files, and will instead expect files to be managed using Buck. The main
-result of this is that while you might have a bunch of files jumbled together in
-this directory, when running tests using Buck, they will not.
 
 Normally, this should all be transparent if you're adding a new test and using
 `${TEST_FIXTURES}` to reference it.

@@ -18,9 +18,9 @@ if [ $# -eq 0 ]; then
 fi
 
 
-if [[ "$1" == facebook/* ]]; then
-    # Strip facebook prefix
-    TARGET="/facebook:${1#*/}-manifest"
+if [[ "$1" == */* ]]; then
+    # Handle subdirectory prefix
+    TARGET="/$(dirname "$1"):$(basename "$1")-manifest"
 else
     TARGET=":$1-manifest"
 fi

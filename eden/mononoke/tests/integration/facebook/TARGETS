@@ -6,10 +6,6 @@ load(
     "//eden/mononoke/tests/integration/facebook:fb_manifest_deps.bzl",
     "dott_test",
 )
-load(
-    "//eden/mononoke/tests/integration/facebook:symlink.bzl",
-    "symlink",
-)
 
 oncall("mononoke")
 
@@ -30,12 +26,6 @@ python_library(
         "//dba/ephemeral_shards/if:ephemeral_shards_thrift-py",
         "//libfb/py:db_locator",
     ],
-)
-
-symlink(
-    name = "facebook_tests",
-    srcs = glob(["*.t"]),
-    visibility = ["PUBLIC"],
 )
 
 buck_filegroup(

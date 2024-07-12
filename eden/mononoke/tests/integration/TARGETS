@@ -5,18 +5,8 @@ load(
     "//eden/mononoke/tests/integration/facebook:fb_manifest_deps.bzl",
     "dott_test",
 )
-load(
-    "//eden/mononoke/tests/integration/facebook:symlink.bzl",
-    "symlink",
-)
 
 oncall("mononoke")
-
-symlink(
-    name = "public_tests",
-    srcs = glob(["**/*.t"]),
-    visibility = ["PUBLIC"],
-)
 
 buck_filegroup(
     name = "test_fixtures",

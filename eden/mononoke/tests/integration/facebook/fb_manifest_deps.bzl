@@ -3,11 +3,14 @@
 
 load("@fbcode_macros//build_defs:custom_rule.bzl", "custom_rule")
 load("@fbcode_macros//build_defs:custom_unittest.bzl", "custom_unittest")
-load("@fbcode_macros//build_defs:native_rules.bzl", "buck_filegroup")
 load("@fbcode_macros//build_defs/lib:rust_common.bzl", "rust_common")
 load("@fbcode_macros//build_defs/lib:rust_oss.bzl", "rust_oss")
 load("@fbcode_macros//build_defs/lib:test_utils.bzl", "test_utils")
 load("@fbsource//tools/build_defs/buck2:is_buck2.bzl", "is_buck2")
+load(
+    "//eden/mononoke/tests/integration/facebook:symlink.bzl",
+    "symlink",
+)
 
 MONONOKE_TARGETS_TO_ENV = {
     "//common/tools/thriftdbg:thriftdbg": "THRIFTDBG",  # Used for verify_integrity_service health check
@@ -68,11 +71,8 @@ DOTT_DEPS = {
     "//eden/mononoke/tests/integration/certs/facebook:test_certs": "TEST_CERTS",
     # fixtures
     "//eden/mononoke/tests/integration/facebook:facebook_test_fixtures": "FB_TEST_FIXTURES",
-    # Location ofthe .t tests
-    "//eden/mononoke/tests/integration/facebook:facebook_tests": "TEST_ROOT_FACEBOOK",
     # Test utils
     "//eden/mononoke/tests/integration:get_free_socket": "GET_FREE_SOCKET",
-    "//eden/mononoke/tests/integration:public_tests": "TEST_ROOT_PUBLIC",
     "//eden/mononoke/tests/integration:test_fixtures": "TEST_FIXTURES",
     "//eden/mononoke/tests/integration:urlencode": "URLENCODE",
     "//eden/scm/tests:dummyssh3": "DUMMYSSH",
@@ -227,17 +227,16 @@ def _dott_test(name, dott_files, deps, use_mysql = False, disable_all_network_ac
             if t not in targets:
                 targets[e] = t
 
-    # the custom_manifest_rule replaces some deps, e.g. for OSS builds
-    resolved_deps = custom_manifest_rule(manifest_target, name + "-manifest.json", targets)
-    resolved_deps.append(":" + manifest_target)
-
     dott_files_target = name + "-dott"
-
-    buck_filegroup(
+    symlink(
         name = dott_files_target,
         srcs = dott_files,
     )
+    targets["TEST_ROOT"] = ":%s" % dott_files_target
 
+    # the custom_manifest_rule replaces some deps, e.g. for OSS builds
+    resolved_deps = custom_manifest_rule(manifest_target, name + "-manifest.json", targets)
+    resolved_deps.append(":" + manifest_target)
     resolved_deps.append(":" + dott_files_target)
 
     extra_args = [

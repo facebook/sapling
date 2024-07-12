@@ -15,11 +15,11 @@ if [ $# -eq 0 ]; then
     exit 1
 fi
 
-NAME=$1
-if [[ "$NAME" == facebook/* ]]; then
-    SUBDIR="/facebook"
+NAME="$1"
+if [[ "$NAME" == */* ]]; then
+    SUBDIR="/$(dirname "$NAME")"
     # Strip facebook prefix
-    NAME="${NAME#*/}"
+    NAME="$(basename "$NAME")"
 else
     SUBDIR=""
 fi
