@@ -537,7 +537,11 @@ Please wait for edenfs to finish starting. You can watch its progress with
 
 If EdenFS seems to be taking too long to start you can try restarting it
 with "eden restart --force"'''
-        super().__init__("EdenFS is currently still starting.", remediation=remediation)
+        super().__init__(
+            "EdenFS is currently still starting.",
+            remediation=remediation,
+            severity=ProblemSeverity.ADVICE,
+        )
 
 
 class EdenfsStopping(Problem):
@@ -597,7 +601,9 @@ class NestedCheckout(Problem):
         super().__init__(
             f"""\
 edenfs reports that checkout {checkout.path} is nested within an existing checkout {existing_checkout.path}
-Nested checkouts are usually not intended and can cause spurious behavior. Consider running `eden rm {checkout.path}` to remove misplaced repo(s)\n"""
+Nested checkouts are usually not intended and can cause spurious behavior.""",
+            f"Consider running `eden rm {checkout.path}` to remove misplaced repo(s)\n",
+            severity=ProblemSeverity.ADVICE,
         )
 
 
@@ -608,7 +614,9 @@ class CheckoutInsideBackingRepo(Problem):
         super().__init__(
             f"""\
 edenfs reports that checkout {checkout.path} is created within backing repo of an existing checkout {existing_checkout.path} (backing repo: {existing_checkout.get_backing_repo_path()})
-Checkouts inside backing repo are usually not intended and can cause spurious behavior. Consider running `eden rm {checkout.path}` to remove misplaced repo(s)\n"""
+Checkouts inside backing repo are usually not intended and can cause spurious behavior.""",
+            f"Consider running `eden rm {checkout.path}` to remove misplaced repo(s)\n",
+            severity=ProblemSeverity.ADVICE,
         )
 
 

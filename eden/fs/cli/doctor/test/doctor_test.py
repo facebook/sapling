@@ -330,7 +330,7 @@ Please wait for edenfs to finish starting\. You can watch its progress with
 If EdenFS seems to be taking too long to start you can try restarting it
 with "eden restart --force"
 
-<yellow>1 issue requires manual attention\.<reset>
+<yellow>1 issue with recommended fixes\.<reset>
 Collect an 'eden rage' and ask in the EdenFS (Windows |macOS )?Users group if you need help fixing issues with EdenFS:
 (https://fb\.workplace\.com/groups/eden\.users|https://fb\.workplace\.com/groups/edenfswindows|https://fb\.workplace\.com/groups/edenfsmacos)
 """,
