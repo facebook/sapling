@@ -103,7 +103,10 @@ class MercurialDataOnNFS(Problem):
             f" {dst_shared_path} which is on a NFS filesystem."
             f" Accessing files and directories in this repository will be slow."
         )
-        super().__init__(msg, severity=ProblemSeverity.ADVICE)
+        remediation = (
+            "To fix this, move the Mercurial data directory to a non-NFS filesystem."
+        )
+        super().__init__(msg, remediation, severity=ProblemSeverity.ADVICE)
 
 
 def check_shared_path(tracker: ProblemTracker, mount_path: Path) -> None:
@@ -192,15 +195,12 @@ class LowDiskSpaceMacOS(Problem):
     We will give the user advice on how they can remediate themselves.
     """
 
-    util = "/System/Library/Filesystems/apfs.fs/Contents/Resources/apfs.util"
-    util_check = f"sudo {util} -G ~/*"
-    util_purge = f"sudo {util} -P -low ~/*"
+    util_purge = "eden du --purgeable"
 
     def __init__(self, message: str, severity: ProblemSeverity) -> None:
         addtl_msg = (
             f"\nA significant portion of your disk may be used up by purgeable "
-            f"space. You can check purgeable space with: \n\n'{self.util_check}'\n\n"
-            f"You can clear purgeable space with: \n\n'{self.util_purge}'\n\n"
+            f"space. You can check and clear purgeable space with: \n\n'{self.util_purge}'\n\n"
             f"See https://fburl.com/edenfs_purgeable for more info.\n"
         )
         super().__init__(message + addtl_msg, severity=severity)
