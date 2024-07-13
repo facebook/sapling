@@ -69,6 +69,7 @@ def check_recent_writes(
         tracker.add_problem(
             ElevatedRecentWritesProblem(
                 description=message,
+                remediation=f"See: {get_elevated_recent_writes_error_message_link()}",
                 severity=ProblemSeverity.ADVICE,
             )
         )
@@ -132,7 +133,6 @@ def format_output_message(result: Dict[str, int], minWriteThreshold: int) -> str
         f"We have detected {totalCounts} write operations to the virtual repo.\n"
         "These are expensive operations and you may be able to increase your performance by using a redirect\n"
         "for non-source controlled items such as build products or temporary files:\n"
-        f"See: {get_elevated_recent_writes_error_message_link()}"
     )
 
     return message
