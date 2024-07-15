@@ -36,6 +36,15 @@ The list of all the EdenStats Counter/Duration are as follows:
     3. `Duration accumulateRange{"journal.accumulate_range_us"}` :
     The duration of the journal accumulates range function.
 
+    4. `Counter journalStatusCacheHit{"journal.status_cache_hit"}` :
+    Number of cache hits. This is updated when we have a valid SCM status result in cache to return given the current Journal sequence number.
+
+    5. `Counter journalStatusCacheMiss{"journal.status_cache_miss"}` :
+    Number of cache misses. This is updated when we don't have a valid SCM status result in cache to return given the current Journal sequence number.
+
+    6. `Counter journalStatusCacheSkip{"journal.status_cache_skip"}` :
+    Number of cache insertion skipped. This is updated when we skip inserting a new entry into the cache when the  number of the entries from the calculated result is larger than the limit configured [here](https://fburl.com/code/flwry2g4).
+
 
 - ThriftStats
     1. `Duration streamChangesSince{ "thrift.StreamingEdenService.streamChangesSince.streaming_time_us"}` :
