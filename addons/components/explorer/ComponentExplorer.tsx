@@ -19,6 +19,7 @@ import {Icon} from '../Icon';
 import {Kbd} from '../Kbd';
 import {Panels} from '../Panels';
 import {RadioGroup} from '../Radio';
+import {Subtle} from '../Subtle';
 import {Tag} from '../Tag';
 import {TextArea} from '../TextArea';
 import {TextField} from '../TextField';
@@ -61,6 +62,10 @@ export default function ComponentExplorer() {
       <h2>Component Explorer</h2>
       <div {...stylex.props(styles.container, layout.flexCol, layout.fullWidth)}>
         <GroupName>Colors</GroupName>
+        <Row>
+          Normal
+          <Subtle>Subtle</Subtle>
+        </Row>
         <Row>
           {basicBgs.map(name => (
             <ColorBadge fg={colors.fg} bg={colors[name]} key={name}>
@@ -106,6 +111,26 @@ export default function ComponentExplorer() {
           <span style={{border: '1px solid var(--contrast-active-border)'}}>
             Contrast Active Border
           </span>
+        </Row>
+        <Row>
+          <Icon icon="info" />
+          <Icon icon="pass" color="green" />
+          <Icon icon="warning" color="yellow" />
+          <Icon icon="error" color="red" />
+          <Icon icon="lightbulb" color="blue" />
+        </Row>
+        <Row>
+          XS:
+          <Icon icon="rocket" size="XS" />
+          <span> </span>
+          S: (default)
+          <Icon icon="rocket" size="S" />
+          <span> </span>
+          M:
+          <Icon icon="rocket" size="M" />
+          <span> </span>
+          L:
+          <Icon icon="rocket" size="L" />
         </Row>
         <GroupName>Components</GroupName>
         <Row>
