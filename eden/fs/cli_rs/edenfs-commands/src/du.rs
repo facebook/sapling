@@ -48,7 +48,10 @@ use edenfs_utils::path_from_bytes;
 use serde::Serialize;
 use subprocess::Exec;
 use subprocess::Redirection as SubprocessRedirection;
+use thrift_types::edenfs::GetCurrentSnapshotInfoRequest;
 use thrift_types::edenfs::GetScmStatusParams;
+use thrift_types::edenfs::MountId;
+use thrift_types::edenfs::RootIdOptions;
 
 use crate::ExitCode;
 
@@ -265,6 +268,26 @@ async fn ignored_usage_counts_for_mount(
     checkout: &EdenFsCheckout,
     client: &EdenFsClient,
 ) -> Result<u64> {
+    let mount_point = bytes_from_path(checkout.path())?;
+
+    // FilteredFS mounts require a filterId to be passed into status calls
+    let mut root_id_options = RootIdOptions {
+        filterId: None,
+        ..Default::default()
+    };
+    let snapshot_info_params = GetCurrentSnapshotInfoRequest {
+        mountId: MountId {
+            mountPoint: mount_point,
+            ..Default::default()
+        },
+        cri: None,
+        ..Default::default()
+    };
+    let snapshot_info = client.getCurrentSnapshotInfo(&snapshot_info_params).await;
+    if let Ok(snapshot_info) = snapshot_info {
+        root_id_options.filterId = snapshot_info.filterId;
+    }
+
     let scm_status = client
         .getScmStatusV2(&GetScmStatusParams {
             mountPoint: bytes_from_path(checkout.path())?,
@@ -274,6 +297,7 @@ async fn ignored_usage_counts_for_mount(
                 .as_bytes()
                 .to_vec(),
             listIgnored: true,
+            rootIdOptions: Some(root_id_options),
             ..Default::default()
         })
         .await?
