@@ -430,7 +430,6 @@ def debugbuilddag(
      - "*p" is a fork at parent p, which is a backref
      - "*p1/p2" is a merge of parents p1 and p2, which are backrefs
      - "/p2" is a merge of the preceding node and p2
-     - "@branch" sets the named branch for subsequent nodes
      - "#...\\n" is a comment up to the end of the line
 
     Whitespace between the above elements is ignored.
@@ -472,7 +471,6 @@ def debugbuilddag(
         tr = repo.transaction("builddag")
 
         at = -1
-        atbranch = "default"
         nodeids = []
         id = 0
 
@@ -556,7 +554,6 @@ def debugbuilddag(
                         fctxfn,
                         date=(id, 0),
                         user="debugbuilddag",
-                        extra={"branch": atbranch},
                     )
                     nodeid = repo.commitctx(cx)
                     nodeids.append(nodeid)
@@ -567,9 +564,6 @@ def debugbuilddag(
                     bookmarks.addbookmarks(
                         repo, tr, [name], rev=hex(tonode(id)), force=True, inactive=True
                     )
-                elif type == "a":
-                    ui.note(_x("branch %s\n" % data))
-                    atbranch = data
                 prog.value = id
         tr.close()
     finally:

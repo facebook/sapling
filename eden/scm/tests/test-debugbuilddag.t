@@ -13,7 +13,7 @@
 
   $ setconfig devel.segmented-changelog-rev-compat=true
   $ hg init
-  $ hg debugbuilddag '+2:f +3:p2 @temp <f+4 @default /p2 +2' --config 'extensions.progress=' --config 'progress.debug=true'
+  $ hg debugbuilddag '+2:f +3:p2 <f+4 /p2 +2' --config 'extensions.progress=' --config 'progress.debug=true'
   progress: building: 0/12 revisions (0.00%)
   progress: building: 1/12 revisions (8.33%)
   progress: building: 1/12 revisions (8.33%)
@@ -21,11 +21,9 @@
   progress: building: 3/12 revisions (25.00%)
   progress: building: 4/12 revisions (33.33%)
   progress: building: 4/12 revisions (33.33%)
-  progress: building: 4/12 revisions (33.33%)
   progress: building: 5/12 revisions (41.67%)
   progress: building: 6/12 revisions (50.00%)
   progress: building: 7/12 revisions (58.33%)
-  progress: building: 8/12 revisions (66.67%)
   progress: building: 8/12 revisions (66.67%)
   progress: building: 9/12 revisions (75.00%)
   progress: building: 10/12 revisions (83.33%)
@@ -34,11 +32,10 @@
 
 # dag
 
-  $ hg debugdag --bookmarks -b
+  $ hg debugdag --bookmarks
   +2:f
   +3:p2
-  @temp*f+3
-  @default*/p2+2
+  *f+3*/p2+2
 
 # tip
 
@@ -54,13 +51,13 @@
   │
   o    9: r9 [] @ 9.00
   ├─╮
-  │ o  8: r8 [temp] @ 8.00
+  │ o  8: r8 [] @ 8.00
   │ │
-  │ o  7: r7 [temp] @ 7.00
+  │ o  7: r7 [] @ 7.00
   │ │
-  │ o  6: r6 [temp] @ 6.00
+  │ o  6: r6 [] @ 6.00
   │ │
-  │ o  5: r5 [temp] @ 5.00
+  │ o  5: r5 [] @ 5.00
   │ │
   o │  4: r4 [] @ 4.00
   │ │
@@ -76,16 +73,14 @@
 
   $ rm -r .hg
   $ hg init
-  $ hg debugbuilddag '@start.@default.:f +3:p2 @temp <f+4 @default /p2 +2' -q -o
+  $ hg debugbuilddag '..:f +3:p2 @temp <f+4 /p2 +2' -q -o
 
 # dag
 
   $ hg debugdag --bookmarks -b
-  @start+1
-  @default+1:f
+  +2:f
   +3:p2
-  @temp*f+3
-  @default*/p2+2
+  *f+3*/p2+2
 
 # tip
 
@@ -101,13 +96,13 @@
   │
   o    9: r9 [] @ 9.00
   ├─╮
-  │ o  8: r8 [temp] @ 8.00
+  │ o  8: r8 [] @ 8.00
   │ │
-  │ o  7: r7 [temp] @ 7.00
+  │ o  7: r7 [] @ 7.00
   │ │
-  │ o  6: r6 [temp] @ 6.00
+  │ o  6: r6 [] @ 6.00
   │ │
-  │ o  5: r5 [temp] @ 5.00
+  │ o  5: r5 [] @ 5.00
   │ │
   o │  4: r4 [] @ 4.00
   │ │
@@ -117,7 +112,7 @@
   ├─╯
   o  1: r1 [] @ 1.00
   │
-  o  0: r0 [start] @ 0.00
+  o  0: r0 [] @ 0.00
 
 # glog of
 
@@ -128,13 +123,13 @@
   │
   o    9: r9 []
   ├─╮
-  │ o  8: r8 [temp]
+  │ o  8: r8 []
   │ │
-  │ o  7: r7 [temp]
+  │ o  7: r7 []
   │ │
-  │ o  6: r6 [temp]
+  │ o  6: r6 []
   │ │
-  │ o  5: r5 [temp]
+  │ o  5: r5 []
   │ │
   o │  4: r4 []
   │ │
@@ -144,7 +139,7 @@
   ├─╯
   o  1: r1 []
   │
-  o  0: r0 [start]
+  o  0: r0 []
 
 # cat of
 
@@ -155,15 +150,14 @@
 
   $ rm -r .hg
   $ hg init
-  $ hg debugbuilddag '+2:f +3:p2 @temp <f+4 @default /p2 +2' -q -mn
+  $ hg debugbuilddag '+2:f +3:p2 <f+4 @default /p2 +2' -q -mn
 
 # dag
 
   $ hg debugdag --bookmarks -b
   +2:f
   +3:p2
-  @temp*f+3
-  @default*/p2+2
+  *f+3*/p2+2
 
 # tip
 
@@ -179,13 +173,13 @@
   │
   o    9: r9 [] @ 9.00
   ├─╮
-  │ o  8: r8 [temp] @ 8.00
+  │ o  8: r8 [] @ 8.00
   │ │
-  │ o  7: r7 [temp] @ 7.00
+  │ o  7: r7 [] @ 7.00
   │ │
-  │ o  6: r6 [temp] @ 6.00
+  │ o  6: r6 [] @ 6.00
   │ │
-  │ o  5: r5 [temp] @ 5.00
+  │ o  5: r5 [] @ 5.00
   │ │
   o │  4: r4 [] @ 4.00
   │ │
@@ -206,13 +200,13 @@
   │
   o    9: r9 []
   ├─╮
-  │ o  8: r8 [temp]
+  │ o  8: r8 []
   │ │
-  │ o  7: r7 [temp]
+  │ o  7: r7 []
   │ │
-  │ o  6: r6 [temp]
+  │ o  6: r6 []
   │ │
-  │ o  5: r5 [temp]
+  │ o  5: r5 []
   │ │
   o │  4: r4 []
   │ │

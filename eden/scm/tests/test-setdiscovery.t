@@ -389,7 +389,7 @@ One with >200 heads, which used to use up all of the sample:
 
   $ hg init manyheads
   $ cd manyheads
-  $ echo "+300:r @a" >dagdesc
+  $ echo "+300:r" >dagdesc
   $ echo "*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3 *r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3" >>dagdesc # 20 heads
   $ echo "*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3 *r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3" >>dagdesc # 20 heads
   $ echo "*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3 *r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3" >>dagdesc # 20 heads
@@ -403,7 +403,7 @@ One with >200 heads, which used to use up all of the sample:
   $ echo "*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3 *r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3" >>dagdesc # 20 heads
   $ echo "*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3 *r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3" >>dagdesc # 20 heads
   $ echo "*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3 *r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3" >>dagdesc # 20 heads
-  $ echo "@b *r+3" >>dagdesc # one more head
+  $ echo "*r+3" >>dagdesc # one more head
   $ hg debugbuilddag <dagdesc
   reading DAG from stdin
 
@@ -442,7 +442,7 @@ The graph looks like:
   adding changesets
   adding manifests
   adding file changes
-  updating to branch b
+  updating to branch default
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ hg -R a debugdiscovery b --debug --verbose --config progress.debug=true
@@ -453,16 +453,16 @@ The graph looks like:
   sampling from both directions (200 of 520)
   progress: searching: checking 200 commits, 741 left 2 queries
   query 2; still undecided: 941, sample size is: 200
-  sampling from both directions (200 of 270)
-  progress: searching: checking 200 commits, 257 left 3 queries
-  query 3; still undecided: 457, sample size is: 200
-  sampling from both directions (60 of 60)
-  sampling undecided commits (84 of 84)
-  progress: searching: checking 84 commits, 0 left 4 queries
-  query 4; still undecided: 84, sample size is: 84
+  sampling from both directions (200 of 260)
+  progress: searching: checking 200 commits, 237 left 3 queries
+  query 3; still undecided: 437, sample size is: 200
+  sampling from both directions (68 of 68)
+  sampling undecided commits (93 of 93)
+  progress: searching: checking 93 commits, 0 left 4 queries
+  query 4; still undecided: 93, sample size is: 93
   progress: searching (end)
   4 total queries in 0.0000s
-  common heads: 513314ca8b3a
+  common heads: 1b227ad97c76
   remote is subset
   $ hg -R a debugdiscovery b --debug --verbose --config progress.debug=true --rev tip
   comparing with b
@@ -470,19 +470,19 @@ The graph looks like:
   searching for changes
   local heads: 1; remote heads: 1 (explicit: 0); initial common: 1
   all local heads known remotely
-  common heads: 513314ca8b3a
+  common heads: 1b227ad97c76
   remote is subset
 
 Test actual protocol when pulling one new head in addition to common heads
 
   $ hg clone -U b c
   $ hg -R c id -ir tip
-  513314ca8b3a
+  1b227ad97c76
   $ hg -R c up -qr default
   $ touch c/f
   $ hg -R c ci -Aqm "extra head"
   $ hg -R c id -i
-  ecb0e2f146b3
+  d2eb68bd34e5
 
   $ cd b
   $ configure dummyssh
