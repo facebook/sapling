@@ -1924,6 +1924,7 @@ def goto(
         and repo.ui.configbool("checkout", "use-rust")
         and (force or updatecheck != "none")
     ):
+        repo.ui.log("checkout_info", python_checkout="rust")
         target = repo[node]
         try:
             with repo.dirstate.parentchange():
@@ -1944,6 +1945,8 @@ def goto(
                 return ret
         except rusterror.CheckoutConflictsError as ex:
             abort_on_conflicts(ex.args[0])
+
+    repo.ui.log("checkout_info", python_checkout="python")
 
     _logupdatedistance(repo.ui, repo, node)
     _prefetchlazychildren(repo, node)
