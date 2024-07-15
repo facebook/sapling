@@ -243,7 +243,12 @@ impl<'a, R: Repo> CreateCommitContext<'a, R> {
     ) -> Self {
         self.files.insert(
             path.try_into().ok().expect("Invalid path"),
-            CreateFileContext::FromHelper(content.into(), FileType::Regular, None),
+            CreateFileContext::FromHelper(
+                content.into(),
+                FileType::Regular,
+                GitLfs::FullContent,
+                None,
+            ),
         );
         self
     }
@@ -280,7 +285,21 @@ impl<'a, R: Repo> CreateCommitContext<'a, R> {
     ) -> Self {
         self.files.insert(
             path.try_into().ok().expect("Invalid path"),
-            CreateFileContext::FromHelper(content.into(), t, None),
+            CreateFileContext::FromHelper(content.into(), t, GitLfs::FullContent, None),
+        );
+        self
+    }
+
+    pub fn add_file_with_type_and_lfs(
+        mut self,
+        path: impl TryInto<NonRootMPath>,
+        content: impl Into<Vec<u8>>,
+        t: FileType,
+        git_lfs: GitLfs,
+    ) -> Self {
+        self.files.insert(
+            path.try_into().ok().expect("Invalid path"),
+            CreateFileContext::FromHelper(content.into(), t, git_lfs, None),
         );
         self
     }
@@ -297,7 +316,12 @@ impl<'a, R: Repo> CreateCommitContext<'a, R> {
         );
         self.files.insert(
             path.try_into().ok().expect("Invalid path"),
-            CreateFileContext::FromHelper(content.into(), FileType::Regular, Some(copy_info)),
+            CreateFileContext::FromHelper(
+                content.into(),
+                FileType::Regular,
+                GitLfs::FullContent,
+                Some(copy_info),
+            ),
         );
         self
     }
@@ -308,6 +332,7 @@ impl<'a, R: Repo> CreateCommitContext<'a, R> {
         content: impl Into<Vec<u8>>,
         (parent, parent_path): (impl Into<CommitIdentifier>, impl TryInto<NonRootMPath>),
         file_type: FileType,
+        git_lfs: GitLfs,
     ) -> Self {
         let copy_info = (
             parent_path.try_into().ok().expect("Invalid path"),
@@ -315,7 +340,7 @@ impl<'a, R: Repo> CreateCommitContext<'a, R> {
         );
         self.files.insert(
             path.try_into().ok().expect("Invalid path"),
-            CreateFileContext::FromHelper(content.into(), file_type, Some(copy_info)),
+            CreateFileContext::FromHelper(content.into(), file_type, git_lfs, Some(copy_info)),
         );
         self
     }
@@ -418,7 +443,12 @@ impl<'a, R: Repo> CreateCommitContext<'a, R> {
 }
 
 enum CreateFileContext {
-    FromHelper(Vec<u8>, FileType, Option<(NonRootMPath, CommitIdentifier)>),
+    FromHelper(
+        Vec<u8>,
+        FileType,
+        GitLfs,
+        Option<(NonRootMPath, CommitIdentifier)>,
+    ),
     FromFileChange(FileChange),
     Deleted,
 }
@@ -431,7 +461,7 @@ impl CreateFileContext {
         parents: &[ChangesetId],
     ) -> Result<FileChange, Error> {
         let file_change = match self {
-            Self::FromHelper(content, file_type, copy_info) => {
+            Self::FromHelper(content, file_type, git_lfs, copy_info) => {
                 let content = Bytes::copy_from_slice(content.as_ref());
 
                 let meta = filestore::store(
@@ -465,7 +495,7 @@ impl CreateFileContext {
                     file_type,
                     meta.total_size,
                     copy_info,
-                    GitLfs::FullContent,
+                    git_lfs,
                 )
             }
             Self::FromFileChange(file_change) => file_change,

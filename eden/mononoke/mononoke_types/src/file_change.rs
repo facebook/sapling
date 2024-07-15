@@ -123,6 +123,10 @@ impl TrackedFileChange {
         self.inner.file_type
     }
 
+    pub fn git_lfs(&self) -> GitLfs {
+        self.inner.git_lfs
+    }
+
     pub fn size(&self) -> u64 {
         self.inner.size
     }
@@ -186,6 +190,10 @@ impl BasicFileChange {
 
     pub fn file_type(&self) -> FileType {
         self.file_type
+    }
+
+    pub fn git_lfs(&self) -> GitLfs {
+        self.git_lfs
     }
 
     pub fn size(&self) -> u64 {
@@ -490,6 +498,18 @@ impl FromStr for FileType {
             "symlink" | "link" => Ok(FileType::Symlink),
             "git-submodule" | "gitm" => Ok(FileType::GitSubmodule),
             _ => bail!("Invalid file type: {s}"),
+        }
+    }
+}
+
+impl FromStr for GitLfs {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "full_content" => Ok(GitLfs::FullContent),
+            "lfs_pointer" | "lfs" => Ok(GitLfs::GitLfsPointer),
+            _ => bail!("Invalid GitLfs flag: {s}"),
         }
     }
 }

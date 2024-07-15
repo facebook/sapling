@@ -17,6 +17,7 @@ use context::CoreContext;
 use mononoke_types::ChangesetId;
 use mononoke_types::DateTime;
 use mononoke_types::FileType;
+use mononoke_types::GitLfs;
 
 use crate::CommitIdentifier;
 use crate::CreateCommitContext;
@@ -65,11 +66,12 @@ enum ChangeAction {
     /// Set the content of a file (optionally with file type).
     ///
     /// ```text
-    ///     # modify: COMMIT path/to/file [TYPE] "content"
+    ///     # modify: COMMIT path/to/file [TYPE] [LFS] "content"
     /// ```
     Modify {
         path: Vec<u8>,
         file_type: FileType,
+        git_lfs: GitLfs,
         content: Vec<u8>,
     },
     /// Mark a file as deleted.
@@ -88,11 +90,12 @@ enum ChangeAction {
     /// Mark a file as a copy of another file (optionally with file type).
     ///
     /// ```text
-    ///     # copy: COMMIT path/to/file [TYPE] "content" PARENT_COMMIT_ID path/copied/from
+    ///     # copy: COMMIT path/to/file [TYPE] [LFS] "content" PARENT_COMMIT_ID path/copied/from
     /// ```
     Copy {
         path: Vec<u8>,
         file_type: FileType,
+        git_lfs: GitLfs,
         content: Vec<u8>,
         parent: String,
         parent_path: Vec<u8>,
@@ -188,12 +191,16 @@ impl Action {
                         ChangeAction::CommitterDate { committer_date },
                     ))
                 }
-                ("modify", [name, path, rest @ .., content]) if rest.len() < 2 => {
+                ("modify", [name, path, rest @ .., content]) if rest.len() < 3 => {
                     let name = name.to_string()?;
                     let path = path.to_bytes();
                     let file_type = match rest.first() {
                         Some(file_type) => file_type.to_string()?.parse()?,
                         None => FileType::Regular,
+                    };
+                    let git_lfs = match rest.get(1) {
+                        Some(git_lfs) => git_lfs.to_string()?.parse()?,
+                        None => GitLfs::FullContent,
                     };
                     let content = content.to_bytes();
                     Ok(Action::make_change(
@@ -201,6 +208,7 @@ impl Action {
                         ChangeAction::Modify {
                             path,
                             file_type,
+                            git_lfs,
                             content,
                         },
                     ))
@@ -225,13 +233,17 @@ impl Action {
                     ))
                 }
                 ("copy", [name, path, rest @ .., content, parent, parent_path])
-                    if rest.len() < 2 =>
+                    if rest.len() < 3 =>
                 {
                     let name = name.to_string()?;
                     let path = path.to_bytes();
                     let file_type = match rest.first() {
                         Some(file_type) => file_type.to_string()?.parse()?,
                         None => FileType::Regular,
+                    };
+                    let git_lfs = match rest.get(1) {
+                        Some(git_lfs) => git_lfs.to_string()?.parse()?,
+                        None => GitLfs::FullContent,
                     };
                     let content = content.to_bytes();
                     let parent = parent.to_string()?;
@@ -241,6 +253,7 @@ impl Action {
                         ChangeAction::Copy {
                             path,
                             file_type,
+                            git_lfs,
                             content,
                             parent,
                             parent_path,
@@ -367,9 +380,10 @@ fn apply_changes<'a, R: Repo>(
             ChangeAction::Modify {
                 path,
                 file_type,
+                git_lfs,
                 content,
                 ..
-            } => c = c.add_file_with_type(path.as_slice(), content, file_type),
+            } => c = c.add_file_with_type_and_lfs(path.as_slice(), content, file_type, git_lfs),
             ChangeAction::Delete { path, .. } => c = c.delete_file(path.as_slice()),
             ChangeAction::Forget { path, .. } => c = c.forget_file(path.as_slice()),
             ChangeAction::Extra { key, value, .. } => c = c.add_extra(key, value),
@@ -386,6 +400,7 @@ fn apply_changes<'a, R: Repo>(
                 parent,
                 parent_path,
                 file_type,
+                git_lfs,
                 ..
             } => {
                 let parent: CommitIdentifier =
@@ -395,6 +410,7 @@ fn apply_changes<'a, R: Repo>(
                     content,
                     (parent, parent_path.as_slice()),
                     file_type,
+                    git_lfs,
                 )
             }
         }
@@ -736,6 +752,7 @@ mod test {
                 change: ChangeAction::Modify {
                     path: b"path/to/file".to_vec(),
                     file_type: FileType::Regular,
+                    git_lfs: GitLfs::FullContent,
                     content: b"this has \xaa content\n\ton \x02 lines with \"quotes\"".to_vec(),
                 }
             }
@@ -747,6 +764,7 @@ mod test {
                 change: ChangeAction::Modify {
                     path: b"path/to/binary/file".to_vec(),
                     file_type: FileType::Executable,
+                    git_lfs: GitLfs::FullContent,
                     content: b"\xfa\xce\xb0\x0c".to_vec(),
                 }
             }

@@ -1,0 +1,21 @@
+load(
+    "//eden/mononoke/tests/integration/facebook:fb_manifest_deps.bzl",
+    "dott_test",
+)
+
+oncall("scm_server_infra")
+
+dott_test(
+    name = "git_lfs",
+    dott_files =
+        glob([
+            "*.t",
+        ]),
+    deps = [
+        "//eden/mononoke:backfill_derived_data",
+        "//eden/mononoke/git_server:git_server",
+        "//eden/mononoke/lfs_server:lfs_server",
+        "//eden/mononoke/tools/admin:newadmin",
+        "//eden/mononoke/tools/testtool:testtool",
+    ],
+)
