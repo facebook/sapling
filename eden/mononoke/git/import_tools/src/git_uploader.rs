@@ -9,6 +9,7 @@ use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Error;
 use async_trait::async_trait;
+use auto_impl::auto_impl;
 use blobrepo::save_bonsai_changesets;
 use bonsai_git_mapping::BonsaiGitMappingEntry;
 use bonsai_git_mapping::BonsaiGitMappingRef;
@@ -67,6 +68,7 @@ impl ReuploadCommits {
 }
 
 #[async_trait]
+#[auto_impl(&, Arc, Box)]
 pub trait GitUploader: Clone + Send + Sync + 'static {
     /// The type of a file change to be uploaded
     type Change: Clone + Send + Sync + 'static;

@@ -8,6 +8,7 @@ rust_library(
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:async-trait",
+        "fbsource//third-party/rust:auto_impl",
         "fbsource//third-party/rust:bytes",
         "fbsource//third-party/rust:encoding_rs",
         "fbsource//third-party/rust:futures",
@@ -22,7 +23,6 @@ rust_library(
         "fbsource//third-party/rust:slog",
         "fbsource//third-party/rust:smallvec",
         "fbsource//third-party/rust:tokio",
-        "//common/rust/shed/borrowed:borrowed",
         "//common/rust/shed/cloned:cloned",
         "//common/rust/shed/futures_stats:futures_stats",
         "//common/rust/shed/sorted_vector_map:sorted_vector_map",

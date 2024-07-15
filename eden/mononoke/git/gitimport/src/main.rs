@@ -275,7 +275,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
         prefs.git_command_path = PathBuf::from(path);
     }
 
-    let uploader = import_direct::DirectUploader::new(repo.clone(), reupload);
+    let uploader = Arc::new(import_direct::DirectUploader::new(repo.clone(), reupload));
 
     let target = match args.subcommand {
         GitimportSubcommand::FullRepo {} => GitimportTarget::full(),
@@ -291,9 +291,14 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
         }
         GitimportSubcommand::ImportTreeAsSingleBonsaiChangeset { git_commit } => {
             let commit = git_commit.parse()?;
-            let bcs_id =
-                import_tree_as_single_bonsai_changeset(&ctx, path, uploader, commit, &prefs)
-                    .await?;
+            let bcs_id = import_tree_as_single_bonsai_changeset(
+                &ctx,
+                path,
+                uploader.clone(),
+                commit,
+                &prefs,
+            )
+            .await?;
             info!(ctx.logger(), "imported as {}", bcs_id);
             if args.derive_hg {
                 derive_hg(&ctx, &repo, [(&commit, &bcs_id)].into_iter()).await?;
@@ -303,7 +308,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
     };
 
     let gitimport_result: LinkedHashMap<_, _> =
-        import_tools::gitimport(&ctx, path, &uploader, &target, &prefs)
+        import_tools::gitimport(&ctx, path, uploader.clone(), &target, &prefs)
             .await
             .context("gitimport failed")?;
     if args.derive_hg {
@@ -370,7 +375,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
                 .into_iter()
                 .map(|entry| (entry.tag_name, entry.tag_hash))
                 .collect::<HashMap<_, _>>();
-            let reader = GitRepoReader::new(&prefs.git_command_path, path).await?;
+            let reader = Arc::new(GitRepoReader::new(&prefs.git_command_path, path).await?);
             for (maybe_tag_id, name, changeset) in
                 mapping
                     .iter()
@@ -408,13 +413,12 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
                     // Only upload the tag if it's new or has changed.
                     if new_or_updated_tag {
                         // The ref getting imported is a tag, so store the raw git Tag object.
-                        upload_git_tag(&ctx, &uploader, &reader, tag_id).await?;
+                        upload_git_tag(&ctx, uploader.clone(), reader.clone(), tag_id).await?;
                         // Create the changeset corresponding to the commit pointed to by the tag.
                         create_changeset_for_annotated_tag(
                             &ctx,
-                            &uploader,
-                            path,
-                            &prefs,
+                            uploader.clone(),
+                            reader.clone(),
                             tag_id,
                             Some(name.clone()),
                             changeset,

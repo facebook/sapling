@@ -18,6 +18,7 @@ use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
+use auto_impl::auto_impl;
 use bytes::Bytes;
 use git_types::ObjectContent;
 use gix_hash::ObjectId;
@@ -38,6 +39,7 @@ use tokio::sync::oneshot;
 type ObjectSender = oneshot::Sender<Result<ObjectContent>>;
 
 #[async_trait]
+#[auto_impl(&, Arc, Box)]
 pub trait GitReader: Clone + Send + Sync + 'static {
     async fn get_object(&self, oid: &gix_hash::oid) -> Result<ObjectContent>;
 

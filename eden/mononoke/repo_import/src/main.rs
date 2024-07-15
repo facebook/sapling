@@ -1210,7 +1210,8 @@ async fn repo_import(
         info!(ctx.logger(), "Started importing git commits to Mononoke");
         let uploader =
             import_direct::DirectUploader::new(repo.as_blob_repo().clone(), ReuploadCommits::Never);
-        let import_map = import_tools::gitimport(&ctx, path, &uploader, &target, &prefs).await?;
+        let import_map =
+            import_tools::gitimport(&ctx, path, Arc::new(uploader), &target, &prefs).await?;
         info!(ctx.logger(), "Added commits to Mononoke");
 
         let git_merge_oid = {
