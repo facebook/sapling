@@ -28,6 +28,7 @@ import {type CommitInfo} from '../types';
 import {commitMode} from './CommitInfoState';
 import {Banner, BannerKind} from 'isl-components/Banner';
 import {Button} from 'isl-components/Button';
+import {ButtonGroup} from 'isl-components/ButtonGroup';
 import {Divider} from 'isl-components/Divider';
 import {Icon} from 'isl-components/Icon';
 import {Tooltip} from 'isl-components/Tooltip';
@@ -86,10 +87,10 @@ function SuggestionBanner({
         icon={<Icon size="M" icon="lightbulb" color="blue" />}
         alwaysShowButtons
         buttons={
-          <>
+          <ButtonGroup>
             {buttons}
             <DismissSuggestionButton />
-          </>
+          </ButtonGroup>
         }>
         <Tooltip title={tooltip}>
           <Column alignStart style={{gap: 0}}>
@@ -178,9 +179,6 @@ function SplitSuggestionImpl({commit}: {commit: CommitInfo}) {
   } else {
     return <AmendSuggestion />;
   }
-
-  // no need to show any suggestion
-  return null;
 }
 
 export default function SplitSuggestion({commit}: {commit: CommitInfo}) {

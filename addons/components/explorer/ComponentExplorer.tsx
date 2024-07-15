@@ -11,6 +11,7 @@ import {Badge} from '../Badge';
 import {Banner, BannerKind} from '../Banner';
 import {Button} from '../Button';
 import {ButtonDropdown} from '../ButtonDropdown';
+import {ButtonGroup} from '../ButtonGroup';
 import {Checkbox} from '../Checkbox';
 import {Divider} from '../Divider';
 import {Dropdown} from '../Dropdown';
@@ -221,6 +222,39 @@ export default function ComponentExplorer() {
             onClick={selected => console.log('click!', selected)}
             onChangeSelected={setButtonDropdownChoice}
           />
+        </Row>
+        <Row>
+          <ButtonGroup>
+            <Button>A</Button>
+            <Tooltip title="Wrapping in a tooltip doesn't affect the group styling">
+              <Button>B</Button>
+            </Tooltip>
+            <Button>
+              <Icon icon="close" />
+            </Button>
+          </ButtonGroup>
+          <ButtonGroup
+            icon /* Be sure to set icon=True on the group if the buttons are icon=True */
+          >
+            <Button icon style={{paddingInline: '5px'}}>
+              Action A
+            </Button>
+            <Button icon style={{paddingInline: '5px'}}>
+              Action B
+            </Button>
+            <Button icon>
+              <Icon icon="close" />
+            </Button>
+          </ButtonGroup>
+          <ButtonGroup>
+            <Button>A</Button>
+            <Button disabled>B</Button>
+            <Button>C</Button>
+            <Button primary>D</Button>
+            <Button>
+              <Icon icon="close" />
+            </Button>
+          </ButtonGroup>
         </Row>
         <Row>
           <Checkbox checked={checkbox1} onChange={setCheckbox1}>
