@@ -309,9 +309,9 @@ mod test {
             .expect_err("unexpected OK - tz_offset_secs out of bounds");
         DateTime::from_timestamp(0, -86_400)
             .expect_err("unexpected OK - tz_offset_secs out of bounds");
-        DateTime::from_timestamp(i64::min_value(), 0)
+        DateTime::from_timestamp(i64::MIN, 0)
             .expect_err("unexpected OK - timestamp_secs out of bounds");
-        DateTime::from_timestamp(i64::max_value(), 0)
+        DateTime::from_timestamp(i64::MAX, 0)
             .expect_err("unexpected OK - timestamp_secs out of bounds");
     }
 
@@ -328,12 +328,12 @@ mod test {
         })
         .expect_err("unexpected OK - tz_offset_secs out of bounds");
         DateTime::from_thrift(thrift::time::DateTime {
-            timestamp_secs: i64::min_value(),
+            timestamp_secs: i64::MIN,
             tz_offset_secs: 0,
         })
         .expect_err("unexpected OK - timestamp_secs out of bounds");
         DateTime::from_thrift(thrift::time::DateTime {
-            timestamp_secs: i64::max_value(),
+            timestamp_secs: i64::MAX,
             tz_offset_secs: 0,
         })
         .expect_err("unexpected OK - timestamp_secs out of bounds");

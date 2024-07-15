@@ -359,7 +359,7 @@ impl BookmarksCache for NoopBookmarksCache {
                 BookmarkCategory::ALL,
                 BookmarkKind::ALL_PUBLISHING,
                 pagination,
-                limit.unwrap_or(std::u64::MAX),
+                limit.unwrap_or(u64::MAX),
             )
             .map_ok(|(book, cs_id)| {
                 let kind = *book.kind();

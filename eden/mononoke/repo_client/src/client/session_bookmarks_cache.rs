@@ -236,7 +236,7 @@ where
                         &ctx,
                         &BookmarkPrefix::empty(),
                         &BookmarkPagination::FromStart,
-                        Some(std::u64::MAX),
+                        Some(u64::MAX),
                     )
                     .await?
                     .into_iter()

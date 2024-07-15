@@ -17,7 +17,7 @@ pub(crate) fn plural<'a, T: PrimInt>(n: T, single: &'a str, plural: &'a str) -> 
 fn byte_count(size: i64, unit_single: &str, unit_plural: &str, multiple: &[&str]) -> String {
     const UNIT_LIMIT: i64 = 9999;
     match (size, multiple.split_last()) {
-        (std::i64::MIN..=UNIT_LIMIT, _) | (_, None) => {
+        (i64::MIN..=UNIT_LIMIT, _) | (_, None) => {
             format!("{}{}", size, plural(size, unit_single, unit_plural))
         }
         (size, Some((last_multiple, multiple))) => {

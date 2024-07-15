@@ -75,7 +75,7 @@ impl Cache {
                         BookmarkCategory::ALL,
                         BookmarkKind::ALL_PUBLISHING,
                         &BookmarkPagination::FromStart,
-                        std::u64::MAX,
+                        u64::MAX,
                     )
                     .try_fold(
                         BTreeMap::new(),
@@ -784,7 +784,7 @@ mod tests {
                         BookmarkCategory::ALL,
                         BookmarkKind::ALL_PUBLISHING,
                         &BookmarkPagination::FromStart,
-                        std::u64::MAX,
+                        u64::MAX,
                     )
                     .try_collect::<Vec<_>>()
                     .await;

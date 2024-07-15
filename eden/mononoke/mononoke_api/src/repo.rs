@@ -1381,7 +1381,7 @@ impl RepoContext {
                     BookmarkCategory::ALL,
                     BookmarkKind::ALL,
                     &pagination,
-                    limit.unwrap_or(std::u64::MAX),
+                    limit.unwrap_or(u64::MAX),
                 )
                 .try_filter_map(move |(bookmark, cs_id)| async move {
                     if bookmark.kind() == &BookmarkKind::Scratch {

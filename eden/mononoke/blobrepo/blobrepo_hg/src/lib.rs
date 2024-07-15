@@ -261,7 +261,7 @@ impl<T: CommitGraphRef + BonsaiHgMappingRef + Send + Sync> BlobRepoHg for T {
                 BookmarkCategory::ALL,
                 BookmarkKind::ALL_PUBLISHING,
                 &BookmarkPagination::FromStart,
-                std::u64::MAX,
+                u64::MAX,
             )
             .map_ok(move |(_, cs)| {
                 cloned!(ctx);
@@ -385,7 +385,7 @@ impl<T: CommitGraphRef + BonsaiHgMappingRef + Send + Sync> BlobRepoHg for T {
             BookmarkCategory::ALL,
             BookmarkKind::ALL_PUBLISHING,
             &BookmarkPagination::FromStart,
-            std::u64::MAX,
+            u64::MAX,
         );
         to_hg_bookmark_stream(self, &ctx, stream)
     }

@@ -1907,7 +1907,7 @@ where
             BookmarkCategory::ALL,
             BookmarkKind::ALL_PUBLISHING,
             &BookmarkPagination::FromStart,
-            std::u64::MAX,
+            u64::MAX,
         )
         .map_ok(|(book, csid)| (book.into_key(), csid))
         .try_collect::<HashMap<_, _>>();

@@ -101,7 +101,7 @@ impl ChangesetArgs {
                             BookmarkCategory::ALL,
                             BookmarkKind::ALL_PUBLISHING,
                             &BookmarkPagination::FromStart,
-                            std::u64::MAX,
+                            u64::MAX,
                         )
                         .map_ok(|(_name, cs_id)| cs_id)
                 }))

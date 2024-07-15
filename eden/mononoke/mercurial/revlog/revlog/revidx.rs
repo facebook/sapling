@@ -8,7 +8,6 @@
 use std::ops::Add;
 use std::ops::Mul;
 use std::str::FromStr;
-use std::u32;
 
 /// Index into a `RevLog`
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]

@@ -146,11 +146,11 @@ impl ChunkBuilder {
 
 fn verify_path<'a>(mpath: &'a NonRootMPath) -> Result<&'a NonRootMPath> {
     let len = mpath.len();
-    if len > (u16::max_value() as usize) {
+    if len > (u16::MAX as usize) {
         bail!(ErrorKind::WirePackEncode(format!(
             "attempted to encode a filename of length {} -- maximum length supported is {}",
             len,
-            u16::max_value()
+            u16::MAX
         )));
     }
     Ok(mpath)

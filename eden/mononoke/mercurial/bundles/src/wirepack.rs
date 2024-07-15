@@ -210,13 +210,13 @@ impl HistoryEntry {
                         ))
                     );
                     ensure!(
-                        path.len() <= (u16::max_value() as usize),
+                        path.len() <= (u16::MAX as usize),
                         ErrorKind::InvalidWirePackEntry(format!(
                             "history entry for {} is copied from a path of length {} -- maximum \
                              length supported is {}",
                             self.node,
                             path.len(),
-                            u16::max_value(),
+                            u16::MAX,
                         ),)
                     );
                 }

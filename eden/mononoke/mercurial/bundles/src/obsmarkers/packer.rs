@@ -115,7 +115,7 @@ mod test {
     use super::*;
 
     fn long_string() -> String {
-        String::from_utf8(vec![b'T'; u16::max_value() as usize]).unwrap()
+        String::from_utf8(vec![b'T'; u16::MAX as usize]).unwrap()
     }
 
     fn size_matches(data: &[u8]) -> bool {
@@ -189,7 +189,7 @@ mod test {
 
         fn test_prepare_metadata(predecessor: HgChangesetId, successors: Vec<HgChangesetId>, time: DateTime, metadata: Vec<MetadataEntry>) -> bool {
             let chunk = prepare_obsmarker_chunk(&predecessor, &successors, &time, &metadata);
-            let max_size = u8::max_value() as usize;
+            let max_size = u8::MAX as usize;
 
             if metadata.len() > max_size || successors.len() > max_size {
                 // NOTE: With the default quickcheck configuration, we won't exercise this. We
@@ -220,7 +220,7 @@ mod test {
     #[test]
     fn test_successor_count_overflow() {
         let time = DateTime::now();
-        let successors = vec![nodehash::TWOS_CSID; u16::max_value() as usize];
+        let successors = vec![nodehash::TWOS_CSID; u16::MAX as usize];
         let metadata = vec![];
         let chunk = prepare_obsmarker_chunk(&nodehash::ONES_CSID, &successors, &time, &metadata);
         assert!(chunk.is_err());
@@ -230,7 +230,7 @@ mod test {
     fn test_metadata_count_overflow() {
         let entry = MetadataEntry::new("key", "value");
         let time = DateTime::now();
-        let metadata = vec![entry; u16::max_value() as usize];
+        let metadata = vec![entry; u16::MAX as usize];
         let chunk = prepare_obsmarker_chunk(
             &nodehash::ONES_CSID,
             &[nodehash::TWOS_CSID],

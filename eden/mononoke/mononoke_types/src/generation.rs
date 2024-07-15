@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::u64;
-
 use abomonation_derive::Abomonation;
 use serde_derive::Deserialize;
 use serde_derive::Serialize;

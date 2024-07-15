@@ -230,7 +230,7 @@ where
         BacksyncLimit::Limit(limit) => limit,
         BacksyncLimit::NoLimit => {
             // Set limit extremely high to read all new values
-            u64::max_value()
+            u64::MAX
         }
     };
     let next_entries: Vec<_> = commit_syncer
@@ -463,7 +463,7 @@ where
     );
     scuba_sample.add(
         "backsync_duration_ms",
-        u64::try_from(start_instant.elapsed().as_millis()).unwrap_or(u64::max_value()),
+        u64::try_from(start_instant.elapsed().as_millis()).unwrap_or(u64::MAX),
     );
     scuba_sample.add("backsync_previously_done", maybe_log_id.is_none());
 

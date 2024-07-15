@@ -85,7 +85,7 @@ impl SqlBookmarksSubscription {
             txn,
             ctx.client_request_info(),
             &sql_bookmarks.repo_id,
-            &std::u64::MAX,
+            &u64::MAX,
             &tok,
             BookmarkKind::ALL_PUBLISHING,
             BookmarkCategory::ALL,

@@ -1274,7 +1274,7 @@ async fn get_most_recent_heads(ctx: &CoreContext, repo: &BlobRepo) -> Result<Vec
             BookmarkCategory::ALL,
             BookmarkKind::ALL_PUBLISHING,
             &BookmarkPagination::FromStart,
-            std::u64::MAX,
+            u64::MAX,
         )
         .map_ok(|(_name, csid)| csid)
         .try_collect::<Vec<_>>()

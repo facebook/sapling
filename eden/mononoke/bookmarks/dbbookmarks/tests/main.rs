@@ -597,7 +597,7 @@ async fn test_list_by_prefix(fb: FacebookInit) {
                 BookmarkCategory::ALL,
                 BookmarkKind::ALL,
                 &BookmarkPagination::FromStart,
-                std::u64::MAX
+                u64::MAX
             )
             .try_collect::<HashMap<_, _>>()
             .await
@@ -617,7 +617,7 @@ async fn test_list_by_prefix(fb: FacebookInit) {
                 BookmarkCategory::ALL,
                 BookmarkKind::ALL,
                 &BookmarkPagination::FromStart,
-                std::u64::MAX
+                u64::MAX
             )
             .try_collect::<Vec<_>>()
             .await
@@ -637,7 +637,7 @@ async fn test_list_by_prefix(fb: FacebookInit) {
                 BookmarkCategory::ALL,
                 BookmarkKind::ALL,
                 &BookmarkPagination::FromStart,
-                std::u64::MAX
+                u64::MAX
             )
             .try_collect::<Vec<_>>()
             .await
@@ -1188,7 +1188,7 @@ async fn test_creating_publishing_bookmarks(fb: FacebookInit) {
                 BookmarkCategory::ALL,
                 BookmarkKind::ALL,
                 &BookmarkPagination::FromStart,
-                std::u64::MAX
+                u64::MAX
             )
             .try_collect::<HashMap<_, _>>()
             .await
@@ -1212,7 +1212,7 @@ async fn test_creating_publishing_bookmarks(fb: FacebookInit) {
                 BookmarkCategory::ALL,
                 BookmarkKind::ALL,
                 &BookmarkPagination::FromStart,
-                std::u64::MAX
+                u64::MAX
             )
             .try_collect::<HashMap<_, _>>()
             .await

@@ -48,11 +48,11 @@ enum ChunkInner {
 impl Chunk {
     pub fn new(val: impl Into<Bytes>) -> Result<Self> {
         let bytes: Bytes = val.into();
-        if bytes.len() > i32::max_value() as usize {
+        if bytes.len() > i32::MAX as usize {
             bail!(ErrorKind::Bundle2Chunk(format!(
                 "chunk of length {} exceeds maximum {}",
                 bytes.len(),
-                i32::max_value()
+                i32::MAX
             )));
         }
         Ok(Chunk(ChunkInner::Normal(bytes)))

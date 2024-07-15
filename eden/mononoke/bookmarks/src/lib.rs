@@ -122,7 +122,7 @@ where
             BookmarkCategory::ALL,
             BookmarkKind::ALL_PUBLISHING,
             &BookmarkPagination::FromStart,
-            std::u64::MAX,
+            u64::MAX,
         )
         .map_ok(|(_, cs_id)| cs_id)
         .boxed()
@@ -139,7 +139,7 @@ where
             BookmarkCategory::ALL,
             BookmarkKind::ALL_PUBLISHING,
             &BookmarkPagination::FromStart,
-            std::u64::MAX,
+            u64::MAX,
         )
     }
 }
@@ -159,7 +159,7 @@ pub fn bookmark_heads_fetcher(
                     BookmarkCategory::ALL,
                     BookmarkKind::ALL_PUBLISHING,
                     &BookmarkPagination::FromStart,
-                    std::u64::MAX,
+                    u64::MAX,
                 )
                 .map_ok(|(_, cs_id)| cs_id)
                 .try_collect()

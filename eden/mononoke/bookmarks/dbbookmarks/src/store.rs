@@ -375,7 +375,7 @@ impl SqlBookmarks {
                     BookmarkPagination::FromStart => {
                         // Sorting is only useful for pagination. If the query returns all bookmark
                         // names, then skip the sorting.
-                        if limit == std::u64::MAX {
+                        if limit == u64::MAX {
                             let tok: i32 = rand::thread_rng().gen();
                             SelectAllUnordered::maybe_traced_query(
                                 &conn,
@@ -444,7 +444,7 @@ impl SqlBookmarks {
                 let prefix_like_pattern = prefix.to_escaped_sql_like_pattern();
                 match pagination {
                     BookmarkPagination::FromStart => {
-                        if limit == std::u64::MAX {
+                        if limit == u64::MAX {
                             SelectByPrefixUnordered::maybe_traced_query(
                                 &conn,
                                 cri,
