@@ -694,6 +694,7 @@ pub(crate) async fn derive_all_enabled_types_for_repo(
             all_changesets.iter().map(|cs_data| cs_data.cs_id).collect(),
             None,
             &enabled_types,
+            None,
         )
         .await?;
 

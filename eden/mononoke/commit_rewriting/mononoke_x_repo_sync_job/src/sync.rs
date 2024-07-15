@@ -1070,7 +1070,7 @@ async fn derive_initial_import_batch<R: Repo>(
         .collect::<Vec<_>>();
 
     // Derive all the data types in bulk to speed up the overall import process
-    let duration = large_repo
+    large_repo
         .repo_derived_data()
         .manager()
         .derive_bulk(
@@ -1078,15 +1078,15 @@ async fn derive_initial_import_batch<R: Repo>(
             changesets_to_derive.to_vec(),
             None,
             &derived_data_types,
+            None,
         )
         .await?;
 
     log_debug(
         ctx,
         format!(
-            "Finished bulk derivation of {0} changesets in {1:.3} seconds",
+            "Finished bulk derivation of {0} changesets",
             changesets_to_derive.len(),
-            duration.as_secs_f64()
         ),
     );
     Ok(())

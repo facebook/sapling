@@ -75,12 +75,6 @@ add a more complex graph of changesets:
 
 derive more types, on additional changesets:
   $ mononoke_newadmin derived-data -R repo derive-bulk -T fastlog -T hgchangesets -T unodes --start $E --end $G
-  Error: derive exactly batch pre-condition not satisfied: all ancestors' and dependencies' data must already have been derived
-  
-  Caused by:
-      0: a batch ancestor does not have 'fastlog' derived
-      1: dependency 'fastlog' of f41e886d61d03021b73d006acf237244086eb7a5d9c7989e44e59b76d3c3f2b5 was not already derived
-  [1]
 
   $ mononoke_newadmin derived-data -R repo derive-bulk -T fastlog -T hgchangesets -T unodes --start $C --end $G
 

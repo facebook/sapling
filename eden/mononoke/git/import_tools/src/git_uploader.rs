@@ -13,7 +13,6 @@ use bonsai_git_mapping::BonsaiGitMappingEntry;
 use bonsai_git_mapping::BonsaiGitMappingRef;
 use bonsai_git_mapping::BonsaisOrGitShas;
 use bonsai_tag_mapping::BonsaiTagMappingRef;
-use borrowed::borrowed;
 use bulk_derivation::BulkDerivation;
 use bytes::Bytes;
 use changesets::ChangesetsRef;
@@ -24,8 +23,6 @@ use filestore::FilestoreConfigRef;
 use filestore::StoreRequest;
 use futures::stream;
 use futures::Stream;
-use futures::StreamExt;
-use futures::TryStreamExt;
 use futures_stats::TimedTryFutureExt;
 use gix_hash::ObjectId;
 use mononoke_types::hash;
@@ -345,7 +342,7 @@ pub async fn finalize_batch(
         .iter()
         .map(|entry| entry.bcs_id)
         .collect::<Vec<_>>();
-    let batch_size = csids.len();
+    let batch_size = csids.len() as u64;
     let config = repo.repo_derived_data().active_config();
 
     // Derive all types that don't depend on GitCommit
@@ -357,44 +354,9 @@ pub async fn finalize_batch(
             _ => true,
         })
         .collect::<Vec<_>>();
-    // Find the derivation frontier to be resilient to restarts when backfillng wasn't properly
-    // caught up
-    let last_derived = repo
-        .commit_graph()
-        .ancestors_frontier_with(ctx, csids.clone(), |csid| {
-            borrowed!(ctx);
-            cloned!(non_git_types);
-            async move {
-                Ok(stream::iter(non_git_types)
-                    .all(|ddt| async move {
-                        repo.repo_derived_data()
-                            .manager()
-                            .is_derived(ctx, csid, None, ddt.clone())
-                            .await
-                            .unwrap_or(false)
-                    })
-                    .await)
-            }
-        })
-        .await?;
-    repo.commit_graph()
-        .ancestors_difference_segment_slices(
-            ctx,
-            csids.clone(),
-            last_derived.clone(),
-            batch_size as u64,
-        )
-        .await?
-        .try_for_each(|chunk| {
-            borrowed!(non_git_types);
-            async move {
-                repo.repo_derived_data()
-                    .manager()
-                    .derive_bulk(ctx, chunk, None, non_git_types)
-                    .await?;
-                Ok(())
-            }
-        })
+    repo.repo_derived_data()
+        .manager()
+        .derive_bulk(ctx, csids.clone(), None, &non_git_types, Some(batch_size))
         .await?;
 
     // Upload all bonsai git mappings.
@@ -421,7 +383,7 @@ pub async fn finalize_batch(
         .collect::<Vec<_>>();
     repo.repo_derived_data()
         .manager()
-        .derive_bulk(ctx, csids, None, &delta_manifests)
+        .derive_bulk(ctx, csids, None, &delta_manifests, Some(batch_size))
         .await?;
     Ok(())
 }

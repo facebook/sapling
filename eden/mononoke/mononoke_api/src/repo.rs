@@ -11,7 +11,6 @@ use std::fmt;
 use std::hash::Hash;
 use std::hash::Hasher;
 use std::sync::Arc;
-use std::time::Duration;
 use std::time::SystemTime;
 use std::time::UNIX_EPOCH;
 
@@ -1879,7 +1878,8 @@ impl RepoContext {
         ctx: &CoreContext,
         csids: Vec<ChangesetId>,
         derivable_types: &[DerivableType],
-    ) -> Result<Duration, MononokeError> {
+        override_batch_size: Option<u64>,
+    ) -> Result<(), MononokeError> {
         // We don't need to expose rederivation to users of the repo api
         // That's a lower level concept that clients like the derived data backfiller
         // can get straight from the derived data manager
@@ -1888,7 +1888,13 @@ impl RepoContext {
             .repo
             .repo_derived_data()
             .manager()
-            .derive_bulk(ctx, csids, rederivation, derivable_types)
+            .derive_bulk(
+                ctx,
+                csids,
+                rederivation,
+                derivable_types,
+                override_batch_size,
+            )
             .await?)
     }
 

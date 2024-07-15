@@ -65,7 +65,7 @@ Create small repo commits
   get_commit_sync_outcome_with_hint called for 11->10, cs 7e97054c51a17ea2c03cd5184826b6a7556d141d57c5a1641bbd62c0854d1a36, hint CandidateSelectionHint::Only
   Ancestor 2999dcf517994fe94506b62e5a9c54f851abd4c4964f98fdd701c013abd9c0c3 synced successfully as 85776cdc88303208a1cde5c614996a89441d3a9175a6311dda34d178428ba652
   Root fsnode id from 85776cdc88303208a1cde5c614996a89441d3a9175a6311dda34d178428ba652: bd7918272cd69f6f7946d62d5dddf4dc8687c11b5399f2b73539ab6c375cad5a
-  Finished bulk derivation of 2 changesets in * (glob)
+  Finished bulk derivation of 2 changesets
   CommitSyncer{11->10}: unsafe_sync_commit called for 2999dcf517994fe94506b62e5a9c54f851abd4c4964f98fdd701c013abd9c0c3, with hint: CandidateSelectionHint::Only
   get_commit_sync_outcome_with_hint called for 11->10, cs 7e97054c51a17ea2c03cd5184826b6a7556d141d57c5a1641bbd62c0854d1a36, hint CandidateSelectionHint::Only
   changeset 2999dcf517994fe94506b62e5a9c54f851abd4c4964f98fdd701c013abd9c0c3 synced as 85776cdc88303208a1cde5c614996a89441d3a9175a6311dda34d178428ba652 in * (glob)
@@ -149,7 +149,7 @@ Add more commits to small repo
   get_commit_sync_outcome_with_hint called for 11->10, cs 9eeb57261a4dfbeeb2e1c06ef6dc3f83b11e314eb34c598f2d042967b1938583, hint CandidateSelectionHint::Only
   Ancestor d2ba11302a912b679610fd60d7e56dd8f01372c130faa3ae72816d5568b25f3a synced successfully as ccfdf094e4710a77de7b36c4324fa7ee64dafba4067726e383db62273553466b
   Root fsnode id from ccfdf094e4710a77de7b36c4324fa7ee64dafba4067726e383db62273553466b: 7e4e5c99dcb5cfc12e6729bf8a6bac22884d21d2ba1de5d4c00563229863053f
-  Finished bulk derivation of 2 changesets in * (glob)
+  Finished bulk derivation of 2 changesets
   CommitSyncer{11->10}: unsafe_sync_commit called for d2ba11302a912b679610fd60d7e56dd8f01372c130faa3ae72816d5568b25f3a, with hint: CandidateSelectionHint::Only
   get_commit_sync_outcome_with_hint called for 11->10, cs 9eeb57261a4dfbeeb2e1c06ef6dc3f83b11e314eb34c598f2d042967b1938583, hint CandidateSelectionHint::Only
   changeset d2ba11302a912b679610fd60d7e56dd8f01372c130faa3ae72816d5568b25f3a synced as ccfdf094e4710a77de7b36c4324fa7ee64dafba4067726e383db62273553466b in * (glob)

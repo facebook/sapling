@@ -6,7 +6,6 @@
  */
 
 use std::sync::Arc;
-use std::time::Duration;
 
 use basename_suffix_skeleton_manifest_v3::RootBssmV3DirectoryId;
 use blame::RootBlameV2;
@@ -42,7 +41,8 @@ pub trait BulkDerivation {
         csids: Vec<ChangesetId>,
         rederivation: Option<Arc<dyn Rederivation>>,
         derived_data_types: &[DerivableType],
-    ) -> impl std::future::Future<Output = Result<Duration, DerivationError>> + Send;
+        override_batch_size: Option<u64>,
+    ) -> impl std::future::Future<Output = Result<(), DerivationError>> + Send;
     fn is_derived(
         &self,
         ctx: &CoreContext,
@@ -55,151 +55,184 @@ pub trait BulkDerivation {
 impl BulkDerivation for DerivedDataManager {
     /// Derive all the desired derived data types for all the desired csids
     ///
-    /// The provided batch of csids must be in topological
-    /// order.
-    ///
-    /// The caller must have arranged for the dependencies
-    /// and ancestors of the batch to have already been derived for all the derived
-    /// datat types requested.
-    ///
-    /// If any dependency or ancestor is not already derived, an error
-    /// will be returned.
-    /// If a dependent derived data type has not been derived for the batch of csids prior to
-    /// this, it will be derived first. The same pre-conditions apply on the dependent derived data
-    /// type.
+    /// If the dependent types or changesets are not derived yet, they will be derived now
     fn derive_bulk(
         &self,
         ctx: &CoreContext,
         csids: Vec<ChangesetId>,
         rederivation: Option<Arc<dyn Rederivation>>,
         derived_data_types: &[DerivableType],
-    ) -> impl std::future::Future<Output = Result<Duration, DerivationError>> + Send {
+        override_batch_size: Option<u64>,
+    ) -> impl std::future::Future<Output = Result<(), DerivationError>> + Send {
         // Note: We could skip the ones that are dependent on others that are present in this list to
         // avoid racing with ourselves
         stream::iter(derived_data_types)
             .then(move |derived_data_type| {
-                cloned!(csids, rederivation);
+                cloned!(csids, rederivation, override_batch_size);
                 async move {
+                    let csids = &csids;
+                    let derivation_ctx = &self.derivation_context(rederivation);
                     match derived_data_type {
                         DerivableType::Unodes => {
-                            self.derive_exactly_batch::<RootUnodeManifestId>(
+                            self.derive_heads::<RootUnodeManifestId>(
                                 ctx,
+                                derivation_ctx,
                                 csids,
-                                rederivation,
+                                override_batch_size,
                             )
                             .await
                         }
                         DerivableType::BlameV2 => {
-                            self.derive_exactly_batch::<RootBlameV2>(ctx, csids, rederivation)
-                                .await
+                            self.derive_heads::<RootBlameV2>(
+                                ctx,
+                                derivation_ctx,
+                                csids,
+                                override_batch_size,
+                            )
+                            .await
                         }
                         DerivableType::FileNodes => {
-                            self.derive_exactly_batch::<FilenodesOnlyPublic>(
+                            self.derive_heads::<FilenodesOnlyPublic>(
                                 ctx,
+                                derivation_ctx,
                                 csids,
-                                rederivation,
+                                override_batch_size,
                             )
                             .await
                         }
                         DerivableType::HgChangesets => {
-                            self.derive_exactly_batch::<MappedHgChangesetId>(
+                            self.derive_heads::<MappedHgChangesetId>(
                                 ctx,
+                                derivation_ctx,
                                 csids,
-                                rederivation,
+                                override_batch_size,
                             )
                             .await
                         }
                         DerivableType::HgAugmentedManifests => {
-                            self.derive_exactly_batch::<RootHgAugmentedManifestId>(
+                            self.derive_heads::<RootHgAugmentedManifestId>(
                                 ctx,
+                                derivation_ctx,
                                 csids,
-                                rederivation,
+                                override_batch_size,
                             )
                             .await
                         }
                         DerivableType::Fsnodes => {
-                            self.derive_exactly_batch::<RootFsnodeId>(ctx, csids, rederivation)
-                                .await
+                            self.derive_heads::<RootFsnodeId>(
+                                ctx,
+                                derivation_ctx,
+                                csids,
+                                override_batch_size,
+                            )
+                            .await
                         }
                         DerivableType::Fastlog => {
-                            self.derive_exactly_batch::<RootFastlog>(ctx, csids, rederivation)
-                                .await
+                            self.derive_heads::<RootFastlog>(
+                                ctx,
+                                derivation_ctx,
+                                csids,
+                                override_batch_size,
+                            )
+                            .await
                         }
                         DerivableType::DeletedManifests => {
-                            self.derive_exactly_batch::<RootDeletedManifestV2Id>(
+                            self.derive_heads::<RootDeletedManifestV2Id>(
                                 ctx,
+                                derivation_ctx,
                                 csids,
-                                rederivation,
+                                override_batch_size,
                             )
                             .await
                         }
                         DerivableType::SkeletonManifests => {
-                            self.derive_exactly_batch::<RootSkeletonManifestId>(
+                            self.derive_heads::<RootSkeletonManifestId>(
                                 ctx,
+                                derivation_ctx,
                                 csids,
-                                rederivation,
+                                override_batch_size,
                             )
                             .await
                         }
                         DerivableType::ChangesetInfo => {
-                            self.derive_exactly_batch::<ChangesetInfo>(ctx, csids, rederivation)
-                                .await
+                            self.derive_heads::<ChangesetInfo>(
+                                ctx,
+                                derivation_ctx,
+                                csids,
+                                override_batch_size,
+                            )
+                            .await
                         }
                         DerivableType::GitTrees => {
-                            self.derive_exactly_batch::<TreeHandle>(ctx, csids, rederivation)
-                                .await
+                            self.derive_heads::<TreeHandle>(
+                                ctx,
+                                derivation_ctx,
+                                csids,
+                                override_batch_size,
+                            )
+                            .await
                         }
                         DerivableType::GitCommits => {
-                            self.derive_exactly_batch::<MappedGitCommitId>(ctx, csids, rederivation)
-                                .await
+                            self.derive_heads::<MappedGitCommitId>(
+                                ctx,
+                                derivation_ctx,
+                                csids,
+                                override_batch_size,
+                            )
+                            .await
                         }
                         DerivableType::GitDeltaManifests => {
-                            self.derive_exactly_batch::<RootGitDeltaManifestId>(
+                            self.derive_heads::<RootGitDeltaManifestId>(
                                 ctx,
+                                derivation_ctx,
                                 csids,
-                                rederivation,
+                                override_batch_size,
                             )
                             .await
                         }
                         DerivableType::GitDeltaManifestsV2 => {
-                            self.derive_exactly_batch::<RootGitDeltaManifestV2Id>(
+                            self.derive_heads::<RootGitDeltaManifestV2Id>(
                                 ctx,
+                                derivation_ctx,
                                 csids,
-                                rederivation,
+                                override_batch_size,
                             )
                             .await
                         }
                         DerivableType::BssmV3 => {
-                            self.derive_exactly_batch::<RootBssmV3DirectoryId>(
+                            self.derive_heads::<RootBssmV3DirectoryId>(
                                 ctx,
+                                derivation_ctx,
                                 csids,
-                                rederivation,
+                                override_batch_size,
                             )
                             .await
                         }
                         DerivableType::TestManifests => {
-                            self.derive_exactly_batch::<RootTestManifestDirectory>(
+                            self.derive_heads::<RootTestManifestDirectory>(
                                 ctx,
+                                derivation_ctx,
                                 csids,
-                                rederivation,
+                                override_batch_size,
                             )
                             .await
                         }
                         DerivableType::TestShardedManifests => {
-                            self.derive_exactly_batch::<RootTestShardedManifestDirectory>(
+                            self.derive_heads::<RootTestShardedManifestDirectory>(
                                 ctx,
+                                derivation_ctx,
                                 csids,
-                                rederivation,
+                                override_batch_size,
                             )
                             .await
                         }
                     }
                 }
             })
-            .fold(Ok(Duration::ZERO), |acc, x| async move {
+            .fold(Ok(()), |acc, x| async move {
                 match (acc, x) {
-                    (Ok(duration), Ok(acc)) => Ok(duration + acc),
                     (Err(e), _) | (_, Err(e)) => Err(e),
+                    _ => Ok(()),
                 }
             })
     }

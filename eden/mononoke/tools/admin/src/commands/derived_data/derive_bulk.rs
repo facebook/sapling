@@ -88,25 +88,16 @@ pub(super) async fn derive_bulk(
         csids.len(),
         derived_data_types.len()
     );
-    if let Some(chunk_size) = args.chunk_size {
-        for csid_chunk in csids.chunks(chunk_size.get()) {
-            trace!(
-                ctx.logger(),
-                "deriving chunk of {} commits to {}",
-                csid_chunk.len(),
-                csid_chunk.last().expect("chunk should have at least one"),
-            );
-            repo.repo_derived_data()
-                .manager()
-                .derive_bulk(ctx, csid_chunk.to_vec(), None, &derived_data_types)
-                .await?;
-        }
-    } else {
-        repo.repo_derived_data()
-            .manager()
-            .derive_bulk(ctx, csids, None, &derived_data_types)
-            .await?;
-    }
+    repo.repo_derived_data()
+        .manager()
+        .derive_bulk(
+            ctx,
+            csids,
+            None,
+            &derived_data_types,
+            args.chunk_size.map(|chunk_size| chunk_size.get() as u64),
+        )
+        .await?;
 
     Ok(())
 }

@@ -8,7 +8,6 @@
 use std::collections::BTreeMap;
 
 use bookmarks::BookmarkKey;
-use borrowed::borrowed;
 use bytes::Bytes;
 use context::CoreContext;
 use derived_data_manager::DerivableType;
@@ -497,7 +496,8 @@ impl SourceControlServiceImpl {
                 .iter()
                 .map(DerivableType::from_request)
                 .collect::<Result<Vec<_>, _>>()?;
-            repo.derive_bulk(&ctx, csids, &derived_data_types).await?;
+            repo.derive_bulk(&ctx, csids, &derived_data_types, None)
+                .await?;
         }
 
         // If you ask for a git identity back, then we'll assume that you supplied one to us
@@ -774,52 +774,9 @@ impl SourceControlServiceImpl {
             .collect::<Result<Vec<_>, _>>()?;
         let derived_data_type = DerivableType::from_request(&params.derived_data_type)?;
 
-        // Find any ancestor that's not derived
-        // * First, find the last derived changesets that are ancestors of the changesets we want
-        //   to derive
-        let last_derived = repo
-            .commit_graph()
-            .ancestors_frontier_with(&ctx, csids.clone(), |csid| {
-                borrowed!(ctx, repo, derived_data_type);
-                async move {
-                    repo.is_derived(ctx, csid, *derived_data_type)
-                        .await
-                        .map_err(|e| e.into())
-                }
-            })
-            .await
-            .map_err(Into::<MononokeError>::into)?;
-
         const CONCURRENCY: u64 = 1000;
-        // * Then, find all underived changesets since the ones that we just identified as the last
-        //   derived changesets.
-        // * This commit graph API endpoint gives us a topologically sorted stream of topologically
-        //   sorted chunks where we now that a chunk will never overlap two segments in the commit
-        //   graph.
-        //   This way to split the commits maximizes the consistency of chunk sizes.
-        //   This means that we will have even chunks that don't cross merge commit boundaries,
-        //   which is the most efficient way to call `derive_bulk` as that would have to cut chunks
-        //   at merge boundaries if this property wasn't provided, leading to chunks of uneven size
-        //   and variability in the gains from batching.
-        repo.commit_graph()
-            .ancestors_difference_segment_slices(
-                &ctx,
-                csids.clone(),
-                last_derived.clone(),
-                CONCURRENCY,
-            )
-            .await
-            .map_err(Into::<MononokeError>::into)?
-            .try_for_each(|chunk| {
-                borrowed!(ctx, repo, derived_data_type);
-                async move {
-                    repo.derive_bulk(ctx, chunk.to_vec(), &[*derived_data_type])
-                        .await?;
-                    Ok(())
-                }
-            })
-            .await
-            .map_err(Into::<MononokeError>::into)?;
+        repo.derive_bulk(&ctx, csids, &[derived_data_type], Some(CONCURRENCY))
+            .await?;
 
         Ok(thrift::RepoPrepareCommitsResponse {
             ..Default::default()
