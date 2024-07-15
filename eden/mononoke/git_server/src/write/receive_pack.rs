@@ -19,6 +19,7 @@ use hyper::Response;
 use packetline::encode::flush_to_write;
 use packetline::encode::write_text_packetline;
 use protocol::pack_processor::parse_pack;
+use repo_blobstore::RepoBlobstoreArc;
 
 use crate::command::Command;
 use crate::command::RequestCommand;
@@ -59,7 +60,7 @@ async fn push<'a>(
     if let Command::Push(push_args) = request_command.command {
         let (ctx, blobstore) = (
             &request_context.ctx,
-            request_context.repo.repo_blobstore.clone(),
+            request_context.repo.repo_blobstore_arc().clone(),
         );
         // Parse the packfile provided as part of the push and verify that its valid
         let parsed_objects = parse_pack(push_args.pack_file, ctx, blobstore.clone()).await?;

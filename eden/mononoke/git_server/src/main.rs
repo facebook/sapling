@@ -20,28 +20,20 @@ use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
-use bonsai_git_mapping::BonsaiGitMapping;
-use bonsai_tag_mapping::BonsaiTagMapping;
-use bookmarks::Bookmarks;
-use bookmarks_cache::BookmarksCache;
-use changesets::Changesets;
 use clap::Parser;
 use clientinfo::ClientEntryPoint;
 use cloned::cloned;
 use cmdlib_caching::CachelibSettings;
-use commit_graph::CommitGraph;
 use connection_security_checker::ConnectionSecurityChecker;
 use environment::BookmarkCacheDerivedData;
 use environment::BookmarkCacheKind;
 use environment::BookmarkCacheOptions;
 use executor_lib::args::ShardedExecutorArgs;
 use fbinit::FacebookInit;
-use filestore::FilestoreConfig;
 use futures::channel::oneshot;
 use futures::future::try_select;
 use futures::pin_mut;
 use futures::TryFutureExt;
-use git_symbolic_refs::GitSymbolicRefs;
 use gotham_ext::handler::MononokeHttpHandler;
 use gotham_ext::middleware::ConfigInfoMiddleware;
 use gotham_ext::middleware::LoadMiddleware;
@@ -56,8 +48,8 @@ use gotham_ext::middleware::TlsSessionDataMiddleware;
 use gotham_ext::serve;
 use http::HeaderValue;
 use metaconfig_parser::RepoConfigs;
-use metaconfig_types::RepoConfig;
 use metaconfig_types::ShardedService;
+use mononoke_api::Repo;
 use mononoke_app::args::McrouterAppExtension;
 use mononoke_app::args::ReadonlyArgs;
 use mononoke_app::args::RepoFilterAppExtension;
@@ -69,10 +61,6 @@ use mononoke_app::fb303::Fb303AppExtension;
 use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
 use mononoke_app::MononokeReposManager;
-use repo_blobstore::RepoBlobstore;
-use repo_derived_data::RepoDerivedData;
-use repo_identity::RepoIdentity;
-use repo_permission_checker::RepoPermissionChecker;
 use slog::info;
 use tokio::net::TcpListener;
 
@@ -102,52 +90,6 @@ const SM_CLEANUP_TIMEOUT_SECS: u64 = 60;
 // object size results in more entries and possibly higher idle memory usage.
 // More info: https://fburl.com/wiki/i78i3uzk
 const CACHE_OBJECT_SIZE: usize = 256 * 1024;
-
-#[facet::container]
-#[derive(Clone)]
-pub struct Repo {
-    #[facet]
-    repo_identity: RepoIdentity,
-
-    #[init(repo_identity.name().to_string())]
-    name: String,
-
-    #[facet]
-    repo_config: RepoConfig,
-
-    #[facet]
-    repo_blobstore: RepoBlobstore,
-
-    #[facet]
-    bookmarks: dyn Bookmarks,
-
-    #[facet]
-    bonsai_tag_mapping: dyn BonsaiTagMapping,
-
-    #[facet]
-    bonsai_git_mapping: dyn BonsaiGitMapping,
-
-    #[facet]
-    repo_derived_data: RepoDerivedData,
-
-    #[facet]
-    git_symbolic_refs: dyn GitSymbolicRefs,
-
-    #[facet]
-    commit_graph: CommitGraph,
-
-    #[facet]
-    repo_permission_checker: dyn RepoPermissionChecker,
-
-    #[facet]
-    pub warm_bookmarks_cache: dyn BookmarksCache,
-
-    #[facet]
-    pub changesets: dyn Changesets,
-
-    #[facet]
-    pub filestore_config: FilestoreConfig,
-}
 
 /// Mononoke Git Server
 #[derive(Parser)]

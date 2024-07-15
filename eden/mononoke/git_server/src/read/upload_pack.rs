@@ -10,6 +10,7 @@ use std::sync::Arc;
 use anyhow::Context;
 use anyhow::Error;
 use async_stream::try_stream;
+use bonsai_git_mapping::BonsaiGitMappingRef;
 use bonsai_git_mapping::BonsaisOrGitShas;
 use bytes::Bytes;
 use futures::future::try_join4;
@@ -91,7 +92,7 @@ async fn pack_header() -> Result<Bytes, Error> {
 }
 
 fn concurrency(context: &RepositoryRequestContext) -> PackfileConcurrency {
-    match &context.repo.repo_config.git_concurrency {
+    match &context.repo.inner_repo().repo_config.git_concurrency {
         Some(concurrency) => PackfileConcurrency::new(
             concurrency.trees_and_blobs,
             concurrency.commits,
@@ -115,7 +116,7 @@ async fn acknowledgements(
     let git_shas = BonsaisOrGitShas::from_object_ids(args.haves.iter())?;
     let entries = context
         .repo
-        .bonsai_git_mapping
+        .bonsai_git_mapping()
         .get(&context.ctx, git_shas)
         .await
         .with_context(|| {
