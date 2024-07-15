@@ -489,17 +489,6 @@ impl SourceControlServiceImpl {
             .create_changeset_stack(stack_parents, info_stack, changes_stack, bubble)
             .await?;
 
-        // Prepare derived data if we were asked to.
-        if let Some(prepare_types) = &params.prepare_derived_data_types {
-            let csids = stack.iter().map(|c| c.id()).collect::<Vec<_>>();
-            let derived_data_types = prepare_types
-                .iter()
-                .map(DerivableType::from_request)
-                .collect::<Result<Vec<_>, _>>()?;
-            repo.derive_bulk(&ctx, csids, &derived_data_types, None)
-                .await?;
-        }
-
         // If you ask for a git identity back, then we'll assume that you supplied one to us
         // and set it. Later, when we can derive a git commit hash, this'll become more
         // open, because we'll only do the check if you ask for a hash different to the
@@ -512,6 +501,19 @@ impl SourceControlServiceImpl {
                 repo.set_git_mapping_from_changeset(changeset).await?;
             }
         }
+
+        // Prepare derived data if we were asked to, excluding Git types
+        if let Some(prepare_types) = &params.prepare_derived_data_types {
+            let csids = stack.iter().map(|c| c.id()).collect::<Vec<_>>();
+            let derived_data_types = prepare_types
+                .iter()
+                .map(DerivableType::from_request)
+                .collect::<Result<Vec<_>, _>>()?;
+            repo.derive_bulk(&ctx, csids, &derived_data_types, None)
+                .await
+                .context("Deriving non Git types")?;
+        }
+
         let identity_schemes = &params.identity_schemes;
         let commit_ids = stream::iter(stack.into_iter().map(|changeset| async move {
             map_commit_identity(&changeset, identity_schemes).await
