@@ -320,6 +320,18 @@ impl VFS {
         Ok(())
     }
 
+    /// Rewrite over a symlink that already exists.
+    ///
+    /// Care is taken to not accidentally write _through_ the symlink.
+    pub fn rewrite_symlink(&self, path: &RepoPath, data: &[u8], flag: UpdateFlag) -> Result<usize> {
+        if !cfg!(unix) {
+            // unix supports O_NOFOLLOW when opening. For Windows, just remove the file first.
+            let filepath = self.inner.auditor.audit(path)?;
+            self.remove_keep_path(&filepath)?;
+        }
+        self.write(path, data, flag)
+    }
+
     // Reads file content
     pub fn read(&self, path: &RepoPath) -> Result<Bytes> {
         Ok(self.read_with_metadata(path)?.0)

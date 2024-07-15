@@ -18,6 +18,7 @@ use std::sync::Arc;
 use std::thread;
 use std::time::SystemTime;
 
+use actions::UpdateAction;
 use anyhow::anyhow;
 use anyhow::bail;
 use anyhow::format_err;
@@ -128,6 +129,8 @@ struct UpdateContentAction {
     content_hgid: HgId,
     /// New file type.
     file_type: FileType,
+    /// File type of existing file, if any.
+    from_file_type: Option<FileType>,
 }
 
 /// Only update metadata on the file, do not update content
@@ -155,7 +158,7 @@ pub struct CheckoutStats {
 }
 
 enum Work {
-    Write(Key, Bytes, UpdateFlag),
+    Write(Key, Bytes, UpdateFlag, Option<UpdateFlag>),
     SetExec(RepoPathBuf, bool),
     Remove(RepoPathBuf),
 }
@@ -202,7 +205,7 @@ impl CheckoutPlan {
                     update_meta.push(UpdateMetaAction { path, set_x_flag })
                 }
                 Action::Update(up) => {
-                    update_content.insert(path, UpdateContentAction::new(up.to));
+                    update_content.insert(path, UpdateContentAction::new(up));
                 }
             }
         }
@@ -298,8 +301,13 @@ impl CheckoutPlan {
                     let mut bar_count = 0;
                     while let Ok(work) = rx.recv() {
                         let result = match &work {
-                            Work::Write(key, data, flag) => {
-                                vfs.write(&key.path, data, *flag).map(|_| ())
+                            Work::Write(key, data, flag, from_flag) => {
+                                if matches!(from_flag, Some(UpdateFlag::Symlink)) {
+                                    // Take special care if we are writing over a symlink.
+                                    vfs.rewrite_symlink(&key.path, data, *flag).map(|_| ())
+                                } else {
+                                    vfs.write(&key.path, data, *flag).map(|_| ())
+                                }
                             }
                             Work::SetExec(path, exec) => {
                                 vfs.set_executable(path, *exec).map(|_| ())
@@ -352,7 +360,12 @@ impl CheckoutPlan {
                     .get(&key)
                     .ok_or_else(|| format_err!("Storage returned unknown key {}", key))?;
                 let flag = type_to_flag(&action.file_type);
-                tx.send(Work::Write(key, data, flag))?;
+                tx.send(Work::Write(
+                    key,
+                    data,
+                    flag,
+                    action.from_file_type.as_ref().map(type_to_flag),
+                ))?;
             }
             drop(tx);
 
@@ -379,7 +392,7 @@ impl CheckoutPlan {
                     }
                     Some(Work::Remove(path)) => stats.remove_failed.push((path, err)),
                     Some(Work::SetExec(path, _)) => stats.set_exec_failed.push((path, err)),
-                    Some(Work::Write(key, _, _)) => stats.write_failed.push((key.path, err)),
+                    Some(Work::Write(key, ..)) => stats.write_failed.push((key.path, err)),
                 }
             }
 
@@ -907,10 +920,11 @@ fn type_to_flag(ft: &FileType) -> UpdateFlag {
 }
 
 impl UpdateContentAction {
-    pub fn new(meta: FileMetadata) -> Self {
+    pub fn new(up: UpdateAction) -> Self {
         Self {
-            content_hgid: meta.hgid,
-            file_type: meta.file_type,
+            content_hgid: up.to.hgid,
+            file_type: up.to.file_type,
+            from_file_type: up.from.map(|from| from.file_type),
         }
     }
 }

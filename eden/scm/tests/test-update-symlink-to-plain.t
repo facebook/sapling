@@ -2,9 +2,8 @@
 
 #require symlink no-eden
 
-#testcases legacyupdater rustupdater
-
   $ configure modern
+  $ setconfig workingcopy.rust-checkout=true
 
   $ newserver server1
   $ clone server1 client
