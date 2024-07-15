@@ -116,22 +116,36 @@ impl DerivedDataManager {
         Ok(())
     }
 
-    /// Find which ancestors of `csid` are not yet derived, and necessary for
-    /// the derivation of `csid` to complete, and derive them.
-    async fn derive_underived<Derivable>(
+    /// Find which ancestors of `heads` are not yet derived, and necessary for
+    /// the derivation of `heads` to complete, and derive them.
+    /// The derivation will be batched. Unless otherwise configured here with `override_batch_size`, the
+    /// batch_size will be read from the configuration for this derived data type.
+    /// Dependent types will be derived ahead of time.
+    /// Return how many changesets were actually derived to derive the heads.
+    pub async fn derive_heads<Derivable>(
         &self,
         ctx: &CoreContext,
-        derivation_ctx: Arc<DerivationContext>,
-        target_csid: ChangesetId,
-    ) -> Result<DerivationOutcome<Derivable>, DerivationError>
+        derivation_ctx: &DerivationContext,
+        heads: &[ChangesetId],
+        override_batch_size: Option<u64>,
+    ) -> Result<u64, DerivationError>
     where
         Derivable: BonsaiDerivable,
     {
+        Derivable::Dependencies::derive_heads(
+            self,
+            ctx,
+            derivation_ctx,
+            heads,
+            override_batch_size,
+            &mut HashSet::new(),
+        )
+        .await
+        .context("failed to derive dependent types")?;
         let last_derived = self
             .commit_graph()
-            .ancestors_frontier_with(ctx, vec![target_csid], |csid| {
-                borrowed!(ctx);
-                cloned!(derivation_ctx);
+            .ancestors_frontier_with(ctx, heads.to_vec(), |csid| {
+                borrowed!(ctx, derivation_ctx);
                 async move {
                     Ok(derivation_ctx
                         .fetch_derived::<Derivable>(ctx, csid)
@@ -141,17 +155,17 @@ impl DerivedDataManager {
             })
             .await
             .map_err(Into::<DerivationError>::into)?;
-        let batch_size = derivation_ctx.batch_size::<Derivable>();
+        let batch_size = override_batch_size.unwrap_or(derivation_ctx.batch_size::<Derivable>());
         let count = self
             .commit_graph()
-            .ancestors_difference_segments(ctx, vec![target_csid], last_derived.clone())
+            .ancestors_difference_segments(ctx, heads.to_vec(), last_derived.clone())
             .await?
             .into_iter()
             .map(|segment| segment.length)
             .sum();
         let rederivation = derivation_ctx.rederivation.clone();
         self.commit_graph()
-            .ancestors_difference_segment_slices(ctx, vec![target_csid], last_derived, batch_size)
+            .ancestors_difference_segment_slices(ctx, heads.to_vec(), last_derived, batch_size)
             .await
             .map_err(Into::<DerivationError>::into)?
             .try_for_each(|batch| {
@@ -165,6 +179,23 @@ impl DerivedDataManager {
             })
             .await
             .map_err(Into::<DerivationError>::into)?;
+        Ok(count)
+    }
+
+    /// Find which ancestors of `csid` are not yet derived, and necessary for
+    /// the derivation of `csid` to complete, and derive them.
+    async fn derive_underived<Derivable>(
+        &self,
+        ctx: &CoreContext,
+        derivation_ctx: Arc<DerivationContext>,
+        target_csid: ChangesetId,
+    ) -> Result<DerivationOutcome<Derivable>, DerivationError>
+    where
+        Derivable: BonsaiDerivable,
+    {
+        let count = self
+            .derive_heads::<Derivable>(ctx, &derivation_ctx, &[target_csid], None)
+            .await?;
         let derived = Derivable::fetch(ctx, &derivation_ctx, target_csid)
             .await?
             .ok_or_else(|| anyhow!("We just derived it! Fetching it should not return None"))?;
@@ -658,39 +689,19 @@ impl DerivedDataManager {
             ))?;
 
         // All heads should have their dependent data types derived.
-        // Let's check if that's the case
-        let dependency_checks = async move {
-            stream::iter(heads)
-                .map(|csid| async move {
-                    Derivable::Dependencies::check_dependencies(
-                        ctx,
-                        derivation_ctx_ref,
-                        csid,
-                        &mut HashSet::new(),
-                    )
-                    .await
-                })
-                .buffered(100)
-                .try_for_each(|_| async { Ok(()) })
-                .await
-                .context("a batch dependency has not been derived")
-        };
-        // If dependent derived data types are not derived yet, let's derive them
-        let dependent_types_duration = if let Err(e) = dependency_checks.await {
-            // We will derive batch for ourselves and all of our dependencies
-            Derivable::Dependencies::derive_exactly_batch_dependencies(
-                self,
-                ctx,
-                csids,
-                rederivation.clone(),
-                &mut HashSet::new(),
-            )
-            .await
-            .context("failed to derive batch dependencies")
-            .context(e)?
-        } else {
-            Duration::ZERO
-        };
+        // Let's make sure that's the case
+        let (dependent_types_stats, _) = Derivable::Dependencies::derive_heads(
+            self,
+            ctx,
+            derivation_ctx_ref,
+            &heads.into_iter().collect::<Vec<_>>(),
+            None,
+            &mut HashSet::new(),
+        )
+        .try_timed()
+        .await
+        .context("failed to derive batch dependencies")?;
+        let dependent_types_duration = dependent_types_stats.completion_time;
 
         let ctx = ctx.clone_and_reset();
         let ctx = self.set_derivation_session_class(ctx.clone());

@@ -151,10 +151,10 @@
   Caused by:
       0: Error while calculating object count
       1: Error in deriving RootGitDeltaManifestId for changeset ChangesetId(Blake2(4cd77220f6dcf9154b8cd4dc0f33b72b19a765d73a770cce612ee094191e7d9e))
-      2: a batch dependency has not been derived
-      3: failed to derive batch dependencies
       *: a batch dependency has not been derived (glob) (?)
       *: failed to derive batch dependencies (glob) (?)
+      2: failed to derive dependent types
+      3: failed to derive dependent types
       *: failed to derive git_trees batch (start:032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044, end:4cd77220f6dcf9154b8cd4dc0f33b72b19a765d73a770cce612ee094191e7d9e) (glob)
       *: Raw Git tree with hash fc59e10f3c37ad53e0af6882e382f0169eae51ac should have been present already (glob)
       *: The object corresponding to object ID fc59e10f3c37ad53e0af6882e382f0169eae51ac or its packfile item does not exist in the data store (glob)

@@ -10,7 +10,6 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::fmt::Debug;
 use std::sync::Arc;
-use std::time::Duration;
 
 use anyhow::anyhow;
 use anyhow::Result;
@@ -208,13 +207,14 @@ pub trait DerivationDependencies {
     ) -> Result<()>;
     /// Derive all dependent data types for this batch of commits.
     /// The same pre-conditions apply as in derive.rs
-    async fn derive_exactly_batch_dependencies(
+    async fn derive_heads(
         ddm: &DerivedDataManager,
         ctx: &CoreContext,
-        csid: Vec<ChangesetId>,
-        rederivation: Option<Arc<dyn Rederivation>>,
+        derivation: &DerivationContext,
+        heads: &[ChangesetId],
+        override_batch_size: Option<u64>,
         visited: &mut HashSet<TypeId>,
-    ) -> Result<Duration, DerivationError>;
+    ) -> Result<(), DerivationError>;
     /// Derive all predecessor data types for this batch of commits.
     /// The same pre-conditions apply as in derive.rs
     async fn derive_predecessors(
@@ -236,14 +236,15 @@ impl DerivationDependencies for () {
     ) -> Result<()> {
         Ok(())
     }
-    async fn derive_exactly_batch_dependencies(
+    async fn derive_heads(
         _ddm: &DerivedDataManager,
         _ctx: &CoreContext,
-        _csid: Vec<ChangesetId>,
-        _rederivation: Option<Arc<dyn Rederivation>>,
+        _derivation_ctx: &DerivationContext,
+        _heads: &[ChangesetId],
+        _override_batch_size: Option<u64>,
         _visited: &mut HashSet<TypeId>,
-    ) -> Result<Duration, DerivationError> {
-        Ok(Duration::ZERO)
+    ) -> Result<(), DerivationError> {
+        Ok(())
     }
     async fn derive_predecessors(
         _ddm: &DerivedDataManager,
@@ -280,23 +281,39 @@ where
             Rest::check_dependencies(ctx, derivation_ctx, csid, visited).await
         }
     }
-    async fn derive_exactly_batch_dependencies(
+    async fn derive_heads(
         ddm: &DerivedDataManager,
         ctx: &CoreContext,
-        csid: Vec<ChangesetId>,
-        rederivation: Option<Arc<dyn Rederivation>>,
+        derivation_ctx: &DerivationContext,
+        heads: &[ChangesetId],
+        override_batch_size: Option<u64>,
         visited: &mut HashSet<TypeId>,
-    ) -> Result<Duration, DerivationError> {
+    ) -> Result<(), DerivationError> {
         let type_id = TypeId::of::<Derivable>();
         if visited.insert(type_id) {
-            let res = try_join(
-                ddm.derive_exactly_batch::<Derivable>(ctx, csid.clone(), rederivation.clone()),
-                Rest::derive_exactly_batch_dependencies(ddm, ctx, csid, rederivation, visited),
+            try_join(
+                ddm.derive_heads::<Derivable>(ctx, derivation_ctx, heads, override_batch_size),
+                Rest::derive_heads(
+                    ddm,
+                    ctx,
+                    derivation_ctx,
+                    heads,
+                    override_batch_size,
+                    visited,
+                ),
             )
             .await?;
-            Ok(res.0 + res.1)
+            Ok(())
         } else {
-            Rest::derive_exactly_batch_dependencies(ddm, ctx, csid, rederivation, visited).await
+            Rest::derive_heads(
+                ddm,
+                ctx,
+                derivation_ctx,
+                heads,
+                override_batch_size,
+                visited,
+            )
+            .await
         }
     }
     async fn derive_predecessors(
