@@ -70,7 +70,7 @@ impl ChangesetHook for BlockMergeCommitsHook {
 
         match (is_bypass_tag, is_nonbypassable_bookmark) {
             (true, true) => Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
-                "Merge commit is not allowed on this bookmakr despite the bypass tag in commit message",
+                "Merge commit is not allowed on this bookmark despite the bypass tag in commit message",
                 "This bookmark can't have merge commits".to_string(),
             ))),
             (false, _) => Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
