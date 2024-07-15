@@ -40,6 +40,7 @@ use fastlog::RootFastlog;
 use fbinit::FacebookInit;
 use filenodes::FilenodesArc;
 use filenodes_derivation::FilenodesOnlyPublic;
+use filestore::FilestoreConfigRef;
 use fsnodes::RootFsnodeId;
 use futures::future;
 use futures::future::ready;
@@ -180,7 +181,8 @@ pub trait Repo = RepoDerivedDataArc
     + BonsaiGitMappingArc
     + FilenodesArc
     + RepoBlobstoreRef
-    + CommitGraphArc;
+    + CommitGraphArc
+    + FilestoreConfigRef;
 
 pub fn derive_data_for_csids(
     ctx: &CoreContext,
@@ -309,6 +311,7 @@ impl<Derivable> DerivedUtilsFromManager<Derivable> {
             repo.bonsai_git_mapping_arc(),
             repo.filenodes_arc(),
             repo.repo_blobstore().clone(),
+            *repo.filestore_config(),
             lease,
             scuba,
             config_name,

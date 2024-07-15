@@ -29,6 +29,7 @@ use clap::Parser;
 use clap::Subcommand;
 use commit_graph::CommitGraph;
 use filenodes::Filenodes;
+use filestore::FilestoreConfig;
 use mononoke_app::args::RepoArgs;
 use mononoke_app::MononokeApp;
 use repo_blobstore::RepoBlobstore;
@@ -76,6 +77,8 @@ struct Repo {
     commit_graph: CommitGraph,
     #[facet]
     filenodes: dyn Filenodes,
+    #[facet]
+    filestore_config: FilestoreConfig,
 }
 
 /// Request information about derived data

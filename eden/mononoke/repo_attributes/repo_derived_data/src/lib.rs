@@ -24,6 +24,7 @@ use derived_data_manager::DerivationError;
 use derived_data_manager::DerivedDataManager;
 use derived_data_remote::DerivationClient;
 use filenodes::Filenodes;
+use filestore::FilestoreConfig;
 use metaconfig_types::DerivedDataConfig;
 use metaconfig_types::DerivedDataTypesConfig;
 use mononoke_types::ChangesetId;
@@ -52,6 +53,7 @@ impl RepoDerivedData {
         bonsai_git_mapping: Arc<dyn BonsaiGitMapping>,
         filenodes: Arc<dyn Filenodes>,
         repo_blobstore: RepoBlobstore,
+        filestore_config: FilestoreConfig,
         lease: Arc<dyn LeaseOps>,
         scuba: MononokeScubaSampleBuilder,
         config: DerivedDataConfig,
@@ -67,6 +69,7 @@ impl RepoDerivedData {
             bonsai_git_mapping,
             filenodes,
             repo_blobstore,
+            filestore_config,
             lease,
             scuba,
             config_name.clone(),

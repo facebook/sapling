@@ -619,6 +619,7 @@ impl TestRepoFactory {
         bonsai_git_mapping: &ArcBonsaiGitMapping,
         filenodes: &ArcFilenodes,
         repo_blobstore: &ArcRepoBlobstore,
+        filestore_config: &ArcFilestoreConfig,
     ) -> Result<ArcRepoDerivedData> {
         let lease = self.derived_data_lease.as_ref().map_or_else(
             || Arc::new(InProcessLease::new()) as Arc<dyn LeaseOps>,
@@ -633,6 +634,7 @@ impl TestRepoFactory {
             bonsai_git_mapping.clone(),
             filenodes.clone(),
             repo_blobstore.as_ref().clone(),
+            **filestore_config,
             lease,
             MononokeScubaSampleBuilder::with_discard(),
             repo_config.derived_data_config.clone(),

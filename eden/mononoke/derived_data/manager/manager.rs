@@ -17,6 +17,7 @@ use context::CoreContext;
 use derived_data_remote::DerivationClient;
 use ephemeral_blobstore::BubbleId;
 use filenodes::Filenodes;
+use filestore::FilestoreConfig;
 use metaconfig_types::DerivedDataTypesConfig;
 use mononoke_types::ChangesetId;
 use mononoke_types::RepositoryId;
@@ -93,6 +94,7 @@ impl DerivedDataManager {
         bonsai_git_mapping: Arc<dyn BonsaiGitMapping>,
         filenodes: Arc<dyn Filenodes>,
         repo_blobstore: RepoBlobstore,
+        filestore_config: FilestoreConfig,
         lease: Arc<dyn LeaseOps>,
         scuba: MononokeScubaSampleBuilder,
         config_name: String,
@@ -119,6 +121,7 @@ impl DerivedDataManager {
                     config_name,
                     config,
                     repo_blobstore.boxed(),
+                    filestore_config,
                 ),
             }),
         }

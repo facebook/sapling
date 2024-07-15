@@ -17,6 +17,7 @@ use bonsai_hg_mapping::BonsaiHgMapping;
 use cacheblob::MemWritesBlobstore;
 use context::CoreContext;
 use filenodes::Filenodes;
+use filestore::FilestoreConfig;
 use futures::future::try_join_all;
 use metaconfig_types::DerivedDataTypesConfig;
 use mononoke_types::BonsaiChangeset;
@@ -39,6 +40,7 @@ pub struct DerivationContext {
     config: DerivedDataTypesConfig,
     pub(crate) rederivation: Option<Arc<dyn Rederivation>>,
     pub(crate) blobstore: Arc<dyn Blobstore>,
+    filestore_config: FilestoreConfig,
 
     /// Write cache layered over the blobstore.  This is the same object
     /// with two views, so we can return a reference to the `Arc<dyn
@@ -57,6 +59,7 @@ impl DerivationContext {
         config_name: String,
         config: DerivedDataTypesConfig,
         blobstore: Arc<dyn Blobstore>,
+        filestore_config: FilestoreConfig,
     ) -> Self {
         // Start with None. Use with_rederivation later if needed
         let rederivation = None;
@@ -68,6 +71,7 @@ impl DerivationContext {
             config,
             rederivation,
             blobstore,
+            filestore_config,
             blobstore_write_cache: None,
         }
     }
@@ -234,6 +238,10 @@ impl DerivationContext {
             Some((blobstore, _)) => blobstore,
             None => &self.blobstore,
         }
+    }
+
+    pub fn filestore_config(&self) -> FilestoreConfig {
+        self.filestore_config
     }
 
     pub fn bonsai_hg_mapping(&self) -> Result<&dyn BonsaiHgMapping> {

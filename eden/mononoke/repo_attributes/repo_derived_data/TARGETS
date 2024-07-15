@@ -18,6 +18,7 @@ rust_library(
         "//eden/mononoke/derived_data:derived_data_manager",
         "//eden/mononoke/derived_data:derived_data_remote",
         "//eden/mononoke/filenodes:filenodes",
+        "//eden/mononoke/filestore:filestore",
         "//eden/mononoke/metaconfig:metaconfig_types",
         "//eden/mononoke/mononoke_types:mononoke_types",
         "//eden/mononoke/repo_attributes/commit_graph/commit_graph:commit_graph",

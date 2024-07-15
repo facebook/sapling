@@ -116,6 +116,8 @@ impl InMemoryRepo {
 
         let derivation_service_client = None;
 
+        let filestore_config = repo.filestore_config().clone();
+
         let repo_derived_data = RepoDerivedData::new(
             repo_identity.id(),
             repo_identity.name().to_string(),
@@ -125,13 +127,13 @@ impl InMemoryRepo {
             bonsai_git_mapping,
             filenodes,
             mem_writes_repo_blobstore.clone(),
+            filestore_config,
             lease,
             scuba,
             derived_data_config,
             derivation_service_client,
         )?;
 
-        let filestore_config = repo.filestore_config().clone();
         Ok(Self {
             repo_blobstore: mem_writes_repo_blobstore.into(),
             derived_data: repo_derived_data.into(),

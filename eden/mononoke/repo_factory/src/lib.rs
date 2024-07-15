@@ -1177,6 +1177,7 @@ impl RepoFactory {
         bonsai_git_mapping: &ArcBonsaiGitMapping,
         filenodes: &ArcFilenodes,
         repo_blobstore: &ArcRepoBlobstore,
+        filestore_config: &ArcFilestoreConfig,
     ) -> Result<ArcRepoDerivedData> {
         let config = repo_config.derived_data_config.clone();
         let lease = self.lease(DERIVED_DATA_LEASE)?;
@@ -1196,6 +1197,7 @@ impl RepoFactory {
             bonsai_git_mapping.clone(),
             filenodes.clone(),
             repo_blobstore.as_ref().clone(),
+            **filestore_config,
             lease,
             scuba,
             config,
@@ -1315,6 +1317,7 @@ impl RepoFactory {
         bonsai_git_mapping: &ArcBonsaiGitMapping,
         filenodes: &ArcFilenodes,
         repo_blobstore: &ArcRepoBlobstore,
+        filestore_config: &FilestoreConfig,
     ) -> Result<ArcRepoDerivationQueues> {
         #[cfg(not(fbcode_build))]
         {
@@ -1326,6 +1329,7 @@ impl RepoFactory {
                 bonsai_hg_mapping,
                 bonsai_git_mapping,
                 repo_blobstore,
+                filestore_config,
                 filenodes,
             );
             anyhow::bail!("RepoDerivationQueues is not supported in non-fbcode builds")
@@ -1353,6 +1357,7 @@ impl RepoFactory {
                     bonsai_git_mapping.clone(),
                     filenodes.clone(),
                     repo_blobstore.as_ref().clone(),
+                    *filestore_config,
                     lease,
                     derived_data_scuba,
                     config,
