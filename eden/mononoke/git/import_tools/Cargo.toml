@@ -36,6 +36,7 @@ hyper = { version = "0.14.26", features = ["client", "http1", "http2", "stream"]
 hyper-openssl = "0.9"
 linked-hash-map = { version = "0.5", features = ["serde_impl"] }
 manifest = { version = "0.1.0", path = "../../manifest" }
+mononoke_api = { version = "0.1.0", path = "../../mononoke_api" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 rand = { version = "0.8", features = ["small_rng"] }
 repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }

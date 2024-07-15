@@ -38,6 +38,7 @@ rust_library(
         "//eden/mononoke/git/git_types:git_types",
         "//eden/mononoke/git_symbolic_refs:git_symbolic_refs",
         "//eden/mononoke/manifest:manifest",
+        "//eden/mononoke/mononoke_api:mononoke_api",
         "//eden/mononoke/mononoke_types:mononoke_types",
         "//eden/mononoke/repo_attributes/commit_graph/commit_graph:commit_graph",
         "//eden/mononoke/repo_attributes/repo_derived_data:repo_derived_data",

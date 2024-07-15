@@ -34,8 +34,10 @@ use fbinit::FacebookInit;
 use futures::future;
 use import_tools::create_changeset_for_annotated_tag;
 use import_tools::import_tree_as_single_bonsai_changeset;
+use import_tools::set_bookmark;
 use import_tools::upload_git_tag;
 use import_tools::BackfillDerivation;
+use import_tools::BookmarkOperation;
 use import_tools::GitRepoReader;
 use import_tools::GitimportPreferences;
 use import_tools::GitimportTarget;
@@ -441,52 +443,19 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
                     .await
                     .with_context(|| format!("failed to resolve bookmark {name}"))?
                     .map(|context| context.id());
-                match old_changeset {
-                    // The bookmark already exists. Instead of creating it, we need to move it.
-                    Some(old_changeset) => {
-                        if old_changeset != final_changeset {
-                            let allow_non_fast_forward = true;
-                            repo_context
-                                .move_bookmark(
-                                    &bookmark_key,
-                                    final_changeset,
-                                    Some(old_changeset),
-                                    allow_non_fast_forward,
-                                    pushvars.as_ref(),
-                                    Some(gitimport_result.len()),
-                                )
-                                .await
-                                .with_context(|| format!("failed to move bookmark {name} from {old_changeset:?} to {final_changeset:?}"))?;
-                            info!(
-                                ctx.logger(),
-                                "Bookmark: \"{name}\": {final_changeset:?} (moved from {old_changeset:?})"
-                            );
-                        } else {
-                            info!(
-                                ctx.logger(),
-                                "Bookmark: \"{name}\": {final_changeset:?} (already up-to-date)"
-                            );
-                        }
-                    }
-                    // The bookmark doesn't yet exist. Create it.
-                    None => {
-                        repo_context
-                            .create_bookmark(
-                                &bookmark_key,
-                                final_changeset,
-                                pushvars.as_ref(),
-                                Some(gitimport_result.len()),
-                            )
-                            .await
-                            .with_context(|| {
-                                format!("failed to create bookmark {name} during gitimport")
-                            })?;
-                        info!(
-                            ctx.logger(),
-                            "Bookmark: \"{name}\": {final_changeset:?} (created)"
-                        )
-                    }
-                }
+                let allow_non_fast_forward = true;
+                let affected_changesets_limit = Some(gitimport_result.len());
+                let operation =
+                    BookmarkOperation::new(bookmark_key, old_changeset, Some(final_changeset))?;
+                set_bookmark(
+                    &ctx,
+                    &repo_context,
+                    &operation,
+                    pushvars.as_ref(),
+                    allow_non_fast_forward,
+                    affected_changesets_limit,
+                )
+                .await?;
             }
         };
     }

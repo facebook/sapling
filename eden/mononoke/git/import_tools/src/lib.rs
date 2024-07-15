@@ -8,6 +8,7 @@
 #![feature(try_blocks)]
 #![feature(trait_alias)]
 
+pub mod bookmark;
 pub mod git_reader;
 pub mod git_uploader;
 mod gitimport_objects;
@@ -52,6 +53,8 @@ use tokio::process::Command;
 use tokio::sync::mpsc;
 use tokio::task;
 
+pub use crate::bookmark::set_bookmark;
+pub use crate::bookmark::BookmarkOperation;
 use crate::git_reader::GitReader;
 pub use crate::git_reader::GitRepoReader;
 pub use crate::git_uploader::GitUploader;
