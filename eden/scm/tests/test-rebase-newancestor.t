@@ -232,8 +232,6 @@ rebase of merge of ancestors
   $ hg ci -Aqm 'merge rebase ancestors'
   $ hg rebase -d 'desc("merge p1 1")' -v
   rebasing 4c5f12f25ebe "merge rebase ancestors"
-  resolving manifests
-  removing other
   note: merging f9daf77ffe76+ and 4c5f12f25ebe using bids from ancestors a60552eb93fb and f59da8fc0fcf
   
   calculating bids for ancestor a60552eb93fb

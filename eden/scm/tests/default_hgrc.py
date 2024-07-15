@@ -53,6 +53,9 @@ use-rust=True
 [status]
 use-rust=True
 
+[workingcopy]
+rust-checkout=True
+
 [extensions]
 treemanifest=
 copytrace=

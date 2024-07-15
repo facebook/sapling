@@ -149,15 +149,6 @@ def wrapgoto(
     updatecheck=None,
     **kwargs,
 ):
-    if (
-        repo.ui.configbool("checkout", "use-rust")
-        and repo.ui.configbool("workingcopy", "rust-checkout")
-        and (force or updatecheck != "none")
-    ):
-        # Rust handles "hg.update" events, so skip "hg.update" below if we are
-        # going to be using Rust.
-        return orig(repo, node, force=force, updatecheck=updatecheck, **kwargs)
-
     distance = 0
     oldnode = repo["."].node()
     newnode = repo[node].node()

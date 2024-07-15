@@ -1,5 +1,3 @@
-
-#inprocess-hg-incompatible
   $ setconfig experimental.nativecheckout=true
   $ setconfig commands.update.check=noconflict
 
@@ -15,11 +13,9 @@
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ echo x > b
   $ hg up 'desc(B)'
-  b: untracked file differs (no-eden !)
-  abort: untracked files in working directory differ from files in requested revision (no-eden !)
-  abort: conflicting changes: (eden !)
-    b (eden !)
-  (commit or goto --clean to discard changes) (eden !)
+  abort: 1 conflicting file changes:
+   b
+  (commit, shelve, goto --clean to discard all your changes, or goto --merge to merge them)
   [255]
   $ hg up 'desc(B)' --clean
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved

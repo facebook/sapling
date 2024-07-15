@@ -750,8 +750,6 @@ Test that rebase is not confused by $CWD disappearing during rebase (issue4121)
 
   $ hg rebase -b . -d 'desc(dest)' --traceback
   rebasing 779a07b1b7a0 "first source commit"
-  current directory was removed (rmcwd !)
-  (consider changing to repo root: $TESTTMP/cwd-vanish) (rmcwd !)
   rebasing * "second source with subdir" (glob)
 
 Get back to the root of cwd-vanish. Note that even though `cd ..`

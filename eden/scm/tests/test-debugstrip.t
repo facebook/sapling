@@ -598,13 +598,6 @@ cannot easily express revset like "commitD::", and it uses something like
 unrelated to strip.)
 
   $ hg debugstrip 'desc(commitD)' --debug
-  resolving manifests
-   branchmerge: False, force: True
-   ancestor: d8db9d137221+, local: d8db9d137221+, remote: eca11cf91c71
-   c: other deleted -> r
-  removing c
-   d: other deleted -> r
-  removing d
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   3 changesets found
   list of changesets:

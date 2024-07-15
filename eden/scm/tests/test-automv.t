@@ -16,6 +16,7 @@
   > rebase=
   > EOF
   $ setconfig automv.similarity=75
+  $ setconfig commands.update.check=none
 
 # Setup repo
 

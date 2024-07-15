@@ -7,10 +7,8 @@
 # GNU General Public License version 2.
 
   $ eagerepo
-  $ cat >> $HGRCPATH << 'EOF'
-  > [extensions]
-  > preventpremegarepoupdateshook=
-  > EOF
+  $ enable preventpremegarepoupdateshook
+  $ setconfig checkout.use-rust=false
 
   $ hg init repo
   $ cd repo

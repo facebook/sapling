@@ -66,16 +66,16 @@ coherent (issue4353)
   $ cat > ../dirstateexception.py <<EOF
   > from __future__ import absolute_import
   > from sapling import (
+  >   dirstate,
   >   error,
   >   extensions,
-  >   merge,
   > )
   > 
-  > def wraprecordupdates(orig, repo, actions, branchmerge):
+  > def raiseerror(orig, *args, **opts):
   >     raise error.Abort("simulated error while recording dirstateupdates")
   > 
   > def reposetup(ui, repo):
-  >     extensions.wrapfunction(merge, 'recordupdates', wraprecordupdates)
+  >     extensions.wrapfunction(dirstate.dirstate, 'setparents', raiseerror)
   > EOF
 
   $ hg rm a
