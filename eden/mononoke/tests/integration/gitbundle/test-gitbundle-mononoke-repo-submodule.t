@@ -64,8 +64,6 @@
   $ cd "$TESTTMP"
   $ with_stripped_logs gitimport "$GIT_REPO" --generate-bookmarks full-repo
   using repo "repo" repoid RepositoryId(0)
-  GitRepo:$TESTTMP/repo-git commit 1 of 3 - Oid:* => Bid:* (glob)
-  GitRepo:$TESTTMP/repo-git commit 2 of 3 - Oid:* => Bid:* (glob)
   GitRepo:$TESTTMP/repo-git commit 3 of 3 - Oid:* => Bid:* (glob)
   Ref: "refs/heads/master": Some(ChangesetId(Blake2(*))) (glob)
   Ref: "refs/remotes/origin/HEAD": Some(ChangesetId(Blake2(*))) (glob)

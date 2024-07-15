@@ -153,7 +153,6 @@
   > --recovery-file-path "$GIT_REPO/recovery_file.json"
   using repo "repo" repoid RepositoryId(0)
   Started importing git commits to Mononoke
-  GitRepo:$TESTTMP/repo-git commit 1 of 2 - Oid:ce435b03 => Bid:071d73e6
   GitRepo:$TESTTMP/repo-git commit 2 of 2 - Oid:67328fd4 => Bid:6f63fa96
   Added commits to Mononoke
   Initializing repo: * (glob)

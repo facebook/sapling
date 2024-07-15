@@ -28,6 +28,7 @@ use import_tools::BackfillDerivation;
 use import_tools::CommitMetadata;
 use import_tools::GitImportLfs;
 use import_tools::GitUploader;
+use import_tools::GitimportAccumulator;
 use import_tools::TagMetadata;
 use mononoke_api::repo::git::create_annotated_tag;
 use mononoke_api::repo::git::upload_packfile_base_item;
@@ -133,15 +134,15 @@ where
         upload_file(self.repo(), ctx, lfs, path, ty, oid, git_bytes).await
     }
 
-    async fn generate_changeset_for_commit(
+    async fn generate_intermediate_changeset_for_commit(
         &self,
         _ctx: &CoreContext,
-        bonsai_parents: Vec<ChangesetId>,
         metadata: CommitMetadata,
         changes: SortedVectorMap<NonRootMPath, Self::Change>,
+        acc: &GitimportAccumulator,
         _dry_run: bool,
-    ) -> Result<(Self::IntermediateChangeset, ChangesetId), Error> {
-        generate_changeset_for_commit(bonsai_parents, metadata, changes).await
+    ) -> Result<Self::IntermediateChangeset, Error> {
+        generate_changeset_for_commit(metadata, changes, acc).await
     }
 
     async fn finalize_batch(
@@ -149,8 +150,9 @@ where
         ctx: &CoreContext,
         dry_run: bool,
         backfill_derivation: BackfillDerivation,
-        changesets: Vec<(Self::IntermediateChangeset, hash::GitSha1)>,
-    ) -> Result<(), Error> {
+        changesets: Vec<(hash::GitSha1, Self::IntermediateChangeset)>,
+        _acc: &GitimportAccumulator,
+    ) -> Result<Vec<(hash::GitSha1, ChangesetId)>, Error> {
         finalize_batch(self.repo(), ctx, dry_run, backfill_derivation, changesets).await
     }
 

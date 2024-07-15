@@ -110,10 +110,6 @@
   * Fetched the recovery stage for importing. (glob)
   Starting from stage: GitImport
   * Started importing git commits to Mononoke (glob)
-  * GitRepo:$TESTTMP/repo-git commit 1 of 5 - Oid:ce435b03 => Bid:071d73e6 (glob)
-  * GitRepo:$TESTTMP/repo-git commit 2 of 5 - Oid:2c01e4a5 => Bid:4dbc9506 (glob)
-  * GitRepo:$TESTTMP/repo-git commit 3 of 5 - Oid:38f71f7e => Bid:d805ae48 (glob)
-  * GitRepo:$TESTTMP/repo-git commit 4 of 5 - Oid:13aef6ec => Bid:260f78ba (glob)
   * GitRepo:$TESTTMP/repo-git commit 5 of 5 - Oid:6783febd => Bid:8d76deb1 (glob)
   * Added commits to Mononoke (glob)
   * Initializing repo: * (glob)

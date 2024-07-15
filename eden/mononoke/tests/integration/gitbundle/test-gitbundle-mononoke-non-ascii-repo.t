@@ -43,7 +43,6 @@
   $ cd "$TESTTMP"
   $ with_stripped_logs gitimport "$GIT_REPO" --derive-hg --generate-bookmarks full-repo
   using repo "repo" repoid RepositoryId(0)
-  GitRepo:*repo-git commit 1 of 2 - Oid:* => Bid:* (glob)
   GitRepo:*repo-git commit 2 of 2 - Oid:* => Bid:* (glob)
   Hg: Sha1(*): HgManifestId(HgNodeHash(Sha1(*))) (glob)
   Hg: Sha1(*): HgManifestId(HgNodeHash(Sha1(*))) (glob)
