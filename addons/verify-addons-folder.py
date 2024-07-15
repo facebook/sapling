@@ -39,6 +39,7 @@ async def verify():
     await asyncio.gather(
         verify_prettier(),
         verify_shared(),
+        verify_components(),
         verify_textmate(),
         verify_isl(),
     )
@@ -55,6 +56,13 @@ async def verify_shared():
     shared = addons / "shared"
     await lint_and_test(shared)
     timer.report(ok("shared/"))
+
+
+async def verify_components():
+    timer = Timer("verifying components/")
+    components = addons / "components"
+    await lint_and_test(components)
+    timer.report(ok("components/"))
 
 
 async def verify_textmate():
