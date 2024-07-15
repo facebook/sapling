@@ -735,13 +735,6 @@ impl crate::Subcommand for DiskUsageCmd {
                 get_purgeable_size().with_context(|| "Failed to get purgeable space")?;
         }
 
-        // Make immutable
-        let backing_failed_file_checks = backing_failed_file_checks;
-        let mount_failed_file_checks = mount_failed_file_checks;
-        let redirection_failed_file_checks = redirect_usage_count.failed_file_checks;
-        let redirection_path_usage_count = redirect_usage_count.path_usage;
-        let buck_redirections = buck_redirections;
-
         // GET SUMMARY INFO for shared usage
         let mut shared_failed_file_checks = HashSet::new();
         let (logs_dir_usage, failed_logs_dir_file_checks) =
@@ -808,7 +801,7 @@ impl crate::Subcommand for DiskUsageCmd {
                     println!("{}", redir.display());
                 }
             }
-            write_failed_to_check_files_message(&redirection_failed_file_checks);
+            write_failed_to_check_files_message(&redirect_usage_count.failed_file_checks);
 
             if !buck_redirections.is_empty() {
                 if self.should_clean() {
@@ -922,9 +915,9 @@ impl crate::Subcommand for DiskUsageCmd {
             }
 
             // PRINT DETAILS
-            if !redirection_path_usage_count.is_empty() {
+            if !redirect_usage_count.path_usage.is_empty() {
                 write_title("Redirections Details");
-                for (usage_count, redirect) in redirection_path_usage_count {
+                for (usage_count, redirect) in redirect_usage_count.path_usage {
                     println!("{: >10}: {}", format_size(usage_count), redirect.display());
                 }
             }
