@@ -7,7 +7,7 @@
 
 include "fb303/thrift/fb303_core.thrift"
 include "thrift/annotation/thrift.thrift"
-include "configerator/structs/scm/mononoke/megarepo/megarepo_configs.thrift"
+include "eden/mononoke/megarepo_api/if/megarepo_configs.thrift"
 include "eden/mononoke/derived_data/if/derived_data_type.thrift"
 
 namespace cpp2 facebook.scm.service

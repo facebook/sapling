@@ -33,8 +33,8 @@ thrift_library(
         "source_control.thrift": ["SourceControlService"],
     },
     deps = [
-        "//configerator/structs/scm/mononoke/megarepo:megarepo_configs",
         "//eden/mononoke/derived_data/if:derived_data_type_if",
+        "//eden/mononoke/megarepo_api/if:megarepo_configs",
         "//fb303/thrift:fb303_core",
         "//thrift/annotation:thrift",
     ],
