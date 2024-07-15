@@ -8,7 +8,7 @@
 const IS_CI = !!process.env.SANDCASTLE || !!process.env.GITHUB_ACTIONS;
 
 /* global module */
-/** @type {import('ts-jest/dist/types').InitialOptionsTsJest} */
+/** @type {import('ts-jest/dist/types').JestConfigWithTsJest} */
 module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'jsdom',

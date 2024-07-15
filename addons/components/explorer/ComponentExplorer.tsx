@@ -342,7 +342,7 @@ export default function ComponentExplorer() {
         <Row>
           <div {...stylex.props(layout.flexCol)} style={{alignItems: 'flex-start'}}>
             {paddings.map(size => (
-              <div {...stylex.props(layout.flexRow)} style={{gap: spacing[size]}}>
+              <div {...stylex.props(layout.flexRow)} style={{gap: spacing[size]}} key={size}>
                 <ColorBadge>A</ColorBadge>
                 <ColorBadge>B</ColorBadge>
                 <ColorBadge>{size}</ColorBadge>
