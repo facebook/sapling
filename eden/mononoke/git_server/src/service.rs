@@ -6,6 +6,10 @@
  */
 
 mod error_formatter;
+mod reader;
 mod router;
+mod uploader;
 
+pub use reader::GitObjectStore;
 pub use router::build_router;
+pub use uploader::upload_objects;

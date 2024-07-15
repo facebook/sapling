@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::sync::Arc;
+
 use bytes::Bytes;
 use gotham::mime;
 use gotham::state::FromState;
@@ -23,6 +25,8 @@ use crate::command::RequestCommand;
 use crate::model::GitMethodInfo;
 use crate::model::RepositoryParams;
 use crate::model::RepositoryRequestContext;
+use crate::service::upload_objects;
+use crate::service::GitObjectStore;
 use crate::util::empty_body;
 use crate::util::get_body;
 
@@ -53,11 +57,20 @@ async fn push<'a>(
     // TODO(rajshar): Implement the actual push logic
     let mut output = vec![];
     if let Command::Push(push_args) = request_command.command {
-        // Parse the packfile provided as part of the push and verify that its valid
-        let _parsed_objects = parse_pack(
-            push_args.pack_file,
+        let (ctx, blobstore) = (
             &request_context.ctx,
             request_context.repo.repo_blobstore.clone(),
+        );
+        // Parse the packfile provided as part of the push and verify that its valid
+        let parsed_objects = parse_pack(push_args.pack_file, ctx, blobstore.clone()).await?;
+        // Generate the GitObjectStore using the parsed objects
+        let object_store = Arc::new(GitObjectStore::new(parsed_objects, ctx, blobstore.clone()));
+        // Upload the objects corresponding to the push to the underlying store
+        let _git_bonsai_mappings = upload_objects(
+            ctx,
+            request_context.repo.clone(),
+            object_store,
+            &push_args.ref_updates,
         )
         .await?;
         write_text_packetline(OK_HEADER, &mut output).await?;

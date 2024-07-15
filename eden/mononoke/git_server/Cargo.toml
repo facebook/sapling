@@ -9,6 +9,7 @@ license = "GPLv2+"
 
 [dependencies]
 anyhow = "1.0.75"
+async-recursion = "1.0.2"
 async-stream = "0.3"
 async-trait = "0.1.71"
 bonsai_git_mapping = { version = "0.1.0", path = "../bonsai_git_mapping" }
@@ -33,6 +34,7 @@ flate2 = { version = "1.0.26", features = ["rust_backend"], default-features = f
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
 futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 git_symbolic_refs = { version = "0.1.0", path = "../git_symbolic_refs" }
+git_types = { version = "0.1.0", path = "../git/git_types" }
 gix-date = "0.7"
 gix-hash = "0.11"
 gix-object = "0.33"
@@ -43,6 +45,8 @@ gotham_derive = "0.7.0"
 gotham_ext = { version = "0.1.0", path = "../gotham_ext" }
 http = "0.2"
 hyper = { version = "0.14.26", features = ["client", "http1", "http2", "stream"] }
+import_direct = { version = "0.1.0", path = "../git/import_direct" }
+import_tools = { version = "0.1.0", path = "../git/import_tools" }
 metaconfig_parser = { version = "0.1.0", path = "../metaconfig/parser" }
 metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
 mononoke_app = { version = "0.1.0", path = "../cmdlib/mononoke_app" }
@@ -68,3 +72,4 @@ thiserror = "1.0.49"
 tokio = { version = "1.37.0", features = ["full", "test-util", "tracing"] }
 tokio-stream = { version = "0.1.14", features = ["fs", "io-util", "net", "signal", "sync", "time"] }
 tokio-util = { version = "0.7.10", features = ["full"] }
+topo_sort = { version = "0.1.0", path = "../common/topo_sort" }

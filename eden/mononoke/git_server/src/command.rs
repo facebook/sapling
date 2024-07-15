@@ -10,10 +10,11 @@ use gix_packetline::PacketLineRef;
 use gix_packetline::StreamingPeekableIter;
 use gix_transport::bstr::BString;
 use gix_transport::bstr::ByteSlice;
-use push::PushArgs;
 
 pub use self::fetch::FetchArgs;
 pub use self::ls_refs::LsRefsArgs;
+pub use self::push::PushArgs;
+pub use self::push::RefUpdate;
 
 mod fetch;
 mod ls_refs;

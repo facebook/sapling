@@ -54,8 +54,12 @@ pub struct DirectUploader<R> {
 
 impl<R> DirectUploader<R> {
     pub fn new(repo: R, reupload_commits: ReuploadCommits) -> Self {
+        Self::with_arc(Arc::new(repo), reupload_commits)
+    }
+
+    pub fn with_arc(repo: Arc<R>, reupload_commits: ReuploadCommits) -> Self {
         Self {
-            inner: Arc::new(repo),
+            inner: repo,
             reupload_commits,
         }
     }
