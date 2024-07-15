@@ -471,13 +471,14 @@ class _helpdispatch:
             return rst
 
         # synopsis
+        cliname = identity.default().cliname()
         if len(entry) > 2:
-            if entry[2].startswith("hg"):
+            if entry[2].startswith(cliname):
                 rst.append("%s\n" % entry[2])
             else:
-                rst.append("%s %s %s\n" % (identity.default().cliname(), cmd, entry[2]))
+                rst.append("%s %s %s\n" % (cliname, cmd, entry[2]))
         else:
-            rst.append("%s %s\n" % (identity.default().cliname(), cmd))
+            rst.append("%s %s\n" % (cliname, cmd))
         # aliases
         # try to simplify aliases, ex. compress ['ab', 'abc', 'abcd', 'abcde']
         # to ['ab', 'abcde']
