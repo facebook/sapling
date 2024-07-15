@@ -797,14 +797,19 @@ fn main(fb: FacebookInit) -> Result<()> {
         Some(service_name) => {
             // The service name needs to be 'static to satisfy SM contract
             static SM_SERVICE_NAME: OnceLock<String> = OnceLock::new();
+            static SM_SERVICE_SCOPE_NAME: OnceLock<String> = OnceLock::new();
             let logger = process.matches.logger().clone();
+            let scope_name = process
+                .matches
+                .value_of("sharded-scope-name")
+                .unwrap_or(SM_SERVICE_SCOPE);
             let matches = Arc::clone(&process.matches);
             let mut executor = ShardedProcessExecutor::new(
                 process.fb,
                 process.matches.runtime().clone(),
                 &logger,
                 SM_SERVICE_NAME.get_or_init(|| service_name.to_string()),
-                SM_SERVICE_SCOPE,
+                SM_SERVICE_SCOPE_NAME.get_or_init(|| scope_name.to_string()),
                 SM_CLEANUP_TIMEOUT_SECS,
                 Arc::new(process),
                 true, // enable shard (repo) level healing
