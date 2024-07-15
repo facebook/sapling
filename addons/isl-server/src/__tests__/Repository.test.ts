@@ -429,6 +429,7 @@ www/flib/intern/entity/diff/EntPhabricatorDiffSchema.php                        
       const execaSpy = mockExeca([[/^sl diff/, () => ({stdout: EXAMPLE_DIFFSTAT})]]);
       const generatedFiles = ['generated1.file', 'generated2.file'];
       repo.fetchSignificantLinesOfCode(ctx, 'abcdef', generatedFiles);
+      await nextTick();
       expect(execaSpy).toHaveBeenCalledWith(
         'sl',
         expect.arrayContaining([

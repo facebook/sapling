@@ -8,6 +8,7 @@
 import type {Logger} from './logger';
 import type {ServerPlatform} from './serverPlatform';
 
+import {Internal} from './Internal';
 import ServerToClientAPI from './ServerToClientAPI';
 import {makeServerSideTracker} from './analytics/serverSideTracker';
 import {fileLogger, stdoutLogger} from './logger';
@@ -56,6 +57,7 @@ export function onClientConnection(connection: ClientConnection): () => void {
   const version = connection?.version ?? 'unknown';
   logger.log(`establish client connection for ${connection.cwd}`);
   logger.log(`platform '${platform.platformName}', version '${version}'`);
+  void Internal.logInternalInfo?.(logger);
 
   const tracker = makeServerSideTracker(logger, platform, version);
   tracker.track('ClientConnection', {extras: {cwd: connection.cwd}});

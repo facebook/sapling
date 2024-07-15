@@ -641,14 +641,19 @@ export class Repository {
     const cwdRelativeArgs = this.normalizeOperationArgs(cwd, operation.args);
     const {stdin} = operation;
 
+    const env = await Promise.all([
+      Internal.additionalEnvForCommand?.(operation),
+      this.getMergeToolEnvVars(ctx),
+    ]);
+
     const {command, args, options} = getExecParams(
       this.info.command,
       cwdRelativeArgs,
       cwd,
       stdin ? {input: stdin} : undefined,
       {
-        ...Internal.additionalEnvForCommand?.(operation),
-        ...(await this.getMergeToolEnvVars(ctx)),
+        ...env[0],
+        ...env[1],
       },
     );
 
@@ -1298,13 +1303,16 @@ export class Repository {
         extras: eventName == null ? {args} : undefined,
         operationId: `isl:${id}`,
       },
-      () =>
+      async () =>
         runCommand(
           ctx,
           args,
           {
             ...options,
-            env: {...options?.env, ...Internal.additionalEnvForCommand?.(id)} as NodeJS.ProcessEnv,
+            env: {
+              ...options?.env,
+              ...((await Internal.additionalEnvForCommand?.(id)) ?? {}),
+            } as NodeJS.ProcessEnv,
           },
           timeout ?? READ_COMMAND_TIMEOUT_MS,
         ),

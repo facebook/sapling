@@ -43,7 +43,7 @@ export default async function queryGraphQL<TData, TVariables>(
       stdout: 'pipe',
       stderr: 'pipe',
       env: {
-        ...(Internal.additionalGhEnvVars ?? {}),
+        ...((await Internal.additionalGhEnvVars?.()) ?? {}),
       },
     });
     const json = JSON.parse(stdout);
@@ -82,7 +82,7 @@ export async function isGithubEnterprise(hostname: string): Promise<boolean> {
       stdout: 'pipe',
       stderr: 'pipe',
       env: {
-        ...(Internal.additionalGhEnvVars ?? {}),
+        ...((await Internal.additionalGhEnvVars?.()) ?? {}),
       },
     });
     return true;
