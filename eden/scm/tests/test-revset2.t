@@ -37,16 +37,8 @@
   >   hg log --template '{node}\n' -r "$1"
   > }
 
-  $ setbranch() {
-  >   BRANCH="$1"
-  > }
-
   $ commit() {
-  >   if [ -n "$BRANCH" ]; then
-  >     hg commit --extra "branch=$BRANCH" "$@"
-  >   else
-  >     hg commit "$@"
-  >   fi
+  >   hg commit "$@"
   > }
 
 extension to build '_intlist()' and '_hexlist()', which is necessary because
@@ -96,57 +88,46 @@ these predicates use '\0' as a separator:
   $ cd repo
 
   $ echo a > a
-  $ setbranch a
   $ commit -Aqm0
 
   $ echo b > b
-  $ setbranch b
   $ commit -Aqm1
 
   $ rm a
-  $ setbranch a-b-c-
   $ commit -Aqm2 -u Bob
 
-  $ hg log -r "extra('branch', 'a-b-c-')" --template '{node}\n'
-  5ed5505e9f1c21de2345daabdd7913fe53e4acd2
   $ hg log -r "extra('branch')" --template '{node}\n'
-  2785f51eece5a23075c6f1d74702d8d9cb8bf0d4
-  d75937da8da0322d18c3771fb029ffd88b996c89
-  5ed5505e9f1c21de2345daabdd7913fe53e4acd2
+  f7b1eb17ad24730a1651fccd46c43826d1bbc2ac
+  925d80f479bb026b0fb3deb27503780b13f74123
+  ca0049c702f186378942cfea3da87905eea720a3
   $ hg log -r "extra('branch', 're:a')" --template '{branch}\n'
-  a
-  a-b-c-
+  default
+  default
+  default
 
   $ hg co 1
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ setbranch +a+b+c+
   $ commit -Aqm3
 
   $ hg co -C 2  # interleave
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ echo bb > b
-  $ setbranch -a-b-c-
   $ commit -Aqm4 -d "May 12 2005"
 
   $ hg co -C 3
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ setbranch !a/b/c/
   $ commit -Aqm"5 bug"
 
   $ hg merge 4
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
-  $ setbranch _a_b_c_
   $ commit -Aqm"6 issue619"
 
-  $ setbranch .a.b.c.
   $ commit -Aqm7
 
-  $ setbranch all
 
   $ hg co 4
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ setbranch é
   $ commit -Aqm9
 
   $ hg book -fr 6 1.0
@@ -163,50 +144,50 @@ these predicates use '\0' as a separator:
 test subtracting something from an addset
 
   $ log '(outgoing() or removes(a)) - removes(a)'
-  d5d0dcbdc4d9ff5dbb2d336f32f0bb561c1a532c
-  6a4f54cc779b5949146617ba046459baab4a496f
+  6d98e1a8658014ae6501fab0b5e4d1be2d393880
+  d57d206a3bab91a65cbc8c7fb6c7de5a235c6bcf
 
 test intersecting something with an addset
 
   $ log 'parents(outgoing() or removes(a))'
-  d75937da8da0322d18c3771fb029ffd88b996c89
-  2326846efdab34abffaf5ad2e7831f64a8ebb017
-  904fa392b9415cad2ad08ac82d39bed6cfbcaa1c
-  d5d0dcbdc4d9ff5dbb2d336f32f0bb561c1a532c
+  925d80f479bb026b0fb3deb27503780b13f74123
+  f97e7d9434783652739570e7cfdac469336f9e24
+  cbd103c35a18fb5ef34e414924807969a3ed80ae
+  6d98e1a8658014ae6501fab0b5e4d1be2d393880
 
 test that `or` operation:
 order is no longer preserved with `idset`, which enforces DESC order internally.
 
   $ log '3:4 or 2:5'
-  5ed5505e9f1c21de2345daabdd7913fe53e4acd2
-  8528aa5637f252b36e034c373e36890ace37524c
-  2326846efdab34abffaf5ad2e7831f64a8ebb017
-  904fa392b9415cad2ad08ac82d39bed6cfbcaa1c
+  ca0049c702f186378942cfea3da87905eea720a3
+  8c386d836a07c457eff065d28be13dd131ed35ce
+  f97e7d9434783652739570e7cfdac469336f9e24
+  cbd103c35a18fb5ef34e414924807969a3ed80ae
   $ log '3:4 or 5:2'
-  5ed5505e9f1c21de2345daabdd7913fe53e4acd2
-  8528aa5637f252b36e034c373e36890ace37524c
-  2326846efdab34abffaf5ad2e7831f64a8ebb017
-  904fa392b9415cad2ad08ac82d39bed6cfbcaa1c
+  ca0049c702f186378942cfea3da87905eea720a3
+  8c386d836a07c457eff065d28be13dd131ed35ce
+  f97e7d9434783652739570e7cfdac469336f9e24
+  cbd103c35a18fb5ef34e414924807969a3ed80ae
   $ log 'sort(3:4 or 2:5)'
-  5ed5505e9f1c21de2345daabdd7913fe53e4acd2
-  8528aa5637f252b36e034c373e36890ace37524c
-  2326846efdab34abffaf5ad2e7831f64a8ebb017
-  904fa392b9415cad2ad08ac82d39bed6cfbcaa1c
+  ca0049c702f186378942cfea3da87905eea720a3
+  8c386d836a07c457eff065d28be13dd131ed35ce
+  f97e7d9434783652739570e7cfdac469336f9e24
+  cbd103c35a18fb5ef34e414924807969a3ed80ae
   $ log 'sort(3:4 or 5:2)'
-  5ed5505e9f1c21de2345daabdd7913fe53e4acd2
-  8528aa5637f252b36e034c373e36890ace37524c
-  2326846efdab34abffaf5ad2e7831f64a8ebb017
-  904fa392b9415cad2ad08ac82d39bed6cfbcaa1c
+  ca0049c702f186378942cfea3da87905eea720a3
+  8c386d836a07c457eff065d28be13dd131ed35ce
+  f97e7d9434783652739570e7cfdac469336f9e24
+  cbd103c35a18fb5ef34e414924807969a3ed80ae
 
 test that more than one `-r`s are combined in the right order and deduplicated:
 
   $ hg log -T '{node}\n' -r 3 -r 3 -r 4 -r 5:2 -r 'ancestors(4)'
-  8528aa5637f252b36e034c373e36890ace37524c
-  2326846efdab34abffaf5ad2e7831f64a8ebb017
-  904fa392b9415cad2ad08ac82d39bed6cfbcaa1c
-  5ed5505e9f1c21de2345daabdd7913fe53e4acd2
-  d75937da8da0322d18c3771fb029ffd88b996c89
-  2785f51eece5a23075c6f1d74702d8d9cb8bf0d4
+  8c386d836a07c457eff065d28be13dd131ed35ce
+  f97e7d9434783652739570e7cfdac469336f9e24
+  cbd103c35a18fb5ef34e414924807969a3ed80ae
+  ca0049c702f186378942cfea3da87905eea720a3
+  925d80f479bb026b0fb3deb27503780b13f74123
+  f7b1eb17ad24730a1651fccd46c43826d1bbc2ac
 
 test that `or` operation skips duplicated revisions from right-hand side
 
@@ -223,7 +204,7 @@ test that `or` operation skips duplicated revisions from right-hand side
         (symbol '4'))))
   * set:
   <nameset-
-    <spans [2785f51eece5a23075c6f1d74702d8d9cb8bf0d4:904fa392b9415cad2ad08ac82d39bed6cfbcaa1c+0:5]>>
+    <spans [f7b1eb17ad24730a1651fccd46c43826d1bbc2ac:cbd103c35a18fb5ef34e414924807969a3ed80ae+0:5]>>
   5
   4
   3
@@ -245,7 +226,7 @@ test that `or` operation skips duplicated revisions from right-hand side
             (symbol '5'))))))
   * set:
   <nameset+
-    <spans [2785f51eece5a23075c6f1d74702d8d9cb8bf0d4:904fa392b9415cad2ad08ac82d39bed6cfbcaa1c+0:5]>>
+    <spans [f7b1eb17ad24730a1651fccd46c43826d1bbc2ac:cbd103c35a18fb5ef34e414924807969a3ed80ae+0:5]>>
   0
   1
   2
@@ -300,7 +281,7 @@ test optimization of trivial `or` operation
   <addset
     <baseset [0, 1]>,
     <nameset+
-      <spans [5ed5505e9f1c21de2345daabdd7913fe53e4acd2:8528aa5637f252b36e034c373e36890ace37524c+2:3]>>>
+      <spans [ca0049c702f186378942cfea3da87905eea720a3:8c386d836a07c457eff065d28be13dd131ed35ce+2:3]>>>
   0
   1
   2
@@ -333,7 +314,7 @@ test optimization of trivial `or` operation
         (string '5\x006'))))
   * set:
   <nameset+
-    <spans [2785f51eece5a23075c6f1d74702d8d9cb8bf0d4:e0cc66ef77e8b6f711815af4e001a6594fde3ba5+0:6]>>
+    <spans [f7b1eb17ad24730a1651fccd46c43826d1bbc2ac:b1166c9cdb4bf159910e366395bee663c8dfb681+0:6]>>
   0
   1
   2
@@ -372,16 +353,16 @@ unoptimized `or` looks like this
 test that `_list` should be narrowed by provided `subset`
 
   $ log '0:2 and (null|1|2|3)'
-  d75937da8da0322d18c3771fb029ffd88b996c89
-  5ed5505e9f1c21de2345daabdd7913fe53e4acd2
+  925d80f479bb026b0fb3deb27503780b13f74123
+  ca0049c702f186378942cfea3da87905eea720a3
 
 test that `_list` should remove duplicates
 
   $ log '0|1|2|1|2|-1|tip'
-  2785f51eece5a23075c6f1d74702d8d9cb8bf0d4
-  d75937da8da0322d18c3771fb029ffd88b996c89
-  5ed5505e9f1c21de2345daabdd7913fe53e4acd2
-  6a4f54cc779b5949146617ba046459baab4a496f
+  f7b1eb17ad24730a1651fccd46c43826d1bbc2ac
+  925d80f479bb026b0fb3deb27503780b13f74123
+  ca0049c702f186378942cfea3da87905eea720a3
+  d57d206a3bab91a65cbc8c7fb6c7de5a235c6bcf
 
 test unknown revision in `_list`
 
@@ -392,8 +373,8 @@ test unknown revision in `_list`
 test integer range in `_list`
 
   $ log '-1|-10'
-  6a4f54cc779b5949146617ba046459baab4a496f
-  2785f51eece5a23075c6f1d74702d8d9cb8bf0d4
+  d57d206a3bab91a65cbc8c7fb6c7de5a235c6bcf
+  f7b1eb17ad24730a1651fccd46c43826d1bbc2ac
 
   $ log '-10|-11'
   abort: unknown revision '-11'!
@@ -445,7 +426,7 @@ test that chained `or` operations make balanced addsets
         (symbol '5'))))
   * set:
   <nameset+
-    <spans [2785f51eece5a23075c6f1d74702d8d9cb8bf0d4:904fa392b9415cad2ad08ac82d39bed6cfbcaa1c+0:5]>>
+    <spans [f7b1eb17ad24730a1651fccd46c43826d1bbc2ac:cbd103c35a18fb5ef34e414924807969a3ed80ae+0:5]>>
   0
   1
   2
@@ -474,16 +455,16 @@ test that chained `or` operations never eat up stack (issue4624)
 
   $ hg log -T '{node}\n' -r `hg debugsh -c "ui.write('+'.join(['0:1'] * 500))"`
   devel-warn: excess usage of repo.__contains__ at: * (glob)
-  2785f51eece5a23075c6f1d74702d8d9cb8bf0d4
-  d75937da8da0322d18c3771fb029ffd88b996c89
+  f7b1eb17ad24730a1651fccd46c43826d1bbc2ac
+  925d80f479bb026b0fb3deb27503780b13f74123
 
 test that repeated `-r` options never eat up stack (issue4565)
 (uses `-r 0::1` to avoid possible optimization at old-style parser)
 
   $ hg log -T '{node}\n' `hg debugsh -c "for i in range(500): ui.write('-r 0::1 '),"`
   devel-warn: excess usage of repo.__contains__ at: * (glob)
-  2785f51eece5a23075c6f1d74702d8d9cb8bf0d4
-  d75937da8da0322d18c3771fb029ffd88b996c89
+  f7b1eb17ad24730a1651fccd46c43826d1bbc2ac
+  925d80f479bb026b0fb3deb27503780b13f74123
 
 check that conversion to only works
   $ try --optimize '::3 - ::1'
@@ -500,7 +481,7 @@ check that conversion to only works
       (symbol '1')))
   * set:
   <nameset+
-    <spans [8528aa5637f252b36e034c373e36890ace37524c+3]>>
+    <spans [8c386d836a07c457eff065d28be13dd131ed35ce+3]>>
   3
   $ try --optimize 'ancestors(1) - ancestors(3)'
   (minus
@@ -534,7 +515,7 @@ check that conversion to only works
       (symbol '2')))
   * set:
   <nameset+
-    <spans [8528aa5637f252b36e034c373e36890ace37524c:e0cc66ef77e8b6f711815af4e001a6594fde3ba5+3:6]>>
+    <spans [8c386d836a07c457eff065d28be13dd131ed35ce:b1166c9cdb4bf159910e366395bee663c8dfb681+3:6]>>
   3
   4
   5
@@ -556,7 +537,7 @@ check that conversion to only works
       (symbol '4')))
   * set:
   <nameset+
-    <spans [904fa392b9415cad2ad08ac82d39bed6cfbcaa1c:e0cc66ef77e8b6f711815af4e001a6594fde3ba5+5:6, 8528aa5637f252b36e034c373e36890ace37524c+3]>>
+    <spans [cbd103c35a18fb5ef34e414924807969a3ed80ae:b1166c9cdb4bf159910e366395bee663c8dfb681+5:6, 8c386d836a07c457eff065d28be13dd131ed35ce+3]>>
   3
   5
   6
@@ -641,47 +622,47 @@ invalid function call should not be optimized to only()
   [255]
 
   $ log 'user(bob)'
-  5ed5505e9f1c21de2345daabdd7913fe53e4acd2
+  ca0049c702f186378942cfea3da87905eea720a3
 
   $ log '4::8'
-  2326846efdab34abffaf5ad2e7831f64a8ebb017
-  d5d0dcbdc4d9ff5dbb2d336f32f0bb561c1a532c
+  f97e7d9434783652739570e7cfdac469336f9e24
+  6d98e1a8658014ae6501fab0b5e4d1be2d393880
   $ log '4:8'
-  2326846efdab34abffaf5ad2e7831f64a8ebb017
-  904fa392b9415cad2ad08ac82d39bed6cfbcaa1c
-  e0cc66ef77e8b6f711815af4e001a6594fde3ba5
-  013af1973af4a1932911a575960a876af6c02aaa
-  d5d0dcbdc4d9ff5dbb2d336f32f0bb561c1a532c
+  f97e7d9434783652739570e7cfdac469336f9e24
+  cbd103c35a18fb5ef34e414924807969a3ed80ae
+  b1166c9cdb4bf159910e366395bee663c8dfb681
+  c42d3b18b7b19d997b65800072b703b19989cc12
+  6d98e1a8658014ae6501fab0b5e4d1be2d393880
 
   $ log 'sort(!merge() & (modifies(b) | user(bob) | keyword(bug) | keyword(issue) & 1::9), "-date")'
-  2326846efdab34abffaf5ad2e7831f64a8ebb017
-  5ed5505e9f1c21de2345daabdd7913fe53e4acd2
-  904fa392b9415cad2ad08ac82d39bed6cfbcaa1c
+  f97e7d9434783652739570e7cfdac469336f9e24
+  ca0049c702f186378942cfea3da87905eea720a3
+  cbd103c35a18fb5ef34e414924807969a3ed80ae
 
   $ log 'not 0 and 0:2'
-  d75937da8da0322d18c3771fb029ffd88b996c89
-  5ed5505e9f1c21de2345daabdd7913fe53e4acd2
+  925d80f479bb026b0fb3deb27503780b13f74123
+  ca0049c702f186378942cfea3da87905eea720a3
   $ log 'not 1 and 0:2'
-  2785f51eece5a23075c6f1d74702d8d9cb8bf0d4
-  5ed5505e9f1c21de2345daabdd7913fe53e4acd2
+  f7b1eb17ad24730a1651fccd46c43826d1bbc2ac
+  ca0049c702f186378942cfea3da87905eea720a3
   $ log 'not 2 and 0:2'
-  2785f51eece5a23075c6f1d74702d8d9cb8bf0d4
-  d75937da8da0322d18c3771fb029ffd88b996c89
+  f7b1eb17ad24730a1651fccd46c43826d1bbc2ac
+  925d80f479bb026b0fb3deb27503780b13f74123
   $ log '(1 and 2)::'
   $ log '(1 and 2):'
   $ log '(1 and 2):3'
   $ log 'sort(head(), -rev)'
-  6a4f54cc779b5949146617ba046459baab4a496f
-  013af1973af4a1932911a575960a876af6c02aaa
+  d57d206a3bab91a65cbc8c7fb6c7de5a235c6bcf
+  c42d3b18b7b19d997b65800072b703b19989cc12
   $ log '4::8 - 8'
-  2326846efdab34abffaf5ad2e7831f64a8ebb017
+  f97e7d9434783652739570e7cfdac469336f9e24
 
 matching() should preserve the order of the input set:
 
   $ log '(2 or 3 or 1) and matching(1 or 2 or 3)'
-  5ed5505e9f1c21de2345daabdd7913fe53e4acd2
-  8528aa5637f252b36e034c373e36890ace37524c
-  d75937da8da0322d18c3771fb029ffd88b996c89
+  ca0049c702f186378942cfea3da87905eea720a3
+  8c386d836a07c457eff065d28be13dd131ed35ce
+  925d80f479bb026b0fb3deb27503780b13f74123
 
   $ log 'named("unknown")'
   abort: namespace 'unknown' does not exist!
@@ -695,15 +676,15 @@ matching() should preserve the order of the input set:
 issue2437
 
   $ log '3 and p1(5)'
-  8528aa5637f252b36e034c373e36890ace37524c
+  8c386d836a07c457eff065d28be13dd131ed35ce
   $ log '4 and p2(6)'
-  2326846efdab34abffaf5ad2e7831f64a8ebb017
+  f97e7d9434783652739570e7cfdac469336f9e24
   $ log '1 and parents(:2)'
-  d75937da8da0322d18c3771fb029ffd88b996c89
+  925d80f479bb026b0fb3deb27503780b13f74123
   $ log '2 and children(1:)'
-  5ed5505e9f1c21de2345daabdd7913fe53e4acd2
+  ca0049c702f186378942cfea3da87905eea720a3
   $ log 'roots(all()) or roots(all())'
-  2785f51eece5a23075c6f1d74702d8d9cb8bf0d4
+  f7b1eb17ad24730a1651fccd46c43826d1bbc2ac
   $ hg debugrevspec 'roots(all()) or roots(all())'
   0
 
@@ -717,27 +698,27 @@ issue2654: report a parse error if the revset was not completely parsed
 
 or operator should preserve ordering (no longer true with nameset fast paths):
   $ log 'reverse(2::4) or tip'
-  6a4f54cc779b5949146617ba046459baab4a496f
-  2326846efdab34abffaf5ad2e7831f64a8ebb017
-  5ed5505e9f1c21de2345daabdd7913fe53e4acd2
+  d57d206a3bab91a65cbc8c7fb6c7de5a235c6bcf
+  f97e7d9434783652739570e7cfdac469336f9e24
+  ca0049c702f186378942cfea3da87905eea720a3
 
 parentrevspec
 
   $ log 'merge()^0'
-  e0cc66ef77e8b6f711815af4e001a6594fde3ba5
+  b1166c9cdb4bf159910e366395bee663c8dfb681
   $ log 'merge()^'
-  904fa392b9415cad2ad08ac82d39bed6cfbcaa1c
+  cbd103c35a18fb5ef34e414924807969a3ed80ae
   $ log 'merge()^1'
-  904fa392b9415cad2ad08ac82d39bed6cfbcaa1c
+  cbd103c35a18fb5ef34e414924807969a3ed80ae
   $ log 'merge()^2'
-  2326846efdab34abffaf5ad2e7831f64a8ebb017
+  f97e7d9434783652739570e7cfdac469336f9e24
   $ log '(not merge())^2'
   $ log 'merge()^^'
-  8528aa5637f252b36e034c373e36890ace37524c
+  8c386d836a07c457eff065d28be13dd131ed35ce
   $ log 'merge()^1^'
-  8528aa5637f252b36e034c373e36890ace37524c
+  8c386d836a07c457eff065d28be13dd131ed35ce
   $ log 'merge()^^^'
-  d75937da8da0322d18c3771fb029ffd88b996c89
+  925d80f479bb026b0fb3deb27503780b13f74123
 
   $ hg debugrevspec -s '(merge() | 0)~-1'
   * set:
@@ -745,25 +726,25 @@ parentrevspec
   1
   7
   $ log 'merge()~-1'
-  013af1973af4a1932911a575960a876af6c02aaa
+  c42d3b18b7b19d997b65800072b703b19989cc12
   $ log 'tip~-1'
   $ log '(tip | merge())~-1'
-  013af1973af4a1932911a575960a876af6c02aaa
+  c42d3b18b7b19d997b65800072b703b19989cc12
   $ log 'merge()~0'
-  e0cc66ef77e8b6f711815af4e001a6594fde3ba5
+  b1166c9cdb4bf159910e366395bee663c8dfb681
   $ log 'merge()~1'
-  904fa392b9415cad2ad08ac82d39bed6cfbcaa1c
+  cbd103c35a18fb5ef34e414924807969a3ed80ae
   $ log 'merge()~2'
-  8528aa5637f252b36e034c373e36890ace37524c
+  8c386d836a07c457eff065d28be13dd131ed35ce
   $ log 'merge()~2^1'
-  d75937da8da0322d18c3771fb029ffd88b996c89
+  925d80f479bb026b0fb3deb27503780b13f74123
   $ log 'merge()~3'
-  d75937da8da0322d18c3771fb029ffd88b996c89
+  925d80f479bb026b0fb3deb27503780b13f74123
 
   $ log '(-3:tip)^'
-  2326846efdab34abffaf5ad2e7831f64a8ebb017
-  e0cc66ef77e8b6f711815af4e001a6594fde3ba5
-  d5d0dcbdc4d9ff5dbb2d336f32f0bb561c1a532c
+  f97e7d9434783652739570e7cfdac469336f9e24
+  b1166c9cdb4bf159910e366395bee663c8dfb681
+  6d98e1a8658014ae6501fab0b5e4d1be2d393880
 
   $ log 'tip^foo'
   hg: parse error: ^ expects a number 0, 1, or 2
@@ -801,25 +782,25 @@ multiple revspecs
 (idset does not preserve '+' order for optimization)
 
   $ hg log -r 'tip~1:tip' -r 'tip~2:tip~1' --template '{node}\n'
-  2326846efdab34abffaf5ad2e7831f64a8ebb017
-  904fa392b9415cad2ad08ac82d39bed6cfbcaa1c
-  e0cc66ef77e8b6f711815af4e001a6594fde3ba5
-  013af1973af4a1932911a575960a876af6c02aaa
-  d5d0dcbdc4d9ff5dbb2d336f32f0bb561c1a532c
-  6a4f54cc779b5949146617ba046459baab4a496f
+  f97e7d9434783652739570e7cfdac469336f9e24
+  cbd103c35a18fb5ef34e414924807969a3ed80ae
+  b1166c9cdb4bf159910e366395bee663c8dfb681
+  c42d3b18b7b19d997b65800072b703b19989cc12
+  6d98e1a8658014ae6501fab0b5e4d1be2d393880
+  d57d206a3bab91a65cbc8c7fb6c7de5a235c6bcf
 
 test usage in revpair (with "+")
 
 (real pair)
 
   $ hg diff -r 'tip^^' -r 'tip'
-  diff -r 2326846efdab -r 6a4f54cc779b .hgtags
+  diff -r f97e7d943478 -r d57d206a3bab .hgtags
   --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
   +++ b/.hgtags	Thu Jan 01 00:00:00 1970 +0000
   @@ -0,0 +1,1 @@
   +e0cc66ef77e8b6f711815af4e001a6594fde3ba5 1.0
   $ hg diff -r 'tip^^::tip'
-  diff -r 2326846efdab -r 6a4f54cc779b .hgtags
+  diff -r f97e7d943478 -r d57d206a3bab .hgtags
   --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
   +++ b/.hgtags	Thu Jan 01 00:00:00 1970 +0000
   @@ -0,0 +1,1 @@
@@ -833,13 +814,13 @@ test usage in revpair (with "+")
 (single rev that does not looks like a range)
 
   $ hg diff -r 'tip^::tip^ or tip^'
-  diff -r d5d0dcbdc4d9 .hgtags
+  diff -r 6d98e1a86580 .hgtags
   --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
   +++ b/.hgtags	* (glob)
   @@ -0,0 +1,1 @@
   +e0cc66ef77e8b6f711815af4e001a6594fde3ba5 1.0
   $ hg diff -r 'tip^ or tip^'
-  diff -r d5d0dcbdc4d9 .hgtags
+  diff -r 6d98e1a86580 .hgtags
   --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
   +++ b/.hgtags	* (glob)
   @@ -0,0 +1,1 @@
@@ -870,7 +851,7 @@ aliases:
     None)
   * set:
   <nameset-
-    <spans [e0cc66ef77e8b6f711815af4e001a6594fde3ba5+6]>>
+    <spans [b1166c9cdb4bf159910e366395bee663c8dfb681+6]>>
   6
 
   $ HGPLAIN=1
@@ -890,7 +871,7 @@ aliases:
     None)
   * set:
   <nameset-
-    <spans [e0cc66ef77e8b6f711815af4e001a6594fde3ba5+6]>>
+    <spans [b1166c9cdb4bf159910e366395bee663c8dfb681+6]>>
   6
 
   $ unset HGPLAIN
@@ -946,7 +927,7 @@ test alias recursion
       None))
   * set:
   <nameset+
-    <spans [e0cc66ef77e8b6f711815af4e001a6594fde3ba5:013af1973af4a1932911a575960a876af6c02aaa+6:7]>>
+    <spans [b1166c9cdb4bf159910e366395bee663c8dfb681:c42d3b18b7b19d997b65800072b703b19989cc12+6:7]>>
   6
   7
 
@@ -1008,9 +989,9 @@ test nesting and variable passing
   <baseset
     <max
       <fullreposet+
-        <spans [2785f51eece5a23075c6f1d74702d8d9cb8bf0d4:6a4f54cc779b5949146617ba046459baab4a496f+0:9]>>,
+        <spans [f7b1eb17ad24730a1651fccd46c43826d1bbc2ac:d57d206a3bab91a65cbc8c7fb6c7de5a235c6bcf+0:9]>>,
       <nameset+
-        <spans [5ed5505e9f1c21de2345daabdd7913fe53e4acd2:904fa392b9415cad2ad08ac82d39bed6cfbcaa1c+2:5]>>>>
+        <spans [ca0049c702f186378942cfea3da87905eea720a3:cbd103c35a18fb5ef34e414924807969a3ed80ae+2:5]>>>>
   5
 
 test chained `or` operations are flattened at parsing phase
@@ -1043,7 +1024,7 @@ test chained `or` operations are flattened at parsing phase
         (symbol '3'))))
   * set:
   <nameset+
-    <spans [2785f51eece5a23075c6f1d74702d8d9cb8bf0d4:8528aa5637f252b36e034c373e36890ace37524c+0:3]>>
+    <spans [f7b1eb17ad24730a1651fccd46c43826d1bbc2ac:8c386d836a07c457eff065d28be13dd131ed35ce+0:3]>>
   0
   1
   2
@@ -1087,7 +1068,7 @@ but 'all()' should never be substituted to '0()'.
       None))
   * set:
   <nameset-
-    <spans [2785f51eece5a23075c6f1d74702d8d9cb8bf0d4+0]>>
+    <spans [f7b1eb17ad24730a1651fccd46c43826d1bbc2ac+0]>>
   0
 
 test unknown reference:
@@ -1137,7 +1118,7 @@ test unknown reference:
     <baseset [9]>,
     <filteredset
       <fullreposet+
-        <spans [2785f51eece5a23075c6f1d74702d8d9cb8bf0d4:6a4f54cc779b5949146617ba046459baab4a496f+0:9]>>,
+        <spans [f7b1eb17ad24730a1651fccd46c43826d1bbc2ac:d57d206a3bab91a65cbc8c7fb6c7de5a235c6bcf+0:9]>>,
       <desc '$1'>>>
   9
 
@@ -1237,59 +1218,59 @@ test unknown reference:
 
 issue4553: check that revset aliases override existing hash prefix
 
-  $ hg log -qr e
-  e0cc66ef77e8
+  $ hg log -qr b
+  b1166c9cdb4b
 
-  $ hg log -qr e --config revsetalias.e="all()"
-  2785f51eece5
-  d75937da8da0
-  5ed5505e9f1c
-  8528aa5637f2
-  2326846efdab
-  904fa392b941
-  e0cc66ef77e8
-  013af1973af4
-  d5d0dcbdc4d9
-  6a4f54cc779b
+  $ hg log -qr b --config revsetalias.b="all()"
+  f7b1eb17ad24
+  925d80f479bb
+  ca0049c702f1
+  8c386d836a07
+  f97e7d943478
+  cbd103c35a18
+  b1166c9cdb4b
+  c42d3b18b7b1
+  6d98e1a86580
+  d57d206a3bab
 
-  $ hg log -qr e: --config revsetalias.e="0"
-  2785f51eece5
-  d75937da8da0
-  5ed5505e9f1c
-  8528aa5637f2
-  2326846efdab
-  904fa392b941
-  e0cc66ef77e8
-  013af1973af4
-  d5d0dcbdc4d9
-  6a4f54cc779b
+  $ hg log -qr b: --config revsetalias.b="0"
+  f7b1eb17ad24
+  925d80f479bb
+  ca0049c702f1
+  8c386d836a07
+  f97e7d943478
+  cbd103c35a18
+  b1166c9cdb4b
+  c42d3b18b7b1
+  6d98e1a86580
+  d57d206a3bab
 
-  $ hg log -qr :e --config revsetalias.e="9"
-  2785f51eece5
-  d75937da8da0
-  5ed5505e9f1c
-  8528aa5637f2
-  2326846efdab
-  904fa392b941
-  e0cc66ef77e8
-  013af1973af4
-  d5d0dcbdc4d9
-  6a4f54cc779b
+  $ hg log -qr :b --config revsetalias.b="9"
+  f7b1eb17ad24
+  925d80f479bb
+  ca0049c702f1
+  8c386d836a07
+  f97e7d943478
+  cbd103c35a18
+  b1166c9cdb4b
+  c42d3b18b7b1
+  6d98e1a86580
+  d57d206a3bab
 
-  $ hg log -qr e:
-  e0cc66ef77e8
-  013af1973af4
-  d5d0dcbdc4d9
-  6a4f54cc779b
+  $ hg log -qr b:
+  b1166c9cdb4b
+  c42d3b18b7b1
+  6d98e1a86580
+  d57d206a3bab
 
-  $ hg log -qr :e
-  2785f51eece5
-  d75937da8da0
-  5ed5505e9f1c
-  8528aa5637f2
-  2326846efdab
-  904fa392b941
-  e0cc66ef77e8
+  $ hg log -qr :b
+  f7b1eb17ad24
+  925d80f479bb
+  ca0049c702f1
+  8c386d836a07
+  f97e7d943478
+  cbd103c35a18
+  b1166c9cdb4b
 
 issue2549 - correct optimizations
 
@@ -1327,7 +1308,7 @@ issue2549 - correct optimizations
     <baseset
       <max
         <fullreposet+
-          <spans [2785f51eece5a23075c6f1d74702d8d9cb8bf0d4:6a4f54cc779b5949146617ba046459baab4a496f+0:9]>>,
+          <spans [f7b1eb17ad24730a1651fccd46c43826d1bbc2ac:d57d206a3bab91a65cbc8c7fb6c7de5a235c6bcf+0:9]>>,
         <baseset [1, 2]>>>,
     <not
       <baseset [2]>>>
@@ -1346,7 +1327,7 @@ issue2549 - correct optimizations
     <baseset
       <min
         <fullreposet+
-          <spans [2785f51eece5a23075c6f1d74702d8d9cb8bf0d4:6a4f54cc779b5949146617ba046459baab4a496f+0:9]>>,
+          <spans [f7b1eb17ad24730a1651fccd46c43826d1bbc2ac:d57d206a3bab91a65cbc8c7fb6c7de5a235c6bcf+0:9]>>,
         <baseset [1, 2]>>>,
     <not
       <baseset [1]>>>
@@ -1370,47 +1351,47 @@ issue2549 - correct optimizations
 
 issue4289 - ordering of built-ins
   $ hg log -M -q -r 3:2
-  8528aa5637f2
-  5ed5505e9f1c
+  8c386d836a07
+  ca0049c702f1
 
 test revsets started with 40-chars hash (issue3669)
 
   $ ISSUE3669_TIP=`hg tip --template '{node}'`
   $ hg log -r "${ISSUE3669_TIP}" --template '{node}\n'
-  6a4f54cc779b5949146617ba046459baab4a496f
+  d57d206a3bab91a65cbc8c7fb6c7de5a235c6bcf
   $ hg log -r "${ISSUE3669_TIP}^" --template '{node}\n'
-  d5d0dcbdc4d9ff5dbb2d336f32f0bb561c1a532c
+  6d98e1a8658014ae6501fab0b5e4d1be2d393880
 
 test or-ed indirect predicates (issue3775)
 
   $ log '6 or 6^1' | sort
-  904fa392b9415cad2ad08ac82d39bed6cfbcaa1c
-  e0cc66ef77e8b6f711815af4e001a6594fde3ba5
+  b1166c9cdb4bf159910e366395bee663c8dfb681
+  cbd103c35a18fb5ef34e414924807969a3ed80ae
   $ log '6^1 or 6' | sort
-  904fa392b9415cad2ad08ac82d39bed6cfbcaa1c
-  e0cc66ef77e8b6f711815af4e001a6594fde3ba5
+  b1166c9cdb4bf159910e366395bee663c8dfb681
+  cbd103c35a18fb5ef34e414924807969a3ed80ae
   $ log '4 or 4~1' | sort
-  2326846efdab34abffaf5ad2e7831f64a8ebb017
-  5ed5505e9f1c21de2345daabdd7913fe53e4acd2
+  ca0049c702f186378942cfea3da87905eea720a3
+  f97e7d9434783652739570e7cfdac469336f9e24
   $ log '4~1 or 4' | sort
-  2326846efdab34abffaf5ad2e7831f64a8ebb017
-  5ed5505e9f1c21de2345daabdd7913fe53e4acd2
+  ca0049c702f186378942cfea3da87905eea720a3
+  f97e7d9434783652739570e7cfdac469336f9e24
   $ log '(0 or 2):(4 or 6) or 0 or 6' | sort
-  2326846efdab34abffaf5ad2e7831f64a8ebb017
-  2785f51eece5a23075c6f1d74702d8d9cb8bf0d4
-  5ed5505e9f1c21de2345daabdd7913fe53e4acd2
-  8528aa5637f252b36e034c373e36890ace37524c
-  904fa392b9415cad2ad08ac82d39bed6cfbcaa1c
-  d75937da8da0322d18c3771fb029ffd88b996c89
-  e0cc66ef77e8b6f711815af4e001a6594fde3ba5
+  8c386d836a07c457eff065d28be13dd131ed35ce
+  925d80f479bb026b0fb3deb27503780b13f74123
+  b1166c9cdb4bf159910e366395bee663c8dfb681
+  ca0049c702f186378942cfea3da87905eea720a3
+  cbd103c35a18fb5ef34e414924807969a3ed80ae
+  f7b1eb17ad24730a1651fccd46c43826d1bbc2ac
+  f97e7d9434783652739570e7cfdac469336f9e24
   $ log '0 or 6 or (0 or 2):(4 or 6)' | sort
-  2326846efdab34abffaf5ad2e7831f64a8ebb017
-  2785f51eece5a23075c6f1d74702d8d9cb8bf0d4
-  5ed5505e9f1c21de2345daabdd7913fe53e4acd2
-  8528aa5637f252b36e034c373e36890ace37524c
-  904fa392b9415cad2ad08ac82d39bed6cfbcaa1c
-  d75937da8da0322d18c3771fb029ffd88b996c89
-  e0cc66ef77e8b6f711815af4e001a6594fde3ba5
+  8c386d836a07c457eff065d28be13dd131ed35ce
+  925d80f479bb026b0fb3deb27503780b13f74123
+  b1166c9cdb4bf159910e366395bee663c8dfb681
+  ca0049c702f186378942cfea3da87905eea720a3
+  cbd103c35a18fb5ef34e414924807969a3ed80ae
+  f7b1eb17ad24730a1651fccd46c43826d1bbc2ac
+  f97e7d9434783652739570e7cfdac469336f9e24
 
 tests for 'remote()' predicate:
 #.  (csets in remote) (id)            (remote)
@@ -1426,46 +1407,45 @@ tests for 'remote()' predicate:
   $ echo r > r
   $ hg ci -Aqm 10
   $ log 'remote()'
-  013af1973af4a1932911a575960a876af6c02aaa
+  d57d206a3bab91a65cbc8c7fb6c7de5a235c6bcf
   $ log 'remote("a-b-c-")'
-  5ed5505e9f1c21de2345daabdd7913fe53e4acd2
+  ca0049c702f186378942cfea3da87905eea720a3
   $ cd ../repo
 
 tests for concatenation of strings/symbols by "##"
-
-  $ try "278 ## '5f5' ## 1ee ## 'ce5'"
+  $ try "f7b ## '1eb' ## 17a ## 'd24'"
   (_concat
     (_concat
       (_concat
-        (symbol '278')
-        (string '5f5'))
-      (symbol '1ee'))
-    (string 'ce5'))
+        (symbol 'f7b')
+        (string '1eb'))
+      (symbol '17a'))
+    (string 'd24'))
   * concatenated:
-  (string '2785f51eece5')
+  (string 'f7b1eb17ad24')
   * set:
   <baseset [0]>
   0
 
   $ echo 'cat4($1, $2, $3, $4) = $1 ## $2 ## $3 ## $4' >> .hg/hgrc
-  $ try "cat4(278, '5f5', 1ee, 'ce5')"
+  $ try "cat4(f7b, '1eb', 17a, 'd24')"
   (func
     (symbol 'cat4')
     (list
-      (symbol '278')
-      (string '5f5')
-      (symbol '1ee')
-      (string 'ce5')))
+      (symbol 'f7b')
+      (string '1eb')
+      (symbol '17a')
+      (string 'd24')))
   * expanded:
   (_concat
     (_concat
       (_concat
-        (symbol '278')
-        (string '5f5'))
-      (symbol '1ee'))
-    (string 'ce5'))
+        (symbol 'f7b')
+        (string '1eb'))
+      (symbol '17a'))
+    (string 'd24'))
   * concatenated:
-  (string '2785f51eece5')
+  (string 'f7b1eb17ad24')
   * set:
   <baseset [0]>
   0
@@ -1474,15 +1454,15 @@ tests for concatenation of strings/symbols by "##"
 
   $ echo 'cat2($1, $2) = $1 ## $2' >> .hg/hgrc
   $ echo 'cat2x2($1, $2, $3, $4) = cat2($1 ## $2, $3 ## $4)' >> .hg/hgrc
-  $ log "cat2x2(278, '5f5', 1ee, 'ce5')"
-  2785f51eece5a23075c6f1d74702d8d9cb8bf0d4
+  $ log "cat2x2(f7b, '1eb', 17a, 'd24')"
+  f7b1eb17ad24730a1651fccd46c43826d1bbc2ac
 
 (check operator priority)
 
   $ echo 'cat2n2($1, $2, $3, $4) = $1 ## $2 or $3 ## $4~2' >> .hg/hgrc
-  $ log "cat2n2(2785f5, 1eece5, 6a4f54, cc779b)"
-  2785f51eece5a23075c6f1d74702d8d9cb8bf0d4
-  2326846efdab34abffaf5ad2e7831f64a8ebb017
+  $ log "cat2n2(f7b1eb, 17ad24, d57d20, 6a3bab)"
+  f7b1eb17ad24730a1651fccd46c43826d1bbc2ac
+  f97e7d9434783652739570e7cfdac469336f9e24
 
   $ cd ..
 
@@ -1496,7 +1476,6 @@ prepare repository that has "default" branches of multiple roots
   $ echo default1 >> a
   $ hg ci -m1
 
-  $ setbranch stable
   $ echo stable2 >> a
   $ commit -m2
   $ echo stable3 >> a

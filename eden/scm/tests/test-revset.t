@@ -59,7 +59,7 @@
   $ commit() {
   >   if [ -n "$BRANCH" ]; then
   >     # hg bookmark -i
-  >     hg commit --extra="branch=$BRANCH" "$@"
+  >     hg commit "$@"
   >     hg bookmark -if -- "$BRANCH"
   >     # export $BRANCH=$(hg log -r . -T '{node}')
   >   else
@@ -123,15 +123,14 @@
   $ setbranch a-b-c-
   $ commit -Aqm2 -u Bob
 
-  $ hg log -r 'extra('\''branch'\'', '\''a-b-c-'\'')' --template '{rev}\n'
-  2
   $ hg log -r 'extra('\''branch'\'')' --template '{rev}\n'
   0
   1
   2
   $ hg log -r 'extra('\''branch'\'', '\''re:a'\'')' --template '{rev} {branch}\n'
-  0 a
-  2 a-b-c-
+  0 default
+  1 default
+  2 default
 
   $ hg co 1
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -183,7 +182,7 @@
     (symbol '1'))
   * set:
   <nameset+
-    <spans [2785f51eece5a23075c6f1d74702d8d9cb8bf0d4:d75937da8da0322d18c3771fb029ffd88b996c89+0:1]>>
+    <spans [f7b1eb17ad24730a1651fccd46c43826d1bbc2ac:925d80f479bb026b0fb3deb27503780b13f74123+0:1]>>
   0
   1
   $ try --optimize ':'
@@ -194,7 +193,7 @@
     None)
   * set:
   <nameset+
-    <spans [2785f51eece5a23075c6f1d74702d8d9cb8bf0d4:6a4f54cc779b5949146617ba046459baab4a496f+0:9]>>
+    <spans [f7b1eb17ad24730a1651fccd46c43826d1bbc2ac:d57d206a3bab91a65cbc8c7fb6c7de5a235c6bcf+0:9]>>
   0
   1
   2
@@ -211,7 +210,7 @@
     (symbol '6'))
   * set:
   <nameset+
-    <spans [904fa392b9415cad2ad08ac82d39bed6cfbcaa1c:e0cc66ef77e8b6f711815af4e001a6594fde3ba5+5:6, 8528aa5637f252b36e034c373e36890ace37524c+3]>>
+    <spans [cbd103c35a18fb5ef34e414924807969a3ed80ae:b1166c9cdb4bf159910e366395bee663c8dfb681+5:6, 8c386d836a07c457eff065d28be13dd131ed35ce+3]>>
   3
   5
   6
@@ -294,7 +293,7 @@
     (symbol '+a+b+c+'))
   * set:
   <nameset+
-    <spans [8528aa5637f252b36e034c373e36890ace37524c:6a4f54cc779b5949146617ba046459baab4a496f+3:9]>>
+    <spans [8c386d836a07c457eff065d28be13dd131ed35ce:d57d206a3bab91a65cbc8c7fb6c7de5a235c6bcf+3:9]>>
   3
   4
   5
@@ -307,7 +306,7 @@
     (symbol '+a+b+c+'))
   * set:
   <nameset+
-    <spans [2785f51eece5a23075c6f1d74702d8d9cb8bf0d4:8528aa5637f252b36e034c373e36890ace37524c+0:3]>>
+    <spans [f7b1eb17ad24730a1651fccd46c43826d1bbc2ac:8c386d836a07c457eff065d28be13dd131ed35ce+0:3]>>
   0
   1
   2
@@ -318,7 +317,7 @@
     (symbol '+a+b+c+'))
   * set:
   <nameset-
-    <spans [8528aa5637f252b36e034c373e36890ace37524c:2326846efdab34abffaf5ad2e7831f64a8ebb017+3:4]>>
+    <spans [8c386d836a07c457eff065d28be13dd131ed35ce:f97e7d9434783652739570e7cfdac469336f9e24+3:4]>>
   4
   3
   $ log '-a-b-c-:+a+b+c+'
@@ -424,7 +423,7 @@
   6
   $ log a
   0
-  $ log 2785f51ee
+  $ log f7b1eb17a
   0
   $ log 'date(2005)'
   4
@@ -486,7 +485,6 @@
 # keyword arguments
 
   $ log 'extra(branch, value=a)'
-  0
 
   $ log 'extra(branch, a, b)'
   hg: parse error: extra takes at most 2 positional arguments
@@ -797,7 +795,7 @@
     None)
   * set:
   <nameset+
-    <spans [2785f51eece5a23075c6f1d74702d8d9cb8bf0d4:6a4f54cc779b5949146617ba046459baab4a496f+0:9]>>
+    <spans [f7b1eb17ad24730a1651fccd46c43826d1bbc2ac:d57d206a3bab91a65cbc8c7fb6c7de5a235c6bcf+0:9]>>
   0
   1
   2
@@ -814,7 +812,7 @@
     (symbol '1'))
   * set:
   <nameset+
-    <spans [2785f51eece5a23075c6f1d74702d8d9cb8bf0d4:d75937da8da0322d18c3771fb029ffd88b996c89+0:1]>>
+    <spans [f7b1eb17ad24730a1651fccd46c43826d1bbc2ac:925d80f479bb026b0fb3deb27503780b13f74123+0:1]>>
   0
   1
   $ try -p analyzed ':(1|2)'
@@ -826,7 +824,7 @@
         (symbol '2'))))
   * set:
   <nameset+
-    <spans [2785f51eece5a23075c6f1d74702d8d9cb8bf0d4:5ed5505e9f1c21de2345daabdd7913fe53e4acd2+0:2]>>
+    <spans [f7b1eb17ad24730a1651fccd46c43826d1bbc2ac:ca0049c702f186378942cfea3da87905eea720a3+0:2]>>
   0
   1
   2
@@ -849,7 +847,7 @@
     (symbol '2'))
   * set:
   <nameset+
-    <spans [2785f51eece5a23075c6f1d74702d8d9cb8bf0d4:5ed5505e9f1c21de2345daabdd7913fe53e4acd2+0:2]>>
+    <spans [f7b1eb17ad24730a1651fccd46c43826d1bbc2ac:ca0049c702f186378942cfea3da87905eea720a3+0:2]>>
   0
   1
   2
@@ -861,7 +859,7 @@
     (symbol '2'))
   * set:
   <nameset+
-    <spans [2785f51eece5a23075c6f1d74702d8d9cb8bf0d4:5ed5505e9f1c21de2345daabdd7913fe53e4acd2+0:2]>>
+    <spans [f7b1eb17ad24730a1651fccd46c43826d1bbc2ac:ca0049c702f186378942cfea3da87905eea720a3+0:2]>>
   0
   1
   2
@@ -872,7 +870,7 @@
       (symbol '9')))
   * set:
   <nameset+
-    <spans [d5d0dcbdc4d9ff5dbb2d336f32f0bb561c1a532c:6a4f54cc779b5949146617ba046459baab4a496f+8:9]>>
+    <spans [6d98e1a8658014ae6501fab0b5e4d1be2d393880:d57d206a3bab91a65cbc8c7fb6c7de5a235c6bcf+8:9]>>
   8
   9
 
@@ -898,7 +896,7 @@
       (symbol '2')))
   * set:
   <nameset+
-    <spans [2785f51eece5a23075c6f1d74702d8d9cb8bf0d4:5ed5505e9f1c21de2345daabdd7913fe53e4acd2+0:2]>>
+    <spans [f7b1eb17ad24730a1651fccd46c43826d1bbc2ac:ca0049c702f186378942cfea3da87905eea720a3+0:2]>>
   0
   1
   2
@@ -914,7 +912,7 @@
     (symbol '2'))
   * set:
   <nameset+
-    <spans [2785f51eece5a23075c6f1d74702d8d9cb8bf0d4:5ed5505e9f1c21de2345daabdd7913fe53e4acd2+0:2]>>
+    <spans [f7b1eb17ad24730a1651fccd46c43826d1bbc2ac:ca0049c702f186378942cfea3da87905eea720a3+0:2]>>
   0
   1
   2
@@ -930,7 +928,7 @@
     (symbol '2'))
   * set:
   <nameset+
-    <spans [2785f51eece5a23075c6f1d74702d8d9cb8bf0d4:5ed5505e9f1c21de2345daabdd7913fe53e4acd2+0:2]>>
+    <spans [f7b1eb17ad24730a1651fccd46c43826d1bbc2ac:ca0049c702f186378942cfea3da87905eea720a3+0:2]>>
   0
   1
   2
@@ -944,7 +942,7 @@
             (symbol '9'))))))
   * set:
   <nameset+
-    <spans [2326846efdab34abffaf5ad2e7831f64a8ebb017:6a4f54cc779b5949146617ba046459baab4a496f+4:9]>>
+    <spans [f97e7d9434783652739570e7cfdac469336f9e24:d57d206a3bab91a65cbc8c7fb6c7de5a235c6bcf+4:9]>>
   4
   5
   6
@@ -958,7 +956,7 @@
       (symbol '.')))
   * set:
   <nameset+
-    <spans [d5d0dcbdc4d9ff5dbb2d336f32f0bb561c1a532c:6a4f54cc779b5949146617ba046459baab4a496f+8:9]>>
+    <spans [6d98e1a8658014ae6501fab0b5e4d1be2d393880:d57d206a3bab91a65cbc8c7fb6c7de5a235c6bcf+8:9]>>
   8
   9
 
@@ -968,7 +966,7 @@
       (symbol '.')))
   * set:
   <nameset+
-    <spans [d5d0dcbdc4d9ff5dbb2d336f32f0bb561c1a532c:6a4f54cc779b5949146617ba046459baab4a496f+8:9]>>
+    <spans [6d98e1a8658014ae6501fab0b5e4d1be2d393880:d57d206a3bab91a65cbc8c7fb6c7de5a235c6bcf+8:9]>>
   8
   9
 
@@ -979,7 +977,7 @@
     (symbol '.'))
   * set:
   <nameset+
-    <spans [d5d0dcbdc4d9ff5dbb2d336f32f0bb561c1a532c:6a4f54cc779b5949146617ba046459baab4a496f+8:9]>>
+    <spans [6d98e1a8658014ae6501fab0b5e4d1be2d393880:d57d206a3bab91a65cbc8c7fb6c7de5a235c6bcf+8:9]>>
   8
   9
 
@@ -1002,7 +1000,7 @@
     (symbol '2'))
   * set:
   <nameset+
-    <spans [2785f51eece5a23075c6f1d74702d8d9cb8bf0d4:5ed5505e9f1c21de2345daabdd7913fe53e4acd2+0:2]>>
+    <spans [f7b1eb17ad24730a1651fccd46c43826d1bbc2ac:ca0049c702f186378942cfea3da87905eea720a3+0:2]>>
   0
   1
   2
@@ -1018,7 +1016,7 @@
     (symbol '2'))
   * set:
   <nameset+
-    <spans [2785f51eece5a23075c6f1d74702d8d9cb8bf0d4:5ed5505e9f1c21de2345daabdd7913fe53e4acd2+0:2]>>
+    <spans [f7b1eb17ad24730a1651fccd46c43826d1bbc2ac:ca0049c702f186378942cfea3da87905eea720a3+0:2]>>
   0
   1
   2
@@ -1354,7 +1352,7 @@
   * set:
   <filteredset
     <fullreposet+
-      <spans [2785f51eece5a23075c6f1d74702d8d9cb8bf0d4:6a4f54cc779b5949146617ba046459baab4a496f+0:9]>>,
+      <spans [f7b1eb17ad24730a1651fccd46c43826d1bbc2ac:d57d206a3bab91a65cbc8c7fb6c7de5a235c6bcf+0:9]>>,
     <grep '\x08issue\\d+'>>
   $ try 'grep(r"\bissue\d+")'
   (func
@@ -1363,7 +1361,7 @@
   * set:
   <filteredset
     <fullreposet+
-      <spans [2785f51eece5a23075c6f1d74702d8d9cb8bf0d4:6a4f54cc779b5949146617ba046459baab4a496f+0:9]>>,
+      <spans [f7b1eb17ad24730a1651fccd46c43826d1bbc2ac:d57d206a3bab91a65cbc8c7fb6c7de5a235c6bcf+0:9]>>,
     <grep '\\bissue\\d+'>>
   6
   $ try 'grep(r"\")'
@@ -1415,7 +1413,7 @@
   $ hg debugrevspec --no-show-revs -s '0:7 & all()'
   * set:
   <nameset+
-    <spans [2785f51eece5a23075c6f1d74702d8d9cb8bf0d4:013af1973af4a1932911a575960a876af6c02aaa+0:7]>>
+    <spans [f7b1eb17ad24730a1651fccd46c43826d1bbc2ac:c42d3b18b7b19d997b65800072b703b19989cc12+0:7]>>
   $ log 'limit(0:7 & all(), 3, 4)'
   4
   5
@@ -1436,7 +1434,7 @@
   $ hg debugrevspec --no-show-revs -s '0::7'
   * set:
   <nameset+
-    <spans [2785f51eece5a23075c6f1d74702d8d9cb8bf0d4:013af1973af4a1932911a575960a876af6c02aaa+0:7]>>
+    <spans [f7b1eb17ad24730a1651fccd46c43826d1bbc2ac:c42d3b18b7b19d997b65800072b703b19989cc12+0:7]>>
   $ log 'limit(0+1+2+3+4+5+6+7, 3, 4)'
   4
   5
@@ -1455,7 +1453,7 @@
   $ hg debugrevspec -s 'limit(sort(0::7, rev), 3, 6)'
   * set:
   <nameset+
-    <spans [e0cc66ef77e8b6f711815af4e001a6594fde3ba5:013af1973af4a1932911a575960a876af6c02aaa+6:7]>>
+    <spans [b1166c9cdb4bf159910e366395bee663c8dfb681:c42d3b18b7b19d997b65800072b703b19989cc12+6:7]>>
   6
   7
   $ hg debugrevspec -s 'limit(sort(0::7, rev), 3, 9)'
@@ -1464,7 +1462,7 @@
   $ hg debugrevspec -s 'limit(sort(0::7, -rev), 3, 6)'
   * set:
   <nameset-
-    <spans [2785f51eece5a23075c6f1d74702d8d9cb8bf0d4:d75937da8da0322d18c3771fb029ffd88b996c89+0:1]>>
+    <spans [f7b1eb17ad24730a1651fccd46c43826d1bbc2ac:925d80f479bb026b0fb3deb27503780b13f74123+0:1]>>
   1
   0
   $ hg debugrevspec -s 'limit(sort(0::7, -rev), 3, 9)'
@@ -1480,7 +1478,7 @@
   $ hg debugrevspec --no-show-revs -s '0:7'
   * set:
   <nameset+
-    <spans [2785f51eece5a23075c6f1d74702d8d9cb8bf0d4:013af1973af4a1932911a575960a876af6c02aaa+0:7]>>
+    <spans [f7b1eb17ad24730a1651fccd46c43826d1bbc2ac:c42d3b18b7b19d997b65800072b703b19989cc12+0:7]>>
   $ log 'limit(0:7, 3, 4)'
   4
   5
@@ -1501,7 +1499,7 @@
   $ hg debugrevspec -s 'limit(0:7, 3, 6)'
   * set:
   <nameset+
-    <spans [e0cc66ef77e8b6f711815af4e001a6594fde3ba5:013af1973af4a1932911a575960a876af6c02aaa+6:7]>>
+    <spans [b1166c9cdb4bf159910e366395bee663c8dfb681:c42d3b18b7b19d997b65800072b703b19989cc12+6:7]>>
   6
   7
   $ hg debugrevspec -s 'limit(0:7, 3, 9)'
@@ -1510,7 +1508,7 @@
   $ hg debugrevspec -s 'limit(7:0, 3, 6)'
   * set:
   <nameset-
-    <spans [2785f51eece5a23075c6f1d74702d8d9cb8bf0d4:d75937da8da0322d18c3771fb029ffd88b996c89+0:1]>>
+    <spans [f7b1eb17ad24730a1651fccd46c43826d1bbc2ac:925d80f479bb026b0fb3deb27503780b13f74123+0:1]>>
   1
   0
   $ hg debugrevspec -s 'limit(7:0, 3, 9)'
@@ -1526,28 +1524,28 @@
   $ hg debugrevspec -s 'first(4:0, 3) & 3:'
   * set:
   <nameset-
-    <spans [8528aa5637f252b36e034c373e36890ace37524c:2326846efdab34abffaf5ad2e7831f64a8ebb017+3:4]>>
+    <spans [8c386d836a07c457eff065d28be13dd131ed35ce:f97e7d9434783652739570e7cfdac469336f9e24+3:4]>>
   4
   3
 
   $ hg debugrevspec -s '3: & first(4:0, 3)'
   * set:
   <nameset+
-    <spans [8528aa5637f252b36e034c373e36890ace37524c:2326846efdab34abffaf5ad2e7831f64a8ebb017+3:4]>>
+    <spans [8c386d836a07c457eff065d28be13dd131ed35ce:f97e7d9434783652739570e7cfdac469336f9e24+3:4]>>
   3
   4
 
   $ hg debugrevspec -s 'last(4:0, 3) & :1'
   * set:
   <nameset-
-    <spans [2785f51eece5a23075c6f1d74702d8d9cb8bf0d4:d75937da8da0322d18c3771fb029ffd88b996c89+0:1]>>
+    <spans [f7b1eb17ad24730a1651fccd46c43826d1bbc2ac:925d80f479bb026b0fb3deb27503780b13f74123+0:1]>>
   1
   0
 
   $ hg debugrevspec -s ':1 & last(4:0, 3)'
   * set:
   <nameset+
-    <spans [2785f51eece5a23075c6f1d74702d8d9cb8bf0d4:d75937da8da0322d18c3771fb029ffd88b996c89+0:1]>>
+    <spans [f7b1eb17ad24730a1651fccd46c43826d1bbc2ac:925d80f479bb026b0fb3deb27503780b13f74123+0:1]>>
   0
   1
 
@@ -1556,7 +1554,7 @@
   $ hg debugrevspec -s 'last(0::)'
   * set:
   <nameset+
-    <spans [6a4f54cc779b5949146617ba046459baab4a496f+9]>>
+    <spans [d57d206a3bab91a65cbc8c7fb6c7de5a235c6bcf+9]>>
   9
   $ hg identify -r '0::' --num
   9
@@ -1618,7 +1616,6 @@
   $ log 'modifies("set:modified()")'
   4
   $ log 'id(5)'
-  2
   $ log 'only(9)'
   8
   9
@@ -1683,7 +1680,7 @@
       (symbol '8')))
   * set:
   <nameset+
-    <spans [d5d0dcbdc4d9ff5dbb2d336f32f0bb561c1a532c:6a4f54cc779b5949146617ba046459baab4a496f+8:9]>>
+    <spans [6d98e1a8658014ae6501fab0b5e4d1be2d393880:d57d206a3bab91a65cbc8c7fb6c7de5a235c6bcf+8:9]>>
   8
   9
   $ try --optimize '(9)%(5)'
@@ -1700,7 +1697,7 @@
       (symbol '5')))
   * set:
   <nameset+
-    <spans [d5d0dcbdc4d9ff5dbb2d336f32f0bb561c1a532c:6a4f54cc779b5949146617ba046459baab4a496f+8:9, 2326846efdab34abffaf5ad2e7831f64a8ebb017+4, 5ed5505e9f1c21de2345daabdd7913fe53e4acd2+2]>>
+    <spans [6d98e1a8658014ae6501fab0b5e4d1be2d393880:d57d206a3bab91a65cbc8c7fb6c7de5a235c6bcf+8:9, f97e7d9434783652739570e7cfdac469336f9e24+4, ca0049c702f186378942cfea3da87905eea720a3+2]>>
   2
   4
   8
@@ -1731,15 +1728,14 @@
 
 # Test hexadecimal revision
 
-  $ log 'id(2)'
-  abort: 00changelog.i@2: ambiguous identifier!
+  $ log 'id(f)'
+  abort: 00changelog.i@f: ambiguous identifier!
   [255]
-  $ log 'id(23268)'
+  $ log 'id(f97e7)'
   4
-  $ log 'id(2785f51eece)'
+  $ log 'id(f7b1eb17ad2)'
   0
   $ log 'id(d5d0dcbdc4d9ff5dbb2d336f32f0bb561c1a532c)'
-  8
   $ log 'id(d5d0dcbdc4a)'
   $ log 'id(d5d0dcbdc4w)'
   $ log 'id(d5d0dcbdc4d9ff5dbb2d336f32f0bb561c1a532d)'
@@ -2032,7 +2028,7 @@ FIXME: This is wrong.
       (symbol '1')))
   * set:
   <nameset-
-    <spans [8528aa5637f252b36e034c373e36890ace37524c+3, 2785f51eece5a23075c6f1d74702d8d9cb8bf0d4+0]>>
+    <spans [8c386d836a07c457eff065d28be13dd131ed35ce+3, f7b1eb17ad24730a1651fccd46c43826d1bbc2ac+0]>>
   3
   0
 
@@ -2060,7 +2056,7 @@ FIXME: This is wrong.
       (string '0\x001\x002')))
   * set:
   <nameset-
-    <spans [2785f51eece5a23075c6f1d74702d8d9cb8bf0d4:5ed5505e9f1c21de2345daabdd7913fe53e4acd2+0:2]>>
+    <spans [f7b1eb17ad24730a1651fccd46c43826d1bbc2ac:ca0049c702f186378942cfea3da87905eea720a3+0:2]>>
   2
   1
   0
@@ -2092,7 +2088,7 @@ FIXME: This is wrong.
         (symbol '2'))))
   * set:
   <nameset-
-    <spans [2785f51eece5a23075c6f1d74702d8d9cb8bf0d4:5ed5505e9f1c21de2345daabdd7913fe53e4acd2+0:2]>>
+    <spans [f7b1eb17ad24730a1651fccd46c43826d1bbc2ac:ca0049c702f186378942cfea3da87905eea720a3+0:2]>>
   2
   1
   0
@@ -2117,7 +2113,7 @@ FIXME: This is wrong.
       (string '0\x001\x002')))
   * set:
   <nameset-
-    <spans [2785f51eece5a23075c6f1d74702d8d9cb8bf0d4:5ed5505e9f1c21de2345daabdd7913fe53e4acd2+0:2]>>
+    <spans [f7b1eb17ad24730a1651fccd46c43826d1bbc2ac:ca0049c702f186378942cfea3da87905eea720a3+0:2]>>
   2
   1
   0
@@ -2140,7 +2136,7 @@ FIXME: This is wrong.
       (symbol '0')))
   * set:
   <nameset+
-    <spans [2785f51eece5a23075c6f1d74702d8d9cb8bf0d4:5ed5505e9f1c21de2345daabdd7913fe53e4acd2+0:2]>>
+    <spans [f7b1eb17ad24730a1651fccd46c43826d1bbc2ac:ca0049c702f186378942cfea3da87905eea720a3+0:2]>>
   0
   1
   2
@@ -2152,7 +2148,7 @@ FIXME: This is wrong.
       (symbol '0'))
     (func
       (symbol '_hexlist')
-      (string '2785f51eece5a23075c6f1d74702d8d9cb8bf0d4\x00d75937da8da0322d18c3771fb029ffd88b996c89\x005ed5505e9f1c21de2345daabdd7913fe53e4acd2')))
+      (string 'f7b1eb17ad24730a1651fccd46c43826d1bbc2ac\x00925d80f479bb026b0fb3deb27503780b13f74123\x00ca0049c702f186378942cfea3da87905eea720a3')))
   * optimized:
   (and
     (range
@@ -2160,10 +2156,10 @@ FIXME: This is wrong.
       (symbol '0'))
     (func
       (symbol '_hexlist')
-      (string '2785f51eece5a23075c6f1d74702d8d9cb8bf0d4\x00d75937da8da0322d18c3771fb029ffd88b996c89\x005ed5505e9f1c21de2345daabdd7913fe53e4acd2')))
+      (string 'f7b1eb17ad24730a1651fccd46c43826d1bbc2ac\x00925d80f479bb026b0fb3deb27503780b13f74123\x00ca0049c702f186378942cfea3da87905eea720a3')))
   * set:
   <nameset-
-    <spans [2785f51eece5a23075c6f1d74702d8d9cb8bf0d4:5ed5505e9f1c21de2345daabdd7913fe53e4acd2+0:2]>>
+    <spans [f7b1eb17ad24730a1651fccd46c43826d1bbc2ac:ca0049c702f186378942cfea3da87905eea720a3+0:2]>>
   2
   1
   0
@@ -2204,7 +2200,7 @@ FIXME: This is wrong.
       (string '0\x001')))
   * set:
   <nameset-
-    <spans [5ed5505e9f1c21de2345daabdd7913fe53e4acd2+2]>>
+    <spans [ca0049c702f186378942cfea3da87905eea720a3+2]>>
   2
 
   $ try -p optimized '2:0 & not (0:2 & (0 + 1))'
@@ -2222,7 +2218,7 @@ FIXME: This is wrong.
         (string '0\x001'))))
   * set:
   <nameset-
-    <spans [5ed5505e9f1c21de2345daabdd7913fe53e4acd2+2]>>
+    <spans [ca0049c702f186378942cfea3da87905eea720a3+2]>>
   2
 
 #  because 'present()' does nothing other than suppressing an error, the
@@ -2265,7 +2261,7 @@ FIXME: This is wrong.
         (string '0\x001\x002'))))
   * set:
   <nameset-
-    <spans [2785f51eece5a23075c6f1d74702d8d9cb8bf0d4:5ed5505e9f1c21de2345daabdd7913fe53e4acd2+0:2]>>
+    <spans [f7b1eb17ad24730a1651fccd46c43826d1bbc2ac:ca0049c702f186378942cfea3da87905eea720a3+0:2]>>
   2
   1
   0
@@ -2294,7 +2290,7 @@ FIXME: This is wrong.
         None)))
   * set:
   <nameset+
-    <spans [2785f51eece5a23075c6f1d74702d8d9cb8bf0d4:5ed5505e9f1c21de2345daabdd7913fe53e4acd2+0:2]>>
+    <spans [f7b1eb17ad24730a1651fccd46c43826d1bbc2ac:ca0049c702f186378942cfea3da87905eea720a3+0:2]>>
   0
   1
   2
@@ -2328,7 +2324,7 @@ FIXME: This is wrong.
         (string '-rev'))))
   * set:
   <nameset+
-    <spans [2785f51eece5a23075c6f1d74702d8d9cb8bf0d4:5ed5505e9f1c21de2345daabdd7913fe53e4acd2+0:2]>>
+    <spans [f7b1eb17ad24730a1651fccd46c43826d1bbc2ac:ca0049c702f186378942cfea3da87905eea720a3+0:2]>>
   0
   1
   2
@@ -2368,7 +2364,7 @@ FIXME: This is wrong.
         (string '1\x000\x002'))))
   * set:
   <nameset-
-    <spans [d75937da8da0322d18c3771fb029ffd88b996c89+1]>>
+    <spans [925d80f479bb026b0fb3deb27503780b13f74123+1]>>
   1
 
   $ try --optimize '2:0 & not last(0 + 2 + 1)'
@@ -2396,7 +2392,7 @@ FIXME: This is wrong.
         (string '0\x002\x001'))))
   * set:
   <nameset-
-    <spans [5ed5505e9f1c21de2345daabdd7913fe53e4acd2+2, 2785f51eece5a23075c6f1d74702d8d9cb8bf0d4+0]>>
+    <spans [ca0049c702f186378942cfea3da87905eea720a3+2, f7b1eb17ad24730a1651fccd46c43826d1bbc2ac+0]>>
   2
   0
 
@@ -2434,7 +2430,7 @@ FIXME: This is wrong.
         (string '0\x002\x001'))))
   * set:
   <nameset-
-    <spans [d75937da8da0322d18c3771fb029ffd88b996c89+1]>>
+    <spans [925d80f479bb026b0fb3deb27503780b13f74123+1]>>
   1
 
 #  'A & B' can be rewritten as 'flipand(B, A)' by weight.
@@ -2573,7 +2569,7 @@ FIXME: This is wrong.
   $ cd sorting
   $ cat >> .hg/hgrc << 'EOF'
   > [ui]
-  > logtemplate = '{rev} {branch|p5}{desc|p5}{author|p5}{date|hgdate}\n'
+  > logtemplate = '{rev} {desc|p5}{author|p5}{date|hgdate}\n'
   > [templatealias]
   > p5(s) = pad(s, 5)
   > EOF
@@ -2589,103 +2585,103 @@ FIXME: This is wrong.
 #  compare revisions (has fast path):
 
   $ hg log -r 'sort(all(), rev)'
-  0 b12  m111 u112 111 10800
-  1 b11  m12  u111 112 7200
-  2 b111 m11  u12  111 3600
-  3 b112 m111 u11  120 0
+  0 m111 u112 111 10800
+  1 m12  u111 112 7200
+  2 m11  u12  111 3600
+  3 m111 u11  120 0
 
   $ hg log -r 'sort(all(), -rev)'
-  3 b112 m111 u11  120 0
-  2 b111 m11  u12  111 3600
-  1 b11  m12  u111 112 7200
-  0 b12  m111 u112 111 10800
+  3 m111 u11  120 0
+  2 m11  u12  111 3600
+  1 m12  u111 112 7200
+  0 m111 u112 111 10800
 
 #  compare variable-length strings (issue5218):
 
   $ hg log -r 'sort(all(), branch)'
-  1 b11  m12  u111 112 7200
-  2 b111 m11  u12  111 3600
-  3 b112 m111 u11  120 0
-  0 b12  m111 u112 111 10800
+  0 m111 u112 111 10800
+  1 m12  u111 112 7200
+  2 m11  u12  111 3600
+  3 m111 u11  120 0
 
   $ hg log -r 'sort(all(), -branch)'
-  0 b12  m111 u112 111 10800
-  3 b112 m111 u11  120 0
-  2 b111 m11  u12  111 3600
-  1 b11  m12  u111 112 7200
+  0 m111 u112 111 10800
+  1 m12  u111 112 7200
+  2 m11  u12  111 3600
+  3 m111 u11  120 0
 
   $ hg log -r 'sort(all(), desc)'
-  2 b111 m11  u12  111 3600
-  0 b12  m111 u112 111 10800
-  3 b112 m111 u11  120 0
-  1 b11  m12  u111 112 7200
+  2 m11  u12  111 3600
+  0 m111 u112 111 10800
+  3 m111 u11  120 0
+  1 m12  u111 112 7200
 
   $ hg log -r 'sort(all(), -desc)'
-  1 b11  m12  u111 112 7200
-  0 b12  m111 u112 111 10800
-  3 b112 m111 u11  120 0
-  2 b111 m11  u12  111 3600
+  1 m12  u111 112 7200
+  0 m111 u112 111 10800
+  3 m111 u11  120 0
+  2 m11  u12  111 3600
 
   $ hg log -r 'sort(all(), user)'
-  3 b112 m111 u11  120 0
-  1 b11  m12  u111 112 7200
-  0 b12  m111 u112 111 10800
-  2 b111 m11  u12  111 3600
+  3 m111 u11  120 0
+  1 m12  u111 112 7200
+  0 m111 u112 111 10800
+  2 m11  u12  111 3600
 
   $ hg log -r 'sort(all(), -user)'
-  2 b111 m11  u12  111 3600
-  0 b12  m111 u112 111 10800
-  1 b11  m12  u111 112 7200
-  3 b112 m111 u11  120 0
+  2 m11  u12  111 3600
+  0 m111 u112 111 10800
+  1 m12  u111 112 7200
+  3 m111 u11  120 0
 
 #  compare dates (tz offset should have no effect):
 
   $ hg log -r 'sort(all(), date)'
-  0 b12  m111 u112 111 10800
-  2 b111 m11  u12  111 3600
-  1 b11  m12  u111 112 7200
-  3 b112 m111 u11  120 0
+  0 m111 u112 111 10800
+  2 m11  u12  111 3600
+  1 m12  u111 112 7200
+  3 m111 u11  120 0
 
   $ hg log -r 'sort(all(), -date)'
-  3 b112 m111 u11  120 0
-  1 b11  m12  u111 112 7200
-  0 b12  m111 u112 111 10800
-  2 b111 m11  u12  111 3600
+  3 m111 u11  120 0
+  1 m12  u111 112 7200
+  0 m111 u112 111 10800
+  2 m11  u12  111 3600
 
 #  be aware that 'sort(x, -k)' is not exactly the same as 'reverse(sort(x, k))'
 #  because '-k' reverses the comparison, not the list itself:
 
   $ hg log -r 'sort(0 + 2, date)'
-  0 b12  m111 u112 111 10800
-  2 b111 m11  u12  111 3600
+  0 m111 u112 111 10800
+  2 m11  u12  111 3600
 
   $ hg log -r 'sort(0 + 2, -date)'
-  0 b12  m111 u112 111 10800
-  2 b111 m11  u12  111 3600
+  0 m111 u112 111 10800
+  2 m11  u12  111 3600
 
   $ hg log -r 'reverse(sort(0 + 2, date))'
-  2 b111 m11  u12  111 3600
-  0 b12  m111 u112 111 10800
+  2 m11  u12  111 3600
+  0 m111 u112 111 10800
 
 #  sort by multiple keys:
 
   $ hg log -r 'sort(all(), "branch -rev")'
-  1 b11  m12  u111 112 7200
-  2 b111 m11  u12  111 3600
-  3 b112 m111 u11  120 0
-  0 b12  m111 u112 111 10800
+  3 m111 u11  120 0
+  2 m11  u12  111 3600
+  1 m12  u111 112 7200
+  0 m111 u112 111 10800
 
   $ hg log -r 'sort(all(), "-desc -date")'
-  1 b11  m12  u111 112 7200
-  3 b112 m111 u11  120 0
-  0 b12  m111 u112 111 10800
-  2 b111 m11  u12  111 3600
+  1 m12  u111 112 7200
+  3 m111 u11  120 0
+  0 m111 u112 111 10800
+  2 m11  u12  111 3600
 
   $ hg log -r 'sort(all(), "user -branch date rev")'
-  3 b112 m111 u11  120 0
-  1 b11  m12  u111 112 7200
-  0 b12  m111 u112 111 10800
-  2 b111 m11  u12  111 3600
+  3 m111 u11  120 0
+  1 m12  u111 112 7200
+  0 m111 u112 111 10800
+  2 m11  u12  111 3600
 
 #  toposort prioritises graph branches
 
@@ -2706,31 +2702,31 @@ FIXME: This is wrong.
   $ hg ci -m t3 -u tu -d '130 0'
 
   $ hg log -r 'sort(all(), topo)'
-  6 b111 t3   tu   130 0
-  5 b111 t2   tu   130 0
-  4 b111 t1   tu   130 0
-  3 b112 m111 u11  120 0
-  2 b111 m11  u12  111 3600
-  1 b11  m12  u111 112 7200
-  0 b12  m111 u112 111 10800
+  6 t3   tu   130 0
+  5 t2   tu   130 0
+  4 t1   tu   130 0
+  3 m111 u11  120 0
+  2 m11  u12  111 3600
+  1 m12  u111 112 7200
+  0 m111 u112 111 10800
 
   $ hg log -r 'sort(all(), -topo)'
-  0 b12  m111 u112 111 10800
-  1 b11  m12  u111 112 7200
-  2 b111 m11  u12  111 3600
-  3 b112 m111 u11  120 0
-  4 b111 t1   tu   130 0
-  5 b111 t2   tu   130 0
-  6 b111 t3   tu   130 0
+  0 m111 u112 111 10800
+  1 m12  u111 112 7200
+  2 m11  u12  111 3600
+  3 m111 u11  120 0
+  4 t1   tu   130 0
+  5 t2   tu   130 0
+  6 t3   tu   130 0
 
   $ hg log -r 'sort(all(), topo, topo.firstbranch=book1)'
-  5 b111 t2   tu   130 0
-  6 b111 t3   tu   130 0
-  4 b111 t1   tu   130 0
-  3 b112 m111 u11  120 0
-  2 b111 m11  u12  111 3600
-  1 b11  m12  u111 112 7200
-  0 b12  m111 u112 111 10800
+  5 t2   tu   130 0
+  6 t3   tu   130 0
+  4 t1   tu   130 0
+  3 m111 u11  120 0
+  2 m11  u12  111 3600
+  1 m12  u111 112 7200
+  0 m111 u112 111 10800
 
 # topographical sorting can't be combined with other sort keys, and you can't
 # use the topo.firstbranch option when topo sort is not active:
@@ -2746,7 +2742,7 @@ FIXME: This is wrong.
 # topo.firstbranch should accept any kind of expressions:
 
   $ hg log -r 'sort(0, topo, topo.firstbranch=(book1))'
-  0 b12  m111 u112 111 10800
+  0 m111 u112 111 10800
 
   $ cd ..
   $ cd repo
