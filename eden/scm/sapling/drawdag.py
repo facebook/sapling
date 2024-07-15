@@ -323,7 +323,7 @@ class simplecommitctx(context.committablectx):
             "mutinfo": mutinfo,
             "user": user,
         }
-        super(simplecommitctx, self).__init__(self, text or name, **opts)
+        super().__init__(repo, text or name, **opts)
         self._repo = repo
         self._filemap = filemap
         self._parents = parentctxs

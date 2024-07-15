@@ -1511,14 +1511,18 @@ class committablectx(basectx):
         self._extra = {}
         if extra:
             self._extra = extra.copy()
-        if "branch" not in self._extra:
-            try:
-                branch = encoding.fromlocal(self._repo.dirstate.branch())
-            except UnicodeDecodeError:
-                raise error.Abort(_("branch name not in UTF-8!"))
-            self._extra["branch"] = branch
-        if self._extra["branch"] == "":
+
+        if repo.ui.configbool("experimental", "no-branch", True):
             self._extra["branch"] = "default"
+        else:
+            if "branch" not in self._extra:
+                try:
+                    branch = encoding.fromlocal(self._repo.dirstate.branch())
+                except UnicodeDecodeError:
+                    raise error.Abort(_("branch name not in UTF-8!"))
+                self._extra["branch"] = branch
+            if self._extra["branch"] == "":
+                self._extra["branch"] = "default"
 
     def __bytes__(self):
         return encodeutf8(str(self))
