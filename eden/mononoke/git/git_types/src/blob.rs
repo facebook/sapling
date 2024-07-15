@@ -47,6 +47,10 @@ impl BlobHandle {
         Ok(Self { oid, file_type })
     }
 
+    pub fn from_oid_and_file_type(oid: RichGitSha1, file_type: FileType) -> Self {
+        Self { oid, file_type }
+    }
+
     pub fn filemode(&self) -> i32 {
         match self.file_type {
             FileType::Regular => mode::GIT_FILEMODE_BLOB,

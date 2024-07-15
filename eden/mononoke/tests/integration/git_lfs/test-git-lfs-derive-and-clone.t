@@ -30,16 +30,18 @@
 # List all the objects in Git repo
   $ cd $REPONAME  
   $ cat large_file
-  contents of LFS file (no-eol)
+  version https://git-lfs.github.com/spec/v1
+  oid sha256:f0d0c2c2389643eba52baaa036bf2b66668a996da8c6a1618785ce7f393e46ed
+  size 20 (no-eol)
   $ git rev-list --objects --all 
-  573aa48fcae9dbe43b1cdb399e5347679b9826fa
+  debb49562a1b388c240ad57b758baa683d5d2fb7
   be393840a21645c52bbde7e62bdb7269fc3ebb87
   8131b4f1da6df2caebe93c581ddd303153b338e5
-  e96054e75b8a16ac4fdd06b86da5a42d4aadcddd 
+  61eda68aa48e8a2e5053bcf2c4244c0368173053 
   8c7e5a667f1b771847fe88c01c3de34413a1b220 A
   7371f47a6f8bd23a8fa1a8b2a9479cdd76380e54 B
   96d80cd6c4e7158dbebd0849f4fb7ce513e5828c C
-  3222f7f375a57003fc49c796a44c103701106139 large_file
+  2adb0e3bdc5bf435a8276d61a50ff7a0b82912fb large_file
   f6dc85adf6f1fa7fafdd9d57cf66bf6926145bb3 
   617601c79811cbbae338512798318b4e5b70c9ac 
 
@@ -50,7 +52,9 @@ $ cd "$TESTTMP"
   Updated Git hooks.
   Git LFS initialized.
   $ git_client -c "lfs.url=$LFS_URL" -c http.extraHeader="x-client-info: {\"request_info\": {\"entry_point\": \"CurlTest\", \"correlator\": \"test\"}}" lfs fetch --all
+  fetch: 1 object found, done.
   fetch: Fetching all references...
   $ git lfs checkout
+  Checking out LFS objects: 100% (1/1), 20 B | 0 B/s, done.
   $ cat large_file
   contents of LFS file (no-eol)
