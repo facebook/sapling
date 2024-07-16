@@ -100,7 +100,7 @@ testedwith = "ships-with-fb-ext"
 amendopts = [
     ("", "rebase", None, _("rebases children after the amend")),
     ("", "fixup", None, _("rebase children from a previous amend (DEPRECATED)")),
-    ("", "to", "", _("amend to a specific commit in the current stack (ADVANCED)")),
+    ("", "to", "", _("amend to a specific commit in the current stack")),
 ] + cmdutil.templateopts
 
 # Never restack commits on amend.
