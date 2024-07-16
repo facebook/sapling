@@ -127,6 +127,11 @@ pub async fn parse_pack(
     ctx: &CoreContext,
     blobstore: Arc<RepoBlobstore>,
 ) -> Result<FxHashMap<ObjectId, ObjectContent>> {
+    // If the packfile is empty, return an empty object map. This can happen when the push only has ref create/update
+    // pointing to existing commit or just ref deletes
+    if pack_bytes.is_empty() {
+        return Ok(FxHashMap::default());
+    }
     let mut raw_file = Builder::new()
         .suffix(PACKFILE_SUFFIX)
         .rand_bytes(8)
