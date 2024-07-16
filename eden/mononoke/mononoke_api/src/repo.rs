@@ -327,7 +327,7 @@ async fn maybe_push_redirector(
 }
 
 impl RepoContextBuilder {
-    pub(crate) async fn new(
+    pub async fn new(
         ctx: CoreContext,
         repo: Arc<Repo>,
         repos: Arc<MononokeRepos<Repo>>,

@@ -5,11 +5,13 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
+use bonsai_git_mapping::BonsaiGitMapping;
 use context::CoreContext;
 use git_types::fetch_git_object_bytes;
 use git_types::GitIdentifier;
@@ -19,6 +21,7 @@ use gix_hash::ObjectId;
 use gix_object::ObjectRef;
 use import_tools::git_reader::GitReader;
 use mononoke_types::hash::GitSha1;
+use mononoke_types::ChangesetId;
 use repo_blobstore::RepoBlobstore;
 use rustc_hash::FxHashMap;
 
@@ -64,6 +67,55 @@ impl GitReader for GitObjectStore {
                 .context("Failed to convert bytes into git object")?
                 .into_owned();
             Ok(ObjectContent { raw: bytes, parsed })
+        }
+    }
+}
+
+/// Struct storing the git to bonsai mappings for the commits received as part of
+/// push. For commits outside of the pushed packfile, this struct fetches the mappings
+/// from blobstore (if present)
+#[derive(Clone)]
+pub struct GitMappingsStore {
+    ctx: CoreContext,
+    stored_mappings: Arc<dyn BonsaiGitMapping>,
+    mappings: HashMap<ObjectId, ChangesetId>,
+}
+
+impl GitMappingsStore {
+    pub fn new(
+        ctx: &CoreContext,
+        stored_mappings: Arc<dyn BonsaiGitMapping>,
+        mappings: HashMap<ObjectId, ChangesetId>,
+    ) -> Self {
+        Self {
+            ctx: ctx.clone(),
+            stored_mappings,
+            mappings,
+        }
+    }
+
+    pub async fn get_bonsai(&self, oid: &ObjectId) -> Result<Option<ChangesetId>> {
+        // The only time we return an empty mapping is when the oid is null. This can happen
+        // when the user is trying to create or delete a bookmark.
+        if *oid == ObjectId::null(gix_hash::Kind::Sha1) {
+            Ok(None)
+        } else if let Some(cs_id) = self.mappings.get(oid.as_ref()).cloned() {
+            Ok(Some(cs_id))
+        } else {
+            let cs_id = self
+                .stored_mappings
+                .get_bonsai_from_git_sha1(&self.ctx, GitSha1::from_object_id(oid.as_ref())?)
+                .await
+                .with_context(|| {
+                    format!(
+                        "Failure in getting bonsai for git sha1 {} during push",
+                        oid.to_hex()
+                    )
+                })?
+                .ok_or_else(|| {
+                    anyhow::anyhow!("No bonsai found for git sha1 {} during push", oid.to_hex())
+                })?;
+            Ok(Some(cs_id))
         }
     }
 }

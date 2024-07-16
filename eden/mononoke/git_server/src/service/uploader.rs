@@ -177,7 +177,6 @@ pub async fn upload_objects(
         let TagMetadata {
             name,
             bonsai_target,
-            ..
         } = tag_metadata;
         // Add a mapping from the tag object id to the commit changeset id where it points. This will later
         // be used in bookmark movement

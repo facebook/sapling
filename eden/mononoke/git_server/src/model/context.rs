@@ -15,6 +15,7 @@ use gotham::state::State;
 use gotham_derive::StateData;
 use gotham_ext::middleware::request_context::RequestContext;
 use metaconfig_parser::RepoConfigs;
+use mononoke_repos::MononokeRepos;
 use repo_authorization::AuthorizationContext;
 use repo_permission_checker::RepoPermissionCheckerRef;
 use slog::Logger;
@@ -29,6 +30,7 @@ use crate::Repo;
 pub struct RepositoryRequestContext {
     pub ctx: CoreContext,
     pub repo: Arc<Repo>,
+    pub mononoke_repos: Arc<MononokeRepos<Repo>>,
     pub repo_configs: Arc<RepoConfigs>,
 }
 
@@ -86,13 +88,18 @@ impl GitServerContext {
         ctx: CoreContext,
         method_info: GitMethodInfo,
     ) -> Result<RepositoryRequestContext, GitServerContextErrorKind> {
-        let (repo, enforce_authorization, repo_configs) = {
+        let (repo, mononoke_repos, enforce_authorization, repo_configs) = {
             let inner = self
                 .inner
                 .read()
                 .expect("poisoned lock in git server context");
             match inner.repos.get(&method_info.repo) {
-                Some(repo) => (repo, inner.enforce_auth, inner.repos.repo_configs()),
+                Some(repo) => (
+                    repo,
+                    inner.repos.repo_mgr.repos().clone(),
+                    inner.enforce_auth,
+                    inner.repos.repo_configs(),
+                ),
                 None => {
                     return Err(GitServerContextErrorKind::RepositoryDoesNotExist(
                         method_info.repo.to_string(),
@@ -104,6 +111,7 @@ impl GitServerContext {
         Ok(RepositoryRequestContext {
             ctx,
             repo,
+            mononoke_repos,
             repo_configs,
         })
     }

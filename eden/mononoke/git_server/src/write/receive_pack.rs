@@ -7,7 +7,12 @@
 
 use std::sync::Arc;
 
+use bonsai_git_mapping::BonsaiGitMappingArc;
 use bytes::Bytes;
+use cloned::cloned;
+use futures::stream;
+use futures::StreamExt;
+use futures::TryStreamExt;
 use gotham::mime;
 use gotham::state::FromState;
 use gotham::state::State;
@@ -26,13 +31,18 @@ use crate::command::RequestCommand;
 use crate::model::GitMethodInfo;
 use crate::model::RepositoryParams;
 use crate::model::RepositoryRequestContext;
+use crate::service::set_ref;
 use crate::service::upload_objects;
+use crate::service::GitMappingsStore;
 use crate::service::GitObjectStore;
+use crate::service::RefUpdateOperation;
 use crate::util::empty_body;
 use crate::util::get_body;
 
-const OK_HEADER: &[u8] = b"unpack ok";
-const OK_PREFIX: &str = "ok";
+const PACK_OK: &[u8] = b"unpack ok";
+const REF_OK: &str = "ok";
+const REF_ERR: &str = "ng";
+const REF_UPDATE_CONCURRENCY: usize = 20;
 
 pub async fn receive_pack(state: &mut State) -> Result<Response<Body>, HttpError> {
     let body_bytes = get_body(state).await?;
@@ -50,12 +60,13 @@ async fn push<'a>(
     request_command: RequestCommand<'a>,
 ) -> anyhow::Result<Response<Body>> {
     let repo_name = RepositoryParams::borrow_from(state).repo_name();
-    let request_context = RepositoryRequestContext::instantiate(
-        state,
-        GitMethodInfo::from_command(&request_command.command, repo_name),
-    )
-    .await?;
-    // TODO(rajshar): Implement the actual push logic
+    let request_context = Arc::new(
+        RepositoryRequestContext::instantiate(
+            state,
+            GitMethodInfo::from_command(&request_command.command, repo_name),
+        )
+        .await?,
+    );
     let mut output = vec![];
     if let Command::Push(push_args) = request_command.command {
         let (ctx, blobstore) = (
@@ -67,20 +78,60 @@ async fn push<'a>(
         // Generate the GitObjectStore using the parsed objects
         let object_store = Arc::new(GitObjectStore::new(parsed_objects, ctx, blobstore.clone()));
         // Upload the objects corresponding to the push to the underlying store
-        let _git_bonsai_mappings = upload_objects(
+        let git_bonsai_mappings = upload_objects(
             ctx,
             request_context.repo.clone(),
             object_store,
             &push_args.ref_updates,
         )
         .await?;
-        write_text_packetline(OK_HEADER, &mut output).await?;
-        for ref_update in push_args.ref_updates {
-            write_text_packetline(
-                format!("{} {}", OK_PREFIX, ref_update.ref_name).as_bytes(),
-                &mut output,
-            )
+        let affected_changesets_len = git_bonsai_mappings.len();
+        // We were successful in parsing the pack and uploading the objects to underlying store. Indicate this to the client
+        write_text_packetline(PACK_OK, &mut output).await?;
+        // Create bonsai_git_mapping store to enable mapping lookup during bookmark movement
+        let git_bonsai_mapping_store = Arc::new(GitMappingsStore::new(
+            ctx,
+            request_context.repo.inner.bonsai_git_mapping_arc(),
+            git_bonsai_mappings,
+        ));
+        // Update each ref concurrently (TODO(rajshar): Add support for atomic ref update)
+        let updated_refs = stream::iter(push_args.ref_updates.clone())
+            .map(|ref_update| {
+                cloned!(request_context, git_bonsai_mapping_store);
+                async move {
+                    let output = tokio::spawn(async move {
+                        let ref_update_op = RefUpdateOperation::new(
+                            ref_update.clone(),
+                            affected_changesets_len,
+                            None,
+                        ); // TODO(rajshar): Populate pushvars from HTTP headers
+                        set_ref(request_context, git_bonsai_mapping_store, ref_update_op).await
+                    })
+                    .await?;
+                    anyhow::Ok(output)
+                }
+            })
+            .buffer_unordered(REF_UPDATE_CONCURRENCY)
+            .try_collect::<Vec<_>>()
             .await?;
+        // For each ref, update the status as ok or ng based on the result of the bookmark set operation
+        for (updated_ref, result) in updated_refs {
+            match result {
+                Ok(_) => {
+                    write_text_packetline(
+                        format!("{} {}", REF_OK, updated_ref.ref_name).as_bytes(),
+                        &mut output,
+                    )
+                    .await?;
+                }
+                Err(e) => {
+                    write_text_packetline(
+                        format!("{} {} {}", REF_ERR, updated_ref.ref_name, e).as_bytes(),
+                        &mut output,
+                    )
+                    .await?;
+                }
+            }
         }
         flush_to_write(&mut output).await?;
     }

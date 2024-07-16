@@ -24,7 +24,7 @@
   $ git add file1
   $ git commit -qam "Add file1"
   $ old_head=$(git rev-parse HEAD)
-  $ git tag -a -m"new tag" first_tag
+  $ git tag -a -m "new tag" first_tag
   $ echo "this is file2" > file2
   $ git add file2
   $ git commit -qam "Add file2"
@@ -46,6 +46,7 @@
 
 # Add some new commits to the cloned repo and push it to remote
   $ cd repo
+  $ current_head=$(git rev-parse HEAD)
   $ echo "newly added file" > new_file
   $ git add .
   $ git commit -qam "Commit with newly added file"
@@ -57,8 +58,7 @@
   $ git tag -a -m "Tag for push" push_tag
   $ git tag -a -m "Tag pointing in the past" past_tag $old_head
 
-# The git-receive-pack endpoint accepts pushes without moving the bookmarks in the backend
-# but stores all the git and bonsai objects in the server
+# Push all the changes made so far
   $ git_client push origin --all --follow-tags
   To https://*/repos/git/ro/repo.git (glob)
      e8615d6..e8b927e  master -> master
@@ -81,16 +81,22 @@
   tags/past_tag|42DD560265FB5465B9D5B66265B6C50C4B23A13F503ACAA63181A23CCD7CDB1E|9183B513199288101E5AAFB7F5F90B64092093DE|0
   tags/push_tag|04189410E1F520E08AAA430592C5F2B3DD2746AFBCE5DE80A1282ECA10B36A6E|EC8F5A7483999D8D78203A64786F3734D7737EE7|0
 
+# Wait for the warm bookmark cache to catch up with the latest changes
+  $ wait_for_git_bookmark_move HEAD $current_head
+
 # Cloning the repo in a new folder will not get the latest changes since we didn't really accept the push
   $ cd "$TESTTMP"
   $ git_client clone $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git new_repo
   Cloning into 'new_repo'...
   $ cd new_repo
 
-# When trying to list refs, note that new_branch is not present since the server never accepted it
+# List all the known refs. Ensure that the new branches and tags are present in the repo
   $ git show-ref | sort
   8963e1f55d1346a07c3aec8c8fc72bf87d0452b1 refs/tags/first_tag
-  e8615d6f149b876be0a2f30a1c5bf0c42bf8e136 refs/heads/master
-  e8615d6f149b876be0a2f30a1c5bf0c42bf8e136 refs/remotes/origin/HEAD
-  e8615d6f149b876be0a2f30a1c5bf0c42bf8e136 refs/remotes/origin/master
+  9183b513199288101e5aafb7f5f90b64092093de refs/tags/past_tag
+  ad1d25082e63405c284b9dc2d4b63fd2c39bcc7e refs/remotes/origin/new_branch
+  e8b927ed84aa5ab33aeada81770a2aaa94f111be refs/heads/master
+  e8b927ed84aa5ab33aeada81770a2aaa94f111be refs/remotes/origin/HEAD
+  e8b927ed84aa5ab33aeada81770a2aaa94f111be refs/remotes/origin/master
+  ec8f5a7483999d8d78203a64786f3734d7737ee7 refs/tags/push_tag
   fb02ed046a1e75fe2abb8763f7c715496ae36353 refs/tags/empty_tag

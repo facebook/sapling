@@ -57,6 +57,7 @@ rust_binary(
         "//eden/mononoke/metaconfig:metaconfig_parser",
         "//eden/mononoke/metaconfig:metaconfig_types",
         "//eden/mononoke/mononoke_api:mononoke_api",
+        "//eden/mononoke/mononoke_repos:mononoke_repos",
         "//eden/mononoke/mononoke_types:mononoke_types",
         "//eden/mononoke/permission_checker:permission_checker",
         "//eden/mononoke/repo_attributes/repo_identity:repo_identity",
