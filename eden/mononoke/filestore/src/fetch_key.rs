@@ -30,6 +30,15 @@ pub enum FetchKey {
     Aliased(Alias),
 }
 
+impl Display for FetchKey {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Canonical(content_id) => f.write_fmt(format_args!("{:?}", content_id)),
+            Self::Aliased(alias) => f.write_fmt(format_args!("{:?}", alias)),
+        }
+    }
+}
+
 impl From<ContentId> for FetchKey {
     fn from(content_id: ContentId) -> Self {
         FetchKey::Canonical(content_id)
