@@ -32,8 +32,6 @@ pub struct WorkspaceData {
     pub timestamp: i64,
 }
 
-// Types for cloud/workspace
-
 #[auto_wire]
 #[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
 #[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
@@ -133,8 +131,7 @@ pub struct ClientInfo {
 }
 
 #[auto_wire]
-#[derive(Clone, Debug, Eq, PartialEq)]
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct ReferencesDataResponse {
     #[id(0)]
@@ -143,8 +140,7 @@ pub struct ReferencesDataResponse {
 }
 
 #[auto_wire]
-#[derive(Clone, Debug, Eq, PartialEq)]
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct WorkspaceDataResponse {
     #[id(0)]
