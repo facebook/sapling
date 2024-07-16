@@ -57,7 +57,28 @@ setup configuration
     "parents": []
   }
 
-  $ mononoke_newadmin fetch -R repo -B main -p ""
+  $ mononoke_newadmin fetch -R repo -B main -p "" -k hg
   A 005d992c5dcf32993668f7cede29d296c494a5d9 regular
   B 35e7525ce3a48913275d7061dd9a867ffef1e34d regular
   C a2e456504a5e61f763f1a0b36a6c247c7541b2b3 regular
+
+  $ mononoke_newadmin fetch -R repo -B main -p "" -k fsnode
+  Summary:
+  Simple-Format-SHA1: f8af839f2ffaa63aa251fafdbea413cb21ae9176
+  Simple-Format-SHA256: 17ffd9c91c2ff10a13f8689b098fd41c90d0b45b0c14ad96eede1217b56418a5
+  Children: 3 files (3), 0 dirs
+  Descendants: 3 files (3)
+  Children list:
+  A eb56488e97bb4cf5eb17f05357b80108a4a71f6c3bab52dfcaec07161d105ec9 regular
+  B 55662471e2a28db8257939b2f9a2d24e65b46a758bac12914a58f17dcde6905f regular
+  C 896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d regular
+
+  $ mononoke_newadmin fetch -R repo -B main -p "A" -k fsnode
+  File-Type: regular
+  Size: 1
+  Content-Id: eb56488e97bb4cf5eb17f05357b80108a4a71f6c3bab52dfcaec07161d105ec9
+  Sha1: 6dcd4ce23d88e2ee9568ba546c007c63d9131c1b
+  Sha256: 559aead08264d5795d3909718cdd05abd49572e84fe55590eef31a88a08fdffd
+  Git-Sha1: 8c7e5a667f1b771847fe88c01c3de34413a1b220
+  
+  A
