@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use anyhow::Result;
 use cached_config::ModificationTime;
 use fbinit::FacebookInit;
 use live_commit_sync_config::*;
@@ -34,7 +35,7 @@ const PUSHREDIRECTOR_BOTH_ENABLED: &str = r#"{
 }"#;
 
 #[fbinit::test]
-async fn test_enabling_push_redirection(fb: FacebookInit) {
+async fn test_enabling_push_redirection(fb: FacebookInit) -> Result<()> {
     let (ctx, test_source, _store, live_commit_sync_config) =
         get_ctx_source_store_and_live_config(fb, EMPTY_PUSHREDIRECTOR, EMTPY_COMMIT_SYNC_ALL);
     let repo_1 = RepositoryId::new(1);
@@ -51,12 +52,12 @@ async fn test_enabling_push_redirection(fb: FacebookInit) {
     assert!(
         !live_commit_sync_config
             .push_redirector_enabled_for_draft(&ctx, repo_1)
-            .await
+            .await?
     );
     assert!(
         live_commit_sync_config
             .push_redirector_enabled_for_public(&ctx, repo_1)
-            .await
+            .await?
     );
 
     // Enable push-redirection of public and draft commits
@@ -71,11 +72,13 @@ async fn test_enabling_push_redirection(fb: FacebookInit) {
     assert!(
         live_commit_sync_config
             .push_redirector_enabled_for_draft(&ctx, repo_1)
-            .await
+            .await?
     );
     assert!(
         live_commit_sync_config
             .push_redirector_enabled_for_public(&ctx, repo_1)
-            .await
+            .await?
     );
+
+    Ok(())
 }

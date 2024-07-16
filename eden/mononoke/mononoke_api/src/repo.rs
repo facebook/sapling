@@ -301,7 +301,7 @@ async fn maybe_push_redirector(
     let live_commit_sync_config = repo.live_commit_sync_config();
     let enabled = live_commit_sync_config
         .push_redirector_enabled_for_public(ctx, repo.repoid())
-        .await;
+        .await?;
     if enabled {
         let large_repo_id = base.common_commit_sync_config.large_repo_id;
         let large_repo = repos.get_by_id(large_repo_id.id()).ok_or_else(|| {

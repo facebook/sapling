@@ -896,12 +896,12 @@ impl RepoClient {
             InfinitePush(_) => {
                 live_commit_sync_config
                     .push_redirector_enabled_for_draft(ctx, repo_id)
-                    .await
+                    .await?
             }
             Push(_) | PushRebase(_) | BookmarkOnlyPushRebase(_) => {
                 live_commit_sync_config
                     .push_redirector_enabled_for_public(ctx, repo_id)
-                    .await
+                    .await?
             }
         };
 

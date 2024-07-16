@@ -844,7 +844,7 @@ async fn get_large_repo_config_if_pushredirected<'a>(
     let repo_id = repo.repo_id();
     let enabled = live_commit_sync_config
         .push_redirector_enabled_for_public(ctx, repo_id)
-        .await;
+        .await?;
 
     if enabled {
         let common_commit_sync_config = match live_commit_sync_config.get_common_config(repo_id) {

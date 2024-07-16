@@ -74,7 +74,7 @@ pub async fn get_pushrebase_hooks(
                 repo.repo_cross_repo()
                     .live_commit_sync_config()
                     .push_redirector_enabled_for_public(ctx, small_repo_id)
-                    .await
+                    .await?
             } else {
                 true
             };

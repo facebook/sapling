@@ -165,7 +165,7 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
                 &maybe_mapping_change_version,
                 commit_sync_context,
             )
-            .await;
+            .await?;
 
         // We are using the state of pushredirection to determine which repo is "source of truth" for the contents
         // if it's the small repo we can't be rewriting the "mapping change" commits as even if we
@@ -173,7 +173,7 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
         let pushredirection_disabled = !self
             .live_commit_sync_config
             .push_redirector_enabled_for_public(ctx, self.target_repo_id.0)
-            .await;
+            .await?;
 
         // During backsyncing we provide an option to skip empty commits but we
         // can only do that when they're not changing the mapping.
@@ -552,7 +552,7 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
                 && !self
                     .live_commit_sync_config
                     .push_redirector_enabled_for_public(ctx, self.target_repo_id.0)
-                    .await;
+                    .await?;
             let rewrite_res = rewrite_commit(
                 self.ctx,
                 cs,
@@ -633,11 +633,11 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
         ctx: &CoreContext,
         maybe_mapping_change_version: &Option<CommitSyncConfigVersion>,
         commit_sync_context: CommitSyncContext,
-    ) -> CommitRewrittenToEmpty {
+    ) -> Result<CommitRewrittenToEmpty> {
         let pushredirection_disabled = !self
             .live_commit_sync_config
             .push_redirector_enabled_for_public(ctx, self.target_repo_id.0)
-            .await;
+            .await?;
         // If a commit is changing mapping let's always rewrite it to
         // small repo regardless if outcome is empty. This is to ensure
         // that efter changing mapping there's a commit in small repo
@@ -649,10 +649,10 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
              // These commits should still be written to the large repo.
              commit_sync_context == CommitSyncContext::ForwardSyncerInitialImport
         {
-            return CommitRewrittenToEmpty::Keep;
+            Ok(CommitRewrittenToEmpty::Keep)
+        } else {
+            Ok(CommitRewrittenToEmpty::Discard)
         }
-
-        CommitRewrittenToEmpty::Discard
     }
 
     /// Get `CommitSyncConfigVersion` to use while remapping a

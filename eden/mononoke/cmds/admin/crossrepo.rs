@@ -333,7 +333,7 @@ async fn run_pushredirection_subcommand<'a>(
                     &ctx,
                     commit_syncer.get_small_repo().repo_identity().id(),
                 )
-                .await
+                .await?
             {
                 return Err(format_err!(
                     "not allowed to run {} if pushredirection is enabled",
@@ -404,7 +404,7 @@ async fn run_pushredirection_subcommand<'a>(
                     &ctx,
                     commit_syncer.get_small_repo().repo_identity().id(),
                 )
-                .await
+                .await?
             {
                 return Err(format_err!(
                     "not allowed to run {} if pushredirection is enabled",
@@ -516,7 +516,7 @@ async fn change_mapping_via_extras<'a>(
             ctx,
             commit_syncer.get_small_repo().repo_identity().id(),
         )
-        .await
+        .await?
         && std::env::var("MONONOKE_ADMIN_ALWAYS_ALLOW_MAPPING_CHANGE_VIA_EXTRA").is_err()
     {
         return Err(format_err!(

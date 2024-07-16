@@ -277,7 +277,7 @@ async fn run_in_tailing_mode<M: SyncedCommitMapping + Clone + 'static>(
                 // update log at all.
                 let enabled = live_commit_sync_config
                     .push_redirector_enabled_for_public(ctx, source_repo_id)
-                    .await;
+                    .await?;
 
                 // Pushredirection is enabled - we need to disable forward sync in that case
                 if enabled {

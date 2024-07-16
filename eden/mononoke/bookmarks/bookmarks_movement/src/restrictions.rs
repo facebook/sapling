@@ -151,7 +151,7 @@ pub async fn check_bookmark_sync_config(
                 .repo_cross_repo()
                 .live_commit_sync_config()
                 .push_redirector_enabled_for_public(ctx, repo.repo_identity().id())
-                .await
+                .await?
             {
                 return Err(BookmarkMovementError::PushRedirectorEnabledForPublishing {
                     bookmark: bookmark.clone(),
@@ -163,7 +163,7 @@ pub async fn check_bookmark_sync_config(
                 .repo_cross_repo()
                 .live_commit_sync_config()
                 .push_redirector_enabled_for_draft(ctx, repo.repo_identity().id())
-                .await
+                .await?
             {
                 return Err(BookmarkMovementError::PushRedirectorEnabledForScratch {
                     bookmark: bookmark.clone(),

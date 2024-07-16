@@ -30,6 +30,7 @@ rust_unittest(
     crate = "live_commit_sync_config_test",
     crate_root = "test/main.rs",
     deps = [
+        "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:pretty_assertions",
         ":live_commit_sync_config",
         "//common/rust/shed/cached_config:cached_config",
