@@ -63,6 +63,13 @@ class FixableProblem(ProblemBase):
     def perform_fix(self) -> None:
         """Attempt to automatically fix the problem."""
 
+    # This should be an abstractmethod but so I can incrementally implement the subfunctions
+    # it's a normal one for now
+    # @abc.abstractmethod
+    def check_fix(self) -> bool:
+        """Checks if the problem has been fixed."""
+        return True
+
 
 class Problem(ProblemBase):
     def __init__(
@@ -208,14 +215,27 @@ class ProblemFixer(ProblemTracker):
         )
         try:
             problem.perform_fix()
-            self._filtered_out.write(
-                problem.severity(),
-                "fixed",
-                fg=self._filtered_out.out.GREEN,
-                end="\n\n",
-                flush=True,
-            )
-            self.num_fixed_problems += 1
+            if problem.check_fix():
+                self._filtered_out.write(
+                    problem.severity(),
+                    "fixed",
+                    fg=self._filtered_out.out.GREEN,
+                    end="\n\n",
+                    flush=True,
+                )
+                self.num_fixed_problems += 1
+            else:
+                self._filtered_out.writeln(
+                    problem.severity(), "error", fg=self._filtered_out.out.RED
+                )
+                self._filtered_out.write(
+                    problem.severity(),
+                    f"Attempted and failed to fix problem {problem.__class__.__name__}",
+                    end="\n\n",
+                    flush=True,
+                )
+                self.num_failed_fixes += 1
+                self.problem_failed_fixes.add(problem.__class__.__name__)
         except Exception as ex:
             self._filtered_out.writeln(
                 problem.severity(), "error", fg=self._filtered_out.out.RED
