@@ -11,7 +11,11 @@ O=Mononoke
 C=US
 ST=CA
 
+[alt_names]
+DNS.1 = proxy
+
 [ v3_ca ]
+subjectAltName = @alt_names
 basicConstraints = CA:FALSE
 keyUsage = digitalSignature, keyEncipherment
 extendedKeyUsage = clientAuth, serverAuth
