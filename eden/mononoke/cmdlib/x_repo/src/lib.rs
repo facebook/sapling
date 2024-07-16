@@ -176,7 +176,7 @@ async fn get_things_from_matches<R: Repo>(
     let builder = sql_factory
         .open::<SqlPushRedirectionConfigBuilder>()
         .await?;
-    let push_redirection_config = builder.build(source_repo_id);
+    let push_redirection_config = builder.build();
 
     let live_commit_sync_config: Arc<dyn LiveCommitSyncConfig> =
         Arc::new(CfgrLiveCommitSyncConfig::new_with_xdb(

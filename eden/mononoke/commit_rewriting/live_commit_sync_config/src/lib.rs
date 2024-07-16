@@ -28,7 +28,6 @@ use pushredirect_enable::MononokePushRedirectEnable;
 use pushredirect_enable::PushRedirectEnableState;
 use slog::debug;
 use slog::error;
-use slog::info;
 use slog::warn;
 use slog::Logger;
 use thiserror::Error;
@@ -200,15 +199,11 @@ impl CfgrLiveCommitSyncConfig {
                 .push_redirect_config
                 .clone()
                 .expect("push_redirect_config should be available")
-                .get(ctx)
+                .get(ctx, repo_id)
                 .await;
             match cfg {
                 Ok(cfg) => {
                     if let Some(cfg) = cfg {
-                        info!(
-                            ctx.logger(),
-                            "Found push redirection config for repo {}", repo_id
-                        );
                         return Some(PushRedirectEnableState {
                             draft_push: cfg.draft_push,
                             public_push: cfg.public_push,

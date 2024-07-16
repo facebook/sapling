@@ -1828,7 +1828,6 @@ impl RepoFactory {
 
     pub async fn push_redirection_config(
         &self,
-        repo_identity: &ArcRepoIdentity,
         repo_config: &ArcRepoConfig,
     ) -> Result<ArcPushRedirectionConfig> {
         let builder = self
@@ -1836,7 +1835,7 @@ impl RepoFactory {
             .await
             .context(RepoFactoryError::PushRedirectConfig)?;
 
-        let push_redirection_config = builder.build(repo_identity.id());
+        let push_redirection_config = builder.build();
         Ok(Arc::new(push_redirection_config))
     }
 }

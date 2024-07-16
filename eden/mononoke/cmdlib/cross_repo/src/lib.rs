@@ -190,8 +190,7 @@ async fn get_things_from_app<R: CrossRepo>(
     let builder = sql_factory
         .open::<SqlPushRedirectionConfigBuilder>()
         .await?;
-    let source_repo_id = app.repo_id(repo_args.source_repo.as_repo_arg())?;
-    let push_redirection_config = builder.build(source_repo_id);
+    let push_redirection_config = builder.build();
 
     let live_commit_sync_config: Arc<dyn LiveCommitSyncConfig> =
         Arc::new(CfgrLiveCommitSyncConfig::new_with_xdb(

@@ -66,7 +66,6 @@ fn row_to_entry(row: (RowId, RepositoryId, bool, bool)) -> PushRedirectionConfig
 
 pub struct SqlPushRedirectionConfig {
     connections: SqlConnections,
-    repo_id: RepositoryId,
 }
 
 #[derive(Clone)]
@@ -85,13 +84,10 @@ impl SqlConstruct for SqlPushRedirectionConfigBuilder {
 }
 
 impl SqlPushRedirectionConfigBuilder {
-    pub fn build(self, repo_id: RepositoryId) -> SqlPushRedirectionConfig {
+    pub fn build(self) -> SqlPushRedirectionConfig {
         let SqlPushRedirectionConfigBuilder { connections } = self;
 
-        SqlPushRedirectionConfig {
-            connections,
-            repo_id,
-        }
+        SqlPushRedirectionConfig { connections }
     }
 }
 
@@ -99,10 +95,16 @@ impl SqlConstructFromMetadataDatabaseConfig for SqlPushRedirectionConfigBuilder 
 
 #[async_trait]
 impl PushRedirectionConfig for SqlPushRedirectionConfig {
-    async fn set(&self, _ctx: &CoreContext, draft_push: bool, public_push: bool) -> Result<()> {
+    async fn set(
+        &self,
+        _ctx: &CoreContext,
+        repo_id: RepositoryId,
+        draft_push: bool,
+        public_push: bool,
+    ) -> Result<()> {
         Set::query(
             &self.connections.write_connection,
-            &self.repo_id,
+            &repo_id,
             &draft_push,
             &public_push,
         )
@@ -110,8 +112,12 @@ impl PushRedirectionConfig for SqlPushRedirectionConfig {
         Ok(())
     }
 
-    async fn get(&self, _ctx: &CoreContext) -> Result<Option<PushRedirectionConfigEntry>> {
-        let rows = Get::query(&self.connections.read_connection, &self.repo_id).await?;
+    async fn get(
+        &self,
+        _ctx: &CoreContext,
+        repo_id: RepositoryId,
+    ) -> Result<Option<PushRedirectionConfigEntry>> {
+        let rows = Get::query(&self.connections.read_connection, &repo_id).await?;
         Ok(rows.into_iter().next().map(row_to_entry))
     }
 }
@@ -126,29 +132,31 @@ mod test {
     async fn test_set(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let builder = SqlPushRedirectionConfigBuilder::with_sqlite_in_memory()?;
-        let push = builder.clone().build(RepositoryId::new(1));
+        let push = builder.clone().build();
 
         // insert one
-        push.set(&ctx, true, false).await?;
-        let entry = push.get(&ctx).await?;
+        let repo_id = RepositoryId::new(1);
+        push.set(&ctx, repo_id, true, false).await?;
+        let entry = push.get(&ctx, repo_id).await?;
         assert!(entry.is_some());
         let entry = entry.unwrap();
         assert!(entry.draft_push);
         assert!(!entry.public_push);
 
-        let push = builder.build(RepositoryId::new(2));
+        let push = builder.build();
 
         // insert another
-        push.set(&ctx, false, true).await?;
-        let entry = push.get(&ctx).await?;
+        let repo_id = RepositoryId::new(2);
+        push.set(&ctx, repo_id, false, true).await?;
+        let entry = push.get(&ctx, repo_id).await?;
         assert!(entry.is_some());
         let entry = entry.unwrap();
         assert!(!entry.draft_push);
         assert!(entry.public_push);
 
         // update it
-        push.set(&ctx, true, true).await?;
-        let entry = push.get(&ctx).await?;
+        push.set(&ctx, repo_id, true, true).await?;
+        let entry = push.get(&ctx, repo_id).await?;
         assert!(entry.is_some());
         let entry = entry.unwrap();
         assert!(entry.draft_push);
@@ -161,13 +169,14 @@ mod test {
     async fn test_get(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let builder = SqlPushRedirectionConfigBuilder::with_sqlite_in_memory()?;
-        let push = builder.build(RepositoryId::new(3));
+        let push = builder.build();
 
-        let entry = push.get(&ctx).await?;
+        let repo_id = RepositoryId::new(1);
+        let entry = push.get(&ctx, repo_id).await?;
         assert!(entry.is_none());
 
-        push.set(&ctx, true, true).await?;
-        let entry = push.get(&ctx).await?;
+        push.set(&ctx, repo_id, true, true).await?;
+        let entry = push.get(&ctx, repo_id).await?;
         assert!(entry.is_some());
         let entry = entry.unwrap();
         assert!(entry.draft_push);

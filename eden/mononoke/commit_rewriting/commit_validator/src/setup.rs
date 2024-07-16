@@ -61,7 +61,7 @@ pub async fn get_validation_helpers<'a>(
     let builder = sql_factory
         .open::<SqlPushRedirectionConfigBuilder>()
         .await?;
-    let push_redirection_config = builder.build(repo_id);
+    let push_redirection_config = builder.build();
     let live_commit_sync_config = CfgrLiveCommitSyncConfig::new_with_xdb(
         ctx.logger(),
         config_store,

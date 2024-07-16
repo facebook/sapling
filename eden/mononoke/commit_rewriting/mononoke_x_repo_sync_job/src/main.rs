@@ -543,7 +543,7 @@ async fn async_main<'a>(app: MononokeApp, ctx: CoreContext) -> Result<(), Error>
     let builder = sql_factory
         .open::<SqlPushRedirectionConfigBuilder>()
         .await?;
-    let push_redirection_config = builder.build(small_repo.blob_repo().repo_identity().id());
+    let push_redirection_config = builder.build();
     let live_commit_sync_config = Arc::new(CfgrLiveCommitSyncConfig::new_with_xdb(
         logger,
         &config_store,
