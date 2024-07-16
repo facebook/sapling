@@ -17,6 +17,7 @@ dott_test(
         "//eden/mononoke:bonsai_verify",
         "//eden/mononoke:mononoke",
         "//eden/mononoke/git/gitimport:gitimport",
+        "//eden/mononoke/lfs_server:lfs_server",
         "//eden/mononoke/tools/admin:newadmin",
     ],
 )
