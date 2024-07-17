@@ -267,7 +267,7 @@ impl SourceControlServiceImpl {
 
         // Collect author and date fields from the commit info.
         let info: HashMap<_, _> = future::try_join_all(csids.iter().map(move |csid| async move {
-            let changeset = repo.changeset_from_existing_id(*csid).await?;
+            let changeset = repo.changeset_from_existing_id(*csid);
             let (date, author, message) = try_join!(
                 changeset.author_date(),
                 changeset.author(),

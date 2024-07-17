@@ -1110,11 +1110,8 @@ impl RepoContext {
     }
 
     /// Create changeset context from known existing changeset id.
-    pub async fn changeset_from_existing_id(
-        &self,
-        cs_id: ChangesetId,
-    ) -> Result<ChangesetContext, MononokeError> {
-        Ok(ChangesetContext::new(self.clone(), cs_id))
+    pub fn changeset_from_existing_id(&self, cs_id: ChangesetId) -> ChangesetContext {
+        ChangesetContext::new(self.clone(), cs_id)
     }
 
     pub async fn difference_of_unions_of_ancestors<'a>(
