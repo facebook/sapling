@@ -37,6 +37,7 @@ use changesets::ArcChangesets;
 use changesets_impl::SqlChangesetsBuilder;
 use commit_cloud::sql::builder::SqlCommitCloudBuilder;
 use commit_cloud::ArcCommitCloud;
+use commit_cloud::CommitCloud;
 use commit_graph::ArcCommitGraph;
 use commit_graph::ArcCommitGraphWriter;
 use commit_graph::BaseCommitGraphWriter;
@@ -870,13 +871,13 @@ impl TestRepoFactory {
         bonsai_hg_mapping: &ArcBonsaiHgMapping,
         repo_derived_data: &ArcRepoDerivedData,
     ) -> Result<ArcCommitCloud> {
-        Ok(Arc::new(commit_cloud::CommitCloud {
-            storage: SqlCommitCloudBuilder::from_sql_connections(self.metadata_db.clone())
-                .new(false),
-            bonsai_hg_mapping: bonsai_hg_mapping.clone(),
-            repo_derived_data: repo_derived_data.clone(),
-            core_ctx: self.ctx.clone(),
-        }))
+        let cc = CommitCloud::new(
+            SqlCommitCloudBuilder::from_sql_connections(self.metadata_db.clone()).new(false),
+            bonsai_hg_mapping.clone(),
+            repo_derived_data.clone(),
+            self.ctx.clone(),
+        );
+        Ok(Arc::new(cc))
     }
 
     /// Function to create a logger for repos stats

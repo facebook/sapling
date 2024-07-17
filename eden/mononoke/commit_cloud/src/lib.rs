@@ -25,6 +25,8 @@ use edenapi_types::UpdateReferencesParams;
 use edenapi_types::WorkspaceData;
 use facet::facet;
 use mononoke_types::Timestamp;
+use permission_checker::AclProvider;
+use permission_checker::DefaultAclProvider;
 use references::update_references_data;
 use repo_derived_data::ArcRepoDerivedData;
 use workspace::sanity_check_workspace_name;
@@ -42,6 +44,25 @@ pub struct CommitCloud {
     pub bonsai_hg_mapping: Arc<dyn BonsaiHgMapping>,
     pub repo_derived_data: ArcRepoDerivedData,
     pub core_ctx: CoreContext,
+    pub acl_provider: Arc<dyn AclProvider>,
+}
+
+impl CommitCloud {
+    pub fn new(
+        storage: SqlCommitCloud,
+        bonsai_hg_mapping: Arc<dyn BonsaiHgMapping>,
+        repo_derived_data: ArcRepoDerivedData,
+        core_ctx: CoreContext,
+    ) -> Self {
+        let acl_provider = DefaultAclProvider::new(core_ctx.fb);
+        CommitCloud {
+            storage,
+            bonsai_hg_mapping,
+            repo_derived_data,
+            core_ctx,
+            acl_provider,
+        }
+    }
 }
 
 #[derive(Debug, Clone)]

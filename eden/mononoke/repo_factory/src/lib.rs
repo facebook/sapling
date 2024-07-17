@@ -1815,15 +1815,15 @@ impl RepoFactory {
             .open_sql::<SqlCommitCloudBuilder>(repo_config)
             .await
             .context(RepoFactoryError::SqlCommitCloud)?;
-        Ok(Arc::new(CommitCloud {
-            storage: sql_commit_cloud.new(matches!(
+        Ok(Arc::new(CommitCloud::new(
+            sql_commit_cloud.new(matches!(
                 &repo_config.storage_config.metadata,
                 MetadataDatabaseConfig::Remote(_)
             )),
-            bonsai_hg_mapping: bonsai_hg_mapping.clone(),
-            repo_derived_data: repo_derived_data.clone(),
-            core_ctx: self.ctx(None),
-        }))
+            bonsai_hg_mapping.clone(),
+            repo_derived_data.clone(),
+            self.ctx(None),
+        )))
     }
 
     pub async fn push_redirection_config(
