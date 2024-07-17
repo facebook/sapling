@@ -25,7 +25,7 @@ use bitflags::bitflags;
 pub enum Item<T> {
     Tree(T, Vec<Item<T>>),
     Item(T),
-    Placeholder(Placeholder),
+    Placeholder(Placeholder<T>),
 }
 
 /// Placeholder for capturing. Currently supports single item (`__`, like `?` in
@@ -33,14 +33,35 @@ pub enum Item<T> {
 /// trees (groups).
 /// Might be extended (like, adding fields of custom functions) to support more
 /// complex matches (ex. look ahead, balanced brackets, limited tokens, etc).
-#[derive(Clone, PartialEq, Eq, Debug)]
-pub struct Placeholder {
+#[derive(Clone)]
+pub struct Placeholder<T> {
     name: String,
+    /// If set, specify whether to match an item.
+    /// Can be useful to express `[0-9a-f]` like in glob.
+    #[allow(dead_code)]
+    matches_item: Option<fn(&Item<T>) -> bool>,
 }
 
-impl Placeholder {
+impl<T> PartialEq for Placeholder<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.name == other.name
+    }
+}
+
+impl<T> Eq for Placeholder<T> {}
+
+impl<T> fmt::Debug for Placeholder<T> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        self.name.fmt(f)
+    }
+}
+
+impl<T> Placeholder<T> {
     pub fn new(name: String) -> Self {
-        Self { name }
+        Self {
+            name,
+            matches_item: None,
+        }
     }
 
     pub fn name(&self) -> &str {
