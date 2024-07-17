@@ -33,7 +33,7 @@ rust_library(
         "fbsource//third-party/rust:tracing",
         "//eden/scm/lib/pathmatcher:pathmatcher",
         "//eden/scm/lib/types:types",
-        "//eden/scm/lib/util/syncify:syncify",
+        "//eden/scm/lib/util/rewrite-macros:rewrite-macros",
     ],
 )
 

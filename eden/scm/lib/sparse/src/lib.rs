@@ -33,7 +33,7 @@ mod extra_use {
 
 #[cfg(not(feature = "async"))]
 mod extra_use {
-    pub(crate) use syncify::syncify;
+    pub(crate) use rewrite_macros::syncify;
     pub(crate) type BoxFuture<'a, T> = T;
 }
 

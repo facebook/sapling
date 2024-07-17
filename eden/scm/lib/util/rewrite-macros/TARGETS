@@ -3,7 +3,7 @@ load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
 oncall("sapling")
 
 rust_library(
-    name = "syncify",
+    name = "rewrite-macros",
     srcs = glob(["src/**/*.rs"]),
     crate_root = "src/lib.rs",
     proc_macro = True,
@@ -12,6 +12,6 @@ rust_library(
         "proc-macro",
     ],
     deps = [
-        "//eden/scm/lib/util/syncify/tree-pattern-match:tree-pattern-match",
+        "//eden/scm/lib/util/rewrite-macros/tree-pattern-match:tree-pattern-match",
     ],
 )
