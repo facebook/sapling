@@ -244,8 +244,16 @@ fn test_replace_all() {
 fn test_replace_all_adjacent() {
     let items = parse!(a b c);
     let items = replace_all(items, &parse!(__1), &parse!(__1 dot));
-    // FIXME: "dot" should be after "b"
-    assert_eq!(unparse(&items), "a dot b c dot");
+    assert_eq!(unparse(&items), "a dot b dot c dot");
+}
+
+#[test]
+fn test_replace_all_nested() {
+    let items = parse!(x a b x [ x a [ x a c ] x ]);
+    // Swap "a" and its next item.
+    let items = replace_all(items, &parse!(a __1g), &parse!(__1g a));
+    // The "a [ x a c ]" was swapped so the inner "x a c" is not changed.
+    assert_eq!(unparse(&items), "x b a x [ x [ x a c ] a x ]");
 }
 
 #[test]

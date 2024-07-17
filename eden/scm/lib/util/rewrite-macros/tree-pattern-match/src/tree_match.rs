@@ -10,10 +10,12 @@
 //! Intended to be used as part of Rust proc-macro logic, but separate
 //! from the `proc_macro` crate for easier testing.
 
+use std::borrow::Cow;
 use std::collections::HashMap;
 use std::fmt;
 use std::hash::Hash;
 use std::sync::Arc;
+use std::sync::OnceLock;
 use std::sync::RwLock;
 
 use bitflags::bitflags;
@@ -59,8 +61,7 @@ impl Placeholder {
 /// Similar to regex match. A match can have multiple captures.
 #[derive(Debug, Default, Clone, Eq, PartialEq)]
 pub struct Match<T> {
-    /// Length of the match. We don't track the "start" since it's handled by
-    /// `replace_in_place` locally.
+    /// Length of the match.
     len: usize,
     /// Start of the match. `items[start .. start + len]` matches `pat`.
     start: usize,
@@ -70,13 +71,14 @@ pub struct Match<T> {
 type Captures<T> = HashMap<String, Vec<Item<T>>>;
 
 /// Replace matches. Similar to Python `re.sub` but is tree aware.
-pub fn replace_all<T: fmt::Debug + Clone + PartialEq>(
-    mut items: Vec<Item<T>>,
+pub fn replace_all<T: fmt::Debug + Clone + PartialEq + 'static>(
+    items: Vec<Item<T>>,
     pat: &[Item<T>],
     replace: impl Replace<T>,
 ) -> Vec<Item<T>> {
-    replace_in_place(&mut items, pat, &replace);
-    items
+    TreeMatchState::default()
+        .replace_all(&items, pat, &replace)
+        .into_owned()
 }
 
 /// Find matches. Similar to Python `re.findall` but is tree aware.
@@ -117,39 +119,6 @@ where
     fn expand(&self, m: &Match<T>) -> Vec<Item<T>> {
         (self)(m)
     }
-}
-
-/// Replace matches in place.
-fn replace_in_place<T: fmt::Debug + Clone + PartialEq>(
-    items: &mut Vec<Item<T>>,
-    pat: &[Item<T>],
-    replace: &dyn Replace<T>,
-) -> bool {
-    let mut changed = false;
-    let mut i = 0;
-    while i < items.len() {
-        if let Some(matched) = match_items(&items[i..], pat, true) {
-            // Replace in place.
-            let replaced = replace.expand(&matched);
-            let replaced_len = replaced.len();
-            let new_items = {
-                let mut new_items = items[..i].to_vec();
-                new_items.extend(replaced);
-                new_items.extend_from_slice(&items[(i + matched.len)..]);
-                new_items
-            };
-            *items = new_items;
-            i += replaced_len + 1;
-            changed = true;
-        } else {
-            let item = &mut items[i];
-            if let Item::Tree(_, ref mut sub_items) = item {
-                replace_in_place(sub_items, pat, replace);
-            }
-            i += 1;
-        }
-    }
-    changed
 }
 
 /// Expand `replace` with captured items.
@@ -207,10 +176,10 @@ enum TreeMatchMode {
     /// `pat` must match `items`, consuming the entire sequence.
     MatchFull,
     /// `pat` can match `items[..subset]`, not the entire `items`.
+    #[allow(dead_code)]
     MatchBegin,
     /// Perform a search to find all matches. Start / end / depth do not
     /// have to match.
-    #[allow(dead_code)]
     Search,
 }
 
@@ -340,6 +309,7 @@ impl<'a, T: PartialEq + Clone + fmt::Debug> SeqMatchState<'a, T> {
     }
 
     /// Backtrack the match and fill `captures`.
+    #[allow(dead_code)]
     fn fill_match(&self, r#match: &mut Match<T>) {
         self.fill_match_with_match_end(r#match, None, true);
     }
@@ -531,6 +501,83 @@ impl<'a, T: PartialEq + Clone + fmt::Debug> TreeMatchState<'a, T> {
     }
 }
 
+impl<'a, T: PartialEq + Clone + fmt::Debug + 'static> TreeMatchState<'a, T> {
+    fn replace_all(
+        &self,
+        items: &'a [Item<T>],
+        pat: &'a [Item<T>],
+        replace: &dyn Replace<T>,
+    ) -> Cow<'a, [Item<T>]> {
+        let matched = self.matched(pat, items, TreeMatchMode::Search);
+
+        // Step 1. Calculate matches on the current depth.
+        let mut matches = Vec::new();
+        let mut replaced = MaybeOwned::<T>(OnceLock::new());
+        matched.fill_matches(&mut matches);
+
+        // Step 2. For subtrees that are not covered by the matches, replace them first.
+        // This is because the replaces are 1-item to 1-item, not shifting indexes around.
+        for (i, item) in items.iter().enumerate() {
+            if let Item::Tree(t, children) = item {
+                if is_covered(i, &matches) {
+                    // Do not overlap.
+                    continue;
+                }
+                let new_children = self.replace_all(children, pat, replace);
+                if is_owned(&new_children) {
+                    replaced.maybe_init(items);
+                    replaced.as_mut()[i] = Item::Tree(t.clone(), new_children.into_owned());
+                }
+            }
+        }
+
+        // Step 3. Replace at the current depth.
+        if !matches.is_empty() {
+            let mut new_items = Vec::with_capacity(items.len());
+            let mut end = 0;
+            for m in matches {
+                new_items.extend_from_slice(replaced.slice(items, end, m.start));
+                let replaced = replace.expand(&m);
+                new_items.extend(replaced);
+                end = m.start + m.len;
+            }
+            new_items.extend_from_slice(replaced.slice(items, end, items.len()));
+            replaced.0 = new_items.into();
+        }
+
+        match replaced.0.into_inner() {
+            None => Cow::Borrowed(items),
+            Some(items) => Cow::Owned(items),
+        }
+    }
+}
+
+// Work with Cow. This is mainly to avoid the lifetime of a `Cow`.
+struct MaybeOwned<T>(OnceLock<Vec<Item<T>>>);
+
+impl<T: Clone + 'static> MaybeOwned<T> {
+    fn maybe_init(&self, init_value: &[Item<T>]) {
+        self.0.get_or_init(|| init_value.to_vec());
+    }
+
+    fn slice<'a>(&'a self, fallback: &'a [Item<T>], start: usize, end: usize) -> &'a [Item<T>] {
+        match self.0.get() {
+            None => &fallback[start..end],
+            Some(v) => &v[start..end],
+        }
+    }
+}
+
+impl<T: Clone + 'static> MaybeOwned<T> {
+    fn as_mut(&mut self) -> &mut Vec<Item<T>> {
+        self.0.get_mut().unwrap()
+    }
+}
+
+fn is_owned<T: ToOwned + ?Sized>(value: &Cow<'_, T>) -> bool {
+    matches!(value, Cow::Owned(_))
+}
+
 fn is_covered<T>(index: usize, sorted_matches: &[Match<T>]) -> bool {
     let m = match sorted_matches.binary_search_by_key(&index, |m| m.start) {
         Ok(idx) => sorted_matches.get(idx),
@@ -542,39 +589,4 @@ fn is_covered<T>(index: usize, sorted_matches: &[Match<T>]) -> bool {
         }
     }
     false
-}
-
-/// Match patterns in items from the start. Similar to Python's `re.match`.
-///
-/// `pat` can use placeholders to match items.
-///
-/// If `allow_remaining` is true, `items` can have remaining parts that won't
-/// be matched while there is still a successful match.
-///
-/// This function recursively calls itself to match inner trees.
-fn match_items<T: fmt::Debug + Clone + PartialEq>(
-    items: &[Item<T>],
-    pat: &[Item<T>],
-    allow_remaining: bool,
-) -> Option<Match<T>> {
-    let opts = if allow_remaining {
-        TreeMatchMode::MatchBegin
-    } else {
-        TreeMatchMode::MatchFull
-    };
-    let tree_match = TreeMatchState {
-        cache: Default::default(),
-    };
-    let matched = tree_match.matched(pat, items, opts);
-    if matched.has_match() {
-        let mut r#match = Match {
-            captures: Default::default(),
-            len: 0,
-            start: 0,
-        };
-        matched.fill_match(&mut r#match);
-        Some(r#match)
-    } else {
-        None
-    }
 }
