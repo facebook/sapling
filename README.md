@@ -17,10 +17,10 @@ Sapling SCM is comprised of three main components:
 
 * The Sapling client: The client-side `sl` command line and web interface for users to interact
   with Sapling SCM.
-* Mononoke: A highly scalable distributed source control server. (Not yet
-  supported publicly.)
-* EdenFS: A virtual filesystem for efficiently checking out large repositories.
-  (Not yet supported publicly.)
+* Mononoke: A highly scalable distributed source control server. Not yet
+  supported publicly, OSS is buildable for unsupported experimentation.
+* EdenFS: A virtual filesystem for efficiently checking out large repositories. Not yet
+  supported publicly, OSS is buildable for unsupported experimentation.
 
 Sapling SCM's scalability goals are to ensure that all source control operations
 scale with the number of files in use by a developer, and not with the size of
@@ -39,15 +39,13 @@ The CLI code can be found in the `eden/scm` subdirectory.
 
 [Mononoke](eden/mononoke/README.md) is the server-side component of Sapling SCM.
 
-While it is used in production within Meta, it currently does not build in an
-open source context and is not yet supported for external usage.
+While it is used in production within Meta it is not yet supported for external usage. OSS builds in GitHub Actions are available for unsupported experimentation.
 
 ### EdenFS
 
 EdenFS is a virtual file system for managing Sapling checkouts.
 
-While it is used in production within Meta, it currently does not build in an
-open source context and is not yet supported for external usage.
+While it is used in production within Meta it is not yet supported for external usage. OSS builds in GitHub Actions are available for unsupported experimentation.
 
 EdenFS speeds up operations in large repositories by only populating working
 directory files on demand, as they are accessed.  This makes operations like
@@ -66,6 +64,11 @@ resulting `sl` executable.
 
 Building the Sapling CLI requires Python 3.8, Rust, CMake, and OpenSSL for the main cli, and
 Node and Yarn for the ISL web UI.
+
+## Getting in Contact
+
+You can [Report an Issue on GitHub](https://github.com/facebook/sapling/issues) or
+[Join the Discord](https://discord.gg/X6baZ94Vzh)
 
 # License
 
