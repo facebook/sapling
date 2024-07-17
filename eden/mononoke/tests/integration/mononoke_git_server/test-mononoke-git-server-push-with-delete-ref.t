@@ -23,7 +23,6 @@
   $ echo "this is file1" > file1
   $ git add file1
   $ git commit -qam "Add file1"
-  $ old_head=$(git rev-parse HEAD)
   $ git tag -a -m "new tag" first_tag
   $ echo "this is file2" > file2
   $ git add file2

@@ -1548,6 +1548,36 @@ function wait_for_git_bookmark_move() {
   done
 }
 
+function wait_for_git_bookmark_delete() {
+  local bookmark_name="$1"
+  local attempt=0
+  while [ $attempt -lt 30 ]
+  do
+    attempt=$((attempt + 1))
+    refs=$(git_client ls-remote --quiet)
+    if echo "$refs" | grep -q "$bookmark_name"; then
+      sleep 2
+    else
+      return 0
+    fi
+  done
+}
+
+function wait_for_git_bookmark_create() {
+  local bookmark_name="$1"
+  local attempt=0
+  while [ $attempt -lt 30 ]
+  do
+    attempt=$((attempt + 1))
+    refs=$(git_client ls-remote --quiet)
+    if echo "$refs" | grep -q "$bookmark_name"; then
+      return 0
+    else
+      sleep 2
+    fi
+  done
+}
+
 
 function wait_for_land_service {
   export LAND_SERVICE_PORT
