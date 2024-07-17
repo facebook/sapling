@@ -75,6 +75,7 @@ pub use crate::bookmark::SetBookmarkRequest;
 pub use crate::bookmark::SetBookmarkResponse;
 pub use crate::cloud::CloudWorkspaceRequest;
 pub use crate::cloud::GetReferencesParams;
+pub use crate::cloud::GetSmartlogParams;
 pub use crate::cloud::ReferencesData;
 pub use crate::cloud::ReferencesDataResponse;
 pub use crate::cloud::UpdateReferencesParams;

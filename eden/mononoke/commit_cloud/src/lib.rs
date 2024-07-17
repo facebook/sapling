@@ -17,7 +17,9 @@ use commit_cloud_intern_utils::interngraph_publisher::publish_single_update;
 #[cfg(fbcode_build)]
 use commit_cloud_intern_utils::notification::NotificationData;
 use context::CoreContext;
+use edenapi_types::cloud::SmartlogData;
 use edenapi_types::GetReferencesParams;
+use edenapi_types::GetSmartlogParams;
 use edenapi_types::ReferencesData;
 use edenapi_types::UpdateReferencesParams;
 use edenapi_types::WorkspaceData;
@@ -248,5 +250,14 @@ impl CommitCloud {
             snapshots: None,
             timestamp: Some(new_version_timestamp.timestamp_nanos()),
         })
+    }
+
+    pub async fn get_smartlog(&self, params: &GetSmartlogParams) -> anyhow::Result<SmartlogData> {
+        if params.workspace.is_empty() || params.reponame.is_empty() {
+            return Err(anyhow::anyhow!(
+                "'get_smartlog' failed: empty repo_name or workspace"
+            ));
+        }
+        Err(anyhow::anyhow!("Not implemented"))
     }
 }
