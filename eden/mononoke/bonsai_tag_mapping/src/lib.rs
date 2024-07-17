@@ -83,4 +83,7 @@ pub trait BonsaiTagMapping: Send + Sync {
 
     /// Add new tag name to bonsai changeset mappings
     async fn add_or_update_mappings(&self, entries: Vec<BonsaiTagMappingEntry>) -> Result<()>;
+
+    /// Delete existing bonsai tag mappings based on the input tag names
+    async fn delete_mappings_by_name(&self, tag_names: Vec<String>) -> Result<()>;
 }

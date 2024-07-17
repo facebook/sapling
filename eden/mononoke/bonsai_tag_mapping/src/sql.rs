@@ -31,6 +31,12 @@ mononoke_queries! {
         "REPLACE INTO bonsai_tag_mapping (repo_id, tag_name, changeset_id, tag_hash, target_is_tag) VALUES {values}"
     }
 
+    write DeleteBonsaiTagMappingsByName(repo_id: RepositoryId,
+        >list tag_names: String) {
+        none,
+        "DELETE FROM bonsai_tag_mapping WHERE repo_id = {repo_id} AND tag_name IN {tag_names}"
+    }
+
     read SelectAllMappings(
         repo_id: RepositoryId,
     ) -> (String, ChangesetId, GitSha1, bool) {
@@ -226,6 +232,22 @@ impl BonsaiTagMapping for SqlBonsaiTagMapping {
             format!(
                 "Failed to add mappings in repo {} for entries {:?}",
                 self.repo_id, entries,
+            )
+        })?;
+        Ok(())
+    }
+
+    async fn delete_mappings_by_name(&self, tag_names: Vec<String>) -> Result<()> {
+        DeleteBonsaiTagMappingsByName::query(
+            &self.connections.write_connection,
+            &self.repo_id,
+            tag_names.as_slice(),
+        )
+        .await
+        .with_context(|| {
+            format!(
+                "Failed to delete mappings in repo {} for tag names {:?}",
+                self.repo_id, tag_names,
             )
         })?;
         Ok(())
