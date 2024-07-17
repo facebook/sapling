@@ -5,6 +5,9 @@
  * GNU General Public License version 2.
  */
 
+use proc_macro2::Delimiter;
+use tree_pattern_match::PlaceholderExt;
+
 use crate::prelude::*;
 
 // arg         | inner_arg | pass_arg      | inner_body
@@ -46,93 +49,97 @@ pub(crate) fn demomo(attr: TokenStream, tokens: TokenStream) -> TokenStream {
             || parse("Self").to_items(),
             |m| m.captures["__TYPE"].clone(),
         );
-    tokens.replace_with(
-        "fn __NAME (___ARGSg) ___RET { ___BODYg } ",
-        |m: &Match<TokenInfo>| {
-            let name = &m.captures["__NAME"];
-            let args = m.captures["___ARGSg"]
-                .replace("___PREFIX self,", "self: ___PREFIX Self,")
-                .group_by_angle_bracket();
-            let ret = &m.captures["___RET"];
-            let inner_ret = ret.replace("Self", self_type.clone());
-            let body = &m.captures["___BODYg"];
-            let inner_name = {
-                let mut body_args = body.clone();
-                body_args.extend(args.clone());
-                pick_unique_name(body_args, "inner")
-            };
+    let pat = "fn __NAME (___ARGSg) ___RET { ___BODYg } "
+        .to_items()
+        .with_placeholder_matching_items([(
+            "___RET",
+            (|item: &Item| !matches!(item, Item::Tree(TokenInfo::Group(d), _) if *d == Delimiter::Brace))
+                as fn(&Item) -> bool,
+        )]);
+    tokens.replace_with(pat, |m: &Match<TokenInfo>| {
+        let name = &m.captures["__NAME"];
+        let args = m.captures["___ARGSg"]
+            .replace("___PREFIX self,", "self: ___PREFIX Self,")
+            .group_by_angle_bracket();
+        let ret = &m.captures["___RET"];
+        let inner_ret = ret.replace("Self", self_type.clone());
+        let body = &m.captures["___BODYg"];
+        let inner_name = {
+            let mut body_args = body.clone();
+            body_args.extend(args.clone());
+            pick_unique_name(body_args, "inner")
+        };
 
+        if debug {
+            eprintln!(
+                "name: [{}], args: [{}], ret: [{}]",
+                unparse(name),
+                unparse(&args),
+                unparse(ret)
+            );
+        }
+
+        let mut inner_args = args
+            .replace("Self", self_type.clone())
+            .replace("self", "self_")
+            .group_by_angle_bracket();
+        let mut inner_body = body
+            .replace("Self", self_type.clone())
+            .replace("self", "self_");
+        let mut pass_args = scan_names(&args, &"__NAME:".to_items()).replace("__N", "__N,");
+
+        for t in IMPL_TEMPLATES {
+            let from = parse(&format!("__NAME: impl {}", t.from))
+                .to_items()
+                .group_by_angle_bracket();
+            let to = format!("__NAME: {}", t.to);
+            let names = scan_names(&inner_args, &from);
+            if names.is_empty() {
+                continue;
+            }
+            // inner_args: x: AsRef<T> => x: &T
+            inner_args = inner_args.replace(&*from, &*to);
             if debug {
-                eprintln!(
-                    "name: [{}], args: [{}], ret: [{}]",
-                    unparse(name),
-                    unparse(&args),
-                    unparse(ret)
-                );
+                eprintln!("- {}: {:?}", t.from.replace("___Tg", "T"), unparse(&names),);
             }
-
-            let mut inner_args = args
-                .replace("Self", self_type.clone())
-                .replace("self", "self_")
-                .group_by_angle_bracket();
-            let mut inner_body = body
-                .replace("Self", self_type.clone())
-                .replace("self", "self_");
-            let mut pass_args = scan_names(&args, &"__NAME:".to_items()).replace("__N", "__N,");
-
-            for t in IMPL_TEMPLATES {
-                let from = parse(&format!("__NAME: impl {}", t.from))
-                    .to_items()
-                    .group_by_angle_bracket();
-                let to = format!("__NAME: {}", t.to);
-                let names = scan_names(&inner_args, &from);
-                if names.is_empty() {
-                    continue;
-                }
-                // inner_args: x: AsRef<T> => x: &T
-                inner_args = inner_args.replace(&*from, &*to);
-                if debug {
-                    eprintln!("- {}: {:?}", t.from.replace("___Tg", "T"), unparse(&names),);
-                }
-                for name in names {
-                    // inner_body: x.as_ref() => x
-                    let mut long = vec![name.clone()];
-                    long.extend(parse(t.body).to_items());
-                    let short = vec![name.clone()];
-                    inner_body = inner_body.replace(long.clone(), short.clone());
-                    // pass_args: x => x.as_ref()
-                    pass_args = pass_args.replace(short, long)
-                }
+            for name in names {
+                // inner_body: x.as_ref() => x
+                let mut long = vec![name.clone()];
+                long.extend(parse(t.body).to_items());
+                let short = vec![name.clone()];
+                inner_body = inner_body.replace(long.clone(), short.clone());
+                // pass_args: x => x.as_ref()
+                pass_args = pass_args.replace(short, long)
             }
+        }
 
-            let tokens = {
-                let name = name.to_tokens();
-                let args = &args.to_tokens();
-                let ret = ret.to_tokens();
-                let inner_ret = &inner_ret.to_tokens();
-                let inner_args = &inner_args.to_tokens();
-                let inner_body = &inner_body.to_tokens();
-                let pass_args = &pass_args.to_tokens();
+        let tokens = {
+            let name = name.to_tokens();
+            let args = &args.to_tokens();
+            let ret = ret.to_tokens();
+            let inner_ret = &inner_ret.to_tokens();
+            let inner_args = &inner_args.to_tokens();
+            let inner_body = &inner_body.to_tokens();
+            let pass_args = &pass_args.to_tokens();
 
-                quote! {
-                    fn #name ( #args ) #ret {
-                        fn #inner_name ( #inner_args ) #inner_ret {
-                            #inner_body
-                        }
-                        #inner_name ( #pass_args )
+            quote! {
+                fn #name ( #args ) #ret {
+                    fn #inner_name ( #inner_args ) #inner_ret {
+                        #inner_body
                     }
+                    #inner_name ( #pass_args )
                 }
-            };
-
-            let tokens = TokenStream::from(tokens);
-
-            if debug {
-                eprintln!("output: [[[\n{}\n]]]", unparse(&tokens));
             }
+        };
 
-            tokens.to_items()
-        },
-    )
+        let tokens = TokenStream::from(tokens);
+
+        if debug {
+            eprintln!("output: [[[\n{}\n]]]", unparse(&tokens));
+        }
+
+        tokens.to_items()
+    })
 }
 
 fn scan_names(items: &Vec<Item>, pattern: &Vec<Item>) -> Vec<Item> {
@@ -295,11 +302,8 @@ mod tests {
         );
     }
 
-    // Known issue: Token groups like `()` in return type are not supported.
-    // This is a limitation of the greedy matching algorithm: `___RET` does not match `()`,
-    // `__RETg` greedily matches the body block `{ ... }` so the body will not match.
     #[test]
-    fn known_issue_no_group_in_return_type() {
+    fn test_group_in_return_type() {
         let attr = parse("");
         let code = parse(
             r#"
@@ -313,8 +317,11 @@ mod tests {
             unparse(&demomo(attr, code)),
             r#"
             fn f (x : impl ToString) -> Result < () > {
-                dbg ! (x . to_string ());
-                Ok (())
+                fn inner (x : String) -> Result < () > {
+                    dbg ! (x);
+                    Ok (())
+                }
+                inner (x . to_string () ,)
             }"#
         );
     }
