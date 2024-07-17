@@ -67,8 +67,8 @@ pub trait Rederivation: Send + Sync + 'static {
     fn mark_derived(&self, derivable_type: DerivableType, csid: ChangesetId);
 }
 
-pub type VisitedDerivableTypesMap<'a> =
-    Arc<Mutex<HashMap<DerivableType, Shared<BoxFuture<'a, Result<u64, SharedDerivationError>>>>>>;
+pub type VisitedDerivableTypesMap<'a, OkType, ErrType> =
+    Arc<Mutex<HashMap<DerivableType, Shared<BoxFuture<'a, Result<OkType, ErrType>>>>>>;
 
 impl DerivedDataManager {
     #[async_recursion]
@@ -157,7 +157,7 @@ impl DerivedDataManager {
         heads: &'a [ChangesetId],
         override_batch_size: Option<u64>,
         rederivation: Option<Arc<dyn Rederivation>>,
-        visited: VisitedDerivableTypesMap<'a>,
+        visited: VisitedDerivableTypesMap<'a, u64, SharedDerivationError>,
     ) -> impl Future<Output = Result<u64, SharedDerivationError>> + 'a
     where
         Derivable: BonsaiDerivable,

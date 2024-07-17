@@ -25,10 +25,10 @@ use mononoke_types::ChangesetId;
 use mononoke_types::DerivableType;
 
 use crate::context::DerivationContext;
-use crate::manager::derive::VisitedDerivableTypesMap;
 use crate::DerivedDataManager;
 use crate::Rederivation;
 use crate::SharedDerivationError;
+use crate::VisitedDerivableTypesMap;
 
 /// Defines how derivation occurs.  Each derived data type must implement
 /// `BonsaiDerivable` to describe how to derive a new value from its inputs
@@ -216,7 +216,7 @@ pub trait DerivationDependencies {
         heads: &'a [ChangesetId],
         override_batch_size: Option<u64>,
         rederivation: Option<Arc<dyn Rederivation>>,
-        _visited: VisitedDerivableTypesMap<'a>,
+        _visited: VisitedDerivableTypesMap<'a, u64, SharedDerivationError>,
     ) -> Result<(), SharedDerivationError>;
     /// Derive all predecessor data types for this batch of commits.
     /// The same pre-conditions apply as in derive.rs
@@ -248,7 +248,7 @@ impl DerivationDependencies for () {
         _heads: &'a [ChangesetId],
         _override_batch_size: Option<u64>,
         _rederivation: Option<Arc<dyn Rederivation>>,
-        _visited: VisitedDerivableTypesMap<'a>,
+        _visited: VisitedDerivableTypesMap<'a, u64, SharedDerivationError>,
     ) -> Result<(), SharedDerivationError> {
         Ok(())
     }
@@ -296,7 +296,7 @@ where
         heads: &'a [ChangesetId],
         override_batch_size: Option<u64>,
         rederivation: Option<Arc<dyn Rederivation>>,
-        visited: VisitedDerivableTypesMap<'a>,
+        visited: VisitedDerivableTypesMap<'a, u64, SharedDerivationError>,
     ) -> Result<(), SharedDerivationError> {
         let _res = try_join(
             ddm.derive_heads_with_visited::<Derivable>(
