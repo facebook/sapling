@@ -12,16 +12,22 @@ use anyhow::Context;
 use anyhow::Result;
 use bonsai_tag_mapping::BonsaiTagMappingRef;
 use bytes::Bytes;
+use gix_hash::ObjectId;
+use gix_object::Kind;
+use import_tools::git_reader::GitReader;
 use import_tools::set_bookmark;
 use import_tools::BookmarkOperation;
 use mononoke_api::repo::RepoContextBuilder;
 use mononoke_api::BookmarkKey;
+use mononoke_types::ChangesetId;
 use repo_authorization::AuthorizationContext;
 use repo_bookmark_attrs::RepoBookmarkAttrsRef;
 
 use super::GitMappingsStore;
+use super::GitObjectStore;
 use crate::command::RefUpdate;
 use crate::model::RepositoryRequestContext;
+use crate::service::uploader::peel_tag_target;
 
 /// Struct representing a ref update (create, move, delete) operation
 pub struct RefUpdateOperation {
@@ -48,17 +54,19 @@ impl RefUpdateOperation {
 pub async fn set_ref(
     request_context: Arc<RepositoryRequestContext>,
     mappings_store: Arc<GitMappingsStore>,
+    object_store: Arc<GitObjectStore>,
     ref_update_op: RefUpdateOperation,
 ) -> (RefUpdate, Result<()>) {
     let ref_update = ref_update_op.ref_update.clone();
     // TODO(rajshar): Provide better information about failures instead of just an anyhow::Err
-    let result = set_ref_inner(request_context, mappings_store, ref_update_op).await;
+    let result = set_ref_inner(request_context, mappings_store, object_store, ref_update_op).await;
     (ref_update, result)
 }
 
 async fn set_ref_inner(
     request_context: Arc<RepositoryRequestContext>,
     mappings_store: Arc<GitMappingsStore>,
+    object_store: Arc<GitObjectStore>,
     ref_update_op: RefUpdateOperation,
 ) -> Result<()> {
     let (ctx, repo, repos) = (
@@ -75,12 +83,14 @@ async fn set_ref_inner(
         .await
         .context("Failure in creating RepoContext for git push")?;
     // Get the bonsai changeset id of the old and the new git commits
-    let old_changeset = mappings_store
-        .get_bonsai(&ref_update_op.ref_update.from)
-        .await?;
-    let new_changeset = mappings_store
-        .get_bonsai(&ref_update_op.ref_update.to)
-        .await?;
+    let old_changeset = get_bonsai(
+        &mappings_store,
+        &object_store,
+        &ref_update_op.ref_update.from,
+    )
+    .await?;
+    let new_changeset =
+        get_bonsai(&mappings_store, &object_store, &ref_update_op.ref_update.to).await?;
     // Create the bookmark key by stripping the refs/ prefix from the ref name
     let bookmark_key = BookmarkKey::new(
         ref_update_op
@@ -115,4 +125,26 @@ async fn set_ref_inner(
             .await?;
     }
     Ok(())
+}
+
+async fn get_bonsai(
+    mappings_store: &GitMappingsStore,
+    object_store: &GitObjectStore,
+    git_oid: &ObjectId,
+) -> Result<Option<ChangesetId>> {
+    match mappings_store.get_bonsai(git_oid).await {
+        result @ Ok(_) => result,
+        err => match object_store.get_object(git_oid.as_ref()).await {
+            Ok(obj_content) => {
+                if let Some(tag) = obj_content.parsed.as_tag() {
+                    let (oid, kind) = peel_tag_target(tag, object_store).await?;
+                    if kind == Kind::Commit {
+                        return mappings_store.get_bonsai(&oid).await;
+                    }
+                }
+                anyhow::bail!("*** Refs pointing to tree or blobs is not allowed")
+            }
+            _ => err,
+        },
+    }
 }

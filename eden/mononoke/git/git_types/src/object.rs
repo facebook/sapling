@@ -58,3 +58,13 @@ pub struct ObjectContent {
     pub parsed: Object,
     pub raw: Bytes,
 }
+
+impl ObjectContent {
+    pub fn is_tree(&self) -> bool {
+        self.parsed.as_tree().is_some()
+    }
+
+    pub fn is_blob(&self) -> bool {
+        self.parsed.as_blob().is_some()
+    }
+}

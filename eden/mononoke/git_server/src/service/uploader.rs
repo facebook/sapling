@@ -97,14 +97,16 @@ async fn git_to_bonsai(
 }
 
 #[async_recursion]
-async fn peel_tag_target(tag: &Tag, object_store: &GitObjectStore) -> Result<ObjectId> {
-    if tag.target_kind == Kind::Commit {
-        Ok(tag.target.clone())
-    } else if tag.target_kind == Kind::Tag {
+pub(crate) async fn peel_tag_target(
+    tag: &Tag,
+    object_store: &GitObjectStore,
+) -> Result<(ObjectId, Kind)> {
+    // If the target is a tag, keep recursing
+    if tag.target_kind == Kind::Tag {
         let target_tag = object_store.read_tag(&tag.target).await?;
         peel_tag_target(&target_tag, object_store).await
     } else {
-        anyhow::bail!("The target of a tag can only be a commit or another tag")
+        Ok((tag.target.clone(), tag.target_kind))
     }
 }
 
@@ -118,7 +120,12 @@ async fn tags(
     let mut result = HashMap::new();
     for (id, object) in object_store.object_map.iter() {
         if let Some(tag) = object.parsed.as_tag() {
-            let commit_id = peel_tag_target(tag, object_store).await?;
+            let (commit_id, kind) = peel_tag_target(tag, object_store).await?;
+            // If the tag points to a tree or a blob, then we don't care for it cause it will get rejected
+            // later in the push
+            if kind != Kind::Commit {
+                continue;
+            }
             let bonsai_id = if let Some(bonsai_id) = git_bonsai_mappings.get(&commit_id) {
                 *bonsai_id
             } else {

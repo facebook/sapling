@@ -81,7 +81,7 @@ async fn push<'a>(
         let git_bonsai_mappings = upload_objects(
             ctx,
             request_context.repo.clone(),
-            object_store,
+            object_store.clone(),
             &push_args.ref_updates,
         )
         .await?;
@@ -97,7 +97,7 @@ async fn push<'a>(
         // Update each ref concurrently (TODO(rajshar): Add support for atomic ref update)
         let updated_refs = stream::iter(push_args.ref_updates.clone())
             .map(|ref_update| {
-                cloned!(request_context, git_bonsai_mapping_store);
+                cloned!(request_context, git_bonsai_mapping_store, object_store);
                 async move {
                     let output = tokio::spawn(async move {
                         let ref_update_op = RefUpdateOperation::new(
@@ -105,7 +105,13 @@ async fn push<'a>(
                             affected_changesets_len,
                             None,
                         ); // TODO(rajshar): Populate pushvars from HTTP headers
-                        set_ref(request_context, git_bonsai_mapping_store, ref_update_op).await
+                        set_ref(
+                            request_context,
+                            git_bonsai_mapping_store,
+                            object_store,
+                            ref_update_op,
+                        )
+                        .await
                     })
                     .await?;
                     anyhow::Ok(output)
