@@ -38,7 +38,6 @@ pub struct Placeholder<T> {
     name: String,
     /// If set, specify whether to match an item.
     /// Can be useful to express `[0-9a-f]` like in glob.
-    #[allow(dead_code)]
     matches_item: Option<fn(&Item<T>) -> bool>,
 }
 
@@ -58,10 +57,14 @@ impl<T> fmt::Debug for Placeholder<T> {
 
 impl<T> Placeholder<T> {
     pub fn new(name: String) -> Self {
-        Self {
-            name,
-            matches_item: None,
-        }
+        let matches_tree = name.contains('g');
+        let matches_item = if matches_tree {
+            None
+        } else {
+            Some(|item: &Item<T>| -> bool { !matches!(item, Item::Tree(..)) }
+                as fn(&Item<T>) -> bool)
+        };
+        Self { name, matches_item }
     }
 
     pub fn name(&self) -> &str {
@@ -73,9 +76,12 @@ impl<T> Placeholder<T> {
         self.name.starts_with("___")
     }
 
-    // true: match Item::Tree; false: does not match Item::Tree
-    pub fn matches_tree(&self) -> bool {
-        self.name.contains('g')
+    /// Test matching against a single item.
+    pub fn matches_item(&self, item: &Item<T>) -> bool {
+        match self.matches_item.as_ref() {
+            None => true,
+            Some(f) => f(item),
+        }
     }
 }
 
@@ -291,7 +297,6 @@ impl<'a, T: PartialEq + Clone + fmt::Debug> SeqMatchState<'a, T> {
                         }
                     }
                     Item::Placeholder(p) => {
-                        let match_tree = p.matches_tree();
                         if p.matches_multiple() {
                             // item: . . . .
                             //            /
@@ -307,14 +312,11 @@ impl<'a, T: PartialEq + Clone + fmt::Debug> SeqMatchState<'a, T> {
                                 SeqMatched::MATCH_PLACEHOLDER_MULTI
                                     | SeqMatched::MATCH_PLACEHOLDER_MULTI_EXTEND,
                             ) {
-                                if match_tree
-                                    || !matches!(&self.items[item_end - 1], Item::Tree(..))
-                                {
+                                if p.matches_item(&self.items[item_end - 1]) {
                                     result |= SeqMatched::MATCH_PLACEHOLDER_MULTI_EXTEND;
                                 }
                             }
-                        } else if (match_tree
-                            || !matches!(&self.items[item_end - 1], Item::Tree(..)))
+                        } else if p.matches_item(&self.items[item_end - 1])
                             && self.matched(pat_end - 1, item_end - 1, opts).has_match()
                         {
                             result |= SeqMatched::MATCH_PLACEHOLDER_SINGLE;
