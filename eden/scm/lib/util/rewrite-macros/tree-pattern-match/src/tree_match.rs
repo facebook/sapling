@@ -57,14 +57,10 @@ impl<T> fmt::Debug for Placeholder<T> {
 
 impl<T> Placeholder<T> {
     pub fn new(name: String) -> Self {
-        let matches_tree = name.contains('g');
-        let matches_item = if matches_tree {
-            None
-        } else {
-            Some(|item: &Item<T>| -> bool { !matches!(item, Item::Tree(..)) }
-                as fn(&Item<T>) -> bool)
-        };
-        Self { name, matches_item }
+        Self {
+            name,
+            matches_item: None,
+        }
     }
 
     pub fn set_matches_item(&mut self, matches_item: fn(&Item<T>) -> bool) -> &mut Self {

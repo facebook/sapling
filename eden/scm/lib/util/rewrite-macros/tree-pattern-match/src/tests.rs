@@ -156,7 +156,10 @@ fn test_find_all_multiple_matches() {
     assert_eq!(matches[1].show(), ["__1 => c", "__2 => d"]);
 
     let items = parse!(a b a c [] a x [] a);
-    let pat = parse!(a ___1);
+    let pat = parse!(a ___1).with_placeholder_matching_items([(
+        "___1",
+        (|t: &Item| !matches!(t, Item::Tree(..))) as fn(&Item) -> bool,
+    )]);
     let matches = find_all(&items, &pat);
     assert_eq!(matches.len(), 3);
     assert_eq!(matches[0].show(), ["___1 => b a c"]);
