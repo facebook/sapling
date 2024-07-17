@@ -12,6 +12,7 @@ rust_library(
         "proc-macro",
     ],
     deps = [
+        "fbsource//third-party/rust:proc-macro2",
         "//eden/scm/lib/util/rewrite-macros/tree-pattern-match:tree-pattern-match",
     ],
 )

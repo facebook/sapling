@@ -9,7 +9,7 @@ extern crate proc_macro;
 
 use std::str::FromStr;
 
-use proc_macro::TokenStream;
+use proc_macro2::TokenStream;
 
 mod token;
 mod token_stream_ext;
@@ -37,7 +37,14 @@ pub(crate) type Item = tree_pattern_match::Item<TokenInfo>;
 /// Use `debug` in proc macro attribute to turn on extra output about expanded
 /// code. You can also use `cargo expand`.
 #[proc_macro_attribute]
-pub fn syncify(attr: TokenStream, mut tokens: TokenStream) -> TokenStream {
+pub fn syncify(
+    attr: proc_macro::TokenStream,
+    tokens: proc_macro::TokenStream,
+) -> proc_macro::TokenStream {
+    syncify2(attr.into(), tokens.into()).into()
+}
+
+fn syncify2(attr: TokenStream, mut tokens: TokenStream) -> TokenStream {
     let debug = !attr.find_all(parse("debug")).is_empty();
     tokens
         .replace_all(parse(".await"), parse(""))

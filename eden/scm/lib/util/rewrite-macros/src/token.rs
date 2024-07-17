@@ -7,9 +7,9 @@
 
 use std::fmt;
 
-use proc_macro::Delimiter;
-use proc_macro::TokenStream;
-use proc_macro::TokenTree;
+use proc_macro2::Delimiter;
+use proc_macro2::TokenStream;
+use proc_macro2::TokenTree;
 
 /// TokenTree-like, but:
 /// - Supports PartialEq.
@@ -47,7 +47,7 @@ impl PartialEq for TokenInfo {
         match (self, other) {
             (TokenInfo::Group(l), TokenInfo::Group(r)) => l == r,
             (TokenInfo::Atom(l), TokenInfo::Atom(r)) => match (l, r) {
-                (TokenTree::Ident(l), TokenTree::Ident(r)) => l.to_string() == r.to_string(),
+                (TokenTree::Ident(l), TokenTree::Ident(r)) => l == r,
                 (TokenTree::Literal(l), TokenTree::Literal(r)) => l.to_string() == r.to_string(),
                 (TokenTree::Punct(l), TokenTree::Punct(r)) => l.as_char() == r.as_char(),
                 _ => false,

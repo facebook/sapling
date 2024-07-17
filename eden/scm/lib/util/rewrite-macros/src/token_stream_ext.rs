@@ -5,9 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use proc_macro::Group;
-use proc_macro::TokenStream;
-use proc_macro::TokenTree;
+use proc_macro2::Group;
+use proc_macro2::TokenStream;
+use proc_macro2::TokenTree;
 use tree_pattern_match::find_all;
 use tree_pattern_match::replace_all;
 use tree_pattern_match::Match;
