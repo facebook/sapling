@@ -145,6 +145,22 @@ fn test_find_all_multiple_matches() {
     assert_eq!(matches.len(), 2);
     assert_eq!(matches[0].show(), ["__1 => b"]);
     assert_eq!(matches[1].show(), ["__1 => c"]);
+
+    // "e" is ignored, since matches are picked from the start.
+    let items = parse!(a b c d e);
+    let pat = parse!(__1 __2);
+    let matches = find_all(&items, &pat);
+    assert_eq!(matches.len(), 2);
+    assert_eq!(matches[0].show(), ["__1 => a", "__2 => b"]);
+    assert_eq!(matches[1].show(), ["__1 => c", "__2 => d"]);
+
+    let items = parse!(a b a c [] a x [] a);
+    let pat = parse!(a ___1);
+    let matches = find_all(&items, &pat);
+    assert_eq!(matches.len(), 3);
+    assert_eq!(matches[0].show(), ["___1 => b a c"]);
+    assert_eq!(matches[1].show(), ["___1 => x"]);
+    assert_eq!(matches[2].show(), ["___1 => "]);
 }
 
 #[test]
@@ -185,6 +201,15 @@ fn test_find_all_nested_captures() {
     let matches = find_all(&parse!(a b c d [ e f ]), &parse!(a ___1 d [ ___2 ]));
     assert_eq!(matches.len(), 1);
     assert_eq!(matches[0].show(), ["___1 => b c", "___2 => e f"]);
+
+    let items = parse!(a [ a [ a [ x ] ] ] b [ a [ y ] b [ a [ p ] a [ q ] ] ]);
+    let pat = parse!(a[___1g]);
+    let matches = find_all(&items, &pat);
+    assert_eq!(matches.len(), 4);
+    assert_eq!(matches[0].show(), ["___1g => a [ a [ x ] ]"]);
+    assert_eq!(matches[1].show(), ["___1g => y"]);
+    assert_eq!(matches[2].show(), ["___1g => p"]);
+    assert_eq!(matches[3].show(), ["___1g => q"]);
 }
 
 #[test]

@@ -84,22 +84,7 @@ pub fn find_all<T: fmt::Debug + Clone + PartialEq>(
     items: &[Item<T>],
     pat: &[Item<T>],
 ) -> Vec<Match<T>> {
-    let mut result = Vec::new();
-    let mut i = 0;
-    while i < items.len() {
-        if let Some(matched) = match_items(&items[i..], pat, true) {
-            i += matched.len.max(1);
-            result.push(matched);
-        } else {
-            let item = &items[i];
-            if let Item::Tree(_, sub_items) = item {
-                // Search recursively.
-                result.extend(find_all(sub_items, pat));
-            }
-            i += 1;
-        }
-    }
-    result
+    TreeMatchState::default().find_all(items, pat)
 }
 
 /// Takes a single match and output its replacement.
@@ -212,6 +197,8 @@ struct SeqMatchState<'a, T> {
     items: &'a [Item<T>],
     /// Matched length. None: not matched.
     match_end: Option<usize>,
+    /// Only set for TreeMatchMode::Search. All matched ends.
+    match_ends: Vec<usize>,
 }
 
 /// Options for `TreeMatchState::match`.
@@ -246,6 +233,15 @@ bitflags! {
         const MATCH_INIT = 32;
         /// Not yet calculated.
         const UNKNOWN = 128;
+    }
+}
+
+// T does not have to implement "Default".
+impl<'a, T> Default for TreeMatchState<'a, T> {
+    fn default() -> Self {
+        Self {
+            cache: Default::default(),
+        }
     }
 }
 
@@ -345,9 +341,54 @@ impl<'a, T: PartialEq + Clone + fmt::Debug> SeqMatchState<'a, T> {
 
     /// Backtrack the match and fill `captures`.
     fn fill_match(&self, r#match: &mut Match<T>) {
+        self.fill_match_with_match_end(r#match, None, true);
+    }
+
+    /// Backtrace all matches. Used together with `TreeMatchMode::Search`.
+    ///
+    /// Matches are reported from start to end picking the longest.
+    /// Overlapping matches are skipped.
+    ///
+    /// DOES NOT fill matches in nested trees.
+    /// `SeqMatchState` only calculates matches at the current layer.
+    fn fill_matches(&self, matches: &mut Vec<Match<T>>) {
+        for &end in &self.match_ends {
+            let mut m = Match {
+                captures: Default::default(),
+                len: 0,
+                start: 0,
+            };
+            // Just figures out the matching start position so we can check overalp
+            // and maybe replace the last match.
+            // There are probably smarter ways to handle this...
+            self.fill_match_with_match_end(&mut m, Some(end), false);
+            assert_eq!(m.start + m.len, end);
+            if let Some(last) = matches.last() {
+                if last.start >= m.start {
+                    assert!(last.start + last.len < m.start + m.len);
+                    // Current match is better than last. Replace last.
+                    matches.pop();
+                } else if last.start + last.len > m.start {
+                    // Current match overlaps with last. Skip current.
+                    continue;
+                }
+            }
+            // Update the "captures".
+            self.fill_match_with_match_end(&mut m, Some(end), true);
+            matches.push(m);
+        }
+    }
+
+    // If fill_captures is false, still report match start.
+    fn fill_match_with_match_end(
+        &self,
+        r#match: &mut Match<T>,
+        match_end: Option<usize>,
+        fill_captures: bool,
+    ) {
         let mut pat_len = self.pat.len();
         let mut multi_len = 0;
-        let match_end = self.match_end.unwrap();
+        let match_end = match_end.unwrap_or_else(|| self.match_end.unwrap());
         let mut item_len = match_end;
         loop {
             let mut item_dec = 1;
@@ -358,9 +399,11 @@ impl<'a, T: PartialEq + Clone + fmt::Debug> SeqMatchState<'a, T> {
                 if let (Item::Tree(_, pat_children), Item::Tree(_, item_children)) =
                     (&self.pat[pat_len - 1], &self.items[item_len - 1])
                 {
-                    self.parent
-                        .matched(pat_children, item_children, TreeMatchMode::MatchFull)
-                        .fill_match(r#match);
+                    if fill_captures {
+                        self.parent
+                            .matched(pat_children, item_children, TreeMatchMode::MatchFull)
+                            .fill_match_with_match_end(r#match, None, fill_captures);
+                    }
                     pat_len -= 1;
                 } else {
                     unreachable!("bug: MATCH_TREE does not actually match trees");
@@ -377,10 +420,12 @@ impl<'a, T: PartialEq + Clone + fmt::Debug> SeqMatchState<'a, T> {
                     (item_len, multi_len)
                 };
                 if let Item::Placeholder(p) = &self.pat[pat_len - 1] {
-                    r#match.captures.insert(
-                        p.name().to_string(),
-                        self.items[start..start + len].to_vec(),
-                    );
+                    if fill_captures {
+                        r#match.captures.insert(
+                            p.name().to_string(),
+                            self.items[start..start + len].to_vec(),
+                        );
+                    }
                 } else {
                     unreachable!("bug: MATCH_PLACEHOLDER does not actually match a placeholder");
                 }
@@ -438,6 +483,7 @@ impl<'a, T: PartialEq + Clone + fmt::Debug> TreeMatchState<'a, T> {
             pat,
             items,
             match_end: None,
+            match_ends: Default::default(),
         };
         match opts {
             TreeMatchMode::MatchFull => {
@@ -447,9 +493,13 @@ impl<'a, T: PartialEq + Clone + fmt::Debug> TreeMatchState<'a, T> {
             }
             TreeMatchMode::MatchBegin | TreeMatchMode::Search => {
                 // Figure out the longest match.
+                let is_search = opts == TreeMatchMode::Search;
                 for len in 1..=items.len() {
                     if !seq.matched(pat.len(), len, opts).is_empty() {
                         seq.match_end = Some(len);
+                        if is_search {
+                            seq.match_ends.push(len);
+                        }
                     }
                 }
             }
@@ -461,6 +511,37 @@ impl<'a, T: PartialEq + Clone + fmt::Debug> TreeMatchState<'a, T> {
             .or_insert(Arc::new(seq))
             .clone()
     }
+
+    fn find_all(&self, items: &'a [Item<T>], pat: &'a [Item<T>]) -> Vec<Match<T>> {
+        let matched = self.matched(pat, items, TreeMatchMode::Search);
+        let mut result = Vec::new();
+        matched.fill_matches(&mut result);
+        let current_depth_matches_len = result.len();
+        // fill_matches() only reports matches in depth 0. Need to scan children recursively.
+        for (i, item) in items.iter().enumerate() {
+            if let Item::Tree(.., children) = item {
+                if is_covered(i, &result[..current_depth_matches_len]) {
+                    // Do not overlap.
+                    continue;
+                }
+                result.extend(self.find_all(children, pat));
+            }
+        }
+        result
+    }
+}
+
+fn is_covered<T>(index: usize, sorted_matches: &[Match<T>]) -> bool {
+    let m = match sorted_matches.binary_search_by_key(&index, |m| m.start) {
+        Ok(idx) => sorted_matches.get(idx),
+        Err(idx) => sorted_matches.get(idx.saturating_sub(1)),
+    };
+    if let Some(m) = m {
+        if m.start <= index && m.start + m.len > index {
+            return true;
+        }
+    }
+    false
 }
 
 /// Match patterns in items from the start. Similar to Python's `re.match`.
