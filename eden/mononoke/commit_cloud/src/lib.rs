@@ -8,10 +8,11 @@
 #![feature(trait_alias)]
 pub mod references;
 pub mod sql;
-pub mod workspace;
+
 use std::sync::Arc;
 
 use bonsai_hg_mapping::BonsaiHgMapping;
+use commit_cloud_helpers::sanity_check_workspace_name;
 #[cfg(fbcode_build)]
 use commit_cloud_intern_utils::interngraph_publisher::publish_single_update;
 #[cfg(fbcode_build)]
@@ -29,7 +30,6 @@ use permission_checker::AclProvider;
 use permission_checker::DefaultAclProvider;
 use references::update_references_data;
 use repo_derived_data::ArcRepoDerivedData;
-use workspace::sanity_check_workspace_name;
 
 use crate::references::cast_references_data;
 use crate::references::fetch_references;

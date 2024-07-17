@@ -1,0 +1,11 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("mononoke")
+
+rust_library(
+    name = "commit_cloud_helpers",
+    srcs = glob(["*.rs"]),
+    deps = [
+        "fbsource//third-party/rust:regex",
+    ],
+)

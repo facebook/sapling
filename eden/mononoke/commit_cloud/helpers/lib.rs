@@ -7,19 +7,6 @@
 
 use regex::Regex;
 
-use crate::references::heads::WorkspaceHead;
-use crate::references::history::WorkspaceHistory;
-use crate::references::local_bookmarks::WorkspaceLocalBookmark;
-use crate::references::remote_bookmarks::WorkspaceRemoteBookmark;
-
-#[allow(unused)]
-pub(crate) struct WorkspaceContents {
-    heads: Vec<WorkspaceHead>,
-    local_bookmarks: Vec<WorkspaceLocalBookmark>,
-    remote_bookmarks: Vec<WorkspaceRemoteBookmark>,
-    history: WorkspaceHistory,
-}
-
 const WORKSPACE_NAME_PATTERN: &str = r"user/([^/]+)/.+";
 const EMAIL_PATTERN: &str = r"^([a-zA-Z0-9_\-.]+)@([a-zA-Z0-9_\-.]+)\.([a-zA-Z]{2,5})$";
 const LINUX_USER_PATTERN: &str = r"^[a-z_]([a-z0-9_-]{0,31}|[a-z0-9_-]{0,30}\\$)$";
@@ -51,7 +38,7 @@ pub fn sanity_check_workspace_name(name: &str) -> bool {
 
 #[cfg(test)]
 mod test {
-    use crate::workspace::sanity_check_workspace_name;
+    use crate::sanity_check_workspace_name;
 
     #[test]
     fn test_invalid_workspace_names() {
