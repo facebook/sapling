@@ -11,6 +11,7 @@ namespace cpp2 facebook.scm.service
 namespace py3 scm.service.thrift
 namespace py scm.service.thrift.megarepo_configs
 namespace php SourceControlMegarepoConfigStructs
+namespace java.swift com.facebook.scm.megarepo_configs
 
 // Megarepo service structs
 

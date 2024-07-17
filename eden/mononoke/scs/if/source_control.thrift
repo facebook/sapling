@@ -14,6 +14,7 @@ namespace cpp2 facebook.scm.service
 namespace php SourceControlService
 namespace py scm.service.thrift.source_control
 namespace py3 scm.service.thrift
+namespace java.swift com.facebook.scm.service
 
 typedef binary (rust.type = "Bytes") binary_bytes
 typedef binary small_binary (

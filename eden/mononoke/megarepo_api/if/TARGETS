@@ -5,12 +5,16 @@ oncall("mononoke")
 
 thrift_library(
     name = "megarepo_configs",
+    java_versions = [
+        "21",
+    ],
     languages = [
         "hs2",
         "rust",
         "py",
         "py3",
         "cpp2",
+        "java-swift",
     ],
     plugins = [
         thrift_plugin_automock,

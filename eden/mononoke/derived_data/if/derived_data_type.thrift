@@ -9,6 +9,7 @@ namespace cpp2 facebook.scm.service
 namespace php DerivedData
 namespace py scm.derived_data.thrift.derived_data_type
 namespace py3 scm.derived_data.thrift
+namespace java.swift com.facebook.scm.derived_data
 
 /// An enum representing the DerivedDataType tied to the compiled time enforced rust enum, and
 /// compatible with both SCS and the Derived Data Service interfaces
