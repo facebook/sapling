@@ -5,26 +5,39 @@
  * GNU General Public License version 2.
  */
 
+use std::str::FromStr;
+
 use proc_macro2::Group;
 use proc_macro2::TokenStream;
 use proc_macro2::TokenTree;
 use tree_pattern_match::find_all;
 use tree_pattern_match::replace_all;
 use tree_pattern_match::Match;
+use tree_pattern_match::Replace;
 
 use crate::prelude::Item;
 use crate::prelude::TokenInfo;
 
-/// Convenient methods on TokenStream.
-pub(crate) trait TokenStreamExt {
-    fn to_items(&self) -> Vec<Item>;
-    fn from_items(items: Vec<Item>) -> Self;
-    fn replace_all(&mut self, pat: Self, replace: Self) -> &mut Self;
-    fn replace_all_raw(&mut self, pat: &[Item], replace: &[Item]) -> &mut Self;
-    fn find_all(&self, pat: Self) -> Vec<Match<TokenInfo>>;
+pub(crate) trait FindReplace {
+    fn replace_with(&self, pat: impl ToItems, replace: impl Replace<TokenInfo>) -> Self;
+    fn replace(&self, pat: impl ToItems, replace: impl ToItems) -> Self
+    where
+        Self: Sized,
+    {
+        self.replace_with(pat, replace.to_items())
+    }
+    fn find_all(&self, pat: impl ToItems) -> Vec<Match<TokenInfo>>;
 }
 
-impl TokenStreamExt for TokenStream {
+pub(crate) trait ToItems {
+    fn to_items(&self) -> Vec<Item>;
+}
+
+pub(crate) trait ToTokens {
+    fn to_tokens(self) -> TokenStream;
+}
+
+impl ToItems for TokenStream {
     fn to_items(&self) -> Vec<Item> {
         self.clone()
             .into_iter()
@@ -43,11 +56,50 @@ impl TokenStreamExt for TokenStream {
             })
             .collect()
     }
+}
 
-    fn from_items(items: Vec<Item>) -> Self {
+impl ToItems for Vec<Item> {
+    fn to_items(&self) -> Vec<Item> {
+        self.clone()
+    }
+}
+
+impl ToItems for &'_ Vec<Item> {
+    fn to_items(&self) -> Vec<Item> {
+        self.to_vec()
+    }
+}
+
+impl ToItems for &'_ [Item] {
+    fn to_items(&self) -> Vec<Item> {
+        self.to_vec()
+    }
+}
+
+impl ToItems for &'_ str {
+    fn to_items(&self) -> Vec<Item> {
+        TokenStream::from_str(self).unwrap().to_items()
+    }
+}
+
+impl ToTokens for TokenStream {
+    fn to_tokens(self) -> TokenStream {
+        self
+    }
+}
+
+impl ToTokens for &'_ TokenStream {
+    fn to_tokens(self) -> TokenStream {
+        self.clone()
+    }
+}
+
+impl ToTokens for Vec<Item> {
+    fn to_tokens(self) -> TokenStream {
+        let items = self;
         let iter = items.into_iter().map(|item| match item {
             Item::Tree(info, sub_items) => {
-                let stream = Self::from_items(sub_items);
+                let stream = sub_items.to_tokens();
                 let delimiter = match info {
                     TokenInfo::Group(v) => v,
                     _ => panic!("Item::Tree should capture TokenInfo::Group"),
@@ -63,23 +115,44 @@ impl TokenStreamExt for TokenStream {
         });
         TokenStream::from_iter(iter)
     }
+}
 
-    fn replace_all(&mut self, pat: Self, replace: Self) -> &mut Self {
+impl ToTokens for &'_ Vec<Item> {
+    fn to_tokens(self) -> TokenStream {
+        self.clone().to_tokens()
+    }
+}
+
+impl ToTokens for &'_ [Item] {
+    fn to_tokens(self) -> TokenStream {
+        self.to_vec().to_tokens()
+    }
+}
+
+impl FindReplace for TokenStream {
+    fn replace_with(&self, pat: impl ToItems, replace: impl Replace<TokenInfo>) -> Self {
         let pat = pat.to_items();
-        let replace = replace.to_items();
-        self.replace_all_raw(&pat, &replace)
-    }
-
-    fn replace_all_raw(&mut self, pat: &[Item], replace: &[Item]) -> &mut Self {
         let items = self.to_items();
-        let items = replace_all(items, pat, replace);
-        *self = Self::from_items(items);
-        self
+        let items = replace_all(items, &pat, replace);
+        items.to_tokens()
     }
 
-    fn find_all(&self, pat: Self) -> Vec<Match<TokenInfo>> {
+    fn find_all(&self, pat: impl ToItems) -> Vec<Match<TokenInfo>> {
         let items = self.to_items();
         let pat = pat.to_items();
         find_all(&items, &pat)
+    }
+}
+
+impl FindReplace for Vec<Item> {
+    fn replace_with(&self, pat: impl ToItems, replace: impl Replace<TokenInfo>) -> Self {
+        let pat = pat.to_items();
+        let items = self.clone();
+        replace_all(items, &pat, replace)
+    }
+
+    fn find_all(&self, pat: impl ToItems) -> Vec<Match<TokenInfo>> {
+        let pat = pat.to_items();
+        find_all(self, &pat)
     }
 }

@@ -7,6 +7,7 @@
 
 extern crate proc_macro;
 
+#[allow(unused)]
 mod prelude;
 mod syncify;
 mod token;
