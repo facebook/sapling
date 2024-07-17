@@ -37,3 +37,41 @@ pub(crate) fn syncify(attr: TokenStream, mut tokens: TokenStream) -> TokenStream
 
     tokens
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_syncify_basic() {
+        let attr = parse("");
+        let code = parse(
+            r#"
+            async fn foo(x: usize) -> usize {
+                async_runtime::block_on(async { bar(x).await + 1 })
+            }
+"#,
+        );
+        assert_eq!(
+            unparse(&syncify(attr, code)),
+            "fn foo (x : usize) -> usize { { bar (x) + 1 } }"
+        );
+    }
+
+    #[test]
+    fn test_syncify_tests() {
+        let attr = parse("");
+        let code = parse(
+            r#"
+            #[tokio::test]
+            async fn test_foo() {
+                assert!(g().await);
+            }
+"#,
+        );
+        assert_eq!(
+            unparse(&syncify(attr, code)),
+            "# [test] fn test_foo () { assert ! (g ()) ; }"
+        );
+    }
+}
