@@ -8,6 +8,8 @@
 use std::str::FromStr;
 
 use proc_macro2::Group;
+use proc_macro2::Punct;
+use proc_macro2::Spacing;
 use proc_macro2::TokenStream;
 use proc_macro2::TokenTree;
 use tree_pattern_match::find_all;
@@ -39,23 +41,44 @@ pub(crate) trait ToTokens {
 
 impl ToItems for TokenStream {
     fn to_items(&self) -> Vec<Item> {
-        self.clone()
-            .into_iter()
-            .map(|tt| match tt {
-                TokenTree::Group(ref v) => {
+        let mut iter = self.clone().into_iter().peekable();
+        let mut result = Vec::with_capacity(iter.size_hint().0);
+        while let Some(tt) = iter.next() {
+            let next = iter.peek();
+            let item = match (&tt, next) {
+                (TokenTree::Group(v), _) => {
                     let sub_items = v.stream().to_items();
-                    Item::Tree(TokenInfo::from(tt), sub_items)
+                    Item::Tree(TokenInfo::from_single(tt), sub_items)
                 }
-                TokenTree::Ident(v) if v.to_string().starts_with("__") => {
+                (TokenTree::Ident(v), _) if v.to_string().starts_with("__") => {
                     Item::Placeholder(v.to_string())
                 }
-                _ => {
-                    let token = TokenInfo::from(tt);
+                (TokenTree::Punct(p1), Some(TokenTree::Punct(p2)))
+                    if is_punct_pair_atom(p1, &p2) =>
+                {
+                    let tokens = vec![tt, iter.next().unwrap()];
+                    let token = TokenInfo::from_multi(tokens);
                     Item::Item(token)
                 }
-            })
-            .collect()
+                _ => {
+                    let token = TokenInfo::from_single(tt);
+                    Item::Item(token)
+                }
+            };
+            result.push(item);
+        }
+        result
     }
+}
+
+// Only allow unambigious atoms.
+// ex. ">>" is ambigious since it can be part of "Result<Vec<T>>".
+fn is_punct_pair_atom(p1: &Punct, p2: &Punct) -> bool {
+    matches!(p1.spacing(), Spacing::Joint)
+        && matches!(
+            (p1.as_char(), p2.as_char()),
+            (':', ':') | ('-', '>') | ('=', '>')
+        )
 }
 
 impl ToItems for Vec<Item> {
@@ -97,7 +120,7 @@ impl ToTokens for &'_ TokenStream {
 impl ToTokens for Vec<Item> {
     fn to_tokens(self) -> TokenStream {
         let items = self;
-        let iter = items.into_iter().map(|item| match item {
+        let iter = items.into_iter().flat_map(|item| match item {
             Item::Tree(info, sub_items) => {
                 let stream = sub_items.to_tokens();
                 let delimiter = match info {
@@ -105,10 +128,11 @@ impl ToTokens for Vec<Item> {
                     _ => panic!("Item::Tree should capture TokenInfo::Group"),
                 };
                 let new_group = Group::new(delimiter, stream);
-                TokenTree::Group(new_group)
+                vec![TokenTree::Group(new_group)]
             }
             Item::Item(info) => match info {
-                TokenInfo::Atom(v) => v,
+                TokenInfo::Atom(v) => vec![v],
+                TokenInfo::Atoms(vs) => vs,
                 _ => panic!("Item::Item should capture TokenInfo::Atom"),
             },
             Item::Placeholder(v) => panic!("cannot convert placeholder {} back to Token", v),
@@ -154,5 +178,31 @@ impl FindReplace for Vec<Item> {
     fn find_all(&self, pat: impl ToItems) -> Vec<Match<TokenInfo>> {
         let pat = pat.to_items();
         find_all(self, &pat)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::prelude::parse;
+
+    #[test]
+    fn test_inseparatable_puncts() {
+        let t = |s: &str| {
+            let tokens = parse(s);
+            let items = tokens.to_items();
+            format!("{:?}", items)
+                .replace("Item(\"", "")
+                .replace("\")", "")
+        };
+        assert_eq!(t("s: ::String"), "[s, :, ::, String]");
+        assert_eq!(t("Result<Vec<u8>>"), "[Result, <, Vec, <, u8, >, >]");
+        assert_eq!(
+            t("collect::<Result<Vec<_>>>"),
+            "[collect, ::, <, Result, <, Vec, <, _, >, >, >]"
+        );
+        assert_eq!(t("x >>= 2"), "[x, >, >, =, 2]");
+        assert_eq!(t("|| -> u8"), "[|, |, ->, u8]");
+        assert_eq!(t("1 => 2"), "[1, =>, 2]");
     }
 }
