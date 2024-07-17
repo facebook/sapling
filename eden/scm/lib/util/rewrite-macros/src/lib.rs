@@ -7,6 +7,7 @@
 
 extern crate proc_macro;
 
+mod demomo;
 #[allow(unused)]
 mod prelude;
 mod syncify;
@@ -37,4 +38,66 @@ pub fn syncify(
     tokens: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {
     syncify::syncify(attr.into(), tokens.into()).into()
+}
+
+/// De-monomorphization. Rewrite functions using `impl` parameters like:
+///
+/// ```
+/// #[rewrite_macros::demomo]
+/// fn foo(x: impl AsRef<str>) -> String {
+///     let x = x.as_ref();
+///     x.replace("1", "2").replace("3", "4").replace("5", "6") // complex logic
+/// }
+/// ```
+///
+/// to:
+///
+/// ```ignore
+/// fn foo(x: impl AsRef<str>) -> String {
+///     fn inner(x: &str) -> String {
+///         x.replace("1", "2").replace("3", "4").replace("5", "6") // complex logic
+///     }
+///     inner(x.as_ref())
+/// }
+/// ```
+///
+/// so the complex logic (`inner`) is only compiled once and occurs once in the
+/// final binary.
+///
+/// Supports the following parameters:
+/// - `impl AsRef<T>`
+/// - `impl Into<T>`
+/// - `impl ToString<T>`.
+///
+/// For functions that take `self`, put `#[demomo]` on the `impl` block
+/// so `demomo` can figure out the type of `Self`:
+///
+/// ```
+/// use std::fs;
+/// use std::path::Path;
+///
+/// struct S(String);
+/// #[rewrite_macros::demomo]
+/// impl S {
+///     fn open(path: impl AsRef<Path>) -> Self {
+///         Self(fs::read_to_string(path.as_ref()).unwrap())
+///     }
+///     fn save_as(&self, path: impl AsRef<Path>) {
+///         let _ = fs::write(path.as_ref(), self.0.as_bytes());
+///     }
+///     fn edit(&mut self, content: impl ToString) {
+///         self.0 = content.to_string();
+///     }
+/// }
+/// ```
+///
+/// Use `#[demomo(debug)]` to enable debug output at compile time.
+///
+/// See also https://matklad.github.io/2021/09/04/fast-rust-builds.html#Compilation-Model-Monomorphization
+#[proc_macro_attribute]
+pub fn demomo(
+    attr: proc_macro::TokenStream,
+    tokens: proc_macro::TokenStream,
+) -> proc_macro::TokenStream {
+    demomo::demomo(attr.into(), tokens.into()).into()
 }

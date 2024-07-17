@@ -8,12 +8,15 @@
 use std::str::FromStr;
 
 pub(crate) use proc_macro2::TokenStream;
+pub(crate) use quote::quote;
+pub(crate) use tree_pattern_match::Match;
 
 pub(crate) use crate::token::TokenInfo;
 pub(crate) use crate::token_stream_ext::AngleBracket;
 pub(crate) use crate::token_stream_ext::FindReplace;
 pub(crate) use crate::token_stream_ext::ToItems;
 pub(crate) use crate::token_stream_ext::ToTokens;
+
 pub(crate) type Item = tree_pattern_match::Item<TokenInfo>;
 
 pub(crate) fn parse(code: &str) -> TokenStream {
@@ -89,4 +92,12 @@ pub(crate) fn unparse(stream: impl ToTokens) -> String {
     } else {
         tokens.to_string()
     }
+}
+
+pub(crate) fn pick_unique_name(body: Vec<Item>, preferred_name: &str) -> TokenStream {
+    let mut name = preferred_name.to_string();
+    while !body.find_all(name.as_str()).is_empty() {
+        name.push('_');
+    }
+    parse(&name)
 }
