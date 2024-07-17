@@ -28,6 +28,7 @@ use import_tools::GitimportPreferences;
 use import_tools::ReuploadCommits;
 use mononoke_types::hash::GitSha1;
 use mononoke_types::ChangesetId;
+use mononoke_types::DerivableType;
 use repo_identity::RepoIdentityRef;
 use topo_sort::sort_topological;
 
@@ -143,7 +144,9 @@ pub async fn upload_objects(
         ReuploadCommits::Never,
     ));
     let prefs = GitimportPreferences {
-        backfill_derivation: BackfillDerivation::AllConfiguredTypes,
+        backfill_derivation: BackfillDerivation::OnlySpecificTypes(vec![
+            DerivableType::GitDeltaManifests,
+        ]),
         ..Default::default()
     };
     let acc = GitimportAccumulator::from_roots(HashMap::new());
