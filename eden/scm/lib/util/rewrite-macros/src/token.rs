@@ -19,6 +19,9 @@ use proc_macro2::TokenTree;
 #[derive(Clone)]
 pub(crate) enum TokenInfo {
     Group(Delimiter),
+    /// Custom group consists of left and right tokens.
+    /// Useful for, `< ... >` (angle bracket).
+    CustomGroup(TokenTree, TokenTree),
     Atom(TokenTree),
     /// Inseparable tokens, like "::", "=>", "->".
     /// They use 2 `proc_macro2::TokenTree`s.
@@ -43,6 +46,11 @@ impl fmt::Debug for TokenInfo {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             TokenInfo::Group(d) => d.fmt(f),
+            TokenInfo::CustomGroup(l, r) => {
+                let l = TokenStream::from(l.clone()).to_string();
+                let r = TokenStream::from(r.clone()).to_string();
+                write!(f, "{l}{r}")
+            }
             TokenInfo::Atom(t) => {
                 let s = TokenStream::from(t.clone()).to_string();
                 write!(f, "{:?}", s)
@@ -59,6 +67,9 @@ impl PartialEq for TokenInfo {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
             (TokenInfo::Group(l), TokenInfo::Group(r)) => l == r,
+            (TokenInfo::CustomGroup(l1, r1), TokenInfo::CustomGroup(l2, r2)) => {
+                atom_eq(l1, l2) && atom_eq(r1, r2)
+            }
             (TokenInfo::Atom(l), TokenInfo::Atom(r)) => atom_eq(l, r),
             (TokenInfo::Atoms(ls), TokenInfo::Atoms(rs)) => {
                 ls.len() == rs.len() && ls.iter().zip(rs.iter()).all(|(l, r)| atom_eq(l, r))

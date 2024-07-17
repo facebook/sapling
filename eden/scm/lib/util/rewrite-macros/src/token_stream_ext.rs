@@ -32,6 +32,12 @@ pub(crate) trait FindReplace {
     fn find_all(&self, pat: impl ToItems) -> Vec<Match<TokenInfo>>;
 }
 
+pub(crate) trait AngleBracket {
+    /// Change `< ... >` into group to avoid unbalanced matches.
+    /// Only use this when standalone `<` (less than) or `>` are not possible.
+    fn group_by_angle_bracket(self) -> Self;
+}
+
 pub(crate) trait ToItems {
     fn to_items(&self) -> Vec<Item>;
 }
@@ -124,12 +130,19 @@ impl ToTokens for Vec<Item> {
         let iter = items.into_iter().flat_map(|item| match item {
             Item::Tree(info, sub_items) => {
                 let stream = sub_items.to_tokens();
-                let delimiter = match info {
-                    TokenInfo::Group(v) => v,
+                match info {
+                    TokenInfo::Group(delimiter) => {
+                        let new_group = Group::new(delimiter, stream);
+                        vec![TokenTree::Group(new_group)]
+                    }
+                    TokenInfo::CustomGroup(l, r) => {
+                        let mut result = vec![l];
+                        result.extend(stream);
+                        result.push(r);
+                        result
+                    }
                     _ => panic!("Item::Tree should capture TokenInfo::Group"),
-                };
-                let new_group = Group::new(delimiter, stream);
-                vec![TokenTree::Group(new_group)]
+                }
             }
             Item::Item(info) => match info {
                 TokenInfo::Atom(v) => vec![v],
@@ -181,19 +194,62 @@ impl FindReplace for Vec<Item> {
     }
 }
 
+impl AngleBracket for Vec<Item> {
+    fn group_by_angle_bracket(self) -> Self {
+        let mut iter = self.into_iter();
+        let mut result = Vec::new();
+        while let Some(item) = iter.next() {
+            if matches!(&item, Item::Item(TokenInfo::Atom(TokenTree::Punct(p) )) if p.as_char() == '<')
+            {
+                // Find the matching '>'
+                let mut balance = 1;
+                let mut buf = Vec::new();
+                while let Some(item2) = iter.next() {
+                    if let Item::Item(TokenInfo::Atom(TokenTree::Punct(p))) = &item2 {
+                        match p.as_char() {
+                            '<' => {
+                                balance += 1;
+                            }
+                            '>' => {
+                                balance -= 1;
+                            }
+                            _ => {}
+                        }
+                    }
+                    if balance == 0 {
+                        let (left, right) = match (item, item2) {
+                            (Item::Item(TokenInfo::Atom(l)), Item::Item(TokenInfo::Atom(r))) => {
+                                (l, r)
+                            }
+                            _ => unreachable!(),
+                        };
+                        let info = TokenInfo::CustomGroup(left, right);
+                        let tree = Item::Tree(info, buf.group_by_angle_bracket());
+                        result.push(tree);
+                        break;
+                    }
+                    buf.push(item2);
+                }
+            } else {
+                result.push(item);
+            }
+        }
+        result
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::prelude::parse;
+    use crate::prelude::unparse;
 
     #[test]
     fn test_inseparatable_puncts() {
         let t = |s: &str| {
             let tokens = parse(s);
             let items = tokens.to_items();
-            format!("{:?}", items)
-                .replace("Item(\"", "")
-                .replace("\")", "")
+            display(&items)
         };
         assert_eq!(t("s: ::String"), "[s, :, ::, String]");
         assert_eq!(t("Result<Vec<u8>>"), "[Result, <, Vec, <, u8, >, >]");
@@ -204,5 +260,25 @@ mod tests {
         assert_eq!(t("x >>= 2"), "[x, >, >, =, 2]");
         assert_eq!(t("|| -> u8"), "[|, |, ->, u8]");
         assert_eq!(t("1 => 2"), "[1, =>, 2]");
+    }
+
+    #[test]
+    fn test_group_by_angle_bracket() {
+        let tokens = parse("x as Result<Vec<u8>>;");
+        let items = tokens.to_items();
+        assert_eq!(display(&items), "[x, as, Result, <, Vec, <, u8, >, >, ;]");
+        let grouped = items.group_by_angle_bracket();
+        assert_eq!(
+            display(&grouped),
+            "[x, as, Result, Tree(<>, [Vec, Tree(<>, [u8])]), ;]"
+        );
+        let tokens = grouped.to_tokens();
+        assert_eq!(unparse(tokens), "\n            x as Result < Vec < u8 >>;");
+    }
+
+    fn display(items: &[Item]) -> String {
+        format!("{:?}", items)
+            .replace("Item(\"", "")
+            .replace("\")", "")
     }
 }
