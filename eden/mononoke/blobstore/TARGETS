@@ -28,6 +28,7 @@ rust_library(
         ":packblob",
         ":prefixblob",
         ":readonlyblob",
+        ":s3blob",
         ":samplingblob",
         ":sqlblob",
         ":throttledblob",
@@ -42,7 +43,7 @@ rust_library(
         "//eden/mononoke/common/scuba_ext:scuba_ext",
         "//eden/mononoke/common/sql_construct:sql_construct",
         "//eden/mononoke/facebook/manifoldblob:manifoldblob",
-        "//eden/mononoke/facebook/s3blob:s3blob",
+        "//eden/mononoke/facebook/s3pool:s3pool",
         "//eden/mononoke/metaconfig:metaconfig_types",
     ],
 )
@@ -235,6 +236,31 @@ rust_library(
         "//eden/mononoke/mononoke_types:mononoke_types",
         "//eden/mononoke/server/context:context",
         "//thrift/lib/rust:fbthrift",
+    ],
+)
+
+rust_library(
+    name = "s3blob",
+    srcs = glob(["s3blob/src/*.rs"]),
+    autocargo = {"cargo_toml_dir": "s3blob"},
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:async-trait",
+        "fbsource//third-party/rust:chrono",
+        "fbsource//third-party/rust:hyper",
+        "fbsource//third-party/rust:hyper-openssl",
+        "fbsource//third-party/rust:nonzero_ext",
+        "fbsource//third-party/rust:openssl",
+        "fbsource//third-party/rust:rusoto_core",
+        "fbsource//third-party/rust:rusoto_credential",
+        "fbsource//third-party/rust:rusoto_s3",
+        "fbsource//third-party/rust:rusoto_sts",
+        "fbsource//third-party/rust:tokio",
+        "//common/rust/shed/futures_stats:futures_stats",
+        "//common/rust/shed/time_ext:time_ext",
+        "//eden/mononoke/blobstore:blobstore",
+        "//eden/mononoke/mononoke_types:mononoke_types",
+        "//eden/mononoke/server/context:context",
     ],
 )
 

@@ -159,6 +159,7 @@ members = [
   "blobstore/prefixblob",
   "blobstore/readonlyblob",
   "blobstore/redactedblobstore",
+  "blobstore/s3blob",
   "blobstore/samplingblob",
   "blobstore/sqlblob",
   "blobstore/test_utils",

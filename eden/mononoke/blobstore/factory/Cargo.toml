@@ -31,6 +31,7 @@ packblob = { version = "0.1.0", path = "../packblob" }
 prefixblob = { version = "0.1.0", path = "../prefixblob" }
 rand_distr = "0.4"
 readonlyblob = { version = "0.1.0", path = "../readonlyblob" }
+s3blob = { version = "0.1.0", path = "../s3blob" }
 samplingblob = { version = "0.1.0", path = "../samplingblob" }
 scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
