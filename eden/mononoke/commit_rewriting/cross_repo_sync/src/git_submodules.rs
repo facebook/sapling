@@ -16,7 +16,7 @@ pub use expand::SubmoduleExpansionData;
 pub(crate) use expand::SubmodulePath;
 pub use in_memory_repo::InMemoryRepo;
 pub(crate) use utils::build_recursive_submodule_deps;
-pub use utils::get_all_submodule_deps;
+pub use utils::get_all_possible_repo_submodule_deps;
 pub(crate) use utils::get_git_hash_from_submodule_file;
 pub(crate) use utils::get_submodule_repo;
 pub(crate) use utils::get_x_repo_submodule_metadata_file_path;
