@@ -54,7 +54,10 @@ mod tests {
         );
         assert_eq!(
             unparse(&syncify(attr, code)),
-            "fn foo (x : usize) -> usize { { bar (x) + 1 } }"
+            r#"
+            fn foo (x : usize) -> usize {
+                { bar (x) + 1 }
+            }"#
         );
     }
 
@@ -71,7 +74,10 @@ mod tests {
         );
         assert_eq!(
             unparse(&syncify(attr, code)),
-            "# [test] fn test_foo () { assert ! (g ()) ; }"
+            r#"
+            # [test] fn test_foo () {
+                assert ! (g ());
+            }"#
         );
     }
 }
