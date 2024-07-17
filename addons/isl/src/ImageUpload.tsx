@@ -224,6 +224,13 @@ export function FilePicker({uploadFiles}: {uploadFiles: (files: Array<File>) => 
                     uploadFiles(chosen);
                   }
                 });
+              } else {
+                // By default, <button> clicks do not forward to the parent <label>'s htmlFor target.
+                // Manually trigger a click on the element instead.
+                const input = document.getElementById(id);
+                if (input) {
+                  input.click();
+                }
               }
             }}>
             <PaperclipIcon />
