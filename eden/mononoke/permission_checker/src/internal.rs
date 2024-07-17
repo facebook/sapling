@@ -40,6 +40,9 @@ pub struct Acls {
     pub tiers: HashMap<String, Arc<Acl>>,
 
     #[serde(default)]
+    pub workspaces: HashMap<String, Arc<Acl>>,
+
+    #[serde(default)]
     pub groups: HashMap<String, Arc<MononokeIdentitySet>>,
 }
 
@@ -113,6 +116,12 @@ impl AclProvider for InternalAclProvider {
         Ok(Box::new(AclPermissionChecker {
             acl: self.acls.tiers.get(name).cloned().unwrap_or_default(),
         }))
+    }
+
+    async fn commitcloud_workspace_acl(&self, name: &str) -> Result<Option<BoxPermissionChecker>> {
+        Ok(Some(Box::new(AclPermissionChecker {
+            acl: self.acls.workspaces.get(name).cloned().unwrap_or_default(),
+        })))
     }
 
     async fn group(&self, name: &str) -> Result<BoxMembershipChecker> {

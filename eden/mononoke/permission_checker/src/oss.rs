@@ -117,6 +117,10 @@ impl AclProvider for DummyAclProvider {
         Ok(Box::new(AlwaysAllow))
     }
 
+    async fn commitcloud_workspace_acl(&self, _name: &str) -> Result<Option<BoxPermissionChecker>> {
+        Ok(Some(Box::new(AlwaysAllow)))
+    }
+
     async fn group(&self, _name: &str) -> Result<BoxMembershipChecker> {
         Ok(Box::new(NeverMember))
     }

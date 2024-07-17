@@ -29,6 +29,9 @@ pub trait AclProvider: Send + Sync {
     /// access control list.
     async fn tier_acl(&self, name: &str) -> Result<BoxPermissionChecker>;
 
+    /// Returns a permission checker for the access to commit cloud workspaces
+    async fn commitcloud_workspace_acl(&self, name: &str) -> Result<Option<BoxPermissionChecker>>;
+
     /// Returns a membership checker for the named group.
     async fn group(&self, name: &str) -> Result<BoxMembershipChecker>;
 
