@@ -1922,7 +1922,7 @@ impl RepoContext {
             .manager()
             .derive_bulk(
                 ctx,
-                csids,
+                &csids,
                 rederivation,
                 derivable_types,
                 override_batch_size,

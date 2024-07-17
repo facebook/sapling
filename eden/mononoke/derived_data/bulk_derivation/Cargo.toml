@@ -11,6 +11,7 @@ license = "GPLv2+"
 path = "lib.rs"
 
 [dependencies]
+async-trait = "0.1.71"
 basename_suffix_skeleton_manifest_v3 = { version = "0.1.0", path = "../basename_suffix_skeleton_manifest_v3" }
 blame = { version = "0.1.0", path = "../blame" }
 changeset_info = { version = "0.1.0", path = "../changeset_info" }

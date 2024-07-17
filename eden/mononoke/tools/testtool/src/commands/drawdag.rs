@@ -156,13 +156,7 @@ async fn derive_all(ctx: &CoreContext, repo: &BlobRepo, csids: &[ChangesetId]) -
         .collect::<Vec<_>>();
     repo.repo_derived_data()
         .manager()
-        .derive_bulk(
-            ctx,
-            csids.to_vec(),
-            None,
-            derived_data_types.as_slice(),
-            None,
-        )
+        .derive_bulk(ctx, csids, None, derived_data_types.as_slice(), None)
         .await?;
     Ok(())
 }

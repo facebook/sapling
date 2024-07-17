@@ -7,12 +7,14 @@
 
 use std::sync::Arc;
 
+use async_trait::async_trait;
 use basename_suffix_skeleton_manifest_v3::RootBssmV3DirectoryId;
 use blame::RootBlameV2;
 use changeset_info::ChangesetInfo;
 use cloned::cloned;
 use context::CoreContext;
 use deleted_manifest::RootDeletedManifestV2Id;
+use derived_data_manager::manager::derive::VisitedDerivableTypesMap;
 use derived_data_manager::DerivableType;
 use derived_data_manager::DerivationError;
 use derived_data_manager::DerivedDataManager;
@@ -22,7 +24,8 @@ use fastlog::RootFastlog;
 use filenodes_derivation::FilenodesOnlyPublic;
 use fsnodes::RootFsnodeId;
 use futures::stream;
-use futures::stream::StreamExt;
+use futures::StreamExt;
+use futures::TryStreamExt;
 use git_types::MappedGitCommitId;
 use git_types::RootGitDeltaManifestId;
 use git_types::RootGitDeltaManifestV2Id;
@@ -35,206 +38,223 @@ use test_manifest::RootTestManifestDirectory;
 use test_sharded_manifest::RootTestShardedManifestDirectory;
 use unodes::RootUnodeManifestId;
 
+#[async_trait]
 pub trait BulkDerivation {
-    fn derive_bulk(
+    async fn derive_bulk(
         &self,
         ctx: &CoreContext,
-        csids: Vec<ChangesetId>,
+        csids: &[ChangesetId],
         rederivation: Option<Arc<dyn Rederivation>>,
         derived_data_types: &[DerivableType],
         override_batch_size: Option<u64>,
-    ) -> impl std::future::Future<Output = Result<(), SharedDerivationError>> + Send;
-    fn is_derived(
+    ) -> Result<(), SharedDerivationError>;
+    async fn is_derived(
         &self,
         ctx: &CoreContext,
         csid: ChangesetId,
         rederivation: Option<Arc<dyn Rederivation>>,
         derived_data_type: DerivableType,
-    ) -> impl std::future::Future<Output = Result<bool, DerivationError>> + Send;
+    ) -> Result<bool, DerivationError>;
 }
 
+#[async_trait]
 impl BulkDerivation for DerivedDataManager {
     /// Derive all the desired derived data types for all the desired csids
     ///
     /// If the dependent types or changesets are not derived yet, they will be derived now
-    fn derive_bulk(
+    async fn derive_bulk(
         &self,
         ctx: &CoreContext,
-        csids: Vec<ChangesetId>,
+        csids: &[ChangesetId],
         rederivation: Option<Arc<dyn Rederivation>>,
         derived_data_types: &[DerivableType],
         override_batch_size: Option<u64>,
-    ) -> impl std::future::Future<Output = Result<(), SharedDerivationError>> + Send {
-        // Note: We could skip the ones that are dependent on others that are present in this list to
-        // avoid racing with ourselves
+    ) -> Result<(), SharedDerivationError> {
+        let visited = VisitedDerivableTypesMap::default();
         stream::iter(derived_data_types)
-            .then(move |derived_data_type| {
-                cloned!(csids, rederivation, override_batch_size);
+            .map(move |derived_data_type| {
+                cloned!(rederivation, visited);
                 async move {
-                    let csids = &csids;
                     match derived_data_type {
                         DerivableType::Unodes => {
-                            self.derive_heads::<RootUnodeManifestId>(
+                            self.derive_heads_with_visited::<RootUnodeManifestId>(
                                 ctx,
                                 csids,
                                 override_batch_size,
                                 rederivation,
+                                visited,
                             )
                             .await
                         }
                         DerivableType::BlameV2 => {
-                            self.derive_heads::<RootBlameV2>(
+                            self.derive_heads_with_visited::<RootBlameV2>(
                                 ctx,
                                 csids,
                                 override_batch_size,
                                 rederivation,
+                                visited,
                             )
                             .await
                         }
                         DerivableType::FileNodes => {
-                            self.derive_heads::<FilenodesOnlyPublic>(
+                            self.derive_heads_with_visited::<FilenodesOnlyPublic>(
                                 ctx,
                                 csids,
                                 override_batch_size,
                                 rederivation,
+                                visited,
                             )
                             .await
                         }
                         DerivableType::HgChangesets => {
-                            self.derive_heads::<MappedHgChangesetId>(
+                            self.derive_heads_with_visited::<MappedHgChangesetId>(
                                 ctx,
                                 csids,
                                 override_batch_size,
                                 rederivation,
+                                visited,
                             )
                             .await
                         }
                         DerivableType::HgAugmentedManifests => {
-                            self.derive_heads::<RootHgAugmentedManifestId>(
+                            self.derive_heads_with_visited::<RootHgAugmentedManifestId>(
                                 ctx,
                                 csids,
                                 override_batch_size,
                                 rederivation,
+                                visited,
                             )
                             .await
                         }
                         DerivableType::Fsnodes => {
-                            self.derive_heads::<RootFsnodeId>(
+                            self.derive_heads_with_visited::<RootFsnodeId>(
                                 ctx,
                                 csids,
                                 override_batch_size,
                                 rederivation,
+                                visited,
                             )
                             .await
                         }
                         DerivableType::Fastlog => {
-                            self.derive_heads::<RootFastlog>(
+                            self.derive_heads_with_visited::<RootFastlog>(
                                 ctx,
                                 csids,
                                 override_batch_size,
                                 rederivation,
+                                visited,
                             )
                             .await
                         }
                         DerivableType::DeletedManifests => {
-                            self.derive_heads::<RootDeletedManifestV2Id>(
+                            self.derive_heads_with_visited::<RootDeletedManifestV2Id>(
                                 ctx,
                                 csids,
                                 override_batch_size,
                                 rederivation,
+                                visited,
                             )
                             .await
                         }
                         DerivableType::SkeletonManifests => {
-                            self.derive_heads::<RootSkeletonManifestId>(
+                            self.derive_heads_with_visited::<RootSkeletonManifestId>(
                                 ctx,
                                 csids,
                                 override_batch_size,
                                 rederivation,
+                                visited,
                             )
                             .await
                         }
                         DerivableType::ChangesetInfo => {
-                            self.derive_heads::<ChangesetInfo>(
+                            self.derive_heads_with_visited::<ChangesetInfo>(
                                 ctx,
                                 csids,
                                 override_batch_size,
                                 rederivation,
+                                visited,
                             )
                             .await
                         }
                         DerivableType::GitTrees => {
-                            self.derive_heads::<TreeHandle>(
+                            self.derive_heads_with_visited::<TreeHandle>(
                                 ctx,
                                 csids,
                                 override_batch_size,
                                 rederivation,
+                                visited,
                             )
                             .await
                         }
                         DerivableType::GitCommits => {
-                            self.derive_heads::<MappedGitCommitId>(
+                            self.derive_heads_with_visited::<MappedGitCommitId>(
                                 ctx,
                                 csids,
                                 override_batch_size,
                                 rederivation,
+                                visited,
                             )
                             .await
                         }
                         DerivableType::GitDeltaManifests => {
-                            self.derive_heads::<RootGitDeltaManifestId>(
+                            self.derive_heads_with_visited::<RootGitDeltaManifestId>(
                                 ctx,
                                 csids,
                                 override_batch_size,
                                 rederivation,
+                                visited,
                             )
                             .await
                         }
                         DerivableType::GitDeltaManifestsV2 => {
-                            self.derive_heads::<RootGitDeltaManifestV2Id>(
+                            self.derive_heads_with_visited::<RootGitDeltaManifestV2Id>(
                                 ctx,
                                 csids,
                                 override_batch_size,
                                 rederivation,
+                                visited,
                             )
                             .await
                         }
                         DerivableType::BssmV3 => {
-                            self.derive_heads::<RootBssmV3DirectoryId>(
+                            self.derive_heads_with_visited::<RootBssmV3DirectoryId>(
                                 ctx,
                                 csids,
                                 override_batch_size,
                                 rederivation,
+                                visited,
                             )
                             .await
                         }
                         DerivableType::TestManifests => {
-                            self.derive_heads::<RootTestManifestDirectory>(
+                            self.derive_heads_with_visited::<RootTestManifestDirectory>(
                                 ctx,
                                 csids,
                                 override_batch_size,
                                 rederivation,
+                                visited,
                             )
                             .await
                         }
                         DerivableType::TestShardedManifests => {
-                            self.derive_heads::<RootTestShardedManifestDirectory>(
+                            self.derive_heads_with_visited::<RootTestShardedManifestDirectory>(
                                 ctx,
                                 csids,
                                 override_batch_size,
                                 rederivation,
+                                visited,
                             )
                             .await
                         }
                     }
                 }
             })
-            .fold(Ok(()), |acc, x| async move {
-                match (acc, x) {
-                    (Err(e), _) | (_, Err(e)) => Err(e),
-                    _ => Ok(()),
-                }
-            })
+            .boxed()
+            .buffer_unordered(10)
+            .try_collect::<Vec<_>>()
+            .await?;
+
+        Ok(())
     }
     async fn is_derived(
         &self,

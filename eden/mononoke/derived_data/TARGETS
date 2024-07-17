@@ -46,6 +46,7 @@ rust_library(
     srcs = glob(["bulk_derivation/**/*.rs"]),
     autocargo = {"cargo_toml_dir": "bulk_derivation"},
     deps = [
+        "fbsource//third-party/rust:async-trait",
         "fbsource//third-party/rust:futures",
         ":basename_suffix_skeleton_manifest_v3",
         ":blame",

@@ -691,7 +691,10 @@ pub(crate) async fn derive_all_enabled_types_for_repo(
         .manager()
         .derive_bulk(
             ctx,
-            all_changesets.iter().map(|cs_data| cs_data.cs_id).collect(),
+            &all_changesets
+                .iter()
+                .map(|cs_data| cs_data.cs_id)
+                .collect::<Vec<_>>(),
             None,
             &enabled_types,
             None,

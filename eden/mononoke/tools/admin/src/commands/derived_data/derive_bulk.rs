@@ -92,7 +92,7 @@ pub(super) async fn derive_bulk(
         .manager()
         .derive_bulk(
             ctx,
-            csids,
+            &csids,
             None,
             &derived_data_types,
             args.chunk_size.map(|chunk_size| chunk_size.get() as u64),
