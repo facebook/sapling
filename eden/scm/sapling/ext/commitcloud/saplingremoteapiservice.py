@@ -181,7 +181,7 @@ class SaplingRemoteAPIService(baseservice.BaseService):
         )
 
     def getworkspaces(self, reponame, prefix):
-        return self.fallback(reponame, prefix)
+        return self.fallback.getworkspaces(reponame, prefix)
 
     def getworkspace(self, reponame, workspacename):
         self.ui.debug(
