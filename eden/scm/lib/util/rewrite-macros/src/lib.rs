@@ -7,16 +7,10 @@
 
 extern crate proc_macro;
 
-use std::str::FromStr;
-
-use proc_macro2::TokenStream;
-
+mod prelude;
+mod syncify;
 mod token;
 mod token_stream_ext;
-
-pub(crate) use token::TokenInfo;
-use token_stream_ext::TokenStreamExt;
-pub(crate) type Item = tree_pattern_match::Item<TokenInfo>;
 
 /// Try to make code non-async by removing `async` and `.await` keywords.
 ///
@@ -41,42 +35,5 @@ pub fn syncify(
     attr: proc_macro::TokenStream,
     tokens: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {
-    syncify2(attr.into(), tokens.into()).into()
-}
-
-fn syncify2(attr: TokenStream, mut tokens: TokenStream) -> TokenStream {
-    let debug = !attr.find_all(parse("debug")).is_empty();
-    tokens
-        .replace_all(parse(".await"), parse(""))
-        .replace_all(parse(".boxed()"), parse(""))
-        .replace_all(parse("async move"), parse(""))
-        .replace_all(parse("async"), parse(""))
-        .replace_all(parse("#[tokio::test]"), parse("#[test]"))
-        .replace_all(parse("__::block_on(___g1)"), parse("___g1"));
-
-    // Apply customized replaces.
-    let matches = attr.find_all(parse("[___g1] => [___g2]"));
-    if debug {
-        eprintln!("{} customized replaces", matches.len());
-    }
-    for m in matches {
-        let pat = m.captures.get("___g1").unwrap();
-        let replace = m.captures.get("___g2").unwrap();
-        tokens.replace_all_raw(pat, replace);
-    }
-
-    // `cargo expand` can also be used to produce output.
-    if debug {
-        eprintln!("output: [[[\n{}\n]]]", unparse(&tokens));
-    }
-
-    tokens
-}
-
-fn parse(code: &str) -> TokenStream {
-    TokenStream::from_str(code).unwrap()
-}
-
-fn unparse(stream: &TokenStream) -> String {
-    stream.to_string()
+    syncify::syncify(attr.into(), tokens.into()).into()
 }

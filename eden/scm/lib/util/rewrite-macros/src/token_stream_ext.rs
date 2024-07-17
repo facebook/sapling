@@ -12,8 +12,8 @@ use tree_pattern_match::find_all;
 use tree_pattern_match::replace_all;
 use tree_pattern_match::Match;
 
-use crate::Item;
-use crate::TokenInfo;
+use crate::prelude::Item;
+use crate::prelude::TokenInfo;
 
 /// Convenient methods on TokenStream.
 pub(crate) trait TokenStreamExt {
