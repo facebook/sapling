@@ -12,11 +12,12 @@ use context::CoreContext;
 use metaconfig_types::CommonCommitSyncConfig;
 use mononoke_api::Mononoke;
 use mononoke_api::RepoContext;
+use mononoke_api::XRepoLookupExactBehaviour;
+use mononoke_api::XRepoLookupSyncBehaviour;
 use mononoke_types::ChangesetId;
 use phases::PhasesRef;
 use pushrebase_mutation_mapping::PushrebaseMutationMappingRef;
 use source_control as thrift;
-use synced_commit_mapping::SyncedCommitSourceRepo;
 
 use crate::errors;
 use crate::source_control_impl::SourceControlServiceImpl;
@@ -152,39 +153,48 @@ impl RepoChangesetsPushrebaseHistory {
         config: CommonCommitSyncConfig,
     ) -> Result<bool, errors::ServiceError> {
         let mut synced_changesets = vec![];
-        let (target_repo_ids, expected_sync_origin) = if config.large_repo_id == repo.repoid() {
-            (
-                config.small_repos.keys().copied().collect(),
-                SyncedCommitSourceRepo::Small,
-            )
+        let target_repo_ids = if config.large_repo_id == repo.repoid() {
+            config.small_repos.keys().copied().collect()
         } else {
-            (vec![config.large_repo_id], SyncedCommitSourceRepo::Large)
+            vec![config.large_repo_id]
         };
 
         for target_repo_id in target_repo_ids.into_iter() {
-            let entries = repo
-                .synced_commit_mapping()
-                .get(&self.ctx, repo.repoid(), bcs_id, target_repo_id)
-                .await
-                .map_err(errors::internal_error)?;
-            if let Some(target_repo_name) = self.mononoke.repo_name_from_id(target_repo_id) {
-                synced_changesets.extend(entries.into_iter().filter_map(
-                    |(cs, _, maybe_source_repo)| {
-                        let traverse = match maybe_source_repo {
-                            // source_repo information can be absent e.g. for old commits but
-                            // let's still traverse the mapping because in most cases we will
-                            // get the correct result.
-                            None => true,
-                            Some(source_repo) if source_repo == expected_sync_origin => true,
-                            _ => false,
-                        };
-                        if traverse {
-                            Some(RepoChangeset(target_repo_name.clone(), cs))
-                        } else {
-                            None
+            match self.mononoke.repo_name_from_id(target_repo_id) {
+                Some(target_repo_name) => {
+                    let target_repo = self.repo(&target_repo_name).await?;
+                    match repo
+                        .xrepo_commit_lookup(
+                            &target_repo,
+                            bcs_id,
+                            None,
+                            XRepoLookupSyncBehaviour::NeverSync,
+                            XRepoLookupExactBehaviour::OnlyExactMapping,
+                        )
+                        .await
+                    {
+                        Ok(None) => {}
+                        Ok(Some(target_repo_commit_ctx)) => synced_changesets
+                            .push(RepoChangeset(target_repo_name, target_repo_commit_ctx.id())),
+                        Err(err) => {
+                            return Err(errors::internal_error(format!(
+                                "Encountered error `{}` while looking up commit {} from repository {} in repository {}",
+                                err,
+                                bcs_id,
+                                repo.name(),
+                                target_repo_name,
+                            ))
+                            .into());
                         }
-                    },
-                ));
+                    }
+                }
+                None => {
+                    return Err(errors::internal_error(format!(
+                        "unable to resolve repository name for repository id {}",
+                        target_repo_id
+                    ))
+                    .into());
+                }
             }
         }
 
