@@ -126,7 +126,8 @@ async fn push<'a>(
                 }
                 Err(e) => {
                     write_text_packetline(
-                        format!("{} {} {}", REF_ERR, updated_ref.ref_name, e).as_bytes(),
+                        format!("{} {} {}", REF_ERR, updated_ref.ref_name, e.root_cause())
+                            .as_bytes(),
                         &mut output,
                     )
                     .await?;

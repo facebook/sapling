@@ -52,6 +52,7 @@ permission_checker = { version = "0.1.0", path = "../permission_checker" }
 protocol = { version = "0.1.0", path = "../git/protocol" }
 repo_authorization = { version = "0.1.0", path = "../repo_authorization" }
 repo_blobstore = { version = "0.1.0", path = "../blobrepo/repo_blobstore" }
+repo_bookmark_attrs = { version = "0.1.0", path = "../repo_attributes/repo_bookmark_attrs" }
 repo_identity = { version = "0.1.0", path = "../repo_attributes/repo_identity" }
 repo_permission_checker = { version = "0.1.0", path = "../repo_attributes/repo_permission_checker" }
 rustc-hash = "1.1.0"

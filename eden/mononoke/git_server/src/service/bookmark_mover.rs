@@ -17,6 +17,7 @@ use import_tools::BookmarkOperation;
 use mononoke_api::repo::RepoContextBuilder;
 use mononoke_api::BookmarkKey;
 use repo_authorization::AuthorizationContext;
+use repo_bookmark_attrs::RepoBookmarkAttrsRef;
 
 use super::GitMappingsStore;
 use crate::command::RefUpdate;
@@ -90,8 +91,12 @@ async fn set_ref_inner(
     )?;
     let bookmark_operation =
         BookmarkOperation::new(bookmark_key.clone(), old_changeset, new_changeset)?;
+    // Check if the bookmark has non-fast-forward updates enabled
+    let allow_non_fast_forward = !repo
+        .inner_repo()
+        .repo_bookmark_attrs()
+        .is_fast_forward_only(&bookmark_key);
     // Actually perform the ref update
-    let allow_non_fast_forward = false; // TODO(rajshar): Use this value from BookmarkConfig instead of hardcoding here
     set_bookmark(
         &ctx,
         &repo_context,
