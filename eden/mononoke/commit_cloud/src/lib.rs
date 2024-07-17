@@ -51,8 +51,17 @@ pub struct ClientInfo {
 
 #[derive(Debug, Clone)]
 pub struct CommitCloudContext {
-    pub reponame: String,
     pub workspace: String,
+    pub reponame: String,
+}
+
+impl CommitCloudContext {
+    pub fn new(workspace: &str, reponame: &str) -> Self {
+        Self {
+            workspace: workspace.to_owned(),
+            reponame: reponame.to_owned(),
+        }
+    }
 }
 
 impl CommitCloud {
@@ -79,10 +88,7 @@ impl CommitCloud {
         &self,
         params: GetReferencesParams,
     ) -> anyhow::Result<ReferencesData> {
-        let ctx = CommitCloudContext {
-            workspace: params.workspace.clone(),
-            reponame: params.reponame.clone(),
-        };
+        let ctx = CommitCloudContext::new(&params.workspace, &params.reponame);
 
         let base_version = params.version;
 
@@ -153,10 +159,7 @@ impl CommitCloud {
             ));
         }
 
-        let ctx = CommitCloudContext {
-            workspace: params.workspace.clone(),
-            reponame: params.reponame.clone(),
-        };
+        let ctx = CommitCloudContext::new(&params.workspace, &params.reponame);
         let mut latest_version: u64 = 0;
         let mut version_timestamp: i64 = 0;
 
