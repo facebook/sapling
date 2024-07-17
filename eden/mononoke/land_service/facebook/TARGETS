@@ -10,7 +10,7 @@ tw.container(
             fbpkg.builder(
                 name = "mononoke.land_service",
                 path_actions = {
-                    "land_service": "//eden/mononoke/land_service:land_service",
+                    "land_service": "//eden/mononoke/land_service/facebook/server:land_service",
                 },
             ),
         ),
