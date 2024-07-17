@@ -9,6 +9,7 @@ use std::time::Duration;
 
 use anyhow::Error;
 use mononoke_types::RepositoryId;
+use shared_error::std::SharedError;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -22,3 +23,5 @@ pub enum DerivationError {
     #[error(transparent)]
     Error(#[from] Error),
 }
+
+pub type SharedDerivationError = SharedError<DerivationError>;

@@ -8,6 +8,7 @@
 #[cfg(fbcode_build)]
 use bytes::Bytes;
 use derived_data_manager::DerivationError;
+use derived_data_manager::SharedDerivationError;
 use mononoke_types::RepositoryId;
 use thiserror::Error;
 
@@ -47,6 +48,12 @@ pub enum ZeusWrapperError {
 
 impl From<DerivationError> for InternalError {
     fn from(e: DerivationError) -> Self {
+        InternalError::Other(e.into())
+    }
+}
+
+impl From<SharedDerivationError> for InternalError {
+    fn from(e: SharedDerivationError) -> Self {
         InternalError::Other(e.into())
     }
 }

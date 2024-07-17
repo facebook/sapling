@@ -17,6 +17,7 @@ use derived_data_manager::DerivableType;
 use derived_data_manager::DerivationError;
 use derived_data_manager::DerivedDataManager;
 use derived_data_manager::Rederivation;
+use derived_data_manager::SharedDerivationError;
 use fastlog::RootFastlog;
 use filenodes_derivation::FilenodesOnlyPublic;
 use fsnodes::RootFsnodeId;
@@ -42,7 +43,7 @@ pub trait BulkDerivation {
         rederivation: Option<Arc<dyn Rederivation>>,
         derived_data_types: &[DerivableType],
         override_batch_size: Option<u64>,
-    ) -> impl std::future::Future<Output = Result<(), DerivationError>> + Send;
+    ) -> impl std::future::Future<Output = Result<(), SharedDerivationError>> + Send;
     fn is_derived(
         &self,
         ctx: &CoreContext,
@@ -63,7 +64,7 @@ impl BulkDerivation for DerivedDataManager {
         rederivation: Option<Arc<dyn Rederivation>>,
         derived_data_types: &[DerivableType],
         override_batch_size: Option<u64>,
-    ) -> impl std::future::Future<Output = Result<(), DerivationError>> + Send {
+    ) -> impl std::future::Future<Output = Result<(), SharedDerivationError>> + Send {
         // Note: We could skip the ones that are dependent on others that are present in this list to
         // avoid racing with ourselves
         stream::iter(derived_data_types)

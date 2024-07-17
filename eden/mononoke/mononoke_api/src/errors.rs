@@ -18,6 +18,7 @@ use bookmarks_movement::describe_hook_rejections;
 use bookmarks_movement::BookmarkMovementError;
 use bookmarks_movement::HookRejection;
 use derived_data::DerivationError;
+use derived_data::SharedDerivationError;
 use itertools::Itertools;
 use megarepo_error::MegarepoError;
 use mononoke_types::path::MPath;
@@ -116,6 +117,15 @@ impl From<DerivationError> for MononokeError {
         match e {
             e @ DerivationError::Disabled(..) => MononokeError::NotAvailable(e.to_string()),
             e => MononokeError::from(anyhow::Error::from(e)),
+        }
+    }
+}
+
+impl From<SharedDerivationError> for MononokeError {
+    fn from(e: SharedDerivationError) -> Self {
+        match e.inner() {
+            inner @ DerivationError::Disabled(..) => MononokeError::NotAvailable(inner.to_string()),
+            _ => MononokeError::from(anyhow::Error::from(e)),
         }
     }
 }

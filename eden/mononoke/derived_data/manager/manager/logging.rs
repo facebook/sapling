@@ -23,7 +23,7 @@ use slog::warn;
 use super::derive::DerivationOutcome;
 use super::DerivedDataManager;
 use crate::derivable::BonsaiDerivable;
-use crate::error::DerivationError;
+use crate::error::SharedDerivationError;
 
 pub(super) struct DerivedDataScuba<Derivable> {
     /// Scuba sample builder to log to the derived data table.
@@ -241,7 +241,7 @@ impl DerivedDataManager {
         csid: ChangesetId,
         stats: &FutureStats,
         pc: &PerfCounters,
-        result: &Result<DerivationOutcome<Derivable>, DerivationError>,
+        result: &Result<DerivationOutcome<Derivable>, SharedDerivationError>,
     ) where
         Derivable: BonsaiDerivable,
     {

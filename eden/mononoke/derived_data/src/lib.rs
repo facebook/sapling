@@ -73,6 +73,7 @@ use repo_identity::RepoIdentityRef;
 pub mod batch;
 
 pub use derived_data_manager::DerivationError;
+pub use derived_data_manager::SharedDerivationError;
 pub use metaconfig_types::DerivedDataTypesConfig;
 
 pub mod macro_export {
@@ -85,6 +86,7 @@ pub mod macro_export {
 
     pub use super::BonsaiDerived;
     pub use super::DerivationError;
+    pub use super::SharedDerivationError;
 }
 
 /// Trait for accessing data that can be derived from bonsai changesets, such
@@ -107,7 +109,7 @@ pub trait BonsaiDerived: Sized + Send + Sync + Clone + 'static {
         ctx: &CoreContext,
         repo: &(impl RepoDerivedDataRef + Send + Sync),
         csid: ChangesetId,
-    ) -> Result<Self, DerivationError>;
+    ) -> Result<Self, SharedDerivationError>;
 
     /// Fetch the derived data in cases where we might not want to trigger
     /// derivation, e.g. when scrubbing.
@@ -152,7 +154,7 @@ macro_rules! impl_bonsai_derived_via_manager {
                 ctx: &$crate::macro_export::CoreContext,
                 repo: &(impl $crate::macro_export::RepoDerivedDataRef + Send + Sync),
                 csid: $crate::macro_export::ChangesetId,
-            ) -> Result<Self, $crate::macro_export::DerivationError> {
+            ) -> Result<Self, $crate::macro_export::SharedDerivationError> {
                 repo.repo_derived_data().derive::<Self>(ctx, csid).await
             }
 

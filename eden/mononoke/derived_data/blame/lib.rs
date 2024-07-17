@@ -20,7 +20,7 @@ use blobstore::Loadable;
 use blobstore::LoadableError;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
-use derived_data::DerivationError;
+use derived_data::SharedDerivationError;
 pub use fetch::fetch_content_for_blame;
 pub use fetch::FetchOutcome;
 use manifest::ManifestOps;
@@ -63,7 +63,7 @@ pub enum BlameError {
     #[error(transparent)]
     Rejected(#[from] BlameRejected),
     #[error(transparent)]
-    DerivationError(#[from] DerivationError),
+    DerivationError(#[from] SharedDerivationError),
     #[error(transparent)]
     LoadableError(#[from] LoadableError),
     #[error(transparent)]

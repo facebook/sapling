@@ -22,6 +22,7 @@ use context::CoreContext;
 use derived_data_manager::BonsaiDerivable;
 use derived_data_manager::DerivationError;
 use derived_data_manager::DerivedDataManager;
+use derived_data_manager::SharedDerivationError;
 use derived_data_remote::DerivationClient;
 use filenodes::Filenodes;
 use filestore::FilestoreConfig;
@@ -187,7 +188,7 @@ impl RepoDerivedData {
         &self,
         ctx: &CoreContext,
         csid: ChangesetId,
-    ) -> Result<Derivable, DerivationError>
+    ) -> Result<Derivable, SharedDerivationError>
     where
         Derivable: BonsaiDerivable,
     {

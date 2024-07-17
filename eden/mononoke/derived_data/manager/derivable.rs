@@ -25,9 +25,10 @@ use mononoke_types::ChangesetId;
 use mononoke_types::DerivableType;
 
 use crate::context::DerivationContext;
-use crate::DerivationError;
+use crate::manager::derive::VisitedDerivableTypesMap;
 use crate::DerivedDataManager;
 use crate::Rederivation;
+use crate::SharedDerivationError;
 
 /// Defines how derivation occurs.  Each derived data type must implement
 /// `BonsaiDerivable` to describe how to derive a new value from its inputs
@@ -207,14 +208,14 @@ pub trait DerivationDependencies {
     ) -> Result<()>;
     /// Derive all dependent data types for this batch of commits.
     /// The same pre-conditions apply as in derive.rs
-    async fn derive_heads(
-        ddm: &DerivedDataManager,
-        ctx: &CoreContext,
-        derivation: &DerivationContext,
-        heads: &[ChangesetId],
+    async fn derive_heads<'a>(
+        ddm: &'a DerivedDataManager,
+        ctx: &'a CoreContext,
+        derivation: &'a DerivationContext,
+        heads: &'a [ChangesetId],
         override_batch_size: Option<u64>,
-        visited: &mut HashSet<TypeId>,
-    ) -> Result<(), DerivationError>;
+        _visited: VisitedDerivableTypesMap<'a>,
+    ) -> Result<(), SharedDerivationError>;
     /// Derive all predecessor data types for this batch of commits.
     /// The same pre-conditions apply as in derive.rs
     async fn derive_predecessors(
@@ -223,7 +224,7 @@ pub trait DerivationDependencies {
         csid: ChangesetId,
         rederivation: Option<Arc<dyn Rederivation>>,
         visited: &mut HashSet<TypeId>,
-    ) -> Result<(), DerivationError>;
+    ) -> Result<(), SharedDerivationError>;
 }
 
 #[async_trait]
@@ -236,14 +237,14 @@ impl DerivationDependencies for () {
     ) -> Result<()> {
         Ok(())
     }
-    async fn derive_heads(
-        _ddm: &DerivedDataManager,
-        _ctx: &CoreContext,
-        _derivation_ctx: &DerivationContext,
-        _heads: &[ChangesetId],
+    async fn derive_heads<'a>(
+        _ddm: &'a DerivedDataManager,
+        _ctx: &'a CoreContext,
+        _derivation_ctx: &'a DerivationContext,
+        _heads: &'a [ChangesetId],
         _override_batch_size: Option<u64>,
-        _visited: &mut HashSet<TypeId>,
-    ) -> Result<(), DerivationError> {
+        _visited: VisitedDerivableTypesMap<'a>,
+    ) -> Result<(), SharedDerivationError> {
         Ok(())
     }
     async fn derive_predecessors(
@@ -252,7 +253,7 @@ impl DerivationDependencies for () {
         _csid: ChangesetId,
         _rederivation: Option<Arc<dyn Rederivation>>,
         _visited: &mut HashSet<TypeId>,
-    ) -> Result<(), DerivationError> {
+    ) -> Result<(), SharedDerivationError> {
         Ok(())
     }
 }
@@ -281,30 +282,22 @@ where
             Rest::check_dependencies(ctx, derivation_ctx, csid, visited).await
         }
     }
-    async fn derive_heads(
-        ddm: &DerivedDataManager,
-        ctx: &CoreContext,
-        derivation_ctx: &DerivationContext,
-        heads: &[ChangesetId],
+    async fn derive_heads<'a>(
+        ddm: &'a DerivedDataManager,
+        ctx: &'a CoreContext,
+        derivation_ctx: &'a DerivationContext,
+        heads: &'a [ChangesetId],
         override_batch_size: Option<u64>,
-        visited: &mut HashSet<TypeId>,
-    ) -> Result<(), DerivationError> {
-        let type_id = TypeId::of::<Derivable>();
-        if visited.insert(type_id) {
-            try_join(
-                ddm.derive_heads::<Derivable>(ctx, derivation_ctx, heads, override_batch_size),
-                Rest::derive_heads(
-                    ddm,
-                    ctx,
-                    derivation_ctx,
-                    heads,
-                    override_batch_size,
-                    visited,
-                ),
-            )
-            .await?;
-            Ok(())
-        } else {
+        visited: VisitedDerivableTypesMap<'a>,
+    ) -> Result<(), SharedDerivationError> {
+        let _res = try_join(
+            ddm.derive_heads_with_visited::<Derivable>(
+                ctx,
+                derivation_ctx,
+                heads,
+                override_batch_size,
+                visited.clone(),
+            ),
             Rest::derive_heads(
                 ddm,
                 ctx,
@@ -312,9 +305,10 @@ where
                 heads,
                 override_batch_size,
                 visited,
-            )
-            .await
-        }
+            ),
+        )
+        .await?;
+        Ok(())
     }
     async fn derive_predecessors(
         ddm: &DerivedDataManager,
@@ -322,7 +316,7 @@ where
         csid: ChangesetId,
         rederivation: Option<Arc<dyn Rederivation>>,
         visited: &mut HashSet<TypeId>,
-    ) -> Result<(), DerivationError> {
+    ) -> Result<(), SharedDerivationError> {
         let type_id = TypeId::of::<Derivable>();
         if visited.insert(type_id) {
             try_join(

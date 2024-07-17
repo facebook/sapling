@@ -19,7 +19,6 @@ use blobstore::Loadable;
 use borrowed::borrowed;
 use cloned::cloned;
 use context::CoreContext;
-use derived_data_manager::DerivationError;
 use futures::future;
 use futures::future::try_join;
 use futures::future::try_join_all;
@@ -513,7 +512,6 @@ pub async fn derive_hg_changeset(
     let start_timestamp = Instant::now();
     let result = match derived_data.derive::<MappedHgChangesetId>(ctx, cs_id).await {
         Ok(id) => Ok(id.hg_changeset_id()),
-        Err(DerivationError::Error(err)) => Err(err),
         Err(err) => Err(err.into()),
     };
     STATS::generate_hg_from_bonsai_total_latency_ms

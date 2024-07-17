@@ -9,6 +9,7 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::future;
 use std::sync::Arc;
+use std::sync::Mutex;
 use std::time::Duration;
 use std::time::Instant;
 
@@ -29,10 +30,14 @@ use derived_data_service_if::DerivedDataType;
 use derived_data_service_if::RequestError;
 use derived_data_service_if::RequestErrorReason;
 use derived_data_service_if::RequestStatus;
+use futures::future::BoxFuture;
 use futures::future::FutureExt;
+use futures::future::Shared;
+use futures::future::TryFutureExt;
 use futures::stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
+use futures::Future;
 use futures_stats::TimedFutureExt;
 use futures_stats::TimedTryFutureExt;
 use mononoke_types::ChangesetId;
@@ -45,6 +50,7 @@ use crate::context::DerivationContext;
 use crate::derivable::BonsaiDerivable;
 use crate::derivable::DerivationDependencies;
 use crate::error::DerivationError;
+use crate::error::SharedDerivationError;
 
 /// Trait to allow determination of rederivation.
 pub trait Rederivation: Send + Sync + 'static {
@@ -60,6 +66,9 @@ pub trait Rederivation: Send + Sync + 'static {
     /// this changeset.
     fn mark_derived(&self, derivable_type: DerivableType, csid: ChangesetId);
 }
+
+pub type VisitedDerivableTypesMap<'a> =
+    Arc<Mutex<HashMap<DerivableType, Shared<BoxFuture<'a, Result<u64, SharedDerivationError>>>>>>;
 
 impl DerivedDataManager {
     #[async_recursion]
@@ -128,58 +137,103 @@ impl DerivedDataManager {
         derivation_ctx: &DerivationContext,
         heads: &[ChangesetId],
         override_batch_size: Option<u64>,
-    ) -> Result<u64, DerivationError>
+    ) -> Result<u64, SharedDerivationError>
     where
         Derivable: BonsaiDerivable,
     {
-        Derivable::Dependencies::derive_heads(
-            self,
+        self.derive_heads_with_visited::<Derivable>(
             ctx,
             derivation_ctx,
             heads,
             override_batch_size,
-            &mut HashSet::new(),
+            Default::default(),
         )
         .await
-        .context("failed to derive dependent types")?;
-        let last_derived = self
-            .commit_graph()
-            .ancestors_frontier_with(ctx, heads.to_vec(), |csid| {
-                borrowed!(ctx, derivation_ctx);
-                async move {
-                    Ok(derivation_ctx
-                        .fetch_derived::<Derivable>(ctx, csid)
-                        .await?
-                        .is_some())
-                }
-            })
-            .await
-            .map_err(Into::<DerivationError>::into)?;
-        let batch_size = override_batch_size.unwrap_or(derivation_ctx.batch_size::<Derivable>());
-        let count = self
-            .commit_graph()
-            .ancestors_difference_segments(ctx, heads.to_vec(), last_derived.clone())
-            .await?
-            .into_iter()
-            .map(|segment| segment.length)
-            .sum();
-        let rederivation = derivation_ctx.rederivation.clone();
-        self.commit_graph()
-            .ancestors_difference_segment_slices(ctx, heads.to_vec(), last_derived, batch_size)
-            .await
-            .map_err(Into::<DerivationError>::into)?
-            .try_for_each(|batch| {
-                borrowed!(ctx, self as ddm);
-                cloned!(rederivation);
-                async move {
-                    ddm.derive_exactly_batch::<Derivable>(ctx, batch.to_vec(), rederivation)
-                        .await?;
-                    Ok(())
-                }
-            })
-            .await
-            .map_err(Into::<DerivationError>::into)?;
-        Ok(count)
+    }
+
+    pub fn derive_heads_with_visited<'a, Derivable>(
+        &'a self,
+        ctx: &'a CoreContext,
+        derivation_ctx: &'a DerivationContext,
+        heads: &'a [ChangesetId],
+        override_batch_size: Option<u64>,
+        visited: VisitedDerivableTypesMap<'a>,
+    ) -> impl Future<Output = Result<u64, SharedDerivationError>> + 'a
+    where
+        Derivable: BonsaiDerivable,
+    {
+        let derivation_future = {
+            cloned!(visited);
+            async move {
+                Derivable::Dependencies::derive_heads(
+                    self,
+                    ctx,
+                    derivation_ctx,
+                    heads,
+                    override_batch_size,
+                    visited,
+                )
+                .await
+                .context("failed to derive dependent types")?;
+                let last_derived = self
+                    .commit_graph()
+                    .ancestors_frontier_with(ctx, heads.to_vec(), |csid| {
+                        borrowed!(ctx, derivation_ctx);
+                        async move {
+                            Ok(derivation_ctx
+                                .fetch_derived::<Derivable>(ctx, csid)
+                                .await?
+                                .is_some())
+                        }
+                    })
+                    .await
+                    .map_err(Into::<DerivationError>::into)?;
+                let batch_size =
+                    override_batch_size.unwrap_or(derivation_ctx.batch_size::<Derivable>());
+                let count = self
+                    .commit_graph()
+                    .ancestors_difference_segments(ctx, heads.to_vec(), last_derived.clone())
+                    .await?
+                    .into_iter()
+                    .map(|segment| segment.length)
+                    .sum();
+                let rederivation = derivation_ctx.rederivation.clone();
+                self.commit_graph()
+                    .ancestors_difference_segment_slices(
+                        ctx,
+                        heads.to_vec(),
+                        last_derived,
+                        batch_size,
+                    )
+                    .await
+                    .map_err(Into::<DerivationError>::into)?
+                    .try_for_each(|batch| {
+                        borrowed!(ctx, self as ddm);
+                        cloned!(rederivation);
+                        async move {
+                            ddm.derive_exactly_batch::<Derivable>(
+                                ctx,
+                                batch.to_vec(),
+                                rederivation,
+                            )
+                            .await?;
+                            Ok(())
+                        }
+                    })
+                    .await
+                    .map_err(Into::<DerivationError>::into)?;
+                Ok(count)
+            }
+        }
+        .map_err(|e: DerivationError| SharedDerivationError::from(e))
+        .boxed();
+
+        let mut visited = visited.lock().unwrap();
+
+        visited
+            .entry(Derivable::VARIANT)
+            .or_insert(derivation_future.shared())
+            .clone()
     }
 
     /// Find which ancestors of `csid` are not yet derived, and necessary for
@@ -189,7 +243,7 @@ impl DerivedDataManager {
         ctx: &CoreContext,
         derivation_ctx: Arc<DerivationContext>,
         target_csid: ChangesetId,
-    ) -> Result<DerivationOutcome<Derivable>, DerivationError>
+    ) -> Result<DerivationOutcome<Derivable>, SharedDerivationError>
     where
         Derivable: BonsaiDerivable,
     {
@@ -197,8 +251,13 @@ impl DerivedDataManager {
             .derive_heads::<Derivable>(ctx, &derivation_ctx, &[target_csid], None)
             .await?;
         let derived = Derivable::fetch(ctx, &derivation_ctx, target_csid)
-            .await?
-            .ok_or_else(|| anyhow!("We just derived it! Fetching it should not return None"))?;
+            .await
+            .map_err(DerivationError::from)?
+            .ok_or_else(|| {
+                DerivationError::from(anyhow!(
+                    "We just derived it! Fetching it should not return None"
+                ))
+            })?;
         Ok(DerivationOutcome { derived, count })
     }
 
@@ -267,7 +326,7 @@ impl DerivedDataManager {
         ctx: &CoreContext,
         csid: ChangesetId,
         rederivation: Option<Arc<dyn Rederivation>>,
-    ) -> Result<Derivable, DerivationError>
+    ) -> Result<Derivable, SharedDerivationError>
     where
         Derivable: BonsaiDerivable,
     {
@@ -275,6 +334,7 @@ impl DerivedDataManager {
             Ok(value)
         } else if let Some(value) = self
             .derive_remotely(ctx, csid, rederivation.clone())
+            .map_err(SharedDerivationError::from)
             .await?
         {
             Ok(value)
@@ -551,11 +611,12 @@ impl DerivedDataManager {
         ctx: &CoreContext,
         csid: ChangesetId,
         rederivation: Option<Arc<dyn Rederivation>>,
-    ) -> Result<Derivable, DerivationError>
+    ) -> Result<Derivable, SharedDerivationError>
     where
         Derivable: BonsaiDerivable,
     {
         self.get_manager(ctx, csid)
+            .map_err(|e| SharedDerivationError::from(DerivationError::from(e)))
             .await?
             .derive_impl::<Derivable>(ctx, csid, rederivation)
             .await
@@ -566,7 +627,7 @@ impl DerivedDataManager {
         ctx: &CoreContext,
         csid: ChangesetId,
         rederivation: Option<Arc<dyn Rederivation>>,
-    ) -> Result<Derivable, DerivationError>
+    ) -> Result<Derivable, SharedDerivationError>
     where
         Derivable: BonsaiDerivable,
     {
@@ -696,7 +757,7 @@ impl DerivedDataManager {
             derivation_ctx_ref,
             &heads.into_iter().collect::<Vec<_>>(),
             None,
-            &mut HashSet::new(),
+            Default::default(),
         )
         .try_timed()
         .await
