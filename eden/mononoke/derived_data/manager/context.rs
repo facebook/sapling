@@ -87,7 +87,7 @@ impl DerivationContext {
     }
 
     // For dangerous-override: allow replacement of bonsai-hg-mapping
-    pub fn with_replaced_bonsai_hg_mapping(
+    pub(crate) fn with_replaced_bonsai_hg_mapping(
         &self,
         bonsai_hg_mapping: Arc<dyn BonsaiHgMapping>,
     ) -> Self {
@@ -98,14 +98,14 @@ impl DerivationContext {
     }
 
     // For dangerous-override: allow replacement of filenodes
-    pub fn with_replaced_filenodes(&self, filenodes: Arc<dyn Filenodes>) -> Self {
+    pub(crate) fn with_replaced_filenodes(&self, filenodes: Arc<dyn Filenodes>) -> Self {
         Self {
             filenodes: Some(filenodes),
             ..self.clone()
         }
     }
 
-    pub fn with_replaced_config(
+    pub(crate) fn with_replaced_config(
         &self,
         config_name: String,
         config: DerivedDataTypesConfig,
@@ -117,7 +117,7 @@ impl DerivationContext {
         }
     }
 
-    pub fn with_replaced_blobstore(&self, blobstore: Arc<dyn Blobstore>) -> Self {
+    pub(crate) fn with_replaced_blobstore(&self, blobstore: Arc<dyn Blobstore>) -> Self {
         Self {
             blobstore,
             ..self.clone()
