@@ -72,158 +72,157 @@ impl BulkDerivation for DerivedDataManager {
                 cloned!(csids, rederivation, override_batch_size);
                 async move {
                     let csids = &csids;
-                    let derivation_ctx = &self.derivation_context(rederivation);
                     match derived_data_type {
                         DerivableType::Unodes => {
                             self.derive_heads::<RootUnodeManifestId>(
                                 ctx,
-                                derivation_ctx,
                                 csids,
                                 override_batch_size,
+                                rederivation,
                             )
                             .await
                         }
                         DerivableType::BlameV2 => {
                             self.derive_heads::<RootBlameV2>(
                                 ctx,
-                                derivation_ctx,
                                 csids,
                                 override_batch_size,
+                                rederivation,
                             )
                             .await
                         }
                         DerivableType::FileNodes => {
                             self.derive_heads::<FilenodesOnlyPublic>(
                                 ctx,
-                                derivation_ctx,
                                 csids,
                                 override_batch_size,
+                                rederivation,
                             )
                             .await
                         }
                         DerivableType::HgChangesets => {
                             self.derive_heads::<MappedHgChangesetId>(
                                 ctx,
-                                derivation_ctx,
                                 csids,
                                 override_batch_size,
+                                rederivation,
                             )
                             .await
                         }
                         DerivableType::HgAugmentedManifests => {
                             self.derive_heads::<RootHgAugmentedManifestId>(
                                 ctx,
-                                derivation_ctx,
                                 csids,
                                 override_batch_size,
+                                rederivation,
                             )
                             .await
                         }
                         DerivableType::Fsnodes => {
                             self.derive_heads::<RootFsnodeId>(
                                 ctx,
-                                derivation_ctx,
                                 csids,
                                 override_batch_size,
+                                rederivation,
                             )
                             .await
                         }
                         DerivableType::Fastlog => {
                             self.derive_heads::<RootFastlog>(
                                 ctx,
-                                derivation_ctx,
                                 csids,
                                 override_batch_size,
+                                rederivation,
                             )
                             .await
                         }
                         DerivableType::DeletedManifests => {
                             self.derive_heads::<RootDeletedManifestV2Id>(
                                 ctx,
-                                derivation_ctx,
                                 csids,
                                 override_batch_size,
+                                rederivation,
                             )
                             .await
                         }
                         DerivableType::SkeletonManifests => {
                             self.derive_heads::<RootSkeletonManifestId>(
                                 ctx,
-                                derivation_ctx,
                                 csids,
                                 override_batch_size,
+                                rederivation,
                             )
                             .await
                         }
                         DerivableType::ChangesetInfo => {
                             self.derive_heads::<ChangesetInfo>(
                                 ctx,
-                                derivation_ctx,
                                 csids,
                                 override_batch_size,
+                                rederivation,
                             )
                             .await
                         }
                         DerivableType::GitTrees => {
                             self.derive_heads::<TreeHandle>(
                                 ctx,
-                                derivation_ctx,
                                 csids,
                                 override_batch_size,
+                                rederivation,
                             )
                             .await
                         }
                         DerivableType::GitCommits => {
                             self.derive_heads::<MappedGitCommitId>(
                                 ctx,
-                                derivation_ctx,
                                 csids,
                                 override_batch_size,
+                                rederivation,
                             )
                             .await
                         }
                         DerivableType::GitDeltaManifests => {
                             self.derive_heads::<RootGitDeltaManifestId>(
                                 ctx,
-                                derivation_ctx,
                                 csids,
                                 override_batch_size,
+                                rederivation,
                             )
                             .await
                         }
                         DerivableType::GitDeltaManifestsV2 => {
                             self.derive_heads::<RootGitDeltaManifestV2Id>(
                                 ctx,
-                                derivation_ctx,
                                 csids,
                                 override_batch_size,
+                                rederivation,
                             )
                             .await
                         }
                         DerivableType::BssmV3 => {
                             self.derive_heads::<RootBssmV3DirectoryId>(
                                 ctx,
-                                derivation_ctx,
                                 csids,
                                 override_batch_size,
+                                rederivation,
                             )
                             .await
                         }
                         DerivableType::TestManifests => {
                             self.derive_heads::<RootTestManifestDirectory>(
                                 ctx,
-                                derivation_ctx,
                                 csids,
                                 override_batch_size,
+                                rederivation,
                             )
                             .await
                         }
                         DerivableType::TestShardedManifests => {
                             self.derive_heads::<RootTestShardedManifestDirectory>(
                                 ctx,
-                                derivation_ctx,
                                 csids,
                                 override_batch_size,
+                                rederivation,
                             )
                             .await
                         }

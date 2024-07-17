@@ -134,18 +134,18 @@ impl DerivedDataManager {
     pub async fn derive_heads<Derivable>(
         &self,
         ctx: &CoreContext,
-        derivation_ctx: &DerivationContext,
         heads: &[ChangesetId],
         override_batch_size: Option<u64>,
+        rederivation: Option<Arc<dyn Rederivation>>,
     ) -> Result<u64, SharedDerivationError>
     where
         Derivable: BonsaiDerivable,
     {
         self.derive_heads_with_visited::<Derivable>(
             ctx,
-            derivation_ctx,
             heads,
             override_batch_size,
+            rederivation,
             Default::default(),
         )
         .await
@@ -154,9 +154,9 @@ impl DerivedDataManager {
     pub fn derive_heads_with_visited<'a, Derivable>(
         &'a self,
         ctx: &'a CoreContext,
-        derivation_ctx: &'a DerivationContext,
         heads: &'a [ChangesetId],
         override_batch_size: Option<u64>,
+        rederivation: Option<Arc<dyn Rederivation>>,
         visited: VisitedDerivableTypesMap<'a>,
     ) -> impl Future<Output = Result<u64, SharedDerivationError>> + 'a
     where
@@ -168,13 +168,16 @@ impl DerivedDataManager {
                 Derivable::Dependencies::derive_heads(
                     self,
                     ctx,
-                    derivation_ctx,
                     heads,
                     override_batch_size,
+                    rederivation.clone(),
                     visited,
                 )
                 .await
                 .context("failed to derive dependent types")?;
+
+                let derivation_ctx = self.derivation_context(rederivation);
+
                 let last_derived = self
                     .commit_graph()
                     .ancestors_frontier_with(ctx, heads.to_vec(), |csid| {
@@ -241,15 +244,18 @@ impl DerivedDataManager {
     async fn derive_underived<Derivable>(
         &self,
         ctx: &CoreContext,
-        derivation_ctx: Arc<DerivationContext>,
         target_csid: ChangesetId,
+        rederivation: Option<Arc<dyn Rederivation>>,
     ) -> Result<DerivationOutcome<Derivable>, SharedDerivationError>
     where
         Derivable: BonsaiDerivable,
     {
         let count = self
-            .derive_heads::<Derivable>(ctx, &derivation_ctx, &[target_csid], None)
+            .derive_heads::<Derivable>(ctx, &[target_csid], None, rederivation.clone())
             .await?;
+
+        let derivation_ctx = self.derivation_context(rederivation);
+
         let derived = Derivable::fetch(ctx, &derivation_ctx, target_csid)
             .await
             .map_err(DerivationError::from)?
@@ -632,12 +638,11 @@ impl DerivedDataManager {
         Derivable: BonsaiDerivable,
     {
         self.check_enabled::<Derivable>()?;
-        let derivation_ctx = self.derivation_context(rederivation);
 
         let pc = ctx.clone().fork_perf_counters();
 
         let (stats, res) = self
-            .derive_underived(ctx, Arc::new(derivation_ctx), csid)
+            .derive_underived(ctx, csid, rederivation)
             .timed()
             .fuse()
             .await;
@@ -754,9 +759,9 @@ impl DerivedDataManager {
         let (dependent_types_stats, _) = Derivable::Dependencies::derive_heads(
             self,
             ctx,
-            derivation_ctx_ref,
             &heads.into_iter().collect::<Vec<_>>(),
             None,
+            rederivation.clone(),
             Default::default(),
         )
         .try_timed()

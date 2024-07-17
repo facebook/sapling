@@ -139,9 +139,8 @@ async fn derive<D: BonsaiDerivable>(
 ) -> Result<()> {
     let mgr = repo.repo_derived_data().manager();
     let rederivation = None;
-    let derivation_ctx = mgr.derivation_context(rederivation);
     let override_batch_size = None;
-    mgr.derive_heads::<D>(ctx, &derivation_ctx, csids, override_batch_size)
+    mgr.derive_heads::<D>(ctx, csids, override_batch_size, rederivation)
         .await
         .with_context(|| format!("Failed to derive {}", D::NAME))?;
     Ok(())

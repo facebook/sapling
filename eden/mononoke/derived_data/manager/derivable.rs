@@ -211,9 +211,9 @@ pub trait DerivationDependencies {
     async fn derive_heads<'a>(
         ddm: &'a DerivedDataManager,
         ctx: &'a CoreContext,
-        derivation: &'a DerivationContext,
         heads: &'a [ChangesetId],
         override_batch_size: Option<u64>,
+        rederivation: Option<Arc<dyn Rederivation>>,
         _visited: VisitedDerivableTypesMap<'a>,
     ) -> Result<(), SharedDerivationError>;
     /// Derive all predecessor data types for this batch of commits.
@@ -240,9 +240,9 @@ impl DerivationDependencies for () {
     async fn derive_heads<'a>(
         _ddm: &'a DerivedDataManager,
         _ctx: &'a CoreContext,
-        _derivation_ctx: &'a DerivationContext,
         _heads: &'a [ChangesetId],
         _override_batch_size: Option<u64>,
+        _rederivation: Option<Arc<dyn Rederivation>>,
         _visited: VisitedDerivableTypesMap<'a>,
     ) -> Result<(), SharedDerivationError> {
         Ok(())
@@ -285,27 +285,20 @@ where
     async fn derive_heads<'a>(
         ddm: &'a DerivedDataManager,
         ctx: &'a CoreContext,
-        derivation_ctx: &'a DerivationContext,
         heads: &'a [ChangesetId],
         override_batch_size: Option<u64>,
+        rederivation: Option<Arc<dyn Rederivation>>,
         visited: VisitedDerivableTypesMap<'a>,
     ) -> Result<(), SharedDerivationError> {
         let _res = try_join(
             ddm.derive_heads_with_visited::<Derivable>(
                 ctx,
-                derivation_ctx,
                 heads,
                 override_batch_size,
+                rederivation.clone(),
                 visited.clone(),
             ),
-            Rest::derive_heads(
-                ddm,
-                ctx,
-                derivation_ctx,
-                heads,
-                override_batch_size,
-                visited,
-            ),
+            Rest::derive_heads(ddm, ctx, heads, override_batch_size, rederivation, visited),
         )
         .await?;
         Ok(())
