@@ -198,6 +198,8 @@ pub trait BonsaiDerivable: Sized + Send + Sync + Clone + Debug + 'static {
 
 #[async_trait]
 pub trait DerivationDependencies {
+    /// Returns an iterator over all dependencies.
+    fn iter() -> impl Iterator<Item = DerivableType>;
     /// Checks that all dependencies have been derived for this
     /// changeset.
     async fn check_dependencies(
@@ -229,6 +231,9 @@ pub trait DerivationDependencies {
 
 #[async_trait]
 impl DerivationDependencies for () {
+    fn iter() -> impl Iterator<Item = DerivableType> {
+        std::iter::empty()
+    }
     async fn check_dependencies(
         _ctx: &CoreContext,
         _derivation: &DerivationContext,
@@ -264,6 +269,9 @@ where
     Derivable: BonsaiDerivable,
     Rest: DerivationDependencies + 'static,
 {
+    fn iter() -> impl Iterator<Item = DerivableType> {
+        std::iter::once(Derivable::VARIANT).chain(Rest::iter())
+    }
     async fn check_dependencies(
         ctx: &CoreContext,
         derivation_ctx: &DerivationContext,
