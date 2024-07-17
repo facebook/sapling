@@ -18,7 +18,37 @@ use std::fmt;
 pub enum Item<T> {
     Tree(T, Vec<Item<T>>),
     Item(T),
-    Placeholder(String),
+    Placeholder(Placeholder),
+}
+
+/// Placeholder for capturing. Currently supports single item (`__`, like `?` in
+/// glob) and mult-item (`___`, like `*` in glob), with `g` to indicate matching
+/// trees (groups).
+/// Might be extended (like, adding fields of custom functions) to support more
+/// complex matches (ex. look ahead, balanced brackets, limited tokens, etc).
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct Placeholder {
+    name: String,
+}
+
+impl Placeholder {
+    pub fn new(name: String) -> Self {
+        Self { name }
+    }
+
+    pub fn name(&self) -> &str {
+        self.name.as_str()
+    }
+
+    // true: match 0 or many items; false: match 1 item
+    pub fn matches_multiple(&self) -> bool {
+        self.name.starts_with("___")
+    }
+
+    // true: match Item::Tree; false: does not match Item::Tree
+    pub fn matches_tree(&self) -> bool {
+        self.name.contains('g')
+    }
 }
 
 /// Similar to regex match. A match can have multiple captures.
@@ -140,8 +170,8 @@ fn expand_replace<T: Clone>(replace: &[Item<T>], captures: &Captures<T>) -> Vec<
                 let new_tree = Item::Tree(delimiter.clone(), sub_expanded);
                 result.push(new_tree);
             }
-            Item::Placeholder(ident) => {
-                if let Some(items) = captures.get(ident) {
+            Item::Placeholder(p) => {
+                if let Some(items) = captures.get(p.name()) {
                     result.extend_from_slice(items);
                 }
             }
@@ -179,13 +209,13 @@ fn match_items<T: fmt::Debug + Clone + PartialEq>(
         let pat_next = &pat[j];
 
         // Handle placeholder matches.
-        if let Item::Placeholder(ident_str) = pat_next {
-            if ident_str.starts_with("___") {
+        if let Item::Placeholder(p) = pat_next {
+            if p.matches_multiple() {
                 // Multi-item match (*). We just "look ahead" for a short range.
                 let mut pat_rest = &pat[j + 1..];
                 let mut item_rest = &items[i..];
                 // Do not match groups, unless the placeholder wants.
-                if !is_placeholder_matching_tree(ident_str) {
+                if !p.matches_tree() {
                     item_rest = slice_trim_trees(item_rest);
                     pat_rest = slice_trim_trees(pat_rest);
                 }
@@ -205,7 +235,7 @@ fn match_items<T: fmt::Debug + Clone + PartialEq>(
                     if pat_rest == &item_rest[start..end] {
                         // item_rest[start..end] matches the non-placeholder part of the pattern.
                         // So items[..start] matches the placeholder.
-                        captures.insert(ident_str.clone(), item_rest[..start].to_vec());
+                        captures.insert(p.name().to_string(), item_rest[..start].to_vec());
                         i += end;
                         j += pat_rest.len() + 1;
                         continue 'main_loop;
@@ -217,15 +247,15 @@ fn match_items<T: fmt::Debug + Clone + PartialEq>(
                     end -= 1;
                 }
                 return None;
-            } else if ident_str.starts_with("__") {
-                // Single item match. But do not match a tree.
+            } else {
+                // Single item match.
                 let is_matched = match item_next {
                     Some(Item::Item(_)) => true,
-                    Some(Item::Tree(..)) if is_placeholder_matching_tree(ident_str) => true,
+                    Some(Item::Tree(..)) if p.matches_tree() => true,
                     _ => false,
                 };
                 if is_matched {
-                    captures.insert(ident_str.clone(), vec![item_next.unwrap().clone()]);
+                    captures.insert(p.name().to_string(), vec![item_next.unwrap().clone()]);
                     i += 1;
                     j += 1;
                     continue;
@@ -271,11 +301,6 @@ fn slice_trim_trees<T>(slice: &[Item<T>]) -> &[Item<T>] {
         }
     }
     slice
-}
-
-/// Whether the placeholder wants to match trees.
-fn is_placeholder_matching_tree(ident_str: &str) -> bool {
-    ident_str.contains('g')
 }
 
 impl<T> Match<T> {

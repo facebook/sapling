@@ -13,4 +13,5 @@ pub use tree_match::find_all;
 pub use tree_match::replace_all;
 pub use tree_match::Item;
 pub use tree_match::Match;
+pub use tree_match::Placeholder;
 pub use tree_match::Replace;

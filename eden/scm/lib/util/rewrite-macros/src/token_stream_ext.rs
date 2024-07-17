@@ -15,6 +15,7 @@ use proc_macro2::TokenTree;
 use tree_pattern_match::find_all;
 use tree_pattern_match::replace_all;
 use tree_pattern_match::Match;
+use tree_pattern_match::Placeholder;
 use tree_pattern_match::Replace;
 
 use crate::prelude::Item;
@@ -51,7 +52,7 @@ impl ToItems for TokenStream {
                     Item::Tree(TokenInfo::from_single(tt), sub_items)
                 }
                 (TokenTree::Ident(v), _) if v.to_string().starts_with("__") => {
-                    Item::Placeholder(v.to_string())
+                    Item::Placeholder(Placeholder::new(v.to_string()))
                 }
                 (TokenTree::Punct(p1), Some(TokenTree::Punct(p2)))
                     if is_punct_pair_atom(p1, &p2) =>
@@ -135,7 +136,7 @@ impl ToTokens for Vec<Item> {
                 TokenInfo::Atoms(vs) => vs,
                 _ => panic!("Item::Item should capture TokenInfo::Atom"),
             },
-            Item::Placeholder(v) => panic!("cannot convert placeholder {} back to Token", v),
+            Item::Placeholder(v) => panic!("cannot convert placeholder {} back to Token", v.name()),
         });
         TokenStream::from_iter(iter)
     }

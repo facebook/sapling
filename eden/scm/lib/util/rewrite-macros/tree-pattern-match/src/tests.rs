@@ -5,9 +5,10 @@
  * GNU General Public License version 2.
  */
 
-pub use crate::find_all;
-pub use crate::replace_all;
-pub use crate::Match;
+use crate::find_all;
+use crate::replace_all;
+use crate::Match;
+use crate::Placeholder;
 
 type Item = crate::Item<String>;
 
@@ -45,7 +46,7 @@ fn unparse(items: &[Item]) -> String {
                 out.push(s[1..2].to_owned());
             }
             Item::Item(s) => out.push(s.clone()),
-            Item::Placeholder(s) => out.push(s.clone()),
+            Item::Placeholder(p) => out.push(p.name().to_string()),
         }
     }
     out.join(" ")
@@ -53,7 +54,7 @@ fn unparse(items: &[Item]) -> String {
 
 fn from_str(s: &str) -> Item {
     if s.starts_with("__") {
-        Item::Placeholder(s.to_owned())
+        Item::Placeholder(Placeholder::new(s.to_owned()))
     } else {
         Item::Item(s.to_owned())
     }
