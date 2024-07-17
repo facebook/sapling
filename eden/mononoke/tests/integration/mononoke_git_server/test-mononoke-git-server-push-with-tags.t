@@ -108,10 +108,8 @@
   5c160d85002e94d3583b660cc3689a820ef7379d refs/tags/first_tag
 
 # Ensure that we have entry in bonsai_tag_mapping table for just first_tag that is different than the one before
-# NOTE: This behavior is currently broken which is why we both tags listed. This will be fixed in follow up diffs
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "SELECT tag_name, hex(changeset_id) as cs_id, hex(tag_hash) as tag_hash, target_is_tag FROM bonsai_tag_mapping ORDER BY tag_name"
   tags/first_tag|CE935806373A5F7B912F34D2B1AD35CF5897B6EFA98D7ECDF366A601AE250DB7|5C160D85002E94D3583B660CC3689A820EF7379D|0
-  tags/second_tag|B40C7E078B46D907C6679AA511B981242845EB3D3F7AF3719B863E8833503EFA|CE5A26BA55C422E8E3960224153EF5CF35E75B14|0
 
 # Ensure that only the first_tag show up in bookmarks table pointing to a different commit than before
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "SELECT name, hex(changeset_id) FROM bookmarks WHERE name LIKE 'tags/%' ORDER BY name"

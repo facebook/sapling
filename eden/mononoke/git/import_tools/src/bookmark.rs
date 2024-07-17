@@ -35,6 +35,10 @@ impl BookmarkOperation {
             operation_type,
         })
     }
+
+    pub fn is_delete(&self) -> bool {
+        self.operation_type.is_delete()
+    }
 }
 
 /// Enum representing the type of bookmark operation.
@@ -64,6 +68,13 @@ impl BookmarkOperationType {
             ),
         };
         Ok(op)
+    }
+
+    pub fn is_delete(&self) -> bool {
+        match self {
+            Self::Delete(_) => true,
+            _ => false,
+        }
     }
 }
 

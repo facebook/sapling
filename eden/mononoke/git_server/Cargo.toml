@@ -13,6 +13,7 @@ async-recursion = "1.0.2"
 async-stream = "0.3"
 async-trait = "0.1.71"
 bonsai_git_mapping = { version = "0.1.0", path = "../bonsai_git_mapping" }
+bonsai_tag_mapping = { version = "0.1.0", path = "../bonsai_tag_mapping" }
 bytes = { version = "1.6.0", features = ["serde"] }
 clap = { version = "4.5.6", features = ["derive", "env", "string", "unicode", "wrap_help"] }
 clientinfo = { version = "0.1.0", path = "../../scm/lib/clientinfo" }
