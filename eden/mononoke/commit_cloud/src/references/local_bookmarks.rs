@@ -30,7 +30,7 @@ pub async fn update_bookmarks(
     sql_commit_cloud: &SqlCommitCloud,
     mut txn: Transaction,
     cri: Option<&ClientRequestInfo>,
-    ctx: CommitCloudContext,
+    ctx: &CommitCloudContext,
     updated_bookmarks: HashMap<String, HgId>,
     removed_bookmarks: Vec<String>,
 ) -> anyhow::Result<Transaction> {

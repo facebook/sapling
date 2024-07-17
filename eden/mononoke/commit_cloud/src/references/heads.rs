@@ -27,7 +27,7 @@ pub async fn update_heads(
     sql_commit_cloud: &SqlCommitCloud,
     mut txn: Transaction,
     cri: Option<&ClientRequestInfo>,
-    ctx: CommitCloudContext,
+    ctx: &CommitCloudContext,
     removed_heads: Vec<HgId>,
     new_heads: Vec<HgId>,
 ) -> anyhow::Result<Transaction> {

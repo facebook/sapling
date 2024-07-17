@@ -82,7 +82,7 @@ async fn get_references(
 ) -> anyhow::Result<ReferencesDataResponse, Error> {
     Ok(ReferencesDataResponse {
         data: repo
-            .cloud_references(request)
+            .cloud_references(&request)
             .await
             .map_err(ServerError::from),
     })
@@ -113,7 +113,7 @@ async fn update_references(
 ) -> anyhow::Result<ReferencesDataResponse, Error> {
     Ok(ReferencesDataResponse {
         data: repo
-            .cloud_update_references(request)
+            .cloud_update_references(&request)
             .await
             .map_err(ServerError::from),
     })

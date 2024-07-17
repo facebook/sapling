@@ -86,7 +86,7 @@ impl CommitCloud {
 
     pub async fn get_references(
         &self,
-        params: GetReferencesParams,
+        params: &GetReferencesParams,
     ) -> anyhow::Result<ReferencesData> {
         let ctx = CommitCloudContext::new(&params.workspace, &params.reponame);
 
@@ -127,7 +127,7 @@ impl CommitCloud {
             });
         }
 
-        let raw_references_data = fetch_references(ctx.clone(), &self.storage).await?;
+        let raw_references_data = fetch_references(&ctx, &self.storage).await?;
 
         let references_data = cast_references_data(
             raw_references_data,
@@ -144,7 +144,7 @@ impl CommitCloud {
 
     pub async fn update_references(
         &self,
-        params: UpdateReferencesParams,
+        params: &UpdateReferencesParams,
     ) -> anyhow::Result<ReferencesData> {
         if params.workspace.is_empty() || params.reponame.is_empty() {
             return Err(anyhow::anyhow!(
@@ -172,7 +172,7 @@ impl CommitCloud {
         }
 
         if params.version < latest_version {
-            let raw_references_data = fetch_references(ctx.clone(), &self.storage).await?;
+            let raw_references_data = fetch_references(&ctx, &self.storage).await?;
             return cast_references_data(
                 raw_references_data,
                 latest_version,

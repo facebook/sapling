@@ -25,7 +25,7 @@ pub async fn update_snapshots(
     sql_commit_cloud: &SqlCommitCloud,
     mut txn: Transaction,
     cri: Option<&ClientRequestInfo>,
-    ctx: CommitCloudContext,
+    ctx: &CommitCloudContext,
     new_snapshots: Vec<HgId>,
     removed_snapshots: Vec<HgId>,
 ) -> anyhow::Result<Transaction> {

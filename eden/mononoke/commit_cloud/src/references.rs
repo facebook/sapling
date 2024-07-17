@@ -50,7 +50,7 @@ pub struct RawReferencesData {
 
 // Perform all get queries into the database
 pub(crate) async fn fetch_references(
-    ctx: CommitCloudContext,
+    ctx: &CommitCloudContext,
     sql: &SqlCommitCloud,
 ) -> Result<RawReferencesData, anyhow::Error> {
     let heads: Vec<WorkspaceHead> = sql.get(ctx.reponame.clone(), ctx.workspace.clone()).await?;
@@ -143,20 +143,12 @@ pub(crate) async fn update_references_data(
     ctx: &CommitCloudContext,
 ) -> anyhow::Result<Transaction> {
     let mut txn = txn;
-    txn = update_heads(
-        sql,
-        txn,
-        cri,
-        ctx.clone(),
-        params.removed_heads,
-        params.new_heads,
-    )
-    .await?;
+    txn = update_heads(sql, txn, cri, ctx, params.removed_heads, params.new_heads).await?;
     txn = update_bookmarks(
         sql,
         txn,
         cri,
-        ctx.clone(),
+        ctx,
         params.updated_bookmarks,
         params.removed_bookmarks,
     )
@@ -165,7 +157,7 @@ pub(crate) async fn update_references_data(
         sql,
         txn,
         cri,
-        ctx.clone(),
+        ctx,
         params.updated_remote_bookmarks,
         params.removed_remote_bookmarks,
     )
@@ -174,7 +166,7 @@ pub(crate) async fn update_references_data(
         sql,
         txn,
         cri,
-        ctx.clone(),
+        ctx,
         params.new_snapshots,
         params.removed_snapshots,
     )

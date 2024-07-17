@@ -28,7 +28,7 @@ pub async fn update_remote_bookmarks(
     sql_commit_cloud: &SqlCommitCloud,
     mut txn: Transaction,
     cri: Option<&ClientRequestInfo>,
-    ctx: CommitCloudContext,
+    ctx: &CommitCloudContext,
     updated_remote_bookmarks: Option<Vec<RemoteBookmark>>,
     removed_remote_bookmarks: Option<Vec<RemoteBookmark>>,
 ) -> anyhow::Result<Transaction> {

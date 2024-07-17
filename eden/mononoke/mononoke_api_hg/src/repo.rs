@@ -1066,7 +1066,7 @@ impl HgRepoContext {
 
     pub async fn cloud_references(
         &self,
-        params: GetReferencesParams,
+        params: &GetReferencesParams,
     ) -> Result<ReferencesData, MononokeError> {
         Ok(self
             .blob_repo()
@@ -1077,7 +1077,7 @@ impl HgRepoContext {
 
     pub async fn cloud_update_references(
         &self,
-        params: UpdateReferencesParams,
+        params: &UpdateReferencesParams,
     ) -> Result<ReferencesData, MononokeError> {
         Ok(self
             .blob_repo()
