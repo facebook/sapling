@@ -72,6 +72,52 @@ impl Match<String> {
 }
 
 #[test]
+fn test_simple_matches() {
+    let items = parse!(a b c);
+    let pat = parse!(a __1 c);
+    let matches = find_all(&items, &pat);
+    assert_eq!(matches.len(), 1);
+    assert_eq!(matches[0].show(), ["__1 => b"]);
+
+    let pat = parse!(a ___1 c);
+    let matches = find_all(&items, &pat);
+    assert_eq!(matches.len(), 1);
+    assert_eq!(matches[0].show(), ["___1 => b"]);
+
+    let pat = parse!(a b ___1 c);
+    let matches = find_all(&items, &pat);
+    assert_eq!(matches.len(), 1);
+    assert_eq!(matches[0].show(), ["___1 => "]);
+
+    let pat = parse!(___1);
+    let matches = find_all(&items, &pat);
+    assert_eq!(matches.len(), 1);
+    assert_eq!(matches[0].show(), ["___1 => a b c"]);
+
+    let pat = parse!(__1 __2 __3);
+    let matches = find_all(&items, &pat);
+    assert_eq!(matches.len(), 1);
+    assert_eq!(matches[0].show(), ["__1 => a", "__2 => b", "__3 => c"]);
+
+    let pat = parse!(__1 __2);
+    let matches = find_all(&items, &pat);
+    assert_eq!(matches.len(), 1);
+    assert_eq!(matches[0].show(), ["__1 => a", "__2 => b"]);
+
+    let pat = parse!(__1);
+    let matches = find_all(&items, &pat);
+    assert_eq!(matches.len(), 3);
+    assert_eq!(matches[0].show(), ["__1 => a"]);
+    assert_eq!(matches[1].show(), ["__1 => b"]);
+    assert_eq!(matches[2].show(), ["__1 => c"]);
+
+    let items = parse!(a [] b);
+    let pat = parse!(a [] b);
+    let matches = find_all(&items, &pat);
+    assert_eq!(matches.len(), 1);
+}
+
+#[test]
 fn test_find_all_multiple_matches() {
     let items = parse!(a b a c);
     let pat = parse!(a __1);
@@ -119,6 +165,15 @@ fn test_find_all_nested_captures() {
     let matches = find_all(&parse!(a b c d [ e f ]), &parse!(a ___1 d [ ___2 ]));
     assert_eq!(matches.len(), 1);
     assert_eq!(matches[0].show(), ["___1 => b c", "___2 => e f"]);
+}
+
+#[test]
+fn test_find_all_greedy_matches() {
+    let items = parse!(a b c);
+    let pat = parse!(___1 c);
+    let matches = find_all(&items, &pat);
+    // ___1 includes both "a" and "b".
+    assert_eq!(matches[0].show(), ["___1 => a b"]);
 }
 
 #[test]

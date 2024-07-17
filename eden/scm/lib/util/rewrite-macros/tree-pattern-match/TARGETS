@@ -6,4 +6,7 @@ rust_library(
     name = "tree-pattern-match",
     srcs = glob(["src/**/*.rs"]),
     crate_root = "src/lib.rs",
+    deps = [
+        "fbsource//third-party/rust:bitflags",
+    ],
 )
