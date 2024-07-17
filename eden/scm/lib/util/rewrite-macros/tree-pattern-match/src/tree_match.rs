@@ -72,12 +72,12 @@ type Captures<T> = HashMap<String, Vec<Item<T>>>;
 
 /// Replace matches. Similar to Python `re.sub` but is tree aware.
 pub fn replace_all<T: fmt::Debug + Clone + PartialEq + 'static>(
-    items: Vec<Item<T>>,
+    items: &[Item<T>],
     pat: &[Item<T>],
     replace: impl Replace<T>,
 ) -> Vec<Item<T>> {
     TreeMatchState::default()
-        .replace_all(&items, pat, &replace)
+        .replace_all(items, pat, &replace)
         .into_owned()
 }
 

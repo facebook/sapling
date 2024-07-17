@@ -224,26 +224,26 @@ fn test_find_all_greedy_matches() {
 #[test]
 fn test_replace_all() {
     let items = parse!(async fn foo [B is Future [T] Send] (a b) Future [ R ] { a dot await and b dot await });
-    let items = replace_all(items, &parse!(dot await), &parse!());
+    let items = replace_all(&items, &parse!(dot await), &parse!());
     assert_eq!(
         unparse(&items),
         "async fn foo [ B is Future [ T ] Send ] ( a b ) Future [ R ] { a and b }"
     );
-    let items = replace_all(items, &parse!([ B ___g1 Send ]), &parse!());
+    let items = replace_all(&items, &parse!([ B ___g1 Send ]), &parse!());
     assert_eq!(
         unparse(&items),
         "async fn foo ( a b ) Future [ R ] { a and b }"
     );
-    let items = replace_all(items, &parse!(Future[__1]), &parse!(__1));
+    let items = replace_all(&items, &parse!(Future[__1]), &parse!(__1));
     assert_eq!(unparse(&items), "async fn foo ( a b ) R { a and b }");
-    let items = replace_all(items, &parse!(a ___1 b), &parse!(b ___1 a));
+    let items = replace_all(&items, &parse!(a ___1 b), &parse!(b ___1 a));
     assert_eq!(unparse(&items), "async fn foo ( b a ) R { b and a }");
 }
 
 #[test]
 fn test_replace_all_adjacent() {
     let items = parse!(a b c);
-    let items = replace_all(items, &parse!(__1), &parse!(__1 dot));
+    let items = replace_all(&items, &parse!(__1), &parse!(__1 dot));
     assert_eq!(unparse(&items), "a dot b dot c dot");
 }
 
@@ -251,7 +251,7 @@ fn test_replace_all_adjacent() {
 fn test_replace_all_nested() {
     let items = parse!(x a b x [ x a [ x a c ] x ]);
     // Swap "a" and its next item.
-    let items = replace_all(items, &parse!(a __1g), &parse!(__1g a));
+    let items = replace_all(&items, &parse!(a __1g), &parse!(__1g a));
     // The "a [ x a c ]" was swapped so the inner "x a c" is not changed.
     assert_eq!(unparse(&items), "x b a x [ x [ x a c ] a x ]");
 }
@@ -260,7 +260,7 @@ fn test_replace_all_nested() {
 fn test_replace_func() {
     let items = parse!(x [a b] x [c d e] x);
     let pat = parse!([___1]);
-    let replaced = replace_all(items, &pat, |m: &Match<String>| -> Vec<Item> {
+    let replaced = replace_all(&items, &pat, |m: &Match<String>| -> Vec<Item> {
         let mut v: Vec<Item> = m.captures["___1"].clone();
         v.reverse();
         v

@@ -158,7 +158,7 @@ impl FindReplace for TokenStream {
     fn replace_with(&self, pat: impl ToItems, replace: impl Replace<TokenInfo>) -> Self {
         let pat = pat.to_items();
         let items = self.to_items();
-        let items = replace_all(items, &pat, replace);
+        let items = replace_all(&items, &pat, replace);
         items.to_tokens()
     }
 
@@ -172,8 +172,7 @@ impl FindReplace for TokenStream {
 impl FindReplace for Vec<Item> {
     fn replace_with(&self, pat: impl ToItems, replace: impl Replace<TokenInfo>) -> Self {
         let pat = pat.to_items();
-        let items = self.clone();
-        replace_all(items, &pat, replace)
+        replace_all(self, &pat, replace)
     }
 
     fn find_all(&self, pat: impl ToItems) -> Vec<Match<TokenInfo>> {
