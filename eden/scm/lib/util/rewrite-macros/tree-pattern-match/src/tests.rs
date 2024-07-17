@@ -7,6 +7,7 @@
 
 use crate::find_all;
 use crate::replace_all;
+use crate::tree_match::PlaceholderExt;
 use crate::Match;
 use crate::Placeholder;
 
@@ -219,6 +220,25 @@ fn test_find_all_greedy_matches() {
     let matches = find_all(&items, &pat);
     // ___1 includes both "a" and "b".
     assert_eq!(matches[0].show(), ["___1 => a b"]);
+}
+
+#[test]
+fn test_find_all_with_custom_placeholders() {
+    let items = parse!(a b c xx d e f xx x y z);
+    let pat = parse!(___1 xx ___2).with_placeholder_matching_items([
+        (
+            "___1",
+            (|item: &Item| matches!(item, Item::Item(x) if x != "xx")) as fn(&Item) -> _,
+        ),
+        (
+            "___2",
+            (|item: &Item| matches!(item, Item::Item(x) if x != "f")) as fn(&Item) -> _,
+        ),
+    ]);
+    let matches = find_all(&items, &pat);
+    // FIXME: missed a match
+    assert_eq!(matches.len(), 1);
+    assert_eq!(matches[0].show(), ["___1 => a b c", "___2 => d e"]);
 }
 
 #[test]

@@ -67,6 +67,11 @@ impl<T> Placeholder<T> {
         Self { name, matches_item }
     }
 
+    pub fn set_matches_item(&mut self, matches_item: fn(&Item<T>) -> bool) -> &mut Self {
+        self.matches_item = Some(matches_item);
+        self
+    }
+
     pub fn name(&self) -> &str {
         self.name.as_str()
     }
@@ -82,6 +87,44 @@ impl<T> Placeholder<T> {
             None => true,
             Some(f) => f(item),
         }
+    }
+}
+
+pub trait PlaceholderExt<T> {
+    fn with_placeholder_matching_items(
+        self,
+        name_matches_item_pairs: impl IntoIterator<Item = (&'static str, fn(&Item<T>) -> bool)>,
+    ) -> Self;
+}
+
+impl<T> PlaceholderExt<T> for Vec<Item<T>> {
+    fn with_placeholder_matching_items(
+        mut self,
+        name_matches_item_pairs: impl IntoIterator<Item = (&'static str, fn(&Item<T>) -> bool)>,
+    ) -> Self {
+        fn rewrite_items<T>(
+            items: &mut Vec<Item<T>>,
+            mapping: &HashMap<&str, fn(&Item<T>) -> bool>,
+        ) {
+            for item in items.iter_mut() {
+                match item {
+                    Item::Placeholder(p) => {
+                        if let Some(f) = mapping.get(p.name()) {
+                            p.set_matches_item(*f);
+                        }
+                    }
+                    Item::Tree(_, children) => {
+                        rewrite_items(children, mapping);
+                    }
+                    _ => {}
+                }
+            }
+        }
+
+        let mapping: HashMap<&str, fn(&Item<T>) -> bool> =
+            name_matches_item_pairs.into_iter().collect();
+        rewrite_items(&mut self, &mapping);
+        self
     }
 }
 
