@@ -196,6 +196,14 @@ fn test_replace_all() {
 }
 
 #[test]
+fn test_replace_all_adjacent() {
+    let items = parse!(a b c);
+    let items = replace_all(items, &parse!(__1), &parse!(__1 dot));
+    // FIXME: "dot" should be after "b"
+    assert_eq!(unparse(&items), "a dot b c dot");
+}
+
+#[test]
 fn test_replace_func() {
     let items = parse!(x [a b] x [c d e] x);
     let pat = parse!([___1]);
