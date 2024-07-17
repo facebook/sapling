@@ -463,7 +463,15 @@ impl<'a, T: PartialEq + Clone + fmt::Debug> TreeMatchState<'a, T> {
     }
 }
 
-fn match_items2<T: fmt::Debug + Clone + PartialEq>(
+/// Match patterns in items from the start. Similar to Python's `re.match`.
+///
+/// `pat` can use placeholders to match items.
+///
+/// If `allow_remaining` is true, `items` can have remaining parts that won't
+/// be matched while there is still a successful match.
+///
+/// This function recursively calls itself to match inner trees.
+fn match_items<T: fmt::Debug + Clone + PartialEq>(
     items: &[Item<T>],
     pat: &[Item<T>],
     allow_remaining: bool,
@@ -487,154 +495,5 @@ fn match_items2<T: fmt::Debug + Clone + PartialEq>(
         Some(r#match)
     } else {
         None
-    }
-}
-
-/// Match two item slices from the start. Similar to Python's `re.match`.
-///
-/// `pat` can use placeholders to match items.
-///
-/// If `allow_remaining` is true, `items` can have remaining parts that won't
-/// be matched while there is still a successful match.
-///
-/// This function recursively calls itself to match inner trees.
-fn match_items<T: fmt::Debug + Clone + PartialEq>(
-    items: &[Item<T>],
-    pat: &[Item<T>],
-    allow_remaining: bool,
-) -> Option<Match<T>> {
-    let match1 = match_items1(items, pat, allow_remaining);
-    let match2 = match_items2(items, pat, allow_remaining);
-    assert_eq!(
-        match1.as_ref().map(|m| &m.captures),
-        match2.as_ref().map(|m| &m.captures),
-        "match_items mismatch: {:?} {:?} {}",
-        items,
-        pat,
-        allow_remaining,
-    );
-    match1
-}
-fn match_items1<T: fmt::Debug + Clone + PartialEq>(
-    items: &[Item<T>],
-    pat: &[Item<T>],
-    allow_remaining: bool,
-) -> Option<Match<T>> {
-    let mut i = 0;
-    let mut j = 0;
-    let mut captures: Captures<T> = HashMap::new();
-
-    'main_loop: loop {
-        match (i >= items.len(), j >= pat.len(), allow_remaining) {
-            (_, true, true) | (true, true, false) => return Some(Match::new(i, captures)),
-            (false, true, false) => return None,
-            (false, false, _) | (true, false, _) => (),
-        };
-
-        let item_next = items.get(i);
-        let pat_next = &pat[j];
-
-        // Handle placeholder matches.
-        if let Item::Placeholder(p) = pat_next {
-            if p.matches_multiple() {
-                // Multi-item match (*). We just "look ahead" for a short range.
-                let mut pat_rest = &pat[j + 1..];
-                let mut item_rest = &items[i..];
-                // Do not match groups, unless the placeholder wants.
-                if !p.matches_tree() {
-                    item_rest = slice_trim_trees(item_rest);
-                    pat_rest = slice_trim_trees(pat_rest);
-                }
-                // No way to match if "item_rest" is shorter.
-                if pat_rest.len() > item_rest.len() {
-                    return None;
-                }
-                // Limit search complexity.
-                const CAP: usize = 32;
-                if allow_remaining && item_rest.len() > pat_rest.len() + CAP {
-                    item_rest = &item_rest[..pat_rest.len() + CAP];
-                }
-                // Naive O(N^2) scan, but limited to CAP.
-                let mut end = item_rest.len();
-                let mut start = end - pat_rest.len();
-                loop {
-                    if pat_rest == &item_rest[start..end] {
-                        // item_rest[start..end] matches the non-placeholder part of the pattern.
-                        // So items[..start] matches the placeholder.
-                        captures.insert(p.name().to_string(), item_rest[..start].to_vec());
-                        i += end;
-                        j += pat_rest.len() + 1;
-                        continue 'main_loop;
-                    }
-                    if !allow_remaining || start == 0 {
-                        break;
-                    }
-                    start -= 1;
-                    end -= 1;
-                }
-                return None;
-            } else {
-                // Single item match.
-                let is_matched = match item_next {
-                    Some(Item::Item(_)) => true,
-                    Some(Item::Tree(..)) if p.matches_tree() => true,
-                    _ => false,
-                };
-                if is_matched {
-                    captures.insert(p.name().to_string(), vec![item_next.unwrap().clone()]);
-                    i += 1;
-                    j += 1;
-                    continue;
-                }
-                return None;
-            }
-        }
-
-        // Match subtree recursively.
-        if let (Some(Item::Tree(ld, lhs)), Item::Tree(rd, rhs)) = (item_next, pat_next) {
-            // NOTE: we only want "shallow" tree (ex. only the brackets) check here.
-            if ld != rd {
-                return None;
-            }
-            // Match recursive.
-            let sub_result = match_items(lhs, rhs, false);
-            match sub_result {
-                None => return None,
-                Some(matched) => {
-                    captures.extend(matched.captures);
-                    i += 1;
-                    j += 1;
-                    continue;
-                }
-            }
-        }
-
-        // Match item.
-        if item_next == Some(pat_next) {
-            i += 1;
-            j += 1;
-        } else {
-            return None;
-        }
-    }
-}
-
-/// Truncate a item slice so it does not have Trees.
-fn slice_trim_trees<T>(slice: &[Item<T>]) -> &[Item<T>] {
-    for (i, item) in slice.iter().enumerate() {
-        if matches!(item, Item::Tree(..)) {
-            return &slice[..i];
-        }
-    }
-    slice
-}
-
-impl<T> Match<T> {
-    fn new(len: usize, captures: Captures<T>) -> Self {
-        Self {
-            len,
-            captures,
-            start: 0,
-        }
     }
 }

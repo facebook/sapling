@@ -118,6 +118,26 @@ fn test_simple_matches() {
 }
 
 #[test]
+fn test_non_greedy_matches() {
+    // "a" after "___1" cannot match the longest "a".
+    let items = parse!(a b a c a d);
+    let pat = parse!(a ___1 a ___2 c ___3 d);
+    let matches = find_all(&items, &pat);
+    assert_eq!(matches.len(), 1);
+    assert_eq!(matches[0].show(), ["___1 => b", "___2 => ", "___3 => a"]);
+
+    // [ ___2 i ___3 ] match the middle, not the first nor the last.
+    let items = parse!(a b c d [ e f g ] [ h i j ] [ k l m ]);
+    let pat = parse!(a ___1g [ ___2 i ___3 ]);
+    let matches = find_all(&items, &pat);
+    assert_eq!(matches.len(), 1);
+    assert_eq!(
+        matches[0].show(),
+        ["___1g => b c d [ e f g ]", "___2 => h", "___3 => j"]
+    );
+}
+
+#[test]
 fn test_find_all_multiple_matches() {
     let items = parse!(a b a c);
     let pat = parse!(a __1);
