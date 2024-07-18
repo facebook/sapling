@@ -69,7 +69,7 @@ ImmediateFuture<Hash32> VirtualInode::getBlake3(
     const std::shared_ptr<ObjectStore>& objectStore,
     const ObjectFetchContextPtr& fetchContext) const {
   // Ensure this is a regular file.
-  // We intentionally want to refuse to compute the SHA1 of symlinks
+  // We intentionally want to refuse to compute the blake3 of symlinks
   switch (filteredEntryDtype(
       getDtype(), objectStore->getWindowsSymlinksEnabled())) {
     case dtype_t::Dir:
@@ -373,7 +373,6 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributes(
                   folly::Try<std::optional<ObjectId>>{std::move(entryObjectId)};
             }
 
-            // TODO: add blake3 support
             return EntryAttributes{
                 std::move(sha1),
                 std::move(blake3),
