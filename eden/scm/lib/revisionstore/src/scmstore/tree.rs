@@ -23,6 +23,7 @@ use ::types::PathComponentBuf;
 use ::types::RepoPath;
 use anyhow::anyhow;
 use anyhow::bail;
+use anyhow::Context;
 use anyhow::Result;
 use clientinfo::get_client_request_info_thread_local;
 use clientinfo::set_client_request_info_thread_local;
@@ -974,6 +975,24 @@ impl storemodel::TreeStore for TreeStore {
                     basic_tree_entry: OnceCell::new(),
                 };
                 Ok((key, Box::new(tree_entry)))
+            });
+        Ok(Box::new(iter))
+    }
+
+    fn get_tree_aux_data_iter(
+        &self,
+        keys: Vec<Key>,
+        fetch_mode: FetchMode,
+    ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, TreeAuxData)>>> {
+        let fetched = self.fetch_batch(keys.into_iter(), TreeAttributes::AUX_DATA, fetch_mode);
+        let iter = fetched
+            .into_iter()
+            .map(|entry| -> anyhow::Result<(Key, TreeAuxData)> {
+                let (key, store_tree) = entry?;
+                let aux = store_tree
+                    .aux_data
+                    .ok_or_else(|| anyhow::anyhow!("aux data is missing from store tree"))?;
+                Ok((key, aux))
             });
         Ok(Box::new(iter))
     }

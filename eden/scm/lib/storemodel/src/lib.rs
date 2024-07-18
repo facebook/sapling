@@ -364,6 +364,30 @@ pub trait TreeStore: KeyStore {
         Ok(Box::new(iter))
     }
 
+    /// List metadata of the given trees.
+    /// Contact remote server on demand. Might block.
+    ///
+    /// Ignores fetch_mode in the default implementation
+    /// Currently mainly used by EdenFS.
+    fn get_tree_aux_data_iter(
+        &self,
+        keys: Vec<Key>,
+        _fetch_mode: FetchMode,
+    ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, TreeAuxData)>>> {
+        let iter = keys
+            .into_iter()
+            .map(|k| match self.get_local_tree_aux_data(&k.path, k.hgid) {
+                Err(e) => Err(e),
+                Ok(None) => Err(anyhow::format_err!(
+                    "{}@{}: not found locally",
+                    k.path,
+                    k.hgid
+                )),
+                Ok(Some(data)) => Ok((k, data)),
+            });
+        Ok(Box::new(iter))
+    }
+
     fn as_key_store(&self) -> &dyn KeyStore
     where
         Self: Sized,
@@ -382,27 +406,6 @@ pub trait TreeStore: KeyStore {
             None => Ok(None),
             Some(e) => e.aux_data(),
         }
-    }
-
-    /// Get tree aux data for the given trees.
-    /// Contact remote server on demand. Might block.
-    fn get_tree_aux_data_iter(
-        &self,
-        keys: Vec<Key>,
-        fetch_mode: FetchMode,
-    ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, TreeAuxData)>>> {
-        let iter = self
-            .get_tree_iter(keys, fetch_mode)?
-            .map(|entry| match entry {
-                Err(e) => Err(e),
-                Ok((key, data)) => {
-                    let metadata = data.aux_data()?.ok_or_else(|| {
-                        anyhow::anyhow!(format!("tree aux data is missing for key: {}", key))
-                    })?;
-                    Ok((key, metadata))
-                }
-            });
-        Ok(Box::new(iter))
     }
 
     /// Get tree aux data for the given tree.
