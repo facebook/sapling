@@ -170,7 +170,11 @@ impl WarmBookmarksCacheBuilder {
         phases: &ArcPhases,
     ) -> Result<(), Error> {
         self.add_derived_data_warmers(
-            &[MappedHgChangesetId::VARIANT, FilenodesOnlyPublic::VARIANT],
+            &[
+                MappedHgChangesetId::VARIANT,
+                FilenodesOnlyPublic::VARIANT,
+                RootHgAugmentedManifestId::VARIANT,
+            ],
             repo_derived_data,
         )?;
         self.add_public_phase_warmer(phases);
@@ -187,6 +191,7 @@ impl WarmBookmarksCacheBuilder {
                 MappedGitCommitId::VARIANT,
                 TreeHandle::VARIANT,
                 RootGitDeltaManifestId::VARIANT,
+                RootGitDeltaManifestV2Id::VARIANT,
             ],
             repo_derived_data,
         )?;
