@@ -103,6 +103,54 @@ void SaplingNativeBackingStore::getTreeBatch(
       std::move(resolver));
 }
 
+folly::Try<std::shared_ptr<TreeAuxData>>
+SaplingNativeBackingStore::getTreeMetadata(NodeId node, bool local) {
+  FetchMode fetch_mode = FetchMode::AllowRemote;
+  if (local) {
+    fetch_mode = FetchMode::LocalOnly;
+  }
+  XLOGF(
+      DBG7,
+      "Importing tree metadata node={} from hgcache from hgcache",
+      folly::hexlify(node));
+  return folly::makeTryWith([&] {
+    auto metadata = sapling_backingstore_get_tree_aux(
+        *store_.get(),
+        rust::Slice<const uint8_t>{node.data(), node.size()},
+        fetch_mode);
+    XCHECK(
+        metadata.get(),
+        "sapling_backingstore_get_tree_aux returned a nullptr, but did not throw an exception.");
+    return metadata;
+  });
+}
+
+void SaplingNativeBackingStore::getTreeMetadataBatch(
+    SaplingRequestRange requests,
+    sapling::FetchMode fetch_mode,
+    folly::FunctionRef<void(size_t, folly::Try<std::shared_ptr<TreeAuxData>>)>
+        resolve) {
+  auto resolver = std::make_shared<GetTreeAuxBatchResolver>(std::move(resolve));
+  auto count = requests.size();
+
+  XLOG(DBG7, "Import tree metadatas with size: {}", count);
+
+  std::vector<Request> raw_requests;
+  raw_requests.reserve(count);
+  for (auto& request : requests) {
+    raw_requests.push_back(Request{
+        request.node.data(),
+        request.cause,
+    });
+  }
+
+  sapling_backingstore_get_tree_aux_batch(
+      *store_.get(),
+      rust::Slice<const Request>{raw_requests.data(), raw_requests.size()},
+      fetch_mode,
+      std::move(resolver));
+}
+
 folly::Try<std::unique_ptr<folly::IOBuf>> SaplingNativeBackingStore::getBlob(
     NodeId node,
     FetchMode fetch_mode) {
