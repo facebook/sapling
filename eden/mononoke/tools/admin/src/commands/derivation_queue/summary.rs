@@ -21,6 +21,10 @@ pub struct SummaryArgs {
     /// Display the client info for each item in the queue
     #[clap(short, long)]
     client_info: bool,
+
+    /// Limit the number of items to display.
+    #[clap(short, long, default_value_t = 20)]
+    limit: usize,
 }
 
 pub async fn summary(
@@ -44,7 +48,8 @@ pub async fn summary(
     }
     table.set_titles(titles);
 
-    for item in summary.items {
+    println!("Number of items in the queue: {}", summary.items.len());
+    for item in summary.items.into_iter().take(args.limit) {
         let timestamp = item
             .enqueue_timestamp()
             .ok_or_else(|| anyhow!("Missing enqueue timestamp"))?;
