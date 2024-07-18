@@ -45,6 +45,11 @@ Create commit that modifies git submodule in small repo
   > initial-import --no-progress-bar -i "$C" \
   > --version-name "$LATEST_CONFIG_VERSION_NAME" --no-automatic-derivation
   Starting session with id * (glob)
+  Initializing repo: * (glob)
+  Initialized repo: * (glob)
+  Initializing repo: * (glob)
+  Initialized repo: * (glob)
+  All repos initialized. It took: 0 seconds
   Checking if ab5bf42dd164f61fa2bcb2de20224d8ffb60f12619bb3692f69d7c171dc1c3be is already synced 11->10
   Syncing ab5bf42dd164f61fa2bcb2de20224d8ffb60f12619bb3692f69d7c171dc1c3be for inital import
   Source repo: small_repo / Target repo: large_repo
