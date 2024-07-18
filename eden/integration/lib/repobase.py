@@ -146,3 +146,6 @@ class Repository:
 
     def update(self, rev: str, clean: bool = False, merge: bool = False) -> str:
         raise NotImplementedError()
+
+    def push(self, rev: str, target: str, create: bool = False) -> str:
+        raise NotImplementedError()

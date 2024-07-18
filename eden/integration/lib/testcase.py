@@ -110,6 +110,9 @@ class EdenTestCase(EdenTestCaseBase):
         # during integration tests
         self.setenv("INTEGRATION_TEST", "1")
 
+        # Set this environment variable to enable Sl tracing during the test
+        # self.setenv("SL_LOG", "trace")
+
         self.setup_eden_test()
         self.report_time("test setup done")
 
@@ -794,7 +797,9 @@ class HgRepoTestMixin:
         # breaking resolution of create_repo().
         # pyre-fixme[16]: `HgRepoTestMixin` has no attribute `create_hg_repo`.
         return self.create_hg_repo(
-            name, init_configs=["experimental.windows-symlinks=True"], filtered=filtered
+            name,
+            init_configs=["experimental.windows-symlinks=True"],
+            filtered=filtered,
         )
 
 
