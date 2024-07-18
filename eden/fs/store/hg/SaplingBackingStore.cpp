@@ -196,7 +196,7 @@ TreePtr fromRawTree(
         entries.emplace(entry.first, std::move(entry.second));
       }
     } catch (const PathComponentContainsDirectorySeparator& ex) {
-      XLOG(WARN) << "Ignoring directory entry: " << ex.what();
+      XLOGF(WARN, "Ignoring directory entry: {}", ex.what());
     }
   }
   return std::make_shared<TreePtr::element_type>(
@@ -278,8 +278,9 @@ SaplingBackingStore::SaplingBackingStore(
   uint8_t numberThreads =
       config_->getEdenConfig()->numBackingstoreThreads.getValue();
   if (!numberThreads) {
-    XLOG(WARN)
-        << "SaplingBackingStore configured to use 0 threads. Invalid, using one thread instead";
+    XLOG(
+        WARN,
+        "SaplingBackingStore configured to use 0 threads. Invalid, using one thread instead");
     numberThreads = 1;
   }
   threads_.reserve(numberThreads);
@@ -326,8 +327,9 @@ SaplingBackingStore::SaplingBackingStore(
   uint8_t numberThreads =
       config_->getEdenConfig()->numBackingstoreThreads.getValue();
   if (!numberThreads) {
-    XLOG(WARN)
-        << "SaplingBackingStore configured to use 0 threads. Invalid, using one thread instead";
+    XLOG(
+        WARN,
+        "SaplingBackingStore configured to use 0 threads. Invalid, using one thread instead");
     numberThreads = 1;
   }
   threads_.reserve(numberThreads);
@@ -400,7 +402,7 @@ void SaplingBackingStore::processBlobImportRequests(
     std::vector<std::shared_ptr<SaplingImportRequest>>&& requests) {
   folly::stop_watch<std::chrono::milliseconds> watch;
 
-  XLOG(DBG4) << "Processing blob import batch size=" << requests.size();
+  XLOGF(DBG4, "Processing blob import batch size={}", requests.size());
 
   for (auto& request : requests) {
     auto* blobImport = request->getRequest<SaplingImportRequest::BlobImport>();
@@ -429,9 +431,10 @@ void SaplingBackingStore::processBlobImportRequests(
     for (auto& request : requests) {
       auto* promise = request->getPromise<BlobPtr>();
       if (promise->isFulfilled()) {
-        XLOG(DBG4)
-            << "Blob found in Sapling local for "
-            << request->getRequest<SaplingImportRequest::BlobImport>()->hash;
+        XLOGF(
+            DBG4,
+            "Blob found in Sapling local for {}",
+            request->getRequest<SaplingImportRequest::BlobImport>()->hash);
         switch (request->getFetchType()) {
           case SaplingImportRequest::FetchType::Prefetch:
             stats_->addDuration(
@@ -468,9 +471,10 @@ void SaplingBackingStore::processBlobImportRequests(
       auto* promise = request->getPromise<BlobPtr>();
       if (promise->isFulfilled()) {
         if (!config_->getEdenConfig()->allowRemoteGetBatch.getValue()) {
-          XLOG(DBG4)
-              << "Blob found in Sapling remote for "
-              << request->getRequest<SaplingImportRequest::BlobImport>()->hash;
+          XLOGF(
+              DBG4,
+              "Blob found in Sapling remote for {}",
+              request->getRequest<SaplingImportRequest::BlobImport>()->hash);
           switch (request->getFetchType()) {
             case SaplingImportRequest::FetchType::Prefetch:
               request->getContext()->setFetchedSource(
@@ -520,10 +524,11 @@ void SaplingBackingStore::processBlobImportRequests(
               .defer([request = std::move(request),
                       watch,
                       stats = stats_.copy()](auto&& result) mutable {
-                XLOG(DBG4)
-                    << "Imported blob from HgImporter for "
-                    << request->getRequest<SaplingImportRequest::BlobImport>()
-                           ->hash;
+                XLOGF(
+                    DBG4,
+                    "Imported blob from HgImporter for {}",
+                    request->getRequest<SaplingImportRequest::BlobImport>()
+                        ->hash);
                 switch (request->getFetchType()) {
                   case SaplingImportRequest::FetchType::Prefetch:
                     stats->addDuration(
@@ -767,9 +772,10 @@ void SaplingBackingStore::processTreeImportRequests(
     for (auto& request : requests) {
       auto* promise = request->getPromise<TreePtr>();
       if (promise->isFulfilled()) {
-        XLOG(DBG4)
-            << "Tree found in Sapling local for "
-            << request->getRequest<SaplingImportRequest::TreeImport>()->hash;
+        XLOGF(
+            DBG4,
+            "Tree found in Sapling local for {}",
+            request->getRequest<SaplingImportRequest::TreeImport>()->hash);
         request->getContext()->setFetchedSource(
             ObjectFetchContext::FetchedSource::Local,
             ObjectFetchContext::ObjectType::Tree,
@@ -792,9 +798,10 @@ void SaplingBackingStore::processTreeImportRequests(
       auto* promise = request->getPromise<TreePtr>();
       if (promise->isFulfilled()) {
         if (!config_->getEdenConfig()->allowRemoteGetBatch.getValue()) {
-          XLOG(DBG4)
-              << "Tree found in Sapling remote for "
-              << request->getRequest<SaplingImportRequest::TreeImport>()->hash;
+          XLOGF(
+              DBG4,
+              "Tree found in Sapling remote for {}",
+              request->getRequest<SaplingImportRequest::TreeImport>()->hash);
           request->getContext()->setFetchedSource(
               ObjectFetchContext::FetchedSource::Remote,
               ObjectFetchContext::ObjectType::Tree,
@@ -825,10 +832,11 @@ void SaplingBackingStore::processTreeImportRequests(
               .defer([request = std::move(request),
                       watch,
                       stats = stats_.copy()](auto&& result) mutable {
-                XLOG(DBG4)
-                    << "Imported tree after retry for "
-                    << request->getRequest<SaplingImportRequest::TreeImport>()
-                           ->hash;
+                XLOGF(
+                    DBG4,
+                    "Imported tree after retry for {}",
+                    request->getRequest<SaplingImportRequest::TreeImport>()
+                        ->hash);
                 stats->addDuration(
                     &SaplingBackingStoreStats::fetchTree, watch.elapsed());
                 request
@@ -1047,10 +1055,10 @@ void SaplingBackingStore::processBlobMetaImportRequests(
     for (auto& request : requests) {
       auto* promise = request->getPromise<BlobMetadataPtr>();
       if (promise->isFulfilled()) {
-        XLOG(DBG4) << "BlobMetaData found in Sapling local for "
-                   << request
-                          ->getRequest<SaplingImportRequest::BlobMetaImport>()
-                          ->hash;
+        XLOGF(
+            DBG4,
+            "BlobMetaData found in Sapling local for {}",
+            request->getRequest<SaplingImportRequest::BlobMetaImport>()->hash);
         request->getContext()->setFetchedSource(
             ObjectFetchContext::FetchedSource::Local,
             ObjectFetchContext::ObjectType::BlobMetadata,
@@ -1070,10 +1078,11 @@ void SaplingBackingStore::processBlobMetaImportRequests(
       auto* promise = request->getPromise<BlobMetadataPtr>();
       if (promise->isFulfilled()) {
         if (!config_->getEdenConfig()->allowRemoteGetBatch.getValue()) {
-          XLOG(DBG4) << "BlobMetaData found in Sapling remote for "
-                     << request
-                            ->getRequest<SaplingImportRequest::BlobMetaImport>()
-                            ->hash;
+          XLOGF(
+              DBG4,
+              "BlobMetaData found in Sapling remote for {}",
+              request->getRequest<SaplingImportRequest::BlobMetaImport>()
+                  ->hash);
           request->getContext()->setFetchedSource(
               ObjectFetchContext::FetchedSource::Remote,
               ObjectFetchContext::ObjectType::BlobMetadata,
@@ -1462,8 +1471,7 @@ SaplingBackingStore::getTreeMetadataEnqueue(
     const HgProxyHash& proxyHash,
     const ObjectFetchContextPtr& context) {
   auto getTreeMetaFuture = makeImmediateFutureWith([&] {
-    XLOG(DBG4) << "make tree meta import request for " << proxyHash.path()
-               << ", hash is:" << id;
+    XLOGF(DBG4, "making tree meta import request for {}", proxyHash.path(), id);
     auto requestContext = context.copy();
     auto request = SaplingImportRequest::makeTreeMetaImportRequest(
         id, proxyHash, requestContext);
@@ -1542,8 +1550,11 @@ folly::SemiFuture<BackingStore::GetTreeResult> SaplingBackingStore::getTree(
       ObjectFetchContext::ObjectType::Tree);
 
   if (auto tree = getTreeLocal(id, proxyHash)) {
-    XLOG(DBG5) << "imported tree of '" << proxyHash.path() << "', "
-               << proxyHash.revHash().toString() << " from hgcache";
+    XLOGF(
+        DBG5,
+        "imported tree of '{}', {} from hgcache",
+        proxyHash.path(),
+        proxyHash.revHash().toString());
     stats_->increment(&SaplingBackingStoreStats::fetchTreeSuccess);
     stats_->increment(&SaplingBackingStoreStats::fetchTreeLocal);
     return folly::makeSemiFuture(GetTreeResult{
@@ -1691,8 +1702,11 @@ SaplingBackingStore::getBlobEnqueue(
     const ObjectFetchContextPtr& context,
     const SaplingImportRequest::FetchType fetch_type) {
   auto getBlobFuture = makeImmediateFutureWith([&] {
-    XLOG(DBG4) << "make blob import request for " << proxyHash.path()
-               << ", hash is:" << id;
+    XLOGF(
+        DBG4,
+        "making blob import request for {}, hash is: {}",
+        proxyHash.path(),
+        id);
     auto requestContext = context.copy();
     auto request = SaplingImportRequest::makeBlobImportRequest(
         id, proxyHash, requestContext);
@@ -1789,8 +1803,11 @@ SaplingBackingStore::getBlobMetadataEnqueue(
   }
 
   auto getBlobMetaFuture = makeImmediateFutureWith([&] {
-    XLOG(DBG4) << "make blob meta import request for " << proxyHash.path()
-               << ", hash is:" << id;
+    XLOGF(
+        DBG4,
+        "making blob meta import request for {}, hash is: {}",
+        proxyHash.path(),
+        id);
     auto requestContext = context.copy();
     auto request = SaplingImportRequest::makeBlobMetaImportRequest(
         id, proxyHash, requestContext);
@@ -1869,8 +1886,11 @@ SaplingBackingStore::getRootTree(
                          context,
                          ObjectFetchContext::ObjectType::RootTree)
                   .thenValue([this, commitId, watch](TreePtr rootTree) {
-                    XLOG(DBG1) << "imported mercurial commit " << commitId
-                               << " as tree " << rootTree->getHash();
+                    XLOGF(
+                        DBG1,
+                        "imported mercurial commit {} as tree {}",
+                        commitId,
+                        rootTree->getHash());
                     stats_->addDuration(
                         &SaplingBackingStoreStats::getRootTree,
                         watch.elapsed());
@@ -1958,8 +1978,11 @@ folly::Future<TreePtr> SaplingBackingStore::importTreeManifestImpl(
   auto tree = getTreeFromBackingStore(
       path.copy(), manifestNode, objectId, context.copy(), type);
   if (tree.hasValue()) {
-    XLOG(DBG4) << "imported tree node=" << manifestNode << " path=" << path
-               << " from SaplingNativeBackingStore";
+    XLOGF(
+        DBG4,
+        "imported tree node={} path={} from SaplingNativeBackingStore",
+        manifestNode,
+        path);
     switch (type) {
       case ObjectFetchContext::ObjectType::Tree:
         // getTree never gets here. We add this case only for completeness
@@ -2012,8 +2035,12 @@ folly::Future<TreePtr> SaplingBackingStore::retryGetTree(
     RelativePathPiece path,
     ObjectFetchContextPtr context,
     const ObjectFetchContext::ObjectFetchContext::ObjectType type) {
-  XLOG(DBG6) << "importing tree " << edenTreeID << ": hg manifest "
-             << manifestNode << " for path \"" << path << "\"";
+  XLOGF(
+      DBG6,
+      "importing tree {}: hg manifest {} for path \"{}\"",
+      edenTreeID,
+      manifestNode,
+      path);
 
   // Explicitly check for the null ID on the root directory.
   // This isn't actually present in the mercurial data store; it has to be
@@ -2472,19 +2499,22 @@ ImmediateFuture<folly::Unit> SaplingBackingStore::importManifestForRoot(
                        manifestId,
                        context,
                        ObjectFetchContext::ObjectType::ManifestForRoot)
-                .thenValue(
-                    [this, commitId, manifestId, watch](TreePtr rootTree) {
-                      XLOG(DBG3) << "imported mercurial commit " << commitId
-                                 << " with manifest " << manifestId
-                                 << " as tree " << rootTree->getHash();
-                      stats_->addDuration(
-                          &SaplingBackingStoreStats::importManifestForRoot,
-                          watch.elapsed());
-                      localStore_->put(
-                          KeySpace::HgCommitToTreeFamily,
-                          commitId,
-                          rootTree->getHash().getBytes());
-                    });
+                .thenValue([this, commitId, manifestId, watch](
+                               TreePtr rootTree) {
+                  XLOGF(
+                      DBG3,
+                      "imported mercurial commit {} with manifest {} as tree {}",
+                      commitId,
+                      manifestId,
+                      rootTree->getHash());
+                  stats_->addDuration(
+                      &SaplingBackingStoreStats::importManifestForRoot,
+                      watch.elapsed());
+                  localStore_->put(
+                      KeySpace::HgCommitToTreeFamily,
+                      commitId,
+                      rootTree->getHash().getBytes());
+                });
           });
 }
 
