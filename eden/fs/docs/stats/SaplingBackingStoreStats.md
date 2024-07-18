@@ -2,15 +2,15 @@
 
 1. `Duration get{xxx}{"store.sapling.get_{xxx}_us"}` :
 
-Duration of the whole get xxx (blob, blobmetadata, tree)
+Duration of the whole get xxx (blob, blobmetadata, tree, treemetadata)
 SaplingBackingStore::get{xxx} in Microsecond. This includes looking in local
 first then if not found prepare the request, enqueue the request and then mark
 it as finished when it is fulfilled.
 
 2. `Duration fetch{xxx}{"store.sapling.fetch_{xxx}_us"}` :
 
-Duration of fetching xxx (blob, blobmetadata, tree) requests from the network in
-Microsecond.
+Duration of fetching xxx (blob, blobmetadata, tree, treemetadata) requests from
+the network in Microsecond.
 
 3. `Duration getRootTree{"store.sapling.get_root_tree_us"}` :
 
@@ -23,21 +23,23 @@ Duration of getting a manifest for Root from the Backing Store in Microsecond.
 
 5. `Counter fetch{xxx}Local{"store.sapling.fetch_{xxx}_local"}` :
 
-Number of xxx (blob, blobmetadata, tree) fetching locally from hgcache
+Number of xxx (blob, blobmetadata, tree, treemetadata) fetching locally from
+hgcache
 
 6. `Counter fetch{xxx}Remote{"store.sapling.fetch_{xxx}_remote"}` :
 
-Number of xxx (blob, blobmetadata, tree) fetching remotely from the network
-(EdenAPI)
+Number of xxx (blob, blobmetadata, tree, treemetadata) fetching remotely from
+the network (EdenAPI)
 
 7. `Counter fetch{xxx}Success{"store.sapling.fetch_{xxx}_success"}` :
 
-Number of xxx (blob, blobmetadata, tree) that fetch successfully in the first
-try. (It could be local or remote)
+Number of xxx (blob, blobmetadata, tree, treemetadata) that fetch successfully
+in the first try. (It could be local or remote)
 
 8. `Counter fetch{xxx}Failure{"store.sapling.fetch_{xxx}_failure"}` :
 
-Number of xxx (blob, blobmetadata, tree) that failed in the first fetch try.
+Number of xxx (blob, blobmetadata, tree, treemetadata) that failed in the first
+fetch try.
 
 9. `Counter fetch{xxx}RetrySuccess{"store.sapling.fetch_{xxx}_retry_success"}` :
 
