@@ -2726,6 +2726,7 @@ EdenServiceHandler::getEntryAttributes(
     const EdenMount& edenMount,
     const std::vector<std::string>& paths,
     EntryAttributeFlags reqBitmask,
+    AttributesRequestScope reqScope,
     SyncBehavior sync,
     const ObjectFetchContextPtr& fetchContext) {
   return waitForPendingWrites(edenMount, sync)
@@ -2733,11 +2734,12 @@ EdenServiceHandler::getEntryAttributes(
                   &edenMount,
                   &paths,
                   fetchContext = fetchContext.copy(),
-                  reqBitmask](auto&&) mutable {
+                  reqBitmask,
+                  reqScope](auto&&) mutable {
         vector<ImmediateFuture<EntryAttributes>> futures;
         for (const auto& path : paths) {
           futures.emplace_back(getEntryAttributesForPath(
-              edenMount, reqBitmask, path, fetchContext));
+              edenMount, reqBitmask, reqScope, path, fetchContext));
         }
 
         // Collect all futures into a single tuple
@@ -2745,9 +2747,26 @@ EdenServiceHandler::getEntryAttributes(
       });
 }
 
+namespace {
+bool dtypeMatchesRequestScope(
+    VirtualInode inode,
+    AttributesRequestScope reqScope) {
+  if (reqScope == AttributesRequestScope::TREES_AND_FILES) {
+    return true;
+  }
+
+  if (inode.isDirectory()) {
+    return reqScope == AttributesRequestScope::TREES;
+  } else {
+    return reqScope == AttributesRequestScope::FILES;
+  }
+}
+} // namespace
+
 ImmediateFuture<EntryAttributes> EdenServiceHandler::getEntryAttributesForPath(
     const EdenMount& edenMount,
     EntryAttributeFlags reqBitmask,
+    AttributesRequestScope reqScope,
     std::string_view path,
     const ObjectFetchContextPtr& fetchContext) {
   if (path.empty()) {
@@ -2763,14 +2782,20 @@ ImmediateFuture<EntryAttributes> EdenServiceHandler::getEntryAttributesForPath(
     return edenMount.getVirtualInode(relativePath, fetchContext)
         .thenValue([&edenMount,
                     reqBitmask,
+                    reqScope,
                     relativePath = relativePath.copy(),
                     fetchContext =
                         fetchContext.copy()](const VirtualInode& virtualInode) {
-          return virtualInode.getEntryAttributes(
-              reqBitmask,
-              relativePath,
-              edenMount.getObjectStore(),
-              fetchContext);
+          if (dtypeMatchesRequestScope(virtualInode, reqScope)) {
+            return virtualInode.getEntryAttributes(
+                reqBitmask,
+                relativePath,
+                edenMount.getObjectStore(),
+                fetchContext);
+          }
+          return makeImmediateFuture<EntryAttributes>(PathError(
+              reqScope == AttributesRequestScope::TREES ? ENOTDIR : EISDIR,
+              relativePath));
         });
   } catch (const std::exception& e) {
     return ImmediateFuture<EntryAttributes>(
@@ -2814,6 +2839,7 @@ EdenServiceHandler::semifuture_getAttributesFromFiles(
       mountHandle.getEdenMount(),
       paths,
       kAllEntryAttributes,
+      AttributesRequestScope::FILES,
       *params->sync(),
       fetchContext);
 
@@ -2904,11 +2930,8 @@ folly::SemiFuture<std::unique_ptr<GetAttributesFromFilesResultV2>>
 EdenServiceHandler::semifuture_getAttributesFromFilesV2(
     std::unique_ptr<GetAttributesFromFilesParams> params) {
   auto mountHandle = lookupMount(params->mountPoint());
-  if (params->scope_ref().has_value()) {
-    XLOGF(
-        WARN,
-        "request scoping is not yet implemented for getAttributesFromFilesV2");
-  }
+  auto reqScope =
+      params->scope().value_or(AttributesRequestScope::TREES_AND_FILES);
   auto reqBitmask = EntryAttributeFlags::raw(*params->requestedAttributes());
   std::vector<std::string>& paths = params->paths().value();
   auto helper = INSTRUMENT_THRIFT_CALL(
@@ -2922,6 +2945,7 @@ EdenServiceHandler::semifuture_getAttributesFromFilesV2(
       mountHandle.getEdenMount(),
       paths,
       reqBitmask,
+      reqScope,
       *params->sync(),
       fetchContext);
 

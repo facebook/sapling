@@ -460,11 +460,13 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
       const EdenMount& edenMount,
       const std::vector<std::string>& paths,
       EntryAttributeFlags reqBitmask,
+      AttributesRequestScope reqScope,
       SyncBehavior sync,
       const ObjectFetchContextPtr& fetchContext);
   ImmediateFuture<EntryAttributes> getEntryAttributesForPath(
       const EdenMount& edenMount,
       EntryAttributeFlags reqBitmask,
+      AttributesRequestScope reqScope,
       std::string_view path,
       const ObjectFetchContextPtr& fetchContext);
 
