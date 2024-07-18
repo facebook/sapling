@@ -399,6 +399,11 @@ class EdenTestCase(EdenTestCaseBase):
         with open(self.eden.system_rollout_path, "w") as edenfsctl_rollout:
             edenfsctl_rollout.write(json.dumps(config))
 
+    def stat(self, path: str) -> os.stat_result:
+        """Stat the file at the specified path relative to the clone."""
+        fullpath = self.get_path(path)
+        return os.lstat(fullpath)
+
     @staticmethod
     def unix_only(fn):
         """
