@@ -406,8 +406,35 @@ class SaplingBackingStore final : public BackingStore {
       const ObjectFetchContextPtr& context);
 
   folly::SemiFuture<GetTreeMetaResult> getTreeMetadata(
-      const ObjectId& /*id*/,
-      const ObjectFetchContextPtr& /*context*/) override;
+      const ObjectId& id,
+      const ObjectFetchContextPtr& context) override;
+
+  /**
+   * Create a tree metadata fetch request and enqueue it to the
+   * SaplingImportRequestQueue
+   *
+   * For latency sensitive context, the caller is responsible for checking if
+   * the tree metadata is present locally, as this function will always push
+   * the request at the end of the queue.
+   */
+  ImmediateFuture<GetTreeMetaResult> getTreeMetadataEnqueue(
+      const ObjectId& id,
+      const HgProxyHash& proxyHash,
+      const ObjectFetchContextPtr& context);
+
+  /**
+   * Fetch multiple aux data at once.
+   *
+   * This function returns when all the aux data have been fetched.
+   */
+  void getTreeMetadataBatch(
+      const ImportRequestsList& requests,
+      sapling::FetchMode fetch_mode);
+
+  /**
+   * Reads tree metadata from hg cache.
+   */
+  folly::Try<TreeMetadataPtr> getLocalTreeMetadata(const HgProxyHash& id);
 
   folly::SemiFuture<GetBlobResult> getBlob(
       const ObjectId& id,
