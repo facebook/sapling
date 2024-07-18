@@ -19,6 +19,7 @@
 #include "eden/fs/model/BlobMetadataFwd.h"
 #include "eden/fs/model/ObjectId.h"
 #include "eden/fs/model/TreeFwd.h"
+#include "eden/fs/model/TreeMetadataFwd.h"
 #include "eden/fs/store/KeySpace.h"
 
 namespace facebook::eden {

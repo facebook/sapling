@@ -15,8 +15,10 @@
 #include "eden/common/utils/Bug.h"
 #include "eden/common/utils/IDGen.h"
 #include "eden/fs/model/Blob.h"
+#include "eden/fs/model/BlobMetadataFwd.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
+#include "eden/fs/model/TreeMetadataFwd.h"
 #include "eden/fs/store/ImportPriority.h"
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/store/hg/HgProxyHash.h"
@@ -48,6 +50,7 @@ class SaplingImportRequest {
   using BlobImport = BaseImport<BlobPtr>;
   using TreeImport = BaseImport<TreePtr>;
   using BlobMetaImport = BaseImport<BlobMetadataPtr>;
+  using TreeMetaImport = BaseImport<TreeMetadataPtr>;
 
   /**
    * Allocate a blob request.
@@ -66,6 +69,11 @@ class SaplingImportRequest {
       const ObjectFetchContextPtr& context);
 
   static std::shared_ptr<SaplingImportRequest> makeBlobMetaImportRequest(
+      const ObjectId& hash,
+      const HgProxyHash& proxyHash,
+      const ObjectFetchContextPtr& context);
+
+  static std::shared_ptr<SaplingImportRequest> makeTreeMetaImportRequest(
       const ObjectId& hash,
       const HgProxyHash& proxyHash,
       const ObjectFetchContextPtr& context);
@@ -169,11 +177,13 @@ class SaplingImportRequest {
   SaplingImportRequest(const SaplingImportRequest&) = delete;
   SaplingImportRequest& operator=(const SaplingImportRequest&) = delete;
 
-  using Request = std::variant<BlobImport, TreeImport, BlobMetaImport>;
+  using Request =
+      std::variant<BlobImport, TreeImport, BlobMetaImport, TreeMetaImport>;
   using Response = std::variant<
       folly::Promise<BlobPtr>,
       folly::Promise<TreePtr>,
-      folly::Promise<BlobMetadataPtr>>;
+      folly::Promise<BlobMetadataPtr>,
+      folly::Promise<TreeMetadataPtr>>;
 
   Request request_;
   ObjectFetchContextPtr context_;

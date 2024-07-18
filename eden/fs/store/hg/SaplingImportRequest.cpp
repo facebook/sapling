@@ -55,4 +55,12 @@ SaplingImportRequest::makeBlobMetaImportRequest(
   return makeRequest<BlobMetaImport>(context, hash, proxyHash);
 }
 
+std::shared_ptr<SaplingImportRequest>
+SaplingImportRequest::makeTreeMetaImportRequest(
+    const ObjectId& hash,
+    const HgProxyHash& proxyHash,
+    const ObjectFetchContextPtr& context) {
+  return makeRequest<TreeMetaImport>(context, hash, proxyHash);
+}
+
 } // namespace facebook::eden
