@@ -98,10 +98,7 @@ impl<T> PlaceholderExt<T> for Vec<Item<T>> {
         mut self,
         name_matches_item_pairs: impl IntoIterator<Item = (&'static str, fn(&Item<T>) -> bool)>,
     ) -> Self {
-        fn rewrite_items<T>(
-            items: &mut Vec<Item<T>>,
-            mapping: &HashMap<&str, fn(&Item<T>) -> bool>,
-        ) {
+        fn rewrite_items<T>(items: &mut [Item<T>], mapping: &HashMap<&str, fn(&Item<T>) -> bool>) {
             for item in items.iter_mut() {
                 match item {
                     Item::Placeholder(p) => {
@@ -636,6 +633,8 @@ impl<T: Clone + 'static> MaybeOwned<T> {
     }
 }
 
+// clippy: intentionally want to test on Cow but not consume it.
+#[allow(clippy::ptr_arg)]
 fn is_owned<T: ToOwned + ?Sized>(value: &Cow<'_, T>) -> bool {
     matches!(value, Cow::Owned(_))
 }

@@ -61,7 +61,7 @@ impl ToItems for TokenStream {
                     Item::Placeholder(Placeholder::new(v.to_string()))
                 }
                 (TokenTree::Punct(p1), Some(TokenTree::Punct(p2)))
-                    if is_punct_pair_atom(p1, &p2) =>
+                    if is_punct_pair_atom(p1, p2) =>
                 {
                     let tokens = vec![tt, iter.next().unwrap()];
                     let token = TokenInfo::from_multi(tokens);
@@ -204,6 +204,8 @@ impl AngleBracket for Vec<Item> {
                 // Find the matching '>'
                 let mut balance = 1;
                 let mut buf = Vec::new();
+                // clippy false positive: "iter" cannot be consumed here.
+                #[allow(clippy::while_let_on_iterator)]
                 while let Some(item2) = iter.next() {
                     if let Item::Item(TokenInfo::Atom(TokenTree::Punct(p))) = &item2 {
                         match p.as_char() {

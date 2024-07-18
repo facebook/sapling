@@ -132,8 +132,6 @@ pub(crate) fn demomo(attr: TokenStream, tokens: TokenStream) -> TokenStream {
             }
         };
 
-        let tokens = TokenStream::from(tokens);
-
         if debug {
             eprintln!("output: [[[\n{}\n]]]", unparse(&tokens));
         }

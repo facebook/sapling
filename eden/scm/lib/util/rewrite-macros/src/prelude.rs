@@ -44,7 +44,7 @@ pub(crate) fn unparse(stream: impl ToTokens) -> String {
         }
 
         std::thread_local! {
-            static DEPTH: std::cell::Cell<u32> = std::cell::Cell::new(0);
+            static DEPTH: std::cell::Cell<u32> = const { std::cell::Cell::new(0) };
         }
 
         DEPTH.set(DEPTH.get() + 1);
