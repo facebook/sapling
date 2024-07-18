@@ -13,7 +13,6 @@ use std::sync::Arc;
 use std::sync::RwLock;
 use std::time::Duration;
 
-use anyhow::anyhow;
 use anyhow::Context as _;
 use anyhow::Error;
 use async_trait::async_trait;
@@ -204,16 +203,10 @@ impl WarmBookmarksCacheBuilder {
 
         let config = repo_derived_data.config();
         for ty in types.iter() {
-            if !config.is_enabled(**ty) {
-                return Err(anyhow!(
-                    "{} is not enabled for {}",
-                    ty.name(),
-                    self.repo_identity.name()
-                ));
+            if config.is_enabled(**ty) {
+                self.warmers
+                    .extend(self.derived_data_warmer(ty, repo_derived_data));
             }
-
-            self.warmers
-                .extend(self.derived_data_warmer(ty, repo_derived_data));
         }
 
         Ok(())
