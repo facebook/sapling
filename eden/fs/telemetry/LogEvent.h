@@ -391,7 +391,12 @@ struct NfsCrawlDetected {
 };
 
 struct FetchMiss {
-  enum MissType : uint8_t { Tree = 0, Blob = 1, BlobMetadata = 2 };
+  enum MissType : uint8_t {
+    Tree = 0,
+    Blob = 1,
+    BlobMetadata = 2,
+    TreeMetadata = 3
+  };
 
   static constexpr const char* type = "fetch_miss";
 
@@ -406,8 +411,12 @@ struct FetchMiss {
       event.addString("miss_type", "tree");
     } else if (miss_type == Blob) {
       event.addString("miss_type", "blob");
+    } else if (miss_type == BlobMetadata) {
+      event.addString("miss_type", "blob_aux");
+    } else if (miss_type == TreeMetadata) {
+      event.addString("miss_type", "tree_aux");
     } else {
-      event.addString("miss_type", "aux");
+      throw std::range_error(fmt::format("Unknown miss type: {}", miss_type));
     }
     event.addString("reason", reason);
     event.addBool("retry", retry);
