@@ -32,6 +32,7 @@ use storemodel::BoxIterator;
 use storemodel::Bytes;
 use storemodel::FileAuxData;
 use storemodel::FileStore;
+use storemodel::TreeAuxData;
 use storemodel::TreeEntry;
 use storemodel::TreeStore;
 use tracing::instrument;
@@ -597,6 +598,23 @@ impl LocalRemoteImpl<Box<dyn TreeEntry>> for Arc<dyn TreeStore> {
         fetch_mode: FetchMode,
     ) -> Result<BoxIterator<Result<(Key, Box<dyn TreeEntry>)>>> {
         self.get_tree_iter(keys, fetch_mode)
+    }
+}
+
+/// Read tree aux.
+impl LocalRemoteImpl<TreeAuxData> for Arc<dyn TreeStore> {
+    fn get_local_single(&self, path: &RepoPath, id: HgId) -> Result<Option<TreeAuxData>> {
+        self.get_local_tree_aux_data(path, id)
+    }
+    fn get_single(&self, path: &RepoPath, id: HgId, fetch_mode: FetchMode) -> Result<TreeAuxData> {
+        self.get_tree_aux_data(path, id, fetch_mode)
+    }
+    fn get_batch_iter(
+        &self,
+        keys: Vec<Key>,
+        fetch_mode: FetchMode,
+    ) -> Result<BoxIterator<Result<(Key, TreeAuxData)>>> {
+        self.get_tree_aux_data_iter(keys, fetch_mode)
     }
 }
 
