@@ -29,6 +29,7 @@ use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks::BookmarksRef;
 use borrowed::borrowed;
+use cmdlib_cross_repo::repo_provider_from_mononoke_app;
 use context::CoreContext;
 use cross_repo_sync::create_commit_syncer_lease;
 use cross_repo_sync::create_commit_syncers;
@@ -991,14 +992,17 @@ async fn get_pushredirected_vars(
 
     let live_commit_sync_config = Arc::new(live_commit_sync_config);
 
-    let repos_manager = app.open_managed_repos(None).await?;
-    let repos = repos_manager.repos().clone();
+    let repo_provider = repo_provider_from_mononoke_app(app);
 
     let repo_arc = Arc::new(repo.clone());
 
-    let submodule_deps =
-        get_all_possible_repo_submodule_deps(ctx, repo_arc, repos, live_commit_sync_config.clone())
-            .await?;
+    let submodule_deps = get_all_possible_repo_submodule_deps(
+        ctx,
+        repo_arc,
+        repo_provider,
+        live_commit_sync_config.clone(),
+    )
+    .await?;
 
     let mapping = open_sql::<SqlSyncedCommitMapping>(ctx.fb, repo.repo_id(), configs, env).await?;
     let syncers = create_commit_syncers(
@@ -1253,15 +1257,14 @@ async fn repo_import(
             .as_ref()
             .ok_or_else(|| format_err!("gitimported changeset ids are not found"))?;
 
-        let repos_manager = app.open_managed_repos(None).await?;
-        let repos = repos_manager.repos().clone();
+        let repo_provider = repo_provider_from_mononoke_app(app);
 
         let repo_arc = Arc::new(repo.clone());
 
         let submodule_deps = get_all_possible_repo_submodule_deps(
             &ctx,
             repo_arc,
-            repos,
+            repo_provider,
             Arc::new(live_commit_sync_config),
         )
         .await?;

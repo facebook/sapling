@@ -51,6 +51,7 @@ pub use commit_syncers_lib::Syncers;
 pub use git_submodules::get_all_possible_repo_submodule_deps;
 pub use git_submodules::validate_all_submodule_expansions;
 pub use git_submodules::InMemoryRepo;
+pub use git_submodules::RepoProvider;
 pub use git_submodules::SubmoduleExpansionData;
 pub use reporting::log_debug;
 pub use reporting::log_info;

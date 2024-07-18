@@ -21,6 +21,7 @@ use cross_repo_sync::create_commit_syncers;
 use cross_repo_sync::get_all_possible_repo_submodule_deps;
 use cross_repo_sync::CommitSyncRepos;
 use cross_repo_sync::CommitSyncer;
+use cross_repo_sync::RepoProvider;
 use cross_repo_sync::Source;
 use cross_repo_sync::SubmoduleDeps;
 use cross_repo_sync::Syncers;
@@ -29,6 +30,7 @@ use futures::future;
 use live_commit_sync_config::CfgrLiveCommitSyncConfig;
 use live_commit_sync_config::LiveCommitSyncConfig;
 use mononoke_app::args::AsRepoArg;
+use mononoke_app::args::RepoArg;
 use mononoke_app::args::SourceAndTargetRepoArgs;
 use mononoke_app::MononokeApp;
 use pushredirect::SqlPushRedirectionConfigBuilder;
@@ -70,15 +72,14 @@ async fn create_commit_syncers_from_app_impl<R: CrossRepo>(
     let caching = app.environment().caching;
     let x_repo_syncer_lease = create_commit_syncer_lease(app.fb, caching)?;
 
-    let repos_manager = app.open_managed_repos(None).await?;
-    let repos = repos_manager.repos().clone();
+    let repo_provider = repo_provider_from_mononoke_app(app);
 
     let source_repo_arc = Arc::new(source_repo.0.clone());
 
     let submodule_deps = get_all_possible_repo_submodule_deps(
         ctx,
         source_repo_arc,
-        repos,
+        repo_provider,
         live_commit_sync_config.clone(),
     )
     .await?;
@@ -227,15 +228,14 @@ async fn create_commit_syncer_from_app_impl<R: CrossRepo>(
     let caching = app.environment().caching;
     let x_repo_syncer_lease = create_commit_syncer_lease(app.fb, caching)?;
 
-    let repos_manager = app.open_managed_repos(None).await?;
-    let repos = repos_manager.repos().clone();
+    let repo_provider = repo_provider_from_mononoke_app(app);
 
     let source_repo_arc = Arc::new(source_repo.0.clone());
 
     let submodule_deps = get_all_possible_repo_submodule_deps(
         ctx,
         source_repo_arc,
-        repos,
+        repo_provider,
         live_commit_sync_config.clone(),
     )
     .await?;
@@ -273,4 +273,17 @@ async fn create_commit_syncer<'a, R: CrossRepo>(
         x_repo_syncer_lease,
     );
     Ok(commit_syncer)
+}
+
+pub fn repo_provider_from_mononoke_app<'a, R: CrossRepo>(
+    app: &'a MononokeApp,
+) -> RepoProvider<'a, R> {
+    let repo_provider: RepoProvider<'a, R> = Arc::new(move |repo_id| {
+        Box::pin(async move {
+            let repo = app.open_repo_unredacted::<R>(&RepoArg::Id(repo_id)).await?;
+            Ok(Arc::new(repo))
+        })
+    });
+
+    repo_provider
 }

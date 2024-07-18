@@ -78,7 +78,6 @@ rust_library(
         "//eden/mononoke/megarepo_api:commit_transformation",
         "//eden/mononoke/mercurial:mercurial_types",
         "//eden/mononoke/metaconfig:metaconfig_types",
-        "//eden/mononoke/mononoke_repos:mononoke_repos",
         "//eden/mononoke/mononoke_types:mononoke_types",
         "//eden/mononoke/mutable_counters:mutable_counters",
         "//eden/mononoke/phases:phases",

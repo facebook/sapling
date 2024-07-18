@@ -66,6 +66,7 @@ use cross_repo_sync::CandidateSelectionHint;
 use cross_repo_sync::CommitSyncContext;
 use cross_repo_sync::CommitSyncRepos;
 use cross_repo_sync::CommitSyncer;
+use cross_repo_sync::RepoProvider;
 use cross_repo_sync::SubmoduleDeps;
 use cross_repo_sync::Target;
 use derived_data_manager::BonsaiDerivable;
@@ -1713,17 +1714,30 @@ impl RepoContext {
         target_repo_ctx: &'a Self,
     ) -> Result<SubmoduleDeps<Repo>, MononokeError> {
         let live_commit_sync_config = self.repo.live_commit_sync_config();
+        let repo_provider: RepoProvider<'a, Repo> = Arc::new(move |repo_id| {
+            Box::pin({
+                let repos = self.repos.clone();
+
+                async move {
+                    let repo = repos
+                        .get_by_id(repo_id.id())
+                        .ok_or_else(|| anyhow!("Submodule dependency repo with id {repo_id} not available through RepoContext"))?;
+                    Ok(repo)
+                }
+            })
+        });
+
         let source_submodule_deps = get_all_possible_repo_submodule_deps(
             &self.ctx,
             self.repo.clone(),
-            self.repos.clone(),
+            repo_provider.clone(),
             live_commit_sync_config.clone(),
         )
         .await?;
         let target_submodule_deps = get_all_possible_repo_submodule_deps(
             &self.ctx,
             target_repo_ctx.repo.clone(),
-            self.repos.clone(),
+            repo_provider,
             live_commit_sync_config,
         )
         .await?;

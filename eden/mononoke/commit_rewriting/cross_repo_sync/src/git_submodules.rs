@@ -22,5 +22,6 @@ pub(crate) use utils::get_submodule_repo;
 pub(crate) use utils::get_x_repo_submodule_metadata_file_path;
 pub(crate) use utils::git_hash_from_submodule_metadata_file;
 pub(crate) use utils::root_fsnode_id_from_submodule_git_commit;
+pub use utils::RepoProvider;
 pub use validation::validate_all_submodule_expansions;
 pub(crate) use validation::validate_working_copy_of_expansion_with_recursive_submodules;

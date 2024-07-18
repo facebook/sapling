@@ -5,8 +5,10 @@
  * GNU General Public License version 2.
  */
 
+use core::future::Future;
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::pin::Pin;
 use std::str::FromStr;
 use std::sync::Arc;
 
@@ -16,6 +18,7 @@ use anyhow::Error;
 use anyhow::Result;
 use blobstore::Storable;
 use changesets_creation::save_changesets;
+use cloned::cloned;
 use context::CoreContext;
 use fsnodes::RootFsnodeId;
 use futures::future;
@@ -30,7 +33,6 @@ use manifest::bonsai_diff;
 use manifest::BonsaiDiffFileChange;
 use manifest::Entry;
 use manifest::ManifestOps;
-use mononoke_repos::MononokeRepos;
 use mononoke_types::hash::GitSha1;
 use mononoke_types::hash::RichGitSha1;
 use mononoke_types::BlobstoreValue;
@@ -44,6 +46,7 @@ use mononoke_types::FsnodeId;
 use mononoke_types::GitLfs;
 use mononoke_types::MPathElement;
 use mononoke_types::NonRootMPath;
+use mononoke_types::RepositoryId;
 use movers::Mover;
 use repo_blobstore::RepoBlobstoreArc;
 use repo_derived_data::RepoDerivedDataRef;
@@ -452,6 +455,14 @@ async fn create_bonsai_for_dangling_submodule_pointer<R: Repo>(
     Ok(exp_bonsai_cs_id)
 }
 
+/// Async function that, given a RepositoryId, loads and returns the repo.
+pub type RepoProvider<'a, R> = Arc<
+    dyn Fn(RepositoryId) -> Pin<Box<dyn Future<Output = Result<Arc<R>>> + Send + 'a>>
+        + Send
+        + Sync
+        + 'a,
+>;
+
 /// Syncing commits from/to repos that have git submodule actions set to
 /// expand requires loading the repo of the submodules it depends on.
 ///
@@ -464,7 +475,7 @@ async fn create_bonsai_for_dangling_submodule_pointer<R: Repo>(
 pub async fn get_all_possible_repo_submodule_deps<R>(
     ctx: &CoreContext,
     repo: Arc<R>,
-    repos: Arc<MononokeRepos<R>>,
+    repo_provider: RepoProvider<'_, R>,
     live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
 ) -> Result<SubmoduleDeps<R>>
 where
@@ -495,40 +506,45 @@ where
         return Ok(SubmoduleDeps::NotNeeded);
     };
 
-    let repo_deps: HashMap<NonRootMPath, Arc<R>> = repo_deps_ids
-        .into_iter()
+    let repo_deps: HashMap<NonRootMPath, Arc<R>> = stream::iter(repo_deps_ids)
         .filter_map(|(submodule_path, sm_repo_id)| {
-            let mb_sm_repo = repos.get_by_id(sm_repo_id.id());
-            match mb_sm_repo {
-                Some(sm_repo) => Some((submodule_path, sm_repo)),
-                None => {
-                    // We don't want to fail the entire request if a submodule
-                    // is not found **here**, because not all operations
-                    // that run this code path might actually need the submodule
-                    // deps and repos could be missing due to repo sharding.
-                    // But let's at least log a warning if this happen.
-                    log_warning(
-                        ctx,
-                        format!(
-                            "Failed to load submodule dependency at path {} with id {}",
-                            submodule_path.clone(),
-                            sm_repo_id.id()
-                        ),
-                    );
+            cloned!(repo_provider);
+            async move {
+                let mb_sm_repo = repo_provider(sm_repo_id)
+                    .await
+                    .context("Repo provider failed to open repo");
+                match mb_sm_repo {
+                    Ok(sm_repo) => Some((submodule_path, sm_repo)),
+                    Err(_err) => {
+                        // We don't want to fail the entire request if a submodule
+                        // is not found **here**, because not all operations
+                        // that run this code path might actually need the submodule
+                        // deps and repos could be missing due to repo sharding.
+                        // But let's at least log a warning if this happen.
+                        log_warning(
+                            ctx,
+                            format!(
+                                "Failed to load submodule dependency at path {} with id {}",
+                                submodule_path.clone(),
+                                sm_repo_id.id()
+                            ),
+                        );
 
-                    ctx.scuba().clone().log_with_msg(
-                        "Failed to load submodule dependency in RepoContextBuilder",
-                        format!(
-                            "Submodule path: {}. Submodule repo id: {}",
-                            submodule_path.clone(),
-                            sm_repo_id.id()
-                        ),
-                    );
-                    None
+                        ctx.scuba().clone().log_with_msg(
+                            "Failed to load submodule dependency in RepoContextBuilder",
+                            format!(
+                                "Submodule path: {}. Submodule repo id: {}",
+                                submodule_path.clone(),
+                                sm_repo_id.id()
+                            ),
+                        );
+                        None
+                    }
                 }
             }
         })
-        .collect();
+        .collect::<HashMap<NonRootMPath, Arc<R>>>()
+        .await;
 
     if repo_deps.len() < submodule_deps_to_load {
         log_warning(
