@@ -419,12 +419,13 @@ pub trait TreeStore: KeyStore {
         fetch_mode: FetchMode,
     ) -> anyhow::Result<TreeAuxData> {
         let key = Key::new(path.to_owned(), id);
-        match self.get_tree_iter(vec![key.clone()], fetch_mode)?.next() {
+        match self
+            .get_tree_aux_data_iter(vec![key.clone()], fetch_mode)?
+            .next()
+        {
             None => Err(anyhow::format_err!("{}@{}: not found remotely", path, id)),
             Some(Err(e)) => Err(e),
-            Some(Ok((_k, tree))) => tree.aux_data()?.ok_or_else(|| {
-                anyhow::anyhow!(format!("tree aux data is missing for key: {}", key))
-            }),
+            Some(Ok((_k, aux))) => Ok(aux),
         }
     }
 }
