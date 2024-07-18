@@ -428,6 +428,7 @@ struct PrjfsStats : StatsGroup<PrjfsStats> {
  */
 struct ObjectStoreStats : StatsGroup<ObjectStoreStats> {
   Duration getTree{"store.get_tree_us"};
+  Duration getTreeMetadata{"store.get_tree_metadata_us"};
   Duration getBlob{"store.get_blob_us"};
   Duration getBlobMetadata{"store.get_blob_metadata_us"};
   Duration getRootTree{"store.get_root_tree_us"};
@@ -441,6 +442,14 @@ struct ObjectStoreStats : StatsGroup<ObjectStoreStats> {
   Counter getTreeFromLocalStore{"object_store.get_tree.local_store"};
   Counter getTreeFromBackingStore{"object_store.get_tree.backing_store"};
   Counter getTreeFailed{"object_store.get_tree_failed"};
+
+  Counter getTreeMetadataFromMemory{"object_store.get_tree_metadata.memory"};
+  Counter getTreeMetadataFromLocalStore{
+      "object_store.get_tree_metadata.local_store"};
+  Counter getTreeMetadataFromBackingStore{
+      "object_store.get_tree_metadata.backing_store"};
+  Counter getTreeMetadataFromTree{"object_store.get_tree_metadata.tree"};
+  Counter getTreeMetadataFailed{"object_store.get_tree_metadata_failed"};
 
   Counter getRootTreeFromBackingStore{
       "object_store.get_root_tree.backing_store"};
@@ -457,15 +466,19 @@ struct ObjectStoreStats : StatsGroup<ObjectStoreStats> {
 
 struct LocalStoreStats : StatsGroup<LocalStoreStats> {
   Duration getTree{"local_store.get_tree_us"};
+  Duration getTreeMetadata{"local_store.get_tree_metadata_us"};
   Duration getBlob{"local_store.get_blob_us"};
   Duration getBlobMetadata{"local_store.get_blob_metadata_us"};
   Counter getTreeSuccess{"local_store.get_tree_success"};
+  Counter getTreeMetadataSuccess{"local_store.get_tree_metadata_success"};
   Counter getBlobSuccess{"local_store.get_blob_success"};
   Counter getBlobMetadataSuccess{"local_store.get_blob_metadata_success"};
   Counter getTreeFailure{"local_store.get_tree_failure"};
+  Counter getTreeMetadataFailure{"local_store.get_tree_metadata_failure"};
   Counter getBlobFailure{"local_store.get_blob_failure"};
   Counter getBlobMetadataFailure{"local_store.get_blob_metadata_failure"};
   Counter getTreeError{"local_store.get_tree_error"};
+  Counter getTreeMetadataError{"local_store.get_tree_metadata_error"};
   Counter getBlobError{"local_store.get_blob_error"};
   Counter getBlobMetadataError{"local_store.get_blob_metadata_error"};
 };
@@ -488,6 +501,12 @@ struct SaplingBackingStoreStats : StatsGroup<SaplingBackingStoreStats> {
   Counter fetchTreeFailure{"store.sapling.fetch_tree_failure"};
   Counter fetchTreeRetrySuccess{"store.sapling.fetch_tree_retry_success"};
   Counter fetchTreeRetryFailure{"store.sapling.fetch_tree_retry_failure"};
+  Duration getTreeMetadata{"store.sapling.get_tree_metadata_us"};
+  Duration fetchTreeMetadata{"store.sapling.fetch_blob_metadata_us"};
+  Counter fetchTreeMetadataLocal{"store.sapling.fetch_blob_metadata_local"};
+  Counter fetchTreeMetadataRemote{"store.sapling.fetch_blob_metadata_remote"};
+  Counter fetchTreeMetadataSuccess{"store.sapling.fetch_blob_metadata_success"};
+  Counter fetchTreeMetadataFailure{"store.sapling.fetch_blob_metadata_failure"};
   Counter getRootTreeLocal{"store.sapling.get_root_tree_local"};
   Counter getRootTreeRemote{"store.sapling.get_root_tree_remote"};
   Counter getRootTreeSuccess{"store.sapling.get_root_tree_success"};
