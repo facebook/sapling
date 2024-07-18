@@ -38,14 +38,22 @@ pub async fn summary(
 
     let mut table = Table::new();
 
-    let mut titles = row!["type", "bubble", "head", "root"];
+    let mut titles = row!["time in queue", "type", "bubble", "head", "root"];
     if args.client_info {
         titles.add_cell(cell!["client info"]);
     }
     table.set_titles(titles);
 
     for item in summary.items {
+        let timestamp = item
+            .enqueue_timestamp()
+            .ok_or_else(|| anyhow!("Missing enqueue timestamp"))?;
         let mut row = row![
+            format!(
+                "{}s{}ms",
+                timestamp.since_seconds(),
+                timestamp.since_millis() % 1000
+            ),
             item.derived_data_type(),
             format!("{:?}", item.bubble_id()),
             item.head_cs_id(),
