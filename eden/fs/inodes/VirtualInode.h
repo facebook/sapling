@@ -50,10 +50,11 @@ class VirtualInode {
   explicit VirtualInode(TreePtr value, mode_t mode)
       : variant_(std::move(value)), treeMode_(mode) {}
 
-  explicit VirtualInode(TreeEntry value) : variant_(std::move(value)) {
+  explicit VirtualInode(TreeEntry value) {
     XCHECK(!value.isTree())
         << "TreeEntries which represent a tree should be resolved to a tree "
         << "before being constructed into VirtualInode";
+    variant_ = std::move(value);
   }
 
   /**
