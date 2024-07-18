@@ -808,6 +808,15 @@ class EdenConfig : private ConfigSettingManager {
       true,
       this};
 
+  ConfigSetting<bool> hgEnableTreeLocalStoreCaching{
+      "hg:cache-trees-in-localstore",
+      true,
+      this};
+
+  ConfigSetting<bool> hgEnableBlobLocalStoreCaching{
+      "hg:cache-blobs-in-localstore",
+      false,
+      this};
   /**
    * List of paths to filter out when importing Mercurial trees.
    *

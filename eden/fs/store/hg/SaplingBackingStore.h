@@ -288,6 +288,9 @@ class SaplingBackingStore final : public BackingStore {
   int64_t dropAllPendingRequestsFromQueue() override;
 
  private:
+  FRIEND_TEST(
+      SaplingBackingStoreNoFaultInjectorTest,
+      cachingPolicyConstruction);
   FRIEND_TEST(SaplingBackingStoreNoFaultInjectorTest, getTree);
   FRIEND_TEST(SaplingBackingStoreWithFaultInjectorTest, getTree);
   FRIEND_TEST(SaplingBackingStoreNoFaultInjectorTest, getBlob);
@@ -305,6 +308,13 @@ class SaplingBackingStore final : public BackingStore {
   // Forbidden copy constructor and assignment operator
   SaplingBackingStore(const SaplingBackingStore&) = delete;
   SaplingBackingStore& operator=(const SaplingBackingStore&) = delete;
+
+  /**
+   * Meant to be called by the constructor to determine the local store caching
+   * policy based on configurable options. To inspect the caching policy, call
+   * BackingStore::getLocalStoreCachingPolicy()
+   */
+  LocalStoreCachingPolicy constructLocalStoreCachingPolicy();
 
   /**
    * Import the manifest for the specified revision using mercurial

@@ -266,10 +266,7 @@ SaplingBackingStore::SaplingBackingStore(
       structuredLogger_{std::move(structuredLogger)},
       logger_(std::move(logger)),
       faultInjector_{*faultInjector},
-      localStoreCachingPolicy_{
-          config_->getEdenConfig()->hgEnableBlobMetaLocalStoreCaching.getValue()
-              ? LocalStoreCachingPolicy::TreesAndBlobMetadata
-              : LocalStoreCachingPolicy::Trees},
+      localStoreCachingPolicy_{constructLocalStoreCachingPolicy()},
       runtimeOptions_(computeRuntimeOptions(std::move(runtimeOptions))),
       activityBuffer_{
           config_->getEdenConfig()->hgActivityBufferSize.getValue()},
@@ -317,10 +314,7 @@ SaplingBackingStore::SaplingBackingStore(
       structuredLogger_{std::move(structuredLogger)},
       logger_(std::move(logger)),
       faultInjector_{*faultInjector},
-      localStoreCachingPolicy_{
-          config_->getEdenConfig()->hgEnableBlobMetaLocalStoreCaching.getValue()
-              ? LocalStoreCachingPolicy::TreesAndBlobMetadata
-              : LocalStoreCachingPolicy::Trees},
+      localStoreCachingPolicy_{constructLocalStoreCachingPolicy()},
       runtimeOptions_(std::move(runtimeOptions)),
       activityBuffer_{
           config_->getEdenConfig()->hgActivityBufferSize.getValue()},
@@ -350,6 +344,37 @@ SaplingBackingStore::~SaplingBackingStore() {
   for (auto& thread : threads_) {
     thread.join();
   }
+}
+
+BackingStore::LocalStoreCachingPolicy
+SaplingBackingStore::constructLocalStoreCachingPolicy() {
+  bool shouldCacheTrees =
+      config_->getEdenConfig()->hgEnableTreeLocalStoreCaching.getValue();
+  bool shouldCacheBlobs =
+      config_->getEdenConfig()->hgEnableBlobLocalStoreCaching.getValue();
+  bool shouldCacheBlobMetadata =
+      config_->getEdenConfig()->hgEnableBlobMetaLocalStoreCaching.getValue();
+
+  using PolicyType =
+      std::underlying_type_t<BackingStore::LocalStoreCachingPolicy>;
+  PolicyType result =
+      static_cast<PolicyType>(BackingStore::LocalStoreCachingPolicy::NoCaching);
+
+  if (shouldCacheTrees) {
+    result |=
+        static_cast<PolicyType>(BackingStore::LocalStoreCachingPolicy::Trees);
+  }
+
+  if (shouldCacheBlobs) {
+    result |=
+        static_cast<PolicyType>(BackingStore::LocalStoreCachingPolicy::Blobs);
+  }
+
+  if (shouldCacheBlobMetadata) {
+    result |= static_cast<PolicyType>(
+        BackingStore::LocalStoreCachingPolicy::BlobMetadata);
+  }
+  return static_cast<BackingStore::LocalStoreCachingPolicy>(result);
 }
 
 void SaplingBackingStore::processHgEvent(const HgImportTraceEvent& event) {
