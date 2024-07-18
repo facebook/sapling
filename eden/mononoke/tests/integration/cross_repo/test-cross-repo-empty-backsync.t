@@ -111,10 +111,10 @@ make it to the large repo.
   $ killandwait $MONONOKE_PID
   $ mononoke
   $ wait_for_mononoke
-  $ enable_pushredirect 0 false false
+  $ reset_pushredirect && enable_pushredirect 0 false false
 
   $ cd "$TESTTMP/small-hg-client"
-  $ hg commit --config ui.allowemptycommit=True -m "Empty5"
+  $ hg commit --config ui.allowemptycommit=True -m "Empty5" || exit 1
 This time pushing empty commit shouldn't fail as there is no pushredirection.
   $ REPONAME="$SMALL_REPO_NAME" quiet hgmn push -r . --to master_bookmark
 

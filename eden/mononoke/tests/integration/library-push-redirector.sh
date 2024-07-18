@@ -764,4 +764,36 @@ function enable_pushredirect {
   }
 }
 EOF
+
+  enable_pushredirect_xdb "$repo_id" "$draft_push" "$public_push"
+}
+
+function enable_pushredirect_xdb {
+  local repo_id=$1
+  local draft_push=${2:-false}
+  local public_push=${3:-true}
+
+  setup_acls
+  mkdir -p "$TESTTMP"/mononoke-config
+  # redirecting stderr is not nice, but avoids a lot of noise in the "disable-all-network-access" case
+  "$MONONOKE_NEWADMIN" \
+    "${CACHE_ARGS[@]}" \
+    "${COMMON_ARGS[@]}" --log-level ERROR \
+    --mononoke-config-path  "$TESTTMP"/mononoke-config \
+    megarepo push-redirection enable --repo-id "$repo_id" -d "$draft_push" -p "$public_push" 2> /dev/null
+}
+
+function reset_pushredirect {
+  local repo_id=$1
+
+  cat > "$PUSHREDIRECT_CONF/enable" <<EOF
+{
+  "per_repo": {
+  }
+}
+EOF
+
+  sqlite3 "$TESTTMP/monsql/sqlite_dbs" <<EOF
+    DELETE from pushredirect;
+EOF
 }

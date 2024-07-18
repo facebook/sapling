@@ -66,6 +66,9 @@
   >   }
   > }
   > EOF
+  $ enable_pushredirect_xdb 1 false true
+  $ enable_pushredirect_xdb 2 false false
+  $ enable_pushredirect_xdb 2 false false
 
   $ start_large_small_repo
   Starting Mononoke server

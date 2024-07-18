@@ -735,7 +735,7 @@ function setup_common_jks() {
   merge_just_knobs <<EOF
 {
   "bools": {
-    "scm/mononoke:pushredirect_use_xdb": false,
+    "scm/mononoke:pushredirect_use_xdb": true,
     "scm/mononoke:pushredirect_disable_configerator": false
   }
 }
