@@ -235,6 +235,19 @@ impl BackingStore {
             .batch_with_callback(keys, fetch_mode, resolve)
     }
 
+    pub fn get_tree_aux(&self, node: &[u8], fetch_mode: FetchMode) -> Result<Option<TreeAuxData>> {
+        self.maybe_reload().treestore.single(node, fetch_mode)
+    }
+
+    pub fn get_tree_aux_batch<F>(&self, keys: Vec<Key>, fetch_mode: FetchMode, resolve: F)
+    where
+        F: Fn(usize, Result<Option<TreeAuxData>>),
+    {
+        self.maybe_reload()
+            .treestore
+            .batch_with_callback(keys, fetch_mode, resolve)
+    }
+
     /// Forces backing store to rescan pack files or local indexes
     #[instrument(level = "debug", skip(self))]
     pub fn refresh(&self) {
