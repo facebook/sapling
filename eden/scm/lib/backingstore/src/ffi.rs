@@ -86,6 +86,7 @@ pub(crate) mod ffi {
         entries: Vec<TreeEntry>,
     }
 
+    #[derive(Debug)]
     pub struct TreeAuxData {
         total_size: u64,
         content_blake3: [u8; 32],
@@ -299,14 +300,23 @@ pub fn sapling_backingstore_get_tree_aux(
     node: &[u8],
     fetch_mode: ffi::FetchMode,
 ) -> Result<SharedPtr<ffi::TreeAuxData>> {
-    Ok(SharedPtr::new(
-        store
-            .get_tree(node, FetchMode::from(fetch_mode))
-            .and_then(|opt| opt.ok_or_else(|| Error::msg("no tree found")))?
-            .aux_data()
-            .and_then(|aux_data| aux_data.ok_or_else(|| Error::msg("no aux data found for tree")))?
-            .into(),
-    ))
+    let aux_data = store
+        .get_tree(node, FetchMode::from(fetch_mode))
+        .and_then(|opt| opt.ok_or_else(|| Error::msg("no tree found")))
+        .and_then(|tree_entry| tree_entry.aux_data());
+
+    match aux_data {
+        Ok(Some(aux_data)) => Ok(SharedPtr::new(aux_data.into())),
+        Ok(None) => {
+            tracing::debug!("no aux data found for tree {:?}", node);
+            Err(anyhow!("no aux data found for tree {:?}", node))
+        }
+        Err(e) => Err(anyhow!(
+            "failed to get aux data for tree {:?}: {:?}",
+            node,
+            e
+        )),
+    }
 }
 
 pub fn sapling_backingstore_get_tree_aux_batch(
