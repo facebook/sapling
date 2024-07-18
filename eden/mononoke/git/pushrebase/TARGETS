@@ -1,0 +1,16 @@
+load("@fbcode_macros//build_defs:rust_binary.bzl", "rust_binary")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mononoke")
+
+rust_binary(
+    name = "git_pushrebase",
+    srcs = glob(["src/**/*.rs"]),
+    test_deps = [
+    ],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:clap",
+        "//common/rust/shed/fbinit:fbinit",
+    ],
+)

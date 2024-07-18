@@ -333,6 +333,7 @@ members = [
   "git/packfile/if/mocks",
   "git/packfile/if/services",
   "git/protocol",
+  "git/pushrebase",
   "git_server",
   "git_symbolic_refs",
   "gotham_ext",
