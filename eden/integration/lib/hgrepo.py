@@ -307,6 +307,10 @@ class HgRepository(repobase.Repository):
         hgrc.setdefault("checkout", {})
         hgrc["checkout"]["use-rust"] = "true"
 
+        # It's safe to use EdenAPI push for testing purposes
+        hgrc.add_section("push")
+        hgrc["push"]["edenapi"] = "true"
+
         self.write_hgrc(hgrc)
 
         storerequirespath = os.path.join(self.path, ".hg", "store", "requires")
@@ -478,4 +482,5 @@ class HgRepository(repobase.Repository):
         args = ["push", "-r", rev, "--to", target]
         if create:
             args.append("--create")
+
         return self.hg(*args)
