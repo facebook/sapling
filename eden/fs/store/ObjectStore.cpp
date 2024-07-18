@@ -20,6 +20,7 @@
 #include "eden/common/utils/Throw.h"
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Tree.h"
+#include "eden/fs/model/TreeMetadata.h"
 #include "eden/fs/store/BackingStore.h"
 #include "eden/fs/store/LocalStore.h"
 #include "eden/fs/store/ObjectFetchContext.h"
@@ -329,6 +330,69 @@ folly::SemiFuture<BackingStore::GetTreeResult> ObjectStore::getTreeImpl(
                       return makeImmediateFuture<BackingStore::GetTreeResult>(
                           ew);
                     });
+          })
+      .semi();
+}
+
+ImmediateFuture<TreeMetadata> ObjectStore::getTreeMetadata(
+    const ObjectId& id,
+    const ObjectFetchContextPtr& fetchContext) const {
+  DurationScope<EdenStats> statScope{
+      stats_, &ObjectStoreStats::getTreeMetadata};
+
+  // TODO(cuev): Check in-memory cache
+
+  deprioritizeWhenFetchHeavy(*fetchContext);
+
+  return ImmediateFuture<BackingStore::GetTreeMetaResult>{
+      getTreeMetadataImpl(id, fetchContext)}
+      .thenValue(
+          [self = shared_from_this(),
+           fetchContext = fetchContext.copy(),
+           id,
+           statScope =
+               std::move(statScope)](BackingStore::GetTreeMetaResult result)
+              -> ImmediateFuture<TreeMetadata> {
+            if (!result.treeMeta) {
+              self->stats_->increment(&ObjectStoreStats::getTreeMetadataFailed);
+              XLOGF(DBG4, "unable to find aux data for {}", id);
+              throwf<std::domain_error>("aux data for {} not found", id);
+            }
+            auto metadata = std::move(result.treeMeta);
+            // TODO(cuev): Write back to caches
+            fetchContext->didFetch(
+                ObjectFetchContext::TreeMetadata, id, result.origin);
+            self->updateProcessFetch(*fetchContext);
+            return *metadata;
+          });
+}
+
+folly::SemiFuture<BackingStore::GetTreeMetaResult>
+ObjectStore::getTreeMetadataImpl(
+    const ObjectId& id,
+    const ObjectFetchContextPtr& context) const {
+  // TODO(cuev): Look in the LocalStore for TreeMetadata
+
+  return ImmediateFuture{backingStore_->getTreeMetadata(id, context)}
+      .thenValue(
+          [self = shared_from_this(), id, context = context.copy()](
+              BackingStore::GetTreeMetaResult result)
+              -> ImmediateFuture<BackingStore::GetTreeMetaResult> {
+            if (result.treeMeta) {
+              self->stats_->increment(
+                  &ObjectStoreStats::getTreeMetadataFromBackingStore);
+              return result;
+            }
+            self->stats_->increment(&ObjectStoreStats::getTreeMetadataFailed);
+            return BackingStore::GetTreeMetaResult{
+                nullptr, ObjectFetchContext::Origin::NotFetched};
+          })
+      .thenError(
+          [self = shared_from_this(), id](const folly::exception_wrapper& ew)
+              -> ImmediateFuture<BackingStore::GetTreeMetaResult> {
+            self->stats_->increment(&ObjectStoreStats::getTreeMetadataFailed);
+            XLOGF(DBG4, "unable to find aux data for {}", id);
+            return makeImmediateFuture<BackingStore::GetTreeMetaResult>(ew);
           })
       .semi();
 }

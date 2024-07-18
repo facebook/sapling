@@ -178,7 +178,16 @@ class ObjectStore : public IObjectStore,
       const ObjectId& id,
       const ObjectFetchContextPtr& context) const override;
 
-  // TODO(T192128228): Add GetTreeMetadata method for caching purposes
+  /**
+   * Get metadata about a tree.
+   *
+   * This returns an ImmediateFuture object that will produce the TreeMetadata
+   * when it is ready.  It may result in a std::domain_error if the specified
+   * tree does not exist, or possibly other exceptions on error.
+   */
+  ImmediateFuture<TreeMetadata> getTreeMetadata(
+      const ObjectId& id,
+      const ObjectFetchContextPtr& context) const;
 
   /**
    * Prefetch all the blobs represented by the HashRange.
@@ -350,6 +359,10 @@ class ObjectStore : public IObjectStore,
   }
 
   folly::SemiFuture<BackingStore::GetTreeResult> getTreeImpl(
+      const ObjectId& id,
+      const ObjectFetchContextPtr& context) const;
+
+  folly::SemiFuture<BackingStore::GetTreeMetaResult> getTreeMetadataImpl(
       const ObjectId& id,
       const ObjectFetchContextPtr& context) const;
 
