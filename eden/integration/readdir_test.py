@@ -890,6 +890,8 @@ class ReaddirTest(testcase.EdenRepoTest):
                     sync=SyncBehavior(),
                 )
             )
+            print(f"expected: \n{expected}")
+            print(f"actual: \n{actual_result}")
             self.assertEqual(
                 expected,
                 actual_result,
@@ -912,6 +914,8 @@ class ReaddirTest(testcase.EdenRepoTest):
                     sync=SyncBehavior(),
                 )
             )
+            print(f"expected: \n{expected}")
+            print(f"actual: \n{actual}")
             self.assertEqual(expected, actual)
 
             # non existent directory
@@ -933,6 +937,8 @@ class ReaddirTest(testcase.EdenRepoTest):
                     sync=SyncBehavior(),
                 )
             )
+            print(f"expected: \n{expected}")
+            print(f"actual: \n{actual}")
             self.assertEqual(expected, actual)
 
             # file
@@ -954,6 +960,8 @@ class ReaddirTest(testcase.EdenRepoTest):
                     sync=SyncBehavior(),
                 )
             )
+            print(f"expected: \n{expected}")
+            print(f"actual: \n{actual}")
             self.assertEqual(expected, actual)
 
             # empty string
@@ -1003,8 +1011,8 @@ class ReaddirTest(testcase.EdenRepoTest):
                     sync=SyncBehavior(),
                 )
             )
-            print(expected)
-            print(actual_result)
+            print(f"expected: \n{expected}")
+            print(f"actual: \n{actual_result}")
 
             self.assertEqual(
                 expected,
@@ -1053,8 +1061,8 @@ class ReaddirTest(testcase.EdenRepoTest):
                     sync=SyncBehavior(),
                 )
             )
-            print(expected)
-            print(actual)
+            print(f"expected: \n{expected}")
+            print(f"actual: \n{actual}")
 
             self.assertEqual(
                 expected,
@@ -1080,8 +1088,8 @@ class ReaddirTest(testcase.EdenRepoTest):
                     sync=SyncBehavior(),
                 )
             )
-            print(expected)
-            print(actual)
+            print(f"expected: \n{expected}")
+            print(f"actual: \n{actual}")
             self.assertEqual(
                 expected,
                 actual.dirLists[0].get_dirListAttributeData()[entry_name],
