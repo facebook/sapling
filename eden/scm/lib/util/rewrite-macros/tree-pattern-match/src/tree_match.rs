@@ -124,8 +124,8 @@ impl<T> PlaceholderExt<T> for Vec<Item<T>> {
 /// Similar to regex match. A match can have multiple captures.
 #[derive(Debug, Default, Clone, Eq, PartialEq)]
 pub struct Match<T> {
-    /// Length of the match.
-    len: usize,
+    /// End of the match (exclusive).
+    end: usize,
     /// Start of the match. `items[start .. start + len]` matches `pat`.
     start: usize,
     /// Placeholder -> matched items.
@@ -384,20 +384,20 @@ impl<'a, T: PartialEq + Clone + fmt::Debug> SeqMatchState<'a, T> {
         for &end in &self.match_ends {
             let mut m = Match {
                 captures: Default::default(),
-                len: 0,
+                end: 0,
                 start: 0,
             };
             // Just figures out the matching start position so we can check overalp
             // and maybe replace the last match.
             // There are probably smarter ways to handle this...
             self.fill_match_with_match_end(&mut m, Some(end), false);
-            assert_eq!(m.start + m.len, end);
+            assert_eq!(m.end, end);
             if let Some(last) = matches.last() {
                 if last.start >= m.start {
-                    assert!(last.start + last.len < m.start + m.len);
+                    assert!(last.end < m.end);
                     // Current match is better than last. Replace last.
                     matches.pop();
-                } else if last.start + last.len > m.start {
+                } else if last.end > m.start {
                     // Current match overlaps with last. Skip current.
                     continue;
                 }
@@ -472,7 +472,7 @@ impl<'a, T: PartialEq + Clone + fmt::Debug> SeqMatchState<'a, T> {
             }
         }
         r#match.start = item_len;
-        r#match.len = match_end - r#match.start;
+        r#match.end = match_end;
     }
 
     /// Cached match result for calculate(pat_end, item_end).
@@ -598,7 +598,7 @@ impl<'a, T: PartialEq + Clone + fmt::Debug + 'static> TreeMatchState<'a, T> {
                 new_items.extend_from_slice(replaced.slice(items, end, m.start));
                 let replaced = replace.expand(&m);
                 new_items.extend(replaced);
-                end = m.start + m.len;
+                end = m.end;
             }
             new_items.extend_from_slice(replaced.slice(items, end, items.len()));
             replaced.0 = new_items.into();
@@ -645,7 +645,7 @@ fn is_covered<T>(index: usize, sorted_matches: &[Match<T>]) -> bool {
         Err(idx) => sorted_matches.get(idx.saturating_sub(1)),
     };
     if let Some(m) = m {
-        if m.start <= index && m.start + m.len > index {
+        if m.start <= index && m.end > index {
             return true;
         }
     }
