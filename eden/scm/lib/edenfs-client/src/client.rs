@@ -247,9 +247,10 @@ pub(crate) fn extract_error<V, E: std::error::Error + Send + Sync + 'static>(
 
 async fn get_socket_transport(sock_path: &Path) -> Result<SocketTransport<UnixStream>> {
     let sock = UnixStream::connect(&sock_path).await?;
-    Ok(SocketTransport::new_with_error_handler(sock, |error| {
-        error!(?error, "thrift transport error")
-    }))
+    Ok(SocketTransport::new_with_error_handler(
+        sock,
+        |error| error!(target: "transport_errors", thrift_transport_error=?error),
+    ))
 }
 
 #[derive(Deserialize)]
