@@ -371,6 +371,7 @@ mod test {
         );
         builder.add_hg_warmers(&repo.repo_derived_data_arc(), &repo.phases_arc())?;
         let wbc = builder.build().await?;
+        wbc.sync(&ctx).await;
         let session_bookmark_cache = SessionBookmarkCache::new(BasicTestRepo {
             repo: repo.blob_repo.clone(),
             wbc: Some(Arc::new(wbc)),

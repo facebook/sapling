@@ -57,10 +57,12 @@ use futures_stats::TimedFutureExt;
 use futures_watchdog::WatchdogExt;
 use git_types::MappedGitCommitId;
 use git_types::RootGitDeltaManifestId;
+use git_types::RootGitDeltaManifestV2Id;
 use git_types::TreeHandle;
 use itertools::Itertools;
 use lock_ext::RwLockExt;
 use mercurial_derivation::MappedHgChangesetId;
+use mercurial_derivation::RootHgAugmentedManifestId;
 use mononoke_types::ChangesetId;
 use mononoke_types::DerivableType;
 use mononoke_types::Timestamp;
@@ -209,91 +211,88 @@ impl WarmBookmarksCacheBuilder {
                     self.repo_identity.name()
                 ));
             }
+
+            self.warmers
+                .extend(self.derived_data_warmer(ty, repo_derived_data));
         }
 
-        if types.contains(&MappedHgChangesetId::VARIANT) {
-            self.warmers
-                .push(create_derived_data_warmer::<MappedHgChangesetId>(
-                    &self.ctx,
-                    repo_derived_data.clone(),
-                ));
-        }
-
-        if types.contains(&RootUnodeManifestId::VARIANT) {
-            self.warmers
-                .push(create_derived_data_warmer::<RootUnodeManifestId>(
-                    &self.ctx,
-                    repo_derived_data.clone(),
-                ));
-        }
-        if types.contains(&RootFsnodeId::VARIANT) {
-            self.warmers
-                .push(create_derived_data_warmer::<RootFsnodeId>(
-                    &self.ctx,
-                    repo_derived_data.clone(),
-                ));
-        }
-        if types.contains(&RootSkeletonManifestId::VARIANT) {
-            self.warmers
-                .push(create_derived_data_warmer::<RootSkeletonManifestId>(
-                    &self.ctx,
-                    repo_derived_data.clone(),
-                ));
-        }
-        if types.contains(&RootBlameV2::VARIANT) {
-            self.warmers.push(create_derived_data_warmer::<RootBlameV2>(
-                &self.ctx,
-                repo_derived_data.clone(),
-            ));
-        }
-        if types.contains(&ChangesetInfo::VARIANT) {
-            self.warmers
-                .push(create_derived_data_warmer::<ChangesetInfo>(
-                    &self.ctx,
-                    repo_derived_data.clone(),
-                ));
-        }
-        if types.contains(&RootDeletedManifestV2Id::VARIANT) {
-            self.warmers
-                .push(create_derived_data_warmer::<RootDeletedManifestV2Id>(
-                    &self.ctx,
-                    repo_derived_data.clone(),
-                ));
-        }
-        if types.contains(&RootFastlog::VARIANT) {
-            self.warmers.push(create_derived_data_warmer::<RootFastlog>(
-                &self.ctx,
-                repo_derived_data.clone(),
-            ));
-        }
-        if types.contains(&RootBssmV3DirectoryId::VARIANT) {
-            self.warmers
-                .push(create_derived_data_warmer::<RootBssmV3DirectoryId>(
-                    &self.ctx,
-                    repo_derived_data.clone(),
-                ));
-        }
-        if types.contains(&TreeHandle::VARIANT) {
-            self.warmers.push(create_derived_data_warmer::<TreeHandle>(
-                &self.ctx,
-                repo_derived_data.clone(),
-            ));
-        }
-        if types.contains(&MappedGitCommitId::VARIANT) {
-            self.warmers
-                .push(create_derived_data_warmer::<MappedGitCommitId>(
-                    &self.ctx,
-                    repo_derived_data.clone(),
-                ));
-        }
-        if types.contains(&RootGitDeltaManifestId::VARIANT) {
-            self.warmers
-                .push(create_derived_data_warmer::<RootGitDeltaManifestId>(
-                    &self.ctx,
-                    repo_derived_data.clone(),
-                ));
-        }
         Ok(())
+    }
+
+    fn derived_data_warmer(
+        &self,
+        derivable_type: &DerivableType,
+        repo_derived_data: &ArcRepoDerivedData,
+    ) -> Option<Warmer> {
+        match derivable_type {
+            DerivableType::Unodes => Some(create_derived_data_warmer::<RootUnodeManifestId>(
+                &self.ctx,
+                repo_derived_data.clone(),
+            )),
+            DerivableType::BlameV2 => Some(create_derived_data_warmer::<RootBlameV2>(
+                &self.ctx,
+                repo_derived_data.clone(),
+            )),
+            DerivableType::FileNodes => {
+                // TODO: add warmer for filenodes
+                None
+            }
+            DerivableType::HgChangesets => Some(create_derived_data_warmer::<MappedHgChangesetId>(
+                &self.ctx,
+                repo_derived_data.clone(),
+            )),
+            DerivableType::HgAugmentedManifests => Some(create_derived_data_warmer::<
+                RootHgAugmentedManifestId,
+            >(
+                &self.ctx, repo_derived_data.clone()
+            )),
+            DerivableType::Fsnodes => Some(create_derived_data_warmer::<RootFsnodeId>(
+                &self.ctx,
+                repo_derived_data.clone(),
+            )),
+            DerivableType::Fastlog => Some(create_derived_data_warmer::<RootFastlog>(
+                &self.ctx,
+                repo_derived_data.clone(),
+            )),
+            DerivableType::DeletedManifests => Some(create_derived_data_warmer::<
+                RootDeletedManifestV2Id,
+            >(
+                &self.ctx, repo_derived_data.clone()
+            )),
+            DerivableType::SkeletonManifests => Some(create_derived_data_warmer::<
+                RootSkeletonManifestId,
+            >(
+                &self.ctx, repo_derived_data.clone()
+            )),
+            DerivableType::ChangesetInfo => Some(create_derived_data_warmer::<ChangesetInfo>(
+                &self.ctx,
+                repo_derived_data.clone(),
+            )),
+            DerivableType::GitTrees => Some(create_derived_data_warmer::<TreeHandle>(
+                &self.ctx,
+                repo_derived_data.clone(),
+            )),
+            DerivableType::GitDeltaManifests => Some(create_derived_data_warmer::<
+                RootGitDeltaManifestId,
+            >(
+                &self.ctx, repo_derived_data.clone()
+            )),
+            DerivableType::GitDeltaManifestsV2 => Some(create_derived_data_warmer::<
+                RootGitDeltaManifestV2Id,
+            >(
+                &self.ctx, repo_derived_data.clone()
+            )),
+            DerivableType::BssmV3 => Some(create_derived_data_warmer::<RootBssmV3DirectoryId>(
+                &self.ctx,
+                repo_derived_data.clone(),
+            )),
+            DerivableType::GitCommits => Some(create_derived_data_warmer::<MappedGitCommitId>(
+                &self.ctx,
+                repo_derived_data.clone(),
+            )),
+            DerivableType::TestManifests => None,
+            DerivableType::TestShardedManifests => None,
+        }
     }
 
     fn add_public_phase_warmer(&mut self, phases: &ArcPhases) {
