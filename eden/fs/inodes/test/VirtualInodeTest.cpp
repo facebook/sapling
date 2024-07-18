@@ -846,7 +846,13 @@ TEST(VirtualInodeTest, fileOpsOnCorrectObjectsOnly) {
       if (metadataTry.hasValue()) {
         auto& metadata = metadataTry.value();
         EXPECT_TRUE(metadata.sha1.value().hasException());
-        EXPECT_TRUE(metadata.size.value().hasException());
+        if (info.isMaterialized()) {
+          // We can't get the size/blake3 of materialized directory
+          EXPECT_FALSE(metadata.size.has_value());
+        } else {
+          // We require a remote lookup to get the size/blake3 of directories
+          EXPECT_TRUE(metadata.size.value().hasException());
+        }
         EXPECT_EQ(metadata.type.value().value(), info.getTreeEntryType())
             << " on path " << info.getLogPath();
       }
@@ -878,7 +884,13 @@ TEST(VirtualInodeTest, fileOpsOnCorrectObjectsOnly) {
       if (metadataTry.hasValue()) {
         auto& metadata = metadataTry.value();
         EXPECT_FALSE(metadata.sha1.has_value());
-        EXPECT_TRUE(metadata.size.value().hasException());
+        if (info.isMaterialized()) {
+          // We can't get the size/blake3 of materialized directory
+          EXPECT_FALSE(metadata.size.has_value());
+        } else {
+          // We require a remote lookup to get the size/blake3 of directories
+          EXPECT_TRUE(metadata.size.value().hasException());
+        }
         EXPECT_EQ(metadata.type.value().value(), info.getTreeEntryType())
             << " on path " << info.getLogPath();
       }

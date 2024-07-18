@@ -81,7 +81,11 @@ class ReaddirTest(testcase.EdenRepoTest):
     hello_id: bytes
     slink_id: bytes
     adir_id: bytes
+    adir_size_result: SizeOrError
+    adir_blake3_result: Blake3OrError
     cdir_subdir_id: bytes
+    cdir_subdir_size_result: SizeOrError
+    cdir_subdir_blake3_result: Blake3OrError
 
     def setup_eden_test(self) -> None:
         self.enable_windows_symlinks = True
@@ -169,6 +173,11 @@ class ReaddirTest(testcase.EdenRepoTest):
         self.repo.write_file("bdir/file", "bar!\n")
         self.commit3 = self.repo.commit("Commit 3.")
 
+        # Eagerepo requires commits to be pushed to the server so that
+        # aux data can be derived for trees
+        if self.repo_type in ["hg", "filteredhg"]:
+            self.repo.push(rev=".", target="master", create=True)
+
         self.adir_file_id = {
             "hg": self.convert_raw_oid_to_foid(
                 RawObjectId(
@@ -219,6 +228,32 @@ class ReaddirTest(testcase.EdenRepoTest):
             "git": b"aa0e79d49fe12527662d2d73ea839691eb472c9a",
         }[self.repo_type]
 
+        # There is no easy way to compute the blake3/size of a directory on the fly (in Python)
+        # Since these hashes/sizes should stay constant, we can just hardcode the expected result
+        adir_size = 207
+        adir_blake3 = b"\x73\xf0\xc6\xe3\x6b\x3c\xb9\xfc\x64\xa8\xa3\x39\x24\x57\xd3\xc9\xd0\x2d\x11\xfd\x22\xe5\x36\x71\x94\x5d\x95\x3f\xfa\xc3\x8c\x92"
+        self.adir_size_result = {
+            "hg": SizeOrError(adir_size),
+            "filteredhg": SizeOrError(adir_size),
+            "git": SizeOrError(
+                error=EdenError(
+                    message="std::domain_error: getTreeMetadata is not implemented for GitBackingStores",
+                    errorType=EdenErrorType.GENERIC_ERROR,
+                )
+            ),
+        }[self.repo_type]
+
+        self.adir_blake3_result = {
+            "hg": Blake3OrError(adir_blake3),
+            "filteredhg": Blake3OrError(adir_blake3),
+            "git": Blake3OrError(
+                error=EdenError(
+                    message="std::domain_error: getTreeMetadata is not implemented for GitBackingStores",
+                    errorType=EdenErrorType.GENERIC_ERROR,
+                )
+            ),
+        }[self.repo_type]
+
         self.cdir_subdir_id = {
             "hg": self.convert_raw_oid_to_foid(
                 RawObjectId(
@@ -227,6 +262,32 @@ class ReaddirTest(testcase.EdenRepoTest):
                 )
             ),
             "git": b"f5497927ddcc19b41c4ca57e01ff99339f93db13",
+        }[self.repo_type]
+
+        # There is no easy way to compute the blake3/size of a directory on the fly (in Python)
+        # Since these hashes/sizes should stay constant, we can just hardcode the expected result
+        cdir_subdir_size = 211
+        cdir_subdir_blake3 = b"\x2f\xe0\x36\xd6\xf0\x6a\xf6\xb5\x60\xe7\xe1\xf4\x95\x1c\x9c\xd7\xf1\x62\x08\x32\xa2\xee\xb8\x42\x16\x9b\xd4\xe7\x7b\x83\x0a\x94"
+        self.cdir_subdir_size_result = {
+            "hg": SizeOrError(cdir_subdir_size),
+            "filteredhg": SizeOrError(cdir_subdir_size),
+            "git": SizeOrError(
+                error=EdenError(
+                    message="std::domain_error: getTreeMetadata is not implemented for GitBackingStores",
+                    errorType=EdenErrorType.GENERIC_ERROR,
+                )
+            ),
+        }[self.repo_type]
+
+        self.cdir_subdir_blake3_result = {
+            "hg": Blake3OrError(cdir_subdir_blake3),
+            "filteredhg": Blake3OrError(cdir_subdir_blake3),
+            "git": Blake3OrError(
+                error=EdenError(
+                    message="std::domain_error: getTreeMetadata is not implemented for GitBackingStores",
+                    errorType=EdenErrorType.GENERIC_ERROR,
+                )
+            ),
         }[self.repo_type]
 
     def assert_eden_error(
@@ -529,22 +590,10 @@ class ReaddirTest(testcase.EdenRepoTest):
                         errorType=EdenErrorType.POSIX_ERROR,
                     )
                 ),
-                SizeOrError(
-                    error=EdenError(
-                        message="adir: Is a directory",
-                        errorCode=21,
-                        errorType=EdenErrorType.POSIX_ERROR,
-                    )
-                ),
+                self.adir_size_result,
                 SourceControlTypeOrError(SourceControlType.TREE),
                 ObjectIdOrError(self.adir_id),
-                blake3=Blake3OrError(
-                    error=EdenError(
-                        message="adir: Is a directory",
-                        errorCode=21,
-                        errorType=EdenErrorType.POSIX_ERROR,
-                    )
-                ),
+                self.adir_blake3_result,
             )
         )
 
@@ -975,41 +1024,24 @@ class ReaddirTest(testcase.EdenRepoTest):
         self,
         parent_name: bytes,
         entry_name: bytes,
-        error_message: str,
-        error_code: int,
         source_control_type: SourceControlType,
+        sha1_result: Sha1OrError,
+        blake3_result: Blake3OrError,
+        size_result: SizeOrError,
         object_id: Optional[bytes],
     ) -> None:
         with self.get_thrift_client_legacy() as client:
             expected = FileAttributeDataOrErrorV2(
                 fileAttributeData=FileAttributeDataV2(
-                    sha1=Sha1OrError(
-                        error=EdenError(
-                            message=error_message,
-                            errorCode=error_code,
-                            errorType=EdenErrorType.POSIX_ERROR,
-                        )
-                    ),
-                    size=SizeOrError(
-                        error=EdenError(
-                            message=error_message,
-                            errorCode=error_code,
-                            errorType=EdenErrorType.POSIX_ERROR,
-                        )
-                    ),
+                    sha1=sha1_result,
+                    size=size_result,
                     sourceControlType=SourceControlTypeOrError(
                         sourceControlType=source_control_type
                     ),
                     objectId=ObjectIdOrError(
                         objectId=object_id,
                     ),
-                    blake3=Blake3OrError(
-                        error=EdenError(
-                            message=error_message,
-                            errorCode=error_code,
-                            errorType=EdenErrorType.POSIX_ERROR,
-                        )
-                    ),
+                    blake3=blake3_result,
                 )
             )
 
@@ -1059,13 +1091,27 @@ class ReaddirTest(testcase.EdenRepoTest):
         self.readdir_no_size_or_sha1(
             parent_name=b"cdir",
             entry_name=b"subdir",
-            error_message="cdir/subdir: Is a directory",
-            error_code=21,
             source_control_type=SourceControlType.TREE,
+            sha1_result=Sha1OrError(
+                error=EdenError(
+                    message="cdir/subdir: Is a directory",
+                    errorCode=21,
+                    errorType=EdenErrorType.POSIX_ERROR,
+                )
+            ),
+            blake3_result=self.cdir_subdir_blake3_result,
+            size_result=self.cdir_subdir_size_result,
             object_id=self.cdir_subdir_id,
         )
+
         if sys.platform != "win32":
             sockpath = self.get_path("adir/asock")
+            sock_error = EdenError(
+                message="adir/asock: file is a non-source-control type: 12: Invalid argument",
+                errorCode=22,
+                errorType=EdenErrorType.POSIX_ERROR,
+            )
+
             # UDS are not supported in python on Win until 3.9:
             # https://bugs.python.org/issue33408
             with socket.socket(socket.AF_UNIX) as sock:
@@ -1073,18 +1119,34 @@ class ReaddirTest(testcase.EdenRepoTest):
                 self.readdir_no_size_or_sha1(
                     parent_name=b"adir",
                     entry_name=b"asock",
-                    error_message="adir/asock: file is a non-source-control type: 12: Invalid argument",
-                    error_code=22,
                     source_control_type=SourceControlType.UNKNOWN,
+                    sha1_result=Sha1OrError(error=sock_error),
+                    blake3_result=Blake3OrError(
+                        error=sock_error,
+                    ),
+                    size_result=SizeOrError(
+                        error=sock_error,
+                    ),
                     object_id=None,
                 )
+
+        slink_error = EdenError(
+            message="slink: file is a symlink: Invalid argument",
+            errorCode=22,
+            errorType=EdenErrorType.POSIX_ERROR,
+        )
 
         self.readdir_no_size_or_sha1(
             parent_name=b"",
             entry_name=b"slink",
-            error_message="slink: file is a symlink: Invalid argument",
-            error_code=22,
             source_control_type=SourceControlType.SYMLINK,
+            sha1_result=Sha1OrError(error=slink_error),
+            blake3_result=Blake3OrError(
+                error=slink_error,
+            ),
+            size_result=SizeOrError(
+                error=slink_error,
+            ),
             object_id=self.slink_id,
         )
 

@@ -188,9 +188,11 @@ class VirtualInode {
       const ObjectFetchContextPtr& fetchContext,
       bool blake3Required = false) const;
 
-  EntryAttributes getEntryAttributesForNonFile(
+  ImmediateFuture<EntryAttributes> getEntryAttributesForNonFile(
       EntryAttributeFlags requestedAttributes,
       RelativePathPiece path,
+      const std::shared_ptr<ObjectStore>& objectStore,
+      const ObjectFetchContextPtr& fetchContext,
       std::optional<TreeEntryType> entryType,
       int errorCode,
       std::string additionalErrorContext = {}) const;

@@ -13,6 +13,7 @@
 #include "eden/fs/inodes/InodeError.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/model/Tree.h"
+#include "eden/fs/model/TreeMetadata.h"
 #include "eden/fs/service/gen-cpp2/eden_types.h"
 #include "eden/fs/store/ObjectStore.h"
 
@@ -215,9 +216,11 @@ ImmediateFuture<BlobMetadata> VirtualInode::getBlobMetadata(
       });
 }
 
-EntryAttributes VirtualInode::getEntryAttributesForNonFile(
+ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributesForNonFile(
     EntryAttributeFlags requestedAttributes,
     RelativePathPiece path,
+    const std::shared_ptr<ObjectStore>& objectStore,
+    const ObjectFetchContextPtr& fetchContext,
     std::optional<TreeEntryType> entryType,
     int errorCode,
     std::string additionalErrorContext) const {
@@ -227,26 +230,91 @@ EntryAttributes VirtualInode::getEntryAttributesForNonFile(
         folly::Try<Hash20>{PathError{errorCode, path, additionalErrorContext}};
   }
 
-  std::optional<folly::Try<Hash32>> blake3;
-  if (requestedAttributes.contains(ENTRY_ATTRIBUTE_BLAKE3)) {
-    blake3 =
-        folly::Try<Hash32>{PathError{errorCode, path, additionalErrorContext}};
-  }
-
-  std::optional<folly::Try<uint64_t>> size;
-  if (requestedAttributes.contains(ENTRY_ATTRIBUTE_SIZE)) {
-    size = folly::Try<uint64_t>{
-        PathError{errorCode, path, std::move(additionalErrorContext)}};
-  }
-
   std::optional<folly::Try<std::optional<TreeEntryType>>> type;
   if (requestedAttributes.contains(ENTRY_ATTRIBUTE_SOURCE_CONTROL_TYPE)) {
     type = folly::Try<std::optional<TreeEntryType>>{entryType};
   }
 
   std::optional<folly::Try<std::optional<ObjectId>>> objectId;
+  auto oid = getObjectId();
   if (requestedAttributes.contains(ENTRY_ATTRIBUTE_OBJECT_ID)) {
-    objectId = folly::Try<std::optional<ObjectId>>{getObjectId()};
+    objectId = folly::Try<std::optional<ObjectId>>{oid};
+  }
+
+  std::optional<folly::Try<Hash32>> blake3;
+  std::optional<folly::Try<uint64_t>> size;
+
+  // The entry is a symlink, socket, or other unsupported type. We return
+  // error values for these entry types if they were requested.
+  //
+  // entryType is std::nullopt if the entry is a socket or other non-scm type
+  if (entryType.value_or(TreeEntryType::SYMLINK) != TreeEntryType::TREE) {
+    if (requestedAttributes.contains(ENTRY_ATTRIBUTE_SIZE)) {
+      size = folly::Try<uint64_t>{
+          PathError{errorCode, path, additionalErrorContext}};
+    }
+
+    if (requestedAttributes.contains(ENTRY_ATTRIBUTE_BLAKE3)) {
+      blake3 = folly::Try<Hash32>{
+          PathError{errorCode, path, std::move(additionalErrorContext)}};
+    }
+  } else {
+    // The entry is a tree, and therefore we can attempt to compute tree
+    // metadata for it. However, we can only compute the additional attributes
+    // of trees that have ObjectIds. In other words, the tree must be
+    // unmaterialized.
+    if ((requestedAttributes.contains(ENTRY_ATTRIBUTE_BLAKE3) ||
+         requestedAttributes.contains(ENTRY_ATTRIBUTE_SIZE)) &&
+        oid.has_value()) {
+      auto treeMetaFut =
+          objectStore->getTreeMetadata(oid.value(), fetchContext)
+              .thenValue(
+                  [requestedAttributes, sha1, type, objectId, blake3, size](
+                      TreeMetadata treeMeta) mutable {
+                    if (requestedAttributes.contains(ENTRY_ATTRIBUTE_BLAKE3)) {
+                      blake3 =
+                          std::optional<folly::Try<Hash32>>{treeMeta.blake3};
+                    }
+                    if (requestedAttributes.contains(ENTRY_ATTRIBUTE_SIZE)) {
+                      size = std::optional<folly::Try<uint64_t>>{
+                          std::move(treeMeta.size)};
+                    }
+                    return EntryAttributes{
+                        std::move(sha1),
+                        std::move(blake3),
+                        std::move(size),
+                        std::move(type),
+                        std::move(objectId)};
+                  });
+      return std::move(treeMetaFut)
+          .thenError([requestedAttributes,
+                      treeSha1 = std::move(sha1),
+                      treeType = std::move(type),
+                      treeObjectId = std::move(objectId),
+                      treeBlake3 = std::move(blake3),
+                      treeSize = std::move(size)](
+                         const folly::exception_wrapper& ex) mutable {
+            // We failed to get tree aux data. This shouldn't cause the
+            // entire result to be an error. We can return whichever
+            // attributes we successfully fetched.
+            if (requestedAttributes.contains(ENTRY_ATTRIBUTE_BLAKE3)) {
+              treeBlake3 = folly::Try<Hash32>{ex};
+            }
+
+            if (requestedAttributes.contains(ENTRY_ATTRIBUTE_SIZE)) {
+              treeSize = folly::Try<uint64_t>{ex};
+            }
+
+            return EntryAttributes{
+                std::move(treeSha1),
+                std::move(treeBlake3),
+                std::move(treeSize),
+                std::move(treeType),
+                std::move(treeObjectId),
+            };
+          });
+    }
+    // We return empty tree metadata attributes for materialized directories
   }
 
   return EntryAttributes{
@@ -271,11 +339,18 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributes(
       break;
     case dtype_t::Dir:
       return getEntryAttributesForNonFile(
-          requestedAttributes, path, TreeEntryType::TREE, EISDIR);
+          requestedAttributes,
+          path,
+          objectStore,
+          fetchContext,
+          TreeEntryType::TREE,
+          EISDIR);
     case dtype_t::Symlink:
       return getEntryAttributesForNonFile(
           requestedAttributes,
           path,
+          objectStore,
+          fetchContext,
           TreeEntryType::SYMLINK,
           EINVAL,
           "file is a symlink");
@@ -283,6 +358,8 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributes(
       return getEntryAttributesForNonFile(
           requestedAttributes,
           path,
+          objectStore,
+          fetchContext,
           std::nullopt,
           EINVAL,
           fmt::format(
