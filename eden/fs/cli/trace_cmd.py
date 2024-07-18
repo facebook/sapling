@@ -64,6 +64,7 @@ Resource Type:
 \U0001F4C4 Blob (file content)
 \U0001F332 Tree (directory content)
 \U0001F5C2\U00000020 Blob Metadata (sha1, size, blake3)
+\U000100B7 Tree Metadata (size, blake3)
 
 Import Priority (--verbose):
 \U0001F535 LOW

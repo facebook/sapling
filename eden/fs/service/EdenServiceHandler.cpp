@@ -1708,6 +1708,9 @@ void convertHgImportTraceEventToHgEvent(
     case HgImportTraceEvent::BLOBMETA:
       te.resourceType_ref() = HgResourceType::BLOBMETA;
       break;
+    case HgImportTraceEvent::TREEMETA:
+      te.resourceType_ref() = HgResourceType::TREEMETA;
+      break;
   }
 
   switch (event.importPriority) {

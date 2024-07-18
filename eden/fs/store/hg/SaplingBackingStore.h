@@ -55,6 +55,7 @@ struct HgImportTraceEvent : TraceEventBase {
     BLOB,
     TREE,
     BLOBMETA,
+    TREEMETA,
   };
 
   static HgImportTraceEvent queue(
@@ -192,18 +193,22 @@ class SaplingBackingStore final : public BackingStore {
     BLOB,
     TREE,
     BLOBMETA,
+    TREEMETA,
     BATCHED_BLOB,
     BATCHED_TREE,
     BATCHED_BLOBMETA,
+    BATCHED_TREEMETA,
     PREFETCH
   };
-  constexpr static std::array<SaplingImportObject, 7> saplingImportObjects{
+  constexpr static std::array<SaplingImportObject, 9> saplingImportObjects{
       SaplingImportObject::BLOB,
       SaplingImportObject::TREE,
       SaplingImportObject::BLOBMETA,
+      SaplingImportObject::TREEMETA,
       SaplingImportObject::BATCHED_BLOB,
       SaplingImportObject::BATCHED_TREE,
       SaplingImportObject::BATCHED_BLOBMETA,
+      SaplingImportObject::BATCHED_TREEMETA,
       SaplingImportObject::PREFETCH};
 
   static folly::StringPiece stringOfSaplingImportObject(
@@ -505,6 +510,8 @@ class SaplingBackingStore final : public BackingStore {
       std::vector<std::shared_ptr<SaplingImportRequest>>&& requests);
   void processBlobMetaImportRequests(
       std::vector<std::shared_ptr<SaplingImportRequest>>&& requests);
+  void processTreeMetaImportRequests(
+      std::vector<std::shared_ptr<SaplingImportRequest>>&& requests);
 
   ImmediateFuture<GetGlobFilesResult> getGlobFiles(
       const RootId& id,
@@ -638,6 +645,8 @@ class SaplingBackingStore final : public BackingStore {
       pendingImportBlobMetaWatches_;
   mutable RequestMetricsScope::LockedRequestWatchList pendingImportTreeWatches_;
   mutable RequestMetricsScope::LockedRequestWatchList
+      pendingImportTreeMetaWatches_;
+  mutable RequestMetricsScope::LockedRequestWatchList
       pendingImportPrefetchWatches_;
 
   // Track metrics for imports currently fetching data from hg
@@ -646,6 +655,8 @@ class SaplingBackingStore final : public BackingStore {
   mutable RequestMetricsScope::LockedRequestWatchList
       liveImportBlobMetaWatches_;
   mutable RequestMetricsScope::LockedRequestWatchList
+      liveImportTreeMetaWatches_;
+  mutable RequestMetricsScope::LockedRequestWatchList
       liveImportPrefetchWatches_;
 
   // Track metrics for the number of live batches
@@ -653,6 +664,8 @@ class SaplingBackingStore final : public BackingStore {
   mutable RequestMetricsScope::LockedRequestWatchList liveBatchedTreeWatches_;
   mutable RequestMetricsScope::LockedRequestWatchList
       liveBatchedBlobMetaWatches_;
+  mutable RequestMetricsScope::LockedRequestWatchList
+      liveBatchedTreeMetaWatches_;
 
   std::unique_ptr<SaplingBackingStoreOptions> runtimeOptions_;
 

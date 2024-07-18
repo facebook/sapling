@@ -966,6 +966,10 @@ SaplingBackingStore::prepareRequests(
           importRequestsMap.emplace(
               nodeId, make_pair(requests, &liveBatchedTreeWatches_));
           break;
+        case SaplingImportObject::TREEMETA:
+          importRequestsMap.emplace(
+              nodeId, make_pair(requests, &liveBatchedTreeMetaWatches_));
+          break;
         case SaplingImportObject::BLOB:
           importRequestsMap.emplace(
               nodeId, make_pair(requests, &liveBatchedBlobWatches_));
@@ -976,6 +980,7 @@ SaplingBackingStore::prepareRequests(
           break;
         // The following types cannot get here. It is just for completeness
         case SaplingImportObject::BATCHED_TREE:
+        case SaplingImportObject::BATCHED_TREEMETA:
         case SaplingImportObject::BATCHED_BLOB:
         case SaplingImportObject::BATCHED_BLOBMETA:
         case SaplingImportObject::PREFETCH:
@@ -1729,6 +1734,7 @@ folly::Future<TreePtr> SaplingBackingStore::importTreeManifestImpl(
             &SaplingBackingStoreStats::importManifestForRootSuccess);
         break;
       // The following types cannot get here. It is just for completeness
+      case ObjectFetchContext::TreeMetadata:
       case ObjectFetchContext::Blob:
       case ObjectFetchContext::BlobMetadata:
       case ObjectFetchContext::ObjectType::PrefetchBlob:
@@ -1751,6 +1757,7 @@ folly::Future<TreePtr> SaplingBackingStore::importTreeManifestImpl(
           &SaplingBackingStoreStats::importManifestForRootFailure);
       break;
       // The following types cannot get here. It is just for completeness
+    case ObjectFetchContext::TreeMetadata:
     case ObjectFetchContext::Blob:
     case ObjectFetchContext::BlobMetadata:
     case ObjectFetchContext::PrefetchBlob:
@@ -1927,6 +1934,7 @@ folly::Future<TreePtr> SaplingBackingStore::retryGetTreeImpl(
                   &SaplingBackingStoreStats::importManifestForRootRetrySuccess);
               break;
             // The following types cannot get here. It is just for completeness
+            case ObjectFetchContext::TreeMetadata:
             case ObjectFetchContext::Blob:
             case ObjectFetchContext::BlobMetadata:
             case ObjectFetchContext::PrefetchBlob:
@@ -1958,6 +1966,7 @@ folly::Future<TreePtr> SaplingBackingStore::retryGetTreeImpl(
                   &SaplingBackingStoreStats::importManifestForRootRetryFailure);
               break;
             // The following types cannot get here. It is just for completeness
+            case ObjectFetchContext::TreeMetadata:
             case ObjectFetchContext::Blob:
             case ObjectFetchContext::BlobMetadata:
             case ObjectFetchContext::PrefetchBlob:
@@ -2120,6 +2129,9 @@ SaplingBackingStore::getPendingImportWatches(SaplingImportObject object) const {
     case SaplingImportObject::BLOBMETA:
     case SaplingImportObject::BATCHED_BLOBMETA:
       return pendingImportBlobMetaWatches_;
+    case SaplingImportObject::TREEMETA:
+    case SaplingImportObject::BATCHED_TREEMETA:
+      return pendingImportTreeMetaWatches_;
     case SaplingImportObject::PREFETCH:
       return pendingImportPrefetchWatches_;
   }
@@ -2136,6 +2148,8 @@ SaplingBackingStore::getLiveImportWatches(SaplingImportObject object) const {
       return liveImportTreeWatches_;
     case SaplingImportObject::BLOBMETA:
       return liveImportBlobMetaWatches_;
+    case SaplingImportObject::TREEMETA:
+      return liveImportTreeMetaWatches_;
     case SaplingImportObject::PREFETCH:
       return liveImportPrefetchWatches_;
     case SaplingImportObject::BATCHED_BLOB:
@@ -2144,6 +2158,8 @@ SaplingBackingStore::getLiveImportWatches(SaplingImportObject object) const {
       return liveBatchedTreeWatches_;
     case SaplingImportObject::BATCHED_BLOBMETA:
       return liveBatchedBlobMetaWatches_;
+    case SaplingImportObject::BATCHED_TREEMETA:
+      return liveBatchedTreeMetaWatches_;
   }
   EDEN_BUG() << "unknown sapling import object " << enumValue(object);
 }
@@ -2157,12 +2173,16 @@ folly::StringPiece SaplingBackingStore::stringOfSaplingImportObject(
       return "tree";
     case SaplingImportObject::BLOBMETA:
       return "blobmeta";
+    case SaplingImportObject::TREEMETA:
+      return "treemeta";
     case SaplingImportObject::BATCHED_BLOB:
       return "batched_blob";
     case SaplingImportObject::BATCHED_TREE:
       return "batched_tree";
     case SaplingImportObject::BATCHED_BLOBMETA:
       return "batched_blobmeta";
+    case SaplingImportObject::BATCHED_TREEMETA:
+      return "batched_treemeta";
     case SaplingImportObject::PREFETCH:
       return "prefetch";
   }

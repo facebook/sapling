@@ -166,9 +166,11 @@ class ImportObject(Enum):
     BLOB = "blob"
     TREE = "tree"
     BLOBMETA = "blobmeta"
+    TREEMETA = "treemeta"
     BATCHED_BLOB = "batched_blob"
     BATCHED_TREE = "batched_tree"
     BATCHED_BLOBMETA = "batched_blobmeta"
+    BATCHED_TREEMETA = "batched_treemeta"
     PREFETCH = "prefetch"
 
 

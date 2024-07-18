@@ -40,6 +40,8 @@ constexpr auto kTimeout = std::chrono::seconds{1};
 constexpr size_t kStartingInodeWidth = 5;
 static const auto kTreeEmoji =
     reinterpret_cast<const char*>(u8"\U0001F332"); // 🌲
+static const auto kTreeMetaEmoji =
+    reinterpret_cast<const char*>(u8"U000100B7"); // 𐂷
 static const auto kBlobEmoji =
     reinterpret_cast<const char*>(u8"\U0001F4C4"); // 📄
 static const auto kBlobMetaEmoji =
@@ -98,6 +100,7 @@ static const std::unordered_map<HgResourceType, const char*> kResourceTypes = {
     {HgResourceType::BLOB, kBlobEmoji},
     {HgResourceType::TREE, kTreeEmoji},
     {HgResourceType::BLOBMETA, kBlobMetaEmoji},
+    {HgResourceType::TREEMETA, kTreeMetaEmoji},
 };
 
 static const std::unordered_map<HgImportPriority, const char*>

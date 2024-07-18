@@ -70,6 +70,9 @@ void BackingStoreLogger::logImport(
     case ObjectFetchContext::ObjectType::Tree:
       typeString = "Tree";
       break;
+    case ObjectFetchContext::ObjectType::TreeMetadata:
+      typeString = "Tree Metadata";
+      break;
     case ObjectFetchContext::RootTree:
       typeString = "Root Tree";
       break;
