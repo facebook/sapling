@@ -791,6 +791,15 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
+   * Controls the max number of tree metadata import requests we batch in
+   * SaplingBackingStore
+   */
+  ConfigSetting<uint32_t> importBatchSizeTreeMeta{
+      "hg:import-batch-size-treemeta",
+      1024,
+      this};
+
+  /**
    * Whether fetching objects should fall back to hg importer process.
    */
   ConfigSetting<bool> hgImporterFetchFallback{
