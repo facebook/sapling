@@ -44,11 +44,19 @@ class SaplingImportRequestQueue {
       std::shared_ptr<SaplingImportRequest> request);
 
   /**
-   * Enqueue an aux data request to the queue.
+   * Enqueue a blob aux data request to the queue.
    *
    * Return a future that will complete when the aux data request completes.
    */
   ImmediateFuture<BlobMetadataPtr> enqueueBlobMeta(
+      std::shared_ptr<SaplingImportRequest> request);
+
+  /**
+   * Enqueue a tree aux data request to the queue.
+   *
+   * Return a future that will complete when the aux data request completes.
+   */
+  ImmediateFuture<TreeMetadataPtr> enqueueTreeMeta(
       std::shared_ptr<SaplingImportRequest> request);
 
   /**
@@ -114,6 +122,7 @@ class SaplingImportRequestQueue {
     ImportQueue treeQueue;
     ImportQueue blobQueue;
     ImportQueue blobMetaQueue;
+    ImportQueue treeMetaQueue;
   };
 
   /**
@@ -154,6 +163,10 @@ void SaplingImportRequestQueue::markImportAsFinished(
   if constexpr (std::is_same_v<T, const Tree>) {
     auto* treeImport = import->getRequest<SaplingImportRequest::TreeImport>();
     promises = &treeImport->promises;
+  } else if constexpr (std::is_same_v<T, const TreeMetadata>) {
+    auto* treeMetaImport =
+        import->getRequest<SaplingImportRequest::TreeMetaImport>();
+    promises = &treeMetaImport->promises;
   } else if constexpr (std::is_same_v<T, const BlobMetadata>) {
     auto* blobMetaImport =
         import->getRequest<SaplingImportRequest::BlobMetaImport>();
@@ -161,7 +174,7 @@ void SaplingImportRequestQueue::markImportAsFinished(
   } else {
     static_assert(
         std::is_same_v<T, const Blob>,
-        "markImportAsFinished can only be called with Tree, Blob or BlobMetadata types");
+        "markImportAsFinished can only be called with Tree, TreeMetadata, Blob or BlobMetadata types");
     auto* blobImport = import->getRequest<SaplingImportRequest::BlobImport>();
     promises = &blobImport->promises;
   }
@@ -189,12 +202,14 @@ SaplingImportRequestQueue::getImportQueue(folly::Synchronized<
                                           std::mutex>::LockedPtr& state) {
   if constexpr (std::is_same_v<T, const Tree>) {
     return &state->treeQueue;
+  } else if constexpr (std::is_same_v<T, const TreeMetadata>) {
+    return &state->treeMetaQueue;
   } else if constexpr (std::is_same_v<T, const BlobMetadata>) {
     return &state->blobMetaQueue;
   } else {
     static_assert(
         std::is_same_v<T, const Blob>,
-        "getImportQueue can only be called with Tree, Blob or BlobMetadata types");
+        "getImportQueue can only be called with Tree, TreeMetadata, Blob or BlobMetadata types");
     return &state->blobQueue;
   }
 }

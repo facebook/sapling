@@ -38,6 +38,12 @@ ImmediateFuture<BlobMetadataPtr> SaplingImportRequestQueue::enqueueBlobMeta(
       std::move(request));
 }
 
+ImmediateFuture<TreeMetadataPtr> SaplingImportRequestQueue::enqueueTreeMeta(
+    std::shared_ptr<SaplingImportRequest> request) {
+  return enqueue<TreeMetadata, SaplingImportRequest::TreeMetaImport>(
+      std::move(request));
+}
+
 template <typename T, typename ImportType>
 ImmediateFuture<std::shared_ptr<const T>> SaplingImportRequestQueue::enqueue(
     std::shared_ptr<SaplingImportRequest> request) {
@@ -99,12 +105,14 @@ SaplingImportRequestQueue::combineAndClearRequestQueues() {
   auto treeQSz = state->treeQueue.queue.size();
   auto blobQSz = state->blobQueue.queue.size();
   auto blobMetaQSz = state->blobMetaQueue.queue.size();
+  auto treeMetaQSz = state->treeMetaQueue.queue.size();
   XLOGF(
       DBG5,
-      "combineAndClearRequestQueues: tree queue size = {}, blob queue size = {}, blob metadata queue size = {}",
+      "combineAndClearRequestQueues: tree queue size = {}, blob queue size = {}, blob metadata queue size = {}, tree metadata queue size = {}",
       treeQSz,
       blobQSz,
-      blobMetaQSz);
+      blobMetaQSz,
+      treeMetaQSz);
   auto res = std::move(state->treeQueue.queue);
   res.insert(
       res.end(),
@@ -114,10 +122,15 @@ SaplingImportRequestQueue::combineAndClearRequestQueues() {
       res.end(),
       std::make_move_iterator(state->blobMetaQueue.queue.begin()),
       std::make_move_iterator(state->blobMetaQueue.queue.end()));
+  res.insert(
+      res.end(),
+      std::make_move_iterator(state->treeMetaQueue.queue.begin()),
+      std::make_move_iterator(state->treeMetaQueue.queue.end()));
   state->treeQueue.queue.clear();
   state->blobQueue.queue.clear();
   state->blobMetaQueue.queue.clear();
-  XCHECK_EQ(res.size(), treeQSz + blobQSz + blobMetaQSz);
+  state->treeMetaQueue.queue.clear();
+  XCHECK_EQ(res.size(), treeQSz + blobQSz + blobMetaQSz + treeMetaQSz);
   return res;
 }
 
@@ -132,6 +145,7 @@ SaplingImportRequestQueue::dequeue() {
       state->treeQueue.queue.clear();
       state->blobQueue.queue.clear();
       state->blobMetaQueue.queue.clear();
+      state->treeMetaQueue.queue.clear();
       return std::vector<std::shared_ptr<SaplingImportRequest>>();
     }
 
@@ -145,6 +159,15 @@ SaplingImportRequestQueue::dequeue() {
       count = config_->getEdenConfig()->importBatchSizeTree.getValue();
       highestPriority = state->treeQueue.queue.front()->getPriority();
       queue = &state->treeQueue.queue;
+    }
+
+    if (!state->treeMetaQueue.queue.empty()) {
+      auto priority = state->treeMetaQueue.queue.front()->getPriority();
+      if (!queue || priority > highestPriority) {
+        queue = &state->treeMetaQueue.queue;
+        count = config_->getEdenConfig()->importBatchSizeTreeMeta.getValue();
+        highestPriority = priority;
+      }
     }
 
     if (!state->blobMetaQueue.queue.empty()) {
