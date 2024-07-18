@@ -205,6 +205,8 @@ function DagRowInner(props: {row: ExtendedGraphRow; info: DagCommitInfo} & Rende
   //    ││├Term─────────┤││                 ││
   //    │││ | |         │││ (extras)        ││
   //    │││ | ~         │││                 ││
+  //    ││├Padding──────┤││                 ││
+  //    │││ |           │││                 ││
   //    ││├Link─────────┤││                 ││
   //    │││ |\          │││                 ││
   //    │││ | |         │││                 ││
@@ -310,6 +312,17 @@ function DagRowInner(props: {row: ExtendedGraphRow; info: DagCommitInfo} & Rende
     </div>
   );
 
+  const stackPaddingPart = linkLine && linkLine.length <= 2 && (
+    <div className="render-dag-row-left-side-line stack-padding">
+      {linkLine
+        // one less than the extra indent added by the link line normally
+        .slice(0, -1)
+        .map((l, i) => (
+          <PadTile key={i} scaleY={0.3} line={PadLine.Parent} />
+        ))}
+    </div>
+  );
+
   const termLinePart = termLine && (
     <>
       <div className="render-dag-row-left-side-line term-line-pad">
@@ -383,6 +396,7 @@ function DagRowInner(props: {row: ExtendedGraphRow; info: DagCommitInfo} & Rende
         {commitExtrasPart && postNodeLinePart}
         {linkLinePart}
         {termLinePart}
+        {stackPaddingPart}
         {ancestryLinePart}
       </>
     );

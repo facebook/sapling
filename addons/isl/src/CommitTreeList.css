@@ -32,7 +32,7 @@
   gap: var(--pad);
   align-items: center;
   margin-top: var(--halfpad);
-  margin-bottom: var(--pad);
+  margin-bottom: calc(2 * var(--pad));
   margin-left: var(--halfpad);
 }
 
