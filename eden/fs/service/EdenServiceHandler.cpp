@@ -2786,6 +2786,13 @@ constexpr EntryAttributeFlags kAllEntryAttributes = ENTRY_ATTRIBUTE_SIZE |
 folly::SemiFuture<std::unique_ptr<GetAttributesFromFilesResult>>
 EdenServiceHandler::semifuture_getAttributesFromFiles(
     std::unique_ptr<GetAttributesFromFilesParams> params) {
+  if (params->scope_ref().has_value()) {
+    return folly::SemiFuture<
+        std::unique_ptr<GetAttributesFromFilesResult>>(newEdenError(
+        EINVAL,
+        EdenErrorType::ARGUMENT_ERROR,
+        "scope is not supported by legacy getAttributesFromFiles endpoint"));
+  }
   auto mountPoint = *params->mountPoint();
   auto mountPath = absolutePathFromThrift(mountPoint);
   auto mountHandle = server_->getMount(mountPath);
@@ -2897,6 +2904,11 @@ folly::SemiFuture<std::unique_ptr<GetAttributesFromFilesResultV2>>
 EdenServiceHandler::semifuture_getAttributesFromFilesV2(
     std::unique_ptr<GetAttributesFromFilesParams> params) {
   auto mountHandle = lookupMount(params->mountPoint());
+  if (params->scope_ref().has_value()) {
+    XLOGF(
+        WARN,
+        "request scoping is not yet implemented for getAttributesFromFilesV2");
+  }
   auto reqBitmask = EntryAttributeFlags::raw(*params->requestedAttributes());
   std::vector<std::string>& paths = params->paths().value();
   auto helper = INSTRUMENT_THRIFT_CALL(
