@@ -2,12 +2,12 @@
 
 EdenFS supports glob patterns through the following interfaces:
 
-* Ignore files (e.g. `.gitignore`)
-* `globFiles` Thrift API
+- Ignore files (e.g. `.gitignore`)
+- `globFiles` Thrift API
 
 ## Ignore Files
 
-EdenFS uses *ignore files* to exclude files in the `getScmStatus` Thrift API
+EdenFS uses _ignore files_ to exclude files in the `getScmStatus` Thrift API
 (used by `hg status`, for example). The syntax for EdenFS' ignore files is
 compatible with the syntax for [`gitignore` files][gitignore] used by the Git
 version control system, even when an EdenFS checkout is backed by a Mercurial
@@ -17,12 +17,12 @@ repository.
 
 EdenFS interprets the following tokens specially within glob patterns:
 
-* `**`: Match zero, one, or more path components.
-* `*`: Match zero, one, or more valid path component characters.
-* `?`: Match exactly one valid path component characters.
-* `[`: Match exactly one path component character in the given set of
+- `**`: Match zero, one, or more path components.
+- `*`: Match zero, one, or more valid path component characters.
+- `?`: Match exactly one valid path component characters.
+- `[`: Match exactly one path component character in the given set of
   characters. The set is terminated by `]`.
-* `[!`, `[^`: Match exactly one path component character *not* in the given set
+- `[!`, `[^`: Match exactly one path component character _not_ in the given set
   of characters. The set is terminated by `]`.
 
 EdenFS glob patterns are compatible with [`gitignore` patterns][gitignore] used

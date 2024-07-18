@@ -1,5 +1,4 @@
-Caching in Eden
-===============
+# Caching in Eden
 
 [This captures the state of Eden as of November, 2018. The information below may
 change.]
@@ -32,10 +31,10 @@ quick succession, and reloading the blob each time would be inefficient.
 
 The design of this cache attempts to satisfy competing objectives:
 
-* Minimize blob reloads under Eden's various access patterns
-* Fit in a mostly-capped memory budget
-* Avoid performance cliffs under pathological access patterns
-* Maximize memory available to the kernel's own caches, since they have the
+- Minimize blob reloads under Eden's various access patterns
+- Fit in a mostly-capped memory budget
+- Avoid performance cliffs under pathological access patterns
+- Maximize memory available to the kernel's own caches, since they have the
   highest leverage.
 
 The cache has a maximum size (default 40 MiB as of this writing), and blobs are
@@ -50,7 +49,7 @@ experimentation.
 One interesting aspect of the blob cache is that Eden has a sense of whether a
 request is likely to occur again. For example, if the kernel does not support
 caching readlink calls over FUSE, then any symlink blob should be kept in Eden's
-cache until evicted. If the kernel *does* cache readlink, then the blob can be
+cache until evicted. If the kernel _does_ cache readlink, then the blob can be
 released as soon it's been read, making room for other blobs.
 
 A more complicated example is that of a series of reads across a large file.
@@ -61,11 +60,11 @@ blob, Eden evicts the blob from its cache.
 
 Blobs are evicted from cache when:
 
-* The blob cache is full and exceeds its minimum entry count.
-* The blob has been read by the kernel and the kernel cache is populated.
-* A file inode is materialized and future requests will be satisfied by the
+- The blob cache is full and exceeds its minimum entry count.
+- The blob has been read by the kernel and the kernel cache is populated.
+- A file inode is materialized and future requests will be satisfied by the
   overlay.
-* The kernel has evicted an inode from its own inode cache after reading some of
+- The kernel has evicted an inode from its own inode cache after reading some of
   the blob.
 
 ## Blob Metadata
