@@ -7,7 +7,7 @@ from collections import defaultdict
 from enum import Enum
 from typing import Dict, List, Optional
 
-from . import edenapi_upload, error, hg, mutation, phases, scmutil
+from . import edenapi_upload, error, hg, mutation, phases, scmutil, util
 from .bookmarks import readremotenames, saveremotenames
 from .i18n import _, _n, _x
 from .node import bin, hex, nullhex, short
@@ -42,10 +42,6 @@ def get_edenapi_for_dest(repo, _dest):
     # default push dest is the same as edenapi.url config.
     try:
         edenapi = repo.edenapi
-        if edenapi.url().startswith("eager:"):
-            # todo (zhaolong): implement push related EdenAPIs for eagerepo
-            return None
-
         return edenapi
     except Exception:
         return None

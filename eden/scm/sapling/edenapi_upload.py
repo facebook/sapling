@@ -79,7 +79,7 @@ def _uploadfilenodes(repo, fctxs):
     dpack, _hpack = repo.fileslog.getmutablelocalpacks()
     try:
         with repo.ui.timesection("http.edenapi.upload_files"):
-            use_sha1 = util.istest() and "sha1-only" in repo.edenapi.capabilities()
+            use_sha1 = "sha1-only" in repo.edenapi.capabilities()
             stream, _stats = repo.edenapi.uploadfiles(dpack, keys, use_sha1)
             items = list(stream)
             repo.ui.status(
