@@ -77,12 +77,15 @@ use slog::info;
 use tokio::runtime::Runtime;
 
 mod errors;
+mod leader_election;
 mod re_cas_sync;
 
 use crate::errors::ErrorKind::SyncFailed;
 use crate::errors::PipelineError;
 use crate::errors::PipelineError::AnonymousError;
 use crate::errors::PipelineError::EntryError;
+use crate::leader_election::LeaderElection;
+use crate::leader_election::ZkMode;
 
 const MODE_SYNC_LOOP: &str = "sync-loop";
 const LATEST_REPLAYED_REQUEST_KEY: &str = "latest-replayed-request-cas";
@@ -175,6 +178,15 @@ impl MononokeCasSyncProcess {
                 .required(false)
                 .help("how many times to retry the execution")
         )
+        .arg(
+            Arg::with_name("leader-only")
+                .long("leader-only")
+                .takes_value(false)
+                .required(false)
+                .help(
+                    "If leader election is enabled, only one instance of the job will be running at a time for a repo",
+                )
+        )
         .about(
             "Special job that takes commits that were sent to Mononoke and \
              send their files and (augmented) trees to cas",
@@ -259,6 +271,13 @@ pub struct MononokeCasSyncProcessExecutor {
     repo_name: String,
 }
 
+#[async_trait]
+impl LeaderElection for MononokeCasSyncProcessExecutor {
+    fn get_shared_lock_path(&self) -> String {
+        format!("{}_{}", JOB_NAME, self.repo_name)
+    }
+}
+
 impl MononokeCasSyncProcessExecutor {
     fn new(
         fb: FacebookInit,
@@ -292,6 +311,7 @@ impl MononokeCasSyncProcessExecutor {
             "retry-num",
             DEFAULT_EXECUTION_RETRY_NUM,
         );
+        let mode: ZkMode = self.matches.as_ref().is_present("leader-only").into();
 
         retry_always(
             self.ctx.logger(),
@@ -303,25 +323,31 @@ impl MononokeCasSyncProcessExecutor {
                         self.ctx.logger(),
                         "sync stopping due to cancellation request at attempt {}", attempt
                     );
-                    anyhow::Ok(())
                 } else {
-                    run(
-                        attempt,
-                        self.fb,
-                        &self.ctx,
-                        &self.matches,
-                        self.repo_name.clone(),
-                        Arc::clone(&self.cancellation_requested),
-                    )
-                    .await
-                    .with_context(|| {
-                        format!(
-                            "Error during mononoke RE CAS sync command execution for repo {}. Attempt number {}",
-                            &self.repo_name, attempt
-                        )
-                    })?;
-                    anyhow::Ok(())
+                    match self.maybe_become_leader(mode, self.ctx.logger().clone()).await {
+                        Ok(_leader_token) => {
+                            run(
+                                attempt,
+                                self.fb,
+                                &self.ctx,
+                                &self.matches,
+                                self.repo_name.clone(),
+                                Arc::clone(&self.cancellation_requested),
+                            )
+                            .await
+                            .with_context(|| {
+                                format!(
+                                    "Error during mononoke RE CAS sync command execution for repo {}. Attempt number {}",
+                                    &self.repo_name, attempt
+                                )
+                            })?;
+                        },
+                        Err(e) => {
+                            error!(self.ctx.logger(), "Failed to become leader {:#}", e);
+                        }
+                    }
                 }
+                anyhow::Ok(())
             },
             base_retry_delay_ms,
             retry_num,
