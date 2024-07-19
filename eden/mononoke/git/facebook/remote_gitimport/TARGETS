@@ -21,6 +21,7 @@ rust_binary(
         "fbsource//third-party/rust:strum",
         "//common/rust/monitoring:obc_lib",
         "//common/rust/scuba:scuba",
+        "//common/rust/shed/borrowed:borrowed",
         "//common/rust/shed/cached_config:cached_config",
         "//common/rust/shed/cloned:cloned",
         "//common/rust/shed/fbinit:fbinit",
