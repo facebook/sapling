@@ -60,6 +60,8 @@ pub use crate::update::BookmarkUpdatePolicy;
 pub use crate::update::BookmarkUpdateTargets;
 pub use crate::update::UpdateBookmarkOp;
 
+const ALLOW_NON_FFWD_PUSHVAR: &str = "x-git-allow-non-ffwd-push";
+
 /// Trait alias for bookmarks movement repositories.
 ///
 /// These are the repo attributes that are necessary to call most functions in

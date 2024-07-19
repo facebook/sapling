@@ -33,6 +33,7 @@ use crate::restrictions::check_bookmark_sync_config;
 use crate::restrictions::BookmarkKindRestrictions;
 use crate::BookmarkMovementError;
 use crate::Repo;
+use crate::ALLOW_NON_FFWD_PUSHVAR;
 
 /// The old and new changeset during a bookmark update.
 ///
@@ -60,12 +61,16 @@ impl BookmarkUpdatePolicy {
         repo: &impl Repo,
         bookmark: &BookmarkKey,
         targets: &BookmarkUpdateTargets,
+        pushvars: &Option<&HashMap<String, Bytes>>,
     ) -> Result<(), BookmarkMovementError> {
         let fast_forward_only = match self {
             Self::FastForwardOnly => true,
             Self::AnyPermittedByConfig => repo.repo_bookmark_attrs().is_fast_forward_only(bookmark),
         };
-        if fast_forward_only && targets.old != targets.new {
+        let bypass = pushvars.map_or(false, |pushvar| {
+            pushvar.contains_key(ALLOW_NON_FFWD_PUSHVAR)
+        });
+        if fast_forward_only && !bypass && targets.old != targets.new {
             // Check that this move is a fast-forward move.
             if !repo
                 .commit_graph()
@@ -190,7 +195,7 @@ impl<'op> UpdateBookmarkOp<'op> {
         check_bookmark_sync_config(ctx, repo, self.bookmark, kind).await?;
 
         self.update_policy
-            .check_update_permitted(ctx, repo, self.bookmark, &self.targets)
+            .check_update_permitted(ctx, repo, self.bookmark, &self.targets, &self.pushvars)
             .await?;
 
         self.affected_changesets

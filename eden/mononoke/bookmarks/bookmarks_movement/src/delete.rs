@@ -25,6 +25,7 @@ use crate::restrictions::check_bookmark_sync_config;
 use crate::restrictions::BookmarkKindRestrictions;
 use crate::BookmarkMovementError;
 use crate::Repo;
+use crate::ALLOW_NON_FFWD_PUSHVAR;
 
 #[must_use = "DeleteBookmarkOp must be run to have an effect"]
 pub struct DeleteBookmarkOp<'op> {
@@ -100,11 +101,13 @@ impl<'op> DeleteBookmarkOp<'op> {
             .await?;
 
         check_bookmark_sync_config(ctx, repo, self.bookmark, kind).await?;
-
-        if repo
+        let fast_forward_only = repo
             .repo_bookmark_attrs()
-            .is_fast_forward_only(self.bookmark)
-        {
+            .is_fast_forward_only(self.bookmark);
+        let bypass = self.pushvars.map_or(false, |pushvar| {
+            pushvar.contains_key(ALLOW_NON_FFWD_PUSHVAR)
+        });
+        if fast_forward_only && !bypass {
             // Cannot delete fast-forward-only bookmarks.
             return Err(BookmarkMovementError::DeletionProhibited {
                 bookmark: self.bookmark.clone(),

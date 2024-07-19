@@ -56,6 +56,16 @@
   $ echo "delete file1" > delete_file1
   $ git add delete_file1
   $ git commit -qam "Add delete_file1"
+# Create another branch that will be fast-forward only but we will bypass the restriction through pushvar
+  $ git checkout -b bypass_branch_ffonly
+  Switched to a new branch 'bypass_branch_ffonly'
+  $ echo "bypass file1" > bypass_file1
+  $ git add bypass_file1
+  $ git commit -qam "Add bypass_file1"
+  $ initial_bypass_commit=$(git rev-parse HEAD)
+  $ echo "bypass file2" > bypass_file2
+  $ git add bypass_file2
+  $ git commit -qam "Add bypass_file2"
   $ git checkout master
   Switched to branch 'master'
 
@@ -76,6 +86,7 @@
 # List all the known refs
   $ cd repo
   $ git show-ref | sort
+  28718e2ecb4aec6de586603f3338f439f5b843ac refs/remotes/origin/bypass_branch_ffonly
   33f84db74b1f57fe45ae0fc29edc65ae984b979d refs/remotes/origin/non_ffwd_branch
   8963e1f55d1346a07c3aec8c8fc72bf87d0452b1 refs/tags/first_tag
   c47cf83db7aff6eb843f31a57d59f19670b69ed5 refs/remotes/origin/branch_for_delete_ffonly
@@ -100,6 +111,18 @@
   branch 'non_ffwd_branch' set up to track 'origin/non_ffwd_branch'.
   $ git reset --hard $initial_nonffwd_commit
   HEAD is now at 676bc3c Add nonfwdfile1
+# Try doing a non-ffwd push on bypass_branch_ffonly branch which should normally fail
+# but since we are providing a bypass, it should work
+  $ git checkout bypass_branch_ffonly
+  Switched to a new branch 'bypass_branch_ffonly'
+  branch 'bypass_branch_ffonly' set up to track 'origin/bypass_branch_ffonly'.
+  $ git reset --hard $initial_bypass_commit
+  HEAD is now at 7b248e9 Add bypass_file1
+
+  $ git_client -c http.extraHeader="x-git-allow-non-ffwd-push: 1" push origin bypass_branch_ffonly --force
+  To https://localhost:$LOCAL_PORT/repos/git/ro/repo.git
+   + 28718e2...7b248e9 bypass_branch_ffonly -> bypass_branch_ffonly (forced update)
+
 # Try deleting a ffwd-only branch which should fail cause deletion is considered
 # as a non-ffwd change
   $ git_client push origin --delete branch_for_delete_ffonly
@@ -109,7 +132,7 @@
   [1]
 
 # Push all the changes made so far
-  $ git_client push origin --all --follow-tags --force &> output
+  $ git_client push origin master branch_ffonly non_ffwd_branch --force &> output
   [1]
   $ cat output | sort
      e8615d6..4981a25  master -> master
@@ -127,12 +150,13 @@
   Cloning into 'new_repo'...
   $ cd new_repo
 
-# List all the known refs. Ensure that only master and non_ffwd_branch reflect a change
+# List all the known refs. Ensure that only master,non_ffwd_branch and bypass_branch_ffonly reflect a change
   $ git show-ref | sort
   4981a25180e49be096fce2ac3e68e455fc158449 refs/heads/master
   4981a25180e49be096fce2ac3e68e455fc158449 refs/remotes/origin/HEAD
   4981a25180e49be096fce2ac3e68e455fc158449 refs/remotes/origin/master
   676bc3cdd4bcc0b238223b6ca444c7ac50b59174 refs/remotes/origin/non_ffwd_branch
+  7b248e999d14fbc53386479609031c21649c6598 refs/remotes/origin/bypass_branch_ffonly
   8963e1f55d1346a07c3aec8c8fc72bf87d0452b1 refs/tags/first_tag
   c47cf83db7aff6eb843f31a57d59f19670b69ed5 refs/remotes/origin/branch_for_delete_ffonly
   eb95862bb5d5c295844706cbb0d0e56fee405f5c refs/remotes/origin/branch_ffonly

@@ -5,13 +5,11 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::HashMap;
 use std::sync::Arc;
 
 use anyhow::Context;
 use anyhow::Result;
 use bonsai_tag_mapping::BonsaiTagMappingRef;
-use bytes::Bytes;
 use gix_hash::ObjectId;
 use gix_object::Kind;
 use import_tools::git_reader::GitReader;
@@ -21,7 +19,6 @@ use mononoke_api::repo::RepoContextBuilder;
 use mononoke_api::BookmarkKey;
 use mononoke_types::ChangesetId;
 use repo_authorization::AuthorizationContext;
-use repo_bookmark_attrs::RepoBookmarkAttrsRef;
 
 use super::GitMappingsStore;
 use super::GitObjectStore;
@@ -33,19 +30,13 @@ use crate::service::uploader::peel_tag_target;
 pub struct RefUpdateOperation {
     ref_update: RefUpdate,
     affected_changesets: usize,
-    pushvars: Option<HashMap<String, Bytes>>,
 }
 
 impl RefUpdateOperation {
-    pub fn new(
-        ref_update: RefUpdate,
-        affected_changesets: usize,
-        pushvars: Option<HashMap<String, Bytes>>,
-    ) -> Self {
+    pub fn new(ref_update: RefUpdate, affected_changesets: usize) -> Self {
         Self {
             ref_update,
             affected_changesets,
-            pushvars,
         }
     }
 }
@@ -101,17 +92,17 @@ async fn set_ref_inner(
     )?;
     let bookmark_operation =
         BookmarkOperation::new(bookmark_key.clone(), old_changeset, new_changeset)?;
-    // Check if the bookmark has non-fast-forward updates enabled
-    let allow_non_fast_forward = !repo
-        .inner_repo()
-        .repo_bookmark_attrs()
-        .is_fast_forward_only(&bookmark_key);
+    // Flag for client side expectation of allow non fast forward updates. Git clients by default
+    // prevent users from pushing non-ffwd updates. If the request reaches the server, then that
+    // means the client has explicitly requested for a non-ffwd update and the final result will be
+    // governed by the server side config (ofcourse subject to bypass)
+    let allow_non_fast_forward = true;
     // Actually perform the ref update
     set_bookmark(
         &ctx,
         &repo_context,
         &bookmark_operation,
-        ref_update_op.pushvars.as_ref(),
+        Some(request_context.pushvars.as_ref()),
         allow_non_fast_forward,
         Some(ref_update_op.affected_changesets),
     )

@@ -100,16 +100,11 @@ async fn push<'a>(
                 cloned!(request_context, git_bonsai_mapping_store, object_store);
                 async move {
                     let output = tokio::spawn(async move {
-                        let ref_update_op = RefUpdateOperation::new(
-                            ref_update.clone(),
-                            affected_changesets_len,
-                            None,
-                        ); // TODO(rajshar): Populate pushvars from HTTP headers
                         set_ref(
                             request_context,
                             git_bonsai_mapping_store,
                             object_store,
-                            ref_update_op,
+                            RefUpdateOperation::new(ref_update.clone(), affected_changesets_len),
                         )
                         .await
                     })
