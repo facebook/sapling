@@ -565,3 +565,26 @@ async fn test_basic_path_copies() {
     assert_path_copies!(c A B, ["b/1.txt" => "a/1.txt", "b/3.cpp" => "b/3.c"]);
     assert_path_copies!(c B A, ["a/1.txt" => "b/1.txt", "b/3.c" => "b/3.cpp"]);
 }
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn test_forward_copy_then_rename() {
+    let ascii = r#"
+    C
+    |
+    B
+    |
+    A
+    "#;
+    let changes = HashMap::from([
+        ("A", vec!["+ a 1"]),
+        ("B", vec!["C a b"]),
+        ("C", vec!["-> b c"]),
+    ]);
+    let t = CopyTraceTestCase::new(ascii, changes).await;
+    let c = t.copy_trace().await;
+
+    assert_trace_rename!(c A C, a -> a);
+    assert_trace_rename!(c B C, b -> c);
+    // tofix: should not found `b`, since `b` is not in commit `A`
+    assert_trace_rename!(c A C, b -> c);
+}
