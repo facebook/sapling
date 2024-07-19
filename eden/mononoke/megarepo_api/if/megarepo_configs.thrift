@@ -75,7 +75,7 @@ struct Source {
   /// A name to match sources across version bumps
   /// Has no meaning, except for book-keeping
   1: string source_name;
-  /// Monooke repository id, where source is located
+  /// Mononoke repository id, where source is located
   2: RepoId repo_id;
   /// Name of the original (git) repo, from which this source comes
   3: string name;
