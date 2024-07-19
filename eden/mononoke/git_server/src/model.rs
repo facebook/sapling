@@ -7,6 +7,7 @@
 
 mod context;
 mod method;
+mod pushvars;
 
 pub use context::GitServerContext;
 pub use context::RepositoryRequestContext;
@@ -14,6 +15,7 @@ use gotham_derive::StateData;
 use gotham_derive::StaticResponseExtender;
 pub use method::GitMethod;
 pub use method::GitMethodInfo;
+pub use pushvars::Pushvars;
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize, StateData, StaticResponseExtender)]

@@ -9,5 +9,6 @@ mod request;
 mod response;
 
 pub use self::request::encoding::RequestContentEncodingMiddleware;
+pub use self::request::pushvars::PushvarsParsingMiddleware;
 pub use self::response::content_type::ResponseContentTypeMiddleware;
 pub use self::response::ods::OdsMiddleware;

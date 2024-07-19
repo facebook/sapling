@@ -49,6 +49,7 @@ use gotham_ext::serve;
 use http::HeaderValue;
 use metaconfig_parser::RepoConfigs;
 use metaconfig_types::ShardedService;
+use middleware::PushvarsParsingMiddleware;
 use mononoke_api::Repo;
 use mononoke_app::args::McrouterAppExtension;
 use mononoke_app::args::ReadonlyArgs;
@@ -259,6 +260,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                     None,
                     args.readonly.readonly,
                 ))
+                .add(PushvarsParsingMiddleware {})
                 .add(ResponseContentTypeMiddleware {})
                 .add(PostResponseMiddleware::default())
                 .add(LoadMiddleware::new())

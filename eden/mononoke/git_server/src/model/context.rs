@@ -22,6 +22,7 @@ use slog::Logger;
 
 use super::method::GitMethod;
 use super::GitMethodInfo;
+use super::Pushvars;
 use crate::errors::GitServerContextErrorKind;
 use crate::GitRepos;
 use crate::Repo;
@@ -32,6 +33,7 @@ pub struct RepositoryRequestContext {
     pub repo: Arc<Repo>,
     pub mononoke_repos: Arc<MononokeRepos<Repo>>,
     pub repo_configs: Arc<RepoConfigs>,
+    pub pushvars: Pushvars,
 }
 
 impl RepositoryRequestContext {
@@ -40,10 +42,11 @@ impl RepositoryRequestContext {
         method_info: GitMethodInfo,
     ) -> Result<Self, GitServerContextErrorKind> {
         state.put(method_info.clone());
+        let pushvars = state.take::<Pushvars>();
         let req_ctx = state.borrow_mut::<RequestContext>();
         let ctx = req_ctx.ctx.clone();
         let git_ctx = GitServerContext::borrow_from(state);
-        git_ctx.request_context(ctx, method_info).await
+        git_ctx.request_context(ctx, method_info, pushvars).await
     }
 
     pub fn _logger(&self) -> &Logger {
@@ -87,6 +90,7 @@ impl GitServerContext {
         &self,
         ctx: CoreContext,
         method_info: GitMethodInfo,
+        pushvars: Pushvars,
     ) -> Result<RepositoryRequestContext, GitServerContextErrorKind> {
         let (repo, mononoke_repos, enforce_authorization, repo_configs) = {
             let inner = self
@@ -113,6 +117,7 @@ impl GitServerContext {
             repo,
             mononoke_repos,
             repo_configs,
+            pushvars,
         })
     }
 }
