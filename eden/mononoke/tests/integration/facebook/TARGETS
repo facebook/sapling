@@ -334,6 +334,7 @@ dott_test(
         "//eden/mononoke/lfs_server:lfs_server",
         "//eden/mononoke/scs/client:scsc",
         "//eden/mononoke/scs_server:scs_server",
+        "//eden/mononoke/tools/admin:newadmin",
     ],
 )
 

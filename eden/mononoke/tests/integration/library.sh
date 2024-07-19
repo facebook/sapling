@@ -1726,9 +1726,10 @@ function lfs_server {
     lfs_health "$poll" "$proto" "$bound_addr_file"
 
   export LFS_HOST_PORT
+  export BASE_LFS_URL
   LFS_HOST_PORT="$listen_host:$LFS_PORT"
-  uri="${proto}://$LFS_HOST_PORT"
-  echo "$uri"
+  BASE_LFS_URL="${proto}://$LFS_HOST_PORT"
+  echo "$BASE_LFS_URL"
 
   cp "$log" "$log.saved"
   truncate -s 0 "$log"
