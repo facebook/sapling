@@ -39,7 +39,7 @@ use types::RepoPathBuf;
 // performance. It also allows us to get rid of the flush method.
 pub trait Manifest {
     /// Inspects the manifest for the given path. Returns available metadata.
-    /// If the path is pointing to an file then Some(FsNodeMetadata::File) is returned with then
+    /// If the path is pointing to an file then Some(FsNodeMetadata::File) is returned with the
     /// file_metadata associated with the file. If the path is poitning to a directory then
     /// Some(FsNodeMetadata::Directory) is returned. If the path is not found then None is
     /// returned.
