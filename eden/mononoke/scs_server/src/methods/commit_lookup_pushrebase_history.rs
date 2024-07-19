@@ -9,21 +9,17 @@ use std::iter::once;
 use std::sync::Arc;
 
 use context::CoreContext;
-use futures::prelude::*;
 use metaconfig_types::CommonCommitSyncConfig;
 use mononoke_api::Mononoke;
 use mononoke_api::RepoContext;
-use mononoke_api::XRepoLookupExactBehaviour;
-use mononoke_api::XRepoLookupSyncBehaviour;
 use mononoke_types::ChangesetId;
 use phases::PhasesRef;
 use pushrebase_mutation_mapping::PushrebaseMutationMappingRef;
 use source_control as thrift;
+use synced_commit_mapping::SyncedCommitSourceRepo;
 
 use crate::errors;
 use crate::source_control_impl::SourceControlServiceImpl;
-
-const MAX_XREPO_LOOKUPS: usize = 10;
 
 #[derive(Debug, Clone)]
 struct RepoChangeset(String, ChangesetId);
@@ -155,64 +151,44 @@ impl RepoChangesetsPushrebaseHistory {
         bcs_id: ChangesetId,
         config: CommonCommitSyncConfig,
     ) -> Result<bool, errors::ServiceError> {
-        let target_repo_ids = if config.large_repo_id == repo.repoid() {
-            config.small_repos.keys().copied().collect()
+        let mut synced_changesets = vec![];
+        let (target_repo_ids, expected_sync_origin) = if config.large_repo_id == repo.repoid() {
+            (
+                config.small_repos.keys().copied().collect(),
+                SyncedCommitSourceRepo::Small,
+            )
         } else {
-            vec![config.large_repo_id]
+            (vec![config.large_repo_id], SyncedCommitSourceRepo::Large)
         };
 
-        let target_repo_names: Vec<_> = target_repo_ids
-            .into_iter()
-            .map(|target_repo_id| {
-                self.mononoke
-                    .repo_name_from_id(target_repo_id.clone())
-                    .ok_or_else(|| {
-                        errors::internal_error(format!(
-                            "unable to resolve repository name for repository id {}",
-                            target_repo_id
-                        ))
-                        .into()
-                    })
-            })
-            .collect::<Result<_, errors::ServiceError>>()?;
-
-        let mut target_repos = vec![];
-        for target_repo_name in target_repo_names {
-            target_repos.push(self.repo(&target_repo_name).await?)
+        for target_repo_id in target_repo_ids.into_iter() {
+            let entries = repo
+                .synced_commit_mapping()
+                .get(&self.ctx, repo.repoid(), bcs_id, target_repo_id)
+                .await
+                .map_err(errors::internal_error)?;
+            if let Some(target_repo_name) = self.mononoke.repo_name_from_id(target_repo_id) {
+                synced_changesets.extend(entries.into_iter().filter_map(
+                    |(cs, _, maybe_source_repo)| {
+                        let traverse = match maybe_source_repo {
+                            // source_repo information can be absent e.g. for old commits but
+                            // let's still traverse the mapping because in most cases we will
+                            // get the correct result.
+                            None => true,
+                            Some(source_repo) if source_repo == expected_sync_origin => true,
+                            _ => false,
+                        };
+                        if traverse {
+                            Some(RepoChangeset(target_repo_name.clone(), cs))
+                        } else {
+                            None
+                        }
+                    },
+                ));
+            }
         }
 
-        let synced_changesets: Result<Vec<RepoChangeset>, errors::ServiceError> = futures::stream::iter(target_repos.into_iter().map(|target_repo| {
-            let repo = repo.clone();
-                async move {
-                    match repo
-                        .xrepo_commit_lookup(
-                            &target_repo,
-                            bcs_id,
-                            None,
-                            XRepoLookupSyncBehaviour::NeverSync,
-                            XRepoLookupExactBehaviour::OnlyExactMapping,
-                        )
-                        .await
-                    {
-                        Ok(None) => Ok(vec![]),
-                        Ok(Some(target_repo_commit_ctx)) => Ok(vec![RepoChangeset(target_repo.name().to_string(), target_repo_commit_ctx.id())]),
-                        Err(err) => Err(errors::internal_error(format!(
-                                "Encountered error `{}` while looking up commit {} from repository {} in repository {}",
-                                err,
-                                bcs_id,
-                                repo.name(),
-                                target_repo.name(),
-                            ))
-                            .into())
-                    }
-                }
-        }))
-        .buffer_unordered(MAX_XREPO_LOOKUPS)
-        .try_concat()
-        .await;
-
-        let resolved_synced_changesets = synced_changesets?;
-        let mut iter = resolved_synced_changesets.iter();
+        let mut iter = synced_changesets.iter();
 
         match (iter.next(), iter.next()) {
             (None, _) => Ok(false),
@@ -224,7 +200,7 @@ impl RepoChangesetsPushrebaseHistory {
                 "commit sync mapping is ambiguous in repo {} for {}: {:?} (expected only one)",
                 repo.name(),
                 bcs_id,
-                resolved_synced_changesets,
+                synced_changesets,
             ))
             .into()),
         }
