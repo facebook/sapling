@@ -691,6 +691,7 @@ async fn run<'a>(
         MononokeScubaSampleBuilder::with_discard()
     };
     scuba_sample.add_common_server_data();
+    scuba_sample.add("repo_name", repo_name.clone());
 
     let repo: Repo =
         args::open_repo_by_id_unredacted(ctx.fb, ctx.logger(), matches, repo_id).await?;
