@@ -6,7 +6,8 @@ this file:
 - `Counter` : The static counters can call `increment()` method to add a number
 
 - `Duration` : These stats record duration of the events with `addDuration()`
-  method.
+  method. The duration names should ends with `_us` to highlight that the value
+  is in microseconds.
   > ## Note: These stats get turned into a histogram, and EdenFS reports the followings for them
   >
   > - Export Types
@@ -20,13 +21,6 @@ this file:
   >   - 1 min, 10 min, and 1 hour
   > - Only `Durations` are turned into the following percentiles
   >   - P1, P10, P50, P90, and P99
-
-You can see the list of all the EdenFS counter and their current values by
-running
-
-```
-$ eden debug thrift getCounters --json
-```
 
 The list of all the EdenStats Counter/Duration are as follows:
 
