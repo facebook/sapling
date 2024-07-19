@@ -22,6 +22,7 @@ rust_binary(
         "//common/rust/monitoring:obc_lib",
         "//common/rust/scuba:scuba",
         "//common/rust/shed/cached_config:cached_config",
+        "//common/rust/shed/cloned:cloned",
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/fbinit:fbinit-tokio",
         "//common/rust/shed/futures_stats:futures_stats",
