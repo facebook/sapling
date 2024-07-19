@@ -158,7 +158,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         .with_default_scuba_dataset("mononoke_git_server")
         .with_bookmarks_cache(BookmarkCacheOptions {
             cache_kind: BookmarkCacheKind::Local,
-            derived_data: BookmarkCacheDerivedData::GitOnly,
+            derived_data: BookmarkCacheDerivedData::NoDerivation, // Derivation is already done at push time
         })
         .with_app_extension(WarmBookmarksCacheExtension {})
         .with_app_extension(McrouterAppExtension {})
