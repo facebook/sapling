@@ -50,6 +50,12 @@
   $ echo "nonfwd file2" > nonfwdfile2
   $ git add nonfwdfile2
   $ git commit -qam "Add nonfwdfile2"
+# Create another branch that will be fast-forward only and we will try to delete it later
+  $ git checkout -b branch_for_delete_ffonly
+  Switched to a new branch 'branch_for_delete_ffonly'
+  $ echo "delete file1" > delete_file1
+  $ git add delete_file1
+  $ git commit -qam "Add delete_file1"
   $ git checkout master
   Switched to branch 'master'
 
@@ -72,27 +78,35 @@
   $ git show-ref | sort
   33f84db74b1f57fe45ae0fc29edc65ae984b979d refs/remotes/origin/non_ffwd_branch
   8963e1f55d1346a07c3aec8c8fc72bf87d0452b1 refs/tags/first_tag
+  c47cf83db7aff6eb843f31a57d59f19670b69ed5 refs/remotes/origin/branch_for_delete_ffonly
   e8615d6f149b876be0a2f30a1c5bf0c42bf8e136 refs/heads/master
   e8615d6f149b876be0a2f30a1c5bf0c42bf8e136 refs/remotes/origin/HEAD
   e8615d6f149b876be0a2f30a1c5bf0c42bf8e136 refs/remotes/origin/master
   eb95862bb5d5c295844706cbb0d0e56fee405f5c refs/remotes/origin/branch_ffonly
 
-# Add some new commits to the master branch while trying to do a non-ffwd push on branch_ffonly which should
-# fail. Try doing a non-ffwd push on non_ffwd_branch branch which should succeed
+# Add some new commits to the master branch
   $ echo "Just another file" > another_file
   $ git add .
   $ git commit -qam "Another commit on master"
+# Try to do a non-ffwd push on branch_ffonly which should fail
   $ git checkout branch_ffonly
   Switched to a new branch 'branch_ffonly'
   branch 'branch_ffonly' set up to track 'origin/branch_ffonly'.
   $ git reset --hard $initial_ffonly_commit
   HEAD is now at 3ea0687 Add fwdfile1
+# Try doing a non-ffwd push on non_ffwd_branch branch which should succeed
   $ git checkout non_ffwd_branch
   Switched to a new branch 'non_ffwd_branch'
   branch 'non_ffwd_branch' set up to track 'origin/non_ffwd_branch'.
   $ git reset --hard $initial_nonffwd_commit
   HEAD is now at 676bc3c Add nonfwdfile1
-
+# Try deleting a ffwd-only branch which should fail cause deletion is considered
+# as a non-ffwd change
+  $ git_client push origin --delete branch_for_delete_ffonly
+  To https://localhost:$LOCAL_PORT/repos/git/ro/repo.git
+   ! [remote rejected] branch_for_delete_ffonly (invalid request: Deletion of 'heads/branch_for_delete_ffonly' is prohibited)
+  error: failed to push some refs to 'https://localhost:$LOCAL_PORT/repos/git/ro/repo.git'
+  [1]
 
 # Push all the changes made so far
   $ git_client push origin --all --follow-tags --force &> output
@@ -120,4 +134,5 @@
   4981a25180e49be096fce2ac3e68e455fc158449 refs/remotes/origin/master
   676bc3cdd4bcc0b238223b6ca444c7ac50b59174 refs/remotes/origin/non_ffwd_branch
   8963e1f55d1346a07c3aec8c8fc72bf87d0452b1 refs/tags/first_tag
+  c47cf83db7aff6eb843f31a57d59f19670b69ed5 refs/remotes/origin/branch_for_delete_ffonly
   eb95862bb5d5c295844706cbb0d0e56fee405f5c refs/remotes/origin/branch_ffonly
