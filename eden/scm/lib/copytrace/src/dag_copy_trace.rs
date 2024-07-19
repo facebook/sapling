@@ -171,6 +171,13 @@ impl CopyTrace for DagCopyTrace {
         src_path: RepoPathBuf,
     ) -> Result<TraceResult> {
         tracing::debug!(?src, ?dst, ?src_path, "trace_reanme");
+
+        let msrc = self.vertex_to_tree_manifest(&src).await?;
+        if msrc.get(&src_path)?.is_none() {
+            tracing::debug!("src_path not found in src commit");
+            return Ok(TraceResult::NotFound);
+        }
+
         if self.dag.is_ancestor(src.clone(), dst.clone()).await? {
             return self
                 .trace_rename_forward(src.clone(), dst.clone(), src_path)

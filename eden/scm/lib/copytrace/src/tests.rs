@@ -585,6 +585,6 @@ async fn test_forward_copy_then_rename() {
 
     assert_trace_rename!(c A C, a -> a);
     assert_trace_rename!(c B C, b -> c);
-    // tofix: should not found `b`, since `b` is not in commit `A`
-    assert_trace_rename!(c A C, b -> c);
+    // should not found, since `b` is not in src commit `A`
+    assert_trace_rename!(c A C, b -> !);
 }
