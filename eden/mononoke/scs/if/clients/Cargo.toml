@@ -18,7 +18,6 @@ doc = false
 anyhow = "1.0.75"
 async-trait = "0.1.71"
 codegen_includer_proc_macro = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-const-cstr = "0.3.0"
 derived_data_type_if = { version = "0.1.0", path = "../../../derived_data/if" }
 derived_data_type_if_clients = { version = "0.1.0", path = "../../../derived_data/if/clients" }
 fb303_core = { version = "0.0.0", git = "https://github.com/facebook/fb303.git", branch = "main" }
