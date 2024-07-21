@@ -10,6 +10,8 @@ use regex::Regex;
 const WORKSPACE_NAME_PATTERN: &str = r"user/([^/]+)/.+";
 const EMAIL_PATTERN: &str = r"^([a-zA-Z0-9_\-.]+)@([a-zA-Z0-9_\-.]+)\.([a-zA-Z]{2,5})$";
 const LINUX_USER_PATTERN: &str = r"^[a-z_]([a-z0-9_-]{0,31}|[a-z0-9_-]{0,30}\\$)$";
+#[allow(unused)]
+const VALID_ACL_PATTERN: &str = "^[a-zA-Z0-9,=_\\.\\-]+([/][a-zA-Z0-9,=_\\.\\-]+)*$";
 
 pub fn is_valid_workspace_structure(name: &str) -> (bool, Option<String>) {
     let validator =
@@ -36,8 +38,33 @@ pub fn sanity_check_workspace_name(name: &str) -> bool {
     false
 }
 
+#[allow(unused)]
+pub fn is_valid_acl_name(acl_name: &str) -> bool {
+    let validator = Regex::new(VALID_ACL_PATTERN).expect("Error while creating email regex");
+    validator.is_match(acl_name)
+}
+
+#[allow(unused)]
+pub fn decorate_workspace_name_to_valid_acl_name(name: &str) -> String {
+    let mut workspace_decorated = name.to_string();
+    let allowed_punctuation = [',', '=', '_', '.', '-', '/'];
+    workspace_decorated = workspace_decorated
+        .chars()
+        .map(|c| {
+            if c.is_alphanumeric() || allowed_punctuation.contains(&c) {
+                c
+            } else {
+                '_'
+            }
+        })
+        .collect();
+    workspace_decorated
+}
+
 #[cfg(test)]
 mod test {
+    use crate::decorate_workspace_name_to_valid_acl_name;
+    use crate::is_valid_acl_name;
     use crate::sanity_check_workspace_name;
 
     #[test]
@@ -64,5 +91,36 @@ mod test {
         assert!(sanity_check_workspace_name(
             "user/testuser@oculus.com/other name with spaces"
         ));
+    }
+
+    #[test]
+    fn test_invalid_acl_names() {
+        assert!(!is_valid_acl_name(
+            "user/testuser@oculus.com/other name with spaces"
+        ));
+        assert!(!is_valid_acl_name("user/testuser@oculus.com/default"));
+    }
+
+    #[test]
+    fn test_valid_acl_names() {
+        assert!(is_valid_acl_name("user/testuser/default"));
+    }
+
+    #[test]
+    fn test_workspace_name_decorate_for_acl() {
+        assert_eq!(
+            decorate_workspace_name_to_valid_acl_name("user/testuser/default"),
+            "user/testuser/default"
+        );
+        assert_eq!(
+            decorate_workspace_name_to_valid_acl_name("user/testuser@oculus.com/default"),
+            "user/testuser_oculus.com/default"
+        );
+        assert_eq!(
+            decorate_workspace_name_to_valid_acl_name(
+                "user/testuser@oculus.com/other name with spaces"
+            ),
+            "user/testuser_oculus.com/other_name_with_spaces"
+        );
     }
 }
