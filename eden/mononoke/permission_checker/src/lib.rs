@@ -6,6 +6,7 @@
  */
 
 mod checker;
+pub mod dummy;
 #[cfg(fbcode_build)]
 mod facebook;
 mod identity;
@@ -35,4 +36,4 @@ pub use provider::AclProvider;
 pub type DefaultAclProvider = facebook::HipsterAclProvider;
 
 #[cfg(not(fbcode_build))]
-pub type DefaultAclProvider = oss::DummyAclProvider;
+pub type DefaultAclProvider = dummy::DummyAclProvider;
