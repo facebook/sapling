@@ -21,9 +21,12 @@ rust_library(
         "//common/rust/aclchecker:aclchecker",
         "//common/rust/identity:identity_ext",
         "//common/rust/shed/fbinit:fbinit",
-        "//configerator/structs/infrasec/if:acl-rust",
     ] + ([] if rust_oss.is_oss_build() else [
+        "//configerator/structs/infrasec/if:acl-rust",
         "fbsource//third-party/rust:maplit",
         "fbsource//third-party/rust:tokio",
+        "//configerator/structs/infrasec/if:acl-rust",
+        "//infrasec/authorization/if:if-service-rust",
+        "//infrasec/authorization/if:if-service-rust-srclients",
     ]),
 )
