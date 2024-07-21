@@ -11,7 +11,7 @@ const WORKSPACE_NAME_PATTERN: &str = r"user/([^/]+)/.+";
 const EMAIL_PATTERN: &str = r"^([a-zA-Z0-9_\-.]+)@([a-zA-Z0-9_\-.]+)\.([a-zA-Z]{2,5})$";
 const LINUX_USER_PATTERN: &str = r"^[a-z_]([a-z0-9_-]{0,31}|[a-z0-9_-]{0,30}\\$)$";
 
-fn is_valid_workspace_structure(name: &str) -> (bool, Option<String>) {
+pub fn is_valid_workspace_structure(name: &str) -> (bool, Option<String>) {
     let validator =
         Regex::new(WORKSPACE_NAME_PATTERN).expect("Error while creating workspace regex");
     let owner = validator
@@ -19,11 +19,11 @@ fn is_valid_workspace_structure(name: &str) -> (bool, Option<String>) {
         .and_then(|caps| caps.get(1).map(|match_| match_.as_str().to_string()));
     (validator.is_match(name), owner)
 }
-fn is_valid_email(email: &str) -> bool {
+pub fn is_valid_email(email: &str) -> bool {
     let validator = Regex::new(EMAIL_PATTERN).expect("Error while creating email regex");
     validator.is_match(email)
 }
-fn is_valid_linux_user(user: &str) -> bool {
+pub fn is_valid_linux_user(user: &str) -> bool {
     let validator = Regex::new(LINUX_USER_PATTERN).expect("Error while creating linux user regex");
     validator.is_match(user)
 }

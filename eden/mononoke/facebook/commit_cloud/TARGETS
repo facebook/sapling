@@ -7,6 +7,9 @@ rust_library(
     srcs = glob([
         "**/*.rs",
     ]),
+    test_deps = [
+        "//common/rust/shed/fbinit:fbinit-tokio",
+    ],
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:base64",
@@ -17,6 +20,9 @@ rust_library(
         "//common/rust/shed/fbinit:fbinit",
         "//configerator/structs/infrasec/if:acl-rust",
         "//crypto/cat/rust:cryptocat",
+        "//eden/mononoke/commit_cloud/helpers:commit_cloud_helpers",
+        "//eden/mononoke/permission_checker:permission_checker",
         "//eden/scm/lib/edenapi/types:edenapi_types",
+        "//employee/if:thrift-rust-srclients",
     ],
 )
