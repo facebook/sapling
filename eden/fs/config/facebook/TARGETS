@@ -12,6 +12,7 @@ python_library(
             [
                 "//gatekeeper/py:client",
                 "//libfb/py:employee",
+                ":edenfs_qe",
             ],
         ),
     ],
@@ -34,6 +35,21 @@ python_library(
         "//eden/fs/cli:telemetry",
         "//thrift/lib/py3:common",
         "//thrift/lib/py3:types",
+    ],
+)
+
+python_library(
+    name = "edenfs_qe",
+    srcs = ["edenfs_qe.py"],
+    compatible_with = [
+        "ovr_config//os:linux",
+    ],
+    deps = [
+        "//configerator/structs/qe2/service:qe2_servicev2-py3-clients",
+        "//configerator/structs/qe2/service:qe2_servicev2-py3-types",
+        "//ondemand:paths",
+        "//servicerouter/client/py3:base",
+        "//servicerouter/client/py3:get_client",
     ],
 )
 
