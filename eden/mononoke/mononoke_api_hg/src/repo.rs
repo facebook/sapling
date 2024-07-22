@@ -1059,7 +1059,12 @@ impl HgRepoContext {
         reponame: &str,
     ) -> Result<WorkspaceData, MononokeError> {
         let ctx = CommitCloudContext::new(workspace, reponame)?;
-        Ok(self.blob_repo().commit_cloud().get_workspace(&ctx).await?)
+        Ok(self
+            .repo()
+            .inner_repo()
+            .commit_cloud()
+            .get_workspace(&ctx)
+            .await?)
     }
 
     pub async fn cloud_references(
@@ -1068,7 +1073,8 @@ impl HgRepoContext {
     ) -> Result<ReferencesData, MononokeError> {
         let ctx = CommitCloudContext::new(&params.workspace, &params.reponame)?;
         Ok(self
-            .blob_repo()
+            .repo()
+            .inner_repo()
             .commit_cloud()
             .get_references(&ctx, params)
             .await?)
@@ -1083,7 +1089,8 @@ impl HgRepoContext {
             ctx.check_workspace_name()?;
         }
         Ok(self
-            .blob_repo()
+            .repo()
+            .inner_repo()
             .commit_cloud()
             .update_references(&ctx, params)
             .await?)
