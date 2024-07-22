@@ -9,6 +9,7 @@
 //!
 //! Stores configuration and state for data derivation.
 
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use anyhow::anyhow;
@@ -24,6 +25,7 @@ use derived_data_manager::DerivationError;
 use derived_data_manager::DerivedDataManager;
 use derived_data_manager::SharedDerivationError;
 use derived_data_remote::DerivationClient;
+use ephemeral_blobstore::Bubble;
 use filenodes::Filenodes;
 use filestore::FilestoreConfig;
 use metaconfig_types::DerivedDataConfig;
@@ -39,8 +41,11 @@ pub struct RepoDerivedData {
     /// Configuration for derived data.
     config: DerivedDataConfig,
 
+    /// Hashmap of config name to derived data manager for this repo.
+    managers: HashMap<String, DerivedDataManager>,
+
     /// Derived data manager for the enabled types on this repo.
-    manager: DerivedDataManager,
+    enabled_manager: DerivedDataManager,
 }
 
 impl RepoDerivedData {
@@ -60,63 +65,117 @@ impl RepoDerivedData {
         config: DerivedDataConfig,
         derivation_service_client: Option<Arc<dyn DerivationClient>>,
     ) -> Result<RepoDerivedData> {
-        let config_name = config.enabled_config_name.clone();
-        let manager = DerivedDataManager::new(
-            repo_id,
-            repo_name,
-            changesets,
-            commit_graph,
-            bonsai_hg_mapping,
-            bonsai_git_mapping,
-            filenodes,
-            repo_blobstore,
-            filestore_config,
-            lease,
-            scuba,
-            config_name.clone(),
-            config
-                .get_config(&config_name)
-                .ok_or_else(|| {
-                    anyhow!(
-                        "Requested config name: {} is not in the available configs",
-                        config_name
-                    )
-                })?
-                .clone(),
-            derivation_service_client,
-        );
-        Ok(RepoDerivedData { config, manager })
+        let managers = config
+            .available_configs
+            .iter()
+            .map(|(config_name, config)| {
+                (
+                    config_name.to_string(),
+                    DerivedDataManager::new(
+                        repo_id,
+                        repo_name.clone(),
+                        changesets.clone(),
+                        commit_graph.clone(),
+                        bonsai_hg_mapping.clone(),
+                        bonsai_git_mapping.clone(),
+                        filenodes.clone(),
+                        repo_blobstore.clone(),
+                        filestore_config,
+                        lease.clone(),
+                        scuba.clone(),
+                        config_name.to_string(),
+                        config.clone(),
+                        derivation_service_client.clone(),
+                    ),
+                )
+            })
+            .collect::<HashMap<_, _>>();
+        let enabled_manager = managers
+            .get(&config.enabled_config_name)
+            .ok_or_else(|| {
+                anyhow!(
+                    "enabled_config_name: {} is not in available_configs",
+                    config.enabled_config_name
+                )
+            })?
+            .clone();
+        Ok(RepoDerivedData {
+            config,
+            managers,
+            enabled_manager,
+        })
     }
 
     // For dangerous-override: allow replacement of lease-ops
     pub fn with_replaced_lease(&self, lease: Arc<dyn LeaseOps>) -> Self {
+        let updated_managers = self
+            .managers
+            .iter()
+            .map(|(name, manager)| (name.clone(), manager.with_replaced_lease(lease.clone())))
+            .collect::<HashMap<_, _>>();
         Self {
             config: self.config.clone(),
-            manager: self.manager.with_replaced_lease(lease),
+            managers: updated_managers,
+            enabled_manager: self.enabled_manager.with_replaced_lease(lease),
         }
     }
 
     // For dangerous-override: allow replacement of blobstore
     pub fn with_replaced_blobstore(&self, repo_blobstore: RepoBlobstore) -> Self {
+        let updated_managers = self
+            .managers
+            .iter()
+            .map(|(name, manager)| {
+                (
+                    name.clone(),
+                    manager.with_replaced_blobstore(repo_blobstore.clone()),
+                )
+            })
+            .collect::<HashMap<_, _>>();
         Self {
             config: self.config.clone(),
-            manager: self.manager.with_replaced_blobstore(repo_blobstore),
+            managers: updated_managers,
+            enabled_manager: self.enabled_manager.with_replaced_blobstore(repo_blobstore),
         }
     }
 
     // For dangerous-override: allow replacement of changesets
     pub fn with_replaced_changesets(&self, changesets: Arc<dyn Changesets>) -> Self {
+        let updated_managers = self
+            .managers
+            .iter()
+            .map(|(name, manager)| {
+                (
+                    name.clone(),
+                    manager.with_replaced_changesets(changesets.clone()),
+                )
+            })
+            .collect::<HashMap<_, _>>();
         Self {
             config: self.config.clone(),
-            manager: self.manager.with_replaced_changesets(changesets),
+            managers: updated_managers,
+            enabled_manager: self.enabled_manager.with_replaced_changesets(changesets),
         }
     }
 
     // For dangerous-override: allow replacement of commit_graph
     pub fn with_replaced_commit_graph(&self, commit_graph: Arc<CommitGraph>) -> Self {
+        let updated_managers = self
+            .managers
+            .iter()
+            .map(|(name, manager)| {
+                (
+                    name.clone(),
+                    manager.with_replaced_commit_graph(commit_graph.clone()),
+                )
+            })
+            .collect::<HashMap<_, _>>();
         Self {
             config: self.config.clone(),
-            manager: self.manager.with_replaced_commit_graph(commit_graph),
+            managers: updated_managers,
+            enabled_manager: self
+                .enabled_manager
+                .with_replaced_commit_graph(commit_graph),
         }
     }
 
@@ -125,26 +184,54 @@ impl RepoDerivedData {
         &self,
         bonsai_hg_mapping: Arc<dyn BonsaiHgMapping>,
     ) -> Self {
+        let updated_managers = self
+            .managers
+            .iter()
+            .map(|(name, manager)| {
+                (
+                    name.clone(),
+                    manager.with_replaced_bonsai_hg_mapping(bonsai_hg_mapping.clone()),
+                )
+            })
+            .collect::<HashMap<_, _>>();
         Self {
             config: self.config.clone(),
-            manager: self
-                .manager
+            managers: updated_managers,
+            enabled_manager: self
+                .enabled_manager
                 .with_replaced_bonsai_hg_mapping(bonsai_hg_mapping),
         }
     }
 
     // For dangerous-override: allow replacement of filenodes
     pub fn with_replaced_filenodes(&self, filenodes: Arc<dyn Filenodes>) -> Self {
+        let updated_managers = self
+            .managers
+            .iter()
+            .map(|(name, manager)| {
+                (
+                    name.clone(),
+                    manager.with_replaced_filenodes(filenodes.clone()),
+                )
+            })
+            .collect::<HashMap<_, _>>();
         Self {
             config: self.config.clone(),
-            manager: self.manager.with_replaced_filenodes(filenodes),
+            managers: updated_managers,
+            enabled_manager: self.enabled_manager.with_replaced_filenodes(filenodes),
         }
     }
 
-    pub fn with_manager(&self, manager: DerivedDataManager) -> Self {
+    pub fn for_bubble(&self, bubble: Bubble) -> Self {
+        let updated_managers = self
+            .managers
+            .iter()
+            .map(|(name, manager)| (name.clone(), manager.clone().for_bubble(bubble.clone())))
+            .collect::<HashMap<_, _>>();
         Self {
             config: self.config.clone(),
-            manager,
+            managers: updated_managers,
+            enabled_manager: self.enabled_manager.clone().for_bubble(bubble),
         }
     }
 
@@ -155,17 +242,24 @@ impl RepoDerivedData {
 
     /// Config for the currently active derived data.
     pub fn active_config(&self) -> &DerivedDataTypesConfig {
-        self.manager.config()
+        self.manager().config()
     }
 
     /// Derived data lease for this repo.
     pub fn lease(&self) -> &Arc<dyn LeaseOps> {
-        self.manager.lease().lease_ops()
+        self.manager().lease().lease_ops()
     }
 
     /// Default manager for derivation.
     pub fn manager(&self) -> &DerivedDataManager {
-        &self.manager
+        &self.enabled_manager
+    }
+
+    /// Returns the manager for the given config name.
+    pub fn manager_for_config(&self, config_name: &str) -> Result<&DerivedDataManager> {
+        self.managers
+            .get(config_name)
+            .ok_or_else(|| anyhow!("No manager found for config {}", config_name))
     }
 
     /// Count the number of ancestors of a commit that are underived.
@@ -178,7 +272,7 @@ impl RepoDerivedData {
     where
         Derivable: BonsaiDerivable,
     {
-        self.manager
+        self.manager()
             .count_underived::<Derivable>(ctx, csid, limit, None)
             .await
     }
@@ -192,7 +286,7 @@ impl RepoDerivedData {
     where
         Derivable: BonsaiDerivable,
     {
-        self.manager.derive::<Derivable>(ctx, csid, None).await
+        self.manager().derive::<Derivable>(ctx, csid, None).await
     }
 
     /// Fetch an already derived derived data type using the default manager.
@@ -204,7 +298,7 @@ impl RepoDerivedData {
     where
         Derivable: BonsaiDerivable,
     {
-        self.manager
+        self.manager()
             .fetch_derived::<Derivable>(ctx, csid, None)
             .await
     }

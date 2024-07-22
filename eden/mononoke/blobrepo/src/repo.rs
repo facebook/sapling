@@ -176,13 +176,7 @@ impl BlobRepo {
         let commit_graph = Arc::new(bubble.repo_commit_graph(self));
         let changeset_fetcher =
             SimpleChangesetFetcher::new(changesets.clone(), self.repo_identity().id());
-        let new_manager = self
-            .inner
-            .repo_derived_data
-            .manager()
-            .clone()
-            .for_bubble(bubble);
-        let repo_derived_data = self.inner.repo_derived_data.with_manager(new_manager);
+        let repo_derived_data = self.inner.repo_derived_data.for_bubble(bubble);
         let mut inner = (*self.inner).clone();
         inner.repo_derived_data = Arc::new(repo_derived_data);
         inner.changesets = changesets;
