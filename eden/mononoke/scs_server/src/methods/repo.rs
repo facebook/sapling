@@ -503,7 +503,6 @@ impl SourceControlServiceImpl {
             }
         }
 
-        // Prepare derived data if we were asked to, excluding Git types
         if let Some(prepare_types) = &params.prepare_derived_data_types {
             let csids = stack.iter().map(|c| c.id()).collect::<Vec<_>>();
             let derived_data_types = prepare_types
@@ -511,8 +510,7 @@ impl SourceControlServiceImpl {
                 .map(DerivableType::from_request)
                 .collect::<Result<Vec<_>, _>>()?;
             repo.derive_bulk(&ctx, csids, &derived_data_types, Some(batch_size))
-                .await
-                .context("Deriving non Git types")?;
+                .await?;
         }
 
         let identity_schemes = &params.identity_schemes;
