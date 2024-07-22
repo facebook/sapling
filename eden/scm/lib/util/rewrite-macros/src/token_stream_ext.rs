@@ -276,6 +276,21 @@ mod tests {
         );
         let tokens = grouped.to_tokens();
         assert_eq!(unparse(tokens), "\n            x as Result < Vec < u8 >>;");
+
+        // "->" won't disrupt the grouping.
+        let tokens = parse("Box<dyn Fn() -> X>");
+        let items = tokens.to_items();
+        assert_eq!(
+            display(&items),
+            "[Box, <, dyn, Fn, Tree(Parenthesis, []), ->, X, >]"
+        );
+        let grouped = items.group_by_angle_bracket();
+        assert_eq!(
+            display(&grouped),
+            "[Box, Tree(<>, [dyn, Fn, Tree(Parenthesis, []), ->, X])]"
+        );
+        let tokens = grouped.to_tokens();
+        assert_eq!(unparse(tokens), "Box < dyn Fn () -> X >");
     }
 
     fn display(items: &[Item]) -> String {
