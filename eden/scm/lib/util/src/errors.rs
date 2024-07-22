@@ -9,6 +9,7 @@ use std::io;
 use std::path::Path;
 
 use lazystr::LazyStr;
+use rewrite_macros::demomo;
 
 #[derive(Debug, thiserror::Error)]
 #[error("{msg}: {source}")]
@@ -23,6 +24,7 @@ pub fn from_err_msg(source: io::Error, msg: String) -> io::Error {
     io::Error::new(kind, error)
 }
 
+#[demomo]
 pub fn from_err_msg_path(
     err: io::Error,
     msg: impl AsRef<str>,

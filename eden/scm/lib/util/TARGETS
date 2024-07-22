@@ -72,5 +72,6 @@ rust_library(
         "fbsource//third-party/rust:thiserror",
         "//eden/scm/lib/atomicfile:atomicfile",
         "//eden/scm/lib/lazystr:lazystr",
+        "//eden/scm/lib/util/rewrite-macros:rewrite-macros",
     ],
 )
