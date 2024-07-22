@@ -254,3 +254,18 @@ tw.container(
     ],
     oncall = "scm_server_infra",
 )
+
+tw.container(
+    name = "tw.mononoke.git_server_push_tailer",
+    features = [
+        tw.build_fbpkg(
+            mononoke_fbpkg(
+                name = "mononoke.git_server_push_tailer",
+                path_actions = {
+                    "git_server_push_tailer": "//eden/mononoke/git_server/push_tailer:git_server_push_tailer",
+                },
+            ),
+        ),
+    ],
+    oncall = "scm_server_infra",
+)
