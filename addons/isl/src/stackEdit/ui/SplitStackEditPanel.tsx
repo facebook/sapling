@@ -676,7 +676,14 @@ function EditableCommitTitle(props: MaybeEditableCommitTitleProps) {
         const newFullText = newTitle + '\n' + existingDescription;
         const newStack = commitStack.stack.setIn([commit.rev, 'text'], newFullText);
         const newCommitStack = commitStack.set('stack', newStack);
-        stackEdit.push(newCommitStack, {name: 'metaedit', commit});
+
+        const previous = stackEdit.undoOperationDescription();
+        if (previous != null && previous.name == 'metaedit' && previous.commit.rev === commit.rev) {
+          // the last operation was also editing this same message, let's re-use the history instead of growing it
+          stackEdit.replaceTopOperation(newCommitStack, {name: 'metaedit', commit});
+        } else {
+          stackEdit.push(newCommitStack, {name: 'metaedit', commit});
+        }
       }
     }
   };

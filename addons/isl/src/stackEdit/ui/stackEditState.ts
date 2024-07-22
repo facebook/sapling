@@ -103,6 +103,24 @@ class History extends HistoryRecord {
     });
   }
 
+  /**
+   * Like `pop` then `push`, used to update the most recent operation as an optimization.
+   */
+  replaceTop(
+    state: CommitStackState,
+    op: StackEditOpDescription,
+    splitRange?: SplitRangeRecord,
+  ): History {
+    const newSplitRange = splitRange ?? this.current.splitRange;
+    const newHistory = this.history
+      .slice(0, this.currentIndex)
+      .push(StackStateWithOperation({op, state, splitRange: newSplitRange}));
+    return new History({
+      history: newHistory,
+      currentIndex: newHistory.size - 1,
+    });
+  }
+
   setSplitRange(range: SplitRangeRecord): History {
     const newHistory = this.history.set(this.currentIndex, this.current.set('splitRange', range));
     return new History({
@@ -368,6 +386,23 @@ class UseStackEditState {
       return;
     }
     const newHistory = this.history.push(commitStack, op, splitRange);
+    this.setHistory(newHistory);
+  }
+
+  /**
+   * Like `pop` then `push`, used to update the most recent operation as an optimization
+   * to avoid lots of tiny state changes in the history.
+   */
+  replaceTopOperation(
+    commitStack: CommitStackState,
+    op: StackEditOpDescription,
+    splitRange?: SplitRangeRecord,
+  ) {
+    if (commitStack.originalStack !== this.commitStack.originalStack) {
+      // Wrong stack. Discard.
+      return;
+    }
+    const newHistory = this.history.replaceTop(commitStack, op, splitRange);
     this.setHistory(newHistory);
   }
 
