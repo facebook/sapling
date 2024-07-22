@@ -9,17 +9,20 @@ use std::path::PathBuf;
 
 use anyhow::Context;
 use anyhow::Result;
+use bulk_derivation::BulkDerivation;
+use clap::builder::PossibleValuesParser;
 use clap::Args;
 use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use futures_stats::TimedTryFutureExt;
 use mononoke_app::args::ChangesetArgs;
-use repo_derived_data::RepoDerivedDataArc;
+use mononoke_types::DerivableType;
+use repo_derived_data::RepoDerivedDataRef;
 use slog::debug;
+use strum::IntoEnumIterator;
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
 
-use super::args::DerivedUtilsArgs;
 use super::Repo;
 
 #[derive(Args)]
@@ -27,8 +30,8 @@ pub(super) struct SliceArgs {
     #[clap(flatten)]
     changeset_args: ChangesetArgs,
 
-    #[clap(flatten)]
-    derived_utils_args: DerivedUtilsArgs,
+    #[clap(short = 'T', long, value_parser = PossibleValuesParser::new(DerivableType::iter().map(|t| DerivableType::name(&t))))]
+    derived_data_type: String,
 
     /// The size of each slice in generation numbers. So that each slice will have
     /// changesets with generations in a range [slice_start, slice_start + slice_size)
@@ -47,9 +50,10 @@ pub(super) struct SliceArgs {
 }
 
 pub(super) async fn slice(ctx: &CoreContext, repo: &Repo, args: SliceArgs) -> Result<()> {
-    let derived_utils = args.derived_utils_args.derived_utils(ctx, repo)?;
-
     let mut cs_ids = args.changeset_args.resolve_changesets(ctx, repo).await?;
+    let derived_data_type = DerivableType::from_name(&args.derived_data_type)?;
+
+    let manager = repo.repo_derived_data().manager();
 
     debug!(
         ctx.logger(),
@@ -60,14 +64,16 @@ pub(super) async fn slice(ctx: &CoreContext, repo: &Repo, args: SliceArgs) -> Re
     let excluded_ancestors = if args.rederive {
         vec![]
     } else {
-        cs_ids = derived_utils
-            .pending(ctx.clone(), repo.repo_derived_data_arc(), cs_ids)
+        cs_ids = manager
+            .pending(ctx, &cs_ids, None, derived_data_type)
             .await?;
 
         let (frontier_stats, frontier) = repo
             .commit_graph()
-            .ancestors_frontier_with(ctx, cs_ids.clone(), |cs_id| {
-                derived_utils.is_derived(ctx, cs_id)
+            .ancestors_frontier_with(ctx, cs_ids.clone(), |cs_id| async move {
+                Ok(manager
+                    .is_derived(ctx, cs_id, None, derived_data_type)
+                    .await?)
             })
             .try_timed()
             .await?;
