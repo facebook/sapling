@@ -239,9 +239,9 @@ fn test_find_all_with_custom_placeholders() {
         ),
     ]);
     let matches = find_all(&items, &pat);
-    // FIXME: missed a match
-    assert_eq!(matches.len(), 1);
+    assert_eq!(matches.len(), 2);
     assert_eq!(matches[0].show(), ["___1 => a b c", "___2 => d e"]);
+    assert_eq!(matches[1].show(), ["___1 => f", "___2 => x y z"]);
 }
 
 #[test]

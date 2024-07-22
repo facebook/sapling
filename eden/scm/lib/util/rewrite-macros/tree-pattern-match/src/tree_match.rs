@@ -485,6 +485,33 @@ impl<'a, T: PartialEq + Clone + fmt::Debug> SeqMatchState<'a, T> {
         self.cache[(item_end) * (self.pat.len() + 1) + pat_end]
     }
 
+    /// Reset cache to UNKNOWN state for item_start..item_end.
+    fn clear_cache_range(&mut self, item_start: usize, item_end: usize) {
+        let pat_len = self.pat.len() + 1;
+        let start = item_start * pat_len;
+        let end = item_end * pat_len;
+        self.cache[start..end].fill(SeqMatched::UNKNOWN);
+    }
+
+    /// Modify states so new matches cannot overlap with the previous match ending at `end`.
+    /// i.e. new match.start must >= end.
+    fn cut_off_matches_at(&mut self, end: usize) {
+        // Move the "boundary" conditions from item_end=0 to item_end=end.
+        // Check `fn matched` for the boundary conditions.
+        for i in 0..self.pat.len() {
+            let matched = match i {
+                0 => SeqMatched::MATCH_INIT,
+                1 if matches!(self.pat.first(), Some(Item::Placeholder(p)) if p.matches_multiple()) => {
+                    SeqMatched::MATCH_PLACEHOLDER_MULTI
+                }
+                _ => SeqMatched::empty(),
+            };
+            *self.get_cache_mut(i, end) = matched;
+        }
+        // cache[pat=end, item=end] is intentionally unchanged
+        // so backtracking (to fill captures) still works.
+    }
+
     fn has_match(&self) -> bool {
         self.match_end.is_some()
     }
@@ -522,25 +549,38 @@ impl<'a, T: PartialEq + Clone + fmt::Debug> TreeMatchState<'a, T> {
             TreeMatchMode::MatchBegin | TreeMatchMode::Search => {
                 // Figure out the longest match.
                 let is_search = opts == TreeMatchMode::Search;
-                for end in 1..=items.len() {
-                    if !seq.matched(pat.len(), end, opts).is_empty() {
-                        seq.match_end = Some(end);
-                        if is_search {
-                            // Deal with overlapping.
-                            // There are probably smarter ways to handle this...
-                            if let Some(&last_end) = seq.match_ends.last() {
-                                let start = seq.backtrack_match_start(end);
-                                let last_start = seq.backtrack_match_start(last_end);
-                                if last_start >= start {
-                                    // Current match is better than last. Replace last.
-                                    seq.match_ends.pop();
-                                } else if last_end > start {
-                                    // Current match overlaps with last. Skip current.
-                                    continue;
+                let mut last_cutoff = 0;
+                'next: for end in 1..=items.len() {
+                    'retry: loop {
+                        if !seq.matched(pat.len(), end, opts).is_empty() {
+                            if is_search {
+                                // Deal with overlapping.
+                                // There are probably smarter ways to handle this...
+                                if let Some(&last_end) = seq.match_ends.last() {
+                                    let start = seq.backtrack_match_start(end);
+                                    let last_start = seq.backtrack_match_start(last_end);
+                                    if last_start >= start {
+                                        // Current match is better than last. Replace last.
+                                        seq.match_ends.pop();
+                                    } else if last_end > start {
+                                        // Current match overlaps with last.
+                                        if last_cutoff < last_end {
+                                            // Re-run the search with updated cut off state.
+                                            seq.clear_cache_range(last_end + 1, end + 1);
+                                            seq.cut_off_matches_at(last_end);
+                                            last_cutoff = last_end;
+                                            continue 'retry;
+                                        } else {
+                                            // Already cut off. No need to re-run the search.
+                                            continue 'next;
+                                        }
+                                    }
                                 }
+                                seq.match_ends.push(end);
                             }
-                            seq.match_ends.push(end);
+                            seq.match_end = Some(end);
                         }
+                        break;
                     }
                 }
             }
