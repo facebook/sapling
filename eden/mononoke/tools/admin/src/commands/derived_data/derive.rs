@@ -6,20 +6,24 @@
  */
 
 use std::collections::HashSet;
+use std::sync::Arc;
+use std::sync::Mutex;
 
 use anyhow::Result;
+use bulk_derivation::BulkDerivation;
 use clap::builder::PossibleValuesParser;
 use clap::Args;
 use context::CoreContext;
 use context::SessionClass;
-use derived_data_utils::derived_data_utils;
-use derived_data_utils::POSSIBLE_DERIVED_TYPE_NAMES;
+use derived_data_manager::DerivedDataManager;
+use derived_data_manager::Rederivation;
 use futures_stats::TimedTryFutureExt;
 use mononoke_api::ChangesetId;
 use mononoke_app::args::ChangesetArgs;
 use mononoke_types::DerivableType;
 use repo_derived_data::RepoDerivedDataRef;
 use slog::trace;
+use strum::IntoEnumIterator;
 
 use super::Repo;
 
@@ -28,7 +32,7 @@ pub(super) struct DeriveArgs {
     #[clap(flatten)]
     changeset_args: ChangesetArgs,
     /// Type of derived data
-    #[clap(long, short = 'T', required = true,  value_parser = PossibleValuesParser::new(POSSIBLE_DERIVED_TYPE_NAMES), group="types to derive")]
+    #[clap(long, short = 'T', required = true,  value_parser = PossibleValuesParser::new(DerivableType::iter().map(|t| DerivableType::name(&t))), group="types to derive")]
     derived_data_types: Vec<String>,
     /// Whether all enabled derived data types should be derived
     #[clap(long, required = true, group = "types to derive")]
@@ -39,11 +43,16 @@ pub(super) struct DeriveArgs {
     /// Whether to derive from the predecessor of this derived data type
     #[clap(long)]
     from_predecessor: bool,
+    /// Batch size to use for derivation
+    #[clap(long)]
+    batch_size: Option<u64>,
 }
 
 pub(super) async fn derive(ctx: &mut CoreContext, repo: &Repo, args: DeriveArgs) -> Result<()> {
     let resolved_csids = args.changeset_args.resolve_changesets(ctx, repo).await?;
     let csids = resolved_csids.as_slice();
+
+    let manager = repo.repo_derived_data().manager();
 
     let derived_data_types = if args.all_types {
         // Derive all the types enabled in the config
@@ -57,63 +66,75 @@ pub(super) async fn derive(ctx: &mut CoreContext, repo: &Repo, args: DeriveArgs)
             .collect::<Result<HashSet<_>>>()?
     };
 
-    for derived_data_type in derived_data_types {
-        derive_data_type(
-            ctx,
-            repo,
-            derived_data_type,
-            csids,
-            args.rederive,
-            args.from_predecessor,
-        )
-        .await?;
+    let rederivation = if args.rederive {
+        trace!(ctx.logger(), "about to rederive {} commits", csids.len());
+        // Force this binary to write to all blobstores
+        ctx.session_mut()
+            .override_session_class(SessionClass::Background);
+        Arc::new(Mutex::new(csids.iter().copied().collect::<HashSet<_>>()))
+    } else {
+        trace!(ctx.logger(), "about to derive {} commits", csids.len());
+        Default::default()
+    };
+
+    if args.from_predecessor {
+        for derived_data_type in derived_data_types {
+            for csid in csids {
+                derive_from_predecessor(
+                    ctx,
+                    manager,
+                    derived_data_type,
+                    *csid,
+                    rederivation.clone(),
+                )
+                .await?;
+            }
+        }
+    } else {
+        let (stats, ()) = manager
+            .derive_bulk(
+                ctx,
+                csids,
+                Some(rederivation),
+                &derived_data_types.into_iter().collect::<Vec<_>>(),
+                args.batch_size,
+            )
+            .try_timed()
+            .await?;
+        trace!(
+            ctx.logger(),
+            "finished derivation in {}ms",
+            stats.completion_time.as_millis(),
+        );
     }
 
     Ok(())
 }
 
-async fn derive_data_type(
-    ctx: &mut CoreContext,
-    repo: &Repo,
+async fn derive_from_predecessor(
+    ctx: &CoreContext,
+    manager: &DerivedDataManager,
     derived_data_type: DerivableType,
-    csids: &[ChangesetId],
-    rederive: bool,
-    from_predecessor: bool,
+    csid: ChangesetId,
+    rederivation: Arc<dyn Rederivation>,
 ) -> Result<()> {
-    let derived_utils = derived_data_utils(ctx.fb, repo, derived_data_type)?;
-
-    if rederive {
-        trace!(ctx.logger(), "about to rederive {} commits", csids.len());
-        derived_utils.regenerate(csids);
-        // Force this binary to write to all blobstores
-        ctx.session_mut()
-            .override_session_class(SessionClass::Background);
-    } else {
-        trace!(ctx.logger(), "about to derive {} commits", csids.len());
-    };
-
-    for csid in csids {
-        trace!(ctx.logger(), "deriving {}", csid);
-        let (stats, res) = if from_predecessor {
-            derived_utils
-                .derive_from_predecessor(ctx.clone(), repo.repo_derived_data.clone(), *csid)
-                .try_timed()
-                .await?
-        } else {
-            derived_utils
-                .derive(ctx.clone(), repo.repo_derived_data.clone(), *csid)
-                .try_timed()
-                .await?
-        };
-        trace!(
-            ctx.logger(),
-            "derived {} for {} in {}ms, {:?}",
-            derived_data_type.name(),
-            csid,
-            stats.completion_time.as_millis(),
-            res,
-        );
-    }
-
+    trace!(ctx.logger(), "deriving {} from predecessors", csid);
+    let (stats, res) = BulkDerivation::derive_from_predecessor(
+        manager,
+        ctx,
+        csid,
+        Some(rederivation),
+        derived_data_type,
+    )
+    .try_timed()
+    .await?;
+    trace!(
+        ctx.logger(),
+        "derived {} for {} in {}ms, {:?}",
+        derived_data_type.name(),
+        csid,
+        stats.completion_time.as_millis(),
+        res,
+    );
     Ok(())
 }

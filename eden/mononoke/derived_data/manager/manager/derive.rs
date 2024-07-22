@@ -38,6 +38,7 @@ use futures::stream::TryStreamExt;
 use futures::Future;
 use futures_stats::TimedFutureExt;
 use futures_stats::TimedTryFutureExt;
+use lock_ext::LockExt;
 use mononoke_types::ChangesetId;
 use mononoke_types::DerivableType;
 use slog::debug;
@@ -63,6 +64,20 @@ pub trait Rederivation: Send + Sync + 'static {
     /// is called, `needs_rederive` should not return `true` for
     /// this changeset.
     fn mark_derived(&self, derivable_type: DerivableType, csid: ChangesetId);
+}
+
+impl Rederivation for Mutex<HashSet<ChangesetId>> {
+    fn needs_rederive(&self, _derivable_type: DerivableType, csid: ChangesetId) -> Option<bool> {
+        if self.with(|rederive| rederive.contains(&csid)) {
+            Some(true)
+        } else {
+            None
+        }
+    }
+
+    fn mark_derived(&self, _derivable_type: DerivableType, csid: ChangesetId) {
+        self.with(|rederive| rederive.remove(&csid));
+    }
 }
 
 pub type VisitedDerivableTypesMap<'a, OkType, ErrType> =
