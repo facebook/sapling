@@ -1,0 +1,10 @@
+load("@fbcode_macros//build_defs:rust_binary.bzl", "rust_binary")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mononoke")
+
+rust_binary(
+    name = "git_server_push_tailer",
+    srcs = glob(["src/**/*.rs"]),
+    deps = [],
+)
