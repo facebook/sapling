@@ -38,7 +38,7 @@ pub struct Placeholder<T> {
     name: String,
     /// If set, specify whether to match an item.
     /// Can be useful to express `[0-9a-f]` like in glob.
-    matches_item: Option<fn(&Item<T>) -> bool>,
+    matches_item: Option<Arc<dyn (Fn(&Item<T>) -> bool) + 'static>>,
     /// If true, matches empty or multiple items, like `*`.
     /// Otherwise, matches one item.
     matches_multiple: bool,
@@ -68,8 +68,11 @@ impl<T> Placeholder<T> {
         }
     }
 
-    pub fn set_matches_item(&mut self, matches_item: fn(&Item<T>) -> bool) -> &mut Self {
-        self.matches_item = Some(matches_item);
+    pub fn set_matches_item(
+        &mut self,
+        matches_item: impl (Fn(&Item<T>) -> bool) + 'static,
+    ) -> &mut Self {
+        self.matches_item = Some(Arc::new(matches_item));
         self
     }
 
@@ -97,23 +100,26 @@ impl<T> Placeholder<T> {
 }
 
 pub trait PlaceholderExt<T> {
-    fn with_placeholder_matching_items(
+    fn with_placeholder_matching_items<F: Fn(&Item<T>) -> bool + 'static>(
         self,
-        name_matches_item_pairs: impl IntoIterator<Item = (&'static str, fn(&Item<T>) -> bool)>,
+        name_matches_item_pairs: impl IntoIterator<Item = (&'static str, F)>,
     ) -> Self;
 }
 
 impl<T> PlaceholderExt<T> for Vec<Item<T>> {
-    fn with_placeholder_matching_items(
+    fn with_placeholder_matching_items<F: Fn(&Item<T>) -> bool + 'static>(
         mut self,
-        name_matches_item_pairs: impl IntoIterator<Item = (&'static str, fn(&Item<T>) -> bool)>,
+        name_matches_item_pairs: impl IntoIterator<Item = (&'static str, F)>,
     ) -> Self {
-        fn rewrite_items<T>(items: &mut [Item<T>], mapping: &HashMap<&str, fn(&Item<T>) -> bool>) {
+        fn rewrite_items<T, F: Fn(&Item<T>) -> bool + 'static>(
+            items: &mut [Item<T>],
+            mapping: &mut HashMap<&str, F>,
+        ) {
             for item in items.iter_mut() {
                 match item {
                     Item::Placeholder(p) => {
-                        if let Some(f) = mapping.get(p.name()) {
-                            p.set_matches_item(*f);
+                        if let Some(f) = mapping.remove(p.name()) {
+                            p.set_matches_item(f);
                         }
                     }
                     Item::Tree(_, children) => {
@@ -124,9 +130,8 @@ impl<T> PlaceholderExt<T> for Vec<Item<T>> {
             }
         }
 
-        let mapping: HashMap<&str, fn(&Item<T>) -> bool> =
-            name_matches_item_pairs.into_iter().collect();
-        rewrite_items(&mut self, &mapping);
+        let mut mapping: HashMap<&str, F> = name_matches_item_pairs.into_iter().collect();
+        rewrite_items(&mut self, &mut mapping);
         self
     }
 }
