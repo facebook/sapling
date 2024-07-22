@@ -461,6 +461,7 @@ impl SourceControlServiceImpl {
         repo: thrift::RepoSpecifier,
         params: thrift::RepoCreateStackParams,
     ) -> Result<thrift::RepoCreateStackResponse, errors::ServiceError> {
+        let batch_size = params.commits.len() as u64;
         let repo = self
             .repo_for_service(ctx.clone(), &repo, params.service_identity.clone())
             .await?;
@@ -509,7 +510,7 @@ impl SourceControlServiceImpl {
                 .iter()
                 .map(DerivableType::from_request)
                 .collect::<Result<Vec<_>, _>>()?;
-            repo.derive_bulk(&ctx, csids, &derived_data_types, None)
+            repo.derive_bulk(&ctx, csids, &derived_data_types, Some(batch_size))
                 .await
                 .context("Deriving non Git types")?;
         }
