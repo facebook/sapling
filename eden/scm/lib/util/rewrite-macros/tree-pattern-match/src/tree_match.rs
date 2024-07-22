@@ -122,7 +122,7 @@ impl<T> PlaceholderExt<T> for Vec<Item<T>> {
 }
 
 /// Similar to regex match. A match can have multiple captures.
-#[derive(Debug, Default, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Match<T> {
     /// End of the match (exclusive).
     end: usize,
@@ -132,6 +132,17 @@ pub struct Match<T> {
     pub captures: Captures<T>,
 }
 type Captures<T> = HashMap<String, Vec<Item<T>>>;
+
+// T does not ened to implement `Default`.
+impl<T> Default for Match<T> {
+    fn default() -> Self {
+        Self {
+            end: 0,
+            start: 0,
+            captures: Default::default(),
+        }
+    }
+}
 
 /// Replace matches. Similar to Python `re.sub` but is tree aware.
 pub fn replace_all<T: fmt::Debug + Clone + PartialEq + 'static>(
@@ -382,11 +393,7 @@ impl<'a, T: PartialEq + Clone + fmt::Debug> SeqMatchState<'a, T> {
     /// `SeqMatchState` only calculates matches at the current layer.
     fn fill_matches(&self, matches: &mut Vec<Match<T>>) {
         for &end in &self.match_ends {
-            let mut m = Match {
-                captures: Default::default(),
-                end: 0,
-                start: 0,
-            };
+            let mut m = Match::default();
             // Just figures out the matching start position so we can check overalp
             // and maybe replace the last match.
             // There are probably smarter ways to handle this...
