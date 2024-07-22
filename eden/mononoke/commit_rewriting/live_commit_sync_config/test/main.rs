@@ -17,6 +17,7 @@ use fbinit::FacebookInit;
 use live_commit_sync_config::CfgrLiveCommitSyncConfig;
 use live_commit_sync_config::CONFIGERATOR_ALL_COMMIT_SYNC_CONFIGS;
 use live_commit_sync_config::CONFIGERATOR_PUSHREDIRECT_ENABLE;
+use pushredirect::TestPushRedirectionConfig;
 
 macro_rules! is_error_kind {
     ($result_expression:expr, $( $pattern:pat_param )|+ $( if $guard: expr )?) => {
@@ -57,6 +58,7 @@ fn get_ctx_source_store_and_live_config(
     CoreContext,
     Arc<TestSource>,
     ConfigStore,
+    Arc<TestPushRedirectionConfig>,
     CfgrLiveCommitSyncConfig,
 ) {
     let ctx = CoreContext::test_mock(fb);
@@ -76,7 +78,20 @@ fn get_ctx_source_store_and_live_config(
     test_source.insert_to_refresh(CONFIGERATOR_PUSHREDIRECT_ENABLE.to_string());
     test_source.insert_to_refresh(CONFIGERATOR_ALL_COMMIT_SYNC_CONFIGS.to_string());
 
+    let test_push_redirection_config = Arc::new(TestPushRedirectionConfig::new());
+
     let store = ConfigStore::new(test_source.clone(), Duration::from_millis(2), None);
-    let live_commit_sync_config = CfgrLiveCommitSyncConfig::new(ctx.logger(), &store).unwrap();
-    (ctx, test_source, store, live_commit_sync_config)
+    let live_commit_sync_config = CfgrLiveCommitSyncConfig::new_with_xdb(
+        ctx.logger(),
+        &store,
+        test_push_redirection_config.clone(),
+    )
+    .unwrap();
+    (
+        ctx,
+        test_source,
+        store,
+        test_push_redirection_config,
+        live_commit_sync_config,
+    )
 }

@@ -16,7 +16,7 @@ use crate::EMTPY_COMMIT_SYNC_ALL;
 
 #[fbinit::test]
 async fn test_empty_configs(fb: FacebookInit) -> Result<()> {
-    let (ctx, _test_source, _store, live_commit_sync_config) =
+    let (ctx, _test_source, _store, _test_push_redirection_config, live_commit_sync_config) =
         get_ctx_source_store_and_live_config(fb, EMPTY_PUSHREDIRECTOR, EMTPY_COMMIT_SYNC_ALL);
     let repo_1 = RepositoryId::new(1);
     assert!(

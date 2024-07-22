@@ -112,7 +112,7 @@ const ALL_COMMIT_SYNC_CONFIG_V1: &str = r#"{
 
 #[fbinit::test]
 async fn test_different_repos_same_group(fb: FacebookInit) {
-    let (_ctx, _test_source, _store, live_commit_sync_config) =
+    let (_ctx, _test_source, _store, _test_push_redirection_config, live_commit_sync_config) =
         get_ctx_source_store_and_live_config(fb, EMPTY_PUSHREDIRECTOR, ALL_COMMIT_SYNC_CONFIG_V1);
 
     let repo_0 = RepositoryId::new(0);
@@ -150,7 +150,7 @@ async fn test_different_repos_same_group(fb: FacebookInit) {
 
 #[fbinit::test]
 async fn test_version_counts(fb: FacebookInit) {
-    let (_ctx, _test_source, _store, live_commit_sync_config) =
+    let (_ctx, _test_source, _store, _test_push_redirection_config, live_commit_sync_config) =
         get_ctx_source_store_and_live_config(fb, EMPTY_PUSHREDIRECTOR, ALL_COMMIT_SYNC_CONFIG_V1);
 
     let repo_0 = RepositoryId::new(0);
