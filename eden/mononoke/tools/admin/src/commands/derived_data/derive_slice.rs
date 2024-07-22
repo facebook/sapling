@@ -30,7 +30,6 @@ use futures::StreamExt;
 use futures::TryStreamExt;
 use futures_stats::TimedTryFutureExt;
 use mononoke_types::DerivableType;
-use repo_derived_data::RepoDerivedDataRef;
 use slog::debug;
 use strum::IntoEnumIterator;
 use tokio::fs::File;
@@ -214,10 +213,11 @@ async fn inner_derive_slice(
 pub(super) async fn derive_slice(
     ctx: &CoreContext,
     repo: &Repo,
+    manager: &DerivedDataManager,
     args: DeriveSliceArgs,
 ) -> Result<()> {
     let derived_data_type = DerivableType::from_name(&args.derived_data_type)?;
-    let manager = repo.repo_derived_data().manager().clone();
+    cloned!(manager);
 
     if args.rederive {
         let mut ctx = ctx.clone();

@@ -48,11 +48,14 @@ pub(super) struct DeriveArgs {
     batch_size: Option<u64>,
 }
 
-pub(super) async fn derive(ctx: &mut CoreContext, repo: &Repo, args: DeriveArgs) -> Result<()> {
+pub(super) async fn derive(
+    ctx: &mut CoreContext,
+    repo: &Repo,
+    manager: &DerivedDataManager,
+    args: DeriveArgs,
+) -> Result<()> {
     let resolved_csids = args.changeset_args.resolve_changesets(ctx, repo).await?;
     let csids = resolved_csids.as_slice();
-
-    let manager = repo.repo_derived_data().manager();
 
     let derived_data_types = if args.all_types {
         // Derive all the types enabled in the config

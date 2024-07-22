@@ -33,6 +33,7 @@ use mononoke_app::args::RepoArgs;
 use mononoke_app::MononokeApp;
 use repo_blobstore::RepoBlobstore;
 use repo_derived_data::RepoDerivedData;
+use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentity;
 
 use self::count_underived::count_underived;
@@ -84,6 +85,10 @@ pub struct CommandArgs {
     #[clap(flatten)]
     repo: RepoArgs,
 
+    /// The derived data config name to use. If not specified, the enabled config will be used
+    #[clap(short, long)]
+    config_name: Option<String>,
+
     #[clap(subcommand)]
     subcommand: DerivedDataSubcommand,
 }
@@ -126,14 +131,24 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         }
     };
 
+    let manager = if let Some(config_name) = args.config_name {
+        repo.repo_derived_data().manager_for_config(&config_name)?
+    } else {
+        repo.repo_derived_data().manager()
+    };
+
     match args.subcommand {
-        DerivedDataSubcommand::Exists(args) => exists(&ctx, &repo, args).await?,
-        DerivedDataSubcommand::CountUnderived(args) => count_underived(&ctx, &repo, args).await?,
+        DerivedDataSubcommand::Exists(args) => exists(&ctx, &repo, manager, args).await?,
+        DerivedDataSubcommand::CountUnderived(args) => {
+            count_underived(&ctx, &repo, manager, args).await?
+        }
         DerivedDataSubcommand::VerifyManifests(args) => verify_manifests(&ctx, &repo, args).await?,
         DerivedDataSubcommand::ListManifest(args) => list_manifest(&ctx, &repo, args).await?,
-        DerivedDataSubcommand::Derive(args) => derive(&mut ctx, &repo, args).await?,
-        DerivedDataSubcommand::Slice(args) => slice(&ctx, &repo, args).await?,
-        DerivedDataSubcommand::DeriveSlice(args) => derive_slice(&ctx, &repo, args).await?,
+        DerivedDataSubcommand::Derive(args) => derive(&mut ctx, &repo, manager, args).await?,
+        DerivedDataSubcommand::Slice(args) => slice(&ctx, &repo, manager, args).await?,
+        DerivedDataSubcommand::DeriveSlice(args) => {
+            derive_slice(&ctx, &repo, manager, args).await?
+        }
     }
 
     Ok(())
