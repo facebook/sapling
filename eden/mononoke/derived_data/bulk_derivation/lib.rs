@@ -42,6 +42,7 @@ use unodes::RootUnodeManifestId;
 
 #[async_trait]
 pub trait BulkDerivation {
+    /// Derive all the given derived data types for all the given changeset ids.
     async fn derive_bulk(
         &self,
         ctx: &CoreContext,
@@ -50,6 +51,7 @@ pub trait BulkDerivation {
         derived_data_types: &[DerivableType],
         override_batch_size: Option<u64>,
     ) -> Result<(), SharedDerivationError>;
+    /// Check if the given derived data type is derived for the given changeset id.
     async fn is_derived(
         &self,
         ctx: &CoreContext,
@@ -57,6 +59,15 @@ pub trait BulkDerivation {
         rederivation: Option<Arc<dyn Rederivation>>,
         derived_data_type: DerivableType,
     ) -> Result<bool, DerivationError>;
+    /// Returns a `Vec` that contains all changeset ids that don't have the given
+    /// derived data type derived from the given changeset ids.
+    async fn pending(
+        &self,
+        ctx: &CoreContext,
+        csids: &[ChangesetId],
+        rederivation: Option<Arc<dyn Rederivation>>,
+        derived_data_type: DerivableType,
+    ) -> Result<Vec<ChangesetId>, DerivationError>;
 }
 
 struct SingleTypeManager<T: BonsaiDerivable> {
@@ -89,6 +100,12 @@ trait SingleTypeDerivation: Send + Sync {
         csid: ChangesetId,
         rederivation: Option<Arc<dyn Rederivation>>,
     ) -> Result<bool, DerivationError>;
+    async fn pending(
+        &self,
+        ctx: &CoreContext,
+        csids: &[ChangesetId],
+        rederivation: Option<Arc<dyn Rederivation>>,
+    ) -> Result<Vec<ChangesetId>, DerivationError>;
 }
 
 #[async_trait]
@@ -118,6 +135,22 @@ impl<T: BonsaiDerivable> SingleTypeDerivation for SingleTypeManager<T> {
             .fetch_derived::<T>(ctx, csid, rederivation)
             .await?
             .is_some())
+    }
+    async fn pending(
+        &self,
+        ctx: &CoreContext,
+        csids: &[ChangesetId],
+        rederivation: Option<Arc<dyn Rederivation>>,
+    ) -> Result<Vec<ChangesetId>, DerivationError> {
+        let derived = self
+            .manager
+            .fetch_derived_batch::<T>(ctx, csids.to_vec(), rederivation)
+            .await?;
+        Ok(csids
+            .iter()
+            .filter(|csid| !derived.contains_key(csid))
+            .copied()
+            .collect())
     }
 }
 
@@ -210,5 +243,15 @@ impl BulkDerivation for DerivedDataManager {
     ) -> Result<bool, DerivationError> {
         let manager = manager_for_type(self, derived_data_type);
         manager.is_derived(ctx, csid, rederivation).await
+    }
+    async fn pending(
+        &self,
+        ctx: &CoreContext,
+        csids: &[ChangesetId],
+        rederivation: Option<Arc<dyn Rederivation>>,
+        derived_data_type: DerivableType,
+    ) -> Result<Vec<ChangesetId>, DerivationError> {
+        let manager = manager_for_type(self, derived_data_type);
+        manager.pending(ctx, csids, rederivation).await
     }
 }
