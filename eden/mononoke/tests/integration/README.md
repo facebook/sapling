@@ -40,20 +40,21 @@ test target:
 
 e.g.
 ```sh
-./incremental_integration_setup.sh server
+./incremental_integration_setup.sh server/server
 ```
 
-Note, you can add @mode/opt, then it will build in opt mode
+Note, `incremental_integration_setup.sh` builds with `@fbcode//mode/dev-nosan-lg` by default,
+you can add @mode/opt, then it will build in opt mode
 
 ```sh
-./incremental_integration_setup.sh server @mode/opt
+./incremental_integration_setup.sh server/server @mode/opt
 ```
 
 Then, run the tests by executing the pre-built incremental setup. Notice this
-is done per rule, in this case `server`:
+is done per rule, in this case `server/server`:
 
 ```sh
-./incremental_integration_run.sh server test1.t test2.t test3.t
+./incremental_integration_run.sh server/server test1.t test2.t test3.t
 ```
 
 If your test rule lives in a subdirectory - for example `facebook/`, simply use name
