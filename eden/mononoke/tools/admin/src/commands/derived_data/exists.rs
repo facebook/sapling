@@ -6,28 +6,42 @@
  */
 
 use anyhow::Result;
+use bulk_derivation::BulkDerivation;
+use clap::builder::PossibleValuesParser;
 use clap::Args;
 use context::CoreContext;
 use mononoke_app::args::ChangesetArgs;
+use mononoke_types::DerivableType;
+use repo_derived_data::RepoDerivedDataRef;
+use strum::IntoEnumIterator;
 
-use super::args::DerivedUtilsArgs;
 use super::Repo;
 
 #[derive(Args)]
 pub(super) struct ExistsArgs {
     #[clap(flatten)]
     changeset_args: ChangesetArgs,
-    #[clap(flatten)]
-    derived_utils_args: DerivedUtilsArgs,
+
+    /// The derived data config name to use. If not specified, the enabled config will be used
+    #[clap(short, long)]
+    config_name: Option<String>,
+
+    #[clap(short = 'T', long, value_parser = PossibleValuesParser::new(DerivableType::iter().map(|t| DerivableType::name(&t))))]
+    derived_data_type: String,
 }
 
 pub(super) async fn exists(ctx: &CoreContext, repo: &Repo, args: ExistsArgs) -> Result<()> {
-    let derived_utils = args.derived_utils_args.derived_utils(ctx, repo)?;
-
     let cs_ids = args.changeset_args.resolve_changesets(ctx, repo).await?;
+    let derived_data_type = DerivableType::from_name(&args.derived_data_type)?;
 
-    let pending = derived_utils
-        .pending(ctx.clone(), repo.repo_derived_data.clone(), cs_ids.clone())
+    let manager = if let Some(config_name) = args.config_name {
+        repo.repo_derived_data().manager_for_config(&config_name)?
+    } else {
+        repo.repo_derived_data().manager()
+    };
+
+    let pending = manager
+        .pending(ctx, &cs_ids, None, derived_data_type)
         .await?;
 
     for cs_id in cs_ids {

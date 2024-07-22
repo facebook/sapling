@@ -66,11 +66,11 @@ stop when it becomes idle.
   Derived: 544c0991ef12b0621aa901dd64ef65f539246646faa940171850f5e11c84cda7
   $ mononoke_newadmin derived-data -R repo exists -T unodes -B other
   Derived: 39f5c6f537a8c1157a7f92a39bb036f58c03269fbe244cccaf6489fd26813467
-  $ mononoke_newadmin derived-data -R repo exists --backfill -T blame -B main
+  $ mononoke_newadmin derived-data -R repo exists -c backfilling -T blame -B main
   Derived: 544c0991ef12b0621aa901dd64ef65f539246646faa940171850f5e11c84cda7
-  $ mononoke_newadmin derived-data -R repo exists --backfill -T blame -B other
+  $ mononoke_newadmin derived-data -R repo exists -c backfilling -T blame -B other
   Derived: 39f5c6f537a8c1157a7f92a39bb036f58c03269fbe244cccaf6489fd26813467
-  $ mononoke_newadmin derived-data -R repo exists --backfill -T skeleton_manifests -B other
+  $ mononoke_newadmin derived-data -R repo exists -c backfilling -T skeleton_manifests -B other
   Derived: 39f5c6f537a8c1157a7f92a39bb036f58c03269fbe244cccaf6489fd26813467
-  $ mononoke_newadmin derived-data -R repo exists --backfill -T skeleton_manifests -B main
+  $ mononoke_newadmin derived-data -R repo exists -c backfilling -T skeleton_manifests -B main
   Derived: 544c0991ef12b0621aa901dd64ef65f539246646faa940171850f5e11c84cda7
