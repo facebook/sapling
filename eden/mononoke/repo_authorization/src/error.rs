@@ -29,6 +29,7 @@ pub enum DeniedAction {
     BookmarkModification(BookmarkKey),
     OverrideGitMapping,
     GitImportOperation,
+    CommitCloudOperation(String, String),
 }
 
 impl fmt::Display for DeniedAction {
@@ -57,6 +58,13 @@ impl fmt::Display for DeniedAction {
             DeniedAction::GitImportOperation => {
                 f.write_str("Access for Git-import related operations")
             }
+            DeniedAction::CommitCloudOperation(action, workspace_acl) => f.write_str(
+                format!(
+                    "Access for Commit Cloud operation {} for workspace {}",
+                    action, workspace_acl
+                )
+                .as_str(),
+            ),
         }
     }
 }

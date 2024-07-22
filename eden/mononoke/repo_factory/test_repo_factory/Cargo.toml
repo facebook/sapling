@@ -44,6 +44,7 @@ mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 mutable_counters = { version = "0.1.0", path = "../../mutable_counters" }
 mutable_renames = { version = "0.1.0", path = "../../mutable_renames" }
 newfilenodes = { version = "0.1.0", path = "../../newfilenodes" }
+permission_checker = { version = "0.1.0", path = "../../permission_checker" }
 phases = { version = "0.1.0", path = "../../phases" }
 pushrebase_mutation_mapping = { version = "0.1.0", path = "../../pushrebase_mutation_mapping" }
 pushredirect = { version = "0.1.0", path = "../../megarepo_api/pushredirect" }

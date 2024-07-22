@@ -84,6 +84,7 @@ use mutable_renames::ArcMutableRenames;
 use mutable_renames::MutableRenames;
 use mutable_renames::SqlMutableRenamesStore;
 use newfilenodes::NewFilenodesBuilder;
+use permission_checker::dummy::DummyAclProvider;
 use phases::ArcPhases;
 use pushrebase_mutation_mapping::ArcPushrebaseMutationMapping;
 use pushrebase_mutation_mapping::SqlPushrebaseMutationMappingConnection;
@@ -876,6 +877,7 @@ impl TestRepoFactory {
             bonsai_hg_mapping.clone(),
             repo_derived_data.clone(),
             self.ctx.clone(),
+            DummyAclProvider::new(self.fb),
         );
         Ok(Arc::new(cc))
     }

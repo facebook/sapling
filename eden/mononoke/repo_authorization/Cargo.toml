@@ -11,6 +11,8 @@ license = "GPLv2+"
 acl_regions = { version = "0.1.0", path = "../acl_regions" }
 anyhow = "1.0.75"
 bookmarks = { version = "0.1.0", path = "../bookmarks" }
+commit_cloud = { version = "0.1.0", path = "../commit_cloud" }
+commit_cloud_helpers = { version = "0.1.0", path = "../commit_cloud/helpers" }
 context = { version = "0.1.0", path = "../server/context" }
 metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }

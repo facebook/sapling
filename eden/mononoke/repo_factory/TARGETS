@@ -145,6 +145,7 @@ rust_library(
         "//eden/mononoke/mutable_counters:mutable_counters",
         "//eden/mononoke/mutable_renames:mutable_renames",
         "//eden/mononoke/newfilenodes:newfilenodes",
+        "//eden/mononoke/permission_checker:permission_checker",
         "//eden/mononoke/phases:phases",
         "//eden/mononoke/phases:sqlphases",
         "//eden/mononoke/pushrebase_mutation_mapping:pushrebase_mutation_mapping",

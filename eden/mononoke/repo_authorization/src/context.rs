@@ -10,6 +10,10 @@ use anyhow::anyhow;
 use anyhow::Result;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarkKind;
+use commit_cloud::CommitCloudRef;
+use commit_cloud_helpers::make_workspace_acl_name;
+#[cfg(fbcode_build)]
+use commit_cloud_intern_utils::acl_check::infer_workspace_identity;
 use context::CoreContext;
 use metaconfig_types::RepoConfigRef;
 use mononoke_types::path::MPath;
@@ -502,6 +506,70 @@ impl AuthorizationContext {
         self.check_git_import_operations(ctx, repo)
             .await
             .permitted_or_else(|| self.permission_denied(ctx, DeniedAction::GitImportOperation))
+    }
+
+    /// Check whether the caller is allowed to operate on certain commit cloud workspace.
+    pub async fn check_commitcloud_operation(
+        &self,
+        ctx: &CoreContext,
+        repo: &impl CommitCloudRef,
+        workspace: &str,
+        reponame: &str,
+        action: &str,
+    ) -> AuthorizationCheckOutcome {
+        let permitted = match self {
+            AuthorizationContext::FullAccess => true,
+            AuthorizationContext::Identity => {
+                #[allow(unused_assignments)]
+                let mut owner_check = true;
+
+                #[cfg(fbcode_build)]
+                {
+                    owner_check = match infer_workspace_identity(ctx.fb, workspace).await {
+                        Ok(Some(owner)) => ctx.metadata().identities().contains(&owner),
+                        Err(_) | Ok(None) => false,
+                    };
+                }
+                let acl_check = match repo
+                    .commit_cloud()
+                    .commit_cloud_acl(&make_workspace_acl_name(workspace, reponame))
+                    .await
+                {
+                    Ok(Some(checker)) => {
+                        checker
+                            .check_set(ctx.metadata().identities(), &[action])
+                            .await
+                    }
+                    Err(_) | Ok(None) => false,
+                };
+
+                owner_check || acl_check
+            }
+            AuthorizationContext::Service(_service_name) => false,
+            AuthorizationContext::ReadOnlyIdentity | AuthorizationContext::DraftOnlyIdentity => {
+                false
+            }
+        };
+        AuthorizationCheckOutcome::from_permitted(permitted)
+    }
+
+    /// Require that the caller is allowed to operate on certain commit cloud workspace.
+    pub async fn require_commitcloud_operation(
+        &self,
+        ctx: &CoreContext,
+        repo: &impl CommitCloudRef,
+        workspace: &str,
+        reponame: &str,
+        action: &str,
+    ) -> Result<(), AuthorizationError> {
+        self.check_commitcloud_operation(ctx, repo, workspace, reponame, action)
+            .await
+            .permitted_or_else(|| {
+                self.permission_denied(
+                    ctx,
+                    DeniedAction::CommitCloudOperation(action.to_string(), workspace.to_string()),
+                )
+            })
     }
 }
 

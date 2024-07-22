@@ -10,7 +10,6 @@ use regex::Regex;
 const WORKSPACE_NAME_PATTERN: &str = r"user/([^/]+)/.+";
 const EMAIL_PATTERN: &str = r"^([a-zA-Z0-9_\-.]+)@([a-zA-Z0-9_\-.]+)\.([a-zA-Z]{2,5})$";
 const LINUX_USER_PATTERN: &str = r"^[a-z_]([a-z0-9_-]{0,31}|[a-z0-9_-]{0,30}\\$)$";
-#[allow(unused)]
 const VALID_ACL_PATTERN: &str = "^[a-zA-Z0-9,=_\\.\\-]+([/][a-zA-Z0-9,=_\\.\\-]+)*$";
 
 pub fn is_valid_workspace_structure(name: &str) -> (bool, Option<String>) {
@@ -38,13 +37,11 @@ pub fn sanity_check_workspace_name(name: &str) -> bool {
     false
 }
 
-#[allow(unused)]
 pub fn is_valid_acl_name(acl_name: &str) -> bool {
     let validator = Regex::new(VALID_ACL_PATTERN).expect("Error while creating email regex");
     validator.is_match(acl_name)
 }
 
-#[allow(unused)]
 pub fn decorate_workspace_name_to_valid_acl_name(name: &str) -> String {
     let mut workspace_decorated = name.to_string();
     let allowed_punctuation = [',', '=', '_', '.', '-', '/'];
@@ -59,6 +56,18 @@ pub fn decorate_workspace_name_to_valid_acl_name(name: &str) -> String {
         })
         .collect();
     workspace_decorated
+}
+
+pub fn make_workspace_acl_name(workspace: &str, reponame: &str) -> String {
+    if is_valid_acl_name(workspace) {
+        format!("{}/{}", reponame, workspace)
+    } else {
+        format!(
+            "{}/{}",
+            reponame,
+            decorate_workspace_name_to_valid_acl_name(workspace)
+        )
+    }
 }
 
 #[cfg(test)]

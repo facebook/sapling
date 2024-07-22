@@ -8,7 +8,6 @@
 #![feature(trait_alias)]
 pub mod references;
 pub mod sql;
-
 use std::sync::Arc;
 
 use bonsai_hg_mapping::BonsaiHgMapping;
@@ -27,7 +26,7 @@ use edenapi_types::WorkspaceData;
 use facet::facet;
 use mononoke_types::Timestamp;
 use permission_checker::AclProvider;
-use permission_checker::DefaultAclProvider;
+use permission_checker::BoxPermissionChecker;
 use references::update_references_data;
 use repo_derived_data::ArcRepoDerivedData;
 
@@ -53,8 +52,8 @@ impl CommitCloud {
         bonsai_hg_mapping: Arc<dyn BonsaiHgMapping>,
         repo_derived_data: ArcRepoDerivedData,
         core_ctx: CoreContext,
+        acl_provider: Arc<dyn AclProvider>,
     ) -> Self {
-        let acl_provider = DefaultAclProvider::new(core_ctx.fb);
         CommitCloud {
             storage,
             bonsai_hg_mapping,
@@ -280,5 +279,12 @@ impl CommitCloud {
             ));
         }
         Err(anyhow::anyhow!("Not implemented"))
+    }
+
+    pub async fn commit_cloud_acl(
+        &self,
+        name: &str,
+    ) -> anyhow::Result<Option<BoxPermissionChecker>> {
+        self.acl_provider.commitcloud_workspace_acl(name).await
     }
 }

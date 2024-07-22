@@ -1823,6 +1823,7 @@ impl RepoFactory {
             bonsai_hg_mapping.clone(),
             repo_derived_data.clone(),
             self.ctx(None),
+            self.env.acl_provider.clone(),
         )))
     }
 
