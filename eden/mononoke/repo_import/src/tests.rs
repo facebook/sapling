@@ -66,7 +66,8 @@ mod tests {
     use movers::DefaultAction;
     use movers::Mover;
     use mutable_counters::MutableCountersRef;
-    use pushredirect::PushRedirectionConfigArc;
+    use pushredirect::PushRedirectionConfig;
+    use pushredirect::TestPushRedirectionConfig;
     use repo_blobstore::RepoBlobstoreRef;
     use repo_derived_data::RepoDerivedDataArc;
     use repo_derived_data::RepoDerivedDataRef;
@@ -493,13 +494,21 @@ mod tests {
         test_source.insert_to_refresh(CONFIGERATOR_PUSHREDIRECT_ENABLE.to_string());
         test_source.insert_to_refresh(CONFIGERATOR_ALL_COMMIT_SYNC_CONFIGS.to_string());
 
+        let test_push_redirection_config = Arc::new(TestPushRedirectionConfig::new());
+        test_push_redirection_config
+            .set(&ctx, RepositoryId::new(1), false, true)
+            .await?;
+        test_push_redirection_config
+            .set(&ctx, RepositoryId::new(2), true, false)
+            .await?;
+
         let repo0 = create_repo(fb, 0).await?;
 
         let config_store = ConfigStore::new(test_source.clone(), Duration::from_millis(2), None);
         let live_commit_sync_config = CfgrLiveCommitSyncConfig::new_with_xdb(
             ctx.logger(),
             &config_store,
-            repo0.push_redirection_config_arc(),
+            test_push_redirection_config,
         )?;
 
         insert_repo_config(0, &mut repos);

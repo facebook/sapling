@@ -5,6 +5,10 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+use std::sync::Arc;
+use std::sync::Mutex;
+
 use anyhow::Result;
 use async_trait::async_trait;
 use context::CoreContext;
@@ -57,5 +61,54 @@ impl PushRedirectionConfig for NoopPushRedirectionConfig {
         _repo_id: RepositoryId,
     ) -> Result<Option<PushRedirectionConfigEntry>> {
         Ok(None)
+    }
+}
+
+#[derive(Clone)]
+pub struct TestPushRedirectionConfig {
+    entries: Arc<Mutex<HashMap<RepositoryId, PushRedirectionConfigEntry>>>,
+}
+
+impl TestPushRedirectionConfig {
+    pub fn new() -> Self {
+        Self {
+            entries: Arc::new(Mutex::new(HashMap::new())),
+        }
+    }
+}
+
+#[async_trait]
+impl PushRedirectionConfig for TestPushRedirectionConfig {
+    async fn set(
+        &self,
+        _ctx: &CoreContext,
+        repo_id: RepositoryId,
+        draft_push: bool,
+        public_push: bool,
+    ) -> Result<()> {
+        let mut map = self.entries.lock().expect("poisoned lock");
+        map.insert(
+            repo_id.to_owned(),
+            PushRedirectionConfigEntry {
+                id: RowId(0),
+                repo_id,
+                draft_push,
+                public_push,
+            },
+        );
+        Ok(())
+    }
+
+    async fn get(
+        &self,
+        _ctx: &CoreContext,
+        repo_id: RepositoryId,
+    ) -> Result<Option<PushRedirectionConfigEntry>> {
+        Ok(self
+            .entries
+            .lock()
+            .expect("poisoned lock")
+            .get(&repo_id)
+            .cloned())
     }
 }
