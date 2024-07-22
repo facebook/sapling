@@ -51,6 +51,7 @@ pub trait BulkDerivation {
         derived_data_types: &[DerivableType],
         override_batch_size: Option<u64>,
     ) -> Result<(), SharedDerivationError>;
+
     /// Check if the given derived data type is derived for the given changeset id.
     async fn is_derived(
         &self,
@@ -59,6 +60,7 @@ pub trait BulkDerivation {
         rederivation: Option<Arc<dyn Rederivation>>,
         derived_data_type: DerivableType,
     ) -> Result<bool, DerivationError>;
+
     /// Returns a `Vec` that contains all changeset ids that don't have the given
     /// derived data type derived from the given changeset ids.
     async fn pending(
@@ -68,6 +70,17 @@ pub trait BulkDerivation {
         rederivation: Option<Arc<dyn Rederivation>>,
         derived_data_type: DerivableType,
     ) -> Result<Vec<ChangesetId>, DerivationError>;
+
+    /// Returns the number of ancestor of the given changeset that don't have
+    /// the given derived data type derived.
+    async fn count_underived(
+        &self,
+        ctx: &CoreContext,
+        csid: ChangesetId,
+        limit: Option<u64>,
+        rederivation: Option<Arc<dyn Rederivation>>,
+        derived_data_type: DerivableType,
+    ) -> Result<u64, DerivationError>;
 }
 
 struct SingleTypeManager<T: BonsaiDerivable> {
@@ -94,18 +107,28 @@ trait SingleTypeDerivation: Send + Sync {
         rederivation: Option<Arc<dyn Rederivation>>,
         visited: VisitedDerivableTypesMap<'a, u64, SharedDerivationError>,
     ) -> Result<(), SharedDerivationError>;
+
     async fn is_derived(
         &self,
         ctx: &CoreContext,
         csid: ChangesetId,
         rederivation: Option<Arc<dyn Rederivation>>,
     ) -> Result<bool, DerivationError>;
+
     async fn pending(
         &self,
         ctx: &CoreContext,
         csids: &[ChangesetId],
         rederivation: Option<Arc<dyn Rederivation>>,
     ) -> Result<Vec<ChangesetId>, DerivationError>;
+
+    async fn count_underived(
+        &self,
+        ctx: &CoreContext,
+        csid: ChangesetId,
+        limit: Option<u64>,
+        rederivation: Option<Arc<dyn Rederivation>>,
+    ) -> Result<u64, DerivationError>;
 }
 
 #[async_trait]
@@ -124,6 +147,7 @@ impl<T: BonsaiDerivable> SingleTypeDerivation for SingleTypeManager<T> {
             .await?;
         Ok(())
     }
+
     async fn is_derived(
         &self,
         ctx: &CoreContext,
@@ -136,6 +160,7 @@ impl<T: BonsaiDerivable> SingleTypeDerivation for SingleTypeManager<T> {
             .await?
             .is_some())
     }
+
     async fn pending(
         &self,
         ctx: &CoreContext,
@@ -151,6 +176,18 @@ impl<T: BonsaiDerivable> SingleTypeDerivation for SingleTypeManager<T> {
             .filter(|csid| !derived.contains_key(csid))
             .copied()
             .collect())
+    }
+
+    async fn count_underived(
+        &self,
+        ctx: &CoreContext,
+        csid: ChangesetId,
+        limit: Option<u64>,
+        rederivation: Option<Arc<dyn Rederivation>>,
+    ) -> Result<u64, DerivationError> {
+        self.manager
+            .count_underived::<T>(ctx, csid, limit, rederivation)
+            .await
     }
 }
 
@@ -234,6 +271,7 @@ impl BulkDerivation for DerivedDataManager {
 
         Ok(())
     }
+
     async fn is_derived(
         &self,
         ctx: &CoreContext,
@@ -244,6 +282,7 @@ impl BulkDerivation for DerivedDataManager {
         let manager = manager_for_type(self, derived_data_type);
         manager.is_derived(ctx, csid, rederivation).await
     }
+
     async fn pending(
         &self,
         ctx: &CoreContext,
@@ -253,5 +292,19 @@ impl BulkDerivation for DerivedDataManager {
     ) -> Result<Vec<ChangesetId>, DerivationError> {
         let manager = manager_for_type(self, derived_data_type);
         manager.pending(ctx, csids, rederivation).await
+    }
+
+    async fn count_underived(
+        &self,
+        ctx: &CoreContext,
+        csid: ChangesetId,
+        limit: Option<u64>,
+        rederivation: Option<Arc<dyn Rederivation>>,
+        derived_data_type: DerivableType,
+    ) -> Result<u64, DerivationError> {
+        let manager = manager_for_type(self, derived_data_type);
+        manager
+            .count_underived(ctx, csid, limit, rederivation)
+            .await
     }
 }
