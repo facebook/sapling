@@ -25,6 +25,7 @@ import {EmptyState} from '../../EmptyState';
 import {useGeneratedFileStatuses} from '../../GeneratedFile';
 import {tracker} from '../../analytics';
 import {t, T} from '../../i18n';
+import {readAtom} from '../../jotaiUtils';
 import {GeneratedStatus} from '../../types';
 import {isAbsent} from '../commitStackState';
 import {computeLinesForFileStackEditor} from './FileStackEditorLines';
@@ -281,11 +282,7 @@ function SplitColumn(props: SplitColumnProps) {
           <span className="split-commit-header-stack-number">
             {rev + 1} / {subStack.size}
           </span>
-          <EditableCommitTitle
-            commitMessage={commitMessage}
-            commitKey={commit?.key}
-            readOnly={editors.isEmpty()}
-          />
+          <EditableCommitTitle commitMessage={commitMessage} commitKey={commit?.key} />
           <Button icon onClick={e => showExtraCommitActionsContextMenu(e)}>
             <Icon icon="ellipsis" />
           </Button>
@@ -656,7 +653,6 @@ function StackRangeSelector() {
 type MaybeEditableCommitTitleProps = {
   commitMessage: string;
   commitKey?: string;
-  readOnly: boolean;
 };
 
 function EditableCommitTitle(props: MaybeEditableCommitTitleProps) {
@@ -684,13 +680,34 @@ function EditableCommitTitle(props: MaybeEditableCommitTitleProps) {
         } else {
           stackEdit.push(newCommitStack, {name: 'metaedit', commit});
         }
+      } else {
+        // If we don't have a real commit for this editor, it's the "fake" blank commit added to the top of the dense stack.
+        // We need a real commit to associate the newly edited title to, so it can be persisted/is part of the undo stack.
+        // So we make the fake blank commit into a real blank commit by inserting at the end.
+        // Note that this will create another fake blank commit AFTER the new real blank commit.
+
+        const [, endRev] = findStartEndRevs(stackEdit);
+
+        const messageTemplate = readAtom(commitMessageTemplate);
+        const schema = readAtom(commitMessageFieldsSchema);
+        const fields: CommitMessageFields = {...messageTemplate, Title: newTitle};
+        const message = commitMessageFieldsToString(schema, fields);
+        if (endRev != null) {
+          const newStack = commitStack.insertEmpty(endRev + 1, message);
+
+          const newEnd = newStack.get(endRev + 1);
+          if (newEnd != null) {
+            let {splitRange} = stackEdit;
+            splitRange = splitRange.set('endKey', newEnd.key);
+            stackEdit.push(newStack, {name: 'insertBlankCommit'}, splitRange);
+          }
+        }
       }
     }
   };
   return (
     <TextField
       containerXstyle={styles.full}
-      readOnly={props.readOnly}
       value={existingTitle}
       title={t('Edit commit title')}
       style={{width: 'calc(100% - var(--pad))'}}
