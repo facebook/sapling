@@ -240,7 +240,7 @@ struct SeqMatchState<'a, T> {
     items: &'a [Item<T>],
     /// Matched length. None: not matched.
     match_end: Option<usize>,
-    /// Only set for TreeMatchMode::Search. All matched ends.
+    /// Only set for TreeMatchMode::Search. Non-overlapping matched ends.
     match_ends: Vec<usize>,
 }
 
@@ -384,7 +384,7 @@ impl<'a, T: PartialEq + Clone + fmt::Debug> SeqMatchState<'a, T> {
         self.fill_match_with_match_end(r#match, None, true);
     }
 
-    /// Backtrace all matches. Used together with `TreeMatchMode::Search`.
+    /// Backtrack all matches. Used together with `TreeMatchMode::Search`.
     ///
     /// Matches are reported from start to end picking the longest.
     /// Overlapping matches are skipped.
@@ -394,25 +394,17 @@ impl<'a, T: PartialEq + Clone + fmt::Debug> SeqMatchState<'a, T> {
     fn fill_matches(&self, matches: &mut Vec<Match<T>>) {
         for &end in &self.match_ends {
             let mut m = Match::default();
-            // Just figures out the matching start position so we can check overalp
-            // and maybe replace the last match.
-            // There are probably smarter ways to handle this...
-            self.fill_match_with_match_end(&mut m, Some(end), false);
-            assert_eq!(m.end, end);
-            if let Some(last) = matches.last() {
-                if last.start >= m.start {
-                    assert!(last.end < m.end);
-                    // Current match is better than last. Replace last.
-                    matches.pop();
-                } else if last.end > m.start {
-                    // Current match overlaps with last. Skip current.
-                    continue;
-                }
-            }
-            // Update the "captures".
             self.fill_match_with_match_end(&mut m, Some(end), true);
             matches.push(m);
         }
+    }
+
+    // Find the "start" of a match. This could be O(N).
+    fn backtrack_match_start(&self, end: usize) -> usize {
+        let mut m = Match::default();
+        self.fill_match_with_match_end(&mut m, Some(end), false);
+        assert_eq!(m.end, end, "find_match_start requires 'end' to be a match");
+        m.start
     }
 
     // If fill_captures is false, still report match start.
@@ -530,11 +522,24 @@ impl<'a, T: PartialEq + Clone + fmt::Debug> TreeMatchState<'a, T> {
             TreeMatchMode::MatchBegin | TreeMatchMode::Search => {
                 // Figure out the longest match.
                 let is_search = opts == TreeMatchMode::Search;
-                for len in 1..=items.len() {
-                    if !seq.matched(pat.len(), len, opts).is_empty() {
-                        seq.match_end = Some(len);
+                for end in 1..=items.len() {
+                    if !seq.matched(pat.len(), end, opts).is_empty() {
+                        seq.match_end = Some(end);
                         if is_search {
-                            seq.match_ends.push(len);
+                            // Deal with overlapping.
+                            // There are probably smarter ways to handle this...
+                            if let Some(&last_end) = seq.match_ends.last() {
+                                let start = seq.backtrack_match_start(end);
+                                let last_start = seq.backtrack_match_start(last_end);
+                                if last_start >= start {
+                                    // Current match is better than last. Replace last.
+                                    seq.match_ends.pop();
+                                } else if last_end > start {
+                                    // Current match overlaps with last. Skip current.
+                                    continue;
+                                }
+                            }
+                            seq.match_ends.push(end);
                         }
                     }
                 }
