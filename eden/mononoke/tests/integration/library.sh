@@ -736,7 +736,7 @@ function setup_common_jks() {
 {
   "bools": {
     "scm/mononoke:pushredirect_use_xdb": true,
-    "scm/mononoke:pushredirect_disable_configerator": false
+    "scm/mononoke:pushredirect_disable_configerator": true
   }
 }
 EOF
