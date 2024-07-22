@@ -49,7 +49,6 @@ deleted_manifest = { version = "0.1.0", path = "../../derived_data/deleted_manif
 deletion_log = { version = "0.1.0", path = "../../repo_attributes/deletion_log" }
 derived_data = { version = "0.1.0", path = "../../derived_data" }
 derived_data_manager = { version = "0.1.0", path = "../../derived_data/manager" }
-derived_data_utils = { version = "0.1.0", path = "../../derived_data/utils" }
 ephemeral_blobstore = { version = "0.1.0", path = "../../blobstore/ephemeral_blobstore" }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

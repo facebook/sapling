@@ -7,7 +7,6 @@
 
 mod count_underived;
 mod derive;
-mod derive_bulk;
 mod derive_slice;
 mod exists;
 mod list_manifest;
@@ -40,8 +39,6 @@ use self::count_underived::count_underived;
 use self::count_underived::CountUnderivedArgs;
 use self::derive::derive;
 use self::derive::DeriveArgs;
-use self::derive_bulk::derive_bulk;
-use self::derive_bulk::DeriveBulkArgs;
 use self::derive_slice::derive_slice;
 use self::derive_slice::DeriveSliceArgs;
 use self::exists::exists;
@@ -97,8 +94,6 @@ enum DerivedDataSubcommand {
     CountUnderived(CountUnderivedArgs),
     /// Actually derive data
     Derive(DeriveArgs),
-    /// Backfill derived data for public commits
-    DeriveBulk(DeriveBulkArgs),
     /// Derive data for a slice of commits
     DeriveSlice(DeriveSliceArgs),
     /// Check if derived data has been generated
@@ -129,9 +124,6 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
                 .await
                 .context("Failed to open repo")?
         }
-        DerivedDataSubcommand::DeriveBulk(_) => open_repo_for_derive(&app, &args.repo, &false)
-            .await
-            .context("Failed to open repo")?,
     };
 
     match args.subcommand {
@@ -142,7 +134,6 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         DerivedDataSubcommand::Derive(args) => derive(&mut ctx, &repo, args).await?,
         DerivedDataSubcommand::Slice(args) => slice(&ctx, &repo, args).await?,
         DerivedDataSubcommand::DeriveSlice(args) => derive_slice(&ctx, &repo, args).await?,
-        DerivedDataSubcommand::DeriveBulk(args) => derive_bulk(&mut ctx, &repo, args).await?,
     }
 
     Ok(())
