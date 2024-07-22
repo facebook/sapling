@@ -6,7 +6,7 @@
 
   $ . "${TEST_FIXTURES}/library.sh"
   $ REPOTYPE="blob_files"
-  $ ENABLED_DERIVED_DATA='["git_commits", "git_trees", "git_delta_manifests", "unodes", "filenodes", "hgchangesets"]' setup_common_config $REPOTYPE
+  $ ENABLED_DERIVED_DATA='["git_commits", "git_trees", "git_delta_manifests", "git_delta_manifests_v2", "unodes", "filenodes", "hgchangesets"]' setup_common_config $REPOTYPE
   $ testtool_drawdag -R repo << EOF
   > A-B-C
   > # bookmark: C heads/main
@@ -15,7 +15,7 @@
   A=aa53d24251ff3f54b1b2c29ae02826701b2abeb0079f1bb13b8434b54cd87675
   B=f8c75e41a0c4d29281df765f39de47bca1dcadfdc55ada4ccc2f6df567201658
   C=1054de6604c183c5326e56061e05c63922c3c8bd49c4d1d4e51d129ce8fbc7c8
-  $ quiet backfill_derived_data backfill-all git_trees git_commits git_delta_manifests unodes
+  $ quiet backfill_derived_data backfill-all git_trees git_commits git_delta_manifests git_delta_manifests_v2 unodes
   $ mononoke_newadmin git-symref -R repo create --symref-name HEAD --ref-name main --ref-type branch
   Symbolic ref HEAD pointing to branch main has been added
 

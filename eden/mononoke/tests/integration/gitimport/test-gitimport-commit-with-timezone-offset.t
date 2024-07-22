@@ -5,10 +5,10 @@
 # directory of this source tree.
 
   $ . "${TEST_FIXTURES}/library.sh"
-  $ ENABLED_DERIVED_DATA='["unodes", "git_commits", "git_trees", "git_delta_manifests"]' setup_common_config
+  $ ENABLED_DERIVED_DATA='["unodes", "git_commits", "git_trees", "git_delta_manifests", "git_delta_manifests_v2"]' setup_common_config
   $ GIT_REPO="${TESTTMP}/repo-git"
   $ REPOTYPE="blob_files"
-  $ ENABLED_DERIVED_DATA='["unodes", "git_commits", "git_trees", "git_delta_manifests"]' setup_common_config $REPOTYPE
+  $ ENABLED_DERIVED_DATA='["unodes", "git_commits", "git_trees", "git_delta_manifests", "git_delta_manifests_v2"]' setup_common_config $REPOTYPE
   $ cat >> repos/repo/server.toml <<EOF
   > [source_control_service]
   > permit_writes = true

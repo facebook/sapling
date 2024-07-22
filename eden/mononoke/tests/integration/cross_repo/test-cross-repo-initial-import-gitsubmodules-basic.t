@@ -74,6 +74,7 @@ Create commit that modifies git submodule in small repo
   Backfilled * derivation for synced ancestor * in * (glob)
   Backfilled * derivation for synced ancestor * in * (glob)
   Backfilled * derivation for synced ancestor * in * (glob)
+  Backfilled * derivation for synced ancestor * in * (glob)
   changeset 00b0b4d6130a22ccf3fada118572a85a6bb2d7c253d4285557802b7b8f250821 synced as 768a9c6d2b6943900f9d4374028a891c7d3dc62d7ecc25a1fd2a9c3fc9aba14b in * (glob)
   successful sync of head 00b0b4d6130a22ccf3fada118572a85a6bb2d7c253d4285557802b7b8f250821
 

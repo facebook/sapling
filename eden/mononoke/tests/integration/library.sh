@@ -1191,6 +1191,10 @@ if [[ -n "${ENABLED_DERIVED_DATA:-}" ]]; then
   cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
 [derived_data_config.available_configs.default]
 types = $ENABLED_DERIVED_DATA
+git_delta_manifest_version = 2
+git_delta_manifest_v2_config.max_inlined_object_size = 20
+git_delta_manifest_v2_config.max_inlined_delta_size = 20
+git_delta_manifest_v2_config.delta_chunk_size = 1000
 CONFIG
 else
   cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
@@ -1204,6 +1208,7 @@ types=[
   "fsnodes",
   "git_commits",
   "git_delta_manifests",
+  "git_delta_manifests_v2",
   "git_trees",
   "unodes",
   "hgchangesets",
@@ -1213,6 +1218,10 @@ types=[
   "test_manifests",
   "test_sharded_manifests"
 ]
+git_delta_manifest_version = 2
+git_delta_manifest_v2_config.max_inlined_object_size = 20
+git_delta_manifest_v2_config.max_inlined_delta_size = 20
+git_delta_manifest_v2_config.delta_chunk_size = 1000
 CONFIG
 fi
 

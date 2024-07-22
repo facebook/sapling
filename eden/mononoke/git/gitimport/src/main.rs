@@ -254,6 +254,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
                     // If we discard submodules, we can't derive the git data types since they are inconsistent
                     DerivableType::GitCommits
                     | DerivableType::GitDeltaManifests
+                    | DerivableType::GitDeltaManifestsV2
                     | DerivableType::GitTrees => false,
                     _ => true,
                 })

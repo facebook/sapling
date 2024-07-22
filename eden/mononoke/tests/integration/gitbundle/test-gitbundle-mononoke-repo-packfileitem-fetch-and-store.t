@@ -6,7 +6,7 @@
 
   $ . "${TEST_FIXTURES}/library.sh"
   $ REPOTYPE="blob_files"
-  $ ENABLED_DERIVED_DATA='["git_commits", "git_trees", "git_delta_manifests", "unodes", "filenodes", "hgchangesets"]' setup_common_config $REPOTYPE
+  $ ENABLED_DERIVED_DATA='["git_commits", "git_trees", "git_delta_manifests", "git_delta_manifests_v2", "unodes", "filenodes", "hgchangesets"]' setup_common_config $REPOTYPE
   $ GIT_REPO_ORIGIN="${TESTTMP}/origin/repo-git"
   $ GIT_REPO="${TESTTMP}/repo-git"
   $ BUNDLE_PATH="${TESTTMP}/repo_bundle.bundle"
@@ -143,7 +143,7 @@
 # Verify that generating the bundle regenerated the needed packfile items. Note that the count will not be the same as
 # before since the bundle creator would use deltas where appropriate which would skip base packfile items
   $ ls $TESTTMP/blobstore/blobs | grep "git_packfile_base_item" | wc -l
-  26
+  25
 
 List the delta histogram of the pack file - this way we'll see
 if we change whether we delta or not.

@@ -6,7 +6,7 @@
 
   $ . "${TEST_FIXTURES}/library.sh"
   $ REPOTYPE="blob_files"
-  $ ENABLED_DERIVED_DATA='["git_commits", "git_trees", "git_delta_manifests", "unodes", "filenodes", "hgchangesets"]' setup_common_config $REPOTYPE
+  $ ENABLED_DERIVED_DATA='["git_commits", "git_trees", "git_delta_manifests", "git_delta_manifests_v2", "unodes", "filenodes", "hgchangesets"]' setup_common_config $REPOTYPE
   $ GIT_REPO_ORIGIN="${TESTTMP}/origin/repo-git"
   $ GIT_REPO_SUBMODULE="${TESTTMP}/origin/repo-submodule"
   $ GIT_REPO="${TESTTMP}/repo-git"
@@ -148,9 +148,9 @@
   
   Caused by:
       0: Error while calculating object count
-      1: Error in deriving RootGitDeltaManifestId for changeset ChangesetId(Blake2(4cd77220f6dcf9154b8cd4dc0f33b72b19a765d73a770cce612ee094191e7d9e))
       *: a batch dependency has not been derived (glob) (?)
       *: failed to derive batch dependencies (glob) (?)
+      1: Error in deriving RootGitDeltaManifestV2Id for changeset ChangesetId(Blake2(4cd77220f6dcf9154b8cd4dc0f33b72b19a765d73a770cce612ee094191e7d9e))
       2: failed to derive dependent types
       *: failed to derive git_trees batch (start:032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044, end:4cd77220f6dcf9154b8cd4dc0f33b72b19a765d73a770cce612ee094191e7d9e) (glob)
       *: Raw Git tree with hash fc59e10f3c37ad53e0af6882e382f0169eae51ac should have been present already (glob)
