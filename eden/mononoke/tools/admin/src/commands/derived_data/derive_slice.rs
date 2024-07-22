@@ -12,6 +12,8 @@ use std::sync::Arc;
 
 use anyhow::Context;
 use anyhow::Result;
+use bulk_derivation::BulkDerivation;
+use clap::builder::PossibleValuesParser;
 use clap::Args;
 use clap::ValueEnum;
 use cloned::cloned;
@@ -21,19 +23,20 @@ use commit_graph_types::segments::BoundaryChangesets;
 use commit_graph_types::segments::SegmentedSliceDescription;
 use context::CoreContext;
 use context::SessionClass;
-use derived_data_utils::DerivedUtils;
+use derived_data_manager::DerivedDataManager;
 use futures::stream;
+use futures::try_join;
 use futures::StreamExt;
 use futures::TryStreamExt;
 use futures_stats::TimedTryFutureExt;
-use repo_derived_data::ArcRepoDerivedData;
-use repo_derived_data::RepoDerivedDataArc;
+use mononoke_types::DerivableType;
+use repo_derived_data::RepoDerivedDataRef;
 use slog::debug;
+use strum::IntoEnumIterator;
 use tokio::fs::File;
 use tokio::io::AsyncReadExt;
 use tokio::task;
 
-use super::args::DerivedUtilsArgs;
 use super::Repo;
 
 #[derive(Args)]
@@ -43,8 +46,8 @@ pub(super) struct DeriveSliceArgs {
     #[clap(long, short = 'f', value_name = "FILE")]
     input_file: PathBuf,
 
-    #[clap(flatten)]
-    derived_utils_args: DerivedUtilsArgs,
+    #[clap(short = 'T', long, value_parser = PossibleValuesParser::new(DerivableType::iter().map(|t| DerivableType::name(&t))))]
+    derived_data_type: String,
 
     /// Whether to derive slices or the boundaries between slices.
     #[clap(long)]
@@ -99,10 +102,10 @@ async fn parse_boundaries(boundaries_files: PathBuf) -> Result<BoundaryChangeset
 
 async fn derive_boundaries(
     ctx: &CoreContext,
-    repo_derived_data: ArcRepoDerivedData,
-    derived_utils: Arc<dyn DerivedUtils>,
+    manager: DerivedDataManager,
     boundaries: BoundaryChangesets,
     boundaries_concurrency: usize,
+    derived_data_type: DerivableType,
 ) -> Result<()> {
     let boundaries_count = boundaries.len();
     debug!(
@@ -113,21 +116,25 @@ async fn derive_boundaries(
     stream::iter(boundaries)
         .map(Ok)
         .try_for_each_concurrent(boundaries_concurrency, |csid| {
-            cloned!(ctx, derived_utils, repo_derived_data, completed);
+            cloned!(ctx, manager, completed);
             async move {
                 task::spawn(async move {
-                    let (derive_boundary_stats, res) = derived_utils
-                        .derive_from_predecessor(ctx.clone(), repo_derived_data, csid)
-                        .try_timed()
-                        .await?;
+                    let (derive_boundary_stats, ()) = BulkDerivation::derive_from_predecessor(
+                        &manager,
+                        &ctx,
+                        csid,
+                        None,
+                        derived_data_type,
+                    )
+                    .try_timed()
+                    .await?;
 
                     let completed_count = completed.fetch_add(1, Ordering::SeqCst) + 1;
                     debug!(
                         ctx.logger(),
-                        "derived boundary {} in {}ms, {:?} ({}/{})",
+                        "derived boundary {} in {}ms, ({}/{})",
                         csid,
                         derive_boundary_stats.completion_time.as_millis(),
-                        res,
                         completed_count,
                         boundaries_count,
                     );
@@ -143,53 +150,45 @@ async fn derive_boundaries(
 async fn inner_derive_slice(
     ctx: &CoreContext,
     commit_graph: ArcCommitGraph,
-    repo_derived_data: ArcRepoDerivedData,
-    derived_utils: Arc<dyn DerivedUtils>,
+    manager: DerivedDataManager,
     slice_description: SegmentedSliceDescription,
     slice_count: usize,
     completed: Arc<AtomicUsize>,
+    derived_data_type: DerivableType,
 ) -> Result<()> {
     let segment_count = slice_description.segments.len();
     let (stats, ()) = stream::iter(slice_description.segments.into_iter().enumerate())
         .map(anyhow::Ok)
         .try_for_each(|(segment_index, segment)| {
-            cloned!(ctx, commit_graph, derived_utils, repo_derived_data);
+            cloned!(ctx, commit_graph, manager);
             async move {
-                let segment_cs_ids = commit_graph
-                    .range_stream(&ctx, segment.base, segment.head)
-                    .await?
-                    .collect::<Vec<_>>()
-                    .await;
+                let (head_generation, base_generation) = try_join!(
+                    commit_graph.changeset_generation(&ctx, segment.head),
+                    commit_graph.changeset_generation(&ctx, segment.base)
+                )?;
+                let segment_cs_ids_count = head_generation.value() - base_generation.value() + 1;
 
                 debug!(
                     ctx.logger(),
                     "deriving segment from {} to {} ({} commits, {}/{})",
                     segment.base,
                     segment.head,
-                    segment_cs_ids.len(),
+                    segment_cs_ids_count,
                     segment_index + 1,
                     segment_count,
                 );
 
-                let mut derive_segment_completion_time = std::time::Duration::from_millis(0);
-                for chunk in segment_cs_ids.chunks(20) {
-                    let (derive_batch_stats, _) = derived_utils
-                        .derive_exactly_batch(
-                            ctx.clone(),
-                            repo_derived_data.clone(),
-                            chunk.to_vec(),
-                        )
-                        .try_timed()
-                        .await?;
-                    derive_segment_completion_time += derive_batch_stats.completion_time;
-                }
+                let (derive_batch_stats, ()) = manager
+                    .derive_bulk(&ctx, &[segment.head], None, &[derived_data_type], None)
+                    .try_timed()
+                    .await?;
 
                 debug!(
                     ctx.logger(),
                     "derived segment from {} to {} in {}ms ({}/{})",
                     segment.base,
                     segment.head,
-                    derive_segment_completion_time.as_millis(),
+                    derive_batch_stats.completion_time.as_millis(),
                     segment_index + 1,
                     segment_count,
                 );
@@ -217,7 +216,9 @@ pub(super) async fn derive_slice(
     repo: &Repo,
     args: DeriveSliceArgs,
 ) -> Result<()> {
-    let derived_utils = args.derived_utils_args.derived_utils(ctx, repo)?;
+    let derived_data_type = DerivableType::from_name(&args.derived_data_type)?;
+    let manager = repo.repo_derived_data().manager().clone();
+
     if args.rederive {
         let mut ctx = ctx.clone();
         // Force this binary to write to all blobstores
@@ -231,10 +232,10 @@ pub(super) async fn derive_slice(
 
             derive_boundaries(
                 ctx,
-                repo.repo_derived_data_arc(),
-                derived_utils,
+                manager,
                 boundaries,
                 args.boundaries_concurrency,
+                derived_data_type,
             )
             .await
         }
@@ -250,19 +251,18 @@ pub(super) async fn derive_slice(
             stream::iter(slice_descriptions)
                 .map(Ok)
                 .try_for_each_concurrent(args.slice_concurrency, |slice_description| {
-                    cloned!(ctx, derived_utils, completed);
+                    cloned!(ctx, manager, completed);
                     let commit_graph = repo.commit_graph_arc();
-                    let repo_derived_data = repo.repo_derived_data_arc();
                     async move {
                         task::spawn(async move {
                             inner_derive_slice(
                                 &ctx,
                                 commit_graph,
-                                repo_derived_data,
-                                derived_utils,
+                                manager,
                                 slice_description,
                                 slice_count,
                                 completed,
+                                derived_data_type,
                             )
                             .await
                         })

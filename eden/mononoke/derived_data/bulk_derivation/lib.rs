@@ -81,6 +81,16 @@ pub trait BulkDerivation {
         rederivation: Option<Arc<dyn Rederivation>>,
         derived_data_type: DerivableType,
     ) -> Result<u64, DerivationError>;
+
+    /// Derive the given derived data type for the given changeset id, using its
+    /// predecessor derived data types.
+    async fn derive_from_predecessor(
+        &self,
+        ctx: &CoreContext,
+        csid: ChangesetId,
+        rederivation: Option<Arc<dyn Rederivation>>,
+        derived_data_type: DerivableType,
+    ) -> Result<(), DerivationError>;
 }
 
 struct SingleTypeManager<T: BonsaiDerivable> {
@@ -129,6 +139,13 @@ trait SingleTypeDerivation: Send + Sync {
         limit: Option<u64>,
         rederivation: Option<Arc<dyn Rederivation>>,
     ) -> Result<u64, DerivationError>;
+
+    async fn derive_from_predecessor(
+        &self,
+        ctx: &CoreContext,
+        csid: ChangesetId,
+        rederivation: Option<Arc<dyn Rederivation>>,
+    ) -> Result<(), DerivationError>;
 }
 
 #[async_trait]
@@ -188,6 +205,18 @@ impl<T: BonsaiDerivable> SingleTypeDerivation for SingleTypeManager<T> {
         self.manager
             .count_underived::<T>(ctx, csid, limit, rederivation)
             .await
+    }
+
+    async fn derive_from_predecessor(
+        &self,
+        ctx: &CoreContext,
+        csid: ChangesetId,
+        rederivation: Option<Arc<dyn Rederivation>>,
+    ) -> Result<(), DerivationError> {
+        self.manager
+            .derive_from_predecessor::<T>(ctx, csid, rederivation)
+            .await?;
+        Ok(())
     }
 }
 
@@ -305,6 +334,19 @@ impl BulkDerivation for DerivedDataManager {
         let manager = manager_for_type(self, derived_data_type);
         manager
             .count_underived(ctx, csid, limit, rederivation)
+            .await
+    }
+
+    async fn derive_from_predecessor(
+        &self,
+        ctx: &CoreContext,
+        csid: ChangesetId,
+        rederivation: Option<Arc<dyn Rederivation>>,
+        derived_data_type: DerivableType,
+    ) -> Result<(), DerivationError> {
+        let manager = manager_for_type(self, derived_data_type);
+        manager
+            .derive_from_predecessor(ctx, csid, rederivation)
             .await
     }
 }
