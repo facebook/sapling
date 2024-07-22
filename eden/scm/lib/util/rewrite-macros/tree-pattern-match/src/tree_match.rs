@@ -39,6 +39,9 @@ pub struct Placeholder<T> {
     /// If set, specify whether to match an item.
     /// Can be useful to express `[0-9a-f]` like in glob.
     matches_item: Option<fn(&Item<T>) -> bool>,
+    /// If true, matches empty or multiple items, like `*`.
+    /// Otherwise, matches one item.
+    matches_multiple: bool,
 }
 
 impl<T> PartialEq for Placeholder<T> {
@@ -57,14 +60,21 @@ impl<T> fmt::Debug for Placeholder<T> {
 
 impl<T> Placeholder<T> {
     pub fn new(name: String) -> Self {
+        let matches_multiple = name.starts_with("___");
         Self {
             name,
             matches_item: None,
+            matches_multiple,
         }
     }
 
     pub fn set_matches_item(&mut self, matches_item: fn(&Item<T>) -> bool) -> &mut Self {
         self.matches_item = Some(matches_item);
+        self
+    }
+
+    pub fn set_matches_multiple(&mut self, matches_multiple: bool) -> &mut Self {
+        self.matches_multiple = matches_multiple;
         self
     }
 
@@ -74,7 +84,7 @@ impl<T> Placeholder<T> {
 
     // true: match 0 or many items; false: match 1 item
     pub fn matches_multiple(&self) -> bool {
-        self.name.starts_with("___")
+        self.matches_multiple
     }
 
     /// Test matching against a single item.
