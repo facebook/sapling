@@ -27,8 +27,6 @@ use derived_data_service_if::DeriveRequest;
 use derived_data_service_if::DeriveResponse;
 use derived_data_service_if::DeriveUnderived;
 use derived_data_service_if::DerivedDataType;
-use derived_data_service_if::RequestError;
-use derived_data_service_if::RequestErrorReason;
 use derived_data_service_if::RequestStatus;
 use futures::future::BoxFuture;
 use futures::future::FutureExt;
@@ -560,28 +558,6 @@ impl DerivedDataManager {
                         }
                     },
                     Err(e) => {
-                        // Remote derivation is expected to fail for ephemeral changesets.
-                        // Currently, this is not supported. Let's fallback to local derivation to
-                        // unblock derivation of, for example, "changeset_info" DDT required for most SCS
-                        // methods to work.
-                        for cause in e.chain() {
-                            if let Some(req_err) = cause.downcast_ref::<RequestError>() {
-                                if matches!(req_err.reason, RequestErrorReason::commit_not_found(_))
-                                {
-                                    if justknobs::eval(
-                                        "scm/mononoke:derived_data_enable_local_fallback_for_ephemeral_bubbles",
-                                        None,
-                                        Some(self.repo_name()),
-                                    )? {
-                                        derived_data_scuba.log_remote_derivation_end(
-                                            ctx,
-                                            Some(String::from("Commit Not Found Response")),
-                                        );
-                                        return Ok(None);
-                                    }
-                                }
-                            }
-                        }
                         if attempt >= RETRY_ATTEMPTS_LIMIT {
                             derived_data_scuba
                                 .log_remote_derivation_end(ctx, Some(format!("{:#}", e)));
