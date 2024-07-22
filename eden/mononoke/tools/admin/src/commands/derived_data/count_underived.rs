@@ -6,24 +6,27 @@
  */
 
 use anyhow::Result;
+use bulk_derivation::BulkDerivation;
+use clap::builder::PossibleValuesParser;
 use clap::Args;
-use cloned::cloned;
 use context::CoreContext;
 use futures::stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use mononoke_app::args::ChangesetArgs;
+use mononoke_types::DerivableType;
 use repo_derived_data::RepoDerivedDataRef;
+use strum::IntoEnumIterator;
 
-use super::args::DerivedUtilsArgs;
 use super::Repo;
 
 #[derive(Args)]
 pub(super) struct CountUnderivedArgs {
     #[clap(flatten)]
     changeset_args: ChangesetArgs,
-    #[clap(flatten)]
-    derived_utils_args: DerivedUtilsArgs,
+
+    #[clap(short = 'T', long, value_parser = PossibleValuesParser::new(DerivableType::iter().map(|t| DerivableType::name(&t))))]
+    derived_data_type: String,
 }
 
 pub(super) async fn count_underived(
@@ -31,19 +34,16 @@ pub(super) async fn count_underived(
     repo: &Repo,
     args: CountUnderivedArgs,
 ) -> Result<()> {
-    let derived_utils = args.derived_utils_args.derived_utils(ctx, repo)?;
-
     let cs_ids = args.changeset_args.resolve_changesets(ctx, repo).await?;
+    let derived_data_type = DerivableType::from_name(&args.derived_data_type)?;
+    let manager = repo.repo_derived_data().manager();
 
     stream::iter(cs_ids)
-        .map(|cs_id| {
-            cloned!(derived_utils);
-            async move {
-                let underived = derived_utils
-                    .count_underived(ctx, repo.repo_derived_data(), cs_id)
+        .map(|cs_id| async move {
+            let underived =
+                BulkDerivation::count_underived(manager, ctx, cs_id, None, None, derived_data_type)
                     .await?;
-                Result::<_>::Ok((cs_id, underived))
-            }
+            Ok((cs_id, underived))
         })
         .buffer_unordered(10)
         .try_for_each(|(cs_id, underived)| async move {
