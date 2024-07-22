@@ -78,40 +78,47 @@ pub struct CommitCloudContext {
 }
 
 impl CommitCloudContext {
-    pub fn new(workspace: &str, reponame: &str) -> Self {
-        Self {
+    pub fn new(workspace: &str, reponame: &str) -> anyhow::Result<Self> {
+        if workspace.is_empty() || reponame.is_empty() {
+            return Err(anyhow::anyhow!(
+                "'commit cloud' failed: empty reponame or workspace"
+            ));
+        }
+        Ok(Self {
             workspace: workspace.to_owned(),
             reponame: reponame.to_owned(),
+        })
+    }
+
+    pub fn check_workspace_name(&self) -> anyhow::Result<()> {
+        if !sanity_check_workspace_name(&self.workspace) {
+            return Err(anyhow::anyhow!(
+                "'commit cloud' failed: creating a new workspace with name '{}' is not allowed",
+                self.workspace
+            ));
         }
+        Ok(())
     }
 }
 
 impl CommitCloud {
-    pub async fn get_workspace(
-        &self,
-        workspace: &str,
-        reponame: &str,
-    ) -> anyhow::Result<WorkspaceData> {
-        if workspace.is_empty() || reponame.is_empty() {
-            return Err(anyhow::anyhow!(
-                "'get_workspace' failed: empty repo_name or workspace"
-            ));
-        }
-
+    pub async fn get_workspace(&self, ctx: &CommitCloudContext) -> anyhow::Result<WorkspaceData> {
         let maybeworkspace =
-            WorkspaceVersion::fetch_from_db(&self.storage, workspace, reponame).await?;
+            WorkspaceVersion::fetch_from_db(&self.storage, &ctx.workspace, &ctx.reponame).await?;
         if let Some(res) = maybeworkspace {
-            return Ok(res.into_workspace_data(reponame));
+            return Ok(res.into_workspace_data(&ctx.reponame));
         }
-        Err(anyhow::anyhow!("Workspace {} does not exist", workspace))
+        Err(anyhow::anyhow!(
+            "Workspace {} does not exist",
+            ctx.workspace
+        ))
     }
 
     pub async fn get_references(
         &self,
+        ctx: &CommitCloudContext,
         params: &GetReferencesParams,
     ) -> anyhow::Result<ReferencesData> {
-        let ctx = CommitCloudContext::new(&params.workspace, &params.reponame);
-
         let base_version = params.version;
 
         let mut latest_version: u64 = 0;
@@ -166,22 +173,9 @@ impl CommitCloud {
 
     pub async fn update_references(
         &self,
+        ctx: &CommitCloudContext,
         params: &UpdateReferencesParams,
     ) -> anyhow::Result<ReferencesData> {
-        if params.workspace.is_empty() || params.reponame.is_empty() {
-            return Err(anyhow::anyhow!(
-                "'update_references' failed: empty repo_name or workspace"
-            ));
-        }
-
-        if params.version == 0 && !sanity_check_workspace_name(&params.workspace) {
-            return Err(anyhow::anyhow!(
-                "'update_references' failed: creating a new workspace with name '{}' is not allowed",
-                params.workspace
-            ));
-        }
-
-        let ctx = CommitCloudContext::new(&params.workspace, &params.reponame);
         let mut latest_version: u64 = 0;
         let mut version_timestamp: i64 = 0;
 
@@ -194,7 +188,7 @@ impl CommitCloud {
         }
 
         if params.version < latest_version {
-            let raw_references_data = fetch_references(&ctx, &self.storage).await?;
+            let raw_references_data = fetch_references(ctx, &self.storage).await?;
             return cast_references_data(
                 raw_references_data,
                 latest_version,
@@ -272,12 +266,11 @@ impl CommitCloud {
         })
     }
 
-    pub async fn get_smartlog(&self, params: &GetSmartlogParams) -> anyhow::Result<SmartlogData> {
-        if params.workspace.is_empty() || params.reponame.is_empty() {
-            return Err(anyhow::anyhow!(
-                "'get_smartlog' failed: empty repo_name or workspace"
-            ));
-        }
+    pub async fn get_smartlog(
+        &self,
+        _ctx: &CommitCloudContext,
+        _params: &GetSmartlogParams,
+    ) -> anyhow::Result<SmartlogData> {
         Err(anyhow::anyhow!("Not implemented"))
     }
 

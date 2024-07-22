@@ -28,6 +28,7 @@ use bytes::Bytes;
 use changeset_fetcher::ChangesetFetcherRef;
 use changesets::ChangesetInsert;
 use changesets::ChangesetsRef;
+use commit_cloud::CommitCloudContext;
 use commit_cloud::CommitCloudRef;
 use commit_graph::CommitGraphRef;
 use context::CoreContext;
@@ -1057,21 +1058,19 @@ impl HgRepoContext {
         workspace: &str,
         reponame: &str,
     ) -> Result<WorkspaceData, MononokeError> {
-        Ok(self
-            .blob_repo()
-            .commit_cloud()
-            .get_workspace(workspace, reponame)
-            .await?)
+        let ctx = CommitCloudContext::new(workspace, reponame)?;
+        Ok(self.blob_repo().commit_cloud().get_workspace(&ctx).await?)
     }
 
     pub async fn cloud_references(
         &self,
         params: &GetReferencesParams,
     ) -> Result<ReferencesData, MononokeError> {
+        let ctx = CommitCloudContext::new(&params.workspace, &params.reponame)?;
         Ok(self
             .blob_repo()
             .commit_cloud()
-            .get_references(params)
+            .get_references(&ctx, params)
             .await?)
     }
 
@@ -1079,10 +1078,14 @@ impl HgRepoContext {
         &self,
         params: &UpdateReferencesParams,
     ) -> Result<ReferencesData, MononokeError> {
+        let ctx = CommitCloudContext::new(&params.workspace, &params.reponame)?;
+        if params.version == 0 {
+            ctx.check_workspace_name()?;
+        }
         Ok(self
             .blob_repo()
             .commit_cloud()
-            .update_references(params)
+            .update_references(&ctx, params)
             .await?)
     }
 }

@@ -31,11 +31,11 @@ Check response.
 
   $ hgedenapi debugapi -e cloudupdatereferences -i "{'workspace':'user/i|3gal[]ser/default','reponame':'repo','version':0, 'removed_heads':[], 'new_heads':[], 'updated_bookmarks':[], 'removed_bookmarks':[], 'new_snapshots':[], 'removed_snapshots':[]}"
   {"data": {"Err": {"code": 0,
-                    "message": "InternalError(InternalError('update_references' failed: creating a new workspace with name 'user/i|3gal[]ser/default' is not allowed))"}}}
+                    "message": "InternalError(InternalError('commit cloud' failed: creating a new workspace with name 'user/i|3gal[]ser/default' is not allowed))"}}}
 
   $ hgedenapi debugapi -e cloudupdatereferences -i "{'workspace':'','reponame':'repo','version':0, 'removed_heads':[], 'new_heads':[ '20ca2a4749a439b459125ef0f6a4f26e88ee7538'], 'updated_bookmarks':[('main', '20ca2a4749a439b459125ef0f6a4f26e88ee7538')], 'removed_bookmarks':[], 'new_snapshots':[], 'removed_snapshots':[]}"
   {"data": {"Err": {"code": 0,
-                    "message": "InternalError(InternalError('update_references' failed: empty repo_name or workspace))"}}}
+                    "message": "InternalError(InternalError('commit cloud' failed: empty reponame or workspace))"}}}
 
   $ hgedenapi debugapi -e cloudupdatereferences -i "{'workspace':'user/integrationtest/default','reponame':'repo','version':0, 'removed_heads':[], 'new_heads':[ '20ca2a4749a439b459125ef0f6a4f26e88ee7538'], 'updated_bookmarks':[('main', '20ca2a4749a439b459125ef0f6a4f26e88ee7538')], 'removed_bookmarks':[], 'new_snapshots':[], 'removed_snapshots':[]}"
   {"data": {"Ok": {"heads": None,
