@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::marker::PhantomData;
 use std::sync::Arc;
 
 use async_trait::async_trait;
@@ -14,6 +15,7 @@ use changeset_info::ChangesetInfo;
 use cloned::cloned;
 use context::CoreContext;
 use deleted_manifest::RootDeletedManifestV2Id;
+use derived_data_manager::BonsaiDerivable;
 use derived_data_manager::DerivableType;
 use derived_data_manager::DerivationError;
 use derived_data_manager::DerivedDataManager;
@@ -57,6 +59,112 @@ pub trait BulkDerivation {
     ) -> Result<bool, DerivationError>;
 }
 
+struct SingleTypeManager<T: BonsaiDerivable> {
+    manager: DerivedDataManager,
+    derived_data_type: PhantomData<T>,
+}
+
+impl<T: BonsaiDerivable> SingleTypeManager<T> {
+    fn new(manager: DerivedDataManager) -> Self {
+        Self {
+            manager,
+            derived_data_type: PhantomData,
+        }
+    }
+}
+
+#[async_trait]
+trait SingleTypeDerivation: Send + Sync {
+    async fn derive_heads_with_visited<'a>(
+        &self,
+        ctx: &'a CoreContext,
+        csids: &'a [ChangesetId],
+        override_batch_size: Option<u64>,
+        rederivation: Option<Arc<dyn Rederivation>>,
+        visited: VisitedDerivableTypesMap<'a, u64, SharedDerivationError>,
+    ) -> Result<(), SharedDerivationError>;
+    async fn is_derived(
+        &self,
+        ctx: &CoreContext,
+        csid: ChangesetId,
+        rederivation: Option<Arc<dyn Rederivation>>,
+    ) -> Result<bool, DerivationError>;
+}
+
+#[async_trait]
+impl<T: BonsaiDerivable> SingleTypeDerivation for SingleTypeManager<T> {
+    async fn derive_heads_with_visited<'a>(
+        &self,
+        ctx: &'a CoreContext,
+        csids: &'a [ChangesetId],
+        override_batch_size: Option<u64>,
+        rederivation: Option<Arc<dyn Rederivation>>,
+        visited: VisitedDerivableTypesMap<'a, u64, SharedDerivationError>,
+    ) -> Result<(), SharedDerivationError> {
+        self.manager
+            .clone()
+            .derive_heads_with_visited::<T>(ctx, csids, override_batch_size, rederivation, visited)
+            .await?;
+        Ok(())
+    }
+    async fn is_derived(
+        &self,
+        ctx: &CoreContext,
+        csid: ChangesetId,
+        rederivation: Option<Arc<dyn Rederivation>>,
+    ) -> Result<bool, DerivationError> {
+        Ok(self
+            .manager
+            .fetch_derived::<T>(ctx, csid, rederivation)
+            .await?
+            .is_some())
+    }
+}
+
+fn manager_for_type(
+    manager: &DerivedDataManager,
+    derived_data_type: DerivableType,
+) -> Arc<dyn SingleTypeDerivation + Send + Sync + 'static> {
+    let manager = manager.clone();
+    match derived_data_type {
+        DerivableType::Unodes => Arc::new(SingleTypeManager::<RootUnodeManifestId>::new(manager)),
+        DerivableType::BlameV2 => Arc::new(SingleTypeManager::<RootBlameV2>::new(manager)),
+        DerivableType::FileNodes => {
+            Arc::new(SingleTypeManager::<FilenodesOnlyPublic>::new(manager))
+        }
+        DerivableType::HgChangesets => {
+            Arc::new(SingleTypeManager::<MappedHgChangesetId>::new(manager))
+        }
+        DerivableType::HgAugmentedManifests => {
+            Arc::new(SingleTypeManager::<RootHgAugmentedManifestId>::new(manager))
+        }
+        DerivableType::Fsnodes => Arc::new(SingleTypeManager::<RootFsnodeId>::new(manager)),
+        DerivableType::Fastlog => Arc::new(SingleTypeManager::<RootFastlog>::new(manager)),
+        DerivableType::DeletedManifests => {
+            Arc::new(SingleTypeManager::<RootDeletedManifestV2Id>::new(manager))
+        }
+        DerivableType::SkeletonManifests => {
+            Arc::new(SingleTypeManager::<RootSkeletonManifestId>::new(manager))
+        }
+        DerivableType::ChangesetInfo => Arc::new(SingleTypeManager::<ChangesetInfo>::new(manager)),
+        DerivableType::GitTrees => Arc::new(SingleTypeManager::<TreeHandle>::new(manager)),
+        DerivableType::GitCommits => Arc::new(SingleTypeManager::<MappedGitCommitId>::new(manager)),
+        DerivableType::GitDeltaManifests => {
+            Arc::new(SingleTypeManager::<RootGitDeltaManifestId>::new(manager))
+        }
+        DerivableType::GitDeltaManifestsV2 => {
+            Arc::new(SingleTypeManager::<RootGitDeltaManifestV2Id>::new(manager))
+        }
+        DerivableType::BssmV3 => Arc::new(SingleTypeManager::<RootBssmV3DirectoryId>::new(manager)),
+        DerivableType::TestManifests => {
+            Arc::new(SingleTypeManager::<RootTestManifestDirectory>::new(manager))
+        }
+        DerivableType::TestShardedManifests => Arc::new(SingleTypeManager::<
+            RootTestShardedManifestDirectory,
+        >::new(manager)),
+    }
+}
+
 #[async_trait]
 impl BulkDerivation for DerivedDataManager {
     /// Derive all the desired derived data types for all the desired csids
@@ -75,178 +183,15 @@ impl BulkDerivation for DerivedDataManager {
             .map(move |derived_data_type| {
                 cloned!(rederivation, visited);
                 async move {
-                    match derived_data_type {
-                        DerivableType::Unodes => {
-                            self.derive_heads_with_visited::<RootUnodeManifestId>(
-                                ctx,
-                                csids,
-                                override_batch_size,
-                                rederivation,
-                                visited,
-                            )
-                            .await
-                        }
-                        DerivableType::BlameV2 => {
-                            self.derive_heads_with_visited::<RootBlameV2>(
-                                ctx,
-                                csids,
-                                override_batch_size,
-                                rederivation,
-                                visited,
-                            )
-                            .await
-                        }
-                        DerivableType::FileNodes => {
-                            self.derive_heads_with_visited::<FilenodesOnlyPublic>(
-                                ctx,
-                                csids,
-                                override_batch_size,
-                                rederivation,
-                                visited,
-                            )
-                            .await
-                        }
-                        DerivableType::HgChangesets => {
-                            self.derive_heads_with_visited::<MappedHgChangesetId>(
-                                ctx,
-                                csids,
-                                override_batch_size,
-                                rederivation,
-                                visited,
-                            )
-                            .await
-                        }
-                        DerivableType::HgAugmentedManifests => {
-                            self.derive_heads_with_visited::<RootHgAugmentedManifestId>(
-                                ctx,
-                                csids,
-                                override_batch_size,
-                                rederivation,
-                                visited,
-                            )
-                            .await
-                        }
-                        DerivableType::Fsnodes => {
-                            self.derive_heads_with_visited::<RootFsnodeId>(
-                                ctx,
-                                csids,
-                                override_batch_size,
-                                rederivation,
-                                visited,
-                            )
-                            .await
-                        }
-                        DerivableType::Fastlog => {
-                            self.derive_heads_with_visited::<RootFastlog>(
-                                ctx,
-                                csids,
-                                override_batch_size,
-                                rederivation,
-                                visited,
-                            )
-                            .await
-                        }
-                        DerivableType::DeletedManifests => {
-                            self.derive_heads_with_visited::<RootDeletedManifestV2Id>(
-                                ctx,
-                                csids,
-                                override_batch_size,
-                                rederivation,
-                                visited,
-                            )
-                            .await
-                        }
-                        DerivableType::SkeletonManifests => {
-                            self.derive_heads_with_visited::<RootSkeletonManifestId>(
-                                ctx,
-                                csids,
-                                override_batch_size,
-                                rederivation,
-                                visited,
-                            )
-                            .await
-                        }
-                        DerivableType::ChangesetInfo => {
-                            self.derive_heads_with_visited::<ChangesetInfo>(
-                                ctx,
-                                csids,
-                                override_batch_size,
-                                rederivation,
-                                visited,
-                            )
-                            .await
-                        }
-                        DerivableType::GitTrees => {
-                            self.derive_heads_with_visited::<TreeHandle>(
-                                ctx,
-                                csids,
-                                override_batch_size,
-                                rederivation,
-                                visited,
-                            )
-                            .await
-                        }
-                        DerivableType::GitCommits => {
-                            self.derive_heads_with_visited::<MappedGitCommitId>(
-                                ctx,
-                                csids,
-                                override_batch_size,
-                                rederivation,
-                                visited,
-                            )
-                            .await
-                        }
-                        DerivableType::GitDeltaManifests => {
-                            self.derive_heads_with_visited::<RootGitDeltaManifestId>(
-                                ctx,
-                                csids,
-                                override_batch_size,
-                                rederivation,
-                                visited,
-                            )
-                            .await
-                        }
-                        DerivableType::GitDeltaManifestsV2 => {
-                            self.derive_heads_with_visited::<RootGitDeltaManifestV2Id>(
-                                ctx,
-                                csids,
-                                override_batch_size,
-                                rederivation,
-                                visited,
-                            )
-                            .await
-                        }
-                        DerivableType::BssmV3 => {
-                            self.derive_heads_with_visited::<RootBssmV3DirectoryId>(
-                                ctx,
-                                csids,
-                                override_batch_size,
-                                rederivation,
-                                visited,
-                            )
-                            .await
-                        }
-                        DerivableType::TestManifests => {
-                            self.derive_heads_with_visited::<RootTestManifestDirectory>(
-                                ctx,
-                                csids,
-                                override_batch_size,
-                                rederivation,
-                                visited,
-                            )
-                            .await
-                        }
-                        DerivableType::TestShardedManifests => {
-                            self.derive_heads_with_visited::<RootTestShardedManifestDirectory>(
-                                ctx,
-                                csids,
-                                override_batch_size,
-                                rederivation,
-                                visited,
-                            )
-                            .await
-                        }
-                    }
+                    manager_for_type(self, *derived_data_type)
+                        .derive_heads_with_visited(
+                            ctx,
+                            csids,
+                            override_batch_size,
+                            rederivation,
+                            visited,
+                        )
+                        .await
                 }
             })
             .boxed()
@@ -263,75 +208,7 @@ impl BulkDerivation for DerivedDataManager {
         rederivation: Option<Arc<dyn Rederivation>>,
         derived_data_type: DerivableType,
     ) -> Result<bool, DerivationError> {
-        Ok(match derived_data_type {
-            DerivableType::Unodes => self
-                .fetch_derived::<RootUnodeManifestId>(ctx, csid, rederivation)
-                .await?
-                .is_some(),
-            DerivableType::BlameV2 => self
-                .fetch_derived::<RootBlameV2>(ctx, csid, rederivation)
-                .await?
-                .is_some(),
-            DerivableType::FileNodes => self
-                .fetch_derived::<FilenodesOnlyPublic>(ctx, csid, rederivation)
-                .await?
-                .is_some(),
-            DerivableType::HgChangesets => self
-                .fetch_derived::<MappedHgChangesetId>(ctx, csid, rederivation)
-                .await?
-                .is_some(),
-            DerivableType::HgAugmentedManifests => self
-                .fetch_derived::<RootHgAugmentedManifestId>(ctx, csid, rederivation)
-                .await?
-                .is_some(),
-            DerivableType::Fsnodes => self
-                .fetch_derived::<RootFsnodeId>(ctx, csid, rederivation)
-                .await?
-                .is_some(),
-            DerivableType::Fastlog => self
-                .fetch_derived::<RootFastlog>(ctx, csid, rederivation)
-                .await?
-                .is_some(),
-            DerivableType::DeletedManifests => self
-                .fetch_derived::<RootDeletedManifestV2Id>(ctx, csid, rederivation)
-                .await?
-                .is_some(),
-            DerivableType::SkeletonManifests => self
-                .fetch_derived::<RootSkeletonManifestId>(ctx, csid, rederivation)
-                .await?
-                .is_some(),
-            DerivableType::ChangesetInfo => self
-                .fetch_derived::<ChangesetInfo>(ctx, csid, rederivation)
-                .await?
-                .is_some(),
-            DerivableType::GitTrees => self
-                .fetch_derived::<TreeHandle>(ctx, csid, rederivation)
-                .await?
-                .is_some(),
-            DerivableType::GitCommits => self
-                .fetch_derived::<MappedGitCommitId>(ctx, csid, rederivation)
-                .await?
-                .is_some(),
-            DerivableType::GitDeltaManifests => self
-                .fetch_derived::<RootGitDeltaManifestId>(ctx, csid, rederivation)
-                .await?
-                .is_some(),
-            DerivableType::GitDeltaManifestsV2 => self
-                .fetch_derived::<RootGitDeltaManifestV2Id>(ctx, csid, rederivation)
-                .await?
-                .is_some(),
-            DerivableType::BssmV3 => self
-                .fetch_derived::<RootBssmV3DirectoryId>(ctx, csid, rederivation)
-                .await?
-                .is_some(),
-            DerivableType::TestManifests => self
-                .fetch_derived::<RootTestManifestDirectory>(ctx, csid, rederivation)
-                .await?
-                .is_some(),
-            DerivableType::TestShardedManifests => self
-                .fetch_derived::<RootTestShardedManifestDirectory>(ctx, csid, rederivation)
-                .await?
-                .is_some(),
-        })
+        let manager = manager_for_type(self, derived_data_type);
+        manager.is_derived(ctx, csid, rederivation).await
     }
 }

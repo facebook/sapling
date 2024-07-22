@@ -211,7 +211,7 @@ pub trait DerivationDependencies {
     /// Derive all dependent data types for this batch of commits.
     /// The same pre-conditions apply as in derive.rs
     async fn derive_heads<'a>(
-        ddm: &'a DerivedDataManager,
+        ddm: DerivedDataManager,
         ctx: &'a CoreContext,
         heads: &'a [ChangesetId],
         override_batch_size: Option<u64>,
@@ -243,7 +243,7 @@ impl DerivationDependencies for () {
         Ok(())
     }
     async fn derive_heads<'a>(
-        _ddm: &'a DerivedDataManager,
+        _ddm: DerivedDataManager,
         _ctx: &'a CoreContext,
         _heads: &'a [ChangesetId],
         _override_batch_size: Option<u64>,
@@ -291,7 +291,7 @@ where
         }
     }
     async fn derive_heads<'a>(
-        ddm: &'a DerivedDataManager,
+        ddm: DerivedDataManager,
         ctx: &'a CoreContext,
         heads: &'a [ChangesetId],
         override_batch_size: Option<u64>,
@@ -299,7 +299,7 @@ where
         visited: VisitedDerivableTypesMap<'a, u64, SharedDerivationError>,
     ) -> Result<(), SharedDerivationError> {
         let _res = try_join(
-            ddm.derive_heads_with_visited::<Derivable>(
+            ddm.clone().derive_heads_with_visited::<Derivable>(
                 ctx,
                 heads,
                 override_batch_size,

@@ -139,18 +139,19 @@ impl DerivedDataManager {
     where
         Derivable: BonsaiDerivable,
     {
-        self.derive_heads_with_visited::<Derivable>(
-            ctx,
-            heads,
-            override_batch_size,
-            rederivation,
-            Default::default(),
-        )
-        .await
+        self.clone()
+            .derive_heads_with_visited::<Derivable>(
+                ctx,
+                heads,
+                override_batch_size,
+                rederivation,
+                Default::default(),
+            )
+            .await
     }
 
     pub fn derive_heads_with_visited<'a, Derivable>(
-        &'a self,
+        self,
         ctx: &'a CoreContext,
         heads: &'a [ChangesetId],
         override_batch_size: Option<u64>,
@@ -164,7 +165,7 @@ impl DerivedDataManager {
             cloned!(visited);
             async move {
                 Derivable::Dependencies::derive_heads(
-                    self,
+                    self.clone(),
                     ctx,
                     heads,
                     override_batch_size,
@@ -733,7 +734,7 @@ impl DerivedDataManager {
         // All heads should have their dependent data types derived.
         // Let's make sure that's the case
         let (dependent_types_stats, _) = Derivable::Dependencies::derive_heads(
-            self,
+            self.clone(),
             ctx,
             &heads.into_iter().collect::<Vec<_>>(),
             None,
