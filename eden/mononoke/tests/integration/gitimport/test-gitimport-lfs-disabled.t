@@ -65,7 +65,7 @@ Git Import
   Ref: "refs/heads/main": Some(ChangesetId(Blake2(77efb78fc3e4ae41846ea7cdcb2cb5a3c65cac8614e841ba31187a97b859f958)))
   Initializing repo: repo
   Initialized repo: repo
-  All repos initialized. It took: 0 seconds
+  All repos initialized. It took: * seconds (glob)
   Bookmark: "heads/main": ChangesetId(Blake2(77efb78fc3e4ae41846ea7cdcb2cb5a3c65cac8614e841ba31187a97b859f958)) (created)
 
 We store full file contents for non-LFS file
