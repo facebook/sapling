@@ -68,6 +68,7 @@ use mutable_counters::MutableCountersArc;
 use repo_blobstore::RepoBlobstore;
 use repo_derived_data::RepoDerivedData;
 use repo_identity::RepoIdentity;
+use repo_name::encode_repo_name;
 use retry::retry_always;
 use retry::RetryAttemptsCount;
 use scuba_ext::MononokeScubaSampleBuilder;
@@ -274,7 +275,7 @@ pub struct MononokeCasSyncProcessExecutor {
 #[async_trait]
 impl LeaderElection for MononokeCasSyncProcessExecutor {
     fn get_shared_lock_path(&self) -> String {
-        format!("{}_{}", JOB_NAME, self.repo_name)
+        format!("{}_{}", JOB_NAME, encode_repo_name(self.repo_name.clone()))
     }
 }
 
