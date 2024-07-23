@@ -58,6 +58,7 @@ pub struct UploadCounters {
     uploaded: RelaxedCounter,
     uploaded_bytes: RelaxedCounter,
     already_present: RelaxedCounter,
+    largest_uploaded_blob_bytes: RelaxedCounter,
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -88,10 +89,11 @@ impl Display for UploadCounters {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
         write!(
             f,
-            "uploaded digests: {}, already present digests: {}, uploaded bytes: {}",
+            "uploaded digests: {}, already present digests: {}, uploaded bytes: {}, the largest uploaded blob: {}",
             self.uploaded.get(),
             self.already_present.get(),
-            ByteSize::b(self.uploaded_bytes.get() as u64).to_string_as(true)
+            ByteSize::b(self.uploaded_bytes.get() as u64).to_string_as(true),
+            ByteSize::b(self.largest_uploaded_blob_bytes.get() as u64).to_string_as(true)
         )
     }
 }
@@ -107,13 +109,23 @@ impl UploadCounters {
         self.uploaded.add(other.uploaded.get());
         self.already_present.add(other.already_present.get());
         self.uploaded_bytes.add(other.uploaded_bytes.get());
+        if self.largest_uploaded_blob_bytes.get() < other.largest_uploaded_blob_bytes.get() {
+            self.largest_uploaded_blob_bytes.add(
+                other.largest_uploaded_blob_bytes.get() - self.largest_uploaded_blob_bytes.get(),
+            );
+        }
     }
 
     pub fn tick(&self, ctx: &CoreContext, outcome: UploadOutcome) {
         match outcome {
             UploadOutcome::Uploaded(size) => {
+                let size = size as usize;
                 self.uploaded.inc();
-                self.uploaded_bytes.add(size as usize);
+                self.uploaded_bytes.add(size);
+                if self.largest_uploaded_blob_bytes.get() < size {
+                    self.largest_uploaded_blob_bytes
+                        .add(size - self.largest_uploaded_blob_bytes.get());
+                }
             }
             UploadOutcome::AlreadyPresent => {
                 self.already_present.inc();
