@@ -320,3 +320,26 @@ Can do multiple mappings in a single graft:
   @@ -1,1 +1,1 @@
   -A
   +AA
+
+
+Multiple mappings can all follow renames:
+  $ newclientrepo
+  $ drawdag <<EOS
+  > G  # G/dir/rename = AA\n
+  > |
+  > F  # F/dir/rename = A\n (renamed from dir/file)
+  > |
+  > E  # E/dir3/rename3 = A\n (renamed from dir3/file)
+  > |
+  > D  # D/dir3/file = A\n
+  > |
+  > C  # C/dir2/rename2 = A\n (renamed from dir2/file)
+  > |
+  > B  # B/dir2/file = A\n
+  > |
+  > A  # A/dir/file = A\n
+  > EOS
+  $ hg go -q $G
+  $ hg graft -qr $G --from-path dir --to-path dir2 --from-path dir --to-path dir3
+  skipping ancestor revision 301f396cc76c
+  [255]
