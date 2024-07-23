@@ -355,6 +355,36 @@ py_class!(pub class treemanifest |py| {
         Ok(self.underlying(py).read().has_grafts())
     }
 
+    /// Turn a regular path into the equivalent paths after applying registered grafts.
+    /// This is the inverse of ungraftedpath, but is one-to-many in this direction.
+    def graftedpaths(&self, path: &PyPath) -> PyResult<Vec<PyPathBuf>> {
+        Ok(self.underlying(py)
+           .read()
+           .grafted_paths(path.to_repo_path().map_pyerr(py)?)
+           .into_iter()
+           .map(|p| p.into())
+           .collect())
+    }
+
+    /// Turn the regular local_path into the equivalent grafted path, inferring which
+    /// graft to use based on dest_path.
+    def graftedpath(&self, local_path: &PyPath, dest_path: &PyPath) -> PyResult<Option<PyPathBuf>> {
+        Ok(self.underlying(py)
+           .read()
+           .grafted_path(local_path.to_repo_path().map_pyerr(py)?, dest_path.to_repo_path().map_pyerr(py)?)
+           .map(|p| p.into()))
+    }
+
+    /// Turn a regular path into the containing grafts after applying registered grafts.
+    def grafteddests(&self, path: &PyPath) -> PyResult<Vec<PyPathBuf>> {
+        Ok(self.underlying(py)
+           .read()
+           .grafted_dests(path.to_repo_path().map_pyerr(py)?)
+           .into_iter()
+           .map(|p| p.into())
+           .collect())
+    }
+
     /// Find modified directories. Return [(path: str, exist_left: bool, exist_right: bool)].
     /// Modified directories are added, removed, or metadata changed (direct file or subdir added,
     /// removed, similar to when OS updates mtime of a directory). File content change does not

@@ -1932,4 +1932,45 @@ mod tests {
             Some(repo_path_buf("left/b"))
         );
     }
+
+    #[test]
+    fn test_grafted_conversion() {
+        let mut tree = TreeManifest::ephemeral(Arc::new(TestStore::new()));
+        tree.insert(repo_path_buf("foo/a"), make_meta("10"))
+            .unwrap();
+
+        tree.register_diff_graft(repo_path("foo"), repo_path("bar"))
+            .unwrap();
+        tree.register_diff_graft(repo_path("foo"), repo_path("baz"))
+            .unwrap();
+        tree.register_diff_graft(repo_path("something"), repo_path("else"))
+            .unwrap();
+
+        assert_eq!(
+            tree.grafted_paths(repo_path("foo")),
+            &[repo_path_buf("bar"), repo_path_buf("baz")]
+        );
+        assert_eq!(
+            tree.grafted_dests(repo_path("foo")),
+            &[repo_path_buf("bar"), repo_path_buf("baz")]
+        );
+
+        assert_eq!(
+            tree.grafted_paths(repo_path("foo/a/b")),
+            &[repo_path_buf("bar/a/b"), repo_path_buf("baz/a/b")]
+        );
+        assert_eq!(
+            tree.grafted_dests(repo_path("foo/a/b")),
+            &[repo_path_buf("bar"), repo_path_buf("baz")]
+        );
+
+        assert!(
+            tree.grafted_path(repo_path("foo/a/b"), repo_path("nothing"))
+                .is_none()
+        );
+        assert_eq!(
+            tree.grafted_path(repo_path("foo/a/b"), repo_path("baz/something")),
+            Some(repo_path_buf("baz/a/b"))
+        );
+    }
 }
