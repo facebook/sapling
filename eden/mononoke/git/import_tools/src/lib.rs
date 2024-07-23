@@ -291,12 +291,12 @@ pub async fn gitimport<Uploader: GitUploader>(
         .context(
             "Failure in converting Result<Vec<commits>> to Vec<commits> in target.list_commits",
         )?;
-    let nb_commits_to_import = all_commits.len();
-    if 0 == nb_commits_to_import {
+
+    if all_commits.is_empty() {
         info!(ctx.logger(), "Nothing to import for repo {}.", repo_name);
         return Ok(acc.into_inner());
     }
-    let acc = GitimportAccumulator::from_roots(target.get_roots().clone());
+
     import_commit_contents(ctx, repo_name, all_commits, uploader, reader, prefs, acc).await
 }
 
@@ -319,7 +319,6 @@ pub async fn import_commit_contents<Uploader: GitUploader, Reader: GitReader>(
     let mappings: Vec<(ObjectId, ChangesetId)> = stream::iter(all_commits.clone())
         // Ignore any error. This is an optional optimization
         .chunks(SQL_CONCURRENCY)
-        .map(|v| v.into_iter().collect::<Vec<_>>())
         .map(|oids| {
             cloned!(uploader, ctx);
             async move {
