@@ -22,6 +22,7 @@ changesets = { version = "0.1.0", path = "../../changesets" }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 context = { version = "0.1.0", path = "../../server/context" }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
+futures_watchdog = { version = "0.1.0", path = "../../common/futures_watchdog" }
 manifest = { version = "0.1.0", path = "../../manifest" }
 mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }

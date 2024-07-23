@@ -27,6 +27,7 @@ use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use futures::try_join;
 use futures::FutureExt;
+use futures_watchdog::WatchdogExt;
 use manifest::find_intersection_of_diffs;
 use manifest::AsyncManifest;
 use manifest::Diff;
@@ -279,6 +280,7 @@ where
             }
         }
         .try_collect::<Vec<_>>()
+        .watched(ctx.logger())
         .await?;
 
         let manifests_list = diff_stream
@@ -326,6 +328,7 @@ where
             UploadPolicy::BlobsOnly => {
                 self.client
                     .ensure_upload_file_contents(ctx, &blobstore, files_list, blobs_lookup)
+                    .watched(ctx.logger())
                     .await?
                     .into_iter()
                     .for_each(|(_, outcome)| {
@@ -335,6 +338,7 @@ where
             UploadPolicy::TreesOnly => {
                 self.client
                     .ensure_upload_augmented_trees(ctx, &blobstore, manifests_list, trees_lookup)
+                    .watched(ctx.logger())
                     .await?
                     .into_iter()
                     .for_each(|(_, outcome)| {
@@ -343,18 +347,17 @@ where
             }
             UploadPolicy::All => {
                 let (outcomes_trees, outcomes_files) = try_join!(
-                    self.client.ensure_upload_augmented_trees(
-                        ctx,
-                        &blobstore,
-                        manifests_list,
-                        trees_lookup
-                    ),
-                    self.client.ensure_upload_file_contents(
-                        ctx,
-                        &blobstore,
-                        files_list,
-                        blobs_lookup
-                    )
+                    self.client
+                        .ensure_upload_augmented_trees(
+                            ctx,
+                            &blobstore,
+                            manifests_list,
+                            trees_lookup
+                        )
+                        .watched(ctx.logger()),
+                    self.client
+                        .ensure_upload_file_contents(ctx, &blobstore, files_list, blobs_lookup)
+                        .watched(ctx.logger())
                 )?;
 
                 outcomes_trees.into_iter().for_each(|(_, outcome)| {

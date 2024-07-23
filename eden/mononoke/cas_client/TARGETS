@@ -63,6 +63,7 @@ rust_library(
         "//eden/mononoke/cas_client:scm_client",
         "//eden/mononoke/changesets:changesets",
         "//eden/mononoke/common/bounded_traversal:bounded_traversal",
+        "//eden/mononoke/common/futures_watchdog:futures_watchdog",
         "//eden/mononoke/manifest:manifest",
         "//eden/mononoke/mercurial:mercurial_types",
         "//eden/mononoke/mononoke_types:mononoke_types",
