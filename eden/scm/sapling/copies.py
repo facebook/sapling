@@ -79,22 +79,7 @@ The following are configs to tune the behavior of copy tracing algorithm:
 
 import codecs
 
-from . import git, hgdemandimport, json, node, pathutil, phases, pycompat, util
-
-
-def _findlimit(repo, a, b):
-    """
-    Find the earliest revision that's an ancestor of a or b but not both, except
-    in the case where a or b is an ancestor of the other.
-    """
-    if a is None:
-        a = repo.revs("p1()").first()
-    if b is None:
-        b = repo.revs("p1()").first()
-    if a is None or b is None or not repo.revs("ancestor(%d, %d)", a, b):
-        return None
-
-    return repo.revs("only(%d, %d) + only(%d, %d) + %d + %d", a, b, b, a, a, b).min()
+from . import hgdemandimport, json, node, phases, pycompat
 
 
 def _chain(src, dst, a, b):
