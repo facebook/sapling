@@ -36,7 +36,7 @@ define_stats! {
 
 const MAX_CONCURRENT_UPLOADS_TREES: usize = 200;
 const MAX_CONCURRENT_UPLOADS_FILES: usize = 100;
-const MAX_BYTES_FOR_INLINE_UPLOAD: u64 = 500_000;
+const MAX_BYTES_FOR_INLINE_UPLOAD: u64 = 3_000_000;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum UploadOutcome {
