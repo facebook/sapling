@@ -20,6 +20,7 @@ Test validation of --from-path and --to-path
   abort: overlapping --to-path entries
   [255]
 
+Basic case merging a file change between directory branches "foo" and "bar".
   $ newclientrepo
   $ drawdag <<EOS
   > C B  # B/bar/file = a\nb\ncc\n (copied from foo/file)
@@ -45,3 +46,18 @@ Test validation of --from-path and --to-path
   +aa
    b
    cc
+
+
+Graft a commit adding a new file:
+  $ newclientrepo
+  $ drawdag <<EOS
+  > C B  # A/foo/file = file\n
+  > |/   # B/bar/file = file\n (copied from foo/file)
+  > A    # C/foo/new = new\n
+  > EOS
+  $ hg go -q $B
+  $ hg st
+  $ hg graft -qr $C --from-path foo --to-path bar
+  abort: bar/new@4ed9729386a6: not found in manifest!
+  [255]
+
