@@ -3869,6 +3869,19 @@ def samefile(f, ctx1, ctx2, m1=None, m2=None):
 
 
 def amend(ui, repo, old, extra, pats, opts):
+    wctx = repo[None]
+    matcher = scmutil.match(wctx, pats, opts)
+
+    amend_copies = copies.collect_amend_copies(repo.ui, wctx, old, matcher)
+
+    node = _amend(ui, repo, wctx, old, extra, opts, matcher)
+
+    copies.record_amend_copies(repo, amend_copies, old, repo[node])
+
+    return node
+
+
+def _amend(ui, repo, wctx, old, extra, opts, matcher):
     # avoid cycle context -> subrepo -> cmdutil
     from . import context
 
@@ -3884,7 +3897,6 @@ def amend(ui, repo, old, extra, pats, opts):
         # old      o - changeset to amend
         #          |
         # base     o - first parent of the changeset to amend
-        wctx = repo[None]
 
         # Copy to avoid mutating input
         extra = extra.copy()
@@ -3910,7 +3922,6 @@ def amend(ui, repo, old, extra, pats, opts):
 
         # add/remove the files to the working copy if the "addremove" option
         # was specified.
-        matcher = scmutil.match(wctx, pats, opts)
         if opts.get("addremove") and scmutil.addremove(repo, matcher, "", opts):
             raise error.Abort(
                 _("failed to mark all new/missing files as added/removed")
