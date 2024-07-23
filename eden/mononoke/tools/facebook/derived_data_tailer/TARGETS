@@ -25,6 +25,7 @@ rust_binary(
         "//eden/mononoke/cmdlib/sharding:executor_lib",
         "//eden/mononoke/cmdlib/sharding_ext:sharding_ext",
         "//eden/mononoke/derived_data:bulk_derivation",
+        "//eden/mononoke/derived_data:derived_data_manager",
         "//eden/mononoke/metaconfig:metaconfig_types",
         "//eden/mononoke/mononoke_types:mononoke_types",
         "//eden/mononoke/repo_attributes/repo_derived_data:repo_derived_data",
