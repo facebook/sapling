@@ -76,6 +76,36 @@ TEST_F(JournalTest, accumulate_range_all_changes) {
   EXPECT_EQ(2, summed->changedFilesInOverlay.size());
 }
 
+TEST_F(JournalTest, accumulate_range_mix_hg_changes) {
+  // Empty journals have no rang to accumulate over
+  EXPECT_FALSE(journal.getLatest());
+  EXPECT_EQ(nullptr, journal.accumulateRange());
+
+  // Make an initial entry.
+  journal.recordChanged("foo/bar"_relpath);
+
+  // Sanity check that the latest information matches.
+  auto latest = journal.getLatest();
+
+  // get accumulated data for the tip of journal
+  auto summed = journal.accumulateRange(latest->sequenceID);
+  EXPECT_FALSE(summed->containsHgOnlyChanges);
+
+  // Record changes under .hg folder
+  journal.recordChanged(".hg/foo/bar"_relpath);
+
+  // get accumulated data for the tip of journal
+  latest = journal.getLatest();
+  summed = journal.accumulateRange(latest->sequenceID);
+  // It only contains .hg change
+  EXPECT_TRUE(summed->containsHgOnlyChanges);
+
+  // get accumulated data from the beginning.
+  summed = journal.accumulateRange();
+  // It contains non-hg-only change
+  EXPECT_FALSE(summed->containsHgOnlyChanges);
+}
+
 TEST_F(JournalTest, accumulateRangeRemoveCreateUpdate) {
   // Remove test.txt
   journal.recordRemoved("test.txt"_relpath);
@@ -157,6 +187,11 @@ void checkHashMatches(
   auto range = journal.accumulateRange(latest->sequenceID);
   ASSERT_TRUE(range);
   EXPECT_EQ(transitions, range->snapshotTransitions);
+  if (transitions.size() > 1) {
+    EXPECT_TRUE(range->containsRootUpdate);
+  } else {
+    EXPECT_FALSE(range->containsRootUpdate);
+  }
 
   range = journal.accumulateRange();
   ASSERT_TRUE(range);

@@ -424,6 +424,10 @@ std::unique_ptr<JournalDeltaRange> Journal::accumulateRange(
 
           for (auto& entry : current.getChangedFilesInOverlay()) {
             auto& name = entry.first;
+            if (result->containsHgOnlyChanges && !name.empty() &&
+                name.paths().begin().piece() != ".hg"_relpath) {
+              result->containsHgOnlyChanges = false;
+            }
             auto& currentInfo = entry.second;
             auto* resultInfo =
                 folly::get_ptr(result->changedFilesInOverlay, name);
@@ -474,6 +478,7 @@ std::unique_ptr<JournalDeltaRange> Journal::accumulateRange(
 
     std::reverse(
         result->snapshotTransitions.begin(), result->snapshotTransitions.end());
+    result->containsRootUpdate = result->snapshotTransitions.size() > 1;
   }
 
   deltaState->lastModificationHasBeenObserved = true;
