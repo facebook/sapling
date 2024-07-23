@@ -103,3 +103,220 @@ Graft a file that was renamed in dest branch:
   +aa
    b
    cc
+
+
+Graft a commit renaming a file:
+  $ newclientrepo
+  $ drawdag <<EOS
+  > C B  # B/bar/file = a\nb\ncc\n (copied from foo/file)
+  > |/   # C/foo/rename = aa\nb\nc\n (renamed from foo/file)
+  > A    # A/foo/file = a\nb\nc\n
+  > EOS
+  $ hg go -q $B
+  $ hg graft -qr $C --from-path foo --to-path bar
+  $ hg show
+  commit:      597c3df28a9e
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  files:       bar/file bar/rename
+  description:
+  C
+  
+  
+  diff --git a/bar/file b/bar/rename
+  rename from bar/file
+  rename to bar/rename
+  --- a/bar/file
+  +++ b/bar/rename
+  @@ -1,3 +1,3 @@
+  -a
+  +aa
+   b
+   cc
+
+Graft a commit with rename in "remote" history:
+  $ newclientrepo
+  $ drawdag <<EOS
+  > D    # D/foo/rename = aa\nb\nc\n
+  > |
+  > C B  # B/bar/file = a\nb\ncc\n
+  > |/   # C/foo/rename = a\nb\nc\n (renamed from foo/file)
+  > A    # A/foo/file = a\nb\nc\n
+  > EOS
+  $ hg go -q $B
+  $ hg graft -qr $D --from-path foo --to-path bar
+  $ hg show
+  commit:      54cc7ba455d7
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  files:       bar/file
+  description:
+  D
+  
+  
+  diff --git a/bar/file b/bar/file
+  --- a/bar/file
+  +++ b/bar/file
+  @@ -1,3 +1,3 @@
+  -a
+  +aa
+   b
+   cc
+
+
+Graft a commit with rename in "local" history:
+  $ newclientrepo
+  $ drawdag <<EOS
+  > D E  # D/foo/rename = aa\nb\nc\n
+  > | |  # E/bar/file = a\nb\ncc\n
+  > C B  # B/bar/file = a\nb\nc\n
+  > |/   # C/foo/rename = a\nb\nc\n (renamed from foo/file)
+  > A    # A/foo/file = a\nb\nc\n
+  > EOS
+  $ hg go -q $D
+  $ hg graft -qr $E --from-path bar --to-path foo
+  $ hg show
+  commit:      fa496899ba00
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  files:       foo/rename
+  description:
+  E
+  
+  
+  diff --git a/foo/rename b/foo/rename
+  --- a/foo/rename
+  +++ b/foo/rename
+  @@ -1,3 +1,3 @@
+   aa
+   b
+  -c
+  +cc
+
+
+Graft a commit with renames on both sides:
+  $ newclientrepo
+  $ drawdag <<EOS
+  >   F  # F/bar/rename2 = a\nb\ncc\n
+  >   |
+  > D E  # D/foo/rename = aa\nb\nc\n
+  > | |  # E/bar/rename2 = a\nb\nc\n (renamed from bar/file)
+  > C B  # B/bar/file = a\nb\nc\n
+  > |/   # C/foo/rename = a\nb\nc\n (renamed from foo/file)
+  > A    # A/foo/file = a\nb\nc\n
+  > EOS
+  $ hg go -q $D
+  $ hg graft -qr $F --from-path bar --to-path foo
+  $ hg show
+  commit:      424441b2970c
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  files:       foo/rename
+  description:
+  F
+  
+  
+  diff --git a/foo/rename b/foo/rename
+  --- a/foo/rename
+  +++ b/foo/rename
+  @@ -1,3 +1,3 @@
+   aa
+   b
+  -c
+  +cc
+
+
+Grafting individual files also works:
+  $ newclientrepo
+  $ drawdag <<EOS
+  >   C  # C/B = aa\nb\nc\n
+  >   |
+  > D B  # D/A = a\nb\ncc\n
+  > |/   # B/B = a\nb\nc\n (copied from A)
+  > A    # A/A = a\nb\nc\n
+  > EOS
+  $ hg go -q $D
+  $ hg graft -qr $C --from-path B --to-path A
+  $ hg show
+  commit:      4b102adaac64
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  files:       A
+  description:
+  C
+  
+  
+  diff --git a/A b/A
+  --- a/A
+  +++ b/A
+  @@ -1,3 +1,3 @@
+  -a
+  +aa
+   b
+   cc
+
+
+Can graft between completely unrelated directories:
+  $ newclientrepo
+  $ drawdag <<EOS
+  > B  # B/A = a\nb\ncc\n
+  > |
+  > A  # A/A = a\nb\nc\n
+  > 
+  > C  # C/C = aa\nb\nc\n
+  > EOS
+  $ hg go -q $C
+  $ hg graft -qr $B --from-path A --to-path C
+  $ hg show
+  commit:      b60c71cdc603
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  files:       C
+  description:
+  B
+  
+  
+  diff --git a/C b/C
+  --- a/C
+  +++ b/C
+  @@ -1,3 +1,3 @@
+   aa
+   b
+  -c
+  +cc
+
+
+Can do multiple mappings in a single graft:
+  $ newclientrepo
+  $ drawdag <<EOS
+  > D  # D/dir/file = AA\n
+  > |
+  > C  # C/dir3/file = A\n
+  > |
+  > B  # B/dir2/file = A\n
+  > |
+  > A  # A/dir/file = A\n
+  > EOS
+  $ hg go -q $C
+  $ hg graft -qr $D --from-path dir --to-path dir2 --from-path dir --to-path dir3
+  $ hg show
+  commit:      2995e39b4791
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  files:       dir2/file dir3/file
+  description:
+  D
+  
+  
+  diff --git a/dir2/file b/dir2/file
+  --- a/dir2/file
+  +++ b/dir2/file
+  @@ -1,1 +1,1 @@
+  -A
+  +AA
+  diff --git a/dir3/file b/dir3/file
+  --- a/dir3/file
+  +++ b/dir3/file
+  @@ -1,1 +1,1 @@
+  -A
+  +AA
