@@ -4816,3 +4816,21 @@ def wrongtooltocontinue(repo, task):
     if after[1]:
         hint = after[0]
     raise error.Abort(_("no %s in progress") % task, hint=hint)
+
+
+diffgraftopts = [
+    (
+        "",
+        "from-path",
+        [],
+        _("re-map this path to correspondong --to-path (ADVANCED)"),
+        _("PATH"),
+    ),
+    (
+        "",
+        "to-path",
+        [],
+        _("re-map corresponding --from-path to this path (ADVANCED)"),
+        _("PATH"),
+    ),
+]

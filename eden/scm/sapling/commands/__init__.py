@@ -193,6 +193,7 @@ diffopts2 = cmdutil.diffopts2
 mergetoolopts = cmdutil.mergetoolopts
 similarityopts = cmdutil.similarityopts
 debugrevlogopts = cmdutil.debugrevlogopts
+diffgraftopts = cmdutil.diffgraftopts
 
 # Commands start here, listed alphabetically
 
@@ -2463,7 +2464,8 @@ def forget(ui, repo, *pats, **opts):
     ]
     + commitopts2
     + mergetoolopts
-    + dryrunopts,
+    + dryrunopts
+    + diffgraftopts,
     _("[OPTION]... REV..."),
     legacyaliases=["gra", "graf"],
 )
