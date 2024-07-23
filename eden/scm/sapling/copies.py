@@ -78,6 +78,7 @@ The following are configs to tune the behavior of copy tracing algorithm:
 """
 
 import codecs
+from collections import defaultdict
 
 from . import hgdemandimport, json, node, phases, pycompat
 
@@ -231,25 +232,54 @@ def mergecopies(repo, cdst, csrc, base):
         if sourcecommitnum > sourcecommitlimit:
             return {}
 
+    msrc = csrc.manifest()
+
     cp = pathcopies(base, csrc)
+    for dst in list(cp.keys()):
+        # dst and src paths will both be in csrc's "path space".
+        # Convert dst path into mdst's "path space", fanning out.
+        if grafted := msrc.graftedpaths(dst):
+            src = cp.pop(dst)
+            for path in grafted:
+                cp[path] = src
+
     for dst, src in _filtercopies(cp, base, csrc, cdst, "src").items():
         if src in orig_cdst or dst in orig_cdst:
             copies[dst] = src
 
-    # file is missing if it isn't present in the destination, but is present in
-    # the base and present in the source.
-    # Presence in the base is important to exclude added files, presence in the
-    # source is important to exclude removed files.
-    missingfiles = list(
-        filter(lambda f: f not in mdst and f in base and f in csrc, changedfiles)
-    )
+    missingfiles = []
+    for src in changedfiles:
+        # Fan out src file into the equivalent paths in dst.
+        dst_files = msrc.graftedpaths(src) or [src]
+        for dst in dst_files:
+            # file is missing if it isn't present in the destination, but is present in
+            # the base and present in the source.
+            # Presence in the base is important to exclude added files, presence in the
+            # source is important to exclude removed files.
+            if dst not in mdst and src in base and src in csrc:
+                missingfiles.append((dst, src))
+
     repo.ui.metrics.gauge("copytrace_missingfiles", len(missingfiles))
     if missingfiles and _dagcopytraceenabled(repo.ui):
-        dag_copy_trace = repo._dagcopytrace
-        dst_copies = dag_copy_trace.trace_renames(
-            csrc.node(), cdst.node(), missingfiles
+        srconly, same = [], []
+        for dst_path, src_path in missingfiles:
+            if dst_path == src_path:
+                same.append(dst_path)
+            else:
+                srconly.append(src_path)
+
+        # Normal case - src and dest manifest use the same "path space", so just do a
+        # single trace form csrc to cdst.
+        dst_copies = repo._dagcopytrace.trace_renames(
+            csrc.node(),
+            cdst.node(),
+            same,
         )
         copies.update(_filtercopies(dst_copies, base, csrc, cdst, "dst"))
+
+        # xdir missing files - use special xdir logic.
+        xdir_copies = _xdir_copies(repo, csrc, cdst, srconly)
+        copies.update(_filtercopies(xdir_copies, base, csrc, cdst, "dst"))
 
     # Look for additional amend-copies.
     amend_copies = getamendcopies(repo, cdst, base.p1())
@@ -260,6 +290,93 @@ def mergecopies(repo, cdst, csrc, base):
                 copies[dst] = src
 
     repo.ui.metrics.gauge("copytrace_copies", len(copies))
+    return copies
+
+
+def _xdir_copies(repo, csrc, cdst, srcmissing):
+    """Compute copies for cross-directory merging.
+
+    Cross-directory differs from normal copy tracing because:
+
+    1. Cross-directory merges don't necessarily have copy metadata for
+       the files. If a user started with a plain "cp" instead of "sl cp",
+       we want rename tracing for cross-directory merges to still work.
+
+    2. The common ancestor of csrc and cdst is not necessarily far back enough
+       to follow the branched directory history. For example:
+
+    D # modify "foo/file"
+    |
+    C
+    |
+    B # rename "bar/file" to "bar/renamed"
+    |
+    A # branch "foo/" into "bar/"
+
+    If we are on C and we graft D:foo into C:bar, the common ancestor
+    for src=D^ and dst=C is C, but that is not far back enough to discover the
+    rename from "bar/file" to "bar/renamed".
+    """
+
+    msrc = csrc.manifest()
+    mdst = cdst.manifest()
+    dag = repo.changelog.dag
+
+    # Group missing paths by graft dest path (the "--to-path" option).
+    dests = defaultdict(lambda: [])
+    for srcpath in srcmissing:
+        for dest in msrc.grafteddests(srcpath):
+            dests[dest].append(srcpath)
+
+    copies = {}
+    for dstpath, srcpaths in dests.items():
+        # Commit where "dstpath" was (most recently) created.
+        cdstbase = repo.pathcreation(dstpath, dag.ancestors([cdst.node()]))
+
+        srcdir = msrc.ungraftedpath(dstpath)
+        # Commit where "srcdir" was (most recently) created.
+        csrcbase = repo.pathcreation(srcdir, dag.ancestors([csrc.node()]))
+
+        # TODO: don't look for renames "too far" back in either branch (i.e. before the
+        # other branch's branch point)
+
+        # Trace renames on src side.
+        src_copies = repo._dagcopytrace.trace_renames(
+            csrc.node(),
+            csrcbase,
+            srcpaths,
+        )
+
+        # Fan out result paths into cdst "path space".
+        dst_paths = []
+        for path in src_copies.keys():
+            for dst_path in msrc.graftedpaths(path):
+                dst_paths.append(dst_path)
+
+        # Continue rename trace on dst side.
+        dst_copies = repo._dagcopytrace.trace_renames(
+            cdstbase,
+            cdst.node(),
+            dst_paths,
+        )
+
+        # If a src in dst_copies is a dst in src_copies, stitch together.
+        # This could happen if both sides have renamed.
+        for dst in list(dst_copies.keys()):
+            src = dst_copies[dst]
+            src = msrc.ungraftedpath(src) or src
+            if src in src_copies:
+                dst_copies[dst] = src_copies[src]
+
+        # Add rest of src_copies to copies if it exists in mdst.
+        # We change the "dst" to be in the "path space" cdst instead of csrc.
+        for dst, src in src_copies.items():
+            for dst in msrc.graftedpaths(dst):
+                if dst in mdst:
+                    dst_copies[dst] = src
+
+        copies |= dst_copies
+
     return copies
 
 

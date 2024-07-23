@@ -86,9 +86,20 @@ Graft a file that was renamed in dest branch:
   > EOS
   $ hg go -q $D
   $ hg graft -qr $C --from-path foo --to-path bar
-  other [graft] changed bar/file which local [local] is missing
-  hint: if this is due to a renamed file, you can manually input the renamed path
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved, or input (r)enamed path? u
-  abort: unresolved conflicts, can't continue
-  (use 'hg resolve' and 'hg graft --continue')
-  [255]
+  $ hg show
+  commit:      4de9783d32fa
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  files:       bar/rename
+  description:
+  C
+  
+  
+  diff --git a/bar/rename b/bar/rename
+  --- a/bar/rename
+  +++ b/bar/rename
+  @@ -1,3 +1,3 @@
+  -a
+  +aa
+   b
+   cc
