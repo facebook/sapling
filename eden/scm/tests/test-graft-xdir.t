@@ -28,32 +28,20 @@ Test validation of --from-path and --to-path
   > EOS
   $ hg go -q $B
   $ hg graft -qr $C --from-path foo --to-path bar
-  abort: bar/file@439eb343cae6: not found in manifest!
-  [255]
-FIXME: we want to graft to bar/file, not foo/file
   $ hg show
-  commit:      7599131684a9
+  commit:      c6f2b52276f0
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
-  files:       B bar/file
+  files:       bar/file
   description:
-  B
+  C
   
   
-  diff --git a/B b/B
-  new file mode 100644
-  --- /dev/null
-  +++ b/B
-  @@ -0,0 +1,1 @@
-  +B
-  \ No newline at end of file
-  diff --git a/foo/file b/bar/file
-  copy from foo/file
-  copy to bar/file
-  --- a/foo/file
+  diff --git a/bar/file b/bar/file
+  --- a/bar/file
   +++ b/bar/file
   @@ -1,3 +1,3 @@
-   a
+  -a
+  +aa
    b
-  -c
-  +cc
+   cc

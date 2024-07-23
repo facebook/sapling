@@ -310,6 +310,10 @@ class manifestdict:
     def hasgrafts(self):
         return False
 
+    # For compat with Rust manifest.
+    def ungraftedpath(self, path):
+        return None
+
 
 def _msearch(m, s, lo=0, hi=None):
     """return a tuple (start, end) that says where to find s within m.

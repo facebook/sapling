@@ -919,89 +919,105 @@ def manifestmerge(
     actions = {}
     # (n1, fl1) = "local"
     # (n2, fl2) = "remote"
-    for f, ((n1, fl1), (n2, fl2)) in pycompat.iteritems(diff):
+    for f1, ((n1, fl1), (n2, fl2)) in pycompat.iteritems(diff):
+        # If the diff operation had re-mapped directories for one side, "m.ungraftedpath()"
+        # will recover the original path for m.
+        f2 = m2.ungraftedpath(f1) or f1
+        fa = ma.ungraftedpath(f1) or f1
+
         if n1 and n2:  # file exists on both local and remote side
-            if f not in ma:
-                fa = copy.get(f, None)
+            if fa not in ma:
+                fa = copy.get(f1, None)
                 if fa is not None:
-                    actions[f] = (
+                    fa = m2.ungraftedpath(fa) or fa
+                    actions[f1] = (
                         "m",
-                        (f, f, fa, False, pa.node()),
+                        (f1, f2, fa, False, pa.node()),
                         "both renamed from " + fa,
                     )
                 else:
-                    actions[f] = ("m", (f, f, None, False, pa.node()), "both created")
+                    actions[f1] = (
+                        "m",
+                        (f1, f2, None, False, pa.node()),
+                        "both created",
+                    )
             else:
-                a = ma[f]
-                fla = ma.flags(f)
+                a = ma[fa]
+                fla = ma.flags(fa)
                 nol = "l" not in fl1 + fl2 + fla
                 if n2 == a and fl2 == fla:
-                    actions[f] = ("k", (), "remote unchanged")
+                    actions[f1] = ("k", (), "remote unchanged")
                 elif n1 == a and fl1 == fla:  # local unchanged - use remote
                     if fl1 == fl2:
-                        actions[f] = ("g", (fl2, False), "remote is newer")
+                        actions[f1] = ("g", (fl2, False), "remote is newer")
                     else:
-                        actions[f] = ("rg", (fl2, False), "flag differ")
+                        actions[f1] = ("rg", (fl2, False), "flag differ")
                 elif nol and n2 == a:  # remote only changed 'x'
-                    actions[f] = ("e", (fl2,), "update permissions")
+                    actions[f1] = ("e", (fl2,), "update permissions")
                 elif nol and n1 == a:  # local only changed 'x'
-                    actions[f] = ("g", (fl1, False), "remote is newer")
+                    actions[f1] = ("g", (fl1, False), "remote is newer")
                 else:  # both changed something
-                    actions[f] = ("m", (f, f, f, False, pa.node()), "versions differ")
-        elif n1:  # file exists only on local side
-            if f in copied:
-                pass  # we'll deal with it on m2 side
-            elif f in copy:
-                f2 = copy[f]
-                if f2 in m2:
-                    actions[f] = (
+                    actions[f1] = (
                         "m",
-                        (f, f2, f2, False, pa.node()),
-                        "local copied/moved from " + f2,
+                        (f1, f2, fa, False, pa.node()),
+                        "versions differ",
+                    )
+        elif n1:  # file exists only on local side
+            if f1 in copied:
+                pass  # we'll deal with it on m2 side
+            elif f1 in copy:
+                f1prev = copy[f1]
+                f2 = m2.ungraftedpath(f1prev) or f1prev
+                if f2 in m2:
+                    actions[f1] = (
+                        "m",
+                        (f1, f2, f2, False, pa.node()),
+                        "local copied/moved from " + f1prev,
                     )
                 else:
                     # copy source doesn't exist - treat this as
                     # a change/delete conflict.
-                    actions[f] = (
+                    actions[f1] = (
                         "cd",
-                        (f, None, f2, False, pa.node()),
+                        (f1, None, f2, False, pa.node()),
                         "prompt changed/deleted copy source",
                     )
-            elif f in ma:  # clean, a different, no remote
-                if n1 != ma[f]:
+            elif fa in ma:  # clean, a different, no remote
+                if n1 != ma[fa]:
                     if acceptremote:
-                        actions[f] = ("r", None, "remote delete")
+                        actions[f1] = ("r", None, "remote delete")
                     else:
-                        actions[f] = (
+                        actions[f1] = (
                             "cd",
-                            (f, None, f, False, pa.node()),
+                            (f1, None, f1, False, pa.node()),
                             "prompt changed/deleted",
                         )
                 elif n1 == addednodeid:
                     # This extra 'a' is added by working copy manifest to mark
                     # the file as locally added. We should forget it instead of
                     # deleting it.
-                    actions[f] = ("f", None, "remote deleted")
+                    actions[f1] = ("f", None, "remote deleted")
                 else:
-                    actions[f] = ("r", None, "other deleted")
+                    actions[f1] = ("r", None, "other deleted")
         elif n2:  # file exists only on remote side
-            if f in copied:
+            if f1 in copied:
                 pass  # we'll deal with it on m1 side
-            elif f in copy:
-                f2 = copy[f]
-                if f2 in m2:
-                    actions[f] = (
+            elif f1 in copy:
+                f1prev = copy[f1]
+                f2prev = m2.ungraftedpath(f1prev) or f1prev
+                if f2prev in m2:
+                    actions[f1] = (
                         "m",
-                        (f2, f, f2, False, pa.node()),
-                        "remote copied from " + f2,
+                        (f1prev, f2, f2prev, False, pa.node()),
+                        "remote copied from " + f2prev,
                     )
                 else:
-                    actions[f] = (
+                    actions[f1] = (
                         "m",
-                        (f2, f, f2, True, pa.node()),
-                        "remote moved from " + f2,
+                        (f1prev, f2, f2prev, True, pa.node()),
+                        "remote moved from " + f2prev,
                     )
-            elif f not in ma:
+            elif fa not in ma:
                 # local unknown, remote created: the logic is described by the
                 # following table:
                 #
@@ -1014,22 +1030,22 @@ def manifestmerge(
                 # Checking whether the files are different is expensive, so we
                 # don't do that when we can avoid it.
                 if not force:
-                    actions[f] = ("c", (fl2,), "remote created")
+                    actions[f1] = ("c", (fl2,), "remote created")
                 elif not branchmerge:
-                    actions[f] = ("c", (fl2,), "remote created")
+                    actions[f1] = ("c", (fl2,), "remote created")
                 else:
-                    actions[f] = (
+                    actions[f1] = (
                         "cm",
                         (fl2, pa.node()),
                         "remote created, get or merge",
                     )
-            elif n2 != ma[f]:
+            elif n2 != ma[fa]:
                 if acceptremote:
-                    actions[f] = ("c", (fl2,), "remote recreating")
+                    actions[f1] = ("c", (fl2,), "remote recreating")
                 else:
-                    actions[f] = (
+                    actions[f1] = (
                         "dc",
-                        (None, f, f, False, pa.node()),
+                        (None, f2, fa, False, pa.node()),
                         "prompt deleted/changed",
                     )
 
