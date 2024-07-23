@@ -11,9 +11,11 @@ use clientinfo::ClientRequestInfo;
 use sql::Connection;
 use sql::Transaction;
 
+use crate::references::local_bookmarks::LocalBookmarksMap;
 use crate::references::local_bookmarks::WorkspaceLocalBookmark;
 use crate::sql::ops::Delete;
 use crate::sql::ops::Get;
+use crate::sql::ops::GetAsMap;
 use crate::sql::ops::Insert;
 use crate::sql::ops::SqlCommitCloud;
 use crate::sql::ops::Update;
@@ -62,6 +64,33 @@ impl Get<WorkspaceLocalBookmark> for SqlCommitCloud {
                 })
             })
             .collect::<anyhow::Result<Vec<WorkspaceLocalBookmark>>>()
+    }
+}
+
+#[async_trait]
+impl GetAsMap<LocalBookmarksMap> for SqlCommitCloud {
+    async fn get_as_map(
+        &self,
+        reponame: String,
+        workspace: String,
+    ) -> anyhow::Result<LocalBookmarksMap> {
+        let rows =
+            GetLocalBookmarks::query(&self.connections.read_connection, &reponame, &workspace)
+                .await?;
+        let mut map = LocalBookmarksMap::new();
+        for (name, node) in rows {
+            match changeset_from_bytes(&node, self.uses_mysql) {
+                Ok(hgid) => {
+                    if let Some(val) = map.get_mut(&hgid) {
+                        val.push(name.clone());
+                    } else {
+                        map.insert(hgid, vec![name]);
+                    }
+                }
+                Err(e) => return Err(e),
+            }
+        }
+        Ok(map)
     }
 }
 

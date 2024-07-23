@@ -26,6 +26,8 @@ pub struct WorkspaceLocalBookmark {
     pub commit: HgChangesetId,
 }
 
+pub type LocalBookmarksMap = HashMap<HgChangesetId, Vec<String>>;
+
 pub async fn update_bookmarks(
     sql_commit_cloud: &SqlCommitCloud,
     mut txn: Transaction,
