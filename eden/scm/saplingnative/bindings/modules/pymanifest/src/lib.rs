@@ -28,6 +28,7 @@ use manifest::FileMetadata;
 use manifest::FileType;
 use manifest::FsNodeMetadata;
 use manifest::Manifest;
+use manifest_tree::apply_diff_grafts;
 use manifest_tree::TreeManifest;
 use manifest_tree::TreeStore;
 use parking_lot::RwLock;
@@ -542,6 +543,17 @@ py_class!(pub class treemanifest |py| {
         let mut tree = self.underlying(py).write();
         let hgid = tree.flush().map_pyerr(py)?;
         Ok(PyBytes::new(py, hgid.as_ref()))
+    }
+
+    @classmethod def applydiffgrafts(_cls, m1: &treemanifest, m2: &treemanifest) -> PyResult<(Self, Self)> {
+        let (m1, m2) = apply_diff_grafts(
+            &m1.underlying(py).read(),
+            &m2.underlying(py).read(),
+        ).map_pyerr(py)?;
+        Ok((
+            Self::create_instance(py, Arc::new(RwLock::new(m1)), Default::default())?,
+            Self::create_instance(py, Arc::new(RwLock::new(m2)), Default::default())?,
+            ))
     }
 
 });

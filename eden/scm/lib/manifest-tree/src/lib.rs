@@ -67,6 +67,9 @@ pub struct TreeManifest {
     store: InnerStore,
     // TODO: root can't be a Leaf
     root: Link,
+
+    // List of from->to grafts to perform before diff operation.
+    diff_grafts: Vec<(RepoPathBuf, RepoPathBuf)>,
 }
 
 #[derive(Error, Debug)]
@@ -101,6 +104,7 @@ impl TreeManifest {
         TreeManifest {
             store: InnerStore::new(store),
             root: Link::durable(hgid),
+            diff_grafts: Vec::new(),
         }
     }
 
@@ -109,6 +113,7 @@ impl TreeManifest {
         TreeManifest {
             store: InnerStore::new(store),
             root: Link::ephemeral(),
+            diff_grafts: Vec::new(),
         }
     }
 
@@ -607,6 +612,57 @@ impl TreeManifest {
         Ok(())
     }
 
+    /// Return a new tree with registered grafts applied. If there are no grafts, a
+    /// shallow copy of `self` is returned. If we have no grafts but `other` does (`other`
+    /// is the other side of the diff operation), return a new tree with only the "to"
+    /// side of `other`'s grafts present.
+    ///
+    /// For example in "sl graft -r A --from-path foo --to-path bar", we apply foo->bar
+    /// graft to A yielding a tree with just "bar", and we apply bar->bar graft to the
+    /// wdir manifest, yield a tree with just "bar". This way we strip out parts of the
+    /// manifest that aren't part of the graft.
+    pub fn apply_diff_grafts(&self, other: &Self) -> Result<Self> {
+        if self.diff_grafts.is_empty() && other.diff_grafts.is_empty() {
+            // No grafts to apply - return a shallow copy of ourself.
+            return Ok(Self {
+                store: self.store.clone(),
+                root: self.root.thread_copy(),
+                diff_grafts: Vec::new(),
+            });
+        }
+
+        let mut grafted = Self {
+            store: self.store.clone(),
+            root: Link::ephemeral(),
+            diff_grafts: Vec::new(),
+        };
+
+        if self.diff_grafts.is_empty() {
+            for (_, to) in other.diff_grafts.iter() {
+                grafted.graft(to, self.get_link(to)?)?;
+            }
+        } else {
+            for (from, to) in self.diff_grafts.iter() {
+                grafted.graft(to, self.get_link(from)?)?;
+            }
+        }
+        Ok(grafted)
+    }
+
+    /// Register a graft to take effect during `diff` operations.
+    /// This allows temporarily moving tree nodes around just for the diff.
+    /// See `ungrafted_path` for mapping the diff result back to the original path.
+    /// Returns an error if `to` overlaps with existing graft destination.
+    pub fn register_diff_graft(&mut self, from: &RepoPath, to: &RepoPath) -> Result<()> {
+        for (_, existing) in self.diff_grafts.iter() {
+            if existing.is_empty() || to.is_empty() || !existing.common_prefix(to).is_empty() {
+                bail!("overlapping graft destinations {} and {}", existing, to);
+            }
+        }
+        self.diff_grafts.push((from.to_owned(), to.to_owned()));
+        Ok(())
+    }
+
     fn get_link(&self, path: &RepoPath) -> Result<Option<&Link>> {
         let mut cursor = &self.root;
         for (parent, component) in path.parents().zip(path.components()) {
@@ -719,6 +775,13 @@ pub fn compat_subtree_diff(
     };
     state.work(hgid, other_nodes)?;
     Ok(state.result)
+}
+
+pub fn apply_diff_grafts(
+    m1: &TreeManifest,
+    m2: &TreeManifest,
+) -> Result<(TreeManifest, TreeManifest)> {
+    Ok((m1.apply_diff_grafts(m2)?, m2.apply_diff_grafts(m1)?))
 }
 
 /// Prefetch everything under given tree nodes, filtered by the given matcher.
@@ -1641,5 +1704,122 @@ mod tests {
         let mut grafted = tree.clone();
         grafted.graft(repo_path("dir"), None).unwrap();
         assert_eq!(list_files(&grafted), vec!["a"]);
+    }
+
+    fn grafted_diff(a: &TreeManifest, b: &TreeManifest) -> Vec<String> {
+        let (a, b) = apply_diff_grafts(a, b).unwrap();
+        let mut files = a
+            .diff(&b, &AlwaysMatcher::new())
+            .unwrap()
+            .map(|e| Ok(e?.path.into_string()))
+            .collect::<Result<Vec<_>>>()
+            .unwrap();
+        files.sort();
+        files
+    }
+
+    #[test]
+    fn test_register_diff_graft_validation() {
+        let mut tree = TreeManifest::ephemeral(Arc::new(TestStore::new()));
+        // Test we don't allow overlapping "to" values in grafts.
+        assert!(
+            tree.register_diff_graft(repo_path("foo"), repo_path("bar"))
+                .is_ok()
+        );
+        assert!(
+            tree.register_diff_graft(repo_path("foo"), repo_path("baz"))
+                .is_ok()
+        );
+        assert!(
+            tree.register_diff_graft(repo_path("anything"), repo_path("bar"))
+                .is_err()
+        );
+        assert!(
+            tree.register_diff_graft(repo_path("anything"), repo_path("bar/anything"))
+                .is_err()
+        );
+        assert!(
+            tree.register_diff_graft(repo_path("anything"), repo_path(""))
+                .is_err()
+        );
+
+        let mut tree = TreeManifest::ephemeral(Arc::new(TestStore::new()));
+        assert!(
+            tree.register_diff_graft(repo_path("foo"), repo_path(""))
+                .is_ok()
+        );
+        assert!(
+            tree.register_diff_graft(repo_path("anything"), repo_path("anything"))
+                .is_err()
+        );
+    }
+
+    #[test]
+    fn test_graft_for_diff() {
+        let mut left = TreeManifest::ephemeral(Arc::new(TestStore::new()));
+        left.insert(repo_path_buf("left/a"), make_meta("10"))
+            .unwrap();
+        left.insert(repo_path_buf("left/b"), make_meta("10"))
+            .unwrap();
+        left.insert(repo_path_buf("left_only"), make_meta("10"))
+            .unwrap();
+
+        let mut right = TreeManifest::ephemeral(Arc::new(TestStore::new()));
+        right
+            .insert(repo_path_buf("right/b"), make_meta("10"))
+            .unwrap();
+        right
+            .insert(repo_path_buf("right/c"), make_meta("10"))
+            .unwrap();
+        right
+            .insert(repo_path_buf("right_only"), make_meta("10"))
+            .unwrap();
+
+        // Sanity with no grafts registered
+        assert_eq!(
+            grafted_diff(&left, &right),
+            vec![
+                "left/a",
+                "left/b",
+                "left_only",
+                "right/b",
+                "right/c",
+                "right_only",
+            ]
+        );
+
+        // Now register a graft form left->right
+        left.register_diff_graft(repo_path("left"), repo_path("right"))
+            .unwrap();
+
+        assert_eq!(grafted_diff(&left, &right), vec!["right/a", "right/c"]);
+
+        // Order doesn't matter
+        assert_eq!(grafted_diff(&right, &left), vec!["right/a", "right/c"]);
+
+        // Can graft same path again
+        left.register_diff_graft(repo_path("left"), repo_path("right-copy"))
+            .unwrap();
+
+        assert_eq!(
+            grafted_diff(&left, &right),
+            vec!["right-copy/a", "right-copy/b", "right/a", "right/c"]
+        );
+
+        // Can graft other side, too:
+
+        // This keeps "right" in place.
+        right
+            .register_diff_graft(repo_path("right"), repo_path("right"))
+            .unwrap();
+        // This grafts right into right-copy
+        right
+            .register_diff_graft(repo_path("right"), repo_path("right-copy"))
+            .unwrap();
+
+        assert_eq!(
+            grafted_diff(&left, &right),
+            vec!["right-copy/a", "right-copy/c", "right/a", "right/c"]
+        );
     }
 }
