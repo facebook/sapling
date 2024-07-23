@@ -59,4 +59,27 @@ py_class!(class pathhistory |py| {
     def __iter__(&self) -> PyResult<Self> {
         Ok(self.clone_ref(py))
     }
+
+    @classmethod def lastcreation(_cls,
+        set: ImplInto<Set>,
+        path: PyPathBuf,
+        roottreereader: ImplInto<Arc<dyn ReadRootTreeIds + Send + Sync>>,
+        treestore: ImplInto<Arc<dyn TreeStore>>,
+    ) -> PyResult<Option<PyBytes>> {
+        let set = set.into();
+        let root_tree_reader = roottreereader.into();
+        let tree_store = treestore.into();
+        let got = py.allow_threads(|| block_on(async {
+            let mut history = PathHistory::new_existence_tracer(
+                set,
+                path.to_repo_path_buf()?,
+                root_tree_reader,
+                tree_store,
+            ).await?;
+            history.next().await
+        })).map_pyerr(py)?;
+
+        Ok(got.map(|n| PyBytes::new(py, n.as_ref())))
+    }
+
 });

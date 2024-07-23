@@ -1681,6 +1681,16 @@ class localrepository:
         )
         return hist
 
+    def pathcreation(self, path, nodes):
+        """Return the most recent commit where path was added.
+
+        path can be either a file or a directory.
+        nodes decides the search range (ex. "::." or "_firstancestors(.)")
+        """
+        return bindings.pathhistory.pathhistory.lastcreation(
+            nodes, path, self.changelog.inner, self.manifestlog.datastore
+        )
+
     def publishing(self):
         # narrow-heads repos are NOT publishing. This ensures pushing to a
         # narrow-heads repo would cause visible heads changes to make the
