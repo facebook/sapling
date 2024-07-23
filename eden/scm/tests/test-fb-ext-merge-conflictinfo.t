@@ -661,7 +661,7 @@ Test case 4: Source changed, dest moved (w/o copytracing)
      deleted:
   
 
-  $ hg rebase -d 'desc(dest)' -s 'desc(source)' --config extensions.copytrace=!
+  $ hg rebase -d 'desc(dest)' -s 'desc(source)' --config copytrace.sourcecommitlimit=0
   rebasing ec87889f5f90 "source"
   other [source (being rebased)] changed file which local [dest (rebasing onto)] is missing
   hint: if this is due to a renamed file, you can manually input the renamed path
@@ -774,7 +774,7 @@ Test case 6: Source moved, dest changed (w/o copytracing)
      deleted:
   
 
-  $ hg rebase -d 'desc(dest)' -s 'desc(source)' --config extensions.copytrace=!
+  $ hg rebase -d 'desc(dest)' -s 'desc(source)' --config copytrace.sourcecommitlimit=0
   rebasing e6e7483a8950 "source"
   local [dest (rebasing onto)] changed file which other [source (being rebased)] deleted
   use (c)hanged version, (d)elete, or leave (u)nresolved? u

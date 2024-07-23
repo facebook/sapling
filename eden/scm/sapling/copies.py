@@ -114,9 +114,137 @@ def pathcopies(x, y, match=None):
     return dagcopytrace.path_copies(x.node(), y.node(), match)
 
 
-def mergecopies(repo, c1, c2, base):
-    # This function is wrapped by copytrace.mergecopies,
-    return {}
+def mergecopies(repo, cdst, csrc, base):
+    """Fast copytracing using filename heuristics
+
+    Handle one case where we assume there are no merge commits in
+    "source branch". Source branch is commits from base up to csrc not
+    including base.
+    If these assumptions don't hold then we fallback to the
+    upstream mergecopies
+
+    p
+    |
+    p  <- cdst - rebase or merge destination, can be draft
+    .
+    .
+    .   d  <- csrc - commit to be rebased or merged or grafted.
+    |   |
+    p   d  <- base
+    | /
+    p  <- common ancestor
+
+    To find copies we are looking for files with similar filenames.
+    See description of the heuristics below.
+
+    Return a mapping from destination name -> source name,
+    where source is in csrc and destination is in cdst or vice-versa.
+
+    """
+
+    # todo: make copy tracing support directory move detection
+
+    # avoid silly behavior for parent -> working dir
+    if csrc.node() is None and cdst.node() == repo.dirstate.p1():
+        return repo.dirstate.copies()
+
+    orig_cdst = cdst
+    if cdst.rev() is None:
+        cdst = cdst.p1()
+    if csrc.rev() is None:
+        csrc = csrc.p1()
+
+    copies = {}
+
+    changedfiles = set()
+    sourcecommitnum = 0
+    sourcecommitlimit = repo.ui.configint("copytrace", "sourcecommitlimit")
+    mdst = cdst.manifest()
+
+    if repo.ui.cmdname == "backout":
+        # for `backout` operation, `base` is the commit we want to backout and
+        # `csrc` is the parent of the `base` commit.
+        curr, target = base, csrc
+    else:
+        # for normal cases, `base` is the parent of `csrc`
+        curr, target = csrc, base
+
+    while curr != target:
+        if len(curr.parents()) == 2:
+            # To keep things simple let's not handle merges
+            return {}
+        changedfiles.update(curr.files())
+        curr = curr.p1()
+        sourcecommitnum += 1
+        if sourcecommitnum > sourcecommitlimit:
+            return {}
+
+    cp = pathcopies(base, csrc)
+    for dst, src in _filtercopies(cp, base, cdst).items():
+        if src in orig_cdst or dst in orig_cdst:
+            copies[dst] = src
+
+    # file is missing if it isn't present in the destination, but is present in
+    # the base and present in the source.
+    # Presence in the base is important to exclude added files, presence in the
+    # source is important to exclude removed files.
+    missingfiles = list(
+        filter(lambda f: f not in mdst and f in base and f in csrc, changedfiles)
+    )
+    repo.ui.metrics.gauge("copytrace_missingfiles", len(missingfiles))
+    if missingfiles and _dagcopytraceenabled(repo.ui):
+        dag_copy_trace = repo._dagcopytrace
+        dst_copies = dag_copy_trace.trace_renames(
+            csrc.node(), cdst.node(), missingfiles
+        )
+        copies.update(_filtercopies(dst_copies, base, csrc))
+
+    # Look for additional amend-copies.
+    amend_copies = getamendcopies(repo, cdst, base.p1())
+    if amend_copies:
+        repo.ui.debug("Loaded amend copytrace for %s" % cdst)
+        for dst, src in _filtercopies(amend_copies, base, csrc).items():
+            if dst not in copies:
+                copies[dst] = src
+
+    repo.ui.metrics.gauge("copytrace_copies", len(copies))
+    return copies
+
+
+def _filtercopies(copies, base, otherctx):
+    """Remove uninteresting copies if a file is renamed in one side but not changed
+    in the other side.
+
+    The mergecopies function is expected to report cases where one side renames
+    a file, while the other side changed the file before the rename.
+
+    In case there is only renaming without changing, do not report the copy.
+    In fact, reporting the copy can confuse other part of merge.py and cause
+    files to be deleted incorrectly.
+
+    This post-processing is currently known only necessary to the heuristics
+    algorithm, but not necessary for the original, slow "full copytracing" code
+    path.
+    """
+    newcopies = {}
+    if copies:
+        # Warm-up manifests
+        otherctx.manifest()
+        base.manifest()
+        for fdst, fsrc in copies.items():
+            if fsrc not in base:
+                # Should not happen. Just be graceful in case something went
+                # wrong.
+                continue
+            basenode = base[fsrc].filenode()
+            if fsrc in otherctx and otherctx[fsrc].filenode() == basenode:
+                continue
+            newcopies[fdst] = fsrc
+    return newcopies
+
+
+def _dagcopytraceenabled(ui):
+    return ui.configbool("copytrace", "dagcopytrace")
 
 
 def duplicatecopies(repo, wctx, rev, fromrev, skiprev=None):
