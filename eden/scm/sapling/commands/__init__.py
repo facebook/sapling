@@ -2642,6 +2642,11 @@ def _dograft(ui, repo, *revs, **opts):
 
         # we don't merge the first commit when continuing
         if not cont:
+            # Apply --from-path/--to-path mappings to manifest being grafted, and its
+            # parent manifest.
+            cmdutil.registerdiffgrafts(opts, ctx)
+            cmdutil.registerdiffgrafts(opts, ctx.p1())
+
             # perform the graft merge with p1(rev) as 'ancestor'
             try:
                 # ui.forcemerge is an internal variable, do not document

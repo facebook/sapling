@@ -21,6 +21,7 @@ import struct
 from bindings import (
     checkout as nativecheckout,
     error as rusterror,
+    manifest as rustmanifest,
     status as nativestatus,
     worker as rustworker,
     workingcopy as rustworkingcopy,
@@ -866,7 +867,7 @@ def manifestmerge(
         # Identify which files are relevant to the merge, so we can limit the
         # total m1-vs-m2 diff to just those files. This has significant
         # performance benefits in large repositories.
-        relevantfiles = set(ma.diff(m2).keys())
+        relevantfiles = set(_diff_manifests(ma, m2))
 
         # For copied and moved files, we need to add the source file too.
         for copykey, copyvalue in pycompat.iteritems(copy):
@@ -891,7 +892,7 @@ def manifestmerge(
     # - diff(m1, ma) is potentially huge, and can use sparsematcher.
     elif sparsematch is not None and not forcefulldiff:
         if branchmerge:
-            relevantfiles = set(ma.diff(m2).keys())
+            relevantfiles = set(_diff_manifests(ma, m2))
             for copykey, copyvalue in pycompat.iteritems(copy):
                 if copyvalue in relevantfiles:
                     relevantfiles.add(copykey)
@@ -913,7 +914,7 @@ def manifestmerge(
     with perftrace.trace("Manifest Diff"):
         if hasattr(repo, "resettreefetches"):
             repo.resettreefetches()
-        diff = m1.diff(m2, matcher=matcher)
+        diff = _diff_manifests(m1, m2, matcher=matcher)
         perftrace.tracevalue("Differences", len(diff))
         if hasattr(repo, "resettreefetches"):
             perftrace.tracevalue("Tree Fetches", repo.resettreefetches())
@@ -1233,6 +1234,12 @@ def calculateupdates(
         actions.update(fractions)
 
     return actions, diverge, renamedelete
+
+
+def _diff_manifests(m1, m2, matcher=None):
+    if m1.hasgrafts() or m2.hasgrafts():
+        m1, m2 = rustmanifest.treemanifest.applydiffgrafts(m1, m2)
+    return m1.diff(m2, matcher)
 
 
 def removeone(repo, wctx, f):

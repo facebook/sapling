@@ -4834,3 +4834,27 @@ diffgraftopts = [
         _("PATH"),
     ),
 ]
+
+
+def registerdiffgrafts(opts, ctx):
+    """Register --from-path/--to-path manifest "grafts" in ctx's manifest.
+
+    These grafts are applied temporarily before diff operations, allowing users
+    to "remap" directories.
+    """
+    from_paths = opts.get("from_path") or []
+    to_paths = opts.get("to_path") or []
+
+    if not from_paths and not to_paths:
+        return
+
+    if len(from_paths) != len(to_paths):
+        raise error.Abort(_("must provide same number of --from-path and --to-path"))
+
+    # Disallow overlapping --to-path to keep things simple.
+    if len(to_paths) > 1 and (os.path.commonpath(to_paths) or "" in to_paths):
+        raise error.Abort(_("overlapping --to-path entries"))
+
+    manifest = ctx.manifest()
+    for f, t in zip(from_paths, to_paths):
+        manifest.registerdiffgraft(f, t)

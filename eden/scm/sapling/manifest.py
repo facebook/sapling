@@ -306,6 +306,10 @@ class manifestdict:
 
         return arraytext, deltatext
 
+    # For compat with Rust manifest.
+    def hasgrafts(self):
+        return False
+
 
 def _msearch(m, s, lo=0, hi=None):
     """return a tuple (start, end) that says where to find s within m.

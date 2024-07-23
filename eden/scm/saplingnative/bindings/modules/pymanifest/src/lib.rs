@@ -582,7 +582,7 @@ py_class!(pub class treemanifest |py| {
         Ok((
             Self::create_instance(py, Arc::new(RwLock::new(m1)), Default::default())?,
             Self::create_instance(py, Arc::new(RwLock::new(m2)), Default::default())?,
-            ))
+        ))
     }
 
 });
