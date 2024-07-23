@@ -86,5 +86,9 @@ Graft a file that was renamed in dest branch:
   > EOS
   $ hg go -q $D
   $ hg graft -qr $C --from-path foo --to-path bar
-  abort: bar/file@439eb343cae6: not found in manifest!
+  other [graft] changed bar/file which local [local] is missing
+  hint: if this is due to a renamed file, you can manually input the renamed path
+  use (c)hanged version, leave (d)eleted, or leave (u)nresolved, or input (r)enamed path? u
+  abort: unresolved conflicts, can't continue
+  (use 'hg resolve' and 'hg graft --continue')
   [255]

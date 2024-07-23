@@ -355,8 +355,11 @@ def onetimeclientsetup(ui):
             for f, (m, actionargs, msg) in pycompat.iteritems(actions):
                 if sparsematch and not sparsematch(f):
                     continue
-                if m in ("c", "dc"):
+                if m == "c":
                     files.append((f, mctx.filenode(f)))
+                elif m == "dc":
+                    f2 = actionargs[1]
+                    files.append((f, mctx.filenode(f2)))
                 elif m in ("dg", "cm"):
                     f2 = actionargs[0]
                     files.append((f2, mctx.filenode(f2)))
