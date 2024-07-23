@@ -60,14 +60,13 @@ use commit_cloud::CommitCloud;
 use commit_graph::CommitGraph;
 use commit_graph::CommitGraphRef;
 use context::CoreContext;
-use cross_repo_sync::get_all_possible_repo_submodule_deps;
+use cross_repo_sync::get_all_submodule_deps;
 use cross_repo_sync::get_small_and_large_repos;
 use cross_repo_sync::CandidateSelectionHint;
 use cross_repo_sync::CommitSyncContext;
 use cross_repo_sync::CommitSyncRepos;
 use cross_repo_sync::CommitSyncer;
 use cross_repo_sync::RepoProvider;
-use cross_repo_sync::SubmoduleDeps;
 use cross_repo_sync::Target;
 use derived_data_manager::BonsaiDerivable;
 use derived_data_manager::DerivableType;
@@ -1656,7 +1655,28 @@ impl RepoContext {
         let (_small_repo, _large_repo) =
             get_small_and_large_repos(self.repo.as_ref(), other.repo.as_ref(), &common_config)?;
 
-        let submodule_deps = self.get_final_submodule_deps(other).await?;
+        let live_commit_sync_config = self.repo.live_commit_sync_config();
+        let repo_provider: RepoProvider<'a, Repo> = Arc::new(move |repo_id| {
+            Box::pin({
+                let repos = self.repos.clone();
+
+                async move {
+                    let repo = repos
+                        .get_by_id(repo_id.id())
+                        .ok_or_else(|| anyhow!("Submodule dependency repo with id {repo_id} not available through RepoContext"))?;
+                    Ok(repo)
+                }
+            })
+        });
+
+        let submodule_deps = get_all_submodule_deps(
+            &self.ctx,
+            self.repo.clone(),
+            other.repo.clone(),
+            repo_provider,
+            live_commit_sync_config,
+        )
+        .await?;
 
         let commit_sync_repos = CommitSyncRepos::new(
             self.repo().clone(),
@@ -1703,58 +1723,6 @@ impl RepoContext {
                 EquivalentWorkingCopyAncestor(cs_id, _) | RewrittenAs(cs_id, _) => Some(cs_id),
             });
         Ok(maybe_cs_id.map(|cs_id| ChangesetContext::new(other.clone(), cs_id)))
-    }
-
-    /// Only the small repo should have submodule dependencies in the commit sync
-    /// config, but when `xrepo_commit_lookup`, we don't know if the small repo
-    /// is the source (forward sync) or target (backsync).
-    /// So just get the submodule dependencies from both repos
-    async fn get_final_submodule_deps<'a>(
-        &'a self,
-        target_repo_ctx: &'a Self,
-    ) -> Result<SubmoduleDeps<Repo>, MononokeError> {
-        let live_commit_sync_config = self.repo.live_commit_sync_config();
-        let repo_provider: RepoProvider<'a, Repo> = Arc::new(move |repo_id| {
-            Box::pin({
-                let repos = self.repos.clone();
-
-                async move {
-                    let repo = repos
-                        .get_by_id(repo_id.id())
-                        .ok_or_else(|| anyhow!("Submodule dependency repo with id {repo_id} not available through RepoContext"))?;
-                    Ok(repo)
-                }
-            })
-        });
-
-        let source_submodule_deps = get_all_possible_repo_submodule_deps(
-            &self.ctx,
-            self.repo.clone(),
-            repo_provider.clone(),
-            live_commit_sync_config.clone(),
-        )
-        .await?;
-        let target_submodule_deps = get_all_possible_repo_submodule_deps(
-            &self.ctx,
-            target_repo_ctx.repo.clone(),
-            repo_provider,
-            live_commit_sync_config,
-        )
-        .await?;
-
-        match (
-            source_submodule_deps.dep_map(),
-            target_submodule_deps.dep_map(),
-        ) {
-            (Some(dep_map), None) => Ok(SubmoduleDeps::ForSync(dep_map.clone())),
-            (None, Some(dep_map)) => Ok(SubmoduleDeps::ForSync(dep_map.clone())),
-            (Some(source_deps_map), Some(target_deps_map)) => {
-                let mut deps_map = source_deps_map.clone();
-                deps_map.extend(target_deps_map.clone());
-                Ok(SubmoduleDeps::ForSync(deps_map))
-            }
-            (None, None) => Ok(SubmoduleDeps::NotAvailable),
-        }
     }
 
     /// Start a write to the repo.

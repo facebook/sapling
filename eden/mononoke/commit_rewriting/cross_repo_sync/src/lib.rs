@@ -48,7 +48,7 @@ pub use commit_syncers_lib::unsafe_get_parent_map_for_target_bookmark_rewrite;
 pub use commit_syncers_lib::update_mapping_with_version;
 pub use commit_syncers_lib::CommitSyncRepos;
 pub use commit_syncers_lib::Syncers;
-pub use git_submodules::get_all_possible_repo_submodule_deps;
+pub use git_submodules::get_all_submodule_deps;
 pub use git_submodules::validate_all_submodule_expansions;
 pub use git_submodules::InMemoryRepo;
 pub use git_submodules::RepoProvider;

@@ -18,7 +18,7 @@ use cacheblob::LeaseOps;
 use context::CoreContext;
 use cross_repo_sync::create_commit_syncer_lease;
 use cross_repo_sync::create_commit_syncers;
-use cross_repo_sync::get_all_possible_repo_submodule_deps;
+use cross_repo_sync::get_all_submodule_deps;
 use cross_repo_sync::CommitSyncRepos;
 use cross_repo_sync::CommitSyncer;
 use cross_repo_sync::RepoProvider;
@@ -75,10 +75,12 @@ async fn create_commit_syncers_from_app_impl<R: CrossRepo>(
     let repo_provider = repo_provider_from_mononoke_app(app);
 
     let source_repo_arc = Arc::new(source_repo.0.clone());
+    let target_repo_arc = Arc::new(target_repo.0.clone());
 
-    let submodule_deps = get_all_possible_repo_submodule_deps(
+    let submodule_deps = get_all_submodule_deps(
         ctx,
         source_repo_arc,
+        target_repo_arc,
         repo_provider,
         live_commit_sync_config.clone(),
     )
@@ -231,10 +233,12 @@ async fn create_commit_syncer_from_app_impl<R: CrossRepo>(
     let repo_provider = repo_provider_from_mononoke_app(app);
 
     let source_repo_arc = Arc::new(source_repo.0.clone());
+    let target_repo_arc = Arc::new(target_repo.0.clone());
 
-    let submodule_deps = get_all_possible_repo_submodule_deps(
+    let submodule_deps = get_all_submodule_deps(
         ctx,
         source_repo_arc,
+        target_repo_arc,
         repo_provider,
         live_commit_sync_config.clone(),
     )
