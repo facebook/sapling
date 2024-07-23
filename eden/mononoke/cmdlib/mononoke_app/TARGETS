@@ -15,6 +15,7 @@ rust_library(
         "fbsource//third-party/rust:itertools",
         "fbsource//third-party/rust:regex",
         "fbsource//third-party/rust:slog",
+        "fbsource//third-party/rust:strum",
         "fbsource//third-party/rust:tokio",
         "//common/rust/gflags:gflags",
         "//common/rust/ratelim:ratelim",

@@ -7,13 +7,11 @@
 
 use anyhow::Result;
 use bulk_derivation::BulkDerivation;
-use clap::builder::PossibleValuesParser;
 use clap::Args;
 use context::CoreContext;
 use derived_data_manager::DerivedDataManager;
 use mononoke_app::args::ChangesetArgs;
-use mononoke_types::DerivableType;
-use strum::IntoEnumIterator;
+use mononoke_app::args::DerivedDataArgs;
 
 use super::Repo;
 
@@ -22,8 +20,8 @@ pub(super) struct ExistsArgs {
     #[clap(flatten)]
     changeset_args: ChangesetArgs,
 
-    #[clap(short = 'T', long, value_parser = PossibleValuesParser::new(DerivableType::iter().map(|t| DerivableType::name(&t))))]
-    derived_data_type: String,
+    #[clap(flatten)]
+    derived_data_args: DerivedDataArgs,
 }
 
 pub(super) async fn exists(
@@ -33,7 +31,7 @@ pub(super) async fn exists(
     args: ExistsArgs,
 ) -> Result<()> {
     let cs_ids = args.changeset_args.resolve_changesets(ctx, repo).await?;
-    let derived_data_type = DerivableType::from_name(&args.derived_data_type)?;
+    let derived_data_type = args.derived_data_args.resolve_type()?;
 
     let pending = manager
         .pending(ctx, &cs_ids, None, derived_data_type)

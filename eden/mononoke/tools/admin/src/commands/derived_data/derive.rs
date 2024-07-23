@@ -11,7 +11,6 @@ use std::sync::Mutex;
 
 use anyhow::Result;
 use bulk_derivation::BulkDerivation;
-use clap::builder::PossibleValuesParser;
 use clap::Args;
 use context::CoreContext;
 use context::SessionClass;
@@ -20,10 +19,9 @@ use derived_data_manager::Rederivation;
 use futures_stats::TimedTryFutureExt;
 use mononoke_api::ChangesetId;
 use mononoke_app::args::ChangesetArgs;
+use mononoke_app::args::MultiDerivedDataArgs;
 use mononoke_types::DerivableType;
-use repo_derived_data::RepoDerivedDataRef;
 use slog::trace;
-use strum::IntoEnumIterator;
 
 use super::Repo;
 
@@ -31,12 +29,8 @@ use super::Repo;
 pub(super) struct DeriveArgs {
     #[clap(flatten)]
     changeset_args: ChangesetArgs,
-    /// Type of derived data
-    #[clap(long, short = 'T', required = true,  value_parser = PossibleValuesParser::new(DerivableType::iter().map(|t| DerivableType::name(&t))), group="types to derive")]
-    derived_data_types: Vec<String>,
-    /// Whether all enabled derived data types should be derived
-    #[clap(long, required = true, group = "types to derive")]
-    all_types: bool,
+    #[clap(flatten)]
+    multi_derived_data_args: MultiDerivedDataArgs,
     /// Whether the changesets need to be rederived or not
     #[clap(long)]
     pub(crate) rederive: bool,
@@ -57,17 +51,9 @@ pub(super) async fn derive(
     let resolved_csids = args.changeset_args.resolve_changesets(ctx, repo).await?;
     let csids = resolved_csids.as_slice();
 
-    let derived_data_types = if args.all_types {
-        // Derive all the types enabled in the config
-        let derived_data_config = repo.repo_derived_data().active_config();
-        derived_data_config.types.clone()
-    } else {
-        // Only derive the types specified by the user
-        args.derived_data_types
-            .into_iter()
-            .map(|ty| DerivableType::from_name(&ty))
-            .collect::<Result<HashSet<_>>>()?
-    };
+    let derived_data_types = args
+        .multi_derived_data_args
+        .resolve_types(manager.config())?;
 
     let rederivation = if args.rederive {
         trace!(ctx.logger(), "about to rederive {} commits", csids.len());
@@ -99,7 +85,7 @@ pub(super) async fn derive(
                 ctx,
                 csids,
                 Some(rederivation),
-                &derived_data_types.into_iter().collect::<Vec<_>>(),
+                &derived_data_types,
                 args.batch_size,
             )
             .try_timed()

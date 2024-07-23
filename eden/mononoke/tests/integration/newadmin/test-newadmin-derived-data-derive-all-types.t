@@ -24,17 +24,16 @@ setup configuration
 exactly one of `-T` or `--all-flags` are provided:
   $ mononoke_newadmin derived-data -R repo derive -B main
   error: the following required arguments were not provided:
-    --derived-data-types <DERIVED_DATA_TYPES>
-    --all-types
+    <--derived-data-types <DERIVED_DATA_TYPES>|--all-types>
   
-  Usage: newadmin derived-data <--repo-id <REPO_ID>|--repo-name <REPO_NAME>> derive --derived-data-types <DERIVED_DATA_TYPES> --all-types <--changeset-id <CHANGESET_ID>|--hg-id <HG_ID>|--bookmark <BOOKMARK>|--all-bookmarks>
+  Usage: newadmin derived-data <--repo-id <REPO_ID>|--repo-name <REPO_NAME>> derive <--changeset-id <CHANGESET_ID>|--hg-id <HG_ID>|--bookmark <BOOKMARK>|--all-bookmarks> <--derived-data-types <DERIVED_DATA_TYPES>|--all-types>
   
   For more information, try '--help'.
   [2]
   $ mononoke_newadmin derived-data -R repo derive --all-types -T unodes -B main
   error: the argument '--all-types' cannot be used with '--derived-data-types <DERIVED_DATA_TYPES>'
   
-  Usage: newadmin derived-data <--repo-id <REPO_ID>|--repo-name <REPO_NAME>> derive --derived-data-types <DERIVED_DATA_TYPES> --all-types <--changeset-id <CHANGESET_ID>|--hg-id <HG_ID>|--bookmark <BOOKMARK>|--all-bookmarks>
+  Usage: newadmin derived-data <--repo-id <REPO_ID>|--repo-name <REPO_NAME>> derive <--changeset-id <CHANGESET_ID>|--hg-id <HG_ID>|--bookmark <BOOKMARK>|--all-bookmarks> <--derived-data-types <DERIVED_DATA_TYPES>|--all-types>
   
   For more information, try '--help'.
   [2]

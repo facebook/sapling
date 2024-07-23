@@ -10,16 +10,14 @@ use std::path::PathBuf;
 use anyhow::Context;
 use anyhow::Result;
 use bulk_derivation::BulkDerivation;
-use clap::builder::PossibleValuesParser;
 use clap::Args;
 use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use derived_data_manager::DerivedDataManager;
 use futures_stats::TimedTryFutureExt;
 use mononoke_app::args::ChangesetArgs;
-use mononoke_types::DerivableType;
+use mononoke_app::args::DerivedDataArgs;
 use slog::debug;
-use strum::IntoEnumIterator;
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
 
@@ -30,8 +28,8 @@ pub(super) struct SliceArgs {
     #[clap(flatten)]
     changeset_args: ChangesetArgs,
 
-    #[clap(short = 'T', long, value_parser = PossibleValuesParser::new(DerivableType::iter().map(|t| DerivableType::name(&t))))]
-    derived_data_type: String,
+    #[clap(flatten)]
+    derived_data_args: DerivedDataArgs,
 
     /// The size of each slice in generation numbers. So that each slice will have
     /// changesets with generations in a range [slice_start, slice_start + slice_size)
@@ -56,7 +54,7 @@ pub(super) async fn slice(
     args: SliceArgs,
 ) -> Result<()> {
     let mut cs_ids = args.changeset_args.resolve_changesets(ctx, repo).await?;
-    let derived_data_type = DerivableType::from_name(&args.derived_data_type)?;
+    let derived_data_type = args.derived_data_args.resolve_type()?;
 
     debug!(
         ctx.logger(),

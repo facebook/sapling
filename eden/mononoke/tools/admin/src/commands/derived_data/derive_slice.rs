@@ -13,7 +13,6 @@ use std::sync::Arc;
 use anyhow::Context;
 use anyhow::Result;
 use bulk_derivation::BulkDerivation;
-use clap::builder::PossibleValuesParser;
 use clap::Args;
 use clap::ValueEnum;
 use cloned::cloned;
@@ -29,9 +28,9 @@ use futures::try_join;
 use futures::StreamExt;
 use futures::TryStreamExt;
 use futures_stats::TimedTryFutureExt;
+use mononoke_app::args::DerivedDataArgs;
 use mononoke_types::DerivableType;
 use slog::debug;
-use strum::IntoEnumIterator;
 use tokio::fs::File;
 use tokio::io::AsyncReadExt;
 use tokio::task;
@@ -45,8 +44,8 @@ pub(super) struct DeriveSliceArgs {
     #[clap(long, short = 'f', value_name = "FILE")]
     input_file: PathBuf,
 
-    #[clap(short = 'T', long, value_parser = PossibleValuesParser::new(DerivableType::iter().map(|t| DerivableType::name(&t))))]
-    derived_data_type: String,
+    #[clap(flatten)]
+    derived_data_args: DerivedDataArgs,
 
     /// Whether to derive slices or the boundaries between slices.
     #[clap(long)]
@@ -216,7 +215,7 @@ pub(super) async fn derive_slice(
     manager: &DerivedDataManager,
     args: DeriveSliceArgs,
 ) -> Result<()> {
-    let derived_data_type = DerivableType::from_name(&args.derived_data_type)?;
+    let derived_data_type = args.derived_data_args.resolve_type()?;
     cloned!(manager);
 
     if args.rederive {
