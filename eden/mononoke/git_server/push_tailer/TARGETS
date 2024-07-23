@@ -6,5 +6,11 @@ oncall("mononoke")
 rust_binary(
     name = "git_server_push_tailer",
     srcs = glob(["src/**/*.rs"]),
-    deps = [],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:clap",
+        "fbsource//third-party/rust:tokio",
+        "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/fbinit:fbinit-tokio",
+    ],
 )
