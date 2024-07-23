@@ -219,8 +219,6 @@ coreconfigitem("experimental", "bundle2lazylocking", default=False)
 coreconfigitem("experimental", "bundlecomplevel", default=None)
 coreconfigitem("experimental", "changegroup3", default=False)
 coreconfigitem("experimental", "clientcompressionengines", default=list)
-coreconfigitem("experimental", "copytrace.movecandidateslimit", default=100)
-coreconfigitem("experimental", "copytrace.sourcecommitlimit", default=100)
 coreconfigitem("experimental", "crecordtest", default=None)
 coreconfigitem("experimental", "disable-narrow-heads-ssh-server", default=True)
 coreconfigitem(

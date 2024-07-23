@@ -85,7 +85,6 @@ contentstorefallback=True
 [experimental]
 use-rust-changelog=True
 windows-symlinks=True
-copytrace=off
 
 [tweakdefaults]
 graftkeepdate=True
