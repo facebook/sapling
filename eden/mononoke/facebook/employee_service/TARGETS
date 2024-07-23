@@ -1,0 +1,14 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("mononoke")
+
+rust_library(
+    name = "employee_service",
+    srcs = ["lib.rs"],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "//common/rust/shed/fbinit:fbinit",
+        "//employee/if:thrift-rust-clients",
+        "//employee/if:thrift-rust-srclients",
+    ],
+)
