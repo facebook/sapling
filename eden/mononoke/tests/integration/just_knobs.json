@@ -47,6 +47,6 @@
     "scm/mononoke:scs_other_methods_sampling_rate": 1,
     "scm/mononoke:warm_bookmark_cache_poll_interval_ms": 1000,
     "scm/mononoke:derivation_worker_max_concurrent_derivations": 10,
-    "scm/mononoke:live_git_sync_batch_size": 20
+    "scm/mononoke:live_git_sync_batch_size": 50
   }
 }
