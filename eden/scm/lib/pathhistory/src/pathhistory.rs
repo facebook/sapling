@@ -97,17 +97,30 @@ struct CommitState {
 }
 
 impl PathHistory {
-    /// Prepare context to search changes of `paths` in commit `set`.
+    /// Prepare context to search content changes of `paths` in commit `set`.
     ///
     /// The search is lazy. Call `next()` to get the next commit.
     /// Commits are emitted in topo order, latest first.
-    pub async fn new(
+    pub async fn new_content_tracer(
         set: Set,
         paths: Vec<RepoPathBuf>,
         root_tree_reader: Arc<dyn ReadRootTreeIds + Send + Sync>,
         tree_store: Arc<dyn TreeStore>,
     ) -> Result<Self> {
         Self::new_internal(set, paths, root_tree_reader, tree_store, false).await
+    }
+
+    /// Prepare context to search existence changes of `paths` in commit `set`.
+    ///
+    /// The search is lazy. Call `next()` to get the next commit.
+    /// Commits are emitted in topo order, latest first.
+    pub async fn new_existence_tracer(
+        set: Set,
+        path: RepoPathBuf,
+        root_tree_reader: Arc<dyn ReadRootTreeIds + Send + Sync>,
+        tree_store: Arc<dyn TreeStore>,
+    ) -> Result<Self> {
+        Self::new_internal(set, vec![path], root_tree_reader, tree_store, true).await
     }
 
     /// Internal version of `PathHistory::new` method.

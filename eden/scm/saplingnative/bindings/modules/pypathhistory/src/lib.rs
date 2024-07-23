@@ -43,7 +43,7 @@ py_class!(class pathhistory |py| {
         let paths: Vec<RepoPathBuf> = paths.into_iter().map(|p| p.to_repo_path_buf()).collect::<Result<Vec<_>, _>>().map_pyerr(py)?;
         let root_tree_reader = roottreereader.into();
         let tree_store = treestore.into();
-        let history = py.allow_threads(|| block_on(PathHistory::new(set, paths, root_tree_reader, tree_store))).map_pyerr(py)?;
+        let history = py.allow_threads(|| block_on(PathHistory::new_content_tracer(set, paths, root_tree_reader, tree_store))).map_pyerr(py)?;
         Self::create_instance(py, Arc::new(Mutex::new(history)))
     }
 

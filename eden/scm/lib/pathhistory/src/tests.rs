@@ -38,7 +38,6 @@ use types::RepoPath;
 use types::RepoPathBuf;
 
 use crate::PathHistory;
-use crate::RenameTracer;
 
 #[derive(Clone, Default)]
 pub struct TestHistory {
@@ -136,7 +135,7 @@ impl TestHistory {
             .map(|s| RepoPath::from_str(s).unwrap().to_owned())
             .collect();
 
-        PathHistory::new(set, paths, Arc::new(self.clone()), Arc::new(self.clone()))
+        PathHistory::new_content_tracer(set, paths, Arc::new(self.clone()), Arc::new(self.clone()))
             .await
             .unwrap()
     }
@@ -197,15 +196,11 @@ impl TestHistory {
         }
     }
 
-    // Obtain the `RenameTracer` struct.
-    pub async fn rename_tracer(
-        &self,
-        params: impl Into<BuildSetParam>,
-        path: &str,
-    ) -> RenameTracer {
+    // Obtain a `PathHistory` for tracing existence.
+    pub async fn rename_tracer(&self, params: impl Into<BuildSetParam>, path: &str) -> PathHistory {
         let set = self.build_set(params.into()).await;
         let path = RepoPath::from_str(path).unwrap().to_owned();
-        RenameTracer::new(set, path, Arc::new(self.clone()), Arc::new(self.clone()))
+        PathHistory::new_existence_tracer(set, path, Arc::new(self.clone()), Arc::new(self.clone()))
             .await
             .unwrap()
     }
@@ -330,20 +325,6 @@ fn vertex_to_int(v: Vertex) -> u64 {
 }
 
 impl PathHistory {
-    async fn next_n(&mut self, mut n: usize) -> Vec<u64> {
-        let mut result = Vec::new();
-        while let Some(v) = self.next().await.unwrap() {
-            result.push(vertex_to_int(v));
-            n -= 1;
-            if n == 0 {
-                break;
-            }
-        }
-        result
-    }
-}
-
-impl RenameTracer {
     async fn next_n(&mut self, mut n: usize) -> Vec<u64> {
         let mut result = Vec::new();
         while let Some(v) = self.next().await.unwrap() {

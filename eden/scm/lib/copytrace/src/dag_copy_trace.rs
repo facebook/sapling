@@ -20,7 +20,7 @@ use hg_metrics::increment_counter;
 use manifest::Manifest;
 use manifest_tree::TreeManifest;
 use manifest_tree::TreeStore;
-use pathhistory::RenameTracer;
+use pathhistory::PathHistory;
 use pathmatcher::Matcher;
 use storemodel::ReadRootTreeIds;
 use types::HgId;
@@ -95,7 +95,7 @@ impl DagCopyTrace {
         path: RepoPathBuf,
     ) -> Result<Option<Vertex>> {
         let set = self.dag.range(src.into(), dst.into()).await?;
-        let mut rename_tracer = RenameTracer::new(
+        let mut rename_tracer = PathHistory::new_existence_tracer(
             set,
             path,
             self.root_tree_reader.clone(),

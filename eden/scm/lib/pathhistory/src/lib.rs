@@ -22,14 +22,12 @@
 
 mod pathhistory;
 mod pathops;
-mod renametrace;
 mod utils;
 
 #[cfg(test)]
 mod tests;
 
 pub use crate::pathhistory::PathHistory;
-pub use crate::renametrace::RenameTracer;
 
 #[cfg(test)]
 dev_logger::init!();
