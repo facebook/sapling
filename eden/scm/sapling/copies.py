@@ -232,7 +232,7 @@ def mergecopies(repo, cdst, csrc, base):
             return {}
 
     cp = pathcopies(base, csrc)
-    for dst, src in _filtercopies(cp, base, cdst).items():
+    for dst, src in _filtercopies(cp, base, csrc, cdst, "src").items():
         if src in orig_cdst or dst in orig_cdst:
             copies[dst] = src
 
@@ -249,13 +249,13 @@ def mergecopies(repo, cdst, csrc, base):
         dst_copies = dag_copy_trace.trace_renames(
             csrc.node(), cdst.node(), missingfiles
         )
-        copies.update(_filtercopies(dst_copies, base, csrc))
+        copies.update(_filtercopies(dst_copies, base, csrc, cdst, "dst"))
 
     # Look for additional amend-copies.
     amend_copies = getamendcopies(repo, cdst, base.p1())
     if amend_copies:
         repo.ui.debug("Loaded amend copytrace for %s" % cdst)
-        for dst, src in _filtercopies(amend_copies, base, csrc).items():
+        for dst, src in _filtercopies(amend_copies, base, csrc, cdst, "dst").items():
             if dst not in copies:
                 copies[dst] = src
 
@@ -263,7 +263,7 @@ def mergecopies(repo, cdst, csrc, base):
     return copies
 
 
-def _filtercopies(copies, base, otherctx):
+def _filtercopies(copies, base, csrc, cdst, copyside):
     """Remove uninteresting copies if a file is renamed in one side but not changed
     in the other side.
 
@@ -280,18 +280,30 @@ def _filtercopies(copies, base, otherctx):
     """
     newcopies = {}
     if copies:
-        # Warm-up manifests
-        otherctx.manifest()
-        base.manifest()
+        msrc = csrc.manifest()
         for fdst, fsrc in copies.items():
             if fsrc not in base:
                 # Should not happen. Just be graceful in case something went
                 # wrong.
                 continue
             basenode = base[fsrc].filenode()
-            if fsrc in otherctx and otherctx[fsrc].filenode() == basenode:
+
+            # For xdir merge, convert the src path into the cdst's "path space".
+            graftedfsrc = msrc.graftedpath(fsrc, fdst) or fsrc
+
+            if copyside == "src":
+                otherctx = cdst
+                fother = graftedfsrc
+            else:
+                otherctx = csrc
+                fother = fsrc
+
+            if fother in otherctx and otherctx[fother].filenode() == basenode:
                 continue
-            newcopies[fdst] = fsrc
+
+            # Use the grafted src path - we want to yield dst and src paths both in the
+            # dest commit's "path space" since this makes things easier for merge.py.
+            newcopies[fdst] = graftedfsrc
     return newcopies
 
 
