@@ -58,6 +58,18 @@ Graft a commit adding a new file:
   $ hg go -q $B
   $ hg st
   $ hg graft -qr $C --from-path foo --to-path bar
-  abort: bar/new@4ed9729386a6: not found in manifest!
-  [255]
-
+  $ hg show
+  commit:      1d8d66326bc5
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  files:       bar/new
+  description:
+  C
+  
+  
+  diff --git a/bar/new b/bar/new
+  new file mode 100644
+  --- /dev/null
+  +++ b/bar/new
+  @@ -0,0 +1,1 @@
+  +new

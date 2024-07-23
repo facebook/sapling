@@ -599,8 +599,8 @@ def _checkunknownfiles(repo, wctx, mctx, force, actions):
     else:
         for f, (m, args, msg) in progiter(pycompat.iteritems(actions)):
             if m == "cm":
-                fl2, anc = args
-                different = _checkunknownfile(repo, wctx, mctx, f)
+                f2, fl2, anc = args
+                different = _checkunknownfile(repo, wctx, mctx, f, f2)
                 if repo.dirstate._ignore(f):
                     config = ignoredconfig
                 else:
@@ -619,7 +619,7 @@ def _checkunknownfiles(repo, wctx, mctx, force, actions):
                 #     don't like an abort happening in the middle of
                 #     merge.update/goto.
                 if not different:
-                    actions[f] = ("g", (fl2, False), "remote created")
+                    actions[f] = ("g", (f2, fl2, False), "remote created")
                 elif config == "abort":
                     actions[f] = (
                         "m",
@@ -629,7 +629,7 @@ def _checkunknownfiles(repo, wctx, mctx, force, actions):
                 else:
                     if config == "warn":
                         warnconflicts.add(f)
-                    actions[f] = ("g", (fl2, True), "remote created")
+                    actions[f] = ("g", (f2, fl2, True), "remote created")
 
     for f in sorted(abortconflicts):
         warn = repo.ui.warn
@@ -662,7 +662,7 @@ def _checkunknownfiles(repo, wctx, mctx, force, actions):
                 or any(p in pathconflicts for p in util.finddirs(f))
             )
             (flags,) = args
-            actions[f] = ("g", (flags, backup), msg)
+            actions[f] = ("g", (f, flags, backup), msg)
 
 
 def _forgetremoved(wctx, mctx, branchmerge):
@@ -949,13 +949,13 @@ def manifestmerge(
                     actions[f1] = ("k", (), "remote unchanged")
                 elif n1 == a and fl1 == fla:  # local unchanged - use remote
                     if fl1 == fl2:
-                        actions[f1] = ("g", (fl2, False), "remote is newer")
+                        actions[f1] = ("g", (f2, fl2, False), "remote is newer")
                     else:
-                        actions[f1] = ("rg", (fl2, False), "flag differ")
+                        actions[f1] = ("rg", (f2, fl2, False), "flag differ")
                 elif nol and n2 == a:  # remote only changed 'x'
                     actions[f1] = ("e", (fl2,), "update permissions")
                 elif nol and n1 == a:  # local only changed 'x'
-                    actions[f1] = ("g", (fl1, False), "remote is newer")
+                    actions[f1] = ("g", (f2, fl1, False), "remote is newer")
                 else:  # both changed something
                     actions[f1] = (
                         "m",
@@ -1036,7 +1036,7 @@ def manifestmerge(
                 else:
                     actions[f1] = (
                         "cm",
-                        (fl2, pa.node()),
+                        (f2, fl2, pa.node()),
                         "remote created, get or merge",
                     )
             elif n2 != ma[fa]:
@@ -1244,7 +1244,7 @@ def batchremove(repo, wctx, actions):
         )
 
 
-def updateone(repo, fctxfunc, wctx, f, flags, backup=False, backgroundclose=False):
+def updateone(repo, fctxfunc, wctx, f, f2, flags, backup=False, backgroundclose=False):
     if backup:
         # If a file or directory exists with the same name, back that
         # up.  Otherwise, look to see if there is a file that conflicts
@@ -1258,7 +1258,7 @@ def updateone(repo, fctxfunc, wctx, f, flags, backup=False, backgroundclose=Fals
         orig = scmutil.origpath(repo.ui, repo, absf)
         if repo.wvfs.lexists(absf):
             util.rename(absf, orig)
-    fctx = fctxfunc(f)
+    fctx = fctxfunc(f2)
     if fctx.flags() == "m" and not wctx.isinmemory():
         # Do not handle submodules for on-disk checkout here.
         # They are handled separately.
@@ -1286,12 +1286,14 @@ def batchget(repo, mctx, wctx, actions):
     i = 0
     size = 0
     with repo.wvfs.backgroundclosing(ui, expectedcount=len(actions)):
-        for f, (flags, backup), msg in actions:
+        for f, (f2, flags, backup), msg in actions:
             repo.ui.debug(" %s: %s -> g\n" % (f, msg))
             if verbose:
                 repo.ui.note(_("getting %s\n") % f)
 
-            size += updateone(repo, fctx, wctx, f, flags, backup, backgroundclose=True)
+            size += updateone(
+                repo, fctx, wctx, f, f2, flags, backup, backgroundclose=True
+            )
             if i == 100:
                 yield i, size, f
                 i = 0
@@ -1459,10 +1461,13 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
             fctx = mctx.filectx
             slinkfix = pycompat.iswindows and repo.wvfs._cansymlink
             slinks = []
-            for f, (flags, backup), msg in actions["g"] + actions["rg"]:
+            ftof2 = {}
+            for f, (f2, flags, backup), msg in actions["g"] + actions["rg"]:
+                if f != f2:
+                    ftof2[f] = f2
                 if slinkfix and "l" in flags:
                     slinks.append(f)
-                fnode = fctx(f).filenode()
+                fnode = fctx(f2).filenode()
                 # The write method will either return immediately or block if
                 # the internal worker queue is full.
                 writer.write(f, fnode, flags)
@@ -1473,7 +1478,7 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
             writesize, retry = writer.wait()
             for f, flag in retry:
                 repo.ui.debug("retrying %s\n" % f)
-                writesize += updateone(repo, fctx, wctx, f, flag)
+                writesize += updateone(repo, fctx, wctx, f, ftof2.get(f, f), flag)
             if slinkfix:
                 nativecheckout.fixsymlinks(slinks, repo.wvfs.base)
         else:

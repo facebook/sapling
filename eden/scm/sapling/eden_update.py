@@ -239,7 +239,7 @@ def _determine_actions_for_conflicts(repo, src, conflicts, wctx, destctx):
                 #  - if the file is ignored in the wctx, but tracked in the dest,
                 #    we can just take the remote version.
                 action_type = "g"
-                action = (destctx.manifest().flags(path), False)
+                action = (path, destctx.manifest().flags(path), False)
                 prompt = "remote created"
             else:
                 # In core Mercurial, this is the case where the file does not exist

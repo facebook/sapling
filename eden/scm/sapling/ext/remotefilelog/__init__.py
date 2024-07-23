@@ -336,8 +336,9 @@ def onetimeclientsetup(ui):
         if shallowrepo.requirement in repo.requirements:
             manifest = mctx.manifest()
             files = []
-            for f, args, msg in actions["g"]:
-                files.append((f, manifest[f]))
+            for _f, args, msg in actions["g"]:
+                f2 = args[0]
+                files.append((f2, manifest[f2]))
             # batch fetch the needed files from the server
             repo.fileservice.prefetch(files, fetchhistory=False)
         return orig(
@@ -354,9 +355,9 @@ def onetimeclientsetup(ui):
             for f, (m, actionargs, msg) in pycompat.iteritems(actions):
                 if sparsematch and not sparsematch(f):
                     continue
-                if m in ("c", "dc", "cm"):
+                if m in ("c", "dc"):
                     files.append((f, mctx.filenode(f)))
-                elif m == "dg":
+                elif m in ("dg", "cm"):
                     f2 = actionargs[0]
                     files.append((f2, mctx.filenode(f2)))
             # We need history for the files so we can compute the sha(p1, p2,
