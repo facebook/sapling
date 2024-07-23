@@ -292,30 +292,8 @@ def _mergecopies(orig, repo, cdst, csrc, base):
     To find copies we are looking for files with similar filenames.
     See description of the heuristics below.
 
-    Upstream copytracing function returns five dicts:
-    "copy", "movewithdir", "diverge", "renamedelete" and "dirmove". See below
-    for a more detailed description (mostly copied from upstream).
-    This extension returns "copy" dict only, everything else is empty.
-
-    "copy" is a mapping from destination name -> source name,
+    Return a mapping from destination name -> source name,
     where source is in csrc and destination is in cdst or vice-versa.
-
-    "movewithdir" is a mapping from source name -> destination name,
-    where the file at source present in one context but not the other
-    needs to be moved to destination by the merge process, because the
-    other context moved the directory it is in.
-
-    "diverge" is a mapping of source name -> list of destination names
-    for divergent renames. On the time of writing this extension it was used
-    only to print warning.
-
-    "renamedelete" is a mapping of source name -> list of destination
-    names for files deleted in c1 that were renamed in c2 or vice-versa.
-    On the time of writing this extension it was used only to print warning.
-
-    "dirmove" is a mapping of detected source dir -> destination dir renames.
-    This is needed for handling changes to new files previously grafted into
-    renamed directories.
 
     """
 
@@ -323,7 +301,7 @@ def _mergecopies(orig, repo, cdst, csrc, base):
 
     # avoid silly behavior for parent -> working dir
     if csrc.node() is None and cdst.node() == repo.dirstate.p1():
-        return repo.dirstate.copies(), {}, {}, {}, {}
+        return repo.dirstate.copies()
 
     orig_cdst = cdst
     if cdst.rev() is None:
@@ -386,7 +364,7 @@ def _mergecopies(orig, repo, cdst, csrc, base):
                     copies[dst] = src
 
     repo.ui.metrics.gauge("copytrace_copies", len(copies))
-    return copies, {}, {}, {}, {}
+    return copies
 
 
 def _filtercopies(copies, base, otherctx):

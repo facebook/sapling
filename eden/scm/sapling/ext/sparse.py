@@ -281,15 +281,13 @@ def _setupupdates(_ui) -> None:
     ):
         """Filter updates to only lay out files that match the sparse rules."""
         ui = repo.ui
-        actions, diverge, renamedelete = orig(
-            repo, wctx, mctx, ancestors, branchmerge, *arg, **kwargs
-        )
+        actions = orig(repo, wctx, mctx, ancestors, branchmerge, *arg, **kwargs)
 
         # If the working context is in memory (virtual), there's no need to
         # apply the user's sparse rules at all (and in fact doing so would
         # cause unexpected behavior in the real working copy).
         if not _hassparse(repo) or wctx.isinmemory():
-            return actions, diverge, renamedelete
+            return actions
 
         files = set()
         prunedactions = {}
@@ -409,7 +407,7 @@ def _setupupdates(_ui) -> None:
                             elif old and not new:
                                 prunedactions[file] = ("r", [], "")
 
-        return prunedactions, diverge, renamedelete
+        return prunedactions
 
     extensions.wrapfunction(mergemod, "calculateupdates", _calculateupdates)
 

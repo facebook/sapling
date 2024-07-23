@@ -114,7 +114,7 @@ def pathcopies(x, y, match=None):
 
 def mergecopies(repo, c1, c2, base):
     # This function is wrapped by copytrace.mergecopies,
-    return {}, {}, {}, {}, {}
+    return {}
 
 
 def duplicatecopies(repo, wctx, rev, fromrev, skiprev=None):

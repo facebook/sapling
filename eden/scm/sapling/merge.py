@@ -834,14 +834,13 @@ def manifestmerge(
     branchmerge and force are as passed in to update
     acceptremote = accept the incoming changes without prompting
     """
-    copy, movewithdir, diverge, renamedelete, dirmove = {}, {}, {}, {}, {}
+    copy = {}
 
     # manifests fetched in order are going to be faster, so prime the caches
     [x.manifest() for x in sorted(wctx.parents() + [p2, pa], key=scmutil.intrev)]
 
     if followcopies:
-        ret = copies.mergecopies(repo, wctx, p2, pa)
-        copy, movewithdir, diverge, renamedelete, dirmove = ret
+        copy = copies.mergecopies(repo, wctx, p2, pa)
 
     boolbm = pycompat.bytestr(bool(branchmerge))
     boolf = pycompat.bytestr(bool(force))
@@ -855,7 +854,6 @@ def manifestmerge(
 
     m1, m2, ma = wctx.manifest(), p2.manifest(), pa.manifest()
     copied = set(copy.values())
-    copied.update(movewithdir.values())
 
     matcher = None
 
@@ -873,8 +871,6 @@ def manifestmerge(
         for copykey, copyvalue in pycompat.iteritems(copy):
             if copyvalue in relevantfiles:
                 relevantfiles.add(copykey)
-        for movedirkey in movewithdir:
-            relevantfiles.add(movedirkey)
         matcher = scmutil.matchfiles(repo, relevantfiles)
 
     # For sparse repos, attempt to use the sparsematcher to narrow down
@@ -896,8 +892,6 @@ def manifestmerge(
             for copykey, copyvalue in pycompat.iteritems(copy):
                 if copyvalue in relevantfiles:
                     relevantfiles.add(copykey)
-            for movedirkey in movewithdir:
-                relevantfiles.add(movedirkey)
             filesmatcher = scmutil.matchfiles(repo, relevantfiles)
         else:
             filesmatcher = None
@@ -957,20 +951,6 @@ def manifestmerge(
         elif n1:  # file exists only on local side
             if f in copied:
                 pass  # we'll deal with it on m2 side
-            elif f in movewithdir:  # directory rename, move local
-                f2 = movewithdir[f]
-                if f2 in m2:
-                    actions[f2] = (
-                        "m",
-                        (f, f2, None, True, pa.node()),
-                        "remote directory rename, both created",
-                    )
-                else:
-                    actions[f2] = (
-                        "dm",
-                        (f, fl1),
-                        "remote directory rename - move from " + f,
-                    )
             elif f in copy:
                 f2 = copy[f]
                 if f2 in m2:
@@ -1007,20 +987,6 @@ def manifestmerge(
         elif n2:  # file exists only on remote side
             if f in copied:
                 pass  # we'll deal with it on m1 side
-            elif f in movewithdir:
-                f2 = movewithdir[f]
-                if f2 in m1:
-                    actions[f2] = (
-                        "m",
-                        (f2, f, None, False, pa.node()),
-                        "local directory rename, both created",
-                    )
-                else:
-                    actions[f2] = (
-                        "dg",
-                        (f, fl2),
-                        "local directory rename - get from " + f,
-                    )
             elif f in copy:
                 f2 = copy[f]
                 if f2 in m2:
@@ -1058,19 +1024,7 @@ def manifestmerge(
                         "remote created, get or merge",
                     )
             elif n2 != ma[f]:
-                df = None
-                for d in dirmove:
-                    if f.startswith(d):
-                        # new file added in a directory that was moved
-                        df = dirmove[d] + f[len(d) :]
-                        break
-                if df is not None and df in m1:
-                    actions[df] = (
-                        "m",
-                        (df, f, f, False, pa.node()),
-                        "local directory rename - respect move from " + f,
-                    )
-                elif acceptremote:
+                if acceptremote:
                     actions[f] = ("c", (fl2,), "remote recreating")
                 else:
                     actions[f] = (
@@ -1083,7 +1037,7 @@ def manifestmerge(
         # If we are merging, look for path conflicts.
         checkpathconflicts(repo, wctx, p2, actions)
 
-    return actions, diverge, renamedelete
+    return actions
 
 
 def _resolvetrivial(repo, wctx, mctx, ancestor, actions):
@@ -1114,7 +1068,7 @@ def calculateupdates(
     """Calculate the actions needed to merge mctx into wctx using ancestors"""
 
     if len(ancestors) == 1:  # default
-        actions, diverge, renamedelete = manifestmerge(
+        actions = manifestmerge(
             repo,
             wctx,
             mctx,
@@ -1134,10 +1088,9 @@ def calculateupdates(
 
         # Call for bids
         fbids = {}  # mapping filename to bids (action method to list af actions)
-        diverge, renamedelete = None, None
         for ancestor in ancestors:
             repo.ui.note(_("\ncalculating bids for ancestor %s\n") % ancestor)
-            actions, diverge1, renamedelete1 = manifestmerge(
+            actions = manifestmerge(
                 repo,
                 wctx,
                 mctx,
@@ -1149,13 +1102,6 @@ def calculateupdates(
                 forcefulldiff=True,
             )
             _checkunknownfiles(repo, wctx, mctx, force, actions)
-
-            # Track the shortest set of warning on the theory that bid
-            # merge will correctly incorporate more information
-            if diverge is None or len(diverge1) < len(diverge):
-                diverge = diverge1
-            if renamedelete is None or len(renamedelete) < len(renamedelete1):
-                renamedelete = renamedelete1
 
             for f, a in sorted(pycompat.iteritems(actions)):
                 m, args, msg = a
@@ -1233,7 +1179,7 @@ def calculateupdates(
         fractions = _forgetremoved(wctx, mctx, branchmerge)
         actions.update(fractions)
 
-    return actions, diverge, renamedelete
+    return actions
 
 
 def _diff_manifests(m1, m2, matcher=None):
@@ -2193,7 +2139,7 @@ def _update(
 
         ### calculate phase
         with progress.spinner(repo.ui, "calculating"):
-            actionbyfile, diverge, renamedelete = calculateupdates(
+            actionbyfile = calculateupdates(
                 repo,
                 wc,
                 p2,
@@ -2221,23 +2167,6 @@ def _update(
             if m not in actions:
                 actions[m] = []
             actions[m].append((f, args, msg))
-
-        # divergent renames
-        for f, fl in sorted(pycompat.iteritems(diverge)):
-            repo.ui.warn(
-                _("note: possible conflict - %s was renamed " "multiple times to:\n")
-                % f
-            )
-            for nf in fl:
-                repo.ui.warn(" %s\n" % nf)
-
-        # rename and delete
-        for f, fl in sorted(pycompat.iteritems(renamedelete)):
-            repo.ui.warn(
-                _("note: possible conflict - %s was deleted " "and renamed to:\n") % f
-            )
-            for nf in fl:
-                repo.ui.warn(" %s\n" % nf)
 
         ### apply phase
         if not branchmerge:  # just jump to the new rev
