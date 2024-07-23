@@ -20,6 +20,7 @@ use cpython_ext::convert::ImplInto;
 use cpython_ext::pyset_add;
 use cpython_ext::pyset_new;
 use cpython_ext::PyNone;
+use cpython_ext::PyPath;
 use cpython_ext::PyPathBuf;
 use cpython_ext::ResultPyErrExt;
 use manifest::DiffType;
@@ -324,6 +325,29 @@ py_class!(pub class treemanifest |py| {
             result.set_item(py, path, (diff_left, diff_right))?;
         }
         Ok(result)
+    }
+
+    /// Register a graft to take effect during `diff` operations.
+    /// This allows temporarily moving tree nodes around just for the diff.
+    /// See `ungraftedpath` for mapping the diff result back to the original path.
+    def registerdiffgraft(&self, from: &PyPath, to: &PyPath) -> PyResult<PyNone> {
+        self.underlying(py)
+            .write()
+            .register_diff_graft(
+                from.to_repo_path().map_pyerr(py)?,
+                to.to_repo_path().map_pyerr(py)?,
+            ).map_pyerr(py)?;
+        Ok(PyNone)
+    }
+
+    /// Map a grafted path back to this manifest's original path.
+    /// This is used in conjunction with `graftfordiff` to translate a grafted path in the
+    /// diff result back to the original path, if any.
+    def ungraftedpath(&self, path: &PyPath) -> PyResult<Option<PyPathBuf>> {
+        Ok(self.underlying(py)
+           .read()
+           .ungrafted_path(path.to_repo_path().map_pyerr(py)?)
+           .map(|p| p.into()))
     }
 
     /// Find modified directories. Return [(path: str, exist_left: bool, exist_right: bool)].
