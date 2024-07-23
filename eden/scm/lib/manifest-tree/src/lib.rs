@@ -681,6 +681,83 @@ impl TreeManifest {
         None
     }
 
+    /// Turn a regular path into the equivalent paths after applying registered grafts.
+    /// This is the inverse of ungrafted_path, but is one-to-many in this direction.
+    ///
+    /// With grafts of `foo->bar, foo->baz`, this turns `foo/file` into `[bar/file, baz/file]`.
+
+    pub fn grafted_paths(&self, path: &RepoPath) -> Vec<RepoPathBuf> {
+        // NB: we can assume we don't have overlappying "to"s since we validate in
+        // register_diff_graft.
+        self.diff_grafts
+            .iter()
+            .filter_map(|(from, to)| {
+                if let Some(suffix) = path.strip_prefix(from, true) {
+                    if from == to {
+                        None
+                    } else if suffix.is_empty() {
+                        Some(to.clone())
+                    } else {
+                        Some(to.join(suffix))
+                    }
+                } else {
+                    None
+                }
+            })
+            .collect()
+    }
+
+    /// Turn the regular local_path into the equivalent grafted path, inferring which
+    /// graft to use based on dest_path (making it a one-to-one mapping).
+    ///
+    /// With grafts of `foo->bar, foo->baz`, this turns `(foo/file, bar/something)` into `bar/file`.
+    pub fn grafted_path(&self, local_path: &RepoPath, dest_path: &RepoPath) -> Option<RepoPathBuf> {
+        for (from, to) in self.diff_grafts.iter().rev() {
+            if !dest_path.starts_with(to, true) {
+                continue;
+            }
+
+            if from == to {
+                return None;
+            }
+
+            return match local_path.strip_prefix(from, true) {
+                None => None,
+                Some(suffix) => {
+                    if suffix.is_empty() {
+                        return Some(to.clone());
+                    } else {
+                        return Some(to.join(suffix));
+                    }
+                }
+            };
+        }
+        None
+    }
+
+    /// Turn a regular path into the containing grafts after applying registered grafts.
+    ///
+    /// With grafts `foo->bar, foo->baz`, this turns path `foo/file` into `[bar, baz]`.
+    pub fn grafted_dests(&self, path: &RepoPath) -> Vec<RepoPathBuf> {
+        // NB: we can assume we don't have overlappying "to"s since we validate in
+        // register_diff_graft.
+        self.diff_grafts
+            .iter()
+            .filter_map(|(from, to)| {
+                if path.starts_with(from, true) && from != to {
+                    Some(to.clone())
+                } else {
+                    None
+                }
+            })
+            .collect()
+    }
+
+    /// Report whether this manifest has any registered diff grafts.
+    pub fn has_grafts(&self) -> bool {
+        !self.diff_grafts.is_empty()
+    }
+
     fn get_link(&self, path: &RepoPath) -> Result<Option<&Link>> {
         let mut cursor = &self.root;
         for (parent, component) in path.parents().zip(path.components()) {

@@ -350,6 +350,11 @@ py_class!(pub class treemanifest |py| {
            .map(|p| p.into()))
     }
 
+    /// Report whether this manifest has any registered diff grafts.
+    def hasgrafts(&self) -> PyResult<bool> {
+        Ok(self.underlying(py).read().has_grafts())
+    }
+
     /// Find modified directories. Return [(path: str, exist_left: bool, exist_right: bool)].
     /// Modified directories are added, removed, or metadata changed (direct file or subdir added,
     /// removed, similar to when OS updates mtime of a directory). File content change does not
