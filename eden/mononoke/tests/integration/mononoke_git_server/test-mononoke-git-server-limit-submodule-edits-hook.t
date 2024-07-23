@@ -20,10 +20,12 @@
   > [[bookmarks]]
   > name="heads/master"
   > [[bookmarks.hooks]]
-  > hook_name="block_submodules"
+  > hook_name="limit_submodule_edits"
   > [[hooks]]
-  > name="block_submodules"
-  > 
+  > name="limit_submodule_edits"
+  > config_json='''{
+  > "allow_edits_with_marker": "@update-submodule"
+  > }'''
   > EOF
 
   $ merge_just_knobs <<EOF
@@ -84,6 +86,32 @@
   $ git_client push origin --all
   To https://localhost:$LOCAL_PORT/repos/git/ro/repo.git
    ! [remote rejected] master -> master (hooks failed:
-    block_submodules for *: Commit introduces a submodule at path submodule_path) (glob)
+    limit_submodule_edits for *: Commit creates or edits a submodule at path submodule_path. If you did mean to do this, add "@update-submodule: submodule_path" to your commit message) (glob)
   error: failed to push some refs to 'https://localhost:$LOCAL_PORT/repos/git/ro/repo.git'
   [1]
+
+# Change the commit message and try to push with the marker containing a wrong path.
+  $ git commit --amend -m "@update-submodule: wrong_path"
+  [master *] @update-submodule: wrong_path (glob)
+   Date: Sat Jan 1 00:00:00 2000 +0000
+   2 files changed, 4 insertions(+)
+   create mode 100644 .gitmodules
+   create mode 160000 submodule_path
+  $ git_client push origin --all
+  To https://localhost:$LOCAL_PORT/repos/git/ro/repo.git
+   ! [remote rejected] master -> master (hooks failed:
+    limit_submodule_edits for *: Commit creates or edits a submodule at path submodule_path. The content of the "@update-submodule" marker, do not match the path of the submodule: "wrong_path" != "submodule_path") (glob)
+  error: failed to push some refs to 'https://localhost:$LOCAL_PORT/repos/git/ro/repo.git'
+  [1]
+
+# Change the commit message and try to push with the marker containing the path.
+  $ git commit --amend -m "@update-submodule: submodule_path"
+  [master *] @update-submodule: submodule_path (glob)
+   Date: Sat Jan 1 00:00:00 2000 +0000
+   2 files changed, 4 insertions(+)
+   create mode 100644 .gitmodules
+   create mode 160000 submodule_path
+  $ git_client push origin --all
+  To https://localhost:$LOCAL_PORT/repos/git/ro/repo.git
+     *..*  master -> master (glob)
+

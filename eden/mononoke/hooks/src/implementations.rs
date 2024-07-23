@@ -13,7 +13,6 @@ mod block_content_pattern;
 mod block_empty_commit;
 mod block_files;
 pub(crate) mod block_merge_commits;
-pub(crate) mod block_submodules;
 pub(crate) mod block_unclean_merge_commits;
 pub(crate) mod deny_files;
 mod limit_commit_message_length;
@@ -21,6 +20,7 @@ pub(crate) mod limit_commit_size;
 mod limit_directory_size;
 pub(crate) mod limit_filesize;
 mod limit_path_length;
+pub(crate) mod limit_submodule_edits;
 pub(crate) mod no_bad_extensions;
 pub(crate) mod no_bad_filenames;
 mod no_insecure_filenames;
@@ -56,7 +56,9 @@ pub async fn make_changeset_hook(
         "block_unclean_merge_commits" => Some(b(
             block_unclean_merge_commits::BlockUncleanMergeCommitsHook::new(&params.config)?,
         )),
-        "block_submodules" => Some(b(block_submodules::BlockSubmodulesHook::new())),
+        "limit_submodule_edits" => Some(b(limit_submodule_edits::LimitSubmoduleEditsHook::new(
+            &params.config,
+        )?)),
         "block_commit_message_pattern" => Some(b(
             block_commit_message_pattern::BlockCommitMessagePatternHook::new(&params.config)?,
         )),
