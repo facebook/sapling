@@ -70,6 +70,17 @@ dott_test(
 )
 
 dott_test(
+    name = "derived-data-tailer",
+    disable_all_network_access_target = False,
+    dott_files = glob(["test-derived-data-tailer*.t"]),
+    deps = [
+        "//eden/mononoke/tools/admin:newadmin",
+        "//eden/mononoke/tools/facebook/derived_data_tailer:derived_data_tailer",
+        "//eden/mononoke/tools/testtool:testtool",
+    ],
+)
+
+dott_test(
     name = "test-bookmark-service",
     disable_all_network_access_target = False,
     dott_files = glob(["test-bookmark-service*.t"]),

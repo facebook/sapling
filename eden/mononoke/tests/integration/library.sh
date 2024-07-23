@@ -2357,6 +2357,13 @@ function backfill_derived_data_multiple_repos() {
     "$@"
 }
 
+function derived_data_tailer {
+  GLOG_minloglevel=5 "$DERIVED_DATA_TAILER" \
+    "${CACHE_ARGS[@]}" \
+    "${COMMON_ARGS[@]}" \
+    --mononoke-config-path "$TESTTMP"/mononoke-config "$@"
+}
+
 function hook_tailer() {
   "$MONONOKE_HOOK_TAILER" \
     "${CACHE_ARGS[@]}" \
