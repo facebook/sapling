@@ -1823,39 +1823,106 @@ ImmediateFuture<Unit> EdenMount::diff(
     if (latestInfo.has_value()) {
       auto key = ScmStatusCache::makeKey(commitHash, listIgnored);
       auto curSequenceID = latestInfo.value().sequenceID;
+      std::variant<StatusResultFuture, StatusResultPromise> getResult{nullptr};
       {
-        auto lockedCachePtr = scmStatusCache_.rlock();
-        if ((*lockedCachePtr)->contains(key)) {
-          auto cachedStatusPtr = (*lockedCachePtr)->get(key);
-          if (cachedStatusPtr->seq == curSequenceID) {
-            getStats()->increment(&JournalStats::journalStatusCacheHit);
-            callback->setStatus(cachedStatusPtr->status);
-            return folly::unit;
-          }
-        }
-        getStats()->increment(&JournalStats::journalStatusCacheMiss);
+        auto lockedCachePtr = scmStatusCache_.wlock();
+        getResult = (*lockedCachePtr)->get(key, curSequenceID);
       }
 
-      return diff(rootInode, ctxPtr, commitHash)
-          .thenValue([this, curSequenceID, callback, key = std::move(key)](
-                         auto&&) mutable {
-            auto lockedCachePtr = scmStatusCache_.wlock();
-            ScmStatus newStatus = callback->peekStatus();
-            if (newStatus.entries_ref().value().size() >
-                getEdenConfig()->scmStatusCacheMaxEntriesPerItem.getValue()) {
-              // we don't have a good way to invalidate a single cache entry but
-              // as long as we cap the total size it should be fine if we leave
-              // some expired entries behind.
-              getStats()->increment(&JournalStats::journalStatusCacheSkip);
-              return;
-            }
-            (*lockedCachePtr)
-                ->insert(
-                    std::move(key),
-                    std::make_shared<const SeqStatusPair>(
-                        curSequenceID, std::move(newStatus)));
-          })
-          .ensure(std::move(stateHolder));
+      if (std::holds_alternative<StatusResultFuture>(getResult)) {
+        auto future = std::move(std::get<StatusResultFuture>(getResult));
+        getStats()->increment(&JournalStats::journalStatusCacheHit);
+        if (future.isReady()) {
+          callback->setStatus(std::move(future).get());
+          return folly::unit;
+        }
+        getStats()->increment(&JournalStats::journalStatusCachePend);
+        return std::move(future)
+            .thenValue(
+                [callback](auto&& status) { callback->setStatus(status); })
+            .ensure(std::move(stateHolder));
+      }
+
+      getStats()->increment(&JournalStats::journalStatusCacheMiss);
+
+      auto promise = std::get<StatusResultPromise>(getResult);
+
+      // we fall back to the no-cache flow if somehow the promise is nullptr
+      if (promise.get() != nullptr) {
+        return diff(rootInode, ctxPtr, commitHash)
+            .thenTry([this,
+                      curSequenceID,
+                      callback,
+                      promise,
+                      key = std::move(key)](folly::Try<Unit>&& result) mutable {
+              // handling exceptions from the future chain
+              if (result.hasException()) {
+                promise->setTry(folly::Try<ScmStatus>{result.exception()});
+                // remove the promise from cache so future requests can retry
+                {
+                  // this operations should be performaned with the lock held
+                  auto lockedCachePtr = scmStatusCache_.wlock();
+                  (*lockedCachePtr)->dropPromise(key, curSequenceID);
+                  return makeImmediateFuture<folly::Unit>(result.exception());
+                }
+              }
+
+              bool shouldInsert = true;
+
+              ScmStatus newStatus = callback->peekStatus();
+
+              // no need to insert a status result which contains exceptions
+              if (newStatus.errors_ref()->size() > 0) {
+                shouldInsert = false;
+              }
+
+              // don't cache a status if it's too large so the cache size does
+              // not explode easily
+              if (newStatus.entries_ref().value().size() >
+                  getEdenConfig()->scmStatusCacheMaxEntriesPerItem.getValue()) {
+                getStats()->increment(&JournalStats::journalStatusCacheSkip);
+                shouldInsert = false;
+              }
+
+              // FaultInjector check point: for testing only
+              this->serverState_->getFaultInjector().check(
+                  "scmStatusCache", "blocking setValue");
+
+              // set value for the shared promise so the pending requests get
+              // notified
+              // we do this without holding the lock for security concerns
+              promise->setValue(newStatus);
+
+              // FaultInjector check point: for testing only
+              this->serverState_->getFaultInjector().check(
+                  "scmStatusCache", "blocking insert");
+              {
+                // this operations should be performaned with the lock held
+                auto lockedCachePtr = scmStatusCache_.wlock();
+                if (shouldInsert) {
+                  (*lockedCachePtr)
+                      ->insert(
+                          key,
+                          std::make_shared<SeqStatusPair>(
+                              curSequenceID, std::move(newStatus)));
+                }
+
+                // FaultInjector check point: for testing only
+                this->serverState_->getFaultInjector().check(
+                    "scmStatusCache", "blocking dropPromise");
+
+                // remove the promise from cache
+                (*lockedCachePtr)->dropPromise(key, curSequenceID);
+              }
+              return ImmediateFuture<Unit>(folly::unit);
+            })
+            .ensure(std::move(stateHolder));
+      }
+      XLOG(ERR) << "ScmStatusCache returned nullptr for promise: key=" << key
+                << ", commitHash=" << commitHash
+                << ", listIgnored=" << listIgnored
+                << ", curSequenceID=" << curSequenceID
+                << ". Falling back to no-cache path for this request";
     }
   }
 

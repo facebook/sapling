@@ -549,6 +549,7 @@ struct JournalStats : StatsGroup<JournalStats> {
   Counter truncatedReads{"journal.truncated_reads"};
   Counter filesAccumulated{"journal.files_accumulated"};
   Counter journalStatusCacheHit{"journal.status_cache_hit"};
+  Counter journalStatusCachePend{"journal.status_cache_pend"};
   Counter journalStatusCacheMiss{"journal.status_cache_miss"};
   Counter journalStatusCacheSkip{"journal.status_cache_skip"};
   Duration accumulateRange{"journal.accumulate_range_us"};
