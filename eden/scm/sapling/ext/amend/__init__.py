@@ -210,23 +210,6 @@ def uisetup(ui):
 
     extensions.afterloaded("automv", has_automv)
 
-    def evolveloaded(loaded):
-        if not loaded:
-            return
-
-        evolvemod = extensions.find("evolve")
-
-        # Remove conflicted commands from evolve.
-        table = evolvemod.cmdtable
-        for name in ["prev", "next", "split", "fold", "metaedit", "prune"]:
-            todelete = [k for k in table if name in k]
-            for k in todelete:
-                oldentry = table[k]
-                table["debugevolve%s" % name] = oldentry
-                del table[k]
-
-    extensions.afterloaded("evolve", evolveloaded)
-
     def rebaseloaded(loaded):
         if not loaded:
             return

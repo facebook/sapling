@@ -1033,7 +1033,7 @@ def _wrapamend(flag):
         return
     amendcmd = extensions.bind(_amendcmd, flag)
     # the amend command can exist in amend, or evolve
-    for extname in ["amend", "evolve", None]:
+    for extname in ["amend", None]:
         try:
             if extname is None:
                 cmdtable = commands.table
