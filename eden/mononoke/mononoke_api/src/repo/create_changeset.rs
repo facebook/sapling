@@ -610,7 +610,7 @@ impl RepoContext {
         // If some, this changeset is a snapshot. Currently unsupported to upload a
         // normal commit to a bubble, though can be easily added.
         bubble: Option<&Bubble>,
-    ) -> Result<ChangesetContext, MononokeError> {
+    ) -> Result<(SortedVectorMap<String, Vec<u8>>, ChangesetContext), MononokeError> {
         let changesets = self
             .create_changeset_stack(parents, vec![info], vec![changes], bubble)
             .await?;
@@ -637,7 +637,7 @@ impl RepoContext {
         // If some, this changeset is a snapshot. Currently unsupported to upload a
         // normal commit to a bubble, though can be easily added.
         bubble: Option<&Bubble>,
-    ) -> Result<Vec<ChangesetContext>, MononokeError> {
+    ) -> Result<Vec<(SortedVectorMap<String, Vec<u8>>, ChangesetContext)>, MononokeError> {
         self.start_write()?;
         self.authorization_context()
             .require_repo_write(
@@ -920,7 +920,7 @@ impl RepoContext {
         for (info, file_changes) in info_stack.into_iter().zip(file_changes_stack.into_iter()) {
             let author_date = MononokeDateTime::new(info.author_date);
             let committer_date = info.committer_date.map(MononokeDateTime::new);
-            let hg_extra = info.extra.into();
+            let hg_extra = SortedVectorMap::<_, _>::from(info.extra);
             let git_extra_headers = info.git_extra_headers.map(SortedVectorMap::from);
             let file_changes = file_changes
                 .into_iter()
@@ -937,7 +937,7 @@ impl RepoContext {
                 committer: info.committer,
                 committer_date,
                 message: info.message,
-                hg_extra,
+                hg_extra: hg_extra.clone(),
                 git_extra_headers,
                 git_tree_hash: None,
                 file_changes,
@@ -955,7 +955,7 @@ impl RepoContext {
             let new_changeset_id = new_changeset.get_changeset_id();
             parents = vec![new_changeset_id];
             new_changesets.push(new_changeset);
-            new_changeset_ids.push(new_changeset_id);
+            new_changeset_ids.push((hg_extra, new_changeset_id));
         }
 
         if let Some(bubble) = &bubble {
@@ -972,7 +972,7 @@ impl RepoContext {
 
         Ok(new_changeset_ids
             .into_iter()
-            .map(|new_changeset_id| ChangesetContext::new(self.clone(), new_changeset_id))
+            .map(|(hg_extras, id)| (hg_extras, ChangesetContext::new(self.clone(), id)))
             .collect())
     }
 }

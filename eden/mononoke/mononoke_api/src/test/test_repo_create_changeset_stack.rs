@@ -57,8 +57,12 @@ async fn create_changeset_stack(
             git_extra_headers: git_extra_headers.clone(),
         })
         .collect::<Vec<_>>();
-    repo.create_changeset_stack(stack_parents, info_stack, changes_stack, bubble)
-        .await
+    Ok(repo
+        .create_changeset_stack(stack_parents, info_stack, changes_stack, bubble)
+        .await?
+        .into_iter()
+        .map(|(_hg_extra, cs)| cs)
+        .collect())
 }
 
 async fn create_changesets_sequentially(
@@ -89,7 +93,7 @@ async fn create_changesets_sequentially(
             extra: extra.clone(),
             git_extra_headers: git_extra_headers.clone(),
         };
-        let commit = repo
+        let (_hg_extra, commit) = repo
             .create_changeset(parents, info, changes, bubble)
             .await?;
         parents = vec![commit.id()];

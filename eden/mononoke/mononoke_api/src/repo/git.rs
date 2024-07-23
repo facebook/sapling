@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::HashMap;
-
 use anyhow::Context;
 use blobstore::Blobstore;
 use bonsai_git_mapping::BonsaiGitMappingEntry;
@@ -44,6 +42,7 @@ use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataArc;
 use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentityRef;
+use sorted_vector_map::SortedVectorMap;
 
 use crate::changeset::ChangesetContext;
 use crate::errors::MononokeError;
@@ -65,23 +64,21 @@ impl RepoContext {
     pub async fn set_git_mapping_from_changeset(
         &self,
         changeset_ctx: &ChangesetContext,
+        hg_extras: &SortedVectorMap<String, Vec<u8>>,
     ) -> Result<(), MononokeError> {
-        let mut extras: HashMap<_, _> = changeset_ctx.hg_extras().await?.into_iter().collect();
-
         //TODO(simonfar): Once we support deriving git commits, do derivation here
         // If there's no hggit extras, then give back the derived hash.
         // If there's a hggit extra, and it matches the derived commit, accept even if you
         // don't have permission
-
-        if extras.get(HGGIT_MARKER_EXTRA).map(Vec::as_slice) == Some(HGGIT_MARKER_VALUE) {
-            if let Some(hggit_sha1) = extras.remove(HGGIT_COMMIT_ID_EXTRA) {
+        if hg_extras.get(HGGIT_MARKER_EXTRA).map(Vec::as_slice) == Some(HGGIT_MARKER_VALUE) {
+            if let Some(hggit_sha1) = hg_extras.get(HGGIT_COMMIT_ID_EXTRA) {
                 // We can't derive right now, so always do the permission check for
                 // overriding in the case of mismatch.
                 self.authorization_context()
                     .require_override_git_mapping(self.ctx(), self.inner_repo())
                     .await?;
 
-                let hggit_sha1 = String::from_utf8_lossy(&hggit_sha1).parse()?;
+                let hggit_sha1 = String::from_utf8_lossy(hggit_sha1).parse()?;
                 let entry = BonsaiGitMappingEntry::new(hggit_sha1, changeset_ctx.id());
                 let mapping = self.inner_repo().bonsai_git_mapping();
                 mapping
