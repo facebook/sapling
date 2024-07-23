@@ -663,6 +663,24 @@ impl TreeManifest {
         Ok(())
     }
 
+    /// Map a grafted path back to this manifest's original path.
+    /// This is used in conjunction with `graft_for_diff` to translate a grafted path in the
+    /// diff result back to the original path, if any.
+    pub fn ungrafted_path(&self, path: &RepoPath) -> Option<RepoPathBuf> {
+        for (from, to) in self.diff_grafts.iter().rev() {
+            if let Some(suffix) = path.strip_prefix(to, true) {
+                if from == to {
+                    return None;
+                } else if suffix.is_empty() {
+                    return Some(from.clone());
+                } else {
+                    return Some(from.join(suffix));
+                }
+            }
+        }
+        None
+    }
+
     fn get_link(&self, path: &RepoPath) -> Result<Option<&Link>> {
         let mut cursor = &self.root;
         for (parent, component) in path.parents().zip(path.components()) {
@@ -1787,12 +1805,18 @@ mod tests {
                 "right_only",
             ]
         );
+        assert!(left.ungrafted_path(repo_path("right/b")).is_none());
 
         // Now register a graft form left->right
         left.register_diff_graft(repo_path("left"), repo_path("right"))
             .unwrap();
 
         assert_eq!(grafted_diff(&left, &right), vec!["right/a", "right/c"]);
+        assert_eq!(
+            left.ungrafted_path(repo_path("right/b")),
+            Some(repo_path_buf("left/b"))
+        );
+        assert!(right.ungrafted_path(repo_path("right/b")).is_none());
 
         // Order doesn't matter
         assert_eq!(grafted_diff(&right, &left), vec!["right/a", "right/c"]);
@@ -1820,6 +1844,15 @@ mod tests {
         assert_eq!(
             grafted_diff(&left, &right),
             vec!["right-copy/a", "right-copy/c", "right/a", "right/c"]
+        );
+        assert_eq!(
+            right.ungrafted_path(repo_path("right-copy/b")),
+            Some(repo_path_buf("right/b"))
+        );
+        assert!(right.ungrafted_path(repo_path("right/b")).is_none());
+        assert_eq!(
+            left.ungrafted_path(repo_path("right-copy/b")),
+            Some(repo_path_buf("left/b"))
         );
     }
 }
