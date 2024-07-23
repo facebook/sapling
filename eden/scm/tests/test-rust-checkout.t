@@ -25,6 +25,22 @@ Unknown file w/ different content - conflict:
   (commit, shelve, goto --clean to discard all your changes, or goto --merge to merge them)
   [255]
 
+Checking out to diff without file where file removed locally
+  $ newclientrepo
+  $ drawdag <<EOS
+  > B  # B/file = foo
+  > |
+  > A
+  > EOS
+  $ hg go $B -qC
+  $ hg rm file
+TODO: Fix this EdenFS issue
+  $ hg go $A
+  abort: 1 conflicting file changes: (no-eden !)
+   file (no-eden !)
+  (commit, shelve, goto --clean to discard all your changes, or goto --merge to merge them) (no-eden !)
+  [255] (no-eden !)
+  update complete (eden !)
 
 Respect merge marker file:
   $ newclientrepo
