@@ -73,3 +73,18 @@ Graft a commit adding a new file:
   +++ b/bar/new
   @@ -0,0 +1,1 @@
   +new
+
+
+Graft a file that was renamed in dest branch:
+  $ newclientrepo
+  $ drawdag <<EOS
+  >   D  # D/bar/rename = a\nb\ncc\n (renamed from bar/file)
+  >   |
+  > C B  # A/foo/file = a\nb\nc\n
+  > |/   # B/bar/file = a\nb\ncc\n (copied from foo/file)
+  > A    # C/foo/file = aa\nb\nc\n
+  > EOS
+  $ hg go -q $D
+  $ hg graft -qr $C --from-path foo --to-path bar
+  abort: bar/file@439eb343cae6: not found in manifest!
+  [255]
