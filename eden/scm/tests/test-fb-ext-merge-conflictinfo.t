@@ -1,7 +1,7 @@
 #require no-eden
 
   $ configure mutation-norecord
-  $ enable conflictinfo rebase copytrace
+  $ enable conflictinfo rebase
   $ setconfig experimental.rebase-long-labels=True
   $ setconfig copytrace.dagcopytrace=True
 

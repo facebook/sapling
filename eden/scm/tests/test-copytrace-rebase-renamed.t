@@ -1,7 +1,7 @@
 
 #require no-eden
 
-  $ enable amend copytrace rebase
+  $ enable amend rebase
   $ newrepo
 
   $ touch base

@@ -58,7 +58,6 @@ rust-checkout=True
 
 [extensions]
 treemanifest=
-copytrace=
 
 [treemanifest]
 sendtrees=True

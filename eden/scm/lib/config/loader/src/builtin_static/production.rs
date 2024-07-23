@@ -130,7 +130,6 @@ blackbox=
 chistedit=
 clindex=
 conflictinfo=
-copytrace=
 debugnetwork=
 dialect=
 directaccess=

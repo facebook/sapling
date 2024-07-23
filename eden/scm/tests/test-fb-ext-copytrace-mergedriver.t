@@ -13,7 +13,7 @@
   $ enable mergedriver
 
   $ newrepo
-  $ enable copytrace amend
+  $ enable amend
   $ setconfig 'experimental.mergedriver=python:$TESTTMP/m.py'
 
   $ drawdag << 'EOS'

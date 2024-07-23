@@ -3,7 +3,7 @@
   $ eagerepo
   $ . $TESTDIR/git.sh
   $ setconfig diff.git=True
-  $ enable rebase copytrace
+  $ enable rebase
 
   $ setupconfig() {
   >   setconfig copytrace.dagcopytrace=True

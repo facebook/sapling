@@ -44,6 +44,7 @@ _ignoreextensions = {
     "color",
     "configwarn",
     "convert",
+    "copytrace",
     "debugcommitmessage",
     "directaccess",
     "eden",

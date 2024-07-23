@@ -45,7 +45,7 @@ Python utilities:
 
 # Use some production settings. They avoid expensive paths.
 
-  $ enable sparse treemanifest rebase copytrace
+  $ enable sparse treemanifest rebase
 
   $ newrepo
   $ drawdag << 'EOS'

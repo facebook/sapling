@@ -6,7 +6,7 @@
   $ setconfig experimental.allowfilepeer=True
 
   $ configure mutation-norecord
-  $ enable copytrace rebase shelve remotenames
+  $ enable rebase shelve remotenames
   $ setconfig copytrace.dagcopytrace=False
 
   $ initclient() {

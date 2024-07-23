@@ -275,7 +275,6 @@ Test extension help:
   
        conflictinfo
        eden          accelerated hg functionality in Eden checkouts (eden !)
-       copytrace     extension that does copytracing fast
        debugshell    a python shell with repo, changelog & manifest objects
        errorredirect
                      redirect error message

@@ -1,6 +1,6 @@
 
   $ eagerepo
-  $ enable rebase copytrace
+  $ enable rebase
 
 should merge changes of a into the copy file b
 

@@ -106,7 +106,6 @@ Somehow problematic: With many extensions
   > color=
   > commitcloud=
   > conflictinfo=
-  > copytrace=
   > crdump=
   > debugcommitmessage=
   > dialect=
