@@ -164,6 +164,10 @@ impl Link {
             anyhow!("cannot mutate tree manifest link if there are multiple readers")
         })
     }
+
+    pub fn is_leaf(&self) -> bool {
+        matches!(self.as_ref(), Leaf(_))
+    }
 }
 
 impl LinkData {

@@ -20,6 +20,7 @@ use std::collections::BTreeMap;
 use std::fmt;
 use std::sync::Arc;
 
+use anyhow::bail;
 use anyhow::Result;
 use iter::bfs_iter;
 use manifest::DiffEntry;
@@ -574,6 +575,38 @@ impl TreeManifest {
         Ok(executor.converted_nodes.into_iter())
     }
 
+    /// Insert `other` into `self` at `path`. If `path` is already in the tree, it is
+    /// replaced, not merged or overlaid. Any conflicting entries in `self` are
+    /// overwritten in order to insert `other`. `other` can be a Leaf, but if so cannot be
+    /// inserted as the root of `self`. `other` is deep copied so it remains mutable. If
+    /// `other` is None, an empty directory is inserted at `path`.
+    pub fn graft(&mut self, path: &RepoPath, other: Option<&Link>) -> Result<()> {
+        if path.is_empty() && other.is_some_and(Link::is_leaf) {
+            bail!("can't graft leaf node to root of tree");
+        }
+
+        let mut cursor = &mut self.root;
+        for (parent, component) in path.parents().zip(path.components()) {
+            let links = cursor.mut_ephemeral_links(&self.store, parent)?;
+            cursor = match links.entry(component.to_owned()) {
+                Entry::Vacant(e) => e.insert(Link::ephemeral()),
+                Entry::Occupied(o) => {
+                    let link = o.into_mut();
+                    if matches!(link.as_ref(), Leaf(_)) {
+                        // Path conflict - replace file with a directory.
+                        *link = Link::ephemeral();
+                    }
+                    link
+                }
+            };
+        }
+
+        // Deep copy `other` so it, and our grafted copy, remain mutable.
+        *cursor = other.map_or_else(Link::ephemeral, |other| other.clone());
+
+        Ok(())
+    }
+
     fn get_link(&self, path: &RepoPath) -> Result<Option<&Link>> {
         let mut cursor = &self.root;
         for (parent, component) in path.parents().zip(path.components()) {
@@ -713,6 +746,7 @@ pub fn init() {
 mod tests {
     use manifest::testutil::*;
     use manifest::FileType;
+    use pathmatcher::AlwaysMatcher;
     use store::Element;
     use storemodel::InsertOpts;
     use storemodel::Kind;
@@ -1559,5 +1593,53 @@ mod tests {
                 (path_component_buf("a2"), FsNodeMetadata::Directory(None)),
             ]),
         );
+    }
+
+    fn list_files(m: &TreeManifest) -> Vec<String> {
+        let mut files = m
+            .files(AlwaysMatcher::new())
+            .map(|f| Ok(f?.path.into_string()))
+            .collect::<Result<Vec<_>>>()
+            .unwrap();
+        files.sort();
+        files
+    }
+
+    #[test]
+    fn test_graft() {
+        let mut tree = TreeManifest::ephemeral(Arc::new(TestStore::new()));
+        tree.insert(repo_path_buf("a"), make_meta("10")).unwrap();
+        tree.insert(repo_path_buf("dir/b"), make_meta("10"))
+            .unwrap();
+        tree.insert(repo_path_buf("dir/dir/c"), make_meta("10"))
+            .unwrap();
+
+        let mut grafted = tree.clone();
+        grafted
+            .graft(
+                repo_path("dir"),
+                tree.get_link(repo_path("dir/dir")).unwrap(),
+            )
+            .unwrap();
+        // Graft overwrites existing tree - does not "overlay".
+        assert_eq!(list_files(&grafted), vec!["a", "dir/c"]);
+
+        // Other tree didn't change
+        assert_eq!(list_files(&tree), vec!["a", "dir/b", "dir/dir/c"]);
+
+        // Can graft over a file
+        let mut grafted = tree.clone();
+        grafted
+            .graft(
+                repo_path("dir/b"),
+                tree.get_link(repo_path("dir/dir")).unwrap(),
+            )
+            .unwrap();
+        assert_eq!(list_files(&grafted), vec!["a", "dir/b/c", "dir/dir/c"]);
+
+        // Can insert empty directories
+        let mut grafted = tree.clone();
+        grafted.graft(repo_path("dir"), None).unwrap();
+        assert_eq!(list_files(&grafted), vec!["a"]);
     }
 }
