@@ -432,6 +432,25 @@ impl RepoPath {
         }
     }
 
+    /// Return common prefix of `self` and `other`.
+    pub fn common_prefix<'a>(&'a self, other: &'a Self) -> &'a Self {
+        let mut parts = self.components();
+        let mut other_parts = other.components();
+
+        loop {
+            let position = parts.position;
+            match (parts.next(), other_parts.next()) {
+                (None, _) => return self,
+                (_, None) => return other,
+                (l, r) => {
+                    if l != r {
+                        return Self::from_str_unchecked(&self.0[..position.saturating_sub(1)]);
+                    }
+                }
+            }
+        }
+    }
+
     /// Create a new RepoPathBuf joining self with other.
     pub fn join(&self, other: impl AsRef<RepoPath>) -> RepoPathBuf {
         let mut buf = self.to_owned();
@@ -1420,6 +1439,44 @@ mod tests {
             repo_path("foo/bar/baz")
                 .strip_prefix(repo_path("foo/bar/baz/qux"), false)
                 .is_none()
+        );
+    }
+
+    #[test]
+    fn test_common_prefix() {
+        assert_eq!(repo_path("").common_prefix(repo_path("foo")), repo_path(""));
+        assert_eq!(repo_path("foo").common_prefix(repo_path("")), repo_path(""));
+        assert_eq!(
+            repo_path("foo").common_prefix(repo_path("foobar")),
+            repo_path("")
+        );
+        assert_eq!(
+            repo_path("foo").common_prefix(repo_path("foo")),
+            repo_path("foo")
+        );
+        assert_eq!(
+            repo_path("foo/bar").common_prefix(repo_path("foo")),
+            repo_path("foo")
+        );
+        assert_eq!(
+            repo_path("foo").common_prefix(repo_path("foo/bar")),
+            repo_path("foo")
+        );
+        assert_eq!(
+            repo_path("foo/bar").common_prefix(repo_path("foo/bar")),
+            repo_path("foo/bar")
+        );
+        assert_eq!(
+            repo_path("foo/bar/baz/qux").common_prefix(repo_path("bar")),
+            repo_path("")
+        );
+        assert_eq!(
+            repo_path("foo/bar/baz/qux").common_prefix(repo_path("foo/bar")),
+            repo_path("foo/bar")
+        );
+        assert_eq!(
+            repo_path("foo/bar").common_prefix(repo_path("foo/bar/baz/qux")),
+            repo_path("foo/bar")
         );
     }
 }
