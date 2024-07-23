@@ -31,6 +31,7 @@
 #include <folly/io/async/HHWheelTimer.h>
 #include <folly/logging/xlog.h>
 #include <folly/portability/GFlags.h>
+#include <folly/portability/SysTypes.h>
 #include <folly/stop_watch.h>
 #include <thrift/lib/cpp/concurrency/ThreadManager.h>
 #include <thrift/lib/cpp2/async/ServerPublisherStream.h>
@@ -98,6 +99,7 @@
 #endif
 
 #ifndef _WIN32
+#include <sys/wait.h>
 #include "eden/fs/fuse/FuseChannel.h"
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/notifications/CommandNotifier.h"
@@ -329,19 +331,39 @@ class EdenServer::ThriftServerEventHandler
     attachEventBase(eventBase);
     registerSignalHandler(SIGINT);
     registerSignalHandler(SIGTERM);
+#ifndef _WIN32
+    registerSignalHandler(SIGCHLD);
+#endif
     runningPromise_.setValue();
   }
 
   void signalReceived(int sig) noexcept override {
-    // Stop the server.
-    // Unregister for this signal first, so that we will be terminated
-    // immediately if the signal is sent again before we finish stopping.
-    // This makes it easier to kill the daemon if graceful shutdown hangs or
-    // takes longer than expected for some reason.  (For instance, if we
-    // unmounting the mount points hangs for some reason.)
-    XLOG(INFO) << "stopping due to signal " << sig;
-    unregisterSignalHandler(sig);
-    edenServer_->stop();
+    switch (sig) {
+#ifndef _WIN32
+      case SIGCHLD:
+        XLOG(DBG4) << "got SIGCHLD";
+        {
+          // Clean up zombie processes (ex. `sl debugrefreshconfig`).
+          int status;
+          pid_t pid;
+          while ((pid = waitpid(-1, &status, WNOHANG)) > 0) {
+            XLOG(DBG5) << "waited pid " << pid << " status " << status;
+          }
+        }
+        return;
+#endif
+      case SIGINT:
+      case SIGTERM:
+        // Stop the server.
+        // Unregister for this signal first, so that we will be terminated
+        // immediately if the signal is sent again before we finish stopping.
+        // This makes it easier to kill the daemon if graceful shutdown hangs or
+        // takes longer than expected for some reason.  (For instance, if we
+        // unmounting the mount points hangs for some reason.)
+        XLOG(INFO) << "stopping due to signal " << sig;
+        unregisterSignalHandler(sig);
+        edenServer_->stop();
+    }
   }
 
   /**
