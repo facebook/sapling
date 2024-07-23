@@ -34,13 +34,11 @@ Checking out to diff without file where file removed locally
   > EOS
   $ hg go $B -qC
   $ hg rm file
-TODO: Fix this EdenFS issue
   $ hg go $A
-  abort: 1 conflicting file changes: (no-eden !)
-   file (no-eden !)
-  (commit, shelve, goto --clean to discard all your changes, or goto --merge to merge them) (no-eden !)
-  [255] (no-eden !)
-  update complete (eden !)
+  abort: 1 conflicting file changes:
+   file
+  (commit, shelve, goto --clean to discard all your changes, or goto --merge to merge them)
+  [255]
 
 Respect merge marker file:
   $ newclientrepo
@@ -191,10 +189,9 @@ Various invalid arg combos:
   M foo
   R B
   ? bar
-Eden doesn't report "B" as conflicting - seems harmless but technically incorrect (?)
   $ hg go $A
   abort: * conflicting file changes: (glob)
-   B (no-eden !)
+   B
    bar
    foo
   (commit, shelve, goto --clean to discard all your changes, or goto --merge to merge them)

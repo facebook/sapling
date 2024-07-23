@@ -55,6 +55,7 @@ fn actionmap_from_eden_conflicts(
     let mut modified = Vec::new();
     let mut removed = Vec::new();
     let mut added = Vec::new();
+    let mut missing = Vec::new();
     let mut unknown = Vec::new();
     let treestate_binding = wc.treestate();
     let mut treestate = treestate_binding.lock();
@@ -122,7 +123,12 @@ fn actionmap_from_eden_conflicts(
                 ))?;
                 changed_metadata_to_action(old_meta, new_meta)
             }
-            ConflictType::MissingRemoved | ConflictType::DirectoryNotEmpty => None,
+            ConflictType::MissingRemoved => {
+                let conflict_path = conflict.path.as_repo_path();
+                missing.push(conflict_path.to_owned());
+                Some(Action::Remove)
+            }
+            ConflictType::DirectoryNotEmpty => None,
         };
         if let Some(action) = action {
             map.insert(conflict.path, action);
@@ -136,6 +142,7 @@ fn actionmap_from_eden_conflicts(
     status_builder = status_builder.removed(removed);
     status_builder = status_builder.added(added);
     status_builder = status_builder.unknown(unknown);
+    status_builder = status_builder.deleted(missing);
 
     Ok((ActionMap { map }, status_builder.build()))
 }
