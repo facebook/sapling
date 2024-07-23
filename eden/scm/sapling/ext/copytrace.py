@@ -75,9 +75,7 @@ import codecs
 from sapling import (
     cmdutil,
     copies as copiesmod,
-    dispatch,
     extensions,
-    filemerge,
     hgdemandimport,
     json,
     phases,
@@ -99,19 +97,6 @@ configitem("copytrace", "dagcopytrace", default=False)
 
 
 def extsetup(ui) -> None:
-    filemerge._localchangedotherdeletedmsg = _(
-        "local%(l)s changed %(fd)s which other%(o)s deleted%(fa)s\n"
-        + "use (c)hanged version, (d)elete, or leave (u)nresolved?"
-        "$$ &Changed $$ &Delete $$ &Unresolved"
-    )
-
-    filemerge._otherchangedlocaldeletedmsg = _(
-        "other%(o)s changed %(fd)s which local%(l)s is missing\n"
-        "hint: %(hint)s\n"
-        "use (c)hanged version, leave (d)eleted, or leave (u)nresolved, or input (r)enamed path?"
-        "$$ &Changed $$ &Deleted $$ &Unresolved $$ &Renamed"
-    )
-
     extensions.wrapfunction(copiesmod, "mergecopies", _mergecopies)
     extensions.wrapfunction(cmdutil, "amend", _amend)
 

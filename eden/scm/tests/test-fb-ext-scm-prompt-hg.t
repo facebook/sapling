@@ -1,3 +1,5 @@
+#debugruntest-incompatible
+
 #chg-compatible
 #require bash no-eden
 
@@ -124,8 +126,9 @@ Test unshelve
   unshelving change 'default'
   rebasing shelved changes
   rebasing 19f7fec7f80b "shelve changes to: c3"
-  other [source] changed b which local [dest] deleted
-  use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? u
+  other [source] changed b which local [dest] is missing
+  hint: the missing file was probably added by commit 4b6cc7d5194b in the branch being rebased
+  use (c)hanged version, leave (d)eleted, or leave (u)nresolved, or input (r)enamed path? u
   unresolved conflicts (see 'hg resolve', then 'hg unshelve --continue')
   (5cad84d17|UNSHELVE)
   $ cmd hg unshelve --config "extensions.shelve=" --abort

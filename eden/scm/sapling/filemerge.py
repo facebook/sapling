@@ -64,14 +64,14 @@ fullmerge = internaltool.fullmerge  # both premerge and merge
 
 _localchangedotherdeletedmsg = _(
     "local%(l)s changed %(fd)s which other%(o)s deleted%(fa)s\n"
-    "use (c)hanged version, (d)elete, or leave (u)nresolved?"
+    + "use (c)hanged version, (d)elete, or leave (u)nresolved?"
     "$$ &Changed $$ &Delete $$ &Unresolved"
 )
 
 _otherchangedlocaldeletedmsg = _(
-    "other%(o)s changed %(fd)s which local%(l)s deleted\n"
-    "use (c)hanged version, leave (d)eleted, "
-    "leave (u)nresolved, or input (r)enamed path?"
+    "other%(o)s changed %(fd)s which local%(l)s is missing\n"
+    "hint: %(hint)s\n"
+    "use (c)hanged version, leave (d)eleted, or leave (u)nresolved, or input (r)enamed path?"
     "$$ &Changed $$ &Deleted $$ &Unresolved $$ &Renamed"
 )
 
