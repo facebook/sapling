@@ -315,6 +315,7 @@ impl ShardedHgAugmentedManifest {
                     .map(|res| {
                         res.and_then(|(k, v)| anyhow::Ok((MPathElement::from_smallvec(k)?, v)))
                     })
+                    .yield_periodically()
                     .chunks(MAX_BUFFERED_ENTRIES)
                     .map(|results| {
                         results
