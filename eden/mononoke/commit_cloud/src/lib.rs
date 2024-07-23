@@ -28,6 +28,7 @@ use mononoke_types::Timestamp;
 use permission_checker::AclProvider;
 use permission_checker::BoxPermissionChecker;
 use references::update_references_data;
+use references::RawSmartlogData;
 use repo_derived_data::ArcRepoDerivedData;
 
 use crate::references::cast_references_data;
@@ -279,5 +280,17 @@ impl CommitCloud {
         name: &str,
     ) -> anyhow::Result<Option<BoxPermissionChecker>> {
         self.acl_provider.commitcloud_workspace_acl(name).await
+    }
+
+    pub async fn get_smartlog_raw_info(
+        &self,
+        params: &GetSmartlogParams,
+    ) -> anyhow::Result<RawSmartlogData> {
+        references::fetch_smartlog_references(
+            &CommitCloudContext::new(&params.workspace, &params.reponame)?,
+            &self.storage,
+            &params.flags,
+        )
+        .await
     }
 }
