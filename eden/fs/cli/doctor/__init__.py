@@ -889,6 +889,32 @@ Failed to remount this mount with error:
             else:
                 raise
 
+    def check_fix(self) -> bool:
+        """
+        Check that mount return value is 1(already mounted) when rerunning command
+        """
+        try:
+            mount_value = self._instance.mount(str(self._mount_path), False)
+        except Exception as ex:
+            """
+            This should only happen if the mount becomes corrupted
+            between the time of the remount and the time of the check.
+            """
+            self._out.write(
+                f"\nAttempt to fix missing mount failed: {ex}.\n",
+                flush=True,
+            )
+            return False
+        if mount_value == 1:
+            return True
+        elif mount_value == 0:
+            """
+            This should only happen if the mount somehow gets unmounted
+            between the time of the remount and the time of the check.
+            """
+            return True
+        return False
+
 
 class StaleWorkingDirectory(Problem):
     def __init__(self, msg: str) -> None:

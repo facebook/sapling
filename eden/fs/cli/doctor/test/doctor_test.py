@@ -19,7 +19,7 @@ from unittest.mock import call, patch
 
 import eden.fs.cli.doctor as doctor
 from eden.fs.cli.config import EdenCheckout, EdenInstance
-from eden.fs.cli.doctor import check_hg, check_watchman
+from eden.fs.cli.doctor import check_hg, check_mount, check_watchman
 from eden.fs.cli.doctor.check_filesystems import (
     check_hg_status_match_hg_diff,
     check_loaded_content,
@@ -38,6 +38,7 @@ from eden.fs.cli.doctor.test.lib.fake_vscode_extensions_checker import (
 )
 from eden.fs.cli.doctor.test.lib.problem_collector import ProblemCollector
 from eden.fs.cli.doctor.test.lib.testcase import DoctorTestBase
+from eden.fs.cli.doctor.util import CheckoutInfo
 from eden.fs.cli.prjfs import PRJ_FILE_STATE
 from eden.fs.cli.test.lib.output import TestOutput
 from facebook.eden.ttypes import (
@@ -1829,6 +1830,232 @@ Please uninstall this extension.
         )
 
         self.assertEqual(exit_code, 0)
+
+    @patch("eden.fs.cli.doctor.test.lib.fake_eden_instance.FakeEdenInstance.mount")
+    def test_missing_mount_fixed(
+        self,
+        # pyre-fixme[2]: Parameter must be annotated.
+        mock_mount,
+    ) -> None:
+        instance = FakeEdenInstance(self.make_temporary_directory())
+        checkout = instance.create_test_mount("path1")
+
+        path = checkout.path
+        checkout_info = CheckoutInfo(
+            # pyre-fixme[6]: For 3rd param expected `EdenInstance` but got
+            # `FakeEdenInstance`.
+            instance,
+            path,
+            state=None,
+            backing_repo=checkout.get_backing_repo_path(),
+        )
+
+        fixer, out = self.create_fixer(dry_run=False)
+        mount_table = instance.mount_table
+
+        edenfs_path = "/path/to/eden-mount"
+        watchman_roots = {edenfs_path}
+        watchman_info = check_watchman.WatchmanCheckInfo(watchman_roots)
+
+        mock_mount.side_effect = [0, 1]
+        check_mount(
+            out,
+            fixer,
+            # pyre-fixme[6]: For 3rd param expected `EdenInstance` but got
+            # `FakeEdenInstance`.
+            instance,
+            checkout_info,
+            mount_table,
+            watchman_info,
+            [checkout_info],
+            set(),
+            True,
+            True,
+        )
+        self.assertEqual(mock_mount.call_count, 2)
+        self.assertEqual(mock_mount.mock_calls, [call(str(checkout.path), False)] * 2)
+        self.assertEqual(len(fixer.problem_types), 1)
+        self.assertEqual(fixer.num_fixed_problems, 1)
+        self.assertEqual(
+            f"""\
+<yellow>- Found problem:<reset>
+{checkout.path} is not currently mounted
+Remounting {checkout.path}...<green>fixed<reset>
+
+""",
+            out.getvalue(),
+        )
+
+    @patch("eden.fs.cli.doctor.test.lib.fake_eden_instance.FakeEdenInstance.mount")
+    def test_missing_mount_hg_fixed(
+        self,
+        # pyre-fixme[2]: Parameter must be annotated.
+        mock_mount,
+    ) -> None:
+        instance = FakeEdenInstance(self.make_temporary_directory())
+        checkout = instance.create_test_mount("path1")
+
+        path = checkout.path
+        checkout_info = CheckoutInfo(
+            # pyre-fixme[6]: For 3rd param expected `EdenInstance` but got
+            # `FakeEdenInstance`.
+            instance,
+            path,
+            state=None,
+            backing_repo=checkout.get_backing_repo_path(),
+        )
+
+        fixer, out = self.create_fixer(dry_run=False)
+        mount_table = instance.mount_table
+
+        edenfs_path = "/path/to/eden-mount"
+        watchman_roots = {edenfs_path}
+        watchman_info = check_watchman.WatchmanCheckInfo(watchman_roots)
+
+        mock_mount.side_effect = [Exception(), 0, 1]
+        check_mount(
+            out,
+            fixer,
+            # pyre-fixme[6]: For 3rd param expected `EdenInstance` but got
+            # `FakeEdenInstance`.
+            instance,
+            checkout_info,
+            mount_table,
+            watchman_info,
+            [checkout_info],
+            set(),
+            True,
+            True,
+        )
+        self.assertEqual(mock_mount.call_count, 3)
+        self.assertEqual(mock_mount.mock_calls, [call(str(checkout.path), False)] * 3)
+        self.assertEqual(len(fixer.problem_types), 1)
+        self.assertEqual(fixer.num_fixed_problems, 1)
+        self.assertEqual(
+            f"""\
+<yellow>- Found problem:<reset>
+{checkout.path} is not currently mounted
+Remounting {checkout.path}...
+Mount failed. Running `hg doctor` in the backing repo and then will retry the mount.
+<green>fixed<reset>
+
+""",
+            out.getvalue(),
+        )
+
+    @patch("eden.fs.cli.doctor.test.lib.fake_eden_instance.FakeEdenInstance.mount")
+    def test_missing_mount_too_short(
+        self,
+        # pyre-fixme[2]: Parameter must be annotated.
+        mock_mount,
+    ) -> None:
+        instance = FakeEdenInstance(self.make_temporary_directory())
+        checkout = instance.create_test_mount("path1")
+
+        path = checkout.path
+        checkout_info = CheckoutInfo(
+            # pyre-fixme[6]: For 3rd param expected `EdenInstance` but got
+            # `FakeEdenInstance`.
+            instance,
+            path,
+            state=None,
+            backing_repo=checkout.get_backing_repo_path(),
+        )
+
+        fixer, out = self.create_fixer(dry_run=False)
+        mount_table = instance.mount_table
+
+        edenfs_path = "/path/to/eden-mount"
+        watchman_roots = {edenfs_path}
+        watchman_info = check_watchman.WatchmanCheckInfo(watchman_roots)
+
+        mock_mount.side_effect = [Exception("is too short for header"), 0, 1]
+        check_mount(
+            out,
+            fixer,
+            # pyre-fixme[6]: For 3rd param expected `EdenInstance` but got
+            # `FakeEdenInstance`.
+            instance,
+            checkout_info,
+            mount_table,
+            watchman_info,
+            [checkout_info],
+            set(),
+            True,
+            True,
+        )
+        self.assertEqual(mock_mount.call_count, 1)
+        self.assertEqual(mock_mount.mock_calls, [call(str(checkout.path), False)] * 1)
+        self.assertEqual(len(fixer.problem_types), 1)
+        self.assertEqual(fixer.num_fixed_problems, 0)
+        self.assertEqual(fixer.num_failed_fixes, 1)
+        self.assertRegex(
+            out.getvalue(),
+            r"""<yellow>- Found problem:<reset>
+.*
+.*
+Failed to fix problem CheckoutNotMounted: Exception: is too short for header
+((.|\n)*)""",
+        )
+
+    @patch("eden.fs.cli.doctor.test.lib.fake_eden_instance.FakeEdenInstance.mount")
+    def test_missing_mount_fail_recheck(
+        self,
+        # pyre-fixme[2]: Parameter must be annotated.
+        mock_mount,
+    ) -> None:
+        instance = FakeEdenInstance(self.make_temporary_directory())
+        checkout = instance.create_test_mount("path1")
+
+        path = checkout.path
+        checkout_info = CheckoutInfo(
+            # pyre-fixme[6]: For 3rd param expected `EdenInstance` but got
+            # `FakeEdenInstance`.
+            instance,
+            path,
+            state=None,
+            backing_repo=checkout.get_backing_repo_path(),
+        )
+
+        fixer, out = self.create_fixer(dry_run=False)
+        mount_table = instance.mount_table
+
+        edenfs_path = "/path/to/eden-mount"
+        watchman_roots = {edenfs_path}
+        watchman_info = check_watchman.WatchmanCheckInfo(watchman_roots)
+
+        mock_mount.side_effect = [0, Exception("error text"), 0, 1]
+        check_mount(
+            out,
+            fixer,
+            # pyre-fixme[6]: For 3rd param expected `EdenInstance` but got
+            # `FakeEdenInstance`.
+            instance,
+            checkout_info,
+            mount_table,
+            watchman_info,
+            [checkout_info],
+            set(),
+            True,
+            True,
+        )
+        self.assertEqual(mock_mount.call_count, 2)
+        self.assertEqual(mock_mount.mock_calls, [call(str(checkout.path), False)] * 2)
+        self.assertEqual(len(fixer.problem_types), 1)
+        self.assertEqual(fixer.num_fixed_problems, 0)
+        self.assertEqual(fixer.num_failed_fixes, 1)
+        self.assertEqual(
+            f"""\
+<yellow>- Found problem:<reset>
+{checkout.path} is not currently mounted
+Remounting {checkout.path}...
+Attempt to fix missing mount failed: error text.
+<red>error<reset>
+Attempted and failed to fix problem CheckoutNotMounted
+
+""",
+            out.getvalue(),
+        )
 
 
 def _create_watchman_subscription(
