@@ -140,7 +140,6 @@ class DoctorTest(DoctorTestBase):
         side_effects.append({"watch-del": True, "root": edenfs_path2})
         calls.append(call(["watch-project", edenfs_path2]))
         side_effects.append({"watcher": "eden"})
-
         calls.append(call(["watch-project", edenfs_path3]))
         side_effects.append({"watcher": "eden"})
 

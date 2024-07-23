@@ -47,6 +47,7 @@ class IncorrectWatchmanWatch(FixableProblem):
     def __init__(self, path: str, watcher: Any) -> None:
         self._path = path
         self._watcher = watcher
+        self.fix_result: Optional[str] = None
 
     def description(self) -> str:
         return (
@@ -65,11 +66,15 @@ class IncorrectWatchmanWatch(FixableProblem):
         # an EdenFS watch this time.
         _call_watchman(["watch-del", self._path])
         watch_details = _call_watchman(["watch-project", self._path])
-        if watch_details.get("watcher") != "eden":
+        self.fix_result = watch_details.get("watcher")
+        if self.fix_result != "eden":
             raise RemediationError(
                 f"Failed to replace watchman watch for {self._path} "
                 'with an "eden" watcher'
             )
+
+    def check_fix(self) -> bool:
+        return self.fix_result == "eden"
 
 
 class MissingOrDuplicatedSubscription(Problem):
