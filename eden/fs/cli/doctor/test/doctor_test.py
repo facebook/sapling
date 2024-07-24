@@ -18,7 +18,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 from unittest.mock import call, MagicMock, patch
 
 import eden.fs.cli.doctor as doctor
-from eden.fs.cli.config import EdenCheckout, EdenInstance
+from eden.fs.cli.config import EdenCheckout, EdenInstance, SnapshotState
 from eden.fs.cli.doctor import check_hg, check_mount, check_watchman
 from eden.fs.cli.doctor.check_filesystems import (
     check_hg_status_match_hg_diff,
@@ -585,7 +585,10 @@ Repairing hg directory contents for {checkout.path}...<green>fixed<reset>
         )
         self.assert_dirstate_p0(checkout, snapshot_hex)
 
-    def test_snapshot_and_dirstate_file_differ_and_snapshot_invalid(self) -> None:
+    @patch("eden.fs.cli.config.EdenCheckout.get_snapshot")
+    def test_snapshot_and_dirstate_file_differ_and_snapshot_invalid(
+        self, mock_get_snapshot: MagicMock
+    ) -> None:
         def check_commit_validity(commit: str) -> bool:
             if commit == "12345678" * 5:
                 return False
@@ -593,6 +596,15 @@ Repairing hg directory contents for {checkout.path}...<green>fixed<reset>
 
         dirstate_hash_hex = "12000000" * 5
         snapshot_hex = "12345678" * 5
+
+        def snapshot_state_factory(hash_hex: str) -> SnapshotState:
+            return SnapshotState(hash_hex, hash_hex)
+
+        mock_get_snapshot.side_effect = [
+            snapshot_state_factory(snapshot_hex),
+            snapshot_state_factory(snapshot_hex),
+            snapshot_state_factory(dirstate_hash_hex),
+        ]
         checkout, fixer, out = self._test_hash_check(
             dirstate_hash_hex, snapshot_hex, commit_checker=check_commit_validity
         )
@@ -628,23 +640,35 @@ Repairing hg directory contents for {checkout.path}...<green>fixed<reset>
         "eden.fs.cli.doctor.check_hg.get_tip_commit_hash",
         return_value=b"\x87\x65\x43\x21" * 5,
     )
+    @patch("eden.fs.cli.config.EdenCheckout.get_snapshot")
+    @patch("eden.fs.cli.doctor.check_hg.DirstateChecker._is_commit_hash_valid")
     def test_snapshot_and_dirstate_file_differ_and_all_commit_hash_invalid(
         self,
-        # pyre-fixme[2]: Parameter must be annotated.
-        mock_get_tip_commit_hash,
+        mock_is_commit_hash_valid: MagicMock,
+        mock_get_snapshot: MagicMock,
+        mock_get_tip_commit_hash: MagicMock,
     ) -> None:
-        def check_commit_validity(commit: str) -> bool:
-            null_commit = "00000000" * 5
-            if commit == null_commit:
-                return True
-            return False
-
         dirstate_hash_hex = "12000000" * 5
         snapshot_hex = "12345678" * 5
         valid_commit_hash = "87654321" * 5
-        checkout, fixer, out = self._test_hash_check(
-            dirstate_hash_hex, snapshot_hex, commit_checker=check_commit_validity
-        )
+        mock_is_commit_hash_valid.side_effect = [
+            False,
+            True,
+            False,
+            True,
+            True,
+            True,
+        ]
+
+        def snapshot_state_factory(hash_hex: str) -> SnapshotState:
+            return SnapshotState(hash_hex, hash_hex)
+
+        mock_get_snapshot.side_effect = [
+            snapshot_state_factory(snapshot_hex),
+            snapshot_state_factory(snapshot_hex),
+            snapshot_state_factory(valid_commit_hash),
+        ]
+        checkout, fixer, out = self._test_hash_check(dirstate_hash_hex, snapshot_hex)
 
         self.assertEqual(
             f"""\
@@ -680,23 +704,41 @@ Repairing hg directory contents for {checkout.path}...<green>fixed<reset>
         "eden.fs.cli.doctor.check_hg.get_tip_commit_hash",
         return_value=b"\x87\x65\x43\x21" * 5,
     )
+    @patch("eden.fs.cli.config.EdenCheckout.get_snapshot")
+    @patch("eden.fs.cli.doctor.check_hg.DirstateChecker._is_commit_hash_valid")
     def test_snapshot_and_dirstate_file_differ_and_all_parents_invalid(
         self,
-        # pyre-fixme[2]: Parameter must be annotated.
-        mock_get_tip_commit_hash,
+        mock_is_commit_hash_valid: MagicMock,
+        mock_get_snapshot: MagicMock,
+        mock_get_tip_commit_hash: MagicMock,
     ) -> None:
-        def check_commit_validity(commit: str) -> bool:
-            return False
-
         dirstate_hash_hex = "12000000" * 5
         dirstate_parent2_hash_hex = "12340000" * 5
         snapshot_hex = "12345678" * 5
         valid_commit_hash = "87654321" * 5
+
+        mock_is_commit_hash_valid.side_effect = [
+            False,
+            False,
+            False,
+            True,
+            True,
+            True,
+        ]
+
+        def snapshot_state_factory(hash_hex: str) -> SnapshotState:
+            return SnapshotState(hash_hex, hash_hex)
+
+        mock_get_snapshot.side_effect = [
+            snapshot_state_factory(snapshot_hex),
+            snapshot_state_factory(snapshot_hex),
+            snapshot_state_factory(valid_commit_hash),
+        ]
+
         checkout, fixer, out = self._test_hash_check(
             dirstate_hash_hex,
             snapshot_hex,
             dirstate_parent2_hash_hex,
-            commit_checker=check_commit_validity,
         )
 
         self.assertEqual(

@@ -10,6 +10,7 @@
 import os
 import shutil
 import typing
+from unittest.mock import patch
 
 import eden.fs.cli.doctor as doctor
 from eden.fs.cli.config import EdenInstance
@@ -121,7 +122,12 @@ Repairing hg directory contents for {self.checkout.path}...<green>fixed<reset>
         store.mkdir()
         journal = store / "journal"
         journal.write_text("")
-        out = self.cure_what_ails_you(dry_run=False)
+        with patch(
+            "eden.fs.cli.doctor.check_hg.AbandonedTransactionChecker.repair",
+            wraps=lambda: os.unlink(journal),
+        ) as mock_run_hg:
+            out = self.cure_what_ails_you(dry_run=False)
+            mock_run_hg.assert_called_once()
         self.assertEqual(
             f"""\
 Checking {self.checkout.path}

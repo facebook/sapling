@@ -11,6 +11,7 @@ import abc
 import binascii
 import os
 import subprocess
+from enum import Enum
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Type
 
@@ -32,6 +33,11 @@ except ImportError:
 
     def reclone_remediation(checkout_path: Path) -> str:
         return ""
+
+
+class HgDirectoryErrorReason(Enum):
+    MISSING_HG_DIR = 1
+    FAILED_CHECK = 2
 
 
 class HgChecker:
@@ -384,7 +390,11 @@ def check_hg(tracker: ProblemTracker, checkout: EdenCheckout) -> None:
     hg_path = checkout.hg_dot_path
     if not os.path.exists(hg_path):
         description = f"Missing hg directory: {hg_path}"
-        tracker.add_problem(HgDirectoryError(checkout, checkers, description))
+        tracker.add_problem(
+            HgDirectoryError(
+                checkout, checkers, description, HgDirectoryErrorReason.MISSING_HG_DIR
+            )
+        )
         return
 
     check_in_progress_checkout(tracker, checkout)
@@ -406,7 +416,11 @@ def check_hg(tracker: ProblemTracker, checkout: EdenCheckout) -> None:
             if len(bad_checkers) == len(file_checkers)
             else None
         )
-        tracker.add_problem(HgDirectoryError(checkout, bad_checkers, msg))
+        tracker.add_problem(
+            HgDirectoryError(
+                checkout, bad_checkers, msg, HgDirectoryErrorReason.FAILED_CHECK
+            )
+        )
 
 
 class HgDirectoryError(FixableProblem):
@@ -415,10 +429,12 @@ class HgDirectoryError(FixableProblem):
         checkout: EdenCheckout,
         checkers: List[HgChecker],
         description: Optional[str] = None,
+        reason: Optional[HgDirectoryErrorReason] = None,
     ) -> None:
         self._checkout = checkout
         self._checkers = checkers
         self._description = description
+        self._reason = reason
 
     def description(self) -> str:
         if self._description is not None:
@@ -446,3 +462,19 @@ class HgDirectoryError(FixableProblem):
 
         for checker in self._checkers:
             checker.repair()
+
+    def check_fix(self) -> bool:
+        if self._reason and self._reason == HgDirectoryErrorReason.MISSING_HG_DIR:
+            # Missing hg directory
+            hg_path = self._checkout.hg_dot_path
+            if not os.path.exists(hg_path):
+                return False
+        # check .hg contents
+        failed_checkers = {}
+        for checker in self._checkers:
+            errors = checker.check_for_error()
+            if errors:
+                failed_checkers[checker.__class__.__name__] = errors
+        if failed_checkers:
+            raise Exception("Failed hg checkers: {}".format(failed_checkers))
+        return True
