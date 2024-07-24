@@ -168,6 +168,10 @@ impl Link {
     pub fn is_leaf(&self) -> bool {
         matches!(self.as_ref(), Leaf(_))
     }
+
+    pub fn is_ephemeral(&self) -> bool {
+        matches!(self.as_ref(), Ephemeral(_))
+    }
 }
 
 impl LinkData {

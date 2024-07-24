@@ -597,7 +597,7 @@ impl TreeManifest {
                 Entry::Vacant(e) => e.insert(Link::ephemeral()),
                 Entry::Occupied(o) => {
                     let link = o.into_mut();
-                    if matches!(link.as_ref(), Leaf(_)) {
+                    if link.is_leaf() {
                         // Path conflict - replace file with a directory.
                         *link = Link::ephemeral();
                     }
@@ -756,6 +756,11 @@ impl TreeManifest {
     /// Report whether this manifest has any registered diff grafts.
     pub fn has_grafts(&self) -> bool {
         !self.diff_grafts.is_empty()
+    }
+
+    /// Reports whether this manifest has been modified (in-memory).
+    pub fn is_dirty(&self) -> bool {
+        self.root.is_ephemeral() || !self.diff_grafts.is_empty()
     }
 
     fn get_link(&self, path: &RepoPath) -> Result<Option<&Link>> {
@@ -1972,5 +1977,28 @@ mod tests {
             tree.grafted_path(repo_path("foo/a/b"), repo_path("baz/something")),
             Some(repo_path_buf("baz/a/b"))
         );
+    }
+
+    #[test]
+    fn test_is_dirty() {
+        let mut tree = TreeManifest::ephemeral(Arc::new(TestStore::new()));
+
+        tree.insert(repo_path_buf("foo/bar/file"), make_meta("10"))
+            .unwrap();
+        assert!(tree.is_dirty());
+
+        let _ = tree.finalize(Vec::new()).unwrap();
+        assert!(!tree.is_dirty());
+
+        tree.insert(repo_path_buf("foo/bar/file"), make_meta("11"))
+            .unwrap();
+        assert!(tree.is_dirty());
+
+        let _ = tree.finalize(Vec::new()).unwrap();
+        assert!(!tree.is_dirty());
+
+        tree.register_diff_graft(repo_path("from"), repo_path("to"))
+            .unwrap();
+        assert!(tree.is_dirty());
     }
 }

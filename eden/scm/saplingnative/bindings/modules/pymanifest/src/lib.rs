@@ -488,6 +488,11 @@ py_class!(pub class treemanifest |py| {
         Ok(result)
     }
 
+    /// Report whether this manifest has been modified (in-memory).
+    def dirty(&self) -> PyResult<bool> {
+        Ok(self.underlying(py).read().is_dirty())
+    }
+
     // iterator stuff
 
     def __contains__(&self, path: PyPathBuf) -> PyResult<bool> {

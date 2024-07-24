@@ -715,6 +715,9 @@ class treemanifestctx:
     def find(self, key):
         return self.read().find(key)
 
+    def dirty(self):
+        return self._tree and self._tree.dirty()
+
 
 class memtreemanifestctx:
     def __init__(self, manifestlog, dir=""):
