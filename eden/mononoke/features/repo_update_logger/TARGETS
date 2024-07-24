@@ -30,6 +30,7 @@ rust_library(
         "//eden/mononoke/blobrepo:repo_blobstore",
         "//eden/mononoke/blobstore:blobstore",
         "//eden/mononoke/blobstore:ephemeral_blobstore",
+        "//eden/mononoke/bonsai_globalrev_mapping:bonsai_globalrev_mapping",
         "//eden/mononoke/bookmarks:bookmarks",
         "//eden/mononoke/bookmarks:bookmarks_types",
         "//eden/mononoke/common/logger_ext:logger_ext",

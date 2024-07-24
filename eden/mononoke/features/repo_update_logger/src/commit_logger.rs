@@ -14,6 +14,7 @@ use anyhow::Error;
 use anyhow::Result;
 use async_trait::async_trait;
 use blobstore::Loadable;
+use bonsai_globalrev_mapping::BonsaiGlobalrevMappingRef;
 use bookmarks_types::BookmarkKey;
 use bookmarks_types::BookmarkKind;
 use chrono::DateTime;
@@ -31,6 +32,7 @@ use mononoke_new_commit_rust_logger::MononokeNewCommitLogger;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::Generation;
+use mononoke_types::Globalrev;
 use once_cell::sync::Lazy;
 use permission_checker::MononokeIdentitySet;
 use phases::PhasesRef;
@@ -142,12 +144,14 @@ struct PlainCommitInfo {
     pusher_entry_point: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pusher_main_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    globalrev: Option<Globalrev>,
 }
 
 impl PlainCommitInfo {
     async fn new(
         ctx: &CoreContext,
-        repo: &(impl CommitGraphRef + RepoIdentityRef),
+        repo: &(impl BonsaiGlobalrevMappingRef + CommitGraphRef + RepoIdentityRef),
         received_timestamp: DateTime<Utc>,
         bookmark: Option<(&BookmarkKey, BookmarkKind)>,
         commit_info: CommitInfo,
@@ -172,6 +176,10 @@ impl PlainCommitInfo {
         let generation = repo
             .commit_graph()
             .changeset_generation(ctx, changeset_id)
+            .await?;
+        let globalrev = repo
+            .bonsai_globalrev_mapping()
+            .get_globalrev_from_bonsai(ctx, changeset_id)
             .await?;
         let user_unix_name = ctx.metadata().unix_name().map(|un| un.to_string());
         let user_identities = ctx.metadata().identities().clone();
@@ -207,6 +215,7 @@ impl PlainCommitInfo {
             pusher_correlator,
             pusher_entry_point,
             pusher_main_id,
+            globalrev,
         })
     }
 }
@@ -260,6 +269,9 @@ impl Loggable for PlainCommitInfo {
         if let Some(main_id) = &self.pusher_main_id {
             logger.set_client_main_id(main_id.clone());
         }
+        if let Some(globalrev) = &self.globalrev {
+            logger.set_globalrev(globalrev.id() as i64);
+        }
 
         logger.attach_raw_scribe_write_cat()?;
         logger.log_async()?;
@@ -270,7 +282,7 @@ impl Loggable for PlainCommitInfo {
 
 pub async fn log_new_commits(
     ctx: &CoreContext,
-    repo: &(impl RepoIdentityRef + CommitGraphRef + RepoConfigRef),
+    repo: &(impl RepoIdentityRef + BonsaiGlobalrevMappingRef + CommitGraphRef + RepoConfigRef),
     bookmark: Option<(&BookmarkKey, BookmarkKind)>,
     commit_infos: Vec<CommitInfo>,
 ) {
@@ -311,7 +323,7 @@ pub async fn log_new_commits(
 
 pub async fn log_new_bonsai_changesets(
     ctx: &CoreContext,
-    repo: &(impl RepoIdentityRef + CommitGraphRef + RepoConfigRef),
+    repo: &(impl RepoIdentityRef + BonsaiGlobalrevMappingRef + CommitGraphRef + RepoConfigRef),
     bookmark: &BookmarkKey,
     kind: BookmarkKind,
     commits_to_log: Vec<BonsaiChangeset>,
@@ -333,7 +345,14 @@ pub async fn log_new_bonsai_changesets(
 /// once when they're actually created, second time when they become public.
 pub async fn find_draft_ancestors(
     ctx: &CoreContext,
-    repo: &(impl RepoIdentityRef + RepoConfigRef + PhasesRef + CommitGraphRef + RepoBlobstoreRef),
+    repo: &(
+         impl RepoIdentityRef
+         + RepoConfigRef
+         + PhasesRef
+         + BonsaiGlobalrevMappingRef
+         + CommitGraphRef
+         + RepoBlobstoreRef
+     ),
     to_cs_id: ChangesetId,
 ) -> Result<Vec<BonsaiChangeset>, Error> {
     ctx.scuba()

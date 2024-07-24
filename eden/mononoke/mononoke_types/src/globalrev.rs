@@ -15,6 +15,7 @@ use anyhow::bail;
 use anyhow::Error;
 use anyhow::Result;
 use edenapi_types::CommitId as EdenapiCommitId;
+use serde_derive::Serialize;
 use sql::mysql;
 
 use crate::BonsaiChangeset;
@@ -29,7 +30,18 @@ pub const GLOBALREV_EXTRA: &str = "global_rev";
 pub const START_COMMIT_GLOBALREV: u64 = 1000147970;
 
 // Changeset globalrev.
-#[derive(Abomonation, Debug, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(
+    Abomonation,
+    Debug,
+    Clone,
+    Copy,
+    Eq,
+    PartialEq,
+    Ord,
+    PartialOrd,
+    Hash,
+    Serialize
+)]
 #[derive(mysql::OptTryFromRowField)]
 pub struct Globalrev(u64);
 
