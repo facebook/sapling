@@ -337,8 +337,12 @@ def _xdir_copies(repo, csrc, cdst, srcmissing):
         # Commit where "srcdir" was (most recently) created.
         csrcbase = repo.pathcreation(srcdir, dag.ancestors([csrc.node()]))
 
-        # TODO: don't look for renames "too far" back in either branch (i.e. before the
-        # other branch's branch point)
+        # Pull forward the bases so they don't extend too far into the history before the
+        # branch point of the other dir.
+        if dag.isancestor(csrcbase, cdstbase):
+            csrcbase = dag.gcaone([cdstbase, csrc.node()])
+        elif dag.isancestor(cdstbase, csrcbase):
+            cdstbase = dag.gcaone([csrcbase, cdst.node()])
 
         # Trace renames on src side.
         src_copies = repo._dagcopytrace.trace_renames(

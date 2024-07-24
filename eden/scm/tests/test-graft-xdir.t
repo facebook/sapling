@@ -381,5 +381,18 @@ Don't get confused by renames too far in the past on src side:
   > EOS
   $ hg go -q $E
   $ hg graft -qr $F --from-path dir --to-path dir2
-  abort: dir2/rename3@d47bf539d7b1: not found in manifest!
-  [255]
+  $ hg show
+  commit:      f576590c646e
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  files:       dir2/rename2
+  description:
+  F
+  
+  
+  diff --git a/dir2/rename2 b/dir2/rename2
+  --- a/dir2/rename2
+  +++ b/dir2/rename2
+  @@ -1,1 +1,1 @@
+  -A
+  +AA
