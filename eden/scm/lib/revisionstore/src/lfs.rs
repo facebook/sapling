@@ -377,9 +377,12 @@ impl LfsIndexedLogBlobsStore {
 
     pub fn get(&self, hash: &Sha256, total_size: u64) -> Result<Option<Bytes>> {
         let log = self.inner.read();
-        let chunks_iter = log
-            .lookup(0, hash)?
-            .map(|data| Ok(deserialize::<LfsIndexedLogBlobsEntry>(data?)?));
+        let chunks_iter = log.lookup(0, hash)?.map(|data| {
+            let data: Bytes = log.slice_to_bytes(data?);
+            let deserialized: LfsIndexedLogBlobsEntry =
+                data.as_deserialize_hint(|| deserialize(&data))?;
+            Ok(deserialized)
+        });
 
         // Filter errors. It's possible that one entry is corrupted, or for whatever reason can't
         // be deserialized, whenever this blob/entry is refetched, the corrupted entry will still be
