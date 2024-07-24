@@ -27,12 +27,18 @@ const keyChange = (e: KeyboardEvent) => {
 };
 document.addEventListener('keydown', keyChange);
 document.addEventListener('keyup', keyChange);
+const onBlur = () => {
+  // reset all pressed keys when ISL is blurred, to prevent stuck key state from vscode shortcuts
+  writeAtom(keyPressAtom, {});
+};
+window.addEventListener('blur', onBlur);
 
 registerCleanup(
   keyPressAtom,
   () => {
     document.removeEventListener('keydown', keyChange);
     document.removeEventListener('keyup', keyChange);
+    window.removeEventListener('blur', onBlur);
   },
   import.meta.hot,
 );
