@@ -7,9 +7,7 @@
 
 //! EdenFS utils
 
-use std::env::var;
 use std::ffi::OsString;
-use std::fs::read_to_string;
 use std::path::Path;
 use std::path::PathBuf;
 use std::process::Command;
@@ -19,8 +17,6 @@ use anyhow::anyhow;
 use edenfs_error::EdenFsError;
 use edenfs_error::Result;
 use edenfs_error::ResultExt;
-use glob::glob;
-use sysinfo::Pid;
 use tracing::trace;
 
 pub mod humantime;
@@ -69,63 +65,46 @@ pub fn get_environment_suitable_for_subprocess() -> Vec<(OsString, OsString)> {
         .collect()
 }
 
-/// In the EdenFS buck integration tests we build buck from source
-/// in these tests we need to use the source built buck. The path for
-/// this will be in the SOURCE_BUILT_BUCK environment variable. Otherwise we use
-/// the default buck in our path.
 pub fn get_buck_command() -> String {
-    if let Ok(buck_cmd) = var("SOURCE_BUILT_BUCK") {
-        buck_cmd
-    } else {
-        "buck".to_string()
-    }
+    "buck2".to_string()
 }
 
 /// Buck is sensitive to many environment variables, so we need to set them up
 /// properly before calling into buck
 pub fn get_env_with_buck_version(path: &Path) -> Result<Vec<(OsString, OsString)>> {
     let mut env = get_environment_suitable_for_subprocess();
-    // If we are going to use locally built buck we don't need to set a buck
-    // version. The locally build buck will only use the locally built
-    // version
 
-    if env
-        .iter()
-        .find(|&(k, _)| k == "SOURCE_BUILT_BUCK")
-        .is_none()
-    {
-        // Using BUCKVERSION=last here to avoid triggering a download of a new
-        // version of buck just to kill off buck.  This is specific to Facebook's
-        // deployment of buck, and has no impact on the behavior of the opensource
-        // buck executable.
-        let buck_version = if !cfg!(windows) {
-            Ok("last".to_string())
+    // Using BUCKVERSION=last here to avoid triggering a download of a new
+    // version of buck just to kill off buck.  This is specific to Facebook's
+    // deployment of buck, and has no impact on the behavior of the opensource
+    // buck executable.
+    let buck_version = if !cfg!(windows) {
+        Ok("last".to_string())
+    } else {
+        // On Windows, "last" doesn't work, fallback to reading the .buck-java11 file.
+        let mut version_cmd = Command::new(get_buck_command());
+        version_cmd.arg("--version-fast");
+        let canonical_path = path.canonicalize().from_err()?;
+        #[cfg(windows)]
+        let canonical_path = strip_unc_prefix(canonical_path);
+        let output = version_cmd
+            .current_dir(canonical_path)
+            .output()
+            .from_err()?;
+        if output.status.success() {
+            Ok(std::str::from_utf8(&output.stdout)
+                .from_err()?
+                .trim_end()
+                .to_string())
         } else {
-            // On Windows, "last" doesn't work, fallback to reading the .buck-java11 file.
-            let mut version_cmd = Command::new(get_buck_command());
-            version_cmd.arg("--version-fast");
-            let canonical_path = path.canonicalize().from_err()?;
-            #[cfg(windows)]
-            let canonical_path = strip_unc_prefix(canonical_path);
-            let output = version_cmd
-                .current_dir(canonical_path)
-                .output()
-                .from_err()?;
-            if output.status.success() {
-                Ok(std::str::from_utf8(&output.stdout)
-                    .from_err()?
-                    .trim_end()
-                    .to_string())
-            } else {
-                Err(EdenFsError::Other(anyhow!(
-                    "Failed to get buck version, stderr: {}, exit status: {:?}",
-                    String::from_utf8_lossy(&output.stderr),
-                    output.status,
-                )))
-            }
-        }?;
-        env.push((OsString::from("BUCKVERSION"), OsString::from(buck_version)));
-    }
+            Err(EdenFsError::Other(anyhow!(
+                "Failed to get buck version, stderr: {}, exit status: {:?}",
+                String::from_utf8_lossy(&output.stderr),
+                output.status,
+            )))
+        }
+    }?;
+    env.push((OsString::from("BUCKVERSION"), OsString::from(buck_version)));
     Ok(env)
 }
 
@@ -160,65 +139,25 @@ pub fn get_executable(pid: sysinfo::Pid) -> Option<PathBuf> {
     None
 }
 
-pub fn is_process_running(pid: Pid) -> bool {
-    let mut system = sysinfo::System::new();
-
-    if system.refresh_process(pid) {
-        system.process(pid).is_some()
-    } else {
-        false
-    }
-}
-
-pub fn find_second_level_buck_projects(path: &Path) -> Result<Vec<PathBuf>> {
-    /*
-     * While repos usually have a top level buckconfig, in some cases projects have
-     * their own configuration files one level down.  This glob() finds those directories for us.
-     */
-    let buck_configs = glob(&format!("{}/*/.buckconfig", path.to_string_lossy())).from_err()?;
-    let buck_projects = buck_configs
-        .filter_map(|c| match c {
-            Ok(project) => {
-                if project.is_file() {
-                    project.parent().map(|p| p.to_owned())
-                } else {
-                    None
-                }
-            }
-            Err(_) => None,
-        })
-        .collect();
-    Ok(buck_projects)
-}
-
-/// Stop the major buckd instances that are likely to be running for path
-pub fn stop_buckd_for_repo(path: &Path) {
-    match find_second_level_buck_projects(path) {
-        Ok(projects) => {
-            for project in projects {
-                if is_buckd_running_for_path(&project) {
-                    if let Err(e) = stop_buckd_for_path(&project) {
-                        eprintln!(
-                            "Failed to kill buck. Please manually run `buck kill` in `{}`\n{:?}\n\n",
-                            &project.display(),
-                            e
-                        )
-                    }
-                }
+pub fn is_buckd_running_for_repo(path: &Path) -> bool {
+    let mut status_cmd = Command::new(get_buck_command());
+    status_cmd.arg("status");
+    let canonical_path = path.canonicalize().unwrap_or_default();
+    #[cfg(windows)]
+    let canonical_path = strip_unc_prefix(canonical_path);
+    match status_cmd.current_dir(canonical_path).output() {
+        Ok(output) => {
+            if output.status.success() {
+                let stdout = String::from_utf8_lossy(&output.stdout);
+                !stdout.contains("no buckd running")
+            } else {
+                false
             }
         }
-        Err(_) => {}
-    };
-}
-
-pub fn is_buckd_running_for_path(path: &Path) -> bool {
-    let pid_file = path.join(".buckd").join("pid");
-    let file_contents = read_to_string(&pid_file).unwrap_or_default();
-
-    if let Ok(buck_pid) = file_contents.trim().parse::<Pid>() {
-        is_process_running(buck_pid)
-    } else {
-        false
+        Err(e) => {
+            eprintln!("Error running buck2 status: {}", e);
+            false
+        }
     }
 }
 
@@ -234,22 +173,27 @@ pub fn run_buck_command(buck_command: &mut Command, path: &Path) -> Result<Outpu
         .from_err()
 }
 
-pub fn stop_buckd_for_path(path: &Path) -> Result<()> {
-    println!("Stopping buck in {}...", path.display());
-    let mut kill_cmd = Command::new(get_buck_command());
-    kill_cmd.arg("kill");
-    let canonical_path = path.canonicalize().from_err()?;
-    #[cfg(windows)]
-    let canonical_path = strip_unc_prefix(canonical_path);
-    let out = run_buck_command(&mut kill_cmd, &canonical_path)?;
-    if out.status.success() {
-        Ok(())
+pub fn stop_buckd_for_repo(path: &Path) -> Result<()> {
+    if is_buckd_running_for_repo(path) {
+        println!("Stopping buck2 in {}...", path.display());
+        let mut kill_cmd = Command::new(get_buck_command());
+        kill_cmd.arg("kill");
+        let canonical_path = path.canonicalize().from_err()?;
+        #[cfg(windows)]
+        let canonical_path = strip_unc_prefix(canonical_path);
+        let out = run_buck_command(&mut kill_cmd, &canonical_path)?;
+        if out.status.success() {
+            Ok(())
+        } else {
+            Err(EdenFsError::Other(anyhow!(
+                "Failed to kill buck, stderr: {}, exit status: {:?}. Please try to run `buck2 kill` manually in {}.",
+                String::from_utf8_lossy(&out.stderr),
+                out.status,
+                path.display(),
+            )))
+        }
     } else {
-        Err(EdenFsError::Other(anyhow!(
-            "Failed to kill buck, stderr: {}, exit status: {:?}",
-            String::from_utf8_lossy(&out.stderr),
-            out.status,
-        )))
+        Ok(())
     }
 }
 

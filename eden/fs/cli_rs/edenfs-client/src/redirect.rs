@@ -26,10 +26,8 @@ use edenfs_error::ResultExt;
 use edenfs_telemetry::send;
 #[cfg(fbcode_build)]
 use edenfs_telemetry::EDEN_EVENTS_SCUBA;
-use edenfs_utils::is_buckd_running_for_path;
 use edenfs_utils::metadata::MetadataExt;
 use edenfs_utils::remove_symlink;
-use edenfs_utils::stop_buckd_for_path;
 use edenfs_utils::stop_buckd_for_repo;
 #[cfg(target_os = "windows")]
 use mkscratch::zzencode;
@@ -823,25 +821,10 @@ impl Redirection {
             return Ok(disposition);
         }
 
-        // If this redirect was setup by buck, we should stop buck
-        // prior to unmounting it, as it doesn't currently have a
-        // great way to detect that the directories have gone away.
-        if let Some(possible_buck_project) = repo_path.parent() {
-            if is_buckd_running_for_path(possible_buck_project) {
-                if let Err(e) = stop_buckd_for_path(possible_buck_project) {
-                    eprintln!(
-                        "Failed to kill buck. Please manually run `buck kill` in `{}`\n{}\n\n",
-                        &possible_buck_project.display(),
-                        e
-                    );
-                }
-            }
-        }
-
         // We have encountered issues with buck daemons holding references to files underneath the
         // redirection we're trying to remove. We should kill all buck instances for the repo to
         // guard against these cases and avoid `redirect fixup` failures.
-        stop_buckd_for_repo(&checkout.path());
+        let _ = stop_buckd_for_repo(&checkout.path());
 
         if disposition == RepoPathDisposition::IsSymlink {
             remove_symlink(&repo_path)
