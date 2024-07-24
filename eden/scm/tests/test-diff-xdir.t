@@ -56,6 +56,16 @@ Same diff, but in --reverse:
   +onlyfoo
 
 
+Can filter by paths "--to-path" space:
+  $ hg diff -r $A -r $A --from-path foo --to-path bar bar/differs
+  diff --git a/foo/differs b/bar/differs
+  --- a/foo/differs
+  +++ b/bar/differs
+  @@ -1,2 +1,2 @@
+   one
+  -two
+  +three
+
 Check copy tracing:
   $ newclientrepo
   $ drawdag <<EOS
@@ -73,3 +83,49 @@ Check copy tracing:
   @@ -1,1 +1,1 @@
   -dog
   +cat
+
+
+Can diff with working copy:
+  $ newclientrepo
+  $ drawdag <<EOS
+  > A  # A/foo/file = cat\n
+  >    # A/bar/file = cat\n
+  > EOS
+  $ hg go -q $A
+  $ hg diff --from-path foo --to-path bar
+  $ echo dog > bar/file
+  $ hg diff --from-path foo --to-path bar
+  diff --git a/foo/file b/bar/file
+  --- a/foo/file
+  +++ b/bar/file
+  @@ -1,1 +1,1 @@
+  -cat
+  +dog
+  $ hg diff -r . --from-path foo --to-path bar
+  diff --git a/foo/file b/bar/file
+  --- a/foo/file
+  +++ b/bar/file
+  @@ -1,1 +1,1 @@
+  -cat
+  +dog
+
+
+Works with --only-files-in-revs:
+  $ newclientrepo
+  $ drawdag <<EOS
+  > B  # B/bar/animal = giraffe\n
+  > |
+  > A  # A/foo/fruit = apple\n
+  >    # A/foo/animal = cat\n
+  >    # A/bar/fruit = banana\n
+  >    # A/bar/animal = dog\n
+  > EOS
+  $ hg diff -r $B -r $B --from-path foo --to-path bar --only-files-in-revs
+  diff --git a/foo/animal b/bar/animal
+  --- a/foo/animal
+  +++ b/bar/animal
+  @@ -1,1 +1,1 @@
+  -cat
+  +giraffe
+FIXME: should show diff
+  $ hg diff -r $B -r $B --from-path bar --to-path foo --only-files-in-revs
