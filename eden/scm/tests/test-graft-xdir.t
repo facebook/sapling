@@ -1,4 +1,6 @@
   $ setconfig diff.git=true
+  $ enable morestatus
+  $ setconfig morestatus.show=true
 
 Test validation of --from-path and --to-path
   $ newclientrepo
@@ -73,6 +75,33 @@ Graft a commit adding a new file:
   +++ b/bar/new
   @@ -0,0 +1,1 @@
   +new
+
+
+Graft a commit deleting a file:
+  $ newclientrepo
+  $ drawdag <<EOS
+  > B    # B/bar/file = (removed)
+  > |
+  > A    # A/foo/file = file\n
+  >      # A/bar/file = file\n
+  > EOS
+  $ hg go -q $A
+  $ hg graft -qr $B --from-path bar --to-path foo
+  $ hg show
+  commit:      e6596dc08a17
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  files:       foo/file
+  description:
+  B
+  
+  
+  diff --git a/foo/file b/foo/file
+  deleted file mode 100644
+  --- a/foo/file
+  +++ /dev/null
+  @@ -1,1 +0,0 @@
+  -file
 
 
 Graft a file that was renamed in dest branch:
@@ -420,3 +449,106 @@ TODO: we should be able to follow copies here once we have splice metadata
   abort: unresolved conflicts, can't continue
   (use 'hg resolve' and 'hg graft --continue')
   [255]
+
+
+Merge conflict - both sides modified:
+  $ newclientrepo
+  $ drawdag <<EOS
+  > B    # B/foo/file = one\n
+  > |    # B/bar/file = two\n
+  > A    # A/foo/file = file\n
+  >      # A/bar/file = file\n
+  > EOS
+  $ hg go -q $B
+  $ hg graft -qr $B --from-path foo --to-path bar
+  warning: 1 conflicts while merging bar/file! (edit, then use 'hg resolve --mark')
+  abort: unresolved conflicts, can't continue
+  (use 'hg resolve' and 'hg graft --continue')
+  [255]
+  $ hg st
+  M bar/file
+  ? bar/file.orig
+  
+  # The repository is in an unfinished *graft* state.
+  # Unresolved merge conflicts (1):
+  # 
+  #     bar/file
+  # 
+  # To mark files as resolved:  hg resolve --mark FILE
+  # To continue:                hg graft --continue
+  # To abort:                   hg graft --abort
+  $ cat bar/file
+  <<<<<<< local: 79ea462108b8 - test: B
+  two
+  =======
+  one
+  >>>>>>> graft: 79ea462108b8 - test: B
+  $ echo "one\ntwo" > bar/file
+  $ hg resolve --mark bar/file
+  (no more unresolved files)
+  continue: hg graft --continue
+  $ hg graft --continue
+  grafting 79ea462108b8 "B"
+  $ hg show
+  commit:      5f43e111547b
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  files:       bar/file
+  description:
+  B
+  
+  
+  diff --git a/bar/file b/bar/file
+  --- a/bar/file
+  +++ b/bar/file
+  @@ -1,1 +1,2 @@
+  +one
+   two
+
+
+Merge conflict - delete/modified:
+  $ newclientrepo
+  $ drawdag <<EOS
+  > B    # B/foo/file = (removed)
+  > |    # B/bar/file = two\n
+  > A    # A/foo/file = file\n
+  >      # A/bar/file = file\n
+  > EOS
+  $ hg go -q $B
+  $ hg graft -qr $B --from-path foo --to-path bar
+  local [local] changed bar/file which other [graft] deleted
+  use (c)hanged version, (d)elete, or leave (u)nresolved? u
+  abort: unresolved conflicts, can't continue
+  (use 'hg resolve' and 'hg graft --continue')
+  [255]
+  $ hg st
+  
+  # The repository is in an unfinished *graft* state.
+  # Unresolved merge conflicts (1):
+  # 
+  #     bar/file
+  # 
+  # To mark files as resolved:  hg resolve --mark FILE
+  # To continue:                hg graft --continue
+  # To abort:                   hg graft --abort
+  $ hg rm bar/file
+  $ hg resolve --mark bar/file
+  (no more unresolved files)
+  continue: hg graft --continue
+  $ hg graft --continue
+  grafting 40b702e0ac96 "B"
+  $ hg show
+  commit:      8feddf4a25cd
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  files:       bar/file
+  description:
+  B
+  
+  
+  diff --git a/bar/file b/bar/file
+  deleted file mode 100644
+  --- a/bar/file
+  +++ /dev/null
+  @@ -1,1 +0,0 @@
+  -two
