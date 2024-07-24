@@ -18,6 +18,8 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 from unittest.mock import call, MagicMock, patch
 
 import eden.fs.cli.doctor as doctor
+
+import facebook.eden.ttypes as eden_ttypes
 from eden.fs.cli.config import EdenCheckout, EdenInstance, SnapshotState
 from eden.fs.cli.doctor import check_hg, check_mount, check_watchman
 from eden.fs.cli.doctor.check_filesystems import (
@@ -1598,22 +1600,35 @@ Fixing files known to EdenFS but not present on disk in {Path(mount)}...<green>f
             f"{Path('unmaterialized/extra')} is not known to EdenFS but is accessible on disk",
         )
 
-    def test_inode_counts(self) -> None:
+    @patch("eden.fs.cli.doctor.test.lib.fake_client.FakeClient.getStatInfo")
+    def test_inode_counts(self, mock_get_stat_info: MagicMock) -> None:
         tmp_dir = self.make_temporary_directory()
         instance = FakeEdenInstance(tmp_dir)
         checkout = instance.create_test_mount("path")
 
-        instance.get_thrift_client_legacy().set_mount_inode_info(
-            checkout.path,
-            MountInodeInfo(
+        before_mount_point_info = {
+            os.fsencode(checkout.path): MountInodeInfo(
                 unloadedInodeCount=2_000_000,
                 loadedFileCount=3_000_000,
                 loadedTreeCount=4_000_000,
-            ),
-        )
+            )
+        }
+
+        after_mount_point_info = {
+            os.fsencode(checkout.path): MountInodeInfo(
+                unloadedInodeCount=0,
+                loadedFileCount=0,
+                loadedTreeCount=0,
+            )
+        }
 
         out = TestOutput()
         dry_run = False
+        mock_get_stat_info.side_effect = [
+            eden_ttypes.InternalStats(mountPointInfo=before_mount_point_info),
+            eden_ttypes.InternalStats(mountPointInfo=after_mount_point_info),
+        ]
+
         exit_code = doctor.cure_what_ails_you(
             # pyre-fixme[6]: For 1st param expected `EdenInstance` but got
             #  `FakeEdenInstance`.

@@ -15,7 +15,8 @@ from typing import List, Optional, Set
 
 from eden.fs.cli.config import EdenCheckout, EdenInstance
 from eden.fs.cli.util import get_environment_suitable_for_subprocess
-from facebook.eden.ttypes import MountInodeInfo, MountState
+from facebook.eden.constants import STATS_MOUNTS_STATS
+from facebook.eden.ttypes import GetStatInfoParams, MountInodeInfo, MountState
 
 
 class CheckoutInfo:
@@ -199,3 +200,17 @@ def format_approx_duration(duration: timedelta) -> str:
             return f"{count} {unit_name}{suffix}"
 
     return "a moment"
+
+
+def get_mount_inode_info(checkout_info: CheckoutInfo) -> Optional[MountInodeInfo]:
+    """
+    Gets current MountInodeInfo from an EdenInstance and CheckoutInfo.
+    """
+    instance = checkout_info.instance
+    with instance.get_thrift_client_legacy() as client:
+        internal_stats = client.getStatInfo(
+            GetStatInfoParams(statsMask=STATS_MOUNTS_STATS)
+        )
+        mount_point_info = internal_stats.mountPointInfo or {}
+        return mount_point_info.get(bytes(checkout_info.path))
+    return None

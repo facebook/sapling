@@ -16,7 +16,7 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
-from typing import Callable, List, Set, Tuple, Union
+from typing import Callable, List, Optional, Set, Tuple, Union
 
 from eden.fs.cli import hg_util
 from eden.fs.cli.config import EdenCheckout, EdenInstance, InProgressCheckoutError
@@ -27,17 +27,19 @@ from eden.fs.cli.doctor.problem import (
     ProblemTracker,
     RemediationError,
 )
-from eden.fs.cli.doctor.util import CheckoutInfo
+from eden.fs.cli.doctor.util import CheckoutInfo, get_mount_inode_info
 from eden.fs.cli.filesystem import FsUtil
 from eden.fs.cli.prjfs import PRJ_FILE_STATE
 from facebook.eden.constants import DIS_REQUIRE_LOADED, DIS_REQUIRE_MATERIALIZED
 from facebook.eden.ttypes import (
     DebugInvalidateRequest,
+    DebugInvalidateResponse,
     EdenError,
     GetCurrentSnapshotInfoRequest,
     GetScmStatusParams,
     MatchFileSystemRequest,
     MountId,
+    MountInodeInfo,
     RootIdOptions,
     ScmFileStatus,
     SyncBehavior,
@@ -47,6 +49,14 @@ from facebook.eden.ttypes import (
 
 def check_using_nfs_path(tracker: ProblemTracker, mount_path: Path) -> None:
     check_shared_path(tracker, mount_path)
+
+
+def total_inode_count(inode_info: MountInodeInfo) -> int:
+    return (
+        inode_info.loadedFileCount
+        + inode_info.loadedTreeCount
+        + inode_info.unloadedInodeCount
+    )
 
 
 class StateDirOnNFS(Problem):
@@ -770,8 +780,10 @@ def check_loaded_content(
 
 
 class HighInodeCountProblem(Problem, FixableProblem):
-    def __init__(self, info: CheckoutInfo, inode_count: int) -> None:
+    def __init__(self, info: CheckoutInfo, inode_count: int, threshold: int) -> None:
         self._info = info
+        self._threshold = threshold
+        self.fix_result: Optional[DebugInvalidateResponse] = None
         super().__init__(
             description=f"Mount point {self._info.path} has {inode_count} files on disk, which may impact EdenFS performance",
             severity=ProblemSeverity.ADVICE,
@@ -787,7 +799,7 @@ class HighInodeCountProblem(Problem, FixableProblem):
         """Invalidate all non-materialized inodes."""
         with self._info.instance.get_thrift_client_legacy() as client:
             try:
-                client.debugInvalidateNonMaterialized(
+                self.fix_result = client.debugInvalidateNonMaterialized(
                     DebugInvalidateRequest(
                         mount=MountId(mountPoint=bytes(self._info.path)),
                         path=b"",
@@ -799,6 +811,20 @@ class HighInodeCountProblem(Problem, FixableProblem):
                 raise RemediationError(
                     f"Failed to invalidate non-materialized files: {ex}"
                 )
+
+    def check_fix(self) -> bool:
+        newInodeInfo = get_mount_inode_info(self._info)
+        if newInodeInfo is None:
+            print(f"Failed to get inode info for {self._info.path}")
+            return False
+        inode_count = total_inode_count(newInodeInfo)
+        if inode_count > self._threshold:
+            if self.fix_result:
+                print(
+                    f"Invalidated {self.fix_result.numInvalidated} inodes. {inode_count} inodes is still greater than the threshold of {self._threshold} inodes. "
+                )
+            return False
+        return True
 
 
 class UnknownInodeCountProblem(Problem):
@@ -825,13 +851,9 @@ def check_inode_counts(
         tracker.add_problem(UnknownInodeCountProblem(checkout.path))
         return
 
-    inode_count = (
-        inode_info.loadedFileCount
-        + inode_info.loadedTreeCount
-        + inode_info.unloadedInodeCount
-    )
+    inode_count = total_inode_count(inode_info)
     if inode_count > threshold:
-        tracker.add_problem(HighInodeCountProblem(checkout, inode_count))
+        tracker.add_problem(HighInodeCountProblem(checkout, inode_count, threshold))
 
 
 class HgStatusAndDiffMismatch(PathsProblem):
