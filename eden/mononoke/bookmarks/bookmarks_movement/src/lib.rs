@@ -12,12 +12,17 @@ use blobrepo::AsBlobRepo;
 use bonsai_git_mapping::BonsaiGitMappingArc;
 use bonsai_globalrev_mapping::BonsaiGlobalrevMappingArc;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
+use bookmarks::BookmarkTransaction;
+use bookmarks::BookmarkTransactionHook;
+use bookmarks::BookmarkUpdateLogId;
 use bookmarks::BookmarksRef;
 use bookmarks_types::BookmarkKey;
 use changesets::ChangesetsRef;
 use commit_graph::CommitGraphRef;
+use context::CoreContext;
 use itertools::Itertools;
 use metaconfig_types::RepoConfigRef;
+use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::NonRootMPath;
 use phases::PhasesRef;
@@ -31,6 +36,9 @@ use repo_cross_repo::RepoCrossRepoRef;
 use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentityRef;
 use repo_permission_checker::RepoPermissionCheckerRef;
+use repo_update_logger::log_bookmark_operation;
+use repo_update_logger::log_new_bonsai_changesets;
+use repo_update_logger::BookmarkInfo;
 use thiserror::Error;
 
 pub mod affected_changesets;
@@ -176,4 +184,59 @@ pub fn describe_hook_rejections(rejections: &[HookRejection]) -> String {
             )
         })
         .join("\n")
+}
+
+pub struct BookmarkInfoTransaction {
+    bookmark_info: BookmarkInfo,
+    transaction: Box<dyn BookmarkTransaction>,
+    log_new_public_commits_to_scribe: bool,
+    commits: Vec<BonsaiChangeset>,
+    txn_hook: Option<BookmarkTransactionHook>,
+}
+
+impl BookmarkInfoTransaction {
+    pub fn delete(bookmark_info: BookmarkInfo, transaction: Box<dyn BookmarkTransaction>) -> Self {
+        Self::new(bookmark_info, transaction, false, vec![], None)
+    }
+
+    pub fn new(
+        bookmark_info: BookmarkInfo,
+        transaction: Box<dyn BookmarkTransaction>,
+        log_new_public_commits_to_scribe: bool,
+        commits: Vec<BonsaiChangeset>,
+        txn_hook: Option<BookmarkTransactionHook>,
+    ) -> Self {
+        Self {
+            bookmark_info,
+            transaction,
+            log_new_public_commits_to_scribe,
+            commits,
+            txn_hook,
+        }
+    }
+
+    /// Method responsible for committing the transaction and logging the bookmark operation
+    pub async fn commit_and_log(
+        self,
+        ctx: &CoreContext,
+        repo: &impl Repo,
+    ) -> Result<BookmarkUpdateLogId, BookmarkMovementError> {
+        let (bookmark_name, kind) = (
+            self.bookmark_info.bookmark_name.clone(),
+            self.bookmark_info.bookmark_kind,
+        );
+        let maybe_log_id = match self.txn_hook {
+            Some(txn_hook) => self.transaction.commit_with_hook(txn_hook).await?,
+            None => self.transaction.commit().await?,
+        };
+        if let Some(log_id) = maybe_log_id {
+            if self.log_new_public_commits_to_scribe {
+                log_new_bonsai_changesets(ctx, repo, &bookmark_name, kind, self.commits).await;
+            }
+            log_bookmark_operation(ctx, repo, &self.bookmark_info).await;
+            Ok(log_id.into())
+        } else {
+            Err(BookmarkMovementError::TransactionFailed)
+        }
+    }
 }

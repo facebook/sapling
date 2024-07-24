@@ -8,6 +8,7 @@
 use std::collections::HashMap;
 
 use anyhow::Result;
+use bookmarks::BookmarkTransaction;
 use bookmarks::BookmarkUpdateLogId;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks_types::BookmarkKey;
@@ -21,8 +22,6 @@ use mononoke_types::ChangesetId;
 use repo_authorization::AuthorizationContext;
 use repo_authorization::RepoWriteOperation;
 use repo_update_logger::find_draft_ancestors;
-use repo_update_logger::log_bookmark_operation;
-use repo_update_logger::log_new_bonsai_changesets;
 use repo_update_logger::BookmarkInfo;
 use repo_update_logger::BookmarkOperation;
 
@@ -31,6 +30,7 @@ use crate::affected_changesets::AffectedChangesets;
 use crate::repo_lock::check_repo_lock;
 use crate::restrictions::check_bookmark_sync_config;
 use crate::restrictions::BookmarkKindRestrictions;
+use crate::BookmarkInfoTransaction;
 use crate::BookmarkMovementError;
 use crate::Repo;
 use crate::ALLOW_NON_FFWD_PUSHVAR;
@@ -164,13 +164,14 @@ impl<'op> UpdateBookmarkOp<'op> {
         self
     }
 
-    pub async fn run(
+    pub async fn run_with_transaction(
         mut self,
         ctx: &'op CoreContext,
         authz: &'op AuthorizationContext,
         repo: &'op impl Repo,
         hook_manager: &'op HookManager,
-    ) -> Result<BookmarkUpdateLogId, BookmarkMovementError> {
+        txn: Option<Box<dyn BookmarkTransaction>>,
+    ) -> Result<BookmarkInfoTransaction, BookmarkMovementError> {
         let kind = self.kind_restrictions.check_kind(repo, self.bookmark)?;
 
         if self.only_log_acl_checks {
@@ -225,7 +226,7 @@ impl<'op> UpdateBookmarkOp<'op> {
         )
         .await?;
 
-        let mut txn = repo.bookmarks().create_transaction(ctx.clone());
+        let mut txn = txn.unwrap_or_else(|| repo.bookmarks().create_transaction(ctx.clone()));
         let txn_hook;
 
         let commits_to_log = match kind {
@@ -291,27 +292,31 @@ impl<'op> UpdateBookmarkOp<'op> {
                 to_log
             }
         };
-
-        let maybe_log_id = match txn_hook {
-            Some(txn_hook) => txn.commit_with_hook(txn_hook).await?,
-            None => txn.commit().await?,
+        let info = BookmarkInfo {
+            bookmark_name: self.bookmark.clone(),
+            bookmark_kind: kind,
+            operation: BookmarkOperation::Update(self.targets.old, self.targets.new),
+            reason: self.reason,
         };
-        if let Some(log_id) = maybe_log_id {
-            if self.log_new_public_commits_to_scribe {
-                log_new_bonsai_changesets(ctx, repo, self.bookmark, kind, commits_to_log.clone())
-                    .await;
-            }
-            let info = BookmarkInfo {
-                bookmark_name: self.bookmark.clone(),
-                bookmark_kind: kind,
-                operation: BookmarkOperation::Update(self.targets.old, self.targets.new),
-                reason: self.reason,
-            };
-            log_bookmark_operation(ctx, repo, &info).await;
+        Ok(BookmarkInfoTransaction::new(
+            info,
+            txn,
+            self.log_new_public_commits_to_scribe,
+            commits_to_log,
+            txn_hook,
+        ))
+    }
 
-            Ok(log_id.into())
-        } else {
-            Err(BookmarkMovementError::TransactionFailed)
-        }
+    pub async fn run(
+        self,
+        ctx: &'op CoreContext,
+        authz: &'op AuthorizationContext,
+        repo: &'op impl Repo,
+        hook_manager: &'op HookManager,
+    ) -> Result<BookmarkUpdateLogId, BookmarkMovementError> {
+        let info_txn = self
+            .run_with_transaction(ctx, authz, repo, hook_manager, None)
+            .await?;
+        info_txn.commit_and_log(ctx, repo).await
     }
 }

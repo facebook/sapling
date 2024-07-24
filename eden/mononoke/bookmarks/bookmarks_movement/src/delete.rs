@@ -7,6 +7,7 @@
 
 use std::collections::HashMap;
 
+use bookmarks::BookmarkTransaction;
 use bookmarks::BookmarkUpdateLogId;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks_types::BookmarkKey;
@@ -16,13 +17,13 @@ use context::CoreContext;
 use mononoke_types::ChangesetId;
 use repo_authorization::AuthorizationContext;
 use repo_authorization::RepoWriteOperation;
-use repo_update_logger::log_bookmark_operation;
 use repo_update_logger::BookmarkInfo;
 use repo_update_logger::BookmarkOperation;
 
 use crate::repo_lock::check_repo_lock;
 use crate::restrictions::check_bookmark_sync_config;
 use crate::restrictions::BookmarkKindRestrictions;
+use crate::BookmarkInfoTransaction;
 use crate::BookmarkMovementError;
 use crate::Repo;
 use crate::ALLOW_NON_FFWD_PUSHVAR;
@@ -73,12 +74,13 @@ impl<'op> DeleteBookmarkOp<'op> {
         self
     }
 
-    pub async fn run(
+    pub async fn run_with_transaction(
         self,
         ctx: &'op CoreContext,
         authz: &'op AuthorizationContext,
         repo: &'op impl Repo,
-    ) -> Result<BookmarkUpdateLogId, BookmarkMovementError> {
+        txn: Option<Box<dyn BookmarkTransaction>>,
+    ) -> Result<BookmarkInfoTransaction, BookmarkMovementError> {
         let kind = self.kind_restrictions.check_kind(repo, self.bookmark)?;
 
         if self.only_log_acl_checks {
@@ -127,7 +129,7 @@ impl<'op> DeleteBookmarkOp<'op> {
             .clone()
             .add("bookmark", self.bookmark.to_string())
             .log_with_msg("Deleting bookmark", None);
-        let mut txn = repo.bookmarks().create_transaction(ctx.clone());
+        let mut txn = txn.unwrap_or_else(|| repo.bookmarks().create_transaction(ctx.clone()));
         match kind {
             BookmarkKind::Scratch => {
                 txn.delete_scratch(self.bookmark, self.old_target)?;
@@ -136,19 +138,22 @@ impl<'op> DeleteBookmarkOp<'op> {
                 txn.delete(self.bookmark, self.old_target, self.reason)?;
             }
         }
+        let info = BookmarkInfo {
+            bookmark_name: self.bookmark.clone(),
+            bookmark_kind: kind,
+            operation: BookmarkOperation::Delete(self.old_target),
+            reason: self.reason,
+        };
+        Ok(BookmarkInfoTransaction::delete(info, txn))
+    }
 
-        let maybe_log_id = txn.commit().await?;
-        if let Some(log_id) = maybe_log_id {
-            let info = BookmarkInfo {
-                bookmark_name: self.bookmark.clone(),
-                bookmark_kind: kind,
-                operation: BookmarkOperation::Delete(self.old_target),
-                reason: self.reason,
-            };
-            log_bookmark_operation(ctx, repo, &info).await;
-            Ok(log_id.into())
-        } else {
-            Err(BookmarkMovementError::TransactionFailed)
-        }
+    pub async fn run(
+        self,
+        ctx: &'op CoreContext,
+        authz: &'op AuthorizationContext,
+        repo: &'op impl Repo,
+    ) -> Result<BookmarkUpdateLogId, BookmarkMovementError> {
+        let info_txn = self.run_with_transaction(ctx, authz, repo, None).await?;
+        info_txn.commit_and_log(ctx, repo).await
     }
 }
