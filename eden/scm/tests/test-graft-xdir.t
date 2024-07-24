@@ -21,8 +21,9 @@ Test validation of --from-path and --to-path
   grafting 426bada5c675 "A"
   abort: overlapping --to-path entries
   [255]
-FIXME: these aren't overlapping
-  $ hg graft -r $A --from-path foo --from-path bar --to-path baz/a --to-path baz/b
+  $ hg graft -qr $A --from-path foo --from-path bar --to-path baz/a --to-path baz/b
+  note: graft of 426bada5c675 created no changes to commit
+  $ hg graft -r $A --from-path foo --from-path bar --to-path baz/a --to-path baz/a
   grafting 426bada5c675 "A"
   abort: overlapping --to-path entries
   [255]

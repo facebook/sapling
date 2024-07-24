@@ -657,7 +657,7 @@ impl TreeManifest {
     /// Returns an error if `to` overlaps with existing graft destination.
     pub fn register_diff_graft(&mut self, from: &RepoPath, to: &RepoPath) -> Result<()> {
         for (_, existing) in self.diff_grafts.iter() {
-            if existing.is_empty() || to.is_empty() || !existing.common_prefix(to).is_empty() {
+            if to.starts_with(existing, true) || existing.starts_with(to, true) {
                 bail!("overlapping graft destinations {} and {}", existing, to);
             }
         }
@@ -1855,6 +1855,20 @@ mod tests {
         );
         assert!(
             tree.register_diff_graft(repo_path("anything"), repo_path("anything"))
+                .is_err()
+        );
+
+        let mut tree = TreeManifest::ephemeral(Arc::new(TestStore::new()));
+        assert!(
+            tree.register_diff_graft(repo_path("foo"), repo_path("bar/one"))
+                .is_ok()
+        );
+        assert!(
+            tree.register_diff_graft(repo_path("foo"), repo_path("bar/two"))
+                .is_ok()
+        );
+        assert!(
+            tree.register_diff_graft(repo_path("foo"), repo_path("bar/two"))
                 .is_err()
         );
     }

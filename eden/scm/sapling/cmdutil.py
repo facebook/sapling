@@ -33,7 +33,6 @@ from . import (
     crecord as crecordmod,
     dagop,
     dirstateguard,
-    eagerepo,
     edenfs,
     encoding,
     error,
@@ -4863,8 +4862,12 @@ def registerdiffgrafts(opts, *ctxs):
         raise error.Abort(_("must provide same number of --from-path and --to-path"))
 
     # Disallow overlapping --to-path to keep things simple.
-    if len(to_paths) > 1 and (os.path.commonpath(to_paths) or "" in to_paths):
-        raise error.Abort(_("overlapping --to-path entries"))
+    to_dirs = util.dirs(to_paths)
+    seen = set()
+    for p in to_paths:
+        if p in to_dirs or p in seen:
+            raise error.Abort(_("overlapping --to-path entries"))
+        seen.add(p)
 
     for ctx in ctxs:
         manifest = ctx.manifest()
