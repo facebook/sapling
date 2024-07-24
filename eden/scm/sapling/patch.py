@@ -2745,14 +2745,18 @@ def diffhunks(
     modifiedset = set(modified)
     addedset = set(added)
     removedset = set(removed)
+
+    m1 = ctx1.manifest()
     for f in modified:
-        if f not in ctx1:
+        f1 = m1.ungraftedpath(f) or f
+        if f1 not in ctx1:
             # Fix up added, since merged-in additions appear as
             # modifications during merges
             modifiedset.remove(f)
             addedset.add(f)
     for f in removed:
-        if f not in ctx1:
+        f1 = m1.ungraftedpath(f) or f
+        if f1 not in ctx1:
             # Merged-in additions that are then removed are reported as removed.
             # They are not in ctx1, so We don't want to show them in the diff.
             removedset.remove(f)
