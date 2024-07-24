@@ -64,17 +64,12 @@ Check copy tracing:
   > A  # A/foo/file = cat\n
   >    # A/bar/file = cat\n
   > EOS
-FIXME: show rename properly
   $ hg diff -r $B --from-path foo --to-path bar -r $A
-  diff --git a/foo/file b/bar/file
-  new file mode 100644
-  --- /dev/null
-  +++ b/bar/file
-  @@ -0,0 +1,1 @@
-  +cat
-  diff --git a/foo/rename b/bar/rename
-  deleted file mode 100644
+  diff --git a/foo/rename b/bar/file
+  rename from foo/rename
+  rename to bar/file
   --- a/foo/rename
-  +++ /dev/null
-  @@ -1,1 +0,0 @@
+  +++ b/bar/file
+  @@ -1,1 +1,1 @@
   -dog
+  +cat

@@ -22,6 +22,7 @@ Test validation of --from-path and --to-path
   abort: overlapping --to-path entries
   [255]
 
+
 Basic case merging a file change between directory branches "foo" and "bar".
   $ newclientrepo
   $ drawdag <<EOS

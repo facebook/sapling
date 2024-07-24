@@ -278,8 +278,8 @@ def mergecopies(repo, cdst, csrc, base):
         copies.update(_filtercopies(dst_copies, base, csrc, cdst, "dst"))
 
         # xdir missing files - use special xdir logic.
-        xdir_copies = _xdir_copies(repo, csrc, cdst, srconly)
-        copies.update(_filtercopies(xdir_copies, base, csrc, cdst, "dst"))
+        xdir = xdir_copies(repo, csrc, cdst, srconly)
+        copies.update(_filtercopies(xdir, base, csrc, cdst, "dst"))
 
     # Look for additional amend-copies.
     amend_copies = getamendcopies(repo, cdst, base.p1())
@@ -293,7 +293,7 @@ def mergecopies(repo, cdst, csrc, base):
     return copies
 
 
-def _xdir_copies(repo, csrc, cdst, srcmissing):
+def xdir_copies(repo, csrc, cdst, srcmissing):
     """Compute copies for cross-directory merging.
 
     Cross-directory differs from normal copy tracing because:

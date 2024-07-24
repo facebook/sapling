@@ -2710,10 +2710,21 @@ def diffhunks(
         hexfunc = short
     revs = [hexfunc(node) for node in [ctx1.node(), ctx2.node()] if node]
 
+    m1 = ctx1.manifest()
+
     if copy is None:
         copy = {}
         if opts.git or opts.upgrade:
-            copy = copies.pathcopies(ctx1, ctx2, match=match)
+            if m1.hasgrafts():
+                copy = copies.xdir_copies(
+                    repo, ctx1, ctx2, [m1.ungraftedpath(p) or p for p in removed]
+                )
+                # Convert copy info to "path space" of ctx2 since that matches paths
+                # produced by the diff.
+                copy = {k: m1.graftedpath(v, k) or v for k, v in copy.items()}
+            else:
+                copy = copies.pathcopies(ctx1, ctx2, match=match)
+
             if opts.filtercopysource and match is not None:
                 newcopy = {}
                 for copydst, copysrc in copy.items():
@@ -2746,7 +2757,6 @@ def diffhunks(
     addedset = set(added)
     removedset = set(removed)
 
-    m1 = ctx1.manifest()
     for f in modified:
         f1 = m1.ungraftedpath(f) or f
         if f1 not in ctx1:
@@ -2765,7 +2775,11 @@ def diffhunks(
     removed = sorted(removedset)
     # Files merged in during a merge and then copied/renamed are
     # reported as copies. We want to show them in the diff as additions.
-    copy = {dst: src for (dst, src) in copy.items() if src in ctx1}
+    copy = {
+        dst: src
+        for (dst, src) in copy.items()
+        if (m1.ungraftedpath(src) or src) in ctx1
+    }
 
     def difffn(opts, losedata):
         return trydiff(
@@ -2980,7 +2994,7 @@ def _filepairs(ctx1, ctx2, modified, added, removed, copy, opts):
     or 'rename' (the latter two only if opts.git is set)."""
     gone = set()
 
-    copyto = dict([(v, k) for k, v in copy.items()])
+    copyto = {v: k for k, v in copy.items()}
 
     addedset, removedset = set(added), set(removed)
 
@@ -3000,6 +3014,7 @@ def _filepairs(ctx1, ctx2, modified, added, removed, copy, opts):
                         gone.add(f1)
                     else:
                         copyop = b"copy"
+                    f1 = m1.ungraftedpath(f1) or f1
         elif f2 in removedset:
             f2exists = False
             if opts.git:
