@@ -108,13 +108,17 @@ impl Handler for Streaming {
         match Header::parse(data) {
             Ok(header) => {
                 if let Some(ref mut receiver) = self.receiver {
-                    if receiver.header(header).is_err() {
-                        return false;
+                    if let Err(err) = receiver.header(header) {
+                        // Don't propagate error as `false` since that will error out the entire request.
+                        // One case the receiver goes away is during HTTP 1.1 -> 2 upgrade
+                        // (probably related to the initial request getting dropped
+                        // earlier than we expect, but not totally sure).
+                        tracing::warn!(?err, "error sending header to receiver");
                     }
                 }
             }
             Err(e) => {
-                tracing::error!("{:?}", e);
+                tracing::error!(err=?e, "error parsing header");
             }
         }
         true
