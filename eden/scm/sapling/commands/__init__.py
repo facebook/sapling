@@ -2224,6 +2224,9 @@ def diff(ui, repo, *pats, **opts):
 
     if onlyfilesinrevs:
         files1 = set(ctx1.files())
+        m1 = ctx1.manifest()
+        if m1.hasgrafts():
+            files1 = set(f for f in files1 for f in m1.graftedpaths(f))
         files2 = set(ctx2.files())
         pats = pats + tuple(repo.wvfs.join(f) for f in files1 | files2)
 

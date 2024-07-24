@@ -127,5 +127,10 @@ Works with --only-files-in-revs:
   @@ -1,1 +1,1 @@
   -cat
   +giraffe
-FIXME: should show diff
   $ hg diff -r $B -r $B --from-path bar --to-path foo --only-files-in-revs
+  diff --git a/bar/animal b/foo/animal
+  --- a/bar/animal
+  +++ b/foo/animal
+  @@ -1,1 +1,1 @@
+  -giraffe
+  +cat
