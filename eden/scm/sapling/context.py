@@ -173,7 +173,10 @@ class basectx:
             cleanset = set()
         deleted, unknown, ignored = s.deleted, s.unknown, s.ignored
         deletedset = set(deleted)
-        d = mf1.diff(mf2, matcher=match)
+        dmf1, dmf2 = mf1, mf2
+        if mf1.hasgrafts():
+            dmf1, dmf2 = bindings.manifest.treemanifest.applydiffgrafts(mf1, mf2)
+        d = dmf1.diff(dmf2, matcher=match)
         for fn, value in pycompat.iteritems(d):
             if listclean:
                 cleanset.discard(fn)

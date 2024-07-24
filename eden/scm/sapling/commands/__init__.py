@@ -2142,7 +2142,8 @@ def debugcomplete(ui, cmd="", **opts):
     ]
     + diffopts
     + diffopts2
-    + walkopts,
+    + walkopts
+    + diffgraftopts,
     _("[OPTION]... ([-c REV] | [-r REV1 [-r REV2]]) [FILE]..."),
     inferrepo=True,
     cmdtype=readonly,
@@ -2214,6 +2215,8 @@ def diff(ui, repo, *pats, **opts):
         ctx1 = ctx2.p1()
     else:
         ctx1, ctx2 = (repo[node] for node in scmutil.revpair(repo, revs))
+
+    cmdutil.registerdiffgrafts(opts, ctx1)
 
     if reverse:
         ctx1, ctx2 = ctx2, ctx1
