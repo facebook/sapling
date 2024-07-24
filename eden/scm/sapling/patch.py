@@ -2988,23 +2988,25 @@ def _filepairs(ctx1, ctx2, modified, added, removed, copy, opts):
     for f2 in sorted(modified + added + removed):
         copyop = None
         f1 = m1.ungraftedpath(f2) or f2
+        f1exists, f2exists = True, True
         if f2 in addedset:
-            f1 = None
+            f1exists = False
             if f2 in copy:
                 if opts.git:
                     f1 = copy[f2]
+                    f1exists = True
                     if f1 in removedset and f1 not in gone:
                         copyop = b"rename"
                         gone.add(f1)
                     else:
                         copyop = b"copy"
         elif f2 in removedset:
+            f2exists = False
             if opts.git:
                 # have we already reported a copy above?
                 if f2 in copyto and copyto[f2] in addedset and copy[copyto[f2]] == f2:
                     continue
-            f2 = None
-        yield f1, f2, copyop
+        yield f1, f1exists, f2, f2exists, copyop
 
 
 def trydiff(
@@ -3068,18 +3070,20 @@ def trydiff(
                     "file %s doesn't start with relroot %s" % (f, relroot)
                 )
 
-    for f1, f2, copyop in _filepairs(ctx1, ctx2, modified, added, removed, copy, opts):
+    for f1, f1exists, f2, f2exists, copyop in _filepairs(
+        ctx1, ctx2, modified, added, removed, copy, opts
+    ):
         content1 = None
         content2 = None
         fctx1 = None
         fctx2 = None
         flag1 = None
         flag2 = None
-        if f1:
+        if f1exists:
             fctx1 = getfilectx(f1, ctx1)
             if opts.git or losedatafn:
                 flag1 = ctx1.flags(f1)
-        if f2:
+        if f2exists:
             fctx2 = getfilectx(f2, ctx2)
             if opts.git or losedatafn:
                 flag2 = ctx2.flags(f2)
@@ -3096,21 +3100,21 @@ def trydiff(
                 binary
                 or
                 # copy/rename
-                f2 in copy
+                (f2exists and f2 in copy)
                 or
                 # empty file creation
-                (not f1 and isempty(fctx2))
+                (not f1exists and isempty(fctx2))
                 or
                 # empty file deletion
-                (isempty(fctx1) and not f2)
+                (isempty(fctx1) and not f2exists)
                 or
                 # create with flags
-                (not f1 and flag2)
+                (not f1exists and flag2)
                 or
                 # change flags
-                (f1 and f2 and flag1 != flag2)
+                (f1exists and f2exists and flag1 != flag2)
             ):
-                losedatafn(f2 or f1)
+                losedatafn((f2exists and f2) or f1)
 
         path1 = f1 or f2
         path2 = f2 or f1
@@ -3122,9 +3126,9 @@ def trydiff(
                 b"diff --git %s%s %s%s"
                 % (aprefix, encodeutf8(path1), bprefix, encodeutf8(path2))
             )
-            if not f1:  # added
+            if not fctx1:  # added
                 header.append(b"new file mode %s" % gitmode[flag2])
-            elif not f2:  # removed
+            elif not fctx2:  # removed
                 header.append(b"deleted file mode %s" % gitmode[flag1])
             else:  # modified/copied/renamed
                 mode1, mode2 = gitmode[flag1], gitmode[flag2]

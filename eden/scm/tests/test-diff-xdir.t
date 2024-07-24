@@ -10,7 +10,6 @@
   >    # A/bar/onlybar = onlybar\n
   > EOS
 
-FIXME: "a/" paths wrong
   $ hg diff -r $A -r $A --from-path foo --to-path bar
   diff --git a/foo/differs b/bar/differs
   --- a/foo/differs
@@ -19,13 +18,13 @@ FIXME: "a/" paths wrong
    one
   -two
   +three
-  diff --git a/bar/onlybar b/bar/onlybar
+  diff --git a/foo/onlybar b/bar/onlybar
   new file mode 100644
   --- /dev/null
   +++ b/bar/onlybar
   @@ -0,0 +1,1 @@
   +onlybar
-  diff --git a/foo/onlyfoo b/foo/onlyfoo
+  diff --git a/foo/onlyfoo b/bar/onlyfoo
   deleted file mode 100644
   --- a/foo/onlyfoo
   +++ /dev/null
