@@ -362,3 +362,24 @@ Multiple mappings can all follow renames:
   @@ -1,1 +1,1 @@
   -A
   +AA
+
+
+Don't get confused by renames too far in the past on src side:
+  $ newclientrepo
+  $ drawdag <<EOS
+  > F  # F/dir/rename3 = AA\n
+  > |
+  > E  # E/dir/rename3 = A\n (renamed from dir/rename2)
+  > |
+  > D  # D/dir2/rename2 = A\n
+  > |
+  > C  # C/dir/rename2 = A\n (renamed from dir/rename1)
+  > |
+  > B  # B/dir/rename1 = A\n (renamed from dir/file)
+  > |
+  > A  # A/dir/file = A\n
+  > EOS
+  $ hg go -q $E
+  $ hg graft -qr $F --from-path dir --to-path dir2
+  abort: dir2/rename3@d47bf539d7b1: not found in manifest!
+  [255]
