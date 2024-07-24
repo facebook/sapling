@@ -2121,11 +2121,12 @@ def _update(
             if list(ms.unresolved()):
                 raise error.Abort(_("outstanding merge conflicts"))
         if branchmerge:
-            if pas == [p2]:
+            xdir = p2.manifest().hasgrafts()
+            if pas == [p2] and not xdir:
                 raise error.Abort(
                     _("merging with a working directory ancestor" " has no effect")
                 )
-            elif pas == [p1]:
+            elif pas == [p1] and not xdir:
                 if not mergeancestor and wc.branch() == p2.branch():
                     raise error.Abort(
                         _("nothing to merge"),
@@ -2467,7 +2468,7 @@ def graft(repo, ctx, pctx, labels, keepparent=False):
         ctx,
         force=True,
         ancestor=pctx,
-        mergeancestor=mergeancestor,
+        mergeancestor=mergeancestor and not ctx.manifest().hasgrafts(),
         labels=labels,
     )
 

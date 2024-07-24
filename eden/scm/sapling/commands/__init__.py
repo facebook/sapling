@@ -2650,7 +2650,12 @@ def _dograft(ui, repo, *revs, **opts):
             try:
                 # ui.forcemerge is an internal variable, do not document
                 repo.ui.setconfig("ui", "forcemerge", opts.get("tool", ""), "graft")
-                stats = mergemod.graft(repo, ctx, ctx.p1(), ["local", "graft"])
+                stats = mergemod.graft(
+                    repo,
+                    ctx,
+                    ctx.p1(),
+                    ["local", "graft"],
+                )
             finally:
                 repo.ui.setconfig("ui", "forcemerge", "", "graft")
             # report any conflicts

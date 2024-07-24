@@ -412,6 +412,11 @@ Trace rename history before directory branch point:
   > A  # A/dir/file = A\n
   > EOS
   $ hg go -q $E
+TODO: we should be able to follow copies here once we have splice metadata
   $ hg graft -qr $E --from-path dir4 --to-path dir3
-  abort: dir3/rename4@cf9b93d51512: not found in manifest!
+  other [graft] changed dir3/rename4 which local [local] is missing
+  hint: if this is due to a renamed file, you can manually input the renamed path
+  use (c)hanged version, leave (d)eleted, or leave (u)nresolved, or input (r)enamed path? u
+  abort: unresolved conflicts, can't continue
+  (use 'hg resolve' and 'hg graft --continue')
   [255]
