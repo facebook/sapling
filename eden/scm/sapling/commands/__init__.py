@@ -2216,10 +2216,11 @@ def diff(ui, repo, *pats, **opts):
     else:
         ctx1, ctx2 = (repo[node] for node in scmutil.revpair(repo, revs))
 
-    cmdutil.registerdiffgrafts(opts, ctx1)
-
     if reverse:
         ctx1, ctx2 = ctx2, ctx1
+        opts["from_path"], opts["to_path"] = opts.get("to_path"), opts.get("from_path")
+
+    cmdutil.registerdiffgrafts(opts, ctx1)
 
     if onlyfilesinrevs:
         files1 = set(ctx1.files())

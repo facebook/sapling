@@ -33,5 +33,24 @@
 
 
   $ hg diff --reverse -r $A -r $A --from-path foo --to-path bar
+  diff --git a/bar/differs b/foo/differs
+  --- a/bar/differs
+  +++ b/foo/differs
+  @@ -1,2 +1,2 @@
+   one
+  -three
+  +two
+  diff --git a/bar/onlybar b/foo/onlybar
+  deleted file mode 100644
+  --- a/bar/onlybar
+  +++ /dev/null
+  @@ -1,1 +0,0 @@
+  -onlybar
+  diff --git a/bar/onlyfoo b/foo/onlyfoo
+  new file mode 100644
+  --- /dev/null
+  +++ b/foo/onlyfoo
+  @@ -0,0 +1,1 @@
+  +onlyfoo
 
 
