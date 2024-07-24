@@ -24,6 +24,7 @@ use blobstore::BlobstoreIsPresent;
 use blobstore::BlobstoreKeyParam;
 use blobstore::BlobstoreKeySource;
 use blobstore::BlobstoreUnlinkOps;
+use bonsai_globalrev_mapping::BonsaiGlobalrevMappingArc;
 use changesets::ArcChangesets;
 use changesets::ChangesetsArc;
 use commit_graph::CommitGraph;
@@ -476,7 +477,12 @@ impl Bubble {
     pub fn repo_view(
         &self,
         container: &(
-             impl RepoBlobstoreRef + RepoIdentityArc + ChangesetsArc + CommitGraphRef + RepoConfigArc
+             impl BonsaiGlobalrevMappingArc
+             + RepoBlobstoreRef
+             + RepoIdentityArc
+             + ChangesetsArc
+             + CommitGraphRef
+             + RepoConfigArc
          ),
     ) -> EphemeralRepoView {
         let repo_blobstore = self.wrap_repo_blobstore(container.repo_blobstore().clone());
@@ -494,6 +500,7 @@ impl Bubble {
                 repo_blobstore,
                 container.commit_graph(),
             )),
+            bonsai_globalrev_mapping: container.bonsai_globalrev_mapping_arc(),
             repo_identity,
             repo_config,
         }

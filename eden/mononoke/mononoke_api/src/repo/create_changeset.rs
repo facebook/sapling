@@ -11,6 +11,7 @@ use std::collections::HashSet;
 
 use anyhow::anyhow;
 use blobstore::Loadable;
+use bonsai_globalrev_mapping::BonsaiGlobalrevMappingRef;
 use borrowed::borrowed;
 use bytes::Bytes;
 use changesets::ChangesetsRef;
@@ -568,7 +569,12 @@ impl RepoContext {
         &self,
         changesets: Vec<BonsaiChangeset>,
         repo: &(
-             impl ChangesetsRef + CommitGraphRef + RepoBlobstoreRef + RepoIdentityRef + RepoConfigRef
+             impl BonsaiGlobalrevMappingRef
+             + ChangesetsRef
+             + CommitGraphRef
+             + RepoBlobstoreRef
+             + RepoIdentityRef
+             + RepoConfigRef
          ),
         bubble: Option<&Bubble>,
     ) -> Result<(), MononokeError> {

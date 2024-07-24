@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use bonsai_globalrev_mapping::BonsaiGlobalrevMapping;
 use changesets::Changesets;
 use commit_graph::CommitGraph;
 use metaconfig_types::RepoConfig;
@@ -21,6 +22,9 @@ pub struct EphemeralRepoView {
 
     #[facet]
     pub(crate) commit_graph: CommitGraph,
+
+    #[facet]
+    pub(crate) bonsai_globalrev_mapping: dyn BonsaiGlobalrevMapping,
 
     #[facet]
     pub(crate) repo_identity: RepoIdentity,

@@ -14,6 +14,7 @@ anyhow = "1.0.75"
 async-stream = "0.3"
 async-trait = "0.1.71"
 blobstore = { version = "0.1.0", path = ".." }
+bonsai_globalrev_mapping = { version = "0.1.0", path = "../../bonsai_globalrev_mapping" }
 changesets = { version = "0.1.0", path = "../../changesets" }
 chrono = { version = "0.4", features = ["clock", "serde", "std"], default-features = false }
 commit_graph = { version = "0.1.0", path = "../../repo_attributes/commit_graph/commit_graph" }
