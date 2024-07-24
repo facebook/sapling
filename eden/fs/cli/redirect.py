@@ -25,7 +25,7 @@ from thrift.Thrift import TApplicationException
 
 from . import cmd_util, mtab, subcmd as subcmd_mod, tabulate
 
-from .buck import is_buckd_running_for_path, stop_buckd_for_path, stop_buckd_for_repo
+from .buck import stop_buckd_for_repo
 from .config import CheckoutConfig, EdenCheckout, EdenInstance, load_toml_config
 from .prompt import prompt_confirmation
 from .subcmd import Subcmd
@@ -428,13 +428,6 @@ class Redirection:
         disposition = RepoPathDisposition.analyze(repo_path)
         if disposition == RepoPathDisposition.DOES_NOT_EXIST:
             return disposition
-
-        # If this redirect was setup by buck, we should stop buck
-        # prior to unmounting it, as it doesn't currently have a
-        # great way to detect that the directories have gone away.
-        maybe_buck_project = str(repo_path.parent)
-        if is_buckd_running_for_path(maybe_buck_project):
-            stop_buckd_for_path(maybe_buck_project)
 
         # We have encountered issues with buck daemons holding references to files underneath the
         # redirection we're trying to remove. We should kill all buck instances for the repo to

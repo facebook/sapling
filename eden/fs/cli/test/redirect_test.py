@@ -23,7 +23,7 @@ class RedirectTest(unittest.TestCase, TemporaryDirectoryMixin):
     @patch("eden.fs.cli.redirect.Redirection._bind_unmount")
     @patch("eden.fs.cli.redirect.RepoPathDisposition.analyze")
     @patch("eden.fs.cli.redirect.Redirection.expand_repo_path")
-    @patch("eden.fs.cli.buck.is_buckd_running_for_path")
+    @patch("eden.fs.cli.buck.is_buckd_running_for_repo")
     def test_twice_failed_bind_unmount(
         self,
         mock_buckd_running: MagicMock,
