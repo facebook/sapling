@@ -65,6 +65,8 @@ pub enum HttpScubaKey {
     ClientCorrelator,
     /// The client identities received for the client, if any.
     ClientIdentities,
+    /// Alias of the sandcastle job, if any.
+    SandcastleAlias,
     /// A unique ID identifying this request.
     RequestId,
     /// How long it took to send headers.
@@ -100,6 +102,7 @@ impl AsRef<str> for HttpScubaKey {
             ClientIp => "client_ip",
             ClientCorrelator => "client_correlator",
             ClientIdentities => "client_identities",
+            SandcastleAlias => "sandcastle_alias",
             RequestId => "request_id",
             HeadersDurationMs => "headers_duration_ms",
             DurationMs => "duration_ms",
@@ -242,6 +245,9 @@ fn populate_scuba(scuba: &mut MononokeScubaSampleBuilder, state: &mut State) {
         scuba.sample_for_identities(identities);
         let identities: Vec<_> = identities.iter().map(|i| i.to_string()).collect();
         scuba.add(HttpScubaKey::ClientIdentities, identities);
+
+        let sandcastle_alias = metadata.sandcastle_alias();
+        scuba.add(HttpScubaKey::SandcastleAlias, sandcastle_alias);
     }
 
     if let Some(config_version) = ConfigInfo::try_borrow_from(state) {
