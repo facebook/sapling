@@ -191,12 +191,12 @@ pub struct BookmarkInfoTransaction {
     transaction: Box<dyn BookmarkTransaction>,
     log_new_public_commits_to_scribe: bool,
     commits: Vec<BonsaiChangeset>,
-    txn_hook: Option<BookmarkTransactionHook>,
+    txn_hooks: Vec<BookmarkTransactionHook>,
 }
 
 impl BookmarkInfoTransaction {
     pub fn delete(bookmark_info: BookmarkInfo, transaction: Box<dyn BookmarkTransaction>) -> Self {
-        Self::new(bookmark_info, transaction, false, vec![], None)
+        Self::new(bookmark_info, transaction, false, vec![], vec![])
     }
 
     pub fn new(
@@ -204,14 +204,14 @@ impl BookmarkInfoTransaction {
         transaction: Box<dyn BookmarkTransaction>,
         log_new_public_commits_to_scribe: bool,
         commits: Vec<BonsaiChangeset>,
-        txn_hook: Option<BookmarkTransactionHook>,
+        txn_hooks: Vec<BookmarkTransactionHook>,
     ) -> Self {
         Self {
             bookmark_info,
             transaction,
             log_new_public_commits_to_scribe,
             commits,
-            txn_hook,
+            txn_hooks,
         }
     }
 
@@ -225,10 +225,7 @@ impl BookmarkInfoTransaction {
             self.bookmark_info.bookmark_name.clone(),
             self.bookmark_info.bookmark_kind,
         );
-        let maybe_log_id = match self.txn_hook {
-            Some(txn_hook) => self.transaction.commit_with_hooks(vec![txn_hook]).await?,
-            None => self.transaction.commit().await?,
-        };
+        let maybe_log_id = self.transaction.commit_with_hooks(self.txn_hooks).await?;
         if let Some(log_id) = maybe_log_id {
             if self.log_new_public_commits_to_scribe {
                 log_new_bonsai_changesets(ctx, repo, &bookmark_name, kind, self.commits).await;

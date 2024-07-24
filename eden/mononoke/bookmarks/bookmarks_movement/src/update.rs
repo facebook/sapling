@@ -9,6 +9,7 @@ use std::collections::HashMap;
 
 use anyhow::Result;
 use bookmarks::BookmarkTransaction;
+use bookmarks::BookmarkTransactionHook;
 use bookmarks::BookmarkUpdateLogId;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks_types::BookmarkKey;
@@ -171,6 +172,7 @@ impl<'op> UpdateBookmarkOp<'op> {
         repo: &'op impl Repo,
         hook_manager: &'op HookManager,
         txn: Option<Box<dyn BookmarkTransaction>>,
+        mut txn_hooks: Vec<BookmarkTransactionHook>,
     ) -> Result<BookmarkInfoTransaction, BookmarkMovementError> {
         let kind = self.kind_restrictions.check_kind(repo, self.bookmark)?;
 
@@ -227,12 +229,9 @@ impl<'op> UpdateBookmarkOp<'op> {
         .await?;
 
         let mut txn = txn.unwrap_or_else(|| repo.bookmarks().create_transaction(ctx.clone()));
-        let txn_hook;
 
         let commits_to_log = match kind {
             BookmarkKind::Scratch => {
-                txn_hook = None;
-
                 ctx.scuba()
                     .clone()
                     .add("bookmark", self.bookmark.to_string())
@@ -276,7 +275,9 @@ impl<'op> UpdateBookmarkOp<'op> {
                 };
 
                 let (txn_hook_res, to_log) = futures::join!(txn_hook_fut, to_log);
-                txn_hook = txn_hook_res?;
+                if let Some(txn_hook) = txn_hook_res? {
+                    txn_hooks.push(txn_hook);
+                }
 
                 ctx.scuba()
                     .clone()
@@ -303,7 +304,7 @@ impl<'op> UpdateBookmarkOp<'op> {
             txn,
             self.log_new_public_commits_to_scribe,
             commits_to_log,
-            txn_hook,
+            txn_hooks,
         ))
     }
 
@@ -315,7 +316,7 @@ impl<'op> UpdateBookmarkOp<'op> {
         hook_manager: &'op HookManager,
     ) -> Result<BookmarkUpdateLogId, BookmarkMovementError> {
         let info_txn = self
-            .run_with_transaction(ctx, authz, repo, hook_manager, None)
+            .run_with_transaction(ctx, authz, repo, hook_manager, None, vec![])
             .await?;
         info_txn.commit_and_log(ctx, repo).await
     }
