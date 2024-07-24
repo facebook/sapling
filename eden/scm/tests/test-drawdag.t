@@ -490,3 +490,4 @@ Support file names with dashes:
   > EOS
   $ hg st --change $A
   A A
+  A hi-there

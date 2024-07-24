@@ -436,7 +436,7 @@ def _drawdagintransaction(repo, text: str, tr, **opts) -> None:
     files = collections.defaultdict(dict)  # {(name, path): content}
     comments = list(_getcomments(text))
     commenttext = "\n".join(comments)
-    filere = re.compile(r"^(\w+)/([.\w/]+)\s*=\s*(.*)$", re.M)
+    filere = re.compile(r"^(\w+)/([.\w/-]+)\s*=\s*(.*)$", re.M)
     for name, path, content in filere.findall(commenttext):
         content = content.replace(r"\n", "\n").replace(r"\1", "\1")
         files[name][path] = content
