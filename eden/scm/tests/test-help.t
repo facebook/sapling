@@ -583,6 +583,10 @@ Test command without options
       generate diffs in the git extended diff format. For more information, see
       'hg help diffs'.
   
+      "--from-path" and "--to-path" allow diffing between directories. Files
+      outside "--from-path" in the left side are ignored. See 'hg help
+      directorybranching' for more information.
+  
       Note:
          'hg diff' might generate unexpected results during merges because it
          defaults to comparing against your working copy's first parent commit

@@ -198,6 +198,11 @@ helptable = sorted(
         (["color"], _("Colorizing Outputs"), loaddoc("color")),
         (["config", "hgrc"], _("Configuration Files"), loaddoc("config")),
         (["dates"], _("Date Formats"), loaddoc("dates")),
+        (
+            ["directorybranching"],
+            _("Directory Branching"),
+            loaddoc("directorybranching"),
+        ),
         (["flags"], _("Command-line flags"), loaddoc("flags")),
         (["patterns"], _("Specifying Files by File Name Pattern"), loaddoc("patterns")),
         (["environment", "env"], _("Environment Variables"), loaddoc("environment")),

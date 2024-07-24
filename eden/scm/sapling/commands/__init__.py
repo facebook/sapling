@@ -2166,6 +2166,10 @@ def diff(ui, repo, *pats, **opts):
     to generate diffs in the git extended diff format. For more information,
     see :prog:`help diffs`.
 
+    ``--from-path`` and ``--to-path`` allow diffing between directories.
+    Files outside ``--from-path`` in the left side are ignored. See
+    :prog:`help directorybranching` for more information.
+
     .. note::
 
        :prog:`diff` might generate unexpected results during merges because it
@@ -2505,6 +2509,11 @@ def graft(ui, repo, *revs, **opts):
     so that the current merge can be manually resolved. Once all
     conflicts are resolved, the graft process can be continued with
     the ``-c/--continue`` option.
+
+    ``--from-path`` and ``--to-path`` allow copying commits between
+    directories. Files in the grafted commit(s) outside of
+    ``--from-path`` are ignored. See :prog:`help directorybranching` for
+    more information.
 
     .. note::
 
