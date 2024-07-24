@@ -30,7 +30,7 @@ use crate::ALLOW_NON_FFWD_PUSHVAR;
 
 #[must_use = "DeleteBookmarkOp must be run to have an effect"]
 pub struct DeleteBookmarkOp<'op> {
-    bookmark: &'op BookmarkKey,
+    bookmark: BookmarkKey,
     old_target: ChangesetId,
     reason: BookmarkUpdateReason,
     kind_restrictions: BookmarkKindRestrictions,
@@ -40,7 +40,7 @@ pub struct DeleteBookmarkOp<'op> {
 
 impl<'op> DeleteBookmarkOp<'op> {
     pub fn new(
-        bookmark: &'op BookmarkKey,
+        bookmark: BookmarkKey,
         old_target: ChangesetId,
         reason: BookmarkUpdateReason,
     ) -> DeleteBookmarkOp<'op> {
@@ -81,7 +81,7 @@ impl<'op> DeleteBookmarkOp<'op> {
         repo: &'op impl Repo,
         txn: Option<Box<dyn BookmarkTransaction>>,
     ) -> Result<BookmarkInfoTransaction, BookmarkMovementError> {
-        let kind = self.kind_restrictions.check_kind(repo, self.bookmark)?;
+        let kind = self.kind_restrictions.check_kind(repo, &self.bookmark)?;
 
         if self.only_log_acl_checks {
             if authz
@@ -99,13 +99,13 @@ impl<'op> DeleteBookmarkOp<'op> {
                 .await?;
         }
         authz
-            .require_bookmark_modify(ctx, repo, self.bookmark)
+            .require_bookmark_modify(ctx, repo, &self.bookmark)
             .await?;
 
-        check_bookmark_sync_config(ctx, repo, self.bookmark, kind).await?;
+        check_bookmark_sync_config(ctx, repo, &self.bookmark, kind).await?;
         let fast_forward_only = repo
             .repo_bookmark_attrs()
-            .is_fast_forward_only(self.bookmark);
+            .is_fast_forward_only(&self.bookmark);
         let bypass = self.pushvars.map_or(false, |pushvar| {
             pushvar.contains_key(ALLOW_NON_FFWD_PUSHVAR)
         });
@@ -132,10 +132,10 @@ impl<'op> DeleteBookmarkOp<'op> {
         let mut txn = txn.unwrap_or_else(|| repo.bookmarks().create_transaction(ctx.clone()));
         match kind {
             BookmarkKind::Scratch => {
-                txn.delete_scratch(self.bookmark, self.old_target)?;
+                txn.delete_scratch(&self.bookmark, self.old_target)?;
             }
             BookmarkKind::Publishing | BookmarkKind::PullDefaultPublishing => {
-                txn.delete(self.bookmark, self.old_target, self.reason)?;
+                txn.delete(&self.bookmark, self.old_target, self.reason)?;
             }
         }
         let info = BookmarkInfo {

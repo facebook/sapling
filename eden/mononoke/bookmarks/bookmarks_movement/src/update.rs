@@ -91,7 +91,7 @@ impl BookmarkUpdatePolicy {
 
 #[must_use = "UpdateBookmarkOp must be run to have an effect"]
 pub struct UpdateBookmarkOp<'op> {
-    bookmark: &'op BookmarkKey,
+    bookmark: BookmarkKey,
     targets: BookmarkUpdateTargets,
     update_policy: BookmarkUpdatePolicy,
     reason: BookmarkUpdateReason,
@@ -105,7 +105,7 @@ pub struct UpdateBookmarkOp<'op> {
 
 impl<'op> UpdateBookmarkOp<'op> {
     pub fn new(
-        bookmark: &'op BookmarkKey,
+        bookmark: BookmarkKey,
         targets: BookmarkUpdateTargets,
         update_policy: BookmarkUpdatePolicy,
         reason: BookmarkUpdateReason,
@@ -174,7 +174,7 @@ impl<'op> UpdateBookmarkOp<'op> {
         txn: Option<Box<dyn BookmarkTransaction>>,
         mut txn_hooks: Vec<BookmarkTransactionHook>,
     ) -> Result<BookmarkInfoTransaction, BookmarkMovementError> {
-        let kind = self.kind_restrictions.check_kind(repo, self.bookmark)?;
+        let kind = self.kind_restrictions.check_kind(repo, &self.bookmark)?;
 
         if self.only_log_acl_checks {
             if authz
@@ -192,13 +192,13 @@ impl<'op> UpdateBookmarkOp<'op> {
                 .await?;
         }
         authz
-            .require_bookmark_modify(ctx, repo, self.bookmark)
+            .require_bookmark_modify(ctx, repo, &self.bookmark)
             .await?;
 
-        check_bookmark_sync_config(ctx, repo, self.bookmark, kind).await?;
+        check_bookmark_sync_config(ctx, repo, &self.bookmark, kind).await?;
 
         self.update_policy
-            .check_update_permitted(ctx, repo, self.bookmark, &self.targets, &self.pushvars)
+            .check_update_permitted(ctx, repo, &self.bookmark, &self.targets, &self.pushvars)
             .await?;
 
         self.affected_changesets
@@ -207,7 +207,7 @@ impl<'op> UpdateBookmarkOp<'op> {
                 authz,
                 repo,
                 hook_manager,
-                self.bookmark,
+                &self.bookmark,
                 self.pushvars,
                 self.reason,
                 kind,
@@ -236,7 +236,7 @@ impl<'op> UpdateBookmarkOp<'op> {
                     .clone()
                     .add("bookmark", self.bookmark.to_string())
                     .log_with_msg("Updating scratch bookmark", None);
-                txn.update_scratch(self.bookmark, self.targets.new, self.targets.old)?;
+                txn.update_scratch(&self.bookmark, self.targets.new, self.targets.old)?;
 
                 vec![]
             }
@@ -244,7 +244,7 @@ impl<'op> UpdateBookmarkOp<'op> {
                 crate::restrictions::check_restriction_ensure_ancestor_of(
                     ctx,
                     repo,
-                    self.bookmark,
+                    &self.bookmark,
                     self.targets.new,
                 )
                 .await?;
@@ -285,7 +285,7 @@ impl<'op> UpdateBookmarkOp<'op> {
                     .log_with_msg("Updating public bookmark", None);
 
                 txn.update(
-                    self.bookmark,
+                    &self.bookmark,
                     self.targets.new,
                     self.targets.old,
                     self.reason,

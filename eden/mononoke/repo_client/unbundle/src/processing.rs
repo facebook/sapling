@@ -500,7 +500,7 @@ async fn plain_push_bookmark(
     match (bookmark_push.old, bookmark_push.new) {
         (None, Some(new_target)) => {
             let res = bookmarks_movement::CreateBookmarkOp::new(
-                &bookmark_push.name,
+                bookmark_push.name.clone(),
                 new_target,
                 reason,
                 None,
@@ -531,7 +531,7 @@ async fn plain_push_bookmark(
 
         (Some(old_target), Some(new_target)) => {
             let res = bookmarks_movement::UpdateBookmarkOp::new(
-                &bookmark_push.name,
+                bookmark_push.name.clone(),
                 BookmarkUpdateTargets {
                     old: old_target,
                     new: new_target,
@@ -576,13 +576,17 @@ async fn plain_push_bookmark(
         }
 
         (Some(old_target), None) => {
-            bookmarks_movement::DeleteBookmarkOp::new(&bookmark_push.name, old_target, reason)
-                .only_if_public()
-                .with_pushvars(maybe_pushvars)
-                .only_log_acl_checks(only_log_acl_checks)
-                .run(ctx, &authz, repo)
-                .await
-                .context("Failed to delete bookmark")?;
+            bookmarks_movement::DeleteBookmarkOp::new(
+                bookmark_push.name.clone(),
+                old_target,
+                reason,
+            )
+            .only_if_public()
+            .with_pushvars(maybe_pushvars)
+            .only_log_acl_checks(only_log_acl_checks)
+            .run(ctx, &authz, repo)
+            .await
+            .context("Failed to delete bookmark")?;
         }
 
         (None, None) => {}
@@ -607,7 +611,7 @@ async fn infinitepush_scratch_bookmark(
             .unwrap_or_default();
     if bookmark_push.old.is_none() && bookmark_push.create {
         bookmarks_movement::CreateBookmarkOp::new(
-            &bookmark_push.name,
+            bookmark_push.name.clone(),
             bookmark_push.new,
             BookmarkUpdateReason::Push,
             None,
@@ -626,7 +630,7 @@ async fn infinitepush_scratch_bookmark(
             )
         })?;
         bookmarks_movement::UpdateBookmarkOp::new(
-            &bookmark_push.name,
+            bookmark_push.name.clone(),
             BookmarkUpdateTargets {
                 old: old_target,
                 new: bookmark_push.new,

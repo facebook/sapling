@@ -36,7 +36,7 @@ use crate::Repo;
 
 #[must_use = "CreateBookmarkOp must be run to have an effect"]
 pub struct CreateBookmarkOp<'op> {
-    bookmark: &'op BookmarkKey,
+    bookmark: BookmarkKey,
     target: ChangesetId,
     reason: BookmarkUpdateReason,
     kind_restrictions: BookmarkKindRestrictions,
@@ -49,7 +49,7 @@ pub struct CreateBookmarkOp<'op> {
 
 impl<'op> CreateBookmarkOp<'op> {
     pub fn new(
-        bookmark: &'op BookmarkKey,
+        bookmark: BookmarkKey,
         target: ChangesetId,
         reason: BookmarkUpdateReason,
         affected_changesets_limit: Option<usize>,
@@ -116,7 +116,7 @@ impl<'op> CreateBookmarkOp<'op> {
         txn: Option<Box<dyn BookmarkTransaction>>,
         mut txn_hooks: Vec<BookmarkTransactionHook>,
     ) -> Result<BookmarkInfoTransaction, BookmarkMovementError> {
-        let kind = self.kind_restrictions.check_kind(repo, self.bookmark)?;
+        let kind = self.kind_restrictions.check_kind(repo, &self.bookmark)?;
 
         if self.only_log_acl_checks {
             if authz
@@ -134,10 +134,10 @@ impl<'op> CreateBookmarkOp<'op> {
                 .await?;
         }
         authz
-            .require_bookmark_modify(ctx, repo, self.bookmark)
+            .require_bookmark_modify(ctx, repo, &self.bookmark)
             .await?;
 
-        check_bookmark_sync_config(ctx, repo, self.bookmark, kind).await?;
+        check_bookmark_sync_config(ctx, repo, &self.bookmark, kind).await?;
 
         self.affected_changesets
             .check_restrictions(
@@ -145,7 +145,7 @@ impl<'op> CreateBookmarkOp<'op> {
                 authz,
                 repo,
                 hook_manager,
-                self.bookmark,
+                &self.bookmark,
                 self.pushvars,
                 self.reason,
                 kind,
@@ -172,14 +172,14 @@ impl<'op> CreateBookmarkOp<'op> {
                     .add("bookmark", self.bookmark.to_string())
                     .log_with_msg("Creating scratch bookmark", None);
 
-                txn.create_scratch(self.bookmark, self.target)?;
+                txn.create_scratch(&self.bookmark, self.target)?;
                 vec![]
             }
             BookmarkKind::Publishing | BookmarkKind::PullDefaultPublishing => {
                 crate::restrictions::check_restriction_ensure_ancestor_of(
                     ctx,
                     repo,
-                    self.bookmark,
+                    &self.bookmark,
                     self.target,
                 )
                 .await?;
@@ -219,7 +219,7 @@ impl<'op> CreateBookmarkOp<'op> {
                     .add("bookmark", self.bookmark.to_string())
                     .log_with_msg("Creating public bookmark", None);
 
-                txn.create(self.bookmark, self.target, self.reason)?;
+                txn.create(&self.bookmark, self.target, self.reason)?;
                 to_log
             }
         };
