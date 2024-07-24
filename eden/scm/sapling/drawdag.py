@@ -579,7 +579,7 @@ def _drawdagintransaction(repo, text: str, tr, **opts) -> None:
                 if defaultfiles:
                     added[name] = name
             # add extra file contents in comments
-            for path, content in files.get(name, {}).items():
+            for path, content in files.pop(name, {}).items():
                 added[path] = content
             commitmutations = None
             if name in mutations:
@@ -595,6 +595,12 @@ def _drawdagintransaction(repo, text: str, tr, **opts) -> None:
         committed[name] = n
         if name not in mutationpreds and opts.get("bookmarks") and not script:
             bookmarks.addbookmarks(repo, tr, [name], hex(n), True, True)
+
+    if files:
+        raise error.Abort(
+            _("unused files: %s")
+            % ["/".join([name, path]) for name, fns in files.items() for path in fns]
+        )
 
     # parse comments like "bookmark book_A=A" to specify bookmarks
     dates = {}

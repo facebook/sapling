@@ -475,9 +475,9 @@ for documentation:
 
 
 Give errors for invalid commit names for files:
-
   $ newrepo
   $ drawdag <<EOS
   > A  # B/oops = oops
   > EOS
-
+  abort: unused files: ['B/oops']
+  [255]
