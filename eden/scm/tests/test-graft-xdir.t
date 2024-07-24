@@ -21,6 +21,11 @@ Test validation of --from-path and --to-path
   grafting 426bada5c675 "A"
   abort: overlapping --to-path entries
   [255]
+FIXME: these aren't overlapping
+  $ hg graft -r $A --from-path foo --from-path bar --to-path baz/a --to-path baz/b
+  grafting 426bada5c675 "A"
+  abort: overlapping --to-path entries
+  [255]
 
 
 Basic case merging a file change between directory branches "foo" and "bar".
