@@ -472,3 +472,12 @@ for documentation:
   diff --git a/0 b/3
   copy from 0
   copy to 3
+
+
+Give errors for invalid commit names for files:
+
+  $ newrepo
+  $ drawdag <<EOS
+  > A  # B/oops = oops
+  > EOS
+
