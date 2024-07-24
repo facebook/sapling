@@ -396,3 +396,22 @@ Don't get confused by renames too far in the past on src side:
   @@ -1,1 +1,1 @@
   -A
   +AA
+
+
+Trace rename history before directory branch point:
+  $ newclientrepo
+  $ drawdag <<EOS
+  > E  # E/dir4/rename4 = AA\n
+  > |
+  > D  # D/dir4/rename4 = A\n (copied from dir/file)
+  > |
+  > C  # C/dir3/rename3 = A\n (copied from dir2/rename2)
+  > |
+  > B  # B/dir2/rename2 = A\n (copied from dir/file)
+  > |
+  > A  # A/dir/file = A\n
+  > EOS
+  $ hg go -q $E
+  $ hg graft -qr $E --from-path dir4 --to-path dir3
+  abort: dir3/rename4@cf9b93d51512: not found in manifest!
+  [255]
