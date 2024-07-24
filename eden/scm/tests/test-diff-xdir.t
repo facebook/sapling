@@ -10,6 +10,7 @@
   >    # A/bar/onlybar = onlybar\n
   > EOS
 
+Basic diff with add, modify, and remove:
   $ hg diff -r $A -r $A --from-path foo --to-path bar
   diff --git a/foo/differs b/bar/differs
   --- a/foo/differs
@@ -32,7 +33,8 @@
   -onlyfoo
 
 
-  $ hg diff --reverse -r $A -r $A --from-path foo --to-path bar
+Same diff, but in --reverse:
+  $ hg diff --reverse -r $A -r $A --from-path foo --to-path bar --traceback --config devel.collapse-traceback=false
   diff --git a/bar/differs b/foo/differs
   --- a/bar/differs
   +++ b/foo/differs
@@ -54,3 +56,25 @@
   +onlyfoo
 
 
+Check copy tracing:
+  $ newclientrepo
+  $ drawdag <<EOS
+  > B  # B/foo/rename = dog\n (renamed from foo/file)
+  > |
+  > A  # A/foo/file = cat\n
+  >    # A/bar/file = cat\n
+  > EOS
+FIXME: show rename properly
+  $ hg diff -r $B --from-path foo --to-path bar -r $A
+  diff --git a/foo/file b/bar/file
+  new file mode 100644
+  --- /dev/null
+  +++ b/bar/file
+  @@ -0,0 +1,1 @@
+  +cat
+  diff --git a/foo/rename b/bar/rename
+  deleted file mode 100644
+  --- a/foo/rename
+  +++ /dev/null
+  @@ -1,1 +0,0 @@
+  -dog
