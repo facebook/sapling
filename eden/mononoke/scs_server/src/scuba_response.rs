@@ -247,6 +247,6 @@ impl AddScubaResponse for thrift::RepoUploadPackfileBaseItemResponse {}
 
 impl AddScubaResponse for thrift::RepoStackGitBundleStoreResponse {
     fn add_scuba_response(&self, scuba: &mut MononokeScubaSampleBuilder) {
-        scuba.add("bundle_handle", self.everstore_handle.as_ref());
+        scuba.add("response_bundle_handle", self.everstore_handle.as_ref());
     }
 }
