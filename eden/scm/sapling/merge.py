@@ -2464,9 +2464,9 @@ def graft(repo, ctx, pctx, labels, keepparent=False):
 
     stats = merge(
         repo,
-        ctx.node(),
+        ctx,
         force=True,
-        ancestor=pctx.node(),
+        ancestor=pctx,
         mergeancestor=mergeancestor,
         labels=labels,
     )

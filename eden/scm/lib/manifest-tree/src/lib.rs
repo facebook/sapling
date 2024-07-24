@@ -639,10 +639,12 @@ impl TreeManifest {
 
         if self.diff_grafts.is_empty() {
             for (_, to) in other.diff_grafts.iter() {
+                tracing::info!(%to, "applying self diff graft");
                 grafted.graft(to, self.get_link(to)?)?;
             }
         } else {
             for (from, to) in self.diff_grafts.iter() {
+                tracing::info!(%from, %to, "applying diff graft");
                 grafted.graft(to, self.get_link(from)?)?;
             }
         }

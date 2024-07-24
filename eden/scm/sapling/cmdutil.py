@@ -4847,7 +4847,7 @@ diffgraftopts = [
 ]
 
 
-def registerdiffgrafts(opts, ctx):
+def registerdiffgrafts(opts, *ctxs):
     """Register --from-path/--to-path manifest "grafts" in ctx's manifest.
 
     These grafts are applied temporarily before diff operations, allowing users
@@ -4866,6 +4866,7 @@ def registerdiffgrafts(opts, ctx):
     if len(to_paths) > 1 and (os.path.commonpath(to_paths) or "" in to_paths):
         raise error.Abort(_("overlapping --to-path entries"))
 
-    manifest = ctx.manifest()
-    for f, t in zip(from_paths, to_paths):
-        manifest.registerdiffgraft(f, t)
+    for ctx in ctxs:
+        manifest = ctx.manifest()
+        for f, t in zip(from_paths, to_paths):
+            manifest.registerdiffgraft(f, t)

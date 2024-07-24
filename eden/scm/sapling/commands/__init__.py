@@ -2599,7 +2599,7 @@ def _dograft(ui, repo, *revs, **opts):
     # way to the graftstate. With --force, any revisions we would have otherwise
     # skipped would not have been filtered out, and if they hadn't been applied
     # already, they'd have been in the graftstate.
-    if not (cont or opts.get("force")):
+    if not (cont or opts.get("force") or opts.get("from_path")):
         # check for ancestors of dest branch
         crev = repo["."].rev()
         ancestors = repo.changelog.ancestors([crev], inclusive=True)
@@ -2644,8 +2644,7 @@ def _dograft(ui, repo, *revs, **opts):
         if not cont:
             # Apply --from-path/--to-path mappings to manifest being grafted, and its
             # parent manifest.
-            cmdutil.registerdiffgrafts(opts, ctx)
-            cmdutil.registerdiffgrafts(opts, ctx.p1())
+            cmdutil.registerdiffgrafts(opts, ctx, ctx.p1())
 
             # perform the graft merge with p1(rev) as 'ancestor'
             try:

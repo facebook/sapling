@@ -341,5 +341,24 @@ Multiple mappings can all follow renames:
   > EOS
   $ hg go -q $G
   $ hg graft -qr $G --from-path dir --to-path dir2 --from-path dir --to-path dir3
-  skipping ancestor revision 301f396cc76c
-  [255]
+  $ hg show
+  commit:      b741cc1c2a84
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  files:       dir2/rename2 dir3/rename3
+  description:
+  G
+  
+  
+  diff --git a/dir2/rename2 b/dir2/rename2
+  --- a/dir2/rename2
+  +++ b/dir2/rename2
+  @@ -1,1 +1,1 @@
+  -A
+  +AA
+  diff --git a/dir3/rename3 b/dir3/rename3
+  --- a/dir3/rename3
+  +++ b/dir3/rename3
+  @@ -1,1 +1,1 @@
+  -A
+  +AA
