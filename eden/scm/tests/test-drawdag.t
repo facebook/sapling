@@ -481,3 +481,12 @@ Give errors for invalid commit names for files:
   > EOS
   abort: unused files: ['B/oops']
   [255]
+
+
+Support file names with dashes:
+  $ newrepo
+  $ drawdag <<EOS
+  > A  # A/hi-there = foo
+  > EOS
+  $ hg st --change $A
+  A A
