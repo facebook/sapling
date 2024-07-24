@@ -1687,7 +1687,7 @@ class localrepository:
         path can be either a file or a directory.
         nodes decides the search range (ex. "::." or "_firstancestors(.)")
         """
-        return bindings.pathhistory.pathhistory.lastcreation(
+        return bindings.pathhistory.lastcreation(
             nodes, path, self.changelog.inner, self.manifestlog.datastore
         )
 
