@@ -622,14 +622,12 @@ impl BookmarkTransaction for SqlBookmarksTransaction {
     }
 
     fn commit(self: Box<Self>) -> BoxFuture<'static, Result<Option<u64>>> {
-        self.commit_with_hook(Arc::new(|_ctx, txn| future::ok(txn).boxed()))
+        self.commit_with_hooks(vec![Arc::new(|_ctx, txn| future::ok(txn).boxed())])
     }
 
-    /// commit_with_hook() can be used to have the same transaction to update two different database
-    /// tables. `txn_hook()` should apply changes to the transaction.
-    fn commit_with_hook(
+    fn commit_with_hooks(
         self: Box<Self>,
-        txn_hook: BookmarkTransactionHook,
+        txn_hooks: Vec<BookmarkTransactionHook>,
     ) -> BoxFuture<'static, Result<Option<u64>>> {
         let Self {
             ctx,
@@ -648,7 +646,7 @@ impl BookmarkTransaction for SqlBookmarksTransaction {
 
                 let mut txn = write_connection.start_transaction().await?;
 
-                txn = match txn_hook(ctx.clone(), txn).await {
+                txn = match run_transaction_hooks(&ctx, txn, &txn_hooks).await {
                     Ok(txn) => txn,
                     Err(BookmarkTransactionError::RetryableError(_))
                         if attempt < MAX_BOOKMARK_TRANSACTION_ATTEMPT_COUNT =>
@@ -713,6 +711,17 @@ impl BookmarkTransaction for SqlBookmarksTransaction {
         }
         .boxed()
     }
+}
+
+async fn run_transaction_hooks(
+    ctx: &CoreContext,
+    mut txn: sql::Transaction,
+    txn_hooks: &Vec<BookmarkTransactionHook>,
+) -> Result<sql::Transaction, BookmarkTransactionError> {
+    for txn_hook in txn_hooks {
+        txn = txn_hook(ctx.clone(), txn).await?;
+    }
+    Ok(txn)
 }
 
 #[cfg(test)]

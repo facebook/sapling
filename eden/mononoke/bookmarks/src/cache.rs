@@ -458,9 +458,9 @@ impl BookmarkTransaction for CachedBookmarksTransaction {
             .boxed()
     }
 
-    fn commit_with_hook(
+    fn commit_with_hooks(
         self: Box<Self>,
-        txn_hook: BookmarkTransactionHook,
+        txn_hooks: Vec<BookmarkTransactionHook>,
     ) -> BoxFuture<'static, Result<Option<u64>>> {
         let CachedBookmarksTransaction {
             transaction,
@@ -470,7 +470,7 @@ impl BookmarkTransaction for CachedBookmarksTransaction {
         } = *self;
 
         transaction
-            .commit_with_hook(txn_hook)
+            .commit_with_hooks(txn_hooks)
             .map_ok(move |maybe_log_id| {
                 if maybe_log_id.is_some() && dirty {
                     cache.purge(ctx);
@@ -684,9 +684,9 @@ mod tests {
             future::ok(Some(0)).boxed()
         }
 
-        fn commit_with_hook(
+        fn commit_with_hooks(
             self: Box<Self>,
-            _txn_hook: BookmarkTransactionHook,
+            _txn_hooks: Vec<BookmarkTransactionHook>,
         ) -> BoxFuture<'static, Result<Option<u64>>> {
             unimplemented!()
         }

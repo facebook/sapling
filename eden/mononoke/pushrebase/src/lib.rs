@@ -1235,7 +1235,7 @@ async fn try_move_bookmark(
     };
 
     let maybe_log_id = txn
-        .commit_with_hook(Arc::new(sql_txn_hook))
+        .commit_with_hooks(vec![Arc::new(sql_txn_hook)])
         .await?
         .map(BookmarkUpdateLogId::from);
 

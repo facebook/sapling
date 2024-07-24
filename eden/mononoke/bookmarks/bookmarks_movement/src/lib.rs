@@ -226,7 +226,7 @@ impl BookmarkInfoTransaction {
             self.bookmark_info.bookmark_kind,
         );
         let maybe_log_id = match self.txn_hook {
-            Some(txn_hook) => self.transaction.commit_with_hook(txn_hook).await?,
+            Some(txn_hook) => self.transaction.commit_with_hooks(vec![txn_hook]).await?,
             None => self.transaction.commit().await?,
         };
         if let Some(log_id) = maybe_log_id {

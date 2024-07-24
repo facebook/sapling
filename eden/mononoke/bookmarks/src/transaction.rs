@@ -119,11 +119,11 @@ pub trait BookmarkTransaction: Send + Sync + 'static {
     /// returning a successful `None` value; infrastructure failure is reported via an Error.
     fn commit(self: Box<Self>) -> BoxFuture<'static, Result<Option<u64>>>;
 
-    /// Commits the bookmarks update along with any changes injected by the BookmarkTransactionHook. The
+    /// Commits the bookmarks update along with any changes injected by all the BookmarkTransactionHooks. The
     /// future returns Some(log_id) if the bookmarks has moved, and None otherwise. Infrastructure errors
     /// are reported via the Error.
-    fn commit_with_hook(
+    fn commit_with_hooks(
         self: Box<Self>,
-        txn_hook: BookmarkTransactionHook,
+        txn_hooks: Vec<BookmarkTransactionHook>,
     ) -> BoxFuture<'static, Result<Option<u64>>>;
 }

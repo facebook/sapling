@@ -731,7 +731,7 @@ where
             });
 
             let res = bookmark_txn
-                .commit_with_hook(txn_hook)
+                .commit_with_hooks(vec![txn_hook])
                 .await?
                 .map(|x| x.into());
             log_new_bonsai_changesets(

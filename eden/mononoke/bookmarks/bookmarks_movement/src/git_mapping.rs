@@ -284,10 +284,10 @@ mod tests {
             BookmarkUpdateReason::TestMove,
         )?;
         let ok = txn
-            .commit_with_hook(upload_mapping_entries_bookmark_txn_hook(
+            .commit_with_hooks(vec![upload_mapping_entries_bookmark_txn_hook(
                 repo.bonsai_git_mapping_arc(),
                 entries,
-            ))
+            )])
             .await?
             .is_some();
         assert!(ok);
