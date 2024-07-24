@@ -134,3 +134,60 @@ Works with --only-files-in-revs:
   @@ -1,1 +1,1 @@
   -giraffe
   +cat
+
+
+Works with multiple grafts:
+  $ newclientrepo
+  $ drawdag <<EOS
+  > B  # B/bar/animal = giraffe\n
+  > |  # B/baz/food = sushi\n (renamed from baz/fruit)
+  > |
+  > A  # A/foo/fruit = apple\n
+  >    # A/foo/animal = cat\n
+  >    # A/bar/fruit = banana\n
+  >    # A/bar/animal = dog\n
+  >    # A/baz/fruit = orange\n
+  >    # A/baz/animal = horse\n
+  > EOS
+  $ hg diff -r $A -r $B --from-path foo --to-path bar --from-path foo --to-path baz
+  diff --git a/foo/animal b/bar/animal
+  --- a/foo/animal
+  +++ b/bar/animal
+  @@ -1,1 +1,1 @@
+  -cat
+  +giraffe
+  diff --git a/foo/fruit b/bar/fruit
+  --- a/foo/fruit
+  +++ b/bar/fruit
+  @@ -1,1 +1,1 @@
+  -apple
+  +banana
+  diff --git a/foo/animal b/baz/animal
+  --- a/foo/animal
+  +++ b/baz/animal
+  @@ -1,1 +1,1 @@
+  -cat
+  +horse
+  diff --git a/foo/fruit b/baz/food
+  rename from foo/fruit
+  rename to baz/food
+  --- a/foo/fruit
+  +++ b/baz/food
+  @@ -1,1 +1,1 @@
+  -apple
+  +sushi
+  $ hg diff -r $B -r $B --from-path foo --to-path bar --from-path foo --to-path baz --only-files-in-revs
+  diff --git a/foo/animal b/bar/animal
+  --- a/foo/animal
+  +++ b/bar/animal
+  @@ -1,1 +1,1 @@
+  -cat
+  +giraffe
+  diff --git a/foo/fruit b/baz/food
+  rename from foo/fruit
+  rename to baz/food
+  --- a/foo/fruit
+  +++ b/baz/food
+  @@ -1,1 +1,1 @@
+  -apple
+  +sushi
