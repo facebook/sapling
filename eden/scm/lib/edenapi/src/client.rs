@@ -1066,25 +1066,37 @@ impl SaplingRemoteApi for Client {
     }
 
     async fn health(&self) -> Result<ResponseMeta, SaplingRemoteApiError> {
-        let url = self.build_url_repoless(paths::HEALTH_CHECK)?;
+        self.with_retry(|client| {
+            async {
+                let url = client.build_url_repoless(paths::HEALTH_CHECK)?;
 
-        tracing::info!("Sending health check request: {}", &url);
+                tracing::info!("Sending health check request: {}", &url);
 
-        let req = self.configure_request(self.inner.client.get(url))?;
-        let res = raise_for_status(req.send_async().await?).await?;
+                let req = client.configure_request(client.inner.client.get(url))?;
+                let res = raise_for_status(req.send_async().await?).await?;
 
-        Ok(ResponseMeta::from(&res))
+                Ok(ResponseMeta::from(&res))
+            }
+            .boxed()
+        })
+        .await
     }
 
     async fn capabilities(&self) -> Result<Vec<String>, SaplingRemoteApiError> {
-        tracing::info!("Requesting capabilities for repo {}", &self.repo_name());
-        let url = self.build_url("capabilities")?;
-        let req = self.configure_request(self.inner.client.get(url))?;
-        let res = raise_for_status(req.send_async().await?).await?;
-        let body: Vec<u8> = res.into_body().decoded().try_concat().await?;
-        let caps = serde_json::from_slice(&body)
-            .map_err(|e| SaplingRemoteApiError::ParseResponse(e.to_string()))?;
-        Ok(caps)
+        self.with_retry(|client| {
+            async {
+                tracing::info!("Requesting capabilities for repo {}", &client.repo_name());
+                let url = client.build_url("capabilities")?;
+                let req = client.configure_request(client.inner.client.get(url))?;
+                let res = raise_for_status(req.send_async().await?).await?;
+                let body: Vec<u8> = res.into_body().decoded().try_concat().await?;
+                let caps = serde_json::from_slice(&body)
+                    .map_err(|e| SaplingRemoteApiError::ParseResponse(e.to_string()))?;
+                Ok(caps)
+            }
+            .boxed()
+        })
+        .await
     }
 
     async fn files_attrs(
