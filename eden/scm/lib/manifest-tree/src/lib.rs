@@ -719,6 +719,9 @@ impl TreeManifest {
                 continue;
             }
 
+            // From here on, return unconditionally since `dest_path` can only match one
+            // `to` (since `to`s cannot overlap).
+
             if from == to {
                 return None;
             }
@@ -727,9 +730,9 @@ impl TreeManifest {
                 None => None,
                 Some(suffix) => {
                     if suffix.is_empty() {
-                        return Some(to.clone());
+                        Some(to.clone())
                     } else {
-                        return Some(to.join(suffix));
+                        Some(to.join(suffix))
                     }
                 }
             };
