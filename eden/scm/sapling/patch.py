@@ -2969,7 +2969,7 @@ def diffui(*args, **kw):
     return difflabel(diff, *args, **kw)
 
 
-def _filepairs(modified, added, removed, copy, opts):
+def _filepairs(ctx1, ctx2, modified, added, removed, copy, opts):
     """generates tuples (f1, f2, copyop), where f1 is the name of the file
     before and f2 is the the name after. For added files, f1 will be None,
     and for removed files, f2 will be None. copyop may be set to None, 'copy'
@@ -2980,25 +2980,26 @@ def _filepairs(modified, added, removed, copy, opts):
 
     addedset, removedset = set(added), set(removed)
 
-    for f in sorted(modified + added + removed):
+    m1 = ctx1.manifest()
+    for f2 in sorted(modified + added + removed):
         copyop = None
-        f1, f2 = f, f
-        if f in addedset:
+        f1 = m1.ungraftedpath(f2) or f2
+        if f2 in addedset:
             f1 = None
-            if f in copy:
+            if f2 in copy:
                 if opts.git:
-                    f1 = copy[f]
+                    f1 = copy[f2]
                     if f1 in removedset and f1 not in gone:
                         copyop = b"rename"
                         gone.add(f1)
                     else:
                         copyop = b"copy"
-        elif f in removedset:
-            f2 = None
+        elif f2 in removedset:
             if opts.git:
                 # have we already reported a copy above?
-                if f in copyto and copyto[f] in addedset and copy[copyto[f]] == f:
+                if f2 in copyto and copyto[f2] in addedset and copy[copyto[f2]] == f2:
                     continue
+            f2 = None
         yield f1, f2, copyop
 
 
@@ -3063,7 +3064,7 @@ def trydiff(
                     "file %s doesn't start with relroot %s" % (f, relroot)
                 )
 
-    for f1, f2, copyop in _filepairs(modified, added, removed, copy, opts):
+    for f1, f2, copyop in _filepairs(ctx1, ctx2, modified, added, removed, copy, opts):
         content1 = None
         content2 = None
         fctx1 = None

@@ -10,8 +10,15 @@
   >    # A/bar/onlybar = onlybar\n
   > EOS
 
-FIXME: should diff foo and bar directories
+FIXME: missing onlyfoo
   $ hg diff -r $A -r $A --from-path foo --to-path bar
+  diff --git a/foo/differs b/bar/differs
+  --- a/foo/differs
+  +++ b/bar/differs
+  @@ -1,2 +1,2 @@
+   one
+  -two
+  +three
   diff --git a/bar/onlybar b/bar/onlybar
   new file mode 100644
   --- /dev/null
