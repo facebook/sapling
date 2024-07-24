@@ -30,3 +30,8 @@
   +++ /dev/null
   @@ -1,1 +0,0 @@
   -onlyfoo
+
+
+  $ hg diff --reverse -r $A -r $A --from-path foo --to-path bar
+
+
