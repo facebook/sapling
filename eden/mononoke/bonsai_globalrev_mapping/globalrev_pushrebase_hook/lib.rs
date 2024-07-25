@@ -36,8 +36,11 @@ pub struct GlobalrevPushrebaseHook {
     ctx: CoreContext,
     mapping: Arc<dyn BonsaiGlobalrevMapping>,
     repository_id: RepositoryId,
-    /// If this is a large repo where globalrevs will be backsynced to a small repo
-    small_repo_id: Option<RepositoryId>,
+    /// If this is a megarepo large repo, then this is the repo id of the
+    /// small repo that has globalrevs enabled (if any).
+    /// If pushredirection is enabled in this small repo, then globalrevs are
+    /// assigned in the large repo and then backsynced to the small repo.
+    globalrevs_small_repo_id: Option<RepositoryId>,
 }
 
 impl GlobalrevPushrebaseHook {
@@ -45,13 +48,13 @@ impl GlobalrevPushrebaseHook {
         ctx: CoreContext,
         mapping: Arc<dyn BonsaiGlobalrevMapping>,
         repository_id: RepositoryId,
-        small_repo_id: Option<RepositoryId>,
+        globalrevs_small_repo_id: Option<RepositoryId>,
     ) -> Box<dyn PushrebaseHook> {
         Box::new(Self {
             ctx,
             mapping,
             repository_id,
-            small_repo_id,
+            globalrevs_small_repo_id,
         })
     }
 }
@@ -66,13 +69,13 @@ impl PushrebaseHook for GlobalrevPushrebaseHook {
         let max = self.mapping.get_max(&self.ctx).await?;
         let increment = 1;
 
-        let next_rev = match (max, self.small_repo_id) {
+        let next_rev = match (max, self.globalrevs_small_repo_id) {
             (Some(max), _) => Globalrev::new(max.id() + increment),
             // The source-of-truth change just happened, let's get this value from
             // the small repo.
-            (None, Some(small_repo_id)) => self
+            (None, Some(globalrevs_small_repo_id)) => self
                 .mapping
-                .get_max_custom_repo(&self.ctx, &small_repo_id)
+                .get_max_custom_repo(&self.ctx, &globalrevs_small_repo_id)
                 .await?
                 .context("Small repo didn't have globalrevs")?,
             (None, None) => Globalrev::start_commit(),

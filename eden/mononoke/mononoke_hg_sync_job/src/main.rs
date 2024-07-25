@@ -1251,7 +1251,7 @@ async fn run<'a>(
             cloned!(repo);
             async move {
                 match globalrev_config {
-                    Some(config) if config.small_repo_id.is_none() => {
+                    Some(config) if config.globalrevs_small_repo_id.is_none() => {
                         match maybe_darkstorm_backup_repo {
                             Some(darkstorm_backup_repo) => {
                                 Ok(GlobalrevSyncer::darkstorm(&repo, darkstorm_backup_repo))

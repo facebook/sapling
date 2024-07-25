@@ -384,7 +384,7 @@ mod tests {
             pushrebase: PushrebaseParams {
                 globalrev_config: Some(GlobalrevConfig {
                     publishing_bookmark: BookmarkKey::new("master")?,
-                    small_repo_id: None,
+                    globalrevs_small_repo_id: None,
                 }),
                 ..Default::default()
             },

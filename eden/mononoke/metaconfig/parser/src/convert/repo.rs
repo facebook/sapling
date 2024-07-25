@@ -332,7 +332,9 @@ impl Convert for RawPushrebaseParams {
                 .map(|bookmark| {
                     anyhow::Ok(GlobalrevConfig {
                         publishing_bookmark: BookmarkKey::new(bookmark)?,
-                        small_repo_id: self.globalrevs_small_repo_id.map(RepositoryId::new),
+                        globalrevs_small_repo_id: self
+                            .globalrevs_small_repo_id
+                            .map(RepositoryId::new),
                     })
                 })
                 .transpose()?,

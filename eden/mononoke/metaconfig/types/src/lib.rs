@@ -762,8 +762,9 @@ pub enum PushrebaseRemoteMode {
 pub struct GlobalrevConfig {
     /// On which bookmark to assign globalrevs
     pub publishing_bookmark: BookmarkKey,
-    /// Present if this is a large repo and globalrevs go to the small repo
-    pub small_repo_id: Option<RepositoryId>,
+    /// Present if this is a large repo and globalrevs go to a particular small repo.
+    /// Contains the id of the small repo with globalrevs.
+    pub globalrevs_small_repo_id: Option<RepositoryId>,
 }
 
 /// Pushrebase configuration options
