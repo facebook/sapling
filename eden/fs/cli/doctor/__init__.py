@@ -444,6 +444,23 @@ class EdenDoctor(EdenDoctorChecker):
                 problem_advisory_fixes=fixer.problem_advisory_fixes,
                 exception=fixer.problem_failed_fixes_exceptions,
             )
+        elif sys.platform == "win32":
+            # dry run doesn't run fixes so we count the number of fixable problems rather
+            # than the number of failed fixes
+            self.instance.log_sample(
+                "eden_doctor_dry_run",
+                num_problems=fixer.num_problems,
+                problems=fixer.problem_types.union(fixer.ignored_problem_types),
+                problem_description=fixer.problem_description,
+                num_fixable=fixer.num_fixable,
+                num_manual_fixes=fixer.num_manual_fixes,
+                num_no_fixes=fixer.num_no_fixes,
+                num_advisory_fixes=fixer.num_advisory_fixes,
+                problem_fixable=fixer.problem_fixable,
+                problem_manual_fixes=fixer.problem_manual_fixes,
+                problem_no_fixes=fixer.problem_no_fixes,
+                problem_advisory_fixes=fixer.problem_advisory_fixes,
+            )
 
         if fixer.num_problems == 0:
             if not fixer.using_edenfs:

@@ -165,11 +165,13 @@ class ProblemFixer(ProblemTracker):
         self.debug = debug
         self.num_problems = 0
         self.num_fixed_problems = 0
+        self.num_fixable = 0
         self.num_failed_fixes = 0
         self.num_manual_fixes = 0
         self.num_no_fixes = 0
         self.num_advisory_fixes = 0
         self.problem_types: Set[str] = set()
+        self.problem_fixable: Set[str] = set()
         self.problem_failed_fixes: Set[str] = set()
         self.problem_manual_fixes: Set[str] = set()
         self.problem_no_fixes: Set[str] = set()
