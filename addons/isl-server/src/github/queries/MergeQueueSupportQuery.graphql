@@ -1,0 +1,5 @@
+query MergeQueueSupportQuery {
+  __type(name: "MergeQueueEntry") {
+    __typename
+  }
+}
