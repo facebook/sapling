@@ -23,6 +23,7 @@ mod limit_path_length;
 pub(crate) mod limit_submodule_edits;
 pub(crate) mod no_bad_extensions;
 pub(crate) mod no_bad_filenames;
+mod no_executable_binaries;
 mod no_insecure_filenames;
 pub(crate) mod no_questionable_filenames;
 pub(crate) mod no_windows_filenames;
@@ -111,6 +112,9 @@ pub fn make_file_hook(
             no_bad_extensions::NoBadExtensions::builder()
                 .set_from_config(&params.config)
                 .build()?,
+        )),
+        "no_executable_binaries" => Some(Box::new(
+            no_executable_binaries::NoExecutableBinariesHook::new(&params.config)?,
         )),
         "no_insecure_filenames" => {
             Some(Box::new(no_insecure_filenames::NoInsecureFilenames::new()?))
