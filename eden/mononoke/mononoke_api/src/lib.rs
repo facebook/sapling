@@ -193,6 +193,12 @@ impl Mononoke {
     }
 }
 
+pub(crate) fn invalid_push_redirected_request(method_name: &str) -> MononokeError {
+    MononokeError::InvalidRequest(format!(
+        "{method_name} is not supported for push redirected repos"
+    ))
+}
+
 pub mod test_impl {
     use blobrepo::BlobRepo;
     use cloned::cloned;

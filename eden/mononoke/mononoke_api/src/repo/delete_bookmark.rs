@@ -9,17 +9,20 @@ use std::collections::HashMap;
 
 use anyhow::Context;
 use bookmarks::BookmarkKey;
+use bookmarks::BookmarkTransaction;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks::BookmarksRef;
+use bookmarks_movement::BookmarkInfoTransaction;
 use bookmarks_movement::DeleteBookmarkOp;
 use bytes::Bytes;
 use mononoke_types::ChangesetId;
 
 use crate::errors::MononokeError;
+use crate::invalid_push_redirected_request;
 use crate::repo::RepoContext;
 
 impl RepoContext {
-    pub async fn delete_bookmark_op<'a>(
+    async fn delete_bookmark_op<'a>(
         &self,
         bookmark: &'_ BookmarkKey,
         old_target: Option<ChangesetId>,
@@ -100,5 +103,33 @@ impl RepoContext {
                 .await?;
         }
         Ok(())
+    }
+
+    /// Delete a bookmark with provided transaction.
+    pub async fn delete_bookmark_with_transaction(
+        &self,
+        bookmark: &BookmarkKey,
+        old_target: Option<ChangesetId>,
+        pushvars: Option<&HashMap<String, Bytes>>,
+        txn: Option<Box<dyn BookmarkTransaction>>,
+    ) -> Result<BookmarkInfoTransaction, MononokeError> {
+        if self.push_redirector.is_some() {
+            return Err(invalid_push_redirected_request(
+                "delete_bookmark_with_transaction",
+            ));
+        }
+        let delete_op = self
+            .delete_bookmark_op(bookmark, old_target, pushvars)
+            .await?;
+
+        let bookmark_info_transaction = delete_op
+            .run_with_transaction(
+                self.ctx(),
+                self.authorization_context(),
+                self.inner_repo(),
+                txn,
+            )
+            .await?;
+        Ok(bookmark_info_transaction)
     }
 }

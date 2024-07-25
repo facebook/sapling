@@ -30,6 +30,7 @@ use crate::affected_changesets::AffectedChangesets;
 use crate::repo_lock::check_repo_lock;
 use crate::restrictions::check_bookmark_sync_config;
 use crate::restrictions::BookmarkKindRestrictions;
+use crate::BookmarkInfoData;
 use crate::BookmarkInfoTransaction;
 use crate::BookmarkMovementError;
 use crate::Repo;
@@ -229,13 +230,9 @@ impl<'op> CreateBookmarkOp<'op> {
             operation: BookmarkOperation::Create(self.target),
             reason: self.reason,
         };
-        Ok(BookmarkInfoTransaction::new(
-            info,
-            txn,
-            self.log_new_public_commits_to_scribe,
-            commits_to_log,
-            txn_hooks,
-        ))
+        let info_data =
+            BookmarkInfoData::new(info, self.log_new_public_commits_to_scribe, commits_to_log);
+        Ok(BookmarkInfoTransaction::new(info_data, txn, txn_hooks))
     }
 
     pub async fn run(

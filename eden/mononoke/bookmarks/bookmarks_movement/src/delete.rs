@@ -23,6 +23,7 @@ use repo_update_logger::BookmarkOperation;
 use crate::repo_lock::check_repo_lock;
 use crate::restrictions::check_bookmark_sync_config;
 use crate::restrictions::BookmarkKindRestrictions;
+use crate::BookmarkInfoData;
 use crate::BookmarkInfoTransaction;
 use crate::BookmarkMovementError;
 use crate::Repo;
@@ -144,7 +145,8 @@ impl<'op> DeleteBookmarkOp<'op> {
             operation: BookmarkOperation::Delete(self.old_target),
             reason: self.reason,
         };
-        Ok(BookmarkInfoTransaction::delete(info, txn))
+        let info_data = BookmarkInfoData::new(info, false, vec![]);
+        Ok(BookmarkInfoTransaction::new(info_data, txn, vec![]))
     }
 
     pub async fn run(

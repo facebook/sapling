@@ -186,54 +186,90 @@ pub fn describe_hook_rejections(rejections: &[HookRejection]) -> String {
         .join("\n")
 }
 
-pub struct BookmarkInfoTransaction {
+pub struct BookmarkInfoData {
     bookmark_info: BookmarkInfo,
-    transaction: Box<dyn BookmarkTransaction>,
     log_new_public_commits_to_scribe: bool,
     commits: Vec<BonsaiChangeset>,
-    txn_hooks: Vec<BookmarkTransactionHook>,
 }
 
-impl BookmarkInfoTransaction {
-    pub fn delete(bookmark_info: BookmarkInfo, transaction: Box<dyn BookmarkTransaction>) -> Self {
-        Self::new(bookmark_info, transaction, false, vec![], vec![])
-    }
-
+impl BookmarkInfoData {
     pub fn new(
         bookmark_info: BookmarkInfo,
-        transaction: Box<dyn BookmarkTransaction>,
         log_new_public_commits_to_scribe: bool,
         commits: Vec<BonsaiChangeset>,
-        txn_hooks: Vec<BookmarkTransactionHook>,
     ) -> Self {
         Self {
             bookmark_info,
-            transaction,
             log_new_public_commits_to_scribe,
             commits,
+        }
+    }
+
+    pub async fn log(self, ctx: &CoreContext, repo: &impl Repo) {
+        if self.log_new_public_commits_to_scribe {
+            log_new_bonsai_changesets(
+                ctx,
+                repo,
+                &self.bookmark_info.bookmark_name,
+                self.bookmark_info.bookmark_kind,
+                self.commits,
+            )
+            .await;
+        }
+        log_bookmark_operation(ctx, repo, &self.bookmark_info).await;
+    }
+}
+
+pub struct TransactionWithHooks {
+    pub transaction: Box<dyn BookmarkTransaction>,
+    pub txn_hooks: Vec<BookmarkTransactionHook>,
+}
+
+impl TransactionWithHooks {
+    pub fn new(
+        transaction: Box<dyn BookmarkTransaction>,
+        txn_hooks: Vec<BookmarkTransactionHook>,
+    ) -> Self {
+        Self {
+            transaction,
             txn_hooks,
         }
     }
 
-    /// Method responsible for committing the transaction and logging the bookmark operation
+    pub async fn commit(self) -> Result<BookmarkUpdateLogId, BookmarkMovementError> {
+        let maybe_log_id = self.transaction.commit_with_hooks(self.txn_hooks).await?;
+        if let Some(log_id) = maybe_log_id {
+            Ok(log_id.into())
+        } else {
+            Err(BookmarkMovementError::TransactionFailed)
+        }
+    }
+}
+
+pub struct BookmarkInfoTransaction {
+    pub info_data: BookmarkInfoData,
+    pub transaction: TransactionWithHooks,
+}
+
+impl BookmarkInfoTransaction {
+    pub fn new(
+        info_data: BookmarkInfoData,
+        transaction: Box<dyn BookmarkTransaction>,
+        txn_hooks: Vec<BookmarkTransactionHook>,
+    ) -> Self {
+        Self {
+            info_data,
+            transaction: TransactionWithHooks::new(transaction, txn_hooks),
+        }
+    }
+
     pub async fn commit_and_log(
         self,
         ctx: &CoreContext,
         repo: &impl Repo,
     ) -> Result<BookmarkUpdateLogId, BookmarkMovementError> {
-        let (bookmark_name, kind) = (
-            self.bookmark_info.bookmark_name.clone(),
-            self.bookmark_info.bookmark_kind,
-        );
-        let maybe_log_id = self.transaction.commit_with_hooks(self.txn_hooks).await?;
-        if let Some(log_id) = maybe_log_id {
-            if self.log_new_public_commits_to_scribe {
-                log_new_bonsai_changesets(ctx, repo, &bookmark_name, kind, self.commits).await;
-            }
-            log_bookmark_operation(ctx, repo, &self.bookmark_info).await;
-            Ok(log_id.into())
-        } else {
-            Err(BookmarkMovementError::TransactionFailed)
-        }
+        let log_id = self.transaction.commit().await?;
+        self.info_data.log(ctx, repo).await;
+        Ok(log_id)
     }
 }

@@ -10,8 +10,11 @@ use std::collections::HashMap;
 use anyhow::format_err;
 use anyhow::Context;
 use bookmarks::BookmarkKey;
+use bookmarks::BookmarkTransaction;
+use bookmarks::BookmarkTransactionHook;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks::BookmarksRef;
+use bookmarks_movement::BookmarkInfoTransaction;
 use bookmarks_movement::BookmarkUpdatePolicy;
 use bookmarks_movement::BookmarkUpdateTargets;
 use bookmarks_movement::UpdateBookmarkOp;
@@ -22,11 +25,12 @@ use hook_manager::manager::HookManagerRef;
 use mononoke_types::ChangesetId;
 
 use crate::errors::MononokeError;
+use crate::invalid_push_redirected_request;
 use crate::repo::RepoContext;
 
 impl RepoContext {
     /// Create operation for moving a bookmark
-    pub async fn move_bookmark_op<'a>(
+    async fn move_bookmark_op<'a>(
         &self,
         bookmark: &'_ BookmarkKey,
         target: ChangesetId,
@@ -169,5 +173,45 @@ impl RepoContext {
                 .await?;
         }
         Ok(())
+    }
+
+    /// Move a bookmark with provided transaction
+    pub async fn move_bookmark_with_transaction(
+        &self,
+        bookmark: &BookmarkKey,
+        target: ChangesetId,
+        old_target: Option<ChangesetId>,
+        allow_non_fast_forward: bool,
+        pushvars: Option<&HashMap<String, Bytes>>,
+        affected_changesets_limit: Option<usize>,
+        txn: Option<Box<dyn BookmarkTransaction>>,
+        txn_hooks: Vec<BookmarkTransactionHook>,
+    ) -> Result<BookmarkInfoTransaction, MononokeError> {
+        if self.push_redirector.is_some() {
+            return Err(invalid_push_redirected_request(
+                "move_bookmark_with_transaction",
+            ));
+        }
+        let update_op = self
+            .move_bookmark_op(
+                bookmark,
+                target,
+                old_target,
+                allow_non_fast_forward,
+                pushvars,
+                affected_changesets_limit,
+            )
+            .await?;
+        let bookmark_info_transaction = update_op
+            .run_with_transaction(
+                self.ctx(),
+                self.authorization_context(),
+                self.inner_repo(),
+                self.hook_manager().as_ref(),
+                txn,
+                txn_hooks,
+            )
+            .await?;
+        Ok(bookmark_info_transaction)
     }
 }
