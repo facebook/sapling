@@ -13,7 +13,6 @@ use blobrepo::BlobRepo;
 use blobrepo_hg::file_history::get_file_history;
 use blobstore::Loadable;
 use context::CoreContext;
-use derived_data::BonsaiDerived;
 use fbinit::FacebookInit;
 use filenodes_derivation::FilenodesOnlyPublic;
 use fixtures::Linear;
@@ -22,6 +21,7 @@ use manifest::ManifestOps;
 use mercurial_types::HgChangesetId;
 use mononoke_types::NonRootMPath;
 use repo_blobstore::RepoBlobstoreRef;
+use repo_derived_data::RepoDerivedDataRef;
 use tests_utils::resolve_cs_id;
 
 #[fbinit::test]
@@ -30,7 +30,9 @@ async fn test_linear_get_file_history(fb: FacebookInit) -> Result<(), Error> {
     let repo = Linear::getrepo(fb).await;
 
     let master_cs_id = resolve_cs_id(&ctx, &repo, "master").await?;
-    FilenodesOnlyPublic::derive(&ctx, &repo, master_cs_id).await?;
+    repo.repo_derived_data()
+        .derive::<FilenodesOnlyPublic>(&ctx, master_cs_id)
+        .await?;
 
     let expected_linknodes = vec![
         HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?,

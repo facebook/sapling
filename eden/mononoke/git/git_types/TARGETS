@@ -52,7 +52,6 @@ rust_library(
         "//common/rust/shed/cloned:cloned",
         "//eden/mononoke/blobstore:blobstore",
         "//eden/mononoke/bonsai_git_mapping:bonsai_git_mapping",
-        "//eden/mononoke/derived_data:derived_data",
         "//eden/mononoke/derived_data:derived_data_manager",
         "//eden/mononoke/derived_data:unodes",
         "//eden/mononoke/derived_data/remote/if:derived_data_service_if-rust",

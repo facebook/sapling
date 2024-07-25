@@ -19,7 +19,6 @@ use commit_transformation::CommitRewrittenToEmpty;
 use commit_transformation::EmptyCommitFromLargeRepo;
 use commit_transformation::RewriteOpts;
 use context::CoreContext;
-use derived_data::BonsaiDerived;
 use live_commit_sync_config::LiveCommitSyncConfig;
 use metaconfig_types::CommitSyncConfigVersion;
 use mononoke_types::BonsaiChangeset;
@@ -156,7 +155,12 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
         expected_version: Option<CommitSyncConfigVersion>,
     ) -> Result<CommitSyncInMemoryResult, Error> {
         let maybe_mapping_change_version = get_mapping_change_version(
-            &ChangesetInfo::derive(self.ctx, self.source_repo.0, cs.get_changeset_id()).await?,
+            &self
+                .source_repo
+                .0
+                .repo_derived_data()
+                .derive::<ChangesetInfo>(self.ctx, cs.get_changeset_id())
+                .await?,
         )?;
 
         let commit_rewritten_to_empty = self

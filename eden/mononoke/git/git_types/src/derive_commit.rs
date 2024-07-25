@@ -15,7 +15,6 @@ use anyhow::Result;
 use async_trait::async_trait;
 use bonsai_git_mapping::BonsaiGitMappingEntry;
 use context::CoreContext;
-use derived_data::impl_bonsai_derived_via_manager;
 use derived_data_manager::dependencies;
 use derived_data_manager::BonsaiDerivable;
 use derived_data_manager::DerivableType;
@@ -186,8 +185,6 @@ impl BonsaiDerivable for MappedGitCommitId {
     }
 }
 
-impl_bonsai_derived_via_manager!(MappedGitCommitId);
-
 #[cfg(test)]
 mod test {
     use std::collections::HashSet;
@@ -199,7 +196,6 @@ mod test {
     use bookmarks::BookmarkKey;
     use bookmarks::BookmarksRef;
     use commit_graph::CommitGraphRef;
-    use derived_data::BonsaiDerived;
     use fbinit::FacebookInit;
     use fixtures::TestRepoFixture;
     use futures::stream;
@@ -295,7 +291,9 @@ mod test {
             .ok_or_else(|| format_err!("no master"))?;
 
         // Validate that the derivation of the Git commit was successful
-        MappedGitCommitId::derive(&ctx, &repo, bcs_id).await?;
+        repo.repo_derived_data()
+            .derive::<MappedGitCommitId>(&ctx, bcs_id)
+            .await?;
         // All the generated git commit IDs would be stored in BonsaiGitMapping. For all such commits, validate
         // parity with its Bonsai counterpart.
         let all_changesets = repo

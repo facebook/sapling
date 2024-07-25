@@ -85,7 +85,6 @@ rust_binary(
         "//eden/mononoke/derived_data:bulk_derivation",
         "//eden/mononoke/derived_data:changeset_info",
         "//eden/mononoke/derived_data:deleted_manifest",
-        "//eden/mononoke/derived_data:derived_data",
         "//eden/mononoke/derived_data:derived_data_manager",
         "//eden/mononoke/derived_data:fsnodes",
         "//eden/mononoke/derived_data:skeleton_manifest",

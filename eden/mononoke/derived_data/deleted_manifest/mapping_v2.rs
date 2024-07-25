@@ -14,7 +14,6 @@ use async_trait::async_trait;
 use blobstore::BlobstoreGetData;
 use bytes::Bytes;
 use context::CoreContext;
-use derived_data::impl_bonsai_derived_via_manager;
 use derived_data_manager::dependencies;
 use derived_data_manager::BonsaiDerivable;
 use derived_data_manager::DerivableType;
@@ -139,8 +138,6 @@ impl BonsaiDerivable for RootDeletedManifestV2Id {
         ))
     }
 }
-
-impl_bonsai_derived_via_manager!(RootDeletedManifestV2Id);
 
 #[cfg(test)]
 crate::test_utils::impl_deleted_manifest_tests!(RootDeletedManifestV2Id);

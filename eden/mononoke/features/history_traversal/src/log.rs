@@ -25,7 +25,6 @@ use context::CoreContext;
 use deleted_manifest::DeletedManifestOps;
 use deleted_manifest::PathState;
 use deleted_manifest::RootDeletedManifestV2Id;
-use derived_data::BonsaiDerived;
 use derived_data::DerivationError;
 use fastlog::fetch_fastlog_batch_by_unode_id;
 use fastlog::fetch_flattened;
@@ -561,7 +560,10 @@ async fn derive_unode_entry(
     cs_id: ChangesetId,
     path: &MPath,
 ) -> Result<Option<UnodeEntry>, Error> {
-    let root_unode_mf_id = RootUnodeManifestId::derive(ctx, repo.as_blob_repo(), cs_id).await?;
+    let root_unode_mf_id = repo
+        .repo_derived_data()
+        .derive::<RootUnodeManifestId>(ctx, cs_id)
+        .await?;
     root_unode_mf_id
         .manifest_unode_id()
         .find_entry(ctx.clone(), repo.repo_blobstore_arc(), path.clone())
@@ -1185,7 +1187,9 @@ async fn prefetch_fastlog_by_changeset(
 
     // if there is no history, let's try to derive batched fastlog data
     // and fetch history again
-    RootFastlog::derive(ctx, repo.as_blob_repo(), changeset_id.clone()).await?;
+    repo.repo_derived_data()
+        .derive::<RootFastlog>(ctx, changeset_id.clone())
+        .await?;
     let fastlog_batch_opt = prefetch_history(ctx, repo, &entry).await?;
     fastlog_batch_opt
         .ok_or_else(|| format_err!("Fastlog data is not found {:?} {:?}", changeset_id, path))
@@ -1277,7 +1281,10 @@ mod test {
 
         let top = parents.first().unwrap().clone();
 
-        RootFastlog::derive(ctx, blob_repo, top).await?;
+        blob_repo
+            .repo_derived_data()
+            .derive::<RootFastlog>(ctx, top)
+            .await?;
 
         expected.reverse();
         check_history(
@@ -1353,7 +1360,10 @@ mod test {
         let (m_top, graph) = branch_head("M", 1, vec![all_top.clone()], graph).await?;
         let (top, graph) = branch_head("Top", 2, vec![l_top, m_top], graph).await?;
 
-        RootFastlog::derive(ctx, blob_repo, top).await?;
+        blob_repo
+            .repo_derived_data()
+            .derive::<RootFastlog>(ctx, top)
+            .await?;
 
         let expected = bfs(&graph, top);
         check_history(
@@ -1420,7 +1430,10 @@ mod test {
             prev_id = create_diamond(ctx, &repo, vec![prev_id], &mut expected).await?;
         }
 
-        RootFastlog::derive(ctx, blob_repo, prev_id).await?;
+        blob_repo
+            .repo_derived_data()
+            .derive::<RootFastlog>(ctx, prev_id)
+            .await?;
 
         expected.reverse();
         check_history(

@@ -36,7 +36,6 @@ use cross_repo_sync::CommitSyncer;
 use cross_repo_sync::ConcreteRepo as CrossRepo;
 use cross_repo_sync::Source;
 use cross_repo_sync::Target;
-use derived_data::BonsaiDerived;
 use fbinit::FacebookInit;
 use fsnodes::RootFsnodeId;
 use futures::compat::Future01CompatExt;
@@ -120,6 +119,7 @@ use repo_blobstore::RepoBlobstore;
 use repo_bookmark_attrs::RepoBookmarkAttrs;
 use repo_cross_repo::RepoCrossRepo;
 use repo_derived_data::RepoDerivedData;
+use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentity;
 
 use crate::cli::cs_args_from_matches;
@@ -1320,7 +1320,10 @@ async fn run_delete_no_longer_bound_files_from_large_repo<'a>(
 
     // Find all files under a given path
     let prefix = sub_m.value_of(PATH_PREFIX).context("prefix is not set")?;
-    let root_fsnode_id = RootFsnodeId::derive(ctx, large_repo, cs_id).await?;
+    let root_fsnode_id = large_repo
+        .repo_derived_data()
+        .derive::<RootFsnodeId>(ctx, cs_id)
+        .await?;
     let entries = root_fsnode_id
         .fsnode_id()
         .find_entries(

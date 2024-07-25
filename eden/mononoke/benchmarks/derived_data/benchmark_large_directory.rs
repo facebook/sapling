@@ -19,7 +19,6 @@ use blobrepo::BlobRepo;
 use context::CoreContext;
 use deleted_manifest::RootDeletedManifestIdCommon;
 use deleted_manifest::RootDeletedManifestV2Id;
-use derived_data::BonsaiDerived;
 use derived_data_manager::BonsaiDerivable as NewBonsaiDerivable;
 use fbinit::FacebookInit;
 use fsnodes::RootFsnodeId;
@@ -30,6 +29,7 @@ use rand::distributions::Alphanumeric;
 use rand::distributions::Uniform;
 use rand::thread_rng;
 use rand::Rng;
+use repo_derived_data::RepoDerivedDataRef;
 use skeleton_manifest::RootSkeletonManifestId;
 use tests_utils::CreateCommitContext;
 use unodes::RootUnodeManifestId;
@@ -131,27 +131,37 @@ async fn modify_large_directory(
 
 async fn derive(ctx: &CoreContext, repo: &BlobRepo, data: &str, csid: ChangesetId) -> String {
     match data {
-        MappedHgChangesetId::NAME => MappedHgChangesetId::derive(ctx, repo, csid)
+        MappedHgChangesetId::NAME => repo
+            .repo_derived_data()
+            .derive::<MappedHgChangesetId>(ctx, csid)
             .await
             .unwrap()
             .hg_changeset_id()
             .to_string(),
-        RootSkeletonManifestId::NAME => RootSkeletonManifestId::derive(ctx, repo, csid)
+        RootSkeletonManifestId::NAME => repo
+            .repo_derived_data()
+            .derive::<RootSkeletonManifestId>(ctx, csid)
             .await
             .unwrap()
             .skeleton_manifest_id()
             .to_string(),
-        RootUnodeManifestId::NAME => RootUnodeManifestId::derive(ctx, repo, csid)
+        RootUnodeManifestId::NAME => repo
+            .repo_derived_data()
+            .derive::<RootUnodeManifestId>(ctx, csid)
             .await
             .unwrap()
             .manifest_unode_id()
             .to_string(),
-        RootDeletedManifestV2Id::NAME => RootDeletedManifestV2Id::derive(ctx, repo, csid)
+        RootDeletedManifestV2Id::NAME => repo
+            .repo_derived_data()
+            .derive::<RootDeletedManifestV2Id>(ctx, csid)
             .await
             .unwrap()
             .id()
             .to_string(),
-        RootFsnodeId::NAME => RootFsnodeId::derive(ctx, repo, csid)
+        RootFsnodeId::NAME => repo
+            .repo_derived_data()
+            .derive::<RootFsnodeId>(ctx, csid)
             .await
             .unwrap()
             .fsnode_id()

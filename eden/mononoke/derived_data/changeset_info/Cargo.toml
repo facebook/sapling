@@ -16,7 +16,6 @@ async-trait = "0.1.71"
 blobstore = { version = "0.1.0", path = "../../blobstore" }
 bytes = { version = "1.6.0", features = ["serde"] }
 context = { version = "0.1.0", path = "../../server/context" }
-derived_data = { version = "0.1.0", path = ".." }
 derived_data_manager = { version = "0.1.0", path = "../manager" }
 derived_data_service_if = { version = "0.1.0", path = "../remote/if" }
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }

@@ -15,7 +15,6 @@ use anyhow::Context;
 use anyhow::Error;
 use context::CoreContext;
 use context::PerfCounterType;
-use derived_data::BonsaiDerived;
 use filestore::FilestoreConfigRef;
 use fsnodes::RootFsnodeId;
 use manifest::Entry;
@@ -161,7 +160,10 @@ impl CommitRemappingState {
         repo: &impl Repo,
         cs_id: ChangesetId,
     ) -> Result<Option<Self>, Error> {
-        let root_fsnode_id = RootFsnodeId::derive(ctx, repo, cs_id).await?;
+        let root_fsnode_id = repo
+            .repo_derived_data()
+            .derive::<RootFsnodeId>(ctx, cs_id)
+            .await?;
 
         let path = MPath::new(REMAPPING_STATE_FILE)?;
         let maybe_entry = root_fsnode_id

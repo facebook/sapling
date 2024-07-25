@@ -12,7 +12,6 @@ use anyhow::Context;
 use anyhow::Error;
 use changeset_info::ChangesetInfo;
 use context::CoreContext;
-use derived_data::BonsaiDerived;
 use metaconfig_types::CommitSyncConfigVersion;
 use mononoke_types::BonsaiChangesetMut;
 use mononoke_types::ChangesetId;
@@ -33,7 +32,10 @@ pub async fn get_version_for_merge<'a>(
     source_cs_id: ChangesetId,
     parent_outcomes: impl IntoIterator<Item = &'a CommitSyncOutcome>,
 ) -> Result<CommitSyncConfigVersion, Error> {
-    let cs_info = ChangesetInfo::derive(ctx, repo, source_cs_id).await?;
+    let cs_info = repo
+        .repo_derived_data()
+        .derive::<ChangesetInfo>(ctx, source_cs_id)
+        .await?;
     get_version_for_merge_with_info(ctx, &cs_info, parent_outcomes)
 }
 
@@ -86,7 +88,10 @@ pub async fn get_version<'a>(
     source_cs_id: ChangesetId,
     parent_versions: impl IntoIterator<Item = &'a CommitSyncConfigVersion>,
 ) -> Result<Option<CommitSyncConfigVersion>, Error> {
-    let cs_info = ChangesetInfo::derive(ctx, repo, source_cs_id).await?;
+    let cs_info = repo
+        .repo_derived_data()
+        .derive::<ChangesetInfo>(ctx, source_cs_id)
+        .await?;
     get_version_with_info(ctx, &cs_info, parent_versions)
 }
 

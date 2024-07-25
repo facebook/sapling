@@ -15,7 +15,6 @@ use blobstore::Blobstore;
 use blobstore::BlobstoreGetData;
 use bytes::Bytes;
 use context::CoreContext;
-use derived_data::impl_bonsai_derived_via_manager;
 use derived_data_manager::dependencies;
 use derived_data_manager::BonsaiDerivable;
 use derived_data_manager::DerivableType;
@@ -159,8 +158,6 @@ impl BonsaiDerivable for RootSkeletonManifestId {
         ))
     }
 }
-
-impl_bonsai_derived_via_manager!(RootSkeletonManifestId);
 
 pub fn get_file_changes(
     bcs: &BonsaiChangeset,

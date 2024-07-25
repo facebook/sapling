@@ -8,7 +8,6 @@
 use anyhow::Error;
 use blobstore::Loadable;
 use context::CoreContext;
-use derived_data::BonsaiDerived;
 use fsnodes::RootFsnodeId;
 use futures::future::try_join;
 use futures::TryStreamExt;
@@ -48,8 +47,10 @@ pub async fn get_changed_content_working_copy_paths(
     bcs_id: ChangesetId,
     base_cs_id: ChangesetId,
 ) -> Result<Vec<NonRootMPath>, Error> {
-    let unode_id = RootFsnodeId::derive(ctx, repo, bcs_id);
-    let base_unode_id = RootFsnodeId::derive(ctx, repo, base_cs_id);
+    let unode_id = repo.repo_derived_data().derive::<RootFsnodeId>(ctx, bcs_id);
+    let base_unode_id = repo
+        .repo_derived_data()
+        .derive::<RootFsnodeId>(ctx, base_cs_id);
 
     let (unode_id, base_unode_id) = try_join(unode_id, base_unode_id).await?;
 
@@ -88,8 +89,10 @@ pub async fn get_colliding_paths_between_commits(
     bcs_id: ChangesetId,
     base_cs_id: ChangesetId,
 ) -> Result<Vec<NonRootMPath>, Error> {
-    let unode_id = RootFsnodeId::derive(ctx, repo, bcs_id);
-    let base_unode_id = RootFsnodeId::derive(ctx, repo, base_cs_id);
+    let unode_id = repo.repo_derived_data().derive::<RootFsnodeId>(ctx, bcs_id);
+    let base_unode_id = repo
+        .repo_derived_data()
+        .derive::<RootFsnodeId>(ctx, base_cs_id);
 
     let (unode_id, base_unode_id) = try_join(unode_id, base_unode_id).await?;
 
@@ -126,8 +129,12 @@ pub async fn get_changed_working_copy_paths(
     bcs_id: ChangesetId,
     base_cs_id: ChangesetId,
 ) -> Result<Vec<NonRootMPath>, Error> {
-    let unode_id = RootUnodeManifestId::derive(ctx, repo, bcs_id);
-    let base_unode_id = RootUnodeManifestId::derive(ctx, repo, base_cs_id);
+    let unode_id = repo
+        .repo_derived_data()
+        .derive::<RootUnodeManifestId>(ctx, bcs_id);
+    let base_unode_id = repo
+        .repo_derived_data()
+        .derive::<RootUnodeManifestId>(ctx, base_cs_id);
 
     let (unode_id, base_unode_id) = try_join(unode_id, base_unode_id).await?;
 
@@ -166,7 +173,10 @@ pub async fn get_working_copy_paths_by_prefixes(
     bcs_id: ChangesetId,
     prefixes: impl IntoIterator<Item = NonRootMPath>,
 ) -> Result<Vec<NonRootMPath>, Error> {
-    let unode_id = RootUnodeManifestId::derive(ctx, repo, bcs_id).await?;
+    let unode_id = repo
+        .repo_derived_data()
+        .derive::<RootUnodeManifestId>(ctx, bcs_id)
+        .await?;
     let mut paths = unode_id
         .manifest_unode_id()
         .list_leaf_entries_under(ctx.clone(), repo.repo_blobstore().clone(), prefixes)

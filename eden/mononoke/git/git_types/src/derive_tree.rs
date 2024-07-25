@@ -15,7 +15,6 @@ use blobstore::Blobstore;
 use blobstore::Storable;
 use cloned::cloned;
 use context::CoreContext;
-use derived_data::impl_bonsai_derived_via_manager;
 use derived_data_manager::dependencies;
 use derived_data_manager::BonsaiDerivable;
 use derived_data_manager::DerivableType;
@@ -126,8 +125,6 @@ impl BonsaiDerivable for TreeHandle {
         ))
     }
 }
-
-impl_bonsai_derived_via_manager!(TreeHandle);
 
 async fn derive_git_manifest<B: Blobstore + Clone + 'static>(
     ctx: &CoreContext,
@@ -298,12 +295,10 @@ mod test {
     use anyhow::format_err;
     use bookmarks::BookmarkKey;
     use bookmarks::BookmarksRef;
-    use derived_data::BonsaiDerived;
     use fbinit::FacebookInit;
     use filestore::Alias;
     use filestore::FetchKey;
     use fixtures::TestRepoFixture;
-    use futures_util::stream::TryStreamExt;
     use git2::Oid;
     use git2::Repository;
     use manifest::ManifestOps;
@@ -327,7 +322,10 @@ mod test {
             .await?
             .ok_or_else(|| format_err!("no master"))?;
 
-        let tree = TreeHandle::derive(&ctx, &repo, bcs_id).await?;
+        let tree = repo
+            .repo_derived_data()
+            .derive::<TreeHandle>(&ctx, bcs_id)
+            .await?;
 
         let leaves = tree
             .list_leaf_entries(ctx.clone(), repo.repo_blobstore_arc())

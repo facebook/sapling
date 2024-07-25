@@ -15,7 +15,6 @@ use blobstore::Loadable;
 use clap::builder::PossibleValuesParser;
 use clap::Args;
 use context::CoreContext;
-use derived_data::BonsaiDerived;
 use derived_data_manager::BonsaiDerivable;
 use fsnodes::RootFsnodeId;
 use futures::future::try_join_all;
@@ -30,6 +29,7 @@ use mononoke_types::ContentId;
 use mononoke_types::FileType;
 use mononoke_types::NonRootMPath;
 use repo_blobstore::RepoBlobstoreRef;
+use repo_derived_data::RepoDerivedDataRef;
 use skeleton_manifest::RootSkeletonManifestId;
 use slog::trace;
 use unodes::RootUnodeManifestId;
@@ -168,17 +168,20 @@ impl fmt::Display for ManifestData {
     }
 }
 
-async fn derive_or_fetch<T: BonsaiDerived>(
+async fn derive_or_fetch<T: BonsaiDerivable>(
     ctx: &CoreContext,
     repo: &Repo,
     csid: ChangesetId,
     fetch_derived: bool,
 ) -> Result<T> {
     if fetch_derived {
-        let value = T::fetch_derived(ctx, repo, &csid).await?;
-        value.ok_or_else(|| anyhow!("{} are not derived for {}", T::DERIVABLE_NAME, csid))
+        let value = repo
+            .repo_derived_data()
+            .fetch_derived::<T>(ctx, csid)
+            .await?;
+        value.ok_or_else(|| anyhow!("{} are not derived for {}", T::NAME, csid))
     } else {
-        Ok(T::derive(ctx, repo, csid).await?)
+        Ok(repo.repo_derived_data().derive::<T>(ctx, csid).await?)
     }
 }
 

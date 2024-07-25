@@ -21,7 +21,6 @@ use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use deleted_manifest::DeletedManifestOps;
 use deleted_manifest::RootDeletedManifestIdCommon;
-use derived_data::BonsaiDerived;
 use filestore::FetchKey;
 use futures::future::try_join_all;
 use futures::future::TryFutureExt;
@@ -580,7 +579,9 @@ impl ChangesetPathHistoryContext {
                 if let Some(until_ts) = self.until_timestamp {
                     cs_ids = try_join_all(cs_ids.into_iter().map(|(cs_id, path)| async move {
                         let info = if cs_info_enabled {
-                            ChangesetInfo::derive(ctx, repo, cs_id).await
+                            repo.repo_derived_data()
+                                .derive::<ChangesetInfo>(ctx, cs_id)
+                                .await
                         } else {
                             let bonsai = cs_id.load(ctx, repo.repo_blobstore()).await?;
                             Ok(ChangesetInfo::new(cs_id, bonsai))

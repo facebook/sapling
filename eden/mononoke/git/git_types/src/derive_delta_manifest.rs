@@ -27,7 +27,6 @@ use blobstore::Storable;
 use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
-use derived_data::impl_bonsai_derived_via_manager;
 use derived_data_manager::dependencies;
 use derived_data_manager::BonsaiDerivable;
 use derived_data_manager::DerivableType;
@@ -653,8 +652,6 @@ impl BonsaiDerivable for RootGitDeltaManifestId {
     }
 }
 
-impl_bonsai_derived_via_manager!(RootGitDeltaManifestId);
-
 #[cfg(test)]
 mod tests {
     use std::collections::HashSet;
@@ -668,7 +665,6 @@ mod tests {
     use bookmarks::BookmarkKey;
     use bookmarks::BookmarksRef;
     use commit_graph::CommitGraphRef;
-    use derived_data::BonsaiDerived;
     use fbinit::FacebookInit;
     use fixtures::TestRepoFixture;
     use futures::future;
@@ -703,7 +699,10 @@ mod tests {
             .await?
             .ok_or_else(|| format_err!("no master"))?;
         // Validate that the derivation of the Git Delta Manifest for the head commit succeeds
-        let root_mf_id = RootGitDeltaManifestId::derive(&ctx, &repo, bcs_id).await?;
+        let root_mf_id = repo
+            .repo_derived_data()
+            .derive::<RootGitDeltaManifestId>(&ctx, bcs_id)
+            .await?;
         // Validate the derivation of all the commits in this repo succeeds
         let all_changesets = repo
             .commit_graph()
@@ -715,7 +714,10 @@ mod tests {
                 let repo = &repo;
                 let ctx: &CoreContext = &ctx;
                 async move {
-                    let mf_id = RootGitDeltaManifestId::derive(ctx, repo, bcs_id).await?;
+                    let mf_id = repo
+                        .repo_derived_data()
+                        .derive::<RootGitDeltaManifestId>(ctx, bcs_id)
+                        .await?;
                     Ok(mf_id)
                 }
             })

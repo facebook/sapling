@@ -26,7 +26,6 @@ use commit_transformation::create_source_to_target_multi_mover;
 use commit_transformation::DirectoryMultiMover;
 use commit_transformation::MultiMover;
 use context::CoreContext;
-use derived_data::BonsaiDerived;
 use fsnodes::RootFsnodeId;
 use futures::future::try_join;
 use futures::future::try_join_all;
@@ -393,7 +392,9 @@ pub trait MegarepoOp {
         linkfiles: BTreeMap<NonRootMPath, FileChange>,
         source_name: &SourceName,
     ) -> Result<SourceAndMovedChangesets, MegarepoError> {
-        let root_fsnode_id = RootFsnodeId::derive(ctx, repo, cs_id)
+        let root_fsnode_id = repo
+            .repo_derived_data()
+            .derive::<RootFsnodeId>(ctx, cs_id)
             .await
             .map_err(Error::from)?;
         let fsnode_id = root_fsnode_id.fsnode_id();
@@ -498,7 +499,9 @@ pub trait MegarepoOp {
         mover: &MultiMover,
         directory_mover: &DirectoryMultiMover,
     ) -> Result<Vec<MutableRenameEntry>, Error> {
-        let root_unode_id = RootUnodeManifestId::derive(ctx, repo, cs_id)
+        let root_unode_id = repo
+            .repo_derived_data()
+            .derive::<RootUnodeManifestId>(ctx, cs_id)
             .await
             .map_err(Error::from)?;
         let unode_id = root_unode_id.manifest_unode_id();

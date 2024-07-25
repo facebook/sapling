@@ -451,7 +451,6 @@ mod tests {
     use blobrepo::save_bonsai_changesets;
     use blobstore::Storable;
     use bytes::Bytes;
-    use derived_data::BonsaiDerived;
     use derived_data_test_utils::bonsai_changeset_from_hg;
     use derived_data_test_utils::iterate_all_manifest_entries;
     use fbinit::FacebookInit;
@@ -492,7 +491,9 @@ mod tests {
 
         // Derive filenodes because they are going to be used in this test
         let master_cs_id = resolve_cs_id(&ctx, &repo, "master").await?;
-        FilenodesOnlyPublic::derive(&ctx, &repo, master_cs_id).await?;
+        repo.repo_derived_data()
+            .derive::<FilenodesOnlyPublic>(&ctx, master_cs_id)
+            .await?;
 
         let parent_unode_id = {
             let parent_hg_cs = "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536";
@@ -688,7 +689,10 @@ mod tests {
 
         let find_unodes = {
             |ctx: CoreContext, repo: TestRepo| async move {
-                let p1_root_unode_mf_id = RootUnodeManifestId::derive(&ctx, &repo, p1).await?;
+                let p1_root_unode_mf_id = repo
+                    .repo_derived_data
+                    .derive::<RootUnodeManifestId>(&ctx, p1)
+                    .await?;
 
                 let mut p1_unodes: Vec<_> = p1_root_unode_mf_id
                     .manifest_unode_id()
@@ -702,8 +706,10 @@ mod tests {
                     .await?;
                 p1_unodes.sort_by_key(|(path, _)| path.clone());
 
-                let merge_root_unode_mf_id =
-                    RootUnodeManifestId::derive(&ctx, &repo, merge).await?;
+                let merge_root_unode_mf_id = repo
+                    .repo_derived_data()
+                    .derive::<RootUnodeManifestId>(&ctx, merge)
+                    .await?;
 
                 let mut merge_unodes: Vec<_> = merge_root_unode_mf_id
                     .manifest_unode_id()

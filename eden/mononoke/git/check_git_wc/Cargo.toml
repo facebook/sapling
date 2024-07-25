@@ -11,7 +11,6 @@ license = "GPLv2+"
 anyhow = "1.0.75"
 blobstore = { version = "0.1.0", path = "../../blobstore" }
 context = { version = "0.1.0", path = "../../server/context" }
-derived_data = { version = "0.1.0", path = "../../derived_data" }
 fsnodes = { version = "0.1.0", path = "../../derived_data/fsnodes" }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
 git2 = "0.14"

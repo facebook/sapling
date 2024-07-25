@@ -36,8 +36,7 @@ use cloned::cloned;
 use context::CoreContext;
 use deleted_manifest::RootDeletedManifestIdCommon;
 use deleted_manifest::RootDeletedManifestV2Id;
-use derived_data::BonsaiDerived;
-use derived_data_manager::BonsaiDerivable as NewBonsaiDerivable;
+use derived_data_manager::BonsaiDerivable;
 use fastlog::fetch_fastlog_batch_by_unode_id;
 use fastlog::RootFastlog;
 use filenodes::FilenodeInfo;
@@ -77,6 +76,7 @@ use phases::Phase;
 use phases::Phases;
 use phases::PhasesRef;
 use repo_blobstore::RepoBlobstoreRef;
+use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentityRef;
 use scuba_ext::MononokeScubaSampleBuilder;
 use skeleton_manifest::RootSkeletonManifestId;
@@ -752,7 +752,9 @@ async fn evolve_filenode_flag<'a, V: 'a + VisitOne>(
         let bcs_id = key.inner;
         let derived_filenode = if enable_derive {
             if checker.is_public(ctx, &bcs_id).await? {
-                let _ = FilenodesOnlyPublic::derive(ctx, repo, bcs_id)
+                let _ = repo
+                    .repo_derived_data()
+                    .derive::<FilenodesOnlyPublic>(ctx, bcs_id)
                     .await
                     .map_err(Error::from)?;
                 Some(true)
@@ -766,9 +768,12 @@ async fn evolve_filenode_flag<'a, V: 'a + VisitOne>(
         // We only want to walk to Hg step if filenode is present
         filenode_known_derived = match derived_filenode {
             Some(v) => v,
-            None => FilenodesOnlyPublic::is_derived(ctx, repo, &bcs_id)
+            None => repo
+                .repo_derived_data()
+                .fetch_derived::<FilenodesOnlyPublic>(ctx, bcs_id)
                 .await
-                .map_err(Error::from)?,
+                .map_err(Error::from)?
+                .is_some(),
         };
     }
 
@@ -1184,31 +1189,45 @@ async fn alias_content_mapping_step<V: VisitOne>(
 }
 
 // Only fetch if already derived unless enable_derive is set
-async fn maybe_derived<Derived: BonsaiDerived>(
+async fn maybe_derived<Derivable: BonsaiDerivable>(
     ctx: &CoreContext,
     repo: &BlobRepo,
     bcs_id: ChangesetId,
     enable_derive: bool,
-) -> Result<Option<Derived>, Error> {
+) -> Result<Option<Derivable>, Error> {
     if enable_derive {
-        Ok(Some(Derived::derive(ctx, repo, bcs_id).await?))
+        Ok(Some(
+            repo.repo_derived_data()
+                .derive::<Derivable>(ctx, bcs_id)
+                .await?,
+        ))
     } else {
-        Derived::fetch_derived(ctx, repo, &bcs_id).await
+        Ok(repo
+            .repo_derived_data()
+            .fetch_derived::<Derivable>(ctx, bcs_id)
+            .await?)
     }
 }
 
 // Variant of is_derived that will still trigger derivation if enable_derive is set
-async fn is_derived<Derived: BonsaiDerived>(
+async fn is_derived<Derivable: BonsaiDerivable>(
     ctx: &CoreContext,
     repo: &BlobRepo,
     bcs_id: ChangesetId,
     enable_derive: bool,
 ) -> Result<bool, Error> {
     if enable_derive {
-        let _ = Derived::derive(ctx, repo, bcs_id).await?;
+        let _ = repo
+            .repo_derived_data()
+            .derive::<Derivable>(ctx, bcs_id)
+            .await?;
         Ok(true)
     } else {
-        Ok(Derived::is_derived(ctx, repo, &bcs_id).await?)
+        Ok(repo
+            .repo_derived_data()
+            .fetch_derived::<Derivable>(ctx, bcs_id)
+            .await?
+            .is_some())
     }
 }
 

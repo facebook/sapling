@@ -29,7 +29,6 @@ use cmdlib::args;
 use cmdlib::args::MononokeMatches;
 use cmdlib::helpers;
 use context::CoreContext;
-use derived_data::BonsaiDerived;
 use fbinit::FacebookInit;
 use futures::future::try_join;
 use futures::future::try_join_all;
@@ -49,6 +48,7 @@ use mononoke_types::FileUnodeId;
 use mononoke_types::NonRootMPath;
 use repo_blobstore::RepoBlobstoreArc;
 use repo_blobstore::RepoBlobstoreRef;
+use repo_derived_data::RepoDerivedDataRef;
 use slog::Logger;
 use unodes::RootUnodeManifestId;
 
@@ -156,7 +156,9 @@ pub async fn subcommand_blame<'a>(
                 args::not_shardmanager_compatible::open_repo(fb, &logger, toplevel_matches).await?;
             let cs_id = helpers::csid_resolve(&ctx, repo.clone(), hash_or_bookmark).await?;
 
-            let derived_unode = RootUnodeManifestId::derive(&ctx, &repo, cs_id)
+            let derived_unode = repo
+                .repo_derived_data()
+                .derive::<RootUnodeManifestId>(&ctx, cs_id)
                 .map_err(Error::from)
                 .await?;
 
@@ -233,7 +235,10 @@ async fn find_leaf(
     csid: ChangesetId,
     path: NonRootMPath,
 ) -> Result<FileUnodeId, Error> {
-    let mf_root = RootUnodeManifestId::derive(&ctx, &repo, csid).await?;
+    let mf_root = repo
+        .repo_derived_data()
+        .derive::<RootUnodeManifestId>(&ctx, csid)
+        .await?;
     let entry_opt = mf_root
         .manifest_unode_id()
         .clone()
@@ -256,7 +261,10 @@ async fn try_find_leaf(
     csid: ChangesetId,
     path: NonRootMPath,
 ) -> Result<Option<FileUnodeId>, Error> {
-    let mf_root = RootUnodeManifestId::derive(&ctx, &repo, csid).await?;
+    let mf_root = repo
+        .repo_derived_data()
+        .derive::<RootUnodeManifestId>(&ctx, csid)
+        .await?;
     let entry_opt = mf_root
         .manifest_unode_id()
         .clone()

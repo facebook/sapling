@@ -21,7 +21,6 @@ use blobstore::BlobstoreGetData;
 use blobstore::Storable;
 use bytes::Bytes;
 use context::CoreContext;
-use derived_data::impl_bonsai_derived_via_manager;
 use derived_data_manager::dependencies;
 use derived_data_manager::BonsaiDerivable;
 use derived_data_manager::DerivableType;
@@ -414,8 +413,6 @@ impl BonsaiDerivable for RootGitDeltaManifestV2Id {
     }
 }
 
-impl_bonsai_derived_via_manager!(RootGitDeltaManifestV2Id);
-
 #[cfg(test)]
 mod tests {
     use std::collections::HashSet;
@@ -429,7 +426,6 @@ mod tests {
     use bookmarks::BookmarkKey;
     use bookmarks::BookmarksRef;
     use commit_graph::CommitGraphRef;
-    use derived_data::BonsaiDerived;
     use fbinit::FacebookInit;
     use fixtures::TestRepoFixture;
     use futures::future;
@@ -463,7 +459,10 @@ mod tests {
             .await?
             .ok_or_else(|| format_err!("no master"))?;
         // Validate that the derivation of the GitDeltaManifestV2 for the head commit succeeds
-        let root_mf_id = RootGitDeltaManifestV2Id::derive(ctx, repo, cs_id).await?;
+        let root_mf_id = repo
+            .repo_derived_data()
+            .derive::<RootGitDeltaManifestV2Id>(ctx, cs_id)
+            .await?;
         // Validate the derivation of all the commits in this repo succeeds
         let all_cs_ids = repo
             .commit_graph()
@@ -472,7 +471,9 @@ mod tests {
             .to_vec();
         repo.commit_graph()
             .process_topologically(ctx, all_cs_ids, |cs_id| async move {
-                RootGitDeltaManifestV2Id::derive(ctx, repo, cs_id).await?;
+                repo.repo_derived_data()
+                    .derive::<RootGitDeltaManifestV2Id>(ctx, cs_id)
+                    .await?;
                 Ok(())
             })
             .await

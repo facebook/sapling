@@ -15,7 +15,6 @@ use anyhow::bail;
 use anyhow::Result;
 use blobstore::Loadable;
 use context::CoreContext;
-use derived_data::BonsaiDerived;
 use fsnodes::RootFsnodeId;
 use futures::stream;
 use futures::StreamExt;
@@ -116,7 +115,9 @@ async fn check_receiver(
     rx: mpsc::Receiver<CheckNode>,
     scheduled_max: usize,
 ) -> Result<()> {
-    let root_fsnode = RootFsnodeId::derive(ctx, hg_repo, cs)
+    let root_fsnode = hg_repo
+        .repo_derived_data()
+        .derive::<RootFsnodeId>(ctx, cs)
         .await?
         .into_fsnode_id()
         .load(ctx, hg_repo.repo_blobstore())

@@ -15,7 +15,6 @@ use blobstore::Blobstore;
 use blobstore::BlobstoreGetData;
 use bytes::Bytes;
 use context::CoreContext;
-use derived_data::impl_bonsai_derived_via_manager;
 use derived_data_manager::dependencies;
 use derived_data_manager::BonsaiDerivable;
 use derived_data_manager::DerivableType;
@@ -153,8 +152,6 @@ impl BonsaiDerivable for RootFsnodeId {
     }
 }
 
-impl_bonsai_derived_via_manager!(RootFsnodeId);
-
 pub(crate) fn get_file_changes(
     bcs: &BonsaiChangeset,
 ) -> Vec<(NonRootMPath, Option<(ContentId, FileType)>)> {
@@ -177,7 +174,6 @@ mod test {
     use bookmarks::BookmarksRef;
     use borrowed::borrowed;
     use commit_graph::CommitGraphRef;
-    use derived_data::BonsaiDerived;
     use derived_data_test_utils::iterate_all_manifest_entries;
     use fbinit::FacebookInit;
     use fixtures::BranchEven;
@@ -222,7 +218,9 @@ mod test {
         bcs_id: ChangesetId,
         hg_cs_id: HgChangesetId,
     ) -> Result<()> {
-        let root_fsnode_id = RootFsnodeId::derive(ctx, repo, bcs_id)
+        let root_fsnode_id = repo
+            .repo_derived_data()
+            .derive::<RootFsnodeId>(ctx, bcs_id)
             .await?
             .into_fsnode_id();
 

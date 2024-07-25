@@ -54,9 +54,7 @@
 
 use std::collections::HashMap;
 
-use anyhow::Error;
 use anyhow::Result;
-use async_trait::async_trait;
 use blobstore::Blobstore;
 use context::CoreContext;
 use context::SessionClass;
@@ -64,10 +62,8 @@ use filestore::FetchKey;
 use futures::stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
-use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
 use mononoke_types::ContentMetadataV2;
-use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentityRef;
 
 pub mod batch;
@@ -84,103 +80,8 @@ pub mod macro_export {
     pub use mononoke_types::ChangesetId;
     pub use repo_derived_data::RepoDerivedDataRef;
 
-    pub use super::BonsaiDerived;
     pub use super::DerivationError;
     pub use super::SharedDerivationError;
-}
-
-/// Trait for accessing data that can be derived from bonsai changesets, such
-/// as Mercurial or Git changesets, unodes, fsnodes, skeleton manifests and
-/// other derived data.
-#[async_trait]
-pub trait BonsaiDerived: Sized + Send + Sync + Clone + 'static {
-    const DERIVABLE_NAME: &'static str;
-
-    /// This function is the entrypoint for changeset derivation.  It will
-    /// derive an instance of the derived data type based on the bonsai
-    /// changeset representation.
-    ///
-    /// The derived data will be saved in a mapping from the changeset id,
-    /// so that subsequent derives will just fetch.
-    ///
-    /// This function fails immediately if this type of derived data is not
-    /// enabled for this repo.
-    async fn derive(
-        ctx: &CoreContext,
-        repo: &(impl RepoDerivedDataRef + Send + Sync),
-        csid: ChangesetId,
-    ) -> Result<Self, SharedDerivationError>;
-
-    /// Fetch the derived data in cases where we might not want to trigger
-    /// derivation, e.g. when scrubbing.
-    async fn fetch_derived(
-        ctx: &CoreContext,
-        repo: &(impl RepoDerivedDataRef + Send + Sync),
-        csid: &ChangesetId,
-    ) -> Result<Option<Self>, Error>;
-
-    /// Returns `true` if derived data has already been derived for this
-    /// changeset.
-    async fn is_derived(
-        ctx: &CoreContext,
-        repo: &(impl RepoDerivedDataRef + Send + Sync),
-        csid: &ChangesetId,
-    ) -> Result<bool, DerivationError> {
-        Ok(Self::fetch_derived(ctx, repo, csid).await?.is_some())
-    }
-
-    /// Returns the number of ancestors of `csid` that are not yet derived,
-    /// or at most `limit`.
-    ///
-    /// This function fails immediately if derived data is not enabled for
-    /// this repo.
-    async fn count_underived(
-        ctx: &CoreContext,
-        repo: &(impl RepoDerivedDataRef + Send + Sync),
-        csid: &ChangesetId,
-        limit: u64,
-    ) -> Result<u64, DerivationError>;
-}
-
-#[macro_export]
-macro_rules! impl_bonsai_derived_via_manager {
-    ($derivable:ty) => {
-        #[$crate::macro_export::async_trait]
-        impl $crate::macro_export::BonsaiDerived for $derivable {
-            const DERIVABLE_NAME: &'static str =
-                <$derivable as $crate::macro_export::BonsaiDerivable>::NAME;
-
-            async fn derive(
-                ctx: &$crate::macro_export::CoreContext,
-                repo: &(impl $crate::macro_export::RepoDerivedDataRef + Send + Sync),
-                csid: $crate::macro_export::ChangesetId,
-            ) -> Result<Self, $crate::macro_export::SharedDerivationError> {
-                repo.repo_derived_data().derive::<Self>(ctx, csid).await
-            }
-
-            async fn fetch_derived(
-                ctx: &$crate::macro_export::CoreContext,
-                repo: &(impl $crate::macro_export::RepoDerivedDataRef + Send + Sync),
-                csid: &$crate::macro_export::ChangesetId,
-            ) -> Result<Option<Self>, $crate::macro_export::Error> {
-                Ok(repo
-                    .repo_derived_data()
-                    .fetch_derived::<Self>(ctx, *csid)
-                    .await?)
-            }
-
-            async fn count_underived(
-                ctx: &$crate::macro_export::CoreContext,
-                repo: &(impl $crate::macro_export::RepoDerivedDataRef + Send + Sync),
-                csid: &$crate::macro_export::ChangesetId,
-                limit: u64,
-            ) -> Result<u64, $crate::macro_export::DerivationError> {
-                repo.repo_derived_data()
-                    .count_underived::<Self>(ctx, *csid, Some(limit))
-                    .await
-            }
-        }
-    };
 }
 
 pub fn override_ctx(mut ctx: CoreContext, repo: impl RepoIdentityRef) -> CoreContext {

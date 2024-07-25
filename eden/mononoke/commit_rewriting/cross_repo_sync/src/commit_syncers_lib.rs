@@ -30,7 +30,6 @@ use commit_transformation::FileChangeFilterFunc;
 use commit_transformation::MultiMover;
 use commit_transformation::RewriteOpts;
 use context::CoreContext;
-use derived_data::BonsaiDerived;
 use environment::Caching;
 use fbinit::FacebookInit;
 use futures::channel::oneshot;
@@ -336,7 +335,11 @@ where
             None => {
                 let maybe_mapping_change = async move {
                     get_mapping_change_version(
-                        &ChangesetInfo::derive(ctx, commit_syncer.get_source_repo(), cs_id).await?,
+                        &commit_syncer
+                            .get_source_repo()
+                            .repo_derived_data()
+                            .derive::<ChangesetInfo>(ctx, cs_id)
+                            .await?,
                     )
                 };
                 let parents = source_repo.commit_graph().changeset_parents(ctx, cs_id);

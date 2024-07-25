@@ -11,7 +11,6 @@ use anyhow::Result;
 use async_trait::async_trait;
 use blobstore::BlobstoreGetData;
 use context::CoreContext;
-use derived_data::impl_bonsai_derived_via_manager;
 use derived_data_manager::dependencies;
 use derived_data_manager::BonsaiDerivable;
 use derived_data_manager::DerivableType;
@@ -137,5 +136,3 @@ impl BonsaiDerivable for RootTestShardedManifestDirectory {
         ))
     }
 }
-
-impl_bonsai_derived_via_manager!(RootTestShardedManifestDirectory);

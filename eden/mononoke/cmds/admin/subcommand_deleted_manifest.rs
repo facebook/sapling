@@ -27,7 +27,6 @@ use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use deleted_manifest::DeletedManifestOps;
 use deleted_manifest::RootDeletedManifestV2Id;
-use derived_data::BonsaiDerived;
 use fbinit::FacebookInit;
 use futures::future;
 use futures::StreamExt;
@@ -40,6 +39,7 @@ use mononoke_types::ChangesetId;
 use mononoke_types::DeletedManifestV2Id;
 use mononoke_types::NonRootMPath;
 use repo_blobstore::RepoBlobstoreRef;
+use repo_derived_data::RepoDerivedDataRef;
 use slog::debug;
 use slog::Logger;
 
@@ -151,7 +151,10 @@ async fn subcommand_manifest(
     cs_id: ChangesetId,
     prefix: MPath,
 ) -> Result<(), Error> {
-    let root_manifest = RootDeletedManifestV2Id::derive(&ctx, &repo, cs_id).await?;
+    let root_manifest = repo
+        .repo_derived_data()
+        .derive::<RootDeletedManifestV2Id>(&ctx, cs_id)
+        .await?;
     debug!(ctx.logger(), "ROOT Deleted Manifest V2 {:?}", root_manifest,);
     let mut entries: Vec<_> = root_manifest
         .find_entries(
@@ -234,7 +237,10 @@ async fn verify_single_commit(
 ) -> Result<(), Error> {
     let file_changes = get_file_changes(ctx.clone(), repo.clone(), cs_id.clone());
     let deleted_manifest_paths = async move {
-        let root_manifest = RootDeletedManifestV2Id::derive(&ctx, &repo, cs_id).await?;
+        let root_manifest = repo
+            .repo_derived_data()
+            .derive::<RootDeletedManifestV2Id>(&ctx, cs_id)
+            .await?;
         let entries: BTreeSet<_> = root_manifest
             .list_all_entries(&ctx, repo.repo_blobstore())
             .try_filter_map(|(path, ..)| async move { Ok(Option::<NonRootMPath>::from(path)) })

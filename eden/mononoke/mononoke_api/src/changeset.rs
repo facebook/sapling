@@ -34,7 +34,6 @@ use context::CoreContext;
 use deleted_manifest::DeletedManifestOps;
 use deleted_manifest::RootDeletedManifestIdCommon;
 use deleted_manifest::RootDeletedManifestV2Id;
-use derived_data::BonsaiDerived;
 use derived_data_manager::BonsaiDerivable;
 use fsnodes::RootFsnodeId;
 use futures::future::try_join;
@@ -64,6 +63,7 @@ use mononoke_types::Svnrev;
 use repo_blobstore::RepoBlobstoreArc;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataArc;
+use repo_derived_data::RepoDerivedDataRef;
 use skeleton_manifest::RootSkeletonManifestId;
 use smallvec::SmallVec;
 use sorted_vector_map::SortedVectorMap;
@@ -1158,7 +1158,10 @@ impl ChangesetContext {
                     cloned!(ctx, repo, cs_info_enabled);
                     async move {
                         let info = if cs_info_enabled {
-                            ChangesetInfo::derive(&ctx, repo.repo(), cs_id).await?
+                            repo.repo()
+                                .repo_derived_data()
+                                .derive::<ChangesetInfo>(&ctx, cs_id)
+                                .await?
                         } else {
                             let bonsai = cs_id.load(&ctx, repo.repo().repo_blobstore()).await?;
                             ChangesetInfo::new(cs_id, bonsai)

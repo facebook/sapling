@@ -24,7 +24,6 @@ use commit_graph::CommitGraphArc;
 use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use context::PerfCounterType;
-use derived_data::BonsaiDerived;
 use filenodes_derivation::FilenodesOnlyPublic;
 use filestore::FetchKey;
 use futures::future;
@@ -461,7 +460,10 @@ pub async fn find_new_draft_commits_and_derive_filenodes_for_public_roots(
     ctx.scuba().clone().log_with_msg("Deriving filenodes", None);
     // Ensure filenodes are derived for all of the public heads.
     stream::iter(public_heads)
-        .map(|bcs_id| FilenodesOnlyPublic::derive(ctx, repo, bcs_id))
+        .map(|bcs_id| {
+            repo.repo_derived_data()
+                .derive::<FilenodesOnlyPublic>(ctx, bcs_id)
+        })
         .buffered(100)
         .try_for_each(|_derive| async { Ok(()) })
         .await?;

@@ -19,7 +19,6 @@ use bookmarks::BookmarkKey;
 use bookmarks::BookmarksMaybeStaleExt;
 use cloned::cloned;
 use context::CoreContext;
-use derived_data::BonsaiDerived;
 use fsnodes::RootFsnodeId;
 use futures::future;
 use futures::future::FutureExt;
@@ -120,10 +119,14 @@ pub async fn verify_working_copy_with_version<
     let source_repo = commit_syncer.get_source_repo();
     let target_repo = commit_syncer.get_target_repo();
 
-    let source_root_fsnode_id = RootFsnodeId::derive(ctx, source_repo, source_hash.0)
+    let source_root_fsnode_id = source_repo
+        .repo_derived_data()
+        .derive::<RootFsnodeId>(ctx, source_hash.0)
         .await?
         .into_fsnode_id();
-    let target_root_fsnode_id = RootFsnodeId::derive(ctx, target_repo, target_hash.0)
+    let target_root_fsnode_id = target_repo
+        .repo_derived_data()
+        .derive::<RootFsnodeId>(ctx, target_hash.0)
         .await?
         .into_fsnode_id();
 

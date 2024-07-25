@@ -17,7 +17,6 @@ use cloned::cloned;
 use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use context::PerfCounterType;
-use derived_data::BonsaiDerived;
 use filenodes::FilenodeResult;
 use filenodes_derivation::FilenodesOnlyPublic;
 use futures::compat::Stream01CompatExt;
@@ -36,6 +35,7 @@ use metaconfig_types::CacheWarmupParams;
 use microwave::SnapshotLocation;
 use mononoke_types::ChangesetId;
 use repo_blobstore::RepoBlobstoreRef;
+use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentityRef;
 use revset::AncestorsNodeStream;
 use slog::debug;
@@ -107,7 +107,8 @@ async fn blobstore_and_filenodes_warmup(
         hg_cs_id
             .load(ctx, repo.repo_blobstore())
             .map_err(Error::from),
-        FilenodesOnlyPublic::derive(ctx, repo, bcs_id)
+        repo.repo_derived_data()
+            .derive::<FilenodesOnlyPublic>(ctx, bcs_id)
             .map_err(Error::from)
             .map_ok(|_| ()),
     )

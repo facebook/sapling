@@ -25,7 +25,6 @@ use derived_data::batch::split_bonsais_in_linear_stacks;
 use derived_data::batch::FileConflicts;
 use derived_data::batch::SplitOptions;
 use derived_data::batch::DEFAULT_STACK_FILE_CHANGES_LIMIT;
-use derived_data::impl_bonsai_derived_via_manager;
 use derived_data::prefetch_content_metadata;
 use derived_data_manager::dependencies;
 use derived_data_manager::BonsaiDerivable;
@@ -248,8 +247,6 @@ fn get_hg_changeset_derivation_options(
     }
 }
 
-impl_bonsai_derived_via_manager!(MappedHgChangesetId);
-
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct RootHgAugmentedManifestId(HgAugmentedManifestId);
 
@@ -408,8 +405,6 @@ impl BonsaiDerivable for RootHgAugmentedManifestId {
         ))
     }
 }
-
-impl_bonsai_derived_via_manager!(RootHgAugmentedManifestId);
 
 #[cfg(test)]
 mod test {

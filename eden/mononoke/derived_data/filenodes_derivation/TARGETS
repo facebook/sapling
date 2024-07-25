@@ -33,7 +33,6 @@ rust_library(
         "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:itertools",
         "//eden/mononoke/blobstore:blobstore",
-        "//eden/mononoke/derived_data:derived_data",
         "//eden/mononoke/derived_data:derived_data_manager",
         "//eden/mononoke/derived_data/mercurial_derivation:mercurial_derivation",
         "//eden/mononoke/derived_data/remote/if:derived_data_service_if-rust",

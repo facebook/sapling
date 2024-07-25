@@ -15,7 +15,6 @@ use blobrepo::save_bonsai_changesets;
 use blobrepo::BlobRepo;
 use commit_transformation::copy_file_contents;
 use context::CoreContext;
-use derived_data::BonsaiDerived;
 use fsnodes::RootFsnodeId;
 use futures::future::try_join;
 use futures::TryStreamExt;
@@ -31,6 +30,7 @@ use mononoke_types::GitLfs;
 use mononoke_types::NonRootMPath;
 use regex::Regex;
 use repo_blobstore::RepoBlobstoreRef;
+use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentityRef;
 use slog::debug;
 use slog::info;
@@ -282,7 +282,10 @@ async fn list_directory(
     cs_id: ChangesetId,
     path: &NonRootMPath,
 ) -> Result<Option<BTreeMap<NonRootMPath, FsnodeFile>>, Error> {
-    let root = RootFsnodeId::derive(ctx, repo, cs_id).await?;
+    let root = repo
+        .repo_derived_data()
+        .derive::<RootFsnodeId>(ctx, cs_id)
+        .await?;
 
     let entries = root
         .fsnode_id()

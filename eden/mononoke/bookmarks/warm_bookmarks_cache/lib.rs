@@ -1157,7 +1157,6 @@ mod tests {
     use bookmarks::BookmarksMaybeStaleExt;
     use cloned::cloned;
     use delayblob::DelayedBlobstore;
-    use derived_data::BonsaiDerived;
     use fbinit::FacebookInit;
     use fixtures::Linear;
     use fixtures::TestRepoFixture;
@@ -1166,6 +1165,7 @@ mod tests {
     use mononoke_api_types::InnerRepo;
     use mononoke_types::RepositoryId;
     use repo_derived_data::RepoDerivedDataArc;
+    use repo_derived_data::RepoDerivedDataRef;
     use repo_identity::RepoIdentityArc;
     use sql_ext::mononoke_queries;
     use test_repo_factory::TestRepoFactory;
@@ -1207,7 +1207,9 @@ mod tests {
         assert_eq!(bookmarks, HashMap::new());
 
         let master_cs_id = resolve_cs_id(&ctx, &repo.blob_repo, "master").await?;
-        RootUnodeManifestId::derive(&ctx, &repo.blob_repo, master_cs_id).await?;
+        repo.repo_derived_data()
+            .derive::<RootUnodeManifestId>(&ctx, master_cs_id)
+            .await?;
 
         let bookmarks = init_bookmarks(
             &ctx,
@@ -1260,7 +1262,9 @@ mod tests {
                 .await?;
             master = new_master;
         }
-        RootUnodeManifestId::derive(&ctx, &repo.blob_repo, master).await?;
+        repo.repo_derived_data()
+            .derive::<RootUnodeManifestId>(&ctx, master)
+            .await?;
         let derived_master = master;
 
         info!(ctx.logger(), "creating 5 more underived commits");
@@ -1294,7 +1298,9 @@ mod tests {
             hashmap! {BookmarkKey::new("master")? => (derived_master, BookmarkKind::PullDefaultPublishing)}
         );
 
-        RootUnodeManifestId::derive(&ctx, &repo.blob_repo, master).await?;
+        repo.repo_derived_data()
+            .derive::<RootUnodeManifestId>(&ctx, master)
+            .await?;
         let bookmarks = init_bookmarks(
             &ctx,
             &*sub,
@@ -1325,7 +1331,9 @@ mod tests {
         let warmers = Arc::new(warmers);
 
         let derived_master = resolve_cs_id(&ctx, &repo.blob_repo, "master").await?;
-        RootUnodeManifestId::derive(&ctx, &repo.blob_repo, derived_master).await?;
+        repo.repo_derived_data()
+            .derive::<RootUnodeManifestId>(&ctx, derived_master)
+            .await?;
 
         for i in 1..50 {
             let new_master = CreateCommitContext::new(&ctx, &repo.blob_repo, vec!["master"])
@@ -1377,7 +1385,9 @@ mod tests {
             .add_file("somefile", "content")
             .commit()
             .await?;
-        RootUnodeManifestId::derive(&ctx, &repo.blob_repo, derived_master).await?;
+        repo.repo_derived_data()
+            .derive::<RootUnodeManifestId>(&ctx, derived_master)
+            .await?;
         bookmark(&ctx, &repo.blob_repo, "master")
             .set_to(derived_master)
             .await?;
@@ -1619,7 +1629,9 @@ mod tests {
                     } else {
                         cloned!(repo);
                         async move {
-                            RootUnodeManifestId::derive(ctx, &repo.blob_repo, cs_id).await?;
+                            repo.repo_derived_data()
+                                .derive::<RootUnodeManifestId>(ctx, cs_id)
+                                .await?;
                             Ok(())
                         }
                         .boxed()
@@ -1631,9 +1643,11 @@ mod tests {
                 move |ctx, cs_id| {
                     cloned!(repo);
                     async move {
-                        let res =
-                            RootUnodeManifestId::is_derived(ctx, &repo.blob_repo, &cs_id).await?;
-                        Ok(res)
+                        let res = repo
+                            .repo_derived_data()
+                            .fetch_derived::<RootUnodeManifestId>(ctx, cs_id)
+                            .await?;
+                        Ok(res.is_some())
                     }
                     .boxed()
                 }
@@ -1710,16 +1724,16 @@ mod tests {
         let repo = Linear::get_inner_repo(fb).await;
         let ctx = CoreContext::test_mock(fb);
 
-        RootUnodeManifestId::derive(
-            &ctx,
-            &repo.blob_repo,
-            repo.blob_repo
-                .bookmarks()
-                .get(ctx.clone(), &BookmarkKey::new("master")?)
-                .await?
-                .unwrap(),
-        )
-        .await?;
+        repo.repo_derived_data()
+            .derive::<RootUnodeManifestId>(
+                &ctx,
+                repo.blob_repo
+                    .bookmarks()
+                    .get(ctx.clone(), &BookmarkKey::new("master")?)
+                    .await?
+                    .unwrap(),
+            )
+            .await?;
 
         let derive_sleep_time_ms = 100;
         let how_many_derived = Arc::new(RwLock::new(HashMap::new()));
@@ -1733,7 +1747,9 @@ mod tests {
                     cloned!(repo);
                     async move {
                         tokio::time::sleep(Duration::from_millis(derive_sleep_time_ms)).await;
-                        RootUnodeManifestId::derive(ctx, &repo.blob_repo, cs_id).await?;
+                        repo.repo_derived_data()
+                            .derive::<RootUnodeManifestId>(ctx, cs_id)
+                            .await?;
                         Ok(())
                     }
                     .boxed()
@@ -1744,8 +1760,11 @@ mod tests {
                 move |ctx, cs_id| {
                     cloned!(repo);
                     async move {
-                        let res =
-                            RootUnodeManifestId::is_derived(ctx, &repo.blob_repo, &cs_id).await?;
+                        let res = repo
+                            .repo_derived_data()
+                            .fetch_derived::<RootUnodeManifestId>(ctx, cs_id)
+                            .await?
+                            .is_some();
                         Ok(res)
                     }
                     .boxed()
