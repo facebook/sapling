@@ -57,24 +57,6 @@ Create commit that modifies git submodule in small repo
   Syncing 00b0b4d6130a22ccf3fada118572a85a6bb2d7c253d4285557802b7b8f250821 for inital import
   Source repo: small_repo / Target repo: large_repo
   Found 2 unsynced ancestors
-  Backfilling derived data for latest synced ancestor ac220d3e57adf7c31a869141787d3bc638d79a3f1dd54b0ba54d545c260f14e6
-  Backfilled * derivation for synced ancestor * in * (glob)
-  Backfilled * derivation for synced ancestor * in * (glob)
-  Backfilled * derivation for synced ancestor * in * (glob)
-  Backfilled * derivation for synced ancestor * in * (glob)
-  Backfilled * derivation for synced ancestor * in * (glob)
-  Backfilled * derivation for synced ancestor * in * (glob)
-  Backfilled * derivation for synced ancestor * in * (glob)
-  Backfilled * derivation for synced ancestor * in * (glob)
-  Backfilled * derivation for synced ancestor * in * (glob)
-  Backfilled * derivation for synced ancestor * in * (glob)
-  Backfilled * derivation for synced ancestor * in * (glob)
-  Backfilled * derivation for synced ancestor * in * (glob)
-  Backfilled * derivation for synced ancestor * in * (glob)
-  Backfilled * derivation for synced ancestor * in * (glob)
-  Backfilled * derivation for synced ancestor * in * (glob)
-  Backfilled * derivation for synced ancestor * in * (glob)
-  Backfilled * derivation for synced ancestor * in * (glob)
   changeset 00b0b4d6130a22ccf3fada118572a85a6bb2d7c253d4285557802b7b8f250821 synced as 768a9c6d2b6943900f9d4374028a891c7d3dc62d7ecc25a1fd2a9c3fc9aba14b in * (glob)
   successful sync of head 00b0b4d6130a22ccf3fada118572a85a6bb2d7c253d4285557802b7b8f250821
 

@@ -10,10 +10,10 @@ use std::str::FromStr;
 
 use anyhow::Error;
 use assert_matches::assert_matches;
+use bulk_derivation::BulkDerivation;
 use bytes::Bytes;
 use chrono::FixedOffset;
 use chrono::TimeZone;
-use derived_data_utils::derived_data_utils;
 use fbinit::FacebookInit;
 use fixtures::Linear;
 use fixtures::ManyFilesDirs;
@@ -23,6 +23,7 @@ use mononoke_types::hash::Sha256;
 use mononoke_types::path::MPath;
 use mononoke_types::DerivableType;
 use repo_derived_data::RepoDerivedDataArc;
+use repo_derived_data::RepoDerivedDataRef;
 use smallvec::SmallVec;
 
 use crate::ChangesetContext;
@@ -202,13 +203,11 @@ async fn validate_unnecessary_derived_data_is_not_derived(
             // Derived data utils doesn't support git_trees, so we have to skip it
             continue;
         }
-        let utils = derived_data_utils(ctx.fb, repo.blob_repo(), *ty)?;
-        let not_derived = utils
-            .pending(
-                ctx.clone(),
-                repo.blob_repo().repo_derived_data_arc(),
-                vec![parent_cs_id, cs_id],
-            )
+        let not_derived = repo
+            .repo()
+            .repo_derived_data()
+            .manager()
+            .pending(ctx, &[parent_cs_id, cs_id], None, *ty)
             .await?;
         // It's expected to derive skeleton manifests for the parent commit
         if *ty == derived_data_to_derive {

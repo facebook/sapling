@@ -56,6 +56,7 @@ use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateLogRef;
 use bookmarks::BookmarksRef;
 use bookmarks::Freshness;
+use bulk_derivation::BulkDerivation;
 use clientinfo::ClientEntryPoint;
 use clientinfo::ClientInfo;
 use cmdlib::helpers;
@@ -68,7 +69,6 @@ use cross_repo_sync::ConcreteRepo as CrossRepo;
 use cross_repo_sync::PushrebaseRewriteDates;
 use cross_repo_sync::Source;
 use cross_repo_sync::Target;
-use derived_data_utils::derive_data_for_csids;
 use fbinit::FacebookInit;
 use futures::future;
 use futures::stream;
@@ -92,6 +92,7 @@ use mutable_counters::MutableCountersArc;
 use mutable_counters::MutableCountersRef;
 use pushredirect::SqlPushRedirectionConfigBuilder;
 use regex::Regex;
+use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentityRef;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::debug;
@@ -405,13 +406,12 @@ async fn tail<M: SyncedCommitMapping + Clone + 'static>(
                 let maybe_synced_css = res?;
 
                 if let SyncResult::Synced(synced_css) = maybe_synced_css {
-                    derive_data_for_csids(
-                        ctx,
-                        commit_syncer.get_target_repo(),
-                        synced_css,
-                        derived_data_types,
-                    )?
-                    .await?;
+                    commit_syncer
+                        .get_target_repo()
+                        .repo_derived_data()
+                        .manager()
+                        .derive_bulk(ctx, &synced_css, None, derived_data_types, None)
+                        .await?;
 
                     maybe_apply_backpressure(
                         ctx,
