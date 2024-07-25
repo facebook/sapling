@@ -81,7 +81,7 @@ export function Drawers({
 }
 
 const stickyCollapseSizePx = 60;
-const minimumDrawerSizePx = 100;
+const minDrawerSizePx = 100;
 
 export function Drawer({
   side,
@@ -114,12 +114,13 @@ export function Drawer({
       const moveHandler = debounce(
         (newE: MouseEvent) => {
           const newPos = isVertical ? newE.clientY : newE.clientX;
+          const maxDrawerSizePx = isVertical ? window.innerHeight : window.innerWidth;
           const newSize =
             side === 'right' || side === 'bottom'
               ? initialWidth - (newPos - start)
               : initialWidth + (newPos - start);
           setInnerState((_prev: DrawerState) => ({
-            size: newSize,
+            size: Math.min(maxDrawerSizePx, newSize),
             // if resizing would give us a very small size, just collapse the view entirely
             // note we don't stop the drag sequence by doing this, you can just drag back a bit to re-expand
             collapsed: newSize > stickyCollapseSizePx ? false : true,
@@ -155,12 +156,12 @@ export function Drawer({
         className="drawer-label"
         data-testid="drawer-label"
         onClick={() => {
+          const maxDrawerSizePx = isVertical ? window.innerHeight : window.innerWidth;
           setDrawerState(prev => ({
             ...prev,
             [side]: {
-              size:
-                // enforce a minimum size when expanding
-                prev[side].size < minimumDrawerSizePx ? minimumDrawerSizePx : prev[side].size,
+              // enforce min/max size when expanding
+              size: Math.min(maxDrawerSizePx, Math.max(minDrawerSizePx, prev[side].size)),
               collapsed: !prev[side].collapsed,
             },
           }));
