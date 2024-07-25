@@ -17,6 +17,7 @@ use changeset_info::ChangesetInfo;
 use context::CoreContext;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
+use mononoke_types::ContentMetadataV2;
 use mononoke_types::MPath;
 use mononoke_types::NonRootMPath;
 
@@ -26,11 +27,11 @@ use crate::errors::HookFileContentProviderError;
 #[async_trait]
 pub trait HookFileContentProvider: Send + Sync {
     /// The size of a file with a particular content id.
-    async fn get_file_size<'a>(
+    async fn get_file_metadata<'a>(
         &'a self,
         ctx: &'a CoreContext,
         id: ContentId,
-    ) -> Result<u64, HookFileContentProviderError>;
+    ) -> Result<ContentMetadataV2, HookFileContentProviderError>;
 
     /// The text of a file with a particular content id.  If the content is
     /// not appropriate to analyze (e.g. because it is too large), then the

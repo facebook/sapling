@@ -110,8 +110,9 @@ impl FileHook for LimitFilesize {
         };
 
         let len = content_manager
-            .get_file_size(ctx, change.content_id())
-            .await?;
+            .get_file_metadata(ctx, change.content_id())
+            .await?
+            .total_size;
         for (regex, maybe_limit) in &self.path_regexes_with_limits {
             if !regex.is_match(&path) {
                 continue;

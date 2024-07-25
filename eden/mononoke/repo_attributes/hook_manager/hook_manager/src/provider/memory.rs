@@ -15,8 +15,11 @@ use changeset_info::ChangesetInfo;
 use context::CoreContext;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
+use mononoke_types::ContentMetadataV2;
 use mononoke_types::MPath;
 use mononoke_types::NonRootMPath;
+use quickcheck::Arbitrary;
+use quickcheck::Gen;
 
 use crate::errors::HookFileContentProviderError;
 use crate::provider::FileChange;
@@ -55,18 +58,27 @@ pub struct InMemoryHookFileContentProvider {
 
 #[async_trait]
 impl HookFileContentProvider for InMemoryHookFileContentProvider {
-    async fn get_file_size<'a>(
+    async fn get_file_metadata<'a>(
         &'a self,
         _ctx: &'a CoreContext,
         id: ContentId,
-    ) -> Result<u64, HookFileContentProviderError> {
-        self.id_to_text
+    ) -> Result<ContentMetadataV2, HookFileContentProviderError> {
+        let mb_content_md = self
+            .id_to_text
             .get(&id)
-            .ok_or(HookFileContentProviderError::ContentIdNotFound(id))
             .map(|maybe_bytes| match maybe_bytes {
-                InMemoryFileText::Present(bytes) => bytes.len() as u64,
-                InMemoryFileText::Elided(size) => *size,
-            })
+                InMemoryFileText::Present(bytes) => Some(ContentMetadataV2 {
+                    total_size: bytes.len() as u64,
+                    ..ContentMetadataV2::arbitrary(&mut Gen::new(100))
+                }),
+                InMemoryFileText::Elided(size) => Some(ContentMetadataV2 {
+                    total_size: *size,
+                    ..ContentMetadataV2::arbitrary(&mut Gen::new(100))
+                }),
+            });
+        mb_content_md
+            .flatten()
+            .ok_or(HookFileContentProviderError::ContentIdNotFound(id))
     }
 
     async fn get_file_text<'a>(

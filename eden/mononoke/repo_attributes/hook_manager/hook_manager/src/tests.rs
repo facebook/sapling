@@ -178,8 +178,9 @@ impl ChangesetHook for LengthMatchingChangesetHook {
                 Some(change) => {
                     let fut = async move {
                         let size = content_manager
-                            .get_file_size(ctx, change.content_id())
-                            .await?;
+                            .get_file_metadata(ctx, change.content_id())
+                            .await?
+                            .total_size;
 
                         Ok(expected_length == Some(size).as_ref())
                     };
@@ -369,8 +370,9 @@ impl FileHook for LengthMatchingFileHook {
         let length = match change {
             Some(change) => {
                 content_manager
-                    .get_file_size(ctx, change.content_id())
+                    .get_file_metadata(ctx, change.content_id())
                     .await?
+                    .total_size
             }
             None => return Ok(HookExecution::Accepted),
         };

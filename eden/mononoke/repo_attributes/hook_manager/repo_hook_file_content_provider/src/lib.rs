@@ -36,6 +36,7 @@ use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
+use mononoke_types::ContentMetadataV2;
 use mononoke_types::MPath;
 use mononoke_types::ManifestUnodeId;
 use mononoke_types::NonRootMPath;
@@ -56,16 +57,15 @@ pub struct RepoHookFileContentProvider {
 
 #[async_trait]
 impl HookFileContentProvider for RepoHookFileContentProvider {
-    async fn get_file_size<'a>(
+    async fn get_file_metadata<'a>(
         &'a self,
         ctx: &'a CoreContext,
         id: ContentId,
-    ) -> Result<u64, HookFileContentProviderError> {
+    ) -> Result<ContentMetadataV2, HookFileContentProviderError> {
         Ok(
             filestore::get_metadata(&self.repo_blobstore, ctx, &id.into())
                 .await?
-                .ok_or(HookFileContentProviderError::ContentIdNotFound(id))?
-                .total_size,
+                .ok_or(HookFileContentProviderError::ContentIdNotFound(id))?,
         )
     }
 

@@ -15,6 +15,7 @@ use changeset_info::ChangesetInfo;
 use context::CoreContext;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
+use mononoke_types::ContentMetadataV2;
 use mononoke_types::MPath;
 use mononoke_types::NonRootMPath;
 
@@ -41,12 +42,12 @@ impl<T> TextOnlyHookFileContentProvider<T> {
 impl<T: HookFileContentProvider + 'static> HookFileContentProvider
     for TextOnlyHookFileContentProvider<T>
 {
-    async fn get_file_size<'a>(
+    async fn get_file_metadata<'a>(
         &'a self,
         ctx: &'a CoreContext,
         id: ContentId,
-    ) -> Result<u64, HookFileContentProviderError> {
-        self.inner.get_file_size(ctx, id).await
+    ) -> Result<ContentMetadataV2, HookFileContentProviderError> {
+        self.inner.get_file_metadata(ctx, id).await
     }
 
     /// Override the inner store's get_file_text by filtering out files that are to large or
@@ -57,7 +58,7 @@ impl<T: HookFileContentProvider + 'static> HookFileContentProvider
         id: ContentId,
     ) -> Result<Option<Bytes>, HookFileContentProviderError> {
         // Don't fetch content if we know the object is too large
-        let size = self.get_file_size(ctx, id).await?;
+        let size = self.get_file_metadata(ctx, id).await?.total_size;
         if size > self.max_size {
             return Ok(None);
         }
@@ -124,7 +125,10 @@ mod test {
         let store = TextOnlyHookFileContentProvider::new(inner, 10);
         let ret = rt.block_on(store.get_file_text(&ctx, ONES_CTID)).unwrap();
         assert_eq!(ret, Some("foobar".into()));
-        let ret = rt.block_on(store.get_file_size(&ctx, ONES_CTID)).unwrap();
+        let ret = rt
+            .block_on(store.get_file_metadata(&ctx, ONES_CTID))
+            .unwrap()
+            .total_size;
         assert_eq!(ret, 6);
     }
 
@@ -140,7 +144,10 @@ mod test {
         let ret = rt.block_on(store.get_file_text(&ctx, ONES_CTID)).unwrap();
         assert_eq!(ret, None);
 
-        let ret = rt.block_on(store.get_file_size(&ctx, ONES_CTID)).unwrap();
+        let ret = rt
+            .block_on(store.get_file_metadata(&ctx, ONES_CTID))
+            .unwrap()
+            .total_size;
         assert_eq!(ret, 6);
     }
 
@@ -155,7 +162,10 @@ mod test {
         let store = TextOnlyHookFileContentProvider::new(inner, 10);
         let ret = rt.block_on(store.get_file_text(&ctx, ONES_CTID)).unwrap();
         assert_eq!(ret, None);
-        let ret = rt.block_on(store.get_file_size(&ctx, ONES_CTID)).unwrap();
+        let ret = rt
+            .block_on(store.get_file_metadata(&ctx, ONES_CTID))
+            .unwrap()
+            .total_size;
         assert_eq!(ret, 4);
     }
 }
