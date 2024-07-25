@@ -23,6 +23,7 @@ bonsai_hg_mapping = { version = "0.1.0", path = "../bonsai_hg_mapping" }
 bookmarks = { version = "0.1.0", path = "../bookmarks" }
 bookmarks_movement = { version = "0.1.0", path = "../bookmarks/bookmarks_movement" }
 bounded_traversal = { version = "0.1.0", path = "../common/bounded_traversal" }
+bulk_derivation = { version = "0.1.0", path = "../derived_data/bulk_derivation" }
 bytes = { version = "1.6.0", features = ["serde"] }
 cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 clap_old = { package = "clap", version = "2.34.0" }
@@ -36,7 +37,6 @@ copy_utils = { version = "0.1.0", path = "../common/copy_utils" }
 cross_repo_sync = { version = "0.1.0", path = "../commit_rewriting/cross_repo_sync" }
 deleted_manifest = { version = "0.1.0", path = "../derived_data/deleted_manifest" }
 derived_data = { version = "0.1.0", path = "../derived_data" }
-derived_data_utils = { version = "0.1.0", path = "../derived_data/utils" }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 filenodes = { version = "0.1.0", path = "../filenodes" }
@@ -58,6 +58,7 @@ pushrebase = { version = "0.1.0", path = "../pushrebase" }
 pushredirect = { version = "0.1.0", path = "../megarepo_api/pushredirect" }
 regex = "1.9.2"
 repo_blobstore = { version = "0.1.0", path = "../blobrepo/repo_blobstore" }
+repo_derived_data = { version = "0.1.0", path = "../repo_attributes/repo_derived_data" }
 repo_factory = { version = "0.1.0", path = "../repo_factory" }
 repo_identity = { version = "0.1.0", path = "../repo_attributes/repo_identity" }
 segmented_changelog = { version = "0.1.0", path = "../segmented_changelog" }

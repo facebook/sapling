@@ -27,9 +27,9 @@ use bonsai_globalrev_mapping::bulk_import_globalrevs;
 use bonsai_globalrev_mapping::BonsaiGlobalrevMapping;
 use bookmarks::BookmarksMaybeStaleExt;
 use bookmarks::BookmarksRef;
+use bulk_derivation::BulkDerivation;
 pub use consts::HIGHEST_IMPORTED_GEN_NUM;
 use context::CoreContext;
-use derived_data_utils::derive_data_for_csids;
 use futures::compat::Future01CompatExt;
 use futures::compat::Stream01CompatExt;
 use futures::future;
@@ -46,6 +46,7 @@ use mononoke_types::ChangesetId;
 use mononoke_types::DerivableType;
 use mononoke_types::RepositoryId;
 use phases::PhasesRef;
+use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentityRef;
 use slog::debug;
 use slog::error;
@@ -256,12 +257,20 @@ impl<'a> Blobimport<'a> {
                 );
             }
 
-            let derivation_work = derive_data_for_csids(
-                ctx,
-                blobrepo,
-                changesets.iter().map(|cs| cs.get_changeset_id()).collect(),
-                &derived_data_types[..],
-            )?;
+            let cs_ids = changesets
+                .iter()
+                .map(|cs| cs.get_changeset_id())
+                .collect::<Vec<_>>();
+            let derivation_work = async move {
+                for cs_id in &cs_ids {
+                    blobrepo
+                        .repo_derived_data()
+                        .manager()
+                        .derive_bulk(ctx, &[*cs_id], None, derived_data_types, None)
+                        .await?;
+                }
+                Ok(())
+            };
 
             future::try_join4(
                 synced_commit_mapping_work,

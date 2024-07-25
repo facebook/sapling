@@ -29,6 +29,7 @@ use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks::BookmarksRef;
 use borrowed::borrowed;
+use bulk_derivation::BulkDerivation;
 use cmdlib_cross_repo::repo_provider_from_mononoke_app;
 use context::CoreContext;
 use cross_repo_sync::create_commit_syncer_lease;
@@ -46,7 +47,6 @@ use cross_repo_sync::Repo as CrossRepo;
 use cross_repo_sync::SubmoduleDeps;
 use cross_repo_sync::SubmoduleExpansionData;
 use cross_repo_sync::Syncers;
-use derived_data_utils::derived_data_utils;
 use environment::MononokeEnvironment;
 use fbinit::FacebookInit;
 use futures::future;
@@ -407,24 +407,17 @@ async fn derive_bonsais_single_repo(
     repo: &Repo,
     bcs_ids: &[ChangesetId],
 ) -> Result<(), Error> {
-    let derived_data_types = &repo.repo_derived_data().active_config().types;
-
-    let derived_utils: Vec<_> = derived_data_types
+    let derived_data_types = &repo
+        .repo_derived_data()
+        .active_config()
+        .types
         .iter()
-        .map(|ty| derived_data_utils(ctx.fb, repo.as_blob_repo(), *ty))
-        .collect::<Result<_, _>>()?;
-
-    stream::iter(derived_utils)
-        .map(Ok)
-        .try_for_each_concurrent(derived_data_types.len(), |derived_util| async move {
-            for csid in bcs_ids {
-                derived_util
-                    .derive(ctx.clone(), repo.repo_derived_data_arc(), csid.clone())
-                    .map_ok(|_| ())
-                    .await?;
-            }
-            Result::<(), Error>::Ok(())
-        })
+        .copied()
+        .collect::<Vec<_>>();
+    repo.repo_derived_data()
+        .manager()
+        .derive_bulk(ctx, bcs_ids, None, derived_data_types, None)
+        .map_err(|e| e.into())
         .await
 }
 

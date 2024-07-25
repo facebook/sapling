@@ -22,6 +22,7 @@ use bookmarks::BookmarkUpdateLogRef;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks::BookmarksRef;
 use bookmarks::Freshness;
+use bulk_derivation::BulkDerivation;
 use cached_config::ConfigStore;
 use clap_old::App;
 use clap_old::Arg;
@@ -48,7 +49,6 @@ use cross_repo_sync::Small;
 use cross_repo_sync::SubmoduleDeps;
 use cross_repo_sync::Syncers;
 use cross_repo_sync::CHANGE_XREPO_MAPPING_EXTRA;
-use derived_data_utils::derive_all_enabled_datatypes_for_csids;
 use fbinit::FacebookInit;
 use filestore::FilestoreConfigRef;
 use futures::stream;
@@ -78,6 +78,7 @@ use pushrebase::do_pushrebase_bonsai;
 use pushrebase::FAIL_PUSHREBASE_EXTRA;
 use pushredirect::SqlPushRedirectionConfigBuilder;
 use repo_blobstore::RepoBlobstoreRef;
+use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentityRef;
 use slog::info;
 use slog::warn;
@@ -1256,7 +1257,17 @@ async fn update_large_repo_bookmarks(
                 };
 
                 if let Some(large_cs_id) = new_value {
-                    derive_all_enabled_datatypes_for_csids(&ctx, large_repo, vec![large_cs_id])?
+                    let derived_data_types = large_repo
+                        .repo_derived_data()
+                        .active_config()
+                        .types
+                        .iter()
+                        .copied()
+                        .collect::<Vec<_>>();
+                    large_repo
+                        .repo_derived_data()
+                        .manager()
+                        .derive_bulk(&ctx, &[large_cs_id], None, &derived_data_types, None)
                         .await?;
                     let reason = BookmarkUpdateReason::XRepoSync;
                     let large_bookmark = bookmark_renamer(target_bookmark).ok_or_else(|| {

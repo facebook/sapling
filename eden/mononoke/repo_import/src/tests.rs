@@ -21,6 +21,7 @@ mod tests {
     use bookmarks::BookmarkUpdateReason;
     use bookmarks::BookmarksRef;
     use bookmarks::Freshness;
+    use bulk_derivation::BulkDerivation;
     use cacheblob::InProcessLease;
     use cached_config::ConfigStore;
     use cached_config::ModificationTime;
@@ -30,7 +31,6 @@ mod tests {
     use cross_repo_sync::CommitSyncContext;
     use cross_repo_sync::SubmoduleDeps;
     use derived_data_manager::BonsaiDerivable;
-    use derived_data_utils::derived_data_utils;
     use fbinit::FacebookInit;
     use futures::stream::TryStreamExt;
     use git_types::MappedGitCommitId;
@@ -69,7 +69,6 @@ mod tests {
     use pushredirect::PushRedirectionConfig;
     use pushredirect::TestPushRedirectionConfig;
     use repo_blobstore::RepoBlobstoreRef;
-    use repo_derived_data::RepoDerivedDataArc;
     use repo_derived_data::RepoDerivedDataRef;
     use sql_construct::SqlConstruct;
     use synced_commit_mapping::SqlSyncedCommitMapping;
@@ -819,12 +818,12 @@ mod tests {
         cs_ids: &[ChangesetId],
     ) -> Result<()> {
         let derived_data_types = &repo.repo_derived_data().active_config().types;
-        let blob_repo = repo.as_blob_repo();
 
         for derived_data_type in derived_data_types {
-            let derived_utils = derived_data_utils(ctx.fb, blob_repo, *derived_data_type)?;
-            let pending = derived_utils
-                .pending(ctx.clone(), repo.repo_derived_data_arc(), cs_ids.to_vec())
+            let pending = repo
+                .repo_derived_data()
+                .manager()
+                .pending(ctx, cs_ids, None, *derived_data_type)
                 .await?;
             assert!(pending.is_empty());
         }
