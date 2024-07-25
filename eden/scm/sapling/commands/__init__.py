@@ -6522,12 +6522,7 @@ def update(
         )
 
         if merge:
-            ms = mergemod.mergestate.read(repo)
-            # Are conflicts resolved?
-            # If so, exit the updatemergestate.
-            if not ms.active() or ms.unresolvedcount() == 0:
-                ms.reset()
-                repo.localvfs.tryunlink("updatemergestate")
+            mergemod.try_conclude_merge_state(repo)
 
         return result
 

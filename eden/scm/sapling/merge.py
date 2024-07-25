@@ -2489,3 +2489,12 @@ def graft(repo, ctx, pctx, labels, keepparent=False):
 def _gethex(ctx):
     # for workingctx return p1 hex
     return ctx.hex() if ctx.node() and ctx.hex() != wdirhex else ctx.p1().hex()
+
+
+def try_conclude_merge_state(repo):
+    ms = mergestate.read(repo)
+    # Are conflicts resolved?
+    # If so, exit the updatemergestate.
+    if not ms.active() or ms.unresolvedcount() == 0:
+        ms.reset()
+        repo.localvfs.tryunlink("updatemergestate")
