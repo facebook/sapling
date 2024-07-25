@@ -102,33 +102,17 @@ pub async fn save_changesets(
     try_join(bonsai_objects, parents_to_check).await?;
 
     let topo_sorted_commits = sort_topological(&bcs_parents).expect("loop in commit chain!");
-    if justknobs::eval(
-        "scm/mononoke:save_changesets_use_batch_inserts",
-        None,
-        Some(repo.repo_identity().name()),
-    )? {
-        let entries = topo_sorted_commits
-            .into_iter()
-            .filter_map(|bcs_id| {
-                bcs_parents.get(&bcs_id).map(|parents| ChangesetInsert {
-                    cs_id: bcs_id,
-                    parents: parents.to_vec(),
-                })
+    let entries = topo_sorted_commits
+        .into_iter()
+        .filter_map(|bcs_id| {
+            bcs_parents.get(&bcs_id).map(|parents| ChangesetInsert {
+                cs_id: bcs_id,
+                parents: parents.to_vec(),
             })
-            .collect::<Vec<_>>();
-        if let Ok(entries) = Vec1::try_from(entries) {
-            complete_changesets.add_many(ctx, entries).await?;
-        }
-    } else {
-        for bcs_id in topo_sorted_commits {
-            if let Some(parents) = bcs_parents.get(&bcs_id) {
-                let completion_record = ChangesetInsert {
-                    cs_id: bcs_id,
-                    parents: parents.to_vec(),
-                };
-                complete_changesets.add(ctx, completion_record).await?;
-            }
-        }
+        })
+        .collect::<Vec<_>>();
+    if let Ok(entries) = Vec1::try_from(entries) {
+        complete_changesets.add_many(ctx, entries).await?;
     }
 
     Ok(())
