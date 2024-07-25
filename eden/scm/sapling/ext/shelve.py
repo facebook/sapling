@@ -546,6 +546,8 @@ def _docreatecmd(ui, repo, pats, opts) -> Optional[int]:
         if activebookmark:
             bookmarks.activate(repo, activebookmark)
 
+    merge.try_conclude_merge_state(repo)
+
 
 def _isbareshelve(pats, opts) -> bool:
     return (

@@ -39,14 +39,8 @@
   merging a
   0 files updated, 1 files merged, 0 files removed, 0 files unresolved
 
-# tofix: shoud not result into unfinished state
   $ hg st
   M a
-  
-  # The repository is in an unfinished *merge* state.
-  # No unresolved merge conflicts.
-  # To continue:                hg continue, then hg commit
-  # To abort:                   hg goto --clean .    (warning: this will discard uncommitted changes)
 
   $ hg diff
   diff -r f7e2aa31a34b foo/a
