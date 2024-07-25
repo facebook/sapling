@@ -47,6 +47,8 @@ export const buttonStyles = stylex.create({
       default: 'transparent',
       ':focus-visible': vars.focusBorder,
     },
+    flexWrap: 'nowrap',
+    whiteSpace: 'nowrap',
   },
   primary: {
     background: {
