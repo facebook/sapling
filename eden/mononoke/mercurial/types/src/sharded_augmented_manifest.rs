@@ -562,39 +562,35 @@ impl HgAugmentedManifestEnvelope {
         blobstore: &B,
         manifestid: HgAugmentedManifestId,
     ) -> Result<Option<Self>> {
-        if manifestid.clone().into_nodehash() == NULL_HASH {
-            Ok(None)
-        } else {
-            async {
-                let blobstore_key = manifestid.blobstore_key();
-                let bytes = blobstore
-                    .get(ctx, &blobstore_key)
-                    .await
-                    .context("While fetching aurmented manifest envelope blob")?;
-                (|| {
-                    let envelope = match bytes {
-                        Some(bytes) => Self::from_blob(bytes.into_raw_bytes())?,
-                        None => return Ok(None),
-                    };
-                    if manifestid.into_nodehash() != envelope.augmented_manifest.hg_node_id() {
-                        bail!(
-                            "Augmented Manifest ID mismatch (requested: {}, got: {})",
-                            manifestid,
-                            envelope.augmented_manifest.hg_node_id()
-                        );
-                    }
-                    Ok(Some(envelope))
-                })()
-                .context(MononokeHgBlobError::ManifestDeserializeFailed(
-                    blobstore_key,
-                ))
-            }
-            .await
-            .context(format!(
-                "Failed to load manifest {} from blobstore",
-                manifestid
+        async {
+            let blobstore_key = manifestid.blobstore_key();
+            let bytes = blobstore
+                .get(ctx, &blobstore_key)
+                .await
+                .context("While fetching aurmented manifest envelope blob")?;
+            (|| {
+                let envelope = match bytes {
+                    Some(bytes) => Self::from_blob(bytes.into_raw_bytes())?,
+                    None => return Ok(None),
+                };
+                if manifestid.into_nodehash() != envelope.augmented_manifest.hg_node_id() {
+                    bail!(
+                        "Augmented Manifest ID mismatch (requested: {}, got: {})",
+                        manifestid,
+                        envelope.augmented_manifest.hg_node_id()
+                    );
+                }
+                Ok(Some(envelope))
+            })()
+            .context(MononokeHgBlobError::ManifestDeserializeFailed(
+                blobstore_key,
             ))
         }
+        .await
+        .context(format!(
+            "Failed to load manifest {} from blobstore",
+            manifestid
+        ))
     }
 
     /// Serialize this structure into bytes
