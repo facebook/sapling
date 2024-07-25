@@ -301,7 +301,6 @@ members = [
   "derived_data/test_sharded_manifest",
   "derived_data/test_utils",
   "derived_data/unodes",
-  "derived_data/utils",
   "edenapi_service",
   "features/history_traversal",
   "features/redaction",
