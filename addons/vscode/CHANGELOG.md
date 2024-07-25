@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.1.54
+
+### Jul 25 2024
+
+- Allow editing empty commit titles in interactive split
+- Increase padding between stacks
+- Fix repos without Merge Queue support not being able to fetch diff info (Thanks to [@alex-statsig](https://github.com/alex-statsig))
+- Fix top bar visually jumping when loading new data at certain screen sizes
+- Fix button text unintentionally wrapping
+- Fix the commit info sidebar being too large and having buttons go offscreen
+- Fix file paths getting stuck in full path mode when using a VS Code shortcut that includes opt/ctrl.
+
 ## 0.1.53
 
 ### Jul 8 2024
