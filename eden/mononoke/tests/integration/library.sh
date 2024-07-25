@@ -626,7 +626,6 @@ function setup_common_config {
     setup_mononoke_config "$@"
     setup_common_hg_configs
     setup_configerator_configs
-    setup_common_jks
 }
 
 function get_bonsai_svnrev_mapping {
@@ -729,17 +728,6 @@ function setup_acls() {
 }
 ACLS
   fi
-}
-
-function setup_common_jks() {
-  merge_just_knobs <<EOF
-{
-  "bools": {
-    "scm/mononoke:pushredirect_use_xdb": true,
-    "scm/mononoke:pushredirect_disable_configerator": true
-  }
-}
-EOF
 }
 
 function db_config() {
