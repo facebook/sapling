@@ -317,7 +317,11 @@ impl Doctor {
 
     fn check_http_connectivity(&self, config: &dyn Config) -> Result<(), Diagnosis> {
         let mut url = config_url(config, "edenapi", "url", None)?;
-        let repo_name = match config.get("remotefilelog", "reponame") {
+        let repo_name = match config
+            .get("remotefilelog", "reponame")
+            // Try a default reponame so network doctor works outside a repo context.
+            .or_else(|| config.get("network-doctor", "default-reponame"))
+        {
             Some(name) => name.to_string(),
             None => {
                 return Err(Diagnosis::BadConfig(

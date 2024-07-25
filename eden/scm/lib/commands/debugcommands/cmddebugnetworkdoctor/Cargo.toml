@@ -8,5 +8,4 @@ edition = "2021"
 [dependencies]
 clidispatch = { version = "0.1.0", path = "../../../clidispatch" }
 cmdutil = { version = "0.1.0", path = "../../cmdutil" }
-configloader = { version = "0.1.0", path = "../../../config/loader" }
 network-doctor = { version = "0.1.0", path = "../../../doctor/network" }
