@@ -168,7 +168,7 @@ Found 2 stale edenfs mounts:
   /mnt/stale1
   /mnt/stale2
 Unmounting 2 stale edenfs mounts...<red>error<reset>
-Failed to fix problem StaleMountsFound: RemediationError: Failed to unmount 1 mount point:
+Failed to fix or verify fix for problem StaleMountsFound: RemediationError: Failed to unmount 1 mount point:
   /mnt/stale1
 """,
             out,

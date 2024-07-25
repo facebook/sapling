@@ -512,10 +512,10 @@ Collect an 'eden rage' and ask in the EdenFS (Windows |macOS )?Users group if yo
                 "Watchman is watching /path/to/eden-mount with the wrong watcher type: "
                 '"inotify" instead of "eden"\n'
                 "Fixing watchman watch for /path/to/eden-mount...<red>error<reset>\n"
-                "Failed to fix problem IncorrectWatchmanWatch: RemediationError: Failed to replace "
+                "Failed to fix or verify fix for problem IncorrectWatchmanWatch: RemediationError: Failed to replace "
                 'watchman watch for /path/to/eden-mount with an "eden" watcher'
             ),
-            out,
+            "\n".join(out.split("\n")[:5]),
         )
         self.assert_results(fixer, num_problems=1, num_failed_fixes=1)
 
@@ -1990,7 +1990,7 @@ Mount failed. Running `hg doctor` in the backing repo and then will retry the mo
             r"""<yellow>- Found problem:<reset>
 .*
 .*
-Failed to fix problem CheckoutNotMounted: Exception: is too short for header
+Failed to fix or verify fix for problem CheckoutNotMounted: Exception: is too short for header
 ((.|\n)*)""",
         )
 

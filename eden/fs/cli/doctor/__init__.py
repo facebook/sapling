@@ -442,6 +442,7 @@ class EdenDoctor(EdenDoctorChecker):
                 problem_manual_fixes=fixer.problem_manual_fixes,
                 problem_no_fixes=fixer.problem_no_fixes,
                 problem_advisory_fixes=fixer.problem_advisory_fixes,
+                exception=fixer.problem_failed_fixes_exceptions,
             )
 
         if fixer.num_problems == 0:

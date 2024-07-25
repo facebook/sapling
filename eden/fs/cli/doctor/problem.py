@@ -175,6 +175,7 @@ class ProblemFixer(ProblemTracker):
         self.problem_no_fixes: Set[str] = set()
         self.problem_advisory_fixes: Set[str] = set()
         self.problem_description: List[str] = []
+        self.problem_failed_fixes_exceptions: List[str] = []
 
     def add_problem_impl(self, problem: ProblemBase) -> None:
         self.num_problems += 1
@@ -240,14 +241,16 @@ class ProblemFixer(ProblemTracker):
             self._filtered_out.writeln(
                 problem.severity(), "error", fg=self._filtered_out.out.RED
             )
+            errMsg = f"Failed to fix or verify fix for problem {problem.__class__.__name__}: {format_exception(ex, with_tb=True)}"
             self._filtered_out.write(
                 problem.severity(),
-                f"Failed to fix problem {problem.__class__.__name__}: {format_exception(ex, with_tb=True)}",
+                errMsg,
                 end="\n\n",
                 flush=True,
             )
             self.num_failed_fixes += 1
             self.problem_failed_fixes.add(problem.__class__.__name__)
+            self.problem_failed_fixes_exceptions.append(errMsg)
 
 
 class DryRunFixer(ProblemFixer):
