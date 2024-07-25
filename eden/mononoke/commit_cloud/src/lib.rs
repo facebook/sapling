@@ -157,7 +157,7 @@ impl CommitCloud {
             });
         }
 
-        let raw_references_data = fetch_references(&ctx, &self.storage).await?;
+        let raw_references_data = fetch_references(ctx, &self.storage).await?;
 
         let references_data = cast_references_data(
             raw_references_data,
@@ -218,7 +218,7 @@ impl CommitCloud {
                     .is_some_and(|x| !x.is_empty()));
 
         if !initiate_workspace {
-            txn = update_references_data(&self.storage, txn, cri, params.clone(), &ctx).await?;
+            txn = update_references_data(&self.storage, txn, cri, params.clone(), ctx).await?;
         }
 
         let new_version_timestamp = Timestamp::now();

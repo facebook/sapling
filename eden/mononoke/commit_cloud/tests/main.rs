@@ -300,7 +300,7 @@ async fn test_remote_bookmarks(_fb: FacebookInit) -> anyhow::Result<()> {
         res_map
             .get(&hgid1)
             .unwrap()
-            .into_iter()
+            .iter()
             .map(|b| b.clone().into())
             .collect::<Vec<WorkspaceRemoteBookmark>>(),
         vec![bookmark1]
@@ -309,7 +309,7 @@ async fn test_remote_bookmarks(_fb: FacebookInit) -> anyhow::Result<()> {
         res_map
             .get(&hgid2)
             .unwrap()
-            .into_iter()
+            .iter()
             .map(|b| b.clone().into())
             .collect::<Vec<WorkspaceRemoteBookmark>>(),
         vec![bookmark2.clone()]

@@ -96,7 +96,7 @@ pub(crate) async fn inner_derive_from_predecessor(
                 }
             }
         },
-        { move |_leaf_info| async move { Ok(((), ())) } },
+        move |_leaf_info| async move { Ok(((), ())) },
     )
     .await
 }

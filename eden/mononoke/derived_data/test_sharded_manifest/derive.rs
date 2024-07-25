@@ -124,7 +124,7 @@ async fn inner_derive(
                 }
             }
         },
-        { move |_leaf_info| async move { Ok(((), ())) } },
+        move |_leaf_info| async move { Ok(((), ())) },
     )
     .await
 }
