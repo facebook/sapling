@@ -22,8 +22,7 @@ Skip blobstore warmup
   > EOF
 
 Derive data, then regenerate microwave snapshot
-  $ quiet mononoke_newadmin dump-changesets -R repo --out-filename "$TESTTMP/prefetched_commits" fetch-public
-  $ quiet backfill_derived_data backfill --prefetched-commits-path "$TESTTMP/prefetched_commits" filenodes
+  $ quiet mononoke_newadmin derived-data -R repo derive --all-types --all-bookmarks
   $ quiet microwave_builder --debug blobstore
 
 Start Mononoke again, check that the microwave snapshot was used

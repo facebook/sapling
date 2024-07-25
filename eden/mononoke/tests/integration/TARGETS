@@ -70,28 +70,6 @@ dott_test(
 )
 
 dott_test(
-    name = "backfill-derived-data-with-shardmanager",
-    # Components linked with SM library invoke some network calls to loopback
-    # address for configerator and ODS even without being part of actual execution.
-    # Skip the below tests until RCA is completed for SM integration so
-    # that integration tests do not time-out due to failed network call retries.
-    # TODO(rajshar): Investigate root cause for network calls from SM Client.
-    # Post: https://fb.workplace.com/groups/sm.users/permalink/2490367831097595/
-    disable_all_network_access_target = False,
-    dott_files = [
-        "test-backfill-derived-data.t",
-        "test-backfill-derived-data-dependent-types.t",
-    ],
-    deps = [
-        "//eden/mononoke:backfill_derived_data",
-        "//eden/mononoke:blobimport",
-        "//eden/mononoke:mononoke",
-        "//eden/mononoke/tools/admin:newadmin",
-        "//eden/mononoke/tools/testtool:testtool",
-    ],
-)
-
-dott_test(
     name = "benchmark-filestore",
     dott_files = ["test-benchmark-filestore.t"],
     deps = [
@@ -185,7 +163,6 @@ dott_test(
             "test-cache-warmup-microwave.t",
         ],
     deps = [
-        "//eden/mononoke:backfill_derived_data",
         "//eden/mononoke:blobimport",
         "//eden/mononoke:mononoke",
         "//eden/mononoke/microwave:builder",

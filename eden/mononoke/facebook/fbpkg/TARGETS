@@ -28,13 +28,6 @@ mononoke_fbpkg(
 )
 
 mononoke_fbpkg(
-    name = "mononoke.backfill_derived_data",
-    path_actions = {
-        "backfill_derived_data": "//eden/mononoke:backfill_derived_data",
-    },
-)
-
-mononoke_fbpkg(
     name = "mononoke.blobpacker",
     compress_type = None,
     path_actions = {

@@ -51,7 +51,6 @@ MONONOKE_TARGETS_TO_ENV = {
     "//eden/mononoke/walker:walker": "MONONOKE_WALKER",
     "//eden/mononoke:admin": "MONONOKE_ADMIN",
     "//eden/mononoke:aliasverify": "MONONOKE_ALIAS_VERIFY",
-    "//eden/mononoke:backfill_derived_data": "MONONOKE_BACKFILL_DERIVED_DATA",
     "//eden/mononoke:backfill_mapping": "MONONOKE_BACKFILL_MAPPING",
     "//eden/mononoke:blobimport": "MONONOKE_BLOBIMPORT",
     "//eden/mononoke:blobstore_healer": "MONONOKE_BLOBSTORE_HEALER",

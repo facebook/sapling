@@ -180,7 +180,6 @@ dott_test(
         "test-mirror-hg-commits*.t",
     ]),
     deps = [
-        "//eden/mononoke:backfill_derived_data",
         "//eden/mononoke:blobimport",
         "//eden/mononoke/commit_rewriting/megarepo:megarepotool",
         "//eden/mononoke/facebook/mirror_hg_commits:mirror_hg_commits",

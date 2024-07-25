@@ -2337,26 +2337,6 @@ function microwave_builder() {
     "$@"
 }
 
-function backfill_derived_data() {
-  "$MONONOKE_BACKFILL_DERIVED_DATA" \
-    --debug \
-    "${CACHE_ARGS[@]}" \
-    "${COMMON_ARGS[@]}" \
-    --repo-id "$REPOID" \
-    --mononoke-config-path "${TESTTMP}/mononoke-config" \
-    "$@"
-}
-
-function backfill_derived_data_multiple_repos() {
-  IFS=':' read -r -a ids <<< "${REPOS[*]}"
-  "$MONONOKE_BACKFILL_DERIVED_DATA" \
-    "${CACHE_ARGS[@]}" \
-    "${COMMON_ARGS[@]}" \
-    "${ids[@]}" \
-    --mononoke-config-path "${TESTTMP}/mononoke-config" \
-    "$@"
-}
-
 function derived_data_tailer {
   GLOG_minloglevel=5 "$DERIVED_DATA_TAILER" \
     "${CACHE_ARGS[@]}" \

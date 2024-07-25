@@ -118,7 +118,6 @@ members = [
   "acl_regions",
   "admin",
   "aliasverify",
-  "backfill_derived_data",
   "benchmarks/bulkops",
   "benchmarks/derived_data",
   "benchmarks/filestore",
