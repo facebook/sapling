@@ -11,6 +11,7 @@ license = "GPLv2+"
 anyhow = "1.0.75"
 async-trait = "0.1.71"
 bounded_traversal = { version = "0.1.0", path = "../../common/bounded_traversal" }
+bulk_derivation = { version = "0.1.0", path = "../../derived_data/bulk_derivation" }
 bytes = { version = "1.6.0", features = ["serde"] }
 clientinfo = { version = "0.1.0", path = "../../../scm/lib/clientinfo" }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
@@ -18,7 +19,6 @@ commit_graph = { version = "0.1.0", path = "../commit_graph/commit_graph" }
 context = { version = "0.1.0", path = "../../server/context" }
 derivation_queue_thrift = { version = "0.1.0", path = "if" }
 derived_data_manager = { version = "0.1.0", path = "../../derived_data/manager" }
-derived_data_utils = { version = "0.1.0", path = "../../derived_data/utils" }
 ephemeral_blobstore = { version = "0.1.0", path = "../../blobstore/ephemeral_blobstore" }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }

@@ -141,7 +141,6 @@ rust_binary(
         "//eden/mononoke/common/scuba_ext:scuba_ext",
         "//eden/mononoke/derived_data:bulk_derivation",
         "//eden/mononoke/derived_data:derived_data_manager",
-        "//eden/mononoke/derived_data:derived_data_utils",
         "//eden/mononoke/metaconfig:metaconfig_types",
         "//eden/mononoke/mononoke_types:mononoke_types",
         "//eden/mononoke/repo_attributes/repo_derivation_queues:repo_derivation_queues",

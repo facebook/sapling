@@ -10,12 +10,12 @@ use std::time::Duration;
 
 use anyhow::anyhow;
 use anyhow::Result;
+use bulk_derivation::BulkDerivation;
 use cloned::cloned;
 use commit_graph::CommitGraph;
 use context::CoreContext;
 use derived_data_manager::DerivableType;
 use derived_data_manager::DerivedDataManager;
-use derived_data_utils::check_derived;
 use ephemeral_blobstore::BubbleId;
 use futures::future;
 use futures::future::FutureExt;
@@ -73,7 +73,7 @@ pub async fn build_underived_batched_graph<'a>(
                     // Gather underived parents for the current changeset.
                     let mut underived_parents = Vec::new();
                     for parent_cs in parents.clone() {
-                        if !check_derived(ctx, ddm, derived_data_type, parent_cs).await? {
+                        if !ddm.is_derived(ctx, parent_cs, None, derived_data_type).await? {
                             underived_parents.push(parent_cs);
                         }
                     }
@@ -171,8 +171,7 @@ pub async fn build_underived_batched_graph<'a>(
                             }
                             Err(InternalError::Other(e)) => {
                                 let is_derived =
-                                    check_derived(ctx, ddm, derived_data_type, item.head_cs_id())
-                                        .await?;
+                                    ddm.is_derived(ctx, item.head_cs_id(), None, derived_data_type).await?;
                                 if is_derived {
                                     let err_msg_str = format!("Failed to enqueue with error: {}, but the data was derived", e);
                                     debug!(ctx.logger(), "{}", err_msg_str);
