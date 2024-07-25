@@ -378,8 +378,7 @@ impl DerivedDataManager {
             return Ok(value);
         }
 
-        let mut derivation_ctx = self.derivation_context(rederivation.clone());
-        derivation_ctx.enable_write_batching();
+        let derivation_ctx = self.derivation_context(rederivation.clone());
 
         let bonsai = csid
             .load(ctx, derivation_ctx.blobstore())
