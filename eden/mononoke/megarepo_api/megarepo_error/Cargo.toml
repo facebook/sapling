@@ -10,5 +10,6 @@ license = "GPLv2+"
 [dependencies]
 anyhow = "1.0.75"
 blobstore = { version = "0.1.0", path = "../../blobstore" }
+derived_data_manager = { version = "0.1.0", path = "../../derived_data/manager" }
 source_control = { version = "0.1.0", path = "../../scs/if" }
 thiserror = "1.0.49"

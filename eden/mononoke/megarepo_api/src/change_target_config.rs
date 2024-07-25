@@ -10,12 +10,9 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use anyhow::anyhow;
+use bulk_derivation::BulkDerivation;
 use changeset_fetcher::ChangesetFetcherRef;
 use context::CoreContext;
-use derived_data_utils::derived_data_utils;
-use futures::future;
-use futures::stream::FuturesUnordered;
-use futures::TryStreamExt;
 use itertools::EitherOrBoth;
 use itertools::Itertools;
 use megarepo_config::MononokeMegarepoConfigs;
@@ -31,7 +28,6 @@ use mononoke_api::Mononoke;
 use mononoke_api::RepoContext;
 use mononoke_types::ChangesetId;
 use mutable_renames::MutableRenames;
-use repo_derived_data::RepoDerivedDataArc;
 use repo_derived_data::RepoDerivedDataRef;
 
 use crate::common::find_target_bookmark_and_value;
@@ -303,18 +299,15 @@ impl<'a> ChangeTargetConfig<'a> {
             .repo_derived_data()
             .active_config()
             .types
-            .iter();
-
-        let derivers = FuturesUnordered::new();
-        for ty in derived_data_types {
-            let utils = derived_data_utils(ctx.fb, target_repo.inner_repo(), *ty)?;
-            derivers.push(utils.derive(
-                ctx.clone(),
-                target_repo.inner_repo().repo_derived_data_arc(),
-                final_merge,
-            ));
-        }
-        derivers.try_for_each(|_| future::ready(Ok(()))).await?;
+            .iter()
+            .copied()
+            .collect::<Vec<_>>();
+        target_repo
+            .inner_repo()
+            .repo_derived_data()
+            .manager()
+            .derive_bulk(ctx, &[final_merge], None, &derived_data_types, None)
+            .await?;
 
         // Move bookmark
         self.move_bookmark_conditionally(

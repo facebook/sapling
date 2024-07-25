@@ -16,6 +16,7 @@ blobrepo = { version = "0.1.0", path = "../blobrepo" }
 blobstore = { version = "0.1.0", path = "../blobstore" }
 bonsai_hg_mapping = { version = "0.1.0", path = "../bonsai_hg_mapping" }
 bookmarks = { version = "0.1.0", path = "../bookmarks" }
+bulk_derivation = { version = "0.1.0", path = "../derived_data/bulk_derivation" }
 bytes = { version = "1.6.0", features = ["serde"] }
 changeset_fetcher = { version = "0.1.0", path = "../blobrepo/changeset_fetcher" }
 changesets = { version = "0.1.0", path = "../changesets" }
@@ -23,7 +24,6 @@ commit_graph = { version = "0.1.0", path = "../repo_attributes/commit_graph/comm
 commit_transformation = { version = "0.1.0", path = "commit_transformation" }
 context = { version = "0.1.0", path = "../server/context" }
 derived_data = { version = "0.1.0", path = "../derived_data" }
-derived_data_utils = { version = "0.1.0", path = "../derived_data/utils" }
 filestore = { version = "0.1.0", path = "../filestore" }
 fsnodes = { version = "0.1.0", path = "../derived_data/fsnodes" }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }

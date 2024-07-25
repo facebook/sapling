@@ -14,6 +14,7 @@ use std::sync::Arc;
 
 use anyhow::Error;
 use blobstore::LoadableError;
+use derived_data_manager::SharedDerivationError;
 use source_control as scs_thrift;
 use thiserror::Error;
 
@@ -109,6 +110,12 @@ impl From<Infallible> for MegarepoError {
 
 impl From<LoadableError> for MegarepoError {
     fn from(e: LoadableError) -> Self {
+        MegarepoError::InternalError(InternalError(Arc::new(e.into())))
+    }
+}
+
+impl From<SharedDerivationError> for MegarepoError {
+    fn from(e: SharedDerivationError) -> Self {
         MegarepoError::InternalError(InternalError(Arc::new(e.into())))
     }
 }

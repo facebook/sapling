@@ -10,12 +10,9 @@ use std::sync::Arc;
 
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarksRef;
+use bulk_derivation::BulkDerivation;
 use context::CoreContext;
-use derived_data_utils::derived_data_utils;
-use futures::future;
-use futures::stream::FuturesUnordered;
 use futures::TryFutureExt;
-use futures::TryStreamExt;
 use megarepo_config::verify_config;
 use megarepo_config::MononokeMegarepoConfigs;
 use megarepo_config::SyncTargetConfig;
@@ -26,7 +23,6 @@ use mononoke_api::Mononoke;
 use mononoke_api::RepoContext;
 use mononoke_types::ChangesetId;
 use mutable_renames::MutableRenames;
-use repo_derived_data::RepoDerivedDataArc;
 use repo_derived_data::RepoDerivedDataRef;
 
 use crate::common::MegarepoOp;
@@ -143,22 +139,19 @@ impl<'a> AddSyncTarget<'a> {
         loop {
             i += 1;
             let derived_data_types = repo
-                .blob_repo()
+                .repo()
                 .repo_derived_data()
                 .active_config()
                 .types
-                .iter();
-            let derivers = FuturesUnordered::new();
-            for ty in derived_data_types {
-                let utils = derived_data_utils(ctx.fb, repo.blob_repo(), *ty)?;
-                derivers.push(utils.derive(
-                    ctx.clone(),
-                    repo.blob_repo().repo_derived_data_arc(),
-                    top_merge_cs_id,
-                ));
-            }
-
-            let res = derivers.try_for_each(|_| future::ready(Ok(()))).await;
+                .iter()
+                .copied()
+                .collect::<Vec<_>>();
+            let res = repo
+                .repo()
+                .repo_derived_data()
+                .manager()
+                .derive_bulk(ctx, &[top_merge_cs_id], None, &derived_data_types, None)
+                .await;
             match res {
                 Ok(()) => {
                     break;
