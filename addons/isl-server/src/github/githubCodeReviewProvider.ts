@@ -8,6 +8,8 @@
 import type {CodeReviewProvider} from '../CodeReviewProvider';
 import type {Logger} from '../logger';
 import type {
+  MergeQueueSupportQueryData,
+  MergeQueueSupportQueryVariables,
   PullRequestCommentsQueryData,
   PullRequestCommentsQueryVariables,
   PullRequestReviewComment,
@@ -15,6 +17,8 @@ import type {
   ReactionContent,
   YourPullRequestsQueryData,
   YourPullRequestsQueryVariables,
+  YourPullRequestsWithoutMergeQueueQueryData,
+  YourPullRequestsWithoutMergeQueueQueryVariables,
 } from './generated/graphql';
 import type {
   CodeReviewSystem,
@@ -24,18 +28,18 @@ import type {
   Result,
   DiffComment,
 } from 'isl/src/types';
-import type {ParsedDiff} from 'shared/patch/parse';
 
 import {
+  MergeQueueSupportQuery,
   PullRequestCommentsQuery,
   PullRequestState,
   StatusState,
   YourPullRequestsQuery,
+  YourPullRequestsWithoutMergeQueueQuery,
 } from './generated/graphql';
 import queryGraphQL from './queryGraphQL';
 import {TypedEventEmitter} from 'shared/TypedEventEmitter';
 import {debounce} from 'shared/debounce';
-import {parsePatch} from 'shared/patch/parse';
 import {notEmpty} from 'shared/utils';
 
 export type GitHubDiffSummary = {
@@ -55,6 +59,7 @@ type GitHubCodeReviewSystem = CodeReviewSystem & {type: 'github'};
 export class GitHubCodeReviewProvider implements CodeReviewProvider {
   constructor(private codeReviewSystem: GitHubCodeReviewSystem, private logger: Logger) {}
   private diffSummaries = new TypedEventEmitter<'data', Map<DiffId, GitHubDiffSummary>>();
+  private hasMergeQueueSupport: boolean | null = null;
 
   onChangeDiffSummaries(
     callback: (result: Result<Map<DiffId, GitHubDiffSummary>>) => unknown,
@@ -71,20 +76,47 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
     };
   }
 
+  private async detectMergeQueueSupport(): Promise<boolean> {
+    const data = await this.query<MergeQueueSupportQueryData, MergeQueueSupportQueryVariables>(
+      MergeQueueSupportQuery,
+      {},
+    );
+    return data?.__type != null;
+  }
+
+  private fetchYourPullRequestsGraphQL(
+    includeMergeQueue: boolean,
+  ): Promise<YourPullRequestsQueryData | undefined> {
+    const variables = {
+      // TODO: somehow base this query on the list of DiffIds
+      // This is not very easy with github's graphql API, which doesn't allow more than 5 "OR"s in a search query.
+      // But if we used one-query-per-diff we would reach rate limiting too quickly.
+      searchQuery: `repo:${this.codeReviewSystem.owner}/${this.codeReviewSystem.repo} is:pr author:@me`,
+      numToFetch: 50,
+    };
+    if (includeMergeQueue) {
+      return this.query<YourPullRequestsQueryData, YourPullRequestsQueryVariables>(
+        YourPullRequestsQuery,
+        variables,
+      );
+    } else {
+      return this.query<
+        YourPullRequestsWithoutMergeQueueQueryData,
+        YourPullRequestsWithoutMergeQueueQueryVariables
+      >(YourPullRequestsWithoutMergeQueueQuery, variables);
+    }
+  }
+
   triggerDiffSummariesFetch = debounce(
     async () => {
       try {
+        if (this.hasMergeQueueSupport == null) {
+          this.logger.info('detecting if merge queue is supported');
+          this.hasMergeQueueSupport = (await this.detectMergeQueueSupport()) ?? false;
+          this.logger.info('set merge queue support to ' + this.hasMergeQueueSupport);
+        }
         this.logger.info('fetching github PR summaries');
-        const allSummaries = await this.query<
-          YourPullRequestsQueryData,
-          YourPullRequestsQueryVariables
-        >(YourPullRequestsQuery, {
-          // TODO: somehow base this query on the list of DiffIds
-          // This is not very easy with github's graphql API, which doesn't allow more than 5 "OR"s in a search query.
-          // But if we used one-query-per-diff we would reach rate limiting too quickly.
-          searchQuery: `repo:${this.codeReviewSystem.owner}/${this.codeReviewSystem.repo} is:pr author:@me`,
-          numToFetch: 50,
-        });
+        const allSummaries = await this.fetchYourPullRequestsGraphQL(this.hasMergeQueueSupport);
         if (allSummaries?.search.nodes == null) {
           this.diffSummaries.emit('data', new Map());
           return;
