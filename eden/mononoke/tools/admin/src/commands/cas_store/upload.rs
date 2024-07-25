@@ -18,6 +18,7 @@ use clap::Args;
 use context::CoreContext;
 use mercurial_types::HgChangesetId;
 use mononoke_types::ChangesetId;
+use slog::info;
 
 use super::Repo;
 
@@ -82,7 +83,7 @@ pub async fn cas_store_upload(
         UploadPolicy::All
     };
 
-    if args.full {
+    let stats = if args.full {
         cas_changesets_uploader
             .upload_single_changeset_recursively(
                 ctx,
@@ -91,7 +92,7 @@ pub async fn cas_store_upload(
                 upload_policy,
                 PriorLookupPolicy::All,
             )
-            .await?;
+            .await?
     } else {
         cas_changesets_uploader
             .upload_single_changeset(
@@ -101,8 +102,10 @@ pub async fn cas_store_upload(
                 upload_policy,
                 PriorLookupPolicy::All,
             )
-            .await?;
-    }
+            .await?
+    };
+
+    info!(ctx.logger(), "Upload completed. Upload stats: {}", stats);
 
     Ok(())
 }
