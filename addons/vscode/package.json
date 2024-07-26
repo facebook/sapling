@@ -138,6 +138,20 @@
         "enablement": "sapling:hasRemoteLinkRepo"
       }
     ],
+    "keybindings": [
+      {
+        "command": "sapling.open-comparison-view-uncommitted",
+        "key": "ctrl-'",
+        "mac": "cmd-'",
+        "when": "activeWebviewPanelId != 'sapling.isl'"
+      },
+      {
+        "command": "sapling.open-comparison-view-head",
+        "key": "ctrl-shift-'",
+        "mac": "cmd-shift-'",
+        "when": "activeWebviewPanelId != 'sapling.isl'"
+      }
+    ],
     "menus": {
       "editor/context": [
         {
