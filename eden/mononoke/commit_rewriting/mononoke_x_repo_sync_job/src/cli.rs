@@ -105,6 +105,11 @@ pub struct ForwardSyncerArgs {
     #[clap(long)]
     pub pushrebase_rewrite_dates: bool,
 
+    /// Flag determining if the syncer should run in leader only mode, i.e. for the given
+    /// set of repos, only the leader instance will run the syncer.
+    #[clap(long)]
+    pub leader_only: bool,
+
     #[command(subcommand)]
     pub command: ForwardSyncerCommand,
 

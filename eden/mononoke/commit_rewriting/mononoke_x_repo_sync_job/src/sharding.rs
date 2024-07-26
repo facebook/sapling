@@ -35,9 +35,12 @@ use pushredirect::SqlPushRedirectionConfigBuilder;
 use regex::Regex;
 use repo_identity::RepoIdentityRef;
 use scuba_ext::MononokeScubaSampleBuilder;
+use sharding_ext::encode_repo_name;
 use sharding_ext::RepoShard;
 use slog::info;
 use synced_commit_mapping::SqlSyncedCommitMapping;
+use zk_leader_election::LeaderElection;
+use zk_leader_election::ZkMode;
 
 use crate::cli::ForwardSyncerCommand;
 use crate::reporting::add_common_fields;
@@ -51,6 +54,8 @@ use crate::BackpressureParams;
 use crate::ForwardSyncerArgs;
 use crate::Repo;
 use crate::TailingArgs;
+
+const JOB_NAME: &str = "mononoke_x_repo_sync_job";
 
 /// Struct representing the X Repo Sync Sharded Process
 pub struct XRepoSyncProcess {
@@ -280,7 +285,16 @@ impl RepoShardedProcessExecutor for XRepoSyncProcessExecutor {
             self.ctx.logger(),
             "Starting up X Repo Sync from small repo {small_repo_name} to large repo {large_repo_name}"
         );
-        let result = self.process_command().boxed()
+        let mode: ZkMode = self.args.leader_only.into();
+        let guard = self.maybe_become_leader(mode, self.ctx.logger().clone())
+            .await.with_context(|| format!("Failed to become leader for X Repo Sync from small repo {small_repo_name} to large repo {large_repo_name}"))?;
+        if guard.is_some() {
+            info!(
+                self.ctx.logger(),
+                "Became leader for X Repo Sync from small repo {small_repo_name} to large repo {large_repo_name}"
+            );
+        }
+        let result = self.process_command()
         .await
         .with_context(|| {
             format!(
@@ -308,5 +322,14 @@ impl RepoShardedProcessExecutor for XRepoSyncProcessExecutor {
             "Shutting down X Repo Sync from small repo {small_repo_name} to large repo {large_repo_name}"
         );
         Ok(())
+    }
+}
+
+#[async_trait]
+impl LeaderElection for XRepoSyncProcessExecutor {
+    fn get_shared_lock_path(&self) -> String {
+        let small_repo_name = encode_repo_name(self.small_repo.repo_identity().name());
+        let large_repo_name = encode_repo_name(self.large_repo.repo_identity().name());
+        format!("{JOB_NAME}_{small_repo_name}_{large_repo_name}")
     }
 }

@@ -33,6 +33,7 @@ rust_binary(
         "//eden/mononoke/cmdlib/mononoke_app:mononoke_app",
         "//eden/mononoke/cmdlib/sharding:executor_lib",
         "//eden/mononoke/cmdlib/sharding_ext:sharding_ext",
+        "//eden/mononoke/cmdlib/zk_leader_election:zk_leader_election",
         "//eden/mononoke/commit_rewriting/backsyncer:backsyncer",
         "//eden/mononoke/commit_rewriting/cross_repo_sync:cross_repo_sync",
         "//eden/mononoke/commit_rewriting/live_commit_sync_config:live_commit_sync_config",
