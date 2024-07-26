@@ -1149,7 +1149,8 @@ bool EdenServer::createStorageEngine(cpptoml::table& config) {
         rocksPath,
         getStats().copy(),
         serverState_->getStructuredLogger(),
-        &serverState_->getFaultInjector());
+        &serverState_->getFaultInjector(),
+        config_);
     XLOG(DBG2) << "Created RocksDB store in "
                << watch.elapsed().count() / 1000.0 << " seconds.";
   } else {

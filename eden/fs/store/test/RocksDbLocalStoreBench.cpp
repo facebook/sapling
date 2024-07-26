@@ -9,6 +9,8 @@
 #include "eden/common/testharness/TempFile.h"
 #include "eden/common/utils/FaultInjector.h"
 #include "eden/common/utils/benchharness/Bench.h"
+#include "eden/fs/config/EdenConfig.h"
+#include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/model/BlobMetadata.h"
 #include "eden/fs/store/RocksDbLocalStore.h"
 #include "eden/fs/telemetry/EdenStats.h"
@@ -20,11 +22,16 @@ void getBlobMetadata(benchmark::State& st) {
   auto tempDir = makeTempDir();
   FaultInjector faultInjector{false};
   auto edenStats = makeRefPtr<EdenStats>();
+  std::shared_ptr<EdenConfig> testEdenConfig =
+      EdenConfig::createTestEdenConfig();
+  std::shared_ptr<ReloadableConfig> edenConfig{
+      std::make_shared<ReloadableConfig>(testEdenConfig)};
   auto store = std::make_unique<RocksDbLocalStore>(
       canonicalPath(tempDir.path().string()),
       edenStats.copy(),
       std::make_shared<NullStructuredLogger>(),
-      &faultInjector);
+      &faultInjector,
+      edenConfig);
   store->open();
 
   const size_t N = 1'000'000;
@@ -51,7 +58,8 @@ void getBlobMetadata(benchmark::State& st) {
       canonicalPath(tempDir.path().string()),
       edenStats.copy(),
       std::make_shared<NullStructuredLogger>(),
-      &faultInjector);
+      &faultInjector,
+      edenConfig);
   store->open();
 
   size_t i = 0;

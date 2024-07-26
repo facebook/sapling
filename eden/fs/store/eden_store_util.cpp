@@ -61,10 +61,13 @@ class Command {
  public:
   Command()
       : userInfo_(UserInfo::lookup()),
-        config_(getEdenConfig(userInfo_)),
+        config_(std::make_shared<ReloadableConfig>(getEdenConfig(userInfo_))),
         edenDir_([this]() {
-          XLOG(INFO) << "Using Eden directory: " << config_->edenDir.getValue();
-          return EdenStateDir(config_->edenDir.getValue());
+          XLOGF(
+              INFO,
+              "Using Eden directory: {}",
+              config_->getEdenConfig()->edenDir.getValue());
+          return EdenStateDir(config_->getEdenConfig()->edenDir.getValue());
         }()) {
     if (!edenDir_.acquireLock()) {
       throw ArgumentError(
@@ -90,6 +93,7 @@ class Command {
         makeRefPtr<EdenStats>(),
         std::make_shared<NullStructuredLogger>(),
         &faultInjector_,
+        config_,
         mode);
     localStore->open();
     XLOGF(
@@ -101,7 +105,7 @@ class Command {
   }
 
   UserInfo userInfo_;
-  std::shared_ptr<EdenConfig> config_;
+  std::shared_ptr<ReloadableConfig> config_;
   EdenStateDir edenDir_;
   FaultInjector faultInjector_{/*enabled=*/false};
 };

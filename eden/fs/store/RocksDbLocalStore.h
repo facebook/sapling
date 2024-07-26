@@ -20,6 +20,7 @@ namespace facebook::eden {
 class FaultInjector;
 class StructuredLogger;
 class EdenStats;
+class ReloadableConfig;
 
 using EdenStatsPtr = RefPtr<EdenStats>;
 
@@ -37,6 +38,7 @@ class RocksDbLocalStore final : public LocalStore {
       EdenStatsPtr edenStats,
       std::shared_ptr<StructuredLogger> structuredLogger,
       FaultInjector* FOLLY_NONNULL faultInjector,
+      std::shared_ptr<ReloadableConfig> config,
       RocksDBOpenMode mode = RocksDBOpenMode::ReadWrite);
   void open() override;
   ~RocksDbLocalStore();
@@ -132,6 +134,7 @@ class RocksDbLocalStore final : public LocalStore {
   AbsolutePath pathToDb_;
   RocksDBOpenMode mode_;
   folly::Synchronized<RockDBState> dbHandles_;
+  std::shared_ptr<ReloadableConfig> config_;
 };
 
 } // namespace facebook::eden

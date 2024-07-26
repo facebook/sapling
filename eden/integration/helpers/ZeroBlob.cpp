@@ -13,6 +13,8 @@
 
 #include "eden/common/telemetry/NullStructuredLogger.h"
 #include "eden/common/utils/FaultInjector.h"
+#include "eden/fs/config/EdenConfig.h"
+#include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/store/RocksDbLocalStore.h"
@@ -47,11 +49,16 @@ int main(int argc, char* argv[]) {
   auto edenDir = facebook::eden::canonicalPath(FLAGS_edenDir);
   const auto rocksPath = edenDir + RelativePathPiece{kRocksDBPath};
   FaultInjector faultInjector(/*enabled=*/false);
+  std::shared_ptr<EdenConfig> testEdenConfig =
+      EdenConfig::createTestEdenConfig();
+  std::shared_ptr<ReloadableConfig> edenConfig{
+      std::make_shared<ReloadableConfig>(testEdenConfig)};
   RocksDbLocalStore localStore(
       rocksPath,
       makeRefPtr<EdenStats>(),
       std::make_shared<NullStructuredLogger>(),
-      &faultInjector);
+      &faultInjector,
+      edenConfig);
   localStore.open();
   Blob blob{IOBuf()};
   localStore.putBlob(blobID, &blob);

@@ -27,6 +27,7 @@
 #include "eden/common/utils/FaultInjector.h"
 #include "eden/common/utils/Throw.h"
 #include "eden/fs/config/EdenConfig.h"
+#include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/rocksdb/RocksException.h"
 #include "eden/fs/rocksdb/RocksHandles.h"
 #include "eden/fs/store/KeySpace.h"
@@ -289,13 +290,15 @@ RocksDbLocalStore::RocksDbLocalStore(
     EdenStatsPtr edenStats,
     std::shared_ptr<StructuredLogger> structuredLogger,
     FaultInjector* faultInjector,
+    std::shared_ptr<ReloadableConfig> config,
     RocksDBOpenMode mode)
     : LocalStore{std::move(edenStats)},
       structuredLogger_{std::move(structuredLogger)},
       faultInjector_(*faultInjector),
       ioPool_(12, "RocksLocalStore"),
       pathToDb_{pathToRocksDb.copy()},
-      mode_{mode} {
+      mode_{mode},
+      config_{std::move(config)} {
   XLOG(DBG2) << "Making a new RockDB localstore ( " << this
              << " ) . debug information for T136469251.";
 }
