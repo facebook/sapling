@@ -7,6 +7,7 @@
 
 use anyhow::Context;
 use anyhow::Result;
+use async_trait::async_trait;
 use slog::info;
 use slog::Logger;
 #[cfg(fbcode_build)]
@@ -42,6 +43,7 @@ fn shutdown() {
     std::process::abort();
 }
 
+#[async_trait]
 pub trait LeaderElection {
     fn get_shared_lock_path(&self) -> String;
 

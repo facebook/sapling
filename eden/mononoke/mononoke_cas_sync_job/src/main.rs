@@ -76,17 +76,16 @@ use sharding_ext::RepoShard;
 use slog::error;
 use slog::info;
 use tokio::runtime::Runtime;
+use zk_leader_election::LeaderElection;
+use zk_leader_election::ZkMode;
 
 mod errors;
-mod leader_election;
 mod re_cas_sync;
 
 use crate::errors::ErrorKind::SyncFailed;
 use crate::errors::PipelineError;
 use crate::errors::PipelineError::AnonymousError;
 use crate::errors::PipelineError::EntryError;
-use crate::leader_election::LeaderElection;
-use crate::leader_election::ZkMode;
 
 const MODE_SYNC_LOOP: &str = "sync-loop";
 const LATEST_REPLAYED_REQUEST_KEY: &str = "latest-replayed-request-cas";
