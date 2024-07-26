@@ -6,6 +6,7 @@
  */
 
 use std::io;
+use std::path::PathBuf;
 use std::process::Child;
 use std::process::Command;
 use std::process::Stdio;
@@ -103,6 +104,7 @@ pub struct ISLSpawnOptions {
     pub no_app: bool,
     pub dev: bool,
     pub session: Option<String>,
+    pub chromelike_user_data_dir: Option<PathBuf>,
 }
 
 #[derive(Debug, Default, Deserialize, Serialize, Clone)]

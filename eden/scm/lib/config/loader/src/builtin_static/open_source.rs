@@ -17,6 +17,9 @@ default-flags=user short-date
 # TODO: T130638905 Update this
 sockpath=/opt/facebook/watchman/var/run/watchman/%i-state/sock
 
+[isl]
+chromelike-user-data-dir = Sapling/Webview
+
 [remotenames]
 # TODO what's the right oss value for this?
 autopullhoistpattern=

@@ -168,6 +168,9 @@ def isl_cmd(ui, repo, **opts):
             "noApp": force_no_app or not app,
             "dev": dev,
             "session": session,
+            "chromelike_user_data_dir": repo.ui.config(
+                "isl", "chromelike-user-data-dir"
+            ),
         }
     )
 

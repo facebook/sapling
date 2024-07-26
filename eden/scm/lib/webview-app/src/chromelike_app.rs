@@ -27,6 +27,7 @@ pub fn setup_and_spawn_chrome_like(opts: ISLSpawnOptions) -> anyhow::Result<()> 
         url: &server_output.url,
         width,
         height,
+        user_data_dir: opts.chromelike_user_data_dir.as_deref(),
     };
 
     chrome_opts.run_chrome_like(opts.browser)?;
@@ -38,6 +39,7 @@ struct ISLChromelikeOptions<'a> {
     url: &'a str,
     width: i32,
     height: i32,
+    user_data_dir: Option<&'a Path>,
 }
 
 impl ISLChromelikeOptions<'_> {
@@ -53,8 +55,10 @@ impl ISLChromelikeOptions<'_> {
             command.arg(format!("--window-size={},{}", self.width, self.height));
         }
         command.arg(format!("--app={}", self.url));
-        if let Some(dir) = dirs::data_local_dir() {
-            let dir = dir.join("Sapling").join("Webview");
+        if let (Some(chromelike_user_data_dir), Some(dir)) =
+            (self.user_data_dir, dirs::data_local_dir())
+        {
+            let dir = dir.join(chromelike_user_data_dir);
             fs::create_dir_all(&dir)?;
             command.arg(format!("--user-data-dir={}", dir.display()));
         }
