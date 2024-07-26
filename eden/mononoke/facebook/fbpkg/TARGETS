@@ -1,3 +1,4 @@
+load("//antlir/antlir2/bzl/feature:defs.bzl", "feature")
 load("//eden/mononoke/facebook/fbpkg:lib.bzl", "mononoke_fbpkg")
 load("//tupperware/cm/antlir2/bzl:buck2_container.bzl", "tw")
 
@@ -259,6 +260,10 @@ tw.container(
                 },
             ),
         ),
+        feature.rpms_install(rpms = [
+            "fb-git-wrapper",
+            "git-core",
+        ]),
     ],
     oncall = "scm_server_infra",
 )
