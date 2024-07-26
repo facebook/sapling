@@ -7,6 +7,7 @@
 
 import type {Logger} from './logger';
 import type {ServerPlatform} from './serverPlatform';
+import type {AppMode} from 'isl/src/types';
 
 import {Internal} from './Internal';
 import ServerToClientAPI from './ServerToClientAPI';
@@ -46,6 +47,7 @@ export interface ClientConnection {
   cwd: string;
 
   platform?: ServerPlatform;
+  appMode: AppMode;
 }
 
 export function onClientConnection(connection: ClientConnection): () => void {
@@ -60,7 +62,7 @@ export function onClientConnection(connection: ClientConnection): () => void {
   void Internal.logInternalInfo?.(logger);
 
   const tracker = makeServerSideTracker(logger, platform, version);
-  tracker.track('ClientConnection', {extras: {cwd: connection.cwd}});
+  tracker.track('ClientConnection', {extras: {cwd: connection.cwd, appMode: connection.appMode}});
 
   // start listening to messages
   let api: ServerToClientAPI | null = new ServerToClientAPI(platform, connection, tracker, logger);

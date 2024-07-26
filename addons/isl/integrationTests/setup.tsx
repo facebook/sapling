@@ -224,6 +224,7 @@ commit(date='now')
     version: 'integration-test',
     command: cmd,
     logger: serverLogger,
+    appMode: {mode: 'isl'},
 
     postMessage(message: string): Promise<boolean> {
       serverToClient.emit('data', message);

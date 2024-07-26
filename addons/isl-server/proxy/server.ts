@@ -221,6 +221,7 @@ export function startServer({
         command,
         version: slVersion,
 
+        appMode: {mode: 'isl'},
         platform: platformImpl,
       });
       socket.on('close', () => {

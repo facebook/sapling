@@ -265,6 +265,7 @@ function populateAndSetISLWebview<W extends vscode.WebviewPanel | vscode.Webview
     },
     cwd: vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? process.cwd(), // TODO
     platform: updatedPlatform,
+    appMode: mode,
     logger,
     command: getCLICommand(),
     version: packageJson.version,
