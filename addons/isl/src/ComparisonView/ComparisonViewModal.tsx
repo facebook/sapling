@@ -6,14 +6,12 @@
  */
 
 import type {ComparisonMode} from './atoms';
-import type {Comparison} from 'shared/Comparison';
 
 import {useCommand} from '../ISLShortcuts';
 import {Modal} from '../Modal';
-import {writeAtom} from '../jotaiUtils';
-import {currentComparisonMode} from './atoms';
+import {currentComparisonMode, dismissComparison, showComparison} from './atoms';
 import {Icon} from 'isl-components/Icon';
-import {useAtom} from 'jotai';
+import {useAtomValue} from 'jotai';
 import {lazy, Suspense} from 'react';
 import {ComparisonType} from 'shared/Comparison';
 
@@ -22,26 +20,16 @@ import './ComparisonView.css';
 const ComparisonView = lazy(() => import('./ComparisonView'));
 
 function useComparisonView(): ComparisonMode {
-  const [mode, setMode] = useAtom(currentComparisonMode);
-
-  function toggle(newComparison: Comparison) {
-    setMode(lastMode =>
-      lastMode.comparison === newComparison
-        ? // If the comparison mode hasn't changed, then we want to toggle the view visibility.
-          {visible: !mode.visible, comparison: newComparison}
-        : // If the comparison changed, then force it to open, regardless of if it was open before.
-          {visible: true, comparison: newComparison},
-    );
-  }
+  const mode = useAtomValue(currentComparisonMode);
 
   useCommand('Escape', () => {
-    setMode(mode => ({...mode, visible: false}));
+    dismissComparison();
   });
   useCommand('OpenUncommittedChangesComparisonView', () => {
-    toggle({type: ComparisonType.UncommittedChanges});
+    showComparison({type: ComparisonType.UncommittedChanges});
   });
   useCommand('OpenHeadChangesComparisonView', () => {
-    toggle({type: ComparisonType.HeadChanges});
+    showComparison({type: ComparisonType.HeadChanges});
   });
 
   return mode;
@@ -57,12 +45,7 @@ export function ComparisonViewModal() {
   return (
     <Modal className="comparison-view-modal" height="" width="">
       <Suspense fallback={<Icon icon="loading" />}>
-        <ComparisonView
-          comparison={mode.comparison}
-          dismiss={() =>
-            writeAtom(currentComparisonMode, previous => ({...previous, visible: false}))
-          }
-        />
+        <ComparisonView comparison={mode.comparison} dismiss={dismissComparison} />
       </Suspense>
     </Modal>
   );

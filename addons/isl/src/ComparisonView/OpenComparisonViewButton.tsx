@@ -10,10 +10,9 @@ import type {Comparison} from 'shared/Comparison';
 
 import {T, t} from '../i18n';
 import {short} from '../utils';
-import {currentComparisonMode} from './atoms';
+import {showComparison} from './atoms';
 import {Button} from 'isl-components/Button';
 import {Icon} from 'isl-components/Icon';
-import {useSetAtom} from 'jotai';
 import {ComparisonType} from 'shared/Comparison';
 
 export function OpenComparisonViewButton({
@@ -27,7 +26,6 @@ export function OpenComparisonViewButton({
 }) {
   const isFake =
     comparison.type === ComparisonType.Committed && comparison.hash.startsWith('OPTIMISTIC');
-  const setComparisonMode = useSetAtom(currentComparisonMode);
   return (
     <Button
       data-testid={`open-comparison-view-button-${comparison.type}`}
@@ -35,7 +33,7 @@ export function OpenComparisonViewButton({
       disabled={isFake}
       onClick={() => {
         onClick?.();
-        setComparisonMode({comparison, visible: true});
+        showComparison(comparison);
       }}>
       <Icon icon="files" slot="start" />
       {isFake ? <T>View Changes</T> : buttonText ?? buttonLabelForComparison(comparison)}
