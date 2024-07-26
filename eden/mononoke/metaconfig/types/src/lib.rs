@@ -437,9 +437,7 @@ pub enum BlameVersion {
 /// What `GitDeltaManifest` version should be used.
 #[derive(Eq, Clone, Copy, Debug, Default, PartialEq)]
 pub enum GitDeltaManifestVersion {
-    /// GitDeltaManifest v1
     #[default]
-    V1,
     /// GitDeltaManifest v2
     V2,
 }

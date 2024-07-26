@@ -16,12 +16,9 @@ mod thrift {
 
 mod blob;
 mod commit;
-mod delta;
-mod delta_manifest;
 mod delta_manifest_ops;
 mod delta_manifest_v2;
 mod derive_commit;
-mod derive_delta_manifest;
 mod derive_delta_manifest_v2;
 mod derive_tree;
 mod errors;
@@ -30,25 +27,20 @@ mod object;
 mod store;
 mod tree;
 
-pub use delta_manifest::ObjectKind as DeltaObjectKind;
+pub use delta_manifest_v2::ObjectKind as DeltaObjectKind;
 pub use object::ObjectContent;
 pub use object::ObjectKind;
 
 pub use crate::blob::BlobHandle;
 pub use crate::commit::MappedGitCommitId;
-pub use crate::delta::DeltaInstructionChunkIdPrefix;
-pub use crate::delta::DeltaInstructions;
-pub use crate::delta_manifest::GitDeltaManifestEntry;
-pub use crate::delta_manifest::ObjectDelta;
-pub use crate::delta_manifest::ObjectEntry;
 pub use crate::delta_manifest_ops::fetch_git_delta_manifest;
 pub use crate::delta_manifest_ops::GitDeltaManifestEntryOps;
 pub use crate::delta_manifest_ops::GitDeltaManifestOps;
 pub use crate::delta_manifest_ops::ObjectDeltaOps;
-pub use crate::derive_delta_manifest::RootGitDeltaManifestId;
+pub use crate::delta_manifest_v2::GDMV2Entry;
+pub use crate::delta_manifest_v2::GDMV2ObjectEntry;
 pub use crate::derive_delta_manifest_v2::RootGitDeltaManifestV2Id;
 pub use crate::errors::GitError;
-pub use crate::store::fetch_delta_instructions;
 pub use crate::store::fetch_git_object;
 pub use crate::store::fetch_git_object_bytes;
 pub use crate::store::fetch_non_blob_git_object;

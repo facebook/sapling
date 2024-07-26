@@ -72,7 +72,7 @@ union DerivedData {
   11: DerivedDataDeletedManifestV2 deleted_manifest_v2;
   12: DerivedDataBasenameSuffixSkeletonManifest basename_suffix_skeleton_manifest;
   13: DerivedDataCommitHandle commit_handle;
-  14: DerivedDataGitDeltaManifest git_delta_manifest;
+  // 14: deleted git_delta_manifest
   15: DerivedDataTestManifest test_manifest;
   16: DerivedDataTestShardedManifest test_sharded_manifest;
   17: DerivedDataBssmV3 bssm_v3;
@@ -153,10 +153,6 @@ union DerivedDataTreeHandle {
 
 union DerivedDataCommitHandle {
   1: git_types_thrift.MappedGitCommitId mapped_commit_id;
-}
-
-union DerivedDataGitDeltaManifest {
-  1: git_types_thrift.GitDeltaManifestId root_git_delta_manifest_id;
 }
 
 union DerivedDataHgAugmentedManifest {

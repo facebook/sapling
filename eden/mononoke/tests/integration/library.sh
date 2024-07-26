@@ -1195,7 +1195,6 @@ types=[
   "filenodes",
   "fsnodes",
   "git_commits",
-  "git_delta_manifests",
   "git_delta_manifests_v2",
   "git_trees",
   "unodes",

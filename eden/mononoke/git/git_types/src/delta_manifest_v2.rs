@@ -27,6 +27,7 @@ use futures::StreamExt;
 use futures::TryStreamExt;
 use gix_hash::oid;
 use gix_hash::ObjectId;
+use gix_object::Kind;
 use mononoke_types::hash::Blake2;
 use mononoke_types::hash::BLAKE2_HASH_LENGTH_BYTES;
 use mononoke_types::impl_typed_hash;
@@ -40,7 +41,6 @@ use mononoke_types::BlobstoreValue;
 use mononoke_types::MononokeId;
 use mononoke_types::ThriftConvert;
 
-use crate::delta_manifest::ObjectKind;
 use crate::thrift;
 use crate::TreeMember;
 
@@ -169,6 +169,65 @@ impl GDMV2ObjectEntry {
             kind,
             inlined_bytes,
         })
+    }
+}
+
+/// Enum representing the types of Git objects that can be present
+/// in a GitDeltaManifest
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
+pub enum ObjectKind {
+    Blob,
+    Tree,
+}
+
+impl ObjectKind {
+    pub fn to_gix_kind(&self) -> Kind {
+        match self {
+            ObjectKind::Blob => Kind::Blob,
+            ObjectKind::Tree => Kind::Tree,
+        }
+    }
+
+    pub fn is_tree(&self) -> bool {
+        *self == ObjectKind::Tree
+    }
+
+    pub fn is_blob(&self) -> bool {
+        *self == ObjectKind::Blob
+    }
+}
+
+impl TryFrom<thrift::ObjectKind> for ObjectKind {
+    type Error = anyhow::Error;
+
+    fn try_from(value: thrift::ObjectKind) -> Result<Self, Self::Error> {
+        match value {
+            thrift::ObjectKind::Blob => Ok(Self::Blob),
+            thrift::ObjectKind::Tree => Ok(Self::Tree),
+            thrift::ObjectKind(x) => anyhow::bail!("Unsupported object kind: {}", x),
+        }
+    }
+}
+
+impl From<ObjectKind> for thrift::ObjectKind {
+    fn from(value: ObjectKind) -> Self {
+        match value {
+            ObjectKind::Blob => thrift::ObjectKind::Blob,
+            ObjectKind::Tree => thrift::ObjectKind::Tree,
+        }
+    }
+}
+
+impl ThriftConvert for ObjectKind {
+    const NAME: &'static str = "ObjectKind";
+    type Thrift = thrift::ObjectKind;
+
+    fn from_thrift(t: Self::Thrift) -> Result<Self> {
+        t.try_into()
+    }
+
+    fn into_thrift(self) -> Self::Thrift {
+        self.into()
     }
 }
 

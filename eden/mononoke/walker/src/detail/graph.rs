@@ -1195,7 +1195,6 @@ mod tests {
         let grandfathered: HashSet<DerivableType> = HashSet::from_iter(vec![
             DerivableType::GitTrees,
             DerivableType::GitCommits,
-            DerivableType::GitDeltaManifests,
             DerivableType::GitDeltaManifestsV2,
             DerivableType::TestManifests,
             DerivableType::TestShardedManifests,

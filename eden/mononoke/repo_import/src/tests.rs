@@ -34,7 +34,6 @@ mod tests {
     use fbinit::FacebookInit;
     use futures::stream::TryStreamExt;
     use git_types::MappedGitCommitId;
-    use git_types::RootGitDeltaManifestId;
     use git_types::RootGitDeltaManifestV2Id;
     use git_types::TreeHandle;
     use live_commit_sync_config::CfgrLiveCommitSyncConfig;
@@ -114,7 +113,6 @@ mod tests {
                 // Repo import has no need of these derived data types
                 config.types.remove(&TreeHandle::VARIANT);
                 config.types.remove(&MappedGitCommitId::VARIANT);
-                config.types.remove(&RootGitDeltaManifestId::VARIANT);
                 config.types.remove(&RootGitDeltaManifestV2Id::VARIANT);
             })
             .with_id(RepositoryId::new(id))

@@ -497,7 +497,6 @@ impl Convert for RawDerivedDataTypesConfig {
         };
         let git_delta_manifest_version = match self.git_delta_manifest_version {
             None => GitDeltaManifestVersion::default(),
-            Some(1) => GitDeltaManifestVersion::V1,
             Some(2) => GitDeltaManifestVersion::V2,
             Some(version) => return Err(anyhow!("unknown git delta manifest version {}", version)),
         };

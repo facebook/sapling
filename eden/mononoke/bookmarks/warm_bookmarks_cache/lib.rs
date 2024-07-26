@@ -55,7 +55,6 @@ use futures::stream::TryStreamExt;
 use futures_stats::TimedFutureExt;
 use futures_watchdog::WatchdogExt;
 use git_types::MappedGitCommitId;
-use git_types::RootGitDeltaManifestId;
 use git_types::RootGitDeltaManifestV2Id;
 use git_types::TreeHandle;
 use itertools::Itertools;
@@ -190,7 +189,6 @@ impl WarmBookmarksCacheBuilder {
             &[
                 MappedGitCommitId::VARIANT,
                 TreeHandle::VARIANT,
-                RootGitDeltaManifestId::VARIANT,
                 RootGitDeltaManifestV2Id::VARIANT,
             ],
             repo_derived_data,
@@ -269,11 +267,6 @@ impl WarmBookmarksCacheBuilder {
             DerivableType::GitTrees => Some(create_derived_data_warmer::<TreeHandle>(
                 &self.ctx,
                 repo_derived_data.clone(),
-            )),
-            DerivableType::GitDeltaManifests => Some(create_derived_data_warmer::<
-                RootGitDeltaManifestId,
-            >(
-                &self.ctx, repo_derived_data.clone()
             )),
             DerivableType::GitDeltaManifestsV2 => Some(create_derived_data_warmer::<
                 RootGitDeltaManifestV2Id,

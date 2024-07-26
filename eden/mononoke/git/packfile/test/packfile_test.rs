@@ -14,8 +14,6 @@ use flate2::write::ZlibDecoder;
 use flate2::write::ZlibEncoder;
 use flate2::Compression;
 use futures::stream;
-use git_types::DeltaInstructions;
-use gix_diff::blob::Algorithm;
 use gix_hash::ObjectId;
 use gix_object::Object;
 use gix_object::ObjectRef;
@@ -71,10 +69,8 @@ async fn get_objects_stream(
             .hash()
             .to_owned();
         let tag_hash = BaseObject::new(tag_bytes.clone())?.hash().to_owned();
-        let delta_instructions =
-            DeltaInstructions::generate(tag_bytes, another_tag_bytes, Algorithm::Myers)?;
-        let mut raw_instructions = Vec::new();
-        delta_instructions.write(&mut raw_instructions).await?;
+
+        let raw_instructions = git_delta::git_delta(&tag_bytes, &another_tag_bytes, 1_000_000)?;
         let decompressed_size = raw_instructions.len() as u64;
         let mut encoder = ZlibEncoder::new(Vec::new(), Compression::default());
         encoder.write_all(&raw_instructions)?;

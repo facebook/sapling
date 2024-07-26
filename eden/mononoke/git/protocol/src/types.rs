@@ -16,8 +16,8 @@ use std::marker::Unpin;
 use anyhow::Result;
 use futures::stream::BoxStream;
 use git_types::DeltaObjectKind;
-use git_types::GitDeltaManifestEntry;
-use git_types::ObjectEntry;
+use git_types::GDMV2Entry;
+use git_types::GDMV2ObjectEntry;
 use gix_hash::ObjectId;
 use mononoke_types::hash::RichGitSha1;
 use mononoke_types::path::MPath;
@@ -553,19 +553,19 @@ impl FullObjectEntry {
         })
     }
 
-    pub fn into_delta_manifest_entry(self) -> GitDeltaManifestEntry {
+    pub fn into_delta_manifest_entry(self) -> GDMV2Entry {
         let size = self.rich_git_sha.size();
         let kind = if self.rich_git_sha.is_blob() {
             DeltaObjectKind::Blob
         } else {
             DeltaObjectKind::Tree
         };
-        GitDeltaManifestEntry {
-            full: ObjectEntry {
+        GDMV2Entry {
+            full_object: GDMV2ObjectEntry {
                 size,
                 kind,
                 oid: self.oid,
-                path: self.path,
+                inlined_bytes: None,
             },
             deltas: vec![],
         }

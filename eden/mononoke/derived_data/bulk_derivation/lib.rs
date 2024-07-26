@@ -29,7 +29,6 @@ use futures::stream;
 use futures::StreamExt;
 use futures::TryStreamExt;
 use git_types::MappedGitCommitId;
-use git_types::RootGitDeltaManifestId;
 use git_types::RootGitDeltaManifestV2Id;
 use git_types::TreeHandle;
 use mercurial_derivation::MappedHgChangesetId;
@@ -248,9 +247,6 @@ fn manager_for_type(
         DerivableType::ChangesetInfo => Arc::new(SingleTypeManager::<ChangesetInfo>::new(manager)),
         DerivableType::GitTrees => Arc::new(SingleTypeManager::<TreeHandle>::new(manager)),
         DerivableType::GitCommits => Arc::new(SingleTypeManager::<MappedGitCommitId>::new(manager)),
-        DerivableType::GitDeltaManifests => {
-            Arc::new(SingleTypeManager::<RootGitDeltaManifestId>::new(manager))
-        }
         DerivableType::GitDeltaManifestsV2 => {
             Arc::new(SingleTypeManager::<RootGitDeltaManifestV2Id>::new(manager))
         }

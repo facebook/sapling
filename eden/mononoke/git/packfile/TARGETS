@@ -37,7 +37,6 @@ rust_unittest(
         "fbsource//third-party/rust:bytes",
         "fbsource//third-party/rust:flate2",
         "fbsource//third-party/rust:futures",
-        "fbsource//third-party/rust:gix-diff",
         "fbsource//third-party/rust:gix-features",
         "fbsource//third-party/rust:gix-hash",
         "fbsource//third-party/rust:gix-object",
@@ -47,6 +46,6 @@ rust_unittest(
         ":packfile",
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/fbinit:fbinit-tokio",
-        "//eden/mononoke/git/git_types:git_types",
+        "//eden/mononoke/third_party/git_delta:git_delta",
     ],
 )

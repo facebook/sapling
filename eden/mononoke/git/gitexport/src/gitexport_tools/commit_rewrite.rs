@@ -31,13 +31,14 @@ use futures::stream::TryStreamExt;
 use futures::stream::{self};
 use futures::StreamExt;
 use git_types::MappedGitCommitId;
-use git_types::RootGitDeltaManifestId;
+use git_types::RootGitDeltaManifestV2Id;
 use git_types::TreeHandle;
 use indicatif::ProgressBar;
 use indicatif::ProgressStyle;
 use maplit::hashmap;
 use maplit::hashset;
 use metaconfig_types::DerivedDataTypesConfig;
+use metaconfig_types::GitDeltaManifestV2Config;
 use mononoke_api::BookmarkKey;
 use mononoke_api::ChangesetContext;
 use mononoke_api::CoreContext;
@@ -225,16 +226,16 @@ pub async fn rewrite_partial_changesets(
 
                     run_and_log_stats_to_scuba(
                         ctx,
-                        "Deriving RootGitDeltaManifestId",
+                        "Deriving RootGitDeltaManifestV2Id",
                         temp_repo_ctx
                             .repo()
                             .repo_derived_data()
-                            .derive::<RootGitDeltaManifestId>(ctx, new_bcs_id),
+                            .derive::<RootGitDeltaManifestV2Id>(ctx, new_bcs_id),
                     )
                     .await
                     .with_context(|| {
                         format!(
-                            "Error in deriving RootGitDeltaManifestId for Bonsai commit {:?}",
+                            "Error in deriving RootGitDeltaManifestV2Id for Bonsai commit {:?}",
                             new_bcs_id
                         )
                     })?;
@@ -540,15 +541,19 @@ async fn create_temp_repo(fb: FacebookInit, ctx: &CoreContext) -> Result<RepoCon
             ChangesetInfo::VARIANT,
             MappedGitCommitId::VARIANT,
             TreeHandle::VARIANT,
-            RootGitDeltaManifestId::VARIANT,
+            RootGitDeltaManifestV2Id::VARIANT,
             RootUnodeManifestId::VARIANT,
         },
+        git_delta_manifest_v2_config: Some(GitDeltaManifestV2Config {
+            max_inlined_object_size: 2_000,
+            max_inlined_delta_size: 2_000,
+            delta_chunk_size: 1_000_000,
+        }),
         ..Default::default()
     };
 
     let available_configs = hashmap! {
         "default".to_string() => derived_data_types_config.clone(),
-        "backfilling".to_string() => derived_data_types_config
     };
     let mut factory = TestRepoFactory::with_sqlite_connection(fb, metadata_conn, hg_mutation_conn)?;
     factory

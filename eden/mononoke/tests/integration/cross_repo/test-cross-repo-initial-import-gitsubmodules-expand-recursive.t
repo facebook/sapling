@@ -820,7 +820,7 @@ TODO(T174902563): Fix deletion of submodules in EXPAND submodule action.
   >   (mononoke_newadmin derived-data -R "$SUBMODULE_REPO_NAME" derive -i $SYNCED_BONSAI \
   >     -T fsnodes -T unodes -T fastlog -T fsnodes -T blame -T changeset_info \
   >     -T skeleton_manifests -T deleted_manifest -T bssm_v3 \
-  >     -T git_commits -T git_trees -T git_delta_manifests \
+  >     -T git_commits -T git_trees -T git_delta_manifests_v2 \
   >       && echo "Success!") 2>&1 | rg "Error|Success" || true;
   > }
 

@@ -152,7 +152,7 @@ pub async fn upload_objects(
     ));
     let prefs = GitimportPreferences {
         backfill_derivation: BackfillDerivation::OnlySpecificTypes(vec![
-            DerivableType::GitDeltaManifests,
+            DerivableType::GitDeltaManifestsV2,
         ]),
         ..Default::default()
     };
