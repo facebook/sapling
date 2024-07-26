@@ -3463,35 +3463,6 @@ def newreporequirements(repo) -> Set[str]:
     return requirements
 
 
-def newrepostorerequirements(repo):
-    ui = repo.ui
-    requirements = set()
-
-    # hgsql wants stable legacy revlog access, bypassing visibleheads,
-    # narrow-heads, and zstore-commit-data.
-    if "hgsql" in repo.requirements:
-        return requirements
-
-    if ui.configbool("visibility", "enabled"):
-        requirements.add("visibleheads")
-
-    # See also self._narrowheadsmigration()
-    if (
-        ui.configbool("experimental", "narrow-heads")
-        and ui.configbool("visibility", "enabled")
-        and extensions.isenabled(ui, "remotenames")
-    ):
-        requirements.add("narrowheads")
-
-    if ui.configbool("format", "use-segmented-changelog"):
-        requirements.add("segmentedchangelog")
-        # linkrev are not going to work with segmented changelog,
-        # because the numbers might get rewritten.
-        requirements.add("invalidatelinkrev")
-
-    return requirements
-
-
 def _check_non_printable(ui, message: str) -> None:
     """Raise if non-printable ASCII characters are detected
 
