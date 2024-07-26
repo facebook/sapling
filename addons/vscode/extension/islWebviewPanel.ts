@@ -114,6 +114,16 @@ export function registerISLCommands(
   logger: Logger,
 ): vscode.Disposable {
   const webviewViewProvider = new ISLWebviewViewProvider(context, platform, logger);
+
+  const createComparisonWebviewCommand = (comparison: Comparison) => {
+    try {
+      createComparisonWebview(context, platform, comparison, logger);
+    } catch (err: unknown) {
+      vscode.window.showErrorMessage(
+        `error opening ${labelForComparison(comparison)} comparison: ${err}`,
+      );
+    }
+  };
   return vscode.Disposable.from(
     vscode.commands.registerCommand('sapling.open-isl', () => {
       if (shouldUseWebviewView()) {
@@ -139,14 +149,13 @@ export function registerISLCommands(
       }
     }),
     vscode.commands.registerCommand('sapling.open-comparison-view-uncommitted', () => {
-      const comparison: Comparison = {type: ComparisonType.UncommittedChanges};
-      try {
-        createComparisonWebview(context, platform, comparison, logger);
-      } catch (err: unknown) {
-        vscode.window.showErrorMessage(
-          `error opening ${labelForComparison(comparison)} comparison: ${err}`,
-        );
-      }
+      createComparisonWebviewCommand({type: ComparisonType.UncommittedChanges});
+    }),
+    vscode.commands.registerCommand('sapling.open-comparison-view-head', () => {
+      createComparisonWebviewCommand({type: ComparisonType.HeadChanges});
+    }),
+    vscode.commands.registerCommand('sapling.open-comparison-view-stack', () => {
+      createComparisonWebviewCommand({type: ComparisonType.StackChanges});
     }),
     registerDeserializer(context, platform, logger),
     vscode.window.registerWebviewViewProvider(islViewType, webviewViewProvider, {
