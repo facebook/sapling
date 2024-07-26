@@ -1303,14 +1303,21 @@ Fixing mismatched files/directories in {Path(mount)}...<green>fixed<reset>
         self.assert_results(fixer, num_problems=1, num_fixed_problems=1)
 
     @patch("eden.fs.cli.doctor.test.lib.fake_client.FakeClient.debugInodeStatus")
-    # pyre-fixme[2]: Parameter must be annotated.
-    def test_materialized_missing_file_fixer(self, mock_debugInodeStatus) -> None:
+    @patch("eden.fs.cli.doctor.check_filesystems.MissingFilesForInodes.perform_fix")
+    def test_materialized_missing_file_fixer(
+        self, mock_perform_fix: MagicMock, mock_debugInodeStatus: MagicMock
+    ) -> None:
         instance = FakeEdenInstance(self.make_temporary_directory())
         checkout = instance.create_test_mount("path1")
-        mount = checkout.path
+        mount: Path = checkout.path
 
         # Just create a folders
         os.makedirs(mount / "a")
+
+        def side_effect() -> None:
+            (mount / "a" / "d").touch()
+
+        mock_perform_fix.side_effect = side_effect
 
         mock_debugInodeStatus.return_value = [
             # Pretend that a/d is a file (it doesn't exist)
@@ -1335,6 +1342,7 @@ Fixing mismatched files/directories in {Path(mount)}...<green>fixed<reset>
             checkout,
             lambda p: os.lstat(p).st_mode,
         )
+        mock_perform_fix.assert_called_once()
 
         self.assertEqual(
             f"""<yellow>- Found problem:<reset>
@@ -1347,6 +1355,64 @@ Fixing files known to EdenFS but not present on disk in {Path(mount)}...<green>f
         self.assert_results(fixer, num_problems=1, num_fixed_problems=1)
 
     if sys.platform == "win32":
+
+        @patch("eden.fs.cli.doctor.test.lib.fake_client.FakeClient.debugInodeStatus")
+        @patch("eden.fs.cli.doctor.check_filesystems.MissingFilesForInodes.perform_fix")
+        def test_loaded_missing_file_fixer(
+            self, mock_perform_fix, mock_debugInodeStatus
+        ) -> None:
+            instance = FakeEdenInstance(self.make_temporary_directory())
+            checkout = instance.create_test_mount("path1")
+            mount = checkout.path
+
+            # Just create a folders
+            os.makedirs(mount / "a")
+
+            def side_effect():
+                (mount / "a" / "d").touch()
+
+            mock_perform_fix.side_effect = side_effect
+
+            mock_debugInodeStatus.return_value = [
+                # Pretend that a/d is a file (it doesn't exist)
+                TreeInodeDebugInfo(
+                    1,
+                    b"a",
+                    True,
+                    b"abcd",
+                    [
+                        TreeInodeEntryDebugInfo(
+                            b"d", 4, stat.S_IFREG, False, False, b"efgh"
+                        ),
+                    ],
+                    1,
+                ),
+            ]
+
+            fake_PrjGetOnDiskFileState = MagicMock()
+            fake_PrjGetOnDiskFileState.side_effect = [
+                FileNotFoundError,
+                PRJ_FILE_STATE.HydratedPlaceholder,
+            ]
+
+            fixer, output = self.create_fixer(dry_run=False)
+            check_loaded_content(
+                fixer,
+                typing.cast(EdenInstance, instance),
+                checkout,
+                fake_PrjGetOnDiskFileState,
+            )
+            mock_perform_fix.assert_called_once()
+
+            self.assertEqual(
+                f"""<yellow>- Found problem:<reset>
+{Path("a/d")} is not present on disk despite EdenFS believing it should be
+Fixing files known to EdenFS but not present on disk in {Path(mount)}...<green>fixed<reset>
+
+""",
+                output.getvalue(),
+            )
+            self.assert_results(fixer, num_problems=1, num_fixed_problems=1)
 
         @patch("eden.fs.cli.doctor.test.lib.fake_client.FakeClient.debugInodeStatus")
         def test_materialized_different_case(self, mock_debugInodeStatus) -> None:

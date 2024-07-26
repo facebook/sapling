@@ -442,9 +442,12 @@ class MissingInodesForFiles(PathsProblem, FixableProblem):
 
 
 class MissingFilesForInodes(PathsProblem, FixableProblem):
-    def __init__(self, mount: Path, paths: List[Path]) -> None:
+    def __init__(
+        self, mount: Path, paths: List[Path], get_fn: Callable[[Path], int]
+    ) -> None:
         self._mount = mount
         self._paths = paths
+        self._get_fn: Callable[[Path], int] = get_fn
         super().__init__(
             self.omitPathsDescription(
                 paths, " is not present on disk despite EdenFS believing it should be"
@@ -483,6 +486,19 @@ class MissingFilesForInodes(PathsProblem, FixableProblem):
 {errors}
 """
             )
+
+    def check_fix(self) -> bool:
+        try:
+            for dirent_path in self._paths:
+                self._get_fn(self._mount / dirent_path)
+            return True
+        except FileNotFoundError as ex:
+            print(f"Failed to remediate {self._paths}: {ex}")
+        except Exception as ex:
+            print(
+                f"Unexpected error trying to remediate missing files {self._paths}: {ex}"
+            )
+        return False
 
 
 class DuplicateInodes(PathsProblem):
@@ -624,7 +640,9 @@ def check_materialized_are_accessible(
         )
 
     if nonexistent_inodes:
-        tracker.add_problem(MissingFilesForInodes(checkout.path, nonexistent_inodes))
+        tracker.add_problem(
+            MissingFilesForInodes(checkout.path, nonexistent_inodes, get_mode)
+        )
 
     if inaccessible_inodes:
         tracker.add_problem(MaterializedInodesAreInaccessible(inaccessible_inodes))
@@ -770,7 +788,9 @@ def check_loaded_content(
         )
 
     if not_found:
-        tracker.add_problem(MissingFilesForInodes(checkout.path, not_found))
+        tracker.add_problem(
+            MissingFilesForInodes(checkout.path, not_found, query_prjfs_file)
+        )
 
     if inaccessible:
         tracker.add_problem(LoadedInodesAreInaccessible(inaccessible))
