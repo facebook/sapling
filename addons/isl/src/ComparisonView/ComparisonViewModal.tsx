@@ -61,3 +61,17 @@ export function ComparisonViewModal() {
     </Modal>
   );
 }
+
+export function ComparisonViewApp() {
+  const mode = useComparisonView();
+
+  if (!mode.visible) {
+    return null;
+  }
+
+  return (
+    <Suspense fallback={<Icon icon="loading" />}>
+      <ComparisonView comparison={mode.comparison} />
+    </Suspense>
+  );
+}

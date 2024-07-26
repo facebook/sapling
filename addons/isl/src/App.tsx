@@ -5,13 +5,13 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {RepositoryError} from './types';
+import type {AppMode, RepositoryError} from './types';
 
 import {AllProviders} from './AppWrapper';
 import {CommandHistoryAndProgress} from './CommandHistoryAndProgress';
 import {CommitInfoSidebar} from './CommitInfoView/CommitInfoView';
 import {CommitTreeList} from './CommitTreeList';
-import {ComparisonViewModal} from './ComparisonView/ComparisonViewModal';
+import {ComparisonViewApp, ComparisonViewModal} from './ComparisonView/ComparisonViewModal';
 import {CwdSelections, availableCwds} from './CwdSelector';
 import {Drawers} from './Drawers';
 import {EmptyState} from './EmptyState';
@@ -31,18 +31,43 @@ import {Button} from 'isl-components/Button';
 import {ErrorBoundary, ErrorNotice} from 'isl-components/ErrorNotice';
 import {Icon} from 'isl-components/Icon';
 import {atom, useAtomValue, useSetAtom} from 'jotai';
-import React, {useMemo} from 'react';
+import {Suspense, useMemo} from 'react';
 import {useThrottledEffect} from 'shared/hooks';
 
 import './index.css';
 
+declare global {
+  interface Window {
+    /**
+     * AppMode that determines what feature the App is rendering.
+     * This is set at creation time (e.g. in HTML), and is not dymanic.
+     */
+    islAppMode?: AppMode;
+  }
+}
+
 export default function App() {
+  const mode = window.islAppMode ?? {mode: 'isl'};
   return (
     <AllProviders>
-      <NullStateOrDrawers />
-      <GettingStartedModal />
-      <ComparisonViewModal />
+      {mode.mode === 'isl' ? (
+        <>
+          <NullStateOrDrawers />
+          <GettingStartedModal />
+          <ComparisonViewModal />
+        </>
+      ) : (
+        <ComparisonApp />
+      )}
     </AllProviders>
+  );
+}
+
+function ComparisonApp() {
+  return (
+    <Suspense fallback={<Icon icon="loading" />}>
+      <ComparisonViewApp />
+    </Suspense>
   );
 }
 

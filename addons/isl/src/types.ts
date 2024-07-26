@@ -169,6 +169,21 @@ export type ApplicationInfo = {
   logFilePath: string;
 };
 
+/**
+ * Which "mode" for the App to run. Controls the basic rendering.
+ * Useful to render full-screen alternate views.
+ * isl => normal, full ISL
+ * comparison => just the comparison viewer is rendered, set to some specific comparison
+ */
+export type AppMode =
+  | {
+      mode: 'isl';
+    }
+  | {
+      mode: 'comparison';
+      comparison: Comparison;
+    };
+
 export type CodeReviewSystem =
   | {
       type: 'github';

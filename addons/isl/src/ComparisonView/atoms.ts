@@ -11,7 +11,14 @@ import {atom} from 'jotai';
 import {ComparisonType} from 'shared/Comparison';
 
 export type ComparisonMode = {comparison: Comparison; visible: boolean};
-export const currentComparisonMode = atom<ComparisonMode>({
-  comparison: {type: ComparisonType.UncommittedChanges},
-  visible: false,
-});
+export const currentComparisonMode = atom<ComparisonMode>(
+  window.islAppMode?.mode === 'comparison'
+    ? {
+        comparison: window.islAppMode.comparison,
+        visible: true,
+      }
+    : {
+        comparison: {type: ComparisonType.UncommittedChanges},
+        visible: false,
+      },
+);
