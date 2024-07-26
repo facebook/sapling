@@ -258,15 +258,23 @@ function ComparisonViewHeader({
           <Dropdown
             data-testid="comparison-view-picker"
             value={comparison.type}
-            onChange={event =>
+            onChange={event => {
+              const newComparison = {
+                type: (event as React.FormEvent<HTMLSelectElement>).currentTarget
+                  .value as (typeof defaultComparisons)[0],
+              };
               setComparisonMode(previous => ({
                 ...previous,
-                comparison: {
-                  type: (event as React.FormEvent<HTMLSelectElement>).currentTarget
-                    .value as (typeof defaultComparisons)[0],
-                },
-              }))
-            }
+                comparison: newComparison,
+              }));
+              // When viewed in a dedicated viewer, change the title as the comparison changes
+              if (window.islAppMode != null && window.islAppMode.mode != 'isl') {
+                serverAPI.postMessage({
+                  type: 'platform/changeTitle',
+                  title: labelForComparison(newComparison),
+                });
+              }
+            }}
             options={[
               ...defaultComparisons.map(comparison => ({
                 value: comparison,

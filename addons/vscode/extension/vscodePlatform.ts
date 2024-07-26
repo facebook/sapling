@@ -103,6 +103,12 @@ export const getVSCodePlatform = (context: vscode.ExtensionContext): VSCodeServe
           vscode.env.openExternal(vscode.Uri.parse(message.url));
           break;
         }
+        case 'platform/changeTitle': {
+          if (this.panelOrView != null) {
+            this.panelOrView.title = message.title;
+          }
+          break;
+        }
         case 'platform/confirm': {
           const OKButton = t('isl.confirmModalOK');
           const result = await vscode.window.showInformationMessage(
