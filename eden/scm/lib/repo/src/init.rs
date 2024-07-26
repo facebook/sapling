@@ -163,8 +163,8 @@ fn write_store_requirements(path: &Path, config: &ConfigSet) -> Result<(), InitE
     create_dir(store_path)?;
     let mut requirements = HashSet::from(["visibleheads"]);
     if config
-        .get_or("format", "use-segmented-changelog", is_test)
-        .unwrap_or(false)
+        .get_or("format", "use-segmented-changelog", || true)
+        .unwrap_or(true)
     {
         requirements.insert("invalidatelinkrev");
         requirements.insert("segmentedchangelog");
@@ -260,6 +260,7 @@ treestate
         let path = path.as_path();
         let mut expected = vec!["narrowheads", "visibleheads", ""];
 
+        config.set("format", "use-segmented-changelog", Some("false"), &options);
         write_store_requirements(tmp.path(), &config).unwrap();
         assert_eq!(fs::read_to_string(path).unwrap(), expected.join("\n"));
         fs::remove_dir_all(storepath.as_path()).unwrap();
