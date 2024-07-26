@@ -250,13 +250,13 @@ tw.container(
 )
 
 tw.container(
-    name = "tw.mononoke.git_server_push_tailer",
+    name = "tw.mononoke.git_server_push_poller",
     features = [
         tw.build_fbpkg(
             mononoke_fbpkg(
-                name = "mononoke.git_server_push_tailer",
+                name = "mononoke.git_server_push_poller",
                 path_actions = {
-                    "git_server_push_tailer": "//eden/mononoke/git_server/push_tailer:git_server_push_tailer",
+                    "git_server_push_poller": "//eden/mononoke/git_server/push_poller:git_server_push_poller",
                 },
             ),
         ),

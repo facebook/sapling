@@ -61,7 +61,7 @@ async fn current_mononoke_git_repositories(
     Ok(entries.into_iter().map(|entry| entry.repo_id).collect())
 }
 
-pub async fn tail(fb: FacebookInit, args: Args) -> Result<()> {
+pub async fn poll(fb: FacebookInit, args: Args) -> Result<()> {
     let logger = create_logger();
     let ctx = CoreContext::new_with_logger(fb, logger);
     let xdb_factory = create_prod_xdb_factory(fb)?;

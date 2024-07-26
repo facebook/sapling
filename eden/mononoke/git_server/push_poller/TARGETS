@@ -4,13 +4,13 @@ load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
 oncall("mononoke")
 
 rust_binary(
-    name = "git_server_push_tailer",
+    name = "git_server_push_poller",
     srcs = glob(["src/**/*.rs"]),
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:clap",
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/fbinit:fbinit-tokio",
-        "//eden/mononoke/git_server/push_tailer/lib/tailer:tailer",
+        "//eden/mononoke/git_server/push_poller/lib/poller:poller",
     ],
 )
