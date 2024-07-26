@@ -18,8 +18,6 @@ use anyhow::Result;
 use async_recursion::async_recursion;
 use blobstore::Storable;
 use cloned::cloned;
-use commit_transformation::rewrite_commit;
-use commit_transformation::RewriteOpts;
 use context::CoreContext;
 use derivative::Derivative;
 use either::Either;
@@ -27,7 +25,6 @@ use either::Either::*;
 use futures::stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
-use itertools::Itertools;
 use manifest::BonsaiDiffFileChange;
 use maplit::hashmap;
 use mononoke_types::hash::GitSha1;
@@ -42,27 +39,21 @@ use mononoke_types::GitLfs;
 use mononoke_types::NonRootMPath;
 use mononoke_types::RepositoryId;
 use mononoke_types::TrackedFileChange;
-use movers::Mover;
 use sorted_vector_map::SortedVectorMap;
 
-use crate::commit_syncers_lib::mover_to_multi_mover;
-use crate::commit_syncers_lib::CommitRewriteResult;
 use crate::commit_syncers_lib::SubmoduleExpansionContentIds;
 use crate::git_submodules::in_memory_repo::InMemoryRepo;
 use crate::git_submodules::utils::build_recursive_submodule_deps;
 use crate::git_submodules::utils::get_git_hash_from_submodule_file;
 use crate::git_submodules::utils::get_submodule_bonsai_changeset_id;
-use crate::git_submodules::utils::get_submodule_expansions_affected;
 use crate::git_submodules::utils::get_submodule_file_content_id;
 use crate::git_submodules::utils::get_submodule_repo;
 use crate::git_submodules::utils::get_x_repo_submodule_metadata_file_path;
 use crate::git_submodules::utils::is_path_git_submodule;
 use crate::git_submodules::utils::list_non_submodule_files_under;
 use crate::git_submodules::utils::submodule_diff;
-use crate::git_submodules::validation::validate_all_submodule_expansions;
 use crate::reporting::log_debug;
 use crate::reporting::run_and_log_stats_to_scuba;
-use crate::reporting::set_scuba_logger_fields;
 use crate::types::Large;
 use crate::types::Repo;
 
@@ -125,125 +116,10 @@ enum ExpansionFileChange {
     Generated((NonRootMPath, FileChange, SubmodulePath)),
 }
 
-pub async fn rewrite_commit_with_submodule_expansion<'a, R: Repo>(
-    ctx: &'a CoreContext,
-    bonsai: BonsaiChangesetMut,
-    source_repo: &'a R,
-    sm_exp_data: SubmoduleExpansionData<'a, R>,
-    mover: Mover,
-    // Parameters needed to generate a bonsai for the large repo using `rewrite_commit`
-    remapped_parents: &'a HashMap<ChangesetId, ChangesetId>,
-    rewrite_opts: RewriteOpts,
-) -> Result<CommitRewriteResult> {
-    let is_forward_sync = source_repo.repo_identity().id() != *sm_exp_data.large_repo_id;
-
-    if !is_forward_sync {
-        let ctx = &set_scuba_logger_fields(
-            ctx,
-            [
-                (
-                    "source_repo",
-                    sm_exp_data.large_repo.repo_identity().id().id(),
-                ),
-                ("target_repo", source_repo.repo_identity().id().id()),
-            ],
-        );
-        // Backsyncing, so ensure that submodule expansions are not being modified
-        let submodules_affected =
-            get_submodule_expansions_affected(&sm_exp_data, &bonsai, mover.clone())?;
-
-        ensure!(
-            submodules_affected.is_empty(),
-            "Changeset can't be synced from large to small repo because it modifies the expansion of submodules: {0:#?}",
-            submodules_affected
-                .into_iter()
-                .map(|p| p.to_string())
-                .sorted()
-                .collect::<Vec<_>>(),
-        );
-
-        // No submodule expansions are being modified, so it's safe to backsync
-        let rewriten = rewrite_commit(
-            ctx,
-            bonsai,
-            remapped_parents,
-            mover_to_multi_mover(mover.clone()),
-            source_repo,
-            None,
-            rewrite_opts,
-        )
-        .await
-        .context("Failed to create small repo bonsai")?;
-
-        return Ok(CommitRewriteResult::new(rewriten, HashMap::new()));
-    };
-
-    let ctx = &set_scuba_logger_fields(
-        ctx,
-        [
-            ("source_repo", source_repo.repo_identity().id().id()),
-            (
-                "target_repo",
-                sm_exp_data.large_repo.repo_identity().id().id(),
-            ),
-        ],
-    );
-
-    let (new_bonsai, submodule_expansion_content_ids) = run_and_log_stats_to_scuba(
-        ctx,
-        "Expanding all git submodule file changes",
-        None,
-        expand_all_git_submodule_file_changes(ctx, bonsai, source_repo, sm_exp_data.clone()),
-    )
-    .await
-    .context("Failed to expand submodule file changes from bonsai")?;
-
-    let mb_rewritten_bonsai = run_and_log_stats_to_scuba(
-        ctx,
-        "Rewriting commit",
-        None,
-        rewrite_commit(
-            ctx,
-            new_bonsai,
-            remapped_parents,
-            mover_to_multi_mover(mover.clone()),
-            source_repo,
-            None,
-            rewrite_opts,
-        ),
-    )
-    .await
-    .context("Failed to rewrite commit")?;
-
-    match mb_rewritten_bonsai {
-        Some(rewritten_bonsai) => {
-            let rewritten_bonsai = rewritten_bonsai.freeze()?;
-
-            let validated_bonsai = run_and_log_stats_to_scuba(
-                ctx,
-                "Validating all submodule expansions",
-                None,
-                validate_all_submodule_expansions(ctx, sm_exp_data, rewritten_bonsai, mover),
-            )
-            .await
-            // TODO(gustavoavena): print some identifier of changeset that failed
-            .context("Validation of submodule expansion failed")?;
-
-            let rewritten = Some(validated_bonsai.into_mut());
-
-            Ok(CommitRewriteResult::new(
-                rewritten,
-                submodule_expansion_content_ids,
-            ))
-        }
-        None => Ok(CommitRewriteResult::new(None, HashMap::new())),
-    }
-}
-
 /// Iterate over all file changes from the bonsai being synced and expand any
 /// changes to git submodule files, generating the bonsai that will be synced
 /// to the large repo.
-async fn expand_all_git_submodule_file_changes<'a, R: Repo>(
+pub(crate) async fn expand_all_git_submodule_file_changes<'a, R: Repo>(
     ctx: &'a CoreContext,
     cs: BonsaiChangesetMut,
     small_repo: &'a R,

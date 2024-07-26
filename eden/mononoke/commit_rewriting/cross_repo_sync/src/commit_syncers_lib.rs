@@ -65,7 +65,7 @@ use crate::commit_sync_outcome::CommitSyncOutcome;
 use crate::commit_sync_outcome::DesiredRelationship;
 use crate::commit_sync_outcome::PluralCommitSyncOutcome;
 use crate::commit_syncer::CommitSyncer;
-use crate::git_submodules::rewrite_commit_with_submodule_expansion;
+use crate::git_submodules::sync_commit_with_submodule_expansion;
 use crate::git_submodules::SubmoduleExpansionData;
 use crate::git_submodules::SubmodulePath;
 use crate::reporting::log_debug;
@@ -158,7 +158,7 @@ pub async fn rewrite_commit<'a, R: Repo>(
                     anyhow!("Submodule expansion data not provided when submodules is enabled for small repo")
                 )?;
 
-                return rewrite_commit_with_submodule_expansion(
+                return sync_commit_with_submodule_expansion(
                     ctx,
                     cs,
                     source_repo,
