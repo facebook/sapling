@@ -92,11 +92,11 @@ class Command {
         &faultInjector_,
         mode);
     localStore->open();
-    XLOG(INFO) << "Opened RocksDB store in "
-               << (mode == RocksDBOpenMode::ReadOnly ? "read-only"
-                                                     : "read-write")
-               << " mode in " << (watch.elapsed().count() / 1000.0)
-               << " seconds.";
+    XLOGF(
+        INFO,
+        "Opened RocksDB store in {} mode in {} seconds.",
+        mode == RocksDBOpenMode::ReadOnly ? "read-only" : "read-write",
+        watch.elapsed().count() / 1000.0);
     return localStore;
   }
 
@@ -199,10 +199,12 @@ class ShowSizesCommand : public Command {
     auto localStore = openLocalStore(RocksDBOpenMode::ReadOnly);
 
     for (const auto& ks : KeySpace::kAll) {
-      LOG(INFO) << "Column family \"" << ks->name << "\": "
-                << folly::prettyPrint(
-                       localStore->getApproximateSize(ks),
-                       folly::PRETTY_BYTES_METRIC);
+      XLOGF(
+          INFO,
+          "Column family \"{}\": {}",
+          ks->name,
+          folly::prettyPrint(
+              localStore->getApproximateSize(ks), folly::PRETTY_BYTES_METRIC));
     }
   }
 };
