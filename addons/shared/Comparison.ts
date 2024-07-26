@@ -33,6 +33,14 @@ export type Comparison =
         | ComparisonType.StackChanges;
     };
 
+export function isComparison(arg: unknown): arg is Comparison {
+  return (
+    arg != null &&
+    typeof arg === 'object' &&
+    Object.values(ComparisonType).includes((arg as Comparison).type)
+  );
+}
+
 export function comparisonIsAgainstHead(comparison: Comparison): boolean {
   switch (comparison.type) {
     case ComparisonType.UncommittedChanges:

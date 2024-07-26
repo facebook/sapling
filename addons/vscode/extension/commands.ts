@@ -80,6 +80,7 @@ type ExternalVSCodeCommands = {
   'sapling.open-isl': () => Thenable<void>;
   'sapling.close-isl': () => Thenable<void>;
   'sapling.isl.focus': () => Thenable<void>;
+  'sapling.open-comparison-view': (comparison: Comparison) => Thenable<void>;
   setContext: (key: string, value: unknown) => Thenable<void>;
   'fb-hg.open-or-focus-interactive-smartlog': (
     _: unknown,

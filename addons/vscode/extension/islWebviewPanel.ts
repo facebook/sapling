@@ -19,7 +19,7 @@ import {locale, t} from './i18n';
 import {onClientConnection} from 'isl-server/src';
 import {deserializeFromString, serializeToString} from 'isl/src/serialize';
 import crypto from 'node:crypto';
-import {ComparisonType, labelForComparison} from 'shared/Comparison';
+import {ComparisonType, isComparison, labelForComparison} from 'shared/Comparison';
 import {nullthrows} from 'shared/utils';
 import * as vscode from 'vscode';
 
@@ -156,6 +156,13 @@ export function registerISLCommands(
     }),
     vscode.commands.registerCommand('sapling.open-comparison-view-stack', () => {
       createComparisonWebviewCommand({type: ComparisonType.StackChanges});
+    }),
+    /** Command that opens the provided Comparison argument. Intended to be used programmatically. */
+    vscode.commands.registerCommand('sapling.open-comparison-view', (comparison: unknown) => {
+      if (!isComparison(comparison)) {
+        return;
+      }
+      createComparisonWebviewCommand(comparison);
     }),
     registerDeserializer(context, platform, logger),
     vscode.window.registerWebviewViewProvider(islViewType, webviewViewProvider, {
