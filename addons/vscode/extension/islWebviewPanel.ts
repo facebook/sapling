@@ -236,8 +236,10 @@ function populateAndSetISLWebview<W extends vscode.WebviewPanel | vscode.Webview
 ): W {
   logger.info(`Populating ISL webview ${isPanel(panelOrView) ? 'panel' : 'view'}`);
   hasOpenedISLWebviewBeforeState = true;
-  if (isPanel(panelOrView)) {
+  if (mode.mode === 'isl' && isPanel(panelOrView)) {
     islPanelOrView = panelOrView;
+  }
+  if (isPanel(panelOrView)) {
     panelOrView.iconPath = vscode.Uri.joinPath(
       context.extensionUri,
       'resources',
