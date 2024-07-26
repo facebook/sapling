@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {ComparisonMode} from './atoms';
 import type {Comparison} from 'shared/Comparison';
 
 import {useCommand} from '../ISLShortcuts';
@@ -19,7 +20,7 @@ import './ComparisonView.css';
 
 const ComparisonView = lazy(() => import('./ComparisonView'));
 
-export function ComparisonViewModal() {
+function useComparisonView(): ComparisonMode {
   const [mode, setMode] = useAtom(currentComparisonMode);
 
   function toggle(newComparison: Comparison) {
@@ -41,6 +42,12 @@ export function ComparisonViewModal() {
   useCommand('OpenHeadChangesComparisonView', () => {
     toggle({type: ComparisonType.HeadChanges});
   });
+
+  return mode;
+}
+
+export function ComparisonViewModal() {
+  const mode = useComparisonView();
 
   if (!mode.visible) {
     return null;
