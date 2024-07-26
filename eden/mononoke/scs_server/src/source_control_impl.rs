@@ -319,7 +319,11 @@ impl SourceControlServiceImpl {
             false,
             metadata::security::is_client_untrusted(|h| req_ctxt.header(h))
                 .map_err(errors::invalid_request)?,
-            None, // TODO POPULATE HERE client ip
+            Some(
+                req_ctxt
+                    .get_peer_ip_address()
+                    .map_err(errors::internal_error)?,
+            ),
             Some(req_ctxt.get_peer_port().map_err(errors::internal_error)?),
         )
         .await;
