@@ -27,6 +27,7 @@ export interface ServerPlatform {
   /** Override the analytics Session ID. Should be globally unique. */
   sessionId?: string;
   handleMessageFromClient(
+    this: ServerPlatform,
     repo: Repository | undefined,
     ctx: RepositoryContext,
     message: PlatformSpecificClientToServerMessages,
@@ -37,11 +38,12 @@ export interface ServerPlatform {
 
 export const browserServerPlatform: ServerPlatform = {
   platformName: 'browser',
-  handleMessageFromClient: (
+  handleMessageFromClient(
+    this: ServerPlatform,
     repo: Repository | undefined,
     ctx: RepositoryContext,
     message: PlatformSpecificClientToServerMessages,
-  ) => {
+  ) {
     switch (message.type) {
       case 'platform/openContainingFolder': {
         const absPath: AbsolutePath = pathModule.join(

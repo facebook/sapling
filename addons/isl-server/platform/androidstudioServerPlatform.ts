@@ -9,7 +9,7 @@ import type {ServerPlatform} from '../src/serverPlatform';
 
 export const platform: ServerPlatform = {
   platformName: 'androidStudio',
-  handleMessageFromClient: async (_repo, _ctx, message, _postMessage) => {
+  async handleMessageFromClient(this: ServerPlatform, _repo, _ctx, message, _postMessage) {
     switch (message.type) {
       // TODO: handle any android-studio platform file events
       case 'platform/openFile': {

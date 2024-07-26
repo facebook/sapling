@@ -7,6 +7,7 @@
 
 import type {EnabledSCMApiFeature} from './types';
 import type {Logger} from 'isl-server/src/logger';
+import type {ServerPlatform} from 'isl-server/src/serverPlatform';
 import type {RepositoryContext} from 'isl-server/src/serverTypes';
 
 import packageJson from '../package.json';
@@ -28,7 +29,11 @@ export async function activate(context: vscode.ExtensionContext) {
   const start = Date.now();
   const [outputChannel, logger] = createOutputChannelLogger();
   const platform = getVSCodePlatform(context);
-  const extensionTracker = makeServerSideTracker(logger, platform, packageJson.version);
+  const extensionTracker = makeServerSideTracker(
+    logger,
+    platform as ServerPlatform,
+    packageJson.version,
+  );
   try {
     const [, enabledSCMApiFeatures] = await Promise.all([
       ensureTranslationsLoaded(context),

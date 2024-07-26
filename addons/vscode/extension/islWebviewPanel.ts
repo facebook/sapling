@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {VSCodeServerPlatform} from './vscodePlatform';
 import type {Logger} from 'isl-server/src/logger';
 import type {ServerPlatform} from 'isl-server/src/serverPlatform';
 import type {AppMode, ClientToServerMessage, ServerToClientMessage} from 'isl/src/types';
@@ -33,7 +34,7 @@ const devUri = `http://localhost:${devPort}`;
 
 function createOrFocusISLWebview(
   context: vscode.ExtensionContext,
-  platform: ServerPlatform,
+  platform: VSCodeServerPlatform,
   logger: Logger,
 ): vscode.WebviewPanel | vscode.WebviewView {
   // Try to re-use existing ISL panel/view
@@ -62,7 +63,7 @@ function createOrFocusISLWebview(
 
 function createComparisonWebview(
   context: vscode.ExtensionContext,
-  platform: ServerPlatform,
+  platform: VSCodeServerPlatform,
   comparison: Comparison,
   logger: Logger,
 ): vscode.WebviewPanel {
@@ -109,7 +110,7 @@ export function hasOpenedISLWebviewBefore() {
 
 export function registerISLCommands(
   context: vscode.ExtensionContext,
-  platform: ServerPlatform,
+  platform: VSCodeServerPlatform,
   logger: Logger,
 ): vscode.Disposable {
   const webviewViewProvider = new ISLWebviewViewProvider(context, platform, logger);
@@ -166,7 +167,7 @@ export function registerISLCommands(
 
 function registerDeserializer(
   context: vscode.ExtensionContext,
-  platform: ServerPlatform,
+  platform: VSCodeServerPlatform,
   logger: Logger,
 ) {
   // Make sure we register a serializer in activation event
@@ -194,7 +195,7 @@ function registerDeserializer(
 class ISLWebviewViewProvider implements vscode.WebviewViewProvider {
   constructor(
     private extensionContext: vscode.ExtensionContext,
-    private platform: ServerPlatform,
+    private platform: VSCodeServerPlatform,
     private logger: Logger,
   ) {}
 
@@ -220,7 +221,7 @@ function isPanel(
 function populateAndSetISLWebview<W extends vscode.WebviewPanel | vscode.WebviewView>(
   context: vscode.ExtensionContext,
   panelOrView: W,
-  platform: ServerPlatform,
+  platform: VSCodeServerPlatform,
   mode: AppMode,
   logger: Logger,
 ): W {
@@ -241,6 +242,7 @@ function populateAndSetISLWebview<W extends vscode.WebviewPanel | vscode.Webview
     mode,
     logger,
   );
+  const updatedPlatform = {...platform, panelOrView} as VSCodeServerPlatform as ServerPlatform;
 
   const disposeConnection = onClientConnection({
     postMessage(message: string) {
@@ -253,7 +255,7 @@ function populateAndSetISLWebview<W extends vscode.WebviewPanel | vscode.Webview
       });
     },
     cwd: vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? process.cwd(), // TODO
-    platform,
+    platform: updatedPlatform,
     logger,
     command: getCLICommand(),
     version: packageJson.version,

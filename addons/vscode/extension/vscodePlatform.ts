@@ -61,17 +61,22 @@ function openFile(
     },
   );
 }
+export type VSCodeServerPlatform = ServerPlatform & {
+  panelOrView: undefined | vscode.WebviewPanel | vscode.WebviewView;
+};
 
-export const getVSCodePlatform = (context: vscode.ExtensionContext): ServerPlatform => ({
+export const getVSCodePlatform = (context: vscode.ExtensionContext): VSCodeServerPlatform => ({
   platformName: 'vscode',
   sessionId: vscode.env.sessionId,
-  handleMessageFromClient: async (
+  panelOrView: undefined,
+  async handleMessageFromClient(
+    this: VSCodeServerPlatform,
     repo: Repository | undefined,
     ctx: RepositoryContext,
     message: PlatformSpecificClientToServerMessages,
     postMessage: (message: ServerToClientMessage) => void,
     onDispose: (cb: () => unknown) => void,
-  ) => {
+  ) {
     try {
       switch (message.type) {
         case 'platform/openFiles': {
