@@ -360,7 +360,8 @@ class ObjectStore : public IObjectStore,
 
   folly::SemiFuture<BackingStore::GetTreeResult> getTreeImpl(
       const ObjectId& id,
-      const ObjectFetchContextPtr& context) const;
+      const ObjectFetchContextPtr& context,
+      folly::stop_watch<std::chrono::milliseconds> watch) const;
 
   folly::SemiFuture<BackingStore::GetTreeMetaResult> getTreeMetadataImpl(
       const ObjectId& id,

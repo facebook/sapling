@@ -233,6 +233,7 @@ ImmediateFuture<shared_ptr<const Tree>> ObjectStore::getTree(
     const ObjectFetchContextPtr& fetchContext) const {
   TaskTraceBlock block{"ObjectStore::getTree"};
   DurationScope<EdenStats> statScope{stats_, &ObjectStoreStats::getTree};
+  folly::stop_watch<std::chrono::milliseconds> watch;
 
   // TODO: We should consider checking if we have in flight BackingStore
   // requests on this layer instead of only in the BackingStore. Consider the
@@ -251,13 +252,14 @@ ImmediateFuture<shared_ptr<const Tree>> ObjectStore::getTree(
         ObjectFetchContext::Tree, id, ObjectFetchContext::FromMemoryCache);
 
     updateProcessFetch(*fetchContext);
-
+    stats_->addDuration(
+        &ObjectStoreStats::getTreeMemoryDuration, watch.elapsed());
     return changeCaseSensitivity(std::move(maybeTree), caseSensitive_);
   }
 
   deprioritizeWhenFetchHeavy(*fetchContext);
 
-  return ImmediateFuture{getTreeImpl(id, fetchContext)}.thenValue(
+  return ImmediateFuture{getTreeImpl(id, fetchContext, watch)}.thenValue(
       [self = shared_from_this(),
        statScope = std::move(statScope),
        id,
@@ -273,7 +275,8 @@ ImmediateFuture<shared_ptr<const Tree>> ObjectStore::getTree(
 
 folly::SemiFuture<BackingStore::GetTreeResult> ObjectStore::getTreeImpl(
     const ObjectId& id,
-    const ObjectFetchContextPtr& context) const {
+    const ObjectFetchContextPtr& context,
+    folly::stop_watch<std::chrono::milliseconds> watch) const {
   auto localStoreGetTree = ImmediateFuture<TreePtr>{std::in_place, nullptr};
   if (shouldCacheOnDisk(BackingStore::LocalStoreCachingPolicy::Trees)) {
     // Check Local Store first
@@ -281,11 +284,14 @@ folly::SemiFuture<BackingStore::GetTreeResult> ObjectStore::getTreeImpl(
   }
   return std::move(localStoreGetTree)
       .thenValue(
-          [self = shared_from_this(), id = id, context = context.copy()](
+          [self = shared_from_this(), id = id, context = context.copy(), watch](
               TreePtr tree) mutable
           -> ImmediateFuture<BackingStore::GetTreeResult> {
             if (tree) {
               self->stats_->increment(&ObjectStoreStats::getTreeFromLocalStore);
+              self->stats_->addDuration(
+                  &ObjectStoreStats::getTreeLocalstoreDuration,
+                  watch.elapsed());
               return BackingStore::GetTreeResult{
                   std::move(tree), ObjectFetchContext::FromDiskCache};
             }
@@ -294,7 +300,7 @@ folly::SemiFuture<BackingStore::GetTreeResult> ObjectStore::getTreeImpl(
                 // TODO: This is a good use for toUnsafeFuture to ensure the
                 // tree is cached even if the resulting future is never
                 // consumed.
-                .thenValue([self](BackingStore::GetTreeResult result) {
+                .thenValue([self, watch](BackingStore::GetTreeResult result) {
                   auto batch = self->localStore_->beginWrite();
                   if (self->shouldCacheOnDisk(
                           BackingStore::LocalStoreCachingPolicy::Trees)) {
@@ -320,6 +326,9 @@ folly::SemiFuture<BackingStore::GetTreeResult> ObjectStore::getTreeImpl(
                   batch->flush();
                   self->stats_->increment(
                       &ObjectStoreStats::getTreeFromBackingStore);
+                  self->stats_->addDuration(
+                      &ObjectStoreStats::getTreeBackingstoreDuration,
+                      watch.elapsed());
                   return result;
                 })
                 .thenError(

@@ -428,6 +428,9 @@ struct PrjfsStats : StatsGroup<PrjfsStats> {
  */
 struct ObjectStoreStats : StatsGroup<ObjectStoreStats> {
   Duration getTree{"store.get_tree_us"};
+  Duration getTreeMemoryDuration{"store.get_tree.memory_us"};
+  Duration getTreeLocalstoreDuration{"store.get_tree.localstore_us"};
+  Duration getTreeBackingstoreDuration{"store.get_tree.backingstore_us"};
   Duration getTreeMetadata{"store.get_tree_metadata_us"};
   Duration getBlob{"store.get_blob_us"};
   Duration getBlobMetadata{"store.get_blob_metadata_us"};
