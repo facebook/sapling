@@ -24,10 +24,11 @@ use cmdlib::args;
 use cmdlib::args::MononokeMatches;
 use cmdlib::helpers;
 use cmdlib_x_repo::create_commit_syncer_from_matches;
-use cmdlib_x_repo::get_all_possible_small_repo_submodule_deps_from_matches;
+use cmdlib_x_repo::repo_provider_from_matches;
 use context::CoreContext;
 use cross_repo_sync::create_commit_syncer_lease;
 use cross_repo_sync::find_toposorted_unsynced_ancestors;
+use cross_repo_sync::get_all_submodule_deps;
 use cross_repo_sync::verify_working_copy_with_version;
 use cross_repo_sync::CandidateSelectionHint;
 use cross_repo_sync::CommitSyncContext;
@@ -351,18 +352,24 @@ async fn run_sync_diamond_merge<'a>(
     let x_repo_syncer_lease = create_commit_syncer_lease(ctx.fb, caching)?;
 
     let live_commit_sync_config = Arc::new(live_commit_sync_config);
-    let submodule_deps = get_all_possible_small_repo_submodule_deps_from_matches(
+
+    let repo_provider = repo_provider_from_matches(ctx, matches);
+
+    let source_repo_arc = Arc::new(source_repo);
+    let target_repo_arc = Arc::new(target_repo);
+    let submodule_deps = get_all_submodule_deps(
         ctx,
-        matches,
-        &source_repo,
+        source_repo_arc.clone(),
+        target_repo_arc.clone(),
+        repo_provider,
         live_commit_sync_config.clone(),
     )
     .await?;
 
     sync_diamond_merge::do_sync_diamond_merge(
         ctx,
-        &source_repo,
-        &target_repo,
+        source_repo_arc.as_ref(),
+        target_repo_arc.as_ref(),
         submodule_deps,
         source_merge_cs_id,
         mapping,
