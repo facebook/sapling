@@ -25,10 +25,6 @@
   align-items: center;
 }
 
-.dropdown-container.setting-inline-dropdown label {
-  font-size: 80%;
-}
-
 .zoom-setting {
   display: flex;
   align-items: center;

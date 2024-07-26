@@ -7,7 +7,6 @@
 
 import type {ThemeColor} from './theme';
 import type {PreferredSubmitCommand} from './types';
-import type {ReactNode} from 'react';
 
 import {splitSuggestionEnabled} from './CommitInfoView/SplitSuggestion';
 import {condenseObsoleteStacks} from './CommitTreeList';
@@ -18,6 +17,7 @@ import {useShowKeyboardShortcutsHelp} from './ISLShortcuts';
 import {Internal} from './Internal';
 import {Link} from './Link';
 import {RestackBehaviorSetting} from './RestackBehavior';
+import {Setting} from './Setting';
 import {codeReviewProvider} from './codeReview/CodeReviewInfo';
 import {showDiffNumberConfig} from './codeReview/DiffBadge';
 import {SubmitAsDraftCheckbox} from './codeReview/DraftCheckbox';
@@ -445,23 +445,6 @@ function DebugToolsField() {
           </Checkbox>
         )}
       </Column>
-    </DropdownField>
-  );
-}
-
-function Setting({
-  children,
-  title,
-  description,
-}: {
-  children: ReactNode;
-  title: ReactNode;
-  description?: ReactNode;
-}) {
-  return (
-    <DropdownField title={title}>
-      {description && <div className="setting-description">{description}</div>}
-      {children}
     </DropdownField>
   );
 }
