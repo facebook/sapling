@@ -36,12 +36,14 @@ Create small repo commits
 
   $ with_stripped_logs mononoke_x_repo_sync "$SUBMODULE_REPO_ID"  "$LARGE_REPO_ID" initial-import --no-progress-bar -i "$C" --version-name "$LATEST_CONFIG_VERSION_NAME"
   Starting session with id * (glob)
+  Starting up X Repo Sync from small repo small_repo to large repo large_repo
   Checking if 738630e43445144e9f5ddbe1869730cfbaf8ff6bf95b25b8410cb35ca92f25c7 is already synced 11->10
   Syncing 738630e43445144e9f5ddbe1869730cfbaf8ff6bf95b25b8410cb35ca92f25c7 for inital import
   Source repo: small_repo / Target repo: large_repo
   Found 3 unsynced ancestors
   changeset 738630e43445144e9f5ddbe1869730cfbaf8ff6bf95b25b8410cb35ca92f25c7 synced as ca175120dfe7fb7fcb0d872e26ce331cb24c7d9ec457d599a40684527c65d63a in * (glob)
   successful sync of head 738630e43445144e9f5ddbe1869730cfbaf8ff6bf95b25b8410cb35ca92f25c7
+  X Repo Sync execution finished from small repo small_repo to large repo large_repo
 
   $ clone_and_log_large_repo "ca175120dfe7fb7fcb0d872e26ce331cb24c7d9ec457d599a40684527c65d63a"
   o  cbb9c8a988b5 C

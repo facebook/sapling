@@ -133,12 +133,14 @@ Run the x-repo with submodules setup
   
   NOTE: Running initial import
   Starting session with id * (glob)
+  Starting up X Repo Sync from small repo small_repo to large repo large_repo
   Checking if * (glob)
   Syncing c33eeb91423c021a4d9d57f2efbb08185c77d89b9141433c666b84240395f0c5 for inital import
   Source repo: small_repo / Target repo: large_repo
   Found * unsynced ancestors (glob)
   changeset * synced as * in * (glob)
   successful sync of head * (glob)
+  X Repo Sync execution finished from small repo small_repo to large repo large_repo
   
   
   NOTE: Large repo bookmarks
@@ -245,6 +247,7 @@ Run the x-repo with submodules setup
   
   NOTE: Changing commit sync mapping version
   Starting session with id * (glob)
+  Starting up X Repo Sync from small repo small_repo to large repo large_repo
   changeset resolved as: ChangesetId(Blake2(eef414bd5fc8f7dcc129318276af6945117fe32bb5cfda6b0e6d43036107f61c))
   Checking if eef414bd5fc8f7dcc129318276af6945117fe32bb5cfda6b0e6d43036107f61c is already synced 11->10
   Changing mapping version during pushrebase to INITIAL_IMPORT_SYNC_CONFIG
@@ -280,6 +283,7 @@ Run the x-repo with submodules setup
   syncing eef414bd5fc8f7dcc129318276af6945117fe32bb5cfda6b0e6d43036107f61c via pushrebase for master
   changeset eef414bd5fc8f7dcc129318276af6945117fe32bb5cfda6b0e6d43036107f61c synced as 04190d634e49d29bf87edffb012f42f9f5e49b5b66e99714f17fcd4ef3f3e294 in * (glob)
   successful sync
+  X Repo Sync execution finished from small repo small_repo to large repo large_repo
   
   SYNCED_HEAD: 04190d634e49d29bf87edffb012f42f9f5e49b5b66e99714f17fcd4ef3f3e294
   

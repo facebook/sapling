@@ -47,6 +47,7 @@ Create commit that modifies git submodule in small repo
   $ with_stripped_logs mononoke_x_repo_sync "$SUBMODULE_REPO_ID" "$LARGE_REPO_ID" \
   > initial-import --no-progress-bar --version-name "$LATEST_CONFIG_VERSION_NAME" --all-bookmarks
   Starting session with id * (glob)
+  Starting up X Repo Sync from small repo small_repo to large repo large_repo
   Checking if 54f6eed1de6b6caeb23c17044f9bf8133aa20e68b1b9cf7057f1eb7fe5b48a73 is already synced 11->10
   Syncing 54f6eed1de6b6caeb23c17044f9bf8133aa20e68b1b9cf7057f1eb7fe5b48a73 for inital import
   Source repo: small_repo / Target repo: large_repo
@@ -59,6 +60,7 @@ Create commit that modifies git submodule in small repo
   Found 2 unsynced ancestors
   changeset 00b0b4d6130a22ccf3fada118572a85a6bb2d7c253d4285557802b7b8f250821 synced as 768a9c6d2b6943900f9d4374028a891c7d3dc62d7ecc25a1fd2a9c3fc9aba14b in * (glob)
   successful sync of head 00b0b4d6130a22ccf3fada118572a85a6bb2d7c253d4285557802b7b8f250821
+  X Repo Sync execution finished from small repo small_repo to large repo large_repo
 
 
   $ clone_and_log_large_repo 768a9c6d2b6943900f9d4374028a891c7d3dc62d7ecc25a1fd2a9c3fc9aba14b 8443fe4b35302f08abf9ffa53d494b7175d7514c04e4cd52fc78f8369cbd5a83

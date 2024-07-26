@@ -58,7 +58,7 @@ fn augment_args(
 #[macro_export]
 macro_rules! repo_args {
     ($ident:ident, $name_arg:literal, $maybe_short_name_arg:expr, $name_help:literal, $id_arg:literal, $id_help:literal) => {
-        #[derive(Debug)]
+        #[derive(Debug, Clone)]
         pub struct $ident(RepoArg);
 
         impl Args for $ident {
@@ -101,6 +101,16 @@ macro_rules! repo_args {
         impl AsRepoArg for $ident {
             fn as_repo_arg(&self) -> &RepoArg {
                 &self.0
+            }
+        }
+
+        impl $ident {
+            pub fn with_name(name: String) -> Self {
+                Self(RepoArg::with_name(name))
+            }
+
+            pub fn with_id(id: i32) -> Self {
+                Self(RepoArg::with_id(id))
             }
         }
     };
@@ -237,7 +247,7 @@ repo_args!(
 /// Command line arguments for specifying only a source  and a target repos,
 /// Necessary for cross-repo operations
 /// Only visible if the app was built with a call to `MononokeAppBuilder::with_source_and_target_repos`
-#[derive(Args, Debug)]
+#[derive(Args, Debug, Clone)]
 pub struct SourceAndTargetRepoArgs {
     #[clap(flatten)]
     pub source_repo: SourceRepoArgs,
@@ -246,10 +256,32 @@ pub struct SourceAndTargetRepoArgs {
     pub target_repo: TargetRepoArgs,
 }
 
-#[derive(Debug)]
+impl SourceAndTargetRepoArgs {
+    pub fn with_source_and_target_repo_name(
+        source_repo_name: String,
+        target_repo_name: String,
+    ) -> Self {
+        Self {
+            source_repo: SourceRepoArgs::with_name(source_repo_name),
+            target_repo: TargetRepoArgs::with_name(target_repo_name),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
 pub enum RepoArg {
     Id(RepositoryId),
     Name(String),
+}
+
+impl RepoArg {
+    pub fn with_id(id: i32) -> Self {
+        Self::Id(RepositoryId::new(id))
+    }
+
+    pub fn with_name(name: String) -> Self {
+        Self::Name(name)
+    }
 }
 
 pub trait AsRepoArg {

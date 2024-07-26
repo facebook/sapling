@@ -7,6 +7,7 @@ oncall("scm_server_infra")
 
 dott_test(
     name = "cross-repo",
+    disable_all_network_access_target = False,
     dott_files = glob(["*.t"]),
     deps = [
         "//eden/mononoke:admin",

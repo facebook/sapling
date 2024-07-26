@@ -45,6 +45,7 @@ Create small repo commits
   enabled stdlog with level: Error (set RUST_LOG to configure)
   Starting session with id * (glob)
   Reloading redacted config from configerator
+  Starting up X Repo Sync from small repo small_repo to large repo large_repo
   Checking if 2999dcf517994fe94506b62e5a9c54f851abd4c4964f98fdd701c013abd9c0c3 is already synced 11->10
   Syncing 2999dcf517994fe94506b62e5a9c54f851abd4c4964f98fdd701c013abd9c0c3 for inital import
   Source repo: small_repo / Target repo: large_repo
@@ -70,6 +71,7 @@ Create small repo commits
   get_commit_sync_outcome_with_hint called for 11->10, cs 7e97054c51a17ea2c03cd5184826b6a7556d141d57c5a1641bbd62c0854d1a36, hint CandidateSelectionHint::Only
   changeset 2999dcf517994fe94506b62e5a9c54f851abd4c4964f98fdd701c013abd9c0c3 synced as 85776cdc88303208a1cde5c614996a89441d3a9175a6311dda34d178428ba652 in * (glob)
   successful sync of head 2999dcf517994fe94506b62e5a9c54f851abd4c4964f98fdd701c013abd9c0c3
+  X Repo Sync execution finished from small repo small_repo to large repo large_repo
 
 
   $ clone_and_log_large_repo "85776cdc88303208a1cde5c614996a89441d3a9175a6311dda34d178428ba652"
@@ -112,6 +114,7 @@ Add more commits to small repo
   enabled stdlog with level: Error (set RUST_LOG to configure)
   Starting session with id * (glob)
   Reloading redacted config from configerator
+  Starting up X Repo Sync from small repo small_repo to large repo large_repo
   Checking if d2ba11302a912b679610fd60d7e56dd8f01372c130faa3ae72816d5568b25f3a is already synced 11->10
   Syncing d2ba11302a912b679610fd60d7e56dd8f01372c130faa3ae72816d5568b25f3a for inital import
   Source repo: small_repo / Target repo: large_repo
@@ -138,6 +141,7 @@ Add more commits to small repo
   get_commit_sync_outcome_with_hint called for 11->10, cs 9eeb57261a4dfbeeb2e1c06ef6dc3f83b11e314eb34c598f2d042967b1938583, hint CandidateSelectionHint::Only
   changeset d2ba11302a912b679610fd60d7e56dd8f01372c130faa3ae72816d5568b25f3a synced as ccfdf094e4710a77de7b36c4324fa7ee64dafba4067726e383db62273553466b in * (glob)
   successful sync of head d2ba11302a912b679610fd60d7e56dd8f01372c130faa3ae72816d5568b25f3a
+  X Repo Sync execution finished from small repo small_repo to large repo large_repo
 
   $ clone_and_log_large_repo "ccfdf094e4710a77de7b36c4324fa7ee64dafba4067726e383db62273553466b"
   abort: destination 'large_repo' is not empty

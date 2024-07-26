@@ -278,12 +278,14 @@ Merge with preserved ancestors
   $ cd "$TESTTMP"
   $ mononoke_x_repo_sync 1 0 once --target-bookmark master_bookmark --commit $(hg log -T "{node}" -r pre_merge_p1 --cwd "$TESTTMP/with_merge_hg") |& grep -v "using repo"
   * Starting session with id * (glob)
+  * Starting up X Repo Sync from small repo with_merge_mon to large repo meg_mon (glob)
   * changeset resolved as: ChangesetId(Blake2(87924512f63d088d5b6bb5368bfef8016246e59927fe9d06d8ea657bc94e993d)) (glob)
   * Checking if 87924512f63d088d5b6bb5368bfef8016246e59927fe9d06d8ea657bc94e993d is already synced 1->0 (glob)
   * 1 unsynced ancestors of 87924512f63d088d5b6bb5368bfef8016246e59927fe9d06d8ea657bc94e993d (glob)
   * syncing 87924512f63d088d5b6bb5368bfef8016246e59927fe9d06d8ea657bc94e993d via pushrebase for master_bookmark (glob)
   * changeset 87924512f63d088d5b6bb5368bfef8016246e59927fe9d06d8ea657bc94e993d synced as 321d5cb2cf4c5e1bf7cb2e809b3aaf181a0907aa63bc69ee3575a7e6313b92e7 in * (glob)
   * successful sync (glob)
+  * X Repo Sync execution finished from small repo with_merge_mon to large repo meg_mon (glob)
   $ mononoke_admin_source_target 1 0 crossrepo map 87924512f63d088d5b6bb5368bfef8016246e59927fe9d06d8ea657bc94e993d
   * using repo "with_merge_mon" repoid RepositoryId(1) (glob)
   * using repo "meg_mon" repoid RepositoryId(0) (glob)

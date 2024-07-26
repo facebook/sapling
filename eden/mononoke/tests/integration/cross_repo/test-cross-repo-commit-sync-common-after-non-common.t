@@ -63,6 +63,7 @@
   Value of xreposync_from_1 in repo large-mon(Id: 0) set to 0
   $ with_stripped_logs mononoke_x_repo_sync 1 0 tail --catch-up-once
   Starting session with id * (glob)
+  Starting up X Repo Sync from small repo small-mon to large repo large-mon
   queue size is 3
   processing log entry #1
   0 unsynced ancestors of 1ba347e63a4bf200944c22ade8dbea038dd271ef97af346ba4ccfaaefb10dd4d
@@ -79,6 +80,7 @@
   syncing 542a68bb4fd5a7ba5a047a0bb29a48d660c0ea5114688d00b11658313e8f1e6b via pushrebase for master_bookmark
   changeset 542a68bb4fd5a7ba5a047a0bb29a48d660c0ea5114688d00b11658313e8f1e6b synced as 3c072c4093381c801d2a575ccc7943e59ece487b455a5f4781ea7c750af2983e in * (glob)
   successful sync bookmark update log #3
+  X Repo Sync execution finished from small repo small-mon to large repo large-mon
 
 -- Show the bookmarks after the sync
   $ mononoke_newadmin bookmarks --repo-name large-mon list
@@ -106,12 +108,14 @@
   Updating publishing bookmark other_bookmark from 6899eb0af1d64df45683e6bf22c8b82593b22539dec09394f516f944f6fa8c12 to a9d1b36d3a6d37d43ff6cd7279e0e02a9f6e1930dc41e1ee129bdfd315572074
   $ mononoke_x_repo_sync 1 0 tail --catch-up-once  2>&1 | strip_glog
   Starting session with id * (glob)
+  Starting up X Repo Sync from small repo small-mon to large repo large-mon
   queue size is 1
   processing log entry #4
   1 unsynced ancestors of a9d1b36d3a6d37d43ff6cd7279e0e02a9f6e1930dc41e1ee129bdfd315572074
   syncing a9d1b36d3a6d37d43ff6cd7279e0e02a9f6e1930dc41e1ee129bdfd315572074
   changeset a9d1b36d3a6d37d43ff6cd7279e0e02a9f6e1930dc41e1ee129bdfd315572074 synced as 7b854923a6d1a8681ba45d2ea9b704d8f9ac795bfabc393477eb181217745072 in * (glob)
   successful sync bookmark update log #4
+  X Repo Sync execution finished from small repo small-mon to large repo large-mon
 
   $ testtool_drawdag -R large-mon << EOF
   > S_D-L_A-L_B
@@ -126,12 +130,14 @@
   Updating publishing bookmark master_bookmark from 542a68bb4fd5a7ba5a047a0bb29a48d660c0ea5114688d00b11658313e8f1e6b to a9d1b36d3a6d37d43ff6cd7279e0e02a9f6e1930dc41e1ee129bdfd315572074
   $ mononoke_x_repo_sync 1 0 tail --catch-up-once  2>&1 | strip_glog
   Starting session with id * (glob)
+  Starting up X Repo Sync from small repo small-mon to large repo large-mon
   queue size is 1
   processing log entry #5
   1 unsynced ancestors of a9d1b36d3a6d37d43ff6cd7279e0e02a9f6e1930dc41e1ee129bdfd315572074
   syncing a9d1b36d3a6d37d43ff6cd7279e0e02a9f6e1930dc41e1ee129bdfd315572074 via pushrebase for master_bookmark
   changeset a9d1b36d3a6d37d43ff6cd7279e0e02a9f6e1930dc41e1ee129bdfd315572074 synced as 6c69e9c52d3293368e2d26a5e31bed2392ec9d31bd05e4777124d3076e01617e in * (glob)
   successful sync bookmark update log #5
+  X Repo Sync execution finished from small repo small-mon to large repo large-mon
 
   $ mononoke_newadmin bookmarks --repo-name large-mon list
   7b854923a6d1a8681ba45d2ea9b704d8f9ac795bfabc393477eb181217745072 bookprefix/other_bookmark
@@ -163,9 +169,11 @@
   Updating publishing bookmark other_bookmark from a9d1b36d3a6d37d43ff6cd7279e0e02a9f6e1930dc41e1ee129bdfd315572074 to c8f423b81b6dc422d07144a05bde9fe8ff03a0c7aaf77840418b104125fff9c0
   $ mononoke_x_repo_sync 1 0 tail --catch-up-once  2>&1 | strip_glog
   * (glob)
+  Starting up X Repo Sync from small repo small-mon to large repo large-mon
   queue size is 1
   processing log entry #6
   1 unsynced ancestors of c8f423b81b6dc422d07144a05bde9fe8ff03a0c7aaf77840418b104125fff9c0
   syncing c8f423b81b6dc422d07144a05bde9fe8ff03a0c7aaf77840418b104125fff9c0
   changeset c8f423b81b6dc422d07144a05bde9fe8ff03a0c7aaf77840418b104125fff9c0 synced as 5c3f0368dead91cb214d9b3983ae632c160960e35ee91ac6f11ad96e5601849d in * (glob)
   successful sync bookmark update log #6
+  X Repo Sync execution finished from small repo small-mon to large repo large-mon

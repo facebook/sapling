@@ -51,7 +51,6 @@ use anyhow::format_err;
 use anyhow::Error;
 use anyhow::Result;
 use backsyncer::format_counter as format_backsyncer_counter;
-use blobstore_factory::MetadataSqlFactory;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateLogRef;
 use bookmarks::BookmarksRef;
@@ -59,8 +58,6 @@ use bookmarks::Freshness;
 use bulk_derivation::BulkDerivation;
 use clientinfo::ClientEntryPoint;
 use clientinfo::ClientInfo;
-use cmdlib::helpers;
-use cmdlib_cross_repo::create_commit_syncers_from_app_unredacted;
 use context::CoreContext;
 use cross_repo_sync::CandidateSelectionHint;
 use cross_repo_sync::CommitSyncContext;
@@ -69,10 +66,12 @@ use cross_repo_sync::ConcreteRepo as CrossRepo;
 use cross_repo_sync::PushrebaseRewriteDates;
 use cross_repo_sync::Source;
 use cross_repo_sync::Target;
+use executor_lib::RepoShardedProcessExecutor;
 use fbinit::FacebookInit;
 use futures::future;
 use futures::stream;
 use futures::stream::TryStreamExt;
+use futures::FutureExt;
 use futures::StreamExt;
 use futures_stats::TimedFutureExt;
 use live_commit_sync_config::CfgrLiveCommitSyncConfig;
@@ -80,7 +79,6 @@ use live_commit_sync_config::LiveCommitSyncConfig;
 use metaconfig_types::CommitSyncConfigVersion;
 use metadata::Metadata;
 use mononoke_api::Repo;
-use mononoke_app::args::AsRepoArg;
 use mononoke_app::args::MultiRepoArgs;
 use mononoke_app::fb303::AliveService;
 use mononoke_app::MononokeApp;
@@ -88,29 +86,27 @@ use mononoke_hg_sync_job_helper_lib::wait_for_latest_log_id_to_be_synced;
 use mononoke_types::ChangesetId;
 use mononoke_types::DerivableType;
 use mutable_counters::ArcMutableCounters;
-use mutable_counters::MutableCountersArc;
 use mutable_counters::MutableCountersRef;
-use pushredirect::SqlPushRedirectionConfigBuilder;
 use regex::Regex;
 use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentityRef;
 use scuba_ext::MononokeScubaSampleBuilder;
+use sharding::XRepoSyncProcessExecutor;
 use slog::debug;
 use slog::info;
 use slog::warn;
 use synced_commit_mapping::SyncedCommitMapping;
 
 use crate::cli::ForwardSyncerArgs;
-use crate::cli::ForwardSyncerCommand::*;
 use crate::cli::TailCommandArgs;
 use crate::sync::SyncResult;
 
 mod cli;
 mod reporting;
+mod sharding;
 mod sync;
 
 use crate::cli::create_app;
-use crate::reporting::add_common_fields;
 use crate::reporting::log_bookmark_update_result;
 use crate::reporting::log_noop_iteration;
 use crate::sync::sync_commit_and_ancestors;
@@ -267,6 +263,7 @@ async fn run_in_tailing_mode<M: SyncedCommitMapping + Clone + 'static>(
                 &maybe_bookmark_regex,
                 pushrebase_rewrite_dates,
             )
+            .boxed()
             .await?;
         }
         TailingArgs::LoopForever(commit_syncer) => {
@@ -299,6 +296,7 @@ async fn run_in_tailing_mode<M: SyncedCommitMapping + Clone + 'static>(
                     &maybe_bookmark_regex,
                     pushrebase_rewrite_dates,
                 )
+                .boxed()
                 .await?;
 
                 if !synced_something {
@@ -370,6 +368,7 @@ async fn tail<M: SyncedCommitMapping + Clone + 'static>(
         .get_source_repo()
         .bookmark_update_log()
         .count_further_bookmark_log_entries(ctx.clone(), start_id.try_into()?, None)
+        .boxed()
         .await?;
 
     if log_entries.is_empty() {
@@ -420,6 +419,7 @@ async fn tail<M: SyncedCommitMapping + Clone + 'static>(
                         scuba_sample.clone(),
                         sleep_duration,
                     )
+                    .boxed()
                     .await?;
                 }
             } else {
@@ -463,6 +463,7 @@ async fn maybe_apply_backpressure(
                     let maybe_counter = repo
                         .mutable_counters()
                         .get_counter(ctx, &backsyncer_counter)
+                        .boxed()
                         .await?
                         .map(|counter| counter.try_into())
                         .transpose()?;
@@ -491,6 +492,7 @@ async fn maybe_apply_backpressure(
             })
             .try_buffer_unordered(100)
             .try_fold(0, |acc, x| future::ready(Ok(::std::cmp::max(acc, x))))
+            .boxed()
             .await?;
 
         if max_further_entries > limit {
@@ -518,135 +520,12 @@ where
 }
 
 async fn async_main<'a>(app: MononokeApp, ctx: CoreContext) -> Result<(), Error> {
-    let config_store = app.environment().config_store.clone();
-    let mut scuba_sample = ctx.scuba().clone();
-
     let args: ForwardSyncerArgs = app.args()?;
-
-    let logger = ctx.logger();
-    let small_repo: Arc<Repo> = app.open_repo(&args.repo_args.source_repo).await?;
-
-    let large_repo: Arc<Repo> = app.open_repo(&args.repo_args.target_repo).await?;
-
-    // RFC: use unredacted or standard `create_commit_syncers_from_app`?
-    let syncers = create_commit_syncers_from_app_unredacted(&ctx, &app, &args.repo_args).await?;
-    let commit_syncer = syncers.small_to_large;
-
-    let (_, repo_config) = app.repo_config(args.repo_args.source_repo.as_repo_arg())?;
-    let sql_factory: MetadataSqlFactory = MetadataSqlFactory::new(
-        app.fb,
-        repo_config.storage_config.metadata.clone(),
-        app.mysql_options().clone(),
-        *app.readonly_storage(),
-    )
-    .await?;
-    let builder = sql_factory
-        .open::<SqlPushRedirectionConfigBuilder>()
-        .await?;
-    let push_redirection_config = builder.build();
-    let live_commit_sync_config = Arc::new(CfgrLiveCommitSyncConfig::new_with_xdb(
-        logger,
-        &config_store,
-        Arc::new(push_redirection_config),
-    )?);
-    let common_commit_sync_config =
-        live_commit_sync_config.get_common_config(small_repo.blob_repo().repo_identity().id())?;
-
-    let common_bookmarks: HashSet<_> = common_commit_sync_config
-        .common_pushrebase_bookmarks
-        .clone()
-        .into_iter()
-        .collect();
-
-    let target_mutable_counters = large_repo.mutable_counters_arc();
-
-    let pushrebase_rewrite_dates = if args.pushrebase_rewrite_dates {
-        PushrebaseRewriteDates::Yes
-    } else {
-        PushrebaseRewriteDates::No
-    };
-
-    add_common_fields(&mut scuba_sample, &commit_syncer);
-    match args.command {
-        InitialImport(initial_import_args) => {
-            let sync_config_version_name = initial_import_args.sync_config_version_name.clone();
-            let config_version = CommitSyncConfigVersion(sync_config_version_name);
-            let resolved_csids = initial_import_args
-                .changeset_args
-                .resolve_changesets(&ctx, &small_repo)
-                .await?;
-
-            run_in_initial_import_mode(
-                &ctx,
-                resolved_csids,
-                commit_syncer,
-                config_version,
-                scuba_sample,
-                initial_import_args.no_progress_bar,
-                initial_import_args.no_automatic_derivation,
-                initial_import_args.derivation_batch_size,
-            )
-            .await
-        }
-        Once(once_cmd_args) => {
-            let maybe_target_bookmark = once_cmd_args
-                .target_bookmark
-                .clone()
-                .map(BookmarkKey::new)
-                .transpose()?;
-            let bcs =
-                helpers::csid_resolve(&ctx, small_repo.blob_repo(), &once_cmd_args.commit.as_str())
-                    .await?;
-            let new_version = once_cmd_args.new_version.map(CommitSyncConfigVersion);
-
-            run_in_single_commit_mode(
-                &ctx,
-                bcs,
-                commit_syncer,
-                scuba_sample,
-                maybe_target_bookmark,
-                common_bookmarks,
-                pushrebase_rewrite_dates,
-                new_version,
-                once_cmd_args.unsafe_force_rewrite_parent_to_target_bookmark,
-            )
-            .await
-        }
-        Tail(tail_cmd_args) => {
-            let sleep_duration = Duration::from_secs(tail_cmd_args.sleep_secs);
-            let tailing_args = if tail_cmd_args.catch_up_once {
-                TailingArgs::CatchUpOnce(commit_syncer)
-            } else {
-                TailingArgs::LoopForever(commit_syncer)
-            };
-
-            let backpressure_params = BackpressureParams::new(&app, tail_cmd_args.clone()).await?;
-
-            let maybe_bookmark_regex = match tail_cmd_args.bookmark_regex {
-                Some(regex) => Some(Regex::new(regex.as_str())?),
-                None => None,
-            };
-
-            run_in_tailing_mode(
-                &ctx,
-                target_mutable_counters,
-                common_bookmarks,
-                scuba_sample,
-                backpressure_params,
-                tail_cmd_args
-                    .derived_data_types
-                    .into_iter()
-                    .map(|ty| DerivableType::from_name(&ty))
-                    .collect::<Result<_>>()?,
-                tailing_args,
-                sleep_duration,
-                maybe_bookmark_regex,
-                pushrebase_rewrite_dates,
-                live_commit_sync_config,
-            )
-            .await
-        }
-    }
+    let repo_args = args.repo_args.clone();
+    let x_repo_process_executor =
+        XRepoSyncProcessExecutor::new(Arc::new(app), Arc::new(ctx), Arc::new(args), &repo_args)
+            .await?;
+    x_repo_process_executor.execute().await
 }
 
 struct BackpressureParams {

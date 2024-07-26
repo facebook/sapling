@@ -65,7 +65,7 @@ pub struct OnceCommandArgs {
     pub unsafe_force_rewrite_parent_to_target_bookmark: bool,
 }
 
-#[derive(Debug, Args, Clone)]
+#[derive(Clone, Debug, Args)]
 #[clap(
     about = "Start a live sync between repos, so commits from the small repo are automatically synced to the large one"
 )]
