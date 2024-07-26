@@ -298,7 +298,8 @@ RocksDbLocalStore::RocksDbLocalStore(
       ioPool_(12, "RocksLocalStore"),
       pathToDb_{pathToRocksDb.copy()},
       mode_{mode},
-      config_{std::move(config)} {
+      config_{std::move(config)},
+      isAsync_{config_->getEdenConfig()->asyncRocksDbLocalStore.getValue()} {
   XLOG(DBG2) << "Making a new RockDB localstore ( " << this
              << " ) . debug information for T136469251.";
 }
@@ -468,6 +469,25 @@ StoreResult RocksDbLocalStore::get(KeySpace keySpace, ByteRange key) const {
         status, "failed to get ", folly::hexlify(key), " from local store");
   }
   return StoreResult(std::move(value));
+}
+
+FOLLY_NODISCARD ImmediateFuture<StoreResult>
+RocksDbLocalStore::getImmediateFuture(KeySpace keySpace, const ObjectId& key)
+    const {
+  // Reading from a ReloadableConfig is expensive, so we only read the async
+  // config in the constructor. The tradeoff is that Eden must be restarted to
+  // switch between async and sync mode.
+  if (isAsync_) {
+    return faultInjector_.checkAsync("local store get single", "")
+        .semi()
+        .via(&ioPool_)
+        .thenValue([keySpace, key, self = shared_from_this()](folly::Unit&&) {
+          return self->get(keySpace, key.getBytes());
+        })
+        .semi();
+  } else {
+    return LocalStore::getImmediateFuture(keySpace, key);
+  }
 }
 
 FOLLY_NODISCARD ImmediateFuture<std::vector<StoreResult>>
