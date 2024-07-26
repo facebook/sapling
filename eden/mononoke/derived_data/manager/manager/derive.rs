@@ -652,9 +652,6 @@ impl DerivedDataManager {
     /// and ancestors of the batch to have already been derived.  If
     /// any dependency or ancestor is not already derived, an error
     /// will be returned.
-    /// If a dependent derived data type has not been derived for the batch of changesets prior to
-    /// this, it will be derived first. The same pre-conditions apply on the dependent derived data
-    /// type.
     pub async fn derive_exactly_batch<Derivable>(
         &self,
         ctx: &CoreContext,
@@ -746,19 +743,21 @@ impl DerivedDataManager {
             ))?;
 
         // All heads should have their dependent data types derived.
-        // Let's make sure that's the case
-        let (dependent_types_stats, _) = Derivable::Dependencies::derive_heads(
-            self.clone(),
-            ctx,
-            &heads.into_iter().collect::<Vec<_>>(),
-            None,
-            rederivation.clone(),
-            Default::default(),
-        )
-        .try_timed()
-        .await
-        .context("failed to derive batch dependencies")?;
-        let dependent_types_duration = dependent_types_stats.completion_time;
+        // Let's check if that's the case
+        stream::iter(heads)
+            .map(|csid| async move {
+                Derivable::Dependencies::check_dependencies(
+                    ctx,
+                    derivation_ctx_ref,
+                    csid,
+                    &mut HashSet::new(),
+                )
+                .await
+            })
+            .buffered(100)
+            .try_for_each(|_| async { Ok(()) })
+            .await
+            .context("a batch dependency has not been derived")?;
 
         let ctx = ctx.clone_and_reset();
         let ctx = self.set_derivation_session_class(ctx.clone());
@@ -859,7 +858,7 @@ impl DerivedDataManager {
 
         let batch_duration = result?;
 
-        Ok(batch_duration + secondary_derivation.await? + dependent_types_duration)
+        Ok(batch_duration + secondary_derivation.await?)
     }
 
     /// Fetch derived data for a changeset if it has previously been derived.
