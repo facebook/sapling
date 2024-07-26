@@ -312,14 +312,15 @@ impl SourceControlServiceImpl {
                 return Ok(metadata);
             }
         }
+
         let mut metadata = Metadata::new(
             None,
             tls_identities.union(&cats_identities).cloned().collect(),
             false,
             metadata::security::is_client_untrusted(|h| req_ctxt.header(h))
                 .map_err(errors::invalid_request)?,
-            None,
-            None,
+            None, // TODO POPULATE HERE client ip
+            Some(req_ctxt.get_peer_port().map_err(errors::internal_error)?),
         )
         .await;
 
