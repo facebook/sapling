@@ -14,7 +14,10 @@ import type {Json} from 'shared/typeUtils';
 import {Internal} from './Internal';
 import {logger} from 'isl/src/logger';
 import {browserPlatformImpl} from 'isl/src/platform/browerPlatformImpl';
+import {lazy} from 'react';
 import {tryJsonParse} from 'shared/utils';
+
+const VSCodeSettings = lazy(() => import('./VSCodeSettings'));
 
 declare global {
   interface Window {
@@ -101,6 +104,20 @@ export const vscodeWebviewPlatform: Platform = {
   },
   upsellExternalMergeTool: false,
 
+  openDedicatedComparison: async (comparison: Comparison): Promise<boolean> => {
+    const {getComparisonPanelMode} = await import('./state');
+    const mode = getComparisonPanelMode();
+    if (mode === 'Auto') {
+      return false;
+    }
+    window.clientToServerAPI?.postMessage({
+      type: 'platform/executeVSCodeCommand',
+      command: 'sapling.open-comparison-view',
+      args: [comparison],
+    });
+    return true;
+  },
+
   clipboardCopy: browserPlatformImpl.clipboardCopy,
 
   getPersistedState<T extends Json>(key: string): T | null {
@@ -147,6 +164,7 @@ export const vscodeWebviewPlatform: Platform = {
   AdditionalDebugContent: Internal.AdditionalDebugContent,
   GettingStartedContent: Internal.GettingStartedContent,
   GettingStartedBugNuxContent: Internal.GettingStartedBugNuxContent,
+  Settings: VSCodeSettings,
 };
 
 function getTheme(): ThemeColor {

@@ -53,6 +53,19 @@
           "description": "%settings.markConflictingFilesResolvedOnSave.description%",
           "default": true
         },
+        "sapling.comparisonPanelMode": {
+          "type": "string",
+          "enum": [
+            "Auto",
+            "Always Separate Panel"
+          ],
+          "enumDescriptions": [
+            "%settings.comparisonPanelMode.enumDescriptions.auto%",
+            "%settings.comparisonPanelMode.enumDescriptions.always-separate-panel%"
+          ],
+          "description": "%settings.comparisonPanelMode.description%",
+          "default": "Auto"
+        },
         "sapling.isl.showInSidebar": {
           "type": "boolean",
           "default": false,

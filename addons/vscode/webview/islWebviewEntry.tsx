@@ -11,6 +11,10 @@ import App from 'isl/src/App';
 import {getLastestOperationInfo, onOperationExited} from 'isl/src/operationsState';
 import {registerDisposable} from 'isl/src/utils';
 import ReactDOM from 'react-dom/client';
+
+// start state side effect fetches
+import './state';
+
 import './vscode-styles.css';
 
 const PHABRICATOR_DIFF_ID_REGEX = /D([1-9][0-9]{5,})/im;

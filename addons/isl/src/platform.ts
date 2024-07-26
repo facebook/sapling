@@ -52,6 +52,8 @@ export interface Platform {
 
   handleServerMessage?: (message: ServerToClientMessage) => void;
 
+  openDedicatedComparison?: (comparison: Comparison) => Promise<boolean>;
+
   /**
    * Component representing additional buttons/info in the help menu.
    * Note: This should be lazy-loaded via `React.lazy()` so that implementations
