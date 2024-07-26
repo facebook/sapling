@@ -499,7 +499,6 @@ std::optional<BlobMetadata> ObjectStore::getBlobMetadataFromInMemoryCache(
     auto metadataCache = metadataCache_.wlock();
     auto cacheIter = metadataCache->find(id);
     if (cacheIter != metadataCache->end()) {
-      stats_->increment(&ObjectStoreStats::getBlobMetadataFromMemory);
       context->didFetch(
           ObjectFetchContext::BlobMetadata,
           id,
@@ -518,6 +517,7 @@ ImmediateFuture<BlobMetadata> ObjectStore::getBlobMetadata(
     bool blake3Needed) const {
   DurationScope<EdenStats> statScope{
       stats_, &ObjectStoreStats::getBlobMetadata};
+  folly::stop_watch<std::chrono::milliseconds> watch;
 
   // Check in-memory cache
   auto inMemoryCacheBlobMetadata =
@@ -528,24 +528,31 @@ ImmediateFuture<BlobMetadata> ObjectStore::getBlobMetadata(
           .thenValue(
               [self = shared_from_this(),
                id,
-               metadata = std::move(inMemoryCacheBlobMetadata).value()](
-                  auto&& blob) mutable -> ImmediateFuture<BlobMetadata> {
+               metadata = std::move(inMemoryCacheBlobMetadata).value(),
+               watch](auto&& blob) mutable -> ImmediateFuture<BlobMetadata> {
                 auto blake3 = self->computeBlake3(*blob);
                 // updating the metadata with the computed blake3 hash and
                 // update the cache
                 metadata.blake3.emplace(blake3);
                 self->metadataCache_.wlock()->set(id, metadata);
+                self->stats_->increment(
+                    &ObjectStoreStats::getBlobMetadataFromBlob);
+                self->stats_->addDuration(
+                    &ObjectStoreStats::getBlobMetadataFromBlobDuration,
+                    watch.elapsed());
                 return metadata;
               });
     }
-
+    stats_->increment(&ObjectStoreStats::getBlobMetadataFromMemory);
+    stats_->addDuration(
+        &ObjectStoreStats::getBlobMetadataMemoryDuration, watch.elapsed());
     return std::move(inMemoryCacheBlobMetadata).value();
   }
 
   deprioritizeWhenFetchHeavy(*fetchContext);
 
   return ImmediateFuture<BackingStore::GetBlobMetaResult>{
-      getBlobMetadataImpl(id, fetchContext)}
+      getBlobMetadataImpl(id, fetchContext, watch)}
       .thenValue(
           [self = shared_from_this(),
            fetchContext = fetchContext.copy(),
@@ -589,7 +596,8 @@ ImmediateFuture<BlobMetadata> ObjectStore::getBlobMetadata(
 folly::SemiFuture<BackingStore::GetBlobMetaResult>
 ObjectStore::getBlobMetadataImpl(
     const ObjectId& id,
-    const ObjectFetchContextPtr& context) const {
+    const ObjectFetchContextPtr& context,
+    folly::stop_watch<std::chrono::milliseconds> watch) const {
   auto localStoreGetBlobMetadata =
       ImmediateFuture<BlobMetadataPtr>{std::in_place, nullptr};
   if (shouldCacheOnDisk(BackingStore::LocalStoreCachingPolicy::BlobMetadata)) {
@@ -598,12 +606,15 @@ ObjectStore::getBlobMetadataImpl(
 
   return std::move(localStoreGetBlobMetadata)
       .thenValue(
-          [self = shared_from_this(), id = id, context = context.copy()](
+          [self = shared_from_this(), id = id, context = context.copy(), watch](
               BlobMetadataPtr metadata) mutable
           -> ImmediateFuture<BackingStore::GetBlobMetaResult> {
             if (metadata) {
               self->stats_->increment(
                   &ObjectStoreStats::getBlobMetadataFromLocalStore);
+              self->stats_->addDuration(
+                  &ObjectStoreStats::getBlobMetadataLocalstoreDuration,
+                  watch.elapsed());
               return BackingStore::GetBlobMetaResult{
                   std::move(metadata), ObjectFetchContext::FromDiskCache};
             }
@@ -611,7 +622,7 @@ ObjectStore::getBlobMetadataImpl(
             return ImmediateFuture{
                 self->backingStore_->getBlobMetadata(id, context)}
                 .thenValue(
-                    [self, id, context = context.copy()](
+                    [self, id, context = context.copy(), watch](
                         BackingStore::GetBlobMetaResult result)
                         -> ImmediateFuture<BackingStore::GetBlobMetaResult> {
                       if (result.blobMeta &&
@@ -619,12 +630,17 @@ ObjectStore::getBlobMetadataImpl(
                               kZeroHash) { // from eden/fs/model/Hash.cpp
                         self->stats_->increment(
                             &ObjectStoreStats::getBlobMetadataFromBackingStore);
+                        self->stats_->addDuration(
+                            &ObjectStoreStats::
+                                getBlobMetadataBackingstoreDuration,
+                            watch.elapsed());
                         return result;
                       }
 
                       return ImmediateFuture{self->getBlobImpl(id, context)}
                           .thenValue([self,
-                                      backingStoreResult = std::move(result)](
+                                      backingStoreResult = std::move(result),
+                                      watch](
                                          BackingStore::GetBlobResult result) {
                             if (result.blob) {
                               self->stats_->increment(
@@ -637,6 +653,11 @@ ObjectStore::getBlobMetadataImpl(
                                 blake3 =
                                     backingStoreResult.blobMeta->blake3.value();
                               }
+
+                              self->stats_->addDuration(
+                                  &ObjectStoreStats::
+                                      getBlobMetadataFromBlobDuration,
+                                  watch.elapsed());
 
                               return BackingStore::GetBlobMetaResult{
                                   std::make_shared<BlobMetadata>(

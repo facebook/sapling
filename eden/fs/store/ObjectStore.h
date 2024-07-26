@@ -373,7 +373,8 @@ class ObjectStore : public IObjectStore,
 
   folly::SemiFuture<BackingStore::GetBlobMetaResult> getBlobMetadataImpl(
       const ObjectId& id,
-      const ObjectFetchContextPtr& context) const;
+      const ObjectFetchContextPtr& context,
+      folly::stop_watch<std::chrono::milliseconds> watch) const;
 
   ImmediateFuture<BackingStore::GetGlobFilesResult> getGlobFilesImpl(
       const RootId& id,
