@@ -115,7 +115,13 @@ const comparisonDisplayMode = localStorageBackedAtom<ComparisonDisplayMode | 're
   'responsive',
 );
 
-export default function ComparisonView({comparison}: {comparison: Comparison}) {
+export default function ComparisonView({
+  comparison,
+  dismiss,
+}: {
+  comparison: Comparison;
+  dismiss?: () => void;
+}) {
   const compared = useAtomValue(currentComparisonData(comparison));
 
   const displayMode = useComparisonDisplayMode();
@@ -207,6 +213,7 @@ export default function ComparisonView({comparison}: {comparison: Comparison}) {
         comparison={comparison}
         collapsedFiles={collapsedFiles}
         setCollapsedFile={setCollapsedFile}
+        dismiss={dismiss}
       />
       <div className="comparison-view-details">{content}</div>
     </div>
@@ -222,10 +229,12 @@ function ComparisonViewHeader({
   comparison,
   collapsedFiles,
   setCollapsedFile,
+  dismiss,
 }: {
   comparison: Comparison;
   collapsedFiles: Map<string, boolean>;
   setCollapsedFile: (path: string, collapsed: boolean) => unknown;
+  dismiss?: () => void;
 }) {
   const setComparisonMode = useSetAtom(currentComparisonMode);
   const [compared, reloadComparison] = useAtom(currentComparisonData(comparison));
@@ -309,12 +318,11 @@ function ComparisonViewHeader({
           </Tooltip>
           {isLoading ? <Icon icon="loading" data-testid="comparison-loading" /> : null}
         </span>
-        <Button
-          data-testid="close-comparison-view-button"
-          icon
-          onClick={() => setComparisonMode(previous => ({...previous, visible: false}))}>
-          <Icon icon="x" />
-        </Button>
+        {dismiss == null ? null : (
+          <Button data-testid="close-comparison-view-button" icon onClick={dismiss}>
+            <Icon icon="x" />
+          </Button>
+        )}
       </div>
     </>
   );

@@ -10,6 +10,7 @@ import type {Comparison} from 'shared/Comparison';
 
 import {useCommand} from '../ISLShortcuts';
 import {Modal} from '../Modal';
+import {writeAtom} from '../jotaiUtils';
 import {currentComparisonMode} from './atoms';
 import {Icon} from 'isl-components/Icon';
 import {useAtom} from 'jotai';
@@ -56,7 +57,12 @@ export function ComparisonViewModal() {
   return (
     <Modal className="comparison-view-modal" height="" width="">
       <Suspense fallback={<Icon icon="loading" />}>
-        <ComparisonView comparison={mode.comparison} />
+        <ComparisonView
+          comparison={mode.comparison}
+          dismiss={() =>
+            writeAtom(currentComparisonMode, previous => ({...previous, visible: false}))
+          }
+        />
       </Suspense>
     </Modal>
   );
