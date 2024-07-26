@@ -48,6 +48,13 @@ TESTFLAGS ?= $(shell echo $$HGTESTFLAGS)
 OSXVERSIONFLAGS ?= $(shell echo $$OSXVERSIONFLAGS)
 
 HGNAME ?= hg
+ifeq ($(OS),Windows_NT)
+HG_BIN_NAME ?= hg.exe
+SL_BIN_NAME ?= sl.exe
+else
+HG_BIN_NAME ?= hg
+SL_BIN_NAME ?= sl
+endif
 SL_NAME = sl
 ISL_NAME ?= isl-dist.tar.xz
 
@@ -84,6 +91,7 @@ all: build
 
 oss: OSS=true
 oss: HGNAME=$(SL_NAME)
+oss: HG_BIN_NAME=$(SL_BIN_NAME)
 oss: local
 
 install-oss: oss
@@ -99,24 +107,20 @@ local:
 	  build_clib $(COMPILERFLAG) \
 	  build_rust_ext -i -l $(RUST_FLAG) \
 	  build_mo
-ifeq ($(OS),Windows_NT)
-	cp build/scripts-3.$(PYTHON_MINOR_VERSION)/$(HGNAME).exe $(HGNAME).exe
-else
+ifneq ($(OS),Windows_NT)
 	$(RM) $(HGNAME)
-	cp build/scripts-3.$(PYTHON_MINOR_VERSION)/$(HGNAME) $(HGNAME)
 endif
+	cp build/scripts-3.$(PYTHON_MINOR_VERSION)/$(HG_BIN_NAME) $(HG_BIN_NAME)
 
 hg:
 	SAPLING_SKIP_OTHER_RUST_BINARIES=true $(shell $(PYTHON3) contrib/pick_python.py $(PYTHON3)) setup.py $(PURE) \
 	  build_clib $(COMPILERFLAG) \
 	  build_rust_ext -i -l $(RUST_FLAG) \
 	  build_mo
-ifeq ($(OS),Windows_NT)
-	cp build/scripts-3.$(PYTHON_MINOR_VERSION)/$(HGNAME).exe $(HGNAME).exe
-else
+ifneq ($(OS),Windows_NT)
 	$(RM) $(HGNAME)
-	cp build/scripts-3.$(PYTHON_MINOR_VERSION)/$(HGNAME) $(HGNAME)
 endif
+	cp build/scripts-3.$(PYTHON_MINOR_VERSION)/$(HG_BIN_NAME) $(HG_BIN_NAME)
 
 build:
 	$(PYTHON) setup.py $(PURE) build $(COMPILERFLAG)
@@ -214,7 +218,7 @@ i18n/hg.pot: $(PYFILES) $(DOCFILES) i18n/posplit i18n/hggettext
 	mv -f $@.tmp $@
 
 buck:
-	cp $(shell buck2 build $(BUCK_BUILD_MODE) fbcode//eden/scm:hg --show-full-simple-output) $(HGNAME)
+	cp $(shell buck2 build $(BUCK_BUILD_MODE) fbcode//eden/scm:hg --show-full-simple-output) $(HG_BIN_NAME)
 
 buck-isl:
 	cp $(shell buck2 build $(BUCK_BUILD_MODE) fbcode//eden/addons:isl-tar --show-full-simple-output) $(ISL_NAME)
