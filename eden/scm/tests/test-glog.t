@@ -78,7 +78,6 @@
 # |/
 # o  (0) root
 
-  $ setconfig format.use-segmented-changelog=true
   $ setconfig devel.segmented-changelog-rev-compat=true
   $ commit() {
   >   rev=$1

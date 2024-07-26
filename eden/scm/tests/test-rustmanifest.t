@@ -20,7 +20,6 @@
   ...     return list(tuple(line.split()) for line in sheval(cmd).splitlines())
 
   $ setconfig experimental.allowfilepeer=True
-  $ setconfig format.use-segmented-changelog=true
   $ setconfig devel.segmented-changelog-rev-compat=true
   $ . "$TESTDIR/library.sh"
 
