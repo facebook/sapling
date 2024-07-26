@@ -69,6 +69,9 @@ export interface Platform {
     ({dismiss}: {dismiss: () => void}) => JSX.Element
   >;
 
+  /** Platform-specific settings, such as how ISL panels work */
+  Settings?: LazyExoticComponent<() => JSX.Element>;
+
   theme?: {
     getTheme(): ThemeColor;
     getThemeName?(): string | undefined;

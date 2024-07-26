@@ -42,6 +42,7 @@ import {Kbd} from 'isl-components/Kbd';
 import {Subtle} from 'isl-components/Subtle';
 import {Tooltip} from 'isl-components/Tooltip';
 import {useAtom, useAtomValue} from 'jotai';
+import {Suspense} from 'react';
 import {KeyCode, Modifier} from 'shared/KeyboardShortcuts';
 import {tryJsonParse, nullthrows} from 'shared/utils';
 
@@ -195,6 +196,7 @@ function SettingsDropdown({
           </Column>
         </Setting>
       )}
+      <Suspense>{platform.Settings == null ? null : <platform.Settings />}</Suspense>
       <DebugToolsField />
     </DropdownFields>
   );
