@@ -131,9 +131,9 @@ impl Config for StaticConfig {
     }
 
     fn get_sources(&self, section: &str, name: &str) -> Cow<[ValueSource]> {
-        match self.get(section, name) {
+        match self.get_considering_unset(section, name) {
             Some(value) => Cow::Owned(vec![ValueSource {
-                value: Some(value),
+                value,
                 source: Text::from_static(self.name),
                 location: None,
             }]),
@@ -203,6 +203,17 @@ v2 = x
         assert_eq!(config.get_considering_unset("b", "v2"), None);
         assert_eq!(config.get_considering_unset("a", "v3"), Some(None));
         assert_eq!(config.get_considering_unset("a", "v4"), None);
+
+        let sources = &config.get_sources("a", "v1")[0];
+        assert_eq!(sources.value, None);
+        assert_eq!(sources.source, config.name);
+        let sources = &config.get_sources("a", "v2")[0];
+        assert_eq!(sources.value.as_deref(), Some("x"));
+        assert_eq!(sources.source, config.name);
+        let sources = &config.get_sources("a", "v3")[0];
+        assert_eq!(sources.value, None);
+        assert_eq!(sources.source, config.name);
+        assert!(config.get_sources("a", "v4").is_empty());
     }
 
     #[test]
