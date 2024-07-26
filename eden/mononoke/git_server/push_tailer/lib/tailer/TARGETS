@@ -1,16 +1,15 @@
-load("@fbcode_macros//build_defs:rust_binary.bzl", "rust_binary")
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
 load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
 
 oncall("mononoke")
 
-rust_binary(
-    name = "git_server_push_tailer",
+rust_library(
+    name = "tailer",
     srcs = glob(["src/**/*.rs"]),
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:clap",
+        "fbsource//third-party/rust:tokio",
         "//common/rust/shed/fbinit:fbinit",
-        "//common/rust/shed/fbinit:fbinit-tokio",
-        "//eden/mononoke/git_server/push_tailer/lib/tailer:tailer",
     ],
 )
