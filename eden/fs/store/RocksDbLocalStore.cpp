@@ -168,11 +168,14 @@ void RocksDbWriteBatch::flush() {
     return;
   }
 
-  XLOG(DBG5) << "Flushing " << pending << " entries with data size of "
-             << writeBatch_.GetDataSize();
+  XLOGF(
+      DBG5,
+      "Flushing {} entries with data size of {}",
+      pending,
+      writeBatch_.GetDataSize());
 
   auto status = lockedDB_->handles->db->Write(WriteOptions(), &writeBatch_);
-  XLOG(DBG5) << "... Flushed";
+  XLOG(DBG5, "... Flushed");
 
   if (!status.ok()) {
     throw RocksException::build(
@@ -200,8 +203,10 @@ RocksDbWriteBatch::RocksDbWriteBatch(
 
 RocksDbWriteBatch::~RocksDbWriteBatch() {
   if (writeBatch_.Count() > 0) {
-    XLOG(ERR) << "WriteBatch being destroyed with " << writeBatch_.Count()
-              << " items pending flush";
+    XLOGF(
+        ERR,
+        "WriteBatch being destroyed with {} items pending flush",
+        writeBatch_.Count());
   }
 }
 
@@ -261,8 +266,7 @@ RocksHandles openDB(AbsolutePathPiece path, RocksDBOpenMode mode) {
     return RocksHandles(
         path.viewWithoutUNC(), mode, options, columnDescriptors);
   } catch (const RocksException& ex) {
-    XLOG(ERR) << "Error opening RocksDB storage at " << path << ": "
-              << ex.what();
+    XLOGF(ERR, "Error opening RocksDB storage at {}: {}", path, ex.what());
     if (mode == RocksDBOpenMode::ReadOnly) {
       // In read-only mode fail rather than attempting to repair the DB.
       throw;
@@ -281,8 +285,10 @@ RocksHandles openDB(AbsolutePathPiece path, RocksDBOpenMode mode) {
 namespace facebook::eden {
 
 RocksDbLocalStore::RockDBState::RockDBState() {
-  XLOG(DBG2) << "Making a new RockDB localstore ( " << this
-             << " ). debug information for T136469251.";
+  XLOGF(
+      DBG2,
+      "Making a new RockDB localstore ( {} ). Debug information for T136469251.",
+      (void*)this);
 }
 
 RocksDbLocalStore::RocksDbLocalStore(
@@ -300,13 +306,18 @@ RocksDbLocalStore::RocksDbLocalStore(
       mode_{mode},
       config_{std::move(config)},
       isAsync_{config_->getEdenConfig()->asyncRocksDbLocalStore.getValue()} {
-  XLOG(DBG2) << "Making a new RockDB localstore ( " << this
-             << " ) . debug information for T136469251.";
+  XLOGF(
+      DBG2,
+      "Making a new {} RockDB localstore ( {} ). Debug information for T136469251.",
+      isAsync_ ? "async" : "sync",
+      (void*)this);
 }
 
 void RocksDbLocalStore::open() {
-  XLOG(DBG2) << "Opening Rocksdb localstore ( " << this
-             << " ) . debug information for T136469251.";
+  XLOGF(
+      DBG2,
+      "Opening Rocksdb localstore ( {} ). Debug information for T136469251.",
+      (void*)this);
   {
     auto handles = dbHandles_.wlock();
     switch (handles->status) {
@@ -325,12 +336,14 @@ void RocksDbLocalStore::open() {
   }
   // Publish fb303 stats once when we first open the DB.
   // These will be kept up-to-date later by the periodicManagementTask() call.
-  XLOG(DBG2) << "RocksDB opened, computing statistics ...";
+  XLOG(DBG2, "RocksDB opened, computing statistics ...");
   computeStats(/*publish=*/true, /*config=*/nullptr);
-  XLOG(DBG2) << "RocksDB opened, clearing out old data ...";
+  XLOG(DBG2, "RocksDB opened, clearing out old data ...");
   clearDeprecatedKeySpaces();
-  XLOG(DBG2) << "RocksDB setup complete. ( " << this
-             << " ) . debug information for T136469251.";
+  XLOGF(
+      DBG2,
+      "RocksDB setup complete. ( {} ). Debug information for T136469251.",
+      (void*)this);
 }
 
 RocksDbLocalStore::~RocksDbLocalStore() {
@@ -347,8 +360,10 @@ void RocksDbLocalStore::close() {
     handles->handles = nullptr;
   }
   handles->status = RockDbHandleStatus::CLOSED;
-  XLOG(DBG2) << "Closing Rocksdb localstore ( " << this
-             << " ) . debug information for T136469251.";
+  XLOGF(
+      DBG2,
+      "Closing Rocksdb localstore ( {} ). Debug information for T136469251.",
+      (void*)this);
 }
 
 folly::Synchronized<RocksDbLocalStore::RockDBState>::ConstRLockedPtr
@@ -371,7 +386,7 @@ RocksDbLocalStore::getHandles() const {
 }
 
 void RocksDbLocalStore::repairDB(AbsolutePathPiece path) {
-  XLOG(ERR) << "Attempting to repair RocksDB " << path;
+  XLOGF(ERR, "Attempting to repair RocksDB at path: {}", path);
   rocksdb::ColumnFamilyOptions unknownColumFamilyOptions;
   unknownColumFamilyOptions.OptimizeForPointLookup(8);
   unknownColumFamilyOptions.OptimizeLevelStyleCompaction();
@@ -393,7 +408,7 @@ void RocksDbLocalStore::clearKeySpace(KeySpace keySpace) {
   auto handlesLock = getHandles();
   auto& handles = handlesLock->handles;
   auto columnFamily = handles->columns[keySpace->index].get();
-  XLOG(DBG2) << "clearing column family \"" << columnFamily->GetName() << "\"";
+  XLOGF(DBG2, "clearing column family \"{}\"", columnFamily->GetName());
   std::string rangeStorage;
   const auto fullRange = getFullRange(rangeStorage);
 
@@ -431,8 +446,7 @@ void RocksDbLocalStore::compactKeySpace(KeySpace keySpace) {
   auto options = rocksdb::CompactRangeOptions{};
   options.allow_write_stall = true;
   auto columnFamily = handles->columns[keySpace->index].get();
-  XLOG(DBG2) << "compacting column family \"" << columnFamily->GetName()
-             << "\"";
+  XLOGF(DBG2, "compacting column family \"{}\"", columnFamily->GetName());
   auto status = handles->db->CompactRange(
       options, columnFamily, /*begin=*/nullptr, /*end=*/nullptr);
   if (!status.ok()) {
@@ -515,7 +529,7 @@ RocksDbLocalStore::getBatch(
             .thenValue([store = getSharedFromThis(),
                         keySpace,
                         keys = std::move(batch)](folly::Unit&&) {
-              XLOG(DBG3) << __func__ << " starting to actually do work";
+              XLOGF(DBG3, "{} starting to actually do work", __func__);
               auto handlesLock = store->getHandles();
               auto& handles = handlesLock->handles;
               std::vector<Slice> keySlices;
@@ -633,8 +647,10 @@ uint64_t RocksDbLocalStore::getApproximateSize(KeySpace keySpace) const {
   if (result) {
     size += sstFilesSize;
   } else {
-    XLOG(WARN) << "unable to retrieve SST file size from RocksDB for key space "
-               << handles->columns[keySpace->index]->GetName();
+    XLOGF(
+        WARN,
+        "unable to retrieve SST file size from RocksDB for key space {}",
+        handles->columns[keySpace->index]->GetName());
   }
 
   // kSizeAllMemTables reports the size of the memtables.
@@ -654,8 +670,10 @@ uint64_t RocksDbLocalStore::getApproximateSize(KeySpace keySpace) const {
   if (result) {
     size += memtableSize;
   } else {
-    XLOG(WARN) << "unable to retrieve memtable size from RocksDB for key space "
-               << handles->columns[keySpace->index]->GetName();
+    XLOGF(
+        WARN,
+        "unable to retrieve memtable size from RocksDB for key space {}",
+        handles->columns[keySpace->index]->GetName());
   }
 
   return size;
@@ -677,10 +695,12 @@ void RocksDbLocalStore::periodicManagementTask(const EdenConfig& config) {
         keySpaceNames.append(ks->name.str());
       }
     }
-    XLOG(INFO) << "scheduling automatic local store garbage collection: "
-               << "ephemeral data sizes of columns " << keySpaceNames
-               << " exceed their limits; total ephemeral size = "
-               << before.ephemeral;
+    XLOGF(
+        INFO,
+        "scheduling automatic local store garbage collection: ephemeral data "
+        "sizes of columns {} exceed their limits; total ephemeral size = {}",
+        keySpaceNames,
+        before.ephemeral);
     triggerAutoGC(before);
   }
 }
@@ -730,8 +750,9 @@ void RocksDbLocalStore::triggerAutoGC(SizeSummary before) {
   {
     auto state = autoGCState_.wlock();
     if (state->inProgress_) {
-      XLOG(WARN) << "skipping local store garbage collection: "
-                    "another GC job is still running";
+      XLOG(
+          WARN,
+          "skipping local store garbage collection: another GC still running");
       fb303::fbData->incrementCounter(
           folly::to<string>(statsPrefix_, "auto_gc.schedule_failure"));
       return;
@@ -754,8 +775,10 @@ void RocksDbLocalStore::triggerAutoGC(SizeSummary before) {
         }
       }
     } catch (const std::exception& ex) {
-      XLOG(ERR) << "error during automatic local store garbage collection: "
-                << folly::exceptionStr(ex);
+      XLOGF(
+          ERR,
+          "error during automatic local store garbage collection: {}",
+          folly::exceptionStr(ex));
       store->autoGCFinished(/*successful=*/false, before.ephemeral);
       return;
     }
