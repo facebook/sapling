@@ -76,8 +76,10 @@ export function ComparisonViewApp() {
   }
 
   return (
-    <Suspense fallback={<Icon icon="loading" />}>
-      <ComparisonView comparison={mode.comparison} />
-    </Suspense>
+    <div className="comparison-view-root">
+      <Suspense fallback={<Icon icon="loading" />}>
+        <ComparisonView comparison={mode.comparison} />
+      </Suspense>
+    </div>
   );
 }
