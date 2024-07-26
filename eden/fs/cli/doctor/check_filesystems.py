@@ -395,7 +395,12 @@ class MaterializedInodesAreInaccessible(PathsProblem):
 
 
 class MissingInodesForFiles(PathsProblem, FixableProblem):
-    def __init__(self, instance: EdenInstance, mount: Path, paths: List[Path]) -> None:
+    def __init__(
+        self,
+        instance: EdenInstance,
+        mount: Path,
+        paths: List[Path],
+    ) -> None:
         self._instance = instance
         self._mount = mount
         self._paths = paths
@@ -414,31 +419,49 @@ class MissingInodesForFiles(PathsProblem, FixableProblem):
     def start_msg(self) -> str:
         return f"Fixing files present on disk but not known to EdenFS in {self._mount}"
 
+    def run_match_filesystem(self) -> List[str]:
+        """
+        Execute a thrift call to EdenFS to force sync the eden state with the filesystem
+        Don't catch errors here, handle them in the caller
+        """
+        with self._instance.get_thrift_client_legacy() as client:
+            result = client.matchFilesystem(
+                MatchFileSystemRequest(
+                    MountId(str(self._mount).encode()),
+                    [str(path).encode() for path in self._paths],
+                )
+            )
+            return [
+                f"{path}: {path_result.error}"
+                for path, path_result in zip(self._paths, result.results)
+                if path_result.error is not None
+            ]
+
     def perform_fix(self) -> None:
         """Attempt to fix files not known to EdenFS.
 
         For some reason, EdenFS isn't aware of these files. We poke Eden to
         notice the files exist with the thrift call matchFileSystem.
         """
-        with self._instance.get_thrift_client_legacy() as client:
-            try:
-                result = client.matchFilesystem(
-                    MatchFileSystemRequest(
-                        MountId(str(self._mount).encode()),
-                        [str(path).encode() for path in self._paths],
-                    )
-                )
-                failed = [
-                    f"{path}: {path_result.error}"
-                    for path, path_result in zip(self._paths, result.results)
-                    if path_result.error is not None
-                ]
-                if failed:
-                    errors = "\n".join(failed)
-                    print(f"Failed to remediate:\n{errors}")
+        try:
+            failed = self.run_match_filesystem()
+            if failed:
+                errors = "\n".join(failed)
+                raise RemediationError(f"Failed to remediate missing inodes: {errors}")
 
-            except EdenError as ex:
-                print(f"Failed to remediate {self._paths}: {ex}")
+        except EdenError as ex:
+            raise RemediationError(
+                f"Failed to remediate missing inodes {self._paths}: {ex}"
+            )
+
+    def check_fix(self) -> bool:
+        """
+        This one is difficult to check independently since it requires checking
+        the internal eden state.
+        Instead we rely on the thrift call reporting success
+        """
+        failed = self.run_match_filesystem()
+        return failed == []
 
 
 class MissingFilesForInodes(PathsProblem, FixableProblem):

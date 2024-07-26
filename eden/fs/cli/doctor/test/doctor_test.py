@@ -1354,6 +1354,47 @@ Fixing files known to EdenFS but not present on disk in {Path(mount)}...<green>f
         )
         self.assert_results(fixer, num_problems=1, num_fixed_problems=1)
 
+    @patch("eden.fs.cli.doctor.test.lib.fake_client.FakeClient.debugInodeStatus")
+    def test_materialized_missing_inode_fixer(
+        self, mock_debugInodeStatus: MagicMock
+    ) -> None:
+        instance = FakeEdenInstance(self.make_temporary_directory())
+        checkout = instance.create_test_mount("path1")
+        mount: Path = checkout.path
+
+        os.makedirs(mount / "a" / "b")
+
+        mock_debugInodeStatus.return_value = [
+            # Pretend that a/b is a file (it's a directory)
+            TreeInodeDebugInfo(
+                1,
+                b"a",
+                True,
+                b"abcd",
+                [],
+                1,
+            ),
+            # a/b is now missing from inodes
+        ]
+
+        fixer, output = self.create_fixer(dry_run=False)
+        check_materialized_are_accessible(
+            fixer,
+            typing.cast(EdenInstance, instance),
+            checkout,
+            lambda p: os.lstat(p).st_mode,
+        )
+
+        self.assertEqual(
+            f"""<yellow>- Found problem:<reset>
+{Path("a/b")} is not known to EdenFS but is accessible on disk
+Fixing files present on disk but not known to EdenFS in {Path(mount)}...<green>fixed<reset>
+
+""",
+            output.getvalue(),
+        )
+        self.assert_results(fixer, num_problems=1, num_fixed_problems=1)
+
     if sys.platform == "win32":
 
         @patch("eden.fs.cli.doctor.test.lib.fake_client.FakeClient.debugInodeStatus")
@@ -1408,6 +1449,54 @@ Fixing files known to EdenFS but not present on disk in {Path(mount)}...<green>f
                 f"""<yellow>- Found problem:<reset>
 {Path("a/d")} is not present on disk despite EdenFS believing it should be
 Fixing files known to EdenFS but not present on disk in {Path(mount)}...<green>fixed<reset>
+
+""",
+                output.getvalue(),
+            )
+            self.assert_results(fixer, num_problems=1, num_fixed_problems=1)
+
+        @patch("eden.fs.cli.doctor.test.lib.fake_client.FakeClient.debugInodeStatus")
+        def test_loaded_missing_inode_fixer(
+            self, mock_debugInodeStatus: MagicMock
+        ) -> None:
+            instance = FakeEdenInstance(self.make_temporary_directory())
+            checkout = instance.create_test_mount("path1")
+            mount = checkout.path
+
+            unmaterialized = checkout.path / "unmaterialized"
+            os.makedirs(unmaterialized)
+            with open(unmaterialized / "extra", "wb") as f:
+                f.write(b"read all about it")
+
+            mock_debugInodeStatus.return_value = [
+                TreeInodeDebugInfo(
+                    3,
+                    b"unmaterialized",
+                    False,
+                    b"bcde",
+                    [],
+                    1,
+                ),
+            ]
+
+            fake_PrjGetOnDiskFileState = MagicMock()
+            fake_PrjGetOnDiskFileState.side_effect = [
+                FileNotFoundError,
+                PRJ_FILE_STATE.HydratedPlaceholder,
+            ]
+
+            fixer, output = self.create_fixer(dry_run=False)
+            check_loaded_content(
+                fixer,
+                typing.cast(EdenInstance, instance),
+                checkout,
+                fake_PrjGetOnDiskFileState,
+            )
+
+            self.assertEqual(
+                f"""<yellow>- Found problem:<reset>
+{Path("unmaterialized/extra")} is not known to EdenFS but is accessible on disk
+Fixing files present on disk but not known to EdenFS in {Path(mount)}...<green>fixed<reset>
 
 """,
                 output.getvalue(),
