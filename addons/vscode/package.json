@@ -109,6 +109,11 @@
         "category": "%sapling.command-category%"
       },
       {
+        "command": "sapling.open-comparison-view-uncommitted",
+        "title": "%sapling.open-comparison-view-uncommitted-command%",
+        "category": "%sapling.command-category%"
+      },
+      {
         "command": "sapling.isl.focus",
         "title": "Focus Sapling ISL Sidebar"
       },
