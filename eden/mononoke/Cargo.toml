@@ -335,6 +335,8 @@ members = [
   "git_server",
   "git_server/push_redirect_config",
   "git_server/push_tailer",
+  "git_server/push_tailer/lib/ephemeral_shard",
+  "git_server/push_tailer/lib/storage",
   "git_server/push_tailer/lib/tailer",
   "git_symbolic_refs",
   "gotham_ext",
