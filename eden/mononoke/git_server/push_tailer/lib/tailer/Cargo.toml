@@ -10,5 +10,11 @@ license = "GPLv2+"
 [dependencies]
 anyhow = "1.0.75"
 clap = { version = "4.5.6", features = ["derive", "env", "string", "unicode", "wrap_help"] }
+context = { version = "0.1.0", path = "../../../../server/context" }
 fbinit = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+logger = { version = "0.1.0", path = "../logger" }
+mononoke_types = { version = "0.1.0", path = "../../../../mononoke_types" }
+push_redirect_config = { version = "0.1.0", path = "../../../push_redirect_config" }
+sql_construct = { version = "0.1.0", path = "../../../../common/sql_construct" }
+storage = { version = "0.1.0", path = "../storage" }
 tokio = { version = "1.37.0", features = ["full", "test-util", "tracing"] }
