@@ -10,6 +10,7 @@ use clap::command;
 use clap::Args;
 use clap::Parser;
 use cmdlib_logging::ScubaLoggingArgs;
+use executor_lib::args::ShardedExecutorArgs;
 use fbinit::FacebookInit;
 use mononoke_app::args::ChangesetArgs;
 use mononoke_app::args::SourceAndTargetRepoArgs;
@@ -106,6 +107,9 @@ pub struct ForwardSyncerArgs {
 
     #[command(subcommand)]
     pub command: ForwardSyncerCommand,
+
+    #[clap(flatten)]
+    pub sharded_executor_args: ShardedExecutorArgs,
 
     // TODO(gustavoavena): remove the default scuba logging after all tw
     // tasks have been updated.

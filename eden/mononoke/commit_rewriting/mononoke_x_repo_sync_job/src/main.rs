@@ -43,6 +43,7 @@
 //! ```
 
 use std::collections::HashSet;
+use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -91,6 +92,7 @@ use regex::Regex;
 use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentityRef;
 use scuba_ext::MononokeScubaSampleBuilder;
+use sharding::XRepoSyncProcess;
 use sharding::XRepoSyncProcessExecutor;
 use slog::debug;
 use slog::info;
@@ -112,6 +114,8 @@ use crate::reporting::log_noop_iteration;
 use crate::sync::sync_commit_and_ancestors;
 use crate::sync::sync_commits_for_initial_import;
 use crate::sync::sync_single_bookmark_update_log;
+
+const SM_CLEANUP_TIMEOUT_SECS: u64 = 60;
 
 /// Sync and all of its unsynced ancestors **if the given commit has at least
 /// one synced ancestor**.
@@ -520,12 +524,34 @@ where
 }
 
 async fn async_main<'a>(app: MononokeApp, ctx: CoreContext) -> Result<(), Error> {
-    let args: ForwardSyncerArgs = app.args()?;
+    let args: Arc<ForwardSyncerArgs> = Arc::new(app.args()?);
+    let app = Arc::new(app);
+    let ctx = Arc::new(ctx);
     let repo_args = args.repo_args.clone();
-    let x_repo_process_executor =
-        XRepoSyncProcessExecutor::new(Arc::new(app), Arc::new(ctx), Arc::new(args), &repo_args)
-            .await?;
-    x_repo_process_executor.execute().await
+    let runtime = app.runtime().clone();
+    let logger = app.logger().clone();
+    if let Some(mut executor) = args.sharded_executor_args.clone().build_executor(
+        app.fb,
+        runtime.clone(),
+        &logger,
+        || {
+            Arc::new(XRepoSyncProcess::new(
+                ctx.clone(),
+                app.clone(),
+                args.clone(),
+            ))
+        },
+        true, // enable shard (repo) level healing
+        SM_CLEANUP_TIMEOUT_SECS,
+    )? {
+        executor
+            .block_and_execute(ctx.logger(), Arc::new(AtomicBool::new(false)))
+            .await
+    } else {
+        let x_repo_process_executor =
+            XRepoSyncProcessExecutor::new(app, ctx, args, &repo_args).await?;
+        x_repo_process_executor.execute().await
+    }
 }
 
 struct BackpressureParams {

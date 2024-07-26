@@ -17,7 +17,7 @@ use crate::RepoShardedProcess;
 use crate::ShardedProcessExecutor;
 
 /// Command line arguments for sharded executor
-#[derive(Args, Debug)]
+#[derive(Clone, Args, Debug)]
 pub struct ShardedExecutorArgs {
     /// The name of the ShardManager service corresponding to this service's region.
     /// If this argument isn't provided, the service will operate in non-sharded mode.

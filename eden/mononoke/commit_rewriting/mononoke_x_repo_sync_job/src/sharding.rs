@@ -60,7 +60,7 @@ pub struct XRepoSyncProcess {
 }
 
 impl XRepoSyncProcess {
-    pub(crate) fn _new(
+    pub(crate) fn new(
         ctx: Arc<CoreContext>,
         app: Arc<MononokeApp>,
         args: Arc<ForwardSyncerArgs>,
