@@ -1,4 +1,5 @@
 load("@fbcode_macros//build_defs:native_rules.bzl", "buck_genrule")
+load("//antlir/fbpkg:fbpkg.bzl", "fbpkg")
 
 oncall("scm_client_infra")
 
@@ -15,4 +16,47 @@ buck_genrule(
         "ovr_config//os:linux",
         "ovr_config//os:macos",
     ],
+)
+
+fbpkg.builder(
+    name = "scm.edenfs",
+    architectures = [
+        "x86_64",
+        "aarch64",
+    ],
+
+    # this is doing (almost) the same as eden/fs/facebook/packaging/packman.yml
+    # for the config we cannot do with fbpkg.builder (e.g. set mode for a binary) we
+    # should rely on Chef to config correctly.
+    #
+    # TODO:
+    #  - expiry
+    #  - mode: edenfs_privhelper : 04755
+    #  - dirs
+    #    - path: /etc/eden
+    #      mode: '0755'
+    #    - path: /etc/eden/config.d
+    #      mode: '0755'
+    path_actions = {
+        # these should be put under "/usr/local/bin/"
+        "bin/eden": fbpkg.symlink("bin/edenfsctl"),
+        "bin/edenfsctl": fbpkg.copy("//eden/fs/cli_rs/edenfsctl:edenfsctl"),
+        "bin/edenfsctl.real": fbpkg.copy("//eden/fs/cli:edenfsctl"),
+
+        # static files
+        "etc/eden/NOT_MOUNTED_README.txt": "fs/facebook/packaging/NOT_MOUNTED_README.txt",
+        "etc/eden/config.d": "fs/facebook/packaging/config.d",
+        "etc/eden/ignore": "fs/facebook/packaging/ignore",
+
+        # these should be put under "/usr/local/libexec/eden/"
+        "libexec/eden/eden-fb303-collector": fbpkg.copy("//eden/fs/facebook:eden-fb303-collector"),
+        "libexec/eden/eden_fsck": fbpkg.copy("//eden/fs/inodes/fscatalog:eden_fsck"),
+        "libexec/eden/eden_store_util": fbpkg.copy("//eden/fs/store:eden_store_util"),
+        "libexec/eden/eden_trace_stream": fbpkg.copy("//eden/fs/cli/trace:trace_stream"),
+        "libexec/eden/edenfs": fbpkg.copy("//eden/fs/service:edenfs"),
+        "libexec/eden/edenfs_config_manager": fbpkg.copy("//eden/fs/config/facebook:edenfs_config_manager"),
+        "libexec/eden/edenfs_monitor": fbpkg.copy("//eden/fs/monitor:edenfs_monitor"),
+        "libexec/eden/edenfs_privhelper": fbpkg.copy("//eden/fs/service:edenfs_privhelper"),
+        "libexec/eden/edenfs_restarter": fbpkg.copy("//eden/fs/facebook:edenfs_restarter"),
+    },
 )
