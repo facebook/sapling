@@ -84,12 +84,18 @@ impl HgMutationEntry {
         &self.successor
     }
 
-    pub fn predecessors(&self) -> &[HgChangesetId] {
-        self.predecessors.as_slice()
+    pub fn predecessors(
+        &self,
+    ) -> impl ExactSizeIterator<Item = &HgChangesetId> + DoubleEndedIterator<Item = &HgChangesetId>
+    {
+        self.predecessors.iter()
     }
 
-    pub fn split(&self) -> &[HgChangesetId] {
-        self.split.as_slice()
+    pub fn split(
+        &self,
+    ) -> impl ExactSizeIterator<Item = &HgChangesetId> + DoubleEndedIterator<Item = &HgChangesetId>
+    {
+        self.split.iter()
     }
 
     pub fn op(&self) -> &str {
@@ -108,8 +114,13 @@ impl HgMutationEntry {
         self.timezone
     }
 
-    pub fn extra(&self) -> &[(String, String)] {
-        self.extra.as_slice()
+    pub fn extra(&self) -> impl Iterator<Item = (&str, &str)> {
+        self.extra.iter().map(|(k, v)| (k.as_ref(), v.as_ref()))
+    }
+
+    /// Returns `extra` encoded with JSON.
+    pub fn extra_json(&self) -> Result<String> {
+        Ok(serde_json::to_string(&self.extra)?)
     }
 
     /// Add the next predecessor to the entry.
@@ -431,20 +442,19 @@ impl HgMutationEntrySet {
                 hash_map::Entry::Occupied(entry) => {
                     // This changeset has a new entry to store.  See if all its
                     // predecessors' primordials are known.
-                    for predecessor_id in entry.get().predecessors().iter() {
+                    for predecessor_id in entry.get().predecessors() {
                         if !self.changeset_primordials.contains_key(predecessor_id) {
                             missing_primordials.push(*predecessor_id);
                         }
                     }
                     // The first predecessor's primordial should be
                     // propagated to this changeset.
-                    let predecessor_id =
-                        entry.get().predecessors().iter().next().ok_or_else(|| {
-                            anyhow!(
-                                "Mutation entry for {} has no predecessors",
-                                entry.get().successor()
-                            )
-                        })?;
+                    let predecessor_id = entry.get().predecessors().next().ok_or_else(|| {
+                        anyhow!(
+                            "Mutation entry for {} has no predecessors",
+                            entry.get().successor()
+                        )
+                    })?;
                     match self.changeset_primordials.get(predecessor_id) {
                         Some(&primordial_id) => {
                             // The entry's first predecessor's primordial is known.
@@ -521,8 +531,7 @@ impl HgMutationEntrySet {
             } else if let Some(entry) = new_entries.get(&candidate) {
                 // This is not the primordial commit, we must look at its
                 // predecessors.
-                let predecessors = entry.predecessors();
-                if let Some(first) = predecessors.first() {
+                if let Some(first) = entry.predecessors().next() {
                     // Merge this candidate's group with the group of its
                     // first predecessor: they will have the same primordial.
                     grouper.merge(candidate, *first);
@@ -532,7 +541,7 @@ impl HgMutationEntrySet {
                         entry.successor()
                     ));
                 }
-                for &predecessor in predecessors.iter() {
+                for &predecessor in entry.predecessors() {
                     if seen.insert(predecessor) {
                         candidates.push(predecessor);
                     }
@@ -568,7 +577,6 @@ impl HgMutationEntrySet {
             if let Some(new_entry) = new_entries.remove(&changeset_id) {
                 if new_entry
                     .predecessors()
-                    .iter()
                     .all(|predecessor| self.changeset_primordials.contains_key(predecessor))
                 {
                     // We have found primordials for all predecessors of this
@@ -599,7 +607,7 @@ impl HgMutationEntrySet {
                     // additional changesets we will need to process.  Push
                     // predecessors in reverse order so that we process them in
                     // forwards order.
-                    for predecessor_id in entry.predecessors().iter().rev() {
+                    for predecessor_id in entry.predecessors().rev() {
                         // Only enqueue the predecessor if:
                         // 1. There is an entry for it
                         if self.entries.contains_key(predecessor_id)

@@ -124,9 +124,9 @@ impl SqlHgMutationStore {
                 entry.user(),
                 entry.timestamp(),
                 entry.timezone(),
-                serde_json::to_string(entry.extra())?,
+                entry.extra_json()?,
             ));
-            for (index, predecessor) in entry.predecessors().iter().enumerate() {
+            for (index, predecessor) in entry.predecessors().enumerate() {
                 let primordial = entry_set
                     .changeset_primordials
                     .get(predecessor)
@@ -144,7 +144,7 @@ impl SqlHgMutationStore {
                     primordial,
                 ));
             }
-            for (index, split_successor) in entry.split().iter().enumerate() {
+            for (index, split_successor) in entry.split().enumerate() {
                 db_splits.push((
                     &self.repo_id,
                     entry.successor(),
@@ -495,7 +495,6 @@ impl HgMutationStore for SqlHgMutationStore {
                 let successor = entry.successor();
                 !entry
                     .predecessors()
-                    .iter()
                     .any(|predecessor| predecessor == successor)
             })
             .map(|entry| (*entry.successor(), entry))
@@ -508,7 +507,7 @@ impl HgMutationStore for SqlHgMutationStore {
         for changeset_id in &new_changeset_ids {
             changeset_ids.insert(changeset_id.clone());
             if let Some(entry) = entries.get(changeset_id) {
-                changeset_ids.extend(entry.predecessors().iter().cloned());
+                changeset_ids.extend(entry.predecessors().copied());
             }
         }
         self.fetch_by_successor(
