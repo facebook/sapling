@@ -229,6 +229,7 @@ fn parse_with_repo_definition(
         zelos_config,
         bookmark_name_for_objects_count,
         default_objects_count,
+        x_repo_sync_source_mapping,
         ..
     } = named_repo_config;
 
@@ -347,6 +348,7 @@ fn parse_with_repo_definition(
     let git_concurrency = git_concurrency.convert()?;
     let metadata_logger_config = metadata_logger_config.convert()?.unwrap_or_default();
     let zelos_config = zelos_config.convert()?;
+    let x_repo_sync_source_mapping = x_repo_sync_source_mapping.convert()?;
 
     Ok(RepoConfig {
         enabled,
@@ -395,6 +397,7 @@ fn parse_with_repo_definition(
         zelos_config,
         bookmark_name_for_objects_count,
         default_objects_count,
+        x_repo_sync_source_mapping,
     })
 }
 
@@ -567,6 +570,8 @@ mod test {
     use metaconfig_types::UnodeVersion;
     use metaconfig_types::UpdateLoggingConfig;
     use metaconfig_types::WalkerConfig;
+    use metaconfig_types::XRepoSyncSourceConfig;
+    use metaconfig_types::XRepoSyncSourceConfigMapping;
     use mononoke_types::path::MPath;
     use mononoke_types::DerivableType;
     use mononoke_types::NonRootMPath;
@@ -945,6 +950,10 @@ mod test {
             bookmarks = ["master", "release"]
             sleep_interval_secs = 100
 
+            [x_repo_sync_source_mapping.mapping.aros]
+            bookmark_regex = "master"
+            backsync_enabled = true            
+            
             [deep_sharding_config.status]
         "#;
         let fbsource_repo_def = r#"
@@ -1364,6 +1373,16 @@ mod test {
                     ],
                     sleep_interval_secs: 100,
                 },
+                x_repo_sync_source_mapping: Some(XRepoSyncSourceConfigMapping {
+                    mapping: hashmap! {
+                        "aros".to_string() => XRepoSyncSourceConfig {
+                            bookmark_regex: "master".to_string(),
+                            backsync_enabled: true,
+                        }
+                    }
+                    .into_iter()
+                    .collect(),
+                }),
                 zelos_config: None,
                 bookmark_name_for_objects_count: None,
                 default_objects_count: None,
@@ -1447,6 +1466,7 @@ mod test {
                 zelos_config: None,
                 bookmark_name_for_objects_count: None,
                 default_objects_count: None,
+                x_repo_sync_source_mapping: None,
             },
         );
         assert_eq!(

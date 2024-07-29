@@ -56,6 +56,8 @@ use metaconfig_types::UpdateLoggingConfig;
 use metaconfig_types::WalkerConfig;
 use metaconfig_types::WalkerJobParams;
 use metaconfig_types::WalkerJobType;
+use metaconfig_types::XRepoSyncSourceConfig;
+use metaconfig_types::XRepoSyncSourceConfigMapping;
 use metaconfig_types::ZelosConfig;
 use mononoke_types::path::MPath;
 use mononoke_types::ChangesetId;
@@ -98,6 +100,8 @@ use repos::RawUpdateLoggingConfig;
 use repos::RawWalkerConfig;
 use repos::RawWalkerJobParams;
 use repos::RawWalkerJobType;
+use repos::RawXRepoSyncSourceConfig;
+use repos::RawXRepoSyncSourceConfigMapping;
 use repos::RawZelosConfig;
 
 use crate::convert::Convert;
@@ -868,5 +872,31 @@ impl Convert for RawGitConcurrencyParams {
             commits: self.commits.try_into()?,
             tags: self.tags.try_into()?,
         })
+    }
+}
+
+impl Convert for RawXRepoSyncSourceConfig {
+    type Output = XRepoSyncSourceConfig;
+
+    fn convert(self) -> Result<Self::Output> {
+        Ok(XRepoSyncSourceConfig {
+            bookmark_regex: self.bookmark_regex,
+            backsync_enabled: self.backsync_enabled,
+        })
+    }
+}
+
+impl Convert for RawXRepoSyncSourceConfigMapping {
+    type Output = XRepoSyncSourceConfigMapping;
+
+    fn convert(self) -> Result<Self::Output> {
+        let mapping = self
+            .mapping
+            .into_iter()
+            .map(|(repo_name, x_repo_sync_source_config)| {
+                Ok((repo_name, x_repo_sync_source_config.convert()?))
+            })
+            .collect::<Result<_>>()?;
+        Ok(XRepoSyncSourceConfigMapping { mapping })
     }
 }

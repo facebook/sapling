@@ -10,6 +10,7 @@
 
 #![deny(missing_docs)]
 
+use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::fmt;
@@ -248,6 +249,10 @@ pub struct RepoConfig {
     pub bookmark_name_for_objects_count: Option<String>,
     /// Default value for the objects count metric if it cannot be determined via TreeInfo.
     pub default_objects_count: Option<i64>,
+    /// Map of XRepoSyncSourceConfig for the current repo keyed by the name of the target repo, e.g.
+    /// XRepoSyncSourceConfig for the sync from whatsapp/server to fbsource will be stored as
+    /// whatsapp_server_config.x_repo_sync_source_mapping["fbsource"] = config
+    pub x_repo_sync_source_mapping: Option<XRepoSyncSourceConfigMapping>,
 }
 
 /// Config determining if the repo is deep sharded in the context of a service.
@@ -1971,4 +1976,22 @@ pub struct GitConcurrencyParams {
     pub commits: usize,
     /// The concurrency value for tag fetches
     pub tags: usize,
+}
+
+/// Configuration for x repo syncs
+#[derive(Debug, Clone, Default, Eq, PartialEq)]
+pub struct XRepoSyncSourceConfig {
+    /// Regex matching the bookmarks that need to be synced
+    pub bookmark_regex: String,
+    /// Flag determining if backsyncing is enabled for this repo
+    pub backsync_enabled: bool,
+}
+
+/// Configuration for x repo sync keyed by the target repo name
+#[derive(Debug, Clone, Default, Eq, PartialEq)]
+pub struct XRepoSyncSourceConfigMapping {
+    /// Map of XRepoSyncSourceConfig for the current repo keyed by the name of the target repo, e.g.
+    /// XRepoSyncSourceConfig for the sync from whatsapp/server to fbsource will be stored as
+    /// whatsapp_server_config.mapping["fbsource"] = config
+    pub mapping: BTreeMap<String, XRepoSyncSourceConfig>,
 }
