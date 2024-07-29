@@ -181,7 +181,7 @@ impl XRepoSyncProcessExecutor {
         })
     }
 
-    pub(crate) async fn process_command(&self) -> Result<()> {
+    async fn process_command(&self) -> Result<()> {
         let ctx = &self.ctx;
         match &self.args.command {
             InitialImport(initial_import_args) => {
@@ -243,10 +243,8 @@ impl XRepoSyncProcessExecutor {
                     TailingArgs::LoopForever(self.commit_syncer.clone())
                 };
 
-                let maybe_bookmark_regex = match &tail_cmd_args.bookmark_regex {
-                    Some(regex) => Some(Regex::new(regex.as_str())?),
-                    None => None,
-                };
+                let maybe_bookmark_regex =
+                    self.bookmark_regex(tail_cmd_args.bookmark_regex.as_ref())?;
 
                 let backpressure_params =
                     BackpressureParams::new(&self.app, tail_cmd_args.clone()).await?;
@@ -272,6 +270,24 @@ impl XRepoSyncProcessExecutor {
                 .boxed()
                 .await
             }
+        }
+    }
+
+    fn bookmark_regex(&self, cli_bookmark_regex: Option<&String>) -> Result<Option<Regex>> {
+        // The CLI arguments override the config provided value
+        if let Some(regex) = cli_bookmark_regex {
+            let regex = Regex::new(regex.as_str())?;
+            Ok(Some(regex))
+        } else if let Some(configs) = self.small_repo.config().x_repo_sync_source_mapping.as_ref() {
+            let large_repo_name = self.large_repo.repo_identity().name();
+            let regex = configs
+                .mapping
+                .get(large_repo_name)
+                .map(|config| Regex::new(config.bookmark_regex.as_str()))
+                .transpose()?;
+            Ok(regex)
+        } else {
+            Ok(None)
         }
     }
 }
