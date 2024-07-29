@@ -95,7 +95,7 @@ def get_sapling() -> str:
     return env_sl_bin if env_sl_bin else "sl"
 
 
-subprocess_cwd = os.path.dirname(__file__)
+subprocess_cwd = Path(__file__).parent
 
 
 # Extract command documentation from Sapling.
@@ -106,11 +106,11 @@ def generate_commands_json(command_list: List[str]) -> Dict:
             "--config",
             "extensions.github=",
             "debugshell",
-            "extract-command-documentation.py",
+            subprocess_cwd / "extract-command-documentation.py",
             json.dumps(command_list, indent=2),
         ],
         capture_output=True,
-        cwd=subprocess_cwd,
+        cwd=os.sep,
     )
     if proc.returncode != 0:
         eprint(f"extracting website contents failed: \n {proc}")
@@ -151,11 +151,11 @@ def rst_to_markdown(rsts: Dict[str, str]) -> Dict[str, str]:
         [
             get_sapling(),
             "debugshell",
-            "rst-to-md.py",
+            subprocess_cwd / "rst-to-md.py",
         ],
         capture_output=True,
         input=json.dumps(rsts).encode("utf-8"),
-        cwd=subprocess_cwd,
+        cwd=os.sep,
     )
     if proc.returncode != 0:
         eprint(f"converting rst to md failed: \n {proc}")
