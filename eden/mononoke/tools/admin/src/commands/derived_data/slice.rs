@@ -39,7 +39,7 @@ pub(super) struct SliceArgs {
     /// If set, will slice all ancestors of the given commits. Regardless of whether
     /// they are already derived or not.
     #[clap(long)]
-    rederive: bool,
+    reslice: bool,
 
     /// If provided, the output slices will be written to this file as a JSON array.
     /// Otherwise, they will be printed to stdout.
@@ -62,7 +62,7 @@ pub(super) async fn slice(
         cs_ids.len(),
     );
 
-    let excluded_ancestors = if args.rederive {
+    let excluded_ancestors = if args.reslice {
         vec![]
     } else {
         cs_ids = manager
