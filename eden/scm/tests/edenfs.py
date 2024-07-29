@@ -116,6 +116,13 @@ allow-apple-double = "false"
 darwin-redirection-type = "symlink"
 """
                             )
+                    elif sys.platform == "win32":
+                        eden_rc.write(
+                            """
+[notifications]
+enable-eden-menu = "false"
+"""
+                        )
 
                 self.eden.start()
                 self.generate_eden_cli_wrapper(orig_test_dir)

@@ -272,6 +272,8 @@ class EdenTestCase(EdenTestCaseBase):
             configs["nfs"] = ["allow-apple-double = false"]
             if "SANDCASTLE" in os.environ:
                 configs["redirections"] = ['darwin-redirection-type = "symlink"']
+        elif sys.platform == "win32":
+            configs["notifications"] = ['enable-eden-menu = "false"']
         return configs
 
     def create_hg_repo(
