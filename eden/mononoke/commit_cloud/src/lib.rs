@@ -86,6 +86,31 @@ impl CommitCloud {
         ))
     }
 
+    pub async fn get_workspaces(
+        &self,
+        prefix: &str,
+        reponame: &str,
+    ) -> anyhow::Result<Vec<WorkspaceData>> {
+        if reponame.is_empty() || prefix.is_empty() {
+            return Err(anyhow::anyhow!(
+                "'get workspaces' failed: empty reponame or prefix "
+            ));
+        }
+
+        if prefix.len() < 3 {
+            return Err(anyhow::anyhow!(
+                "'get workspaces' failed: prefix must be at least 3 characters "
+            ));
+        }
+        let maybeworkspace =
+            WorkspaceVersion::fetch_by_prefix(&self.storage, prefix, reponame).await?;
+
+        Ok(maybeworkspace
+            .into_iter()
+            .map(|wp| wp.into_workspace_data(reponame))
+            .collect())
+    }
+
     pub async fn get_references(
         &self,
         ctx: &CommitCloudContext,

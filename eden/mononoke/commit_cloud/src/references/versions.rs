@@ -8,6 +8,7 @@
 use edenapi_types::WorkspaceData;
 use mononoke_types::Timestamp;
 
+use crate::sql::versions_ops::get_version_by_prefix;
 use crate::Get;
 use crate::SqlCommitCloud;
 
@@ -28,6 +29,14 @@ impl WorkspaceVersion {
         Get::<WorkspaceVersion>::get(sql, reponame.to_owned(), workspace.to_owned())
             .await
             .map(|versions| versions.into_iter().next())
+    }
+
+    pub async fn fetch_by_prefix(
+        sql: &SqlCommitCloud,
+        prefix: &str,
+        reponame: &str,
+    ) -> anyhow::Result<Vec<Self>> {
+        get_version_by_prefix(&sql.connections, reponame.to_string(), prefix.to_string()).await
     }
 }
 
