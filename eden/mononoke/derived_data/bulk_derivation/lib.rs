@@ -51,6 +51,21 @@ pub trait BulkDerivation {
         override_batch_size: Option<u64>,
     ) -> Result<(), SharedDerivationError>;
 
+    /// Derive data for exactly a batch of changesets.
+    ///
+    /// The provided batch of changesets must be in topological
+    /// order. The caller must have arranged for the dependencies
+    /// and ancestors of the batch to have already been derived.  If
+    /// any dependency or ancestor is not already derived, an error
+    /// will be returned.
+    async fn derive_exactly_batch(
+        &self,
+        ctx: &CoreContext,
+        csids: &[ChangesetId],
+        rederivation: Option<Arc<dyn Rederivation>>,
+        derived_data_type: DerivableType,
+    ) -> Result<(), DerivationError>;
+
     /// Check if the given derived data type is derived for the given changeset id.
     async fn is_derived(
         &self,
@@ -117,6 +132,13 @@ trait SingleTypeDerivation: Send + Sync {
         visited: VisitedDerivableTypesMap<'a, u64, SharedDerivationError>,
     ) -> Result<(), SharedDerivationError>;
 
+    async fn derive_exactly_batch(
+        &self,
+        ctx: &CoreContext,
+        csids: &[ChangesetId],
+        rederivation: Option<Arc<dyn Rederivation>>,
+    ) -> Result<(), DerivationError>;
+
     async fn is_derived(
         &self,
         ctx: &CoreContext,
@@ -160,6 +182,18 @@ impl<T: BonsaiDerivable> SingleTypeDerivation for SingleTypeManager<T> {
         self.manager
             .clone()
             .derive_heads_with_visited::<T>(ctx, csids, override_batch_size, rederivation, visited)
+            .await?;
+        Ok(())
+    }
+
+    async fn derive_exactly_batch(
+        &self,
+        ctx: &CoreContext,
+        csids: &[ChangesetId],
+        rederivation: Option<Arc<dyn Rederivation>>,
+    ) -> Result<(), DerivationError> {
+        self.manager
+            .derive_exactly_batch::<T>(ctx, csids.to_vec(), rederivation)
             .await?;
         Ok(())
     }
@@ -295,6 +329,17 @@ impl BulkDerivation for DerivedDataManager {
             .await?;
 
         Ok(())
+    }
+
+    async fn derive_exactly_batch(
+        &self,
+        ctx: &CoreContext,
+        csids: &[ChangesetId],
+        rederivation: Option<Arc<dyn Rederivation>>,
+        derived_data_type: DerivableType,
+    ) -> Result<(), DerivationError> {
+        let manager = manager_for_type(self, derived_data_type);
+        manager.derive_exactly_batch(ctx, csids, rederivation).await
     }
 
     async fn is_derived(
