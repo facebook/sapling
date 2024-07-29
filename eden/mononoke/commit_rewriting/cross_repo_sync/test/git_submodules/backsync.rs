@@ -280,6 +280,7 @@ async fn test_changing_submodule_metadata_pointer_to_git_commit_from_another_rep
         validation_res,
         vec![
             "Validation of submodule submodules/repo_b failed",
+            "Failed to get submodule bonsai changeset id",
             expected_err_msg,
         ],
     );

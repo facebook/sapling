@@ -50,6 +50,7 @@ use mononoke_types::RepositoryId;
 use movers::Mover;
 use repo_blobstore::RepoBlobstoreArc;
 use repo_derived_data::RepoDerivedDataRef;
+use repo_identity::RepoIdentityRef;
 use sorted_vector_map::SortedVectorMap;
 
 use crate::git_submodules::expand::SubmoduleExpansionData;
@@ -205,7 +206,9 @@ pub(crate) async fn get_submodule_file_content_id(
     cs_id: ChangesetId,
     path: &NonRootMPath,
 ) -> Result<Option<ContentId>> {
-    content_id_of_file_with_type(ctx, repo, cs_id, path, FileType::GitSubmodule).await
+    content_id_of_file_with_type(ctx, repo, cs_id, path, FileType::GitSubmodule)
+        .await
+        .with_context(|| anyhow!("Failed to get content id of subdmodule file {path} in {cs_id}"))
 }
 
 /// Returns the content id of a file at a given path if it was os a specific
@@ -218,12 +221,18 @@ pub(crate) async fn content_id_of_file_with_type<R>(
     expected_file_type: FileType,
 ) -> Result<Option<ContentId>>
 where
-    R: RepoDerivedDataRef + RepoBlobstoreArc,
+    R: RepoDerivedDataRef + RepoBlobstoreArc + RepoIdentityRef,
 {
     let fsnode_id = repo
         .repo_derived_data()
         .derive::<RootFsnodeId>(ctx, cs_id)
-        .await?
+        .await
+        .with_context(|| {
+            format!(
+                "Failed to derive RootFsnodeId of {cs_id} from repo {0}",
+                repo.repo_identity().name()
+            )
+        })?
         .into_fsnode_id();
 
     let entry = fsnode_id
@@ -245,12 +254,18 @@ pub(crate) async fn list_non_submodule_files_under<R>(
     submodule_path: SubmodulePath,
 ) -> Result<impl Stream<Item = Result<NonRootMPath>>>
 where
-    R: RepoDerivedDataRef + RepoBlobstoreArc,
+    R: RepoDerivedDataRef + RepoBlobstoreArc + RepoIdentityRef,
 {
     let fsnode_id = repo
         .repo_derived_data()
         .derive::<RootFsnodeId>(ctx, cs_id)
-        .await?
+        .await
+        .with_context(|| {
+            format!(
+                "Failed to derive RootFsnodeId of {cs_id} from repo {0}",
+                repo.repo_identity().name()
+            )
+        })?
         .into_fsnode_id();
 
     Ok(fsnode_id
@@ -275,12 +290,15 @@ pub(crate) async fn root_fsnode_id_from_submodule_git_commit(
     git_hash: GitSha1,
     dangling_submodule_pointers: &[GitSha1],
 ) -> Result<FsnodeId> {
-    let cs_id =
-        get_submodule_bonsai_changeset_id(ctx, repo, git_hash, dangling_submodule_pointers).await?;
+    let cs_id = get_submodule_bonsai_changeset_id(ctx, repo, git_hash, dangling_submodule_pointers)
+        .await
+        .context("Failed to get submodule bonsai changeset id")?;
+
     let submodule_root_fsnode_id: RootFsnodeId = repo
         .repo_derived_data()
         .derive::<RootFsnodeId>(ctx, cs_id)
-        .await?;
+        .await
+        .context("Failed to derive RootFsnodeId")?;
 
     Ok(submodule_root_fsnode_id.into_fsnode_id())
 }
@@ -370,7 +388,8 @@ pub(crate) async fn get_submodule_bonsai_changeset_id<R: Repo>(
     let mb_cs_id = submodule_repo
         .bonsai_git_mapping()
         .get_bonsai_from_git_sha1(ctx, git_submodule_sha1)
-        .await?;
+        .await
+        .context("Failed to get bonsai from git sha1")?;
 
     if let Some(cs_id) = mb_cs_id {
         return Ok(cs_id);

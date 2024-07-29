@@ -72,30 +72,35 @@ pub async fn validate_all_submodule_expansions<'a, R: Repo>(
     // Iterate over the submodule dependency paths.
     // Create a map grouping the file changes per submodule dependency.
 
-    let bonsai: BonsaiChangeset = stream::iter(sm_exp_data.submodule_deps.iter().map(anyhow::Ok))
-        .try_fold(bonsai, |bonsai, (submodule_path, submodule_repo)| {
-            cloned!(mover, sm_exp_data);
-            async move {
-                run_and_log_stats_to_scuba(
-                    ctx,
-                    "Validating submodule expansion",
-                    format!("Submodule path: {submodule_path}"),
-                    validate_submodule_expansion(
+    let bonsai_res: Result<BonsaiChangeset> =
+        stream::iter(sm_exp_data.submodule_deps.iter().map(anyhow::Ok))
+            .try_fold(bonsai, |bonsai, (submodule_path, submodule_repo)| {
+                cloned!(mover, sm_exp_data);
+                async move {
+                    run_and_log_stats_to_scuba(
                         ctx,
-                        sm_exp_data,
-                        bonsai,
-                        submodule_path,
-                        submodule_repo.as_ref(),
-                        mover,
-                    ),
-                )
-                .await
-                .with_context(|| format!("Validation of submodule {submodule_path} failed"))
-            }
-        })
-        .await?;
+                        "Validating submodule expansion",
+                        format!("Submodule path: {submodule_path}"),
+                        validate_submodule_expansion(
+                            ctx,
+                            sm_exp_data,
+                            bonsai,
+                            submodule_path,
+                            submodule_repo.as_ref(),
+                            mover,
+                        ),
+                    )
+                    .await
+                    .with_context(|| format!("Validation of submodule {submodule_path} failed"))
+                }
+            })
+            .await;
 
-    Ok(bonsai)
+    if let Err(err) = &bonsai_res {
+        log_error(ctx, format!("Submodule validation failed: {err:#?}"));
+    }
+
+    bonsai_res
 }
 
 /// Validate that a bonsai in the large repo is valid for a given submodule repo
@@ -176,6 +181,7 @@ async fn validate_submodule_expansion<'a, R: Repo>(
                 // the large repo bonsai
                 return Ok(bonsai);
             }
+
             // Check if the submodule metadata file existed in any of the
             // parents. If it did, it means that a submodule expansion is
             // being modified without properly updating the metadata file.
@@ -263,7 +269,8 @@ async fn validate_submodule_expansion<'a, R: Repo>(
         format!("Synced submodule path: {}", &synced_submodule_path),
         get_submodule_expansion_fsnode_id(ctx, sm_exp_data.clone(), &bonsai, synced_submodule_path),
     )
-    .await?;
+    .await
+    .context("Failed to get submodule expansion fsnode id")?;
 
     if submodule_fsnode_id == expansion_fsnode_id {
         // If fsnodes are an exact match, there are no recursive submodules and the
@@ -491,8 +498,14 @@ where
     let large_repo_blobstore = large_repo.repo_blobstore_arc();
     let submodule_blobstore = submodule_repo.repo_blobstore_arc();
 
-    let submodule_fsnode: Fsnode = submodule_fsnode_id.load(ctx, &submodule_blobstore).await?;
-    let expansion_fsnode: Fsnode = expansion_fsnode_id.load(ctx, &large_repo_blobstore).await?;
+    let submodule_fsnode: Fsnode = submodule_fsnode_id
+        .load(ctx, &submodule_blobstore)
+        .await
+        .context("Failed to load fsnode")?;
+    let expansion_fsnode: Fsnode = expansion_fsnode_id
+        .load(ctx, &large_repo_blobstore)
+        .await
+        .context("Failed to load fsnode")?;
 
     // STEP 1: get all the entries in each fsnode.
     let all_expansion_entries: HashSet<(MPathElement, FsnodeEntry)> =
@@ -626,6 +639,9 @@ where
                         ),
                     )
                     .await
+                    .context(
+                        "Failed to validate expansion directory against submodule manifest entry",
+                    )
                 }
             },
         )
