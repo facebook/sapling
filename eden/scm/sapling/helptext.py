@@ -4654,7 +4654,7 @@ sort-inserts
 """
 
 directorybranching = r"""@Product@ supports a form of branching reminiscent of Subversion where each branch is a separate directory.
-Unlike Subverison, the branched directories live side-by-side as normal directories in the working copy.
+Unlike Subversion, the branched directories live side-by-side as normal directories in the working copy.
 
 .. note::
 
