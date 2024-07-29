@@ -14,16 +14,12 @@ use anyhow::bail;
 use anyhow::Error;
 use anyhow::Result;
 use blobstore_factory::MetadataSqlFactory;
-use cacheblob::LeaseOps;
 use context::CoreContext;
 use cross_repo_sync::create_commit_syncer_lease;
 use cross_repo_sync::create_commit_syncers;
 use cross_repo_sync::get_all_submodule_deps;
-use cross_repo_sync::CommitSyncRepos;
-use cross_repo_sync::CommitSyncer;
 use cross_repo_sync::RepoProvider;
 use cross_repo_sync::Source;
-use cross_repo_sync::SubmoduleDeps;
 use cross_repo_sync::Syncers;
 use cross_repo_sync::Target;
 use futures::future;
@@ -114,24 +110,6 @@ async fn create_commit_syncers_from_app_impl<R: CrossRepo>(
     )
 }
 
-/// Instantiate the source-target `CommitSyncer` struct by parsing `app`
-pub async fn create_commit_syncer_from_app<R: CrossRepo>(
-    ctx: &CoreContext,
-    app: &MononokeApp,
-    repo_args: &SourceAndTargetRepoArgs,
-) -> Result<CommitSyncer<SqlSyncedCommitMapping, R>, Error> {
-    create_commit_syncer_from_app_impl(ctx, app, false /* reverse */, repo_args).await
-}
-
-/// Instantiate the target-source `CommitSyncer` struct by parsing `app`
-pub async fn create_reverse_commit_syncer_from_app<R: CrossRepo>(
-    ctx: &CoreContext,
-    app: &MononokeApp,
-    repo_args: &SourceAndTargetRepoArgs,
-) -> Result<CommitSyncer<SqlSyncedCommitMapping, R>, Error> {
-    create_commit_syncer_from_app_impl(ctx, app, true /* reverse */, repo_args).await
-}
-
 /// Instantiate some auxiliary things from `app`
 /// Naming is hard.
 async fn get_things_from_app<R: CrossRepo>(
@@ -206,77 +184,6 @@ async fn get_things_from_app<R: CrossRepo>(
         mapping,
         live_commit_sync_config,
     ))
-}
-
-fn flip_direction<T>(source_item: Source<T>, target_item: Target<T>) -> (Source<T>, Target<T>) {
-    (Source(target_item.0), Target(source_item.0))
-}
-
-async fn create_commit_syncer_from_app_impl<R: CrossRepo>(
-    ctx: &CoreContext,
-    app: &MononokeApp,
-    reverse: bool,
-    repo_args: &SourceAndTargetRepoArgs,
-) -> Result<CommitSyncer<SqlSyncedCommitMapping, R>, Error> {
-    let (source_repo, target_repo, mapping, live_commit_sync_config) =
-        get_things_from_app::<R>(ctx, app, repo_args, false).await?;
-
-    let (source_repo, target_repo) = if reverse {
-        flip_direction(source_repo, target_repo)
-    } else {
-        (source_repo, target_repo)
-    };
-
-    let caching = app.environment().caching;
-    let x_repo_syncer_lease = create_commit_syncer_lease(app.fb, caching)?;
-
-    let repo_provider = repo_provider_from_mononoke_app(app);
-
-    let source_repo_arc = Arc::new(source_repo.0.clone());
-    let target_repo_arc = Arc::new(target_repo.0.clone());
-
-    let submodule_deps = get_all_submodule_deps(
-        ctx,
-        source_repo_arc,
-        target_repo_arc,
-        repo_provider,
-        live_commit_sync_config.clone(),
-    )
-    .await?;
-
-    create_commit_syncer(
-        ctx,
-        source_repo,
-        target_repo,
-        submodule_deps,
-        mapping,
-        live_commit_sync_config,
-        x_repo_syncer_lease,
-    )
-    .await
-}
-
-async fn create_commit_syncer<'a, R: CrossRepo>(
-    ctx: &'a CoreContext,
-    source_repo: Source<R>,
-    target_repo: Target<R>,
-    submodule_deps: SubmoduleDeps<R>,
-    mapping: SqlSyncedCommitMapping,
-    live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
-    x_repo_syncer_lease: Arc<dyn LeaseOps>,
-) -> Result<CommitSyncer<SqlSyncedCommitMapping, R>, Error> {
-    let common_config =
-        live_commit_sync_config.get_common_config(source_repo.0.repo_identity().id())?;
-
-    let repos = CommitSyncRepos::new(source_repo.0, target_repo.0, submodule_deps, &common_config)?;
-    let commit_syncer = CommitSyncer::new(
-        ctx,
-        mapping,
-        repos,
-        live_commit_sync_config,
-        x_repo_syncer_lease,
-    );
-    Ok(commit_syncer)
 }
 
 pub fn repo_provider_from_mononoke_app<'a, R: CrossRepo>(
