@@ -196,6 +196,7 @@ rust_library(
         "fbsource//third-party/rust:serde_json",
         "fbsource//third-party/rust:slog",
         ":mercurial_types",
+        "//common/rust/shed/abomonable_string:abomonable_string",
         "//common/rust/shed/facet:facet",
         "//common/rust/shed/justknobs_stub:justknobs",
         "//common/rust/shed/memcache_stub:memcache",

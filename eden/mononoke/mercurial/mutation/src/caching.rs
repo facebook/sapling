@@ -44,6 +44,7 @@ use crate::HgMutationStore;
 /// (repo_id, cs_id) -> Vec<HgMutationEntry> mapping
 #[derive(Abomonation, Clone, Debug, Eq, Hash, PartialEq)]
 #[cfg_attr(test, derive(Arbitrary))]
+#[repr(align(8))]
 pub struct HgMutationCacheEntry {
     /// The mutation entries that are part of the cache record
     pub mutation_entries: Vec<HgMutationEntry>,
@@ -275,7 +276,6 @@ mod tests {
     use super::HgMutationCacheEntry;
 
     quickcheck! {
-        #[ignore]
         fn abomonable(entry: HgMutationCacheEntry) -> bool {
             let mut v = Vec::new();
             unsafe { abomonation::encode(&entry, &mut v).expect("should encode"); }
