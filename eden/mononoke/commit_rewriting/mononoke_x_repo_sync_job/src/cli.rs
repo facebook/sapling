@@ -13,7 +13,7 @@ use cmdlib_logging::ScubaLoggingArgs;
 use executor_lib::args::ShardedExecutorArgs;
 use fbinit::FacebookInit;
 use mononoke_app::args::ChangesetArgs;
-use mononoke_app::args::SourceAndTargetRepoArgs;
+use mononoke_app::args::OptSourceAndTargetRepoArgs;
 use mononoke_app::fb303::Fb303AppExtension;
 use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
@@ -100,7 +100,7 @@ pub enum ForwardSyncerCommand {
 pub struct ForwardSyncerArgs {
     /// Identifiers or names for the source and target repos
     #[clap(flatten, next_help_heading = "CROSS REPO OPTIONS")]
-    pub repo_args: SourceAndTargetRepoArgs,
+    pub repo_args: OptSourceAndTargetRepoArgs,
 
     #[clap(long)]
     pub pushrebase_rewrite_dates: bool,

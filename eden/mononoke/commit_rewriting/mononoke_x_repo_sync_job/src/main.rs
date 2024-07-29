@@ -49,6 +49,7 @@ use std::time::Duration;
 
 use anyhow::anyhow;
 use anyhow::format_err;
+use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use backsyncer::format_counter as format_backsyncer_counter;
@@ -548,6 +549,9 @@ async fn async_main<'a>(app: MononokeApp, ctx: CoreContext) -> Result<(), Error>
             .block_and_execute(ctx.logger(), Arc::new(AtomicBool::new(false)))
             .await
     } else {
+        let repo_args = repo_args
+            .into_source_and_target_args()
+            .context("Source and Target repos must be provided when running in non-sharded mode")?;
         let x_repo_process_executor =
             XRepoSyncProcessExecutor::new(app, ctx, args, &repo_args).await?;
         x_repo_process_executor.execute().await

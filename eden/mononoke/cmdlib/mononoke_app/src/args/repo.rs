@@ -119,7 +119,7 @@ macro_rules! repo_args {
 #[macro_export]
 macro_rules! repo_args_optional {
     ($ident:ident, $name_arg:literal, $maybe_short_name_arg:expr, $name_help:literal, $id_arg:literal, $id_help:literal) => {
-        #[derive(Debug)]
+        #[derive(Debug, Clone)]
         pub struct $ident(Option<RepoArg>);
 
         impl Args for $ident {
@@ -244,9 +244,53 @@ repo_args!(
     "Numeric target repository ID"
 );
 
+repo_args_optional!(
+    OptSourceRepoArgs,
+    "source-repo-name",
+    None,
+    "Source repository name",
+    "source-repo-id",
+    "Numeric source repository ID"
+);
+
+repo_args_optional!(
+    OptTargetRepoArgs,
+    "target-repo-name",
+    None,
+    "Target repository name",
+    "target-repo-id",
+    "Numeric target repository ID"
+);
+
 /// Command line arguments for specifying only a source  and a target repos,
 /// Necessary for cross-repo operations
 /// Only visible if the app was built with a call to `MononokeAppBuilder::with_source_and_target_repos`
+#[derive(Args, Debug, Clone)]
+pub struct OptSourceAndTargetRepoArgs {
+    #[clap(flatten)]
+    pub source_repo: OptSourceRepoArgs,
+
+    #[clap(flatten)]
+    pub target_repo: OptTargetRepoArgs,
+}
+
+impl OptSourceAndTargetRepoArgs {
+    pub fn into_source_and_target_args(self) -> Result<SourceAndTargetRepoArgs> {
+        let source_repo = self
+            .source_repo
+            .0
+            .ok_or_else(|| anyhow::anyhow!("Missing source repo"))?;
+        let target_repo = self
+            .target_repo
+            .0
+            .ok_or_else(|| anyhow::anyhow!("Missing target repo"))?;
+        Ok(SourceAndTargetRepoArgs {
+            source_repo: SourceRepoArgs(source_repo),
+            target_repo: TargetRepoArgs(target_repo),
+        })
+    }
+}
+
 #[derive(Args, Debug, Clone)]
 pub struct SourceAndTargetRepoArgs {
     #[clap(flatten)]
