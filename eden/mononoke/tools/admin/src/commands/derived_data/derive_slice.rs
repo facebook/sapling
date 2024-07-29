@@ -24,7 +24,6 @@ use context::CoreContext;
 use context::SessionClass;
 use derived_data_manager::DerivedDataManager;
 use futures::stream;
-use futures::try_join;
 use futures::StreamExt;
 use futures::TryStreamExt;
 use futures_stats::TimedTryFutureExt;
@@ -160,33 +159,42 @@ async fn inner_derive_slice(
         .try_for_each(|(segment_index, segment)| {
             cloned!(ctx, commit_graph, manager);
             async move {
-                let (head_generation, base_generation) = try_join!(
-                    commit_graph.changeset_generation(&ctx, segment.head),
-                    commit_graph.changeset_generation(&ctx, segment.base)
-                )?;
-                let segment_cs_ids_count = head_generation.value() - base_generation.value() + 1;
+                let segment_cs_ids = commit_graph
+                    .range_stream(&ctx, segment.base, segment.head)
+                    .await?
+                    .collect::<Vec<_>>()
+                    .await;
 
                 debug!(
                     ctx.logger(),
                     "deriving segment from {} to {} ({} commits, {}/{})",
                     segment.base,
                     segment.head,
-                    segment_cs_ids_count,
+                    segment_cs_ids.len(),
                     segment_index + 1,
                     segment_count,
                 );
 
-                let (derive_batch_stats, ()) = manager
-                    .derive_bulk(&ctx, &[segment.head], None, &[derived_data_type], None)
+                let mut derive_segment_completion_time = std::time::Duration::from_millis(0);
+                for chunk in segment_cs_ids.chunks(20) {
+                    let (derive_batch_stats, _) = BulkDerivation::derive_exactly_batch(
+                        &manager,
+                        &ctx,
+                        chunk,
+                        None,
+                        derived_data_type,
+                    )
                     .try_timed()
                     .await?;
+                    derive_segment_completion_time += derive_batch_stats.completion_time;
+                }
 
                 debug!(
                     ctx.logger(),
                     "derived segment from {} to {} in {}ms ({}/{})",
                     segment.base,
                     segment.head,
-                    derive_batch_stats.completion_time.as_millis(),
+                    derive_segment_completion_time.as_millis(),
                     segment_index + 1,
                     segment_count,
                 );
