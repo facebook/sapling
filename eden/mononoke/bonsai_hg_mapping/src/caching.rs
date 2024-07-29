@@ -243,7 +243,10 @@ impl BonsaiHgMapping for CachingBonsaiHgMapping {
 }
 
 fn get_cache_key(repo_id: RepositoryId, cs: &BonsaiOrHgChangesetId) -> String {
-    format!("{}.{:?}", repo_id.prefix(), cs)
+    match cs {
+        BonsaiOrHgChangesetId::Bonsai(id) => format!("{}.B.{}", repo_id.prefix(), id),
+        BonsaiOrHgChangesetId::Hg(id) => format!("{}.H.{}", repo_id.prefix(), id),
+    }
 }
 
 impl MemcacheEntity for BonsaiHgMappingCacheEntry {

@@ -277,7 +277,10 @@ impl BonsaiGitMapping for CachingBonsaiGitMapping {
 }
 
 fn get_cache_key(repo_id: RepositoryId, cs: &BonsaiOrGitSha) -> String {
-    format!("{}.{:?}", repo_id.prefix(), cs)
+    match cs {
+        BonsaiOrGitSha::Bonsai(id) => format!("{}.B.{}", repo_id.prefix(), id),
+        BonsaiOrGitSha::GitSha1(sha) => format!("{}.G.{}", repo_id.prefix(), sha),
+    }
 }
 
 impl MemcacheEntity for BonsaiGitMappingCacheEntry {
