@@ -181,6 +181,7 @@ pub enum PrefetchCmd {
         #[clap(flatten)]
         options: FetchOptions,
         #[clap(
+            long,
             default_value = "0",
             help = "Optionally set the number of top accessed directories to \
                 prefetch, overriding the default."
@@ -536,6 +537,8 @@ impl PrefetchCmd {
         let predictive_num_dirs = if num_dirs == 0 && checkout_config.get_predictive_num_dirs() != 0
         {
             checkout_config.get_predictive_num_dirs()
+        } else if num_dirs > 0 {
+            num_dirs
         } else {
             0
         };
