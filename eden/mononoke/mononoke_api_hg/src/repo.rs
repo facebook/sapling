@@ -28,7 +28,7 @@ use bytes::Bytes;
 use changeset_fetcher::ChangesetFetcherRef;
 use changesets::ChangesetInsert;
 use changesets::ChangesetsRef;
-use commit_cloud::CommitCloudContext;
+use commit_cloud::ctx::CommitCloudContext;
 use commit_cloud::CommitCloudRef;
 use commit_graph::CommitGraphRef;
 use context::CoreContext;

@@ -6,12 +6,12 @@
  */
 
 #![feature(trait_alias)]
+pub mod ctx;
 pub mod references;
 pub mod sql;
 use std::sync::Arc;
 
 use bonsai_hg_mapping::BonsaiHgMapping;
-use commit_cloud_helpers::sanity_check_workspace_name;
 #[cfg(fbcode_build)]
 use commit_cloud_intern_utils::interngraph_publisher::publish_single_update;
 #[cfg(fbcode_build)]
@@ -31,6 +31,7 @@ use references::update_references_data;
 use references::RawSmartlogData;
 use repo_derived_data::ArcRepoDerivedData;
 
+use crate::ctx::CommitCloudContext;
 use crate::references::cast_references_data;
 use crate::references::fetch_references;
 use crate::references::versions::WorkspaceVersion;
@@ -70,36 +71,6 @@ pub struct ClientInfo {
     pub hostname: String,
     pub reporoot: String,
     pub version: u64,
-}
-
-#[derive(Debug, Clone)]
-pub struct CommitCloudContext {
-    pub workspace: String,
-    pub reponame: String,
-}
-
-impl CommitCloudContext {
-    pub fn new(workspace: &str, reponame: &str) -> anyhow::Result<Self> {
-        if workspace.is_empty() || reponame.is_empty() {
-            return Err(anyhow::anyhow!(
-                "'commit cloud' failed: empty reponame or workspace"
-            ));
-        }
-        Ok(Self {
-            workspace: workspace.to_owned(),
-            reponame: reponame.to_owned(),
-        })
-    }
-
-    pub fn check_workspace_name(&self) -> anyhow::Result<()> {
-        if !sanity_check_workspace_name(&self.workspace) {
-            return Err(anyhow::anyhow!(
-                "'commit cloud' failed: creating a new workspace with name '{}' is not allowed",
-                self.workspace
-            ));
-        }
-        Ok(())
-    }
 }
 
 impl CommitCloud {
