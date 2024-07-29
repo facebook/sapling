@@ -464,9 +464,6 @@ impl DerivedDataManager {
     where
         Derivable: BonsaiDerivable,
     {
-        let mut debugging_scuba = ctx.scuba().clone();
-        debugging_scuba.log_with_msg("debugging", format!("bubble id is {:?}", self.bubble_id()));
-
         if let Some(client) = self.derivation_service_client() {
             let mut attempt = 0;
             let started = Instant::now();
