@@ -7,12 +7,12 @@
 
 use anyhow::Error;
 use async_trait::async_trait;
-use edenapi_types::cloud::ReferencesDataResponse;
-use edenapi_types::cloud::WorkspaceDataResponse;
 use edenapi_types::CloudWorkspaceRequest;
 use edenapi_types::GetReferencesParams;
+use edenapi_types::ReferencesDataResponse;
 use edenapi_types::ServerError;
 use edenapi_types::UpdateReferencesParams;
+use edenapi_types::WorkspaceDataResponse;
 use futures::stream;
 use futures::FutureExt;
 use futures::StreamExt;
