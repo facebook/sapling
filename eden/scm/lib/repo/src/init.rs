@@ -162,18 +162,12 @@ fn write_store_requirements(path: &Path, config: &ConfigSet) -> Result<(), InitE
     let store_path = store_path.as_path();
     create_dir(store_path)?;
     let mut requirements = HashSet::from(["visibleheads"]);
-    if config
-        .get_or("format", "use-segmented-changelog", || true)
-        .unwrap_or(true)
-    {
+    if config.get_or("format", "use-segmented-changelog", || true)? {
         requirements.insert("invalidatelinkrev");
         requirements.insert("segmentedchangelog");
     }
 
-    if config
-        .get_or("experimental", "narrow-heads", || true)
-        .unwrap_or(true)
-    {
+    if config.get_or("experimental", "narrow-heads", || true)? {
         requirements.insert("narrowheads");
     }
 
