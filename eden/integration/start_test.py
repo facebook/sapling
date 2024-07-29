@@ -130,7 +130,7 @@ class StartTest(testcase.EdenTestCase):
         self.eden.run_cmd("stop")
 
     def edenfsctl_args(self) -> List[str]:
-        return ["--daemon-binary", FindExe.EDEN_DAEMON]
+        return ["-d", FindExe.EDEN_DAEMON]
 
     def edenfs_args(self) -> List[str]:
         args = []

@@ -254,7 +254,7 @@ class CloneTest(testcase.EdenRepoTest):
         tmp = Path(self.make_temporary_directory())
         clone_output = self.eden.run_cmd(
             "clone",
-            "--daemon-binary",
+            "-d",
             FindExe.EDEN_DAEMON,
             self.repo.path,
             str(tmp),

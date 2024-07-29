@@ -788,7 +788,7 @@ class CloneCmd(Subcmd):
         # Optional arguments to control how to start the daemon if clone needs
         # to start edenfs.  We do not show these in --help by default These
         # behave identically to the daemon arguments with the same name.
-        parser.add_argument("--daemon-binary", help=argparse.SUPPRESS)
+        parser.add_argument("--daemon-binary", "-d", help=argparse.SUPPRESS)
         parser.add_argument(
             "--daemon-args",
             dest="edenfs_args",
@@ -1927,7 +1927,7 @@ class UnmountCmd(Subcmd):
 class StartCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
-            "--daemon-binary", help="Path to the binary for the edenfs daemon."
+            "--daemon-binary", "-d", help="Path to the binary for the edenfs daemon."
         )
         parser.add_argument(
             "--if-necessary",
@@ -2151,7 +2151,7 @@ class RestartCmd(Subcmd):
             "still in the middle of starting or stopping.",
         )
         parser.add_argument(
-            "--daemon-binary", help="Path to the binary for the edenfs daemon."
+            "--daemon-binary", "-d", help="Path to the binary for the edenfs daemon."
         )
         parser.add_argument(
             "--shutdown-timeout",
