@@ -1,6 +1,7 @@
 load("//antlir/antlir2/bzl/feature:defs.bzl", "feature")
 load("//eden/mononoke/facebook/fbpkg:lib.bzl", "mononoke_fbpkg")
 load("//tupperware/cm/antlir2/bzl:buck2_container.bzl", "tw")
+load("//tupperware/config/common:tw.mixin.zkdaemon.bzl", zkdaemon_mixin = "mixin")
 
 oncall("mononoke")
 
@@ -265,5 +266,6 @@ tw.container(
             "git-core",
         ]),
     ],
+    mixins = [zkdaemon_mixin],
     oncall = "scm_server_infra",
 )
