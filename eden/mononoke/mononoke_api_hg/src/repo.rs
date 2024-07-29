@@ -1067,6 +1067,19 @@ impl HgRepoContext {
             .await?)
     }
 
+    pub async fn cloud_workspaces(
+        &self,
+        prefix: &str,
+        reponame: &str,
+    ) -> Result<Vec<WorkspaceData>, MononokeError> {
+        Ok(self
+            .repo()
+            .inner_repo()
+            .commit_cloud()
+            .get_workspaces(prefix, reponame)
+            .await?)
+    }
+
     pub async fn cloud_references(
         &self,
         params: &GetReferencesParams,

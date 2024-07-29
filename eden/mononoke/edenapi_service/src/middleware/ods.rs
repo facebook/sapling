@@ -30,6 +30,7 @@ define_stats! {
     cloud_references_duration_ms: histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 95; P 99),
     cloud_update_references_duration_ms: histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 95; P 95; P 99),
     cloud_workspace_duration_ms: histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 95; P 99),
+    cloud_workspaces_duration_ms: histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 95; P 99),
     commit_graph_duration_ms: histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 95; P 99),
     commit_graph_segments_duration_ms: histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 95; P 99),
     commit_graph_v2_duration_ms: histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 95; P 99),
@@ -97,6 +98,7 @@ fn log_stats(state: &mut State, status: StatusCode) -> Option<()> {
                     STATS::cloud_update_references_duration_ms.add_value(dur_ms)
                 }
                 CloudWorkspace => STATS::cloud_workspace_duration_ms.add_value(dur_ms),
+                CloudWorkspaces => STATS::cloud_workspaces_duration_ms.add_value(dur_ms),
                 CommitGraphSegments => STATS::commit_graph_segments_duration_ms.add_value(dur_ms),
                 CommitGraphV2 => STATS::commit_graph_v2_duration_ms.add_value(dur_ms),
                 CommitHashLookup => STATS::commit_hash_lookup_duration_ms.add_value(dur_ms),

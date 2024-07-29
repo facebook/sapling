@@ -45,6 +45,16 @@ pub struct CloudWorkspaceRequest {
 #[auto_wire]
 #[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
 #[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
+pub struct CloudWorkspacesRequest {
+    #[id(0)]
+    pub prefix: String,
+    #[id(1)]
+    pub reponame: String,
+}
+
+#[auto_wire]
+#[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct UpdateReferencesParams {
     #[id(0)]
     pub workspace: String,
@@ -146,6 +156,15 @@ pub struct WorkspaceDataResponse {
     #[id(0)]
     #[no_default]
     pub data: Result<WorkspaceData, ServerError>,
+}
+
+#[auto_wire]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
+pub struct WorkspacesDataResponse {
+    #[id(0)]
+    #[no_default]
+    pub data: Result<Vec<WorkspaceData>, ServerError>,
 }
 
 #[auto_wire]
