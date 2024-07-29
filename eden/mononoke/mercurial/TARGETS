@@ -181,6 +181,10 @@ rust_library(
         "mutation/schemas/**/*.sql",
     ]),
     autocargo = {"cargo_toml_dir": "mutation"},
+    test_deps = [
+        "fbsource//third-party/rust:quickcheck",
+        "//common/rust/shed/quickcheck_arbitrary_derive:quickcheck_arbitrary_derive",
+    ],
     deps = [
         "fbsource//third-party/rust:abomonation",
         "fbsource//third-party/rust:abomonation_derive",

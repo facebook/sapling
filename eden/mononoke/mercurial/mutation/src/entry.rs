@@ -19,6 +19,8 @@ use edenapi_types::HgMutationEntryContent;
 use hg_mutation_entry_thrift as thrift;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgNodeHash;
+#[cfg(test)]
+use quickcheck_arbitrary_derive::Arbitrary;
 use types::mutation::MutationEntry;
 use types::HgId;
 
@@ -26,6 +28,7 @@ use crate::grouper::Grouper;
 
 /// Record of a Mercurial mutation operation (e.g. amend or rebase).
 #[derive(Abomonation, Clone, Debug, Hash, Eq, PartialEq)]
+#[cfg_attr(test, derive(Arbitrary))]
 pub struct HgMutationEntry {
     /// The commit that resulted from the mutation operation.
     successor: HgChangesetId,

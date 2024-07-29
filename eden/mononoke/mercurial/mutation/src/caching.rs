@@ -34,6 +34,8 @@ use memcache::KeyGen;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgNodeHash;
 use mononoke_types::RepositoryId;
+#[cfg(test)]
+use quickcheck_arbitrary_derive::Arbitrary;
 
 use crate::HgMutationEntry;
 use crate::HgMutationStore;
@@ -41,6 +43,7 @@ use crate::HgMutationStore;
 /// Struct representing the cache entry for
 /// (repo_id, cs_id) -> Vec<HgMutationEntry> mapping
 #[derive(Abomonation, Clone, Debug, Eq, Hash, PartialEq)]
+#[cfg_attr(test, derive(Arbitrary))]
 pub struct HgMutationCacheEntry {
     /// The mutation entries that are part of the cache record
     pub mutation_entries: Vec<HgMutationEntry>,
@@ -262,5 +265,22 @@ impl KeyedEntityStore<HgChangesetId, HgMutationCacheEntry> for CacheRequest<'_> 
                 })
                 .collect(),
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use quickcheck::quickcheck;
+
+    use super::HgMutationCacheEntry;
+
+    quickcheck! {
+        #[ignore]
+        fn abomonable(entry: HgMutationCacheEntry) -> bool {
+            let mut v = Vec::new();
+            unsafe { abomonation::encode(&entry, &mut v).expect("should encode"); }
+            let (decoded, remainder) = unsafe { abomonation::decode::<HgMutationCacheEntry>(&mut v).expect("should decode") };
+            decoded == &entry && remainder.is_empty()
+        }
     }
 }
