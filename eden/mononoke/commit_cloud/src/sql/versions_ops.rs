@@ -11,17 +11,24 @@ use clientinfo::ClientRequestInfo;
 use mononoke_types::Timestamp;
 use sql::Connection;
 use sql::Transaction;
+use sql_ext::SqlConnections;
 
 use crate::references::versions::WorkspaceVersion;
 use crate::sql::ops::Get;
 use crate::sql::ops::Insert;
 use crate::sql::ops::SqlCommitCloud;
 use crate::sql::ops::Update;
+use crate::sql::utils::prepare_prefix;
 
 mononoke_queries! {
     read GetVersion(reponame: String, workspace: String) -> (String, u64, bool, Timestamp){
         mysql("SELECT `workspace`, `version`, `archived`, UNIX_TIMESTAMP(`timestamp`) FROM `versions` WHERE `reponame`={reponame} AND `workspace`={workspace}")
         sqlite("SELECT `workspace`, `version`, `archived`, `timestamp` FROM `versions` WHERE `reponame`={reponame} AND `workspace`={workspace}")
+    }
+
+    read GetVersionByPrefix(reponame: String, prefix: String) -> (String,  u64, bool, Timestamp){
+        mysql("SELECT `workspace`, `version`, `archived`, UNIX_TIMESTAMP(`timestamp`) FROM `versions` WHERE `reponame`={reponame} AND `workspace` LIKE {prefix}")
+        sqlite("SELECT `workspace`,  `version`, `archived`, `timestamp` FROM `versions` WHERE `reponame`={reponame} AND `workspace` LIKE {prefix}")
     }
 
     // We have to check the version again inside the transaction because in rare case
@@ -107,4 +114,27 @@ impl Update<WorkspaceVersion> for SqlCommitCloud {
         //To be implemented among other Update queries
         return Err(anyhow::anyhow!("Not implemented yet"));
     }
+}
+
+pub async fn get_version_by_prefix(
+    connections: &SqlConnections,
+    reponame: String,
+    prefix: String,
+) -> anyhow::Result<Vec<WorkspaceVersion>> {
+    let rows = GetVersionByPrefix::query(
+        &connections.read_connection,
+        &reponame,
+        &prepare_prefix(&prefix),
+    )
+    .await?;
+    rows.into_iter()
+        .map(|(workspace, version, archived, timestamp)| {
+            Ok(WorkspaceVersion {
+                workspace,
+                version,
+                archived,
+                timestamp,
+            })
+        })
+        .collect::<anyhow::Result<Vec<WorkspaceVersion>>>()
 }

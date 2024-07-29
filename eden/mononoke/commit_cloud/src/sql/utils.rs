@@ -41,6 +41,15 @@ pub fn list_as_bytes(
     Ok(res)
 }
 
+pub fn prepare_prefix(input: &str) -> String {
+    let mut escaped = input.to_string();
+    escaped = escaped.replace('\\', "\\\\");
+    escaped = escaped.replace('_', "\\_");
+    escaped = escaped.replace('%', "\\%");
+    escaped.push('%');
+    escaped
+}
+
 #[cfg(test)]
 mod test {
     use std::str::FromStr;
