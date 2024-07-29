@@ -137,6 +137,7 @@ python_library(
         "doctor/facebook/check_mdatp.py",
         "doctor/facebook/check_vscode_extensions.py",
         "doctor/facebook/check_x509.py",
+        "doctor/facebook/internal_consts.py",
         "doctor/facebook/internal_error_messages.py",
         "doctor/facebook/lib/fake_vscode_extensions_checker.py",
         "doctor/problem.py",

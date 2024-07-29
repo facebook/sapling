@@ -6,16 +6,24 @@
 
 # pyre-strict
 
+import sys
 
 from eden.fs.cli import mtab
 from eden.fs.cli.config import EdenCheckout, EdenInstance
-from eden.fs.cli.doctor.problem import FixableProblem, ProblemTracker
+from eden.fs.cli.doctor.problem import FixableProblem, ProblemTracker, RemediationError
 from eden.fs.cli.redirect import (
     get_effective_redirections,
     Redirection,
     RedirectionState,
     RedirectionType,
 )
+
+try:
+    from .facebook.internal_consts import get_doctor_link
+except ImportError:
+
+    def get_doctor_link() -> str:
+        return ""
 
 
 def check_redirections(
@@ -50,4 +58,20 @@ class MisconfiguredRedirection(FixableProblem):
         self._redir.remove_existing(self._checkout)
         if self._redir.type == RedirectionType.UNKNOWN:
             return
-        self._redir.apply(self._checkout)
+        try:
+            self._redir.apply(self._checkout)
+        except OSError as err:
+            # pyre-ignore[16]: winerror only exists on windows
+            if sys.platform == "win32" and err.winerror == 1314:
+                # Missing permissions - this usually means that
+                # the user cannot create symlinks
+                msg = (
+                    f"Error occured when trying to create symlink: {err}.\n"
+                    "User is missing permissions to create symlinks.\n"
+                    "Check that the Developer Mode has been enabled in Windows, "
+                    "or that the user is allowed to create symlinks in the Local Security Policy.\n"
+                    f"Running chef may fix this. See {get_doctor_link()} for more information."
+                )
+                raise RemediationError(msg)
+            # Pass other errors
+            raise

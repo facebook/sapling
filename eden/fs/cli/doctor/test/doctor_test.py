@@ -27,6 +27,7 @@ from eden.fs.cli.doctor.check_filesystems import (
     check_loaded_content,
     check_materialized_are_accessible,
 )
+from eden.fs.cli.doctor.check_redirections import check_redirections
 from eden.fs.cli.doctor.problem import ProblemSeverity
 from eden.fs.cli.doctor.test.lib.fake_client import ResetParentsCommitsArgs
 from eden.fs.cli.doctor.test.lib.fake_eden_instance import FakeEdenInstance
@@ -42,10 +43,12 @@ from eden.fs.cli.doctor.test.lib.problem_collector import ProblemCollector
 from eden.fs.cli.doctor.test.lib.testcase import DoctorTestBase
 from eden.fs.cli.doctor.util import CheckoutInfo
 from eden.fs.cli.prjfs import PRJ_FILE_STATE
+from eden.fs.cli.redirect import Redirection, RedirectionState, RedirectionType
 from eden.fs.cli.test.lib.output import TestOutput
 from facebook.eden.ttypes import (
     GetScmStatusResult,
     MountInodeInfo,
+    MountState,
     ScmFileStatus,
     ScmStatus,
     SHA1Result,
@@ -1691,6 +1694,49 @@ Fixing files present on disk but not known to EdenFS in {Path(mount)}...<green>f
                 {
                     f"{Path('a/d')} has an unexpected file type: known to EdenFS as a directory, but is a file on disk",
                 },
+            )
+
+        @patch("eden.fs.cli.redirect.Redirection.apply")
+        @patch("eden.fs.cli.redirect.Redirection.remove_existing")
+        @patch("eden.fs.cli.doctor.check_redirections.get_effective_redirections")
+        def test_redirection_failed_symlink(
+            self, mock_get_effective_redirections, mock_remove_existing, mock_apply
+        ) -> None:
+            instance = FakeEdenInstance(self.make_temporary_directory())
+            checkout = instance.create_test_mount("path1")
+
+            mock_get_effective_redirections.return_value = {
+                "A": Redirection(
+                    checkout.path,
+                    RedirectionType.BIND,
+                    None,
+                    "",
+                    RedirectionState.SYMLINK_MISSING,
+                )
+            }
+            mock_remove_existing.return_value = None
+            mock_apply.side_effect = OSError(0, "Test error", "a", 1314, "b")
+
+            fixer, out = self.create_fixer(dry_run=False)
+            mount_table = instance.mount_table
+
+            check_redirections(
+                fixer,
+                instance,
+                checkout,
+                mount_table,
+            )
+            mock_remove_existing.assert_called_once()
+            mock_apply.assert_called_once()
+            self.assertRegex(
+                "\n".join(out.getvalue().splitlines()[:7]),
+                r"""<yellow>- Found problem:<reset>
+Misconfigured redirection at .*
+Fixing redirection at .*...<red>error<reset>
+Failed to fix or verify fix for problem MisconfiguredRedirection: RemediationError: Error occured when trying to create symlink: \[WinError 1314\] Test error: 'a' -> 'b'.
+User is missing permissions to create symlinks.
+Check that the Developer Mode has been enabled in Windows, or that the user is allowed to create symlinks in the Local Security Policy.
+Running chef may fix this.*""",
             )
 
     @patch("eden.fs.cli.doctor.test.lib.fake_client.FakeClient.getSHA1")
