@@ -838,8 +838,8 @@ where
             .into_iter()
             .chain(submodule_deps.repos())
             .collect::<Vec<_>>();
-        let target_repo = self.get_target_repo();
-        let large_in_memory_repo = InMemoryRepo::from_repo(target_repo, fallback_repos)?;
+        let large_repo = self.get_large_repo();
+        let large_in_memory_repo = InMemoryRepo::from_repo(large_repo, fallback_repos)?;
 
         CommitInMemorySyncer {
             ctx,
@@ -899,7 +899,7 @@ where
             .into_iter()
             .chain(submodule_deps.repos())
             .collect::<Vec<_>>();
-        let large_in_memory_repo = InMemoryRepo::from_repo(&target_repo, fallback_repos)?;
+        let large_in_memory_repo = InMemoryRepo::from_repo(large_repo, fallback_repos)?;
         let submodule_expansion_data = match submodule_deps {
             SubmoduleDeps::ForSync(deps) => Some(SubmoduleExpansionData {
                 submodule_deps: deps,
@@ -1037,7 +1037,7 @@ where
             .into_iter()
             .chain(source_repo_deps.repos())
             .collect::<Vec<_>>();
-        let large_in_memory_repo = InMemoryRepo::from_repo(&target_repo, fallback_repos)?;
+        let large_in_memory_repo = InMemoryRepo::from_repo(large_repo, fallback_repos)?;
 
         let submodule_expansion_data = match &source_repo_deps {
             SubmoduleDeps::ForSync(deps) => Some(SubmoduleExpansionData {
