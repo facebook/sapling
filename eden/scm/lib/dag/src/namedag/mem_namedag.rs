@@ -11,7 +11,7 @@ use std::sync::atomic::AtomicU64;
 use super::AbstractDag;
 use super::DagBuilder;
 use crate::iddag::IdDag;
-use crate::iddagstore::InProcessStore;
+use crate::iddagstore::MemStore;
 use crate::idmap::MemIdMap;
 use crate::ops::Open;
 use crate::ops::Persist;
@@ -22,7 +22,7 @@ use crate::Result;
 ///
 /// Does not support loading from or saving to the filesystem.
 /// The graph has to be built from scratch by `add_heads`.
-pub type MemDag = AbstractDag<IdDag<InProcessStore>, MemIdMap, MemDagPath, MemDagState>;
+pub type MemDag = AbstractDag<IdDag<MemStore>, MemIdMap, MemDagPath, MemDagState>;
 
 /// Address to open in-memory Dag.
 #[derive(Debug, Clone)]
@@ -45,7 +45,7 @@ impl Open for MemDagPath {
     type OpenTarget = MemDag;
 
     fn open(&self) -> Result<Self::OpenTarget> {
-        let dag = IdDag::new_in_process();
+        let dag = IdDag::new_in_memory();
         let map = MemIdMap::new();
         let id = format!("mem:{}", next_id());
         let state = MemDagState::default();

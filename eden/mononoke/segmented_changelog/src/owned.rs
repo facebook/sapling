@@ -17,18 +17,18 @@ use crate::idmap::IdMap;
 use crate::read_only::ReadOnlySegmentedChangelog;
 use crate::segmented_changelog_delegate;
 use crate::CloneData;
-use crate::InProcessIdDag;
 use crate::Location;
+use crate::MemIdDag;
 use crate::SegmentedChangelog;
 
 // We call it owned because the iddag is owned.
 pub struct OwnedSegmentedChangelog {
-    pub(crate) iddag: InProcessIdDag,
+    pub(crate) iddag: MemIdDag,
     pub(crate) idmap: Arc<dyn IdMap>,
 }
 
 impl OwnedSegmentedChangelog {
-    pub fn new(iddag: InProcessIdDag, idmap: Arc<dyn IdMap>) -> Self {
+    pub fn new(iddag: MemIdDag, idmap: Arc<dyn IdMap>) -> Self {
         Self { iddag, idmap }
     }
 }

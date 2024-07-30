@@ -50,8 +50,8 @@ use crate::update::SeedHead;
 use crate::update::ServerDag;
 use crate::CloneData;
 use crate::CloneHints;
-use crate::InProcessIdDag;
 use crate::Location;
+use crate::MemIdDag;
 use crate::MismatchedHeadsError;
 use crate::SegmentedChangelog;
 
@@ -119,7 +119,7 @@ impl OnDemandUpdateSegmentedChangelog {
     pub fn new(
         ctx: CoreContext,
         repo_id: RepositoryId,
-        iddag: InProcessIdDag,
+        iddag: MemIdDag,
         idmap: Arc<dyn IdMap>,
         changeset_fetcher: ArcChangesetFetcher,
         bookmarks: Arc<dyn Bookmarks>,

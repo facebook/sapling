@@ -62,7 +62,7 @@ use crate::update::vertexlist_from_seedheads;
 use crate::update::SeedHead;
 use crate::version_store::SegmentedChangelogVersionStore;
 use crate::CloneHints;
-use crate::InProcessIdDag;
+use crate::MemIdDag;
 use crate::SegmentedChangelogSqlConnections;
 
 define_stats! {
@@ -295,7 +295,7 @@ impl SegmentedChangelogTailer {
                         (
                             true,
                             sc_version.idmap_version.bump(),
-                            InProcessIdDag::new_in_process(),
+                            MemIdDag::new_in_memory(),
                         )
                     } else {
                         let iddag = self
@@ -308,7 +308,7 @@ impl SegmentedChangelogTailer {
                         (false, sc_version.idmap_version, iddag)
                     }
                 }
-                None => (true, IdMapVersion(1), InProcessIdDag::new_in_process()),
+                None => (true, IdMapVersion(1), MemIdDag::new_in_memory()),
             }
         };
 

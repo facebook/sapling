@@ -34,8 +34,8 @@ use crate::seedheads_from_config;
 use crate::version_store::SegmentedChangelogVersionStore;
 use crate::CloneHints;
 use crate::DisabledSegmentedChangelog;
-use crate::InProcessIdDag;
 use crate::JobType;
+use crate::MemIdDag;
 use crate::SegmentedChangelog;
 
 #[derive(Clone)]
@@ -68,7 +68,7 @@ pub fn new_test_segmented_changelog(
     Ok(Arc::new(OnDemandUpdateSegmentedChangelog::new(
         ctx,
         repo_id,
-        InProcessIdDag::new_in_process(),
+        MemIdDag::new_in_memory(),
         Arc::new(ConcurrentMemIdMap::new()),
         changeset_fetcher,
         bookmarks,
@@ -139,7 +139,7 @@ pub async fn new_server_segmented_changelog<'a>(
         return Ok(Arc::new(OnDemandUpdateSegmentedChangelog::new(
             ctx.clone(),
             repo_id,
-            InProcessIdDag::new_in_process(),
+            MemIdDag::new_in_memory(),
             Arc::new(ConcurrentMemIdMap::new()),
             changeset_fetcher,
             bookmarks,

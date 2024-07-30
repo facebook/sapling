@@ -24,7 +24,7 @@ mod in_process_store;
 #[cfg(any(test, feature = "indexedlog-backend"))]
 pub(crate) mod indexedlog_store;
 
-pub(crate) use in_process_store::InProcessStore;
+pub(crate) use in_process_store::MemStore;
 #[cfg(any(test, feature = "indexedlog-backend"))]
 pub(crate) use indexedlog_store::IndexedLogStore;
 
@@ -1034,8 +1034,8 @@ P->C: 50->N100, 50->N300"#
     }
 
     fn for_each_empty_store(f: impl Fn(&mut dyn IdDagStore)) {
-        let mut store = InProcessStore::new();
-        tracing::debug!("testing InProcessStore");
+        let mut store = MemStore::new();
+        tracing::debug!("testing MemStore");
         f(&mut store);
 
         #[cfg(feature = "indexedlog-backend")]

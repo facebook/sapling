@@ -17,7 +17,7 @@ use mononoke_types::RepositoryId;
 
 use crate::logging::log_new_iddag_version;
 use crate::types::IdDagVersion;
-use crate::InProcessIdDag;
+use crate::MemIdDag;
 
 pub struct IdDagSaveStore {
     repo_id: RepositoryId,
@@ -33,7 +33,7 @@ impl IdDagSaveStore {
         &'a self,
         ctx: &'a CoreContext,
         iddag_version: IdDagVersion,
-    ) -> Result<Option<InProcessIdDag>> {
+    ) -> Result<Option<MemIdDag>> {
         let bytes_opt = self
             .blobstore
             .get(ctx, &self.key(iddag_version))
@@ -50,7 +50,7 @@ impl IdDagSaveStore {
         };
 
         let deserialization = move || {
-            let iddag: InProcessIdDag = mincode::deserialize(&bytes.into_raw_bytes())?;
+            let iddag: MemIdDag = mincode::deserialize(&bytes.into_raw_bytes())?;
             anyhow::Ok(iddag)
         };
         // In tests we can't offload deserialization to spawn blocking because
@@ -69,7 +69,7 @@ impl IdDagSaveStore {
         &'a self,
         ctx: &'a CoreContext,
         iddag_version: IdDagVersion,
-    ) -> Result<InProcessIdDag> {
+    ) -> Result<MemIdDag> {
         self.find(ctx, iddag_version).await?.ok_or_else(|| {
             format_err!(
                 "Not Found: prebuilt iddag (repo_id: {}, version: {})",
@@ -82,7 +82,7 @@ impl IdDagSaveStore {
     pub async fn save<'a>(
         &'a self,
         ctx: &'a CoreContext,
-        iddag: &InProcessIdDag,
+        iddag: &MemIdDag,
     ) -> Result<IdDagVersion> {
         let buffer = mincode::serialize(iddag)?;
         let iddag_version = IdDagVersion::from_serialized_bytes(&buffer);

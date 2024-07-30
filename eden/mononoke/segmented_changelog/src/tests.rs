@@ -73,8 +73,8 @@ use crate::types::IdMapVersion;
 use crate::types::SegmentedChangelogVersion;
 use crate::version_store::SegmentedChangelogVersionStore;
 use crate::CloneHints;
-use crate::InProcessIdDag;
 use crate::Location;
+use crate::MemIdDag;
 use crate::SeedHead;
 use crate::SegmentedChangelog;
 use crate::SegmentedChangelogRef;
@@ -219,7 +219,7 @@ async fn load_iddag(
     ctx: &CoreContext,
     blobrepo: &BlobRepo,
     connections: &SegmentedChangelogSqlConnections,
-) -> Result<InProcessIdDag> {
+) -> Result<MemIdDag> {
     let sc_version = load_sc_version(ctx, blobrepo.repo_identity().id(), connections).await?;
     let iddag_save_store = IdDagSaveStore::new(
         blobrepo.repo_identity().id(),
@@ -818,7 +818,7 @@ async fn test_incremental_update_with_desync_iddag(fb: FacebookInit) -> Result<(
         OnDemandUpdateSegmentedChangelog::new(
             ctx.clone(),
             blobrepo.repo_identity().id(),
-            InProcessIdDag::new_in_process(),
+            MemIdDag::new_in_memory(),
             Arc::clone(&idmap),
             blobrepo.changeset_fetcher_arc(),
             blobrepo.bookmarks_arc(),
@@ -870,7 +870,7 @@ async fn test_clone_data(fb: FacebookInit) -> Result<()> {
 
     let clone_data = sc.clone_data(&ctx).await?;
 
-    let mut new_iddag = InProcessIdDag::new_in_process();
+    let mut new_iddag = MemIdDag::new_in_memory();
     new_iddag.build_segments_from_prepared_flat_segments(&clone_data.0.flat_segments)?;
     let new_owned = OwnedSegmentedChangelog::new(new_iddag, sc.idmap.clone());
 
@@ -964,7 +964,7 @@ async fn test_periodic_update(fb: FacebookInit) -> Result<()> {
     let on_demand = OnDemandUpdateSegmentedChangelog::new(
         ctx.clone(),
         blobrepo.repo_identity().id(),
-        InProcessIdDag::new_in_process(),
+        MemIdDag::new_in_memory(),
         Arc::new(ConcurrentMemIdMap::new()),
         blobrepo.changeset_fetcher_arc(),
         blobrepo.bookmarks_arc(),

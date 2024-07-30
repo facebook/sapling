@@ -61,7 +61,7 @@ pub use vertex_options::VertexListWithOptions;
 pub use vertex_options::VertexOptions;
 
 pub type Level = u8;
-pub type InProcessIdDag = IdDag<iddagstore::InProcessStore>;
+pub type MemIdDag = IdDag<iddagstore::MemStore>;
 #[cfg(any(test, feature = "indexedlog-backend"))]
 pub type OnDiskIdDag = IdDag<iddagstore::IndexedLogStore>;
 

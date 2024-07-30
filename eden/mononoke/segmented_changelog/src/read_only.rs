@@ -26,8 +26,8 @@ use crate::DagId;
 use crate::DagIdSet;
 use crate::FirstAncestorConstraint;
 use crate::Group;
-use crate::InProcessIdDag;
 use crate::Location;
+use crate::MemIdDag;
 use crate::SegmentedChangelog;
 
 const IDMAP_CHANGESET_FETCH_BATCH: usize = 500;
@@ -38,7 +38,7 @@ define_stats! {
 }
 
 pub struct ReadOnlySegmentedChangelog<'a> {
-    pub(crate) iddag: &'a InProcessIdDag,
+    pub(crate) iddag: &'a MemIdDag,
     pub(crate) idmap: Arc<dyn IdMap>,
 }
 
@@ -235,7 +235,7 @@ impl<'a> SegmentedChangelog for ReadOnlySegmentedChangelog<'a> {
 }
 
 impl<'a> ReadOnlySegmentedChangelog<'a> {
-    pub fn new(iddag: &'a InProcessIdDag, idmap: Arc<dyn IdMap>) -> Self {
+    pub fn new(iddag: &'a MemIdDag, idmap: Arc<dyn IdMap>) -> Self {
         Self { iddag, idmap }
     }
 

@@ -30,7 +30,7 @@ pub fn main() {
     let dag_dir = tempdir().unwrap();
 
     bench_with_iddag(|| IdDag::open(dag_dir.path()).unwrap());
-    bench_with_iddag(IdDag::new_in_process);
+    bench_with_iddag(IdDag::new_in_memory);
 
     bench_many_heads_namedag();
 }

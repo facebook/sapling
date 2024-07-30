@@ -10,7 +10,7 @@ use dag::idmap::IdMapAssignHead;
 use dag::Group;
 use dag::IdDag;
 use dag::IdSet;
-use dag::InProcessIdDag;
+use dag::MemIdDag;
 use dag::Vertex;
 use minibench::bench;
 use minibench::elapsed;
@@ -20,10 +20,7 @@ use tempfile::tempdir;
 type ParentsFunc<'a> = Box<dyn Fn(Vertex) -> dag::Result<Vec<Vertex>> + Send + Sync + 'a>;
 
 pub fn main() {
-    println!(
-        "benchmarking {} serde",
-        std::any::type_name::<InProcessIdDag>()
-    );
+    println!("benchmarking {} serde", std::any::type_name::<MemIdDag>());
     let parents = bindag::parse_bindag(bindag::MOZILLA);
 
     let head_name = Vertex::copy_from(format!("{}", parents.len() - 1).as_bytes());
@@ -50,7 +47,7 @@ pub fn main() {
         &reserved_ids,
     ))
     .unwrap();
-    let mut iddag = IdDag::new_in_process();
+    let mut iddag = IdDag::new_in_memory();
     iddag
         .build_segments_from_prepared_flat_segments(&outcome)
         .unwrap();
@@ -66,7 +63,7 @@ pub fn main() {
 
     bench("deserializing inprocess iddag with mincode", || {
         elapsed(|| {
-            let _new_iddag: InProcessIdDag = mincode::deserialize(&blob).unwrap();
+            let _new_iddag: MemIdDag = mincode::deserialize(&blob).unwrap();
         })
     });
 }

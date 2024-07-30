@@ -21,7 +21,7 @@ use crate::idmap::IdMap;
 use crate::idmap::SqlIdMap;
 use crate::types::SegmentedChangelogVersion;
 use crate::version_store::SegmentedChangelogVersionStore;
-use crate::InProcessIdDag;
+use crate::MemIdDag;
 use crate::SegmentedChangelogSqlConnections;
 
 pub async fn copy_segmented_changelog(
@@ -74,7 +74,7 @@ pub async fn copy_segmented_changelog(
 
     // Build an IdDag - we can use the old IdDag's shape to speed things up,
     // as we know that the new IdDag is a subset of the old one.
-    let mut new_iddag = InProcessIdDag::new_in_process();
+    let mut new_iddag = MemIdDag::new_in_memory();
     let get_parents = |id| old_iddag.parent_ids(id);
     new_iddag.build_segments(dag_limit, &get_parents)?;
 

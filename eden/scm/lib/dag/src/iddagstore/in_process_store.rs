@@ -33,7 +33,7 @@ use crate::Level;
 use crate::Result;
 
 #[derive(Clone)]
-pub struct InProcessStore {
+pub struct MemStore {
     segments: [Vec<Segment>; Group::COUNT],
     // level -> head -> serialized Segment
     level_head_index: Vec<BTreeMap<Id, StoreId>>,
@@ -54,7 +54,7 @@ enum StoreId {
     Virtual(usize),
 }
 
-impl IdDagStore for InProcessStore {
+impl IdDagStore for MemStore {
     fn max_level(&self) -> Result<Level> {
         Ok((self.level_head_index.len().max(1) - 1) as Level)
     }
@@ -317,13 +317,13 @@ impl IdDagStore for InProcessStore {
     }
 }
 
-impl StorageVersion for InProcessStore {
+impl StorageVersion for MemStore {
     fn storage_version(&self) -> (u64, u64) {
         (0, 0)
     }
 }
 
-impl Persist for InProcessStore {
+impl Persist for MemStore {
     type Lock = ();
 
     fn lock(&mut self) -> Result<()> {
@@ -339,7 +339,7 @@ impl Persist for InProcessStore {
     }
 }
 
-impl InProcessStore {
+impl MemStore {
     fn get_head_index(&self, level: Level) -> Option<&BTreeMap<Id, StoreId>> {
         self.level_head_index.get(level as usize)
     }
@@ -369,9 +369,9 @@ impl InProcessStore {
     }
 }
 
-impl InProcessStore {
+impl MemStore {
     pub fn new() -> Self {
-        InProcessStore {
+        MemStore {
             segments: [Vec::new(), Vec::new(), Vec::new()],
             level_head_index: Vec::new(),
             parent_index: BTreeMap::new(),
@@ -381,7 +381,7 @@ impl InProcessStore {
     }
 }
 
-impl Serialize for InProcessStore {
+impl Serialize for MemStore {
     fn serialize<S>(&self, serializer: S) -> StdResult<S::Ok, S::Error>
     where
         S: Serializer,
@@ -403,14 +403,14 @@ impl Serialize for InProcessStore {
     }
 }
 
-impl<'de> Deserialize<'de> for InProcessStore {
+impl<'de> Deserialize<'de> for MemStore {
     fn deserialize<D>(deserializer: D) -> StdResult<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
-        struct InProcessStoreVisitor;
-        impl<'de> Visitor<'de> for InProcessStoreVisitor {
-            type Value = InProcessStore;
+        struct MemStoreVisitor;
+        impl<'de> Visitor<'de> for MemStoreVisitor {
+            type Value = MemStore;
             fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
                 formatter.write_str("a list of segments")
             }
@@ -418,7 +418,7 @@ impl<'de> Deserialize<'de> for InProcessStore {
             where
                 A: SeqAccess<'de>,
             {
-                let mut store = InProcessStore::new();
+                let mut store = MemStore::new();
                 while let Some(segment) = access.next_element()? {
                     store.insert_segment(segment).map_err(|e| {
                         A::Error::custom(format!("failed to deserialize IdDagStore: {} ", e))
@@ -428,7 +428,7 @@ impl<'de> Deserialize<'de> for InProcessStore {
             }
         }
 
-        deserializer.deserialize_seq(InProcessStoreVisitor)
+        deserializer.deserialize_seq(MemStoreVisitor)
     }
 }
 
@@ -441,7 +441,7 @@ mod tests {
     #[test]
     fn test_remove_segment_serialize() {
         // Test remove_flat_segment is still effective after serialize->deserialize.
-        let mut store = InProcessStore::new();
+        let mut store = MemStore::new();
         test_remove_segment(&mut store);
         assert!(!store.removed_store_ids.is_empty());
 
@@ -450,7 +450,7 @@ mod tests {
 
         // Check store state after serialize -> deserialize round-trip.
         let data = mincode::serialize(&store).unwrap();
-        let store: InProcessStore = mincode::deserialize(&data).unwrap();
+        let store: MemStore = mincode::deserialize(&data).unwrap();
         assert!(store.removed_store_ids.is_empty());
 
         let new_state = dump_store_state(&store, &all);

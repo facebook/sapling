@@ -118,7 +118,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_builder_absent_path_state_can_use_add_heads() {
-        let dag = IdDag::new_in_process();
+        let dag = IdDag::new_in_memory();
         let map = MemIdMap::new();
         let builder = DagBuilder::new_with_idmap_dag(map, dag);
         let mut dag = builder.build().unwrap();

@@ -36,7 +36,7 @@ use crate::idmap::vertex_name_from_cs_id;
 use crate::idmap::IdMap;
 use crate::idmap::IdMapWrapper;
 use crate::Group;
-use crate::InProcessIdDag;
+use crate::MemIdDag;
 
 pub type SeedHead = SegmentedChangelogHeadConfig;
 
@@ -104,14 +104,14 @@ pub async fn vertexlist_from_seedheads(
     Ok(heads_with_options)
 }
 
-pub type ServerDag = crate::dag::namedag::AbstractDag<InProcessIdDag, IdMapWrapper, (), ()>;
+pub type ServerDag = crate::dag::namedag::AbstractDag<MemIdDag, IdMapWrapper, (), ()>;
 
 /// Convert a server IdDag and IdMap to a Dag
 /// Note: you will need to call Dag::map().flush_writes
 /// to write out updates to the IdMap
 pub fn server_namedag(
     ctx: CoreContext,
-    iddag: InProcessIdDag,
+    iddag: MemIdDag,
     idmap: Arc<dyn IdMap>,
 ) -> Result<ServerDag> {
     let idmap = IdMapWrapper::new(ctx, idmap);

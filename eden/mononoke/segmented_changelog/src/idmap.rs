@@ -34,7 +34,7 @@ pub use self::sql::SqlIdMap;
 use crate::types::IdMapVersion;
 use crate::DagId;
 use crate::DagIdSet;
-use crate::InProcessIdDag;
+use crate::MemIdDag;
 
 #[async_trait]
 #[auto_impl::auto_impl(&, Arc)]
@@ -148,7 +148,7 @@ impl OverlayIdMap {
         }
     }
 
-    pub fn from_iddag_and_idmap(iddag: &InProcessIdDag, shared: Arc<dyn IdMap>) -> Result<Self> {
+    pub fn from_iddag_and_idmap(iddag: &MemIdDag, shared: Arc<dyn IdMap>) -> Result<Self> {
         let shared_id_set = iddag.all().context("error calculating iddag.all()")?;
         Ok(Self::new(shared, shared_id_set))
     }
@@ -346,7 +346,7 @@ impl IdMapFactory {
         &self,
         ctx: &CoreContext,
         version: IdMapVersion,
-        iddag: &InProcessIdDag,
+        iddag: &MemIdDag,
     ) -> Result<Arc<dyn IdMap>> {
         let overlay = OverlayIdMap::from_iddag_and_idmap(iddag, self.for_writer(ctx, version))?;
         Ok(Arc::new(overlay))

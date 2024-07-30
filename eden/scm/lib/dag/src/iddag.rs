@@ -28,9 +28,9 @@ use crate::errors::NotFoundError;
 use crate::id::Group;
 use crate::id::Id;
 use crate::iddagstore::IdDagStore;
-use crate::iddagstore::InProcessStore;
 #[cfg(any(test, feature = "indexedlog-backend"))]
 use crate::iddagstore::IndexedLogStore;
+use crate::iddagstore::MemStore;
 use crate::ops::Persist;
 use crate::ops::StorageVersion;
 #[cfg(any(test, feature = "indexedlog-backend"))]
@@ -122,11 +122,11 @@ impl TryClone for IdDag<IndexedLogStore> {
     }
 }
 
-impl IdDag<InProcessStore> {
+impl IdDag<MemStore> {
     /// Instantiate an [`IdDag`] that stores all it's data in process. Useful for scenarios that
     /// do not require data persistance.
-    pub fn new_in_process() -> Self {
-        let store = InProcessStore::new();
+    pub fn new_in_memory() -> Self {
+        let store = MemStore::new();
         Self {
             store,
             new_seg_size: default_seg_size(),
@@ -2180,7 +2180,7 @@ mod tests {
         assert_eq!(all.count(), 1001);
 
         // Insert discontinuous segments.
-        let mut dag = IdDag::new_in_process();
+        let mut dag = IdDag::new_in_memory();
         // 10..=20
         dag.build_segments(Id(20), &|p| {
             Ok(if p > Id(10) { vec![p - 1] } else { vec![] })
@@ -2252,7 +2252,7 @@ mod tests {
 
         // Segment 20..=30 shouldn't have the "ONLY_HEAD" flag because of the gap.
         // In debug output it does not have "H" prefix.
-        let mut dag = IdDag::new_in_process();
+        let mut dag = IdDag::new_in_memory();
         dag.build_segments_from_prepared_flat_segments(&prepared)
             .unwrap();
         let iter = dag.iter_segments_ascending(Id(0), 0).unwrap();
@@ -2263,7 +2263,7 @@ mod tests {
     fn test_roots_max_level_empty() {
         // Create segments in a way that the highest level
         // contains no segments in the master group.
-        let mut iddag = IdDag::new_in_process();
+        let mut iddag = IdDag::new_in_memory();
         let mut prepared = PreparedFlatSegments {
             segments: vec![
                 FlatSegment {
@@ -2310,7 +2310,7 @@ mod tests {
 
     #[test]
     fn test_strip() {
-        let mut iddag = IdDag::new_in_process();
+        let mut iddag = IdDag::new_in_memory();
         let mut prepared = PreparedFlatSegments::default();
         prepared.segments.insert(FlatSegment {
             low: Id(0),
@@ -2420,7 +2420,7 @@ mod tests {
 
     #[test]
     fn test_id_set_to_id_segments() {
-        let mut iddag = IdDag::new_in_process();
+        let mut iddag = IdDag::new_in_memory();
 
         // Insert some segments. Create a few levels.
         let mut prepared = PreparedFlatSegments::default();
