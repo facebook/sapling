@@ -203,15 +203,7 @@ impl CommitGraph {
                 ctx,
                 frontier,
                 move |node| future::ready(Ok(node.generation < target_generation)),
-                if justknobs::eval(
-                    "scm/mononoke:commit_graph_use_skip_tree_exact_prefetching",
-                    None,
-                    None,
-                )? {
-                    Prefetch::for_exact_skip_tree_traversal(target_generation)
-                } else {
-                    Prefetch::for_skip_tree_traversal(target_generation)
-                },
+                Prefetch::for_exact_skip_tree_traversal(target_generation),
             )
             .await?;
         }

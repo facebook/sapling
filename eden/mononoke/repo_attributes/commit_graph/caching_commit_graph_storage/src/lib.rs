@@ -75,7 +75,6 @@ pub struct CachingCommitGraphStorage {
     memcache: MemcacheHandler,
     keygen_single: KeyGen,
     keygen_prefetch_p1_linear: KeyGen,
-    keygen_prefetch_skip_tree: KeyGen,
     keygen_prefetch_skip_tree_exact: KeyGen,
     repo_id: RepositoryId,
 }
@@ -265,9 +264,6 @@ impl EntityStore<CachedPrefetchedChangesetEdges> for CacheRequest<'_> {
                 Some(PrefetchTarget::LinearAncestors { .. }) => {
                     &self.caching_storage.keygen_prefetch_p1_linear
                 }
-                Some(PrefetchTarget::SkipTreeSkewAncestors { .. }) => {
-                    &self.caching_storage.keygen_prefetch_skip_tree
-                }
                 Some(PrefetchTarget::ExactSkipTreeAncestors { .. }) => {
                     &self.caching_storage.keygen_prefetch_skip_tree_exact
                 }
@@ -428,7 +424,6 @@ impl CachingCommitGraphStorage {
             memcache: cache_handler_factory.memcache(),
             keygen_single: Self::keygen("scm.mononoke.commitgraph"),
             keygen_prefetch_p1_linear: Self::keygen("scm.mononoke.commitgraph.p1"),
-            keygen_prefetch_skip_tree: Self::keygen("scm.mononoke.commitgraph.sk"),
             keygen_prefetch_skip_tree_exact: Self::keygen("scm.mononoke.commitgraph.ske"),
         }
     }

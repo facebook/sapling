@@ -37,16 +37,6 @@ pub enum PrefetchTarget {
         /// Prefetch up to this many steps.
         steps: u64,
     },
-    /// Prefetch along the maximum skip tree distance by following the skip
-    /// tree skew ancestor, or first parent if the changeset does not have
-    /// a skip tree skew ancestor
-    SkipTreeSkewAncestors {
-        /// Prefetch as far back as this generation.
-        generation: Generation,
-
-        /// Prefetch up to this many steps.
-        steps: u64,
-    },
     /// Prefetch along the skip tree following exactly what the skew binary
     /// algorithm would do to get to the target generation.
     ExactSkipTreeAncestors {
@@ -75,18 +65,6 @@ pub enum Prefetch {
 }
 
 impl Prefetch {
-    /// Prepare prefetching for skew-binary traversal over the skip tree.
-    pub fn for_skip_tree_traversal(generation: Generation) -> Self {
-        // We are prefetching mostly along the skew ancestor edge, which
-        // should typically be O(log(N)) in length, except that for merge
-        // commits without a common ancestor we follow the p1 parent, so limit
-        // to 32 steps so that we don't follow the p1 ancestry too far.
-        Prefetch::Hint(PrefetchTarget::SkipTreeSkewAncestors {
-            generation,
-            steps: 32,
-        })
-    }
-
     /// Prepare prefetching for skew-binary traversal over the skip tree.
     pub fn for_exact_skip_tree_traversal(generation: Generation) -> Self {
         Prefetch::Hint(PrefetchTarget::ExactSkipTreeAncestors { generation })

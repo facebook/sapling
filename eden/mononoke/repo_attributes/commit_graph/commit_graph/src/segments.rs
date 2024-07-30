@@ -326,7 +326,7 @@ impl CommitGraph {
                         .fetch_many_edges(
                             ctx,
                             &cs_ids,
-                            Prefetch::for_skip_tree_traversal(base_generation),
+                            Prefetch::for_exact_skip_tree_traversal(base_generation),
                         )
                         .await?;
 
@@ -1048,7 +1048,7 @@ impl CommitGraph {
                         .fetch_many_edges(
                             ctx,
                             &heads.keys().copied().collect::<Vec<_>>(),
-                            Prefetch::for_skip_tree_traversal(targets_generation),
+                            Prefetch::for_exact_skip_tree_traversal(targets_generation),
                         )
                         .await?;
 
