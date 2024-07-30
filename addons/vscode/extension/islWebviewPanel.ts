@@ -353,6 +353,36 @@ function getInitialStateJs(context: vscode.ExtensionContext, logger: Logger) {
 }
 
 /**
+ * Get any extra styles to inject into the webview.
+ * Important: this is injected into the HTML directly, and should not
+ * use any user-controlled data that could be used maliciously.
+ */
+function getExtraStyles(): string {
+  const fontFeatureSettings = vscode.workspace
+    .getConfiguration('editor')
+    .get<string | boolean>('fontLigatures');
+  const validFontFeaturesRegex = /^[0-9a-zA-Z"',\-_ ]*$/;
+  if (fontFeatureSettings === true) {
+    return ''; // no need to specify specific additional settings
+  }
+  if (
+    !fontFeatureSettings ||
+    typeof fontFeatureSettings !== 'string' ||
+    !validFontFeaturesRegex.test(fontFeatureSettings)
+  ) {
+    return `
+    html {
+      font-variant-ligatures: none;
+    }`;
+  }
+  return `
+  html {
+    font-feature-settings: ${fontFeatureSettings};
+  }
+  `;
+}
+
+/**
  * When built in dev mode using vite, files are not written to disk.
  * In order to get files to load, we need to set up the server path ourself.
  *
@@ -388,6 +418,9 @@ function devModeHtmlForISLWebview(
       window.__vite_plugin_react_preamble_installed__ = true
     </script>
     <script type="module" src="/@vite/client"></script>
+    <style>
+      ${getExtraStyles()}
+    </style>
 
 		<script>
 			window.saplingLanguage = "${locale /* important: locale has already been validated */}";
@@ -456,6 +489,9 @@ function htmlForISLWebview(
 		<title>${titleText}</title>
 		<link href="res/webview.css" rel="stylesheet">
 		<link href="res/stylex.css" rel="stylesheet">
+    <style>
+      ${getExtraStyles()}
+    </style>
 		<script nonce="${nonce}">
 			window.saplingLanguage = "${locale /* important: locale has already been validated */}";
       window.islAppMode = ${JSON.stringify(appMode)};
