@@ -18,6 +18,7 @@ use metaconfig_types::BlameVersion;
 use metaconfig_types::BookmarkOrRegex;
 use metaconfig_types::BookmarkParams;
 use metaconfig_types::CacheWarmupParams;
+use metaconfig_types::CommitCloudConfig;
 use metaconfig_types::CommitGraphConfig;
 use metaconfig_types::CommitIdentityScheme;
 use metaconfig_types::ComparableRegex;
@@ -68,6 +69,7 @@ use mononoke_types::RepositoryId;
 use regex::Regex;
 use repos::RawBookmarkConfig;
 use repos::RawCacheWarmupConfig;
+use repos::RawCommitCloudConfig;
 use repos::RawCommitGraphConfig;
 use repos::RawCommitIdentityScheme;
 use repos::RawCrossRepoCommitValidationConfig;
@@ -898,5 +900,14 @@ impl Convert for RawXRepoSyncSourceConfigMapping {
             })
             .collect::<Result<_>>()?;
         Ok(XRepoSyncSourceConfigMapping { mapping })
+    }
+}
+
+impl Convert for RawCommitCloudConfig {
+    type Output = CommitCloudConfig;
+    fn convert(self) -> Result<Self::Output> {
+        Ok(CommitCloudConfig {
+            mocked_employees: self.mocked_employees,
+        })
     }
 }

@@ -226,6 +226,7 @@ fn parse_with_repo_definition(
         everstore_local_path,
         git_concurrency,
         metadata_logger_config,
+        commit_cloud_config,
         zelos_config,
         bookmark_name_for_objects_count,
         default_objects_count,
@@ -350,6 +351,7 @@ fn parse_with_repo_definition(
     let zelos_config = zelos_config.convert()?;
     let x_repo_sync_source_mapping = x_repo_sync_source_mapping.convert()?;
 
+    let commit_cloud_config = commit_cloud_config.convert()?.unwrap_or_default();
     Ok(RepoConfig {
         enabled,
         storage_config,
@@ -398,6 +400,7 @@ fn parse_with_repo_definition(
         bookmark_name_for_objects_count,
         default_objects_count,
         x_repo_sync_source_mapping,
+        commit_cloud_config,
     })
 }
 
@@ -523,6 +526,7 @@ mod test {
     use metaconfig_types::BookmarkParams;
     use metaconfig_types::BubbleDeletionMode;
     use metaconfig_types::CacheWarmupParams;
+    use metaconfig_types::CommitCloudConfig;
     use metaconfig_types::CommitGraphConfig;
     use metaconfig_types::CommitIdentityScheme;
     use metaconfig_types::CommitSyncConfig;
@@ -1386,6 +1390,9 @@ mod test {
                 zelos_config: None,
                 bookmark_name_for_objects_count: None,
                 default_objects_count: None,
+                commit_cloud_config: CommitCloudConfig {
+                    mocked_employees: Vec::new(),
+                },
             },
         );
 
@@ -1467,6 +1474,7 @@ mod test {
                 bookmark_name_for_objects_count: None,
                 default_objects_count: None,
                 x_repo_sync_source_mapping: None,
+                commit_cloud_config: CommitCloudConfig::default(),
             },
         );
         assert_eq!(

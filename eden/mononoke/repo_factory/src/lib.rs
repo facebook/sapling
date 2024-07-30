@@ -1824,6 +1824,7 @@ impl RepoFactory {
             repo_derived_data.clone(),
             self.ctx(None),
             self.env.acl_provider.clone(),
+            repo_config.commit_cloud_config.clone().into(),
         )))
     }
 

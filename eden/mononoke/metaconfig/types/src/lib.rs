@@ -253,6 +253,8 @@ pub struct RepoConfig {
     /// XRepoSyncSourceConfig for the sync from whatsapp/server to fbsource will be stored as
     /// whatsapp_server_config.x_repo_sync_source_mapping["fbsource"] = config
     pub x_repo_sync_source_mapping: Option<XRepoSyncSourceConfigMapping>,
+    /// Commit cloud configuration
+    pub commit_cloud_config: CommitCloudConfig,
 }
 
 /// Config determining if the repo is deep sharded in the context of a service.
@@ -1994,4 +1996,11 @@ pub struct XRepoSyncSourceConfigMapping {
     /// XRepoSyncSourceConfig for the sync from whatsapp/server to fbsource will be stored as
     /// whatsapp_server_config.mapping["fbsource"] = config
     pub mapping: BTreeMap<String, XRepoSyncSourceConfig>,
+}
+
+/// Configs that are being passed to commit cloud
+#[derive(Debug, Default, Clone, Eq, PartialEq)]
+pub struct CommitCloudConfig {
+    /// Mock emails or usernames used for tests
+    pub mocked_employees: Vec<String>,
 }

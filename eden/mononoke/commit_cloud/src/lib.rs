@@ -24,6 +24,7 @@ use edenapi_types::ReferencesData;
 use edenapi_types::UpdateReferencesParams;
 use edenapi_types::WorkspaceData;
 use facet::facet;
+use metaconfig_types::CommitCloudConfig;
 use mononoke_types::Timestamp;
 use permission_checker::AclProvider;
 use permission_checker::BoxPermissionChecker;
@@ -38,7 +39,6 @@ use crate::references::versions::WorkspaceVersion;
 use crate::sql::ops::Get;
 use crate::sql::ops::Insert;
 use crate::sql::ops::SqlCommitCloud;
-
 #[facet]
 pub struct CommitCloud {
     pub storage: SqlCommitCloud,
@@ -46,6 +46,7 @@ pub struct CommitCloud {
     pub repo_derived_data: ArcRepoDerivedData,
     pub core_ctx: CoreContext,
     pub acl_provider: Arc<dyn AclProvider>,
+    pub config: Arc<CommitCloudConfig>,
 }
 
 impl CommitCloud {
@@ -55,6 +56,7 @@ impl CommitCloud {
         repo_derived_data: ArcRepoDerivedData,
         core_ctx: CoreContext,
         acl_provider: Arc<dyn AclProvider>,
+        config: Arc<CommitCloudConfig>,
     ) -> Self {
         CommitCloud {
             storage,
@@ -62,6 +64,7 @@ impl CommitCloud {
             repo_derived_data,
             core_ctx,
             acl_provider,
+            config,
         }
     }
 }
