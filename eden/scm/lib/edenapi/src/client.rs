@@ -1060,6 +1060,84 @@ impl Client {
         let retry_count = self.inner.config.max_retry_per_request;
         with_retry(retry_count, || func(self)).await
     }
+
+    async fn cloud_workspace_attempt(
+        &self,
+        workspace: String,
+        reponame: String,
+    ) -> Result<WorkspaceDataResponse, SaplingRemoteApiError> {
+        tracing::info!("Requesting workspace {} in repo {} ", workspace, reponame);
+        let url = self.build_url(paths::CLOUD_WORKSPACE)?;
+        let workspace_req = CloudWorkspaceRequest {
+            workspace: workspace.to_string(),
+            reponame: reponame.to_string(),
+        };
+        let request = self
+            .configure_request(self.inner.client.post(url))?
+            .cbor(&workspace_req.to_wire())
+            .map_err(SaplingRemoteApiError::RequestSerializationFailed)?;
+
+        self.fetch_single::<WorkspaceDataResponse>(request).await
+    }
+
+    async fn cloud_workspaces_attempt(
+        &self,
+        prefix: String,
+        reponame: String,
+    ) -> Result<WorkspacesDataResponse, SaplingRemoteApiError> {
+        tracing::info!(
+            "Requesting workspaces with prefix {} in repo {} ",
+            prefix,
+            reponame
+        );
+        let url = self.build_url(paths::CLOUD_WORKSPACES)?;
+        let workspace_req = CloudWorkspacesRequest {
+            prefix: prefix.to_string(),
+            reponame: reponame.to_string(),
+        };
+        let request = self
+            .configure_request(self.inner.client.post(url))?
+            .cbor(&workspace_req.to_wire())
+            .map_err(SaplingRemoteApiError::RequestSerializationFailed)?;
+
+        self.fetch_single::<WorkspacesDataResponse>(request).await
+    }
+
+    async fn cloud_references_attempt(
+        &self,
+        data: GetReferencesParams,
+    ) -> Result<ReferencesDataResponse, SaplingRemoteApiError> {
+        tracing::info!(
+            "Requesting cloud references for the workspace '{}' in the repo '{}' ",
+            data.workspace,
+            data.reponame
+        );
+        let url = self.build_url(paths::CLOUD_REFERENCES)?;
+        let request = self
+            .configure_request(self.inner.client.post(url))?
+            .cbor(&data.to_wire())
+            .map_err(SaplingRemoteApiError::RequestSerializationFailed)?;
+
+        self.fetch_single::<ReferencesDataResponse>(request).await
+    }
+
+    async fn cloud_update_references_attempt(
+        &self,
+        data: UpdateReferencesParams,
+    ) -> Result<ReferencesDataResponse, SaplingRemoteApiError> {
+        tracing::info!(
+            "Requesting update cloud references for the workspace '{}' in the repo '{}'",
+            data.workspace,
+            data.reponame
+        );
+        let url = self.build_url(paths::CLOUD_UPDATE_REFERENCES)?;
+        let request = self
+            .configure_request(self.inner.client.post(url))?
+            .cbor(&data.to_wire())
+            .map_err(SaplingRemoteApiError::RequestSerializationFailed)?;
+
+        self.fetch_single::<ReferencesDataResponse>(request).await
+    }
 }
 
 #[async_trait]
@@ -1675,18 +1753,11 @@ impl SaplingRemoteApi for Client {
         workspace: String,
         reponame: String,
     ) -> Result<WorkspaceDataResponse, SaplingRemoteApiError> {
-        tracing::info!("Requesting workspace {} in repo {} ", workspace, reponame);
-        let url = self.build_url(paths::CLOUD_WORKSPACE)?;
-        let workspace_req = CloudWorkspaceRequest {
-            workspace: workspace.to_string(),
-            reponame: reponame.to_string(),
-        };
-        let request = self
-            .configure_request(self.inner.client.post(url))?
-            .cbor(&workspace_req.to_wire())
-            .map_err(SaplingRemoteApiError::RequestSerializationFailed)?;
-
-        self.fetch_single::<WorkspaceDataResponse>(request).await
+        self.with_retry(|this| {
+            this.cloud_workspace_attempt(workspace.clone(), reponame.clone())
+                .boxed()
+        })
+        .await
     }
 
     async fn cloud_workspaces(
@@ -1694,58 +1765,27 @@ impl SaplingRemoteApi for Client {
         prefix: String,
         reponame: String,
     ) -> Result<WorkspacesDataResponse, SaplingRemoteApiError> {
-        tracing::info!(
-            "Requesting workspaces with prefix {} in repo {} ",
-            prefix,
-            reponame
-        );
-        let url = self.build_url(paths::CLOUD_WORKSPACES)?;
-        let workspace_req = CloudWorkspacesRequest {
-            prefix: prefix.to_string(),
-            reponame: reponame.to_string(),
-        };
-        let request = self
-            .configure_request(self.inner.client.post(url))?
-            .cbor(&workspace_req.to_wire())
-            .map_err(SaplingRemoteApiError::RequestSerializationFailed)?;
-
-        self.fetch_single::<WorkspacesDataResponse>(request).await
+        self.with_retry(|this| {
+            this.cloud_workspaces_attempt(prefix.clone(), reponame.clone())
+                .boxed()
+        })
+        .await
     }
 
     async fn cloud_references(
         &self,
         data: GetReferencesParams,
     ) -> Result<ReferencesDataResponse, SaplingRemoteApiError> {
-        tracing::info!(
-            "Requesting cloud references for the workspace '{}' in the repo '{}' ",
-            data.workspace,
-            data.reponame
-        );
-        let url = self.build_url(paths::CLOUD_REFERENCES)?;
-        let request = self
-            .configure_request(self.inner.client.post(url))?
-            .cbor(&data.to_wire())
-            .map_err(SaplingRemoteApiError::RequestSerializationFailed)?;
-
-        self.fetch_single::<ReferencesDataResponse>(request).await
+        self.with_retry(|this| this.cloud_references_attempt(data.clone()).boxed())
+            .await
     }
 
     async fn cloud_update_references(
         &self,
         data: UpdateReferencesParams,
     ) -> Result<ReferencesDataResponse, SaplingRemoteApiError> {
-        tracing::info!(
-            "Requesting update cloud references for the workspace '{}' in the repo '{}'",
-            data.workspace,
-            data.reponame
-        );
-        let url = self.build_url(paths::CLOUD_UPDATE_REFERENCES)?;
-        let request = self
-            .configure_request(self.inner.client.post(url))?
-            .cbor(&data.to_wire())
-            .map_err(SaplingRemoteApiError::RequestSerializationFailed)?;
-
-        self.fetch_single::<ReferencesDataResponse>(request).await
+        self.with_retry(|this| this.cloud_update_references_attempt(data.clone()).boxed())
+            .await
     }
 
     async fn suffix_query(
