@@ -165,9 +165,7 @@ pub enum BookmarkMovementError {
     )]
     PushRedirectorEnabledForPublishing { bookmark: BookmarkKey },
 
-    #[error(
-        "Bookmark '{bookmark}' cannot be moved because scratch bookmarks are being redirected"
-    )]
+    #[error("Bookmark '{bookmark}' cannot be moved because scratch bookmarks are being redirected")]
     PushRedirectorEnabledForScratch { bookmark: BookmarkKey },
 
     #[error(transparent)]
