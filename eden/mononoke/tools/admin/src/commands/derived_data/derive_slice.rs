@@ -9,6 +9,7 @@ use std::path::PathBuf;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
+use std::sync::Mutex;
 
 use anyhow::Context;
 use anyhow::Result;
@@ -23,6 +24,7 @@ use commit_graph_types::segments::SegmentedSliceDescription;
 use context::CoreContext;
 use context::SessionClass;
 use derived_data_manager::DerivedDataManager;
+use derived_data_manager::Rederivation;
 use futures::stream;
 use futures::StreamExt;
 use futures::TryStreamExt;
@@ -103,7 +105,14 @@ async fn derive_boundaries(
     boundaries: BoundaryChangesets,
     boundaries_concurrency: usize,
     derived_data_type: DerivableType,
+    rederive: bool,
 ) -> Result<()> {
+    let rederivation: Option<Arc<dyn Rederivation>> = if rederive {
+        Some(Arc::new(Mutex::new(boundaries.iter().copied().collect())))
+    } else {
+        None
+    };
+
     let boundaries_count = boundaries.len();
     debug!(
         ctx.logger(),
@@ -113,14 +122,14 @@ async fn derive_boundaries(
     stream::iter(boundaries)
         .map(Ok)
         .try_for_each_concurrent(boundaries_concurrency, |csid| {
-            cloned!(ctx, manager, completed);
+            cloned!(ctx, manager, completed, rederivation);
             async move {
                 task::spawn(async move {
                     let (derive_boundary_stats, ()) = BulkDerivation::derive_from_predecessor(
                         &manager,
                         &ctx,
                         csid,
-                        None,
+                        rederivation,
                         derived_data_type,
                     )
                     .try_timed()
@@ -152,6 +161,7 @@ async fn inner_derive_slice(
     slice_count: usize,
     completed: Arc<AtomicUsize>,
     derived_data_type: DerivableType,
+    rederive: bool,
 ) -> Result<()> {
     let segment_count = slice_description.segments.len();
     let (stats, ()) = stream::iter(slice_description.segments.into_iter().enumerate())
@@ -177,15 +187,27 @@ async fn inner_derive_slice(
 
                 let mut derive_segment_completion_time = std::time::Duration::from_millis(0);
                 for chunk in segment_cs_ids.chunks(20) {
-                    let (derive_batch_stats, _) = BulkDerivation::derive_exactly_batch(
-                        &manager,
-                        &ctx,
-                        chunk,
-                        None,
-                        derived_data_type,
-                    )
-                    .try_timed()
-                    .await?;
+                    let (derive_batch_stats, _) = if rederive {
+                        BulkDerivation::derive_exactly_batch(
+                            &manager,
+                            &ctx,
+                            chunk,
+                            None,
+                            derived_data_type,
+                        )
+                        .try_timed()
+                        .await?
+                    } else {
+                        BulkDerivation::derive_exactly_underived_batch(
+                            &manager,
+                            &ctx,
+                            chunk,
+                            None,
+                            derived_data_type,
+                        )
+                        .try_timed()
+                        .await?
+                    };
                     derive_segment_completion_time += derive_batch_stats.completion_time;
                 }
 
@@ -243,6 +265,7 @@ pub(super) async fn derive_slice(
                 boundaries,
                 args.boundaries_concurrency,
                 derived_data_type,
+                args.rederive,
             )
             .await
         }
@@ -270,6 +293,7 @@ pub(super) async fn derive_slice(
                                 slice_count,
                                 completed,
                                 derived_data_type,
+                                args.rederive,
                             )
                             .await
                         })
