@@ -1079,9 +1079,7 @@ def _simplemerge(ui, basectx, ctx, p1ctx, manifestbuilder):
             "",
             "quit",
             False,
-            _(
-                "quit an interrupted rebase and keep the already rebased commits (EXPERIMENTAL)"
-            ),
+            _("quit an interrupted rebase and keep the already rebased commits"),
         ),
         (
             "",
@@ -1161,7 +1159,8 @@ def rebase(ui, repo, templ=None, **opts):
     After manually resolving conflicts, resume the rebase with
     :prog:`rebase --continue`. If you are not able to successfully
     resolve all conflicts, run :prog:`rebase --abort` to abort the
-    rebase.
+    entire rebase; or run :prog:`rebase --quit` to quit the interrupted
+    rebase state and keep the already rebased commits.
 
     Alternatively, you can use a custom merge tool to automate conflict
     resolution. To specify a custom merge tool, use the ``--tool`` flag. See
