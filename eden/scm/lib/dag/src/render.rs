@@ -22,6 +22,8 @@ pub use renderdag::*;
 use crate::nameset::SyncSetQuery;
 #[cfg(any(test, feature = "indexedlog-backend"))]
 use crate::ops::IdConvert;
+#[cfg(any(test, feature = "indexedlog-backend"))]
+use crate::Dag;
 use crate::DagAlgorithm;
 #[cfg(any(test, feature = "indexedlog-backend"))]
 use crate::Group;
@@ -29,12 +31,10 @@ use crate::Group;
 use crate::IdSpan;
 #[cfg(any(test, feature = "indexedlog-backend"))]
 use crate::Level;
-#[cfg(any(test, feature = "indexedlog-backend"))]
-use crate::NameDag;
 use crate::Set;
 use crate::Vertex;
 
-/// Render a NameDag or MemNameDag into a String.
+/// Render a Dag or MemDag into a String.
 pub fn render_namedag(
     dag: &(impl DagAlgorithm + ?Sized),
     get_message: impl Fn(&Vertex) -> Option<String>,
@@ -68,7 +68,7 @@ pub fn render_namedag(
     Ok(output)
 }
 
-/// Render a NameDag or MemNameDag into structured `GraphRow`s.
+/// Render a Dag or MemDag into structured `GraphRow`s.
 /// The `GraphRow` can serialize to other formats.
 ///
 /// If `subset` is provided, only render a subset of the graph.
@@ -144,7 +144,7 @@ fn dag_to_renderer_next_rows(
 #[cfg(any(test, feature = "indexedlog-backend"))]
 pub fn render_segment_dag(
     mut out: impl Write,
-    dag: &NameDag,
+    dag: &Dag,
     level: Level,
     group: Group,
 ) -> Result<()> {

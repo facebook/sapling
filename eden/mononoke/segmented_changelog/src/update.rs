@@ -28,7 +28,7 @@ use metaconfig_types::SegmentedChangelogHeadConfig;
 use mononoke_types::ChangesetId;
 use slog::info;
 
-use crate::dag::NameDagBuilder;
+use crate::dag::DagBuilder;
 use crate::dag::Vertex;
 use crate::dag::VertexListWithOptions;
 use crate::dag::VertexOptions;
@@ -104,18 +104,18 @@ pub async fn vertexlist_from_seedheads(
     Ok(heads_with_options)
 }
 
-pub type ServerNameDag = crate::dag::namedag::AbstractNameDag<InProcessIdDag, IdMapWrapper, (), ()>;
+pub type ServerDag = crate::dag::namedag::AbstractDag<InProcessIdDag, IdMapWrapper, (), ()>;
 
-/// Convert a server IdDag and IdMap to a NameDag
-/// Note: you will need to call NameDag::map().flush_writes
+/// Convert a server IdDag and IdMap to a Dag
+/// Note: you will need to call Dag::map().flush_writes
 /// to write out updates to the IdMap
 pub fn server_namedag(
     ctx: CoreContext,
     iddag: InProcessIdDag,
     idmap: Arc<dyn IdMap>,
-) -> Result<ServerNameDag> {
+) -> Result<ServerDag> {
     let idmap = IdMapWrapper::new(ctx, idmap);
-    NameDagBuilder::new_with_idmap_dag(idmap, iddag)
+    DagBuilder::new_with_idmap_dag(idmap, iddag)
         .build()
         .map_err(anyhow::Error::from)
 }

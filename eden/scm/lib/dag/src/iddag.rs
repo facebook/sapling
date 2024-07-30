@@ -64,7 +64,7 @@ use crate::VerLink;
 /// graphs about how segments help with ancestry queries.
 ///
 /// [`IdDag`] is often used together with [`IdMap`] to allow customized names
-/// on vertexes. The [`NameDag`] type provides an easy-to-use interface to
+/// on vertexes. The [`Dag`] type provides an easy-to-use interface to
 /// keep [`IdDag`] and [`IdMap`] in sync.
 #[derive(Clone, Serialize, Deserialize)]
 pub struct IdDag<Store> {

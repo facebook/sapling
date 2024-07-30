@@ -9,7 +9,7 @@ use changeset_fetcher::ArcChangesetFetcher;
 use context::CoreContext;
 
 use crate::dag::errors::BackendError;
-use crate::dag::namedag::MemNameDag;
+use crate::dag::namedag::MemDag;
 use crate::dag::ops::Parents;
 use crate::dag::Result;
 use crate::dag::Vertex;
@@ -43,8 +43,8 @@ impl Parents for FetchParents {
         Ok(parents.iter().map(vertex_name_from_cs_id).collect())
     }
 
-    async fn hint_subdag_for_insertion(&self, _heads: &[Vertex]) -> Result<MemNameDag> {
+    async fn hint_subdag_for_insertion(&self, _heads: &[Vertex]) -> Result<MemDag> {
         // No dirty scope here, so always return empty
-        Ok(MemNameDag::new())
+        Ok(MemDag::new())
     }
 }

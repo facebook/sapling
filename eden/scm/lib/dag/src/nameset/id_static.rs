@@ -401,11 +401,11 @@ pub(crate) mod tests {
     use crate::nameset::slice::SliceSet;
     use crate::nameset::union::UnionSet;
     use crate::tests::build_segments;
+    use crate::Dag;
     use crate::DagAlgorithm;
-    use crate::NameDag;
 
     /// Test with a predefined DAG.
-    pub(crate) fn with_dag<R, F: Fn(&NameDag) -> R>(func: F) -> R {
+    pub(crate) fn with_dag<R, F: Fn(&Dag) -> R>(func: F) -> R {
         let built = build_segments(
             r#"
             A--B--C--D

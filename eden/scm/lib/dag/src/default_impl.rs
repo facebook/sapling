@@ -13,7 +13,7 @@ use futures::StreamExt;
 use futures::TryStreamExt;
 
 use crate::errors::programming;
-use crate::namedag::MemNameDag;
+use crate::namedag::MemDag;
 use crate::nameset::hints::Hints;
 use crate::ops::DagAddHeads;
 use crate::ops::IdConvert;
@@ -89,7 +89,7 @@ use crate::VertexListWithOptions;
 pub(crate) async fn beautify(
     this: &(impl DagAlgorithm + ?Sized),
     main_branch: Option<Set>,
-) -> Result<MemNameDag> {
+) -> Result<MemDag> {
     // Prepare input for utils::beautify_graph.
     // Maintain usize <-> Vertex map. Also fetch the Vertex <-> Id mapping (via all.iter).
     let all = this.all().await?;
@@ -120,7 +120,7 @@ pub(crate) async fn beautify(
     let sorted = utils::beautify_graph(&parents_vec, &priorities);
 
     // Recreate the graph using the given order.
-    let mut dag = MemNameDag::new();
+    let mut dag = MemDag::new();
     let snapshot = this.dag_snapshot()?;
     for i in sorted.into_iter().rev() {
         let heads: Vec<Vertex> = vec![usize_to_vertex[i].clone()];
@@ -130,13 +130,13 @@ pub(crate) async fn beautify(
 }
 
 /// Provide a sub-graph containing only the specified set.
-pub(crate) async fn subdag(this: &(impl DagAlgorithm + ?Sized), set: Set) -> Result<MemNameDag> {
+pub(crate) async fn subdag(this: &(impl DagAlgorithm + ?Sized), set: Set) -> Result<MemDag> {
     let set = this.sort(&set).await?;
     let parents = match set.to_parents().await? {
         Some(p) => p,
         None => return programming("Set returned by dag.sort() should support to_parents()"),
     };
-    let mut dag = MemNameDag::new();
+    let mut dag = MemDag::new();
     let heads = this.heads_ancestors(set).await?;
     // "heads" is in DESC order. Use reversed order for insertion so the
     // resulting subdag might preserve the same order with the original dag.
@@ -197,13 +197,13 @@ pub(crate) async fn set_to_parents(set: &Set) -> Result<Option<impl Parents>> {
             Ok(parents)
         }
 
-        async fn hint_subdag_for_insertion(&self, _heads: &[Vertex]) -> Result<MemNameDag> {
+        async fn hint_subdag_for_insertion(&self, _heads: &[Vertex]) -> Result<MemDag> {
             // The `IdParents` is not intended to be inserted to other graphs.
             tracing::warn!(
                 target: "dag::idparents",
                 "IdParents does not implement hint_subdag_for_insertion() for efficient insertion"
             );
-            Ok(MemNameDag::new())
+            Ok(MemDag::new())
         }
     }
 
@@ -415,7 +415,7 @@ pub(crate) async fn hint_subdag_for_insertion(
     this: &(impl Parents + ?Sized),
     scope: &Set,
     heads: &[Vertex],
-) -> Result<MemNameDag> {
+) -> Result<MemDag> {
     let count = scope.count_slow().await?;
     tracing::trace!("hint_subdag_for_insertion: pending vertexes: {}", count);
 
@@ -441,16 +441,16 @@ pub(crate) async fn hint_subdag_for_insertion(
             Ok(filtered_parents)
         }
 
-        async fn hint_subdag_for_insertion(&self, _heads: &[Vertex]) -> Result<MemNameDag> {
+        async fn hint_subdag_for_insertion(&self, _heads: &[Vertex]) -> Result<MemDag> {
             // No need to use such a hint (to avoid infinite recursion).
             // Pending names should exist in the graph without using remote fetching.
-            Ok(MemNameDag::new())
+            Ok(MemDag::new())
         }
     }
 
     // Insert vertexes in `scope` to `dag`.
-    let mut dag = MemNameDag::new();
-    // The MemNameDag should not be lazy.
+    let mut dag = MemDag::new();
+    // The MemDag should not be lazy.
     assert!(!dag.is_vertex_lazy());
 
     let scoped_parents = ScopedParents {

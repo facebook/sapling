@@ -8,7 +8,7 @@
 use std::collections::HashMap;
 use std::collections::HashSet;
 
-use dag::namedag::MemNameDag;
+use dag::namedag::MemDag;
 use dag::nameset::SyncSetQuery;
 use dag::ops::ImportAscii;
 use dag::DagAlgorithm;
@@ -40,7 +40,7 @@ pub(crate) fn render_string_with_order(
         ancestors,
         missing,
     } = fixture;
-    let mut dag = MemNameDag::new();
+    let mut dag = MemDag::new();
     dag.import_ascii_with_heads(ascii, Some(heads)).unwrap();
     // str -> Vertex
     let v = |s: &str| Vertex::copy_from(s.as_bytes());

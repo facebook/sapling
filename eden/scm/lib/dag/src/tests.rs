@@ -18,11 +18,11 @@ use crate::ops::DagPersistent;
 use crate::ops::ImportAscii;
 #[cfg(feature = "render")]
 use crate::render::render_namedag;
+use crate::Dag;
 use crate::DagAlgorithm;
 use crate::IdMap;
 #[cfg(test)]
 use crate::IdSet;
-use crate::NameDag;
 use crate::Result;
 use crate::Set;
 
@@ -64,7 +64,7 @@ pub(crate) use test_dag::ProtocolMonitor;
 
 #[cfg(test)]
 use crate::iddag::FirstAncestorConstraint;
-use crate::namedag::MemNameDag;
+use crate::namedag::MemDag;
 use crate::ops::IdConvert;
 #[cfg(test)]
 use crate::protocol::Process;
@@ -116,7 +116,7 @@ fn test_dag_sort_version<T: DagAlgorithm + IdConvert>(dag: &T) -> Result<()> {
     let sets = [
         nameset(""),
         nameset("A C B"),
-        r(from_ascii(MemNameDag::new(), ASCII_DAG3).sort(&nameset("C A B")))?,
+        r(from_ascii(MemDag::new(), ASCII_DAG3).sort(&nameset("C A B")))?,
     ];
     for set in sets {
         let sorted = r(dag.sort(&set))?;
@@ -275,7 +275,7 @@ fn test_specific_dag_import(dag: impl DagAlgorithm + DagAddHeads) -> Result<()> 
     let dag1 = from_ascii_with_heads(dag, ascii, Some(&["J", "K"][..]));
 
     let dir = tempdir().unwrap();
-    let mut dag2 = NameDag::open(dir.path())?;
+    let mut dag2 = Dag::open(dir.path())?;
     r(dag2.import_and_flush(&dag1, nameset("J")))?;
     #[cfg(feature = "render")]
     assert_eq!(
@@ -305,7 +305,7 @@ fn test_specific_dag_import(dag: impl DagAlgorithm + DagAddHeads) -> Result<()> 
     );
 
     // Check that dag2 is actually flushed to disk.
-    let dag3 = NameDag::open(dir.path())?;
+    let dag3 = Dag::open(dir.path())?;
     #[cfg(feature = "render")]
     assert_eq!(
         render(&dag3),
@@ -393,7 +393,7 @@ fn test_import_ascii_with_vertex_fn() {
         |/
         A
     "#;
-    let mut dag = MemNameDag::new();
+    let mut dag = MemDag::new();
     let vertex_fn = |s: &str| -> Vertex {
         let mut bytes = s.as_bytes().to_vec();
         bytes.push(b'0');
@@ -405,7 +405,7 @@ fn test_import_ascii_with_vertex_fn() {
 
 #[test]
 fn test_mem_namedag() {
-    let new_dag = MemNameDag::new;
+    let new_dag = MemDag::new;
     test_generic_dag(&new_dag);
     test_specific_dag_import(new_dag()).unwrap();
 }
@@ -419,7 +419,7 @@ fn test_namedag() {
     let counter = AtomicUsize::new(0);
     let new_dag = move || {
         let count = counter.fetch_add(1, Ordering::AcqRel);
-        NameDag::open(dir.path().join(count.to_string())).unwrap()
+        Dag::open(dir.path().join(count.to_string())).unwrap()
     };
     test_generic_dag(&new_dag);
     test_specific_dag_import(new_dag()).unwrap();
@@ -758,7 +758,7 @@ Lv0: RH0-6[] 7-10[5] H11-12[6, 10] N0-N3[1] N4-N5[N3, 9]"#
 #[test]
 fn test_namedag_reassign_master() -> crate::Result<()> {
     let dir = tempdir().unwrap();
-    let mut dag = NameDag::open(dir.path())?;
+    let mut dag = Dag::open(dir.path())?;
     dag = from_ascii(dag, "A-B-C");
 
     // The in-memory DAG can answer parent_names questions.
@@ -1405,12 +1405,12 @@ fn get_parents_func_from_ascii(text: &str) -> impl Fn(Vertex) -> Result<Vec<Vert
 /// Result of `build_segments`.
 pub(crate) struct BuildSegmentResult {
     pub(crate) ascii: Vec<String>,
-    pub(crate) name_dag: NameDag,
+    pub(crate) name_dag: Dag,
     pub(crate) dir: tempfile::TempDir,
 }
 
 /// Take an ASCII DAG, assign segments from given heads.
-/// Return the ASCII DAG and the built NameDag.
+/// Return the ASCII DAG and the built Dag.
 pub(crate) fn build_segments(text: &str, heads: &str, segment_size: usize) -> BuildSegmentResult {
     let mut dag = TestDag::new_with_segment_size(segment_size);
 

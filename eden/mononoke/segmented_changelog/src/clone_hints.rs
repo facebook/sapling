@@ -31,7 +31,7 @@ use sql_ext::SqlConnections;
 
 use crate::idmap::IdMap;
 use crate::types::IdMapVersion;
-use crate::update::ServerNameDag;
+use crate::update::ServerDag;
 use crate::DagId;
 
 /// Number of hint entries to store in a single chunk.
@@ -128,7 +128,7 @@ impl CloneHints {
     pub(crate) async fn add_hints(
         &self,
         ctx: &CoreContext,
-        namedag: &ServerNameDag,
+        namedag: &ServerDag,
         idmap_version: IdMapVersion,
         bonsai_hg_mapping: &dyn BonsaiHgMapping,
     ) -> Result<()> {

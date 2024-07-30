@@ -15,7 +15,7 @@ use futures::TryStreamExt;
 use crate::iddag::IdDag;
 use crate::iddagstore::IdDagStore;
 use crate::idmap::IdMapAssignHead;
-use crate::namedag::AbstractNameDag;
+use crate::namedag::AbstractDag;
 use crate::nameset::Set;
 use crate::ops::CheckIntegrity;
 use crate::ops::DagAlgorithm;
@@ -29,7 +29,7 @@ use crate::Result;
 use crate::Vertex;
 
 #[async_trait::async_trait]
-impl<IS, M, P, S> CheckIntegrity for AbstractNameDag<IdDag<IS>, M, P, S>
+impl<IS, M, P, S> CheckIntegrity for AbstractDag<IdDag<IS>, M, P, S>
 where
     IS: IdDagStore + Persist + 'static,
     IdDag<IS>: TryClone,

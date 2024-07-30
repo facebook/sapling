@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use super::super::NameDag;
+use super::super::Dag;
 use super::IdStaticSet;
 use super::Set;
 use crate::IdSet;
@@ -25,8 +25,8 @@ impl<'a> From<(LegacyCodeNeedIdAccess, &'a IdStaticSet)> for IdSet {
     }
 }
 
-impl<'a> From<(LegacyCodeNeedIdAccess, IdSet, &'a NameDag)> for Set {
-    fn from(value: (LegacyCodeNeedIdAccess, IdSet, &'a NameDag)) -> Set {
+impl<'a> From<(LegacyCodeNeedIdAccess, IdSet, &'a Dag)> for Set {
+    fn from(value: (LegacyCodeNeedIdAccess, IdSet, &'a Dag)) -> Set {
         Set::from_spans_dag(value.1, value.2).unwrap()
     }
 }

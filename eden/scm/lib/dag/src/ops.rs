@@ -19,7 +19,7 @@ use crate::id::Group;
 use crate::id::Id;
 use crate::id::Vertex;
 pub use crate::iddag::IdDagAlgorithm;
-use crate::namedag::MemNameDag;
+use crate::namedag::MemDag;
 use crate::nameset::id_lazy::IdLazySet;
 use crate::nameset::id_static::IdStaticSet;
 use crate::nameset::Set;
@@ -42,12 +42,12 @@ pub trait DagAlgorithm: Send + Sync {
     async fn sort(&self, set: &Set) -> Result<Set>;
 
     /// Re-create the graph so it looks better when rendered.
-    async fn beautify(&self, main_branch: Option<Set>) -> Result<MemNameDag> {
+    async fn beautify(&self, main_branch: Option<Set>) -> Result<MemDag> {
         default_impl::beautify(self, main_branch).await
     }
 
     /// Extract a sub graph containing only specified vertexes.
-    async fn subdag(&self, set: Set) -> Result<MemNameDag> {
+    async fn subdag(&self, set: Set) -> Result<MemDag> {
         default_impl::subdag(self, set).await
     }
 
@@ -67,7 +67,7 @@ pub trait DagAlgorithm: Send + Sync {
 
     /// Calculates parents of the given set.
     ///
-    /// Note: Parent order is not preserved. Use [`NameDag::parent_names`]
+    /// Note: Parent order is not preserved. Use [`Dag::parent_names`]
     /// to preserve order.
     async fn parents(&self, set: Set) -> Result<Set> {
         default_impl::parents(self, set).await
@@ -259,7 +259,7 @@ pub trait Parents: Send + Sync {
     /// returning an empty or "incorrect" graph does not hurt correctness. But
     /// might hurt performance. Returning a set that contains vertexes that do
     /// overlap in the existing graph is incorrect.
-    async fn hint_subdag_for_insertion(&self, _heads: &[Vertex]) -> Result<MemNameDag>;
+    async fn hint_subdag_for_insertion(&self, _heads: &[Vertex]) -> Result<MemDag>;
 }
 
 #[async_trait::async_trait]
@@ -268,7 +268,7 @@ impl Parents for Arc<dyn DagAlgorithm + Send + Sync> {
         DagAlgorithm::parent_names(self, name).await
     }
 
-    async fn hint_subdag_for_insertion(&self, heads: &[Vertex]) -> Result<MemNameDag> {
+    async fn hint_subdag_for_insertion(&self, heads: &[Vertex]) -> Result<MemDag> {
         let scope = self.dirty().await?;
         default_impl::hint_subdag_for_insertion(self, &scope, heads).await
     }
@@ -280,7 +280,7 @@ impl Parents for &(dyn DagAlgorithm + Send + Sync) {
         DagAlgorithm::parent_names(*self, name).await
     }
 
-    async fn hint_subdag_for_insertion(&self, heads: &[Vertex]) -> Result<MemNameDag> {
+    async fn hint_subdag_for_insertion(&self, heads: &[Vertex]) -> Result<MemDag> {
         let scope = self.dirty().await?;
         default_impl::hint_subdag_for_insertion(self, &scope, heads).await
     }
@@ -292,9 +292,9 @@ impl<'a> Parents for Box<dyn Fn(Vertex) -> Result<Vec<Vertex>> + Send + Sync + '
         (self)(name)
     }
 
-    async fn hint_subdag_for_insertion(&self, _heads: &[Vertex]) -> Result<MemNameDag> {
+    async fn hint_subdag_for_insertion(&self, _heads: &[Vertex]) -> Result<MemDag> {
         // No clear way to detect the "dirty" scope.
-        Ok(MemNameDag::new())
+        Ok(MemDag::new())
     }
 }
 
@@ -307,7 +307,7 @@ impl Parents for std::collections::HashMap<Vertex, Vec<Vertex>> {
         }
     }
 
-    async fn hint_subdag_for_insertion(&self, heads: &[Vertex]) -> Result<MemNameDag> {
+    async fn hint_subdag_for_insertion(&self, heads: &[Vertex]) -> Result<MemDag> {
         let mut keys: Vec<Vertex> = self.keys().cloned().collect();
         keys.sort_unstable();
         let scope = Set::from_static_names(keys);

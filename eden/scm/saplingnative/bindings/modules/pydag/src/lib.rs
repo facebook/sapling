@@ -58,7 +58,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
         py_fn!(py, describe_bytes(bytes: PyBytes)),
     )?;
 
-    // Repair NameDag storage.
+    // Repair Dag storage.
     m.add(py, "repair", py_fn!(py, repair(path: &PyPath)))?;
 
     // Configure related settings.
@@ -79,7 +79,7 @@ fn describe_bytes(py: Python, bytes: PyBytes) -> PyResult<String> {
 }
 
 fn repair(py: Python, path: &PyPath) -> PyResult<String> {
-    dag::NameDag::repair(path).map_pyerr(py)
+    dag::Dag::repair(path).map_pyerr(py)
 }
 
 fn configure(py: Python, config: ImplInto<Arc<dyn Config + Send + Sync>>) -> PyResult<PyNone> {

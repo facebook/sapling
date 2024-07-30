@@ -13,10 +13,10 @@ use dag::nameset::SyncSetQuery;
 use dag::ops::DagAlgorithm;
 use dag::ops::DagPersistent;
 use dag::ops::IdConvert;
+use dag::Dag;
 use dag::Group;
 use dag::Id;
 use dag::IdSet;
-use dag::NameDag;
 use dag::OnDiskIdDag;
 use dag::Vertex;
 use dag::VertexListWithOptions;
@@ -27,21 +27,21 @@ use crate::parse_bindag;
 use crate::ParentRevs;
 
 /// Context for testing purpose.
-/// Contains the parsed bindag and NameDag from the dag crate.
+/// Contains the parsed bindag and Dag from the dag crate.
 pub struct GeneralTestContext<T> {
     /// Plain DAG parsed from bindag
     pub parents: Vec<T>,
 
     /// Complex DAG, with ids re-assigned
-    pub dag: NameDag,
+    pub dag: Dag,
 
-    /// Simple IdMap. NameDag Id -> Plain DAG id
+    /// Simple IdMap. Dag Id -> Plain DAG id
     pub idmap: HashMap<Id, usize>,
 
-    /// Plain DAG id -> NameDag Id.
+    /// Plain DAG id -> Dag Id.
     pub rev_idmap: Vec<Id>,
 
-    /// Temporary dir containing the NameDag daga.
+    /// Temporary dir containing the Dag daga.
     pub dir: TempDir,
 }
 
@@ -63,7 +63,7 @@ impl TestContext {
 
 impl<T: AsRef<[usize]> + Send + Sync + Clone + 'static> GeneralTestContext<T> {
     pub fn from_parents(parents: Vec<T>) -> Self {
-        // Prepare NameDag
+        // Prepare Dag
         let parents_by_name = {
             let parents = parents.clone();
             move |name: Vertex| -> dag::Result<Vec<Vertex>> {
@@ -96,7 +96,7 @@ impl<T: AsRef<[usize]> + Send + Sync + Clone + 'static> GeneralTestContext<T> {
         let master_names: Vec<Vertex> = get_heads(parents.len() / 2);
 
         let dir = tempfile::tempdir().unwrap();
-        let mut dag = NameDag::open(dir.path()).unwrap();
+        let mut dag = Dag::open(dir.path()).unwrap();
         let parents_map: Box<dyn Fn(Vertex) -> dag::Result<Vec<Vertex>> + Send + Sync> =
             Box::new(parents_by_name);
         let heads = VertexListWithOptions::from(master_names)

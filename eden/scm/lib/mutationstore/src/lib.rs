@@ -37,7 +37,7 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use bitflags::bitflags;
-use dag::namedag::MemNameDag;
+use dag::namedag::MemDag;
 use dag::nameset::hints::Flags;
 use dag::ops::DagAddHeads;
 use dag::DagAlgorithm;
@@ -366,14 +366,14 @@ impl MutationStore {
     /// commit replacement relations.  The returned graph supports graph
     /// operations like common ancestors, heads, roots, etc. Parents in the
     /// graph are predecessors.
-    pub async fn get_dag(&self, nodes: Vec<Node>) -> Result<MemNameDag> {
+    pub async fn get_dag(&self, nodes: Vec<Node>) -> Result<MemDag> {
         self.get_dag_advanced(nodes, DagFlags::SUCCESSORS | DagFlags::PREDECESSORS)
             .await
     }
 
     /// Advanced version of `get_dag`. Specify whether to include successors or
     /// predecessors explicitly.
-    pub async fn get_dag_advanced(&self, nodes: Vec<Node>, flags: DagFlags) -> Result<MemNameDag> {
+    pub async fn get_dag_advanced(&self, nodes: Vec<Node>, flags: DagFlags) -> Result<MemDag> {
         // Raw parent map. Might contain cycles.
         let mut parent_map = HashMap::<Node, Vec<Node>>::new();
         let mut non_heads = HashSet::<Node>::new();
@@ -432,7 +432,7 @@ impl MutationStore {
             .collect();
 
         // Construct the graph.
-        let mut dag = MemNameDag::new();
+        let mut dag = MemDag::new();
         let parents: Box<dyn Fn(Vertex) -> dag::Result<Vec<Vertex>> + Send + Sync> =
             Box::new(parent_func);
 

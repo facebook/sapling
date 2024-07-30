@@ -33,9 +33,9 @@ use crate::protocol::RemoteIdConvertProtocol;
 use crate::render::render_namedag;
 use crate::tests::DrawDag;
 use crate::CloneData;
+use crate::Dag;
 use crate::Group;
 use crate::Level;
-use crate::NameDag;
 use crate::Result;
 use crate::Set;
 use crate::Vertex;
@@ -43,7 +43,7 @@ use crate::VertexListWithOptions;
 
 /// Dag structure for testing purpose.
 pub struct TestDag {
-    pub dag: NameDag,
+    pub dag: Dag,
     pub seg_size: usize,
     pub dir: tempfile::TempDir,
     pub output: Arc<Mutex<Vec<String>>>,
@@ -102,7 +102,7 @@ impl TestDag {
     /// Creates a `TestDag` with a specific segment size.
     pub fn new_with_segment_size(seg_size: usize) -> Self {
         let dir = tempfile::tempdir().unwrap();
-        let dag = NameDag::open(dir.path().join("n")).unwrap();
+        let dag = Dag::open(dir.path().join("n")).unwrap();
         Self {
             dir,
             dag,
@@ -113,7 +113,7 @@ impl TestDag {
 
     /// Reopen the dag. Drop in-memory state including caches.
     pub fn reopen(&mut self) {
-        let mut dag = NameDag::open(self.dir.path().join("n")).unwrap();
+        let mut dag = Dag::open(self.dir.path().join("n")).unwrap();
         dag.set_remote_protocol(self.dag.get_remote_protocol());
         self.dag = dag;
     }
@@ -458,7 +458,7 @@ impl TestDag {
 }
 
 impl Deref for TestDag {
-    type Target = NameDag;
+    type Target = Dag;
 
     fn deref(&self) -> &Self::Target {
         &self.dag

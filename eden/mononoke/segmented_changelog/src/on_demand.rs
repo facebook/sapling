@@ -47,7 +47,7 @@ use crate::segmented_changelog_delegate;
 use crate::update::server_namedag;
 use crate::update::vertexlist_from_seedheads;
 use crate::update::SeedHead;
-use crate::update::ServerNameDag;
+use crate::update::ServerDag;
 use crate::CloneData;
 use crate::CloneHints;
 use crate::InProcessIdDag;
@@ -107,7 +107,7 @@ mod actual_update {
 
 pub struct OnDemandUpdateSegmentedChangelog {
     repo_id: RepositoryId,
-    namedag: Arc<RwLock<ServerNameDag>>,
+    namedag: Arc<RwLock<ServerDag>>,
     changeset_fetcher: ArcChangesetFetcher,
     bookmarks: Arc<dyn Bookmarks>,
     seed_heads: Vec<SeedHead>,
@@ -328,7 +328,7 @@ impl OnDemandUpdateSegmentedChangelog {
 async fn the_actual_update(
     ctx: CoreContext,
     repo_id: RepositoryId,
-    namedag: Arc<RwLock<ServerNameDag>>,
+    namedag: Arc<RwLock<ServerDag>>,
     changeset_fetcher: ArcChangesetFetcher,
     heads: &VertexListWithOptions,
 ) -> Result<()> {

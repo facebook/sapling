@@ -8,7 +8,7 @@
 use std::collections::HashMap;
 use std::collections::HashSet;
 
-use crate::namedag::MemNameDag;
+use crate::namedag::MemDag;
 use crate::ops::Parents;
 use crate::Result;
 use crate::Vertex;
@@ -51,7 +51,7 @@ impl Parents for DrawDag {
         Parents::parent_names(&self.parents, name).await
     }
 
-    async fn hint_subdag_for_insertion(&self, heads: &[Vertex]) -> Result<MemNameDag> {
+    async fn hint_subdag_for_insertion(&self, heads: &[Vertex]) -> Result<MemDag> {
         Parents::hint_subdag_for_insertion(&self.parents, heads).await
     }
 }

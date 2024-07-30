@@ -10,7 +10,7 @@ use async_runtime::block_unless_interrupted as block_on;
 use clidispatch::ReqCtx;
 use cliparser::define_flags;
 use cmdutil::Result;
-use dag::namedag::IndexedLogNameDagPath;
+use dag::namedag::IndexedLogDagPath;
 use dag::ops::DagImportPullData;
 use dag::ops::DagPersistent;
 use dag::ops::Open;
@@ -40,7 +40,7 @@ pub fn run(ctx: ReqCtx<StatusOpts>, repo: &mut Repo) -> Result<u8> {
     segments_path.push("store");
     segments_path.push("segments");
     segments_path.push("v1");
-    let namedag_path = IndexedLogNameDagPath(segments_path);
+    let namedag_path = IndexedLogDagPath(segments_path);
     let mut namedag = namedag_path
         .open()
         .context("error opening segmented changelog")?;

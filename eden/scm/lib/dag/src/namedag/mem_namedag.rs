@@ -8,8 +8,8 @@
 use std::sync::atomic;
 use std::sync::atomic::AtomicU64;
 
-use super::AbstractNameDag;
-use super::NameDagBuilder;
+use super::AbstractDag;
+use super::DagBuilder;
 use crate::iddag::IdDag;
 use crate::iddagstore::InProcessStore;
 use crate::idmap::MemIdMap;
@@ -18,23 +18,22 @@ use crate::ops::Persist;
 use crate::ops::StorageVersion;
 use crate::Result;
 
-/// In-memory version of [`NameDag`].
+/// In-memory version of [`Dag`].
 ///
 /// Does not support loading from or saving to the filesystem.
 /// The graph has to be built from scratch by `add_heads`.
-pub type MemNameDag =
-    AbstractNameDag<IdDag<InProcessStore>, MemIdMap, MemNameDagPath, MemNameDagState>;
+pub type MemDag = AbstractDag<IdDag<InProcessStore>, MemIdMap, MemDagPath, MemDagState>;
 
 /// Address to open in-memory Dag.
 #[derive(Debug, Clone)]
-pub struct MemNameDagPath;
+pub struct MemDagPath;
 
 #[derive(Debug, Clone)]
-pub struct MemNameDagState {
+pub struct MemDagState {
     version: (u64, u64),
 }
 
-impl Default for MemNameDagState {
+impl Default for MemDagState {
     fn default() -> Self {
         Self {
             version: (rand::random(), 0),
@@ -42,15 +41,15 @@ impl Default for MemNameDagState {
     }
 }
 
-impl Open for MemNameDagPath {
-    type OpenTarget = MemNameDag;
+impl Open for MemDagPath {
+    type OpenTarget = MemDag;
 
     fn open(&self) -> Result<Self::OpenTarget> {
         let dag = IdDag::new_in_process();
         let map = MemIdMap::new();
         let id = format!("mem:{}", next_id());
-        let state = MemNameDagState::default();
-        let result = NameDagBuilder::new_with_idmap_dag(map, dag)
+        let state = MemDagState::default();
+        let result = DagBuilder::new_with_idmap_dag(map, dag)
             .with_path(self.clone())
             .with_id(id)
             .with_state(state)
@@ -59,13 +58,13 @@ impl Open for MemNameDagPath {
     }
 }
 
-impl MemNameDag {
+impl MemDag {
     pub fn new() -> Self {
-        MemNameDagPath.open().unwrap()
+        MemDagPath.open().unwrap()
     }
 }
 
-impl Persist for MemNameDagState {
+impl Persist for MemDagState {
     type Lock = ();
 
     fn lock(&mut self) -> Result<Self::Lock> {
@@ -82,7 +81,7 @@ impl Persist for MemNameDagState {
     }
 }
 
-impl StorageVersion for MemNameDagState {
+impl StorageVersion for MemDagState {
     fn storage_version(&self) -> (u64, u64) {
         self.version
     }

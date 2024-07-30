@@ -88,15 +88,15 @@ mod builder;
 mod indexedlog_namedag;
 mod mem_namedag;
 
-pub use builder::NameDagBuilder;
+pub use builder::DagBuilder;
 #[cfg(any(test, feature = "indexedlog-backend"))]
-pub use indexedlog_namedag::IndexedLogNameDagPath;
+pub use indexedlog_namedag::Dag;
 #[cfg(any(test, feature = "indexedlog-backend"))]
-pub use indexedlog_namedag::NameDag;
-pub use mem_namedag::MemNameDag;
-pub use mem_namedag::MemNameDagPath;
+pub use indexedlog_namedag::IndexedLogDagPath;
+pub use mem_namedag::MemDag;
+pub use mem_namedag::MemDagPath;
 
-pub struct AbstractNameDag<I, M, P, S>
+pub struct AbstractDag<I, M, P, S>
 where
     I: Send + Sync,
     M: Send + Sync,
@@ -106,7 +106,7 @@ where
     pub(crate) dag: I,
     pub(crate) map: M,
 
-    /// A read-only snapshot of the `NameDag`.
+    /// A read-only snapshot of the `Dag`.
     /// Lazily calculated.
     snapshot: RwLock<Option<Arc<Self>>>,
 
@@ -114,10 +114,10 @@ where
     /// They can be flushed by `flush()`.
     pending_heads: VertexListWithOptions,
 
-    /// Path used to open this `NameDag`.
+    /// Path used to open this `Dag`.
     path: P,
 
-    /// Extra state of the `NameDag`.
+    /// Extra state of the `Dag`.
     state: S,
 
     /// Identity of the dag. Derived from `path`.
@@ -164,7 +164,7 @@ pub struct DagInternalStats {
     pub sort_slow_path_count: AtomicUsize,
 }
 
-impl<D, M, P, S> AbstractNameDag<D, M, P, S>
+impl<D, M, P, S> AbstractDag<D, M, P, S>
 where
     D: Send + Sync,
     M: Send + Sync,
@@ -182,7 +182,7 @@ where
     }
 }
 
-impl<IS, M, P, S> AbstractNameDag<IdDag<IS>, M, P, S>
+impl<IS, M, P, S> AbstractDag<IdDag<IS>, M, P, S>
 where
     IS: IdDagStore,
     IdDag<IS>: TryClone,
@@ -253,7 +253,7 @@ where
 }
 
 #[async_trait::async_trait]
-impl<IS, M, P, S> DagPersistent for AbstractNameDag<IdDag<IS>, M, P, S>
+impl<IS, M, P, S> DagPersistent for AbstractDag<IdDag<IS>, M, P, S>
 where
     IS: IdDagStore + Persist + StorageVersion,
     IdDag<IS>: TryClone + 'static,
@@ -282,7 +282,7 @@ where
         // Reload meta and logs. This drops in-memory changes, which is fine because we have
         // checked there are no in-memory changes at the beginning.
         //
-        // Also see comments in `NameDagState::lock()`.
+        // Also see comments in `DagState::lock()`.
         let old_version = self.state.storage_version();
         let lock = self.state.lock()?;
         let map_lock = self.map.lock()?;
@@ -339,7 +339,7 @@ where
         // Warn about possible misuses.
         if heads.vertexes_by_group(Group::MASTER).len() != heads.len() {
             return programming(format!(
-                "NameDag::flush({:?}) is probably misused (group is not master)",
+                "Dag::flush({:?}) is probably misused (group is not master)",
                 heads
             ));
         }
@@ -394,7 +394,7 @@ where
     }
 }
 
-impl<IS, M, P, S> AbstractNameDag<IdDag<IS>, M, P, S>
+impl<IS, M, P, S> AbstractDag<IdDag<IS>, M, P, S>
 where
     IS: IdDagStore,
     IdDag<IS>: TryClone + 'static,
@@ -451,7 +451,7 @@ where
     }
 }
 
-impl<IS, M, P, S> AbstractNameDag<IdDag<IS>, M, P, S>
+impl<IS, M, P, S> AbstractDag<IdDag<IS>, M, P, S>
 where
     IS: Send + Sync + 'static,
     IdDag<IS>: StorageVersion,
@@ -459,7 +459,7 @@ where
     P: Send + Sync + 'static,
     S: Send + Sync + 'static,
 {
-    /// Attempt to reuse caches from `other` if two `NameDag`s are compatible.
+    /// Attempt to reuse caches from `other` if two `Dag`s are compatible.
     /// Usually called when `self` is newly created.
     fn maybe_reuse_caches_from(&mut self, other: &Self) {
         // No need to check IdMap (or "state" which includes both IdDag and IdMap).
@@ -501,7 +501,7 @@ where
 }
 
 #[async_trait::async_trait]
-impl<IS, M, P, S> DagAddHeads for AbstractNameDag<IdDag<IS>, M, P, S>
+impl<IS, M, P, S> DagAddHeads for AbstractDag<IdDag<IS>, M, P, S>
 where
     IS: IdDagStore,
     IdDag<IS>: TryClone,
@@ -608,7 +608,7 @@ where
 }
 
 #[async_trait::async_trait]
-impl<IS, M, P, S> DagStrip for AbstractNameDag<IdDag<IS>, M, P, S>
+impl<IS, M, P, S> DagStrip for AbstractDag<IdDag<IS>, M, P, S>
 where
     IS: IdDagStore + Persist,
     IdDag<IS>: TryClone + StorageVersion,
@@ -638,7 +638,7 @@ where
     }
 }
 
-impl<IS, M, P, S> AbstractNameDag<IdDag<IS>, M, P, S>
+impl<IS, M, P, S> AbstractDag<IdDag<IS>, M, P, S>
 where
     IS: IdDagStore,
     IdDag<IS>: TryClone,
@@ -703,7 +703,7 @@ where
 }
 
 #[async_trait::async_trait]
-impl<IS, M, P, S> IdMapWrite for AbstractNameDag<IdDag<IS>, M, P, S>
+impl<IS, M, P, S> IdMapWrite for AbstractDag<IdDag<IS>, M, P, S>
 where
     IS: IdDagStore,
     IdDag<IS>: TryClone,
@@ -721,7 +721,7 @@ where
 }
 
 #[async_trait::async_trait]
-impl<IS, M, P, S> DagImportCloneData for AbstractNameDag<IdDag<IS>, M, P, S>
+impl<IS, M, P, S> DagImportCloneData for AbstractDag<IdDag<IS>, M, P, S>
 where
     IS: IdDagStore + Persist + 'static,
     IdDag<IS>: TryClone,
@@ -750,7 +750,7 @@ where
     }
 }
 
-impl<IS, M, P, S> AbstractNameDag<IdDag<IS>, M, P, S>
+impl<IS, M, P, S> AbstractDag<IdDag<IS>, M, P, S>
 where
     IS: IdDagStore + Persist + 'static,
     IdDag<IS>: TryClone,
@@ -799,7 +799,7 @@ where
 }
 
 #[async_trait::async_trait]
-impl<IS, M, P, S> DagImportPullData for AbstractNameDag<IdDag<IS>, M, P, S>
+impl<IS, M, P, S> DagImportPullData for AbstractDag<IdDag<IS>, M, P, S>
 where
     IS: IdDagStore + Persist,
     IdDag<IS>: TryClone + StorageVersion,
@@ -1183,7 +1183,7 @@ where
 }
 
 #[async_trait::async_trait]
-impl<IS, M, P, S> DagExportCloneData for AbstractNameDag<IdDag<IS>, M, P, S>
+impl<IS, M, P, S> DagExportCloneData for AbstractDag<IdDag<IS>, M, P, S>
 where
     IS: IdDagStore,
     IdDag<IS>: TryClone,
@@ -1232,7 +1232,7 @@ where
 }
 
 #[async_trait::async_trait]
-impl<IS, M, P, S> DagExportPullData for AbstractNameDag<IdDag<IS>, M, P, S>
+impl<IS, M, P, S> DagExportPullData for AbstractDag<IdDag<IS>, M, P, S>
 where
     IS: IdDagStore,
     IdDag<IS>: TryClone,
@@ -1268,7 +1268,7 @@ where
     }
 }
 
-impl<IS, M, P, S> AbstractNameDag<IdDag<IS>, M, P, S>
+impl<IS, M, P, S> AbstractDag<IdDag<IS>, M, P, S>
 where
     IS: IdDagStore,
     IdDag<IS>: TryClone,
@@ -1356,7 +1356,7 @@ where
     }
 }
 
-impl<IS, M, P, S> AbstractNameDag<IdDag<IS>, M, P, S>
+impl<IS, M, P, S> AbstractDag<IdDag<IS>, M, P, S>
 where
     IS: IdDagStore,
     IdDag<IS>: TryClone,
@@ -1393,7 +1393,7 @@ where
 /// This function visits the "roots" of "parents", and if they are not assigned,
 /// then add their descendants to the "unassigned" result set.
 async fn calculate_definitely_unassigned_vertexes<IS, M, P, S>(
-    this: &AbstractNameDag<IdDag<IS>, M, P, S>,
+    this: &AbstractDag<IdDag<IS>, M, P, S>,
     parents: &dyn Parents,
     heads: &[Vertex],
 ) -> Result<Vec<Vertex>>
@@ -1544,7 +1544,7 @@ where
 }
 
 // The "client" Dag. Using a remote protocol to fill lazy part of the vertexes.
-impl<IS, M, P, S> AbstractNameDag<IdDag<IS>, M, P, S>
+impl<IS, M, P, S> AbstractDag<IdDag<IS>, M, P, S>
 where
     IS: IdDagStore,
     IdDag<IS>: TryClone,
@@ -1762,7 +1762,7 @@ async fn calculate_id_name_from_paths(
 // The server Dag. IdMap is complete. Provide APIs for client Dag to resolve vertexes.
 // Currently mainly used for testing purpose.
 #[async_trait::async_trait]
-impl<IS, M, P, S> RemoteIdConvertProtocol for AbstractNameDag<IdDag<IS>, M, P, S>
+impl<IS, M, P, S> RemoteIdConvertProtocol for AbstractDag<IdDag<IS>, M, P, S>
 where
     IS: IdDagStore,
     IdDag<IS>: TryClone,
@@ -1794,7 +1794,7 @@ where
 
 // On "snapshot".
 #[async_trait::async_trait]
-impl<IS, M, P, S> RemoteIdConvertProtocol for Arc<AbstractNameDag<IdDag<IS>, M, P, S>>
+impl<IS, M, P, S> RemoteIdConvertProtocol for Arc<AbstractDag<IdDag<IS>, M, P, S>>
 where
     IS: IdDagStore,
     IdDag<IS>: TryClone,
@@ -1825,7 +1825,7 @@ where
 
 /// DAG related read-only algorithms.
 #[async_trait::async_trait]
-impl<IS, M, P, S> DagAlgorithm for AbstractNameDag<IdDag<IS>, M, P, S>
+impl<IS, M, P, S> DagAlgorithm for AbstractDag<IdDag<IS>, M, P, S>
 where
     IS: IdDagStore,
     IdDag<IS>: TryClone + 'static,
@@ -1949,7 +1949,7 @@ where
 
     /// Calculates parents of the given set.
     ///
-    /// Note: Parent order is not preserved. Use [`NameDag::parent_names`]
+    /// Note: Parent order is not preserved. Use [`Dag::parent_names`]
     /// to preserve order.
     async fn parents(&self, set: Set) -> Result<Set> {
         // Preserve ANCESTORS flag. If ancestors(x) == x, then ancestors(parents(x)) == parents(x).
@@ -2165,7 +2165,7 @@ fn extract_ancestor_flag_if_compatible(hints: &Hints, dag_version: &VerLink) -> 
 }
 
 #[async_trait::async_trait]
-impl<I, M, P, S> PrefixLookup for AbstractNameDag<I, M, P, S>
+impl<I, M, P, S> PrefixLookup for AbstractDag<I, M, P, S>
 where
     I: Send + Sync,
     M: PrefixLookup + Send + Sync,
@@ -2188,7 +2188,7 @@ where
 }
 
 #[async_trait::async_trait]
-impl<IS, M, P, S> IdConvert for AbstractNameDag<IdDag<IS>, M, P, S>
+impl<IS, M, P, S> IdConvert for AbstractDag<IdDag<IS>, M, P, S>
 where
     IS: IdDagStore,
     IdDag<IS>: TryClone,
@@ -2438,7 +2438,7 @@ where
     }
 }
 
-impl<IS, M, P, S> AbstractNameDag<IdDag<IS>, M, P, S>
+impl<IS, M, P, S> AbstractDag<IdDag<IS>, M, P, S>
 where
     IS: IdDagStore,
     IdDag<IS>: TryClone + 'static,
@@ -2726,7 +2726,7 @@ fn is_ok_some<T>(value: Result<Option<T>>) -> bool {
     }
 }
 
-impl<IS, M, P, S> IdMapSnapshot for AbstractNameDag<IdDag<IS>, M, P, S>
+impl<IS, M, P, S> IdMapSnapshot for AbstractDag<IdDag<IS>, M, P, S>
 where
     IS: IdDagStore,
     IdDag<IS>: TryClone + 'static,
@@ -2739,7 +2739,7 @@ where
     }
 }
 
-impl<IS, M, P, S> fmt::Debug for AbstractNameDag<IdDag<IS>, M, P, S>
+impl<IS, M, P, S> fmt::Debug for AbstractDag<IdDag<IS>, M, P, S>
 where
     IS: IdDagStore,
     M: IdConvert + Send + Sync,

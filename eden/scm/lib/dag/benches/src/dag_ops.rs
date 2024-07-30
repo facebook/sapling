@@ -8,7 +8,7 @@
 use dag::iddagstore::IdDagStore;
 use dag::idmap::IdMap;
 use dag::idmap::IdMapAssignHead;
-use dag::namedag::NameDag;
+use dag::namedag::Dag;
 use dag::ops::DagAlgorithm;
 use dag::ops::DagPersistent;
 use dag::ops::Persist;
@@ -247,7 +247,7 @@ fn bench_with_iddag<S: IdDagStore + Persist>(get_empty_iddag: impl Fn() -> IdDag
 }
 
 fn bench_many_heads_namedag() {
-    println!("benchmarking NameDag with many heads");
+    println!("benchmarking Dag with many heads");
     // Create a graph with M linear vertexes in the master branch, and M
     // child for every vertex in the master branch.
     //
@@ -280,7 +280,7 @@ fn bench_many_heads_namedag() {
         .with_desired_group(Group::MASTER)
         .chain(non_master_heads);
     let dag_dir = tempdir().unwrap();
-    let mut dag = NameDag::open(dag_dir.path()).unwrap();
+    let mut dag = Dag::open(dag_dir.path()).unwrap();
     nbr(dag.add_heads_and_flush(&parent_func, &heads)).unwrap();
 
     let to_set = |v: &str| -> Set {
