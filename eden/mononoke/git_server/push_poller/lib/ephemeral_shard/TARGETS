@@ -6,6 +6,7 @@ oncall("mononoke")
 rust_library(
     name = "ephemeral_shard",
     srcs = glob(["src/**/*.rs"]),
+    autocargo = {"ignore_rule": True},
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:async-trait",

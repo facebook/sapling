@@ -6,6 +6,7 @@ oncall("mononoke")
 rust_library(
     name = "storage",
     srcs = glob(["src/**/*.rs"]),
+    autocargo = {"ignore_rule": True},
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:maplit",
