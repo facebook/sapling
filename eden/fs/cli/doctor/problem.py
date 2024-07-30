@@ -63,12 +63,9 @@ class FixableProblem(ProblemBase):
     def perform_fix(self) -> None:
         """Attempt to automatically fix the problem."""
 
-    # This should be an abstractmethod but so I can incrementally implement the subfunctions
-    # it's a normal one for now
-    # @abc.abstractmethod
+    @abc.abstractmethod
     def check_fix(self) -> bool:
         """Checks if the problem has been fixed."""
-        return True
 
 
 class Problem(ProblemBase):
