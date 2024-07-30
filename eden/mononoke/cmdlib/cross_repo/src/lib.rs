@@ -31,11 +31,12 @@ use mononoke_app::args::SourceAndTargetRepoArgs;
 use mononoke_app::MononokeApp;
 use pushredirect::SqlPushRedirectionConfigBuilder;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
-use sql_query_config::SqlQueryConfig;
+use sql_query_config::SqlQueryConfigArc;
 use synced_commit_mapping::SqlSyncedCommitMapping;
 
-pub trait CrossRepo =
-    cross_repo_sync::Repo + for<'a> facet::AsyncBuildable<'a, repo_factory::RepoFactoryBuilder<'a>>;
+pub trait CrossRepo = cross_repo_sync::Repo
+    + SqlQueryConfigArc
+    + for<'a> facet::AsyncBuildable<'a, repo_factory::RepoFactoryBuilder<'a>>;
 
 /// Instantiate the `Syncers` struct by parsing `app`
 pub async fn create_commit_syncers_from_app<R: CrossRepo>(
@@ -150,7 +151,7 @@ async fn get_things_from_app<R: CrossRepo>(
     )
     .await?;
 
-    let (source_repo, target_repo) = if !unredacted {
+    let (source_repo, target_repo): (R, R) = if !unredacted {
         app.open_source_and_target_repos(repo_args).await?
     } else {
         future::try_join(
@@ -170,8 +171,7 @@ async fn get_things_from_app<R: CrossRepo>(
     let builder = sql_factory
         .open::<SqlPushRedirectionConfigBuilder>()
         .await?;
-    // FIXME enable caching
-    let push_redirection_config = builder.build(Arc::new(SqlQueryConfig { caching: None }));
+    let push_redirection_config = builder.build(source_repo.sql_query_config_arc());
 
     let live_commit_sync_config: Arc<dyn LiveCommitSyncConfig> =
         Arc::new(CfgrLiveCommitSyncConfig::new_with_xdb(
