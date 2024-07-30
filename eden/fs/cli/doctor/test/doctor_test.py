@@ -1207,7 +1207,7 @@ Checking {mount}
         checkout = instance.create_test_mount("path1")
         mount = checkout.path
 
-        # Just create a/b/c folders
+        # Just create a/b folders
         os.makedirs(mount / "a" / "b")
 
         mock_debugInodeStatus.return_value = [
@@ -1262,29 +1262,47 @@ Checking {mount}
         )
 
     @patch("eden.fs.cli.doctor.test.lib.fake_client.FakeClient.debugInodeStatus")
-    # pyre-fixme[2]: Parameter must be annotated.
-    def test_materialized_different_mode_fixer(self, mock_debugInodeStatus) -> None:
+    def test_materialized_different_mode_fixer(
+        self, mock_debugInodeStatus: MagicMock
+    ) -> None:
         instance = FakeEdenInstance(self.make_temporary_directory())
         checkout = instance.create_test_mount("path1")
-        mount = checkout.path
+        mount: Path = checkout.path
 
-        # Just create a/b/c folders
+        # Just create a/b folders
         os.makedirs(mount / "a" / "b")
 
-        mock_debugInodeStatus.return_value = [
+        mock_debugInodeStatus.side_effect = [
             # Pretend that a/b is a file (it's a directory)
-            TreeInodeDebugInfo(
-                1,
-                b"a",
-                True,
-                b"abcd",
-                [
-                    TreeInodeEntryDebugInfo(
-                        b"b", 2, stat.S_IFREG, False, True, b"dcba"
-                    ),
-                ],
-                1,
-            ),
+            [
+                TreeInodeDebugInfo(
+                    1,
+                    b"a",
+                    True,
+                    b"abcd",
+                    [
+                        TreeInodeEntryDebugInfo(
+                            b"b", 2, stat.S_IFREG, False, True, b"dcba"
+                        ),
+                    ],
+                    1,
+                )
+            ],
+            # now report it as a directory
+            [
+                TreeInodeDebugInfo(
+                    1,
+                    b"a",
+                    True,
+                    b"abcd",
+                    [
+                        TreeInodeEntryDebugInfo(
+                            b"b", 2, stat.S_IFDIR, False, True, b"dcba"
+                        ),
+                    ],
+                    1,
+                )
+            ],
         ]
 
         fixer, output = self.create_fixer(dry_run=False)
@@ -1304,6 +1322,52 @@ Fixing mismatched files/directories in {Path(mount)}...<green>fixed<reset>
             output.getvalue(),
         )
         self.assert_results(fixer, num_problems=1, num_fixed_problems=1)
+
+    @patch("eden.fs.cli.doctor.test.lib.fake_client.FakeClient.debugInodeStatus")
+    def test_materialized_different_mode_fixer_fail(
+        self, mock_debugInodeStatus: MagicMock
+    ) -> None:
+        instance = FakeEdenInstance(self.make_temporary_directory())
+        checkout = instance.create_test_mount("path1")
+        mount: Path = checkout.path
+
+        # Just create a/b folders
+        os.makedirs(mount / "a" / "b")
+
+        # Pretend that a/b is a file (it's a directory)
+        mock_debugInodeStatus.return_value = [
+            TreeInodeDebugInfo(
+                1,
+                b"a",
+                True,
+                b"abcd",
+                [
+                    TreeInodeEntryDebugInfo(
+                        b"b", 2, stat.S_IFREG, False, True, b"dcba"
+                    ),
+                ],
+                1,
+            )
+        ]
+
+        fixer, output = self.create_fixer(dry_run=False)
+        check_materialized_are_accessible(
+            fixer,
+            typing.cast(EdenInstance, instance),
+            checkout,
+            lambda p: os.lstat(p).st_mode,
+        )
+
+        self.assertRegex(
+            output.getvalue(),
+            r"""<yellow>- Found problem:<reset>
+.* has an unexpected file type: known to EdenFS as a file, but is a directory on disk
+Fixing mismatched files/directories in .*...<red>error<reset>
+Failed to fix or verify fix for problem MaterializedInodesHaveDifferentModeOnDisk: RemediationError: Failed check for MaterializedInodesHaveDifferentModeOnDisk failed:
+Path .* is a directory on disk but file in eden
+(.|\n)*""",
+        )
+        self.assert_results(fixer, num_problems=1, num_failed_fixes=1)
 
     @patch("eden.fs.cli.doctor.test.lib.fake_client.FakeClient.debugInodeStatus")
     @patch("eden.fs.cli.doctor.check_filesystems.MissingFilesForInodes.perform_fix")

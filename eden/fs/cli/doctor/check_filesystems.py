@@ -16,7 +16,7 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
-from typing import Callable, List, Optional, Set, Tuple, Union
+from typing import Callable, Dict, List, Optional, Set, Tuple, Union
 
 from eden.fs.cli import hg_util
 from eden.fs.cli.config import EdenCheckout, EdenInstance, InProgressCheckoutError
@@ -316,18 +316,27 @@ def mode_to_str(mode: int) -> str:
 
 
 class MaterializedInodesHaveDifferentModeOnDisk(PathsProblem, FixableProblem):
-    def __init__(self, mount: Path, errors: List[Tuple[Path, int, int]]) -> None:
+    def __init__(
+        self,
+        instance: EdenInstance,
+        mount: Path,
+        errors: Dict[Path, Tuple[int, int]],
+        case_sensitive: bool,
+    ) -> None:
+        self._instance = instance
         self._mount = mount
         self._errors = errors
+        self._case_sensitive = case_sensitive
 
-        formatted_error = [
-            (
-                error[0],
-                f"known to EdenFS as a {mode_to_str(error[2])}, "
-                f"but is a {mode_to_str(error[1])} on disk",
+        formatted_error = []
+        for error, (local_file_mode, eden_mode) in errors.items():
+            formatted_error.append(
+                (
+                    error,
+                    f"known to EdenFS as a {mode_to_str(eden_mode)}, "
+                    f"but is a {mode_to_str(local_file_mode)} on disk",
+                )
             )
-            for error in errors
-        ]
         super().__init__(
             self.omitPathsDescriptionWithException(
                 formatted_error, " has an unexpected file type"
@@ -360,7 +369,7 @@ class MaterializedInodesHaveDifferentModeOnDisk(PathsProblem, FixableProblem):
                 new_path.rename(path)
 
         failed = []
-        for path, _, _ in self._errors:
+        for path in self._errors.keys():
             try:
                 tries = 0
                 while True:
@@ -382,6 +391,49 @@ class MaterializedInodesHaveDifferentModeOnDisk(PathsProblem, FixableProblem):
 {errors}
 """
             )
+
+    def check_fix(self) -> bool:
+        mismatched_modes = []
+        with self._instance.get_thrift_client_legacy() as client:
+            try:
+                materialized = client.debugInodeStatus(
+                    bytes(self._mount),
+                    b"",
+                    flags=DIS_REQUIRE_MATERIALIZED,
+                    sync=SyncBehavior(),
+                )
+                for materialized_dir in materialized:
+                    materialized_name = os.fsdecode(materialized_dir.path)
+                    path = Path(materialized_name)
+                    for dirent in materialized_dir.entries:
+                        name = os.fsdecode(dirent.name)
+                        if not self._case_sensitive:
+                            name = name.lower()
+                        dirent_path = path / Path(name)
+                        if dirent_path in self._errors:
+                            target_dirent_mode = self._errors[dirent_path][0]
+                            if stat.S_IFMT(dirent.mode) != stat.S_IFMT(
+                                target_dirent_mode
+                            ):
+                                mismatched_modes.append(
+                                    (dirent_path, target_dirent_mode, dirent.mode)
+                                )
+            except Exception as ex:
+                raise RemediationError(
+                    f"Unexpected error trying to validate fix for mismatched inode modes in {self._errors}: {ex}"
+                )
+        if mismatched_modes:
+            errorMsg = "\n".join(
+                [
+                    f"Path {path} is a {mode_to_str(disk_mode)} on disk but {mode_to_str(eden_mode)} in eden"
+                    for path, disk_mode, eden_mode in mismatched_modes
+                ]
+            )
+
+            raise RemediationError(
+                f"Failed check for {self.__class__.__name__} failed:\n{errorMsg}"
+            )
+        return True
 
 
 class MaterializedInodesAreInaccessible(PathsProblem):
@@ -547,7 +599,7 @@ def check_materialized_are_accessible(
     get_mode: Callable[[Path], int],
 ) -> None:
     # {path | path is a materialized directory or one of its entries whose mode does not match on the filesystem}
-    mismatched_mode = []
+    mismatched_mode = {}
     # {path | path is a materialized file or directory inside EdenFS, and can not be read on the filesystem}
     inaccessible_inodes = []
     # {path | path is a materialized file or directory inside EdenFS, and does not exist on the filesystem}
@@ -586,7 +638,7 @@ def check_materialized_are_accessible(
             continue
 
         if not stat.S_ISDIR(mode):
-            mismatched_mode += [(path, stat.S_IFDIR, mode)]
+            mismatched_mode[path] = (stat.S_IFDIR, mode)
 
         # A None missing_path_names avoids the listdir and missing inodes check
         missing_path_names = None
@@ -649,7 +701,7 @@ def check_materialized_are_accessible(
                 dirent_mode = stat.S_IFMT(dirent_mode)
 
                 if dirent_mode != stat.S_IFMT(dirent.mode):
-                    mismatched_mode += [(dirent_path, dirent_mode, dirent.mode)]
+                    mismatched_mode[dirent_path] = (dirent_mode, dirent.mode)
 
         if missing_path_names:
             missing_inodes += [path / name for name in missing_path_names]
@@ -672,7 +724,9 @@ def check_materialized_are_accessible(
 
     if mismatched_mode:
         tracker.add_problem(
-            MaterializedInodesHaveDifferentModeOnDisk(checkout.path, mismatched_mode)
+            MaterializedInodesHaveDifferentModeOnDisk(
+                instance, checkout.path, mismatched_mode, case_sensitive
+            )
         )
 
 
