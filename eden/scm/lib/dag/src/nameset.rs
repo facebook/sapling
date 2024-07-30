@@ -35,7 +35,7 @@ use crate::ops::Parents;
 use crate::Id;
 use crate::IdSet;
 use crate::Result;
-use crate::VertexName;
+use crate::Vertex;
 
 pub mod difference;
 pub mod hints;
@@ -76,14 +76,14 @@ impl NameSet {
     }
 
     /// Creates from a (short) list of known names.
-    pub fn from_static_names(names: impl IntoIterator<Item = VertexName>) -> NameSet {
+    pub fn from_static_names(names: impl IntoIterator<Item = Vertex>) -> NameSet {
         Self::from_query(r#static::StaticSet::from_names(names))
     }
 
     /// Creates from a (lazy) iterator of names.
     pub fn from_iter<I>(iter: I, hints: Hints) -> NameSet
     where
-        I: IntoIterator<Item = Result<VertexName>> + 'static,
+        I: IntoIterator<Item = Result<Vertex>> + 'static,
         <I as IntoIterator>::IntoIter: Send + Sync,
     {
         Self::from_query(lazy::LazySet::from_iter(iter, hints))
@@ -145,7 +145,7 @@ impl NameSet {
         hints: Hints,
     ) -> NameSet
     where
-        C: for<'a> Fn(&'a MetaSet, &'a VertexName) -> Result<bool>,
+        C: for<'a> Fn(&'a MetaSet, &'a Vertex) -> Result<bool>,
         C: Send + Sync + 'static,
     {
         let evaluate = move || -> BoxFuture<_> {
@@ -168,9 +168,7 @@ impl NameSet {
     pub fn from_async_evaluate_contains(
         evaluate: Box<dyn Fn() -> BoxFuture<'static, Result<NameSet>> + Send + Sync>,
         contains: Box<
-            dyn for<'a> Fn(&'a MetaSet, &'a VertexName) -> BoxFuture<'a, Result<bool>>
-                + Send
-                + Sync,
+            dyn for<'a> Fn(&'a MetaSet, &'a Vertex) -> BoxFuture<'a, Result<bool>> + Send + Sync,
         >,
         hints: Hints,
     ) -> NameSet {
@@ -398,7 +396,7 @@ impl NameSet {
     /// for a vertex, then the vertex will be taken, other it will be skipped.
     pub fn filter(
         &self,
-        filter_func: Box<dyn Fn(&VertexName) -> BoxFuture<Result<bool>> + Send + Sync + 'static>,
+        filter_func: Box<dyn Fn(&Vertex) -> BoxFuture<Result<bool>> + Send + Sync + 'static>,
     ) -> Self {
         let filter_func = Arc::new(filter_func);
         let this = self.clone();
@@ -652,12 +650,12 @@ pub trait AsyncNameSetQuery: Any + Debug + Send + Sync {
     }
 
     /// The first name in the set.
-    async fn first(&self) -> Result<Option<VertexName>> {
+    async fn first(&self) -> Result<Option<Vertex>> {
         self.iter().await?.next().await.transpose()
     }
 
     /// The last name in the set.
-    async fn last(&self) -> Result<Option<VertexName>> {
+    async fn last(&self) -> Result<Option<Vertex>> {
         self.iter_rev().await?.next().await.transpose()
     }
 
@@ -667,7 +665,7 @@ pub trait AsyncNameSetQuery: Any + Debug + Send + Sync {
     }
 
     /// Test if this set contains a given name.
-    async fn contains(&self, name: &VertexName) -> Result<bool> {
+    async fn contains(&self, name: &Vertex) -> Result<bool> {
         let mut iter = self.iter().await?;
         while let Some(item) = iter.next().await {
             if &item? == name {
@@ -679,7 +677,7 @@ pub trait AsyncNameSetQuery: Any + Debug + Send + Sync {
 
     /// Test contains in less than O(N) time.
     /// Returns None if cannot achieve in less than O(N) time.
-    async fn contains_fast(&self, name: &VertexName) -> Result<Option<bool>> {
+    async fn contains_fast(&self, name: &Vertex) -> Result<Option<bool>> {
         let _ = name;
         Ok(None)
     }
@@ -733,16 +731,16 @@ pub trait SyncNameSetQuery {
     fn count(&self) -> Result<u64>;
 
     /// The first name in the set.
-    fn first(&self) -> Result<Option<VertexName>>;
+    fn first(&self) -> Result<Option<Vertex>>;
 
     /// The last name in the set.
-    fn last(&self) -> Result<Option<VertexName>>;
+    fn last(&self) -> Result<Option<Vertex>>;
 
     /// Test if this set is empty.
     fn is_empty(&self) -> Result<bool>;
 
     /// Test if this set contains a given name.
-    fn contains(&self, name: &VertexName) -> Result<bool>;
+    fn contains(&self, name: &Vertex) -> Result<bool>;
 
     /// For downcasting.
     fn as_any(&self) -> &dyn Any;
@@ -767,11 +765,11 @@ impl<T: AsyncNameSetQuery> SyncNameSetQuery for T {
         non_blocking(AsyncNameSetQuery::count_slow(self))?
     }
 
-    fn first(&self) -> Result<Option<VertexName>> {
+    fn first(&self) -> Result<Option<Vertex>> {
         non_blocking(AsyncNameSetQuery::first(self))?
     }
 
-    fn last(&self) -> Result<Option<VertexName>> {
+    fn last(&self) -> Result<Option<Vertex>> {
         non_blocking(AsyncNameSetQuery::last(self))?
     }
 
@@ -779,7 +777,7 @@ impl<T: AsyncNameSetQuery> SyncNameSetQuery for T {
         non_blocking(AsyncNameSetQuery::is_empty(self))?
     }
 
-    fn contains(&self, name: &VertexName) -> Result<bool> {
+    fn contains(&self, name: &Vertex) -> Result<bool> {
         non_blocking(AsyncNameSetQuery::contains(self, name))?
     }
 
@@ -809,11 +807,11 @@ impl SyncNameSetQuery for NameSet {
         non_blocking(AsyncNameSetQuery::count_slow(self.0.deref()))?
     }
 
-    fn first(&self) -> Result<Option<VertexName>> {
+    fn first(&self) -> Result<Option<Vertex>> {
         non_blocking(AsyncNameSetQuery::first(self.0.deref()))?
     }
 
-    fn last(&self) -> Result<Option<VertexName>> {
+    fn last(&self) -> Result<Option<Vertex>> {
         non_blocking(AsyncNameSetQuery::last(self.0.deref()))?
     }
 
@@ -821,7 +819,7 @@ impl SyncNameSetQuery for NameSet {
         non_blocking(AsyncNameSetQuery::is_empty(self.0.deref()))?
     }
 
-    fn contains(&self, name: &VertexName) -> Result<bool> {
+    fn contains(&self, name: &Vertex) -> Result<bool> {
         non_blocking(AsyncNameSetQuery::contains(self.0.deref(), name))?
     }
 
@@ -841,12 +839,12 @@ impl SyncNameSetQuery for NameSet {
 /// Iterator of [`NameSet`].
 /// Types implementing this should consider replacing `iter_rev` with a fast
 /// path if possible.
-pub trait NameIter: Iterator<Item = Result<VertexName>> + Send {}
-impl<T> NameIter for T where T: Iterator<Item = Result<VertexName>> + Send {}
+pub trait NameIter: Iterator<Item = Result<Vertex>> + Send {}
+impl<T> NameIter for T where T: Iterator<Item = Result<Vertex>> + Send {}
 
 /// Abstract async iterator that yields `Vertex`es.
-pub trait VertexStream: Stream<Item = Result<VertexName>> + Send {}
-impl<T> VertexStream for T where T: Stream<Item = Result<VertexName>> + Send {}
+pub trait VertexStream: Stream<Item = Result<Vertex>> + Send {}
+impl<T> VertexStream for T where T: Stream<Item = Result<Vertex>> + Send {}
 
 /// Boxed async iterator that yields `Vertex`es.
 pub type BoxVertexStream = Pin<Box<dyn VertexStream>>;
@@ -855,7 +853,7 @@ pub type BoxVertexStream = Pin<Box<dyn VertexStream>>;
 struct NonblockingNameIter(BoxVertexStream);
 
 impl Iterator for NonblockingNameIter {
-    type Item = Result<VertexName>;
+    type Item = Result<Vertex>;
 
     fn next(&mut self) -> Option<Self::Item> {
         match non_blocking(self.0.next()) {
@@ -869,14 +867,14 @@ fn to_iter(stream: BoxVertexStream) -> Box<dyn NameIter> {
     Box::new(NonblockingNameIter(stream))
 }
 
-impl From<VertexName> for NameSet {
-    fn from(name: VertexName) -> NameSet {
+impl From<Vertex> for NameSet {
+    fn from(name: Vertex) -> NameSet {
         NameSet::from_static_names(std::iter::once(name))
     }
 }
 
-impl From<&VertexName> for NameSet {
-    fn from(name: &VertexName) -> NameSet {
+impl From<&Vertex> for NameSet {
+    fn from(name: &Vertex) -> NameSet {
         NameSet::from_static_names(std::iter::once(name.clone()))
     }
 }
@@ -919,7 +917,7 @@ pub(crate) mod tests {
         fn from(name: &str) -> NameSet {
             NameSet::from_static_names(
                 name.split_whitespace()
-                    .map(|n| VertexName::copy_from(n.as_bytes())),
+                    .map(|n| Vertex::copy_from(n.as_bytes())),
             )
         }
     }
@@ -945,7 +943,7 @@ pub(crate) mod tests {
     type SizeHint = (u64, Option<u64>);
 
     #[derive(Default, Debug)]
-    pub(crate) struct VecQuery(Vec<VertexName>, Hints, SizeHint);
+    pub(crate) struct VecQuery(Vec<Vertex>, Hints, SizeHint);
 
     #[async_trait::async_trait]
     impl AsyncNameSetQuery for VecQuery {
@@ -971,7 +969,7 @@ pub(crate) mod tests {
         /// Quickly create [`VecQuery`] that contains `len(bytes)` items.
         pub(crate) fn from_bytes(bytes: &[u8]) -> Self {
             let mut used = [false; 256];
-            let v: Vec<VertexName> = bytes
+            let v: Vec<Vertex> = bytes
                 .iter()
                 .filter_map(|&b| {
                     if used[b as usize] {
@@ -1001,13 +999,13 @@ pub(crate) mod tests {
         }
     }
 
-    /// Create a [`VertexName`] from `u8` by repeating them.
-    pub(crate) fn to_name(value: u8) -> VertexName {
-        VertexName::from(vec![value; 2])
+    /// Create a [`Vertex`] from `u8` by repeating them.
+    pub(crate) fn to_name(value: u8) -> Vertex {
+        Vertex::from(vec![value; 2])
     }
 
-    /// Shorten a [`VertexName`] result.
-    pub(crate) fn shorten_name(name: VertexName) -> String {
+    /// Shorten a [`Vertex`] result.
+    pub(crate) fn shorten_name(name: Vertex) -> String {
         name.to_hex()[..2].to_string()
     }
 
@@ -1311,7 +1309,7 @@ pub(crate) mod tests {
         id_static::tests::with_dag(|dag| {
             let sets: Vec<NameSet> = vec!["C B A".into(), nb(dag.ancestors("C".into())).unwrap()];
             for abc in sets {
-                let filter: NameSet = abc.filter(Box::new(|v: &VertexName| {
+                let filter: NameSet = abc.filter(Box::new(|v: &Vertex| {
                     Box::pin(async move { Ok(v.as_ref() != b"A") })
                 }));
                 check_invariants(filter.0.as_ref()).unwrap();
@@ -1361,7 +1359,7 @@ pub(crate) mod tests {
         // change the internal set state.
         let contains_fast_vec: Vec<Option<bool>> = (0..=0xff)
             .map(|b| {
-                let name = VertexName::from(vec![b; 20]);
+                let name = Vertex::from(vec![b; 20]);
                 nb(query.contains_fast(&name)).unwrap_or(None)
             })
             .collect();
@@ -1370,7 +1368,7 @@ pub(crate) mod tests {
         let (size_hint_min, size_hint_max) = nb(query.size_hint());
         let first = nb(query.first())?;
         let last = nb(query.last())?;
-        let names: Vec<VertexName> = ni(query.iter())?.collect::<Result<Vec<_>>>()?;
+        let names: Vec<Vertex> = ni(query.iter())?.collect::<Result<Vec<_>>>()?;
         assert_eq!(
             first,
             names.first().cloned(),
@@ -1427,7 +1425,7 @@ pub(crate) mod tests {
         );
         assert!(
             (0..=0xff).all(|b| {
-                let name = VertexName::from(vec![b; 20]);
+                let name = Vertex::from(vec![b; 20]);
                 nb(query.contains(&name)).ok() == Some(names.contains(&name))
             }),
             "contains() should return false for names not returned by iter() (set: {:?})",
@@ -1437,7 +1435,7 @@ pub(crate) mod tests {
             (0..=0xff)
                 .zip(contains_fast_vec.into_iter())
                 .all(|(b, old_contains)| {
-                    let name = VertexName::from(vec![b; 20]);
+                    let name = Vertex::from(vec![b; 20]);
                     let contains = nb(query.contains_fast(&name)).unwrap_or(None);
                     old_contains.is_none() || contains == old_contains
                 }),
@@ -1446,7 +1444,7 @@ pub(crate) mod tests {
         );
         assert!(
             (0..=0xff).all(|b| {
-                let name = VertexName::from(vec![b; 20]);
+                let name = Vertex::from(vec![b; 20]);
                 let contains = nb(query.contains_fast(&name)).unwrap_or(None);
                 contains.is_none() || contains == Some(names.contains(&name))
             }),
@@ -1465,7 +1463,7 @@ pub(crate) mod tests {
                 &query
             );
         }
-        let reversed: Vec<VertexName> = ni(query.iter_rev())?.collect::<Result<Vec<_>>>()?;
+        let reversed: Vec<Vertex> = ni(query.iter_rev())?.collect::<Result<Vec<_>>>()?;
         if let Some(reversed_set) = query.specialized_reverse() {
             let iter = reversed_set.iter()?;
             let names = iter.collect::<Result<Vec<_>>>()?;
@@ -1473,7 +1471,7 @@ pub(crate) mod tests {
         }
         assert_eq!(
             names,
-            reversed.into_iter().rev().collect::<Vec<VertexName>>(),
+            reversed.into_iter().rev().collect::<Vec<Vertex>>(),
             "iter() should match iter_rev().rev() (set: {:?})",
             &query
         );
@@ -1511,7 +1509,7 @@ pub(crate) mod tests {
     }
 
     pub(crate) fn check_skip_take_reverse(set: NameSet) -> Result<()> {
-        let names: Vec<VertexName> = set.iter()?.collect::<Result<Vec<_>>>()?;
+        let names: Vec<Vertex> = set.iter()?.collect::<Result<Vec<_>>>()?;
         let len = names.len();
         for reverse in [false, true] {
             for skip in 0..=(len + 2) {

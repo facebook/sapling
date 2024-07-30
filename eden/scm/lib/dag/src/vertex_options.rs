@@ -10,13 +10,13 @@ use std::collections::HashSet;
 use serde::Deserialize;
 
 use crate::Group;
-use crate::VertexName;
+use crate::Vertex;
 
-/// A list of [`VertexName`]s (usually heads) with options attached to each vertex.
+/// A list of [`Vertex`]s (usually heads) with options attached to each vertex.
 #[derive(Default, Debug, Clone, Deserialize)]
 #[serde(transparent)]
 pub struct VertexListWithOptions {
-    list: Vec<(VertexName, VertexOptions)>,
+    list: Vec<(Vertex, VertexOptions)>,
 }
 
 /// Options attached to a vertex. Usually the vertex is a head. The head and its
@@ -62,8 +62,8 @@ impl Default for VertexOptions {
     }
 }
 
-impl<'a> From<&'a [VertexName]> for VertexListWithOptions {
-    fn from(list: &'a [VertexName]) -> Self {
+impl<'a> From<&'a [Vertex]> for VertexListWithOptions {
+    fn from(list: &'a [Vertex]) -> Self {
         // Just use default options.
         Self {
             list: list
@@ -74,8 +74,8 @@ impl<'a> From<&'a [VertexName]> for VertexListWithOptions {
     }
 }
 
-impl From<Vec<VertexName>> for VertexListWithOptions {
-    fn from(list: Vec<VertexName>) -> Self {
+impl From<Vec<Vertex>> for VertexListWithOptions {
+    fn from(list: Vec<Vertex>) -> Self {
         // Just use default options.
         Self {
             list: list
@@ -86,25 +86,25 @@ impl From<Vec<VertexName>> for VertexListWithOptions {
     }
 }
 
-impl From<Vec<(VertexName, VertexOptions)>> for VertexListWithOptions {
-    fn from(list: Vec<(VertexName, VertexOptions)>) -> Self {
+impl From<Vec<(Vertex, VertexOptions)>> for VertexListWithOptions {
+    fn from(list: Vec<(Vertex, VertexOptions)>) -> Self {
         Self { list }
     }
 }
 
 impl VertexListWithOptions {
     /// Get the vertexes and their options.
-    pub fn vertex_options(&self) -> Vec<(VertexName, VertexOptions)> {
+    pub fn vertex_options(&self) -> Vec<(Vertex, VertexOptions)> {
         self.list.clone()
     }
 
     /// Get the vertexes.
-    pub fn vertexes(&self) -> Vec<VertexName> {
+    pub fn vertexes(&self) -> Vec<Vertex> {
         self.list.iter().map(|i| i.0.clone()).collect()
     }
 
     /// Get the vertexes, filter by the `desired_group` option.
-    pub fn vertexes_by_group(&self, group: Group) -> Vec<VertexName> {
+    pub fn vertexes_by_group(&self, group: Group) -> Vec<Vertex> {
         self.list
             .iter()
             .filter_map(|(v, o)| {
@@ -123,7 +123,7 @@ impl VertexListWithOptions {
     }
 
     /// Add a new item to the list.
-    pub fn push(&mut self, head_opts: (VertexName, VertexOptions)) {
+    pub fn push(&mut self, head_opts: (Vertex, VertexOptions)) {
         self.list.push(head_opts);
     }
 

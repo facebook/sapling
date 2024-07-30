@@ -42,7 +42,7 @@ use dag::nameset::hints::Flags;
 use dag::ops::DagAddHeads;
 use dag::DagAlgorithm;
 use dag::Set;
-use dag::VertexName;
+use dag::Vertex;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use indexedlog::log::IndexDef;
@@ -165,7 +165,7 @@ impl MutationStore {
             pred_nodes.push(pred);
         }
         let pred_set =
-            Set::from_static_names(pred_nodes.iter().map(|p| VertexName::copy_from(p.as_ref())));
+            Set::from_static_names(pred_nodes.iter().map(|p| Vertex::copy_from(p.as_ref())));
         let dag = self
             .get_dag_advanced(pred_nodes, DagFlags::SUCCESSORS)
             .await?;
@@ -175,7 +175,7 @@ impl MutationStore {
         for entry in &self.pending {
             let x = entry.preds[0];
             // Find all "P"s, as in P -> ... -> X, and X -> Y.
-            let x_set = VertexName::copy_from(x.as_ref()).into();
+            let x_set = Vertex::copy_from(x.as_ref()).into();
             // "dag" is locally built and should be non-blocking.
             let x_ancestors = match dag.ancestors(x_set).await {
                 Ok(set) => set,
@@ -267,8 +267,8 @@ impl MutationStore {
             // So we manually ignore names not in the local graph to avoid the
             // slow path.
             if let Some(visible_id_convert) = visible.id_convert() {
-                let obsnames: Vec<VertexName> = { obsall.iter().await?.try_collect().await? };
-                let obsnames: Vec<VertexName> = {
+                let obsnames: Vec<Vertex> = { obsall.iter().await?.try_collect().await? };
+                let obsnames: Vec<Vertex> = {
                     let contains = visible_id_convert
                         .contains_vertex_name_locally(&obsnames)
                         .await?;
@@ -411,12 +411,12 @@ impl MutationStore {
         }
 
         // Construct parent_func.
-        let parent_func = move |node: VertexName| -> dag::Result<Vec<VertexName>> {
+        let parent_func = move |node: Vertex| -> dag::Result<Vec<Vertex>> {
             match parent_map.get(&Node::from_slice(node.as_ref()).unwrap()) {
                 None => Ok(Vec::new()),
                 Some(parents) => Ok(parents
                     .iter()
-                    .map(|n| VertexName::copy_from(n.as_ref()))
+                    .map(|n| Vertex::copy_from(n.as_ref()))
                     .collect()),
             }
         };
@@ -426,14 +426,14 @@ impl MutationStore {
         // `add_heads`, `break_parent_func_cycle`, and the resulting graph.
         let mut heads: Vec<Node> = connected.difference(&non_heads).cloned().collect();
         heads.sort_unstable();
-        let heads: Vec<VertexName> = heads
+        let heads: Vec<Vertex> = heads
             .into_iter()
-            .map(|n| VertexName::copy_from(n.as_ref()))
+            .map(|n| Vertex::copy_from(n.as_ref()))
             .collect();
 
         // Construct the graph.
         let mut dag = MemNameDag::new();
-        let parents: Box<dyn Fn(VertexName) -> dag::Result<Vec<VertexName>> + Send + Sync> =
+        let parents: Box<dyn Fn(Vertex) -> dag::Result<Vec<Vertex>> + Send + Sync> =
             Box::new(parent_func);
 
         // Inserting to a memory DAG from a fully known parent function is non-blocking.
@@ -732,7 +732,7 @@ mod tests {
     }
 
     /// Create a vertex from a single-char string.
-    fn v(s: impl ToString) -> VertexName {
+    fn v(s: impl ToString) -> Vertex {
         n(s).as_ref().to_vec().into()
     }
 

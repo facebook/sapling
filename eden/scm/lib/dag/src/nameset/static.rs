@@ -15,14 +15,14 @@ use super::AsyncNameSetQuery;
 use super::BoxVertexStream;
 use super::Hints;
 use crate::Result;
-use crate::VertexName;
+use crate::Vertex;
 
 /// A set backed by a concrete ordered set.
-pub struct StaticSet(pub(crate) IndexSet<VertexName>, Hints);
+pub struct StaticSet(pub(crate) IndexSet<Vertex>, Hints);
 
 impl StaticSet {
-    pub fn from_names(names: impl IntoIterator<Item = VertexName>) -> Self {
-        let names: IndexSet<VertexName> = names.into_iter().collect();
+    pub fn from_names(names: impl IntoIterator<Item = Vertex>) -> Self {
+        let names: IndexSet<Vertex> = names.into_iter().collect();
         let hints = Hints::default();
         if names.is_empty() {
             hints.add_flags(Flags::EMPTY);
@@ -31,7 +31,7 @@ impl StaticSet {
     }
 
     pub fn empty() -> Self {
-        let names: IndexSet<VertexName> = Default::default();
+        let names: IndexSet<Vertex> = Default::default();
         let hints = Hints::default();
         hints.add_flags(Flags::EMPTY);
         Self(names, hints)
@@ -63,11 +63,11 @@ impl AsyncNameSetQuery for StaticSet {
         Ok(self.0.is_empty())
     }
 
-    async fn contains(&self, name: &VertexName) -> Result<bool> {
+    async fn contains(&self, name: &Vertex) -> Result<bool> {
         Ok(self.0.contains(name))
     }
 
-    async fn contains_fast(&self, name: &VertexName) -> Result<Option<bool>> {
+    async fn contains_fast(&self, name: &Vertex) -> Result<Option<bool>> {
         Ok(Some(self.0.contains(name)))
     }
 

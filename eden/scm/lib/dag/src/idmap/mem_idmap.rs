@@ -13,7 +13,7 @@ use super::IdMapWrite;
 use crate::errors::NotFoundError;
 use crate::id::Group;
 use crate::id::Id;
-use crate::id::VertexName;
+use crate::id::Vertex;
 use crate::ops::IdConvert;
 use crate::ops::Persist;
 use crate::ops::PrefixLookup;
@@ -33,8 +33,8 @@ pub struct MemIdMap {
 /// or "version" concept.
 #[derive(Default, Clone)]
 pub(crate) struct CoreMemIdMap {
-    id2name: BTreeMap<Id, VertexName>,
-    name2id: BTreeMap<VertexName, Id>,
+    id2name: BTreeMap<Id, Vertex>,
+    name2id: BTreeMap<Vertex, Id>,
 }
 
 impl MemIdMap {
@@ -59,11 +59,11 @@ impl Clone for MemIdMap {
 }
 
 impl CoreMemIdMap {
-    pub fn lookup_vertex_id(&self, name: &VertexName) -> Option<Id> {
+    pub fn lookup_vertex_id(&self, name: &Vertex) -> Option<Id> {
         self.name2id.get(name).copied()
     }
 
-    pub fn lookup_vertex_name(&self, id: Id) -> Option<&VertexName> {
+    pub fn lookup_vertex_name(&self, id: Id) -> Option<&Vertex> {
         self.id2name.get(&id)
     }
 
@@ -71,8 +71,8 @@ impl CoreMemIdMap {
         &self,
         hex_prefix: &[u8],
         limit: usize,
-    ) -> Result<Vec<VertexName>> {
-        let start = VertexName::from_hex(hex_prefix)?;
+    ) -> Result<Vec<Vertex>> {
+        let start = Vertex::from_hex(hex_prefix)?;
         let mut result = Vec::new();
         for (vertex, _) in self.name2id.range(start..) {
             if !vertex.to_hex().as_bytes().starts_with(hex_prefix) {
@@ -86,11 +86,11 @@ impl CoreMemIdMap {
         Ok(result)
     }
 
-    pub fn lookup_range(&self, low: Id, high: Id) -> impl Iterator<Item = (&Id, &VertexName)> {
+    pub fn lookup_range(&self, low: Id, high: Id) -> impl Iterator<Item = (&Id, &Vertex)> {
         self.id2name.range(low..=high)
     }
 
-    pub fn has_vertex_name(&self, name: &VertexName) -> bool {
+    pub fn has_vertex_name(&self, name: &Vertex) -> bool {
         self.name2id.contains_key(name)
     }
 
@@ -98,13 +98,13 @@ impl CoreMemIdMap {
         self.id2name.contains_key(&id)
     }
 
-    pub fn insert_vertex_id_name(&mut self, id: Id, vertex_name: VertexName) {
+    pub fn insert_vertex_id_name(&mut self, id: Id, vertex_name: Vertex) {
         self.name2id.insert(vertex_name.clone(), id);
         self.id2name.insert(id, vertex_name);
     }
 
-    pub fn remove_range(&mut self, low: Id, high: Id) -> Result<Vec<VertexName>> {
-        let to_remove: Vec<(Id, VertexName)> = self
+    pub fn remove_range(&mut self, low: Id, high: Id) -> Result<Vec<Vertex>> {
+        let to_remove: Vec<(Id, Vertex)> = self
             .id2name
             .range(low..=high)
             .map(|(i, n)| (*i, n.clone()))
@@ -119,14 +119,14 @@ impl CoreMemIdMap {
 
 #[async_trait::async_trait]
 impl IdConvert for MemIdMap {
-    async fn vertex_id(&self, name: VertexName) -> Result<Id> {
+    async fn vertex_id(&self, name: Vertex) -> Result<Id> {
         self.core
             .lookup_vertex_id(&name)
             .ok_or_else(|| name.not_found_error())
     }
     async fn vertex_id_with_max_group(
         &self,
-        name: &VertexName,
+        name: &Vertex,
         max_group: Group,
     ) -> Result<Option<Id>> {
         let optional_id = self.core.name2id.get(name).and_then(|id| {
@@ -138,13 +138,13 @@ impl IdConvert for MemIdMap {
         });
         Ok(optional_id)
     }
-    async fn vertex_name(&self, id: Id) -> Result<VertexName> {
+    async fn vertex_name(&self, id: Id) -> Result<Vertex> {
         self.core
             .lookup_vertex_name(id)
             .cloned()
             .ok_or_else(|| id.not_found_error())
     }
-    async fn contains_vertex_name(&self, name: &VertexName) -> Result<bool> {
+    async fn contains_vertex_name(&self, name: &Vertex) -> Result<bool> {
         Ok(self.core.has_vertex_name(name))
     }
 
@@ -155,7 +155,7 @@ impl IdConvert for MemIdMap {
             .map(|id| self.core.has_vertex_id(id))
             .collect())
     }
-    async fn contains_vertex_name_locally(&self, names: &[VertexName]) -> Result<Vec<bool>> {
+    async fn contains_vertex_name_locally(&self, names: &[Vertex]) -> Result<Vec<bool>> {
         Ok(names
             .iter()
             .map(|name| self.core.has_vertex_name(name))
@@ -175,12 +175,12 @@ impl IdConvert for MemIdMap {
 #[async_trait::async_trait]
 impl IdMapWrite for MemIdMap {
     async fn insert(&mut self, id: Id, name: &[u8]) -> Result<()> {
-        let vertex_name = VertexName::copy_from(name);
+        let vertex_name = Vertex::copy_from(name);
         self.core.insert_vertex_id_name(id, vertex_name);
         self.map_version.bump();
         Ok(())
     }
-    async fn remove_range(&mut self, low: Id, high: Id) -> Result<Vec<VertexName>> {
+    async fn remove_range(&mut self, low: Id, high: Id) -> Result<Vec<Vertex>> {
         if !(low.is_virtual() && high.is_virtual()) {
             self.map_version = VerLink::new();
         }
@@ -206,11 +206,7 @@ impl Persist for MemIdMap {
 
 #[async_trait::async_trait]
 impl PrefixLookup for MemIdMap {
-    async fn vertexes_by_hex_prefix(
-        &self,
-        hex_prefix: &[u8],
-        limit: usize,
-    ) -> Result<Vec<VertexName>> {
+    async fn vertexes_by_hex_prefix(&self, hex_prefix: &[u8], limit: usize) -> Result<Vec<Vertex>> {
         self.core.lookup_vertexes_by_hex_prefix(hex_prefix, limit)
     }
 }

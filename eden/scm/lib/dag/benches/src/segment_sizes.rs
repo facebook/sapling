@@ -12,19 +12,19 @@ use dag::Group;
 use dag::Id;
 use dag::IdDag;
 use dag::IdSet;
-use dag::VertexName;
+use dag::Vertex;
 use minibench::bench;
 use minibench::elapsed;
 use nonblocking::non_blocking_result as nbr;
 use tempfile::tempdir;
 
-type ParentsFunc<'a> = Box<dyn Fn(VertexName) -> dag::Result<Vec<VertexName>> + Send + Sync + 'a>;
+type ParentsFunc<'a> = Box<dyn Fn(Vertex) -> dag::Result<Vec<Vertex>> + Send + Sync + 'a>;
 
 pub fn main() {
     let parents = bindag::parse_bindag(bindag::MOZILLA);
 
-    let head_name = VertexName::copy_from(format!("{}", parents.len() - 1).as_bytes());
-    let parents_by_name = |name: VertexName| -> dag::Result<Vec<VertexName>> {
+    let head_name = Vertex::copy_from(format!("{}", parents.len() - 1).as_bytes());
+    let parents_by_name = |name: Vertex| -> dag::Result<Vec<Vertex>> {
         let i = String::from_utf8(name.as_ref().to_vec())
             .unwrap()
             .parse::<usize>()

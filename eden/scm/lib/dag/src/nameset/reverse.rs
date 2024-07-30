@@ -16,7 +16,7 @@ use super::BoxVertexStream;
 use super::Hints;
 use super::NameSet;
 use crate::Result;
-use crate::VertexName;
+use crate::Vertex;
 
 /// Set with a reversed iteration order.
 #[derive(Clone)]
@@ -60,19 +60,19 @@ impl AsyncNameSetQuery for ReverseSet {
         self.inner.size_hint().await
     }
 
-    async fn contains(&self, name: &VertexName) -> Result<bool> {
+    async fn contains(&self, name: &Vertex) -> Result<bool> {
         self.inner.contains(name).await
     }
 
-    async fn contains_fast(&self, name: &VertexName) -> Result<Option<bool>> {
+    async fn contains_fast(&self, name: &Vertex) -> Result<Option<bool>> {
         self.inner.contains_fast(name).await
     }
 
-    async fn first(&self) -> Result<Option<VertexName>> {
+    async fn first(&self) -> Result<Option<Vertex>> {
         self.inner.last().await
     }
 
-    async fn last(&self) -> Result<Option<VertexName>> {
+    async fn last(&self) -> Result<Option<Vertex>> {
         self.inner.first().await
     }
 

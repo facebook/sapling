@@ -17,7 +17,7 @@ use dag_types::FlatSegment;
 use dag_types::Id;
 use dag_types::Location;
 use dag_types::PreparedFlatSegments;
-use dag_types::VertexName;
+use dag_types::Vertex;
 use types::HgId;
 
 use crate::commit::CommitGraphSegmentParent;
@@ -27,7 +27,7 @@ pub struct CommitGraphSegments {
     pub segments: Vec<CommitGraphSegmentsEntry>,
 }
 
-impl TryFrom<CommitGraphSegments> for CloneData<VertexName> {
+impl TryFrom<CommitGraphSegments> for CloneData<Vertex> {
     type Error = anyhow::Error;
 
     /// Convert server-provided commit graph segments into valid clone data by
@@ -103,16 +103,16 @@ impl TryFrom<CommitGraphSegments> for CloneData<VertexName> {
             flat_segments,
             idmap: name_map
                 .into_iter()
-                .map(|(name, id)| (id, VertexName::copy_from(&name.into_byte_array())))
+                .map(|(name, id)| (id, Vertex::copy_from(&name.into_byte_array())))
                 .collect(),
         })
     }
 }
 
-impl TryFrom<CloneData<VertexName>> for CommitGraphSegments {
+impl TryFrom<CloneData<Vertex>> for CommitGraphSegments {
     type Error = anyhow::Error;
 
-    fn try_from(clone_data: CloneData<VertexName>) -> Result<Self> {
+    fn try_from(clone_data: CloneData<Vertex>) -> Result<Self> {
         let CloneData {
             flat_segments,
             idmap,

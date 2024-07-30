@@ -27,7 +27,7 @@ use crate::IdSetIter;
 use crate::IdSpan;
 use crate::NameSet;
 use crate::Result;
-use crate::VertexName;
+use crate::Vertex;
 
 /// A set backed by [`IdSet`] + [`IdMap`].
 /// Efficient for DAG calculation.
@@ -45,7 +45,7 @@ struct Iter {
     iter: IdSetIter<IdSet>,
     map: Arc<dyn IdConvert + Send + Sync>,
     reversed: bool,
-    buf: Vec<Result<VertexName>>,
+    buf: Vec<Result<Vertex>>,
 }
 
 impl Iter {
@@ -53,7 +53,7 @@ impl Iter {
         Box::pin(futures::stream::unfold(self, |this| this.next()))
     }
 
-    async fn next(mut self) -> Option<(Result<VertexName>, Self)> {
+    async fn next(mut self) -> Option<(Result<Vertex>, Self)> {
         if let Some(name) = self.buf.pop() {
             return Some((name, self));
         }
@@ -108,8 +108,8 @@ impl Iter {
 
 struct DebugSpan {
     span: IdSpan,
-    low_name: Option<VertexName>,
-    high_name: Option<VertexName>,
+    low_name: Option<Vertex>,
+    high_name: Option<Vertex>,
 }
 
 impl fmt::Debug for DebugSpan {
@@ -235,7 +235,7 @@ impl IdStaticSet {
         self.reversed
     }
 
-    async fn max(&self) -> Result<Option<VertexName>> {
+    async fn max(&self) -> Result<Option<Vertex>> {
         debug_assert_eq!(self.spans.max(), self.spans.iter_desc().nth(0));
         match self.spans.max() {
             Some(id) => {
@@ -247,7 +247,7 @@ impl IdStaticSet {
         }
     }
 
-    async fn min(&self) -> Result<Option<VertexName>> {
+    async fn min(&self) -> Result<Option<Vertex>> {
         debug_assert_eq!(self.spans.min(), self.spans.iter_desc().rev().nth(0));
         match self.spans.min() {
             Some(id) => {
@@ -322,7 +322,7 @@ impl AsyncNameSetQuery for IdStaticSet {
         (size, Some(size))
     }
 
-    async fn first(&self) -> Result<Option<VertexName>> {
+    async fn first(&self) -> Result<Option<Vertex>> {
         if self.reversed {
             self.min().await
         } else {
@@ -330,7 +330,7 @@ impl AsyncNameSetQuery for IdStaticSet {
         }
     }
 
-    async fn last(&self) -> Result<Option<VertexName>> {
+    async fn last(&self) -> Result<Option<Vertex>> {
         if self.reversed {
             self.max().await
         } else {
@@ -342,7 +342,7 @@ impl AsyncNameSetQuery for IdStaticSet {
         Ok(self.spans.is_empty())
     }
 
-    async fn contains(&self, name: &VertexName) -> Result<bool> {
+    async fn contains(&self, name: &Vertex) -> Result<bool> {
         let result = match self.map.vertex_id_with_max_group(name, Group::MAX).await? {
             Some(id) => self.spans.contains(id),
             None => false,
@@ -350,7 +350,7 @@ impl AsyncNameSetQuery for IdStaticSet {
         Ok(result)
     }
 
-    async fn contains_fast(&self, name: &VertexName) -> Result<Option<bool>> {
+    async fn contains_fast(&self, name: &Vertex) -> Result<Option<bool>> {
         self.contains(name).await.map(Some)
     }
 

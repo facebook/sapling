@@ -22,7 +22,7 @@ use super::Hints;
 use super::NameSet;
 use crate::fmt::write_debug;
 use crate::Result;
-use crate::VertexName;
+use crate::Vertex;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Deserialize)]
 pub enum UnionOrder {
@@ -155,7 +155,7 @@ impl AsyncNameSetQuery for UnionSet {
         Ok(true)
     }
 
-    async fn contains(&self, name: &VertexName) -> Result<bool> {
+    async fn contains(&self, name: &Vertex) -> Result<bool> {
         for set in &self.sets {
             if set.contains(name).await? {
                 return Ok(true);
@@ -164,7 +164,7 @@ impl AsyncNameSetQuery for UnionSet {
         Ok(false)
     }
 
-    async fn contains_fast(&self, name: &VertexName) -> Result<Option<bool>> {
+    async fn contains_fast(&self, name: &Vertex) -> Result<Option<bool>> {
         for set in &self.sets {
             if let Some(result) = set.contains_fast(name).await? {
                 return Ok(Some(result));
@@ -215,7 +215,7 @@ impl ZipStream {
 }
 
 impl Stream for ZipStream {
-    type Item = Result<VertexName>;
+    type Item = Result<Vertex>;
 
     fn poll_next(
         mut self: std::pin::Pin<&mut Self>,

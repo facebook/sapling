@@ -29,8 +29,8 @@ use mononoke_types::ChangesetId;
 use slog::info;
 
 use crate::dag::NameDagBuilder;
+use crate::dag::Vertex;
 use crate::dag::VertexListWithOptions;
-use crate::dag::VertexName;
 use crate::dag::VertexOptions;
 use crate::idmap::vertex_name_from_cs_id;
 use crate::idmap::IdMap;
@@ -120,7 +120,7 @@ pub fn server_namedag(
         .map_err(anyhow::Error::from)
 }
 
-fn head_with_options(head: &ChangesetId) -> (VertexName, VertexOptions) {
+fn head_with_options(head: &ChangesetId) -> (Vertex, VertexOptions) {
     let mut options = VertexOptions::default();
     options.reserve_size = 1 << 26;
     options.desired_group = Group::MASTER;
@@ -211,7 +211,7 @@ mod tests {
         let res = bookmark_with_options(&ctx, &second, repo.bookmarks()).await?;
         assert_eq!(
             res.vertexes(),
-            vec![VertexName::from_hex(
+            vec![Vertex::from_hex(
                 b"5ec506306edb84a4a47f901a55cedeec3113eb118bfae119982f45382481e3dc"
             )?,]
         );
@@ -228,13 +228,13 @@ mod tests {
         assert_eq!(
             res.vertexes(),
             vec![
-                VertexName::from_hex(
+                Vertex::from_hex(
                     b"56da5b997e27f2f9020f6ff2d87b321774369e23579bd2c4ce675efad363f4f4"
                 )?,
-                VertexName::from_hex(
+                Vertex::from_hex(
                     b"5ec506306edb84a4a47f901a55cedeec3113eb118bfae119982f45382481e3dc"
                 )?,
-                VertexName::from_hex(
+                Vertex::from_hex(
                     b"7097e8d1e72af16e8135047d8693fb381246be1bc74c1b6c0cb013fc05331fc1"
                 )?,
             ]
@@ -249,10 +249,10 @@ mod tests {
         assert_eq!(
             res.vertexes(),
             vec![
-                VertexName::from_hex(
+                Vertex::from_hex(
                     b"56da5b997e27f2f9020f6ff2d87b321774369e23579bd2c4ce675efad363f4f4"
                 )?,
-                VertexName::from_hex(
+                Vertex::from_hex(
                     b"7097e8d1e72af16e8135047d8693fb381246be1bc74c1b6c0cb013fc05331fc1"
                 )?,
             ]

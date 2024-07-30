@@ -24,7 +24,7 @@ use crate::ops::StorageVersion;
 use crate::ops::TryClone;
 use crate::Result;
 
-/// A DAG that uses VertexName instead of ids as vertexes.
+/// A DAG that uses Vertex instead of ids as vertexes.
 ///
 /// A high-level wrapper structure. Combination of [`IdMap`] and [`Dag`].
 /// Maintains consistency of dag and map internally.

@@ -37,7 +37,7 @@ use crate::errors::DagError;
 use crate::errors::NotFoundError;
 use crate::id::Group;
 use crate::id::Id;
-use crate::id::VertexName;
+use crate::id::Vertex;
 use crate::iddag::IdDag;
 use crate::iddag::IdDagAlgorithm;
 use crate::iddagstore::IdDagStore;
@@ -139,7 +139,7 @@ where
     /// The source of `overlay_map`s. This avoids absolute Ids, and is
     /// used to flush overlay_map content shall the IdMap change on
     /// disk.
-    overlay_map_paths: Arc<Mutex<Vec<(AncestorPath, Vec<VertexName>)>>>,
+    overlay_map_paths: Arc<Mutex<Vec<(AncestorPath, Vec<Vertex>)>>>,
 
     /// Defines how to communicate with a remote service.
     /// The actual logic probably involves networking like HTTP etc
@@ -151,7 +151,7 @@ where
 
     /// A negative cache. Vertexes that are looked up remotely, and the remote
     /// confirmed the vertexes are outside the master group.
-    missing_vertexes_confirmed_by_remote: Arc<RwLock<HashSet<VertexName>>>,
+    missing_vertexes_confirmed_by_remote: Arc<RwLock<HashSet<Vertex>>>,
 
     /// Internal stats (for testing).
     pub(crate) internal_stats: DagInternalStats,
@@ -204,7 +204,7 @@ where
     /// `add_heads_and_flush`, `strip`, `flush`, `import_pull_data`.
     pub async fn set_managed_virtual_group(
         &mut self,
-        items: Option<Vec<(VertexName, Vec<VertexName>)>>,
+        items: Option<Vec<(Vertex, Vec<Vertex>)>>,
     ) -> Result<()> {
         self.managed_virtual_group = items.map(|items| {
             // Calculate `Parents` and `VertexListWithOptions` so they can be
@@ -218,7 +218,7 @@ where
                 .map(|(v, _p)| (v.clone(), opts.clone()))
                 .collect::<Vec<_>>()
                 .into();
-            let parents: HashMap<VertexName, Vec<VertexName>> = items.into_iter().collect();
+            let parents: HashMap<Vertex, Vec<Vertex>> = items.into_iter().collect();
             let parents: Box<dyn Parents> = Box::new(parents);
             Arc::new((parents, heads))
         });
@@ -369,7 +369,7 @@ where
         // directly. Instead, re-translate the paths.
 
         // Prepare data to insert. Do not hold Mutex across async yield points.
-        let mut to_insert: Vec<(AncestorPath, Vec<VertexName>)> = Vec::new();
+        let mut to_insert: Vec<(AncestorPath, Vec<Vertex>)> = Vec::new();
         std::mem::swap(&mut to_insert, &mut *self.overlay_map_paths.lock().unwrap());
         if to_insert.is_empty() {
             return Ok(());
@@ -404,7 +404,7 @@ where
 {
     /// Implementation detail. Must be protected by a lock.
     async fn flush_cached_idmap_with_lock(&mut self, map_lock: &M::Lock) -> Result<()> {
-        let mut to_insert: Vec<(AncestorPath, Vec<VertexName>)> = Vec::new();
+        let mut to_insert: Vec<(AncestorPath, Vec<Vertex>)> = Vec::new();
         std::mem::swap(&mut to_insert, &mut *self.overlay_map_paths.lock().unwrap());
         if to_insert.is_empty() {
             return Ok(());
@@ -419,12 +419,12 @@ where
         .await?;
 
         // For testing purpose, skip inserting certain vertexes.
-        let mut skip_vertexes: Option<HashSet<VertexName>> = None;
+        let mut skip_vertexes: Option<HashSet<Vertex>> = None;
         if crate::is_testing() {
             if let Ok(s) = var("DAG_SKIP_FLUSH_VERTEXES") {
                 skip_vertexes = Some(
                     s.split(',')
-                        .filter_map(|s| VertexName::from_hex(s.as_bytes()).ok())
+                        .filter_map(|s| Vertex::from_hex(s.as_bytes()).ok())
                         .collect(),
                 )
             }
@@ -715,7 +715,7 @@ where
         self.map.insert(id, name).await
     }
 
-    async fn remove_range(&mut self, low: Id, high: Id) -> Result<Vec<VertexName>> {
+    async fn remove_range(&mut self, low: Id, high: Id) -> Result<Vec<Vertex>> {
         self.map.remove_range(low, high).await
     }
 }
@@ -729,7 +729,7 @@ where
     P: TryClone + Send + Sync + 'static,
     S: TryClone + Persist + Send + Sync + 'static,
 {
-    async fn import_clone_data(&mut self, clone_data: CloneData<VertexName>) -> Result<()> {
+    async fn import_clone_data(&mut self, clone_data: CloneData<Vertex>) -> Result<()> {
         // Write directly to disk. Bypassing "flush()" that re-assigns Ids
         // using parent functions.
         let (lock, map_lock, dag_lock) = self.reload()?;
@@ -810,7 +810,7 @@ where
     // See docstring in ops.py for details.
     async fn import_pull_data(
         &mut self,
-        clone_data: CloneData<VertexName>,
+        clone_data: CloneData<Vertex>,
         heads: &VertexListWithOptions,
     ) -> Result<()> {
         if !self.pending_heads.is_empty() {
@@ -874,7 +874,7 @@ where
                 parent_ids.extend(connected_pids);
             }
 
-            let to_names = |ids: &[Id], hint: &str| -> Result<Vec<VertexName>> {
+            let to_names = |ids: &[Id], hint: &str| -> Result<Vec<Vertex>> {
                 let names = ids.iter().map(|i| match clone_data.idmap.get(i) {
                     Some(v) => Ok(v.clone()),
                     None => {
@@ -926,8 +926,8 @@ where
         /// Query server segments with some indexes.
         struct ServerState<'a> {
             seg_by_high: BTreeMap<Id, FlatSegment>,
-            idmap_by_name: BTreeMap<&'a VertexName, Id>,
-            idmap_by_id: &'a BTreeMap<Id, VertexName>,
+            idmap_by_name: BTreeMap<&'a Vertex, Id>,
+            idmap_by_id: &'a BTreeMap<Id, Vertex>,
         }
         let mut server = ServerState {
             seg_by_high: clone_data
@@ -1002,14 +1002,14 @@ where
                 self.seg_by_high.insert(seg2.high, seg2);
             }
 
-            fn name_by_id(&self, id: Id) -> VertexName {
+            fn name_by_id(&self, id: Id) -> Vertex {
                 self.idmap_by_id
                     .get(&id)
                     .expect("IdMap should contain the `id`. It should be checked before.")
                     .clone()
             }
 
-            fn id_by_name(&self, name: &VertexName) -> Option<Id> {
+            fn id_by_name(&self, name: &Vertex) -> Option<Id> {
                 self.idmap_by_name.get(name).copied()
             }
         }
@@ -1083,7 +1083,7 @@ where
                 }
 
                 let parent_server_ids = &server_seg.parents;
-                let parent_names: Vec<VertexName> = {
+                let parent_names: Vec<Vertex> = {
                     let iter = parent_server_ids.iter().map(|id| server.name_by_id(*id));
                     iter.collect()
                 };
@@ -1191,8 +1191,8 @@ where
     P: TryClone + Send + Sync + 'static,
     S: TryClone + Send + Sync + 'static,
 {
-    async fn export_clone_data(&self) -> Result<CloneData<VertexName>> {
-        let idmap: BTreeMap<Id, VertexName> = {
+    async fn export_clone_data(&self) -> Result<CloneData<Vertex>> {
+        let idmap: BTreeMap<Id, Vertex> = {
             let ids: Vec<Id> = self.dag.universal_ids()?.into_iter().collect();
             tracing::debug!("export: {} universally known vertexes", ids.len());
             let names = {
@@ -1240,13 +1240,13 @@ where
     P: TryClone + Send + Sync + 'static,
     S: TryClone + Send + Sync + 'static,
 {
-    async fn export_pull_data(&self, set: &NameSet) -> Result<CloneData<VertexName>> {
+    async fn export_pull_data(&self, set: &NameSet) -> Result<CloneData<Vertex>> {
         let id_set = self.to_id_set(set).await?;
 
         let flat_segments = self.dag.idset_to_flat_segments(id_set)?;
         let ids: Vec<_> = flat_segments.parents_head_and_roots().into_iter().collect();
 
-        let idmap: BTreeMap<Id, VertexName> = {
+        let idmap: BTreeMap<Id, Vertex> = {
             tracing::debug!("pull: {} vertexes in idmap", ids.len());
             let names = {
                 let fallible_names = self.vertex_name_batch(&ids).await?;
@@ -1367,7 +1367,7 @@ where
     async fn populate_missing_vertexes_for_add_heads(
         &mut self,
         parents: &dyn Parents,
-        heads: &[VertexName],
+        heads: &[Vertex],
     ) -> Result<()> {
         if self.is_vertex_lazy() {
             let unassigned = calculate_definitely_unassigned_vertexes(self, parents, heads).await?;
@@ -1395,8 +1395,8 @@ where
 async fn calculate_definitely_unassigned_vertexes<IS, M, P, S>(
     this: &AbstractNameDag<IdDag<IS>, M, P, S>,
     parents: &dyn Parents,
-    heads: &[VertexName],
-) -> Result<Vec<VertexName>>
+    heads: &[Vertex],
+) -> Result<Vec<Vertex>>
 where
     IS: IdDagStore,
     IdDag<IS>: TryClone,
@@ -1520,7 +1520,7 @@ where
 
     // Figure out unassigned (missing) vertexes that do need to be inserted.
     // This is done via utils::filter_known.
-    let filter_known = |sample: &[VertexName]| -> BoxFuture<Result<Vec<VertexName>>> {
+    let filter_known = |sample: &[Vertex]| -> BoxFuture<Result<Vec<Vertex>>> {
         let sample = sample.to_vec();
         async {
             let known_bools: Vec<bool> = {
@@ -1556,7 +1556,7 @@ where
 {
     /// Resolve vertexes remotely and cache the result in the overlay map.
     /// Return the resolved ids in the given order. Not all names are resolved.
-    async fn resolve_vertexes_remotely(&self, names: &[VertexName]) -> Result<Vec<Option<Id>>> {
+    async fn resolve_vertexes_remotely(&self, names: &[Vertex]) -> Result<Vec<Option<Id>>> {
         if names.is_empty() {
             return Ok(Vec::new());
         }
@@ -1597,7 +1597,7 @@ where
 
     /// Resolve ids remotely and cache the result in the overlay map.
     /// Return the resolved ids in the given order. All ids must be resolved.
-    async fn resolve_ids_remotely(&self, ids: &[Id]) -> Result<Vec<VertexName>> {
+    async fn resolve_ids_remotely(&self, ids: &[Id]) -> Result<Vec<Vertex>> {
         if ids.is_empty() {
             return Ok(Vec::new());
         }
@@ -1637,12 +1637,12 @@ where
     /// Insert `x~n` relative paths to the overlay IdMap.
     async fn insert_relative_paths(
         &self,
-        path_names: Vec<(AncestorPath, Vec<VertexName>)>,
+        path_names: Vec<(AncestorPath, Vec<Vertex>)>,
     ) -> Result<()> {
         if path_names.is_empty() {
             return Ok(());
         }
-        let to_insert: Vec<(Id, VertexName)> = calculate_id_name_from_paths(
+        let to_insert: Vec<(Id, Vertex)> = calculate_id_name_from_paths(
             self.map(),
             self.dag().deref(),
             &self.overlay_map_id_set,
@@ -1669,12 +1669,12 @@ async fn calculate_id_name_from_paths(
     map: &dyn IdConvert,
     dag: &dyn IdDagAlgorithm,
     overlay_map_id_set: &IdSet,
-    path_names: &[(AncestorPath, Vec<VertexName>)],
-) -> Result<Vec<(Id, VertexName)>> {
+    path_names: &[(AncestorPath, Vec<Vertex>)],
+) -> Result<Vec<(Id, Vertex)>> {
     if path_names.is_empty() {
         return Ok(Vec::new());
     }
-    let mut to_insert: Vec<(Id, VertexName)> =
+    let mut to_insert: Vec<(Id, Vertex)> =
         Vec::with_capacity(path_names.iter().map(|(_, ns)| ns.len()).sum());
     for (path, names) in path_names {
         if names.is_empty() {
@@ -1774,9 +1774,9 @@ where
 {
     async fn resolve_names_to_relative_paths(
         &self,
-        heads: Vec<VertexName>,
-        names: Vec<VertexName>,
-    ) -> Result<Vec<(AncestorPath, Vec<VertexName>)>> {
+        heads: Vec<Vertex>,
+        names: Vec<Vertex>,
+    ) -> Result<Vec<(AncestorPath, Vec<Vertex>)>> {
         let request = protocol::RequestNameToLocation { names, heads };
         let response: protocol::ResponseIdNamePair =
             (self.map(), self.dag()).process(request).await?;
@@ -1786,7 +1786,7 @@ where
     async fn resolve_relative_paths_to_names(
         &self,
         paths: Vec<AncestorPath>,
-    ) -> Result<Vec<(AncestorPath, Vec<VertexName>)>> {
+    ) -> Result<Vec<(AncestorPath, Vec<Vertex>)>> {
         let request = protocol::RequestLocationToName { paths };
         let response: protocol::ResponseIdNamePair =
             (self.map(), self.dag()).process(request).await?;
@@ -1806,9 +1806,9 @@ where
 {
     async fn resolve_names_to_relative_paths(
         &self,
-        heads: Vec<VertexName>,
-        names: Vec<VertexName>,
-    ) -> Result<Vec<(AncestorPath, Vec<VertexName>)>> {
+        heads: Vec<Vertex>,
+        names: Vec<Vertex>,
+    ) -> Result<Vec<(AncestorPath, Vec<Vertex>)>> {
         self.deref()
             .resolve_names_to_relative_paths(heads, names)
             .await
@@ -1817,7 +1817,7 @@ where
     async fn resolve_relative_paths_to_names(
         &self,
         paths: Vec<AncestorPath>,
-    ) -> Result<Vec<(AncestorPath, Vec<VertexName>)>> {
+    ) -> Result<Vec<(AncestorPath, Vec<Vertex>)>> {
         self.deref().resolve_relative_paths_to_names(paths).await
     }
 }
@@ -1879,7 +1879,7 @@ where
     }
 
     /// Get ordered parent vertexes.
-    async fn parent_names(&self, name: VertexName) -> Result<Vec<VertexName>> {
+    async fn parent_names(&self, name: Vertex) -> Result<Vec<Vertex>> {
         let id = self.vertex_id(name).await?;
         let parent_ids = self.dag().parent_ids(id)?;
         let mut result = Vec::with_capacity(parent_ids.len());
@@ -1967,7 +1967,7 @@ where
     }
 
     /// Calculates the n-th first ancestor.
-    async fn first_ancestor_nth(&self, name: VertexName, n: u64) -> Result<Option<VertexName>> {
+    async fn first_ancestor_nth(&self, name: Vertex, n: u64) -> Result<Option<Vertex>> {
         #[cfg(test)]
         let name2 = name.clone();
         let id = self.vertex_id(name).await?;
@@ -2026,8 +2026,8 @@ where
     /// If there are no common ancestors, return None.
     /// If there are multiple greatest common ancestors, pick one arbitrarily.
     /// Use `gca_all` to get all of them.
-    async fn gca_one(&self, set: NameSet) -> Result<Option<VertexName>> {
-        let result: Option<VertexName> = match self.dag().gca_one(self.to_id_set(&set).await?)? {
+    async fn gca_one(&self, set: NameSet) -> Result<Option<Vertex>> {
+        let result: Option<Vertex> = match self.dag().gca_one(self.to_id_set(&set).await?)? {
             None => None,
             Some(id) => Some(self.vertex_name(id).await?),
         };
@@ -2063,7 +2063,7 @@ where
     }
 
     /// Tests if `ancestor` is an ancestor of `descendant`.
-    async fn is_ancestor(&self, ancestor: VertexName, descendant: VertexName) -> Result<bool> {
+    async fn is_ancestor(&self, ancestor: Vertex, descendant: Vertex) -> Result<bool> {
         #[cfg(test)]
         let result2 =
             crate::default_impl::is_ancestor(self, ancestor.clone(), descendant.clone()).await?;
@@ -2121,7 +2121,7 @@ where
         roots: NameSet,
         heads: NameSet,
         skip: NameSet,
-    ) -> Result<(Option<VertexName>, NameSet, NameSet)> {
+    ) -> Result<(Option<Vertex>, NameSet, NameSet)> {
         default_impl::suggest_bisect(self, roots, heads, skip).await
     }
 
@@ -2174,11 +2174,7 @@ where
     P: Send + Sync,
     S: Send + Sync,
 {
-    async fn vertexes_by_hex_prefix(
-        &self,
-        hex_prefix: &[u8],
-        limit: usize,
-    ) -> Result<Vec<VertexName>> {
+    async fn vertexes_by_hex_prefix(&self, hex_prefix: &[u8], limit: usize) -> Result<Vec<Vertex>> {
         let mut list = self.map.vertexes_by_hex_prefix(hex_prefix, limit).await?;
         let overlay_list = self
             .overlay_map
@@ -2202,7 +2198,7 @@ where
     P: TryClone + Send + Sync + 'static,
     S: TryClone + Send + Sync + 'static,
 {
-    async fn vertex_id(&self, name: VertexName) -> Result<Id> {
+    async fn vertex_id(&self, name: Vertex) -> Result<Id> {
         match self.map.vertex_id(name.clone()).await {
             Ok(id) => Ok(id),
             Err(crate::Error::VertexNotFound(_)) if self.is_vertex_lazy() => {
@@ -2231,7 +2227,7 @@ where
 
     async fn vertex_id_with_max_group(
         &self,
-        name: &VertexName,
+        name: &Vertex,
         max_group: Group,
     ) -> Result<Option<Id>> {
         match self.map.vertex_id_with_max_group(name, max_group).await {
@@ -2273,7 +2269,7 @@ where
         }
     }
 
-    async fn vertex_name(&self, id: Id) -> Result<VertexName> {
+    async fn vertex_name(&self, id: Id) -> Result<Vertex> {
         match self.map.vertex_name(id).await {
             Ok(name) => Ok(name),
             Err(crate::Error::IdNotFound(_)) if self.is_vertex_lazy() => {
@@ -2302,7 +2298,7 @@ where
         }
     }
 
-    async fn contains_vertex_name(&self, name: &VertexName) -> Result<bool> {
+    async fn contains_vertex_name(&self, name: &Vertex) -> Result<bool> {
         match self.map.contains_vertex_name(name).await {
             Ok(true) => Ok(true),
             Ok(false) if self.is_vertex_lazy() => {
@@ -2347,7 +2343,7 @@ where
         Ok(list)
     }
 
-    async fn contains_vertex_name_locally(&self, names: &[VertexName]) -> Result<Vec<bool>> {
+    async fn contains_vertex_name_locally(&self, names: &[Vertex]) -> Result<Vec<bool>> {
         tracing::trace!("contains_vertex_name_locally names: {:?}", &names);
         let mut list = self.map.contains_vertex_name_locally(names).await?;
         tracing::trace!("contains_vertex_name_locally list (local): {:?}", &list);
@@ -2362,7 +2358,7 @@ where
         Ok(list)
     }
 
-    async fn vertex_name_batch(&self, ids: &[Id]) -> Result<Vec<Result<VertexName>>> {
+    async fn vertex_name_batch(&self, ids: &[Id]) -> Result<Vec<Result<Vertex>>> {
         let mut list = self.map.vertex_name_batch(ids).await?;
         if self.is_vertex_lazy() {
             // Read from overlay map cache.
@@ -2395,7 +2391,7 @@ where
         Ok(list)
     }
 
-    async fn vertex_id_batch(&self, names: &[VertexName]) -> Result<Vec<Result<Id>>> {
+    async fn vertex_id_batch(&self, names: &[Vertex]) -> Result<Vec<Result<Id>>> {
         let mut list = self.map.vertex_id_batch(names).await?;
         if self.is_vertex_lazy() {
             // Read from overlay map cache.
@@ -2422,7 +2418,7 @@ where
                     .collect()
             };
             if !missing_indexes.is_empty() {
-                let missing_names: Vec<VertexName> =
+                let missing_names: Vec<Vertex> =
                     missing_indexes.iter().map(|i| names[*i].clone()).collect();
                 let resolved = self.resolve_vertexes_remotely(&missing_names).await?;
                 for (i, id) in missing_indexes.into_iter().zip(resolved.into_iter()) {
@@ -2505,7 +2501,7 @@ where
 
             // Populate vertex negative cache to reduce round-trips doing remote lookups.
             if self.is_vertex_lazy() {
-                let heads: Vec<VertexName> = heads.vertexes();
+                let heads: Vec<Vertex> = heads.vertexes();
                 self.populate_missing_vertexes_for_add_heads(parents, &heads)
                     .await?;
             }
@@ -2523,7 +2519,7 @@ where
                         )
                         .await?;
                     tracing::debug!(target: "dag::reassign", "need to rebuild heads: {:?}", &heads);
-                    let heads: Vec<VertexName> = heads.iter().await?.try_collect().await?;
+                    let heads: Vec<Vertex> = heads.iter().await?.try_collect().await?;
                     VertexListWithOptions::from(heads)
                 };
                 let reinsert_parents: Box<dyn Parents> = Box::new(self.dag_snapshot()?);
@@ -2585,7 +2581,7 @@ where
 
         // Visit vertexes recursively.
         let mut id_set = IdSet::empty();
-        let mut to_visit: Vec<VertexName> = master_heads;
+        let mut to_visit: Vec<Vertex> = master_heads;
         let mut visited = HashSet::new();
         while let Some(vertex) = to_visit.pop() {
             if !visited.insert(vertex.clone()) {
@@ -2828,7 +2824,7 @@ fn debug<S: IdDagStore>(
 
 struct DebugId {
     id: Id,
-    name: Option<VertexName>,
+    name: Option<Vertex>,
 }
 
 impl fmt::Debug for DebugId {

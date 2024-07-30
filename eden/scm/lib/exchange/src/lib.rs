@@ -12,8 +12,8 @@ use anyhow::Result;
 use async_runtime::block_unless_interrupted as block_on;
 use commits::DagCommits;
 use dag::Group;
+use dag::Vertex;
 use dag::VertexListWithOptions;
-use dag::VertexName;
 use edenapi::configmodel::Config;
 use edenapi::configmodel::ConfigExt;
 use edenapi::types::CommitGraphSegments;
@@ -57,9 +57,9 @@ pub fn clone(
         .iter()
         .filter_map(|name| bookmarks.get(name).cloned())
         .collect();
-    let head_vertexes: Vec<VertexName> = heads
+    let head_vertexes: Vec<Vertex> = heads
         .iter()
-        .map(|h| VertexName::copy_from(h.as_ref()))
+        .map(|h| Vertex::copy_from(h.as_ref()))
         .collect();
     let clone_data = if config.get_or_default::<bool>("clone", "use-commit-graph")? {
         let segments =
@@ -68,7 +68,7 @@ pub fn clone(
     } else {
         block_on(edenapi.pull_lazy(vec![], heads))?
             .map_err(|e| e.tag_network())?
-            .convert_vertex(|n| VertexName::copy_from(&n.into_byte_array()))
+            .convert_vertex(|n| Vertex::copy_from(&n.into_byte_array()))
     };
 
     if config.get_or_default::<bool>("clone", "use-import-clone")? {
@@ -111,7 +111,7 @@ pub fn fast_pull(
 ) -> Result<(u64, u64)> {
     let missing_vertexes = missing
         .iter()
-        .map(|id| VertexName::copy_from(&id.into_byte_array()))
+        .map(|id| Vertex::copy_from(&id.into_byte_array()))
         .collect::<Vec<_>>();
     let pull_data = if config.get_or_default::<bool>("pull", "use-commit-graph")? {
         let segments = block_on(edenapi.commit_graph_segments(missing, common))?
@@ -120,7 +120,7 @@ pub fn fast_pull(
     } else {
         block_on(edenapi.pull_lazy(common, missing))?
             .map_err(|e| e.tag_network())?
-            .convert_vertex(|n| VertexName::copy_from(&n.into_byte_array()))
+            .convert_vertex(|n| Vertex::copy_from(&n.into_byte_array()))
     };
     let commit_count = pull_data.flat_segments.vertex_count();
     let segment_count = pull_data.flat_segments.segment_count();

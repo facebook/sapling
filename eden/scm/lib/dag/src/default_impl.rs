@@ -28,8 +28,8 @@ use crate::Id;
 use crate::IdSet;
 use crate::NameSet;
 use crate::Result;
+use crate::Vertex;
 use crate::VertexListWithOptions;
-use crate::VertexName;
 
 /// Re-create the graph so it looks better when rendered.
 ///
@@ -93,8 +93,8 @@ pub(crate) async fn beautify(
     // Prepare input for utils::beautify_graph.
     // Maintain usize <-> Vertex map. Also fetch the Vertex <-> Id mapping (via all.iter).
     let all = this.all().await?;
-    let usize_to_vertex: Vec<VertexName> = all.iter_rev().await?.try_collect().await?;
-    let vertex_to_usize: HashMap<VertexName, usize> = usize_to_vertex
+    let usize_to_vertex: Vec<Vertex> = all.iter_rev().await?.try_collect().await?;
+    let vertex_to_usize: HashMap<Vertex, usize> = usize_to_vertex
         .iter()
         .enumerate()
         .map(|(i, v)| (v.clone(), i))
@@ -123,7 +123,7 @@ pub(crate) async fn beautify(
     let mut dag = MemNameDag::new();
     let snapshot = this.dag_snapshot()?;
     for i in sorted.into_iter().rev() {
-        let heads: Vec<VertexName> = vec![usize_to_vertex[i].clone()];
+        let heads: Vec<Vertex> = vec![usize_to_vertex[i].clone()];
         dag.add_heads(&snapshot, &heads.into()).await?;
     }
     Ok(dag)
@@ -143,7 +143,7 @@ pub(crate) async fn subdag(
     let heads = this.heads_ancestors(set).await?;
     // "heads" is in DESC order. Use reversed order for insertion so the
     // resulting subdag might preserve the same order with the original dag.
-    let heads: Vec<VertexName> = heads.iter_rev().await?.try_collect().await?;
+    let heads: Vec<Vertex> = heads.iter_rev().await?.try_collect().await?;
     // MASTER group enables the ONLY_HEAD segment flag. It improves graph query performance.
     let heads = VertexListWithOptions::from(heads).with_desired_group(Group::MASTER);
     dag.add_heads(&parents, &heads).await?;
@@ -174,7 +174,7 @@ pub(crate) async fn set_to_parents(set: &NameSet) -> Result<Option<impl Parents>
 
     #[async_trait::async_trait]
     impl Parents for IdParents {
-        async fn parent_names(&self, name: VertexName) -> Result<Vec<VertexName>> {
+        async fn parent_names(&self, name: Vertex) -> Result<Vec<Vertex>> {
             tracing::debug!(
                 target: "dag::idparents",
                 "resolving parents for {:?}", &name,
@@ -200,7 +200,7 @@ pub(crate) async fn set_to_parents(set: &NameSet) -> Result<Option<impl Parents>
             Ok(parents)
         }
 
-        async fn hint_subdag_for_insertion(&self, _heads: &[VertexName]) -> Result<MemNameDag> {
+        async fn hint_subdag_for_insertion(&self, _heads: &[Vertex]) -> Result<MemNameDag> {
             // The `IdParents` is not intended to be inserted to other graphs.
             tracing::warn!(
                 target: "dag::idparents",
@@ -220,7 +220,7 @@ pub(crate) async fn set_to_parents(set: &NameSet) -> Result<Option<impl Parents>
 }
 
 pub(crate) async fn parents(this: &(impl DagAlgorithm + ?Sized), set: NameSet) -> Result<NameSet> {
-    let mut result: Vec<VertexName> = Vec::new();
+    let mut result: Vec<Vertex> = Vec::new();
     let mut iter = set.iter().await?;
     // PERF: This is not an efficient async implementation.
     while let Some(vertex) = iter.next().await {
@@ -232,9 +232,9 @@ pub(crate) async fn parents(this: &(impl DagAlgorithm + ?Sized), set: NameSet) -
 
 pub(crate) async fn first_ancestor_nth(
     this: &(impl DagAlgorithm + ?Sized),
-    name: VertexName,
+    name: Vertex,
     n: u64,
-) -> Result<Option<VertexName>> {
+) -> Result<Option<Vertex>> {
     let mut vertex = name.clone();
     for _ in 0..n {
         let parents = this.parent_names(vertex).await?;
@@ -250,7 +250,7 @@ pub(crate) async fn first_ancestors(
     this: &(impl DagAlgorithm + ?Sized),
     set: NameSet,
 ) -> Result<NameSet> {
-    let mut to_visit: Vec<VertexName> = {
+    let mut to_visit: Vec<Vertex> = {
         let mut list = Vec::with_capacity(set.count_slow().await?.try_into()?);
         let mut iter = set.iter().await?;
         while let Some(next) = iter.next().await {
@@ -259,7 +259,7 @@ pub(crate) async fn first_ancestors(
         }
         list
     };
-    let mut visited: HashSet<VertexName> = to_visit.clone().into_iter().collect();
+    let mut visited: HashSet<Vertex> = to_visit.clone().into_iter().collect();
     while let Some(v) = to_visit.pop() {
         #[allow(clippy::never_loop)]
         if let Some(parent) = this.parent_names(v).await?.into_iter().next() {
@@ -283,7 +283,7 @@ pub(crate) async fn roots(this: &(impl DagAlgorithm + ?Sized), set: NameSet) -> 
 
 pub(crate) async fn merges(this: &(impl DagAlgorithm + ?Sized), set: NameSet) -> Result<NameSet> {
     let this = this.dag_snapshot()?;
-    Ok(set.filter(Box::new(move |v: &VertexName| {
+    Ok(set.filter(Box::new(move |v: &Vertex| {
         let this = this.clone();
         Box::pin(async move {
             DagAlgorithm::parent_names(&this, v.clone())
@@ -334,7 +334,7 @@ pub(crate) async fn only_both(
 pub(crate) async fn gca_one(
     this: &(impl DagAlgorithm + ?Sized),
     set: NameSet,
-) -> Result<Option<VertexName>> {
+) -> Result<Option<Vertex>> {
     this.gca_all(set)
         .await?
         .iter()
@@ -375,8 +375,8 @@ pub(crate) async fn common_ancestors(
 
 pub(crate) async fn is_ancestor(
     this: &(impl DagAlgorithm + ?Sized),
-    ancestor: VertexName,
-    descendant: VertexName,
+    ancestor: Vertex,
+    descendant: Vertex,
 ) -> Result<bool> {
     let mut to_visit = vec![descendant];
     let mut visited: HashSet<_> = to_visit.clone().into_iter().collect();
@@ -402,7 +402,7 @@ pub async fn suggest_bisect(
     roots: NameSet,
     heads: NameSet,
     skip: NameSet,
-) -> Result<(Option<VertexName>, NameSet, NameSet)> {
+) -> Result<(Option<Vertex>, NameSet, NameSet)> {
     let roots = this.to_id_set(&roots).await?;
     let heads = this.to_id_set(&heads).await?;
     let skip = this.to_id_set(&skip).await?;
@@ -426,7 +426,7 @@ pub async fn suggest_bisect(
 pub(crate) async fn hint_subdag_for_insertion(
     this: &(impl Parents + ?Sized),
     scope: &NameSet,
-    heads: &[VertexName],
+    heads: &[Vertex],
 ) -> Result<MemNameDag> {
     let count = scope.count_slow().await?;
     tracing::trace!("hint_subdag_for_insertion: pending vertexes: {}", count);
@@ -439,8 +439,8 @@ pub(crate) async fn hint_subdag_for_insertion(
 
     #[async_trait::async_trait]
     impl<'a, P: Parents + ?Sized> Parents for ScopedParents<'a, P> {
-        async fn parent_names(&self, name: VertexName) -> Result<Vec<VertexName>> {
-            let parents: Vec<VertexName> = self.parents.parent_names(name).await?;
+        async fn parent_names(&self, name: Vertex) -> Result<Vec<Vertex>> {
+            let parents: Vec<Vertex> = self.parents.parent_names(name).await?;
             // Filter by scope. We don't need to provide a "correct" parents here.
             // It is only used to optimize network fetches, not used to actually insert
             // to the graph.
@@ -453,7 +453,7 @@ pub(crate) async fn hint_subdag_for_insertion(
             Ok(filtered_parents)
         }
 
-        async fn hint_subdag_for_insertion(&self, _heads: &[VertexName]) -> Result<MemNameDag> {
+        async fn hint_subdag_for_insertion(&self, _heads: &[Vertex]) -> Result<MemNameDag> {
             // No need to use such a hint (to avoid infinite recursion).
             // Pending names should exist in the graph without using remote fetching.
             Ok(MemNameDag::new())

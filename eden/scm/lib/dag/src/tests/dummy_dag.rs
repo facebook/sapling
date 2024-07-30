@@ -13,7 +13,7 @@ use crate::ops::DagAlgorithm;
 use crate::NameSet;
 use crate::Result;
 use crate::VerLink;
-use crate::VertexName;
+use crate::Vertex;
 
 /// The DummyDag implements a DAG that contains all vertexes with no parents.
 #[derive(Debug, Clone)]
@@ -36,7 +36,7 @@ impl DagAlgorithm for DummyDag {
     }
 
     /// Get ordered parent vertexes.
-    async fn parent_names(&self, name: VertexName) -> Result<Vec<VertexName>> {
+    async fn parent_names(&self, name: Vertex) -> Result<Vec<Vertex>> {
         let _ = name;
         Ok(Vec::new())
     }
@@ -68,7 +68,7 @@ impl DagAlgorithm for DummyDag {
     }
 
     /// Calculates the n-th first ancestor.
-    async fn first_ancestor_nth(&self, name: VertexName, n: u64) -> Result<Option<VertexName>> {
+    async fn first_ancestor_nth(&self, name: Vertex, n: u64) -> Result<Option<Vertex>> {
         if n == 0 {
             Ok(Some(name))
         } else {
@@ -97,7 +97,7 @@ impl DagAlgorithm for DummyDag {
     /// If there are no common ancestors, return None.
     /// If there are multiple greatest common ancestors, pick one arbitrarily.
     /// Use `gca_all` to get all of them.
-    async fn gca_one(&self, set: NameSet) -> Result<Option<VertexName>> {
+    async fn gca_one(&self, set: NameSet) -> Result<Option<Vertex>> {
         if non_blocking(set.count())?? == 1 {
             non_blocking(set.first())?
         } else {
@@ -121,7 +121,7 @@ impl DagAlgorithm for DummyDag {
     }
 
     /// Tests if `ancestor` is an ancestor of `descendant`.
-    async fn is_ancestor(&self, ancestor: VertexName, descendant: VertexName) -> Result<bool> {
+    async fn is_ancestor(&self, ancestor: Vertex, descendant: Vertex) -> Result<bool> {
         Ok(ancestor == descendant)
     }
 
@@ -153,7 +153,7 @@ impl DagAlgorithm for DummyDag {
         _roots: NameSet,
         heads: NameSet,
         _skip: NameSet,
-    ) -> Result<(Option<VertexName>, NameSet, NameSet)> {
+    ) -> Result<(Option<Vertex>, NameSet, NameSet)> {
         Ok((None, NameSet::empty(), heads))
     }
 

@@ -25,7 +25,7 @@ use crate::errors::programming;
 use crate::errors::NotFoundError;
 use crate::id::Group;
 use crate::id::Id;
-use crate::id::VertexName;
+use crate::id::Vertex;
 use crate::ops::IdConvert;
 use crate::ops::Persist;
 use crate::ops::PrefixLookup;
@@ -188,8 +188,8 @@ impl IdMap {
         }
     }
 
-    /// Find VertexName by a specified integer id.
-    pub fn find_vertex_name_by_id(&self, id: Id) -> Result<Option<VertexName>> {
+    /// Find Vertex by a specified integer id.
+    pub fn find_vertex_name_by_id(&self, id: Id) -> Result<Option<Vertex>> {
         if !id.is_valid() {
             return Ok(None);
         }
@@ -197,16 +197,14 @@ impl IdMap {
             return Ok(self.virtual_map.lookup_vertex_name(id).cloned());
         }
         self.find_name_by_id(id)
-            .map(|v| v.map(|n| VertexName(self.log.slice_to_bytes(n))))
+            .map(|v| v.map(|n| Vertex(self.log.slice_to_bytes(n))))
     }
 
     /// Find the integer id matching the given name.
     pub fn find_id_by_name(&self, name: &[u8]) -> Result<Option<Id>> {
         for group in Group::ALL.iter() {
             if *group == Group::VIRTUAL {
-                if let Some(found_id) = self
-                    .virtual_map
-                    .lookup_vertex_id(&VertexName::copy_from(name))
+                if let Some(found_id) = self.virtual_map.lookup_vertex_id(&Vertex::copy_from(name))
                 {
                     return Ok(Some(found_id));
                 }
@@ -283,7 +281,7 @@ impl IdMap {
 
         if id.is_virtual() {
             self.virtual_map
-                .insert_vertex_id_name(id, VertexName::copy_from(name));
+                .insert_vertex_id_name(id, Vertex::copy_from(name));
             return Ok(());
         }
 
@@ -338,13 +336,13 @@ impl IdMap {
         Ok(items)
     }
 
-    fn remove_range(&mut self, low: Id, high: Id) -> Result<Vec<VertexName>> {
+    fn remove_range(&mut self, low: Id, high: Id) -> Result<Vec<Vertex>> {
         let mut names = Vec::new();
         if !low.is_virtual() {
             // Step 1: Find (id, name) pairs in the range except for virtual items.
             debug_assert!(Group::ALL.contains(&(Group::VIRTUAL - 1)));
             let items = self.find_range(low, (Group::VIRTUAL - 1).max_id().min(high))?;
-            names.extend(items.iter().map(|(_, bytes)| VertexName::copy_from(bytes)));
+            names.extend(items.iter().map(|(_, bytes)| Vertex::copy_from(bytes)));
             // Step 2: Write a "delete" entry to delete those indexes.
             // The indexedlog index function (defined by log_open_options())
             // will handle it.
@@ -362,7 +360,7 @@ impl IdMap {
     }
 
     /// Lookup names by hex prefix.
-    fn find_names_by_hex_prefix(&self, hex_prefix: &[u8], limit: usize) -> Result<Vec<VertexName>> {
+    fn find_names_by_hex_prefix(&self, hex_prefix: &[u8], limit: usize) -> Result<Vec<Vertex>> {
         let mut result = Vec::with_capacity(limit);
         for group in Group::ALL.iter().rev() {
             if *group == Group::VIRTUAL {
@@ -379,7 +377,7 @@ impl IdMap {
                     .lookup_prefix_hex(Self::INDEX_GROUP_NAME_TO_ID, prefix)?
                 {
                     let (k, _v) = entry?;
-                    let vertex = VertexName(self.log.slice_to_bytes(&k[Group::BYTES..]));
+                    let vertex = Vertex(self.log.slice_to_bytes(&k[Group::BYTES..]));
                     if !result.contains(&vertex) {
                         result.push(vertex);
                     }
@@ -437,7 +435,7 @@ impl fmt::Debug for IdMap {
         let vec = self.find_range(Id::MIN, Id::MAX).map_err(|_| fmt::Error)?;
         for (id, name) in vec {
             let name = if name.len() >= 20 {
-                VertexName::copy_from(name).to_hex()
+                Vertex::copy_from(name).to_hex()
             } else {
                 String::from_utf8_lossy(&name).to_string()
             };
@@ -450,22 +448,22 @@ impl fmt::Debug for IdMap {
 
 #[async_trait::async_trait]
 impl IdConvert for IdMap {
-    async fn vertex_id(&self, name: VertexName) -> Result<Id> {
+    async fn vertex_id(&self, name: Vertex) -> Result<Id> {
         self.find_id_by_name(name.as_ref())?
             .ok_or_else(|| name.not_found_error())
     }
     async fn vertex_id_with_max_group(
         &self,
-        name: &VertexName,
+        name: &Vertex,
         max_group: Group,
     ) -> Result<Option<Id>> {
         self.find_id_by_name_with_max_group(name.as_ref(), max_group)
     }
-    async fn vertex_name(&self, id: Id) -> Result<VertexName> {
+    async fn vertex_name(&self, id: Id) -> Result<Vertex> {
         self.find_vertex_name_by_id(id)?
             .ok_or_else(|| id.not_found_error())
     }
-    async fn contains_vertex_name(&self, name: &VertexName) -> Result<bool> {
+    async fn contains_vertex_name(&self, name: &Vertex) -> Result<bool> {
         Ok(self.find_id_by_name(name.as_ref())?.is_some())
     }
     async fn contains_vertex_id_locally(&self, ids: &[Id]) -> Result<Vec<bool>> {
@@ -475,7 +473,7 @@ impl IdConvert for IdMap {
         }
         Ok(list)
     }
-    async fn contains_vertex_name_locally(&self, names: &[VertexName]) -> Result<Vec<bool>> {
+    async fn contains_vertex_name_locally(&self, names: &[Vertex]) -> Result<Vec<bool>> {
         let mut list = Vec::with_capacity(names.len());
         for name in names {
             let contains = self.find_id_by_name(name.as_ref())?.is_some();
@@ -497,7 +495,7 @@ impl IdMapWrite for IdMap {
     async fn insert(&mut self, id: Id, name: &[u8]) -> Result<()> {
         IdMap::insert(self, id, name)
     }
-    async fn remove_range(&mut self, low: Id, high: Id) -> Result<Vec<VertexName>> {
+    async fn remove_range(&mut self, low: Id, high: Id) -> Result<Vec<Vertex>> {
         IdMap::remove_range(self, low, high)
     }
 }
@@ -539,11 +537,7 @@ impl Persist for IdMap {
 
 #[async_trait::async_trait]
 impl PrefixLookup for IdMap {
-    async fn vertexes_by_hex_prefix(
-        &self,
-        hex_prefix: &[u8],
-        limit: usize,
-    ) -> Result<Vec<VertexName>> {
+    async fn vertexes_by_hex_prefix(&self, hex_prefix: &[u8], limit: usize) -> Result<Vec<Vertex>> {
         self.find_names_by_hex_prefix(hex_prefix, limit)
     }
 }

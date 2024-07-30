@@ -21,7 +21,7 @@ use super::NameSet;
 use crate::fmt::write_debug;
 use crate::Id;
 use crate::Result;
-use crate::VertexName;
+use crate::Vertex;
 
 /// Intersection of 2 sets.
 ///
@@ -42,7 +42,7 @@ struct Iter {
 }
 
 impl Iter {
-    async fn next(&mut self) -> Option<Result<VertexName>> {
+    async fn next(&mut self) -> Option<Result<Vertex>> {
         if self.ended {
             return None;
         }
@@ -216,11 +216,11 @@ impl AsyncNameSetQuery for IntersectionSet {
         (0, max)
     }
 
-    async fn contains(&self, name: &VertexName) -> Result<bool> {
+    async fn contains(&self, name: &Vertex) -> Result<bool> {
         Ok(self.lhs.contains(name).await? && self.rhs.contains(name).await?)
     }
 
-    async fn contains_fast(&self, name: &VertexName) -> Result<Option<bool>> {
+    async fn contains_fast(&self, name: &Vertex) -> Result<Option<bool>> {
         for set in &[&self.lhs, &self.rhs] {
             let contains = set.contains_fast(name).await?;
             match contains {

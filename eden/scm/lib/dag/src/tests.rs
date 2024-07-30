@@ -11,7 +11,7 @@ pub use test_dag::TestDag;
 
 pub use self::drawdag::DrawDag;
 use crate::id::Group;
-use crate::id::VertexName;
+use crate::id::Vertex;
 use crate::nameset::SyncNameSetQuery;
 use crate::ops::DagAddHeads;
 use crate::ops::DagPersistent;
@@ -346,7 +346,7 @@ fn test_generic_dag2<T: DagAlgorithm + DagAddHeads>(dag: T) -> Result<T> {
         A B C D"#;
     let dag = from_ascii_with_heads(dag, ascii, Some(&["J", "K"][..]));
 
-    let v = |name: &str| -> VertexName { VertexName::copy_from(name.as_bytes()) };
+    let v = |name: &str| -> Vertex { Vertex::copy_from(name.as_bytes()) };
 
     assert_eq!(expand(r(dag.all())?), "A B C D E F G H I J K");
     assert_eq!(expand(r(dag.ancestors(nameset("H I")))?), "A B C D E F H I");
@@ -394,10 +394,10 @@ fn test_import_ascii_with_vertex_fn() {
         A
     "#;
     let mut dag = MemNameDag::new();
-    let vertex_fn = |s: &str| -> VertexName {
+    let vertex_fn = |s: &str| -> Vertex {
         let mut bytes = s.as_bytes().to_vec();
         bytes.push(b'0');
-        VertexName::copy_from(&bytes)
+        Vertex::copy_from(&bytes)
     };
     dag.import_ascii_with_vertex_fn(ascii, vertex_fn).unwrap();
     assert_eq!(expand(r(dag.all()).unwrap()), "A0 B0 C0");
@@ -462,7 +462,7 @@ Lv1: R0-0[] R1-8[0]"#
     // [name] -> RequestNameToLocation (useful for getting ids from commit hashes).
     let names = b"ABCEFGHI"
         .iter()
-        .map(|&b| VertexName::copy_from(&[b]))
+        .map(|&b| Vertex::copy_from(&[b]))
         .collect();
     let request2: RequestNameToLocation =
         r((&built.name_dag.map, &built.name_dag.dag).process(names)).unwrap();
@@ -773,7 +773,7 @@ fn test_namedag_reassign_master() -> crate::Result<()> {
 
     // Second flush, making B master without adding new vertexes.
     let heads =
-        VertexListWithOptions::from(vec![VertexName::from("B")]).with_desired_group(Group::MASTER);
+        VertexListWithOptions::from(vec![Vertex::from("B")]).with_desired_group(Group::MASTER);
     r(dag.flush(&heads)).unwrap();
     assert_eq!(dbg(r(dag.vertex_id("A".into()))?), "0");
     assert_eq!(dbg(r(dag.vertex_id("B".into()))?), "1");
@@ -1357,9 +1357,9 @@ fn expand(set: NameSet) -> String {
 }
 
 fn nameset(names: &str) -> NameSet {
-    let names: Vec<VertexName> = names
+    let names: Vec<Vertex> = names
         .split_whitespace()
-        .map(|n| VertexName::copy_from(n.as_bytes()))
+        .map(|n| Vertex::copy_from(n.as_bytes()))
         .collect();
     NameSet::from_static_names(names)
 }
@@ -1392,12 +1392,12 @@ impl IdMap {
     }
 }
 
-fn get_parents_func_from_ascii(text: &str) -> impl Fn(VertexName) -> Result<Vec<VertexName>> {
+fn get_parents_func_from_ascii(text: &str) -> impl Fn(Vertex) -> Result<Vec<Vertex>> {
     let parents = ::drawdag::parse(text);
-    move |name: VertexName| -> Result<Vec<VertexName>> {
+    move |name: Vertex| -> Result<Vec<Vertex>> {
         Ok(parents[&String::from_utf8(name.as_ref().to_vec()).unwrap()]
             .iter()
-            .map(|p| VertexName::copy_from(p.as_bytes()))
+            .map(|p| Vertex::copy_from(p.as_bytes()))
             .collect())
     }
 }

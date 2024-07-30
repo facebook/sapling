@@ -16,7 +16,7 @@ use super::BoxVertexStream;
 use super::Hints;
 use super::NameSet;
 use crate::Result;
-use crate::VertexName;
+use crate::Vertex;
 
 /// A set that is lazily evaluated to another set on access, with an
 /// optional fast path for "contains".
@@ -41,11 +41,7 @@ pub struct MetaSet {
 
     /// Optional "contains" fast path.
     contains: Option<
-        Box<
-            dyn for<'a> Fn(&'a MetaSet, &'a VertexName) -> BoxFuture<'a, Result<bool>>
-                + Send
-                + Sync,
-        >,
+        Box<dyn for<'a> Fn(&'a MetaSet, &'a Vertex) -> BoxFuture<'a, Result<bool>> + Send + Sync>,
     >,
 
     hints: Hints,
@@ -84,9 +80,7 @@ impl MetaSet {
     pub fn with_contains(
         mut self,
         contains: Box<
-            dyn for<'a> Fn(&'a MetaSet, &'a VertexName) -> BoxFuture<'a, Result<bool>>
-                + Send
-                + Sync,
+            dyn for<'a> Fn(&'a MetaSet, &'a Vertex) -> BoxFuture<'a, Result<bool>> + Send + Sync,
         >,
     ) -> Self {
         self.contains = Some(contains);
@@ -131,11 +125,11 @@ impl AsyncNameSetQuery for MetaSet {
         }
     }
 
-    async fn last(&self) -> Result<Option<VertexName>> {
+    async fn last(&self) -> Result<Option<Vertex>> {
         self.evaluate().await?.last().await
     }
 
-    async fn contains(&self, name: &VertexName) -> Result<bool> {
+    async fn contains(&self, name: &Vertex) -> Result<bool> {
         match self.evaluated() {
             Some(set) => set.contains(name).await,
             None => match &self.contains {
@@ -145,7 +139,7 @@ impl AsyncNameSetQuery for MetaSet {
         }
     }
 
-    async fn contains_fast(&self, name: &VertexName) -> Result<Option<bool>> {
+    async fn contains_fast(&self, name: &Vertex) -> Result<Option<bool>> {
         match &self.contains {
             Some(f) => Ok(Some(f(self, name).await?)),
             None => Ok(None),

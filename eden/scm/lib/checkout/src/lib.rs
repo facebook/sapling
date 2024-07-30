@@ -28,7 +28,7 @@ use async_runtime::block_on;
 use atexit::AtExit;
 use context::CoreContext;
 use crossbeam::channel;
-use dag::VertexName;
+use dag::Vertex;
 #[cfg(windows)]
 use fs_err as fs;
 use manifest::FileMetadata;
@@ -1188,7 +1188,7 @@ fn prefetch_children(repo: &Repo, node: &HgId) -> Result<()> {
         return Ok(());
     }
 
-    let vertex = VertexName::copy_from(node.as_ref());
+    let vertex = Vertex::copy_from(node.as_ref());
 
     let dag = repo.dag_commits()?;
     let mut dag = dag.write();
@@ -1226,7 +1226,7 @@ fn update_distance(repo: &Repo, source: &HgId, dest: &HgId) -> Result<u64> {
         if id.is_null() {
             dag::NameSet::empty()
         } else {
-            VertexName::copy_from(id.as_ref()).into()
+            Vertex::copy_from(id.as_ref()).into()
         }
     };
 

@@ -12,7 +12,7 @@ use crate::dag::errors::BackendError;
 use crate::dag::namedag::MemNameDag;
 use crate::dag::ops::Parents;
 use crate::dag::Result;
-use crate::dag::VertexName;
+use crate::dag::Vertex;
 use crate::idmap::cs_id_from_vertex_name;
 use crate::idmap::vertex_name_from_cs_id;
 
@@ -32,7 +32,7 @@ impl FetchParents {
 
 #[async_trait::async_trait]
 impl Parents for FetchParents {
-    async fn parent_names(&self, name: VertexName) -> Result<Vec<VertexName>> {
+    async fn parent_names(&self, name: Vertex) -> Result<Vec<Vertex>> {
         let cs_id = cs_id_from_vertex_name(&name);
         let parents = self
             .changeset_fetcher
@@ -43,7 +43,7 @@ impl Parents for FetchParents {
         Ok(parents.iter().map(vertex_name_from_cs_id).collect())
     }
 
-    async fn hint_subdag_for_insertion(&self, _heads: &[VertexName]) -> Result<MemNameDag> {
+    async fn hint_subdag_for_insertion(&self, _heads: &[Vertex]) -> Result<MemNameDag> {
         // No dirty scope here, so always return empty
         Ok(MemNameDag::new())
     }

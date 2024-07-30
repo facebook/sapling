@@ -25,7 +25,7 @@ use crate::dag::ops::IdConvert;
 use crate::dag::ops::PrefixLookup;
 use crate::dag::Result;
 use crate::dag::VerLink;
-use crate::dag::VertexName;
+use crate::dag::Vertex;
 use crate::idmap::ConcurrentMemIdMap;
 use crate::idmap::IdMapVersion;
 use crate::DagId;
@@ -39,26 +39,26 @@ define_stats! {
 
 const DEFAULT_LOG_SAMPLING_RATE: usize = 20000;
 
-/// Type conversion - `VertexName` is used in the `dag` crate to abstract over different ID types
+/// Type conversion - `Vertex` is used in the `dag` crate to abstract over different ID types
 /// such as Mercurial IDs, Bonsai, a theoretical git ID and more.
 /// but should always name a Bonsai `ChangesetId` on the server.
 ///
-/// This converts a `VertexName` to a `ChangesetId`
+/// This converts a `Vertex` to a `ChangesetId`
 ///
 /// # Panics
 ///
-/// This conversion will panic if the `VertexName` is not a Bonsai `ChangesetId`
-pub fn cs_id_from_vertex_name(name: &VertexName) -> ChangesetId {
-    ChangesetId::from_bytes(name).expect("VertexName is not a valid ChangesetId")
+/// This conversion will panic if the `Vertex` is not a Bonsai `ChangesetId`
+pub fn cs_id_from_vertex_name(name: &Vertex) -> ChangesetId {
+    ChangesetId::from_bytes(name).expect("Vertex is not a valid ChangesetId")
 }
 
-/// Type conversion - `VertexName` is used in the `dag` crate to abstract over different ID types
+/// Type conversion - `Vertex` is used in the `dag` crate to abstract over different ID types
 /// such as Mercurial IDs, Bonsai, a theoretical git ID and more.
 /// but should always name a Bonsai `ChangesetId` on the server.
 ///
-/// This converts a `ChangesetId` to a `VertexName`
-pub fn vertex_name_from_cs_id(cs_id: &ChangesetId) -> VertexName {
-    VertexName::copy_from(cs_id.blake2().as_ref())
+/// This converts a `ChangesetId` to a `Vertex`
+pub fn vertex_name_from_cs_id(cs_id: &ChangesetId) -> Vertex {
+    Vertex::copy_from(cs_id.blake2().as_ref())
 }
 
 #[derive(Clone)]
@@ -279,13 +279,13 @@ impl PrefixLookup for IdMapWrapper {
         &self,
         _hex_prefix: &[u8],
         _limit: usize,
-    ) -> Result<Vec<VertexName>> {
+    ) -> Result<Vec<Vertex>> {
         errors::programming("Server-side IdMap does not support prefix lookup")
     }
 }
 #[async_trait]
 impl IdConvert for IdMapWrapper {
-    async fn vertex_id(&self, name: VertexName) -> Result<Id> {
+    async fn vertex_id(&self, name: Vertex) -> Result<Id> {
         // NOTE: The server implementation puts all Ids in the "master" group.
         self.vertex_id_with_max_group(&name, Group::MASTER)
             .await?
@@ -293,7 +293,7 @@ impl IdConvert for IdMapWrapper {
     }
     async fn vertex_id_with_max_group(
         &self,
-        name: &VertexName,
+        name: &Vertex,
         _max_group: Group,
     ) -> Result<Option<Id>> {
         // NOTE: The server implementation puts all Ids in the "master" group.
@@ -305,7 +305,7 @@ impl IdConvert for IdMapWrapper {
             .map_err(BackendError::from)?)
     }
 
-    async fn vertex_name(&self, id: Id) -> Result<VertexName> {
+    async fn vertex_name(&self, id: Id) -> Result<Vertex> {
         self.inner
             .find_changeset_id(&self.ctx, id)
             .await
@@ -313,7 +313,7 @@ impl IdConvert for IdMapWrapper {
             .map(|id| vertex_name_from_cs_id(&id))
             .ok_or(DagError::IdNotFound(id))
     }
-    async fn contains_vertex_name(&self, name: &VertexName) -> Result<bool> {
+    async fn contains_vertex_name(&self, name: &Vertex) -> Result<bool> {
         self.vertex_id_with_max_group(name, Group::MASTER)
             .await
             .map(|d| d.is_some())
@@ -330,7 +330,7 @@ impl IdConvert for IdMapWrapper {
         Ok(id.iter().map(|id| found.contains_key(id)).collect())
     }
 
-    async fn contains_vertex_name_locally(&self, name: &[VertexName]) -> Result<Vec<bool>> {
+    async fn contains_vertex_name_locally(&self, name: &[Vertex]) -> Result<Vec<bool>> {
         let cs_ids: Vec<_> = name.iter().map(cs_id_from_vertex_name).collect();
         let found = self
             .inner
@@ -344,8 +344,8 @@ impl IdConvert for IdMapWrapper {
             .collect())
     }
 
-    /// Convert [`Id`]s to [`VertexName`]s in batch.
-    async fn vertex_name_batch(&self, id: &[Id]) -> Result<Vec<Result<VertexName>>> {
+    /// Convert [`Id`]s to [`Vertex`]s in batch.
+    async fn vertex_name_batch(&self, id: &[Id]) -> Result<Vec<Result<Vertex>>> {
         let ids = Vec::from(id);
         let found = self
             .inner
@@ -364,8 +364,8 @@ impl IdConvert for IdMapWrapper {
             .collect())
     }
 
-    /// Convert [`VertexName`]s to [`Id`]s in batch.
-    async fn vertex_id_batch(&self, names: &[VertexName]) -> Result<Vec<Result<Id>>> {
+    /// Convert [`Vertex`]s to [`Id`]s in batch.
+    async fn vertex_id_batch(&self, names: &[Vertex]) -> Result<Vec<Result<Id>>> {
         let cs_ids: Vec<_> = names.iter().map(cs_id_from_vertex_name).collect();
 
         let found = self
@@ -406,7 +406,7 @@ impl IdMapWrite for IdMapWrapper {
             .await
             .map_err(BackendError::from)?)
     }
-    async fn remove_range(&mut self, low: Id, high: Id) -> Result<Vec<VertexName>> {
+    async fn remove_range(&mut self, low: Id, high: Id) -> Result<Vec<Vertex>> {
         let _ = (low, high);
         programming("remove_range() is not implemented server-side")
     }

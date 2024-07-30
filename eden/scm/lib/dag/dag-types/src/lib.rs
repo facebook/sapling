@@ -17,7 +17,7 @@ pub use id::Bytes;
 pub use id::Group;
 pub use id::Id;
 pub use id::IdIter;
-pub use id::VertexName;
+pub use id::Vertex;
 pub use location::Location;
 pub use segment::FlatSegment;
 pub use segment::PreparedFlatSegments;

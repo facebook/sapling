@@ -53,7 +53,7 @@ macro_rules! delegate {
             {
                 self.$($t)*.contains_vertex_id_locally(ids)
             }
-            fn contains_vertex_name_locally<'a: 's, 'b: 's, 's>(&'a self, names: &'b [$crate::VertexName])
+            fn contains_vertex_name_locally<'a: 's, 'b: 's, 's>(&'a self, names: &'b [$crate::Vertex])
                 -> std::pin::Pin<Box<dyn std::future::Future<Output=
                         $crate::Result<Vec<bool>>
                     > + Send + 's>> where Self: 's
@@ -62,12 +62,12 @@ macro_rules! delegate {
             }
             fn vertex_name_batch<'a: 's, 'b: 's, 's>(&'a self, ids: &'b [$crate::Id])
                 -> std::pin::Pin<Box<dyn std::future::Future<Output=
-                        $crate::Result<Vec<$crate::Result<$crate::VertexName>>>
+                        $crate::Result<Vec<$crate::Result<$crate::Vertex>>>
                     > + Send + 's>> where Self: 's
             {
                 self.$($t)*.vertex_name_batch(ids)
             }
-            fn vertex_id_batch<'a: 's, 'b: 's, 's>(&'a self, names: &'b [$crate::VertexName])
+            fn vertex_id_batch<'a: 's, 'b: 's, 's>(&'a self, names: &'b [$crate::Vertex])
                 -> std::pin::Pin<Box<dyn std::future::Future<Output=
                         $crate::Result<Vec<$crate::Result<$crate::Id>>>
                     > + Send + 's>> where Self: 's

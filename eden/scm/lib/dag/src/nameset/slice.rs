@@ -30,7 +30,7 @@ use super::Hints;
 use super::NameSet;
 use crate::fmt::write_debug;
 use crate::Result;
-use crate::VertexName;
+use crate::Vertex;
 
 /// Slice of a set.
 #[derive(Clone)]
@@ -41,9 +41,9 @@ pub struct SliceSet {
     take_count: Option<u64>,
 
     // Skipped vertexes. Updated during iteration.
-    skip_cache: Arc<Mutex<HashSet<VertexName>>>,
+    skip_cache: Arc<Mutex<HashSet<Vertex>>>,
     // Taken vertexes. Updated during iteration.
-    take_cache: Arc<Mutex<IndexSet<VertexName>>>,
+    take_cache: Arc<Mutex<IndexSet<Vertex>>>,
     // If take_cache is complete.
     take_cache_complete: Arc<AtomicBool>,
 }
@@ -109,7 +109,7 @@ struct Iter {
 const SKIP_CACHE_SIZE_THRESHOLD: u64 = 1000;
 
 impl Iter {
-    async fn next(&mut self) -> Option<Result<VertexName>> {
+    async fn next(&mut self) -> Option<Result<Vertex>> {
         if self.ended {
             return None;
         }
@@ -130,7 +130,7 @@ impl Iter {
             // Slow path - use inner_iter.
             let index = self.index;
             trace!("next(index={})", index);
-            let next: Option<VertexName> = match self.inner_iter.next().await {
+            let next: Option<Vertex> = match self.inner_iter.next().await {
                 Some(Err(e)) => {
                     self.index = u64::MAX;
                     return Some(Err(e));
@@ -201,12 +201,12 @@ impl Iter {
 }
 
 struct TakeCacheRevIter {
-    take_cache: Arc<Mutex<IndexSet<VertexName>>>,
+    take_cache: Arc<Mutex<IndexSet<Vertex>>>,
     index: usize,
 }
 
 impl TakeCacheRevIter {
-    async fn next(&mut self) -> Option<Result<VertexName>> {
+    async fn next(&mut self) -> Option<Result<Vertex>> {
         let index = self.index;
         self.index += 1;
         let cache = self.take_cache.lock().await;
@@ -292,7 +292,7 @@ impl AsyncNameSetQuery for SliceSet {
         (min, max)
     }
 
-    async fn contains(&self, name: &VertexName) -> Result<bool> {
+    async fn contains(&self, name: &Vertex) -> Result<bool> {
         if let Some(result) = self.contains_fast(name).await? {
             return Ok(result);
         }
@@ -307,7 +307,7 @@ impl AsyncNameSetQuery for SliceSet {
         Ok(false)
     }
 
-    async fn contains_fast(&self, name: &VertexName) -> Result<Option<bool>> {
+    async fn contains_fast(&self, name: &Vertex) -> Result<Option<bool>> {
         // Check take_cache.
         {
             let take_cache = self.take_cache.lock().await;

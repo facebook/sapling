@@ -26,7 +26,7 @@ use crate::Group;
 use crate::Id;
 use crate::IdSet;
 use crate::Result;
-use crate::VertexName;
+use crate::Vertex;
 
 /// A set backed by a lazy iterator of Ids.
 pub struct IdLazySet {
@@ -89,7 +89,7 @@ impl Iter {
         Box::pin(futures::stream::unfold(self, |this| this.next()))
     }
 
-    async fn next(mut self) -> Option<(Result<VertexName>, Self)> {
+    async fn next(mut self) -> Option<(Result<Vertex>, Self)> {
         loop {
             let state = {
                 let inner = self.inner.lock().unwrap();
@@ -137,7 +137,7 @@ impl Iter {
 
 struct DebugId {
     id: Id,
-    name: Option<VertexName>,
+    name: Option<Vertex>,
 }
 
 impl fmt::Debug for DebugId {
@@ -246,7 +246,7 @@ impl AsyncNameSetQuery for IdLazySet {
             map: self.map.clone(),
             iter: Box::new(inner.visited.clone().into_iter().rev()),
         };
-        async fn next(mut state: State) -> Option<(Result<VertexName>, State)> {
+        async fn next(mut state: State) -> Option<(Result<Vertex>, State)> {
             match state.iter.next() {
                 None => None,
                 Some(id) => {
@@ -265,7 +265,7 @@ impl AsyncNameSetQuery for IdLazySet {
         Ok(inner.visited.len().try_into()?)
     }
 
-    async fn last(&self) -> Result<Option<VertexName>> {
+    async fn last(&self) -> Result<Option<Vertex>> {
         let opt_id = {
             let inner = self.load_all()?;
             inner.visited.iter().rev().nth(0).cloned()
@@ -276,7 +276,7 @@ impl AsyncNameSetQuery for IdLazySet {
         }
     }
 
-    async fn contains(&self, name: &VertexName) -> Result<bool> {
+    async fn contains(&self, name: &Vertex) -> Result<bool> {
         let id = match self.map.vertex_id_with_max_group(name, Group::MAX).await? {
             None => {
                 return Ok(false);
@@ -316,7 +316,7 @@ impl AsyncNameSetQuery for IdLazySet {
         Ok(false)
     }
 
-    async fn contains_fast(&self, name: &VertexName) -> Result<Option<bool>> {
+    async fn contains_fast(&self, name: &Vertex) -> Result<Option<bool>> {
         let id = match self.map.vertex_id_with_max_group(name, Group::MAX).await? {
             None => {
                 return Ok(Some(false));
@@ -373,21 +373,21 @@ pub(crate) mod test_utils {
 
     #[async_trait::async_trait]
     impl PrefixLookup for StrIdMap {
-        async fn vertexes_by_hex_prefix(&self, _: &[u8], _: usize) -> Result<Vec<VertexName>> {
+        async fn vertexes_by_hex_prefix(&self, _: &[u8], _: usize) -> Result<Vec<Vertex>> {
             // Dummy implementation.
             Ok(Vec::new())
         }
     }
     #[async_trait::async_trait]
     impl IdConvert for StrIdMap {
-        async fn vertex_id(&self, name: VertexName) -> Result<Id> {
+        async fn vertex_id(&self, name: Vertex) -> Result<Id> {
             let slice: [u8; 8] = name.as_ref().try_into().unwrap();
             let id = u64::from_le(unsafe { std::mem::transmute(slice) });
             Ok(Id(id))
         }
         async fn vertex_id_with_max_group(
             &self,
-            name: &VertexName,
+            name: &Vertex,
             _max_group: Group,
         ) -> Result<Option<Id>> {
             if name.as_ref().len() == 8 {
@@ -397,11 +397,11 @@ pub(crate) mod test_utils {
                 Ok(None)
             }
         }
-        async fn vertex_name(&self, id: Id) -> Result<VertexName> {
+        async fn vertex_name(&self, id: Id) -> Result<Vertex> {
             let buf: [u8; 8] = unsafe { std::mem::transmute(id.0.to_le()) };
-            Ok(VertexName::copy_from(&buf))
+            Ok(Vertex::copy_from(&buf))
         }
-        async fn contains_vertex_name(&self, name: &VertexName) -> Result<bool> {
+        async fn contains_vertex_name(&self, name: &Vertex) -> Result<bool> {
             Ok(name.as_ref().len() == 8)
         }
         fn map_id(&self) -> &str {
@@ -413,7 +413,7 @@ pub(crate) mod test_utils {
         async fn contains_vertex_id_locally(&self, ids: &[Id]) -> Result<Vec<bool>> {
             Ok(ids.iter().map(|_| true).collect())
         }
-        async fn contains_vertex_name_locally(&self, names: &[VertexName]) -> Result<Vec<bool>> {
+        async fn contains_vertex_name_locally(&self, names: &[Vertex]) -> Result<Vec<bool>> {
             Ok(names.iter().map(|name| name.as_ref().len() == 8).collect())
         }
     }
@@ -468,7 +468,7 @@ pub(crate) mod tests {
         // Incorrect hints, but useful for testing.
         set.hints().add_flags(Flags::ID_ASC);
 
-        let v = |i: u64| -> VertexName { r(StrIdMap::new().vertex_name(Id(i))).unwrap() };
+        let v = |i: u64| -> Vertex { r(StrIdMap::new().vertex_name(Id(i))).unwrap() };
         assert!(nb(set.contains(&v(0x20)))?);
         assert!(nb(set.contains(&v(0x50)))?);
         assert!(!nb(set.contains(&v(0x30)))?);

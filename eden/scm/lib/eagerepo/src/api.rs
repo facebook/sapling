@@ -23,7 +23,6 @@ use dag::protocol::RemoteIdConvertProtocol;
 use dag::Location;
 use dag::Set;
 use dag::Vertex;
-use dag::VertexName;
 use edenapi::configmodel;
 use edenapi::types::make_hash_lookup_request;
 use edenapi::types::AnyFileContentId;
@@ -1507,9 +1506,7 @@ fn to_vec_vertex(ids: &[HgId]) -> Vec<Vertex> {
     ids.iter().map(|i| Vertex::copy_from(i.as_ref())).collect()
 }
 
-fn convert_clone_data(
-    clone_data: dag::CloneData<VertexName>,
-) -> edenapi::Result<dag::CloneData<HgId>> {
+fn convert_clone_data(clone_data: dag::CloneData<Vertex>) -> edenapi::Result<dag::CloneData<HgId>> {
     check_convert_to_hgid(clone_data.idmap.values())?;
     let clone_data = dag::CloneData {
         flat_segments: clone_data.flat_segments,

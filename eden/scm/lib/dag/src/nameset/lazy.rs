@@ -18,7 +18,7 @@ use super::AsyncNameSetQuery;
 use super::BoxVertexStream;
 use super::Hints;
 use crate::Result;
-use crate::VertexName;
+use crate::Vertex;
 
 /// A set backed by a lazy iterator of names.
 pub struct LazySet {
@@ -28,12 +28,12 @@ pub struct LazySet {
 
 struct Inner {
     iter: BoxVertexStream,
-    visited: IndexSet<VertexName>,
+    visited: IndexSet<Vertex>,
     state: State,
 }
 
 impl Inner {
-    async fn load_more(&mut self, n: usize, mut out: Option<&mut Vec<VertexName>>) -> Result<()> {
+    async fn load_more(&mut self, n: usize, mut out: Option<&mut Vec<Vertex>>) -> Result<()> {
         if matches!(self.state, State::Complete | State::Error) {
             return Ok(());
         }
@@ -72,7 +72,7 @@ pub struct Iter {
 }
 
 impl Iter {
-    async fn next(&mut self) -> Option<Result<VertexName>> {
+    async fn next(&mut self) -> Option<Result<Vertex>> {
         loop {
             let mut inner = self.inner.lock().await;
             match inner.state {
@@ -132,7 +132,7 @@ impl fmt::Debug for LazySet {
 impl LazySet {
     pub fn from_iter<I>(names: I, hints: Hints) -> Self
     where
-        I: IntoIterator<Item = Result<VertexName>> + 'static,
+        I: IntoIterator<Item = Result<Vertex>> + 'static,
         <I as IntoIterator>::IntoIter: Send + Sync,
     {
         let stream = futures::stream::iter(names);
@@ -189,12 +189,12 @@ impl AsyncNameSetQuery for LazySet {
         (min, max)
     }
 
-    async fn last(&self) -> Result<Option<VertexName>> {
+    async fn last(&self) -> Result<Option<Vertex>> {
         let inner = self.load_all().await?;
         Ok(inner.visited.iter().rev().nth(0).cloned())
     }
 
-    async fn contains(&self, name: &VertexName) -> Result<bool> {
+    async fn contains(&self, name: &Vertex) -> Result<bool> {
         let mut inner = self.inner.lock().await;
         if inner.visited.contains(name) {
             return Ok(true);
@@ -215,7 +215,7 @@ impl AsyncNameSetQuery for LazySet {
         Ok(false)
     }
 
-    async fn contains_fast(&self, name: &VertexName) -> Result<Option<bool>> {
+    async fn contains_fast(&self, name: &Vertex) -> Result<Option<bool>> {
         let inner = self.inner.lock().await;
         if inner.visited.contains(name) {
             return Ok(Some(true));

@@ -21,7 +21,7 @@ use cpython_ext::PyCell;
 use cpython_ext::PyPathBuf;
 use cpython_ext::ResultPyErrExt;
 use dag_types::Location;
-use dag_types::VertexName;
+use dag_types::Vertex;
 use edenapi::Response;
 use edenapi::SaplingRemoteApi;
 use edenapi::SaplingRemoteApiError;
@@ -345,7 +345,7 @@ pub trait SaplingRemoteApiPyExt: SaplingRemoteApi {
             .allow_threads(|| {
                 block_unless_interrupted(async move {
                     self.clone_data().await.map(|data| {
-                        data.convert_vertex(|hgid| VertexName(hgid.as_ref().to_vec().into()))
+                        data.convert_vertex(|hgid| Vertex(hgid.as_ref().to_vec().into()))
                     })
                 })
             })
@@ -366,9 +366,8 @@ pub trait SaplingRemoteApiPyExt: SaplingRemoteApi {
                 block_unless_interrupted(async move {
                     match self.pull_fast_forward_master(old_master, new_master).await {
                         Err(e) => Err(e),
-                        Ok(data) => Ok(data.convert_vertex(|hgid| {
-                            VertexName(hgid.into_byte_array().to_vec().into())
-                        })),
+                        Ok(data) => Ok(data
+                            .convert_vertex(|hgid| Vertex(hgid.into_byte_array().to_vec().into()))),
                     }
                 })
             })
@@ -384,9 +383,8 @@ pub trait SaplingRemoteApiPyExt: SaplingRemoteApi {
                 block_unless_interrupted(async move {
                     match self.pull_lazy(common, missing).await {
                         Err(e) => Err(e),
-                        Ok(data) => Ok(data.convert_vertex(|hgid| {
-                            VertexName(hgid.into_byte_array().to_vec().into())
-                        })),
+                        Ok(data) => Ok(data
+                            .convert_vertex(|hgid| Vertex(hgid.into_byte_array().to_vec().into()))),
                     }
                 })
             })

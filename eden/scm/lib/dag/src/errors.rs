@@ -12,14 +12,14 @@ use thiserror::Error;
 
 use crate::Group;
 use crate::Id;
-use crate::VertexName;
+use crate::Vertex;
 
 /// Error used by the Dag crate.
 #[derive(Debug, Error)]
 pub enum DagError {
     /// A vertex name cannot be found.
     #[error("{0:?} cannot be found")]
-    VertexNotFound(VertexName),
+    VertexNotFound(Vertex),
 
     /// An Id cannot be found.
     #[error("{0:?} cannot be found")]
@@ -113,7 +113,7 @@ impl NotFoundError for Id {
     }
 }
 
-impl NotFoundError for VertexName {
+impl NotFoundError for Vertex {
     fn not_found_error(&self) -> DagError {
         ::fail::fail_point!("dag-not-found-vertex");
         DagError::VertexNotFound(self.clone())

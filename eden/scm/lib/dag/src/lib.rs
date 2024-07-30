@@ -41,7 +41,7 @@ pub use dag_types::CloneData;
 pub use dag_types::Group;
 pub use dag_types::Id;
 pub use dag_types::Location;
-pub use dag_types::VertexName;
+pub use dag_types::Vertex;
 pub use iddag::FirstAncestorConstraint;
 pub use iddag::IdDag;
 pub use iddag::IdDagAlgorithm;
@@ -72,12 +72,10 @@ pub type Set = NameSet;
 pub type IdSet = spanset::SpanSet;
 pub type IdSetIter<T> = spanset::SpanSetIter<T>;
 pub type IdSpan = spanset::Span;
-pub use namedag::MemNameDag as MemDag;
-pub use nameset::NameIter as SetIter;
-pub type Vertex = VertexName;
-
 #[cfg(feature = "indexedlog-backend")]
 pub use iddagstore::indexedlog_store::describe_indexedlog_entry;
+pub use namedag::MemNameDag as MemDag;
+pub use nameset::NameIter as SetIter;
 
 #[cfg(any(test, feature = "indexedlog-backend"))]
 pub mod tests;

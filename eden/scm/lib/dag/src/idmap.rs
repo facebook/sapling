@@ -14,7 +14,7 @@ use std::borrow::Cow;
 use crate::errors::bug;
 use crate::id::Group;
 use crate::id::Id;
-use crate::id::VertexName;
+use crate::id::Vertex;
 use crate::ops::IdConvert;
 use crate::ops::Parents;
 use crate::segment::PreparedFlatSegments;
@@ -62,7 +62,7 @@ pub trait IdMapAssignHead: IdConvert + IdMapWrite {
     /// to reduce fragmentation.
     async fn assign_head(
         &mut self,
-        head: VertexName,
+        head: Vertex,
         parents_by_name: &dyn Parents,
         group: Group,
         covered_ids: &mut IdSet,
@@ -135,7 +135,7 @@ pub trait IdMapAssignHead: IdConvert + IdMapWrite {
         enum Todo {
             /// Visit parents. Finally assign self. This will eventually turn into AssignedId.
             Visit {
-                head: VertexName,
+                head: Vertex,
 
                 /// The `Id` in `IdMap` that is known assigned to the `head`.
                 /// This can be non-`None` if `IdMap` has more entries than `IdDag`.
@@ -150,7 +150,7 @@ pub trait IdMapAssignHead: IdConvert + IdMapWrite {
             /// the `parent_ids` stack.
             Assign {
                 /// The vertex to assign. Its parents are already visited and assigned.
-                head: VertexName,
+                head: Vertex,
 
                 /// The `Id` in `IdMap` that is known assigned to the `head`.
                 /// This can be non-`None` if `IdMap` has more entries than `IdDag`.
@@ -392,7 +392,7 @@ pub trait IdMapWrite {
     async fn insert(&mut self, id: Id, name: &[u8]) -> Result<()>;
     /// Remove ids in the range `low..=high` and their associated names.
     /// Return removed names.
-    async fn remove_range(&mut self, low: Id, high: Id) -> Result<Vec<VertexName>>;
+    async fn remove_range(&mut self, low: Id, high: Id) -> Result<Vec<Vertex>>;
 }
 
 #[cfg(test)]
@@ -449,21 +449,21 @@ mod tests {
         assert_eq!(
             r(map.vertexes_by_hex_prefix(b"6a", 3)).unwrap(),
             [
-                VertexName::from(&b"jkl3"[..]),
-                VertexName::from(&b"jkl"[..]),
-                VertexName::from(&b"jkl2"[..]),
+                Vertex::from(&b"jkl3"[..]),
+                Vertex::from(&b"jkl"[..]),
+                Vertex::from(&b"jkl2"[..]),
             ]
         );
         assert_eq!(
             r(map.vertexes_by_hex_prefix(b"6a", 1)).unwrap(),
-            [VertexName::from(&b"jkl3"[..])]
+            [Vertex::from(&b"jkl3"[..])]
         );
         assert!(r(map.vertexes_by_hex_prefix(b"6b", 1)).unwrap().is_empty());
 
         assert_eq!(0x78, b'x');
         assert_eq!(
             r(map.vertexes_by_hex_prefix(b"78", 3)).unwrap(),
-            [VertexName::from(&b"xy"[..]), VertexName::from(&b"xyz"[..])]
+            [Vertex::from(&b"xy"[..]), Vertex::from(&b"xyz"[..])]
         );
 
         for _ in 0..=1 {
@@ -545,7 +545,7 @@ mod tests {
         let deleted = |map: &dyn IdConvert| -> String {
             let mut deleted_ids = Vec::new();
             for (id, name) in items {
-                let name = VertexName::copy_from(name);
+                let name = Vertex::copy_from(name);
                 let id = *id;
                 let has_id = r(map.contains_vertex_id_locally(&[id])).unwrap()[0];
                 let lookup_id = r(map.vertex_id_optional(&name)).unwrap();
@@ -572,7 +572,7 @@ mod tests {
             dbg(deleted_ids)
         };
 
-        let f = |vs: Vec<VertexName>| -> String {
+        let f = |vs: Vec<Vertex>| -> String {
             let mut vs = vs;
             vs.sort_unstable();
             dbg(vs)

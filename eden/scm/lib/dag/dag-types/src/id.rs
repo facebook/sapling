@@ -29,15 +29,15 @@ pub struct Id(pub u64);
 /// Name of a vertex in the graph.
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
 #[serde(transparent)]
-pub struct VertexName(pub Bytes);
+pub struct Vertex(pub Bytes);
 
-impl AsRef<[u8]> for VertexName {
+impl AsRef<[u8]> for Vertex {
     fn as_ref(&self) -> &[u8] {
         &self.0
     }
 }
 
-impl VertexName {
+impl Vertex {
     pub fn to_hex(&self) -> String {
         const HEX_CHARS: &[u8] = b"0123456789abcdef";
         let mut v = Vec::with_capacity(self.0.len() * 2);
@@ -71,7 +71,7 @@ impl VertexName {
                 bytes[i / 2] |= value;
             }
         }
-        Ok(VertexName(Bytes::from(bytes)))
+        Ok(Vertex(Bytes::from(bytes)))
     }
 
     pub fn copy_from(value: &[u8]) -> Self {
@@ -79,7 +79,7 @@ impl VertexName {
     }
 }
 
-impl<T> From<T> for VertexName
+impl<T> From<T> for Vertex
 where
     Bytes: From<T>,
 {
@@ -88,7 +88,7 @@ where
     }
 }
 
-impl fmt::Debug for VertexName {
+impl fmt::Debug for Vertex {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         if self.0.len() >= 4 || !looks_like_ascii_identifier(self.as_ref()) {
             // Use hex format for long names (ex. binary commit hashes).
@@ -134,7 +134,7 @@ impl Group {
     /// - Ideally free from fragmentation. In other words,
     ///   `ancestors(master)` can be represented in a single Span.
     /// - Ideally has limited heads. Does not scale with too many heads.
-    /// - VertexNames (commit hashes) might be lazy.
+    /// - Vertexs (commit hashes) might be lazy.
     pub const MASTER: Self = Self(0);
 
     /// The "non-master" group.
@@ -143,7 +143,7 @@ impl Group {
     /// - Expected to have multiple heads. In other words, is fragmented.
     /// - Expected to be sparse referred. For example, the "visible heads"
     ///   will refer to a bounded subset in this group.
-    /// - Expected to be non-lazy. Code paths assume VertexNames
+    /// - Expected to be non-lazy. Code paths assume Vertexs
     ///   (commit hashes) are known in this group.
     pub const NON_MASTER: Self = Self(1);
 
@@ -346,17 +346,17 @@ mod tests {
 
     #[test]
     fn test_vertex_from_hex_odd() {
-        let vertex = VertexName::from_hex(b"a").unwrap();
-        let vertex2 = VertexName::from_hex(b"a0").unwrap();
+        let vertex = Vertex::from_hex(b"a").unwrap();
+        let vertex2 = Vertex::from_hex(b"a0").unwrap();
         assert_eq!(vertex, vertex2);
         assert_eq!(vertex.to_hex(), "a0");
     }
 
     quickcheck! {
         fn test_vertex_hex_roundtrip(slice: Vec<u8>) -> bool {
-            let vertex = VertexName::from(slice);
+            let vertex = Vertex::from(slice);
             let hex = vertex.to_hex();
-            let vertex2 = VertexName::from_hex(hex.as_bytes()).unwrap();
+            let vertex2 = Vertex::from_hex(hex.as_bytes()).unwrap();
             vertex2 == vertex
         }
     }

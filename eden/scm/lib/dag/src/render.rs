@@ -32,12 +32,12 @@ use crate::Level;
 #[cfg(any(test, feature = "indexedlog-backend"))]
 use crate::NameDag;
 use crate::Set;
-use crate::VertexName;
+use crate::Vertex;
 
 /// Render a NameDag or MemNameDag into a String.
 pub fn render_namedag(
     dag: &(impl DagAlgorithm + ?Sized),
-    get_message: impl Fn(&VertexName) -> Option<String>,
+    get_message: impl Fn(&Vertex) -> Option<String>,
 ) -> Result<String> {
     let mut renderer = GraphRowRenderer::new().output().build_box_drawing();
 
@@ -75,7 +75,7 @@ pub fn render_namedag(
 pub fn render_namedag_structured(
     dag: &dyn DagAlgorithm,
     subset: Option<Set>,
-) -> Result<Vec<GraphRow<VertexName>>> {
+) -> Result<Vec<GraphRow<Vertex>>> {
     let mut renderer = GraphRowRenderer::new();
     let next_rows = dag_to_renderer_next_rows(dag, subset)?;
     let mut out = Vec::with_capacity(next_rows.len());
@@ -95,7 +95,7 @@ pub fn render_namedag_structured(
 fn dag_to_renderer_next_rows(
     dag: &(impl DagAlgorithm + ?Sized),
     subset: Option<Set>,
-) -> Result<Vec<(VertexName, Vec<Ancestor<VertexName>>)>> {
+) -> Result<Vec<(Vertex, Vec<Ancestor<Vertex>>)>> {
     let subset = match subset {
         None => non_blocking_result(dag.all())?,
         Some(set) => set,
@@ -107,7 +107,7 @@ fn dag_to_renderer_next_rows(
     for node in iter {
         let direct_parents = non_blocking_result(dag.parent_names(node.clone()))?;
         let subdag_parents = non_blocking_result(subdag.parent_names(node.clone()))?;
-        let mut parents: Vec<Ancestor<VertexName>> = subdag_parents
+        let mut parents: Vec<Ancestor<Vertex>> = subdag_parents
             .iter()
             .cloned()
             .map(|p| {

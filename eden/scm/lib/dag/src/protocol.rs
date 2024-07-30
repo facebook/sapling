@@ -24,7 +24,7 @@ use futures::stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 
-use crate::id::VertexName;
+use crate::id::Vertex;
 use crate::iddag::FirstAncestorConstraint;
 use crate::iddag::IdDag;
 use crate::iddagstore::IdDagStore;
@@ -42,8 +42,8 @@ use crate::Result;
 /// Useful for converting names to ids.
 #[derive(Debug, Clone)]
 pub struct RequestNameToLocation {
-    pub names: Vec<VertexName>,
-    pub heads: Vec<VertexName>,
+    pub names: Vec<Vertex>,
+    pub heads: Vec<Vertex>,
 }
 
 /// Request for converting locations to names (commit hashes).
@@ -61,7 +61,7 @@ pub struct ResponseIdNamePair {
     //
     // For converting Name -> Id, the client provides Box<[u8]>, the server provides
     // AncestorPath.
-    pub path_names: Vec<(AncestorPath, Vec<VertexName>)>,
+    pub path_names: Vec<(AncestorPath, Vec<Vertex>)>,
 }
 
 /// The `n`-th first ancestor of `x`. `x~n` in hg revset syntax.
@@ -70,7 +70,7 @@ pub struct ResponseIdNamePair {
 /// This can be seen as a kind of "location".
 #[derive(Clone)]
 pub struct AncestorPath {
-    pub x: VertexName,
+    pub x: Vertex,
 
     pub n: u64,
 
@@ -110,9 +110,9 @@ pub trait RemoteIdConvertProtocol: Send + Sync + 'static {
     /// the resulting list (instead of returning an error).
     async fn resolve_names_to_relative_paths(
         &self,
-        heads: Vec<VertexName>,
-        names: Vec<VertexName>,
-    ) -> Result<Vec<(AncestorPath, Vec<VertexName>)>>;
+        heads: Vec<Vertex>,
+        names: Vec<Vertex>,
+    ) -> Result<Vec<(AncestorPath, Vec<Vertex>)>>;
 
     /// Ask the server to convert "x~n" relative paths back to commit hashes.
     ///
@@ -121,7 +121,7 @@ pub trait RemoteIdConvertProtocol: Send + Sync + 'static {
     async fn resolve_relative_paths_to_names(
         &self,
         paths: Vec<AncestorPath>,
-    ) -> Result<Vec<(AncestorPath, Vec<VertexName>)>>;
+    ) -> Result<Vec<(AncestorPath, Vec<Vertex>)>>;
 
     /// Return `true` if the protocol is local and queries do not need to
     /// optimize for batching or latency.
@@ -134,16 +134,16 @@ pub trait RemoteIdConvertProtocol: Send + Sync + 'static {
 impl RemoteIdConvertProtocol for () {
     async fn resolve_names_to_relative_paths(
         &self,
-        _heads: Vec<VertexName>,
-        _names: Vec<VertexName>,
-    ) -> Result<Vec<(AncestorPath, Vec<VertexName>)>> {
+        _heads: Vec<Vertex>,
+        _names: Vec<Vertex>,
+    ) -> Result<Vec<(AncestorPath, Vec<Vertex>)>> {
         Ok(Default::default())
     }
 
     async fn resolve_relative_paths_to_names(
         &self,
         paths: Vec<AncestorPath>,
-    ) -> Result<Vec<(AncestorPath, Vec<VertexName>)>> {
+    ) -> Result<Vec<(AncestorPath, Vec<Vertex>)>> {
         let msg = format!(
             "Asked to resolve {:?} in graph but remote protocol is not configured",
             paths
@@ -174,10 +174,10 @@ pub(crate) trait Process<I, O> {
 // Name -> Id, step 1: Name -> RequestNameToLocation
 // Works on an incomplete IdMap, client-side.
 #[async_trait::async_trait]
-impl<M: IdConvert, DagStore: IdDagStore> Process<Vec<VertexName>, RequestNameToLocation>
+impl<M: IdConvert, DagStore: IdDagStore> Process<Vec<Vertex>, RequestNameToLocation>
     for (&M, &IdDag<DagStore>)
 {
-    async fn process(self, names: Vec<VertexName>) -> Result<RequestNameToLocation> {
+    async fn process(self, names: Vec<Vertex>) -> Result<RequestNameToLocation> {
         let map = &self.0;
         let dag = &self.1;
         // Only provides heads in the master group, since it's expected that the
@@ -185,7 +185,7 @@ impl<M: IdConvert, DagStore: IdDagStore> Process<Vec<VertexName>, RequestNameToL
         let heads = stream::iter(dag.heads_ancestors(dag.master_group()?)?).boxed();
         let heads = heads
             .then(|id| map.vertex_name(id))
-            .try_collect::<Vec<VertexName>>()
+            .try_collect::<Vec<Vertex>>()
             .await
             .map_err(|e| {
                 let msg = format!(
@@ -304,7 +304,7 @@ impl<M: IdConvert, DagStore: IdDagStore> Process<RequestNameToLocation, Response
         };
         let resolvable = dag.ancestors(heads.clone())?;
 
-        let id_names: Vec<(Id, VertexName)> = {
+        let id_names: Vec<(Id, Vertex)> = {
             let ids_result = map.vertex_id_batch(&request.names).await?;
             let mut id_names = Vec::with_capacity(ids_result.len());
             for (name, id_result) in request.names.into_iter().zip(ids_result) {
@@ -330,8 +330,8 @@ impl<M: IdConvert, DagStore: IdDagStore> Process<RequestNameToLocation, Response
             id_names
         };
 
-        let path_names: Vec<(AncestorPath, Vec<VertexName>)> = {
-            let x_n_names: Vec<(Id, u64, VertexName)> = id_names
+        let path_names: Vec<(AncestorPath, Vec<Vertex>)> = {
+            let x_n_names: Vec<(Id, u64, Vertex)> = id_names
                 .into_iter()
                 .filter_map(|(id, name)| {
                     match dag.to_first_ancestor_nth(
@@ -348,7 +348,7 @@ impl<M: IdConvert, DagStore: IdDagStore> Process<RequestNameToLocation, Response
                 })
                 .collect::<Result<Vec<_>>>()?;
 
-            // Convert x from Id to VertexName.
+            // Convert x from Id to Vertex.
             stream::iter(x_n_names)
                 .then(|(x, n, name)| async move {
                     let x = map.vertex_name(x).await?;
@@ -379,28 +379,27 @@ impl<M: IdConvert, DagStore: IdDagStore> Process<RequestLocationToName, Response
         let map = &self.0;
         let dag = &self.1;
 
-        let path_names: Vec<(AncestorPath, Vec<VertexName>)> =
-            stream::iter(request.paths.into_iter())
-                .then(|path| async move {
-                    let id = map.vertex_id(path.x.clone()).await?;
-                    let mut id = dag.first_ancestor_nth(id, path.n)?;
-                    let mut ids = Vec::with_capacity(path.batch_size as _);
-                    for i in 0..path.batch_size {
-                        if i > 0 {
-                            id = dag.first_ancestor_nth(id, 1)?;
-                        }
-                        ids.push(id);
+        let path_names: Vec<(AncestorPath, Vec<Vertex>)> = stream::iter(request.paths.into_iter())
+            .then(|path| async move {
+                let id = map.vertex_id(path.x.clone()).await?;
+                let mut id = dag.first_ancestor_nth(id, path.n)?;
+                let mut ids = Vec::with_capacity(path.batch_size as _);
+                for i in 0..path.batch_size {
+                    if i > 0 {
+                        id = dag.first_ancestor_nth(id, 1)?;
                     }
-                    let fallible_names = map.vertex_name_batch(&ids).await?;
-                    let mut names = Vec::with_capacity(fallible_names.len());
-                    for name in fallible_names {
-                        names.push(name?);
-                    }
-                    debug_assert_eq!(path.batch_size, names.len() as u64);
-                    Ok::<_, crate::Error>((path, names))
-                })
-                .try_collect()
-                .await?;
+                    ids.push(id);
+                }
+                let fallible_names = map.vertex_name_batch(&ids).await?;
+                let mut names = Vec::with_capacity(fallible_names.len());
+                for name in fallible_names {
+                    names.push(name?);
+                }
+                debug_assert_eq!(path.batch_size, names.len() as u64);
+                Ok::<_, crate::Error>((path, names))
+            })
+            .try_collect()
+            .await?;
         Ok(ResponseIdNamePair { path_names })
     }
 }

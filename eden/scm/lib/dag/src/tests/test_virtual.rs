@@ -7,7 +7,7 @@
 
 use dag_types::CloneData;
 use dag_types::Group;
-use dag_types::VertexName;
+use dag_types::Vertex;
 use nonblocking::non_blocking as nb;
 use nonblocking::non_blocking_result as r;
 
@@ -122,7 +122,7 @@ fn test_virtual_group_does_not_block_write_operations() -> Result<()> {
 
 #[test]
 fn test_setting_managed_virtual_group_clears_existing_virtual_group() -> Result<()> {
-    let parents: Vec<(VertexName, Vec<VertexName>)> =
+    let parents: Vec<(Vertex, Vec<Vertex>)> =
         vec![("null".into(), vec![]), ("wdir".into(), vec!["B".into()])];
 
     let mut dag = TestDag::draw("A..C");

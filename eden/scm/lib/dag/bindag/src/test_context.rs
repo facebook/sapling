@@ -18,8 +18,8 @@ use dag::Id;
 use dag::IdSet;
 use dag::NameDag;
 use dag::OnDiskIdDag;
+use dag::Vertex;
 use dag::VertexListWithOptions;
-use dag::VertexName;
 use nonblocking::non_blocking_result;
 use tempfile::TempDir;
 
@@ -66,7 +66,7 @@ impl<T: AsRef<[usize]> + Send + Sync + Clone + 'static> GeneralTestContext<T> {
         // Prepare NameDag
         let parents_by_name = {
             let parents = parents.clone();
-            move |name: VertexName| -> dag::Result<Vec<VertexName>> {
+            move |name: Vertex| -> dag::Result<Vec<Vertex>> {
                 let i = String::from_utf8(name.as_ref().to_vec())
                     .unwrap()
                     .parse::<usize>()
@@ -79,25 +79,25 @@ impl<T: AsRef<[usize]> + Send + Sync + Clone + 'static> GeneralTestContext<T> {
             }
         };
         // Pick heads from 0..n
-        let get_heads = |n: usize| -> Vec<VertexName> {
+        let get_heads = |n: usize| -> Vec<Vertex> {
             let mut heads: HashSet<usize> = (0..n).collect();
             for ps in parents.iter().take(n) {
                 for p in ps.as_ref().iter() {
                     heads.remove(p);
                 }
             }
-            let mut names: Vec<VertexName> = Vec::new();
+            let mut names: Vec<Vertex> = Vec::new();
             for h in heads {
-                names.push(VertexName::copy_from(format!("{}", h).as_bytes()));
+                names.push(Vertex::copy_from(format!("{}", h).as_bytes()));
             }
             names
         };
-        let head_names: Vec<VertexName> = get_heads(parents.len());
-        let master_names: Vec<VertexName> = get_heads(parents.len() / 2);
+        let head_names: Vec<Vertex> = get_heads(parents.len());
+        let master_names: Vec<Vertex> = get_heads(parents.len() / 2);
 
         let dir = tempfile::tempdir().unwrap();
         let mut dag = NameDag::open(dir.path()).unwrap();
-        let parents_map: Box<dyn Fn(VertexName) -> dag::Result<Vec<VertexName>> + Send + Sync> =
+        let parents_map: Box<dyn Fn(Vertex) -> dag::Result<Vec<Vertex>> + Send + Sync> =
             Box::new(parents_by_name);
         let heads = VertexListWithOptions::from(master_names)
             .with_desired_group(Group::MASTER)

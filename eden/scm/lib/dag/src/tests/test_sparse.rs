@@ -22,8 +22,8 @@ use crate::tests::dbg;
 use crate::Group;
 use crate::Id;
 use crate::Set;
+use crate::Vertex;
 use crate::VertexListWithOptions;
-use crate::VertexName;
 
 #[tokio::test]
 async fn test_sparse_dag() {
@@ -88,7 +88,7 @@ async fn test_sparse_dag() {
         assert_eq!(client.dag.vertex_id("E".into()).await.unwrap(), Id(11));
 
         // NameSet iteration works too, and resolve Ids in batch.
-        let all: Vec<VertexName> = {
+        let all: Vec<Vertex> = {
             let all = client.dag.all().await.unwrap();
             let iter = all.iter().await.unwrap();
             iter.try_collect().await.unwrap()
@@ -158,10 +158,7 @@ async fn test_add_heads() {
     let parents = pending.dag.dag_snapshot().unwrap();
     client
         .dag
-        .add_heads(
-            &parents,
-            &vec![VertexName::from("G"), VertexName::from("K")].into(),
-        )
+        .add_heads(&parents, &vec![Vertex::from("G"), Vertex::from("K")].into())
         .await
         .unwrap();
     assert_eq!(
@@ -530,7 +527,7 @@ async fn test_flush_no_over_fetch() {
     );
 
     // Flush with a master head. Should not fetch anything.
-    let heads = VertexListWithOptions::from(vec![VertexName::copy_from(b"E")])
+    let heads = VertexListWithOptions::from(vec![Vertex::copy_from(b"E")])
         .with_desired_group(Group::MASTER);
     client.dag.flush(&heads).await.unwrap();
     assert_eq!(client.output(), [] as [&str; 0]);
@@ -722,7 +719,7 @@ async fn client_for_local_cache_test() -> TestDag {
     server.client_cloned_data().await
 }
 
-async fn check_local_cache(client: &TestDag, v: VertexName, id: Id) {
+async fn check_local_cache(client: &TestDag, v: Vertex, id: Id) {
     // Try looking up vertex using different APIs.
     assert_eq!(client.dag.vertex_id(v.clone()).await.unwrap(), id);
     assert!(client.output().is_empty());
@@ -783,7 +780,7 @@ async fn check_local_cache(client: &TestDag, v: VertexName, id: Id) {
 async fn test_local_cache_existing_vertex_to_id() {
     let client = client_for_local_cache_test().await;
 
-    let v: VertexName = "C".into();
+    let v: Vertex = "C".into();
     let id = client.dag.vertex_id(v.clone()).await.unwrap();
     assert_eq!(client.output(), ["resolve names: [C], heads: [G]"]);
 

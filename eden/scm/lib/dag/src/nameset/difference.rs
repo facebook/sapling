@@ -19,7 +19,7 @@ use super::Hints;
 use super::NameSet;
 use crate::fmt::write_debug;
 use crate::Result;
-use crate::VertexName;
+use crate::Vertex;
 
 /// Subset of `lhs` that does not overlap with `rhs`.
 ///
@@ -75,11 +75,11 @@ impl AsyncNameSetQuery for DifferenceSet {
         Ok(iter.into_stream())
     }
 
-    async fn contains(&self, name: &VertexName) -> Result<bool> {
+    async fn contains(&self, name: &Vertex) -> Result<bool> {
         Ok(self.lhs.contains(name).await? && !self.rhs.contains(name).await?)
     }
 
-    async fn contains_fast(&self, name: &VertexName) -> Result<Option<bool>> {
+    async fn contains_fast(&self, name: &Vertex) -> Result<Option<bool>> {
         let lhs_contains = self.lhs.contains_fast(name).await?;
         if lhs_contains == Some(false) {
             return Ok(Some(false));
@@ -129,7 +129,7 @@ impl fmt::Debug for DifferenceSet {
 }
 
 impl Iter {
-    async fn next(&mut self) -> Option<Result<VertexName>> {
+    async fn next(&mut self) -> Option<Result<Vertex>> {
         loop {
             let result = self.iter.as_mut().next().await;
             if let Some(Ok(ref name)) = result {

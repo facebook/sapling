@@ -23,8 +23,8 @@ use dag::ops::DagPersistent;
 use dag::ops::Open;
 use dag::CloneData;
 use dag::Group;
+use dag::Vertex;
 use dag::VertexListWithOptions;
-use dag::VertexName;
 use progress_model::ProgressBar;
 
 define_flags! {
@@ -83,7 +83,7 @@ pub fn run(ctx: ReqCtx<StatusOpts>) -> Result<u8> {
         .into_iter()
         .map(|(k, v)| {
             bar.increase_position(1);
-            (k, VertexName::copy_from(&v.into_byte_array()))
+            (k, Vertex::copy_from(&v.into_byte_array()))
         })
         .collect();
 
