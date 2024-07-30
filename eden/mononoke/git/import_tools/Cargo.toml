@@ -15,6 +15,8 @@ blobrepo = { version = "0.1.0", path = "../../blobrepo" }
 blobstore = { version = "0.1.0", path = "../../blobstore" }
 bonsai_git_mapping = { version = "0.1.0", path = "../../bonsai_git_mapping" }
 bonsai_tag_mapping = { version = "0.1.0", path = "../../bonsai_tag_mapping" }
+bookmarks = { version = "0.1.0", path = "../../bookmarks" }
+bookmarks_movement = { version = "0.1.0", path = "../../bookmarks/bookmarks_movement" }
 bulk_derivation = { version = "0.1.0", path = "../../derived_data/bulk_derivation" }
 bytes = { version = "1.6.0", features = ["serde"] }
 changesets = { version = "0.1.0", path = "../../changesets" }

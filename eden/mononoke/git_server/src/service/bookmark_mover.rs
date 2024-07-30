@@ -10,8 +10,13 @@ use std::sync::Arc;
 use anyhow::Context;
 use anyhow::Result;
 use bonsai_tag_mapping::BonsaiTagMappingRef;
+use cloned::cloned;
+use futures::stream;
+use futures::StreamExt;
+use futures::TryStreamExt;
 use gix_hash::ObjectId;
 use gix_object::Kind;
+use import_tools::bookmark::set_bookmarks;
 use import_tools::git_reader::GitReader;
 use import_tools::set_bookmark;
 use import_tools::BookmarkOperation;
@@ -52,6 +57,91 @@ pub async fn set_ref(
     // TODO(rajshar): Provide better information about failures instead of just an anyhow::Err
     let result = set_ref_inner(request_context, mappings_store, object_store, ref_update_op).await;
     (ref_update, result)
+}
+
+/// Method responsible for creating, moving or deleting multiple git refs atomically
+pub async fn set_refs(
+    request_context: Arc<RepositoryRequestContext>,
+    mappings_store: Arc<GitMappingsStore>,
+    object_store: Arc<GitObjectStore>,
+    ref_update_ops: Vec<RefUpdateOperation>,
+) -> Result<()> {
+    let (ctx, repo, repos) = (
+        request_context.ctx.clone(),
+        request_context.repo.clone(),
+        request_context.mononoke_repos.clone(),
+    );
+    let affected_changesets = ref_update_ops.first().map(|op| op.affected_changesets);
+    // Create the repo context which is the pre-requisite for moving bookmarks
+    let repo_context = RepoContextBuilder::new(ctx.clone(), repo.clone(), repos)
+        .await
+        .context("Failure in creating RepoContextBuilder for git push")?
+        .with_authorization_context(AuthorizationContext::new(&ctx))
+        .build()
+        .await
+        .context("Failure in creating RepoContext for git push")?;
+    let bookmark_operations = stream::iter(ref_update_ops)
+        .map(|ref_update_op| {
+            cloned!(mappings_store, object_store);
+            async move {
+                // Get the bonsai changeset id of the old and the new git commits
+                let old_changeset = get_bonsai(
+                    &mappings_store,
+                    &object_store,
+                    &ref_update_op.ref_update.from,
+                )
+                .await?;
+                let new_changeset =
+                    get_bonsai(&mappings_store, &object_store, &ref_update_op.ref_update.to)
+                        .await?;
+                // Create the bookmark key by stripping the refs/ prefix from the ref name
+                let bookmark_key = BookmarkKey::new(
+                    ref_update_op
+                        .ref_update
+                        .ref_name
+                        .strip_prefix("refs/")
+                        .unwrap_or(ref_update_op.ref_update.ref_name.as_str()),
+                )?;
+                BookmarkOperation::new(bookmark_key.clone(), old_changeset, new_changeset)
+            }
+        })
+        .buffer_unordered(20)
+        .try_collect::<Vec<_>>()
+        .await?;
+    // If the bookmark is a tag and the operation is a delete, then we need to remove the tag entry
+    // from bonsai_tag_mapping table in addition to removing the bookmark entry from bookmarks table
+    let tags_to_delete = bookmark_operations
+        .iter()
+        .filter_map(|bookmark_operation| {
+            if bookmark_operation.bookmark_key.is_tag() && bookmark_operation.is_delete() {
+                Some(bookmark_operation.bookmark_key.name().to_string())
+            } else {
+                None
+            }
+        })
+        .collect::<Vec<_>>();
+    // Flag for client side expectation of allow non fast forward updates. Git clients by default
+    // prevent users from pushing non-ffwd updates. If the request reaches the server, then that
+    // means the client has explicitly requested for a non-ffwd update and the final result will be
+    // governed by the server side config (ofcourse subject to bypass)
+    let allow_non_fast_forward = true;
+    // Actually perform the ref updates
+    set_bookmarks(
+        &ctx,
+        &repo_context,
+        bookmark_operations,
+        Some(request_context.pushvars.as_ref()),
+        allow_non_fast_forward,
+        affected_changesets,
+    )
+    .await?;
+    if !tags_to_delete.is_empty() {
+        repo.inner_repo()
+            .bonsai_tag_mapping()
+            .delete_mappings_by_name(tags_to_delete)
+            .await?;
+    }
+    Ok(())
 }
 
 async fn set_ref_inner(

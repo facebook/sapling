@@ -27,11 +27,14 @@ use protocol::pack_processor::parse_pack;
 use repo_blobstore::RepoBlobstoreArc;
 
 use crate::command::Command;
+use crate::command::PushArgs;
+use crate::command::RefUpdate;
 use crate::command::RequestCommand;
 use crate::model::GitMethodInfo;
 use crate::model::RepositoryParams;
 use crate::model::RepositoryRequestContext;
 use crate::service::set_ref;
+use crate::service::set_refs;
 use crate::service::upload_objects;
 use crate::service::GitMappingsStore;
 use crate::service::GitObjectStore;
@@ -94,27 +97,14 @@ async fn push<'a>(
             request_context.repo.inner.bonsai_git_mapping_arc(),
             git_bonsai_mappings,
         ));
-        // Update each ref concurrently (TODO(rajshar): Add support for atomic ref update)
-        let updated_refs = stream::iter(push_args.ref_updates.clone())
-            .map(|ref_update| {
-                cloned!(request_context, git_bonsai_mapping_store, object_store);
-                async move {
-                    let output = tokio::spawn(async move {
-                        set_ref(
-                            request_context,
-                            git_bonsai_mapping_store,
-                            object_store,
-                            RefUpdateOperation::new(ref_update.clone(), affected_changesets_len),
-                        )
-                        .await
-                    })
-                    .await?;
-                    anyhow::Ok(output)
-                }
-            })
-            .buffer_unordered(REF_UPDATE_CONCURRENCY)
-            .try_collect::<Vec<_>>()
-            .await?;
+        let updated_refs = refs_update(
+            &push_args,
+            request_context.clone(),
+            git_bonsai_mapping_store.clone(),
+            object_store.clone(),
+            affected_changesets_len,
+        )
+        .await?;
         // For each ref, update the status as ok or ng based on the result of the bookmark set operation
         for (updated_ref, result) in updated_refs {
             match result {
@@ -138,4 +128,102 @@ async fn push<'a>(
         flush_to_write(&mut output).await?;
     }
     BytesBody::new(Bytes::from(output), mime::TEXT_PLAIN).try_into_response(state)
+}
+
+/// Function responsible for updating the refs in the repo
+async fn refs_update(
+    push_args: &PushArgs<'_>,
+    request_context: Arc<RepositoryRequestContext>,
+    git_bonsai_mapping_store: Arc<GitMappingsStore>,
+    object_store: Arc<GitObjectStore>,
+    affected_changesets_len: usize,
+) -> anyhow::Result<Vec<(RefUpdate, anyhow::Result<()>)>> {
+    if push_args.settings.atomic {
+        atomic_refs_update(
+            push_args,
+            request_context,
+            git_bonsai_mapping_store,
+            object_store,
+            affected_changesets_len,
+        )
+        .await
+    } else {
+        non_atomic_refs_update(
+            push_args,
+            request_context,
+            git_bonsai_mapping_store,
+            object_store,
+            affected_changesets_len,
+        )
+        .await
+    }
+}
+
+/// Function responsible for updating the refs in the repo non-atomically.
+async fn non_atomic_refs_update(
+    push_args: &PushArgs<'_>,
+    request_context: Arc<RepositoryRequestContext>,
+    git_bonsai_mapping_store: Arc<GitMappingsStore>,
+    object_store: Arc<GitObjectStore>,
+    affected_changesets_len: usize,
+) -> anyhow::Result<Vec<(RefUpdate, anyhow::Result<()>)>> {
+    stream::iter(push_args.ref_updates.clone())
+        .map(|ref_update| {
+            cloned!(request_context, git_bonsai_mapping_store, object_store);
+            async move {
+                let output = tokio::spawn(async move {
+                    set_ref(
+                        request_context,
+                        git_bonsai_mapping_store,
+                        object_store,
+                        RefUpdateOperation::new(ref_update.clone(), affected_changesets_len),
+                    )
+                    .await
+                })
+                .await?;
+                anyhow::Ok(output)
+            }
+        })
+        .buffer_unordered(REF_UPDATE_CONCURRENCY)
+        .try_collect::<Vec<_>>()
+        .await
+}
+
+/// Function responsible for updating the refs in the repo atomically.
+async fn atomic_refs_update(
+    push_args: &PushArgs<'_>,
+    request_context: Arc<RepositoryRequestContext>,
+    git_bonsai_mapping_store: Arc<GitMappingsStore>,
+    object_store: Arc<GitObjectStore>,
+    affected_changesets_len: usize,
+) -> anyhow::Result<Vec<(RefUpdate, anyhow::Result<()>)>> {
+    let ref_update_ops = push_args
+        .ref_updates
+        .iter()
+        .map(|ref_update| RefUpdateOperation::new(ref_update.clone(), affected_changesets_len))
+        .collect::<Vec<_>>();
+    let ref_updates = push_args.ref_updates.clone();
+    match set_refs(
+        request_context,
+        git_bonsai_mapping_store,
+        object_store,
+        ref_update_ops,
+    )
+    .await
+    {
+        Ok(_) => Ok(ref_updates
+            .into_iter()
+            .map(|ref_update| (ref_update, Ok(())))
+            .collect()),
+        Err(e) => {
+            let err_str = format!(
+                "Atomic bookmark update failed with error: {}",
+                e.root_cause()
+            );
+            Ok(ref_updates
+                .into_iter()
+                .map(|ref_update| (ref_update, Err(anyhow::anyhow!(err_str.to_string()))))
+                .collect())
+        }
+    }
 }

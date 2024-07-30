@@ -850,6 +850,10 @@ impl RepoContext {
         self.repo.as_ref()
     }
 
+    pub fn repo_arc(&self) -> Arc<Repo> {
+        self.repo.clone()
+    }
+
     /// The underlying `InnerRepo`.
     pub fn inner_repo(&self) -> &InnerRepo {
         self.repo.inner_repo()
