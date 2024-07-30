@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::HashMap;
 use std::sync::Arc;
 
 use anyhow::Context;
@@ -24,6 +23,8 @@ use mononoke_types::hash::GitSha1;
 use mononoke_types::ChangesetId;
 use repo_blobstore::RepoBlobstore;
 use rustc_hash::FxHashMap;
+
+use super::uploader::RefMap;
 
 #[derive(Clone)]
 pub struct GitObjectStore {
@@ -78,14 +79,14 @@ impl GitReader for GitObjectStore {
 pub struct GitMappingsStore {
     ctx: CoreContext,
     stored_mappings: Arc<dyn BonsaiGitMapping>,
-    mappings: HashMap<ObjectId, ChangesetId>,
+    mappings: RefMap,
 }
 
 impl GitMappingsStore {
     pub fn new(
         ctx: &CoreContext,
         stored_mappings: Arc<dyn BonsaiGitMapping>,
-        mappings: HashMap<ObjectId, ChangesetId>,
+        mappings: RefMap,
     ) -> Self {
         Self {
             ctx: ctx.clone(),
@@ -94,12 +95,24 @@ impl GitMappingsStore {
         }
     }
 
+    pub async fn get_git_sha1(&self, cs_id: &ChangesetId) -> Result<Option<ObjectId>> {
+        if let Some(oid) = self.mappings.oid_by_bonsai(cs_id) {
+            Ok(Some(oid))
+        } else {
+            self.stored_mappings
+                .get_git_sha1_from_bonsai(&self.ctx, *cs_id)
+                .await?
+                .map(|oid| oid.to_object_id())
+                .transpose()
+        }
+    }
+
     pub async fn get_bonsai(&self, oid: &ObjectId) -> Result<Option<ChangesetId>> {
         // The only time we return an empty mapping is when the oid is null. This can happen
         // when the user is trying to create or delete a bookmark.
         if *oid == ObjectId::null(gix_hash::Kind::Sha1) {
             Ok(None)
-        } else if let Some(cs_id) = self.mappings.get(oid.as_ref()).cloned() {
+        } else if let Some(cs_id) = self.mappings.bonsai_by_oid(oid) {
             Ok(Some(cs_id))
         } else {
             let cs_id = self

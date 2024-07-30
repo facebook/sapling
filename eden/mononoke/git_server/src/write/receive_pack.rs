@@ -81,21 +81,21 @@ async fn push<'a>(
         // Generate the GitObjectStore using the parsed objects
         let object_store = Arc::new(GitObjectStore::new(parsed_objects, ctx, blobstore.clone()));
         // Upload the objects corresponding to the push to the underlying store
-        let git_bonsai_mappings = upload_objects(
+        let ref_map = upload_objects(
             ctx,
             request_context.repo.clone(),
             object_store.clone(),
             &push_args.ref_updates,
         )
         .await?;
-        let affected_changesets_len = git_bonsai_mappings.len();
+        let affected_changesets_len = ref_map.len();
         // We were successful in parsing the pack and uploading the objects to underlying store. Indicate this to the client
         write_text_packetline(PACK_OK, &mut output).await?;
         // Create bonsai_git_mapping store to enable mapping lookup during bookmark movement
         let git_bonsai_mapping_store = Arc::new(GitMappingsStore::new(
             ctx,
             request_context.repo.inner.bonsai_git_mapping_arc(),
-            git_bonsai_mappings,
+            ref_map,
         ));
         let updated_refs = refs_update(
             &push_args,

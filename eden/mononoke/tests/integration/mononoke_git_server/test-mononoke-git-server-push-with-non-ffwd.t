@@ -136,7 +136,7 @@
   [1]
   $ cat output | sort
      e8615d6..4981a25  master -> master
-   ! [remote rejected] branch_ffonly -> branch_ffonly (Non fast-forward bookmark move of 'heads/branch_ffonly' from * to *) (glob)
+   ! [remote rejected] branch_ffonly -> branch_ffonly (Non fast-forward bookmark move of 'heads/branch_ffonly' from eb95862bb5d5c295844706cbb0d0e56fee405f5c to 3ea0687e31d7b65429c774526728dba90cbaabc0)
    + 33f84db...676bc3c non_ffwd_branch -> non_ffwd_branch (forced update)
   To https://*/repos/git/ro/repo.git (glob)
   error: failed to push some refs to 'https://localhost:$LOCAL_PORT/repos/git/ro/repo.git'

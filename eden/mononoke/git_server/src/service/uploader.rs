@@ -42,6 +42,53 @@ struct TagMetadata {
     bonsai_target: ChangesetId,
 }
 
+#[derive(Clone, Debug)]
+pub struct RefMap {
+    commits_to_bonsai: HashMap<ObjectId, ChangesetId>,
+    bonsai_to_commits: HashMap<ChangesetId, ObjectId>,
+    tags_to_bonsai: HashMap<ObjectId, ChangesetId>,
+    bonsai_to_tags: HashMap<ChangesetId, ObjectId>,
+}
+
+impl RefMap {
+    fn from_commits(commits: HashMap<ObjectId, ChangesetId>) -> Self {
+        let bonsai_to_commits = commits.iter().map(|(oid, cs_id)| (*cs_id, *oid)).collect();
+        Self {
+            bonsai_to_commits,
+            commits_to_bonsai: commits,
+            tags_to_bonsai: HashMap::new(),
+            bonsai_to_tags: HashMap::new(),
+        }
+    }
+
+    fn commit_bonsai_by_oid(&self, oid: &ObjectId) -> Option<ChangesetId> {
+        self.commits_to_bonsai.get(oid).cloned()
+    }
+
+    pub(crate) fn bonsai_by_oid(&self, oid: &ObjectId) -> Option<ChangesetId> {
+        self.commits_to_bonsai
+            .get(oid)
+            .cloned()
+            .or_else(|| self.tags_to_bonsai.get(oid).cloned())
+    }
+
+    pub(crate) fn oid_by_bonsai(&self, cs_id: &ChangesetId) -> Option<ObjectId> {
+        self.bonsai_to_commits
+            .get(cs_id)
+            .cloned()
+            .or_else(|| self.bonsai_to_tags.get(cs_id).cloned())
+    }
+
+    fn insert_tag(&mut self, oid: &ObjectId, cs_id: ChangesetId) {
+        self.tags_to_bonsai.insert(*oid, cs_id);
+        self.bonsai_to_tags.insert(cs_id, *oid);
+    }
+
+    pub(crate) fn len(&self) -> usize {
+        self.commits_to_bonsai.len() + self.tags_to_bonsai.len()
+    }
+}
+
 impl TagMetadata {
     fn new(name: Option<String>, bonsai_target: ChangesetId) -> Self {
         Self {
@@ -115,7 +162,7 @@ async fn tags(
     ctx: &CoreContext,
     repo: &Repo,
     object_store: &GitObjectStore,
-    git_bonsai_mappings: &HashMap<ObjectId, ChangesetId>,
+    ref_map: &RefMap,
 ) -> Result<HashMap<ObjectId, TagMetadata>> {
     let mut result = HashMap::new();
     for (id, object) in object_store.object_map.iter() {
@@ -126,8 +173,8 @@ async fn tags(
             if kind != Kind::Commit {
                 continue;
             }
-            let bonsai_id = if let Some(bonsai_id) = git_bonsai_mappings.get(&commit_id) {
-                *bonsai_id
+            let bonsai_id = if let Some(bonsai_id) = ref_map.commit_bonsai_by_oid(&commit_id) {
+                bonsai_id
             } else {
                 git_to_bonsai(ctx, repo, &commit_id).await?
             };
@@ -144,7 +191,7 @@ pub async fn upload_objects(
     repo: Arc<Repo>,
     object_store: Arc<GitObjectStore>,
     ref_updates: &[RefUpdate],
-) -> Result<HashMap<ObjectId, ChangesetId>> {
+) -> Result<RefMap> {
     let repo_name = repo.repo_identity().name().to_string();
     let uploader = Arc::new(DirectUploader::with_arc(
         repo.clone(),
@@ -158,7 +205,7 @@ pub async fn upload_objects(
     };
     let acc = GitimportAccumulator::from_roots(HashMap::new());
     // Import and store all the commits, trees and blobs that are pare of the push
-    let mut git_bonsai_mappings = import_commit_contents(
+    let git_bonsai_mappings = import_commit_contents(
         ctx,
         repo_name,
         sorted_commits(&object_store)?,
@@ -170,8 +217,10 @@ pub async fn upload_objects(
     .await?
     .into_iter()
     .collect();
+    let mut ref_map = RefMap::from_commits(git_bonsai_mappings);
+
     // Fetch all the tags to be uploaded as part of this push
-    let mut tags = tags(ctx, &repo, &object_store, &git_bonsai_mappings).await?;
+    let mut tags = tags(ctx, &repo, &object_store, &ref_map).await?;
     // Ensure that the tags are mapped to the right name (necessary for tags with namespaced refs)
     for ref_update in ref_updates {
         let (name, oid) = (ref_update.ref_name.clone(), ref_update.to.as_ref());
@@ -190,7 +239,7 @@ pub async fn upload_objects(
         } = tag_metadata;
         // Add a mapping from the tag object id to the commit changeset id where it points. This will later
         // be used in bookmark movement
-        git_bonsai_mappings.insert(tag_id.clone(), bonsai_target);
+        ref_map.insert_tag(&tag_id, bonsai_target);
         // Store the raw tag object first
         upload_git_tag(ctx, uploader.clone(), object_store.clone(), &tag_id).await?;
         // Create the changeset corresponding to the commit pointed to by the tag.
@@ -204,5 +253,5 @@ pub async fn upload_objects(
         )
         .await?;
     }
-    Ok(git_bonsai_mappings)
+    Ok(ref_map)
 }

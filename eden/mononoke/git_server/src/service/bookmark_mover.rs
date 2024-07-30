@@ -23,6 +23,7 @@ use import_tools::set_bookmark;
 use import_tools::BookmarkOperation;
 use mononoke_api::repo::RepoContextBuilder;
 use mononoke_api::BookmarkKey;
+use mononoke_api::MononokeError;
 use mononoke_types::ChangesetId;
 use repo_authorization::AuthorizationContext;
 
@@ -127,7 +128,7 @@ pub async fn set_refs(
     // governed by the server side config (ofcourse subject to bypass)
     let allow_non_fast_forward = true;
     // Actually perform the ref updates
-    set_bookmarks(
+    let result = set_bookmarks(
         &ctx,
         &repo_context,
         bookmark_operations,
@@ -136,7 +137,10 @@ pub async fn set_refs(
         affected_changesets,
         BookmarkOperationErrorReporting::Plain,
     )
-    .await?;
+    .await;
+    if let Err(e) = result {
+        return Err(update_error(&mappings_store, e).await);
+    }
     if !tags_to_delete.is_empty() {
         repo.inner_repo()
             .bonsai_tag_mapping()
@@ -190,7 +194,7 @@ async fn set_ref_inner(
     // governed by the server side config (ofcourse subject to bypass)
     let allow_non_fast_forward = true;
     // Actually perform the ref update
-    set_bookmark(
+    let result = set_bookmark(
         &ctx,
         &repo_context,
         &bookmark_operation,
@@ -199,7 +203,10 @@ async fn set_ref_inner(
         Some(ref_update_op.affected_changesets),
         BookmarkOperationErrorReporting::Plain,
     )
-    .await?;
+    .await;
+    if let Err(err) = result {
+        anyhow::bail!(update_error(&mappings_store, err).await);
+    }
     // If the bookmark is a tag and the operation is a delete, then we need to remove the tag entry
     // from bonsai_tag_mapping table in addition to removing the bookmark entry from bookmarks table
     if bookmark_key.is_tag() && bookmark_operation.is_delete() {
@@ -230,5 +237,36 @@ async fn get_bonsai(
             }
             _ => err,
         },
+    }
+}
+
+/// Convert commit IDs in error messages from Bonsai to Git
+async fn update_error(mappings_store: &GitMappingsStore, err: MononokeError) -> anyhow::Error {
+    match err {
+        MononokeError::NonFastForwardMove { bookmark, from, to } => {
+            let from = git_sha_str(mappings_store, &from).await;
+            let to = git_sha_str(mappings_store, &to).await;
+            anyhow::anyhow!("Non fast-forward bookmark move of '{bookmark}' from {from} to {to}")
+        }
+        MononokeError::HookFailure(hook_rejections) => {
+            let mut hook_msgs = vec![];
+            for hook_rejection in hook_rejections {
+                let git_sha = git_sha_str(mappings_store, &hook_rejection.cs_id).await;
+                hook_msgs.push(format!(
+                    "  {} for {}: {}",
+                    hook_rejection.hook_name, git_sha, hook_rejection.reason.long_description
+                ));
+            }
+            anyhow::anyhow!("hooks failed:\n{}", hook_msgs.join("\n"))
+        }
+        e => e.into(),
+    }
+}
+
+async fn git_sha_str(mappings_store: &GitMappingsStore, bonsai: &ChangesetId) -> String {
+    if let Ok(Some(oid)) = mappings_store.get_git_sha1(bonsai).await {
+        oid.to_hex().to_string()
+    } else {
+        bonsai.to_hex().to_string()
     }
 }
