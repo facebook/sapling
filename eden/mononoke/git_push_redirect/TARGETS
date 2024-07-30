@@ -4,7 +4,7 @@ load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
 oncall("mononoke")
 
 rust_library(
-    name = "push_redirect_config",
+    name = "git_push_redirect",
     srcs = glob([
         "src/**/*.rs",
         "schemas/**/*.sql",
