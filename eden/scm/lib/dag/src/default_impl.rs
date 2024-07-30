@@ -26,8 +26,8 @@ use crate::DagAlgorithm;
 use crate::Group;
 use crate::Id;
 use crate::IdSet;
-use crate::NameSet;
 use crate::Result;
+use crate::Set;
 use crate::Vertex;
 use crate::VertexListWithOptions;
 
@@ -88,7 +88,7 @@ use crate::VertexListWithOptions;
 /// This function is expensive. Only run on small graphs.
 pub(crate) async fn beautify(
     this: &(impl DagAlgorithm + ?Sized),
-    main_branch: Option<NameSet>,
+    main_branch: Option<Set>,
 ) -> Result<MemNameDag> {
     // Prepare input for utils::beautify_graph.
     // Maintain usize <-> Vertex map. Also fetch the Vertex <-> Id mapping (via all.iter).
@@ -100,7 +100,7 @@ pub(crate) async fn beautify(
         .map(|(i, v)| (v.clone(), i))
         .collect();
     let mut priorities = Vec::new();
-    let main_branch = main_branch.unwrap_or_else(NameSet::empty);
+    let main_branch = main_branch.unwrap_or_else(Set::empty);
 
     let mut parents_vec = Vec::with_capacity(usize_to_vertex.len());
     for (i, vertex) in usize_to_vertex.iter().enumerate() {
@@ -130,10 +130,7 @@ pub(crate) async fn beautify(
 }
 
 /// Provide a sub-graph containing only the specified set.
-pub(crate) async fn subdag(
-    this: &(impl DagAlgorithm + ?Sized),
-    set: NameSet,
-) -> Result<MemNameDag> {
+pub(crate) async fn subdag(this: &(impl DagAlgorithm + ?Sized), set: Set) -> Result<MemNameDag> {
     let set = this.sort(&set).await?;
     let parents = match set.to_parents().await? {
         Some(p) => p,
@@ -151,7 +148,7 @@ pub(crate) async fn subdag(
 }
 
 /// Convert `Set` to a `Parents` implementation that only returns vertexes in the set.
-pub(crate) async fn set_to_parents(set: &NameSet) -> Result<Option<impl Parents>> {
+pub(crate) async fn set_to_parents(set: &Set) -> Result<Option<impl Parents>> {
     let (id_set, id_map) = match set.to_id_set_and_id_map_in_o1() {
         Some(v) => v,
         None => return Ok(None),
@@ -219,7 +216,7 @@ pub(crate) async fn set_to_parents(set: &NameSet) -> Result<Option<impl Parents>
     Ok(Some(parents))
 }
 
-pub(crate) async fn parents(this: &(impl DagAlgorithm + ?Sized), set: NameSet) -> Result<NameSet> {
+pub(crate) async fn parents(this: &(impl DagAlgorithm + ?Sized), set: Set) -> Result<Set> {
     let mut result: Vec<Vertex> = Vec::new();
     let mut iter = set.iter().await?;
     // PERF: This is not an efficient async implementation.
@@ -227,7 +224,7 @@ pub(crate) async fn parents(this: &(impl DagAlgorithm + ?Sized), set: NameSet) -
         let parents = this.parent_names(vertex?).await?;
         result.extend(parents);
     }
-    Ok(NameSet::from_static_names(result))
+    Ok(Set::from_static_names(result))
 }
 
 pub(crate) async fn first_ancestor_nth(
@@ -246,10 +243,7 @@ pub(crate) async fn first_ancestor_nth(
     Ok(Some(vertex))
 }
 
-pub(crate) async fn first_ancestors(
-    this: &(impl DagAlgorithm + ?Sized),
-    set: NameSet,
-) -> Result<NameSet> {
+pub(crate) async fn first_ancestors(this: &(impl DagAlgorithm + ?Sized), set: Set) -> Result<Set> {
     let mut to_visit: Vec<Vertex> = {
         let mut list = Vec::with_capacity(set.count_slow().await?.try_into()?);
         let mut iter = set.iter().await?;
@@ -269,19 +263,19 @@ pub(crate) async fn first_ancestors(
         }
     }
     let hints = Hints::new_inherit_idmap_dag(set.hints());
-    let set = NameSet::from_iter(visited.into_iter().map(Ok), hints);
+    let set = Set::from_iter(visited.into_iter().map(Ok), hints);
     this.sort(&set).await
 }
 
-pub(crate) async fn heads(this: &(impl DagAlgorithm + ?Sized), set: NameSet) -> Result<NameSet> {
+pub(crate) async fn heads(this: &(impl DagAlgorithm + ?Sized), set: Set) -> Result<Set> {
     Ok(set.clone() - this.parents(set).await?)
 }
 
-pub(crate) async fn roots(this: &(impl DagAlgorithm + ?Sized), set: NameSet) -> Result<NameSet> {
+pub(crate) async fn roots(this: &(impl DagAlgorithm + ?Sized), set: Set) -> Result<Set> {
     Ok(set.clone() - this.children(set).await?)
 }
 
-pub(crate) async fn merges(this: &(impl DagAlgorithm + ?Sized), set: NameSet) -> Result<NameSet> {
+pub(crate) async fn merges(this: &(impl DagAlgorithm + ?Sized), set: Set) -> Result<Set> {
     let this = this.dag_snapshot()?;
     Ok(set.filter(Box::new(move |v: &Vertex| {
         let this = this.clone();
@@ -295,27 +289,24 @@ pub(crate) async fn merges(this: &(impl DagAlgorithm + ?Sized), set: NameSet) ->
 
 pub(crate) async fn reachable_roots(
     this: &(impl DagAlgorithm + ?Sized),
-    roots: NameSet,
-    heads: NameSet,
-) -> Result<NameSet> {
+    roots: Set,
+    heads: Set,
+) -> Result<Set> {
     let heads_ancestors = this.ancestors(heads.clone()).await?;
     let roots = roots & heads_ancestors.clone(); // Filter out "bogus" roots.
     let only = heads_ancestors - this.ancestors(roots.clone()).await?;
     Ok(roots.clone() & (heads.clone() | this.parents(only).await?))
 }
 
-pub(crate) async fn heads_ancestors(
-    this: &(impl DagAlgorithm + ?Sized),
-    set: NameSet,
-) -> Result<NameSet> {
+pub(crate) async fn heads_ancestors(this: &(impl DagAlgorithm + ?Sized), set: Set) -> Result<Set> {
     this.heads(this.ancestors(set).await?).await
 }
 
 pub(crate) async fn only(
     this: &(impl DagAlgorithm + ?Sized),
-    reachable: NameSet,
-    unreachable: NameSet,
-) -> Result<NameSet> {
+    reachable: Set,
+    unreachable: Set,
+) -> Result<Set> {
     let reachable = this.ancestors(reachable).await?;
     let unreachable = this.ancestors(unreachable).await?;
     Ok(reachable - unreachable)
@@ -323,9 +314,9 @@ pub(crate) async fn only(
 
 pub(crate) async fn only_both(
     this: &(impl DagAlgorithm + ?Sized),
-    reachable: NameSet,
-    unreachable: NameSet,
-) -> Result<(NameSet, NameSet)> {
+    reachable: Set,
+    unreachable: Set,
+) -> Result<(Set, Set)> {
     let reachable = this.ancestors(reachable).await?;
     let unreachable = this.ancestors(unreachable).await?;
     Ok((reachable - unreachable.clone(), unreachable))
@@ -333,7 +324,7 @@ pub(crate) async fn only_both(
 
 pub(crate) async fn gca_one(
     this: &(impl DagAlgorithm + ?Sized),
-    set: NameSet,
+    set: Set,
 ) -> Result<Option<Vertex>> {
     this.gca_all(set)
         .await?
@@ -344,15 +335,12 @@ pub(crate) async fn gca_one(
         .transpose()
 }
 
-pub(crate) async fn gca_all(this: &(impl DagAlgorithm + ?Sized), set: NameSet) -> Result<NameSet> {
+pub(crate) async fn gca_all(this: &(impl DagAlgorithm + ?Sized), set: Set) -> Result<Set> {
     this.heads_ancestors(this.common_ancestors(set).await?)
         .await
 }
 
-pub(crate) async fn common_ancestors(
-    this: &(impl DagAlgorithm + ?Sized),
-    set: NameSet,
-) -> Result<NameSet> {
+pub(crate) async fn common_ancestors(this: &(impl DagAlgorithm + ?Sized), set: Set) -> Result<Set> {
     let result = match set.count_slow().await? {
         0 => set,
         1 => this.ancestors(set).await?,
@@ -362,10 +350,10 @@ pub(crate) async fn common_ancestors(
             let set = this.roots(set).await?;
             let mut iter = set.iter().await?;
             let mut result = this
-                .ancestors(NameSet::from(iter.next().await.unwrap()?))
+                .ancestors(Set::from(iter.next().await.unwrap()?))
                 .await?;
             while let Some(v) = iter.next().await {
-                result = result.intersection(&this.ancestors(NameSet::from(v?)).await?);
+                result = result.intersection(&this.ancestors(Set::from(v?)).await?);
             }
             result
         }
@@ -399,10 +387,10 @@ pub(crate) async fn is_ancestor(
 /// (ToIdSet, ToSet).
 pub async fn suggest_bisect(
     this: &(impl DagAlgorithm + ToIdSet + ToSet + IdConvert + ?Sized),
-    roots: NameSet,
-    heads: NameSet,
-    skip: NameSet,
-) -> Result<(Option<Vertex>, NameSet, NameSet)> {
+    roots: Set,
+    heads: Set,
+    skip: Set,
+) -> Result<(Option<Vertex>, Set, Set)> {
     let roots = this.to_id_set(&roots).await?;
     let heads = this.to_id_set(&heads).await?;
     let skip = this.to_id_set(&skip).await?;
@@ -425,7 +413,7 @@ pub async fn suggest_bisect(
 #[tracing::instrument(skip(this), level=tracing::Level::DEBUG)]
 pub(crate) async fn hint_subdag_for_insertion(
     this: &(impl Parents + ?Sized),
-    scope: &NameSet,
+    scope: &Set,
     heads: &[Vertex],
 ) -> Result<MemNameDag> {
     let count = scope.count_slow().await?;
@@ -434,7 +422,7 @@ pub(crate) async fn hint_subdag_for_insertion(
     // ScopedParents only contains parents within "scope".
     struct ScopedParents<'a, P: Parents + ?Sized> {
         parents: &'a P,
-        scope: &'a NameSet,
+        scope: &'a Set,
     }
 
     #[async_trait::async_trait]

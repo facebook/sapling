@@ -15,7 +15,7 @@ use std::sync::Arc;
 use nonblocking::non_blocking_result;
 
 use super::hints::Flags;
-use super::AsyncNameSetQuery;
+use super::AsyncSetQuery;
 use super::BoxVertexStream;
 use super::Hints;
 use crate::ops::DagAlgorithm;
@@ -25,8 +25,8 @@ use crate::Group;
 use crate::IdSet;
 use crate::IdSetIter;
 use crate::IdSpan;
-use crate::NameSet;
 use crate::Result;
+use crate::Set;
 use crate::Vertex;
 
 /// A set backed by [`IdSet`] + [`IdMap`].
@@ -285,7 +285,7 @@ impl IdStaticSet {
 }
 
 #[async_trait::async_trait]
-impl AsyncNameSetQuery for IdStaticSet {
+impl AsyncSetQuery for IdStaticSet {
     async fn iter(&self) -> Result<BoxVertexStream> {
         let iter = Iter {
             iter: self.spans.clone().into_iter(),
@@ -366,18 +366,16 @@ impl AsyncNameSetQuery for IdStaticSet {
         Some(self.map.as_ref() as &dyn IdConvert)
     }
 
-    fn specialized_reverse(&self) -> Option<NameSet> {
-        Some(NameSet::from_query(self.clone().reversed()))
+    fn specialized_reverse(&self) -> Option<Set> {
+        Some(Set::from_query(self.clone().reversed()))
     }
 
-    fn specialized_take(&self, take: u64) -> Option<NameSet> {
-        Some(NameSet::from_query(self.clone().slice_spans(0, take)))
+    fn specialized_take(&self, take: u64) -> Option<Set> {
+        Some(Set::from_query(self.clone().slice_spans(0, take)))
     }
 
-    fn specialized_skip(&self, skip: u64) -> Option<NameSet> {
-        Some(NameSet::from_query(
-            self.clone().slice_spans(skip, u64::MAX),
-        ))
+    fn specialized_skip(&self, skip: u64) -> Option<Set> {
+        Some(Set::from_query(self.clone().slice_spans(skip, u64::MAX)))
     }
 
     /// Specialized "flatten_id" implementation.
@@ -396,7 +394,7 @@ pub(crate) mod tests {
     use nonblocking::non_blocking_result as r;
 
     use super::super::tests::*;
-    use super::super::NameSet;
+    use super::super::Set;
     use super::*;
     use crate::nameset::difference::DifferenceSet;
     use crate::nameset::intersection::IntersectionSet;
@@ -498,27 +496,24 @@ pub(crate) mod tests {
     }
 
     /// Show set iteration and flatten set iteration for debugging purpose.
-    fn dbg_flat(set: &NameSet) -> String {
+    fn dbg_flat(set: &Set) -> String {
         let flat = set.specialized_flatten_id();
         let flat_str = match flat {
-            Some(flat) => format!(
-                " flat:{}",
-                fmt_iter(&NameSet::from_query(flat.into_owned()))
-            ),
+            Some(flat) => format!(" flat:{}", fmt_iter(&Set::from_query(flat.into_owned()))),
             None => String::new(),
         };
         format!("{}{}", fmt_iter(set), flat_str)
     }
 
     // Construct diff, intersection, union sets directly to bypass fast paths.
-    fn set_ops(a: &NameSet, b: &NameSet) -> (NameSet, NameSet, NameSet) {
+    fn set_ops(a: &Set, b: &Set) -> (Set, Set, Set) {
         let difference = DifferenceSet::new(a.clone(), b.clone());
         let intersection = IntersectionSet::new(a.clone(), b.clone());
         let union = UnionSet::new(a.clone(), b.clone());
         (
-            NameSet::from_query(difference),
-            NameSet::from_query(intersection),
-            NameSet::from_query(union),
+            Set::from_query(difference),
+            Set::from_query(intersection),
+            Set::from_query(union),
         )
     }
 
@@ -609,9 +604,8 @@ pub(crate) mod tests {
             let abcd = r(dag.ancestors("D".into()))?.reverse();
             let abefg = r(dag.ancestors("G".into()))?.reverse();
 
-            let slice12 = |a: &NameSet| -> NameSet {
-                NameSet::from_query(SliceSet::new(a.clone(), 1, Some(2)))
-            };
+            let slice12 =
+                |a: &Set| -> Set { Set::from_query(SliceSet::new(a.clone(), 1, Some(2))) };
 
             let (d, i, u) = set_ops(&abcd, &abefg);
             assert_eq!(dbg_flat(&d), "[C, D] flat:[C, D]");
@@ -675,7 +669,7 @@ pub(crate) mod tests {
 
     #[test]
     fn test_dag_no_fast_paths() -> Result<()> {
-        let f = |s: NameSet| -> String { dbg(s) };
+        let f = |s: Set| -> String { dbg(s) };
         with_dag(|dag1| -> Result<()> {
             with_dag(|dag2| -> Result<()> {
                 let abcd = r(dag1.ancestors("D".into()))?;
@@ -719,7 +713,7 @@ pub(crate) mod tests {
                 // No fast path for manually constructed StaticSet either, because
                 // the StaticSets do not have DAG associated to test compatibility.
                 // However, "all & z" is changed to "z & all" for performance.
-                let z = || NameSet::from("Z");
+                let z = || Set::from("Z");
                 assert_eq!(f(z() & a2()), "<and <static [Z]> <spans [A:G+0:6]>>");
                 assert_eq!(f(z() | a2()), "<or <static [Z]> <spans [A:G+0:6]>>");
                 assert_eq!(f(z() - a2()), "<diff <static [Z]> <spans [A:G+0:6]>>");
@@ -728,7 +722,7 @@ pub(crate) mod tests {
                 assert_eq!(f(a1() - z()), "<diff <spans [A:G+0:6]> <static [Z]>>");
 
                 // EMPTY fast paths can still be used.
-                let e = NameSet::empty;
+                let e = Set::empty;
                 assert_eq!(f(e() & a1()), "<empty>");
                 assert_eq!(f(e() | a1()), "<spans [A:G+0:6]>");
                 assert_eq!(f(e() - a1()), "<empty>");
@@ -757,7 +751,7 @@ pub(crate) mod tests {
             let all = r(dag.all())?;
             assert_eq!(dbg(&all), "<spans [A:G+0:6]>");
 
-            let ac: NameSet = "A C".into();
+            let ac: Set = "A C".into();
             let ac = r(dag.sort(&ac))?;
 
             let intersection = all.intersection(&ac);
@@ -825,7 +819,7 @@ pub(crate) mod tests {
     #[test]
     fn test_skip_take_reverse() -> Result<()> {
         with_dag(|dag| {
-            let set = r(dag.sort(&NameSet::from("A B C")))?;
+            let set = r(dag.sort(&Set::from("A B C")))?;
             check_skip_take_reverse(set)
         })
     }
@@ -835,7 +829,7 @@ pub(crate) mod tests {
         with_dag(|dag| -> Result<()> {
             let abc = r(dag.ancestors("B C".into()))?;
             let abe = r(dag.common_ancestors("E".into()))?;
-            let f: NameSet = "F".into();
+            let f: Set = "F".into();
             let all = r(dag.all())?;
 
             assert!(has_ancestors_flag(abc.clone()));
@@ -879,7 +873,7 @@ pub(crate) mod tests {
     #[test]
     fn test_dag_hints_ancestors_fast_paths() -> Result<()> {
         with_dag(|dag| -> Result<()> {
-            let bfg: NameSet = "B F G".into();
+            let bfg: Set = "B F G".into();
 
             // Set the ANCESTORS flag. It's incorrect but make it easier to test fast paths.
             bfg.hints().add_flags(Flags::ANCESTORS);
@@ -911,7 +905,7 @@ pub(crate) mod tests {
         })
     }
 
-    fn has_ancestors_flag(set: NameSet) -> bool {
+    fn has_ancestors_flag(set: Set) -> bool {
         set.hints().contains(Flags::ANCESTORS)
     }
 

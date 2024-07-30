@@ -7,7 +7,7 @@
 
 //! # nameset
 //!
-//! See [`NameSet`] for the main structure.
+//! See [`Set`] for the main structure.
 
 use std::any::Any;
 use std::borrow::Cow;
@@ -58,15 +58,15 @@ use self::meta::MetaSet;
 use self::reverse::ReverseSet;
 use self::r#static::StaticSet;
 
-/// A [`NameSet`] contains an immutable list of names.
+/// A [`Set`] contains an immutable list of names.
 ///
 /// It provides order-preserving iteration and set operations,
 /// and is cheaply clonable.
 #[derive(Clone)]
-pub struct NameSet(Arc<dyn AsyncNameSetQuery>);
+pub struct Set(Arc<dyn AsyncSetQuery>);
 
-impl NameSet {
-    pub(crate) fn from_query(query: impl AsyncNameSetQuery) -> Self {
+impl Set {
+    pub(crate) fn from_query(query: impl AsyncSetQuery) -> Self {
         Self(Arc::new(query))
     }
 
@@ -76,12 +76,12 @@ impl NameSet {
     }
 
     /// Creates from a (short) list of known names.
-    pub fn from_static_names(names: impl IntoIterator<Item = Vertex>) -> NameSet {
+    pub fn from_static_names(names: impl IntoIterator<Item = Vertex>) -> Set {
         Self::from_query(r#static::StaticSet::from_names(names))
     }
 
     /// Creates from a (lazy) iterator of names.
-    pub fn from_iter<I>(iter: I, hints: Hints) -> NameSet
+    pub fn from_iter<I>(iter: I, hints: Hints) -> Set
     where
         I: IntoIterator<Item = Result<Vertex>> + 'static,
         <I as IntoIterator>::IntoIter: Send + Sync,
@@ -90,7 +90,7 @@ impl NameSet {
     }
 
     /// Creates from a (lazy) stream of names with hints.
-    pub fn from_stream(stream: BoxVertexStream, hints: Hints) -> NameSet {
+    pub fn from_stream(stream: BoxVertexStream, hints: Hints) -> Set {
         Self::from_query(lazy::LazySet::from_stream(stream, hints))
     }
 
@@ -99,7 +99,7 @@ impl NameSet {
         iter: I,
         map: Arc<dyn IdConvert + Send + Sync>,
         dag: Arc<dyn DagAlgorithm + Send + Sync>,
-    ) -> NameSet
+    ) -> Set
     where
         I: IntoIterator<Item = Result<Id>> + 'static,
         <I as IntoIterator>::IntoIter: Send + Sync,
@@ -108,10 +108,7 @@ impl NameSet {
     }
 
     /// Creates from a (lazy) iterator of Ids and a struct with snapshot abilities.
-    pub fn from_id_iter_dag<I>(
-        iter: I,
-        dag: &(impl DagAlgorithm + IdMapSnapshot),
-    ) -> Result<NameSet>
+    pub fn from_id_iter_dag<I>(iter: I, dag: &(impl DagAlgorithm + IdMapSnapshot)) -> Result<Set>
     where
         I: IntoIterator<Item = Result<Id>> + 'static,
         <I as IntoIterator>::IntoIter: Send + Sync,
@@ -126,7 +123,7 @@ impl NameSet {
         spans: IdSet,
         map: Arc<dyn IdConvert + Send + Sync>,
         dag: Arc<dyn DagAlgorithm + Send + Sync>,
-    ) -> NameSet {
+    ) -> Set {
         Self::from_query(IdStaticSet::from_spans_idmap_dag(spans, map, dag))
     }
 
@@ -137,13 +134,13 @@ impl NameSet {
         Ok(Self::from_spans_idmap_dag(spans, map, dag))
     }
 
-    /// Creates from a function that evaluates to a [`NameSet`], and a
+    /// Creates from a function that evaluates to a [`Set`], and a
     /// `contains` fast path.
     pub fn from_evaluate_contains<C>(
-        evaluate: impl Fn() -> Result<NameSet> + Send + Sync + 'static,
+        evaluate: impl Fn() -> Result<Set> + Send + Sync + 'static,
         contains: C,
         hints: Hints,
-    ) -> NameSet
+    ) -> Set
     where
         C: for<'a> Fn(&'a MetaSet, &'a Vertex) -> Result<bool>,
         C: Send + Sync + 'static,
@@ -163,20 +160,20 @@ impl NameSet {
         )
     }
 
-    /// Creates from an async function that evaluates to a [`NameSet`], and a
+    /// Creates from an async function that evaluates to a [`Set`], and a
     /// async `contains` fast path.
     pub fn from_async_evaluate_contains(
-        evaluate: Box<dyn Fn() -> BoxFuture<'static, Result<NameSet>> + Send + Sync>,
+        evaluate: Box<dyn Fn() -> BoxFuture<'static, Result<Set>> + Send + Sync>,
         contains: Box<
             dyn for<'a> Fn(&'a MetaSet, &'a Vertex) -> BoxFuture<'a, Result<bool>> + Send + Sync,
         >,
         hints: Hints,
-    ) -> NameSet {
+    ) -> Set {
         Self::from_query(MetaSet::from_evaluate_hints(evaluate, hints).with_contains(contains))
     }
 
     /// Reverse the iteration order of the `Set`.
-    pub fn reverse(&self) -> NameSet {
+    pub fn reverse(&self) -> Set {
         match self.0.specialized_reverse() {
             Some(set) => set,
             None => Self::from_query(ReverseSet::new(self.clone())),
@@ -184,7 +181,7 @@ impl NameSet {
     }
 
     /// Calculates the subset that is only in self, not in other.
-    pub fn difference(&self, other: &NameSet) -> NameSet {
+    pub fn difference(&self, other: &Set) -> Set {
         if other.hints().contains(Flags::FULL)
             && other.hints().dag_version() >= self.hints().dag_version()
             && self.hints().dag_version() > None
@@ -240,7 +237,7 @@ impl NameSet {
     }
 
     /// Calculates the intersection of two sets.
-    pub fn intersection(&self, other: &NameSet) -> NameSet {
+    pub fn intersection(&self, other: &Set) -> Set {
         if self.hints().contains(Flags::FULL)
             && self.hints().dag_version() >= other.hints().dag_version()
             && other.hints().dag_version() > None
@@ -335,7 +332,7 @@ impl NameSet {
     }
 
     /// Calculates the union of two sets. Iteration order might get lost.
-    pub fn union(&self, other: &NameSet) -> NameSet {
+    pub fn union(&self, other: &Set) -> Set {
         if let Some(set) = self.union_fast_paths(other) {
             return set;
         }
@@ -383,7 +380,7 @@ impl NameSet {
 
     /// Similar to `union`, but without showfast paths, and force a "flatten zip" order.
     /// For example `[1,2,3,4].union_zip([5,6])` produces this order: `[1,5,2,6,3,4]`.
-    pub fn union_zip(&self, other: &NameSet) -> NameSet {
+    pub fn union_zip(&self, other: &Set) -> Set {
         tracing::debug!(
             target: "dag::algo::union_zip",
             "union_zip(x={:.6?}, y={:.6?}) (slow path)", self, other);
@@ -466,7 +463,7 @@ impl NameSet {
     /// might be represented by a complex expression.
     ///
     /// By flattening, the iteration order might be lost.
-    pub async fn flatten(&self) -> Result<NameSet> {
+    pub async fn flatten(&self) -> Result<Set> {
         match (self.id_map(), self.dag()) {
             (Some(id_map), Some(dag)) => {
                 // Convert to IdStaticSet
@@ -486,7 +483,7 @@ impl NameSet {
         &self,
         id_map: Arc<dyn IdConvert + Send + Sync>,
         dag: Arc<dyn DagAlgorithm + Send + Sync>,
-    ) -> Result<NameSet> {
+    ) -> Result<Set> {
         if self.as_any().is::<IdStaticSet>() {
             return Ok(self.clone());
         }
@@ -497,13 +494,13 @@ impl NameSet {
         }
         ids.sort_unstable_by_key(|i| u64::MAX - i.0);
         let spans = IdSet::from_sorted_spans(ids);
-        let flat_set = NameSet::from_spans_idmap_dag(spans, id_map, dag);
+        let flat_set = Set::from_spans_idmap_dag(spans, id_map, dag);
         flat_set.hints().inherit_flags_min_max_id(self.hints());
         Ok(flat_set)
     }
 
     /// Convert this set to a static name set.
-    pub async fn flatten_names(&self) -> Result<NameSet> {
+    pub async fn flatten_names(&self) -> Result<Set> {
         if self.as_any().is::<StaticSet>() {
             return Ok(self.clone());
         }
@@ -514,7 +511,7 @@ impl NameSet {
     }
 
     /// Take the first `n` items.
-    pub fn take(&self, n: u64) -> NameSet {
+    pub fn take(&self, n: u64) -> Set {
         if let Some(set) = self.specialized_take(n) {
             tracing::debug!("take(x={:.6?}, {}) (specialized path)", self, n);
             set
@@ -526,7 +523,7 @@ impl NameSet {
     }
 
     /// Skip the first `n` items.
-    pub fn skip(&self, n: u64) -> NameSet {
+    pub fn skip(&self, n: u64) -> Set {
         if n == 0 {
             return self.clone();
         }
@@ -551,7 +548,7 @@ impl NameSet {
     }
 }
 
-impl BitAnd for NameSet {
+impl BitAnd for Set {
     type Output = Self;
 
     fn bitand(self, other: Self) -> Self {
@@ -559,7 +556,7 @@ impl BitAnd for NameSet {
     }
 }
 
-impl BitOr for NameSet {
+impl BitOr for Set {
     type Output = Self;
 
     fn bitor(self, other: Self) -> Self {
@@ -567,7 +564,7 @@ impl BitOr for NameSet {
     }
 }
 
-impl Add for NameSet {
+impl Add for Set {
     type Output = Self;
 
     fn add(self, rhs: Self) -> Self::Output {
@@ -575,7 +572,7 @@ impl Add for NameSet {
     }
 }
 
-impl Sub for NameSet {
+impl Sub for Set {
     type Output = Self;
 
     fn sub(self, other: Self) -> Self {
@@ -583,26 +580,26 @@ impl Sub for NameSet {
     }
 }
 
-impl Deref for NameSet {
-    type Target = dyn AsyncNameSetQuery;
+impl Deref for Set {
+    type Target = dyn AsyncSetQuery;
 
     fn deref(&self) -> &Self::Target {
         self.0.deref()
     }
 }
 
-impl fmt::Debug for NameSet {
+impl fmt::Debug for Set {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         self.0.fmt(f)
     }
 }
 
-/// Read-only queries required by [`NameSet`]: Iteration, length and contains.
+/// Read-only queries required by [`Set`]: Iteration, length and contains.
 ///
 /// Types implementating this trait should rewrite methods to use fast paths
 /// when possible.
 #[async_trait::async_trait]
-pub trait AsyncNameSetQuery: Any + Debug + Send + Sync {
+pub trait AsyncSetQuery: Any + Debug + Send + Sync {
     /// Iterate through the set in defined order.
     async fn iter(&self) -> Result<BoxVertexStream>;
 
@@ -695,20 +692,20 @@ pub trait AsyncNameSetQuery: Any + Debug + Send + Sync {
 
     /// Specialized "reverse" implementation.
     /// Returns `None` to use the general purpose reverse implementation.
-    fn specialized_reverse(&self) -> Option<NameSet> {
+    fn specialized_reverse(&self) -> Option<Set> {
         None
     }
 
     /// Specialized "take" implementation.
     /// Returns `None` to use the general purpose implementation.
-    fn specialized_take(&self, n: u64) -> Option<NameSet> {
+    fn specialized_take(&self, n: u64) -> Option<Set> {
         let _ = n;
         None
     }
 
     /// Specialized "take" implementation.
     /// Returns `None` to use the general purpose implementation.
-    fn specialized_skip(&self, n: u64) -> Option<NameSet> {
+    fn specialized_skip(&self, n: u64) -> Option<Set> {
         let _ = n;
         None
     }
@@ -719,8 +716,8 @@ pub trait AsyncNameSetQuery: Any + Debug + Send + Sync {
     }
 }
 
-/// Sync version of `AsyncNameSetQuery`.
-pub trait SyncNameSetQuery {
+/// Sync version of `AsyncSetQuery`.
+pub trait SyncSetQuery {
     /// Iterate through the set in defined order.
     fn iter(&self) -> Result<Box<dyn NameIter>>;
 
@@ -752,91 +749,91 @@ pub trait SyncNameSetQuery {
     fn id_convert(&self) -> Option<&dyn IdConvert>;
 }
 
-impl<T: AsyncNameSetQuery> SyncNameSetQuery for T {
+impl<T: AsyncSetQuery> SyncSetQuery for T {
     fn iter(&self) -> Result<Box<dyn NameIter>> {
-        non_blocking(AsyncNameSetQuery::iter(self))?.map(to_iter)
+        non_blocking(AsyncSetQuery::iter(self))?.map(to_iter)
     }
 
     fn iter_rev(&self) -> Result<Box<dyn NameIter>> {
-        non_blocking(AsyncNameSetQuery::iter_rev(self))?.map(to_iter)
+        non_blocking(AsyncSetQuery::iter_rev(self))?.map(to_iter)
     }
 
     fn count(&self) -> Result<u64> {
-        non_blocking(AsyncNameSetQuery::count_slow(self))?
+        non_blocking(AsyncSetQuery::count_slow(self))?
     }
 
     fn first(&self) -> Result<Option<Vertex>> {
-        non_blocking(AsyncNameSetQuery::first(self))?
+        non_blocking(AsyncSetQuery::first(self))?
     }
 
     fn last(&self) -> Result<Option<Vertex>> {
-        non_blocking(AsyncNameSetQuery::last(self))?
+        non_blocking(AsyncSetQuery::last(self))?
     }
 
     fn is_empty(&self) -> Result<bool> {
-        non_blocking(AsyncNameSetQuery::is_empty(self))?
+        non_blocking(AsyncSetQuery::is_empty(self))?
     }
 
     fn contains(&self, name: &Vertex) -> Result<bool> {
-        non_blocking(AsyncNameSetQuery::contains(self, name))?
+        non_blocking(AsyncSetQuery::contains(self, name))?
     }
 
     fn as_any(&self) -> &dyn Any {
-        AsyncNameSetQuery::as_any(self)
+        AsyncSetQuery::as_any(self)
     }
 
     fn hints(&self) -> &Hints {
-        AsyncNameSetQuery::hints(self)
+        AsyncSetQuery::hints(self)
     }
 
     fn id_convert(&self) -> Option<&dyn IdConvert> {
-        AsyncNameSetQuery::id_convert(self)
+        AsyncSetQuery::id_convert(self)
     }
 }
 
-impl SyncNameSetQuery for NameSet {
+impl SyncSetQuery for Set {
     fn iter(&self) -> Result<Box<dyn NameIter>> {
-        non_blocking(AsyncNameSetQuery::iter(self.0.deref()))?.map(to_iter)
+        non_blocking(AsyncSetQuery::iter(self.0.deref()))?.map(to_iter)
     }
 
     fn iter_rev(&self) -> Result<Box<dyn NameIter>> {
-        non_blocking(AsyncNameSetQuery::iter_rev(self.0.deref()))?.map(to_iter)
+        non_blocking(AsyncSetQuery::iter_rev(self.0.deref()))?.map(to_iter)
     }
 
     fn count(&self) -> Result<u64> {
-        non_blocking(AsyncNameSetQuery::count_slow(self.0.deref()))?
+        non_blocking(AsyncSetQuery::count_slow(self.0.deref()))?
     }
 
     fn first(&self) -> Result<Option<Vertex>> {
-        non_blocking(AsyncNameSetQuery::first(self.0.deref()))?
+        non_blocking(AsyncSetQuery::first(self.0.deref()))?
     }
 
     fn last(&self) -> Result<Option<Vertex>> {
-        non_blocking(AsyncNameSetQuery::last(self.0.deref()))?
+        non_blocking(AsyncSetQuery::last(self.0.deref()))?
     }
 
     fn is_empty(&self) -> Result<bool> {
-        non_blocking(AsyncNameSetQuery::is_empty(self.0.deref()))?
+        non_blocking(AsyncSetQuery::is_empty(self.0.deref()))?
     }
 
     fn contains(&self, name: &Vertex) -> Result<bool> {
-        non_blocking(AsyncNameSetQuery::contains(self.0.deref(), name))?
+        non_blocking(AsyncSetQuery::contains(self.0.deref(), name))?
     }
 
     fn as_any(&self) -> &dyn Any {
-        AsyncNameSetQuery::as_any(self.0.deref())
+        AsyncSetQuery::as_any(self.0.deref())
     }
 
     fn hints(&self) -> &Hints {
-        AsyncNameSetQuery::hints(self.0.deref())
+        AsyncSetQuery::hints(self.0.deref())
     }
 
     fn id_convert(&self) -> Option<&dyn IdConvert> {
-        AsyncNameSetQuery::id_convert(self.0.deref())
+        AsyncSetQuery::id_convert(self.0.deref())
     }
 }
 
-/// Iterator of [`NameSet`].
+/// Iterator of [`Set`].
 /// Types implementing this should consider replacing `iter_rev` with a fast
 /// path if possible.
 pub trait NameIter: Iterator<Item = Result<Vertex>> + Send {}
@@ -867,15 +864,15 @@ fn to_iter(stream: BoxVertexStream) -> Box<dyn NameIter> {
     Box::new(NonblockingNameIter(stream))
 }
 
-impl From<Vertex> for NameSet {
-    fn from(name: Vertex) -> NameSet {
-        NameSet::from_static_names(std::iter::once(name))
+impl From<Vertex> for Set {
+    fn from(name: Vertex) -> Set {
+        Set::from_static_names(std::iter::once(name))
     }
 }
 
-impl From<&Vertex> for NameSet {
-    fn from(name: &Vertex) -> NameSet {
-        NameSet::from_static_names(std::iter::once(name.clone()))
+impl From<&Vertex> for Set {
+    fn from(name: &Vertex) -> Set {
+        Set::from_static_names(std::iter::once(name.clone()))
     }
 }
 
@@ -913,17 +910,17 @@ pub(crate) mod tests {
     }
 
     // For easier testing.
-    impl From<&str> for NameSet {
-        fn from(name: &str) -> NameSet {
-            NameSet::from_static_names(
+    impl From<&str> for Set {
+        fn from(name: &str) -> Set {
+            Set::from_static_names(
                 name.split_whitespace()
                     .map(|n| Vertex::copy_from(n.as_bytes())),
             )
         }
     }
 
-    impl NameSet {
-        pub(crate) fn assert_eq(&self, other: NameSet) {
+    impl Set {
+        pub(crate) fn assert_eq(&self, other: Set) {
             assert!(
                 other.count().unwrap() == self.count().unwrap()
                     && (other.clone() & self.clone()).count().unwrap() == self.count().unwrap(),
@@ -946,7 +943,7 @@ pub(crate) mod tests {
     pub(crate) struct VecQuery(Vec<Vertex>, Hints, SizeHint);
 
     #[async_trait::async_trait]
-    impl AsyncNameSetQuery for VecQuery {
+    impl AsyncSetQuery for VecQuery {
         async fn iter(&self) -> Result<BoxVertexStream> {
             let iter = self.0.clone().into_iter().map(Ok);
             Ok(Box::pin(futures::stream::iter(iter)))
@@ -1020,13 +1017,13 @@ pub(crate) mod tests {
     fn test_empty_query() -> Result<()> {
         let query = VecQuery::default();
         check_invariants(&query)?;
-        assert_eq!(SyncNameSetQuery::iter(&query)?.count(), 0);
-        assert_eq!(SyncNameSetQuery::iter_rev(&query)?.count(), 0);
-        assert_eq!(SyncNameSetQuery::first(&query)?, None);
-        assert_eq!(SyncNameSetQuery::last(&query)?, None);
-        assert_eq!(SyncNameSetQuery::count(&query)?, 0);
-        assert!(SyncNameSetQuery::is_empty(&query)?);
-        assert!(!SyncNameSetQuery::contains(&query, &to_name(0))?);
+        assert_eq!(SyncSetQuery::iter(&query)?.count(), 0);
+        assert_eq!(SyncSetQuery::iter_rev(&query)?.count(), 0);
+        assert_eq!(SyncSetQuery::first(&query)?, None);
+        assert_eq!(SyncSetQuery::last(&query)?, None);
+        assert_eq!(SyncSetQuery::count(&query)?, 0);
+        assert!(SyncSetQuery::is_empty(&query)?);
+        assert!(!SyncSetQuery::contains(&query, &to_name(0))?);
         Ok(())
     }
 
@@ -1034,32 +1031,26 @@ pub(crate) mod tests {
     fn test_vec_query() -> Result<()> {
         let query = VecQuery::from_bytes(b"\xab\xef\xcd");
         check_invariants(&query)?;
+        assert_eq!(shorten_iter(SyncSetQuery::iter(&query)), ["ab", "ef", "cd"]);
         assert_eq!(
-            shorten_iter(SyncNameSetQuery::iter(&query)),
-            ["ab", "ef", "cd"]
-        );
-        assert_eq!(
-            shorten_iter(SyncNameSetQuery::iter_rev(&query)),
+            shorten_iter(SyncSetQuery::iter_rev(&query)),
             ["cd", "ef", "ab"]
         );
-        assert_eq!(
-            shorten_name(SyncNameSetQuery::first(&query)?.unwrap()),
-            "ab"
-        );
-        assert_eq!(shorten_name(SyncNameSetQuery::last(&query)?.unwrap()), "cd");
-        assert!(!SyncNameSetQuery::is_empty(&query)?);
-        assert!(SyncNameSetQuery::contains(&query, &to_name(0xef))?);
-        assert!(!SyncNameSetQuery::contains(&query, &to_name(0))?);
+        assert_eq!(shorten_name(SyncSetQuery::first(&query)?.unwrap()), "ab");
+        assert_eq!(shorten_name(SyncSetQuery::last(&query)?.unwrap()), "cd");
+        assert!(!SyncSetQuery::is_empty(&query)?);
+        assert!(SyncSetQuery::contains(&query, &to_name(0xef))?);
+        assert!(!SyncSetQuery::contains(&query, &to_name(0))?);
         Ok(())
     }
 
     #[test]
     fn test_debug() {
-        let set = NameSet::from_static_names(vec![to_name(2)])
-            .union(&NameSet::from_static_names(vec![to_name(1)]))
+        let set = Set::from_static_names(vec![to_name(2)])
+            .union(&Set::from_static_names(vec![to_name(1)]))
             .difference(
-                &NameSet::from_static_names(vec![to_name(3)])
-                    .intersection(&NameSet::from_static_names(vec![to_name(2), to_name(3)])),
+                &Set::from_static_names(vec![to_name(3)])
+                    .intersection(&Set::from_static_names(vec![to_name(2), to_name(3)])),
             );
         assert_eq!(
             dbg(&set),
@@ -1089,19 +1080,19 @@ pub(crate) mod tests {
 
     #[test]
     fn test_flatten() {
-        let set = NameSet::from_static_names(vec![to_name(2)])
-            .union(&NameSet::from_static_names(vec![to_name(1)]))
+        let set = Set::from_static_names(vec![to_name(2)])
+            .union(&Set::from_static_names(vec![to_name(1)]))
             .difference(
-                &NameSet::from_static_names(vec![to_name(3)])
-                    .intersection(&NameSet::from_static_names(vec![to_name(2), to_name(3)])),
+                &Set::from_static_names(vec![to_name(3)])
+                    .intersection(&Set::from_static_names(vec![to_name(2), to_name(3)])),
             );
         assert_eq!(dbg(r(set.flatten()).unwrap()), "<static [0202, 0101]>");
     }
 
     #[test]
     fn test_union_zip() {
-        let set1 = NameSet::from_static_names(vec![to_name(1), to_name(2), to_name(3), to_name(4)]);
-        let set2 = NameSet::from_static_names(vec![to_name(5), to_name(6)]);
+        let set1 = Set::from_static_names(vec![to_name(1), to_name(2), to_name(3), to_name(4)]);
+        let set2 = Set::from_static_names(vec![to_name(5), to_name(6)]);
         let unioned = set1.union_zip(&set2);
         let names = unioned.iter().unwrap().collect::<Result<Vec<_>>>().unwrap();
         assert_eq!(dbg(names), "[0101, 0505, 0202, 0606, 0303, 0404]");
@@ -1109,9 +1100,9 @@ pub(crate) mod tests {
 
     #[test]
     fn test_ops() {
-        let ab: NameSet = "a b".into();
-        let bc: NameSet = "b c".into();
-        let s = |set: NameSet| -> Vec<String> { shorten_iter(set.iter()) };
+        let ab: Set = "a b".into();
+        let bc: Set = "b c".into();
+        let s = |set: Set| -> Vec<String> { shorten_iter(set.iter()) };
         assert_eq!(s(ab.clone() | bc.clone()), ["61", "62", "63"]);
         assert_eq!(s(ab.clone() & bc.clone()), ["62"]);
         assert_eq!(s(ab - bc), ["61"]);
@@ -1119,8 +1110,8 @@ pub(crate) mod tests {
 
     #[test]
     fn test_skip_take_slow_path() {
-        let s: NameSet = "a b c d".into();
-        let d = |set: NameSet| -> String { dbg(r(set.flatten_names()).unwrap()) };
+        let s: Set = "a b c d".into();
+        let d = |set: Set| -> String { dbg(r(set.flatten_names()).unwrap()) };
         assert_eq!(d(s.take(2)), "<static [a, b]>");
         assert_eq!(d(s.skip(2)), "<static [c, d]>");
         assert_eq!(d(s.skip(1).take(2)), "<static [b, c]>");
@@ -1128,10 +1119,10 @@ pub(crate) mod tests {
 
     #[test]
     fn test_hints_empty_full_fast_paths() {
-        let partial: NameSet = "a".into();
+        let partial: Set = "a".into();
         partial.hints().add_flags(Flags::ID_ASC);
-        let empty: NameSet = "".into();
-        let full: NameSet = "f".into();
+        let empty: Set = "".into();
+        let full: Set = "f".into();
         full.hints().add_flags(Flags::FULL | Flags::ID_DESC);
 
         assert_eq!(
@@ -1184,7 +1175,7 @@ pub(crate) mod tests {
         let b = move || b.clone();
         let c = move || c.clone();
         let d = move || d.clone();
-        let f = |set: NameSet| {
+        let f = |set: Set| {
             let s = dbg(&set);
             let v = set
                 .iter()
@@ -1237,11 +1228,11 @@ pub(crate) mod tests {
 
     #[test]
     fn test_hints_min_max_id() {
-        let bc: NameSet = "b c".into();
+        let bc: Set = "b c".into();
         bc.hints().set_min_id(Id(20));
         bc.hints().add_flags(Flags::ID_DESC);
 
-        let ad: NameSet = "a d".into();
+        let ad: Set = "a d".into();
         ad.hints().set_max_id(Id(40));
         ad.hints().add_flags(Flags::ID_ASC);
 
@@ -1274,10 +1265,10 @@ pub(crate) mod tests {
 
     #[test]
     fn test_hints_ancestors() {
-        let a: NameSet = "a".into();
+        let a: Set = "a".into();
         a.hints().add_flags(Flags::ANCESTORS);
 
-        let b: NameSet = "b".into();
+        let b: Set = "b".into();
         assert_eq!(
             hints_ops(&a, &b),
             [
@@ -1307,9 +1298,9 @@ pub(crate) mod tests {
     #[test]
     fn test_filter() {
         id_static::tests::with_dag(|dag| {
-            let sets: Vec<NameSet> = vec!["C B A".into(), nb(dag.ancestors("C".into())).unwrap()];
+            let sets: Vec<Set> = vec!["C B A".into(), nb(dag.ancestors("C".into())).unwrap()];
             for abc in sets {
-                let filter: NameSet = abc.filter(Box::new(|v: &Vertex| {
+                let filter: Set = abc.filter(Box::new(|v: &Vertex| {
                     Box::pin(async move { Ok(v.as_ref() != b"A") })
                 }));
                 check_invariants(filter.0.as_ref()).unwrap();
@@ -1327,7 +1318,7 @@ pub(crate) mod tests {
 
     #[test]
     fn test_reverse() {
-        let ab: NameSet = "a b".into();
+        let ab: Set = "a b".into();
         let ba = ab.reverse();
         check_invariants(&*ba).unwrap();
         let names = ba.iter().unwrap().collect::<Result<Vec<_>>>().unwrap();
@@ -1335,7 +1326,7 @@ pub(crate) mod tests {
     }
 
     // Print hints for &, |, - operations.
-    fn hints_ops(lhs: &NameSet, rhs: &NameSet) -> Vec<String> {
+    fn hints_ops(lhs: &Set, rhs: &Set) -> Vec<String> {
         vec![
             (lhs.clone() - rhs.clone(), rhs.clone() - lhs.clone()),
             (lhs.clone() & rhs.clone(), rhs.clone() & lhs.clone()),
@@ -1352,9 +1343,9 @@ pub(crate) mod tests {
         .collect()
     }
 
-    /// Check consistency of a `AsyncNameSetQuery`, such as `iter().nth(0)` matches
+    /// Check consistency of a `AsyncSetQuery`, such as `iter().nth(0)` matches
     /// `first()` etc.
-    pub(crate) fn check_invariants(query: &dyn AsyncNameSetQuery) -> Result<()> {
+    pub(crate) fn check_invariants(query: &dyn AsyncSetQuery) -> Result<()> {
         // Collect contains_fast result before calling other functions which might
         // change the internal set state.
         let contains_fast_vec: Vec<Option<bool>> = (0..=0xff)
@@ -1452,7 +1443,7 @@ pub(crate) mod tests {
             &query
         );
         if let Some(flatten_id) = query.specialized_flatten_id() {
-            let iter = r(AsyncNameSetQuery::iter(&*flatten_id))?;
+            let iter = r(AsyncSetQuery::iter(&*flatten_id))?;
             let mut flatten_names = r(iter.try_collect::<Vec<_>>())?;
             flatten_names.sort_unstable();
             let mut sorted_names = names.clone();
@@ -1480,9 +1471,7 @@ pub(crate) mod tests {
 
     /// Generate 2 sets in a loop to test container set (intersection, union, difference) types.
     /// Focus on extra "size_hint" test.
-    pub(crate) fn check_size_hint_sets<Q: AsyncNameSetQuery>(
-        build_set: impl Fn(NameSet, NameSet) -> Q,
-    ) {
+    pub(crate) fn check_size_hint_sets<Q: AsyncSetQuery>(build_set: impl Fn(Set, Set) -> Q) {
         let lhs = b"\x11\x22\x33";
         let rhs = b"\x33\x55\x77";
         for lhs_start in 0..lhs.len() {
@@ -1495,10 +1484,8 @@ pub(crate) mod tests {
                                     .adjust_size_hint(lhs_size_hint_adjust);
                                 let rhs_set = VecQuery::from_bytes(&rhs[rhs_start..rhs_end])
                                     .adjust_size_hint(rhs_size_hint_adjust);
-                                let set = build_set(
-                                    NameSet::from_query(lhs_set),
-                                    NameSet::from_query(rhs_set),
-                                );
+                                let set =
+                                    build_set(Set::from_query(lhs_set), Set::from_query(rhs_set));
                                 check_invariants(&set).unwrap();
                             }
                         }
@@ -1508,7 +1495,7 @@ pub(crate) mod tests {
         }
     }
 
-    pub(crate) fn check_skip_take_reverse(set: NameSet) -> Result<()> {
+    pub(crate) fn check_skip_take_reverse(set: Set) -> Result<()> {
         let names: Vec<Vertex> = set.iter()?.collect::<Result<Vec<_>>>()?;
         let len = names.len();
         for reverse in [false, true] {
@@ -1543,8 +1530,8 @@ pub(crate) mod tests {
         Ok(())
     }
 
-    pub(crate) fn fmt_iter(set: &NameSet) -> String {
-        let iter = r(AsyncNameSetQuery::iter(set.deref())).unwrap();
+    pub(crate) fn fmt_iter(set: &Set) -> String {
+        let iter = r(AsyncSetQuery::iter(set.deref())).unwrap();
         let names = r(iter.try_collect::<Vec<_>>()).unwrap();
         dbg(names)
     }

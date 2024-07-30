@@ -12,7 +12,7 @@ pub use test_dag::TestDag;
 pub use self::drawdag::DrawDag;
 use crate::id::Group;
 use crate::id::Vertex;
-use crate::nameset::SyncNameSetQuery;
+use crate::nameset::SyncSetQuery;
 use crate::ops::DagAddHeads;
 use crate::ops::DagPersistent;
 use crate::ops::ImportAscii;
@@ -23,8 +23,8 @@ use crate::IdMap;
 #[cfg(test)]
 use crate::IdSet;
 use crate::NameDag;
-use crate::NameSet;
 use crate::Result;
+use crate::Set;
 
 mod drawdag;
 mod test_dag;
@@ -1346,7 +1346,7 @@ async fn test_subdag() {
 
 // Test utilities
 
-fn expand(set: NameSet) -> String {
+fn expand(set: Set) -> String {
     let mut names = set
         .iter()
         .unwrap()
@@ -1356,12 +1356,12 @@ fn expand(set: NameSet) -> String {
     names.join(" ")
 }
 
-fn nameset(names: &str) -> NameSet {
+fn nameset(names: &str) -> Set {
     let names: Vec<Vertex> = names
         .split_whitespace()
         .map(|n| Vertex::copy_from(n.as_bytes()))
         .collect();
-    NameSet::from_static_names(names)
+    Set::from_static_names(names)
 }
 
 impl IdMap {

@@ -9,7 +9,7 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::ops::Range;
 
-use dag::nameset::SyncNameSetQuery;
+use dag::nameset::SyncSetQuery;
 use dag::ops::DagAlgorithm;
 use dag::ops::DagPersistent;
 use dag::ops::IdConvert;

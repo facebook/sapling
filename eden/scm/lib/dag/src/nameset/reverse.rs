@@ -11,22 +11,22 @@ use std::fmt;
 
 use super::hints::Flags;
 use super::id_static::IdStaticSet;
-use super::AsyncNameSetQuery;
+use super::AsyncSetQuery;
 use super::BoxVertexStream;
 use super::Hints;
-use super::NameSet;
+use super::Set;
 use crate::Result;
 use crate::Vertex;
 
 /// Set with a reversed iteration order.
 #[derive(Clone)]
 pub struct ReverseSet {
-    inner: NameSet,
+    inner: Set,
     hints: Hints,
 }
 
 impl ReverseSet {
-    pub fn new(set: NameSet) -> Self {
+    pub fn new(set: Set) -> Self {
         let hints = set.hints().clone();
         hints.update_flags_with(|flags| {
             let mut new_flags = flags - (Flags::TOPO_DESC | Flags::ID_DESC | Flags::ID_ASC);
@@ -43,7 +43,7 @@ impl ReverseSet {
 }
 
 #[async_trait::async_trait]
-impl AsyncNameSetQuery for ReverseSet {
+impl AsyncSetQuery for ReverseSet {
     async fn iter(&self) -> Result<BoxVertexStream> {
         self.inner.iter_rev().await
     }
@@ -92,7 +92,7 @@ impl AsyncNameSetQuery for ReverseSet {
         self.inner.id_convert()
     }
 
-    fn specialized_reverse(&self) -> Option<NameSet> {
+    fn specialized_reverse(&self) -> Option<Set> {
         Some(self.inner.clone())
     }
 
@@ -121,7 +121,7 @@ mod tests {
 
     #[test]
     fn test_basic() -> Result<()> {
-        let orig = NameSet::from("a b c d");
+        let orig = Set::from("a b c d");
         let set = ReverseSet::new(orig);
         check_invariants(&set)?;
 

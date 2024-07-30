@@ -16,10 +16,10 @@ use serde::Deserialize;
 
 use super::hints::Flags;
 use super::id_static::IdStaticSet;
-use super::AsyncNameSetQuery;
+use super::AsyncSetQuery;
 use super::BoxVertexStream;
 use super::Hints;
-use super::NameSet;
+use super::Set;
 use crate::fmt::write_debug;
 use crate::Result;
 use crate::Vertex;
@@ -41,7 +41,7 @@ pub enum UnionOrder {
 ///
 /// See [`UnionOrder`] for iteration order.
 pub struct UnionSet {
-    sets: [NameSet; 2],
+    sets: [Set; 2],
     hints: Hints,
     order: UnionOrder,
     // Count of the "count_slow" calls.
@@ -50,7 +50,7 @@ pub struct UnionSet {
 }
 
 impl UnionSet {
-    pub fn new(lhs: NameSet, rhs: NameSet) -> Self {
+    pub fn new(lhs: Set, rhs: Set) -> Self {
         let hints = Hints::union(&[lhs.hints(), rhs.hints()]);
         if hints.id_map().is_some() {
             if let (Some(id1), Some(id2)) = (lhs.hints().min_id(), rhs.hints().min_id()) {
@@ -80,7 +80,7 @@ impl UnionSet {
 }
 
 #[async_trait::async_trait]
-impl AsyncNameSetQuery for UnionSet {
+impl AsyncSetQuery for UnionSet {
     async fn iter(&self) -> Result<BoxVertexStream> {
         debug_assert_eq!(self.sets.len(), 2);
         let diff = self.sets[1].clone() - self.sets[0].clone();
@@ -269,8 +269,8 @@ mod tests {
     use super::*;
 
     fn union(a: &[u8], b: &[u8]) -> UnionSet {
-        let a = NameSet::from_query(VecQuery::from_bytes(a));
-        let b = NameSet::from_query(VecQuery::from_bytes(b));
+        let a = Set::from_query(VecQuery::from_bytes(a));
+        let b = Set::from_query(VecQuery::from_bytes(b));
         UnionSet::new(a, b)
     }
 

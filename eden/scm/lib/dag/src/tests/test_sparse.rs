@@ -87,7 +87,7 @@ async fn test_sparse_dag() {
         assert_eq!(client.dag.vertex_name(Id(9)).await.unwrap(), "C".into());
         assert_eq!(client.dag.vertex_id("E".into()).await.unwrap(), Id(11));
 
-        // NameSet iteration works too, and resolve Ids in batch.
+        // Set iteration works too, and resolve Ids in batch.
         let all: Vec<Vertex> = {
             let all = client.dag.all().await.unwrap();
             let iter = all.iter().await.unwrap();

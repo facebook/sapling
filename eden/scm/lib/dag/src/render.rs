@@ -19,7 +19,7 @@ pub use renderdag::GraphRowRenderer;
 pub use renderdag::Renderer;
 pub use renderdag::*;
 
-use crate::nameset::SyncNameSetQuery;
+use crate::nameset::SyncSetQuery;
 #[cfg(any(test, feature = "indexedlog-backend"))]
 use crate::ops::IdConvert;
 use crate::DagAlgorithm;

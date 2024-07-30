@@ -225,10 +225,10 @@ impl IdMap for IdMapMemWrites {
 /// # Performance
 ///
 /// This function creates a new `VerLink` of `IdMap` every time for convenience.
-///  `dag::NameSet` will conservatively assumes `IdMap` are totally different,
+///  `dag::Set` will conservatively assumes `IdMap` are totally different,
 /// and conservatively avoid fast paths when it sees those different `verlink`s.
-/// Practically, that means you need to avoid capturing `NameSet` produced
-/// outside the `closure` to avoid performance issues. Having all `NameSet`
+/// Practically, that means you need to avoid capturing `Set` produced
+/// outside the `closure` to avoid performance issues. Having all `Set`
 /// calculations inside the `closure` is fine, even if the final result is
 /// passed out to the enclosing scope
 #[derive(Clone)]

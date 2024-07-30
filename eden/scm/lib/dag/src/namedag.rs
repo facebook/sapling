@@ -46,7 +46,7 @@ use crate::idmap::IdMapAssignHead;
 use crate::idmap::IdMapWrite;
 use crate::nameset::hints::Flags;
 use crate::nameset::hints::Hints;
-use crate::nameset::NameSet;
+use crate::nameset::Set;
 use crate::ops::CheckIntegrity;
 use crate::ops::DagAddHeads;
 use crate::ops::DagAlgorithm;
@@ -616,7 +616,7 @@ where
     P: TryClone + Open<OpenTarget = Self> + Send + Sync + 'static,
     S: TryClone + Persist + Send + Sync + 'static,
 {
-    async fn strip(&mut self, set: &NameSet) -> Result<()> {
+    async fn strip(&mut self, set: &Set) -> Result<()> {
         if !self.pending_heads.is_empty() {
             return programming(format!(
                 "strip does not support pending heads ({:?})",
@@ -647,7 +647,7 @@ where
     S: TryClone + Send + Sync + 'static,
 {
     /// Internal impelementation of "strip".
-    async fn strip_with_lock(&mut self, set: &NameSet, map_lock: &M::Lock) -> Result<()> {
+    async fn strip_with_lock(&mut self, set: &Set, map_lock: &M::Lock) -> Result<()> {
         if !self.pending_heads.is_empty() {
             return programming(format!(
                 "strip does not support pending heads ({:?})",
@@ -1240,7 +1240,7 @@ where
     P: TryClone + Send + Sync + 'static,
     S: TryClone + Send + Sync + 'static,
 {
-    async fn export_pull_data(&self, set: &NameSet) -> Result<CloneData<Vertex>> {
+    async fn export_pull_data(&self, set: &Set) -> Result<CloneData<Vertex>> {
         let id_set = self.to_id_set(set).await?;
 
         let flat_segments = self.dag.idset_to_flat_segments(id_set)?;
@@ -1419,7 +1419,7 @@ where
     let subdag = parents.hint_subdag_for_insertion(heads).await?;
 
     let mut remaining = subdag.all().await?;
-    let mut unassigned = NameSet::empty();
+    let mut unassigned = Set::empty();
 
     // For lazy graph, avoid some remote lookups by figuring out
     // some definitely unassigned (missing) vertexes. For example,
@@ -1456,9 +1456,7 @@ where
 
             let root_parents_id_set = {
                 let root_parents = parents.parent_names(root.clone()).await?;
-                let root_parents_set = match this
-                    .sort(&NameSet::from_static_names(root_parents))
-                    .await
+                let root_parents_set = match this.sort(&Set::from_static_names(root_parents)).await
                 {
                     Ok(set) => set,
                     Err(_) => {
@@ -1512,7 +1510,7 @@ where
 
         if !unassigned_roots.is_empty() {
             unassigned = subdag
-                .descendants(NameSet::from_static_names(unassigned_roots))
+                .descendants(Set::from_static_names(unassigned_roots))
                 .await?;
             remaining = remaining.difference(&unassigned);
         }
@@ -1835,8 +1833,8 @@ where
     P: TryClone + Sync + Send + 'static,
     S: TryClone + Sync + Send + 'static,
 {
-    /// Sort a `NameSet` topologically.
-    async fn sort(&self, set: &NameSet) -> Result<NameSet> {
+    /// Sort a `Set` topologically.
+    async fn sort(&self, set: &Set) -> Result<Set> {
         let hints = set.hints();
         if hints.contains(Flags::TOPO_DESC)
             && matches!(hints.dag_version(), Some(v) if v <= self.dag_version())
@@ -1854,7 +1852,7 @@ where
                 flat_set.map = self.id_map_snapshot()?;
                 flat_set.dag = self.dag_snapshot()?;
                 tracing::debug!(target: "dag::algo::sort", "sort({:6?}) (fast path 2)", set);
-                return Ok(NameSet::from_query(flat_set));
+                return Ok(Set::from_query(flat_set));
             } else {
                 tracing::info!(target: "dag::algo::sort", "sort({:6?}) (cannot use fast path 2 due to mismatched version)", set);
             }
@@ -1873,7 +1871,7 @@ where
                 spans.push(id?);
             }
         }
-        let result = NameSet::from_spans_dag(spans, self)?;
+        let result = Set::from_spans_dag(spans, self)?;
         result.hints().add_flags(flags);
         Ok(result)
     }
@@ -1890,23 +1888,23 @@ where
     }
 
     /// Returns a set that covers all vertexes tracked by this DAG.
-    async fn all(&self) -> Result<NameSet> {
+    async fn all(&self) -> Result<Set> {
         let spans = self.dag().all()?;
-        let result = NameSet::from_spans_dag(spans, self)?;
+        let result = Set::from_spans_dag(spans, self)?;
         result.hints().add_flags(Flags::FULL);
         Ok(result)
     }
 
     /// Returns a set that covers all vertexes in the master group.
-    async fn master_group(&self) -> Result<NameSet> {
+    async fn master_group(&self) -> Result<Set> {
         let spans = self.dag().master_group()?;
-        let result = NameSet::from_spans_dag(spans, self)?;
+        let result = Set::from_spans_dag(spans, self)?;
         result.hints().add_flags(Flags::ANCESTORS);
         Ok(result)
     }
 
     /// Calculates all ancestors reachable from any name from the given set.
-    async fn ancestors(&self, set: NameSet) -> Result<NameSet> {
+    async fn ancestors(&self, set: Set) -> Result<Set> {
         if set.hints().contains(Flags::ANCESTORS)
             && set.hints().dag_version() <= Some(self.dag_version())
         {
@@ -1914,13 +1912,13 @@ where
         }
         let spans = self.to_id_set(&set).await?;
         let spans = self.dag().ancestors(spans)?;
-        let result = NameSet::from_spans_dag(spans, self)?;
+        let result = Set::from_spans_dag(spans, self)?;
         result.hints().add_flags(Flags::ANCESTORS);
         Ok(result)
     }
 
     /// Like `ancestors` but follows only the first parents.
-    async fn first_ancestors(&self, set: NameSet) -> Result<NameSet> {
+    async fn first_ancestors(&self, set: Set) -> Result<Set> {
         // If set == ancestors(set), then first_ancestors(set) == set.
         if set.hints().contains(Flags::ANCESTORS)
             && set.hints().dag_version() <= Some(self.dag_version())
@@ -1929,7 +1927,7 @@ where
         }
         let spans = self.to_id_set(&set).await?;
         let spans = self.dag().first_ancestors(spans)?;
-        let result = NameSet::from_spans_dag(spans, self)?;
+        let result = Set::from_spans_dag(spans, self)?;
         #[cfg(test)]
         {
             result.assert_eq(crate::default_impl::first_ancestors(self, set).await?);
@@ -1938,10 +1936,10 @@ where
     }
 
     /// Calculate merges within the given set.
-    async fn merges(&self, set: NameSet) -> Result<NameSet> {
+    async fn merges(&self, set: Set) -> Result<Set> {
         let spans = self.to_id_set(&set).await?;
         let spans = self.dag().merges(spans)?;
-        let result = NameSet::from_spans_dag(spans, self)?;
+        let result = Set::from_spans_dag(spans, self)?;
         #[cfg(test)]
         {
             result.assert_eq(crate::default_impl::merges(self, set).await?);
@@ -1953,11 +1951,11 @@ where
     ///
     /// Note: Parent order is not preserved. Use [`NameDag::parent_names`]
     /// to preserve order.
-    async fn parents(&self, set: NameSet) -> Result<NameSet> {
+    async fn parents(&self, set: Set) -> Result<Set> {
         // Preserve ANCESTORS flag. If ancestors(x) == x, then ancestors(parents(x)) == parents(x).
         let flags = extract_ancestor_flag_if_compatible(set.hints(), self.dag_version());
         let spans = self.dag().parents(self.to_id_set(&set).await?)?;
-        let result = NameSet::from_spans_dag(spans, self)?;
+        let result = Set::from_spans_dag(spans, self)?;
         result.hints().add_flags(flags);
         #[cfg(test)]
         {
@@ -1985,7 +1983,7 @@ where
     }
 
     /// Calculates heads of the given set.
-    async fn heads(&self, set: NameSet) -> Result<NameSet> {
+    async fn heads(&self, set: Set) -> Result<Set> {
         if set.hints().contains(Flags::ANCESTORS)
             && set.hints().dag_version() <= Some(self.dag_version())
         {
@@ -1993,7 +1991,7 @@ where
             return self.heads_ancestors(set).await;
         }
         let spans = self.dag().heads(self.to_id_set(&set).await?)?;
-        let result = NameSet::from_spans_dag(spans, self)?;
+        let result = Set::from_spans_dag(spans, self)?;
         #[cfg(test)]
         {
             result.assert_eq(crate::default_impl::heads(self, set).await?);
@@ -2002,17 +2000,17 @@ where
     }
 
     /// Calculates children of the given set.
-    async fn children(&self, set: NameSet) -> Result<NameSet> {
+    async fn children(&self, set: Set) -> Result<Set> {
         let spans = self.dag().children(self.to_id_set(&set).await?)?;
-        let result = NameSet::from_spans_dag(spans, self)?;
+        let result = Set::from_spans_dag(spans, self)?;
         Ok(result)
     }
 
     /// Calculates roots of the given set.
-    async fn roots(&self, set: NameSet) -> Result<NameSet> {
+    async fn roots(&self, set: Set) -> Result<Set> {
         let flags = extract_ancestor_flag_if_compatible(set.hints(), self.dag_version());
         let spans = self.dag().roots(self.to_id_set(&set).await?)?;
-        let result = NameSet::from_spans_dag(spans, self)?;
+        let result = Set::from_spans_dag(spans, self)?;
         result.hints().add_flags(flags);
         #[cfg(test)]
         {
@@ -2026,7 +2024,7 @@ where
     /// If there are no common ancestors, return None.
     /// If there are multiple greatest common ancestors, pick one arbitrarily.
     /// Use `gca_all` to get all of them.
-    async fn gca_one(&self, set: NameSet) -> Result<Option<Vertex>> {
+    async fn gca_one(&self, set: Set) -> Result<Option<Vertex>> {
         let result: Option<Vertex> = match self.dag().gca_one(self.to_id_set(&set).await?)? {
             None => None,
             Some(id) => Some(self.vertex_name(id).await?),
@@ -2040,9 +2038,9 @@ where
 
     /// Calculates all "greatest common ancestor"s of the given set.
     /// `gca_one` is faster if an arbitrary answer is ok.
-    async fn gca_all(&self, set: NameSet) -> Result<NameSet> {
+    async fn gca_all(&self, set: Set) -> Result<Set> {
         let spans = self.dag().gca_all(self.to_id_set(&set).await?)?;
-        let result = NameSet::from_spans_dag(spans, self)?;
+        let result = Set::from_spans_dag(spans, self)?;
         #[cfg(test)]
         {
             result.assert_eq(crate::default_impl::gca_all(self, set).await?);
@@ -2051,9 +2049,9 @@ where
     }
 
     /// Calculates all common ancestors of the given set.
-    async fn common_ancestors(&self, set: NameSet) -> Result<NameSet> {
+    async fn common_ancestors(&self, set: Set) -> Result<Set> {
         let spans = self.dag().common_ancestors(self.to_id_set(&set).await?)?;
-        let result = NameSet::from_spans_dag(spans, self)?;
+        let result = Set::from_spans_dag(spans, self)?;
         result.hints().add_flags(Flags::ANCESTORS);
         #[cfg(test)]
         {
@@ -2086,9 +2084,9 @@ where
     /// This is different from `heads`. In case set contains X and Y, and Y is
     /// an ancestor of X, but not the immediate ancestor, `heads` will include
     /// Y while this function won't.
-    async fn heads_ancestors(&self, set: NameSet) -> Result<NameSet> {
+    async fn heads_ancestors(&self, set: Set) -> Result<Set> {
         let spans = self.dag().heads_ancestors(self.to_id_set(&set).await?)?;
-        let result = NameSet::from_spans_dag(spans, self)?;
+        let result = Set::from_spans_dag(spans, self)?;
         #[cfg(test)]
         {
             // default_impl::heads_ancestors calls `heads` if `Flags::ANCESTORS`
@@ -2101,35 +2099,35 @@ where
     }
 
     /// Calculates the "dag range" - vertexes reachable from both sides.
-    async fn range(&self, roots: NameSet, heads: NameSet) -> Result<NameSet> {
+    async fn range(&self, roots: Set, heads: Set) -> Result<Set> {
         let roots = self.to_id_set(&roots).await?;
         let heads = self.to_id_set(&heads).await?;
         let spans = self.dag().range(roots, heads)?;
-        let result = NameSet::from_spans_dag(spans, self)?;
+        let result = Set::from_spans_dag(spans, self)?;
         Ok(result)
     }
 
     /// Calculates the descendants of the given set.
-    async fn descendants(&self, set: NameSet) -> Result<NameSet> {
+    async fn descendants(&self, set: Set) -> Result<Set> {
         let spans = self.dag().descendants(self.to_id_set(&set).await?)?;
-        let result = NameSet::from_spans_dag(spans, self)?;
+        let result = Set::from_spans_dag(spans, self)?;
         Ok(result)
     }
 
     async fn suggest_bisect(
         &self,
-        roots: NameSet,
-        heads: NameSet,
-        skip: NameSet,
-    ) -> Result<(Option<Vertex>, NameSet, NameSet)> {
+        roots: Set,
+        heads: Set,
+        skip: Set,
+    ) -> Result<(Option<Vertex>, Set, Set)> {
         default_impl::suggest_bisect(self, roots, heads, skip).await
     }
 
     /// Vertexes buffered in memory, not yet written to disk.
-    async fn dirty(&self) -> Result<NameSet> {
+    async fn dirty(&self) -> Result<Set> {
         let all = self.dag().all()?;
         let spans = all.difference(&self.persisted_id_set);
-        let set = NameSet::from_spans_dag(spans, self)?;
+        let set = Set::from_spans_dag(spans, self)?;
         Ok(set)
     }
 
@@ -2508,7 +2506,7 @@ where
 
             // Backup, then remove vertexes that need to be reassigned. Actual reassignment
             // happens in the next loop iteration.
-            let to_reassign: NameSet = self.find_vertexes_to_reassign(parents, heads).await?;
+            let to_reassign: Set = self.find_vertexes_to_reassign(parents, heads).await?;
             if !to_reassign.is_empty().await? {
                 let reinsert_heads: VertexListWithOptions = {
                     let heads = self
@@ -2575,7 +2573,7 @@ where
         &self,
         parents: &dyn Parents,
         heads: &VertexListWithOptions,
-    ) -> Result<NameSet> {
+    ) -> Result<Set> {
         // Heads that need to be inserted to the master group.
         let master_heads = heads.vertexes_by_group(Group::MASTER);
 
@@ -2602,7 +2600,7 @@ where
             to_visit.extend(parents);
         }
 
-        let set = NameSet::from_spans_dag(id_set, self)?;
+        let set = Set::from_spans_dag(id_set, self)?;
         tracing::debug!(target: "dag::reassign", "need to reassign: {:?}", &set);
         Ok(set)
     }

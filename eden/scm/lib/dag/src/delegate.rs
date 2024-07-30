@@ -338,7 +338,7 @@ macro_rules! delegate {
             fn check_isomorphic_graph<'a: 's, 'b: 's, 's> (
                 &'a self,
                 other: &'b dyn $crate::ops::DagAlgorithm,
-                heads: $crate::NameSet,
+                heads: $crate::Set,
             )
                 -> std::pin::Pin<Box<dyn std::future::Future<Output=
                         $crate::Result<Vec<String>>

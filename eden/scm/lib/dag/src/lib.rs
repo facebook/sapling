@@ -51,7 +51,7 @@ pub use idmap::IdMap;
 #[cfg(any(test, feature = "indexedlog-backend"))]
 pub use namedag::NameDag;
 pub use namedag::NameDagBuilder;
-pub use nameset::NameSet;
+pub use nameset::Set;
 pub use ops::DagAlgorithm;
 pub use segment::FlatSegment;
 pub use segment::IdSegment;
@@ -68,7 +68,6 @@ pub type OnDiskIdDag = IdDag<iddagstore::IndexedLogStore>;
 // Short aliases for main public types.
 #[cfg(any(test, feature = "indexedlog-backend"))]
 pub type Dag = NameDag;
-pub type Set = NameSet;
 pub type IdSet = spanset::SpanSet;
 pub type IdSetIter<T> = spanset::SpanSetIter<T>;
 pub type IdSpan = spanset::Span;

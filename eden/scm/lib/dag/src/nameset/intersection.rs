@@ -14,10 +14,10 @@ use futures::StreamExt;
 
 use super::hints::Flags;
 use super::id_static::IdStaticSet;
-use super::AsyncNameSetQuery;
+use super::AsyncSetQuery;
 use super::BoxVertexStream;
 use super::Hints;
-use super::NameSet;
+use super::Set;
 use crate::fmt::write_debug;
 use crate::Id;
 use crate::Result;
@@ -27,14 +27,14 @@ use crate::Vertex;
 ///
 /// The iteration order is defined by the first set.
 pub struct IntersectionSet {
-    lhs: NameSet,
-    rhs: NameSet,
+    lhs: Set,
+    rhs: Set,
     hints: Hints,
 }
 
 struct Iter {
     iter: BoxVertexStream,
-    rhs: NameSet,
+    rhs: Set,
     ended: bool,
 
     /// Optional fast path for stop.
@@ -92,7 +92,7 @@ impl StopCondition {
 }
 
 impl IntersectionSet {
-    pub fn new(lhs: NameSet, rhs: NameSet) -> Self {
+    pub fn new(lhs: Set, rhs: Set) -> Self {
         // More efficient if `lhs` is smaller. But `lhs` order matters.
         // Swap `lhs` and `rhs` if `lhs` is `FULL`.
         let (lhs, rhs) = if lhs.hints().contains(Flags::FULL)
@@ -153,7 +153,7 @@ impl IntersectionSet {
 }
 
 #[async_trait::async_trait]
-impl AsyncNameSetQuery for IntersectionSet {
+impl AsyncSetQuery for IntersectionSet {
     async fn iter(&self) -> Result<BoxVertexStream> {
         let stop_condition = if !self.is_rhs_id_map_comapatible() {
             None
@@ -268,8 +268,8 @@ mod tests {
     use crate::Id;
 
     fn intersection(a: &[u8], b: &[u8]) -> IntersectionSet {
-        let a = NameSet::from_query(VecQuery::from_bytes(a));
-        let b = NameSet::from_query(VecQuery::from_bytes(b));
+        let a = Set::from_query(VecQuery::from_bytes(a));
+        let b = Set::from_query(VecQuery::from_bytes(b));
         IntersectionSet::new(a, b)
     }
 
@@ -294,8 +294,8 @@ mod tests {
         // The min_ids are intentionally wrong to test the fast paths.
         let a = lazy_set(&[0x70, 0x60, 0x50, 0x40, 0x30, 0x20]);
         let b = lazy_set_inherit(&[0x70, 0x65, 0x50, 0x40, 0x35, 0x20], &a);
-        let a = NameSet::from_query(a);
-        let b = NameSet::from_query(b);
+        let a = Set::from_query(a);
+        let b = Set::from_query(b);
         a.hints().add_flags(Flags::ID_DESC);
         b.hints().set_min_id(Id(0x40));
         b.hints().set_max_id(Id(0x50));
@@ -309,8 +309,8 @@ mod tests {
         // Test the reversed sort order.
         let a = lazy_set(&[0x20, 0x30, 0x40, 0x50, 0x60, 0x70]);
         let b = lazy_set_inherit(&[0x70, 0x65, 0x50, 0x40, 0x35, 0x20], &a);
-        let a = NameSet::from_query(a);
-        let b = NameSet::from_query(b);
+        let a = Set::from_query(a);
+        let b = Set::from_query(b);
         a.hints().add_flags(Flags::ID_ASC);
         b.hints().set_min_id(Id(0x40));
         b.hints().set_max_id(Id(0x50));
@@ -321,7 +321,7 @@ mod tests {
         assert_eq!(shorten_iter(ni(set.iter_rev())), ["70", "50", "40"]);
 
         // If two sets have incompatible IdMap, fast paths are not used.
-        let a = NameSet::from_query(lazy_set(&[0x20, 0x30, 0x40, 0x50, 0x60, 0x70]));
+        let a = Set::from_query(lazy_set(&[0x20, 0x30, 0x40, 0x50, 0x60, 0x70]));
         a.hints().add_flags(Flags::ID_ASC);
         let set = IntersectionSet::new(a, b.clone());
         // Should contain "70" and "20".

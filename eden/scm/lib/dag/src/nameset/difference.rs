@@ -13,10 +13,10 @@ use futures::StreamExt;
 
 use super::hints::Flags;
 use super::id_static::IdStaticSet;
-use super::AsyncNameSetQuery;
+use super::AsyncSetQuery;
 use super::BoxVertexStream;
 use super::Hints;
-use super::NameSet;
+use super::Set;
 use crate::fmt::write_debug;
 use crate::Result;
 use crate::Vertex;
@@ -25,18 +25,18 @@ use crate::Vertex;
 ///
 /// The iteration order is defined by `lhs`.
 pub struct DifferenceSet {
-    lhs: NameSet,
-    rhs: NameSet,
+    lhs: Set,
+    rhs: Set,
     hints: Hints,
 }
 
 struct Iter {
     iter: BoxVertexStream,
-    rhs: NameSet,
+    rhs: Set,
 }
 
 impl DifferenceSet {
-    pub fn new(lhs: NameSet, rhs: NameSet) -> Self {
+    pub fn new(lhs: Set, rhs: Set) -> Self {
         let hints = Hints::new_inherit_idmap_dag(lhs.hints());
         // Inherit flags, min/max Ids from lhs.
         hints.add_flags(
@@ -58,7 +58,7 @@ impl DifferenceSet {
 }
 
 #[async_trait::async_trait]
-impl AsyncNameSetQuery for DifferenceSet {
+impl AsyncSetQuery for DifferenceSet {
     async fn iter(&self) -> Result<BoxVertexStream> {
         let iter = Iter {
             iter: self.lhs.iter().await?,
@@ -159,8 +159,8 @@ mod tests {
     use super::*;
 
     fn difference(a: &[u8], b: &[u8]) -> DifferenceSet {
-        let a = NameSet::from_query(VecQuery::from_bytes(a));
-        let b = NameSet::from_query(VecQuery::from_bytes(b));
+        let a = Set::from_query(VecQuery::from_bytes(a));
+        let b = Set::from_query(VecQuery::from_bytes(b));
         DifferenceSet::new(a, b)
     }
 

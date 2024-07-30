@@ -1222,9 +1222,9 @@ fn update_distance(repo: &Repo, source: &HgId, dest: &HgId) -> Result<u64> {
     let dag = repo.dag_commits()?;
     let dag = dag.read();
 
-    let to_nameset = |id: &HgId| -> dag::NameSet {
+    let to_nameset = |id: &HgId| -> dag::Set {
         if id.is_null() {
-            dag::NameSet::empty()
+            dag::Set::empty()
         } else {
             Vertex::copy_from(id.as_ref()).into()
         }

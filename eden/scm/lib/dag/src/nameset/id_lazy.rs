@@ -16,7 +16,7 @@ use nonblocking::non_blocking_result;
 
 use super::hints::Flags;
 use super::id_static::IdStaticSet;
-use super::AsyncNameSetQuery;
+use super::AsyncSetQuery;
 use super::BoxVertexStream;
 use super::Hints;
 use crate::ops::DagAlgorithm;
@@ -224,7 +224,7 @@ impl IdLazySet {
 }
 
 #[async_trait::async_trait]
-impl AsyncNameSetQuery for IdLazySet {
+impl AsyncSetQuery for IdLazySet {
     async fn iter(&self) -> Result<BoxVertexStream> {
         let inner = self.inner.clone();
         let map = self.map.clone();
@@ -441,7 +441,7 @@ pub(crate) mod tests {
     use nonblocking::non_blocking_result as r;
 
     use super::super::tests::*;
-    use super::super::NameSet;
+    use super::super::Set;
     use super::test_utils::*;
     use super::*;
 
@@ -507,12 +507,12 @@ pub(crate) mod tests {
     fn test_flatten() {
         let set1 = lazy_set(&[3, 2, 4]);
         let set2 = lazy_set_inherit(&[3, 7, 6], &set1);
-        let set1 = NameSet::from_query(set1);
-        let set2 = NameSet::from_query(set2);
+        let set1 = Set::from_query(set1);
+        let set2 = Set::from_query(set2);
 
         // Show flatten by names, and flatten by ids.
         // The first should be <static ...>, the second should be <spans ...>.
-        let show = |set: NameSet| {
+        let show = |set: Set| {
             [
                 format!("{:5.2?}", r(set.flatten_names()).unwrap()),
                 format!("{:5.2?}", r(set.flatten()).unwrap()),

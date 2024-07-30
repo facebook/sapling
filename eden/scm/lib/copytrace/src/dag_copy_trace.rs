@@ -14,7 +14,7 @@ use async_trait::async_trait;
 use configmodel::Config;
 use configmodel::ConfigExt;
 use dag::DagAlgorithm;
-use dag::NameSet;
+use dag::Set;
 use dag::Vertex;
 use hg_metrics::increment_counter;
 use manifest::Manifest;
@@ -149,8 +149,8 @@ impl DagCopyTrace {
     }
 
     async fn compute_distance(&self, src: Vertex, dst: Vertex) -> Result<u64> {
-        let src: NameSet = src.into();
-        let dst: NameSet = dst.into();
+        let src: Set = src.into();
+        let dst: Set = dst.into();
         let distance = self
             .dag
             .only(src.clone(), dst.clone())

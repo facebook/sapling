@@ -11,10 +11,10 @@ use std::sync::RwLock;
 
 use futures::future::BoxFuture;
 
-use super::AsyncNameSetQuery;
+use super::AsyncSetQuery;
 use super::BoxVertexStream;
 use super::Hints;
-use super::NameSet;
+use super::Set;
 use crate::Result;
 use crate::Vertex;
 
@@ -36,8 +36,8 @@ use crate::Vertex;
 /// fast path), as `MetaSet` supports fast path for iteration, if the underlying
 /// set supports it.
 pub struct MetaSet {
-    evaluate: Box<dyn Fn() -> BoxFuture<'static, Result<NameSet>> + Send + Sync>,
-    evaluated: RwLock<Option<NameSet>>,
+    evaluate: Box<dyn Fn() -> BoxFuture<'static, Result<Set>> + Send + Sync>,
+    evaluated: RwLock<Option<Set>>,
 
     /// Optional "contains" fast path.
     contains: Option<
@@ -62,9 +62,9 @@ impl fmt::Debug for MetaSet {
 
 impl MetaSet {
     /// Constructs `MetaSet` from an `evaluate` function that returns a
-    /// `NameSet`. The `evaluate` function is not called immediately.
+    /// `Set`. The `evaluate` function is not called immediately.
     pub fn from_evaluate_hints(
-        evaluate: Box<dyn Fn() -> BoxFuture<'static, Result<NameSet>> + Send + Sync + 'static>,
+        evaluate: Box<dyn Fn() -> BoxFuture<'static, Result<Set>> + Send + Sync + 'static>,
         hints: Hints,
     ) -> Self {
         Self {
@@ -88,7 +88,7 @@ impl MetaSet {
     }
 
     /// Evaluate the set. Returns a new set.
-    pub async fn evaluate(&self) -> Result<NameSet> {
+    pub async fn evaluate(&self) -> Result<Set> {
         if let Some(s) = &*self.evaluated.read().unwrap() {
             return Ok(s.clone());
         }
@@ -99,13 +99,13 @@ impl MetaSet {
 
     /// Returns the evaluated set if it was evaluated.
     /// Returns None if the set was not evaluated.
-    pub fn evaluated(&self) -> Option<NameSet> {
+    pub fn evaluated(&self) -> Option<Set> {
         self.evaluated.read().unwrap().clone()
     }
 }
 
 #[async_trait::async_trait]
-impl AsyncNameSetQuery for MetaSet {
+impl AsyncSetQuery for MetaSet {
     async fn iter(&self) -> Result<BoxVertexStream> {
         self.evaluate().await?.iter().await
     }
@@ -165,7 +165,7 @@ mod tests {
     fn meta_set(v: &[impl ToString]) -> MetaSet {
         let v: Vec<_> = v.iter().map(|s| s.to_string()).collect();
         let f = move || -> BoxFuture<_> {
-            let s = NameSet::from_static_names(v.clone().into_iter().map(Into::into));
+            let s = Set::from_static_names(v.clone().into_iter().map(Into::into));
             Box::pin(async move { Ok(s) })
         };
         MetaSet::from_evaluate_hints(Box::new(f), Hints::default())

@@ -16,7 +16,7 @@ use crate::iddag::IdDag;
 use crate::iddagstore::IdDagStore;
 use crate::idmap::IdMapAssignHead;
 use crate::namedag::AbstractNameDag;
-use crate::nameset::NameSet;
+use crate::nameset::Set;
 use crate::ops::CheckIntegrity;
 use crate::ops::DagAlgorithm;
 use crate::ops::IdConvert;
@@ -171,7 +171,7 @@ where
     async fn check_isomorphic_graph(
         &self,
         other: &dyn DagAlgorithm,
-        heads: NameSet,
+        heads: Set,
     ) -> Result<Vec<String>> {
         let mut problems = Vec::new();
 

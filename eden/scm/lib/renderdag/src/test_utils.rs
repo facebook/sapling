@@ -9,7 +9,7 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 
 use dag::namedag::MemNameDag;
-use dag::nameset::SyncNameSetQuery;
+use dag::nameset::SyncSetQuery;
 use dag::ops::ImportAscii;
 use dag::DagAlgorithm;
 use dag::Vertex;

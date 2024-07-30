@@ -24,10 +24,10 @@ use tracing::Level;
 
 use super::hints::Flags;
 use super::id_static::IdStaticSet;
-use super::AsyncNameSetQuery;
+use super::AsyncSetQuery;
 use super::BoxVertexStream;
 use super::Hints;
-use super::NameSet;
+use super::Set;
 use crate::fmt::write_debug;
 use crate::Result;
 use crate::Vertex;
@@ -35,7 +35,7 @@ use crate::Vertex;
 /// Slice of a set.
 #[derive(Clone)]
 pub struct SliceSet {
-    inner: NameSet,
+    inner: Set,
     hints: Hints,
     skip_count: u64,
     take_count: Option<u64>,
@@ -49,7 +49,7 @@ pub struct SliceSet {
 }
 
 impl SliceSet {
-    pub fn new(set: NameSet, skip_count: u64, take_count: Option<u64>) -> Self {
+    pub fn new(set: Set, skip_count: u64, take_count: Option<u64>) -> Self {
         let hints = set.hints().clone();
         hints.update_flags_with(|mut f| {
             // Only keep compatible flags.
@@ -227,7 +227,7 @@ impl TakeCacheRevIter {
 }
 
 #[async_trait::async_trait]
-impl AsyncNameSetQuery for SliceSet {
+impl AsyncSetQuery for SliceSet {
     async fn iter(&self) -> Result<BoxVertexStream> {
         let inner_iter = self.inner.iter().await?;
         let iter = Iter {
@@ -402,7 +402,7 @@ mod tests {
 
     #[test]
     fn test_basic() -> Result<()> {
-        let orig = NameSet::from("a b c d e f g h i");
+        let orig = Set::from("a b c d e f g h i");
         let count = r(orig.count())?;
 
         let set = SliceSet::new(orig.clone(), 0, None);
@@ -446,7 +446,7 @@ mod tests {
 
     #[test]
     fn test_debug() {
-        let orig = NameSet::from("a b c d e f g h i");
+        let orig = Set::from("a b c d e f g h i");
         let set = SliceSet::new(orig.clone(), 0, None);
         assert_eq!(dbg(set), "<slice <static [a, b, c] + 6 more> [..]>");
         let set = SliceSet::new(orig.clone(), 4, None);
@@ -463,7 +463,7 @@ mod tests {
         for skip in 0..(bytes.len() + 2) {
             for size_hint_adjust in 0..7 {
                 let vec_set = VecQuery::from_bytes(&bytes[..]).adjust_size_hint(size_hint_adjust);
-                let vec_set = NameSet::from_query(vec_set);
+                let vec_set = Set::from_query(vec_set);
                 for take in 0..(bytes.len() + 2) {
                     let set = SliceSet::new(vec_set.clone(), skip as _, Some(take as _));
                     check_invariants(&set).unwrap();
@@ -483,7 +483,7 @@ mod tests {
             } else {
                 Some(take)
             };
-            let orig = NameSet::from("a c b d e f g i h j");
+            let orig = Set::from("a c b d e f g i h j");
             let set = SliceSet::new(orig, skip, take);
             check_invariants(&set).unwrap();
             true

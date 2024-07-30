@@ -18,7 +18,7 @@ use async_trait::async_trait;
 use dag::ops::DagAddHeads;
 use dag::ops::DagAlgorithm;
 use dag::MemDag;
-use dag::NameSet;
+use dag::Set;
 use dag::Vertex;
 use manifest::FileMetadata;
 use manifest::FileType;
@@ -154,7 +154,7 @@ impl TestHistory {
         }
     }
 
-    async fn build_set(&self, build_set_params: BuildSetParam) -> NameSet {
+    async fn build_set(&self, build_set_params: BuildSetParam) -> Set {
         let BuildSetParam(max_commit_int, selected_commit_ints) = build_set_params;
         // Build commit graph and the "set".
         let mut dag = MemDag::new();
@@ -190,7 +190,7 @@ impl TestHistory {
         match selected_commit_ints {
             None => dag.all().await.unwrap(),
             Some(ints) => {
-                let set = NameSet::from_static_names(ints.into_iter().map(vertex_from_int));
+                let set = Set::from_static_names(ints.into_iter().map(vertex_from_int));
                 dag.sort(&set).await.unwrap()
             }
         }

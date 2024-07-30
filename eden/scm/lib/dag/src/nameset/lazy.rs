@@ -14,7 +14,7 @@ use futures::lock::MutexGuard;
 use futures::StreamExt;
 use indexmap::IndexSet;
 
-use super::AsyncNameSetQuery;
+use super::AsyncSetQuery;
 use super::BoxVertexStream;
 use super::Hints;
 use crate::Result;
@@ -159,7 +159,7 @@ impl LazySet {
 }
 
 #[async_trait::async_trait]
-impl AsyncNameSetQuery for LazySet {
+impl AsyncSetQuery for LazySet {
     async fn iter(&self) -> Result<BoxVertexStream> {
         let inner = self.inner.clone();
         let iter = Iter { inner, index: 0 };

@@ -11,7 +11,7 @@ use std::fmt;
 use indexmap::IndexSet;
 
 use super::hints::Flags;
-use super::AsyncNameSetQuery;
+use super::AsyncSetQuery;
 use super::BoxVertexStream;
 use super::Hints;
 use crate::Result;
@@ -39,7 +39,7 @@ impl StaticSet {
 }
 
 #[async_trait::async_trait]
-impl AsyncNameSetQuery for StaticSet {
+impl AsyncSetQuery for StaticSet {
     async fn iter(&self) -> Result<BoxVertexStream> {
         let iter = self.0.clone().into_iter().map(Ok);
         Ok(Box::pin(futures::stream::iter(iter)))

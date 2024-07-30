@@ -10,7 +10,7 @@ use std::path::Path;
 
 use dag::errors::NotFoundError;
 // TODO: Consider migrating to async, or get rid of strip in tests.
-use dag::nameset::SyncNameSetQuery;
+use dag::nameset::SyncSetQuery;
 use dag::DagAlgorithm;
 use dag::Set;
 use dag::Vertex;

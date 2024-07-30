@@ -30,7 +30,7 @@ use dag::errors::NotFoundError;
 use dag::nameset::hints::Flags;
 use dag::nameset::meta::MetaSet;
 // Revset is non-lazy. Sync APIs can be used.
-use dag::nameset::SyncNameSetQuery;
+use dag::nameset::SyncSetQuery;
 use dag::ops::CheckIntegrity;
 use dag::ops::DagAddHeads;
 use dag::ops::DagAlgorithm;
@@ -1916,7 +1916,7 @@ impl CheckIntegrity for RevlogIndex {
     async fn check_isomorphic_graph(
         &self,
         other: &dyn DagAlgorithm,
-        heads: dag::NameSet,
+        heads: dag::Set,
     ) -> dag::Result<Vec<String>> {
         let _ = (other, heads);
         unsupported_dag_error()

@@ -522,7 +522,7 @@ impl From<Set> for VertexListWithOptions {
 }
 
 fn to_head_opts(set: Set) -> VertexListWithOptions {
-    use crate::nameset::SyncNameSetQuery;
+    use crate::nameset::SyncSetQuery;
     let heads_vec = set.iter().unwrap().collect::<Result<Vec<_>>>().unwrap();
     VertexListWithOptions::from(heads_vec).with_desired_group(Group::MASTER)
 }

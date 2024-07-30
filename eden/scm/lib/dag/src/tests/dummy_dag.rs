@@ -10,8 +10,8 @@ use std::sync::Arc;
 use nonblocking::non_blocking;
 
 use crate::ops::DagAlgorithm;
-use crate::NameSet;
 use crate::Result;
+use crate::Set;
 use crate::VerLink;
 use crate::Vertex;
 
@@ -31,7 +31,7 @@ impl DummyDag {
 
 #[async_trait::async_trait]
 impl DagAlgorithm for DummyDag {
-    async fn sort(&self, set: &NameSet) -> Result<NameSet> {
+    async fn sort(&self, set: &Set) -> Result<Set> {
         Ok(set.clone())
     }
 
@@ -42,29 +42,29 @@ impl DagAlgorithm for DummyDag {
     }
 
     /// Returns a set that covers all vertexes tracked by this DAG.
-    async fn all(&self) -> Result<NameSet> {
+    async fn all(&self) -> Result<Set> {
         crate::errors::programming("DummyDag does not support all()")
     }
 
     /// Returns a set that covers all vertexes in the master group.
-    async fn master_group(&self) -> Result<NameSet> {
+    async fn master_group(&self) -> Result<Set> {
         crate::errors::programming("DummyDag does not support master_group()")
     }
 
     /// Vertexes buffered in memory, not yet written to disk.
-    async fn dirty(&self) -> Result<NameSet> {
-        Ok(NameSet::empty())
+    async fn dirty(&self) -> Result<Set> {
+        Ok(Set::empty())
     }
 
     /// Calculates all ancestors reachable from any name from the given set.
-    async fn ancestors(&self, set: NameSet) -> Result<NameSet> {
+    async fn ancestors(&self, set: Set) -> Result<Set> {
         Ok(set)
     }
 
     /// Calculates parents of the given set.
-    async fn parents(&self, set: NameSet) -> Result<NameSet> {
+    async fn parents(&self, set: Set) -> Result<Set> {
         let _ = set;
-        Ok(NameSet::empty())
+        Ok(Set::empty())
     }
 
     /// Calculates the n-th first ancestor.
@@ -77,18 +77,18 @@ impl DagAlgorithm for DummyDag {
     }
 
     /// Calculates heads of the given set.
-    async fn heads(&self, set: NameSet) -> Result<NameSet> {
+    async fn heads(&self, set: Set) -> Result<Set> {
         Ok(set)
     }
 
     /// Calculates children of the given set.
-    async fn children(&self, set: NameSet) -> Result<NameSet> {
+    async fn children(&self, set: Set) -> Result<Set> {
         let _ = set;
-        Ok(NameSet::empty())
+        Ok(Set::empty())
     }
 
     /// Calculates roots of the given set.
-    async fn roots(&self, set: NameSet) -> Result<NameSet> {
+    async fn roots(&self, set: Set) -> Result<Set> {
         Ok(set)
     }
 
@@ -97,7 +97,7 @@ impl DagAlgorithm for DummyDag {
     /// If there are no common ancestors, return None.
     /// If there are multiple greatest common ancestors, pick one arbitrarily.
     /// Use `gca_all` to get all of them.
-    async fn gca_one(&self, set: NameSet) -> Result<Option<Vertex>> {
+    async fn gca_one(&self, set: Set) -> Result<Option<Vertex>> {
         if non_blocking(set.count())?? == 1 {
             non_blocking(set.first())?
         } else {
@@ -107,16 +107,16 @@ impl DagAlgorithm for DummyDag {
 
     /// Calculates all "greatest common ancestor"s of the given set.
     /// `gca_one` is faster if an arbitrary answer is ok.
-    async fn gca_all(&self, set: NameSet) -> Result<NameSet> {
+    async fn gca_all(&self, set: Set) -> Result<Set> {
         self.common_ancestors(set).await
     }
 
     /// Calculates all common ancestors of the given set.
-    async fn common_ancestors(&self, set: NameSet) -> Result<NameSet> {
+    async fn common_ancestors(&self, set: Set) -> Result<Set> {
         if non_blocking(set.count())?? == 1 {
             Ok(set)
         } else {
-            Ok(NameSet::empty())
+            Ok(Set::empty())
         }
     }
 
@@ -134,27 +134,27 @@ impl DagAlgorithm for DummyDag {
     /// This is different from `heads`. In case set contains X and Y, and Y is
     /// an ancestor of X, but not the immediate ancestor, `heads` will include
     /// Y while this function won't.
-    async fn heads_ancestors(&self, set: NameSet) -> Result<NameSet> {
+    async fn heads_ancestors(&self, set: Set) -> Result<Set> {
         Ok(set)
     }
 
     /// Calculates the "dag range" - vertexes reachable from both sides.
-    async fn range(&self, roots: NameSet, heads: NameSet) -> Result<NameSet> {
+    async fn range(&self, roots: Set, heads: Set) -> Result<Set> {
         Ok(roots & heads)
     }
 
     /// Calculates the descendants of the given set.
-    async fn descendants(&self, set: NameSet) -> Result<NameSet> {
+    async fn descendants(&self, set: Set) -> Result<Set> {
         Ok(set)
     }
 
     async fn suggest_bisect(
         &self,
-        _roots: NameSet,
-        heads: NameSet,
-        _skip: NameSet,
-    ) -> Result<(Option<Vertex>, NameSet, NameSet)> {
-        Ok((None, NameSet::empty(), heads))
+        _roots: Set,
+        heads: Set,
+        _skip: Set,
+    ) -> Result<(Option<Vertex>, Set, Set)> {
+        Ok((None, Set::empty(), heads))
     }
 
     fn is_vertex_lazy(&self) -> bool {
