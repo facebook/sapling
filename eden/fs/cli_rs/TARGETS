@@ -16,7 +16,7 @@ rust_binary(
         "edenfsctl_python": "//eden/fs/cli:edenfsctl",
     },
     deps = [
-        "//common/rust/buck_resources:buck_resources",
+        "fbsource//third-party/rust:buck-resources",
     ],
 )
 
@@ -36,7 +36,7 @@ rust_binary(
         "edenfsctl_python": "//eden/fs/cli:edenfsctl",
     },
     deps = [
-        "//common/rust/buck_resources:buck_resources",
+        "fbsource//third-party/rust:buck-resources",
         "//eden/fs/privhelper:privhelper",
     ],
 )
