@@ -495,3 +495,10 @@ XXX: We can't use `sl` here because output ordering is flaky.
   b22b11c36d16 public 'o1'  
   22f66edbeb8e public 'o2'  remote/regular
   f141e512974a draft 'o_draft'  
+
+  $ hgedenapi cloud list
+  commitcloud: searching workspaces for the 'repo' repo
+  the following commitcloud workspaces are available:
+          default (connected)
+  run `hg cloud sl -w <workspace name>` to view the commits
+  run `hg cloud switch -w <workspace name>` to switch to a different workspace

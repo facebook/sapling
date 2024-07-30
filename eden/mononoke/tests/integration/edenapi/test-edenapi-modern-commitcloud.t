@@ -74,4 +74,12 @@ Check response.
   {"data": {"Err": {"code": 0,
                     "message": "InternalError(InternalError(Workspace user/thisdoesnot/exist does not exist))"}}}
 
+  $ hgedenapi debugapi -e cloudworkspaces -i "'user/integrationtest/'" -i "'repo'"
+  {"data": {"Ok": [{"name": "user/integrationtest/default",
+                    "version": 1,
+                    "archived": False,
+                    "reponame": "repo",
+                    "timestamp": *}]}} (glob)
+
+
  
