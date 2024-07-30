@@ -56,6 +56,7 @@ pub use ops::DagAlgorithm;
 pub use segment::FlatSegment;
 pub use segment::IdSegment;
 pub use segment::PreparedFlatSegments;
+pub use spanset::IdSet;
 pub use verlink::VerLink;
 pub use vertex_options::VertexListWithOptions;
 pub use vertex_options::VertexOptions;
@@ -66,8 +67,7 @@ pub type MemIdDag = IdDag<iddagstore::MemStore>;
 pub type OnDiskIdDag = IdDag<iddagstore::IndexedLogStore>;
 
 // Short aliases for main public types.
-pub type IdSet = spanset::SpanSet;
-pub type IdSetIter<T> = spanset::SpanSetIter<T>;
+pub type IdSetIter<T> = spanset::IdSetIter<T>;
 pub type IdSpan = spanset::Span;
 #[cfg(feature = "indexedlog-backend")]
 pub use iddagstore::indexedlog_store::describe_indexedlog_entry;
