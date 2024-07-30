@@ -108,14 +108,27 @@ ObjectCache<ObjectType, Flavor, ObjectCacheStats>::getInterestHandle(
   // Acquires ObjectCache's lock upon destruction by calling dropInterestHandle,
   // so ensure that, if an exception is thrown below, the ~ObjectInterestHandle
   // runs after the lock is released.
-  ObjectInterestHandle<ObjectType, ObjectCacheStats> interestHandle;
 
   if (interest == Interest::None) {
     return GetResult{};
   }
-
   auto state = state_.lock();
+  return getInterestHandleCore(state, hash, interest);
+}
 
+template <
+    typename ObjectType,
+    ObjectCacheFlavor Flavor,
+    typename ObjectCacheStats>
+template <ObjectCacheFlavor F>
+typename std::enable_if_t<
+    F == ObjectCacheFlavor::InterestHandle,
+    typename ObjectCache<ObjectType, Flavor, ObjectCacheStats>::GetResult>
+ObjectCache<ObjectType, Flavor, ObjectCacheStats>::getInterestHandleCore(
+    LockedState& state,
+    const ObjectId& hash,
+    Interest interest) noexcept {
+  ObjectInterestHandle<ObjectType, ObjectCacheStats> interestHandle;
   auto item = getImpl(hash, *state);
   if (!item) {
     return GetResult{};
@@ -144,7 +157,6 @@ ObjectCache<ObjectType, Flavor, ObjectCacheStats>::getInterestHandle(
     case Interest::None:
       break;
   }
-
   return GetResult{item->object, std::move(interestHandle)};
 }
 
@@ -212,25 +224,70 @@ ObjectCache<ObjectType, Flavor, ObjectCacheStats>::insertInterestHandle(
   // Acquires ObjectCache's lock upon destruction by calling dropInterestHandle,
   // so ensure that, if an exception is thrown below, the ~ObjectInterestHandle
   // runs after the lock is released.
-  ObjectInterestHandle<ObjectType, ObjectCacheStats> interestHandle{};
+  auto preProcessRes = preProcessInterestHandle<F>(id, object, interest);
 
+  if (interest == Interest::None) {
+    return std::move(preProcessRes.interestHandle);
+  }
+
+  XLOG(DBG6) << " creating entry with generation="
+             << preProcessRes.cacheItemGeneration;
+
+  auto state = state_.lock();
+  return insertInterestHandleCore(
+      std::move(id),
+      std::move(object),
+      interest,
+      state,
+      preProcessRes.cacheItemGeneration,
+      std::move(preProcessRes.interestHandle));
+}
+
+template <
+    typename ObjectType,
+    ObjectCacheFlavor Flavor,
+    typename ObjectCacheStats>
+template <ObjectCacheFlavor F>
+typename std::enable_if_t<
+    F == ObjectCacheFlavor::InterestHandle,
+    typename ObjectCache<ObjectType, Flavor, ObjectCacheStats>::
+        PreProcessInterestHandleResult>
+ObjectCache<ObjectType, Flavor, ObjectCacheStats>::preProcessInterestHandle(
+    ObjectId id,
+    ObjectPtr object,
+    Interest interest) {
+  ObjectInterestHandle<ObjectType, ObjectCacheStats> interestHandle{};
   auto cacheItemGeneration = generateUniqueID();
 
   if (interest == Interest::WantHandle) {
     // This can throw, so do it before inserting into items.
     interestHandle = ObjectInterestHandle<ObjectType, ObjectCacheStats>{
-        this->shared_from_this(), id, object, cacheItemGeneration};
+        this->shared_from_this(),
+        std::move(id),
+        std::move(object),
+        cacheItemGeneration};
   } else {
-    interestHandle.object_ = object;
+    interestHandle.object_ = std::move(object);
   }
 
-  if (interest == Interest::None) {
-    return interestHandle;
-  }
+  return {std::move(interestHandle), cacheItemGeneration};
+}
 
-  XLOG(DBG6) << "  creating entry with generation=" << cacheItemGeneration;
-
-  auto state = state_.lock();
+template <
+    typename ObjectType,
+    ObjectCacheFlavor Flavor,
+    typename ObjectCacheStats>
+template <ObjectCacheFlavor F>
+typename std::enable_if_t<
+    F == ObjectCacheFlavor::InterestHandle,
+    ObjectInterestHandle<ObjectType, ObjectCacheStats>>
+ObjectCache<ObjectType, Flavor, ObjectCacheStats>::insertInterestHandleCore(
+    ObjectId id,
+    ObjectPtr object,
+    Interest interest,
+    LockedState& state,
+    uint64_t cacheItemGeneration,
+    ObjectInterestHandle<ObjectType, ObjectCacheStats> interestHandle) {
   auto [item, inserted] = insertImpl(std::move(id), std::move(object), *state);
   switch (interest) {
     case Interest::UnlikelyNeededAgain:
