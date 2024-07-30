@@ -58,5 +58,8 @@ fbpkg.builder(
         "libexec/eden/edenfs_monitor": fbpkg.copy("//eden/fs/monitor:edenfs_monitor"),
         "libexec/eden/edenfs_privhelper": fbpkg.copy("//eden/fs/service:edenfs_privhelper"),
         "libexec/eden/edenfs_restarter": fbpkg.copy("//eden/fs/facebook:edenfs_restarter"),
+
+        # static file for eden-locale
+        "locale/en/LC_MESSAGES/libc.mo": "locale/glibc_en.mo",
     },
 )
