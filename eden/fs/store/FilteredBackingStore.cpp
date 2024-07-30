@@ -389,11 +389,41 @@ folly::SemiFuture<folly::Unit> FilteredBackingStore::prefetchBlobs(
 
 ImmediateFuture<BackingStore::GetGlobFilesResult>
 FilteredBackingStore::getGlobFiles(
-    const RootId& /* id */,
-    const std::vector<std::string>& /* globs */) {
-  // TODO T188269931: Implement filters for Globs
-  return folly::makeFuture<GetGlobFilesResult>(std::runtime_error(
-      "getGlobFiles() is not implemented on filteredBackingStore"));
+    const RootId& id,
+    const std::vector<std::string>& globs) {
+  auto [parsedRootId, parsedFilterId] = parseFilterIdFromRootId(id);
+  auto fut = backingStore_->getGlobFiles(parsedRootId, globs);
+  return std::move(fut).thenValue([this, filterId = parsedFilterId](
+                                      auto&& getGlobFilesResult) {
+    std::vector<ImmediateFuture<std::pair<std::string, FilterCoverage>>>
+        isFilteredFutures;
+    isFilteredFutures.reserve(getGlobFilesResult.globFiles.size());
+    for (std::string& path : getGlobFilesResult.globFiles) {
+      auto filterResult =
+          filter_->getFilterCoverageForPath(RelativePathPiece(path), filterId);
+      auto filterFut =
+          std::move(filterResult)
+              .thenValue([path = std::move(path)](auto&& coverage) mutable {
+                return std::pair(std::move(path), std::move(coverage));
+              });
+      isFilteredFutures.emplace_back(std::move(filterFut));
+    }
+    return collectAllSafe(std::move(isFilteredFutures))
+        .thenValue([rootId = getGlobFilesResult.rootId](
+                       std::vector<std::pair<std::string, FilterCoverage>>&&
+                           filterCoverageVec) {
+          std::vector<std::string> filteredPaths;
+          for (auto&& filterCoveragePair : filterCoverageVec) {
+            auto filterCoverage = filterCoveragePair.second;
+            // Let through unfiltered paths
+            if (filterCoverage != FilterCoverage::RECURSIVELY_FILTERED) {
+              filteredPaths.emplace_back(std::move(filterCoveragePair.first));
+            }
+            // If the filterCoverage is RECURSIVELY_FILTERED, just drop it
+          }
+          return GetGlobFilesResult{filteredPaths, std::move(rootId)};
+        });
+  });
 }
 
 void FilteredBackingStore::periodicManagementTask() {

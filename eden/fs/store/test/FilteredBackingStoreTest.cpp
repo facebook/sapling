@@ -48,6 +48,8 @@ const char kTestFilter6[] =
 foo\n\
 dir2/README\n\
 filtered_out";
+const char kTestFilter7[] = "dir2/README";
+const char kTestFilter8[] = "this/filter/is/very/nested";
 
 struct TestRepo {
   folly::test::TemporaryDirectory testDir{"eden_filtered_backing_store_test"};
@@ -785,6 +787,111 @@ TEST_F(FakeSubstringFilteredBackingStoreTest, testCompareTreeObjectsById) {
   EXPECT_TRUE(
       filteredStore_->compareObjectsById(grandchildOID, grandchildOID2) ==
       ObjectComparison::Unknown);
+}
+
+TEST_F(FakeSubstringFilteredBackingStoreTest, getGlobFiles) {
+  // Populate the backing store glob files
+  RootId rootId =
+      RootId{FilteredBackingStore::createFilteredRootId("1", kTestFilter1)};
+  RootId rootId2 =
+      RootId{FilteredBackingStore::createFilteredRootId("2", kTestFilter2)};
+  RootId rootId3 =
+      RootId{FilteredBackingStore::createFilteredRootId("3", kTestFilter4)};
+  RootId rootId4 =
+      RootId{FilteredBackingStore::createFilteredRootId("4", kTestFilter7)};
+  RootId rootId5 =
+      RootId{FilteredBackingStore::createFilteredRootId("5", kTestFilter8)};
+  wrappedStore_->putGlob(
+      std::pair<RootId, std::string>{RootId{"1"}, "foo"},
+      std::vector<std::string>{"football2", "football3", "foo/bar/baz.cpp"});
+  wrappedStore_->putGlob(
+      std::pair<RootId, std::string>{RootId{"2"}, "foo"},
+      std::vector<std::string>{"football2", "football3", "foo/tball2/baz.cpp"});
+  wrappedStore_->putGlob(
+      std::pair<RootId, std::string>{RootId{"3"}, "foo"},
+      std::vector<std::string>{"football2", "football3", "foo/bar/baz.cpp"});
+  wrappedStore_->putGlob(
+      std::pair<RootId, std::string>{RootId{"4"}, "foo"},
+      std::vector<std::string>{
+          "football2",
+          "football3",
+          "foo/bar/baz.cpp",
+          "dir2/foo.txt",
+          "dir2/foo/README",
+          "dir2/README",
+          "dir2/README.txt",
+          "dir2/README2/read.txt",
+      });
+  wrappedStore_->putGlob(
+      std::pair<RootId, std::string>{RootId{"5"}, "foo"},
+      std::vector<std::string>{
+          "this",
+          "this/filter",
+          "this/filter/is",
+          "this/filter/is/very",
+          "this/filter/is/very/nested",
+      });
+
+  // Get the glob files
+  auto executor = folly::ManualExecutor();
+
+  auto filteredFut1 =
+      filteredStore_->getGlobFiles(rootId, std::vector<std::string>{"foo"})
+          .semi()
+          .via(&executor);
+  auto filteredFut2 =
+      filteredStore_->getGlobFiles(rootId2, std::vector<std::string>{"foo"})
+          .semi()
+          .via(&executor);
+  auto filteredFut3 =
+      filteredStore_->getGlobFiles(rootId3, std::vector<std::string>{"foo"})
+          .semi()
+          .via(&executor);
+  auto filteredFut4 =
+      filteredStore_->getGlobFiles(rootId4, std::vector<std::string>{"foo"})
+          .semi()
+          .via(&executor);
+  auto filteredFut5 =
+      filteredStore_->getGlobFiles(rootId5, std::vector<std::string>{"foo"})
+          .semi()
+          .via(&executor);
+  executor.drain();
+  EXPECT_TRUE(filteredFut1.isReady());
+  EXPECT_TRUE(filteredFut2.isReady());
+  EXPECT_TRUE(filteredFut3.isReady());
+  EXPECT_TRUE(filteredFut4.isReady());
+  EXPECT_TRUE(filteredFut5.isReady());
+
+  auto filteredFutRes1 = std::move(filteredFut1).get(0ms);
+  auto filteredFutRes2 = std::move(filteredFut2).get(0ms);
+  auto filteredFutRes3 = std::move(filteredFut3).get(0ms);
+  auto filteredFutRes4 = std::move(filteredFut4).get(0ms);
+  auto filteredFutRes5 = std::move(filteredFut5).get(0ms);
+
+  // Check that the glob files are filtered correctly
+  EXPECT_EQ(filteredFutRes1.globFiles.size(), 0);
+  EXPECT_EQ(filteredFutRes2.globFiles.size(), 2);
+  EXPECT_EQ(filteredFutRes3.globFiles.size(), 3);
+  EXPECT_EQ(filteredFutRes4.globFiles.size(), 5);
+  EXPECT_EQ(filteredFutRes5.globFiles.size(), 4);
+
+  EXPECT_EQ(filteredFutRes2.globFiles[0], "football3");
+  EXPECT_EQ(filteredFutRes2.globFiles[1], "foo/tball2/baz.cpp");
+
+  EXPECT_EQ(filteredFutRes3.globFiles[0], "football2");
+  EXPECT_EQ(filteredFutRes3.globFiles[1], "football3");
+  EXPECT_EQ(filteredFutRes3.globFiles[2], "foo/bar/baz.cpp");
+
+  EXPECT_EQ(filteredFutRes4.globFiles[0], "football2");
+  EXPECT_EQ(filteredFutRes4.globFiles[1], "football3");
+  EXPECT_EQ(filteredFutRes4.globFiles[2], "foo/bar/baz.cpp");
+  EXPECT_EQ(filteredFutRes4.globFiles[3], "dir2/foo.txt");
+  EXPECT_EQ(filteredFutRes4.globFiles[4], "dir2/foo/README");
+
+  EXPECT_EQ(filteredFutRes5.globFiles[0], "this");
+  EXPECT_EQ(filteredFutRes5.globFiles[1], "this/filter");
+  EXPECT_EQ(filteredFutRes5.globFiles[2], "this/filter/is");
+  EXPECT_EQ(filteredFutRes5.globFiles[3], "this/filter/is/very");
 }
 
 TEST_F(FakePrefixFilteredBackingStoreTest, testCompareSimilarTreeObjectsById) {
