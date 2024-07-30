@@ -49,43 +49,55 @@ struct SkewAncestorsSet {
 }
 
 impl SkewAncestorsSet {
-    /// Adds a changeset to the set.
+    /// Add changesets to the set.
     pub async fn add(
         &mut self,
         ctx: &CoreContext,
         storage: &Arc<dyn CommitGraphStorage>,
-        cs_id: ChangesetId,
+        cs_ids: &[ChangesetId],
         base_generation: Generation,
     ) -> Result<()> {
-        let mut edges = storage.fetch_edges(ctx, cs_id).await?;
+        // Chunk the changesets into batches to avoid overloading storage.
+        for cs_ids in cs_ids.chunks(500) {
+            let edges = storage
+                .fetch_many_edges(
+                    ctx,
+                    cs_ids,
+                    Prefetch::for_exact_skip_tree_traversal(base_generation),
+                )
+                .await?;
 
-        if self
-            .changesets
-            .entry(edges.node.generation)
-            .or_default()
-            .insert(cs_id)
-        {
-            // if this changeset wasn't already present in the set, increment the count
-            // of all changesets reachable by following skew binary ancestors edges.
-            loop {
-                self.skew_ancestors
-                    .entry(cs_id)
+            for (cs_id, fetched_edges) in edges {
+                let mut cs_edges = fetched_edges.edges();
+                if self
+                    .changesets
+                    .entry(cs_edges.node.generation)
                     .or_default()
-                    .insert(edges.node.cs_id);
-                *self
-                    .skew_ancestors_counts
-                    .entry(edges.node.cs_id)
-                    .or_default() += 1;
+                    .insert(cs_id)
+                {
+                    // if this changeset wasn't already present in the set, increment the count
+                    // of all changesets reachable by following skew binary ancestors edges.
+                    loop {
+                        self.skew_ancestors
+                            .entry(cs_id)
+                            .or_default()
+                            .insert(cs_edges.node.cs_id);
+                        *self
+                            .skew_ancestors_counts
+                            .entry(cs_edges.node.cs_id)
+                            .or_default() += 1;
 
-                match edges.skip_tree_skew_ancestor {
-                    Some(skip_tree_skew_ancestor)
-                        if skip_tree_skew_ancestor.generation >= base_generation =>
-                    {
-                        edges = storage
-                            .fetch_edges(ctx, skip_tree_skew_ancestor.cs_id)
-                            .await?;
+                        match cs_edges.skip_tree_skew_ancestor {
+                            Some(skip_tree_skew_ancestor)
+                                if skip_tree_skew_ancestor.generation >= base_generation =>
+                            {
+                                cs_edges = storage
+                                    .fetch_edges(ctx, skip_tree_skew_ancestor.cs_id)
+                                    .await?;
+                            }
+                            _ => break,
+                        }
                     }
-                    _ => break,
                 }
             }
         }
@@ -227,16 +239,10 @@ impl CommitGraph {
         let mut heads_skew_ancestors_set: SkewAncestorsSet = Default::default();
         let mut common_skew_ancestors_set: SkewAncestorsSet = Default::default();
 
-        for cs_id in heads.iter().copied() {
-            heads_skew_ancestors_set
-                .add(ctx, &self.storage, cs_id, base_edges.node.generation)
-                .await?;
-        }
-        for cs_id in common {
-            common_skew_ancestors_set
-                .add(ctx, &self.storage, cs_id, base_edges.node.generation)
-                .await?;
-        }
+        futures::try_join!(
+            heads_skew_ancestors_set.add(ctx, &self.storage, &heads, base_edges.node.generation),
+            common_skew_ancestors_set.add(ctx, &self.storage, &common, base_edges.node.generation),
+        )?;
 
         let mut locations: HashMap<_, _> = Default::default();
 
