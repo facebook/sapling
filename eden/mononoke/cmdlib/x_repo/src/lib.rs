@@ -35,11 +35,12 @@ use live_commit_sync_config::LiveCommitSyncConfig;
 use mononoke_types::RepositoryId;
 use pushredirect::SqlPushRedirectionConfigBuilder;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
-use sql_query_config::SqlQueryConfig;
+use sql_query_config::SqlQueryConfigArc;
 use synced_commit_mapping::SqlSyncedCommitMapping;
 
-pub trait Repo =
-    cross_repo_sync::Repo + for<'b> facet::AsyncBuildable<'b, repo_factory::RepoFactoryBuilder<'b>>;
+pub trait Repo = cross_repo_sync::Repo
+    + SqlQueryConfigArc
+    + for<'b> facet::AsyncBuildable<'b, repo_factory::RepoFactoryBuilder<'b>>;
 
 /// Instantiate the `Syncers` struct by parsing `matches`
 pub async fn create_commit_syncers_from_matches<R: Repo>(
@@ -164,7 +165,7 @@ async fn get_things_from_matches<R: Repo>(
     let source_repo_fut = args::open_repo_with_repo_id(fb, logger, source_repo_id, matches);
     let target_repo_fut = args::open_repo_with_repo_id(fb, logger, target_repo_id, matches);
 
-    let (source_repo, target_repo) = try_join!(source_repo_fut, target_repo_fut)?;
+    let (source_repo, target_repo): (R, R) = try_join!(source_repo_fut, target_repo_fut)?;
 
     let sql_factory: MetadataSqlFactory = MetadataSqlFactory::new(
         ctx.fb,
@@ -176,8 +177,7 @@ async fn get_things_from_matches<R: Repo>(
     let builder = sql_factory
         .open::<SqlPushRedirectionConfigBuilder>()
         .await?;
-    // FIXME enable caching
-    let push_redirection_config = builder.build(Arc::new(SqlQueryConfig { caching: None }));
+    let push_redirection_config = builder.build(source_repo.sql_query_config_arc());
 
     let live_commit_sync_config: Arc<dyn LiveCommitSyncConfig> =
         Arc::new(CfgrLiveCommitSyncConfig::new_with_xdb(

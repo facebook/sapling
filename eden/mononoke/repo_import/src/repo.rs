@@ -29,6 +29,7 @@ use repo_cross_repo::RepoCrossRepo;
 use repo_derived_data::RepoDerivedData;
 use repo_identity::RepoIdentity;
 use repo_identity::RepoIdentityRef;
+use sql_query_config::SqlQueryConfig;
 use synced_commit_mapping::SyncedCommitMapping;
 
 #[facet::container]
@@ -66,6 +67,9 @@ pub struct Repo {
 
     #[facet]
     push_redirection_config: dyn PushRedirectionConfig,
+
+    #[facet]
+    sql_query_config: SqlQueryConfig,
 }
 
 impl Repo {

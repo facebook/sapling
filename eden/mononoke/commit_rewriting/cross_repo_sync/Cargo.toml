@@ -72,6 +72,7 @@ slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 sorted_vector_map = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 sql_construct = { version = "0.1.0", path = "../../common/sql_construct" }
+sql_query_config = { version = "0.1.0", path = "../../repo_attributes/sql_query_config" }
 static_assertions = "1.1.0"
 synced_commit_mapping = { version = "0.1.0", path = "../synced_commit_mapping" }
 synced_commit_mapping_pushrebase_hook = { version = "0.1.0", path = "../synced_commit_mapping/pushrebase_hook" }

@@ -96,6 +96,7 @@ use slog::info;
 use slog::warn;
 use sql::Transaction;
 use sql_ext::TransactionResult;
+use sql_query_config::SqlQueryConfig;
 use synced_commit_mapping::SyncedCommitMapping;
 use thiserror::Error;
 use wireproto_handler::TargetRepoDbs;
@@ -121,6 +122,7 @@ pub struct Repo(
     RepoIdentity,
     CommitGraph,
     dyn Filenodes,
+    SqlQueryConfig,
 );
 
 #[cfg(test)]

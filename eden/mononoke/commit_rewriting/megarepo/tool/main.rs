@@ -205,6 +205,7 @@ pub struct Repo(
     RepoIdentity,
     CommitGraph,
     dyn Filenodes,
+    SqlQueryConfig,
 );
 
 async fn run_move<'a>(

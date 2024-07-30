@@ -66,6 +66,7 @@ use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentity;
 use repo_identity::RepoIdentityRef;
 use sorted_vector_map::SortedVectorMap;
+use sql_query_config::SqlQueryConfig;
 use static_assertions::assert_impl_all;
 use thiserror::Error;
 
@@ -267,6 +268,9 @@ pub struct ConcreteRepo {
 
     #[facet]
     file_nodes: dyn Filenodes,
+
+    #[facet]
+    sql_query_config: SqlQueryConfig,
 }
 
 assert_impl_all!(ConcreteRepo: Repo);

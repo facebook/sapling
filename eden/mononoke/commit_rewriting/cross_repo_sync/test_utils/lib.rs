@@ -69,6 +69,7 @@ use repo_cross_repo::RepoCrossRepo;
 use repo_derived_data::RepoDerivedData;
 use repo_identity::RepoIdentity;
 use sql_construct::SqlConstruct;
+use sql_query_config::SqlQueryConfig;
 use synced_commit_mapping::SqlSyncedCommitMapping;
 use synced_commit_mapping::SyncedCommitMapping;
 use synced_commit_mapping::SyncedCommitMappingEntry;
@@ -104,6 +105,9 @@ pub struct TestRepo {
 
     #[facet]
     pub repo_config: RepoConfig,
+
+    #[facet]
+    pub sql_query_config: SqlQueryConfig,
 }
 
 impl AsBlobRepo for TestRepo {
