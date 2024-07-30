@@ -304,6 +304,23 @@ class EdenConfig : private ConfigSettingManager {
       true,
       this};
 
+  /**
+   * Whether Eden should use resource pools
+   */
+  ConfigSetting<bool> thriftUseResourcePools{
+      "thrift:use-resource-pools",
+      false,
+      this};
+
+  /**
+   * Whether Eden should use serial execution for each request. Resource pools
+   * must be enabled for this to take effect
+   */
+  ConfigSetting<bool> thriftUseSerialExecution{
+      "thrift:use-serial-execution",
+      false,
+      this};
+
   // [ssl]
 
   ConfigSetting<AbsolutePath> clientCertificate{

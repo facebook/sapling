@@ -391,6 +391,15 @@ class EdenServer : private TakeoverHandler {
     return version_;
   }
 
+  /**
+   * Returns true if the thrift server is configured to use serial execution.
+   * This only happens if both resource pools are enabled and the config for
+   * serial execution is enabled.
+   */
+  bool usingThriftSerialExecution() const {
+    return thriftUseSerialExecution_ && thriftUseResourcePools_;
+  }
+
   const EdenStatsPtr& getStats() const;
 
   /**
@@ -747,6 +756,17 @@ class EdenServer : private TakeoverHandler {
    * Build package version
    */
   const std::string version_;
+
+  /**
+   * If the Thrift Server created at startup is using resource pools
+   */
+  bool thriftUseResourcePools_;
+
+  /**
+   * If the Thrift Server created at startup is configured to use serial
+   * execution. This will only take effect if thriftUseResourcePools_ is true.
+   */
+  bool thriftUseSerialExecution_;
 
   /**
    * Remounting progress state.
