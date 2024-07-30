@@ -638,6 +638,33 @@ impl DerivedDataManager {
         Ok(res?.derived)
     }
 
+    /// Derive data for exactly all underived changesets in a batch.
+    ///
+    /// The provided batch of changesets must be in topological
+    /// order. The caller must have arranged for the dependencies
+    /// and ancestors of the batch to have already been derived. If
+    /// any dependency or ancestor is not already derived, an error
+    /// will be returned.
+    pub async fn derive_exactly_underived_batch<Derivable>(
+        &self,
+        ctx: &CoreContext,
+        csids: Vec<ChangesetId>,
+        rederivation: Option<Arc<dyn Rederivation>>,
+    ) -> Result<Duration, DerivationError>
+    where
+        Derivable: BonsaiDerivable,
+    {
+        let derived = self
+            .fetch_derived_batch::<Derivable>(ctx, csids.clone(), rederivation.clone())
+            .await?;
+        let underived = csids
+            .into_iter()
+            .filter(|csid| !derived.contains_key(csid))
+            .collect();
+        self.derive_exactly_batch::<Derivable>(ctx, underived, rederivation)
+            .await
+    }
+
     #[async_recursion]
     /// Derive data for exactly a batch of changesets.
     ///
@@ -646,7 +673,7 @@ impl DerivedDataManager {
     ///
     /// The difference between "derive_exactly" and "derive", is that for
     /// deriving exactly, the caller must have arranged for the dependencies
-    /// and ancestors of the batch to have already been derived.  If
+    /// and ancestors of the batch to have already been derived. If
     /// any dependency or ancestor is not already derived, an error
     /// will be returned.
     pub async fn derive_exactly_batch<Derivable>(
