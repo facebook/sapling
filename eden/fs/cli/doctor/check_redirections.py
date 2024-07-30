@@ -12,6 +12,7 @@ from eden.fs.cli import mtab
 from eden.fs.cli.config import EdenCheckout, EdenInstance
 from eden.fs.cli.doctor.problem import FixableProblem, ProblemTracker, RemediationError
 from eden.fs.cli.redirect import (
+    check_redirection,
     get_effective_redirections,
     Redirection,
     RedirectionState,
@@ -75,3 +76,6 @@ class MisconfiguredRedirection(FixableProblem):
                 raise RemediationError(msg)
             # Pass other errors
             raise
+
+    def check_fix(self) -> bool:
+        return check_redirection(self._redir, self._checkout)

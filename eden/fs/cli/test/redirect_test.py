@@ -13,7 +13,12 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 from eden.fs.cli.doctor.test.lib.fake_eden_instance import FakeEdenInstance
-from eden.fs.cli.redirect import FixupCmd, RedirectionState, RedirectionType
+from eden.fs.cli.redirect import (
+    check_redirection,
+    FixupCmd,
+    RedirectionState,
+    RedirectionType,
+)
 from eden.test_support.temporary_directory import TemporaryDirectoryMixin
 
 from ..redirect import Redirection, RepoPathDisposition
@@ -162,3 +167,110 @@ class RedirectTest(unittest.TestCase, TemporaryDirectoryMixin):
 
         mock_remove_existing.assert_called_once()
         mock_apply.assert_called_once()
+
+    @patch("eden.fs.cli.redirect.is_bind_mount")
+    @patch("eden.fs.cli.redirect.Redirection.remove_existing")
+    @patch("eden.fs.cli.redirect.Redirection.apply")
+    def test_misconfigured_redirection_bind_unknown(
+        self,
+        mock_apply: MagicMock,
+        mock_remove_existing: MagicMock,
+        mock_is_bind_mount: MagicMock,
+    ) -> None:
+        temp_dir = self.make_temporary_directory()
+        repo_path = os.path.join(temp_dir, "test")
+
+        mock_is_bind_mount.side_effect = [False, True]
+        mock_remove_existing.return_value = None
+        mock_apply.return_value = None
+
+        instance = FakeEdenInstance(temp_dir)
+        checkout = instance.create_test_mount("mount_dir")
+        redir_fixed = Redirection(
+            repo_path=Path(repo_path),
+            redir_type=RedirectionType.BIND,
+            target=None,
+            source="mount",
+            state=RedirectionState.UNKNOWN_MOUNT,
+        )
+        redir_broken = Redirection(
+            repo_path=Path(repo_path),
+            redir_type=RedirectionType.BIND,
+            target=None,
+            source="mount",
+            state=RedirectionState.UNKNOWN_MOUNT,
+        )
+
+        result_fixed = check_redirection(redir_fixed, checkout)
+        self.assertEqual(result_fixed, True)
+
+        result_broken = check_redirection(redir_broken, checkout)
+        self.assertEqual(result_broken, False)
+
+    @patch("eden.fs.cli.redirect.is_bind_mount")
+    @patch("eden.fs.cli.redirect.Redirection.remove_existing")
+    @patch("eden.fs.cli.redirect.Redirection.apply")
+    def test_misconfigured_redirection_bind_not_mounted(
+        self,
+        mock_apply: MagicMock,
+        mock_remove_existing: MagicMock,
+        mock_is_bind_mount: MagicMock,
+    ) -> None:
+        temp_dir = self.make_temporary_directory()
+        repo_path = os.path.join(temp_dir, "test")
+
+        mock_is_bind_mount.side_effect = [True, False]
+        mock_remove_existing.return_value = None
+        mock_apply.return_value = None
+
+        instance = FakeEdenInstance(temp_dir)
+        checkout = instance.create_test_mount("mount_dir")
+        redir_fixed = Redirection(
+            repo_path=Path(repo_path),
+            redir_type=RedirectionType.BIND,
+            target=None,
+            source="mount",
+            state=RedirectionState.NOT_MOUNTED,
+        )
+        redir_broken = Redirection(
+            repo_path=Path(repo_path),
+            redir_type=RedirectionType.BIND,
+            target=None,
+            source="mount",
+            state=RedirectionState.NOT_MOUNTED,
+        )
+
+        result_fixed = check_redirection(redir_fixed, checkout)
+        self.assertEqual(result_fixed, True)
+
+        result_broken = check_redirection(redir_broken, checkout)
+        self.assertEqual(result_broken, False)
+
+    @patch("pathlib.Path.readlink")
+    @patch("eden.fs.cli.redirect.Redirection.remove_existing")
+    @patch("eden.fs.cli.redirect.Redirection.apply")
+    def test_misconfigured_redirection_symlink_symlink_missing(
+        self,
+        mock_apply: MagicMock,
+        mock_remove_existing: MagicMock,
+        mock_readlink: MagicMock,
+    ) -> None:
+        temp_dir = self.make_temporary_directory()
+        repo_path = os.path.join(temp_dir, "test")
+
+        mock_remove_existing.return_value = None
+        mock_apply.return_value = None
+
+        instance = FakeEdenInstance(temp_dir)
+        checkout = instance.create_test_mount("mount_dir")
+        redir_fixed = Redirection(
+            repo_path=Path(repo_path),
+            redir_type=RedirectionType.SYMLINK,
+            target=None,
+            source="mount",
+            state=RedirectionState.SYMLINK_MISSING,
+        )
+        mock_readlink.return_value = redir_fixed.expand_target_abspath(checkout)
+
+        result_fixed = check_redirection(redir_fixed, checkout)
+        self.assertEqual(result_fixed, True)
