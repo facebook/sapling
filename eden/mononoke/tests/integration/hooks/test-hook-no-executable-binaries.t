@@ -80,3 +80,52 @@ Non-executable binary file - should work
   adding manifests
   adding file changes
   updating bookmark master_bookmark
+
+
+Executable binary under specific directory - should fail
+
+  $ hg up -q "min(all())"
+  $ mkdir some_dir
+  $ echo -e "\x00\x12\x34\x56\x78" > some_dir/binary_file.exe
+  $ chmod +x some_dir/binary_file.exe
+  $ hg ci -Aqm 1
+  $ hgmn push -r . --to master_bookmark
+  pushing rev 03e66567b425 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  searching for changes
+  remote: Command failed
+  remote:   Error:
+  remote:     hooks failed:
+  remote:     no_executable_binaries for 03e66567b4257e9891da6db09f751d726a274fa9: Executable file some_dir/binary_file.exe can't be committed.
+  remote: 
+  remote:   Root cause:
+  remote:     hooks failed:
+  remote:     no_executable_binaries for 03e66567b4257e9891da6db09f751d726a274fa9: Executable file some_dir/binary_file.exe can't be committed.
+  remote: 
+  remote:   Debug context:
+  remote:     "hooks failed:\nno_executable_binaries for 03e66567b4257e9891da6db09f751d726a274fa9: Executable file some_dir/binary_file.exe can't be committed."
+  abort: unexpected EOL, expected netstring digit
+  [255]
+
+-- Add `some_dir` path to the config's allow-list
+  $ hook_test_setup \
+  > no_executable_binaries <(
+  >   cat <<CONF
+  > config_json='''{
+  >   "illegal_executable_binary_message": "Executable file \${filename} can't be committed.",
+  >   "allow_list_paths": ["some_dir"]
+  > }'''
+  > CONF
+  > )
+  abort: repository `$TESTTMP/repo-hg` already exists
+  abort: destination 'repo2' is not empty
+  $ force_update_configerator
+
+Executable binary under allow-listed directory - should pass
+
+  $ hgmn push -r . --to master_bookmark
+  pushing rev 03e66567b425 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  updating bookmark master_bookmark

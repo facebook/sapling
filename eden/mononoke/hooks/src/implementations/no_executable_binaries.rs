@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
@@ -28,6 +29,8 @@ pub struct NoExecutableBinariesConfig {
     /// is committed.
     /// ${filename} => The path of the file along with the filename
     illegal_executable_binary_message: String,
+    /// Allow-list all files under any of these paths
+    allow_list_paths: Option<Vec<String>>,
 }
 
 /// Hook to block commits containing files with illegal name patterns
@@ -60,6 +63,15 @@ impl FileHook for NoExecutableBinariesHook {
         _cross_repo_push_source: CrossRepoPushSource,
         _push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution> {
+        if let Some(allow_list_paths) = &self.config.allow_list_paths {
+            for allowed_path in allow_list_paths {
+                let allowed_mpath = NonRootMPath::new(allowed_path)
+                    .with_context(|| anyhow!("{allowed_path} is an invalid path"))?;
+                if allowed_mpath.is_prefix_of(path) {
+                    return Ok(HookExecution::Accepted);
+                }
+            }
+        }
         let content_id = match change {
             Some(basic_fc) => {
                 if basic_fc.file_type() != FileType::Executable {
@@ -112,6 +124,7 @@ mod test {
         NoExecutableBinariesConfig {
             illegal_executable_binary_message: "Executable file '${filename}' can't be committed."
                 .to_string(),
+            allow_list_paths: Some(vec!["some_dir/".to_string()]),
         }
     }
 
@@ -297,6 +310,34 @@ mod test {
 
         let valid_files: HashSet<&str> =
             hashset! {"foo/bar/baz", "foo bar/quux", "bar/baz/hoo.txt" };
+
+        let illegal_files: HashMap<&str, &str> = hashmap! {};
+
+        assert_hook_execution(ctx, content_manager, bcs, hook, valid_files, illegal_files).await
+    }
+
+    /// Test that the hook allows executable binaries under allow-listed paths
+    #[fbinit::test]
+    async fn test_executable_binaries_under_allow_listed_path_pass(fb: FacebookInit) -> Result<()> {
+        let (ctx, repo, content_manager, hook) = test_setup(fb).await;
+
+        borrowed!(ctx, repo);
+
+        let cs_id = CreateCommitContext::new_root(ctx, repo)
+            .add_file_with_type(
+                "some_dir/exec",
+                vec![b'\0', 0x4D, 0x5A],
+                FileType::Executable,
+            )
+            .add_file("bar/baz/hoo.txt", "a")
+            .add_file("foo bar/baz", "b")
+            .commit()
+            .await?;
+
+        let bcs = cs_id.load(ctx, &repo.repo_blobstore).await?;
+
+        let valid_files: HashSet<&str> =
+            hashset! {"some_dir/exec", "foo bar/baz", "bar/baz/hoo.txt" };
 
         let illegal_files: HashMap<&str, &str> = hashmap! {};
 
