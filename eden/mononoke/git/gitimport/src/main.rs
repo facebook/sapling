@@ -32,6 +32,7 @@ use clientinfo::ClientInfo;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::future;
+use import_tools::bookmark::BookmarkOperationErrorReporting;
 use import_tools::create_changeset_for_annotated_tag;
 use import_tools::import_tree_as_single_bonsai_changeset;
 use import_tools::set_bookmark;
@@ -454,6 +455,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
                     pushvars.as_ref(),
                     allow_non_fast_forward,
                     affected_changesets_limit,
+                    BookmarkOperationErrorReporting::WithContext,
                 )
                 .await?;
             }

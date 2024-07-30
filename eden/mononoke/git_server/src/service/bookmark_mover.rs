@@ -17,6 +17,7 @@ use futures::TryStreamExt;
 use gix_hash::ObjectId;
 use gix_object::Kind;
 use import_tools::bookmark::set_bookmarks;
+use import_tools::bookmark::BookmarkOperationErrorReporting;
 use import_tools::git_reader::GitReader;
 use import_tools::set_bookmark;
 use import_tools::BookmarkOperation;
@@ -133,6 +134,7 @@ pub async fn set_refs(
         Some(request_context.pushvars.as_ref()),
         allow_non_fast_forward,
         affected_changesets,
+        BookmarkOperationErrorReporting::Plain,
     )
     .await?;
     if !tags_to_delete.is_empty() {
@@ -195,6 +197,7 @@ async fn set_ref_inner(
         Some(request_context.pushvars.as_ref()),
         allow_non_fast_forward,
         Some(ref_update_op.affected_changesets),
+        BookmarkOperationErrorReporting::Plain,
     )
     .await?;
     // If the bookmark is a tag and the operation is a delete, then we need to remove the tag entry
