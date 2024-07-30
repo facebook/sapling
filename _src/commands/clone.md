@@ -4,7 +4,7 @@ sidebar_position: 8
 
 ## clone
 <!--
-  @generated SignedSource<<23b566b1dfc4ab075608655b22d6d5bd>>
+  @generated SignedSource<<171b44586ac12d58efb9c7e40f6d5de2>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 
@@ -26,7 +26,7 @@ to be a Git repo: `git`, `git+file`, `git+ftp`, `git+ftps`,
 Scp-like URLs of the form `user@host:path` are converted to
 `ssh://user@host/path`.
 
-Other URL schemes are assumed to point to an EdenAPI capable repo.
+Other URL schemes are assumed to point to an SaplingRemoteAPI capable repo.
 
 The `--git` option forces the source to be interpreted as a Git repo.
 
