@@ -15,5 +15,5 @@ CREATE TABLE IF NOT EXISTS `deletion_plan` (
   PRIMARY KEY (`repo_id`, `cs_id`, `blob_key`, `reason`)
 );
 
-CREATE INDEX IF NOT EXISTS `repo_id_reason` ON `deletion_plan` (`repo_id`, `reason`);
-CREATE INDEX IF NOT EXISTS `reason` ON `deletion_plan` (`reason`);
+CREATE INDEX IF NOT EXISTS `deletion_plan_repo_id_reason` ON `deletion_plan` (`repo_id`, `reason`);
+CREATE INDEX IF NOT EXISTS `deletion_plan_reason` ON `deletion_plan` (`reason`);

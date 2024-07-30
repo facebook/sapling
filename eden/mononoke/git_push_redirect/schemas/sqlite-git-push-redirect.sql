@@ -11,5 +11,5 @@ CREATE TABLE IF NOT EXISTS `git_push_redirect` (
   `mononoke` BOOLEAN NOT NULL DEFAULT FALSE
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS `repo_id` ON `git_push_redirect` (`repo_id`);
-CREATE INDEX IF NOT EXISTS `mononoke` ON `git_push_redirect` (`mononoke`);
+CREATE UNIQUE INDEX IF NOT EXISTS `git_push_redirect_repo_id` ON `git_push_redirect` (`repo_id`);
+CREATE INDEX IF NOT EXISTS `git_push_redirect_mononoke` ON `git_push_redirect` (`mononoke`);

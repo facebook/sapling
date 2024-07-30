@@ -12,4 +12,4 @@ CREATE TABLE IF NOT EXISTS `bonsai_blob_mapping` (
     PRIMARY KEY (`repo_id`, `cs_id`, `blob_key`)
 );
 
-CREATE INDEX IF NOT EXISTS `blob_key` ON `bonsai_blob_mapping` (`repo_id`, `blob_key`);
+CREATE INDEX IF NOT EXISTS `bonsai_blob_mapping_blob_key` ON `bonsai_blob_mapping` (`repo_id`, `blob_key`);

@@ -12,4 +12,4 @@
   `public_push` BOOLEAN NOT NULL DEFAULT FALSE
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS `repo_id` ON `pushredirect` (`repo_id`);
+CREATE UNIQUE INDEX IF NOT EXISTS `pushredirect_repo_id` ON `pushredirect` (`repo_id`);

@@ -70,7 +70,7 @@ CREATE TABLE IF NOT EXISTS `synced_working_copy_equivalence` (
 );
 
  -- Small bcs id can map to multiple large bcs ids
- CREATE INDEX IF NOT EXISTS `small_bcs_key` ON `synced_working_copy_equivalence`
+ CREATE INDEX IF NOT EXISTS `synced_working_copy_equivalence_small_bcs_key` ON `synced_working_copy_equivalence`
   (`large_repo_id`,`small_repo_id`,`small_bcs_id`);
 
 -- This table defines what version should be used to rewrite a given large commit.

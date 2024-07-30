@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS `bookmarks` (
   UNIQUE(`repo_id`, `log_id`)
 );
 
-CREATE INDEX IF NOT EXISTS `repo_id_hg_kind` ON `bookmarks` (`repo_id`, `hg_kind`);
+CREATE INDEX IF NOT EXISTS `bookmarks_repo_id_hg_kind` ON `bookmarks` (`repo_id`, `hg_kind`);
 
 CREATE TABLE IF NOT EXISTS `bookmarks_update_log` (
   `id` INTEGER NOT NULL,

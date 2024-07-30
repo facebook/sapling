@@ -13,4 +13,4 @@ CREATE TABLE IF NOT EXISTS `megarepo_sync_config` (
   `serialized_config` TEXT NOT NULL
 );
 
-CREATE INDEX IF NOT EXISTS `target_and_version` ON `megarepo_sync_config` (`repo_id`, `bookmark`, `version`);
+CREATE INDEX IF NOT EXISTS `megarepo_sync_config_target_and_version` ON `megarepo_sync_config` (`repo_id`, `bookmark`, `version`);

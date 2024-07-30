@@ -12,4 +12,4 @@ CREATE TABLE IF NOT EXISTS `pushrebase_mutation_mapping` (
   `successor_bcs_id` BINARY(32) NOT NULL
 );
 
-CREATE INDEX IF NOT EXISTS `repo_successor_key` ON `pushrebase_mutation_mapping` (`repo_id`, `successor_bcs_id`);
+CREATE INDEX IF NOT EXISTS `pushrebase_mutation_mapping_repo_successor_key` ON `pushrebase_mutation_mapping` (`repo_id`, `successor_bcs_id`);
