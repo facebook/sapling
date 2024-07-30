@@ -101,6 +101,7 @@ sorted_vector_map = { version = "0.2.0", git = "https://github.com/facebookexper
 sparse = { version = "0.1.0", path = "../../scm/lib/sparse", features = ["async"] }
 sql_construct = { version = "0.1.0", path = "../common/sql_construct" }
 sql_ext = { version = "0.1.0", path = "../common/rust/sql_ext" }
+sql_query_config = { version = "0.1.0", path = "../repo_attributes/sql_query_config" }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 streaming_clone = { version = "0.1.0", path = "../repo_client/streaming_clone" }
 synced_commit_mapping = { version = "0.1.0", path = "../commit_rewriting/synced_commit_mapping" }

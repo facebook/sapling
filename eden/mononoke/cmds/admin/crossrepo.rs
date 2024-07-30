@@ -84,6 +84,7 @@ use slog::info;
 use slog::warn;
 use slog::Logger;
 use sorted_vector_map::sorted_vector_map;
+use sql_query_config::SqlQueryConfig;
 use synced_commit_mapping::EquivalentWorkingCopyEntry;
 use synced_commit_mapping::SqlSyncedCommitMapping;
 use synced_commit_mapping::SyncedCommitMapping;
@@ -1611,7 +1612,7 @@ async fn get_live_commit_sync_config<'a>(
     let builder = sql_factory
         .open::<SqlPushRedirectionConfigBuilder>()
         .await?;
-    let push_redirection_config = builder.build();
+    let push_redirection_config = builder.build(Arc::new(SqlQueryConfig { caching: None }));
     CfgrLiveCommitSyncConfig::new_with_xdb(
         ctx.logger(),
         config_store,

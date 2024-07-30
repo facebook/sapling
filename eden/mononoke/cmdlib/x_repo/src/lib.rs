@@ -35,6 +35,7 @@ use live_commit_sync_config::LiveCommitSyncConfig;
 use mononoke_types::RepositoryId;
 use pushredirect::SqlPushRedirectionConfigBuilder;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
+use sql_query_config::SqlQueryConfig;
 use synced_commit_mapping::SqlSyncedCommitMapping;
 
 pub trait Repo =
@@ -175,7 +176,8 @@ async fn get_things_from_matches<R: Repo>(
     let builder = sql_factory
         .open::<SqlPushRedirectionConfigBuilder>()
         .await?;
-    let push_redirection_config = builder.build();
+    // FIXME enable caching
+    let push_redirection_config = builder.build(Arc::new(SqlQueryConfig { caching: None }));
 
     let live_commit_sync_config: Arc<dyn LiveCommitSyncConfig> =
         Arc::new(CfgrLiveCommitSyncConfig::new_with_xdb(

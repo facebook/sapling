@@ -1830,13 +1830,14 @@ impl RepoFactory {
     pub async fn push_redirection_config(
         &self,
         repo_config: &ArcRepoConfig,
+        sql_query_config: &ArcSqlQueryConfig,
     ) -> Result<ArcPushRedirectionConfig> {
         let builder = self
             .open_sql::<SqlPushRedirectionConfigBuilder>(repo_config)
             .await
             .context(RepoFactoryError::PushRedirectConfig)?;
 
-        let push_redirection_config = builder.build();
+        let push_redirection_config = builder.build(sql_query_config.clone());
         Ok(Arc::new(push_redirection_config))
     }
 }

@@ -153,6 +153,7 @@ use slog::debug;
 use slog::error;
 use sql_construct::SqlConstruct;
 use sql_ext::facebook::MysqlOptions;
+use sql_query_config::SqlQueryConfig;
 use stats::prelude::*;
 use streaming_clone::StreamingClone;
 use streaming_clone::StreamingCloneBuilder;
@@ -237,7 +238,8 @@ pub struct Repo {
         CommitGraph,
         dyn GitSymbolicRefs,
         dyn Filenodes,
-        CommitCloud
+        CommitCloud,
+        SqlQueryConfig,
     )]
     pub inner: InnerRepo,
 
@@ -504,6 +506,7 @@ impl Repo {
             streaming_clone: Arc::new(
                 StreamingCloneBuilder::with_sqlite_in_memory()?.build(repo_id, repo_blobstore),
             ),
+            sql_query_config: Arc::new(SqlQueryConfig { caching: None }),
         };
 
         let mut warm_bookmarks_cache_builder = WarmBookmarksCacheBuilder::new(

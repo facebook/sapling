@@ -38,6 +38,7 @@ rust_library(
         "//eden/mononoke/repo_attributes/repo_lock:repo_lock",
         "//eden/mononoke/repo_attributes/repo_permission_checker:repo_permission_checker",
         "//eden/mononoke/repo_attributes/repo_sparse_profiles:repo_sparse_profiles",
+        "//eden/mononoke/repo_attributes/sql_query_config:sql_query_config",
         "//eden/mononoke/repo_client:streaming_clone",
         "//eden/mononoke/segmented_changelog:segmented_changelog_types",
     ],

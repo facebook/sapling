@@ -13,6 +13,7 @@ use anyhow::Error;
 use lazy_static::lazy_static;
 use quickcheck_arbitrary_derive::Arbitrary;
 use regex::Regex;
+use serde_derive::Deserialize;
 use serde_derive::Serialize;
 use sql::mysql;
 
@@ -47,7 +48,7 @@ lazy_static! {
 /// Represents a repository. This ID is used throughout storage.
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 #[derive(Abomonation, Arbitrary)]
-#[derive(Serialize, mysql::OptTryFromRowField)]
+#[derive(Serialize, Deserialize, mysql::OptTryFromRowField)]
 pub struct RepositoryId(i32);
 
 impl RepositoryId {

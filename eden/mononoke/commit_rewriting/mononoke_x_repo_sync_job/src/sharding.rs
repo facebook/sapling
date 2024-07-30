@@ -142,7 +142,7 @@ impl XRepoSyncProcessExecutor {
         let builder = sql_factory
             .open::<SqlPushRedirectionConfigBuilder>()
             .await?;
-        let push_redirection_config = builder.build();
+        let push_redirection_config = builder.build(small_repo.inner.sql_query_config.clone());
         let live_commit_sync_config = Arc::new(CfgrLiveCommitSyncConfig::new_with_xdb(
             logger,
             &config_store,

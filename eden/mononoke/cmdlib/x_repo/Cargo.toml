@@ -21,4 +21,5 @@ mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 pushredirect = { version = "0.1.0", path = "../../megarepo_api/pushredirect" }
 repo_factory = { version = "0.1.0", path = "../../repo_factory" }
 sql_construct = { version = "0.1.0", path = "../../common/sql_construct" }
+sql_query_config = { version = "0.1.0", path = "../../repo_attributes/sql_query_config" }
 synced_commit_mapping = { version = "0.1.0", path = "../../commit_rewriting/synced_commit_mapping" }

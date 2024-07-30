@@ -5,8 +5,11 @@
  * GNU General Public License version 2.
  */
 
+use abomonation_derive::Abomonation;
 use anyhow::Result;
 use mononoke_types::RepositoryId;
+use serde_derive::Deserialize;
+use serde_derive::Serialize;
 use sql::mysql;
 use sql::mysql_async::from_value_opt;
 use sql::mysql_async::prelude::ConvIr;
@@ -14,7 +17,8 @@ use sql::mysql_async::prelude::FromValue;
 use sql::mysql_async::FromValueError;
 use sql::mysql_async::Value;
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq, mysql::OptTryFromRowField)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Abomonation, Serialize, Deserialize)]
+#[derive(mysql::OptTryFromRowField)]
 pub struct RowId(pub u64);
 
 impl From<RowId> for Value {

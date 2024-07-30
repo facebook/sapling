@@ -5,12 +5,15 @@
  * GNU General Public License version 2.
  */
 
+use std::sync::Arc;
+
 use anyhow::Result;
 use async_trait::async_trait;
 use context::CoreContext;
 use mononoke_types::RepositoryId;
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
+use sql_ext::_macro_internal::SqlQueryConfig;
 use sql_ext::mononoke_queries;
 use sql_ext::SqlConnections;
 
@@ -33,7 +36,7 @@ mononoke_queries! {
          WHERE id = {id}"
     }
 
-    read Get(repo_id: RepositoryId) -> (
+    cacheable read Get(repo_id: RepositoryId) -> (
         RowId,
         RepositoryId,
         bool,
@@ -66,6 +69,7 @@ fn row_to_entry(row: (RowId, RepositoryId, bool, bool)) -> PushRedirectionConfig
 
 pub struct SqlPushRedirectionConfig {
     connections: SqlConnections,
+    sql_query_config: Arc<SqlQueryConfig>,
 }
 
 #[derive(Clone)]
@@ -84,10 +88,13 @@ impl SqlConstruct for SqlPushRedirectionConfigBuilder {
 }
 
 impl SqlPushRedirectionConfigBuilder {
-    pub fn build(self) -> SqlPushRedirectionConfig {
+    pub fn build(self, sql_query_config: Arc<SqlQueryConfig>) -> SqlPushRedirectionConfig {
         let SqlPushRedirectionConfigBuilder { connections } = self;
 
-        SqlPushRedirectionConfig { connections }
+        SqlPushRedirectionConfig {
+            connections,
+            sql_query_config,
+        }
     }
 }
 
@@ -117,7 +124,12 @@ impl PushRedirectionConfig for SqlPushRedirectionConfig {
         _ctx: &CoreContext,
         repo_id: RepositoryId,
     ) -> Result<Option<PushRedirectionConfigEntry>> {
-        let rows = Get::query(&self.connections.read_connection, &repo_id).await?;
+        let rows = Get::query(
+            self.sql_query_config.as_ref(),
+            &self.connections.read_connection,
+            &repo_id,
+        )
+        .await?;
         Ok(rows.into_iter().next().map(row_to_entry))
     }
 }
@@ -132,7 +144,8 @@ mod test {
     async fn test_set(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let builder = SqlPushRedirectionConfigBuilder::with_sqlite_in_memory()?;
-        let push = builder.clone().build();
+        let sql_query_config = Arc::new(SqlQueryConfig { caching: None });
+        let push = builder.clone().build(sql_query_config.clone());
 
         // insert one
         let repo_id = RepositoryId::new(1);
@@ -143,7 +156,7 @@ mod test {
         assert!(entry.draft_push);
         assert!(!entry.public_push);
 
-        let push = builder.build();
+        let push = builder.build(sql_query_config);
 
         // insert another
         let repo_id = RepositoryId::new(2);
@@ -169,7 +182,8 @@ mod test {
     async fn test_get(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let builder = SqlPushRedirectionConfigBuilder::with_sqlite_in_memory()?;
-        let push = builder.build();
+        let sql_query_config = Arc::new(SqlQueryConfig { caching: None });
+        let push = builder.build(sql_query_config);
 
         let repo_id = RepositoryId::new(1);
         let entry = push.get(&ctx, repo_id).await?;
