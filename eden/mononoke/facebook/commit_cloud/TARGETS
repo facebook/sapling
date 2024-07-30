@@ -20,8 +20,8 @@ rust_library(
         "//configerator/structs/infrasec/if:acl-rust",
         "//crypto/cat/rust:cryptocat",
         "//eden/mononoke/commit_cloud/helpers:commit_cloud_helpers",
+        "//eden/mononoke/facebook/employee_service:employee_service",
         "//eden/mononoke/permission_checker:permission_checker",
         "//eden/scm/lib/edenapi/types:edenapi_types",
-        "//employee/if:thrift-rust-srclients",
     ],
 )

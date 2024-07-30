@@ -525,7 +525,13 @@ impl AuthorizationContext {
 
                 #[cfg(fbcode_build)]
                 {
-                    owner_check = match infer_workspace_identity(ctx.fb, workspace).await {
+                    owner_check = match infer_workspace_identity(
+                        ctx.fb,
+                        workspace,
+                        Some(repo.commit_cloud().config.mocked_employees.clone()),
+                    )
+                    .await
+                    {
                         Ok(Some(owner)) => ctx.metadata().identities().contains(&owner),
                         Err(_) | Ok(None) => false,
                     };
