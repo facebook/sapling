@@ -9,6 +9,7 @@ pub use mercurial_types::HgFileNodeId;
 pub use mercurial_types::HgManifestId;
 pub use mercurial_types::HgParents;
 
+pub mod cloud;
 pub mod data;
 pub mod ext;
 pub mod file;

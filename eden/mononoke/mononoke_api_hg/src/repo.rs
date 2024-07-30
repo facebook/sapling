@@ -28,16 +28,10 @@ use bytes::Bytes;
 use changeset_fetcher::ChangesetFetcherRef;
 use changesets::ChangesetInsert;
 use changesets::ChangesetsRef;
-use commit_cloud::ctx::CommitCloudContext;
-use commit_cloud::CommitCloudRef;
 use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use edenapi_types::AnyId;
-use edenapi_types::GetReferencesParams;
-use edenapi_types::ReferencesData;
-use edenapi_types::UpdateReferencesParams;
 use edenapi_types::UploadToken;
-use edenapi_types::WorkspaceData;
 use ephemeral_blobstore::Bubble;
 use ephemeral_blobstore::BubbleId;
 use ephemeral_blobstore::RepoEphemeralStore;
@@ -1051,62 +1045,6 @@ impl HgRepoContext {
             .collect::<Result<Vec<_>, MononokeError>>()?;
 
         Ok(hg_parent_mapping)
-    }
-
-    pub async fn cloud_workspace(
-        &self,
-        workspace: &str,
-        reponame: &str,
-    ) -> Result<WorkspaceData, MononokeError> {
-        let ctx = CommitCloudContext::new(workspace, reponame)?;
-        Ok(self
-            .repo()
-            .inner_repo()
-            .commit_cloud()
-            .get_workspace(&ctx)
-            .await?)
-    }
-
-    pub async fn cloud_workspaces(
-        &self,
-        prefix: &str,
-        reponame: &str,
-    ) -> Result<Vec<WorkspaceData>, MononokeError> {
-        Ok(self
-            .repo()
-            .inner_repo()
-            .commit_cloud()
-            .get_workspaces(prefix, reponame)
-            .await?)
-    }
-
-    pub async fn cloud_references(
-        &self,
-        params: &GetReferencesParams,
-    ) -> Result<ReferencesData, MononokeError> {
-        let ctx = CommitCloudContext::new(&params.workspace, &params.reponame)?;
-        Ok(self
-            .repo()
-            .inner_repo()
-            .commit_cloud()
-            .get_references(&ctx, params)
-            .await?)
-    }
-
-    pub async fn cloud_update_references(
-        &self,
-        params: &UpdateReferencesParams,
-    ) -> Result<ReferencesData, MononokeError> {
-        let ctx = CommitCloudContext::new(&params.workspace, &params.reponame)?;
-        if params.version == 0 {
-            ctx.check_workspace_name()?;
-        }
-        Ok(self
-            .repo()
-            .inner_repo()
-            .commit_cloud()
-            .update_references(&ctx, params)
-            .await?)
     }
 }
 
