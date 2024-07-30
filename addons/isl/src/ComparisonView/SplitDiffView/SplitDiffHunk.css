@@ -132,7 +132,7 @@
 
 .split-diff-view-hunk-table td,
 .split-diff-view-file-preamble {
-  font-size: 12px;
+  font-size: var(--editor-font-size);
   line-height: 16px;
   white-space: pre-wrap;
   word-break: break-all;
