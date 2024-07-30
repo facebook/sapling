@@ -44,11 +44,16 @@ impl RateLimiter for FakeLimiter {
         &self,
         _metric: Metric,
         _identities: &MononokeIdentitySet,
+        _main_id: Option<&str>,
     ) -> Result<Result<(), RateLimitReason>, Error> {
         Ok(Ok(()))
     }
 
-    fn check_load_shed(&self, _identities: &MononokeIdentitySet) -> Result<(), RateLimitReason> {
+    fn check_load_shed(
+        &self,
+        _identities: &MononokeIdentitySet,
+        _main_id: Option<&str>,
+    ) -> Result<(), RateLimitReason> {
         Ok(())
     }
 

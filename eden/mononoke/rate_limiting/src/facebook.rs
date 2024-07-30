@@ -51,13 +51,14 @@ impl RateLimiter for MononokeRateLimits {
         &self,
         metric: Metric,
         identities: &MononokeIdentitySet,
+        main_id: Option<&str>,
     ) -> Result<Result<(), RateLimitReason>, Error> {
         for limit in &self.config.rate_limits {
             if limit.metric != metric {
                 continue;
             }
 
-            if !limit.applies_to_client(identities) {
+            if !limit.applies_to_client(identities, main_id) {
                 continue;
             }
 
@@ -79,9 +80,13 @@ impl RateLimiter for MononokeRateLimits {
         Ok(Ok(()))
     }
 
-    fn check_load_shed(&self, identities: &MononokeIdentitySet) -> Result<(), RateLimitReason> {
+    fn check_load_shed(
+        &self,
+        identities: &MononokeIdentitySet,
+        main_id: Option<&str>,
+    ) -> Result<(), RateLimitReason> {
         for limit in &self.config.load_shed_limits {
-            limit.should_load_shed(self.fb, Some(identities))?;
+            limit.should_load_shed(self.fb, Some(identities), main_id)?;
         }
 
         Ok(())

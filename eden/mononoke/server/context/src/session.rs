@@ -109,17 +109,35 @@ impl SessionContainer {
 
     pub fn check_load_shed(&self) -> Result<(), RateLimitReason> {
         match &self.inner.rate_limiter {
-            Some(limiter) => limiter.check_load_shed(self.metadata().identities()),
+            Some(limiter) => {
+                let main_client_id = self
+                    .metadata()
+                    .client_info()
+                    .and_then(|client_info| client_info.request_info.clone())
+                    .and_then(|request_info| request_info.main_id);
+                limiter.check_load_shed(self.metadata().identities(), main_client_id.as_deref())
+            }
             None => Ok(()),
         }
     }
 
     pub async fn check_rate_limit(&self, metric: Metric) -> Result<(), RateLimitReason> {
         match &self.inner.rate_limiter {
-            Some(limiter) => limiter
-                .check_rate_limit(metric, self.metadata().identities())
-                .await
-                .unwrap_or(Ok(())),
+            Some(limiter) => {
+                let main_client_id = self
+                    .metadata()
+                    .client_info()
+                    .and_then(|client_info| client_info.request_info.clone())
+                    .and_then(|request_info| request_info.main_id);
+                limiter
+                    .check_rate_limit(
+                        metric,
+                        self.metadata().identities(),
+                        main_client_id.as_deref(),
+                    )
+                    .await
+                    .unwrap_or(Ok(()))
+            }
             None => Ok(()),
         }
     }

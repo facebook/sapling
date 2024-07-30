@@ -47,9 +47,14 @@ pub trait RateLimiter {
         &self,
         metric: Metric,
         identities: &MononokeIdentitySet,
+        main_id: Option<&str>,
     ) -> Result<Result<(), RateLimitReason>, Error>;
 
-    fn check_load_shed(&self, identities: &MononokeIdentitySet) -> Result<(), RateLimitReason>;
+    fn check_load_shed(
+        &self,
+        identities: &MononokeIdentitySet,
+        main_id: Option<&str>,
+    ) -> Result<(), RateLimitReason>;
 
     fn bump_load(&self, metric: Metric, load: LoadCost);
 
@@ -119,11 +124,11 @@ pub struct RateLimit {
 
 #[cfg(fbcode_build)]
 impl RateLimit {
-    fn applies_to_client(&self, identities: &MononokeIdentitySet) -> bool {
+    fn applies_to_client(&self, identities: &MononokeIdentitySet, main_id: Option<&str>) -> bool {
         match &self.target {
             // TODO (harveyhunt): Pass identities rather than Some(identities) once LFS server has
             // been updated to require certs.
-            Some(t) => t.matches_client(Some(identities)),
+            Some(t) => t.matches_client(Some(identities), main_id),
             None => true,
         }
     }
@@ -135,9 +140,10 @@ impl LoadShedLimit {
         &self,
         fb: FacebookInit,
         identities: Option<&MononokeIdentitySet>,
+        main_id: Option<&str>,
     ) -> Result<(), RateLimitReason> {
         let applies_to_client = match &self.target {
-            Some(t) => t.matches_client(identities),
+            Some(t) => t.matches_client(identities, main_id),
             None => true,
         };
 
@@ -195,6 +201,7 @@ pub enum Target {
     OrTarget(Vec<Target>),
     Identity(MononokeIdentity),
     StaticSlice(StaticSlice),
+    MainClientId(String),
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -221,13 +228,21 @@ pub struct StaticSlice {
 }
 
 impl Target {
-    pub fn matches_client(&self, identities: Option<&MononokeIdentitySet>) -> bool {
+    pub fn matches_client(
+        &self,
+        identities: Option<&MononokeIdentitySet>,
+        main_client_id: Option<&str>,
+    ) -> bool {
         match self {
-            Self::NotTarget(t) => !t.matches_client(identities),
-            Self::AndTarget(ts) => ts.iter().all(|t| t.matches_client(identities)),
-            Self::OrTarget(ts) => ts.iter().any(|t| t.matches_client(identities)),
+            Self::NotTarget(t) => !t.matches_client(identities, None),
+            Self::AndTarget(ts) => ts.iter().all(|t| t.matches_client(identities, None)),
+            Self::OrTarget(ts) => ts.iter().any(|t| t.matches_client(identities, None)),
             Self::Identity(i) => match identities {
                 Some(client_idents) => client_idents.contains(i),
+                None => false,
+            },
+            Self::MainClientId(id) => match main_client_id {
+                Some(client_id) => client_id == id,
                 None => false,
             },
             Self::StaticSlice(s) => in_throttled_slice(identities, s.slice_pct, &s.nonce),
@@ -262,31 +277,35 @@ mod test {
         let test_ident = MononokeIdentity::new("USER", "foo");
         let test2_ident = MononokeIdentity::new("USER", "bar");
         let test3_ident = MononokeIdentity::new("USER", "baz");
+        let test_client_id = String::from("test_client_id");
 
         let ident_target = Target::Identity(test_ident.clone());
         let ident2_target = Target::Identity(test2_ident);
         let ident3_target = Target::Identity(test3_ident.clone());
         let empty_idents = Some(MononokeIdentitySet::new());
 
-        assert!(!ident_target.matches_client(empty_idents.as_ref()));
+        assert!(!ident_target.matches_client(empty_idents.as_ref(), None));
 
         let mut idents = MononokeIdentitySet::new();
         idents.insert(test_ident);
         idents.insert(test3_ident);
         let idents = Some(idents);
 
-        assert!(ident_target.matches_client(idents.as_ref()));
+        assert!(ident_target.matches_client(idents.as_ref(), None));
 
         let and_target = Target::AndTarget(vec![ident_target.clone(), ident3_target]);
 
-        assert!(and_target.matches_client(idents.as_ref()));
+        assert!(and_target.matches_client(idents.as_ref(), None));
 
         let or_target = Target::OrTarget(vec![ident_target, ident2_target.clone()]);
 
-        assert!(or_target.matches_client(idents.as_ref()));
+        assert!(or_target.matches_client(idents.as_ref(), None));
 
         let not_target = Target::NotTarget(Box::new(ident2_target));
-        assert!(not_target.matches_client(idents.as_ref()));
+        assert!(not_target.matches_client(idents.as_ref(), None));
+
+        let client_id_target = Target::MainClientId(test_client_id.clone());
+        assert!(client_id_target.matches_client(None, Some(&test_client_id)))
     }
 
     #[test]
@@ -353,26 +372,26 @@ mod test {
         let idents2 = Some(idents);
 
         // All of SERVICE_IDENTITY: bar
-        assert!(ident_target.matches_client(idents1.as_ref()));
+        assert!(ident_target.matches_client(idents1.as_ref(), None));
 
         // 20% of SERVICE_IDENTITY: bar. ratelimited host
         let twenty_pct_service_identity =
             Target::AndTarget(vec![ident_target.clone(), twenty_pct_target.clone()]);
-        assert!(twenty_pct_service_identity.matches_client(idents1.as_ref()));
+        assert!(twenty_pct_service_identity.matches_client(idents1.as_ref(), None));
 
         // 20% of SERVICE_IDENTITY: bar. not ratelimited host
         let twenty_pct_service_identity =
             Target::AndTarget(vec![ident_target.clone(), twenty_pct_target]);
-        assert!(!twenty_pct_service_identity.matches_client(idents2.as_ref()));
+        assert!(!twenty_pct_service_identity.matches_client(idents2.as_ref(), None));
 
         // 100% of SERVICE_IDENTITY: bar
         let hundred_pct_service_identity =
             Target::AndTarget(vec![ident_target.clone(), hundred_pct_target.clone()]);
-        assert!(hundred_pct_service_identity.matches_client(idents1.as_ref()));
+        assert!(hundred_pct_service_identity.matches_client(idents1.as_ref(), None));
 
         // 100% of SERVICE_IDENTITY: bar
         let hundred_pct_service_identity =
             Target::AndTarget(vec![ident_target.clone(), hundred_pct_target]);
-        assert!(hundred_pct_service_identity.matches_client(idents2.as_ref()));
+        assert!(hundred_pct_service_identity.matches_client(idents2.as_ref(), None));
     }
 }

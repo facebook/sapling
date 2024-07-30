@@ -50,12 +50,21 @@ impl Middleware for ThrottleMiddleware {
                 return chain(state);
             }
         }
-        let identities = state
-            .try_borrow::<MetadataState>()
-            .map(|metadata_state| metadata_state.metadata().identities());
+
+        let (identities, main_client_id) = match state.try_borrow::<MetadataState>() {
+            Some(metadata_state) => {
+                let client_id = metadata_state
+                    .metadata()
+                    .client_request_info()
+                    .and_then(|info| info.main_id.clone());
+                (Some(metadata_state.metadata().identities()), client_id)
+            }
+            None => (None, None),
+        };
 
         for limit in self.handle.get().loadshedding_limits().iter() {
-            if let Err(err) = limit.should_load_shed(self.fb, identities) {
+            if let Err(err) = limit.should_load_shed(self.fb, identities, main_client_id.as_deref())
+            {
                 let err = HttpError::e429(err);
 
                 let res =
