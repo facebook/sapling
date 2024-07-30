@@ -12,15 +12,15 @@ use std::sync::Arc;
 use futures::StreamExt;
 use futures::TryStreamExt;
 
+use crate::dag::MemDag;
 use crate::errors::programming;
-use crate::namedag::MemDag;
-use crate::nameset::hints::Hints;
 use crate::ops::DagAddHeads;
 use crate::ops::IdConvert;
 use crate::ops::IdDagAlgorithm;
 use crate::ops::Parents;
 use crate::ops::ToIdSet;
 use crate::ops::ToSet;
+use crate::set::hints::Hints;
 use crate::utils;
 use crate::DagAlgorithm;
 use crate::Group;

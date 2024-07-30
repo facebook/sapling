@@ -5,10 +5,10 @@
  * GNU General Public License version 2.
  */
 
+use dag::dag::Dag;
 use dag::iddagstore::IdDagStore;
 use dag::idmap::IdMap;
 use dag::idmap::IdMapAssignHead;
-use dag::namedag::Dag;
 use dag::ops::DagAlgorithm;
 use dag::ops::DagPersistent;
 use dag::ops::Persist;
@@ -32,7 +32,7 @@ pub fn main() {
     bench_with_iddag(|| IdDag::open(dag_dir.path()).unwrap());
     bench_with_iddag(IdDag::new_in_memory);
 
-    bench_many_heads_namedag();
+    bench_many_heads_dag();
 }
 
 fn bench_with_iddag<S: IdDagStore + Persist>(get_empty_iddag: impl Fn() -> IdDag<S>) {
@@ -246,7 +246,7 @@ fn bench_with_iddag<S: IdDagStore + Persist>(get_empty_iddag: impl Fn() -> IdDag
     });
 }
 
-fn bench_many_heads_namedag() {
+fn bench_many_heads_dag() {
     println!("benchmarking Dag with many heads");
     // Create a graph with M linear vertexes in the master branch, and M
     // child for every vertex in the master branch.

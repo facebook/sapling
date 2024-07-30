@@ -10,7 +10,7 @@ use async_runtime::block_unless_interrupted as block_on;
 use clidispatch::ReqCtx;
 use cliparser::define_flags;
 use cmdutil::Result;
-use dag::namedag::IndexedLogDagPath;
+use dag::dag::IndexedLogDagPath;
 use dag::ops::DagImportPullData;
 use dag::ops::DagPersistent;
 use dag::ops::Open;

@@ -739,7 +739,7 @@ mod tests {
         repo.flush().await.unwrap();
 
         let repo2 = EagerRepo::open(dir).unwrap();
-        let rendered = dag::render::render_namedag(&*repo2.dag().await, |v| {
+        let rendered = dag::render::render_dag(&*repo2.dag().await, |v| {
             let id = Id20::from_slice(v.as_ref()).unwrap();
             let blob = repo2.get_sha1_blob(id).unwrap().unwrap();
             Some(String::from_utf8_lossy(&blob[Id20::len() * 2..]).to_string())

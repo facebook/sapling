@@ -17,7 +17,7 @@ use clidispatch::ReqCtx;
 use cliparser::define_flags;
 use cmdutil::ConfigSet;
 use cmdutil::Result;
-use dag::namedag::IndexedLogDagPath;
+use dag::dag::IndexedLogDagPath;
 use dag::ops::DagImportCloneData;
 use dag::ops::DagPersistent;
 use dag::ops::Open;

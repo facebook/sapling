@@ -27,10 +27,6 @@ use byteorder::ReadBytesExt;
 use byteorder::BE;
 use dag::errors::DagError;
 use dag::errors::NotFoundError;
-use dag::nameset::hints::Flags;
-use dag::nameset::meta::MetaSet;
-// Revset is non-lazy. Sync APIs can be used.
-use dag::nameset::SyncSetQuery;
 use dag::ops::CheckIntegrity;
 use dag::ops::DagAddHeads;
 use dag::ops::DagAlgorithm;
@@ -39,6 +35,10 @@ use dag::ops::IdMapSnapshot;
 use dag::ops::Parents;
 use dag::ops::PrefixLookup;
 use dag::ops::ToIdSet;
+use dag::set::hints::Flags;
+use dag::set::meta::MetaSet;
+// Revset is non-lazy. Sync APIs can be used.
+use dag::set::SyncSetQuery;
 use dag::Group;
 use dag::Id;
 use dag::IdSet;

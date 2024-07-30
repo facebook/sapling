@@ -37,9 +37,9 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use bitflags::bitflags;
-use dag::namedag::MemDag;
-use dag::nameset::hints::Flags;
+use dag::dag::MemDag;
 use dag::ops::DagAddHeads;
+use dag::set::hints::Flags;
 use dag::DagAlgorithm;
 use dag::Set;
 use dag::Vertex;
@@ -587,7 +587,7 @@ mod tests {
         let dag = r(ms.get_dag(vec![n("B")]))?;
         assert_eq!(r(non_blocking_result(dag.all())?.count())?, 5); // A B C D E
         assert_eq!(
-            dag::render::render_namedag(&dag, |v| Some(format!("({})", v.as_ref()[0] as char)))?,
+            dag::render::render_dag(&dag, |v| Some(format!("({})", v.as_ref()[0] as char)))?,
             r#"
             o  4545454545454545454545454545454545454545 (E)
             │
@@ -753,6 +753,6 @@ mod tests {
     /// Render the mutation store for the given nodes.
     fn render(ms: &MutationStore, s: &str) -> Result<String> {
         let dag = r(ms.get_dag(s.chars().map(n).collect::<Vec<Node>>()))?;
-        dag::render::render_namedag(&dag, |v| Some(format!("({})", v.as_ref()[0] as char)))
+        dag::render::render_dag(&dag, |v| Some(format!("({})", v.as_ref()[0] as char)))
     }
 }

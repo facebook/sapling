@@ -8,9 +8,9 @@
 use std::collections::HashMap;
 use std::collections::HashSet;
 
-use dag::namedag::MemDag;
-use dag::nameset::SyncSetQuery;
+use dag::dag::MemDag;
 use dag::ops::ImportAscii;
+use dag::set::SyncSetQuery;
 use dag::DagAlgorithm;
 use dag::Vertex;
 use nonblocking::non_blocking_result;

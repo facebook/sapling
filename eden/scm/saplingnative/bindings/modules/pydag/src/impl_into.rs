@@ -12,7 +12,7 @@ use cpython_ext::convert::register_into;
 
 use crate::commits::commits;
 use crate::dagalgo::dagalgo;
-use crate::nameset::nameset;
+use crate::set::nameset;
 
 pub(crate) fn register(py: Python) {
     register_into(py, |py, c: commits| c.to_read_root_tree_nodes(py));

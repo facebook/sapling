@@ -57,7 +57,7 @@ use crate::owned::OwnedSegmentedChangelog;
 use crate::parents::FetchParents;
 use crate::types::IdMapVersion;
 use crate::types::SegmentedChangelogVersion;
-use crate::update::server_namedag;
+use crate::update::server_dag;
 use crate::update::vertexlist_from_seedheads;
 use crate::update::SeedHead;
 use crate::version_store::SegmentedChangelogVersionStore;
@@ -321,13 +321,13 @@ impl SegmentedChangelogTailer {
         }
         let idmap = self.idmap_factory.for_writer(ctx, idmap_version);
 
-        let mut namedag = server_namedag(ctx.clone(), iddag, idmap)?;
+        let mut dag = server_dag(ctx.clone(), iddag, idmap)?;
 
         let heads =
             vertexlist_from_seedheads(ctx, &self.seed_heads, self.bookmarks.as_ref()).await?;
 
-        let head_commits: Vec<_> = namedag
-            .heads(namedag.master_group().await?)
+        let head_commits: Vec<_> = dag
+            .heads(dag.master_group().await?)
             .await?
             .iter()
             .await?
@@ -336,7 +336,7 @@ impl SegmentedChangelogTailer {
             .await?;
 
         let changeset_fetcher = {
-            let namedag_max_gen = stream::iter(head_commits.iter().map(Ok::<_, Error>))
+            let dag_max_gen = stream::iter(head_commits.iter().map(Ok::<_, Error>))
                 .try_fold(0, {
                     let fetcher = &self.changeset_fetcher;
                     move |max, cs_id| async move {
@@ -360,7 +360,7 @@ impl SegmentedChangelogTailer {
             })
             .await?;
 
-            if heads_min_gen.saturating_sub(namedag_max_gen) > 1000 {
+            if heads_min_gen.saturating_sub(dag_max_gen) > 1000 {
                 let repo_bounds = self
                     .bulk_fetch
                     .get_repo_bounds_after_commits(ctx, head_commits)
@@ -403,18 +403,13 @@ impl SegmentedChangelogTailer {
         // of writing to the IdMap.
         // Thus, if OOMs happen here, the IdMap may need to flush writes to the DB
         // at interesting points.
-        let changed = namedag.add_heads(&parent_fetcher, &heads).await?;
+        let changed = dag.add_heads(&parent_fetcher, &heads).await?;
 
         self.clone_hints
-            .add_hints(
-                ctx,
-                &namedag,
-                idmap_version,
-                self.bonsai_hg_mapping.as_ref(),
-            )
+            .add_hints(ctx, &dag, idmap_version, self.bonsai_hg_mapping.as_ref())
             .await?;
 
-        let (idmap, iddag) = namedag.into_idmap_dag();
+        let (idmap, iddag) = dag.into_idmap_dag();
         let idmap = idmap.finish().await?;
 
         if !changed {

@@ -7,7 +7,7 @@
 
 use std::sync::Arc;
 
-use crate::namedag::AbstractDag;
+use crate::dag::AbstractDag;
 use crate::IdDag;
 use crate::IdDagStore;
 

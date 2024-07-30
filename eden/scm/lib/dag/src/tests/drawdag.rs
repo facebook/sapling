@@ -8,7 +8,7 @@
 use std::collections::HashMap;
 use std::collections::HashSet;
 
-use crate::namedag::MemDag;
+use crate::dag::MemDag;
 use crate::ops::Parents;
 use crate::Result;
 use crate::Vertex;

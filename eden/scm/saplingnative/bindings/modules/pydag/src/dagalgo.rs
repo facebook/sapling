@@ -196,7 +196,7 @@ py_class!(pub class dagalgo |py| {
             None
         };
         let dag = self.dag(py);
-        dag::render::render_namedag(dag.as_ref(), get_message).map_pyerr(py)
+        dag::render::render_dag(dag.as_ref(), get_message).map_pyerr(py)
     }
 
     /// segments(nameset, maxlevel=255) -> [segment]

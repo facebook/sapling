@@ -104,16 +104,12 @@ pub async fn vertexlist_from_seedheads(
     Ok(heads_with_options)
 }
 
-pub type ServerDag = crate::dag::namedag::AbstractDag<MemIdDag, IdMapWrapper, (), ()>;
+pub type ServerDag = crate::dag::dag::AbstractDag<MemIdDag, IdMapWrapper, (), ()>;
 
 /// Convert a server IdDag and IdMap to a Dag
 /// Note: you will need to call Dag::map().flush_writes
 /// to write out updates to the IdMap
-pub fn server_namedag(
-    ctx: CoreContext,
-    iddag: MemIdDag,
-    idmap: Arc<dyn IdMap>,
-) -> Result<ServerDag> {
+pub fn server_dag(ctx: CoreContext, iddag: MemIdDag, idmap: Arc<dyn IdMap>) -> Result<ServerDag> {
     let idmap = IdMapWrapper::new(ctx, idmap);
     DagBuilder::new_with_idmap_dag(idmap, iddag)
         .build()

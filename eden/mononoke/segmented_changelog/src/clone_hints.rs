@@ -128,7 +128,7 @@ impl CloneHints {
     pub(crate) async fn add_hints(
         &self,
         ctx: &CoreContext,
-        namedag: &ServerDag,
+        dag: &ServerDag,
         idmap_version: IdMapVersion,
         bonsai_hg_mapping: &dyn BonsaiHgMapping,
     ) -> Result<()> {
@@ -138,7 +138,7 @@ impl CloneHints {
         );
 
         // Similar to `export_pull_data` in the dag crate.
-        let id_dag = namedag.dag();
+        let id_dag = dag.dag();
         let all_ids = id_dag.all().context("error computing all() ids")?;
         let flat_segments = id_dag
             .idset_to_flat_segments(all_ids)
@@ -170,7 +170,7 @@ impl CloneHints {
             new_ids.len()
         );
 
-        let idmap_entries = namedag
+        let idmap_entries = dag
             .map()
             .as_inner()
             .find_many_changeset_ids(ctx, new_ids.clone())

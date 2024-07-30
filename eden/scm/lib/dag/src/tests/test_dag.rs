@@ -30,7 +30,7 @@ use crate::ops::IdConvert;
 use crate::protocol;
 use crate::protocol::RemoteIdConvertProtocol;
 #[cfg(feature = "render")]
-use crate::render::render_namedag;
+use crate::render::render_dag;
 use crate::tests::DrawDag;
 use crate::CloneData;
 use crate::Dag;
@@ -230,7 +230,7 @@ impl TestDag {
     #[cfg(feature = "render")]
     /// Render the graph.
     pub fn render_graph(&self) -> String {
-        render_namedag(&self.dag, |v| {
+        render_dag(&self.dag, |v| {
             Some(
                 non_blocking_result(self.dag.vertex_id(v.clone()))
                     .unwrap()
@@ -334,12 +334,8 @@ impl TestDag {
 
     /// Describe segments at the given level and group as a string.
     pub fn debug_segments(&self, level: Level, group: Group) -> String {
-        let lines = crate::namedag::debug_segments_by_level_group(
-            &self.dag.dag,
-            &self.dag.map,
-            level,
-            group,
-        );
+        let lines =
+            crate::dag::debug_segments_by_level_group(&self.dag.dag, &self.dag.map, level, group);
         lines
             .iter()
             .map(|l| format!("\n        {}", l))
@@ -522,7 +518,7 @@ impl From<Set> for VertexListWithOptions {
 }
 
 fn to_head_opts(set: Set) -> VertexListWithOptions {
-    use crate::nameset::SyncSetQuery;
+    use crate::set::SyncSetQuery;
     let heads_vec = set.iter().unwrap().collect::<Result<Vec<_>>>().unwrap();
     VertexListWithOptions::from(heads_vec).with_desired_group(Group::MASTER)
 }

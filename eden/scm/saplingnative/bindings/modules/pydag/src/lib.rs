@@ -22,12 +22,12 @@ pub mod commits;
 pub mod dagalgo;
 pub mod idmap;
 mod impl_into;
-pub mod nameset;
 mod parents;
+pub mod set;
 pub mod spanset;
 mod verlink;
 
-pub use nameset::Names;
+pub use set::Names;
 pub use spanset::spans;
 pub use spanset::Spans;
 pub(crate) use verlink::VerLink;
@@ -45,7 +45,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     m.add_class::<parents::parents>(py)?;
 
     // smartset-like types
-    m.add_class::<nameset::nameset>(py)?;
+    m.add_class::<set::nameset>(py)?;
     m.add_class::<spanset::spans>(py)?;
 
     // maximum Id
@@ -88,7 +88,7 @@ fn configure(py: Python, config: ImplInto<Arc<dyn Config + Send + Sync>>) -> PyR
         .get_or_default::<bool>("experimental", "pydag-use-legacy-union-order")
         .map_pyerr(py)?;
     if use_legacy_order {
-        nameset::USE_LEGACY_UNION_ORDER.store(true, std::sync::atomic::Ordering::Release);
+        set::USE_LEGACY_UNION_ORDER.store(true, std::sync::atomic::Ordering::Release);
     }
     Ok(PyNone)
 }

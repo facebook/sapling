@@ -8,8 +8,8 @@
 use changeset_fetcher::ArcChangesetFetcher;
 use context::CoreContext;
 
+use crate::dag::dag::MemDag;
 use crate::dag::errors::BackendError;
-use crate::dag::namedag::MemDag;
 use crate::dag::ops::Parents;
 use crate::dag::Result;
 use crate::dag::Vertex;

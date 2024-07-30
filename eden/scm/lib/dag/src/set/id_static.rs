@@ -396,10 +396,10 @@ pub(crate) mod tests {
     use super::super::tests::*;
     use super::super::Set;
     use super::*;
-    use crate::nameset::difference::DifferenceSet;
-    use crate::nameset::intersection::IntersectionSet;
-    use crate::nameset::slice::SliceSet;
-    use crate::nameset::union::UnionSet;
+    use crate::set::difference::DifferenceSet;
+    use crate::set::intersection::IntersectionSet;
+    use crate::set::slice::SliceSet;
+    use crate::set::union::UnionSet;
     use crate::tests::build_segments;
     use crate::Dag;
     use crate::DagAlgorithm;

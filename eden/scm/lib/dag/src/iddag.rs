@@ -31,6 +31,8 @@ use crate::iddagstore::IdDagStore;
 #[cfg(any(test, feature = "indexedlog-backend"))]
 use crate::iddagstore::IndexedLogStore;
 use crate::iddagstore::MemStore;
+use crate::idset;
+use crate::idset::Span;
 use crate::ops::Persist;
 use crate::ops::StorageVersion;
 #[cfg(any(test, feature = "indexedlog-backend"))]
@@ -39,8 +41,6 @@ use crate::segment::FlatSegment;
 use crate::segment::PreparedFlatSegments;
 use crate::segment::Segment;
 use crate::segment::SegmentFlags;
-use crate::spanset;
-use crate::spanset::Span;
 use crate::types_ext::PreparedFlatSegmentsExt;
 use crate::Error::Programming;
 use crate::IdSegment;
@@ -576,7 +576,7 @@ impl<Store: IdDagStore> IdDag<Store> {
 
         let push = |seg: FlatSegment| segments.push(seg);
         let span_iter = set.as_spans().iter().cloned();
-        spanset::intersect_iter(seg_iter, span_iter, push);
+        idset::intersect_iter(seg_iter, span_iter, push);
 
         Ok(PreparedFlatSegments {
             segments: segments.into_iter().collect(),

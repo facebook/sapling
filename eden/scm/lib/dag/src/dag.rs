@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-//! # namedag
+//! # dag
 //!
 //! Combination of IdMap and IdDag.
 
@@ -44,9 +44,6 @@ use crate::iddagstore::IdDagStore;
 use crate::idmap::CoreMemIdMap;
 use crate::idmap::IdMapAssignHead;
 use crate::idmap::IdMapWrite;
-use crate::nameset::hints::Flags;
-use crate::nameset::hints::Hints;
-use crate::nameset::Set;
 use crate::ops::CheckIntegrity;
 use crate::ops::DagAddHeads;
 use crate::ops::DagAlgorithm;
@@ -72,6 +69,9 @@ use crate::protocol::Process;
 use crate::protocol::RemoteIdConvertProtocol;
 use crate::segment::PreparedFlatSegments;
 use crate::segment::SegmentFlags;
+use crate::set::hints::Flags;
+use crate::set::hints::Hints;
+use crate::set::Set;
 use crate::types_ext::PreparedFlatSegmentsExt;
 use crate::utils;
 use crate::Error::NeedSlowPath;
@@ -85,16 +85,16 @@ use crate::VertexOptions;
 
 mod builder;
 #[cfg(any(test, feature = "indexedlog-backend"))]
-mod indexedlog_namedag;
-mod mem_namedag;
+mod indexedlog_dag;
+mod mem_dag;
 
 pub use builder::DagBuilder;
 #[cfg(any(test, feature = "indexedlog-backend"))]
-pub use indexedlog_namedag::Dag;
+pub use indexedlog_dag::Dag;
 #[cfg(any(test, feature = "indexedlog-backend"))]
-pub use indexedlog_namedag::IndexedLogDagPath;
-pub use mem_namedag::MemDag;
-pub use mem_namedag::MemDagPath;
+pub use indexedlog_dag::IndexedLogDagPath;
+pub use mem_dag::MemDag;
+pub use mem_dag::MemDagPath;
 
 pub struct AbstractDag<I, M, P, S>
 where

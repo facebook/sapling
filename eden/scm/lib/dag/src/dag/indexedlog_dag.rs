@@ -44,7 +44,7 @@ impl Open for IndexedLogDagPath {
     type OpenTarget = Dag;
 
     fn open(&self) -> Result<Self::OpenTarget> {
-        crate::failpoint!("dag-namedag-open");
+        crate::failpoint!("dag-dag-open");
         let path = &self.0;
         let opts = Dag::default_open_options();
         tracing::debug!(target: "dag::open",  "open at {:?}", path.display());

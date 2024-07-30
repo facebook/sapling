@@ -19,9 +19,9 @@ pub use renderdag::GraphRowRenderer;
 pub use renderdag::Renderer;
 pub use renderdag::*;
 
-use crate::nameset::SyncSetQuery;
 #[cfg(any(test, feature = "indexedlog-backend"))]
 use crate::ops::IdConvert;
+use crate::set::SyncSetQuery;
 #[cfg(any(test, feature = "indexedlog-backend"))]
 use crate::Dag;
 use crate::DagAlgorithm;
@@ -35,7 +35,7 @@ use crate::Set;
 use crate::Vertex;
 
 /// Render a Dag or MemDag into a String.
-pub fn render_namedag(
+pub fn render_dag(
     dag: &(impl DagAlgorithm + ?Sized),
     get_message: impl Fn(&Vertex) -> Option<String>,
 ) -> Result<String> {
@@ -72,7 +72,7 @@ pub fn render_namedag(
 /// The `GraphRow` can serialize to other formats.
 ///
 /// If `subset` is provided, only render a subset of the graph.
-pub fn render_namedag_structured(
+pub fn render_dag_structured(
     dag: &dyn DagAlgorithm,
     subset: Option<Set>,
 ) -> Result<Vec<GraphRow<Vertex>>> {

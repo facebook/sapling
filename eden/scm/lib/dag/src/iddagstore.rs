@@ -11,22 +11,22 @@ use crate::errors::bug;
 use crate::errors::programming;
 use crate::id::Group;
 use crate::id::Id;
+use crate::idset::Span;
 use crate::segment::Segment;
 use crate::segment::SegmentFlags;
-use crate::spanset::Span;
 use crate::IdSet;
 use crate::Level;
 use crate::Result;
 use crate::VerLink;
 
-mod in_process_store;
+mod mem_store;
 
 #[cfg(any(test, feature = "indexedlog-backend"))]
 pub(crate) mod indexedlog_store;
 
-pub(crate) use in_process_store::MemStore;
 #[cfg(any(test, feature = "indexedlog-backend"))]
 pub(crate) use indexedlog_store::IndexedLogStore;
+pub(crate) use mem_store::MemStore;
 
 pub trait IdDagStore: Send + Sync + 'static {
     /// Maximum level segment in the store
