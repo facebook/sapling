@@ -181,7 +181,16 @@ class SaplingRemoteAPIService(baseservice.BaseService):
         )
 
     def getworkspaces(self, reponame, prefix):
-        return self.fallback.getworkspaces(reponame, prefix)
+        """Fetch Commit Cloud workspaces for the given prefix"""
+        self.ui.debug(
+            "sending 'get_workspaces' request on Sapling Remote API\n",
+            component="commitcloud",
+        )
+
+        response = self.repo.edenapi.cloudworkspaces(prefix, reponame)
+        # Put everything into "workspaces" key, so it's easier to parse in the client
+        workspaces = {"workspaces": self._getdatafromresponse(response)}
+        return self._makeworkspacesinfo(workspaces)
 
     def getworkspace(self, reponame, workspacename):
         self.ui.debug(
@@ -260,3 +269,12 @@ class SaplingRemoteAPIService(baseservice.BaseService):
         else:
             version = response["version"]
         return version
+
+    def _getdatafromresponse(self, response):
+        if "data" in response:
+            if "Ok" in response["data"]:
+                return response["data"]["Ok"]
+            else:
+                raise error.Abort(response["data"]["Err"]["message"])
+
+        raise error.Abort("No data received from server")

@@ -32,6 +32,7 @@ use edenapi_types::BookmarkEntry;
 use edenapi_types::BookmarkRequest;
 use edenapi_types::CloneData;
 use edenapi_types::CloudWorkspaceRequest;
+use edenapi_types::CloudWorkspacesRequest;
 use edenapi_types::CommitGraphEntry;
 use edenapi_types::CommitGraphRequest;
 use edenapi_types::CommitGraphSegmentsEntry;
@@ -96,6 +97,7 @@ use edenapi_types::UploadTreeEntry;
 use edenapi_types::UploadTreeRequest;
 use edenapi_types::UploadTreeResponse;
 use edenapi_types::WorkspaceDataResponse;
+use edenapi_types::WorkspacesDataResponse;
 use futures::future::BoxFuture;
 use futures::prelude::*;
 use hg_http::http_client;
@@ -170,6 +172,7 @@ mod paths {
     pub const DOWNLOAD_FILE: &str = "download/file";
     pub const BLAME: &str = "blame";
     pub const CLOUD_WORKSPACE: &str = "cloud/workspace";
+    pub const CLOUD_WORKSPACES: &str = "cloud/workspaces";
     pub const CLOUD_UPDATE_REFERENCES: &str = "cloud/update_references";
     pub const CLOUD_REFERENCES: &str = "cloud/references";
     pub const SUFFIXQUERY: &str = "suffix_query";
@@ -1684,6 +1687,29 @@ impl SaplingRemoteApi for Client {
             .map_err(SaplingRemoteApiError::RequestSerializationFailed)?;
 
         self.fetch_single::<WorkspaceDataResponse>(request).await
+    }
+
+    async fn cloud_workspaces(
+        &self,
+        prefix: String,
+        reponame: String,
+    ) -> Result<WorkspacesDataResponse, SaplingRemoteApiError> {
+        tracing::info!(
+            "Requesting workspaces with prefix {} in repo {} ",
+            prefix,
+            reponame
+        );
+        let url = self.build_url(paths::CLOUD_WORKSPACES)?;
+        let workspace_req = CloudWorkspacesRequest {
+            prefix: prefix.to_string(),
+            reponame: reponame.to_string(),
+        };
+        let request = self
+            .configure_request(self.inner.client.post(url))?
+            .cbor(&workspace_req.to_wire())
+            .map_err(SaplingRemoteApiError::RequestSerializationFailed)?;
+
+        self.fetch_single::<WorkspacesDataResponse>(request).await
     }
 
     async fn cloud_references(
