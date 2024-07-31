@@ -19,6 +19,7 @@ rust_library(
         "//remote_execution/client_lib/wrappers/rust:re_client_lib",
         "//common/rust/shed/fbinit:fbinit",
         "//eden/mononoke/server/context:context",
+        "//common/rust/shed/futures_ext:futures_ext",
         "fbsource//third-party/rust:slog",
         "fbsource//third-party/rust:tokio",
     ])),
