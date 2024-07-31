@@ -9,6 +9,7 @@ use anyhow::Error;
 use mercurial_types::HgAugmentedManifestId;
 use mercurial_types::HgFileNodeId;
 use mononoke_types::ChangesetId;
+use mononoke_types::MPath;
 use mononoke_types::MPathElement;
 
 #[derive(thiserror::Error, Debug)]
@@ -19,8 +20,12 @@ pub enum CasChangesetUploaderErrorKind {
     DiffChangesetFailed(Error),
     #[error("Upload failed for filenode id: {0}, filename {1}, with error: {2}")]
     FileUploadFailed(HgFileNodeId, MPathElement, Error),
+    #[error("Upload failed for filenode id: {0}, path {1}, with error: {2}")]
+    FileUploadFailedWithFullPath(HgFileNodeId, MPath, Error),
     #[error("Upload failed for augmented manifest id: {0} with error: {1}")]
     TreeUploadFailed(HgAugmentedManifestId, Error),
+    #[error("Path not found: {0}")]
+    PathNotFound(MPath),
     #[error(transparent)]
     Error(#[from] Error),
 }

@@ -6,6 +6,7 @@
  */
 
 use anyhow::anyhow;
+use anyhow::Context;
 use anyhow::Result;
 #[cfg(not(fbcode_build))]
 use cas_client::DummyCasClient;
@@ -18,6 +19,7 @@ use clap::Args;
 use context::CoreContext;
 use mercurial_types::HgChangesetId;
 use mononoke_types::ChangesetId;
+use mononoke_types::MPath;
 use slog::info;
 
 use super::Repo;
@@ -35,6 +37,9 @@ pub struct CasStoreUploadArgs {
     /// Upload the entire changeset's working copy data recursively.
     #[clap(long)]
     full: bool,
+    /// Upload only the specified path (allowed for full uploads only)
+    #[clap(long, short, requires = "full")]
+    path: Option<String>,
     /// Verbose logging of the upload process (CAS) vs quiet output by default.
     #[clap(long)]
     verbose: bool,
@@ -83,12 +88,18 @@ pub async fn cas_store_upload(
         UploadPolicy::All
     };
 
+    let mut path = None;
+    if let Some(ref spath) = args.path {
+        path = Some(MPath::new(spath).with_context(|| anyhow!("Invalid path: {}", spath))?);
+    }
+
     let stats = if args.full {
         cas_changesets_uploader
             .upload_single_changeset_recursively(
                 ctx,
                 repo,
                 &changeset_id,
+                path,
                 upload_policy,
                 PriorLookupPolicy::All,
             )
