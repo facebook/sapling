@@ -99,6 +99,10 @@ impl HgFileContext {
         .map_err(MononokeError::from)
     }
 
+    pub fn file_header_metadata(&self) -> Bytes {
+        self.envelope.metadata().clone()
+    }
+
     pub async fn content_metadata(&self) -> Result<ContentMetadataV2, MononokeError> {
         let content_id = self.envelope.content_id();
         let fetch_key = filestore::FetchKey::Canonical(content_id);
