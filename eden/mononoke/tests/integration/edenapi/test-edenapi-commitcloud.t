@@ -26,6 +26,14 @@
   >         "bypass_readonly": ["$CLIENT0_ID_TYPE:$CLIENT0_ID_DATA"]
   >       }
   >     }
+  >   },
+  >  "workspaces": {
+  >     "repo/user/test/default": {
+  >       "actions": {
+  >         "read": ["$CLIENT0_ID_TYPE:$CLIENT0_ID_DATA"],
+  >         "write": ["$CLIENT0_ID_TYPE:$CLIENT0_ID_DATA"]
+  >       }
+  >     }
   >   }
   > }
   > ACLS

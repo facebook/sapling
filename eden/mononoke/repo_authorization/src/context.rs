@@ -536,20 +536,19 @@ impl AuthorizationContext {
                         Err(_) | Ok(None) => false,
                     };
                 }
-                let acl_check = match repo
-                    .commit_cloud()
-                    .commit_cloud_acl(&make_workspace_acl_name(workspace, reponame))
-                    .await
-                {
-                    Ok(Some(checker)) => {
-                        checker
-                            .check_set(ctx.metadata().identities(), &[action])
-                            .await
+                owner_check
+                    || match repo
+                        .commit_cloud()
+                        .commit_cloud_acl(&make_workspace_acl_name(workspace, reponame))
+                        .await
+                    {
+                        Ok(Some(checker)) => {
+                            checker
+                                .check_set(ctx.metadata().identities(), &[action])
+                                .await
+                        }
+                        Err(_) | Ok(None) => false,
                     }
-                    Err(_) | Ok(None) => false,
-                };
-
-                owner_check || acl_check
             }
             AuthorizationContext::Service(_service_name) => false,
             AuthorizationContext::ReadOnlyIdentity | AuthorizationContext::DraftOnlyIdentity => {

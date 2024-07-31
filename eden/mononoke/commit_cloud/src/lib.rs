@@ -84,7 +84,7 @@ impl CommitCloud {
             return Ok(res.into_workspace_data(&ctx.reponame));
         }
         Err(anyhow::anyhow!(
-            "Workspace {} does not exist",
+            "'get_workspace' failed: workspace {} does not exist",
             ctx.workspace
         ))
     }
@@ -131,14 +131,14 @@ impl CommitCloud {
         }
         if base_version > latest_version && latest_version == 0 {
             return Err(anyhow::anyhow!(
-                "Workspace {} has been removed or renamed",
+                "'get_references' failed: workspace {} has been removed or renamed",
                 ctx.workspace.clone()
             ));
         }
 
         if base_version > latest_version {
             return Err(anyhow::anyhow!(
-                "Base version {} is greater than latest version {}",
+                "'get_references' failed: base version {} is greater than latest version {}",
                 base_version,
                 latest_version
             ));

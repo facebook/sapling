@@ -22,6 +22,16 @@ impl HgRepoContext {
         reponame: &str,
     ) -> Result<WorkspaceData, MononokeError> {
         let ctx = CommitCloudContext::new(workspace, reponame)?;
+        let authz = self.repo().authorization_context();
+        authz
+            .require_commitcloud_operation(
+                self.ctx(),
+                &self.repo().repo(),
+                workspace,
+                reponame,
+                "read",
+            )
+            .await?;
         Ok(self
             .repo()
             .inner_repo()
@@ -47,6 +57,16 @@ impl HgRepoContext {
         &self,
         params: &GetReferencesParams,
     ) -> Result<ReferencesData, MononokeError> {
+        let authz = self.repo().authorization_context();
+        authz
+            .require_commitcloud_operation(
+                self.ctx(),
+                &self.repo().repo(),
+                &params.workspace,
+                &params.reponame,
+                "read",
+            )
+            .await?;
         let ctx = CommitCloudContext::new(&params.workspace, &params.reponame)?;
         Ok(self
             .repo()
@@ -64,6 +84,18 @@ impl HgRepoContext {
         if params.version == 0 {
             ctx.check_workspace_name()?;
         }
+
+        let authz = self.repo().authorization_context();
+        authz
+            .require_commitcloud_operation(
+                self.ctx(),
+                &self.repo().repo(),
+                &params.workspace,
+                &params.reponame,
+                "write",
+            )
+            .await?;
+
         Ok(self
             .repo()
             .inner_repo()
