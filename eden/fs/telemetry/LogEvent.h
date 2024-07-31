@@ -454,4 +454,20 @@ struct SaplingBlobDownloadEvent {
   }
 };
 
+/**
+ * Used to log user actions on e-Menu
+ */
+struct EMenuActionEvent {
+  static constexpr const char* type = "e_menu_action_events";
+  enum ActionType : uint8_t { EMenuClick = 0 };
+
+  ActionType action_type;
+
+  void populate(DynamicEvent& event) const {
+    if (action_type == EMenuClick) {
+      event.addString("action_type", "EMenuClick");
+    }
+  }
+};
+
 } // namespace facebook::eden
