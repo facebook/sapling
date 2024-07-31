@@ -130,6 +130,12 @@ class WindowsNotifier : public Notifier {
    */
   void updateIconColor(std::optional<size_t> numActive);
 
+  /**
+   * Logs event to Scuba
+   */
+  template <typename Event>
+  void logEvent(const Event& event);
+
  private:
   void appendInodePopulationReportMenu(HMENU hMenu);
   void appendOptionsMenu(HMENU hMenu);

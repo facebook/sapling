@@ -655,6 +655,13 @@ void WindowsNotifier::updateIconColor(std::optional<size_t> numActive) {
   }
 }
 
+template <typename Event>
+void WindowsNotifier::logEvent(const Event& event) {
+  if (structuredLogger_) {
+    structuredLogger_->logEvent(event);
+  }
+}
+
 void WindowsNotifier::changeIconColor(UINT iconType) {
   NOTIFYICONDATAW iconData = {};
   iconData.cbSize = sizeof(iconData);
