@@ -55,7 +55,5 @@
 
 # Push all the changes made so far
   $ git_client push origin --all --follow-tags
-  error: RPC failed; HTTP 500 curl 22 The requested URL returned error: 500
-  fatal: the remote end hung up unexpectedly
-  Everything up-to-date
-  [1]
+  To https://localhost:$LOCAL_PORT/repos/git/ro/repo.git
+     611de34..3b75f0b  master -> master

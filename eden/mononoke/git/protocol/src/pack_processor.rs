@@ -30,6 +30,7 @@ use gix_hash::Kind;
 use gix_hash::ObjectId;
 use gix_object::encode::loose_header;
 use gix_object::ObjectRef;
+use gix_object::WriteTo;
 use gix_pack::cache::Never;
 use gix_pack::data;
 use gix_pack::data::decode::entry::ResolvedBase;
@@ -106,10 +107,12 @@ async fn fetch_prereq_objects(
                         .await;
                 match fallible_git_bytes {
                     Ok(git_bytes) => {
-                        let kind = ObjectRef::from_loose(&git_bytes)
-                            .context("Failure in converting bytes into git object")?
-                            .kind();
-                        anyhow::Ok(Some((object_id, (git_bytes, kind))))
+                        let object = ObjectRef::from_loose(&git_bytes)
+                            .context("Failure in converting bytes into git object")?;
+                        let kind = object.kind();
+                        let mut git_bytes = Vec::new();
+                        object.write_to(git_bytes.by_ref())?;
+                        anyhow::Ok(Some((object_id, (Bytes::from(git_bytes), kind))))
                     }
                     // The object might not be present in the data store since its an inpack object
                     _ => anyhow::Ok(None),
