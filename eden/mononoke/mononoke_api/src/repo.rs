@@ -146,11 +146,7 @@ use repo_sparse_profiles::ArcRepoSparseProfiles;
 use repo_sparse_profiles::RepoSparseProfiles;
 use repo_sparse_profiles::RepoSparseProfilesArc;
 use repo_stats_logger::RepoStatsLogger;
-use segmented_changelog::CloneData;
-use segmented_changelog::DisabledSegmentedChangelog;
 use segmented_changelog::Location;
-use segmented_changelog::SegmentedChangelog;
-use segmented_changelog::SegmentedChangelogRef;
 use slog::debug;
 use slog::error;
 use sql_construct::SqlConstruct;
@@ -230,7 +226,6 @@ pub struct Repo {
         dyn RepoPermissionChecker,
         dyn RepoLock,
         RepoConfig,
-        dyn SegmentedChangelog,
         RepoEphemeralStore,
         MutableRenames,
         RepoCrossRepo,
@@ -500,7 +495,6 @@ impl Repo {
         let inner = InnerRepo {
             blob_repo,
             repo_config: Arc::new(config.clone()),
-            segmented_changelog: Arc::new(DisabledSegmentedChangelog::new()),
             ephemeral_store: Arc::new(RepoEphemeralStore::disabled(repo_id)),
             mutable_renames: Arc::new(MutableRenames::new_test(
                 repo_id,
@@ -879,11 +873,6 @@ impl RepoContext {
     /// The ephemeral store for the referenced repository
     pub fn repo_ephemeral_store_arc(&self) -> ArcRepoEphemeralStore {
         self.repo.repo_ephemeral_store_arc()
-    }
-
-    /// The segmeneted changelog for the referenced repository.
-    pub fn segmented_changelog(&self) -> &dyn SegmentedChangelog {
-        self.repo.segmented_changelog()
     }
 
     /// The commit sync mapping for the referenced repository
@@ -1821,39 +1810,6 @@ impl RepoContext {
                     .collect::<HashMap<ChangesetId, Result<_, MononokeError>>>()
             })
             .map_err(MononokeError::from)?)
-    }
-
-    pub async fn segmented_changelog_clone_data(
-        &self,
-    ) -> Result<(CloneData<ChangesetId>, HashMap<ChangesetId, HgChangesetId>), MononokeError> {
-        let segmented_changelog = self.repo.segmented_changelog();
-        let clone_data = segmented_changelog
-            .clone_data(&self.ctx)
-            .await
-            .map_err(MononokeError::from)?;
-        Ok(clone_data)
-    }
-
-    pub async fn segmented_changelog_disabled(&self) -> Result<bool, MononokeError> {
-        let segmented_changelog = self.repo.segmented_changelog();
-        let disabled = segmented_changelog
-            .disabled(&self.ctx)
-            .await
-            .map_err(MononokeError::from)?;
-        Ok(disabled)
-    }
-
-    pub async fn segmented_changelog_pull_data(
-        &self,
-        common: Vec<ChangesetId>,
-        missing: Vec<ChangesetId>,
-    ) -> Result<CloneData<ChangesetId>, MononokeError> {
-        let segmented_changelog = self.repo.segmented_changelog();
-        let pull_data = segmented_changelog
-            .pull_data(&self.ctx, common, missing)
-            .await
-            .map_err(MononokeError::from)?;
-        Ok(pull_data)
     }
 
     pub async fn derive_bulk(

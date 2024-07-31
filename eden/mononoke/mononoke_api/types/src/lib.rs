@@ -37,7 +37,6 @@ use repo_identity::RepoIdentity;
 use repo_lock::RepoLock;
 use repo_permission_checker::RepoPermissionChecker;
 use repo_sparse_profiles::RepoSparseProfiles;
-use segmented_changelog_types::SegmentedChangelog;
 use sql_query_config::SqlQueryConfig;
 use streaming_clone::StreamingClone;
 
@@ -77,9 +76,6 @@ pub struct InnerRepo {
 
     #[facet]
     pub repo_config: RepoConfig,
-
-    #[facet]
-    pub segmented_changelog: dyn SegmentedChangelog,
 
     #[facet]
     pub ephemeral_store: RepoEphemeralStore,

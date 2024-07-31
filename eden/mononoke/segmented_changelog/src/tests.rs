@@ -11,10 +11,11 @@ use std::time::Duration;
 use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Result;
-use blobrepo::AsBlobRepo;
 use blobrepo::BlobRepo;
+use bonsai_hg_mapping::BonsaiHgMapping;
 use bonsai_hg_mapping::BonsaiHgMappingArc;
 use bookmarks::BookmarkKey;
+use bookmarks::Bookmarks;
 use bookmarks::BookmarksArc;
 use bulkops::ChangesetBulkFetcher;
 use caching_ext::CacheHandlerFactory;
@@ -22,11 +23,13 @@ use changeset_fetcher::ChangesetFetcherArc;
 use changeset_fetcher::ChangesetFetcherRef;
 use changeset_fetcher::PrefetchedChangesetsFetcher;
 use changesets::ChangesetEntry;
+use changesets::Changesets;
 use changesets::ChangesetsArc;
 use changesets::ChangesetsRef;
 use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use fbinit::FacebookInit;
+use filestore::FilestoreConfig;
 use fixtures::set_bookmark;
 use fixtures::BranchEven;
 use fixtures::Linear;
@@ -48,7 +51,10 @@ use mononoke_types::RepositoryId;
 use once_cell::sync::Lazy;
 use phases::PhasesArc;
 use phases::PhasesRef;
+use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreRef;
+use repo_derived_data::RepoDerivedData;
+use repo_identity::RepoIdentity;
 use repo_identity::RepoIdentityRef;
 use sql_construct::SqlConstruct;
 use sql_ext::replication::NoReplicaLagMonitor;
@@ -78,6 +84,34 @@ use crate::MemIdDag;
 use crate::SeedHead;
 use crate::SegmentedChangelog;
 use crate::SegmentedChangelogRef;
+
+#[facet::container]
+#[derive(Clone)]
+pub struct SegmentedChangelogTestRepo {
+    #[facet]
+    pub segmented_changelog: dyn SegmentedChangelog,
+
+    #[facet]
+    pub bookmarks: dyn Bookmarks,
+
+    #[facet]
+    pub bonsai_hg_mapping: dyn BonsaiHgMapping,
+
+    #[facet]
+    pub changesets: dyn Changesets,
+
+    #[facet]
+    pub filestore_config: FilestoreConfig,
+
+    #[facet]
+    pub repo_blobstore: RepoBlobstore,
+
+    #[facet]
+    pub repo_identity: RepoIdentity,
+
+    #[facet]
+    pub repo_derived_data: RepoDerivedData,
+}
 
 trait SegmentedChangelogExt {
     async fn head(&self, ctx: &CoreContext) -> Result<ChangesetId>;
@@ -373,18 +407,17 @@ async fn test_build_idmap(fb: FacebookInit) -> Result<()> {
 #[fbinit::test]
 async fn test_is_ancestor(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
-    let repo = MergeUneven::get_inner_repo(fb).await;
+    let repo: SegmentedChangelogTestRepo = MergeUneven::get_custom_test_repo(fb).await;
     let sc = repo.segmented_changelog();
-    let blobrepo = repo.as_blob_repo();
 
     // Graph looks like:
     // a -> b -> c
     //  \-> d -> e
-    let a = resolve_cs_id(&ctx, &blobrepo, "15c40d0abc36d47fb51c8eaec51ac7aad31f669c").await?;
-    let b = resolve_cs_id(&ctx, &blobrepo, "d7542c9db7f4c77dab4b315edd328edf1514952f").await?;
-    let c = resolve_cs_id(&ctx, &blobrepo, "b65231269f651cfe784fd1d97ef02a049a37b8a0").await?;
-    let d = resolve_cs_id(&ctx, &blobrepo, "3cda5c78aa35f0f5b09780d971197b51cad4613a").await?;
-    let e = resolve_cs_id(&ctx, &blobrepo, "1d8a907f7b4bf50c6a09c16361e2205047ecc5e5").await?;
+    let a = resolve_cs_id(&ctx, &repo, "15c40d0abc36d47fb51c8eaec51ac7aad31f669c").await?;
+    let b = resolve_cs_id(&ctx, &repo, "d7542c9db7f4c77dab4b315edd328edf1514952f").await?;
+    let c = resolve_cs_id(&ctx, &repo, "b65231269f651cfe784fd1d97ef02a049a37b8a0").await?;
+    let d = resolve_cs_id(&ctx, &repo, "3cda5c78aa35f0f5b09780d971197b51cad4613a").await?;
+    let e = resolve_cs_id(&ctx, &repo, "1d8a907f7b4bf50c6a09c16361e2205047ecc5e5").await?;
 
     assert_eq!(sc.is_ancestor(&ctx, a, c).await?, None);
     assert!(sc.build_up_to_heads(&ctx, &[c, e]).await?);
@@ -678,34 +711,32 @@ async fn test_build_incremental_from_scratch(fb: FacebookInit) -> Result<()> {
 
     {
         // linear
-        let inner = Linear::get_inner_repo(fb).await;
-        let blobrepo = inner.as_blob_repo();
-        let sc = inner.segmented_changelog();
+        let repo: SegmentedChangelogTestRepo = Linear::get_custom_test_repo(fb).await;
+        let sc = repo.segmented_changelog();
 
         let known_cs =
-            resolve_cs_id(&ctx, &blobrepo, "79a13814c5ce7330173ec04d279bf95ab3f652fb").await?;
+            resolve_cs_id(&ctx, &repo, "79a13814c5ce7330173ec04d279bf95ab3f652fb").await?;
         let distance: u64 = 4;
         let answer = sc
             .location_to_changeset_id(&ctx, Location::new(known_cs, distance))
             .await?;
         let expected_cs =
-            resolve_cs_id(&ctx, &blobrepo, "0ed509bf086fadcb8a8a5384dc3b550729b0fc17").await?;
+            resolve_cs_id(&ctx, &repo, "0ed509bf086fadcb8a8a5384dc3b550729b0fc17").await?;
         assert_eq!(answer, expected_cs);
     }
     {
         // merge_uneven
-        let inner = MergeUneven::get_inner_repo(fb).await;
-        let blobrepo = inner.as_blob_repo();
-        let sc = inner.segmented_changelog();
+        let repo: SegmentedChangelogTestRepo = MergeUneven::get_custom_test_repo(fb).await;
+        let sc = repo.segmented_changelog();
 
         let known_cs =
-            resolve_cs_id(&ctx, &blobrepo, "264f01429683b3dd8042cb3979e8bf37007118bc").await?;
+            resolve_cs_id(&ctx, &repo, "264f01429683b3dd8042cb3979e8bf37007118bc").await?;
         let distance: u64 = 5;
         let answer = sc
             .location_to_changeset_id(&ctx, Location::new(known_cs, distance))
             .await?;
         let expected_cs =
-            resolve_cs_id(&ctx, &blobrepo, "4f7f3fd428bec1a48f9314414b063c706d9c1aed").await?;
+            resolve_cs_id(&ctx, &repo, "4f7f3fd428bec1a48f9314414b063c706d9c1aed").await?;
         assert_eq!(answer, expected_cs);
     }
 
@@ -751,20 +782,19 @@ async fn test_two_repos(fb: FacebookInit) -> Result<()> {
 #[fbinit::test]
 async fn test_on_demand_update_commit_location_to_changeset_ids(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
-    let inner = Linear::get_inner_repo(fb).await;
-    let blobrepo = inner.as_blob_repo();
+    let repo: SegmentedChangelogTestRepo = Linear::get_custom_test_repo(fb).await;
 
     // commit modified10 (11)
-    let cs11 = resolve_cs_id(&ctx, &blobrepo, "79a13814c5ce7330173ec04d279bf95ab3f652fb").await?;
+    let cs11 = resolve_cs_id(&ctx, &repo, "79a13814c5ce7330173ec04d279bf95ab3f652fb").await?;
     // commit 10
-    let cs10 = resolve_cs_id(&ctx, &blobrepo, "a5ffa77602a066db7d5cfb9fb5823a0895717c5a").await?;
+    let cs10 = resolve_cs_id(&ctx, &repo, "a5ffa77602a066db7d5cfb9fb5823a0895717c5a").await?;
     // commit 6
-    let cs6 = resolve_cs_id(&ctx, &blobrepo, "eed3a8c0ec67b6a6fe2eb3543334df3f0b4f202b").await?;
+    let cs6 = resolve_cs_id(&ctx, &repo, "eed3a8c0ec67b6a6fe2eb3543334df3f0b4f202b").await?;
 
     // commit 5
-    let cs5 = resolve_cs_id(&ctx, &blobrepo, "cb15ca4a43a59acff5388cea9648c162afde8372").await?;
+    let cs5 = resolve_cs_id(&ctx, &repo, "cb15ca4a43a59acff5388cea9648c162afde8372").await?;
 
-    let sc = inner.segmented_changelog();
+    let sc = repo.segmented_changelog();
     let answer = try_join_all(vec![
         sc.location_to_changeset_id(&ctx, Location::new(cs10, 5)),
         sc.location_to_changeset_id(&ctx, Location::new(cs6, 1)),
@@ -774,8 +804,8 @@ async fn test_on_demand_update_commit_location_to_changeset_ids(fb: FacebookInit
     assert_eq!(answer, vec![cs5, cs5, cs5]);
 
     // Recreate the test repo to reset the segmented changelog
-    let inner = Linear::get_inner_repo(fb).await;
-    let sc = inner.segmented_changelog();
+    let repo: SegmentedChangelogTestRepo = Linear::get_custom_test_repo(fb).await;
+    let sc = repo.segmented_changelog();
     let answer = try_join_all(vec![
         sc.changeset_id_to_location(&ctx, vec![cs10], cs5),
         sc.changeset_id_to_location(&ctx, vec![cs6], cs5),
@@ -1110,13 +1140,11 @@ async fn test_manager_check_if_indexed(fb: FacebookInit) -> Result<()> {
 #[fbinit::test]
 async fn test_mismatched_heads(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
-    let inner = BranchEven::get_inner_repo(fb).await;
-    let blobrepo = inner.as_blob_repo();
+    let repo: SegmentedChangelogTestRepo = BranchEven::get_custom_test_repo(fb).await;
 
-    let dag = inner.segmented_changelog();
-    let h1 = resolve_cs_id(&ctx, &blobrepo, "4f7f3fd428bec1a48f9314414b063c706d9c1aed").await?;
-    let h1_parent =
-        resolve_cs_id(&ctx, &blobrepo, "b65231269f651cfe784fd1d97ef02a049a37b8a0").await?;
+    let dag = repo.segmented_changelog();
+    let h1 = resolve_cs_id(&ctx, &repo, "4f7f3fd428bec1a48f9314414b063c706d9c1aed").await?;
+    let h1_parent = resolve_cs_id(&ctx, &repo, "b65231269f651cfe784fd1d97ef02a049a37b8a0").await?;
 
     assert_eq!(
         dag.changeset_id_to_location(&ctx, vec![h1], h1_parent)
@@ -1125,7 +1153,7 @@ async fn test_mismatched_heads(fb: FacebookInit) -> Result<()> {
     );
 
     // should fail with the small limit for traversing from client heads
-    let h2 = resolve_cs_id(&ctx, &blobrepo, "16839021e338500b3cf7c9b871c8a07351697d68").await?;
+    let h2 = resolve_cs_id(&ctx, &repo, "16839021e338500b3cf7c9b871c8a07351697d68").await?;
 
     let f = dag.changeset_id_to_location(&ctx, vec![h1, h2], h1_parent);
 
@@ -1141,7 +1169,7 @@ async fn test_mismatched_heads(fb: FacebookInit) -> Result<()> {
     assert!(err.is::<crate::MismatchedHeadsError>());
 
     // should succeed as the client head not far from the commits in SC IdMap
-    let h2 = resolve_cs_id(&ctx, &blobrepo, "16839021e338500b3cf7c9b871c8a07351697d68").await?;
+    let h2 = resolve_cs_id(&ctx, &repo, "16839021e338500b3cf7c9b871c8a07351697d68").await?;
 
     let f = dag.changeset_id_to_location(&ctx, vec![h1, h2], h1_parent);
 

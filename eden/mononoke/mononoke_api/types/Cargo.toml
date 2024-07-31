@@ -39,6 +39,5 @@ repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity
 repo_lock = { version = "0.1.0", path = "../../repo_attributes/repo_lock/repo_lock" }
 repo_permission_checker = { version = "0.1.0", path = "../../repo_attributes/repo_permission_checker" }
 repo_sparse_profiles = { version = "0.1.0", path = "../../repo_attributes/repo_sparse_profiles" }
-segmented_changelog_types = { version = "0.1.0", path = "../../segmented_changelog/types" }
 sql_query_config = { version = "0.1.0", path = "../../repo_attributes/sql_query_config" }
 streaming_clone = { version = "0.1.0", path = "../../repo_client/streaming_clone" }

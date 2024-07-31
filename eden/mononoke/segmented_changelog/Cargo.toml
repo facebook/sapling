@@ -57,8 +57,10 @@ tokio = { version = "1.37.0", features = ["full", "test-util", "tracing"] }
 commit_graph = { version = "0.1.0", path = "../repo_attributes/commit_graph/commit_graph" }
 fbinit = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit-tokio = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+filestore = { version = "0.1.0", path = "../filestore" }
 fixtures = { version = "0.1.0", path = "../tests/fixtures" }
 maplit = "1.0"
 mononoke_types-mocks = { version = "0.1.0", path = "../mononoke_types/mocks" }
 once_cell = "1.12"
+repo_derived_data = { version = "0.1.0", path = "../repo_attributes/repo_derived_data" }
 tests_utils = { version = "0.1.0", path = "../tests/utils" }
