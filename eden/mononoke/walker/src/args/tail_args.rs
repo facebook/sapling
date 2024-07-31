@@ -21,6 +21,7 @@ use crate::args::arg_types::InternedTypeArg;
 use crate::args::arg_types::DEFAULT_INTERNED_TYPES_STR;
 use crate::args::graph_arg_types::NodeTypeArg;
 use crate::detail::checkpoint::CheckpointsByName;
+use crate::detail::checkpoint::CheckpointsVersion;
 use crate::detail::checkpoint::SqlCheckpoints;
 use crate::detail::tail::ChunkingParams;
 use crate::detail::tail::ClearStateParams;
@@ -170,6 +171,9 @@ pub struct CheckpointArgs {
     /// Checkpoint the walk covered bounds 1 in N steps.
     #[clap(long, default_value = "1")]
     pub checkpoint_sample_rate: u64,
+    /// Whether to look for checkpoints in table walker_checkpoints or walker_checkpoints_v2.
+    #[clap(long, default_value = "v1")]
+    pub checkpoint_version: CheckpointsVersion,
 }
 
 impl CheckpointArgs {
@@ -191,6 +195,7 @@ impl CheckpointArgs {
                 checkpoint_name.clone(),
                 sql_checkpoints,
                 self.checkpoint_sample_rate,
+                CheckpointsVersion::V1,
             )))
         } else {
             Ok(None)

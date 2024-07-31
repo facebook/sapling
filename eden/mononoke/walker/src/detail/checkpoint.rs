@@ -101,20 +101,33 @@ pub struct CheckpointsByName {
     pub checkpoint_name: String,
     sql_checkpoints: Arc<SqlCheckpoints>,
     pub sample_rate: u64,
+    version: CheckpointsVersion,
+}
+
+#[derive(Clone, Copy, Debug, clap::ValueEnum)]
+pub enum CheckpointsVersion {
+    V1,
+    V2,
 }
 
 impl CheckpointsByName {
-    pub fn new(checkpoint_name: String, sql_checkpoints: SqlCheckpoints, sample_rate: u64) -> Self {
+    pub fn new(
+        checkpoint_name: String,
+        sql_checkpoints: SqlCheckpoints,
+        sample_rate: u64,
+        version: CheckpointsVersion,
+    ) -> Self {
         Self {
             checkpoint_name,
             sql_checkpoints: Arc::new(sql_checkpoints),
             sample_rate,
+            version,
         }
     }
 
     pub async fn load(&self, repo_id: RepositoryId) -> Result<Option<Checkpoint>, Error> {
         self.sql_checkpoints
-            .load(repo_id, &self.checkpoint_name)
+            .load(repo_id, &self.checkpoint_name, self.version)
             .await
     }
 
@@ -159,7 +172,7 @@ impl CheckpointsByName {
         checkpoint: &Checkpoint,
     ) -> Result<(), Error> {
         self.sql_checkpoints
-            .insert(repo_id, &self.checkpoint_name, checkpoint)
+            .insert(repo_id, &self.checkpoint_name, checkpoint, self.version)
             .await
     }
 
@@ -169,7 +182,7 @@ impl CheckpointsByName {
         checkpoint: &Checkpoint,
     ) -> Result<(), Error> {
         self.sql_checkpoints
-            .update(repo_id, &self.checkpoint_name, checkpoint)
+            .update(repo_id, &self.checkpoint_name, checkpoint, self.version)
             .await
     }
 
@@ -179,7 +192,7 @@ impl CheckpointsByName {
         checkpoint: &Checkpoint,
     ) -> Result<(), Error> {
         self.sql_checkpoints
-            .finish(repo_id, &self.checkpoint_name, checkpoint)
+            .finish(repo_id, &self.checkpoint_name, checkpoint, self.version)
             .await
     }
 
@@ -216,13 +229,26 @@ impl SqlCheckpoints {
         &self,
         repo_id: RepositoryId,
         checkpoint_name: &str,
+        version: CheckpointsVersion,
     ) -> Result<Option<Checkpoint>, Error> {
-        let rows = SelectCheckpoint::query(
-            &self.connections.read_master_connection,
-            &repo_id,
-            &checkpoint_name,
-        )
-        .await?;
+        let rows = match version {
+            CheckpointsVersion::V1 => {
+                SelectCheckpoint::query(
+                    &self.connections.read_master_connection,
+                    &repo_id,
+                    &checkpoint_name,
+                )
+                .await?
+            }
+            CheckpointsVersion::V2 => {
+                SelectCheckpointV2::query(
+                    &self.connections.read_master_connection,
+                    &repo_id,
+                    &checkpoint_name,
+                )
+                .await?
+            }
+        };
 
         Ok(rows.into_iter().next().map(|row| Checkpoint {
             lower_bound: row.0,
@@ -241,21 +267,42 @@ impl SqlCheckpoints {
         // Query macro wants &String rather than &str
         checkpoint_name: &String,
         checkpoint: &Checkpoint,
+        version: CheckpointsVersion,
     ) -> Result<(), Error> {
-        InsertCheckpoint::query(
-            &self.connections.write_connection,
-            &[(
-                &repo_id,
-                checkpoint_name,
-                &checkpoint.lower_bound,
-                &checkpoint.upper_bound,
-                &checkpoint.create_timestamp,
-                &checkpoint.update_timestamp,
-                &checkpoint.update_run_number,
-                &checkpoint.update_chunk_number,
-            )],
-        )
-        .await?;
+        match version {
+            CheckpointsVersion::V1 => {
+                InsertCheckpoint::query(
+                    &self.connections.write_connection,
+                    &[(
+                        &repo_id,
+                        checkpoint_name,
+                        &checkpoint.lower_bound,
+                        &checkpoint.upper_bound,
+                        &checkpoint.create_timestamp,
+                        &checkpoint.update_timestamp,
+                        &checkpoint.update_run_number,
+                        &checkpoint.update_chunk_number,
+                    )],
+                )
+                .await?
+            }
+            CheckpointsVersion::V2 => {
+                InsertCheckpointV2::query(
+                    &self.connections.write_connection,
+                    &[(
+                        &repo_id,
+                        checkpoint_name,
+                        &checkpoint.lower_bound,
+                        &checkpoint.upper_bound,
+                        &checkpoint.create_timestamp,
+                        &checkpoint.update_timestamp,
+                        &checkpoint.update_run_number,
+                        &checkpoint.update_chunk_number,
+                    )],
+                )
+                .await?
+            }
+        };
         Ok(())
     }
 
@@ -265,19 +312,38 @@ impl SqlCheckpoints {
         // Query macro wants &String rather than &str
         checkpoint_name: &String,
         checkpoint: &Checkpoint,
+        version: CheckpointsVersion,
     ) -> Result<(), Error> {
-        UpdateCheckpoint::query(
-            &self.connections.write_connection,
-            &repo_id,
-            checkpoint_name,
-            &checkpoint.lower_bound,
-            &checkpoint.upper_bound,
-            &checkpoint.create_timestamp,
-            &checkpoint.update_timestamp,
-            &checkpoint.update_run_number,
-            &checkpoint.update_chunk_number,
-        )
-        .await?;
+        match version {
+            CheckpointsVersion::V1 => {
+                UpdateCheckpoint::query(
+                    &self.connections.write_connection,
+                    &repo_id,
+                    checkpoint_name,
+                    &checkpoint.lower_bound,
+                    &checkpoint.upper_bound,
+                    &checkpoint.create_timestamp,
+                    &checkpoint.update_timestamp,
+                    &checkpoint.update_run_number,
+                    &checkpoint.update_chunk_number,
+                )
+                .await?
+            }
+            CheckpointsVersion::V2 => {
+                UpdateCheckpointV2::query(
+                    &self.connections.write_connection,
+                    &repo_id,
+                    checkpoint_name,
+                    &checkpoint.lower_bound,
+                    &checkpoint.upper_bound,
+                    &checkpoint.create_timestamp,
+                    &checkpoint.update_timestamp,
+                    &checkpoint.update_run_number,
+                    &checkpoint.update_chunk_number,
+                )
+                .await?
+            }
+        };
         Ok(())
     }
 
@@ -287,18 +353,36 @@ impl SqlCheckpoints {
         // Query macro wants &String rather than &str
         checkpoint_name: &String,
         checkpoint: &Checkpoint,
+        version: CheckpointsVersion,
     ) -> Result<(), Error> {
-        FinishCheckpoint::query(
-            &self.connections.write_connection,
-            &repo_id,
-            checkpoint_name,
-            &checkpoint.lower_bound,
-            &checkpoint.upper_bound,
-            &checkpoint.update_timestamp,
-            &checkpoint.update_run_number,
-            &checkpoint.update_chunk_number,
-        )
-        .await?;
+        match version {
+            CheckpointsVersion::V1 => {
+                FinishCheckpoint::query(
+                    &self.connections.write_connection,
+                    &repo_id,
+                    checkpoint_name,
+                    &checkpoint.lower_bound,
+                    &checkpoint.upper_bound,
+                    &checkpoint.update_timestamp,
+                    &checkpoint.update_run_number,
+                    &checkpoint.update_chunk_number,
+                )
+                .await?
+            }
+            CheckpointsVersion::V2 => {
+                FinishCheckpointV2::query(
+                    &self.connections.write_connection,
+                    &repo_id,
+                    checkpoint_name,
+                    &checkpoint.lower_bound,
+                    &checkpoint.upper_bound,
+                    &checkpoint.update_timestamp,
+                    &checkpoint.update_run_number,
+                    &checkpoint.update_chunk_number,
+                )
+                .await?
+            }
+        };
         Ok(())
     }
 }
@@ -362,6 +446,63 @@ mononoke_queries! {
         SET lower_bound={lower_bound}, upper_bound={upper_bound}, last_finish_timestamp={last_finish_timestamp}, last_finish_run_number={last_finish_run_number}, last_finish_chunk_number={last_finish_chunk_number}
         WHERE repo_id={repo_id} AND checkpoint_name={checkpoint_name}"
     }
+
+    read SelectCheckpointV2(
+        repo_id: RepositoryId,
+        checkpoint_name: &str,
+    ) -> (u64, u64, Timestamp, Timestamp, u64, u64, Option<Timestamp>) {
+        "SELECT lower_bound, upper_bound, create_timestamp, update_timestamp, update_run_number, update_chunk_number, last_finish_timestamp
+        FROM walker_checkpoints_v2 WHERE repo_id={repo_id} AND checkpoint_name={checkpoint_name}"
+    }
+
+    write InsertCheckpointV2(
+        values: (
+            repo_id: RepositoryId,
+            checkpoint_name: String,
+            lower_bound: u64,
+            upper_bound: u64,
+            create_timestamp: Timestamp,
+            update_timestamp: Timestamp,
+            update_run_number: u64,
+            update_chunk_number: u64,
+        ),
+    ) {
+        none,
+        "INSERT INTO walker_checkpoints_v2
+         (repo_id, checkpoint_name, lower_bound, upper_bound, create_timestamp, update_timestamp, update_run_number, update_chunk_number)
+         VALUES {values}"
+    }
+
+    write UpdateCheckpointV2(
+        repo_id: RepositoryId,
+        checkpoint_name: String,
+        lower_bound: u64,
+        upper_bound: u64,
+        create_timestamp: Timestamp,
+        update_timestamp: Timestamp,
+        update_run_number: u64,
+        update_chunk_number: u64,
+    ) {
+        none,
+        "UPDATE walker_checkpoints_v2
+        SET lower_bound={lower_bound}, upper_bound={upper_bound}, create_timestamp={create_timestamp}, update_timestamp={update_timestamp}, update_run_number={update_run_number}, update_chunk_number={update_chunk_number}
+        WHERE repo_id={repo_id} AND checkpoint_name={checkpoint_name}"
+    }
+
+    write FinishCheckpointV2(
+        repo_id: RepositoryId,
+        checkpoint_name: String,
+        lower_bound: u64,
+        upper_bound: u64,
+        last_finish_timestamp: Timestamp,
+        last_finish_run_number: u64,
+        last_finish_chunk_number: u64,
+    ) {
+        none,
+        "UPDATE walker_checkpoints_v2
+        SET lower_bound={lower_bound}, upper_bound={upper_bound}, last_finish_timestamp={last_finish_timestamp}, last_finish_run_number={last_finish_run_number}, last_finish_chunk_number={last_finish_chunk_number}
+        WHERE repo_id={repo_id} AND checkpoint_name={checkpoint_name}"
+    }
 }
 
 #[cfg(test)]
@@ -370,12 +511,12 @@ mod tests {
 
     use super::*;
 
-    #[fbinit::test]
-    async fn test_sql_roundtrip(_fb: FacebookInit) -> Result<(), Error> {
+    async fn test_sql_roundtrip_impl(version: CheckpointsVersion) -> Result<(), Error> {
         let checkpoints = CheckpointsByName::new(
             "test_checkpoint".to_string(),
             SqlCheckpoints::with_sqlite_in_memory()?,
             0,
+            version,
         );
 
         let repo_id = RepositoryId::new(123);
@@ -420,5 +561,15 @@ mod tests {
         );
 
         Ok(())
+    }
+
+    #[fbinit::test]
+    async fn test_sql_roundtrip(_fb: FacebookInit) -> Result<(), Error> {
+        test_sql_roundtrip_impl(CheckpointsVersion::V1).await
+    }
+
+    #[fbinit::test]
+    async fn test_sql_roundtrip_v2(_fb: FacebookInit) -> Result<(), Error> {
+        test_sql_roundtrip_impl(CheckpointsVersion::V2).await
     }
 }
