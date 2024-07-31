@@ -1,0 +1,14 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mononoke")
+
+rust_library(
+    name = "repository",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {"ignore_rule": True},
+    deps = [
+        "//common/rust/mysql:mysql_client",
+        "//eden/mononoke/mononoke_types:mononoke_types",
+    ],
+)
