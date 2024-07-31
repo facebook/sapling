@@ -425,6 +425,7 @@ python_unittest(
         "//eden/fs/service:thrift-py",
         "//eden/integration/hg/lib:testutil",
         "//eden/integration/lib:lib",
+        "//thrift/lib/py:server_base",
     ],
 )
 

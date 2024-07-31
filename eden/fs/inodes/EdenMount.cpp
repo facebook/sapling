@@ -1741,6 +1741,11 @@ ImmediateFuture<Unit> EdenMount::diff(
     TreeInodePtr rootInode,
     DiffContext* ctxPtr,
     const RootId& commitHash) const {
+  auto faultTry = this->serverState_->getFaultInjector().checkTry(
+      "EdenMount::diff", commitHash.value());
+  if (faultTry.hasException()) {
+    return folly::Try<folly::Unit>{faultTry.exception()};
+  }
   return objectStore_->getRootTree(commitHash, ctxPtr->getFetchContext())
       .thenValue([this](ObjectStore::GetRootTreeResult rootTree) {
         return waitForPendingWrites().thenValue(

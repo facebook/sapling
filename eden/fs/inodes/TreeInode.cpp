@@ -2990,7 +2990,14 @@ ImmediateFuture<Unit> TreeInode::computeDiff(
   // Note that we explicitly move-capture the deferredFutures vector into this
   // callback, to ensure that the DeferredDiffEntry objects do not get
   // destroyed before they complete.
-  return collectAll(std::move(deferredFutures))
+  auto faultFuture =
+      getMount()->getServerState()->getFaultInjector().checkAsync(
+          "TreeInode::computeDiff", currentPath.view());
+  return std::move(faultFuture)
+      .thenValue(
+          [deferredFutures = std::move(deferredFutures)](auto&&) mutable {
+            return collectAll(std::move(deferredFutures));
+          })
       .thenValue([self = std::move(self),
                   currentPath = RelativePath{std::move(currentPath)},
                   context,

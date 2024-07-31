@@ -16,6 +16,8 @@ import time
 from threading import Thread
 from typing import Dict, List
 
+import thrift.transport
+
 from eden.integration.lib.hgrepo import HgRepository
 from facebook.eden.ttypes import (
     EdenError,
@@ -25,12 +27,15 @@ from facebook.eden.ttypes import (
     GetScmStatusParams,
     ScmFileStatus,
     ScmStatus,
+    SynchronizeWorkingCopyParams,
     UnblockFaultArg,
 )
 
 from .lib.hg_extension_test_base import EdenHgTestCase, hg_cached_status_test
 
 THREAD_JOIN_TIMEOUT_SECONDS = 3
+
+WINDOWS_RUNTIME_ERR_PREFIX = "class " if sys.platform == "win32" else ""
 
 
 @hg_cached_status_test
@@ -652,6 +657,121 @@ class StatusTest(EdenHgTestCase):
 
             # no cache should be hit since the sequence number is advanced
             self.counter_check(client, miss_cnt=2, hit_cnt=0)
+
+    def test_status_cache_error_handlilng(self) -> None:
+        """Test that when there is error computing the diff, we don't cache the error
+        and the next call should succeed"""
+        if not self.enable_status_cache:
+            # no need to test the cache if it is not enabled
+            return
+
+        initial_commit_hex = self.repo.get_head_hash()
+        initial_commit = binascii.unhexlify(initial_commit_hex)
+
+        # prepare the folder structure
+        self.repo.write_file("parent/file_1.txt", "what")
+        self.repo.write_file("parent/file_2.txt", "what")
+
+        self.repo.write_file("parent/child/file_1.txt", "what")
+        self.repo.write_file("parent/child/file_2.txt", "what")
+
+        with self.get_thrift_client_legacy() as client:
+            client.injectFault(
+                FaultDefinition(
+                    keyClass="TreeInode::computeDiff",
+                    keyValueRegex="parent/child",
+                    count=1,
+                    errorType="runtime_error",
+                )
+            )
+            initial_status_with_error = client.getScmStatusV2(
+                GetScmStatusParams(
+                    mountPoint=bytes(self.mount, encoding="utf-8"),
+                    commit=initial_commit,
+                    listIgnored=False,
+                    rootIdOptions=None,
+                )
+            ).status
+            self.assertDictEqual(
+                {
+                    b"parent/child": f"{WINDOWS_RUNTIME_ERR_PREFIX}std::runtime_error: injected error"
+                },
+                initial_status_with_error.errors,
+            )
+            self.counter_check(client, miss_cnt=1, hit_cnt=0)
+
+            # after the error is cleared, the next call should succeed without errors
+            status_without_error = client.getScmStatusV2(
+                GetScmStatusParams(
+                    mountPoint=bytes(self.mount, encoding="utf-8"),
+                    commit=initial_commit,
+                    listIgnored=False,
+                    rootIdOptions=None,
+                )
+            ).status
+            self.assertDictEqual(
+                {},
+                status_without_error.errors,
+            )
+            # the previous call should not be cached so we are expecting two misses
+            self.counter_check(client, miss_cnt=2, hit_cnt=0)
+
+            # writing more files to advance the journal sequence number
+            self.repo.write_file("parent/file_3.txt", "what")
+            self.repo.write_file("parent/child/file_3.txt", "what")
+
+            # On windows platform, there is a chance that the changes are not
+            # synced so this call might hit the cache instead of returning an error.
+            client.synchronizeWorkingCopy(
+                self.mount.encode("utf-8"), SynchronizeWorkingCopyParams()
+            )
+
+            client.injectFault(
+                FaultDefinition(
+                    keyClass="EdenMount::diff",
+                    keyValueRegex=f".*{initial_commit_hex}.*",
+                    count=1,
+                    errorType="runtime_error",
+                    errorMessage="intentional exception",
+                )
+            )
+
+            try:
+                client.getScmStatusV2(
+                    GetScmStatusParams(
+                        mountPoint=bytes(self.mount, encoding="utf-8"),
+                        commit=initial_commit,
+                        listIgnored=False,
+                    )
+                )
+                self.fail("status cache should throw exception and fail this request!")
+            except thrift.Thrift.TApplicationException as e:
+                self.assertEqual(
+                    f"{WINDOWS_RUNTIME_ERR_PREFIX}std::runtime_error: intentional exception",
+                    e.message,
+                )
+            self.counter_check(client, miss_cnt=3, hit_cnt=0)
+
+            status_without_error = client.getScmStatusV2(
+                GetScmStatusParams(
+                    mountPoint=bytes(self.mount, encoding="utf-8"),
+                    commit=initial_commit,
+                    listIgnored=False,
+                )
+            ).status
+
+            self.assertDictEqual(
+                {
+                    b"parent/child/file_1.txt": 0,
+                    b"parent/child/file_2.txt": 0,
+                    b"parent/child/file_3.txt": 0,
+                    b"parent/file_1.txt": 0,
+                    b"parent/file_2.txt": 0,
+                    b"parent/file_3.txt": 0,
+                },
+                status_without_error.entries,
+            )
+            self.counter_check(client, miss_cnt=4, hit_cnt=0)
 
 
 @hg_cached_status_test
