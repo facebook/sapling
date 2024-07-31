@@ -46,7 +46,7 @@ pub fn doc() -> &'static str {
 
     Frequently useful in shells scripts and automation to run commands like::
 
-       $  ./$(sl root)/bin/script.py
+       $ $(@prog@ root)/bin/script.py
 
     Returns 0 on success."#
 }

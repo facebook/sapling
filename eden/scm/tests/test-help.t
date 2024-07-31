@@ -487,7 +487,7 @@ Test the textwidth config option
       Frequently useful in shells scripts and
       automation to run commands like:
   
-        $  ./$(sl root)/bin/script.py
+        $ $(hg root)/bin/script.py
   
       Returns 0 on success.
   
@@ -510,7 +510,7 @@ Test help on a self-referencing alias that is a rust command
   
       Frequently useful in shells scripts and automation to run commands like:
   
-        $  ./$(sl root)/bin/script.py
+        $ $(hg root)/bin/script.py
   
       Returns 0 on success.
   
@@ -530,7 +530,7 @@ Test help on a self-referencing alias that is a rust command
   
       Frequently useful in shells scripts and automation to run commands like:
   
-        $  ./$(sl root)/bin/script.py
+        $ $(hg root)/bin/script.py
   
       Returns 0 on success.
   
