@@ -549,6 +549,14 @@ impl AuthorizationContext {
                         }
                         Err(_) | Ok(None) => false,
                     }
+                    || match repo.commit_cloud().commit_cloud_acl("allow_list").await {
+                        Ok(Some(checker)) => {
+                            checker
+                                .check_set(ctx.metadata().identities(), &[action])
+                                .await
+                        }
+                        Err(_) | Ok(None) => false,
+                    }
             }
             AuthorizationContext::Service(_service_name) => false,
             AuthorizationContext::ReadOnlyIdentity | AuthorizationContext::DraftOnlyIdentity => {
