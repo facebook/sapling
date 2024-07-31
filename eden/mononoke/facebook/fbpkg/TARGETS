@@ -214,6 +214,14 @@ mononoke_fbpkg(
 )
 
 mononoke_fbpkg(
+    name = "mononoke.gitimport",
+    compress_type = None,
+    path_actions = {
+        "gitimport": "//eden/mononoke/git/gitimport:gitimport",
+    },
+)
+
+mononoke_fbpkg(
     name = "mononoke.gitexport",
     compress_type = None,
     path_actions = {
