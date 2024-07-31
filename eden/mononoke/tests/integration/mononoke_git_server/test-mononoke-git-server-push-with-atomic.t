@@ -62,6 +62,9 @@
   $ cd "$TESTTMP"
   $ quiet gitimport "$GIT_REPO" --derive-hg --generate-bookmarks full-repo
 
+# Set Mononoke as the Source of Truth
+  $ set_mononoke_as_source_of_truth_for_git
+
 # Start up the Mononoke Git Service
   $ mononoke_git_service
 # Clone the Git repo from Mononoke

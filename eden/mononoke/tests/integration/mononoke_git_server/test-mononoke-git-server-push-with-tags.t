@@ -39,6 +39,9 @@
   $ cd "$TESTTMP"
   $ quiet gitimport "$GIT_REPO" --derive-hg --generate-bookmarks full-repo
 
+# Set Mononoke as the Source of Truth
+  $ set_mononoke_as_source_of_truth_for_git
+
 # Ensure that we have entry in bonsai_tag_mapping table for the pushed tags
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "SELECT tag_name, hex(changeset_id) as cs_id, hex(tag_hash) as tag_hash, target_is_tag FROM bonsai_tag_mapping ORDER BY tag_name"
   tags/first_tag|5CA579C0E3EBEA708371B65CE559E5A51B231AD1B6F3CDFD874CA27362A2A6A8|8963E1F55D1346A07C3AEC8C8FC72BF87D0452B1|0

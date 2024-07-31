@@ -651,6 +651,10 @@ function set_bonsai_globalrev_mapping {
   sqlite3 "$TESTTMP/monsql/sqlite_dbs" "INSERT INTO bonsai_globalrev_mapping (repo_id, bcs_id, globalrev) VALUES ($REPO_ID, X'$BCS_ID', $GLOBALREV)";
 }
 
+function set_mononoke_as_source_of_truth_for_git {
+  sqlite3 "$TESTTMP/monsql/sqlite_dbs" "REPLACE INTO git_push_redirect (repo_id, mononoke) VALUES (0, 1)"
+}
+
 function setup_mononoke_config {
   cd "$TESTTMP" || exit
 

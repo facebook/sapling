@@ -36,9 +36,6 @@
   $ cd "$TESTTMP"
   $ quiet gitimport "$GIT_REPO" --derive-hg --generate-bookmarks full-repo
 
-# Set Mononoke as the Source of Truth
-  $ set_mononoke_as_source_of_truth_for_git
-
 # Start up the Mononoke Git Service
   $ mononoke_git_service
 # Clone the Git repo from Mononoke
@@ -59,7 +56,21 @@
   $ git tag -a -m "Tag for push" push_tag
   $ git tag -a -m "Tag pointing in the past" past_tag $old_head
 
-# Push all the changes made so far
+# Push all the changes made so far. This push should fail since Mononoke is not the Source of Truth for this repo
+  $ git_client push origin --all --follow-tags
+  error: unable to parse remote unpack status: Push rejected: Mononoke is not the source of truth for repo repo
+  To https://*/repos/git/ro/repo.git (glob)
+   ! [remote rejected] master -> master (Push rejected: Mononoke is not the source of truth for repo repo)
+   ! [remote rejected] new_branch -> new_branch (Push rejected: Mononoke is not the source of truth for repo repo)
+   ! [remote rejected] past_tag -> past_tag (Push rejected: Mononoke is not the source of truth for repo repo)
+   ! [remote rejected] push_tag -> push_tag (Push rejected: Mononoke is not the source of truth for repo repo)
+  error: failed to push some refs to 'https://localhost:$LOCAL_PORT/repos/git/ro/repo.git'
+  [1]
+
+# Set Mononoke to be the Source of Truth for this repo
+  $ set_mononoke_as_source_of_truth_for_git
+
+# Retry the push now, it should succeed
   $ git_client push origin --all --follow-tags
   To https://*/repos/git/ro/repo.git (glob)
      e8615d6..e8b927e  master -> master
