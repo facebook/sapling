@@ -828,6 +828,7 @@ TODO(T174902563): Fix deletion of submodules in EXPAND submodule action.
 -- EXPECT: commit isn't synced and returns working copy equivalent instead
   $ echo "changing large repo file" > file_in_large_repo.txt
   $ hgmn commit -A -m "Changing large repo file" 
+  $ REPONAME=$LARGE_REPO_NAME hgedenapi push -q -r . --to master --non-forward-move --pushvar NON_FAST_FORWARD=true
   $ backsync_get_info_and_derive_data
   Processing commit: Changing large repo file
   Commit hash: 48021e7aeafd324f9976f551aea60aa88dd9f61a
@@ -851,6 +852,7 @@ TODO(T174902563): Fix deletion of submodules in EXPAND submodule action.
 -- EXPECT: commit is backsynced normally because it doesn't touch submodule expansions
   $ echo "changing small repo file" > smallrepofolder1/regular_dir/aardvar
   $ hgmn commit -A -m "Changing small repo in large repo (not submodule)" 
+  $ REPONAME=$LARGE_REPO_NAME hgedenapi push -q -r . --to master --non-forward-move --pushvar NON_FAST_FORWARD=true
   $ backsync_get_info_and_derive_data
   Processing commit: Changing small repo in large repo (not submodule)
   Commit hash: 35e70dc7f37c3f51876a0f017a733a13809bef32
@@ -985,8 +987,6 @@ TODO(T179530927): properly support backsyncing with submodule expansion
   │
   o  48021e7aeafd Changing large repo file
   │
-  │ o  cd7933d8ab7a submodule corruption
-  ├─╯
   o  d246b01a5a5b Remove repo C submodule from repo A
   │
   o  d3dae76d4349 Update submodule B in repo A

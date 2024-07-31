@@ -49,13 +49,13 @@ use mononoke_types::NonRootMPath;
 use mononoke_types::RepositoryId;
 use movers::Mover;
 use repo_blobstore::RepoBlobstoreArc;
+use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentityRef;
 use sorted_vector_map::SortedVectorMap;
 
 use crate::git_submodules::expand::SubmoduleExpansionData;
 use crate::git_submodules::expand::SubmodulePath;
-use crate::git_submodules::in_memory_repo::InMemoryRepo;
 use crate::reporting::log_warning;
 use crate::types::Repo;
 use crate::SubmoduleDeps;
@@ -83,11 +83,14 @@ pub(crate) async fn get_git_hash_from_submodule_file<'a, R: Repo>(
 
 /// Get the git hash from a submodule file, which represents the commit from the
 /// given submodule that the source repo depends on at that revision.
-pub(crate) async fn git_hash_from_submodule_metadata_file<'a>(
+pub(crate) async fn git_hash_from_submodule_metadata_file<'a, R>(
     ctx: &'a CoreContext,
-    large_repo: &'a InMemoryRepo,
+    large_repo: &'a R,
     submodule_file_content_id: ContentId,
-) -> Result<GitSha1> {
+) -> Result<GitSha1>
+where
+    R: RepoBlobstoreRef,
+{
     let bytes = filestore::fetch_concat_exact(large_repo.repo_blobstore(), ctx, submodule_file_content_id, 40)
       .await
       .with_context(|| {
