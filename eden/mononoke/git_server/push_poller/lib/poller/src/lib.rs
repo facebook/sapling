@@ -15,7 +15,6 @@ use fbinit::FacebookInit;
 use git_push_redirect::GitPushRedirectConfig;
 use git_push_redirect::GitPushRedirectConfigEntry;
 use git_push_redirect::SqlGitPushRedirectConfigBuilder;
-use logger::create_logger;
 use mononoke_types::RepositoryId;
 use mysql_client::ConnectionOptionsBuilder;
 use mysql_client::ConnectionPoolOptionsBuilder;
@@ -62,8 +61,8 @@ async fn current_mononoke_git_repositories(
 }
 
 pub async fn poll(fb: FacebookInit, args: Args) -> Result<()> {
-    let logger = create_logger();
-    let ctx = CoreContext::new_with_logger(fb, logger);
+    let logger = logging::get();
+    let ctx = CoreContext::new_with_logger(fb, logger.clone());
     let xdb_factory = create_prod_xdb_factory(fb)?;
 
     let mut interval = tokio::time::interval(Duration::from_secs(args.mononoke_polling_interval));

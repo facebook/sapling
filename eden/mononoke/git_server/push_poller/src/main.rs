@@ -7,6 +7,7 @@
 
 #![deny(warnings)]
 
+use anyhow::anyhow;
 use anyhow::Result;
 use clap::Parser;
 use fbinit::FacebookInit;
@@ -27,8 +28,16 @@ enum Command {
     Poll(PollerArgs),
 }
 
+fn setup_logging() -> Result<()> {
+    let glog_drain = slog_glog_fmt::default_drain();
+    let drain = slog_envlogger::new(glog_drain);
+    let logger = slog::Logger::root(drain, slog::o!());
+    logging::set_from_main(&logger).map_err(|_| anyhow!("Logger already initialized"))
+}
+
 #[fbinit::main]
 async fn main(fb: FacebookInit) -> Result<()> {
+    setup_logging()?;
     let args = Args::parse();
     match args.cmd {
         Command::Poll(args) => poll(fb, args).await,

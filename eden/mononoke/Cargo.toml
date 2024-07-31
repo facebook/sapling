@@ -335,7 +335,6 @@ members = [
   "git/pushrebase",
   "git_push_redirect",
   "git_server",
-  "git_server/push_poller/lib/logger",
   "git_symbolic_refs",
   "gotham_ext",
   "hgproto",
