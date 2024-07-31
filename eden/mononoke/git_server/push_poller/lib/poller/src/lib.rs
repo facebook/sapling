@@ -14,6 +14,7 @@ use cached_config::ConfigStore;
 use clap::Parser;
 use context::CoreContext;
 use fbinit::FacebookInit;
+use futures::prelude::*;
 use git_push_redirect::GitPushRedirectConfig;
 use git_push_redirect::GitPushRedirectConfigEntry;
 use git_push_redirect::SqlGitPushRedirectConfigBuilder;
@@ -40,6 +41,9 @@ pub struct Args {
         default_value = "configerator://scm/mononoke/repos/tiers/scs"
     )]
     mononoke_config_path: String,
+    /// Maximum concurrency of operations during one iteration of polling.
+    #[arg(long = "concurrency", default_value = "10")]
+    concurrency: usize,
 }
 
 pub fn create_config_store(fb: FacebookInit, logger: Logger) -> Result<ConfigStore> {
@@ -104,6 +108,37 @@ async fn current_mononoke_git_repositories(
     Ok(repositories)
 }
 
+async fn print_fingerprints(
+    ctx: &CoreContext,
+    xdb_factory: &XdbFactory,
+    repo_configs: &RepoConfigs,
+    concurrency: usize,
+) -> Result<()> {
+    let repositories = current_mononoke_git_repositories(ctx, xdb_factory, repo_configs).await?;
+    futures::stream::iter(repositories.into_iter().map(|repository| async move {
+        println!(
+            "Repository id: `{}`, name: `{}`, current fingerprint: `{:?}`",
+            repository.id(),
+            repository.name(),
+            repository.current_fingerprint()?
+        );
+
+        Ok(repository)
+    }))
+    .buffer_unordered(concurrency)
+    .for_each(|repository: Result<Repository>| async move {
+        match repository {
+            Ok(repository) => {
+                logging::info!("Successfully processed repository `{}`", repository.name())
+            }
+            Err(e) => logging::warn!("Failed to process a repository with error `{}`", e),
+        }
+    })
+    .await;
+
+    Ok(())
+}
+
 pub async fn poll(fb: FacebookInit, args: Args) -> Result<()> {
     let logger = logging::get();
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
@@ -115,9 +150,13 @@ pub async fn poll(fb: FacebookInit, args: Args) -> Result<()> {
     let mut interval = tokio::time::interval(Duration::from_secs(args.mononoke_polling_interval));
     loop {
         interval.tick().await;
-        println!(
-            "Current Mononoke Git server repositories: {:?}",
-            current_mononoke_git_repositories(&ctx, &xdb_factory, &repo_configs).await?
-        );
+        if let Err(e) =
+            print_fingerprints(&ctx, &xdb_factory, &repo_configs, args.concurrency).await
+        {
+            logging::warn!(
+                "Encounted error `{}` while printing fingerprint in iteration",
+                e
+            );
+        }
     }
 }
