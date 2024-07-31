@@ -22,7 +22,6 @@ use metaconfig_types::ArcRepoConfig;
 use mononoke_types::ChangesetId;
 use repo_derived_data::ArcRepoDerivedData;
 use sharding_ext::encode_repo_name;
-use slog::info;
 use slog::warn;
 use slog::Logger;
 use stats::define_stats;
@@ -66,14 +65,6 @@ impl RepoStatsLogger {
                     let bookmark_name =
                         get_repo_bookmark_name(repo_config.clone()).expect("invalid bookmark name");
                     let default_repo_objects_count = get_repo_default_objects_count(repo_config);
-                    info!(
-                        ctx.logger(),
-                        "repo {} {} bookmark {} default_repo_objects_count {}",
-                        repo_name,
-                        repo_key,
-                        bookmark_name,
-                        default_repo_objects_count
-                    );
 
                     match get_repo_objects_count(
                         &ctx,
