@@ -1786,32 +1786,10 @@ impl RepoContext {
         location: Location<ChangesetId>,
         count: u64,
     ) -> Result<Vec<ChangesetId>, MononokeError> {
-        let use_commit_graph = justknobs::eval(
-            "scm/mononoke:commit_graph_location_to_hash",
-            None,
-            Some(self.name()),
-        )
-        .unwrap_or_default();
-
-        let ancestors = match use_commit_graph {
-            true => {
-                self.commit_graph()
-                    .locations_to_changeset_ids(
-                        self.ctx(),
-                        location.descendant,
-                        location.distance,
-                        count,
-                    )
-                    .await?
-            }
-            false => {
-                let segmented_changelog = self.repo.segmented_changelog();
-                segmented_changelog
-                    .location_to_many_changeset_ids(&self.ctx, location, count)
-                    .await
-                    .map_err(MononokeError::from)?
-            }
-        };
+        let ancestors = self
+            .commit_graph()
+            .locations_to_changeset_ids(self.ctx(), location.descendant, location.distance, count)
+            .await?;
 
         Ok(ancestors)
     }
@@ -1825,44 +1803,24 @@ impl RepoContext {
         cs_ids: Vec<ChangesetId>,
     ) -> Result<HashMap<ChangesetId, Result<Location<ChangesetId>, MononokeError>>, MononokeError>
     {
-        let use_commit_graph = justknobs::eval(
-            "scm/mononoke:commit_graph_hash_to_location",
-            None,
-            Some(self.name()),
-        )
-        .unwrap_or_default();
-
-        match use_commit_graph {
-            true => Ok(self
-                .commit_graph()
-                .changeset_ids_to_locations(self.ctx(), master_heads, cs_ids)
-                .await
-                .map(|ok| {
-                    ok.into_iter()
-                        .map(|(k, v)| {
-                            (
-                                k,
-                                Ok(Location {
-                                    descendant: v.cs_id,
-                                    distance: v.distance,
-                                }),
-                            )
-                        })
-                        .collect::<HashMap<ChangesetId, Result<_, MononokeError>>>()
-                })
-                .map_err(MononokeError::from)?),
-            false => Ok(self
-                .repo()
-                .segmented_changelog()
-                .many_changeset_ids_to_locations(&self.ctx, master_heads, cs_ids)
-                .await
-                .map(|ok| {
-                    ok.into_iter()
-                        .map(|(k, v)| (k, v.map_err(Into::into)))
-                        .collect::<HashMap<ChangesetId, Result<_, MononokeError>>>()
-                })
-                .map_err(MononokeError::from)?),
-        }
+        Ok(self
+            .commit_graph()
+            .changeset_ids_to_locations(self.ctx(), master_heads, cs_ids)
+            .await
+            .map(|ok| {
+                ok.into_iter()
+                    .map(|(k, v)| {
+                        (
+                            k,
+                            Ok(Location {
+                                descendant: v.cs_id,
+                                distance: v.distance,
+                            }),
+                        )
+                    })
+                    .collect::<HashMap<ChangesetId, Result<_, MononokeError>>>()
+            })
+            .map_err(MononokeError::from)?)
     }
 
     pub async fn segmented_changelog_clone_data(

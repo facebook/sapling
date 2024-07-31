@@ -57,7 +57,7 @@ Blobimport test repo.
   $ blobimport repo-hg/.hg repo
 
 Start up SaplingRemoteAPI server.
-  $ SEGMENTED_CHANGELOG_ENABLE=1 setup_mononoke_config
+  $ setup_mononoke_config
   $ start_and_wait_for_mononoke_server
 Create and send request.
   $ cat > master_heads << EOF
@@ -84,11 +84,11 @@ Create and send request.
     "result": {"Ok": {"distance": 1,
                       "descendant": bin("1b794c59b583e47686701d0142848e90a3a94a7d")}}},
    {"hgid": bin("49cb92066bfd0763fff729c354345650b7428554"),
-    "result": {"Ok": {"distance": 2,
-                      "descendant": bin("1b794c59b583e47686701d0142848e90a3a94a7d")}}},
+    "result": {"Ok": {"distance": 0,
+                      "descendant": bin("49cb92066bfd0763fff729c354345650b7428554")}}},
    {"hgid": bin("f585351a92f85104bff7c284233c338b10eb1df7"),
-    "result": {"Err": {"code": 0,
-                       "message": "InternalError(InternalError(failed to compute the common descendant and distance for 86de925f9338cbc325f5ec1620b6556fb441d1e08466f65ae51930fae6abe120 with heads [ChangesetId(Blake2(a3bb22b98a3f75dbf14a07bcfe4200c4e5e94e3bef536b2f4165ba3db2b35d82))]: Programming(\"cannot convert 4 to x~n form (x must be in `H + parents(ancestors(H) & merge())` where H = 6) (trace: in seg 3-4[1], 4 has child seg (H5-7[2, 4]), child seg cannot be followed (4 is not p1))\")))"}}},
+    "result": {"Ok": {"distance": 0,
+                      "descendant": bin("f585351a92f85104bff7c284233c338b10eb1df7")}}},
    {"hgid": bin("26805aba1e600a82e93661149f2313866a221a7b"),
     "result": {"Ok": {"distance": 1,
                       "descendant": bin("f585351a92f85104bff7c284233c338b10eb1df7")}}},

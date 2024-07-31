@@ -37,16 +37,6 @@
   P=a050a5556469b55ca00d97899b06995b44569989
   Q=4e9f8e556b01de1ac058397e86387d37778808d2
 
-Since hash-to-location and location-to-hash work via segmented changelog, we must still build one.
-  $ quiet segmented_changelog_tailer_reseed --repo repo --head=master_bookmark
-
-Enable Segmented Changelog
-  $ cat >> "$TESTTMP/mononoke-config/repos/repo/server.toml" <<CONFIG
-  > [segmented_changelog_config]
-  > enabled=true
-  > heads_to_include = [{ bookmark = "master_bookmark" }]
-  > CONFIG
-
   $ start_and_wait_for_mononoke_server
 
 Ensure we can clone the repo using the commit graph segments endpoint
@@ -200,9 +190,6 @@ Add some new commits, move the master bookmark and do a pull
   $ mononoke_newadmin bookmarks -R repo set master_bookmark "$X"
   Updating publishing bookmark master_bookmark from 2f7f5cd90b7b58f14d6b20b83b95478d5b0ab8c1e5bf429bc317256813516895 to e4b2425dd7affae8fd14348623eb66fa78e9a7ead9330b203d828dae0ec19f79
 
-Since hash-to-location is still using the server-side segmented changelog, we must make sure it's up-to-date.
-  $ quiet segmented_changelog_tailer_once --repo repo
-
   $ flush_mononoke_bookmarks
   $ sleep 1
 
@@ -288,5 +275,3 @@ Since hash-to-location is still using the server-side segmented changelog, we mu
     "length": 3,
     "parents": [{"hgid": bin("4e9f8e556b01de1ac058397e86387d37778808d2"),
                  "location": None}]}]
-
-
