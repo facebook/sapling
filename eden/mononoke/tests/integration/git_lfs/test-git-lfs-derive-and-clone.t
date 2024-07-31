@@ -14,7 +14,7 @@
   > EOF
   A=aa53d24251ff3f54b1b2c29ae02826701b2abeb0079f1bb13b8434b54cd87675
   B=f8c75e41a0c4d29281df765f39de47bca1dcadfdc55ada4ccc2f6df567201658
-  C=1054de6604c183c5326e56061e05c63922c3c8bd49c4d1d4e51d129ce8fbc7c8
+  C=198d25da38c153f3feecddeee7e49fe3fa16d7e0085ea919c183372bf42a66d4
   $ mononoke_newadmin derived-data -R repo derive -T git_trees -T git_commits -T git_delta_manifests_v2 -T unodes --all-bookmarks
   $ mononoke_newadmin git-symref -R repo create --symref-name HEAD --ref-name main --ref-type branch
   Symbolic ref HEAD pointing to branch main has been added
@@ -32,16 +32,16 @@
   $ cat large_file
   version https://git-lfs.github.com/spec/v1
   oid sha256:f0d0c2c2389643eba52baaa036bf2b66668a996da8c6a1618785ce7f393e46ed
-  size 20 (no-eol)
+  size 20
   $ git rev-list --objects --all 
-  debb49562a1b388c240ad57b758baa683d5d2fb7
+  965986666df66943a3496f227d288ae9802102ab
   be393840a21645c52bbde7e62bdb7269fc3ebb87
   8131b4f1da6df2caebe93c581ddd303153b338e5
-  61eda68aa48e8a2e5053bcf2c4244c0368173053 
+  463c0410d3fa5af8728525016d18d792fc8c97ea 
   8c7e5a667f1b771847fe88c01c3de34413a1b220 A
   7371f47a6f8bd23a8fa1a8b2a9479cdd76380e54 B
   96d80cd6c4e7158dbebd0849f4fb7ce513e5828c C
-  2adb0e3bdc5bf435a8276d61a50ff7a0b82912fb large_file
+  3acb3c7e01e7c40b6e5e154126682bf2d4f43223 large_file
   f6dc85adf6f1fa7fafdd9d57cf66bf6926145bb3 
   617601c79811cbbae338512798318b4e5b70c9ac 
 

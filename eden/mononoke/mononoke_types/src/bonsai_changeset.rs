@@ -704,7 +704,7 @@ mod test {
                     FileType::Regular,
                     42,
                     None,
-                    GitLfs::GitLfsPointer,
+                    GitLfs::canonical_pointer(),
                 ),
                 NonRootMPath::new("b").unwrap() => FileChange::Deletion,
             ];
@@ -846,7 +846,7 @@ mod test {
                     FileType::Regular,
                     42,
                     None,
-                    GitLfs::GitLfsPointer,
+                    GitLfs::canonical_pointer(),
                 ),
                 NonRootMPath::new("b").unwrap() => FileChange::Deletion,
             ],

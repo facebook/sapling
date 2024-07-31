@@ -137,11 +137,9 @@ struct FileChange {
   // size is a u64 stored as an i64
   3: i64 size;
   4: optional CopyInfo copy_from;
-  // Git LFS pointer:
-  //  * true means file is represented by LFS pointer in Git
-  //  * not set means file is represented by full text in Git
-  //  * false is invalid value and should not be ever used
-  5: optional bool is_git_lfs;
+  // This structure present means this file should be represented
+  // as Git LFS pointer when served via Git data formats.
+  5: optional GitLfs git_lfs;
 } (rust.exhaustive)
 
 // This is only used optionally so it is OK to use `required` here.
@@ -150,6 +148,26 @@ struct CopyInfo {
   // cs_id must match one of the parents specified in BonsaiChangeset
   2: id.ChangesetId cs_id;
 } (rust.exhaustive)
+
+// Git LFS
+// Just mere presence of this structure is enough to get the file changes
+// represented as Git LFS pointer when served using Git data formats.
+//
+// Leaving this datastructure entirely empty is recommended when creating new
+// commits originating from outside of Git. But if the commit was created by
+// by rougue client and the pointer is not exactly byte-for-byte equal to what
+// Mononoke would create then data here is used to ensure data rountripability.
+//
+// by canonical pointer we mean one like:
+// version https://git-lfs.github.com/spec/v1\noid sha256:{sha256}\nsize {size}\n
+//
+// see: https://github.com/git-lfs/git-lfs/blob/main/docs/spec.md
+struct GitLfs {
+  1: optional id.ContentId non_canonical_pointer_content_id;
+// If there's any version of Git LFS format beyond v1 then we should
+// have an enum here to indicate the version number. Right now there's just
+// one version: v1.
+}
 
 // The following were automatically generated and may benefit from renaming.
 typedef map<path.NonRootMPath, FileChangeOpt> (

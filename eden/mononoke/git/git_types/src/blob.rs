@@ -11,6 +11,7 @@ use context::CoreContext;
 use filestore::FetchKey;
 use mononoke_types::hash::RichGitSha1;
 use mononoke_types::BasicFileChange;
+use mononoke_types::ContentId;
 use mononoke_types::FileType;
 
 use crate::errors::MononokeGitError;
@@ -49,6 +50,22 @@ impl BlobHandle {
 
     pub fn from_oid_and_file_type(oid: RichGitSha1, file_type: FileType) -> Self {
         Self { oid, file_type }
+    }
+
+    pub async fn from_content_id_and_file_type<B: Blobstore>(
+        ctx: &CoreContext,
+        blobstore: &B,
+        content_id: ContentId,
+        file_type: FileType,
+    ) -> Result<Self, Error> {
+        let key = FetchKey::Canonical(content_id);
+        let metadata = filestore::get_metadata(blobstore, ctx, &key)
+            .await?
+            .ok_or(MononokeGitError::ContentMissing(key))?;
+        Ok(Self {
+            oid: metadata.git_sha1,
+            file_type,
+        })
     }
 
     pub fn filemode(&self) -> i32 {

@@ -48,7 +48,36 @@ pub enum GitLfs {
     #[default]
     FullContent,
     /// A Git-LFS pointer should be served over git protocol
-    GitLfsPointer,
+    GitLfsPointer {
+        /// The content id of the pointer if different from the default
+        /// one created by Git LFS or Mononoke.
+        non_canonical_pointer: Option<ContentId>,
+    },
+}
+
+impl GitLfs {
+    pub fn full_content() -> Self {
+        Self::FullContent
+    }
+
+    pub fn canonical_pointer() -> Self {
+        Self::GitLfsPointer {
+            non_canonical_pointer: None,
+        }
+    }
+
+    pub fn non_canonical_pointer(content_id: ContentId) -> Self {
+        Self::GitLfsPointer {
+            non_canonical_pointer: Some(content_id),
+        }
+    }
+
+    pub fn is_lfs_pointer(&self) -> bool {
+        match self {
+            GitLfs::GitLfsPointer { .. } => true,
+            GitLfs::FullContent => false,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash, Serialize, Deserialize)]
@@ -108,8 +137,14 @@ impl TrackedFileChange {
                     file: file.into_thrift(),
                     cs_id: cs_id.into_thrift(),
                 }),
-            is_git_lfs: match self.inner.git_lfs {
-                GitLfs::GitLfsPointer => Some(true),
+            git_lfs: match self.inner.git_lfs {
+                GitLfs::GitLfsPointer {
+                    non_canonical_pointer,
+                } => Some(thrift::bonsai::GitLfs {
+                    non_canonical_pointer_content_id: non_canonical_pointer
+                        .map(|id| id.into_thrift()),
+                    ..Default::default()
+                }),
                 GitLfs::FullContent => None,
             },
         }
@@ -149,10 +184,14 @@ impl TrackedFileChange {
                     content_id: ContentId::from_thrift(fc.content_id)?,
                     file_type: FileType::from_thrift(fc.file_type)?,
                     size: fc.size as u64,
-                    git_lfs: match fc.is_git_lfs {
-                        Some(true) => GitLfs::GitLfsPointer,
+                    git_lfs: match fc.git_lfs {
+                        Some(git_lfs) => GitLfs::GitLfsPointer {
+                            non_canonical_pointer: git_lfs
+                                .non_canonical_pointer_content_id
+                                .map(ContentId::from_thrift)
+                                .transpose()?,
+                        },
                         None => GitLfs::FullContent,
-                        Some(false) => bail!("is_git_lfs must be true or None"),
                     },
                 },
                 copy_from: match fc.copy_from {
@@ -507,8 +546,8 @@ impl FromStr for GitLfs {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "full_content" => Ok(GitLfs::FullContent),
-            "lfs_pointer" | "lfs" => Ok(GitLfs::GitLfsPointer),
+            "full_content" => Ok(GitLfs::full_content()),
+            "lfs_pointer" | "lfs" => Ok(GitLfs::canonical_pointer()),
             _ => bail!("Invalid GitLfs flag: {s}"),
         }
     }
@@ -566,24 +605,9 @@ mod test {
             file_type: thrift::bonsai::FileType::Regular,
             size: 0,
             copy_from: None,
-            is_git_lfs: None,
+            git_lfs: None,
         };
         TrackedFileChange::from_thrift(thrift_fc, &NonRootMPath::new("foo").unwrap())
             .expect_err("unexpected OK - bad content ID");
-    }
-
-    #[test]
-    fn bad_lfs_filechange_thrift() {
-        let thrift_fc = thrift::bonsai::FileChange {
-            content_id: thrift::id::ContentId(thrift::id::Id::Blake2(thrift::id::Blake2(
-                vec![2; 32].into(),
-            ))),
-            file_type: thrift::bonsai::FileType::Regular,
-            size: 0,
-            copy_from: None,
-            is_git_lfs: Some(false),
-        };
-        TrackedFileChange::from_thrift(thrift_fc, &NonRootMPath::new("foo").unwrap())
-            .expect_err("unexpected OK - bad lfs flag");
     }
 }

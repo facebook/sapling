@@ -212,7 +212,7 @@ async fn derive_git_manifest<B: Blobstore + Clone + 'static>(
 // in line with https://github.com/git-lfs/git-lfs/blob/main/docs/spec.md
 fn format_lfs_pointer(sha256: Sha256, size: u64) -> String {
     format!(
-        "version https://git-lfs.github.com/spec/v1\noid sha256:{sha256}\nsize {size}",
+        "version https://git-lfs.github.com/spec/v1\noid sha256:{sha256}\nsize {size}\n",
         sha256 = sha256,
         size = size
     )
@@ -256,11 +256,16 @@ pub async fn get_file_changes<B: Blobstore + Clone + 'static>(
         .map(|(mpath, file_change)| async move {
             match file_change.simplify() {
                 Some(basic_file_change) => match basic_file_change.git_lfs() {
+                    // File is not LFS file
                     GitLfs::FullContent => Ok((
                         mpath,
                         Some(BlobHandle::new(ctx, blobstore, basic_file_change).await?),
                     )),
-                    GitLfs::GitLfsPointer => {
+                    // No pointer content provided: we're generatic spec conformant canonical
+                    // pointer
+                    GitLfs::GitLfsPointer {
+                        non_canonical_pointer: None,
+                    } => {
                         let oid = generate_and_store_git_pointer(
                             blobstore,
                             filestore_config,
@@ -276,6 +281,21 @@ pub async fn get_file_changes<B: Blobstore + Clone + 'static>(
                             )),
                         ))
                     }
+                    // Non canonical LFS pointer provided - let's use it as is
+                    GitLfs::GitLfsPointer {
+                        non_canonical_pointer: Some(non_canonical_pointer),
+                    } => Ok((
+                        mpath,
+                        Some(
+                            BlobHandle::from_content_id_and_file_type(
+                                ctx,
+                                blobstore,
+                                non_canonical_pointer,
+                                basic_file_change.file_type(),
+                            )
+                            .await?,
+                        ),
+                    )),
                 },
                 None => Ok((mpath, None)),
             }
