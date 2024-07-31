@@ -23,6 +23,15 @@ use mononoke_types::NonRootMPath;
 
 use crate::errors::HookFileContentProviderError;
 
+/// Enum describing the state of a bookmark for which hooks are being run.
+pub enum BookmarkState {
+    /// The bookmark is new and is being created by the current push
+    New,
+    /// The bookmark is existing and is being moved by the current push
+    Existing(ChangesetId),
+    // No Deleted state because hooks are not run on deleted bookmarks
+}
+
 /// Trait implemented by providers of content for hooks to analyze.
 #[async_trait]
 pub trait HookFileContentProvider: Send + Sync {
@@ -41,6 +50,15 @@ pub trait HookFileContentProvider: Send + Sync {
         ctx: &'a CoreContext,
         id: ContentId,
     ) -> Result<Option<Bytes>, HookFileContentProviderError>;
+
+    /// The state of a bookmark at the time the push is being run. Note that this
+    /// is best effort since the bookmark can move as a result of another push
+    /// happening concurrently
+    async fn get_bookmark_state<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        bookmark: BookmarkKey,
+    ) -> Result<BookmarkState, HookFileContentProviderError>;
 
     /// Find the content of a set of files at a particular bookmark.
     async fn find_content<'a>(

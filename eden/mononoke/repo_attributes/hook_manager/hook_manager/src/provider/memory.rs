@@ -22,6 +22,7 @@ use quickcheck::Arbitrary;
 use quickcheck::Gen;
 
 use crate::errors::HookFileContentProviderError;
+use crate::provider::BookmarkState;
 use crate::provider::FileChange;
 use crate::provider::HookFileContentProvider;
 use crate::provider::PathContent;
@@ -141,6 +142,17 @@ impl HookFileContentProvider for InMemoryHookFileContentProvider {
             anyhow!("`directory_sizes` is not implemented for `InMemoryHookFileContentProvider`")
                 .into(),
         )
+    }
+
+    async fn get_bookmark_state<'a>(
+        &'a self,
+        _ctx: &'a CoreContext,
+        _bookmark: BookmarkKey,
+    ) -> Result<BookmarkState, HookFileContentProviderError> {
+        Err(anyhow!(
+            "`get_bookmark_state` is not implemented for `InMemoryHookFileContentProvider`"
+        )
+        .into())
     }
 }
 

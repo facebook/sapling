@@ -20,6 +20,7 @@ use mononoke_types::MPath;
 use mononoke_types::NonRootMPath;
 
 use crate::errors::HookFileContentProviderError;
+use crate::provider::BookmarkState;
 use crate::provider::FileChange;
 use crate::provider::HookFileContentProvider;
 use crate::provider::PathContent;
@@ -102,6 +103,14 @@ impl<T: HookFileContentProvider + 'static> HookFileContentProvider
         paths: Vec<MPath>,
     ) -> Result<HashMap<MPath, u64>, HookFileContentProviderError> {
         self.inner.directory_sizes(ctx, changeset_id, paths).await
+    }
+
+    async fn get_bookmark_state<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        bookmark: BookmarkKey,
+    ) -> Result<BookmarkState, HookFileContentProviderError> {
+        self.inner.get_bookmark_state(ctx, bookmark).await
     }
 }
 

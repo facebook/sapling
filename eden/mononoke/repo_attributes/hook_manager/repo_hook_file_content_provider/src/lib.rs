@@ -23,6 +23,7 @@ use context::CoreContext;
 use futures::future;
 use futures::stream::TryStreamExt;
 use futures_util::future::TryFutureExt;
+use hook_manager::provider::BookmarkState;
 use hook_manager::FileChange;
 use hook_manager::HookFileContentProvider;
 use hook_manager::HookFileContentProviderError;
@@ -271,6 +272,23 @@ impl HookFileContentProvider for RepoHookFileContentProvider {
             .try_collect()
             .await
             .map_err(HookFileContentProviderError::from)
+    }
+
+    async fn get_bookmark_state<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        bookmark: BookmarkKey,
+    ) -> Result<BookmarkState, HookFileContentProviderError> {
+        let maybe_bookmark_val = self
+            .bookmarks
+            .get(ctx.clone(), &bookmark)
+            .await
+            .with_context(|| format!("Error fetching bookmark: {}", bookmark))?;
+        if let Some(cs_id) = maybe_bookmark_val {
+            Ok(BookmarkState::Existing(cs_id))
+        } else {
+            Ok(BookmarkState::New)
+        }
     }
 }
 
