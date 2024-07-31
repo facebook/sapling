@@ -22,10 +22,12 @@
 #include <folly/futures/Future.h>
 #include <folly/portability/Windows.h>
 
+#include "eden/common/telemetry/StructuredLogger.h"
 #include "eden/common/utils/SpawnedProcess.h"
 #include "eden/common/utils/StringConv.h"
 #include "eden/common/utils/SystemError.h"
 #include "eden/fs/config/EdenConfig.h"
+#include "eden/fs/telemetry/LogEvent.h"
 
 namespace facebook::eden {
 namespace {
@@ -581,9 +583,11 @@ void cacheIconImages() {
 
 WindowsNotifier::WindowsNotifier(
     std::shared_ptr<ReloadableConfig> edenConfig,
+    const std::shared_ptr<StructuredLogger>& logger,
     std::string_view version,
     std::chrono::time_point<std::chrono::steady_clock> startTime)
     : Notifier(std::move(edenConfig)),
+      structuredLogger_{std::move(logger)},
       guid_{
           version == "(dev build)" ? std::nullopt
                                    : std::optional<Guid>(EMenuGuid)},

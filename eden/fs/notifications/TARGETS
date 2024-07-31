@@ -73,10 +73,12 @@ cpp_library(
     deps = [
         "fbsource//third-party/fmt:fmt",
         ":constants",
+        "//eden/common/telemetry:structured_logger",
         "//eden/common/utils:process",
         "//eden/common/utils:stringconv",
         "//eden/common/utils:system_error",
         "//eden/fs/config:config",
+        "//eden/fs/telemetry:log_info",
         "//folly/futures:core",
         "//folly/portability:windows",
     ],
