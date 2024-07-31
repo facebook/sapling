@@ -30,7 +30,6 @@ mod rsync;
 mod subcommand_blame;
 mod subcommand_deleted_manifest;
 mod subcommand_phases;
-mod truncate_segmented_changelog;
 
 fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
     args::MononokeAppBuilder::new("Mononoke admin command line tool")
@@ -47,7 +46,6 @@ fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
         .subcommand(subcommand_blame::build_subcommand())
         .subcommand(subcommand_deleted_manifest::build_subcommand())
         .subcommand(rsync::build_subcommand())
-        .subcommand(truncate_segmented_changelog::build_subcommand())
 }
 
 #[fbinit::main]
@@ -86,12 +84,6 @@ fn main(fb: FacebookInit) -> ExitCode {
             }
             (rsync::RSYNC, Some(sub_m)) => {
                 rsync::subcommand_rsync(fb, logger, &matches, sub_m).await
-            }
-            (truncate_segmented_changelog::TRUNCATE_SEGMENTED_CHANGELOG, Some(sub_m)) => {
-                truncate_segmented_changelog::subcommand_truncate_segmented_changelog(
-                    fb, logger, &matches, sub_m,
-                )
-                .await
             }
             _ => Err(SubcommandError::InvalidArgs),
         }
