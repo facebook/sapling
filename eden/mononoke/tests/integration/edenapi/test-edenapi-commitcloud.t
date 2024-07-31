@@ -38,7 +38,7 @@
   > }
   > ACLS
   $ setconfig ui.ignorerevnum=false
-  $ setconfig pull.httpcommitgraph2=true
+  $ setconfig pull.httpcommitgraph2=true pull.use-commit-graph=true clone.use-rust=true clone.use-commit-graph=true
   $ setconfig remotenames.selectivepull=True remotenames.selectivepulldefault=master
 
 setup custom smartlog
@@ -52,13 +52,6 @@ setup configuration
   $ export LOG=pull
   $ INFINITEPUSH_ALLOW_WRITES=true \
   >   setup_common_config
-  $ cat >> "$TESTTMP/mononoke-config/repos/repo/server.toml" <<CONFIG
-  > [segmented_changelog_config]
-  > enabled=true
-  > heads_to_include = [
-  >    { bookmark = "master" },
-  > ]
-  > CONFIG
   $ cd $TESTTMP
 
 setup common configuration for these tests
@@ -124,17 +117,12 @@ setup repo
 Import and start mononoke
   $ cd $TESTTMP
   $ blobimport repo/.hg repo
-  $ quiet segmented_changelog_tailer_reseed --repo=repo --head=master
   $ mononoke
   $ wait_for_mononoke
 
 Clone 1 and 2
   $ hgedenapi clone "mononoke://$(mononoke_address)/repo" client1 -q
-  DEBUG pull::httpbookmarks: edenapi fetched bookmarks: {'master': '8b2dca0c8a726d66bf26d47835a356cc4286facd'}
-  DEBUG pull::fastpath: master: 8b2dca0c8a726d66bf26d47835a356cc4286facd (unchanged)
   $ hgedenapi clone "mononoke://$(mononoke_address)/repo" client2 -q
-  DEBUG pull::httpbookmarks: edenapi fetched bookmarks: {'master': '8b2dca0c8a726d66bf26d47835a356cc4286facd'}
-  DEBUG pull::fastpath: master: 8b2dca0c8a726d66bf26d47835a356cc4286facd (unchanged)
 
 Connect client 1 and client 2 to Commit Cloud
   $ cd client1

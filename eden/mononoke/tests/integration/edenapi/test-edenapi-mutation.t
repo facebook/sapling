@@ -8,7 +8,7 @@
   $ configure modern
   $ setconfig ui.ignorerevnum=false
 
-  $ setconfig pull.httpcommitgraph2=true
+  $ setconfig pull.httpcommitgraph2=true pull.use-commit-graph=true clone.use-rust=true clone.use-commit-graph=true
 
 Set up local hgrc and Mononoke config, with commit cloud, http pull and upload.
   $ export READ_ONLY_REPO=1

@@ -26,7 +26,6 @@ define_stats! {
     blame_duration_ms: histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 95; P 99),
     bookmarks_duration_ms: histogram(10, 0, 500, Average, Sum, Count; P 50; P 75; P 95; P 99),
     capabilities_duration_ms: histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 95; P 99),
-    clone_duration: dynamic_histogram("{}.clone_data_ms", (repo: String); 10, 0, 500, Average, Sum, Count; P 50; P 75; P 95; P 99),
     cloud_references_duration_ms: histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 95; P 99),
     cloud_update_references_duration_ms: histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 95; P 95; P 99),
     cloud_workspace_duration_ms: histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 95; P 99),
@@ -49,8 +48,6 @@ define_stats! {
     history_duration_ms: histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 95; P 99),
     land_stack_duration_ms: histogram(10, 0, 500, Average, Sum, Count; P 50; P 75; P 95; P 99),
     lookup_duration_ms: histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 95; P 99),
-    pull_fast_forward_duration_ms: histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 95; P 99),
-    pull_lazy_duration_ms: histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 95; P 99),
     request_load: histogram(100, 0, 5000, Average; P 50; P 75; P 95; P 99),
     requests: dynamic_timeseries("{}.requests", (method: String); Rate, Sum),
     response_bytes_sent: dynamic_histogram("{}.response_bytes_sent", (method: String); 1_500_000, 0, 150_000_000, Average, Sum, Count; P 50; P 75; P 95; P 99),
@@ -78,7 +75,6 @@ fn log_stats(state: &mut State, status: StatusCode) -> Option<()> {
 
     let hander_info = state.try_borrow::<HandlerInfo>()?;
     let method = hander_info.method?;
-    let repo = hander_info.repo.clone()?;
 
     let callbacks = state.try_borrow_mut::<PostResponseCallbacks>()?;
 
@@ -92,7 +88,6 @@ fn log_stats(state: &mut State, status: StatusCode) -> Option<()> {
                 Blame => STATS::blame_duration_ms.add_value(dur_ms),
                 Bookmarks => STATS::bookmarks_duration_ms.add_value(dur_ms),
                 Capabilities => STATS::capabilities_duration_ms.add_value(dur_ms),
-                Clone => STATS::clone_duration.add_value(dur_ms, (repo,)),
                 CloudReferences => STATS::cloud_references_duration_ms.add_value(dur_ms),
                 CloudUpdateReferences => {
                     STATS::cloud_update_references_duration_ms.add_value(dur_ms)
@@ -118,8 +113,6 @@ fn log_stats(state: &mut State, status: StatusCode) -> Option<()> {
                 History => STATS::history_duration_ms.add_value(dur_ms),
                 LandStack => STATS::land_stack_duration_ms.add_value(dur_ms),
                 Lookup => STATS::lookup_duration_ms.add_value(dur_ms),
-                PullFastForwardMaster => STATS::pull_fast_forward_duration_ms.add_value(dur_ms),
-                PullLazy => STATS::pull_lazy_duration_ms.add_value(dur_ms),
                 SetBookmark => STATS::set_bookmark_duration_ms.add_value(dur_ms),
                 SuffixQuery => STATS::suffix_query_duration_ms.add_value(dur_ms),
                 Trees => STATS::trees_duration_ms.add_value(dur_ms),

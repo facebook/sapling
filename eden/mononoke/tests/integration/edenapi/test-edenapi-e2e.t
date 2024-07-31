@@ -7,17 +7,10 @@
   $ . "${TEST_FIXTURES}/library.sh"
   $ configure modern
   $ setconfig remotenames.selectivepulldefault=master_bookmark \
-  >  pull.httpcommitgraph2=1 pull.httphashprefix=1
+  >  pull.httpcommitgraph2=1 pull.httphashprefix=1 pull.use-commit-graph=true clone.use-rust=true clone.use-commit-graph=true
 
 Set up local hgrc and Mononoke config, with http pull
   $ setup_common_config
-  $ cat >> "$TESTTMP/mononoke-config/repos/repo/server.toml" <<CONFIG
-  > [segmented_changelog_config]
-  > enabled=true
-  > heads_to_include = [
-  >    { bookmark = "master_bookmark" },
-  > ]
-  > CONFIG
   $ cd $TESTTMP
 
 Custom smartlog
@@ -37,18 +30,14 @@ Initialize test repo.
 Import and start mononoke
   $ cd $TESTTMP
   $ blobimport repo/.hg repo
-  $ quiet segmented_changelog_tailer_reseed --repo=repo --head=master_bookmark
   $ mononoke
   $ wait_for_mononoke
 
 Clone 1 and 2
   $ hgedenapi clone "mononoke://$(mononoke_address)/repo" client1
-  fetching lazy changelog
-  populating main commit graph
-  tip commit: 8b2dca0c8a726d66bf26d47835a356cc4286facd
-  fetching selected remote bookmarks
-  updating to branch default
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  Cloning repo into $TESTTMP/client1
+  Checking out 'master_bookmark'
+  1 files updated
   $ hgedenapi clone "mononoke://$(mononoke_address)/repo" client2 -q
   $ cd client1
   $ sl
@@ -72,12 +61,9 @@ Clone 3
 This is a hack, it seems WBC may be stale, causing the test to be flaky. It needs a proper fix.
   $ sleep 3
   $ hgedenapi clone "mononoke://$(mononoke_address)/repo" client3
-  fetching lazy changelog
-  populating main commit graph
-  tip commit: 8b2dca0c8a726d66bf26d47835a356cc4286facd
-  fetching selected remote bookmarks
-  updating to branch default
-  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  Cloning repo into $TESTTMP/client3
+  Checking out 'master_bookmark'
+  2 files updated
   $ cd client3
   $ hgedenapi up remote/master_bookmark 
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -98,7 +84,7 @@ This is a hack, it seems WBC may be stale, causing the test to be flaky. It need
   $ sleep 3
   $ hgedenapi pull
   pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo
-  imported commit graph for 1 commit (1 segment)
+  searching for changes
   $ sl
   o  6b51b03e4f04 public 'newer commit'  remote/master_bookmark
   │
@@ -111,10 +97,9 @@ This is a hack, it seems WBC may be stale, causing the test to be flaky. It need
 
 On clone 2 with tailer
   $ cd "$TESTTMP/client2"
-  $ quiet segmented_changelog_tailer_once --repo repo
   $ hgedenapi pull
   pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo
-  imported commit graph for 2 commits (1 segment)
+  searching for changes
   $ sl
   o  6b51b03e4f04 public 'newer commit'  remote/master_bookmark
   │

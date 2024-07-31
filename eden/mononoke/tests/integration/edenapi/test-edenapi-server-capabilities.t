@@ -10,15 +10,6 @@ Set up local hgrc and Mononoke config.
   $ quiet default_setup_blobimport
   $ setup_configerator_configs
 
-Build up segmented changelog
-  $ quiet segmented_changelog_tailer_reseed --repo repo --head=master_bookmark
-
-Enable Segmented Changelog
-  $ cat >> "$TESTTMP/mononoke-config/repos/repo/server.toml" <<CONFIG
-  > [segmented_changelog_config]
-  > enabled=true
-  > CONFIG
-
   $ start_and_wait_for_mononoke_server
   $ sslcurlas client0 -s "https://localhost:$MONONOKE_SOCKET/edenapi/repo/capabilities"
-  ["segmented-changelog","commit-graph-segments"] (no-eol)
+  ["commit-graph-segments"] (no-eol)

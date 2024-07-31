@@ -63,7 +63,6 @@ use crate::utils::to_cbor_bytes;
 mod blame;
 mod bookmarks;
 mod capabilities;
-mod clone;
 mod commit;
 mod commit_cloud;
 mod files;
@@ -71,7 +70,6 @@ mod handler;
 mod history;
 mod land;
 mod lookup;
-mod pull;
 mod repos;
 mod suffix_query;
 mod trees;
@@ -91,7 +89,6 @@ pub enum SaplingRemoteApiMethod {
     Blame,
     Bookmarks,
     Capabilities,
-    Clone,
     CloudReferences,
     CloudUpdateReferences,
     CloudWorkspace,
@@ -111,8 +108,6 @@ pub enum SaplingRemoteApiMethod {
     History,
     LandStack,
     Lookup,
-    PullFastForwardMaster,
-    PullLazy,
     SetBookmark,
     SuffixQuery,
     Trees,
@@ -130,7 +125,6 @@ impl fmt::Display for SaplingRemoteApiMethod {
             Self::Blame => "blame",
             Self::Bookmarks => "bookmarks",
             Self::Capabilities => "capabilities",
-            Self::Clone => "clone",
             Self::CloudReferences => "cloud_references",
             Self::CloudUpdateReferences => "cloud_update_references",
             Self::CloudWorkspace => "cloud_workspace",
@@ -150,8 +144,6 @@ impl fmt::Display for SaplingRemoteApiMethod {
             Self::History => "history",
             Self::LandStack => "land_stack",
             Self::Lookup => "lookup",
-            Self::PullFastForwardMaster => "pull_fast_forward_master",
-            Self::PullLazy => "pull_lazy",
             Self::SetBookmark => "set_bookmark",
             Self::SuffixQuery => "suffix_query",
             Self::Trees => "trees",
@@ -236,11 +228,8 @@ macro_rules! define_handler {
 }
 
 define_handler!(capabilities_handler, capabilities::capabilities_handler);
-define_handler!(clone_handler, clone::clone_data);
 define_handler!(commit_hash_to_location_handler, commit::hash_to_location);
 define_handler!(commit_revlog_data_handler, commit::revlog_data);
-define_handler!(pull_fast_forward_master, pull::pull_fast_forward_master);
-define_handler!(pull_lazy, pull::pull_lazy);
 define_handler!(repos_handler, repos::repos);
 define_handler!(trees_handler, trees::trees);
 define_handler!(upload_file_handler, files::upload_file);
@@ -470,18 +459,6 @@ pub fn build_router(ctx: ServerContext) -> Router {
             .post("/:repo/commit/revlog_data")
             .with_path_extractor::<commit::RevlogDataParams>()
             .to(commit_revlog_data_handler);
-        route
-            .post("/:repo/clone")
-            .with_path_extractor::<clone::CloneParams>()
-            .to(clone_handler);
-        route
-            .post("/:repo/pull_fast_forward_master")
-            .with_path_extractor::<pull::PullFastForwardParams>()
-            .to(pull_fast_forward_master);
-        route
-            .post("/:repo/pull_lazy")
-            .with_path_extractor::<pull::PullLazyParams>()
-            .to(pull_lazy);
         route
             .put("/:repo/upload/file/:idtype/:id")
             .with_path_extractor::<files::UploadFileParams>()
