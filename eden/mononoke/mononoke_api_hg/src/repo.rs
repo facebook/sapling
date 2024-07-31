@@ -29,6 +29,7 @@ use changesets::ChangesetInsert;
 use changesets::ChangesetsRef;
 use commit_graph::CommitGraphRef;
 use context::CoreContext;
+use dag_types::Location;
 use edenapi_types::AnyId;
 use edenapi_types::UploadToken;
 use ephemeral_blobstore::Bubble;
@@ -74,7 +75,6 @@ use repo_client::find_new_draft_commits_and_derive_filenodes_for_public_roots;
 use repo_client::gettreepack_entries;
 use repo_update_logger::log_new_commits;
 use repo_update_logger::CommitInfo;
-use segmented_changelog::Location;
 use slog::debug;
 use unbundle::upload_changeset;
 

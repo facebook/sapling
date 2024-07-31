@@ -21,6 +21,7 @@ changesets = { version = "0.1.0", path = "../changesets" }
 commit_cloud = { version = "0.1.0", path = "../commit_cloud" }
 commit_graph = { version = "0.1.0", path = "../repo_attributes/commit_graph/commit_graph" }
 context = { version = "0.1.0", path = "../server/context" }
+dag-types = { version = "0.1.0", path = "../../scm/lib/dag/dag-types" }
 edenapi_types = { version = "0.1.0", path = "../../scm/lib/edenapi/types" }
 ephemeral_blobstore = { version = "0.1.0", path = "../blobstore/ephemeral_blobstore" }
 filestore = { version = "0.1.0", path = "../filestore" }
@@ -41,7 +42,6 @@ repo_blobstore = { version = "0.1.0", path = "../blobrepo/repo_blobstore" }
 repo_client = { version = "0.1.0", path = "../repo_client" }
 repo_update_logger = { version = "0.1.0", path = "../features/repo_update_logger" }
 revisionstore_types = { version = "0.1.0", path = "../../scm/lib/revisionstore/types" }
-segmented_changelog = { version = "0.1.0", path = "../segmented_changelog" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 unbundle = { version = "0.1.0", path = "../repo_client/unbundle" }
 
