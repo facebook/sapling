@@ -25,10 +25,12 @@ use repository::Repository;
 use slog::Logger;
 use sql_construct::SqlConstruct;
 use storage::Destination;
+use storage::Xdb;
 use storage::XdbFactory;
 use tokio::time::Duration;
 
 const MONONOKE_PRODUCTION_SHARD_NAME: &str = "xdb.mononoke_production";
+const METAGIT_SHARD_NAME: &str = "xdb.metagit";
 
 #[derive(Debug, Parser)]
 pub struct Args {
@@ -76,23 +78,21 @@ fn create_prod_xdb_factory(fb: FacebookInit) -> Result<XdbFactory> {
     XdbFactory::new(fb, destination, pool_options, conn_options)
 }
 
-async fn current_mononoke_git_repositories(
-    ctx: &CoreContext,
-    xdb_factory: &XdbFactory,
-    repo_configs: &RepoConfigs,
-) -> Result<Vec<Repository>> {
-    let xdb = xdb_factory
-        .create_or_get_shard(MONONOKE_PRODUCTION_SHARD_NAME)
-        .await?;
-    let connections = xdb.read_conns().await?;
+async fn current_mononoke_git_repositories<'a>(
+    ctx: &'a CoreContext,
+    mononoke_production_xdb: &'a Xdb,
+    metagit_xdb: &'a Xdb,
+    repo_configs: &'a RepoConfigs,
+) -> Result<Vec<Repository<'a>>> {
+    let connections = mononoke_production_xdb.read_conns().await?;
     let git_push_redirect_config: &dyn GitPushRedirectConfig =
         &SqlGitPushRedirectConfigBuilder::from_sql_connections(connections).build();
 
     let entries: Vec<GitPushRedirectConfigEntry> = git_push_redirect_config
         .get_redirected_to_mononoke(ctx)
         .await?;
-
     let mut repositories: Vec<Repository> = vec![];
+
     for entry in entries {
         let id = entry.repo_id;
         repositories.push(Repository::new(
@@ -102,27 +102,25 @@ async fn current_mononoke_git_repositories(
                 .map(|(name, _)| name.to_string())
                 .ok_or_else(|| anyhow!("Could not find repository name for repository id {}", id))?
                 .into(),
+            metagit_xdb,
         ))
     }
 
     Ok(repositories)
 }
 
-async fn print_fingerprints(
+async fn update_fingerprints(
     ctx: &CoreContext,
-    xdb_factory: &XdbFactory,
+    mononoke_production_xdb: &Xdb,
+    metagit_xdb: &Xdb,
     repo_configs: &RepoConfigs,
     concurrency: usize,
 ) -> Result<()> {
-    let repositories = current_mononoke_git_repositories(ctx, xdb_factory, repo_configs).await?;
+    let repositories =
+        current_mononoke_git_repositories(ctx, mononoke_production_xdb, metagit_xdb, repo_configs)
+            .await?;
     futures::stream::iter(repositories.into_iter().map(|repository| async move {
-        println!(
-            "Repository id: `{}`, name: `{}`, current fingerprint: `{:?}`",
-            repository.id(),
-            repository.name(),
-            repository.current_fingerprint()?
-        );
-
+        repository.update_metagit_fingerprint().await?;
         Ok(repository)
     }))
     .buffer_unordered(concurrency)
@@ -146,15 +144,25 @@ pub async fn poll(fb: FacebookInit, args: Args) -> Result<()> {
     let config_store = create_config_store(fb, logger.clone())?;
     let repo_configs = metaconfig_parser::load_repo_configs(&config_path, &config_store)?;
     let xdb_factory = create_prod_xdb_factory(fb)?;
+    let mononoke_production_xdb = xdb_factory
+        .create_or_get_shard(MONONOKE_PRODUCTION_SHARD_NAME)
+        .await?;
+    let metagit_xdb = xdb_factory.create_or_get_shard(METAGIT_SHARD_NAME).await?;
 
     let mut interval = tokio::time::interval(Duration::from_secs(args.mononoke_polling_interval));
     loop {
         interval.tick().await;
-        if let Err(e) =
-            print_fingerprints(&ctx, &xdb_factory, &repo_configs, args.concurrency).await
+        if let Err(e) = update_fingerprints(
+            &ctx,
+            &mononoke_production_xdb,
+            &metagit_xdb,
+            &repo_configs,
+            args.concurrency,
+        )
+        .await
         {
             logging::warn!(
-                "Encounted error `{}` while printing fingerprint in iteration",
+                "Encounted error `{}` while updating fingerprints in iteration",
                 e
             );
         }
