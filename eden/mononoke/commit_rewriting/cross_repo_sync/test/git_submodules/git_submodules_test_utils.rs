@@ -27,13 +27,13 @@ use cacheblob::InProcessLease;
 use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use cross_repo_sync::submodule_metadata_file_prefix_and_dangling_pointers;
-use cross_repo_sync::validate_all_submodule_expansions;
 use cross_repo_sync::CommitSyncRepos;
 use cross_repo_sync::CommitSyncer;
 use cross_repo_sync::InMemoryRepo;
 use cross_repo_sync::Large;
 use cross_repo_sync::SubmoduleDeps;
 use cross_repo_sync::SubmoduleExpansionData;
+use cross_repo_sync::ValidSubmoduleExpansionBonsai;
 use cross_repo_sync_test_utils::rebase_root_on_master;
 use cross_repo_sync_test_utils::TestRepo;
 use fbinit::FacebookInit;
@@ -782,5 +782,13 @@ pub(crate) async fn test_submodule_expansion_validation_in_large_repo_bonsai(
         large_repo_id,
         dangling_submodule_pointers,
     };
-    validate_all_submodule_expansions(&ctx, sm_exp_data, bonsai, mover).await
+
+    ValidSubmoduleExpansionBonsai::validate_all_submodule_expansions(
+        &ctx,
+        sm_exp_data,
+        bonsai,
+        mover,
+    )
+    .await
+    .map(ValidSubmoduleExpansionBonsai::into_inner)
 }

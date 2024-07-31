@@ -55,52 +55,64 @@ use crate::reporting::log_trace;
 use crate::reporting::run_and_log_stats_to_scuba;
 use crate::types::Repo;
 
-/// Validate that a given bonsai **from the large repo** keeps all submodule
-/// expansions valid.
-pub async fn validate_all_submodule_expansions<'a, R: Repo>(
-    ctx: &'a CoreContext,
-    sm_exp_data: SubmoduleExpansionData<'a, R>,
-    // Bonsai from the large repo that should have all submodule expansions
-    // validated
-    bonsai: BonsaiChangeset,
-    // TODO(T179533620): fetch mover from commit sync config, instead of
-    // requiring it to be provided by callers.
-    mover: Mover,
-) -> Result<BonsaiChangeset> {
-    // For every submodule dependency, get all changes in their directories.
+/// A wrapper over BonsaiChangeset that can only be created by running submodule
+/// expansion validation on a bonsai.
+/// This type will be used as input of any functions that require a bonsai
+/// to have all its submodule expansions already validated (e.g. backsyncing).
+pub struct ValidSubmoduleExpansionBonsai(BonsaiChangeset);
 
-    // Iterate over the submodule dependency paths.
-    // Create a map grouping the file changes per submodule dependency.
+impl ValidSubmoduleExpansionBonsai {
+    /// Validate that a given bonsai **from the large repo** keeps all submodule
+    /// expansions valid.
+    pub async fn validate_all_submodule_expansions<'a, R: Repo>(
+        ctx: &'a CoreContext,
+        sm_exp_data: SubmoduleExpansionData<'a, R>,
+        // Bonsai from the large repo that should have all submodule expansions
+        // validated
+        bonsai: BonsaiChangeset,
+        // TODO(T179533620): fetch mover from commit sync config, instead of
+        // requiring it to be provided by callers.
+        mover: Mover,
+    ) -> Result<ValidSubmoduleExpansionBonsai> {
+        // For every submodule dependency, get all changes in their directories.
 
-    let bonsai_res: Result<BonsaiChangeset> =
-        stream::iter(sm_exp_data.submodule_deps.iter().map(anyhow::Ok))
-            .try_fold(bonsai, |bonsai, (submodule_path, submodule_repo)| {
-                cloned!(mover, sm_exp_data);
-                async move {
-                    run_and_log_stats_to_scuba(
-                        ctx,
-                        "Validating submodule expansion",
-                        format!("Submodule path: {submodule_path}"),
-                        validate_submodule_expansion(
+        // Iterate over the submodule dependency paths.
+        // Create a map grouping the file changes per submodule dependency.
+
+        let bonsai_res: Result<BonsaiChangeset> =
+            stream::iter(sm_exp_data.submodule_deps.iter().map(anyhow::Ok))
+                .try_fold(bonsai, |bonsai, (submodule_path, submodule_repo)| {
+                    cloned!(mover, sm_exp_data);
+                    async move {
+                        run_and_log_stats_to_scuba(
                             ctx,
-                            sm_exp_data,
-                            bonsai,
-                            submodule_path,
-                            submodule_repo.as_ref(),
-                            mover,
-                        ),
-                    )
-                    .await
-                    .with_context(|| format!("Validation of submodule {submodule_path} failed"))
-                }
-            })
-            .await;
+                            "Validating submodule expansion",
+                            format!("Submodule path: {submodule_path}"),
+                            validate_submodule_expansion(
+                                ctx,
+                                sm_exp_data,
+                                bonsai,
+                                submodule_path,
+                                submodule_repo.as_ref(),
+                                mover,
+                            ),
+                        )
+                        .await
+                        .with_context(|| format!("Validation of submodule {submodule_path} failed"))
+                    }
+                })
+                .await;
 
-    if let Err(err) = &bonsai_res {
-        log_error(ctx, format!("Submodule validation failed: {err:#?}"));
+        if let Err(err) = &bonsai_res {
+            log_error(ctx, format!("Submodule validation failed: {err:#?}"));
+        }
+
+        bonsai_res.map(ValidSubmoduleExpansionBonsai)
     }
 
-    bonsai_res
+    pub fn into_inner(self) -> BonsaiChangeset {
+        self.0
+    }
 }
 
 /// Validate that a bonsai in the large repo is valid for a given submodule repo

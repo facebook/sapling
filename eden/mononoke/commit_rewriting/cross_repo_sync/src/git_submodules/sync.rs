@@ -22,7 +22,7 @@ use crate::commit_syncers_lib::mover_to_multi_mover;
 use crate::commit_syncers_lib::CommitRewriteResult;
 use crate::git_submodules::expand::expand_all_git_submodule_file_changes;
 use crate::git_submodules::utils::get_submodule_expansions_affected;
-use crate::git_submodules::validation::validate_all_submodule_expansions;
+use crate::git_submodules::validation::ValidSubmoduleExpansionBonsai;
 use crate::reporting::set_scuba_logger_fields;
 use crate::run_and_log_stats_to_scuba;
 use crate::types::Repo;
@@ -127,13 +127,18 @@ pub async fn sync_commit_with_submodule_expansion<'a, R: Repo>(
                 ctx,
                 "Validating all submodule expansions",
                 None,
-                validate_all_submodule_expansions(ctx, sm_exp_data, rewritten_bonsai, mover),
+                ValidSubmoduleExpansionBonsai::validate_all_submodule_expansions(
+                    ctx,
+                    sm_exp_data,
+                    rewritten_bonsai,
+                    mover,
+                ),
             )
             .await
             // TODO(gustavoavena): print some identifier of changeset that failed
             .context("Validation of submodule expansion failed")?;
 
-            let rewritten = Some(validated_bonsai.into_mut());
+            let rewritten = Some(validated_bonsai.into_inner().into_mut());
 
             Ok(CommitRewriteResult::new(
                 rewritten,
