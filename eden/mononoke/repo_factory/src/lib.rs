@@ -110,6 +110,8 @@ use filenodes::ArcFilenodes;
 use filestore::ArcFilestoreConfig;
 use filestore::FilestoreConfig;
 use futures_watchdog::WatchdogExt;
+use git_push_redirect::ArcGitPushRedirectConfig;
+use git_push_redirect::SqlGitPushRedirectConfigBuilder;
 use git_symbolic_refs::ArcGitSymbolicRefs;
 use git_symbolic_refs::SqlGitSymbolicRefsBuilder;
 use hook_manager::manager::ArcHookManager;
@@ -686,6 +688,9 @@ pub enum RepoFactoryError {
     #[error("Error opening repo-metadata-checkpoint")]
     RepoMetadataCheckpoint,
 
+    #[error("Error opening git-push-redirect-config")]
+    GitPushRedirectConfig,
+
     #[error("Error opening pushrebase mutation mapping")]
     PushrebaseMutationMapping,
 
@@ -1011,6 +1016,18 @@ impl RepoFactory {
             .context(RepoFactoryError::RepoMetadataCheckpoint)?
             .build(repo_identity.id());
         Ok(Arc::new(repo_metadata_info))
+    }
+
+    pub async fn git_push_redirect_config(
+        &self,
+        repo_config: &ArcRepoConfig,
+    ) -> Result<ArcGitPushRedirectConfig> {
+        let git_push_redirect_config = self
+            .open_sql::<SqlGitPushRedirectConfigBuilder>(repo_config)
+            .await
+            .context(RepoFactoryError::GitPushRedirectConfig)?
+            .build();
+        Ok(Arc::new(git_push_redirect_config))
     }
 
     pub async fn pushrebase_mutation_mapping(

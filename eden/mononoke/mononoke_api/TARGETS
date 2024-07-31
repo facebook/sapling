@@ -104,6 +104,7 @@ rust_library(
         "//eden/mononoke/git/git_types:git_types",
         "//eden/mononoke/git/packfile:packfile",
         "//eden/mononoke/git/protocol:protocol",
+        "//eden/mononoke/git_push_redirect:git_push_redirect",
         "//eden/mononoke/git_symbolic_refs:git_symbolic_refs",
         "//eden/mononoke/hooks:hooks",
         "//eden/mononoke/manifest:manifest",

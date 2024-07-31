@@ -90,6 +90,8 @@ use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use futures::try_join;
 use futures::Future;
+use git_push_redirect::GitPushRedirectConfig;
+use git_push_redirect::TestGitPushRedirectConfig;
 use git_symbolic_refs::GitSymbolicRefs;
 use git_types::MappedGitCommitId;
 use hook_manager::manager::HookManager;
@@ -260,6 +262,9 @@ pub struct Repo {
 
     #[facet]
     pub repo_stats_logger: RepoStatsLogger,
+
+    #[facet]
+    pub git_push_redirect_config: dyn GitPushRedirectConfig,
 }
 
 impl AsBlobRepo for Repo {
@@ -434,6 +439,7 @@ impl Repo {
             repo_handler_base: self.repo_handler_base.clone(),
             filestore_config: self.filestore_config.clone(),
             repo_stats_logger: self.repo_stats_logger.clone(),
+            git_push_redirect_config: self.git_push_redirect_config.clone(),
         }
     }
 
@@ -524,7 +530,7 @@ impl Repo {
         let filestore_config = Arc::new(FilestoreConfig::no_chunking_filestore());
 
         let repo_stats_logger = Arc::new(RepoStatsLogger::noop());
-
+        let git_push_redirect_config = Arc::new(TestGitPushRedirectConfig::new());
         Ok(Self {
             name: name.clone(),
             inner,
@@ -533,6 +539,7 @@ impl Repo {
             repo_handler_base,
             filestore_config,
             repo_stats_logger,
+            git_push_redirect_config,
         })
     }
 

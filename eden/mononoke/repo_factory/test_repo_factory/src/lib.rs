@@ -52,6 +52,8 @@ use fbinit::FacebookInit;
 use filenodes::ArcFilenodes;
 use filestore::ArcFilestoreConfig;
 use filestore::FilestoreConfig;
+use git_push_redirect::ArcGitPushRedirectConfig;
+use git_push_redirect::SqlGitPushRedirectConfigBuilder;
 use git_symbolic_refs::ArcGitSymbolicRefs;
 use git_symbolic_refs::SqlGitSymbolicRefsBuilder;
 use hook_manager::manager::ArcHookManager;
@@ -544,6 +546,14 @@ impl TestRepoFactory {
         Ok(Arc::new(
             SqlGitSymbolicRefsBuilder::from_sql_connections(self.metadata_db.clone())
                 .build(repo_identity.id()),
+        ))
+    }
+
+    /// Construct Git Push Redirect Config using the in-memory metadata
+    /// database.
+    pub fn git_push_redirect_config(&self) -> Result<ArcGitPushRedirectConfig> {
+        Ok(Arc::new(
+            SqlGitPushRedirectConfigBuilder::from_sql_connections(self.metadata_db.clone()).build(),
         ))
     }
 
