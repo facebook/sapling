@@ -462,10 +462,11 @@ WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) noexcept {
             // is prerable to listening to mouse clicks and key presses
             // directly.
           case WM_CONTEXTMENU: {
+            auto notifier = getWindowsNotifier(hwnd);
+            notifier->logEvent(EMenuActionEvent{EMenuActionEvent::EMenuClick});
             POINT pt = {};
             pt.x = GET_X_LPARAM(wParam);
             pt.y = GET_Y_LPARAM(wParam);
-            auto notifier = getWindowsNotifier(hwnd);
             notifier->showContextMenu(hwnd, pt);
           } break;
         }
