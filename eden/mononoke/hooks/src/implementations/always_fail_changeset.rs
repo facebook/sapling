@@ -14,8 +14,8 @@ use mononoke_types::BonsaiChangeset;
 use crate::ChangesetHook;
 use crate::CrossRepoPushSource;
 use crate::HookExecution;
-use crate::HookFileContentProvider;
 use crate::HookRejectionInfo;
+use crate::HookStateProvider;
 use crate::PushAuthoredBy;
 
 #[derive(Clone, Debug)]
@@ -34,7 +34,7 @@ impl ChangesetHook for AlwaysFailChangeset {
         _ctx: &'ctx CoreContext,
         _bookmark: &BookmarkKey,
         _changeset: &'cs BonsaiChangeset,
-        _content_manager: &'fetcher dyn HookFileContentProvider,
+        _content_manager: &'fetcher dyn HookStateProvider,
         _cross_repo_push_source: CrossRepoPushSource,
         _push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution, Error> {

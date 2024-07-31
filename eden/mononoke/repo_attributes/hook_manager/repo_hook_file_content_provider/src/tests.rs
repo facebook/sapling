@@ -20,9 +20,9 @@ use hook_manager::ChangesetHook;
 use hook_manager::CrossRepoPushSource;
 use hook_manager::FileChange as FileDiff;
 use hook_manager::HookExecution;
-use hook_manager::HookFileContentProvider;
 use hook_manager::HookManager;
 use hook_manager::HookRejectionInfo;
+use hook_manager::HookStateProvider;
 use hook_manager::PathContent;
 use hook_manager::PushAuthoredBy;
 use maplit::hashmap;
@@ -47,7 +47,7 @@ use tests_utils::bookmark;
 use tests_utils::BasicTestRepo;
 use tests_utils::CreateCommitContext;
 
-use crate::RepoHookFileContentProvider;
+use crate::RepoHookStateProvider;
 
 #[derive(Clone)]
 struct FindFilesChangesetHook {
@@ -61,7 +61,7 @@ impl ChangesetHook for FindFilesChangesetHook {
         ctx: &'ctx CoreContext,
         _bookmark: &BookmarkKey,
         _changeset: &'cs BonsaiChangeset,
-        content_manager: &'fetcher dyn HookFileContentProvider,
+        content_manager: &'fetcher dyn HookStateProvider,
         _cross_repo_push_source: CrossRepoPushSource,
         _push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution, Error> {
@@ -101,7 +101,7 @@ impl ChangesetHook for FileChangesChangesetHook {
         ctx: &'ctx CoreContext,
         _bookmark: &BookmarkKey,
         changeset: &'cs BonsaiChangeset,
-        content_manager: &'fetcher dyn HookFileContentProvider,
+        content_manager: &'fetcher dyn HookStateProvider,
         _cross_repo_push_source: CrossRepoPushSource,
         _push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution, Error> {
@@ -144,7 +144,7 @@ impl ChangesetHook for LatestChangesChangesetHook {
         ctx: &'ctx CoreContext,
         _bookmark: &BookmarkKey,
         _changeset: &'cs BonsaiChangeset,
-        content_manager: &'fetcher dyn HookFileContentProvider,
+        content_manager: &'fetcher dyn HookStateProvider,
         _cross_repo_push_source: CrossRepoPushSource,
         _push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution, Error> {
@@ -426,7 +426,7 @@ fn default_changeset() -> BonsaiChangeset {
 async fn hook_manager_repo(fb: FacebookInit, repo: &BasicTestRepo) -> HookManager {
     let ctx = CoreContext::test_mock(fb);
 
-    let content_manager = RepoHookFileContentProvider::new(repo);
+    let content_manager = RepoHookStateProvider::new(repo);
     HookManager::new(
         ctx.fb,
         &InternalAclProvider::default(),

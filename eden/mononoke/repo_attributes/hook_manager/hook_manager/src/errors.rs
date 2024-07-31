@@ -15,7 +15,7 @@ pub enum HookManagerError {
 }
 
 #[derive(Debug, Error)]
-pub enum HookFileContentProviderError {
+pub enum HookStateProviderError {
     #[error("Content with id '{0}' not found")]
     ContentIdNotFound(ContentId),
 
@@ -26,7 +26,7 @@ pub enum HookFileContentProviderError {
     Error(#[from] anyhow::Error),
 }
 
-impl From<std::num::TryFromIntError> for HookFileContentProviderError {
+impl From<std::num::TryFromIntError> for HookStateProviderError {
     fn from(_: std::num::TryFromIntError) -> Self {
         Self::ContentTooLarge
     }

@@ -21,10 +21,10 @@ use mononoke_types::NonRootMPath;
 use quickcheck::Arbitrary;
 use quickcheck::Gen;
 
-use crate::errors::HookFileContentProviderError;
+use crate::errors::HookStateProviderError;
 use crate::provider::BookmarkState;
 use crate::provider::FileChange;
-use crate::provider::HookFileContentProvider;
+use crate::provider::HookStateProvider;
 use crate::provider::PathContent;
 
 #[derive(Clone)]
@@ -53,17 +53,17 @@ impl From<u64> for InMemoryFileText {
 }
 
 #[derive(Clone)]
-pub struct InMemoryHookFileContentProvider {
+pub struct InMemoryHookStateProvider {
     id_to_text: HashMap<ContentId, InMemoryFileText>,
 }
 
 #[async_trait]
-impl HookFileContentProvider for InMemoryHookFileContentProvider {
+impl HookStateProvider for InMemoryHookStateProvider {
     async fn get_file_metadata<'a>(
         &'a self,
         _ctx: &'a CoreContext,
         id: ContentId,
-    ) -> Result<ContentMetadataV2, HookFileContentProviderError> {
+    ) -> Result<ContentMetadataV2, HookStateProviderError> {
         let mb_content_md = self
             .id_to_text
             .get(&id)
@@ -79,17 +79,17 @@ impl HookFileContentProvider for InMemoryHookFileContentProvider {
             });
         mb_content_md
             .flatten()
-            .ok_or(HookFileContentProviderError::ContentIdNotFound(id))
+            .ok_or(HookStateProviderError::ContentIdNotFound(id))
     }
 
     async fn get_file_text<'a>(
         &'a self,
         _ctx: &'a CoreContext,
         id: ContentId,
-    ) -> Result<Option<Bytes>, HookFileContentProviderError> {
+    ) -> Result<Option<Bytes>, HookStateProviderError> {
         self.id_to_text
             .get(&id)
-            .ok_or(HookFileContentProviderError::ContentIdNotFound(id))
+            .ok_or(HookStateProviderError::ContentIdNotFound(id))
             .map(|maybe_bytes| match maybe_bytes {
                 InMemoryFileText::Present(bytes) => Some(bytes.clone()),
                 InMemoryFileText::Elided(_) => None,
@@ -101,11 +101,8 @@ impl HookFileContentProvider for InMemoryHookFileContentProvider {
         _ctx: &'a CoreContext,
         _bookmark: BookmarkKey,
         _paths: Vec<NonRootMPath>,
-    ) -> Result<HashMap<NonRootMPath, PathContent>, HookFileContentProviderError> {
-        Err(
-            anyhow!("`find_content` is not implemented for `InMemoryHookFileContentProvider`")
-                .into(),
-        )
+    ) -> Result<HashMap<NonRootMPath, PathContent>, HookStateProviderError> {
+        Err(anyhow!("`find_content` is not implemented for `InMemoryHookStateProvider`").into())
     }
 
     async fn file_changes<'a>(
@@ -113,11 +110,8 @@ impl HookFileContentProvider for InMemoryHookFileContentProvider {
         _ctx: &'a CoreContext,
         _new_cs_id: ChangesetId,
         _old_cs_id: ChangesetId,
-    ) -> Result<Vec<(NonRootMPath, FileChange)>, HookFileContentProviderError> {
-        Err(
-            anyhow!("`file_changes` is not implemented for `InMemoryHookFileContentProvider`")
-                .into(),
-        )
+    ) -> Result<Vec<(NonRootMPath, FileChange)>, HookStateProviderError> {
+        Err(anyhow!("`file_changes` is not implemented for `InMemoryHookStateProvider`").into())
     }
 
     async fn latest_changes<'a>(
@@ -125,11 +119,8 @@ impl HookFileContentProvider for InMemoryHookFileContentProvider {
         _ctx: &'a CoreContext,
         _bookmark: BookmarkKey,
         _paths: Vec<NonRootMPath>,
-    ) -> Result<HashMap<NonRootMPath, ChangesetInfo>, HookFileContentProviderError> {
-        Err(
-            anyhow!("`latest_changes` is not implemented for `InMemoryHookFileContentProvider`")
-                .into(),
-        )
+    ) -> Result<HashMap<NonRootMPath, ChangesetInfo>, HookStateProviderError> {
+        Err(anyhow!("`latest_changes` is not implemented for `InMemoryHookStateProvider`").into())
     }
 
     async fn directory_sizes<'a>(
@@ -137,28 +128,25 @@ impl HookFileContentProvider for InMemoryHookFileContentProvider {
         _ctx: &'a CoreContext,
         _changeset_id: ChangesetId,
         _paths: Vec<MPath>,
-    ) -> Result<HashMap<MPath, u64>, HookFileContentProviderError> {
-        Err(
-            anyhow!("`directory_sizes` is not implemented for `InMemoryHookFileContentProvider`")
-                .into(),
-        )
+    ) -> Result<HashMap<MPath, u64>, HookStateProviderError> {
+        Err(anyhow!("`directory_sizes` is not implemented for `InMemoryHookStateProvider`").into())
     }
 
     async fn get_bookmark_state<'a>(
         &'a self,
         _ctx: &'a CoreContext,
         _bookmark: BookmarkKey,
-    ) -> Result<BookmarkState, HookFileContentProviderError> {
-        Err(anyhow!(
-            "`get_bookmark_state` is not implemented for `InMemoryHookFileContentProvider`"
+    ) -> Result<BookmarkState, HookStateProviderError> {
+        Err(
+            anyhow!("`get_bookmark_state` is not implemented for `InMemoryHookStateProvider`")
+                .into(),
         )
-        .into())
     }
 }
 
-impl InMemoryHookFileContentProvider {
-    pub fn new() -> InMemoryHookFileContentProvider {
-        InMemoryHookFileContentProvider {
+impl InMemoryHookStateProvider {
+    pub fn new() -> InMemoryHookStateProvider {
+        InMemoryHookStateProvider {
             id_to_text: HashMap::new(),
         }
     }

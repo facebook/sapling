@@ -19,18 +19,18 @@ use mononoke_types::ContentMetadataV2;
 use mononoke_types::MPath;
 use mononoke_types::NonRootMPath;
 
-use crate::errors::HookFileContentProviderError;
+use crate::errors::HookStateProviderError;
 use crate::provider::BookmarkState;
 use crate::provider::FileChange;
-use crate::provider::HookFileContentProvider;
+use crate::provider::HookStateProvider;
 use crate::provider::PathContent;
 
-pub struct TextOnlyHookFileContentProvider<T> {
+pub struct TextOnlyHookStateProvider<T> {
     inner: Arc<T>,
     max_size: u64,
 }
 
-impl<T> TextOnlyHookFileContentProvider<T> {
+impl<T> TextOnlyHookStateProvider<T> {
     pub fn new(inner: T, max_size: u64) -> Self {
         Self {
             inner: Arc::new(inner),
@@ -40,14 +40,12 @@ impl<T> TextOnlyHookFileContentProvider<T> {
 }
 
 #[async_trait]
-impl<T: HookFileContentProvider + 'static> HookFileContentProvider
-    for TextOnlyHookFileContentProvider<T>
-{
+impl<T: HookStateProvider + 'static> HookStateProvider for TextOnlyHookStateProvider<T> {
     async fn get_file_metadata<'a>(
         &'a self,
         ctx: &'a CoreContext,
         id: ContentId,
-    ) -> Result<ContentMetadataV2, HookFileContentProviderError> {
+    ) -> Result<ContentMetadataV2, HookStateProviderError> {
         self.inner.get_file_metadata(ctx, id).await
     }
 
@@ -57,7 +55,7 @@ impl<T: HookFileContentProvider + 'static> HookFileContentProvider
         &'a self,
         ctx: &'a CoreContext,
         id: ContentId,
-    ) -> Result<Option<Bytes>, HookFileContentProviderError> {
+    ) -> Result<Option<Bytes>, HookStateProviderError> {
         // Don't fetch content if we know the object is too large
         let size = self.get_file_metadata(ctx, id).await?.total_size;
         if size > self.max_size {
@@ -74,7 +72,7 @@ impl<T: HookFileContentProvider + 'static> HookFileContentProvider
         ctx: &'a CoreContext,
         bookmark: BookmarkKey,
         paths: Vec<NonRootMPath>,
-    ) -> Result<HashMap<NonRootMPath, PathContent>, HookFileContentProviderError> {
+    ) -> Result<HashMap<NonRootMPath, PathContent>, HookStateProviderError> {
         self.inner.find_content(ctx, bookmark, paths).await
     }
 
@@ -83,7 +81,7 @@ impl<T: HookFileContentProvider + 'static> HookFileContentProvider
         ctx: &'a CoreContext,
         new_cs_id: ChangesetId,
         old_cs_id: ChangesetId,
-    ) -> Result<Vec<(NonRootMPath, FileChange)>, HookFileContentProviderError> {
+    ) -> Result<Vec<(NonRootMPath, FileChange)>, HookStateProviderError> {
         self.inner.file_changes(ctx, new_cs_id, old_cs_id).await
     }
 
@@ -92,7 +90,7 @@ impl<T: HookFileContentProvider + 'static> HookFileContentProvider
         ctx: &'a CoreContext,
         bookmark: BookmarkKey,
         paths: Vec<NonRootMPath>,
-    ) -> Result<HashMap<NonRootMPath, ChangesetInfo>, HookFileContentProviderError> {
+    ) -> Result<HashMap<NonRootMPath, ChangesetInfo>, HookStateProviderError> {
         self.inner.latest_changes(ctx, bookmark, paths).await
     }
 
@@ -101,7 +99,7 @@ impl<T: HookFileContentProvider + 'static> HookFileContentProvider
         ctx: &'a CoreContext,
         changeset_id: ChangesetId,
         paths: Vec<MPath>,
-    ) -> Result<HashMap<MPath, u64>, HookFileContentProviderError> {
+    ) -> Result<HashMap<MPath, u64>, HookStateProviderError> {
         self.inner.directory_sizes(ctx, changeset_id, paths).await
     }
 
@@ -109,7 +107,7 @@ impl<T: HookFileContentProvider + 'static> HookFileContentProvider
         &'a self,
         ctx: &'a CoreContext,
         bookmark: BookmarkKey,
-    ) -> Result<BookmarkState, HookFileContentProviderError> {
+    ) -> Result<BookmarkState, HookStateProviderError> {
         self.inner.get_bookmark_state(ctx, bookmark).await
     }
 }
@@ -121,17 +119,17 @@ mod test {
     use tokio::runtime::Runtime;
 
     use super::*;
-    use crate::InMemoryHookFileContentProvider;
+    use crate::InMemoryHookStateProvider;
 
     #[fbinit::test]
     fn test_acceptable_file(fb: FacebookInit) {
         let rt = Runtime::new().unwrap();
         let ctx = CoreContext::test_mock(fb);
 
-        let mut inner = InMemoryHookFileContentProvider::new();
+        let mut inner = InMemoryHookStateProvider::new();
         inner.insert(ONES_CTID, "foobar");
 
-        let store = TextOnlyHookFileContentProvider::new(inner, 10);
+        let store = TextOnlyHookStateProvider::new(inner, 10);
         let ret = rt.block_on(store.get_file_text(&ctx, ONES_CTID)).unwrap();
         assert_eq!(ret, Some("foobar".into()));
         let ret = rt
@@ -146,10 +144,10 @@ mod test {
         let rt = Runtime::new().unwrap();
         let ctx = CoreContext::test_mock(fb);
 
-        let mut inner = InMemoryHookFileContentProvider::new();
+        let mut inner = InMemoryHookStateProvider::new();
         inner.insert(ONES_CTID, "foobar");
 
-        let store = TextOnlyHookFileContentProvider::new(inner, 2);
+        let store = TextOnlyHookStateProvider::new(inner, 2);
         let ret = rt.block_on(store.get_file_text(&ctx, ONES_CTID)).unwrap();
         assert_eq!(ret, None);
 
@@ -165,10 +163,10 @@ mod test {
         let rt = Runtime::new().unwrap();
         let ctx = CoreContext::test_mock(fb);
 
-        let mut inner = InMemoryHookFileContentProvider::new();
+        let mut inner = InMemoryHookStateProvider::new();
         inner.insert(ONES_CTID, "foo\0");
 
-        let store = TextOnlyHookFileContentProvider::new(inner, 10);
+        let store = TextOnlyHookStateProvider::new(inner, 10);
         let ret = rt.block_on(store.get_file_text(&ctx, ONES_CTID)).unwrap();
         assert_eq!(ret, None);
         let ret = rt

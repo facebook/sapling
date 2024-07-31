@@ -103,7 +103,7 @@ use repo_cross_repo::ArcRepoCrossRepo;
 use repo_cross_repo::RepoCrossRepo;
 use repo_derived_data::ArcRepoDerivedData;
 use repo_derived_data::RepoDerivedData;
-use repo_hook_file_content_provider::RepoHookFileContentProvider;
+use repo_hook_file_content_provider::RepoHookStateProvider;
 use repo_identity::ArcRepoIdentity;
 use repo_identity::RepoIdentity;
 use repo_lock::AlwaysUnlockedRepoLock;
@@ -783,7 +783,7 @@ impl TestRepoFactory {
         bookmarks: &ArcBookmarks,
         repo_blobstore: &ArcRepoBlobstore,
     ) -> ArcHookManager {
-        let content_store = RepoHookFileContentProvider::from_parts(
+        let content_store = RepoHookStateProvider::from_parts(
             bookmarks.clone(),
             repo_blobstore.clone(),
             repo_derived_data.clone(),

@@ -19,8 +19,8 @@ use serde::Deserialize;
 use crate::CrossRepoPushSource;
 use crate::FileHook;
 use crate::HookExecution;
-use crate::HookFileContentProvider;
 use crate::HookRejectionInfo;
+use crate::HookStateProvider;
 use crate::PushAuthoredBy;
 
 #[derive(Debug, Deserialize, Clone)]
@@ -57,7 +57,7 @@ impl FileHook for NoExecutableBinariesHook {
     async fn run<'this: 'change, 'ctx: 'this, 'change, 'fetcher: 'change, 'path: 'change>(
         &'this self,
         ctx: &'ctx CoreContext,
-        content_manager: &'fetcher dyn HookFileContentProvider,
+        content_manager: &'fetcher dyn HookStateProvider,
         change: Option<&'change BasicFileChange>,
         path: &'path NonRootMPath,
         _cross_repo_push_source: CrossRepoPushSource,
@@ -113,7 +113,7 @@ mod test {
     use maplit::hashmap;
     use maplit::hashset;
     use mononoke_types::BonsaiChangeset;
-    use repo_hook_file_content_provider::RepoHookFileContentProvider;
+    use repo_hook_file_content_provider::RepoHookStateProvider;
     use tests_utils::BasicTestRepo;
     use tests_utils::CreateCommitContext;
 
@@ -133,14 +133,14 @@ mod test {
     ) -> (
         CoreContext,
         BasicTestRepo,
-        RepoHookFileContentProvider,
+        RepoHookStateProvider,
         NoExecutableBinariesHook,
     ) {
         let ctx = CoreContext::test_mock(fb);
         let repo: BasicTestRepo = test_repo_factory::build_empty(ctx.fb)
             .await
             .expect("Failed to create test repo");
-        let content_manager = RepoHookFileContentProvider::new(&repo);
+        let content_manager = RepoHookStateProvider::new(&repo);
         let config = make_test_config();
         let hook = NoExecutableBinariesHook::with_config(config);
 
@@ -149,7 +149,7 @@ mod test {
 
     async fn assert_hook_execution(
         ctx: &CoreContext,
-        content_manager: RepoHookFileContentProvider,
+        content_manager: RepoHookStateProvider,
         bcs: BonsaiChangeset,
         hook: NoExecutableBinariesHook,
         valid_files: HashSet<&str>,

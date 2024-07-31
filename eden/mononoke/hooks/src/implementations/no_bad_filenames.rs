@@ -18,8 +18,8 @@ use serde::Deserialize;
 use crate::CrossRepoPushSource;
 use crate::FileHook;
 use crate::HookExecution;
-use crate::HookFileContentProvider;
 use crate::HookRejectionInfo;
+use crate::HookStateProvider;
 use crate::PushAuthoredBy;
 
 #[derive(Debug, Deserialize, Clone)]
@@ -61,7 +61,7 @@ impl FileHook for NoBadFilenamesHook {
     async fn run<'this: 'change, 'ctx: 'this, 'change, 'fetcher: 'change, 'path: 'change>(
         &'this self,
         _ctx: &'ctx CoreContext,
-        _content_manager: &'fetcher dyn HookFileContentProvider,
+        _content_manager: &'fetcher dyn HookStateProvider,
         change: Option<&'change BasicFileChange>,
         path: &'path NonRootMPath,
         _cross_repo_push_source: CrossRepoPushSource,
@@ -101,7 +101,7 @@ mod test {
     use blobstore::Loadable;
     use borrowed::borrowed;
     use fbinit::FacebookInit;
-    use repo_hook_file_content_provider::RepoHookFileContentProvider;
+    use repo_hook_file_content_provider::RepoHookStateProvider;
     use tests_utils::BasicTestRepo;
     use tests_utils::CreateCommitContext;
 
@@ -128,7 +128,7 @@ mod test {
         let ctx = CoreContext::test_mock(fb);
         let repo: BasicTestRepo = test_repo_factory::build_empty(ctx.fb).await?;
         borrowed!(ctx, repo);
-        let content_manager = RepoHookFileContentProvider::new(&repo);
+        let content_manager = RepoHookStateProvider::new(&repo);
         let cs_id = CreateCommitContext::new_root(ctx, repo)
             .add_file("dir/a", "a")
             .add_file("dir/b", "b")
@@ -160,7 +160,7 @@ mod test {
         let ctx = CoreContext::test_mock(fb);
         let repo: BasicTestRepo = test_repo_factory::build_empty(ctx.fb).await?;
         borrowed!(ctx, repo);
-        let content_manager = RepoHookFileContentProvider::new(&repo);
+        let content_manager = RepoHookStateProvider::new(&repo);
         // Illegal file names
         let cs_id = CreateCommitContext::new_root(ctx, repo)
             .add_file("foo/bar:baz/quux", "a")
@@ -210,7 +210,7 @@ mod test {
         let ctx = CoreContext::test_mock(fb);
         let repo: BasicTestRepo = test_repo_factory::build_empty(ctx.fb).await?;
         borrowed!(ctx, repo);
-        let content_manager = RepoHookFileContentProvider::new(&repo);
+        let content_manager = RepoHookStateProvider::new(&repo);
         // Illegal file names
         let cs_id = CreateCommitContext::new_root(ctx, repo)
             .add_file("foo/bar/baz", "a")
@@ -245,7 +245,7 @@ mod test {
         let ctx = CoreContext::test_mock(fb);
         let repo: BasicTestRepo = test_repo_factory::build_empty(ctx.fb).await?;
         borrowed!(ctx, repo);
-        let content_manager = RepoHookFileContentProvider::new(&repo);
+        let content_manager = RepoHookStateProvider::new(&repo);
         // Illegal file names
         let cs_id = CreateCommitContext::new_root(ctx, repo)
             .add_file("foo/bar:baz/quux", "a")

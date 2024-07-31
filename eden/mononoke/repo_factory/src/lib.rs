@@ -116,7 +116,7 @@ use git_symbolic_refs::ArcGitSymbolicRefs;
 use git_symbolic_refs::SqlGitSymbolicRefsBuilder;
 use hook_manager::manager::ArcHookManager;
 use hook_manager::manager::HookManager;
-use hook_manager::TextOnlyHookFileContentProvider;
+use hook_manager::TextOnlyHookStateProvider;
 use hooks::hook_loader::load_hooks;
 use live_commit_sync_config::CfgrLiveCommitSyncConfig;
 use memcache::KeyGen;
@@ -161,7 +161,7 @@ use repo_cross_repo::RepoCrossRepo;
 use repo_derivation_queues::ArcRepoDerivationQueues;
 use repo_derived_data::ArcRepoDerivedData;
 use repo_derived_data::RepoDerivedData;
-use repo_hook_file_content_provider::RepoHookFileContentProvider;
+use repo_hook_file_content_provider::RepoHookStateProvider;
 use repo_identity::ArcRepoIdentity;
 use repo_identity::RepoIdentity;
 use repo_lock::AlwaysLockedRepoLock;
@@ -1472,8 +1472,8 @@ impl RepoFactory {
         }
 
         let hook_manager = async {
-            let content_provider = Box::new(TextOnlyHookFileContentProvider::new(
-                RepoHookFileContentProvider::from_parts(
+            let content_provider = Box::new(TextOnlyHookStateProvider::new(
+                RepoHookStateProvider::from_parts(
                     bookmarks.clone(),
                     repo_blobstore.clone(),
                     repo_derived_data.clone(),

@@ -30,13 +30,13 @@ use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::NonRootMPath;
 
-pub use crate::errors::HookFileContentProviderError;
 pub use crate::errors::HookManagerError;
+pub use crate::errors::HookStateProviderError;
 pub use crate::manager::HookManager;
-pub use crate::provider::memory::InMemoryHookFileContentProvider;
-pub use crate::provider::text_only::TextOnlyHookFileContentProvider;
+pub use crate::provider::memory::InMemoryHookStateProvider;
+pub use crate::provider::text_only::TextOnlyHookStateProvider;
 pub use crate::provider::FileChange;
-pub use crate::provider::HookFileContentProvider;
+pub use crate::provider::HookStateProvider;
 pub use crate::provider::PathContent;
 
 /// Whether changesets were created by a user or a service.
@@ -85,7 +85,7 @@ pub trait ChangesetHook: Send + Sync {
         ctx: &'ctx CoreContext,
         bookmark: &BookmarkKey,
         changeset: &'cs BonsaiChangeset,
-        content_provider: &'provider dyn HookFileContentProvider,
+        content_provider: &'provider dyn HookStateProvider,
         cross_repo_push_source: CrossRepoPushSource,
         push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution, Error>;
@@ -100,7 +100,7 @@ pub trait FileHook: Send + Sync {
     async fn run<'this: 'change, 'ctx: 'this, 'change, 'provider: 'change, 'path: 'change>(
         &'this self,
         ctx: &'ctx CoreContext,
-        content_provider: &'provider dyn HookFileContentProvider,
+        content_provider: &'provider dyn HookStateProvider,
         change: Option<&'change BasicFileChange>,
         path: &'path NonRootMPath,
         cross_repo_push_source: CrossRepoPushSource,

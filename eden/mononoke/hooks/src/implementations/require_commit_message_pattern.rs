@@ -18,8 +18,8 @@ use serde::Deserialize;
 use crate::ChangesetHook;
 use crate::CrossRepoPushSource;
 use crate::HookExecution;
-use crate::HookFileContentProvider;
 use crate::HookRejectionInfo;
+use crate::HookStateProvider;
 use crate::PushAuthoredBy;
 
 #[derive(Deserialize, Clone, Debug)]
@@ -61,7 +61,7 @@ impl ChangesetHook for RequireCommitMessagePatternHook {
         _ctx: &'ctx CoreContext,
         _bookmark: &BookmarkKey,
         changeset: &'cs BonsaiChangeset,
-        _content_manager: &'fetcher dyn HookFileContentProvider,
+        _content_manager: &'fetcher dyn HookStateProvider,
         _cross_repo_push_source: CrossRepoPushSource,
         push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution, Error> {

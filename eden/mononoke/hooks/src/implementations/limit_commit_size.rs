@@ -17,8 +17,8 @@ use crate::ChangesetHook;
 use crate::CrossRepoPushSource;
 use crate::HookConfig;
 use crate::HookExecution;
-use crate::HookFileContentProvider;
 use crate::HookRejectionInfo;
+use crate::HookStateProvider;
 use crate::PushAuthoredBy;
 
 #[derive(Deserialize, Clone, Debug)]
@@ -90,7 +90,7 @@ impl ChangesetHook for LimitCommitSizeHook {
         _ctx: &'ctx CoreContext,
         _bookmark: &BookmarkKey,
         changeset: &'cs BonsaiChangeset,
-        _content_manager: &'fetcher dyn HookFileContentProvider,
+        _content_manager: &'fetcher dyn HookStateProvider,
         cross_repo_push_source: CrossRepoPushSource,
         push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution> {
@@ -175,7 +175,7 @@ mod test {
     use blobstore::Loadable;
     use borrowed::borrowed;
     use fbinit::FacebookInit;
-    use repo_hook_file_content_provider::RepoHookFileContentProvider;
+    use repo_hook_file_content_provider::RepoHookStateProvider;
     use tests_utils::BasicTestRepo;
     use tests_utils::CreateCommitContext;
 
@@ -208,7 +208,7 @@ mod test {
 
         let bcs = cs_id.load(ctx, &repo.repo_blobstore).await?;
 
-        let content_manager = RepoHookFileContentProvider::new(&repo);
+        let content_manager = RepoHookStateProvider::new(&repo);
 
         let config = make_test_config();
         let hook = LimitCommitSizeHook::with_config(config)?;
@@ -308,7 +308,7 @@ mod test {
 
         let bcs = cs_id.load(ctx, &repo.repo_blobstore).await?;
 
-        let content_manager = RepoHookFileContentProvider::new(&repo);
+        let content_manager = RepoHookStateProvider::new(&repo);
         let mut config = make_test_config();
         config.commit_size_limit = Some(100);
         config.changed_files_limit = Some(2);
@@ -365,7 +365,7 @@ mod test {
 
         let bcs = cs_id.load(ctx, &repo.repo_blobstore).await?;
 
-        let content_manager = RepoHookFileContentProvider::new(&repo);
+        let content_manager = RepoHookStateProvider::new(&repo);
         let mut config = make_test_config();
         config.commit_size_limit = Some(1);
         config.changed_files_limit = Some(3);
@@ -405,7 +405,7 @@ mod test {
 
         let bcs = cs_id.load(ctx, &repo.repo_blobstore).await?;
 
-        let content_manager = RepoHookFileContentProvider::new(&repo);
+        let content_manager = RepoHookStateProvider::new(&repo);
 
         let mut config = make_test_config();
         config.commit_size_limit = Some(1);
@@ -456,7 +456,7 @@ mod test {
 
         let bcs = cs_id.load(ctx, &repo.repo_blobstore).await?;
 
-        let content_manager = RepoHookFileContentProvider::new(&repo);
+        let content_manager = RepoHookStateProvider::new(&repo);
         let mut config = make_test_config();
         config.commit_size_limit = Some(2);
         config.changed_files_limit = Some(2);

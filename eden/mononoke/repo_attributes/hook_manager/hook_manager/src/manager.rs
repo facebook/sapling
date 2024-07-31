@@ -37,7 +37,7 @@ use scuba_ext::MononokeScubaSampleBuilder;
 use slog::debug;
 
 use crate::errors::HookManagerError;
-use crate::provider::HookFileContentProvider;
+use crate::provider::HookStateProvider;
 use crate::ChangesetHook;
 use crate::ChangesetHookExecutionId;
 use crate::CrossRepoPushSource;
@@ -56,7 +56,7 @@ pub struct HookManager {
     hooks: HashMap<String, Hook>,
     bookmark_hooks: HashMap<BookmarkKey, Vec<String>>,
     regex_hooks: Vec<(Regex, Vec<String>)>,
-    content_provider: Box<dyn HookFileContentProvider>,
+    content_provider: Box<dyn HookStateProvider>,
     reviewers_membership: ArcMembershipChecker,
     admin_membership: ArcMembershipChecker,
     scuba: MononokeScubaSampleBuilder,
@@ -68,7 +68,7 @@ impl HookManager {
     pub async fn new(
         fb: FacebookInit,
         acl_provider: &dyn AclProvider,
-        content_provider: Box<dyn HookFileContentProvider>,
+        content_provider: Box<dyn HookStateProvider>,
         hook_manager_params: HookManagerParams,
         mut scuba: MononokeScubaSampleBuilder,
         repo_name: String,
@@ -110,7 +110,7 @@ impl HookManager {
     }
 
     // Create a very simple HookManager, for use inside of the TestRepoFactory.
-    pub fn new_test(repo_name: String, content_provider: Box<dyn HookFileContentProvider>) -> Self {
+    pub fn new_test(repo_name: String, content_provider: Box<dyn HookStateProvider>) -> Self {
         Self {
             repo_name,
             hooks: HashMap::new(),
@@ -316,7 +316,7 @@ impl<'a> HookInstance<'a> {
         self,
         ctx: &CoreContext,
         bookmark: &BookmarkKey,
-        content_provider: &dyn HookFileContentProvider,
+        content_provider: &dyn HookStateProvider,
         hook_name: &str,
         mut scuba: MononokeScubaSampleBuilder,
         cs: &BonsaiChangeset,
@@ -432,7 +432,7 @@ impl Hook {
         &'a self,
         ctx: &'a CoreContext,
         bookmark: &'a BookmarkKey,
-        content_provider: &'a dyn HookFileContentProvider,
+        content_provider: &'a dyn HookStateProvider,
         hook_name: &'cs str,
         cs: &'cs BonsaiChangeset,
         scuba: MononokeScubaSampleBuilder,

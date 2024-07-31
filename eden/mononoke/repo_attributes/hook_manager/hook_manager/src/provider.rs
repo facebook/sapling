@@ -21,7 +21,7 @@ use mononoke_types::ContentMetadataV2;
 use mononoke_types::MPath;
 use mononoke_types::NonRootMPath;
 
-use crate::errors::HookFileContentProviderError;
+use crate::errors::HookStateProviderError;
 
 /// Enum describing the state of a bookmark for which hooks are being run.
 pub enum BookmarkState {
@@ -34,13 +34,13 @@ pub enum BookmarkState {
 
 /// Trait implemented by providers of content for hooks to analyze.
 #[async_trait]
-pub trait HookFileContentProvider: Send + Sync {
+pub trait HookStateProvider: Send + Sync {
     /// The size of a file with a particular content id.
     async fn get_file_metadata<'a>(
         &'a self,
         ctx: &'a CoreContext,
         id: ContentId,
-    ) -> Result<ContentMetadataV2, HookFileContentProviderError>;
+    ) -> Result<ContentMetadataV2, HookStateProviderError>;
 
     /// The text of a file with a particular content id.  If the content is
     /// not appropriate to analyze (e.g. because it is too large), then the
@@ -49,7 +49,7 @@ pub trait HookFileContentProvider: Send + Sync {
         &'a self,
         ctx: &'a CoreContext,
         id: ContentId,
-    ) -> Result<Option<Bytes>, HookFileContentProviderError>;
+    ) -> Result<Option<Bytes>, HookStateProviderError>;
 
     /// The state of a bookmark at the time the push is being run. Note that this
     /// is best effort since the bookmark can move as a result of another push
@@ -58,7 +58,7 @@ pub trait HookFileContentProvider: Send + Sync {
         &'a self,
         ctx: &'a CoreContext,
         bookmark: BookmarkKey,
-    ) -> Result<BookmarkState, HookFileContentProviderError>;
+    ) -> Result<BookmarkState, HookStateProviderError>;
 
     /// Find the content of a set of files at a particular bookmark.
     async fn find_content<'a>(
@@ -66,7 +66,7 @@ pub trait HookFileContentProvider: Send + Sync {
         ctx: &'a CoreContext,
         bookmark: BookmarkKey,
         paths: Vec<NonRootMPath>,
-    ) -> Result<HashMap<NonRootMPath, PathContent>, HookFileContentProviderError>;
+    ) -> Result<HashMap<NonRootMPath, PathContent>, HookStateProviderError>;
 
     /// Find all changes between two changeset ids.
     async fn file_changes<'a>(
@@ -74,7 +74,7 @@ pub trait HookFileContentProvider: Send + Sync {
         ctx: &'a CoreContext,
         new_cs_id: ChangesetId,
         old_cs_id: ChangesetId,
-    ) -> Result<Vec<(NonRootMPath, FileChange)>, HookFileContentProviderError>;
+    ) -> Result<Vec<(NonRootMPath, FileChange)>, HookStateProviderError>;
 
     /// Find the latest changesets that affected a set of paths at a particular bookmark.
     async fn latest_changes<'a>(
@@ -82,7 +82,7 @@ pub trait HookFileContentProvider: Send + Sync {
         ctx: &'a CoreContext,
         bookmark: BookmarkKey,
         paths: Vec<NonRootMPath>,
-    ) -> Result<HashMap<NonRootMPath, ChangesetInfo>, HookFileContentProviderError>;
+    ) -> Result<HashMap<NonRootMPath, ChangesetInfo>, HookStateProviderError>;
 
     /// Find the count of child entries in a set of paths
     async fn directory_sizes<'a>(
@@ -90,7 +90,7 @@ pub trait HookFileContentProvider: Send + Sync {
         ctx: &'a CoreContext,
         changeset_id: ChangesetId,
         paths: Vec<MPath>,
-    ) -> Result<HashMap<MPath, u64>, HookFileContentProviderError>;
+    ) -> Result<HashMap<MPath, u64>, HookStateProviderError>;
 }
 
 #[derive(Clone, Debug)]

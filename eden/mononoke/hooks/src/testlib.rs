@@ -15,7 +15,7 @@ use mononoke_types::NonRootMPath;
 use repo_blobstore::RepoBlobstoreArc;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataArc;
-use repo_hook_file_content_provider::RepoHookFileContentProvider;
+use repo_hook_file_content_provider::RepoHookStateProvider;
 
 use crate::ChangesetHook;
 use crate::CrossRepoPushSource;
@@ -39,7 +39,7 @@ pub async fn test_changeset_hook(
 ) -> Result<HookExecution> {
     let bcs = cs_id.load(ctx, repo.repo_blobstore()).await?;
     let bookmark = BookmarkKey::new(bookmark_name)?;
-    let content_provider = RepoHookFileContentProvider::new(repo);
+    let content_provider = RepoHookStateProvider::new(repo);
     hook.run(
         ctx,
         &bookmark,
@@ -64,7 +64,7 @@ pub async fn test_file_hook(
     push_authored_by: PushAuthoredBy,
 ) -> Result<Vec<(NonRootMPath, HookExecution)>> {
     let bcs = cs_id.load(ctx, repo.repo_blobstore()).await?;
-    let content_provider = RepoHookFileContentProvider::new(repo);
+    let content_provider = RepoHookStateProvider::new(repo);
     let mut results = Vec::new();
     for (path, change) in bcs.file_changes() {
         let outcome = hook

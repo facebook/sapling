@@ -40,10 +40,10 @@ use crate::ChangesetHook;
 use crate::CrossRepoPushSource;
 use crate::FileHook;
 use crate::HookExecution;
-use crate::HookFileContentProvider;
 use crate::HookManager;
 use crate::HookRejectionInfo;
-use crate::InMemoryHookFileContentProvider;
+use crate::HookStateProvider;
+use crate::InMemoryHookStateProvider;
 use crate::PushAuthoredBy;
 
 #[derive(Clone, Debug)]
@@ -64,7 +64,7 @@ impl ChangesetHook for FnChangesetHook {
         _ctx: &'ctx CoreContext,
         _bookmark: &BookmarkKey,
         _changeset: &'cs BonsaiChangeset,
-        _content_manager: &'fetcher dyn HookFileContentProvider,
+        _content_manager: &'fetcher dyn HookStateProvider,
         _cross_repo_push_source: CrossRepoPushSource,
         _push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution, Error> {
@@ -94,7 +94,7 @@ impl ChangesetHook for FileContentMatchingChangesetHook {
         ctx: &'ctx CoreContext,
         _bookmark: &BookmarkKey,
         changeset: &'cs BonsaiChangeset,
-        content_manager: &'fetcher dyn HookFileContentProvider,
+        content_manager: &'fetcher dyn HookStateProvider,
         _cross_repo_push_source: CrossRepoPushSource,
         _push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution, Error> {
@@ -166,7 +166,7 @@ impl ChangesetHook for LengthMatchingChangesetHook {
         ctx: &'ctx CoreContext,
         _bookmark: &BookmarkKey,
         changeset: &'cs BonsaiChangeset,
-        content_manager: &'fetcher dyn HookFileContentProvider,
+        content_manager: &'fetcher dyn HookStateProvider,
         _cross_repo_push_source: CrossRepoPushSource,
         _push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution, Error> {
@@ -227,7 +227,7 @@ impl FileHook for FnFileHook {
     async fn run<'this: 'change, 'ctx: 'this, 'change, 'fetcher: 'change, 'path: 'change>(
         &'this self,
         _ctx: &'ctx CoreContext,
-        _content_manager: &'fetcher dyn HookFileContentProvider,
+        _content_manager: &'fetcher dyn HookStateProvider,
         _change: Option<&'change BasicFileChange>,
         _path: &'path NonRootMPath,
         _cross_repo_push_source: CrossRepoPushSource,
@@ -257,7 +257,7 @@ impl FileHook for PathMatchingFileHook {
     async fn run<'this: 'change, 'ctx: 'this, 'change, 'fetcher: 'change, 'path: 'change>(
         &'this self,
         _ctx: &'ctx CoreContext,
-        _content_manager: &'fetcher dyn HookFileContentProvider,
+        _content_manager: &'fetcher dyn HookStateProvider,
         _change: Option<&'change BasicFileChange>,
         path: &'path NonRootMPath,
         _cross_repo_push_source: CrossRepoPushSource,
@@ -285,7 +285,7 @@ impl FileHook for FileContentMatchingFileHook {
     async fn run<'this: 'change, 'ctx: 'this, 'change, 'fetcher: 'change, 'path: 'change>(
         &'this self,
         ctx: &'ctx CoreContext,
-        content_manager: &'fetcher dyn HookFileContentProvider,
+        content_manager: &'fetcher dyn HookStateProvider,
         change: Option<&'change BasicFileChange>,
         _path: &'path NonRootMPath,
         _cross_repo_push_source: CrossRepoPushSource,
@@ -329,7 +329,7 @@ impl FileHook for IsSymLinkMatchingFileHook {
     async fn run<'this: 'change, 'ctx: 'this, 'change, 'fetcher: 'change, 'path: 'change>(
         &'this self,
         _ctx: &'ctx CoreContext,
-        _content_manager: &'fetcher dyn HookFileContentProvider,
+        _content_manager: &'fetcher dyn HookStateProvider,
         change: Option<&'change BasicFileChange>,
         _path: &'path NonRootMPath,
         _cross_repo_push_source: CrossRepoPushSource,
@@ -361,7 +361,7 @@ impl FileHook for LengthMatchingFileHook {
     async fn run<'this: 'change, 'ctx: 'this, 'change, 'fetcher: 'change, 'path: 'change>(
         &'this self,
         ctx: &'ctx CoreContext,
-        content_manager: &'fetcher dyn HookFileContentProvider,
+        content_manager: &'fetcher dyn HookStateProvider,
         change: Option<&'change BasicFileChange>,
         _path: &'path NonRootMPath,
         _cross_repo_push_source: CrossRepoPushSource,
@@ -390,7 +390,7 @@ fn length_matching_file_hook(length: u64) -> Box<dyn FileHook> {
 async fn hook_manager_inmem(fb: FacebookInit) -> HookManager {
     let ctx = CoreContext::test_mock(fb);
 
-    let mut content_manager = InMemoryHookFileContentProvider::new();
+    let mut content_manager = InMemoryHookStateProvider::new();
     content_manager.insert(ONES_CTID, "elephants");
     content_manager.insert(TWOS_CTID, "hippopatami");
     content_manager.insert(THREES_CTID, "eels");

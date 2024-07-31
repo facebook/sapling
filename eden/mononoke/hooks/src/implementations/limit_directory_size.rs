@@ -22,8 +22,8 @@ use crate::ChangesetHook;
 use crate::CrossRepoPushSource;
 use crate::HookConfig;
 use crate::HookExecution;
-use crate::HookFileContentProvider;
 use crate::HookRejectionInfo;
+use crate::HookStateProvider;
 use crate::PushAuthoredBy;
 
 /// Limit the size of directories to prevent very large directories from being
@@ -140,7 +140,7 @@ impl ChangesetHook for LimitDirectorySizeHook {
         ctx: &'ctx CoreContext,
         _bookmark: &BookmarkKey,
         changeset: &'cs BonsaiChangeset,
-        content_manager: &'fetcher dyn HookFileContentProvider,
+        content_manager: &'fetcher dyn HookStateProvider,
         cross_repo_push_source: CrossRepoPushSource,
         push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution> {
@@ -275,7 +275,7 @@ mod test {
     use blobstore::Loadable;
     use borrowed::borrowed;
     use fbinit::FacebookInit;
-    use repo_hook_file_content_provider::RepoHookFileContentProvider;
+    use repo_hook_file_content_provider::RepoHookStateProvider;
     use tests_utils::BasicTestRepo;
 
     use super::*;
@@ -340,7 +340,7 @@ mod test {
 
         let bookmark = BookmarkKey::new("bookmark")?;
 
-        let content_manager = RepoHookFileContentProvider::new(&repo);
+        let content_manager = RepoHookStateProvider::new(&repo);
 
         // Nothing enabled
         let config = make_test_config();

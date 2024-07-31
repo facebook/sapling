@@ -17,8 +17,8 @@ use regex::Regex;
 use crate::CrossRepoPushSource;
 use crate::FileHook;
 use crate::HookExecution;
-use crate::HookFileContentProvider;
 use crate::HookRejectionInfo;
+use crate::HookStateProvider;
 use crate::PushAuthoredBy;
 
 #[derive(Default)]
@@ -75,7 +75,7 @@ impl FileHook for NoQuestionableFilenames {
     async fn run<'this: 'change, 'ctx: 'this, 'change, 'fetcher: 'change, 'path: 'change>(
         &'this self,
         _ctx: &'ctx CoreContext,
-        _content_manager: &'fetcher dyn HookFileContentProvider,
+        _content_manager: &'fetcher dyn HookStateProvider,
         change: Option<&'change BasicFileChange>,
         path: &'path NonRootMPath,
         cross_repo_push_source: CrossRepoPushSource,

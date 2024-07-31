@@ -15,7 +15,7 @@ use metaconfig_types::HookManagerParams;
 use metaconfig_types::HookParams;
 use metaconfig_types::RepoConfig;
 use permission_checker::InternalAclProvider;
-use repo_hook_file_content_provider::RepoHookFileContentProvider;
+use repo_hook_file_content_provider::RepoHookStateProvider;
 use scuba_ext::MononokeScubaSampleBuilder;
 use tests_utils::BasicTestRepo;
 
@@ -26,7 +26,7 @@ use crate::HookManager;
 async fn hook_manager_repo(fb: FacebookInit, repo: &BasicTestRepo) -> HookManager {
     let ctx = CoreContext::test_mock(fb);
 
-    let content_manager = RepoHookFileContentProvider::new(&repo);
+    let content_manager = RepoHookStateProvider::new(&repo);
     HookManager::new(
         ctx.fb,
         &InternalAclProvider::default(),
