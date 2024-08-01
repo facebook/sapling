@@ -28,7 +28,6 @@ use edenfs_telemetry::send;
 use edenfs_telemetry::EDEN_EVENTS_SCUBA;
 use edenfs_utils::metadata::MetadataExt;
 use edenfs_utils::remove_symlink;
-use edenfs_utils::stop_buckd_for_repo;
 #[cfg(target_os = "windows")]
 use mkscratch::zzencode;
 use pathdiff::diff_paths;
@@ -820,11 +819,6 @@ impl Redirection {
         if disposition == RepoPathDisposition::DoesNotExist {
             return Ok(disposition);
         }
-
-        // We have encountered issues with buck daemons holding references to files underneath the
-        // redirection we're trying to remove. We should kill all buck instances for the repo to
-        // guard against these cases and avoid `redirect fixup` failures.
-        let _ = stop_buckd_for_repo(&checkout.path());
 
         if disposition == RepoPathDisposition::IsSymlink {
             remove_symlink(&repo_path)

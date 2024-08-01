@@ -505,12 +505,6 @@ class Redirection:
         if disposition == RepoPathDisposition.DOES_NOT_EXIST:
             return disposition
 
-        # We have encountered issues with buck daemons holding references to files underneath the
-        # redirection we're trying to remove. We should kill all buck instances for the repo to
-        # guard against these cases and avoid `redirect fixup` failures.
-        checkout_path = str(checkout.path)
-        stop_buckd_for_repo(checkout_path)
-
         if disposition == RepoPathDisposition.IS_SYMLINK:
             repo_path.unlink()
             return RepoPathDisposition.DOES_NOT_EXIST

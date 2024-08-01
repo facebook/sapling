@@ -2088,7 +2088,6 @@ def stop_aux_processes_for_path(
 ) -> None:
     """Tear down processes that will hold onto file handles and prevent shutdown
     for a given mount point/repo"""
-    buck.stop_buckd_for_repo(repo_path)
     unmount_redirections_for_path(repo_path, complain_about_failing_to_unmount_redirs)
     stop_internal_processes(repo_path)
 
