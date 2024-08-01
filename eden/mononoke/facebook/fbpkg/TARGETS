@@ -1,4 +1,3 @@
-load("//antlir/antlir2/bzl/feature:defs.bzl", "feature")
 load("//eden/mononoke/facebook/fbpkg:lib.bzl", "mononoke_fbpkg")
 load("//tupperware/cm/antlir2/bzl:buck2_container.bzl", "tw")
 load("//tupperware/config/common:tw.mixin.zkdaemon.bzl", zkdaemon_mixin = "mixin")
@@ -270,15 +269,8 @@ tw.container(
                 },
             ),
         ),
-        feature.rpms_install(rpms = [
-            "fb-git-wrapper",
-            "git-core",
-        ]),
-        feature.ensure_file_symlink(
-            link = "/usr/local/bin/git.real",
-            target = "/usr/bin/git",
-        ),
     ],
     mixins = [zkdaemon_mixin],
     oncall = "scm_server_infra",
+    parent = "//tupperware/image/source_control:scm",
 )
