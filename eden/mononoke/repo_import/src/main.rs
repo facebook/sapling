@@ -68,9 +68,7 @@ use mercurial_types::NonRootMPath;
 use metaconfig_parser::RepoConfigs;
 use metaconfig_types::CommitSyncConfigVersion;
 use metaconfig_types::DefaultSmallToLargeCommitSyncPathAction;
-use metaconfig_types::MetadataDatabaseConfig;
 use metaconfig_types::RepoConfig;
-use metaconfig_types::SegmentedChangelogConfig;
 use metaconfig_types::DEFAULT_GIT_SUBMODULE_METADATA_FILE_PREFIX;
 use mononoke_app::args::RepoArgs;
 use mononoke_app::fb303::AliveService;
@@ -87,14 +85,10 @@ use movers::DefaultAction;
 use movers::Mover;
 use pushrebase::do_pushrebase_bonsai;
 use pushredirect::PushRedirectionConfigArc;
-use segmented_changelog::seedheads_from_config;
-use segmented_changelog::SeedHead;
-use segmented_changelog::SegmentedChangelogTailer;
 use serde::Deserialize;
 use serde::Serialize;
 use slog::info;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
-use sql_ext::facebook::MysqlOptions;
 use synced_commit_mapping::SqlSyncedCommitMapping;
 use synced_commit_mapping::SyncedCommitMapping;
 use synced_commit_mapping::SyncedCommitMappingRef;
@@ -173,7 +167,6 @@ enum ImportStage {
     GitImport,
     RewritePaths,
     DeriveBonsais,
-    TailSegmentedChangelog,
     MoveBookmark,
     MergeCommits,
     PushCommit,
@@ -1357,30 +1350,13 @@ async fn repo_import(
         .await?;
         info!(ctx.logger(), "Finished deriving data types");
 
-        recovery_fields.import_stage = ImportStage::TailSegmentedChangelog;
+        recovery_fields.import_stage = ImportStage::MoveBookmark;
         save_importing_state(recovery_fields).await?;
     }
 
     let imported_cs_id = recovery_fields
         .imported_cs_id
         .ok_or_else(|| format_err!("Imported changeset id is not found"))?;
-
-    if recovery_fields.import_stage == ImportStage::TailSegmentedChangelog {
-        info!(ctx.logger(), "Start tailing segmented changelog");
-        tail_segmented_changelog(
-            &ctx,
-            &repo,
-            &imported_cs_id,
-            &repo_config.storage_config.metadata,
-            &env.mysql_options,
-            &repo_config.segmented_changelog_config,
-        )
-        .await?;
-        info!(ctx.logger(), "Finished tailing segmented changelog");
-
-        recovery_fields.import_stage = ImportStage::MoveBookmark;
-        save_importing_state(recovery_fields).await?;
-    }
 
     if recovery_fields.import_stage == ImportStage::MoveBookmark {
         move_bookmark(
@@ -1462,50 +1438,6 @@ async fn repo_import(
         pushrebased_cs_id
     );
 
-    Ok(())
-}
-
-async fn tail_segmented_changelog(
-    ctx: &CoreContext,
-    repo: &Repo,
-    imported_cs_id: &ChangesetId,
-    storage_config_metadata: &MetadataDatabaseConfig,
-    mysql_options: &MysqlOptions,
-    segmented_changelog_config: &SegmentedChangelogConfig,
-) -> Result<(), Error> {
-    let mut seed_heads = seedheads_from_config(
-        ctx,
-        segmented_changelog_config,
-        segmented_changelog::JobType::Background,
-    )?;
-    seed_heads.push(SeedHead::from(imported_cs_id));
-
-    let segmented_changelog_tailer = SegmentedChangelogTailer::build_from(
-        ctx,
-        repo.as_blob_repo(),
-        storage_config_metadata,
-        mysql_options,
-        seed_heads,
-        stream::empty(), // no prefetched commits
-        None,            // no caching
-    )
-    .await?;
-
-    let repo_id = repo.repo_id();
-
-    info!(
-        ctx.logger(),
-        "repo {}: SegmentedChangelogTailer initialized", repo_id
-    );
-
-    segmented_changelog_tailer
-        .once(ctx, false)
-        .await
-        .with_context(|| format!("repo {}: incrementally building repo", repo_id))?;
-    info!(
-        ctx.logger(),
-        "repo {}: SegmentedChangelogTailer is done", repo_id,
-    );
     Ok(())
 }
 

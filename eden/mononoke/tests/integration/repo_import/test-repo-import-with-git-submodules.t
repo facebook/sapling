@@ -122,21 +122,7 @@
   * The destination bookmark name is: master_bookmark. * (glob)
   * There is no additional setup step needed! (glob)
 
-# run segmented changelog tailer on master bookmark
-  $ cat >> "$TESTTMP/mononoke-config/repos/repo/server.toml" <<CONFIG
-  > [segmented_changelog_config]
-  > heads_to_include = [
-  >    { bookmark = "master_bookmark" },
-  > ]
-  > CONFIG
-  $ segmented_changelog_tailer_reseed --repo repo  2>&1 | grep -e successfully -e segmented_changelog_tailer
-  * repo name 'repo' translates to id 0 (glob)
-  * SegmentedChangelogTailer initialized, repo_id: 0 (glob)
-  * successfully seeded segmented changelog, repo_id: 0 (glob)
-  * SegmentedChangelogTailer is done, repo_id: 0 (glob)
-
 # Import the repo
-# Segmented changelog should be rebuild for newly imported commits along the way.
   $ with_stripped_logs repo_import \
   > import \
   > "$GIT_REPO" \
@@ -161,19 +147,6 @@
   Saved shifted bonsai changesets
   Start deriving data types
   Finished deriving data types
-  Start tailing segmented changelog
-  Using the following segmented changelog heads: [Bookmark(BookmarkKey { name: BookmarkName { bookmark: "master_bookmark" }, category: Branch })]
-  repo 0: SegmentedChangelogTailer initialized
-  starting incremental update to segmented changelog
-  iddag initialized, it covers 3 ids
-  starting the actual update
-  Adding hints for idmap_version 1
-  idmap_version 1 has a full set of hints (4 unhinted IDs is less than chunk size of 5000)
-  IdMap updated, IdDag updated
-  segmented changelog version saved, idmap_version: 1, iddag_version: 858d30cfb08f0cc339b20663ddc4ed84ab67146515a386d735d5d903d2c67586
-  successful incremental update to segmented changelog
-  repo 0: SegmentedChangelogTailer is done
-  Finished tailing segmented changelog
   Start moving the bookmark
   Created bookmark BookmarkKey { name: BookmarkName { bookmark: "repo_import_new_repo" }, category: Branch } pointing to 4f830791a5ae7a2981d6c252d2be0bd7ebd3b1090080074b4b4bae6deb250b4a
   Set bookmark BookmarkKey { name: BookmarkName { bookmark: "repo_import_new_repo" }, category: Branch } to point to ChangesetId(Blake2(a1740c3d4a0f8e012b12c0c93f5a69cc902fe7398d8f334ef202f33c32fc247c))
