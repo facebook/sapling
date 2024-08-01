@@ -313,6 +313,8 @@ export type ExactRevset = {type: 'exact-revset'; revset: Revset};
 /**
  * Most arguments to eden commands are literal `string`s, except:
  * - When specifying file paths, the server needs to know which args are files to convert them to be cwd-relative.
+ *     - For long file lists, we pass them in a single bulk arg, which will be passed via stdin instead
+ *       to avoid command line length limits.
  * - When specifying commit hashes, you may be acting on optimistic version of those hashes.
  *   The server can re-write hashes using a revset that transforms into the latest successor instead.
  *   This allows you to act on the optimistic versions of commits in queued commands,
@@ -324,6 +326,7 @@ export type ExactRevset = {type: 'exact-revset'; revset: Revset};
 export type CommandArg =
   | string
   | {type: 'repo-relative-file'; path: RepoRelativePath}
+  | {type: 'repo-relative-file-list'; paths: Array<RepoRelativePath>}
   | {type: 'config'; key: string; value: string}
   | ExactRevset
   | SucceedableRevset

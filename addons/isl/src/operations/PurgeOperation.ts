@@ -26,12 +26,13 @@ export class PurgeOperation extends Operation {
 
   getArgs() {
     const args: Array<CommandArg> = ['purge', '--files'];
-    args.push(
-      ...this.files.map(file => ({
-        type: 'repo-relative-file' as const,
-        path: file,
-      })),
-    );
+    if (this.files.length > 0) {
+      // Tag file arguments specialy so the remote repo can convert them to the proper cwd-relative format.
+      args.push({
+        type: 'repo-relative-file-list' as const,
+        paths: this.files,
+      });
+    }
     return args;
   }
 

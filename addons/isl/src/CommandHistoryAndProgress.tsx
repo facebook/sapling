@@ -67,6 +67,8 @@ function OperationDescription(props: {
                   return undefined;
                 case 'repo-relative-file':
                   return arg.path;
+                case 'repo-relative-file-list':
+                  return truncate(arg.paths.join(' '), 200);
                 case 'exact-revset':
                 case 'succeedable-revset':
                 case 'optimistic-revset':
@@ -76,9 +78,7 @@ function OperationDescription(props: {
                     // revset could also be a remote bookmark, so only do this if it looks like a hash
                     /^[a-z0-9]{40}$/.test(arg.revset)
                     ? short(arg.revset)
-                    : arg.revset.length > 80
-                    ? arg.revset.slice(0, 80) + '...'
-                    : arg.revset;
+                    : truncate(arg.revset, 80);
               }
             }
             if (/\s/.test(arg)) {

@@ -143,7 +143,7 @@ describe('CommitTreeList', () => {
           expectMessageSentToServer({
             type: 'runOperation',
             operation: {
-              args: ['revert', {path: 'src/file.js', type: 'repo-relative-file'}],
+              args: ['revert', {type: 'repo-relative-file-list', paths: ['src/file.js']}],
               id: expect.anything(),
               runner: CommandRunner.Sapling,
               trackEventName: 'RevertOperation',

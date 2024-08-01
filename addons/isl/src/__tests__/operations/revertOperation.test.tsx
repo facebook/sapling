@@ -101,7 +101,7 @@ describe('RevertOperation', () => {
       expectMessageSentToServer({
         type: 'runOperation',
         operation: {
-          args: ['revert', {type: 'repo-relative-file', path: 'myFile1.txt'}],
+          args: ['revert', {type: 'repo-relative-file-list', paths: ['myFile1.txt']}],
           id: expect.anything(),
           runner: CommandRunner.Sapling,
           trackEventName: 'RevertOperation',
@@ -137,7 +137,7 @@ describe('RevertOperation', () => {
         expectMessageSentToServer({
           type: 'runOperation',
           operation: {
-            args: ['purge', '--files', {type: 'repo-relative-file', path: 'untracked.txt'}],
+            args: ['purge', '--files', {type: 'repo-relative-file-list', paths: ['untracked.txt']}],
             id: expect.anything(),
             runner: CommandRunner.Sapling,
             trackEventName: 'PurgeOperation',
@@ -217,7 +217,7 @@ describe('RevertOperation', () => {
       expectMessageSentToServer({
         type: 'runOperation',
         operation: {
-          args: ['revert', {type: 'repo-relative-file', path: 'myFile2.txt'}],
+          args: ['revert', {type: 'repo-relative-file-list', paths: ['myFile2.txt']}],
           id: expect.anything(),
           runner: CommandRunner.Sapling,
           trackEventName: 'RevertOperation',
@@ -227,7 +227,7 @@ describe('RevertOperation', () => {
       expectMessageSentToServer({
         type: 'runOperation',
         operation: {
-          args: ['purge', '--files', {type: 'repo-relative-file', path: 'untracked2.txt'}],
+          args: ['purge', '--files', {type: 'repo-relative-file-list', paths: ['untracked2.txt']}],
           id: expect.anything(),
           runner: CommandRunner.Sapling,
           trackEventName: 'PurgeOperation',
@@ -262,9 +262,10 @@ describe('RevertOperation', () => {
         operation: {
           args: [
             'revert',
-            {type: 'repo-relative-file', path: 'myFile1.txt'},
-            {type: 'repo-relative-file', path: 'movedFrom.txt'},
-            {type: 'repo-relative-file', path: 'movedTo.txt'},
+            {
+              type: 'repo-relative-file-list',
+              paths: ['myFile1.txt', 'movedFrom.txt', 'movedTo.txt'],
+            },
           ],
           id: expect.anything(),
           runner: CommandRunner.Sapling,
@@ -278,8 +279,7 @@ describe('RevertOperation', () => {
           args: [
             'purge',
             '--files',
-            {type: 'repo-relative-file', path: 'myFile1.txt'},
-            {type: 'repo-relative-file', path: 'movedTo.txt'},
+            {type: 'repo-relative-file-list', paths: ['myFile1.txt', 'movedTo.txt']},
           ],
           id: expect.anything(),
           runner: CommandRunner.Sapling,
@@ -306,8 +306,7 @@ describe('RevertOperation', () => {
         operation: {
           args: [
             'revert',
-            {type: 'repo-relative-file', path: 'myFile1.txt'},
-            {type: 'repo-relative-file', path: 'myFile2.txt'},
+            {type: 'repo-relative-file-list', paths: ['myFile1.txt', 'myFile2.txt']},
           ],
           id: expect.anything(),
           runner: CommandRunner.Sapling,
@@ -350,7 +349,7 @@ describe('RevertOperation', () => {
             'revert',
             '--rev',
             {type: 'succeedable-revset', revset: '.^'},
-            {type: 'repo-relative-file', path: 'file.txt'},
+            {type: 'repo-relative-file-list', paths: ['file.txt']},
           ],
           id: expect.anything(),
           runner: CommandRunner.Sapling,

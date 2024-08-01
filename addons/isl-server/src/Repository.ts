@@ -13,7 +13,6 @@ import type {RepositoryContext} from './serverTypes';
 import type {
   CommitInfo,
   Disposable,
-  CommandArg,
   UncommittedChanges,
   ChangedFile,
   RepoInfo,
@@ -241,13 +240,14 @@ export class Repository {
         if (operation.runner === CommandRunner.Sapling) {
           return this.runOperation(ctx, operation, handleCommandProgress, signal);
         } else if (operation.runner === CommandRunner.CodeReviewProvider) {
-          const normalizedArgs = this.normalizeOperationArgs(cwd, operation.args);
+          const {args: normalizedArgs} = this.normalizeOperationArgs(cwd, operation);
           if (this.codeReviewProvider?.runExternalCommand == null) {
             return Promise.reject(
               Error('CodeReviewProvider does not support running external commands'),
             );
           }
 
+          // TODO: support stdin
           return (
             this.codeReviewProvider?.runExternalCommand(
               cwd,
@@ -257,7 +257,8 @@ export class Repository {
             ) ?? Promise.resolve()
           );
         } else if (operation.runner === CommandRunner.InternalArcanist) {
-          const normalizedArgs = this.normalizeOperationArgs(cwd, operation.args);
+          // TODO: support stdin
+          const {args: normalizedArgs} = this.normalizeOperationArgs(cwd, operation);
           if (Internal.runArcanistCommand == null) {
             return Promise.reject(Error('InternalArcanist runner is not supported'));
           }
@@ -596,36 +597,58 @@ export class Repository {
     return this.operationQueue.getRunningOperation();
   }
 
-  private normalizeOperationArgs(cwd: string, args: Array<CommandArg>): Array<string> {
+  private normalizeOperationArgs(
+    cwd: string,
+    operation: RunnableOperation,
+  ): {args: Array<string>; stdin?: string | undefined} {
     const repoRoot = nullthrows(this.info.repoRoot);
     const illegalArgs = new Set(['--cwd', '--config', '--insecure', '--repository', '-R']);
-    return args.flatMap(arg => {
+    let stdin = operation.stdin;
+    const args = [];
+    for (const arg of operation.args) {
       if (typeof arg === 'object') {
         switch (arg.type) {
           case 'config':
             if (!(settableConfigNames as ReadonlyArray<string>).includes(arg.key)) {
               throw new Error(`config ${arg.key} not allowed`);
             }
-            return ['--config', `${arg.key}=${arg.value}`];
+            args.push('--config', `${arg.key}=${arg.value}`);
+            continue;
           case 'repo-relative-file':
-            return [path.normalize(path.relative(cwd, path.join(repoRoot, arg.path)))];
+            args.push(path.normalize(path.relative(cwd, path.join(repoRoot, arg.path))));
+            continue;
+          case 'repo-relative-file-list':
+            // pass long lists of files as stdin via fileset patterns
+            // this is passed as an arg instead of directly in stdin so that we can do path normalization
+            args.push('listfile0:-');
+            if (stdin != null) {
+              throw new Error('stdin already set when using repo-relative-file-list');
+            }
+            stdin = arg.paths
+              .map(p => path.normalize(path.relative(cwd, path.join(repoRoot, p))))
+              .join('\0');
+            continue;
           case 'exact-revset':
             if (arg.revset.startsWith('-')) {
               // don't allow revsets to be used as flags
               throw new Error('invalid revset');
             }
-            return [arg.revset];
+            args.push(arg.revset);
+            continue;
           case 'succeedable-revset':
-            return [`max(successors(${arg.revset}))`];
+            args.push(`max(successors(${arg.revset}))`);
+            continue;
           case 'optimistic-revset':
-            return [`max(successors(${arg.revset}))`];
+            args.push(`max(successors(${arg.revset}))`);
+            continue;
         }
       }
       if (illegalArgs.has(arg)) {
         throw new Error(`argument '${arg}' is not allowed`);
       }
-      return arg;
-    });
+      args.push(arg);
+    }
+    return {args, stdin};
   }
 
   /**
@@ -638,8 +661,7 @@ export class Repository {
     signal: AbortSignal,
   ): Promise<void> {
     const {cwd} = ctx;
-    const cwdRelativeArgs = this.normalizeOperationArgs(cwd, operation.args);
-    const {stdin} = operation;
+    const {args: cwdRelativeArgs, stdin} = this.normalizeOperationArgs(cwd, operation);
 
     const env = await Promise.all([
       Internal.additionalEnvForCommand?.(operation),
