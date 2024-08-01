@@ -285,7 +285,7 @@ impl CommitCloud {
         &self,
         params: &GetSmartlogParams,
     ) -> anyhow::Result<RawSmartlogData> {
-        references::fetch_smartlog_references(
+        RawSmartlogData::fetch_smartlog_references(
             &CommitCloudContext::new(&params.workspace, &params.reponame)?,
             &self.storage,
             &params.flags,
