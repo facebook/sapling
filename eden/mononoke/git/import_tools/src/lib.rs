@@ -384,10 +384,18 @@ pub async fn import_commit_contents<Uploader: GitUploader, Reader: GitReader>(
             while let Some(incoming) = rx.recv().await {
                 cloned!(backfill_derivation, ctx, acc, uploader, repo_name,);
                 task::spawn(async move {
-                    let finalized_chunk = uploader
+                    let finalized_chunk_res = uploader
                         .finalize_batch(&ctx, dry_run, backfill_derivation, incoming, &acc)
                         .await
-                        .context("finalize_batch")?;
+                        .context("finalize_batch");
+                    let finalized_chunk = match finalized_chunk_res {
+                        Err(e) => {
+                            // Log the error if any
+                            info!(ctx.logger(), "{}", e);
+                            anyhow::bail!(e);
+                        }
+                        Ok(chunk) => chunk,
+                    };
                     // Only log progress after every batch to avoid log-spew and wasted time
                     if let Some((last_git_sha1, last_bcs_id)) = finalized_chunk.last() {
                         info!(
