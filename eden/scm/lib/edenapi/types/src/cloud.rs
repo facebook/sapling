@@ -227,9 +227,9 @@ pub struct SmartlogData {
     #[id(0)]
     pub nodes: Vec<SmartlogNode>,
     #[id(1)]
-    pub version: i64,
+    pub version: Option<i64>,
     #[id(2)]
-    pub timestamp: i64,
+    pub timestamp: Option<i64>,
 }
 
 impl RemoteBookmark {

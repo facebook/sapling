@@ -12,30 +12,35 @@ pub mod sql;
 use std::sync::Arc;
 
 use bonsai_hg_mapping::BonsaiHgMapping;
+use changeset_info::ChangesetInfo;
 #[cfg(fbcode_build)]
 use commit_cloud_intern_utils::interngraph_publisher::publish_single_update;
 #[cfg(fbcode_build)]
 use commit_cloud_intern_utils::notification::NotificationData;
 use context::CoreContext;
+use edenapi_types::cloud::RemoteBookmark;
 use edenapi_types::cloud::SmartlogData;
 use edenapi_types::GetReferencesParams;
 use edenapi_types::GetSmartlogParams;
+use edenapi_types::HgId;
 use edenapi_types::ReferencesData;
+use edenapi_types::SmartlogNode;
 use edenapi_types::UpdateReferencesParams;
 use edenapi_types::WorkspaceData;
 use facet::facet;
+use mercurial_types::HgChangesetId;
 use metaconfig_types::CommitCloudConfig;
 use mononoke_types::Timestamp;
 use permission_checker::AclProvider;
 use permission_checker::BoxPermissionChecker;
-use references::update_references_data;
-use references::RawSmartlogData;
 use repo_derived_data::ArcRepoDerivedData;
 
 use crate::ctx::CommitCloudContext;
 use crate::references::cast_references_data;
 use crate::references::fetch_references;
+use crate::references::update_references_data;
 use crate::references::versions::WorkspaceVersion;
+use crate::references::RawSmartlogData;
 use crate::sql::ops::Get;
 use crate::sql::ops::Insert;
 use crate::sql::ops::SqlCommitCloud;
@@ -291,5 +296,33 @@ impl CommitCloud {
             &params.flags,
         )
         .await
+    }
+
+    pub fn make_smartlog_node(
+        &self,
+        hgid: &HgChangesetId,
+        parents: &Vec<HgId>,
+        node: &ChangesetInfo,
+        local_bookmarks: &Vec<String>,
+        remote_bookmarks: &Option<Vec<RemoteBookmark>>,
+        is_public: bool,
+    ) -> anyhow::Result<SmartlogNode> {
+        let author = node.author();
+        let date = node.author_date().as_chrono().timestamp();
+        let message = node.message();
+
+        let phase = if is_public { "public" } else { "draft" };
+
+        let node = SmartlogNode {
+            node: (*hgid).into(),
+            phase: String::from(phase),
+            author: author.to_string(),
+            date,
+            message: message.to_string(),
+            parents: parents.to_owned(),
+            bookmarks: local_bookmarks.to_owned(),
+            remote_bookmarks: remote_bookmarks.to_owned(),
+        };
+        Ok(node)
     }
 }
