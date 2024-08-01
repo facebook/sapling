@@ -86,6 +86,14 @@ impl AuthorizationContext {
         matches!(self, AuthorizationContext::Service(_))
     }
 
+    /// Returns service identiry for a service write.
+    pub fn service_identity(&self) -> Option<String> {
+        match self {
+            AuthorizationContext::Service(service_name) => Some(service_name.clone()),
+            _ => None,
+        }
+    }
+
     /// Create a permission denied error for a particular action.
     fn permission_denied(
         &self,
