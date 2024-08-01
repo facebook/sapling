@@ -1,4 +1,3 @@
-load("@fbcode_macros//build_defs:python_library.bzl", "python_library")
 load("//eden/scm:targets.bzl", "rust_python_library")
 
 oncall("sapling")
@@ -100,9 +99,4 @@ rust_python_library(
         # [[[end]]]
         "//eden/scm/lib/cpython-ext:cpython-ext",
     ],
-)
-
-python_library(
-    name = "bindings_type_stubs",
-    srcs = glob(["*.pyi"]),
 )
