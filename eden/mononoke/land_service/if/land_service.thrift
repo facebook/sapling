@@ -45,6 +45,9 @@ struct LandChangesetRequest {
 
   /// Whether to log new public commits
   7: bool log_new_public_commits_to_scribe;
+
+  /// Service identity to use for this commit creation.
+  8: optional string service_identity;
 } (rust.exhaustive)
 
 struct BonsaiHashPairs {
