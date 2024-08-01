@@ -1148,8 +1148,14 @@ fn packfile_stream_from_changesets<'a>(
                 break;
             }
         }
-
-        packfile_items_futures.poll_next_unpin(cx)
+        // If none of the delta_manifest_entries_futures have completed, then its possible that packfile_item_futures is empty. If we return
+        // packfile_items_futures.poll_next_unpin() in that case then we will end up returning Poll::Ready(None) and the stream will never get
+        // polled again even though there are still items to be processed.
+        if packfile_items_futures.is_empty() {
+            Poll::Pending
+        } else {
+            packfile_items_futures.poll_next_unpin(cx)
+        }
     })
     .try_filter_map(futures::future::ok)
     .boxed()
