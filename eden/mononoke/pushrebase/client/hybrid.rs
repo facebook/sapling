@@ -48,7 +48,7 @@ pub async fn normal_pushrebase<'a>(
     };
     let maybe_fallback_scuba: Option<(MononokeScubaSampleBuilder, BookmarkMovementError)> = {
         let maybe_client: Option<Box<dyn PushrebaseClient>> =
-            maybe_client_from_address(&remote_mode, ctx, repo).await?;
+            maybe_client_from_address(&remote_mode, ctx, authz, repo).await?;
 
         if let Some(client) = maybe_client {
             let result = client
@@ -118,12 +118,13 @@ pub async fn normal_pushrebase<'a>(
 async fn maybe_client_from_address<'a>(
     remote_mode: &'a PushrebaseRemoteMode,
     ctx: &'a CoreContext,
+    authz: &'a AuthorizationContext,
     repo: &'a impl Repo,
 ) -> anyhow::Result<Option<Box<dyn PushrebaseClient + 'a>>> {
     match remote_mode {
         PushrebaseRemoteMode::RemoteLandService(address)
         | PushrebaseRemoteMode::RemoteLandServiceWithLocalFallback(address) => {
-            Ok(address_from_land_service(address, ctx, repo).await?)
+            Ok(address_from_land_service(address, ctx, authz, repo).await?)
         }
         PushrebaseRemoteMode::Local => Ok(None),
     }
@@ -132,16 +133,18 @@ async fn maybe_client_from_address<'a>(
 async fn address_from_land_service<'a>(
     address: &'a Address,
     ctx: &'a CoreContext,
+    authz: &'a AuthorizationContext,
     repo: &'a impl Repo,
 ) -> anyhow::Result<Option<Box<dyn PushrebaseClient + 'a>>> {
     #[cfg(fbcode_build)]
     {
         match address {
             metaconfig_types::Address::Tier(tier) => Ok(Some(Box::new(
-                LandServicePushrebaseClient::from_tier(ctx, tier.clone(), repo).await?,
+                LandServicePushrebaseClient::from_tier(ctx, tier.clone(), authz, repo).await?,
             ))),
             metaconfig_types::Address::HostPort(host_port) => Ok(Some(Box::new(
-                LandServicePushrebaseClient::from_host_port(ctx, host_port.clone(), repo).await?,
+                LandServicePushrebaseClient::from_host_port(ctx, host_port.clone(), authz, repo)
+                    .await?,
             ))),
         }
     }
