@@ -260,6 +260,7 @@ tw.container(
 
 tw.container(
     name = "tw.mononoke.git_server_push_poller",
+    custom_image_opts = tw.image.opts(),
     features = [
         tw.build_fbpkg(
             mononoke_fbpkg(
@@ -273,6 +274,10 @@ tw.container(
             "fb-git-wrapper",
             "git-core",
         ]),
+        feature.ensure_file_symlink(
+            link = "/usr/local/bin/git.real",
+            target = "/usr/bin/git",
+        ),
     ],
     mixins = [zkdaemon_mixin],
     oncall = "scm_server_infra",
