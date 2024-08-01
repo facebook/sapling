@@ -13,6 +13,7 @@
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::fmt::Write;
+use std::ops::Range;
 use std::sync::Arc;
 
 use anyhow::anyhow;
@@ -47,6 +48,7 @@ use sql_ext::mononoke_queries;
 use vec1::vec1;
 use vec1::Vec1;
 
+mod bulkops;
 #[cfg(test)]
 mod tests;
 
@@ -880,6 +882,50 @@ mononoke_queries! {
                 = {cs_id};
         "
     }
+
+    read SelectChangesetsIdsBounds(repo_id: RepositoryId) -> (u64, u64) {
+        "SELECT min(id), max(id)
+         FROM commit_graph_edges
+         WHERE repo_id = {repo_id}"
+    }
+
+    read SelectOldestChangesetsIdsInRange(repo_id: RepositoryId, lower_bound: u64, upper_bound: u64, limit: u64) -> (ChangesetId, u64) {
+        mysql(
+            "SELECT cs_id, id
+            FROM commit_graph_edges FORCE INDEX(repo_id_id)
+            WHERE repo_id = {repo_id}
+              AND {lower_bound} <= id AND id < {upper_bound}
+            ORDER BY id ASC
+            LIMIT {limit}"
+        )
+        sqlite(
+            "SELECT cs_id, id
+            FROM commit_graph_edges
+            WHERE repo_id = {repo_id}
+              AND {lower_bound} <= id AND id < {upper_bound}
+            ORDER BY id ASC
+            LIMIT {limit}"
+        )
+    }
+
+    read SelectNewestChangesetsIdsInRange(repo_id: RepositoryId, lower_bound: u64, upper_bound: u64, limit: u64) -> (ChangesetId, u64) {
+        mysql(
+            "SELECT cs_id, id
+            FROM commit_graph_edges FORCE INDEX(repo_id_id)
+            WHERE repo_id = {repo_id}
+              AND {lower_bound} <= id AND id < {upper_bound}
+            ORDER BY id DESC
+            LIMIT {limit}"
+        )
+        sqlite(
+            "SELECT cs_id, id
+            FROM commit_graph_edges
+            WHERE repo_id = {repo_id}
+              AND {lower_bound} <= id AND id < {upper_bound}
+            ORDER BY id DESC
+            LIMIT {limit}"
+        )
+    }
 }
 
 type FetchedEdgesRow = (
@@ -1251,6 +1297,64 @@ impl SqlCommitGraphStorage {
         .await?
         .first()
         .map(|(id,)| *id))
+    }
+
+    /// Returns the bounds of the auto-increment ids of changesets in the repo.
+    /// The bounds are returns as a half open interval [lo, hi).
+    ///
+    /// If there are no changesets in the repo, returns `None`.
+    pub(crate) async fn repo_bounds(
+        &self,
+        ctx: &CoreContext,
+        read_from_master: bool,
+    ) -> Result<Option<Range<u64>>> {
+        let conn = self.read_conn(read_from_master);
+        let rows = SelectChangesetsIdsBounds::query(conn, &self.repo_id).await?;
+        Ok(rows.first().map(|(lo, hi)| *lo..*hi + 1))
+    }
+
+    /// Fetch the oldest `limit` changesets from all changesets that have auto-increment ids
+    /// in the range [range.start, range.end).
+    ///
+    /// For each changeset we return a tuple of its changeset id and its auto-increment id.
+    pub(crate) async fn fetch_oldest_changesets_in_range(
+        &self,
+        ctx: &CoreContext,
+        range: Range<u64>,
+        limit: u64,
+        read_from_master: bool,
+    ) -> Result<Vec<(ChangesetId, u64)>> {
+        let conn = self.read_conn(read_from_master);
+        SelectOldestChangesetsIdsInRange::query(
+            conn,
+            &self.repo_id,
+            &range.start,
+            &range.end,
+            &limit,
+        )
+        .await
+    }
+
+    /// Fetch the newest `limit` changesets from all changesets that have auto-increment ids
+    /// in the range [range.start, range.end).
+    ///
+    /// For each changeset we return a tuple of its changeset id and its auto-increment id.
+    pub(crate) async fn fetch_newest_changesets_in_range(
+        &self,
+        ctx: &CoreContext,
+        range: Range<u64>,
+        limit: u64,
+        read_from_master: bool,
+    ) -> Result<Vec<(ChangesetId, u64)>> {
+        let conn = self.read_conn(read_from_master);
+        SelectNewestChangesetsIdsInRange::query(
+            conn,
+            &self.repo_id,
+            &range.start,
+            &range.end,
+            &limit,
+        )
+        .await
     }
 }
 
