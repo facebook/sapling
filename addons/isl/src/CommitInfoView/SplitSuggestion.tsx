@@ -117,7 +117,7 @@ function NewCommitSuggestion() {
         <b>
           <T>Consider unselecting some of these changes</T>
         </b>
-        <T>Small Diffs lead to fewer SEVs & quicker review times</T>
+        <T>Small Diffs lead to quicker review times</T>
       </SuggestionBanner>
     );
   }
@@ -139,7 +139,7 @@ function AmendSuggestion() {
         <b>
           <T>Consider unselecting some of these changes</T>
         </b>
-        <T>Small Diffs lead to fewer SEVs & quicker review times</T>
+        <T>Small Diffs lead to quicker review times</T>
       </SuggestionBanner>
     );
   }
@@ -164,7 +164,7 @@ function SplitSuggestionImpl({commit}: {commit: CommitInfo}) {
         <b>
           <T>Consider splitting up this commit</T>
         </b>
-        <T>Small Diffs lead to fewer SEVs & quicker review times</T>
+        <T>Small Diffs lead to quicker review times</T>
       </SuggestionBanner>
     );
   }

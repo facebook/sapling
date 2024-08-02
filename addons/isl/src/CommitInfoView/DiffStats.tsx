@@ -81,7 +81,7 @@ function ResolvedDiffStatsView({
           //formatting this on multiple lines to look good in the tooltip
           `Consider unselecting some of these changes.
 
-Small Diffs lead to fewer SEVs & quicker review times.
+Small Diffs lead to quicker review times.
 `,
         )}>
         <Icon icon="warning" color="yellow" />
