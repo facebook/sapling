@@ -83,6 +83,7 @@ rust_library(
         "//common/rust/shed/stats:stats",
         "//eden/mononoke/lfs_protocol:lfs_protocol",
         "//eden/scm/lib/async-runtime:async-runtime",
+        "//eden/scm/lib/cas-client:cas-client",
         "//eden/scm/lib/clientinfo:clientinfo",
         "//eden/scm/lib/clientinfo-async:clientinfo_async",
         "//eden/scm/lib/config/model:configmodel",

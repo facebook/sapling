@@ -10,6 +10,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::Result;
+use cas_client::CasClient;
 use configmodel::convert::ByteCount;
 use configmodel::Config;
 use configmodel::ConfigExt;
@@ -57,6 +58,7 @@ pub struct FileStoreBuilder<'a> {
 
     edenapi: Option<Arc<SaplingRemoteApiFileStore>>,
     contentstore: Option<Arc<ContentStore>>,
+    cas_client: Option<Arc<dyn CasClient>>,
 }
 
 impl<'a> FileStoreBuilder<'a> {
@@ -72,6 +74,7 @@ impl<'a> FileStoreBuilder<'a> {
             lfs_cache: None,
             edenapi: None,
             contentstore: None,
+            cas_client: None,
         }
     }
 
@@ -92,6 +95,11 @@ impl<'a> FileStoreBuilder<'a> {
 
     pub fn edenapi(mut self, edenapi: Arc<SaplingRemoteApiFileStore>) -> Self {
         self.edenapi = Some(edenapi);
+        self
+    }
+
+    pub fn cas_client(mut self, cas_client: Arc<dyn CasClient>) -> Self {
+        self.cas_client = Some(cas_client);
         self
     }
 
@@ -389,6 +397,12 @@ impl<'a> FileStoreBuilder<'a> {
             .config
             .get_or("scmstore", "max-prefetch-size", || 100_000)?;
 
+        let cas_client = if self.config.get_or_default("scmstore", "fetch-from-cas")? {
+            self.cas_client
+        } else {
+            None
+        };
+
         tracing::trace!(target: "revisionstore::filestore", "constructing FileStore");
         Ok(FileStore {
             extstored_policy,
@@ -408,6 +422,7 @@ impl<'a> FileStoreBuilder<'a> {
 
             edenapi,
             lfs_remote,
+            cas_client,
 
             activity_logger,
             contentstore,
@@ -452,6 +467,7 @@ pub struct TreeStoreBuilder<'a> {
     contentstore: Option<Arc<ContentStore>>,
     tree_aux_store: Option<Arc<TreeAuxStore>>,
     filestore: Option<Arc<FileStore>>,
+    cas_client: Option<Arc<dyn CasClient>>,
 }
 
 impl<'a> TreeStoreBuilder<'a> {
@@ -467,6 +483,7 @@ impl<'a> TreeStoreBuilder<'a> {
             contentstore: None,
             tree_aux_store: None,
             filestore: None,
+            cas_client: None,
         }
     }
 
@@ -487,6 +504,11 @@ impl<'a> TreeStoreBuilder<'a> {
 
     pub fn edenapi(mut self, edenapi: Arc<SaplingRemoteApiTreeStore>) -> Self {
         self.edenapi = Some(edenapi);
+        self
+    }
+
+    pub fn cas_client(mut self, cas_client: Arc<dyn CasClient>) -> Self {
+        self.cas_client = Some(cas_client);
         self
     }
 
@@ -732,12 +754,19 @@ impl<'a> TreeStoreBuilder<'a> {
             );
         }
 
+        let cas_client = if self.config.get_or_default("scmstore", "fetch-from-cas")? {
+            self.cas_client
+        } else {
+            None
+        };
+
         tracing::trace!(target: "revisionstore::treestore", "constructing TreeStore");
         Ok(TreeStore {
             indexedlog_local,
             indexedlog_cache,
             cache_to_local_cache: true,
             edenapi,
+            cas_client,
             contentstore,
             tree_aux_store,
             historystore_local,

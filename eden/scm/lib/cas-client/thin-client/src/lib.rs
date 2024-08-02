@@ -31,6 +31,11 @@ pub struct ThinCasClient {
 
 pub fn init() {
     fn construct(config: &dyn Config) -> Result<Option<Arc<dyn CasClient>>> {
+        // Kill switch in case something unexpected happens during construction of client.
+        if config.get_or_default("cas", "disable")? {
+            return Ok(None);
+        }
+
         ThinCasClient::from_config(config).map(|c| Some(Arc::new(c) as Arc<dyn CasClient>))
     }
     factory::register_constructor("thin-client", construct);

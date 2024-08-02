@@ -47,6 +47,7 @@ rust_library(
         "fbsource//third-party/rust:thiserror",
         "fbsource//third-party/rust:tracing",
         "//eden/scm/lib/async-runtime:async-runtime",
+        "//eden/scm/lib/cas-client:cas-client",
         "//eden/scm/lib/commits/trait:commits-trait",
         "//eden/scm/lib/config/loader:configloader",
         "//eden/scm/lib/config/model:configmodel",

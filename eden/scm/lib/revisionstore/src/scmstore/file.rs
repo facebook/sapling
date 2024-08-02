@@ -20,6 +20,7 @@ use anyhow::anyhow;
 use anyhow::bail;
 use anyhow::ensure;
 use anyhow::Result;
+use cas_client::CasClient;
 use clientinfo::get_client_request_info_thread_local;
 use clientinfo::set_client_request_info_thread_local;
 use crossbeam::channel::unbounded;
@@ -109,6 +110,8 @@ pub struct FileStore {
 
     // Aux Data Store
     pub(crate) aux_cache: Option<Arc<AuxStore>>,
+
+    pub(crate) cas_client: Option<Arc<dyn CasClient>>,
 
     // Metrics, statistics, debugging
     pub(crate) activity_logger: Option<Arc<Mutex<ActivityLogger>>>,
@@ -435,6 +438,7 @@ impl FileStore {
 
             edenapi: None,
             lfs_remote: None,
+            cas_client: None,
 
             contentstore: None,
             fetch_logger: None,
@@ -489,6 +493,7 @@ impl FileStore {
 
             edenapi: None,
             lfs_remote: None,
+            cas_client: None,
 
             contentstore: None,
             fetch_logger: self.fetch_logger.clone(),

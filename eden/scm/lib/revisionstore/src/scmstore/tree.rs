@@ -23,8 +23,8 @@ use ::types::PathComponentBuf;
 use ::types::RepoPath;
 use anyhow::anyhow;
 use anyhow::bail;
-use anyhow::Context;
 use anyhow::Result;
+use cas_client::CasClient;
 use clientinfo::get_client_request_info_thread_local;
 use clientinfo::set_client_request_info_thread_local;
 use crossbeam::channel::unbounded;
@@ -117,6 +117,8 @@ pub struct TreeStore {
 
     pub historystore_local: Option<Arc<IndexedLogHgIdHistoryStore>>,
     pub historystore_cache: Option<Arc<IndexedLogHgIdHistoryStore>>,
+
+    pub cas_client: Option<Arc<dyn CasClient>>,
 
     /// Write tree parents to history cache even if parents weren't requested.
     pub prefetch_tree_parents: bool,
@@ -470,6 +472,7 @@ impl TreeStore {
             indexedlog_cache: None,
             cache_to_local_cache: true,
             edenapi: None,
+            cas_client: None,
             contentstore: None,
             historystore_cache: None,
             historystore_local: None,
@@ -550,6 +553,7 @@ impl LegacyStore for TreeStore {
             historystore_cache: None,
             cache_to_local_cache: false,
             edenapi: None,
+            cas_client: None,
             contentstore: None,
             filestore: None,
             tree_aux_store: None,
