@@ -34,6 +34,7 @@ use mononoke_app::MononokeApp;
 use repo_blobstore::RepoBlobstore;
 use repo_derived_data::RepoDerivedData;
 use repo_derived_data::RepoDerivedDataRef;
+use repo_factory::RepoFactory;
 use repo_identity::RepoIdentity;
 
 use self::count_underived::count_underived;
@@ -89,6 +90,10 @@ pub struct CommandArgs {
     #[clap(short, long)]
     config_name: Option<String>,
 
+    /// Whether to bypass redaction when deriving and querying derived data.
+    #[clap(long)]
+    bypass_redaction: bool,
+
     #[clap(subcommand)]
     subcommand: DerivedDataSubcommand,
 }
@@ -119,13 +124,14 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         | DerivedDataSubcommand::CountUnderived(_)
         | DerivedDataSubcommand::VerifyManifests(_)
         | DerivedDataSubcommand::ListManifest(_)
-        | DerivedDataSubcommand::Slice(_) => app
-            .open_repo(&args.repo)
-            .await
-            .context("Failed to open repo")?,
+        | DerivedDataSubcommand::Slice(_) => {
+            open_repo_for_derive(&app, &args.repo, false, args.bypass_redaction)
+                .await
+                .context("Failed to open repo")?
+        }
         DerivedDataSubcommand::Derive(DeriveArgs { rederive, .. })
         | DerivedDataSubcommand::DeriveSlice(DeriveSliceArgs { rederive, .. }) => {
-            open_repo_for_derive(&app, &args.repo, rederive)
+            open_repo_for_derive(&app, &args.repo, *rederive, args.bypass_redaction)
                 .await
                 .context("Failed to open repo")?
         }
@@ -154,18 +160,29 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
     Ok(())
 }
 
-async fn open_repo_for_derive(app: &MononokeApp, repo: &RepoArgs, rederive: &bool) -> Result<Repo> {
-    if *rederive {
-        app.open_repo_with_factory_customization(repo, |repo_factory| {
-            repo_factory
-                .with_lease_override(|_| Arc::new(DummyLease {}))
-                .with_bonsai_hg_mapping_override()
+async fn open_repo_for_derive(
+    app: &MononokeApp,
+    repo: &RepoArgs,
+    rederive: bool,
+    bypass_redaction: bool,
+) -> Result<Repo> {
+    let repo_customization: Box<dyn Fn(&mut RepoFactory) -> &mut RepoFactory + Send> = if rederive {
+        Box::new(|repo_factory| {
+            {
+                repo_factory
+                    .with_lease_override(|_| Arc::new(DummyLease {}))
+                    .with_bonsai_hg_mapping_override()
+            }
         })
-        .await
     } else {
-        app.open_repo_with_factory_customization(repo, |repo_factory| {
-            repo_factory.with_lease_override(|_| Arc::new(DummyLease {}))
-        })
-        .await
+        Box::new(|repo_factory| repo_factory.with_lease_override(|_| Arc::new(DummyLease {})))
+    };
+
+    if bypass_redaction {
+        app.open_repo_unredacted_with_factory_customization(repo, repo_customization)
+            .await
+    } else {
+        app.open_repo_with_factory_customization(repo, repo_customization)
+            .await
     }
 }

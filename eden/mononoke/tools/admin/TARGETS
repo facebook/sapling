@@ -117,6 +117,7 @@ rust_binary(
         "//eden/mononoke/repo_attributes/repo_derived_data:repo_derived_data",
         "//eden/mononoke/repo_attributes/repo_identity:repo_identity",
         "//eden/mononoke/repo_attributes/repo_lock:repo_lock",
+        "//eden/mononoke/repo_factory:repo_factory",
         "//eden/mononoke/scs/if:source_control-rust",
         "//eden/mononoke/server/context:context",
         "//thrift/lib/rust:fbthrift",
