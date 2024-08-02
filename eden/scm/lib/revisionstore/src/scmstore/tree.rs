@@ -159,6 +159,7 @@ impl TreeStore {
         let cache_to_local_cache = self.cache_to_local_cache;
         let aux_cache = self.filestore.as_ref().and_then(|fs| fs.aux_cache.clone());
         let tree_aux_store = self.tree_aux_store.clone();
+        let cas_client = self.cas_client.clone();
 
         let fetch_children_metadata = match self.tree_metadata_mode {
             TreeMetadataMode::Always => true,
@@ -248,11 +249,17 @@ impl TreeStore {
                         }
                     }
                 }
+            }
 
+            if fetch_local || (fetch_remote && cas_client.is_some()) {
                 if let Some(tree_aux_store) = &tree_aux_store {
+                    let mut wants_aux = TreeAttributes::AUX_DATA;
+                    if cas_client.is_some() {
+                        wants_aux |= TreeAttributes::CONTENT;
+                    }
                     let pending: Vec<_> = state
                         .common
-                        .pending(TreeAttributes::AUX_DATA, false)
+                        .pending(wants_aux, false)
                         .map(|(key, _attrs)| key.clone())
                         .collect();
                     for key in pending.into_iter() {
@@ -272,6 +279,10 @@ impl TreeStore {
             }
 
             if fetch_remote {
+                if let Some(cas_client) = &cas_client {
+                    state.fetch_cas(cas_client);
+                }
+
                 if let Some(edenapi) = &edenapi {
                     let attributes = edenapi_types::TreeAttributes {
                         manifest_blob: true,

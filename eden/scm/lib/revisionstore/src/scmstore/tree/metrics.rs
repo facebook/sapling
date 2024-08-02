@@ -21,6 +21,7 @@ pub struct TreeStoreFetchMetrics {
     pub(crate) indexedlog: LocalAndCacheFetchMetrics,
     pub(crate) aux: LocalAndCacheFetchMetrics,
     pub(crate) edenapi: FetchMetrics,
+    pub(crate) cas: FetchMetrics,
 }
 
 impl AddAssign for TreeStoreFetchMetrics {
@@ -28,6 +29,7 @@ impl AddAssign for TreeStoreFetchMetrics {
         self.indexedlog += rhs.indexedlog;
         self.aux += rhs.aux;
         self.edenapi += rhs.edenapi;
+        self.cas += rhs.cas;
     }
 }
 
@@ -36,6 +38,7 @@ impl TreeStoreFetchMetrics {
         namespaced("indexedlog", self.indexedlog.metrics())
             .chain(namespaced("aux", self.aux.metrics()))
             .chain(namespaced("edenapi", self.edenapi.metrics()))
+            .chain(namespaced("cas", self.cas.metrics()))
     }
 
     /// Update ODS stats.

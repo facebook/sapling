@@ -5,19 +5,26 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
 use std::time::Instant;
 
 use anyhow::Result;
+use async_runtime::block_on;
+use cas_client::CasClient;
 use crossbeam::channel::Sender;
 use tracing::field;
 use types::fetch_mode::FetchMode;
 use types::hgid::NULL_ID;
+use types::AugmentedTree;
+use types::AugmentedTreeWithDigest;
+use types::CasDigest;
 use types::Key;
 use types::NodeInfo;
 
 use super::metrics::TreeStoreFetchMetrics;
 use super::types::StoreTree;
 use super::types::TreeAttributes;
+use crate::error::ClonableError;
 use crate::indexedlogtreeauxstore::TreeAuxStore;
 use crate::scmstore::fetch::CommonFetchState;
 use crate::scmstore::fetch::FetchErrors;
@@ -163,5 +170,113 @@ impl FetchState {
             .time_from_duration(start_time.elapsed());
 
         Ok(())
+    }
+
+    pub(crate) fn fetch_cas(&mut self, cas_client: &dyn CasClient) {
+        let span = tracing::info_span!(
+            "fetch_cas",
+            keys = field::Empty,
+            hits = field::Empty,
+            requests = field::Empty,
+            time = field::Empty,
+        );
+        let _enter = span.enter();
+
+        let mut digest_to_key: HashMap<CasDigest, Key> = self
+            .common
+            .pending(TreeAttributes::CONTENT | TreeAttributes::PARENTS, false)
+            .filter_map(|(key, store_tree)| {
+                let aux_data = store_tree.aux_data.as_ref()?;
+                Some((
+                    CasDigest {
+                        hash: aux_data.augmented_manifest_id,
+                        size: aux_data.augmented_manifest_size,
+                    },
+                    key.clone(),
+                ))
+            })
+            .collect();
+
+        if digest_to_key.is_empty() {
+            return;
+        }
+
+        let digests: Vec<CasDigest> = digest_to_key.keys().cloned().collect();
+
+        span.record("keys", digests.len());
+
+        let mut found = 0;
+        let mut error = 0;
+        let mut reqs = 0;
+
+        // TODO: configure
+        let max_batch_size = 1000;
+        let start_time = Instant::now();
+
+        for chunk in digests.chunks(max_batch_size) {
+            reqs += 1;
+
+            // TODO: should we fan out here into multiple requests?
+            match block_on(cas_client.fetch(chunk)) {
+                Ok(results) => {
+                    for (digest, data) in results {
+                        let Some(key) = digest_to_key.remove(&digest) else {
+                            tracing::error!("got CAS result for unrequested digest {:?}", digest);
+                            continue;
+                        };
+
+                        match data {
+                            Err(err) => {
+                                tracing::error!(?err, ?key, ?digest, "CAS fetch error");
+                                error += 1;
+                                self.errors.keyed_error(key, err);
+                            }
+                            Ok(None) => {
+                                // miss
+                            }
+                            Ok(Some(data)) => match AugmentedTree::try_deserialize(&*data) {
+                                Ok(tree) => {
+                                    found += 1;
+                                    self.common.found(
+                                        key,
+                                        StoreTree {
+                                            content: Some(LazyTree::Cas(AugmentedTreeWithDigest {
+                                                augmented_manifest_id: digest.hash,
+                                                augmented_manifest_size: digest.size,
+                                                augmented_tree: tree,
+                                            })),
+                                            parents: None,
+                                            aux_data: None,
+                                        },
+                                    );
+                                }
+                                Err(err) => {
+                                    error += 1;
+                                    self.errors.keyed_error(key, err);
+                                }
+                            },
+                        }
+                    }
+                }
+                Err(err) => {
+                    tracing::error!(?err, "overall CAS error");
+                    let err = ClonableError::new(err);
+                    for digest in chunk {
+                        if let Some(key) = digest_to_key.get(digest) {
+                            self.errors.keyed_error(key.clone(), err.clone().into());
+                        }
+                    }
+                }
+            }
+        }
+
+        span.record("hits", found);
+        span.record("requests", reqs);
+        span.record("time", start_time.elapsed().as_millis() as u64);
+
+        let _ = self.metrics.cas.time_from_duration(start_time.elapsed());
+        self.metrics.cas.fetch(digests.len());
+        self.metrics.cas.err(error);
+        self.metrics.cas.hit(found);
     }
 }
