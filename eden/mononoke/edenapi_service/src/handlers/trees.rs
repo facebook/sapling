@@ -260,7 +260,7 @@ async fn fetch_tree(
             .perf_counters()
             .increment_counter(PerfCounterType::EdenapiTreesAuxData);
 
-        if let Some(entries) = fetch_child_metadata_entries(&repo, &ctx).await? {
+        if let Some(entries) = fetch_child_file_metadata_entries(&repo, &ctx).await? {
             let children: Vec<Result<TreeChildEntry, SaplingRemoteApiServerError>> = entries
                 .buffer_unordered(MAX_CONCURRENT_METADATA_FETCHES_PER_TREE_FETCH)
                 .map(|r| r.map_err(|e| SaplingRemoteApiServerError::with_key(key.clone(), e)))
@@ -274,7 +274,7 @@ async fn fetch_tree(
     Ok(entry)
 }
 
-async fn fetch_child_metadata_entries<'a>(
+async fn fetch_child_file_metadata_entries<'a>(
     repo: &'a HgRepoContext,
     ctx: &'a HgTreeContext,
 ) -> Result<
@@ -285,25 +285,27 @@ async fn fetch_child_metadata_entries<'a>(
     if manifest.content().files.len() > LARGE_TREE_METADATA_LIMIT {
         return Ok(None);
     }
-    let entries = manifest.list().collect::<Vec<_>>();
+    let file_entries =
+        manifest
+            .list()
+            .collect::<Vec<_>>()
+            .into_iter()
+            .filter_map(|(name, entry)| {
+                if let Entry::Leaf((_, child_id)) = entry {
+                    Some((name, child_id))
+                } else {
+                    None
+                }
+            });
 
     Ok(Some(
-        stream::iter(entries)
+        stream::iter(file_entries)
             // .entries iterator is not `Send`
             .map({
-                move |(name, entry)| async move {
+                move |(name, child_id)| async move {
                     let name = RepoPathBuf::from_string(name.to_string())?;
-                    Ok(match entry {
-                        Entry::Leaf((_, child_id)) => {
-                            let child_key = Key::new(name, child_id.into_nodehash().into());
-                            fetch_child_file_metadata(repo, child_key.clone()).await?
-                        }
-                        // This API never returned any directory metadata
-                        Entry::Tree(child_id) => TreeChildEntry::new_directory_entry(
-                            Key::new(name, child_id.into_nodehash().into()),
-                            TreeAuxData::default(),
-                        ),
-                    })
+                    let child_key = Key::new(name, child_id.into_nodehash().into());
+                    fetch_child_file_metadata(repo, child_key.clone()).await
                 }
             }),
     ))
@@ -313,19 +315,19 @@ async fn fetch_child_file_metadata(
     repo: &HgRepoContext,
     child_key: Key,
 ) -> Result<TreeChildEntry, Error> {
-    let metadata = repo
+    let ctx = repo
         .file(HgFileNodeId::new(child_key.hgid.into()))
         .await?
-        .ok_or_else(|| ErrorKind::FileFetchFailed(child_key.clone()))?
-        .content_metadata()
-        .await?;
+        .ok_or_else(|| ErrorKind::FileFetchFailed(child_key.clone()))?;
+
+    let metadata = ctx.content_metadata().await?;
     Ok(TreeChildEntry::new_file_entry(
         child_key,
         FileAuxData {
             total_size: metadata.total_size,
             sha1: metadata.sha1.into(),
             blake3: metadata.seeded_blake3.into(),
-            file_header_metadata: None,
+            file_header_metadata: Some(ctx.file_header_metadata()),
         }
         .into(),
     ))
