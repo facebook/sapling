@@ -45,8 +45,8 @@ void sanityCheckFs(const std::string& mountPoint) {
       // process that crashed without unmounting.
       return;
     }
-    throw_<std::domain_error>(
-        "statfs failed for: ", mountPoint, ": ", folly::errnoStr(err));
+    throwf<std::domain_error>(
+        "statfs failed for: {}: {}", mountPoint, folly::errnoStr(err));
   }
 
   constexpr typeof(fsBuf.f_type) allowedFs[] = {
@@ -90,8 +90,8 @@ void sanityCheckFs(const std::string& mountPoint) {
     }
   }
 
-  throw_<std::domain_error>(
-      "Cannot mount over filesystem type: ", fsBuf.f_type);
+  throwf<std::domain_error>(
+      "Cannot mount over filesystem type: {}", fsBuf.f_type);
 #else
   (void)mountPoint;
 #endif
@@ -105,34 +105,30 @@ void PrivHelperServer::sanityCheckMountPoint(const std::string& mountPoint) {
 
   if (access(mountPoint.c_str(), W_OK) < 0) {
     auto err = errno;
-    throw_<std::domain_error>(
-        "User:",
+    throwf<std::domain_error>(
+        "User:{} doesn't have write access to {}: {}",
         getuid(),
-        " doesn't have write access to ",
         mountPoint,
-        ": ",
         folly::errnoStr(err));
   }
 
   struct stat st;
   if (stat(mountPoint.c_str(), &st) < 0) {
     auto err = errno;
-    throw_<std::domain_error>(
-        "User:",
+    throwf<std::domain_error>(
+        "User:{} cannot stat {}: {}",
         getuid(),
-        " cannot stat ",
         mountPoint,
-        ": ",
         folly::errnoStr(err));
   }
 
   if (!S_ISDIR(st.st_mode)) {
-    throw_<std::domain_error>(mountPoint, " isn't a directory");
+    throwf<std::domain_error>("{} isn't a directory", mountPoint);
   }
 
   if (st.st_uid != uid_) {
-    throw_<std::domain_error>(
-        "User:", uid_, " isn't the owner of: ", mountPoint);
+    throwf<std::domain_error>(
+        "User:{} isn't the owner of: {}", uid_, mountPoint);
   }
 
   sanityCheckFs(mountPoint);
