@@ -28,9 +28,9 @@ pub mod workingcopy_client;
 
 pub use crate::augmented_tree::AugmentedDirectoryNode;
 pub use crate::augmented_tree::AugmentedFileNode;
-pub use crate::augmented_tree::AugmentedTreeChildEntry;
+pub use crate::augmented_tree::AugmentedTree;
 pub use crate::augmented_tree::AugmentedTreeEntry;
-pub use crate::augmented_tree::AugmentedTreeEntryWithDigest;
+pub use crate::augmented_tree::AugmentedTreeWithDigest;
 pub use crate::blake3::Blake3;
 pub use crate::cas::CasDigest;
 pub use crate::hgid::HgId;

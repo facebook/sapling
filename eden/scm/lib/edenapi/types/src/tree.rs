@@ -18,9 +18,9 @@ use types::hgid::HgId;
 use types::hgid::NULL_ID;
 use types::key::Key;
 use types::parents::Parents;
-use types::AugmentedTreeChildEntry;
+use types::AugmentedTree;
 use types::AugmentedTreeEntry;
-use types::AugmentedTreeEntryWithDigest;
+use types::AugmentedTreeWithDigest;
 
 use crate::Blake3;
 use crate::DirectoryMetadata;
@@ -48,7 +48,7 @@ pub enum TreeError {
     #[error("TreeEntry missing field '{0}'")]
     MissingField(&'static str),
 
-    #[error("TreeEntry failed to convert from AugmentedTreeEntry: '{0}'")]
+    #[error("TreeEntry failed to convert from AugmentedTree: '{0}'")]
     AugmentedTreeConversionError(String),
 }
 
@@ -200,9 +200,9 @@ impl TreeChildEntry {
     }
 }
 
-impl TryFrom<AugmentedTreeEntry> for TreeEntry {
+impl TryFrom<AugmentedTree> for TreeEntry {
     type Error = TreeError;
-    fn try_from(aug_tree: AugmentedTreeEntry) -> Result<Self, Self::Error> {
+    fn try_from(aug_tree: AugmentedTree) -> Result<Self, Self::Error> {
         let mut entry: TreeEntry = TreeEntry::new(Key {
             hgid: aug_tree.hg_node_id,
             ..Default::default()
@@ -221,7 +221,7 @@ impl TryFrom<AugmentedTreeEntry> for TreeEntry {
                 .subentries
                 .into_iter()
                 .map(|(path, augmented_entry)| match augmented_entry {
-                    AugmentedTreeChildEntry::FileNode(file) => Ok(TreeChildEntry::new_file_entry(
+                    AugmentedTreeEntry::FileNode(file) => Ok(TreeChildEntry::new_file_entry(
                         Key {
                             hgid: file.filenode,
                             path,
@@ -240,7 +240,7 @@ impl TryFrom<AugmentedTreeEntry> for TreeEntry {
                         }
                         .into(),
                     )),
-                    AugmentedTreeChildEntry::DirectoryNode(tree) => {
+                    AugmentedTreeEntry::DirectoryNode(tree) => {
                         Ok(TreeChildEntry::new_directory_entry(
                             Key {
                                 hgid: tree.treenode,
@@ -264,9 +264,9 @@ impl TryFrom<AugmentedTreeEntry> for TreeEntry {
     }
 }
 
-impl TryFrom<AugmentedTreeEntryWithDigest> for TreeEntry {
+impl TryFrom<AugmentedTreeWithDigest> for TreeEntry {
     type Error = TreeError;
-    fn try_from(aug_tree_with_digest: AugmentedTreeEntryWithDigest) -> Result<Self, Self::Error> {
+    fn try_from(aug_tree_with_digest: AugmentedTreeWithDigest) -> Result<Self, Self::Error> {
         let mut entry: TreeEntry = TreeEntry::try_from(aug_tree_with_digest.augmented_tree)?;
         let dir_meta = DirectoryMetadata {
             augmented_manifest_id: Blake3::from_byte_array(

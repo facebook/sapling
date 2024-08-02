@@ -40,9 +40,9 @@ use sha1::Digest;
 use sha1::Sha1;
 use storemodel::types::AugmentedDirectoryNode;
 use storemodel::types::AugmentedFileNode;
-use storemodel::types::AugmentedTreeChildEntry;
+use storemodel::types::AugmentedTree;
 use storemodel::types::AugmentedTreeEntry;
-use storemodel::types::AugmentedTreeEntryWithDigest;
+use storemodel::types::AugmentedTreeWithDigest;
 use storemodel::types::CasDigest;
 use storemodel::types::HgId;
 use storemodel::types::Parents;
@@ -464,21 +464,21 @@ impl EagerRepo {
                 let sapling_manifest = sapling_manifest.unwrap();
                 let (parents, data) = Self::extract_parents_from_tree_data(sapling_manifest)?;
                 let tree_entry = manifest_tree::TreeEntry(data, SerializationFormat::Hg);
-                let mut subentries: Vec<(RepoPathBuf, AugmentedTreeChildEntry)> = Vec::new();
+                let mut subentries: Vec<(RepoPathBuf, AugmentedTreeEntry)> = Vec::new();
                 for child in tree_entry.elements() {
                     let child = child?;
                     let hgid = child.hgid;
-                    let entry: AugmentedTreeChildEntry = match child.flag {
+                    let entry: AugmentedTreeEntry = match child.flag {
                         Flag::Directory => {
                             let subtree_bytes = self.derive_augmented_tree_recursively(hgid)?;
                             if subtree_bytes.is_none() {
                                 return Ok(None); // Can't calculate because subtree's data is missing.
                             }
                             let CasDigest { hash, size } =
-                                AugmentedTreeEntryWithDigest::try_deserialize_digest(
+                                AugmentedTreeWithDigest::try_deserialize_digest(
                                     &mut std::io::Cursor::new(subtree_bytes.unwrap()),
                                 )?;
-                            AugmentedTreeChildEntry::DirectoryNode(AugmentedDirectoryNode {
+                            AugmentedTreeEntry::DirectoryNode(AugmentedDirectoryNode {
                                 treenode: hgid,
                                 augmented_manifest_id: hash,
                                 augmented_manifest_size: size,
@@ -501,7 +501,7 @@ impl EagerRepo {
                                 CasPointer::File(hgid),
                             )?;
 
-                            AugmentedTreeChildEntry::FileNode(AugmentedFileNode {
+                            AugmentedTreeEntry::FileNode(AugmentedFileNode {
                                 file_type,
                                 filenode: hgid,
                                 content_blake3: aux_data.blake3.into_byte_array().into(),
@@ -520,7 +520,7 @@ impl EagerRepo {
                     subentries.push((path, entry));
                 }
 
-                let aug_tree = AugmentedTreeEntry {
+                let aug_tree = AugmentedTree {
                     hg_node_id: id,
                     computed_hg_node_id: None,
                     p1: parents.p1().copied(),
@@ -530,7 +530,7 @@ impl EagerRepo {
 
                 let digest = aug_tree.compute_content_addressed_digest()?;
 
-                let aug_tree_with_digest = AugmentedTreeEntryWithDigest {
+                let aug_tree_with_digest = AugmentedTreeWithDigest {
                     augmented_manifest_id: digest.hash,
                     augmented_manifest_size: digest.size,
                     augmented_tree: aug_tree,

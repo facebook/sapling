@@ -87,7 +87,7 @@ use manifest_tree::Flag;
 use minibytes::Bytes;
 use mutationstore::MutationEntry;
 use nonblocking::non_blocking_result;
-use storemodel::types::AugmentedTreeEntryWithDigest;
+use storemodel::types::AugmentedTreeWithDigest;
 use storemodel::SerializationFormat;
 use tracing::debug;
 use tracing::error;
@@ -275,9 +275,7 @@ impl SaplingRemoteApi for EagerRepo {
                 {
                     Ok(tree) => {
                         let augmented_tree_with_digest =
-                            AugmentedTreeEntryWithDigest::try_deserialize(std::io::Cursor::new(
-                                tree,
-                            ))?;
+                            AugmentedTreeWithDigest::try_deserialize(std::io::Cursor::new(tree))?;
                         let mut converted_entry: TreeEntry =
                             TreeEntry::try_from(augmented_tree_with_digest).map_err(|err| {
                                 SaplingRemoteApiServerError::with_key(key.clone(), err)

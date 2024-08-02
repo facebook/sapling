@@ -803,7 +803,7 @@ mod sharded_augmented_manifest_tests {
     use fixtures::Linear;
     use fixtures::TestRepoFixture;
     use repo_blobstore::RepoBlobstoreArc;
-    use types::AugmentedTreeEntry;
+    use types::AugmentedTree;
 
     use super::*;
 
@@ -932,7 +932,7 @@ mod sharded_augmented_manifest_tests {
         );
 
         // Check compatibility with the Sapling Type, to make sure Sapling can deserialize
-        assert!(AugmentedTreeEntry::try_deserialize(Cursor::new(bytes)).is_ok());
+        assert!(AugmentedTree::try_deserialize(Cursor::new(bytes)).is_ok());
 
         Ok(())
     }
