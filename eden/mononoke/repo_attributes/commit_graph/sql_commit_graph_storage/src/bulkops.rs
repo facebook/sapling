@@ -19,7 +19,7 @@ use mononoke_types::ChangesetId;
 use crate::SqlCommitGraphStorage;
 
 #[facet::facet]
-struct CommitGraphBulkFetcher {
+pub struct CommitGraphBulkFetcher {
     storage: Arc<SqlCommitGraphStorage>,
 }
 

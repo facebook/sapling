@@ -186,6 +186,8 @@ use segmented_changelog::ArcSegmentedChangelogManager;
 use segmented_changelog::SegmentedChangelogSqlConnections;
 use segmented_changelog_types::ArcSegmentedChangelog;
 use slog::o;
+use sql_commit_graph_storage::ArcCommitGraphBulkFetcher;
+use sql_commit_graph_storage::CommitGraphBulkFetcher;
 use sql_commit_graph_storage::SqlCommitGraphStorageBuilder;
 use sql_construct::SqlConstructFromDatabaseConfig;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
@@ -1796,6 +1798,19 @@ impl RepoFactory {
             scuba,
             repo_identity.name().to_string(),
         )))
+    }
+
+    pub async fn commit_graph_bulk_fetcher(
+        &self,
+        repo_identity: &ArcRepoIdentity,
+        repo_config: &ArcRepoConfig,
+    ) -> Result<ArcCommitGraphBulkFetcher> {
+        let sql_storage = self
+            .open_sql::<SqlCommitGraphStorageBuilder>(repo_config)
+            .await?
+            .build(self.env.rendezvous_options, repo_identity.id());
+
+        Ok(Arc::new(CommitGraphBulkFetcher::new(Arc::new(sql_storage))))
     }
 
     pub async fn bonsai_blob_mapping(

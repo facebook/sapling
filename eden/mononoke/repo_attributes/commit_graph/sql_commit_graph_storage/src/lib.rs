@@ -48,6 +48,9 @@ use sql_ext::mononoke_queries;
 use vec1::vec1;
 use vec1::Vec1;
 
+pub use crate::bulkops::ArcCommitGraphBulkFetcher;
+pub use crate::bulkops::CommitGraphBulkFetcher;
+
 mod bulkops;
 #[cfg(test)]
 mod tests;

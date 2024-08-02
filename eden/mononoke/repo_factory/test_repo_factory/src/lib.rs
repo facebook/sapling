@@ -127,6 +127,8 @@ use sql::rusqlite::Connection as SqliteConnection;
 use sql::sqlite::SqliteCallbacks;
 use sql::Connection;
 use sql::SqlConnections;
+use sql_commit_graph_storage::ArcCommitGraphBulkFetcher;
+use sql_commit_graph_storage::CommitGraphBulkFetcher;
 use sql_commit_graph_storage::SqlCommitGraphStorageBuilder;
 use sql_construct::SqlConstruct;
 use sql_query_config::ArcSqlQueryConfig;
@@ -848,6 +850,18 @@ impl TestRepoFactory {
         Ok(Arc::new(BaseCommitGraphWriter::new(CommitGraph::clone(
             commit_graph,
         ))))
+    }
+
+    /// Commit graph bulk fetcher
+    pub fn commit_graph_bulk_fetcher(
+        &self,
+        repo_identity: &RepoIdentity,
+    ) -> Result<ArcCommitGraphBulkFetcher> {
+        let sql_storage =
+            SqlCommitGraphStorageBuilder::from_sql_connections(self.metadata_db.clone())
+                .build(RendezVousOptions::for_test(), repo_identity.id());
+
+        Ok(Arc::new(CommitGraphBulkFetcher::new(Arc::new(sql_storage))))
     }
 
     /// Warm bookmarks cache
