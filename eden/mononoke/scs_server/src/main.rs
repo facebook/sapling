@@ -363,7 +363,6 @@ fn setup_thrift_server(
         .with_tls()
         .expect("failed to enable TLS")
         .with_cancel_if_client_disconnected()
-        .with_metadata(metadata::create_metadata())
-        .with_factory(exec, move || service)
+        .add_factory(exec, move || service, Some(metadata::create_metadata()))
         .build())
 }
