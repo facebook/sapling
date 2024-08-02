@@ -20,9 +20,6 @@ macro_rules! abort_if {
 
 #[macro_export]
 macro_rules! abort {
-    ( $msg:expr ) => {
-        return Err($crate::errors::Abort($msg.into()).into());
-    };
     ( $($arg:tt)+ ) => {
         return Err($crate::errors::Abort(format!($($arg)*).into()).into());
     };
@@ -30,9 +27,6 @@ macro_rules! abort {
 
 #[macro_export]
 macro_rules! fallback {
-    ( $msg:expr ) => {
-        return Err($crate::errors::FallbackToPython($msg.into()).into());
-    };
     ( $($arg:tt)+ ) => {
         return Err($crate::errors::FallbackToPython(format!($($arg)*).into()).into());
     };
@@ -138,9 +132,18 @@ mod test {
         abort!("error: {}", "banana");
     }
 
+    fn abort_format_single() -> anyhow::Result<()> {
+        let banana = "banana";
+        abort!("error: {banana}");
+    }
+
     #[test]
     fn test_abort() {
         assert_eq!(format!("{}", abort_simple().unwrap_err()), "error!");
         assert_eq!(format!("{}", abort_format().unwrap_err()), "error: banana",);
+        assert_eq!(
+            format!("{}", abort_format_single().unwrap_err()),
+            "error: banana",
+        );
     }
 }
