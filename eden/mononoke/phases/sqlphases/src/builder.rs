@@ -8,7 +8,7 @@
 use std::sync::Arc;
 
 use caching_ext::CacheHandlerFactory;
-use changeset_fetcher::ArcChangesetFetcher;
+use commit_graph::ArcCommitGraph;
 use memcache::KeyGen;
 use mononoke_types::RepositoryId;
 use phases::ArcPhases;
@@ -46,11 +46,11 @@ impl SqlPhasesBuilder {
     pub fn build(
         self,
         repo_id: RepositoryId,
-        changeset_fetcher: ArcChangesetFetcher,
+        commit_graph: ArcCommitGraph,
         heads_fetcher: HeadsFetcher,
     ) -> ArcPhases {
         let phases_store = self.phases_store();
-        let phases = SqlPhases::new(phases_store, repo_id, changeset_fetcher, heads_fetcher);
+        let phases = SqlPhases::new(phases_store, repo_id, commit_graph, heads_fetcher);
         Arc::new(phases)
     }
 

@@ -23,9 +23,9 @@ use ascii::AsciiString;
 use blobimport_lib::BookmarkImportPolicy;
 use blobrepo::BlobRepo;
 use bonsai_globalrev_mapping::SqlBonsaiGlobalrevMappingBuilder;
-use changeset_fetcher::ChangesetFetcherRef;
 use clap::Parser;
 use cmdlib::monitoring::AliveService;
+use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use context::SessionContainer;
 use failure_ext::SlogKVError;
@@ -369,8 +369,8 @@ async fn maybe_update_highest_imported_generation_number(
         .mutable_counters()
         .get_counter(ctx, blobimport_lib::HIGHEST_IMPORTED_GEN_NUM);
     let new_gen_num = blobrepo
-        .changeset_fetcher()
-        .get_generation_number(ctx, latest_imported_cs_id);
+        .commit_graph()
+        .changeset_generation(ctx, latest_imported_cs_id);
     let (maybe_highest_imported_gen_num, new_gen_num) =
         try_join(maybe_highest_imported_gen_num, new_gen_num).await?;
 

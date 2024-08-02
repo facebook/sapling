@@ -21,8 +21,6 @@ use bonsai_git_mapping::BonsaiGitMapping;
 use bonsai_globalrev_mapping::BonsaiGlobalrevMapping;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use bonsai_svnrev_mapping::BonsaiSvnrevMapping;
-use changeset_fetcher::ChangesetFetcher;
-use changesets::Changesets;
 use children::ChildrenArgs;
 use clap::Parser;
 use clap::Subcommand;
@@ -78,12 +76,6 @@ pub enum CommitGraphSubcommand {
 
 #[facet::container]
 pub struct Repo {
-    #[facet]
-    changesets: dyn Changesets,
-
-    #[facet]
-    changeset_fetcher: dyn ChangesetFetcher,
-
     #[facet]
     commit_graph: CommitGraph,
 

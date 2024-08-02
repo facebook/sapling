@@ -8,7 +8,6 @@
 use std::sync::Arc;
 
 use anyhow::anyhow;
-use changeset_fetcher::ChangesetFetcherRef;
 use context::CoreContext;
 use megarepo_config::MononokeMegarepoConfigs;
 use megarepo_config::Target;
@@ -171,9 +170,8 @@ impl<'a> RemergeSource<'a> {
         repo: &RepoContext,
     ) -> Result<ChangesetId, MegarepoError> {
         let parents = repo
-            .inner_repo()
-            .changeset_fetcher()
-            .get_parents(ctx, actual_target_location)
+            .commit_graph()
+            .changeset_parents(ctx, actual_target_location)
             .await?;
         if parents.len() != 2 || parents[0] != expected_target_location {
             return Err(MegarepoError::request(anyhow!(

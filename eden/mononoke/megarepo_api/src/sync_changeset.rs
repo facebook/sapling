@@ -15,7 +15,6 @@ use anyhow::Result;
 use async_trait::async_trait;
 use blobrepo::save_bonsai_changesets;
 use blobstore::Loadable;
-use changeset_fetcher::ChangesetFetcherRef;
 use commit_graph::CommitGraphRef;
 use commit_transformation::create_directory_source_to_target_multi_mover;
 use commit_transformation::create_source_to_target_multi_mover;
@@ -405,9 +404,8 @@ impl<'a> SyncChangeset<'a> {
 
         // Check that first parent is a target location
         let parents = repo
-            .inner_repo()
-            .changeset_fetcher()
-            .get_parents(ctx, actual_target_location)
+            .commit_graph()
+            .changeset_parents(ctx, actual_target_location)
             .await?;
         if parents.first() != Some(&expected_target_location) {
             return Err(MegarepoError::request(anyhow!(

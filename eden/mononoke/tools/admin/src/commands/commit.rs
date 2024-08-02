@@ -17,7 +17,6 @@ use bonsai_globalrev_mapping::BonsaiGlobalrevMapping;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use bonsai_svnrev_mapping::BonsaiSvnrevMapping;
 use bookmarks::Bookmarks;
-use changeset_fetcher::ChangesetFetcher;
 use changesets::Changesets;
 use clap::Parser;
 use clap::Subcommand;
@@ -76,9 +75,6 @@ pub struct Repo {
 
     #[facet]
     changesets: dyn Changesets,
-
-    #[facet]
-    changeset_fetcher: dyn ChangesetFetcher,
 
     #[facet]
     commit_graph: CommitGraph,

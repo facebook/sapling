@@ -31,7 +31,6 @@ use bookmarks::BookmarkUpdateLogEntry;
 use bookmarks::BookmarkUpdateLogId;
 use bookmarks::Freshness;
 use borrowed::borrowed;
-use changeset_fetcher::ChangesetFetcher;
 use changesets::Changesets;
 use changesets_uploader::MononokeCasChangesetsUploader;
 use clap_old::Arg;
@@ -116,9 +115,6 @@ pub struct MononokeCasSyncProcess {
 #[facet::container]
 #[derive(Clone)]
 pub struct Repo {
-    #[facet]
-    pub changeset_fetcher: dyn ChangesetFetcher,
-
     #[facet]
     pub changesets: dyn Changesets,
 

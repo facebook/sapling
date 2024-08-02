@@ -15,7 +15,6 @@ use bonsai_svnrev_mapping::BonsaiSvnrevMapping;
 use bonsai_tag_mapping::BonsaiTagMapping;
 use bookmarks::BookmarkUpdateLog;
 use bookmarks::Bookmarks;
-use changeset_fetcher::ChangesetFetcher;
 use changesets::Changesets;
 use commit_cloud::CommitCloud;
 use commit_graph::CommitGraph;
@@ -59,7 +58,6 @@ pub struct InnerRepo {
         dyn BonsaiSvnrevMapping,
         dyn BookmarkUpdateLog,
         dyn Bookmarks,
-        dyn ChangesetFetcher,
         dyn Changesets,
         dyn Filenodes,
         dyn Phases,

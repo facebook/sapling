@@ -24,7 +24,6 @@ use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bookmarks::BookmarkKey;
 use bookmarks::Freshness;
 use bytes::Bytes;
-use changeset_fetcher::ChangesetFetcherRef;
 use changesets::ChangesetInsert;
 use changesets::ChangesetsRef;
 use commit_graph::CommitGraphRef;
@@ -888,8 +887,8 @@ impl HgRepoContext {
         let cs_parent_mapping = stream::iter(missing_commits.clone())
             .map(move |cs_id| async move {
                 let parents = blob_repo
-                    .changeset_fetcher()
-                    .get_parents(self.ctx(), cs_id)
+                    .commit_graph()
+                    .changeset_parents(self.ctx(), cs_id)
                     .await?;
                 Ok::<_, Error>((cs_id, parents))
             })

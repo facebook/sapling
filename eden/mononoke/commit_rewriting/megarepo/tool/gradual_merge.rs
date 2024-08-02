@@ -12,7 +12,6 @@ use std::collections::VecDeque;
 use anyhow::Error;
 use blobstore::Loadable;
 use bookmarks::BookmarkKey;
-use changeset_fetcher::ChangesetFetcherRef;
 use cmdlib::helpers;
 use commit_graph::CommitGraphRef;
 use context::CoreContext;
@@ -269,7 +268,7 @@ async fn find_unmerged_commits(
             return Ok(commits_to_merge.split_off(found_idx.0 + 1));
         }
 
-        let parents = repo.changeset_fetcher().get_parents(ctx, cs_id).await?;
+        let parents = repo.commit_graph().changeset_parents(ctx, cs_id).await?;
         for p in parents {
             if visited.insert(p) {
                 queue.push_back(p);

@@ -534,7 +534,6 @@ mod test {
     use bonsai_hg_mapping::BonsaiHgMapping;
     use bookmarks::BookmarkUpdateLogId;
     use bookmarks::Bookmarks;
-    use changeset_fetcher::ChangesetFetcher;
     use changesets::Changesets;
     use fbinit::FacebookInit;
     use filestore::FilestoreConfig;
@@ -555,9 +554,6 @@ mod test {
 
         #[facet]
         pub changesets: dyn Changesets,
-
-        #[facet]
-        pub changeset_fetcher: dyn ChangesetFetcher,
 
         #[facet]
         pub bonsai_hg_mapping: dyn BonsaiHgMapping,

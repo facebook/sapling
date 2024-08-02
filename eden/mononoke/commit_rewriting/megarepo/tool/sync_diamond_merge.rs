@@ -24,7 +24,6 @@ use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks::BookmarksRef;
 use cacheblob::LeaseOps;
-use changeset_fetcher::ChangesetFetcherRef;
 use cloned::cloned;
 use commit_graph::CommitGraphRef;
 use commit_transformation::upload_commits;
@@ -136,11 +135,11 @@ pub async fn do_sync_diamond_merge(
     );
 
     let parents = small_repo
-        .changeset_fetcher()
-        .get_parents(ctx, small_merge_cs_id)
+        .commit_graph()
+        .changeset_parents(ctx, small_merge_cs_id)
         .await?;
 
-    let (p1, p2) = validate_parents(parents)?;
+    let (p1, p2) = validate_parents(parents.to_vec())?;
 
     let new_branch = find_new_branch_oldest_first(ctx.clone(), small_repo, p1, p2).await?;
 

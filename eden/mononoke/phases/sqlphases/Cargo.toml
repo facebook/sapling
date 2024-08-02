@@ -16,7 +16,7 @@ ascii = "1.0"
 async-trait = "0.1.71"
 bytes = { version = "1.6.0", features = ["serde"] }
 caching_ext = { version = "0.1.0", path = "../../common/rust/caching_ext" }
-changeset_fetcher = { version = "0.1.0", path = "../../blobrepo/changeset_fetcher" }
+commit_graph = { version = "0.1.0", path = "../../repo_attributes/commit_graph/commit_graph" }
 context = { version = "0.1.0", path = "../../server/context" }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
 maplit = "1.0"

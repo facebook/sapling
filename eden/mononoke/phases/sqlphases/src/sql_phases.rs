@@ -15,7 +15,7 @@ use anyhow::Error;
 use anyhow::Result;
 use ascii::AsciiString;
 use async_trait::async_trait;
-use changeset_fetcher::ArcChangesetFetcher;
+use commit_graph::ArcCommitGraph;
 use context::CoreContext;
 use futures::future::try_join;
 use futures::future::BoxFuture;
@@ -117,7 +117,7 @@ pub type HeadsFetcher =
 #[derive(Clone)]
 pub struct SqlPhases {
     phases_store: SqlPhasesStore,
-    changeset_fetcher: ArcChangesetFetcher,
+    commit_graph: ArcCommitGraph,
     heads_fetcher: HeadsFetcher,
     repo_id: RepositoryId,
 }
@@ -202,12 +202,12 @@ impl SqlPhases {
     pub fn new(
         phases_store: SqlPhasesStore,
         repo_id: RepositoryId,
-        changeset_fetcher: ArcChangesetFetcher,
+        commit_graph: ArcCommitGraph,
         heads_fetcher: HeadsFetcher,
     ) -> Self {
         Self {
             phases_store,
-            changeset_fetcher,
+            commit_graph,
             heads_fetcher,
             repo_id,
         }
@@ -260,7 +260,7 @@ impl Phases for SqlPhases {
         });
         Arc::new(SqlPhases {
             phases_store: self.phases_store.clone(),
-            changeset_fetcher: self.changeset_fetcher.clone(),
+            commit_graph: self.commit_graph.clone(),
             heads_fetcher,
             repo_id: self.repo_id,
         })
@@ -274,7 +274,7 @@ pub async fn mark_reachable_as_public(
     all_heads: &[ChangesetId],
     ephemeral_derive: bool,
 ) -> Result<Vec<ChangesetId>, Error> {
-    let changeset_fetcher = &phases.changeset_fetcher;
+    let commit_graph = &phases.commit_graph;
     let public = phases.get_public_raw(ctx, all_heads).await?;
 
     let mut input = all_heads
@@ -298,8 +298,8 @@ pub async fn mark_reachable_as_public(
         }
 
         let (generation, parents) = try_join(
-            changeset_fetcher.get_generation_number(ctx, cs),
-            changeset_fetcher.get_parents(ctx, cs),
+            commit_graph.changeset_generation(ctx, cs),
+            commit_graph.changeset_parents(ctx, cs),
         )
         .await?;
 

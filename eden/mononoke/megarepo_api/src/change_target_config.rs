@@ -11,7 +11,6 @@ use std::sync::Arc;
 
 use anyhow::anyhow;
 use bulk_derivation::BulkDerivation;
-use changeset_fetcher::ChangesetFetcherRef;
 use context::CoreContext;
 use itertools::EitherOrBoth;
 use itertools::Itertools;
@@ -391,9 +390,8 @@ impl<'a> ChangeTargetConfig<'a> {
 
         // Check that first parent is a target location
         let parents = repo
-            .inner_repo()
-            .changeset_fetcher()
-            .get_parents(ctx, actual_target_location)
+            .commit_graph()
+            .changeset_parents(ctx, actual_target_location)
             .await?;
         if parents.first() != Some(&expected_target_location) {
             return Err(MegarepoError::request(anyhow!(

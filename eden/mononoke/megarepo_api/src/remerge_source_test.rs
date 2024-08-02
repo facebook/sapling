@@ -8,7 +8,7 @@
 use std::sync::Arc;
 
 use anyhow::Error;
-use changeset_fetcher::ChangesetFetcherRef;
+use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use maplit::btreemap;
@@ -157,8 +157,8 @@ async fn test_remerge_source_simple(fb: FacebookInit) -> Result<(), Error> {
 
     let parents = test
         .blobrepo
-        .changeset_fetcher()
-        .get_parents(&ctx, target_cs_id)
+        .commit_graph()
+        .changeset_parents(&ctx, target_cs_id)
         .await?;
     assert_eq!(parents[0], old_target_cs_id);
 

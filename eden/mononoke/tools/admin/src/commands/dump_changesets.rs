@@ -16,7 +16,6 @@ use bonsai_svnrev_mapping::BonsaiSvnrevMapping;
 use bulkops::ChangesetBulkFetcher;
 use bulkops::Direction;
 use bytes::Bytes;
-use changeset_fetcher::ChangesetFetcher;
 use changesets::deserialize_cs_entries;
 use changesets::serialize_cs_entries;
 use changesets::ChangesetEntry;
@@ -136,9 +135,6 @@ pub struct Repo {
 
     #[facet]
     phases: dyn Phases,
-
-    #[facet]
-    changeset_fetcher: dyn ChangesetFetcher,
 }
 
 impl Format {

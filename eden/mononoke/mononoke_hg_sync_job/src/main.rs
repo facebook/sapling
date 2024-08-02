@@ -40,7 +40,6 @@ use bookmarks::BookmarkUpdateLogEntry;
 use bookmarks::BookmarkUpdateLogId;
 use bookmarks::Freshness;
 use borrowed::borrowed;
-use changeset_fetcher::ChangesetFetcher;
 use changesets::Changesets;
 use clap_old::Arg;
 use clap_old::ArgGroup;
@@ -166,9 +165,6 @@ pub struct HgSyncProcess {
 #[facet::container]
 #[derive(Clone)]
 pub struct Repo {
-    #[facet]
-    pub changeset_fetcher: dyn ChangesetFetcher,
-
     #[facet]
     pub changesets: dyn Changesets,
 

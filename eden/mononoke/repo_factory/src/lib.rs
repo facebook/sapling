@@ -867,7 +867,7 @@ impl RepoFactory {
         repo_identity: &ArcRepoIdentity,
         repo_config: &ArcRepoConfig,
         bookmarks: &ArcBookmarks,
-        changeset_fetcher: &ArcChangesetFetcher,
+        commit_graph: &ArcCommitGraph,
     ) -> Result<ArcPhases> {
         let mut sql_phases_builder = self
             .open_sql::<SqlPhasesBuilder>(repo_config)
@@ -877,7 +877,7 @@ impl RepoFactory {
             sql_phases_builder.enable_caching(cache_handler_factory);
         }
         let heads_fetcher = bookmark_heads_fetcher(bookmarks.clone());
-        Ok(sql_phases_builder.build(repo_identity.id(), changeset_fetcher.clone(), heads_fetcher))
+        Ok(sql_phases_builder.build(repo_identity.id(), commit_graph.clone(), heads_fetcher))
     }
 
     pub async fn bonsai_hg_mapping(

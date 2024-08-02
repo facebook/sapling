@@ -255,7 +255,6 @@ mod test {
     use anyhow::Result;
     use bonsai_hg_mapping::BonsaiHgMapping;
     use bookmarks::Bookmarks;
-    use changeset_fetcher::ChangesetFetcher;
     use changesets::Changesets;
     use cloned::cloned;
     use fbinit::FacebookInit;
@@ -285,8 +284,6 @@ mod test {
         repo_blobstore: RepoBlobstore,
         #[facet]
         repo_derived_data: RepoDerivedData,
-        #[facet]
-        changeset_fetcher: dyn ChangesetFetcher,
         #[facet]
         changesets: dyn Changesets,
         #[facet]

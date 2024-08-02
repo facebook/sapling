@@ -469,11 +469,11 @@ impl TestRepoFactory {
         &self,
         repo_identity: &ArcRepoIdentity,
         bookmarks: &ArcBookmarks,
-        changeset_fetcher: &ArcChangesetFetcher,
+        commit_graph: &ArcCommitGraph,
     ) -> ArcPhases {
         let sql_phases_builder = SqlPhasesBuilder::from_sql_connections(self.metadata_db.clone());
         let heads_fetcher = bookmark_heads_fetcher(bookmarks.clone());
-        sql_phases_builder.build(repo_identity.id(), changeset_fetcher.clone(), heads_fetcher)
+        sql_phases_builder.build(repo_identity.id(), commit_graph.clone(), heads_fetcher)
     }
 
     /// Construct Bonsai Hg Mapping using the in-memory metadata database.

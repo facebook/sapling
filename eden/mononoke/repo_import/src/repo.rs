@@ -12,7 +12,6 @@ use bonsai_globalrev_mapping::BonsaiGlobalrevMapping;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use bookmarks::BookmarkUpdateLog;
 use bookmarks::Bookmarks;
-use changeset_fetcher::ChangesetFetcher;
 use changesets::Changesets;
 use commit_graph::CommitGraph;
 use filenodes::Filenodes;
@@ -46,7 +45,6 @@ pub struct Repo {
         dyn BonsaiHgMapping,
         dyn Bookmarks,
         dyn BookmarkUpdateLog,
-        dyn ChangesetFetcher,
         dyn Changesets,
         dyn Phases,
         dyn PushrebaseMutationMapping,
