@@ -36,12 +36,14 @@ use mononoke_app::args::HooksAppExtension;
 use mononoke_app::args::RepoFilterAppExtension;
 use mononoke_app::args::ShutdownTimeoutArgs;
 use mononoke_app::args::WarmBookmarksCacheExtension;
+use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
 use mononoke_app::MononokeReposManager;
 use panichandler::Fate;
 use permission_checker::DefaultAclProvider;
 use sharding_ext::RepoShard;
 use slog::info;
+use slog::Logger;
 use source_control_services::make_SourceControlService_server;
 use srserver::service_framework::BuildModule;
 use srserver::service_framework::ContextPropModule;
@@ -202,7 +204,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let args: ScsServerArgs = app.args()?;
 
-    let logger = app.logger().clone();
+    let logger = setup_logging(&app);
     let runtime = app.runtime();
 
     let exec = runtime.clone();
@@ -342,4 +344,8 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     info!(logger, "Exiting...");
     Ok(())
+}
+
+fn setup_logging(app: &MononokeApp) -> Logger {
+    app.logger().clone()
 }
