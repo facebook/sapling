@@ -51,8 +51,10 @@ use srserver::service_framework::Fb303Module;
 use srserver::service_framework::ProfileModule;
 use srserver::service_framework::ServiceFramework;
 use srserver::service_framework::ThriftStatsModule;
+use srserver::ThriftExecutor;
 use srserver::ThriftServer;
 use srserver::ThriftServerBuilder;
+use srserver::ThriftStreamExecutor;
 use tokio::task;
 
 mod commit_id;
@@ -206,8 +208,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let logger = setup_logging(&app);
     let runtime = app.runtime();
-
-    let exec = runtime.clone();
     let env = app.environment();
 
     let scuba_builder = env.scuba_sample_builder.clone();
@@ -228,14 +228,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         memory::set_max_memory(max_memory);
     }
 
-    // Initialize the FB303 Thrift stack.
-
-    let fb303_base = {
-        cloned!(will_exit);
-        move |proto| {
-            make_BaseService_server(proto, facebook::BaseServiceImpl::new(will_exit.clone()))
-        }
-    };
     let acl_provider = DefaultAclProvider::new(fb);
     let security_checker = runtime.block_on(ConnectionSecurityChecker::new(
         acl_provider.as_ref(),
@@ -252,31 +244,21 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         app.configs(),
         &app.repo_configs().common,
     );
-    let service = {
-        move |proto| {
-            make_SourceControlService_server(
-                proto,
-                source_control_server.thrift_server(),
-                fb303_base.clone(),
-            )
-        }
-    };
+
     let monitoring_forever = {
         let monitoring_ctx = CoreContext::new_with_logger(fb, logger.clone());
         monitoring::monitoring_stats_submitter(monitoring_ctx, mononoke)
     };
     runtime.spawn(monitoring_forever);
 
-    let thrift: ThriftServer = ThriftServerBuilder::new(fb)
-        .with_name(SERVICE_NAME)
-        .expect("failed to set name")
-        .with_address(&args.host, args.port, false)?
-        .with_tls()
-        .expect("failed to enable TLS")
-        .with_cancel_if_client_disconnected()
-        .with_metadata(metadata::create_metadata())
-        .with_factory(exec, move || service)
-        .build();
+    let thrift = setup_thrift_server(
+        fb,
+        &args,
+        &will_exit,
+        source_control_server,
+        runtime.clone(),
+    )
+    .context("Failed to set up Thrift server")?;
 
     let mut service_framework = ServiceFramework::from_server(SERVICE_NAME, thrift)
         .context("Failed to create service framework server")?;
@@ -348,4 +330,40 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
 fn setup_logging(app: &MononokeApp) -> Logger {
     app.logger().clone()
+}
+
+fn setup_thrift_server(
+    fb: FacebookInit,
+    args: &ScsServerArgs,
+    will_exit: &Arc<AtomicBool>,
+    source_control_server: source_control_impl::SourceControlServiceImpl,
+    exec: impl 'static + Clone + ThriftExecutor + ThriftStreamExecutor,
+) -> anyhow::Result<ThriftServer> {
+    let fb303_base = {
+        cloned!(will_exit);
+        move |proto| {
+            make_BaseService_server(proto, facebook::BaseServiceImpl::new(will_exit.clone()))
+        }
+    };
+
+    let service = {
+        move |proto| {
+            make_SourceControlService_server(
+                proto,
+                source_control_server.thrift_server(),
+                fb303_base.clone(),
+            )
+        }
+    };
+
+    Ok(ThriftServerBuilder::new(fb)
+        .with_name(SERVICE_NAME)
+        .expect("failed to set name")
+        .with_address(&args.host, args.port, false)?
+        .with_tls()
+        .expect("failed to enable TLS")
+        .with_cancel_if_client_disconnected()
+        .with_metadata(metadata::create_metadata())
+        .with_factory(exec, move || service)
+        .build())
 }
