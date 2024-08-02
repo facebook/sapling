@@ -196,7 +196,7 @@ impl EagerRepoStore {
             CasPointer::File(id) => match self.get_content(id)? {
                 Some(data) => {
                     tracing::trace!("found CAS file data");
-                    Ok(Some(split_hg_file_metadata(&data)?.0))
+                    Ok(Some(split_hg_file_metadata(&data).0))
                 }
                 None => Ok(None),
             },
@@ -443,12 +443,11 @@ impl EagerRepo {
     }
 
     /// Parse a file blob into raw data and copy_from metadata.
-    fn parse_file_blob(data: Bytes) -> Result<(Bytes, Bytes)> {
+    fn parse_file_blob(data: Bytes) -> (Bytes, Bytes) {
         // drop the p1/p2 info
         let data = data.slice(HG_PARENTS_LEN..);
-        let (raw_data, copy_from) =
-            hgstore::split_hg_file_metadata(&data).map_err(anyhow::Error::from)?;
-        Ok((raw_data, copy_from))
+        let (raw_data, copy_from) = hgstore::split_hg_file_metadata(&data);
+        (raw_data, copy_from)
     }
 
     /// Calculate augmented trees recursively
@@ -489,7 +488,7 @@ impl EagerRepo {
                             if bytes.is_none() {
                                 return Ok(None); // Can't calculate because file is missing.
                             }
-                            let (raw_data, copy_from) = Self::parse_file_blob(bytes.unwrap())?;
+                            let (raw_data, copy_from) = Self::parse_file_blob(bytes.unwrap());
                             let aux_data = FileAuxData::from_content(&raw_data);
 
                             // Store a mapping from CasDigest to hg id so we can query augmented data by CasDigest.

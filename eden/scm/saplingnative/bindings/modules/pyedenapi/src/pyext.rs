@@ -537,8 +537,7 @@ pub trait SaplingRemoteApiPyExt: SaplingRemoteApi {
                 match content {
                     StoreResult::Found(raw_content) => {
                         let raw_content = raw_content.into();
-                        let (raw_data, copy_from) =
-                            split_hg_file_metadata(&raw_content).map_pyerr(py)?;
+                        let (raw_data, copy_from) = split_hg_file_metadata(&raw_content);
                         let content_id = file_content_id(&raw_data);
                         Ok((
                             (content_id, raw_data),

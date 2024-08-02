@@ -33,7 +33,7 @@ impl KeyStore for EagerRepoStore {
         id: HgId,
     ) -> anyhow::Result<Option<minibytes::Bytes>> {
         match self.get_content(id)? {
-            Some(data) => Ok(Some(split_hg_file_metadata(&data)?.0)),
+            Some(data) => Ok(Some(split_hg_file_metadata(&data).0)),
             None => Ok(None),
         }
     }

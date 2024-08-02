@@ -28,7 +28,7 @@ use types::RepoPath;
 ///
 /// If the blob starts with \1\n too, it's escaped by adding \1\n\1\n at the beginning.
 pub fn strip_hg_file_metadata(data: &Bytes) -> Result<(Bytes, Option<Key>)> {
-    let (blob, copy_from) = split_hg_file_metadata(data)?;
+    let (blob, copy_from) = split_hg_file_metadata(data);
     Ok((blob, parse_copy_from_hg_file_metadata(copy_from.as_ref())?))
 }
 
@@ -63,17 +63,17 @@ pub fn parse_copy_from_hg_file_metadata(data: &[u8]) -> Result<Option<Key>> {
     }
 }
 
-pub fn split_hg_file_metadata(data: &Bytes) -> Result<(Bytes, Bytes)> {
+pub fn split_hg_file_metadata(data: &Bytes) -> (Bytes, Bytes) {
     let slice = data.as_ref();
     if !slice.starts_with(b"\x01\n") {
-        return Ok((data.clone(), Bytes::new()));
+        return (data.clone(), Bytes::new());
     }
     let slice = &slice[2..];
     if let Some(pos) = slice.windows(2).position(|needle| needle == b"\x01\n") {
         let split_pos = 2 + pos + 2;
-        Ok((data.slice(split_pos..), data.slice(..split_pos)))
+        (data.slice(split_pos..), data.slice(..split_pos))
     } else {
-        Ok((data.clone(), Bytes::new()))
+        (data.clone(), Bytes::new())
     }
 }
 
@@ -97,7 +97,7 @@ mod tests {
         assert_eq!(split_data, Bytes::from(&b"this is a blob"[..]));
         assert_eq!(path, Some(key.clone()));
 
-        let (blob, copy_from) = split_hg_file_metadata(&data)?;
+        let (blob, copy_from) = split_hg_file_metadata(&data);
         assert_eq!(blob, Bytes::from(&b"this is a blob"[..]));
         assert_eq!(
             copy_from,
@@ -111,7 +111,7 @@ mod tests {
         assert_eq!(split_data, Bytes::from(&b"this is a blob"[..]));
         assert_eq!(path, None);
 
-        let (blob, copy_from) = split_hg_file_metadata(&data)?;
+        let (blob, copy_from) = split_hg_file_metadata(&data);
         assert_eq!(blob, Bytes::from(&b"this is a blob"[..]));
         assert_eq!(copy_from, &b"\x01\n\x01\n"[..]);
 
@@ -120,7 +120,7 @@ mod tests {
         assert_eq!(split_data, data);
         assert_eq!(path, None);
 
-        let (blob, copy_from) = split_hg_file_metadata(&data)?;
+        let (blob, copy_from) = split_hg_file_metadata(&data);
         assert_eq!(blob, data);
         assert_eq!(copy_from, Bytes::new());
 
