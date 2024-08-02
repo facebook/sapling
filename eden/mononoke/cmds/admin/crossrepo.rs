@@ -875,14 +875,14 @@ async fn create_file_changes(
         // rewrite to a small repo, then the whole mapping change commit isn't
         // going to exist in the small repo.
 
+        let movers = commit_syncer.get_movers_by_version(mapping_version).await?;
+
         let mover = if commit_syncer.get_source_repo().repo_identity().id()
             == large_repo.repo_identity().id()
         {
-            commit_syncer.get_mover_by_version(mapping_version).await?
+            movers.mover
         } else {
-            commit_syncer
-                .get_reverse_mover_by_version(mapping_version)
-                .await?
+            movers.reverse_mover
         };
 
         if mover(&path)?.is_none() {

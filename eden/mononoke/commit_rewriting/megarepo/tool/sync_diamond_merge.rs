@@ -327,7 +327,7 @@ async fn create_rewritten_merge_commit(
         &remapped_parents,
         syncers
             .small_to_large
-            .get_mover_by_version(&version_p1)
+            .get_movers_by_version(&version_p1)
             .await?,
         source_repo,
         Default::default(),
@@ -378,7 +378,8 @@ async fn generate_additional_file_changes(
             BonsaiDiffFileChange::Changed(ref path, ..)
             | BonsaiDiffFileChange::ChangedReusedId(ref path, ..)
             | BonsaiDiffFileChange::Deleted(ref path) => {
-                let maybe_new_path = large_to_small.get_mover_by_version(version).await?(path)?;
+                let mover = large_to_small.get_movers_by_version(version).await?.mover;
+                let maybe_new_path = mover(path)?;
                 if maybe_new_path.is_some() {
                     continue;
                 }

@@ -50,6 +50,7 @@ pub enum ErrorKind {
 pub type Mover = Arc<dyn Fn(&NonRootMPath) -> Result<Option<NonRootMPath>> + Send + Sync + 'static>;
 
 /// A struct to contain forward and reverse `Mover`
+#[derive(Clone)]
 pub struct Movers {
     pub mover: Mover,
     pub reverse_mover: Mover,

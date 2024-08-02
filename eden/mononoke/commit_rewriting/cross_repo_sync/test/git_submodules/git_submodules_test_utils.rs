@@ -750,8 +750,8 @@ pub(crate) async fn test_submodule_expansion_validation_in_large_repo_bonsai(
 
     let large_repo_id = Large(large_repo.repo_identity().id());
     let sync_config_version = base_commit_sync_version_name();
-    let mover = commit_syncer
-        .get_mover_by_version(&sync_config_version)
+    let movers = commit_syncer
+        .get_movers_by_version(&sync_config_version)
         .await?;
 
     let submodule_deps = commit_syncer.get_submodule_deps();
@@ -787,7 +787,7 @@ pub(crate) async fn test_submodule_expansion_validation_in_large_repo_bonsai(
         &ctx,
         sm_exp_data,
         bonsai,
-        mover,
+        movers.mover,
     )
     .await
     .map(ValidSubmoduleExpansionBonsai::into_inner)

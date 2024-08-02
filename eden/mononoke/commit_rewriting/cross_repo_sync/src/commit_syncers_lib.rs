@@ -53,13 +53,14 @@ use mononoke_types::FileType;
 use mononoke_types::NonRootMPath;
 use mononoke_types::RepositoryId;
 use movers::Mover;
+use movers::Movers;
 use slog::info;
 use synced_commit_mapping::SyncedCommitMapping;
 use synced_commit_mapping::SyncedCommitMappingEntry;
 use synced_commit_mapping::SyncedCommitSourceRepo;
 use topo_sort::sort_topological;
 
-use crate::commit_sync_config_utils::get_mover;
+use crate::commit_sync_config_utils::get_movers;
 use crate::commit_sync_outcome::CandidateSelectionHint;
 use crate::commit_sync_outcome::CommitSyncOutcome;
 use crate::commit_sync_outcome::DesiredRelationship;
@@ -128,7 +129,7 @@ pub async fn rewrite_commit<'a, R: Repo>(
     ctx: &'a CoreContext,
     cs: BonsaiChangesetMut,
     remapped_parents: &'a HashMap<ChangesetId, ChangesetId>,
-    mover: Mover,
+    movers: Movers,
     source_repo: &'a R,
     rewrite_opts: RewriteOpts,
     git_submodules_action: GitSubmodulesChangesAction,
@@ -163,7 +164,7 @@ pub async fn rewrite_commit<'a, R: Repo>(
                     cs,
                     source_repo,
                     submodule_expansion_data,
-                    mover.clone(),
+                    movers.clone(),
                     remapped_parents,
                     rewrite_opts,
                 )
@@ -175,7 +176,7 @@ pub async fn rewrite_commit<'a, R: Repo>(
         ctx,
         cs,
         remapped_parents,
-        mover_to_multi_mover(mover),
+        mover_to_multi_mover(movers.mover),
         source_repo,
         None,
         rewrite_opts,
@@ -921,13 +922,13 @@ pub(crate) fn strip_removed_parents(
     Ok(source_cs)
 }
 
-pub(crate) async fn get_mover_by_version(
+pub(crate) async fn get_movers_by_version(
     version: &CommitSyncConfigVersion,
     live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
     source_id: Source<RepositoryId>,
     target_repo_id: Target<RepositoryId>,
-) -> Result<Mover, Error> {
-    get_mover(
+) -> Result<Movers, Error> {
+    get_movers(
         live_commit_sync_config,
         version,
         source_id.0,

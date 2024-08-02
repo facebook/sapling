@@ -40,6 +40,7 @@ use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
 use mononoke_types::RepositoryId;
 use movers::Mover;
+use movers::Movers;
 use pushrebase::do_pushrebase_bonsai;
 use pushrebase_hooks::get_pushrebase_hooks;
 use repo_blobstore::RepoBlobstoreRef;
@@ -65,7 +66,7 @@ use crate::commit_sync_outcome::CandidateSelectionHint;
 use crate::commit_sync_outcome::CommitSyncOutcome;
 use crate::commit_sync_outcome::PluralCommitSyncOutcome;
 use crate::commit_syncers_lib::find_toposorted_unsynced_ancestors;
-use crate::commit_syncers_lib::get_mover_by_version;
+use crate::commit_syncers_lib::get_movers_by_version;
 use crate::commit_syncers_lib::remap_parents;
 use crate::commit_syncers_lib::rewrite_commit;
 use crate::commit_syncers_lib::run_with_lease;
@@ -417,11 +418,11 @@ where
         &self.mapping
     }
 
-    pub async fn get_mover_by_version(
+    pub async fn get_movers_by_version(
         &self,
         version: &CommitSyncConfigVersion,
-    ) -> Result<Mover, Error> {
-        get_mover_by_version(
+    ) -> Result<Movers, Error> {
+        get_movers_by_version(
             version,
             Arc::clone(&self.live_commit_sync_config),
             Source(self.repos.get_source_repo().repo_identity().id()),
@@ -867,7 +868,7 @@ where
         let (source_repo, target_repo) = self.get_source_target();
 
         let submodule_deps = self.get_submodule_deps();
-        let mover = self.get_mover_by_version(sync_config_version).await?;
+        let movers = self.get_movers_by_version(sync_config_version).await?;
 
         let git_submodules_action = get_git_submodule_action_by_version(
             ctx,
@@ -916,7 +917,7 @@ where
             ctx,
             source_cs,
             &remapped_parents,
-            mover,
+            movers,
             &source_repo,
             Default::default(),
             git_submodules_action,
@@ -994,7 +995,7 @@ where
             remapped_parents_outcome.push(commit_sync_outcome);
         }
 
-        let mover = self.get_mover_by_version(&version).await?;
+        let movers = self.get_movers_by_version(&version).await?;
 
         let git_submodules_action = get_git_submodule_action_by_version(
             ctx,
@@ -1055,7 +1056,7 @@ where
             ctx,
             source_cs_mut,
             &remapped_parents,
-            mover,
+            movers,
             &source_repo,
             Default::default(),
             git_submodules_action,

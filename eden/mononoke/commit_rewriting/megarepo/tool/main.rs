@@ -882,12 +882,12 @@ async fn run_mover<'a>(
 ) -> Result<(), Error> {
     let commit_syncer = create_commit_syncer_from_matches::<CrossRepo>(ctx, matches, None).await?;
     let version = get_version(sub_m)?;
-    let mover = commit_syncer.get_mover_by_version(&version).await?;
+    let movers = commit_syncer.get_movers_by_version(&version).await?;
     let path = sub_m
         .value_of(PATH)
         .ok_or_else(|| format_err!("{} not set", PATH))?;
     let path = NonRootMPath::new(path)?;
-    println!("{:?}", mover(&path));
+    println!("{:?}", (movers.mover)(&path));
     Ok(())
 }
 
@@ -1396,7 +1396,7 @@ async fn find_mover_for_commit<R: cross_repo_sync::Repo>(
             ));
         }
         RewrittenAs(_, version) | EquivalentWorkingCopyAncestor(_, version) => {
-            commit_syncer.get_mover_by_version(&version).await?
+            commit_syncer.get_movers_by_version(&version).await?.mover
         }
     };
 

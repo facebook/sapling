@@ -159,7 +159,7 @@ where
     let rewrite_res = {
         let map = HashMap::new();
         let version = CommitSyncConfigVersion("TEST_VERSION_NAME".to_string());
-        let mover = commit_syncer.get_mover_by_version(&version).await?;
+        let movers = commit_syncer.get_movers_by_version(&version).await?;
         let (x_repo_submodule_metadata_file_prefix, dangling_submodule_pointers) =
             submodule_metadata_file_prefix_and_dangling_pointers(
                 source_repo.repo_identity().id(),
@@ -192,7 +192,7 @@ where
             &ctx,
             source_bcs_mut,
             &map,
-            mover,
+            movers,
             source_repo,
             Default::default(),
             Default::default(),

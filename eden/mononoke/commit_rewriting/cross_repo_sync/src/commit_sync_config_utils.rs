@@ -10,19 +10,19 @@ use std::sync::Arc;
 
 use anyhow::anyhow;
 use anyhow::Error;
+use anyhow::Result;
 use bookmark_renaming::get_bookmark_renamers;
 use bookmark_renaming::BookmarkRenamer;
 use bookmark_renaming::BookmarkRenamers;
 use bookmarks::BookmarkKey;
 use context::CoreContext;
 use live_commit_sync_config::LiveCommitSyncConfig;
-use metaconfig_types::CommitSyncConfig;
 use metaconfig_types::CommitSyncConfigVersion;
 use metaconfig_types::CommitSyncDirection;
 use metaconfig_types::CommonCommitSyncConfig;
 use metaconfig_types::GitSubmodulesChangesAction;
 use mononoke_types::RepositoryId;
-use movers::get_movers;
+use movers::get_movers as get_movers_from_config;
 use movers::Mover;
 use movers::Movers;
 
@@ -74,23 +74,35 @@ pub async fn get_git_submodule_action_by_version(
     Ok(GitSubmodulesChangesAction::default())
 }
 
+pub async fn get_movers(
+    live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
+    version: &CommitSyncConfigVersion,
+    source_repo_id: RepositoryId,
+    target_repo_id: RepositoryId,
+) -> Result<Movers> {
+    let commit_sync_config = live_commit_sync_config
+        .get_commit_sync_config_by_version(source_repo_id, version)
+        .await?;
+    let common_config = live_commit_sync_config.get_common_config(source_repo_id)?;
+    let (direction, small_repo_id) =
+        get_direction_and_small_repo_id(&common_config, source_repo_id, target_repo_id)?;
+
+    get_movers_from_config(&commit_sync_config, small_repo_id, direction)
+}
+
 pub async fn get_mover(
     live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
     version: &CommitSyncConfigVersion,
     source_repo_id: RepositoryId,
     target_repo_id: RepositoryId,
-) -> Result<Mover, Error> {
-    let commit_sync_config = live_commit_sync_config
-        .get_commit_sync_config_by_version(source_repo_id, version)
-        .await?;
-    let common_config = live_commit_sync_config.get_common_config(source_repo_id)?;
-
-    let Movers { mover, .. } = get_movers_from_config(
-        &common_config,
-        &commit_sync_config,
+) -> Result<Mover> {
+    let Movers { mover, .. } = get_movers(
+        live_commit_sync_config,
+        version,
         source_repo_id,
         target_repo_id,
-    )?;
+    )
+    .await?;
     Ok(mover)
 }
 
@@ -99,18 +111,14 @@ pub async fn get_reverse_mover(
     version: &CommitSyncConfigVersion,
     source_repo_id: RepositoryId,
     target_repo_id: RepositoryId,
-) -> Result<Mover, Error> {
-    let commit_sync_config = live_commit_sync_config
-        .get_commit_sync_config_by_version(source_repo_id, version)
-        .await?;
-    let common_config = live_commit_sync_config.get_common_config(source_repo_id)?;
-
-    let Movers { reverse_mover, .. } = get_movers_from_config(
-        &common_config,
-        &commit_sync_config,
+) -> Result<Mover> {
+    let Movers { reverse_mover, .. } = get_movers(
+        live_commit_sync_config,
+        version,
         source_repo_id,
         target_repo_id,
-    )?;
+    )
+    .await?;
     Ok(reverse_mover)
 }
 
@@ -170,17 +178,6 @@ pub async fn get_common_pushrebase_bookmarks(
 ) -> Result<Vec<BookmarkKey>, Error> {
     let common_sync_config = live_commit_sync_config.get_common_config(repo_id)?;
     Ok(common_sync_config.common_pushrebase_bookmarks)
-}
-
-fn get_movers_from_config(
-    common_config: &CommonCommitSyncConfig,
-    commit_sync_config: &CommitSyncConfig,
-    source_repo_id: RepositoryId,
-    target_repo_id: RepositoryId,
-) -> Result<Movers, Error> {
-    let (direction, small_repo_id) =
-        get_direction_and_small_repo_id(common_config, source_repo_id, target_repo_id)?;
-    get_movers(commit_sync_config, small_repo_id, direction)
 }
 
 fn get_bookmark_renamers_from_config(

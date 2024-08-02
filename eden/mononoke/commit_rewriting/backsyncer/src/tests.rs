@@ -71,7 +71,7 @@ use metaconfig_types::SmallRepoPermanentConfig;
 use mononoke_types::ChangesetId;
 use mononoke_types::NonRootMPath;
 use mononoke_types::RepositoryId;
-use movers::Mover;
+use movers::Movers;
 use mutable_counters::MutableCountersArc;
 use pretty_assertions::assert_eq;
 use repo_blobstore::RepoBlobstoreRef;
@@ -1007,7 +1007,7 @@ async fn verify_mapping_and_all_wc(
         });
         use CommitSyncOutcome::*;
 
-        let (target_cs_id, mover_to_use) = match outcome {
+        let (target_cs_id, movers_to_use) = match outcome {
             NotSyncCandidate(_) => {
                 continue;
             }
@@ -1016,7 +1016,7 @@ async fn verify_mapping_and_all_wc(
                 println!("using mover for {:?}", version);
                 (
                     target_cs_id,
-                    commit_syncer.get_mover_by_version(version).await?,
+                    commit_syncer.get_movers_by_version(version).await?,
                 )
             }
         };
@@ -1042,7 +1042,7 @@ async fn verify_mapping_and_all_wc(
             source_hg_cs_id,
             target_hg_cs_id,
             commit_syncer.clone(),
-            mover_to_use.clone(),
+            movers_to_use.clone(),
         )
         .await?;
     }
@@ -1099,13 +1099,13 @@ async fn verify_bookmarks(
                 );
 
                 use CommitSyncOutcome::*;
-                let mover = match commit_sync_outcome {
+                let movers = match commit_sync_outcome {
                     NotSyncCandidate(_) => {
                         panic!("commit should not point to NotSyncCandidate");
                     }
                     EquivalentWorkingCopyAncestor(_, version) | RewrittenAs(_, version) => {
                         println!("using mover for {:?}", version);
-                        commit_syncer.get_mover_by_version(&version).await?
+                        commit_syncer.get_movers_by_version(&version).await?
                     }
                 };
 
@@ -1114,7 +1114,7 @@ async fn verify_bookmarks(
                     source_hg_cs_id,
                     target_hg_cs_id,
                     commit_syncer.clone(),
-                    mover.clone(),
+                    movers.clone(),
                 )
                 .await?;
             }
@@ -1138,7 +1138,7 @@ async fn compare_contents(
     source_hg_cs_id: HgChangesetId,
     target_hg_cs_id: HgChangesetId,
     commit_syncer: CommitSyncer<SqlSyncedCommitMapping, TestRepo>,
-    mover: Mover,
+    movers: Movers,
 ) -> Result<(), Error> {
     let source_content =
         list_content(ctx, source_hg_cs_id, commit_syncer.get_source_repo()).await?;
@@ -1149,6 +1149,9 @@ async fn compare_contents(
         "source content: {:?}, target content {:?}",
         source_content, target_content
     );
+
+    let mover = movers.mover;
+
     let filtered_source_content: HashMap<_, _> = source_content
         .into_iter()
         .filter_map(|(key, value)| {
@@ -1419,7 +1422,7 @@ async fn init_repos(
             &ctx,
             first_bcs_mut,
             &empty_map,
-            commit_syncer.get_mover_by_version(&version).await?,
+            commit_syncer.get_movers_by_version(&version).await?,
             &source_repo,
             Default::default(),
             git_submodules_action,

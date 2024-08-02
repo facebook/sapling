@@ -16,7 +16,7 @@ use context::CoreContext;
 use itertools::Itertools;
 use mononoke_types::BonsaiChangesetMut;
 use mononoke_types::ChangesetId;
-use movers::Mover;
+use movers::Movers;
 
 use crate::commit_syncers_lib::mover_to_multi_mover;
 use crate::commit_syncers_lib::CommitRewriteResult;
@@ -34,7 +34,7 @@ pub async fn sync_commit_with_submodule_expansion<'a, R: Repo>(
     bonsai: BonsaiChangesetMut,
     source_repo: &'a R,
     sm_exp_data: SubmoduleExpansionData<'a, R>,
-    mover: Mover,
+    movers: Movers,
     // Parameters needed to generate a bonsai for the large repo using `rewrite_commit`
     remapped_parents: &'a HashMap<ChangesetId, ChangesetId>,
     rewrite_opts: RewriteOpts,
@@ -54,7 +54,7 @@ pub async fn sync_commit_with_submodule_expansion<'a, R: Repo>(
         );
         // Backsyncing, so ensure that submodule expansions are not being modified
         let submodules_affected =
-            get_submodule_expansions_affected(&sm_exp_data, &bonsai, mover.clone())?;
+            get_submodule_expansions_affected(&sm_exp_data, &bonsai, movers.mover.clone())?;
 
         ensure!(
             submodules_affected.is_empty(),
@@ -71,7 +71,7 @@ pub async fn sync_commit_with_submodule_expansion<'a, R: Repo>(
             ctx,
             bonsai,
             remapped_parents,
-            mover_to_multi_mover(mover.clone()),
+            mover_to_multi_mover(movers.mover.clone()),
             source_repo,
             None,
             rewrite_opts,
@@ -110,7 +110,7 @@ pub async fn sync_commit_with_submodule_expansion<'a, R: Repo>(
             ctx,
             new_bonsai,
             remapped_parents,
-            mover_to_multi_mover(mover.clone()),
+            mover_to_multi_mover(movers.mover.clone()),
             source_repo,
             None,
             rewrite_opts,
@@ -131,7 +131,7 @@ pub async fn sync_commit_with_submodule_expansion<'a, R: Repo>(
                     ctx,
                     sm_exp_data,
                     rewritten_bonsai,
-                    mover,
+                    movers.mover,
                 ),
             )
             .await

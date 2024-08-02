@@ -64,6 +64,7 @@ mod tests {
     use mononoke_types_mocks::changesetid::TWOS_CSID;
     use movers::DefaultAction;
     use movers::Mover;
+    use movers::Movers;
     use mutable_counters::MutableCountersRef;
     use pushredirect::PushRedirectionConfig;
     use pushredirect::TestPushRedirectionConfig;
@@ -84,6 +85,7 @@ mod tests {
     use crate::find_mapping_version;
     use crate::get_large_repo_config_if_pushredirected;
     use crate::get_large_repo_setting;
+    use crate::get_reverse_mover;
     use crate::merge_imported_commit;
     use crate::move_bookmark;
     use crate::push_merge_commit;
@@ -745,8 +747,9 @@ mod tests {
         movers.push(
             syncers
                 .small_to_large
-                .get_mover_by_version(&CommitSyncConfigVersion("TEST_VERSION".to_string()))
-                .await?,
+                .get_movers_by_version(&CommitSyncConfigVersion("TEST_VERSION".to_string()))
+                .await?
+                .mover,
         );
 
         let combined_mover: Mover = Arc::new(move |source_path: &NonRootMPath| {
@@ -761,10 +764,15 @@ mod tests {
             Ok(Some(mutable_path))
         });
 
+        let combined_movers = Movers {
+            mover: combined_mover.clone(),
+            reverse_mover: get_reverse_mover(),
+        };
+
         let (shifted_bcs_ids, _git_merge_shifted_bcs_id) = rewrite_file_paths(
             &ctx,
             &large_repo,
-            &combined_mover,
+            &combined_movers,
             &cs_ids,
             cs_ids.last().unwrap(),
             SubmoduleDeps::ForSync(HashMap::new()),
@@ -912,8 +920,9 @@ mod tests {
         movers.push(
             syncers
                 .small_to_large
-                .get_mover_by_version(&CommitSyncConfigVersion("TEST_VERSION".to_string()))
-                .await?,
+                .get_movers_by_version(&CommitSyncConfigVersion("TEST_VERSION".to_string()))
+                .await?
+                .mover,
         );
 
         let combined_mover: Mover = Arc::new(move |source_path: &NonRootMPath| {
@@ -927,11 +936,15 @@ mod tests {
             }
             Ok(Some(mutable_path))
         });
+        let combined_movers = Movers {
+            mover: combined_mover.clone(),
+            reverse_mover: get_reverse_mover(),
+        };
 
         let (large_repo_cs_ids, _) = rewrite_file_paths(
             &ctx,
             &large_repo,
-            &combined_mover,
+            &combined_movers,
             &cs_ids,
             cs_ids.last().unwrap(),
             SubmoduleDeps::ForSync(HashMap::new()),

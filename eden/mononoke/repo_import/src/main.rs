@@ -83,6 +83,7 @@ use mononoke_types::DateTime;
 use mononoke_types::RepositoryId;
 use movers::DefaultAction;
 use movers::Mover;
+use movers::Movers;
 use pushrebase::do_pushrebase_bonsai;
 use pushredirect::PushRedirectionConfigArc;
 use serde::Deserialize;
@@ -209,7 +210,7 @@ pub struct RecoveryFields {
 async fn rewrite_file_paths(
     ctx: &CoreContext,
     repo: &Repo,
-    mover: &Mover,
+    movers: &Movers,
     gitimport_bcs_ids: &[ChangesetId],
     git_merge_bcs_id: &ChangesetId,
     submodule_deps: SubmoduleDeps<Repo>,
@@ -249,7 +250,7 @@ async fn rewrite_file_paths(
             ctx,
             bcs.clone().into_mut(),
             &remapped_parents,
-            mover.clone(),
+            movers.clone(),
             repo,
             Default::default(),
             Default::default(),
@@ -1109,10 +1110,15 @@ async fn repo_import(
     )
     .await?;
     let mut maybe_small_repo_back_sync_vars = None;
-    let mut movers = vec![movers::mover_factory(
+    let mover = movers::mover_factory(
         HashMap::new(),
         DefaultAction::PrependPrefix(dest_path_prefix),
-    )?];
+    )?;
+
+    let mut movers = vec![Movers {
+        mover: mover.clone(),
+        reverse_mover: get_reverse_mover(),
+    }];
 
     if let Some(large_repo_config) = maybe_large_repo_config {
         let (large_repo, large_repo_import_setting, syncers) = get_pushredirected_vars(
@@ -1146,7 +1152,7 @@ async fn repo_import(
         movers.push(
             syncers
                 .small_to_large
-                .get_mover_by_version(&version)
+                .get_movers_by_version(&version)
                 .await?,
         );
 
@@ -1175,8 +1181,8 @@ async fn repo_import(
 
     let combined_mover: Mover = Arc::new(move |source_path: &NonRootMPath| {
         let mut mutable_path = source_path.clone();
-        for mover in movers.clone() {
-            let maybe_path = mover(&mutable_path)?;
+        for mover_pair in movers.clone() {
+            let maybe_path = (mover_pair.mover)(&mutable_path)?;
             mutable_path = match maybe_path {
                 Some(moved_path) => moved_path,
                 None => return Ok(None),
@@ -1184,6 +1190,10 @@ async fn repo_import(
         }
         Ok(Some(mutable_path))
     });
+    let combined_movers = Movers {
+        mover: combined_mover.clone(),
+        reverse_mover: get_reverse_mover(),
+    };
 
     // Importing process starts here
     if recovery_fields.import_stage == ImportStage::GitImport {
@@ -1263,7 +1273,7 @@ async fn repo_import(
         let (shifted_bcs_ids, git_merge_shifted_bcs_id) = rewrite_file_paths(
             &ctx,
             &repo,
-            &combined_mover,
+            &combined_movers,
             gitimport_bcs_ids,
             git_merge_bcs_id,
             submodule_deps,
@@ -1691,4 +1701,18 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
             Err(e)
         }
     }
+}
+
+/// The reverse_mover is used to backsync changes to submodule expansion, so it
+/// shouldn't ever be needed by repo_import, since it should only perform
+/// forward sync (i.e. small to large).
+///
+/// This mover will satisfy the type system and will crash if the assumption
+/// from above doesn't hold anymore.
+pub(crate) fn get_reverse_mover() -> Mover {
+    Arc::new(move |_source_path: &NonRootMPath| {
+        Err(anyhow!(
+            "Reverse mover should never be called for repo_import tool"
+        ))
+    })
 }
