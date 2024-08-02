@@ -87,13 +87,6 @@ mononoke_fbpkg(
 )
 
 mononoke_fbpkg(
-    name = "mononoke.segmented_changelog_tailer",
-    path_actions = {
-        "segmented_changelog_tailer": "//eden/mononoke:segmented_changelog_tailer",
-    },
-)
-
-mononoke_fbpkg(
     name = "mononoke.sqlblob_gc",
     compress_type = None,
     path_actions = {

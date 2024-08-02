@@ -15,7 +15,6 @@ dott_test(
         "//eden/mononoke:admin",
         "//eden/mononoke:blobimport",
         "//eden/mononoke:mononoke",
-        "//eden/mononoke:segmented_changelog_tailer",
         "//eden/mononoke/tools/admin:newadmin",
         "//eden/mononoke/tools/testtool:testtool",
     ],

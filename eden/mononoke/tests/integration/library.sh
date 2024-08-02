@@ -2289,37 +2289,6 @@ if [ -z "$HAS_FB" ]; then
   }
 fi
 
-function segmented_changelog_tailer_reseed() {
-  "$MONONOKE_SEGMENTED_CHANGELOG_TAILER" \
-    "${CACHE_ARGS[@]}" \
-    "${COMMON_ARGS[@]}" \
-    --mononoke-config-path "${TESTTMP}/mononoke-config" \
-    --force-reseed \
-    "$@"
-}
-
-function segmented_changelog_tailer_once() {
-  "$MONONOKE_SEGMENTED_CHANGELOG_TAILER" \
-    "${CACHE_ARGS[@]}" \
-    "${COMMON_ARGS[@]}" \
-    --mononoke-config-path "${TESTTMP}/mononoke-config" \
-    --once \
-    "$@"
-}
-
-function background_segmented_changelog_tailer() {
-  out_file=$1
-  shift
-  # short delay here - we don't want to wait too much during tests
-  "$MONONOKE_SEGMENTED_CHANGELOG_TAILER" \
-    "${CACHE_ARGS[@]}" \
-    "${COMMON_ARGS[@]}" \
-    --mononoke-config-path "${TESTTMP}/mononoke-config" \
-    "$@" >> "$TESTTMP/$out_file" 2>&1 &
-  pid=$!
-  echo "$pid" >> "$DAEMON_PIDS"
-}
-
 function microwave_builder() {
   "$MONONOKE_MICROWAVE_BUILDER" \
     "${CACHE_ARGS[@]}" \

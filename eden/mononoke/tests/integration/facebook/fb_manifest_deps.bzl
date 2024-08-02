@@ -58,8 +58,6 @@ MONONOKE_TARGETS_TO_ENV = {
     "//eden/mononoke:check_git_wc": "MONONOKE_CHECK_GIT_WC",
     "//eden/mononoke:mononoke": "MONONOKE_SERVER",
     "//eden/mononoke:packer": "MONONOKE_PACKER",
-    "//eden/mononoke:segmented_changelog_seeder": "MONONOKE_SEGMENTED_CHANGELOG_SEEDER",
-    "//eden/mononoke:segmented_changelog_tailer": "MONONOKE_SEGMENTED_CHANGELOG_TAILER",
     "//eden/mononoke:sqlblob_gc": "MONONOKE_SQLBLOB_GC",
     "//security/source_control/verify_integrity/service:verify_integrity_service": "VERIFY_INTEGRITY_SERVICE",
     "//security/source_control/verify_integrity:verify_integrity": "VERIFY_INTEGRITY",

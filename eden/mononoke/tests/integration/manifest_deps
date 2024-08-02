@@ -29,7 +29,6 @@ MONONOKE_BINS = {
     "MONONOKE_MICROWAVE_BUILDER": "builder",
     "MONONOKE_PACKER": "packer",
     "MONONOKE_REPO_IMPORT": "repo_import",
-    "MONONOKE_SEGMENTED_CHANGELOG_TAILER": "segmented_changelog_tailer",
     "MONONOKE_STREAMING_CLONE": "new_streaming_clone",
     "MONONOKE_SERVER": "mononoke",
     "MONONOKE_SQLBLOB_GC": "sqlblob_gc",

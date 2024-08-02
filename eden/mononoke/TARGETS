@@ -362,28 +362,6 @@ rust_binary(
 )
 
 rust_binary(
-    name = "segmented_changelog_tailer",
-    srcs = ["cmds/segmented_changelog_tailer.rs"],
-    test_deps = [],
-    deps = [
-        "fbsource//third-party/rust:anyhow",
-        "fbsource//third-party/rust:bytes",
-        "fbsource//third-party/rust:clap",
-        "fbsource//third-party/rust:futures",
-        "fbsource//third-party/rust:slog",
-        "fbsource//third-party/rust:tokio",
-        "//common/rust/shed/fbinit:fbinit",
-        "//eden/mononoke/blobrepo:blobrepo",
-        "//eden/mononoke/changesets:changesets",
-        "//eden/mononoke/cmdlib:cmdlib",
-        "//eden/mononoke/cmdlib/mononoke_app:mononoke_app",
-        "//eden/mononoke/repo_attributes/repo_identity:repo_identity",
-        "//eden/mononoke/segmented_changelog:segmented_changelog",
-        "//eden/mononoke/server/context:context",
-    ],
-)
-
-rust_binary(
     name = "sqlblob_gc",
     srcs = glob(["cmds/sqlblob_gc/**/*.rs"]),
     test_deps = [],
