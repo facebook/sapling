@@ -9,6 +9,7 @@ use std::ops::BitOr;
 
 use anyhow::anyhow;
 use anyhow::Result;
+use hgstore::parse_copy_from_hg_file_metadata;
 use minibytes::Bytes;
 use types::Key;
 
@@ -83,10 +84,25 @@ impl StoreFile {
     }
 
     pub fn file_content_with_copy_info(&mut self) -> Result<(Bytes, Option<Key>)> {
-        self.content
+        let content = self
+            .content
             .as_mut()
-            .ok_or_else(|| anyhow!("no content available"))?
-            .file_content_with_copy_info()
+            .ok_or_else(|| anyhow!("no content available"))?;
+
+        // Prefer getting content header info from aux data since that is more compatible
+        // with CAS (which won't contain header).
+        if let Some(FileAuxData {
+            file_header_metadata: Some(header),
+            ..
+        }) = &self.aux_data
+        {
+            Ok((
+                content.file_content()?,
+                parse_copy_from_hg_file_metadata(header)?,
+            ))
+        } else {
+            content.file_content_with_copy_info()
+        }
     }
 }
 

@@ -9,5 +9,6 @@
 
 mod filestore_util;
 
+pub use filestore_util::parse_copy_from_hg_file_metadata;
 pub use filestore_util::split_hg_file_metadata;
 pub use filestore_util::strip_hg_file_metadata;
