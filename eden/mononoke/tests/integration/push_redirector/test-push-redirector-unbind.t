@@ -11,6 +11,13 @@
   $ ENABLE_API_WRITES=1 create_large_small_repo
   Adding synced mapping entry
   $ setup_configerator_configs
+  $ merge_just_knobs <<EOF
+  > {
+  >   "bools": {
+  >     "scm/mononoke:sql_disable_auto_cache": true
+  >   }
+  > }
+  > EOF
   $ enable_pushredirect 1
   $ start_large_small_repo
   Starting Mononoke server

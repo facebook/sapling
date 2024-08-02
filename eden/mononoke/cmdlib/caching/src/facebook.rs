@@ -177,11 +177,10 @@ pub fn init_cachelib_from_settings(
             .unwrap_or(available_space / 20),
     )?;
 
-    // SQL queries being cached using `cacheable` keyword
-    // At present the feature is used in bubble look-ups in snapshots only.
-    // Defaults to a very small cache.
-    // Readjust if usage increases.
-    cachelib::get_or_create_volatile_pool("sql", settings.sql_cache_size.unwrap_or(1024))?;
+    cachelib::get_or_create_volatile_pool(
+        "sql",
+        settings.sql_cache_size.unwrap_or(32 * 1024 * 1024),
+    )?;
 
     cachelib::get_or_create_volatile_pool(
         "blobstore-blobs",

@@ -20,8 +20,17 @@ Setup repositories
 
   $ setup_commitsyncmap
   $ setup_configerator_configs
+
 -- initial push-redirection setup redirects ovrsource into megarepo,
 -- which is the large repo at this point
+-- disable sql cache since we will be changing pushredirect settings a couple of times
+  $ merge_just_knobs <<EOF
+  > {
+  >   "bools": {
+  >     "scm/mononoke:sql_disable_auto_cache": true
+  >   }
+  > }
+  > EOF
   $ enable_pushredirect 2
 
   $ cat >> "$HGRCPATH" <<EOF
