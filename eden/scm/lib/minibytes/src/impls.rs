@@ -70,7 +70,7 @@ impl Default for Bytes {
     }
 }
 
-impl<T: AsRef<[u8]>> PartialEq<T> for Bytes {
+impl<T: AsRef<[u8]> + ?Sized> PartialEq<T> for Bytes {
     fn eq(&self, other: &T) -> bool {
         self.as_slice() == other.as_ref()
     }
@@ -78,7 +78,7 @@ impl<T: AsRef<[u8]>> PartialEq<T> for Bytes {
 
 impl Eq for Bytes {}
 
-impl<T: AsRef<[u8]>> PartialOrd<T> for Bytes {
+impl<T: AsRef<[u8]> + ?Sized> PartialOrd<T> for Bytes {
     fn partial_cmp(&self, other: &T) -> Option<cmp::Ordering> {
         self.as_slice().partial_cmp(other.as_ref())
     }

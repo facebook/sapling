@@ -9,8 +9,8 @@ use std::iter;
 use std::num::NonZeroU64;
 
 use anyhow::Result;
-use bytes::Bytes;
 use dag_types::Location;
+use minibytes::Bytes;
 #[cfg(any(test, feature = "for-tests"))]
 use quickcheck::Arbitrary;
 #[cfg(any(test, feature = "for-tests"))]

@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use bytes::Bytes;
+use minibytes::Bytes;
 #[cfg(any(test, feature = "for-tests"))]
 use quickcheck::Arbitrary;
 #[cfg(any(test, feature = "for-tests"))]
@@ -230,13 +230,10 @@ impl TryFrom<AugmentedTree> for TreeEntry {
                             blake3: Blake3::from_another(file.content_blake3),
                             sha1: Sha1::from_another(file.content_sha1),
                             total_size: file.total_size,
-                            file_header_metadata: {
-                                if let Some(metadata) = file.file_header_metadata {
-                                    Some(metadata.into_vec().into()) // converts minibytes::Bytes to bytes::Bytes
-                                } else {
-                                    Some(Bytes::new()) // in FileAuxData None would mean file_header_metadata is not fetched/not known if it is present
-                                }
-                            },
+                            // in FileAuxData None would mean file_header_metadata is not fetched/not known if it is present
+                            file_header_metadata: Some(
+                                file.file_header_metadata.unwrap_or_default(),
+                            ),
                         }
                         .into(),
                     )),

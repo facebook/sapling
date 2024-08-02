@@ -176,7 +176,8 @@ async fn fetch_tree(
                                         file_header_metadata: Some(
                                             file.file_header_metadata
                                                 .clone()
-                                                .unwrap_or(Bytes::new()),
+                                                .unwrap_or(Bytes::new())
+                                                .into(),
                                         ),
                                     }
                                     .into(),
@@ -217,7 +218,7 @@ async fn fetch_tree(
                     .await
                     .with_context(|| ErrorKind::TreeFetchFailed(key.clone()))?;
 
-                entry.with_data(Some(data));
+                entry.with_data(Some(data.into()));
             }
 
             return Ok(entry);
@@ -248,7 +249,7 @@ async fn fetch_tree(
             .await
             .with_context(|| ErrorKind::TreeFetchFailed(key.clone()))?;
 
-        entry.with_data(Some(data));
+        entry.with_data(Some(data.into()));
     }
 
     if attributes.parents {

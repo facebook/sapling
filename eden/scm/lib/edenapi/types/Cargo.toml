@@ -14,6 +14,7 @@ anyhow = "1.0.75"
 blake3 = { version = "=1.5.0", features = ["traits-preview"] }
 bytes = { version = "1.6.0", features = ["serde"] }
 dag-types = { version = "0.1.0", path = "../../dag/dag-types", features = ["for-tests"] }
+minibytes = { version = "0.1.0", path = "../../minibytes" }
 paste = "1.0.14"
 quickcheck = "1.0"
 quickcheck_arbitrary_derive = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

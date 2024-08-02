@@ -329,6 +329,7 @@ transparent_wire!(
     usize,
     isize,
     bytes::Bytes,
+    minibytes::Bytes,
     String,
     (),
 );

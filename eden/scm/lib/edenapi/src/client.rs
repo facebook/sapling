@@ -16,7 +16,6 @@ use std::time::Duration;
 
 use anyhow::format_err;
 use async_trait::async_trait;
-use bytes::Bytes as RawBytes;
 use clientinfo::ClientInfo;
 use clientinfo_async::get_client_request_info_task_local;
 use edenapi_types::make_hash_lookup_request;
@@ -108,6 +107,7 @@ use http_client::Request;
 use itertools::Itertools;
 use metrics::Counter;
 use metrics::EntranceGuard;
+use minibytes::Bytes as RawBytes;
 use minibytes::Bytes;
 use parking_lot::Once;
 use progress_model::AggregatingProgressBar;
@@ -912,11 +912,10 @@ impl Client {
             .cbor(&req)
             .map_err(SaplingRemoteApiError::RequestSerializationFailed)?;
 
-        use bytes::BytesMut;
         let buf = if let Some(UploadTokenMetadata::FileContentTokenMetadata(m)) = metadata {
-            BytesMut::with_capacity(m.content_size.try_into().unwrap_or_default())
+            Vec::with_capacity(m.content_size.try_into().unwrap_or_default())
         } else {
-            BytesMut::new()
+            Vec::new()
         };
 
         Ok(self
@@ -927,7 +926,6 @@ impl Client {
                 Ok(buf)
             })
             .await?
-            .freeze()
             .into())
     }
 

@@ -266,7 +266,7 @@ async fn commit_revlog_data(
         .await
         .context(ErrorKind::CommitRevlogDataRequestFailed)?
         .ok_or(ErrorKind::HgIdNotFound(hg_id))?;
-    let answer = CommitRevlogData::new(hg_id, bytes);
+    let answer = CommitRevlogData::new(hg_id, bytes.into());
     Ok(answer)
 }
 

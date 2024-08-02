@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use bytes::Bytes;
+use minibytes::Bytes;
 #[cfg(any(test, feature = "for-tests"))]
 use quickcheck::Arbitrary;
 use serde_derive::Deserialize;

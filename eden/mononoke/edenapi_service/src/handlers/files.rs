@@ -186,7 +186,7 @@ async fn fetch_file(
 
     if let Some((hg_file_blob, metadata)) = content {
         file = file.with_content(FileContent {
-            hg_file_blob,
+            hg_file_blob: hg_file_blob.into(),
             metadata,
         });
     }
@@ -196,7 +196,7 @@ async fn fetch_file(
             total_size: content_metadata.total_size,
             sha1: content_metadata.sha1.into(),
             blake3: content_metadata.seeded_blake3.into(),
-            file_header_metadata: Some(ctx.file_header_metadata()),
+            file_header_metadata: Some(ctx.file_header_metadata().into()),
         });
     }
 

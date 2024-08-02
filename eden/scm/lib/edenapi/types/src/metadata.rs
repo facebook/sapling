@@ -8,7 +8,7 @@
 use std::fmt;
 use std::str::FromStr;
 
-use bytes::Bytes;
+use minibytes::Bytes;
 #[cfg(any(test, feature = "for-tests"))]
 use quickcheck::Arbitrary;
 #[cfg(any(test, feature = "for-tests"))]

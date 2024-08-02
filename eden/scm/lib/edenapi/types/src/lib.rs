@@ -44,12 +44,12 @@ pub mod token;
 pub mod tree;
 pub mod wire;
 
-use bytes::Bytes;
 // re-export CloneData
 pub use dag_types::CloneData;
 pub use dag_types::FlatSegment;
 pub use dag_types::Location as CommitLocation;
 pub use dag_types::PreparedFlatSegments;
+use minibytes::Bytes;
 #[cfg(any(test, feature = "for-tests"))]
 use quickcheck_arbitrary_derive::Arbitrary;
 use serde::Serialize;
