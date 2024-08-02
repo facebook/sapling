@@ -34,6 +34,8 @@ use mutationstore::MutationStore;
 use parking_lot::lock_api::RwLockReadGuard;
 use parking_lot::RawRwLock;
 use parking_lot::RwLock;
+use sha1::Digest;
+use sha1::Sha1;
 use storemodel::types::AugmentedDirectoryNode;
 use storemodel::types::AugmentedFileNode;
 use storemodel::types::AugmentedTreeChildEntry;
@@ -82,9 +84,6 @@ const HG_LEN: usize = HgId::len();
 pub struct EagerRepo {
     pub(crate) dag: Mutex<Dag>,
     pub(crate) store: EagerRepoStore,
-    // Additional store for the Augmented Trees, since they are addressed by
-    // the same sha1 hashes, making it impossible to store in the primary store
-    pub(crate) secondary_tree_store: EagerRepoStore,
     metalog: RwLock<MetaLog>,
     pub(crate) dir: PathBuf,
     pub(crate) mut_store: Mutex<MutationStore>,
@@ -247,15 +246,12 @@ impl EagerRepo {
         let store_dir = hg_dir.join("store");
         let dag = Dag::open(store_dir.join("segments").join("v1"))?;
         let store = EagerRepoStore::open(&store_dir.join("hgcommits").join("v1"))?;
-        let secondary_tree_store =
-            EagerRepoStore::open(&store_dir.join("augmentedtrees").join("v1"))?;
         let metalog = MetaLog::open(store_dir.join("metalog"), None)?;
         let mut_store = MutationStore::open(store_dir.join("mutation"))?;
 
         let repo = Self {
             dag: Mutex::new(dag),
             store,
-            secondary_tree_store,
             metalog: RwLock::new(metalog),
             dir: dir.to_path_buf(),
             mut_store: Mutex::new(mut_store),
@@ -346,7 +342,6 @@ impl EagerRepo {
     /// Write pending changes to disk.
     pub async fn flush(&self) -> Result<()> {
         self.store.flush()?;
-        self.secondary_tree_store.flush()?;
         let master_heads = {
             let books = self.get_bookmarks_map()?;
             let mut heads = Vec::new();
@@ -384,12 +379,12 @@ impl EagerRepo {
     /// Insert SHA1 blob to zstore for augmented trees.
     /// These blobs are not content addressed
     pub fn add_augmented_tree_blob(&self, id: Id20, data: &[u8]) -> Result<()> {
-        self.secondary_tree_store.add_arbitrary_blob(id, data)
+        self.store.add_arbitrary_blob(augmented_id(id), data)
     }
 
     /// Read SHA1 blob from zstore for augmented trees.
     pub fn get_augmented_tree_blob(&self, id: Id20) -> Result<Option<Bytes>> {
-        self.secondary_tree_store.get_sha1_blob(id)
+        self.store.get_sha1_blob(augmented_id(id))
     }
 
     /// Extract parents out of a SHA1 manifest blob, returns the remaining data.
@@ -410,7 +405,7 @@ impl EagerRepo {
 
     /// Calculate augmented trees recursively
     pub fn derive_augmented_tree_recursively(&self, id: Id20) -> Result<Option<Bytes>> {
-        match self.secondary_tree_store.get_sha1_blob(id)? {
+        match self.get_augmented_tree_blob(id)? {
             Some(t) => Ok(Some(t)),
             None => {
                 let sapling_manifest = self.get_sha1_blob(id)?;
@@ -612,6 +607,15 @@ impl EagerRepo {
     pub fn store(&self) -> EagerRepoStore {
         self.store.clone()
     }
+}
+
+// Hash something else in to differentiate augmented and non-augmented keys.
+fn augmented_id(id: Id20) -> Id20 {
+    let mut hasher = Sha1::new();
+    hasher.update(b"augmented");
+    hasher.update(id.as_ref());
+    let hash: [u8; 20] = hasher.finalize().into();
+    Id20::from_byte_array(hash)
 }
 
 pub fn is_eager_repo(path: &Path) -> bool {
