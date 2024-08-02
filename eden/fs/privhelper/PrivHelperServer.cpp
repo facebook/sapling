@@ -182,7 +182,7 @@ bool tryLoadKext(const std::string& kextPathString) {
   auto ret = KextManagerLoadKextWithURL(kextUrl, NULL);
 
   if (ret != kOSReturnSuccess) {
-    XLOG(ERR) << "Failed to load " << kextPathString << ": error code " << ret;
+    XLOGF(ERR, "Failed to load {}: error code {}", kextPathString, ret);
     // Soft error: we might be able to continue with MacFuse
     return false;
   }
@@ -325,7 +325,11 @@ folly::File mountOSXFuse(
   } else {
     args.daemon_timeout = daemon_timeout_seconds;
   }
-  XLOG(ERR) << "setting daemon_timeout to " << args.daemon_timeout;
+  XLOGF(
+      ERR,
+      "Max daemon timeout ({}) exceeded. Setting daemon_timeout to {}",
+      FUSE_MAX_DAEMON_TIMEOUT,
+      args.daemon_timeout);
   args.altflags |= FUSE_MOPT_DAEMON_TIMEOUT;
 
   // maximum iosize for reading or writing.  We want to allow a much
@@ -363,8 +367,12 @@ folly::File mountOSXFuse(
         auto res = mount(devName, args.mntpath, mountFlags, &args);
         if (res != 0) {
           *shared_errno = errno;
-          XLOG(ERR) << "failed to mount " << args.mntpath << " using "
-                    << devName << ": " << folly::errnoStr(*shared_errno);
+          XLOGF(
+              ERR,
+              "failed to mount {} using {}: {}",
+              args.mntpath,
+              devName,
+              folly::errnoStr(*shared_errno));
         }
       });
   thr.detach();
@@ -506,8 +514,10 @@ folly::File PrivHelperServer::fuseMount(
   try {
     return mountMacFuse(mountPath, readOnly, fuseTimeout_);
   } catch (const std::exception& macFuseExc) {
-    XLOG(ERR) << "Failed to mount using MacFuse, trying OSXFuse ("
-              << folly::exceptionStr(macFuseExc) << ")";
+    XLOGF(
+        ERR,
+        "Failed to mount using MacFuse, trying OSXFuse ({})",
+        folly::exceptionStr(macFuseExc));
     return mountOSXFuse(mountPath, readOnly, fuseTimeout_, useDevEdenFs_);
   }
 #else
@@ -565,7 +575,7 @@ void PrivHelperServer::nfsMount(
     bool useReaddirplus) {
 #ifdef __APPLE__
   if (shouldLoadNfsKext()) {
-    XLOG(DBG3) << "Apple nfs.kext is not loaded. Attempting to load.";
+    XLOG(DBG3, "Apple nfs.kext is not loaded. Attempting to load");
     loadNfsKext();
   }
 
@@ -824,8 +834,11 @@ void PrivHelperServer::unmount(const char* mountPath) {
     // This can happen if it was already manually unmounted by a
     // separate process.
     if (errnum != EINVAL) {
-      XLOG(WARNING) << "error unmounting " << mountPath << ": "
-                    << folly::errnoStr(errnum);
+      XLOGF(
+          WARNING,
+          "error unmounting {}: {}",
+          mountPath,
+          folly::errnoStr(errnum));
     }
   }
 }
@@ -835,8 +848,11 @@ UnixSocket::Message PrivHelperServer::processTakeoverStartupMsg(
   string mountPath;
   std::vector<string> bindMounts;
   PrivHelperConn::parseTakeoverStartupRequest(cursor, mountPath, bindMounts);
-  XLOG(DBG3) << "takeover startup for \"" << mountPath << "\"; "
-             << bindMounts.size() << " bind mounts";
+  XLOGF(
+      DBG3,
+      "takeover startup for \"{}\"; {} bind mounts",
+      mountPath,
+      bindMounts.size());
 
   sanityCheckMountPoint(mountPath);
 
@@ -849,7 +865,7 @@ UnixSocket::Message PrivHelperServer::processMountMsg(Cursor& cursor) {
   bool readOnly;
   string vfsType;
   PrivHelperConn::parseMountRequest(cursor, mountPath, readOnly, vfsType);
-  XLOG(DBG3) << "mount \"" << mountPath << "\"";
+  XLOGF(DBG3, "mount \"{}\"", mountPath);
 
   sanityCheckMountPoint(mountPath);
 
@@ -872,7 +888,7 @@ UnixSocket::Message PrivHelperServer::processMountNfsMsg(Cursor& cursor) {
       readOnly,
       iosize,
       useReaddirplus);
-  XLOG(DBG3) << "mount.nfs \"" << mountPath << "\"";
+  XLOGF(DBG3, "mount.nfs \"{}\"", mountPath);
 
   sanityCheckMountPoint(mountPath);
 
@@ -885,7 +901,7 @@ UnixSocket::Message PrivHelperServer::processMountNfsMsg(Cursor& cursor) {
 UnixSocket::Message PrivHelperServer::processUnmountMsg(Cursor& cursor) {
   string mountPath;
   PrivHelperConn::parseUnmountRequest(cursor, mountPath);
-  XLOG(DBG3) << "unmount \"" << mountPath << "\"";
+  XLOGF(DBG3, "unmount \"{}\"", mountPath);
 
   const auto it = mountPoints_.find(mountPath);
   if (it == mountPoints_.end()) {
@@ -900,7 +916,7 @@ UnixSocket::Message PrivHelperServer::processUnmountMsg(Cursor& cursor) {
 UnixSocket::Message PrivHelperServer::processNfsUnmountMsg(Cursor& cursor) {
   string mountPath;
   PrivHelperConn::parseNfsUnmountRequest(cursor, mountPath);
-  XLOG(DBG3) << "unmount \"" << mountPath << "\"";
+  XLOGF(DBG3, "unmount \"{}\"", mountPath);
 
   const auto it = mountPoints_.find(mountPath);
   if (it == mountPoints_.end()) {
@@ -916,7 +932,7 @@ UnixSocket::Message PrivHelperServer::processTakeoverShutdownMsg(
     Cursor& cursor) {
   string mountPath;
   PrivHelperConn::parseTakeoverShutdownRequest(cursor, mountPath);
-  XLOG(DBG3) << "takeover shutdown \"" << mountPath << "\"";
+  XLOGF(DBG3, "takeover shutdown \"{}\"", mountPath);
 
   const auto it = mountPoints_.find(mountPath);
   if (it == mountPoints_.end()) {
@@ -940,7 +956,7 @@ UnixSocket::Message PrivHelperServer::processBindMountMsg(Cursor& cursor) {
   string clientPath;
   string mountPath;
   PrivHelperConn::parseBindMountRequest(cursor, clientPath, mountPath);
-  XLOG(DBG3) << "bind mount \"" << mountPath << "\"";
+  XLOGF(DBG3, "bind mount \"{}\"", mountPath);
 
   // findMatchingMountPrefix will throw if mountPath doesn't match
   // any known mount.  We perform this check so that we're not a
@@ -954,7 +970,7 @@ UnixSocket::Message PrivHelperServer::processBindMountMsg(Cursor& cursor) {
 UnixSocket::Message PrivHelperServer::processBindUnMountMsg(Cursor& cursor) {
   string mountPath;
   PrivHelperConn::parseBindUnMountRequest(cursor, mountPath);
-  XLOG(DBG3) << "bind unmount \"" << mountPath << "\"";
+  XLOGF(DBG3, "bind unmount \"{}\"", mountPath);
 
   // findMatchingMountPrefix will throw if mountPath doesn't match
   // any known mount.  We perform this check so that we're not a
@@ -969,7 +985,7 @@ UnixSocket::Message PrivHelperServer::processBindUnMountMsg(Cursor& cursor) {
 UnixSocket::Message PrivHelperServer::processSetLogFileMsg(
     folly::io::Cursor& cursor,
     UnixSocket::Message& request) {
-  XLOG(DBG3) << "set log file";
+  XLOG(DBG3, "set log file");
   PrivHelperConn::parseSetLogFileRequest(cursor);
   if (request.files.size() != 1) {
     throwf<std::runtime_error>(
@@ -992,7 +1008,7 @@ void PrivHelperServer::setLogFile(folly::File logFile) {
 UnixSocket::Message PrivHelperServer::processSetDaemonTimeout(
     folly::io::Cursor& cursor,
     UnixSocket::Message& /* request */) {
-  XLOG(DBG3) << "set daemon timeout";
+  XLOG(DBG3, "set daemon timeout");
   std::chrono::nanoseconds duration;
   PrivHelperConn::parseSetDaemonTimeoutRequest(cursor, duration);
 
@@ -1008,7 +1024,7 @@ void PrivHelperServer::setDaemonTimeout(std::chrono::nanoseconds duration) {
 UnixSocket::Message PrivHelperServer::processSetUseEdenFs(
     folly::io::Cursor& cursor,
     UnixSocket::Message& /* request */) {
-  XLOG(DBG3) << "set use /dev/edenfs";
+  XLOG(DBG3, "set use /dev/edenfs");
   PrivHelperConn::parseSetUseEdenFsRequest(cursor, useDevEdenFs_);
 
   return makeResponse();
@@ -1051,8 +1067,10 @@ void PrivHelperServer::bindUnmount(const char* mountPath) {
     }
 
     if (std::chrono::steady_clock::now() > endTime) {
-      XLOG(WARNING) << "error unmounting " << mountPath
-                    << ": mount did not go away after successful unmount call";
+      XLOGF(
+          WARNING,
+          "error unmounting {}: mount did not go away after successful unmount call",
+          mountPath);
       break;
     }
     sched_yield();
@@ -1068,12 +1086,16 @@ void PrivHelperServer::run() {
   // the parent exits and then umount all outstanding mount points before we
   // exit.)
   if (signal(SIGINT, SIG_IGN) == SIG_ERR) {
-    XLOG(FATAL) << "error setting SIGINT handler in privhelper process"
-                << folly::errnoStr(errno);
+    XLOGF(
+        FATAL,
+        "error setting SIGINT handler in privhelper process: {}",
+        folly::errnoStr(errno));
   }
   if (signal(SIGTERM, SIG_IGN) == SIG_ERR) {
-    XLOG(FATAL) << "error setting SIGTERM handler in privhelper process"
-                << folly::errnoStr(errno);
+    XLOGF(
+        FATAL,
+        "error setting SIGTERM handler in privhelper process: {}",
+        folly::errnoStr(errno));
   }
 
   conn_->setReceiveCallback(this);
@@ -1082,7 +1104,7 @@ void PrivHelperServer::run() {
   // We terminate the event loop when the socket has been closed.
   // This normally means the parent process exited, so we can clean up and exit
   // too.
-  XLOG(DBG5) << "privhelper process exiting";
+  XLOG(DBG5, "privhelper process exiting");
 
   // Unmount all active mount points
   cleanupMountPoints();
@@ -1092,8 +1114,10 @@ void PrivHelperServer::messageReceived(UnixSocket::Message&& message) noexcept {
   try {
     processAndSendResponse(std::move(message));
   } catch (const std::exception& ex) {
-    XLOG(ERR) << "error processing privhelper request: "
-              << folly::exceptionStr(ex);
+    XLOGF(
+        ERR,
+        "error processing privhelper request: {}",
+        folly::exceptionStr(ex));
   }
 }
 
@@ -1105,8 +1129,10 @@ void PrivHelperServer::processAndSendResponse(UnixSocket::Message&& message) {
   try {
     response = processMessage(packet, cursor, message);
   } catch (const std::exception& ex) {
-    XLOG(ERR) << "error processing privhelper request: "
-              << folly::exceptionStr(ex);
+    XLOGF(
+        ERR,
+        "error processing privhelper request: {}",
+        folly::exceptionStr(ex));
     packet.metadata.msg_type = PrivHelperConn::RESP_ERROR;
     response = makeResponse();
     Appender appender(&response.data, 1024);
@@ -1123,8 +1149,9 @@ void PrivHelperServer::processAndSendResponse(UnixSocket::Message&& message) {
   } else {
     // This is unexpected, but go ahead and allocate more room just in case this
     // ever does occur.
-    XLOG(WARN) << "insufficient headroom for privhelper response packet: "
-               << "making more space";
+    XLOG(
+        WARN,
+        "insufficient headroom for privhelper response packet; making more space");
     auto body = std::make_unique<IOBuf>(std::move(response.data));
     response.data = IOBuf(IOBuf::CREATE, packetSize);
     response.data.append(packetSize);
@@ -1213,7 +1240,7 @@ void PrivHelperServer::socketClosed() noexcept {
 
 void PrivHelperServer::receiveError(
     const folly::exception_wrapper& ew) noexcept {
-  XLOG(ERR) << "receive error in privhelper server: " << ew;
+  XLOGF(ERR, "receive error in privhelper server: {}", ew.what());
   eventBase_->terminateLoopSoon();
 }
 
@@ -1222,8 +1249,11 @@ void PrivHelperServer::cleanupMountPoints() {
     try {
       unmount(mountPoint.c_str());
     } catch (const std::exception& ex) {
-      XLOG(ERR) << "error unmounting \"" << mountPoint
-                << "\": " << folly::exceptionStr(ex);
+      XLOGF(
+          ERR,
+          "error unmounting \"{}\": {}",
+          mountPoint,
+          folly::exceptionStr(ex));
     }
   }
 
