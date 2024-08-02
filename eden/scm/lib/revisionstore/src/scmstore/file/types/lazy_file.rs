@@ -35,6 +35,9 @@ pub(crate) enum LazyFile {
 
     /// An SaplingRemoteApi FileEntry.
     SaplingRemoteApi(FileEntry),
+
+    /// File content read from CAS (no hg header).
+    Cas(Bytes),
 }
 
 impl LazyFile {
@@ -46,6 +49,7 @@ impl LazyFile {
             IndexedLog(ref entry) => Some(entry.key().hgid),
             Lfs(_, ref ptr) => Some(ptr.hgid()),
             SaplingRemoteApi(ref entry) => Some(entry.key().hgid),
+            Cas(_) => None,
         }
     }
 
@@ -75,6 +79,7 @@ impl LazyFile {
             ContentStore(ref blob, _) => strip_hg_file_metadata(blob)?.0,
             // TODO(meyer): Convert SaplingRemoteApi to use minibytes
             SaplingRemoteApi(ref entry) => strip_hg_file_metadata(&entry.data()?.into())?.0,
+            Cas(data) => data.clone(),
         })
     }
 
@@ -86,6 +91,7 @@ impl LazyFile {
             Lfs(ref blob, ref ptr) => (blob.clone(), ptr.copy_from().clone()),
             ContentStore(ref blob, _) => strip_hg_file_metadata(blob)?,
             SaplingRemoteApi(ref entry) => strip_hg_file_metadata(&entry.data()?.into())?,
+            Cas(_) => bail!("CAS data has no copy info"),
         })
     }
 
@@ -97,6 +103,7 @@ impl LazyFile {
             Lfs(ref blob, ref ptr) => rebuild_metadata(blob.clone(), ptr),
             ContentStore(ref blob, _) => blob.clone(),
             SaplingRemoteApi(ref entry) => entry.data()?.into(),
+            Cas(_) => bail!("CAS data has no copy info"),
         })
     }
 
@@ -110,6 +117,10 @@ impl LazyFile {
             },
             ContentStore(_, ref meta) => meta.clone(),
             SaplingRemoteApi(ref entry) => entry.metadata()?.clone(),
+            Cas(data) => Metadata {
+                size: Some(data.len() as u64),
+                flags: None,
+            },
         })
     }
 
@@ -127,6 +138,7 @@ impl LazyFile {
             Lfs(_, _) => None,
             // ContentStore handles caching internally
             ContentStore(_, _) => None,
+            Cas(_) => None,
         })
     }
 }

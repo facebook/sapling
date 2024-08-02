@@ -30,7 +30,17 @@ impl StoreValue for StoreFile {
     /// Returns which attributes are present in this StoreFile
     fn attrs(&self) -> FileAttributes {
         FileAttributes {
-            content: self.content.is_some(),
+            pure_content: self.content.is_some(),
+            content_header: self
+                .content
+                .as_ref()
+                // All content sources have hg file header except CAS.
+                .is_some_and(|f| !matches!(f, LazyFile::Cas(_)))
+                // File header can also come from AUX data.
+                || self
+                    .aux_data
+                    .as_ref()
+                    .is_some_and(|aux| aux.file_header_metadata.is_some()),
             aux_data: self.aux_data.is_some(),
         }
     }
@@ -38,7 +48,11 @@ impl StoreValue for StoreFile {
     /// Return a StoreFile with only the specified subset of attributes
     fn mask(self, attrs: FileAttributes) -> Self {
         StoreFile {
-            content: if attrs.content { self.content } else { None },
+            content: if attrs.pure_content || attrs.content_header {
+                self.content
+            } else {
+                None
+            },
             aux_data: if attrs.aux_data { self.aux_data } else { None },
         }
     }

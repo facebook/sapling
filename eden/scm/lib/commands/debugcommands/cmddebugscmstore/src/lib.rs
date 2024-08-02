@@ -166,7 +166,8 @@ fn fetch_files(
     let mut missing = fetch_and_display_successes(
         keys,
         FileAttributes {
-            content: !aux_only,
+            pure_content: !aux_only,
+            content_header: !aux_only,
             aux_data: true,
         },
     );
@@ -177,14 +178,16 @@ fn fetch_files(
         missing = fetch_and_display_successes(
             missing.into_keys().collect(),
             FileAttributes {
-                content: true,
+                pure_content: true,
+                content_header: true,
                 aux_data: false,
             },
         );
         missing = fetch_and_display_successes(
             missing.into_keys().collect(),
             FileAttributes {
-                content: false,
+                pure_content: false,
+                content_header: false,
                 aux_data: true,
             },
         );

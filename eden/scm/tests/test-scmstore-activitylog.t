@@ -13,12 +13,12 @@
 
 (Fetches twice for some reason)
   $ cat log
-  {"op":"FileFetch","keys":[{"path":"f","node":*}],"attrs":{"content":true,"aux_data":false},"start_millis":*,"duration_millis":*} (glob)
-  {"op":"FileFetch","keys":[{"path":"f","node":*}],"attrs":{"content":true,"aux_data":false},"start_millis":*,"duration_millis":*} (glob)
+  {"op":"FileFetch","keys":[{"path":"f","node":*}],"attrs":*,"start_millis":*,"duration_millis":*} (glob)
+  {"op":"FileFetch","keys":[{"path":"f","node":*}],"attrs":*,"start_millis":*,"duration_millis":*} (glob)
 
 Use activity log to verify that replay triggers fetches
   $ hg debugscmstorereplay --path log --config scmstore.activitylog=log2
   Fetched 2 keys across 2 fetches in * (glob)
   $ cat log2
-  {"op":"FileFetch","keys":[{"path":"f","node":*}],"attrs":{"content":true,"aux_data":false},"start_millis":*,"duration_millis":*} (glob)
-  {"op":"FileFetch","keys":[{"path":"f","node":*}],"attrs":{"content":true,"aux_data":false},"start_millis":*,"duration_millis":*} (glob)
+  {"op":"FileFetch","keys":[{"path":"f","node":*}],"attrs":*,"start_millis":*,"duration_millis":*} (glob)
+  {"op":"FileFetch","keys":[{"path":"f","node":*}],"attrs":*,"start_millis":*,"duration_millis":*} (glob)

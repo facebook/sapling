@@ -102,7 +102,7 @@ impl storemodel::KeyStore for ArcFileStore {
         keys: Vec<Key>,
         fetch_mode: FetchMode,
     ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, Bytes)>>> {
-        let fetched = self.0.fetch(keys, FileAttributes::CONTENT, fetch_mode);
+        let fetched = self.0.fetch(keys, FileAttributes::PURE_CONTENT, fetch_mode);
         let iter = fetched
             .into_iter()
             .map(|result| -> anyhow::Result<(Key, Bytes)> {

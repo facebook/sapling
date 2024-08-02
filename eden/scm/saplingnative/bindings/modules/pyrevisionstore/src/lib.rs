@@ -1100,7 +1100,7 @@ py_class!(pub class filescmstore |py| {
             .map(|tuple| from_tuple_to_key(py, &tuple))
             .collect::<PyResult<Vec<Key>>>()?;
         let results = PyList::new(py, &[]);
-        let fetch_result = self.store(py).fetch(keys.into_iter(), FileAttributes { content: false, aux_data: true}, FetchMode::AllowRemote );
+        let fetch_result = self.store(py).fetch(keys.into_iter(), FileAttributes::AUX, FetchMode::AllowRemote);
 
         let (found, missing, _errors) = fetch_result.consume();
         // TODO(meyer): FileStoreFetch should have utility methods to various consumer cases like this (get complete, get missing, transform to Result<EntireBatch>, transform to iterator of Result<IndividualFetch>, etc)
