@@ -31,6 +31,7 @@ use crossbeam::channel::unbounded;
 use edenapi_types::FileAuxData;
 use edenapi_types::TreeAuxData;
 use edenapi_types::TreeChildEntry;
+use fetch::FetchState;
 use minibytes::Bytes;
 use once_cell::sync::OnceCell;
 use parking_lot::RwLock;
@@ -46,7 +47,6 @@ use crate::datastore::RemoteDataStore;
 use crate::indexedlogdatastore::Entry;
 use crate::indexedlogdatastore::IndexedLogHgIdDataStore;
 use crate::indexedlogtreeauxstore::TreeAuxStore;
-use crate::scmstore::fetch::CommonFetchState;
 use crate::scmstore::fetch::FetchErrors;
 use crate::scmstore::fetch::FetchResults;
 use crate::scmstore::fetch::KeyFetchError;
@@ -73,6 +73,7 @@ use crate::SaplingRemoteApiTreeStore;
 use crate::StoreKey;
 use crate::StoreResult;
 
+mod fetch;
 mod metrics;
 pub mod types;
 
@@ -148,10 +149,9 @@ impl TreeStore {
     ) -> FetchResults<StoreTree> {
         let (found_tx, found_rx) = unbounded();
         let found_tx2 = found_tx.clone();
-        let mut common: CommonFetchState<StoreTree> =
-            CommonFetchState::new(reqs, attrs, found_tx, fetch_mode);
+        let mut state = FetchState::new(reqs, attrs, found_tx, fetch_mode);
 
-        let keys_len = common.pending_len();
+        let keys_len = state.common.pending_len();
 
         let indexedlog_cache = self.indexedlog_cache.clone();
         let indexedlog_local = self.indexedlog_local.clone();
@@ -199,7 +199,8 @@ impl TreeStore {
                     if let Some(log) = log {
                         let start_time = Instant::now();
 
-                        let pending: Vec<_> = common
+                        let pending: Vec<_> = state
+                            .common
                             .pending(TreeAttributes::CONTENT, false)
                             .map(|(key, _attrs)| key.clone())
                             .collect();
@@ -213,7 +214,8 @@ impl TreeStore {
                         for key in pending.into_iter() {
                             if let Some(entry) = log.get_entry(key)? {
                                 tracing::trace!("{:?} found in {:?}", entry.key(), location);
-                                common
+                                state
+                                    .common
                                     .found(entry.key().clone(), LazyTree::IndexedLog(entry).into());
                                 found_count += 1;
                             }
@@ -230,14 +232,15 @@ impl TreeStore {
                     ("local", &historystore_local),
                 ] {
                     if let Some(log) = log {
-                        let pending: Vec<_> = common
+                        let pending: Vec<_> = state
+                            .common
                             .pending(TreeAttributes::PARENTS, false)
                             .map(|(key, _attrs)| key.clone())
                             .collect();
                         for key in pending.into_iter() {
                             if let Some(entry) = log.get_node_info(&key)? {
                                 tracing::trace!("{:?} found parents in {name}", key);
-                                common.found(
+                                state.common.found(
                                     key,
                                     StoreTree {
                                         content: None,
@@ -254,14 +257,15 @@ impl TreeStore {
                 }
 
                 if let Some(tree_aux_store) = &tree_aux_store {
-                    let pending: Vec<_> = common
+                    let pending: Vec<_> = state
+                        .common
                         .pending(TreeAttributes::AUX_DATA, false)
                         .map(|(key, _attrs)| key.clone())
                         .collect();
                     for key in pending.into_iter() {
                         if let Some(entry) = tree_aux_store.get(&key.hgid)? {
                             tracing::trace!(?key, ?entry, "found tree aux entry in cache");
-                            common.found(
+                            state.common.found(
                                 key.clone(),
                                 StoreTree {
                                     content: None,
@@ -276,7 +280,8 @@ impl TreeStore {
 
             if fetch_remote {
                 if let Some(ref edenapi) = edenapi {
-                    let pending: Vec<_> = common
+                    let pending: Vec<_> = state
+                        .common
                         .pending(
                             TreeAttributes::CONTENT
                                 | TreeAttributes::PARENTS
@@ -374,7 +379,7 @@ impl TreeStore {
                                 }
                             }
 
-                            common.found(key, entry.into());
+                            state.common.found(key, entry.into());
                         }
                         util::record_edenapi_stats(&span, &response.stats);
                         let _ = metrics.edenapi.time_from_duration(start_time.elapsed());
@@ -388,7 +393,8 @@ impl TreeStore {
             // TODO: Not handling RemoteOnly for now due to legacy, reinvestigate when refactoring the datastores
             if let FetchMode::AllowRemote = fetch_mode {
                 if let Some(ref contentstore) = contentstore {
-                    let pending: Vec<_> = common
+                    let pending: Vec<_> = state
+                        .common
                         .pending(TreeAttributes::CONTENT, false)
                         .map(|(key, _attrs)| StoreKey::HgId(key.clone()))
                         .collect();
@@ -417,7 +423,9 @@ impl TreeStore {
                                 // We don't write to local indexedlog for contentstore fallbacks because
                                 // contentstore handles that internally.
                                 tracing::trace!("{:?} found in contentstore", &key);
-                                common.found(key, LazyTree::ContentStore(blob.into()).into());
+                                state
+                                    .common
+                                    .found(key, LazyTree::ContentStore(blob.into()).into());
                             }
                         }
                     }
@@ -425,7 +433,7 @@ impl TreeStore {
             }
 
             // TODO(meyer): Report incomplete / not found, handle errors better instead of just always failing the batch, etc
-            common.results(FetchErrors::new());
+            state.common.results(FetchErrors::new());
 
             if let Err(err) = metrics.update_ods() {
                 tracing::error!(?err, "error updating tree ods counters");
