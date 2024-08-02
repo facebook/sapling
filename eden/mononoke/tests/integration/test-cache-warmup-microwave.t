@@ -46,7 +46,7 @@ Start Mononoke again, check that the microwave snapshot was used
   $ wait_for_mononoke_cache_warmup
   $ grep primed "$TESTTMP/mononoke.out"
   * primed filenodes cache with 1 entries, repo: repo (glob)
-  * primed changesets cache with 3 entries, repo: repo (glob)
+  * primed changesets cache with 0 entries, repo: repo (glob)
   * microwave: successfully primed cache, repo: repo (glob)
 
 Finally, check that we can also generate a snapshot to files
