@@ -76,6 +76,7 @@ pub struct FileStoreFetchMetrics {
     pub(crate) aux: LocalAndCacheFetchMetrics,
     pub(crate) contentstore: ContentStoreFetchMetrics,
     pub(crate) edenapi: FetchMetrics,
+    pub(crate) cas: FetchMetrics,
 }
 
 impl AddAssign for FileStoreFetchMetrics {
@@ -85,6 +86,7 @@ impl AddAssign for FileStoreFetchMetrics {
         self.aux += rhs.aux;
         self.contentstore += rhs.contentstore;
         self.edenapi += rhs.edenapi;
+        self.cas += rhs.cas;
     }
 }
 
@@ -95,6 +97,7 @@ impl FileStoreFetchMetrics {
             .chain(namespaced("aux", self.aux.metrics()))
             .chain(namespaced("contentstore", self.contentstore.metrics()))
             .chain(namespaced("edenapi", self.edenapi.metrics()))
+            .chain(namespaced("cas", self.cas.metrics()))
     }
     /// Update ODS stats.
     /// This assumes that fbinit was called higher up the stack.

@@ -54,11 +54,11 @@ impl<T: StoreValue> CommonFetchState<T> {
         &'a self,
         fetchable: T::Attrs,
         with_computable: bool,
-    ) -> impl Iterator<Item = (&'a Key, T::Attrs)> + 'a {
-        self.pending.iter().filter_map(move |(key, _)| {
+    ) -> impl Iterator<Item = (&'a Key, &'a T)> + 'a {
+        self.pending.iter().filter_map(move |(key, store_item)| {
             let actionable = self.actionable(key, fetchable, with_computable);
             if actionable.any() {
-                Some((key, actionable))
+                Some((key, store_item))
             } else {
                 None
             }

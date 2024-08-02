@@ -178,6 +178,7 @@ impl FileStore {
         let lfs_cache = self.lfs_cache.clone();
         let lfs_local = self.lfs_local.clone();
         let edenapi = self.edenapi.clone();
+        let cas_client = self.cas_client.clone();
         let lfs_remote = self.lfs_remote.clone();
         let contentstore = self.contentstore.clone();
         let metrics = self.metrics.clone();
@@ -203,11 +204,17 @@ impl FileStore {
             );
             let _enter = span.enter();
 
-            if fetch_local {
+            if fetch_local || (fetch_remote && cas_client.is_some()) {
                 if let Some(ref aux_cache) = aux_cache {
-                    state.fetch_aux_indexedlog(aux_cache, StoreLocation::Cache);
+                    state.fetch_aux_indexedlog(
+                        aux_cache,
+                        StoreLocation::Cache,
+                        cas_client.is_some(),
+                    );
                 }
+            }
 
+            if fetch_local {
                 if let Some(ref indexedlog_cache) = indexedlog_cache {
                     state.fetch_indexedlog(
                         indexedlog_cache,
@@ -234,6 +241,10 @@ impl FileStore {
             }
 
             if fetch_remote {
+                if let Some(cas_client) = &cas_client {
+                    state.fetch_cas(cas_client);
+                }
+
                 if let Some(ref edenapi) = edenapi {
                     state.fetch_edenapi(
                         edenapi,

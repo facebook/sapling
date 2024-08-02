@@ -8,12 +8,14 @@
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::sync::Arc;
+use std::time::Instant;
 
 use anyhow::anyhow;
 use anyhow::Result;
 use async_runtime::block_on;
 use async_runtime::spawn_blocking;
 use async_runtime::stream_to_iter;
+use cas_client::CasClient;
 use clientinfo::get_client_request_info_thread_local;
 use clientinfo_async::with_client_request_info_scope;
 use crossbeam::channel::Sender;
@@ -27,6 +29,7 @@ use tracing::debug;
 use tracing::field;
 use types::errors::NetworkError;
 use types::fetch_mode::FetchMode;
+use types::CasDigest;
 use types::Key;
 use types::Sha256;
 
@@ -315,7 +318,12 @@ impl FetchState {
         }
     }
 
-    pub(crate) fn fetch_aux_indexedlog(&mut self, store: &AuxStore, loc: StoreLocation) {
+    pub(crate) fn fetch_aux_indexedlog(
+        &mut self,
+        store: &AuxStore,
+        loc: StoreLocation,
+        have_cas: bool,
+    ) {
         let fetch_start = std::time::Instant::now();
 
         let mut found = 0;
@@ -323,8 +331,16 @@ impl FetchState {
         let mut count = 0;
         let mut error: Option<String> = None;
 
+        let mut wants_aux = FileAttributes::AUX;
+        if have_cas && loc == StoreLocation::Cache {
+            // Also fetch AUX data if we are going to try fetching from CAS. This does two things:
+            // 1. Fetches hash and size info needed to query CAS for file contents.
+            // 2. Fetches hg content header, which is not available from CAS.
+            wants_aux |= FileAttributes::PURE_CONTENT;
+        }
+
         self.common
-            .iter_pending(FileAttributes::AUX, self.compute_aux_data, |key| {
+            .iter_pending(wants_aux, self.compute_aux_data, |key| {
                 count += 1;
 
                 let res = if self.fetch_mode.ignore_result() {
@@ -697,6 +713,118 @@ impl FetchState {
         self.metrics.edenapi.fetch(count - found_pointers);
         self.metrics.edenapi.err(errors);
         self.metrics.edenapi.hit(found);
+    }
+
+    pub(crate) fn fetch_cas(&mut self, cas_client: &dyn CasClient) {
+        let span = tracing::info_span!(
+            "fetch_cas",
+            keys = field::Empty,
+            hits = field::Empty,
+            requests = field::Empty,
+            time = field::Empty,
+        );
+        let _enter = span.enter();
+
+        let fetchable = FileAttributes::PURE_CONTENT;
+
+        let mut digest_to_key: HashMap<CasDigest, Key> = self
+            // TODO: fetch LFS files
+            .pending_nonlfs(fetchable)
+            .into_iter()
+            // Get AUX data from "pending" (assuming we previously fetched it).
+            .filter_map(|key| {
+                // TODO: fetch aux data from edenapi on-demand?
+
+                let store_file = self.common.pending.get(&key)?;
+                let aux_data = store_file.aux_data.as_ref()?;
+
+                if self.common.request_attrs.content_header && !store_file.attrs().content_header {
+                    // If the caller wants hg content header but the aux data didn't have it,
+                    // we won't find it in CAS, so don't bother fetching content from CAS.
+                    tracing::trace!(?key, "no content header in AUX data - skipping CAS");
+                    None
+                } else {
+                    Some((
+                        CasDigest {
+                            hash: aux_data.blake3,
+                            size: aux_data.total_size,
+                        },
+                        key,
+                    ))
+                }
+            })
+            .collect();
+
+        if digest_to_key.is_empty() {
+            return;
+        }
+
+        let digests: Vec<CasDigest> = digest_to_key.keys().cloned().collect();
+
+        span.record("keys", digests.len());
+
+        let mut found = 0;
+        let mut error = 0;
+        let mut reqs = 0;
+
+        // TODO: configure
+        let max_batch_size = 1000;
+        let start_time = Instant::now();
+
+        for chunk in digests.chunks(max_batch_size) {
+            reqs += 1;
+
+            // TODO: should we fan out here into multiple requests?
+            match block_on(cas_client.fetch(chunk)) {
+                Ok(results) => {
+                    for (digest, data) in results {
+                        let Some(key) = digest_to_key.remove(&digest) else {
+                            tracing::error!("got CAS result for unrequested digest {:?}", digest);
+                            continue;
+                        };
+
+                        match data {
+                            Err(err) => {
+                                tracing::error!(?err, ?key, ?digest, "CAS fetch error");
+                                error += 1;
+                                self.errors.keyed_error(key, err);
+                            }
+                            Ok(None) => {
+                                // miss
+                            }
+                            Ok(Some(data)) => {
+                                found += 1;
+                                self.found_attributes(
+                                    key,
+                                    StoreFile {
+                                        content: Some(LazyFile::Cas(data.into())),
+                                        aux_data: None,
+                                    },
+                                );
+                            }
+                        }
+                    }
+                }
+                Err(err) => {
+                    tracing::error!(?err, "overall CAS error");
+                    let err = ClonableError::new(err);
+                    for digest in chunk {
+                        if let Some(key) = digest_to_key.get(digest) {
+                            self.errors.keyed_error(key.clone(), err.clone().into());
+                        }
+                    }
+                }
+            }
+        }
+
+        span.record("hits", found);
+        span.record("requests", reqs);
+        span.record("time", start_time.elapsed().as_millis() as u64);
+
+        let _ = self.metrics.cas.time_from_duration(start_time.elapsed());
+        self.metrics.cas.fetch(digests.len());
+        self.metrics.cas.err(error);
+        self.metrics.cas.hit(found);
     }
 
     pub(crate) fn fetch_lfs_remote(

@@ -47,6 +47,9 @@ define_flags! {
         /// Only fetch AUX data (don't request file/tree content).
         aux_only: bool,
 
+        /// Only fetch pure file content (allows request to go to CAS).
+        pure_content: bool,
+
         /// Request tree parents.
         tree_parents: bool,
 
@@ -125,6 +128,7 @@ pub fn run(ctx: ReqCtx<DebugScmStoreOpts>, repo: &mut Repo) -> Result<u8> {
             keys,
             fetch_mode,
             ctx.opts.aux_only,
+            ctx.opts.pure_content,
         )?,
         FetchType::Tree => fetch_trees(
             &ctx.core.io,
@@ -145,6 +149,7 @@ fn fetch_files(
     keys: Vec<Key>,
     fetch_mode: FetchMode,
     aux_only: bool,
+    pure_content: bool,
 ) -> Result<()> {
     repo.file_store()?;
     let store = repo.file_scm_store().unwrap();
@@ -167,7 +172,7 @@ fn fetch_files(
         keys,
         FileAttributes {
             pure_content: !aux_only,
-            content_header: !aux_only,
+            content_header: !aux_only && !pure_content,
             aux_data: true,
         },
     );
@@ -179,7 +184,7 @@ fn fetch_files(
             missing.into_keys().collect(),
             FileAttributes {
                 pure_content: true,
-                content_header: true,
+                content_header: !pure_content,
                 aux_data: false,
             },
         );

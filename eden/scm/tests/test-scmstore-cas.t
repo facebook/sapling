@@ -1,7 +1,8 @@
   $ setconfig push.edenapi=true
+  $ setconfig scmstore.fetch-from-cas=true
 
 First sanity check eagerepo works as CAS store
-  $ newclientrepo
+  $ newclientrepo client1 test:server
   $ echo "A" | drawdag
 
 Remote doesn't know about commit yet.
@@ -42,3 +43,27 @@ Can also fetch tree data.
       ],
   }
 
+
+
+Empty local/shared caches.
+  $ setconfig remotefilelog.cachepath=$TESTTMP/cache2
+  $ newclientrepo client2 test:server
+  $ hg pull -qB main
+
+scmstore can fetch (pure) file content from CAS:
+  $ hg debugscmstore -r $A --mode file --pure-content A
+  Successfully fetched file: StoreFile {
+      content: Some(
+          Cas(
+              b"A",
+          ),
+      ),
+      aux_data: Some(
+          FileAuxData {
+              total_size: 1,
+              sha1: Sha1("6dcd4ce23d88e2ee9568ba546c007c63d9131c1b"),
+              blake3: Blake3("5ad3ba58a716e5fc04296ac9af7a1420f726b401fdf16d270beb5b6b30bc0cda"),
+              file_header_metadata: None,
+          },
+      ),
+  }

@@ -24,6 +24,7 @@ pub fn new(config: Arc<dyn Config>) -> anyhow::Result<Option<Arc<dyn CasClient>>
 }
 
 #[async_trait::async_trait]
+#[auto_impl::auto_impl(&, Box, Arc)]
 pub trait CasClient: Sync + Send {
     /// Fetch blobs from CAS.
     async fn fetch(
