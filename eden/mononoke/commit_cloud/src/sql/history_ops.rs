@@ -40,17 +40,22 @@ pub struct DeleteArgs {
 
 mononoke_queries! {
     read GetHistoryVersionTimestamp(reponame: String, workspace: String) -> ( u64, Timestamp){
-        "SELECT `version`, `timestamp` FROM history WHERE reponame={reponame} AND workspace={workspace} ORDER BY version DESC LIMIT 500"
+        mysql("SELECT `version`, UNIX_TIMESTAMP(`timestamp`) FROM history WHERE reponame={reponame} AND workspace={workspace} ORDER BY version DESC LIMIT 500")
+        sqlite("SELECT `version`, `timestamp` FROM history WHERE reponame={reponame} AND workspace={workspace} ORDER BY version DESC LIMIT 500")
     }
 
     read GetHistoryDate(reponame: String, workspace: String, timestamp: Timestamp, limit: u64) -> (Vec<u8>, Vec<u8>, Vec<u8>, Timestamp, u64){
-        "SELECT heads, bookmarks, remotebookmarks, timestamp, version FROM history
-        WHERE reponame={reponame} AND workspace={workspace} AND timestamp >= {timestamp} ORDER BY timestamp LIMIT {limit}"
+        mysql("SELECT heads, bookmarks, remotebookmarks, UNIX_TIMESTAMP(timestamp), version FROM history
+        WHERE reponame={reponame} AND workspace={workspace} AND UNIX_TIMESTAMP(timestamp) >= {timestamp} ORDER BY timestamp LIMIT {limit}")
+        sqlite("SELECT heads, bookmarks, remotebookmarks, timestamp, version FROM history
+        WHERE reponame={reponame} AND workspace={workspace} AND timestamp >= {timestamp} ORDER BY timestamp LIMIT {limit}")
     }
 
     read GetHistoryVersion(reponame: String, workspace: String, version: u64) -> (Vec<u8>, Vec<u8>, Vec<u8>, Timestamp, u64){
-        "SELECT heads, bookmarks, remotebookmarks, timestamp, version FROM history
-        WHERE reponame={reponame} AND workspace={workspace} AND version={version}"
+        mysql("SELECT heads, bookmarks, remotebookmarks, UNIX_TIMESTAMP(timestamp), version FROM history
+        WHERE reponame={reponame} AND workspace={workspace} AND version={version}")
+       sqlite( "SELECT heads, bookmarks, remotebookmarks, timestamp, version FROM history
+        WHERE reponame={reponame} AND workspace={workspace} AND version={version}")
     }
 
     write DeleteHistory(reponame: String, workspace: String, keep_days: u64, keep_version: u64, delete_limit: u64) {
@@ -74,8 +79,10 @@ mononoke_queries! {
 
     write InsertHistory(reponame: String, workspace: String, version: u64, heads: Vec<u8>, bookmarks: Vec<u8>, remote_bookmarks: Vec<u8>, timestamp: Timestamp) {
         none,
-        "INSERT INTO history (reponame, workspace, version, heads, bookmarks, remotebookmarks, timestamp)
-        VALUES ({reponame},{workspace},{version},{heads},{bookmarks},{remote_bookmarks}, {timestamp}) "
+        mysql("INSERT INTO history (reponame, workspace, version, heads, bookmarks, remotebookmarks, timestamp
+            VALUES ({reponame},{workspace},{version},{heads},{bookmarks},{remote_bookmarks}, FROM_UNIXTIME({timestamp}))")
+        sqlite("INSERT INTO history (reponame, workspace, version, heads, bookmarks, remotebookmarks, timestamp)
+        VALUES ({reponame},{workspace},{version},{heads},{bookmarks},{remote_bookmarks}, {timestamp}) ")
     }
 
 
