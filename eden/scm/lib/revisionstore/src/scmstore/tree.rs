@@ -168,7 +168,7 @@ impl TreeStore {
             TreeMetadataMode::Never => false,
             TreeMetadataMode::OptIn => fetch_mode.contains(FetchMode::PREFETCH),
         };
-        let fetch_tree_aux_data = self.fetch_tree_aux_data.clone();
+        let fetch_tree_aux_data = self.fetch_tree_aux_data || attrs.aux_data;
         let fetch_parents = attrs.parents || self.prefetch_tree_parents;
 
         let fetch_local = fetch_mode.contains(FetchMode::LOCAL);
@@ -176,6 +176,7 @@ impl TreeStore {
 
         tracing::debug!(
             ?fetch_mode,
+            ?attrs,
             fetch_children_metadata,
             fetch_tree_aux_data,
             fetch_local,
