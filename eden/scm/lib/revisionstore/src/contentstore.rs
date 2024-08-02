@@ -18,7 +18,6 @@ use fs_err as fs;
 use hgstore::strip_hg_file_metadata;
 use hgtime::HgTime;
 use minibytes::Bytes;
-use regex::Regex;
 use tracing::info_span;
 use types::Key;
 
@@ -30,7 +29,6 @@ use crate::datastore::HgIdMutableDeltaStore;
 use crate::datastore::LegacyStore;
 use crate::datastore::Metadata;
 use crate::datastore::RemoteDataStore;
-use crate::datastore::ReportingRemoteDataStore;
 use crate::datastore::StoreResult;
 use crate::indexedlogdatastore::IndexedLogHgIdDataStore;
 use crate::indexedlogdatastore::IndexedLogHgIdDataStoreConfig;
@@ -64,7 +62,7 @@ pub struct ContentStore {
     datastore: UnionHgIdDataStore<Arc<dyn HgIdDataStore>>,
     local_mutabledatastore: Option<Arc<dyn HgIdMutableDeltaStore>>,
     shared_mutabledatastore: Arc<dyn HgIdMutableDeltaStore>,
-    remote_store: Option<Arc<ReportingRemoteDataStore>>,
+    remote_store: Option<Arc<dyn RemoteDataStore>>,
 
     blob_stores: UnionContentDataStore<Arc<dyn ContentDataStore>>,
 }
@@ -528,44 +526,38 @@ impl<'a> ContentStoreBuilder<'a> {
                 (None, None)
             };
 
-        let remote_store: Option<Arc<ReportingRemoteDataStore>> = if let Some(remotestore) =
-            self.remotestore
-        {
-            let shared_store = shared_mutabledatastore.clone();
-            let mut remotestores = UnionHgIdDataStore::new();
+        let remote_store: Option<Arc<dyn RemoteDataStore>> =
+            if let Some(remotestore) = self.remotestore {
+                let shared_store = shared_mutabledatastore.clone();
+                let mut remotestores = UnionHgIdDataStore::new();
 
-            // Add remotestore. For LFS blobs, the LFS pointers will be fetched
-            // at this step and be written to the LFS store.
-            let filenode_remotestore = remotestore.datastore(shared_store.clone());
-            remotestores.add(filenode_remotestore.clone());
+                // Add remotestore. For LFS blobs, the LFS pointers will be fetched
+                // at this step and be written to the LFS store.
+                let filenode_remotestore = remotestore.datastore(shared_store.clone());
+                remotestores.add(filenode_remotestore.clone());
 
-            // Third, the LFS remote store. The previously fetched LFS pointers will be used to
-            // fetch the actual blobs in this store.
-            if enable_lfs {
-                let lfs_remote_store = Arc::new(LfsRemote::new(
-                    shared_lfs_store,
-                    local_lfs_store,
-                    self.config,
-                )?);
-                remotestores.add(lfs_remote_store.datastore(shared_store.clone()));
+                // Third, the LFS remote store. The previously fetched LFS pointers will be used to
+                // fetch the actual blobs in this store.
+                if enable_lfs {
+                    let lfs_remote_store = Arc::new(LfsRemote::new(
+                        shared_lfs_store,
+                        local_lfs_store,
+                        self.config,
+                    )?);
+                    remotestores.add(lfs_remote_store.datastore(shared_store.clone()));
 
-                // Fallback store if the LFS one is dead.
-                let lfs_fallback = LfsFallbackRemoteStore::new(filenode_remotestore);
-                remotestores.add(lfs_fallback);
-            }
+                    // Fallback store if the LFS one is dead.
+                    let lfs_fallback = LfsFallbackRemoteStore::new(filenode_remotestore);
+                    remotestores.add(lfs_fallback);
+                }
 
-            let remotestores: Box<dyn RemoteDataStore> = Box::new(remotestores);
-            let logging_regex = self
-                .config
-                .get_opt::<String>("remotefilelog", "undesiredfileregex")?
-                .map(|s| Regex::new(&s))
-                .transpose()?;
-            let remotestores = Arc::new(ReportingRemoteDataStore::new(remotestores, logging_regex));
-            datastore.add(remotestores.clone());
-            Some(remotestores)
-        } else {
-            None
-        };
+                let remotestores: Box<dyn RemoteDataStore> = Box::new(remotestores);
+                let remotestores = Arc::new(remotestores);
+                datastore.add(remotestores.clone());
+                Some(remotestores)
+            } else {
+                None
+            };
 
         Ok(ContentStore {
             datastore,

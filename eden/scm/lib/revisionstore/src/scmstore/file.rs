@@ -43,7 +43,6 @@ pub use self::types::StoreFile;
 use crate::datastore::HgIdDataStore;
 use crate::datastore::HgIdMutableDeltaStore;
 use crate::datastore::RemoteDataStore;
-use crate::fetch_logger::FetchLogger;
 use crate::indexedlogauxstore::AuxStore;
 use crate::indexedlogdatastore::Entry;
 use crate::indexedlogdatastore::IndexedLogHgIdDataStore;
@@ -87,9 +86,6 @@ pub struct FileStore {
     // Largest set of keys prefetch() accepts before chunking.
     // Configured by scmstore.max-prefetch-size, where 0 means unlimited.
     pub(crate) max_prefetch_size: usize,
-
-    // Record remote fetches
-    pub(crate) fetch_logger: Option<Arc<FetchLogger>>,
 
     // Local-only stores
     pub(crate) indexedlog_local: Option<Arc<IndexedLogHgIdDataStore>>,
@@ -441,7 +437,6 @@ impl FileStore {
             cas_client: None,
 
             contentstore: None,
-            fetch_logger: None,
             metrics: FileStoreMetrics::new(),
             activity_logger: None,
 
@@ -496,7 +491,6 @@ impl FileStore {
             cas_client: None,
 
             contentstore: None,
-            fetch_logger: self.fetch_logger.clone(),
             metrics: self.metrics.clone(),
             activity_logger: self.activity_logger.clone(),
 

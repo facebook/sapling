@@ -33,7 +33,6 @@ use types::Sha256;
 use crate::datastore::HgIdDataStore;
 use crate::datastore::RemoteDataStore;
 use crate::error::ClonableError;
-use crate::fetch_logger::FetchLogger;
 use crate::indexedlogauxstore::AuxStore;
 use crate::indexedlogdatastore::Entry;
 use crate::indexedlogdatastore::IndexedLogHgIdDataStore;
@@ -70,9 +69,6 @@ pub struct FetchState {
     /// LFS pointers we've discovered corresponding to a request Key.
     lfs_pointers: HashMap<Key, (LfsPointersEntry, bool)>,
 
-    /// Tracks remote fetches which match a specific regex
-    fetch_logger: Option<Arc<FetchLogger>>,
-
     lfs_progress: Arc<AggregatingProgressBar>,
 
     /// Track fetch metrics,
@@ -103,7 +99,6 @@ impl FetchState {
 
             lfs_pointers: HashMap::new(),
 
-            fetch_logger: file_store.fetch_logger.clone(),
             extstored_policy: file_store.extstored_policy,
             compute_aux_data: file_store.compute_aux_data,
             lfs_progress: file_store.lfs_progress.clone(),
@@ -548,10 +543,6 @@ impl FetchState {
         let mut errors = 0;
         let mut error: Option<String> = None;
 
-        if let Some(fl) = self.fetch_logger.as_ref() {
-            fl.report_keys(pending.iter())
-        }
-
         // TODO(meyer): Iterators or otherwise clean this up
         let pending_attrs: Vec<_> = pending
             .into_iter()
@@ -741,10 +732,6 @@ impl FetchState {
         }
 
         debug!("Fetching LFS - Count = {count}", count = pending.len());
-
-        if let Some(fl) = self.fetch_logger.as_ref() {
-            fl.report_keys(self.lfs_pointers.keys())
-        }
 
         let prog = self.lfs_progress.create_or_extend(pending.len() as u64);
 

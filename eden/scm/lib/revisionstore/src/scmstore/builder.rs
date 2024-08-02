@@ -18,10 +18,8 @@ use edenapi::Builder;
 use fn_error_context::context;
 use parking_lot::Mutex;
 use progress_model::AggregatingProgressBar;
-use regex::Regex;
 
 use crate::contentstore::check_cache_buster;
-use crate::fetch_logger::FetchLogger;
 use crate::indexedlogauxstore::AuxStore;
 use crate::indexedlogdatastore::IndexedLogHgIdDataStore;
 use crate::indexedlogdatastore::IndexedLogHgIdDataStoreConfig;
@@ -357,14 +355,6 @@ impl<'a> FileStoreBuilder<'a> {
             None
         };
 
-        tracing::trace!(target: "revisionstore::filestore", "processing fetch logger");
-        let logging_regex = self
-            .config
-            .get_opt::<String>("remotefilelog", "undesiredfileregex")?
-            .map(|s| Regex::new(&s))
-            .transpose()?;
-        let fetch_logger = Some(Arc::new(FetchLogger::new(logging_regex)));
-
         let allow_write_lfs_ptrs = self
             .config
             .get_or_default::<bool>("scmstore", "lfsptrwrites")?;
@@ -426,7 +416,6 @@ impl<'a> FileStoreBuilder<'a> {
 
             activity_logger,
             contentstore,
-            fetch_logger,
             metrics: FileStoreMetrics::new(),
 
             aux_cache,

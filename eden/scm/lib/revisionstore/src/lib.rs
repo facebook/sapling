@@ -124,7 +124,6 @@
 mod contentstore;
 mod dataindex;
 mod fanouttable;
-mod fetch_logger;
 mod historyindex;
 mod indexedloghistorystore;
 mod indexedlogutil;
