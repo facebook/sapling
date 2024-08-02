@@ -66,11 +66,12 @@ pub fn run(ctx: ReqCtx<DebugCasOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> 
                     write!(output, "path {path}, node {hgid}, digest {digest:?}, ")?;
 
                     match res {
-                        Ok(contents) => write!(
+                        Ok(Some(contents)) => write!(
                             output,
                             "contents:\n{}\n\n",
                             util::utf8::escape_non_utf8(&contents)
                         )?,
+                        Ok(None) => write!(output, "not found in CAS\n\n",)?,
                         Err(err) => write!(output, "error: {err:?}\n")?,
                     }
                 }

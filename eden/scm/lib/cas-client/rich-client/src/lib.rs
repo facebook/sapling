@@ -92,7 +92,10 @@ fn from_re_digest(d: &TDigest) -> Result<CasDigest> {
 
 #[async_trait::async_trait]
 impl CasClient for RichCasClient {
-    async fn fetch(&self, digests: &[CasDigest]) -> Result<Vec<(CasDigest, Result<Vec<u8>>)>> {
+    async fn fetch(
+        &self,
+        digests: &[CasDigest],
+    ) -> Result<Vec<(CasDigest, Result<Option<Vec<u8>>>)>> {
         let request = DownloadRequest {
             inlined_digests: Some(digests.iter().map(to_re_digest).collect()),
             ..Default::default()
@@ -106,10 +109,10 @@ impl CasClient for RichCasClient {
             .into_iter()
             .map(|blob| {
                 let digest = from_re_digest(&blob.digest)?;
-                if blob.status.code == TCode::OK {
-                    Ok((digest, Ok(blob.blob)))
-                } else {
-                    Ok((
+                match blob.status.code {
+                    TCode::OK => Ok((digest, Ok(Some(blob.blob)))),
+                    TCode::NOT_FOUND => Ok((digest, Ok(None))),
+                    _ => Ok((
                         digest,
                         Err(anyhow!(
                             "bad status (code={}, message={}, group={})",
@@ -117,7 +120,7 @@ impl CasClient for RichCasClient {
                             blob.status.message,
                             blob.status.group
                         )),
-                    ))
+                    )),
                 }
             })
             .collect::<Result<Vec<_>>>()

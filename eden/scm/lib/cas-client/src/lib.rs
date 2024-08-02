@@ -29,5 +29,5 @@ pub trait CasClient: Sync + Send {
     async fn fetch(
         &self,
         digests: &[CasDigest],
-    ) -> anyhow::Result<Vec<(CasDigest, anyhow::Result<Vec<u8>>)>>;
+    ) -> anyhow::Result<Vec<(CasDigest, anyhow::Result<Option<Vec<u8>>>)>>;
 }
