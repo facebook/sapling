@@ -448,8 +448,6 @@ members = [
   "repo_import",
   "repo_metadata_checkpoint",
   "repo_stats_logger",
-  "revset",
-  "revset/revset-test-helper",
   "scs/if",
   "scs/if/clients",
   "scs/if/mocks",
