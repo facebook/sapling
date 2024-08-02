@@ -20,13 +20,14 @@ use crate::FileType;
 use crate::HgId;
 use crate::Id20;
 use crate::RepoPathBuf;
+use crate::Sha1;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct AugmentedFileNode {
     pub file_type: FileType,
     pub filenode: HgId,
     pub content_blake3: Blake3,
-    pub content_sha1: Id20,
+    pub content_sha1: Sha1,
     pub total_size: u64,
     pub file_header_metadata: Option<Bytes>,
 }
@@ -298,7 +299,7 @@ impl AugmentedTree {
                                 ))?
                                 .trim();
 
-                            let sha1 = Id20::from_hex(sha1.as_ref())?;
+                            let sha1 = Sha1::from_hex(sha1.as_ref())?;
 
                             let file_header_metadata = parts
                             .next()
@@ -644,7 +645,7 @@ mod tests {
                     b"4444444444444444444444444444444444444444444444444444444444444444"
                 )
                 .expect("bad blake3"),
-                content_sha1: Id20::from_hex(b"4444444444444444444444444444444444444444")
+                content_sha1: Sha1::from_hex(b"4444444444444444444444444444444444444444")
                     .expect("bad id20"),
                 total_size: 10,
                 file_header_metadata: Some(Bytes::from(

@@ -504,8 +504,8 @@ impl EagerRepo {
                             AugmentedTreeEntry::FileNode(AugmentedFileNode {
                                 file_type,
                                 filenode: hgid,
-                                content_blake3: aux_data.blake3.into_byte_array().into(),
-                                content_sha1: aux_data.sha1.into_byte_array().into(),
+                                content_blake3: aux_data.blake3,
+                                content_sha1: aux_data.sha1,
                                 total_size: aux_data.total_size,
                                 file_header_metadata: if copy_from.is_empty() {
                                     None

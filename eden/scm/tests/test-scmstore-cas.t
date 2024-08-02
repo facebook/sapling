@@ -33,7 +33,7 @@ Can also fetch tree data.
                       file_type: Regular,
                       filenode: HgId("005d992c5dcf32993668f7cede29d296c494a5d9"),
                       content_blake3: Blake3("5ad3ba58a716e5fc04296ac9af7a1420f726b401fdf16d270beb5b6b30bc0cda"),
-                      content_sha1: HgId("6dcd4ce23d88e2ee9568ba546c007c63d9131c1b"),
+                      content_sha1: Sha1("6dcd4ce23d88e2ee9568ba546c007c63d9131c1b"),
                       total_size: 1,
                       file_header_metadata: None,
                   },
