@@ -7,7 +7,7 @@
 
 use crate::Blake3;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct CasDigest {
     pub hash: Blake3,
     pub size: u64,

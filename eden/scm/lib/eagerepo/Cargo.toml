@@ -8,6 +8,7 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.75"
 async-trait = "0.1.71"
+cas-client = { version = "0.1.0", path = "../cas-client" }
 configmodel = { version = "0.1.0", path = "../config/model" }
 dag = { version = "0.1.0", path = "../dag" }
 edenapi_trait = { version = "0.1.0", path = "../edenapi/trait" }

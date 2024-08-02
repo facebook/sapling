@@ -21,6 +21,7 @@ rust_library(
         "fbsource//third-party/rust:sha1",
         "fbsource//third-party/rust:thiserror",
         "fbsource//third-party/rust:tracing",
+        "//eden/scm/lib/cas-client:cas-client",
         "//eden/scm/lib/config/model:configmodel",
         "//eden/scm/lib/dag:dag",
         "//eden/scm/lib/edenapi/trait:edenapi_trait",

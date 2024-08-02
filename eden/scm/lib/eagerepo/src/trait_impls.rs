@@ -7,6 +7,7 @@
 
 //! Implement traits from other crates.
 
+use cas_client::CasClient;
 use hgstore::split_hg_file_metadata;
 use hgstore::strip_hg_file_metadata;
 use storemodel::types;
@@ -16,6 +17,7 @@ use storemodel::InsertOpts;
 use storemodel::KeyStore;
 use storemodel::SerializationFormat;
 use storemodel::TreeStore;
+use types::CasDigest;
 use types::HgId;
 use types::Key;
 use types::RepoPath;
@@ -124,3 +126,23 @@ impl FileStore for EagerRepoStore {
 }
 
 impl TreeStore for EagerRepoStore {}
+
+#[async_trait::async_trait]
+impl CasClient for EagerRepoStore {
+    async fn fetch(
+        &self,
+        digests: &[CasDigest],
+    ) -> anyhow::Result<Vec<(CasDigest, anyhow::Result<Option<Vec<u8>>>)>> {
+        Ok(digests
+            .iter()
+            .map(|digest| {
+                (
+                    *digest,
+                    self.get_cas_blob(*digest)
+                        .map_err(Into::into)
+                        .map(|data| data.map(|data| data.into_vec())),
+                )
+            })
+            .collect())
+    }
+}

@@ -25,6 +25,7 @@ use dag::Vertex;
 use dag::VertexListWithOptions;
 use futures::lock::Mutex;
 use futures::lock::MutexGuard;
+use hgstore::split_hg_file_metadata;
 use manifest_tree::FileType;
 use manifest_tree::Flag;
 use manifest_tree::TreeEntry;
@@ -162,6 +163,34 @@ impl EagerRepoStore {
         match self.get_sha1_blob(id)? {
             None => Ok(None),
             Some(data) => Ok(Some(data.slice(HG_SHA1_PREFIX..))),
+        }
+    }
+
+    /// Read CAS data for digest.
+    pub fn get_cas_blob(&self, digest: CasDigest) -> Result<Option<Bytes>> {
+        let Some(pointer_data) = self.get_sha1_blob(digest_id(digest))? else {
+            return Ok(None);
+        };
+
+        match CasPointer::deserialize(&pointer_data)? {
+            CasPointer::Tree(id) => {
+                // We store data for AugmentedTreeWithDigest, but we want to return data for AugmentedTree.
+                // Strip off the first line (which is the digest).
+                self.get_sha1_blob(augmented_id(id)).and_then(|blob| {
+                    blob.map(|blob| {
+                        if let Some(idx) = blob.as_ref().iter().position(|&b| b == b'\n') {
+                            Ok(blob.slice(idx + 1..))
+                        } else {
+                            Err(anyhow!("augmented tree data has no newline?").into())
+                        }
+                    })
+                    .transpose()
+                })
+            }
+            CasPointer::File(id) => match self.get_content(id)? {
+                Some(data) => Ok(Some(split_hg_file_metadata(&data)?.0)),
+                None => Ok(None),
+            },
         }
     }
 
