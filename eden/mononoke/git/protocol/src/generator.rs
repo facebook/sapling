@@ -1113,10 +1113,17 @@ fn packfile_stream_from_changesets<'a>(
             }
         }
 
-        while let Poll::Ready(Some(entries)) = delta_manifest_entries_futures.poll_next_unpin(cx) {
-            let entries = entries?;
-            for entry in entries {
-                delta_manifest_entries_buffer.push_back(entry);
+        // Ensure that we don't poll `delta_manifest_entries_futures` if it's empty. Technically this
+        // might not be necessary, but streams are not supposed to be polled again if they ever return
+        // Poll::Ready(None) so let's be safe.
+        if !delta_manifest_entries_futures.is_empty() {
+            while let Poll::Ready(Some(entries)) =
+                delta_manifest_entries_futures.poll_next_unpin(cx)
+            {
+                let entries = entries?;
+                for entry in entries {
+                    delta_manifest_entries_buffer.push_back(entry);
+                }
             }
         }
 
