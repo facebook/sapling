@@ -7,7 +7,6 @@ oncall("mononoke")
 mononoke_fbpkg(
     name = "mononoke.server",
     path_actions = {
-        "config": "fbcode//eden/mononoke/facebook/config:config",
         "mononoke": "fbcode//eden/mononoke:mononoke",
     },
 )

@@ -26,7 +26,6 @@ def mononoke_fbpkg(
         )
 
     path_actions = dict(path_actions)
-    path_actions["config"] = "//eden/mononoke/facebook/config:config"
 
     return fbpkg.builder(
         name = name,
