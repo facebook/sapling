@@ -278,7 +278,6 @@ where
 
         let is_chunking = fetcher_params.is_some();
         let mut run_start = Timestamp::now();
-        let mut chunk_smaller_than_fetch = None;
 
         // Get the chunk stream and whether the bounds it covers are contiguous
         let (contiguous_bounds, mut best_bounds, chunk_stream) = if let Some((
@@ -286,9 +285,6 @@ where
             heads_fetcher,
         )) = &fetcher_params
         {
-            if chunking.chunk_size < MAX_FETCH_STEP as usize {
-                chunk_smaller_than_fetch = Some(chunking.direction);
-            }
             let (mut lower, mut upper) = heads_fetcher.get_repo_bounds(&ctx).await?;
             if let Some(lower_override) = chunking.repo_lower_bound_override {
                 lower = lower_override;
@@ -412,28 +408,10 @@ where
             let mut chunk_upper: u64 = 0;
             let chunk_members: HashSet<ChangesetId> = chunk_members
                 .into_iter()
-                .map(|((cs_id, id), (fetch_low, fetch_upper))| {
-                    if let Some(direction) = chunk_smaller_than_fetch {
-                        // Adjust the bounds so it doesn't exceed previous chunk
-                        if direction == Direction::NewestFirst {
-                            chunk_low = min(chunk_low, id);
-                            chunk_upper = max(chunk_upper, fetch_upper);
-                            if let Some(last_chunk_low) = last_chunk_low {
-                                chunk_upper = min(last_chunk_low, chunk_upper)
-                            }
-                        } else {
-                            chunk_low = min(chunk_low, fetch_low);
-                            if let Some(last_chunk_upper) = last_chunk_upper {
-                                chunk_low = max(last_chunk_upper, chunk_low)
-                            }
-                            // Top of range is exclusive, so add one to the found id
-                            chunk_upper = max(chunk_upper, id + 1);
-                        }
-                    } else {
-                        // no need to adjust
-                        chunk_low = min(chunk_low, fetch_low);
-                        chunk_upper = max(chunk_upper, fetch_upper);
-                    }
+                .map(|((cs_id, id), (_fetch_low, _fetch_upper))| {
+                    chunk_low = min(chunk_low, id);
+                    chunk_upper = max(chunk_upper, id + 1);
+
                     cs_id
                 })
                 .collect();
