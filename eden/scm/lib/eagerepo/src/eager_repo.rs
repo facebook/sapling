@@ -41,6 +41,7 @@ use storemodel::types::AugmentedFileNode;
 use storemodel::types::AugmentedTreeChildEntry;
 use storemodel::types::AugmentedTreeEntry;
 use storemodel::types::AugmentedTreeEntryWithDigest;
+use storemodel::types::CasDigest;
 use storemodel::types::HgId;
 use storemodel::types::Parents;
 use storemodel::types::RepoPathBuf;
@@ -426,14 +427,14 @@ impl EagerRepo {
                             if subtree_bytes.is_none() {
                                 return Ok(None); // Can't calculate because subtree's data is missing.
                             }
-                            let (augmented_manifest_id, augmented_manifest_size) =
+                            let CasDigest { hash, size } =
                                 AugmentedTreeEntryWithDigest::try_deserialize_digest(
                                     &mut std::io::Cursor::new(subtree_bytes.unwrap()),
                                 )?;
                             AugmentedTreeChildEntry::DirectoryNode(AugmentedDirectoryNode {
                                 treenode: hgid,
-                                augmented_manifest_id,
-                                augmented_manifest_size,
+                                augmented_manifest_id: hash,
+                                augmented_manifest_size: size,
                             })
                         }
                         Flag::File(file_type) => {
@@ -473,8 +474,8 @@ impl EagerRepo {
                 let digest = aug_tree.compute_content_addressed_digest()?;
 
                 let aug_tree_with_digest = AugmentedTreeEntryWithDigest {
-                    augmented_manifest_id: digest.0,
-                    augmented_manifest_size: digest.1,
+                    augmented_manifest_id: digest.hash,
+                    augmented_manifest_size: digest.size,
                     augmented_tree: aug_tree,
                 };
 

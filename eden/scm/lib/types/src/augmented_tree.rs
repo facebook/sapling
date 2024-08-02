@@ -15,6 +15,7 @@ use blake3::Hasher as Blake3Hasher;
 use minibytes::Bytes;
 
 use crate::Blake3;
+use crate::CasDigest;
 use crate::FileType;
 use crate::HgId;
 use crate::Id20;
@@ -339,7 +340,7 @@ impl AugmentedTreeEntry {
         })
     }
 
-    pub fn compute_content_addressed_digest(&self) -> anyhow::Result<(Blake3, u64)> {
+    pub fn compute_content_addressed_digest(&self) -> anyhow::Result<CasDigest> {
         let mut calculator = AugmentedTreeEntryDigestCalculator::new();
         self.try_serialize(&mut calculator)?;
         calculator.finalize()
@@ -363,9 +364,12 @@ impl AugmentedTreeEntryDigestCalculator {
         }
     }
 
-    fn finalize(self) -> anyhow::Result<(Blake3, u64)> {
+    fn finalize(self) -> anyhow::Result<CasDigest> {
         let hash = Blake3::from_slice(self.hasher.finalize().as_bytes())?;
-        Ok((hash, self.size))
+        Ok(CasDigest {
+            hash,
+            size: self.size,
+        })
     }
 }
 
@@ -407,18 +411,17 @@ impl AugmentedTreeEntryWithDigest {
     }
 
     pub fn try_deserialize(mut reader: impl BufRead) -> anyhow::Result<Self, Error> {
-        let (augmented_manifest_id, augmented_manifest_size) =
-            Self::try_deserialize_digest(&mut reader)?;
+        let CasDigest { hash, size } = Self::try_deserialize_digest(&mut reader)?;
         let augmented_tree = AugmentedTreeEntry::try_deserialize(reader)?;
         anyhow::Ok(Self {
-            augmented_manifest_id,
+            augmented_manifest_id: hash,
             augmented_tree,
-            augmented_manifest_size,
+            augmented_manifest_size: size,
         })
     }
 
     /// Deserializes just the header of an AugmentedTreeEntryWithDigest.
-    pub fn try_deserialize_digest<R: BufRead>(reader: &mut R) -> anyhow::Result<(Blake3, u64)> {
+    pub fn try_deserialize_digest<R: BufRead>(reader: &mut R) -> anyhow::Result<CasDigest> {
         let mut line = String::new();
         reader.read_line(&mut line)?;
         let mut header = line.split(' ');
@@ -434,7 +437,10 @@ impl AugmentedTreeEntryWithDigest {
             .ok_or(anyhow!("augmented tree: missing augmented_manifest_size"))?
             .trim()
             .parse::<u64>()?;
-        Ok((augmented_manifest_id, augmented_manifest_size))
+        Ok(CasDigest {
+            hash: augmented_manifest_id,
+            size: augmented_manifest_size,
+        })
     }
 }
 
@@ -665,7 +671,7 @@ mod tests {
         ));
         let augmented_tree_entry =
             AugmentedTreeEntry::try_deserialize(&mut reader).expect("parsing failed");
-        let (hash, size) = augmented_tree_entry
+        let CasDigest { hash, size } = augmented_tree_entry
             .compute_content_addressed_digest()
             .expect("digest calculation failed");
         assert_eq!(
@@ -692,7 +698,7 @@ mod tests {
             AugmentedTreeEntry::try_deserialize(&mut reader).expect("parsing failed");
 
         // Calculate digest
-        let (hash, size) = augmented_tree_entry
+        let CasDigest { hash, size } = augmented_tree_entry
             .compute_content_addressed_digest()
             .expect("digest calculation failed");
 
