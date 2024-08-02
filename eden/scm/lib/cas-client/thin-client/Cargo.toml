@@ -12,4 +12,5 @@ cas-client = { version = "0.1.0", path = ".." }
 configmodel = { version = "0.1.0", path = "../../config/model" }
 factory = { version = "0.1.0", path = "../../util/factory" }
 fbinit = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+tracing = { version = "0.1.40", features = ["attributes", "valuable"] }
 types = { version = "0.1.0", path = "../../types" }

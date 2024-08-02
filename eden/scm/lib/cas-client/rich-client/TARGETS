@@ -8,6 +8,7 @@ rust_library(
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:async-trait",
+        "fbsource//third-party/rust:tracing",
         "//common/rust/shed/fbinit:fbinit",
         "//eden/scm/lib/cas-client:cas-client",
         "//eden/scm/lib/config/model:configmodel",

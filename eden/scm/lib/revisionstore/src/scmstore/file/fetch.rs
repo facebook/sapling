@@ -357,11 +357,17 @@ impl FetchState {
                 };
                 match res {
                     Ok(Some(aux)) => {
+                        if have_cas {
+                            tracing::trace!(target: "cas", ?key, ?aux, "found file aux data");
+                        }
                         self.metrics.aux.store(loc).hit(1);
                         found += 1;
                         return Some(aux.into());
                     }
                     Ok(None) => {
+                        if have_cas {
+                            tracing::trace!(target: "cas", ?key, "no file aux data");
+                        }
                         self.metrics.aux.store(loc).miss(1);
                     }
                     Err(err) => {
@@ -736,12 +742,22 @@ impl FetchState {
                 // TODO: fetch aux data from edenapi on-demand?
 
                 let store_file = self.common.pending.get(&key)?;
-                let aux_data = store_file.aux_data.as_ref()?;
+
+                let aux_data = match store_file.aux_data.as_ref() {
+                    Some(aux_data) => {
+                        tracing::trace!(target: "cas", ?key, ?aux_data, "found aux data for file digest");
+                        aux_data
+                    }
+                    None => {
+                        tracing::trace!(target: "cas", ?key, "no aux data for file digest");
+                        return None;
+                    }
+                };
 
                 if self.common.request_attrs.content_header && !store_file.attrs().content_header {
                     // If the caller wants hg content header but the aux data didn't have it,
                     // we won't find it in CAS, so don't bother fetching content from CAS.
-                    tracing::trace!(?key, "no content header in AUX data - skipping CAS");
+                    tracing::trace!(target: "cas", ?key, "no content header in AUX data");
                     None
                 } else {
                     Some((
@@ -786,14 +802,17 @@ impl FetchState {
                         match data {
                             Err(err) => {
                                 tracing::error!(?err, ?key, ?digest, "CAS fetch error");
+                                tracing::error!(target: "cas", ?err, ?key, ?digest, "file fetch error");
                                 error += 1;
                                 self.errors.keyed_error(key, err);
                             }
                             Ok(None) => {
+                                tracing::error!(target: "cas", ?key, ?digest, "file not in cas");
                                 // miss
                             }
                             Ok(Some(data)) => {
                                 found += 1;
+                                tracing::error!(target: "cas", ?key, ?digest, "file found in cas");
                                 self.found_attributes(
                                     key,
                                     StoreFile {

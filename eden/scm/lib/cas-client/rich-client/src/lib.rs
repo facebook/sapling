@@ -34,9 +34,11 @@ pub fn init() {
     fn construct(config: &dyn Config) -> Result<Option<Arc<dyn CasClient>>> {
         // Kill switch in case something unexpected happens during construction of client.
         if config.get_or_default("cas", "disable")? {
+            tracing::warn!(target: "cas", "disabled (cas.disable=true)");
             return Ok(None);
         }
 
+        tracing::debug!(target: "cas", "creating rich client");
         RichCasClient::from_config(config).map(|c| Some(Arc::new(c) as Arc<dyn CasClient>))
     }
     factory::register_constructor("rich-client", construct);
@@ -101,6 +103,8 @@ impl CasClient for RichCasClient {
         &self,
         digests: &[CasDigest],
     ) -> Result<Vec<(CasDigest, Result<Option<Vec<u8>>>)>> {
+        tracing::debug!(target: "cas", "rich client fetching {} digests", digests.len());
+
         let request = DownloadRequest {
             inlined_digests: Some(digests.iter().map(to_re_digest).collect()),
             ..Default::default()

@@ -265,6 +265,9 @@ impl TreeStore {
                     for key in pending.into_iter() {
                         if let Some(entry) = tree_aux_store.get(&key.hgid)? {
                             tracing::trace!(?key, ?entry, "found tree aux entry in cache");
+                            if cas_client.is_some() {
+                                tracing::trace!(target: "cas", ?key, ?entry, "found tree aux data");
+                            }
                             state.common.found(
                                 key.clone(),
                                 StoreTree {

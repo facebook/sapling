@@ -186,7 +186,17 @@ impl FetchState {
             .common
             .pending(TreeAttributes::CONTENT | TreeAttributes::PARENTS, false)
             .filter_map(|(key, store_tree)| {
-                let aux_data = store_tree.aux_data.as_ref()?;
+                let aux_data = match store_tree.aux_data.as_ref() {
+                    Some(aux_data) => {
+                        tracing::trace!(target: "cas", ?key, ?aux_data, "found aux data for tree digest");
+                        aux_data
+                    }
+                    None => {
+                        tracing::trace!(target: "cas", ?key, "no aux data for tree digest");
+                        return None;
+                    }
+                };
+
                 Some((
                     CasDigest {
                         hash: aux_data.augmented_manifest_id,
@@ -228,15 +238,18 @@ impl FetchState {
                         match data {
                             Err(err) => {
                                 tracing::error!(?err, ?key, ?digest, "CAS fetch error");
+                                tracing::error!(target: "cas", ?err, ?key, ?digest, "tree fetch error");
                                 error += 1;
                                 self.errors.keyed_error(key, err);
                             }
                             Ok(None) => {
+                                tracing::error!(target: "cas", ?key, ?digest, "tree not in cas");
                                 // miss
                             }
                             Ok(Some(data)) => match AugmentedTree::try_deserialize(&*data) {
                                 Ok(tree) => {
                                     found += 1;
+                                    tracing::error!(target: "cas", ?key, ?digest, "tree found in cas");
                                     self.common.found(
                                         key,
                                         StoreTree {

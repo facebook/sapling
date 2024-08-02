@@ -12,11 +12,16 @@ pub use types::CasDigest;
 
 pub fn new(config: Arc<dyn Config>) -> anyhow::Result<Option<Arc<dyn CasClient>>> {
     match factory::call_constructor::<_, Arc<dyn CasClient>>(&config as &dyn Config) {
-        Ok(client) => Ok(Some(client)),
+        Ok(client) => {
+            tracing::debug!(target: "cas", "created client");
+            Ok(Some(client))
+        }
         Err(err) => {
             if factory::is_error_from_constructor(&err) {
+                tracing::debug!(target: "cas", ?err, "error creating client");
                 Err(err)
             } else {
+                tracing::debug!(target: "cas", "no constructors produced a client");
                 Ok(None)
             }
         }

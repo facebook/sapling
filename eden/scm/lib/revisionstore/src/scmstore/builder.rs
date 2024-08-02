@@ -390,6 +390,7 @@ impl<'a> FileStoreBuilder<'a> {
         let cas_client = if self.config.get_or_default("scmstore", "fetch-from-cas")? {
             self.cas_client
         } else {
+            tracing::debug!(target: "cas", "scmstore disabled (scmstore.fetch-from-cas=false)");
             None
         };
 
@@ -744,8 +745,18 @@ impl<'a> TreeStoreBuilder<'a> {
         }
 
         let cas_client = if self.config.get_or_default("scmstore", "fetch-from-cas")? {
+            if self.cas_client.is_some() {
+                if !fetch_tree_aux_data {
+                    tracing::warn!(target: "cas", "augmented tree fetching disabled (scmstore.fetch-tree-aux-data=false)");
+                }
+                if tree_aux_store.is_none() {
+                    tracing::warn!(target: "cas", "tree aux store disabled (scmstore.store-tree-aux-data=false)");
+                }
+            }
+
             self.cas_client
         } else {
+            tracing::debug!(target: "cas", "scmstore disabled (scmstore.fetch-from-cas=false)");
             None
         };
 
