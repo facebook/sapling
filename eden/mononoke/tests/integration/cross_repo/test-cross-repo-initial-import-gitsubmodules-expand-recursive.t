@@ -870,38 +870,47 @@ TODO(T174902563): Fix deletion of submodules in EXPAND submodule action.
   Deriving all enabled types except hgchangesets and filenodes
   Success!
 
--- Create a commit in repo_b to update its repo_a pointer from the large repo
+
+-- Create a commit in repo_b to update its submodule pointer from the large repo
 -- EXPECT: FAIL because backsyncing submodule changes isn't supported until T179530927
-  $ cd $GIT_REPO_B
-  $ echo "new file abc" > abc
-  $ git add .
-  $ git commit -q -am "Add abc"
-  $ cd $TESTTMP
-
--- Import this commit to repo_b mononoke mirror
-  $ REPOID="$REPO_B_ID" with_stripped_logs gitimport "$GIT_REPO_B" --bypass-derived-data-backfilling  \
-  >   --bypass-readonly --generate-bookmarks full-repo > "$TESTTMP/gitimport_output"
-
-  $ GIT_REPO_B_HEAD=$(rg ".*Ref: \"refs/heads/master\": Some\(ChangesetId\(Blake2\((\w+).+" -or '$1' "$TESTTMP/gitimport_output")
-  $ echo "GIT_REPO_B_HEAD: $GIT_REPO_B_HEAD"
-  GIT_REPO_B_HEAD: 3cd7a66e604714b2b96af41e9c595be692f1f5f0713af3f7b2dc3426b05407bd
-
-  $ REPO_B_GIT_HASH=$(mononoke_newadmin convert --repo-id $REPO_B_ID -f bonsai -t git $GIT_REPO_B_HEAD)
-  $ echo "REPO_B_GIT_HASH: $REPO_B_GIT_HASH"
-  REPO_B_GIT_HASH: e412b2106ae18eab108f1f8d7ed6e4527d0296cc
-
-  $ cd "$TESTTMP/$LARGE_REPO_NAME" || exit
-  $ echo "new file abc" > smallrepofolder1/git-repo-b/abc
-  $ printf "%s" $REPO_B_GIT_HASH > smallrepofolder1/.x-repo-submodule-git-repo-b
-  $ hg commit -Aq -m "Valid repo_b submodule version bump from large repo" 
-  $ REPONAME="$LARGE_REPO_NAME" hgedenapi cloud backup -q
+  $ update_repo_b_submodule_pointer_in_large_repo
+  
+  
+  NOTE: Create a commit in repo_b
+  REPO_B_BONSAI: 9a7eca2ee4e942d3e2cbbe854063f7a7de9c41ae64585c9929479d2d4e185bef
+  REPO_B_GIT_COMMIT_HASH: 63cddb76ed45b54c55223cba2ece9edd99ffed0e
 
   $ backsync_get_info_and_derive_data
   Processing commit: Valid repo_b submodule version bump from large repo
-  Commit hash: 4c97f3a7133c630c6c97e495767e3c0afc72f12c
+  Commit hash: 82ddf52981e5d88e0ba9c5c40a4119c0b3e79791
   *error: Changeset can't be synced from large to small repo because it modifies the expansion of submodules* (glob)
   [255]
 
+
+-- Update a recursive submodule pointer from the large repo
+-- EXPECT: FAIL because backsyncing submodule changes isn't supported until T179530927
+  $ update_repo_c_submodule_pointer_in_large_repo
+  
+  
+  NOTE: Create a commit in repo_c and update its pointer in repo_b
+  GIT_REPO_C_HEAD: 54f77f0efc9afcd04c3762a622f17ace83582151506f44d9eb0fcdd4b0e36bfa
+  REPO_C_GIT_HASH: 5b447718cdc49d6289690f68b11f6b8a3002a396
+  
+  
+  NOTE: Update repo_c submodule in git repo_b
+  From $TESTTMP/git-repo-c
+     810d4f5..5b44771  master     -> origin/master
+  Submodule path 'git-repo-c': checked out '5b447718cdc49d6289690f68b11f6b8a3002a396'
+  GIT_REPO_B_HEAD: 065ee332e835cab7f781b87decb8c07bd5bb7fe129fc3aed47f4fa07697b65de
+  REPO_B_GIT_COMMIT_HASH: 538924163436e89a3aa25a686075afb7182ec9c1
+  Updating repo_b/repo_c submodule pointer to: 5b447718cdc49d6289690f68b11f6b8a3002a396
+  Updating repo_b submodule pointer to: 538924163436e89a3aa25a686075afb7182ec9c1
+
+  $ backsync_get_info_and_derive_data
+  Processing commit: Valid repo_b and repo_c recursive submodule version bump from large repo
+  Commit hash: 30c8d217612887e4fbdc67a3a99bfafbd30ff0c7
+  *error: Changeset can't be synced from large to small repo because it modifies the expansion of submodules* (glob)
+  [255]
 
 -- -----------------------------------------------------------------------------
 -- Test backsyncing changes that affect submodule expansions, which is 
@@ -919,7 +928,7 @@ TODO(T179530927): properly support backsyncing with submodule expansion
   adding smallrepofolder1/git-repo-b/foo
   $ backsync_get_info_and_derive_data
   Processing commit: Changing submodule expansion in large repo
-  Commit hash: bab85a315b3cbb019987ee8a64218fbe1b74ebd1
+  Commit hash: c7d080ee5c709e8e2d1b9b4b5651794c32562a57
   *error: Changeset can't be synced from large to small repo because it modifies the expansion of submodules* (glob)
   [255]
  
@@ -930,7 +939,7 @@ TODO(T179530927): properly support backsyncing with submodule expansion
   $ hgmn commit -A -m "Changing recursive submodule expansion in large repo" 
   $ backsync_get_info_and_derive_data
   Processing commit: Changing recursive submodule expansion in large repo
-  Commit hash: bd0497471542b74de3e5a162cf999ded980e19cc
+  Commit hash: 30007acc22ee48943b10987aa077baa58604b16e
   *error: Changeset can't be synced from large to small repo because it modifies the expansion of submodules* (glob)
   [255]
 
@@ -940,7 +949,7 @@ TODO(T179530927): properly support backsyncing with submodule expansion
   $ hgmn commit -q -A -m "Deleting repo_b submodule metadata file" 
   $ backsync_get_info_and_derive_data
   Processing commit: Deleting repo_b submodule metadata file
-  Commit hash: 7ad4d01593f806973d6abf279461f272ae350d3c
+  Commit hash: 6ca06fcdbad10ff68045a6a4a7943d615572da68
   *error: Changeset can't be synced from large to small repo because it modifies the expansion of submodules* (glob)
   [255]
 
@@ -951,7 +960,7 @@ TODO(T179530927): properly support backsyncing with submodule expansion
   $ hgmn commit -q -A -m "Deleting repo_c recursive submodule metadata file" 
   $ backsync_get_info_and_derive_data
   Processing commit: Deleting repo_c recursive submodule metadata file
-  Commit hash: 576aae4aa892b2fe82018f506dd9eee3ecd27540
+  Commit hash: f23fdfefba449bb97551d0d0f62dfa98b91b147c
   *error: Changeset can't be synced from large to small repo because it modifies the expansion of submodules* (glob)
   [255]
 
@@ -962,7 +971,7 @@ TODO(T179530927): properly support backsyncing with submodule expansion
   $ hgmn commit -q -A -m "Change repo_b submodule metadata file" 
   $ backsync_get_info_and_derive_data
   Processing commit: Change repo_b submodule metadata file
-  Commit hash: e6661be3910766204de55e775e4b0d67a3ff6d62
+  Commit hash: 712a7c68e6886f43849ea5c483af483cd8971be7
   *error: Changeset can't be synced from large to small repo because it modifies the expansion of submodules* (glob)
   [255]
 
@@ -973,7 +982,7 @@ TODO(T179530927): properly support backsyncing with submodule expansion
   $ hgmn commit -q -A -m "Change repo_c recursive submodule metadata file" 
   $ backsync_get_info_and_derive_data
   Processing commit: Change repo_c recursive submodule metadata file
-  Commit hash: 27bf37b11ac5b549e88b8c4a21f7014c9de29c57
+  Commit hash: b3c215dcc5e6b3e6be3ad2d1a86a49a8c4165a10
   *error: Changeset can't be synced from large to small repo because it modifies the expansion of submodules* (glob)
   [255]
 
@@ -985,7 +994,7 @@ TODO(T179530927): properly support backsyncing with submodule expansion
   $ hgmn commit -q -A -m "Delete repo_b submodule expansion" 
   $ backsync_get_info_and_derive_data
   Processing commit: Delete repo_b submodule expansion
-  Commit hash: 6be84c52e8ab09faaac5e988c9e03b6069fbf889
+  Commit hash: 8d9b3649d3f75309086117613cf45b7fc5f7b6a3
   *error: Changeset can't be synced from large to small repo because it modifies the expansion of submodules* (glob)
   [255]
 
@@ -995,30 +1004,32 @@ TODO(T179530927): properly support backsyncing with submodule expansion
   $ hgmn commit -q -A -m "Delete repo_c recursive submodule expansion" 
   $ backsync_get_info_and_derive_data
   Processing commit: Delete repo_c recursive submodule expansion
-  Commit hash: 8b020ac644b4756ab3bba56b7a26ff0b64b81407
+  Commit hash: 8ca04fb63d0842c5e909ab0e443edd78770ec92e
   *error: Changeset can't be synced from large to small repo because it modifies the expansion of submodules* (glob)
   [255]
 
 
 
   $ hg_log -r "sort(all(), desc)"
-  @  8b020ac644b4 Delete repo_c recursive submodule expansion
+  @  8ca04fb63d08 Delete repo_c recursive submodule expansion
   │
-  │ o  6be84c52e8ab Delete repo_b submodule expansion
+  │ o  8d9b3649d3f7 Delete repo_b submodule expansion
   ├─╯
-  │ o  27bf37b11ac5 Change repo_c recursive submodule metadata file
+  │ o  b3c215dcc5e6 Change repo_c recursive submodule metadata file
   ├─╯
-  │ o  e6661be39107 Change repo_b submodule metadata file
+  │ o  712a7c68e688 Change repo_b submodule metadata file
   ├─╯
-  │ o  576aae4aa892 Deleting repo_c recursive submodule metadata file
+  │ o  f23fdfefba44 Deleting repo_c recursive submodule metadata file
   ├─╯
-  │ o  7ad4d01593f8 Deleting repo_b submodule metadata file
+  │ o  6ca06fcdbad1 Deleting repo_b submodule metadata file
   ├─╯
-  │ o  bd0497471542 Changing recursive submodule expansion in large repo
+  │ o  30007acc22ee Changing recursive submodule expansion in large repo
   ├─╯
-  │ o  bab85a315b3c Changing submodule expansion in large repo
+  │ o  c7d080ee5c70 Changing submodule expansion in large repo
   ├─╯
-  o  4c97f3a7133c Valid repo_b submodule version bump from large repo
+  o  30c8d2176128 Valid repo_b and repo_c recursive submodule version bump from large repo
+  │
+  o  82ddf52981e5 Valid repo_b submodule version bump from large repo
   │
   o  35e70dc7f37c Changing small repo in large repo (not submodule)
   │

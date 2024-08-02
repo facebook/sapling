@@ -260,3 +260,117 @@ function make_changes_to_git_repos_a_b_c {
 function print_section() {
     printf "\n\nNOTE: %s\n" "$1"
 }
+
+# Create a commit in repo_b that can be used to update its submodule pointer
+# from the large repo
+function create_repo_b_commits_for_submodule_pointer_update {
+  export REPO_B_GIT_COMMIT_HASH;
+
+  print_section "Create a commit in repo_b"
+  #  Create a commit in repo_b to update its repo_a pointer from the large repo
+  cd "$GIT_REPO_B" || exit
+  echo "new file abc" > abc
+  git add .
+  git commit -q -am "Add file to repo_b"
+
+  cd "$TESTTMP" || exit
+
+  # Import this commit to repo_b mononoke mirror
+  REPOID="$REPO_B_ID" with_stripped_logs gitimport "$GIT_REPO_B" --bypass-derived-data-backfilling  \
+    --bypass-readonly --generate-bookmarks full-repo > "$TESTTMP/gitimport_output"
+
+  REPO_B_BONSAI=$(rg ".*Ref: \"refs/heads/master\": Some\(ChangesetId\(Blake2\((\w+).+" -or '$1' "$TESTTMP/gitimport_output")
+  echo "REPO_B_BONSAI: $REPO_B_BONSAI"
+  # GIT_REPO_B_HEAD: 3cd7a66e604714b2b96af41e9c595be692f1f5f0713af3f7b2dc3426b05407bd
+
+  REPO_B_GIT_COMMIT_HASH=$(mononoke_newadmin convert --repo-id "$REPO_B_ID" -f bonsai -t git "$REPO_B_BONSAI")
+  echo "REPO_B_GIT_COMMIT_HASH: $REPO_B_GIT_COMMIT_HASH"
+  # REPO_B_GIT_HASH: e412b2106ae18eab108f1f8d7ed6e4527d0296cc
+}
+
+# Create a commit in repo_b and update its submodule pointer from the large repo
+function update_repo_b_submodule_pointer_in_large_repo {
+  create_repo_b_commits_for_submodule_pointer_update;
+
+  cd "$TESTTMP/$LARGE_REPO_NAME" || exit
+  echo "new file abc" > smallrepofolder1/git-repo-b/abc
+  printf "%s" "$REPO_B_GIT_COMMIT_HASH" > smallrepofolder1/.x-repo-submodule-git-repo-b
+  hg commit -Aq -m "Valid repo_b submodule version bump from large repo"
+  REPONAME="$LARGE_REPO_NAME" hgedenapi cloud backup -q
+}
+
+
+# Create a commit in repo_c that can be used to update its submodule pointer
+# from the large repo
+function create_repo_c_commit {
+  export REPO_C_GIT_HASH;
+
+  #  Create a commit in repo_b to update its repo_a pointer from the large repo
+  cd "$GIT_REPO_C" || exit
+  echo "new file in repo_c" > file_in_c
+  git add .
+  git commit -q -am "Add file in repo_c"
+  cd "$TESTTMP" || exit
+
+  # Import this commit to repo_c mononoke mirror
+  REPOID="$REPO_C_ID" with_stripped_logs gitimport "$GIT_REPO_C" --bypass-derived-data-backfilling  \
+    --bypass-readonly --generate-bookmarks full-repo > "$TESTTMP/gitimport_repo_c_output"
+
+  GIT_REPO_C_HEAD=$(rg ".*Ref: \"refs/heads/master\": Some\(ChangesetId\(Blake2\((\w+).+" -or '$1' "$TESTTMP/gitimport_repo_c_output")
+  echo "GIT_REPO_C_HEAD: $GIT_REPO_C_HEAD"
+
+  REPO_C_GIT_HASH=$(mononoke_newadmin convert --repo-id "$REPO_C_ID" -f bonsai -t git "$GIT_REPO_C_HEAD")
+  echo "REPO_C_GIT_HASH: $REPO_C_GIT_HASH"
+}
+
+# Create commits in repo_c and repo_b that can be used to update their submodule
+# pointers from the large repo
+function create_repo_c_and_repo_b_commits_for_submodule_pointer_update {
+  export REPO_B_GIT_COMMIT_HASH;
+  export REPO_C_SUBMODULE_GIT_HASH;
+
+
+  print_section "Create a commit in repo_c and update its pointer in repo_b"
+  create_repo_c_commit;
+  REPO_C_SUBMODULE_GIT_HASH="$REPO_C_GIT_HASH";
+
+  print_section "Update repo_c submodule in git repo_b"
+  cd "$GIT_REPO_B" || exit
+  git submodule update --remote
+  git add .
+  git commit -q -am "Update submodule C in repo B"
+
+  # Import this commit to repo_b mononoke mirror
+  REPOID="$REPO_B_ID" with_stripped_logs gitimport "$GIT_REPO_B" --bypass-derived-data-backfilling  \
+    --bypass-readonly --generate-bookmarks full-repo > "$TESTTMP/gitimport_output"
+
+  GIT_REPO_B_HEAD=$(rg ".*Ref: \"refs/heads/master\": Some\(ChangesetId\(Blake2\((\w+).+" -or '$1' "$TESTTMP/gitimport_output")
+  echo "GIT_REPO_B_HEAD: $GIT_REPO_B_HEAD"
+
+  REPO_B_GIT_COMMIT_HASH=$(mononoke_newadmin convert --repo-id "$REPO_B_ID" -f bonsai -t git "$GIT_REPO_B_HEAD")
+  echo "REPO_B_GIT_COMMIT_HASH: $REPO_B_GIT_COMMIT_HASH"
+
+}
+
+# Create a commit in repo_b and repo_c, then update its submodule pointers from
+# the large repo to test recursive submodule updates from the large repo
+function update_repo_c_submodule_pointer_in_large_repo {
+  create_repo_c_and_repo_b_commits_for_submodule_pointer_update;
+
+  cd "$TESTTMP/$LARGE_REPO_NAME" || exit
+
+  # Update repo_c working copy in repo_b submodule metadata file
+  echo "new file in repo_c" > smallrepofolder1/git-repo-b/git-repo-c/file_in_c
+
+  echo "Updating repo_b/repo_c submodule pointer to: $REPO_C_SUBMODULE_GIT_HASH"
+  # Update repo_c submodule metadata file
+  printf "%s" "$REPO_C_SUBMODULE_GIT_HASH" > smallrepofolder1/git-repo-b/.x-repo-submodule-git-repo-c
+
+  echo "Updating repo_b submodule pointer to: $REPO_B_GIT_COMMIT_HASH"
+
+  # Update repo_b submodule metadata file
+  printf "%s" "$REPO_B_GIT_COMMIT_HASH" > smallrepofolder1/.x-repo-submodule-git-repo-b
+
+  hg commit -Aq -m "Valid repo_b and repo_c recursive submodule version bump from large repo"
+  REPONAME="$LARGE_REPO_NAME" hgedenapi cloud backup -q
+}
