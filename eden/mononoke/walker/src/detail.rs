@@ -10,6 +10,7 @@ pub mod checkpoint;
 #[macro_use]
 pub mod graph;
 pub mod corpus;
+pub mod fetcher;
 pub mod log;
 pub mod pack;
 pub mod parse_node;

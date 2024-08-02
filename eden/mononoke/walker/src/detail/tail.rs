@@ -49,6 +49,7 @@ use tokio::time::Instant;
 use crate::commands::JobWalkParams;
 use crate::detail::checkpoint::Checkpoint;
 use crate::detail::checkpoint::CheckpointsByName;
+use crate::detail::fetcher::BulkFetcherOps;
 use crate::detail::graph::ChangesetKey;
 use crate::detail::graph::Node;
 use crate::detail::graph::NodeType;
@@ -265,14 +266,14 @@ where
         let fetcher_params = tail_params
             .chunking
             .as_ref()
-            .map(|chunking| {
+            .map(|chunking| -> Result<(_, Arc<dyn BulkFetcherOps>), Error> {
                 let heads_fetcher = ChangesetBulkFetcher::new(
                     repo_params.repo.changesets_arc(),
                     repo_params.repo.phases_arc(),
                 )
                 .with_read_from_master(false)
                 .with_step(MAX_FETCH_STEP);
-                heads_fetcher.map(|v| (chunking, v))
+                heads_fetcher.map(|v| -> (_, Arc<dyn BulkFetcherOps>) { (chunking, Arc::new(v)) })
             })
             .transpose()?;
 
@@ -285,13 +286,14 @@ where
             heads_fetcher,
         )) = &fetcher_params
         {
-            let (mut lower, mut upper) = heads_fetcher.get_repo_bounds(&ctx).await?;
-            if let Some(lower_override) = chunking.repo_lower_bound_override {
-                lower = lower_override;
-            }
-            if let Some(upper_override) = chunking.repo_upper_bound_override {
-                upper = upper_override;
-            }
+            let repo_bounds = heads_fetcher.repo_bounds(&ctx).await?;
+
+            let lower = chunking
+                .repo_lower_bound_override
+                .unwrap_or(repo_bounds.start);
+            let upper = chunking
+                .repo_upper_bound_override
+                .unwrap_or(repo_bounds.end);
 
             info!(repo_params.logger, #log::CHUNKING, "Repo bounds: ({}, {})", lower, upper);
 
@@ -349,11 +351,7 @@ where
 
             let load_ids = |(lower, upper)| {
                 heads_fetcher
-                    .fetch_ids_for_both_public_and_draft_commits(
-                        &ctx,
-                        chunking.direction,
-                        Some((lower, upper)),
-                    )
+                    .changesets_stream(&ctx, chunking.direction, lower..upper)
                     .chunks(chunking.chunk_size)
                     .map(move |v| v.into_iter().collect::<Result<HashSet<_>, Error>>())
             };
@@ -408,7 +406,7 @@ where
             let mut chunk_upper: u64 = 0;
             let chunk_members: HashSet<ChangesetId> = chunk_members
                 .into_iter()
-                .map(|((cs_id, id), (_fetch_low, _fetch_upper))| {
+                .map(|(cs_id, id)| {
                     chunk_low = min(chunk_low, id);
                     chunk_upper = max(chunk_upper, id + 1);
 
