@@ -394,13 +394,10 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
                     })
             {
                 let final_changeset = changeset.clone();
-                let mut name = name
+                let name = name
                     .strip_prefix("refs/")
                     .context("Ref does not start with refs/")?
                     .to_string();
-                if name.starts_with("remotes/origin/") {
-                    name = name.replacen("remotes/origin/", "heads/", 1);
-                };
                 if name.as_str() == "heads/HEAD" {
                     // Skip the HEAD revision: it shouldn't be imported as a bookmark in mononoke
                     continue;
