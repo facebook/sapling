@@ -7,6 +7,7 @@
 
 use std::cmp;
 use std::collections::HashSet;
+use std::ops::Range;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
@@ -22,8 +23,6 @@ use async_trait::async_trait;
 use blobstore::Loadable;
 use blobstore::Storable;
 use bytes::Bytes;
-use changesets::Changesets;
-use changesets::ChangesetsRef;
 use clap::Parser;
 use clap::ValueEnum;
 use context::CoreContext;
@@ -68,6 +67,8 @@ use slog::error;
 use slog::info;
 use slog::warn;
 use slog::Logger;
+use sql_commit_graph_storage::CommitGraphBulkFetcher;
+use sql_commit_graph_storage::CommitGraphBulkFetcherRef;
 
 const LIMIT: usize = 1000;
 const SM_SERVICE_SCOPE: &str = "global";
@@ -82,7 +83,7 @@ pub struct Repo {
     #[facet]
     mutable_counters: dyn MutableCounters,
     #[facet]
-    changesets: dyn Changesets,
+    commit_graph_bulk_fetcher: CommitGraphBulkFetcher,
 }
 
 #[derive(Debug, Clone, Copy, ValueEnum)]
@@ -504,23 +505,26 @@ impl AliasVerification {
         Ok(())
     }
 
-    async fn get_bounded(&self, min_id: u64, max_id: u64) -> Result<(), Error> {
+    async fn get_bounded(&self, bounds: Range<u64>) -> Result<(), Error> {
         if self.cancellation_requested.load(Ordering::Relaxed) {
             return Ok(());
         }
         info!(
             self.logger,
-            "Process Changesets with ids: [{:?}, {:?})", min_id, max_id
+            "Process Changesets with ids: [{:?}, {:?})", bounds.start, bounds.end,
         );
         let repo = self.repo()?;
-        let bcs_ids = repo
-            .changesets()
-            .list_enumeration_range(&self.ctx, min_id, max_id, None, true);
+        let bcs_ids = repo.commit_graph_bulk_fetcher().oldest_first_stream(
+            &self.ctx,
+            bounds.clone(),
+            500,
+            true,
+        );
         let count = AtomicUsize::new(0);
         let rcount = &count;
         let file_changes_stream = bcs_ids
-            .and_then(move |(bcs_id, _)| async move {
-                let file_changes_vec = self.get_file_changes_vector(bcs_id).await?;
+            .and_then(move |item| async move {
+                let file_changes_vec = self.get_file_changes_vector(item.cs_id).await?;
                 Ok(stream::iter(file_changes_vec).map(anyhow::Ok))
             })
             .try_flatten()
@@ -549,13 +553,13 @@ impl AliasVerification {
                 }
             })
             .await?;
-        self.update_overall_progress(rcount.load(Ordering::Relaxed), max_id)
+        self.update_overall_progress(rcount.load(Ordering::Relaxed), bounds.end)
             .await?;
         self.print_report(RunStatus::InProgress);
         Ok(())
     }
 
-    async fn start_and_end_id(&self, min_id: u64, max_id: u64) -> Result<(u64, u64)> {
+    async fn adjust_bounds(&self, repo_bounds: Range<u64>) -> Result<Range<u64>> {
         let counter_name = self.counter_name();
         let counter_val = self
             .repo()?
@@ -566,60 +570,57 @@ impl AliasVerification {
         // No chunking if no start or end provided.
         if self.start == 0 {
             if self.args.min_cs_db_id != 0 {
-                return Ok((self.args.min_cs_db_id, max_id));
+                return Ok(self.args.min_cs_db_id..repo_bounds.end);
             } else {
-                return Ok((
-                    counter_val.unwrap_or(self.args.min_cs_db_id as i64) as u64,
-                    max_id,
-                ));
+                return Ok(
+                    counter_val.unwrap_or(self.args.min_cs_db_id as i64) as u64..repo_bounds.end
+                );
             }
         }
         match self.args.mode {
             // Chunking only in backfilling mode
             Mode::Backfill => {
-                let factor = (max_id - min_id) / self.total;
+                let factor = (repo_bounds.end - repo_bounds.start) / self.total;
                 let prev_chunk_id = std::cmp::max(self.start, 1) - 1;
-                let default_start_point = (min_id + factor * prev_chunk_id) as i64;
+                let default_start_point = (repo_bounds.start + factor * prev_chunk_id) as i64;
                 // If the mutable counter "counter_val" doesn't have a value, then use the
                 // default_start_point as the starting point of the chunk. If the counter has
                 // a value, then use that unless the value is less than default_start_point.
                 let start_point = counter_val.map_or(default_start_point, |counter| {
                     std::cmp::max(counter, default_start_point)
                 }) as u64;
-                let end_point = min_id + factor * self.start;
-                Ok((start_point, end_point))
+                let end_point = repo_bounds.start + factor * self.start;
+                Ok(start_point..end_point)
             }
-            _ => Ok((self.args.min_cs_db_id, max_id)),
+            _ => Ok(self.args.min_cs_db_id..repo_bounds.end),
         }
     }
 
     pub async fn verify_all(&self) -> Result<(), Error> {
         let (ctx, step, repo) = (&self.ctx, self.args.step, self.repo()?);
-        let (min_id, max_id) = repo
-            .changesets()
-            .enumeration_bounds(ctx, true, vec![])
-            .await?
-            .unwrap();
-        let (init_changeset_id, max_id) = self.start_and_end_id(min_id, max_id).await?;
+        let repo_bounds = repo
+            .commit_graph_bulk_fetcher()
+            .repo_bounds(ctx, true)
+            .await?;
+        let cur_bounds = self.adjust_bounds(repo_bounds.clone()).await?;
         let mut bounds = vec![];
-        let mut cur_id = cmp::max(min_id, init_changeset_id);
+        let mut cur_id = cmp::max(repo_bounds.start, cur_bounds.start);
         info!(
             self.logger,
-            "Initiating aliasverify in {:?} mode with input init changesetid {} and actual init changesetid {}. Max changesetid {}",
+            "Initiating aliasverify in {:?} mode with bounds [{}, {}). Starting with changeset with id {}.",
             self.args.mode,
-            init_changeset_id,
+            cur_bounds.start,
+            cur_bounds.end,
             cur_id,
-            max_id,
         );
-        let max_id = max_id + 1;
-        while cur_id < max_id {
-            let max = cmp::min(max_id, cur_id + step);
-            bounds.push((cur_id, max));
+        while cur_id < cur_bounds.end {
+            let max = cmp::min(cur_bounds.end, cur_id + step);
+            bounds.push(cur_id..max);
             cur_id += step;
         }
         stream::iter(bounds)
             .map(Ok)
-            .try_for_each(move |(min_val, max_val)| self.get_bounded(min_val, max_val))
+            .try_for_each(move |chunk_bounds| self.get_bounded(chunk_bounds))
             .await?;
         self.print_report(RunStatus::Finished);
         if self.args.sharded_service_name.is_some() {
