@@ -92,12 +92,12 @@
   $ mkdir $TESTTMP/git_client_repo
   $ cd $TESTTMP
 # Clone using the bundle created above
-  $ git clone $BUNDLE_OUTPUT git_client_repo
-  Cloning into 'git_client_repo'...
+  $ git clone --mirror $BUNDLE_OUTPUT git_client_repo
+  Cloning into bare repository 'git_client_repo'...
   $ cd git_client_repo
 # Get the repository log and verify if its the same as earlier
   $ git log --pretty=format:"%h %an %s %D"
-  7cb1854 mononoke Added README.md HEAD -> master, origin/master, origin/HEAD
+  7cb1854 mononoke Added README.md HEAD -> master
   ca4b2b2 mononoke Added rust tests 
   a612a21 mononoke Added rust library tag: release_v1.0
   8ce3eae mononoke Add file1 tag: first_tag (no-eol)
@@ -109,5 +109,5 @@
 
 List the delta histogram of the pack file - this way we'll see
 if we change whether we delta or not.
-  $ git verify-pack -sv ./.git/objects/pack/*.pack
+  $ git verify-pack -sv ./objects/pack/*.pack
   non delta: 18 objects

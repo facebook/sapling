@@ -59,8 +59,8 @@
 
 # Clone the Git repo  
   $ cd "$TESTTMP"
-  $ git clone "$GIT_REPO_ORIGIN"
-  Cloning into 'repo-git'...
+  $ git clone --mirror "$GIT_REPO_ORIGIN" repo-git
+  Cloning into bare repository 'repo-git'...
   done.
 
 # Capture all the known Git objects from the repo
@@ -82,8 +82,6 @@
   Hg: Sha1(*): HgManifestId(HgNodeHash(Sha1(*))) (glob)
   Hg: Sha1(*): HgManifestId(HgNodeHash(Sha1(*))) (glob)
   Ref: "refs/heads/master": Some(ChangesetId(Blake2(*))) (glob)
-  Ref: "refs/remotes/origin/HEAD": Some(ChangesetId(Blake2(*))) (glob)
-  Ref: "refs/remotes/origin/master": Some(ChangesetId(Blake2(*))) (glob)
   Ref: "refs/tags/changed_tag": Some(ChangesetId(Blake2(*))) (glob)
   Ref: "refs/tags/empty_tag": Some(ChangesetId(Blake2(*))) (glob)
   Ref: "refs/tags/first_tag": Some(ChangesetId(Blake2(*))) (glob)
@@ -91,7 +89,6 @@
   Initialized repo: repo
   All repos initialized. It took: * seconds (glob)
   Bookmark: "heads/master": ChangesetId(Blake2(*)) (created) (glob)
-  Bookmark: "heads/master": ChangesetId(Blake2(*)) (already up-to-date) (glob)
   Bookmark: "tags/changed_tag": ChangesetId(Blake2(*)) (created) (glob)
   Bookmark: "tags/empty_tag": ChangesetId(Blake2(*)) (created) (glob)
   Bookmark: "tags/first_tag": ChangesetId(Blake2(*)) (created) (glob)
@@ -106,8 +103,8 @@
 # Create a new empty folder for containing the repo
   $ mkdir $TESTTMP/git_client_repo  
   $ cd "$TESTTMP"
-  $ git clone "$BUNDLE_PATH" git_client_repo
-  Cloning into 'git_client_repo'...
+  $ git clone --mirror "$BUNDLE_PATH" git_client_repo
+  Cloning into bare repository 'git_client_repo'...
   $ cd git_client_repo
 
 # Get the repository log and verify if its the same as earlier

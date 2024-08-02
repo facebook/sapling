@@ -44,8 +44,8 @@
   $ git commit -qam "Modified file1.2 -> file1 in branch R2"
 
   $ cd "$TESTTMP"
-  $ git clone "$GIT_REPO_ORIGIN"
-  Cloning into 'repo-git'...
+  $ git clone --mirror "$GIT_REPO_ORIGIN" repo-git
+  Cloning into bare repository 'repo-git'...
   done.
 
 # Capture all the known Git objects from the repo

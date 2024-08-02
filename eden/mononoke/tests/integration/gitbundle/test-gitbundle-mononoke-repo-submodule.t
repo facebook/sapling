@@ -50,8 +50,8 @@
   $ git commit -q -am "Add a new submodule"
 
   $ cd "$TESTTMP"
-  $ git clone "$GIT_REPO_ORIGIN"
-  Cloning into 'repo-git'...
+  $ git clone --mirror "$GIT_REPO_ORIGIN" repo-git
+  Cloning into bare repository 'repo-git'...
   done.
 # Capture all the known Git objects from the repo
   $ cd $GIT_REPO
@@ -66,15 +66,12 @@
   using repo "repo" repoid RepositoryId(0)
   GitRepo:$TESTTMP/repo-git commit 3 of 3 - Oid:* => Bid:* (glob)
   Ref: "refs/heads/master": Some(ChangesetId(Blake2(*))) (glob)
-  Ref: "refs/remotes/origin/HEAD": Some(ChangesetId(Blake2(*))) (glob)
-  Ref: "refs/remotes/origin/master": Some(ChangesetId(Blake2(*))) (glob)
   Ref: "refs/tags/empty_tag": Some(ChangesetId(Blake2(da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c)))
   Ref: "refs/tags/first_tag": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)))
   Initializing repo: repo
   Initialized repo: repo
   All repos initialized. It took: * seconds (glob)
   Bookmark: "heads/master": ChangesetId(Blake2(*)) (created) (glob)
-  Bookmark: "heads/master": ChangesetId(Blake2(*)) (already up-to-date) (glob)
   Bookmark: "tags/empty_tag": ChangesetId(Blake2(da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c)) (created)
   Bookmark: "tags/first_tag": ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)) (created)
 
@@ -88,8 +85,8 @@
 # Create a new empty folder for containing the repo
   $ mkdir $TESTTMP/git_client_repo  
   $ cd "$TESTTMP"
-  $ git clone "$BUNDLE_PATH" git_client_repo
-  Cloning into 'git_client_repo'...
+  $ git clone --mirror "$BUNDLE_PATH" git_client_repo
+  Cloning into bare repository 'git_client_repo'...
   $ cd git_client_repo
 
 # Get the repository log and verify if its the same as earlier

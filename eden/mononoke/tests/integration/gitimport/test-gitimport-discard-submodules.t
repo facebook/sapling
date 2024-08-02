@@ -55,6 +55,10 @@
   done.
 # Capture all the known Git objects from the repo
   $ cd $GIT_REPO
+  $ git fetch "$GIT_REPO_ORIGIN" +refs/*:refs/* --prune -u
+  From $TESTTMP/origin/repo-git
+   - [deleted]         (none)     -> origin/master
+     (refs/remotes/origin/HEAD has become dangling)
   $ git rev-list --objects --all | git cat-file --batch-check='%(objectname) %(objecttype) %(rest)' | sort > $TESTTMP/object_list
   $ cat $TESTTMP/object_list
   433eb172726bc7b6d60e8d68efb0f0ef4e67a667 blob file1
@@ -72,7 +76,7 @@
 # Get the repository log
   $ git log --pretty=format:"%h %an %s %D" > $TESTTMP/repo_log
   $ cat $TESTTMP/repo_log
-  fbae2e7 mononoke Add a new submodule HEAD -> master, tag: empty_tag, origin/master, origin/HEAD
+  fbae2e7 mononoke Add a new submodule HEAD -> master, tag: empty_tag
   e8615d6 mononoke Add file2 
   8ce3eae mononoke Add file1 tag: first_tag (no-eol)
 
@@ -108,15 +112,12 @@
   using repo "repo" repoid RepositoryId(0)
   GitRepo:$TESTTMP/repo-git commit 3 of 3 - Oid:fbae2e73 => Bid:4cd77220
   Ref: "refs/heads/master": Some(ChangesetId(Blake2(4cd77220f6dcf9154b8cd4dc0f33b72b19a765d73a770cce612ee094191e7d9e)))
-  Ref: "refs/remotes/origin/HEAD": Some(ChangesetId(Blake2(4cd77220f6dcf9154b8cd4dc0f33b72b19a765d73a770cce612ee094191e7d9e)))
-  Ref: "refs/remotes/origin/master": Some(ChangesetId(Blake2(4cd77220f6dcf9154b8cd4dc0f33b72b19a765d73a770cce612ee094191e7d9e)))
   Ref: "refs/tags/empty_tag": Some(ChangesetId(Blake2(4cd77220f6dcf9154b8cd4dc0f33b72b19a765d73a770cce612ee094191e7d9e)))
   Ref: "refs/tags/first_tag": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)))
   Initializing repo: repo
   Initialized repo: repo
   All repos initialized. It took: * seconds (glob)
   Bookmark: "heads/master": ChangesetId(Blake2(4cd77220f6dcf9154b8cd4dc0f33b72b19a765d73a770cce612ee094191e7d9e)) (created)
-  Bookmark: "heads/master": ChangesetId(Blake2(4cd77220f6dcf9154b8cd4dc0f33b72b19a765d73a770cce612ee094191e7d9e)) (already up-to-date)
   Bookmark: "tags/empty_tag": ChangesetId(Blake2(4cd77220f6dcf9154b8cd4dc0f33b72b19a765d73a770cce612ee094191e7d9e)) (created)
   Bookmark: "tags/first_tag": ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)) (created)
 

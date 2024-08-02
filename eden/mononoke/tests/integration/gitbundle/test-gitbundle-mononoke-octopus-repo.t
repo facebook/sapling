@@ -91,16 +91,16 @@
 # Create a new empty folder for containing the repo
   $ mkdir $TESTTMP/git_client_repo  
   $ cd "$TESTTMP"
-  $ git clone "$BUNDLE_PATH" git_client_repo
-  Cloning into 'git_client_repo'...
+  $ git clone --mirror "$BUNDLE_PATH" git_client_repo
+  Cloning into bare repository 'git_client_repo'...
   $ cd git_client_repo
 # Get the repository log and verify if its the same as earlier
   $ git log --pretty=format:"%h %an %s %D"
-  6283891 mononoke Merge branches 'branch1' and 'branch2' HEAD -> master, origin/master, origin/HEAD
+  6283891 mononoke Merge branches 'branch1' and 'branch2' HEAD -> master
   161a8cb mononoke Add master 
-  bf946c8 mononoke Add branch1 origin/branch1
-  933c6d8 mononoke Add branch2 origin/branch2
-  d53a2ef mononoke root commit origin/root (no-eol)
+  bf946c8 mononoke Add branch1 branch1
+  933c6d8 mononoke Add branch2 branch2
+  d53a2ef mononoke root commit root (no-eol)
 
 # Dump all the known Git objects into a file
   $ git rev-list --objects --all | git cat-file --batch-check='%(objectname) %(objecttype) %(rest)' | sort > $TESTTMP/new_object_list

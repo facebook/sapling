@@ -68,8 +68,8 @@
   $ git merge -q dev_branch test_branch
 
   $ cd "$TESTTMP"
-  $ git clone "$GIT_REPO_ORIGIN"
-  Cloning into 'repo-git'...
+  $ git clone --mirror "$GIT_REPO_ORIGIN" repo-git
+  Cloning into bare repository 'repo-git'...
   done.
 
 # Capture all the known Git objects from the repo
@@ -84,11 +84,9 @@
   $ with_stripped_logs gitimport "$GIT_REPO" --generate-bookmarks full-repo
   using repo "repo" repoid RepositoryId(0)
   GitRepo:$TESTTMP/repo-git commit 7 of 7 - Oid:e460783b => Bid:73a90516
+  Ref: "refs/heads/dev_branch": Some(ChangesetId(Blake2(*))) (glob)
   Ref: "refs/heads/master": Some(ChangesetId(Blake2(*))) (glob)
-  Ref: "refs/remotes/origin/HEAD": Some(ChangesetId(Blake2(*))) (glob)
-  Ref: "refs/remotes/origin/dev_branch": Some(ChangesetId(Blake2(*))) (glob)
-  Ref: "refs/remotes/origin/master": Some(ChangesetId(Blake2(*))) (glob)
-  Ref: "refs/remotes/origin/test_branch": Some(ChangesetId(Blake2(*))) (glob)
+  Ref: "refs/heads/test_branch": Some(ChangesetId(Blake2(*))) (glob)
   Ref: "refs/tags/dev_version": Some(ChangesetId(Blake2(*))) (glob)
   Ref: "refs/tags/first_tag": Some(ChangesetId(Blake2(*))) (glob)
   Ref: "refs/tags/release_v1.0": Some(ChangesetId(Blake2(*))) (glob)
@@ -97,9 +95,8 @@
   Initializing repo: repo
   Initialized repo: repo
   All repos initialized. It took: * seconds (glob)
-  Bookmark: "heads/master": ChangesetId(Blake2(*)) (created) (glob)
   Bookmark: "heads/dev_branch": ChangesetId(Blake2(*)) (created) (glob)
-  Bookmark: "heads/master": ChangesetId(Blake2(*)) (already up-to-date) (glob)
+  Bookmark: "heads/master": ChangesetId(Blake2(*)) (created) (glob)
   Bookmark: "heads/test_branch": ChangesetId(Blake2(*)) (created) (glob)
   Bookmark: "tags/dev_version": ChangesetId(Blake2(*)) (created) (glob)
   Bookmark: "tags/first_tag": ChangesetId(Blake2(*)) (created) (glob)
@@ -126,8 +123,8 @@
 # Create a new empty folder for containing the repo
   $ mkdir $TESTTMP/git_packfile_item_repo  
   $ cd "$TESTTMP"
-  $ git clone "$BUNDLE_PATH" git_packfile_item_repo
-  Cloning into 'git_packfile_item_repo'...
+  $ git clone --mirror "$BUNDLE_PATH" git_packfile_item_repo
+  Cloning into bare repository 'git_packfile_item_repo'...
   $ cd git_packfile_item_repo
 
 # Get the repository log and verify if its the same as earlier
@@ -147,7 +144,7 @@
 
 List the delta histogram of the pack file - this way we'll see
 if we change whether we delta or not.
-  $ git verify-pack -sv ./.git/objects/pack/*.pack
+  $ git verify-pack -sv ./objects/pack/*.pack
   non delta: 26 objects
   chain length = 1: 4 objects
   chain length = 2: 3 objects

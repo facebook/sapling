@@ -50,6 +50,14 @@
 
 # Capture all the known Git objects from the repo
   $ cd $GIT_REPO
+  $ git fetch "$GIT_REPO_ORIGIN" +refs/*:refs/* --prune -u
+  From $TESTTMP/origin/repo-git
+   - [deleted]         (none)     -> origin/R1
+   - [deleted]         (none)     -> origin/R2
+     (refs/remotes/origin/HEAD has become dangling)
+   - [deleted]         (none)     -> origin/master
+   * [new branch]      R1         -> R1
+   * [new branch]      master     -> master
   $ git rev-list --objects --all | git cat-file --batch-check='%(objectname) %(objecttype) %(rest)' | sort > $TESTTMP/object_list
 
 # Import it into Mononoke

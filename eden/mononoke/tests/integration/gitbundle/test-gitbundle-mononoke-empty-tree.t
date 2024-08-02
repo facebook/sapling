@@ -38,8 +38,8 @@ Test bundled repo verification
   $TESTTMP/repo_bundle.bundle is okay
   $ cd ..
 Test cloning the bundled repo
-  $ git clone $BUNDLE_PATH cloned_git_repo
-  Cloning into 'cloned_git_repo'...
+  $ git clone --mirror $BUNDLE_PATH cloned_git_repo
+  Cloning into bare repository 'cloned_git_repo'...
 
 Test batched derivation
   $ mononoke_newadmin derived-data -R "repo" derive --all-types -i "$C"

@@ -28,8 +28,8 @@
   $ git commit -q -am "यह एक और परीक्षा है"
   $ git tag -a empty_tag -m "टैग की गई प्रतिबद्धता"
   $ cd "$TESTTMP"
-  $ git clone "$GIT_REPO_ORIGIN"
-  Cloning into 'repo-git'...
+  $ git clone --mirror "$GIT_REPO_ORIGIN" repo-git
+  Cloning into bare repository 'repo-git'...
   done.
 # Capture all the known Git objects from the repo
   $ cd $GIT_REPO
@@ -47,14 +47,11 @@
   Hg: Sha1(*): HgManifestId(HgNodeHash(Sha1(*))) (glob)
   Hg: Sha1(*): HgManifestId(HgNodeHash(Sha1(*))) (glob)
   Ref: "refs/heads/master": Some(ChangesetId(Blake2(*))) (glob)
-  Ref: "refs/remotes/origin/HEAD": Some(ChangesetId(Blake2(*))) (glob)
-  Ref: "refs/remotes/origin/master": Some(ChangesetId(Blake2(*))) (glob)
   Ref: "refs/tags/empty_tag": Some(ChangesetId(Blake2(*))) (glob)
   Initializing repo: repo
   Initialized repo: repo
   All repos initialized. It took: * seconds (glob)
   Bookmark: "heads/master": ChangesetId(Blake2(*)) (created) (glob)
-  Bookmark: "heads/master": ChangesetId(Blake2(*)) (already up-to-date) (glob)
   Bookmark: "tags/empty_tag": ChangesetId(Blake2(*)) (created) (glob)
 
 # Regenerate the Git repo out of the Mononoke repo
@@ -68,17 +65,20 @@
 # Create a new empty folder for containing the repo
   $ mkdir $TESTTMP/git_client_repo  
   $ cd "$TESTTMP"
-  $ git clone "$BUNDLE_PATH" git_client_repo
-  Cloning into 'git_client_repo'...
+  $ git clone --mirror "$BUNDLE_PATH" git_client_repo
+  Cloning into bare repository 'git_client_repo'...
   $ cd git_client_repo
 
 # Get the repository log and verify if its the same as earlier
   $ git log --pretty=format:"%h %an %s %D" > $TESTTMP/new_repo_log
   $ diff -w $TESTTMP/new_repo_log $TESTTMP/repo_log
+  > d46416c mononoke यह एक और परीक्षा है HEAD -> master, tag: empty_tag
+  $TESTTMP.sh: line 107: d46416c: command not found
+  [127]
 
 # Print out the log to ensure the commit messages have carried over without data loss
   $ git log --pretty=format:"%h %an %s %D"
-  d46416c mononoke यह एक और परीक्षा है HEAD -> master, tag: empty_tag, origin/master, origin/HEAD
+  d46416c mononoke यह एक और परीक्षा है HEAD -> master, tag: empty_tag
   65d5239 mononoke मैं परीक्षण कर रहा हूँ  (no-eol)
 
 # Dump all the known Git objects into a file
