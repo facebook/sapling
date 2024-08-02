@@ -11,5 +11,6 @@ rust_library(
         "fbsource//third-party/rust:async-trait",
         "//eden/scm/lib/config/model:configmodel",
         "//eden/scm/lib/types:types",
+        "//eden/scm/lib/util/factory:factory",
     ],
 )

@@ -229,7 +229,6 @@ rust_binary(
     ] + ([] if rust_oss.is_oss_build() else [
         "//common/rust/shed/fbinit:fbinit",
     ]) + ([
-        "//eden/scm/lib/cas-client:cas-client",
         "//eden/scm/lib/cas-client/thin-client:thin-cas-client",
     ] if is_experimental_cas_build() else []),
 )

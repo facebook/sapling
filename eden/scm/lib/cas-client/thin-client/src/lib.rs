@@ -29,8 +29,11 @@ pub struct ThinCasClient {
     metadata: RemoteExecutionMetadata,
 }
 
-pub fn construct(config: &dyn Config) -> Result<Arc<dyn CasClient>> {
-    ThinCasClient::from_config(config).map(|c| Arc::new(c) as Arc<dyn CasClient>)
+pub fn init() {
+    fn construct(config: &dyn Config) -> Result<Option<Arc<dyn CasClient>>> {
+        ThinCasClient::from_config(config).map(|c| Some(Arc::new(c) as Arc<dyn CasClient>))
+    }
+    factory::register_constructor("thin-client", construct);
 }
 
 impl ThinCasClient {

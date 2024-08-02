@@ -12,6 +12,7 @@ rust_library(
         "//eden/scm/lib/cas-client:cas-client",
         "//eden/scm/lib/config/model:configmodel",
         "//eden/scm/lib/types:types",
+        "//eden/scm/lib/util/factory:factory",
         "//remote_execution/client_lib/wrappers/rust:re_client_lib",
     ],
 )

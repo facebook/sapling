@@ -97,7 +97,6 @@ rust_library(
         "//eden/scm/lib/tracing-collector:tracing-collector",
         "//eden/scm/lib/types:types",
     ] + ([
-        "//eden/scm/lib/cas-client:cas-client",
         "//eden/scm/lib/cas-client/rich-client:rich-cas-client",
     ] if is_experimental_cas_build() else []),
 )

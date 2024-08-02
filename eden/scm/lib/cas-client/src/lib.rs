@@ -6,22 +6,21 @@
  */
 
 use std::sync::Arc;
-use std::sync::OnceLock;
 
 use configmodel::Config;
 pub use types::CasDigest;
 
-type Constructor = fn(&dyn Config) -> anyhow::Result<Arc<dyn CasClient>>;
-
-static CONSTRUCTOR: OnceLock<Constructor> = OnceLock::new();
-
-pub fn register_constructor(c: Constructor) {
-    // panic if called twice
-    CONSTRUCTOR.set(c).unwrap()
-}
-
-pub fn new(config: &dyn Config) -> anyhow::Result<Option<Arc<dyn CasClient>>> {
-    CONSTRUCTOR.get().map(|c| c(config)).transpose()
+pub fn new(config: Arc<dyn Config>) -> anyhow::Result<Option<Arc<dyn CasClient>>> {
+    match factory::call_constructor::<_, Arc<dyn CasClient>>(&config as &dyn Config) {
+        Ok(client) => Ok(Some(client)),
+        Err(err) => {
+            if factory::is_error_from_constructor(&err) {
+                Err(err)
+            } else {
+                Ok(None)
+            }
+        }
+    }
 }
 
 #[async_trait::async_trait]
