@@ -42,6 +42,7 @@ use phases::PhasesArc;
 use repo_identity::RepoIdentityRef;
 use slog::info;
 use slog::Logger;
+use sql_commit_graph_storage::CommitGraphBulkFetcherArc;
 use strum::IntoEnumIterator;
 use tokio::time::Duration;
 use tokio::time::Instant;
@@ -49,6 +50,7 @@ use tokio::time::Instant;
 use crate::commands::JobWalkParams;
 use crate::detail::checkpoint::Checkpoint;
 use crate::detail::checkpoint::CheckpointsByName;
+use crate::detail::checkpoint::CheckpointsVersion;
 use crate::detail::fetcher::BulkFetcherOps;
 use crate::detail::graph::ChangesetKey;
 use crate::detail::graph::Node;
@@ -267,13 +269,26 @@ where
             .chunking
             .as_ref()
             .map(|chunking| -> Result<(_, Arc<dyn BulkFetcherOps>), Error> {
-                let heads_fetcher = ChangesetBulkFetcher::new(
-                    repo_params.repo.changesets_arc(),
-                    repo_params.repo.phases_arc(),
-                )
-                .with_read_from_master(false)
-                .with_step(MAX_FETCH_STEP);
-                heads_fetcher.map(|v| -> (_, Arc<dyn BulkFetcherOps>) { (chunking, Arc::new(v)) })
+                let heads_fetcher: Arc<dyn BulkFetcherOps> = match chunking
+                    .checkpoints
+                    .as_ref()
+                    .map(|checkpoints| checkpoints.version)
+                {
+                    // If we're using checkpoints v2, we need to use CommitGraphBulkFetcher as
+                    // checkpoints are stored in reference to the commit graph sql table.
+                    Some(CheckpointsVersion::V2) => {
+                        repo_params.repo.commit_graph_bulk_fetcher_arc()
+                    }
+                    _ => Arc::new(
+                        ChangesetBulkFetcher::new(
+                            repo_params.repo.changesets_arc(),
+                            repo_params.repo.phases_arc(),
+                        )
+                        .with_read_from_master(false)
+                        .with_step(MAX_FETCH_STEP)?,
+                    ),
+                };
+                Ok((chunking, heads_fetcher))
             })
             .transpose()?;
 

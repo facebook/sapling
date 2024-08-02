@@ -83,6 +83,7 @@ rust_binary(
         "//eden/mononoke/mononoke_types:mononoke_types",
         "//eden/mononoke/newfilenodes:newfilenodes",
         "//eden/mononoke/phases:phases",
+        "//eden/mononoke/repo_attributes/commit_graph/sql_commit_graph_storage:sql_commit_graph_storage",
         "//eden/mononoke/repo_attributes/repo_derived_data:repo_derived_data",
         "//eden/mononoke/repo_attributes/repo_identity:repo_identity",
         "//eden/mononoke/repo_factory:repo_factory",

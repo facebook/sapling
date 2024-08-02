@@ -50,6 +50,8 @@ use vec1::Vec1;
 
 pub use crate::bulkops::ArcCommitGraphBulkFetcher;
 pub use crate::bulkops::CommitGraphBulkFetcher;
+pub use crate::bulkops::CommitGraphBulkFetcherArc;
+pub use crate::bulkops::CommitGraphBulkFetcherRef;
 
 mod bulkops;
 #[cfg(test)]

@@ -40,6 +40,7 @@ use repo_identity::RepoIdentity;
 use repo_identity::RepoIdentityRef;
 use repo_lock::RepoLock;
 use repo_permission_checker::RepoPermissionChecker;
+use sql_commit_graph_storage::CommitGraphBulkFetcher;
 
 // NOTE: this structure and its fields are public to enable `DangerousOverride` functionality
 #[facet::container]
@@ -122,6 +123,9 @@ pub struct BlobRepoInner {
 
     #[facet]
     pub commit_cloud: CommitCloud,
+
+    #[facet]
+    pub commit_graph_bulk_fetcher: CommitGraphBulkFetcher,
 }
 
 #[facet::container]
@@ -152,7 +156,8 @@ pub struct BlobRepo {
         dyn RepoPermissionChecker,
         dyn RepoLock,
         RepoBookmarkAttrs,
-        CommitCloud
+        CommitCloud,
+        CommitGraphBulkFetcher,
     )]
     inner: Arc<BlobRepoInner>,
 }

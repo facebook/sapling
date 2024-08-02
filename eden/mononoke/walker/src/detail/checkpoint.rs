@@ -101,7 +101,7 @@ pub struct CheckpointsByName {
     pub checkpoint_name: String,
     sql_checkpoints: Arc<SqlCheckpoints>,
     pub sample_rate: u64,
-    version: CheckpointsVersion,
+    pub version: CheckpointsVersion,
 }
 
 #[derive(Clone, Copy, Debug, clap::ValueEnum)]
