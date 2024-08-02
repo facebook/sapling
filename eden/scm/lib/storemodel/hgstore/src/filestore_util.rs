@@ -29,36 +29,37 @@ use types::RepoPath;
 /// If the blob starts with \1\n too, it's escaped by adding \1\n\1\n at the beginning.
 pub fn strip_hg_file_metadata(data: &Bytes) -> Result<(Bytes, Option<Key>)> {
     let (blob, copy_from) = split_hg_file_metadata(data)?;
-    if copy_from.len() > 0 {
-        let slice = copy_from.as_ref();
-        let slice = &slice[2..copy_from.len() - 2];
-        let mut path = None;
-        let mut hgid = None;
+    Ok((blob, parse_copy_from_hg_file_metadata(copy_from.as_ref())?))
+}
 
-        for line in slice.split(|c| c == &b'\n') {
-            if line.is_empty() {
-                continue;
-            }
-            if line.starts_with(b"copy: ") {
-                path = Some(RepoPath::from_str(str::from_utf8(&line[6..])?)?.to_owned());
-            } else if line.starts_with(b"copyrev: ") {
-                hgid = Some(HgId::from_str(str::from_utf8(&line[9..])?)?);
-            } else {
-                bail!("Unknown metadata in data: {:?}", line);
-            }
+pub fn parse_copy_from_hg_file_metadata(data: &[u8]) -> Result<Option<Key>> {
+    if data.is_empty() {
+        return Ok(None);
+    }
+
+    let data = &data[2..data.len() - 2];
+    let mut path = None;
+    let mut hgid = None;
+
+    for line in data.split(|c| c == &b'\n') {
+        if line.is_empty() {
+            continue;
         }
+        if line.starts_with(b"copy: ") {
+            path = Some(RepoPath::from_str(str::from_utf8(&line[6..])?)?.to_owned());
+        } else if line.starts_with(b"copyrev: ") {
+            hgid = Some(HgId::from_str(str::from_utf8(&line[9..])?)?);
+        } else {
+            bail!("Unknown metadata in data: {:?}", line);
+        }
+    }
 
-        let key = match (path, hgid) {
-            (None, Some(_)) => bail!("missing 'copyrev' metadata"),
-            (Some(_), None) => bail!("missing 'copy' metadata"),
+    match (path, hgid) {
+        (None, Some(_)) => bail!("missing 'copyrev' metadata"),
+        (Some(_), None) => bail!("missing 'copy' metadata"),
 
-            (None, None) => None,
-            (Some(path), Some(hgid)) => Some(Key::new(path, hgid)),
-        };
-
-        Ok((blob, key))
-    } else {
-        Ok((blob, None))
+        (None, None) => Ok(None),
+        (Some(path), Some(hgid)) => Ok(Some(Key::new(path, hgid))),
     }
 }
 
