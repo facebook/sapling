@@ -218,7 +218,7 @@ impl TryFrom<AugmentedTree> for TreeEntry {
         )));
         entry.with_children(Some(
             aug_tree
-                .subentries
+                .entries
                 .into_iter()
                 .map(|(path, augmented_entry)| match augmented_entry {
                     AugmentedTreeEntry::FileNode(file) => Ok(TreeChildEntry::new_file_entry(

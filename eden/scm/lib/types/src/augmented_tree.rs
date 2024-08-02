@@ -53,13 +53,13 @@ pub struct AugmentedTree {
     pub computed_hg_node_id: Option<HgId>,
     pub p1: Option<HgId>,
     pub p2: Option<HgId>,
-    pub subentries: Vec<(RepoPathBuf, AugmentedTreeEntry)>,
+    pub entries: Vec<(RepoPathBuf, AugmentedTreeEntry)>,
 }
 
 impl AugmentedTree {
     pub fn sapling_tree_blob_size(&self) -> usize {
         let mut size: usize = 0;
-        for (path, subentry) in self.subentries.iter() {
+        for (path, subentry) in self.entries.iter() {
             size += path.len() + 2;
             match subentry {
                 AugmentedTreeEntry::DirectoryNode(_) => {
@@ -74,7 +74,7 @@ impl AugmentedTree {
     }
 
     pub fn write_sapling_tree_blob(&self, mut w: impl Write) -> Result<()> {
-        for (path, subentry) in self.subentries.iter() {
+        for (path, subentry) in self.entries.iter() {
             w.write_all(path.as_ref())?;
             w.write_all(b"\0")?;
             match subentry {
@@ -123,7 +123,7 @@ impl AugmentedTree {
             size += 1;
         }
         size += 1;
-        for (path, subentry) in self.subentries.iter() {
+        for (path, subentry) in self.entries.iter() {
             size += path.len() + 1;
             match subentry {
                 AugmentedTreeEntry::FileNode(f) => {
@@ -171,7 +171,7 @@ impl AugmentedTree {
             w.write_all(b"-")?;
         };
         w.write_all(b"\n")?;
-        for (path, subentry) in self.subentries.iter() {
+        for (path, subentry) in self.entries.iter() {
             w.write_all(path.as_ref())?;
             w.write_all(b"\0")?;
             match subentry {
@@ -257,7 +257,7 @@ impl AugmentedTree {
             computed_hg_node_id,
             p1,
             p2,
-            subentries: reader
+            entries: reader
                 .lines()
                 .map(|line| {
                     let line = line?;
@@ -462,7 +462,7 @@ mod tests {
         let augmented_tree_entry =
             AugmentedTree::try_deserialize(&mut reader).expect("parsing failed");
 
-        assert_eq!(augmented_tree_entry.subentries.len(), 4);
+        assert_eq!(augmented_tree_entry.entries.len(), 4);
         let mut buf: Vec<u8> = Vec::with_capacity(1024);
         augmented_tree_entry
             .write_sapling_tree_blob(&mut buf)
@@ -499,7 +499,7 @@ mod tests {
         let augmented_tree_entry =
             AugmentedTree::try_deserialize(&mut reader).expect("parsing failed");
 
-        assert_eq!(augmented_tree_entry.subentries.len(), 10);
+        assert_eq!(augmented_tree_entry.entries.len(), 10);
         assert_eq!(
             augmented_tree_entry.hg_node_id,
             HgId::from_hex(b"2d6429cc6d9576d412493d30c700c58a4ac38fbe").unwrap()
@@ -508,7 +508,7 @@ mod tests {
             augmented_tree_entry.p1,
             Some(HgId::from_hex(b"5d09d8b81f6c097d294cb081389428baa9ef96f4").unwrap())
         );
-        let first_child = augmented_tree_entry.subentries.first().unwrap();
+        let first_child = augmented_tree_entry.entries.first().unwrap();
         assert_eq!(
             first_child.0,
             RepoPathBuf::from_utf8(r"AssetWithZoneReclassifications.php".into()).unwrap()
@@ -516,7 +516,7 @@ mod tests {
         assert_matches!(first_child.1, AugmentedTreeEntry::FileNode(_));
         assert_matches!(
             augmented_tree_entry
-                .subentries
+                .entries
                 .get(2)
                 .expect("index 2 out of range")
                 .1,
@@ -524,7 +524,7 @@ mod tests {
         );
         assert_matches!(
             augmented_tree_entry
-                .subentries
+                .entries
                 .get(3)
                 .expect("index 3 out of range")
                 .1,
@@ -532,7 +532,7 @@ mod tests {
         );
         assert_eq!(
             augmented_tree_entry
-                .subentries
+                .entries
                 .get(3)
                 .expect("index 3 out of range")
                 .1,
@@ -608,7 +608,7 @@ mod tests {
         let augmented_tree_entry =
             AugmentedTree::try_deserialize(&mut reader).expect("parsing failed");
 
-        assert_eq!(augmented_tree_entry.subentries.len(), 4);
+        assert_eq!(augmented_tree_entry.entries.len(), 4);
         assert_eq!(
             augmented_tree_entry.computed_hg_node_id,
             Some(HgId::from_hex(b"4444444444444444444444444444444444444444").expect("bad hgid"))
@@ -632,10 +632,10 @@ mod tests {
         let augmented_tree_entry =
             AugmentedTree::try_deserialize(&mut reader).expect("parsing failed");
 
-        assert_eq!(augmented_tree_entry.subentries.len(), 4);
+        assert_eq!(augmented_tree_entry.entries.len(), 4);
 
         assert_eq!(
-            augmented_tree_entry.subentries.first().unwrap().1,
+            augmented_tree_entry.entries.first().unwrap().1,
             AugmentedTreeEntry::FileNode(AugmentedFileNode {
                 file_type: FileType::Regular,
                 filenode: HgId::from_hex(b"4444444444444444444444444444444444444444")

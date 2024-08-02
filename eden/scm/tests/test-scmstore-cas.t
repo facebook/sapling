@@ -23,7 +23,7 @@ Can also fetch tree data.
       computed_hg_node_id: None,
       p1: None,
       p2: None,
-      subentries: [
+      entries: [
           (
               RepoPathBuf(
                   "A",

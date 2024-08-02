@@ -464,7 +464,7 @@ impl EagerRepo {
                 let sapling_manifest = sapling_manifest.unwrap();
                 let (parents, data) = Self::extract_parents_from_tree_data(sapling_manifest)?;
                 let tree_entry = manifest_tree::TreeEntry(data, SerializationFormat::Hg);
-                let mut subentries: Vec<(RepoPathBuf, AugmentedTreeEntry)> = Vec::new();
+                let mut entries: Vec<(RepoPathBuf, AugmentedTreeEntry)> = Vec::new();
                 for child in tree_entry.elements() {
                     let child = child?;
                     let hgid = child.hgid;
@@ -517,7 +517,7 @@ impl EagerRepo {
                     };
                     let path = RepoPathBuf::from_string(child.component.to_string())
                         .map_err(anyhow::Error::from)?;
-                    subentries.push((path, entry));
+                    entries.push((path, entry));
                 }
 
                 let aug_tree = AugmentedTree {
@@ -525,7 +525,7 @@ impl EagerRepo {
                     computed_hg_node_id: None,
                     p1: parents.p1().copied(),
                     p2: parents.p2().copied(),
-                    subentries,
+                    entries,
                 };
 
                 let digest = aug_tree.compute_content_addressed_digest()?;
