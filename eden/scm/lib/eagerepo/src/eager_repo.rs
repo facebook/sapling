@@ -16,6 +16,7 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
 
+use anyhow::anyhow;
 use dag::ops::DagAddHeads;
 use dag::ops::DagPersistent;
 use dag::Dag;
@@ -164,9 +165,14 @@ impl EagerRepoStore {
         }
     }
 
+    /// Read SHA1 blob from zstore for augmented data.
+    pub fn get_augmented_blob(&self, id: Id20) -> Result<Option<Bytes>> {
+        self.get_sha1_blob(augmented_id(id))
+    }
+
     /// Check files and trees referenced by the `id` are present.
     /// Missing paths are pushed to `missing`.
-    fn find_missing_references<'a>(
+    fn find_missing_references(
         &self,
         id: Id20,
         flag: Flag,
@@ -379,13 +385,15 @@ impl EagerRepo {
 
     /// Insert SHA1 blob to zstore for augmented trees.
     /// These blobs are not content addressed
-    pub fn add_augmented_tree_blob(&self, id: Id20, data: &[u8]) -> Result<()> {
-        self.store.add_arbitrary_blob(augmented_id(id), data)
+    pub fn add_augmented_tree_blob(&self, id: Id20, digest: CasDigest, data: &[u8]) -> Result<()> {
+        self.store.add_arbitrary_blob(augmented_id(id), data)?;
+        // Store a mapping from CasDigest to hg id so we can query augmented data by CasDigest.
+        self.add_cas_mapping(digest, CasPointer::Tree(id))
     }
 
-    /// Read SHA1 blob from zstore for augmented trees.
-    pub fn get_augmented_tree_blob(&self, id: Id20) -> Result<Option<Bytes>> {
-        self.store.get_sha1_blob(augmented_id(id))
+    fn add_cas_mapping(&self, digest: CasDigest, pointer: CasPointer) -> Result<()> {
+        self.store
+            .add_arbitrary_blob(digest_id(digest), &pointer.serialize())
     }
 
     /// Extract parents out of a SHA1 manifest blob, returns the remaining data.
@@ -406,7 +414,7 @@ impl EagerRepo {
 
     /// Calculate augmented trees recursively
     pub fn derive_augmented_tree_recursively(&self, id: Id20) -> Result<Option<Bytes>> {
-        match self.get_augmented_tree_blob(id)? {
+        match self.store.get_augmented_blob(id)? {
             Some(t) => Ok(Some(t)),
             None => {
                 let sapling_manifest = self.get_sha1_blob(id)?;
@@ -444,6 +452,16 @@ impl EagerRepo {
                             }
                             let (raw_data, copy_from) = Self::parse_file_blob(bytes.unwrap())?;
                             let aux_data = FileAuxData::from_content(&raw_data);
+
+                            // Store a mapping from CasDigest to hg id so we can query augmented data by CasDigest.
+                            self.add_cas_mapping(
+                                CasDigest {
+                                    hash: aux_data.blake3,
+                                    size: aux_data.total_size,
+                                },
+                                CasPointer::File(hgid),
+                            )?;
+
                             AugmentedTreeChildEntry::FileNode(AugmentedFileNode {
                                 file_type,
                                 filenode: hgid,
@@ -486,7 +504,7 @@ impl EagerRepo {
                     .expect("writing failed");
 
                 // Store the augmented tree in zstore
-                self.add_augmented_tree_blob(id, &buf)?;
+                self.add_augmented_tree_blob(id, digest, &buf)?;
 
                 Ok(Some(Bytes::from(buf)))
             }
@@ -617,6 +635,50 @@ fn augmented_id(id: Id20) -> Id20 {
     hasher.update(id.as_ref());
     let hash: [u8; 20] = hasher.finalize().into();
     Id20::from_byte_array(hash)
+}
+
+fn digest_id(digest: CasDigest) -> Id20 {
+    let mut hasher = Sha1::new();
+    hasher.update(digest.hash.as_ref());
+    let hash: [u8; 20] = hasher.finalize().into();
+    Id20::from_byte_array(hash)
+}
+
+// Point to either a tree blob or file blob. Tree blobs are stored in the desired
+// augmented format, but files are stored with hg metadata prepended, so we must
+// differentiat the two.
+enum CasPointer {
+    Tree(Id20),
+    File(Id20),
+}
+
+impl CasPointer {
+    fn serialize(&self) -> Vec<u8> {
+        let mut data = Vec::with_capacity(21);
+        match self {
+            Self::File(id) => {
+                data.push(0);
+                data.extend_from_slice(id.as_ref());
+            }
+            Self::Tree(id) => {
+                data.push(1);
+                data.extend_from_slice(id.as_ref());
+            }
+        }
+        data
+    }
+
+    fn deserialize(data: &[u8]) -> Result<Self> {
+        if data.len() != 21 {
+            Err(anyhow!("bad CAS pointer length {}", data.len()).into())
+        } else {
+            match data[0] {
+                0 => Ok(Self::File(Id20::from_slice(&data[1..]).unwrap())),
+                1 => Ok(Self::Tree(Id20::from_slice(&data[1..]).unwrap())),
+                _ => Err(anyhow!("bad pointer type {}", data[0]).into()),
+            }
+        }
+    }
 }
 
 pub fn is_eager_repo(path: &Path) -> bool {
