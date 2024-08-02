@@ -28,16 +28,13 @@ pub enum Error {
 
     #[error("when moving bookmark {0:?} to {1:?}, the commit does not exist")]
     BookmarkMissingCommit(String, Vertex),
+
+    #[error(transparent)]
+    Other(#[from] anyhow::Error),
 }
 
 impl From<std::io::Error> for Error {
     fn from(err: std::io::Error) -> Self {
-        Self::Dag(dag::errors::BackendError::from(err).into())
-    }
-}
-
-impl From<anyhow::Error> for Error {
-    fn from(err: anyhow::Error) -> Self {
         Self::Dag(dag::errors::BackendError::from(err).into())
     }
 }
