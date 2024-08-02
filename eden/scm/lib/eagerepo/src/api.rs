@@ -937,6 +937,11 @@ impl SaplingRemoteApi for EagerRepo {
                 }
             }
 
+            // Eagerly compute augmented manifest data.
+            if let Err(err) = self.derive_augmented_tree_recursively(cs.manifestid) {
+                error!(?err, "error pre-deriving augmented tree data");
+            }
+
             let text = match changeset_to_text(cs) {
                 Ok(text) => text,
                 Err(err) => {

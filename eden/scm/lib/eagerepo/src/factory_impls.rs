@@ -12,9 +12,10 @@ use std::sync::Arc;
 use storemodel::StoreInfo;
 use storemodel::StoreOutput;
 
+use crate::cas::cas_client_from_config;
 use crate::EagerRepoStore;
 
-pub(crate) fn setup_eagerepo_store_constructor() {
+pub(crate) fn init() {
     fn maybe_construct_eagerepo_store(
         info: &dyn StoreInfo,
     ) -> anyhow::Result<Option<Box<dyn StoreOutput>>> {
@@ -38,4 +39,6 @@ pub(crate) fn setup_eagerepo_store_constructor() {
         }
     }
     factory::register_constructor("eager", maybe_construct_eagerepo_store);
+
+    factory::register_constructor("eager", cas_client_from_config);
 }

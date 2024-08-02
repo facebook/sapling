@@ -22,6 +22,7 @@
 //! "lazy evaluation".
 
 mod api;
+mod cas;
 mod eager_repo;
 mod errors;
 mod factory_impls;
@@ -36,5 +37,5 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 /// Initialization. Register abstraction implementations.
 pub fn init() {
-    crate::factory_impls::setup_eagerepo_store_constructor();
+    crate::factory_impls::init();
 }
