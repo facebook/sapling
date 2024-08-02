@@ -42,6 +42,7 @@ pub use crate::path::PathComponent;
 pub use crate::path::PathComponentBuf;
 pub use crate::path::RepoPath;
 pub use crate::path::RepoPathBuf;
+pub use crate::sha::Sha1;
 pub use crate::sha::Sha256;
 pub use crate::tree::FileType;
 

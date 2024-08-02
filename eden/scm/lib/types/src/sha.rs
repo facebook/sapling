@@ -58,6 +58,13 @@ impl<R: Read + ?Sized> ReadSha256Ext for R {
     }
 }
 
+pub type Sha1 = AbstractHashType<Sha1TypeInfo, 20>;
+pub struct Sha1TypeInfo;
+
+impl HashTypeInfo for Sha1TypeInfo {
+    const HASH_TYPE_NAME: &'static str = "Sha1";
+}
+
 // Some users dependent on it.
 pub use crate::hash::to_hex;
 
