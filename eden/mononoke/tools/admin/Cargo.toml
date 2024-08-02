@@ -25,7 +25,6 @@ bookmarks_movement = { version = "0.1.0", path = "../../bookmarks/bookmarks_move
 borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 bounded_traversal = { version = "0.1.0", path = "../../common/bounded_traversal" }
 bulk_derivation = { version = "0.1.0", path = "../../derived_data/bulk_derivation" }
-bulkops = { version = "0.1.0", path = "../../bulkops" }
 bytes = { version = "1.6.0", features = ["serde"] }
 cacheblob = { version = "0.1.0", path = "../../blobstore/cacheblob" }
 cas_client = { version = "0.1.0", path = "../../cas_client/client" }
@@ -62,7 +61,6 @@ git_symbolic_refs = { version = "0.1.0", path = "../../git_symbolic_refs" }
 git_types = { version = "0.1.0", path = "../../git/git_types" }
 gix-hash = "0.11"
 gix-object = "0.33"
-itertools = "0.11.0"
 manifest = { version = "0.1.0", path = "../../manifest" }
 megarepo_api = { version = "0.1.0", path = "../../megarepo_api" }
 megarepo_error = { version = "0.1.0", path = "../../megarepo_api/megarepo_error" }

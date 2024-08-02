@@ -115,16 +115,6 @@ dott_test(
 )
 
 dott_test(
-    name = "dump-changesets",
-    dott_files = glob(["test-dump-changesets*.t"]),
-    deps = [
-        "//eden/mononoke:blobimport",
-        "//eden/mononoke:mononoke",
-        "//eden/mononoke/tools/admin:newadmin",
-    ],
-)
-
-dott_test(
     name = "filenodes",
     dott_files = ["test-db-filenodes.t"] + glob([
         "test-filenodes*.t",
