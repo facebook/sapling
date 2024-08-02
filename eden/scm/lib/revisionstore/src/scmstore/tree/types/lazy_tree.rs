@@ -13,6 +13,9 @@ use edenapi_types::TreeEntry;
 use manifest_tree::TreeEntry as ManifestTreeEntry;
 use minibytes::Bytes;
 use storemodel::SerializationFormat;
+use types::hgid::NULL_ID;
+use types::AugmentedTreeEntry;
+use types::AugmentedTreeWithDigest;
 use types::HgId;
 use types::Key;
 use types::Parents;
@@ -34,6 +37,10 @@ pub(crate) enum LazyTree {
 
     /// An SaplingRemoteApi TreeEntry.
     SaplingRemoteApi(TreeEntry),
+
+    /// Tree data from CAS. Note that CAS actually contains AugmentedTree (without
+    /// digest), but we have the digest in-hand so we store an AugmentedTreeWithDigest.
+    Cas(AugmentedTreeWithDigest),
 }
 
 pub enum AuxData {
@@ -47,8 +54,9 @@ impl LazyTree {
         use LazyTree::*;
         match self {
             ContentStore(_) => None,
-            IndexedLog(ref entry) => Some(entry.key().hgid),
-            SaplingRemoteApi(ref entry) => Some(entry.key().hgid),
+            IndexedLog(entry) => Some(entry.key().hgid),
+            SaplingRemoteApi(entry) => Some(entry.key().hgid),
+            Cas(entry) => Some(entry.augmented_tree.hg_node_id),
         }
     }
 
@@ -56,9 +64,15 @@ impl LazyTree {
     pub(crate) fn hg_content(&self) -> Result<Bytes> {
         use LazyTree::*;
         Ok(match self {
-            IndexedLog(ref entry) => entry.content()?,
-            ContentStore(ref blob) => blob.clone(),
-            SaplingRemoteApi(ref entry) => entry.data()?.into(),
+            IndexedLog(entry) => entry.content()?,
+            ContentStore(blob) => blob.clone(),
+            SaplingRemoteApi(entry) => entry.data()?,
+            Cas(entry) => {
+                let tree = &entry.augmented_tree;
+                let mut data = Vec::with_capacity(tree.sapling_tree_blob_size());
+                tree.write_sapling_tree_blob(&mut data)?;
+                data.into()
+            }
         })
     }
 
@@ -68,10 +82,12 @@ impl LazyTree {
         Ok(match self {
             IndexedLog(ref entry) => Some(entry.clone().with_key(key)),
             SaplingRemoteApi(ref entry) => {
-                Some(Entry::new(key, entry.data()?.into(), Metadata::default()))
+                Some(Entry::new(key, entry.data()?, Metadata::default()))
             }
             // ContentStore handles caching internally
             ContentStore(_) => None,
+            // Don't write CAS entries to local cache.
+            Cas(_) => None,
         })
     }
 
@@ -85,6 +101,10 @@ impl LazyTree {
     pub(crate) fn parents(&self) -> Option<Parents> {
         match &self {
             Self::SaplingRemoteApi(entry) => entry.parents,
+            Self::Cas(entry) => Some(Parents::new(
+                entry.augmented_tree.p1.unwrap_or(NULL_ID),
+                entry.augmented_tree.p2.unwrap_or(NULL_ID),
+            )),
             _ => None,
         }
     }
@@ -92,6 +112,10 @@ impl LazyTree {
     pub(crate) fn aux_data(&self) -> Option<TreeAuxData> {
         match &self {
             Self::SaplingRemoteApi(entry) => entry.tree_aux_data.clone(),
+            Self::Cas(entry) => Some(TreeAuxData {
+                augmented_manifest_id: entry.augmented_manifest_id,
+                augmented_manifest_size: entry.augmented_manifest_size,
+            }),
             _ => None,
         }
     }
@@ -132,6 +156,31 @@ impl LazyTree {
                             .collect::<HashMap<_, _>>()
                     })
             }
+            Cas(entry) => entry
+                .augmented_tree
+                .entries
+                .iter()
+                .map(|(_path, child)| match child {
+                    AugmentedTreeEntry::FileNode(file) => (
+                        file.filenode,
+                        AuxData::File(FileAuxData {
+                            total_size: file.total_size,
+                            sha1: file.content_sha1,
+                            blake3: file.content_blake3,
+                            file_header_metadata: Some(
+                                file.file_header_metadata.clone().unwrap_or_default(),
+                            ),
+                        }),
+                    ),
+                    AugmentedTreeEntry::DirectoryNode(dir) => (
+                        dir.treenode,
+                        AuxData::Tree(TreeAuxData {
+                            augmented_manifest_id: dir.augmented_manifest_id,
+                            augmented_manifest_size: dir.augmented_manifest_size,
+                        }),
+                    ),
+                })
+                .collect(),
             _ => HashMap::new(),
         }
     }
