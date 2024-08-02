@@ -205,8 +205,6 @@ pub struct RepoConfig {
     pub enforce_lfs_acl_check: bool,
     /// Whether to use warm bookmark cache while serving data hg wireprotocol
     pub repo_client_use_warm_bookmarks_cache: bool,
-    /// Configuration for Segmented Changelog.
-    pub segmented_changelog_config: SegmentedChangelogConfig,
     /// Configuration for repo_client module
     pub repo_client_knobs: RepoClientKnobs,
     /// Callsign to check phabricator commits
@@ -1621,123 +1619,6 @@ impl AsRef<str> for HgsqlGlobalrevsName {
 impl AsRef<String> for HgsqlGlobalrevsName {
     fn as_ref(&self) -> &String {
         &self.0
-    }
-}
-
-/// An unit of configuration for what should be indexed by Segmented Changelog.
-#[derive(Debug, Clone, Eq, PartialEq)]
-pub enum SegmentedChangelogHeadConfig {
-    /// All public bookmarks with exceptions.
-    AllPublicBookmarksExcept(Vec<BookmarkKey>),
-    /// A single bookmark.
-    Bookmark(BookmarkKey),
-    /// A single changeset.
-    Changeset(ChangesetId),
-}
-
-impl From<Option<BookmarkKey>> for SegmentedChangelogHeadConfig {
-    fn from(f: Option<BookmarkKey>) -> Self {
-        match f {
-            None => Self::AllPublicBookmarksExcept(vec![]),
-            Some(n) => Self::Bookmark(n),
-        }
-    }
-}
-
-impl From<BookmarkKey> for SegmentedChangelogHeadConfig {
-    fn from(n: BookmarkKey) -> Self {
-        Self::Bookmark(n)
-    }
-}
-
-impl From<ChangesetId> for SegmentedChangelogHeadConfig {
-    fn from(c: ChangesetId) -> Self {
-        Self::Changeset(c)
-    }
-}
-
-impl From<&ChangesetId> for SegmentedChangelogHeadConfig {
-    fn from(c: &ChangesetId) -> Self {
-        Self::Changeset(*c)
-    }
-}
-
-/// Configuration for Segmented Changelog.
-#[derive(Debug, Clone, Eq, PartialEq)]
-pub struct SegmentedChangelogConfig {
-    /// Signals whether segmented changelog functionality is enabled for the current repository.
-    /// This can mean that functionality is disabled to shed load, that the required data is not
-    /// curretly being computed or that it was never computed for this repository.
-    pub enabled: bool,
-    /// How often the tailer should check for updates on the master_bookmark.
-    /// Defaults to 5 minutes.
-    pub tailer_update_period: Option<Duration>,
-    /// By default a mononoke process will look for Dags to load from blobstore.  In tests we may
-    /// not have prebuilt Dags to load so we have this setting to allow us to skip that step and
-    /// initialize with an empty Dag.
-    /// We don't want to set this in production.
-    pub skip_dag_load_at_startup: bool,
-    /// How often an Dag will be reloaded from saves.
-    /// The Dag will not reload when unset.
-    pub reload_dag_save_period: Option<Duration>,
-    /// How often the in process Dag will check the master bookmark to update itself.
-    /// The Dag will not check master when unset.
-    pub update_to_master_bookmark_period: Option<Duration>,
-    /// All the heads that should be part of segmented changelog.
-    pub heads_to_include: Vec<SegmentedChangelogHeadConfig>,
-    /// Heads that should be indexed by segmented changelog offline jobs but
-    /// shouldn't be kept-up-to-date in online serving jobs.
-    ///
-    /// There are two usecases for including extra stuff there:
-    ///
-    /// The first one is repo imports, we don't want to overwhelm prod jobs with
-    /// doing the job for the branches we aren't going to be serving anytime
-    /// soon.
-    ///
-    /// The second usecase is backwards master moves:  say we have a commit
-    /// graph like this:
-    /// ```text
-    ///  B <- master
-    ///  |
-    ///  A
-    ///  |
-    /// ...
-    /// ```
-    /// Then we move a master bookmark backwards to A and create a new commit on top
-    /// (this is a very rare situation, but it might happen during sevs)
-    ///
-    /// ```text
-    ///  C <- master
-    ///  |
-    ///  |  B
-    ///  | /
-    ///  A
-    ///  |
-    /// ...
-    /// ```
-    ///
-    /// Clients might have already pulled commit B, and so they assume it's present on
-    /// the server. However if we reseed segmented changelog then commit B won't be
-    /// a part of a new reseeded changelog because B is not an ancestor of master anymore.
-    /// It might lead to problems - clients might fail because server doesn't know about
-    /// a commit they assume it should know of, and server would do expensive sql requests
-    /// (see S242328).
-    pub extra_heads_to_include_in_background_jobs: Vec<SegmentedChangelogHeadConfig>,
-}
-
-impl Default for SegmentedChangelogConfig {
-    fn default() -> Self {
-        SegmentedChangelogConfig {
-            enabled: false,
-            tailer_update_period: Some(Duration::from_secs(45)),
-            skip_dag_load_at_startup: false,
-            reload_dag_save_period: Some(Duration::from_secs(3600)),
-            update_to_master_bookmark_period: Some(Duration::from_secs(60)),
-            heads_to_include: vec![SegmentedChangelogHeadConfig::AllPublicBookmarksExcept(
-                vec![],
-            )],
-            extra_heads_to_include_in_background_jobs: vec![],
-        }
     }
 }
 

@@ -180,11 +180,6 @@ use repo_stats_logger::RepoStatsLogger;
 use requests_table::ArcLongRunningRequestsQueue;
 use requests_table::SqlLongRunningRequestsQueue;
 use scuba_ext::MononokeScubaSampleBuilder;
-use segmented_changelog::new_server_segmented_changelog;
-use segmented_changelog::new_server_segmented_changelog_manager;
-use segmented_changelog::ArcSegmentedChangelogManager;
-use segmented_changelog::SegmentedChangelogSqlConnections;
-use segmented_changelog_types::ArcSegmentedChangelog;
 use slog::o;
 use sql_commit_graph_storage::ArcCommitGraphBulkFetcher;
 use sql_commit_graph_storage::CommitGraphBulkFetcher;
@@ -702,12 +697,6 @@ pub enum RepoFactoryError {
     #[error("Error opening hg mutation store")]
     HgMutationStore,
 
-    #[error("Error opening segmented changelog")]
-    SegmentedChangelog,
-
-    #[error("Error starting segmented changelog manager")]
-    SegmentedChangelogManager,
-
     #[error("Missing cache pool: {0}")]
     MissingCachePool(String),
 
@@ -1128,62 +1117,6 @@ impl RepoFactory {
         } else {
             Ok(Arc::new(hg_mutation_store))
         }
-    }
-
-    pub async fn segmented_changelog(
-        &self,
-        repo_config: &ArcRepoConfig,
-        repo_identity: &ArcRepoIdentity,
-        changeset_fetcher: &ArcChangesetFetcher,
-        bookmarks: &ArcBookmarks,
-        repo_blobstore: &ArcRepoBlobstore,
-    ) -> Result<ArcSegmentedChangelog> {
-        let sql_connections = self
-            .open_sql::<SegmentedChangelogSqlConnections>(repo_config)
-            .await
-            .context(RepoFactoryError::SegmentedChangelog)?;
-        let cache_handler_factory = self.cache_handler_factory("segmented_changelog")?;
-        let segmented_changelog = new_server_segmented_changelog(
-            &self.ctx(Some(repo_identity)),
-            repo_identity,
-            repo_config.segmented_changelog_config.clone(),
-            sql_connections,
-            changeset_fetcher.clone(),
-            bookmarks.clone(),
-            repo_blobstore.clone(),
-            cache_handler_factory,
-        )
-        .await
-        .context(RepoFactoryError::SegmentedChangelog)?;
-        Ok(segmented_changelog)
-    }
-
-    pub async fn segmented_changelog_manager(
-        &self,
-        repo_config: &ArcRepoConfig,
-        repo_identity: &ArcRepoIdentity,
-        changeset_fetcher: &ArcChangesetFetcher,
-        bookmarks: &ArcBookmarks,
-        repo_blobstore: &ArcRepoBlobstore,
-    ) -> Result<ArcSegmentedChangelogManager> {
-        let sql_connections = self
-            .open_sql::<SegmentedChangelogSqlConnections>(repo_config)
-            .await
-            .context(RepoFactoryError::SegmentedChangelogManager)?;
-        let cache_handler_factory = self.cache_handler_factory("segmented_changelog")?;
-        let manager = new_server_segmented_changelog_manager(
-            &self.ctx(Some(repo_identity)),
-            repo_identity,
-            repo_config.segmented_changelog_config.clone(),
-            sql_connections,
-            changeset_fetcher.clone(),
-            bookmarks.clone(),
-            repo_blobstore.clone(),
-            cache_handler_factory,
-        )
-        .await
-        .context(RepoFactoryError::SegmentedChangelogManager)?;
-        Ok(Arc::new(manager))
     }
 
     pub fn repo_derived_data(

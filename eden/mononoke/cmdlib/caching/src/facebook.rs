@@ -166,11 +166,6 @@ pub fn init_cachelib_from_settings(
     )?;
 
     cachelib::get_or_create_volatile_pool(
-        "segmented_changelog",
-        settings.segmented_changelog_cache_size.unwrap_or(1024),
-    )?;
-
-    cachelib::get_or_create_volatile_pool(
         "mutable_renames",
         settings
             .mutable_renames_cache_size

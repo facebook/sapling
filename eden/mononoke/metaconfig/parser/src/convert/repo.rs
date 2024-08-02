@@ -6,8 +6,6 @@
  */
 
 use std::collections::HashMap;
-use std::str::FromStr;
-use std::time::Duration;
 
 use anyhow::anyhow;
 use anyhow::Context;
@@ -44,8 +42,6 @@ use metaconfig_types::PushrebaseFlags;
 use metaconfig_types::PushrebaseParams;
 use metaconfig_types::PushrebaseRemoteMode;
 use metaconfig_types::RepoClientKnobs;
-use metaconfig_types::SegmentedChangelogConfig;
-use metaconfig_types::SegmentedChangelogHeadConfig;
 use metaconfig_types::ServiceWriteRestrictions;
 use metaconfig_types::ShardedService;
 use metaconfig_types::ShardingModeConfig;
@@ -61,7 +57,6 @@ use metaconfig_types::XRepoSyncSourceConfig;
 use metaconfig_types::XRepoSyncSourceConfigMapping;
 use metaconfig_types::ZelosConfig;
 use mononoke_types::path::MPath;
-use mononoke_types::ChangesetId;
 use mononoke_types::DerivableType;
 use mononoke_types::NonRootMPath;
 use mononoke_types::PrefixTrie;
@@ -90,8 +85,6 @@ use repos::RawPushrebaseParams;
 use repos::RawPushrebaseRemoteMode;
 use repos::RawPushrebaseRemoteModeRemote;
 use repos::RawRepoClientKnobs;
-use repos::RawSegmentedChangelogConfig;
-use repos::RawSegmentedChangelogHeadConfig;
 use repos::RawServiceWriteRestrictions;
 use repos::RawShardedService;
 use repos::RawShardingModeConfig;
@@ -568,86 +561,6 @@ impl Convert for RawRepoClientKnobs {
     fn convert(self) -> Result<Self::Output> {
         Ok(RepoClientKnobs {
             allow_short_getpack_history: self.allow_short_getpack_history,
-        })
-    }
-}
-
-impl Convert for RawSegmentedChangelogHeadConfig {
-    type Output = SegmentedChangelogHeadConfig;
-
-    fn convert(self) -> Result<Self::Output> {
-        let res = match self {
-            Self::all_public_bookmarks_except(exceptions) => {
-                SegmentedChangelogHeadConfig::AllPublicBookmarksExcept(
-                    exceptions
-                        .into_iter()
-                        .map(BookmarkKey::new)
-                        .collect::<Result<Vec<BookmarkKey>>>()?,
-                )
-            }
-            Self::bookmark(bookmark_name) => {
-                SegmentedChangelogHeadConfig::Bookmark(BookmarkKey::new(bookmark_name)?)
-            }
-            Self::bonsai_changeset(changeset_id) => {
-                SegmentedChangelogHeadConfig::Changeset(ChangesetId::from_str(&changeset_id)?)
-            }
-            Self::UnknownField(_) => {
-                return Err(anyhow!(
-                    "Unknown variant of RawSegmentedChangelogHeadConfig!"
-                ));
-            }
-        };
-        Ok(res)
-    }
-}
-
-impl Convert for RawSegmentedChangelogConfig {
-    type Output = SegmentedChangelogConfig;
-
-    fn convert(self) -> Result<Self::Output> {
-        fn maybe_secs_to_duration(
-            maybe_secs: Option<i64>,
-            default: Option<Duration>,
-        ) -> Result<Option<Duration>> {
-            match maybe_secs {
-                Some(0) => Ok(None),
-                Some(secs) => Ok(Some(Duration::from_secs(secs.try_into()?))),
-                None => Ok(default),
-            }
-        }
-
-        let heads_to_include = self
-            .heads_to_include
-            .into_iter()
-            .map(|raw| raw.convert())
-            .collect::<Result<Vec<_>>>()?;
-
-        let extra_heads_to_include_in_background_jobs = self
-            .extra_heads_to_include_in_background_jobs
-            .into_iter()
-            .map(|raw| raw.convert())
-            .collect::<Result<Vec<_>>>()?;
-
-        let default = SegmentedChangelogConfig::default();
-        Ok(SegmentedChangelogConfig {
-            enabled: self.enabled.unwrap_or(default.enabled),
-            tailer_update_period: maybe_secs_to_duration(
-                self.tailer_update_period_secs,
-                default.tailer_update_period,
-            )?,
-            skip_dag_load_at_startup: self
-                .skip_dag_load_at_startup
-                .unwrap_or(default.skip_dag_load_at_startup),
-            reload_dag_save_period: maybe_secs_to_duration(
-                self.reload_dag_save_period_secs,
-                default.reload_dag_save_period,
-            )?,
-            update_to_master_bookmark_period: maybe_secs_to_duration(
-                self.update_to_master_bookmark_period_secs,
-                default.update_to_master_bookmark_period,
-            )?,
-            heads_to_include,
-            extra_heads_to_include_in_background_jobs,
         })
     }
 }

@@ -1235,17 +1235,6 @@ hg_set_committer_extra = true
 CONFIG
 fi
 
-if [[ -n "${SEGMENTED_CHANGELOG_ENABLE:-}" ]]; then
-  cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
-[segmented_changelog_config]
-enabled=true
-heads_to_include = [
-   { bookmark = "master_bookmark" },
-]
-skip_dag_load_at_startup=true
-CONFIG
-fi
-
 if [[ -n "${BACKUP_FROM:-}" ]]; then
   cat >> "repo_definitions/$reponame_urlencoded/server.toml" <<CONFIG
 backup_source_repo_name="$BACKUP_FROM"

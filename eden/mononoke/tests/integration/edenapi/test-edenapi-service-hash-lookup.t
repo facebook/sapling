@@ -45,7 +45,7 @@ Populate test repo
 Import and start mononoke
   $ cd ..
   $ blobimport repo-hg/.hg repo
-  $ SEGMENTED_CHANGELOG_ENABLE=1 setup_mononoke_config
+  $ setup_mononoke_config
   $ start_and_wait_for_mononoke_server
 Check response.
   $ hgedenapi debugapi -e hashlookup -i '["4", "26805aba1e600a82e93661149f2313866a221a7b", "", "ffff"]'

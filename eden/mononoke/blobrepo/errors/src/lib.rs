@@ -35,7 +35,6 @@ pub enum StateOpenError {
     BonsaiHgMapping,
     Phases,
     HgMutationStore,
-    SegmentedChangelog,
 }
 
 impl fmt::Display for StateOpenError {
@@ -51,7 +50,6 @@ impl fmt::Display for StateOpenError {
             StateOpenError::BonsaiHgMapping => write!(f, "bonsai_hg_mapping"),
             StateOpenError::Phases => write!(f, "phases"),
             StateOpenError::HgMutationStore => write!(f, "hg_mutation_store"),
-            StateOpenError::SegmentedChangelog => write!(f, "segmented_changelog"),
         }
     }
 }

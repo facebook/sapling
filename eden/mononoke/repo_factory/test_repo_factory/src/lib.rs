@@ -27,7 +27,6 @@ use bonsai_tag_mapping::SqlBonsaiTagMappingBuilder;
 use bookmarks::bookmark_heads_fetcher;
 use bookmarks::ArcBookmarkUpdateLog;
 use bookmarks::ArcBookmarks;
-use bookmarks::BookmarkKey;
 use bookmarks_cache::ArcBookmarksCache;
 use cacheblob::InProcessLease;
 use cacheblob::LeaseOps;
@@ -74,8 +73,6 @@ use metaconfig_types::HookManagerParams;
 use metaconfig_types::InfinitepushNamespace;
 use metaconfig_types::InfinitepushParams;
 use metaconfig_types::RepoConfig;
-use metaconfig_types::SegmentedChangelogConfig;
-use metaconfig_types::SegmentedChangelogHeadConfig;
 use metaconfig_types::SourceControlServiceParams;
 use metaconfig_types::UnodeVersion;
 use mononoke_types::DerivableType;
@@ -120,9 +117,6 @@ use repo_stats_logger::ArcRepoStatsLogger;
 use repo_stats_logger::RepoStatsLogger;
 use requests_table::SqlLongRunningRequestsQueue;
 use scuba_ext::MononokeScubaSampleBuilder;
-use segmented_changelog::new_test_segmented_changelog;
-use segmented_changelog::SegmentedChangelogSqlConnections;
-use segmented_changelog_types::ArcSegmentedChangelog;
 use sql::rusqlite::Connection as SqliteConnection;
 use sql::sqlite::SqliteCallbacks;
 use sql::Connection;
@@ -193,13 +187,6 @@ pub fn default_test_repo_config() -> RepoConfig {
                 "default".to_string() => derived_data_types_config.clone(),
                 "backfilling".to_string() => derived_data_types_config
             ],
-        },
-        segmented_changelog_config: SegmentedChangelogConfig {
-            enabled: true,
-            heads_to_include: vec![SegmentedChangelogHeadConfig::Bookmark(
-                BookmarkKey::new("master").unwrap(),
-            )],
-            ..Default::default()
         },
         infinitepush: InfinitepushParams {
             namespace: Some(InfinitepushNamespace::new(
@@ -273,7 +260,6 @@ impl TestRepoFactory {
         metadata_con.execute_batch(SqlLongRunningRequestsQueue::CREATION_QUERY)?;
         metadata_con.execute_batch(SqlMutableRenamesStore::CREATION_QUERY)?;
         metadata_con.execute_batch(SqlSyncedCommitMapping::CREATION_QUERY)?;
-        metadata_con.execute_batch(SegmentedChangelogSqlConnections::CREATION_QUERY)?;
         metadata_con.execute_batch(SqlRepoLock::CREATION_QUERY)?;
         metadata_con.execute_batch(SqlSparseProfilesSizes::CREATION_QUERY)?;
         metadata_con.execute_batch(StreamingCloneBuilder::CREATION_QUERY)?;
@@ -601,24 +587,6 @@ impl TestRepoFactory {
             SqlHgMutationStoreBuilder::from_sql_connections(self.hg_mutation_db.clone())
                 .with_repo_id(repo_identity.id()),
         ))
-    }
-
-    /// Construct Segmented Changelog.  Segmented changelog is disabled in
-    /// test repos.
-    pub fn segmented_changelog(
-        &self,
-        repo_identity: &ArcRepoIdentity,
-        repo_config: &ArcRepoConfig,
-        changeset_fetcher: &ArcChangesetFetcher,
-        bookmarks: &ArcBookmarks,
-    ) -> Result<ArcSegmentedChangelog> {
-        new_test_segmented_changelog(
-            self.ctx.clone(),
-            repo_identity.id(),
-            &repo_config.segmented_changelog_config,
-            changeset_fetcher.clone(),
-            bookmarks.clone(),
-        )
     }
 
     /// Construct RepoDerivedData.  Derived data uses an in-process lease for
