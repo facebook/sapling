@@ -167,16 +167,22 @@ impl EagerRepoStore {
     }
 
     /// Read CAS data for digest.
+    #[tracing::instrument(skip(self), level = "trace")]
     pub fn get_cas_blob(&self, digest: CasDigest) -> Result<Option<Bytes>> {
         let Some(pointer_data) = self.get_sha1_blob(digest_id(digest))? else {
+            tracing::trace!("no CAS pointer data");
             return Ok(None);
         };
+
+        let pointer = CasPointer::deserialize(&pointer_data)?;
+        tracing::trace!("found CAS pointer {pointer:?}");
 
         match CasPointer::deserialize(&pointer_data)? {
             CasPointer::Tree(id) => {
                 // We store data for AugmentedTreeWithDigest, but we want to return data for AugmentedTree.
                 // Strip off the first line (which is the digest).
                 self.get_sha1_blob(augmented_id(id)).and_then(|blob| {
+                    tracing::trace!("found CAS tree data");
                     blob.map(|blob| {
                         if let Some(idx) = blob.as_ref().iter().position(|&b| b == b'\n') {
                             Ok(blob.slice(idx + 1..))
@@ -188,7 +194,10 @@ impl EagerRepoStore {
                 })
             }
             CasPointer::File(id) => match self.get_content(id)? {
-                Some(data) => Ok(Some(split_hg_file_metadata(&data)?.0)),
+                Some(data) => {
+                    tracing::trace!("found CAS file data");
+                    Ok(Some(split_hg_file_metadata(&data)?.0))
+                }
                 None => Ok(None),
             },
         }
@@ -421,6 +430,7 @@ impl EagerRepo {
     }
 
     fn add_cas_mapping(&self, digest: CasDigest, pointer: CasPointer) -> Result<()> {
+        tracing::trace!("adding CAS mapping from {digest:?} to {pointer:?}");
         self.store
             .add_arbitrary_blob(digest_id(digest), &pointer.serialize())
     }
@@ -676,6 +686,7 @@ fn digest_id(digest: CasDigest) -> Id20 {
 // Point to either a tree blob or file blob. Tree blobs are stored in the desired
 // augmented format, but files are stored with hg metadata prepended, so we must
 // differentiat the two.
+#[derive(Debug)]
 enum CasPointer {
     Tree(Id20),
     File(Id20),
