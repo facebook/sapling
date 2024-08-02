@@ -251,8 +251,8 @@ std::pair<folly::File, int> allocateFuseDevice(bool useDevEdenFs) {
 template <typename T, std::size_t Size>
 void checkThenPlaceInBuffer(T (&buf)[Size], folly::StringPiece data) {
   if (data.size() >= Size) {
-    throw_<std::runtime_error>(fmt::format(
-        "string exceeds buffer size in snprintf.  result was {}", data));
+    throwf<std::runtime_error>(
+        "string exceeds buffer size in snprintf.  result was {}", data);
   }
 
   memcpy(buf, data.data(), data.size());
@@ -889,7 +889,7 @@ UnixSocket::Message PrivHelperServer::processUnmountMsg(Cursor& cursor) {
 
   const auto it = mountPoints_.find(mountPath);
   if (it == mountPoints_.end()) {
-    throw_<std::domain_error>("No FUSE mount found for ", mountPath);
+    throwf<std::domain_error>("No FUSE mount found for {}", mountPath);
   }
 
   unmount(mountPath.c_str());
@@ -904,7 +904,7 @@ UnixSocket::Message PrivHelperServer::processNfsUnmountMsg(Cursor& cursor) {
 
   const auto it = mountPoints_.find(mountPath);
   if (it == mountPoints_.end()) {
-    throw_<std::domain_error>("No NFS mount found for ", mountPath);
+    throwf<std::domain_error>("No NFS mount found for {}", mountPath);
   }
 
   unmount(mountPath.c_str());
@@ -920,7 +920,7 @@ UnixSocket::Message PrivHelperServer::processTakeoverShutdownMsg(
 
   const auto it = mountPoints_.find(mountPath);
   if (it == mountPoints_.end()) {
-    throw_<std::domain_error>("No mount found for ", mountPath);
+    throwf<std::domain_error>("No mount found for {}", mountPath);
   }
 
   mountPoints_.erase(mountPath);
@@ -933,7 +933,7 @@ std::string PrivHelperServer::findMatchingMountPrefix(folly::StringPiece path) {
       return mountPoint;
     }
   }
-  throw_<std::domain_error>("No FUSE mount found for ", path);
+  throwf<std::domain_error>("No FUSE mount found for {}", path);
 }
 
 UnixSocket::Message PrivHelperServer::processBindMountMsg(Cursor& cursor) {
@@ -972,9 +972,9 @@ UnixSocket::Message PrivHelperServer::processSetLogFileMsg(
   XLOG(DBG3) << "set log file";
   PrivHelperConn::parseSetLogFileRequest(cursor);
   if (request.files.size() != 1) {
-    throw_<std::runtime_error>(
-        "expected to receive 1 file descriptor with setLogFile() request ",
-        "received ",
+    throwf<std::runtime_error>(
+        "expected to receive 1 file descriptor with setLogFile() request. "
+        "received {}",
         request.files.size());
   }
 
@@ -1199,8 +1199,8 @@ UnixSocket::Message PrivHelperServer::processMessage(
       break;
   }
 
-  throw_<std::runtime_error>(
-      "unexpected privhelper message type: ", folly::to_underlying(msgType));
+  throwf<std::runtime_error>(
+      "unexpected privhelper message type: {}", folly::to_underlying(msgType));
 }
 
 void PrivHelperServer::eofReceived() noexcept {
