@@ -1,8 +1,8 @@
 [patch.crates-io]
 abomonation = { git = "https://github.com/markbt/abomonation", rev = "0f43346d2afa2aedc64d61f3f4273e8d1e454642" }
 base64urlsafedata = { git = "https://github.com/kanidm/webauthn-rs.git", rev = "d278c56adfa39a0723c79bdcd461644194bc5138" }
-bindgen = { git = "https://github.com/rust-lang/rust-bindgen", rev = "7e9043497297e04e91ae76dfe0d2e7998828e529" }
-bindgen-cli = { git = "https://github.com/rust-lang/rust-bindgen", rev = "7e9043497297e04e91ae76dfe0d2e7998828e529" }
+bindgen = { git = "https://github.com/rust-lang/rust-bindgen", rev = "7ea3f36d58399204a6ab81a38be14c3c363c296b" }
+bindgen-cli = { git = "https://github.com/rust-lang/rust-bindgen", rev = "7ea3f36d58399204a6ab81a38be14c3c363c296b" }
 cxx = { package = "cxx", git = "https://github.com/facebookexperimental/cxx.git", rev = "cf9ae5500db7d31292d12a6b0728b0f6a1d7b9c9" }
 cxx-build = { package = "cxx-build", git = "https://github.com/facebookexperimental/cxx.git", rev = "cf9ae5500db7d31292d12a6b0728b0f6a1d7b9c9" }
 displaydoc = { git = "https://github.com/yaahc/displaydoc", rev = "7dc6e324b1788a6b7fb9f3a1953c512923a3e9f0" }
