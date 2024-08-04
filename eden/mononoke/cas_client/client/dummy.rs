@@ -47,4 +47,8 @@ impl<'a> CasClient for DummyCasClient<'a> {
     ) -> Result<Vec<MononokeDigest>, Error> {
         Ok(digests.to_vec())
     }
+
+    fn repo_name(&self) -> &str {
+        "dummy"
+    }
 }

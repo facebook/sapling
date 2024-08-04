@@ -32,6 +32,7 @@ define_stats! {
     prefix = "mononoke.cas_client";
     uploaded_manifests_count: timeseries(Rate, Sum),
     uploaded_files_count: timeseries(Rate, Sum),
+    uploaded_bytes: dynamic_histogram("{}.uploaded_bytes", (repo_name: String); 1_500_000, 0, 150_000_000, Average, Sum, Count; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
 }
 
 const MAX_CONCURRENT_UPLOADS_TREES: usize = 200;
@@ -94,6 +95,7 @@ where
             self.client.streaming_upload_blob(&digest, stream).await?;
         }
         STATS::uploaded_files_count.add_value(1);
+        STATS::uploaded_bytes.add_value(digest.1 as i64, (self.client.repo_name().to_string(),));
         Ok(UploadOutcome::Uploaded(digest.1))
     }
 
@@ -254,6 +256,7 @@ where
                 .await?;
         }
         STATS::uploaded_manifests_count.add_value(1);
+        STATS::uploaded_bytes.add_value(digest.1 as i64, (self.client.repo_name().to_string(),));
         Ok(UploadOutcome::Uploaded(digest.1))
     }
 

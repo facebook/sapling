@@ -39,4 +39,6 @@ pub trait CasClient: Sync + Send {
         &self,
         digests: &'a [MononokeDigest],
     ) -> Result<Vec<MononokeDigest>, Error>;
+    /// Get the name of the repo this client is for.
+    fn repo_name(&self) -> &str;
 }
