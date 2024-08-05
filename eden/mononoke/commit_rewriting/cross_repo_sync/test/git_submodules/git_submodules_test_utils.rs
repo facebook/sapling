@@ -30,7 +30,6 @@ use cross_repo_sync::submodule_metadata_file_prefix_and_dangling_pointers;
 use cross_repo_sync::CommitSyncRepos;
 use cross_repo_sync::CommitSyncer;
 use cross_repo_sync::InMemoryRepo;
-use cross_repo_sync::Large;
 use cross_repo_sync::SubmoduleDeps;
 use cross_repo_sync::SubmoduleExpansionData;
 use cross_repo_sync::ValidSubmoduleExpansionBonsai;
@@ -748,7 +747,7 @@ pub(crate) async fn test_submodule_expansion_validation_in_large_repo_bonsai(
 ) -> Result<BonsaiChangeset> {
     println!("Validating expansion of bonsai: {0:#?}", bonsai.message());
 
-    let large_repo_id = Large(large_repo.repo_identity().id());
+    let small_repo_id = repo_a.repo_identity().id();
     let sync_config_version = base_commit_sync_version_name();
     let movers = commit_syncer
         .get_movers_by_version(&sync_config_version)
@@ -779,7 +778,7 @@ pub(crate) async fn test_submodule_expansion_validation_in_large_repo_bonsai(
         submodule_deps,
         large_repo: large_in_memory_repo,
         x_repo_submodule_metadata_file_prefix: x_repo_submodule_metadata_file_prefix.as_str(),
-        large_repo_id,
+        small_repo_id,
         dangling_submodule_pointers,
     };
 

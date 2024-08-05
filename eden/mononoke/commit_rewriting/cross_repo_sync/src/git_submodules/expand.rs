@@ -54,7 +54,6 @@ use crate::git_submodules::utils::list_non_submodule_files_under;
 use crate::git_submodules::utils::submodule_diff;
 use crate::reporting::log_debug;
 use crate::reporting::run_and_log_stats_to_scuba;
-use crate::types::Large;
 use crate::types::Repo;
 
 /// Wrapper to differentiate submodule paths from file changes paths at the
@@ -80,10 +79,9 @@ pub struct SubmoduleExpansionData<'a, R: Repo> {
     #[derivative(Debug = "ignore")]
     pub submodule_deps: &'a HashMap<NonRootMPath, Arc<R>>,
     pub x_repo_submodule_metadata_file_prefix: &'a str,
-    // TODO(T179530927): remove this once backsync is supported
-    /// Used to ensure that trying to backsync from large to small repos that
-    /// have submodule expansion enabled crashes while backsync is not supported.
-    pub large_repo_id: Large<RepositoryId>,
+    /// Used to determine the direction of the sync and log relevant information
+    /// to scuba.
+    pub small_repo_id: RepositoryId,
     /// Read-only version of the large repo, which performs any writes in memory.
     /// This is needed to validate submodule expansion in large repo bonsais.
     #[derivative(Debug = "ignore")]

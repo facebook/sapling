@@ -65,7 +65,6 @@ use crate::types::Repo;
 use crate::types::Source;
 use crate::types::Target;
 use crate::InMemoryRepo;
-use crate::Large;
 use crate::SubmoduleDeps;
 use crate::SubmoduleExpansionData;
 
@@ -173,7 +172,7 @@ pub async fn verify_working_copy_with_version<
         SubmoduleDeps::ForSync(ref deps) => Some(SubmoduleExpansionData {
             submodule_deps: deps,
             x_repo_submodule_metadata_file_prefix: &x_repo_submodule_metadata_file_prefix,
-            large_repo_id: Large(large_repo.repo_identity().id()),
+            small_repo_id: small_repo.repo_identity().id(),
             large_repo: large_in_memory_repo,
             dangling_submodule_pointers,
         }),

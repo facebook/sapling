@@ -37,7 +37,6 @@ use cross_repo_sync::CommitSyncContext;
 use cross_repo_sync::CommitSyncOutcome;
 use cross_repo_sync::CommitSyncer;
 use cross_repo_sync::InMemoryRepo;
-use cross_repo_sync::Large;
 use cross_repo_sync::SubmoduleDeps;
 use cross_repo_sync::SubmoduleExpansionData;
 use cross_repo_sync::Syncers;
@@ -302,7 +301,7 @@ async fn create_rewritten_merge_commit(
 
     let submodule_deps = syncers.small_to_large.get_submodule_deps();
 
-    let large_repo_id = Large(large_repo.repo_identity().id());
+    let small_repo_id = small_repo.repo_identity().id();
     let fallback_repos = vec![Arc::new(small_repo.clone())]
         .into_iter()
         .chain(submodule_deps.repos())
@@ -312,7 +311,7 @@ async fn create_rewritten_merge_commit(
         SubmoduleDeps::ForSync(deps) => Some(SubmoduleExpansionData {
             submodule_deps: deps,
             x_repo_submodule_metadata_file_prefix: x_repo_submodule_metadata_file_prefix.as_str(),
-            large_repo_id,
+            small_repo_id,
             large_repo: large_in_memory_repo,
             dangling_submodule_pointers,
         }),

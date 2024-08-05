@@ -39,7 +39,8 @@ pub async fn sync_commit_with_submodule_expansion<'a, R: Repo>(
     remapped_parents: &'a HashMap<ChangesetId, ChangesetId>,
     rewrite_opts: RewriteOpts,
 ) -> Result<CommitRewriteResult> {
-    let is_forward_sync = source_repo.repo_identity().id() != *sm_exp_data.large_repo_id;
+    let is_forward_sync =
+        source_repo.repo_identity().id() != sm_exp_data.large_repo.repo_identity().id();
 
     if !is_forward_sync {
         let ctx = &set_scuba_logger_fields(
@@ -49,7 +50,7 @@ pub async fn sync_commit_with_submodule_expansion<'a, R: Repo>(
                     "source_repo",
                     sm_exp_data.large_repo.repo_identity().id().id(),
                 ),
-                ("target_repo", source_repo.repo_identity().id().id()),
+                ("target_repo", sm_exp_data.small_repo_id.id()),
             ],
         );
         return backsync_without_submodule_expansion_support(

@@ -36,7 +36,6 @@ use cross_repo_sync::CommitSyncContext;
 use cross_repo_sync::CommitSyncRepos;
 use cross_repo_sync::CommitSyncer;
 use cross_repo_sync::InMemoryRepo;
-use cross_repo_sync::Large;
 use cross_repo_sync::Repo;
 use cross_repo_sync::SubmoduleDeps;
 use cross_repo_sync::SubmoduleExpansionData;
@@ -168,13 +167,14 @@ where
             )
             .await?;
 
+        let small_repo = commit_syncer.get_small_repo();
+        let small_repo_id = small_repo.repo_identity().id();
         let large_repo = commit_syncer.get_large_repo();
-        let large_repo_id = Large(large_repo.repo_identity().id());
         let fallback_repos = vec![Arc::new(source_repo.clone())]
             .into_iter()
             .chain(submodule_deps.repos())
             .collect::<Vec<_>>();
-        let large_in_memory_repo = InMemoryRepo::from_repo(target_repo, fallback_repos)?;
+        let large_in_memory_repo = InMemoryRepo::from_repo(large_repo, fallback_repos)?;
 
         let submodule_expansion_data = match submodule_deps {
             SubmoduleDeps::ForSync(deps) => Some(SubmoduleExpansionData {
@@ -182,7 +182,7 @@ where
                 submodule_deps: deps,
                 x_repo_submodule_metadata_file_prefix: x_repo_submodule_metadata_file_prefix
                     .as_str(),
-                large_repo_id,
+                small_repo_id,
                 dangling_submodule_pointers,
             }),
             SubmoduleDeps::NotNeeded | SubmoduleDeps::NotAvailable => None,

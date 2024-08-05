@@ -84,7 +84,6 @@ use crate::reporting::CommitSyncContext;
 use crate::sync_config_version_utils::get_version;
 use crate::sync_config_version_utils::set_mapping_change_version;
 use crate::types::ErrorKind;
-use crate::types::Large;
 use crate::types::PushrebaseRewriteDates;
 use crate::types::Repo;
 use crate::types::Source;
@@ -895,7 +894,7 @@ where
             )
             .await?;
         let large_repo = self.get_large_repo();
-        let large_repo_id = Large(large_repo.repo_identity().id());
+        let small_repo_id = small_repo.repo_identity().id();
         let fallback_repos = vec![Arc::new(source_repo.clone())]
             .into_iter()
             .chain(submodule_deps.repos())
@@ -907,7 +906,7 @@ where
                 large_repo: large_in_memory_repo,
                 x_repo_submodule_metadata_file_prefix: x_repo_submodule_metadata_file_prefix
                     .as_str(),
-                large_repo_id,
+                small_repo_id,
                 dangling_submodule_pointers,
             }),
             SubmoduleDeps::NotNeeded | SubmoduleDeps::NotAvailable => None,
@@ -1033,7 +1032,7 @@ where
             .await?;
 
         let large_repo = self.get_large_repo();
-        let large_repo_id = Large(large_repo.repo_identity().id());
+        let small_repo_id = small_repo.repo_identity().id();
         let fallback_repos = vec![Arc::new(source_repo.clone())]
             .into_iter()
             .chain(source_repo_deps.repos())
@@ -1046,7 +1045,7 @@ where
                 large_repo: large_in_memory_repo,
                 x_repo_submodule_metadata_file_prefix: x_repo_submodule_metadata_file_prefix
                     .as_str(),
-                large_repo_id,
+                small_repo_id,
                 dangling_submodule_pointers,
             }),
             SubmoduleDeps::NotNeeded | SubmoduleDeps::NotAvailable => None,
