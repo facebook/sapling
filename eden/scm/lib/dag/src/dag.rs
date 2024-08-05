@@ -71,6 +71,7 @@ use crate::segment::PreparedFlatSegments;
 use crate::segment::SegmentFlags;
 use crate::set::hints::Flags;
 use crate::set::hints::Hints;
+use crate::set::id_static::BasicIterationOrder;
 use crate::set::Set;
 use crate::types_ext::PreparedFlatSegmentsExt;
 use crate::utils;
@@ -1846,9 +1847,7 @@ where
             let dag_version = flat_set.dag.dag_version();
             if dag_version <= self.dag_version() {
                 let mut flat_set = flat_set.into_owned();
-                if flat_set.is_reversed() {
-                    flat_set = flat_set.reversed();
-                }
+                flat_set.set_iteration_order(BasicIterationOrder::Desc);
                 flat_set.map = self.id_map_snapshot()?;
                 flat_set.dag = self.dag_snapshot()?;
                 tracing::debug!(target: "dag::algo::sort", "sort({:6?}) (fast path 2)", set);

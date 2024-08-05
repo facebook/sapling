@@ -227,15 +227,12 @@ impl Set {
             if let (Some(_order), Some(this_id_set)) = (order, this.id_set_try_preserving_order()) {
                 // Fast path for IdStaticSet.
                 // The order is preserved, `this.is_id_sorted` is true.
-                let mut result = Self::from_spans_idmap_dag(
+                let result = Self::from_spans_idmap_dag_order(
                     this_id_set.difference(other.id_set_losing_order()),
                     this.map.clone(),
                     this.dag.clone(),
+                    this.iteration_order(),
                 );
-                // Preserve order.
-                if this.is_reversed() {
-                    result = result.reverse();
-                }
                 tracing::debug!(
                     target: "dag::algo::difference",
                     "difference(x={:.6?}, y={:.6?}) = {:.6?} (fast path 3)",
@@ -295,14 +292,12 @@ impl Set {
             let order = this.map.map_version().partial_cmp(other.map.map_version());
             if let (Some(order), Some(this_id_set)) = (order, this.id_set_try_preserving_order()) {
                 // Fast path for IdStaticSet
-                let mut result = Self::from_spans_idmap_dag(
+                let result = Self::from_spans_idmap_dag_order(
                     this_id_set.intersection(other.id_set_losing_order()),
                     pick(order, &this.map, &other.map).clone(),
                     pick(order, &this.dag, &other.dag).clone(),
+                    this.iteration_order(),
                 );
-                if this.is_reversed() {
-                    result = result.reverse();
-                }
                 tracing::debug!(
                     target: "dag::algo::intersection",
                     "intersection(x={:.6?}, y={:.6?}) = {:?} (IdStatic fast path)",
@@ -361,15 +356,13 @@ impl Set {
             let order = this.map.map_version().partial_cmp(other.map.map_version());
             if let Some(order) = order {
                 // Fast path for IdStaticSet
-                let mut result = Self::from_spans_idmap_dag(
+                let result = Self::from_spans_idmap_dag_order(
                     this.id_set_losing_order()
                         .union(other.id_set_losing_order()),
                     pick(order, &this.map, &other.map).clone(),
                     pick(order, &this.dag, &other.dag).clone(),
+                    this.iteration_order(),
                 );
-                if this.is_reversed() {
-                    result = result.reverse();
-                }
                 tracing::debug!(
                     target: "dag::algo::union",
                     "union(x={:.6?}, y={:.6?}) = {:.6?} (fast path 3)",

@@ -234,6 +234,8 @@ impl IdStaticSet {
     /// - `map` and `dag` set to the newer version of `lhs` and `rhs`.
     /// - `spans` set to `edit_spans(&lhs.spans, &rhs.spans)`.
     /// Otherwise return `None`.
+    ///
+    /// Iteration order will not be preserved.
     pub(crate) fn from_edit_spans(
         lhs: &Self,
         rhs: &Self,
@@ -247,9 +249,8 @@ impl IdStaticSet {
         };
         let (map, dag) = (picked.map.clone(), picked.dag.clone());
         let mut result = Self::from_spans_idmap_dag(spans, map, dag);
-        // Match iteration order of the left side.
-        if lhs.is_reversed() {
-            result = result.reversed();
+        if let Some(order) = lhs.iteration_order() {
+            result.set_iteration_order(order);
         }
         Some(result)
     }
@@ -269,11 +270,6 @@ impl IdStaticSet {
             }
         }
         self
-    }
-
-    /// Returns true if this set is in ASC order; false if in DESC order.
-    pub(crate) fn is_reversed(&self) -> bool {
-        matches!(self.iteration_order, IterationOrder::Asc)
     }
 
     /// Update iteration order. Only `Asc` and `Desc` is accepted.
