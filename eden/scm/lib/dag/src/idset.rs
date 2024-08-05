@@ -783,6 +783,30 @@ impl Debug for IdSet {
     }
 }
 
+/// Similar to `Span` but the iteration order is defined by `start` (inclusive) and `end`
+/// (inclusive), not hardcoded DESC. `start` might be larger or smaller than `end`.
+#[derive(Clone, Copy, Debug)]
+pub struct OrderedSpan {
+    start: Id,
+    end: Id,
+}
+
+impl OrderedSpan {
+    fn count(&self) -> u64 {
+        self.start.0.abs_diff(self.end.0) + 1
+    }
+
+    fn nth(&self, n: u64) -> Option<Id> {
+        if self.start <= self.end {
+            let id = self.start + n;
+            if id > self.end { None } else { Some(id) }
+        } else {
+            let id = self.start - n;
+            if id < self.end { None } else { Some(id) }
+        }
+    }
+}
+
 /// Iterator of integers in a [`IdSet`].
 #[derive(Clone)]
 pub struct IdSetIter<T> {
