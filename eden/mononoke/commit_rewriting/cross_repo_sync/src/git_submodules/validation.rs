@@ -573,15 +573,26 @@ where
 
     // The paths that are NOT in the submodule's manifest CAN ONLY BE submodule
     // metadata files.
-    let expected_metadata_files = should_be_metadata_files
-        .into_iter()
-        .map(|(path, entry)| match entry {
-            FsnodeEntry::File(fsnode_file) => Ok((path, fsnode_file)),
-            FsnodeEntry::Directory(_) => Err(anyhow!(
-                "Paths in expansion and not in submodules should be metadata files"
-            )),
-        })
-        .collect::<Result<HashMap<_, _>>>()?;
+    let (expected_metadata_files, unexpected_paths): (HashMap<_, _>, Vec<_>) =
+        should_be_metadata_files
+            .into_iter()
+            .map(|(path, entry)| match entry {
+                FsnodeEntry::File(fsnode_file) => Ok((path, fsnode_file)),
+                FsnodeEntry::Directory(_) => Err(path),
+            })
+            .partition_result();
+
+    if !unexpected_paths.is_empty() {
+        log_error(
+            ctx,
+            format!(
+                "Unexpected files in the expansion that are not in the submodule: {unexpected_paths:#?}",
+            ),
+        );
+        return Err(anyhow!(
+            "Found files in the expansion that are not in the submodule",
+        ));
+    }
 
     // The paths are are present in both, but their content doesn't match can be
     // either a submodule expansion or a directory that contains an expansion.
