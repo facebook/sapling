@@ -875,16 +875,19 @@ impl Redirection {
             // error if we want to redirect using a symlink.
             if !force {
                 return Err(EdenFsError::Other(anyhow!(
-                    "Cannot redirect {} because it is a non-empty directory (full path {}).  Review its contents and \
-                remove it if that is appropriate and then try again.",
+                    "Cannot redirect `{}` because it is a non-empty directory (full path `{}`). Either-
+- Try again after reviewing and manually deleting the directory, or 
+- Use `--force` parameter in this command to attempt inline deletion of the directory if none of its files are in use.",
                     self.repo_path.display(),
                     self.expand_repo_path(checkout).display()
                 )));
             } else {
-                println!("Attempting to remove forcefully.");
+                println!("Attempting to forcefully remove the directory.");
                 if forcefully_remove_dir_all(&self.expand_repo_path(checkout)).is_err() {
                     return Err(EdenFsError::Other(anyhow!(
-                        "Cannot redirect {} because it is a non-empty directory (full path {}).\nHint: You can use --force to attempt to remove it with its contents or review its contents manually and remove it if that is appropriate and then try again.",
+                        "Cannot redirect `{}` because it is a non-empty directory (full path `{}`) and force attempt of directory deletion failed.
+ This happens mostly when some of its files are in use by another process.
+ To detect and kill such processes, follow https://fburl.com/edenfs-redirection-non-empty-directory.",
                         self.repo_path.display(),
                         self.expand_repo_path(checkout).display()
                     )));
