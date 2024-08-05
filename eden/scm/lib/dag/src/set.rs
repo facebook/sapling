@@ -53,6 +53,7 @@ pub mod union;
 
 use self::hints::Flags;
 use self::hints::Hints;
+use self::id_static::BasicIterationOrder;
 use self::id_static::IdStaticSet;
 use self::meta::MetaSet;
 use self::reverse::ReverseSet;
@@ -124,7 +125,21 @@ impl Set {
         map: Arc<dyn IdConvert + Send + Sync>,
         dag: Arc<dyn DagAlgorithm + Send + Sync>,
     ) -> Set {
-        Self::from_query(IdStaticSet::from_spans_idmap_dag(spans, map, dag))
+        Self::from_spans_idmap_dag_order(spans, map, dag, None)
+    }
+
+    /// Creates from [`IdSet`], [`IdMap`], [`DagAlgorithm`], and [`BasicIterationOrder`].
+    pub fn from_spans_idmap_dag_order(
+        spans: IdSet,
+        map: Arc<dyn IdConvert + Send + Sync>,
+        dag: Arc<dyn DagAlgorithm + Send + Sync>,
+        iteration_order: Option<BasicIterationOrder>,
+    ) -> Set {
+        let mut set = IdStaticSet::from_spans_idmap_dag(spans, map, dag);
+        if let Some(order) = iteration_order {
+            set.set_iteration_order(order);
+        }
+        Self::from_query(set)
     }
 
     /// Creates from [`IdSet`] and a struct with snapshot abilities.
