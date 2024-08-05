@@ -37,7 +37,7 @@ Sanity check that children metadata isn't fetched by default:
                           hgid: HgId("2aabbe46539594a3aede2a262ebfbcd3107ad10c"),
                       },
                       data: Some(
-                          b"dir\0ac934ed5f01e06c92b6c95661b2ccaf2a734509ft\nfile1\0a58629e4c3c5a5d14b5810b2e35681bb84319167\nfile2\0ecbe8b3047eb5d9bb298f516d451f64491812e07\n",
+                          b"dir\x00ac934ed5f01e06c92b6c95661b2ccaf2a734509ft\nfile1\x00a58629e4c3c5a5d14b5810b2e35681bb84319167\nfile2\x00ecbe8b3047eb5d9bb298f516d451f64491812e07\n",
                       ),
                       parents: Some(
                           None,
@@ -79,7 +79,7 @@ Fetch a tree with children metadata, make sure directories aux data also returne
                           hgid: HgId("2aabbe46539594a3aede2a262ebfbcd3107ad10c"),
                       },
                       data: Some(
-                          b"dir\0ac934ed5f01e06c92b6c95661b2ccaf2a734509ft\nfile1\0a58629e4c3c5a5d14b5810b2e35681bb84319167\nfile2\0ecbe8b3047eb5d9bb298f516d451f64491812e07\n",
+                          b"dir\x00ac934ed5f01e06c92b6c95661b2ccaf2a734509ft\nfile1\x00a58629e4c3c5a5d14b5810b2e35681bb84319167\nfile2\x00ecbe8b3047eb5d9bb298f516d451f64491812e07\n",
                       ),
                       parents: Some(
                           None,
@@ -208,7 +208,7 @@ Fetch mode can also trigger tree metadata fetch:
                           hgid: HgId("2aabbe46539594a3aede2a262ebfbcd3107ad10c"),
                       },
                       data: Some(
-                          b"dir\0ac934ed5f01e06c92b6c95661b2ccaf2a734509ft\nfile1\0a58629e4c3c5a5d14b5810b2e35681bb84319167\nfile2\0ecbe8b3047eb5d9bb298f516d451f64491812e07\n",
+                          b"dir\x00ac934ed5f01e06c92b6c95661b2ccaf2a734509ft\nfile1\x00a58629e4c3c5a5d14b5810b2e35681bb84319167\nfile2\x00ecbe8b3047eb5d9bb298f516d451f64491812e07\n",
                       ),
                       parents: Some(
                           None,
@@ -324,7 +324,7 @@ First fetch plain tree:
                           hgid: HgId("2aabbe46539594a3aede2a262ebfbcd3107ad10c"),
                       },
                       data: Some(
-                          b"dir\0ac934ed5f01e06c92b6c95661b2ccaf2a734509ft\nfile1\0a58629e4c3c5a5d14b5810b2e35681bb84319167\nfile2\0ecbe8b3047eb5d9bb298f516d451f64491812e07\n",
+                          b"dir\x00ac934ed5f01e06c92b6c95661b2ccaf2a734509ft\nfile1\x00a58629e4c3c5a5d14b5810b2e35681bb84319167\nfile2\x00ecbe8b3047eb5d9bb298f516d451f64491812e07\n",
                       ),
                       parents: Some(
                           None,
