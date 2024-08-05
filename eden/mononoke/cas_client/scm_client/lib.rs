@@ -33,11 +33,14 @@ define_stats! {
     uploaded_manifests_count: timeseries(Rate, Sum),
     uploaded_files_count: timeseries(Rate, Sum),
     uploaded_bytes: dynamic_histogram("{}.uploaded_bytes", (repo_name: String); 1_500_000, 0, 150_000_000, Average, Sum, Count; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
+    small_blobs_uploaded_bytes: dynamic_histogram("{}.small_blobs.uploaded_bytes", (repo_name: String); 1_500_000, 0, 150_000_000, Average, Sum, Count; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
+    large_blobs_uploaded_bytes: dynamic_histogram("{}.large_blobs.uploaded_bytes", (repo_name: String); 1_500_000, 0, 150_000_000, Average, Sum, Count; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
 }
 
 const MAX_CONCURRENT_UPLOADS_TREES: usize = 200;
 const MAX_CONCURRENT_UPLOADS_FILES: usize = 100;
 const MAX_BYTES_FOR_INLINE_UPLOAD: u64 = 3_000_000;
+const SMALL_BLOBS_THRESHOLD: u64 = 2_621_440;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum UploadOutcome {
@@ -62,6 +65,16 @@ where
 
     async fn lookup_digest(&self, digest: &MononokeDigest) -> Result<bool, Error> {
         self.client.lookup_blob(digest).await
+    }
+
+    fn log_upload_size(&self, size: u64) {
+        let repo_name = self.client.repo_name().to_string();
+        STATS::uploaded_bytes.add_value(size as i64, (repo_name.clone(),));
+        if size <= SMALL_BLOBS_THRESHOLD {
+            STATS::small_blobs_uploaded_bytes.add_value(size as i64, (repo_name,));
+        } else {
+            STATS::large_blobs_uploaded_bytes.add_value(size as i64, (repo_name,));
+        }
     }
 
     async fn get_file_digest<'a>(
@@ -95,7 +108,7 @@ where
             self.client.streaming_upload_blob(&digest, stream).await?;
         }
         STATS::uploaded_files_count.add_value(1);
-        STATS::uploaded_bytes.add_value(digest.1 as i64, (self.client.repo_name().to_string(),));
+        self.log_upload_size(digest.1);
         Ok(UploadOutcome::Uploaded(digest.1))
     }
 
@@ -256,7 +269,7 @@ where
                 .await?;
         }
         STATS::uploaded_manifests_count.add_value(1);
-        STATS::uploaded_bytes.add_value(digest.1 as i64, (self.client.repo_name().to_string(),));
+        self.log_upload_size(digest.1);
         Ok(UploadOutcome::Uploaded(digest.1))
     }
 
