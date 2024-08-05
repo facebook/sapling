@@ -899,12 +899,7 @@ impl<T: IndexSpan> Iterator for IdSetIter<T> {
             } else {
                 let span_id = span_id + n;
                 self.front = (vec_id, span_id);
-                let result = if self.front <= self.back {
-                    self.front.1 += 1;
-                    span.nth(span_id)
-                } else {
-                    None
-                };
+                let result = self.next();
                 #[cfg(test)]
                 assert_eq!(self.size_hint().0, expected_size);
                 return result;
