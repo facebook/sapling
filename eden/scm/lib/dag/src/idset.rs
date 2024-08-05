@@ -21,6 +21,7 @@ use std::iter::Rev;
 use std::ops::Bound;
 use std::ops::RangeBounds;
 use std::ops::RangeInclusive;
+use std::sync::Arc;
 
 use dag_types::FlatSegment;
 use serde::Deserialize;
@@ -805,6 +806,23 @@ impl OrderedSpan {
             if id < self.end { None } else { Some(id) }
         }
     }
+
+    /// Attempt to push an `Id` to the current span and preserve iteration order.
+    /// For example, `OrderedSpan { start: 10, end: 20 }.push(21)` produces
+    /// `OrderedSpan { start: 10, end: 21 }`.
+    fn maybe_push(&self, id: Id) -> Option<Self> {
+        if id.group() == self.start.group()
+            && ((self.start <= self.end && id == self.end + 1)
+                || (self.start >= self.end && id + 1 == self.end))
+        {
+            Some(Self {
+                start: self.start,
+                end: id,
+            })
+        } else {
+            None
+        }
+    }
 }
 
 /// Used by [`IdSetIter`] for more flexible iteration.
@@ -1023,6 +1041,63 @@ impl IntoIterator for IdSet {
     }
 }
 
+/// `IdSet` for iteration.
+#[derive(Clone, Debug)]
+pub(crate) struct IdList(Arc<Vec<OrderedSpan>>);
+
+impl IdList {
+    /// Creates `IdList`. Preserves `ids` iteration order.
+    pub fn from_ids<I: Into<Id>>(ids: impl IntoIterator<Item = I>) -> Self {
+        let mut list = Vec::new();
+        let mut span = None;
+        for id in ids {
+            let id = id.into();
+            span = match span {
+                None => Some(OrderedSpan { start: id, end: id }),
+                Some(current) => match current.maybe_push(id) {
+                    Some(next) => Some(next),
+                    None => {
+                        list.push(current);
+                        Some(OrderedSpan { start: id, end: id })
+                    }
+                },
+            }
+        }
+        if let Some(span) = span.take() {
+            list.push(span)
+        }
+        Self(Arc::new(list))
+    }
+}
+
+impl IndexSpan for Arc<Vec<OrderedSpan>> {
+    fn get_span(&self, index: usize) -> OrderedSpan {
+        self[index]
+    }
+}
+
+impl IntoIterator for &IdList {
+    type Item = Id;
+    type IntoIter = IdSetIter<Arc<Vec<OrderedSpan>>>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        let len = self.0.len();
+        let back = (
+            len as isize - 1,
+            if len == 0 {
+                0
+            } else {
+                self.0[len - 1].count() - 1
+            },
+        );
+        IdSetIter {
+            span_set: self.0.clone(),
+            front: (0, 0),
+            back,
+        }
+    }
+}
+
 // `#[serde(transparent)]` on the `Id` struct.
 // This would be easier if `Id` has `#[serde(transparent)]`.
 // But that might be a breaking change now...
@@ -1058,8 +1133,11 @@ mod flat_id {
 mod tests {
     use std::collections::HashSet;
 
+    use quickcheck::quickcheck;
+
     use super::*;
     use crate::tests::dbg;
+    use crate::tests::nid;
 
     impl From<RangeInclusive<u64>> for Span {
         fn from(range: RangeInclusive<u64>) -> Span {
@@ -1483,5 +1561,45 @@ mod tests {
                 }
             }
         }
+    }
+
+    fn check_id_list_iter(ids: &[Id]) {
+        let list = IdList::from_ids(ids.iter().copied());
+        assert_eq!(list.into_iter().next(), ids.first().copied());
+        assert_eq!(list.into_iter().next_back(), ids.last().copied());
+        let iter = list.into_iter();
+        assert_eq!(iter.size_hint(), (ids.len(), Some(ids.len())));
+        assert_eq!(iter.collect::<Vec<Id>>(), ids.to_vec());
+        let iter = list.into_iter();
+        let mut rev_ids = ids.to_vec();
+        rev_ids.reverse();
+        assert_eq!(iter.rev().collect::<Vec<Id>>(), rev_ids);
+    }
+
+    #[test]
+    fn test_id_list_iter() {
+        check_id_list_iter(&[]);
+        check_id_list_iter(&[
+            Id(0),
+            Id(1),
+            Id(2),
+            Id(5),
+            Id(4),
+            Id(3),
+            nid(1),
+            nid(2),
+            nid(4),
+            nid(3),
+        ]);
+    }
+
+    #[test]
+    fn test_id_list_iter_quickcheck() {
+        fn check(ids: Vec<u8>) -> bool {
+            let ids = ids.into_iter().map(|i| Id(i as u64)).collect::<Vec<Id>>();
+            check_id_list_iter(&ids);
+            true
+        }
+        quickcheck(check as fn(Vec<u8>) -> bool);
     }
 }
