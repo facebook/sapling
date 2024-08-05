@@ -8,6 +8,18 @@ oncall("autocargo")
 rust_library(
     name = "hostcaps",
     srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "lints": {
+                "rust": {
+                    "unexpected_cfgs": {
+                        "check-cfg": ["cfg(fbcode_build)"],
+                        "level": "warn",
+                    },
+                },
+            },
+        },
+    },
     crate_root = "src/lib.rs",
     deps = [
         "fbsource//third-party/rust:once_cell",
