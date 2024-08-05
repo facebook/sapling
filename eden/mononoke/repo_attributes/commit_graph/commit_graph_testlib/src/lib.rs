@@ -60,6 +60,7 @@ macro_rules! impl_commit_graph_tests {
             test_find_by_prefix,
             test_add_recursive,
             test_add_recursive_many_changesets,
+            test_add_many_changesets,
             test_ancestors_frontier_with,
             test_range_stream,
             test_common_base,
@@ -898,6 +899,225 @@ pub async fn test_add_recursive_many_changesets(
             .await?,
         2
     );
+    Ok(())
+}
+
+pub async fn test_add_many_changesets(
+    ctx: CoreContext,
+    storage: Arc<dyn CommitGraphStorageTest>,
+) -> Result<()> {
+    //  Reference graph:
+    //  r"
+    //      A-B-C-D-G-H-I
+    //       \     /
+    //        E---F---J
+    //  "
+
+    let graph = CommitGraph::new(storage.clone());
+    let graph_writer = BaseCommitGraphWriter::new(graph.clone());
+
+    assert_eq!(
+        graph_writer
+            .add_many(
+                &ctx,
+                vec1![
+                    (name_cs_id("A"), smallvec![]),
+                    (name_cs_id("B"), smallvec![name_cs_id("A")]),
+                    (name_cs_id("E"), smallvec![name_cs_id("A")]),
+                    (name_cs_id("C"), smallvec![name_cs_id("B")]),
+                ],
+            )
+            .await?,
+        4
+    );
+    storage.flush();
+
+    assert_eq!(
+        graph
+            .changeset_parents(&ctx, name_cs_id("A"))
+            .await?
+            .as_slice(),
+        &[]
+    );
+    assert_eq!(
+        graph
+            .changeset_parents(&ctx, name_cs_id("B"))
+            .await?
+            .as_slice(),
+        &[name_cs_id("A")]
+    );
+    assert_eq!(
+        graph
+            .changeset_parents(&ctx, name_cs_id("C"))
+            .await?
+            .as_slice(),
+        &[name_cs_id("B")]
+    );
+
+    // D is not yet inserted.
+    assert!(
+        graph
+            .changeset_parents(&ctx, name_cs_id("D"))
+            .await
+            .is_err(),
+    );
+
+    // If the provided changesets are not in topological order we will
+    // return an error.
+    assert!(
+        graph_writer
+            .add_many(
+                &ctx,
+                vec1![
+                    (name_cs_id("G"), smallvec![name_cs_id("D"), name_cs_id("F")]),
+                    (name_cs_id("D"), smallvec![name_cs_id("C")]),
+                    (name_cs_id("F"), smallvec![name_cs_id("E")]),
+                ],
+            )
+            .await
+            .is_err()
+    );
+
+    assert_eq!(
+        graph_writer
+            .add_many(
+                &ctx,
+                vec1![
+                    (name_cs_id("D"), smallvec![name_cs_id("C")]),
+                    (name_cs_id("F"), smallvec![name_cs_id("E")]),
+                    (name_cs_id("G"), smallvec![name_cs_id("D"), name_cs_id("F")]),
+                ],
+            )
+            .await?,
+        3
+    );
+    storage.flush();
+
+    assert_eq!(
+        graph
+            .changeset_parents(&ctx, name_cs_id("D"))
+            .await?
+            .as_slice(),
+        &[name_cs_id("C")]
+    );
+    assert_eq!(
+        graph
+            .changeset_parents(&ctx, name_cs_id("F"))
+            .await?
+            .as_slice(),
+        &[name_cs_id("E")]
+    );
+    assert_eq!(
+        graph
+            .changeset_parents(&ctx, name_cs_id("G"))
+            .await?
+            .as_slice(),
+        &[name_cs_id("D"), name_cs_id("F")]
+    );
+
+    // Re-inserting changesets is a no-op.
+    graph_writer
+        .add_many(
+            &ctx,
+            vec1![
+                (name_cs_id("D"), smallvec![name_cs_id("C")]),
+                (name_cs_id("F"), smallvec![name_cs_id("E")]),
+                (name_cs_id("G"), smallvec![name_cs_id("D"), name_cs_id("F")]),
+            ],
+        )
+        .await?;
+    storage.flush();
+
+    assert_eq!(
+        graph
+            .changeset_parents(&ctx, name_cs_id("D"))
+            .await?
+            .as_slice(),
+        &[name_cs_id("C")]
+    );
+    assert_eq!(
+        graph
+            .changeset_parents(&ctx, name_cs_id("F"))
+            .await?
+            .as_slice(),
+        &[name_cs_id("E")]
+    );
+    assert_eq!(
+        graph
+            .changeset_parents(&ctx, name_cs_id("G"))
+            .await?
+            .as_slice(),
+        &[name_cs_id("D"), name_cs_id("F")]
+    );
+
+    assert_eq!(
+        graph_writer
+            .add_many(
+                &ctx,
+                vec1![
+                    (name_cs_id("H"), smallvec![name_cs_id("G")]),
+                    (name_cs_id("J"), smallvec![name_cs_id("F")]),
+                    (name_cs_id("I"), smallvec![name_cs_id("H")]),
+                ],
+            )
+            .await?,
+        3
+    );
+    storage.flush();
+
+    assert_eq!(
+        graph
+            .changeset_parents(&ctx, name_cs_id("H"))
+            .await?
+            .as_slice(),
+        &[name_cs_id("G")]
+    );
+    assert_eq!(
+        graph
+            .changeset_parents(&ctx, name_cs_id("I"))
+            .await?
+            .as_slice(),
+        &[name_cs_id("H")]
+    );
+    assert_eq!(
+        graph
+            .changeset_parents(&ctx, name_cs_id("J"))
+            .await?
+            .as_slice(),
+        &[name_cs_id("F")]
+    );
+
+    assert!(
+        graph
+            .is_ancestor(&ctx, name_cs_id("A"), name_cs_id("J"))
+            .await?
+    );
+    assert!(
+        !graph
+            .is_ancestor(&ctx, name_cs_id("J"), name_cs_id("A"))
+            .await?
+    );
+    assert!(
+        !graph
+            .is_ancestor(&ctx, name_cs_id("D"), name_cs_id("F"))
+            .await?
+    );
+    assert!(
+        !graph
+            .is_ancestor(&ctx, name_cs_id("F"), name_cs_id("D"))
+            .await?
+    );
+    assert!(
+        graph
+            .is_ancestor(&ctx, name_cs_id("F"), name_cs_id("H"))
+            .await?
+    );
+    assert!(
+        !graph
+            .is_ancestor(&ctx, name_cs_id("H"), name_cs_id("F"))
+            .await?
+    );
+
     Ok(())
 }
 

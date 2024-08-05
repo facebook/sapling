@@ -16,8 +16,11 @@ use std::sync::Arc;
 
 use anyhow::anyhow;
 use anyhow::bail;
+use anyhow::Context;
 use anyhow::Result;
 use borrowed::borrowed;
+use buffered_commit_graph_storage::BufferedCommitGraphStorage;
+use commit_graph_types::edges::ChangesetEdges;
 use commit_graph_types::edges::ChangesetNode;
 pub use commit_graph_types::edges::ChangesetParents;
 use commit_graph_types::frontier::AncestorsWithinDistance;
@@ -46,6 +49,7 @@ use mononoke_types::ChangesetIdsResolvedFromPrefix;
 use mononoke_types::Generation;
 use mononoke_types::FIRST_GENERATION;
 use smallvec::smallvec;
+use vec1::Vec1;
 
 pub use crate::ancestors_stream::AncestorsStreamBuilder;
 pub use crate::compat::ParentsFetcher;
@@ -122,6 +126,47 @@ impl CommitGraph {
                 self.build_edges(ctx, cs_id, parents, &parent_edges).await?,
             )
             .await
+    }
+
+    /// Add many new changesets to the commit graph. Changesets should
+    /// be sorted in topological order.
+    ///
+    /// Returns the number of newly added changesets to the commit graph.
+    pub(crate) async fn add_many(
+        &self,
+        ctx: &CoreContext,
+        changesets: Vec1<(ChangesetId, ChangesetParents)>,
+    ) -> Result<usize> {
+        // Find all parents that should already exist in the commit graph
+        // and fetch their edges.
+        let changesets_set: HashSet<ChangesetId> =
+            changesets.iter().map(|(cs_id, _)| cs_id).cloned().collect();
+        let parents_to_fetch = changesets
+            .iter()
+            .flat_map(|(_, parents)| parents)
+            .filter(|cs_id| !changesets_set.contains(cs_id))
+            .copied()
+            .collect::<Vec<_>>();
+        let mut edges_map: HashMap<ChangesetId, ChangesetEdges> = self
+            .storage
+            .fetch_many_edges(ctx, &parents_to_fetch, Prefetch::None)
+            .await
+            .with_context(|| "during commit_graph::add_many (fetch_many_edges)")?
+            .into_iter()
+            .map(|(k, v)| (k, v.into()))
+            .collect();
+
+        // We use buffered storage here to be able to do all the writes in parallel.
+        // We need to create a new CommitGraph wrapper to work with the buffered storage.
+        let buffered_storage =
+            Arc::new(BufferedCommitGraphStorage::new(self.storage.clone(), 10000));
+        let graph = CommitGraph::new(buffered_storage.clone());
+        for (cs_id, parents) in changesets {
+            let edges = graph.build_edges(ctx, cs_id, parents, &edges_map).await?;
+            edges_map.insert(cs_id, edges.clone());
+            buffered_storage.add(ctx, edges).await?;
+        }
+        buffered_storage.flush(ctx).await
     }
 
     /// Find all changeset ids with a given prefix.

@@ -35,6 +35,16 @@ pub trait CommitGraphWriter {
         parents: ChangesetParents,
     ) -> Result<bool>;
 
+    /// Add many new changesets to the commit graph. Changesets should
+    /// be sorted in topological order.
+    ///
+    /// Returns the number of newly added changesets to the commit graph.
+    async fn add_many(
+        &self,
+        ctx: &CoreContext,
+        changesets: Vec1<(ChangesetId, ChangesetParents)>,
+    ) -> Result<usize>;
+
     /// Same as add but fetches parent edges using the changeset fetcher
     /// if not found in the storage, and recursively tries to add them.
     ///
@@ -71,6 +81,18 @@ impl CommitGraphWriter for BaseCommitGraphWriter {
             .await
             .with_context(|| "during BaseCommitGraphWriter::add")
     }
+
+    async fn add_many(
+        &self,
+        ctx: &CoreContext,
+        changesets: Vec1<(ChangesetId, ChangesetParents)>,
+    ) -> Result<usize> {
+        self.commit_graph
+            .add_many(ctx, changesets)
+            .await
+            .with_context(|| "during BaseCommitGraphWriter::add_many")
+    }
+
     async fn add_recursive(
         &self,
         ctx: &CoreContext,
@@ -135,6 +157,49 @@ impl CommitGraphWriter for LoggingCommitGraphWriter {
                 scuba.add("num_added", added_to_commit_graph);
 
                 if added_to_commit_graph {
+                    scuba.log_with_msg("Insertion succeeded", None);
+                } else {
+                    scuba.log_with_msg("Changesets already stored", None);
+                }
+
+                Ok(added_to_commit_graph)
+            }
+        }
+    }
+
+    async fn add_many(
+        &self,
+        ctx: &CoreContext,
+        changesets: Vec1<(ChangesetId, ChangesetParents)>,
+    ) -> Result<usize> {
+        let mut scuba = self.scuba.clone();
+
+        scuba.add_common_server_data();
+        if let Some(client_info) = ctx.client_request_info() {
+            scuba.add_client_request_info(client_info);
+        }
+        // Only the last id, which is good enough for logging.
+        scuba.add("changeset_id", changesets.last().0.to_string());
+        scuba.add("changeset_count", changesets.len());
+        scuba.add("repo_name", self.repo_name.as_str());
+
+        match self
+            .inner_writer
+            .add_many(ctx, changesets)
+            .try_timed()
+            .await
+        {
+            Err(err) => {
+                scuba.add("error", err.to_string());
+                scuba.log_with_msg("Insertion failed", None);
+
+                Err(err)
+            }
+            Ok((stats, added_to_commit_graph)) => {
+                scuba.add("time_s", stats.completion_time.as_secs_f64());
+                scuba.add("num_added", added_to_commit_graph);
+
+                if added_to_commit_graph > 0 {
                     scuba.log_with_msg("Insertion succeeded", None);
                 } else {
                     scuba.log_with_msg("Changesets already stored", None);
