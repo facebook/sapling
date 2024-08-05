@@ -33,7 +33,7 @@ use crate::Vertex;
 /// Efficient for DAG calculation.
 #[derive(Clone)]
 pub struct IdStaticSet {
-    pub(crate) spans: IdSet,
+    spans: IdSet,
     pub(crate) map: Arc<dyn IdConvert + Send + Sync>,
     pub(crate) dag: Arc<dyn DagAlgorithm + Send + Sync>,
     hints: Hints,
@@ -190,6 +190,25 @@ impl IdStaticSet {
             hints,
             dag,
             reversed: false,
+        }
+    }
+
+    /// Get the low-level `IdSet`, which no longer preserves iteration order.
+    pub(crate) fn id_set_losing_order(&self) -> &IdSet {
+        &self.spans
+    }
+
+    /// Get the low-level `IdSet`, or `None` if iteration order cannot be preserved.
+    /// Note: `reserved` is not preserved and needs to be considered separately.
+    pub(crate) fn id_set_try_preserving_order(&self) -> Option<&IdSet> {
+        if self
+            .hints()
+            .flags()
+            .intersects(Flags::ID_DESC | Flags::ID_ASC)
+        {
+            Some(&self.spans)
+        } else {
+            None
         }
     }
 

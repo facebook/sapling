@@ -21,7 +21,9 @@ pub struct LegacyCodeNeedIdAccess;
 impl<'a> From<(LegacyCodeNeedIdAccess, &'a IdStaticSet)> for IdSet {
     fn from(value: (LegacyCodeNeedIdAccess, &'a IdStaticSet)) -> IdSet {
         let set = value.1;
-        set.spans.clone()
+        // TODO: find users of this and potentially migrate them off the legacy access.
+        // It is unclear whether it is safe to lose iteration order here.
+        set.id_set_losing_order().clone()
     }
 }
 

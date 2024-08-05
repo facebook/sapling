@@ -360,7 +360,8 @@ impl AsyncSetQuery for SliceSet {
         let sensitive_flags = Flags::ID_DESC | Flags::ID_ASC;
         let expected_flags = self.hints().flags() & sensitive_flags;
         let mut can_use_fast_path = true;
-        if self.skip_count == 0 && inner.spans.count() <= self.take_count.unwrap_or(u64::MAX) {
+        let spans = inner.id_set_try_preserving_order()?;
+        if self.skip_count == 0 && spans.count() <= self.take_count.unwrap_or(u64::MAX) {
             can_use_fast_path = true
         } else if expected_flags.is_empty() {
             can_use_fast_path = false;

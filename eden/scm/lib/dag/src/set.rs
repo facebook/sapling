@@ -209,10 +209,11 @@ impl Set {
             other.specialized_flatten_id(),
         ) {
             let order = this.map.map_version().partial_cmp(other.map.map_version());
-            if order.is_some() {
-                // Fast path for IdStaticSet
+            if let (Some(_order), Some(this_id_set)) = (order, this.id_set_try_preserving_order()) {
+                // Fast path for IdStaticSet.
+                // The order is preserved, `this.is_id_sorted` is true.
                 let mut result = Self::from_spans_idmap_dag(
-                    this.spans.difference(&other.spans),
+                    this_id_set.difference(other.id_set_losing_order()),
                     this.map.clone(),
                     this.dag.clone(),
                 );
@@ -277,10 +278,10 @@ impl Set {
             other.specialized_flatten_id(),
         ) {
             let order = this.map.map_version().partial_cmp(other.map.map_version());
-            if let Some(order) = order {
+            if let (Some(order), Some(this_id_set)) = (order, this.id_set_try_preserving_order()) {
                 // Fast path for IdStaticSet
                 let mut result = Self::from_spans_idmap_dag(
-                    this.spans.intersection(&other.spans),
+                    this_id_set.intersection(other.id_set_losing_order()),
                     pick(order, &this.map, &other.map).clone(),
                     pick(order, &this.dag, &other.dag).clone(),
                 );
@@ -346,7 +347,8 @@ impl Set {
             if let Some(order) = order {
                 // Fast path for IdStaticSet
                 let mut result = Self::from_spans_idmap_dag(
-                    this.spans.union(&other.spans),
+                    this.id_set_losing_order()
+                        .union(other.id_set_losing_order()),
                     pick(order, &this.map, &other.map).clone(),
                     pick(order, &this.dag, &other.dag).clone(),
                 );
@@ -544,7 +546,7 @@ impl Set {
     /// and control how to resolve in batches.
     pub fn to_id_set_and_id_map_in_o1(&self) -> Option<(IdSet, Arc<dyn IdConvert + Send + Sync>)> {
         let id_set = self.specialized_flatten_id()?.into_owned();
-        Some((id_set.spans, id_set.map))
+        Some((id_set.id_set_losing_order().clone(), id_set.map))
     }
 }
 

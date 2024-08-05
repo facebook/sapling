@@ -704,7 +704,7 @@ impl<T: Clone> TryClone for T {
 
 #[async_trait::async_trait]
 impl<T: IdConvert + IdMapSnapshot> ToIdSet for T {
-    /// Converts [`Set`] to [`IdSet`].
+    /// Converts [`Set`] to [`IdSet`], which no longer preserves iteration order.
     async fn to_id_set(&self, set: &Set) -> Result<IdSet> {
         let version = set.hints().id_map_version();
 
@@ -712,14 +712,14 @@ impl<T: IdConvert + IdMapSnapshot> ToIdSet for T {
         if let Some(set) = set.as_any().downcast_ref::<IdStaticSet>() {
             if None < version && version <= Some(self.map_version()) {
                 tracing::debug!(target: "dag::algo::to_id_set", "{:6?} (fast path)", set);
-                return Ok(set.spans.clone());
+                return Ok(set.id_set_losing_order().clone());
             }
         }
 
         // Fast path: flatten to IdStaticSet. This works for UnionSet(...) cases.
         if let Some(set) = set.specialized_flatten_id() {
             tracing::debug!(target: "dag::algo::to_id_set", "{:6?} (fast path 2)", set);
-            return Ok(set.spans.clone());
+            return Ok(set.id_set_losing_order().clone());
         }
 
         // Convert IdLazySet to IdStaticSet. Bypass hash lookups.
@@ -727,7 +727,7 @@ impl<T: IdConvert + IdMapSnapshot> ToIdSet for T {
             if None < version && version <= Some(self.map_version()) {
                 tracing::warn!(target: "dag::algo::to_id_set", "{:6?} (slow path 1)", set);
                 let set: IdStaticSet = set.to_static()?;
-                return Ok(set.spans);
+                return Ok(set.id_set_losing_order().clone());
             }
         }
 
