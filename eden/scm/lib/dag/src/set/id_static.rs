@@ -50,6 +50,15 @@ enum IterationOrder {
     Desc,
 }
 
+/// Basic iteration order. A subset of `IterationOrder`.
+#[derive(Copy, Clone, Debug)]
+pub enum BasicIterationOrder {
+    /// From smaller ids to larger ids.
+    Asc,
+    /// From larger ids to smaller ids.
+    Desc,
+}
+
 struct Iter {
     iter: IdSetIter<IdSet>,
     map: Arc<dyn IdConvert + Send + Sync>,
@@ -265,6 +274,33 @@ impl IdStaticSet {
     /// Returns true if this set is in ASC order; false if in DESC order.
     pub(crate) fn is_reversed(&self) -> bool {
         matches!(self.iteration_order, IterationOrder::Asc)
+    }
+
+    /// Update iteration order. Only `Asc` and `Desc` is accepted.
+    pub(crate) fn set_iteration_order(&mut self, order: BasicIterationOrder) {
+        // Only reuse Asc or Desc order. Cannot handle custom order.
+        match order {
+            BasicIterationOrder::Asc => {
+                self.hints.remove_flags(Flags::ID_DESC | Flags::TOPO_DESC);
+                self.hints.add_flags(Flags::ID_ASC);
+                self.iteration_order = IterationOrder::Asc;
+            }
+            BasicIterationOrder::Desc => {
+                self.hints.remove_flags(Flags::ID_ASC);
+                self.hints.add_flags(Flags::ID_DESC | Flags::TOPO_DESC);
+                self.iteration_order = IterationOrder::Desc
+            }
+        }
+    }
+
+    /// Obtain the iteration order. Only `Asc` and `Desc` is returned. Otherwise report as `None`.
+    pub(crate) fn iteration_order(&self) -> Option<BasicIterationOrder> {
+        match self.iteration_order {
+            IterationOrder::Asc => Some(BasicIterationOrder::Asc),
+            IterationOrder::Desc => Some(BasicIterationOrder::Desc),
+            #[allow(unreachable_patterns)]
+            _ => None,
+        }
     }
 
     async fn max(&self) -> Result<Option<Vertex>> {
