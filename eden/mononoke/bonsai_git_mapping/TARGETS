@@ -47,7 +47,6 @@ rust_library(
         "//common/rust/shed/facet:facet",
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/fbinit:fbinit-tokio",
-        "//eden/mononoke/blobrepo:changeset_fetcher",
         "//eden/mononoke/blobrepo:repo_blobstore",
         "//eden/mononoke/blobstore:blobstore",
         "//eden/mononoke/bonsai_git_mapping:bonsai_git_mapping",

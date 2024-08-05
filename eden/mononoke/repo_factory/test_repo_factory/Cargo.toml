@@ -19,7 +19,6 @@ bonsai_tag_mapping = { version = "0.1.0", path = "../../bonsai_tag_mapping" }
 bookmarks = { version = "0.1.0", path = "../../bookmarks" }
 bookmarks_cache = { version = "0.1.0", path = "../../bookmarks/bookmarks_cache" }
 cacheblob = { version = "0.1.0", path = "../../blobstore/cacheblob" }
-changeset_fetcher = { version = "0.1.0", path = "../../blobrepo/changeset_fetcher" }
 changesets = { version = "0.1.0", path = "../../changesets" }
 changesets_impl = { version = "0.1.0", path = "../../changesets/changesets_impl" }
 commit_cloud = { version = "0.1.0", path = "../../commit_cloud" }

@@ -13,7 +13,6 @@ use bonsai_git_mapping::BonsaiGitMappingRef;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use bookmarks::Bookmarks;
 use borrowed::borrowed;
-use changeset_fetcher::ChangesetFetcher;
 use changesets::Changesets;
 use commit_graph::CommitGraph;
 use context::CoreContext;
@@ -44,9 +43,6 @@ struct Repo {
 
     #[facet]
     bookmarks: dyn Bookmarks,
-
-    #[facet]
-    changeset_fetcher: dyn ChangesetFetcher,
 
     #[facet]
     changesets: dyn Changesets,

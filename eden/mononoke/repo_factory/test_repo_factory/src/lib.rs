@@ -30,8 +30,6 @@ use bookmarks::ArcBookmarks;
 use bookmarks_cache::ArcBookmarksCache;
 use cacheblob::InProcessLease;
 use cacheblob::LeaseOps;
-use changeset_fetcher::ArcChangesetFetcher;
-use changeset_fetcher::SimpleChangesetFetcher;
 use changesets::ArcChangesets;
 use changesets_impl::SqlChangesetsBuilder;
 use commit_cloud::sql::builder::SqlCommitCloudBuilder;
@@ -418,18 +416,6 @@ impl TestRepoFactory {
             changesets,
             commit_graph_writer.clone(),
         )?))
-    }
-
-    /// Construct a Changeset Fetcher.
-    pub fn changeset_fetcher(
-        &self,
-        repo_identity: &ArcRepoIdentity,
-        changesets: &ArcChangesets,
-    ) -> ArcChangesetFetcher {
-        Arc::new(SimpleChangesetFetcher::new(
-            changesets.clone(),
-            repo_identity.id(),
-        ))
     }
 
     /// Construct SQL bookmarks using the in-memory metadata database.

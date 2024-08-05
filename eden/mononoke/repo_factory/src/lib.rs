@@ -67,8 +67,6 @@ use cacheblob::LeaseOps;
 use cacheblob::MemcacheOps;
 use caching_commit_graph_storage::CachingCommitGraphStorage;
 use caching_ext::CacheHandlerFactory;
-use changeset_fetcher::ArcChangesetFetcher;
-use changeset_fetcher::SimpleChangesetFetcher;
 use changesets::ArcChangesets;
 use changesets_impl::CachingChangesets;
 use changesets_impl::SqlChangesetsBuilder;
@@ -808,17 +806,6 @@ impl RepoFactory {
                 repo_derived_data.clone(),
             )
             .await?,
-        ))
-    }
-
-    pub fn changeset_fetcher(
-        &self,
-        repo_identity: &ArcRepoIdentity,
-        changesets: &ArcChangesets,
-    ) -> ArcChangesetFetcher {
-        Arc::new(SimpleChangesetFetcher::new(
-            changesets.clone(),
-            repo_identity.id(),
         ))
     }
 

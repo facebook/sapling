@@ -15,8 +15,6 @@ use bonsai_svnrev_mapping::BonsaiSvnrevMapping;
 use bonsai_tag_mapping::BonsaiTagMapping;
 use bookmarks::BookmarkUpdateLog;
 use bookmarks::Bookmarks;
-use changeset_fetcher::ChangesetFetcher;
-use changeset_fetcher::SimpleChangesetFetcher;
 use changesets::Changesets;
 use changesets::ChangesetsRef;
 use commit_cloud::CommitCloud;
@@ -60,9 +58,6 @@ pub struct BlobRepoInner {
 
     #[facet]
     pub changesets: dyn Changesets,
-
-    #[facet]
-    pub changeset_fetcher: dyn ChangesetFetcher,
 
     #[facet]
     pub commit_graph: CommitGraph,
@@ -135,7 +130,6 @@ pub struct BlobRepo {
         RepoIdentity,
         RepoBlobstore,
         dyn Changesets,
-        dyn ChangesetFetcher,
         CommitGraph,
         dyn BonsaiHgMapping,
         dyn BonsaiGitMapping,
@@ -179,13 +173,10 @@ impl BlobRepo {
         let blobstore = bubble.wrap_repo_blobstore(self.repo_blobstore().clone());
         let changesets = Arc::new(bubble.repo_changesets(self));
         let commit_graph = Arc::new(bubble.repo_commit_graph(self));
-        let changeset_fetcher =
-            SimpleChangesetFetcher::new(changesets.clone(), self.repo_identity().id());
         let repo_derived_data = self.inner.repo_derived_data.for_bubble(bubble);
         let mut inner = (*self.inner).clone();
         inner.repo_derived_data = Arc::new(repo_derived_data);
         inner.changesets = changesets;
-        inner.changeset_fetcher = Arc::new(changeset_fetcher);
         inner.repo_blobstore = Arc::new(blobstore);
         inner.commit_graph = commit_graph;
         Self {

@@ -7,7 +7,6 @@
 
 mod repo;
 
-pub use changeset_fetcher::ChangesetFetcher;
 pub use filestore::StoreRequest;
 
 pub use crate::repo::save_bonsai_changesets;

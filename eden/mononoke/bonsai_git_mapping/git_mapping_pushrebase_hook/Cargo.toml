@@ -24,7 +24,6 @@ sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-s
 blobstore = { version = "0.1.0", path = "../../blobstore" }
 bonsai_hg_mapping = { version = "0.1.0", path = "../../bonsai_hg_mapping" }
 borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-changeset_fetcher = { version = "0.1.0", path = "../../blobrepo/changeset_fetcher" }
 changesets = { version = "0.1.0", path = "../../changesets" }
 commit_graph = { version = "0.1.0", path = "../../repo_attributes/commit_graph/commit_graph" }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
