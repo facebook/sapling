@@ -1,4 +1,3 @@
-load("@fbcode_macros//build_defs:cpp_python_extension.bzl", "cpp_python_extension")
 load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
 load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
 
@@ -45,29 +44,5 @@ rust_library(
     },
     deps = [
         "fbsource//third-party/rust:cpython",
-    ],
-)
-
-cpp_python_extension(
-    name = "conch_parser",
-    srcs = ["symbol.c"],
-    base_module = "",
-    # Conch parser was moved into the Python bindings module itself in
-    # D42822105 and is now just available to build as a separate module. As this
-    # target is not compatible with Windows, we have to disable it
-    compatible_with = [
-        "ovr_config//os:linux",
-        "ovr_config//os:macos",
-    ],
-    compiler_flags = [
-        "-fno-strict-aliasing",
-    ],
-    linker_flags = select({
-        "DEFAULT": ["-uPyInit_conch_parser"],
-        "ovr_config//os:macos": ["-u_PyInit_conch_parser"],
-        "ovr_config//os:windows": [],
-    }),
-    deps = [
-        "//eden/scm/saplingnative/conch_parser:rust_conch_parser",
     ],
 )
