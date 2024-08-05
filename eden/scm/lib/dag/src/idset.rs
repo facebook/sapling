@@ -807,6 +807,30 @@ impl OrderedSpan {
     }
 }
 
+/// Used by [`IdSetIter`] for more flexible iteration.
+pub trait IndexSpan {
+    /// Get the span (start, end).
+    /// The iteration starts from `start` (inclusive) and ends at `end` (inclusive).
+    fn get_span(&self, index: usize) -> OrderedSpan;
+}
+
+impl IndexSpan for IdSet {
+    fn get_span(&self, index: usize) -> OrderedSpan {
+        let Span { low, high } = self.spans[index];
+        // Iterate from `high` to `low` by default.
+        OrderedSpan {
+            start: high,
+            end: low,
+        }
+    }
+}
+
+impl IndexSpan for &IdSet {
+    fn get_span(&self, index: usize) -> OrderedSpan {
+        <IdSet as IndexSpan>::get_span(self, index)
+    }
+}
+
 /// Iterator of integers in a [`IdSet`].
 #[derive(Clone)]
 pub struct IdSetIter<T> {
@@ -816,7 +840,7 @@ pub struct IdSetIter<T> {
     back: (isize, u64),
 }
 
-impl<T: AsRef<IdSet>> IdSetIter<T> {
+impl<T: IndexSpan> IdSetIter<T> {
     fn count_remaining(&self) -> u64 {
         let mut front = self.front;
         let back = self.back;
@@ -825,8 +849,8 @@ impl<T: AsRef<IdSet>> IdSetIter<T> {
             let (vec_id, span_id) = front;
             let (back_vec_id, back_span_id) = back;
             if vec_id < back_vec_id {
-                let len = self.span_set.as_ref().spans[vec_id as usize].count();
-                count += len.max(span_id) - span_id;
+                let span = self.span_set.get_span(vec_id as usize);
+                count += span.count().saturating_sub(span_id);
                 front = (vec_id + 1, 0);
             } else {
                 count += back_span_id - span_id + 1;
@@ -837,7 +861,7 @@ impl<T: AsRef<IdSet>> IdSetIter<T> {
     }
 }
 
-impl<T: AsRef<IdSet>> Iterator for IdSetIter<T> {
+impl<T: IndexSpan> Iterator for IdSetIter<T> {
     type Item = Id;
 
     fn next(&mut self) -> Option<Id> {
@@ -849,15 +873,15 @@ impl<T: AsRef<IdSet>> Iterator for IdSetIter<T> {
             #[cfg(test)]
             let old_size = self.size_hint().0;
             let (vec_id, span_id) = self.front;
-            let span = &self.span_set.as_ref().spans[vec_id as usize];
-            self.front = if span_id == span.high.0 - span.low.0 {
+            let span = self.span_set.get_span(vec_id as usize);
+            self.front = if span_id + 1 == span.count() {
                 (vec_id + 1, 0)
             } else {
                 (vec_id, span_id + 1)
             };
             #[cfg(test)]
             assert_eq!(self.size_hint().0 + 1, old_size);
-            Some(span.high - span_id)
+            span.nth(span_id)
         }
     }
 
@@ -867,7 +891,7 @@ impl<T: AsRef<IdSet>> Iterator for IdSetIter<T> {
         let mut n = n as u64;
         while self.front <= self.back {
             let (vec_id, span_id) = self.front;
-            let span = &self.span_set.as_ref().spans[vec_id as usize];
+            let span = self.span_set.get_span(vec_id as usize);
             let span_remaining = span.count() - span_id;
             if n >= span_remaining {
                 n -= span_remaining;
@@ -877,7 +901,7 @@ impl<T: AsRef<IdSet>> Iterator for IdSetIter<T> {
                 self.front = (vec_id, span_id);
                 let result = if self.front <= self.back {
                     self.front.1 += 1;
-                    Some(span.high - span_id)
+                    span.nth(span_id)
                 } else {
                     None
                 };
@@ -903,7 +927,7 @@ impl<T: AsRef<IdSet>> Iterator for IdSetIter<T> {
     }
 }
 
-impl<T: AsRef<IdSet>> DoubleEndedIterator for IdSetIter<T> {
+impl<T: IndexSpan> DoubleEndedIterator for IdSetIter<T> {
     fn next_back(&mut self) -> Option<Id> {
         if self.front > self.back {
             #[cfg(test)]
@@ -913,11 +937,11 @@ impl<T: AsRef<IdSet>> DoubleEndedIterator for IdSetIter<T> {
             #[cfg(test)]
             let old_size = self.size_hint().0;
             let (vec_id, span_id) = self.back;
-            let span = &self.span_set.as_ref().spans[vec_id as usize];
+            let span = self.span_set.get_span(vec_id as usize);
             self.back = if span_id == 0 {
                 let span_len = if vec_id > 0 {
-                    let span = self.span_set.as_ref().spans[(vec_id - 1) as usize];
-                    span.high.0 - span.low.0
+                    let span = self.span_set.get_span((vec_id - 1) as usize);
+                    span.count() - 1
                 } else {
                     0
                 };
@@ -927,7 +951,7 @@ impl<T: AsRef<IdSet>> DoubleEndedIterator for IdSetIter<T> {
             };
             #[cfg(test)]
             assert_eq!(self.size_hint().0 + 1, old_size);
-            Some(span.high - span_id)
+            span.nth(span_id)
         }
     }
 
@@ -937,12 +961,12 @@ impl<T: AsRef<IdSet>> DoubleEndedIterator for IdSetIter<T> {
         let mut n = n as u64;
         while self.front <= self.back {
             let (vec_id, span_id) = self.back;
-            let span = &self.span_set.as_ref().spans[vec_id as usize];
+            let span = self.span_set.get_span(vec_id as usize);
             let span_remaining = span_id + 1;
             if n >= span_remaining {
                 n -= span_remaining;
                 let span_end = if vec_id > 0 {
-                    self.span_set.as_ref().spans[(vec_id - 1) as usize].count() - 1
+                    self.span_set.get_span((vec_id - 1) as usize).count() - 1
                 } else {
                     0
                 };
@@ -953,7 +977,7 @@ impl<T: AsRef<IdSet>> DoubleEndedIterator for IdSetIter<T> {
                 let result = if self.front <= self.back {
                     if span_id == 0 {
                         let span_end = if vec_id > 0 {
-                            self.span_set.as_ref().spans[(vec_id - 1) as usize].count() - 1
+                            self.span_set.get_span((vec_id - 1) as usize).count() - 1
                         } else {
                             0
                         };
@@ -961,7 +985,7 @@ impl<T: AsRef<IdSet>> DoubleEndedIterator for IdSetIter<T> {
                     } else {
                         self.back.1 -= 1;
                     }
-                    Some(span.high - span_id)
+                    span.nth(span_id)
                 } else {
                     None
                 };
@@ -974,7 +998,7 @@ impl<T: AsRef<IdSet>> DoubleEndedIterator for IdSetIter<T> {
     }
 }
 
-impl<T: AsRef<IdSet>> ExactSizeIterator for IdSetIter<T> {
+impl<T: IndexSpan> ExactSizeIterator for IdSetIter<T> {
     fn len(&self) -> usize {
         self.count_remaining() as _
     }
@@ -1001,12 +1025,6 @@ impl IntoIterator for IdSet {
             front: (0, 0),
             back,
         }
-    }
-}
-
-impl AsRef<IdSet> for IdSet {
-    fn as_ref(&self) -> &IdSet {
-        self
     }
 }
 
