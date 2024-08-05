@@ -328,7 +328,7 @@ async fn fetch_child_file_metadata(
             total_size: metadata.total_size,
             sha1: metadata.sha1.into(),
             blake3: metadata.seeded_blake3.into(),
-            file_header_metadata: Some(ctx.file_header_metadata()),
+            file_header_metadata: Some(ctx.file_header_metadata().into()),
         }
         .into(),
     ))
