@@ -11,7 +11,6 @@ license = "GPLv2+"
 anyhow = "1.0.75"
 blobrepo = { version = "0.1.0", path = "../blobrepo" }
 blobstore = { version = "0.1.0", path = "../blobstore" }
-changesets = { version = "0.1.0", path = "../changesets" }
 context = { version = "0.1.0", path = "../server/context" }
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 filenodes = { version = "0.1.0", path = "../filenodes" }

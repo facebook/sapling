@@ -12,8 +12,6 @@ use std::path::PathBuf;
 use anyhow::Error;
 use blobrepo::BlobRepo;
 use blobstore::Blobstore;
-use changesets::ChangesetEntry;
-use changesets::ChangesetsRef;
 use context::CoreContext;
 use fbthrift::compact_protocol;
 use filenodes::FilenodeInfo;
@@ -26,7 +24,6 @@ use mercurial_types::HgChangesetId;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgNodeHash;
 use mononoke_types::BlobstoreBytes;
-use mononoke_types::ChangesetId;
 use mononoke_types::RepoPath;
 use mononoke_types::RepositoryId;
 use repo_blobstore::RepoBlobstoreRef;
@@ -51,68 +48,39 @@ pub struct Snapshot {
 }
 
 impl Snapshot {
-    pub async fn build<FilenodesStream, ChangesetsStream>(
-        filenodes: FilenodesStream,
-        changesets: ChangesetsStream,
-    ) -> Self
+    pub async fn build<FilenodesStream>(filenodes: FilenodesStream) -> Self
     where
         FilenodesStream: Stream<Item = PreparedFilenode>,
-        ChangesetsStream: Stream<Item = ChangesetEntry>,
     {
         let mut seen_filenodes = HashSet::new();
-        let filenodes = filenodes.fold(Vec::new(), |mut v, c| {
-            let PreparedFilenode { path, info } = c;
+        let filenodes = filenodes
+            .fold(Vec::new(), |mut v, c| {
+                let PreparedFilenode { path, info } = c;
 
-            if seen_filenodes.insert((path.clone(), info.filenode.clone())) {
-                let t = thrift::FilenodeSnapshot {
-                    path: Some(path.into_thrift()),
-                    filenode: Some(info.filenode.into_nodehash().into_thrift()),
-                    p1: info.p1.map(|p| p.into_nodehash().into_thrift()),
-                    p2: info.p2.map(|p| p.into_nodehash().into_thrift()),
-                    copyfrom: info.copyfrom.map(|copyfrom| thrift::CopyInfoSnapshot {
-                        path: Some(copyfrom.0.into_thrift()),
-                        filenode: Some(copyfrom.1.into_nodehash().into_thrift()),
-                    }),
-                    linknode: Some(info.linknode.into_nodehash().into_thrift()),
-                };
+                if seen_filenodes.insert((path.clone(), info.filenode.clone())) {
+                    let t = thrift::FilenodeSnapshot {
+                        path: Some(path.into_thrift()),
+                        filenode: Some(info.filenode.into_nodehash().into_thrift()),
+                        p1: info.p1.map(|p| p.into_nodehash().into_thrift()),
+                        p2: info.p2.map(|p| p.into_nodehash().into_thrift()),
+                        copyfrom: info.copyfrom.map(|copyfrom| thrift::CopyInfoSnapshot {
+                            path: Some(copyfrom.0.into_thrift()),
+                            filenode: Some(copyfrom.1.into_nodehash().into_thrift()),
+                        }),
+                        linknode: Some(info.linknode.into_nodehash().into_thrift()),
+                    };
 
-                v.push(t);
-            }
+                    v.push(t);
+                }
 
-            future::ready(v)
-        });
-
-        let mut seen_changesets = HashSet::new();
-        let changesets = changesets.fold(Vec::new(), |mut v, c| {
-            let ChangesetEntry {
-                repo_id: _,
-                cs_id,
-                parents,
-                gen,
-            } = c;
-
-            if seen_changesets.insert(cs_id) {
-                let t = thrift::ChangesetSnapshot {
-                    cs_id: Some(cs_id.into_thrift()),
-                    parents: Some(parents.into_iter().map(|p| p.into_thrift()).collect()),
-                    // NOTE: We expect this conversion (and the reverse one) between u64 and i64 to
-                    // succeed because the generation number is >= 0, but also not so large that it
-                    // cannot fit in a i64.
-                    gen: Some(gen.try_into().unwrap()),
-                };
-
-                v.push(t);
-            }
-
-            future::ready(v)
-        });
-
-        let (filenodes, changesets) = future::join(filenodes, changesets).await;
+                future::ready(v)
+            })
+            .await;
 
         Snapshot {
             snapshot: thrift::RepoSnapshot {
                 filenodes: Some(filenodes),
-                changesets: Some(changesets),
+                changesets: Some(vec![]),
             },
         }
     }
@@ -193,18 +161,6 @@ pub async fn prime_cache(
         filenodes.len()
     );
 
-    let changesets = snapshot
-        .changesets
-        .ok_or_else(|| Error::msg("changesets missing"))?;
-    let changesets = reheat_changesets(repo.repo_identity().id(), changesets)?;
-
-    repo.changesets().prime_cache(ctx, changesets.as_ref());
-    info!(
-        ctx.logger(),
-        "primed changesets cache with {} entries",
-        changesets.len()
-    );
-
     Ok(())
 }
 
@@ -251,38 +207,6 @@ fn reheat_filenodes(
                     copyfrom,
                     linknode: HgChangesetId::new(HgNodeHash::from_thrift(linknode)?),
                 },
-            })
-        })
-        .collect()
-}
-
-fn reheat_changesets(
-    repo_id: RepositoryId,
-    changesets: Vec<thrift::ChangesetSnapshot>,
-) -> Result<Vec<ChangesetEntry>, Error> {
-    changesets
-        .into_iter()
-        .map(|c| {
-            let thrift::ChangesetSnapshot {
-                cs_id,
-                parents,
-                gen,
-            } = c;
-
-            let cs_id = cs_id.ok_or_else(|| Error::msg("cs_id missing"))?;
-            let parents = parents.ok_or_else(|| Error::msg("parents missing"))?;
-            let gen = gen.ok_or_else(|| Error::msg("gen missing"))?;
-
-            let parents = parents
-                .into_iter()
-                .map(ChangesetId::from_thrift)
-                .collect::<Result<Vec<_>, _>>()?;
-
-            Ok(ChangesetEntry {
-                repo_id,
-                cs_id: ChangesetId::from_thrift(cs_id)?,
-                parents,
-                gen: gen.try_into().unwrap(), // See above
             })
         })
         .collect()

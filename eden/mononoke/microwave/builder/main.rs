@@ -5,13 +5,11 @@
  * GNU General Public License version 2.
  */
 
-mod changesets;
 mod filenodes;
 
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use ::changesets::ArcChangesets;
 use ::filenodes::ArcFilenodes;
 use anyhow::format_err;
 use anyhow::Error;
@@ -50,7 +48,6 @@ use warm_bookmarks_cache::create_derived_data_warmer;
 use warm_bookmarks_cache::find_latest_derived_and_underived;
 use warm_bookmarks_cache::LatestDerivedBookmarkEntry;
 
-use crate::changesets::MicrowaveChangesets;
 use crate::filenodes::MicrowaveFilenodes;
 
 async fn cache_warmup_target(
@@ -118,7 +115,6 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
                 };
 
                 let (filenodes_sender, filenodes_receiver) = mpsc::channel(1000);
-                let (changesets_sender, changesets_receiver) = mpsc::channel(1000);
                 let warmup_ctx = ctx.clone();
 
                 let warmup = async move {
@@ -126,7 +122,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
                     let repo: InnerRepo = repo_factory.build(name, config, common_config).await?;
 
                     // Rewind bookmarks to the point where we have derived data. Cache
-                    // warmup requires filenodes and hg changesets to be present.
+                    // warmup requires filenodes to be present.
                     let req = match cache_warmup {
                         Some(params) => {
                             let CacheWarmupParams {
@@ -146,14 +142,9 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
                         None => None,
                     };
 
-                    let warmup_repo = repo
-                        .blob_repo
-                        .dangerous_override(|inner| -> ArcFilenodes {
-                            Arc::new(MicrowaveFilenodes::new(filenodes_sender, inner))
-                        })
-                        .dangerous_override(|inner| -> ArcChangesets {
-                            Arc::new(MicrowaveChangesets::new(changesets_sender, inner))
-                        });
+                    let warmup_repo = repo.blob_repo.dangerous_override(|inner| -> ArcFilenodes {
+                        Arc::new(MicrowaveFilenodes::new(filenodes_sender, inner))
+                    });
 
                     cache_warmup::cache_warmup(
                         &warmup_ctx,
@@ -167,7 +158,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
                 };
 
                 let handle = tokio::task::spawn(warmup);
-                let snapshot = Snapshot::build(filenodes_receiver, changesets_receiver).await;
+                let snapshot = Snapshot::build(filenodes_receiver).await;
 
                 // Make sure cache warmup has succeeded before committing this snapshot, and get
                 // the repo back.
