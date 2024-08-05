@@ -111,9 +111,18 @@ fn get_eden_clone_command(config: &dyn Config) -> Result<Command> {
 
 #[tracing::instrument]
 fn run_eden_clone_command(clone_command: &mut Command) -> Result<()> {
-    let output = clone_command
-        .output()
-        .with_context(|| format!("failed to execute {:?}", clone_command))?;
+    let output = clone_command.output().with_context(|| {
+        let binary_path = PathBuf::from(clone_command.get_program());
+        // On Windows, users frequently hit clone errors caused by EdenFS not being installed.
+        if cfg!(windows) && !binary_path.exists() {
+            format!(
+                "failed to execute {:?}: edenfs binary not found at {:?}.",
+                clone_command, binary_path
+            )
+        } else {
+            format!("failed to execute {:?}", clone_command)
+        }
+    })?;
 
     if !output.status.success() {
         return Err(EdenCloneError::ExeuctionFailure(
