@@ -38,7 +38,16 @@ pub struct IdStaticSet {
     pub(crate) dag: Arc<dyn DagAlgorithm + Send + Sync>,
     hints: Hints,
     // If true, iterate in ASC order instead of DESC.
-    reversed: bool,
+    iteration_order: IterationOrder,
+}
+
+/// Iteration order of the `IdStaticSet`.
+#[derive(Clone, Debug)]
+enum IterationOrder {
+    /// From smaller ids to larger ids.
+    Asc,
+    /// From larger ids to smaller ids.
+    Desc,
 }
 
 struct Iter {
@@ -161,7 +170,7 @@ impl fmt::Debug for IdStaticSet {
             1 => write!(f, " + 1 span")?,
             n => write!(f, " + {} spans", n)?,
         }
-        if self.reversed {
+        if matches!(self.iteration_order, IterationOrder::Asc) {
             // + means ASC order.
             write!(f, " +")?;
         }
@@ -189,7 +198,7 @@ impl IdStaticSet {
             map,
             hints,
             dag,
-            reversed: false,
+            iteration_order: IterationOrder::Desc,
         }
     }
 
@@ -238,20 +247,24 @@ impl IdStaticSet {
 
     /// Change the iteration order between (DESC default) and ASC.
     pub fn reversed(mut self) -> Self {
-        self.reversed = !self.reversed;
-        if self.reversed {
-            self.hints.remove_flags(Flags::ID_DESC | Flags::TOPO_DESC);
-            self.hints.add_flags(Flags::ID_ASC);
-        } else {
-            self.hints.remove_flags(Flags::ID_ASC);
-            self.hints.add_flags(Flags::ID_DESC | Flags::TOPO_DESC);
+        match self.iteration_order {
+            IterationOrder::Desc => {
+                self.hints.remove_flags(Flags::ID_DESC | Flags::TOPO_DESC);
+                self.hints.add_flags(Flags::ID_ASC);
+                self.iteration_order = IterationOrder::Asc
+            }
+            IterationOrder::Asc => {
+                self.hints.remove_flags(Flags::ID_ASC);
+                self.hints.add_flags(Flags::ID_DESC | Flags::TOPO_DESC);
+                self.iteration_order = IterationOrder::Desc
+            }
         }
         self
     }
 
     /// Returns true if this set is in ASC order; false if in DESC order.
     pub(crate) fn is_reversed(&self) -> bool {
-        self.reversed
+        matches!(self.iteration_order, IterationOrder::Asc)
     }
 
     async fn max(&self) -> Result<Option<Vertex>> {
@@ -279,19 +292,22 @@ impl IdStaticSet {
     }
 
     pub(crate) fn slice_spans(mut self, skip: u64, take: u64) -> Self {
-        let (skip, take) = if self.reversed {
-            let len = self.spans.count();
-            // [---take1----][skip]
-            // [skip2][take2][skip]
-            // [--------len-------]
-            let take1 = len.saturating_sub(skip);
-            let take2 = take1.min(take);
-            let skip2 = take1 - take2;
-            (skip2, take2)
-        } else {
-            // [skip][take][---]
-            // [------len------]
-            (skip, take)
+        let (skip, take) = match self.iteration_order {
+            IterationOrder::Asc => {
+                let len = self.spans.count();
+                // [---take1----][skip]
+                // [skip2][take2][skip]
+                // [--------len-------]
+                let take1 = len.saturating_sub(skip);
+                let take2 = take1.min(take);
+                let skip2 = take1 - take2;
+                (skip2, take2)
+            }
+            IterationOrder::Desc => {
+                // [skip][take][---]
+                // [------len------]
+                (skip, take)
+            }
         };
         match (skip, take) {
             (0, u64::MAX) => {}
@@ -309,7 +325,7 @@ impl AsyncSetQuery for IdStaticSet {
         let iter = Iter {
             iter: self.spans.clone().into_iter(),
             map: self.map.clone(),
-            reversed: self.reversed,
+            reversed: matches!(self.iteration_order, IterationOrder::Asc),
             buf: Default::default(),
         };
         Ok(iter.into_box_stream())
@@ -319,7 +335,7 @@ impl AsyncSetQuery for IdStaticSet {
         let iter = Iter {
             iter: self.spans.clone().into_iter(),
             map: self.map.clone(),
-            reversed: !self.reversed,
+            reversed: matches!(self.iteration_order, IterationOrder::Desc),
             buf: Default::default(),
         };
         Ok(iter.into_box_stream())
@@ -342,18 +358,16 @@ impl AsyncSetQuery for IdStaticSet {
     }
 
     async fn first(&self) -> Result<Option<Vertex>> {
-        if self.reversed {
-            self.min().await
-        } else {
-            self.max().await
+        match self.iteration_order {
+            IterationOrder::Asc => self.min().await,
+            IterationOrder::Desc => self.max().await,
         }
     }
 
     async fn last(&self) -> Result<Option<Vertex>> {
-        if self.reversed {
-            self.max().await
-        } else {
-            self.min().await
+        match self.iteration_order {
+            IterationOrder::Asc => self.max().await,
+            IterationOrder::Desc => self.min().await,
         }
     }
 
