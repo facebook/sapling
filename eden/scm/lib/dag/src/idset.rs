@@ -1574,6 +1574,10 @@ mod tests {
         let mut rev_ids = ids.to_vec();
         rev_ids.reverse();
         assert_eq!(iter.rev().collect::<Vec<Id>>(), rev_ids);
+        for i in 0..=ids.len().min(10) {
+            let nth = list.into_iter().nth(i);
+            assert_eq!(nth, ids.get(i).copied(), "{:?}.nth({})", ids, i);
+        }
     }
 
     #[test]

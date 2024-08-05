@@ -22,8 +22,8 @@ use crate::ops::DagAlgorithm;
 use crate::ops::IdConvert;
 use crate::protocol::disable_remote_protocol;
 use crate::Group;
+use crate::Id;
 use crate::IdSet;
-use crate::IdSetIter;
 use crate::IdSpan;
 use crate::Result;
 use crate::Set;
@@ -60,7 +60,7 @@ pub enum BasicIterationOrder {
 }
 
 struct Iter {
-    iter: IdSetIter<IdSet>,
+    iter: Box<dyn DoubleEndedIterator<Item = Id> + Send + Sync + 'static>,
     map: Arc<dyn IdConvert + Send + Sync>,
     reversed: bool,
     buf: Vec<Result<Vertex>>,
@@ -355,7 +355,7 @@ impl IdStaticSet {
 impl AsyncSetQuery for IdStaticSet {
     async fn iter(&self) -> Result<BoxVertexStream> {
         let iter = Iter {
-            iter: self.spans.clone().into_iter(),
+            iter: Box::new(self.spans.clone().into_iter()),
             map: self.map.clone(),
             reversed: matches!(self.iteration_order, IterationOrder::Asc),
             buf: Default::default(),
@@ -365,7 +365,7 @@ impl AsyncSetQuery for IdStaticSet {
 
     async fn iter_rev(&self) -> Result<BoxVertexStream> {
         let iter = Iter {
-            iter: self.spans.clone().into_iter(),
+            iter: Box::new(self.spans.clone().into_iter()),
             map: self.map.clone(),
             reversed: matches!(self.iteration_order, IterationOrder::Desc),
             buf: Default::default(),
