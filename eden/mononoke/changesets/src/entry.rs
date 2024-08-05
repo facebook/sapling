@@ -5,14 +5,13 @@
  * GNU General Public License version 2.
  */
 
-use abomonation_derive::Abomonation;
 use anyhow::Result;
 use bytes::Bytes;
 use fbthrift::compact_protocol;
 use mononoke_types::ChangesetId;
 use mononoke_types::RepositoryId;
 
-#[derive(Abomonation, Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct ChangesetEntry {
     pub repo_id: RepositoryId,
     pub cs_id: ChangesetId,

@@ -109,12 +109,6 @@ pub fn init_cachelib_from_settings(
     )?;
 
     cachelib::get_or_create_volatile_pool(
-        "changesets",
-        settings
-            .changesets_cache_size
-            .unwrap_or(available_space / 20),
-    )?;
-    cachelib::get_or_create_volatile_pool(
         "commit_graph",
         settings
             .commit_graph_cache_size

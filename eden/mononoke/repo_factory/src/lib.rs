@@ -68,7 +68,6 @@ use cacheblob::MemcacheOps;
 use caching_commit_graph_storage::CachingCommitGraphStorage;
 use caching_ext::CacheHandlerFactory;
 use changesets::ArcChangesets;
-use changesets_impl::CachingChangesets;
 use changesets_impl::SqlChangesetsBuilder;
 use commit_cloud::sql::builder::SqlCommitCloudBuilder;
 use commit_cloud::ArcCommitCloud;
@@ -771,18 +770,8 @@ impl RepoFactory {
             .context(RepoFactoryError::Changesets)?;
         let changesets = builder.build(self.env.rendezvous_options, repo_identity.id());
 
-        let possibly_cached_changesets: ArcChangesets =
-            if let Some(cache_handler_factory) = self.cache_handler_factory("changesets")? {
-                Arc::new(CachingChangesets::new(
-                    Arc::new(changesets),
-                    cache_handler_factory,
-                ))
-            } else {
-                Arc::new(changesets)
-            };
-
         Ok(Arc::new(ChangesetsCommitGraphCompat::new(
-            possibly_cached_changesets,
+            Arc::new(changesets),
             commit_graph_writer.clone(),
         )?))
     }

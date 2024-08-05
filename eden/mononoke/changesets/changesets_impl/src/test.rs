@@ -8,11 +8,9 @@
 //! Tests for the Changesets store.
 use std::collections::HashSet;
 use std::str::FromStr;
-use std::sync::Arc;
 
 use anyhow::Error;
 use assert_matches::assert_matches;
-use caching_ext::MockStoreStats;
 use changesets::ChangesetEntry;
 use changesets::ChangesetInsert;
 use changesets::Changesets;
@@ -32,7 +30,6 @@ use rendezvous::RendezVousOptions;
 use sql_construct::SqlConstruct;
 use vec1::Vec1;
 
-use super::CachingChangesets;
 use super::SqlChangesets;
 use super::SqlChangesetsBuilder;
 use crate::sql::SqlChangesetsError;
@@ -49,21 +46,6 @@ where
             .build(RendezVousOptions::for_test(), REPO_ZERO),
     )
     .await?;
-    Ok(())
-}
-
-async fn run_caching_test<F, FO>(fb: FacebookInit, test_fn: F) -> Result<(), Error>
-where
-    F: FnOnce(FacebookInit, CachingChangesets) -> FO,
-    FO: Future<Output = Result<(), Error>>,
-{
-    let real_changesets = Arc::new(
-        SqlChangesetsBuilder::with_sqlite_in_memory()
-            .unwrap()
-            .build(RendezVousOptions::for_test(), REPO_ZERO),
-    );
-    let changesets = CachingChangesets::mocked(real_changesets);
-    test_fn(fb, changesets).await?;
     Ok(())
 }
 
@@ -540,279 +522,6 @@ async fn get_many_by_prefix<C: Changesets>(fb: FacebookInit, changesets: C) -> R
     Ok(())
 }
 
-async fn caching_fill<C: Changesets + 'static>(
-    fb: FacebookInit,
-    changesets: C,
-) -> Result<(), Error> {
-    let changesets = Arc::new(changesets);
-    let mut cc = CachingChangesets::mocked(changesets.clone());
-    let ctx = CoreContext::test_mock(fb);
-    let ctx = &ctx;
-
-    let row1 = ChangesetInsert {
-        cs_id: ONES_CSID,
-        parents: vec![],
-    };
-    let row2 = ChangesetInsert {
-        cs_id: TWOS_CSID,
-        parents: vec![],
-    };
-    let row3 = ChangesetInsert {
-        cs_id: THREES_CSID,
-        parents: vec![],
-    };
-
-    changesets.add(ctx, row1).await?;
-    changesets.add(ctx, row2).await?;
-    changesets.add(ctx, row3).await?;
-
-    // First read should miss everyhwere.
-    let _ = cc.get_many(ctx, vec![ONES_CSID, TWOS_CSID]).await?;
-    assert_eq!(
-        cc.cachelib_stats(),
-        MockStoreStats {
-            gets: 2,
-            sets: 2,
-            misses: 2,
-            hits: 0
-        },
-        "read 1, cachelib"
-    );
-    assert_eq!(
-        cc.memcache_stats(),
-        MockStoreStats {
-            gets: 2,
-            sets: 2,
-            misses: 2,
-            hits: 0
-        },
-        "read 1, memcache"
-    );
-
-    // Another read with the same pool should hit in local cache.
-    let _ = cc.get_many(ctx, vec![ONES_CSID, TWOS_CSID]).await?;
-    assert_eq!(
-        cc.cachelib_stats(),
-        MockStoreStats {
-            gets: 4,
-            sets: 2,
-            misses: 2,
-            hits: 2
-        },
-        "read 2, cachelib"
-    );
-    assert_eq!(
-        cc.memcache_stats(),
-        MockStoreStats {
-            gets: 2,
-            sets: 2,
-            misses: 2,
-            hits: 0
-        },
-        "read 2, memcache"
-    );
-
-    cc = cc.fork_cachelib();
-
-    // Read with a separate pool should hit in Memcache.
-    let _ = cc.get_many(ctx, vec![ONES_CSID, TWOS_CSID]).await?;
-    assert_eq!(
-        cc.cachelib_stats(),
-        MockStoreStats {
-            gets: 2,
-            sets: 2,
-            misses: 2,
-            hits: 0
-        },
-        "read 3, cachelib"
-    );
-    assert_eq!(
-        cc.memcache_stats(),
-        MockStoreStats {
-            gets: 4,
-            sets: 2,
-            misses: 2,
-            hits: 2
-        },
-        "read 3, memcache"
-    );
-
-    // Reading again from the separate pool should now hit in local cache.
-    let _ = cc.get_many(ctx, vec![ONES_CSID, TWOS_CSID]).await?;
-    assert_eq!(
-        cc.cachelib_stats(),
-        MockStoreStats {
-            gets: 4,
-            sets: 2,
-            misses: 2,
-            hits: 2
-        },
-        "read 4, cachelib"
-    );
-    assert_eq!(
-        cc.memcache_stats(),
-        MockStoreStats {
-            gets: 4,
-            sets: 2,
-            misses: 2,
-            hits: 2
-        },
-        "read 4, memcache"
-    );
-
-    // Partial read should partially hit
-    let _ = cc
-        .get_many(ctx, vec![ONES_CSID, TWOS_CSID, THREES_CSID])
-        .await?;
-    assert_eq!(
-        cc.cachelib_stats(),
-        MockStoreStats {
-            gets: 7,
-            sets: 3,
-            misses: 3,
-            hits: 4
-        },
-        "read 5, cachelib"
-    );
-    assert_eq!(
-        cc.memcache_stats(),
-        MockStoreStats {
-            gets: 5,
-            sets: 3,
-            misses: 3,
-            hits: 2
-        },
-        "read 5, memcache"
-    );
-
-    // Partial read should have filled local cache.
-    let _ = cc
-        .get_many(ctx, vec![ONES_CSID, TWOS_CSID, THREES_CSID])
-        .await?;
-    assert_eq!(
-        cc.cachelib_stats(),
-        MockStoreStats {
-            gets: 10,
-            sets: 3,
-            misses: 3,
-            hits: 7
-        },
-        "read 6, cachelib"
-    );
-    assert_eq!(
-        cc.memcache_stats(),
-        MockStoreStats {
-            gets: 5,
-            sets: 3,
-            misses: 3,
-            hits: 2
-        },
-        "read 6, memcache"
-    );
-
-    Ok(())
-}
-
-async fn caching_shared<C: Changesets + 'static>(
-    fb: FacebookInit,
-    changesets: C,
-) -> Result<(), Error> {
-    let changesets = Arc::new(changesets);
-    let cc = CachingChangesets::mocked(changesets.clone());
-    let ctx = CoreContext::test_mock(fb);
-    let ctx = &ctx;
-
-    let row1 = ChangesetInsert {
-        cs_id: ONES_CSID,
-        parents: vec![],
-    };
-    let row2 = ChangesetInsert {
-        cs_id: TWOS_CSID,
-        parents: vec![],
-    };
-    let row3 = ChangesetInsert {
-        cs_id: THREES_CSID,
-        parents: vec![],
-    };
-
-    changesets.add(ctx, row1).await?;
-    changesets.add(ctx, row2).await?;
-    changesets.add(ctx, row3).await?;
-
-    // get should miss
-    let _ = cc.get(ctx, ONES_CSID).await?;
-    assert_eq!(
-        cc.cachelib_stats(),
-        MockStoreStats {
-            gets: 1,
-            sets: 1,
-            misses: 1,
-            hits: 0
-        },
-        "read 1, cachelib"
-    );
-    assert_eq!(
-        cc.memcache_stats(),
-        MockStoreStats {
-            gets: 1,
-            sets: 1,
-            misses: 1,
-            hits: 0
-        },
-        "read 1, memcache"
-    );
-
-    // get_many should hit for what was filled by get
-    let _ = cc
-        .get_many(ctx, vec![ONES_CSID, TWOS_CSID, THREES_CSID])
-        .await?;
-    assert_eq!(
-        cc.cachelib_stats(),
-        MockStoreStats {
-            gets: 4,
-            sets: 3,
-            misses: 3,
-            hits: 1
-        },
-        "read 2, cachelib"
-    );
-    assert_eq!(
-        cc.memcache_stats(),
-        MockStoreStats {
-            gets: 3,
-            sets: 3,
-            misses: 3,
-            hits: 0
-        },
-        "read 2, memcache"
-    );
-
-    // get should hit for what was filled by get_many
-    let _ = cc.get(ctx, THREES_CSID).await?;
-    assert_eq!(
-        cc.cachelib_stats(),
-        MockStoreStats {
-            gets: 5,
-            sets: 3,
-            misses: 3,
-            hits: 2
-        },
-        "read 3, cachelib"
-    );
-    assert_eq!(
-        cc.memcache_stats(),
-        MockStoreStats {
-            gets: 3,
-            sets: 3,
-            misses: 3,
-            hits: 0
-        },
-        "read 3, memcache"
-    );
-
-    Ok(())
-}
-
 async fn test_add_many_fixture<F: fixtures::TestRepoFixture + Send, C: Changesets>(
     fb: FacebookInit,
     changesets: &C,
@@ -859,20 +568,12 @@ async fn test_add_many_fixture<F: fixtures::TestRepoFixture + Send, C: Changeset
     Ok(())
 }
 
-// NOTE: Use this wrapper macro to make sure tests are executed both with Changesets and
-// CachingChangesets. Define tests using #[test] if you need to only execute them for Changesets or
-// CachingChangesets.
 macro_rules! testify {
     ($test: ident) => {
         paste::item! {
             #[fbinit::test]
             async fn [<test_ $test>](fb: FacebookInit) -> Result<(), Error> {
                 run_test(fb, $test).await
-            }
-
-            #[fbinit::test]
-            async fn [<test_caching_ $test>](fb: FacebookInit) -> Result<(), Error> {
-                run_caching_test(fb, $test).await
             }
         }
     };
@@ -887,16 +588,6 @@ testify!(complex);
 testify!(get_many);
 testify!(get_many_by_prefix);
 testify!(get_many_missing);
-
-#[fbinit::test]
-async fn test_caching_fill(fb: FacebookInit) -> Result<(), Error> {
-    run_test(fb, caching_fill).await
-}
-
-#[fbinit::test]
-async fn test_caching_shared(fb: FacebookInit) -> Result<(), Error> {
-    run_test(fb, caching_shared).await
-}
 
 macro_rules! add_many_tests {
     ($fixture: ident) => {
