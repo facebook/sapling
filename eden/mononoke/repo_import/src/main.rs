@@ -41,11 +41,7 @@ use cross_repo_sync::CandidateSelectionHint;
 use cross_repo_sync::CommitSyncContext;
 use cross_repo_sync::CommitSyncOutcome;
 use cross_repo_sync::CommitSyncer;
-use cross_repo_sync::InMemoryRepo;
-use cross_repo_sync::Large;
 use cross_repo_sync::Repo as CrossRepo;
-use cross_repo_sync::SubmoduleDeps;
-use cross_repo_sync::SubmoduleExpansionData;
 use cross_repo_sync::Syncers;
 use environment::MononokeEnvironment;
 use fbinit::FacebookInit;
@@ -69,7 +65,6 @@ use metaconfig_parser::RepoConfigs;
 use metaconfig_types::CommitSyncConfigVersion;
 use metaconfig_types::DefaultSmallToLargeCommitSyncPathAction;
 use metaconfig_types::RepoConfig;
-use metaconfig_types::DEFAULT_GIT_SUBMODULE_METADATA_FILE_PREFIX;
 use mononoke_app::args::RepoArgs;
 use mononoke_app::fb303::AliveService;
 use mononoke_app::fb303::Fb303AppExtension;
@@ -213,7 +208,6 @@ async fn rewrite_file_paths(
     movers: &Movers,
     gitimport_bcs_ids: &[ChangesetId],
     git_merge_bcs_id: &ChangesetId,
-    submodule_deps: SubmoduleDeps<Repo>,
 ) -> Result<(Vec<ChangesetId>, Option<ChangesetId>), Error> {
     let mut remapped_parents: HashMap<ChangesetId, ChangesetId> = HashMap::new();
     let mut bonsai_changesets = vec![];
@@ -232,19 +226,8 @@ async fn rewrite_file_paths(
     for (index, bcs) in gitimport_changesets.iter().enumerate() {
         let bcs_id = bcs.get_changeset_id();
 
-        let large_repo_id = Large(repo.repo_identity().id());
-        let fallback_repos = vec![];
-        let large_in_memory_repo = InMemoryRepo::from_repo(repo, fallback_repos)?;
-        let submodule_expansion_data = match submodule_deps {
-            SubmoduleDeps::ForSync(ref deps) => Some(SubmoduleExpansionData {
-                submodule_deps: deps,
-                x_repo_submodule_metadata_file_prefix: DEFAULT_GIT_SUBMODULE_METADATA_FILE_PREFIX,
-                large_repo_id,
-                large_repo: large_in_memory_repo,
-                dangling_submodule_pointers: vec![],
-            }),
-            SubmoduleDeps::NotNeeded | SubmoduleDeps::NotAvailable => None,
-        };
+        // repo_import doesn't support submodule expansion
+        let submodule_expansion_data = None;
 
         let rewritten_bcs_opt = rewrite_commit(
             ctx,
@@ -1255,28 +1238,12 @@ async fn repo_import(
             .as_ref()
             .ok_or_else(|| format_err!("gitimported changeset ids are not found"))?;
 
-        let repo_provider = repo_provider_from_mononoke_app(app);
-
-        let repo_arc = Arc::new(repo.clone());
-
-        let submodule_deps = get_all_submodule_deps(
-            &ctx,
-            repo_arc.clone(),
-            // Only one repo here, so pass it again as target repo because it
-            // won't change the final submodule deps
-            repo_arc,
-            repo_provider,
-            Arc::new(live_commit_sync_config),
-        )
-        .await?;
-
         let (shifted_bcs_ids, git_merge_shifted_bcs_id) = rewrite_file_paths(
             &ctx,
             &repo,
             &combined_movers,
             gitimport_bcs_ids,
             git_merge_bcs_id,
-            submodule_deps,
         )
         .await?;
 
