@@ -112,7 +112,7 @@ impl GitPushRedirectConfig for SqlGitPushRedirectConfig {
         _ctx: &CoreContext,
         repo_id: RepositoryId,
     ) -> Result<Option<GitPushRedirectConfigEntry>> {
-        let rows = GetByRepoId::query(&self.connections.read_connection, &repo_id).await?;
+        let rows = GetByRepoId::query(&self.connections.read_master_connection, &repo_id).await?;
         Ok(rows.into_iter().next().map(row_to_entry))
     }
 
@@ -120,7 +120,8 @@ impl GitPushRedirectConfig for SqlGitPushRedirectConfig {
         &self,
         _ctx: &CoreContext,
     ) -> Result<Vec<GitPushRedirectConfigEntry>> {
-        let rows = GetByGitPushRedirect::query(&self.connections.read_connection, &true).await?;
+        let rows =
+            GetByGitPushRedirect::query(&self.connections.read_master_connection, &true).await?;
         Ok(rows.into_iter().map(row_to_entry).collect())
     }
 
@@ -128,7 +129,8 @@ impl GitPushRedirectConfig for SqlGitPushRedirectConfig {
         &self,
         _ctx: &CoreContext,
     ) -> Result<Vec<GitPushRedirectConfigEntry>> {
-        let rows = GetByGitPushRedirect::query(&self.connections.read_connection, &false).await?;
+        let rows =
+            GetByGitPushRedirect::query(&self.connections.read_master_connection, &false).await?;
         Ok(rows.into_iter().map(row_to_entry).collect())
     }
 }
