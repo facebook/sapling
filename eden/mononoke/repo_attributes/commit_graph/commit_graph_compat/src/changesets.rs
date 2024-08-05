@@ -5,13 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use std::sync::Arc;
-
 use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
-use changeset_fetcher::ArcChangesetFetcher;
-use changeset_fetcher::SimpleChangesetFetcher;
 use changesets::ArcChangesets;
 use changesets::ChangesetEntry;
 use changesets::ChangesetInsert;
@@ -30,7 +26,6 @@ use vec1::Vec1;
 
 pub struct ChangesetsCommitGraphCompat {
     changesets: ArcChangesets,
-    changeset_fetcher: ArcChangesetFetcher,
     commit_graph_writer: ArcCommitGraphWriter,
 }
 
@@ -39,14 +34,8 @@ impl ChangesetsCommitGraphCompat {
         changesets: ArcChangesets,
         commit_graph_writer: ArcCommitGraphWriter,
     ) -> Result<Self> {
-        let changeset_fetcher = Arc::new(SimpleChangesetFetcher::new(
-            changesets.clone(),
-            changesets.repo_id(),
-        ));
-
         Ok(Self {
             changesets,
-            changeset_fetcher,
             commit_graph_writer,
         })
     }
@@ -61,11 +50,8 @@ impl Changesets for ChangesetsCommitGraphCompat {
     async fn add(&self, ctx: &CoreContext, cs: ChangesetInsert) -> Result<bool> {
         let (added_to_changesets, _) = futures::try_join!(
             self.changesets.add(ctx, cs.clone()),
-            self.commit_graph_writer.add_recursive(
-                ctx,
-                Arc::new(self.changeset_fetcher.clone()),
-                vec1![(cs.cs_id, SmallVec::from_vec(cs.parents))],
-            )
+            self.commit_graph_writer
+                .add_many(ctx, vec1![(cs.cs_id, SmallVec::from_vec(cs.parents))],)
         )
         .with_context(|| "during commit_graph_compat::Changesets::add")?;
         Ok(added_to_changesets)
@@ -74,9 +60,8 @@ impl Changesets for ChangesetsCommitGraphCompat {
     async fn add_many(&self, ctx: &CoreContext, css: Vec1<ChangesetInsert>) -> Result<()> {
         futures::try_join!(
             self.changesets.add_many(ctx, css.clone()),
-            self.commit_graph_writer.add_recursive(
+            self.commit_graph_writer.add_many(
                 ctx,
-                Arc::new(self.changeset_fetcher.clone()),
                 css.mapped(|cs| (cs.cs_id, SmallVec::from_vec(cs.parents))),
             )
         )

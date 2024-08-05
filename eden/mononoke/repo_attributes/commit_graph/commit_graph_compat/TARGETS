@@ -11,7 +11,6 @@ rust_library(
         "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:smallvec",
         "fbsource//third-party/rust:vec1",
-        "//eden/mononoke/blobrepo:changeset_fetcher",
         "//eden/mononoke/changesets:changesets",
         "//eden/mononoke/mononoke_types:mononoke_types",
         "//eden/mononoke/repo_attributes/commit_graph/commit_graph:commit_graph",

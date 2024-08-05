@@ -13,7 +13,6 @@ use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
 use buffered_commit_graph_storage::BufferedCommitGraphStorage;
-use changeset_fetcher::ArcChangesetFetcher;
 use commit_graph_types::edges::ChangesetEdges;
 use commit_graph_types::edges::ChangesetParents;
 use commit_graph_types::storage::CommitGraphStorage;
@@ -110,17 +109,6 @@ pub trait ParentsFetcher: Send + Sync {
         ctx: &CoreContext,
         cs_id: ChangesetId,
     ) -> Result<Vec<ChangesetId>>;
-}
-
-#[async_trait]
-impl ParentsFetcher for ArcChangesetFetcher {
-    async fn fetch_parents(
-        &self,
-        ctx: &CoreContext,
-        cs_id: ChangesetId,
-    ) -> Result<Vec<ChangesetId>> {
-        self.get_parents(ctx, cs_id).await
-    }
 }
 
 #[async_trait]
