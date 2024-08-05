@@ -199,6 +199,32 @@ impl CommitGraph {
             .collect())
     }
 
+    /// Returns the parents of many changesets.
+    pub async fn many_changeset_parents(
+        &self,
+        ctx: &CoreContext,
+        cs_ids: &[ChangesetId],
+    ) -> Result<HashMap<ChangesetId, ChangesetParents>> {
+        let fetched_edges = self
+            .storage
+            .fetch_many_edges(ctx, cs_ids, Prefetch::None)
+            .await?;
+        Ok(fetched_edges
+            .into_iter()
+            .map(|(cs_id, fetched_edges)| {
+                (
+                    cs_id,
+                    fetched_edges
+                        .edges()
+                        .parents
+                        .into_iter()
+                        .map(|parents| parents.cs_id)
+                        .collect(),
+                )
+            })
+            .collect())
+    }
+
     /// Returns the generation number of a single changeset.
     pub async fn changeset_generation(
         &self,
@@ -207,6 +233,22 @@ impl CommitGraph {
     ) -> Result<Generation> {
         let edges = self.storage.fetch_edges(ctx, cs_id).await?;
         Ok(edges.node.generation)
+    }
+
+    /// Returns the generation number of many changesets.
+    pub async fn many_changeset_generations(
+        &self,
+        ctx: &CoreContext,
+        cs_ids: &[ChangesetId],
+    ) -> Result<HashMap<ChangesetId, Generation>> {
+        let fetched_edges = self
+            .storage
+            .fetch_many_edges(ctx, cs_ids, Prefetch::None)
+            .await?;
+        Ok(fetched_edges
+            .into_iter()
+            .map(|(cs_id, fetched_edges)| (cs_id, fetched_edges.node.generation))
+            .collect())
     }
 
     /// Return only the changesets that are found in the commit graph.

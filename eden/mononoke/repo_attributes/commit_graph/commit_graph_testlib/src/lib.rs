@@ -29,6 +29,7 @@ use maplit::hashmap;
 use maplit::hashset;
 use mononoke_types::ChangesetIdPrefix;
 use mononoke_types::ChangesetIdsResolvedFromPrefix;
+use mononoke_types::Generation;
 use mononoke_types::RepositoryId;
 use smallvec::smallvec;
 use vec1::vec1;
@@ -133,6 +134,25 @@ pub async fn test_storage_store_and_fetch(
     );
     assert_eq!(
         graph
+            .many_changeset_generations(
+                &ctx,
+                &[
+                    name_cs_id("A"),
+                    name_cs_id("C"),
+                    name_cs_id("F"),
+                    name_cs_id("G")
+                ]
+            )
+            .await?,
+        hashmap! {
+            name_cs_id("A") => Generation::new(1),
+            name_cs_id("C") => Generation::new(3),
+            name_cs_id("F") => Generation::new(3),
+            name_cs_id("G") => Generation::new(5),
+        }
+    );
+    assert_eq!(
+        graph
             .changeset_parents(&ctx, name_cs_id("A"))
             .await?
             .as_slice(),
@@ -151,6 +171,16 @@ pub async fn test_storage_store_and_fetch(
             .await?
             .as_slice(),
         &[name_cs_id("D"), name_cs_id("F")]
+    );
+    assert_eq!(
+        graph
+            .many_changeset_parents(&ctx, &[name_cs_id("A"), name_cs_id("E"), name_cs_id("G")])
+            .await?,
+        hashmap! {
+            name_cs_id("A") => smallvec![],
+            name_cs_id("E") => smallvec![name_cs_id("A")],
+            name_cs_id("G") => smallvec![name_cs_id("D"), name_cs_id("F")],
+        },
     );
 
     // Check some underlying storage details.
