@@ -52,34 +52,16 @@ pub async fn sync_commit_with_submodule_expansion<'a, R: Repo>(
                 ("target_repo", source_repo.repo_identity().id().id()),
             ],
         );
-        // Backsyncing, so ensure that submodule expansions are not being modified
-        let submodules_affected =
-            get_submodule_expansions_affected(&sm_exp_data, &bonsai, movers.mover.clone())?;
-
-        ensure!(
-            submodules_affected.is_empty(),
-            "Changeset can't be synced from large to small repo because it modifies the expansion of submodules: {0:#?}",
-            submodules_affected
-                .into_iter()
-                .map(|p| p.to_string())
-                .sorted()
-                .collect::<Vec<_>>(),
-        );
-
-        // No submodule expansions are being modified, so it's safe to backsync
-        let rewriten = rewrite_commit(
+        return backsync_without_submodule_expansion_support(
             ctx,
             bonsai,
-            remapped_parents,
-            mover_to_multi_mover(movers.mover.clone()),
+            sm_exp_data,
             source_repo,
-            None,
+            movers,
+            remapped_parents,
             rewrite_opts,
         )
-        .await
-        .context("Failed to create small repo bonsai")?;
-
-        return Ok(CommitRewriteResult::new(rewriten, HashMap::new()));
+        .await;
     };
 
     let ctx = &set_scuba_logger_fields(
@@ -147,4 +129,43 @@ pub async fn sync_commit_with_submodule_expansion<'a, R: Repo>(
         }
         None => Ok(CommitRewriteResult::new(None, HashMap::new())),
     }
+}
+
+/// Sync a commit from large to small repo **only if it doesn't modify any
+/// submodule expansion**.
+async fn backsync_without_submodule_expansion_support<'a, R: Repo>(
+    ctx: &'a CoreContext,
+    bonsai_mut: BonsaiChangesetMut,
+    sm_exp_data: SubmoduleExpansionData<'a, R>,
+    source_repo: &'a R,
+    movers: Movers,
+    remapped_parents: &'a HashMap<ChangesetId, ChangesetId>,
+    rewrite_opts: RewriteOpts,
+) -> Result<CommitRewriteResult> {
+    let submodules_affected =
+        get_submodule_expansions_affected(&sm_exp_data, &bonsai_mut, movers.mover.clone())?;
+
+    ensure!(
+        submodules_affected.is_empty(),
+        "Changeset can't be synced from large to small repo because it modifies the expansion of submodules: {0:#?}",
+        submodules_affected
+            .into_iter()
+            .map(|p| p.to_string())
+            .sorted()
+            .collect::<Vec<_>>(),
+    );
+
+    let rewriten = rewrite_commit(
+        ctx,
+        bonsai_mut,
+        remapped_parents,
+        mover_to_multi_mover(movers.mover.clone()),
+        source_repo,
+        None,
+        rewrite_opts,
+    )
+    .await
+    .context("Failed to create small repo bonsai")?;
+
+    Ok(CommitRewriteResult::new(rewriten, HashMap::new()))
 }
