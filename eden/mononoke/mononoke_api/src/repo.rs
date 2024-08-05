@@ -54,10 +54,10 @@ use cacheblob::InProcessLease;
 use cacheblob::LeaseOps;
 use changeset_info::ChangesetInfo;
 use changesets::Changesets;
-use changesets::ChangesetsArc;
-use changesets::ChangesetsRef;
 use commit_cloud::CommitCloud;
+use commit_graph::ArcCommitGraph;
 use commit_graph::CommitGraph;
+use commit_graph::CommitGraphArc;
 use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use cross_repo_sync::get_all_submodule_deps;
@@ -947,18 +947,17 @@ impl RepoContext {
             .await?)
     }
 
-    // pub(crate) for testing
-    pub(crate) async fn changesets(
+    async fn commit_graph_for_bubble(
         &self,
         bubble_id: Option<BubbleId>,
-    ) -> Result<Arc<dyn Changesets>, MononokeError> {
+    ) -> Result<ArcCommitGraph, MononokeError> {
         Ok(match bubble_id {
             Some(id) => Arc::new(
                 self.open_bubble(id)
                     .await?
-                    .repo_changesets(self.blob_repo()),
+                    .repo_commit_graph(self.blob_repo()),
             ),
-            None => self.blob_repo().changesets_arc(),
+            None => self.blob_repo().commit_graph_arc(),
         })
     }
 
@@ -983,7 +982,7 @@ impl RepoContext {
             },
         };
         Ok(self
-            .changesets(bubble_id)
+            .commit_graph_for_bubble(bubble_id)
             .await?
             .exists(&self.ctx, changeset_id)
             .await?)
@@ -1077,8 +1076,8 @@ impl RepoContext {
             ),
             ChangesetPrefixSpecifier::Bonsai(prefix) => ChangesetSpecifierPrefixResolution::from(
                 self.blob_repo()
-                    .changesets()
-                    .get_many_by_prefix(&self.ctx, prefix, MAX_LIMIT_AMBIGUOUS_IDS)
+                    .commit_graph()
+                    .find_by_prefix(&self.ctx, prefix, MAX_LIMIT_AMBIGUOUS_IDS)
                     .await?,
             ),
             ChangesetPrefixSpecifier::GitSha1(prefix) => ChangesetSpecifierPrefixResolution::from(
@@ -1257,12 +1256,11 @@ impl RepoContext {
         changesets: Vec<ChangesetId>,
     ) -> Result<HashMap<ChangesetId, Vec<ChangesetId>>, MononokeError> {
         let parents = self
-            .blob_repo()
-            .changesets()
-            .get_many(&self.ctx, changesets)
+            .commit_graph()
+            .many_changeset_parents(&self.ctx, &changesets)
             .await?
             .into_iter()
-            .map(|entry| (entry.cs_id, entry.parents))
+            .map(|(cs_id, parents)| (cs_id, parents.to_vec()))
             .collect();
         Ok(parents)
     }
@@ -1451,12 +1449,11 @@ impl RepoContext {
         while !queue.is_empty() {
             // get the unique parents for all changesets in the queue & skip visited & update visited
             let parents: Vec<_> = self
-                .blob_repo()
-                .changesets()
-                .get_many(&self.ctx, queue.clone())
+                .commit_graph()
+                .many_changeset_parents(&self.ctx, &queue)
                 .await?
-                .into_iter()
-                .flat_map(|cs_entry| cs_entry.parents)
+                .into_values()
+                .flatten()
                 .filter(|cs_id| !visited.contains(cs_id))
                 .unique()
                 .collect();

@@ -95,7 +95,6 @@ use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::DateTime;
 use mononoke_types::FileChange;
-use mononoke_types::Generation;
 use mononoke_types::GitLfs;
 use mononoke_types::Timestamp;
 use pushrebase_hook::PushrebaseCommitHook;
@@ -578,11 +577,13 @@ async fn find_closest_root(
         let repo = &repo;
 
         async move {
-            let entry = repo.changesets().get(ctx, *root).await?.ok_or_else(|| {
-                PushrebaseError::from(PushrebaseInternalError::RootNotFound(*root))
-            })?;
+            let root_gen = repo
+                .commit_graph()
+                .changeset_generation(ctx, *root)
+                .await
+                .map_err(|_| PushrebaseError::from(PushrebaseInternalError::RootNotFound(*root)))?;
 
-            Result::<_, PushrebaseError>::Ok((*root, Generation::new(entry.gen)))
+            Result::<_, PushrebaseError>::Ok((*root, root_gen))
         }
     });
 
@@ -644,12 +645,7 @@ async fn find_closest_ancestor_root(
             return Ok(id);
         }
 
-        let parents = repo
-            .changesets()
-            .get(ctx, id)
-            .await?
-            .ok_or_else(|| format_err!("Commit {} does not exist in the repo", id))?
-            .parents;
+        let parents = repo.commit_graph().changeset_parents(ctx, id).await?;
 
         queue.extend(parents.into_iter().filter(|p| queued.insert(*p)));
     }
