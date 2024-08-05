@@ -210,7 +210,9 @@ std::string DefaultEdenMain::getLocalHostname() {
   return getHostname();
 }
 
-void DefaultEdenMain::didFollyInit() {}
+void DefaultEdenMain::init(int* argc, char*** argv) {
+  folly::init(argc, argv);
+}
 
 void DefaultEdenMain::prepare(const EdenServer& /*server*/) {
   fb303::registerFollyLoggingOptionHandlers();
@@ -282,7 +284,8 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
   std::vector<std::string> originalCommandLine{argv, argv + argc};
 
   // Make sure to run this before any flag values are read.
-  folly::init(&argc, &argv);
+  main.init(&argc, &argv);
+
   if (argc != 1) {
     fprintf(stderr, "error: unexpected trailing command line arguments\n");
     return kExitCodeUsage;
@@ -301,8 +304,6 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
 
   auto loggingConfig = folly::parseLogConfig("eden=DBG2; default:async=true");
   folly::LoggerDB::get().updateConfig(loggingConfig);
-
-  main.didFollyInit();
 
   // Temporary hack until client is migrated to supported channel
   THRIFT_FLAG_SET_MOCK(server_header_reject_framed, false);

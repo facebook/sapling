@@ -96,6 +96,7 @@ cpp_binary(
         "//blake3:blake3-constants-cpp2-types",
         "//common/base:build_info",
         "//common/fbwhoami:fb_who_am_i",
+        "//common/init:light",
         "//common/network:hostname",
         "//common/services/cpp:build_values",
         "//eden/fs/config:config",

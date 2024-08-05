@@ -48,7 +48,7 @@ class EdenMain {
   virtual std::string getEdenfsBuildName() = 0;
   virtual std::string getEdenfsVersion() = 0;
   virtual std::string getLocalHostname() = 0;
-  virtual void didFollyInit() = 0;
+  virtual void init(int* argc, char*** argv) = 0;
   virtual void prepare(const EdenServer& server) = 0;
   virtual void prepareConfig(EdenConfig&) {}
   virtual void cleanup() = 0;
@@ -84,7 +84,7 @@ class DefaultEdenMain : public EdenMain {
   std::string getEdenfsBuildName() override;
   std::string getEdenfsVersion() override;
   std::string getLocalHostname() override;
-  void didFollyInit() override;
+  void init(int* argc, char*** argv) override;
   void prepare(const EdenServer& server) override;
   void cleanup() override {}
   ActivityRecorderFactory getActivityRecorderFactory() override;
