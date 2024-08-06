@@ -1547,6 +1547,8 @@ class EdenCheckout:
     def get_snapshot(self) -> SnapshotState:
         """Return the hex version of the parent hash in the SNAPSHOT file."""
         snapshot_path = self.state_dir / SNAPSHOT
+        if not snapshot_path.exists():
+            raise RuntimeError(f"Missing SNAPSHOT file {snapshot_path}")
         with snapshot_path.open("rb") as f:
             header = f.read(8)
             if header == SNAPSHOT_MAGIC_1:

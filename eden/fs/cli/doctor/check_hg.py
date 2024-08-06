@@ -346,7 +346,7 @@ class AbandonedTransactionChecker(HgChecker):
 
 
 class PreviousEdenFSCrashedDuringCheckout(Problem):
-    def __init__(self, checkout: EdenCheckout, ex: InProgressCheckoutError) -> None:
+    def __init__(self, checkout: EdenCheckout, ex: Exception) -> None:
         remediation = f"""\
 EdenFS was killed or crashed during a checkout/update operation. This is unfortunately not recoverable at this time and recloning the repository is necessary.
 {reclone_remediation(checkout.path)}"""

@@ -810,6 +810,10 @@ def check_running_mount(
     if config.scm_type in ["hg", "filteredhg"]:
         try:
             check_hg.check_hg(tracker, checkout)
+        except RuntimeError as ex:
+            tracker.add_problem(EdenCheckoutCorruption(checkout_info, ex))
+            # Exit here but don't reraise since we're already reporting a problem.
+            return
         except Exception as ex:
             raise RuntimeError("Failed to check Mercurial status") from ex
 
