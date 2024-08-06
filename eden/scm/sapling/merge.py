@@ -1906,6 +1906,15 @@ def goto(
                 # triggers loading, there will be an apparent mismatch between the dirstate
                 # read from disk and the in-memory-modified treestate.
                 repo.dirstate._map
+
+                if (
+                    edenfs.requirement in repo.requirements
+                    or git.DOTGIT_REQUIREMENT in repo.requirements
+                ):
+                    # Flush pending commit data so eden has access to data that that
+                    # hasn't been flushed yet.
+                    repo.flushpendingtransaction()
+
                 ret = repo._rsrepo.goto(
                     ctx=repo.ui.rustcontext(),
                     target=target.node(),

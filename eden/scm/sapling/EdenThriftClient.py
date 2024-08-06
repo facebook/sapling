@@ -38,23 +38,16 @@ class EdenThriftClient:
         # If we are in a pending transaction the parent commit we are querying against
         # might not have been stored to disk yet.  Flush the pending transaction state
         # before asking Eden about the status.
-        self._flushPendingTransactions()
+        self._repo.flushpendingtransaction()
 
         return self._client.get_status(parent, list_ignored)
 
     @util.timefunction("edenclientcheckout", 0, "_ui")
     def checkout(self, node, checkout_mode, need_flush=True, manifest=None):
         if need_flush:
-            self._flushPendingTransactions()
+            self._repo.flushpendingtransaction()
 
         if manifest is None:
             manifest = self._repo[node].manifestnode()
 
         return self._client.checkout(node, manifest, checkout_mode)
-
-    def _flushPendingTransactions(self):
-        # If a transaction is currently in progress, make sure it has flushed
-        # pending commit data to disk so that eden will be able to access it.
-        txn = self._repo.currenttransaction()
-        if txn is not None:
-            txn.writepending()

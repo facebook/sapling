@@ -1,7 +1,3 @@
-
-#require no-eden
-
-
   $ configure modern
   $ setconfig tweakdefaults.showupdated=true
 

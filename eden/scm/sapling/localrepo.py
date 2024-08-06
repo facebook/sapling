@@ -2075,6 +2075,12 @@ class localrepository:
         self._transref = weakref.ref(tr)
         return tr
 
+    # Flush pending changelog/store writes. Used to make unflushed
+    # changes visible to EdenFS.
+    def flushpendingtransaction(self):
+        if tx := self.currenttransaction():
+            tx.writepending()
+
     def _journalfiles(self):
         return (
             (self.svfs, "journal"),
