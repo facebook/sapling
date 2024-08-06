@@ -20,6 +20,7 @@ use movers::Movers;
 
 use crate::commit_syncers_lib::mover_to_multi_mover;
 use crate::commit_syncers_lib::CommitRewriteResult;
+use crate::git_submodules::compact::compact_all_submodule_expansion_file_changes;
 use crate::git_submodules::expand::expand_all_git_submodule_file_changes;
 use crate::git_submodules::utils::get_submodule_expansions_affected;
 use crate::git_submodules::validation::ValidSubmoduleExpansionBonsai;
@@ -53,27 +54,62 @@ pub async fn sync_commit_with_submodule_expansion<'a, R: Repo>(
                 ("target_repo", sm_exp_data.small_repo_id.id()),
             ],
         );
-        return backsync_without_submodule_expansion_support(
+
+        let backsync_submodule_expansion_changes = justknobs::eval(
+            "scm/mononoke:backsync_submodule_expansion_changes",
+            None,
+            None,
+        )?;
+
+        if !backsync_submodule_expansion_changes {
+            // If backsyncing changes to submodule expansion is disabled,
+            // ensure no expansions were modified before backsyncing.
+            return backsync_without_submodule_expansion_support(
+                ctx,
+                bonsai,
+                sm_exp_data,
+                source_repo,
+                movers,
+                remapped_parents,
+                rewrite_opts,
+            )
+            .await;
+        }
+
+        // If any submodule expansion is being modified, run validation to make
+        // sure the expansion remains valid and its metadata file was updated.
+        // Then remove the expansion changes and generate a file change of type
+        // GitSubmodule that can be backsynced to the small repo.
+        let compacted_sm_bonsai = compact_all_submodule_expansion_file_changes(
             ctx,
             bonsai,
             sm_exp_data,
             source_repo,
-            movers,
-            remapped_parents,
-            rewrite_opts,
+            // Since this is backsyncing, forward sync mover is the reverse
+            // mover
+            movers.reverse_mover.clone(),
         )
-        .await;
+        .await?;
+
+        let mb_rewritten = compacted_sm_bonsai
+            .rewrite_to_small_repo(
+                ctx,
+                remapped_parents,
+                movers.mover.clone(),
+                source_repo,
+                rewrite_opts,
+            )
+            .await?;
+
+        return Ok(CommitRewriteResult::new(mb_rewritten, HashMap::new()));
     };
 
     let ctx = &set_scuba_logger_fields(
         ctx,
-        [
-            ("source_repo", source_repo.repo_identity().id().id()),
-            (
-                "target_repo",
-                sm_exp_data.large_repo.repo_identity().id().id(),
-            ),
-        ],
+        [(
+            "target_repo",
+            sm_exp_data.large_repo.repo_identity().id().id(),
+        )],
     );
 
     let (new_bonsai, submodule_expansion_content_ids) = run_and_log_stats_to_scuba(

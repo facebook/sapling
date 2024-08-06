@@ -1,5 +1,6 @@
 {
   "bools": {
+    "scm/mononoke:backsync_submodule_expansion_changes": true,
     "scm/mononoke:bssm_enable_optimized_derivation": false,
     "scm/mononoke:cross_repo_skip_backsyncing_ordinary_empty_commits": false,
     "scs/mononoke:defer_to_backsyncer_for_backsync": true,

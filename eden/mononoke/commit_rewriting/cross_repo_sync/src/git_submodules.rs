@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+mod compact;
 mod dummy_struct;
 mod expand;
 mod in_memory_repo;

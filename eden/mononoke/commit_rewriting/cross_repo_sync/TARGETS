@@ -26,6 +26,7 @@ rust_library(
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:async-recursion",
         "fbsource//third-party/rust:async-trait",
+        "fbsource//third-party/rust:bytes",
         "fbsource//third-party/rust:derivative",
         "fbsource//third-party/rust:either",
         "fbsource//third-party/rust:futures",
