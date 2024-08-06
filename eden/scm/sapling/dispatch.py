@@ -967,7 +967,9 @@ def _dispatch(req):
 
         if options["config"] != req.earlyoptions["config"]:
             raise error.Abort(
-                _("option --config may not be abbreviated or used in aliases")
+                _(
+                    "option --config may not be abbreviated, used in aliases, or used as a value for another option"
+                )
             )
         if options["configfile"] != req.earlyoptions["configfile"]:
             raise error.Abort(

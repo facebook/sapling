@@ -63,7 +63,7 @@ fn last_chance_to_abort(early: &HgGlobalOpts, full: &HgGlobalOpts) -> Result<()>
     // parse.
     abort_if!(
         early.config != full.config,
-        "option --config may not be abbreviated or used in aliases",
+        "option --config may not be abbreviated, used in aliases, or used as a value for another option",
     );
 
     abort_if!(
