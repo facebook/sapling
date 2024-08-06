@@ -10,6 +10,7 @@ Test running hg without any arguments and various configs
   $ hg | grep "These are some common"
   These are some common Sapling commands.  Use 'hg help commands' to list all
   $ setconfig commands.naked-default.no-repo=sl
+  $ setconfig commands.naked-default.in-repo=sl
   $ hg
   abort: '$TESTTMP' is not inside a repository, but this command requires a repository!
   (use 'cd' to go to a directory inside a repository and try again)
@@ -61,4 +62,25 @@ Make sure passing either --help or --version, or using HGPLAIN does not trigger 
   $ hg --help | grep "These are some common"
   These are some common Sapling commands.  Use 'hg help commands' to list all
   $ HGPLAIN=true hg | grep "These are some common"
+  These are some common Sapling commands.  Use 'hg help commands' to list all
+
+Make sure that running a command without the naked default config errors out outside of a repo but but not inside a repo.
+
+  $ cat >> $HGRCPATH << EOF
+  > [commands]
+  > naked-default.in-repo=sl
+  > %unset naked-default.no-repo
+  > EOF
+  $ cd
+  $ hg
+  abort: '$TESTTMP' is not inside a repository, but this command requires a repository!
+  (use 'cd' to go to a directory inside a repository and try again)
+  [255]
+  $ newclientrepo
+  $ hg
+  $ cat >> $HGRCPATH << EOF
+  > [commands]
+  > %unset naked-default.in-repo
+  > EOF
+  $ hg | grep "These are some common"
   These are some common Sapling commands.  Use 'hg help commands' to list all
