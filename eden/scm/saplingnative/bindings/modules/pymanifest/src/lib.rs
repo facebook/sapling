@@ -296,6 +296,9 @@ py_class!(pub class treemanifest |py| {
         Ok(Python::None(py))
     }
 
+    /// Diff between two treemanifests.
+    ///
+    /// Return a dict of {path: (left, right)}, where left and right are (file_hgid, file_type) tuple.
     def diff(&self, other: &treemanifest, matcher: Option<PyObject> = None) -> PyResult<PyDict> {
         fn convert_side_diff(
             py: Python,
