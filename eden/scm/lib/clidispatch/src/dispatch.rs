@@ -98,7 +98,7 @@ fn early_parse(args: &[String]) -> Result<ParseOutput, ParseError> {
         .parse_args(args)
 }
 
-fn parse(definition: &CommandDefinition, args: &Vec<String>) -> Result<ParseOutput, ParseError> {
+fn parse(definition: &CommandDefinition, args: &[String]) -> Result<ParseOutput, ParseError> {
     let flags = definition
         .flags()
         .into_iter()

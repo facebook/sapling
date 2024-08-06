@@ -70,11 +70,7 @@ impl CommandDefinition {
     }
 
     pub fn main_alias(&self) -> &str {
-        if let Some(name) = self.aliases.split('|').next() {
-            name
-        } else {
-            ""
-        }
+        self.aliases.split('|').next().unwrap_or_default()
     }
 
     pub fn legacy_alias(&self) -> Option<&str> {
