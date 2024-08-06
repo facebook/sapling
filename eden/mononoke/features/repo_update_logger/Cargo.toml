@@ -11,6 +11,7 @@ license = "GPLv2+"
 anyhow = "1.0.75"
 async-trait = "0.1.71"
 blobstore = { version = "0.1.0", path = "../../blobstore" }
+bonsai_git_mapping = { version = "0.1.0", path = "../../bonsai_git_mapping" }
 bonsai_globalrev_mapping = { version = "0.1.0", path = "../../bonsai_globalrev_mapping" }
 bookmarks = { version = "0.1.0", path = "../../bookmarks" }
 bookmarks_types = { version = "0.1.0", path = "../../bookmarks/bookmarks_types" }
@@ -19,6 +20,9 @@ commit_graph = { version = "0.1.0", path = "../../repo_attributes/commit_graph/c
 context = { version = "0.1.0", path = "../../server/context" }
 ephemeral_blobstore = { version = "0.1.0", path = "../../blobstore/ephemeral_blobstore" }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
+git_push_redirect = { version = "0.1.0", path = "../../git_push_redirect" }
+gix-hash = "0.11"
+hostname = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 logger_ext = { version = "0.1.0", path = "../../common/logger_ext" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }

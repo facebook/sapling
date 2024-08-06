@@ -234,6 +234,7 @@ pub struct Repo {
         StreamingClone,
         CommitGraph,
         dyn GitSymbolicRefs,
+        dyn GitPushRedirectConfig,
         dyn Filenodes,
         CommitCloud,
         SqlQueryConfig,
@@ -257,9 +258,6 @@ pub struct Repo {
 
     #[facet]
     pub repo_stats_logger: RepoStatsLogger,
-
-    #[facet]
-    pub git_push_redirect_config: dyn GitPushRedirectConfig,
 }
 
 impl AsBlobRepo for Repo {
@@ -434,7 +432,6 @@ impl Repo {
             repo_handler_base: self.repo_handler_base.clone(),
             filestore_config: self.filestore_config.clone(),
             repo_stats_logger: self.repo_stats_logger.clone(),
-            git_push_redirect_config: self.git_push_redirect_config.clone(),
         }
     }
 
@@ -491,7 +488,6 @@ impl Repo {
             &blob_repo.bookmark_update_log_arc(),
             &mutable_counters,
         )?;
-
         let inner = InnerRepo {
             blob_repo,
             repo_config: Arc::new(config.clone()),
@@ -507,6 +503,7 @@ impl Repo {
                 StreamingCloneBuilder::with_sqlite_in_memory()?.build(repo_id, repo_blobstore),
             ),
             sql_query_config: Arc::new(SqlQueryConfig { caching: None }),
+            git_push_redirect_config: Arc::new(TestGitPushRedirectConfig::new()),
         };
 
         let mut warm_bookmarks_cache_builder = WarmBookmarksCacheBuilder::new(
@@ -524,7 +521,6 @@ impl Repo {
         let filestore_config = Arc::new(FilestoreConfig::no_chunking_filestore());
 
         let repo_stats_logger = Arc::new(RepoStatsLogger::noop());
-        let git_push_redirect_config = Arc::new(TestGitPushRedirectConfig::new());
         Ok(Self {
             name: name.clone(),
             inner,
@@ -533,7 +529,6 @@ impl Repo {
             repo_handler_base,
             filestore_config,
             repo_stats_logger,
-            git_push_redirect_config,
         })
     }
 

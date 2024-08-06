@@ -6,14 +6,25 @@
  */
 
 use std::fmt;
+use std::time::SystemTime;
+use std::time::UNIX_EPOCH;
 
 #[cfg(fbcode_build)]
 use anyhow::Result;
 use async_trait::async_trait;
+use bonsai_git_mapping::BonsaiGitMappingRef;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks_types::BookmarkKey;
 use bookmarks_types::BookmarkKind;
 use context::CoreContext;
+use futures::join;
+use git_push_redirect::GitPushRedirectConfigRef;
+use git_push_redirect::Staleness;
+#[cfg(fbcode_build)]
+use git_ref_rust_logger::GitRefLogger;
+use gix_hash::Kind;
+use gix_hash::ObjectId;
+use hostname::get_hostname;
 use logger_ext::Loggable;
 use metaconfig_types::RepoConfigRef;
 #[cfg(fbcode_build)]
@@ -73,6 +84,71 @@ pub struct BookmarkInfo {
     pub bookmark_kind: BookmarkKind,
     pub operation: BookmarkOperation,
     pub reason: BookmarkUpdateReason,
+}
+
+#[derive(Serialize)]
+struct GitBookmarkInfo {
+    repo_name: String,
+    bookmark_name: String,
+    old_bookmark_value: String,
+    new_bookmark_value: String,
+    server_hostname: String,
+    timestamp: u128,
+}
+
+impl GitBookmarkInfo {
+    async fn new(
+        ctx: &CoreContext,
+        repo: &(impl RepoIdentityRef + BonsaiGitMappingRef),
+        info: &BookmarkInfo,
+    ) -> Self {
+        let repo_name = format!("{}.git", repo.repo_identity().name());
+        // Need to prepend the refs/ prefix since Mononoke bookmarks strip that off
+        let bookmark_name = format!("refs/{}", &info.bookmark_name);
+        let timestamp = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("Time travel exception!")
+            .as_millis();
+        let old_bookmark_value = get_git_hash(ctx, repo, info.operation.old_bookmark_value())
+            .await
+            .unwrap_or_else(|| ObjectId::null(Kind::Sha1).to_hex().to_string());
+        let new_bookmark_value = get_git_hash(ctx, repo, info.operation.new_bookmark_value())
+            .await
+            .unwrap_or_else(|| ObjectId::null(Kind::Sha1).to_hex().to_string());
+        let server_hostname = get_hostname().unwrap_or("error".to_string());
+        Self {
+            repo_name,
+            bookmark_name,
+            old_bookmark_value,
+            new_bookmark_value,
+            server_hostname,
+            timestamp,
+        }
+    }
+}
+
+#[async_trait]
+impl Loggable for GitBookmarkInfo {
+    #[cfg(fbcode_build)]
+    async fn log_to_logger(&self, ctx: &CoreContext) -> Result<()> {
+        // Without override, WhenceScribeLogged is set to default which will cause
+        // data being logged to "/sandbox" category if service is run from devserver.
+        // But currently we use Logger only if we're in prod (as config implies), so
+        // we should log to prod too, even from devserver.
+        // For example, we can land a commit to prod from devserver, and logging for
+        // this commit should go to prod, not to sandbox.
+        GitRefLogger::override_whence_scribe_logged(ctx.fb, WhenceScribeLogged::PROD);
+        let mut ref_logger = GitRefLogger::new(ctx.fb);
+        ref_logger.set_repo_name(self.repo_name.clone());
+        ref_logger.set_ref_name(self.bookmark_name.clone());
+        ref_logger.set_old_ref_value(self.old_bookmark_value.clone());
+        ref_logger.set_new_ref_value(self.new_bookmark_value.clone());
+        ref_logger.set_pusher_identities(vec![]); // Maintaining parity with current Git logger
+        ref_logger.set_server_hostname(self.server_hostname.clone());
+        ref_logger.set_received_timestamp(self.timestamp as i64);
+        ref_logger.log_async()?;
+        Ok(())
+    }
 }
 
 #[derive(Serialize)]
@@ -147,7 +223,7 @@ impl Loggable for PlainBookmarkInfo {
 
 pub async fn log_bookmark_operation(
     ctx: &CoreContext,
-    repo: &(impl RepoIdentityRef + RepoConfigRef),
+    repo: &(impl RepoIdentityRef + RepoConfigRef + BonsaiGitMappingRef + GitPushRedirectConfigRef),
     info: &BookmarkInfo,
 ) {
     if let Some(bookmark_logging_destination) = &repo
@@ -155,8 +231,42 @@ pub async fn log_bookmark_operation(
         .update_logging_config
         .bookmark_logging_destination
     {
-        PlainBookmarkInfo::new(repo, info)
-            .log(ctx, bookmark_logging_destination)
-            .await;
+        let plain_logger_future = async move {
+            PlainBookmarkInfo::new(repo, info)
+                .log(ctx, bookmark_logging_destination)
+                .await;
+        };
+        let git_logger_future = async move {
+            let mononoke_source_of_truth = repo
+                .git_push_redirect_config()
+                .get_by_repo_id(ctx, repo.repo_identity().id(), Staleness::MaybeStale)
+                .await
+                .map(|entry| entry.map_or(false, |entry| entry.mononoke))
+                .unwrap_or(false);
+            // Only log Git bookmarks if the Git repo is SoT'd in Mononoke
+            if mononoke_source_of_truth {
+                GitBookmarkInfo::new(ctx, repo, info)
+                    .await
+                    .log(ctx, bookmark_logging_destination)
+                    .await;
+            }
+        };
+        join!(plain_logger_future, git_logger_future);
+    }
+}
+
+async fn get_git_hash(
+    ctx: &CoreContext,
+    repo: &(impl RepoIdentityRef + BonsaiGitMappingRef),
+    maybe_cs_id: Option<ChangesetId>,
+) -> Option<String> {
+    if let Some(cs_id) = maybe_cs_id {
+        repo.bonsai_git_mapping()
+            .get_git_sha1_from_bonsai(ctx, cs_id)
+            .await
+            .unwrap_or(None)
+            .map(|sha1| sha1.to_hex().to_string())
+    } else {
+        None
     }
 }

@@ -22,6 +22,7 @@ rust_library(
         "//eden/mononoke/commit_cloud:commit_cloud",
         "//eden/mononoke/filenodes:filenodes",
         "//eden/mononoke/filestore:filestore",
+        "//eden/mononoke/git_push_redirect:git_push_redirect",
         "//eden/mononoke/git_symbolic_refs:git_symbolic_refs",
         "//eden/mononoke/mercurial:mercurial_mutation",
         "//eden/mononoke/metaconfig:metaconfig_types",

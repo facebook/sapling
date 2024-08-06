@@ -10,6 +10,7 @@
 use ::repo_lock::RepoLockRef;
 use blobrepo::AsBlobRepo;
 use bonsai_git_mapping::BonsaiGitMappingArc;
+use bonsai_git_mapping::BonsaiGitMappingRef;
 use bonsai_globalrev_mapping::BonsaiGlobalrevMappingArc;
 use bonsai_globalrev_mapping::BonsaiGlobalrevMappingRef;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
@@ -53,6 +54,7 @@ mod restrictions;
 mod update;
 
 pub use bookmarks_types::BookmarkKind;
+use git_push_redirect::GitPushRedirectConfigRef;
 pub use hooks::CrossRepoPushSource;
 pub use hooks::HookRejection;
 pub use pushrebase::PushrebaseOutcome;
@@ -93,6 +95,7 @@ pub trait Repo = AsBlobRepo
     + RepoPermissionCheckerRef
     + RepoLockRef
     + CommitGraphRef
+    + GitPushRedirectConfigRef
     + Send
     + Sync;
 
@@ -207,7 +210,14 @@ impl BookmarkInfoData {
     pub async fn log(
         self,
         ctx: &CoreContext,
-        repo: &(impl RepoIdentityRef + CommitGraphRef + RepoConfigRef + BonsaiGlobalrevMappingRef),
+        repo: &(
+             impl RepoIdentityRef
+             + CommitGraphRef
+             + RepoConfigRef
+             + BonsaiGlobalrevMappingRef
+             + BonsaiGitMappingRef
+             + GitPushRedirectConfigRef
+         ),
     ) {
         if self.log_new_public_commits_to_scribe {
             log_new_bonsai_changesets(
