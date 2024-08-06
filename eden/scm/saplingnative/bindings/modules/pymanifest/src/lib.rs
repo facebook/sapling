@@ -117,7 +117,7 @@ py_class!(pub class treemanifest |py| {
             }
         };
         let tree = self.underlying(py).read();
-        match tree.get_file(&repo_path).map_pyerr(py)? {
+        match tree.get_file(repo_path).map_pyerr(py)? {
             None => {
                 let msg = format!("cannot find file '{}' in manifest", repo_path);
                 Err(PyErr::new::<exc::KeyError, _>(py, msg))
@@ -129,27 +129,27 @@ py_class!(pub class treemanifest |py| {
     def get(&self, path: PyPathBuf, default: Option<PyBytes> = None) -> PyResult<Option<PyBytes>> {
         let repo_path = path.to_repo_path().map_pyerr(py)?;
         let tree = self.underlying(py).read();
-        let result = match tree.get_file(&repo_path).map_pyerr(py)? {
-            None => None,
-            Some(file_metadata) => Some(node_to_pybytes(py, file_metadata.hgid)),
-        };
+        let result = tree
+            .get_file(repo_path)
+            .map_pyerr(py)?
+            .map(|file_metadata| node_to_pybytes(py, file_metadata.hgid));
         Ok(result.or(default))
     }
 
     def flags(&self, path: PyPathBuf, default: Option<PyString> = None) -> PyResult<PyString> {
         let repo_path = path.to_repo_path().map_pyerr(py)?;
         let tree = self.underlying(py).read();
-        let result = match tree.get_file(&repo_path).map_pyerr(py)? {
-            None => None,
-            Some(file_metadata) => Some(file_type_to_pystring(py, file_metadata.file_type)),
-        };
+        let result = tree
+            .get_file(repo_path)
+            .map_pyerr(py)?
+            .map(|file_metadata| file_type_to_pystring(py, file_metadata.file_type));
         Ok(result.or(default).unwrap_or_else(|| PyString::new(py, "")))
     }
 
     def hasdir(&self, path: PyPathBuf) -> PyResult<bool> {
         let repo_path = path.to_repo_path().map_pyerr(py)?;
         let tree = self.underlying(py).read();
-        let result = match tree.get(&repo_path).map_pyerr(py)? {
+        let result = match tree.get(repo_path).map_pyerr(py)? {
             Some(FsNodeMetadata::Directory(_)) => true,
             _ => false
         };
@@ -462,7 +462,7 @@ py_class!(pub class treemanifest |py| {
     def __delitem__(&self, path: PyPathBuf) -> PyResult<()> {
         let mut tree = self.underlying(py).write();
         let repo_path = path.to_repo_path().map_pyerr(py)?;
-        tree.remove(&repo_path).map_pyerr(py)?;
+        tree.remove(repo_path).map_pyerr(py)?;
         let mut pending_delete = self.pending_delete(py).borrow_mut();
         pending_delete.remove(repo_path);
         Ok(())
@@ -471,7 +471,7 @@ py_class!(pub class treemanifest |py| {
     def __getitem__(&self, path: PyPathBuf) -> PyResult<PyBytes> {
         let repo_path = path.to_repo_path().map_pyerr(py)?;
         let tree = self.underlying(py).read();
-        match tree.get_file(&repo_path).map_pyerr(py)? {
+        match tree.get_file(repo_path).map_pyerr(py)? {
             Some(file_metadata) => Ok(node_to_pybytes(py, file_metadata.hgid)),
             None => Err(PyErr::new::<exc::KeyError, _>(py, format!("file {} not found", path))),
         }
@@ -501,7 +501,7 @@ py_class!(pub class treemanifest |py| {
     def __contains__(&self, path: PyPathBuf) -> PyResult<bool> {
         let repo_path = path.to_repo_path().map_pyerr(py)?;
         let tree = self.underlying(py).read();
-        match tree.get_file(&repo_path).map_pyerr(py)? {
+        match tree.get_file(repo_path).map_pyerr(py)? {
             Some(_) => Ok(true),
             None => Ok(false),
         }
