@@ -77,6 +77,14 @@ except ImportError:
             pass
 
 
+try:
+    from .facebook.internal_consts import get_doctor_link
+except ImportError:
+
+    def get_doctor_link() -> str:
+        return ""
+
+
 # working_directory_was_stale may be set to True by the CLI main module
 # if the original working directory referred to a stale eden mount point.
 working_directory_was_stale = False
@@ -638,9 +646,21 @@ Checkouts inside backing repo are usually not intended and can cause spurious be
         )
 
 
-class ConfigurationParsingProblem(Problem):
+class EdenCheckoutCorruption(Problem):
     def __init__(self, checkout: CheckoutInfo, ex: Exception) -> None:
-        super().__init__(f"error parsing the configuration for {checkout.path}: {ex}")
+        remediation = f"""\
+To recover, you will need to remove and reclone the repo.
+You will lose uncommitted work or shelves, but all your local
+commits are safe.
+
+To remove the corrupted repo, run: `eden rm {checkout.path}`"""
+        if get_doctor_link():
+            remediation += f"\nFor additional info see the wiki at {get_doctor_link()}"
+
+        super().__init__(
+            f"Eden's checkout state for {checkout.path} has been corrupted: {ex}",
+            remediation=remediation,
+        )
 
 
 def check_mount(
@@ -732,7 +752,13 @@ def check_running_mount(
     try:
         config = checkout.get_config()
     except Exception as ex:
-        tracker.add_problem(ConfigurationParsingProblem(checkout_info, ex))
+        # Config file is missing or invalid
+        tracker.add_problem(
+            EdenCheckoutCorruption(
+                checkout_info,
+                ex,
+            )
+        )
         # Just skip the remaining checks.
         # Most of them rely on values from the configuration.
         return

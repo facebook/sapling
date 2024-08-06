@@ -21,7 +21,13 @@ import eden.fs.cli.doctor as doctor
 
 import facebook.eden.ttypes as eden_ttypes
 from eden.fs.cli.config import EdenCheckout, EdenInstance, SnapshotState
-from eden.fs.cli.doctor import check_hg, check_mount, check_watchman
+from eden.fs.cli.doctor import (
+    check_hg,
+    check_mount,
+    check_running_mount,
+    check_watchman,
+    get_doctor_link,
+)
 from eden.fs.cli.doctor.check_filesystems import (
     check_hg_status_match_hg_diff,
     check_loaded_content,
@@ -2282,6 +2288,71 @@ Attempt to fix missing mount failed: error text.
 Attempted and failed to fix problem CheckoutNotMounted
 
 """,
+            out.getvalue(),
+        )
+
+    @patch("eden.fs.cli.config.EdenCheckout.get_config")
+    def test_corrupted_config(
+        self,
+        mock_get_config: MagicMock,
+    ) -> None:
+        instance = FakeEdenInstance(self.make_temporary_directory())
+        checkout = instance.create_test_mount("path1")
+        checkout_config = instance._checkouts_by_path[str(checkout.path)].config
+
+        mock_get_config.side_effect = [
+            checkout_config,
+            FileNotFoundError("FileNotFound"),
+        ]
+        path = checkout.path
+        checkout_info = CheckoutInfo(
+            # pyre-fixme[6]: For 3rd param expected `EdenInstance` but got
+            # `FakeEdenInstance`.
+            instance,
+            path,
+            state=None,
+            backing_repo=checkout.get_backing_repo_path(),
+            running_state_dir=path,
+            configured_state_dir=path,
+        )
+
+        fixer, out = self.create_fixer(dry_run=False)
+        mount_table = instance.mount_table
+
+        edenfs_path = "/path/to/eden-mount"
+        watchman_roots = {edenfs_path}
+        watchman_info = check_watchman.WatchmanCheckInfo(watchman_roots)
+
+        check_running_mount(
+            fixer,
+            # pyre-fixme[6]: For 2rd param expected `EdenInstance` but got
+            # `FakeEdenInstance`.
+            instance,
+            checkout_info,
+            mount_table,
+            watchman_info,
+            False,
+            False,
+        )
+
+        self.assertEqual(mock_get_config.call_count, 2)
+        self.assertEqual(len(fixer.problem_types), 1)
+        self.assertEqual(fixer.num_fixed_problems, 0)
+        self.assertEqual(fixer.num_manual_fixes, 1)
+        self.assertEqual(
+            f"""\
+<yellow>- Found problem:<reset>
+Eden's checkout state for {checkout.path} has been corrupted: FileNotFound
+To recover, you will need to remove and reclone the repo.
+You will lose uncommitted work or shelves, but all your local
+commits are safe.
+
+To remove the corrupted repo, run: `eden rm {checkout.path}`"""
+            + (
+                f"\nFor additional info see the wiki at {get_doctor_link()}\n\n"
+                if get_doctor_link()
+                else "\n\n"
+            ),
             out.getvalue(),
         )
 
