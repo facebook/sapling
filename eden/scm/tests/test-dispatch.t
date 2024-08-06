@@ -54,20 +54,20 @@ Parsing of early options should stop at "--":
 Unparsable form of early options:
 
   $ hg cat --debugg
-  abort: option --debugger may not be abbreviated!
+  abort: option --debugger may not be abbreviated or used in aliases
   [255]
 
 Parsing failure of early options should be detected before executing the
 command:
 
   $ hg log -b '--config=hooks.pre-log=false' default
-  abort: option --config may not be abbreviated!
+  abort: option --config may not be abbreviated or used in aliases
   [255]
   $ hg log -b -R. default
-  abort: option -R has to be separated from other options (e.g. not -qR) and --repository may only be abbreviated as --repo!
+  abort: option -R must appear alone, and --repository may not be abbreviated or used in aliases
   [255]
   $ hg log --cwd .. -b --cwd=. default
-  abort: option --cwd may not be abbreviated!
+  abort: option --cwd may not be abbreviated or used in aliases
   [255]
 
 However, we can't prevent it from loading extensions and configs:
@@ -77,7 +77,7 @@ However, we can't prevent it from loading extensions and configs:
   > EOF
   $ hg log -b '--config=extensions.bad=bad.py' default
   warning: extension bad is disabled because it cannot be imported from bad.py: bad
-  abort: option --config may not be abbreviated!
+  abort: option --config may not be abbreviated or used in aliases
   [255]
 
   $ mkdir -p badrepo/.hg
@@ -103,18 +103,18 @@ Early options can't be specified in [aliases] and [defaults] because they are
 applied before the command name is resolved:
 
   $ hg log -b '--config=alias.log=log --config=hooks.pre-log=false'
-  abort: option --config may not be abbreviated!
+  abort: option --config may not be abbreviated or used in aliases
   [255]
 
   $ hg log -b '--config=defaults.log=--config=hooks.pre-log=false'
-  abort: option --config may not be abbreviated!
+  abort: option --config may not be abbreviated or used in aliases
   [255]
 
 XXX: Should we support this?
 Shell aliases bypass any command parsing rules but for the early one:
 
   $ hg log -b '--config=alias.log=!echo howdy'
-  abort: option --config may not be abbreviated!
+  abort: option --config may not be abbreviated or used in aliases
   [255]
 
 For compatibility reasons, HGPLAIN=+strictflags is not enabled by plain HGPLAIN:

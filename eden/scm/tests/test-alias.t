@@ -629,7 +629,7 @@ shell aliases with global options
 global flags after the shell alias name is passed to the shell command, not handled by hg
 
   $ hg echoall --cwd ..
-  abort: option --cwd may not be abbreviated!
+  abort: option --cwd may not be abbreviated or used in aliases
   [255]
 
 
