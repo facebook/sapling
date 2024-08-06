@@ -44,6 +44,10 @@ status.modified=blue bold
 status.removed=red bold
 status.unknown=magenta bold underline
 
+[commands]
+naked-default.in-repo=sl
+naked-default.no-repo=help
+
 [git]
 filter=blob:none
 

@@ -37,7 +37,4 @@ filechangesplain={
  file_mods % "SL: changed {file}\n"}{
  file_dels % "SL: removed {file}\n"}{
  if(files, "", "SL: no files changed\n")}
-
-[commands]
-naked-default.in-repo=sl
 "###);
