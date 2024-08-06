@@ -260,7 +260,8 @@ class EdenTestCase(EdenTestCaseBase):
         {"namespace": ["key1=value1", "key2=value2"}
         """
         configs = {
-            "experimental": ["enable-nfs-server = true\nwindows-symlinks = false"]
+            "experimental": ["enable-nfs-server = true\nwindows-symlinks = false"],
+            "thrift": ["request-tree-metadata = true"],
         }
         if self.use_nfs():
             configs["clone"] = ['default-mount-protocol = "NFS"']
