@@ -516,6 +516,15 @@ fn clone_metadata(
         return eager_clone(ctx, config, source, destination);
     }
 
+    // Enabling segmented changelog too early breaks the revlog_clone that is needed below
+    // in some cases, so make sure it isn't on.
+    config.set(
+        "format",
+        "use-segmented-changelog",
+        Some("false"),
+        &"clone cmd".into(),
+    );
+
     let mut repo = Repo::init(
         destination,
         config,
