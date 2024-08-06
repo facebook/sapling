@@ -22,6 +22,7 @@ cpp_unittest(
 cpp_unittest(
     name = "fake_object_store_test",
     srcs = ["FakeObjectStoreTest.cpp"],
+    link_execution_preference = "remote",
     supports_static_listing = False,
     deps = [
         "//eden/common/utils:immediate_future",
@@ -37,6 +38,7 @@ cpp_unittest(
 cpp_unittest(
     name = "test_mount_test",
     srcs = ["TestMountTest.cpp"],
+    link_execution_preference = "remote",
     supports_static_listing = False,
     deps = [
         "//eden/fs/inodes:inodes",

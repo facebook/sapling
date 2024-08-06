@@ -362,6 +362,7 @@ cpp_unittest(
 cpp_unittest(
     name = "remove",
     srcs = ["RemoveTest.cpp"],
+    link_execution_preference = "remote",
     supports_static_listing = False,
     deps = [
         "//eden/fs/inodes:inodes",
