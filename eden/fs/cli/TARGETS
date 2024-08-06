@@ -125,6 +125,7 @@ python_library(
         "doctor/check_filesystems.py",
         "doctor/check_hg.py",
         "doctor/check_kerberos.py",
+        "doctor/check_network.py",
         "doctor/check_os.py",
         "doctor/check_recent_writes.py",
         "doctor/check_redirections.py",

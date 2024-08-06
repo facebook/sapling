@@ -40,6 +40,7 @@ from . import (
     check_filesystems,
     check_hg,
     check_kerberos,
+    check_network,
     check_os,
     check_recent_writes,
     check_redirections,
@@ -821,6 +822,12 @@ def check_running_mount(
             check_filesystems.check_hg_status_match_hg_diff(tracker, instance, checkout)
         except Exception as ex:
             raise RuntimeError("Failed to compare `hg status` with `hg diff`") from ex
+
+        try:
+            if not fast:
+                check_network.check_network(tracker, checkout)
+        except Exception as ex:
+            raise RuntimeError("Failed to check network for mount") from ex
 
 
 class CheckoutNotConfigured(Problem):
