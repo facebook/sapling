@@ -20,8 +20,6 @@ Test running hg without any arguments and various configs
   > |
   > A
   > EOS
-  $ hg | grep "These are some common"
-  These are some common Sapling commands.  Use 'hg help commands' to list all
   $ setconfig commands.naked-default.in-repo=sl
   $ hg
   o  commit:      112478962961

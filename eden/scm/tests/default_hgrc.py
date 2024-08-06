@@ -77,6 +77,7 @@ httpcommitgraph2=true
 
 [hint]
 ack-match-full-traversal=True
+ack = smartlog-default-command
 
 [scmstore]
 contentstorefallback=True

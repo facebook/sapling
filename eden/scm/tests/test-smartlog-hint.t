@@ -8,6 +8,10 @@ Not using debugruntest to be sure we are testing "real" argv handling.
   $ newrepo
 
   $ setconfig commands.naked-default.in-repo=sl
+  $ cat >> $HGRCPATH << EOF
+  > [hint]
+  > %unset ack
+  > EOF
 
   $ hg sl
   hint[smartlog-default-command]: you can run smartlog with simply `hg`

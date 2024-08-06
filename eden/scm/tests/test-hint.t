@@ -64,7 +64,7 @@ Test hint --ack command
   hints about next, hint-ack are silenced
   $ cat .hgrc
   [hint]
-  ack = next hint-ack
+  ack = smartlog-default-command next hint-ack
 
   $ hg showhint
   hint[slow]: 'date(x)' is slow - be patient
@@ -73,6 +73,6 @@ Test hint --ack command
   $ hg hint --ack export slow -q
   $ cat .hgrc
   [hint]
-  ack = next hint-ack export slow
+  ack = smartlog-default-command next hint-ack export slow
 
   $ hg showhint
