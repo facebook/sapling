@@ -88,6 +88,9 @@ unique_ptr<EdenServer> TestServer::createServer(
           std::make_shared<NullConfigSource>(ConfigSourceType::UserConfig)});
   auto privHelper = make_unique<FakePrivHelper>();
   config->edenDir.setValue(edenDir, ConfigSourceType::CommandLine);
+#ifdef _WIN32
+  config->enableEdenMenu.setValue(false, ConfigSourceType::SystemConfig);
+#endif // _WIN32
 
   return make_unique<EdenServer>(
       std::vector<std::string>{"edenfs_unit_test"},
