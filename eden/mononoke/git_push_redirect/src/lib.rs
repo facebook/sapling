@@ -16,11 +16,19 @@ use mononoke_types::RepositoryId;
 
 mod store;
 mod types;
-
 pub use crate::store::SqlGitPushRedirectConfig;
 pub use crate::store::SqlGitPushRedirectConfigBuilder;
 pub use crate::types::GitPushRedirectConfigEntry;
 pub use crate::types::RowId;
+
+/// Enum representing the staleness of the SoT status for a repo
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum Staleness {
+    /// The most recent state of the SoT flag for the given repo
+    MostRecent,
+    /// SoT state for the given repo with best-effort recency
+    MaybeStale,
+}
 
 #[facet::facet]
 #[async_trait]
@@ -31,6 +39,7 @@ pub trait GitPushRedirectConfig: Send + Sync {
         &self,
         ctx: &CoreContext,
         repo_id: RepositoryId,
+        staleness: Staleness,
     ) -> Result<Option<GitPushRedirectConfigEntry>>;
 
     async fn get_redirected_to_mononoke(
@@ -57,6 +66,7 @@ impl GitPushRedirectConfig for NoopGitPushRedirectConfig {
         &self,
         _ctx: &CoreContext,
         _repo_id: RepositoryId,
+        _staleness: Staleness,
     ) -> Result<Option<GitPushRedirectConfigEntry>> {
         Ok(None)
     }
@@ -108,6 +118,7 @@ impl GitPushRedirectConfig for TestGitPushRedirectConfig {
         &self,
         _ctx: &CoreContext,
         repo_id: RepositoryId,
+        _staleness: Staleness,
     ) -> Result<Option<GitPushRedirectConfigEntry>> {
         Ok(self
             .entries

@@ -9,6 +9,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 use context::CoreContext;
 use mononoke_types::RepositoryId;
+use sql::Connection;
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::mononoke_queries;
@@ -17,6 +18,7 @@ use sql_ext::SqlConnections;
 use crate::GitPushRedirectConfig;
 use crate::GitPushRedirectConfigEntry;
 use crate::RowId;
+use crate::Staleness;
 
 mononoke_queries! {
     read TestGet(id: RowId) -> (
@@ -75,6 +77,15 @@ pub struct SqlGitPushRedirectConfig {
     connections: SqlConnections,
 }
 
+impl SqlGitPushRedirectConfig {
+    pub fn get_connection(&self, staleness: Staleness) -> &Connection {
+        match staleness {
+            Staleness::MostRecent => &self.connections.read_master_connection,
+            Staleness::MaybeStale => &self.connections.read_connection,
+        }
+    }
+}
+
 #[derive(Clone)]
 pub struct SqlGitPushRedirectConfigBuilder {
     connections: SqlConnections,
@@ -111,8 +122,9 @@ impl GitPushRedirectConfig for SqlGitPushRedirectConfig {
         &self,
         _ctx: &CoreContext,
         repo_id: RepositoryId,
+        staleness: Staleness,
     ) -> Result<Option<GitPushRedirectConfigEntry>> {
-        let rows = GetByRepoId::query(&self.connections.read_master_connection, &repo_id).await?;
+        let rows = GetByRepoId::query(self.get_connection(staleness), &repo_id).await?;
         Ok(rows.into_iter().next().map(row_to_entry))
     }
 
@@ -150,7 +162,9 @@ mod test {
         // insert one
         let repo_id = RepositoryId::new(1);
         push.set(&ctx, repo_id, true).await?;
-        let entry = push.get_by_repo_id(&ctx, repo_id).await?;
+        let entry = push
+            .get_by_repo_id(&ctx, repo_id, Staleness::MostRecent)
+            .await?;
         assert!(entry.is_some());
         let entry = entry.unwrap();
         assert!(entry.mononoke);
@@ -160,14 +174,18 @@ mod test {
         // insert another
         let repo_id = RepositoryId::new(2);
         push.set(&ctx, repo_id, false).await?;
-        let entry = push.get_by_repo_id(&ctx, repo_id).await?;
+        let entry = push
+            .get_by_repo_id(&ctx, repo_id, Staleness::MostRecent)
+            .await?;
         assert!(entry.is_some());
         let entry = entry.unwrap();
         assert!(!entry.mononoke);
 
         // update it
         push.set(&ctx, repo_id, true).await?;
-        let entry = push.get_by_repo_id(&ctx, repo_id).await?;
+        let entry = push
+            .get_by_repo_id(&ctx, repo_id, Staleness::MostRecent)
+            .await?;
         assert!(entry.is_some());
         let entry = entry.unwrap();
         assert!(entry.mononoke);
@@ -182,11 +200,15 @@ mod test {
         let push = builder.build();
 
         let repo_id = RepositoryId::new(1);
-        let entry = push.get_by_repo_id(&ctx, repo_id).await?;
+        let entry = push
+            .get_by_repo_id(&ctx, repo_id, Staleness::MostRecent)
+            .await?;
         assert!(entry.is_none());
 
         push.set(&ctx, repo_id, true).await?;
-        let entry = push.get_by_repo_id(&ctx, repo_id).await?;
+        let entry = push
+            .get_by_repo_id(&ctx, repo_id, Staleness::MostRecent)
+            .await?;
         assert!(entry.is_some());
         let entry = entry.unwrap();
         assert!(entry.mononoke);

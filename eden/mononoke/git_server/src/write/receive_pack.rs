@@ -14,6 +14,7 @@ use context::CoreContext;
 use futures::stream;
 use futures::StreamExt;
 use futures::TryStreamExt;
+use git_push_redirect::Staleness;
 use gotham::mime;
 use gotham::state::FromState;
 use gotham::state::State;
@@ -238,7 +239,7 @@ async fn atomic_refs_update(
 async fn mononoke_source_of_truth(ctx: &CoreContext, repo: Arc<Repo>) -> anyhow::Result<bool> {
     let repo_id = repo.repo_identity().id();
     repo.git_push_redirect_config
-        .get_by_repo_id(ctx, repo_id)
+        .get_by_repo_id(ctx, repo_id, Staleness::MostRecent)
         .await
         .map(|entry| entry.map_or(false, |entry| entry.mononoke))
 }
