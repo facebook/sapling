@@ -321,6 +321,11 @@ class EdenConfig : private ConfigSettingManager {
       false,
       this};
 
+  ConfigSetting<bool> shouldFetchTreeMetadata{
+      "thrift:request-tree-metadata",
+      false,
+      this};
+
   // [ssl]
 
   ConfigSetting<AbsolutePath> clientCertificate{
