@@ -172,7 +172,7 @@ using namespace facebook::eden;
 
 std::shared_ptr<Notifier> getPlatformNotifier(
     std::shared_ptr<ReloadableConfig> config,
-    const std::shared_ptr<StructuredLogger>& logger,
+    std::shared_ptr<StructuredLogger> logger,
     std::string version) {
 #if defined(_WIN32)
   /*
@@ -189,7 +189,7 @@ std::shared_ptr<Notifier> getPlatformNotifier(
      */
     try {
       auto notifier = std::make_shared<WindowsNotifier>(
-          config, logger, version, std::chrono::steady_clock::now());
+          config, std::move(logger), version, std::chrono::steady_clock::now());
       notifier->initialize();
       return notifier;
     } catch (const std::exception& ex) {

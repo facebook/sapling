@@ -45,7 +45,7 @@ class WindowsNotifier : public Notifier {
  public:
   explicit WindowsNotifier(
       std::shared_ptr<ReloadableConfig> edenConfig,
-      const std::shared_ptr<StructuredLogger>& logger,
+      std::shared_ptr<StructuredLogger> logger,
       std::string_view version,
       std::chrono::time_point<std::chrono::steady_clock> startTime);
   ~WindowsNotifier();

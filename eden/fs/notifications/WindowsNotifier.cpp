@@ -584,7 +584,7 @@ void cacheIconImages() {
 
 WindowsNotifier::WindowsNotifier(
     std::shared_ptr<ReloadableConfig> edenConfig,
-    const std::shared_ptr<StructuredLogger>& logger,
+    std::shared_ptr<StructuredLogger> logger,
     std::string_view version,
     std::chrono::time_point<std::chrono::steady_clock> startTime)
     : Notifier(std::move(edenConfig)),
