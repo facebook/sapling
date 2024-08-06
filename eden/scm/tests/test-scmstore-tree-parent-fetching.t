@@ -30,7 +30,7 @@ We can fetch tree parents:
                           hgid: HgId("79bcde5aa72548a14e67f99c571fac4552005120"),
                       },
                       data: Some(
-                          b"file\01135da73f7677c360ac31ecde4ee16e47f0529f5\n",
+                          b"file\x001135da73f7677c360ac31ecde4ee16e47f0529f5\n",
                       ),
                       parents: Some(
                           One(
