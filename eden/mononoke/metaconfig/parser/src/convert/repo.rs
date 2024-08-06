@@ -37,6 +37,7 @@ use metaconfig_types::InfinitepushParams;
 use metaconfig_types::LfsParams;
 use metaconfig_types::LoggingDestination;
 use metaconfig_types::MetadataLoggerConfig;
+use metaconfig_types::MononokeCasSyncConfig;
 use metaconfig_types::PushParams;
 use metaconfig_types::PushrebaseFlags;
 use metaconfig_types::PushrebaseParams;
@@ -64,6 +65,7 @@ use mononoke_types::RepositoryId;
 use regex::Regex;
 use repos::RawBookmarkConfig;
 use repos::RawCacheWarmupConfig;
+use repos::RawCasSyncConfig;
 use repos::RawCommitCloudConfig;
 use repos::RawCommitGraphConfig;
 use repos::RawCommitIdentityScheme;
@@ -660,6 +662,16 @@ impl Convert for RawHgSyncConfig {
             batch_size: self.batch_size,
             lock_on_failure: self.lock_on_failure,
             darkstorm_backup_repo_id: self.darkstorm_backup_repo_id,
+        })
+    }
+}
+
+impl Convert for RawCasSyncConfig {
+    type Output = MononokeCasSyncConfig;
+
+    fn convert(self) -> Result<Self::Output> {
+        Ok(MononokeCasSyncConfig {
+            main_bookmark_to_sync: self.main_bookmark_to_sync,
         })
     }
 }

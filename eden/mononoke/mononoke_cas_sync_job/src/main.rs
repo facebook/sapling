@@ -18,6 +18,7 @@ use std::sync::Arc;
 use std::sync::OnceLock;
 use std::time::Duration;
 
+use anyhow::anyhow;
 use anyhow::bail;
 use anyhow::format_err;
 use anyhow::Context;
@@ -95,9 +96,6 @@ const JOB_NAME: &str = "mononoke_cas_sync_job";
 const DEFAULT_EXECUTION_RETRY_NUM: usize = 1;
 const DEFAULT_RETRY_DELAY_MS: u64 = 1000;
 const DEFAULT_BATCH_SIZE: u64 = 10;
-
-// TODO: make it configurable via a configerator config
-const SUPPORTED_BOOKMARK: &str = "master";
 
 #[derive(Copy, Clone)]
 struct QueueSize(usize);
@@ -699,6 +697,17 @@ async fn run<'a>(
     let bookmarks = bookmarks.with_repo_id(repo_id);
     let reporting_handler = build_reporting_handler(ctx, &scuba_sample, attempt_num, &bookmarks);
 
+    let sync_config = resolved_repo
+        .config
+        .mononoke_cas_sync_config
+        .ok_or_else(|| {
+            anyhow!(
+                "mononoke_cas_sync_config is not found for the repo {}",
+                repo_name
+            )
+        })?;
+    let main_bookmark_to_sync = sync_config.main_bookmark_to_sync.as_str();
+
     // Before beginning any actual processing, check if cancellation has been requested.
     // If yes, then lets return early.
     if cancellation_requested.load(Ordering::Relaxed) {
@@ -769,7 +778,7 @@ async fn run<'a>(
                     components: entries
                         .into_iter()
                         .filter_map(|entry| {
-                            if entry.bookmark_name.as_str() == SUPPORTED_BOOKMARK {
+                            if entry.bookmark_name.as_str() == main_bookmark_to_sync {
                                 Some(entry)
                             } else {
                                 None

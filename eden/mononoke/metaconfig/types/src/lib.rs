@@ -253,6 +253,8 @@ pub struct RepoConfig {
     pub x_repo_sync_source_mapping: Option<XRepoSyncSourceConfigMapping>,
     /// Commit cloud configuration
     pub commit_cloud_config: CommitCloudConfig,
+    /// Mononoke Cas Sync Configuration
+    pub mononoke_cas_sync_config: Option<MononokeCasSyncConfig>,
 }
 
 /// Config determining if the repo is deep sharded in the context of a service.
@@ -1782,6 +1784,13 @@ pub struct HgSyncConfig {
     pub lock_on_failure: bool,
     /// The darkstorm backup repo-id to be used as target for sync
     pub darkstorm_backup_repo_id: Option<i32>,
+}
+
+/// Repo-specific configuration parameters for mononoke cas sync job
+#[derive(Debug, Default, Clone, Eq, PartialEq)]
+pub struct MononokeCasSyncConfig {
+    /// The name of the main bookmark to sync to RE CAS
+    pub main_bookmark_to_sync: String,
 }
 
 /// Destination for telemetry logging.

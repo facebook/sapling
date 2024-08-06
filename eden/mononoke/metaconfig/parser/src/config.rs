@@ -230,6 +230,7 @@ fn parse_with_repo_definition(
         bookmark_name_for_objects_count,
         default_objects_count,
         x_repo_sync_source_mapping,
+        mononoke_cas_sync_config,
         ..
     } = named_repo_config;
 
@@ -349,6 +350,7 @@ fn parse_with_repo_definition(
     let x_repo_sync_source_mapping = x_repo_sync_source_mapping.convert()?;
 
     let commit_cloud_config = commit_cloud_config.convert()?.unwrap_or_default();
+    let mononoke_cas_sync_config = mononoke_cas_sync_config.convert()?;
     Ok(RepoConfig {
         enabled,
         storage_config,
@@ -397,6 +399,7 @@ fn parse_with_repo_definition(
         default_objects_count,
         x_repo_sync_source_mapping,
         commit_cloud_config,
+        mononoke_cas_sync_config,
     })
 }
 
@@ -1360,6 +1363,7 @@ mod test {
                 commit_cloud_config: CommitCloudConfig {
                     mocked_employees: Vec::new(),
                 },
+                mononoke_cas_sync_config: None,
             },
         );
 
@@ -1431,6 +1435,7 @@ mod test {
                 default_objects_count: None,
                 x_repo_sync_source_mapping: None,
                 commit_cloud_config: CommitCloudConfig::default(),
+                mononoke_cas_sync_config: None,
             },
         );
         assert_eq!(
