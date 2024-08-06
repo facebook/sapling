@@ -195,7 +195,7 @@ impl CheckpointArgs {
                 checkpoint_name.clone(),
                 sql_checkpoints,
                 self.checkpoint_sample_rate,
-                CheckpointsVersion::V1,
+                self.checkpoint_version,
             )))
         } else {
             Ok(None)

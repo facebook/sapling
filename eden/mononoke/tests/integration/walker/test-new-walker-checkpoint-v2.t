@@ -38,7 +38,7 @@ bonsai core data, chunked, deep, with checkpointing enabled
   Completed in 2 chunks of size 2, repo: repo
 
 inspect the checkpoint table
-  $ sqlite3 "$TESTTMP/test_sqlite" "select repo_id, checkpoint_name, lower_bound, upper_bound from walker_checkpoints;"
+  $ sqlite3 "$TESTTMP/test_sqlite" "select repo_id, checkpoint_name, lower_bound, upper_bound from walker_checkpoints_v2;"
   0|bonsai_deep|1|4
 
 same run, but against metadata db
@@ -89,7 +89,7 @@ run again, should have no catchup, but main bounds will continue from checkpoint
   Completed in 3 chunks of size 1, repo: repo
 
 inspect the checkpoint table, check the update time is at least one second after creation
-  $ sqlite3 "$TESTTMP/bonsai_deep2" "SELECT repo_id, checkpoint_name, lower_bound, upper_bound FROM walker_checkpoints WHERE update_timestamp >= create_timestamp + 1000000000;"
+  $ sqlite3 "$TESTTMP/bonsai_deep2" "SELECT repo_id, checkpoint_name, lower_bound, upper_bound FROM walker_checkpoints_v2 WHERE update_timestamp >= create_timestamp + 1000000000;"
   0|bonsai_deep2|1|4
 
 additional commit
