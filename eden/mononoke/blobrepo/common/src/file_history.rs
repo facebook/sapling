@@ -15,8 +15,8 @@ use blobrepo::BlobRepo;
 use blobstore::Blobstore;
 use blobstore::Loadable;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
-use changesets::ChangesetsRef;
 use cloned::cloned;
+use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use context::PerfCounterType;
 use filenodes::FilenodeInfo;
@@ -95,8 +95,12 @@ async fn get_filenode_generation(
         Some(a) => a,
         None => return Ok(None),
     };
-    let bonsai = repo.changesets().get(ctx, bcs_id).await?;
-    Ok(bonsai.map(|b| b.gen))
+    Ok(Some(
+        repo.commit_graph()
+            .changeset_generation(ctx, bcs_id)
+            .await?
+            .value(),
+    ))
 }
 
 /// Checks if one filenode is ancestor of another

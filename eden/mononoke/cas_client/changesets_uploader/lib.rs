@@ -18,7 +18,6 @@ use blobstore::Loadable;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bytesize::ByteSize;
 use cas_client::CasClient;
-use changesets::ChangesetsRef;
 use cloned::cloned;
 use context::CoreContext;
 pub use errors::CasChangesetUploaderErrorKind;
@@ -152,7 +151,7 @@ define_stats! {
     uploaded_changesets_recursive: timeseries(Rate, Sum),
 }
 
-pub trait Repo = BonsaiHgMappingRef + ChangesetsRef + RepoBlobstoreArc + Send + Sync;
+pub trait Repo = BonsaiHgMappingRef + RepoBlobstoreArc + Send + Sync;
 
 pub struct CasChangesetsUploader<Client>
 where

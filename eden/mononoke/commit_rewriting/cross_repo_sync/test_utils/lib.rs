@@ -25,8 +25,8 @@ use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateLog;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks::Bookmarks;
-use changesets::Changesets;
 use commit_graph::CommitGraph;
+use commit_graph::CommitGraphWriter;
 use commit_transformation::upload_commits;
 use context::CoreContext;
 use cross_repo_sync::rewrite_commit;
@@ -87,7 +87,6 @@ pub struct TestRepo {
         dyn BonsaiGlobalrevMapping,
         dyn PushrebaseMutationMapping,
         RepoBookmarkAttrs,
-        dyn Changesets,
         dyn Filenodes,
         FilestoreConfig,
         dyn MutableCounters,
@@ -96,6 +95,7 @@ pub struct TestRepo {
         RepoDerivedData,
         RepoIdentity,
         CommitGraph,
+        dyn CommitGraphWriter,
     )]
     pub blob_repo: BlobRepo,
 

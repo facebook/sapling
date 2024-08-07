@@ -62,7 +62,6 @@ rust_library(
         "//eden/mononoke/bonsai_hg_mapping:bonsai_hg_mapping",
         "//eden/mononoke/cas_client:cas_client",
         "//eden/mononoke/cas_client:scm_client",
-        "//eden/mononoke/changesets:changesets",
         "//eden/mononoke/common/bounded_traversal:bounded_traversal",
         "//eden/mononoke/common/futures_watchdog:futures_watchdog",
         "//eden/mononoke/manifest:manifest",

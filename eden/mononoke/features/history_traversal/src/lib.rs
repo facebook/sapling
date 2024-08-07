@@ -19,7 +19,6 @@ mod common;
 mod log;
 
 use blobrepo::AsBlobRepo;
-use changesets::ChangesetsRef;
 use commit_graph::CommitGraphRef;
 pub use log::list_file_history;
 pub use log::CsAndPath;
@@ -43,7 +42,6 @@ pub use crate::blame::blame_with_content;
 /// These are the repo attributes that are necessary to do most of the (mutable)
 /// history traversal operations.
 pub trait Repo = AsBlobRepo
-    + ChangesetsRef
     + MutableRenamesRef
     + RepoBlobstoreRef
     + RepoBlobstoreArc

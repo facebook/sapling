@@ -534,7 +534,7 @@ mod test {
     use bonsai_hg_mapping::BonsaiHgMapping;
     use bookmarks::BookmarkUpdateLogId;
     use bookmarks::Bookmarks;
-    use changesets::Changesets;
+    use commit_graph::CommitGraphWriter;
     use fbinit::FacebookInit;
     use filestore::FilestoreConfig;
     use maplit::hashmap;
@@ -553,9 +553,6 @@ mod test {
         pub repo_blobstore: RepoBlobstore,
 
         #[facet]
-        pub changesets: dyn Changesets,
-
-        #[facet]
         pub bonsai_hg_mapping: dyn BonsaiHgMapping,
 
         #[facet]
@@ -569,6 +566,9 @@ mod test {
 
         #[facet]
         pub commit_graph: CommitGraph,
+
+        #[facet]
+        pub commit_graph_writer: dyn CommitGraphWriter,
 
         #[facet]
         pub repo_identity: RepoIdentity,

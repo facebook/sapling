@@ -159,9 +159,9 @@ pub async fn new_batch_derivation(
 mod test {
     use bonsai_hg_mapping::BonsaiHgMapping;
     use bookmarks::Bookmarks;
-    use changesets::Changesets;
     use commit_graph::CommitGraph;
     use commit_graph::CommitGraphRef;
+    use commit_graph::CommitGraphWriter;
     use fbinit::FacebookInit;
     use filestore::FilestoreConfig;
     use fixtures::Linear;
@@ -189,11 +189,11 @@ mod test {
         #[facet]
         commit_graph: CommitGraph,
         #[facet]
+        commit_graph_writer: dyn CommitGraphWriter,
+        #[facet]
         repo_blobstore: RepoBlobstore,
         #[facet]
         filestore_config: FilestoreConfig,
-        #[facet]
-        changesets: dyn Changesets,
         #[facet]
         repo_identity: RepoIdentity,
     }

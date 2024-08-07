@@ -11,8 +11,8 @@ use bonsai_git_mapping::BonsaiGitMappingRef;
 use bonsai_tag_mapping::BonsaiTagMappingRef;
 use bookmarks::BookmarksRef;
 use bookmarks_cache::BookmarksCacheRef;
-use changesets::ChangesetsRef;
 use commit_graph::CommitGraphRef;
+use commit_graph::CommitGraphWriterRef;
 use filestore::FilestoreConfigRef;
 use git_symbolic_refs::GitSymbolicRefsRef;
 use metaconfig_types::RepoConfigRef;
@@ -39,11 +39,11 @@ pub trait Repo = RepoIdentityRef
     + BookmarksRef
     + BonsaiGitMappingRef
     + BonsaiTagMappingRef
-    + ChangesetsRef
     + FilestoreConfigRef
     + RepoDerivedDataRef
     + GitSymbolicRefsRef
     + CommitGraphRef
+    + CommitGraphWriterRef
     + BookmarksCacheRef
     + RepoConfigRef
     + Send

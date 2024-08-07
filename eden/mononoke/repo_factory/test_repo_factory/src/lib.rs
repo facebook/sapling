@@ -39,7 +39,7 @@ use commit_graph::ArcCommitGraph;
 use commit_graph::ArcCommitGraphWriter;
 use commit_graph::BaseCommitGraphWriter;
 use commit_graph::CommitGraph;
-use commit_graph_compat::ChangesetsCommitGraphCompat;
+use commit_graph::CompatCommitGraphWriter;
 use context::CoreContext;
 use dbbookmarks::ArcSqlBookmarks;
 use dbbookmarks::SqlBookmarksBuilder;
@@ -402,20 +402,11 @@ impl TestRepoFactory {
     }
 
     /// Construct Changesets using the in-memory metadata database.
-    pub fn changesets(
-        &self,
-        repo_identity: &ArcRepoIdentity,
-        commit_graph_writer: &ArcCommitGraphWriter,
-    ) -> Result<ArcChangesets> {
-        let changesets = Arc::new(
+    pub fn changesets(&self, repo_identity: &ArcRepoIdentity) -> Result<ArcChangesets> {
+        Ok(Arc::new(
             SqlChangesetsBuilder::from_sql_connections(self.metadata_db.clone())
                 .build(RendezVousOptions::for_test(), repo_identity.id()),
-        );
-
-        Ok(Arc::new(ChangesetsCommitGraphCompat::new(
-            changesets,
-            commit_graph_writer.clone(),
-        )?))
+        ))
     }
 
     /// Construct SQL bookmarks using the in-memory metadata database.
@@ -799,11 +790,14 @@ impl TestRepoFactory {
     /// Commit graph writer
     pub fn commit_graph_writer(
         &self,
-        commit_graph: &ArcCommitGraph,
+        commit_graph: &CommitGraph,
+        changesets: &ArcChangesets,
     ) -> Result<ArcCommitGraphWriter> {
-        Ok(Arc::new(BaseCommitGraphWriter::new(CommitGraph::clone(
-            commit_graph,
-        ))))
+        let base_writer = BaseCommitGraphWriter::new(commit_graph.clone());
+        Ok(Arc::new(CompatCommitGraphWriter::new(
+            Arc::new(base_writer),
+            changesets.clone(),
+        )))
     }
 
     /// Commit graph bulk fetcher

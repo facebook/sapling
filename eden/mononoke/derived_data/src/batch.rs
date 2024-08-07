@@ -290,7 +290,8 @@ fn has_file_conflict(
 mod test {
     use bonsai_hg_mapping::BonsaiHgMapping;
     use bookmarks::Bookmarks;
-    use changesets::Changesets;
+    use commit_graph::CommitGraph;
+    use commit_graph::CommitGraphWriter;
     use fbinit::FacebookInit;
     use filestore::FilestoreConfig;
     use maplit::btreemap;
@@ -316,7 +317,9 @@ mod test {
         #[facet]
         filestore_config: FilestoreConfig,
         #[facet]
-        changesets: dyn Changesets,
+        commit_graph: CommitGraph,
+        #[facet]
+        commit_graph_writer: dyn CommitGraphWriter,
         #[facet]
         repo_identity: RepoIdentity,
     }

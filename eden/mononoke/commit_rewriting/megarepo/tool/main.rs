@@ -93,8 +93,8 @@ use bonsai_globalrev_mapping::BonsaiGlobalrevMapping;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use bookmarks::BookmarkUpdateLog;
 use bookmarks::Bookmarks;
-use changesets::Changesets;
 use commit_graph::CommitGraph;
+use commit_graph::CommitGraphWriter;
 use filenodes::Filenodes;
 use filestore::FilestoreConfig;
 use megarepolib::chunking::even_chunker_with_max_size;
@@ -194,7 +194,6 @@ pub struct Repo(
     dyn Bookmarks,
     dyn Phases,
     dyn BookmarkUpdateLog,
-    dyn Changesets,
     FilestoreConfig,
     dyn MutableCounters,
     RepoBlobstore,
@@ -202,6 +201,7 @@ pub struct Repo(
     RepoDerivedData,
     RepoIdentity,
     CommitGraph,
+    dyn CommitGraphWriter,
     dyn Filenodes,
     SqlQueryConfig,
 );

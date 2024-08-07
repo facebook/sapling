@@ -76,8 +76,8 @@ use commit_graph::ArcCommitGraph;
 use commit_graph::ArcCommitGraphWriter;
 use commit_graph::BaseCommitGraphWriter;
 use commit_graph::CommitGraph;
+use commit_graph::CompatCommitGraphWriter;
 use commit_graph::LoggingCommitGraphWriter;
-use commit_graph_compat::ChangesetsCommitGraphCompat;
 use commit_graph_types::storage::CommitGraphStorage;
 use context::CoreContext;
 use context::SessionContainer;
@@ -762,7 +762,6 @@ impl RepoFactory {
         &self,
         repo_identity: &ArcRepoIdentity,
         repo_config: &ArcRepoConfig,
-        commit_graph_writer: &ArcCommitGraphWriter,
     ) -> Result<ArcChangesets> {
         let builder = self
             .open_sql::<SqlChangesetsBuilder>(repo_config)
@@ -770,10 +769,7 @@ impl RepoFactory {
             .context(RepoFactoryError::Changesets)?;
         let changesets = builder.build(self.env.rendezvous_options, repo_identity.id());
 
-        Ok(Arc::new(ChangesetsCommitGraphCompat::new(
-            Arc::new(changesets),
-            commit_graph_writer.clone(),
-        )?))
+        Ok(Arc::new(changesets))
     }
 
     pub async fn repo_stats_logger(
@@ -1691,7 +1687,8 @@ impl RepoFactory {
         &self,
         repo_identity: &ArcRepoIdentity,
         repo_config: &ArcRepoConfig,
-        commit_graph: &ArcCommitGraph,
+        commit_graph: &CommitGraph,
+        changesets: &ArcChangesets,
     ) -> Result<ArcCommitGraphWriter> {
         let scuba_table = repo_config.commit_graph_config.scuba_table.as_deref();
         let scuba = match scuba_table {
@@ -1702,8 +1699,14 @@ impl RepoFactory {
             None => MononokeScubaSampleBuilder::with_discard(),
         };
 
+        let base_writer = Arc::new(BaseCommitGraphWriter::new(commit_graph.clone()));
+        let changesets_compat_writer = Arc::new(CompatCommitGraphWriter::new(
+            base_writer,
+            changesets.clone(),
+        ));
+
         Ok(Arc::new(LoggingCommitGraphWriter::new(
-            Arc::new(BaseCommitGraphWriter::new(CommitGraph::clone(commit_graph))),
+            changesets_compat_writer,
             scuba,
             repo_identity.name().to_string(),
         )))

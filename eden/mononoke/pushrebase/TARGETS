@@ -38,7 +38,6 @@ rust_library(
         "//eden/mononoke/blobstore:blobstore",
         "//eden/mononoke/bonsai_hg_mapping:bonsai_hg_mapping",
         "//eden/mononoke/bookmarks:bookmarks",
-        "//eden/mononoke/changesets:changesets",
         "//eden/mononoke/changesets/changesets_creation:changesets_creation",
         "//eden/mononoke/derived_data/filenodes_derivation:filenodes_derivation",
         "//eden/mononoke/derived_data/mercurial_derivation:mercurial_derivation",

@@ -52,7 +52,6 @@ rust_library(
         "//eden/mononoke/bonsai_git_mapping:bonsai_git_mapping",
         "//eden/mononoke/bonsai_hg_mapping:bonsai_hg_mapping",
         "//eden/mononoke/bookmarks:bookmarks",
-        "//eden/mononoke/changesets:changesets",
         "//eden/mononoke/filestore:filestore",
         "//eden/mononoke/mononoke_types:mononoke_types-mocks",
         "//eden/mononoke/pushrebase:pushrebase",

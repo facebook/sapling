@@ -23,7 +23,6 @@ changesets = { version = "0.1.0", path = "../../changesets" }
 changesets_impl = { version = "0.1.0", path = "../../changesets/changesets_impl" }
 commit_cloud = { version = "0.1.0", path = "../../commit_cloud" }
 commit_graph = { version = "0.1.0", path = "../../repo_attributes/commit_graph/commit_graph" }
-commit_graph_compat = { version = "0.1.0", path = "../../repo_attributes/commit_graph/commit_graph_compat" }
 context = { version = "0.1.0", path = "../../server/context" }
 dbbookmarks = { version = "0.1.0", path = "../../bookmarks/dbbookmarks" }
 ephemeral_blobstore = { version = "0.1.0", path = "../../blobstore/ephemeral_blobstore" }

@@ -412,10 +412,10 @@ mod test {
     use bookmarks::BookmarkKey;
     use bookmarks::Bookmarks;
     use borrowed::borrowed;
-    use changesets::Changesets;
     use cloned::cloned;
     use commit_graph::CommitGraph;
     use commit_graph::CommitGraphRef;
+    use commit_graph::CommitGraphWriter;
     use fbinit::FacebookInit;
     use filestore::FilestoreConfig;
     use fixtures::BranchEven;
@@ -456,7 +456,7 @@ mod test {
         #[facet]
         commit_graph: CommitGraph,
         #[facet]
-        changesets: dyn Changesets,
+        commit_graph_writer: dyn CommitGraphWriter,
         #[facet]
         repo_identity: RepoIdentity,
     }

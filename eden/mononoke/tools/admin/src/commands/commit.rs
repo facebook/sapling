@@ -17,11 +17,11 @@ use bonsai_globalrev_mapping::BonsaiGlobalrevMapping;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use bonsai_svnrev_mapping::BonsaiSvnrevMapping;
 use bookmarks::Bookmarks;
-use changesets::Changesets;
 use clap::Parser;
 use clap::Subcommand;
 use commit_graph::CommitGraph;
 use commit_graph::CommitGraphRef;
+use commit_graph::CommitGraphWriter;
 use context::CoreContext;
 use futures::StreamExt;
 use futures::TryStreamExt;
@@ -74,10 +74,10 @@ pub struct Repo {
     repo_blobstore: RepoBlobstore,
 
     #[facet]
-    changesets: dyn Changesets,
+    commit_graph: CommitGraph,
 
     #[facet]
-    commit_graph: CommitGraph,
+    commit_graph_writer: dyn CommitGraphWriter,
 
     #[facet]
     bookmarks: dyn Bookmarks,

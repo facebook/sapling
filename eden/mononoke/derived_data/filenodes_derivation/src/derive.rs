@@ -293,10 +293,10 @@ mod tests {
     use async_trait::async_trait;
     use bonsai_hg_mapping::BonsaiHgMapping;
     use bookmarks::Bookmarks;
-    use changesets::Changesets;
     use cloned::cloned;
     use commit_graph::CommitGraph;
     use commit_graph::CommitGraphRef;
+    use commit_graph::CommitGraphWriter;
     use fbinit::FacebookInit;
     use filenodes::FilenodeRange;
     use filenodes::FilenodeResult;
@@ -333,7 +333,7 @@ mod tests {
         #[facet]
         commit_graph: CommitGraph,
         #[facet]
-        changesets: dyn Changesets,
+        commit_graph_writer: dyn CommitGraphWriter,
         #[facet]
         filenodes: dyn Filenodes,
         #[facet]

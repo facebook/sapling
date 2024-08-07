@@ -14,10 +14,10 @@ use bonsai_tag_mapping::BonsaiTagMappingRef;
 use bookmarks::BookmarksRef;
 use bookmarks_cache::BookmarksCacheRef;
 use bytes::Bytes;
-use changesets::ChangesetsRef;
 use chrono::DateTime;
 use chrono::FixedOffset;
 use commit_graph::CommitGraphRef;
+use commit_graph::CommitGraphWriterRef;
 use context::CoreContext;
 use filestore::FilestoreConfigRef;
 use git_symbolic_refs::GitSymbolicRefsRef;
@@ -203,7 +203,7 @@ where
 /// Free function for creating Mononoke counterpart of Git tree object
 pub async fn create_git_tree(
     ctx: &CoreContext,
-    repo: &(impl ChangesetsRef + RepoBlobstoreRef + RepoIdentityRef),
+    repo: &(impl CommitGraphRef + CommitGraphWriterRef + RepoBlobstoreRef + RepoIdentityRef),
     git_tree_hash: &gix_hash::oid,
 ) -> anyhow::Result<(), GitError> {
     let blobstore_key = format!(
@@ -251,7 +251,13 @@ pub async fn create_git_tree(
 /// Bookmarks of category `Branch` are never annotated.
 pub async fn create_annotated_tag(
     ctx: &CoreContext,
-    repo: &(impl ChangesetsRef + RepoBlobstoreRef + BonsaiTagMappingRef + RepoIdentityRef),
+    repo: &(
+         impl CommitGraphRef
+         + CommitGraphWriterRef
+         + RepoBlobstoreRef
+         + BonsaiTagMappingRef
+         + RepoIdentityRef
+     ),
     tag_hash: Option<ObjectId>,
     name: String,
     author: Option<String>,
@@ -309,11 +315,11 @@ pub trait Repo = RepoIdentityRef
     + BonsaiGitMappingRef
     + BonsaiTagMappingRef
     + RepoDerivedDataRef
-    + ChangesetsRef
     + FilestoreConfigRef
     + GitSymbolicRefsRef
     + BookmarksCacheRef
     + CommitGraphRef
+    + CommitGraphWriterRef
     + RepoConfigRef
     + Send
     + Sync;

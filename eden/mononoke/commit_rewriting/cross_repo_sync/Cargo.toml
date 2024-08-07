@@ -26,7 +26,6 @@ bounded_traversal = { version = "0.1.0", path = "../../common/bounded_traversal"
 bytes = { version = "1.6.0", features = ["serde"] }
 cacheblob = { version = "0.1.0", path = "../../blobstore/cacheblob" }
 changeset_info = { version = "0.1.0", path = "../../derived_data/changeset_info" }
-changesets = { version = "0.1.0", path = "../../changesets" }
 changesets_creation = { version = "0.1.0", path = "../../changesets/changesets_creation" }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 commit_graph = { version = "0.1.0", path = "../../repo_attributes/commit_graph/commit_graph" }

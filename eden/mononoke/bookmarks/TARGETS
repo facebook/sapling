@@ -214,7 +214,6 @@ rust_library(
         "//eden/mononoke/bonsai_git_mapping:bonsai_git_mapping",
         "//eden/mononoke/bonsai_globalrev_mapping:bonsai_globalrev_mapping",
         "//eden/mononoke/bonsai_hg_mapping:bonsai_hg_mapping",
-        "//eden/mononoke/changesets:changesets",
         "//eden/mononoke/commit_rewriting/cross_repo_sync:cross_repo_sync",
         "//eden/mononoke/derived_data:skeleton_manifest",
         "//eden/mononoke/features/repo_update_logger:repo_update_logger",

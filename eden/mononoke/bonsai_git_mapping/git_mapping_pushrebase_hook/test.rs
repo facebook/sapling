@@ -13,8 +13,8 @@ use bonsai_git_mapping::BonsaiGitMappingRef;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use bookmarks::Bookmarks;
 use borrowed::borrowed;
-use changesets::Changesets;
 use commit_graph::CommitGraph;
+use commit_graph::CommitGraphWriter;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use filestore::FilestoreConfig;
@@ -45,10 +45,10 @@ struct Repo {
     bookmarks: dyn Bookmarks,
 
     #[facet]
-    changesets: dyn Changesets,
+    commit_graph: CommitGraph,
 
     #[facet]
-    commit_graph: CommitGraph,
+    commit_graph_writer: dyn CommitGraphWriter,
 
     #[facet]
     filestore_config: FilestoreConfig,

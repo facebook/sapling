@@ -28,9 +28,9 @@ use bookmarks::Bookmarks;
 use bytes::Bytes;
 use changesets::deserialize_cs_entries;
 use changesets::ChangesetEntry;
-use changesets::Changesets;
 use clap::Parser;
 use commit_graph::CommitGraph;
+use commit_graph::CommitGraphWriter;
 use context::CoreContext;
 use executor_lib::RepoShardedProcess;
 use executor_lib::RepoShardedProcessExecutor;
@@ -85,13 +85,13 @@ pub struct Repo {
     #[facet]
     repo_derived_data: RepoDerivedData,
     #[facet]
-    changesets: dyn Changesets,
-    #[facet]
     bookmarks: dyn Bookmarks,
     #[facet]
     bonsai_hg_mapping: dyn BonsaiHgMapping,
     #[facet]
     commit_graph: CommitGraph,
+    #[facet]
+    commit_graph_writer: dyn CommitGraphWriter,
     #[facet]
     filestore_config: FilestoreConfig,
     #[facet]

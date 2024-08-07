@@ -1201,10 +1201,10 @@ mod test {
     use blobrepo::BlobRepo;
     use bonsai_hg_mapping::BonsaiHgMapping;
     use bookmarks::Bookmarks;
-    use changesets::Changesets;
     use commit_graph::CommitGraph;
     use commit_graph::CommitGraphArc;
     use commit_graph::CommitGraphRef;
+    use commit_graph::CommitGraphWriter;
     use context::CoreContext;
     use fastlog::RootFastlog;
     use fbinit::FacebookInit;
@@ -1235,8 +1235,8 @@ mod test {
             RepoDerivedData,
             dyn Bookmarks,
             dyn BonsaiHgMapping,
-            dyn Changesets,
             CommitGraph,
+            dyn CommitGraphWriter,
         )]
         pub blob_repo: BlobRepo,
 

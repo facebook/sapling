@@ -19,8 +19,8 @@ use bookmarks::BookmarkTransactionHook;
 use bookmarks::BookmarkUpdateLogId;
 use bookmarks::BookmarksRef;
 use bookmarks_types::BookmarkKey;
-use changesets::ChangesetsRef;
 use commit_graph::CommitGraphRef;
+use commit_graph::CommitGraphWriterRef;
 use context::CoreContext;
 use itertools::Itertools;
 use metaconfig_types::RepoConfigRef;
@@ -82,7 +82,6 @@ pub trait Repo = AsBlobRepo
     + BonsaiGitMappingArc
     + BonsaiGlobalrevMappingArc
     + BookmarksRef
-    + ChangesetsRef
     + PhasesRef
     + PushrebaseMutationMappingRef
     + RepoBookmarkAttrsRef
@@ -95,6 +94,7 @@ pub trait Repo = AsBlobRepo
     + RepoPermissionCheckerRef
     + RepoLockRef
     + CommitGraphRef
+    + CommitGraphWriterRef
     + GitPushRedirectConfigRef
     + Send
     + Sync;

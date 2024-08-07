@@ -53,7 +53,6 @@ rust_library(
         "//eden/mononoke/bonsai_globalrev_mapping:bonsai_globalrev_mapping",
         "//eden/mononoke/bonsai_hg_mapping:bonsai_hg_mapping",
         "//eden/mononoke/bookmarks:bookmarks",
-        "//eden/mononoke/changesets:changesets",
         "//eden/mononoke/commit_rewriting/cross_repo_sync:cross_repo_sync",
         "//eden/mononoke/commit_rewriting/synced_commit_mapping:synced_commit_mapping",
         "//eden/mononoke/common/rust/sql_ext:sql_ext",

@@ -11,8 +11,9 @@ use std::collections::BTreeMap;
 use anyhow::Error;
 use anyhow::Result;
 use blobstore::Storable;
-use changesets::ChangesetsRef;
 use changesets_creation::save_changesets;
+use commit_graph::CommitGraphRef;
+use commit_graph::CommitGraphWriterRef;
 use context::CoreContext;
 use futures::future;
 use futures::stream;
@@ -36,7 +37,7 @@ use repo_identity::RepoIdentityRef;
 
 pub async fn create_random_stack(
     ctx: &CoreContext,
-    repo: &(impl RepoBlobstoreRef + ChangesetsRef + RepoIdentityRef),
+    repo: &(impl RepoBlobstoreRef + CommitGraphRef + CommitGraphWriterRef + RepoIdentityRef),
     rng: &mut impl Rng,
     parent: Option<ChangesetId>,
     changes_count: impl IntoIterator<Item = usize>,
@@ -112,7 +113,7 @@ impl GenManifest {
     async fn gen_stack(
         &mut self,
         ctx: &CoreContext,
-        repo: &(impl RepoBlobstoreRef + ChangesetsRef + RepoIdentityRef),
+        repo: &(impl RepoBlobstoreRef + CommitGraphRef + CommitGraphWriterRef + RepoIdentityRef),
         rng: &mut impl Rng,
         settings: &GenSettings,
         parent: Option<ChangesetId>,

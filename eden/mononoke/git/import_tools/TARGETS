@@ -33,7 +33,6 @@ rust_library(
         "//eden/mononoke/bonsai_tag_mapping:bonsai_tag_mapping",
         "//eden/mononoke/bookmarks:bookmarks",
         "//eden/mononoke/bookmarks:bookmarks_movement",
-        "//eden/mononoke/changesets:changesets",
         "//eden/mononoke/derived_data:bulk_derivation",
         "//eden/mononoke/derived_data:derived_data_manager",
         "//eden/mononoke/filestore:filestore",

@@ -21,8 +21,8 @@ use blobsync::copy_content;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bookmarks::BookmarksRef;
 use borrowed::borrowed;
-use changesets::ChangesetsRef;
 use commit_graph::CommitGraphRef;
+use commit_graph::CommitGraphWriterRef;
 use context::CoreContext;
 use derivative::Derivative;
 use filestore::FilestoreConfigRef;
@@ -94,12 +94,12 @@ pub struct FileChangeFilter<'a> {
 
 pub trait Repo = RepoIdentityRef
     + RepoBlobstoreArc
-    + ChangesetsRef
     + BookmarksRef
     + BonsaiHgMappingRef
     + RepoDerivedDataRef
     + RepoBlobstoreRef
     + CommitGraphRef
+    + CommitGraphWriterRef
     + Send
     + Sync;
 
@@ -736,8 +736,14 @@ fn mark_as_created_by_lossy_conversion(
 pub async fn upload_commits<'a>(
     ctx: &'a CoreContext,
     rewritten_list: Vec<BonsaiChangeset>,
-    source_repo: &'a (impl RepoBlobstoreRef + ChangesetsRef),
-    target_repo: &'a (impl RepoBlobstoreRef + ChangesetsRef + FilestoreConfigRef + RepoIdentityRef),
+    source_repo: &'a impl RepoBlobstoreRef,
+    target_repo: &'a (
+            impl RepoBlobstoreRef
+            + CommitGraphRef
+            + CommitGraphWriterRef
+            + FilestoreConfigRef
+            + RepoIdentityRef
+        ),
     submodule_content_ids: Vec<(Arc<impl RepoBlobstoreRef>, HashSet<ContentId>)>,
 ) -> Result<(), Error> {
     let mut files_to_sync = HashSet::new();

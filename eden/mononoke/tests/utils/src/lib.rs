@@ -22,8 +22,11 @@ use bookmarks::BookmarksRef;
 use bytes::Bytes;
 use bytes::BytesMut;
 use changesets::Changesets;
-use changesets::ChangesetsRef;
 use changesets_creation::save_changesets;
+use commit_graph::CommitGraph;
+use commit_graph::CommitGraphRef;
+use commit_graph::CommitGraphWriter;
+use commit_graph::CommitGraphWriterRef;
 use context::CoreContext;
 use filestore::FetchKey;
 use filestore::FilestoreConfig;
@@ -55,7 +58,8 @@ pub mod random;
 
 pub trait Repo = BonsaiHgMappingRef
     + BookmarksRef
-    + ChangesetsRef
+    + CommitGraphRef
+    + CommitGraphWriterRef
     + FilestoreConfigRef
     + RepoBlobstoreArc
     + RepoDerivedDataRef
@@ -75,6 +79,12 @@ pub struct BasicTestRepo {
 
     #[facet]
     pub changesets: dyn Changesets,
+
+    #[facet]
+    pub commit_graph: CommitGraph,
+
+    #[facet]
+    pub commit_graph_writer: dyn CommitGraphWriter,
 
     #[facet]
     pub bonsai_hg_mapping: dyn BonsaiHgMapping,

@@ -7,7 +7,6 @@
 
 #![feature(async_closure)]
 
-mod mem_writes_changesets;
 use std::collections::HashMap;
 use std::path::Path;
 use std::path::PathBuf;
@@ -24,7 +23,6 @@ use bonsai_hg_mapping::MemWritesBonsaiHgMapping;
 use cacheblob::dummy::DummyLease;
 use cacheblob::LeaseOps;
 use cacheblob::MemWritesBlobstore;
-use changesets::ArcChangesets;
 use clap::Parser;
 use clap::Subcommand;
 use clientinfo::ClientEntryPoint;
@@ -63,8 +61,6 @@ use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentityRef;
 use slog::info;
 use slog::warn;
-
-use crate::mem_writes_changesets::MemWritesChangesets;
 
 pub const HEAD_SYMREF: &str = "HEAD";
 
@@ -227,9 +223,6 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
     let repo = if dry_run {
         repo.dangerous_override(|blobstore| -> Arc<dyn Blobstore> {
             Arc::new(MemWritesBlobstore::new(blobstore))
-        })
-        .dangerous_override(|changesets| -> ArcChangesets {
-            Arc::new(MemWritesChangesets::new(changesets))
         })
         .dangerous_override(|bonsai_hg_mapping| -> ArcBonsaiHgMapping {
             Arc::new(MemWritesBonsaiHgMapping::new(bonsai_hg_mapping))

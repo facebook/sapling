@@ -15,10 +15,11 @@ use bonsai_svnrev_mapping::BonsaiSvnrevMapping;
 use bonsai_tag_mapping::BonsaiTagMapping;
 use bookmarks::BookmarkUpdateLog;
 use bookmarks::Bookmarks;
-use changesets::Changesets;
-use changesets::ChangesetsRef;
 use commit_cloud::CommitCloud;
 use commit_graph::CommitGraph;
+use commit_graph::CommitGraphRef;
+use commit_graph::CommitGraphWriter;
+use commit_graph::CommitGraphWriterRef;
 use context::CoreContext;
 use ephemeral_blobstore::Bubble;
 use filenodes::Filenodes;
@@ -57,10 +58,10 @@ pub struct BlobRepoInner {
     pub repo_blobstore: RepoBlobstore,
 
     #[facet]
-    pub changesets: dyn Changesets,
+    pub commit_graph: CommitGraph,
 
     #[facet]
-    pub commit_graph: CommitGraph,
+    pub commit_graph_writer: dyn CommitGraphWriter,
 
     #[facet]
     pub bonsai_hg_mapping: dyn BonsaiHgMapping,
@@ -129,8 +130,8 @@ pub struct BlobRepo {
     #[delegate(
         RepoIdentity,
         RepoBlobstore,
-        dyn Changesets,
         CommitGraph,
+        dyn CommitGraphWriter,
         dyn BonsaiHgMapping,
         dyn BonsaiGitMapping,
         dyn BonsaiTagMapping,
@@ -171,12 +172,10 @@ impl BlobRepo {
 
     pub fn with_bubble(&self, bubble: Bubble) -> Self {
         let blobstore = bubble.wrap_repo_blobstore(self.repo_blobstore().clone());
-        let changesets = Arc::new(bubble.repo_changesets(self));
         let commit_graph = Arc::new(bubble.repo_commit_graph(self));
         let repo_derived_data = self.inner.repo_derived_data.for_bubble(bubble);
         let mut inner = (*self.inner).clone();
         inner.repo_derived_data = Arc::new(repo_derived_data);
-        inner.changesets = changesets;
         inner.repo_blobstore = Arc::new(blobstore);
         inner.commit_graph = commit_graph;
         Self {
@@ -204,7 +203,7 @@ impl AsBlobRepo for BlobRepo {
 pub async fn save_bonsai_changesets(
     bonsai_changesets: Vec<BonsaiChangeset>,
     ctx: CoreContext,
-    container: &(impl ChangesetsRef + RepoBlobstoreRef + RepoIdentityRef),
+    container: &(impl CommitGraphRef + CommitGraphWriterRef + RepoBlobstoreRef + RepoIdentityRef),
 ) -> Result<(), Error> {
     changesets_creation::save_changesets(&ctx, container, bonsai_changesets).await
 }

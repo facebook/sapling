@@ -14,7 +14,6 @@ use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Error;
 use blobrepo::BlobRepo;
-use blobrepo_hg::save_bonsai_changeset_object;
 use blobrepo_hg::BlobRepoHg;
 use blobrepo_hg::ChangesetHandle;
 use blobstore::Blobstore;
@@ -24,8 +23,6 @@ use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bookmarks::BookmarkKey;
 use bookmarks::Freshness;
 use bytes::Bytes;
-use changesets::ChangesetInsert;
-use changesets::ChangesetsRef;
 use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use dag_types::Location;
@@ -446,25 +443,6 @@ impl HgRepoContext {
             .hg_mutation_store()
             .all_predecessors(self.ctx(), hg_changesets)
             .await?)
-    }
-
-    /// Store bonsai changeset
-    pub async fn store_bonsai_changeset(
-        &self,
-        bonsai_cs: BonsaiChangeset,
-    ) -> Result<(), MononokeError> {
-        let blobstore = self.blob_repo().repo_blobstore();
-        let cs_id = bonsai_cs.get_changeset_id();
-        let insert = ChangesetInsert {
-            cs_id,
-            parents: bonsai_cs.parents().collect(),
-        };
-        match save_bonsai_changeset_object(self.ctx(), blobstore, bonsai_cs).await {
-            Ok(_) => self.blob_repo().changesets().add(self.ctx(), insert).await,
-            Err(err) => Err(err),
-        }?;
-
-        Ok(())
     }
 
     /// Request all of the tree nodes in the repo under a given path.

@@ -15,7 +15,6 @@ bonsai_hg_mapping = { version = "0.1.0", path = "../bonsai_hg_mapping" }
 bonsai_svnrev_mapping = { version = "0.1.0", path = "../bonsai_svnrev_mapping" }
 bonsai_tag_mapping = { version = "0.1.0", path = "../bonsai_tag_mapping" }
 bookmarks = { version = "0.1.0", path = "../bookmarks" }
-changesets = { version = "0.1.0", path = "../changesets" }
 changesets_creation = { version = "0.1.0", path = "../changesets/changesets_creation" }
 commit_cloud = { version = "0.1.0", path = "../commit_cloud" }
 commit_graph = { version = "0.1.0", path = "../repo_attributes/commit_graph/commit_graph" }

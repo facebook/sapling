@@ -19,10 +19,8 @@ use blobstore::Loadable;
 use bonsai_hg_mapping::BonsaiHgMappingArc;
 use bonsai_hg_mapping::BonsaiHgMappingEntry;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
-use changesets::ChangesetInsert;
-use changesets::Changesets;
-use changesets::ChangesetsArc;
 use cloned::cloned;
+use commit_graph::CommitGraphWriterArc;
 use context::CoreContext;
 use futures::channel::oneshot;
 use futures::future;
@@ -324,19 +322,19 @@ impl CreateChangeset {
             }
         });
 
-        let complete_changesets = repo.changesets_arc();
+        let commit_graph_writer = repo.commit_graph_writer_arc();
         let bonsai_hg_mapping = repo.bonsai_hg_mapping_arc();
         let changeset_complete_fut = async move {
             let ((hg_cs, bonsai_cs), _) = future::try_join(changeset, parents_complete).await?;
 
             if !self.upload_to_blobstore_only {
                 // update changeset mapping
-                let completion_record = ChangesetInsert {
-                    cs_id: bonsai_cs.get_changeset_id(),
-                    parents: bonsai_cs.parents().collect(),
-                };
-                complete_changesets
-                    .add(&ctx, completion_record)
+                commit_graph_writer
+                    .add(
+                        &ctx,
+                        bonsai_cs.get_changeset_id(),
+                        bonsai_cs.parents().collect(),
+                    )
                     .await
                     .context("While inserting into changeset table")?;
 

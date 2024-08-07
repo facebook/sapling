@@ -67,8 +67,8 @@ use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateLogId;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks::BookmarksRef;
-use changesets::ChangesetsRef;
 use commit_graph::CommitGraphRef;
+use commit_graph::CommitGraphWriterRef;
 use context::CoreContext;
 use filenodes_derivation::FilenodesOnlyPublic;
 use futures::future;
@@ -238,11 +238,11 @@ pub struct PushrebaseOutcome {
 
 pub trait Repo = BonsaiHgMappingRef
     + BookmarksRef
-    + ChangesetsRef
     + RepoBlobstoreArc
     + RepoDerivedDataRef
     + RepoIdentityRef
     + CommitGraphRef
+    + CommitGraphWriterRef
     + Send
     + Sync;
 
@@ -1257,9 +1257,9 @@ mod tests {
     use bonsai_hg_mapping::BonsaiHgMapping;
     use bookmarks::BookmarkTransactionError;
     use bookmarks::Bookmarks;
-    use changesets::Changesets;
     use cloned::cloned;
     use commit_graph::CommitGraph;
+    use commit_graph::CommitGraphWriter;
     use fbinit::FacebookInit;
     use filestore::FilestoreConfig;
     use filestore::FilestoreConfigRef;
@@ -1302,9 +1302,6 @@ mod tests {
     #[derive(Clone)]
     struct PushrebaseTestRepo {
         #[facet]
-        changesets: dyn Changesets,
-
-        #[facet]
         bonsai_hg_mapping: dyn BonsaiHgMapping,
 
         #[facet]
@@ -1327,6 +1324,9 @@ mod tests {
 
         #[facet]
         commit_graph: CommitGraph,
+
+        #[facet]
+        commit_graph_writer: dyn CommitGraphWriter,
     }
 
     async fn fetch_bonsai_changesets(

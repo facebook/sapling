@@ -13,8 +13,8 @@ use async_trait::async_trait;
 use bonsai_git_mapping::BonsaiGitMappingRef;
 use bonsai_tag_mapping::BonsaiTagMappingRef;
 use bytes::Bytes;
-use changesets::ChangesetsRef;
 use commit_graph::CommitGraphRef;
+use commit_graph::CommitGraphWriterRef;
 use context::CoreContext;
 use filestore::FilestoreConfigRef;
 use gix_hash::ObjectId;
@@ -72,8 +72,8 @@ impl<R> DirectUploader<R> {
 #[async_trait]
 impl<R> GitUploader for DirectUploader<R>
 where
-    R: ChangesetsRef
-        + CommitGraphRef
+    R: CommitGraphRef
+        + CommitGraphWriterRef
         + RepoBlobstoreRef
         + BonsaiGitMappingRef
         + BonsaiTagMappingRef

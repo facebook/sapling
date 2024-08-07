@@ -53,12 +53,12 @@ use bytes::Bytes;
 use cacheblob::InProcessLease;
 use cacheblob::LeaseOps;
 use changeset_info::ChangesetInfo;
-use changesets::Changesets;
 use commit_cloud::CommitCloud;
 use commit_graph::ArcCommitGraph;
 use commit_graph::CommitGraph;
 use commit_graph::CommitGraphArc;
 use commit_graph::CommitGraphRef;
+use commit_graph::CommitGraphWriter;
 use context::CoreContext;
 use cross_repo_sync::get_all_submodule_deps;
 use cross_repo_sync::get_small_and_large_repos;
@@ -218,7 +218,6 @@ pub struct Repo {
         dyn BonsaiHgMapping,
         dyn BookmarkUpdateLog,
         dyn Bookmarks,
-        dyn Changesets,
         dyn Phases,
         dyn PushrebaseMutationMapping,
         dyn HgMutationStore,
@@ -233,6 +232,7 @@ pub struct Repo {
         RepoSparseProfiles,
         StreamingClone,
         CommitGraph,
+        dyn CommitGraphWriter,
         dyn GitSymbolicRefs,
         dyn GitPushRedirectConfig,
         dyn Filenodes,
@@ -488,8 +488,10 @@ impl Repo {
             &blob_repo.bookmark_update_log_arc(),
             &mutable_counters,
         )?;
+        let changesets = repo_factory.changesets(&blob_repo.repo_identity_arc())?;
         let inner = InnerRepo {
             blob_repo,
+            changesets,
             repo_config: Arc::new(config.clone()),
             ephemeral_store: Arc::new(RepoEphemeralStore::disabled(repo_id)),
             mutable_renames: Arc::new(MutableRenames::new_test(

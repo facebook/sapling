@@ -18,6 +18,7 @@ use bookmarks::Bookmarks;
 use changesets::Changesets;
 use commit_cloud::CommitCloud;
 use commit_graph::CommitGraph;
+use commit_graph::CommitGraphWriter;
 use ephemeral_blobstore::RepoEphemeralStore;
 use filenodes::Filenodes;
 use filestore::FilestoreConfig;
@@ -59,7 +60,6 @@ pub struct InnerRepo {
         dyn BonsaiSvnrevMapping,
         dyn BookmarkUpdateLog,
         dyn Bookmarks,
-        dyn Changesets,
         dyn Filenodes,
         dyn Phases,
         dyn PushrebaseMutationMapping,
@@ -68,10 +68,14 @@ pub struct InnerRepo {
         dyn RepoPermissionChecker,
         dyn RepoLock,
         CommitGraph,
+        dyn CommitGraphWriter,
         dyn GitSymbolicRefs,
         CommitCloud
     )]
     pub blob_repo: BlobRepo,
+
+    #[facet]
+    pub changesets: dyn Changesets,
 
     #[facet]
     pub repo_config: RepoConfig,

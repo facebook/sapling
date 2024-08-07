@@ -18,7 +18,6 @@ bonsai_hg_mapping = { version = "0.1.0", path = "../bonsai_hg_mapping" }
 bookmarks = { version = "0.1.0", path = "../bookmarks" }
 bulk_derivation = { version = "0.1.0", path = "../derived_data/bulk_derivation" }
 bytes = { version = "1.6.0", features = ["serde"] }
-changesets = { version = "0.1.0", path = "../changesets" }
 commit_graph = { version = "0.1.0", path = "../repo_attributes/commit_graph/commit_graph" }
 commit_transformation = { version = "0.1.0", path = "commit_transformation" }
 context = { version = "0.1.0", path = "../server/context" }

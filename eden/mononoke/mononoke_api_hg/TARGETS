@@ -29,7 +29,6 @@ rust_library(
         "//eden/mononoke/blobstore:ephemeral_blobstore",
         "//eden/mononoke/bonsai_hg_mapping:bonsai_hg_mapping",
         "//eden/mononoke/bookmarks:bookmarks",
-        "//eden/mononoke/changesets:changesets",
         "//eden/mononoke/commit_cloud:commit_cloud",
         "//eden/mononoke/derived_data/mercurial_derivation:mercurial_derivation",
         "//eden/mononoke/features/repo_update_logger:repo_update_logger",

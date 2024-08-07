@@ -51,10 +51,10 @@ use bookmarks::BookmarkUpdateReason;
 use bookmarks::Bookmarks;
 use bookmarks::BookmarksArc;
 use bookmarks::Freshness;
-use changesets::Changesets;
 use cloned::cloned;
 use commit_graph::CommitGraph;
 use commit_graph::CommitGraphRef;
+use commit_graph::CommitGraphWriter;
 use context::CoreContext;
 use cross_repo_sync::find_toposorted_unsynced_ancestors;
 use cross_repo_sync::CandidateSelectionHint;
@@ -112,7 +112,6 @@ pub struct Repo(
     RepoBookmarkAttrs,
     dyn Bookmarks,
     dyn BookmarkUpdateLog,
-    dyn Changesets,
     FilestoreConfig,
     dyn MutableCounters,
     dyn Phases,
@@ -121,6 +120,7 @@ pub struct Repo(
     RepoDerivedData,
     RepoIdentity,
     CommitGraph,
+    dyn CommitGraphWriter,
     dyn Filenodes,
     SqlQueryConfig,
 );

@@ -340,8 +340,8 @@ mod test {
     use anyhow::anyhow;
     use bonsai_hg_mapping::BonsaiHgMapping;
     use bookmarks::Bookmarks;
-    use changesets::Changesets;
     use commit_graph::CommitGraph;
+    use commit_graph::CommitGraphWriter;
     use fbinit::FacebookInit;
     use filestore::FilestoreConfig;
     use mononoke_types::ChangesetId;
@@ -366,9 +366,9 @@ mod test {
         #[facet]
         bookmarks: dyn Bookmarks,
         #[facet]
-        changesets: dyn Changesets,
-        #[facet]
         commit_graph: CommitGraph,
+        #[facet]
+        commit_graph_writer: dyn CommitGraphWriter,
         #[facet]
         repo_derived_data: RepoDerivedData,
         #[facet]

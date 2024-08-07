@@ -10,7 +10,8 @@ use anyhow::Error;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks::BookmarksRef;
-use changesets::ChangesetsRef;
+use commit_graph::CommitGraphRef;
+use commit_graph::CommitGraphWriterRef;
 use context::CoreContext;
 use mercurial_derivation::DeriveHgChangeset;
 use mercurial_types::HgChangesetId;
@@ -29,7 +30,8 @@ use sorted_vector_map::SortedVectorMap;
 
 use crate::chunking::Chunker;
 
-pub trait Repo = ChangesetsRef
+pub trait Repo = CommitGraphRef
+    + CommitGraphWriterRef
     + RepoBlobstoreRef
     + PhasesRef
     + BookmarksRef

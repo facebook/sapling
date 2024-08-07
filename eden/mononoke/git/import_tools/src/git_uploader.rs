@@ -17,9 +17,9 @@ use bonsai_git_mapping::BonsaisOrGitShas;
 use bonsai_tag_mapping::BonsaiTagMappingRef;
 use bulk_derivation::BulkDerivation;
 use bytes::Bytes;
-use changesets::ChangesetsRef;
 use cloned::cloned;
 use commit_graph::CommitGraphRef;
+use commit_graph::CommitGraphWriterRef;
 use context::CoreContext;
 use filestore::FilestoreConfigRef;
 use filestore::StoreRequest;
@@ -162,8 +162,8 @@ pub trait GitUploader: Clone + Send + Sync + 'static {
     ) -> Result<Vec<(hash::GitSha1, ChangesetId)>, Error>;
 }
 
-pub trait Repo = ChangesetsRef
-    + CommitGraphRef
+pub trait Repo = CommitGraphRef
+    + CommitGraphWriterRef
     + RepoBlobstoreRef
     + BonsaiGitMappingRef
     + BonsaiTagMappingRef

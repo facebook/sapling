@@ -24,8 +24,8 @@ use blobstore::Blobstore;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bookmarks::BookmarksRef;
 use change_target_config::ChangeTargetConfig;
-use changesets::ChangesetsRef;
 use commit_graph::CommitGraphRef;
+use commit_graph::CommitGraphWriterRef;
 use context::CoreContext;
 use filestore::FilestoreConfigRef;
 use futures::future::try_join_all;
@@ -85,8 +85,8 @@ mod sync_changeset;
 
 pub trait Repo = BonsaiHgMappingRef
     + BookmarksRef
-    + ChangesetsRef
     + CommitGraphRef
+    + CommitGraphWriterRef
     + FilestoreConfigRef
     + MutableRenamesRef
     + RepoBlobstoreArc

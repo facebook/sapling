@@ -14,10 +14,10 @@ use blobstore::Loadable;
 use bonsai_globalrev_mapping::BonsaiGlobalrevMappingRef;
 use borrowed::borrowed;
 use bytes::Bytes;
-use changesets::ChangesetsRef;
 use chrono::DateTime;
 use chrono::FixedOffset;
 use commit_graph::CommitGraphRef;
+use commit_graph::CommitGraphWriterRef;
 use context::CoreContext;
 use ephemeral_blobstore::Bubble;
 use filestore::FetchKey;
@@ -570,8 +570,8 @@ impl RepoContext {
         changesets: Vec<BonsaiChangeset>,
         repo: &(
              impl BonsaiGlobalrevMappingRef
-             + ChangesetsRef
              + CommitGraphRef
+             + CommitGraphWriterRef
              + RepoBlobstoreRef
              + RepoIdentityRef
              + RepoConfigRef

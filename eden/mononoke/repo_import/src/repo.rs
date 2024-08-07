@@ -12,8 +12,8 @@ use bonsai_globalrev_mapping::BonsaiGlobalrevMapping;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use bookmarks::BookmarkUpdateLog;
 use bookmarks::Bookmarks;
-use changesets::Changesets;
 use commit_graph::CommitGraph;
+use commit_graph::CommitGraphWriter;
 use filenodes::Filenodes;
 use filestore::FilestoreConfig;
 use metaconfig_types::RepoConfig;
@@ -45,11 +45,11 @@ pub struct Repo {
         dyn BonsaiHgMapping,
         dyn Bookmarks,
         dyn BookmarkUpdateLog,
-        dyn Changesets,
         dyn Phases,
         dyn PushrebaseMutationMapping,
         dyn MutableCounters,
         CommitGraph,
+        dyn CommitGraphWriter,
         dyn Filenodes,
     )]
     blob_repo: BlobRepo,

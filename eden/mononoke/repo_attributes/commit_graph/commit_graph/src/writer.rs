@@ -10,6 +10,8 @@ use std::sync::Arc;
 use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
+use changesets::ArcChangesets;
+use changesets::ChangesetInsert;
 use commit_graph_types::edges::ChangesetParents;
 use context::CoreContext;
 use futures_stats::TimedTryFutureExt;
@@ -103,6 +105,76 @@ impl CommitGraphWriter for BaseCommitGraphWriter {
             .add_recursive(ctx, parents_fetcher, changesets)
             .await
             .with_context(|| "during BaseCommitGraphWriter::add_recursive")
+    }
+}
+
+/// A wrapper around a commit graph writer that writes to both
+/// the wrapped writer and the changesets facet.
+pub struct CompatCommitGraphWriter {
+    inner_writer: ArcCommitGraphWriter,
+    changesets: ArcChangesets,
+}
+
+impl CompatCommitGraphWriter {
+    pub fn new(inner_writer: ArcCommitGraphWriter, changesets: ArcChangesets) -> Self {
+        Self {
+            inner_writer,
+            changesets,
+        }
+    }
+}
+
+#[async_trait]
+impl CommitGraphWriter for CompatCommitGraphWriter {
+    async fn add(
+        &self,
+        ctx: &CoreContext,
+        cs_id: ChangesetId,
+        parents: ChangesetParents,
+    ) -> Result<bool> {
+        let cs_insert = ChangesetInsert {
+            cs_id,
+            parents: parents.to_vec(),
+        };
+        let (added_to_commit_graph, _added_to_changesets) = futures::try_join!(
+            self.inner_writer.add(ctx, cs_id, parents),
+            self.changesets.add(ctx, cs_insert)
+        )?;
+        Ok(added_to_commit_graph)
+    }
+
+    async fn add_many(
+        &self,
+        ctx: &CoreContext,
+        changesets: Vec1<(ChangesetId, ChangesetParents)>,
+    ) -> Result<usize> {
+        let cs_inserts = changesets.mapped_ref(|(cs_id, parents)| ChangesetInsert {
+            cs_id: *cs_id,
+            parents: parents.to_vec(),
+        });
+        let (added_to_commit_graph, _added_to_changesets) = futures::try_join!(
+            self.inner_writer.add_many(ctx, changesets),
+            self.changesets.add_many(ctx, cs_inserts)
+        )?;
+        Ok(added_to_commit_graph)
+    }
+
+    async fn add_recursive(
+        &self,
+        ctx: &CoreContext,
+        parents_fetcher: Arc<dyn ParentsFetcher>,
+        changesets: Vec1<(ChangesetId, ChangesetParents)>,
+    ) -> Result<usize> {
+        let cs_inserts = changesets.mapped_ref(|(cs_id, parents)| ChangesetInsert {
+            cs_id: *cs_id,
+            parents: parents.to_vec(),
+        });
+        let (added_to_commit_graph, _added_to_changesets) = futures::try_join!(
+            self.inner_writer
+                .add_recursive(ctx, parents_fetcher, changesets),
+            self.changesets.add_many(ctx, cs_inserts)
+        )?;
+        Ok(added_to_commit_graph)
     }
 }
 

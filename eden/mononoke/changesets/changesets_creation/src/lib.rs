@@ -11,9 +11,9 @@ use std::collections::HashSet;
 use anyhow::anyhow;
 use anyhow::Result;
 use blobstore::Blobstore;
-use changesets::ChangesetInsert;
-use changesets::ChangesetsRef;
 use cloned::cloned;
+use commit_graph::CommitGraphRef;
+use commit_graph::CommitGraphWriterRef;
 use context::CoreContext;
 use futures::future::try_join;
 use futures::stream::FuturesUnordered;
@@ -24,6 +24,7 @@ use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
+use smallvec::ToSmallVec;
 use topo_sort::sort_topological;
 use vec1::Vec1;
 
@@ -33,10 +34,10 @@ use vec1::Vec1;
 /// Parents of the changesets should already by saved in the repository.
 pub async fn save_changesets(
     ctx: &CoreContext,
-    repo: &(impl ChangesetsRef + RepoBlobstoreRef + RepoIdentityRef),
+    repo: &(impl CommitGraphRef + CommitGraphWriterRef + RepoBlobstoreRef + RepoIdentityRef),
     bonsai_changesets: Vec<BonsaiChangeset>,
 ) -> Result<()> {
-    let complete_changesets = repo.changesets();
+    let commit_graph = repo.commit_graph();
     let blobstore = repo.repo_blobstore();
 
     let mut parents_to_check: HashSet<ChangesetId> = HashSet::new();
@@ -51,15 +52,12 @@ pub async fn save_changesets(
     let parents_to_check = parents_to_check
         .into_iter()
         .map({
-            |p| {
-                cloned!(complete_changesets);
-                async move {
-                    let exists = complete_changesets.exists(ctx, p).await?;
-                    if exists {
-                        Ok(())
-                    } else {
-                        Err(anyhow!("Commit {} does not exist in the repo", p))
-                    }
+            |p| async move {
+                let exists = commit_graph.exists(ctx, p).await?;
+                if exists {
+                    Ok(())
+                } else {
+                    Err(anyhow!("Commit {} does not exist in the repo", p))
                 }
             }
         })
@@ -105,14 +103,13 @@ pub async fn save_changesets(
     let entries = topo_sorted_commits
         .into_iter()
         .filter_map(|bcs_id| {
-            bcs_parents.get(&bcs_id).map(|parents| ChangesetInsert {
-                cs_id: bcs_id,
-                parents: parents.to_vec(),
-            })
+            bcs_parents
+                .get(&bcs_id)
+                .map(|parents| (bcs_id, parents.to_smallvec()))
         })
         .collect::<Vec<_>>();
     if let Ok(entries) = Vec1::try_from(entries) {
-        complete_changesets.add_many(ctx, entries).await?;
+        repo.commit_graph_writer().add_many(ctx, entries).await?;
     }
 
     Ok(())

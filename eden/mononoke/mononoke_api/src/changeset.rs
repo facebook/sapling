@@ -22,7 +22,6 @@ use bonsai_svnrev_mapping::BonsaiSvnrevMappingRef;
 use bookmarks::BookmarkKey;
 use bytes::Bytes;
 use changeset_info::ChangesetInfo;
-use changesets::ChangesetsRef;
 use chrono::DateTime;
 use chrono::FixedOffset;
 use cloned::cloned;
@@ -635,20 +634,13 @@ impl ChangesetContext {
 
     /// The generation number of the given changeset
     pub async fn generation(&self) -> Result<Generation, MononokeError> {
-        Ok(Generation::new(
-            self.repo
-                .blob_repo()
-                .changesets()
-                .get(self.ctx(), self.id)
-                .await?
-                .ok_or_else(|| {
-                    MononokeError::NotAvailable(format!(
-                        "Generation number missing for {:?}",
-                        &self.id
-                    ))
-                })?
-                .gen,
-        ))
+        self.repo
+            .commit_graph()
+            .changeset_generation(self.ctx(), self.id)
+            .await
+            .map_err(|_| {
+                MononokeError::NotAvailable(format!("Generation number missing for {:?}", &self.id))
+            })
     }
 
     /// All mercurial commit extras as (name, value) pairs.

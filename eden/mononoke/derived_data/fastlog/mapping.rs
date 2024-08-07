@@ -202,9 +202,9 @@ mod tests {
     use bonsai_hg_mapping::BonsaiHgMapping;
     use bookmarks::BookmarkKey;
     use bookmarks::Bookmarks;
-    use changesets::Changesets;
     use commit_graph::CommitGraph;
     use commit_graph::CommitGraphRef;
+    use commit_graph::CommitGraphWriter;
     use context::CoreContext;
     use fbinit::FacebookInit;
     use filestore::FilestoreConfig;
@@ -255,7 +255,7 @@ mod tests {
         #[facet]
         commit_graph: CommitGraph,
         #[facet]
-        changesets: dyn Changesets,
+        commit_graph_writer: dyn CommitGraphWriter,
         #[facet]
         repo_identity: RepoIdentity,
     }

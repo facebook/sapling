@@ -14,7 +14,8 @@ use anyhow::Error;
 use blobstore::Loadable;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bookmarks::BookmarksRef;
-use changesets::ChangesetsRef;
+use commit_graph::CommitGraphRef;
+use commit_graph::CommitGraphWriterRef;
 use context::CoreContext;
 use futures::future;
 use futures::Stream;
@@ -61,7 +62,8 @@ const REPORTING_INTERVAL_FILES: usize = 10000;
 pub trait Repo = BonsaiHgMappingRef
     + RepoBlobstoreRef
     + RepoDerivedDataRef
-    + ChangesetsRef
+    + CommitGraphRef
+    + CommitGraphWriterRef
     + PhasesRef
     + BookmarksRef
     + RepoIdentityRef
@@ -255,8 +257,9 @@ mod test {
     use anyhow::Result;
     use bonsai_hg_mapping::BonsaiHgMapping;
     use bookmarks::Bookmarks;
-    use changesets::Changesets;
     use cloned::cloned;
+    use commit_graph::CommitGraph;
+    use commit_graph::CommitGraphWriter;
     use fbinit::FacebookInit;
     use filestore::FilestoreConfig;
     use fixtures::Linear;
@@ -285,7 +288,9 @@ mod test {
         #[facet]
         repo_derived_data: RepoDerivedData,
         #[facet]
-        changesets: dyn Changesets,
+        commit_graph: CommitGraph,
+        #[facet]
+        commit_graph_writer: dyn CommitGraphWriter,
         #[facet]
         filestore_config: FilestoreConfig,
         #[facet]
