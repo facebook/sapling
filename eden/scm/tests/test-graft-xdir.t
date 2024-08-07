@@ -560,3 +560,18 @@ Merge conflict - delete/modified:
   +++ /dev/null
   @@ -1,1 +0,0 @@
   -two
+
+
+  $ newclientrepo
+  $ drawdag <<EOS
+  > B  # B/B = B\n (copied from A)
+  > |
+  > A  # A/A = A\n
+  > EOS
+  $ hg go -q $A
+FIXME: shouldn't conflict
+  $ hg graft -qr $B --from-path B --to-path A
+  warning: 1 conflicts while merging A! (edit, then use 'hg resolve --mark')
+  abort: unresolved conflicts, can't continue
+  (use 'hg resolve' and 'hg graft --continue')
+  [255]
