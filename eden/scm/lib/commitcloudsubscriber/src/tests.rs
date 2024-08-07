@@ -51,17 +51,12 @@ repo_root={}",
     )?;
 
     let got = read_subscriptions(dir.path())?;
-    if cfg!(windows) {
-        // FIXME
-        assert_eq!(got.len(), 0);
-    } else {
-        assert_eq!(got.len(), 1);
+    assert_eq!(got.len(), 1);
 
-        let (sub, paths) = got.into_iter().next().unwrap();
-        assert_eq!(sub.repo_name, "my_repo");
-        assert_eq!(sub.workspace, "my_workspace");
-        assert_eq!(paths, vec![repo]);
-    }
+    let (sub, paths) = got.into_iter().next().unwrap();
+    assert_eq!(sub.repo_name, "my_repo");
+    assert_eq!(sub.workspace, "my_workspace");
+    assert_eq!(paths, vec![repo]);
 
     Ok(())
 }

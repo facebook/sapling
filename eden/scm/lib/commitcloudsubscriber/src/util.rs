@@ -15,10 +15,9 @@ use std::process::Command;
 use std::str;
 use std::time::SystemTime;
 
-use anyhow::bail;
 use anyhow::Result;
+use configset::Config;
 use filetime::FileTime;
-use ini::Ini;
 use log::error;
 use log::info;
 use serde_json::json;
@@ -82,28 +81,28 @@ pub fn read_subscriptions(joined_pool_path: &Path) -> Result<HashMap<Subscriptio
                 );
             }
         }
-        if let Ok(ref mut file) = fs::OpenOptions::new().read(true).open(path) {
-            let ini = Ini::read_from(&mut io::BufReader::new(file))?;
-            let section = ini.section(Some("commitcloud"));
-            if let Some(section) = section {
-                // strip whitespaces around the fields
-                let workspace = section.get("workspace").map(|workspace| workspace.trim());
-                let repo_name = section.get("repo_name").map(|repo_name| repo_name.trim());
-                let repo_root = section
-                    .get("repo_root")
-                    .map(|repo_root| PathBuf::from(repo_root.trim()));
 
-                if workspace.is_none() || repo_name.is_none() || repo_root.is_none() {
+        if path.exists() {
+            let mut config = configset::ConfigSet::new();
+            let errors = config.load_path(path, &Default::default());
+            if !errors.is_empty() {
+                return Err(configset::Errors(errors).into());
+            }
+
+            let workspace = config.get_nonempty("commitcloud", "workspace");
+            let repo_name = config.get_nonempty("commitcloud", "repo_name");
+            let repo_root = config.get_nonempty("commitcloud", "repo_root");
+
+            match (workspace, repo_name, repo_root) {
+                (None, _, _) | (_, None, _) | (_, _, None) => {
                     info!(
                         "Skipping the file '{}' because format is invalid",
                         path.display()
                     );
-                } else {
-                    let workspace = workspace.unwrap();
-                    let repo_name = repo_name.unwrap();
-                    let repo_root = repo_root.unwrap();
-
-                    if !Path::new(&repo_root).exists() || !Path::new(&repo_root).is_dir() {
+                }
+                (Some(workspace), Some(repo_name), Some(repo_root)) => {
+                    let repo_root = PathBuf::from(repo_root.as_ref());
+                    if !repo_root.exists() || !repo_root.is_dir() {
                         info!(
                             "Skipping the file '{}' because 'repo_root' '{}' \
                              is not an existing directory",
@@ -116,19 +115,12 @@ pub fn read_subscriptions(joined_pool_path: &Path) -> Result<HashMap<Subscriptio
                         repo_name: repo_name.to_string(),
                         workspace: workspace.to_string(),
                     };
-                    {
-                        if let Some(entry) = subscriptions.get_mut(&subscription) {
-                            (*entry).push(repo_root);
-                            continue;
-                        }
+                    if let Some(entry) = subscriptions.get_mut(&subscription) {
+                        (*entry).push(repo_root);
+                        continue;
                     }
                     subscriptions.insert(subscription, vec![repo_root]);
                 }
-            } else {
-                info!(
-                    "Skipping the file '{}' because format is invalid",
-                    path.display()
-                );
             }
         }
     }
@@ -186,15 +178,19 @@ pub fn read_or_generate_access_token(user_token_path: &Option<PathBuf>) -> Resul
             "Token Lookup: reading commitcloud OAuth token from a file {}...",
             user_token_path.display()
         );
-        match fs::OpenOptions::new().read(true).open(user_token_path) {
-            Ok(ref mut file) => Ini::read_from(&mut io::BufReader::new(file))?
-                .get_from(Some("commitcloud"), "user_token")
-                .map(|s| s.trim().to_string()),
-            Err(ref e) if e.kind() == io::ErrorKind::NotFound => None,
-            Err(err) => {
-                error!("{}", err);
-                bail!(err)
+
+        if user_token_path.exists() {
+            let mut config = configset::ConfigSet::new();
+            let errors = config.load_path(user_token_path, &Default::default());
+            if !errors.is_empty() {
+                return Err(configset::Errors(errors).into());
             }
+
+            config
+                .get_nonempty("commitcloud", "user_token")
+                .map(|t| t.to_string())
+        } else {
+            None
         }
     } else {
         None

@@ -36,12 +36,12 @@ rust_library(
         "fbsource//third-party/rust:parking_lot",
         "fbsource//third-party/rust:regex",
         "fbsource//third-party/rust:reqwest",
-        "fbsource//third-party/rust:rust-ini",
         "fbsource//third-party/rust:serde",
         "fbsource//third-party/rust:serde_json",
         "fbsource//third-party/rust:thiserror",
         "fbsource//third-party/rust:tokio",
         "//common/rust/shed/hostcaps:hostcaps",
+        "//eden/scm/lib/config/set:configset",
         "//eden/scm/lib/identity:identity",
     ],
 )
