@@ -13,9 +13,3 @@ python_binary(
     srcs = ["bisect.py"],
     main_function = "eden.fs.scripts.facebook.bisect.main",
 )
-
-python_binary(
-    name = "parse_macos_crash",
-    srcs = ["parse_macos_crash.py"],
-    main_function = "eden.fs.scripts.facebook.parse_macos_crash.main",
-)
