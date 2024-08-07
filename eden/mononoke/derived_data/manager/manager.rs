@@ -244,6 +244,18 @@ impl DerivedDataManager {
         }
     }
 
+    pub fn with_replaced_derivation_service_client(
+        &self,
+        derivation_service_client: Option<Arc<dyn DerivationClient>>,
+    ) -> Self {
+        Self {
+            inner: Arc::new(DerivedDataManagerInner {
+                derivation_service_client,
+                ..self.inner.as_ref().clone()
+            }),
+        }
+    }
+
     pub fn repo_id(&self) -> RepositoryId {
         self.inner.repo_id
     }

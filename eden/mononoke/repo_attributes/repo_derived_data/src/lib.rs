@@ -262,6 +262,30 @@ impl RepoDerivedData {
         }
     }
 
+    pub fn with_replaced_derivation_service_client(
+        &self,
+        derivation_service_client: Option<Arc<dyn DerivationClient>>,
+    ) -> Self {
+        let updated_managers = self
+            .managers
+            .iter()
+            .map(|(name, manager)| {
+                (
+                    name.clone(),
+                    manager
+                        .with_replaced_derivation_service_client(derivation_service_client.clone()),
+                )
+            })
+            .collect::<HashMap<_, _>>();
+        Self {
+            config: self.config.clone(),
+            managers: updated_managers,
+            enabled_manager: self
+                .enabled_manager
+                .with_replaced_derivation_service_client(derivation_service_client),
+        }
+    }
+
     pub fn for_bubble(&self, bubble: Bubble) -> Self {
         let updated_managers = self
             .managers
