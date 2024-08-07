@@ -40,12 +40,15 @@ Basic case merging a file change between directory branches "foo" and "bar".
   $ hg go -q $B
   $ hg graft -qr $C --from-path foo --to-path bar
   $ hg show
-  commit:      0be18c5d71d4
+  commit:      0d7752011f11
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       bar/file
   description:
   C
+  
+  Grafted from 09a920923fbb29a6c9977eae526b1730d53c9be6
+    Grafted path foo to bar
   
   
   diff --git a/bar/file b/bar/file
@@ -69,12 +72,15 @@ Graft a commit adding a new file:
   $ hg st
   $ hg graft -qr $C --from-path foo --to-path bar
   $ hg show
-  commit:      0aca84000b1b
+  commit:      cbd03170391b
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       bar/new
   description:
   C
+  
+  Grafted from b7298624ac858378b6227152febcc313c3bfb348
+    Grafted path foo to bar
   
   
   diff --git a/bar/new b/bar/new
@@ -96,12 +102,15 @@ Graft a commit deleting a file:
   $ hg go -q $A
   $ hg graft -qr $B --from-path bar --to-path foo
   $ hg show
-  commit:      178914d56aec
+  commit:      e72977d784f4
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       foo/file
   description:
   B
+  
+  Grafted from cf6063bb81125c62e42fd1040b2490659e503e3b
+    Grafted path bar to foo
   
   
   diff --git a/foo/file b/foo/file
@@ -124,12 +133,15 @@ Graft a file that was renamed in dest branch:
   $ hg go -q $D
   $ hg graft -qr $C --from-path foo --to-path bar
   $ hg show
-  commit:      2d46e3be0f1d
+  commit:      77b9e1d6709b
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       bar/rename
   description:
   C
+  
+  Grafted from 09a920923fbb29a6c9977eae526b1730d53c9be6
+    Grafted path foo to bar
   
   
   diff --git a/bar/rename b/bar/rename
@@ -152,12 +164,15 @@ Graft a commit renaming a file:
   $ hg go -q $B
   $ hg graft -qr $C --from-path foo --to-path bar
   $ hg show
-  commit:      8fd88cb7e971
+  commit:      5fcf220c0fa4
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       bar/file bar/rename
   description:
   C
+  
+  Grafted from 53d1a0c140f97ab323b0d4a1acefa7ed74604e71
+    Grafted path foo to bar
   
   
   diff --git a/bar/file b/bar/rename
@@ -183,12 +198,15 @@ Graft a commit with rename in "remote" history:
   $ hg go -q $B
   $ hg graft -qr $D --from-path foo --to-path bar
   $ hg show
-  commit:      77478a381d2e
+  commit:      e418b76b0629
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       bar/file
   description:
   D
+  
+  Grafted from f474dcdb45f7579c1ab82a5cfdab40525db086df
+    Grafted path foo to bar
   
   
   diff --git a/bar/file b/bar/file
@@ -213,12 +231,15 @@ Graft a commit with rename in "local" history:
   $ hg go -q $D
   $ hg graft -qr $E --from-path bar --to-path foo
   $ hg show
-  commit:      010b572fdbef
+  commit:      b07ecd50be1f
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       foo/rename
   description:
   E
+  
+  Grafted from 18e3512650fdf23ebbcf589607dbd700602bee93
+    Grafted path bar to foo
   
   
   diff --git a/foo/rename b/foo/rename
@@ -245,12 +266,15 @@ Graft a commit with renames on both sides:
   $ hg go -q $D
   $ hg graft -qr $F --from-path bar --to-path foo
   $ hg show
-  commit:      29b5f0ff8943
+  commit:      c7309543d5e8
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       foo/rename
   description:
   F
+  
+  Grafted from 7d4e96ab007e943d7bafd40a5aa67cf493c5d818
+    Grafted path bar to foo
   
   
   diff --git a/foo/rename b/foo/rename
@@ -275,12 +299,15 @@ Grafting individual files also works:
   $ hg go -q $D
   $ hg graft -qr $C --from-path B --to-path A
   $ hg show
-  commit:      5df10d1c6698
+  commit:      cd7828202a47
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       A
   description:
   C
+  
+  Grafted from ea0e3d741c410c6984853baacef718860cfc18a5
+    Grafted path B to A
   
   
   diff --git a/A b/A
@@ -305,12 +332,15 @@ Can graft between completely unrelated directories:
   $ hg go -q $C
   $ hg graft -qr $B --from-path A --to-path C
   $ hg show
-  commit:      8ce3c3862e5e
+  commit:      ae46970a08bf
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       C
   description:
   B
+  
+  Grafted from eb8f2e58912725da3773edc0e24d884469f2bb1c
+    Grafted path A to C
   
   
   diff --git a/C b/C
@@ -337,12 +367,16 @@ Can do multiple mappings in a single graft:
   $ hg go -q $C
   $ hg graft -qr $D --from-path dir --to-path dir2 --from-path dir --to-path dir3
   $ hg show
-  commit:      08889a952294
+  commit:      f2c1acf538f2
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       dir2/file dir3/file
   description:
   D
+  
+  Grafted from 08771e12ccbd5547592676e9a972caafcd7b0820
+    Grafted path dir to dir2
+    Grafted path dir to dir3
   
   
   diff --git a/dir2/file b/dir2/file
@@ -379,12 +413,16 @@ Multiple mappings can all follow renames:
   $ hg go -q $G
   $ hg graft -qr $G --from-path dir --to-path dir2 --from-path dir --to-path dir3
   $ hg show
-  commit:      dba2790d7120
+  commit:      971626f1c571
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       dir2/rename2 dir3/rename3
   description:
   G
+  
+  Grafted from fab9c6fdbcd0fc0139ace494073efb5c40011ed1
+    Grafted path dir to dir2
+    Grafted path dir to dir3
   
   
   diff --git a/dir2/rename2 b/dir2/rename2
@@ -419,12 +457,15 @@ Don't get confused by renames too far in the past on src side:
   $ hg go -q $E
   $ hg graft -qr $F --from-path dir --to-path dir2
   $ hg show
-  commit:      ae4b80a20ade
+  commit:      780fcbebd067
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       dir2/rename2
   description:
   F
+  
+  Grafted from dacfc2aa45adb71c3c557083202bd9178b2e7485
+    Grafted path dir to dir2
   
   
   diff --git a/dir2/rename2 b/dir2/rename2
@@ -562,6 +603,7 @@ Merge conflict - delete/modified:
   -two
 
 
+Can opt out of "Grafted by" line in commit message:
   $ newclientrepo
   $ drawdag <<EOS
   > B  # B/B = B\n (copied from A)
@@ -569,7 +611,7 @@ Merge conflict - delete/modified:
   > A  # A/A = A\n
   > EOS
   $ hg go -q $A
-  $ hg graft -qr $B --from-path B --to-path A
+  $ hg graft -qr $B --from-path B --to-path A --no-log
   $ hg show
   commit:      8041fbbca30f
   user:        test

@@ -2652,16 +2652,14 @@ def _dograft(ui, repo, *revs, **opts):
         date = ctx.date()
         if opts.get("date"):
             date = opts["date"]
-        message = ctx.description()
-        if opts.get("log"):
-            message += "\n(grafted from %s)" % ctx.hex()
+        message = _makegraftmessage(ctx, opts)
+
+        # Apply --from-path/--to-path mappings to manifest being grafted, and its
+        # parent manifest.
+        cmdutil.registerdiffgrafts(opts, ctx, ctx.p1())
 
         # we don't merge the first commit when continuing
         if not cont:
-            # Apply --from-path/--to-path mappings to manifest being grafted, and its
-            # parent manifest.
-            cmdutil.registerdiffgrafts(opts, ctx, ctx.p1())
-
             # perform the graft merge with p1(rev) as 'ancestor'
             try:
                 # ui.forcemerge is an internal variable, do not document
@@ -2703,6 +2701,21 @@ def _dograft(ui, repo, *revs, **opts):
         repo.localvfs.unlinkpath("graftstate", ignoremissing=True)
 
     return 0
+
+
+def _makegraftmessage(ctx, opts):
+    message = ctx.description()
+    if opts.get("from_path"):
+        # For xdir grafts, include "grafted from" breadcrumb by default.
+        if opts.get("log") is not False:
+            message += "\n\nGrafted from %s\n" % ctx.hex()
+            for f, t in zip(opts.get("from_path"), opts.get("to_path")):
+                message += "  Grafted path %s to %s\n" % (f, t)
+            message += "\n"
+    else:
+        if opts.get("log"):
+            message += "\n(grafted from %s)" % ctx.hex()
+    return message
 
 
 @command(
