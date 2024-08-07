@@ -569,9 +569,19 @@ Merge conflict - delete/modified:
   > A  # A/A = A\n
   > EOS
   $ hg go -q $A
-FIXME: shouldn't conflict
   $ hg graft -qr $B --from-path B --to-path A
-  warning: 1 conflicts while merging A! (edit, then use 'hg resolve --mark')
-  abort: unresolved conflicts, can't continue
-  (use 'hg resolve' and 'hg graft --continue')
-  [255]
+  $ hg show
+  commit:      8041fbbca30f
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  files:       A
+  description:
+  B
+  
+  
+  diff --git a/A b/A
+  --- a/A
+  +++ b/A
+  @@ -1,1 +1,1 @@
+  -A
+  +B

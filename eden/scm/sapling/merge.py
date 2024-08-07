@@ -929,7 +929,6 @@ def manifestmerge(
             if fa not in ma:
                 fa = copy.get(f1, None)
                 if fa is not None:
-                    fa = m2.ungraftedpath(fa) or fa
                     actions[f1] = (
                         "m",
                         (f1, f2, fa, False, pa.node()),
