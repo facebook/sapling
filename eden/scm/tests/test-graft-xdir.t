@@ -627,3 +627,45 @@ Can opt out of "Grafted by" line in commit message:
   @@ -1,1 +1,1 @@
   -A
   +B
+
+
+Cross-directory graft removes phabricator diff link:
+  $ newclientrepo
+  $ drawdag <<EOS
+  > B  # B/B = B\n (copied from A)
+  > |
+  > A  # A/A = A\n
+  > EOS
+  $ hg metaedit -r $B -m "B\
+  > \
+  > Foo\
+  > \
+  > Differential Revision: example.com/D123\
+  > \
+  > Bar"
+  $ hg go -q $A
+  $ hg graft -qr 'desc("Differential")' --from-path B --to-path A --config extensions.fbcodereview=
+  $ hg show
+  commit:      4813cc8cb11b
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  files:       A
+  description:
+  B
+  
+  Foo
+  
+  Original Phabricator Diff: example.com/D123
+  
+  Bar
+  
+  Grafted from cf83d28f9744974da0629bf4ed27dc5c0848d29a
+    Grafted path B to A
+  
+  
+  diff --git a/A b/A
+  --- a/A
+  +++ b/A
+  @@ -1,1 +1,1 @@
+  -A
+  +B

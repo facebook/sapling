@@ -169,8 +169,18 @@ def makebackoutmessage(orig, repo, message: str, node):
     return message
 
 
+def makegraftmessage(orig, ctx, opts):
+    message = orig(ctx, opts)
+    if opts.get("from_path"):
+        message = re.sub(
+            "(?m)^Differential Revision:", "Original Phabricator Diff:", message
+        )
+    return message
+
+
 def extsetup(ui) -> None:
     extensions.wrapfunction(commands, "_makebackoutmessage", makebackoutmessage)
+    extensions.wrapfunction(commands, "_makegraftmessage", makegraftmessage)
 
     smartset.prefetchtemplatekw.update(
         {
