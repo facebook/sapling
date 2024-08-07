@@ -56,6 +56,12 @@ use srserver::ThriftServer;
 use srserver::ThriftServerBuilder;
 use srserver::ThriftStreamExecutor;
 use tokio::task;
+use tracing::Level;
+use tracing_glog::Glog;
+use tracing_glog::GlogFields;
+use tracing_subscriber::filter;
+use tracing_subscriber::layer::SubscriberExt;
+use tracing_subscriber::Layer;
 
 mod commit_id;
 mod errors;
@@ -82,6 +88,9 @@ struct ScsServerArgs {
     shutdown_timeout_args: ShutdownTimeoutArgs,
     #[clap(flatten)]
     scribe_logging_args: ScribeLoggingArgs,
+    /// Enable trace logging of dependencies
+    #[clap(long, default_value = "false")]
+    trace: bool,
     /// Thrift host
     #[clap(long, short = 'H', default_value = "::")]
     host: String,
@@ -206,7 +215,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let args: ScsServerArgs = app.args()?;
 
-    let logger = setup_logging(&app);
+    let logger = setup_logging(&app, &args)?;
     let runtime = app.runtime();
     let env = app.environment();
 
@@ -328,8 +337,35 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-fn setup_logging(app: &MononokeApp) -> Logger {
-    app.logger().clone()
+fn setup_logging(app: &MononokeApp, args: &ScsServerArgs) -> anyhow::Result<Logger> {
+    if args.trace {
+        let default_filter = filter::Targets::new()
+            .with_default(Level::TRACE)
+            // Make sure noisy dependencies don't pollute the logs
+            .with_target("fb303_core::server", Level::WARN)
+            .with_target("overload_protection::capacity", Level::WARN)
+            .with_target("runtime", Level::WARN)
+            .with_target("tokio", Level::WARN);
+
+        let event_format = Glog::default()
+            .with_timer(tracing_glog::LocalTime::default())
+            .with_target(true);
+
+        // Create and register Glog (stderr) and Scuba logging layers
+        let log_layer = tracing_subscriber::fmt::layer()
+            .event_format(event_format)
+            .fmt_fields(GlogFields::default())
+            .with_writer(std::io::stderr)
+            .with_ansi(false)
+            .with_filter(default_filter.clone());
+
+        let subscriber = tracing_subscriber::registry().with(log_layer);
+
+        // Register tracing subscriber and default
+        tracing::subscriber::set_global_default(subscriber)?;
+    }
+
+    Ok(app.logger().clone())
 }
 
 fn setup_thrift_server(
