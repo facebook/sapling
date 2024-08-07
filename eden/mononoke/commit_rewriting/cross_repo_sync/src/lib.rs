@@ -52,6 +52,7 @@ pub use git_submodules::get_all_submodule_deps;
 pub use git_submodules::InMemoryRepo;
 pub use git_submodules::RepoProvider;
 pub use git_submodules::SubmoduleExpansionData;
+pub use git_submodules::SubmoduleExpansionValidationToken;
 pub use git_submodules::ValidSubmoduleExpansionBonsai;
 pub use reporting::log_debug;
 pub use reporting::log_info;

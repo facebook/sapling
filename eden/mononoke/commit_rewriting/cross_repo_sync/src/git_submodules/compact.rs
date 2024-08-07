@@ -34,6 +34,7 @@ use crate::commit_syncers_lib::mover_to_multi_mover;
 use crate::git_submodules::expand::SubmoduleExpansionData;
 use crate::git_submodules::git_hash_from_submodule_metadata_file;
 use crate::git_submodules::utils::get_x_repo_submodule_metadata_file_path;
+use crate::git_submodules::validation::SubmoduleExpansionValidationToken;
 use crate::git_submodules::validation::ValidSubmoduleExpansionBonsai;
 use crate::git_submodules::SubmodulePath;
 use crate::reporting::log_trace;
@@ -133,7 +134,8 @@ async fn compact_all_submodule_expansion_file_changes_impl<'a, R: Repo>(
     large_repo: &'a R,
     forward_sync_mover: Mover,
 ) -> Result<BonsaiChangesetMut> {
-    let bonsai_mut = valid_bonsai.into_inner().into_mut();
+    let (bonsai, validation_token) = valid_bonsai.into_inner_with_token();
+    let bonsai_mut = bonsai.into_mut();
 
     // Remove all recursive submodules from the submodule deps, because any
     // change to them will also change a top-level submodule expansion.
@@ -171,6 +173,7 @@ async fn compact_all_submodule_expansion_file_changes_impl<'a, R: Repo>(
                     x_repo_submodule_metadata_file_prefix,
                     forward_sync_mover,
                     &sm_path,
+                    validation_token,
                 )
                 .await
             }
@@ -201,6 +204,9 @@ async fn compact_submodule_expansion_file_changes<'a, R: Repo>(
     x_repo_submodule_metadata_file_prefix: &'a str,
     forward_sync_mover: Mover,
     sm_path: &'a NonRootMPath,
+    // Token that ensures that this function can't be called without performing
+    // submodule expansion validation on the provided bonsai.
+    _validation_token: SubmoduleExpansionValidationToken,
 ) -> Result<BonsaiChangesetMut> {
     let x_repo_sm_metadata_file_path = get_x_repo_submodule_metadata_file_path(
         &SubmodulePath(sm_path.clone()),

@@ -59,7 +59,13 @@ use crate::types::Repo;
 /// expansion validation on a bonsai.
 /// This type will be used as input of any functions that require a bonsai
 /// to have all its submodule expansions already validated (e.g. backsyncing).
-pub struct ValidSubmoduleExpansionBonsai(BonsaiChangeset);
+///
+/// A token is also generated that can be passed to downstream calls that mutate
+/// the bonsai but also want to ensure that it was previously validated.
+pub struct ValidSubmoduleExpansionBonsai(BonsaiChangeset, SubmoduleExpansionValidationToken);
+/// A type that can only be constructed in this module due to the private field
+#[derive(Debug, Clone, Copy)]
+pub struct SubmoduleExpansionValidationToken(());
 
 impl ValidSubmoduleExpansionBonsai {
     /// Validate that a given bonsai **from the large repo** keeps all submodule
@@ -107,11 +113,16 @@ impl ValidSubmoduleExpansionBonsai {
             log_error(ctx, format!("Submodule validation failed: {err:#?}"));
         }
 
-        bonsai_res.map(ValidSubmoduleExpansionBonsai)
+        bonsai_res.map(|bonsai| {
+            ValidSubmoduleExpansionBonsai(bonsai, SubmoduleExpansionValidationToken(()))
+        })
     }
 
     pub fn into_inner(self) -> BonsaiChangeset {
         self.0
+    }
+    pub fn into_inner_with_token(self) -> (BonsaiChangeset, SubmoduleExpansionValidationToken) {
+        (self.0, self.1)
     }
 }
 

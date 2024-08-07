@@ -27,4 +27,5 @@ pub(crate) use utils::root_fsnode_id_from_submodule_git_commit;
 pub(crate) use validation::validate_working_copy_of_expansion_with_recursive_submodules;
 
 pub use crate::git_submodules::utils::RepoProvider;
+pub use crate::git_submodules::validation::SubmoduleExpansionValidationToken;
 pub use crate::git_submodules::validation::ValidSubmoduleExpansionBonsai;
