@@ -243,7 +243,7 @@ def mergecopies(repo, cdst, csrc, base):
             for path in grafted:
                 cp[path] = src
 
-    for dst, src in _filtercopies(cp, base, csrc, cdst, "src").items():
+    for dst, src in cp.items():
         if src in orig_cdst or dst in orig_cdst:
             copies[dst] = src
 
@@ -270,26 +270,31 @@ def mergecopies(repo, cdst, csrc, base):
 
         # Normal case - src and dest manifest use the same "path space", so just do a
         # single trace form csrc to cdst.
-        dst_copies = repo._dagcopytrace.trace_renames(
+        copies |= repo._dagcopytrace.trace_renames(
             csrc.node(),
             cdst.node(),
             same,
         )
-        copies.update(_filtercopies(dst_copies, base, csrc, cdst, "dst"))
 
         # xdir missing files - use special xdir logic.
-        xdir = xdir_copies(repo, csrc, cdst, srconly)
-        copies.update(_filtercopies(xdir, base, csrc, cdst, "dst"))
+        copies |= xdir_copies(repo, csrc, cdst, srconly)
 
     # Look for additional amend-copies.
     amend_copies = getamendcopies(repo, cdst, base.p1())
     if amend_copies:
         repo.ui.debug("Loaded amend copytrace for %s" % cdst)
-        for dst, src in _filtercopies(amend_copies, base, csrc, cdst, "dst").items():
+        for dst, src in amend_copies.items():
             if dst not in copies:
                 copies[dst] = src
 
     repo.ui.metrics.gauge("copytrace_copies", len(copies))
+
+    # For the xdir merge case, report copies in cdst's "path space".
+    # This is more convenient for merge.py.
+    for dst in copies.keys():
+        src = copies[dst]
+        copies[dst] = msrc.graftedpath(src, dst) or src
+
     return copies
 
 
@@ -382,50 +387,6 @@ def xdir_copies(repo, csrc, cdst, srcmissing):
         copies |= dst_copies
 
     return copies
-
-
-def _filtercopies(copies, base, csrc, cdst, copyside):
-    """Remove uninteresting copies if a file is renamed in one side but not changed
-    in the other side.
-
-    The mergecopies function is expected to report cases where one side renames
-    a file, while the other side changed the file before the rename.
-
-    In case there is only renaming without changing, do not report the copy.
-    In fact, reporting the copy can confuse other part of merge.py and cause
-    files to be deleted incorrectly.
-
-    This post-processing is currently known only necessary to the heuristics
-    algorithm, but not necessary for the original, slow "full copytracing" code
-    path.
-    """
-    newcopies = {}
-    if copies:
-        msrc = csrc.manifest()
-        for fdst, fsrc in copies.items():
-            if fsrc not in base:
-                # Should not happen. Just be graceful in case something went
-                # wrong.
-                continue
-            basenode = base[fsrc].filenode()
-
-            # For xdir merge, convert the src path into the cdst's "path space".
-            graftedfsrc = msrc.graftedpath(fsrc, fdst) or fsrc
-
-            if copyside == "src":
-                otherctx = cdst
-                fother = graftedfsrc
-            else:
-                otherctx = csrc
-                fother = fsrc
-
-            if fother in otherctx and otherctx[fother].filenode() == basenode:
-                continue
-
-            # Use the grafted src path - we want to yield dst and src paths both in the
-            # dest commit's "path space" since this makes things easier for merge.py.
-            newcopies[fdst] = graftedfsrc
-    return newcopies
 
 
 def _dagcopytraceenabled(ui):

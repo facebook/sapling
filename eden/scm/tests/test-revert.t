@@ -425,14 +425,14 @@
 # merge it with the other head
 
   $ hg merge
-  2 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ hg summary
   parent: 68b989552c4a 
    other adds
   parent: 2b80f4f4fe72 
    rename
-  commit: 2 modified, 1 removed (merge)
+  commit: 2 modified, 1 renamed, 1 copied (merge)
   phases: 3 draft
 
 # clarifies who added what
@@ -486,7 +486,6 @@
   $ hg status
   M base
   R allyour
-  R ignored
   R newadd
 
 # Systematic behavior validation of most possible cases

@@ -758,6 +758,7 @@
   grafting f58c7e2b28fa "C0"
   merging f1e and f1b to f1e
   merging f2a and f2c to f2c
+  merging f5b and f5a to f5a
 
 # Test the cases A.1 (f4x) and A.7 (f3x).
 

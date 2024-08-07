@@ -27,9 +27,9 @@ Update with local changes across a file rename
   $ echo c > a
 
   $ hg up tip
-  local [working copy] changed a which other [destination] deleted
-  use (c)hanged version, (d)elete, or leave (u)nresolved? u
-  1 files updated, 0 files merged, 0 files removed, 1 files unresolved
+  merging a and b to b
+  warning: 1 conflicts while merging b! (edit, then use 'hg resolve --mark')
+  0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges
   [1]
 

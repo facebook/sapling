@@ -45,6 +45,7 @@
   $ hg up -q $C
   $ hg graft book-B
   grafting b55db8435dc2 "B2" (book-B)
+  unresolved: ['D', 'E']
 
   $ hg status
   $ hg log -r . -T '{desc}\n' --stat
@@ -61,3 +62,4 @@
   $ hg up -q $C
   $ hg graft book-B
   grafting b55db8435dc2 "B2" (book-B)
+  unresolved: ['D', 'E']
