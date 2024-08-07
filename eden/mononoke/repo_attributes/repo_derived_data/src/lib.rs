@@ -106,6 +106,22 @@ impl RepoDerivedData {
         })
     }
 
+    pub fn with_mutated_scuba(
+        &self,
+        mutator: impl FnOnce(MononokeScubaSampleBuilder) -> MononokeScubaSampleBuilder + Clone,
+    ) -> Self {
+        let updated_managers = self
+            .managers
+            .iter()
+            .map(|(name, manager)| (name.clone(), manager.with_mutated_scuba(mutator.clone())))
+            .collect::<HashMap<_, _>>();
+        Self {
+            config: self.config.clone(),
+            managers: updated_managers,
+            enabled_manager: self.enabled_manager.with_mutated_scuba(mutator),
+        }
+    }
+
     // For dangerous-override: allow replacement of lease-ops
     pub fn with_replaced_lease(&self, lease: Arc<dyn LeaseOps>) -> Self {
         let updated_managers = self

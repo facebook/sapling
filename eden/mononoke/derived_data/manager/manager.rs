@@ -127,6 +127,18 @@ impl DerivedDataManager {
         }
     }
 
+    pub fn with_mutated_scuba(
+        &self,
+        mutator: impl FnOnce(MononokeScubaSampleBuilder) -> MononokeScubaSampleBuilder + Clone,
+    ) -> Self {
+        Self {
+            inner: Arc::new(DerivedDataManagerInner {
+                scuba: mutator(self.inner.scuba.clone()),
+                ..self.inner.as_ref().clone()
+            }),
+        }
+    }
+
     // For dangerous-override: allow replacement of lease-ops
     pub fn with_replaced_lease(&self, lease: Arc<dyn LeaseOps>) -> Self {
         Self {
