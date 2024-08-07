@@ -258,7 +258,7 @@ pub struct CrossRepoSyncTransactionHook {
 impl PushrebaseTransactionHook for CrossRepoSyncTransactionHook {
     async fn populate_transaction(
         &self,
-        _ctx: &CoreContext,
+        ctx: &CoreContext,
         txn: Transaction,
     ) -> Result<Transaction, BookmarkTransactionError> {
         let txn = if let Some(entry) = &self.forward_synced_entry {
@@ -271,14 +271,18 @@ impl PushrebaseTransactionHook for CrossRepoSyncTransactionHook {
                 )
                 .into());
             }
-            add_many_in_txn(txn, vec![entry.clone()]).await?.0
+            add_many_in_txn(ctx, txn, vec![entry.clone()]).await?.0
         } else {
             txn
         };
         let txn = if !self.large_repo_version_assignments.is_empty() {
-            add_many_large_repo_commit_versions_in_txn(txn, &self.large_repo_version_assignments)
-                .await?
-                .0
+            add_many_large_repo_commit_versions_in_txn(
+                ctx,
+                txn,
+                &self.large_repo_version_assignments,
+            )
+            .await?
+            .0
         } else {
             txn
         };
