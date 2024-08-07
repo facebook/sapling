@@ -33,6 +33,8 @@ use crate::command::RefUpdate;
 use crate::model::RepositoryRequestContext;
 use crate::service::uploader::peel_tag_target;
 
+const DEFAULT_ADDITIONAL_CHANGESETS_LIMIT: usize = 200_000;
+
 /// Struct representing a ref update (create, move, delete) operation
 pub struct RefUpdateOperation {
     ref_update: RefUpdate,
@@ -73,7 +75,9 @@ pub async fn set_refs(
         request_context.repo.clone(),
         request_context.mononoke_repos.clone(),
     );
-    let affected_changesets = ref_update_ops.first().map(|op| op.affected_changesets);
+    let affected_changesets = ref_update_ops
+        .first()
+        .map(|op| std::cmp::max(op.affected_changesets, DEFAULT_ADDITIONAL_CHANGESETS_LIMIT));
     // Create the repo context which is the pre-requisite for moving bookmarks
     let repo_context = RepoContextBuilder::new(ctx.clone(), repo.clone(), repos)
         .await
@@ -188,6 +192,10 @@ async fn set_ref_inner(
     )?;
     let bookmark_operation =
         BookmarkOperation::new(bookmark_key.clone(), old_changeset, new_changeset)?;
+    let affected_changesets = Some(std::cmp::max(
+        ref_update_op.affected_changesets,
+        DEFAULT_ADDITIONAL_CHANGESETS_LIMIT,
+    ));
     // Flag for client side expectation of allow non fast forward updates. Git clients by default
     // prevent users from pushing non-ffwd updates. If the request reaches the server, then that
     // means the client has explicitly requested for a non-ffwd update and the final result will be
@@ -200,7 +208,7 @@ async fn set_ref_inner(
         &bookmark_operation,
         Some(request_context.pushvars.as_ref()),
         allow_non_fast_forward,
-        Some(ref_update_op.affected_changesets),
+        affected_changesets,
         BookmarkOperationErrorReporting::Plain,
     )
     .await;
