@@ -8,7 +8,6 @@
 use std::time::Duration;
 
 use anyhow::Error;
-use bulkops::Direction;
 use clap::Args;
 use fbinit::FacebookInit;
 use metaconfig_types::MetadataDatabaseConfig;
@@ -23,6 +22,7 @@ use crate::args::graph_arg_types::NodeTypeArg;
 use crate::detail::checkpoint::CheckpointsByName;
 use crate::detail::checkpoint::CheckpointsVersion;
 use crate::detail::checkpoint::SqlCheckpoints;
+use crate::detail::fetcher::Direction;
 use crate::detail::tail::ChunkingParams;
 use crate::detail::tail::ClearStateParams;
 use crate::detail::tail::TailParams;

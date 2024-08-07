@@ -17,10 +17,6 @@ use anyhow::bail;
 use anyhow::Error;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bonsai_hg_mapping::BonsaiOrHgChangesetIds;
-use bulkops::ChangesetBulkFetcher;
-use bulkops::Direction;
-use bulkops::MAX_FETCH_STEP;
-use changesets::ChangesetsArc;
 use clientinfo::ClientEntryPoint;
 use clientinfo::ClientInfo;
 use cloned::cloned;
@@ -38,7 +34,6 @@ use mercurial_derivation::MappedHgChangesetId;
 use mononoke_types::ChangesetId;
 use mononoke_types::RepositoryId;
 use mononoke_types::Timestamp;
-use phases::PhasesArc;
 use repo_identity::RepoIdentityRef;
 use slog::info;
 use slog::Logger;
@@ -50,8 +45,8 @@ use tokio::time::Instant;
 use crate::commands::JobWalkParams;
 use crate::detail::checkpoint::Checkpoint;
 use crate::detail::checkpoint::CheckpointsByName;
-use crate::detail::checkpoint::CheckpointsVersion;
 use crate::detail::fetcher::BulkFetcherOps;
+use crate::detail::fetcher::Direction;
 use crate::detail::graph::ChangesetKey;
 use crate::detail::graph::Node;
 use crate::detail::graph::NodeType;
@@ -269,25 +264,8 @@ where
             .chunking
             .as_ref()
             .map(|chunking| -> Result<(_, Arc<dyn BulkFetcherOps>), Error> {
-                let heads_fetcher: Arc<dyn BulkFetcherOps> = match chunking
-                    .checkpoints
-                    .as_ref()
-                    .map(|checkpoints| checkpoints.version)
-                {
-                    // If we're using checkpoints v2, we need to use CommitGraphBulkFetcher as
-                    // checkpoints are stored in reference to the commit graph sql table.
-                    Some(CheckpointsVersion::V2) => {
-                        repo_params.repo.commit_graph_bulk_fetcher_arc()
-                    }
-                    _ => Arc::new(
-                        ChangesetBulkFetcher::new(
-                            repo_params.repo.changesets_arc(),
-                            repo_params.repo.phases_arc(),
-                        )
-                        .with_read_from_master(false)
-                        .with_step(MAX_FETCH_STEP)?,
-                    ),
-                };
+                let heads_fetcher: Arc<dyn BulkFetcherOps> =
+                    repo_params.repo.commit_graph_bulk_fetcher_arc();
                 Ok((chunking, heads_fetcher))
             })
             .transpose()?;

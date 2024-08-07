@@ -23,7 +23,6 @@ use array_init::array_init;
 use async_trait::async_trait;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use bonsai_hg_mapping::BonsaiHgMappingEntry;
-use bulkops::Direction;
 use context::CoreContext;
 use dashmap::mapref::one::Ref;
 use dashmap::DashMap;
@@ -49,6 +48,7 @@ use strum::EnumIter;
 use strum::EnumString;
 use strum::VariantNames;
 
+use crate::detail::fetcher::Direction;
 use crate::detail::graph::EdgeType;
 use crate::detail::graph::Node;
 use crate::detail::graph::NodeData;

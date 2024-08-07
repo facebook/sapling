@@ -40,8 +40,8 @@ Try scrubbing hg file contents (as we regularly do in production)
   > -q 2>&1 | strip_glog
   Walking edge types *, repo: repo (glob)
   Walking node types *, repo: repo (glob)
-  Repo bounds: (1, 7), repo: repo
-  Starting chunk 1 with bounds (1, 7), repo: repo
+  Repo bounds: (1, 12), repo: repo
+  Starting chunk 1 with bounds (1, 12), repo: repo
   Suppressing edge OutgoingEdge { label: RootToBonsaiHgMapping, target: BonsaiHgMapping(ChangesetKey { inner: ChangesetId(Blake2(*)), filenode_known_derived: false }), path: None }, repo: repo (glob)
   Suppressing edge OutgoingEdge { label: RootToBonsaiHgMapping, target: BonsaiHgMapping(ChangesetKey { inner: ChangesetId(Blake2(*)), filenode_known_derived: false }), path: None }, repo: repo (glob)
   Seen,Loaded: 4,4, repo: repo
@@ -58,8 +58,8 @@ Try scrubbing hg filenodes (as we regularly do in production)
   > -q 2>&1 | strip_glog
   Walking edge types *, repo: repo (glob)
   Walking node types *, repo: repo (glob)
-  Repo bounds: (1, 7), repo: repo
-  Starting chunk 1 with bounds (1, 7), repo: repo
+  Repo bounds: (1, 12), repo: repo
+  Starting chunk 1 with bounds (1, 12), repo: repo
   Suppressing edge OutgoingEdge { label: RootToBonsaiHgMapping, target: BonsaiHgMapping(ChangesetKey { inner: ChangesetId(Blake2(*)), filenode_known_derived: false }), path: None }, repo: repo (glob)
   Suppressing edge OutgoingEdge { label: RootToBonsaiHgMapping, target: BonsaiHgMapping(ChangesetKey { inner: ChangesetId(Blake2(*)), filenode_known_derived: false }), path: None }, repo: repo (glob)
   Seen,Loaded: 4,4, repo: repo

@@ -53,8 +53,6 @@ rust_binary(
         "//eden/mononoke/blobstore:samplingblob",
         "//eden/mononoke/bonsai_hg_mapping:bonsai_hg_mapping",
         "//eden/mononoke/bookmarks:bookmarks",
-        "//eden/mononoke/bulkops:bulkops",
-        "//eden/mononoke/changesets:changesets",
         "//eden/mononoke/cmdlib/caching:cmdlib_caching",
         "//eden/mononoke/cmdlib/mononoke_app:mononoke_app",
         "//eden/mononoke/cmdlib/scrubbing:cmdlib_scrubbing",

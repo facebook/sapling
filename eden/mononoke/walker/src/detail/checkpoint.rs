@@ -11,7 +11,6 @@ use std::sync::Arc;
 
 use anyhow::bail;
 use anyhow::Error;
-use bulkops::Direction;
 use mononoke_types::RepositoryId;
 use mononoke_types::Timestamp;
 use slog::info;
@@ -21,6 +20,7 @@ use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::mononoke_queries;
 use sql_ext::SqlConnections;
 
+use crate::detail::fetcher::Direction;
 use crate::detail::log;
 
 #[derive(Clone, Debug, Eq, PartialEq)]

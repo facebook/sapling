@@ -14,7 +14,6 @@ use anyhow::Error;
 use async_trait::async_trait;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use bonsai_hg_mapping::BonsaiHgMappingEntry;
-use bulkops::Direction;
 use context::CoreContext;
 use context::SamplingKey;
 use dashmap::DashMap;
@@ -25,6 +24,7 @@ use phases::Phases;
 use regex::Regex;
 use slog::Logger;
 
+use crate::detail::fetcher::Direction;
 use crate::detail::graph::EdgeType;
 use crate::detail::graph::Node;
 use crate::detail::graph::NodeData;
