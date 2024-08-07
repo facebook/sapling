@@ -110,7 +110,6 @@ members = [
   "acl_regions",
   "admin",
   "aliasverify",
-  "benchmarks/bulkops",
   "benchmarks/derived_data",
   "benchmarks/filestore",
   "benchmarks/storage_config",
