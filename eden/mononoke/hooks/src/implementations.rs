@@ -12,6 +12,7 @@ mod block_commit_message_pattern;
 mod block_content_pattern;
 mod block_empty_commit;
 mod block_files;
+pub(crate) mod block_invalid_symlinks;
 pub(crate) mod block_merge_commits;
 pub(crate) mod block_unclean_merge_commits;
 pub(crate) mod deny_files;
@@ -93,6 +94,9 @@ pub fn make_file_hook(
             block_content_pattern::BlockContentPatternHook::new(&params.config)?,
         )),
         "block_files" => Some(Box::new(block_files::BlockFilesHook::new(&params.config)?)),
+        "block_invalid_symlinks" => Some(Box::new(
+            block_invalid_symlinks::BlockInvalidSymlinksHook::new(&params.config)?,
+        )),
         "deny_files" => Some(Box::new(
             deny_files::DenyFiles::builder()
                 .set_from_config(&params.config)
