@@ -192,10 +192,7 @@ impl From<MononokeError> for edenapi_types::ServerError {
 impl From<&MononokeError> for edenapi_types::ServerError {
     fn from(e: &MononokeError) -> Self {
         let message = format!("{:?}", e);
-        let code = match e {
-            _ => 0,
-        };
-        Self::new(message, code)
+        Self::new(message, 0)
     }
 }
 

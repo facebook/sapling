@@ -1784,8 +1784,7 @@ impl RepoContext {
         cs_ids: Vec<ChangesetId>,
     ) -> Result<HashMap<ChangesetId, Result<Location<ChangesetId>, MononokeError>>, MononokeError>
     {
-        Ok(self
-            .commit_graph()
+        self.commit_graph()
             .changeset_ids_to_locations(self.ctx(), master_heads, cs_ids)
             .await
             .map(|ok| {
@@ -1801,7 +1800,7 @@ impl RepoContext {
                     })
                     .collect::<HashMap<ChangesetId, Result<_, MononokeError>>>()
             })
-            .map_err(MononokeError::from)?)
+            .map_err(MononokeError::from)
     }
 
     pub async fn derive_bulk(
