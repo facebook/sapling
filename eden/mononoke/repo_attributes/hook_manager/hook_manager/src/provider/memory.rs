@@ -26,6 +26,7 @@ use crate::provider::BookmarkState;
 use crate::provider::FileChange;
 use crate::provider::HookStateProvider;
 use crate::provider::PathContent;
+use crate::provider::TagType;
 
 #[derive(Clone)]
 pub enum InMemoryFileText {
@@ -141,6 +142,14 @@ impl HookStateProvider for InMemoryHookStateProvider {
             anyhow!("`get_bookmark_state` is not implemented for `InMemoryHookStateProvider`")
                 .into(),
         )
+    }
+
+    async fn get_tag_type<'a, 'b>(
+        &'a self,
+        _ctx: &'a CoreContext,
+        _bookmark: &'b BookmarkKey,
+    ) -> Result<TagType, HookStateProviderError> {
+        Err(anyhow!("`get_tag_state` is not implemented for `InMemoryHookStateProvider`").into())
     }
 }
 

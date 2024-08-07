@@ -11,6 +11,7 @@ license = "GPLv2+"
 anyhow = "1.0.75"
 async-trait = "0.1.71"
 blobstore = { version = "0.1.0", path = "../../../blobstore" }
+bonsai_tag_mapping = { version = "0.1.0", path = "../../../bonsai_tag_mapping" }
 bookmarks = { version = "0.1.0", path = "../../../bookmarks" }
 bytes = { version = "1.6.0", features = ["serde"] }
 changeset_info = { version = "0.1.0", path = "../../../derived_data/changeset_info" }

@@ -24,6 +24,7 @@ use crate::provider::BookmarkState;
 use crate::provider::FileChange;
 use crate::provider::HookStateProvider;
 use crate::provider::PathContent;
+use crate::provider::TagType;
 
 pub struct TextOnlyHookStateProvider<T> {
     inner: Arc<T>,
@@ -109,6 +110,14 @@ impl<T: HookStateProvider + 'static> HookStateProvider for TextOnlyHookStateProv
         bookmark: &'b BookmarkKey,
     ) -> Result<BookmarkState, HookStateProviderError> {
         self.inner.get_bookmark_state(ctx, bookmark).await
+    }
+
+    async fn get_tag_type<'a, 'b>(
+        &'a self,
+        ctx: &'a CoreContext,
+        bookmark: &'b BookmarkKey,
+    ) -> Result<TagType, HookStateProviderError> {
+        self.inner.get_tag_type(ctx, bookmark).await
     }
 }
 

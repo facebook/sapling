@@ -33,6 +33,7 @@ use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bonsai_svnrev_mapping::BonsaiSvnrevMapping;
 use bonsai_svnrev_mapping::BonsaiSvnrevMappingRef;
 use bonsai_tag_mapping::BonsaiTagMapping;
+use bonsai_tag_mapping::BonsaiTagMappingArc;
 use bookmarks::BookmarkCategory;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarkKind;
@@ -473,6 +474,7 @@ impl Repo {
             &blob_repo.repo_derived_data_arc(),
             &blob_repo.bookmarks_arc(),
             &blob_repo.repo_blobstore_arc(),
+            &blob_repo.bonsai_tag_mapping_arc(),
         );
         let repo_cross_repo = Arc::new(RepoCrossRepo::new(
             synced_commit_mapping,

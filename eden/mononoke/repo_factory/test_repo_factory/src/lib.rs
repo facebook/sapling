@@ -729,11 +729,13 @@ impl TestRepoFactory {
         repo_derived_data: &ArcRepoDerivedData,
         bookmarks: &ArcBookmarks,
         repo_blobstore: &ArcRepoBlobstore,
+        bonsai_tag_mapping: &ArcBonsaiTagMapping,
     ) -> ArcHookManager {
         let content_store = RepoHookStateProvider::from_parts(
             bookmarks.clone(),
             repo_blobstore.clone(),
             repo_derived_data.clone(),
+            bonsai_tag_mapping.clone(),
         );
 
         Arc::new(HookManager::new_test(

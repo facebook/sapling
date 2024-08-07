@@ -14,6 +14,8 @@ use anyhow::format_err;
 use anyhow::Context as _;
 use async_trait::async_trait;
 use blobstore::Loadable;
+use bonsai_tag_mapping::ArcBonsaiTagMapping;
+use bonsai_tag_mapping::BonsaiTagMappingArc;
 use bookmarks::ArcBookmarks;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarksArc;
@@ -24,6 +26,7 @@ use futures::future;
 use futures::stream::TryStreamExt;
 use futures_util::future::TryFutureExt;
 use hook_manager::provider::BookmarkState;
+use hook_manager::provider::TagType;
 use hook_manager::FileChange;
 use hook_manager::HookStateProvider;
 use hook_manager::HookStateProviderError;
@@ -54,6 +57,7 @@ pub struct RepoHookStateProvider {
     repo_blobstore: ArcRepoBlobstore,
     bookmarks: ArcBookmarks,
     repo_derived_data: ArcRepoDerivedData,
+    bonsai_tag_mapping: ArcBonsaiTagMapping,
 }
 
 #[async_trait]
@@ -290,20 +294,40 @@ impl HookStateProvider for RepoHookStateProvider {
             Ok(BookmarkState::New)
         }
     }
+
+    async fn get_tag_type<'a, 'b>(
+        &'a self,
+        _ctx: &'a CoreContext,
+        bookmark: &'b BookmarkKey,
+    ) -> Result<TagType, HookStateProviderError> {
+        if !bookmark.is_tag() {
+            return Ok(TagType::NotATag);
+        }
+        match self
+            .bonsai_tag_mapping
+            .get_entry_by_tag_name(bookmark.to_string())
+            .await?
+        {
+            Some(entry) => Ok(TagType::AnnotatedTag(entry.tag_hash)),
+            None => Ok(TagType::LightweightTag),
+        }
+    }
 }
 
 impl RepoHookStateProvider {
     pub fn new(
-        container: &(impl RepoBlobstoreArc + BookmarksArc + RepoDerivedDataArc),
+        container: &(impl RepoBlobstoreArc + BookmarksArc + RepoDerivedDataArc + BonsaiTagMappingArc),
     ) -> RepoHookStateProvider {
         let repo_blobstore = container.repo_blobstore_arc();
         let bookmarks = container.bookmarks_arc();
         let repo_derived_data = container.repo_derived_data_arc();
+        let bonsai_tag_mapping = container.bonsai_tag_mapping_arc();
 
         RepoHookStateProvider {
             repo_blobstore,
             bookmarks,
             repo_derived_data,
+            bonsai_tag_mapping,
         }
     }
 
@@ -311,11 +335,13 @@ impl RepoHookStateProvider {
         bookmarks: ArcBookmarks,
         repo_blobstore: ArcRepoBlobstore,
         repo_derived_data: ArcRepoDerivedData,
+        bonsai_tag_mapping: ArcBonsaiTagMapping,
     ) -> Self {
         RepoHookStateProvider {
             repo_blobstore,
             bookmarks,
             repo_derived_data,
+            bonsai_tag_mapping,
         }
     }
 }

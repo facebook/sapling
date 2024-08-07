@@ -15,6 +15,7 @@ use anyhow::format_err;
 use anyhow::Error;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
+use bonsai_tag_mapping::BonsaiTagMapping;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks::Bookmarks;
@@ -100,6 +101,9 @@ pub struct BasicTestRepo {
 
     #[facet]
     pub repo_identity: RepoIdentity,
+
+    #[facet]
+    pub bonsai_tag_mapping: dyn BonsaiTagMapping,
 }
 
 pub async fn list_working_copy_utf8(

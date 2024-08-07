@@ -15,6 +15,7 @@ use bookmarks_types::BookmarkKey;
 use bytes::Bytes;
 use changeset_info::ChangesetInfo;
 use context::CoreContext;
+use mononoke_types::hash::GitSha1;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
 use mononoke_types::ContentMetadataV2;
@@ -39,6 +40,16 @@ impl BookmarkState {
         }
         false
     }
+}
+
+/// Enum describing the type of a tag for which hooks are being run.
+pub enum TagType {
+    /// The bookmark is not a tag at all
+    NotATag,
+    /// The bookmark is a simple tag with no object associated with it
+    LightweightTag,
+    /// The bookmark is an annotated tag with an associated object with GitSha1 hash
+    AnnotatedTag(GitSha1),
 }
 
 /// Trait implemented by providers of content for hooks to analyze.
@@ -68,6 +79,15 @@ pub trait HookStateProvider: Send + Sync {
         ctx: &'a CoreContext,
         bookmark: &'b BookmarkKey,
     ) -> Result<BookmarkState, HookStateProviderError>;
+
+    /// The type of a tag at the time the push is being run. Useful for determining
+    /// if the bookmark being pushed is a tag or not and if its a tag, if its a simple
+    /// or annotated.
+    async fn get_tag_type<'a, 'b>(
+        &'a self,
+        ctx: &'a CoreContext,
+        bookmark: &'b BookmarkKey,
+    ) -> Result<TagType, HookStateProviderError>;
 
     /// Find the content of a set of files at a particular bookmark.
     async fn find_content<'a>(

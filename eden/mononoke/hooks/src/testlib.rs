@@ -7,6 +7,7 @@
 
 use anyhow::Result;
 use blobstore::Loadable;
+use bonsai_tag_mapping::BonsaiTagMappingArc;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarksArc;
 use context::CoreContext;
@@ -23,7 +24,8 @@ use crate::FileHook;
 use crate::HookExecution;
 use crate::PushAuthoredBy;
 
-pub trait Repo = RepoBlobstoreRef + RepoBlobstoreArc + BookmarksArc + RepoDerivedDataArc;
+pub trait Repo =
+    RepoBlobstoreRef + RepoBlobstoreArc + BookmarksArc + RepoDerivedDataArc + BonsaiTagMappingArc;
 
 /// Test a changeset hook
 ///

@@ -1355,6 +1355,7 @@ impl RepoFactory {
         repo_derived_data: &ArcRepoDerivedData,
         bookmarks: &ArcBookmarks,
         repo_blobstore: &ArcRepoBlobstore,
+        bonsai_tag_mapping: &ArcBonsaiTagMapping,
     ) -> Result<ArcHookManager> {
         let name = repo_identity.name();
 
@@ -1384,6 +1385,7 @@ impl RepoFactory {
                     bookmarks.clone(),
                     repo_blobstore.clone(),
                     repo_derived_data.clone(),
+                    bonsai_tag_mapping.clone(),
                 ),
                 repo_config.hook_max_file_size,
             ));
