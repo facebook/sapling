@@ -187,6 +187,22 @@ impl DerivedDataManager {
         }
     }
 
+    // For dangerous-override: allow replacement of bonsai-git-mapping
+    pub fn with_replaced_bonsai_git_mapping(
+        &self,
+        bonsai_git_mapping: Arc<dyn BonsaiGitMapping>,
+    ) -> Self {
+        Self {
+            inner: Arc::new(DerivedDataManagerInner {
+                derivation_context: self
+                    .inner
+                    .derivation_context
+                    .with_replaced_bonsai_git_mapping(bonsai_git_mapping),
+                ..self.inner.as_ref().clone()
+            }),
+        }
+    }
+
     // For dangerous-override: allow replacement of filenodes
     pub fn with_replaced_filenodes(&self, filenodes: Arc<dyn Filenodes>) -> Self {
         Self {

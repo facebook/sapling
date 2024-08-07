@@ -203,6 +203,30 @@ impl RepoDerivedData {
         }
     }
 
+    // For dangerous-override: allow replacement of bonsai-git-mapping
+    pub fn with_replaced_bonsai_git_mapping(
+        &self,
+        bonsai_git_mapping: Arc<dyn BonsaiGitMapping>,
+    ) -> Self {
+        let updated_managers = self
+            .managers
+            .iter()
+            .map(|(name, manager)| {
+                (
+                    name.clone(),
+                    manager.with_replaced_bonsai_git_mapping(bonsai_git_mapping.clone()),
+                )
+            })
+            .collect::<HashMap<_, _>>();
+        Self {
+            config: self.config.clone(),
+            managers: updated_managers,
+            enabled_manager: self
+                .enabled_manager
+                .with_replaced_bonsai_git_mapping(bonsai_git_mapping),
+        }
+    }
+
     // For dangerous-override: allow replacement of filenodes
     pub fn with_replaced_filenodes(&self, filenodes: Arc<dyn Filenodes>) -> Self {
         let updated_managers = self

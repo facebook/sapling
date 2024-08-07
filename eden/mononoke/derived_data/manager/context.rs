@@ -97,6 +97,17 @@ impl DerivationContext {
         }
     }
 
+    // For dangerous-override: allow replacement of bonsai-git-mapping
+    pub(crate) fn with_replaced_bonsai_git_mapping(
+        &self,
+        bonsai_git_mapping: Arc<dyn BonsaiGitMapping>,
+    ) -> Self {
+        Self {
+            bonsai_git_mapping: Some(bonsai_git_mapping),
+            ..self.clone()
+        }
+    }
+
     // For dangerous-override: allow replacement of filenodes
     pub(crate) fn with_replaced_filenodes(&self, filenodes: Arc<dyn Filenodes>) -> Self {
         Self {
