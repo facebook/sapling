@@ -32,6 +32,15 @@ pub enum BookmarkState {
     // No Deleted state because hooks are not run on deleted bookmarks
 }
 
+impl BookmarkState {
+    pub fn is_new(&self) -> bool {
+        if let BookmarkState::New = *self {
+            return true;
+        }
+        false
+    }
+}
+
 /// Trait implemented by providers of content for hooks to analyze.
 #[async_trait]
 pub trait HookStateProvider: Send + Sync {
@@ -54,10 +63,10 @@ pub trait HookStateProvider: Send + Sync {
     /// The state of a bookmark at the time the push is being run. Note that this
     /// is best effort since the bookmark can move as a result of another push
     /// happening concurrently
-    async fn get_bookmark_state<'a>(
+    async fn get_bookmark_state<'a, 'b>(
         &'a self,
         ctx: &'a CoreContext,
-        bookmark: BookmarkKey,
+        bookmark: &'b BookmarkKey,
     ) -> Result<BookmarkState, HookStateProviderError>;
 
     /// Find the content of a set of files at a particular bookmark.

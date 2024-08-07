@@ -103,10 +103,10 @@ impl<T: HookStateProvider + 'static> HookStateProvider for TextOnlyHookStateProv
         self.inner.directory_sizes(ctx, changeset_id, paths).await
     }
 
-    async fn get_bookmark_state<'a>(
+    async fn get_bookmark_state<'a, 'b>(
         &'a self,
         ctx: &'a CoreContext,
-        bookmark: BookmarkKey,
+        bookmark: &'b BookmarkKey,
     ) -> Result<BookmarkState, HookStateProviderError> {
         self.inner.get_bookmark_state(ctx, bookmark).await
     }

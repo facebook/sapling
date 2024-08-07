@@ -132,10 +132,10 @@ impl HookStateProvider for InMemoryHookStateProvider {
         Err(anyhow!("`directory_sizes` is not implemented for `InMemoryHookStateProvider`").into())
     }
 
-    async fn get_bookmark_state<'a>(
+    async fn get_bookmark_state<'a, 'b>(
         &'a self,
         _ctx: &'a CoreContext,
-        _bookmark: BookmarkKey,
+        _bookmark: &'b BookmarkKey,
     ) -> Result<BookmarkState, HookStateProviderError> {
         Err(
             anyhow!("`get_bookmark_state` is not implemented for `InMemoryHookStateProvider`")

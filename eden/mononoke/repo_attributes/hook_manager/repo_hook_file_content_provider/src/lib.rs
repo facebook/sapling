@@ -274,14 +274,14 @@ impl HookStateProvider for RepoHookStateProvider {
             .map_err(HookStateProviderError::from)
     }
 
-    async fn get_bookmark_state<'a>(
+    async fn get_bookmark_state<'a, 'b>(
         &'a self,
         ctx: &'a CoreContext,
-        bookmark: BookmarkKey,
+        bookmark: &'b BookmarkKey,
     ) -> Result<BookmarkState, HookStateProviderError> {
         let maybe_bookmark_val = self
             .bookmarks
-            .get(ctx.clone(), &bookmark)
+            .get(ctx.clone(), bookmark)
             .await
             .with_context(|| format!("Error fetching bookmark: {}", bookmark))?;
         if let Some(cs_id) = maybe_bookmark_val {

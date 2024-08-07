@@ -194,7 +194,6 @@ impl HookManager {
                 hooks.extend(r_hooks.iter().map(|a| a.as_str()));
             }
         }
-
         hooks.into_iter()
     }
 

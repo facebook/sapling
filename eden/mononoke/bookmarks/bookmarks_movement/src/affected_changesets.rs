@@ -404,7 +404,6 @@ impl AffectedChangesets {
                     if needs_case_conflicts_check {
                         Self::check_case_conflicts(&chunk, ctx, repo).await?;
                     }
-
                     if needs_hooks_check {
                         Self::check_hooks(
                             adding_new_changesets_to_repo,
