@@ -60,6 +60,7 @@ use sql_ext::SqlConnections;
 
 use crate::changesets::EphemeralChangesets;
 use crate::commit_graph::EphemeralCommitGraphStorage;
+use crate::commit_graph_writer::EphemeralCommitGraphWriter;
 use crate::error::EphemeralBlobstoreError;
 use crate::handle::EphemeralHandle;
 use crate::view::EphemeralRepoView;
@@ -474,6 +475,16 @@ impl Bubble {
         )
     }
 
+    pub fn commit_graph_writer(
+        &self,
+        repo_id: RepositoryId,
+        repo_blobstore: RepoBlobstore,
+        changesets: ArcChangesets,
+    ) -> EphemeralCommitGraphWriter {
+        let ephemeral_changesets = self.changesets(repo_id, repo_blobstore, changesets);
+        EphemeralCommitGraphWriter::new(Arc::new(ephemeral_changesets))
+    }
+
     pub fn repo_view(
         &self,
         container: &(
@@ -497,8 +508,13 @@ impl Bubble {
             )),
             commit_graph: Arc::new(self.commit_graph_with_blobstore(
                 repo_identity.id(),
-                repo_blobstore,
+                repo_blobstore.clone(),
                 container.commit_graph(),
+            )),
+            commit_graph_writer: Arc::new(self.commit_graph_writer(
+                repo_identity.id(),
+                repo_blobstore,
+                container.changesets_arc(),
             )),
             bonsai_globalrev_mapping: container.bonsai_globalrev_mapping_arc(),
             repo_identity,

@@ -8,6 +8,7 @@
 use bonsai_globalrev_mapping::BonsaiGlobalrevMapping;
 use changesets::Changesets;
 use commit_graph::CommitGraph;
+use commit_graph::CommitGraphWriter;
 use metaconfig_types::RepoConfig;
 use repo_blobstore::RepoBlobstore;
 use repo_identity::RepoIdentity;
@@ -22,6 +23,9 @@ pub struct EphemeralRepoView {
 
     #[facet]
     pub(crate) commit_graph: CommitGraph,
+
+    #[facet]
+    pub(crate) commit_graph_writer: dyn CommitGraphWriter,
 
     #[facet]
     pub(crate) bonsai_globalrev_mapping: dyn BonsaiGlobalrevMapping,

@@ -16,6 +16,7 @@ mod bubble;
 mod builder;
 mod changesets;
 mod commit_graph;
+mod commit_graph_writer;
 mod error;
 mod file;
 mod handle;
