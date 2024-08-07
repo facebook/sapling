@@ -36,6 +36,7 @@ MONONOKE_TARGETS_TO_ENV = {
     "//eden/mononoke/land_service/facebook/server:land_service": "LAND_SERVICE",
     "//eden/mononoke/lfs_server:lfs_server": "LFS_SERVER",
     "//eden/mononoke/microwave:builder": "MONONOKE_MICROWAVE_BUILDER",
+    "//eden/mononoke/mononoke_cas_sync_job:mononoke_cas_sync_job": "MONONOKE_CAS_SYNC",
     "//eden/mononoke/mononoke_hg_sync_job:mononoke_hg_sync_job": "MONONOKE_HG_SYNC",
     "//eden/mononoke/repo_import:repo_import": "MONONOKE_REPO_IMPORT",
     "//eden/mononoke/scs/client:scsc": "SCS_CLIENT",

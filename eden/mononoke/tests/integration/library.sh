@@ -240,6 +240,21 @@ function mononoke_hg_sync {
      ssh://user@dummy/"$HG_REPO" "$@" sync-once --start-id "$START_ID"
 }
 
+function mononoke_cas_sync {
+  HG_REPO_NAME="$1"
+  shift
+  START_ID="$1"
+  shift
+
+  GLOG_minloglevel=5 "$MONONOKE_CAS_SYNC" \
+    "${CACHE_ARGS[@]}" \
+    "${COMMON_ARGS[@]}" \
+    --retry-num 1 \
+    --repo-name $HG_REPO_NAME \
+    --mononoke-config-path "$TESTTMP/mononoke-config" \
+     sync-loop --start-id "$START_ID" --batch-size 20
+}
+
 function mononoke_backup_sync {
   HG_REPO="$1"
   SYNC_MODE="$2"
@@ -1065,6 +1080,11 @@ fi
   cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
 [metadata_logger_config]
 bookmarks=["master"]
+CONFIG
+
+  cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
+[mononoke_cas_sync_config]
+main_bookmark_to_sync="master"
 CONFIG
 
   cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG

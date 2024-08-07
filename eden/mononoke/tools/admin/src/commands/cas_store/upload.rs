@@ -47,7 +47,7 @@ pub struct CasStoreUploadArgs {
     #[clap(long)]
     blobs_only: bool,
     /// Upload only the trees of a changeset.
-    #[clap(long, conflicts_with = "blobs-only")]
+    #[clap(long, conflicts_with = "blobs_only")]
     trees_only: bool,
 }
 
