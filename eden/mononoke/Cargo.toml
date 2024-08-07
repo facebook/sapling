@@ -185,7 +185,6 @@ members = [
   "bookmarks/bookmarks_types",
   "bookmarks/dbbookmarks",
   "bookmarks/warm_bookmarks_cache",
-  "bulkops",
   "cache_warmup",
   "cas_client/changesets_uploader",
   "cas_client/client",
