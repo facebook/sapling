@@ -1,30 +1,31 @@
   $ setconfig diff.git=true
   $ enable morestatus
   $ setconfig morestatus.show=true
+  $ setconfig drawdag.defaultfiles=false
 
 Test validation of --from-path and --to-path
   $ newclientrepo
   $ echo "A" | drawdag
   $ hg graft -r $A --from-path foo
-  grafting 426bada5c675 "A"
+  grafting 7b3f3d5e5faf "A"
   abort: must provide same number of --from-path and --to-path
   [255]
   $ hg graft -r $A --to-path foo
-  grafting 426bada5c675 "A"
+  grafting 7b3f3d5e5faf "A"
   abort: must provide same number of --from-path and --to-path
   [255]
   $ hg graft -r $A --from-path foo --from-path bar --to-path baz --to-path baz/qux
-  grafting 426bada5c675 "A"
+  grafting 7b3f3d5e5faf "A"
   abort: overlapping --to-path entries
   [255]
   $ hg graft -r $A --from-path foo --from-path bar --to-path baz --to-path ""
-  grafting 426bada5c675 "A"
+  grafting 7b3f3d5e5faf "A"
   abort: overlapping --to-path entries
   [255]
   $ hg graft -qr $A --from-path foo --from-path bar --to-path baz/a --to-path baz/b
-  note: graft of 426bada5c675 created no changes to commit
+  note: graft of 7b3f3d5e5faf created no changes to commit
   $ hg graft -r $A --from-path foo --from-path bar --to-path baz/a --to-path baz/a
-  grafting 426bada5c675 "A"
+  grafting 7b3f3d5e5faf "A"
   abort: overlapping --to-path entries
   [255]
 
@@ -39,7 +40,7 @@ Basic case merging a file change between directory branches "foo" and "bar".
   $ hg go -q $B
   $ hg graft -qr $C --from-path foo --to-path bar
   $ hg show
-  commit:      c6f2b52276f0
+  commit:      0be18c5d71d4
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       bar/file
@@ -68,7 +69,7 @@ Graft a commit adding a new file:
   $ hg st
   $ hg graft -qr $C --from-path foo --to-path bar
   $ hg show
-  commit:      1d8d66326bc5
+  commit:      0aca84000b1b
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       bar/new
@@ -95,7 +96,7 @@ Graft a commit deleting a file:
   $ hg go -q $A
   $ hg graft -qr $B --from-path bar --to-path foo
   $ hg show
-  commit:      e6596dc08a17
+  commit:      178914d56aec
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       foo/file
@@ -123,7 +124,7 @@ Graft a file that was renamed in dest branch:
   $ hg go -q $D
   $ hg graft -qr $C --from-path foo --to-path bar
   $ hg show
-  commit:      4de9783d32fa
+  commit:      2d46e3be0f1d
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       bar/rename
@@ -151,7 +152,7 @@ Graft a commit renaming a file:
   $ hg go -q $B
   $ hg graft -qr $C --from-path foo --to-path bar
   $ hg show
-  commit:      597c3df28a9e
+  commit:      8fd88cb7e971
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       bar/file bar/rename
@@ -182,7 +183,7 @@ Graft a commit with rename in "remote" history:
   $ hg go -q $B
   $ hg graft -qr $D --from-path foo --to-path bar
   $ hg show
-  commit:      54cc7ba455d7
+  commit:      77478a381d2e
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       bar/file
@@ -212,7 +213,7 @@ Graft a commit with rename in "local" history:
   $ hg go -q $D
   $ hg graft -qr $E --from-path bar --to-path foo
   $ hg show
-  commit:      fa496899ba00
+  commit:      010b572fdbef
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       foo/rename
@@ -244,7 +245,7 @@ Graft a commit with renames on both sides:
   $ hg go -q $D
   $ hg graft -qr $F --from-path bar --to-path foo
   $ hg show
-  commit:      424441b2970c
+  commit:      29b5f0ff8943
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       foo/rename
@@ -274,7 +275,7 @@ Grafting individual files also works:
   $ hg go -q $D
   $ hg graft -qr $C --from-path B --to-path A
   $ hg show
-  commit:      4b102adaac64
+  commit:      5df10d1c6698
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       A
@@ -304,7 +305,7 @@ Can graft between completely unrelated directories:
   $ hg go -q $C
   $ hg graft -qr $B --from-path A --to-path C
   $ hg show
-  commit:      b60c71cdc603
+  commit:      8ce3c3862e5e
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       C
@@ -336,7 +337,7 @@ Can do multiple mappings in a single graft:
   $ hg go -q $C
   $ hg graft -qr $D --from-path dir --to-path dir2 --from-path dir --to-path dir3
   $ hg show
-  commit:      2995e39b4791
+  commit:      08889a952294
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       dir2/file dir3/file
@@ -378,7 +379,7 @@ Multiple mappings can all follow renames:
   $ hg go -q $G
   $ hg graft -qr $G --from-path dir --to-path dir2 --from-path dir --to-path dir3
   $ hg show
-  commit:      b741cc1c2a84
+  commit:      dba2790d7120
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       dir2/rename2 dir3/rename3
@@ -418,7 +419,7 @@ Don't get confused by renames too far in the past on src side:
   $ hg go -q $E
   $ hg graft -qr $F --from-path dir --to-path dir2
   $ hg show
-  commit:      f576590c646e
+  commit:      ae4b80a20ade
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       dir2/rename2
@@ -485,19 +486,19 @@ Merge conflict - both sides modified:
   # To continue:                hg graft --continue
   # To abort:                   hg graft --abort
   $ cat bar/file
-  <<<<<<< local: 79ea462108b8 - test: B
+  <<<<<<< local: dfb58fd2ac21 - test: B
   two
   =======
   one
-  >>>>>>> graft: 79ea462108b8 - test: B
+  >>>>>>> graft: dfb58fd2ac21 - test: B
   $ echo "one\ntwo" > bar/file
   $ hg resolve --mark bar/file
   (no more unresolved files)
   continue: hg graft --continue
   $ hg graft --continue
-  grafting 79ea462108b8 "B"
+  grafting dfb58fd2ac21 "B"
   $ hg show
-  commit:      5f43e111547b
+  commit:      2d9de56e5111
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       bar/file
@@ -543,9 +544,9 @@ Merge conflict - delete/modified:
   (no more unresolved files)
   continue: hg graft --continue
   $ hg graft --continue
-  grafting 40b702e0ac96 "B"
+  grafting a088319ec9f4 "B"
   $ hg show
-  commit:      8feddf4a25cd
+  commit:      5ce674a6db6a
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       bar/file

@@ -1,4 +1,5 @@
   $ setconfig diff.git=true
+  $ setconfig drawdag.defaultfiles=false
 
   $ newclientrepo
   $ drawdag <<EOS
