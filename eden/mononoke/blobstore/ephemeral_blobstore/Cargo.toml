@@ -15,7 +15,6 @@ async-stream = "0.3"
 async-trait = "0.1.71"
 blobstore = { version = "0.1.0", path = ".." }
 bonsai_globalrev_mapping = { version = "0.1.0", path = "../../bonsai_globalrev_mapping" }
-changesets = { version = "0.1.0", path = "../../changesets" }
 chrono = { version = "0.4", features = ["clock", "serde", "std"], default-features = false }
 commit_graph = { version = "0.1.0", path = "../../repo_attributes/commit_graph/commit_graph" }
 commit_graph_types = { version = "0.1.0", path = "../../repo_attributes/commit_graph/commit_graph_types" }
@@ -25,7 +24,6 @@ facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust
 filestore = { version = "0.1.0", path = "../../filestore" }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
 futures_lazy_shared = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-itertools = "0.11.0"
 memwrites_commit_graph_storage = { version = "0.1.0", path = "../../repo_attributes/commit_graph/memwrites_commit_graph_storage" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
@@ -34,7 +32,6 @@ repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
 repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity" }
 serde = { version = "1.0.185", features = ["derive", "rc"] }
 smallvec = { version = "1.6.1", features = ["serde", "specialization", "union"] }
-sorted_vector_map = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 sql_construct = { version = "0.1.0", path = "../../common/sql_construct" }
 sql_ext = { version = "0.1.0", path = "../../common/rust/sql_ext" }
