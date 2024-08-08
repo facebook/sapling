@@ -25,16 +25,10 @@ use futures::future::FutureExt;
 use futures::pin_mut;
 use futures::stream;
 use futures::stream::StreamExt;
-use futures_stats::FutureStats;
-use futures_stats::TimedFutureExt;
-use futures_stats::TimedTryFutureExt;
 use mononoke_types::ContentId;
 use mononoke_types::NonRootMPath;
 use mononoke_types::RepoPath;
-use slog::trace;
-use slog::Logger;
 use stats::prelude::*;
-use time_ext::DurationExt;
 
 use super::errors::MononokeHgBlobError;
 use super::filenode_lookup::lookup_filenode_id;
@@ -115,7 +109,6 @@ impl UploadHgTreeEntry {
             path,
         } = self;
 
-        let logger = ctx.logger().clone();
         let computed_node_id = HgBlobNode::new(contents.clone(), p1, p2).nodeid();
         let node_id: HgNodeHash = match upload_node_id {
             UploadHgNodeHash::Generate => computed_node_id,
@@ -146,34 +139,13 @@ impl UploadHgTreeEntry {
         let manifest_id = HgManifestId::new(node_id);
         let blobstore_key = manifest_id.blobstore_key();
 
-        fn log_upload_stats(
-            logger: Logger,
-            path: RepoPath,
-            node_id: HgNodeHash,
-            computed_node_id: HgNodeHash,
-            stats: FutureStats,
-        ) {
-            trace!(logger, "Upload HgManifestEnvelope stats";
-                "phase" => "manifest_envelope_uploaded".to_string(),
-                "path" => format!("{}", path),
-                "node_id" => format!("{}", node_id),
-                "computed_node_id" => format!("{}", computed_node_id),
-                "poll_count" => stats.poll_count,
-                "poll_time_us" => stats.poll_time.as_micros_unchecked(),
-                "completion_time_us" => stats.completion_time.as_micros_unchecked(),
-            );
-        }
-
         // Upload the blob.
         let upload = {
             let path = path.clone();
-            let logger = logger.clone();
             async move {
-                let (stats, ()) = blobstore
+                blobstore
                     .put(&ctx, blobstore_key, envelope_blob.into())
-                    .try_timed()
                     .await?;
-                log_upload_stats(logger, path.clone(), node_id, computed_node_id, stats);
                 Ok((manifest_id, path))
             }
         };
@@ -308,23 +280,6 @@ impl UploadHgFileContents {
                     file_bytes.into_bytes(),
                 );
 
-                let upload_fut = {
-                    let logger = ctx.logger().clone();
-                    async move {
-                        let (stats, result) = upload_fut.timed().await;
-                        if result.is_ok() {
-                            UploadHgFileEntry::log_stats(
-                                logger,
-                                None,
-                                node_id,
-                                "content_uploaded",
-                                stats,
-                            );
-                        }
-                        result
-                    }
-                };
-
                 let cbmeta = ContentBlobMeta {
                     id,
                     size,
@@ -443,7 +398,6 @@ impl UploadHgFileEntry {
         let (cbmeta, content_upload, compute_fut) =
             contents.execute(ctx.clone(), &blobstore, p1, p2);
         let content_id = cbmeta.id;
-        let logger = ctx.logger().clone();
 
         let envelope_upload = async move {
             let (computed_node_id, metadata, content_size) = compute_fut.await?;
@@ -483,13 +437,9 @@ impl UploadHgFileEntry {
 
             let blobstore_key = node_id.blobstore_key();
 
-            let (stats, ()) = blobstore
+            blobstore
                 .put(&ctx, blobstore_key, envelope_blob.into())
-                .try_timed()
                 .await?;
-
-            Self::log_stats(logger, path, node_id, "file_envelope_uploaded", stats);
-
             Ok(node_id)
         };
 
@@ -518,24 +468,5 @@ impl UploadHgFileEntry {
     ) -> Result<(Entry<HgManifestId, HgFileNodeId>, RepoPath), Error> {
         let filenode_id = self.upload(ctx, blobstore.clone(), Some(&path)).await?;
         Ok((Entry::Leaf(filenode_id), RepoPath::FilePath(path)))
-    }
-
-    fn log_stats(
-        logger: Logger,
-        path: Option<&NonRootMPath>,
-        nodeid: HgFileNodeId,
-        phase: &str,
-        stats: FutureStats,
-    ) {
-        let path = path.map_or_else(String::new, |p| p.to_string());
-        let nodeid = format!("{}", nodeid);
-        trace!(logger, "Upload blob stats";
-            "phase" => String::from(phase),
-            "path" => path,
-            "nodeid" => nodeid,
-            "poll_count" => stats.poll_count,
-            "poll_time_us" => stats.poll_time.as_micros_unchecked(),
-            "completion_time_us" => stats.completion_time.as_micros_unchecked(),
-        );
     }
 }
