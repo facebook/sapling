@@ -28,5 +28,5 @@ test_repo_factory = { version = "0.1.0", path = "../../repo_factory/test_repo_fa
 tests_utils = { version = "0.1.0", path = "../utils" }
 
 [dev-dependencies]
-changesets = { version = "0.1.0", path = "../../changesets" }
+commit_graph = { version = "0.1.0", path = "../../repo_attributes/commit_graph/commit_graph" }
 fbinit-tokio = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
