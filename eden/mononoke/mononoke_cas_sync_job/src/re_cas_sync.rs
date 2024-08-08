@@ -7,7 +7,8 @@
 
 use anyhow::Error;
 use bookmarks::BookmarkUpdateLogEntry;
-use changesets_uploader::MononokeCasChangesetsUploader;
+use cas_client::CasClient;
+use changesets_uploader::CasChangesetsUploader;
 use changesets_uploader::PriorLookupPolicy;
 use changesets_uploader::UploadPolicy;
 use changesets_uploader::UploadStats;
@@ -44,7 +45,7 @@ pub async fn try_derive<'a>(
 }
 
 pub async fn try_sync<'a>(
-    re_cas_client: &MononokeCasChangesetsUploader<'a>,
+    re_cas_client: &CasChangesetsUploader<impl CasClient + 'a>,
     repo: &'a Repo,
     ctx: &'a CoreContext,
     bcs_id: ChangesetId,
@@ -113,7 +114,7 @@ pub async fn try_expand_entry<'a>(
 
 /// Sends commits to CAS while syncing a list of bookmark update log entries.
 pub async fn try_sync_single_combined_entry<'a>(
-    re_cas_client: &MononokeCasChangesetsUploader<'a>,
+    re_cas_client: &CasChangesetsUploader<impl CasClient + 'a>,
     repo: &'a Repo,
     ctx: &'a CoreContext,
     combined_entry: &'a CombinedBookmarkUpdateLogEntry,

@@ -12,10 +12,12 @@ mod facebook;
 
 use anyhow::Error;
 use bytes::Bytes;
+use context::CoreContext;
 pub use dummy::DummyCasClient;
 pub use errors::ErrorKind;
 #[cfg(fbcode_build)]
 pub use facebook::casd_client::RemoteExecutionCasdClient;
+use fbinit::FacebookInit;
 use futures::Stream;
 use mononoke_types::MononokeDigest;
 
@@ -41,4 +43,22 @@ pub trait CasClient: Sync + Send {
     ) -> Result<Vec<MononokeDigest>, Error>;
     /// Get the name of the repo this client is for.
     fn repo_name(&self) -> &str;
+}
+
+pub fn build_mononoke_cas_client<'a>(
+    fb: FacebookInit,
+    ctx: &'a CoreContext,
+    repo: &'a str,
+    verbose: bool,
+) -> Result<impl CasClient + 'a, Error> {
+    #[cfg(fbcode_build)]
+    {
+        RemoteExecutionCasdClient::new(fb, ctx, repo, verbose)
+    }
+    #[cfg(not(fbcode_build))]
+    {
+        let _fb = fb; // unused
+        let _verbose = verbose; // unused
+        DummyCasClient::new(ctx, repo)
+    }
 }

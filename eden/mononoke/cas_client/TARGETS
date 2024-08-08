@@ -18,9 +18,9 @@ rust_library(
         "//eden/mononoke/mononoke_types:mononoke_types",
         "//eden/mononoke/blobstore:blobstore",
         "//eden/mononoke/blobstore:fileblob",
+        "//common/rust/shed/fbinit:fbinit",
     ] + ([] if rust_oss.is_oss_build() else [
         "//remote_execution/client_lib/wrappers/rust:re_client_lib",
-        "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/futures_ext:futures_ext",
         "fbsource//third-party/rust:slog",
         "fbsource//third-party/rust:tokio",

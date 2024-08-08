@@ -23,11 +23,6 @@ use mononoke_types::ContentId;
 use mononoke_types::MononokeDigest;
 use stats::prelude::*;
 
-#[cfg(fbcode_build)]
-pub type MononokeCasClient<'a> = ScmCasClient<cas_client::RemoteExecutionCasdClient<'a>>;
-#[cfg(not(fbcode_build))]
-pub type MononokeCasClient<'a> = ScmCasClient<cas_client::DummyCasClient<'a>>;
-
 define_stats! {
     prefix = "mononoke.cas_client";
     uploaded_manifests_count: timeseries(Rate, Sum),

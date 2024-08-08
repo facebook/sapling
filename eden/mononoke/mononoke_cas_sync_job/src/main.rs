@@ -32,7 +32,9 @@ use bookmarks::BookmarkUpdateLogEntry;
 use bookmarks::BookmarkUpdateLogId;
 use bookmarks::Freshness;
 use borrowed::borrowed;
-use changesets_uploader::MononokeCasChangesetsUploader;
+use cas_client::build_mononoke_cas_client;
+use cas_client::CasClient;
+use changesets_uploader::CasChangesetsUploader;
 use clap_old::Arg;
 use clap_old::SubCommand;
 use clientinfo::ClientEntryPoint;
@@ -512,7 +514,7 @@ pub struct CombinedBookmarkUpdateLogEntry {
 
 /// Sends commits to CAS while syncing a set of bookmark update log entries.
 async fn try_sync_single_combined_entry<'a>(
-    re_cas_client: &MononokeCasChangesetsUploader<'a>,
+    re_cas_client: &CasChangesetsUploader<impl CasClient + 'a>,
     repo: &'a Repo,
     ctx: &'a CoreContext,
     combined_entry: &'a CombinedBookmarkUpdateLogEntry,
@@ -660,16 +662,8 @@ async fn run<'a>(
     repo_name: String,
     cancellation_requested: Arc<AtomicBool>,
 ) -> Result<(), Error> {
-    #[cfg(fbcode_build)]
-    let re_cas_client = MononokeCasChangesetsUploader::new(
-        cas_client::RemoteExecutionCasdClient::new(fb, ctx, &repo_name, false)?,
-    );
-
-    #[cfg(not(fbcode_build))]
     let re_cas_client =
-        MononokeCasChangesetsUploader::new(cas_client::DummyCasClient::new(ctx, &repo_name)?);
-    let _ = fb;
-
+        CasChangesetsUploader::new(build_mononoke_cas_client(fb, ctx, &repo_name, false)?);
     let resolved_repo = args::resolve_repo_by_name(matches.config_store(), matches, &repo_name)
         .with_context(|| format!("Invalid repo name provided: {}", &repo_name))?;
 

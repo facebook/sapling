@@ -8,10 +8,7 @@
 use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
-#[cfg(not(fbcode_build))]
-use cas_client::DummyCasClient;
-#[cfg(fbcode_build)]
-use cas_client::RemoteExecutionCasdClient;
+use cas_client::build_mononoke_cas_client;
 use changesets_uploader::CasChangesetsUploader;
 use changesets_uploader::PriorLookupPolicy;
 use changesets_uploader::UploadPolicy;
@@ -56,12 +53,7 @@ pub async fn cas_store_upload(
     repo: &Repo,
     args: CasStoreUploadArgs,
 ) -> Result<()> {
-    #[cfg(not(fbcode_build))]
-    let cas_changesets_uploader =
-        CasChangesetsUploader::new(DummyCasClient::new(ctx, repo.repo_identity.name())?);
-
-    #[cfg(fbcode_build)]
-    let cas_changesets_uploader = CasChangesetsUploader::new(RemoteExecutionCasdClient::new(
+    let cas_changesets_uploader = CasChangesetsUploader::new(build_mononoke_cas_client(
         ctx.fb,
         ctx,
         repo.repo_identity.name(),
