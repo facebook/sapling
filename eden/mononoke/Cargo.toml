@@ -440,6 +440,7 @@ members = [
   "repo_client/unbundle",
   "repo_client/wirepack",
   "repo_factory",
+  "repo_factory/config_only_repo_factory",
   "repo_factory/test_repo_factory",
   "repo_import",
   "repo_metadata_checkpoint",
