@@ -607,9 +607,7 @@ impl<Value: ShardedMapV2Value> ShardedMapV2Node<Value> {
             for (byte, child) in children {
                 let mut accumulated_prefix = accumulated_prefix.clone();
                 accumulated_prefix.push(byte);
-                if Some(byte) < byte_after {
-                    continue;
-                } else {
+                if Some(byte) >= byte_after {
                     let child_after = if Some(byte) == byte_after {
                         child_after
                     } else {
@@ -617,19 +615,27 @@ impl<Value: ShardedMapV2Value> ShardedMapV2Node<Value> {
                     };
                     let child_skip = target_skip.min(child.size());
                     target_skip = target_skip.saturating_sub(child_skip);
-                    if child_skip == child.size() {
-                        continue;
-                    } else {
-                        out.push(OrderedTraversal::Recurse(
-                            child.size(),
-                            (
+                    if child_skip != child.size() {
+                        if let LoadableShardedMapV2Node::Inlined(child) = child {
+                            child.into_prefix_entries_traverse(
                                 accumulated_prefix,
                                 b"".as_slice(),
                                 child_after,
                                 child_skip,
-                                child,
-                            ),
-                        ));
+                                out,
+                            )?;
+                        } else {
+                            out.push(OrderedTraversal::Recurse(
+                                child.size(),
+                                (
+                                    accumulated_prefix,
+                                    b"".as_slice(),
+                                    child_after,
+                                    child_skip,
+                                    child,
+                                ),
+                            ));
+                        }
                     }
                 }
             }
@@ -654,14 +660,14 @@ impl<Value: ShardedMapV2Value> ShardedMapV2Node<Value> {
                 None => None,
             };
 
-            let (first, rest) = target_prefix.split_first().unwrap();
+            let (byte_prefix, child_prefix) = target_prefix.split_first().unwrap();
             let child_after = match target_after.and_then(|after| after.split_first()) {
-                Some((after_first, _)) if first < after_first => return Ok(()),
-                Some((after_first, after_rest)) if first == after_first => Some(after_rest),
+                Some((byte_after, _)) if byte_prefix < byte_after => return Ok(()),
+                Some((byte_after, child_after)) if byte_prefix == byte_after => Some(child_after),
                 None | Some(_) => None,
             };
 
-            let child = match children.remove(first) {
+            let child = match children.remove(byte_prefix) {
                 Some(child) => child,
                 // Exit early if we can't find the child corresponding to the first byte of
                 // the remainder of target prefix, as that's the only child whose keys can
@@ -670,12 +676,28 @@ impl<Value: ShardedMapV2Value> ShardedMapV2Node<Value> {
             };
 
             accumulated_prefix.extend(current_prefix);
-            accumulated_prefix.push(*first);
+            accumulated_prefix.push(*byte_prefix);
 
-            out.push(OrderedTraversal::Recurse(
-                child.size(),
-                (accumulated_prefix, rest, child_after, target_skip, child),
-            ))
+            if let LoadableShardedMapV2Node::Inlined(child) = child {
+                child.into_prefix_entries_traverse(
+                    accumulated_prefix,
+                    child_prefix,
+                    child_after,
+                    target_skip,
+                    out,
+                )?;
+            } else {
+                out.push(OrderedTraversal::Recurse(
+                    child.size(),
+                    (
+                        accumulated_prefix,
+                        child_prefix,
+                        child_after,
+                        target_skip,
+                        child,
+                    ),
+                ))
+            }
         }
         Ok(())
     }
