@@ -297,6 +297,71 @@ impl SourceControlServiceImpl {
         Ok(parents)
     }
 
+    async fn convert_create_commit_file_content(
+        repo: &RepoContext,
+        content: thrift::RepoCreateCommitParamsFileContent,
+    ) -> Result<CreateChangeFileContents, errors::ServiceError> {
+        let contents = match content {
+            thrift::RepoCreateCommitParamsFileContent::id(id) => {
+                let file_id = FileId::from_request(&id)?;
+                let file = repo
+                    .file(file_id)
+                    .await?
+                    .ok_or_else(|| errors::file_not_found(file_id.to_string()))?;
+                CreateChangeFileContents::Existing {
+                    file_id: file.id().await?,
+                    maybe_size: None,
+                }
+            }
+            thrift::RepoCreateCommitParamsFileContent::content_sha1(sha) => {
+                let sha = Sha1::from_request(&sha)?;
+                let file = repo
+                    .file_by_content_sha1(sha)
+                    .await?
+                    .ok_or_else(|| errors::file_not_found(sha.to_string()))?;
+                CreateChangeFileContents::Existing {
+                    file_id: file.id().await?,
+                    maybe_size: None,
+                }
+            }
+            thrift::RepoCreateCommitParamsFileContent::content_sha256(sha) => {
+                let sha = Sha256::from_request(&sha)?;
+                let file = repo
+                    .file_by_content_sha256(sha)
+                    .await?
+                    .ok_or_else(|| errors::file_not_found(sha.to_string()))?;
+                CreateChangeFileContents::Existing {
+                    file_id: file.id().await?,
+                    maybe_size: None,
+                }
+            }
+            thrift::RepoCreateCommitParamsFileContent::content_gitsha1(sha) => {
+                let sha = GitSha1::from_request(&sha)?;
+                let file = repo
+                    .file_by_content_gitsha1(sha)
+                    .await?
+                    .ok_or_else(|| errors::file_not_found(sha.to_string()))?;
+                CreateChangeFileContents::Existing {
+                    file_id: file.id().await?,
+                    maybe_size: None,
+                }
+            }
+            thrift::RepoCreateCommitParamsFileContent::data(data) => {
+                CreateChangeFileContents::New {
+                    bytes: Bytes::from(data),
+                }
+            }
+            thrift::RepoCreateCommitParamsFileContent::UnknownField(t) => {
+                return Err(errors::invalid_request(format!(
+                    "file content type not supported: {}",
+                    t
+                ))
+                .into());
+            }
+        };
+        Ok(contents)
+    }
+
     async fn convert_create_commit_change(
         repo: &RepoContext,
         change: thrift::RepoCreateCommitParamsChange,
@@ -309,64 +374,7 @@ impl SourceControlServiceImpl {
                     .as_ref()
                     .map(CreateCopyInfo::from_request)
                     .transpose()?;
-                let contents = match c.content {
-                    thrift::RepoCreateCommitParamsFileContent::id(id) => {
-                        let file_id = FileId::from_request(&id)?;
-                        let file = repo
-                            .file(file_id)
-                            .await?
-                            .ok_or_else(|| errors::file_not_found(file_id.to_string()))?;
-                        CreateChangeFileContents::Existing {
-                            file_id: file.id().await?,
-                            maybe_size: None,
-                        }
-                    }
-                    thrift::RepoCreateCommitParamsFileContent::content_sha1(sha) => {
-                        let sha = Sha1::from_request(&sha)?;
-                        let file = repo
-                            .file_by_content_sha1(sha)
-                            .await?
-                            .ok_or_else(|| errors::file_not_found(sha.to_string()))?;
-                        CreateChangeFileContents::Existing {
-                            file_id: file.id().await?,
-                            maybe_size: None,
-                        }
-                    }
-                    thrift::RepoCreateCommitParamsFileContent::content_sha256(sha) => {
-                        let sha = Sha256::from_request(&sha)?;
-                        let file = repo
-                            .file_by_content_sha256(sha)
-                            .await?
-                            .ok_or_else(|| errors::file_not_found(sha.to_string()))?;
-                        CreateChangeFileContents::Existing {
-                            file_id: file.id().await?,
-                            maybe_size: None,
-                        }
-                    }
-                    thrift::RepoCreateCommitParamsFileContent::content_gitsha1(sha) => {
-                        let sha = GitSha1::from_request(&sha)?;
-                        let file = repo
-                            .file_by_content_gitsha1(sha)
-                            .await?
-                            .ok_or_else(|| errors::file_not_found(sha.to_string()))?;
-                        CreateChangeFileContents::Existing {
-                            file_id: file.id().await?,
-                            maybe_size: None,
-                        }
-                    }
-                    thrift::RepoCreateCommitParamsFileContent::data(data) => {
-                        CreateChangeFileContents::New {
-                            bytes: Bytes::from(data),
-                        }
-                    }
-                    thrift::RepoCreateCommitParamsFileContent::UnknownField(t) => {
-                        return Err(errors::invalid_request(format!(
-                            "file content type not supported: {}",
-                            t
-                        ))
-                        .into());
-                    }
-                };
+                let contents = Self::convert_create_commit_file_content(repo, c.content).await?;
                 CreateChange::Tracked(
                     CreateChangeFile {
                         contents,
