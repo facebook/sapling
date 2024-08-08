@@ -252,6 +252,36 @@ impl CommitGraph {
             .collect())
     }
 
+    /// Returns the linear depth of a single changeset. Linear depth is calculated as the
+    /// number of ancestors of the commit if the commit graph consisted only of the first
+    /// parents (i.e. if merges were ignored).
+    pub async fn changeset_linear_depth(
+        &self,
+        ctx: &CoreContext,
+        cs_id: ChangesetId,
+    ) -> Result<u64> {
+        let edges = self.storage.fetch_edges(ctx, cs_id).await?;
+        Ok(edges.node.p1_linear_depth)
+    }
+
+    /// Returns the linear depth of many changesets. Linear depth is calculated as the
+    /// number of ancestors of the commit if the commit graph consisted only of the first
+    /// parents (i.e. if merges were ignored).
+    pub async fn many_changeset_linear_depths(
+        &self,
+        ctx: &CoreContext,
+        cs_ids: &[ChangesetId],
+    ) -> Result<HashMap<ChangesetId, u64>> {
+        let fetched_edges = self
+            .storage
+            .fetch_many_edges(ctx, cs_ids, Prefetch::None)
+            .await?;
+        Ok(fetched_edges
+            .into_iter()
+            .map(|(cs_id, fetched_edges)| (cs_id, fetched_edges.node.p1_linear_depth))
+            .collect())
+    }
+
     /// Return only the changesets that are found in the commit graph.
     pub async fn known_changesets(
         &self,

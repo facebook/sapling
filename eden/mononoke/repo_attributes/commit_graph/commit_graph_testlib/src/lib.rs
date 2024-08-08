@@ -152,6 +152,29 @@ pub async fn test_storage_store_and_fetch(
         }
     );
     assert_eq!(
+        graph.changeset_linear_depth(&ctx, name_cs_id("G")).await?,
+        4
+    );
+    assert_eq!(
+        graph
+            .many_changeset_linear_depths(
+                &ctx,
+                &[
+                    name_cs_id("A"),
+                    name_cs_id("C"),
+                    name_cs_id("F"),
+                    name_cs_id("G")
+                ]
+            )
+            .await?,
+        hashmap! {
+            name_cs_id("A") => 0,
+            name_cs_id("C") => 2,
+            name_cs_id("F") => 2,
+            name_cs_id("G") => 4,
+        }
+    );
+    assert_eq!(
         graph
             .changeset_parents(&ctx, name_cs_id("A"))
             .await?
