@@ -6,6 +6,7 @@
 
   $ . "${TEST_FIXTURES}/library.sh"
   $ setup_common_config
+  $ export CAS_STORE_PATH="$TESTTMP"
 
   $ start_and_wait_for_mononoke_server
   $ hgmn_init repo
@@ -37,7 +38,7 @@ Check that new entry was added to the sync database. 4 pushes
   4
 
 Sync all bookmarks moves
-  $ with_stripped_logs mononoke_cas_sync repo 0 | grep -v "use case"
+  $ with_stripped_logs mononoke_cas_sync repo 0
   Initiating mononoke RE CAS sync command execution for repo repo, repo: repo
   using repo "repo" repoid RepositoryId(0), repo: repo
   syncing log entries [1, 2, 3, 4] ..., repo: repo
@@ -46,3 +47,12 @@ Sync all bookmarks moves
   queue size after processing: 0, repo: repo
   successful sync of entries [1, 2, 3, 4], repo: repo
   Finished mononoke RE CAS sync command execution for repo repo, repo: repo
+
+Validate that the whole working copy for the top commit D is already present in CAS, nothing should be uploaded if incremental sync is correct.
+All trees and blobs should be present!
+  $ with_stripped_logs mononoke_newadmin cas-store --repo-name repo upload --full --hg-id $D
+  Upload completed. Upload stats: uploaded digests: 0, already present digests: 6, uploaded bytes: 0 B, the largest uploaded blob: 0 B
+
+Validate the same for a middle commit B
+  $ with_stripped_logs mononoke_newadmin cas-store --repo-name repo upload --full --hg-id $B
+  Upload completed. Upload stats: uploaded digests: 0, already present digests: 4, uploaded bytes: 0 B, the largest uploaded blob: 0 B
