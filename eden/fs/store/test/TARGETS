@@ -9,7 +9,7 @@ cpp_library(
     headers = ["LocalStoreTest.h"],
     exported_deps = [
         "//eden/common/testharness:temp_file",
-        "//eden/common/utils:utils",
+        "//eden/common/utils:fault_injector",
         "//eden/fs/model:model",
         "//eden/fs/store:store",
         "//folly/io:iobuf",
@@ -30,8 +30,8 @@ cpp_unittest(
     supports_static_listing = False,
     deps = [
         "//eden/common/telemetry:structured_logger",
+        "//eden/common/utils:fault_injector",
         "//eden/common/utils:path",
-        "//eden/common/utils:utils",
         "//eden/fs/config:config",
         "//eden/fs/model:testutil",
         "//eden/fs/store:filtered_backing_store",
@@ -71,10 +71,10 @@ cpp_unittest(
     deps = [
         "//eden/common/telemetry:structured_logger",
         "//eden/common/testharness:temp_file",
+        "//eden/common/utils:fault_injector",
         "//eden/common/utils:immediate_future",
         "//eden/common/utils:path",
         "//eden/common/utils:process_info_cache",
-        "//eden/common/utils:utils",
         "//eden/fs/config:config",
         "//eden/fs/journal:journal",
         "//eden/fs/model:model",
@@ -115,8 +115,9 @@ cpp_binary(
     deps = [
         "//eden/common/telemetry:structured_logger",
         "//eden/common/testharness:temp_file",
-        "//eden/common/utils:utils",
+        "//eden/common/utils:fault_injector",
         "//eden/common/utils/benchharness:benchharness",
+        "//eden/fs/config:config",
         "//eden/fs/model:model",
         "//eden/fs/store:rocksdb",
         "//eden/fs/telemetry:stats",

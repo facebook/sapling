@@ -27,6 +27,7 @@ cpp_unittest(
     deps = [
         "//eden/common/telemetry:structured_logger",
         "//eden/common/telemetry:telemetry",
+        "//eden/common/utils:fault_injector",
         "//eden/common/utils:path",
         "//eden/common/utils:utils",
         "//eden/fs/config:config",

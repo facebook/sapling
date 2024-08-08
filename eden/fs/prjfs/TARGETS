@@ -24,6 +24,7 @@ cpp_library(
     deps = [
         "fbsource//third-party/fmt:fmt",
         "//eden/common/telemetry:structured_logger",
+        "//eden/common/utils:fault_injector",
         "//eden/common/utils:stringconv",
         "//eden/common/utils:win_error",
         "//eden/fs/config:config",

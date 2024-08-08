@@ -152,6 +152,7 @@ cpp_library(
         "fbsource//third-party/fmt:fmt",
         ":file_content_store",
         "//eden/common/utils:enum",
+        "//eden/common/utils:fault_injector",
         "//eden/common/utils:match",
         "//eden/common/utils:process",
         "//eden/common/utils:synchronized",

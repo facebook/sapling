@@ -28,6 +28,7 @@ cpp_library(
     deps = [
         "fbsource//third-party/fmt:fmt",
         "//eden/common/utils:throw",
+        "//eden/common/utils:utils",
         "//eden/fs/utils:event_base_state",
         "//folly:file_util",
         "//folly:likely",
@@ -39,9 +40,9 @@ cpp_library(
     ],
     exported_deps = [
         ":serialization-cpp2-types",
+        "//eden/common/utils:fault_injector",
         "//eden/common/utils:io",
         "//eden/common/utils:path",
-        "//eden/common/utils:utils",
         "//eden/fs/config:config",
         "//eden/fs/utils:fs_channel_types",
         "//folly:file",
