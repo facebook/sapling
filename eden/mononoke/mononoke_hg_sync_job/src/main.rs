@@ -40,7 +40,6 @@ use bookmarks::BookmarkUpdateLogEntry;
 use bookmarks::BookmarkUpdateLogId;
 use bookmarks::Freshness;
 use borrowed::borrowed;
-use changesets::Changesets;
 use clap_old::Arg;
 use clap_old::ArgGroup;
 use clap_old::SubCommand;
@@ -51,6 +50,7 @@ use cmdlib::args;
 use cmdlib::args::MononokeMatches;
 use cmdlib::helpers::block_execute;
 use commit_graph::CommitGraph;
+use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use darkstorm_verifier::DarkstormVerifier;
 use dbbookmarks::SqlBookmarksBuilder;
@@ -165,9 +165,6 @@ pub struct HgSyncProcess {
 #[facet::container]
 #[derive(Clone)]
 pub struct Repo {
-    #[facet]
-    pub changesets: dyn Changesets,
-
     #[facet]
     pub commit_graph: CommitGraph,
 
@@ -1035,12 +1032,9 @@ impl FilterExistingChangesets for DarkstormBackupChangesetsFilter {
         let bcs_ids: Vec<_> = cs_ids.iter().map(|(cs_id, _hg_cs_id)| *cs_id).collect();
         let existing_bcs_ids: Vec<_> = self
             .repo
-            .changesets
-            .get_many(ctx, bcs_ids)
-            .await?
-            .into_iter()
-            .map(|entry| entry.cs_id)
-            .collect();
+            .commit_graph()
+            .known_changesets(ctx, bcs_ids)
+            .await?;
         let existing_hg_cs_id: BTreeSet<_> = self
             .repo
             .bonsai_hg_mapping

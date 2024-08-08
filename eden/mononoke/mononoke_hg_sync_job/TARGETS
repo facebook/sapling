@@ -59,7 +59,6 @@ rust_binary(
         "//eden/mononoke/bonsai_hg_mapping:bonsai_hg_mapping",
         "//eden/mononoke/bookmarks:bookmarks",
         "//eden/mononoke/bookmarks:dbbookmarks",
-        "//eden/mononoke/changesets:changesets",
         "//eden/mononoke/cmdlib:cmdlib",
         "//eden/mononoke/cmdlib/sharding:executor_lib",
         "//eden/mononoke/cmdlib/sharding_ext:sharding_ext",
