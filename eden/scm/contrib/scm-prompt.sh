@@ -239,14 +239,17 @@ _scm_prompt() {
   dir="$PWD"
   while : ; do
     [[ -n "$HOME_IS_NOT_A_REPO" ]] && [[ "$dir" = "/home" ]] && break
-    if [[ -r "$dir/.git" ]]; then
-      br="$(_git_prompt "$dir/.git")"
-      break
-    elif [[ -d "$dir/.hg" ]]; then
+    if [[ -d "$dir/.hg" ]]; then
       br="$(_hg_prompt "$dir/.hg")"
       break
     elif [[ -d "$dir/.sl" ]]; then
       br="$(_hg_prompt "$dir/.sl")"
+      break
+    elif [[ -d "$dir/.git/sl" ]]; then
+      br="$(_hg_prompt "$dir/.git/sl")"
+      break
+    elif [[ -r "$dir/.git" ]]; then
+      br="$(_git_prompt "$dir/.git")"
       break
     fi
     [[ "$dir" = "/" ]] && break
