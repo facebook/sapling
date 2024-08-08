@@ -60,6 +60,7 @@ use sql_ext::SqlConnections;
 
 use crate::changesets::EphemeralChangesets;
 use crate::commit_graph::EphemeralCommitGraphStorage;
+use crate::commit_graph::EphemeralOnlyChangesetStorage;
 use crate::commit_graph_writer::EphemeralCommitGraphWriter;
 use crate::error::EphemeralBlobstoreError;
 use crate::handle::EphemeralHandle;
@@ -431,6 +432,19 @@ impl Bubble {
                 storage,
             ))
         })
+    }
+
+    pub fn ephemeral_only_changesets_storage(
+        &self,
+        repo_id: RepositoryId,
+        repo_blobstore: RepoBlobstore,
+    ) -> EphemeralOnlyChangesetStorage {
+        EphemeralOnlyChangesetStorage::new(
+            repo_id,
+            self.bubble_id(),
+            repo_blobstore,
+            self.connections.clone(),
+        )
     }
 
     pub fn changesets(

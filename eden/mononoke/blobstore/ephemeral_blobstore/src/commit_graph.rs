@@ -78,7 +78,7 @@ mononoke_queries! {
 #[derive(Clone)]
 pub struct EphemeralCommitGraphStorage {
     /// Storage containing only the ephemeral bubble changesets.
-    ephemeral_only_storage: Arc<EphemeralOnlyStorage>,
+    ephemeral_only_storage: Arc<EphemeralOnlyChangesetStorage>,
     /// A storage that wraps the persistent commit graph storage and writes
     /// new changesets to memory.
     mem_writes_storage: Arc<MemWritesCommitGraphStorage>,
@@ -89,7 +89,7 @@ pub struct EphemeralCommitGraphStorage {
 
 /// A storage that allows fetching snapshot changesets.
 #[derive(Clone)]
-pub struct EphemeralOnlyStorage {
+pub struct EphemeralOnlyChangesetStorage {
     repo_id: RepositoryId,
     bubble_id: BubbleId,
     repo_blobstore: RepoBlobstore,
@@ -106,7 +106,7 @@ impl EphemeralCommitGraphStorage {
     ) -> Self {
         let mem_writes_storage = Arc::new(MemWritesCommitGraphStorage::new(persistent_storage));
         Self {
-            ephemeral_only_storage: Arc::new(EphemeralOnlyStorage::new(
+            ephemeral_only_storage: Arc::new(EphemeralOnlyChangesetStorage::new(
                 repo_id,
                 bubble_id,
                 repo_blobstore,
@@ -120,8 +120,8 @@ impl EphemeralCommitGraphStorage {
     }
 }
 
-impl EphemeralOnlyStorage {
-    fn new(
+impl EphemeralOnlyChangesetStorage {
+    pub(crate) fn new(
         repo_id: RepositoryId,
         bubble_id: BubbleId,
         repo_blobstore: RepoBlobstore,
@@ -154,7 +154,7 @@ impl EphemeralOnlyStorage {
         Ok(result.last_insert_id().is_some())
     }
 
-    async fn known_changesets(
+    pub async fn known_changesets(
         &self,
         _ctx: &CoreContext,
         cs_ids: Vec<ChangesetId>,
@@ -218,7 +218,7 @@ impl EphemeralOnlyStorage {
 }
 
 #[async_trait]
-impl ParentsFetcher for EphemeralOnlyStorage {
+impl ParentsFetcher for EphemeralOnlyChangesetStorage {
     async fn fetch_parents(
         &self,
         ctx: &CoreContext,
