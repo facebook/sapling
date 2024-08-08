@@ -189,7 +189,7 @@ std::shared_ptr<Notifier> getPlatformNotifier(
      */
     try {
       auto notifier = std::make_shared<WindowsNotifier>(
-          config, std::move(logger), version, std::chrono::steady_clock::now());
+          config, logger, version, std::chrono::steady_clock::now());
       notifier->initialize();
       return notifier;
     } catch (const std::exception& ex) {
