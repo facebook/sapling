@@ -30,9 +30,6 @@ const TAGS_PREFIX: &str = "tags/";
 const REF_PREFIX: &str = "refs/";
 const PACKFILE_SUFFIX: &str = ".pack";
 
-// The threshold in bytes below which we consider a future cheap enough to have a weight of 1
-const THRESHOLD_BYTES: usize = 6000;
-
 pub trait Repo = RepoIdentityRef
     + RepoBlobstoreArc
     + RepoDerivedDataArc

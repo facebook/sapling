@@ -29,7 +29,6 @@ gix-features = { version = "0.32", features = ["parallel", "rustsha1"] }
 gix-hash = "0.11"
 gix-object = "0.33"
 gix-pack = "0.40"
-justknobs = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 manifest = { version = "0.1.0", path = "../../manifest" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }

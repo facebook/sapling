@@ -19,13 +19,10 @@ use bookmarks::BookmarkKey;
 use bookmarks::BookmarkPagination;
 use bookmarks::BookmarkPrefix;
 use buffered_weighted::MemoryBound;
-use buffered_weighted::StreamExt as _;
 use bytes::Bytes;
 use cloned::cloned;
 use commit_graph_types::frontier::AncestorsWithinDistance;
 use context::CoreContext;
-use futures::future;
-use futures::future::Either;
 use futures::stream;
 use futures::stream::BoxStream;
 use futures::stream::FuturesOrdered;
@@ -83,7 +80,6 @@ use crate::Repo;
 use crate::HEAD_REF;
 use crate::REF_PREFIX;
 use crate::TAGS_PREFIX;
-use crate::THRESHOLD_BYTES;
 
 /// Set of parameters that are needed by the generators used for constructing
 /// response for fetch request
@@ -463,17 +459,6 @@ fn entry_weight(
         delta.instructions_compressed_size()
     });
     weight as usize
-}
-
-fn scaled_entry_weight(
-    entry: &(dyn GitDeltaManifestEntryOps + Send),
-    delta_inclusion: DeltaInclusion,
-    filter: Arc<Option<FetchFilter>>,
-) -> usize {
-    std::cmp::max(
-        entry_weight(entry, delta_inclusion, filter) / THRESHOLD_BYTES,
-        1,
-    )
 }
 
 fn to_commit_stream(commits: Vec<ChangesetId>) -> BoxStream<'static, Result<ChangesetId>> {
@@ -1168,103 +1153,6 @@ fn packfile_stream_from_changesets<'a>(
     .boxed()
 }
 
-async fn packfile_stream_from_objects<'a>(
-    fetch_container: FetchContainer,
-    base_set: Arc<FxHashSet<ObjectId>>,
-    object_stream: BoxStream<
-        'a,
-        Result<(ChangesetId, MPath, Box<dyn GitDeltaManifestEntryOps + Send>)>,
-    >,
-) -> BoxStream<'a, Result<PackfileItem>> {
-    let FetchContainer {
-        ctx,
-        blobstore,
-        delta_inclusion,
-        filter,
-        concurrency,
-        packfile_item_inclusion,
-        ..
-    } = fetch_container;
-    let delta_filter = filter.clone();
-    object_stream
-        .try_filter_map(move |(cs_id, path, entry)| {
-            let base_set = base_set.clone();
-            let filter = filter.clone();
-            async move {
-                let object_id = entry.full_object_oid();
-                let (kind, size) = (entry.full_object_kind(), entry.full_object_size());
-                if base_set.contains(&object_id) {
-                    // This object is already present at the client, so do not include it in the packfile
-                    Ok(None)
-                } else if !filter_object(filter, &path, kind, size) {
-                    // This object does not pass the filter specified by the client, so do not include it in the packfile
-                    Ok(None)
-                } else {
-                    Ok(Some((cs_id, path, entry)))
-                }
-            }
-        })
-        // We use map + buffered instead of map_ok + try_buffered since weighted buffering for futures
-        // currently exists only for Stream and not for TryStream
-        .map(move |result| {
-            match result {
-                Err(err) => (0, Either::Left(future::err(err))),
-                std::result::Result::Ok((changeset_id, path, entry)) => {
-                    cloned!(ctx, blobstore, delta_filter as filter);
-                    let weight = scaled_entry_weight(entry.as_ref(), delta_inclusion, filter.clone());
-                    let fetch_future = async move {
-                        let delta = delta_base(entry.as_ref(), delta_inclusion, filter);
-                        match delta {
-                            Some(delta) => {
-                                let instruction_bytes = delta
-                                    .instruction_bytes(&ctx, &blobstore.boxed(), changeset_id, path)
-                                    .await?;
-
-                                let packfile_item = PackfileItem::new_delta(
-                                    entry.full_object_oid(),
-                                    delta.base_object_oid(),
-                                    delta.instructions_uncompressed_size(),
-                                    instruction_bytes,
-                                );
-                                Ok(packfile_item)
-                            }
-                            None => {
-                                // Use the full object instead
-                                if let Some(inlined_bytes) =
-                                    entry.full_object_inlined_bytes()
-                                {
-                                    Ok(PackfileItem::new_encoded_base(
-                                        GitPackfileBaseItem::from_encoded_bytes(inlined_bytes)
-                                            .with_context(|| {
-                                                format!(
-                                                    "Error in creating GitPackfileBaseItem from encoded bytes for {:?}",
-                                                    entry.full_object_oid(),
-                                                )
-                                            })?
-                                            .try_into()?,
-                                    ))
-                                } else {
-                                    base_packfile_item(
-                                        ctx.clone(),
-                                        blobstore.clone(),
-                                        ObjectIdentifierType::AllObjects(GitIdentifier::Rich(
-                                            entry.full_object_rich_git_sha1()?,
-                                        )),
-                                        packfile_item_inclusion,
-                                    )
-                                    .await
-                                }
-                            }
-                        }
-                    };
-                    (weight, Either::Right(fetch_future))
-                }
-            }
-        })
-        .buffered_weighted_bounded(concurrency.trees_and_blobs, concurrency.memory_bound)
-        .boxed()
-}
-
 /// Create a stream of packfile items containing blob and tree objects that need to be included in the packfile/bundle.
 /// In case the packfile item can be represented as a delta, then use the detla variant instead of the raw object
 async fn tree_and_blob_packfile_stream<'a>(
@@ -1278,7 +1166,6 @@ async fn tree_and_blob_packfile_stream<'a>(
     let FetchContainer {
         ctx,
         blobstore,
-        derived_data,
         concurrency,
         packfile_item_inclusion,
         ..
@@ -1307,41 +1194,7 @@ async fn tree_and_blob_packfile_stream<'a>(
         .boxed();
 
     let packfile_item_stream =
-        if justknobs::eval("scm/mononoke:use_optimized_git_packfile_stream", None, None)? {
-            packfile_stream_from_changesets(fetch_container, base_set, target_commits)
-        } else {
-            let packfile_item_stream = stream::iter(target_commits)
-                .map(Ok)
-                .map_ok({
-                    cloned!(ctx, blobstore, derived_data);
-                    move |changeset_id| {
-                        cloned!(ctx, blobstore, derived_data);
-                        async move {
-                            Ok(stream::iter(
-                                changeset_delta_manifest_entries(
-                                    ctx,
-                                    blobstore,
-                                    derived_data,
-                                    fetch_container.git_delta_manifest_version,
-                                    changeset_id,
-                                )
-                                .await?,
-                            )
-                            .map(Ok))
-                        }
-                    }
-                })
-                .try_buffered(concurrency.trees_and_blobs * 2)
-                .try_flatten()
-                .boxed();
-            packfile_stream_from_objects(
-                fetch_container.clone(),
-                base_set.clone(),
-                packfile_item_stream,
-            )
-            .await
-            .boxed()
-        };
+        packfile_stream_from_changesets(fetch_container, base_set, target_commits);
 
     let requested_trees_and_blobs = stream::iter(tree_and_blob_shas.into_iter().map(Ok))
         .map_ok(move |oid| {
