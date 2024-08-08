@@ -26,6 +26,7 @@ use repo_derived_data::RepoDerivedDataArc;
 use repo_derived_data::RepoDerivedDataRef;
 use smallvec::SmallVec;
 
+use crate::repo::create_changeset::CreateChangeFileContents;
 use crate::ChangesetContext;
 use crate::ChangesetId;
 use crate::CoreContext;
@@ -117,10 +118,12 @@ async fn create_commit(
     changes.insert(
         MPath::try_from("TEST_CREATE")?,
         CreateChange::Tracked(
-            CreateChangeFile::Existing {
-                file_id,
+            CreateChangeFile {
+                contents: CreateChangeFileContents::Existing {
+                    file_id,
+                    maybe_size: None,
+                },
                 file_type: FileType::Regular,
-                maybe_size: None,
             },
             None,
         ),

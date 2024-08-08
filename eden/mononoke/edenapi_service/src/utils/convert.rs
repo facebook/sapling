@@ -38,6 +38,7 @@ use mercurial_types::HgManifestId;
 use mercurial_types::HgNodeHash;
 use mononoke_api::CreateChange;
 use mononoke_api::CreateChangeFile;
+use mononoke_api::CreateChangeFileContents;
 use mononoke_types::path::MPath;
 use mononoke_types::DateTime;
 use mononoke_types::NonRootMPath;
@@ -110,10 +111,12 @@ pub fn to_create_change(fc: BonsaiFileChange, bubble_id: Option<BubbleId>) -> Re
             } = upload_token.data
             {
                 Ok(CreateChange::Tracked(
-                    CreateChangeFile::Existing {
-                        file_id: content_id.into(),
+                    CreateChangeFile {
+                        contents: CreateChangeFileContents::Existing {
+                            file_id: content_id.into(),
+                            maybe_size: extract_size(metadata),
+                        },
                         file_type: file_type.into(),
-                        maybe_size: extract_size(metadata),
                     },
                     // TODO(yancouto): Add copy info on tracked changes
                     None,
@@ -134,10 +137,12 @@ pub fn to_create_change(fc: BonsaiFileChange, bubble_id: Option<BubbleId>) -> Re
                 metadata,
             } = upload_token.data
             {
-                Ok(CreateChange::Untracked(CreateChangeFile::Existing {
-                    file_id: content_id.into(),
+                Ok(CreateChange::Untracked(CreateChangeFile {
+                    contents: CreateChangeFileContents::Existing {
+                        file_id: content_id.into(),
+                        maybe_size: extract_size(metadata),
+                    },
                     file_type: file_type.into(),
-                    maybe_size: extract_size(metadata),
                 }))
             } else {
                 bail!("Invalid upload token format, missing content id")

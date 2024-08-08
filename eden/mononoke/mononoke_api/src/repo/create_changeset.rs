@@ -176,16 +176,20 @@ pub enum CreateChange {
 }
 
 #[derive(Clone)]
-pub enum CreateChangeFile {
+pub struct CreateChangeFile {
+    pub contents: CreateChangeFileContents,
+    pub file_type: FileType,
+}
+
+#[derive(Clone)]
+pub enum CreateChangeFileContents {
     // Upload content from bytes
     New {
         bytes: Bytes,
-        file_type: FileType,
     },
     // Use already uploaded content
     Existing {
         file_id: FileId,
-        file_type: FileType,
         // If not present, will be fetched from the blobstore
         maybe_size: Option<u64>,
     },
@@ -195,8 +199,10 @@ pub enum CreateChangeFile {
 impl CreateChangeFile {
     // constructor that makes tests more ergonomic
     pub fn new_regular(contents: &'static str) -> Self {
-        CreateChangeFile::New {
-            bytes: Bytes::from(contents),
+        CreateChangeFile {
+            contents: CreateChangeFileContents::New {
+                bytes: Bytes::from(contents),
+            },
             file_type: FileType::Regular,
         }
     }
@@ -240,8 +246,8 @@ impl CreateChange {
             CreateChange::Untracked(file) => file,
             CreateChange::UntrackedDeletion | CreateChange::Deletion => return Ok(()),
         };
-        match file {
-            CreateChangeFile::New { bytes, file_type } => {
+        match &mut file.contents {
+            CreateChangeFileContents::New { bytes } => {
                 let meta = filestore::store(
                     &repo_blobstore,
                     filestore_config,
@@ -250,14 +256,12 @@ impl CreateChange {
                     stream::once(async move { Ok(bytes.clone()) }),
                 )
                 .await?;
-                let file_type = *file_type;
-                *file = CreateChangeFile::Existing {
+                file.contents = CreateChangeFileContents::Existing {
                     file_id: meta.content_id,
-                    file_type,
                     maybe_size: Some(meta.total_size),
                 };
             }
-            CreateChangeFile::Existing {
+            CreateChangeFileContents::Existing {
                 file_id,
                 maybe_size,
                 ..
@@ -286,10 +290,13 @@ impl CreateChange {
     pub fn into_file_change(self, parent_ids: &[ChangesetId]) -> Result<FileChange, MononokeError> {
         match self {
             CreateChange::Tracked(
-                CreateChangeFile::Existing {
-                    file_id,
+                CreateChangeFile {
+                    contents:
+                        CreateChangeFileContents::Existing {
+                            file_id,
+                            maybe_size: Some(size),
+                        },
                     file_type,
-                    maybe_size: Some(size),
                 },
                 copy_info,
             ) => Ok(FileChange::tracked(
@@ -301,10 +308,13 @@ impl CreateChange {
                     .transpose()?,
                 GitLfs::FullContent,
             )),
-            CreateChange::Untracked(CreateChangeFile::Existing {
-                file_id,
+            CreateChange::Untracked(CreateChangeFile {
+                contents:
+                    CreateChangeFileContents::Existing {
+                        file_id,
+                        maybe_size: Some(size),
+                    },
                 file_type,
-                maybe_size: Some(size),
             }) => Ok(FileChange::untracked(file_id, file_type, size)),
             CreateChange::UntrackedDeletion => Ok(FileChange::UntrackedDeletion),
             CreateChange::Deletion => Ok(FileChange::Deletion),

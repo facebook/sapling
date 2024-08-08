@@ -26,6 +26,7 @@ use mononoke_api::ChangesetSpecifier;
 use mononoke_api::ChangesetSpecifierPrefixResolution;
 use mononoke_api::CreateChange;
 use mononoke_api::CreateChangeFile;
+use mononoke_api::CreateChangeFileContents;
 use mononoke_api::CreateCopyInfo;
 use mononoke_api::CreateInfo;
 use mononoke_api::FileId;
@@ -316,10 +317,12 @@ impl SourceControlServiceImpl {
                             .await?
                             .ok_or_else(|| errors::file_not_found(file_id.to_string()))?;
                         CreateChange::Tracked(
-                            CreateChangeFile::Existing {
-                                file_id: file.id().await?,
+                            CreateChangeFile {
+                                contents: CreateChangeFileContents::Existing {
+                                    file_id: file.id().await?,
+                                    maybe_size: None,
+                                },
                                 file_type,
-                                maybe_size: None,
                             },
                             copy_info,
                         )
@@ -331,10 +334,12 @@ impl SourceControlServiceImpl {
                             .await?
                             .ok_or_else(|| errors::file_not_found(sha.to_string()))?;
                         CreateChange::Tracked(
-                            CreateChangeFile::Existing {
-                                file_id: file.id().await?,
+                            CreateChangeFile {
+                                contents: CreateChangeFileContents::Existing {
+                                    file_id: file.id().await?,
+                                    maybe_size: None,
+                                },
                                 file_type,
-                                maybe_size: None,
                             },
                             copy_info,
                         )
@@ -346,10 +351,12 @@ impl SourceControlServiceImpl {
                             .await?
                             .ok_or_else(|| errors::file_not_found(sha.to_string()))?;
                         CreateChange::Tracked(
-                            CreateChangeFile::Existing {
-                                file_id: file.id().await?,
+                            CreateChangeFile {
+                                contents: CreateChangeFileContents::Existing {
+                                    file_id: file.id().await?,
+                                    maybe_size: None,
+                                },
                                 file_type,
-                                maybe_size: None,
                             },
                             copy_info,
                         )
@@ -361,17 +368,21 @@ impl SourceControlServiceImpl {
                             .await?
                             .ok_or_else(|| errors::file_not_found(sha.to_string()))?;
                         CreateChange::Tracked(
-                            CreateChangeFile::Existing {
-                                file_id: file.id().await?,
+                            CreateChangeFile {
+                                contents: CreateChangeFileContents::Existing {
+                                    file_id: file.id().await?,
+                                    maybe_size: None,
+                                },
                                 file_type,
-                                maybe_size: None,
                             },
                             copy_info,
                         )
                     }
                     thrift::RepoCreateCommitParamsFileContent::data(data) => CreateChange::Tracked(
-                        CreateChangeFile::New {
-                            bytes: Bytes::from(data),
+                        CreateChangeFile {
+                            contents: CreateChangeFileContents::New {
+                                bytes: Bytes::from(data),
+                            },
                             file_type,
                         },
                         copy_info,
