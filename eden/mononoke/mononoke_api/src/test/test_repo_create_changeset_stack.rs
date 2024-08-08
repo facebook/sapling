@@ -26,7 +26,6 @@ use crate::CreateChange;
 use crate::CreateChangeFile;
 use crate::CreateCopyInfo;
 use crate::CreateInfo;
-use crate::FileType;
 use crate::Mononoke;
 use crate::MononokeError;
 use crate::RepoContext;
@@ -163,38 +162,26 @@ async fn test_create_commit_stack(fb: FacebookInit) -> Result<(), Error> {
         btreemap! {
             MPath::try_from("TEST_FILE")? =>
             CreateChange::Tracked(
-                CreateChangeFile::New {
-                    bytes: Bytes::from("TEST CREATE 1\n"),
-                    file_type: FileType::Regular,
-                },
+                CreateChangeFile::new_regular("TEST CREATE 1\n"),
                 None,
             ),
         },
         btreemap! {
             MPath::try_from("TEST_FILE")? =>
             CreateChange::Tracked(
-                CreateChangeFile::New {
-                    bytes: Bytes::from("TEST CHANGE 1\n"),
-                    file_type: FileType::Regular,
-                },
+                CreateChangeFile::new_regular("TEST CHANGE 1\n"),
                 None,
             ),
             MPath::try_from("TEST_DIR/TEST_FILE")? =>
             CreateChange::Tracked(
-                CreateChangeFile::New {
-                    bytes: Bytes::from("TEST CREATE 2\n"),
-                    file_type: FileType::Regular,
-                },
+                CreateChangeFile::new_regular("TEST CREATE 2\n"),
                 None,
             ),
         },
         btreemap! {
             MPath::try_from("TEST_DIR/TEST_FILE")? =>
             CreateChange::Tracked(
-                CreateChangeFile::New {
-                    bytes: Bytes::from("TEST CHANGE 2\n"),
-                    file_type: FileType::Regular,
-                },
+                CreateChangeFile::new_regular("TEST CHANGE 2\n"),
                 None,
             ),
         },
@@ -268,10 +255,7 @@ async fn test_create_commit_stack_delete_files(fb: FacebookInit) -> Result<(), E
         btreemap! {
             MPath::try_from("TEST_FILE")? =>
             CreateChange::Tracked(
-                CreateChangeFile::New {
-                    bytes: Bytes::from("TEST CREATE 1\n"),
-                    file_type: FileType::Regular,
-                },
+                CreateChangeFile::new_regular("TEST CREATE 1\n"),
                 None,
             ),
         },
@@ -291,10 +275,7 @@ async fn test_create_commit_stack_delete_files(fb: FacebookInit) -> Result<(), E
         btreemap! {
             MPath::try_from("TEST_NEW_FILE")? =>
             CreateChange::Tracked(
-                CreateChangeFile::New {
-                    bytes: Bytes::from("TEST CREATE 1\n"),
-                    file_type: FileType::Regular,
-                },
+                CreateChangeFile::new_regular("TEST CREATE 1\n"),
                 None,
             ),
         },
@@ -312,10 +293,7 @@ async fn test_create_commit_stack_delete_files(fb: FacebookInit) -> Result<(), E
         btreemap! {
             MPath::try_from("TEST_FILE")? =>
             CreateChange::Tracked(
-                CreateChangeFile::New {
-                    bytes: Bytes::from("TEST CREATE 2\n"),
-                    file_type: FileType::Regular,
-                },
+                CreateChangeFile::new_regular("TEST CREATE 1\n"),
                 None,
             ),
         },
@@ -339,20 +317,14 @@ async fn test_create_commit_stack_delete_files(fb: FacebookInit) -> Result<(), E
         btreemap! {
             MPath::try_from("TEST_PATH/SUBDIR/TEST_FILE")? =>
             CreateChange::Tracked(
-                CreateChangeFile::New {
-                    bytes: Bytes::from("TEST CREATE 3\n"),
-                    file_type: FileType::Regular,
-                },
+                CreateChangeFile::new_regular("TEST CREATE 3\n"),
                 None,
             ),
         },
         btreemap! {
             MPath::try_from("TEST_PATH")? =>
             CreateChange::Tracked(
-                CreateChangeFile::New {
-                    bytes: Bytes::from("TEST CREATE 3\n"),
-                    file_type: FileType::Regular,
-                },
+                CreateChangeFile::new_regular("TEST CREATE 3\n"),
                 None,
             ),
         },
@@ -405,20 +377,14 @@ async fn test_create_commit_stack_path_conflicts(fb: FacebookInit) -> Result<(),
         btreemap! {
             MPath::try_from("TEST_PATH")? =>
             CreateChange::Tracked(
-                CreateChangeFile::New {
-                    bytes: Bytes::from("TEST CREATE 1\n"),
-                    file_type: FileType::Regular,
-                },
+                CreateChangeFile::new_regular("TEST CREATE 1\n"),
                 None,
             ),
         },
         btreemap! {
             MPath::try_from("TEST_PATH/SUBDIR/TEST_FILE")? =>
             CreateChange::Tracked(
-                CreateChangeFile::New {
-                    bytes: Bytes::from("TEST CREATE 1\n"),
-                    file_type: FileType::Regular,
-                },
+                CreateChangeFile::new_regular("TEST CREATE 1\n"),
                 None,
             ),
         },
@@ -434,10 +400,7 @@ async fn test_create_commit_stack_path_conflicts(fb: FacebookInit) -> Result<(),
         btreemap! {
             MPath::try_from("TEST_PATH")? =>
             CreateChange::Tracked(
-                CreateChangeFile::New {
-                    bytes: Bytes::from("TEST CREATE 1\n"),
-                    file_type: FileType::Regular,
-                },
+                CreateChangeFile::new_regular("TEST CREATE 1\n"),
                 None,
             ),
         },
@@ -446,10 +409,7 @@ async fn test_create_commit_stack_path_conflicts(fb: FacebookInit) -> Result<(),
             CreateChange::Deletion,
             MPath::try_from("TEST_PATH/SUBDIR/TEST_FILE")? =>
             CreateChange::Tracked(
-                CreateChangeFile::New {
-                    bytes: Bytes::from("TEST CREATE 1\n"),
-                    file_type: FileType::Regular,
-                },
+                CreateChangeFile::new_regular("TEST CREATE 1\n"),
                 None,
             ),
         },
@@ -496,20 +456,14 @@ async fn test_create_commit_stack_copy_from(fb: FacebookInit) -> Result<(), Erro
         btreemap! {
             MPath::try_from("TEST_FILE")? =>
             CreateChange::Tracked(
-                CreateChangeFile::New {
-                    bytes: Bytes::from("TEST CREATE 1\n"),
-                    file_type: FileType::Regular,
-                },
+                CreateChangeFile::new_regular("TEST CREATE 1\n"),
                 None,
             ),
         },
         btreemap! {
             MPath::try_from("TEST_FILE2")? =>
             CreateChange::Tracked(
-                CreateChangeFile::New {
-                    bytes: Bytes::from("TEST CREATE 1\n"),
-                    file_type: FileType::Regular,
-                },
+                CreateChangeFile::new_regular("TEST CREATE 1\n"),
                 Some(CreateCopyInfo::new(MPath::try_from("OTHER_FILE")?, 0)),
             ),
         },
@@ -531,10 +485,7 @@ async fn test_create_commit_stack_copy_from(fb: FacebookInit) -> Result<(), Erro
         btreemap! {
             MPath::try_from("OTHER_FILE")? =>
             CreateChange::Tracked(
-                CreateChangeFile::New {
-                    bytes: Bytes::from("TEST CREATE 2\n"),
-                    file_type: FileType::Regular,
-                },
+                CreateChangeFile::new_regular("TEST CREATE 2\n"),
                 None,
             ),
         },

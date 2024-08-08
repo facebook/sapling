@@ -80,13 +80,7 @@ async fn create_commit(
     let mut changes: BTreeMap<MPath, CreateChange> = BTreeMap::new();
     changes.insert(
         MPath::try_from("TEST_CREATE")?,
-        CreateChange::Tracked(
-            CreateChangeFile::New {
-                bytes: Bytes::from("TEST CREATE\n"),
-                file_type: FileType::Regular,
-            },
-            None,
-        ),
+        CreateChange::Tracked(CreateChangeFile::new_regular("TEST CREATE\n"), None),
     );
 
     // Pre-upload the file content for the second commit, and check its hash
@@ -283,13 +277,7 @@ async fn create_commit_bad_changes(fb: FacebookInit) -> Result<(), Error> {
     let mut changes: BTreeMap<MPath, CreateChange> = BTreeMap::new();
     changes.insert(
         MPath::try_from("1/TEST_CREATE")?,
-        CreateChange::Tracked(
-            CreateChangeFile::New {
-                bytes: Bytes::from("test"),
-                file_type: FileType::Regular,
-            },
-            None,
-        ),
+        CreateChange::Tracked(CreateChangeFile::new_regular("test"), None),
     );
     assert_matches!(
         create_changeset(&repo, changes.clone()).await,
@@ -304,23 +292,11 @@ async fn create_commit_bad_changes(fb: FacebookInit) -> Result<(), Error> {
     let mut changes: BTreeMap<MPath, CreateChange> = BTreeMap::new();
     changes.insert(
         MPath::try_from("TEST_CREATE")?,
-        CreateChange::Tracked(
-            CreateChangeFile::New {
-                bytes: Bytes::from("test"),
-                file_type: FileType::Regular,
-            },
-            None,
-        ),
+        CreateChange::Tracked(CreateChangeFile::new_regular("test"), None),
     );
     changes.insert(
         MPath::try_from("TEST_CREATE/TEST_CREATE")?,
-        CreateChange::Tracked(
-            CreateChangeFile::New {
-                bytes: Bytes::from("test"),
-                file_type: FileType::Regular,
-            },
-            None,
-        ),
+        CreateChange::Tracked(CreateChangeFile::new_regular("test"), None),
     );
     assert_matches!(
         create_changeset(&repo, changes).await,
@@ -331,13 +307,7 @@ async fn create_commit_bad_changes(fb: FacebookInit) -> Result<(), Error> {
     let mut changes: BTreeMap<MPath, CreateChange> = BTreeMap::new();
     changes.insert(
         MPath::try_from("dir1")?,
-        CreateChange::Tracked(
-            CreateChangeFile::New {
-                bytes: Bytes::from("test"),
-                file_type: FileType::Regular,
-            },
-            None,
-        ),
+        CreateChange::Tracked(CreateChangeFile::new_regular("test"), None),
     );
     let cs1 = create_changeset(&repo, changes.clone()).await?;
 
@@ -412,24 +382,12 @@ async fn test_create_merge_commit(fb: FacebookInit) -> Result<(), Error> {
     let mut p1_changes: BTreeMap<MPath, CreateChange> = BTreeMap::new();
     p1_changes.insert(
         MPath::try_from("TEST_CREATE_p1")?,
-        CreateChange::Tracked(
-            CreateChangeFile::New {
-                bytes: Bytes::from("TEST CREATE\n"),
-                file_type: FileType::Regular,
-            },
-            None,
-        ),
+        CreateChange::Tracked(CreateChangeFile::new_regular("TEST CREATE\n"), None),
     );
     let mut p2_changes: BTreeMap<MPath, CreateChange> = BTreeMap::new();
     p2_changes.insert(
         MPath::try_from("TEST_CREATE_p2")?,
-        CreateChange::Tracked(
-            CreateChangeFile::New {
-                bytes: Bytes::from("TEST CREATE\n"),
-                file_type: FileType::Regular,
-            },
-            None,
-        ),
+        CreateChange::Tracked(CreateChangeFile::new_regular("TEST CREATE\n"), None),
     );
 
     let (p1, p2) = try_join!(
@@ -440,26 +398,14 @@ async fn test_create_merge_commit(fb: FacebookInit) -> Result<(), Error> {
     let mut merge_changes: BTreeMap<MPath, CreateChange> = BTreeMap::new();
     merge_changes.insert(
         MPath::try_from("TEST_MERGE")?,
-        CreateChange::Tracked(
-            CreateChangeFile::New {
-                bytes: Bytes::from("TEST CREATE\n"),
-                file_type: FileType::Regular,
-            },
-            None,
-        ),
+        CreateChange::Tracked(CreateChangeFile::new_regular("TEST CREATE\n"), None),
     );
     create_changeset(&repo, merge_changes, vec![p1.id(), p2.id()]).await?;
 
     let mut merge_changes: BTreeMap<MPath, CreateChange> = BTreeMap::new();
     merge_changes.insert(
         MPath::try_from("TEST_CREATE_p1")?,
-        CreateChange::Tracked(
-            CreateChangeFile::New {
-                bytes: Bytes::from("TEST MERGE OVERRIDE\n"),
-                file_type: FileType::Regular,
-            },
-            None,
-        ),
+        CreateChange::Tracked(CreateChangeFile::new_regular("TEST MERGE OVERRIDE\n"), None),
     );
     create_changeset(&repo, merge_changes, vec![p1.id(), p2.id()]).await?;
 
@@ -521,36 +467,18 @@ async fn test_merge_commit_parent_file_conflict(fb: FacebookInit) -> Result<(), 
     let mut p1_changes: BTreeMap<MPath, CreateChange> = BTreeMap::new();
     p1_changes.insert(
         MPath::try_from("TEST_FILE")?,
-        CreateChange::Tracked(
-            CreateChangeFile::New {
-                bytes: Bytes::from("TEST CREATE_p1\n"),
-                file_type: FileType::Regular,
-            },
-            None,
-        ),
+        CreateChange::Tracked(CreateChangeFile::new_regular("TEST CREATE_p1\n"), None),
     );
     let mut p2_changes: BTreeMap<MPath, CreateChange> = BTreeMap::new();
     p2_changes.insert(
         MPath::try_from("TEST_CREATE")?,
-        CreateChange::Tracked(
-            CreateChangeFile::New {
-                bytes: Bytes::from("TEST CREATE_p2\n"),
-                file_type: FileType::Regular,
-            },
-            None,
-        ),
+        CreateChange::Tracked(CreateChangeFile::new_regular("TEST CREATE_p2\n"), None),
     );
 
     let mut p3_changes: BTreeMap<MPath, CreateChange> = BTreeMap::new();
     p3_changes.insert(
         MPath::try_from("TEST_FILE")?,
-        CreateChange::Tracked(
-            CreateChangeFile::New {
-                bytes: Bytes::from("TEST CREATE_p3\n"),
-                file_type: FileType::Regular,
-            },
-            None,
-        ),
+        CreateChange::Tracked(CreateChangeFile::new_regular("TEST CREATE_p3\n"), None),
     );
 
     let (p1, p2, p3) = try_join!(
@@ -639,36 +567,18 @@ async fn test_merge_commit_parent_tree_file_conflict(fb: FacebookInit) -> Result
     let mut p1_changes: BTreeMap<MPath, CreateChange> = BTreeMap::new();
     p1_changes.insert(
         MPath::try_from("TEST_FILE/REALLY_A_DIR")?,
-        CreateChange::Tracked(
-            CreateChangeFile::New {
-                bytes: Bytes::from("TEST CREATE_p1\n"),
-                file_type: FileType::Regular,
-            },
-            None,
-        ),
+        CreateChange::Tracked(CreateChangeFile::new_regular("TEST CREATE_p1\n"), None),
     );
     let mut p2_changes: BTreeMap<MPath, CreateChange> = BTreeMap::new();
     p2_changes.insert(
         MPath::try_from("TEST_CREATE")?,
-        CreateChange::Tracked(
-            CreateChangeFile::New {
-                bytes: Bytes::from("TEST CREATE_p2\n"),
-                file_type: FileType::Regular,
-            },
-            None,
-        ),
+        CreateChange::Tracked(CreateChangeFile::new_regular("TEST CREATE_p2\n"), None),
     );
 
     let mut p3_changes: BTreeMap<MPath, CreateChange> = BTreeMap::new();
     p3_changes.insert(
         MPath::try_from("TEST_FILE")?,
-        CreateChange::Tracked(
-            CreateChangeFile::New {
-                bytes: Bytes::from("TEST CREATE_p3\n"),
-                file_type: FileType::Regular,
-            },
-            None,
-        ),
+        CreateChange::Tracked(CreateChangeFile::new_regular("TEST CREATE_p3\n"), None),
     );
 
     let (p1, p2, p3) = try_join!(

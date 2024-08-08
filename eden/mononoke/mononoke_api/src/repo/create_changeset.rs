@@ -191,6 +191,17 @@ pub enum CreateChangeFile {
     },
 }
 
+#[cfg(test)]
+impl CreateChangeFile {
+    // constructor that makes tests more ergonomic
+    pub fn new_regular(contents: &'static str) -> Self {
+        CreateChangeFile::New {
+            bytes: Bytes::from(contents),
+            file_type: FileType::Regular,
+        }
+    }
+}
+
 // Enum for recording whether a path is not changed, changed or deleted.
 #[derive(Copy, Clone, Default, Eq, PartialEq, Debug)]
 enum CreateChangeType {
