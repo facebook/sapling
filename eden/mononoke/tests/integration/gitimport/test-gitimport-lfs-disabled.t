@@ -5,6 +5,7 @@
 # directory of this source tree.
 
   $ . "${TEST_FIXTURES}/library.sh"
+  $ . "${TEST_FIXTURES}/library-git-lfs.sh"
   $ REPOTYPE="blob_files"
   $ ENABLED_DERIVED_DATA='["git_commits", "git_trees", "git_delta_manifests_v2", "unodes", "filenodes", "hgchangesets"]' setup_common_config $REPOTYPE
 Without that bit gitimport is unable to set bookmarks
@@ -13,48 +14,8 @@ Without that bit gitimport is unable to set bookmarks
   > permit_writes = true
   > EOF
 
-In this test we're creating another repo that serves only as secondary LFS server - this
-way we're showing tha we can deal with the fact that that file contents are uploaded by git
-to other LFS server and the import will copy them to Mononoke.
-(at Meta this simulates our legacy dewey-lfs setup)
-  $ REPOID=2 REPONAME=legacy_lfs setup_common_config $REPOTYPE
-  $ cat >> repos/legacy_lfs/server.toml <<EOF
-  > [source_control_service]
-  > permit_writes = true
-  > EOF
-
-start LFS server
-  $ LFS_LOG="${TESTTMP}/lfs.log"
-  $ BASE_LFS_URL="$(lfs_server --log "$LFS_LOG")"
-  $ MONONOKE_LFS_URL="$BASE_LFS_URL/repo"
-  $ LEGACY_LFS_URL="$BASE_LFS_URL/legacy_lfs"
-
-create a Git repo and one ordinary commit
-  $ GIT_REPO_SERVER="${TESTTMP}/repo-git-server"
-  $ GIT_REPO_CLIENT="${TESTTMP}/repo-git-client"
-  $ git init -q "$GIT_REPO_SERVER" -b main --bare
-  $ git clone -q "$GIT_REPO_SERVER" "$GIT_REPO_CLIENT"
-  warning: You appear to have cloned an empty repository.
-  $ cd "$GIT_REPO_CLIENT"
-  $ echo "sml fle" > small_file
-  $ git add small_file
-  $ git commit -aqm "add small ile"
-
-configure LFS
-  $ git lfs install --local
-  Updated Git hooks.
-  Git LFS initialized.
-  $ git config --local lfs.url "$LEGACY_LFS_URL"
-  $ git config --local http.extraHeader "x-client-info: {\"request_info\": {\"entry_point\": \"CurlTest\", \"correlator\": \"test\"}}"
-  $ git lfs track large_file
-  Tracking "large_file"
-
-commit LFS file
-  $ echo "laaaaaaaaaarge file" > large_file
-  $ git add large_file
-  $ git commit -aqm "add large file"
-  $ git push -q origin main
-  Uploading LFS objects: * (glob)
+Use common repo setup
+  $ test_repos_for_git_lfs_import
 
 Git Import
   $ with_stripped_logs gitimport "$GIT_REPO_SERVER" --generate-bookmarks --concurrency 100 --derive-hg full-repo

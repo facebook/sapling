@@ -22,6 +22,7 @@ buck_filegroup(
         "just_knobs.json",
         "library.sh",
         "library-commit.sh",
+        "library-git-lfs.sh",
         "library-push-redirector.sh",
         "library-snapshot.sh",
         "library-xrepo-git-submodule-expansion.sh",
