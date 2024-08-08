@@ -7,6 +7,12 @@ rust_library(
     name = "config_args",
     srcs = glob(["src/**/*.rs"]),
     deps = [
+        "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:clap",
+        "fbsource//third-party/rust:slog",
+        "fbsource//third-party/rust:tokio",
+        "//common/rust/shed/cached_config:cached_config",
+        "//common/rust/shed/fbinit:fbinit",
+        "//eden/mononoke/mononoke_configs:mononoke_configs",
     ],
 )

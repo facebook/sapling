@@ -111,14 +111,11 @@ impl MononokeApp {
         extension_args: HashMap<TypeId, Box<dyn BoxedAppExtensionArgs>>,
     ) -> Result<Self> {
         let env = Arc::new(env);
-        let config_path = ConfigArgs::from_arg_matches(&args)?.config_path();
-        let config_store = &env.as_ref().config_store;
-        let configs = Arc::new(MononokeConfigs::new(
-            config_path,
-            config_store,
+        let configs = ConfigArgs::from_arg_matches(&args)?.create_mononoke_configs(
             runtime.handle().clone(),
             env.logger.clone(),
-        )?);
+            &env.as_ref().config_store,
+        )?;
 
         let repo_factory = Arc::new(RepoFactory::new(env.clone()));
 

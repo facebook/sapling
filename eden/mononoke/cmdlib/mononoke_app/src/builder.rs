@@ -297,12 +297,9 @@ impl MononokeAppBuilder {
             .create_root_log_drain(self.fb, log_level)
             .context("Failed to create root log drain")?;
 
-        let config_store = create_config_store(
-            self.fb,
-            &config_args,
-            Logger::root(root_log_drain.clone(), o![]),
-        )
-        .context("Failed to create config store")?;
+        let config_store = config_args
+            .create_config_store(self.fb, Logger::root(root_log_drain.clone(), o![]))
+            .context("Failed to create config store")?;
 
         let observability_context = logging_args
             .create_observability_context(&config_store, log_level)
@@ -384,44 +381,6 @@ impl MononokeAppBuilder {
             bookmark_cache_options: self.bookmark_cache_options.clone(),
             filter_repos: None,
         })
-    }
-}
-
-fn create_config_store(
-    fb: FacebookInit,
-    config_args: &ConfigArgs,
-    logger: Logger,
-) -> Result<ConfigStore> {
-    const CRYPTO_PROJECT: &str = "SCM";
-    const CONFIGERATOR_POLL_INTERVAL: Duration = Duration::from_secs(1);
-    const CONFIGERATOR_REFRESH_TIMEOUT: Duration = Duration::from_secs(1);
-
-    if let Some(path) = &config_args.local_configerator_path {
-        Ok(ConfigStore::file(
-            logger,
-            path.clone(),
-            String::new(),
-            CONFIGERATOR_POLL_INTERVAL,
-        ))
-    } else {
-        let crypto_regex_paths = match &config_args.crypto_path_regex {
-            Some(paths) => paths.clone(),
-            None => vec![
-                "scm/mononoke/repos/.*".to_string(),
-                "scm/mononoke/redaction/.*".to_string(),
-            ],
-        };
-        let crypto_regex = crypto_regex_paths
-            .into_iter()
-            .map(|path| (path, CRYPTO_PROJECT.to_string()))
-            .collect();
-        ConfigStore::regex_signed_configerator(
-            fb,
-            logger,
-            crypto_regex,
-            CONFIGERATOR_POLL_INTERVAL,
-            CONFIGERATOR_REFRESH_TIMEOUT,
-        )
     }
 }
 

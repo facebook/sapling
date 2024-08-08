@@ -6,9 +6,17 @@
  */
 
 use std::path::PathBuf;
+use std::sync::Arc;
+use std::time::Duration;
 
+use anyhow::Result;
+use cached_config::ConfigStore;
 use clap::ArgGroup;
 use clap::Args;
+use fbinit::FacebookInit;
+use mononoke_configs::MononokeConfigs;
+use slog::Logger;
+use tokio::runtime::Handle;
 
 #[derive(Args, Debug)]
 #[clap(group(ArgGroup::new("config").args(&["config_path", "config_tier", "prod"]).required(true)))]
@@ -67,6 +75,55 @@ impl ConfigArgs {
             }
         }
         ConfigMode::Development
+    }
+
+    pub fn create_config_store(&self, fb: FacebookInit, logger: Logger) -> Result<ConfigStore> {
+        const CRYPTO_PROJECT: &str = "SCM";
+        const CONFIGERATOR_POLL_INTERVAL: Duration = Duration::from_secs(1);
+        const CONFIGERATOR_REFRESH_TIMEOUT: Duration = Duration::from_secs(1);
+
+        if let Some(path) = &self.local_configerator_path {
+            Ok(ConfigStore::file(
+                logger,
+                path.clone(),
+                String::new(),
+                CONFIGERATOR_POLL_INTERVAL,
+            ))
+        } else {
+            let crypto_regex_paths = match &self.crypto_path_regex {
+                Some(paths) => paths.clone(),
+                None => vec![
+                    "scm/mononoke/repos/.*".to_string(),
+                    "scm/mononoke/redaction/.*".to_string(),
+                ],
+            };
+            let crypto_regex = crypto_regex_paths
+                .into_iter()
+                .map(|path| (path, CRYPTO_PROJECT.to_string()))
+                .collect();
+            ConfigStore::regex_signed_configerator(
+                fb,
+                logger,
+                crypto_regex,
+                CONFIGERATOR_POLL_INTERVAL,
+                CONFIGERATOR_REFRESH_TIMEOUT,
+            )
+        }
+    }
+
+    pub fn create_mononoke_configs(
+        &self,
+        handle: Handle,
+        logger: Logger,
+        config_store: &ConfigStore,
+    ) -> Result<Arc<MononokeConfigs>> {
+        let config_path = self.config_path();
+        Ok(Arc::new(MononokeConfigs::new(
+            config_path,
+            config_store,
+            handle,
+            logger,
+        )?))
     }
 }
 
