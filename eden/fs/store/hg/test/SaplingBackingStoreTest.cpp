@@ -439,19 +439,8 @@ TEST_F(SaplingBackingStoreWithFaultInjectorTest, getTreeBatch) {
 
   // TODO: We should rewrite SaplingBackingStore with futures so that this is
   // more testable: T171328733.
-  auto timeout = 10s;
-  while (faultInjector.getBlockedFaults("SaplingBackingStore::getTreeBatch")
-                 .size() == 0 &&
-         timeout > 0s) {
-    timeout -= 1s;
-    /* sleep override */
-    sleep(1);
-  }
-
-  if (faultInjector.getBlockedFaults("SaplingBackingStore::getTreeBatch")
-          .size() == 0) {
-    FAIL() << "getTreeBatch did not block within 10s";
-  }
+  ASSERT_TRUE(
+      faultInjector.waitUntilBlocked("SaplingBackingStore::getTreeBatch", 10s));
 
   // force a reload
   updateTestEdenConfig(
