@@ -162,7 +162,6 @@ impl<'op> PushrebaseOntoBookmarkOp<'op> {
                 self.cross_repo_push_source,
             )
             .await?;
-
         let mut pushrebase_hooks = get_pushrebase_hooks(
             ctx,
             repo,

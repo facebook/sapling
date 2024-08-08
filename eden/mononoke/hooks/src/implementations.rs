@@ -8,6 +8,7 @@
 //! For Facebook hooks check the src/facebook/ folder
 
 mod always_fail_changeset;
+pub(crate) mod block_accidental_new_bookmark_creation;
 mod block_commit_message_pattern;
 mod block_content_pattern;
 mod block_empty_commit;
@@ -67,6 +68,11 @@ pub async fn make_changeset_hook(
         "block_unannotated_tags" => {
             Some(b(block_unannotated_tags::BlockUnannotatedTagsHook::new()))
         }
+        "block_accidental_new_bookmark_creation" => Some(b(
+            block_accidental_new_bookmark_creation::BlockAccidentalNewBookmarkCreationHook::new(
+                &params.config,
+            )?,
+        )),
         "block_commit_message_pattern" => Some(b(
             block_commit_message_pattern::BlockCommitMessagePatternHook::new(&params.config)?,
         )),

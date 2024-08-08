@@ -1929,9 +1929,16 @@ function hook_test_setup() {
 
   reponame_urlencoded="$(urlencode encode "$REPONAME")"
   HOOKBOOKMARK="${HOOKBOOKMARK:-master_bookmark}"
+
+  if [[ -z "$HOOKBOOKMARK_REGEX" ]]; then
+    HOOKBOOKMARK_ENTRY="name=\"$HOOKBOOKMARK\""
+  else
+    HOOKBOOKMARK_ENTRY="regex=\"$HOOKBOOKMARK_REGEX\""
+  fi
+
   cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
 [[bookmarks]]
-name="$HOOKBOOKMARK"
+$HOOKBOOKMARK_ENTRY
 CONFIG
 
   while [[ "$#" -gt 0 ]]; do
