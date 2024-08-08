@@ -50,8 +50,10 @@ impl LimitSubmoduleEditsHook {
     pub fn with_config(config: LimitSubmoduleEditsConfig) -> Result<Self> {
         let changes_allowed_with_marker_options =
             if let Some(marker) = config.allow_edits_with_marker {
-                let marker_extraction_regex =
-                    Regex::new(&format!(r"{}:\s*(?<{}>.*)", &marker, &NAMED_CAPTURE_NAME))?;
+                let marker_extraction_regex = Regex::new(&format!(
+                    r"{}:\s*(?<{}>.+?)($|\n|\s)",
+                    &marker, &NAMED_CAPTURE_NAME
+                ))?;
                 Some(ChangesAllowedWithMarkerOptions {
                     marker_extraction_regex,
                     marker,

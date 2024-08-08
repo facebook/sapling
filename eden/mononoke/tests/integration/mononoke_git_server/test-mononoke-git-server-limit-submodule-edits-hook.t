@@ -108,8 +108,8 @@
   [1]
 
 # Change the commit message and try to push with the marker containing the path.
-  $ git commit --amend -m "@update-submodule: submodule_path"
-  [master *] @update-submodule: submodule_path (glob)
+  $ git commit --amend -m "@update-submodule: submodule_path rest of the commit message"
+  [master *] @update-submodule: submodule_path rest of the commit message (glob)
    Date: Sat Jan 1 00:00:00 2000 +0000
    2 files changed, 4 insertions(+)
    create mode 100644 .gitmodules
