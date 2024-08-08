@@ -16,19 +16,26 @@ use std::collections::BTreeSet;
 
 use anyhow::Result;
 use blobrepo::BlobRepo;
+use blobstore::Loadable;
 use context::CoreContext;
+use deleted_manifest::DeletedManifestOps;
 use deleted_manifest::RootDeletedManifestIdCommon;
 use deleted_manifest::RootDeletedManifestV2Id;
 use derived_data_manager::BonsaiDerivable as NewBonsaiDerivable;
 use fbinit::FacebookInit;
 use fsnodes::RootFsnodeId;
+use futures::future;
+use futures::stream::TryStreamExt;
 use futures_stats::TimedFutureExt;
+use manifest::ManifestOps;
 use mercurial_derivation::MappedHgChangesetId;
+use mercurial_derivation::RootHgAugmentedManifestId;
 use mononoke_types::ChangesetId;
 use rand::distributions::Alphanumeric;
 use rand::distributions::Uniform;
 use rand::thread_rng;
 use rand::Rng;
+use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataRef;
 use skeleton_manifest::RootSkeletonManifestId;
 use tests_utils::CreateCommitContext;
@@ -166,6 +173,82 @@ async fn derive(ctx: &CoreContext, repo: &BlobRepo, data: &str, csid: ChangesetI
             .unwrap()
             .fsnode_id()
             .to_string(),
+        RootHgAugmentedManifestId::NAME => repo
+            .repo_derived_data()
+            .derive::<RootHgAugmentedManifestId>(ctx, csid)
+            .await
+            .unwrap()
+            .hg_augmented_manifest_id()
+            .to_string(),
+        _ => panic!("invalid derived data type: {}", data),
+    }
+}
+
+async fn iterate(ctx: &CoreContext, repo: &BlobRepo, data: &str, csid: ChangesetId) -> u64 {
+    match data {
+        MappedHgChangesetId::NAME => repo
+            .repo_derived_data()
+            .derive::<MappedHgChangesetId>(ctx, csid)
+            .await
+            .unwrap()
+            .hg_changeset_id()
+            .load(ctx, repo.repo_blobstore())
+            .await
+            .unwrap()
+            .manifestid()
+            .list_all_entries(ctx.clone(), repo.repo_blobstore().clone())
+            .try_fold(0u64, |acc, _| future::ok(acc + 1))
+            .await
+            .unwrap(),
+        RootSkeletonManifestId::NAME => repo
+            .repo_derived_data()
+            .derive::<RootSkeletonManifestId>(ctx, csid)
+            .await
+            .unwrap()
+            .skeleton_manifest_id()
+            .list_all_entries(ctx.clone(), repo.repo_blobstore().clone())
+            .try_fold(0u64, |acc, _| future::ok(acc + 1))
+            .await
+            .unwrap(),
+        RootUnodeManifestId::NAME => repo
+            .repo_derived_data()
+            .derive::<RootUnodeManifestId>(ctx, csid)
+            .await
+            .unwrap()
+            .manifest_unode_id()
+            .list_all_entries(ctx.clone(), repo.repo_blobstore().clone())
+            .try_fold(0u64, |acc, _| future::ok(acc + 1))
+            .await
+            .unwrap(),
+        RootDeletedManifestV2Id::NAME => repo
+            .repo_derived_data()
+            .derive::<RootDeletedManifestV2Id>(ctx, csid)
+            .await
+            .unwrap()
+            .list_all_entries(ctx, repo.repo_blobstore())
+            .try_fold(0u64, |acc, _| future::ok(acc + 1))
+            .await
+            .unwrap(),
+        RootFsnodeId::NAME => repo
+            .repo_derived_data()
+            .derive::<RootFsnodeId>(ctx, csid)
+            .await
+            .unwrap()
+            .fsnode_id()
+            .list_all_entries(ctx.clone(), repo.repo_blobstore().clone())
+            .try_fold(0u64, |acc, _| future::ok(acc + 1))
+            .await
+            .unwrap(),
+        RootHgAugmentedManifestId::NAME => repo
+            .repo_derived_data()
+            .derive::<RootHgAugmentedManifestId>(ctx, csid)
+            .await
+            .unwrap()
+            .hg_augmented_manifest_id()
+            .list_all_entries(ctx.clone(), repo.repo_blobstore().clone())
+            .try_fold(0u64, |acc, _| future::ok(acc + 1))
+            .await
+            .unwrap(),
         _ => panic!("invalid derived data type: {}", data),
     }
 }
@@ -197,6 +280,9 @@ async fn main(fb: FacebookInit) -> Result<()> {
     println!("Last commit: {}", csid);
     let (stats, derived_id) = derive(&ctx, &repo, &data, csid).timed().await;
     println!("Derived id: {}  stats: {:?}", derived_id, stats);
+
+    let (stats, count) = iterate(&ctx, &repo, &data, csid).timed().await;
+    println!("Iterated count: {}  stats: {:?}", count, stats);
 
     Ok(())
 }
