@@ -15,6 +15,7 @@ mod block_empty_commit;
 mod block_files;
 pub(crate) mod block_invalid_symlinks;
 pub(crate) mod block_merge_commits;
+pub(crate) mod block_new_bookmark_creations_by_name;
 pub(crate) mod block_unannotated_tags;
 pub(crate) mod block_unclean_merge_commits;
 pub(crate) mod deny_files;
@@ -70,6 +71,11 @@ pub async fn make_changeset_hook(
         }
         "block_accidental_new_bookmark_creation" => Some(b(
             block_accidental_new_bookmark_creation::BlockAccidentalNewBookmarkCreationHook::new(
+                &params.config,
+            )?,
+        )),
+        "block_new_bookmark_creations_by_name" => Some(b(
+            block_new_bookmark_creations_by_name::BlockNewBookmarkCreationsByNameHook::new(
                 &params.config,
             )?,
         )),
