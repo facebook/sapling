@@ -117,6 +117,7 @@ pub fn to_create_change(fc: BonsaiFileChange, bubble_id: Option<BubbleId>) -> Re
                             maybe_size: extract_size(metadata),
                         },
                         file_type: file_type.into(),
+                        git_lfs: None,
                     },
                     // TODO(yancouto): Add copy info on tracked changes
                     None,
@@ -143,6 +144,7 @@ pub fn to_create_change(fc: BonsaiFileChange, bubble_id: Option<BubbleId>) -> Re
                         maybe_size: extract_size(metadata),
                     },
                     file_type: file_type.into(),
+                    git_lfs: None,
                 }))
             } else {
                 bail!("Invalid upload token format, missing content id")

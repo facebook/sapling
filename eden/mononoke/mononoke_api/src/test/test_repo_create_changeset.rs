@@ -124,6 +124,7 @@ async fn create_commit(
                     maybe_size: None,
                 },
                 file_type: FileType::Regular,
+                git_lfs: None,
             },
             None,
         ),

@@ -371,6 +371,7 @@ impl SourceControlServiceImpl {
                     CreateChangeFile {
                         contents,
                         file_type,
+                        git_lfs: None,
                     },
                     copy_info,
                 )

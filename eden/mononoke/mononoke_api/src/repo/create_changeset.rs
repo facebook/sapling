@@ -176,9 +176,40 @@ pub enum CreateChange {
 }
 
 #[derive(Clone)]
+pub enum CreateChangeGitLfs {
+    FullContent,
+    GitLfsPointer {
+        non_canonical_pointer: Option<CreateChangeFileContents>,
+    },
+}
+
+fn try_into_git_lfs(
+    create_change_git_lfs: Option<CreateChangeGitLfs>,
+) -> Result<GitLfs, MononokeError> {
+    let git_lfs = match create_change_git_lfs {
+        None => GitLfs::full_content(),
+        Some(CreateChangeGitLfs::FullContent) => GitLfs::full_content(),
+        Some(CreateChangeGitLfs::GitLfsPointer {
+            non_canonical_pointer:
+                Some(CreateChangeFileContents::Existing {
+                    file_id,
+                    maybe_size: _size,
+                }),
+        }) => GitLfs::non_canonical_pointer(file_id),
+        Some(CreateChangeGitLfs::GitLfsPointer {
+            non_canonical_pointer: None,
+        }) => GitLfs::canonical_pointer(),
+        _ => return Err(anyhow!("Programming error: create change must be resolved first").into()),
+    };
+    Ok(git_lfs)
+}
+
+#[derive(Clone)]
 pub struct CreateChangeFile {
     pub contents: CreateChangeFileContents,
     pub file_type: FileType,
+    // If missing then server decides whether to use git lfs or not
+    pub git_lfs: Option<CreateChangeGitLfs>,
 }
 
 #[derive(Clone)]
@@ -253,6 +284,7 @@ impl CreateChangeFile {
                 bytes: Bytes::from(contents),
             },
             file_type: FileType::Regular,
+            git_lfs: None,
         }
     }
 }
@@ -295,6 +327,14 @@ impl CreateChange {
             CreateChange::Untracked(file) => file,
             CreateChange::UntrackedDeletion | CreateChange::Deletion => return Ok(()),
         };
+        if let Some(CreateChangeGitLfs::GitLfsPointer {
+            non_canonical_pointer: Some(non_canonical_pointer),
+        }) = &mut file.git_lfs
+        {
+            non_canonical_pointer
+                .resolve(ctx, filestore_config, repo_blobstore.clone())
+                .await?;
+        }
         file.contents
             .resolve(ctx, filestore_config, repo_blobstore)
             .await?;
@@ -311,6 +351,7 @@ impl CreateChange {
                             maybe_size: Some(size),
                         },
                     file_type,
+                    git_lfs,
                 },
                 copy_info,
             ) => Ok(FileChange::tracked(
@@ -320,7 +361,7 @@ impl CreateChange {
                 copy_info
                     .map(|copy_info| copy_info.into_file_change(parent_ids))
                     .transpose()?,
-                GitLfs::FullContent,
+                try_into_git_lfs(git_lfs)?,
             )),
             CreateChange::Untracked(CreateChangeFile {
                 contents:
@@ -329,8 +370,13 @@ impl CreateChange {
                         maybe_size: Some(size),
                     },
                 file_type,
+                git_lfs: None,
             }) => Ok(FileChange::untracked(file_id, file_type, size)),
             CreateChange::UntrackedDeletion => Ok(FileChange::UntrackedDeletion),
+            CreateChange::Untracked(CreateChangeFile {
+                git_lfs: Some(_git_lfs),
+                ..
+            }) => Err(anyhow!("Error: git_lfs not supported for untracked changes").into()),
             CreateChange::Deletion => Ok(FileChange::Deletion),
             _ => Err(anyhow!("Programming error: create change must be resolved first").into()),
         }

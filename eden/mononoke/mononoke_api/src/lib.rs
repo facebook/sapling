@@ -66,6 +66,7 @@ pub use crate::file::HeaderlessUnifiedDiff;
 pub use crate::repo::create_changeset::CreateChange;
 pub use crate::repo::create_changeset::CreateChangeFile;
 pub use crate::repo::create_changeset::CreateChangeFileContents;
+pub use crate::repo::create_changeset::CreateChangeGitLfs;
 pub use crate::repo::create_changeset::CreateCopyInfo;
 pub use crate::repo::create_changeset::CreateInfo;
 pub use crate::repo::land_stack::PushrebaseOutcome;
