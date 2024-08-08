@@ -720,7 +720,8 @@ impl<Value: ShardedMapV2Value> ShardedMapV2Node<Value> {
         skip: usize,
     ) -> impl Stream<Item = Result<(SmallBinary, Value)>> + 'a {
         const BOUNDED_TRAVERSAL_SCHEDULED_MAX: NonZeroUsize = nonzero!(256usize);
-        const BOUNDED_TRAVERSAL_QUEUED_MAX: NonZeroUsize = nonzero!(256usize);
+        let queued_max =
+            NonZeroUsize::new(Value::WEIGHT_LIMIT * 2).unwrap_or(BOUNDED_TRAVERSAL_SCHEDULED_MAX);
         debug_assert!(
             after.is_none() || skip == 0,
             "programming error: only one of after or skip should be set"
@@ -728,7 +729,7 @@ impl<Value: ShardedMapV2Value> ShardedMapV2Node<Value> {
 
         bounded_traversal::bounded_traversal_ordered_stream(
             BOUNDED_TRAVERSAL_SCHEDULED_MAX,
-            BOUNDED_TRAVERSAL_QUEUED_MAX,
+            queued_max,
             vec![(
                 self.size(),
                 (
