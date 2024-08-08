@@ -531,6 +531,155 @@ impl<Value: ShardedMapV2Value> ShardedMapV2Node<Value> {
         self.into_prefix_entries_impl(ctx, blobstore, prefix, Some(after), 0)
     }
 
+    /// Traverse all inlined nodes that match the target filter, and add them as
+    /// ordered traversal items to `out`.  Non-inlined nodes are added as recursion steps.
+    fn into_prefix_entries_traverse<'a, 'b>(
+        self,
+        mut accumulated_prefix: SmallBinary,
+        target_prefix: &'a [u8],
+        target_after: Option<&'a [u8]>,
+        mut target_skip: usize,
+        out: &'b mut Vec<
+            OrderedTraversal<
+                (SmallBinary, Value),
+                (
+                    SmallBinary,
+                    &'a [u8],
+                    Option<&'a [u8]>,
+                    usize,
+                    LoadableShardedMapV2Node<Value>,
+                ),
+            >,
+        >,
+    ) -> Result<()> {
+        let Self {
+            prefix: current_prefix,
+            mut value,
+            mut children,
+            ..
+        } = self;
+        if target_prefix.len() <= current_prefix.len() {
+            // Exit early if the current prefix doesn't start with the target prefix,
+            // as this means all keys in this node and its descendants don't start with
+            // the target prefix.
+            if !current_prefix.starts_with(target_prefix) {
+                return Ok(());
+            }
+
+            // Trim the current prefix from the resume point and work out if we need to filter
+            // the children of this node.
+            if target_after.is_some_and(|after| after.starts_with(current_prefix.as_slice())) {
+                // The value at this point is before the resume point, so it should
+                // not be output.
+                value = None;
+            }
+            if target_skip > 0 && value.is_some() {
+                target_skip -= 1;
+                value = None;
+            }
+
+            let (byte_after, child_after) = match target_after
+                .and_then(|after| after.strip_prefix(current_prefix.as_slice()))
+                .and_then(|after| after.split_first())
+            {
+                None if Some(current_prefix.as_slice()) < target_after => {
+                    // The target prefix is after the current prefix, so we should
+                    // not recurse into any children.
+                    return Ok(());
+                }
+                None => (None, None),
+                Some((byte, rest)) => (Some(*byte), Some(rest)),
+            };
+
+            // If target_prefix is a prefix of the current node, then
+            // we should output all the values included in this node and
+            // its descendants, after any resume point.
+
+            accumulated_prefix.extend(current_prefix);
+
+            if let Some(value) = value {
+                out.push(OrderedTraversal::Output((
+                    accumulated_prefix.clone(),
+                    *value,
+                )))
+            }
+
+            for (byte, child) in children {
+                let mut accumulated_prefix = accumulated_prefix.clone();
+                accumulated_prefix.push(byte);
+                if Some(byte) < byte_after {
+                    continue;
+                } else {
+                    let child_after = if Some(byte) == byte_after {
+                        child_after
+                    } else {
+                        None
+                    };
+                    let child_skip = target_skip.min(child.size());
+                    target_skip = target_skip.saturating_sub(child_skip);
+                    if child_skip == child.size() {
+                        continue;
+                    } else {
+                        out.push(OrderedTraversal::Recurse(
+                            child.size(),
+                            (
+                                accumulated_prefix,
+                                b"".as_slice(),
+                                child_after,
+                                child_skip,
+                                child,
+                            ),
+                        ));
+                    }
+                }
+            }
+        } else {
+            // target_prefix is longer than the prefix of the current node. This
+            // means that there's at most one child we should recurse to while
+            // ignoring the value of the current node and all other children.
+
+            let target_prefix = match target_prefix.strip_prefix(current_prefix.as_slice()) {
+                Some(remaining_prefix) => remaining_prefix,
+                // The target prefix doesn't start with current node's prefix. Exit early
+                // as none of the keys in the map can start with the target prefix.
+                None => return Ok(()),
+            };
+            let target_after = match target_after
+                .and_then(|after| after.strip_prefix(current_prefix.as_slice()))
+            {
+                Some(remaining_after) => Some(remaining_after),
+                None if Some(current_prefix.as_slice()) < target_after => {
+                    return Ok(());
+                }
+                None => None,
+            };
+
+            let (first, rest) = target_prefix.split_first().unwrap();
+            let child_after = match target_after.and_then(|after| after.split_first()) {
+                Some((after_first, _)) if first < after_first => return Ok(()),
+                Some((after_first, after_rest)) if first == after_first => Some(after_rest),
+                None | Some(_) => None,
+            };
+
+            let child = match children.remove(first) {
+                Some(child) => child,
+                // Exit early if we can't find the child corresponding to the first byte of
+                // the remainder of target prefix, as that's the only child whose keys can
+                // start with the target prefix.
+                None => return Ok(()),
+            };
+
+            accumulated_prefix.extend(current_prefix);
+            accumulated_prefix.push(*first);
+
+            out.push(OrderedTraversal::Recurse(
+                child.size(),
+                (accumulated_prefix, rest, child_after, target_skip, child),
+            ))
+        }
+        Ok(())
+    }
+
     /// Internal implementation of all `into_*_entries_*` methods.
     ///
     /// Returns an ordered stream over all key-value pairs in the map for which
@@ -569,10 +718,10 @@ impl<Value: ShardedMapV2Value> ShardedMapV2Node<Value> {
                 ),
             )],
             move |(
-                mut accumulated_prefix,
+                accumulated_prefix,
                 target_prefix,
                 target_after,
-                mut target_skip,
+                target_skip,
                 current_node,
             ): (
                 SmallBinary,
@@ -582,136 +731,15 @@ impl<Value: ShardedMapV2Value> ShardedMapV2Node<Value> {
                 LoadableShardedMapV2Node<Value>,
             )| {
                 async move {
-                    let Self {
-                        prefix: current_prefix,
-                        mut value,
-                        mut children,
-                        ..
-                    } = current_node.load(ctx, blobstore).await?;
-
-                    if target_prefix.len() <= current_prefix.len() {
-                        // Exit early if the current prefix doesn't start with the target prefix,
-                        // as this means all keys in this node and its descendants don't start with
-                        // the target prefix.
-                        if !current_prefix.starts_with(target_prefix) {
-                            return Ok(vec![]);
-                        }
-
-                        // Trim the current prefix from the resume point and work out if we need to filter
-                        // the children of this node.
-                        if target_after
-                            .is_some_and(|after| after.starts_with(current_prefix.as_slice()))
-                        {
-                            // The value at this point is before the resume point, so it should
-                            // not be output.
-                            value = None;
-                        }
-                        if target_skip > 0 && value.is_some() {
-                            target_skip -= 1;
-                            value = None;
-                        }
-
-                        let (byte_after, child_after) = match target_after
-                            .and_then(|after| after.strip_prefix(current_prefix.as_slice()))
-                            .and_then(|after| after.split_first())
-                        {
-                            None if Some(current_prefix.as_slice()) < target_after => {
-                                // The target prefix is after the current prefix, so we should
-                                // not recurse into any children.
-                                return Ok(vec![]);
-                            }
-                            None => (None, None),
-                            Some((byte, rest)) => (Some(*byte), Some(rest)),
-                        };
-
-                        // If target_prefix is a prefix of the current node, then
-                        // we should output all the values included in this node and
-                        // its descendants, after any resume point.
-
-                        accumulated_prefix.extend(current_prefix);
-
-                        Ok(value
-                            .into_iter()
-                            .map(|value| {
-                                OrderedTraversal::Output((accumulated_prefix.clone(), *value))
-                            })
-                            .chain(children.into_iter().filter_map(|(byte, child)| {
-                                let mut accumulated_prefix = accumulated_prefix.clone();
-                                accumulated_prefix.push(byte);
-                                if Some(byte) < byte_after {
-                                    None
-                                } else {
-                                    let child_after = if Some(byte) == byte_after {
-                                        child_after
-                                    } else {
-                                        None
-                                    };
-                                    let child_skip = target_skip.min(child.size());
-                                    target_skip = target_skip.saturating_sub(child_skip);
-                                    if child_skip == child.size() {
-                                        None
-                                    } else {
-                                        Some(OrderedTraversal::Recurse(
-                                            child.size(),
-                                            (
-                                                accumulated_prefix,
-                                                b"".as_slice(),
-                                                child_after,
-                                                child_skip,
-                                                child,
-                                            ),
-                                        ))
-                                    }
-                                }
-                            }))
-                            .collect::<Vec<_>>())
-                    } else {
-                        // target_prefix is longer than the prefix of the current node. This
-                        // means that there's at most one child we should recurse to while
-                        // ignoring the value of the current node and all other children.
-
-                        let target_prefix =
-                            match target_prefix.strip_prefix(current_prefix.as_slice()) {
-                                Some(remaining_prefix) => remaining_prefix,
-                                // The target prefix doesn't start with current node's prefix. Exit early
-                                // as none of the keys in the map can start with the target prefix.
-                                None => return Ok(vec![]),
-                            };
-                        let target_after = match target_after
-                            .and_then(|after| after.strip_prefix(current_prefix.as_slice()))
-                        {
-                            Some(remaining_after) => Some(remaining_after),
-                            None if Some(current_prefix.as_slice()) < target_after => {
-                                return Ok(vec![]);
-                            }
-                            None => None,
-                        };
-
-                        let (first, rest) = target_prefix.split_first().unwrap();
-                        let child_after = match target_after.and_then(|after| after.split_first()) {
-                            Some((after_first, _)) if first < after_first => return Ok(vec![]),
-                            Some((after_first, after_rest)) if first == after_first => {
-                                Some(after_rest)
-                            }
-                            None | Some(_) => None,
-                        };
-
-                        let child = match children.remove(first) {
-                            Some(child) => child,
-                            // Exit early if we can't find the child corresponding to the first byte of
-                            // the remainder of target prefix, as that's the only child whose keys can
-                            // start with the target prefix.
-                            None => return Ok(vec![]),
-                        };
-
-                        accumulated_prefix.extend(current_prefix);
-                        accumulated_prefix.push(*first);
-
-                        Ok(vec![OrderedTraversal::Recurse(
-                            child.size(),
-                            (accumulated_prefix, rest, child_after, target_skip, child),
-                        )])
-                    }
+                    let mut out = Vec::new();
+                    current_node.load(ctx, blobstore).await?.into_prefix_entries_traverse(
+                        accumulated_prefix,
+                        target_prefix,
+                        target_after,
+                        target_skip,
+                        &mut out,
+                    )?;
+                    Ok(out)
                 }
                 .boxed()
             },
