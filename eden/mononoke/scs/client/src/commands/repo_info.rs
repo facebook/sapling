@@ -11,10 +11,14 @@ use std::io::Write;
 
 use anyhow::Error;
 use anyhow::Result;
+use cloned::cloned;
 use scs_client_raw::thrift;
 use serde::Serialize;
 
 use crate::args::repo::RepoArgs;
+use crate::library::summary::run_stress;
+use crate::library::summary::summary_output;
+use crate::library::summary::StressArgs;
 use crate::render::Render;
 use crate::ScscApp;
 
@@ -23,6 +27,10 @@ use crate::ScscApp;
 pub(super) struct CommandArgs {
     #[clap(flatten)]
     repo_args: RepoArgs,
+
+    /// Enable stress test mode
+    #[clap(flatten)]
+    stress: Option<StressArgs>,
 }
 
 #[derive(Serialize)]
@@ -66,19 +74,34 @@ impl Render for RepoInfoOutput {
     }
 }
 
-async fn repo_info(app: ScscApp, args: CommandArgs, repo: thrift::RepoSpecifier) -> Result<()> {
+pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
+    let repo = args.repo_args.clone().into_repo_specifier();
     let conn = app.get_connection(Some(&repo.name))?;
     let params = thrift::RepoInfoParams {
         ..Default::default()
     };
-    let response = conn.repo_info(&repo, &params).await?;
 
-    let repo_info = RepoInfo::try_from(&response)?;
-    let output = RepoInfoOutput { repo: repo_info };
-    app.target.render_one(&args, output).await
-}
+    if let Some(stress) = args.stress {
+        let results = run_stress(
+            stress.count,
+            stress.parallel,
+            conn.get_client_corrrelator(),
+            || {
+                cloned!(conn, repo, params);
+                Box::pin(async move {
+                    conn.repo_info(&repo, &params).await?;
+                    Ok(())
+                })
+            },
+        )
+        .await;
 
-pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
-    let repo = args.repo_args.clone().into_repo_specifier();
-    repo_info(app, args, repo).await
+        let output = summary_output(results);
+        app.target.render(&(), output).await
+    } else {
+        let response = conn.repo_info(&repo, &params).await?;
+        let repo_info = RepoInfo::try_from(&response)?;
+        let output = RepoInfoOutput { repo: repo_info };
+        app.target.render_one(&args, output).await
+    }
 }
