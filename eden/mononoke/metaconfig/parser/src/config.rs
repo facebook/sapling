@@ -231,6 +231,7 @@ fn parse_with_repo_definition(
         default_objects_count,
         x_repo_sync_source_mapping,
         mononoke_cas_sync_config,
+        git_lfs_interpret_pointers,
         ..
     } = named_repo_config;
 
@@ -348,6 +349,7 @@ fn parse_with_repo_definition(
     let metadata_logger_config = metadata_logger_config.convert()?.unwrap_or_default();
     let zelos_config = zelos_config.convert()?;
     let x_repo_sync_source_mapping = x_repo_sync_source_mapping.convert()?;
+    let git_lfs_interpret_pointers = git_lfs_interpret_pointers.unwrap_or(false);
 
     let commit_cloud_config = commit_cloud_config.convert()?.unwrap_or_default();
     let mononoke_cas_sync_config = mononoke_cas_sync_config.convert()?;
@@ -400,6 +402,7 @@ fn parse_with_repo_definition(
         x_repo_sync_source_mapping,
         commit_cloud_config,
         mononoke_cas_sync_config,
+        git_lfs_interpret_pointers,
     })
 }
 
@@ -1364,6 +1367,7 @@ mod test {
                     mocked_employees: Vec::new(),
                 },
                 mononoke_cas_sync_config: None,
+                git_lfs_interpret_pointers: false,
             },
         );
 
@@ -1436,6 +1440,7 @@ mod test {
                 x_repo_sync_source_mapping: None,
                 commit_cloud_config: CommitCloudConfig::default(),
                 mononoke_cas_sync_config: None,
+                git_lfs_interpret_pointers: false,
             },
         );
         assert_eq!(

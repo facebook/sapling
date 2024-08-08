@@ -255,6 +255,12 @@ pub struct RepoConfig {
     pub commit_cloud_config: CommitCloudConfig,
     /// Mononoke Cas Sync Configuration
     pub mononoke_cas_sync_config: Option<MononokeCasSyncConfig>,
+    /// Determines the behaviour on converting from Git commits
+    /// to bonsais for this repo.
+    ///  - With the flag ON the git lfs pointers will be interpreted and the actual file contents will
+    ///    be stored. File contents have to be available in Mononoke.
+    ///  - With this flag OFF the git lfs pointers are treated like any other file in the repo.
+    pub git_lfs_interpret_pointers: bool,
 }
 
 /// Config determining if the repo is deep sharded in the context of a service.
