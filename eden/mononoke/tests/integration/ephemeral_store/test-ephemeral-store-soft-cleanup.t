@@ -14,17 +14,17 @@ setup configuration
   $ mkdir test_tmp
   $ cd test_tmp
   $ echo "a file content" > a
-  $ hgedenapi snapshot create
+  $ sl snapshot create
   snapshot: Snapshot created with id 39c49a9ad363e4a2f0c314093683a84a85bfaa7b4da83046e58ccb4fbeb2f6c5
   $ echo "b file content" > b
   $ hg add b
-  $ hgedenapi snapshot create
+  $ sl snapshot create
   snapshot: Snapshot created with id a70032dd92c595f7c63727c331bff544b49b93655f5df698c756de0ca6e707be
   $ echo "c file content" > c
-  $ hgedenapi snapshot create
+  $ sl snapshot create
   snapshot: Snapshot created with id 29bc19b1061371d50be8982b75d12495f5c9f7dc26c1cbf6edccf225e0af6712
   $ echo "d file content" > d
-  $ hgedenapi snapshot create
+  $ sl snapshot create
   snapshot: Snapshot created with id 736be07322596e3ff8cb7f237de157689bbac49b05d59115386d80925dd08b4b
 # Ensure bubbles are expired before moving forward
   $ sleep 10

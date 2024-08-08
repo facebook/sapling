@@ -42,7 +42,7 @@ Push the commits
   ├─╯
   o  20ca2a4749a4 'A'
   
-  $ hgedenapi push -q -r . --to main
+  $ sl push -q -r . --to main
 
   $ tglog
   @  d6637437d715 'commit2'

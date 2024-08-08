@@ -30,7 +30,7 @@ Push a directory
   $ echo 3 > dir/3
   $ hg -q addremove
   $ hg ci -m 'create dir'
-  $ hgedenapi push -r . --to master_bookmark -q
+  $ sl push -r . --to master_bookmark -q
   $ hgmn up master_bookmark -q
 
 Now replace directory with a file and push it. Make sure file lists before push
@@ -47,7 +47,7 @@ List of files before the push
   $ hg log -r . -T '{files}'
   dir dir/1 dir/2 dir/3 (no-eol)
 
-  $ hgedenapi push -r . --to master_bookmark -q
+  $ sl push -r . --to master_bookmark -q
   $ hgmn up master_bookmark -q
 
 List of files after the push.

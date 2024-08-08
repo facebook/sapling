@@ -76,7 +76,7 @@ Clone the repo
   $ hg ci -m 'to push'
 
 Unsuccessful push creates a draft commit on the server
-  $ hgedenapi push -r . --to master_bookmark
+  $ sl push -r . --to master_bookmark
   pushing rev 812eca0823f9 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
   edenapi: queue 1 commit for upload
   edenapi: queue 1 file for upload
@@ -102,12 +102,12 @@ Let's make a push
   $ hg up -q "min(all())"
   $ echo 2 > 2 && hg addremove -q
   $ hg ci -m 'to push2'
-  $ hgedenapi push -r . --to master_bookmark --pushvar BYPASS_REVIEW=true -q
+  $ sl push -r . --to master_bookmark --pushvar BYPASS_REVIEW=true -q
 
 Now let's push the same commit again but with a bypass. It should pushrebase,
 not move a bookmark
   $ cd ../repo2
-  $ hgedenapi push -r . --to master_bookmark --pushvar BYPASS_REVIEW=true -q --config push.skip-cleanup-commits=true
+  $ sl push -r . --to master_bookmark --pushvar BYPASS_REVIEW=true -q --config push.skip-cleanup-commits=true
   $ hgmn up -q master_bookmark
   $ log
   @  to push [public;rev=5;a6205c464622] default/master_bookmark
@@ -127,18 +127,18 @@ The same procedure, but with commit cloud commit
   $ hg up -q "min(all())"
   $ echo commitcloud > commitcloud && hg addremove -q
   $ hg ci -m commitcloud
-  $ hgedenapi cloud backup -q
+  $ sl cloud backup -q
 
 Move master again
   $ cd ../repo3
   $ hg up -q "min(all())"
   $ echo 3 > 3 && hg addremove -q
   $ hg ci -m 'to push3'
-  $ hgedenapi push -r . --to master_bookmark --pushvar BYPASS_REVIEW=true -q
+  $ sl push -r . --to master_bookmark --pushvar BYPASS_REVIEW=true -q
 
 Now let's push commit cloud commit. Again, it should do pushrebase
   $ cd ../repo2
-  $ hgedenapi push -r . --to master_bookmark --pushvar BYPASS_REVIEW=true -q --config push.skip-cleanup-commits=true
+  $ sl push -r . --to master_bookmark --pushvar BYPASS_REVIEW=true -q --config push.skip-cleanup-commits=true
   $ hgmn up -q master_bookmark
   $ log
   @  commitcloud [public;rev=8;3308f3bd8048] default/master_bookmark

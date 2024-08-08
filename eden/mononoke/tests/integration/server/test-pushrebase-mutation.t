@@ -43,7 +43,7 @@ create a commit with mutation extras
       f0161ad23099c690115006c21e96f780f5d740b6
   
 pushrebase it directly onto master - it will be rewritten without the mutation extras
-  $ hgedenapi push -r . --to master --config push.skip-cleanup-commits=true
+  $ sl push -r . --to master --config push.skip-cleanup-commits=true
   pushing rev 6ad95cdc8ab9 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master
   edenapi: queue 1 commit for upload
   edenapi: queue 1 file for upload
@@ -74,7 +74,7 @@ create another commit on the base commit with mutation extras
       1b9fe529321657f93e84f23afaf9c855b9af34ff
   
 pushrebase it onto master - it will be rebased and rewritten without the mutation extras
-  $ hgedenapi push -r . --to master --config push.skip-cleanup-commits=true
+  $ sl push -r . --to master --config push.skip-cleanup-commits=true
   pushing rev fd935a5d42c4 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master
   edenapi: queue 1 commit for upload
   edenapi: queue 1 file for upload

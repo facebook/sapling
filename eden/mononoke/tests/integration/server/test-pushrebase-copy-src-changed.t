@@ -64,7 +64,7 @@ Create a copy on a client and push it
   $ hg up -q tip
   $ hg cp A D
   $ hg ci -m 'make a copy'
-  $ hgedenapi push -r . --to master_bookmark
+  $ sl push -r . --to master_bookmark
   pushing rev 726a45528732 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
   edenapi: queue 1 commit for upload
   edenapi: queue 1 file for upload

@@ -71,13 +71,13 @@ clone
 
 fast-forward the bookmark
   $ hg up -q $B
-  $ hgedenapi push -r . --to main
+  $ sl push -r . --to main
   pushing rev 112478962961 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark main
   moving remote bookmark main from 426bada5c675 to 112478962961
 
 fast-forward the bookmark over a commit that fails the hook
   $ hg up -q $D
-  $ hgedenapi push -r . --to main
+  $ sl push -r . --to main
   pushing rev 7ff4b7c298ec to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark main
   moving remote bookmark main from 112478962961 to 7ff4b7c298ec
   abort: server error: hooks failed:
@@ -85,19 +85,19 @@ fast-forward the bookmark over a commit that fails the hook
   [255]
 
 bypass the hook, the push will now work
-  $ hgedenapi push -r . --to main --pushvar ALLOW_LARGE_FILES=true
+  $ sl push -r . --to main --pushvar ALLOW_LARGE_FILES=true
   pushing rev 7ff4b7c298ec to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark main
   moving remote bookmark main from 112478962961 to 7ff4b7c298ec
 
 attempt a non-fast-forward move, it should fail
   $ hg up -q $F
-  $ hgedenapi push -r . --to main
+  $ sl push -r . --to main
   pushing rev af09fbbc2f05 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark main
   abort: non-fast-forward push to remote bookmark main from 7ff4b7c298ec to af09fbbc2f05
   (add '--force' or set pushvar NON_FAST_FORWARD=true for a non-fast-forward move)
   [255]
 specify the pushvar to allow the non-fast-forward move.
-  $ hgedenapi push -r . --to main --pushvar NON_FAST_FORWARD=true
+  $ sl push -r . --to main --pushvar NON_FAST_FORWARD=true
   pushing rev af09fbbc2f05 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark main
   moving remote bookmark main from 7ff4b7c298ec to af09fbbc2f05
   abort: server error: hooks failed:
@@ -105,7 +105,7 @@ specify the pushvar to allow the non-fast-forward move.
   [255]
 
 bypass the hook too, and it should work
-  $ hgedenapi push -r . --to main --pushvar NON_FAST_FORWARD=true --pushvar ALLOW_LARGE_FILES=true
+  $ sl push -r . --to main --pushvar NON_FAST_FORWARD=true --pushvar ALLOW_LARGE_FILES=true
   pushing rev af09fbbc2f05 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark main
   moving remote bookmark main from 7ff4b7c298ec to af09fbbc2f05
 
@@ -113,7 +113,7 @@ Noop bookmark-only push doesn't need to bypass hooks to go through.
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select count(*) from bookmarks_update_log";
   7
 The server side bookmark value can be stable due to data derivation, let's workaround it by reading from local
-  $ hgedenapi push -r . --to main --config push.use_local_bookmark_value=True
+  $ sl push -r . --to main --config push.use_local_bookmark_value=True
   pushing rev af09fbbc2f05 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark main
   moving remote bookmark main from af09fbbc2f05 to af09fbbc2f05
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select count(*) from bookmarks_update_log";
@@ -122,7 +122,7 @@ The server side bookmark value can be stable due to data derivation, let's worka
 attempt a move to a completely unrelated commit (no common ancestor), with an ancestor that
 fails the hook
   $ hg up -q $Z
-  $ hgedenapi push -r . --to main --pushvar NON_FAST_FORWARD=true
+  $ sl push -r . --to main --pushvar NON_FAST_FORWARD=true
   pushing rev e3295448b1ef to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark main
   moving remote bookmark main from af09fbbc2f05 to e3295448b1ef
   abort: server error: hooks failed:
@@ -130,23 +130,23 @@ fails the hook
   [255]
 
 bypass the hook, and it should work
-  $ hgedenapi push -r . --to main --pushvar NON_FAST_FORWARD=true --pushvar ALLOW_LARGE_FILES=true
+  $ sl push -r . --to main --pushvar NON_FAST_FORWARD=true --pushvar ALLOW_LARGE_FILES=true
   pushing rev e3295448b1ef to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark main
   moving remote bookmark main from af09fbbc2f05 to e3295448b1ef
 
 pushing another bookmark to the same commit shouldn't require running that hook
   $ hg up -q $X
-  $ hgedenapi push -r . --to other --create
+  $ sl push -r . --to other --create
   pushing rev ba2b7fa7166d to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark other
   creating remote bookmark other
   $ hg up -q $Z
-  $ hgedenapi push -r . --to other
+  $ sl push -r . --to other
   pushing rev e3295448b1ef to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark other
   moving remote bookmark other from ba2b7fa7166d to e3295448b1ef
 
 but pushing to another commit will run the hook
   $ hg up -q $C
-  $ hgedenapi push -r . --to other --pushvar NON_FAST_FORWARD=true
+  $ sl push -r . --to other --pushvar NON_FAST_FORWARD=true
   pushing rev 5e6585e50f1b to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark other
   moving remote bookmark other from e3295448b1ef to 5e6585e50f1b
   abort: server error: hooks failed:
@@ -154,18 +154,18 @@ but pushing to another commit will run the hook
   [255]
 
 bypassing that also works
-  $ hgedenapi push -r . --to other --pushvar NON_FAST_FORWARD=true --pushvar ALLOW_LARGE_FILES=true
+  $ sl push -r . --to other --pushvar NON_FAST_FORWARD=true --pushvar ALLOW_LARGE_FILES=true
   pushing rev 5e6585e50f1b to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark other
   moving remote bookmark other from e3295448b1ef to 5e6585e50f1b
 
 we can now extend that bookmark further without a bypass needed
   $ hg up -q $D
-  $ hgedenapi push -r . --to other
+  $ sl push -r . --to other
   pushing rev 7ff4b7c298ec to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark other
   moving remote bookmark other from 5e6585e50f1b to 7ff4b7c298ec
 
 create a new bookmark at this location - it should fail because of the hook
-  $ hgedenapi push -r . --to created --create
+  $ sl push -r . --to created --create
   pushing rev 7ff4b7c298ec to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark created
   creating remote bookmark created
   abort: failed to create remote bookmark:
@@ -174,11 +174,11 @@ create a new bookmark at this location - it should fail because of the hook
   [255]
 
 bypass the hook to allow the creation
-  $ hgedenapi push -r . --to created --create --pushvar ALLOW_LARGE_FILES=true
+  $ sl push -r . --to created --create --pushvar ALLOW_LARGE_FILES=true
   pushing rev 7ff4b7c298ec to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark created
   creating remote bookmark created
 
 we can, however, create a bookmark at the same location as main
-  $ hgedenapi push -r $Z --to main-copy --create
+  $ sl push -r $Z --to main-copy --create
   pushing rev e3295448b1ef to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark main-copy
   creating remote bookmark main-copy

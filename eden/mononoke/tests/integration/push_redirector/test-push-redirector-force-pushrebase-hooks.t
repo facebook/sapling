@@ -43,14 +43,14 @@ We can't force pushrebase to a shared bookmark, so create a test bookmark that o
 to the small repo
   $ cd "$TESTTMP/small-hg-client"
   $ REPONAME=small-mon hgmn up -q master_bookmark
-  $ REPONAME=small-mon hgedenapi push -r . --to test_bookmark --create
+  $ REPONAME=small-mon sl push -r . --to test_bookmark --create
   pushing rev 11f848659bfc to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark test_bookmark
   creating remote bookmark test_bookmark
 
 Force pushrebase to the small repo with one commit succeeds, and does not get
 blocked by deny_files
   $ echo 2 > 2 && hg addremove -q && hg ci -q -m newcommit
-  $ REPONAME=small-mon hgedenapi push -r . --to test_bookmark --force 2>&1 | grep moving
+  $ REPONAME=small-mon sl push -r . --to test_bookmark --force 2>&1 | grep moving
   moving remote bookmark test_bookmark from 11f848659bfc to ce81c7d38286
 -- newcommit was correctly pushed to test_bookmark
   $ log -r test_bookmark
@@ -77,7 +77,7 @@ Note that the node is from the small repo, even though the hook is in the large 
   $ echo 2 > f/.git/HEAD && hg addremove -q && hg ci -q -m .git
   $ hg log -T"small_node: {node}\n" -r .
   small_node: 6e6a22d48eb51db1e7b8af685d9c99c0d7f10f70
-  $ REPONAME=small-mon hgedenapi push -r . --to test_bookmark --force
+  $ REPONAME=small-mon sl push -r . --to test_bookmark --force
   pushing rev 6e6a22d48eb5 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark test_bookmark
   edenapi: queue 1 commit for upload
   edenapi: queue 0 files for upload
@@ -99,7 +99,7 @@ there, we are ok to create it.  Create a commit on top of that that is backsynce
   $ hg log -T "large_node: {node}\n" -r .
   large_node: d967862de4d54c47ba51e0259fb1f72d881efd73
   $ echo 3 > smallrepofolder/largerepofile && hg addremove -q && hg ci -q -m backsync
-  $ REPONAME=large-mon hgedenapi push --to master_bookmark
+  $ REPONAME=large-mon sl push --to master_bookmark
   pushing rev 148264a57519 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
   edenapi: queue 2 commits for upload
   edenapi: queue 1 file for upload
@@ -128,7 +128,7 @@ Note that since the large repo commit doesn't map to the small repo, we see the 
 changeset id.
 
   $ REPONAME=small-mon hgmn up -q master_bookmark
-  $ REPONAME=small-mon hgedenapi push -r . --to test_bookmark --pushvar NON_FAST_FORWARD=true
+  $ REPONAME=small-mon sl push -r . --to test_bookmark --pushvar NON_FAST_FORWARD=true
   pushing rev cd9bfa9f25eb to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark test_bookmark
   moving remote bookmark test_bookmark from ce81c7d38286 to cd9bfa9f25eb
   abort: server error: hooks failed:

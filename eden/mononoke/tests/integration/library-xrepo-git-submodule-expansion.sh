@@ -296,7 +296,7 @@ function update_repo_b_submodule_pointer_in_large_repo {
   echo "new file abc" > smallrepofolder1/git-repo-b/abc
   printf "%s" "$REPO_B_GIT_COMMIT_HASH" > smallrepofolder1/.x-repo-submodule-git-repo-b
   hg commit -Aq -m "Valid repo_b submodule version bump from large repo"
-  REPONAME="$LARGE_REPO_NAME" hgedenapi cloud backup -q
+  REPONAME="$LARGE_REPO_NAME" sl cloud backup -q
 }
 
 
@@ -372,5 +372,5 @@ function update_repo_c_submodule_pointer_in_large_repo {
   printf "%s" "$REPO_B_GIT_COMMIT_HASH" > smallrepofolder1/.x-repo-submodule-git-repo-b
 
   hg commit -Aq -m "Valid repo_b and repo_c recursive submodule version bump from large repo"
-  REPONAME="$LARGE_REPO_NAME" hgedenapi cloud backup -q
+  REPONAME="$LARGE_REPO_NAME" sl cloud backup -q
 }

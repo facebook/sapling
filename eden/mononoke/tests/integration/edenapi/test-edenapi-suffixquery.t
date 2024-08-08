@@ -22,7 +22,7 @@
   > EOS
 
 Test suffix query output errors if commit not on server:
-  $ hgedenapi debugapi -e suffix_query -i "{'Hg': '$(hg whereami)'}" -i "['.txt']" -i None
+  $ sl debugapi -e suffix_query -i "{'Hg': '$(hg whereami)'}" -i "['.txt']" -i None
   abort: server responded 400 Bad Request for https://localhost:*/edenapi/repo/suffix_query: {"message":"CommitId not found: *","request_id":"*"}. Headers: { (glob)
       "x-request-id": "*", (glob)
       "content-type": "application/json",
@@ -40,16 +40,16 @@ API works:
   $ hg add tmp.txt
   $ hg add src/rust.rs
   $ hg commit -m "jkter"
-  $ hgedenapi push -q --to master --create
-  $ hgedenapi debugapi -e suffix_query -i "{'Hg': '$(hg whereami)'}" -i "['.txt']" -i None
+  $ sl push -q --to master --create
+  $ sl debugapi -e suffix_query -i "{'Hg': '$(hg whereami)'}" -i "['.txt']" -i None
   [{"file_path": "tmp.txt"}]
-  $ hgedenapi debugapi -e suffix_query -i "{'Hg': '$(hg whereami)'}" -i "['.rs']" -i None
+  $ sl debugapi -e suffix_query -i "{'Hg': '$(hg whereami)'}" -i "['.rs']" -i None
   [{"file_path": "src/rust.rs"}]
-  $ hgedenapi debugapi -e suffix_query -i "{'Hg': '$(hg whereami)'}" -i "['.cpp']" -i None
+  $ sl debugapi -e suffix_query -i "{'Hg': '$(hg whereami)'}" -i "['.cpp']" -i None
   []
   $ touch src/nested.txt
   $ hg add src/nested.txt
   $ hg commit -m "mint"
-  $ hgedenapi push -q --to master
-  $ hgedenapi debugapi -e suffix_query -i "{'Hg': '$(hg whereami)'}" -i "['.txt']" -i "['src']"
+  $ sl push -q --to master
+  $ sl debugapi -e suffix_query -i "{'Hg': '$(hg whereami)'}" -i "['.txt']" -i "['src']"
   [{"file_path": "src/nested.txt"}]

@@ -20,7 +20,7 @@ setup configuration
   $ echo "e file content" > e
   $ echo "f file content" > f
   $ hg add f
-  $ hgedenapi snapshot create
+  $ sl snapshot create
   snapshot: Snapshot created with id 9b2da5e2ba10d7e18476ef29c252bed384d9a44206f3b8b4da31046c800a513d
 
 List the blob contents of a bubble without passing any argument:

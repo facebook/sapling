@@ -24,7 +24,7 @@
 Pushrebase commit 1
   $ hg up -q "min(all())"
   $ echo 1 > 1 && hg add 1 && hg ci -m 1
-  $ hgedenapi push -r . --to master_bookmark
+  $ sl push -r . --to master_bookmark
   pushing rev a0c9c5791058 to destination https://localhost:*/edenapi/ bookmark master_bookmark (glob)
   edenapi: queue 1 commit for upload
   edenapi: queue 1 file for upload
@@ -77,7 +77,7 @@ Push rebase fails with conflict in the bottom of the stack
   $ hg up -q "min(all())"
   $ echo 1 > 1 && hg add 1 && hg ci -m 1
   $ echo 2 > 2 && hg add 2 && hg ci -m 2
-  $ hgedenapi push -r . --to master_bookmark
+  $ sl push -r . --to master_bookmark
   pushing rev 0c67ec8c24b9 to destination https://localhost:*/edenapi/ bookmark master_bookmark (glob)
   edenapi: queue 1 commit for upload
   edenapi: queue 1 file for upload
@@ -95,7 +95,7 @@ Push rebase fails with conflict in the top of the stack
   $ hg up -q "min(all())"
   $ echo 2 > 2 && hg add 2 && hg ci -m 2
   $ echo 1 > 1 && hg add 1 && hg ci -m 1
-  $ hgedenapi push -r . --to master_bookmark
+  $ sl push -r . --to master_bookmark
   pushing rev 8d2ff619947e to destination https://localhost:*/edenapi/ bookmark master_bookmark (glob)
   edenapi: queue 2 commits for upload
   edenapi: queue 0 files for upload
@@ -112,7 +112,7 @@ Push stack
   $ hg up -q "min(all())"
   $ echo 3 > 3 && hg add 3 && hg ci -m 3
   $ echo 4 > 4 && hg add 4 && hg ci -m 4
-  $ hgedenapi push -r . --to master_bookmark
+  $ sl push -r . --to master_bookmark
   pushing rev 7a68f123d810 to destination https://localhost:*/edenapi/ bookmark master_bookmark (glob)
   edenapi: queue 2 commits for upload
   edenapi: queue 2 files for upload
@@ -146,7 +146,7 @@ Push fast-forward
   $ hg up master_bookmark
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo 5 > 5 && hg add 5 && hg ci -m 5
-  $ hgedenapi push -r . --to master_bookmark
+  $ sl push -r . --to master_bookmark
   pushing rev 59e5396444cf to destination https://localhost:*/edenapi/ bookmark master_bookmark (glob)
   edenapi: queue 1 commit for upload
   edenapi: queue 1 file for upload
@@ -177,7 +177,7 @@ Push fast-forward
 
 
 Push with no new commits
-  $ hgedenapi push -r . --to master_bookmark
+  $ sl push -r . --to master_bookmark
   pushing rev 59e5396444cf to destination https://localhost:*/edenapi/ bookmark master_bookmark (glob)
   moving remote bookmark master_bookmark from 59e5396444cf to 59e5396444cf
   $ log -r "."
@@ -213,7 +213,7 @@ Push a merge commit with both parents not ancestors of destination bookmark
   o  A [public;rev=0;426bada5c675]
   $
 
-  $ hgedenapi push -r . --to master_bookmark
+  $ sl push -r . --to master_bookmark
   fallback reason: merge commit is not supported by EdenApi push yet
   pushing rev fad460d85200 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
@@ -258,7 +258,7 @@ Push-rebase of a commit with p2 being the ancestor of the destination bookmark
   $ echo 9 > 9 && hg add 9 && hg ci -m 9
   $ echo 10 > 10 && hg add 10 && hg ci -m 10
   $ echo 11 > 11 && hg add 11 && hg ci -m 11
-  $ hgedenapi push -r . --to master_bookmark -q
+  $ sl push -r . --to master_bookmark -q
   $ hgmn up .^^ && echo 12 > 12 && hg add 12 && hg ci -m 12
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ hg log -r master_bookmark -T '{node}\n'
@@ -273,7 +273,7 @@ Push-rebase of a commit with p2 being the ancestor of the destination bookmark
   589551466f2555a4d90ca544b23273a2eed21f9d
 
 - Actually test the push
-  $ hgedenapi push -r . --to master_bookmark
+  $ sl push -r . --to master_bookmark
   fallback reason: merge commit is not supported by EdenApi push yet
   pushing rev e3db177db1d1 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
@@ -285,7 +285,7 @@ Push-rebase of a commit with p2 being the ancestor of the destination bookmark
   $ hg log -r master_bookmark -T '{node}\n'
   eb388b759fde98ed5b1e05fd2da5309f3762c2fd
 Test creating a bookmark on a public commit
-  $ hgedenapi push --rev 25 --to master_bookmark_2 --create
+  $ sl push --rev 25 --to master_bookmark_2 --create
   pushing rev eb388b759fde to destination https://localhost:*/edenapi/ bookmark master_bookmark_2 (glob)
   creating remote bookmark master_bookmark_2
   $ log -r "20::"
@@ -315,7 +315,7 @@ Test a non-forward push
   o  9 [public;rev=20;2f7cc50dc4e5]
   │
   ~
-  $ hgedenapi push --force -r . --to master_bookmark_2 --non-forward-move --pushvar NON_FAST_FORWARD=true
+  $ sl push --force -r . --to master_bookmark_2 --non-forward-move --pushvar NON_FAST_FORWARD=true
   pushing rev 589551466f25 to destination https://localhost:*/edenapi/ bookmark master_bookmark_2 (glob)
   moving remote bookmark master_bookmark_2 from eb388b759fde to 589551466f25
   $ log -r "20::"
@@ -332,7 +332,7 @@ Test a non-forward push
   ~
 
 Test deleting a bookmark
-  $ hgedenapi push --delete master_bookmark_2
+  $ sl push --delete master_bookmark_2
   deleting remote bookmark master_bookmark_2
   $ log -r "20::"
   o    merge 10 and 12 [public;rev=25;eb388b759fde] default/master_bookmark
@@ -349,7 +349,7 @@ Test deleting a bookmark
 
 Test creating a bookmark and new head
   $ echo draft > draft && hg add draft && hg ci -m draft
-  $ hgedenapi push -r . --to newbook --create
+  $ sl push -r . --to newbook --create
   pushing rev 7a037594e202 to destination https://localhost:*/edenapi/ bookmark newbook (glob)
   edenapi: queue 1 commit for upload
   edenapi: queue 1 file for upload
@@ -379,7 +379,7 @@ Test non-fast-forward force pushrebase
   │
   ~
 -- we don't need to pass --pushvar NON_FAST_FORWARD if we're doing a force pushrebase
-  $ hgedenapi push -r . -f --to newbook
+  $ sl push -r . -f --to newbook
   pushing rev 4899f9112d9b to destination https://localhost:*/edenapi/ bookmark newbook (glob)
   edenapi: queue 1 commit for upload
   edenapi: queue 1 file for upload
@@ -421,7 +421,7 @@ Test non-fast-forward force pushrebase
 Check that a force pushrebase with mutation markers.
   $ echo SPARTACUS > sum_ego && hg ci -qAm 27
   $ echo SPARTACUS! > sum_ego && hg amend --config mutation.enabled=true --config mutation.record=true
-  $ hgedenapi push -r . -f --to newbook --config push.check-mutation=true
+  $ sl push -r . -f --to newbook --config push.check-mutation=true
   pushing rev * to destination https://localhost:*/edenapi/ bookmark newbook (glob)
   edenapi: queue 1 commit for upload
   edenapi: queue 1 file for upload
@@ -441,7 +441,7 @@ Check that we can replace a file with a directory
   $ echo hello > A/hello
   $ hgmn add A/hello -q
   $ hgmn ci -qm "replace a file with a dir"
-  $ hgedenapi push --to newbook
+  $ sl push --to newbook
   pushing rev 4e5fec14573f to destination https://localhost:*/edenapi/ bookmark newbook (glob)
   edenapi: queue 1 commit for upload
   edenapi: queue 1 file for upload

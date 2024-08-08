@@ -65,7 +65,7 @@ attempt to push a case conflict onto main
   $ hg add caseconflict.txt CaseConflict.txt
   warning: possible case-folding collision for caseconflict.txt
   $ hg commit -qm conflict1
-  $ hgedenapi push -r . --to main
+  $ sl push -r . --to main
   pushing rev ddbe318d5aca to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark main
   edenapi: queue 1 commit for upload
   edenapi: queue 2 files for upload
@@ -78,14 +78,14 @@ attempt to push a case conflict onto main
   [255]
 
 it's ok to push it on to a scratch bookmark, though
-  $ hgedenapi push -r . --to scratch/conflict1 --create
+  $ sl push -r . --to scratch/conflict1 --create
   pushing to mononoke://$LOCALIP:$LOCAL_PORT/repo
   searching for changes
 
 if we stack a commit that fixes the case conflict, we still can't land the stack
   $ hg rm caseconflict.txt
   $ hg commit -qm "fix conflict"
-  $ hgedenapi push -r . --to main
+  $ sl push -r . --to main
   pushing rev cbb97717004c to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark main
   edenapi: queue 1 commit for upload
   edenapi: queue 0 files for upload
@@ -102,7 +102,7 @@ attempt to push a commit that introduces a case conflict onto main
   $ hg add SomeFile
   warning: possible case-folding collision for SomeFile
   $ hg commit -qm conflict2
-  $ hgedenapi push -r . --to main
+  $ sl push -r . --to main
   pushing rev 99950f688a32 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark main
   edenapi: queue 1 commit for upload
   edenapi: queue 0 files for upload
@@ -114,12 +114,12 @@ attempt to push a commit that introduces a case conflict onto main
   [255]
 
 again, it's ok to push this to a scratch branch
-  $ hgedenapi push -r . --to scratch/conflict2 --create
+  $ sl push -r . --to scratch/conflict2 --create
   pushing to mononoke://$LOCALIP:$LOCAL_PORT/repo
   searching for changes
 
 we can't move the bookmark to a commit with a pre-existing case conflict via bookmark-only pushrebase
-  $ hgedenapi push -r other --to main --pushvar NON_FAST_FORWARD=true
+  $ sl push -r other --to main --pushvar NON_FAST_FORWARD=true
   pushing rev 2b2f2fedc926 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark main
   moving remote bookmark main from 8c2a70bb0c78 to 2b2f2fedc926
   abort: server error: invalid request: Case conflict found in 34931495583238beb776a43e216288f3d2a73946ef3b9e72d77f83e2aafe04c9: existing/CaseConflict conflicts with existing/caseconflict
@@ -132,7 +132,7 @@ we can't land to the other if we introduce a new case conflict
   $ hg add testfile TestFile
   warning: possible case-folding collision for testfile
   $ hg commit -qm conflict3
-  $ hgedenapi push -r . --to other
+  $ sl push -r . --to other
   pushing rev 379371c4bd8a to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark other
   edenapi: queue 1 commit for upload
   edenapi: queue 2 files for upload
@@ -149,7 +149,7 @@ we can land something that doesn't introduce a new case conflict
   $ echo testfile > testfile
   $ hg add testfile
   $ hg commit -qm nonewconflict
-  $ hgedenapi push -r . --to other
+  $ sl push -r . --to other
   pushing rev 951a1a92f401 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark other
   edenapi: queue 1 commit for upload
   edenapi: queue 1 file for upload
@@ -166,7 +166,7 @@ we can't land if we try to make an existing case conflict worse
   $ hg add existing/CASECONFLICT
   warning: possible case-folding collision for existing/CASECONFLICT
   $ hg commit -qm conflict4
-  $ hgedenapi push -r . --to other
+  $ sl push -r . --to other
   pushing rev 13488940ae4f to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark other
   edenapi: queue 1 commit for upload
   edenapi: queue 0 files for upload
@@ -181,7 +181,7 @@ we can land it if we also fix all of the related case conflicts
   $ hg rm existing/CaseConflict
   $ hg rm existing/caseconflict
   $ hg amend -q
-  $ hgedenapi push -r . --to other
+  $ sl push -r . --to other
   pushing rev f53c362f9b2d to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark other
   edenapi: queue 1 commit for upload
   edenapi: queue 0 files for upload

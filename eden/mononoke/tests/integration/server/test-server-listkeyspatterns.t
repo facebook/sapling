@@ -51,27 +51,27 @@ switch to client and enable infinitepush extension
   $ setconfig extensions.infinitepush= extensions.commitcloud=
 
 match with glob pattern
-  $ hgedenapi book --list-remote test/*
+  $ sl book --list-remote test/*
      test/one                  26805aba1e600a82e93661149f2313866a221a7b
      test/three                051cf22dff5ca70a5ba3d06d1f9dd08407dfd1a6
      test/two                  4b61ff5c62e28cff36152201967390a6e7375604
 
 match with literal pattern
-  $ hgedenapi book --list-remote test
-  $ hgedenapi book --list-remote test/three
+  $ sl book --list-remote test
+  $ sl book --list-remote test/three
      test/three                051cf22dff5ca70a5ba3d06d1f9dd08407dfd1a6
-  $ hgedenapi book --list-remote test/t*
+  $ sl book --list-remote test/t*
      test/three                051cf22dff5ca70a5ba3d06d1f9dd08407dfd1a6
      test/two                  4b61ff5c62e28cff36152201967390a6e7375604
 
 match multiple patterns
-  $ hgedenapi book --list-remote test/one --list-remote test/th*
+  $ sl book --list-remote test/one --list-remote test/th*
      test/one                  26805aba1e600a82e93661149f2313866a221a7b
      test/three                051cf22dff5ca70a5ba3d06d1f9dd08407dfd1a6
 
 match with SQL wildcards doesn't match arbitrary things (should match nothing)
-  $ hgedenapi book --list-remote t__t/*
+  $ sl book --list-remote t__t/*
 
 match with SQL wildcards does match things with those characters
-  $ hgedenapi book --list-remote special/__test*
+  $ sl book --list-remote special/__test*
      special/__test__          112478962961147124edd43549aedd1a335e44bf

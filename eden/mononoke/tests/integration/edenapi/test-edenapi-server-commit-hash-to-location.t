@@ -75,7 +75,7 @@ Create and send request.
   > ]
   > EOF
 
-  $ hgedenapi debugapi -e commithashtolocation -f master_heads -f hgids
+  $ sl debugapi -e commithashtolocation -f master_heads -f hgids
   [{"hgid": bin("a194cadd16930608adaa649035ad4c16930cbd0f"),
     "result": {"Ok": {"distance": 0,
                       "descendant": bin("a194cadd16930608adaa649035ad4c16930cbd0f")}}},

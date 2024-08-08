@@ -14,8 +14,8 @@ Set up local hgrc and Mononoke config, with http pull
   $ cd $TESTTMP
 
 Custom smartlog
-  $ function sl {
-  >  hgedenapi log -G -T "{node|short} {phase} '{desc|firstline}' {bookmarks} {remotenames}"
+  $ function smartlog {
+  >  sl log -G -T "{node|short} {phase} '{desc|firstline}' {bookmarks} {remotenames}"
   > }
 
 Initialize test repo.
@@ -24,7 +24,7 @@ Initialize test repo.
   $ mkcommit base_commit
   $ hg log -T '{short(node)}\n'
   8b2dca0c8a72
-  $ hgedenapi bookmark master_bookmark -r 8b2dca0c8a72
+  $ sl bookmark master_bookmark -r 8b2dca0c8a72
 
 
 Import and start mononoke
@@ -34,23 +34,23 @@ Import and start mononoke
   $ wait_for_mononoke
 
 Clone 1 and 2
-  $ hgedenapi clone "mononoke://$(mononoke_address)/repo" client1
+  $ sl clone "mononoke://$(mononoke_address)/repo" client1
   Cloning repo into $TESTTMP/client1
   Checking out 'master_bookmark'
   1 files updated
-  $ hgedenapi clone "mononoke://$(mononoke_address)/repo" client2 -q
+  $ sl clone "mononoke://$(mononoke_address)/repo" client2 -q
   $ cd client1
-  $ sl
+  $ smartlog
   @  8b2dca0c8a72 public 'base_commit'  remote/master_bookmark
   
-  $ hgedenapi up remote/master_bookmark
+  $ sl up remote/master_bookmark
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ echo a > a && hgedenapi commit -m "new commit" -A a
-  $ hgedenapi push --to master_bookmark
+  $ echo a > a && sl commit -m "new commit" -A a
+  $ sl push --to master_bookmark
   pushing rev 8ca8131de573 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   updating bookmark master_bookmark
-  $ sl
+  $ smartlog
   @  8ca8131de573 public 'new commit'  remote/master_bookmark
   │
   o  8b2dca0c8a72 public 'base_commit'
@@ -60,20 +60,20 @@ Clone 3
   $ cd $TESTTMP
 This is a hack, it seems WBC may be stale, causing the test to be flaky. It needs a proper fix.
   $ sleep 3
-  $ hgedenapi clone "mononoke://$(mononoke_address)/repo" client3
+  $ sl clone "mononoke://$(mononoke_address)/repo" client3
   Cloning repo into $TESTTMP/client3
   Checking out 'master_bookmark'
   2 files updated
   $ cd client3
-  $ hgedenapi up remote/master_bookmark 
+  $ sl up remote/master_bookmark 
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ sl
+  $ smartlog
   @  8ca8131de573 public 'new commit'  remote/master_bookmark
   │
   o  8b2dca0c8a72 public 'base_commit'
   
-  $ echo b > a && hgedenapi commit -m "newer commit"
-  $ hgedenapi push --to master_bookmark
+  $ echo b > a && sl commit -m "newer commit"
+  $ sl push --to master_bookmark
   pushing rev 6b51b03e4f04 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   updating bookmark master_bookmark
@@ -82,25 +82,25 @@ Back to clone 1
   $ cd "$TESTTMP/client1"
 This is a hack, it seems WBC may be stale, causing the test to be flaky. It needs a proper fix.
   $ sleep 3
-  $ hgedenapi pull
+  $ sl pull
   pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo
   searching for changes
-  $ sl
+  $ smartlog
   o  6b51b03e4f04 public 'newer commit'  remote/master_bookmark
   │
   @  8ca8131de573 public 'new commit'
   │
   o  8b2dca0c8a72 public 'base_commit'
   
-  $ hgedenapi up remote/master_bookmark
+  $ sl up remote/master_bookmark
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 On clone 2 with tailer
   $ cd "$TESTTMP/client2"
-  $ hgedenapi pull
+  $ sl pull
   pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo
   searching for changes
-  $ sl
+  $ smartlog
   o  6b51b03e4f04 public 'newer commit'  remote/master_bookmark
   │
   o  8ca8131de573 public 'new commit'

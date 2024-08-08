@@ -42,8 +42,8 @@ Set up local hgrc and Mononoke config, with commit cloud, http pull and upload.
   > httphashprefix = true
   > EOF
 Custom smartlog
-  $ function sl {
-  >  hgedenapi log -G -T "{node|short} '{desc|firstline}' {join(mutations % '(Rewritten using {operation} into {join(successors % \'{node|short}\', \', \')})', ' ')}" --hidden
+  $ function smartlog {
+  >  sl log -G -T "{node|short} '{desc|firstline}' {join(mutations % '(Rewritten using {operation} into {join(successors % \'{node|short}\', \', \')})', ' ')}" --hidden
   > }
 
 Initialize test repo.
@@ -64,23 +64,23 @@ Import and start mononoke
   $ start_and_wait_for_mononoke_server
 Test mutations on client 1
   $ cd client1
-  $ hgedenapi up 8b2dca0c8a72 -q
+  $ sl up 8b2dca0c8a72 -q
   DEBUG pull::httpbookmarks: edenapi fetched bookmarks: {'master': None}
   DEBUG pull::httphashlookup: edenapi hash lookups: ['8b2dca0c8a726d66bf26d47835a356cc4286facd']
   DEBUG pull::httpgraph: edenapi fetched 1 graph nodes
   DEBUG pull::httpgraph: edenapi fetched graph with known 0 draft commits
-  $ hgedenapi cloud join -q
+  $ sl cloud join -q
   $ mkcommitedenapi A
   $ hg log -T{node} -r .
   929f2b9071cf032d9422b3cce9773cbe1c574822 (no-eol)
-  $ hgedenapi cloud upload -q
-  $ hgedenapi debugapi -e commitmutations -i '["929f2b9071cf032d9422b3cce9773cbe1c574822"]'
+  $ sl cloud upload -q
+  $ sl debugapi -e commitmutations -i '["929f2b9071cf032d9422b3cce9773cbe1c574822"]'
   []
   $ hg metaedit -r . -m new_message
   $ hg log -T{node} -r .
   f643b098cd183f085ba3e6107b6867ca472e87d1 (no-eol)
-  $ hgedenapi cloud upload -q
-  $ hgedenapi debugapi -e commitmutations -i '["f643b098cd183f085ba3e6107b6867ca472e87d1"]'
+  $ sl cloud upload -q
+  $ sl debugapi -e commitmutations -i '["f643b098cd183f085ba3e6107b6867ca472e87d1"]'
   [{"op": "metaedit",
     "tz": 0,
     "time": 0,
@@ -92,10 +92,10 @@ Test mutations on client 1
     "extras": [],
     "successor": bin("f643b098cd183f085ba3e6107b6867ca472e87d1"),
     "predecessors": [bin("929f2b9071cf032d9422b3cce9773cbe1c574822")]}]
-  $ hgedenapi debugapi -e commitmutations -i '["929f2b9071cf032d9422b3cce9773cbe1c574822"]'
+  $ sl debugapi -e commitmutations -i '["929f2b9071cf032d9422b3cce9773cbe1c574822"]'
   []
 Test phases from commitgraph
-  $ hgedenapi debugapi -e commitgraph2 -i '["f643b098cd183f085ba3e6107b6867ca472e87d1", "929f2b9071cf032d9422b3cce9773cbe1c574822"]' -i '[]' --sort
+  $ sl debugapi -e commitgraph2 -i '["f643b098cd183f085ba3e6107b6867ca472e87d1", "929f2b9071cf032d9422b3cce9773cbe1c574822"]' -i '[]' --sort
   [{"hgid": bin("8b2dca0c8a726d66bf26d47835a356cc4286facd"),
     "parents": [],
     "is_draft": False},
@@ -105,7 +105,7 @@ Test phases from commitgraph
    {"hgid": bin("f643b098cd183f085ba3e6107b6867ca472e87d1"),
     "parents": [bin("8b2dca0c8a726d66bf26d47835a356cc4286facd")],
     "is_draft": True}]
-  $ hgedenapi debugapi -e commitmutations -i '["f643b098cd183f085ba3e6107b6867ca472e87d1", "929f2b9071cf032d9422b3cce9773cbe1c574822"]'
+  $ sl debugapi -e commitmutations -i '["f643b098cd183f085ba3e6107b6867ca472e87d1", "929f2b9071cf032d9422b3cce9773cbe1c574822"]'
   [{"op": "metaedit",
     "tz": 0,
     "time": 0,
@@ -117,7 +117,7 @@ Test phases from commitgraph
     "extras": [],
     "successor": bin("f643b098cd183f085ba3e6107b6867ca472e87d1"),
     "predecessors": [bin("929f2b9071cf032d9422b3cce9773cbe1c574822")]}]
-  $ sl
+  $ smartlog
   @  f643b098cd18 'new_message'
   │
   │ x  929f2b9071cf 'A' (Rewritten using metaedit into f643b098cd18)
@@ -127,18 +127,18 @@ Test phases from commitgraph
 
 Test how they are propagated to client 2
   $ cd ../client2
-  $ hgedenapi debugchangelog --migrate lazy
-  $ hgedenapi pull -r f643b098cd18 -q
+  $ sl debugchangelog --migrate lazy
+  $ sl pull -r f643b098cd18 -q
   DEBUG pull::httpbookmarks: edenapi fetched bookmarks: {'master': None}
   DEBUG pull::httphashlookup: edenapi hash lookups: ['f643b098cd183f085ba3e6107b6867ca472e87d1']
   DEBUG pull::httpgraph: edenapi fetched 2 graph nodes
   DEBUG pull::httpgraph: edenapi fetched graph with known 1 draft commits
-  $ hgedenapi pull -r 929f2b9071cf -q
+  $ sl pull -r 929f2b9071cf -q
   DEBUG pull::httpbookmarks: edenapi fetched bookmarks: {'master': None}
   DEBUG pull::httphashlookup: edenapi hash lookups: ['929f2b9071cf032d9422b3cce9773cbe1c574822']
   DEBUG pull::httpgraph: edenapi fetched 1 graph nodes
   DEBUG pull::httpgraph: edenapi fetched graph with known 1 draft commits
-  $ sl
+  $ smartlog
   x  929f2b9071cf 'A' (Rewritten using metaedit into f643b098cd18)
   │
   │ o  f643b098cd18 'new_message'

@@ -71,7 +71,7 @@ Try to push merge commit
   o  A [public;rev=0;426bada5c675]
   $
 
-  $ hgedenapi push -r . --to master_bookmark
+  $ sl push -r . --to master_bookmark
   fallback reason: merge commit is not supported by EdenApi push yet
   pushing rev 3e1c4ca1f9be to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes

@@ -103,7 +103,7 @@
   $ hg commit -q -m "Add file5"
 
 # Backup the created commits to commit cloud
-  $ hgedenapi cloud backup
+  $ sl cloud backup
   commitcloud: head 'c2e143a98b79' hasn't been uploaded yet
   edenapi: queue 3 commits for upload
   edenapi: queue 3 files for upload

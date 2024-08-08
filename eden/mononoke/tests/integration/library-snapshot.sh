@@ -66,7 +66,7 @@ function base_commit_and_snapshot {
     hg addremove -q
     hg commit -m "Add base files"
     BASE_SNAPSHOT_COMMIT=$(hg log -T "{node}" -r .)
-    EDENSCM_LOG=edenapi::client=error hgedenapi cloud upload -q
+    EDENSCM_LOG=edenapi::client=error sl cloud upload -q
     # Create snapshot
     echo b > modified_file
     echo b > untracked_file
@@ -80,7 +80,7 @@ function base_commit_and_snapshot {
     hg rm deleted_file_then_untracked_modify
     echo b > deleted_file_then_untracked_modify
     ln -s symlink_target symlink_file
-    BASE_SNAPSHOT=$(HGPLAIN=1 hgedenapi snapshot create --labels testing,labels)
+    BASE_SNAPSHOT=$(HGPLAIN=1 sl snapshot create --labels testing,labels)
 }
 
 function assert_on_base_snapshot {

@@ -27,8 +27,8 @@ Run a few requests that use different codepaths for logging server-side
   $ sslcurl -s "https://localhost:$MONONOKE_SOCKET/edenapi/repos"
   {"repos":["repo"]} (no-eol)
 
-  $ hgedenapi debugapi -e uploadfilecontents -i '[({"Sha1":"03cfd743661f07975fa2f1220c5194cbaff48451"}, b"abc\n")]' > /dev/null
-  $ hgedenapi debugapi -e commitgraph2 -i "['$C']" -i "['$A']" --sort > /dev/null
+  $ sl debugapi -e uploadfilecontents -i '[({"Sha1":"03cfd743661f07975fa2f1220c5194cbaff48451"}, b"abc\n")]' > /dev/null
+  $ sl debugapi -e commitgraph2 -i "['$C']" -i "['$A']" --sort > /dev/null
 
 
   $ cat "$SCUBA" | summarize_scuba_json "EdenAPI.*" \

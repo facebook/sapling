@@ -55,7 +55,7 @@ Prepare the client-side repo
 
 Push commit to ancestor bookmark, should work
   $ hgmn up -q master_bookmark
-  $ hgedenapi push -r . --to ancestor --create
+  $ sl push -r . --to ancestor --create
   pushing rev 112478962961 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark ancestor
   creating remote bookmark ancestor
 
@@ -63,7 +63,7 @@ Now try to pushrebase "ancestor" bookmark, should fail
   $ touch file
   $ hg addremove -q
   $ hg ci -m 'new commit'
-  $ hgedenapi push -r . --to ancestor
+  $ sl push -r . --to ancestor
   pushing rev 9ddef2ba352e to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark ancestor
   edenapi: queue 1 commit for upload
   edenapi: queue 1 file for upload
@@ -76,12 +76,12 @@ Now try to pushrebase "ancestor" bookmark, should fail
   [255]
 
 Now push this commit to another bookmark
-  $ hgedenapi push -r . --to another_bookmark --create
+  $ sl push -r . --to another_bookmark --create
   pushing rev 9ddef2ba352e to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark another_bookmark
   creating remote bookmark another_bookmark
 
 And try to move "ancestor" bookmark there, it should fail
-  $ hgedenapi push -r . --to ancestor
+  $ sl push -r . --to ancestor
   pushing rev 9ddef2ba352e to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark ancestor
   moving remote bookmark ancestor from 112478962961 to 9ddef2ba352e
   abort: server error: invalid request: Bookmark 'ancestor' can only be moved to ancestors of 'master_bookmark'

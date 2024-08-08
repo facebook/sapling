@@ -68,9 +68,9 @@ Prepare the client-side repo
 
 Push
 
-  $ hgedenapi push -r C --to date-rewrite -q
-  $ hgedenapi push -r D --to no-date-rewrite -q
-  $ hgedenapi push -r E --to use-repo-config -q
+  $ sl push -r C --to date-rewrite -q
+  $ sl push -r D --to no-date-rewrite -q
+  $ sl push -r E --to use-repo-config -q
 
 Check result
 

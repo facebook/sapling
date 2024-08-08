@@ -37,7 +37,7 @@ Can still clone the repo
   $ hg commit -Aqm D
 
 Can still push to commit cloud
-  $ hgedenapi cloud backup
+  $ sl cloud backup
   commitcloud: head '9c00c53d25b3' hasn't been uploaded yet
   edenapi: queue 1 commit for upload
   edenapi: queue 1 file for upload

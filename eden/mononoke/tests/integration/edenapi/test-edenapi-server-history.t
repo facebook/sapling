@@ -44,7 +44,7 @@ Create and send file data request.
   > ]
   > EOF
 
-  $ hgedenapi debugapi -e history -f req --sort
+  $ sl debugapi -e history -f req --sort
   [{"key": {"node": bin("17b8d4e3bafd4ec4812ad7c930aace9bf07ab033"),
             "path": "copy.txt"},
     "nodeinfo": {"parents": [{"node": bin("186cafa3319c24956783383dc44c5cbc68c5a0ca"),

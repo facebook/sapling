@@ -25,4 +25,4 @@ Create commit which only differs in case
   $ hg ci -Aqm commit1
 
 Push the commit, showing the flag has worked
-  $ hgedenapi push -q -r . --to master_bookmark || (sed -nr -e 's/, uuid:.*//' -e 's/^.*\] (Caused by.*)/\1/p' "$TESTTMP"/mononoke.out | strip_glog; exit 1)
+  $ sl push -q -r . --to master_bookmark || (sed -nr -e 's/, uuid:.*//' -e 's/^.*\] (Caused by.*)/\1/p' "$TESTTMP"/mononoke.out | strip_glog; exit 1)

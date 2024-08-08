@@ -272,7 +272,7 @@ Pushbackup also works
   $ cd ../repo-push
   $ echo aa > aa && hg addremove && hg ci -q -m newrepo
   adding aa
-  $ hgedenapi cloud backup --debug
+  $ sl cloud backup --debug
   commitcloud: head '2cfeca6399fd' hasn't been uploaded yet
   edenapi: queue 1 commit for upload
   edenapi: queue 1 file for upload
@@ -286,7 +286,7 @@ Pushbackup to mononoke peer with compression enabled
 (a larger file is needed to repro problems with zstd compression)
   $ dd if=/dev/zero of=aa bs=4048 count=1024 2> /dev/null
   $ hg amend -m "xxx"
-  $ MONONOKE_DIRECT_PEER=1 hgedenapi cloud backup --config infinitepush.bundlecompression=ZS --config mononokepeer.compression=true
+  $ MONONOKE_DIRECT_PEER=1 sl cloud backup --config infinitepush.bundlecompression=ZS --config mononokepeer.compression=true
   commitcloud: head 'd88fdbcae092' hasn't been uploaded yet
   edenapi: queue 1 commit for upload
   edenapi: queue 1 file for upload
@@ -334,7 +334,7 @@ Pushbackup to mononoke peer with compression enabled
 Pushbackup that does nothing, as only bookmarks have changed
   $ cd ../repo-push
   $ hg book newbook
-  $ hgedenapi cloud backup
+  $ sl cloud backup
   commitcloud: nothing to upload
 
   $ tglogp
@@ -417,7 +417,7 @@ Check phases on another side (for pull command and pull -r)
   $ echo new > file2
   $ hg addremove -q
   $ hg ci -m "change on top of the release"
-  $ hgedenapi cloud backup
+  $ sl cloud backup
   commitcloud: head 'eca836c7c651' hasn't been uploaded yet
   edenapi: queue 1 commit for upload
   edenapi: queue 0 files for upload
@@ -564,13 +564,13 @@ More sophisticated test for phases
   $ mkcommit zzzzz
   $ hgmn push -r . --to "release 4"  --create -q
 
-  $ hgedenapi cloud backup -q
+  $ sl cloud backup -q
 
-  $ hgedenapi cloud check -r 7d67c7248d48 --remote
+  $ sl cloud check -r 7d67c7248d48 --remote
   7d67c7248d486cb264270530ef906f1d09d6c650 backed up
-  $ hgedenapi cloud check -r bf677f20a49d --remote
+  $ sl cloud check -r bf677f20a49d --remote
   bf677f20a49dc5ac94946f3d91ad181f8a6fdbab backed up
-  $ hgedenapi cloud check -r 5e59ac0f4dd0 --remote
+  $ sl cloud check -r 5e59ac0f4dd0 --remote
   5e59ac0f4dd00fd4d751f9f3663be99df0f4765d backed up
 
   $ tglogp

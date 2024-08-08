@@ -61,7 +61,7 @@ create new commits in repo2 and check that they are seen as outgoing
   $ echo "b file content" > b_dir/b
   $ hg add b_dir/b
   $ hg ci -mb
-  $ hgedenapi push -r . --to master_bookmark --create --config extensions.remotenames= --config extensions.pushrebase=
+  $ sl push -r . --to master_bookmark --create --config extensions.remotenames= --config extensions.pushrebase=
   pushing rev bb0985934a0f to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
   edenapi: queue 1 commit for upload
   edenapi: queue 2 files for upload
@@ -129,7 +129,7 @@ The timestamp is not stable, so count its digits instead to ensure it is not nul
   $ echo forcepushrebase > forcepushrebase
   $ hg add -q forcepushrebase
   $ hg ci -m forcepushrebase
-  $ hgedenapi push -r . --to forcepushrebase --create --force --config extensions.remotenames= --config extensions.pushrebase=
+  $ sl push -r . --to forcepushrebase --create --force --config extensions.remotenames= --config extensions.pushrebase=
   pushing rev 0c1e5152244c to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark forcepushrebase
   edenapi: queue 1 commit for upload
   edenapi: queue 1 file for upload
@@ -166,7 +166,7 @@ Use normal push (non-pushrebase).  Since we are not pushing to a public bookmark
   $ echo push > push
   $ hg add -q push
   $ hg ci -m 'commit'
-  $ hgedenapi push --force
+  $ sl push --force
   pushing to mononoke://$LOCALIP:$LOCAL_PORT/repo
   searching for changes
 
@@ -193,7 +193,7 @@ Stop tracking master_bookmark
   $ echo infinitepush > infinitepush
   $ hg add -q infinitepush
   $ hg ci -m 'infinitepush'
-  $ hgedenapi push mononoke://$(mononoke_address)/repo -r . --to "scratch/123" --create
+  $ sl push mononoke://$(mononoke_address)/repo -r . --to "scratch/123" --create
   pushing to mononoke://$LOCALIP:$LOCAL_PORT/repo
   searching for changes
   $ cat "$TESTTMP/scribe_logs/$COMMIT_SCRIBE_CATEGORY" | jq 'select(.is_public == false)' | jq .bookmark
@@ -222,7 +222,7 @@ Update the scratch/123 bookmark
   $ echo new_commit > new_commit
   $ hg add -q new_commit
   $ hg ci -m 'new commit'
-  $ hgedenapi push mononoke://$(mononoke_address)/repo -r . --to "scratch/123"
+  $ sl push mononoke://$(mononoke_address)/repo -r . --to "scratch/123"
   pushing to mononoke://$LOCALIP:$LOCAL_PORT/repo
   searching for changes
   $ cat "$TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY" | jq .repo_name
@@ -243,7 +243,7 @@ Update the scratch/123 bookmark
 
 Delete the master_bookmark
 
-  $ hgedenapi push --delete master_bookmark --config extensions.remotenames= --config extensions.pushrebase=
+  $ sl push --delete master_bookmark --config extensions.remotenames= --config extensions.pushrebase=
   deleting remote bookmark master_bookmark
 
   $ cat "$TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY" | jq .repo_name

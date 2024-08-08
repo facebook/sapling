@@ -30,8 +30,8 @@ setup repo
   > treeonly = true
   > EOF
   $ echo "content0" > file
-  $ hgedenapi commit -Aqm base
-  $ hgedenapi bookmark master_bookmark -r tip
+  $ sl commit -Aqm base
+  $ sl bookmark master_bookmark -r tip
 
 setup repo-push and repo-pull
   $ cd $TESTTMP
@@ -64,11 +64,11 @@ start mononoke
   $ start_and_wait_for_mononoke_server
 push an infinitepush commit with new content
   $ cd $TESTTMP/repo-push
-  $ hgedenapi up master_bookmark
+  $ sl up master_bookmark
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo "content1" > file
-  $ hgedenapi commit -q -m branch
-  $ hgedenapi cloud backup
+  $ sl commit -q -m branch
+  $ sl cloud backup
   commitcloud: head '60ab8a6c8e65' hasn't been uploaded yet
   edenapi: queue 1 commit for upload
   edenapi: queue 1 file for upload
@@ -76,7 +76,7 @@ push an infinitepush commit with new content
   edenapi: queue 1 tree for upload
   edenapi: uploaded 1 tree
   edenapi: uploaded 1 changeset
-  $ hgedenapi log -G -T '{node} {desc} ({remotenames})\n' -r "all()"
+  $ sl log -G -T '{node} {desc} ({remotenames})\n' -r "all()"
   @  60ab8a6c8e652ea968be7ffdb658b49de35d3621 branch ()
   │
   o  d998012a9c34a2423757a3d40f8579c78af1b342 base (default/master_bookmark)
@@ -84,16 +84,16 @@ push an infinitepush commit with new content
 
 pull the infinitepush commit
   $ cd $TESTTMP/repo-pull1
-  $ hgedenapi pull -r 60ab8a6c8e652ea968be7ffdb658b49de35d3621
+  $ sl pull -r 60ab8a6c8e652ea968be7ffdb658b49de35d3621
   pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo
   searching for changes
   adding changesets
   adding manifests
   adding file changes
-  $ hgedenapi up 60ab8a6c8e652ea968be7ffdb658b49de35d3621
+  $ sl up 60ab8a6c8e652ea968be7ffdb658b49de35d3621
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
-  $ hgedenapi debugapi -e history -i '[("file", "b4aa7b980f00bcd3ea58510798c1425dcdc511f3")]'
+  $ sl debugapi -e history -i '[("file", "b4aa7b980f00bcd3ea58510798c1425dcdc511f3")]'
   [{"key": {"node": bin("b4aa7b980f00bcd3ea58510798c1425dcdc511f3"),
             "path": "file"},
     "nodeinfo": {"parents": [{"node": bin("599997c6080f1c12417bbc03894af754eea8dc72"),
@@ -112,8 +112,8 @@ pull the infinitepush commit
 NOTE: Mononoke gave us a NULL linknode
 
   $ echo othercontent > file2
-  $ hgedenapi commit -Aqm other
-  $ hgedenapi log -T '{node} {desc} ({remotenames})\n' -f file
+  $ sl commit -Aqm other
+  $ sl log -T '{node} {desc} ({remotenames})\n' -f file
   linkrevfixup: file b4aa7b980f00bcd3ea58510798c1425dcdc511f3
   60ab8a6c8e652ea968be7ffdb658b49de35d3621 branch ()
   d998012a9c34a2423757a3d40f8579c78af1b342 base (default/master_bookmark)
@@ -122,11 +122,11 @@ NOTE: linkrevfixup was called to fix up the null linkrev
 
 push a master commit with the same content
   $ cd $TESTTMP/repo-push
-  $ hgedenapi up master_bookmark
+  $ sl up master_bookmark
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo "content1" > file
-  $ hgedenapi commit -q -m master
-  $ hgedenapi push --to master_bookmark
+  $ sl commit -q -m master
+  $ sl push --to master_bookmark
   pushing rev 6dbc3093b595 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   updating bookmark master_bookmark
@@ -136,24 +136,24 @@ Make sure the server derives the linknode info for public commit.
 
 pull only the master branch into another repo
   $ cd $TESTTMP/repo-pull2
-  $ hgedenapi up master_bookmark
+  $ sl up master_bookmark
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hgedenapi pull mononoke://$(mononoke_address)/repo -B master_bookmark
+  $ sl pull mononoke://$(mononoke_address)/repo -B master_bookmark
   pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo
   searching for changes
   adding changesets
   adding manifests
   adding file changes
-  $ hgedenapi up master_bookmark
+  $ sl up master_bookmark
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
-  $ hgedenapi log -G -T '{node} {desc} ({remotenames})\n' -r "all()"
+  $ sl log -G -T '{node} {desc} ({remotenames})\n' -r "all()"
   @  6dbc3093b5955d7bb47512155149ec66791c277d master (default/master_bookmark)
   │
   o  d998012a9c34a2423757a3d40f8579c78af1b342 base ()
   
 
-  $ hgedenapi debugapi -e history -i '[("file", "b4aa7b980f00bcd3ea58510798c1425dcdc511f3")]'
+  $ sl debugapi -e history -i '[("file", "b4aa7b980f00bcd3ea58510798c1425dcdc511f3")]'
   [{"key": {"node": bin("b4aa7b980f00bcd3ea58510798c1425dcdc511f3"),
             "path": "file"},
     "nodeinfo": {"parents": [{"node": bin("599997c6080f1c12417bbc03894af754eea8dc72"),
@@ -172,8 +172,8 @@ pull only the master branch into another repo
 NOTE: the linknode is the public commit
 
   $ echo othercontent > file2
-  $ hgedenapi commit -Aqm other
-  $ hgedenapi log -T '{node} {desc} ({remotenames})\n' -f file
+  $ sl commit -Aqm other
+  $ sl log -T '{node} {desc} ({remotenames})\n' -f file
   6dbc3093b5955d7bb47512155149ec66791c277d master (default/master_bookmark)
   d998012a9c34a2423757a3d40f8579c78af1b342 base ()
 
@@ -181,16 +181,16 @@ NOTE: linkrevfixup was not called
 
 pull the infinitepush commit again in a new repo
   $ cd $TESTTMP/repo-pull3
-  $ hgedenapi pull -r 60ab8a6c8e652ea968be7ffdb658b49de35d3621
+  $ sl pull -r 60ab8a6c8e652ea968be7ffdb658b49de35d3621
   pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo
   searching for changes
   adding changesets
   adding manifests
   adding file changes
-  $ hgedenapi up 60ab8a6c8e652ea968be7ffdb658b49de35d3621
+  $ sl up 60ab8a6c8e652ea968be7ffdb658b49de35d3621
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
-  $ hgedenapi debugapi -e history -i '[("file", "b4aa7b980f00bcd3ea58510798c1425dcdc511f3")]'
+  $ sl debugapi -e history -i '[("file", "b4aa7b980f00bcd3ea58510798c1425dcdc511f3")]'
   [{"key": {"node": bin("b4aa7b980f00bcd3ea58510798c1425dcdc511f3"),
             "path": "file"},
     "nodeinfo": {"parents": [{"node": bin("599997c6080f1c12417bbc03894af754eea8dc72"),
@@ -209,8 +209,8 @@ pull the infinitepush commit again in a new repo
 NOTE: Mononoke gave us the public commit as the linknode
 
   $ echo othercontent > file2
-  $ hgedenapi commit -Aqm other
-  $ hgedenapi log -T '{node} {desc} ({remotenames})\n' -f file
+  $ sl commit -Aqm other
+  $ sl log -T '{node} {desc} ({remotenames})\n' -f file
   linkrevfixup: file b4aa7b980f00bcd3ea58510798c1425dcdc511f3
   60ab8a6c8e652ea968be7ffdb658b49de35d3621 branch ()
   d998012a9c34a2423757a3d40f8579c78af1b342 base ()

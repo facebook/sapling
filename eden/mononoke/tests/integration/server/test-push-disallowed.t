@@ -48,7 +48,7 @@ create new hg commits
   adding b
 
 try doing a non-pushrebase push with the new commits
-  $ hgedenapi push --force
+  $ sl push --force
   pushing to mononoke://$LOCALIP:$LOCAL_PORT/repo
   searching for changes
   remote: Command failed
@@ -75,7 +75,7 @@ try doing a non-pushrebase push with the new commits
   [255]
 
 try doing a pushrebase push with the new commits
-  $ hgedenapi push mononoke://$(mononoke_address)/repo --config extensions.pushrebase= --config extensions.remotenames= --to master_bookmark
+  $ sl push mononoke://$(mononoke_address)/repo --config extensions.pushrebase= --config extensions.remotenames= --to master_bookmark
   pushing rev 95415a1a54e2 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
   edenapi: queue 1 commit for upload
   edenapi: queue 1 file for upload

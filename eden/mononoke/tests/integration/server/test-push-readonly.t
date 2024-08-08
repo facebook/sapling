@@ -65,7 +65,7 @@ create new commit in repo2 and check that push to a bookmark fails
   $ hg add b_dir/b
   $ hg ci -mb
 
-  $ hgedenapi push --to master_bookmark --force --config treemanifest.treeonly=True --debug mononoke://$(mononoke_address)/test%2Frepo
+  $ sl push --to master_bookmark --force --config treemanifest.treeonly=True --debug mononoke://$(mononoke_address)/test%2Frepo
   sending hello command
   sending clienttelemetry command
   pushing rev bb0985934a0f to destination mononoke://$LOCALIP:$LOCAL_PORT/test/repo bookmark master_bookmark
@@ -112,14 +112,14 @@ create new commit in repo2 and check that push to a bookmark fails
   [255]
 
 Try to bypass the check
-  $ hgedenapi push --force --to master_bookmark --config treemanifest.treeonly=True mononoke://$(mononoke_address)/test%2Frepo --pushvars "BYPASS_READONLY=true"
+  $ sl push --force --to master_bookmark --config treemanifest.treeonly=True mononoke://$(mononoke_address)/test%2Frepo --pushvars "BYPASS_READONLY=true"
   pushing rev bb0985934a0f to destination mononoke://$LOCALIP:$LOCAL_PORT/test/repo bookmark master_bookmark
   searching for changes
   no changes found
   updating bookmark master_bookmark
 
 Check that a push which doesn't move a bookmark is allowed
-  $ hgedenapi push --force --config treemanifest.treeonly=True --debug mononoke://$(mononoke_address)/test%2Frepo
+  $ sl push --force --config treemanifest.treeonly=True --debug mononoke://$(mononoke_address)/test%2Frepo
   tracking on None {}
   pushing to mononoke://$LOCALIP:$LOCAL_PORT/test/repo
   sending hello command

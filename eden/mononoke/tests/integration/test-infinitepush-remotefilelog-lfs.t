@@ -59,7 +59,7 @@ Do infinitepush (aka commit cloud) push
   $ yes A 2>/dev/null | head -c 200 > large
   $ hg addremove -q
   $ hg ci -m new
-  $ hgedenapi cloud backup
+  $ sl cloud backup
   commitcloud: head '68394cf51f7e' hasn't been uploaded yet
   edenapi: queue 1 commit for upload
   edenapi: queue 2 files for upload

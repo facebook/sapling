@@ -656,7 +656,7 @@ TODO(T174902563): Fix deletion of submodules in EXPAND submodule action.
   $ diff -wbBdu $TESTTMP/push_redir_prereqs_small_large $TESTTMP/push_redir_prereqs_large_small
 
 -- ------------------------------------------------------------------------------
--- Test hgedenapi xrepo lookup with commits that are synced
+-- Test sl xrepo lookup with commits that are synced
 
 -- Helper function to look for the mapping in the database using admin and then
 -- call hgedenpi committranslateids endpoint from large to small.
@@ -667,9 +667,9 @@ TODO(T174902563): Fix deletion of submodules in EXPAND submodule action.
   >   with_stripped_logs mononoke_admin_source_target $LARGE_REPO_ID $SUBMODULE_REPO_ID \
   >     crossrepo map $hg_hash | rg -v "using repo"
   >   
-  >   printf "\n\nCall hgedenapi committranslateids\n" 
+  >   printf "\n\nCall sl committranslateids\n" 
   >   
-  >   REPONAME=$LARGE_REPO_NAME hgedenapi debugapi -e committranslateids \
+  >   REPONAME=$LARGE_REPO_NAME sl debugapi -e committranslateids \
   >     -i "[{'Hg': '$hg_hash'}]" -i "'Bonsai'" -i None -i "'$SUBMODULE_REPO_NAME'"
   >   
   > }
@@ -685,7 +685,7 @@ TODO(T174902563): Fix deletion of submodules in EXPAND submodule action.
   RewrittenAs([(ChangesetId(Blake2(4aee0499ea629ebcd9d0e4be89267d7a4eab5e72f988c20a392d59081db0c32a)), CommitSyncConfigVersion("INITIAL_IMPORT_SYNC_CONFIG"))])
   
   
-  Call hgedenapi committranslateids
+  Call sl committranslateids
   [{"commit": {"Hg": bin("ada44b220ff885a5757bf80bee03e64f0b0e063d")},
     "translated": {"Bonsai": bin("4aee0499ea629ebcd9d0e4be89267d7a4eab5e72f988c20a392d59081db0c32a")}}]
 
@@ -696,7 +696,7 @@ TODO(T174902563): Fix deletion of submodules in EXPAND submodule action.
   RewrittenAs([(ChangesetId(Blake2(b86f7426fc1fe95e22b6bef591e7ba9c8385b86f7b85abd3a377f941d39522af)), CommitSyncConfigVersion("INITIAL_IMPORT_SYNC_CONFIG"))])
   
   
-  Call hgedenapi committranslateids
+  Call sl committranslateids
   [{"commit": {"Hg": bin("d3dae76d4349c88c24d60fe533bd9fbd02ddd5ae")},
     "translated": {"Bonsai": bin("b86f7426fc1fe95e22b6bef591e7ba9c8385b86f7b85abd3a377f941d39522af")}}]
 
@@ -708,7 +708,7 @@ TODO(T174902563): Fix deletion of submodules in EXPAND submodule action.
   RewrittenAs([(ChangesetId(Blake2(856b09638e2550d912282c5a9e8bd47fdf1a899545f9f4a05430a8dc7be1f768)), CommitSyncConfigVersion("INITIAL_IMPORT_SYNC_CONFIG"))])
   
   
-  Call hgedenapi committranslateids
+  Call sl committranslateids
   [{"commit": {"Hg": bin("e2c69ce8cc11691984e50e6023f4bbf4271aa4c3")},
     "translated": {"Bonsai": bin("856b09638e2550d912282c5a9e8bd47fdf1a899545f9f4a05430a8dc7be1f768")}}]
 
@@ -797,7 +797,7 @@ TODO(T174902563): Fix deletion of submodules in EXPAND submodule action.
   
   6 directories, 10 files
   $ function backsync_get_info_and_derive_data() {
-  >   REPONAME="$LARGE_REPO_NAME" hgedenapi cloud backup -q
+  >   REPONAME="$LARGE_REPO_NAME" sl cloud backup -q
   >   COMMIT_TO_SYNC=$(hgmn whereami)
   >   COMMIT_TITLE=$(hgmn log -l1  -T "{truncate(desc, 1)}")
   >   printf "Processing commit: $COMMIT_TITLE\n"
@@ -828,7 +828,7 @@ TODO(T174902563): Fix deletion of submodules in EXPAND submodule action.
 -- EXPECT: commit isn't synced and returns working copy equivalent instead
   $ echo "changing large repo file" > file_in_large_repo.txt
   $ hgmn commit -A -m "Changing large repo file" 
-  $ REPONAME=$LARGE_REPO_NAME hgedenapi push -q -r . --to master --non-forward-move --pushvar NON_FAST_FORWARD=true
+  $ REPONAME=$LARGE_REPO_NAME sl push -q -r . --to master --non-forward-move --pushvar NON_FAST_FORWARD=true
   $ backsync_get_info_and_derive_data
   Processing commit: Changing large repo file
   Commit hash: 48021e7aeafd324f9976f551aea60aa88dd9f61a
@@ -852,7 +852,7 @@ TODO(T174902563): Fix deletion of submodules in EXPAND submodule action.
 -- EXPECT: commit is backsynced normally because it doesn't touch submodule expansions
   $ echo "changing small repo file" > smallrepofolder1/regular_dir/aardvar
   $ hgmn commit -A -m "Changing small repo in large repo (not submodule)" 
-  $ REPONAME=$LARGE_REPO_NAME hgedenapi push -q -r . --to master --non-forward-move --pushvar NON_FAST_FORWARD=true
+  $ REPONAME=$LARGE_REPO_NAME sl push -q -r . --to master --non-forward-move --pushvar NON_FAST_FORWARD=true
   $ backsync_get_info_and_derive_data
   Processing commit: Changing small repo in large repo (not submodule)
   Commit hash: 35e70dc7f37c3f51876a0f017a733a13809bef32

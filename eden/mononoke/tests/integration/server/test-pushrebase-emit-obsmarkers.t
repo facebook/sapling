@@ -64,7 +64,7 @@ Push commits that will be obsoleted
   ├─╯
   o  A [public;rev=0;426bada5c675]
   $
-  $ hgedenapi push -r . --to master_bookmark
+  $ sl push -r . --to master_bookmark
   pushing rev 0c67ec8c24b9 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
   edenapi: queue 2 commits for upload
   edenapi: queue 2 files for upload
@@ -103,7 +103,7 @@ Push commits that will not be obsoleted
   │
   o  A [public;rev=0;426bada5c675]
   $
-  $ hgedenapi push -r . --to master_bookmark
+  $ sl push -r . --to master_bookmark
   pushing rev 6398085ceb9d to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
   edenapi: queue 1 commit for upload
   edenapi: queue 1 file for upload

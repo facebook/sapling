@@ -162,7 +162,7 @@ Normal pushrebase with one commit
   $ cd "$TESTTMP/small-hg-client-1"
   $ REPONAME=small-mon-1 hgmn up -q master_bookmark
   $ echo 2 > 2 && hg addremove -q && hg ci -q -m newcommit
-  $ REPONAME=small-mon-1 hgedenapi push -r . --to master_bookmark 2>&1 | grep "updated remote bookmark"
+  $ REPONAME=small-mon-1 sl push -r . --to master_bookmark 2>&1 | grep "updated remote bookmark"
   updated remote bookmark master_bookmark to 6989db12d1e5
 -- newcommit was correctly pushed to master_bookmark
   $ log -r master_bookmark
@@ -193,7 +193,7 @@ Live change of the config, without Mononoke restart
   $ echo 1 >> 1 && hg add 1 && hg ci -m 'change of mapping'
   $ hg revert -r .^ 1
   $ hg commit --amend
-  $ REPONAME=small-mon-1  hgedenapi push -r . --to master_bookmark -q
+  $ REPONAME=small-mon-1  sl push -r . --to master_bookmark -q
   $ quiet_grep "all is well" -- megarepo_tool_multirepo --source-repo-id $REPOIDLARGE --target-repo-id $REPOIDSMALL1 check-push-redirection-prereqs master_bookmark master_bookmark TEST_VERSION_NAME_LIVE_V1
   * all is well! (glob)
   $ quiet_grep "all is well" -- megarepo_tool_multirepo --source-repo-id $REPOIDLARGE --target-repo-id $REPOIDSMALL1 check-push-redirection-prereqs master_bookmark master_bookmark TEST_VERSION_NAME_LIVE_V2
@@ -220,7 +220,7 @@ Live change of the config, without Mononoke restart
 Do a push it should fail because we disallow pushing over a changeset that changes the mapping
   $ mkdir -p special
   $ echo f > special/f && hg ci -Aqm post_config_change_commit
-  $ REPONAME=small-mon-1 hgedenapi push -r . --to master_bookmark
+  $ REPONAME=small-mon-1 sl push -r . --to master_bookmark
   pushing rev 318b198c67b1 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
   edenapi: queue 1 commit for upload
   edenapi: queue 1 file for upload
@@ -247,7 +247,7 @@ Again, normal pushrebase with one commit
   
   $ mkdir -p special
   $ echo f > special/f && hg ci -Aqm post_config_change_commit
-  $ REPONAME=small-mon-1 hgedenapi push -r . --to master_bookmark 2>&1 | grep "updated remote bookmark"
+  $ REPONAME=small-mon-1 sl push -r . --to master_bookmark 2>&1 | grep "updated remote bookmark"
   updated remote bookmark master_bookmark to * (glob)
 
 -- in the large repo, new commit touched an after_change path

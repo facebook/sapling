@@ -22,7 +22,7 @@
   > EOS
 
 Errors are propagated:
-  $ hgedenapi debugapi -e blame -i "[{'path': 'bar', 'node': '$D'}]"
+  $ sl debugapi -e blame -i "[{'path': 'bar', 'node': '$D'}]"
   [{"data": {"Err": {"code": 0,
                      "message": "HgId not found: e9ace545f925b6f62ae34087895fdc950d168e5f"}},
     "file": {"node": bin("e9ace545f925b6f62ae34087895fdc950d168e5f"),
@@ -35,23 +35,23 @@ Fall back gracefully if edenapi not configured:
   4b86660b0697 1970-01-01 foo:2: two
 
 Fall back if server doesn't have commits:
-  $ hgedenapi blame -cldqf bar -r $D
+  $ sl blame -cldqf bar -r $D
   1ac4b616a32d 1970-01-01 bar:1: zero
   e9ace545f925 1970-01-01 bar:2: uno
   4b86660b0697 1970-01-01 foo:2: two
 
 Server has commits - use edenapi blame data:
-  $ hgedenapi push -q -r $D --to master --create
+  $ sl push -q -r $D --to master --create
 
-  $ EDENSCM_LOG=edenapi::client=info hgedenapi blame -cldqf bar -r $D
+  $ EDENSCM_LOG=edenapi::client=info sl blame -cldqf bar -r $D
    INFO edenapi::client: Blaming 1 file(s)
   1ac4b616a32d 1970-01-01 bar:1: zero
   e9ace545f925 1970-01-01 bar:2: uno
   4b86660b0697 1970-01-01 foo:2: two
 
 Works with "wdir()" for unchanged files:
-  $ hgedenapi go -q $D
-  $ EDENSCM_LOG=edenapi::client=info hgedenapi blame -cldqf bar -r 'wdir()'
+  $ sl go -q $D
+  $ EDENSCM_LOG=edenapi::client=info sl blame -cldqf bar -r 'wdir()'
    INFO edenapi::client: Blaming 1 file(s)
   1ac4b616a32d  1970-01-01 bar:1: zero
   e9ace545f925  1970-01-01 bar:2: uno
@@ -59,14 +59,14 @@ Works with "wdir()" for unchanged files:
 
 But doesn't work if file is dirty:
   $ echo dirty >> bar
-  $ EDENSCM_LOG=edenapi::client=info hgedenapi blame -cldqf bar -r 'wdir()'
+  $ EDENSCM_LOG=edenapi::client=info sl blame -cldqf bar -r 'wdir()'
   1ac4b616a32d  1970-01-01 bar:1: zero
   e9ace545f925  1970-01-01 bar:2: uno
   4b86660b0697  1970-01-01 foo:2: two
   e9ace545f925+ ********** bar:4: dirty (glob)
 
 Peek at what the data looks like:
-  $ hgedenapi debugapi -e blame -i "[{'path': 'bar', 'node': '$D'}]"
+  $ sl debugapi -e blame -i "[{'path': 'bar', 'node': '$D'}]"
   [{"data": {"Ok": {"paths": ["foo",
                               "bar"],
                     "commits": [bin("1ac4b616a32d09428a015bf6a11ccbd1c1410aad"),

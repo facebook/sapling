@@ -42,8 +42,8 @@
   $ setconfig remotenames.selectivepull=True remotenames.selectivepulldefault=master
 
 setup custom smartlog
-  $ function sl {
-  >  hgedenapi log -G -T "{node|short} {phase} '{desc|firstline}' {bookmarks} {remotebookmarks} {join(mutations % '(Rewritten using {operation} into {join(successors % \'{node|short}\', \', \')})', ' ')}" "$@"
+  $ function smartlog {
+  >  sl log -G -T "{node|short} {phase} '{desc|firstline}' {bookmarks} {remotebookmarks} {join(mutations % '(Rewritten using {operation} into {join(successors % \'{node|short}\', \', \')})', ' ')}" "$@"
   > }
 
 setup configuration
@@ -121,19 +121,19 @@ Import and start mononoke
   $ wait_for_mononoke
 
 Clone 1 and 2
-  $ hgedenapi clone "mononoke://$(mononoke_address)/repo" client1 -q
-  $ hgedenapi clone "mononoke://$(mononoke_address)/repo" client2 -q
+  $ sl clone "mononoke://$(mononoke_address)/repo" client1 -q
+  $ sl clone "mononoke://$(mononoke_address)/repo" client2 -q
 
 Connect client 1 and client 2 to Commit Cloud
   $ cd client1
-  $ hgedenapi cloud join -q
-  $ hgedenapi up master -q
+  $ sl cloud join -q
+  $ sl up master -q
 
   $ cd ..
 
   $ cd client2
-  $ hgedenapi cloud join -q
-  $ hgedenapi up master -q
+  $ sl cloud join -q
+  $ sl up master -q
 
 
 Make commits in the first client, and sync it
@@ -141,7 +141,7 @@ Make commits in the first client, and sync it
   $ mkcommitedenapi "A"
   $ mkcommitedenapi "B"
   $ mkcommitedenapi "C"
-  $ hgedenapi cloud sync
+  $ sl cloud sync
   commitcloud: synchronizing 'repo' with 'user/test/default'
   commitcloud: head 'c4f3cf0b6f49' hasn't been uploaded yet
   edenapi: queue 3 commits for upload
@@ -153,7 +153,7 @@ Make commits in the first client, and sync it
   commitcloud: commits synchronized
   finished in * (glob)
 
-  $ sl
+  $ smartlog
   @  c4f3cf0b6f49 draft 'C'
   │
   o  e3133a4a05d5 draft 'B'
@@ -165,7 +165,7 @@ Make commits in the first client, and sync it
 
 Sync from the second client - the commits should appear
   $ cd ../client2
-  $ hgedenapi cloud sync
+  $ sl cloud sync
   commitcloud: synchronizing 'repo' with 'user/test/default'
   commitcloud: nothing to upload
   pulling c4f3cf0b6f49 from mononoke://$LOCALIP:$LOCAL_PORT/repo
@@ -175,7 +175,7 @@ Sync from the second client - the commits should appear
   commitcloud: commits synchronized
   finished in * (glob)
 
-  $ sl
+  $ smartlog
   o  c4f3cf0b6f49 draft 'C'
   │
   o  e3133a4a05d5 draft 'B'
@@ -190,7 +190,7 @@ Make commits from the second client and sync it
   $ mkcommitedenapi "D"
   $ mkcommitedenapi "E"
   $ mkcommitedenapi "F"
-  $ hgedenapi cloud sync
+  $ sl cloud sync
   commitcloud: synchronizing 'repo' with 'user/test/default'
   commitcloud: head 'c981069f3f05' hasn't been uploaded yet
   edenapi: queue 3 commits for upload
@@ -205,8 +205,8 @@ Make commits from the second client and sync it
 
 On the first client, make a bookmark, then sync - the bookmark and the new commits should be synced
   $ cd ../client1
-  $ hgedenapi bookmark -r "min(all())" new_bookmark
-  $ hgedenapi cloud sync
+  $ sl bookmark -r "min(all())" new_bookmark
+  $ sl cloud sync
   commitcloud: synchronizing 'repo' with 'user/test/default'
   commitcloud: nothing to upload
   pulling c981069f3f05 from mononoke://$LOCALIP:$LOCAL_PORT/repo
@@ -216,7 +216,7 @@ On the first client, make a bookmark, then sync - the bookmark and the new commi
   commitcloud: commits synchronized
   finished in * (glob)
 
-  $ sl
+  $ smartlog
   o  c981069f3f05 draft 'F'
   │
   o  5267c897028e draft 'E'
@@ -234,11 +234,11 @@ On the first client, make a bookmark, then sync - the bookmark and the new commi
 
 
 On the first client rebase the stack
-  $ hgedenapi rebase -s 4594cad5305d -d c4f3cf0b6f49
+  $ sl rebase -s 4594cad5305d -d c4f3cf0b6f49
   rebasing 4594cad5305d "D"
   rebasing 5267c897028e "E"
   rebasing c981069f3f05 "F"
-  $ hgedenapi cloud sync
+  $ sl cloud sync
   commitcloud: synchronizing 'repo' with 'user/test/default'
   commitcloud: head 'f5aa28a22f7b' hasn't been uploaded yet
   edenapi: queue 3 commits for upload
@@ -252,7 +252,7 @@ On the first client rebase the stack
 
 On the second client sync it
   $ cd ../client2
-  $ hgedenapi cloud sync
+  $ sl cloud sync
   commitcloud: synchronizing 'repo' with 'user/test/default'
   commitcloud: nothing to upload
   pulling f5aa28a22f7b from mononoke://$LOCALIP:$LOCAL_PORT/repo
@@ -265,7 +265,7 @@ On the second client sync it
   updating to f5aa28a22f7b
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
-  $ sl
+  $ smartlog
   @  f5aa28a22f7b draft 'F'
   │
   o  8da26d088b8f draft 'E'
@@ -282,8 +282,8 @@ On the second client sync it
   
 
 Check mutation markers
-  $ hgedenapi up c981069f3f05 -q
-  $ sl
+  $ sl up c981069f3f05 -q
+  $ smartlog
   o  f5aa28a22f7b draft 'F'
   │
   o  8da26d088b8f draft 'E'
@@ -307,7 +307,7 @@ Check mutation markers
 
 
 On the second client hide all draft commits
-  $ hgedenapi hide -r 'draft()'
+  $ sl hide -r 'draft()'
   hiding commit 929f2b9071cf "A"
   hiding commit e3133a4a05d5 "B"
   hiding commit c4f3cf0b6f49 "C"
@@ -320,28 +320,28 @@ On the second client hide all draft commits
   0 files updated, 0 files merged, 3 files removed, 0 files unresolved
   working directory now at 8b2dca0c8a72
   9 changesets hidden
-  $ hgedenapi cloud sync
+  $ sl cloud sync
   commitcloud: synchronizing 'repo' with 'user/test/default'
   commitcloud: nothing to upload
   commitcloud: commits synchronized
   finished in * (glob)
-  $ hgedenapi up master -q
+  $ sl up master -q
 
-  $ sl
+  $ smartlog
   @  8b2dca0c8a72 public 'base_commit' new_bookmark remote/master
   
 
 
 On the first client check that all commits were hidden
   $ cd ../client1
-  $ hgedenapi cloud sync
+  $ sl cloud sync
   commitcloud: synchronizing 'repo' with 'user/test/default'
   commitcloud: nothing to upload
   commitcloud: commits synchronized
   finished in * (glob)
-  $ hgedenapi up master -q
+  $ sl up master -q
 
-  $ sl
+  $ smartlog
   @  8b2dca0c8a72 public 'base_commit' new_bookmark remote/master
   
 
@@ -351,31 +351,31 @@ Sync on the first client, sync on the second client.
 The purpose of the test is to check syncing of remote bookmarks and to verify that expensive bookmarks are pulled separately (prefetched).
   $ mkcommitedenapi e1
   $ mkcommitedenapi e2
-  $ hgedenapi push -r . --to expensive --force --create --pushvars "BYPASS_READONLY=true"
+  $ sl push -r . --to expensive --force --create --pushvars "BYPASS_READONLY=true"
   pushing rev 98eac947fc54 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark expensive
   searching for changes
   exporting bookmark expensive
-  $ hgedenapi up master -q
+  $ sl up master -q
   $ mkcommitedenapi e3
   $ mkcommitedenapi e4
-  $ hgedenapi push -r . --to expensive_other --force --create --pushvars "BYPASS_READONLY=true"
+  $ sl push -r . --to expensive_other --force --create --pushvars "BYPASS_READONLY=true"
   pushing rev 8537bcdeff72 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark expensive_other
   searching for changes
   exporting bookmark expensive_other
 
   $ mkcommitedenapi e_draft
 
-  $ hgedenapi up master -q
+  $ sl up master -q
   $ mkcommitedenapi o1
   $ mkcommitedenapi o2
-  $ hgedenapi push -r . --to regular --force --create --pushvars "BYPASS_READONLY=true"
+  $ sl push -r . --to regular --force --create --pushvars "BYPASS_READONLY=true"
   pushing rev 22f66edbeb8e to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark regular
   searching for changes
   exporting bookmark regular
 
   $ mkcommitedenapi o_draft
 
-  $ hgedenapi cloud sync
+  $ sl cloud sync
   commitcloud: synchronizing 'repo' with 'user/test/default'
   commitcloud: head '2c6d1f3b1bd6' hasn't been uploaded yet
   commitcloud: head 'f141e512974a' hasn't been uploaded yet
@@ -387,7 +387,7 @@ The purpose of the test is to check syncing of remote bookmarks and to verify th
   edenapi: uploaded 2 changesets
   commitcloud: commits synchronized
   finished in * (glob)
-  $ sl
+  $ smartlog
   @  f141e512974a draft 'o_draft'
   │
   o  22f66edbeb8e draft 'o2'
@@ -407,11 +407,11 @@ The purpose of the test is to check syncing of remote bookmarks and to verify th
   o  8b2dca0c8a72 public 'base_commit' new_bookmark remote/master
   
 (Unfortunately, remote bookmarks are not updated on push)
-  $ hgedenapi pull -B expensive -B expensive_other -B regular
+  $ sl pull -B expensive -B expensive_other -B regular
   pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo
   DEBUG pull::httpbookmarks: edenapi fetched bookmarks: {'expensive': '98eac947fc545fda4c6fc8531b18250aca738ca0', 'expensive_other': '8537bcdeff72ae8456e99f835f7cd3ce5e382772', 'regular': '22f66edbeb8ed912d75fab074df8b3069c91424a'}
 
-  $ sl
+  $ smartlog
   @  f141e512974a draft 'o_draft'
   │
   o  22f66edbeb8e public 'o2'  remote/regular
@@ -430,7 +430,7 @@ The purpose of the test is to check syncing of remote bookmarks and to verify th
   ├─╯
   o  8b2dca0c8a72 public 'base_commit' new_bookmark remote/master
   
-  $ hgedenapi cloud sync
+  $ sl cloud sync
   commitcloud: synchronizing 'repo' with 'user/test/default'
   commitcloud: nothing to upload
   commitcloud: commits synchronized
@@ -439,7 +439,7 @@ The purpose of the test is to check syncing of remote bookmarks and to verify th
   $ cd ../client2
 
   $ setconfig commitcloud.expensive_bookmarks="expensive, expensive_other"
-  $ hgedenapi cloud sync
+  $ sl cloud sync
   commitcloud: synchronizing 'repo' with 'user/test/default'
   commitcloud: nothing to upload
   commitcloud: fetching remote bookmark(s) remote/expensive, remote/expensive_other. Sorry, this may take a while...
@@ -455,7 +455,7 @@ The purpose of the test is to check syncing of remote bookmarks and to verify th
   finished in * (glob)
 
 XXX: We can't use `sl` here because output ordering is flaky.
-  $ hgedenapi log -T "{node|short} {phase} '{desc|firstline}' {bookmarks} {remotebookmarks}\n" -r "sort(all(), desc)"
+  $ sl log -T "{node|short} {phase} '{desc|firstline}' {bookmarks} {remotebookmarks}\n" -r "sort(all(), desc)"
   8b2dca0c8a72 public 'base_commit' new_bookmark remote/master
   6733e9fe3e4b public 'e1'  
   98eac947fc54 public 'e2'  remote/expensive
@@ -467,21 +467,21 @@ XXX: We can't use `sl` here because output ordering is flaky.
   f141e512974a draft 'o_draft'  
 
 
-  $ hgedenapi bookmark -d new_bookmark
+  $ sl bookmark -d new_bookmark
 
-  $ hgedenapi cloud sync
+  $ sl cloud sync
   commitcloud: synchronizing 'repo' with 'user/test/default'
   commitcloud: nothing to upload
   commitcloud: commits synchronized
   finished in 0.00 sec
 
   $ cd ../client1
-  $ hgedenapi cloud sync
+  $ sl cloud sync
   commitcloud: synchronizing 'repo' with 'user/test/default'
   commitcloud: nothing to upload
   commitcloud: commits synchronized
   finished in 0.00 sec
-  $ hgedenapi log -T "{node|short} {phase} '{desc|firstline}' {bookmarks} {remotebookmarks}\n" -r "sort(all(), desc)"
+  $ sl log -T "{node|short} {phase} '{desc|firstline}' {bookmarks} {remotebookmarks}\n" -r "sort(all(), desc)"
   8b2dca0c8a72 public 'base_commit'  remote/master
   6733e9fe3e4b public 'e1'  
   98eac947fc54 public 'e2'  remote/expensive
@@ -492,7 +492,7 @@ XXX: We can't use `sl` here because output ordering is flaky.
   22f66edbeb8e public 'o2'  remote/regular
   f141e512974a draft 'o_draft'  
 
-  $ hgedenapi cloud list
+  $ sl cloud list
   commitcloud: searching workspaces for the 'repo' repo
   the following commitcloud workspaces are available:
           default (connected)

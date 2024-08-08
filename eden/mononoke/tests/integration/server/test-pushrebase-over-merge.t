@@ -40,14 +40,14 @@ Try to push merge commit
   o  A [public;rev=0;426bada5c675]
   $
 
-  $ hgedenapi push -r . --to master_bookmark -q
+  $ sl push -r . --to master_bookmark -q
 
 Now try to push over a merge commit
   $ hgmn up -q 0
   $ echo 'somefile' > somefile
   $ hg add somefile
   $ hg ci -m 'pushrebase over merge'
-  $ hgedenapi push -r . --to master_bookmark -q
+  $ sl push -r . --to master_bookmark -q
   $ hg log -r master_bookmark
   commit:      c8a34708eb3a
   bookmark:    default/master_bookmark

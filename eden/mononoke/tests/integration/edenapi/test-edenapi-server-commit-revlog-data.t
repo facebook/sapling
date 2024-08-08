@@ -30,7 +30,7 @@ Blobimport test repo.
 Start up SaplingRemoteAPI server.
   $ start_and_wait_for_mononoke_server
 Check response.
-  $ hgedenapi debugapi -e commitdata -i "['$COMMIT_1','$COMMIT_2']"
+  $ sl debugapi -e commitdata -i "['$COMMIT_1','$COMMIT_2']"
   [{"hgid": bin("e83645968c8f2954b97a3c79ce5a6b90a464c54d"),
     "revlog_data": b"\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\09b8fa746094652af6be3a05047424c31a48c5fac\ntest\n0 0\ntest.txt\n\nadd test.txt"},
    {"hgid": bin("c7dcf24fab3a8ab956273fa40d5cc44bc26ec655"),

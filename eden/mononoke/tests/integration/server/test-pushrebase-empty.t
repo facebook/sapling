@@ -33,7 +33,7 @@ Push single empty commit
   
   
   
-  $ hgedenapi push -r . --to master_bookmark
+  $ sl push -r . --to master_bookmark
   pushing rev 4d5799789652 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
   edenapi: queue 1 commit for upload
   edenapi: queue 0 files for upload
@@ -49,7 +49,7 @@ Push empty and non-empty commit in a stack
   $ echo 2 > 2 && hg add 2 && hg ci -m 2
   $ hg revert -r .^ 2
   $ hg commit --amend
-  $ hgedenapi push -r . --to master_bookmark
+  $ sl push -r . --to master_bookmark
   pushing rev 22c3c2036561 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
   edenapi: queue 2 commits for upload
   edenapi: queue 1 file for upload
@@ -69,7 +69,7 @@ Push stack of empty commits
   $ echo 1 > 111 && hg add 111 && hg ci -m emptystack2
   $ hg revert -r .^ 111
   $ hg commit --amend
-  $ hgedenapi push -r . --to master_bookmark
+  $ sl push -r . --to master_bookmark
   pushing rev aeb4783bffb3 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
   edenapi: queue 2 commits for upload
   edenapi: queue 0 files for upload
