@@ -22,6 +22,7 @@ mod derive_commit;
 mod derive_delta_manifest_v2;
 mod derive_tree;
 mod errors;
+pub mod git_lfs;
 mod manifest;
 mod object;
 mod store;

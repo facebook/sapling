@@ -37,6 +37,7 @@ use futures::StreamExt;
 use futures::TryFutureExt;
 use futures::TryStreamExt;
 use git_symbolic_refs::GitSymbolicRefsEntry;
+pub use git_types::git_lfs::LfsPointerData;
 use gix_hash::ObjectId;
 use gix_object::Object;
 use linked_hash_map::LinkedHashMap;
@@ -70,7 +71,6 @@ pub use crate::gitimport_objects::GitimportPreferences;
 pub use crate::gitimport_objects::GitimportTarget;
 pub use crate::gitimport_objects::TagMetadata;
 pub use crate::gitlfs::GitImportLfs;
-pub use crate::gitlfs::LfsMetaData;
 
 pub const HGGIT_MARKER_EXTRA: &str = "hg-git-rename-source";
 pub const HGGIT_MARKER_VALUE: &[u8] = b"git";

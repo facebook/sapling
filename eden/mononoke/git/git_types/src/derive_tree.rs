@@ -20,16 +20,12 @@ use derived_data_manager::BonsaiDerivable;
 use derived_data_manager::DerivableType;
 use derived_data_manager::DerivationContext;
 use derived_data_service_if as thrift;
-use filestore::FetchKey;
 use filestore::FilestoreConfig;
 use futures::future::ready;
 use futures::stream::FuturesUnordered;
 use futures::stream::TryStreamExt;
 use manifest::derive_manifest;
 use manifest::flatten_subentries;
-use mononoke_types::hash::RichGitSha1;
-use mononoke_types::hash::Sha256;
-use mononoke_types::BasicFileChange;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::GitLfs;
@@ -37,6 +33,7 @@ use mononoke_types::NonRootMPath;
 
 use crate::errors::MononokeGitError;
 use crate::fetch_non_blob_git_object;
+use crate::git_lfs::generate_and_store_git_lfs_pointer;
 use crate::upload_non_blob_git_object;
 use crate::BlobHandle;
 use crate::Tree;
@@ -209,41 +206,6 @@ async fn derive_git_manifest<B: Blobstore + Clone + 'static>(
     }
 }
 
-// in line with https://github.com/git-lfs/git-lfs/blob/main/docs/spec.md
-fn format_lfs_pointer(sha256: Sha256, size: u64) -> String {
-    format!(
-        "version https://git-lfs.github.com/spec/v1\noid sha256:{sha256}\nsize {size}\n",
-        sha256 = sha256,
-        size = size
-    )
-}
-
-/// Given a file change generates a Git LFS pointer that points to acctual file contents
-/// and stores it in the blobstore. Returns oid of the LFS pointer.
-async fn generate_and_store_git_pointer<B: Blobstore + Clone + 'static>(
-    blobstore: &B,
-    filestore_config: FilestoreConfig,
-    ctx: &CoreContext,
-    basic_file_change: &BasicFileChange,
-) -> Result<RichGitSha1> {
-    let metadata = filestore::get_metadata(
-        blobstore,
-        ctx,
-        &FetchKey::Canonical(basic_file_change.content_id()),
-    )
-    .await?
-    .ok_or_else(|| anyhow!("Missing metadata for {}", basic_file_change.content_id()))?;
-    let lfs_pointer = format_lfs_pointer(metadata.sha256, basic_file_change.size());
-    let ((content_id, _size), fut) =
-        filestore::store_bytes(blobstore, filestore_config, ctx, lfs_pointer.into());
-    fut.await?;
-    let oid = filestore::get_metadata(blobstore, ctx, &FetchKey::Canonical(content_id))
-        .await?
-        .ok_or_else(|| anyhow!("Missing metadata for {}", basic_file_change.content_id()))?
-        .git_sha1;
-    Ok(oid)
-}
-
 pub async fn get_file_changes<B: Blobstore + Clone + 'static>(
     blobstore: &B,
     filestore_config: FilestoreConfig,
@@ -266,7 +228,7 @@ pub async fn get_file_changes<B: Blobstore + Clone + 'static>(
                     GitLfs::GitLfsPointer {
                         non_canonical_pointer: None,
                     } => {
-                        let oid = generate_and_store_git_pointer(
+                        let oid = generate_and_store_git_lfs_pointer(
                             blobstore,
                             filestore_config,
                             ctx,

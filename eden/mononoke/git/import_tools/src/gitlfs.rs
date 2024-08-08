@@ -6,7 +6,6 @@
  */
 
 use core::future::Future;
-use std::str;
 use std::sync::Arc;
 
 use anyhow::format_err;
@@ -19,6 +18,8 @@ use futures::stream;
 use futures::Stream;
 use futures::StreamExt;
 use futures::TryStreamExt;
+use git_types::git_lfs::parse_lfs_pointer;
+use git_types::git_lfs::LfsPointerData;
 use gix_hash::ObjectId;
 use http::Uri;
 use hyper::body;
@@ -34,9 +35,6 @@ use slog::warn;
 use tokio::sync::Semaphore;
 use tokio::time::sleep;
 use tokio::time::Duration;
-/// We will not try to parse any file bigger then this.
-/// Any valid gitlfs metadata file should be smaller then this.
-const MAX_METADATA_LENGTH: usize = 511;
 
 /// Module to be passed into gitimport that defines how LFS files are imported.
 /// The default will disable any LFS support (and the metadata of files pointing to LFS files
@@ -67,51 +65,6 @@ pub struct GitImportLfs {
     inner: Option<Arc<GitImportLfsInner>>,
 }
 
-#[derive(Debug)]
-pub struct LfsMetaData {
-    pub version: String,
-    pub sha256: hash::Sha256,
-    pub size: u64,
-    /// gitblob and gitid, where this metadata comes from. This is useful if we
-    /// end up storing the metadata instead of the content (if the content cannot
-    /// be found on the LFS server for example).
-    pub gitblob: Vec<u8>,
-    pub gitid: ObjectId,
-}
-
-/// Layout of the metafiles:
-/// | version https://git-lfs.github.com/spec/v1
-/// | oid sha256:73e2200459562bb068f08e33210ed106014b877f878932b2147991e17a7c089b
-/// | size 8423391
-fn parse_lfs_metafile(gitblob: &[u8], gitid: ObjectId) -> Option<LfsMetaData> {
-    if gitblob.len() > MAX_METADATA_LENGTH {
-        return None;
-    }
-
-    let mut lines = str::from_utf8(gitblob).ok()?.lines();
-    let version = lines.next()?.strip_prefix("version ")?;
-    if version != "https://git-lfs.github.com/spec/v1" {
-        return None;
-    }
-    let sha256 = lines
-        .next()?
-        .strip_prefix("oid sha256:")?
-        .parse::<hash::Sha256>()
-        .ok()?;
-    let size = lines.next()?.strip_prefix("size ")?.parse::<u64>().ok()?;
-    // As a precaution. If we have an additional line after this, then we assume its not a valid file.
-    if lines.next().is_some() {
-        return None;
-    }
-    Some(LfsMetaData {
-        version: version.to_string(),
-        sha256,
-        size,
-        gitblob: gitblob.to_vec(),
-        gitid,
-    })
-}
-
 impl GitImportLfs {
     pub fn new_disabled() -> Self {
         GitImportLfs { inner: None }
@@ -136,9 +89,10 @@ impl GitImportLfs {
         })
     }
 
-    pub fn is_lfs_file(&self, gitblob: &[u8], gitid: ObjectId) -> Option<LfsMetaData> {
+    /// Checks whether given blob is valid Git LFS pointer and returns its metadata
+    pub fn is_lfs_file(&self, gitblob: &[u8], gitid: ObjectId) -> Option<LfsPointerData> {
         if self.inner.is_some() {
-            parse_lfs_metafile(gitblob, gitid)
+            parse_lfs_pointer(gitblob, gitid)
         } else {
             None
         }
@@ -149,7 +103,7 @@ impl GitImportLfs {
     async fn fetch_bytes_internal(
         &self,
         ctx: &CoreContext,
-        metadata: &LfsMetaData,
+        metadata: &LfsPointerData,
     ) -> Result<
         (
             StoreRequest,
@@ -196,7 +150,7 @@ impl GitImportLfs {
     async fn fetch_bytes(
         &self,
         ctx: &CoreContext,
-        metadata: &LfsMetaData,
+        metadata: &LfsPointerData,
     ) -> Result<(StoreRequest, impl Stream<Item = Result<Bytes, Error>>), Error> {
         let inner = self.inner.as_ref().ok_or_else(|| {
             format_err!("GitImportLfs::fetch_bytes called on disabled GitImportLfs")
@@ -235,13 +189,13 @@ impl GitImportLfs {
     pub async fn with<F, T, Fut>(
         self,
         ctx: CoreContext,
-        metadata: LfsMetaData,
+        metadata: LfsPointerData,
         f: F,
     ) -> Result<T, Error>
     where
         F: FnOnce(
                 CoreContext,
-                LfsMetaData,
+                LfsPointerData,
                 StoreRequest,
                 Box<dyn Stream<Item = Result<Bytes, Error>> + Send + Unpin>,
             ) -> Fut
