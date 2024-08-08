@@ -12,6 +12,7 @@ pub(crate) mod commit;
 pub(crate) mod commit_id;
 pub(crate) mod diff;
 pub(crate) mod path_tree;
+pub(crate) mod stress_test;
 pub(crate) mod summary;
 
 use chrono::DateTime;

@@ -15,9 +15,9 @@ use cloned::cloned;
 use scs_client_raw::thrift;
 use serde::Serialize;
 
-use crate::library::summary::run_stress;
+use crate::library::stress_test::StressArgs;
+use crate::library::stress_test::StressTestRunner;
 use crate::library::summary::summary_output;
-use crate::library::summary::StressArgs;
 use crate::render::Render;
 use crate::ScscApp;
 
@@ -56,19 +56,16 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
     let conn = app.get_connection(None)?;
 
     if let Some(stress) = args.stress {
-        let results = run_stress(
-            stress.count,
-            stress.parallel,
-            conn.get_client_corrrelator(),
-            || {
+        let runner = stress.new_runner(conn.get_client_corrrelator());
+        let results = runner
+            .run(|| {
                 cloned!(conn, params);
                 Box::pin(async move {
                     conn.list_repos(&params).await?;
                     Ok(())
                 })
-            },
-        )
-        .await;
+            })
+            .await;
 
         let output = summary_output(results);
         app.target.render(&(), output).await

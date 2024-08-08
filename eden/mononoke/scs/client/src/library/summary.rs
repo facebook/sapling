@@ -11,26 +11,11 @@ use std::io::Write;
 use anyhow::Error;
 use anyhow::Result;
 use futures::stream;
-use futures::stream::StreamExt;
 use futures::Stream;
 use itertools::Itertools;
 use serde::Serialize;
 
 use crate::render::Render;
-
-#[derive(clap::Parser)]
-/// List the contents of a directory
-pub(crate) struct StressArgs {
-    /// Run in stress test mode
-    #[clap(long = "stress")]
-    pub(crate) enabled: bool,
-    /// Number of times to run the command
-    #[clap(long = "stress-count", default_value_t = 10000)]
-    pub(crate) count: usize,
-    /// Number of parallel commands to run
-    #[clap(long = "stress-parallel", default_value_t = 100)]
-    pub(crate) parallel: usize,
-}
 
 #[derive(Serialize)]
 pub(crate) struct SummaryOutput {
@@ -49,32 +34,6 @@ impl Render for SummaryOutput {
     fn render_json(&self, _args: &Self::Args, w: &mut dyn Write) -> Result<()> {
         Ok(serde_json::to_writer(w, self)?)
     }
-}
-
-/// Run a function `count` times in parallel, as fast as possible, even if that
-/// means overloading the server.
-pub(crate) async fn run_stress<F>(
-    count: usize,
-    parallel: usize,
-    client_correlator: Option<String>,
-    fun: F,
-) -> impl Iterator<Item = Result<(), Error>>
-where
-    F: Fn() -> ::futures::future::BoxFuture<'static, Result<(), Error>>,
-{
-    println!(
-        "running stress test with count: {} parallel: {}.{}",
-        count,
-        parallel,
-        client_correlator.map_or("".to_string(), |c| format!(" client correlator: {}", c))
-    );
-
-    stream::iter(0..count)
-        .map(|_| fun())
-        .buffer_unordered(parallel)
-        .collect::<Vec<_>>()
-        .await
-        .into_iter()
 }
 
 pub(crate) fn summary_output(
