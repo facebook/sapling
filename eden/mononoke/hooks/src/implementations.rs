@@ -14,6 +14,7 @@ mod block_empty_commit;
 mod block_files;
 pub(crate) mod block_invalid_symlinks;
 pub(crate) mod block_merge_commits;
+pub(crate) mod block_unannotated_tags;
 pub(crate) mod block_unclean_merge_commits;
 pub(crate) mod deny_files;
 mod limit_commit_message_length;
@@ -63,6 +64,9 @@ pub async fn make_changeset_hook(
             &params.config,
         )?)),
         "limit_tag_updates" => Some(b(limit_tag_updates::LimitTagUpdatesHook::new())),
+        "block_unannotated_tags" => {
+            Some(b(block_unannotated_tags::BlockUnannotatedTagsHook::new()))
+        }
         "block_commit_message_pattern" => Some(b(
             block_commit_message_pattern::BlockCommitMessagePatternHook::new(&params.config)?,
         )),
