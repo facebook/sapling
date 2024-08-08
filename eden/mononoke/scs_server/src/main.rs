@@ -12,11 +12,13 @@ use std::io::Write;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
+use std::time::Duration;
 
 use anyhow::Context;
 use anyhow::Error;
 use async_trait::async_trait;
 use clap::Parser;
+use clap::ValueEnum;
 use cloned::cloned;
 use cmdlib_logging::ScribeLoggingArgs;
 use connection_security_checker::ConnectionSecurityChecker;
@@ -55,6 +57,7 @@ use srserver::ThriftExecutor;
 use srserver::ThriftServer;
 use srserver::ThriftServerBuilder;
 use srserver::ThriftStreamExecutor;
+use thrift_factory::ThriftFactoryBuilder;
 use tokio::task;
 use tracing::Level;
 use tracing_glog::Glog;
@@ -105,6 +108,21 @@ struct ScsServerArgs {
     /// Max memory to use for the thrift server
     #[clap(long)]
     max_memory: Option<usize>,
+    /// Thrift server mode;
+    #[clap(long, value_enum, default_value_t = ThriftServerMode::Default)]
+    thift_server_mode: ThriftServerMode,
+    /// Thrift queue size
+    #[clap(long, default_value = "0")]
+    thrift_queue_size: usize,
+    /// Number of Thrift workers
+    #[clap(long, default_value = "1000")]
+    thrift_workers_num: usize,
+}
+
+#[derive(ValueEnum, Clone, Copy, Debug, PartialEq, Eq)]
+enum ThriftServerMode {
+    Default,
+    ThriftFactory,
 }
 
 /// Struct representing the Source Control Service process when sharding by
@@ -260,13 +278,25 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     };
     runtime.spawn(monitoring_forever);
 
-    let thrift = setup_thrift_server(
-        fb,
-        &args,
-        &will_exit,
-        source_control_server,
-        runtime.clone(),
-    )
+    let thrift = match args.thift_server_mode {
+        ThriftServerMode::Default => setup_thrift_server(
+            fb,
+            &args,
+            &will_exit,
+            source_control_server,
+            runtime.clone(),
+        ),
+        ThriftServerMode::ThriftFactory => {
+            let (factory, _processing_handle) = runtime.block_on(async move {
+                ThriftFactoryBuilder::new(fb, "main-thrift-incoming", args.thrift_workers_num)
+                    .with_queueing_limit(args.thrift_queue_size)
+                    .build()
+                    .await
+                    .expect("Failed to build thrift factory")
+            });
+            setup_thrift_server(fb, &args, &will_exit, source_control_server, factory)
+        }
+    }
     .context("Failed to set up Thrift server")?;
 
     let mut service_framework = ServiceFramework::from_server(SERVICE_NAME, thrift)
