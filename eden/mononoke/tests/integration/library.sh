@@ -121,6 +121,8 @@ function get_free_socket {
 
 ZELOS_PORT=$(get_free_socket)
 
+CAS_SERVER_SOCKET=$(get_free_socket)
+
 function mononoke_host {
   if [[ $LOCALIP == *":"* ]]; then
     # ipv6, surround in brackets
@@ -138,6 +140,16 @@ function mononoke_address {
     echo -n "$LOCALIP:$MONONOKE_SOCKET"
   fi
 }
+
+function cas_server_address {
+  if [[ $LOCALIP == *":"* ]]; then
+    # ipv6, surround in brackets
+    echo -n "[$LOCALIP]:$CAS_SERVER_SOCKET"
+  else
+    echo -n "$LOCALIP:$CAS_SERVER_SOCKET"
+  fi
+}
+
 
 function scs_address {
   echo -n "$(mononoke_host):$SCS_PORT"
