@@ -877,6 +877,15 @@ struct RepoCreateCommitParamsFileCopyInfo {
   2: i32 parent_index;
 }
 
+union RepoCreateCommitParamsGitLfs {
+  // File should be served as full text (bool val is ignored)
+  1: bool full_content;
+  // A canonical LFS pointer should be generated (bool val is ignored)
+  2: bool lfs_pointer;
+  // A non-canonical LFS pointer is provided
+  3: RepoCreateCommitParamsFileContent non_canonical_lfs_pointer;
+}
+
 struct RepoCreateCommitParamsFileChanged {
   /// The new type of the file.
   1: RepoCreateCommitParamsFileType type;
@@ -886,6 +895,10 @@ struct RepoCreateCommitParamsFileChanged {
 
   /// The file was copied from another file.
   3: optional RepoCreateCommitParamsFileCopyInfo copy_info;
+
+  /// Controls Git LFS representation of change in Git clones of this repo.
+  /// (omitting this field lets server make the decision)
+  4: optional RepoCreateCommitParamsGitLfs git_lfs;
 }
 
 struct RepoCreateCommitParamsFileDeleted {}

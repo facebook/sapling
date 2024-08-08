@@ -27,6 +27,7 @@ use mononoke_api::ChangesetSpecifierPrefixResolution;
 use mononoke_api::CreateChange;
 use mononoke_api::CreateChangeFile;
 use mononoke_api::CreateChangeFileContents;
+use mononoke_api::CreateChangeGitLfs;
 use mononoke_api::CreateCopyInfo;
 use mononoke_api::CreateInfo;
 use mononoke_api::FileId;
@@ -369,6 +370,41 @@ impl SourceControlServiceImpl {
         let change = match change {
             thrift::RepoCreateCommitParamsChange::changed(c) => {
                 let file_type = FileType::from_request(&c.r#type)?;
+                let git_lfs = match c.git_lfs {
+                    // Right now the default is to use full content when client didn't explicitly
+                    // request LFS but we can change it in the future to something smarter.
+                    None => None,
+                    // User explicitly prefers full content
+                    Some(git_lfs) => Some(match git_lfs {
+                        thrift::RepoCreateCommitParamsGitLfs::full_content(_unused) => {
+                            CreateChangeGitLfs::FullContent
+                        }
+                        thrift::RepoCreateCommitParamsGitLfs::lfs_pointer(_unused) => {
+                            CreateChangeGitLfs::GitLfsPointer {
+                                non_canonical_pointer: None,
+                            }
+                        }
+                        thrift::RepoCreateCommitParamsGitLfs::non_canonical_lfs_pointer(
+                            non_canonical_lfs_pointer,
+                        ) => CreateChangeGitLfs::GitLfsPointer {
+                            non_canonical_pointer: Some(
+                                Self::convert_create_commit_file_content(
+                                    repo,
+                                    non_canonical_lfs_pointer,
+                                )
+                                .await?,
+                            ),
+                        },
+                        thrift::RepoCreateCommitParamsGitLfs::UnknownField(t) => {
+                            return Err(errors::invalid_request(format!(
+                                "git lfs variant not supported: {}",
+                                t
+                            ))
+                            .into());
+                        }
+                    }),
+                };
+
                 let copy_info = c
                     .copy_info
                     .as_ref()
@@ -379,7 +415,7 @@ impl SourceControlServiceImpl {
                     CreateChangeFile {
                         contents,
                         file_type,
-                        git_lfs: None,
+                        git_lfs,
                     },
                     copy_info,
                 )
