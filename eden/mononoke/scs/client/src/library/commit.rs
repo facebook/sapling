@@ -38,6 +38,7 @@ pub(crate) struct CommitInfo {
     pub git_extra_headers: Option<BTreeMap<String, String>>,
     pub committer_date: Option<DateTime<FixedOffset>>,
     pub committer: Option<String>,
+    pub linear_depth: Option<i64>,
 }
 
 fn timestamp_to_date(timezone: i32, timestamp: i64) -> DateTime<FixedOffset> {
@@ -110,6 +111,7 @@ impl TryFrom<&thrift::CommitInfo> for CommitInfo {
             git_extra_headers,
             committer_date,
             committer,
+            linear_depth: commit.linear_depth,
         })
     }
 }
