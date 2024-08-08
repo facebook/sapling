@@ -643,6 +643,17 @@ impl ChangesetContext {
             })
     }
 
+    /// The linear depth of the given changeset
+    pub async fn linear_depth(&self) -> Result<u64, MononokeError> {
+        self.repo
+            .commit_graph()
+            .changeset_linear_depth(self.ctx(), self.id)
+            .await
+            .map_err(|_| {
+                MononokeError::NotAvailable(format!("Linear depth missing for {:?}", &self.id))
+            })
+    }
+
     /// All mercurial commit extras as (name, value) pairs.
     pub async fn hg_extras(&self) -> Result<Vec<(String, Vec<u8>)>, MononokeError> {
         Ok(self

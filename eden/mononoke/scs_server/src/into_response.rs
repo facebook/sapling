@@ -363,6 +363,7 @@ impl AsyncIntoResponseWith<thrift::CommitInfo> for ChangesetContext {
             generation,
             committer_date,
             committer,
+            linear_depth,
         ) = try_join!(
             map_commit_identity(&self, identity_schemes),
             self.message(),
@@ -374,6 +375,7 @@ impl AsyncIntoResponseWith<thrift::CommitInfo> for ChangesetContext {
             self.generation(),
             self.committer_date(),
             self.committer(),
+            self.linear_depth(),
         )?;
         Ok(thrift::CommitInfo {
             ids,
@@ -392,6 +394,7 @@ impl AsyncIntoResponseWith<thrift::CommitInfo> for ChangesetContext {
             generation: generation.value() as i64,
             committer_date: committer_date.map(|date| date.timestamp()),
             committer,
+            linear_depth: Some(linear_depth as i64),
             ..Default::default()
         })
     }

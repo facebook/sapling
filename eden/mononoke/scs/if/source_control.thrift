@@ -217,6 +217,13 @@ struct CommitInfo {
 
   /// The identity of the person who committed this commit, as opposed to authored it (if available - commit comes from Git).
   12: optional string committer;
+
+  /// The linear depth of the commit. It's calculated as the number of ancestors of the commit if the commit
+  /// graph consisted only of the first parents (i.e. if merges were ignored).
+  ///
+  /// This can be useful when using the commit_linear_history method. For example commit_linear_history(commit.id, skip=commit.linear_depth, limit=1)
+  /// will return the root commit of the repository.
+  13: optional i64 linear_depth;
 }
 
 struct BookmarkInfo {
