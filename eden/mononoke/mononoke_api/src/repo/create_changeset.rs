@@ -195,6 +195,55 @@ pub enum CreateChangeFileContents {
     },
 }
 
+impl CreateChangeFileContents {
+    async fn resolve(
+        &mut self,
+        ctx: &CoreContext,
+        filestore_config: FilestoreConfig,
+        repo_blobstore: RepoBlobstore,
+    ) -> Result<(), MononokeError> {
+        match self {
+            CreateChangeFileContents::New { bytes } => {
+                let meta = filestore::store(
+                    &repo_blobstore,
+                    filestore_config,
+                    ctx,
+                    &StoreRequest::new(bytes.len() as u64),
+                    stream::once(async move { Ok(bytes.clone()) }),
+                )
+                .await?;
+                *self = CreateChangeFileContents::Existing {
+                    file_id: meta.content_id,
+                    maybe_size: Some(meta.total_size),
+                };
+            }
+            CreateChangeFileContents::Existing {
+                file_id,
+                maybe_size,
+                ..
+            } => {
+                if maybe_size.is_none() {
+                    let size = filestore::get_metadata(
+                        &repo_blobstore,
+                        ctx,
+                        &FetchKey::Canonical(*file_id),
+                    )
+                    .await?
+                    .ok_or_else(|| {
+                        MononokeError::InvalidRequest(format!(
+                            "File id '{}' is not available in this repo",
+                            file_id
+                        ))
+                    })?
+                    .total_size;
+                    *maybe_size = Some(size);
+                }
+            }
+        }
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 impl CreateChangeFile {
     // constructor that makes tests more ergonomic
@@ -246,44 +295,9 @@ impl CreateChange {
             CreateChange::Untracked(file) => file,
             CreateChange::UntrackedDeletion | CreateChange::Deletion => return Ok(()),
         };
-        match &mut file.contents {
-            CreateChangeFileContents::New { bytes } => {
-                let meta = filestore::store(
-                    &repo_blobstore,
-                    filestore_config,
-                    ctx,
-                    &StoreRequest::new(bytes.len() as u64),
-                    stream::once(async move { Ok(bytes.clone()) }),
-                )
-                .await?;
-                file.contents = CreateChangeFileContents::Existing {
-                    file_id: meta.content_id,
-                    maybe_size: Some(meta.total_size),
-                };
-            }
-            CreateChangeFileContents::Existing {
-                file_id,
-                maybe_size,
-                ..
-            } => {
-                if maybe_size.is_none() {
-                    let size = filestore::get_metadata(
-                        &repo_blobstore,
-                        ctx,
-                        &FetchKey::Canonical(*file_id),
-                    )
-                    .await?
-                    .ok_or_else(|| {
-                        MononokeError::InvalidRequest(format!(
-                            "File id '{}' is not available in this repo",
-                            file_id
-                        ))
-                    })?
-                    .total_size;
-                    *maybe_size = Some(size);
-                }
-            }
-        }
+        file.contents
+            .resolve(ctx, filestore_config, repo_blobstore)
+            .await?;
         Ok(())
     }
 
