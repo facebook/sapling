@@ -15,7 +15,6 @@ use anyhow::Error;
 use anyhow::Result;
 use cxx::SharedPtr;
 use storemodel::FileAuxData as ScmStoreFileAuxData;
-use storemodel::TreeAuxData as ScmStoreTreeAuxData;
 use types::fetch_mode::FetchMode;
 use types::Key;
 
