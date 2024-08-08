@@ -22,39 +22,10 @@ command, exit codes, and duration
 FIXME: (recursive) alias expansion is not logged
   $ rm -rf ./.hg/blackbox*
   $ hg so-confusing
-  $ hg blackbox
-  [command] [*, "so-confusing"] started by uid 0 as pid 0 with nice 0 (glob)
-  [process_tree] (this process)
-  [command] [*, "so-confusing"] started by uid 0 as pid 0 with nice 0 (glob) (?)
-  [process_tree] (this process) (?)
-  [legacy][command_info]
-  [legacy][command_info]
-  [legacy][command_info]
-  [legacy][env_vars]
-  [legacy][command_info] (?)
-  [legacy][env_vars] (?)
-  [legacy][command_info]
-  [legacy][env_vars]
-  [legacy][command] so-confusing
-  [legacy][dirstate_info]
-  [legacy][jobid]
-  [legacy][visibility] read 0 heads:
-  [legacy][dirstate_info]
-  [legacy][command_finish] so-confusing exited 0 after 0.00 seconds
-  [legacy][connectionpool]
-  [legacy][command_info]
-  [legacy][metrics] {'metrics': {'scmstore': {'tree': * (glob) (?)
-  [legacy][metrics] {'metrics': {'scmstore': {'file': * (glob) (?)
-  [commmand_finish] exited 0 in 0 ms, max RSS: 0 bytes
-  [tracing] (binary data of * bytes) (glob)
-  [command] [*, "blackbox"] started by uid 0 as pid 0 with nice 0 (glob)
-  [process_tree] (this process)
-  [legacy][command_info]
-  [legacy][command_info]
-  [legacy][env_vars]
-  [legacy][command] blackbox
-  [legacy][dirstate_info]
-  [legacy][jobid]
+  $ hg blackbox --pattern '{"start": "_"}'
+  [command] [*, "so-confusing"] * (glob)
+  [command] [*, "so-confusing"] * (glob) (?)
+  [command] [*, "blackbox", "--pattern", "{\"start\": \"_\"}"] * (glob)
 
 incoming change tracking
 
