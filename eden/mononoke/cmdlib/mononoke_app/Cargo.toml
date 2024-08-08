@@ -20,6 +20,7 @@ cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimen
 clap = { version = "4.5.11", features = ["derive", "env", "string", "unicode", "wrap_help"] }
 cmdlib_caching = { version = "0.1.0", path = "../caching" }
 cmdlib_logging = { version = "0.1.0", path = "../log" }
+config_args = { version = "0.1.0", path = "../config_args" }
 context = { version = "0.1.0", path = "../../server/context" }
 derived_data_remote = { version = "0.1.0", path = "../../derived_data/remote" }
 environment = { version = "0.1.0", path = "../environment" }

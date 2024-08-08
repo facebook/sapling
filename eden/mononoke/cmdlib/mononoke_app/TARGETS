@@ -38,6 +38,7 @@ rust_library(
         "//eden/mononoke/cmdlib:environment",
         "//eden/mononoke/cmdlib/base_app:base_app",
         "//eden/mononoke/cmdlib/caching:cmdlib_caching",
+        "//eden/mononoke/cmdlib/config_args:config_args",
         "//eden/mononoke/cmdlib/mononoke_app/shutdown_timeout:shutdown_timeout",
         "//eden/mononoke/cmdlib/mononoke_app/tls:tls",
         "//eden/mononoke/common/rendezvous:rendezvous",

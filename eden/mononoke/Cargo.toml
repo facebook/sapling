@@ -201,6 +201,7 @@ members = [
   "cmdlib/base_app",
   "cmdlib/caching",
   "cmdlib/commit_id",
+  "cmdlib/config_args",
   "cmdlib/cross_repo",
   "cmdlib/displaying",
   "cmdlib/displaying/graph",

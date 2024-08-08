@@ -10,7 +10,6 @@ use anyhow::Result;
 
 mod acl;
 mod changeset;
-mod config;
 mod derived_data;
 mod gflags;
 mod hooks;
@@ -26,8 +25,8 @@ mod wbc;
 
 pub use acl::AclArgs;
 pub use changeset::ChangesetArgs;
-pub use config::ConfigArgs;
-pub use config::ConfigMode;
+pub use config_args::ConfigArgs;
+pub use config_args::ConfigMode;
 pub use derived_data::DerivedDataArgs;
 pub use derived_data::MultiDerivedDataArgs;
 pub use gflags::GFlagsArgs;
