@@ -27,6 +27,7 @@ gix-actor = "0.24"
 gix-hash = "0.11"
 gix-object = "0.33"
 itertools = "0.11.0"
+lazy_static = "1.4"
 manifest = { version = "0.1.0", path = "../../manifest" }
 megarepo_error = { version = "0.1.0", path = "../../megarepo_api/megarepo_error" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }

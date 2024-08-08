@@ -12,10 +12,12 @@ use context::CoreContext;
 use filestore::FetchKey;
 use filestore::FilestoreConfig;
 use gix_hash::ObjectId;
+use lazy_static::lazy_static;
 use mononoke_types::hash;
 use mononoke_types::hash::RichGitSha1;
 use mononoke_types::hash::Sha256;
 use mononoke_types::BasicFileChange;
+use regex::Regex;
 
 /// In line with https://github.com/git-lfs/git-lfs/blob/main/docs/spec.md
 fn format_lfs_pointer(sha256: Sha256, size: u64) -> String {
@@ -62,13 +64,32 @@ pub struct LfsPointerData {
     /// be found on the LFS server for example).
     pub gitblob: Vec<u8>,
     pub gitid: ObjectId,
+    /// Whether the git lfs pointer in canonical format that would be generated
+    /// if we were to generate it from scratch.
+    pub is_canonical: bool,
+}
+
+lazy_static! {
+    // Regex needs to match for the file to be attempted to be parsed as LFS.
+    static ref LFS_MATCHER_RE: Regex = Regex::new(r"git-media|hawser|git-lfs").unwrap();
 }
 
 /// We will not try to parse any file bigger then this.
 /// Any valid gitlfs metadata file should be smaller then this.
-const MAX_METADATA_LENGTH: usize = 511;
+/// matches limit used by git-lfs:
+/// https://github.com/git-lfs/git-lfs/blob/fc61febe9cc2d9ddc6ffe3e8d1ae546512632552/lfs/scanner.go#L12
+const MAX_METADATA_LENGTH: usize = 1024;
 
-/// Layout of the metafiles:
+const V1_ALIASES: [&str; 3] = [
+    "http://git-media.io/v/2",            // alpha
+    "https://hawser.github.com/spec/v1",  // pre-release
+    "https://git-lfs.github.com/spec/v1", // public launch
+];
+
+/// Parses Git LFS pointer file into datastructure
+/// see https://github.com/git-lfs/git-lfs/blob/main/docs/spec.md for format specification
+///
+/// Layout of the pointer:
 /// | version https://git-lfs.github.com/spec/v1
 /// | oid sha256:73e2200459562bb068f08e33210ed106014b877f878932b2147991e17a7c089b
 /// | size 8423391
@@ -77,26 +98,53 @@ pub fn parse_lfs_pointer(gitblob: &[u8], gitid: ObjectId) -> Option<LfsPointerDa
         return None;
     }
 
-    let mut lines = std::str::from_utf8(gitblob).ok()?.lines();
-    let version = lines.next()?.strip_prefix("version ")?;
-    if version != "https://git-lfs.github.com/spec/v1" {
+    let pointer = std::str::from_utf8(gitblob).ok()?;
+    if !LFS_MATCHER_RE.is_match(pointer) {
         return None;
     }
-    let sha256 = lines
-        .next()?
-        .strip_prefix("oid sha256:")?
-        .parse::<hash::Sha256>()
-        .ok()?;
-    let size = lines.next()?.strip_prefix("size ")?.parse::<u64>().ok()?;
-    // As a precaution. If we have an additional line after this, then we assume its not a valid file.
-    if lines.next().is_some() {
-        return None;
+
+    let (mut sha256, mut size, mut version) = (None, None, None);
+    for line in pointer.lines() {
+        let (k, v) = line.split_once(' ')?;
+        match k {
+            "oid" => {
+                if sha256.is_some() {
+                    return None;
+                }
+                sha256 = v.strip_prefix("sha256:")?.parse::<hash::Sha256>().ok();
+            }
+            "version" => {
+                if version.is_some() {
+                    return None;
+                }
+                if V1_ALIASES.contains(&v) {
+                    version = Some(v.to_string());
+                }
+            }
+            "size" => {
+                if size.is_some() {
+                    return None;
+                }
+                size = Some(v.parse::<u64>().ok()?);
+            }
+            _ => {
+                // We're ignoring extra entries as Git LFS supports extensions to the format
+                // and we don't want to know about those.
+            }
+        }
     }
+
+    // only proceed if all fields are set
+    let (version, sha256, size) = (version?, sha256?, size?);
+
+    let is_canonical = format_lfs_pointer(sha256, size).as_bytes() == gitblob;
+
     Some(LfsPointerData {
-        version: version.to_string(),
+        version,
         sha256,
         size,
         gitblob: gitblob.to_vec(),
         gitid,
+        is_canonical,
     })
 }
