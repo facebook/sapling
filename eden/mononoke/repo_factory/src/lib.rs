@@ -1697,13 +1697,22 @@ impl RepoFactory {
         };
 
         let base_writer = Arc::new(BaseCommitGraphWriter::new(commit_graph.clone()));
-        let changesets_compat_writer = Arc::new(CompatCommitGraphWriter::new(
-            base_writer,
-            changesets.clone(),
-        ));
+
+        let writer: ArcCommitGraphWriter = if justknobs::eval(
+            "scm/mononoke:disable_double_writing_to_changesets_table",
+            None,
+            None,
+        )? {
+            base_writer
+        } else {
+            Arc::new(CompatCommitGraphWriter::new(
+                base_writer,
+                changesets.clone(),
+            ))
+        };
 
         Ok(Arc::new(LoggingCommitGraphWriter::new(
-            changesets_compat_writer,
+            writer,
             scuba,
             repo_identity.name().to_string(),
         )))
