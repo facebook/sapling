@@ -6,7 +6,6 @@
  */
 
 use anyhow::anyhow;
-use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
@@ -23,6 +22,7 @@ use context::CoreContext;
 use futures::stream;
 use futures::StreamExt;
 use futures::TryStreamExt;
+use itertools::Itertools;
 use mercurial_types::HgChangesetId;
 use mononoke_types::ChangesetId;
 
@@ -56,15 +56,14 @@ impl ChangesetArgs {
         &self,
         ctx: &CoreContext,
         repo: &(impl BookmarksRef + BonsaiHgMappingRef),
-    ) -> Result<Option<ChangesetId>> {
+    ) -> Result<ChangesetId> {
         self.resolve_changesets(ctx, repo)
             .await
             .and_then(|changesets| {
-                if changesets.len() > 1 {
-                    bail!("Only one changeset may be provided")
-                } else {
-                    Ok(changesets.into_iter().next())
-                }
+                changesets
+                    .into_iter()
+                    .exactly_one()
+                    .map_err(|_| anyhow!("Exactly one changeset must be provided"))
             })
     }
     pub async fn resolve_changesets(

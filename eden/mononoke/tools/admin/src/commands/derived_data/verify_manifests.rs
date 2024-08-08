@@ -284,11 +284,7 @@ pub(super) async fn verify_manifests(
     repo: &Repo,
     args: VerifyManifestsArgs,
 ) -> Result<()> {
-    let cs_id = args
-        .changeset_args
-        .resolve_changeset(ctx, repo)
-        .await?
-        .ok_or_else(|| anyhow!("Changeset does not exist in this repository"))?;
+    let cs_id = args.changeset_args.resolve_changeset(ctx, repo).await?;
     let fetch_derived = args.if_derived;
     let mut manifests = HashSet::new();
     let mut futs = vec![];

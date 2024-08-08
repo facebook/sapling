@@ -360,11 +360,7 @@ pub(super) async fn list_manifest(
     repo: &Repo,
     args: ListManifestArgs,
 ) -> Result<()> {
-    let cs_id = args
-        .changeset_args
-        .resolve_changeset(ctx, repo)
-        .await?
-        .ok_or_else(|| anyhow!("Changeset not found"))?;
+    let cs_id = args.changeset_args.resolve_changeset(ctx, repo).await?;
 
     let path = args.path.as_deref().unwrap_or("");
     let path: MPath = MPath::new(path).with_context(|| anyhow!("Invalid path: {}", path))?;

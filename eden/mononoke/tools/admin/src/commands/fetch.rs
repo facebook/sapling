@@ -102,8 +102,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         .changeset_args
         .resolve_changeset(&ctx, &repo)
         .await
-        .context("Failed to resolve changeset")?
-        .ok_or_else(|| anyhow!("Changeset not found"))?;
+        .context("Failed to resolve changeset")?;
 
     let blobstore = match args.bubble_id {
         None => repo.repo_blobstore().clone(),
