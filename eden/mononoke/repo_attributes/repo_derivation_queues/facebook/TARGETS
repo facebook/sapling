@@ -30,7 +30,6 @@ rust_library(
         "//eden/mononoke/blobstore:ephemeral_blobstore",
         "//eden/mononoke/bonsai_git_mapping:bonsai_git_mapping",
         "//eden/mononoke/bonsai_hg_mapping:bonsai_hg_mapping",
-        "//eden/mononoke/changesets:changesets",
         "//eden/mononoke/common/scuba_ext:scuba_ext",
         "//eden/mononoke/derived_data:bulk_derivation",
         "//eden/mononoke/derived_data:derived_data_manager",

@@ -572,7 +572,6 @@ impl TestRepoFactory {
         &self,
         repo_identity: &ArcRepoIdentity,
         repo_config: &ArcRepoConfig,
-        changesets: &ArcChangesets,
         commit_graph: &ArcCommitGraph,
         bonsai_hg_mapping: &ArcBonsaiHgMapping,
         bonsai_git_mapping: &ArcBonsaiGitMapping,
@@ -587,7 +586,6 @@ impl TestRepoFactory {
         Ok(Arc::new(RepoDerivedData::new(
             repo_identity.id(),
             repo_identity.name().to_string(),
-            changesets.clone(),
             commit_graph.clone(),
             bonsai_hg_mapping.clone(),
             bonsai_git_mapping.clone(),

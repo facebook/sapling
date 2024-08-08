@@ -48,11 +48,6 @@ impl DerivationAssigner for BubbleAssigner {
 
 impl DerivedDataManager {
     pub fn for_bubble(self, bubble: Bubble) -> Self {
-        let changesets = Arc::new(bubble.changesets(
-            self.repo_id(),
-            self.repo_blobstore().clone(),
-            self.changesets_arc(),
-        ));
         let commit_graph = Arc::new(bubble.commit_graph(
             self.repo_id(),
             self.repo_blobstore().clone(),
@@ -74,7 +69,6 @@ impl DerivedDataManager {
                     manager: Self {
                         inner: Arc::new(DerivedDataManagerInner {
                             bubble_id: Some(bubble.bubble_id()),
-                            changesets: changesets.clone(),
                             commit_graph: commit_graph.clone(),
                             repo_blobstore: wrapped_blobstore,
                             derivation_context,
@@ -86,7 +80,6 @@ impl DerivedDataManager {
                     }),
                 }),
                 bubble_id: Some(bubble.bubble_id()),
-                changesets,
                 commit_graph,
                 ..self.inner.as_ref().clone()
             }),

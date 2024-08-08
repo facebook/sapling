@@ -17,7 +17,6 @@ use anyhow::Result;
 use bonsai_git_mapping::BonsaiGitMapping;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use cacheblob::LeaseOps;
-use changesets::Changesets;
 use commit_graph::CommitGraph;
 use context::CoreContext;
 use derived_data_manager::BonsaiDerivable;
@@ -53,7 +52,6 @@ impl RepoDerivedData {
     pub fn new(
         repo_id: RepositoryId,
         repo_name: String,
-        changesets: Arc<dyn Changesets>,
         commit_graph: Arc<CommitGraph>,
         bonsai_hg_mapping: Arc<dyn BonsaiHgMapping>,
         bonsai_git_mapping: Arc<dyn BonsaiGitMapping>,
@@ -74,7 +72,6 @@ impl RepoDerivedData {
                     DerivedDataManager::new(
                         repo_id,
                         repo_name.clone(),
-                        changesets.clone(),
                         commit_graph.clone(),
                         bonsai_hg_mapping.clone(),
                         bonsai_git_mapping.clone(),
@@ -152,25 +149,6 @@ impl RepoDerivedData {
             config: self.config.clone(),
             managers: updated_managers,
             enabled_manager: self.enabled_manager.with_replaced_blobstore(repo_blobstore),
-        }
-    }
-
-    // For dangerous-override: allow replacement of changesets
-    pub fn with_replaced_changesets(&self, changesets: Arc<dyn Changesets>) -> Self {
-        let updated_managers = self
-            .managers
-            .iter()
-            .map(|(name, manager)| {
-                (
-                    name.clone(),
-                    manager.with_replaced_changesets(changesets.clone()),
-                )
-            })
-            .collect::<HashMap<_, _>>();
-        Self {
-            config: self.config.clone(),
-            managers: updated_managers,
-            enabled_manager: self.enabled_manager.with_replaced_changesets(changesets),
         }
     }
 

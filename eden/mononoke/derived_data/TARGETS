@@ -74,7 +74,6 @@ rust_library(
     autocargo = {"cargo_toml_dir": "manager"},
     test_deps = [
         "fbsource//third-party/rust:tokio",
-        "//eden/mononoke/changesets:changesets",
     ],
     deps = [
         "fbsource//third-party/rust:anyhow",
@@ -100,7 +99,6 @@ rust_library(
         "//eden/mononoke/blobstore:ephemeral_blobstore",
         "//eden/mononoke/bonsai_git_mapping:bonsai_git_mapping",
         "//eden/mononoke/bonsai_hg_mapping:bonsai_hg_mapping",
-        "//eden/mononoke/changesets:changesets",
         "//eden/mononoke/common/scuba_ext:scuba_ext",
         "//eden/mononoke/derived_data/remote/if:derived_data_service_if-rust",
         "//eden/mononoke/filenodes:filenodes",

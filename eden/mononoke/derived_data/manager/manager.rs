@@ -11,7 +11,6 @@ use anyhow::Result;
 use bonsai_git_mapping::BonsaiGitMapping;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use cacheblob::LeaseOps;
-use changesets::Changesets;
 use commit_graph::CommitGraph;
 use context::CoreContext;
 use derived_data_remote::DerivationClient;
@@ -47,7 +46,6 @@ pub struct DerivedDataManagerInner {
     repo_id: RepositoryId,
     repo_name: String,
     bubble_id: Option<BubbleId>,
-    changesets: Arc<dyn Changesets>,
     commit_graph: Arc<CommitGraph>,
     repo_blobstore: RepoBlobstore,
     lease: DerivedDataLease,
@@ -88,7 +86,6 @@ impl DerivedDataManager {
     pub fn new(
         repo_id: RepositoryId,
         repo_name: String,
-        changesets: Arc<dyn Changesets>,
         commit_graph: Arc<CommitGraph>,
         bonsai_hg_mapping: Arc<dyn BonsaiHgMapping>,
         bonsai_git_mapping: Arc<dyn BonsaiGitMapping>,
@@ -107,7 +104,6 @@ impl DerivedDataManager {
                 repo_id,
                 repo_name,
                 bubble_id: None,
-                changesets,
                 commit_graph,
                 repo_blobstore: repo_blobstore.clone(),
                 lease,
@@ -158,16 +154,6 @@ impl DerivedDataManager {
                     .inner
                     .derivation_context
                     .with_replaced_blobstore(repo_blobstore.boxed()),
-                ..self.inner.as_ref().clone()
-            }),
-        }
-    }
-
-    // For dangerous-override: allow replacement of changesets
-    pub fn with_replaced_changesets(&self, changesets: Arc<dyn Changesets>) -> Self {
-        Self {
-            inner: Arc::new(DerivedDataManagerInner {
-                changesets,
                 ..self.inner.as_ref().clone()
             }),
         }
@@ -266,14 +252,6 @@ impl DerivedDataManager {
 
     pub fn bubble_id(&self) -> Option<BubbleId> {
         self.inner.bubble_id
-    }
-
-    pub fn changesets(&self) -> &dyn Changesets {
-        self.inner.changesets.as_ref()
-    }
-
-    pub fn changesets_arc(&self) -> Arc<dyn Changesets> {
-        self.inner.changesets.clone()
     }
 
     pub fn commit_graph(&self) -> &CommitGraph {
