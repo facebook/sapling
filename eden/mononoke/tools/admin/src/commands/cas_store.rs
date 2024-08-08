@@ -10,7 +10,6 @@ mod upload;
 
 use anyhow::Result;
 use bonsai_hg_mapping::BonsaiHgMapping;
-use changesets::Changesets;
 use clap::Parser;
 use clap::Subcommand;
 use info::CasStoreInfoArgs;
@@ -40,9 +39,6 @@ pub struct Repo {
 
     #[facet]
     repo_blobstore: RepoBlobstore,
-
-    #[facet]
-    changesets: dyn Changesets,
 
     #[facet]
     bonsai_hg_mapping: dyn BonsaiHgMapping,

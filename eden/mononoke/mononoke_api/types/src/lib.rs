@@ -15,7 +15,6 @@ use bonsai_svnrev_mapping::BonsaiSvnrevMapping;
 use bonsai_tag_mapping::BonsaiTagMapping;
 use bookmarks::BookmarkUpdateLog;
 use bookmarks::Bookmarks;
-use changesets::Changesets;
 use commit_cloud::CommitCloud;
 use commit_graph::CommitGraph;
 use commit_graph::CommitGraphWriter;
@@ -73,9 +72,6 @@ pub struct InnerRepo {
         CommitCloud
     )]
     pub blob_repo: BlobRepo,
-
-    #[facet]
-    pub changesets: dyn Changesets,
 
     #[facet]
     pub repo_config: RepoConfig,

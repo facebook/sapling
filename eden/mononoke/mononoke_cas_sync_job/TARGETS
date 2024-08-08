@@ -29,7 +29,6 @@ rust_binary(
         "//eden/mononoke/bookmarks:dbbookmarks",
         "//eden/mononoke/cas_client:cas_client",
         "//eden/mononoke/cas_client:changesets_uploader",
-        "//eden/mononoke/changesets:changesets",
         "//eden/mononoke/cmdlib:cmdlib",
         "//eden/mononoke/cmdlib/sharding:executor_lib",
         "//eden/mononoke/cmdlib/sharding_ext:sharding_ext",

@@ -72,7 +72,6 @@ rust_binary(
         "//eden/mononoke/bookmarks:bookmarks_movement",
         "//eden/mononoke/cas_client:cas_client",
         "//eden/mononoke/cas_client:changesets_uploader",
-        "//eden/mononoke/changesets:changesets",
         "//eden/mononoke/changesets/changesets_creation:changesets_creation",
         "//eden/mononoke/cmdlib/commit_id:commit_id",
         "//eden/mononoke/cmdlib/displaying:cmdlib_displaying",

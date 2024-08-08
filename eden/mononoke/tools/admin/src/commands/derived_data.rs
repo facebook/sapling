@@ -23,7 +23,6 @@ use bonsai_hg_mapping::BonsaiHgMapping;
 use bonsai_svnrev_mapping::BonsaiSvnrevMapping;
 use bookmarks::Bookmarks;
 use cacheblob::dummy::DummyLease;
-use changesets::Changesets;
 use clap::Parser;
 use clap::Subcommand;
 use commit_graph::CommitGraph;
@@ -66,8 +65,6 @@ struct Repo {
     bonsai_globalrev_mapping: dyn BonsaiGlobalrevMapping,
     #[facet]
     bonsai_svnrev_mapping: dyn BonsaiSvnrevMapping,
-    #[facet]
-    changesets: dyn Changesets,
     #[facet]
     repo_blobstore: RepoBlobstore,
     #[facet]

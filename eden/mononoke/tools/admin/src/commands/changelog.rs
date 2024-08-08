@@ -14,7 +14,6 @@ use bonsai_git_mapping::BonsaiGitMapping;
 use bonsai_globalrev_mapping::BonsaiGlobalrevMapping;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use bonsai_svnrev_mapping::BonsaiSvnrevMapping;
-use changesets::Changesets;
 use clap::Parser;
 use clap::Subcommand;
 use commit_graph::CommitGraph;
@@ -59,9 +58,6 @@ pub struct Repo {
 
     #[facet]
     bonsai_svnrev_mapping: dyn BonsaiSvnrevMapping,
-
-    #[facet]
-    changesets: dyn Changesets,
 
     #[facet]
     commit_graph: CommitGraph,

@@ -490,10 +490,8 @@ impl Repo {
             &blob_repo.bookmark_update_log_arc(),
             &mutable_counters,
         )?;
-        let changesets = repo_factory.changesets(&blob_repo.repo_identity_arc())?;
         let inner = InnerRepo {
             blob_repo,
-            changesets,
             repo_config: Arc::new(config.clone()),
             ephemeral_store: Arc::new(RepoEphemeralStore::disabled(repo_id)),
             mutable_renames: Arc::new(MutableRenames::new_test(
