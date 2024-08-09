@@ -135,7 +135,7 @@ impl Set {
         dag: Arc<dyn DagAlgorithm + Send + Sync>,
         iteration_order: Option<BasicIterationOrder>,
     ) -> Set {
-        let mut set = IdStaticSet::from_spans_idmap_dag(spans, map, dag);
+        let mut set = IdStaticSet::from_id_set_idmap_dag(spans, map, dag);
         if let Some(order) = iteration_order {
             set.set_iteration_order(order);
         }

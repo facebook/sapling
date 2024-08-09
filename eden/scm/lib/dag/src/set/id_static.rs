@@ -194,7 +194,7 @@ impl fmt::Debug for IdStaticSet {
 }
 
 impl IdStaticSet {
-    pub(crate) fn from_spans_idmap_dag(
+    pub(crate) fn from_id_set_idmap_dag(
         spans: IdSet,
         map: Arc<dyn IdConvert + Send + Sync>,
         dag: Arc<dyn DagAlgorithm + Send + Sync>,
@@ -253,7 +253,7 @@ impl IdStaticSet {
             cmp::Ordering::Greater | cmp::Ordering::Equal => lhs,
         };
         let (map, dag) = (picked.map.clone(), picked.dag.clone());
-        let mut result = Self::from_spans_idmap_dag(spans, map, dag);
+        let mut result = Self::from_id_set_idmap_dag(spans, map, dag);
         if let Some(order) = lhs.iteration_order() {
             result.set_iteration_order(order);
         }

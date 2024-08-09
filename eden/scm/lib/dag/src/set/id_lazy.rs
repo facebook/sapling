@@ -209,7 +209,7 @@ impl IdLazySet {
         for &id in inner.visited.iter() {
             spans.push(id);
         }
-        Ok(IdStaticSet::from_spans_idmap_dag(
+        Ok(IdStaticSet::from_id_set_idmap_dag(
             spans,
             self.map.clone(),
             self.dag.clone(),
