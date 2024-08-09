@@ -1168,6 +1168,19 @@ impl IdList {
         assert_eq!(result.count(), expected);
         result
     }
+
+    /// Convert to `IdSet`.
+    pub fn to_set(&self) -> IdSet {
+        let spans = self.0.iter().map(|OrderedSpan { start, end }| {
+            let (low, high) = if start <= end {
+                (*start, *end)
+            } else {
+                (*end, *start)
+            };
+            Span::new(low, high)
+        });
+        IdSet::from_spans(spans)
+    }
 }
 
 impl IndexSpan for Arc<Vec<OrderedSpan>> {
@@ -1750,5 +1763,12 @@ mod tests {
             true
         }
         quickcheck(check as fn(Vec<u8>, u8, u8) -> bool);
+    }
+
+    #[test]
+    fn test_id_list_to_id_set() {
+        let list = IdList::from_ids([1, 3, 2, 4, 9, 8, 11, 12, 6, 10].iter().map(|i| Id(*i)));
+        let set = list.to_set();
+        assert_eq!(dbg(set), "1..=4 6 8..=12");
     }
 }
