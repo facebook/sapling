@@ -21,6 +21,7 @@ use filestore::FetchKey;
 use futures::future;
 use futures::future::FutureExt;
 use futures::stream;
+use futures::stream::FuturesUnordered;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use manifest::derive_manifest_from_predecessor;
@@ -38,6 +39,7 @@ use mononoke_types::sharded_map_v2::ShardedMapV2Node;
 use mononoke_types::ContentId;
 use mononoke_types::ContentMetadataV2;
 use mononoke_types::MPathElement;
+use mononoke_types::MPathElementPrefix;
 use mononoke_types::TrieMap;
 
 /// Derive an HgAugmentedManifestId from an HgManifestId and parents.
@@ -77,8 +79,12 @@ pub async fn derive_from_hg_manifest_and_parents(
 
                 let mut children = Vec::new();
                 let mut new_subentries = Vec::new();
-                let mut reused_subentries = Vec::new();
-                let mut reused_partial_maps = Vec::new();
+
+                // For each parent we store a list consisting of path elements to fetch entries for,
+                // and path element prefixes to fetch partial maps for.
+                let mut path_elems_to_fetch_from_aug_parents: Vec<
+                    Vec<Either<MPathElement, MPathElementPrefix>>,
+                > = vec![vec![]; aug_parents.len()];
 
                 let mut diff =
                     manifest::compare_manifest(ctx, blobstore, hg_manifest.clone(), hg_parents)
@@ -136,29 +142,16 @@ pub async fn derive_from_hg_manifest_and_parents(
                             }
                         },
                         ManifestComparison::Same(elem, _entry, _parent_entries, index) => {
-                            let aug_parent = aug_parents
-                                .get(index)
-                                .and_then(Option::as_ref)
+                            path_elems_to_fetch_from_aug_parents
+                                .get_mut(index)
                                 .ok_or_else(|| {
                                     anyhow!(
-                                        "Cannot find corresponding parent {} of {}",
+                                        "Cannot find corresponding parent {} of {} (ManifestComparison::Same)",
                                         index,
                                         hg_manifest_id
                                     )
-                                })?;
-                            let entry = aug_parent
-                                .augmented_manifest
-                                .subentries
-                                .lookup(ctx, blobstore, elem.as_ref())
-                                .await?
-                                .ok_or_else(|| {
-                                    anyhow!(
-                                        "Cannot find corresponding entry {} in parent {}",
-                                        elem,
-                                        aug_parent.augmented_manifest.hg_node_id,
-                                    )
-                                })?;
-                            reused_subentries.push((elem, entry));
+                                })?
+                                .push(Either::Left(elem));
                         }
                         ManifestComparison::ManyNew(prefix, entries) => {
                             for (suffix, entry) in entries {
@@ -181,49 +174,100 @@ pub async fn derive_from_hg_manifest_and_parents(
                             }
                         }
                         ManifestComparison::ManySame(prefix, _entries, _parent_entries, index) => {
-                            let aug_parent = aug_parents
-                                .get(index)
-                                .and_then(Option::as_ref)
+                            path_elems_to_fetch_from_aug_parents
+                                .get_mut(index)
                                 .ok_or_else(|| {
                                     anyhow!(
-                                        "Cannot find corresponding parent {} of {}",
+                                        "Cannot find corresponding parent {} of {} (ManifestComparison::ManySame)",
                                         index,
                                         hg_manifest_id
                                     )
-                                })?;
-                            let partial_map = aug_parent
-                                .augmented_manifest
-                                .subentries
-                                .get_partial_map(ctx, blobstore, prefix.as_ref())
-                                .await?
-                                .ok_or_else(|| {
-                                    anyhow!(
-                                        "Cannot find corresponding prefix {:?} in parent {}",
-                                        prefix,
-                                        aug_parent.augmented_manifest.hg_node_id
-                                    )
-                                })?;
-                            reused_partial_maps.push((prefix, partial_map));
+                                })?
+                                .push(Either::Right(prefix));
                         }
                         ManifestComparison::Removed(..) | ManifestComparison::ManyRemoved(..) => {
                             // Removed items are omitted.
                         }
                     }
                 }
+
+                let reused_subentries_and_partial_maps =
+                    path_elems_to_fetch_from_aug_parents.into_iter().enumerate().map(
+                        |(index, path_elems_or_prefixes)| {
+                            let aug_parents = &aug_parents;
+                            async move {
+                                if path_elems_or_prefixes.is_empty() {
+                                    return Ok(futures::stream::empty().left_stream());
+                                }
+
+                                let aug_parent = aug_parents
+                                    .get(index)
+                                    .and_then(Option::as_ref)
+                                    .ok_or_else(|| {
+                                        anyhow!(
+                                            "Cannot find corresponding parent {} of {}",
+                                            index,
+                                            hg_manifest_id
+                                        )
+                                    })?;
+
+                                anyhow::Ok(stream::iter(path_elems_or_prefixes).map(move |elem_or_prefix| async move {
+                                    match elem_or_prefix {
+                                        Either::Left(elem) => {
+                                            let entry = aug_parent
+                                                .augmented_manifest
+                                                .subentries
+                                                .lookup(ctx, blobstore, elem.as_ref())
+                                                .await?
+                                                .ok_or_else(|| {
+                                                    anyhow!(
+                                                        "Cannot find corresponding entry {} in parent {}",
+                                                        elem,
+                                                        aug_parent.augmented_manifest.hg_node_id,
+                                                    )
+                                                })?;
+                                            anyhow::Ok(Either::Left((elem, entry)))
+                                        }
+                                        Either::Right(prefix) => {
+                                            let partial_map = aug_parent
+                                                .augmented_manifest
+                                                .subentries
+                                                .get_partial_map(ctx, blobstore, prefix.as_ref())
+                                                .await?
+                                                .ok_or_else(|| {
+                                                    anyhow!(
+                                                        "Cannot find corresponding prefix {:?} in parent {}",
+                                                        prefix,
+                                                        aug_parent.augmented_manifest.hg_node_id
+                                                    )
+                                                })?;
+                                            anyhow::Ok(Either::Right((prefix, partial_map)))
+                                        }
+                                    }
+                                })
+                                .buffer_unordered(20)
+                                .right_stream())
+                            }
+                        },
+                    )
+                    .collect::<FuturesUnordered<_>>()
+                    .try_flatten()
+                    .try_collect::<Vec<_>>()
+                    .await?;
+
                 anyhow::Ok((
                     (
                         name,
                         hg_manifest,
                         new_subentries,
-                        reused_subentries,
-                        reused_partial_maps,
+                        reused_subentries_and_partial_maps,
                     ),
                     children,
                 ))
             }
             .boxed()
         },
-        |(name, hg_manifest, new_subentries, reused_subentries, reused_partial_maps),
+        |(name, hg_manifest, new_subentries, reused_subentries_and_partial_maps),
          children: bounded_traversal::Iter<(
             Option<MPathElement>,
             HgAugmentedManifestId,
@@ -263,8 +307,11 @@ pub async fn derive_from_hg_manifest_and_parents(
                 for (elem, entry) in new_subentries {
                     subentries.insert(elem, Either::Left(entry));
                 }
-                for (elem, entry) in reused_subentries {
-                    subentries.insert(elem, Either::Left(entry));
+                for reused_item in reused_subentries_and_partial_maps {
+                    match reused_item {
+                        Either::Left((elem, entry)) => subentries.insert(elem, Either::Left(entry)),
+                        Either::Right((prefix, partial_map)) => subentries.insert(prefix, Either::Right(partial_map)),
+                    };
                 }
                 for (name, treenode, augmented_manifest_id, augmented_manifest_size) in children {
                     subentries.insert(
@@ -277,9 +324,6 @@ pub async fn derive_from_hg_manifest_and_parents(
                             },
                         )),
                     );
-                }
-                for (prefix, partial_map) in reused_partial_maps {
-                    subentries.insert(prefix, Either::Right(partial_map));
                 }
                 let subentries =
                     ShardedMapV2Node::from_entries_and_partial_maps(ctx, blobstore, subentries)
