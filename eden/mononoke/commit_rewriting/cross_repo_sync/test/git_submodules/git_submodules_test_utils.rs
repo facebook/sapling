@@ -239,7 +239,7 @@ pub(crate) async fn build_small_repo(
 ) -> Result<(TestRepo, BTreeMap<String, ChangesetId>)> {
     let ctx = CoreContext::test_mock(fb);
 
-    let available_configs = derived_data_available_config();
+    let available_configs = submodule_repo_derived_data_types_config();
 
     let repo_config_arc = small_repo.repo_config.clone();
     let mut repo_config: RepoConfig = (*repo_config_arc).clone();
@@ -334,7 +334,7 @@ async fn build_mononoke_git_mirror_repo(
     repo_name: &str,
     id: i32,
 ) -> Result<TestRepo> {
-    let available_configs = derived_data_available_config();
+    let available_configs = submodule_repo_derived_data_types_config();
 
     let repo = TestRepoFactory::new(fb)?
         .with_name(repo_name)
@@ -487,7 +487,8 @@ pub(crate) fn add_new_commit_sync_config_version_with_submodule_deps(
 // Test data
 
 /// Derived data types that should be enabled in all test repos
-pub(crate) fn derived_data_available_config() -> HashMap<String, DerivedDataTypesConfig> {
+pub(crate) fn submodule_repo_derived_data_types_config() -> HashMap<String, DerivedDataTypesConfig>
+{
     let derived_data_types_config = DerivedDataTypesConfig {
         types: DerivableType::iter().collect(),
         ..Default::default()
