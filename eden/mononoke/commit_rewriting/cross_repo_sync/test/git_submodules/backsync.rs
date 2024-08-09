@@ -41,7 +41,7 @@ async fn test_changing_submodule_expansion_validation_passes_when_working_copy_m
     let SubmoduleSyncTestData {
         large_repo_info: (large_repo, large_repo_master),
         commit_syncer,
-        repo_a_info: (repo_a, _repo_a_cs_map),
+        small_repo_info: (small_repo, _small_repo_cs_map),
         live_commit_sync_config,
         ..
     } = build_submodule_sync_test_data(
@@ -61,22 +61,22 @@ async fn test_changing_submodule_expansion_validation_passes_when_working_copy_m
     let cs_id = CreateCommitContext::new(&ctx, &large_repo, vec![large_repo_master])
         .set_message(MESSAGE)
         .add_file(
-            "repo_a/submodules/.x-repo-submodule-repo_b",
+            "small_repo/submodules/.x-repo-submodule-repo_b",
             b_a_git_hash.to_string(),
         )
         // Delete the file added in commit B_B, to achieve working copy
         // equivalence with B_A
-        .delete_file("repo_a/submodules/repo_b/B_B")
+        .delete_file("small_repo/submodules/repo_b/B_B")
         .commit()
         .await
-        .context("Failed to create commit modifying repo_a directory")?;
+        .context("Failed to create commit modifying small_repo directory")?;
     let bonsai = cs_id.load(&ctx, large_repo.repo_blobstore()).await?;
 
     let validation_res = test_submodule_expansion_validation_in_large_repo_bonsai(
         ctx,
         bonsai,
         large_repo,
-        repo_a,
+        small_repo,
         commit_syncer,
         live_commit_sync_config,
     )
@@ -103,7 +103,7 @@ async fn test_changing_submodule_expansion_without_metadata_file_fails_validatio
     let SubmoduleSyncTestData {
         large_repo_info: (large_repo, large_repo_master),
         commit_syncer,
-        repo_a_info: (repo_a, _repo_a_cs_map),
+        small_repo_info: (small_repo, _small_repo_cs_map),
         live_commit_sync_config,
         ..
     } = build_submodule_sync_test_data(
@@ -118,19 +118,19 @@ async fn test_changing_submodule_expansion_without_metadata_file_fails_validatio
     let cs_id = CreateCommitContext::new(&ctx, &large_repo, vec![large_repo_master])
         .set_message(MESSAGE)
         .add_file(
-            "repo_a/submodules/repo_b/B_B",
-            "Changing file in repo_a directory",
+            "small_repo/submodules/repo_b/B_B",
+            "Changing file in small_repo directory",
         )
         .commit()
         .await
-        .context("Failed to create commit modifying repo_a directory")?;
+        .context("Failed to create commit modifying small_repo directory")?;
     let bonsai = cs_id.load(&ctx, large_repo.repo_blobstore()).await?;
 
     let validation_res = test_submodule_expansion_validation_in_large_repo_bonsai(
         ctx,
         bonsai,
         large_repo,
-        repo_a,
+        small_repo,
         commit_syncer,
         live_commit_sync_config,
     )
@@ -138,7 +138,7 @@ async fn test_changing_submodule_expansion_without_metadata_file_fails_validatio
 
     let expected_err_msg = concat!(
         "Expansion of submodule submodules/repo_b changed without updating ",
-        "its metadata file repo_a/submodules/.x-repo-submodule-repo_b"
+        "its metadata file small_repo/submodules/.x-repo-submodule-repo_b"
     );
 
     assert_validation_error(
@@ -166,7 +166,7 @@ async fn test_changing_submodule_metadata_pointer_without_expansion_fails_valida
     let SubmoduleSyncTestData {
         large_repo_info: (large_repo, large_repo_master),
         commit_syncer,
-        repo_a_info: (repo_a, _repo_a_cs_map),
+        small_repo_info: (small_repo, _small_repo_cs_map),
         live_commit_sync_config,
         ..
     } = build_submodule_sync_test_data(
@@ -186,19 +186,19 @@ async fn test_changing_submodule_metadata_pointer_without_expansion_fails_valida
     let cs_id = CreateCommitContext::new(&ctx, &large_repo, vec![large_repo_master])
         .set_message(MESSAGE)
         .add_file(
-            "repo_a/submodules/.x-repo-submodule-repo_b",
+            "small_repo/submodules/.x-repo-submodule-repo_b",
             b_a_git_hash.to_string(),
         )
         .commit()
         .await
-        .context("Failed to create commit modifying repo_a directory")?;
+        .context("Failed to create commit modifying small_repo directory")?;
     let bonsai = cs_id.load(&ctx, large_repo.repo_blobstore()).await?;
 
     let validation_res = test_submodule_expansion_validation_in_large_repo_bonsai(
         ctx,
         bonsai,
         large_repo,
-        repo_a,
+        small_repo,
         commit_syncer,
         live_commit_sync_config,
     )
@@ -231,7 +231,7 @@ async fn test_changing_submodule_metadata_pointer_to_git_commit_from_another_rep
     let SubmoduleSyncTestData {
         large_repo_info: (large_repo, large_repo_master),
         commit_syncer,
-        repo_a_info: (repo_a, _repo_a_cs_map),
+        small_repo_info: (small_repo, _small_repo_cs_map),
         live_commit_sync_config,
         ..
     } = build_submodule_sync_test_data(
@@ -252,19 +252,19 @@ async fn test_changing_submodule_metadata_pointer_to_git_commit_from_another_rep
     let cs_id = CreateCommitContext::new(&ctx, &large_repo, vec![large_repo_master])
         .set_message(MESSAGE)
         .add_file(
-            "repo_a/submodules/.x-repo-submodule-repo_b",
+            "small_repo/submodules/.x-repo-submodule-repo_b",
             c_a_git_hash.to_string(),
         )
         .commit()
         .await
-        .context("Failed to create commit modifying repo_a directory")?;
+        .context("Failed to create commit modifying small_repo directory")?;
     let bonsai = cs_id.load(&ctx, large_repo.repo_blobstore()).await?;
 
     let validation_res = test_submodule_expansion_validation_in_large_repo_bonsai(
         ctx,
         bonsai,
         large_repo,
-        repo_a,
+        small_repo,
         commit_syncer,
         live_commit_sync_config,
     )
@@ -302,7 +302,7 @@ async fn test_deleting_submodule_metadata_file_without_expansion_passes_validati
     let SubmoduleSyncTestData {
         large_repo_info: (large_repo, large_repo_master),
         commit_syncer,
-        repo_a_info: (repo_a, _repo_a_cs_map),
+        small_repo_info: (small_repo, _small_repo_cs_map),
         live_commit_sync_config,
         ..
     } = build_submodule_sync_test_data(
@@ -316,17 +316,17 @@ async fn test_deleting_submodule_metadata_file_without_expansion_passes_validati
     const MESSAGE: &str = "Delete submodule metadata file without deleting expansion";
     let cs_id = CreateCommitContext::new(&ctx, &large_repo, vec![large_repo_master])
         .set_message(MESSAGE)
-        .delete_file("repo_a/submodules/.x-repo-submodule-repo_b")
+        .delete_file("small_repo/submodules/.x-repo-submodule-repo_b")
         .commit()
         .await
-        .context("Failed to create commit modifying repo_a directory")?;
+        .context("Failed to create commit modifying small_repo directory")?;
     let bonsai = cs_id.load(&ctx, large_repo.repo_blobstore()).await?;
 
     let validation_res = test_submodule_expansion_validation_in_large_repo_bonsai(
         ctx,
         bonsai,
         large_repo,
-        repo_a,
+        small_repo,
         commit_syncer,
         live_commit_sync_config,
     )
@@ -353,7 +353,7 @@ async fn test_deleting_submodule_expansion_without_metadata_file_fails_validatio
     let SubmoduleSyncTestData {
         large_repo_info: (large_repo, large_repo_master),
         commit_syncer,
-        repo_a_info: (repo_a, _repo_a_cs_map),
+        small_repo_info: (small_repo, _small_repo_cs_map),
         live_commit_sync_config,
         ..
     } = build_submodule_sync_test_data(
@@ -367,18 +367,18 @@ async fn test_deleting_submodule_expansion_without_metadata_file_fails_validatio
     const MESSAGE: &str = "Delete submodule expansion without deleting metadata file";
     let cs_id = CreateCommitContext::new(&ctx, &large_repo, vec![large_repo_master])
         .set_message(MESSAGE)
-        .delete_file("repo_a/submodules/repo_b/B_A")
-        .delete_file("repo_a/submodules/repo_b/B_B")
+        .delete_file("small_repo/submodules/repo_b/B_A")
+        .delete_file("small_repo/submodules/repo_b/B_B")
         .commit()
         .await
-        .context("Failed to create commit modifying repo_a directory")?;
+        .context("Failed to create commit modifying small_repo directory")?;
     let bonsai = cs_id.load(&ctx, large_repo.repo_blobstore()).await?;
 
     let validation_res = test_submodule_expansion_validation_in_large_repo_bonsai(
         ctx,
         bonsai,
         large_repo,
-        repo_a,
+        small_repo,
         commit_syncer,
         live_commit_sync_config,
     )
@@ -388,7 +388,7 @@ async fn test_deleting_submodule_expansion_without_metadata_file_fails_validatio
 
     let expected_err_msg = concat!(
         "Expansion of submodule submodules/repo_b changed without updating ",
-        "its metadata file repo_a/submodules/.x-repo-submodule-repo_b"
+        "its metadata file small_repo/submodules/.x-repo-submodule-repo_b"
     );
 
     assert_validation_error(
