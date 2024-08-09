@@ -33,6 +33,7 @@ use crate::ops::IdConvert;
 use crate::ops::IdMapSnapshot;
 use crate::ops::Parents;
 use crate::Id;
+use crate::IdList;
 use crate::IdSet;
 use crate::Result;
 use crate::Vertex;
@@ -120,6 +121,8 @@ impl Set {
     }
 
     /// Creates from [`IdSet`], [`IdMap`] and [`DagAlgorithm`].
+    /// Callsite must make sure `spans`, `map`, `dag` are using the same `Id` mappings.
+    /// Prefer `from_id_set_dag` if possible.
     pub fn from_id_set_idmap_dag(
         spans: IdSet,
         map: Arc<dyn IdConvert + Send + Sync>,
@@ -129,6 +132,7 @@ impl Set {
     }
 
     /// Creates from [`IdSet`], [`IdMap`], [`DagAlgorithm`], and [`BasicIterationOrder`].
+    /// Callsite must make sure `spans`, `map`, `dag` are using the same `Id` mappings.
     pub fn from_id_set_idmap_dag_order(
         spans: IdSet,
         map: Arc<dyn IdConvert + Send + Sync>,
@@ -143,6 +147,7 @@ impl Set {
     }
 
     /// Creates from [`IdSet`] and a struct with snapshot abilities.
+    /// Callsite must make sure `spans`, `dag` are using the same `Id` mappings.
     pub fn from_id_set_dag(
         spans: IdSet,
         dag: &(impl DagAlgorithm + IdMapSnapshot),
@@ -150,6 +155,19 @@ impl Set {
         let map = dag.id_map_snapshot()?;
         let dag = dag.dag_snapshot()?;
         Ok(Self::from_id_set_idmap_dag(spans, map, dag))
+    }
+
+    /// Creates from [`IdList`] and a struct with snapshot abilities.
+    /// Unlike [`Self::from_id_set_dag`], the iteration order of `list` will be preserved.
+    /// Callsite must make sure `list`, `dag` are using the same `Id` mappings.
+    pub fn from_id_list_dag(
+        list: IdList,
+        dag: &(impl DagAlgorithm + IdMapSnapshot),
+    ) -> Result<Self> {
+        let map = dag.id_map_snapshot()?;
+        let dag = dag.dag_snapshot()?;
+        let set = IdStaticSet::from_id_list_idmap_dag(list, map, dag);
+        Ok(Self::from_query(set))
     }
 
     /// Creates from a function that evaluates to a [`Set`], and a
