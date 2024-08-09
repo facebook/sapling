@@ -875,11 +875,6 @@ mod test {
     use context::CoreContext;
     use fbinit::FacebookInit;
     use memblob::Memblob;
-    use quickcheck::Arbitrary;
-    use quickcheck::Gen;
-    use quickcheck::QuickCheck;
-    use quickcheck::TestResult;
-    use quickcheck::Testable;
 
     use super::*;
     use crate::impl_typed_hash;
@@ -1615,85 +1610,74 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
-    fn test_sharded_map_v2_quickcheck(fb: FacebookInit) {
+    #[quickcheck_async::tokio]
+    async fn test_sharded_map_v2_quickcheck(
+        fb: FacebookInit,
+        values: BTreeMap<String, u32>,
+        queries: Vec<String>,
+    ) -> bool {
         let ctx = CoreContext::test_mock(fb);
         let blobstore = Memblob::default();
-        use tokio::runtime::Runtime;
 
-        struct TestHelper(Runtime, CoreContext, Memblob);
-        impl Testable for TestHelper {
-            fn result(&self, gen: &mut Gen) -> TestResult {
-                let res = self.0.block_on(async {
-                    let values: BTreeMap<String, u32> = Arbitrary::arbitrary(gen);
-                    let helper = MapHelper(self.1.clone(), self.2.clone());
+        let helper = MapHelper(ctx, blobstore);
 
-                    let map = helper
-                        .from_entries(
-                            &values
-                                .iter()
-                                .map(|(k, v)| (k.as_str(), *v))
-                                .collect::<Vec<_>>(),
-                        )
-                        .await?;
+        let map = helper
+            .from_entries(
+                &values
+                    .iter()
+                    .map(|(k, v)| (k.as_str(), *v))
+                    .collect::<Vec<_>>(),
+            )
+            .await
+            .unwrap();
 
-                    helper.check_sharded_map(map.clone()).await?;
+        helper.check_sharded_map(map.clone()).await.unwrap();
 
-                    let mut queries: Vec<String> = Arbitrary::arbitrary(gen);
-                    let keys: Vec<&String> = values.keys().collect();
-                    for _ in 0..values.len() / 2 {
-                        queries.push(gen.choose(&keys).unwrap().to_string());
-                    }
+        let queries = queries
+            .into_iter()
+            .chain(
+                values
+                    .keys()
+                    .take(values.len() / 2)
+                    .map(|key| key.to_string()),
+            )
+            .collect::<Vec<String>>();
 
-                    for k in queries {
-                        let correct_v = values.get(&k).cloned().map(TestValue);
-                        let test_v = helper.lookup(&map, &k).await?;
-                        if correct_v != test_v {
-                            return Err(anyhow!("sharded map lookup returns incorrect value"));
-                        }
-                    }
-
-                    let roundtrip_map = helper
-                        .into_entries(map.clone())
-                        .await?
-                        .into_iter()
-                        .collect::<BTreeMap<_, _>>();
-                    if roundtrip_map != values {
-                        return Err(anyhow!(
-                            "sharded map entries do not round trip back to original values (using into_entries)"
-                        ));
-                    }
-
-                    let rountrip_unordered_map = helper
-                        .into_entries_unordered(map.clone())
-                        .await?
-                        .into_iter()
-                        .collect::<BTreeMap<_, _>>();
-                    if rountrip_unordered_map != values {
-                        return Err(anyhow!(
-                            "sharded map entries do not round trip back to original values (using into_entries_unordered)"
-                        ));
-                    }
-
-                    let max_value = values.values().max().copied().unwrap_or_default();
-                    let rollup_data = map.rollup_data();
-
-                    if rollup_data != MaxTestValue(max_value) {
-                        return Err(anyhow!(
-                            "sharded map rollup data does not match expected value"
-                        ));
-                    }
-
-                    anyhow::Ok(())
-                });
-
-                match res {
-                    Ok(()) => TestResult::passed(),
-                    Err(e) => TestResult::error(format!("{}", e)),
-                }
+        for key in queries {
+            let correct_v = values.get(&key).cloned().map(TestValue);
+            let test_v = helper.lookup(&map, &key).await.unwrap();
+            if correct_v != test_v {
+                return false;
             }
         }
 
-        QuickCheck::new().quickcheck(TestHelper(Runtime::new().unwrap(), ctx, blobstore));
+        let roundtrip_map = helper
+            .into_entries(map.clone())
+            .await
+            .unwrap()
+            .into_iter()
+            .collect::<BTreeMap<_, _>>();
+        if roundtrip_map != values {
+            return false;
+        }
+
+        let rountrip_unordered_map = helper
+            .into_entries_unordered(map.clone())
+            .await
+            .unwrap()
+            .into_iter()
+            .collect::<BTreeMap<_, _>>();
+        if rountrip_unordered_map != values {
+            return false;
+        }
+
+        let max_value = values.values().max().copied().unwrap_or_default();
+        let rollup_data = map.rollup_data();
+
+        if rollup_data != MaxTestValue(max_value) {
+            return false;
+        }
+
+        true
     }
 }
