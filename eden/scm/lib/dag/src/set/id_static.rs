@@ -373,25 +373,48 @@ impl IdStaticSet {
         }
         self
     }
+
+    // used by iter and iter_rev.
+    fn get_iter_and_reversed(
+        &self,
+    ) -> (
+        Box<dyn DoubleEndedIterator<Item = Id> + Send + Sync + 'static>,
+        bool,
+    ) {
+        let iter: Box<dyn DoubleEndedIterator<Item = Id> + Send + Sync + 'static> =
+            match self.iteration_order {
+                IterationOrder::Custom(ref list) | IterationOrder::CustomReversed(ref list) => {
+                    Box::new(list.into_iter())
+                }
+                _ => Box::new(self.spans.clone().into_iter()),
+            };
+        let reversed = matches!(
+            self.iteration_order,
+            IterationOrder::Asc | IterationOrder::CustomReversed(_)
+        );
+        (iter, reversed)
+    }
 }
 
 #[async_trait::async_trait]
 impl AsyncSetQuery for IdStaticSet {
     async fn iter(&self) -> Result<BoxVertexStream> {
+        let (iter, reversed) = self.get_iter_and_reversed();
         let iter = Iter {
-            iter: Box::new(self.spans.clone().into_iter()),
+            iter,
             map: self.map.clone(),
-            reversed: matches!(self.iteration_order, IterationOrder::Asc),
+            reversed,
             buf: Default::default(),
         };
         Ok(iter.into_box_stream())
     }
 
     async fn iter_rev(&self) -> Result<BoxVertexStream> {
+        let (iter, reversed) = self.get_iter_and_reversed();
         let iter = Iter {
-            iter: Box::new(self.spans.clone().into_iter()),
+            iter,
             map: self.map.clone(),
-            reversed: matches!(self.iteration_order, IterationOrder::Desc),
+            reversed: !reversed,
             buf: Default::default(),
         };
         Ok(iter.into_box_stream())
