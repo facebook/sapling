@@ -1328,7 +1328,10 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
  private:
   ParentLock parentState_;
 
-  std::unique_ptr<Journal> journal_;
+  std::shared_ptr<Journal>
+      journal_; // since ScmStatusCache depends on Journal we would like Journal
+                // to outlive the cache
+
   folly::Synchronized<std::unique_ptr<IActivityRecorder>> activityRecorder_;
 
   /**

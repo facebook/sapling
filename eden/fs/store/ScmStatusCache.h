@@ -20,6 +20,7 @@
 namespace facebook::eden {
 
 class ReloadableConfig;
+class Journal;
 
 /**
  * We only store one journal position per status parameters, because journal
@@ -65,11 +66,13 @@ class ScmStatusCache : public ObjectCache<
  public:
   static std::shared_ptr<ScmStatusCache> create(
       const EdenConfig* config,
-      EdenStatsPtr stats) {
-    return std::make_shared<ScmStatusCache>(config, std::move(stats));
-  }
-  ScmStatusCache(const EdenConfig* configPtr, EdenStatsPtr stats);
+      EdenStatsPtr stats,
+      std::shared_ptr<Journal> journal);
 
+  ScmStatusCache(
+      const EdenConfig* configPtr,
+      EdenStatsPtr stats,
+      std::shared_ptr<Journal> journal);
   static ObjectId makeKey(const RootId& commitHash, bool listIgnored);
 
   /**
@@ -131,6 +134,14 @@ class ScmStatusCache : public ObjectCache<
    */
   void dropPromise(const ObjectId& key, JournalDelta::SequenceNumber seq);
 
+  /**
+   * Check if the cached entry is with a sequence number that is valid
+   * to reuse given the current sequence number.
+   */
+  bool isSequenceValid(
+      JournalDelta::SequenceNumber curSeq,
+      JournalDelta::SequenceNumber cachedSeq) const;
+
  private:
   /**
    * A map of promises that are waiting for a result when given a key.
@@ -140,6 +151,12 @@ class ScmStatusCache : public ObjectCache<
    * result is inserted into the internal cache.
    */
   std::unordered_map<ObjectId, PromiseMapValue> promiseMap_;
+
+  /**
+   * Use journal to determine if the sequence range contains changes outside
+   * the ".hg" folder. If so, it means the cache is not safe to reuse.
+   */
+  std::shared_ptr<Journal> journal_;
 };
 
 } // namespace facebook::eden

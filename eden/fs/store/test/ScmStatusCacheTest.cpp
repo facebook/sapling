@@ -8,6 +8,7 @@
 #include "eden/fs/store/ScmStatusCache.h"
 #include <folly/portability/GTest.h>
 #include "eden/fs/config/EdenConfig.h"
+#include "eden/fs/journal/Journal.h"
 #include "eden/fs/journal/JournalDelta.h"
 #include "eden/fs/service/gen-cpp2/eden_types.h"
 #include "eden/fs/store/ObjectCache.h"
@@ -17,9 +18,12 @@ using namespace facebook::eden;
 
 struct ScmStatusCacheTest : ::testing::Test {
   std::shared_ptr<EdenConfig> rawEdenConfig;
+  std::shared_ptr<Journal> journal;
 
   void SetUp() override {
     rawEdenConfig = EdenConfig::createTestEdenConfig();
+    EdenStatsPtr edenStats{makeRefPtr<EdenStats>()};
+    journal = std::make_shared<Journal>(edenStats.copy());
   }
 
   ScmStatus extractStatus(
@@ -30,8 +34,8 @@ struct ScmStatusCacheTest : ::testing::Test {
 
 TEST_F(ScmStatusCacheTest, insert_sequence_status_pair) {
   auto key = ObjectId::fromHex("0123456789abcdef");
-  auto cache =
-      ScmStatusCache::create(rawEdenConfig.get(), makeRefPtr<EdenStats>());
+  auto cache = ScmStatusCache::create(
+      rawEdenConfig.get(), makeRefPtr<EdenStats>(), journal);
   EXPECT_FALSE(cache->contains(key));
   EXPECT_EQ(0, cache->getObjectCount());
 
@@ -85,8 +89,8 @@ TEST_F(ScmStatusCacheTest, evict_when_cache_size_too_large) {
   rawEdenConfig->scmStatusCacheMaxSize.setValue(
       600, ConfigSourceType::CommandLine);
 
-  auto cache =
-      ScmStatusCache::create(rawEdenConfig.get(), makeRefPtr<EdenStats>());
+  auto cache = ScmStatusCache::create(
+      rawEdenConfig.get(), makeRefPtr<EdenStats>(), journal);
 
   int maxItemCnt = 600 / totalItemSize;
 
@@ -128,8 +132,8 @@ TEST_F(ScmStatusCacheTest, evict_on_update) {
   rawEdenConfig->scmStatusCacheMininumItems.setValue(
       maxItemCnt - 1, ConfigSourceType::CommandLine);
 
-  auto cache =
-      ScmStatusCache::create(rawEdenConfig.get(), makeRefPtr<EdenStats>());
+  auto cache = ScmStatusCache::create(
+      rawEdenConfig.get(), makeRefPtr<EdenStats>(), journal);
 
   std::vector<ObjectId> keys;
   for (auto i = 0; i < maxItemCnt; i++) {
@@ -153,8 +157,8 @@ TEST_F(ScmStatusCacheTest, evict_on_update) {
 }
 
 TEST_F(ScmStatusCacheTest, drop_cached_promise) {
-  auto cache =
-      ScmStatusCache::create(rawEdenConfig.get(), makeRefPtr<EdenStats>());
+  auto cache = ScmStatusCache::create(
+      rawEdenConfig.get(), makeRefPtr<EdenStats>(), journal);
 
   ScmStatus status;
   status.entries_ref()->emplace("foo", ScmFileStatus::ADDED);
@@ -187,8 +191,8 @@ TEST_F(ScmStatusCacheTest, drop_cached_promise) {
 }
 
 TEST_F(ScmStatusCacheTest, get_results_as_promise_or_future) {
-  auto cache =
-      ScmStatusCache::create(rawEdenConfig.get(), makeRefPtr<EdenStats>());
+  auto cache = ScmStatusCache::create(
+      rawEdenConfig.get(), makeRefPtr<EdenStats>(), journal);
 
   ScmStatus status;
   status.entries_ref()->emplace("foo", ScmFileStatus::ADDED);
@@ -239,4 +243,47 @@ TEST_F(ScmStatusCacheTest, get_results_as_promise_or_future) {
     ASSERT_NE(future.debugIsImmediate(), detail::kImmediateFutureAlwaysDefer);
     EXPECT_EQ(status, (std::move(future)).get());
   }
+}
+
+TEST_F(ScmStatusCacheTest, check_sequence_range_validity) {
+  auto cache = ScmStatusCache::create(
+      rawEdenConfig.get(), makeRefPtr<EdenStats>(), journal);
+
+  // Create test.txt
+  journal->recordCreated("test.txt"_relpath);
+  // Modify test.txt
+  journal->recordChanged("test.txt"_relpath);
+
+  // Sanity check that the latest information matches.
+  auto latest = journal->getLatest();
+  ASSERT_TRUE(latest);
+  EXPECT_EQ(2, latest->sequenceID);
+
+  JournalDelta::SequenceNumber cachedSeq = 2, currentSeq = cachedSeq;
+  EXPECT_TRUE(cache->isSequenceValid(
+      cachedSeq, currentSeq)); // dummy test so we cover the code path
+
+  // normal changes
+  journal->recordCreated("test1.txt"_relpath);
+  journal->recordChanged("test1.txt"_relpath);
+
+  currentSeq = journal->getLatest()->sequenceID;
+  EXPECT_FALSE(cache->isSequenceValid(currentSeq, cachedSeq));
+
+  // reset cached sequence id
+  cachedSeq = currentSeq;
+
+  // .hg-only changes
+  journal->recordChanged(".hg/what"_relpath);
+  journal->recordChanged(".hg/is"_relpath);
+  journal->recordChanged(".hg/this"_relpath);
+
+  currentSeq = journal->getLatest()->sequenceID;
+  EXPECT_TRUE(cache->isSequenceValid(currentSeq, cachedSeq));
+
+  // working directory changes
+  RootId hash1{"1111111111111111111111111111111111111111"};
+  journal->recordHashUpdate(hash1);
+  currentSeq = journal->getLatest()->sequenceID;
+  EXPECT_FALSE(cache->isSequenceValid(currentSeq, cachedSeq));
 }

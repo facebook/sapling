@@ -29,9 +29,11 @@ target_link_libraries(
   PUBLIC
     edencommon::edencommon_os
     eden_config
+    eden_journal
     eden_model
     eden_model_git
     eden_service_thrift_cpp
+    eden_service_thrift_util
     eden_sqlite
     eden_store_type
     eden_store_filter

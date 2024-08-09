@@ -295,7 +295,8 @@ EdenMount::EdenMount(
       clock_{serverState_->getClock()},
       scmStatusCache_{ScmStatusCache::create(
           serverState_->getReloadableConfig()->getEdenConfig().get(),
-          serverState_->getStats().copy())} {
+          serverState_->getStats().copy(),
+          journal_)} {
   subscribeInodeActivityBuffer();
 }
 

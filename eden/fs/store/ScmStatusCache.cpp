@@ -6,17 +6,29 @@
  */
 
 #include "eden/fs/store/ScmStatusCache.h"
+#include "eden/fs/journal/Journal.h"
 
 namespace facebook::eden {
 
-ScmStatusCache::ScmStatusCache(const EdenConfig* configPtr, EdenStatsPtr stats)
+std::shared_ptr<ScmStatusCache> ScmStatusCache::create(
+    const EdenConfig* config,
+    EdenStatsPtr stats,
+    std::shared_ptr<Journal> journal) {
+  return std::make_shared<ScmStatusCache>(
+      config, std::move(stats), std::move(journal));
+}
+
+ScmStatusCache::ScmStatusCache(
+    const EdenConfig* configPtr,
+    EdenStatsPtr stats,
+    std::shared_ptr<Journal> journal)
     : ObjectCache<
           SeqStatusPair,
           ObjectCacheFlavor::Simple,
           ScmStatusCacheStats>{
           configPtr->scmStatusCacheMaxSize.getValue(),
           configPtr->scmStatusCacheMininumItems.getValue(),
-          std::move(stats)} {}
+          std::move(stats)}, journal_(std::move(journal)) {}
 
 std::variant<StatusResultFuture, StatusResultPromise> ScmStatusCache::get(
     const ObjectId& id,
@@ -69,6 +81,25 @@ void ScmStatusCache::dropPromise(
 ObjectId ScmStatusCache::makeKey(const RootId& commitHash, bool listIgnored) {
   return ObjectId(
       folly::fbstring(fmt::format("{}:{}", commitHash.value(), listIgnored)));
+}
+
+bool ScmStatusCache::isSequenceValid(
+    JournalDelta::SequenceNumber curSeq,
+    JournalDelta::SequenceNumber cachedSeq) const {
+  if (cachedSeq >= curSeq) {
+    return true;
+  }
+
+  // There is a chance that the latest sequence of the journal is larger than
+  // the current sequence.
+  // This is OK because when calculating the range, the final range will include
+  // our desired range. So if the final range does not contain non-.hg changes,
+  // we are sure that the current sequence is valid.
+  auto range = journal_->accumulateRange(
+      cachedSeq + 1); // plus one because the range for calculation is inclusive
+  bool valid = !range->isTruncated && range->containsHgOnlyChanges &&
+      !range->containsRootUpdate;
+  return valid;
 }
 
 } // namespace facebook::eden
