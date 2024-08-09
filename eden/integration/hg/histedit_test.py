@@ -17,8 +17,11 @@ from .lib.histedit_command import HisteditCommand
 @hg_test
 # pyre-ignore[13]: T62487924
 class HisteditTest(EdenHgTestCase):
+    # pyre-fixme[13]: Attribute `_commit1` is never initialized.
     _commit1: str
+    # pyre-fixme[13]: Attribute `_commit2` is never initialized.
     _commit2: str
+    # pyre-fixme[13]: Attribute `_commit3` is never initialized.
     _commit3: str
 
     def populate_backing_repo(self, repo: hgrepo.HgRepository) -> None:

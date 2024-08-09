@@ -16,8 +16,11 @@ from .lib.hg_extension_test_base import EdenHgTestCase, hg_test
 @hg_test
 # pyre-ignore[13]: T62487924
 class SymlinkTest(EdenHgTestCase):
+    # pyre-fixme[13]: Attribute `simple_commit` is never initialized.
     simple_commit: str
+    # pyre-fixme[13]: Attribute `symlink_commit` is never initialized.
     symlink_commit: str
+    # pyre-fixme[13]: Attribute `quasi_symlink_commit` is never initialized.
     quasi_symlink_commit: str
 
     def setup_eden_test(self) -> None:
@@ -371,6 +374,7 @@ new file mode 120000
 @hg_test
 # pyre-ignore[13]: T62487924
 class SymlinkWindowsDisabledTest(EdenHgTestCase):
+    # pyre-fixme[13]: Attribute `initial_commit` is never initialized.
     initial_commit: str
 
     def setup_eden_test(self) -> None:

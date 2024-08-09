@@ -528,7 +528,6 @@ class EdenTestCase(EdenTestCaseBase):
                 )
 
 
-# pyre-ignore[13]: T62487924
 class EdenRepoTest(EdenTestCase):
     """
     Base class for EdenHgTest and EdenGitTest.
@@ -540,9 +539,13 @@ class EdenRepoTest(EdenTestCase):
     your tests once per supported repository type.
     """
 
+    # pyre-fixme[13]: Attribute `repo` is never initialized.
     repo: repobase.Repository
+    # pyre-fixme[13]: Attribute `repo_name` is never initialized.
     repo_name: str
+    # pyre-fixme[13]: Attribute `repo_type` is never initialized.
     repo_type: str
+    # pyre-fixme[13]: Attribute `inode_catalog_type` is never initialized.
     inode_catalog_type: str
 
     enable_logview: bool = False

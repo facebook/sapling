@@ -18,8 +18,8 @@ from typing import Set
 from .lib import testcase
 
 
-# pyre-ignore[13]: T62487924
 class BasicTestBase(testcase.EdenRepoTest):
+    # pyre-fixme[13]: Attribute `expected_mount_entries` is never initialized.
     expected_mount_entries: Set[str]
 
     def setup_eden_test(self) -> None:

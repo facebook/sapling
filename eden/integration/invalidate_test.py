@@ -78,7 +78,6 @@ class InvalidateTest(testcase.EdenRepoTest):
         self.assertEqual(self.get_loaded_count(), initial_loaded + 33)
         invalidated = self.invalidate("")
         self.assertEqual(invalidated, 33)
-        # pyre-fixme[6]: Incompatible parameter type [6]: In call `unittest.case.TestCase.assertAlmostEqual`, for 3rd parameter `delta` expected `None` but got `int`.
         self.assertAlmostEqual(self.get_loaded_count(), initial_loaded, delta=1)
         self.read_all()
 
@@ -118,7 +117,6 @@ class InvalidateTest(testcase.EdenRepoTest):
         self.assertEqual(self.get_loaded_count(), initial_loaded + 22)
         invalidated = self.invalidate("", seconds=5)
         self.assertEqual(invalidated, 11)
-        # pyre-fixme[6]: Incompatible parameter type [6]: In call `unittest.case.TestCase.assertAlmostEqual`, for 3rd parameter `delta` expected `None` but got `int`.
         self.assertAlmostEqual(self.get_loaded_count(), initial_loaded + 11, delta=1)
         self.read_all()
 

@@ -29,7 +29,9 @@ class StatusDeadlockTest(EdenHgTestCase):
     make forward progress from this state.
     """
 
+    # pyre-fixme[13]: Attribute `commit1` is never initialized.
     commit1: str
+    # pyre-fixme[13]: Attribute `commit2` is never initialized.
     commit2: str
     expected_status: Dict[str, str] = {}
 

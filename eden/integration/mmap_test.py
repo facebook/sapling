@@ -34,9 +34,9 @@ if platform.system() != "Windows":
 
 
 @testcase.eden_repo_test
-# pyre-ignore[13]: T62487924
 class MmapTest(testcase.EdenRepoTest):
     contents = "abcdef"
+    # pyre-fixme[13]: Attribute `filename` is never initialized.
     filename: str
 
     def populate_repo(self) -> None:

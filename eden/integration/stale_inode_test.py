@@ -21,7 +21,9 @@ POST_CHECKOUT_UNLOADING_DELAY_S = 2
 @testcase.eden_test
 # pyre-ignore[13]: T62487924
 class StaleInodeTestHgNFS(EdenHgTestCase):
+    # pyre-fixme[13]: Attribute `commit0` is never initialized.
     commit0: str
+    # pyre-fixme[13]: Attribute `commit1` is never initialized.
     commit1: str
 
     # normally we use the NFSTestMixin to provide this, but multiple inheritance

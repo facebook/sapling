@@ -16,10 +16,10 @@ from .lib import testcase
 
 
 @testcase.eden_repo_test
-# pyre-ignore[13]: T62487924
 class UnicodeTest(testcase.EdenRepoTest):
     """Verify that non-utf8 files cannot be created on EdenFS."""
 
+    # pyre-fixme[13]: Attribute `non_utf8_path` is never initialized.
     non_utf8_path: bytes
 
     def populate_repo(self) -> None:

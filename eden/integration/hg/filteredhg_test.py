@@ -64,6 +64,7 @@ bdir
 bdir/README.md
 """
 
+    # pyre-fixme[13]: Attribute `initial_commit` is never initialized.
     initial_commit: str
 
     def populate_backing_repo(self, repo: hgrepo.HgRepository) -> None:

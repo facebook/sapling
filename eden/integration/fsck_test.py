@@ -17,8 +17,8 @@ from .lib import edenclient, overlay as overlay_mod, repobase, testcase
 
 
 @testcase.eden_nfs_repo_test
-# pyre-ignore[13]: T62487924
 class FsckTest(testcase.EdenRepoTest):
+    # pyre-fixme[13]: Attribute `overlay` is never initialized.
     overlay: overlay_mod.OverlayStore
 
     def populate_repo(self) -> None:

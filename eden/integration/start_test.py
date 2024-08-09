@@ -400,6 +400,7 @@ class StartFakeEdenFSTest(StartFakeEdenFSTestBase):
             index = argv.index("--edenDir")
         except ValueError:
             self.fail(f"--edenDir not present in arguments: {argv}")
+        # pyre-fixme[61]: `index` is undefined, or not always defined.
         actual_config_dir = argv[index + 1]
         self.assertEqual(str(expected), actual_config_dir, f"bad config dir: {argv}")
 

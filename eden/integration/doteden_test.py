@@ -17,12 +17,12 @@ from .lib import testcase
 
 
 @testcase.eden_repo_test
-# pyre-fixme[13]: Attribute `dot_eden_path` is never initialized.
 class DotEdenTest(testcase.EdenRepoTest):
     """\
     Verify manipulating the .eden directory is disallowed.
     """
 
+    # pyre-fixme[13]: Attribute `dot_eden_path` is never initialized.
     dot_eden_path: Path
     entries: List[Path]
 

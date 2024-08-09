@@ -32,8 +32,8 @@ class DisableTraceCmd(Subcmd):
 
 
 @subcmd_mod.subcmd("trace", "Commands for managing EdenFS tracing")
-# pyre-fixme[13]: Attribute `parser` is never initialized.
 class TraceCmd(Subcmd):
+    # pyre-fixme[13]: Attribute `parser` is never initialized.
     parser: argparse.ArgumentParser
 
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:

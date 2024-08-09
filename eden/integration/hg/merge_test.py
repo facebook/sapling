@@ -18,8 +18,11 @@ class MergeTest(EdenHgTestCase):
     https://www.mercurial-scm.org/repo/hg/help/merge-tools
     """
 
+    # pyre-fixme[13]: Attribute `commit0` is never initialized.
     commit0: str
+    # pyre-fixme[13]: Attribute `commit1` is never initialized.
     commit1: str
+    # pyre-fixme[13]: Attribute `commit2` is never initialized.
     commit2: str
 
     def populate_backing_repo(self, repo: HgRepository) -> None:

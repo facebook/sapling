@@ -777,7 +777,9 @@ class StatusTest(EdenHgTestCase):
 @hg_cached_status_test
 # pyre-ignore[13]: T62487924
 class StatusEdgeCaseTest(EdenHgTestCase):
+    # pyre-fixme[13]: Attribute `commit1` is never initialized.
     commit1: str
+    # pyre-fixme[13]: Attribute `commit2` is never initialized.
     commit2: str
 
     def populate_backing_repo(self, repo: HgRepository) -> None:
@@ -841,9 +843,13 @@ class StatusEdgeCaseTest(EdenHgTestCase):
 @hg_cached_status_test
 # pyre-ignore[13]: T62487924
 class StatusRevertTest(EdenHgTestCase):
+    # pyre-fixme[13]: Attribute `commit1` is never initialized.
     commit1: str
+    # pyre-fixme[13]: Attribute `commit2` is never initialized.
     commit2: str
+    # pyre-fixme[13]: Attribute `commit3` is never initialized.
     commit3: str
+    # pyre-fixme[13]: Attribute `commit4` is never initialized.
     commit4: str
 
     def populate_backing_repo(self, repo: HgRepository) -> None:

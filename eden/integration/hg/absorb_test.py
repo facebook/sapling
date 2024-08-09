@@ -19,6 +19,7 @@ log = logging.getLogger("eden.test.absorb")
 @hg_test
 # pyre-ignore[13]: T62487924
 class AbsorbTest(EdenHgTestCase):
+    # pyre-fixme[13]: Attribute `commit1` is never initialized.
     commit1: str
 
     def populate_backing_repo(self, repo: hgrepo.HgRepository) -> None:

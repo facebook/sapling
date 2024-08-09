@@ -68,23 +68,33 @@ class RawObjectId:
 
 
 @testcase.eden_repo_test
-# pyre-fixme[13]: Attribute `commit1` is never initialized.
-# pyre-fixme[13]: Attribute `commit2` is never initialized.
-# pyre-fixme[13]: Attribute `commit3` is never initialized.
 class ReaddirTest(testcase.EdenRepoTest):
+    # pyre-fixme[13]: Attribute `commit1` is never initialized.
     commit1: str
+    # pyre-fixme[13]: Attribute `commit2` is never initialized.
     commit2: str
+    # pyre-fixme[13]: Attribute `commit3` is never initialized.
     commit3: str
 
+    # pyre-fixme[13]: Attribute `adir_file_id` is never initialized.
     adir_file_id: bytes
+    # pyre-fixme[13]: Attribute `bdir_file_id` is never initialized.
     bdir_file_id: bytes
+    # pyre-fixme[13]: Attribute `hello_id` is never initialized.
     hello_id: bytes
+    # pyre-fixme[13]: Attribute `slink_id` is never initialized.
     slink_id: bytes
+    # pyre-fixme[13]: Attribute `adir_id` is never initialized.
     adir_id: bytes
+    # pyre-fixme[13]: Attribute `adir_size_result` is never initialized.
     adir_size_result: SizeOrError
+    # pyre-fixme[13]: Attribute `adir_blake3_result` is never initialized.
     adir_blake3_result: Blake3OrError
+    # pyre-fixme[13]: Attribute `cdir_subdir_id` is never initialized.
     cdir_subdir_id: bytes
+    # pyre-fixme[13]: Attribute `cdir_subdir_size_result` is never initialized.
     cdir_subdir_size_result: SizeOrError
+    # pyre-fixme[13]: Attribute `cdir_subdir_blake3_result` is never initialized.
     cdir_subdir_blake3_result: Blake3OrError
 
     def setup_eden_test(self) -> None:

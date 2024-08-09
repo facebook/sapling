@@ -14,7 +14,9 @@ from .lib.hg_extension_test_base import EdenHgTestCase, hg_test
 @hg_test
 # pyre-ignore[13]: T62487924
 class PullTest(EdenHgTestCase):
+    # pyre-fixme[13]: Attribute `server_repo` is never initialized.
     server_repo: hgrepo.HgRepository
+    # pyre-fixme[13]: Attribute `commit1` is never initialized.
     commit1: str
 
     def create_backing_repo(self) -> hgrepo.HgRepository:

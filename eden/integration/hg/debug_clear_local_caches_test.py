@@ -16,7 +16,9 @@ from .lib.hg_extension_test_base import EdenHgTestCase, hg_test
 @hg_test
 # pyre-ignore[13]: T62487924
 class DebugClearLocalCachesTest(EdenHgTestCase):
+    # pyre-fixme[13]: Attribute `commit1` is never initialized.
     commit1: str
+    # pyre-fixme[13]: Attribute `commit2` is never initialized.
     commit2: str
 
     # These tests restart Eden and expect data to have persisted.

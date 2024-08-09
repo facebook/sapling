@@ -1948,8 +1948,8 @@ class GCInodesCmd(Subcmd):
 
 
 @subcmd_mod.subcmd("debug", "Internal commands for examining EdenFS state")
-# pyre-fixme[13]: Attribute `parser` is never initialized.
 class DebugCmd(Subcmd):
+    # pyre-fixme[13]: Attribute `parser` is never initialized.
     parser: argparse.ArgumentParser
 
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:

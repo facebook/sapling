@@ -14,6 +14,7 @@ from .lib.hg_extension_test_base import EdenHgTestCase, hg_test
 @hg_test
 # pyre-ignore[13]: T62487924
 class RevertTest(EdenHgTestCase):
+    # pyre-fixme[13]: Attribute `initial_commit` is never initialized.
     initial_commit: str
 
     def populate_backing_repo(self, repo: hgrepo.HgRepository) -> None:

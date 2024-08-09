@@ -64,12 +64,12 @@ ALL_ATTRIBUTES = (
 
 
 @testcase.eden_repo_test
-# pyre-fixme[13]: Attribute `commit1` is never initialized.
-# pyre-fixme[13]: Attribute `commit2` is never initialized.
-# pyre-fixme[13]: Attribute `commit3` is never initialized.
 class ThriftTest(testcase.EdenRepoTest):
+    # pyre-fixme[13]: Attribute `commit1` is never initialized.
     commit1: str
+    # pyre-fixme[13]: Attribute `commit2` is never initialized.
     commit2: str
+    # pyre-fixme[13]: Attribute `commit3` is never initialized.
     commit3: str
 
     def setup_eden_test(self) -> None:
