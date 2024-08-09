@@ -2907,9 +2907,9 @@ class localrepository:
                 m2ctx = p2.manifestctx()
                 mctx = m1ctx.copy()
 
-                m = mctx.read()
                 m1 = m1ctx.read()
                 m2 = m2ctx.read()
+                m = mctx.read()
 
                 # Validate that the files that are checked in can be interpreted
                 # as utf8. This is to protect against potential crashes as we
