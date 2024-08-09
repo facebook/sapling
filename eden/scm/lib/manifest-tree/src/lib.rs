@@ -580,13 +580,15 @@ impl TreeManifest {
         Ok(executor.converted_nodes.into_iter())
     }
 
-    /// Insert `other` into `self` at `path`. If `path` is already in the tree, it is
-    /// replaced, not merged or overlaid. Any conflicting entries in `self` are
-    /// overwritten in order to insert `other`. `other` can be a Leaf, but if so cannot be
-    /// inserted as the root of `self`. `other` is deep copied so it remains mutable. If
-    /// `other` is None, an empty directory is inserted at `path`.
-    pub fn graft(&mut self, path: &RepoPath, other: Option<&Link>) -> Result<()> {
-        if path.is_empty() && other.is_some_and(Link::is_leaf) {
+    /// Insert `other[other_path]` into `self[path]`. If `path` is already in `self`,
+    /// it is replaced, not merged or overlaid. Any conflicting entries in `self` are
+    /// overwritten in order to insert into `path`. `other_path` can be a Leaf, but if so cannot be
+    /// inserted as the root of `self`. `other[other_path]` is deep copied so it remains mutable. If
+    /// `other[other_path]` does not exist, an empty directory is inserted at `path`.
+    pub fn graft(&mut self, path: &RepoPath, other: &Self, other_path: &RepoPath) -> Result<()> {
+        let other_link = other.get_link(other_path)?;
+
+        if path.is_empty() && other_link.is_some_and(Link::is_leaf) {
             bail!("can't graft leaf node to root of tree");
         }
 
@@ -606,8 +608,8 @@ impl TreeManifest {
             };
         }
 
-        // Deep copy `other` so it, and our grafted copy, remain mutable.
-        *cursor = other.map_or_else(Link::ephemeral, |other| other.clone());
+        // Deep copy `other_link` so it, and our grafted copy, remain mutable.
+        *cursor = other_link.map_or_else(Link::ephemeral, |other| other.clone());
 
         Ok(())
     }
@@ -640,12 +642,12 @@ impl TreeManifest {
         if self.diff_grafts.is_empty() {
             for (_, to) in other.diff_grafts.iter() {
                 tracing::info!(%to, "applying self diff graft");
-                grafted.graft(to, self.get_link(to)?)?;
+                grafted.graft(to, self, to)?;
             }
         } else {
             for (from, to) in self.diff_grafts.iter() {
                 tracing::info!(%from, %to, "applying diff graft");
-                grafted.graft(to, self.get_link(from)?)?;
+                grafted.graft(to, self, from)?;
             }
         }
         Ok(grafted)
@@ -1784,10 +1786,7 @@ mod tests {
 
         let mut grafted = tree.clone();
         grafted
-            .graft(
-                repo_path("dir"),
-                tree.get_link(repo_path("dir/dir")).unwrap(),
-            )
+            .graft(repo_path("dir"), &tree, repo_path("dir/dir"))
             .unwrap();
         // Graft overwrites existing tree - does not "overlay".
         assert_eq!(list_files(&grafted), vec!["a", "dir/c"]);
@@ -1798,16 +1797,15 @@ mod tests {
         // Can graft over a file
         let mut grafted = tree.clone();
         grafted
-            .graft(
-                repo_path("dir/b"),
-                tree.get_link(repo_path("dir/dir")).unwrap(),
-            )
+            .graft(repo_path("dir/b"), &tree, repo_path("dir/dir"))
             .unwrap();
         assert_eq!(list_files(&grafted), vec!["a", "dir/b/c", "dir/dir/c"]);
 
         // Can insert empty directories
         let mut grafted = tree.clone();
-        grafted.graft(repo_path("dir"), None).unwrap();
+        grafted
+            .graft(repo_path("dir"), &tree, repo_path("not_exist"))
+            .unwrap();
         assert_eq!(list_files(&grafted), vec!["a"]);
     }
 
