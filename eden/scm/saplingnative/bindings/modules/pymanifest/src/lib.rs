@@ -330,6 +330,21 @@ py_class!(pub class treemanifest |py| {
         Ok(result)
     }
 
+    /// Insert `other[other_path]` into `self[path]`.
+    ///
+    /// See more details in `TreeManifest::graft`.
+    def graft(&self, path: &PyPath, other: &treemanifest, other_path: &PyPath, ) -> PyResult<PyNone> {
+        let this_tree = self.underlying(py);
+        let other_tree = other.underlying(py);
+        let other_path = other_path.to_repo_path().map_pyerr(py)?;
+        let path = path.to_repo_path().map_pyerr(py)?;
+
+        let other_tree_guard = other_tree.read();
+        this_tree.write().graft(path, other_tree_guard.borrow(), other_path).map_pyerr(py)?;
+
+        Ok(PyNone)
+    }
+
     /// Register a graft to take effect during `diff` operations.
     /// This allows temporarily moving tree nodes around just for the diff.
     /// See `ungraftedpath` for mapping the diff result back to the original path.
