@@ -33,7 +33,6 @@ pub use crate::ordered_ops::After;
 pub use crate::ordered_ops::ManifestOrderedOps;
 pub use crate::path_tree::PathTree;
 pub use crate::select::PathOrPrefix;
-pub use crate::sorted_vector_trie_map::SortedVectorTrieMap;
 pub use crate::types::AsyncManifest;
 pub use crate::types::AsyncOrderedManifest;
 pub use crate::types::Combined;
@@ -54,7 +53,6 @@ mod ops;
 mod ordered_ops;
 mod path_tree;
 mod select;
-mod sorted_vector_trie_map;
 mod types;
 
 #[cfg(test)]

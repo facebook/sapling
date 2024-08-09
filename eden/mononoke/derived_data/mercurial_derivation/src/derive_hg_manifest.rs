@@ -28,7 +28,6 @@ use manifest::flatten_subentries;
 use manifest::Entry;
 use manifest::LeafInfo;
 use manifest::ManifestChanges;
-use manifest::SortedVectorTrieMap;
 use manifest::Traced;
 use manifest::TreeInfo;
 use mercurial_types::blobs::ContentBlobMeta;
@@ -44,6 +43,7 @@ use mononoke_types::ChangesetId;
 use mononoke_types::FileType;
 use mononoke_types::NonRootMPath;
 use mononoke_types::RepoPath;
+use mononoke_types::SortedVectorTrieMap;
 use mononoke_types::TrackedFileChange;
 use sorted_vector_map::SortedVectorMap;
 

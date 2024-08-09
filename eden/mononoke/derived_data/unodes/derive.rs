@@ -29,7 +29,6 @@ use manifest::flatten_subentries;
 use manifest::Entry;
 use manifest::LeafInfo;
 use manifest::ManifestChanges;
-use manifest::SortedVectorTrieMap;
 use manifest::TreeInfo;
 use mononoke_types::path::MPath;
 use mononoke_types::unode::FileUnode;
@@ -45,6 +44,7 @@ use mononoke_types::MPathElement;
 use mononoke_types::MPathHash;
 use mononoke_types::ManifestUnodeId;
 use mononoke_types::NonRootMPath;
+use mononoke_types::SortedVectorTrieMap;
 use sorted_vector_map::SortedVectorMap;
 
 use crate::ErrorKind;

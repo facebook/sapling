@@ -44,12 +44,11 @@ use mononoke_types::FsnodeId;
 use mononoke_types::MPathElement;
 use mononoke_types::ManifestUnodeId;
 use mononoke_types::SkeletonManifestId;
+use mononoke_types::SortedVectorTrieMap;
 use mononoke_types::TrieMap;
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
 use smallvec::SmallVec;
-
-use crate::sorted_vector_trie_map::SortedVectorTrieMap;
 
 #[async_trait]
 pub trait TrieMapOps<Store, Value>: Sized {
@@ -88,6 +87,29 @@ impl<Store, V: Send> TrieMapOps<Store, V> for TrieMap<V> {
 
     fn is_empty(&self) -> bool {
         self.is_empty()
+    }
+}
+
+#[async_trait]
+impl<Store, V: Clone + Send + Sync> TrieMapOps<Store, V> for SortedVectorTrieMap<V> {
+    async fn expand(
+        self,
+        _ctx: &CoreContext,
+        _blobstore: &Store,
+    ) -> Result<(Option<V>, Vec<(u8, Self)>)> {
+        SortedVectorTrieMap::expand(self)
+    }
+
+    async fn into_stream(
+        self,
+        _ctx: &CoreContext,
+        _blobstore: &Store,
+    ) -> Result<BoxStream<'async_trait, Result<(SmallVec<[u8; 24]>, V)>>> {
+        Ok(stream::iter(self).map(Ok).boxed())
+    }
+
+    fn is_empty(&self) -> bool {
+        SortedVectorTrieMap::is_empty(self)
     }
 }
 

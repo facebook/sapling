@@ -419,11 +419,11 @@ mod tests {
     use memblob::Memblob;
     use mononoke_types::path::MPath;
     use mononoke_types::FileType;
+    use mononoke_types::SortedVectorTrieMap;
     use pretty_assertions::assert_eq;
 
     use super::*;
     use crate::ops::ManifestOps;
-    use crate::sorted_vector_trie_map::SortedVectorTrieMap;
     use crate::tests::test_manifest::derive_test_manifest;
     use crate::tests::test_manifest::TestLeafId;
     use crate::tests::test_manifest::TestManifestId;
@@ -447,7 +447,7 @@ mod tests {
             .into_trie_map(ctx, blobstore)
             .await?;
         for byte in prefix.as_bytes() {
-            let (_, subentries) = trie_map.expand(ctx, blobstore).await?;
+            let (_, subentries) = trie_map.expand()?;
             let mut subentries = subentries.into_iter().collect::<BTreeMap<_, _>>();
             trie_map = subentries
                 .remove(byte)

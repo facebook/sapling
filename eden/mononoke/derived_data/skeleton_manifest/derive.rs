@@ -31,7 +31,6 @@ use manifest::derive_manifests_for_simple_stack_of_commits;
 use manifest::flatten_subentries;
 use manifest::Entry;
 use manifest::ManifestChanges;
-use manifest::SortedVectorTrieMap;
 use manifest::TreeInfo;
 use mononoke_types::path::MPath;
 use mononoke_types::skeleton_manifest::SkeletonManifest;
@@ -46,6 +45,7 @@ use mononoke_types::FileType;
 use mononoke_types::MPathElement;
 use mononoke_types::NonRootMPath;
 use mononoke_types::SkeletonManifestId;
+use mononoke_types::SortedVectorTrieMap;
 use sorted_vector_map::SortedVectorMap;
 
 use crate::SkeletonManifestDerivationError;
