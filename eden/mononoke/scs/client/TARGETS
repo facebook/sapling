@@ -24,6 +24,7 @@ rust_binary(
     deps = [
         "fbsource//third-party/rust:ansi_term",
         "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:async-trait",
         "fbsource//third-party/rust:auto_impl",
         "fbsource//third-party/rust:bytesize",
         "fbsource//third-party/rust:chrono",

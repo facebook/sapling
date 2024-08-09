@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+#![feature(trait_alias)]
+
 //! Command-line client for the Source Control Service.
 
 use std::env;

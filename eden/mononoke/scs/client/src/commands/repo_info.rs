@@ -17,7 +17,6 @@ use serde::Serialize;
 
 use crate::args::repo::RepoArgs;
 use crate::library::stress_test::StressArgs;
-use crate::library::stress_test::StressTestRunner;
 use crate::library::summary::summary_output;
 use crate::render::Render;
 use crate::ScscApp;
@@ -84,13 +83,13 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
     if let Some(stress) = args.stress {
         let runner = stress.new_runner(conn.get_client_corrrelator());
         let results = runner
-            .run(|| {
+            .run(Box::new(move || {
                 cloned!(conn, repo, params);
                 Box::pin(async move {
                     conn.repo_info(&repo, &params).await?;
                     Ok(())
                 })
-            })
+            }))
             .await;
 
         let output = summary_output(results);
