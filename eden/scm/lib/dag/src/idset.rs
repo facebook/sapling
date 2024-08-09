@@ -807,6 +807,40 @@ impl OrderedSpan {
         }
     }
 
+    fn skip(&self, n: u64) -> Option<Self> {
+        if n >= self.count() {
+            None
+        } else if self.start <= self.end {
+            Some(Self {
+                start: self.start + n,
+                end: self.end,
+            })
+        } else {
+            Some(Self {
+                start: self.start - n,
+                end: self.end,
+            })
+        }
+    }
+
+    fn take(&self, n: u64) -> Option<Self> {
+        if n == 0 {
+            None
+        } else if n >= self.count() {
+            Some(*self)
+        } else if self.start <= self.end {
+            Some(Self {
+                start: self.start,
+                end: self.start + n - 1,
+            })
+        } else {
+            Some(Self {
+                start: self.start,
+                end: self.start + 1 - n,
+            })
+        }
+    }
+
     /// Attempt to push an `Id` to the current span and preserve iteration order.
     /// For example, `OrderedSpan { start: 10, end: 20 }.push(21)` produces
     /// `OrderedSpan { start: 10, end: 21 }`.
@@ -1067,6 +1101,72 @@ impl IdList {
             list.push(span)
         }
         Self(Arc::new(list))
+    }
+
+    /// Count all `Id`s in the list.
+    pub fn count(&self) -> u64 {
+        self.0.iter().map(|i| i.count()).sum()
+    }
+
+    /// Skip the first `n` items.
+    pub fn skip(&self, mut n: u64) -> Self {
+        #[cfg(test)]
+        let expected = self.count().saturating_sub(n);
+        let mut result = Vec::new();
+        for span in self.0.as_ref() {
+            if n == 0 {
+                result.push(*span);
+            } else {
+                let count = span.count();
+                if count <= n {
+                    // This span is skipped entirely.
+                    n -= count;
+                } else {
+                    // This span is skipped partially.
+                    debug_assert!(n > 0);
+                    debug_assert!(n < count);
+                    if let Some(span) = span.skip(n) {
+                        result.push(span)
+                    }
+                    n = 0;
+                }
+            }
+        }
+        let result = Self(Arc::new(result));
+        #[cfg(test)]
+        assert_eq!(result.count(), expected);
+        result
+    }
+
+    /// Only take the first `n` items.
+    pub fn take(&self, mut n: u64) -> Self {
+        #[cfg(test)]
+        let expected = n.min(self.count());
+        let mut result = Vec::new();
+        for span in self.0.as_ref() {
+            if n == 0 {
+                break;
+            } else {
+                let count = span.count();
+                if count <= n {
+                    // This span is taken entirely.
+                    n -= count;
+                    result.push(*span);
+                } else {
+                    // Part of the span is the last to be taken.
+                    debug_assert!(n > 0);
+                    debug_assert!(n < count);
+                    if let Some(span) = span.take(n) {
+                        result.push(span)
+                    }
+                    n = 0;
+                }
+            }
+        }
+        let result = Self(Arc::new(result));
+        #[cfg(test)]
+        assert_eq!(result.count(), expected);
+        result
     }
 }
 
@@ -1605,5 +1705,50 @@ mod tests {
             true
         }
         quickcheck(check as fn(Vec<u8>) -> bool);
+    }
+
+    fn check_id_list_skip_take(list: &IdList, skip: u64, take: u64) {
+        let sub_list = list.skip(skip);
+        let sub_list = sub_list.take(take);
+        let iter = list.into_iter();
+        let ids = iter.skip(skip as _).take(take as _).collect::<Vec<_>>();
+        assert_eq!(
+            sub_list.into_iter().collect::<Vec<Id>>(),
+            ids,
+            "{:?}.skip({}).take({})",
+            list,
+            skip,
+            take
+        );
+    }
+
+    #[test]
+    fn test_id_list_skip_take() {
+        for ids in [
+            &[] as &[u64],
+            &[1],
+            &[1, 2, 3, 7, 6, 5],
+            &[7, 6, 5, 1, 2, 3],
+            &[11, 12, 22, 21, 31, 32],
+            &[10, 30, 20, 50, 40],
+        ] {
+            let len = ids.len() as u64;
+            let list = IdList::from_ids(ids.iter().map(|&i| Id(i)));
+            for skip in 0..=len + 2 {
+                for take in 0..=len + 2 {
+                    check_id_list_skip_take(&list, skip, take)
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_id_list_skip_take_quickcheck() {
+        fn check(ids: Vec<u8>, skip: u8, take: u8) -> bool {
+            let list = IdList::from_ids(ids.into_iter().map(|i| Id(i as u64)));
+            check_id_list_skip_take(&list, skip as _, take as _);
+            true
+        }
+        quickcheck(check as fn(Vec<u8>, u8, u8) -> bool);
     }
 }
