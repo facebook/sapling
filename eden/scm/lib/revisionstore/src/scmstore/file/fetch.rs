@@ -812,7 +812,7 @@ impl FetchState {
                             }
                             Ok(Some(data)) => {
                                 found += 1;
-                                tracing::error!(target: "cas", ?key, ?digest, "file found in cas");
+                                tracing::trace!(target: "cas", ?key, ?digest, "file found in cas");
                                 self.found_attributes(
                                     key,
                                     StoreFile {
