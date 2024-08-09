@@ -1138,6 +1138,44 @@ export class Repository {
     ctx.logger.info('Fetched SLOC for commit:', hash, output, `SLOC: ${sloc}`);
     return sloc;
   }
+
+  public async fetchStrictSignificantLinesOfCode(
+    ctx: RepositoryContext,
+    hash: Hash,
+    excludedFiles: string[],
+  ): Promise<number> {
+    const exclusions = excludedFiles.flatMap(file => [
+      '-X',
+      absolutePathForFileInRepo(file, this) ?? file,
+    ]);
+
+    const output = (
+      await this.runCommand(
+        [
+          'diff',
+          '--stat',
+          '-B',
+          '-X',
+          '**__generated__**',
+          '-X',
+          '**__tests__**',
+          '-X',
+          '**.md',
+          ...exclusions,
+          '-c',
+          hash,
+        ],
+        'SlocCommand',
+        ctx,
+      )
+    ).stdout;
+
+    const sloc = this.parseSlocFrom(output);
+
+    ctx.logger.info('Fetched strict SLOC for commit:', hash, output, `Strict SLOC: ${sloc}`);
+    return sloc;
+  }
+
   public async fetchPendingAmendSignificantLinesOfCode(
     ctx: RepositoryContext,
     hash: Hash,
@@ -1167,6 +1205,55 @@ export class Repository {
     ctx.logger.info('Fetched Pending AMEND SLOC for commit:', hash, output, `SLOC: ${sloc}`);
     return sloc;
   }
+
+  public async fetchPendingAmendStrictSignificantLinesOfCode(
+    ctx: RepositoryContext,
+    hash: Hash,
+    includedFiles: string[],
+  ): Promise<number> {
+    if (includedFiles.length === 0) {
+      return 0; // don't bother running sl diff if there are no files to include
+    }
+    const inclusions = includedFiles.flatMap(file => [
+      '-I',
+      absolutePathForFileInRepo(file, this) ?? file,
+    ]);
+
+    const output = (
+      await this.runCommand(
+        [
+          'diff',
+          '--stat',
+          '-B',
+          '-X',
+          '**__generated__**',
+          '-X',
+          '**__tests__**',
+          '-X',
+          '**.md',
+          ...inclusions,
+          '-r',
+          '.^',
+        ],
+        'PendingSlocCommand',
+        ctx,
+      )
+    ).stdout;
+
+    if (output.trim() === '') {
+      return 0;
+    }
+    const sloc = this.parseSlocFrom(output);
+
+    ctx.logger.info(
+      'Fetched Pending AMEND strict SLOC for commit:',
+      hash,
+      output,
+      `Strict SLOC: ${sloc}`,
+    );
+    return sloc;
+  }
+
   public async fetchPendingSignificantLinesOfCode(
     ctx: RepositoryContext,
     hash: Hash,
@@ -1192,6 +1279,49 @@ export class Repository {
     ctx.logger.info('Fetched Pending SLOC for commit:', hash, output, `SLOC: ${sloc}`);
     return sloc;
   }
+
+  public async fetchPendingStrictSignificantLinesOfCode(
+    ctx: RepositoryContext,
+    hash: Hash,
+    includedFiles: string[],
+  ): Promise<number> {
+    if (includedFiles.length === 0) {
+      return 0; // don't bother running sl diff if there are no files to include
+    }
+    const inclusions = includedFiles.flatMap(file => [
+      '-I',
+      absolutePathForFileInRepo(file, this) ?? file,
+    ]);
+
+    const output = (
+      await this.runCommand(
+        [
+          'diff',
+          '--stat',
+          '-B',
+          '-X',
+          '**__generated__**',
+          '-X',
+          '**__tests__**',
+          '-X',
+          '**.md',
+          ...inclusions,
+        ],
+        'PendingSlocCommand',
+        ctx,
+      )
+    ).stdout;
+    const sloc = this.parseSlocFrom(output);
+
+    ctx.logger.info(
+      'Fetched Pending strict SLOC for commit:',
+      hash,
+      output,
+      `Strict SLOC: ${sloc}`,
+    );
+    return sloc;
+  }
+
   private parseSlocFrom(output: string) {
     const lines = output.trim().split('\n');
     const changes = lines[lines.length - 1];

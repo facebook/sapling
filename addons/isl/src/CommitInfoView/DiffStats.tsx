@@ -11,8 +11,10 @@ import {Row} from '../ComponentUtils';
 import {T, t} from '../i18n';
 import {SLOC_THRESHOLD_FOR_SPLIT_SUGGESTIONS} from '../sloc/diffStatConstants';
 import {
-  useFetchPendingSignificantLinesOfCode,
   useFetchSignificantLinesOfCode,
+  useFetchStrictSignificantLinesOfCode,
+  useFetchPendingSignificantLinesOfCode,
+  useFetchStrictPendingSignificantLinesOfCode,
 } from '../sloc/useFetchSignificantLinesOfCode';
 import * as stylex from '@stylexjs/stylex';
 import {ErrorBoundary} from 'isl-components/ErrorNotice';
@@ -40,7 +42,13 @@ export function LoadingDiffStatsView() {
 }
 export function DiffStats({commit}: Props) {
   const significantLinesOfCode = useFetchSignificantLinesOfCode(commit);
-  return <ResolvedDiffStatsView significantLinesOfCode={significantLinesOfCode} />;
+  const strictSignificantLinesOfCode = useFetchStrictSignificantLinesOfCode(commit);
+  return (
+    <ResolvedDiffStatsView
+      significantLinesOfCode={significantLinesOfCode}
+      strictSignificantLinesOfCode={strictSignificantLinesOfCode}
+    />
+  );
 }
 
 export function PendingDiffStats({showWarning = false}: {showWarning?: boolean}) {
@@ -53,12 +61,14 @@ export function PendingDiffStats({showWarning = false}: {showWarning?: boolean})
 
 export function PendingDiffStatsView({showWarning = false}: {showWarning?: boolean}) {
   const significantLinesOfCode = useFetchPendingSignificantLinesOfCode();
+  const strictSignificantLinesOfCode = useFetchStrictPendingSignificantLinesOfCode();
   if (significantLinesOfCode == null) {
     return <LoadingDiffStatsView />;
   }
   return (
     <ResolvedDiffStatsView
       significantLinesOfCode={significantLinesOfCode}
+      strictSignificantLinesOfCode={strictSignificantLinesOfCode}
       showWarning={showWarning}
     />
   );
@@ -66,16 +76,20 @@ export function PendingDiffStatsView({showWarning = false}: {showWarning?: boole
 
 function ResolvedDiffStatsView({
   significantLinesOfCode,
+  strictSignificantLinesOfCode,
   showWarning,
 }: {
   significantLinesOfCode: number | undefined;
+  strictSignificantLinesOfCode: number | undefined;
   showWarning?: boolean;
 }) {
   if (significantLinesOfCode == null) {
     return null;
   }
   const extras =
-    showWarning && significantLinesOfCode > SLOC_THRESHOLD_FOR_SPLIT_SUGGESTIONS ? (
+    showWarning &&
+    strictSignificantLinesOfCode &&
+    strictSignificantLinesOfCode > SLOC_THRESHOLD_FOR_SPLIT_SUGGESTIONS ? (
       <Tooltip
         title={t(
           //formatting this on multiple lines to look good in the tooltip

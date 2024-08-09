@@ -752,6 +752,7 @@ export type ClientToServerMessage =
   | CodeReviewProviderSpecificClientToServerMessages
   | PlatformSpecificClientToServerMessages
   | {type: 'fetchSignificantLinesOfCode'; hash: Hash; excludedFiles: string[]}
+  | {type: 'fetchStrictSignificantLinesOfCode'; hash: Hash; excludedFiles: string[]}
   | {
       type: 'fetchPendingSignificantLinesOfCode';
       requestId: number;
@@ -759,7 +760,19 @@ export type ClientToServerMessage =
       includedFiles: string[];
     }
   | {
+      type: 'fetchPendingStrictSignificantLinesOfCode';
+      requestId: number;
+      hash: Hash;
+      includedFiles: string[];
+    }
+  | {
       type: 'fetchPendingAmendSignificantLinesOfCode';
+      requestId: number;
+      hash: Hash;
+      includedFiles: string[];
+    }
+  | {
+      type: 'fetchPendingAmendStrictSignificantLinesOfCode';
       requestId: number;
       hash: Hash;
       includedFiles: string[];
@@ -842,6 +855,7 @@ export type ServerToClientMessage =
   | OperationProgressEvent
   | PlatformSpecificServerToClientMessages
   | {type: 'fetchedSignificantLinesOfCode'; hash: Hash; linesOfCode: Result<number>}
+  | {type: 'fetchedStrictSignificantLinesOfCode'; hash: Hash; linesOfCode: Result<number>}
   | {
       type: 'fetchedPendingSignificantLinesOfCode';
       requestId: number;
@@ -849,7 +863,19 @@ export type ServerToClientMessage =
       linesOfCode: Result<number>;
     }
   | {
+      type: 'fetchedPendingStrictSignificantLinesOfCode';
+      requestId: number;
+      hash: Hash;
+      linesOfCode: Result<number>;
+    }
+  | {
       type: 'fetchedPendingAmendSignificantLinesOfCode';
+      requestId: number;
+      hash: Hash;
+      linesOfCode: Result<number>;
+    }
+  | {
+      type: 'fetchedPendingAmendStrictSignificantLinesOfCode';
       requestId: number;
       hash: Hash;
       linesOfCode: Result<number>;
