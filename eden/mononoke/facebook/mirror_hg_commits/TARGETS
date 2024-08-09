@@ -9,7 +9,6 @@ rust_binary(
     srcs = glob(["src/**/*.rs"]),
     deps = [
         "fbsource//third-party/rust:anyhow",
-        "fbsource//third-party/rust:bytes",
         "fbsource//third-party/rust:clap",
         "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:slog",
@@ -27,7 +26,6 @@ rust_binary(
         "//eden/mononoke/bonsai_globalrev_mapping:bonsai_globalrev_mapping",
         "//eden/mononoke/bonsai_hg_mapping:bonsai_hg_mapping",
         "//eden/mononoke/bookmarks:bookmarks",
-        "//eden/mononoke/changesets:changesets",
         "//eden/mononoke/cmdlib:cmdlib",
         "//eden/mononoke/cmdlib:cmdlib_cross_repo",
         "//eden/mononoke/cmdlib/mononoke_app:mononoke_app",
