@@ -116,6 +116,8 @@ impl ChangesetHook for BlockAccidentalNewBookmarkCreationHook {
             return Ok(HookExecution::Accepted);
         }
 
+        let bookmark_name = bookmark.as_str();
+
         if let Some(options) = &self.creation_allowed_with_marker_options {
             if let Some(value_from_marker) = extract_value_from_marker(options, changeset) {
                 let value_to_compare = if let Some(comparison_prefix) = &options.comparison_prefix {
@@ -124,7 +126,7 @@ impl ChangesetHook for BlockAccidentalNewBookmarkCreationHook {
                     value_from_marker
                 };
 
-                if bookmark.as_str() == value_to_compare {
+                if bookmark_name == value_to_compare {
                     return Ok(HookExecution::Accepted);
                 }
             }
@@ -134,7 +136,14 @@ impl ChangesetHook for BlockAccidentalNewBookmarkCreationHook {
                 format!(
                     "Add \"{}: {}\" to the commit message to be able to create this branch.",
                     options.marker,
-                    bookmark.as_str(),
+                    bookmark_name
+                        .strip_prefix(
+                            options
+                                .comparison_prefix
+                                .as_ref()
+                                .map_or("", |x| x.as_str())
+                        )
+                        .unwrap_or(bookmark_name),
                 ),
             )))
         } else {
