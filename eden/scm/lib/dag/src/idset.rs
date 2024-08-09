@@ -788,8 +788,8 @@ impl Debug for IdSet {
 /// (inclusive), not hardcoded DESC. `start` might be larger or smaller than `end`.
 #[derive(Clone, Copy, Debug)]
 pub struct OrderedSpan {
-    start: Id,
-    end: Id,
+    pub start: Id,
+    pub end: Id,
 }
 
 impl OrderedSpan {
@@ -1093,9 +1093,9 @@ impl IntoIterator for IdSet {
     }
 }
 
-/// `IdSet` for iteration.
+/// Mainly for iteration (skip, take, count, into_iter) handling.
 #[derive(Clone, Debug)]
-pub(crate) struct IdList(Arc<Vec<OrderedSpan>>);
+pub struct IdList(Arc<Vec<OrderedSpan>>);
 
 impl IdList {
     /// Creates `IdList`. Preserves `ids` iteration order.
@@ -1221,6 +1221,12 @@ impl IdList {
             Span::new(low, high)
         });
         IdSet::from_spans(spans)
+    }
+
+    /// Access `OrderedSpan` directly. This can be useful to figure out if the
+    /// spans are in a particular order.
+    pub fn as_spans(&self) -> &[OrderedSpan] {
+        &self.0
     }
 }
 

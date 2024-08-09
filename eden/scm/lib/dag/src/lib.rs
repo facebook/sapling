@@ -51,7 +51,9 @@ pub use iddag::IdDagAlgorithm;
 pub use iddagstore::IdDagStore;
 #[cfg(any(test, feature = "indexedlog-backend"))]
 pub use idmap::IdMap;
+pub use idset::IdList;
 pub use idset::IdSet;
+pub use idset::OrderedSpan;
 pub use ops::DagAlgorithm;
 pub use segment::FlatSegment;
 pub use segment::IdSegment;
