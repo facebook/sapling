@@ -131,18 +131,29 @@ impl<V: std::fmt::Debug> std::fmt::Debug for SortedVectorTrieMap<V> {
     }
 }
 
-impl<V: Clone> Iterator for SortedVectorTrieMap<V> {
+pub struct SortedVectorTrieMapIter<V>(SortedVectorTrieMap<V>);
+
+impl<V: Clone> Iterator for SortedVectorTrieMapIter<V> {
     type Item = (SmallVec<[u8; 24]>, V);
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.start < self.end {
-            let (mut name, value) = self.entries[self.start].clone();
-            name.drain(..self.prefix);
-            self.start += 1;
+        if self.0.start < self.0.end {
+            let (mut name, value) = self.0.entries[self.0.start].clone();
+            name.drain(..self.0.prefix);
+            self.0.start += 1;
             Some((name, value))
         } else {
             None
         }
+    }
+}
+
+impl<V: Clone> IntoIterator for SortedVectorTrieMap<V> {
+    type Item = (SmallVec<[u8; 24]>, V);
+    type IntoIter = SortedVectorTrieMapIter<V>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        SortedVectorTrieMapIter(self)
     }
 }
 
@@ -175,7 +186,7 @@ mod tests {
             check_eq!(trie_map.is_empty(), sv_trie_map.is_empty());
 
             let all_trie_map = trie_map.clone().into_iter().collect::<Vec<_>>();
-            let all_sv_trie_map = sv_trie_map.clone().collect::<Vec<_>>();
+            let all_sv_trie_map = sv_trie_map.clone().into_iter().collect::<Vec<_>>();
             check_eq!(all_trie_map, all_sv_trie_map);
 
             let mut expansions = vec![(trie_map, sv_trie_map)];
