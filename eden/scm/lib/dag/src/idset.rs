@@ -857,6 +857,24 @@ impl OrderedSpan {
             None
         }
     }
+
+    /// Attempt to push another [`OrderedSpan`] and preserve iteration order.
+    /// For example,
+    /// `OrderedSpan { start: 10, end: 20 }.push(OrderedSpan { start : 21, end: 30 })`
+    /// produces `OrderedSpan { start: 10, end: 30 }`.
+    fn maybe_push_span(&self, span: Self) -> Option<Self> {
+        if span.start.group() == self.start.group()
+            && ((self.start <= self.end && span.start == self.end + 1 && span.start <= span.end)
+                || (self.start >= self.end && span.start + 1 == self.end && span.start >= span.end))
+        {
+            Some(Self {
+                start: self.start,
+                end: span.end,
+            })
+        } else {
+            None
+        }
+    }
 }
 
 /// Used by [`IdSetIter`] for more flexible iteration.
@@ -1093,6 +1111,29 @@ impl IdList {
                     None => {
                         list.push(current);
                         Some(OrderedSpan { start: id, end: id })
+                    }
+                },
+            }
+        }
+        if let Some(span) = span.take() {
+            list.push(span)
+        }
+        Self(Arc::new(list))
+    }
+
+    /// Creates `IdList`. Preserves `ids` iteration order.
+    pub fn from_spans<S: Into<OrderedSpan>>(spans: impl IntoIterator<Item = S>) -> Self {
+        let mut list = Vec::new();
+        let mut span = None;
+        for s in spans {
+            let s = s.into();
+            span = match span {
+                None => Some(s),
+                Some(current) => match current.maybe_push_span(s) {
+                    Some(next) => Some(next),
+                    None => {
+                        list.push(current);
+                        Some(s)
                     }
                 },
             }
@@ -1770,5 +1811,30 @@ mod tests {
         let list = IdList::from_ids([1, 3, 2, 4, 9, 8, 11, 12, 6, 10].iter().map(|i| Id(*i)));
         let set = list.to_set();
         assert_eq!(dbg(set), "1..=4 6 8..=12");
+    }
+
+    #[test]
+    fn test_id_list_from_spans() {
+        let list = IdList::from_spans(
+            [
+                (10, 20),
+                (21, 30),
+                (90, 80),
+                (79, 60),
+                (51, 51),
+                (50, 50),
+                (55, 55),
+                (56, 56),
+            ]
+            .iter()
+            .map(|(a, b)| OrderedSpan {
+                start: Id(*a),
+                end: Id(*b),
+            }),
+        );
+        assert_eq!(
+            dbg(list.0),
+            "[OrderedSpan { start: 10, end: 30 }, OrderedSpan { start: 90, end: 60 }, OrderedSpan { start: 51, end: 50 }, OrderedSpan { start: 55, end: 56 }]"
+        );
     }
 }
