@@ -223,6 +223,9 @@ class manifestdict:
             return m1.diff(m2)
         return self._lm.diff(m2._lm)
 
+    def set(self, key, node, flag):
+        self._lm[key] = node, flag
+
     def setflag(self, key, flag):
         self._lm[key] = self[key], flag
 

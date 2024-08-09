@@ -2917,8 +2917,7 @@ class localrepository:
                                 fctx, m1, m2, linkrev, trp, changed
                             )
                         assert filenode != nullid, "manifest should not have nullid"
-                        m[f] = filenode
-                        m.setflag(f, fctx.flags())
+                        m.set(f, filenode, fctx.flags())
                     except OSError:
                         self.ui.warn(_("trouble committing %s!\n") % f)
                         raise

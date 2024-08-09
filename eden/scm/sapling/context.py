@@ -2311,11 +2311,9 @@ class overlayworkingctx(committablectx):
 
         flag = self._flagfunc
         for path in self.added():
-            man[path] = addednodeid
-            man.setflag(path, flag(path))
+            man.set(path, addednodeid, flag(path))
         for path in self.modified():
-            man[path] = modifiednodeid
-            man.setflag(path, flag(path))
+            man.set(path, modifiednodeid, flag(path))
         for path in self.removed():
             del man[path]
         return man
