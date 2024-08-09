@@ -21,17 +21,17 @@
   > A # A/foo = one\n
   > EOS
 
-  $ hgmn goto A -q
-  $ hgmn push -r . --to master -q --create
+  $ sl goto A -q
+  $ sl push -r . --to master -q --create
 
-  $ hgmn goto B -q
-  $ hgmn push -r . --to master -q
+  $ sl goto B -q
+  $ sl push -r . --to master -q
 
-  $ hgmn goto C -q
-  $ hgmn push -r . --to master -q
+  $ sl goto C -q
+  $ sl push -r . --to master -q
 
-  $ hgmn goto D -q
-  $ hgmn push -r . --to master -q
+  $ sl goto D -q
+  $ sl push -r . --to master -q
 
 Check that new entry was added to the sync database. 4 pushes
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select count(*) from bookmarks_update_log";
