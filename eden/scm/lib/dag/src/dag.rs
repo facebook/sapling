@@ -1870,7 +1870,7 @@ where
                 spans.push(id?);
             }
         }
-        let result = Set::from_spans_dag(spans, self)?;
+        let result = Set::from_id_set_dag(spans, self)?;
         result.hints().add_flags(flags);
         Ok(result)
     }
@@ -1889,7 +1889,7 @@ where
     /// Returns a set that covers all vertexes tracked by this DAG.
     async fn all(&self) -> Result<Set> {
         let spans = self.dag().all()?;
-        let result = Set::from_spans_dag(spans, self)?;
+        let result = Set::from_id_set_dag(spans, self)?;
         result.hints().add_flags(Flags::FULL);
         Ok(result)
     }
@@ -1897,7 +1897,7 @@ where
     /// Returns a set that covers all vertexes in the master group.
     async fn master_group(&self) -> Result<Set> {
         let spans = self.dag().master_group()?;
-        let result = Set::from_spans_dag(spans, self)?;
+        let result = Set::from_id_set_dag(spans, self)?;
         result.hints().add_flags(Flags::ANCESTORS);
         Ok(result)
     }
@@ -1911,7 +1911,7 @@ where
         }
         let spans = self.to_id_set(&set).await?;
         let spans = self.dag().ancestors(spans)?;
-        let result = Set::from_spans_dag(spans, self)?;
+        let result = Set::from_id_set_dag(spans, self)?;
         result.hints().add_flags(Flags::ANCESTORS);
         Ok(result)
     }
@@ -1926,7 +1926,7 @@ where
         }
         let spans = self.to_id_set(&set).await?;
         let spans = self.dag().first_ancestors(spans)?;
-        let result = Set::from_spans_dag(spans, self)?;
+        let result = Set::from_id_set_dag(spans, self)?;
         #[cfg(test)]
         {
             result.assert_eq(crate::default_impl::first_ancestors(self, set).await?);
@@ -1938,7 +1938,7 @@ where
     async fn merges(&self, set: Set) -> Result<Set> {
         let spans = self.to_id_set(&set).await?;
         let spans = self.dag().merges(spans)?;
-        let result = Set::from_spans_dag(spans, self)?;
+        let result = Set::from_id_set_dag(spans, self)?;
         #[cfg(test)]
         {
             result.assert_eq(crate::default_impl::merges(self, set).await?);
@@ -1954,7 +1954,7 @@ where
         // Preserve ANCESTORS flag. If ancestors(x) == x, then ancestors(parents(x)) == parents(x).
         let flags = extract_ancestor_flag_if_compatible(set.hints(), self.dag_version());
         let spans = self.dag().parents(self.to_id_set(&set).await?)?;
-        let result = Set::from_spans_dag(spans, self)?;
+        let result = Set::from_id_set_dag(spans, self)?;
         result.hints().add_flags(flags);
         #[cfg(test)]
         {
@@ -1990,7 +1990,7 @@ where
             return self.heads_ancestors(set).await;
         }
         let spans = self.dag().heads(self.to_id_set(&set).await?)?;
-        let result = Set::from_spans_dag(spans, self)?;
+        let result = Set::from_id_set_dag(spans, self)?;
         #[cfg(test)]
         {
             result.assert_eq(crate::default_impl::heads(self, set).await?);
@@ -2001,7 +2001,7 @@ where
     /// Calculates children of the given set.
     async fn children(&self, set: Set) -> Result<Set> {
         let spans = self.dag().children(self.to_id_set(&set).await?)?;
-        let result = Set::from_spans_dag(spans, self)?;
+        let result = Set::from_id_set_dag(spans, self)?;
         Ok(result)
     }
 
@@ -2009,7 +2009,7 @@ where
     async fn roots(&self, set: Set) -> Result<Set> {
         let flags = extract_ancestor_flag_if_compatible(set.hints(), self.dag_version());
         let spans = self.dag().roots(self.to_id_set(&set).await?)?;
-        let result = Set::from_spans_dag(spans, self)?;
+        let result = Set::from_id_set_dag(spans, self)?;
         result.hints().add_flags(flags);
         #[cfg(test)]
         {
@@ -2039,7 +2039,7 @@ where
     /// `gca_one` is faster if an arbitrary answer is ok.
     async fn gca_all(&self, set: Set) -> Result<Set> {
         let spans = self.dag().gca_all(self.to_id_set(&set).await?)?;
-        let result = Set::from_spans_dag(spans, self)?;
+        let result = Set::from_id_set_dag(spans, self)?;
         #[cfg(test)]
         {
             result.assert_eq(crate::default_impl::gca_all(self, set).await?);
@@ -2050,7 +2050,7 @@ where
     /// Calculates all common ancestors of the given set.
     async fn common_ancestors(&self, set: Set) -> Result<Set> {
         let spans = self.dag().common_ancestors(self.to_id_set(&set).await?)?;
-        let result = Set::from_spans_dag(spans, self)?;
+        let result = Set::from_id_set_dag(spans, self)?;
         result.hints().add_flags(Flags::ANCESTORS);
         #[cfg(test)]
         {
@@ -2085,7 +2085,7 @@ where
     /// Y while this function won't.
     async fn heads_ancestors(&self, set: Set) -> Result<Set> {
         let spans = self.dag().heads_ancestors(self.to_id_set(&set).await?)?;
-        let result = Set::from_spans_dag(spans, self)?;
+        let result = Set::from_id_set_dag(spans, self)?;
         #[cfg(test)]
         {
             // default_impl::heads_ancestors calls `heads` if `Flags::ANCESTORS`
@@ -2102,14 +2102,14 @@ where
         let roots = self.to_id_set(&roots).await?;
         let heads = self.to_id_set(&heads).await?;
         let spans = self.dag().range(roots, heads)?;
-        let result = Set::from_spans_dag(spans, self)?;
+        let result = Set::from_id_set_dag(spans, self)?;
         Ok(result)
     }
 
     /// Calculates the descendants of the given set.
     async fn descendants(&self, set: Set) -> Result<Set> {
         let spans = self.dag().descendants(self.to_id_set(&set).await?)?;
-        let result = Set::from_spans_dag(spans, self)?;
+        let result = Set::from_id_set_dag(spans, self)?;
         Ok(result)
     }
 
@@ -2126,7 +2126,7 @@ where
     async fn dirty(&self) -> Result<Set> {
         let all = self.dag().all()?;
         let spans = all.difference(&self.persisted_id_set);
-        let set = Set::from_spans_dag(spans, self)?;
+        let set = Set::from_id_set_dag(spans, self)?;
         Ok(set)
     }
 
@@ -2599,7 +2599,7 @@ where
             to_visit.extend(parents);
         }
 
-        let set = Set::from_spans_dag(id_set, self)?;
+        let set = Set::from_id_set_dag(id_set, self)?;
         tracing::debug!(target: "dag::reassign", "need to reassign: {:?}", &set);
         Ok(set)
     }

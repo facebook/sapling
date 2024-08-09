@@ -120,16 +120,16 @@ impl Set {
     }
 
     /// Creates from [`IdSet`], [`IdMap`] and [`DagAlgorithm`].
-    pub fn from_spans_idmap_dag(
+    pub fn from_id_set_idmap_dag(
         spans: IdSet,
         map: Arc<dyn IdConvert + Send + Sync>,
         dag: Arc<dyn DagAlgorithm + Send + Sync>,
     ) -> Set {
-        Self::from_spans_idmap_dag_order(spans, map, dag, None)
+        Self::from_id_set_idmap_dag_order(spans, map, dag, None)
     }
 
     /// Creates from [`IdSet`], [`IdMap`], [`DagAlgorithm`], and [`BasicIterationOrder`].
-    pub fn from_spans_idmap_dag_order(
+    pub fn from_id_set_idmap_dag_order(
         spans: IdSet,
         map: Arc<dyn IdConvert + Send + Sync>,
         dag: Arc<dyn DagAlgorithm + Send + Sync>,
@@ -143,10 +143,13 @@ impl Set {
     }
 
     /// Creates from [`IdSet`] and a struct with snapshot abilities.
-    pub fn from_spans_dag(spans: IdSet, dag: &(impl DagAlgorithm + IdMapSnapshot)) -> Result<Self> {
+    pub fn from_id_set_dag(
+        spans: IdSet,
+        dag: &(impl DagAlgorithm + IdMapSnapshot),
+    ) -> Result<Self> {
         let map = dag.id_map_snapshot()?;
         let dag = dag.dag_snapshot()?;
-        Ok(Self::from_spans_idmap_dag(spans, map, dag))
+        Ok(Self::from_id_set_idmap_dag(spans, map, dag))
     }
 
     /// Creates from a function that evaluates to a [`Set`], and a
@@ -227,7 +230,7 @@ impl Set {
             if let (Some(_order), Some(this_id_set)) = (order, this.id_set_try_preserving_order()) {
                 // Fast path for IdStaticSet.
                 // The order is preserved, `this.is_id_sorted` is true.
-                let result = Self::from_spans_idmap_dag_order(
+                let result = Self::from_id_set_idmap_dag_order(
                     this_id_set.difference(other.id_set_losing_order()),
                     this.map.clone(),
                     this.dag.clone(),
@@ -292,7 +295,7 @@ impl Set {
             let order = this.map.map_version().partial_cmp(other.map.map_version());
             if let (Some(order), Some(this_id_set)) = (order, this.id_set_try_preserving_order()) {
                 // Fast path for IdStaticSet
-                let result = Self::from_spans_idmap_dag_order(
+                let result = Self::from_id_set_idmap_dag_order(
                     this_id_set.intersection(other.id_set_losing_order()),
                     pick(order, &this.map, &other.map).clone(),
                     pick(order, &this.dag, &other.dag).clone(),
@@ -356,7 +359,7 @@ impl Set {
             let order = this.map.map_version().partial_cmp(other.map.map_version());
             if let Some(order) = order {
                 // Fast path for IdStaticSet
-                let result = Self::from_spans_idmap_dag_order(
+                let result = Self::from_id_set_idmap_dag_order(
                     this.id_set_losing_order()
                         .union(other.id_set_losing_order()),
                     pick(order, &this.map, &other.map).clone(),
@@ -504,7 +507,7 @@ impl Set {
         }
         ids.sort_unstable_by_key(|i| u64::MAX - i.0);
         let spans = IdSet::from_sorted_spans(ids);
-        let flat_set = Set::from_spans_idmap_dag(spans, id_map, dag);
+        let flat_set = Set::from_id_set_idmap_dag(spans, id_map, dag);
         flat_set.hints().inherit_flags_min_max_id(self.hints());
         Ok(flat_set)
     }

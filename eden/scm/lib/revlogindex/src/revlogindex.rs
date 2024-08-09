@@ -1151,7 +1151,7 @@ impl DagAlgorithm for RevlogIndex {
                 let id = self.vertex_id(name?).await?;
                 spans.push(id);
             }
-            let result = Set::from_spans_dag(spans, self)?;
+            let result = Set::from_id_set_dag(spans, self)?;
             Ok(result)
         }
     }
@@ -1175,7 +1175,7 @@ impl DagAlgorithm for RevlogIndex {
         } else {
             IdSet::from(Id(0)..=Id(self.len() as u64 - 1))
         };
-        let result = Set::from_spans_dag(id_set, self)?;
+        let result = Set::from_id_set_dag(id_set, self)?;
         result.hints().add_flags(Flags::FULL);
         Ok(result)
     }
@@ -1193,7 +1193,7 @@ impl DagAlgorithm for RevlogIndex {
         if next > low {
             id_set.push(low..=(next - 1));
         }
-        let set = Set::from_spans_dag(id_set, self)?;
+        let set = Set::from_id_set_dag(id_set, self)?;
         Ok(set)
     }
 
@@ -1276,7 +1276,7 @@ impl DagAlgorithm for RevlogIndex {
         }
 
         let idmap = dag.clone();
-        let result = Set::from_spans_idmap_dag(id_spans, idmap, dag);
+        let result = Set::from_id_set_idmap_dag(id_spans, idmap, dag);
         Ok(result)
     }
 
@@ -1386,7 +1386,7 @@ impl DagAlgorithm for RevlogIndex {
         let revs: Vec<u32> = id_set.iter_desc().map(|id| id.0 as u32).collect();
         let gcas = self.gca_revs(&revs, usize::max_value())?;
         let spans = IdSet::from_spans(gcas.into_iter().map(|r| Id(r as _)));
-        let result = Set::from_spans_dag(spans, self)?;
+        let result = Set::from_id_set_dag(spans, self)?;
         Ok(result)
     }
 
@@ -1451,7 +1451,7 @@ impl DagAlgorithm for RevlogIndex {
                 }
             }
         }
-        let result = Set::from_spans_dag(result_id_set, self)?;
+        let result = Set::from_id_set_dag(result_id_set, self)?;
         Ok(result)
     }
 
@@ -1472,7 +1472,7 @@ impl DagAlgorithm for RevlogIndex {
         let head_revs: Vec<u32> = head_ids.into_iter().map(|i| i.0 as u32).collect();
         let result_revs = self.range_revs(&root_revs, &head_revs)?;
         let result_id_set = IdSet::from_spans(result_revs.into_iter().map(|r| Id(r as _)));
-        let result = Set::from_spans_dag(result_id_set, self)?;
+        let result = Set::from_id_set_dag(result_id_set, self)?;
         Ok(result)
     }
 
@@ -1542,7 +1542,7 @@ impl DagAlgorithm for RevlogIndex {
             }
         }
 
-        let result = Set::from_spans_dag(result, self)?;
+        let result = Set::from_id_set_dag(result, self)?;
         Ok(result)
     }
 
@@ -1678,8 +1678,11 @@ impl DagAlgorithm for RevlogIndex {
 
         // Kick off an initial evaluate to process all the draft commits.
         let state = (evaluate)(self.len() as u64)?;
-        let reachable_set =
-            Set::from_spans_idmap_dag(state.lock().reachable_set.clone(), dag.clone(), dag.clone());
+        let reachable_set = Set::from_id_set_idmap_dag(
+            state.lock().reachable_set.clone(),
+            dag.clone(),
+            dag.clone(),
+        );
 
         let eval_contains = evaluate.clone();
         let is_public = move |_: &MetaSet, v: &Vertex| -> dag::Result<bool> {
@@ -1697,7 +1700,7 @@ impl DagAlgorithm for RevlogIndex {
                 let state = (evaluate)(0)?;
                 let guard = state.lock();
 
-                Ok(Set::from_spans_idmap_dag(
+                Ok(Set::from_id_set_idmap_dag(
                     guard.unreachable_set.clone(),
                     guard.dag.clone(),
                     guard.dag.clone(),
@@ -1810,7 +1813,7 @@ impl DagAlgorithm for RevlogIndex {
             }
         }
 
-        let result = Set::from_spans_dag(result, self)?;
+        let result = Set::from_id_set_dag(result, self)?;
         Ok(result)
     }
 

@@ -29,7 +29,7 @@ impl<'a> From<(LegacyCodeNeedIdAccess, &'a IdStaticSet)> for IdSet {
 
 impl<'a> From<(LegacyCodeNeedIdAccess, IdSet, &'a Dag)> for Set {
     fn from(value: (LegacyCodeNeedIdAccess, IdSet, &'a Dag)) -> Set {
-        Set::from_spans_dag(value.1, value.2).unwrap()
+        Set::from_id_set_dag(value.1, value.2).unwrap()
     }
 }
 

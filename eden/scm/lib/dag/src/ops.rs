@@ -756,6 +756,6 @@ impl IdMapSnapshot for Arc<dyn IdConvert + Send + Sync> {
 impl<T: IdMapSnapshot + DagAlgorithm> ToSet for T {
     /// Converts [`IdSet`] to [`Set`].
     fn to_set(&self, set: &IdSet) -> Result<Set> {
-        Set::from_spans_dag(set.clone(), self)
+        Set::from_id_set_dag(set.clone(), self)
     }
 }
