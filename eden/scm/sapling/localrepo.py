@@ -2868,18 +2868,7 @@ class localrepository:
                 m2 = m2ctx.read()
                 m = mctx.read()
 
-                # Validate that the files that are checked in can be interpreted
-                # as utf8. This is to protect against potential crashes as we
-                # move to utf8 file paths. Changing encoding is a beast on top
-                # of storage format.
-                try:
-                    for f in ctx.added():
-                        if isinstance(f, bytes):
-                            f.decode("utf-8")
-                except UnicodeDecodeError as inst:
-                    raise errormod.Abort(
-                        _("invalid file name encoding: %s!") % inst.object
-                    )
+                _validate_file_paths_utf8(ctx.added())
 
                 # check in files
                 added = []
@@ -3551,3 +3540,16 @@ def _validate_committable_ctx(ui, ctx):
             % (len(ctx.files()), file_count_limit),
             hint=hint,
         )
+
+
+def _validate_file_paths_utf8(file_paths):
+    # Validate that the files that are checked in can be interpreted
+    # as utf8. This is to protect against potential crashes as we
+    # move to utf8 file paths. Changing encoding is a beast on top
+    # of storage format.
+    try:
+        for f in file_paths:
+            if isinstance(f, bytes):
+                f.decode("utf-8")
+    except UnicodeDecodeError as inst:
+        raise errormod.Abort(_("invalid file name encoding: %s!") % inst.object)
