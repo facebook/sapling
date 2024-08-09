@@ -301,19 +301,16 @@ impl IdStaticSet {
 
     async fn max(&self) -> Result<Option<Vertex>> {
         debug_assert_eq!(self.spans.max(), self.spans.iter_desc().nth(0));
-        match self.spans.max() {
-            Some(id) => {
-                let map = &self.map;
-                let name = map.vertex_name(id).await?;
-                Ok(Some(name))
-            }
-            None => Ok(None),
-        }
+        self.resolve_optional_id(self.spans.max()).await
     }
 
     async fn min(&self) -> Result<Option<Vertex>> {
         debug_assert_eq!(self.spans.min(), self.spans.iter_desc().rev().nth(0));
-        match self.spans.min() {
+        self.resolve_optional_id(self.spans.min()).await
+    }
+
+    async fn resolve_optional_id(&self, id: Option<Id>) -> Result<Option<Vertex>> {
+        match id {
             Some(id) => {
                 let map = &self.map;
                 let name = map.vertex_name(id).await?;
