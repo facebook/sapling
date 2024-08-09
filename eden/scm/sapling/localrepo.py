@@ -2843,54 +2843,11 @@ class localrepository:
         """Add a new revision to current repository.
         Revision information is passed via the context argument.
         """
+        _validate_committable_ctx(self.ui, ctx)
 
         tr = None
         p1, p2 = ctx.p1(), ctx.p2()
         user = ctx.user()
-
-        if (
-            not self.ui.configbool("commit", "allow-non-printable")
-            and not self.ui.plain()
-        ):
-            _check_non_printable(self.ui, ctx.description())
-
-        descriptionlimit = self.ui.configbytes("commit", "description-size-limit")
-        if descriptionlimit:
-            descriptionlen = len(ctx.description())
-            if descriptionlen > descriptionlimit:
-                raise errormod.Abort(
-                    _("commit message length (%s) exceeds configured limit (%s)")
-                    % (descriptionlen, descriptionlimit)
-                )
-
-        extraslimit = self.ui.configbytes("commit", "extras-size-limit")
-        if extraslimit:
-            extraslen = sum(len(k) + len(v) for k, v in pycompat.iteritems(ctx.extra()))
-            if extraslen > extraslimit:
-                raise errormod.Abort(
-                    _("commit extras total size (%s) exceeds configured limit (%s)")
-                    % (extraslen, extraslimit)
-                )
-
-        file_count_limit = self.ui.configint("commit", "file-count-limit")
-        if file_count_limit and file_count_limit < len(ctx.files()):
-            support = self.ui.config("ui", "supportcontact")
-            if support:
-                hint = (
-                    _(
-                        "contact %s for help or use '--config commit.file-count-limit=N' cautiously to override"
-                    )
-                    % support
-                )
-            else:
-                hint = _(
-                    "use '--config commit.file-count-limit=N' cautiously to override"
-                )
-            raise errormod.Abort(
-                _("commit file count (%d) exceeds configured limit (%d)")
-                % (len(ctx.files()), file_count_limit),
-                hint=hint,
-            )
 
         isgit = git.isgitformat(self)
         lock = self.lock()
@@ -3553,3 +3510,44 @@ def _openchangelog(repo):
     repo._rsrepo.invalidatechangelog()
     inner = repo._rsrepo.changelog()
     return changelog2.changelog(repo, inner, repo.ui.uiconfig())
+
+
+def _validate_committable_ctx(ui, ctx):
+    if not ui.configbool("commit", "allow-non-printable") and not ui.plain():
+        _check_non_printable(ui, ctx.description())
+
+    descriptionlimit = ui.configbytes("commit", "description-size-limit")
+    if descriptionlimit:
+        descriptionlen = len(ctx.description())
+        if descriptionlen > descriptionlimit:
+            raise errormod.Abort(
+                _("commit message length (%s) exceeds configured limit (%s)")
+                % (descriptionlen, descriptionlimit)
+            )
+
+    extraslimit = ui.configbytes("commit", "extras-size-limit")
+    if extraslimit:
+        extraslen = sum(len(k) + len(v) for k, v in pycompat.iteritems(ctx.extra()))
+        if extraslen > extraslimit:
+            raise errormod.Abort(
+                _("commit extras total size (%s) exceeds configured limit (%s)")
+                % (extraslen, extraslimit)
+            )
+
+    file_count_limit = ui.configint("commit", "file-count-limit")
+    if file_count_limit and file_count_limit < len(ctx.files()):
+        support = ui.config("ui", "supportcontact")
+        if support:
+            hint = (
+                _(
+                    "contact %s for help or use '--config commit.file-count-limit=N' cautiously to override"
+                )
+                % support
+            )
+        else:
+            hint = _("use '--config commit.file-count-limit=N' cautiously to override")
+        raise errormod.Abort(
+            _("commit file count (%d) exceeds configured limit (%d)")
+            % (len(ctx.files()), file_count_limit),
+            hint=hint,
+        )
