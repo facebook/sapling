@@ -189,6 +189,7 @@ Show aliases with -v
   serve
   show
   status
+  subtree
   summary
   tag
   tags

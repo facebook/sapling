@@ -97,6 +97,7 @@ with hgdemandimport.deactivated():
         eden,
         fs,
         isl,
+        subtree,
         uncommit,
     )
 
