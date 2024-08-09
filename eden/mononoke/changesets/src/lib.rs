@@ -19,8 +19,6 @@ use vec1::Vec1;
 
 mod entry;
 
-pub use crate::entry::deserialize_cs_entries;
-pub use crate::entry::serialize_cs_entries;
 pub use crate::entry::ChangesetEntry;
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
