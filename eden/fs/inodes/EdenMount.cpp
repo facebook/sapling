@@ -1771,47 +1771,51 @@ ImmediateFuture<Unit> EdenMount::diff(
     bool enforceCurrentParent,
     folly::CancellationToken cancellation,
     const ObjectFetchContextPtr& fetchContext) const {
-  if (enforceCurrentParent) {
+  RootId currentWorkingCopyParentRootId;
+  {
     auto parentInfo = parentState_.rlock();
+    currentWorkingCopyParentRootId = parentInfo->workingCopyParentRootId;
+    if (enforceCurrentParent) {
+      if (std::holds_alternative<ParentCommitState::CheckoutInProgress>(
+              parentInfo->checkoutState)) {
+        return makeImmediateFuture<Unit>(newEdenError(
+            EdenErrorType::CHECKOUT_IN_PROGRESS,
+            "cannot compute status while a checkout is currently in progress"));
+      } else if (
+          auto* interrupted =
+              std::get_if<ParentCommitState::InterruptedCheckout>(
+                  &parentInfo->checkoutState)) {
+        return makeImmediateFuture<Unit>(newEdenError(
+            EdenErrorType::CHECKOUT_IN_PROGRESS,
+            fmt::format(
+                "cannot compute status while a checkout is in progress - please run 'hg update --clean {}' to resume it",
+                interrupted->toCommit)));
+      }
 
-    if (std::holds_alternative<ParentCommitState::CheckoutInProgress>(
-            parentInfo->checkoutState)) {
-      return makeImmediateFuture<Unit>(newEdenError(
-          EdenErrorType::CHECKOUT_IN_PROGRESS,
-          "cannot compute status while a checkout is currently in progress"));
-    } else if (
-        auto* interrupted = std::get_if<ParentCommitState::InterruptedCheckout>(
-            &parentInfo->checkoutState)) {
-      return makeImmediateFuture<Unit>(newEdenError(
-          EdenErrorType::CHECKOUT_IN_PROGRESS,
-          fmt::format(
-              "cannot compute status while a checkout is in progress - please run 'hg update --clean {}' to resume it",
-              interrupted->toCommit)));
+      if (currentWorkingCopyParentRootId != commitHash) {
+        // TODO: We should really add a method to FilteredBackingStore that
+        // allows us to render a FOID as the underlying ObjectId. This would
+        // avoid the round trip we're doing here.
+        auto renderedParentRootId =
+            objectStore_->renderRootId(currentWorkingCopyParentRootId);
+        auto renderedCommitHash = objectStore_->renderRootId(commitHash);
+
+        // Log this occurrence to Scuba
+        getServerState()->getStructuredLogger()->logEvent(ParentMismatch{
+            commitHash.value(), currentWorkingCopyParentRootId.value()});
+        return makeImmediateFuture<Unit>(newEdenError(
+            EdenErrorType::OUT_OF_DATE_PARENT,
+            "error computing status: requested parent commit is out-of-date: requested ",
+            folly::hexlify(renderedCommitHash),
+            ", but current parent commit is ",
+            folly::hexlify(renderedParentRootId),
+            ".\nTry running `eden doctor` to remediate"));
+      }
+
+      // TODO: Should we perhaps hold the parentInfo read-lock for the duration
+      // of the status operation?  This would block new checkout operations from
+      // starting until we have finished computing this status call.
     }
-
-    if (parentInfo->workingCopyParentRootId != commitHash) {
-      // TODO: We should really add a method to FilteredBackingStore that
-      // allows us to render a FOID as the underlying ObjectId. This would
-      // avoid the round trip we're doing here.
-      auto renderedParentRootId =
-          objectStore_->renderRootId(parentInfo->workingCopyParentRootId);
-      auto renderedCommitHash = objectStore_->renderRootId(commitHash);
-
-      // Log this occurrence to Scuba
-      getServerState()->getStructuredLogger()->logEvent(ParentMismatch{
-          commitHash.value(), parentInfo->workingCopyParentRootId.value()});
-      return makeImmediateFuture<Unit>(newEdenError(
-          EdenErrorType::OUT_OF_DATE_PARENT,
-          "error computing status: requested parent commit is out-of-date: requested ",
-          folly::hexlify(renderedCommitHash),
-          ", but current parent commit is ",
-          folly::hexlify(renderedParentRootId),
-          ".\nTry running `eden doctor` to remediate"));
-    }
-
-    // TODO: Should we perhaps hold the parentInfo read-lock for the duration
-    // of the status operation?  This would block new checkout operations from
-    // starting until we have finished computing this status call.
   }
 
   // Create a DiffContext object for this diff operation.
