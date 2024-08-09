@@ -18,8 +18,6 @@ blobrepo_hg = { version = "0.1.0", path = "../blobrepo/blobrepo_hg" }
 blobstore = { version = "0.1.0", path = "../blobstore" }
 bonsai_hg_mapping = { version = "0.1.0", path = "../bonsai_hg_mapping" }
 bookmarks = { version = "0.1.0", path = "../bookmarks" }
-bytes = { version = "1.6.0", features = ["serde"] }
-changesets = { version = "0.1.0", path = "../changesets" }
 clap = { version = "4.5.11", features = ["derive", "env", "string", "unicode", "wrap_help"] }
 commit_graph = { version = "0.1.0", path = "../repo_attributes/commit_graph/commit_graph" }
 context = { version = "0.1.0", path = "../server/context" }
@@ -39,6 +37,7 @@ repo_blobstore = { version = "0.1.0", path = "../blobrepo/repo_blobstore" }
 repo_derived_data = { version = "0.1.0", path = "../repo_attributes/repo_derived_data" }
 repo_identity = { version = "0.1.0", path = "../repo_attributes/repo_identity" }
 scuba_ext = { version = "0.1.0", path = "../common/scuba_ext" }
+serde_json = { version = "1.0.100", features = ["float_roundtrip", "unbounded_depth"] }
 sharding_ext = { version = "0.1.0", path = "../cmdlib/sharding_ext" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
@@ -46,6 +45,7 @@ tokio = { version = "1.37.0", features = ["full", "test-util", "tracing"] }
 
 [dev-dependencies]
 borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+bytes = { version = "1.6.0", features = ["serde"] }
 fixtures = { version = "0.1.0", path = "../tests/fixtures" }
 maplit = "1.0"
 tests_utils = { version = "0.1.0", path = "../tests/utils" }
