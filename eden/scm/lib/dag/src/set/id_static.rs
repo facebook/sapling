@@ -18,6 +18,7 @@ use super::hints::Flags;
 use super::AsyncSetQuery;
 use super::BoxVertexStream;
 use super::Hints;
+use crate::idset::IdList;
 use crate::ops::DagAlgorithm;
 use crate::ops::IdConvert;
 use crate::protocol::disable_remote_protocol;
@@ -48,6 +49,10 @@ enum IterationOrder {
     Asc,
     /// From larger ids to smaller ids.
     Desc,
+    /// Custom iteration order. Must match `IdStaticSet.spans`.
+    Custom(IdList),
+    /// Custom iteration order, reversed.
+    CustomReversed(IdList),
 }
 
 /// Basic iteration order. A subset of `IterationOrder`.
@@ -268,6 +273,17 @@ impl IdStaticSet {
                 self.hints.add_flags(Flags::ID_DESC | Flags::TOPO_DESC);
                 self.iteration_order = IterationOrder::Desc
             }
+            IterationOrder::Custom(list) => {
+                // Conservatively drop order-related flags.
+                self.hints
+                    .remove_flags(Flags::ID_ASC | Flags::ID_DESC | Flags::TOPO_DESC);
+                self.iteration_order = IterationOrder::CustomReversed(list);
+            }
+            IterationOrder::CustomReversed(list) => {
+                self.hints
+                    .remove_flags(Flags::ID_ASC | Flags::ID_DESC | Flags::TOPO_DESC);
+                self.iteration_order = IterationOrder::Custom(list);
+            }
         }
         self
     }
@@ -322,7 +338,7 @@ impl IdStaticSet {
 
     pub(crate) fn slice_spans(mut self, skip: u64, take: u64) -> Self {
         let (skip, take) = match self.iteration_order {
-            IterationOrder::Asc => {
+            IterationOrder::Asc | IterationOrder::CustomReversed(_) => {
                 let len = self.spans.count();
                 // [---take1----][skip]
                 // [skip2][take2][skip]
@@ -332,17 +348,28 @@ impl IdStaticSet {
                 let skip2 = take1 - take2;
                 (skip2, take2)
             }
-            IterationOrder::Desc => {
+            IterationOrder::Desc | IterationOrder::Custom(_) => {
                 // [skip][take][---]
                 // [------len------]
                 (skip, take)
             }
         };
-        match (skip, take) {
-            (0, u64::MAX) => {}
-            (0, _) => self.spans = self.spans.take(take),
-            (_, u64::MAX) => self.spans = self.spans.skip(skip),
-            _ => self.spans = self.spans.skip(skip).take(take),
+        match self.iteration_order {
+            IterationOrder::Custom(ref mut list) | IterationOrder::CustomReversed(ref mut list) => {
+                match (skip, take) {
+                    (0, u64::MAX) => {}
+                    (0, _) => *list = list.take(take),
+                    (_, u64::MAX) => *list = list.skip(skip),
+                    _ => *list = list.skip(skip).take(take),
+                };
+                self.spans = list.to_set();
+            }
+            _ => match (skip, take) {
+                (0, u64::MAX) => {}
+                (0, _) => self.spans = self.spans.take(take),
+                (_, u64::MAX) => self.spans = self.spans.skip(skip),
+                _ => self.spans = self.spans.skip(skip).take(take),
+            },
         }
         self
     }
@@ -390,6 +417,12 @@ impl AsyncSetQuery for IdStaticSet {
         match self.iteration_order {
             IterationOrder::Asc => self.min().await,
             IterationOrder::Desc => self.max().await,
+            IterationOrder::Custom(ref list) => {
+                self.resolve_optional_id(list.into_iter().next()).await
+            }
+            IterationOrder::CustomReversed(ref list) => {
+                self.resolve_optional_id(list.into_iter().next_back()).await
+            }
         }
     }
 
@@ -397,6 +430,12 @@ impl AsyncSetQuery for IdStaticSet {
         match self.iteration_order {
             IterationOrder::Asc => self.max().await,
             IterationOrder::Desc => self.min().await,
+            IterationOrder::Custom(ref list) => {
+                self.resolve_optional_id(list.into_iter().next_back()).await
+            }
+            IterationOrder::CustomReversed(ref list) => {
+                self.resolve_optional_id(list.into_iter().next()).await
+            }
         }
     }
 
