@@ -793,8 +793,17 @@ pub struct OrderedSpan {
 }
 
 impl OrderedSpan {
-    fn count(&self) -> u64 {
+    /// Number of `Id`s in the span. Must >= 1.
+    pub fn count(&self) -> u64 {
         self.start.0.abs_diff(self.end.0) + 1
+    }
+
+    pub fn min(&self) -> Id {
+        self.start.min(self.end)
+    }
+
+    pub fn max(&self) -> Id {
+        self.start.max(self.end)
     }
 
     fn nth(&self, n: u64) -> Option<Id> {
