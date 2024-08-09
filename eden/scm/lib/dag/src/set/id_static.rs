@@ -216,6 +216,64 @@ impl IdStaticSet {
         }
     }
 
+    /// Construct from `list`, `map`, `dag`. The ids in the `list` must match the map and dag.
+    pub(crate) fn from_id_list_idmap_dag(
+        list: IdList,
+        map: Arc<dyn IdConvert + Send + Sync>,
+        dag: Arc<dyn DagAlgorithm + Send + Sync>,
+    ) -> Self {
+        let hints = Hints::new_with_idmap_dag(map.clone(), dag.clone());
+
+        // Calculate hints (flags, min_id, max_id).
+        let mut flags = Flags::ID_DESC | Flags::TOPO_DESC | Flags::ID_ASC | Flags::EMPTY;
+        let mut min_id = None;
+        let mut max_id = None;
+        let mut last_min_id = None;
+        let mut last_max_id = None;
+        for span in list.as_spans() {
+            let (this_min_id, this_max_id) = (span.min(), span.max());
+            flags -= Flags::EMPTY;
+            if span.start < span.end || last_min_id.unwrap_or(Id::MAX) < this_max_id {
+                // Not DESC or TOPO.
+                flags -= Flags::ID_DESC | Flags::TOPO_DESC;
+            }
+            if span.start > span.end || last_max_id.unwrap_or(Id::MIN) > this_min_id {
+                // Not ASC.
+                flags -= Flags::ID_ASC;
+            }
+            (last_min_id, last_max_id) = (Some(this_min_id), Some(this_max_id));
+            min_id = Some(this_min_id.min(min_id.unwrap_or(Id::MAX)));
+            max_id = Some(this_max_id.max(max_id.unwrap_or(Id::MIN)));
+        }
+
+        hints.add_flags(flags);
+        if let Some(min_id) = min_id {
+            hints.set_min_id(min_id);
+        }
+        if let Some(max_id) = max_id {
+            hints.set_max_id(max_id);
+        }
+
+        let spans = list.to_set();
+
+        // If `list` is already sorted, then just use BasicIterationOrder.
+        let iteration_order = if flags.contains(Flags::ID_DESC) {
+            IterationOrder::Desc
+        } else if flags.contains(Flags::ID_ASC) {
+            IterationOrder::Asc
+        } else {
+            IterationOrder::Custom(list)
+        };
+
+        Self {
+            spans,
+            map,
+            hints,
+            dag,
+            iteration_order,
+        }
+    }
+
     /// Get the low-level `IdSet`, which no longer preserves iteration order.
     pub(crate) fn id_set_losing_order(&self) -> &IdSet {
         &self.spans
@@ -520,6 +578,7 @@ pub(crate) mod tests {
     use super::super::tests::*;
     use super::super::Set;
     use super::*;
+    use crate::ops::IdMapSnapshot;
     use crate::set::difference::DifferenceSet;
     use crate::set::intersection::IntersectionSet;
     use crate::set::slice::SliceSet;
@@ -1023,6 +1082,73 @@ pub(crate) mod tests {
             assert_eq!(
                 dbg(r(dag.ancestors(bfg.clone()))?),
                 "<spans [F:G+5:6, B+1]>"
+            );
+
+            Ok(())
+        })
+    }
+
+    #[test]
+    fn test_custom_order_hints() -> Result<()> {
+        with_dag(|dag| -> Result<()> {
+            // Valid Ids are 0 to 6.
+            let map = dag.id_map_snapshot()?;
+            let dag = dag.dag_snapshot()?;
+            let show_hints = move |ids: &[u64]| {
+                let list = IdList::from_ids(ids.iter().map(|&id| Id(id)));
+                let set = IdStaticSet::from_id_list_idmap_dag(list, map.clone(), dag.clone());
+                check_invariants(&set).unwrap();
+                let set_reversed = set.clone().reversed();
+                check_invariants(&set_reversed).unwrap();
+                let hints = set.hints();
+                format!(
+                    "Order: {:?} Min: {:?} Max: {:?} {:?}",
+                    set.iteration_order(),
+                    hints.min_id(),
+                    hints.max_id(),
+                    hints.flags(),
+                )
+            };
+
+            assert_eq!(
+                show_hints(&[]),
+                "Order: Some(Desc) Min: None Max: None Flags(EMPTY | ID_DESC | ID_ASC | TOPO_DESC | ANCESTORS)"
+            );
+            assert_eq!(
+                show_hints(&[2]),
+                "Order: Some(Desc) Min: Some(2) Max: Some(2) Flags(ID_DESC | ID_ASC | TOPO_DESC | HAS_MIN_ID | HAS_MAX_ID)"
+            );
+            assert_eq!(
+                show_hints(&[1, 2]),
+                "Order: Some(Asc) Min: Some(1) Max: Some(2) Flags(ID_ASC | HAS_MIN_ID | HAS_MAX_ID)"
+            );
+            assert_eq!(
+                show_hints(&[2, 1]),
+                "Order: Some(Desc) Min: Some(1) Max: Some(2) Flags(ID_DESC | TOPO_DESC | HAS_MIN_ID | HAS_MAX_ID)"
+            );
+            assert_eq!(
+                show_hints(&[1, 2, 4, 5]),
+                "Order: Some(Asc) Min: Some(1) Max: Some(5) Flags(ID_ASC | HAS_MIN_ID | HAS_MAX_ID)"
+            );
+            assert_eq!(
+                show_hints(&[5, 4, 2, 1]),
+                "Order: Some(Desc) Min: Some(1) Max: Some(5) Flags(ID_DESC | TOPO_DESC | HAS_MIN_ID | HAS_MAX_ID)"
+            );
+            assert_eq!(
+                show_hints(&[4, 5, 1, 2]),
+                "Order: None Min: Some(1) Max: Some(5) Flags(HAS_MIN_ID | HAS_MAX_ID)"
+            );
+            assert_eq!(
+                show_hints(&[2, 1, 5, 4]),
+                "Order: None Min: Some(1) Max: Some(5) Flags(HAS_MIN_ID | HAS_MAX_ID)"
+            );
+            assert_eq!(
+                show_hints(&[4, 5, 1]),
+                "Order: None Min: Some(1) Max: Some(5) Flags(HAS_MIN_ID | HAS_MAX_ID)"
+            );
+            assert_eq!(
+                show_hints(&[2, 1, 5]),
+                "Order: None Min: Some(1) Max: Some(5) Flags(HAS_MIN_ID | HAS_MAX_ID)"
             );
 
             Ok(())
