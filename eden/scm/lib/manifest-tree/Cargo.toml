@@ -30,6 +30,7 @@ tracing = { version = "0.1.40", features = ["attributes", "valuable"] }
 types = { version = "0.1.0", path = "../types" }
 
 [dev-dependencies]
+dev-logger = { version = "0.1.0", path = "../dev-logger" }
 manifest = { version = "0.1.0", path = "../manifest", features = ["for-tests"], default-features = false }
 minibench = { version = "0.1.0", path = "../minibench" }
 quickcheck = "1.0"

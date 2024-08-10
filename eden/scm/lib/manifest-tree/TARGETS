@@ -53,7 +53,10 @@ rust_library(
     },
     crate_root = "src/lib.rs",
     features = ["for-tests"],
-    test_deps = ["fbsource//third-party/rust:quickcheck"],
+    test_deps = [
+        "fbsource//third-party/rust:quickcheck",
+        "//eden/scm/lib/dev-logger:dev-logger",
+    ],
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:crossbeam",

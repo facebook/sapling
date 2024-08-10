@@ -913,6 +913,9 @@ pub fn init() {
 }
 
 #[cfg(test)]
+dev_logger::init!();
+
+#[cfg(test)]
 mod tests {
     use manifest::testutil::*;
     use manifest::FileType;
