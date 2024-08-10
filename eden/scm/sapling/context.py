@@ -3393,6 +3393,89 @@ class metadataonlyctx(committablectx):
         return scmutil.status(modified, added, removed, [], [], [], [])
 
 
+class subtreecopyctx(committablectx):
+
+    def __new__(cls, repo, to_mctx, *args, **kwargs):
+        return super(subtreecopyctx, cls).__new__(cls, repo)
+
+    def __init__(
+        self,
+        repo,
+        from_ctx,
+        to_ctx,
+        from_paths,
+        to_paths,
+        text=None,
+        user=None,
+        date=None,
+        extra=None,
+        editor=False,
+        loginfo=None,
+        mutinfo=None,
+    ):
+        super(subtreecopyctx, self).__init__(
+            repo, text, user, date, extra, loginfo=loginfo, mutinfo=mutinfo
+        )
+        self._from_ctx = from_ctx
+        self._to_ctx = to_ctx
+        self._to_mctx = to_ctx.manifestctx().copy()
+        self._to_mf = self._to_mctx.read()
+        self._manifest = self._to_mf
+
+        self._from_paths = from_paths
+        self._to_paths = to_paths
+        self._parents = [to_ctx]
+
+        if editor:
+            self._text = editor(self._repo, self)
+            self._repo.savecommitmessage(self._text)
+
+    def write_manifest_and_compute_files(self, tr):
+        from_mf = self._from_ctx.manifest()
+        to_mf = self._to_mf
+
+        for from_path, to_path in zip(self._from_paths, self._to_paths):
+            to_mf.graft(to_path, from_mf, from_path)
+
+        # todo: handle git repo
+
+        linkrev = len(self._repo)
+        mn = self._to_mctx.write(
+            tr,
+            linkrev,
+            self.p1().manifestnode(),
+            nullid,
+            added=[],
+            removed=[],
+        )
+
+        return mn, self.files()
+
+    def filectx(self, path, filelog=None):
+        raise NotImplementedError()
+
+    def files(self):
+        return []
+
+    def commit(self):
+        """commit context to the repo"""
+        return self._repo.commitctx(self)
+
+    @propertycache
+    def _status(self):
+        # todo: may need to handle `subtree copy + modification` here
+        # set status files to empty to avoid files scan
+        return scmutil.status(
+            modified=[],
+            added=[],
+            removed=[],
+            deleted=[],
+            unknown=[],
+            ignored=[],
+            clean=[],
+        )
+
+
 class arbitraryfilectx:
     """Allows you to use filectx-like functions on a file in an arbitrary
     location on disk, possibly not in the working directory.
