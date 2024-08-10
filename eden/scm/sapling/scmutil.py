@@ -1520,16 +1520,3 @@ def setup(ui):
 
         def revf64encode(rev):
             return rev
-
-
-def validate_file_paths_utf8(file_paths):
-    # Validate that the files that are checked in can be interpreted
-    # as utf8. This is to protect against potential crashes as we
-    # move to utf8 file paths. Changing encoding is a beast on top
-    # of storage format.
-    try:
-        for f in file_paths:
-            if isinstance(f, bytes):
-                f.decode("utf-8")
-    except UnicodeDecodeError as inst:
-        raise error.Abort(_("invalid file name encoding: %s!") % inst.object)

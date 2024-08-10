@@ -1619,8 +1619,6 @@ class committablectx(basectx):
             # reuse parent manifest in commitctx if no files have changed
             return self.p1().manifestnode(), []
 
-        scmutil.validate_file_paths_utf8(self.added())
-
         repo = self._repo
         ui = repo.ui
         isgit = git.isgitformat(repo)
