@@ -69,7 +69,9 @@ class StaleMountsCheckTest(DoctorTestBase):
         self.assertEqual([], self.mount_table.unmount_lazy_calls)
         self.assertEqual([], self.mount_table.unmount_force_calls)
 
-    def test_force_unmounts_if_lazy_fails(self) -> None:
+    @patch("eden.fs.cli.doctor.check_stale_mounts.get_sudo_perms")
+    def test_force_unmounts_if_lazy_fails(self, mock_get_sudo_perms: MagicMock) -> None:
+        mock_get_sudo_perms.return_value = True
         self.mount_table.add_stale_mount("/mnt/stale1")
         self.mount_table.add_stale_mount("/mnt/stale2")
         self.mount_table.fail_unmount_lazy(b"/mnt/stale1")
@@ -92,7 +94,9 @@ Unmounting 2 stale edenfs mounts...<green>fixed<reset>
         )
         self.assertEqual([b"/mnt/stale1"], self.mount_table.unmount_force_calls)
 
-    def test_unmount_for_fuseedenfs_mount(self) -> None:
+    @patch("eden.fs.cli.doctor.check_stale_mounts.get_sudo_perms")
+    def test_unmount_for_fuseedenfs_mount(self, mock_get_sudo_perms: MagicMock) -> None:
+        mock_get_sudo_perms.return_value = True
         self.mount_table.add_stale_mount("/mnt/fuseedenfs", vfstype="fuse.edenfs")
 
         fixer, out = self.run_check(dry_run=False)
@@ -154,7 +158,9 @@ Would unmount 2 stale edenfs mounts
         self.assertEqual([], self.mount_table.unmount_lazy_calls)
         self.assertEqual([], self.mount_table.unmount_force_calls)
 
-    def test_fails_if_unmount_fails(self) -> None:
+    @patch("eden.fs.cli.doctor.check_stale_mounts.get_sudo_perms")
+    def test_fails_if_unmount_fails(self, mock_get_sudo_perms: MagicMock) -> None:
+        mock_get_sudo_perms.return_value = True
         self.mount_table.add_stale_mount("/mnt/stale1")
         self.mount_table.add_stale_mount("/mnt/stale2")
         self.mount_table.fail_unmount_lazy(b"/mnt/stale1", b"/mnt/stale2")
@@ -215,7 +221,11 @@ Failed to fix or verify fix for problem StaleMountsFound: RemediationError: Fail
             "\n".join(logs_assertion.output),
         )
 
-    def test_does_unmount_if_stale_mount_is_unconnected(self) -> None:
+    @patch("eden.fs.cli.doctor.check_stale_mounts.get_sudo_perms")
+    def test_does_unmount_if_stale_mount_is_unconnected(
+        self, mock_get_sudo_perms: MagicMock
+    ) -> None:
+        mock_get_sudo_perms.return_value = True
         self.mount_table.add_stale_mount("/mnt/stale1")
 
         fixer, out = self.run_check(dry_run=False)
@@ -251,3 +261,20 @@ Unmounting 1 stale edenfs mount...<green>fixed<reset>
         self.assert_results(fixer, num_problems=0)
         self.assertEqual([], self.mount_table.unmount_lazy_calls)
         self.assertEqual([], self.mount_table.unmount_force_calls)
+
+    @patch("eden.fs.cli.doctor.check_stale_mounts.get_sudo_perms")
+    def test_missing_sudo_perms(self, mock_get_sudo_perms: MagicMock) -> None:
+        mock_get_sudo_perms.return_value = False
+        self.mount_table.add_stale_mount("/mnt/stale1")
+
+        fixer, out = self.run_check(dry_run=False)
+        self.assertRegex(
+            out,
+            r"""<yellow>- Found problem:<reset>
+Found 1 stale edenfs mount:
+  /mnt/stale1
+Unmounting 1 stale edenfs mount...<red>error<reset>
+Failed to fix or verify fix for problem StaleMountsFound: RemediationError: Unable to unmount stale mounts due to missing sudo permissions.
+(.*|\n)+
+""",
+        )
