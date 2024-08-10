@@ -228,7 +228,6 @@ $4 = expected result
    ancestor: 924404dff337, local: 94b33a1b7f2d+, remote: 4ce40f5aca24
    preserving a for resolve of b
    preserving rev for resolve of rev
-   b: remote copied from a -> m (premerge)
    rev: versions differ -> m (premerge)
   picktool() ignoring eval error ('invalid token', *) (glob)
   merge tool script: * ../merge (glob)
@@ -292,7 +291,6 @@ $4 = expected result
    preserving a for resolve of b
    preserving rev for resolve of rev
   removing a
-   b: remote moved from a -> m (premerge)
    rev: versions differ -> m (premerge)
   picktool() ignoring eval error ('invalid token', *) (glob)
   merge tool script: * ../merge (glob)

@@ -35,7 +35,8 @@ https://bz.mercurial-scm.org/672
    ancestor: 81f4b099af3d, local: c64f439569a9+, remote: c12dcd37c90a
    preserving 1 for resolve of 1a
   removing 1
-   1a: remote moved from 1 -> m (premerge)
+   1a: remote moved from 1 -> g
+  getting 1a
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
 

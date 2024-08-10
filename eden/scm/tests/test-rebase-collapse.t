@@ -260,7 +260,6 @@ Rebase and collapse - E onto I:
   $ hg rebase -s $E --dest $I --collapse # root (E) is not a merge
   rebasing 49cb92066bfd "E"
   rebasing 3cf8a9483881 "F"
-  merging E
   rebasing 066fd31e12b9 "G"
   rebasing c8947cb2e149 "H"
 

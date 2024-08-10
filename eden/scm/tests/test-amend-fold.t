@@ -67,7 +67,6 @@ Test rebasing of stack after fold.
   2 changesets folded
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   rebasing b762560d23fd "r4"
-  merging mf
   $ showgraph
   o  222fc5a0f200 r4
   │
@@ -88,13 +87,9 @@ Test rebasing of multiple children
   2 changesets folded
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   rebasing 77d787dfa5b6 "r5"
-  merging mf
   rebasing dd0541003d21 "r6"
-  merging mf
   rebasing fac8d040c80b "r2"
-  merging mf
   rebasing 222fc5a0f200 "r4"
-  merging mf
   $ showgraph
   o  04e715445afa r4
   │
@@ -140,9 +135,7 @@ rebase is not on the topmost folded commit.
   rebasing 9c9414e0356c "r7"
   merging mf
   rebasing a422badec216 "r3"
-  merging mf
   rebasing b762560d23fd "r4"
-  merging mf
   $ showgraph
   o  ff604a92f161 r4
   │
@@ -176,9 +169,7 @@ Also test that using node hashes instead of rev numbers works.
   $ hg fold --exact 09bb8c f07e66 cb14eb
   3 changesets folded
   rebasing aa70f0fe546a "r4"
-  merging mf
   rebasing f2987ebe5838 "r5"
-  merging mf
   $ showgraph
   o  30b9661c9b66 r5
   │

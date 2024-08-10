@@ -45,15 +45,29 @@
   $ hg up -q $C
   $ hg graft book-B
   grafting b55db8435dc2 "B2" (book-B)
-  unresolved: ['D', 'E']
 
   $ hg status
-  $ hg log -r . -T '{desc}\n' --stat
-  B2
-   B |  1 +
-   D |  1 +
-   E |  1 +
-   3 files changed, 3 insertions(+), 0 deletions(-)
+
+Be sure to record copy metadata.
+  $ hg log -r . -p --config diff.git=true
+  commit:      599c51a4e5d9
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     B2
+  
+  diff --git a/B b/B
+  new file mode 100644
+  --- /dev/null
+  +++ b/B
+  @@ -0,0 +1,1 @@
+  +B
+  \ No newline at end of file
+  diff --git a/A b/D
+  copy from A
+  copy to D
+  diff --git a/A b/E
+  copy from A
+  copy to E
 
 # Run again with dagcopytrace disabled:
 
@@ -62,4 +76,3 @@
   $ hg up -q $C
   $ hg graft book-B
   grafting b55db8435dc2 "B2" (book-B)
-  unresolved: ['D', 'E']

@@ -270,11 +270,8 @@ Update back to before we performed copies, and inject an unrelated change.
 Rebase the copies on top of the unrelated change.
   $ hg rebase --source 79d255d24ad2cabeb3e52091338517bb09339f2f --dest 'desc(Unrelated)'
   rebasing 79d255d24ad2 "File b created as copy of a and modified"
-  merging a and b to b
   rebasing 327f772bc074 "File c created as copy of b and modified"
-  merging b and c to c
   rebasing 421b7e82bb85 "File d created as copy of c and modified"
-  merging c and d to d
   $ hg goto 'max(desc(File))'
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -296,11 +293,8 @@ copy records collapse correctly.
   $ hg ci -m 'unrelated commit is unrelated'
   $ hg rebase -s 68bf06433839 --dest 'max(desc(unrelated))' --collapse
   rebasing 68bf06433839 "File b created as copy of a and modified"
-  merging a and b to b
   rebasing af74b229bc02 "File c created as copy of b and modified"
-  merging b and c to c
   rebasing dbb9ba033561 "File d created as copy of c and modified"
-  merging c and d to d
   $ hg co tip
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 

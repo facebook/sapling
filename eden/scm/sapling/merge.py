@@ -1334,11 +1334,14 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
     for m, l in actions.items():
         l.sort()
 
+    # These are m(erge) actions that aren't actually conflicts, such as remote copying a
+    # file. We don't want to expose them to merge drivers since merge drivers might get
+    # confused.
+    extra_gets = []
+
     # 'cd' and 'dc' actions are treated like other merge conflicts
-    mergeactions = sorted(actions["cd"])
-    mergeactions.extend(sorted(actions["dc"]))
-    mergeactions.extend(actions["m"])
-    for f, args, msg in mergeactions:
+    mergeactions = []
+    for f, args, msg in actions["cd"] + actions["dc"] + actions["m"]:
         f1, f2, fa, move, anc = args
         if f1 is None:
             fcl = filemerge.absentfilectx(wctx, fa)
@@ -1358,7 +1361,22 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
         # Skip submodules for now
         if fcl.flags() == "m" or fco.flags() == "m":
             continue
-        ms.add(fcl, fco, fca, f)
+
+        # Whether local file and ancestor file differ in any way.
+        conflicting = (
+            fca.cmp(fcl) or fca.flags() != fcl.flags() or fca.path() != fcl.path()
+        )
+
+        if conflicting:
+            ms.add(fcl, fco, fca, f)
+            mergeactions.append((f, args, msg))
+        else:
+            # Ancestor file and local file are identical - no real conflict. Turn this
+            # action into a "g", and don't record in mergestate. We keep it an "m" in
+            # actions so that recordupdates() has all the "m" info to record copy
+            # information.
+            extra_gets.append((f, (f2, fco.flags(), False), msg))
+
         if f1 != f and move:
             moves.append(f1)
 
@@ -1449,6 +1467,8 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
         # get in parallel
         writesize = 0
 
+        get_actions = actions["g"] + actions["rg"] + extra_gets
+
         if rustworkers:
             numworkers = repo.ui.configint(
                 "experimental", "numworkerswriter", worker._numworkers(repo.ui)
@@ -1461,7 +1481,7 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
             slinkfix = pycompat.iswindows and repo.wvfs._cansymlink
             slinks = []
             ftof2 = {}
-            for f, (f2, flags, backup), msg in actions["g"] + actions["rg"]:
+            for f, (f2, flags, backup), msg in get_actions:
                 if f != f2:
                     ftof2[f] = f2
                 if slinkfix and "l" in flags:
@@ -1481,13 +1501,11 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
             if slinkfix:
                 nativecheckout.fixsymlinks(slinks, repo.wvfs.base)
         else:
-            for i, size, item in batchget(
-                repo, mctx, wctx, actions["g"] + actions["rg"]
-            ):
+            for i, size, item in batchget(repo, mctx, wctx, get_actions):
                 z += i
                 writesize += size
                 prog.value = (z, item)
-        updated = len(actions["g"]) + len(actions["rg"])
+        updated = len(get_actions)
         perftrace.tracebytes("Disk Writes", writesize)
 
         # forget (manifest only, just log it) (must come first)

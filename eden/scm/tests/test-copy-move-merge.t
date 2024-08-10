@@ -120,7 +120,6 @@ Verify disabling copy tracing still keeps copies from rebase source
   
   $ hg rebase -d . -b 'desc(copy)'
   rebasing 6adcf8c12e7d "copy b->x"
-  merging b and x to x
   $ hg up -q 'max(desc(copy))'
   $ hg log -f x -T '{desc}\n'
   copy b->x
@@ -152,7 +151,6 @@ Verify we duplicate existing copies, instead of detecting them
   
   $ hg rebase -d 'desc(move)' -s 'max(desc(copy))'
   rebasing 47e1a9e6273b "copy a->b (2)"
-  merging a and b to b
 
   $ hg log -G -f b
   @  commit:      76024fb4b05b
