@@ -1609,6 +1609,112 @@ class committablectx(basectx):
     def manifestnode(self):
         return None
 
+    def write_manifest_and_compute_files(self, tr):
+        """write manifest and compute files, returns (manifestnode, files) pair.
+
+        This is used in `repo.commitctx()` when committing the context. Subclasses
+        may override this function to reuse existing manifest.
+        """
+        if not self.files():
+            # reuse parent manifest in commitctx if no files have changed
+            return self.p1().manifestnode(), []
+
+        scmutil.validate_file_paths_utf8(self.added())
+
+        repo = self._repo
+        ui = repo.ui
+        isgit = git.isgitformat(repo)
+
+        p1, p2 = self.p1(), self.p2()
+
+        m1ctx = p1.manifestctx()
+        m2ctx = p2.manifestctx()
+        mctx = m1ctx.copy()
+
+        m1 = m1ctx.read()
+        m2 = m2ctx.read()
+        m = mctx.read()
+
+        # check in files
+        added = []
+        changed = []
+
+        removed = []
+        drop = []
+
+        def handleremove(f):
+            if f in m1 or f in m2:
+                removed.append(f)
+                if f in m:
+                    del m[f]
+                    drop.append(f)
+
+        for f in self.removed():
+            handleremove(f)
+        for f in sorted(self.modified() + self.added()):
+            if self[f] is None:
+                # in memctx this means removal
+                handleremove(f)
+            else:
+                added.append(f)
+
+        linkrev = len(repo)
+        ui.note(_("committing files:\n"))
+
+        if not isgit:
+            # Prefetch rename data, since _filecommit will look for it.
+            # (git does not need this step)
+            if hasattr(repo.fileslog, "metadatastore"):
+                keys = []
+                for f in added:
+                    fctx = self[f]
+                    if fctx.filenode() is not None:
+                        keys.append((fctx.path(), fctx.filenode()))
+                repo.fileslog.metadatastore.prefetch(keys)
+        for f in progress.each(ui, added, _("committing"), _("files")):
+            ui.note(f + "\n")
+            try:
+                fctx = self[f]
+                if isgit:
+                    filenode = repo._filecommitgit(fctx)
+                else:
+                    filenode = repo._filecommit(fctx, m1, m2, linkrev, tr, changed)
+                assert filenode != nullid, "manifest should not have nullid"
+                m.set(f, filenode, fctx.flags())
+            except OSError:
+                ui.warn(_("trouble committing %s!\n") % f)
+                raise
+            except IOError as inst:
+                errcode = getattr(inst, "errno", errno.ENOENT)
+                if error or errcode and errcode != errno.ENOENT:
+                    ui.warn(_("trouble committing %s!\n") % f)
+                raise
+
+        # update manifest
+        ui.note(_("committing manifest\n"))
+        removed = sorted(removed)
+        drop = sorted(drop)
+        if added or drop:
+            if isgit:
+                mn = mctx.writegit()
+            else:
+                mn = (
+                    mctx.write(
+                        tr,
+                        linkrev,
+                        p1.manifestnode(),
+                        p2.manifestnode(),
+                        added,
+                        drop,
+                    )
+                    or p1.manifestnode()
+                )
+        else:
+            mn = p1.manifestnode()
+        files = changed + removed
+
+        return mn, files
+
     def user(self):
         return self._user or self._repo.ui.username()
 
@@ -3244,6 +3350,10 @@ class metadataonlyctx(committablectx):
 
     def manifestnode(self):
         return self._manifestnode
+
+    def write_manifest_and_compute_files(self, tr):
+        # reuse the existing manifest revision
+        return self.manifestnode(), self.files()
 
     @property
     def _manifestctx(self):
