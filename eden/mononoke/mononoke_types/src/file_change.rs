@@ -126,6 +126,18 @@ impl TrackedFileChange {
         )
     }
 
+    /// Drops the Git-LFS information from file change
+    /// useful when mirroring commits to repos that don't support Git-LFS.
+    pub fn without_git_lfs(&self) -> Self {
+        Self::new(
+            self.inner.content_id,
+            self.inner.file_type,
+            self.inner.size,
+            self.copy_from.clone(),
+            GitLfs::FullContent,
+        )
+    }
+
     pub(crate) fn into_thrift(self) -> thrift::bonsai::FileChange {
         thrift::bonsai::FileChange {
             content_id: self.inner.content_id.into_thrift(),
@@ -300,6 +312,14 @@ impl FileChange {
         match &self {
             Self::Change(tc) => Some(tc.size()),
             Self::UntrackedChange(uc) => Some(uc.size),
+            Self::Deletion | Self::UntrackedDeletion => None,
+        }
+    }
+
+    pub fn git_lfs(&self) -> Option<GitLfs> {
+        match &self {
+            Self::Change(tc) => Some(tc.git_lfs()),
+            Self::UntrackedChange(uc) => Some(uc.git_lfs),
             Self::Deletion | Self::UntrackedDeletion => None,
         }
     }

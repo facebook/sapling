@@ -594,7 +594,9 @@ pub fn rewrite_commit_with_implicit_deletes<'a>(
                         })
                         .transpose()?;
 
-                    Ok(FileChange::Change(change.with_new_copy_from(new_copy_from)))
+                    Ok(FileChange::Change(
+                        change.with_new_copy_from(new_copy_from).without_git_lfs(),
+                    ))
                 }
 
                 // Rewrite both path and changes
@@ -1756,6 +1758,54 @@ mod test {
         );
 
         assert_eq!(multi_mover(&MPath::ROOT)?, vec![MPath::new("prefix")?]);
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn test_rewrite_lfs_file(fb: FacebookInit) -> Result<(), Error> {
+        let repo: blobrepo::BlobRepo = TestRepoFactory::new(fb)?.build().await?;
+        let ctx = CoreContext::test_mock(fb);
+        let mapping_rules = SourceMappingRules {
+            default_prefix: "small".to_string(),
+            ..Default::default()
+        };
+        let multi_mover = create_source_to_target_multi_mover(mapping_rules)?;
+        // Add an LFS file to the repo
+        let first = CreateCommitContext::new_root(&ctx, &repo)
+            .add_file("foo.php", "foo content")
+            .add_file_with_type_and_lfs(
+                "large.avi",
+                "large file content",
+                FileType::Regular,
+                GitLfs::canonical_pointer(),
+            )
+            .commit()
+            .await?;
+
+        let first_rewritten_bcs_id = test_rewrite_commit_cs_id(
+            &ctx,
+            &repo,
+            first,
+            HashMap::new(),
+            multi_mover.clone(),
+            None,
+        )
+        .await?;
+
+        let first_rewritten_bcs = first_rewritten_bcs_id
+            .load(&ctx, &repo.repo_blobstore())
+            .await?;
+        let changes: Vec<_> = first_rewritten_bcs
+            .file_changes()
+            .map(|(path, change)| (path.to_string(), change.git_lfs().unwrap()))
+            .collect();
+        assert_eq!(
+            changes,
+            vec![
+                ("small/foo.php".to_string(), GitLfs::full_content()),
+                ("small/large.avi".to_string(), GitLfs::full_content())
+            ],
+        );
         Ok(())
     }
 }
