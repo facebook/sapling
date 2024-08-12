@@ -41,6 +41,9 @@ use futures::stream;
 use futures::StreamExt;
 use futures::TryStreamExt;
 use git_types::MappedGitCommitId;
+use justknobs::test_helpers::override_just_knobs;
+use justknobs::test_helpers::JustKnobsInMemory;
+use justknobs::test_helpers::KnobVal;
 use live_commit_sync_config::LiveCommitSyncConfig;
 use live_commit_sync_config::TestLiveCommitSyncConfigSource;
 use manifest::ManifestOps;
@@ -152,6 +155,19 @@ impl ExpectedChangeset {
         self.extend_file_changes(deletions_map)
     }
 
+    /// Adds GitSubmodules file changes on the given paths to ExpectedChangesets
+    pub(crate) fn with_git_submodules<S, I>(self, paths: I) -> Self
+    where
+        S: Into<String> + std::cmp::Ord,
+        I: IntoIterator<Item = S>,
+    {
+        let file_changes = paths
+            .into_iter()
+            .map(|p| (p.into(), FileChangeSummary::Change(FileType::GitSubmodule)))
+            .collect::<SortedVectorMap<_, _>>();
+        self.extend_file_changes(file_changes)
+    }
+
     fn extend_file_changes(
         self,
         new_file_changes: SortedVectorMap<String, FileChangeSummary>,
@@ -182,8 +198,13 @@ pub(crate) async fn build_submodule_sync_test_data(
     submodule_deps: Vec<(NonRootMPath, TestRepo)>,
 ) -> Result<SubmoduleSyncTestData> {
     let ctx = CoreContext::test_mock(fb.clone());
+    let test_jk = JustKnobsInMemory::new(hashmap! {
+        "scm/mononoke:backsync_submodule_expansion_changes".to_string() => KnobVal::Bool(true),
+    });
+    override_just_knobs(Some(test_jk));
 
     let small_repo_ddt_cfg = submodule_repo_derived_data_types_config();
+
     let (small_repo, large_repo, mapping, live_commit_sync_config, test_sync_config_source) =
         prepare_repos_mapping_and_config_with_repo_config_overrides(
             fb,
@@ -717,6 +738,7 @@ pub(crate) async fn derive_all_enabled_types_for_repo(
         .iter()
         .copied()
         .collect::<Vec<_>>();
+
     let _ = repo
         .repo_derived_data()
         .manager()

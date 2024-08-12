@@ -9,6 +9,7 @@
 
 //! Tests for handling git submodules in x-repo sync
 
+use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
 use blobstore::Loadable;
@@ -21,7 +22,10 @@ use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataRef;
 use tests_utils::CreateCommitContext;
 
+use crate::check_mapping;
 use crate::git_submodules::git_submodules_test_utils::*;
+use crate::sync_to_master;
+use crate::TestRepo;
 
 const REPO_B_SUBMODULE_PATH: &str = "submodules/repo_b";
 
@@ -42,9 +46,8 @@ async fn test_changing_submodule_expansion_validation_passes_when_working_copy_m
         large_repo_info: (large_repo, large_repo_master),
         commit_syncer,
         small_repo_info: (small_repo, _small_repo_cs_map),
-        live_commit_sync_config,
         ..
-    } = build_submodule_sync_test_data(
+    } = build_submodule_backsync_test_data(
         fb,
         &repo_b,
         vec![(NonRootMPath::new(REPO_B_SUBMODULE_PATH)?, repo_b.clone())],
@@ -70,22 +73,26 @@ async fn test_changing_submodule_expansion_validation_passes_when_working_copy_m
         .commit()
         .await
         .context("Failed to create commit modifying small_repo directory")?;
-    let bonsai = cs_id.load(&ctx, large_repo.repo_blobstore()).await?;
 
-    let validation_res = test_submodule_expansion_validation_in_large_repo_bonsai(
-        ctx,
-        bonsai,
-        large_repo,
-        small_repo,
-        commit_syncer,
-        live_commit_sync_config,
-    )
-    .await;
+    let small_repo_cs_id = sync_to_master(ctx.clone(), &commit_syncer, cs_id)
+        .await?
+        .ok_or(anyhow!("Failed to sync commit"))?;
 
-    assert!(
-        validation_res.is_ok(),
-        "Validation failed when working copy matches submodule pointer"
-    );
+    let small_repo_changesets = get_all_changeset_data_from_repo(&ctx, &small_repo).await?;
+
+    println!("Small repo changesets: {0:#?}", &small_repo_changesets);
+
+    derive_all_enabled_types_for_repo(&ctx, &small_repo, &small_repo_changesets).await?;
+
+    check_mapping(ctx.clone(), &commit_syncer, cs_id, Some(small_repo_cs_id)).await;
+
+    compare_expected_changesets(
+        small_repo_changesets.last_chunk::<1>().unwrap(),
+        &[ExpectedChangeset::new(MESSAGE).with_git_submodules(vec![
+            // GitSubmodule file change
+            "submodules/repo_b",
+        ])],
+    )?;
 
     Ok(())
 }
@@ -410,4 +417,19 @@ fn assert_validation_error(result: Result<BonsaiChangeset>, expected_msgs: Vec<&
         println!("Error messages: {:#?}", error_msgs);
         error_msgs == expected_msgs
     }));
+}
+
+pub(crate) async fn build_submodule_backsync_test_data(
+    fb: FacebookInit,
+    repo_b: &TestRepo,
+    // Add more small repo submodule dependencies for the test case
+    submodule_deps: Vec<(NonRootMPath, TestRepo)>,
+) -> Result<SubmoduleSyncTestData> {
+    let test_data = build_submodule_sync_test_data(fb, repo_b, submodule_deps).await?;
+    let reverse_syncer = test_data.commit_syncer.reverse()?;
+
+    Ok(SubmoduleSyncTestData {
+        commit_syncer: reverse_syncer,
+        ..test_data
+    })
 }
