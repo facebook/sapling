@@ -1030,7 +1030,7 @@ where
         }
 
         // Copyfrom is like another parent
-        for (repo_path, file_node_id) in &file_node_info.copyfrom {
+        if let Some((repo_path, file_node_id)) = &file_node_info.copyfrom {
             checker.add_edge(&mut edges, copyfrom_edge, || {
                 build_file_node(PathKey::new(
                     *file_node_id,
