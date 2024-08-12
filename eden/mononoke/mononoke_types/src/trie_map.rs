@@ -128,6 +128,26 @@ impl<V> TrieMap<V> {
             }
         }
     }
+
+    /// Returns the longest common prefix of all entries in the TrieMap.
+    pub fn longest_common_prefix(&self) -> SmallVec<[u8; 24]> {
+        let mut lcp: SmallVec<[u8; 24]> = Default::default();
+        let mut node = self;
+
+        loop {
+            if node.value.is_some() || node.edges.len() > 1 {
+                return lcp;
+            }
+
+            match node.edges.first_key_value() {
+                None => return lcp,
+                Some((next_byte, child)) => {
+                    lcp.push(*next_byte);
+                    node = child;
+                }
+            }
+        }
+    }
 }
 
 impl<V> TrieMap<V>
@@ -393,6 +413,10 @@ mod test {
         );
 
         assert_eq!(
+            trie_map.longest_common_prefix(),
+            SmallVec::<[u8; 24]>::new(),
+        );
+        assert_eq!(
             trie_map.clone().split_longest_common_prefix(),
             (
                 SmallVec::<[u8; 24]>::new(),
@@ -462,6 +486,10 @@ mod test {
         );
 
         assert_eq!(
+            a_child.longest_common_prefix(),
+            SmallVec::<[u8; 24]>::from_slice("bcd".as_bytes()),
+        );
+        assert_eq!(
             a_child.clone().split_longest_common_prefix(),
             (
                 SmallVec::<[u8; 24]>::from_slice("bcd".as_bytes()),
@@ -482,6 +510,10 @@ mod test {
             vec![(SmallVec::from_slice("cdf".as_bytes()), 3)]
         );
 
+        assert_eq!(
+            b_child.longest_common_prefix(),
+            SmallVec::<[u8; 24]>::from_slice("cdf".as_bytes()),
+        );
         assert_eq!(
             b_child.clone().split_longest_common_prefix(),
             (
@@ -504,6 +536,10 @@ mod test {
         );
 
         assert_eq!(
+            z_child.longest_common_prefix(),
+            SmallVec::<[u8; 24]>::from_slice("zzz".as_bytes()),
+        );
+        assert_eq!(
             z_child.clone().split_longest_common_prefix(),
             (
                 SmallVec::<[u8; 24]>::from_slice("zzz".as_bytes()),
@@ -521,6 +557,10 @@ mod test {
         //   / \
         // x=10 z=6
 
+        assert_eq!(
+            z_child.longest_common_prefix(),
+            SmallVec::<[u8; 24]>::from_slice("zz".as_bytes()),
+        );
         assert_eq!(
             z_child.clone().split_longest_common_prefix(),
             (
