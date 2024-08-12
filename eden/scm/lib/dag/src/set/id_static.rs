@@ -19,13 +19,13 @@ use super::AsyncSetQuery;
 use super::BoxVertexStream;
 use super::Hints;
 use crate::idset::IdList;
+use crate::idset::OrderedSpan;
 use crate::ops::DagAlgorithm;
 use crate::ops::IdConvert;
 use crate::protocol::disable_remote_protocol;
 use crate::Group;
 use crate::Id;
 use crate::IdSet;
-use crate::IdSpan;
 use crate::Result;
 use crate::Set;
 use crate::Vertex;
@@ -130,33 +130,34 @@ impl Iter {
 }
 
 struct DebugSpan {
-    span: IdSpan,
-    low_name: Option<Vertex>,
-    high_name: Option<Vertex>,
+    // start, end are for debug fmt, not iteration order.
+    span: OrderedSpan,
+    end_name: Option<Vertex>,
+    start_name: Option<Vertex>,
 }
 
 impl fmt::Debug for DebugSpan {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match (
-            self.span.low == self.span.high,
-            &self.low_name,
-            &self.high_name,
+            self.span.start == self.span.end,
+            &self.start_name,
+            &self.end_name,
         ) {
             (true, Some(name), _) => {
                 fmt::Debug::fmt(&name, f)?;
-                write!(f, "+{:?}", self.span.low)?;
+                write!(f, "+{:?}", self.span.start)?;
             }
             (true, None, _) => {
-                write!(f, "{:?}", self.span.low)?;
+                write!(f, "{:?}", self.span.start)?;
             }
-            (false, Some(low), Some(high)) => {
-                fmt::Debug::fmt(&low, f)?;
+            (false, Some(start), Some(end)) => {
+                fmt::Debug::fmt(&start, f)?;
                 write!(f, ":")?;
-                fmt::Debug::fmt(&high, f)?;
-                write!(f, "+{:?}:{:?}", self.span.low, self.span.high)?;
+                fmt::Debug::fmt(&end, f)?;
+                write!(f, "+{:?}:{:?}", self.span.start, self.span.end)?;
             }
             (false, _, _) => {
-                write!(f, "{:?}:{:?}", self.span.low, self.span.high)?;
+                write!(f, "{:?}:{:?}", self.span.start, self.span.end)?;
             }
         }
         Ok(())
@@ -166,27 +167,42 @@ impl fmt::Debug for DebugSpan {
 impl fmt::Debug for IdStaticSet {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "<spans ")?;
-        let spans = self.spans.as_spans();
+        let spans_iter: Box<dyn Iterator<Item = OrderedSpan>> = match self.iteration_order {
+            IterationOrder::Custom(ref list) | IterationOrder::CustomReversed(ref list) => {
+                Box::new(list.as_spans().iter().copied())
+            }
+            _ => Box::new(self.spans.as_spans().iter().map(|s| OrderedSpan {
+                start: s.low,
+                end: s.high,
+            })),
+        };
+
+        let len = spans_iter.size_hint().0;
         let limit = f.width().unwrap_or(3);
         f.debug_list()
-            .entries(spans.iter().take(limit).map(|span| DebugSpan {
-                span: *span,
-                low_name: disable_remote_protocol(|| {
-                    non_blocking_result(self.map.vertex_name(span.low)).ok()
+            .entries(spans_iter.take(limit).map(|span| DebugSpan {
+                span,
+                end_name: disable_remote_protocol(|| {
+                    non_blocking_result(self.map.vertex_name(span.end)).ok()
                 }),
-                high_name: disable_remote_protocol(|| {
-                    non_blocking_result(self.map.vertex_name(span.high)).ok()
+                start_name: disable_remote_protocol(|| {
+                    non_blocking_result(self.map.vertex_name(span.start)).ok()
                 }),
             }))
             .finish()?;
-        match spans.len().max(limit) - limit {
+        match len.saturating_sub(limit) {
             0 => {}
             1 => write!(f, " + 1 span")?,
             n => write!(f, " + {} spans", n)?,
         }
-        if matches!(self.iteration_order, IterationOrder::Asc) {
+        match &self.iteration_order {
             // + means ASC order.
-            write!(f, " +")?;
+            IterationOrder::Asc => write!(f, " +")?,
+            // For compatibility with existing tests, do not show a sign for DESC (default) order.
+            // Otherwise this should show "-".
+            IterationOrder::Desc => {}
+            IterationOrder::Custom(_) => write!(f, " ?")?,
+            IterationOrder::CustomReversed(_) => write!(f, " ¿")?,
         }
         write!(f, ">")?;
         Ok(())
@@ -1150,6 +1166,23 @@ pub(crate) mod tests {
                 show_hints(&[2, 1, 5]),
                 "Order: None Min: Some(1) Max: Some(5) Flags(HAS_MIN_ID | HAS_MAX_ID)"
             );
+
+            Ok(())
+        })
+    }
+
+    #[test]
+    fn test_custom_order_debug_fmt() -> Result<()> {
+        with_dag(|dag| -> Result<()> {
+            let map = dag.id_map_snapshot()?;
+            let dag = dag.dag_snapshot()?;
+            let list = move |ids: &[u64]| {
+                let list = IdList::from_ids(ids.iter().map(|&id| Id(id)));
+                IdStaticSet::from_id_list_idmap_dag(list, map.clone(), dag.clone())
+            };
+
+            assert_eq!(dbg(list(&[1, 3, 2])), "<spans [B+1, D:C+3:2] ?>");
+            assert_eq!(dbg(list(&[1, 3, 2]).reversed()), "<spans [B+1, D:C+3:2] ¿>");
 
             Ok(())
         })
