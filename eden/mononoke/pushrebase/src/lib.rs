@@ -94,6 +94,7 @@ use mononoke_types::check_case_conflicts;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::DateTime;
+use mononoke_types::DerivableType;
 use mononoke_types::FileChange;
 use mononoke_types::GitLfs;
 use mononoke_types::Timestamp;
@@ -296,6 +297,18 @@ async fn check_filenodes_backfilled<'a>(
     head: &ChangesetId,
     limit: u64,
 ) -> Result<(), Error> {
+    let derives_filenodes = repo
+        .repo_derived_data()
+        .active_config()
+        .types
+        .contains(&DerivableType::FileNodes);
+
+    if !derives_filenodes {
+        // Repo doesn't have filenodes derivation enabled, so no need to check
+        // if they're backfilled
+        return Ok(());
+    }
+
     let underived = repo
         .repo_derived_data()
         .count_underived::<FilenodesOnlyPublic>(ctx, *head, Some(limit))
