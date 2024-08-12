@@ -291,7 +291,7 @@ struct ParentCommitState {
    */
   struct NoOngoingCheckout {};
 
-  /** A NORMAL or FORCE checkout is ongoing. */
+  /* Any kind of checkout (DRY_RUN, NORMAL or FORCE) is ongoing. */
   struct CheckoutInProgress {};
 
   /** A checkout was previously interrupted */
