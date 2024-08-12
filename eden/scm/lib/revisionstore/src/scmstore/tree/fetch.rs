@@ -249,7 +249,7 @@ impl FetchState {
                             Ok(Some(data)) => match AugmentedTree::try_deserialize(&*data) {
                                 Ok(tree) => {
                                     found += 1;
-                                    tracing::error!(target: "cas", ?key, ?digest, "tree found in cas");
+                                    tracing::trace!(target: "cas", ?key, ?digest, "tree found in cas");
                                     self.common.found(
                                         key,
                                         StoreTree {
