@@ -58,7 +58,7 @@ py_class!(class revlogindex |py| {
     def phasesets(&self, publicheads: Vec<u32>, draftheads: Vec<u32>) -> PyResult<(Spans, Spans)> {
         let revlog = self.index(py).borrow();
         let (public_set, draft_set) = revlog.phasesets(publicheads, draftheads).map_pyerr(py)?;
-        Ok((Spans(public_set), Spans(draft_set)))
+        Ok((Spans::from_id_set(public_set), Spans::from_id_set(draft_set)))
     }
 
     /// Get parent revisions.

@@ -18,11 +18,21 @@ use types::hgid::WDIR_REV;
 /// Differences from the `py_class` version:
 /// - Auto converts from a wider range of Python types - smartset, any iterator.
 /// - No need to take the Python GIL to create a new instance of `Set`.
-pub struct Spans(pub IdSet);
+pub struct Spans(IdSet);
 
 impl From<Spans> for IdSet {
     fn from(val: Spans) -> Self {
         val.0
+    }
+}
+
+impl Spans {
+    pub fn from_id_set(id_set: IdSet) -> Self {
+        Self(id_set)
+    }
+
+    pub fn as_id_set(&self) -> &IdSet {
+        &self.0
     }
 }
 
@@ -50,7 +60,7 @@ py_class!(pub class spans |py| {
     def unsaferange(start: Option<i64> = None, end: Option<i64> = None) -> PyResult<Spans> {
         let _ = py;
         if end.unwrap_or(0) < 0 {
-            return Ok(Spans(IdSet::empty()))
+            return Ok(Spans::from_id_set(IdSet::empty()))
         }
         let start = match start {
             Some(start) => Id(start.max(0) as u64),
@@ -65,7 +75,7 @@ py_class!(pub class spans |py| {
         } else {
             IdSet::empty()
         };
-        Ok(Spans(id_set))
+        Ok(Spans::from_id_set(id_set))
     }
 
     def __contains__(&self, id: i64) -> PyResult<bool> {
@@ -109,19 +119,19 @@ py_class!(pub class spans |py| {
     def __add__(lhs, rhs) -> PyResult<Spans> {
         let lhs = Spans::extract(py, lhs)?;
         let rhs = Spans::extract(py, rhs)?;
-        Ok(Spans(lhs.0.union(&rhs.0)))
+        Ok(Spans::from_id_set(lhs.0.union(&rhs.0)))
     }
 
     def __and__(lhs, rhs) -> PyResult<Spans> {
         let lhs = Spans::extract(py, lhs)?;
         let rhs = Spans::extract(py, rhs)?;
-        Ok(Spans(lhs.0.intersection(&rhs.0)))
+        Ok(Spans::from_id_set(lhs.0.intersection(&rhs.0)))
     }
 
     def __sub__(lhs, rhs) -> PyResult<Spans> {
         let lhs = Spans::extract(py, lhs)?;
         let rhs = Spans::extract(py, rhs)?;
-        Ok(Spans(lhs.0.difference(&rhs.0)))
+        Ok(Spans::from_id_set(lhs.0.difference(&rhs.0)))
     }
 });
 
