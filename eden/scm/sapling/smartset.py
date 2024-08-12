@@ -562,7 +562,14 @@ class nameset(abstractsmartset):
     """
 
     def __init__(
-        self, value=None, *, reverse=False, datarepr=None, istopo=False, repo=None
+        self,
+        value=None,
+        *,
+        reverse=False,
+        datarepr=None,
+        istopo=False,
+        preserve_order=None,
+        repo=None
     ):
         """Initialize nameset (Rust ``dag::Set`` wrapper) for Python smartset.
 
@@ -575,9 +582,12 @@ class nameset(abstractsmartset):
         - None: treated as [].
 
         ``reverse`` is handled by this Python class, not by Rust (yet).
+        ``preserve_order`` is by default False for set, True for other types.
         ``datarepr`` is a tuple of (format, obj, ...), a function or an object
         that provides a printable representation of the given data.
         """
+        if preserve_order is None:
+            preserve_order = not isinstance(value, set)
         if value is None:
             value = []
         if repo is None:
@@ -597,11 +607,13 @@ class nameset(abstractsmartset):
             # IdStaticSet.
             # Optimization: use IdStaticSet if the list is empty.
             nodes = bindings.dag.nameset(value)
+            if not preserve_order:
+                nodes = changelog.dag.sort(nodes)
         else:
             # Iterator[int | Tuple[int, int]]
             # Backed by IdStaticSet in Rust. Most efficient. Associated with the dag.
             # See <pydag::spanset::Spans as FromPyObject>::extract
-            nodes = changelog.tonodes(value)
+            nodes = changelog.tonodes(value, preserve_order=preserve_order)
 
         self._changelog = changelog
         self._set = nodes
