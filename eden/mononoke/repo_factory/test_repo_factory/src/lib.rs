@@ -162,11 +162,11 @@ pub struct TestRepoFactory {
     filenodes_override: Option<Box<dyn Fn(ArcFilenodes) -> ArcFilenodes + Send + Sync>>,
 }
 
-/// The default configuration for test repositories.
+/// The default derived data types configuration for test repositories.
 ///
 /// This configuration enables all derived data types at the latest version.
-pub fn default_test_repo_config() -> RepoConfig {
-    let derived_data_types_config = DerivedDataTypesConfig {
+pub fn default_test_repo_derived_data_types_config() -> DerivedDataTypesConfig {
+    DerivedDataTypesConfig {
         types: DerivableType::iter().collect(),
         unode_version: UnodeVersion::V2,
         blame_version: BlameVersion::V2,
@@ -176,7 +176,14 @@ pub fn default_test_repo_config() -> RepoConfig {
             delta_chunk_size: 1000,
         }),
         ..Default::default()
-    };
+    }
+}
+
+/// The default configuration for test repositories.
+///
+/// This configuration enables all derived data types at the latest version.
+pub fn default_test_repo_config() -> RepoConfig {
+    let derived_data_types_config = default_test_repo_derived_data_types_config();
     RepoConfig {
         derived_data_config: DerivedDataConfig {
             scuba_table: None,
