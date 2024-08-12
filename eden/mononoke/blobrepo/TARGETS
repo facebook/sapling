@@ -104,7 +104,6 @@ rust_library(
         "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:tokio",
         "fbsource//third-party/rust:uuid",
-        ":blobrepo",
         ":blobrepo_common",
         ":blobrepo_errors",
         ":repo_blobstore",
