@@ -26,13 +26,9 @@ use bulk_derivation::BulkDerivation;
 use cacheblob::InProcessLease;
 use commit_graph::CommitGraphRef;
 use context::CoreContext;
-use cross_repo_sync::submodule_metadata_file_prefix_and_dangling_pointers;
 use cross_repo_sync::CommitSyncRepos;
 use cross_repo_sync::CommitSyncer;
-use cross_repo_sync::InMemoryRepo;
 use cross_repo_sync::SubmoduleDeps;
-use cross_repo_sync::SubmoduleExpansionData;
-use cross_repo_sync::ValidSubmoduleExpansionBonsai;
 use cross_repo_sync_test_utils::rebase_root_on_master;
 use cross_repo_sync_test_utils::TestRepo;
 use fbinit::FacebookInit;
@@ -59,7 +55,6 @@ use metaconfig_types::SmallRepoCommitSyncConfig;
 use metaconfig_types::SmallRepoGitSubmoduleConfig;
 use metaconfig_types::SmallRepoPermanentConfig;
 use mononoke_types::hash::GitSha1;
-use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::DerivableType;
 use mononoke_types::FileChange;
@@ -788,60 +783,4 @@ pub(crate) async fn assert_working_copy_matches_expected(
         "Working copy doesn't match expectation"
     );
     Ok(())
-}
-
-/// Test validation of submodule expansion in large repo's bonsai
-pub(crate) async fn test_submodule_expansion_validation_in_large_repo_bonsai(
-    ctx: CoreContext,
-    bonsai: BonsaiChangeset,
-    large_repo: TestRepo,
-    small_repo: TestRepo,
-    commit_syncer: CommitSyncer<SqlSyncedCommitMapping, TestRepo>,
-    live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
-) -> Result<BonsaiChangeset> {
-    println!("Validating expansion of bonsai: {0:#?}", bonsai.message());
-
-    let small_repo_id = small_repo.repo_identity().id();
-    let sync_config_version = base_commit_sync_version_name();
-    let movers = commit_syncer
-        .get_movers_by_version(&sync_config_version)
-        .await?;
-
-    let submodule_deps = commit_syncer.get_submodule_deps();
-    let fallback_repos = vec![Arc::new(small_repo.clone())]
-        .into_iter()
-        .chain(submodule_deps.repos())
-        .collect::<Vec<_>>();
-    let large_in_memory_repo = InMemoryRepo::from_repo(&large_repo, fallback_repos)?;
-    let (x_repo_submodule_metadata_file_prefix, dangling_submodule_pointers) =
-        submodule_metadata_file_prefix_and_dangling_pointers(
-            small_repo.repo_identity().id(),
-            &sync_config_version,
-            live_commit_sync_config.clone(),
-        )
-        .await?;
-
-    let submodule_deps = match submodule_deps {
-        SubmoduleDeps::ForSync(deps) => deps,
-        SubmoduleDeps::NotNeeded | SubmoduleDeps::NotAvailable => {
-            return Err(anyhow!("Submodule deps should have been set!"));
-        }
-    };
-
-    let sm_exp_data = SubmoduleExpansionData {
-        submodule_deps,
-        large_repo: large_in_memory_repo,
-        x_repo_submodule_metadata_file_prefix: x_repo_submodule_metadata_file_prefix.as_str(),
-        small_repo_id,
-        dangling_submodule_pointers,
-    };
-
-    ValidSubmoduleExpansionBonsai::validate_all_submodule_expansions(
-        &ctx,
-        sm_exp_data,
-        bonsai,
-        movers.mover,
-    )
-    .await
-    .map(ValidSubmoduleExpansionBonsai::into_inner)
 }

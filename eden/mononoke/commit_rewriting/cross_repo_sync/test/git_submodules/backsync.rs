@@ -12,13 +12,11 @@
 use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
-use blobstore::Loadable;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use git_types::MappedGitCommitId;
-use mononoke_types::BonsaiChangeset;
+use mononoke_types::ChangesetId;
 use mononoke_types::NonRootMPath;
-use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataRef;
 use tests_utils::CreateCommitContext;
 
@@ -110,10 +108,9 @@ async fn test_changing_submodule_expansion_without_metadata_file_fails_validatio
     let SubmoduleSyncTestData {
         large_repo_info: (large_repo, large_repo_master),
         commit_syncer,
-        small_repo_info: (small_repo, _small_repo_cs_map),
-        live_commit_sync_config,
+        small_repo_info: (_small_repo, _small_repo_cs_map),
         ..
-    } = build_submodule_sync_test_data(
+    } = build_submodule_backsync_test_data(
         fb,
         &repo_b,
         vec![(NonRootMPath::new(REPO_B_SUBMODULE_PATH)?, repo_b.clone())],
@@ -131,26 +128,17 @@ async fn test_changing_submodule_expansion_without_metadata_file_fails_validatio
         .commit()
         .await
         .context("Failed to create commit modifying small_repo directory")?;
-    let bonsai = cs_id.load(&ctx, large_repo.repo_blobstore()).await?;
-
-    let validation_res = test_submodule_expansion_validation_in_large_repo_bonsai(
-        ctx,
-        bonsai,
-        large_repo,
-        small_repo,
-        commit_syncer,
-        live_commit_sync_config,
-    )
-    .await;
+    let sync_result = sync_to_master(ctx.clone(), &commit_syncer, cs_id).await;
 
     let expected_err_msg = concat!(
         "Expansion of submodule submodules/repo_b changed without updating ",
         "its metadata file small_repo/submodules/.x-repo-submodule-repo_b"
     );
 
-    assert_validation_error(
-        validation_res,
+    assert_backsync_validation_error(
+        sync_result,
         vec![
+            "Validation of submodule expansion failed",
             "Validation of submodule submodules/repo_b failed",
             expected_err_msg,
         ],
@@ -173,10 +161,9 @@ async fn test_changing_submodule_metadata_pointer_without_expansion_fails_valida
     let SubmoduleSyncTestData {
         large_repo_info: (large_repo, large_repo_master),
         commit_syncer,
-        small_repo_info: (small_repo, _small_repo_cs_map),
-        live_commit_sync_config,
+        small_repo_info: (_small_repo, _small_repo_cs_map),
         ..
-    } = build_submodule_sync_test_data(
+    } = build_submodule_backsync_test_data(
         fb,
         &repo_b,
         vec![(NonRootMPath::new(REPO_B_SUBMODULE_PATH)?, repo_b.clone())],
@@ -199,23 +186,15 @@ async fn test_changing_submodule_metadata_pointer_without_expansion_fails_valida
         .commit()
         .await
         .context("Failed to create commit modifying small_repo directory")?;
-    let bonsai = cs_id.load(&ctx, large_repo.repo_blobstore()).await?;
 
-    let validation_res = test_submodule_expansion_validation_in_large_repo_bonsai(
-        ctx,
-        bonsai,
-        large_repo,
-        small_repo,
-        commit_syncer,
-        live_commit_sync_config,
-    )
-    .await;
+    let sync_result = sync_to_master(ctx.clone(), &commit_syncer, cs_id).await;
 
     let expected_err_msg = "Files present in expansion are unaccounted for";
 
-    assert_validation_error(
-        validation_res,
+    assert_backsync_validation_error(
+        sync_result,
         vec![
+            "Validation of submodule expansion failed",
             "Validation of submodule submodules/repo_b failed",
             expected_err_msg,
         ],
@@ -238,10 +217,9 @@ async fn test_changing_submodule_metadata_pointer_to_git_commit_from_another_rep
     let SubmoduleSyncTestData {
         large_repo_info: (large_repo, large_repo_master),
         commit_syncer,
-        small_repo_info: (small_repo, _small_repo_cs_map),
-        live_commit_sync_config,
+        small_repo_info: (_small_repo, _small_repo_cs_map),
         ..
-    } = build_submodule_sync_test_data(
+    } = build_submodule_backsync_test_data(
         fb,
         &repo_b,
         vec![(NonRootMPath::new(REPO_B_SUBMODULE_PATH)?, repo_b.clone())],
@@ -265,27 +243,20 @@ async fn test_changing_submodule_metadata_pointer_to_git_commit_from_another_rep
         .commit()
         .await
         .context("Failed to create commit modifying small_repo directory")?;
-    let bonsai = cs_id.load(&ctx, large_repo.repo_blobstore()).await?;
 
-    let validation_res = test_submodule_expansion_validation_in_large_repo_bonsai(
-        ctx,
-        bonsai,
-        large_repo,
-        small_repo,
-        commit_syncer,
-        live_commit_sync_config,
-    )
-    .await;
-    println!("Validation result: {0:#?}", &validation_res);
+    let sync_result = sync_to_master(ctx.clone(), &commit_syncer, cs_id).await;
+
+    println!("Sync result: {0:#?}", &sync_result);
 
     let expected_err_msg = concat!(
         "Failed to get changeset id from git submodule ",
         "commit hash 76ba5635bc159cfa5ac555d95974116bc94473f0 in repo repo_b"
     );
 
-    assert_validation_error(
-        validation_res,
+    assert_backsync_validation_error(
+        sync_result,
         vec![
+            "Validation of submodule expansion failed",
             "Validation of submodule submodules/repo_b failed",
             "Failed to get submodule bonsai changeset id",
             expected_err_msg,
@@ -298,6 +269,8 @@ async fn test_changing_submodule_metadata_pointer_to_git_commit_from_another_rep
 /// Deleting the submodule metadata file without deleting the expansion is a
 /// valid scenario, e.g. when users delete a submodule but keep its static copy
 /// in the repo as regular files.
+/// TODO(T187241943): don't allow users to backsync changesets where the metadat
+/// file is deleted but the expansion is not.
 #[fbinit::test]
 async fn test_deleting_submodule_metadata_file_without_expansion_passes_validation(
     fb: FacebookInit,
@@ -309,10 +282,9 @@ async fn test_deleting_submodule_metadata_file_without_expansion_passes_validati
     let SubmoduleSyncTestData {
         large_repo_info: (large_repo, large_repo_master),
         commit_syncer,
-        small_repo_info: (small_repo, _small_repo_cs_map),
-        live_commit_sync_config,
+        small_repo_info: (_small_repo, _small_repo_cs_map),
         ..
-    } = build_submodule_sync_test_data(
+    } = build_submodule_backsync_test_data(
         fb,
         &repo_b,
         vec![(NonRootMPath::new(REPO_B_SUBMODULE_PATH)?, repo_b.clone())],
@@ -327,22 +299,16 @@ async fn test_deleting_submodule_metadata_file_without_expansion_passes_validati
         .commit()
         .await
         .context("Failed to create commit modifying small_repo directory")?;
-    let bonsai = cs_id.load(&ctx, large_repo.repo_blobstore()).await?;
 
-    let validation_res = test_submodule_expansion_validation_in_large_repo_bonsai(
-        ctx,
-        bonsai,
-        large_repo,
-        small_repo,
-        commit_syncer,
-        live_commit_sync_config,
-    )
-    .await;
+    let sync_result = sync_to_master(ctx.clone(), &commit_syncer, cs_id).await;
 
-    assert!(
-        validation_res.is_ok(),
-        "Validation failed when working copy matches submodule pointer"
-    );
+    println!("Sync result: {0:#?}", &sync_result);
+
+    assert!(sync_result.is_err_and(|err| {
+        // TODO(T187241943): pass validation but fail backsyncing when user
+        // only deletes the metadata file
+        err.to_string() == "Submodule metadata file change is invalid"
+    }));
 
     Ok(())
 }
@@ -360,10 +326,9 @@ async fn test_deleting_submodule_expansion_without_metadata_file_fails_validatio
     let SubmoduleSyncTestData {
         large_repo_info: (large_repo, large_repo_master),
         commit_syncer,
-        small_repo_info: (small_repo, _small_repo_cs_map),
-        live_commit_sync_config,
+        small_repo_info: (_small_repo, _small_repo_cs_map),
         ..
-    } = build_submodule_sync_test_data(
+    } = build_submodule_backsync_test_data(
         fb,
         &repo_b,
         vec![(NonRootMPath::new(REPO_B_SUBMODULE_PATH)?, repo_b.clone())],
@@ -379,28 +344,20 @@ async fn test_deleting_submodule_expansion_without_metadata_file_fails_validatio
         .commit()
         .await
         .context("Failed to create commit modifying small_repo directory")?;
-    let bonsai = cs_id.load(&ctx, large_repo.repo_blobstore()).await?;
 
-    let validation_res = test_submodule_expansion_validation_in_large_repo_bonsai(
-        ctx,
-        bonsai,
-        large_repo,
-        small_repo,
-        commit_syncer,
-        live_commit_sync_config,
-    )
-    .await;
+    let sync_result = sync_to_master(ctx.clone(), &commit_syncer, cs_id).await;
 
-    println!("Validation result: {0:#?}", &validation_res);
+    println!("Sync result: {0:#?}", &sync_result);
 
     let expected_err_msg = concat!(
         "Expansion of submodule submodules/repo_b changed without updating ",
         "its metadata file small_repo/submodules/.x-repo-submodule-repo_b"
     );
 
-    assert_validation_error(
-        validation_res,
+    assert_backsync_validation_error(
+        sync_result,
         vec![
+            "Validation of submodule expansion failed",
             "Validation of submodule submodules/repo_b failed",
             expected_err_msg,
         ],
@@ -410,8 +367,9 @@ async fn test_deleting_submodule_expansion_without_metadata_file_fails_validatio
 }
 
 /// Takes a Result that's expected to be a submodule expansion validation error
-/// and assert it matches the expectations (e.g. error message, contexts).
-fn assert_validation_error(result: Result<BonsaiChangeset>, expected_msgs: Vec<&str>) {
+/// when backsyncing a changeset and assert it matches the
+/// expectations (e.g. error message, contexts).
+fn assert_backsync_validation_error(result: Result<Option<ChangesetId>>, expected_msgs: Vec<&str>) {
     assert!(result.is_err_and(|e| {
         let error_msgs = e.chain().map(|e| e.to_string()).collect::<Vec<_>>();
         println!("Error messages: {:#?}", error_msgs);
