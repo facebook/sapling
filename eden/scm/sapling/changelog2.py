@@ -185,7 +185,7 @@ class changelog:
         """
         return smartset.nameset(self, nodes, reverse, repo=self._reporef())
 
-    def tonodes(self, revs):
+    def tonodes(self, revs, preserve_order=False):
         """Convert an IdSet to Set. The reverse of torevs."""
         # translate fullreposet to dag.all() that preserves the 'full' hint.
         if isinstance(revs, smartset.fullreposet):
@@ -197,7 +197,7 @@ class changelog:
         # nodes directly.
         if isinstance(revs, smartset.nameset):
             return revs._set
-        return self.inner.tonodes(revs)
+        return self.inner.tonodes(revs, preserve_order=preserve_order)
 
     def _loadvisibleheads(self, svfs):
         return visibility.visibleheads(svfs)
