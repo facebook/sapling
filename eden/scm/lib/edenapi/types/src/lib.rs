@@ -81,6 +81,7 @@ pub use crate::cloud::GetSmartlogParams;
 pub use crate::cloud::ReferencesData;
 pub use crate::cloud::ReferencesDataResponse;
 pub use crate::cloud::SmartlogData;
+pub use crate::cloud::SmartlogDataResponse;
 pub use crate::cloud::SmartlogNode;
 pub use crate::cloud::UpdateReferencesParams;
 pub use crate::cloud::WorkspaceData;

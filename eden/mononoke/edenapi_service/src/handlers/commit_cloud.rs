@@ -10,8 +10,10 @@ use async_trait::async_trait;
 use edenapi_types::CloudWorkspaceRequest;
 use edenapi_types::CloudWorkspacesRequest;
 use edenapi_types::GetReferencesParams;
+use edenapi_types::GetSmartlogParams;
 use edenapi_types::ReferencesDataResponse;
 use edenapi_types::ServerError;
+use edenapi_types::SmartlogDataResponse;
 use edenapi_types::UpdateReferencesParams;
 use edenapi_types::WorkspaceDataResponse;
 use edenapi_types::WorkspacesDataResponse;
@@ -28,6 +30,7 @@ pub struct CommitCloudWorkspace;
 pub struct CommitCloudWorkspaces;
 pub struct CommitCloudReferences;
 pub struct CommitCloudUpdateReferences;
+pub struct CommitCloudSmartlog;
 
 #[async_trait]
 impl SaplingRemoteApiHandler for CommitCloudWorkspace {
@@ -148,6 +151,37 @@ async fn update_references(
     Ok(ReferencesDataResponse {
         data: repo
             .cloud_update_references(&request)
+            .await
+            .map_err(ServerError::from),
+    })
+}
+
+#[async_trait]
+impl SaplingRemoteApiHandler for CommitCloudSmartlog {
+    type Request = GetSmartlogParams;
+    type Response = SmartlogDataResponse;
+
+    const HTTP_METHOD: hyper::Method = hyper::Method::POST;
+    const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::CloudSmartlog;
+    const ENDPOINT: &'static str = "/cloud/smartlog";
+
+    async fn handler(
+        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
+        request: Self::Request,
+    ) -> HandlerResult<'async_trait, Self::Response> {
+        let repo = ectx.repo();
+        let res = get_smartlog(request, repo).boxed();
+        Ok(stream::once(res).boxed())
+    }
+}
+
+async fn get_smartlog(
+    request: GetSmartlogParams,
+    repo: HgRepoContext,
+) -> anyhow::Result<SmartlogDataResponse, Error> {
+    Ok(SmartlogDataResponse {
+        data: repo
+            .cloud_smartlog(&request)
             .await
             .map_err(ServerError::from),
     })

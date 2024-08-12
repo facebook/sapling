@@ -90,6 +90,7 @@ pub enum SaplingRemoteApiMethod {
     Bookmarks,
     Capabilities,
     CloudReferences,
+    CloudSmartlog,
     CloudUpdateReferences,
     CloudWorkspace,
     CloudWorkspaces,
@@ -126,6 +127,7 @@ impl fmt::Display for SaplingRemoteApiMethod {
             Self::Bookmarks => "bookmarks",
             Self::Capabilities => "capabilities",
             Self::CloudReferences => "cloud_references",
+            Self::CloudSmartlog => "cloud_smartlog",
             Self::CloudUpdateReferences => "cloud_update_references",
             Self::CloudWorkspace => "cloud_workspace",
             Self::CloudWorkspaces => "cloud_workspaces",
@@ -420,6 +422,7 @@ pub fn build_router(ctx: ServerContext) -> Router {
         Handlers::setup::<bookmarks::BookmarksHandler>(route);
         Handlers::setup::<bookmarks::SetBookmarkHandler>(route);
         Handlers::setup::<commit_cloud::CommitCloudReferences>(route);
+        Handlers::setup::<commit_cloud::CommitCloudSmartlog>(route);
         Handlers::setup::<commit_cloud::CommitCloudUpdateReferences>(route);
         Handlers::setup::<commit_cloud::CommitCloudWorkspace>(route);
         Handlers::setup::<commit_cloud::CommitCloudWorkspaces>(route);
@@ -440,6 +443,7 @@ pub fn build_router(ctx: ServerContext) -> Router {
         Handlers::setup::<history::HistoryHandler>(route);
         Handlers::setup::<land::LandStackHandler>(route);
         Handlers::setup::<lookup::LookupHandler>(route);
+        Handlers::setup::<commit_cloud::CommitCloudSmartlog>(route);
         Handlers::setup::<suffix_query::SuffixQueryHandler>(route);
         Handlers::setup::<trees::UploadTreesHandler>(route);
         route.get("/:repo/health_check").to(health_handler);

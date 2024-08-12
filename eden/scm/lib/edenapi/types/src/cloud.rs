@@ -232,6 +232,15 @@ pub struct SmartlogData {
     pub timestamp: Option<i64>,
 }
 
+#[auto_wire]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
+pub struct SmartlogDataResponse {
+    #[id(0)]
+    #[no_default]
+    pub data: Result<SmartlogData, ServerError>,
+}
+
 impl RemoteBookmark {
     pub fn full_name(&self) -> String {
         format!("{}/{}", self.remote, self.name)
