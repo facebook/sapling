@@ -3452,7 +3452,9 @@ class subtreecopyctx(committablectx):
         return mn, self.files()
 
     def filectx(self, path, filelog=None):
-        raise NotImplementedError()
+        # todo: handle the case when the `path` is file one of `self._to_paths`
+        # currently, this is only used to read dirsync configs
+        return self._to_ctx.filectx(path, filelog=filelog)
 
     def files(self):
         return []

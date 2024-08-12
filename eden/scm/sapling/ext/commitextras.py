@@ -32,6 +32,8 @@ usedinternally = {
     "mutdate",
     "mutop",
     "mutsplit",
+    "branch_info",
+    "test_branch_info",
 }
 
 
