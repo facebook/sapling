@@ -1,5 +1,7 @@
 load("@fbcode_macros//build_defs:native_rules.bzl", "buck_genrule", "buck_sh_binary")
+load("@fbcode_macros//build_defs:rust_binary.bzl", "rust_binary")
 load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbcode_macros//build_defs/lib:rust_oss.bzl", "rust_oss")
 load("@fbsource//tools/build_defs:buckconfig.bzl", "read_bool")
 
 def rust_python_library(deps = None, include_python_sys = False, include_cpython = True, **kwargs):
@@ -49,3 +51,61 @@ def gen_hgpython():
 
 def is_experimental_cas_build():
     return read_bool("sl", "cas", False)
+
+def hg_binary(name, extra_deps = [], extra_features = [], **kwargs):
+    rust_binary(
+        name = name,
+        srcs = glob(["exec/hgmain/src/**/*.rs"]),
+        features = [
+            "fb",
+            "with_chg",
+        ] + extra_features,
+        link_style = "static",
+        linker_flags = select({
+            "DEFAULT": [],
+            "ovr_config//os:windows": [
+                "/MANIFEST:EMBED",
+                "/MANIFESTINPUT:$(location :windows-manifest)",
+            ],
+        }),
+        os_deps = [
+            (
+                "linux",
+                [
+                    "fbsource//third-party/rust:dirs",
+                    "fbsource//third-party/rust:libc",
+                    ":chg",
+                    "//eden/scm/lib/encoding:encoding",
+                    "//eden/scm/lib/identity:identity",
+                ],
+            ),
+            (
+                "macos",
+                [
+                    "fbsource//third-party/rust:dirs",
+                    "fbsource//third-party/rust:libc",
+                    ":chg",
+                    "//eden/scm/lib/encoding:encoding",
+                    "//eden/scm/lib/identity:identity",
+                    "//eden/scm/lib/webview-app:webview-app",
+                ],
+            ),
+            (
+                "windows",
+                [
+                    "fbsource//third-party/rust:anyhow",
+                    "fbsource//third-party/rust:winapi",
+                ],
+            ),
+        ],
+        versions = {"python": "3.10"},
+        deps = [
+            "fbsource//third-party/rust:tracing",
+            "//eden/scm/lib/clidispatch:clidispatch",
+            "//eden/scm/lib/commands:commands",
+            "//eden/scm/lib/util/atexit:atexit",
+        ] + extra_deps + ([] if rust_oss.is_oss_build() else [
+            "//common/rust/shed/fbinit:fbinit",
+        ]),
+        **kwargs
+    )

@@ -3,7 +3,7 @@
 # fix the mercurial code to use fbcode-relative includes.
 #
 
-load("@fbcode//eden/scm:targets.bzl", "gen_hgpython", "is_experimental_cas_build")
+load("@fbcode//eden/scm:targets.bzl", "gen_hgpython", "hg_binary")
 load("@fbcode//target_determinator/macros:ci_hint.bzl", "ci_hint")
 load("@fbcode_macros//build_defs:cpp_binary.bzl", "cpp_binary")
 load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
@@ -11,9 +11,7 @@ load("@fbcode_macros//build_defs:export_files.bzl", "export_file")
 load("@fbcode_macros//build_defs:native_rules.bzl", "buck_command_alias", "buck_filegroup", "buck_sh_binary")
 load("@fbcode_macros//build_defs:python_binary.bzl", "python_binary")
 load("@fbcode_macros//build_defs:python_library.bzl", "python_library")
-load("@fbcode_macros//build_defs:rust_binary.bzl", "rust_binary")
 load("@fbcode_macros//build_defs:rust_universal_binary.bzl", "rust_universal_binary")
-load("@fbcode_macros//build_defs/lib:rust_oss.bzl", "rust_oss")
 load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
 
 oncall("sapling")
@@ -111,9 +109,8 @@ export_file(
     src = "exec/hgmain/manifest.xml",
 )
 
-rust_binary(
+hg_binary(
     name = "hg",
-    srcs = glob(["exec/hgmain/src/**/*.rs"]),
     autocargo = {
         "cargo_target_config": {
             "name": "hgmain",
@@ -178,61 +175,14 @@ rust_binary(
         },
         "cargo_toml_dir": "exec/hgmain",
     },
-    features = [
-        "fb",
-        "with_chg",
-    ] + ([] if rust_oss.is_oss_build() else ["cas"] if is_experimental_cas_build() else []),
-    link_style = "static",
-    linker_flags = select({
-        "DEFAULT": [],
-        "ovr_config//os:windows": [
-            "/MANIFEST:EMBED",
-            "/MANIFESTINPUT:$(location :windows-manifest)",
-        ],
-    }),
-    os_deps = [
-        (
-            "linux",
-            [
-                "fbsource//third-party/rust:dirs",
-                "fbsource//third-party/rust:libc",
-                ":chg",
-                "//eden/scm/lib/encoding:encoding",
-                "//eden/scm/lib/identity:identity",
-            ],
-        ),
-        (
-            "macos",
-            [
-                "fbsource//third-party/rust:dirs",
-                "fbsource//third-party/rust:libc",
-                ":chg",
-                "//eden/scm/lib/encoding:encoding",
-                "//eden/scm/lib/identity:identity",
-                "//eden/scm/lib/webview-app:webview-app",
-            ],
-        ),
-        (
-            "windows",
-            [
-                "fbsource//third-party/rust:anyhow",
-                "fbsource//third-party/rust:winapi",
-            ],
-        ),
-    ],
-    versions = {"python": "3.10"},
-    deps = [
-        "fbsource//third-party/rust:tracing",
-        "//eden/scm/lib/clidispatch:clidispatch",
-        "//eden/scm/lib/commands:commands",
-        "//eden/scm/lib/util/atexit:atexit",
-    ] + (
-        [] if rust_oss.is_oss_build() else [
-            "//common/rust/shed/fbinit:fbinit",
-        ] + ([
-            "//eden/scm/lib/cas-client/thin-client:thin-cas-client",
-        ] if is_experimental_cas_build() else [])
-    ),
+)
+
+hg_binary(
+    name = "hg_cas",
+    allow_oss_build = False,
+    autocargo = {"ignore_rule": True},
+    extra_deps = ["//eden/scm/lib/cas-client/thin-client:thin-cas-client"],
+    extra_features = ["cas"],
 )
 
 # Try to override target depth so //eden/scm/tests:hg_run_tests and other
