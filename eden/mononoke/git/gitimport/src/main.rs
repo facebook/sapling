@@ -7,6 +7,8 @@
 
 #![feature(async_closure)]
 
+mod repo;
+
 use std::collections::HashMap;
 use std::path::Path;
 use std::path::PathBuf;
@@ -14,12 +16,12 @@ use std::sync::Arc;
 
 use anyhow::Context;
 use anyhow::Error;
-use blobrepo::BlobRepo;
 use blobrepo_override::DangerousOverride;
 use blobstore::Blobstore;
 use blobstore::Loadable;
 use bonsai_hg_mapping::ArcBonsaiHgMapping;
 use bonsai_hg_mapping::MemWritesBonsaiHgMapping;
+use bonsai_tag_mapping::BonsaiTagMappingRef;
 use cacheblob::dummy::DummyLease;
 use cacheblob::LeaseOps;
 use cacheblob::MemWritesBlobstore;
@@ -30,6 +32,7 @@ use clientinfo::ClientInfo;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::future;
+use git_symbolic_refs::GitSymbolicRefsRef;
 use import_tools::bookmark::BookmarkOperationErrorReporting;
 use import_tools::create_changeset_for_annotated_tag;
 use import_tools::import_tree_as_single_bonsai_changeset;
@@ -56,11 +59,12 @@ use mononoke_types::ChangesetId;
 use mononoke_types::DerivableType;
 use repo_authorization::AuthorizationContext;
 use repo_blobstore::RepoBlobstoreArc;
-use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentityRef;
 use slog::info;
 use slog::warn;
+
+use crate::repo::Repo;
 
 pub const HEAD_SYMREF: &str = "HEAD";
 
@@ -69,7 +73,7 @@ pub const HEAD_SYMREF: &str = "HEAD";
 
 async fn derive_hg(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &(impl RepoBlobstoreArc + RepoDerivedDataRef + RepoIdentityRef + Send + Sync),
     import_map: impl Iterator<Item = (&gix_hash::ObjectId, &ChangesetId)>,
 ) -> Result<(), Error> {
     let mut hg_manifests = HashMap::new();
@@ -211,7 +215,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
         ReuploadCommits::Never
     };
 
-    let repo: BlobRepo = app.open_repo(&args.repo_args).await?;
+    let repo: Repo = app.open_repo(&args.repo_args).await?;
     info!(
         logger,
         "using repo \"{}\" repoid {:?}",
@@ -316,8 +320,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
         let symref_entry = import_tools::read_symref(HEAD_SYMREF, path, &prefs)
             .await
             .context("read_symrefs failed")?;
-        repo.inner()
-            .git_symbolic_refs
+        repo.git_symbolic_refs()
             .add_or_update_entries(vec![symref_entry])
             .await
             .context("failed to add symbolic ref entries")?;
@@ -363,8 +366,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
                 .await
                 .context("failed to build RepoContext")?;
             let existing_tags = repo
-                .inner()
-                .bonsai_tag_mapping
+                .bonsai_tag_mapping()
                 .get_all_entries()
                 .await
                 .context("Failed to fetch bonsai tag mapping")?
