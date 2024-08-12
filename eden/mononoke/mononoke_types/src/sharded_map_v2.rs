@@ -440,35 +440,37 @@ impl<Value: ShardedMapV2Value> ShardedMapV2Node<Value> {
         }
     }
 
-    /// Returns the value corresponding to the given key, or None if there's no value
-    /// corresponding to it.
+    /// Returns a map containing all key-value pairs in this map for which the key
+    /// starts with the given key_prefix, with key_prefix stripped from the keys.
+    ///
+    /// Returns None if no key in the map starts with the given key_prefix.
     #[async_recursion]
     pub async fn get_partial_map(
         &self,
         ctx: &CoreContext,
         blobstore: &impl Blobstore,
-        key: &[u8],
+        key_prefix: &[u8],
     ) -> Result<Option<LoadableShardedMapV2Node<Value>>> {
-        if let Some(remaining_prefix) = self.prefix.strip_prefix(key) {
-            // If the key is a prefix of this node, then the partial map corresponding
-            // to the key is this node itself (possibly with the prefix adjusted).
+        if let Some(remaining_prefix) = self.prefix.strip_prefix(key_prefix) {
+            // If key_prefix is a prefix of this node, then the partial map corresponding
+            // to the key_prefix is this node itself (possibly with the prefix adjusted).
             let mut node = self.clone();
             node.prefix = remaining_prefix.into();
             return Ok(Some(LoadableShardedMapV2Node::Inlined(node)));
         }
 
-        // If the key starts with the prefix of this node then strip it, otherwise
-        // there's no value corresponding to this key.
-        let key = match key.strip_prefix(self.prefix.as_ref()) {
+        // If key_prefix starts with the prefix of this node then strip it, otherwise
+        // there's no value corresponding to this key_prefix.
+        let key_prefix = match key_prefix.strip_prefix(self.prefix.as_ref()) {
             None => {
                 return Ok(None);
             }
-            Some(key) => key,
+            Some(stripped_key_prefix) => stripped_key_prefix,
         };
 
-        // The key should not be empty, as we would have returned an exact match above.
-        debug_assert!(!key.is_empty());
-        let (first, rest) = key.split_first().expect("No exact match possible");
+        // The key_prefix should not be empty, as we would have returned an exact match above.
+        debug_assert!(!key_prefix.is_empty());
+        let (first, rest) = key_prefix.split_first().expect("No exact match possible");
 
         let child = match self.children.get(first) {
             None => {
@@ -1045,6 +1047,28 @@ mod test {
             map.lookup(&self.0, &self.1, key.as_bytes()).await
         }
 
+        async fn get_partial_map(
+            &self,
+            map: &ShardedMapV2Node<TestValue>,
+            key: &str,
+        ) -> Result<Option<ShardedMapV2Node<TestValue>>> {
+            let partial_map = map
+                .get_partial_map(&self.0, &self.1, key.as_bytes())
+                .await?;
+
+            match partial_map {
+                Some(partial_map) => Ok(Some(partial_map.load(&self.0, &self.1).await?)),
+                None => Ok(None),
+            }
+        }
+
+        async fn load(
+            &self,
+            map: LoadableShardedMapV2Node<TestValue>,
+        ) -> Result<ShardedMapV2Node<TestValue>> {
+            map.load(&self.0, &self.1).await
+        }
+
         async fn into_entries(
             &self,
             map: ShardedMapV2Node<TestValue>,
@@ -1338,11 +1362,25 @@ mod test {
 
         helper.check_example_map(from_entries_map.clone()).await?;
 
+        assert!(
+            helper
+                .get_partial_map(&from_entries_map, "test")
+                .await?
+                .is_none()
+        );
+
         // map_abacab:
         //     *=7
         //     |
         //     a=8
         let map_abacab = inlined_node("", Some(7), vec![(b'a', inlined_node("", Some(8), vec![]))]);
+        assert_eq!(
+            helper.load(map_abacab.clone()).await?,
+            helper
+                .get_partial_map(&from_entries_map, "abacab")
+                .await?
+                .unwrap()
+        );
         // map_abac:
         //     *
         //     |
@@ -1370,6 +1408,13 @@ mod test {
                 "test.map2node.blake2.d40e11f4f3f08ad21b5eb6bab17e0916d449bffde464048dfb27efa3f9c19cee",
             )
             .await?;
+        assert_eq!(
+            helper.load(map_abac.clone()).await?,
+            helper
+                .get_partial_map(&from_entries_map, "abac")
+                .await?
+                .unwrap()
+        );
         // map_abal:
         //      *
         //      |
@@ -1384,6 +1429,13 @@ mod test {
                 (b'b', inlined_node("a", Some(5), vec![])),
                 (b'd', inlined_node("a", Some(6), vec![])),
             ],
+        );
+        assert_eq!(
+            helper.load(map_abal.clone()).await?,
+            helper
+                .get_partial_map(&from_entries_map, "abal")
+                .await?
+                .unwrap()
         );
         // map_a:
         //     *
@@ -1402,6 +1454,13 @@ mod test {
             Some(12),
             vec![(b'c', map_abac.clone()), (b'l', map_abal)],
         );
+        assert_eq!(
+            helper.load(map_a.clone()).await?,
+            helper
+                .get_partial_map(&from_entries_map, "a")
+                .await?
+                .unwrap()
+        );
         // map_omi:
         //     *
         //     |______
@@ -1414,6 +1473,13 @@ mod test {
                 (b'o', inlined_node("jo", Some(1), vec![])),
                 (b'u', inlined_node("x", Some(2), vec![])),
             ],
+        );
+        assert_eq!(
+            helper.load(map_omi.clone()).await?,
+            helper
+                .get_partial_map(&from_entries_map, "omi")
+                .await?
+                .unwrap()
         );
         // map_omu:
         //     *
@@ -1429,6 +1495,13 @@ mod test {
                 (b'd', inlined_node("o", Some(3), vec![])),
                 (b'g', inlined_node("al", Some(4), vec![])),
             ],
+        );
+        assert_eq!(
+            helper.load(map_omu.clone()).await?,
+            helper
+                .get_partial_map(&from_entries_map, "omu")
+                .await?
+                .unwrap()
         );
         // map_o:
         //     *
@@ -1449,6 +1522,13 @@ mod test {
                 "test.map2node.blake2.6f7dc1a2ad07d16eb4d3e586e2f7361c0990dcf4a29b0bb06fa5d04e69710a64"
             )
             .await?;
+        assert_eq!(
+            helper.load(map_o.clone()).await?,
+            helper
+                .get_partial_map(&from_entries_map, "o")
+                .await?
+                .unwrap()
+        );
         // map:
         //     *
         //     |_______________________________________________
@@ -1464,7 +1544,51 @@ mod test {
         //     a=8
         let map = test_node("", None, vec![(b'a', map_a), (b'o', map_o)]);
 
-        assert_eq!(from_entries_map, map);
+        assert_eq!(from_entries_map.clone(), map.clone());
+        assert_eq!(
+            map,
+            helper
+                .get_partial_map(&from_entries_map, "")
+                .await?
+                .unwrap()
+        );
+
+        assert_eq!(
+            helper
+                .from_entries_removed_prefix(&EXAMPLE_ENTRIES[0..8], 2)
+                .await?,
+            helper
+                .get_partial_map(&from_entries_map, "ab")
+                .await?
+                .unwrap()
+        );
+        assert_eq!(
+            helper
+                .from_entries_removed_prefix(&EXAMPLE_ENTRIES[0..8], 3)
+                .await?,
+            helper
+                .get_partial_map(&from_entries_map, "aba")
+                .await?
+                .unwrap()
+        );
+        assert_eq!(
+            helper
+                .from_entries_removed_prefix(&EXAMPLE_ENTRIES[8..12], 2)
+                .await?,
+            helper
+                .get_partial_map(&from_entries_map, "om")
+                .await?
+                .unwrap()
+        );
+        assert_eq!(
+            helper
+                .from_entries_removed_prefix(&EXAMPLE_ENTRIES[10..12], 4)
+                .await?,
+            helper
+                .get_partial_map(&from_entries_map, "omun")
+                .await?
+                .unwrap()
+        );
 
         Ok(())
     }
