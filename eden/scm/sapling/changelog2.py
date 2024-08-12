@@ -190,9 +190,6 @@ class changelog:
         # translate fullreposet to dag.all() that preserves the 'full' hint.
         if isinstance(revs, smartset.fullreposet):
             return self.dag.all()
-        # 'idset' has a fast path - pass the Rust-binding 'spans' directly.
-        if isinstance(revs, smartset.idset):
-            return self.inner.tonodes(revs._spans)
         # 'nameset' has a fast path - it contains the Rust nameset that uses
         # nodes directly.
         if isinstance(revs, smartset.nameset):
