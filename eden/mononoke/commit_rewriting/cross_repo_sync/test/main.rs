@@ -59,6 +59,7 @@ use metaconfig_types::CommitSyncConfig;
 use metaconfig_types::CommitSyncConfigVersion;
 use metaconfig_types::CommonCommitSyncConfig;
 use metaconfig_types::DefaultSmallToLargeCommitSyncPathAction;
+use metaconfig_types::RepoConfig;
 use metaconfig_types::SmallRepoCommitSyncConfig;
 use metaconfig_types::SmallRepoGitSubmoduleConfig;
 use metaconfig_types::SmallRepoPermanentConfig;
@@ -538,6 +539,22 @@ async fn prepare_repos_mapping_and_config(
     ),
     Error,
 > {
+    prepare_repos_mapping_and_config_with_repo_config_overrides(fb, |_| (), |_| ()).await
+}
+async fn prepare_repos_mapping_and_config_with_repo_config_overrides(
+    fb: FacebookInit,
+    small_repo_override: impl FnOnce(&mut RepoConfig),
+    large_repo_override: impl FnOnce(&mut RepoConfig),
+) -> Result<
+    (
+        TestRepo,
+        TestRepo,
+        SqlSyncedCommitMapping,
+        Arc<dyn LiveCommitSyncConfig>,
+        TestLiveCommitSyncConfigSource,
+    ),
+    Error,
+> {
     let metadata_con = SqliteConnection::open_in_memory()?;
     metadata_con.execute_batch(SqlSyncedCommitMapping::CREATION_QUERY)?;
     let hg_mutation_con = SqliteConnection::open_in_memory()?;
@@ -545,11 +562,14 @@ async fn prepare_repos_mapping_and_config(
     let (live_commit_sync_config, source) = TestLiveCommitSyncConfig::new_with_source();
     let live_commit_sync_config = Arc::new(live_commit_sync_config);
     let megarepo = factory
+        .with_config_override(large_repo_override)
         .with_live_commit_sync_config(live_commit_sync_config.clone())
         .with_id(RepositoryId::new(1))
         .build()
         .await?;
+
     let small_repo = factory
+        .with_config_override(small_repo_override)
         .with_live_commit_sync_config(live_commit_sync_config.clone())
         .with_id(RepositoryId::new(0))
         .build()
