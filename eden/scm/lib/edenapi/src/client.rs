@@ -18,6 +18,7 @@ use anyhow::format_err;
 use async_trait::async_trait;
 use clientinfo::ClientInfo;
 use clientinfo_async::get_client_request_info_task_local;
+use edenapi_types::cloud::SmartlogDataResponse;
 use edenapi_types::make_hash_lookup_request;
 use edenapi_types::AlterSnapshotRequest;
 use edenapi_types::AlterSnapshotResponse;
@@ -60,6 +61,7 @@ use edenapi_types::FileRequest;
 use edenapi_types::FileResponse;
 use edenapi_types::FileSpec;
 use edenapi_types::GetReferencesParams;
+use edenapi_types::GetSmartlogParams;
 use edenapi_types::HgFilenodeData;
 use edenapi_types::HgMutationEntryContent;
 use edenapi_types::HistoryEntry;
@@ -175,6 +177,7 @@ mod paths {
     pub const CLOUD_WORKSPACES: &str = "cloud/workspaces";
     pub const CLOUD_UPDATE_REFERENCES: &str = "cloud/update_references";
     pub const CLOUD_REFERENCES: &str = "cloud/references";
+    pub const CLOUD_SMARTLOG: &str = "cloud/smartlog";
     pub const SUFFIXQUERY: &str = "suffix_query";
 }
 
@@ -1784,6 +1787,24 @@ impl SaplingRemoteApi for Client {
     ) -> Result<ReferencesDataResponse, SaplingRemoteApiError> {
         self.with_retry(|this| this.cloud_update_references_attempt(data.clone()).boxed())
             .await
+    }
+
+    async fn cloud_smartlog(
+        &self,
+        data: GetSmartlogParams,
+    ) -> Result<SmartlogDataResponse, SaplingRemoteApiError> {
+        tracing::info!(
+            "Requesting cloud smartlog for the workspace '{}' in the repo '{}' ",
+            data.workspace,
+            data.reponame
+        );
+        let url = self.build_url(paths::CLOUD_SMARTLOG)?;
+        let request = self
+            .configure_request(self.inner.client.post(url))?
+            .cbor(&data.to_wire())
+            .map_err(SaplingRemoteApiError::RequestSerializationFailed)?;
+
+        self.fetch_single::<SmartlogDataResponse>(request).await
     }
 
     async fn suffix_query(

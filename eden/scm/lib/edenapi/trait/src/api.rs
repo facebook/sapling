@@ -10,6 +10,7 @@ use std::num::NonZeroU64;
 use std::time::Duration;
 
 use async_trait::async_trait;
+use edenapi_types::cloud::SmartlogDataResponse;
 use edenapi_types::AlterSnapshotRequest;
 use edenapi_types::AlterSnapshotResponse;
 use edenapi_types::AnyFileContentId;
@@ -36,6 +37,7 @@ use edenapi_types::FetchSnapshotResponse;
 use edenapi_types::FileResponse;
 use edenapi_types::FileSpec;
 use edenapi_types::GetReferencesParams;
+use edenapi_types::GetSmartlogParams;
 use edenapi_types::HgFilenodeData;
 use edenapi_types::HgMutationEntryContent;
 use edenapi_types::HistoryEntry;
@@ -405,6 +407,14 @@ pub trait SaplingRemoteApi: Send + Sync + 'static {
         &self,
         data: UpdateReferencesParams,
     ) -> Result<ReferencesDataResponse, SaplingRemoteApiError> {
+        let _ = data;
+        Err(SaplingRemoteApiError::NotSupported)
+    }
+
+    async fn cloud_smartlog(
+        &self,
+        data: GetSmartlogParams,
+    ) -> Result<SmartlogDataResponse, SaplingRemoteApiError> {
         let _ = data;
         Err(SaplingRemoteApiError::NotSupported)
     }

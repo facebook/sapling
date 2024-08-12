@@ -27,6 +27,7 @@ use edenapi::SaplingRemoteApi;
 use edenapi::SaplingRemoteApiError;
 use edenapi::Stats;
 use edenapi_ext::calc_contentid;
+use edenapi_types::cloud::SmartlogDataResponse;
 use edenapi_types::AlterSnapshotRequest;
 use edenapi_types::AlterSnapshotResponse;
 use edenapi_types::AnyFileContentId;
@@ -43,6 +44,7 @@ use edenapi_types::FetchSnapshotRequest;
 use edenapi_types::FetchSnapshotResponse;
 use edenapi_types::FileResponse;
 use edenapi_types::GetReferencesParams;
+use edenapi_types::GetSmartlogParams;
 use edenapi_types::HgChangesetContent;
 use edenapi_types::HgFilenodeData;
 use edenapi_types::HgMutationEntryContent;
@@ -756,6 +758,18 @@ pub trait SaplingRemoteApiPyExt: SaplingRemoteApi {
     ) -> PyResult<Serde<ReferencesDataResponse>> {
         let responses = py
             .allow_threads(|| block_unless_interrupted(self.cloud_update_references(data.0)))
+            .map_pyerr(py)?
+            .map_pyerr(py)?;
+        Ok(Serde(responses))
+    }
+
+    fn cloud_smartlog_py(
+        &self,
+        data: Serde<GetSmartlogParams>,
+        py: Python,
+    ) -> PyResult<Serde<SmartlogDataResponse>> {
+        let responses = py
+            .allow_threads(|| block_unless_interrupted(self.cloud_smartlog(data.0)))
             .map_pyerr(py)?
             .map_pyerr(py)?;
         Ok(Serde(responses))

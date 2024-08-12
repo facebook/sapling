@@ -25,6 +25,7 @@ use edenapi::SaplingRemoteApi;
 use edenapi_ext::check_files;
 use edenapi_ext::download_files;
 use edenapi_ext::upload_snapshot;
+use edenapi_types::cloud::SmartlogDataResponse;
 use edenapi_types::AlterSnapshotRequest;
 use edenapi_types::AlterSnapshotResponse;
 use edenapi_types::AnyFileContentId;
@@ -46,6 +47,7 @@ use edenapi_types::FileResponse;
 use edenapi_types::FileSpec;
 use edenapi_types::FileType;
 use edenapi_types::GetReferencesParams;
+use edenapi_types::GetSmartlogParams;
 use edenapi_types::HgChangesetContent;
 use edenapi_types::HgMutationEntryContent;
 use edenapi_types::HistoryEntry;
@@ -575,6 +577,12 @@ py_class!(pub class client |py| {
         -> PyResult<Serde<ReferencesDataResponse>>
     {
         self.inner(py).as_ref().cloud_update_references_py(data, py)
+    }
+
+    def cloudsmartlog(&self, data: Serde<GetSmartlogParams>)
+    -> PyResult<Serde<SmartlogDataResponse>>
+    {
+        self.inner(py).as_ref().cloud_smartlog_py(data, py)
     }
 });
 
