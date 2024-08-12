@@ -763,11 +763,42 @@ class nameset(abstractsmartset):
       to reduce or elimate generatorset usage.
     """
 
-    def __init__(self, changelog, nameset, reverse=False, repo=None):
-        assert isinstance(nameset, bindings.dag.nameset)
+    def __init__(self, changelog, value, reverse=False, repo=None):
+        """Initialize nameset (Rust ``dag::Set`` wrapper) for Python smartset.
+
+        ``value`` can be:
+        - bindings.dag.nameset
+        - List[bytes]: Nodes (binary hashes).
+        - bindings.dag.spans
+        - Iterator[int | Tuple[int, int]]: Integer revisions, a tuple
+          (start, end) indicates a range (used to be named "spanset").
+
+        ```reverse`` is handled by this Python class, not by Rust (yet).
+        """
+        if isinstance(value, bindings.dag.nameset):
+            nodes = value
+        elif (
+            isinstance(value, list)
+            and value
+            and all(isinstance(n, bytes) for n in value)
+        ):
+            # Backed by StaticSet in Rust. The StaticSet is free form, not
+            # associated with a dag, which means every time it is calculated
+            # with other sets (ex. union, intersection), it triggers lookups.
+            # Callsites can use `dag.sort` to turn it to the more efficient
+            # IdStaticSet.
+            # Optimization: use IdStaticSet if the list is empty.
+            nodes = bindings.dag.nameset(value)
+        else:
+            # Iterator[int | Tuple[int, int]]
+            # Backed by IdStaticSet in Rust. Most efficient. Associated with the dag.
+            # See <pydag::spanset::Spans as FromPyObject>::extract
+            nodes = changelog.tonodes(value)
+
         self._changelog = changelog
-        self._set = nameset
-        # This controls the order of the set.
+        self._set = nodes
+        # This controls the order of the set on the Python side.
+        # The Rust set has its own order control.
         self._reversed = reverse
         if repo is None:
             raise TypeError("nameset requires repo")
