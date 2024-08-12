@@ -3131,7 +3131,8 @@ ImmediateFuture<Unit> TreeInode::checkout(
                                  << self->getLogPath() << ": " << numErrors
                                  << " errors";
                     });
-          });
+          })
+      .ensure([ctx] { ctx->increaseCheckoutCounter(1); });
 }
 
 bool TreeInode::canShortCircuitCheckout(

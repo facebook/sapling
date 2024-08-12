@@ -18,6 +18,7 @@
 #include <folly/logging/Logger.h>
 #include <folly/portability/GFlags.h>
 #include <chrono>
+#include <cstdint>
 #include <memory>
 #include <mutex>
 #include <optional>
@@ -292,7 +293,17 @@ struct ParentCommitState {
   struct NoOngoingCheckout {};
 
   /* Any kind of checkout (DRY_RUN, NORMAL or FORCE) is ongoing. */
-  struct CheckoutInProgress {};
+  struct CheckoutInProgress {
+    // Checkout progress info should exist iff a checkout is ongoing, and
+    // its existence should change in the same way a ParentCommitState does.
+    // We also want this progress info to be accessible in other places, which
+    // is why this is a shared pointer to the (current) checkout info struct.
+    // For now this is only an uint64_t, but soon this will change to hold
+    // a different struct.
+    // TODO(sggutier): remove the line above once the progress info becomes
+    // more complex.
+    std::shared_ptr<std::atomic<uint64_t>> checkoutProgress;
+  };
 
   /** A checkout was previously interrupted */
   struct InterruptedCheckout {
@@ -550,6 +561,8 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
   RootId getWorkingCopyParent() const {
     return parentState_.rlock()->workingCopyParentRootId;
   }
+
+  std::optional<int64_t> getCheckoutProgress() const;
 
   /**
    * Return the ObjectStore used by this mount point.

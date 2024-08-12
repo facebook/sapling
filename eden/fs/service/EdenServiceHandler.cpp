@@ -5477,6 +5477,21 @@ int64_t EdenServiceHandler::getPid() {
   return ProcessId::current().get();
 }
 
+void EdenServiceHandler::getCheckoutProgressInfo(
+    CheckoutProgressInfoResponse& ret,
+    unique_ptr<CheckoutProgressInfoRequest> params) {
+  auto mountPath = absolutePathFromThrift(*params->mountPoint());
+  auto mountHandle = server_->getMount(mountPath);
+  auto checkoutProgress = mountHandle.getEdenMount().getCheckoutProgress();
+  if (checkoutProgress.has_value()) {
+    CheckoutProgressInfo progressInfoRet;
+    progressInfoRet.updatedInodes_ref() = std::move(checkoutProgress.value());
+    ret.checkoutProgressInfo_ref() = std::move(progressInfoRet);
+  } else {
+    ret.set_noProgress();
+  }
+}
+
 void EdenServiceHandler::initiateShutdown(std::unique_ptr<std::string> reason) {
   auto helper = INSTRUMENT_THRIFT_CALL(INFO);
   XLOG(INFO) << "initiateShutdown requested, reason: " << *reason;

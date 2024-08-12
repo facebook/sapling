@@ -800,6 +800,7 @@ ImmediateFuture<SetPathObjectIdResultAndTimes> EdenMount::setPathsToObjectIds(
         checkoutMode,
         context->getClientPid(),
         "setPathObjectId",
+        nullptr,
         context->getRequestInfo());
 
     /**
@@ -1070,6 +1071,21 @@ const shared_ptr<UnboundedQueueExecutor>& EdenMount::getInvalidationThreadPool()
 
 std::shared_ptr<const EdenConfig> EdenMount::getEdenConfig() const {
   return serverState_->getReloadableConfig()->getEdenConfig();
+}
+
+std::optional<int64_t> EdenMount::getCheckoutProgress() const {
+  auto parentLock = parentState_.rlock();
+  if (!std::holds_alternative<ParentCommitState::CheckoutInProgress>(
+          parentLock->checkoutState)) {
+    return std::nullopt;
+  }
+  auto checkout = std::get<ParentCommitState::CheckoutInProgress>(
+      parentLock->checkoutState);
+  auto progress = checkout.checkoutProgress.get();
+  if (progress == nullptr) {
+    return std::nullopt;
+  }
+  return progress->load(std::memory_order_relaxed);
 }
 
 #ifndef _WIN32
@@ -1358,6 +1374,7 @@ ImmediateFuture<CheckoutResult> EdenMount::checkout(
 
   ParentCommitState::CheckoutState oldState =
       ParentCommitState::NoOngoingCheckout{};
+  std::shared_ptr<CheckoutContext> ctx;
   RootId oldParent;
   {
     auto parentLock = parentState_.wlock();
@@ -1392,15 +1409,18 @@ ImmediateFuture<CheckoutResult> EdenMount::checkout(
     // achieving the same would be to hold the lock during the checkout
     // operation, but this might lead to deadlocks on Windows due to callbacks
     // needing to access the parent commit to service callbacks.
-    parentLock->checkoutState = ParentCommitState::CheckoutInProgress{};
+    auto progressTracker = std::make_shared<std::atomic<uint64_t>>(0);
+    parentLock->checkoutState =
+        ParentCommitState::CheckoutInProgress{progressTracker};
+    ctx = std::make_shared<CheckoutContext>(
+        this,
+        checkoutMode,
+        fetchContext->getClientPid(),
+        thriftMethodCaller,
+        progressTracker,
+        fetchContext->getRequestInfo());
   }
 
-  auto ctx = std::make_shared<CheckoutContext>(
-      this,
-      checkoutMode,
-      fetchContext->getClientPid(),
-      thriftMethodCaller,
-      fetchContext->getRequestInfo());
   XLOG(DBG1) << "starting checkout for " << this->getPath() << ": " << oldParent
              << " to " << snapshotHash;
 

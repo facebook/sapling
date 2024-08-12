@@ -42,6 +42,7 @@ class CheckoutContext {
       CheckoutMode checkoutMode,
       OptionalProcessId clientPid,
       folly::StringPiece thriftMethodName,
+      std::shared_ptr<std::atomic<uint64_t>> checkoutProgress = nullptr,
       const std::unordered_map<std::string, std::string>* requestInfo =
           nullptr);
 
@@ -142,11 +143,15 @@ class CheckoutContext {
     return windowsSymlinksEnabled_;
   }
 
+  void increaseCheckoutCounter(int64_t inc) const;
+
  private:
   CheckoutMode checkoutMode_;
   EdenMount* const mount_;
   RenameLock renameLock_;
   RefPtr<StatsFetchContext> fetchContext_;
+
+  std::shared_ptr<std::atomic<uint64_t>> checkoutProgress_;
 
   // The checkout processing may occur across many threads,
   // if some data load operations complete asynchronously on other threads.

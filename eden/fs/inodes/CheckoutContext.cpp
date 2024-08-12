@@ -25,6 +25,7 @@ CheckoutContext::CheckoutContext(
     CheckoutMode checkoutMode,
     OptionalProcessId clientPid,
     folly::StringPiece thriftMethodName,
+    std::shared_ptr<std::atomic<uint64_t>> checkoutProgress,
     const std::unordered_map<std::string, std::string>* requestInfo)
     : checkoutMode_{checkoutMode},
       mount_{mount},
@@ -33,6 +34,7 @@ CheckoutContext::CheckoutContext(
           ObjectFetchContext::Cause::Thrift,
           thriftMethodName,
           requestInfo)},
+      checkoutProgress_{std::move(checkoutProgress)},
       windowsSymlinksEnabled_{
           mount_->getCheckoutConfig()->getEnableWindowsSymlinks()} {}
 
@@ -157,5 +159,11 @@ void CheckoutContext::addError(
   conflict.type_ref() = ConflictType::ERROR;
   conflict.message_ref() = folly::exceptionStr(ew).toStdString();
   conflicts_.wlock()->push_back(std::move(conflict));
+}
+
+void CheckoutContext::increaseCheckoutCounter(int64_t inc) const {
+  if (checkoutProgress_) {
+    checkoutProgress_->fetch_add(inc, std::memory_order_relaxed);
+  }
 }
 } // namespace facebook::eden

@@ -410,6 +410,10 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
 
   int64_t getPid() override;
 
+  void getCheckoutProgressInfo(
+      CheckoutProgressInfoResponse& ret,
+      std::unique_ptr<CheckoutProgressInfoRequest> params) override;
+
   /**
    * A thrift client has requested that we shutdown.
    */
