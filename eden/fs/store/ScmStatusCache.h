@@ -135,12 +135,29 @@ class ScmStatusCache : public ObjectCache<
   void dropPromise(const ObjectId& key, JournalDelta::SequenceNumber seq);
 
   /**
+   * Clear this cache so both promiseMap and the internal ObjectCache are empty.
+   */
+  void clear();
+
+  /**
    * Check if the cached entry is with a sequence number that is valid
    * to reuse given the current sequence number.
    */
   bool isSequenceValid(
       JournalDelta::SequenceNumber curSeq,
       JournalDelta::SequenceNumber cachedSeq) const;
+
+  /**
+   * Check if the cached working copy parent root id is valid to reuse given
+   * the current working copy parent root id.
+   */
+  bool isCachedWorkingDirValid(RootId& curWorkingDir) const;
+
+  /**
+   * Reset the cached working copy parent root id.
+   * Clear it if no RootId provided.
+   */
+  void resetCachedWorkingDir(RootId curWorkingDir = RootId());
 
  private:
   /**
@@ -151,6 +168,13 @@ class ScmStatusCache : public ObjectCache<
    * result is inserted into the internal cache.
    */
   std::unordered_map<ObjectId, PromiseMapValue> promiseMap_;
+
+  /**
+   * The cached working copy parent root id. This is used to determine if this
+   * cache is valid to use to fetch a cached diff result for current working
+   * copy.
+   */
+  RootId cachedWorkingCopyParentRootId_;
 
   /**
    * Use journal to determine if the sequence range contains changes outside

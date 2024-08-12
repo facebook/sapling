@@ -19,6 +19,7 @@ using namespace facebook::eden;
 struct ScmStatusCacheTest : ::testing::Test {
   std::shared_ptr<EdenConfig> rawEdenConfig;
   std::shared_ptr<Journal> journal;
+  RootId hash1{"1111111111111111111111111111111111111111"};
 
   void SetUp() override {
     rawEdenConfig = EdenConfig::createTestEdenConfig();
@@ -282,8 +283,21 @@ TEST_F(ScmStatusCacheTest, check_sequence_range_validity) {
   EXPECT_TRUE(cache->isSequenceValid(currentSeq, cachedSeq));
 
   // working directory changes
-  RootId hash1{"1111111111111111111111111111111111111111"};
   journal->recordHashUpdate(hash1);
   currentSeq = journal->getLatest()->sequenceID;
   EXPECT_FALSE(cache->isSequenceValid(currentSeq, cachedSeq));
+}
+
+TEST_F(ScmStatusCacheTest, cache_clear) {
+  auto key = ObjectId::fromHex("0123456789abcdef");
+  auto val = std::make_shared<SeqStatusPair>(0, ScmStatus{});
+  auto cache = ScmStatusCache::create(
+      rawEdenConfig.get(), makeRefPtr<EdenStats>(), journal);
+  cache->resetCachedWorkingDir(hash1);
+  cache->insert(key, val);
+  EXPECT_EQ(1, cache->getObjectCount());
+  cache->clear();
+  EXPECT_EQ(0, cache->getObjectCount());
+  auto emptyRootId = RootId();
+  EXPECT_TRUE(cache->isCachedWorkingDirValid(emptyRootId));
 }

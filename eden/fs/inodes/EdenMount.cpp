@@ -1856,7 +1856,16 @@ ImmediateFuture<Unit> EdenMount::diff(
       std::variant<StatusResultFuture, StatusResultPromise> getResult{nullptr};
       {
         auto lockedCachePtr = scmStatusCache_.wlock();
-        getResult = (*lockedCachePtr)->get(key, curSequenceID);
+        auto& cache = *lockedCachePtr;
+
+        // if there is a root update, we can invalidate the cache as a whole
+        // so we don't need to invalidate each entry item individually as we
+        // fetch them.
+        if (!cache->isCachedWorkingDirValid(currentWorkingCopyParentRootId)) {
+          cache->clear();
+          cache->resetCachedWorkingDir(currentWorkingCopyParentRootId);
+        }
+        getResult = cache->get(key, curSequenceID);
       }
 
       if (std::holds_alternative<StatusResultFuture>(getResult)) {

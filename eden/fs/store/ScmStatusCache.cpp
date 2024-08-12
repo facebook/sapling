@@ -102,4 +102,19 @@ bool ScmStatusCache::isSequenceValid(
   return valid;
 }
 
+void ScmStatusCache::clear() {
+  ObjectCache::clear();
+  promiseMap_.clear(); // safe to clear because we know the promise is
+                       // referenced by at least one pending request
+  resetCachedWorkingDir();
+}
+
+bool ScmStatusCache::isCachedWorkingDirValid(RootId& curWorkingDir) const {
+  return cachedWorkingCopyParentRootId_ == curWorkingDir;
+}
+
+void ScmStatusCache::resetCachedWorkingDir(RootId curWorkingDir) {
+  cachedWorkingCopyParentRootId_ = std::move(curWorkingDir);
+}
+
 } // namespace facebook::eden
