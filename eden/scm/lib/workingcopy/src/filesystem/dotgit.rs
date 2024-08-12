@@ -32,7 +32,9 @@ use crate::filesystem::PendingChange;
 pub struct DotGitFileSystem {
     #[allow(unused)]
     treestate: Arc<Mutex<TreeState>>,
+    #[allow(unused)]
     vfs: VFS,
+    #[allow(unused)]
     store: Arc<dyn FileStore>,
     git: Arc<RunGitOptions>,
 }
@@ -159,8 +161,8 @@ impl FileSystem for DotGitFileSystem {
 
     fn sparse_matcher(
         &self,
-        manifests: &[Arc<TreeManifest>],
-        dot_dir: &'static str,
+        _manifests: &[Arc<TreeManifest>],
+        _dot_dir: &'static str,
     ) -> Result<Option<DynMatcher>> {
         Ok(None)
     }

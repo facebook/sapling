@@ -30,7 +30,7 @@ impl DeferredWatchmanClient {
     pub fn get(&self) -> Result<Arc<watchman_client::Client>> {
         self.watchman_client
             .get_or_try_init(|| connect_watchman(&self.config))
-            .map(|c| c.clone())
+            .cloned()
     }
 }
 
