@@ -85,10 +85,10 @@ impl<R> MononokeRepos<R> {
         result.into_iter()
     }
 
-    /// Private method that performs the add operations without lock-related
+    /// Private method that performs the add/update operations without lock-related
     /// logic. The public accessors to this method ensure that the lock is
     /// acquired before this method is invoked.
-    fn add_inner(&self, repo_name: &str, repo_id: i32, repo: R) {
+    fn add_or_update_inner(&self, repo_name: &str, repo_id: i32, repo: R) {
         // First, add the repo-id to repo-name mapping since the actual
         // repo addition should be the last step.
         let id_to_name_map = self.id_to_name_map.load();
@@ -122,7 +122,7 @@ impl<R> MononokeRepos<R> {
     pub fn add(&self, repo_name: &str, repo_id: i32, repo: R) {
         // Acquire the lock to avoid race conditions during update.
         let lock = self.update_lock.lock();
-        self.add_inner(repo_name, repo_id, repo);
+        self.add_or_update_inner(repo_name, repo_id, repo);
         // Drop the lock to allow other threads to update the repos.
         drop(lock);
     }
@@ -138,7 +138,7 @@ impl<R> MononokeRepos<R> {
         match self.update_lock.try_lock() {
             // Lock acquired, add repo.
             Some(lock) => {
-                self.add_inner(repo_name, repo_id, repo);
+                self.add_or_update_inner(repo_name, repo_id, repo);
                 drop(lock);
                 Ok(())
             }
@@ -225,6 +225,35 @@ impl<R> MononokeRepos<R> {
         let lock = self.update_lock.lock();
         let mut id_to_name_map: HashMap<i32, String> = HashMap::new();
         let mut name_to_repo_map: HashMap<String, Arc<R>> = HashMap::new();
+        for (id, name, repo) in repos.into_iter() {
+            id_to_name_map.insert(id, name.to_string());
+            name_to_repo_map.insert(name, Arc::new(repo));
+        }
+        self.id_to_name_map.store(Arc::new(id_to_name_map));
+        self.name_to_repo_map.store(Arc::new(name_to_repo_map));
+        // Drop the lock to allow other threads to update the repos.
+        drop(lock);
+    }
+
+    /// Method responsible for bulk populating MononokeRepos from an input iterator of Repos.
+    /// This method only REPLACES existing repos OR adds new repos with the set of repos
+    /// provided as input maintaining a 1-to-1 mapping. In other words, this method will
+    /// NEVER remove an existing repo.
+    /// NOTE: This is a mutex guarded operation that can induce wait times for
+    /// the caller thread.
+    /// Before calling this method ensure that the caller is not holding additional
+    /// locks. If the caller does hold additional locks, ensure that the locks are
+    /// acquired in proper sequence to avoid deadlock or starvation.
+    pub fn reload<I>(&self, repos: I)
+    where
+        I: IntoIterator<Item = (i32, String, R)>,
+    {
+        // Acquire the lock to avoid race conditions during update.
+        let lock = self.update_lock.lock();
+        let mut id_to_name_map: HashMap<i32, String> =
+            Arc::<_>::unwrap_or_clone(self.id_to_name_map.load().clone());
+        let mut name_to_repo_map: HashMap<String, Arc<R>> =
+            Arc::<_>::unwrap_or_clone(self.name_to_repo_map.load().clone());
         for (id, name, repo) in repos.into_iter() {
             id_to_name_map.insert(id, name.to_string());
             name_to_repo_map.insert(name, Arc::new(repo));

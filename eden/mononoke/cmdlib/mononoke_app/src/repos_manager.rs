@@ -262,19 +262,10 @@ impl<Repo> MononokeConfigUpdateReceiver<Repo> {
             service_name,
         }
     }
-}
 
-#[async_trait]
-impl<Repo> ConfigUpdateReceiver for MononokeConfigUpdateReceiver<Repo>
-where
-    Repo: for<'builder> AsyncBuildable<'builder, RepoFactoryBuilder<'builder>> + Send + Sync,
-{
-    async fn apply_update(
-        &self,
-        repo_configs: Arc<RepoConfigs>,
-        _: Arc<StorageConfigs>,
-    ) -> Result<()> {
-        let mut repos_to_load = Vec::new();
+    /// Method for determing the set of repos to be reloaded with the new config
+    fn reloadable_repo(&self, repo_configs: Arc<RepoConfigs>) -> Vec<(String, RepoConfig)> {
+        let mut repos_to_load = vec![];
         for (repo_name, repo_config) in repo_configs.repos.clone().into_iter() {
             if self.repos.get_by_name(repo_name.as_str()).is_some() {
                 // Repo was already present on the server. Need to reload it.
@@ -302,6 +293,21 @@ where
             // added or removed. In such a case, reloading of the repo with the old name
             // would not be possible based on the new configs.
         }
+        repos_to_load
+    }
+}
+
+#[async_trait]
+impl<Repo> ConfigUpdateReceiver for MononokeConfigUpdateReceiver<Repo>
+where
+    Repo: for<'builder> AsyncBuildable<'builder, RepoFactoryBuilder<'builder>> + Send + Sync,
+{
+    async fn apply_update(
+        &self,
+        repo_configs: Arc<RepoConfigs>,
+        _: Arc<StorageConfigs>,
+    ) -> Result<()> {
+        let repos_to_load = self.reloadable_repo(repo_configs.clone());
 
         let repos_input = stream::iter(repos_to_load)
             .map(|(repo_name, repo_config)| {
@@ -330,7 +336,8 @@ where
             .await
             .into_iter()
             .collect::<Result<Vec<_>>>()?;
-        self.repos.populate(repos_input);
+        // Ensure that we only add or replace repos and NEVER remove them
+        self.repos.reload(repos_input);
         Ok(())
     }
 }
