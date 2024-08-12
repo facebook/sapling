@@ -884,6 +884,11 @@ class nameset(abstractsmartset):
         return node in self._set
 
     def __nonzero__(self):
+        min, max = self._set.size_hint()
+        if min > 0:
+            return True
+        elif max == 0:
+            return False
         return bool(self._set.first())
 
     __bool__ = __nonzero__
