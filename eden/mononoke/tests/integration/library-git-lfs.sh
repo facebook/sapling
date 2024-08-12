@@ -80,6 +80,18 @@ EOF
     echo "laaaaaaaaaarge file" > large_file
     git add large_file
     git commit -aqm "add large file"
+
+    # commit LFS file with non-canonical legacy pointer
+    cat >> large_file_non_canonical_pointer <<EOF
+version https://hawser.github.com/spec/v1
+oid sha256:6c54a4de10537e482e9f91281fb85ab614e0e0f62307047f9b9f3ccea2de8204
+size 20
+EOF
+    git add large_file_non_canonical_pointer
+    git commit -aqm "add large file non canonical pointer"
+
+    # swap that pointer for contents
+    quiet git lfs checkout
     quiet git push -q origin main || return 1
     export GIT_REPO_HEAD
     GIT_REPO_HEAD="$(git rev-parse HEAD)"
