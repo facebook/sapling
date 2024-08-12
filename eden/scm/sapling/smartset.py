@@ -918,7 +918,10 @@ class nameset(abstractsmartset):
     def __len__(self):
         return len(self._set)
 
-    fastlen = __len__
+    def fastlen(self):
+        min, max = self._set.size_hint()
+        if min == max:
+            return min
 
     def fastmin(self):
         return self._set.hints().get("min")
