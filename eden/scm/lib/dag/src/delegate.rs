@@ -112,6 +112,9 @@ macro_rules! delegate {
             fn to_set(&self, set: &$crate::IdSet) -> $crate::Result<$crate::Set> {
                 self.$($t)*.to_set(set)
             }
+            fn id_list_to_set(&self, list: &$crate::IdList) -> $crate::Result<$crate::Set> {
+                self.$($t)*.id_list_to_set(list)
+            }
         }
     };
 

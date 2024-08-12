@@ -23,6 +23,7 @@ pub use crate::iddag::IdDagAlgorithm;
 use crate::set::id_lazy::IdLazySet;
 use crate::set::id_static::IdStaticSet;
 use crate::set::Set;
+use crate::IdList;
 use crate::IdSet;
 use crate::Result;
 use crate::VerLink;
@@ -639,6 +640,9 @@ pub trait ToIdSet {
 pub trait ToSet {
     /// Converts [`IdSet`] to [`Set`].
     fn to_set(&self, set: &IdSet) -> Result<Set>;
+
+    /// Converts [`IdList`] to [`Set`].
+    fn id_list_to_set(&self, list: &IdList) -> Result<Set>;
 }
 
 pub trait IdMapSnapshot {
@@ -757,5 +761,9 @@ impl<T: IdMapSnapshot + DagAlgorithm> ToSet for T {
     /// Converts [`IdSet`] to [`Set`].
     fn to_set(&self, set: &IdSet) -> Result<Set> {
         Set::from_id_set_dag(set.clone(), self)
+    }
+
+    fn id_list_to_set(&self, list: &IdList) -> Result<Set> {
+        Set::from_id_list_dag(list.clone(), self)
     }
 }
