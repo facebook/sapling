@@ -318,7 +318,7 @@ impl MegarepoApi {
         Ok((repo.repo_config_arc(), repo.repo_identity_arc()))
     }
 
-    /// Get Mononoke repo context by terget
+    /// Get Mononoke repo context by target
     pub async fn target_repo(
         &self,
         ctx: &CoreContext,
