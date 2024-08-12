@@ -456,6 +456,20 @@ async fn make_physical_blobstore_unlink_ops<'a>(
         Files { .. } => make_files_blobstore(blobconfig, blobstore_options)
             .await
             .map(|store| Arc::new(store) as Arc<dyn BlobstoreUnlinkOps>),
+        AwsS3 {
+            bucket,
+            region,
+            num_concurrent_operations,
+            ..
+        } => {
+            let client_backend = AwsS3ClientPool::new(region, num_concurrent_operations).await?;
+
+            S3Blob::new(bucket, client_backend, blobstore_options.put_behaviour)
+                .watched(logger)
+                .await
+                .context(ErrorKind::StateOpen)
+                .map(|store| Arc::new(store) as Arc<dyn BlobstoreUnlinkOps>)
+        }
         _ => bail!("Not a physical blobstore"),
     }
 }
