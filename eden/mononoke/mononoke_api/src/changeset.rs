@@ -560,7 +560,7 @@ impl ChangesetContext {
     }
 
     /// Get the `ChangesetInfo` for this changeset.
-    async fn changeset_info(&self) -> Result<ChangesetInfo, MononokeError> {
+    pub async fn changeset_info(&self) -> Result<ChangesetInfo, MononokeError> {
         if self.repo.derive_changeset_info_enabled() {
             self.changeset_info
                 .get_or_init(|| self.derive::<ChangesetInfo>())

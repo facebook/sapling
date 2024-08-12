@@ -9,6 +9,7 @@
 pub mod ctx;
 pub mod references;
 pub mod sql;
+use std::fmt::Display;
 use std::sync::Arc;
 
 use bonsai_hg_mapping::BonsaiHgMapping;
@@ -44,6 +45,7 @@ use crate::references::RawSmartlogData;
 use crate::sql::ops::Get;
 use crate::sql::ops::Insert;
 use crate::sql::ops::SqlCommitCloud;
+
 #[facet]
 pub struct CommitCloud {
     pub storage: SqlCommitCloud,
@@ -79,6 +81,20 @@ pub struct ClientInfo {
     pub hostname: String,
     pub reporoot: String,
     pub version: u64,
+}
+
+pub enum Phase {
+    Public,
+    Draft,
+}
+
+impl Display for Phase {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Phase::Public => write!(f, "public"),
+            Phase::Draft => write!(f, "draft"),
+        }
+    }
 }
 
 impl CommitCloud {
@@ -303,24 +319,22 @@ impl CommitCloud {
         hgid: &HgChangesetId,
         parents: &Vec<HgId>,
         node: &ChangesetInfo,
-        local_bookmarks: &Vec<String>,
+        local_bookmarks: &Option<Vec<String>>,
         remote_bookmarks: &Option<Vec<RemoteBookmark>>,
-        is_public: bool,
+        phase: &Phase,
     ) -> anyhow::Result<SmartlogNode> {
         let author = node.author();
         let date = node.author_date().as_chrono().timestamp();
         let message = node.message();
 
-        let phase = if is_public { "public" } else { "draft" };
-
         let node = SmartlogNode {
             node: (*hgid).into(),
-            phase: String::from(phase),
+            phase: phase.to_string(),
             author: author.to_string(),
             date,
             message: message.to_string(),
             parents: parents.to_owned(),
-            bookmarks: local_bookmarks.to_owned(),
+            bookmarks: local_bookmarks.to_owned().unwrap_or_default(),
             remote_bookmarks: remote_bookmarks.to_owned(),
         };
         Ok(node)

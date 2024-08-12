@@ -678,7 +678,7 @@ impl HgRepoContext {
     }
 
     /// Convert a list of hg changesets to a list of bonsai changesets.
-    async fn convert_changeset_ids(
+    pub(crate) async fn convert_changeset_ids(
         &self,
         changesets: Vec<HgChangesetId>,
     ) -> Result<Vec<ChangesetId>, MononokeError> {
