@@ -561,7 +561,7 @@ class nameset(abstractsmartset):
       to reduce or elimate generatorset usage.
     """
 
-    def __init__(self, changelog, value, reverse=False, repo=None):
+    def __init__(self, value, reverse=False, repo=None):
         """Initialize nameset (Rust ``dag::Set`` wrapper) for Python smartset.
 
         ``value`` can be:
@@ -573,6 +573,9 @@ class nameset(abstractsmartset):
 
         ```reverse`` is handled by this Python class, not by Rust (yet).
         """
+        if repo is None:
+            raise TypeError("nameset requires repo")
+        changelog = repo.changelog
         if isinstance(value, bindings.dag.nameset):
             nodes = value
         elif (
@@ -598,8 +601,6 @@ class nameset(abstractsmartset):
         # This controls the order of the set on the Python side.
         # The Rust set has its own order control.
         self._reversed = reverse
-        if repo is None:
-            raise TypeError("nameset requires repo")
         self._reporef = weakref.ref(repo)
 
     @property
@@ -625,7 +626,7 @@ class nameset(abstractsmartset):
             # Filter by the fullreposet to remove invalid revs.
             allspans = cl.torevs(dag.all())
             spans = spans & allspans
-        s = nameset(cl, cl.tonodes(spans), reverse=ascending, repo=repo)
+        s = nameset(cl.tonodes(spans), reverse=ascending, repo=repo)
         return s
 
     @property
@@ -816,7 +817,7 @@ class nameset(abstractsmartset):
         if otherset is not None:
             # set operation by the Rust layer
             newset = getattr(self._set, op)(otherset)
-            s = nameset(self._changelog, newset, repo=self.repo())
+            s = nameset(newset, repo=self.repo())
             # preserve order
             if self.isascending():
                 s.sort()
@@ -869,7 +870,7 @@ class nameset(abstractsmartset):
             return baseset([], repo=repo)
 
         newset = self._set.skip(skip).take(take)
-        s = nameset(self._changelog, newset, repo=self.repo())
+        s = nameset(newset, repo=self.repo())
         # preserve order
         if self.isascending():
             s.sort()
@@ -1569,7 +1570,7 @@ class fullreposet(nameset):
 
     def __new__(cls, repo):
         cl = repo.changelog
-        s = nameset(cl, cl.dag.all(), reverse=True, repo=repo)
+        s = nameset(cl.dag.all(), reverse=True, repo=repo)
         s.__class__ = cls
         return s
 
