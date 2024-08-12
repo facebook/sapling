@@ -78,18 +78,18 @@ DOTT_DEPS = {
     "//eden/scm/tests:dummyssh3": "DUMMYSSH",
     # The underlying hg test runner code we depend upon
     "//eden/scm/tests:test_runner": "RUN_TESTS_LIBRARY",
+}
+
+DOTT_HG = {
+    "//eden/scm:hg": "BINARY_HG",
     # The version of python to run
     "//eden/scm:hgpython": "BINARY_HGPYTHON",
 }
 
-DOTT_HG = {
-    # The hg build
-    "//eden/scm:hg": "BINARY_HG",
-}
-
 DOTT_HG_CAS = {
-    # The hg build (for now the same)
-    "//eden/scm:hg": "BINARY_HG",
+    "//eden/scm:hg_cas": "BINARY_HG",
+    # The version of python to run
+    "//eden/scm:hgpython_cas": "BINARY_HGPYTHON",
 }
 
 DISABLE_ALL_NETWORK_ACCESS_DEPS = {

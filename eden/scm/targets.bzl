@@ -28,12 +28,12 @@ def rust_python_library(deps = None, include_python_sys = False, include_cpython
     kwargs3["versions"]["python"] = "3.10"
     rust_library(**kwargs3)
 
-def gen_hgpython():
+def gen_hgpython(hg_target, suffix = ""):
     if read_bool("fbcode", "mode_win_enabled", False) and "ovr_config//os:windows":
         return buck_genrule(
-            name = "hgpython",
+            name = "hgpython" + suffix,
             out = "python.exe",
-            bash = "ln -s $(location :hg) $OUT",
+            bash = "ln -s $(location " + hg_target + ") $OUT",
             cmd_exe = "mklink $OUT $(location :hg)",
             executable = True,
         )
@@ -42,10 +42,10 @@ def gen_hgpython():
     # used sometimes, and that copies the binary into another location rather
     # than actually creating a symlink like in other modes for some reason.
     return buck_sh_binary(
-        name = "hgpython",
+        name = "hgpython" + suffix,
         main = "run_buck_hgpython.sh",
         resources = [
-            "fbcode//eden/scm:hg",
+            hg_target,
         ],
     )
 

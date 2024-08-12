@@ -102,7 +102,12 @@ buck_filegroup(
 
 # Similar to "hg".
 # The main executable uses argv[0] to decide to run as a Python interpreter.
-gen_hgpython()
+gen_hgpython(hg_target = "fbcode//eden/scm:hg")
+
+gen_hgpython(
+    hg_target = "fbcode//eden/scm:hg_cas",
+    suffix = "_cas",
+)
 
 export_file(
     name = "windows-manifest",
