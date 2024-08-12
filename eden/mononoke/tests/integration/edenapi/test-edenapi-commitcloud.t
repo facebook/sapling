@@ -231,7 +231,51 @@ On the first client, make a bookmark, then sync - the bookmark and the new commi
   ├─╯
   o  8b2dca0c8a72 public 'base_commit' new_bookmark remote/master
   
+#if edenapi
+  $ sl cloud sl
+  commitcloud: searching draft commits for the 'user/test/default' workspace for the 'repo' repo
+  Smartlog:
+  
+    o  commit:      c981069f3f05
+    │  user:        test
+    │  date:        Thu Jan 01 00:00:00 1970 +0000
+    │  summary:     F
+    │
+    o  commit:      5267c897028e
+    │  user:        test
+    │  date:        Thu Jan 01 00:00:00 1970 +0000
+    │  summary:     E
+    │
+    o  commit:      4594cad5305d
+  ╭─╯  user:        test
+  │    date:        Thu Jan 01 00:00:00 1970 +0000
+  │    summary:     D
+  │
+  │ @  commit:      c4f3cf0b6f49
+  │ │  user:        test
+  │ │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │ │  summary:     C
+  │ │
+  │ o  commit:      e3133a4a05d5
+  │ │  user:        test
+  │ │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │ │  summary:     B
+  │ │
+  │ o  commit:      929f2b9071cf
+  ├─╯  user:        test
+  │    date:        Thu Jan 01 00:00:00 1970 +0000
+  │    summary:     A
+  │
+  o  commit:      8b2dca0c8a72
+     bookmark:    new_bookmark
+     bookmark:    remote/master
+     hoistedname: master
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     base_commit
+  
 
+#endif
 
 On the first client rebase the stack
   $ sl rebase -s 4594cad5305d -d c4f3cf0b6f49

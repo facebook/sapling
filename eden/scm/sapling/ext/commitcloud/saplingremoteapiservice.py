@@ -5,6 +5,8 @@
 
 from __future__ import absolute_import
 
+import time
+
 from bindings import clientinfo as clientinfomod
 
 # Standard Library
@@ -164,7 +166,32 @@ class SaplingRemoteAPIService(baseservice.BaseService):
         )
 
     def getsmartlog(self, reponame, workspace, repo, limit, flags=[]):
-        return self.fallback.getsmartlog(reponame, workspace, repo, limit, flags)
+        self.ui.debug("sending 'get_smartlog' request\n", component="commitcloud")
+
+        data = {
+            "reponame": reponame,
+            "workspace": workspace,
+            "flags": self._map_legacy_flags(flags),
+        }
+        response = self.repo.edenapi.cloudsmartlog(data)
+
+        smartlog = self._getdatafromresponse(response)
+        if limit != 0:
+            cutoff = int(time.time()) - limit
+            smartlog["nodes"] = list(
+                filter(lambda x: x["date"] >= cutoff, smartlog["nodes"])
+            )
+        self.ui.debug(
+            "'get_smartlog' returns %d entries\n" % len(smartlog["nodes"]),
+            component="commitcloud",
+        )
+        for nodeinfo in smartlog["nodes"]:
+            nodeinfo["node"] = nodeinfo["node"].hex()
+            nodeinfo["parents"] = list(map(lambda x: x.hex(), nodeinfo["parents"]))
+        try:
+            return self._makesmartloginfo(smartlog)
+        except Exception as e:
+            raise error.UnexpectedError(self.ui, e)
 
     def getsmartlogbyversion(
         self, reponame, workspace, repo, date, version, limit, flags=[]
@@ -277,4 +304,12 @@ class SaplingRemoteAPIService(baseservice.BaseService):
             else:
                 raise error.Abort(response["data"]["Err"]["message"])
 
-        raise error.Abort("No data received from server")
+        raise error.Abort("No data revceived from server")
+
+    def _map_legacy_flags(self, strings):
+        mapping = {
+            "ADD_REMOTE_BOOKMARKS": "AddRemoteBookmarks",
+            "ADD_ALL_BOOKMARKS": "AddAllBookmarks",
+            "SKIP_PUBLIC_COMMITS_METADATA": "SkipPublicCommitsMetadata",
+        }
+        return [mapping[s] for s in strings]
