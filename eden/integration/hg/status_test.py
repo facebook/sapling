@@ -545,9 +545,7 @@ class StatusTest(EdenHgTestCase):
 
             def thread_worker(cls, exceptions: List[Exception]) -> None:
                 try:
-                    cls.assert_status(
-                        {"world.txt": "?"}, timeout_seconds=0
-                    )  # retry can mess counters
+                    cls.assert_status({"world.txt": "?"})  # retry can mess counters
                 except Exception as e:
                     exceptions.append(e)
 

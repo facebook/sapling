@@ -284,7 +284,7 @@ class EdenHgTestCase(testcase.EdenTestCase, metaclass=abc.ABCMeta):
         op: Optional[str] = None,
         check_ignored: bool = True,
         rev: Optional[str] = None,
-        timeout_seconds: float = 1.0,
+        timeout_seconds: float = 0.0,
     ) -> None:
         """Asserts the output of `hg status` matches the expected state.
 
