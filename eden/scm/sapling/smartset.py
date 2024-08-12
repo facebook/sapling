@@ -740,12 +740,27 @@ class idset(abstractsmartset):
 class nameset(abstractsmartset):
     """Wrapper around Rust's NameSet that meets the smartset interface.
 
-    The Rust NameSet uses commit hashes for its public interface.
+    The Rust ``dag::Set`` uses commit hashes for its public interface.
     This object does conversions to fit in the abstractsmartset interface
     which uses revision numbers.
 
-    Unlike idset, this object can preserve more types of Rust set,
-    including lazy sets.
+    The Rust ``dag::Set`` is like a ``abstractsmartset`` that it supports
+    union, intersection, difference, slice, reverse, set, list, etc.
+    Ideally all ``abstractsmartset`` usage gets migrated to this ``nameset``,
+    meaning that ``dag::Set`` can cover all use-cases.
+
+    Ideally all kinds of smartsets are backed by this ``nameset`` and therefore
+    tracked by Rust ``Set``.
+
+    Currently, some remaining areas to consider are:
+    - The Rust Set does not track prefetch fields.
+    - The Rust Set has ``Hints``. It is designed to replace fast paths like
+      fastasc, fastdesc etc. However, it might have subtle differences.
+    - The generatorset can be tricky because its "next" calls into Python
+      and GIL + async Rust might deadlock. In some cases, during Py_Finalize
+      thread stack unwinding, we saw rust-cpython panic when the RGenerator
+      is used, this hasn't been fully understood. It might be a good idea
+      to reduce or elimate generatorset usage.
     """
 
     def __init__(self, changelog, nameset, reverse=False, repo=None):
