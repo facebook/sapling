@@ -52,7 +52,6 @@ use metaconfig_types::CommonCommitSyncConfig;
 use metaconfig_types::DefaultSmallToLargeCommitSyncPathAction;
 use metaconfig_types::DerivedDataTypesConfig;
 use metaconfig_types::GitSubmodulesChangesAction;
-use metaconfig_types::RepoConfig;
 use metaconfig_types::SmallRepoCommitSyncConfig;
 use metaconfig_types::SmallRepoGitSubmoduleConfig;
 use metaconfig_types::SmallRepoPermanentConfig;
@@ -70,12 +69,13 @@ use repo_identity::RepoIdentityRef;
 use sorted_vector_map::SortedVectorMap;
 use strum::IntoEnumIterator;
 use synced_commit_mapping::SqlSyncedCommitMapping;
+use test_repo_factory::default_test_repo_derived_data_types_config;
 use test_repo_factory::TestRepoFactory;
 use tests_utils::bookmark;
 use tests_utils::drawdag::extend_from_dag_with_actions;
 use tests_utils::CreateCommitContext;
 
-use crate::prepare_repos_mapping_and_config;
+use crate::prepare_repos_mapping_and_config_with_repo_config_overrides;
 use crate::sync_to_master;
 
 pub const MASTER_BOOKMARK_NAME: &str = "master";
@@ -155,8 +155,17 @@ pub(crate) async fn build_submodule_sync_test_data(
     submodule_deps: Vec<(NonRootMPath, TestRepo)>,
 ) -> Result<SubmoduleSyncTestData> {
     let ctx = CoreContext::test_mock(fb.clone());
+
+    let small_repo_ddt_cfg = submodule_repo_derived_data_types_config();
     let (small_repo, large_repo, mapping, live_commit_sync_config, test_sync_config_source) =
-        prepare_repos_mapping_and_config(fb).await?;
+        prepare_repos_mapping_and_config_with_repo_config_overrides(
+            fb,
+            |cfg| {
+                cfg.derived_data_config.available_configs = small_repo_ddt_cfg;
+            },
+            |_| (),
+        )
+        .await?;
 
     println!("Got small/large repos, mapping and config stores");
     let large_repo_root = CreateCommitContext::new(&ctx, &large_repo, Vec::<String>::new())
@@ -234,18 +243,10 @@ pub(crate) async fn build_submodule_sync_test_data(
 /// It will depend on repo B as a submodule.
 pub(crate) async fn build_small_repo(
     fb: FacebookInit,
-    mut small_repo: TestRepo,
+    small_repo: TestRepo,
     submodule_b_git_hash: GitSha1,
 ) -> Result<(TestRepo, BTreeMap<String, ChangesetId>)> {
     let ctx = CoreContext::test_mock(fb);
-
-    let available_configs = submodule_repo_derived_data_types_config();
-
-    let repo_config_arc = small_repo.repo_config.clone();
-    let mut repo_config: RepoConfig = (*repo_config_arc).clone();
-    repo_config.derived_data_config.available_configs = available_configs;
-
-    small_repo.repo_config = Arc::new(repo_config);
 
     let dag = format!(
         r#"
@@ -489,9 +490,21 @@ pub(crate) fn add_new_commit_sync_config_version_with_submodule_deps(
 /// Derived data types that should be enabled in all test repos
 pub(crate) fn submodule_repo_derived_data_types_config() -> HashMap<String, DerivedDataTypesConfig>
 {
+    let types = DerivableType::iter()
+        .filter(|t| {
+            ![
+                DerivableType::HgChangesets,
+                DerivableType::HgAugmentedManifests,
+                DerivableType::FileNodes,
+            ]
+            .contains(t)
+        })
+        .collect();
+
+    let default_test_repo_config = default_test_repo_derived_data_types_config();
     let derived_data_types_config = DerivedDataTypesConfig {
-        types: DerivableType::iter().collect(),
-        ..Default::default()
+        types,
+        ..default_test_repo_config
     };
 
     hashmap! {
