@@ -732,7 +732,7 @@ mononoke_queries! {
             m.split_count,
             m.op, m.user, m.timestamp, m.tz, m.extra
         FROM
-            hg_mutation_info m LEFT JOIN hg_mutation_preds p
+            hg_mutation_info m JOIN hg_mutation_preds p
             ON m.repo_id = p.repo_id AND m.successor = p.successor
         WHERE m.repo_id = {repo_id} AND m.successor IN {cs_id}
         ORDER BY m.successor, p.seq ASC"
@@ -760,7 +760,7 @@ mononoke_queries! {
                 m.op, m.user, m.timestamp, m.tz, m.extra,
                 1 AS step
             FROM
-                hg_mutation_info m LEFT JOIN hg_mutation_preds p
+                hg_mutation_info m JOIN hg_mutation_preds p
                 ON m.repo_id = p.repo_id AND m.successor = p.successor
             WHERE m.repo_id = {repo_id} AND m.successor IN {cs_id}
             UNION ALL
@@ -773,7 +773,7 @@ mononoke_queries! {
             FROM
                 mp INNER JOIN hg_mutation_info m
                 ON m.successor = mp.predecessor
-                LEFT JOIN hg_mutation_preds p
+                JOIN hg_mutation_preds p
                 ON m.repo_id = p.repo_id AND m.successor = p.successor
             WHERE m.repo_id = {repo_id} AND mp.step < {mut_lim}
         )
