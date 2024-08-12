@@ -20,7 +20,6 @@ use commit_cloud_intern_utils::interngraph_publisher::publish_single_update;
 use commit_cloud_intern_utils::notification::NotificationData;
 use context::CoreContext;
 use edenapi_types::cloud::RemoteBookmark;
-use edenapi_types::cloud::SmartlogData;
 use edenapi_types::GetReferencesParams;
 use edenapi_types::GetSmartlogParams;
 use edenapi_types::HgId;
@@ -285,14 +284,6 @@ impl CommitCloud {
             snapshots: None,
             timestamp: Some(new_version_timestamp.timestamp_nanos()),
         })
-    }
-
-    pub async fn get_smartlog(
-        &self,
-        _ctx: &CommitCloudContext,
-        _params: &GetSmartlogParams,
-    ) -> anyhow::Result<SmartlogData> {
-        Err(anyhow::anyhow!("Not implemented"))
     }
 
     pub async fn commit_cloud_acl(
