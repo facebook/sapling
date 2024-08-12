@@ -183,7 +183,7 @@ class changelog:
         The Rust set uses DESC order by default. Setting `reverse` to True
         will reverse the order.
         """
-        return smartset.nameset(nodes, reverse, repo=self._reporef())
+        return smartset.nameset(nodes, reverse=reverse, repo=self._reporef())
 
     def tonodes(self, revs, preserve_order=False):
         """Convert an IdSet to Set. The reverse of torevs."""

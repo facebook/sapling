@@ -561,7 +561,9 @@ class nameset(abstractsmartset):
       to reduce or elimate generatorset usage.
     """
 
-    def __init__(self, value, reverse=False, repo=None):
+    def __init__(
+        self, value=None, *, reverse=False, datarepr=None, istopo=False, repo=None
+    ):
         """Initialize nameset (Rust ``dag::Set`` wrapper) for Python smartset.
 
         ``value`` can be:
@@ -570,9 +572,14 @@ class nameset(abstractsmartset):
         - bindings.dag.spans
         - Iterator[int | Tuple[int, int]]: Integer revisions, a tuple
           (start, end) indicates a range (used to be named "spanset").
+        - None: treated as [].
 
-        ```reverse`` is handled by this Python class, not by Rust (yet).
+        ``reverse`` is handled by this Python class, not by Rust (yet).
+        ``datarepr`` is a tuple of (format, obj, ...), a function or an object
+        that provides a printable representation of the given data.
         """
+        if value is None:
+            value = []
         if repo is None:
             raise TypeError("nameset requires repo")
         changelog = repo.changelog
@@ -602,6 +609,9 @@ class nameset(abstractsmartset):
         # The Rust set has its own order control.
         self._reversed = reverse
         self._reporef = weakref.ref(repo)
+
+        self._istopo = istopo
+        self._datarepr = datarepr
 
     @property
     def _torev(self):
@@ -750,7 +760,7 @@ class nameset(abstractsmartset):
             return bool(self._set.hints().get("desc"))
 
     def istopo(self):
-        return False
+        return self._istopo
 
     def first(self):
         if self._reversed:
@@ -879,8 +889,11 @@ class nameset(abstractsmartset):
         return s
 
     def __repr__(self):
-        d = {False: "-", True: "+", None: ""}[self._ascending]
-        return "<%s%s %s>" % (type(self).__name__, d, self._set)
+        s = _formatsetrepr(self._datarepr)
+        if not s:
+            d = {False: "-", True: "+", None: ""}[self._ascending]
+            s = "<%s%s %s>" % (type(self).__name__, d, self._set)
+        return s
 
 
 class filteredset(abstractsmartset):
