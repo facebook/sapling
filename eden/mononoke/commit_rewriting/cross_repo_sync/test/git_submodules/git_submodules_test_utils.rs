@@ -119,26 +119,53 @@ pub(crate) struct ExpectedChangeset {
 }
 
 impl ExpectedChangeset {
-    /// Quickly create `ExpectedChangeset` by providing a changeset message and
-    /// the paths that you expect to be added/modified or deleted.
-    pub(crate) fn new_by_file_change<S: Into<String> + std::cmp::Ord>(
-        message: S,
-        regular_changes: Vec<S>,
-        deletions: Vec<S>,
-    ) -> Self {
-        let mut reg_changes_map = regular_changes
+    pub(crate) fn new<S: Into<String> + std::cmp::Ord>(message: S) -> Self {
+        Self {
+            message: message.into(),
+            file_changes: SortedVectorMap::new(),
+        }
+    }
+
+    /// Adds Regular file changes on the given paths to ExpectedChangesets
+    pub(crate) fn with_regular_changes<S, I>(self, regular_changes: I) -> Self
+    where
+        S: Into<String> + std::cmp::Ord,
+        I: IntoIterator<Item = S>,
+    {
+        let reg_changes_map = regular_changes
             .into_iter()
             .map(|p| (p.into(), FileChangeSummary::Change(FileType::Regular)))
             .collect::<SortedVectorMap<_, _>>();
+        self.extend_file_changes(reg_changes_map)
+    }
+
+    /// Adds Deletion file changes on the given paths to ExpectedChangesets
+    pub(crate) fn with_deletions<S, I>(self, deletions: I) -> Self
+    where
+        S: Into<String> + std::cmp::Ord,
+        I: IntoIterator<Item = S>,
+    {
         let deletions_map = deletions
             .into_iter()
             .map(|p| (p.into(), FileChangeSummary::Deletion))
             .collect::<SortedVectorMap<_, _>>();
-        reg_changes_map.extend(deletions_map);
+        self.extend_file_changes(deletions_map)
+    }
+
+    fn extend_file_changes(
+        self,
+        new_file_changes: SortedVectorMap<String, FileChangeSummary>,
+    ) -> Self {
+        let ExpectedChangeset {
+            message,
+            mut file_changes,
+        } = self;
+
+        file_changes.extend(new_file_changes);
 
         Self {
-            message: message.into(),
-            file_changes: reg_changes_map,
+            message,
+            file_changes,
         }
     }
 }
@@ -519,27 +546,17 @@ pub(crate) fn base_commit_sync_version_name() -> CommitSyncConfigVersion {
 
 pub(crate) fn expected_changesets_from_basic_setup() -> Vec<ExpectedChangeset> {
     vec![
-        ExpectedChangeset::new_by_file_change(
-            "First commit in large repo",
-            vec!["large_repo_root"],
-            vec![],
-        ),
-        ExpectedChangeset::new_by_file_change("first commit in A", vec!["small_repo/A_A"], vec![]),
-        ExpectedChangeset::new_by_file_change(
-            "add B submodule",
-            vec![
-                "small_repo/A_B",
-                "small_repo/submodules/.x-repo-submodule-repo_b",
-                "small_repo/submodules/repo_b/B_A",
-                "small_repo/submodules/repo_b/B_B",
-            ],
-            vec![],
-        ),
-        ExpectedChangeset::new_by_file_change(
-            "change A after adding submodule B",
-            vec!["small_repo/A_C"],
-            vec![],
-        ),
+        ExpectedChangeset::new("First commit in large repo")
+            .with_regular_changes(vec!["large_repo_root"]),
+        ExpectedChangeset::new("first commit in A").with_regular_changes(vec!["small_repo/A_A"]),
+        ExpectedChangeset::new("add B submodule").with_regular_changes(vec![
+            "small_repo/A_B",
+            "small_repo/submodules/.x-repo-submodule-repo_b",
+            "small_repo/submodules/repo_b/B_A",
+            "small_repo/submodules/repo_b/B_B",
+        ]),
+        ExpectedChangeset::new("change A after adding submodule B")
+            .with_regular_changes(vec!["small_repo/A_C"]),
     ]
 }
 

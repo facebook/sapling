@@ -142,18 +142,20 @@ async fn test_submodule_expansion_basic(fb: FacebookInit) -> Result<()> {
 
     compare_expected_changesets_from_basic_setup(
         &large_repo_changesets,
-        &[ExpectedChangeset::new_by_file_change(
-            MESSAGE,
-            // File changes only contain exact delta and change to submodule
-            // metadata file
-            vec![
-                // Submodule metadata file is updated
-                "small_repo/submodules/.x-repo-submodule-repo_b",
-                "small_repo/submodules/repo_b/new_dir/new_file",
-            ],
-            // File was deleted
-            vec!["small_repo/submodules/repo_b/B_B"],
-        )],
+        &[ExpectedChangeset::new(MESSAGE)
+            .with_regular_changes(
+                // File changes only contain exact delta and change to submodule
+                // metadata file
+                vec![
+                    // Submodule metadata file is updated
+                    "small_repo/submodules/.x-repo-submodule-repo_b",
+                    "small_repo/submodules/repo_b/new_dir/new_file",
+                ],
+            )
+            .with_deletions(
+                // File was deleted
+                vec!["small_repo/submodules/repo_b/B_B"],
+            )],
     )?;
 
     check_submodule_metadata_file_in_large_repo(
@@ -361,17 +363,13 @@ async fn test_submodule_deletion(fb: FacebookInit) -> Result<()> {
 
     compare_expected_changesets_from_basic_setup(
         &large_repo_changesets,
-        &[ExpectedChangeset::new_by_file_change(
-            MESSAGE,
-            // No regular file changes
-            vec![],
+        &[ExpectedChangeset::new(MESSAGE)
             // Files being deleted
-            vec![
+            .with_deletions(vec![
                 "small_repo/submodules/.x-repo-submodule-repo_b",
                 "small_repo/submodules/repo_b/B_A",
                 "small_repo/submodules/repo_b/B_B",
-            ],
-        )],
+            ])],
     )?;
 
     Ok(())
@@ -449,18 +447,20 @@ async fn test_recursive_submodule_deletion(fb: FacebookInit) -> Result<()> {
 
     compare_expected_changesets(
         large_repo_changesets.last_chunk::<1>().unwrap(),
-        &[ExpectedChangeset::new_by_file_change(
-            MESSAGE,
-            // repo_b submodule metadata file is updated
-            vec!["small_repo/submodules/.x-repo-submodule-repo_b"],
-            // Files being deleted
-            vec![
-                // NOTE: repo_c submodule metadata file has to be deleted too
-                "small_repo/submodules/repo_b/submodules/.x-repo-submodule-repo_c",
-                "small_repo/submodules/repo_b/submodules/repo_c/C_A",
-                "small_repo/submodules/repo_b/submodules/repo_c/C_B",
-            ],
-        )],
+        &[ExpectedChangeset::new(MESSAGE)
+            .with_regular_changes(
+                // repo_b submodule metadata file is updated
+                vec!["small_repo/submodules/.x-repo-submodule-repo_b"],
+            )
+            .with_deletions(
+                // Files being deleted
+                vec![
+                    // NOTE: repo_c submodule metadata file has to be deleted too
+                    "small_repo/submodules/repo_b/submodules/.x-repo-submodule-repo_c",
+                    "small_repo/submodules/repo_b/submodules/repo_c/C_A",
+                    "small_repo/submodules/repo_b/submodules/repo_c/C_B",
+                ],
+            )],
     )?;
 
     assert_working_copy_matches_expected(
@@ -545,9 +545,7 @@ async fn test_submodule_with_recursive_submodule_deletion(fb: FacebookInit) -> R
 
     compare_expected_changesets(
         large_repo_changesets.last_chunk::<1>().unwrap(),
-        &[ExpectedChangeset::new_by_file_change(
-            MESSAGE,
-            vec![],
+        &[ExpectedChangeset::new(MESSAGE).with_deletions(
             // Files being deleted
             vec![
                 "small_repo/submodules/.x-repo-submodule-repo_b",
@@ -685,28 +683,32 @@ async fn test_deleting_submodule_but_keeping_directory(fb: FacebookInit) -> Resu
         &large_repo_changesets,
         &[
             // Changeset that deletes the submodule metadata file
-            ExpectedChangeset::new_by_file_change(
-                DELETE_METADATA_FILE_MSG,
-                // The submodule files are treated as regular file changes
-                vec![
-                    "small_repo/submodules/repo_b/B_A",
-                    "small_repo/submodules/repo_b/B_B",
-                ],
-                // Only submodule metadata file is deleted
-                vec!["small_repo/submodules/.x-repo-submodule-repo_b"],
-            ),
+            ExpectedChangeset::new(DELETE_METADATA_FILE_MSG)
+                .with_regular_changes(
+                    // The submodule files are treated as regular file changes
+                    vec![
+                        "small_repo/submodules/repo_b/B_A",
+                        "small_repo/submodules/repo_b/B_B",
+                    ],
+                )
+                .with_deletions(
+                    // Only submodule metadata file is deleted
+                    vec!["small_repo/submodules/.x-repo-submodule-repo_b"],
+                ),
             // Changeset that modifies files in the submodule path, which is
             // now a static copy of the submodule
-            ExpectedChangeset::new_by_file_change(
-                CHANGE_SUBMODULE_PATH_MSG,
-                // The submodule files are treated as regular file changes
-                vec![
-                    "small_repo/submodules/repo_b/B_B",
-                    "small_repo/submodules/repo_b/B_C",
-                ],
-                // Only submodule metadata file is deleted
-                vec!["small_repo/submodules/repo_b/B_A"],
-            ),
+            ExpectedChangeset::new(CHANGE_SUBMODULE_PATH_MSG)
+                .with_regular_changes(
+                    // The submodule files are treated as regular file changes
+                    vec![
+                        "small_repo/submodules/repo_b/B_B",
+                        "small_repo/submodules/repo_b/B_C",
+                    ],
+                )
+                .with_deletions(
+                    // Only submodule metadata file is deleted
+                    vec!["small_repo/submodules/repo_b/B_A"],
+                ),
         ],
     )?;
 
@@ -903,32 +905,36 @@ async fn test_deleting_recursive_submodule_but_keeping_directory(fb: FacebookIni
         large_repo_changesets.last_chunk::<2>().unwrap(),
         &[
             // Changeset that deletes the submodule metadata file
-            ExpectedChangeset::new_by_file_change(
-                DELETE_METADATA_FILE_MSG,
-                // The submodule files are treated as regular file changes
-                vec![
-                    // repo_b submodule metadata file is updated
-                    "small_repo/submodules/.x-repo-submodule-repo_b",
-                    "small_repo/submodules/repo_b/submodules/repo_c/C_A",
-                    "small_repo/submodules/repo_b/submodules/repo_c/C_B",
-                ],
-                // Only submodule metadata file is deleted
-                vec!["small_repo/submodules/repo_b/submodules/.x-repo-submodule-repo_c"],
-            ),
+            ExpectedChangeset::new(DELETE_METADATA_FILE_MSG)
+                .with_regular_changes(
+                    // The submodule files are treated as regular file changes
+                    vec![
+                        // repo_b submodule metadata file is updated
+                        "small_repo/submodules/.x-repo-submodule-repo_b",
+                        "small_repo/submodules/repo_b/submodules/repo_c/C_A",
+                        "small_repo/submodules/repo_b/submodules/repo_c/C_B",
+                    ],
+                )
+                .with_deletions(
+                    // Only submodule metadata file is deleted
+                    vec!["small_repo/submodules/repo_b/submodules/.x-repo-submodule-repo_c"],
+                ),
             // Changeset that modifies files in the submodule path, which is
             // now a static copy of the submodule
-            ExpectedChangeset::new_by_file_change(
-                CHANGE_SUBMODULE_PATH_MSG,
-                // The submodule files are treated as regular file changes
-                vec![
-                    // repo_b submodule metadata file is updated
-                    "small_repo/submodules/.x-repo-submodule-repo_b",
-                    "small_repo/submodules/repo_b/submodules/repo_c/C_B",
-                    "small_repo/submodules/repo_b/submodules/repo_c/C_C",
-                ],
-                // Only submodule metadata file is deleted
-                vec!["small_repo/submodules/repo_b/submodules/repo_c/C_A"],
-            ),
+            ExpectedChangeset::new(CHANGE_SUBMODULE_PATH_MSG)
+                .with_regular_changes(
+                    // The submodule files are treated as regular file changes
+                    vec![
+                        // repo_b submodule metadata file is updated
+                        "small_repo/submodules/.x-repo-submodule-repo_b",
+                        "small_repo/submodules/repo_b/submodules/repo_c/C_B",
+                        "small_repo/submodules/repo_b/submodules/repo_c/C_C",
+                    ],
+                )
+                .with_deletions(
+                    // Only submodule metadata file is deleted
+                    vec!["small_repo/submodules/repo_b/submodules/repo_c/C_A"],
+                ),
         ],
     )?;
 
@@ -1025,20 +1031,22 @@ async fn test_implicitly_deleting_submodule(fb: FacebookInit) -> Result<()> {
 
     compare_expected_changesets_from_basic_setup(
         &large_repo_changesets,
-        &[ExpectedChangeset::new_by_file_change(
-            MESSAGE,
-            // Add a regular file in the same path as the submodule expansion
-            vec!["small_repo/submodules/repo_b"],
-            // Files being deleted
-            vec![
-                // The submodule metadata file should also be deleted
-                "small_repo/submodules/.x-repo-submodule-repo_b",
-                // NOTE: no need to have explicit deletions for these files, because
-                // they're being deleted implicitly.
-                // "small_repo/submodules/repo_b/B_A",
-                // "small_repo/submodules/repo_b/B_B",
-            ],
-        )],
+        &[ExpectedChangeset::new(MESSAGE)
+            .with_regular_changes(
+                // Add a regular file in the same path as the submodule expansion
+                vec!["small_repo/submodules/repo_b"],
+            )
+            .with_deletions(
+                // Files being deleted
+                vec![
+                    // The submodule metadata file should also be deleted
+                    "small_repo/submodules/.x-repo-submodule-repo_b",
+                    // NOTE: no need to have explicit deletions for these files, because
+                    // they're being deleted implicitly.
+                    // "small_repo/submodules/repo_b/B_A",
+                    // "small_repo/submodules/repo_b/B_B",
+                ],
+            )],
     )?;
 
     // Assert that the submodule expansion was actually deleted implicitly
@@ -1129,20 +1137,19 @@ async fn test_implicit_deletions_inside_submodule_repo(fb: FacebookInit) -> Resu
 
     compare_expected_changesets_from_basic_setup(
         &large_repo_changesets,
-        &[ExpectedChangeset::new_by_file_change(
-            MESSAGE,
-            // Submodule metadata file is updated
-            vec![
-                "small_repo/submodules/.x-repo-submodule-repo_b",
-                "small_repo/submodules/repo_b/some_dir",
-            ],
+        &[
+            ExpectedChangeset::new(MESSAGE).with_regular_changes(
+                // Submodule metadata file is updated
+                vec![
+                    "small_repo/submodules/.x-repo-submodule-repo_b",
+                    "small_repo/submodules/repo_b/some_dir",
+                ],
+            ),
             // NOTE: no need to have explicit deletions for these files, because
-            // they're being deleted implicitly.
-            vec![
-                // "small_repo/submodules/repo_b/some_dir/file_x",
-                // "small_repo/submodules/repo_b/some_dir/file_y"
-            ],
-        )],
+            // they're being deleted implicitly:
+            // "small_repo/submodules/repo_b/some_dir/file_x",
+            // "small_repo/submodules/repo_b/some_dir/file_y"
+        ],
     )?;
 
     check_submodule_metadata_file_in_large_repo(
@@ -1252,18 +1259,16 @@ async fn test_implicitly_deleting_file_with_submodule(fb: FacebookInit) -> Resul
 
     compare_expected_changesets_from_basic_setup(
         &large_repo_changesets,
-        &[ExpectedChangeset::new_by_file_change(
-            MESSAGE,
-            vec![
+        &[ExpectedChangeset::new(MESSAGE)
+            .with_regular_changes(vec![
                 "small_repo/.x-repo-submodule-A_A",
                 "small_repo/A_A/C_A",
                 "small_repo/A_A/C_B",
-            ],
-            vec![
+            ])
+            .with_deletions(vec![
                 // The original file is deleted because of the submodule expansion
                 "small_repo/A_A",
-            ],
-        )],
+            ])],
     )?;
 
     check_submodule_metadata_file_in_large_repo(
@@ -1374,24 +1379,19 @@ async fn test_adding_submodule_on_existing_directory(fb: FacebookInit) -> Result
     compare_expected_changesets_from_basic_setup(
         &large_repo_changesets,
         &[
-            ExpectedChangeset::new_by_file_change(
-                ADD_DIR_MSG,
-                vec![
-                    "small_repo/some_dir/subdir/file_x",
-                    "small_repo/some_dir/subdir/file_y",
-                    "small_repo/some_dir/subdir/file_z",
-                    "small_repo/some_dir/subdir/C_A",
-                ],
-                vec![],
-            ),
-            ExpectedChangeset::new_by_file_change(
-                MESSAGE,
-                vec![
+            ExpectedChangeset::new(ADD_DIR_MSG).with_regular_changes(vec![
+                "small_repo/some_dir/subdir/file_x",
+                "small_repo/some_dir/subdir/file_y",
+                "small_repo/some_dir/subdir/file_z",
+                "small_repo/some_dir/subdir/C_A",
+            ]),
+            ExpectedChangeset::new(MESSAGE)
+                .with_regular_changes(vec![
                     "small_repo/some_dir/.x-repo-submodule-subdir",
                     "small_repo/some_dir/subdir/C_A",
                     "small_repo/some_dir/subdir/C_B",
-                ],
-                vec![
+                ])
+                .with_deletions(vec![
                     // All files from the directory should be deleted with
                     // the addition of a submodule expansion on the same path
                     "small_repo/some_dir/subdir/file_x",
@@ -1401,8 +1401,7 @@ async fn test_adding_submodule_on_existing_directory(fb: FacebookInit) -> Result
                     // the submodule expansion has the file with the same path.
                     // I'm leaving this commented out to convey this clearly.
                     // "small_repo/some_dir/subdir/C_A",
-                ],
-            ),
+                ]),
         ],
     )?;
 
@@ -1966,28 +1965,27 @@ async fn test_expanding_known_dangling_submodule_pointers(fb: FacebookInit) -> R
         large_repo_changesets.last_chunk::<4>().unwrap(),
         &[
             // COMMIT 1: Expansion of known dangling pointer
-            ExpectedChangeset::new_by_file_change(
-                COMMIT_MSG_1,
-                vec![
+            ExpectedChangeset::new(COMMIT_MSG_1)
+                .with_regular_changes(vec![
                     // Submodule metadata file is updated
                     "small_repo/submodules/.x-repo-submodule-repo_b",
                     // README file is added with a message informing that this
                     // submodule pointer was dangling.
                     "small_repo/submodules/repo_b/README.TXT",
-                ],
-                // Should delete everything from previous expansion
-                vec![
-                    "small_repo/submodules/repo_b/B_A",
-                    "small_repo/submodules/repo_b/B_B",
-                    "small_repo/submodules/repo_b/submodules/.x-repo-submodule-repo_c",
-                    "small_repo/submodules/repo_b/submodules/repo_c/C_A",
-                    "small_repo/submodules/repo_b/submodules/repo_c/C_B",
-                ],
-            ),
+                ])
+                .with_deletions(
+                    // Should delete everything from previous expansion
+                    vec![
+                        "small_repo/submodules/repo_b/B_A",
+                        "small_repo/submodules/repo_b/B_B",
+                        "small_repo/submodules/repo_b/submodules/.x-repo-submodule-repo_c",
+                        "small_repo/submodules/repo_b/submodules/repo_c/C_A",
+                        "small_repo/submodules/repo_b/submodules/repo_c/C_B",
+                    ],
+                ),
             // COMMIT 2: Fix the dangling pointer
-            ExpectedChangeset::new_by_file_change(
-                COMMIT_MSG_2,
-                vec![
+            ExpectedChangeset::new(COMMIT_MSG_2)
+                .with_regular_changes(vec![
                     // Submodule metadata file is updated
                     "small_repo/submodules/.x-repo-submodule-repo_b",
                     // Add back files from previous submodule pointer
@@ -1998,45 +1996,42 @@ async fn test_expanding_known_dangling_submodule_pointers(fb: FacebookInit) -> R
                     "small_repo/submodules/repo_b/submodules/repo_c/C_B",
                     // Plus the new file added in the new valid pointer
                     "small_repo/submodules/repo_b/B_C",
-                ],
-                vec![
+                ])
+                .with_deletions(vec![
                     // Delete README file from dangling pointer expansion
                     "small_repo/submodules/repo_b/README.TXT",
-                ],
-            ),
+                ]),
             // COMMIT 3: Set dangling pointer in repo_c recursive submodule
-            ExpectedChangeset::new_by_file_change(
-                COMMIT_MSG_3,
-                vec![
+            ExpectedChangeset::new(COMMIT_MSG_3)
+                .with_regular_changes(vec![
                     // Submodule metadata files are updated
                     "small_repo/submodules/.x-repo-submodule-repo_b",
                     "small_repo/submodules/repo_b/submodules/.x-repo-submodule-repo_c",
                     // README file is added with a message informing that this
                     // submodule pointer was dangling.
                     "small_repo/submodules/repo_b/submodules/repo_c/README.TXT",
-                ],
-                // Should delete everything from previous expansion
-                vec![
-                    "small_repo/submodules/repo_b/submodules/repo_c/C_A",
-                    "small_repo/submodules/repo_b/submodules/repo_c/C_B",
-                ],
-            ),
+                ])
+                .with_deletions(
+                    // Should delete everything from previous expansion
+                    vec![
+                        "small_repo/submodules/repo_b/submodules/repo_c/C_A",
+                        "small_repo/submodules/repo_b/submodules/repo_c/C_B",
+                    ],
+                ),
             // COMMIT 4: Fix dangling pointer in repo_c recursive submodule
-            ExpectedChangeset::new_by_file_change(
-                COMMIT_MSG_4,
-                vec![
+            ExpectedChangeset::new(COMMIT_MSG_4)
+                .with_regular_changes(vec![
                     // Submodule metadata files are updated
                     "small_repo/submodules/.x-repo-submodule-repo_b",
                     "small_repo/submodules/repo_b/submodules/.x-repo-submodule-repo_c",
                     // Add back files from expansion of commit C_B
                     "small_repo/submodules/repo_b/submodules/repo_c/C_A",
                     "small_repo/submodules/repo_b/submodules/repo_c/C_B",
-                ],
-                vec![
+                ])
+                .with_deletions(vec![
                     // Delete README file from dangling pointer expansion
                     "small_repo/submodules/repo_b/submodules/repo_c/README.TXT",
-                ],
-            ),
+                ]),
         ],
     )?;
 
