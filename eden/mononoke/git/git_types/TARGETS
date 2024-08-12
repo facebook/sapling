@@ -12,6 +12,7 @@ rust_library(
         "fbsource//third-party/rust:async-compression",
         "fbsource//third-party/rust:futures-util",
         "fbsource//third-party/rust:git2",
+        "fbsource//third-party/rust:indoc",
         "fbsource//third-party/rust:maplit",
         "fbsource//third-party/rust:rand_distr",
         "fbsource//third-party/rust:tempfile",
