@@ -840,6 +840,8 @@ class nameset(abstractsmartset):
                     yield torev(node)
 
             return getiter
+        # It is tempting to use `set.iterrev()` for `if hints.get("desc")`.
+        # However, iterrev() can be slow. So don't use it in fastasc.
         return None
 
     @property
@@ -852,6 +854,8 @@ class nameset(abstractsmartset):
                     yield torev(node)
 
             return getiter
+        # It is tempting to use `set.iterrev()` for `if hints.get("asc")`.
+        # However, iterrev() can be slow. So don't use it in fastdesc.
         return None
 
     def iterrev(self):
@@ -967,6 +971,8 @@ class nameset(abstractsmartset):
 
     def min(self):
         hints = self._set.hints()
+        # Cannot use hints.get("min") even if it is not None.
+        # The hint min can be smaller than the actual min.
         if hints.get("desc"):
             result = self._set.last()
         elif hints.get("asc"):
@@ -982,6 +988,8 @@ class nameset(abstractsmartset):
 
     def max(self):
         hints = self._set.hints()
+        # Cannot use hints.get("max") even if it is not None.
+        # The hint max can be larger than the actual max.
         if hints.get("desc"):
             result = self._set.first()
         elif hints.get("asc"):
