@@ -181,7 +181,7 @@ rust_binary(
     features = [
         "fb",
         "with_chg",
-    ] + (["cas"] if is_experimental_cas_build() else []),
+    ] + ([] if rust_oss.is_oss_build() else ["cas"] if is_experimental_cas_build() else []),
     link_style = "static",
     linker_flags = select({
         "DEFAULT": [],
@@ -226,11 +226,13 @@ rust_binary(
         "//eden/scm/lib/clidispatch:clidispatch",
         "//eden/scm/lib/commands:commands",
         "//eden/scm/lib/util/atexit:atexit",
-    ] + ([] if rust_oss.is_oss_build() else [
-        "//common/rust/shed/fbinit:fbinit",
-    ]) + ([
-        "//eden/scm/lib/cas-client/thin-client:thin-cas-client",
-    ] if is_experimental_cas_build() else []),
+    ] + (
+        [] if rust_oss.is_oss_build() else [
+            "//common/rust/shed/fbinit:fbinit",
+        ] + ([
+            "//eden/scm/lib/cas-client/thin-client:thin-cas-client",
+        ] if is_experimental_cas_build() else [])
+    ),
 )
 
 # Try to override target depth so //eden/scm/tests:hg_run_tests and other
