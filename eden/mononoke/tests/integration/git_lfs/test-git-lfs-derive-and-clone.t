@@ -58,3 +58,13 @@ $ cd "$TESTTMP"
   Checking out LFS objects: 100% (1/1), 20 B | 0 B/s, done.
   $ cat large_file
   contents of LFS file (no-eol)
+
+Inspect bonsai for LFS flag
+  $ mononoke_newadmin fetch -R repo -B heads/main
+  BonsaiChangesetId: 198d25da38c153f3feecddeee7e49fe3fa16d7e0085ea919c183372bf42a66d4
+  Author: author
+  Message: C
+  FileChanges:
+  	 ADDED/MODIFIED: C 896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d
+  	 ADDED/MODIFIED (LFS): large_file eb3b8226bb5383aefd8299990543f1f8588344c3b2c2d25182a2a7d1fb691473
+  

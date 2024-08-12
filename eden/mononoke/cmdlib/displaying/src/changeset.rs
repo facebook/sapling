@@ -16,6 +16,7 @@ use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::DateTime;
 use mononoke_types::FileChange;
+use mononoke_types::GitLfs;
 use serde::Serialize;
 
 #[derive(Serialize)]
@@ -77,10 +78,21 @@ impl Display for DisplayChangeset {
 
 pub fn display_file_change(path: &String, change: &FileChange) -> String {
     match change {
-        FileChange::Change(change) => match change.copy_from() {
-            Some(_) => format!("\t COPY/MOVE: {} {}", path, change.content_id()),
-            None => format!("\t ADDED/MODIFIED: {} {}", path, change.content_id()),
-        },
+        FileChange::Change(change) => {
+            let lfs = match change.git_lfs() {
+                GitLfs::FullContent => "".to_string(),
+                GitLfs::GitLfsPointer {
+                    non_canonical_pointer: None,
+                } => " (LFS)".to_string(),
+                GitLfs::GitLfsPointer {
+                    non_canonical_pointer: Some(id),
+                } => format!(" (LFS, non-canonical pointer: {})", id),
+            };
+            match change.copy_from() {
+                Some(_) => format!("\t COPY/MOVE{}: {} {}", lfs, path, change.content_id()),
+                None => format!("\t ADDED/MODIFIED{}: {} {}", lfs, path, change.content_id()),
+            }
+        }
         FileChange::Deletion => format!("\t REMOVED: {}", path),
         FileChange::UntrackedChange(change) => {
             format!("\t UNTRACKED ADD/MODIFY: {} {}", path, change.content_id())
