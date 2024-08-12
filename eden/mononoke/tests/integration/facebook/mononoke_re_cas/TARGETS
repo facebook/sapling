@@ -14,6 +14,7 @@ dott_test(
     dott_files = glob([
         "*.t",
     ]),
+    enable_sapling_cas = True,
     deps = [
         "//eden/mononoke:blobimport",
         "//eden/mononoke:mononoke",
