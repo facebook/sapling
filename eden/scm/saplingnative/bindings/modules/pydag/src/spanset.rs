@@ -13,13 +13,15 @@ use dag::Id;
 use dag::IdList;
 use dag::IdSet;
 use dag::IdSetIter;
+use dag::OrderedSpan;
 use types::hgid::WDIR_REV;
 
 /// A wrapper around [`IdSet`] with Python integration.
 ///
 /// Differences from the `py_class` version:
 /// - Auto converts from a wider range of Python types - smartset, any iterator.
-///   Attempt to preserve order.
+///   Attempt to preserve order. The iterator item could be int or (int, int).
+///   The latter represents an OrderedSpan.
 /// - No need to take the Python GIL to create a new instance of `Set`.
 #[derive(Clone)]
 pub enum Spans {
@@ -209,6 +211,15 @@ py_class!(pub class spansiter |py| {
     }
 });
 
+fn python_rev_to_id(rev: i64) -> Option<Id> {
+    // Skip "nullrev" (-1) and "wdirrev" (0x7FFFFFFFFFFFFFFF) automatically for now.
+    if rev >= 0 && rev != WDIR_REV {
+        Some(Id(rev as u64))
+    } else {
+        None
+    }
+}
+
 impl<'a> FromPyObject<'a> for Spans {
     fn extract(py: Python, obj: &'a PyObject) -> PyResult<Self> {
         // If obj already owns Set, then avoid iterating through it.
@@ -219,25 +230,36 @@ impl<'a> FromPyObject<'a> for Spans {
 
         // Then iterate through obj and collect all ids.
         // Collecting ids to a Vec first to preserve error handling.
-        let ids: PyResult<Vec<Id>> = obj
+        let spans: PyResult<Vec<OrderedSpan>> = obj
             .iter(py)?
-            .map(|o| o?.extract::<Option<i64>>(py))
-            .filter_map(|o| match o {
-                // Skip "None" (wdir?) automatically.
-                Ok(None) => None,
-                Ok(Some(i)) => {
-                    // Skip "nullrev" and "wdirrev" automatically.
-                    if i >= 0 && i != WDIR_REV {
-                        Some(Ok(Id(i as u64)))
-                    } else {
-                        None
+            .filter_map(|o| {
+                let o = match o {
+                    Err(e) => return Some(Err(e)),
+                    Ok(v) => v,
+                };
+                match o.extract::<Option<i64>>(py) {
+                    // Skip "None" (wdir?) automatically.
+                    Ok(None) => None,
+                    Ok(Some(i)) => {
+                        python_rev_to_id(i).map(|id| Ok(OrderedSpan { start: id, end: id }))
                     }
+                    Err(e) => match o.extract::<(i64, i64)>(py) {
+                        Ok((start, end)) => {
+                            if let (Some(start), Some(end)) =
+                                (python_rev_to_id(start), python_rev_to_id(end))
+                            {
+                                Some(Ok(OrderedSpan { start, end }))
+                            } else {
+                                None
+                            }
+                        }
+                        Err(_) => Some(Err(e)),
+                    },
                 }
-                Err(e) => Some(Err(e)),
             })
             .collect();
 
-        let id_list = IdList::from_ids(ids?);
+        let id_list = IdList::from_spans(spans?);
 
         Ok(Spans::from_id_list(id_list))
     }
