@@ -33,5 +33,6 @@ base_app::subcommands! {
     mod run_hooks;
     mod sparse_profile_delta;
     mod sparse_profile_size;
+    mod update_submodule_expansion;
     mod xrepo_lookup;
 }
