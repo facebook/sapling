@@ -49,8 +49,7 @@ impl ThinCasClient {
 
         re_config.client_name = Some("sapling".to_string());
         re_config.quiet_mode = !config.get_or_default("cas", "verbose")?;
-        re_config.features_config_path =
-            "remote_execution/features/client_source_control".to_string();
+        re_config.features_config_path = "remote_execution/features/client_sapling".to_string();
 
         let mut builder = REClientBuilder::new(fbinit::expect_init()).with_config(re_config);
 
