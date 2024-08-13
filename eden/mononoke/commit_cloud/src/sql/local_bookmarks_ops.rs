@@ -11,6 +11,7 @@ use clientinfo::ClientRequestInfo;
 use sql::Connection;
 use sql::Transaction;
 
+use crate::ctx::CommitCloudContext;
 use crate::references::local_bookmarks::LocalBookmarksMap;
 use crate::references::local_bookmarks::WorkspaceLocalBookmark;
 use crate::sql::ops::Delete;
@@ -123,10 +124,10 @@ impl Update<WorkspaceLocalBookmark> for SqlCommitCloud {
 
     async fn update(
         &self,
-        _reponame: String,
-        _workspace: String,
+        _txn: Transaction,
+        _cc_ctx: CommitCloudContext,
         _args: Self::UpdateArgs,
-    ) -> anyhow::Result<()> {
+    ) -> anyhow::Result<i64> {
         //To be implemented among other Update queries
         return Err(anyhow::anyhow!("Not implemented yet"));
     }

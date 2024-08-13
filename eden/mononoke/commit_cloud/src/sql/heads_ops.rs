@@ -11,6 +11,7 @@ use clientinfo::ClientRequestInfo;
 use mercurial_types::HgChangesetId;
 use sql::Transaction;
 
+use crate::ctx::CommitCloudContext;
 use crate::references::heads::WorkspaceHead;
 use crate::sql::ops::Delete;
 use crate::sql::ops::Get;
@@ -87,10 +88,10 @@ impl Update<WorkspaceHead> for SqlCommitCloud {
 
     async fn update(
         &self,
-        _reponame: String,
-        _workspace: String,
+        _txn: Transaction,
+        _cc_ctx: CommitCloudContext,
         _args: Self::UpdateArgs,
-    ) -> anyhow::Result<()> {
+    ) -> anyhow::Result<i64> {
         //To be implemented among other Update queries
         return Err(anyhow::anyhow!("Not implemented yet"));
     }

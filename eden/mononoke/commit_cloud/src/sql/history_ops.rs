@@ -11,6 +11,7 @@ use clientinfo::ClientRequestInfo;
 use mononoke_types::Timestamp;
 use sql::Transaction;
 
+use crate::ctx::CommitCloudContext;
 use crate::references::heads::WorkspaceHead;
 use crate::references::history::WorkspaceHistory;
 use crate::references::local_bookmarks::WorkspaceLocalBookmark;
@@ -250,10 +251,10 @@ impl Update<WorkspaceHistory> for SqlCommitCloud {
 
     async fn update(
         &self,
-        _reponame: String,
-        _workspace: String,
+        _txn: Transaction,
+        _cc_ctx: CommitCloudContext,
         _args: Self::UpdateArgs,
-    ) -> anyhow::Result<()> {
+    ) -> anyhow::Result<i64> {
         //To be implemented among other Update queries
         return Err(anyhow::anyhow!("Not implemented yet"));
     }

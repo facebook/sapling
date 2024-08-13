@@ -9,6 +9,8 @@ use async_trait::async_trait;
 use clientinfo::ClientRequestInfo;
 use sql::Transaction;
 use sql_ext::SqlConnections;
+
+use crate::ctx::CommitCloudContext;
 pub struct SqlCommitCloud {
     pub connections: SqlConnections,
     // Commit cloud has three databases in mononoke:
@@ -67,10 +69,10 @@ pub trait Update<T = Self> {
     type UpdateArgs;
     async fn update(
         &self,
-        reponame: String,
-        workspace: String,
+        txn: Transaction,
+        cc_ctx: CommitCloudContext,
         args: Self::UpdateArgs,
-    ) -> anyhow::Result<()>;
+    ) -> anyhow::Result<i64>;
 }
 
 #[async_trait]

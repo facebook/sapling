@@ -15,6 +15,7 @@ use mononoke_types::Timestamp;
 use sql::Connection;
 use sql::Transaction;
 
+use crate::ctx::CommitCloudContext;
 use crate::sql::ops::Get;
 use crate::sql::ops::Insert;
 use crate::sql::ops::SqlCommitCloud;
@@ -149,10 +150,10 @@ impl Update<WorkspaceCheckoutLocation> for SqlCommitCloud {
     type UpdateArgs = ();
     async fn update(
         &self,
-        _reponame: String,
-        _workspace: String,
+        _txn: Transaction,
+        _cc_ctx: CommitCloudContext,
         _args: Self::UpdateArgs,
-    ) -> anyhow::Result<()> {
+    ) -> anyhow::Result<i64> {
         // Checkout locations update op endpoint is never used
         unimplemented!("delete is not implemented for checkout locations")
     }

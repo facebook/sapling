@@ -13,6 +13,7 @@ use sql::Connection;
 use sql::Transaction;
 use sql_ext::SqlConnections;
 
+use crate::ctx::CommitCloudContext;
 use crate::references::versions::WorkspaceVersion;
 use crate::sql::ops::Get;
 use crate::sql::ops::Insert;
@@ -107,10 +108,10 @@ impl Update<WorkspaceVersion> for SqlCommitCloud {
     type UpdateArgs = ();
     async fn update(
         &self,
-        _reponame: String,
-        _workspace: String,
+        _txn: Transaction,
+        _cc_ctx: CommitCloudContext,
         _args: Self::UpdateArgs,
-    ) -> anyhow::Result<()> {
+    ) -> anyhow::Result<i64> {
         //To be implemented among other Update queries
         return Err(anyhow::anyhow!("Not implemented yet"));
     }
