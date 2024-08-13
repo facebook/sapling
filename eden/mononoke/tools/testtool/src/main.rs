@@ -13,6 +13,7 @@ use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
 
 mod commands;
+mod repo;
 
 /// Tools for Mononoke Tests
 #[derive(Parser)]

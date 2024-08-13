@@ -14,7 +14,6 @@ use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
-use blobrepo::BlobRepo;
 use changesets_creation::save_changesets;
 use clap::Parser;
 use mercurial_derivation::MappedHgChangesetId;
@@ -31,6 +30,8 @@ use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataRef;
 use serde_derive::Deserialize;
 use sorted_vector_map::SortedVectorMap;
+
+use crate::repo::Repo;
 
 /// Create commits from a JSON-encoded bonsai changeset
 ///
@@ -64,7 +65,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         .into_bonsai()?
         .freeze()?;
 
-    let repo: BlobRepo = app
+    let repo: Repo = app
         .open_repo(&args.repo_args)
         .await
         .context("Failed to open repo")?;
