@@ -9,11 +9,11 @@ license = "GPLv2+"
 
 [dependencies]
 anyhow = "1.0.75"
-blobrepo = { version = "0.1.0", path = "../../blobrepo" }
 blobstore = { version = "0.1.0", path = "../../blobstore" }
 blobstore_factory = { version = "0.1.0", path = "../../blobstore/factory" }
 clap = { version = "4.5.11", features = ["derive", "env", "string", "unicode", "wrap_help"] }
 context = { version = "0.1.0", path = "../../server/context" }
+facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
 mononoke_app = { version = "0.1.0", path = "../../cmdlib/mononoke_app" }

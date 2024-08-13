@@ -18,7 +18,6 @@ use anyhow::bail;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
-use blobrepo::BlobRepo;
 use blobstore::Blobstore;
 use blobstore::PutBehaviour;
 use blobstore_factory::BlobstoreArgDefaults;
@@ -34,6 +33,7 @@ use mononoke_app::args::AsRepoArg;
 use mononoke_app::args::SourceAndTargetRepoArgs;
 use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
+use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreRef;
 use slog::debug;
 use slog::info;
@@ -130,6 +130,13 @@ struct MononokeCopyBlockstoreKeysArgs {
     repo_args: SourceAndTargetRepoArgs,
 }
 
+#[facet::container]
+#[derive(Clone)]
+struct Repo {
+    #[facet]
+    repo_blobstore: RepoBlobstore,
+}
+
 async fn async_main(app: MononokeApp) -> Result<()> {
     let args: MononokeCopyBlockstoreKeysArgs = app.args()?;
     if let (Some(_), None) = (
@@ -146,7 +153,7 @@ async fn async_main(app: MononokeApp) -> Result<()> {
         .override_session_class(SessionClass::Background);
 
     let repo_args = &args.repo_args;
-    let (source_repo, target_repo): (BlobRepo, BlobRepo) = future::try_join(
+    let (source_repo, target_repo): (Repo, Repo) = future::try_join(
         app.create_repo_unredacted(&repo_args.source_repo, args.source_inner_blobstore_id),
         app.create_repo_unredacted(&repo_args.target_repo, args.target_inner_blobstore_id),
     )
