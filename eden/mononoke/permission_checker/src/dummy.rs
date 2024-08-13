@@ -17,6 +17,7 @@ use crate::membership::AlwaysMember;
 use crate::membership::BoxMembershipChecker;
 use crate::membership::NeverMember;
 use crate::provider::AclProvider;
+use crate::MononokeIdentity;
 pub struct DummyAclProvider;
 
 impl DummyAclProvider {
@@ -40,7 +41,11 @@ impl AclProvider for DummyAclProvider {
         Ok(Box::new(AlwaysAllow))
     }
 
-    async fn commitcloud_workspace_acl(&self, _name: &str) -> Result<Option<BoxPermissionChecker>> {
+    async fn commitcloud_workspace_acl(
+        &self,
+        _name: &str,
+        _create_with_owner: &Option<MononokeIdentity>,
+    ) -> Result<Option<BoxPermissionChecker>> {
         Ok(Some(Box::new(AlwaysAllow)))
     }
 

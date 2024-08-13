@@ -290,7 +290,9 @@ impl CommitCloud {
         &self,
         name: &str,
     ) -> anyhow::Result<Option<BoxPermissionChecker>> {
-        self.acl_provider.commitcloud_workspace_acl(name).await
+        self.acl_provider
+            .commitcloud_workspace_acl(name, &None)
+            .await
     }
 
     pub async fn get_smartlog_raw_info(
