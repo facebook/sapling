@@ -10,7 +10,6 @@ use std::collections::BTreeMap;
 use ::manifest::Entry;
 use anyhow::Error;
 use ascii::AsAsciiStr;
-use blobrepo::BlobRepo;
 use blobrepo_hg::ChangesetHandle;
 use blobrepo_hg::CreateChangeset;
 use bytes::Bytes;
@@ -37,9 +36,11 @@ use mononoke_types::DateTime;
 use repo_blobstore::RepoBlobstoreArc;
 use scuba_ext::MononokeScubaSampleBuilder;
 
+use crate::Repo;
+
 pub fn upload_file_no_parents<B>(
     ctx: CoreContext,
-    repo: &BlobRepo,
+    repo: &Repo,
     data: B,
     path: &RepoPath,
 ) -> (
@@ -54,7 +55,7 @@ where
 
 pub fn upload_file_one_parent<B>(
     ctx: CoreContext,
-    repo: &BlobRepo,
+    repo: &Repo,
     data: B,
     path: &RepoPath,
     p1: HgFileNodeId,
@@ -70,7 +71,7 @@ where
 
 pub fn upload_manifest_no_parents<B>(
     ctx: CoreContext,
-    repo: &BlobRepo,
+    repo: &Repo,
     data: B,
     path: &RepoPath,
 ) -> (
@@ -85,7 +86,7 @@ where
 
 pub fn upload_manifest_one_parent<B>(
     ctx: CoreContext,
-    repo: &BlobRepo,
+    repo: &Repo,
     data: B,
     path: &RepoPath,
     p1: HgManifestId,
@@ -101,7 +102,7 @@ where
 
 fn upload_hg_tree_entry(
     ctx: CoreContext,
-    repo: &BlobRepo,
+    repo: &Repo,
     contents: Bytes,
     path: RepoPath,
     p1: Option<HgManifestId>,
@@ -122,7 +123,7 @@ fn upload_hg_tree_entry(
 
 fn upload_hg_file_entry(
     ctx: CoreContext,
-    repo: &BlobRepo,
+    repo: &Repo,
     contents: Bytes,
     path: RepoPath,
     p1: Option<HgFileNodeId>,
@@ -154,7 +155,7 @@ fn upload_hg_file_entry(
 
 pub fn create_changeset_no_parents(
     fb: FacebookInit,
-    repo: &BlobRepo,
+    repo: &Repo,
     root_manifest: BoxFuture<'static, Result<Option<(HgManifestId, RepoPath)>, Error>>,
     other_nodes: Vec<
         BoxFuture<'static, Result<(Entry<HgManifestId, HgFileNodeId>, RepoPath), Error>>,
@@ -189,7 +190,7 @@ pub fn create_changeset_no_parents(
 
 pub fn create_changeset_one_parent(
     fb: FacebookInit,
-    repo: &BlobRepo,
+    repo: &Repo,
     root_manifest: BoxFuture<'static, Result<Option<(HgManifestId, RepoPath)>, Error>>,
     other_nodes: Vec<
         BoxFuture<'static, Result<(Entry<HgManifestId, HgFileNodeId>, RepoPath), Error>>,

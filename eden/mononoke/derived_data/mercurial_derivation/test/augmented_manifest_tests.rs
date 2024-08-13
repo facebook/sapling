@@ -8,7 +8,6 @@
 use std::sync::Arc;
 
 use anyhow::Result;
-use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use cacheblob::MemWritesBlobstore;
 use context::CoreContext;
@@ -24,9 +23,11 @@ use mononoke_types::ChangesetId;
 use repo_blobstore::RepoBlobstoreRef;
 use tests_utils::drawdag::extend_from_dag_with_actions;
 
+use crate::Repo;
+
 async fn get_manifests(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &Repo,
     cs_id: ChangesetId,
     parents: Vec<HgAugmentedManifestId>,
 ) -> Result<(HgManifestId, HgAugmentedManifestId)> {
@@ -66,7 +67,7 @@ async fn get_manifests(
 
 async fn compare_manifests(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &Repo,
     hg_id: HgManifestId,
     aug_id: HgAugmentedManifestId,
 ) -> Result<()> {
@@ -110,7 +111,7 @@ async fn compare_manifests(
 async fn test_augmented_manifest(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
 
-    let repo: BlobRepo = test_repo_factory::build_empty(fb).await?;
+    let repo: Repo = test_repo_factory::build_empty(fb).await?;
 
     let (commits, _dag) = extend_from_dag_with_actions(
         &ctx,
