@@ -16,7 +16,6 @@ use anyhow::format_err;
 use anyhow::Error;
 use bitflags::bitflags;
 use blame::RootBlameV2;
-use blobrepo::BlobRepo;
 use blobstore_factory::SqlTierInfo;
 use bookmarks::BookmarkKey;
 use changeset_info::ChangesetInfo;
@@ -81,6 +80,7 @@ use skeleton_manifest::RootSkeletonManifestId;
 use thiserror::Error;
 use unodes::RootUnodeManifestId;
 
+use crate::detail::repo::Repo;
 use crate::detail::walk::OutgoingEdge;
 
 #[derive(Error, Debug)]
@@ -1050,7 +1050,7 @@ impl Node {
     pub fn validate_hash(
         &self,
         ctx: CoreContext,
-        repo: BlobRepo,
+        repo: Repo,
         node_data: &NodeData,
     ) -> BoxFuture<Result<(), HashValidationError>> {
         match (&self, node_data) {
@@ -1167,7 +1167,7 @@ mod tests {
 
     #[test]
     fn test_all_derived_data_types_supported() {
-        // All types blobrepo can support
+        // All enabled types for the repo
         let a = test_repo_factory::default_test_repo_config()
             .derived_data_config
             .get_active_config()
@@ -1215,7 +1215,7 @@ mod tests {
         }
         assert!(
             missing.is_empty(),
-            "blobrepo derived data types {:?} not supported by walker graph",
+            "Derived data types {:?} not supported by walker graph",
             missing,
         );
     }

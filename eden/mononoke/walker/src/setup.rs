@@ -14,7 +14,6 @@ use anyhow::bail;
 use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Error;
-use blobrepo::BlobRepo;
 use blobstore::Blobstore;
 use blobstore_factory::ScrubHandler;
 use cloned::cloned;
@@ -58,6 +57,7 @@ use crate::detail::progress::sort_by_string;
 use crate::detail::progress::ProgressOptions;
 use crate::detail::progress::ProgressStateCountByType;
 use crate::detail::progress::ProgressStateMutex;
+use crate::detail::repo::Repo;
 use crate::detail::tail::TailParams;
 use crate::detail::validate::REPO;
 use crate::detail::validate::WALK_TYPE;
@@ -468,7 +468,7 @@ async fn setup_repo<'a>(
         progress_options,
     ));
 
-    let repo: BlobRepo = repo_factory
+    let repo: Repo = repo_factory
         .build(repo_name.clone(), repo_config.clone(), common_config)
         .await?;
 

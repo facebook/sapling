@@ -15,6 +15,7 @@ pub mod log;
 pub mod pack;
 pub mod parse_node;
 pub mod progress;
+pub mod repo;
 pub mod sampling;
 pub mod scrub;
 pub mod sizing;
