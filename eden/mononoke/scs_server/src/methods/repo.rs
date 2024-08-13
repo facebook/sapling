@@ -6,9 +6,13 @@
  */
 
 use std::collections::BTreeMap;
+use std::str::FromStr;
 
+use anyhow::anyhow;
 use bookmarks::BookmarkKey;
 use bytes::Bytes;
+use chrono::DateTime;
+use chrono::FixedOffset;
 use context::CoreContext;
 use derived_data_manager::DerivableType;
 use futures::future::try_join_all;
@@ -35,10 +39,15 @@ use mononoke_api::FileType;
 use mononoke_api::MononokeError;
 use mononoke_api::RepoContext;
 use mononoke_api::StoreRequest;
+use mononoke_api::SubmoduleExpansionUpdate;
+use mononoke_api::SubmoduleExpansionUpdateCommitInfo;
 use mononoke_types::hash::GitSha1;
 use mononoke_types::hash::Sha1;
 use mononoke_types::hash::Sha256;
 use mononoke_types::path::MPath;
+use mononoke_types::DateTime as MononokeDateTime;
+use mononoke_types::NonRootMPath;
+use mononoke_types::ThriftConvert;
 use repo_authorization::AuthorizationContext;
 use source_control as thrift;
 
@@ -862,13 +871,126 @@ impl SourceControlServiceImpl {
         })
     }
 
-    /// Do a cross-repo lookup to see if a commit exists under a different hash in another repo
+    /// Update a submodule expansion in the large repo, i.e. change the commit
+    /// being expanded or delete the expansion entirely.
     pub(crate) async fn repo_update_submodule_expansion(
         &self,
-        _ctx: CoreContext,
-        _params: thrift::RepoUpdateSubmoduleExpansionParams,
+        ctx: CoreContext,
+        params: thrift::RepoUpdateSubmoduleExpansionParams,
     ) -> Result<thrift::RepoUpdateSubmoduleExpansionResponse, errors::ServiceError> {
-        // TODO(T179531912): implement repo_update_submodule_expansion
-        unimplemented!("repo_update_submodule_expansion is not implemented yet")
+        let large_repo_ctx = self.repo(ctx.clone(), &params.large_repo).await?;
+
+        let base_cs_specifier = ChangesetSpecifier::from_request(&params.base_commit_id)?;
+        let base_changeset_id = large_repo_ctx
+            .resolve_specifier(base_cs_specifier)
+            .await?
+            .ok_or_else(|| {
+                MononokeError::InvalidRequest(format!(
+                    "unknown commit specifier {}",
+                    base_cs_specifier
+                ))
+            })?;
+        let submodule_expansion_path =
+            NonRootMPath::new(params.submodule_expansion_path.as_bytes())
+                .map_err(MononokeError::from)?;
+
+        let commit_info_params = params.commit_info.unwrap_or_default();
+        // TODO(T179531912): expose more metadata fields in API
+        let author = if commit_info_params.author.is_some() {
+            commit_info_params.author
+        } else {
+            ctx.session().metadata().unix_name().map(String::from)
+        };
+
+        let author_date = commit_info_params
+            .author_date
+            .as_ref()
+            .map(<DateTime<FixedOffset>>::from_request)
+            .transpose()?
+            .map(MononokeDateTime::new);
+
+        let commit_info = SubmoduleExpansionUpdateCommitInfo {
+            author,
+            message: commit_info_params.message,
+            author_date,
+        };
+
+        let submodule_expansion_update = match params.new_submodule_commit_or_delete {
+            Some(thrift::CommitId::git(commit_hash_data)) => {
+                let commit_hash_string = String::from_utf8(commit_hash_data)
+                    .map_err(anyhow::Error::from)
+                    .map_err(MononokeError::from)
+                    .context("Git commit hash encoding")?;
+                // TODO(T179531912): support other hashes
+                let git_commit_id_bytes = GitSha1::from_str(commit_hash_string.as_str())
+                    .map_err(anyhow::Error::from)
+                    .map_err(MononokeError::from)
+                    .context("GitSha1 creation")?;
+                SubmoduleExpansionUpdate::UpdateCommit(git_commit_id_bytes)
+            }
+            Some(_) => {
+                return Err(errors::invalid_request(anyhow!(
+                    "New submodule commit is not a valid git commit hash"
+                ))
+                .into());
+            }
+            None => SubmoduleExpansionUpdate::Delete,
+        };
+
+        let cs_ctx = large_repo_ctx
+            .update_submodule_expansion(
+                base_changeset_id,
+                submodule_expansion_path,
+                submodule_expansion_update,
+                commit_info,
+            )
+            .await?;
+
+        let mut commit_ids = btreemap! {};
+        for scheme in params.identity_schemes {
+            let commit_id = match scheme {
+                thrift::CommitIdentityScheme::BONSAI => {
+                    thrift::CommitId::bonsai(cs_ctx.id().into_bytes().into())
+                }
+                thrift::CommitIdentityScheme::HG => thrift::CommitId::hg(
+                    cs_ctx
+                        .hg_id()
+                        .await?
+                        .ok_or_else(|| {
+                            errors::internal_error(format!(
+                                "No hg mapping found for changeset {}",
+                                cs_ctx.id()
+                            ))
+                        })?
+                        .as_bytes()
+                        .to_vec(),
+                ),
+                thrift::CommitIdentityScheme::GIT => thrift::CommitId::git(
+                    cs_ctx
+                        .git_sha1()
+                        .await?
+                        .ok_or_else(|| {
+                            errors::internal_error(format!(
+                                "No git mapping found for changeset {}",
+                                cs_ctx.id()
+                            ))
+                        })?
+                        .into_inner()
+                        .to_vec(),
+                ),
+                _ => {
+                    return Err(errors::invalid_request(format!(
+                        "{scheme} scheme is not supported"
+                    ))
+                    .into());
+                }
+            };
+            commit_ids.insert(scheme, commit_id);
+        }
+
+        Ok(thrift::RepoUpdateSubmoduleExpansionResponse {
+            ids: commit_ids,
+            ..Default::default()
+        })
     }
 }

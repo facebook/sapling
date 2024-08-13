@@ -13,6 +13,7 @@ use anyhow::Result;
 use scs_client_raw::thrift;
 use serde::Serialize;
 
+use crate::args::commit_id::map_commit_ids;
 use crate::args::commit_id::resolve_commit_id;
 use crate::args::commit_id::CommitIdArgs;
 use crate::args::commit_id::SchemeArgs;
@@ -70,13 +71,13 @@ pub(super) struct CommandArgs {
 }
 
 #[derive(Serialize)]
-pub(crate) struct _SubmoduleExpansionUpdateOutput {
+pub(crate) struct SubmoduleExpansionUpdateOutput {
     #[serde(skip)]
     pub requested: String,
     pub ids: BTreeMap<String, String>,
 }
 
-impl Render for _SubmoduleExpansionUpdateOutput {
+impl Render for SubmoduleExpansionUpdateOutput {
     type Args = SchemeArgs;
 
     fn render(&self, args: &Self::Args, w: &mut dyn Write) -> Result<()> {
@@ -115,7 +116,7 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
         ..Default::default()
     };
 
-    let _params = thrift::RepoUpdateSubmoduleExpansionParams {
+    let params = thrift::RepoUpdateSubmoduleExpansionParams {
         large_repo,
         base_commit_id,
         submodule_expansion_path: args.submodule_expansion_path,
@@ -124,7 +125,14 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
         commit_info: Some(commit_info),
         ..Default::default()
     };
+    let response = large_repo_conn
+        .repo_update_submodule_expansion(&params)
+        .await?;
 
-    // TODO(T179531912): implement SCS method to update submodule expansion
-    Ok(())
+    let output = SubmoduleExpansionUpdateOutput {
+        requested: "Commit".to_string(),
+        ids: map_commit_ids(response.ids.values()),
+    };
+
+    app.target.render_one(&args.scheme_args, output).await
 }

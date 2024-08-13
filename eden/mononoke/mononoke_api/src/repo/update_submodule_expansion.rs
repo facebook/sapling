@@ -40,9 +40,9 @@ pub enum SubmoduleExpansionUpdate {
 }
 
 pub struct SubmoduleExpansionUpdateCommitInfo {
-    message: Option<String>,
-    author: Option<String>,
-    author_date: Option<MononokeDateTime>,
+    pub message: Option<String>,
+    pub author: Option<String>,
+    pub author_date: Option<MononokeDateTime>,
 }
 
 impl RepoContext {
