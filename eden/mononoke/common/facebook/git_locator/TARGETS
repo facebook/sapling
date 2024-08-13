@@ -13,6 +13,7 @@ rust_library(
         "fbsource//third-party/rust:arc-swap",
         "fbsource//third-party/rust:rand",
         "fbsource//third-party/rust:slog",
+        "fbsource//third-party/rust:thiserror",
         "fbsource//third-party/rust:tokio",
         "//common/rust/shed/cloned:cloned",
         "//common/rust/shed/fbinit:fbinit",
