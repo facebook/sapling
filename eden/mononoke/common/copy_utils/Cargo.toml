@@ -10,6 +10,7 @@ license = "GPLv2+"
 [dependencies]
 anyhow = "1.0.75"
 blobrepo = { version = "0.1.0", path = "../../blobrepo" }
+changesets_creation = { version = "0.1.0", path = "../../changesets/changesets_creation" }
 commit_transformation = { version = "0.1.0", path = "../../megarepo_api/commit_transformation" }
 context = { version = "0.1.0", path = "../../server/context" }
 fsnodes = { version = "0.1.0", path = "../../derived_data/fsnodes" }

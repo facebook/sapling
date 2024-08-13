@@ -13,8 +13,8 @@ use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
-use blobrepo::save_bonsai_changesets;
 use blobstore::Loadable;
+use changesets_creation::save_changesets;
 use commit_graph::CommitGraphRef;
 use commit_transformation::create_directory_source_to_target_multi_mover;
 use commit_transformation::create_source_to_target_multi_mover;
@@ -361,10 +361,10 @@ impl<'a> SyncChangeset<'a> {
             .try_collect::<Vec<_>>()
             .await?;
 
-        save_bonsai_changesets(
-            moved_commits.iter().map(|css| css.moved.clone()).collect(),
-            ctx.clone(),
+        save_changesets(
+            ctx,
             target_repo.inner_repo(),
+            moved_commits.iter().map(|css| css.moved.clone()).collect(),
         )
         .await?;
 

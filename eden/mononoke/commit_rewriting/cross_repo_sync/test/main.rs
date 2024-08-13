@@ -14,13 +14,13 @@ use std::sync::Arc;
 use anyhow::anyhow;
 use anyhow::Error;
 use ascii::AsciiString;
-use blobrepo::save_bonsai_changesets;
 use blobstore::Loadable;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks::BookmarksRef;
 use cacheblob::InProcessLease;
+use changesets_creation::save_changesets;
 use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use cross_repo_sync::find_toposorted_unsynced_ancestors;
@@ -155,9 +155,7 @@ async fn create_empty_commit(ctx: CoreContext, repo: &TestRepo) -> ChangesetId {
     .unwrap();
 
     let bcs_id = bcs.get_changeset_id();
-    save_bonsai_changesets(vec![bcs], ctx.clone(), repo)
-        .await
-        .unwrap();
+    save_changesets(&ctx, repo, vec![bcs]).await.unwrap();
 
     let mut txn = repo.bookmarks().create_transaction(ctx.clone());
     txn.force_set(&bookmark, bcs_id, BookmarkUpdateReason::TestMove)
@@ -1985,9 +1983,7 @@ async fn create_merge(
     .unwrap();
 
     let bcs_id = bcs.get_changeset_id();
-    save_bonsai_changesets(vec![bcs], ctx.clone(), repo)
-        .await
-        .unwrap();
+    save_changesets(ctx, repo, vec![bcs]).await.unwrap();
 
     bcs_id
 }

@@ -16,7 +16,6 @@ use anyhow::anyhow;
 use anyhow::Error;
 use ascii::AsciiString;
 use assert_matches::assert_matches;
-use blobrepo::save_bonsai_changesets;
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
@@ -29,6 +28,7 @@ use bookmarks::BookmarksArc;
 use bookmarks::BookmarksMaybeStaleExt;
 use bookmarks::BookmarksRef;
 use bookmarks::Freshness;
+use changesets_creation::save_changesets;
 use cloned::cloned;
 use commit_graph::CommitGraphRef;
 use commit_transformation::upload_commits;
@@ -1436,7 +1436,7 @@ async fn init_repos(
             rewritten.parents.push(initial_commit_in_target);
 
             let rewritten = rewritten.freeze()?;
-            save_bonsai_changesets(vec![rewritten.clone()], ctx.clone(), &target_repo).await?;
+            save_changesets(&ctx, &target_repo, vec![rewritten.clone()]).await?;
             rewritten.get_changeset_id()
         }
         None => initial_commit_in_target,

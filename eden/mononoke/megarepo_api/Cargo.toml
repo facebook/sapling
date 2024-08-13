@@ -12,12 +12,12 @@ anyhow = "1.0.75"
 async-trait = "0.1.71"
 async_once_cell = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 async_requests = { version = "0.1.0", path = "async_requests" }
-blobrepo = { version = "0.1.0", path = "../blobrepo" }
 blobstore = { version = "0.1.0", path = "../blobstore" }
 bonsai_hg_mapping = { version = "0.1.0", path = "../bonsai_hg_mapping" }
 bookmarks = { version = "0.1.0", path = "../bookmarks" }
 bulk_derivation = { version = "0.1.0", path = "../derived_data/bulk_derivation" }
 bytes = { version = "1.6.0", features = ["serde"] }
+changesets_creation = { version = "0.1.0", path = "../changesets/changesets_creation" }
 commit_graph = { version = "0.1.0", path = "../repo_attributes/commit_graph/commit_graph" }
 commit_transformation = { version = "0.1.0", path = "commit_transformation" }
 context = { version = "0.1.0", path = "../server/context" }
@@ -49,6 +49,7 @@ sorted_vector_map = { version = "0.2.0", git = "https://github.com/facebookexper
 unodes = { version = "0.1.0", path = "../derived_data/unodes" }
 
 [dev-dependencies]
+blobrepo = { version = "0.1.0", path = "../blobrepo" }
 fbinit = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit-tokio = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 maplit = "1.0"

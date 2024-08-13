@@ -7,7 +7,6 @@
 
 use std::sync::Arc;
 
-use anyhow::Error;
 use bonsai_git_mapping::BonsaiGitMapping;
 use bonsai_globalrev_mapping::BonsaiGlobalrevMapping;
 use bonsai_hg_mapping::BonsaiHgMapping;
@@ -17,17 +16,13 @@ use bookmarks::BookmarkUpdateLog;
 use bookmarks::Bookmarks;
 use commit_cloud::CommitCloud;
 use commit_graph::CommitGraph;
-use commit_graph::CommitGraphRef;
 use commit_graph::CommitGraphWriter;
-use commit_graph::CommitGraphWriterRef;
-use context::CoreContext;
 use ephemeral_blobstore::Bubble;
 use filenodes::Filenodes;
 use filestore::FilestoreConfig;
 use git_symbolic_refs::GitSymbolicRefs;
 use mercurial_mutation::HgMutationStore;
 use metaconfig_types::RepoConfig;
-use mononoke_types::BonsaiChangeset;
 use mutable_counters::MutableCounters;
 use phases::Phases;
 use pushrebase_mutation_mapping::PushrebaseMutationMapping;
@@ -36,7 +31,6 @@ use repo_blobstore::RepoBlobstoreRef;
 use repo_bookmark_attrs::RepoBookmarkAttrs;
 use repo_derived_data::RepoDerivedData;
 use repo_identity::RepoIdentity;
-use repo_identity::RepoIdentityRef;
 use repo_lock::RepoLock;
 use repo_permission_checker::RepoPermissionChecker;
 use sql_commit_graph_storage::CommitGraphBulkFetcher;
@@ -195,15 +189,4 @@ impl AsBlobRepo for BlobRepo {
     fn as_blob_repo(&self) -> &BlobRepo {
         self
     }
-}
-
-/// This function uploads bonsai changesets object to blobstore in parallel, and then does
-/// sequential writes to changesets table. Parents of the changesets should already by saved
-/// in the repository.
-pub async fn save_bonsai_changesets(
-    bonsai_changesets: Vec<BonsaiChangeset>,
-    ctx: CoreContext,
-    container: &(impl CommitGraphRef + CommitGraphWriterRef + RepoBlobstoreRef + RepoIdentityRef),
-) -> Result<(), Error> {
-    changesets_creation::save_changesets(&ctx, container, bonsai_changesets).await
 }

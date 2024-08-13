@@ -44,6 +44,7 @@ blobrepo = { version = "0.1.0", path = "../../blobrepo" }
 blobrepo_hg = { version = "0.1.0", path = "../../blobrepo/blobrepo_hg" }
 bookmarks = { version = "0.1.0", path = "../../bookmarks" }
 cacheblob = { version = "0.1.0", path = "../../blobstore/cacheblob" }
+changesets_creation = { version = "0.1.0", path = "../../changesets/changesets_creation" }
 cmdlib_caching = { version = "0.1.0", path = "../../cmdlib/caching" }
 commit_graph = { version = "0.1.0", path = "../../repo_attributes/commit_graph/commit_graph" }
 delayblob = { version = "0.1.0", path = "../../blobstore/delayblob" }

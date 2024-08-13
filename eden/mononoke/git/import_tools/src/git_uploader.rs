@@ -10,13 +10,13 @@ use anyhow::Context;
 use anyhow::Error;
 use async_trait::async_trait;
 use auto_impl::auto_impl;
-use blobrepo::save_bonsai_changesets;
 use bonsai_git_mapping::BonsaiGitMappingEntry;
 use bonsai_git_mapping::BonsaiGitMappingRef;
 use bonsai_git_mapping::BonsaisOrGitShas;
 use bonsai_tag_mapping::BonsaiTagMappingRef;
 use bulk_derivation::BulkDerivation;
 use bytes::Bytes;
+use changesets_creation::save_changesets;
 use cloned::cloned;
 use commit_graph::CommitGraphRef;
 use commit_graph::CommitGraphWriterRef;
@@ -345,12 +345,10 @@ pub async fn finalize_batch(
 
     // We know that the commits are in order (this is guaranteed by the Walk), so we
     // can insert them as-is, one by one, without extra dependency / ordering checks.
-    let (stats, ()) = save_bonsai_changesets(vbcs, ctx.clone(), repo)
-        .try_timed()
-        .await?;
+    let (stats, ()) = save_changesets(ctx, repo, vbcs).try_timed().await?;
     debug!(
         ctx.logger(),
-        "save_bonsai_changesets for {} commits in {:?}",
+        "save_changesets for {} commits in {:?}",
         oid_to_bcsid.len(),
         stats.completion_time
     );

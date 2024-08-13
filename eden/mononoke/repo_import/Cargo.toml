@@ -19,6 +19,7 @@ bookmarks = { version = "0.1.0", path = "../bookmarks" }
 bookmarks_movement = { version = "0.1.0", path = "../bookmarks/bookmarks_movement" }
 borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 bulk_derivation = { version = "0.1.0", path = "../derived_data/bulk_derivation" }
+changesets_creation = { version = "0.1.0", path = "../changesets/changesets_creation" }
 clap = { version = "4.5.11", features = ["derive", "env", "string", "unicode", "wrap_help"] }
 cmdlib_cross_repo = { version = "0.1.0", path = "../cmdlib/cross_repo" }
 commit_graph = { version = "0.1.0", path = "../repo_attributes/commit_graph/commit_graph" }

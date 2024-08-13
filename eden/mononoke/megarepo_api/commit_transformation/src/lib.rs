@@ -15,12 +15,12 @@ use anyhow::anyhow;
 use anyhow::bail;
 use anyhow::Error;
 use anyhow::Result;
-use blobrepo::save_bonsai_changesets;
 use blobrepo_utils::convert_diff_result_into_file_change_for_diamond_merge;
 use blobsync::copy_content;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bookmarks::BookmarksRef;
 use borrowed::borrowed;
+use changesets_creation::save_changesets;
 use commit_graph::CommitGraphRef;
 use commit_graph::CommitGraphWriterRef;
 use context::CoreContext;
@@ -800,7 +800,7 @@ pub async fn upload_commits<'a>(
 
     // Then copy from source repo
     copy_file_contents(ctx, source_repo, target_repo, files_to_sync, |_| {}).await?;
-    save_bonsai_changesets(rewritten_list.clone(), ctx.clone(), target_repo).await?;
+    save_changesets(ctx, target_repo, rewritten_list.clone()).await?;
     Ok(())
 }
 
@@ -845,7 +845,6 @@ mod test {
     use std::collections::HashSet;
 
     use anyhow::bail;
-    use blobrepo::save_bonsai_changesets;
     use blobstore::Loadable;
     use fbinit::FacebookInit;
     use maplit::btreemap;
@@ -1710,7 +1709,7 @@ mod test {
             maybe_rewritten.ok_or_else(|| anyhow!("can't rewrite commit {}", bcs_id))?;
         let rewritten = rewritten.freeze()?;
 
-        save_bonsai_changesets(vec![rewritten.clone()], ctx.clone(), repo).await?;
+        save_changesets(ctx, repo, vec![rewritten.clone()]).await?;
 
         Ok(rewritten.get_changeset_id())
     }

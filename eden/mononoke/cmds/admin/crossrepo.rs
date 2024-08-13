@@ -13,7 +13,6 @@ use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Error;
 use backsyncer::format_counter as format_backsyncer_counter;
-use blobrepo::save_bonsai_changesets;
 use blobstore::Loadable;
 use blobstore_factory::MetadataSqlFactory;
 use blobstore_factory::ReadOnlyStorage;
@@ -24,6 +23,7 @@ use bookmarks::BookmarksRef;
 use bookmarks::Freshness;
 use bulk_derivation::BulkDerivation;
 use cached_config::ConfigStore;
+use changesets_creation::save_changesets;
 use clap_old::App;
 use clap_old::Arg;
 use clap_old::ArgMatches;
@@ -854,7 +854,7 @@ async fn create_commit_for_mapping_change(
     .freeze()?;
 
     let large_cs_id = bcs.get_changeset_id();
-    save_bonsai_changesets(vec![bcs], ctx.clone(), &large_repo.0).await?;
+    save_changesets(ctx, &large_repo.0, vec![bcs]).await?;
 
     Ok(Large(large_cs_id))
 }

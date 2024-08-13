@@ -22,7 +22,6 @@ use anyhow::Error;
 use backsyncer::backsync_latest;
 use backsyncer::open_backsyncer_dbs;
 use backsyncer::BacksyncLimit;
-use blobrepo::save_bonsai_changesets;
 use blobrepo::AsBlobRepo;
 use blobstore::Loadable;
 use bookmarks::BookmarkKey;
@@ -30,6 +29,7 @@ use bookmarks::BookmarkUpdateReason;
 use bookmarks::BookmarksRef;
 use borrowed::borrowed;
 use bulk_derivation::BulkDerivation;
+use changesets_creation::save_changesets;
 use cmdlib_cross_repo::repo_provider_from_mononoke_app;
 use context::CoreContext;
 use cross_repo_sync::create_commit_syncer_lease;
@@ -263,7 +263,7 @@ async fn rewrite_file_paths(
     bonsai_changesets = sort_bcs(&bonsai_changesets)?;
     let bcs_ids = get_cs_ids(&bonsai_changesets);
     info!(ctx.logger(), "Saving shifted bonsai changesets");
-    save_bonsai_changesets(bonsai_changesets, ctx.clone(), repo).await?;
+    save_changesets(ctx, repo, bonsai_changesets).await?;
     info!(ctx.logger(), "Saved shifted bonsai changesets");
     Ok((bcs_ids, git_merge_shifted_bcs_id))
 }
@@ -626,7 +626,7 @@ async fn merge_imported_commit(
         "Created merge bonsai: {} and changeset: {:?}", merged_cs_id, merged_cs
     );
 
-    save_bonsai_changesets(vec![merged_cs], ctx.clone(), repo).await?;
+    save_changesets(ctx, repo, vec![merged_cs]).await?;
     info!(ctx.logger(), "Finished merging");
     Ok(merged_cs_id)
 }

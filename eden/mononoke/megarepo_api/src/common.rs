@@ -14,12 +14,12 @@ use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
 use async_trait::async_trait;
-use blobrepo::save_bonsai_changesets;
 use blobstore::Loadable;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks::BookmarksRef;
 use bytes::Bytes;
+use changesets_creation::save_changesets;
 use commit_graph::CommitGraph;
 use commit_transformation::create_directory_source_to_target_multi_mover;
 use commit_transformation::create_source_to_target_multi_mover;
@@ -189,7 +189,7 @@ pub trait MegarepoOp {
             .save_in_changeset(ctx, repo.blob_repo(), &mut bcs)
             .await?;
         let merge = bcs.freeze()?;
-        save_bonsai_changesets(vec![merge.clone()], ctx.clone(), repo.inner_repo()).await?;
+        save_changesets(ctx, repo.inner_repo(), vec![merge.clone()]).await?;
 
         // We don't want to have deletion commit on our mainline. So we'd like to create a new
         // merge commit whose parent is not a deletion commit. For that we take the manifest
@@ -279,7 +279,7 @@ pub trait MegarepoOp {
             git_annotated_tag: None,
         };
         let merge = bcs.freeze()?;
-        save_bonsai_changesets(vec![merge.clone()], ctx.clone(), repo).await?;
+        save_changesets(ctx, repo, vec![merge.clone()]).await?;
 
         Ok(merge.get_changeset_id())
     }
@@ -306,10 +306,10 @@ pub trait MegarepoOp {
         let old_target_with_removed_files =
             new_megarepo_automation_commit(vec![old_target_cs.id()], message, file_changes);
         let old_target_with_removed_files = old_target_with_removed_files.freeze()?;
-        save_bonsai_changesets(
-            vec![old_target_with_removed_files.clone()],
-            ctx.clone(),
+        save_changesets(
+            ctx,
             repo.blob_repo(),
+            vec![old_target_with_removed_files.clone()],
         )
         .await?;
 
@@ -630,13 +630,13 @@ pub trait MegarepoOp {
             )?;
         }
 
-        save_bonsai_changesets(
+        save_changesets(
+            ctx,
+            repo,
             moved_commits
                 .iter()
                 .map(|(_, css)| css.moved.clone())
                 .collect(),
-            ctx.clone(),
-            repo,
         )
         .await?;
 
@@ -888,7 +888,7 @@ pub trait MegarepoOp {
         }
         let final_merge = final_merge.freeze()?;
         merges.push(final_merge.clone());
-        save_bonsai_changesets(merges, ctx.clone(), repo).await?;
+        save_changesets(ctx, repo, merges).await?;
 
         Ok(final_merge.get_changeset_id())
     }

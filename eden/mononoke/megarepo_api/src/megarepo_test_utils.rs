@@ -12,6 +12,7 @@ use std::sync::Arc;
 use anyhow::anyhow;
 use anyhow::Error;
 use blobrepo::BlobRepo;
+use changesets_creation::save_changesets;
 use commit_transformation::create_source_to_target_multi_mover;
 use context::CoreContext;
 use maplit::btreemap;
@@ -137,7 +138,7 @@ impl MegarepoTest {
             .await?;
         let init_target_cs = init_target_cs.freeze()?;
         let init_target_cs_id = init_target_cs.get_changeset_id();
-        blobrepo::save_bonsai_changesets(vec![init_target_cs], ctx.clone(), &self.blobrepo).await?;
+        save_changesets(ctx, &self.blobrepo, vec![init_target_cs]).await?;
 
         bookmark(ctx, &self.blobrepo, target.bookmark.clone())
             .set_to(init_target_cs_id)

@@ -48,8 +48,8 @@ wireproto_handler = { version = "0.1.0", path = "../../wireproto_handler" }
 [dev-dependencies]
 ascii = "1.0"
 assert_matches = "1.5"
-blobrepo = { version = "0.1.0", path = "../../blobrepo" }
 blobrepo_hg = { version = "0.1.0", path = "../../blobrepo/blobrepo_hg" }
+changesets_creation = { version = "0.1.0", path = "../../changesets/changesets_creation" }
 commit_transformation = { version = "0.1.0", path = "../../megarepo_api/commit_transformation" }
 cross_repo_sync_test_utils = { version = "0.1.0", path = "../cross_repo_sync/test_utils" }
 fbinit = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

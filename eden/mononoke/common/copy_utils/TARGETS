@@ -23,6 +23,7 @@ rust_library(
         "//common/rust/shed/sorted_vector_map:sorted_vector_map",
         "//eden/mononoke/blobrepo:blobrepo",
         "//eden/mononoke/blobrepo:repo_blobstore",
+        "//eden/mononoke/changesets/changesets_creation:changesets_creation",
         "//eden/mononoke/derived_data:fsnodes",
         "//eden/mononoke/manifest:manifest",
         "//eden/mononoke/megarepo_api:commit_transformation",

@@ -11,8 +11,8 @@ use std::num::NonZeroU64;
 
 use anyhow::anyhow;
 use anyhow::Error;
-use blobrepo::save_bonsai_changesets;
 use blobrepo::BlobRepo;
+use changesets_creation::save_changesets;
 use commit_transformation::copy_file_contents;
 use context::CoreContext;
 use fsnodes::RootFsnodeId;
@@ -215,7 +215,7 @@ async fn create_changesets(
         parent = cs_id;
     }
 
-    save_bonsai_changesets(changesets, ctx.clone(), repo).await?;
+    save_changesets(ctx, repo, changesets).await?;
 
     Ok(cs_ids)
 }

@@ -32,6 +32,7 @@ use blobstore::Storable;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bookmarks::BookmarksRef;
 use bytes::Bytes;
+use changesets_creation::save_changesets;
 use cloned::cloned;
 use context::CoreContext;
 use fbinit::FacebookInit;
@@ -833,9 +834,7 @@ async fn test_hg_commit_generation_simple(fb: FacebookInit) {
 
     let bcs_id = bcs.get_changeset_id();
     let ctx = CoreContext::test_mock(fb);
-    blobrepo::save_bonsai_changesets(vec![bcs], ctx.clone(), &repo)
-        .await
-        .unwrap();
+    save_changesets(&ctx, &repo, vec![bcs]).await.unwrap();
     let hg_cs_id = repo.derive_hg_changeset(&ctx, bcs_id).await.unwrap();
 
     assert_eq!(
@@ -872,9 +871,7 @@ async fn test_hg_commit_generation_stack(fb: FacebookInit) {
 
     let top_of_stack = changesets.last().unwrap().clone().get_changeset_id();
     let ctx = CoreContext::test_mock(fb);
-    blobrepo::save_bonsai_changesets(changesets, ctx.clone(), &repo)
-        .await
-        .unwrap();
+    save_changesets(&ctx, &repo, changesets).await.unwrap();
 
     let hg_cs_id = repo.derive_hg_changeset(&ctx, top_of_stack).await.unwrap();
     assert_eq!(
@@ -895,7 +892,7 @@ async fn test_hg_commit_generation_one_after_another(fb: FacebookInit) {
 
     let second_bcs = create_bonsai_changeset(vec![first_bcs_id]);
     let second_bcs_id = second_bcs.get_changeset_id();
-    blobrepo::save_bonsai_changesets(vec![first_bcs, second_bcs], ctx.clone(), &repo)
+    save_changesets(&ctx, &repo, vec![first_bcs, second_bcs])
         .await
         .unwrap();
 
@@ -974,7 +971,9 @@ async fn test_hg_commit_generation_uneven_branch(fb: FacebookInit) {
         large_branch_2.get_changeset_id(),
     ]);
 
-    blobrepo::save_bonsai_changesets(
+    save_changesets(
+        &ctx,
+        &repo,
         vec![
             root_bcs,
             large_branch_1,
@@ -982,8 +981,6 @@ async fn test_hg_commit_generation_uneven_branch(fb: FacebookInit) {
             short_branch,
             merge.clone(),
         ],
-        ctx.clone(),
-        &repo,
     )
     .await
     .unwrap();

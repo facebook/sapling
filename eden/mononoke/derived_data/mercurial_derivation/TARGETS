@@ -75,6 +75,7 @@ rust_unittest(
         "//eden/mononoke/blobstore:memblob",
         "//eden/mononoke/bonsai_hg_mapping:bonsai_hg_mapping",
         "//eden/mononoke/bookmarks:bookmarks",
+        "//eden/mononoke/changesets/changesets_creation:changesets_creation",
         "//eden/mononoke/cmdlib/caching:cmdlib_caching",
         "//eden/mononoke/common/scuba_ext:scuba_ext",
         "//eden/mononoke/derived_data/filenodes_derivation:filenodes_derivation",

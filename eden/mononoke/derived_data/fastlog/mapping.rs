@@ -198,10 +198,10 @@ mod tests {
     use std::str::FromStr;
     use std::sync::Arc;
 
-    use blobrepo::save_bonsai_changesets;
     use bonsai_hg_mapping::BonsaiHgMapping;
     use bookmarks::BookmarkKey;
     use bookmarks::Bookmarks;
+    use changesets_creation::save_changesets;
     use commit_graph::CommitGraph;
     use commit_graph::CommitGraphRef;
     use commit_graph::CommitGraphWriter;
@@ -266,9 +266,7 @@ mod tests {
         let ctx = CoreContext::test_mock(fb);
         let bcs = create_bonsai_changeset(vec![]);
         let bcs_id = bcs.get_changeset_id();
-        save_bonsai_changesets(vec![bcs], ctx.clone(), &repo)
-            .await
-            .unwrap();
+        save_changesets(&ctx, &repo, vec![bcs]).await.unwrap();
 
         let root_unode_mf_id = derive_fastlog_batch_and_unode(&ctx, bcs_id.clone(), &repo).await;
 
@@ -363,9 +361,7 @@ mod tests {
         }
 
         let latest = parents.first().unwrap();
-        save_bonsai_changesets(bonsais, ctx.clone(), &repo)
-            .await
-            .unwrap();
+        save_changesets(&ctx, &repo, bonsais).await.unwrap();
 
         verify_all_entries_for_commit(&ctx, &repo, *latest).await;
     }
@@ -399,9 +395,7 @@ mod tests {
         }
 
         let latest = parents.first().unwrap();
-        save_bonsai_changesets(bonsais, ctx.clone(), &repo)
-            .await
-            .unwrap();
+        save_changesets(&ctx, &repo, bonsais).await.unwrap();
 
         verify_all_entries_for_commit(&ctx, &repo, *latest).await;
     }
@@ -468,9 +462,7 @@ mod tests {
             let merge_bcs_id = bcs.get_changeset_id();
 
             bonsais.push(bcs);
-            save_bonsai_changesets(bonsais, ctx.clone(), &repo)
-                .await
-                .unwrap();
+            save_changesets(&ctx, &repo, bonsais).await.unwrap();
 
             let mut parent_unodes = vec![];
 
@@ -662,7 +654,7 @@ mod tests {
         println!("e = {}", e.get_changeset_id());
         bonsais.push(e.clone());
 
-        save_bonsai_changesets(bonsais, ctx.clone(), &repo).await?;
+        save_changesets(&ctx, &repo, bonsais).await?;
 
         verify_all_entries_for_commit(&ctx, &repo, e.get_changeset_id()).await;
         Ok(())

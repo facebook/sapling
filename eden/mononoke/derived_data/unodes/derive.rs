@@ -448,9 +448,9 @@ mod tests {
 
     use anyhow::Result;
     use async_trait::async_trait;
-    use blobrepo::save_bonsai_changesets;
     use blobstore::Storable;
     use bytes::Bytes;
+    use changesets_creation::save_changesets;
     use derived_data_test_utils::bonsai_changeset_from_hg;
     use derived_data_test_utils::iterate_all_manifest_entries;
     use fbinit::FacebookInit;
@@ -943,7 +943,7 @@ mod tests {
         .freeze()
         .unwrap();
 
-        save_bonsai_changesets(vec![bcs.clone()], CoreContext::test_mock(fb), &repo).await?;
+        save_changesets(&CoreContext::test_mock(fb), &repo, vec![bcs.clone()]).await?;
         Ok(bcs)
     }
 

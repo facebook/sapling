@@ -215,6 +215,7 @@ rust_binary(
         "//eden/mononoke/bonsai_hg_mapping:bonsai_hg_mapping",
         "//eden/mononoke/bookmarks:bookmarks",
         "//eden/mononoke/bookmarks:bookmarks_movement",
+        "//eden/mononoke/changesets/changesets_creation:changesets_creation",
         "//eden/mononoke/cmdlib:cmdlib",
         "//eden/mononoke/cmdlib:cmdlib_x_repo",
         "//eden/mononoke/commit_rewriting/backsyncer:backsyncer",
