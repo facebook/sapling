@@ -27,7 +27,10 @@ use futures::StreamExt;
 use futures::TryStreamExt;
 use itertools::Either;
 use nonzero_ext::nonzero;
+use quickcheck::Arbitrary;
+use quickcheck::Gen;
 use smallvec::SmallVec;
+use sorted_vector_map::sorted_vector_map;
 use sorted_vector_map::SortedVectorMap;
 
 use crate::blob::Blob;
@@ -118,6 +121,13 @@ impl<Value: ShardedMapV2Value> ShardedMapV2StoredNode<Value> {
             rollup_data: self.rollup_data.into_bytes(),
         }
     }
+}
+
+/// Returns longest common prefix of a and b.
+fn common_prefix<'a>(a: &'a [u8], b: &'a [u8]) -> &'a [u8] {
+    let lcp = a.iter().zip(b.iter()).take_while(|(a, b)| a == b).count();
+    // Panic safety: lcp is at most a.len()
+    &a[..lcp]
 }
 
 impl<Value: ShardedMapV2Value> LoadableShardedMapV2Node<Value> {
@@ -241,6 +251,26 @@ impl<Value: ShardedMapV2Value> LoadableShardedMapV2Node<Value> {
                 thrift::sharded_map::LoadableShardedMapV2Node::stored(stored.into_thrift())
             }
         }
+    }
+}
+
+#[derive(Clone, Copy, Eq, PartialEq, Hash, Debug)]
+/// The kind of lookup to perform on when using get_entries_and_partial_maps method.
+pub enum LookupKind {
+    Entry,
+    PartialMap,
+}
+
+impl Arbitrary for LookupKind {
+    fn arbitrary(g: &mut Gen) -> Self {
+        if bool::arbitrary(g) {
+            LookupKind::Entry
+        } else {
+            LookupKind::PartialMap
+        }
+    }
+    fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
+        Box::new(std::iter::empty())
     }
 }
 
@@ -490,6 +520,98 @@ impl<Value: ShardedMapV2Value> ShardedMapV2Node<Value> {
                     .await
             }
         }
+    }
+
+    /// Returns the entries and partial maps corresponding to the given TrieMap.
+    /// See documentation of `lookup` and `get_partial_map` for the semantics of looking up entries and
+    /// partial maps.
+    ///
+    /// This is more efficient than calling `lookup` and `get_partial_map` separately for each
+    /// key and prefix.
+    pub async fn get_entries_and_partial_maps(
+        self,
+        ctx: &CoreContext,
+        blobstore: &impl Blobstore,
+        lookup_keys: TrieMap<LookupKind>,
+        concurrency: usize,
+    ) -> Result<TrieMap<Either<Value, LoadableShardedMapV2Node<Value>>>> {
+        bounded_traversal::bounded_traversal_stream(
+            concurrency,
+            vec![(LoadableShardedMapV2Node::Inlined(self), lookup_keys, SmallBinary::new())],
+            |(loadable_node, lookup_keys, mut accumulated_prefix)| {
+                async move {
+                    let node = loadable_node.load(ctx, blobstore).await?;
+
+                    // Find the longest common prefix between all lookup keys and the current node,
+                    // and strip it from the lookup keys and node prefix.
+                    let keys_prefix = lookup_keys.longest_common_prefix();
+                    let lcp = common_prefix(keys_prefix.as_ref(), node.prefix.as_ref());
+
+                    let lookup_keys = lookup_keys.extract_prefix(lcp).expect("lcp should be a prefix of lookup_keys");
+                    let node_prefix: SmallBinary = node.prefix.strip_prefix(lcp).expect("lcp should be a prefix of node.prefix").into();
+
+                    accumulated_prefix.extend_from_slice(lcp);
+
+                    let item = match lookup_keys.value.as_ref().map(|v| **v) {
+                        // If the lookup kind is Entry, then we're looking for a value that
+                        // corresponds to exactly accumulated_prefix.
+                        Some(LookupKind::Entry) => {
+                            if node_prefix.is_empty() {
+                                node.value.clone().map(|v| Either::Left(*v))
+                            } else {
+                                None
+                            }
+                        }
+                        // If the lookup kind is PartialMap, then we return the current node
+                        // after adjusting its prefix.
+                        Some(LookupKind::PartialMap) => {
+                            let mut partial_map = node.clone();
+                            partial_map.prefix = node_prefix.clone();
+                            Some(Either::Right(LoadableShardedMapV2Node::Inlined(
+                                partial_map,
+                            )))
+                        }
+                        _ => None,
+                    };
+
+                    // Expand the sharded map on the first byte.
+                    let mut child_nodes: SortedVectorMap<u8, LoadableShardedMapV2Node<Value>> =
+                        match node_prefix.split_first() {
+                            None => node.children,
+                            Some((first, rest)) => {
+                                let mut node = node;
+                                node.prefix = rest.into();
+                                sorted_vector_map! { *first => LoadableShardedMapV2Node::Inlined(node) }
+                            }
+                        };
+
+                    // Expand the lookup keys on the first byte.
+                    let (_, child_lookup_keys) = lookup_keys.expand();
+
+                    // Group the sharded map children and lookup keys by the first byte.
+                    let children = child_lookup_keys
+                        .into_iter()
+                        .flat_map({
+                            |(byte, lookup_keys)| {
+                                let mut accumulated_prefix = accumulated_prefix.clone();
+                                accumulated_prefix.push(byte);
+                                child_nodes.remove(&byte).map(|node| (node, lookup_keys, accumulated_prefix))
+                            }
+                        })
+                        .collect::<Vec<_>>();
+
+                    // Return the current item and recurse on the grouped node children and lookup keys.
+                    anyhow::Ok((
+                        item.map(|item| (accumulated_prefix, item)),
+                        children,
+                    ))
+                }
+                .boxed()
+            },
+        )
+        .try_filter_map(futures::future::ok)
+        .try_collect()
+        .await
     }
 
     /// Returns an ordered stream over all key-value pairs in the map.
@@ -1042,19 +1164,17 @@ mod test {
         async fn lookup(
             &self,
             map: &ShardedMapV2Node<TestValue>,
-            key: &str,
+            key: impl AsRef<[u8]>,
         ) -> Result<Option<TestValue>> {
-            map.lookup(&self.0, &self.1, key.as_bytes()).await
+            map.lookup(&self.0, &self.1, key.as_ref()).await
         }
 
         async fn get_partial_map(
             &self,
             map: &ShardedMapV2Node<TestValue>,
-            key: &str,
+            key: impl AsRef<[u8]>,
         ) -> Result<Option<ShardedMapV2Node<TestValue>>> {
-            let partial_map = map
-                .get_partial_map(&self.0, &self.1, key.as_bytes())
-                .await?;
+            let partial_map = map.get_partial_map(&self.0, &self.1, key.as_ref()).await?;
 
             match partial_map {
                 Some(partial_map) => Ok(Some(partial_map.load(&self.0, &self.1).await?)),
@@ -1067,6 +1187,28 @@ mod test {
             map: LoadableShardedMapV2Node<TestValue>,
         ) -> Result<ShardedMapV2Node<TestValue>> {
             map.load(&self.0, &self.1).await
+        }
+
+        async fn get_entries_and_partial_maps(
+            &self,
+            map: &ShardedMapV2Node<TestValue>,
+            lookup_keys: TrieMap<LookupKind>,
+        ) -> Result<TrieMap<Either<TestValue, ShardedMapV2Node<TestValue>>>> {
+            let trie_map = map
+                .clone()
+                .get_entries_and_partial_maps(&self.0, &self.1, lookup_keys, 10)
+                .await?;
+
+            let mut loaded_trie_map = TrieMap::default();
+            for (key, entry) in trie_map {
+                let entry = match entry {
+                    Either::Left(value) => Either::Left(value),
+                    Either::Right(partial_map) => Either::Right(self.load(partial_map).await?),
+                };
+                loaded_trie_map.insert(key, entry);
+            }
+
+            Ok(loaded_trie_map)
         }
 
         async fn into_entries(
@@ -1590,6 +1732,90 @@ mod test {
                 .unwrap()
         );
 
+        assert_eq!(
+            [
+                (
+                    "omun",
+                    Either::Right(
+                        helper
+                            .from_entries_removed_prefix(&EXAMPLE_ENTRIES[10..12], 4)
+                            .await?
+                    )
+                ),
+                ("abacaxi", Either::Left(TestValue(11))),
+                ("abalaba", Either::Left(TestValue(5))),
+                ("omiojo", Either::Left(TestValue(1))),
+                ("omungal", Either::Left(TestValue(4))),
+                (
+                    "om",
+                    Either::Right(
+                        helper
+                            .from_entries_removed_prefix(&EXAMPLE_ENTRIES[8..12], 2)
+                            .await?
+                    )
+                ),
+                (
+                    "aba",
+                    Either::Right(
+                        helper
+                            .from_entries_removed_prefix(&EXAMPLE_ENTRIES[0..8], 3)
+                            .await?
+                    )
+                ),
+                (
+                    "o",
+                    Either::Right(
+                        helper
+                            .from_entries_removed_prefix(&EXAMPLE_ENTRIES[8..12], 1)
+                            .await?
+                    )
+                ),
+                (
+                    "ab",
+                    Either::Right(
+                        helper
+                            .from_entries_removed_prefix(&EXAMPLE_ENTRIES[0..8], 2)
+                            .await?
+                    )
+                ),
+                (
+                    "",
+                    Either::Right(helper.from_entries(EXAMPLE_ENTRIES).await?)
+                ),
+                (
+                    "abacab",
+                    Either::Right(
+                        helper
+                            .from_entries_removed_prefix(&EXAMPLE_ENTRIES[1..3], 6)
+                            .await?
+                    )
+                ),
+            ]
+            .into_iter()
+            .collect::<TrieMap<_>>(),
+            helper
+                .get_entries_and_partial_maps(
+                    &from_entries_map,
+                    [
+                        ("omun", LookupKind::PartialMap),
+                        ("om", LookupKind::PartialMap),
+                        ("aba", LookupKind::PartialMap),
+                        ("o", LookupKind::PartialMap),
+                        ("ab", LookupKind::PartialMap),
+                        ("", LookupKind::PartialMap),
+                        ("abacab", LookupKind::PartialMap),
+                        ("abacaxi", LookupKind::Entry),
+                        ("abalaba", LookupKind::Entry),
+                        ("omiojo", LookupKind::Entry),
+                        ("omungal", LookupKind::Entry),
+                        ("test", LookupKind::Entry),
+                    ]
+                    .into_iter()
+                    .collect()
+                )
+                .await?
+        );
+
         Ok(())
     }
 
@@ -1800,6 +2026,56 @@ mod test {
 
         if rollup_data != MaxTestValue(max_value) {
             return false;
+        }
+
+        true
+    }
+
+    #[quickcheck_async::tokio]
+    async fn test_sharded_map_v2_quickcheck_batch_lookup(
+        fb: FacebookInit,
+        values: Vec<(String, u32)>,
+        lookup_keys: TrieMap<LookupKind>,
+    ) -> bool {
+        let ctx = CoreContext::test_mock(fb);
+        let blobstore = Memblob::default();
+
+        let helper = MapHelper(ctx, blobstore);
+
+        let map = helper
+            .from_entries(
+                &values
+                    .iter()
+                    .map(|(k, v)| (k.as_str(), *v))
+                    .collect::<Vec<_>>(),
+            )
+            .await
+            .unwrap();
+
+        let batched_outputs = helper
+            .get_entries_and_partial_maps(&map, lookup_keys.clone())
+            .await
+            .unwrap();
+
+        for (key, kind) in lookup_keys {
+            match kind {
+                LookupKind::Entry => {
+                    let unbatched_lookup = helper.lookup(&map, &key).await.unwrap();
+                    let batched_lookup = batched_outputs.get(&key).cloned();
+
+                    if unbatched_lookup.map(Either::Left) != batched_lookup {
+                        return false;
+                    }
+                }
+                LookupKind::PartialMap => {
+                    let unbatched_lookup = helper.get_partial_map(&map, &key).await.unwrap();
+                    let batched_lookup = batched_outputs.get(&key).cloned();
+
+                    if unbatched_lookup.map(Either::Right) != batched_lookup {
+                        return false;
+                    }
+                }
+            }
         }
 
         true

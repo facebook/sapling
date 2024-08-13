@@ -7,6 +7,8 @@
 
 use std::collections::BTreeMap;
 
+use quickcheck::Arbitrary;
+use quickcheck::Gen;
 use smallvec::SmallVec;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -346,6 +348,20 @@ impl<K: AsRef<[u8]>, V> FromIterator<(K, V)> for TrieMap<V> {
         let mut trie_map: Self = Default::default();
         trie_map.extend(iter);
         trie_map
+    }
+}
+
+impl<V: Arbitrary> Arbitrary for TrieMap<V> {
+    fn arbitrary(g: &mut Gen) -> Self {
+        let v = Vec::<(Vec<u8>, V)>::arbitrary(g);
+        v.into_iter().collect()
+    }
+    fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
+        let v = self
+            .iter()
+            .map(|(k, v)| (k.to_vec(), v.clone()))
+            .collect::<Vec<_>>();
+        Box::new(v.shrink().map(|v| v.into_iter().collect()))
     }
 }
 
