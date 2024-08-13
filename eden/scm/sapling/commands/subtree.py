@@ -5,7 +5,7 @@
 
 import json
 
-from .. import context, error, hg, pathutil, scmutil
+from .. import cmdutil, context, error, hg, pathutil, scmutil
 from ..cmdutil import commitopts, commitopts2
 from ..i18n import _
 from .cmdtable import command
@@ -75,6 +75,7 @@ def copy(ui, repo, *args, **opts):
 
 
 def _docopy(ui, repo, *args, **opts):
+    cmdutil.bailifchanged(repo)
     cwd = repo.getcwd()
 
     from_paths = [pathutil.canonpath(repo.root, cwd, f) for f in opts.get("from_path")]

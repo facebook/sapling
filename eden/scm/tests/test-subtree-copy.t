@@ -38,3 +38,21 @@ test subtree copy
   +aaa
   $ hg dbsh -c 'print(repo["."].extra())'
   {'branch': 'default', 'test_branch_info': '{"v":1,"branches":[{"from_path":"foo","to_path":"bar","from_commit":"d908813f0f7c9078810e26aad1e37bdb32013d4b"}]}'}
+
+
+abort when the working copy is dirty
+
+  $ newclientrepo
+  $ drawdag <<'EOS'
+  > B   # B/foo/x = bbb\n
+  > |
+  > A   # A/foo/x = aaa\n
+  >     # drawdag.defaultfiles=false
+  > EOS  
+  $ hg go $B -q
+  $ echo bbb >> foo/x
+  $ hg st
+  M foo/x
+  $ hg subtree cp -r $A --from-path foo --to-path bar
+  abort: uncommitted changes
+  [255]
