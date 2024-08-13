@@ -179,6 +179,7 @@ members = [
   "lib/util/nodeipc",
   "lib/util/nodeipc/derive",
   "lib/util/procutil",
+  "lib/util/pubsub",
   "lib/util/rewrite-macros",
   "lib/util/rewrite-macros/tree-pattern-match",
   "lib/util/testutil",
