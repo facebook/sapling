@@ -185,6 +185,7 @@ pub mod delete_bookmark;
 pub mod git;
 pub mod land_stack;
 pub mod move_bookmark;
+pub mod update_submodule_expansion;
 
 pub use git::upload_non_blob_git_object;
 

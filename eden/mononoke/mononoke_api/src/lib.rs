@@ -70,6 +70,8 @@ pub use crate::repo::create_changeset::CreateChangeGitLfs;
 pub use crate::repo::create_changeset::CreateCopyInfo;
 pub use crate::repo::create_changeset::CreateInfo;
 pub use crate::repo::land_stack::PushrebaseOutcome;
+pub use crate::repo::update_submodule_expansion::SubmoduleExpansionUpdate;
+pub use crate::repo::update_submodule_expansion::SubmoduleExpansionUpdateCommitInfo;
 pub use crate::repo::BookmarkFreshness;
 pub use crate::repo::BookmarkInfo;
 pub use crate::repo::Repo;
