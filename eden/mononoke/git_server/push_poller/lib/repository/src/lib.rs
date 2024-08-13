@@ -115,12 +115,12 @@ impl<'a> Repository<'a> {
                 "-c",
                 "http.extraHeader='x-route-to-mononoke: 1'",
                 "ls-remote",
+                "--refs",
                 &repo_url,
             ],
             remote_git_retries,
         );
 
-        pipe.add_nonretryable_command(vec!["grep", "-v", "HEAD"]);
         pipe.add_nonretryable_command(vec!["tr", "'\t'", "' '"]);
         pipe.add_nonretryable_command(vec!["sort", "-k", "2"]);
         pipe.add_nonretryable_command(vec!["sha1sum"]);
