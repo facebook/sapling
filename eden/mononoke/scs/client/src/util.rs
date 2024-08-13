@@ -7,6 +7,9 @@
 
 //! Utility traits and functions.
 
+use anyhow::Result;
+use chrono::DateTime;
+use chrono::NaiveDateTime;
 use num::PrimInt;
 
 /// Returns `single` if the given number is 1, or `plural` otherwise.
@@ -47,4 +50,26 @@ pub(crate) fn byte_count_iec(size: i64) -> String {
 #[allow(dead_code)]
 pub(crate) fn byte_count_short(size: i64) -> String {
     byte_count(size, "", "", &["K", "M", "G", "T", "P", "E", "Z", "Y"])
+}
+
+pub(crate) fn convert_to_ts(date_str: Option<&str>) -> Result<Option<i64>> {
+    if let Some(date_str) = date_str {
+        let ts = if let Ok(date) = DateTime::parse_from_str(date_str, "%Y-%m-%d %H:%M:%S %:z") {
+            date.timestamp()
+        } else if let Ok(naive) = NaiveDateTime::parse_from_str(date_str, "%Y-%m-%d %H:%M:%S") {
+            naive.timestamp()
+        } else {
+            date_str.parse::<i64>()?
+        };
+
+        if ts > 0 {
+            return Ok(Some(ts));
+        }
+        anyhow::bail!(
+            "The given date or timestamp must be after 1970-01-01 00:00:00 UTC: {:?}",
+            date_str
+        )
+    }
+
+    Ok(None)
 }
