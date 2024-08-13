@@ -31,10 +31,10 @@ impl HgRepoContext {
         workspace: &str,
         reponame: &str,
     ) -> Result<WorkspaceData, MononokeError> {
-        let ctx = CommitCloudContext::new(workspace, reponame)?;
+        let mut ctx = CommitCloudContext::new(workspace, reponame)?;
         let authz = self.repo().authorization_context();
         authz
-            .require_commitcloud_operation(self.ctx(), &self.repo().repo(), &ctx, "read")
+            .require_commitcloud_operation(self.ctx(), &self.repo().repo(), &mut ctx, "read")
             .await?;
         Ok(self
             .repo()
@@ -61,10 +61,10 @@ impl HgRepoContext {
         &self,
         params: &GetReferencesParams,
     ) -> Result<ReferencesData, MononokeError> {
-        let ctx = CommitCloudContext::new(&params.workspace, &params.reponame)?;
+        let mut ctx = CommitCloudContext::new(&params.workspace, &params.reponame)?;
         let authz = self.repo().authorization_context();
         authz
-            .require_commitcloud_operation(self.ctx(), &self.repo().repo(), &ctx, "read")
+            .require_commitcloud_operation(self.ctx(), &self.repo().repo(), &mut ctx, "read")
             .await?;
 
         Ok(self
@@ -79,14 +79,14 @@ impl HgRepoContext {
         &self,
         params: &UpdateReferencesParams,
     ) -> Result<ReferencesData, MononokeError> {
-        let ctx = CommitCloudContext::new(&params.workspace, &params.reponame)?;
+        let mut ctx = CommitCloudContext::new(&params.workspace, &params.reponame)?;
         if params.version == 0 {
             ctx.check_workspace_name()?;
         }
 
         let authz = self.repo().authorization_context();
         authz
-            .require_commitcloud_operation(self.ctx(), &self.repo().repo(), &ctx, "write")
+            .require_commitcloud_operation(self.ctx(), &self.repo().repo(), &mut ctx, "write")
             .await?;
 
         Ok(self

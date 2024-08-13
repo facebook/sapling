@@ -522,7 +522,7 @@ impl AuthorizationContext {
         &self,
         ctx: &CoreContext,
         repo: &impl CommitCloudRef,
-        cc_ctx: &CommitCloudContext,
+        cc_ctx: &mut CommitCloudContext,
         action: &str,
     ) -> AuthorizationCheckOutcome {
         let permitted = match self {
@@ -533,15 +533,21 @@ impl AuthorizationContext {
 
                 #[cfg(fbcode_build)]
                 {
-                    owner_check = match infer_workspace_identity(
-                        ctx.fb,
-                        &cc_ctx.workspace,
-                        Some(repo.commit_cloud().config.mocked_employees.clone()),
-                    )
-                    .await
-                    {
-                        Ok(Some(owner)) => ctx.metadata().identities().contains(&owner),
-                        Err(_) | Ok(None) => false,
+                    if cc_ctx.owner.is_none() {
+                        let inferred_owner = infer_workspace_identity(
+                            ctx.fb,
+                            &cc_ctx.workspace,
+                            Some(repo.commit_cloud().config.mocked_employees.clone()),
+                        )
+                        .await;
+                        match inferred_owner {
+                            Ok(owner) => cc_ctx.set_owner(owner),
+                            Err(_) => (),
+                        };
+                    }
+                    owner_check = match &cc_ctx.owner {
+                        Some(owner) => ctx.metadata().identities().contains(owner),
+                        None => false,
                     };
                 }
                 owner_check
@@ -582,7 +588,7 @@ impl AuthorizationContext {
         &self,
         ctx: &CoreContext,
         repo: &impl CommitCloudRef,
-        cc_ctx: &CommitCloudContext,
+        cc_ctx: &mut CommitCloudContext,
         action: &str,
     ) -> Result<(), AuthorizationError> {
         self.check_commitcloud_operation(ctx, repo, cc_ctx, action)

@@ -6,11 +6,13 @@
  */
 
 use commit_cloud_helpers::sanity_check_workspace_name;
+use permission_checker::MononokeIdentity;
 
 #[derive(Debug, Clone)]
 pub struct CommitCloudContext {
     pub workspace: String,
     pub reponame: String,
+    pub owner: Option<MononokeIdentity>,
 }
 
 impl CommitCloudContext {
@@ -23,6 +25,7 @@ impl CommitCloudContext {
         Ok(Self {
             workspace: workspace.to_owned(),
             reponame: reponame.to_owned(),
+            owner: None,
         })
     }
 
@@ -34,5 +37,9 @@ impl CommitCloudContext {
             ));
         }
         Ok(())
+    }
+
+    pub fn set_owner(&mut self, owner: Option<MononokeIdentity>) {
+        self.owner = owner;
     }
 }
