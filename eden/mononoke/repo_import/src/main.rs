@@ -22,7 +22,6 @@ use anyhow::Error;
 use backsyncer::backsync_latest;
 use backsyncer::open_backsyncer_dbs;
 use backsyncer::BacksyncLimit;
-use blobrepo::AsBlobRepo;
 use blobstore::Loadable;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateReason;
@@ -477,10 +476,7 @@ async fn move_bookmark(
         recovery_fields.move_bookmark_commits_done = commits_done + shifted_index;
 
         let check_repo = async move {
-            let hg_csid = repo
-                .as_blob_repo()
-                .derive_hg_changeset(ctx, curr_csid.clone())
-                .await?;
+            let hg_csid = repo.derive_hg_changeset(ctx, curr_csid.clone()).await?;
             check_dependent_systems(
                 ctx,
                 repo,
@@ -526,7 +522,6 @@ async fn move_bookmark(
 
             let small_repo_hg_csid = small_repo_back_sync_vars
                 .small_repo
-                .as_blob_repo()
                 .derive_hg_changeset(ctx, small_repo_cs_id)
                 .await?;
 
@@ -653,7 +648,7 @@ async fn push_merge_commit(
 
     let pushrebase_res = do_pushrebase_bonsai(
         ctx,
-        repo.as_blob_repo(),
+        repo,
         pushrebase_flags,
         bookmark_to_merge_into,
         &hashset![merged_cs],
@@ -674,7 +669,7 @@ async fn get_leaf_entries(
     repo: &Repo,
     cs_id: ChangesetId,
 ) -> Result<HashSet<NonRootMPath>, Error> {
-    let hg_cs_id = repo.as_blob_repo().derive_hg_changeset(ctx, cs_id).await?;
+    let hg_cs_id = repo.derive_hg_changeset(ctx, cs_id).await?;
     let hg_cs = hg_cs_id.load(ctx, repo.repo_blobstore()).await?;
     hg_cs
         .manifestid()
@@ -1187,8 +1182,7 @@ async fn repo_import(
         };
         let target = GitimportTarget::full();
         info!(ctx.logger(), "Started importing git commits to Mononoke");
-        let uploader =
-            import_direct::DirectUploader::new(repo.as_blob_repo().clone(), ReuploadCommits::Never);
+        let uploader = import_direct::DirectUploader::new(repo.clone(), ReuploadCommits::Never);
         let import_map =
             import_tools::gitimport(&ctx, path, Arc::new(uploader), &target, &prefs).await?;
         info!(ctx.logger(), "Added commits to Mononoke");

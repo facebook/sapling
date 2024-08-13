@@ -14,7 +14,6 @@ mod tests {
 
     use anyhow::Result;
     use ascii::AsciiString;
-    use blobrepo::AsBlobRepo;
     use blobstore::Loadable;
     use bookmarks::BookmarkKey;
     use bookmarks::BookmarkUpdateLogRef;
@@ -170,7 +169,7 @@ mod tests {
         };
         let changesets = create_from_dag(
             &ctx,
-            repo.as_blob_repo(),
+            &repo,
             r##"
                 A-B-C-D-E-F-G
             "##,
@@ -229,7 +228,7 @@ mod tests {
         };
         let changesets = create_from_dag(
             &ctx,
-            repo.as_blob_repo(),
+            &repo,
             r##"
                 A-B-C-D-E-F-G
             "##,
@@ -357,18 +356,16 @@ mod tests {
         let ctx = CoreContext::test_mock(fb);
         let repo = create_repo(fb, 1).await?;
 
-        let master_cs_id = CreateCommitContext::new_root(&ctx, repo.as_blob_repo())
+        let master_cs_id = CreateCommitContext::new_root(&ctx, &repo)
             .add_file("a", "a")
             .commit()
             .await?;
-        let imported_cs_id = CreateCommitContext::new_root(&ctx, repo.as_blob_repo())
+        let imported_cs_id = CreateCommitContext::new_root(&ctx, &repo)
             .add_file("b", "b")
             .commit()
             .await?;
 
-        let dest_bookmark = bookmark(&ctx, repo.as_blob_repo(), "master")
-            .set_to(master_cs_id)
-            .await?;
+        let dest_bookmark = bookmark(&ctx, &repo, "master").set_to(master_cs_id).await?;
 
         let changeset_args = ChangesetArgs {
             author: "user".to_string(),
@@ -717,7 +714,7 @@ mod tests {
         let small_repo = create_repo(fb, 1).await?;
         let changesets = create_from_dag(
             &ctx,
-            large_repo.as_blob_repo(),
+            &large_repo,
             r##"
                 A-B
             "##,
@@ -847,7 +844,7 @@ mod tests {
 
         let repo_0_commits = create_from_dag(
             &ctx,
-            repo_0.as_blob_repo(),
+            &repo_0,
             r##"
                 A-B
             "##,
@@ -859,7 +856,7 @@ mod tests {
         let repo_1 = create_repo(fb, 1).await?;
         let repo_1_commits = create_from_dag(
             &ctx,
-            repo_1.as_blob_repo(),
+            &repo_1,
             r##"
                 C-D
             "##,
@@ -888,7 +885,7 @@ mod tests {
         let small_repo = create_repo(fb, 1).await?;
         let changesets = create_from_dag(
             &ctx,
-            large_repo.as_blob_repo(),
+            &large_repo,
             r##"
                 A-B
             "##,
@@ -971,17 +968,17 @@ mod tests {
         let large_repo = create_repo(fb, 0).await?;
         let small_repo = create_repo(fb, 1).await?;
 
-        let root = CreateCommitContext::new_root(&ctx, large_repo.as_blob_repo())
+        let root = CreateCommitContext::new_root(&ctx, &large_repo)
             .add_file("random_dir/B/file", "text")
             .commit()
             .await?;
 
-        let first_commit = CreateCommitContext::new(&ctx, large_repo.as_blob_repo(), vec![root])
+        let first_commit = CreateCommitContext::new(&ctx, &large_repo, vec![root])
             .add_file("large_repo/justfile", "justtext")
             .commit()
             .await?;
 
-        bookmark(&ctx, large_repo.as_blob_repo(), "before_mapping_change")
+        bookmark(&ctx, &large_repo, "before_mapping_change")
             .set_to(first_commit)
             .await?;
 
@@ -1008,8 +1005,7 @@ mod tests {
         )
         .await?;
 
-        let wc =
-            list_working_copy_utf8(&ctx, small_repo.as_blob_repo(), small_repo_cs_ids[0]).await?;
+        let wc = list_working_copy_utf8(&ctx, &small_repo, small_repo_cs_ids[0]).await?;
         assert_eq!(
             wc,
             hashmap! {
@@ -1017,8 +1013,7 @@ mod tests {
             }
         );
 
-        let wc =
-            list_working_copy_utf8(&ctx, small_repo.as_blob_repo(), small_repo_cs_ids[1]).await?;
+        let wc = list_working_copy_utf8(&ctx, &small_repo, small_repo_cs_ids[1]).await?;
         assert_eq!(
             wc,
             hashmap! {
@@ -1028,11 +1023,10 @@ mod tests {
         );
 
         // Change mapping
-        let change_mapping_cs_id =
-            CreateCommitContext::new(&ctx, large_repo.as_blob_repo(), vec![first_commit])
-                .commit()
-                .await?;
-        bookmark(&ctx, large_repo.as_blob_repo(), "after_mapping_change")
+        let change_mapping_cs_id = CreateCommitContext::new(&ctx, &large_repo, vec![first_commit])
+            .commit()
+            .await?;
+        bookmark(&ctx, &large_repo, "after_mapping_change")
             .set_to(change_mapping_cs_id)
             .await?;
 

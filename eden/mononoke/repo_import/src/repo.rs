@@ -5,11 +5,10 @@
  * GNU General Public License version 2.
  */
 
-use blobrepo::AsBlobRepo;
-use blobrepo::BlobRepo;
 use bonsai_git_mapping::BonsaiGitMapping;
 use bonsai_globalrev_mapping::BonsaiGlobalrevMapping;
 use bonsai_hg_mapping::BonsaiHgMapping;
+use bonsai_tag_mapping::BonsaiTagMapping;
 use bookmarks::BookmarkUpdateLog;
 use bookmarks::Bookmarks;
 use commit_graph::CommitGraph;
@@ -34,25 +33,56 @@ use synced_commit_mapping::SyncedCommitMapping;
 #[facet::container]
 #[derive(Clone)]
 pub struct Repo {
-    #[delegate(
-        FilestoreConfig,
-        RepoBlobstore,
-        RepoBookmarkAttrs,
-        RepoDerivedData,
-        RepoIdentity,
-        dyn BonsaiGitMapping,
-        dyn BonsaiGlobalrevMapping,
-        dyn BonsaiHgMapping,
-        dyn Bookmarks,
-        dyn BookmarkUpdateLog,
-        dyn Phases,
-        dyn PushrebaseMutationMapping,
-        dyn MutableCounters,
-        CommitGraph,
-        dyn CommitGraphWriter,
-        dyn Filenodes,
-    )]
-    blob_repo: BlobRepo,
+    #[facet]
+    filestore_config: FilestoreConfig,
+
+    #[facet]
+    repo_blobstore: RepoBlobstore,
+
+    #[facet]
+    repo_bookmark_attrs: RepoBookmarkAttrs,
+
+    #[facet]
+    repo_derived_data: RepoDerivedData,
+
+    #[facet]
+    repo_identity: RepoIdentity,
+
+    #[facet]
+    bonsai_git_mapping: dyn BonsaiGitMapping,
+
+    #[facet]
+    bonsai_tag_mapping: dyn BonsaiTagMapping,
+
+    #[facet]
+    bonsai_globalrev_mapping: dyn BonsaiGlobalrevMapping,
+
+    #[facet]
+    bonsai_hg_mapping: dyn BonsaiHgMapping,
+
+    #[facet]
+    bookmarks: dyn Bookmarks,
+
+    #[facet]
+    bookmark_update_log: dyn BookmarkUpdateLog,
+
+    #[facet]
+    phases: dyn Phases,
+
+    #[facet]
+    pushrebase_mutation_mapping: dyn PushrebaseMutationMapping,
+
+    #[facet]
+    mutable_counters: dyn MutableCounters,
+
+    #[facet]
+    commit_graph: CommitGraph,
+
+    #[facet]
+    commit_graph_writer: dyn CommitGraphWriter,
+
+    #[facet]
+    filenodes: dyn Filenodes,
 
     #[facet]
     synced_commit_mapping: dyn SyncedCommitMapping,
@@ -77,11 +107,5 @@ impl Repo {
 
     pub fn name(&self) -> &str {
         self.repo_identity().name()
-    }
-}
-
-impl AsBlobRepo for Repo {
-    fn as_blob_repo(&self) -> &BlobRepo {
-        &self.blob_repo
     }
 }
