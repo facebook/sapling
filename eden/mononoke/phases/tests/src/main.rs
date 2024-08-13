@@ -10,16 +10,21 @@ use std::str::FromStr;
 use anyhow::format_err;
 use anyhow::Error;
 use anyhow::Result;
-use blobrepo::BlobRepo;
+use bonsai_hg_mapping::BonsaiHgMapping;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
+use bonsai_tag_mapping::BonsaiTagMapping;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateReason;
+use bookmarks::Bookmarks;
 use bookmarks::BookmarksMaybeStaleExt;
 use bookmarks::BookmarksRef;
 use borrowed::borrowed;
 use cloned::cloned;
+use commit_graph::CommitGraph;
+use commit_graph::CommitGraphWriter;
 use context::CoreContext;
 use fbinit::FacebookInit;
+use filestore::FilestoreConfig;
 use fixtures::Linear;
 use fixtures::TestRepoFixture;
 use futures::future;
@@ -30,8 +35,48 @@ use mercurial_types::nodehash::HgChangesetId;
 use mononoke_types::ChangesetId;
 use phases::Phases;
 use phases::PhasesRef;
+use repo_blobstore::RepoBlobstore;
+use repo_derived_data::RepoDerivedData;
+use repo_identity::RepoIdentity;
 
-async fn delete_all_publishing_bookmarks(ctx: &CoreContext, repo: &BlobRepo) -> Result<(), Error> {
+#[facet::container]
+#[derive(Clone)]
+struct PhasesTestRepo {
+    #[facet]
+    phases: dyn Phases,
+
+    #[facet]
+    repo_blobstore: RepoBlobstore,
+
+    #[facet]
+    commit_graph: CommitGraph,
+
+    #[facet]
+    commit_graph_writer: dyn CommitGraphWriter,
+
+    #[facet]
+    bonsai_hg_mapping: dyn BonsaiHgMapping,
+
+    #[facet]
+    bookmarks: dyn Bookmarks,
+
+    #[facet]
+    filestore_config: FilestoreConfig,
+
+    #[facet]
+    repo_derived_data: RepoDerivedData,
+
+    #[facet]
+    repo_identity: RepoIdentity,
+
+    #[facet]
+    bonsai_tag_mapping: dyn BonsaiTagMapping,
+}
+
+async fn delete_all_publishing_bookmarks(
+    ctx: &CoreContext,
+    repo: &PhasesTestRepo,
+) -> Result<(), Error> {
     let bookmarks = repo
         .bookmarks()
         .get_publishing_bookmarks_maybe_stale(ctx.clone())
@@ -55,7 +100,7 @@ async fn delete_all_publishing_bookmarks(ctx: &CoreContext, repo: &BlobRepo) -> 
 
 async fn set_bookmark(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &PhasesTestRepo,
     book: &BookmarkKey,
     cs_id: &str,
 ) -> Result<(), Error> {
@@ -87,7 +132,7 @@ async fn is_public(
 
 #[fbinit::test]
 async fn get_phase_hint_test(fb: FacebookInit) -> Result<(), Error> {
-    let repo = Linear::getrepo(fb).await;
+    let repo: PhasesTestRepo = Linear::get_custom_test_repo(fb).await;
     //  @  79a13814c5ce7330173ec04d279bf95ab3f652fb
     //  |
     //  o  a5ffa77602a066db7d5cfb9fb5823a0895717c5a
@@ -232,7 +277,7 @@ async fn get_phase_hint_test(fb: FacebookInit) -> Result<(), Error> {
 
 #[fbinit::test]
 async fn test_mark_reachable_as_public(fb: FacebookInit) -> Result<()> {
-    let repo = fixtures::BranchEven::getrepo(fb).await;
+    let repo: PhasesTestRepo = fixtures::BranchEven::get_custom_test_repo(fb).await;
     // @  4f7f3fd428bec1a48f9314414b063c706d9c1aed (6)
     // |
     // o  b65231269f651cfe784fd1d97ef02a049a37b8a0 (5)
