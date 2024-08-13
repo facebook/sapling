@@ -10,6 +10,7 @@ use anyhow::anyhow;
 use anyhow::Result;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarkKind;
+use commit_cloud::ctx::CommitCloudContext;
 use commit_cloud::CommitCloudRef;
 use commit_cloud_helpers::make_workspace_acl_name;
 #[cfg(fbcode_build)]
@@ -521,8 +522,7 @@ impl AuthorizationContext {
         &self,
         ctx: &CoreContext,
         repo: &impl CommitCloudRef,
-        workspace: &str,
-        reponame: &str,
+        cc_ctx: &CommitCloudContext,
         action: &str,
     ) -> AuthorizationCheckOutcome {
         let permitted = match self {
@@ -535,7 +535,7 @@ impl AuthorizationContext {
                 {
                     owner_check = match infer_workspace_identity(
                         ctx.fb,
-                        workspace,
+                        &cc_ctx.workspace,
                         Some(repo.commit_cloud().config.mocked_employees.clone()),
                     )
                     .await
@@ -547,7 +547,10 @@ impl AuthorizationContext {
                 owner_check
                     || match repo
                         .commit_cloud()
-                        .commit_cloud_acl(&make_workspace_acl_name(workspace, reponame))
+                        .commit_cloud_acl(&make_workspace_acl_name(
+                            &cc_ctx.workspace,
+                            &cc_ctx.reponame,
+                        ))
                         .await
                     {
                         Ok(Some(checker)) => {
@@ -579,16 +582,18 @@ impl AuthorizationContext {
         &self,
         ctx: &CoreContext,
         repo: &impl CommitCloudRef,
-        workspace: &str,
-        reponame: &str,
+        cc_ctx: &CommitCloudContext,
         action: &str,
     ) -> Result<(), AuthorizationError> {
-        self.check_commitcloud_operation(ctx, repo, workspace, reponame, action)
+        self.check_commitcloud_operation(ctx, repo, cc_ctx, action)
             .await
             .permitted_or_else(|| {
                 self.permission_denied(
                     ctx,
-                    DeniedAction::CommitCloudOperation(action.to_string(), workspace.to_string()),
+                    DeniedAction::CommitCloudOperation(
+                        action.to_string(),
+                        cc_ctx.workspace.clone(),
+                    ),
                 )
             })
     }
