@@ -2787,7 +2787,9 @@ def main() -> int:
     parser = create_parser()
     try:
         args = parser.parse_args()
-    except SystemExit:
+    except SystemExit as ex:
+        if ex.code == 0:
+            return 0
         # For some reason argparse calls sys.exit(2) when it encounters a parse
         # error... This makes it hard for us to distinguish between edenfsctl
         # failing w/ exit code 2 and a parse error. Let's catch the parse
