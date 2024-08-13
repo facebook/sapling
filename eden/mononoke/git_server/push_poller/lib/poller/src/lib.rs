@@ -7,7 +7,9 @@
 
 #![deny(warnings)]
 
-use anyhow::anyhow;
+use std::collections::HashSet;
+use std::sync::Arc;
+
 use anyhow::Error;
 use anyhow::Result;
 use cached_config::ConfigStore;
@@ -16,7 +18,6 @@ use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::prelude::*;
 use git_push_redirect::GitPushRedirectConfig;
-use git_push_redirect::GitPushRedirectConfigEntry;
 use git_push_redirect::SqlGitPushRedirectConfigBuilder;
 use metaconfig_parser::RepoConfigs;
 use mysql_client::ConnectionOptionsBuilder;
@@ -46,6 +47,85 @@ pub struct Args {
     /// Maximum concurrency of operations during one iteration of polling.
     #[arg(long = "concurrency", default_value = "10")]
     concurrency: usize,
+}
+
+/// Struct providing access to the Source of Truth information for Git repositories.
+pub struct GitSourceOfTruth {
+    ctx: CoreContext,
+    repo_configs: RepoConfigs,
+    mononoke_production_xdb: Arc<Xdb>,
+    metagit_xdb: Arc<Xdb>,
+}
+
+impl GitSourceOfTruth {
+    pub async fn new(fb: FacebookInit, logger: Logger, config_path: &String) -> Result<Self> {
+        let ctx = CoreContext::new_with_logger(fb, logger.clone());
+        let config_store = create_config_store(fb, logger.clone())?;
+        let repo_configs = metaconfig_parser::load_repo_configs(config_path, &config_store)?;
+        let xdb_factory = create_prod_xdb_factory(fb)?;
+        let mononoke_production_xdb = xdb_factory
+            .create_or_get_shard(MONONOKE_PRODUCTION_SHARD_NAME)
+            .await?;
+        let metagit_xdb = xdb_factory.create_or_get_shard(METAGIT_SHARD_NAME).await?;
+        Ok(Self {
+            ctx,
+            repo_configs,
+            mononoke_production_xdb,
+            metagit_xdb,
+        })
+    }
+
+    async fn current_mononoke_git_repositories<'a>(&'a self) -> Result<Vec<Repository<'a>>> {
+        let connections = self.mononoke_production_xdb.read_conns().await?;
+        let git_push_redirect_config: &dyn GitPushRedirectConfig =
+            &SqlGitPushRedirectConfigBuilder::from_sql_connections(connections).build();
+
+        let current_mononoke_git_repository_ids: HashSet<_> = git_push_redirect_config
+            .get_redirected_to_mononoke(&self.ctx)
+            .await?
+            .into_iter()
+            .map(|entry| entry.repo_id)
+            .collect();
+
+        let repositories: Vec<_> = self
+            .repo_configs
+            .repos
+            .iter()
+            .filter_map(|(name, repo_config)| {
+                if current_mononoke_git_repository_ids.contains(&repo_config.repoid) {
+                    Some(Repository::new(
+                        repo_config.repoid,
+                        name.to_string().into(),
+                        &self.metagit_xdb,
+                    ))
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        Ok(repositories)
+    }
+
+    async fn update_fingerprints(&self, concurrency: usize) -> Result<()> {
+        let repositories = self.current_mononoke_git_repositories().await?;
+        futures::stream::iter(repositories.into_iter().map(|repository| async move {
+            repository.update_metagit_fingerprint().await?;
+            Ok(repository)
+        }))
+        .buffer_unordered(concurrency)
+        .for_each(|repository: Result<Repository>| async move {
+            match repository {
+                Ok(repository) => {
+                    logging::info!("Successfully processed repository `{}`", repository.name())
+                }
+                Err(e) => logging::warn!("Failed to process a repository with error `{}`", e),
+            }
+        })
+        .await;
+
+        Ok(())
+    }
 }
 
 pub fn create_config_store(fb: FacebookInit, logger: Logger) -> Result<ConfigStore> {
@@ -78,89 +158,14 @@ fn create_prod_xdb_factory(fb: FacebookInit) -> Result<XdbFactory> {
     XdbFactory::new(fb, destination, pool_options, conn_options)
 }
 
-async fn current_mononoke_git_repositories<'a>(
-    ctx: &'a CoreContext,
-    mononoke_production_xdb: &'a Xdb,
-    metagit_xdb: &'a Xdb,
-    repo_configs: &'a RepoConfigs,
-) -> Result<Vec<Repository<'a>>> {
-    let connections = mononoke_production_xdb.read_conns().await?;
-    let git_push_redirect_config: &dyn GitPushRedirectConfig =
-        &SqlGitPushRedirectConfigBuilder::from_sql_connections(connections).build();
-
-    let entries: Vec<GitPushRedirectConfigEntry> = git_push_redirect_config
-        .get_redirected_to_mononoke(ctx)
-        .await?;
-    let mut repositories: Vec<Repository> = vec![];
-
-    for entry in entries {
-        let id = entry.repo_id;
-        repositories.push(Repository::new(
-            id,
-            repo_configs
-                .get_repo_config(id)
-                .map(|(name, _)| name.to_string())
-                .ok_or_else(|| anyhow!("Could not find repository name for repository id {}", id))?
-                .into(),
-            metagit_xdb,
-        ))
-    }
-
-    Ok(repositories)
-}
-
-async fn update_fingerprints(
-    ctx: &CoreContext,
-    mononoke_production_xdb: &Xdb,
-    metagit_xdb: &Xdb,
-    repo_configs: &RepoConfigs,
-    concurrency: usize,
-) -> Result<()> {
-    let repositories =
-        current_mononoke_git_repositories(ctx, mononoke_production_xdb, metagit_xdb, repo_configs)
-            .await?;
-    futures::stream::iter(repositories.into_iter().map(|repository| async move {
-        repository.update_metagit_fingerprint().await?;
-        Ok(repository)
-    }))
-    .buffer_unordered(concurrency)
-    .for_each(|repository: Result<Repository>| async move {
-        match repository {
-            Ok(repository) => {
-                logging::info!("Successfully processed repository `{}`", repository.name())
-            }
-            Err(e) => logging::warn!("Failed to process a repository with error `{}`", e),
-        }
-    })
-    .await;
-
-    Ok(())
-}
-
 pub async fn poll(fb: FacebookInit, args: Args) -> Result<()> {
     let logger = logging::get();
-    let ctx = CoreContext::new_with_logger(fb, logger.clone());
-    let config_path = args.mononoke_config_path;
-    let config_store = create_config_store(fb, logger.clone())?;
-    let repo_configs = metaconfig_parser::load_repo_configs(&config_path, &config_store)?;
-    let xdb_factory = create_prod_xdb_factory(fb)?;
-    let mononoke_production_xdb = xdb_factory
-        .create_or_get_shard(MONONOKE_PRODUCTION_SHARD_NAME)
-        .await?;
-    let metagit_xdb = xdb_factory.create_or_get_shard(METAGIT_SHARD_NAME).await?;
+    let sot = GitSourceOfTruth::new(fb, logger.clone(), &args.mononoke_config_path).await?;
 
     let mut interval = tokio::time::interval(Duration::from_secs(args.mononoke_polling_interval));
     loop {
         interval.tick().await;
-        if let Err(e) = update_fingerprints(
-            &ctx,
-            &mononoke_production_xdb,
-            &metagit_xdb,
-            &repo_configs,
-            args.concurrency,
-        )
-        .await
-        {
+        if let Err(e) = sot.update_fingerprints(args.concurrency).await {
             logging::warn!(
                 "Encounted error `{}` while updating fingerprints in iteration",
                 e
