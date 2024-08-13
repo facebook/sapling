@@ -1365,6 +1365,7 @@ mod test {
                 default_objects_count: None,
                 commit_cloud_config: CommitCloudConfig {
                     mocked_employees: Vec::new(),
+                    disable_interngraph_notification: false,
                 },
                 mononoke_cas_sync_config: None,
                 git_lfs_interpret_pointers: false,

@@ -1899,4 +1899,6 @@ pub struct XRepoSyncSourceConfigMapping {
 pub struct CommitCloudConfig {
     /// Mock emails or usernames used for tests
     pub mocked_employees: Vec<String>,
+    /// Disables interngraph notification whenever a commit is synced to commit cloud
+    pub disable_interngraph_notification: bool,
 }

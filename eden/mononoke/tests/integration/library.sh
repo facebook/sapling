@@ -1100,6 +1100,12 @@ main_bookmark_to_sync="master"
 CONFIG
 
   cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
+[commit_cloud_config]
+mocked_employees=["myusername0@fb.com"]
+disable_interngraph_notification=true
+CONFIG
+
+  cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
 [pushrebase]
 forbid_p2_root_rebases=false
 CONFIG
@@ -1308,6 +1314,7 @@ cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
   [zelos_config]
   local_zelos_port = $ZELOS_PORT
 CONFIG
+
 
 }
 

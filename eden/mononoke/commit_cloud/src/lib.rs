@@ -270,7 +270,7 @@ impl CommitCloud {
         txn.commit().await?;
 
         #[cfg(fbcode_build)]
-        if std::env::var_os("SANDCASTLE").map_or(true, |sc| sc != "1") && !initiate_workspace {
+        if !self.config.disable_interngraph_notification && !initiate_workspace {
             let notification =
                 NotificationData::from_update_references_params(params.clone(), new_version);
             let _ = publish_single_update(

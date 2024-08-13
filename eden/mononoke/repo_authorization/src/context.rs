@@ -537,7 +537,7 @@ impl AuthorizationContext {
                         let inferred_owner = infer_workspace_identity(
                             ctx.fb,
                             &cc_ctx.workspace,
-                            Some(repo.commit_cloud().config.mocked_employees.clone()),
+                            repo.commit_cloud().config.mocked_employees.clone(),
                         )
                         .await;
                         match inferred_owner {

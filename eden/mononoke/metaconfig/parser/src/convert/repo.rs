@@ -833,6 +833,7 @@ impl Convert for RawCommitCloudConfig {
     fn convert(self) -> Result<Self::Output> {
         Ok(CommitCloudConfig {
             mocked_employees: self.mocked_employees,
+            disable_interngraph_notification: self.disable_interngraph_notification,
         })
     }
 }
