@@ -5,16 +5,20 @@
  * GNU General Public License version 2.
  */
 
+#![feature(trait_alias)]
+
 use std::collections::BTreeMap;
 use std::collections::HashSet;
 use std::num::NonZeroU64;
 
 use anyhow::anyhow;
 use anyhow::Error;
-use blobrepo::BlobRepo;
 use changesets_creation::save_changesets;
+use commit_graph::CommitGraphRef;
+use commit_graph::CommitGraphWriterRef;
 use commit_transformation::copy_file_contents;
 use context::CoreContext;
+use filestore::FilestoreConfigRef;
 use fsnodes::RootFsnodeId;
 use futures::future::try_join;
 use futures::TryStreamExt;
@@ -36,6 +40,15 @@ use slog::debug;
 use slog::info;
 use sorted_vector_map::SortedVectorMap;
 
+pub trait Repo = RepoBlobstoreRef
+    + RepoDerivedDataRef
+    + CommitGraphRef
+    + CommitGraphWriterRef
+    + FilestoreConfigRef
+    + RepoIdentityRef
+    + Send
+    + Sync;
+
 #[derive(Copy, Clone, Debug, Default)]
 pub struct Limits {
     pub total_file_num_limit: Option<NonZeroU64>,
@@ -51,8 +64,8 @@ pub struct Options {
 
 pub async fn copy(
     ctx: &CoreContext,
-    source_repo: &BlobRepo,
-    target_repo: &BlobRepo,
+    source_repo: &impl Repo,
+    target_repo: &impl Repo,
     source_cs_id: ChangesetId,
     target_cs_id: ChangesetId,
     from_to_dirs: Vec<(NonRootMPath, NonRootMPath)>,
@@ -169,7 +182,7 @@ pub async fn copy(
 
 async fn create_changesets(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &impl Repo,
     file_changes: Vec<BTreeMap<NonRootMPath, Option<(NonRootMPath, FsnodeFile)>>>,
     mut parent: ChangesetId,
     author: String,
@@ -222,8 +235,8 @@ async fn create_changesets(
 
 pub async fn remove_excessive_files(
     ctx: &CoreContext,
-    source_repo: &BlobRepo,
-    target_repo: &BlobRepo,
+    source_repo: &impl Repo,
+    target_repo: &impl Repo,
     source_cs_id: ChangesetId,
     target_cs_id: ChangesetId,
     from_to_dirs: Vec<(NonRootMPath, NonRootMPath)>,
@@ -278,7 +291,7 @@ pub async fn remove_excessive_files(
 // Note that returned paths are RELATIVE to `path`.
 async fn list_directory(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &impl Repo,
     cs_id: ChangesetId,
     path: &NonRootMPath,
 ) -> Result<Option<BTreeMap<NonRootMPath, FsnodeFile>>, Error> {
@@ -346,20 +359,55 @@ fn create_bonsai_changeset(
 #[cfg(test)]
 mod test {
     use blobstore::StoreLoadable;
+    use bonsai_hg_mapping::BonsaiHgMapping;
+    use bookmarks::Bookmarks;
+    use commit_graph::CommitGraph;
     use commit_graph::CommitGraphRef;
+    use commit_graph::CommitGraphWriter;
     use fbinit::FacebookInit;
+    use filestore::FilestoreConfig;
     use maplit::hashmap;
     use mononoke_types::RepositoryId;
+    use repo_blobstore::RepoBlobstore;
+    use repo_derived_data::RepoDerivedData;
+    use repo_identity::RepoIdentity;
     use test_repo_factory::TestRepoFactory;
     use tests_utils::list_working_copy_utf8;
     use tests_utils::CreateCommitContext;
 
     use super::*;
 
+    #[facet::container]
+    struct Repo {
+        #[facet]
+        repo_blobstore: RepoBlobstore,
+
+        #[facet]
+        repo_derived_data: RepoDerivedData,
+
+        #[facet]
+        commit_graph: CommitGraph,
+
+        #[facet]
+        commit_graph_writer: dyn CommitGraphWriter,
+
+        #[facet]
+        filestore_config: FilestoreConfig,
+
+        #[facet]
+        repo_identity: RepoIdentity,
+
+        #[facet]
+        bonsai_hg_mapping: dyn BonsaiHgMapping,
+
+        #[facet]
+        bookmarks: dyn Bookmarks,
+    }
+
     #[fbinit::test]
     async fn test_list_directory(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: BlobRepo = test_repo_factory::build_empty(ctx.fb).await?;
+        let repo: Repo = test_repo_factory::build_empty(ctx.fb).await?;
         let cs_id = CreateCommitContext::new_root(&ctx, &repo)
             .add_file("dir/a", "a")
             .add_file("dir/b", "b")
@@ -380,7 +428,7 @@ mod test {
     #[fbinit::test]
     async fn test_rsync_simple(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: BlobRepo = test_repo_factory::build_empty(ctx.fb).await?;
+        let repo: Repo = test_repo_factory::build_empty(ctx.fb).await?;
         let cs_id = CreateCommitContext::new_root(&ctx, &repo)
             .add_file("dir_from/a", "a")
             .add_file("dir_from/b", "b")
@@ -424,7 +472,7 @@ mod test {
     #[fbinit::test]
     async fn test_rsync_multiple(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: BlobRepo = test_repo_factory::build_empty(ctx.fb).await?;
+        let repo: Repo = test_repo_factory::build_empty(ctx.fb).await?;
         let cs_id = CreateCommitContext::new_root(&ctx, &repo)
             .add_file("dir_from_1/a", "a")
             .add_file("dir_from_1/b", "b")
@@ -487,7 +535,7 @@ mod test {
     #[fbinit::test]
     async fn test_rsync_with_limit(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: BlobRepo = test_repo_factory::build_empty(ctx.fb).await?;
+        let repo: Repo = test_repo_factory::build_empty(ctx.fb).await?;
         let cs_id = CreateCommitContext::new_root(&ctx, &repo)
             .add_file("dir_from/a", "a")
             .add_file("dir_from/b", "b")
@@ -565,7 +613,7 @@ mod test {
     #[fbinit::test]
     async fn test_rsync_with_excludes(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: BlobRepo = test_repo_factory::build_empty(ctx.fb).await?;
+        let repo: Repo = test_repo_factory::build_empty(ctx.fb).await?;
         let cs_id = CreateCommitContext::new_root(&ctx, &repo)
             .add_file("dir_from/BUCK", "buck")
             .add_file("dir_from/b", "b")
@@ -616,7 +664,7 @@ mod test {
     #[fbinit::test]
     async fn test_rsync_with_file_size_limit(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: BlobRepo = test_repo_factory::build_empty(ctx.fb).await?;
+        let repo: Repo = test_repo_factory::build_empty(ctx.fb).await?;
         let cs_id = CreateCommitContext::new_root(&ctx, &repo)
             .add_file("dir_from/a", "aaaaaaaaaa")
             .add_file("dir_from/b", "b")
@@ -698,7 +746,7 @@ mod test {
         fb: FacebookInit,
     ) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: BlobRepo = test_repo_factory::build_empty(ctx.fb).await?;
+        let repo: Repo = test_repo_factory::build_empty(ctx.fb).await?;
         let cs_id = CreateCommitContext::new_root(&ctx, &repo)
             .add_file("dir_from/a", "aaaaaaaaaa")
             .add_file("dir_from/b", "b")
@@ -745,7 +793,7 @@ mod test {
     #[fbinit::test]
     async fn test_rsync_with_overwrite(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: BlobRepo = test_repo_factory::build_empty(ctx.fb).await?;
+        let repo: Repo = test_repo_factory::build_empty(ctx.fb).await?;
         let cs_id = CreateCommitContext::new_root(&ctx, &repo)
             .add_file("dir_from/a", "aa")
             .add_file("dir_from/b", "b")
@@ -835,7 +883,7 @@ mod test {
     #[fbinit::test]
     async fn test_delete_excessive_files(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: BlobRepo = test_repo_factory::build_empty(ctx.fb).await?;
+        let repo: Repo = test_repo_factory::build_empty(ctx.fb).await?;
         let cs_id = CreateCommitContext::new_root(&ctx, &repo)
             .add_file("dir_from/a", "a")
             .add_file("dir_to/a", "a")
@@ -871,7 +919,7 @@ mod test {
     #[fbinit::test]
     async fn test_delete_excessive_files_multiple_dirs(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: BlobRepo = test_repo_factory::build_empty(ctx.fb).await?;
+        let repo: Repo = test_repo_factory::build_empty(ctx.fb).await?;
         let cs_id = CreateCommitContext::new_root(&ctx, &repo)
             .add_file("dir_from_1/a", "a")
             .add_file("dir_to_1/a", "a")
@@ -922,8 +970,8 @@ mod test {
     async fn test_delete_excessive_files_xrepo(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let mut factory = TestRepoFactory::new(fb)?;
-        let source_repo = factory.with_id(RepositoryId::new(0)).build().await?;
-        let target_repo = factory.with_id(RepositoryId::new(1)).build().await?;
+        let source_repo: Repo = factory.with_id(RepositoryId::new(0)).build().await?;
+        let target_repo: Repo = factory.with_id(RepositoryId::new(1)).build().await?;
 
         let source_cs_id = CreateCommitContext::new_root(&ctx, &source_repo)
             .add_file("dir_from/a", "a")
@@ -964,8 +1012,8 @@ mod test {
     async fn test_xrepo_rsync_with_overwrite(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let mut factory = TestRepoFactory::new(fb)?;
-        let source_repo = factory.with_id(RepositoryId::new(0)).build().await?;
-        let target_repo = factory.with_id(RepositoryId::new(1)).build().await?;
+        let source_repo: Repo = factory.with_id(RepositoryId::new(0)).build().await?;
+        let target_repo: Repo = factory.with_id(RepositoryId::new(1)).build().await?;
 
         let source_cs_id = CreateCommitContext::new_root(&ctx, &source_repo)
             .add_file("dir_from/a", "aa")
