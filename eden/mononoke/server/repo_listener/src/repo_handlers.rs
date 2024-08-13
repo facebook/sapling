@@ -68,9 +68,7 @@ pub fn repo_handler(mononoke: Arc<Mononoke>, repo_name: &str) -> anyhow::Result<
                         orig_repo_name,
                     )
                 })?;
-                Some(BackupSourceRepo::from_blob_repo(
-                    backup_repo_source.blob_repo(),
-                ))
+                Some(BackupSourceRepo::from_repo(&backup_repo_source))
             }
         }
     };

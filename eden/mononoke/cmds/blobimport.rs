@@ -260,7 +260,7 @@ async fn async_main(app: MononokeApp) -> Result<()> {
         (_, Some(name)) => Some(RepoArgs::from_repo_name(name)),
         _ => None,
     };
-    let origin_repo = match backup_from_repo_args {
+    let origin_repo: Option<BlobRepo> = match backup_from_repo_args {
         Some(backup_from_repo_args) => {
             Some(app.open_repo(backup_from_repo_args.as_repo_arg()).await?)
         }
@@ -291,7 +291,7 @@ async fn async_main(app: MononokeApp) -> Result<()> {
             populate_git_mapping: repo_config.pushrebase.populate_git_mapping,
             small_repo_id,
             derived_data_types,
-            origin_repo: origin_repo.map(|repo| BackupSourceRepo::from_blob_repo(&repo)),
+            origin_repo: origin_repo.map(|repo| BackupSourceRepo::from_repo(&repo)),
         };
 
         let maybe_latest_imported_rev = if args.find_already_imported_rev_only {

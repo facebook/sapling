@@ -9,7 +9,6 @@ rust_library(
     deps = [
         "fbsource//third-party/rust:slog",
         "//common/rust/shed/facet:facet",
-        "//eden/mononoke/blobrepo:blobrepo",
         "//eden/mononoke/blobrepo:repo_blobstore",
         "//eden/mononoke/bonsai_hg_mapping:bonsai_hg_mapping",
         "//eden/mononoke/bookmarks:bookmarks",

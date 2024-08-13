@@ -7,7 +7,6 @@
 
 use std::sync::Arc;
 
-use blobrepo::BlobRepo;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use bonsai_hg_mapping::BonsaiHgMappingArc;
 use bookmarks::ArcBookmarkUpdateLog;
@@ -71,7 +70,7 @@ pub struct BackupSourceRepo {
 }
 
 impl BackupSourceRepo {
-    pub fn from_blob_repo(repo: &BlobRepo) -> Self {
+    pub fn from_repo(repo: &(impl BonsaiHgMappingArc + RepoBlobstoreArc)) -> Self {
         Self {
             bonsai_hg_mapping: repo.bonsai_hg_mapping_arc(),
             repo_blobstore: repo.repo_blobstore_arc(),
