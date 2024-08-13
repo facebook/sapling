@@ -1139,6 +1139,24 @@ impl Client {
 
         self.fetch_single::<ReferencesDataResponse>(request).await
     }
+
+    async fn cloud_smartlog_attempt(
+        &self,
+        data: GetSmartlogParams,
+    ) -> Result<SmartlogDataResponse, SaplingRemoteApiError> {
+        tracing::info!(
+            "Requesting cloud smartlog for the workspace '{}' in the repo '{}' ",
+            data.workspace,
+            data.reponame
+        );
+        let url = self.build_url(paths::CLOUD_SMARTLOG)?;
+        let request = self
+            .configure_request(self.inner.client.post(url))?
+            .cbor(&data.to_wire())
+            .map_err(SaplingRemoteApiError::RequestSerializationFailed)?;
+
+        self.fetch_single::<SmartlogDataResponse>(request).await
+    }
 }
 
 #[async_trait]
@@ -1793,18 +1811,8 @@ impl SaplingRemoteApi for Client {
         &self,
         data: GetSmartlogParams,
     ) -> Result<SmartlogDataResponse, SaplingRemoteApiError> {
-        tracing::info!(
-            "Requesting cloud smartlog for the workspace '{}' in the repo '{}' ",
-            data.workspace,
-            data.reponame
-        );
-        let url = self.build_url(paths::CLOUD_SMARTLOG)?;
-        let request = self
-            .configure_request(self.inner.client.post(url))?
-            .cbor(&data.to_wire())
-            .map_err(SaplingRemoteApiError::RequestSerializationFailed)?;
-
-        self.fetch_single::<SmartlogDataResponse>(request).await
+        self.with_retry(|this| this.cloud_smartlog_attempt(data.clone()).boxed())
+            .await
     }
 
     async fn suffix_query(
