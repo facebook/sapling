@@ -258,6 +258,9 @@ class SaplingRemoteAPIService(baseservice.BaseService):
         """Cleanup unnecessary remote bookmarks from the given workspace"""
         return self.fallback.cleanupworkspace(reponame, workspace)
 
+    def gethistoricalversions(self, reponame, workspace):
+        return self.fallback.gethistoricalversions(reponame, workspace)
+
     def _castreferences(self, refs):
         """
         1. Create list of heads from head_dates data. Server may omit heads to reduce data transmission.
