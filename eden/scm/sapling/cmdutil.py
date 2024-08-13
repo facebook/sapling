@@ -1028,10 +1028,8 @@ def getcommiteditor(edit=False, finishdesc=None, extramsg=None, editform="", **o
         return lambda r, c: commitforceeditor(
             r, c, finishdesc=finishdesc, extramsg=extramsg, editform=editform
         )
-    elif editform:
-        return lambda r, c: commiteditor(r, c, editform=editform)
     else:
-        return commiteditor
+        return lambda r, c: commiteditor(r, c, editform=editform)
 
 
 def loglimit(opts):
