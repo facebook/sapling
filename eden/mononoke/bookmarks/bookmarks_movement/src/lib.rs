@@ -8,7 +8,6 @@
 #![feature(trait_alias)]
 
 use ::repo_lock::RepoLockRef;
-use blobrepo::AsBlobRepo;
 use bonsai_git_mapping::BonsaiGitMappingArc;
 use bonsai_git_mapping::BonsaiGitMappingRef;
 use bonsai_globalrev_mapping::BonsaiGlobalrevMappingArc;
@@ -77,8 +76,7 @@ const ALLOW_NON_FFWD_PUSHVAR: &str = "x-git-allow-non-ffwd-push";
 ///
 /// These are the repo attributes that are necessary to call most functions in
 /// bookmarks movement.
-pub trait Repo = AsBlobRepo
-    + BonsaiHgMappingRef
+pub trait Repo = BonsaiHgMappingRef
     + BonsaiGitMappingArc
     + BonsaiGlobalrevMappingArc
     + BookmarksRef

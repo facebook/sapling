@@ -222,18 +222,23 @@ pub(crate) async fn populate_git_mapping_txn_hook(
 #[cfg(test)]
 mod tests {
     use anyhow::Result;
-    use blobrepo::AsBlobRepo;
-    use blobrepo::BlobRepo;
     use bonsai_git_mapping::CONVERT_REVISION_EXTRA;
     use bonsai_git_mapping::HGGIT_SOURCE_EXTRA;
+    use bonsai_globalrev_mapping::BonsaiGlobalrevMapping;
+    use bonsai_hg_mapping::BonsaiHgMapping;
     use bookmarks::BookmarkKey;
     use bookmarks::BookmarkUpdateReason;
+    use bookmarks::Bookmarks;
     use bookmarks::BookmarksRef;
     use borrowed::borrowed;
+    use commit_graph::CommitGraph;
+    use commit_graph::CommitGraphWriter;
     use fbinit::FacebookInit;
+    use filestore::FilestoreConfig;
+    use git_push_redirect::GitPushRedirectConfig;
     use maplit::hashmap;
     use maplit::hashset;
-    use mononoke_api_types::InnerRepo;
+    use metaconfig_types::RepoConfig;
     use mononoke_types::hash::GitSha1;
     use mononoke_types_mocks::hash::FIVES_GIT_SHA1;
     use mononoke_types_mocks::hash::FOURS_GIT_SHA1;
@@ -241,7 +246,16 @@ mod tests {
     use mononoke_types_mocks::hash::SIXES_GIT_SHA1;
     use mononoke_types_mocks::hash::THREES_GIT_SHA1;
     use mononoke_types_mocks::hash::TWOS_GIT_SHA1;
+    use phases::Phases;
+    use pushrebase_mutation_mapping::PushrebaseMutationMapping;
+    use repo_blobstore::RepoBlobstore;
     use repo_blobstore::RepoBlobstoreRef;
+    use repo_bookmark_attrs::RepoBookmarkAttrs;
+    use repo_cross_repo::RepoCrossRepo;
+    use repo_derived_data::RepoDerivedData;
+    use repo_identity::RepoIdentity;
+    use repo_lock::RepoLock;
+    use repo_permission_checker::RepoPermissionChecker;
     use test_repo_factory::TestRepoFactory;
     use tests_utils::drawdag::changes;
     use tests_utils::drawdag::create_from_dag_with_changes;
@@ -249,10 +263,68 @@ mod tests {
 
     use super::*;
 
+    #[facet::container]
+    #[derive(Clone)]
+    struct TestRepo {
+        #[facet]
+        bonsai_hg_mapping: dyn BonsaiHgMapping,
+
+        #[facet]
+        bonsai_git_mapping: dyn BonsaiGitMapping,
+
+        #[facet]
+        bonsai_globalrev_mapping: dyn BonsaiGlobalrevMapping,
+
+        #[facet]
+        bookmarks: dyn Bookmarks,
+
+        #[facet]
+        phases: dyn Phases,
+
+        #[facet]
+        filestore_config: FilestoreConfig,
+
+        #[facet]
+        pushrebase_mutation_mapping: dyn PushrebaseMutationMapping,
+
+        #[facet]
+        repo_bookmark_attrs: RepoBookmarkAttrs,
+
+        #[facet]
+        repo_config: RepoConfig,
+
+        #[facet]
+        repo_derived_data: RepoDerivedData,
+
+        #[facet]
+        repo_blobstore: RepoBlobstore,
+
+        #[facet]
+        repo_cross_repo: RepoCrossRepo,
+
+        #[facet]
+        repo_identity: RepoIdentity,
+
+        #[facet]
+        repo_permission_checker: dyn RepoPermissionChecker,
+
+        #[facet]
+        repo_lock: dyn RepoLock,
+
+        #[facet]
+        commit_graph: CommitGraph,
+
+        #[facet]
+        commit_graph_writer: dyn CommitGraphWriter,
+
+        #[facet]
+        git_push_redirect_config: dyn GitPushRedirectConfig,
+    }
+
     fn add_git_extras(
-        context: CreateCommitContext<BlobRepo>,
+        context: CreateCommitContext<TestRepo>,
         hash: GitSha1,
-    ) -> CreateCommitContext<BlobRepo> {
+    ) -> CreateCommitContext<TestRepo> {
         context
             .add_extra(
                 CONVERT_REVISION_EXTRA.to_string(),
@@ -270,7 +342,7 @@ mod tests {
 
     async fn apply_entries(
         ctx: &CoreContext,
-        repo: &impl Repo,
+        repo: &TestRepo,
         bookmark: &BookmarkKey,
         old_target: ChangesetId,
         new_target: ChangesetId,
@@ -297,13 +369,13 @@ mod tests {
     #[fbinit::test]
     async fn test_new_mapping_entries(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: InnerRepo = TestRepoFactory::new(fb)?.build().await?;
+        let repo: TestRepo = TestRepoFactory::new(fb)?.build().await?;
         let bookmark = BookmarkKey::new("main")?;
         borrowed!(ctx, repo);
 
         let dag = create_from_dag_with_changes(
             ctx,
-            repo.as_blob_repo(),
+            repo,
             r"
                 Z-A-B-C-D
                      \
