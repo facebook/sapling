@@ -35,6 +35,7 @@ use mercurial_types::HgAugmentedManifestId;
 use mercurial_types::HgManifestId;
 use mercurial_types::ShardedHgAugmentedManifest;
 use mononoke_types::hash::Blake3;
+use mononoke_types::sharded_map_v2::LookupKind;
 use mononoke_types::sharded_map_v2::ShardedMapV2Node;
 use mononoke_types::ContentId;
 use mononoke_types::ContentMetadataV2;
@@ -197,7 +198,7 @@ pub async fn derive_from_hg_manifest_and_parents(
                             let aug_parents = &aug_parents;
                             async move {
                                 if path_elems_or_prefixes.is_empty() {
-                                    return Ok(futures::stream::empty().left_stream());
+                                    return anyhow::Ok(futures::stream::empty().left_stream());
                                 }
 
                                 let aug_parent = aug_parents
@@ -211,42 +212,25 @@ pub async fn derive_from_hg_manifest_and_parents(
                                         )
                                     })?;
 
-                                anyhow::Ok(stream::iter(path_elems_or_prefixes).map(move |elem_or_prefix| async move {
-                                    match elem_or_prefix {
-                                        Either::Left(elem) => {
-                                            let entry = aug_parent
-                                                .augmented_manifest
-                                                .subentries
-                                                .lookup(ctx, blobstore, elem.as_ref())
-                                                .await?
-                                                .ok_or_else(|| {
-                                                    anyhow!(
-                                                        "Cannot find corresponding entry {} in parent {}",
-                                                        elem,
-                                                        aug_parent.augmented_manifest.hg_node_id,
-                                                    )
-                                                })?;
-                                            anyhow::Ok(Either::Left((elem, entry)))
-                                        }
-                                        Either::Right(prefix) => {
-                                            let partial_map = aug_parent
-                                                .augmented_manifest
-                                                .subentries
-                                                .get_partial_map(ctx, blobstore, prefix.as_ref())
-                                                .await?
-                                                .ok_or_else(|| {
-                                                    anyhow!(
-                                                        "Cannot find corresponding prefix {:?} in parent {}",
-                                                        prefix,
-                                                        aug_parent.augmented_manifest.hg_node_id
-                                                    )
-                                                })?;
-                                            anyhow::Ok(Either::Right((prefix, partial_map)))
-                                        }
+                                let lookup_keys = path_elems_or_prefixes.into_iter().map(|path_elem_or_prefix| {
+                                    match path_elem_or_prefix {
+                                        Either::Left(elem) => (elem.to_smallvec(), LookupKind::Entry),
+                                        Either::Right(prefix) => (prefix.to_smallvec(), LookupKind::PartialMap),
                                     }
                                 })
-                                .buffer_unordered(20)
-                                .right_stream())
+                                .collect();
+
+                                Ok(
+                                    stream::iter(
+                                        aug_parent
+                                            .augmented_manifest
+                                            .subentries
+                                            .clone()
+                                            .get_entries_and_partial_maps(ctx, blobstore, lookup_keys, 100).await?
+                                    )
+                                    .map(anyhow::Ok)
+                                    .right_stream()
+                                )
                             }
                         },
                     )
@@ -307,11 +291,8 @@ pub async fn derive_from_hg_manifest_and_parents(
                 for (elem, entry) in new_subentries {
                     subentries.insert(elem, Either::Left(entry));
                 }
-                for reused_item in reused_subentries_and_partial_maps {
-                    match reused_item {
-                        Either::Left((elem, entry)) => subentries.insert(elem, Either::Left(entry)),
-                        Either::Right((prefix, partial_map)) => subentries.insert(prefix, Either::Right(partial_map)),
-                    };
+                for (key, reused_item) in reused_subentries_and_partial_maps {
+                    subentries.insert(key, reused_item);
                 }
                 for (name, treenode, augmented_manifest_id, augmented_manifest_size) in children {
                     subentries.insert(

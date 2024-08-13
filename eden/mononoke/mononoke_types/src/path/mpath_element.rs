@@ -274,6 +274,10 @@ impl MPathElementPrefix {
         Ok(Self(SmallVec::from_slice(s)))
     }
 
+    pub fn to_smallvec(self) -> SmallVec<[u8; 24]> {
+        self.0
+    }
+
     /// Append a byte to the end of the prefix.
     pub fn push(&mut self, c: u8) -> Result<()> {
         if self.0.len() == MPATH_ELEMENT_MAX_LENGTH {
