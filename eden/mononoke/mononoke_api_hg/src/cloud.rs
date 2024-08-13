@@ -31,16 +31,16 @@ impl HgRepoContext {
         workspace: &str,
         reponame: &str,
     ) -> Result<WorkspaceData, MononokeError> {
-        let mut ctx = CommitCloudContext::new(workspace, reponame)?;
+        let mut cc_ctx = CommitCloudContext::new(workspace, reponame)?;
         let authz = self.repo().authorization_context();
         authz
-            .require_commitcloud_operation(self.ctx(), &self.repo().repo(), &mut ctx, "read")
+            .require_commitcloud_operation(self.ctx(), &self.repo().repo(), &mut cc_ctx, "read")
             .await?;
         Ok(self
             .repo()
             .inner_repo()
             .commit_cloud()
-            .get_workspace(&ctx)
+            .get_workspace(&cc_ctx)
             .await?)
     }
 
@@ -66,12 +66,12 @@ impl HgRepoContext {
         authz
             .require_commitcloud_operation(self.ctx(), &self.repo().repo(), &mut ctx, "read")
             .await?;
-
+        let cc_ctx = CommitCloudContext::new(&params.workspace, &params.reponame)?;
         Ok(self
             .repo()
             .inner_repo()
             .commit_cloud()
-            .get_references(&ctx, params)
+            .get_references(&cc_ctx, params)
             .await?)
     }
 
@@ -79,21 +79,21 @@ impl HgRepoContext {
         &self,
         params: &UpdateReferencesParams,
     ) -> Result<ReferencesData, MononokeError> {
-        let mut ctx = CommitCloudContext::new(&params.workspace, &params.reponame)?;
+        let mut cc_ctx = CommitCloudContext::new(&params.workspace, &params.reponame)?;
         if params.version == 0 {
-            ctx.check_workspace_name()?;
+            cc_ctx.check_workspace_name()?;
         }
 
         let authz = self.repo().authorization_context();
         authz
-            .require_commitcloud_operation(self.ctx(), &self.repo().repo(), &mut ctx, "write")
+            .require_commitcloud_operation(self.ctx(), &self.repo().repo(), &mut cc_ctx, "write")
             .await?;
 
         Ok(self
             .repo()
             .inner_repo()
             .commit_cloud()
-            .update_references(&ctx, params)
+            .update_references(&cc_ctx, params)
             .await?)
     }
 

@@ -50,7 +50,7 @@ pub struct CommitCloud {
     pub storage: SqlCommitCloud,
     pub bonsai_hg_mapping: Arc<dyn BonsaiHgMapping>,
     pub repo_derived_data: ArcRepoDerivedData,
-    pub core_ctx: CoreContext,
+    pub ctx: CoreContext,
     pub acl_provider: Arc<dyn AclProvider>,
     pub config: Arc<CommitCloudConfig>,
 }
@@ -60,7 +60,7 @@ impl CommitCloud {
         storage: SqlCommitCloud,
         bonsai_hg_mapping: Arc<dyn BonsaiHgMapping>,
         repo_derived_data: ArcRepoDerivedData,
-        core_ctx: CoreContext,
+        ctx: CoreContext,
         acl_provider: Arc<dyn AclProvider>,
         config: Arc<CommitCloudConfig>,
     ) -> Self {
@@ -68,7 +68,7 @@ impl CommitCloud {
             storage,
             bonsai_hg_mapping,
             repo_derived_data,
-            core_ctx,
+            ctx,
             acl_provider,
             config,
         }
@@ -97,15 +97,19 @@ impl Display for Phase {
 }
 
 impl CommitCloud {
-    pub async fn get_workspace(&self, ctx: &CommitCloudContext) -> anyhow::Result<WorkspaceData> {
+    pub async fn get_workspace(
+        &self,
+        cc_ctx: &CommitCloudContext,
+    ) -> anyhow::Result<WorkspaceData> {
         let maybeworkspace =
-            WorkspaceVersion::fetch_from_db(&self.storage, &ctx.workspace, &ctx.reponame).await?;
+            WorkspaceVersion::fetch_from_db(&self.storage, &cc_ctx.workspace, &cc_ctx.reponame)
+                .await?;
         if let Some(res) = maybeworkspace {
-            return Ok(res.into_workspace_data(&ctx.reponame));
+            return Ok(res.into_workspace_data(&cc_ctx.reponame));
         }
         Err(anyhow::anyhow!(
             "'get_workspace' failed: workspace {} does not exist",
-            ctx.workspace
+            cc_ctx.workspace
         ))
     }
 
@@ -136,7 +140,7 @@ impl CommitCloud {
 
     pub async fn get_references(
         &self,
-        ctx: &CommitCloudContext,
+        cc_ctx: &CommitCloudContext,
         params: &GetReferencesParams,
     ) -> anyhow::Result<ReferencesData> {
         let base_version = params.version;
@@ -144,7 +148,8 @@ impl CommitCloud {
         let mut latest_version: u64 = 0;
         let mut version_timestamp: i64 = 0;
         let maybeworkspace =
-            WorkspaceVersion::fetch_from_db(&self.storage, &ctx.workspace, &ctx.reponame).await?;
+            WorkspaceVersion::fetch_from_db(&self.storage, &cc_ctx.workspace, &cc_ctx.reponame)
+                .await?;
         if let Some(workspace_version) = maybeworkspace {
             latest_version = workspace_version.version;
             version_timestamp = workspace_version.timestamp.timestamp_nanos();
@@ -152,7 +157,7 @@ impl CommitCloud {
         if base_version > latest_version && latest_version == 0 {
             return Err(anyhow::anyhow!(
                 "'get_references' failed: workspace {} has been removed or renamed",
-                ctx.workspace.clone()
+                cc_ctx.workspace.clone()
             ));
         }
 
@@ -176,7 +181,7 @@ impl CommitCloud {
             });
         }
 
-        let raw_references_data = fetch_references(ctx, &self.storage).await?;
+        let raw_references_data = fetch_references(cc_ctx, &self.storage).await?;
 
         let references_data = cast_references_data(
             raw_references_data,
@@ -184,7 +189,7 @@ impl CommitCloud {
             version_timestamp,
             self.bonsai_hg_mapping.clone(),
             self.repo_derived_data.clone(),
-            &self.core_ctx,
+            &self.ctx,
         )
         .await?;
 
@@ -193,14 +198,15 @@ impl CommitCloud {
 
     pub async fn update_references(
         &self,
-        ctx: &CommitCloudContext,
+        cc_ctx: &CommitCloudContext,
         params: &UpdateReferencesParams,
     ) -> anyhow::Result<ReferencesData> {
         let mut latest_version: u64 = 0;
         let mut version_timestamp: i64 = 0;
 
         let maybeworkspace =
-            WorkspaceVersion::fetch_from_db(&self.storage, &ctx.workspace, &ctx.reponame).await?;
+            WorkspaceVersion::fetch_from_db(&self.storage, &cc_ctx.workspace, &cc_ctx.reponame)
+                .await?;
 
         if let Some(workspace_version) = maybeworkspace {
             latest_version = workspace_version.version;
@@ -208,14 +214,14 @@ impl CommitCloud {
         }
 
         if params.version < latest_version {
-            let raw_references_data = fetch_references(ctx, &self.storage).await?;
+            let raw_references_data = fetch_references(cc_ctx, &self.storage).await?;
             return cast_references_data(
                 raw_references_data,
                 latest_version,
                 version_timestamp,
                 self.bonsai_hg_mapping.clone(),
                 self.repo_derived_data.clone(),
-                &self.core_ctx,
+                &self.ctx,
             )
             .await;
         }
@@ -226,7 +232,7 @@ impl CommitCloud {
             .write_connection
             .start_transaction()
             .await?;
-        let cri = self.core_ctx.client_request_info();
+        let cri = self.ctx.client_request_info();
 
         let initiate_workspace = params.version == 0
             && (params.new_heads.is_empty()
@@ -237,14 +243,14 @@ impl CommitCloud {
                     .is_some_and(|x| !x.is_empty()));
 
         if !initiate_workspace {
-            txn = update_references_data(&self.storage, txn, cri, params.clone(), ctx).await?;
+            txn = update_references_data(&self.storage, txn, cri, params.clone(), cc_ctx).await?;
         }
 
         let new_version_timestamp = Timestamp::now();
         let new_version = latest_version + 1;
 
         let args = WorkspaceVersion {
-            workspace: ctx.workspace.clone(),
+            workspace: cc_ctx.workspace.clone(),
             version: new_version,
             timestamp: new_version_timestamp,
             archived: false,
@@ -255,8 +261,8 @@ impl CommitCloud {
             .insert(
                 txn,
                 cri,
-                ctx.reponame.clone(),
-                ctx.workspace.clone(),
+                cc_ctx.reponame.clone(),
+                cc_ctx.workspace.clone(),
                 args.clone(),
             )
             .await?;
@@ -269,9 +275,9 @@ impl CommitCloud {
                 NotificationData::from_update_references_params(params.clone(), new_version);
             let _ = publish_single_update(
                 notification,
-                &ctx.workspace.clone(),
-                &ctx.reponame.clone(),
-                self.core_ctx.fb,
+                &cc_ctx.workspace.clone(),
+                &cc_ctx.reponame.clone(),
+                self.ctx.fb,
             )
             .await?;
         }
