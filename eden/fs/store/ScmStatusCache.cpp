@@ -6,6 +6,7 @@
  */
 
 #include "eden/fs/store/ScmStatusCache.h"
+#include <folly/logging/xlog.h>
 #include "eden/fs/journal/Journal.h"
 
 namespace facebook::eden {
@@ -31,39 +32,59 @@ ScmStatusCache::ScmStatusCache(
           std::move(stats)}, journal_(std::move(journal)) {}
 
 std::variant<StatusResultFuture, StatusResultPromise> ScmStatusCache::get(
-    const ObjectId& id,
-    JournalDelta::SequenceNumber seq) {
-  auto internalCachedItem = getSimple(id);
-  if (internalCachedItem && internalCachedItem->seq >= seq) {
+    const ObjectId& key,
+    JournalDelta::SequenceNumber curSeq) {
+  auto internalCachedItem = getSimple(key);
+  if (internalCachedItem && isSequenceValid(curSeq, internalCachedItem->seq)) {
+    XLOG(DBG7) << fmt::format(
+        "hit internal cache: key={}, curSeq={}, cachedSeq={}",
+        key,
+        curSeq,
+        internalCachedItem->seq);
+    internalCachedItem->seq =
+        curSeq; // update seq so we can avoid calculating the same range again
     return ImmediateFuture<ScmStatus>{internalCachedItem->status};
   }
 
-  auto it = promiseMap_.find(id);
-  if (it != promiseMap_.end() && it->second.first >= seq) {
+  auto it = promiseMap_.find(key);
+  if (it != promiseMap_.end() && isSequenceValid(curSeq, it->second.first)) {
+    XLOG(DBG7) << fmt::format(
+        "hit promise map: key={}, curSeq={}, cachedSeq={}",
+        key,
+        curSeq,
+        it->second.first);
+    it->second.first =
+        curSeq; // update seq so we can avoid calculating the same range again
     return it->second.second->getFuture();
   }
 
   auto promise = std::make_shared<folly::SharedPromise<ScmStatus>>();
-  promiseMap_.insert_or_assign(id, std::make_pair(seq, promise));
+  promiseMap_.insert_or_assign(key, std::make_pair(curSeq, promise));
 
+  XLOG(DBG7) << fmt::format("cache miss: key={}, curSeq={}", key, curSeq);
   return promise;
 }
 
 void ScmStatusCache::insert(
-    ObjectId id,
-    std::shared_ptr<const SeqStatusPair> pair) {
-  auto internalCachedItem = getSimple(id);
+    ObjectId key,
+    JournalDelta::SequenceNumber curSeq,
+    ScmStatus status) {
+  auto internalCachedItem = getSimple(key);
 
   if (!internalCachedItem) {
-    insertSimple(std::move(id), pair);
+    insertSimple(
+        std::move(key),
+        std::make_shared<SeqStatusPair>(curSeq, std::move(status)));
     return;
   }
 
-  // it's only necessary to update the cache if the diff is computed
+  // It's only necessary to update the cache if the diff is computed
   // for a larger sequenceID than the existing one.
-  if (pair->seq > internalCachedItem->seq) {
-    invalidate(id);
-    insertSimple(std::move(id), std::move(pair));
+  if (curSeq > internalCachedItem->seq) {
+    invalidate(key);
+    insertSimple(
+        std::move(key),
+        std::make_shared<SeqStatusPair>(curSeq, std::move(status)));
   }
 }
 
@@ -99,10 +120,20 @@ bool ScmStatusCache::isSequenceValid(
       cachedSeq + 1); // plus one because the range for calculation is inclusive
   bool valid = !range->isTruncated && range->containsHgOnlyChanges &&
       !range->containsRootUpdate;
+  XLOG(DBG7) << fmt::format(
+      "range: from={}, truncated={}, hgOnly={}, rootUpdate={}",
+      cachedSeq,
+      range->isTruncated,
+      range->containsHgOnlyChanges,
+      range->containsRootUpdate);
   return valid;
 }
 
 void ScmStatusCache::clear() {
+  XLOG(DBG7) << fmt::format(
+      "clearing cache: cachedRoot={}, cacheSize={}",
+      cachedWorkingCopyParentRootId_.value(),
+      getObjectCount());
   ObjectCache::clear();
   promiseMap_.clear(); // safe to clear because we know the promise is
                        // referenced by at least one pending request
@@ -110,6 +141,10 @@ void ScmStatusCache::clear() {
 }
 
 bool ScmStatusCache::isCachedWorkingDirValid(RootId& curWorkingDir) const {
+  XLOG(DBG7) << fmt::format(
+      "cachedRoot={}, currentRoot={}",
+      cachedWorkingCopyParentRootId_.value(),
+      curWorkingDir.value());
   return cachedWorkingCopyParentRootId_ == curWorkingDir;
 }
 
