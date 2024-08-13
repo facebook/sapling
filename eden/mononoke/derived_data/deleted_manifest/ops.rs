@@ -48,8 +48,7 @@ pub enum PathState {
     Exists(UnodeEntry),
 }
 
-pub trait Repo =
-    RepoDerivedDataRef + RepoBlobstoreArc + CommitGraphRef + Clone + Copy + Send + Sync;
+pub trait Repo = RepoDerivedDataRef + RepoBlobstoreArc + CommitGraphRef + Clone + Send + Sync;
 
 #[async_trait::async_trait]
 pub trait DeletedManifestOps: RootDeletedManifestIdCommon {
@@ -67,7 +66,7 @@ pub trait DeletedManifestOps: RootDeletedManifestIdCommon {
     /// fetch find where the path was deleted.
     async fn resolve_path_state<'a>(
         ctx: &'a CoreContext,
-        repo: impl Repo + 'a,
+        repo: &'a impl Repo,
         cs_id: ChangesetId,
         path: &'a MPath,
     ) -> Result<Option<PathState>, Error> {
@@ -163,7 +162,7 @@ pub trait DeletedManifestOps: RootDeletedManifestIdCommon {
                         cloned!(ctx, repo, path);
                         async move {
                             let unode_entry =
-                                derive_unode_entry(&ctx, repo, parent.clone(), &path).await?;
+                                derive_unode_entry(&ctx, &repo, parent.clone(), &path).await?;
                             Ok::<_, Error>((parent, unode_entry))
                         }
                     }
@@ -383,7 +382,7 @@ impl<Root: RootDeletedManifestIdCommon> DeletedManifestOps for Root {}
 
 async fn derive_unode_entry(
     ctx: &CoreContext,
-    repo: impl RepoDerivedDataRef + RepoBlobstoreArc,
+    repo: &(impl RepoDerivedDataRef + RepoBlobstoreArc),
     cs_id: ChangesetId,
     path: &MPath,
 ) -> Result<Option<UnodeEntry>, Error> {

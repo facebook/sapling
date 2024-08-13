@@ -82,7 +82,7 @@ async fn fetch_mutable_blame(
             .context("Unode missing")?
             .into_leaf()
             .ok_or_else(|| BlameError::IsDirectory(path.clone()))?;
-        let my_content = fetch_content_for_blame(ctx, repo.as_blob_repo(), unode)
+        let my_content = fetch_content_for_blame(ctx, repo, unode)
             .await?
             .into_bytes()?;
 
@@ -175,7 +175,7 @@ async fn fetch_immutable_blame(
     csid: ChangesetId,
     path: &NonRootMPath,
 ) -> Result<(BlameV2, FileUnodeId), BlameError> {
-    fetch_blame_v2(ctx, repo.as_blob_repo(), csid, path.clone()).await
+    fetch_blame_v2(ctx, repo, csid, path.clone()).await
 }
 
 pub async fn blame(
@@ -213,7 +213,7 @@ pub async fn blame_with_content(
     follow_mutable_file_history: bool,
 ) -> Result<(BlameV2, Bytes), BlameError> {
     let (blame, file_unode_id) = blame(ctx, repo, csid, path, follow_mutable_file_history).await?;
-    let content = fetch_content_for_blame(ctx, repo.as_blob_repo(), file_unode_id)
+    let content = fetch_content_for_blame(ctx, repo, file_unode_id)
         .await?
         .into_bytes()?;
     Ok((blame, content))

@@ -72,7 +72,7 @@ pub enum BlameError {
 /// Fetch the blame for a file.  Blame will be derived if necessary.
 pub async fn fetch_blame_v2(
     ctx: &CoreContext,
-    repo: impl RepoBlobstoreArc + RepoDerivedDataRef + Sync + Send + Copy,
+    repo: &(impl RepoBlobstoreArc + RepoDerivedDataRef + Sync + Send),
     csid: ChangesetId,
     path: NonRootMPath,
 ) -> Result<(BlameV2, FileUnodeId), BlameError> {

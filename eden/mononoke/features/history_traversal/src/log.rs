@@ -243,7 +243,7 @@ async fn resolve_path_state(
     path: &MPath,
 ) -> Result<Option<PathState>, Error> {
     let path = path.clone();
-    RootDeletedManifestV2Id::resolve_path_state(ctx, repo.as_blob_repo(), cs_id, &path).await
+    RootDeletedManifestV2Id::resolve_path_state(ctx, repo, cs_id, &path).await
 }
 
 /// Returns a full history of the given path starting from the given unode in generation number order.
@@ -1197,8 +1197,6 @@ async fn prefetch_fastlog_by_changeset(
 
 #[cfg(test)]
 mod test {
-    use blobrepo::AsBlobRepo;
-    use blobrepo::BlobRepo;
     use bonsai_hg_mapping::BonsaiHgMapping;
     use bookmarks::Bookmarks;
     use commit_graph::CommitGraph;
@@ -1228,26 +1226,32 @@ mod test {
     #[facet::container]
     #[derive(Clone)]
     struct TestRepoWithMutableRenames {
-        #[delegate(
-            FilestoreConfig,
-            RepoBlobstore,
-            RepoIdentity,
-            RepoDerivedData,
-            dyn Bookmarks,
-            dyn BonsaiHgMapping,
-            CommitGraph,
-            dyn CommitGraphWriter,
-        )]
-        pub blob_repo: BlobRepo,
+        #[facet]
+        filestore_config: FilestoreConfig,
 
         #[facet]
-        pub mutable_renames: MutableRenames,
-    }
+        repo_blobstore: RepoBlobstore,
 
-    impl AsBlobRepo for TestRepoWithMutableRenames {
-        fn as_blob_repo(&self) -> &BlobRepo {
-            &self.blob_repo
-        }
+        #[facet]
+        repo_identity: RepoIdentity,
+
+        #[facet]
+        repo_derived_data: RepoDerivedData,
+
+        #[facet]
+        bookmarks: dyn Bookmarks,
+
+        #[facet]
+        bonsai_hg_mapping: dyn BonsaiHgMapping,
+
+        #[facet]
+        commit_graph: CommitGraph,
+
+        #[facet]
+        commit_graph_writer: dyn CommitGraphWriter,
+
+        #[facet]
+        mutable_renames: MutableRenames,
     }
 
     #[fbinit::test]
@@ -1256,7 +1260,6 @@ mod test {
         // generate couple of hundreds linear file changes and list history
         let repo: TestRepoWithMutableRenames = test_repo_factory::build_empty(fb).await.unwrap();
         let mutable_renames = repo.mutable_renames_arc();
-        let blob_repo = repo.as_blob_repo();
         let ctx = CoreContext::test_mock(fb);
         let ctx = &ctx;
         let ctx = &ctx;
@@ -1281,8 +1284,7 @@ mod test {
 
         let top = parents.first().unwrap().clone();
 
-        blob_repo
-            .repo_derived_data()
+        repo.repo_derived_data()
             .derive::<RootFastlog>(ctx, top)
             .await?;
 
@@ -1335,7 +1337,6 @@ mod test {
         override_just_knobs(None);
         let repo: TestRepoWithMutableRenames = test_repo_factory::build_empty(fb).await.unwrap();
         let mutable_renames = repo.mutable_renames_arc();
-        let blob_repo = repo.as_blob_repo();
         let ctx = CoreContext::test_mock(fb);
         let ctx = &ctx;
 
@@ -1360,8 +1361,7 @@ mod test {
         let (m_top, graph) = branch_head("M", 1, vec![all_top.clone()], graph).await?;
         let (top, graph) = branch_head("Top", 2, vec![l_top, m_top], graph).await?;
 
-        blob_repo
-            .repo_derived_data()
+        repo.repo_derived_data()
             .derive::<RootFastlog>(ctx, top)
             .await?;
 
@@ -1412,14 +1412,13 @@ mod test {
         override_just_knobs(None);
         let repo: TestRepoWithMutableRenames = test_repo_factory::build_empty(fb).await.unwrap();
         let mutable_renames = repo.mutable_renames_arc();
-        let blob_repo = repo.as_blob_repo();
         let ctx = CoreContext::test_mock(fb);
         let ctx = &ctx;
 
         let filename = "1";
         let mut expected = vec![];
 
-        let root_id = CreateCommitContext::new_root(ctx, &blob_repo)
+        let root_id = CreateCommitContext::new_root(ctx, &repo)
             .add_file(filename, "root")
             .commit()
             .await?;
@@ -1430,8 +1429,7 @@ mod test {
             prev_id = create_diamond(ctx, &repo, vec![prev_id], &mut expected).await?;
         }
 
-        blob_repo
-            .repo_derived_data()
+        repo.repo_derived_data()
             .derive::<RootFastlog>(ctx, prev_id)
             .await?;
 

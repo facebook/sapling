@@ -12,7 +12,6 @@ anyhow = "1.0.75"
 async-recursion = "1.0.2"
 async-trait = "0.1.71"
 blame = { version = "0.1.0", path = "../../derived_data/blame" }
-blobrepo = { version = "0.1.0", path = "../../blobrepo" }
 blobstore = { version = "0.1.0", path = "../../blobstore" }
 bytes = { version = "1.6.0", features = ["serde"] }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
