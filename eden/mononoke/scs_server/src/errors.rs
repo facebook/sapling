@@ -301,6 +301,7 @@ impl_into_thrift_error!(service::MegarepoSyncChangesetExn);
 impl_into_thrift_error!(service::MegarepoSyncChangesetPollExn);
 impl_into_thrift_error!(service::MegarepoRemergeSourceExn);
 impl_into_thrift_error!(service::MegarepoRemergeSourcePollExn);
+impl_into_thrift_error!(service::RepoUpdateSubmoduleExpansionExn);
 impl_into_thrift_error!(service::RepoUploadNonBlobGitObjectExn);
 impl_into_thrift_error!(service::RepoUploadPackfileBaseItemExn);
 impl_into_thrift_error!(service::CreateGitTreeExn);

@@ -240,6 +240,9 @@ impl AddScubaResponse for thrift::MegarepoSyncChangesetToken {
     }
 }
 
+// TODO(T179531912): Log responses to scuba
+impl AddScubaResponse for thrift::RepoUpdateSubmoduleExpansionResponse {}
+
 impl AddScubaResponse for thrift::RepoUploadNonBlobGitObjectResponse {}
 impl AddScubaResponse for thrift::CreateGitTreeResponse {}
 impl AddScubaResponse for thrift::CreateGitTagResponse {}

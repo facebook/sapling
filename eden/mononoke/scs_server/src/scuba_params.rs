@@ -612,6 +612,9 @@ impl AddScubaParams for thrift::MegarepoReadConfigParams {
     }
 }
 
+// TODO(T179531912): Log params to scuba
+impl AddScubaParams for thrift::RepoUpdateSubmoduleExpansionParams {}
+
 impl AddScubaParams for thrift::RepoUploadNonBlobGitObjectParams {
     fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
         scuba.add("param_git_object_id", hex(&self.git_hash));

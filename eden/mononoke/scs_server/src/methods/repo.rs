@@ -861,4 +861,14 @@ impl SourceControlServiceImpl {
             ..Default::default()
         })
     }
+
+    /// Do a cross-repo lookup to see if a commit exists under a different hash in another repo
+    pub(crate) async fn repo_update_submodule_expansion(
+        &self,
+        _ctx: CoreContext,
+        _params: thrift::RepoUpdateSubmoduleExpansionParams,
+    ) -> Result<thrift::RepoUpdateSubmoduleExpansionResponse, errors::ServiceError> {
+        // TODO(T179531912): implement repo_update_submodule_expansion
+        unimplemented!("repo_update_submodule_expansion is not implemented yet")
+    }
 }

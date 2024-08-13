@@ -1122,6 +1122,39 @@ struct RepoUploadFileContentParams {
   5: optional string service_identity;
 }
 
+/// Optional metadata for the commit that will be created
+struct RepoUpdateSubmoduleExpansionCommitInfo {
+  /// The commit message.
+  1: optional string message;
+
+  /// The author of the commit.
+  2: optional string author;
+
+  /// The date the commit was authored. If omitted, the server will use the
+  /// current time in its default timezone.
+  3: optional DateTime author_date;
+}
+
+/// Params for repo_update_submodule_expansion method
+struct RepoUpdateSubmoduleExpansionParams {
+  /// Large repo containing the expansion being updated
+  1: RepoSpecifier large_repo;
+  /// Large repo commit that will be the base commit for the generated commit
+  /// updating the submodule expansion.
+  2: CommitId base_commit_id;
+  /// Path of the submodule expansion in the large repo
+  3: Path submodule_expansion_path;
+  /// New submodule commit to expand.
+  /// NOTE: if this is set to null, the submodule expansion will be DELETED!
+  /// This means deleting the submodule from the Git repo when backsyncing the
+  /// commit.
+  4: optional CommitId new_submodule_commit_or_delete;
+  /// Commit identity schemes to return.
+  5: set<CommitIdentityScheme> identity_schemes;
+  /// Optional metadata for the commit that will be generated
+  6: optional RepoUpdateSubmoduleExpansionCommitInfo commit_info;
+}
+
 struct CommitLookupParams {
   /// Commit identity schemes to return.
   1: set<CommitIdentityScheme> identity_schemes;
@@ -1829,6 +1862,17 @@ struct RepoUploadFileContentResponse {
   /// The id of the uploaded file, which can be used in subsequent
   /// repo_create_commit requests.
   1: binary id;
+}
+
+struct RepoUpdateSubmoduleExpansionResponse {
+  /// IDs of the commit updating the submodule expansion in the provided
+  /// repo in all the requested schemes.
+  1: map<CommitIdentityScheme, CommitId> ids;
+}
+
+union RepoUpdateSubmoduleExpansionResult {
+  1: RepoUpdateSubmoduleExpansionResponse success;
+  2: MegarepoAsynchronousRequestError error;
 }
 
 struct CommitCompareResponse {
@@ -2795,6 +2839,14 @@ service SourceControlService extends fb303_core.BaseService {
   /// Poll the execution of megarepo_re_merge_source request
   MegarepoRemergeSourcePollResponse megarepo_remerge_source_poll(
     1: MegarepoRemergeSourceToken token,
+  ) throws (
+    1: RequestError request_error,
+    2: InternalError internal_error,
+    3: OverloadError overload_error,
+  );
+
+  RepoUpdateSubmoduleExpansionResponse repo_update_submodule_expansion(
+    1: RepoUpdateSubmoduleExpansionParams params,
   ) throws (
     1: RequestError request_error,
     2: InternalError internal_error,

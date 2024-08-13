@@ -1089,6 +1089,10 @@ impl SourceControlService for SourceControlServiceThriftImpl {
             token: thrift::MegarepoRemergeSourceToken,
         ) -> Result<thrift::MegarepoRemergeSourcePollResponse, service::MegarepoRemergeSourcePollExn>;
 
+        async fn repo_update_submodule_expansion(
+            params: thrift::RepoUpdateSubmoduleExpansionParams,
+        ) -> Result<thrift::RepoUpdateSubmoduleExpansionResponse, service::RepoUpdateSubmoduleExpansionExn>;
+
         async fn repo_upload_non_blob_git_object(
             repo: thrift::RepoSpecifier,
             params: thrift::RepoUploadNonBlobGitObjectParams,
