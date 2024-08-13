@@ -153,7 +153,6 @@ rust_library(
         "fbsource//third-party/rust:maplit",
         "fbsource//third-party/rust:slog",
         "fbsource//third-party/rust:thiserror",
-        ":blobrepo",
         "//common/rust/shed/cloned:cloned",
         "//common/rust/shed/stats:stats",
         "//eden/mononoke/blobrepo:repo_blobstore",

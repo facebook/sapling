@@ -5,5 +5,7 @@
  * GNU General Public License version 2.
  */
 
+#![feature(trait_alias)]
+
 pub mod changed_files;
 pub mod file_history;
