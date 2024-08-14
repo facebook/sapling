@@ -9,19 +9,22 @@ license = "GPLv2+"
 
 [dependencies]
 anyhow = "1.0.75"
-blobrepo = { version = "0.1.0", path = "../../blobrepo" }
 blobrepo_hg = { version = "0.1.0", path = "../../blobrepo/blobrepo_hg" }
 blobstore = { version = "0.1.0", path = "../../blobstore" }
+bonsai_hg_mapping = { version = "0.1.0", path = "../../bonsai_hg_mapping" }
 bytes = { version = "1.6.0", features = ["serde"] }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+commit_graph = { version = "0.1.0", path = "../../repo_attributes/commit_graph/commit_graph" }
 context = { version = "0.1.0", path = "../../server/context" }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+filenodes = { version = "0.1.0", path = "../../filenodes" }
 filestore = { version = "0.1.0", path = "../../filestore" }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
 getbundle_response = { version = "0.1.0", path = "../getbundle_response" }
 mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
 redactedblobstore = { version = "0.1.0", path = "../../blobstore/redactedblobstore" }
 repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
+repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity" }
 revisionstore_types = { version = "0.1.0", path = "../../../scm/lib/revisionstore/types" }
 thiserror = "1.0.49"
 

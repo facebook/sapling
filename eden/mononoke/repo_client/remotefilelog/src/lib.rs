@@ -9,13 +9,15 @@ use std::collections::HashSet;
 use std::fmt;
 
 use anyhow::Result;
-use blobrepo::AsBlobRepo;
 use blobrepo_hg::file_history::get_file_history_maybe_incomplete;
 use blobstore::Loadable;
+use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bytes::Bytes;
 use bytes::BytesMut;
 use cloned::cloned;
+use commit_graph::CommitGraphRef;
 use context::CoreContext;
+use filenodes::FilenodesRef;
 use filestore::FetchKey;
 use futures::future;
 use futures::future::BoxFuture;
@@ -41,6 +43,7 @@ use redactedblobstore::has_redaction_root_cause;
 use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreArc;
 use repo_blobstore::RepoBlobstoreRef;
+use repo_identity::RepoIdentityRef;
 use revisionstore_types::Metadata;
 use thiserror::Error;
 
@@ -235,7 +238,15 @@ pub async fn create_raw_filenode_blob(
 /// times
 pub fn get_unordered_file_history_for_multiple_nodes(
     ctx: &CoreContext,
-    repo: &(impl RepoLike + AsBlobRepo),
+    repo: &(
+         impl RepoLike
+         + RepoIdentityRef
+         + FilenodesRef
+         + CommitGraphRef
+         + BonsaiHgMappingRef
+         + Clone
+         + 'static
+     ),
     filenodes: HashSet<HgFileNodeId>,
     path: &NonRootMPath,
     allow_short_getpack_history: bool,
@@ -247,14 +258,8 @@ pub fn get_unordered_file_history_for_multiple_nodes(
         None
     };
     select_all(filenodes.into_iter().map(|filenode| {
-        get_file_history_maybe_incomplete(
-            ctx.clone(),
-            repo.as_blob_repo().clone(),
-            filenode,
-            path.clone(),
-            limit,
-        )
-        .boxed()
+        get_file_history_maybe_incomplete(ctx.clone(), repo.clone(), filenode, path.clone(), limit)
+            .boxed()
     }))
     .try_filter({
         let mut used_filenodes = HashSet::new();
