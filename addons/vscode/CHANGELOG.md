@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.1.55
+
+### Aug 13 2024
+
+- Improve error messages from `sl` to show the actual issue in the error UI
+- Allow selecting text from error messages without closing the error message
+- Truncate long lists of bookmarks
+- Fix focus getting lost when tabbing back and forth to ISL in VS Code
+- Make it possible to open the Comparison View in its own separate panel
+- Use configured VS Code font size and ligatures in the comparison view
+- Fix errors when trying to discard many files with some unchecked
+
 ## 0.1.54
 
 ### Jul 25 2024
