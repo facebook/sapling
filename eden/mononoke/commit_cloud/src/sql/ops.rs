@@ -70,9 +70,10 @@ pub trait Update<T = Self> {
     async fn update(
         &self,
         txn: Transaction,
+        cri: Option<&ClientRequestInfo>,
         cc_ctx: CommitCloudContext,
         args: Self::UpdateArgs,
-    ) -> anyhow::Result<i64>;
+    ) -> anyhow::Result<(Transaction, u64)>;
 }
 
 #[async_trait]

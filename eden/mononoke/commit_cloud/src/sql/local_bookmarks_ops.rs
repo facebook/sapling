@@ -125,9 +125,10 @@ impl Update<WorkspaceLocalBookmark> for SqlCommitCloud {
     async fn update(
         &self,
         _txn: Transaction,
+        _cri: Option<&ClientRequestInfo>,
         _cc_ctx: CommitCloudContext,
         _args: Self::UpdateArgs,
-    ) -> anyhow::Result<i64> {
+    ) -> anyhow::Result<(Transaction, u64)> {
         //To be implemented among other Update queries
         return Err(anyhow::anyhow!("Not implemented yet"));
     }

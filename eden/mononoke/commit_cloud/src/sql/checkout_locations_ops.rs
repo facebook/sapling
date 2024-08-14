@@ -151,9 +151,10 @@ impl Update<WorkspaceCheckoutLocation> for SqlCommitCloud {
     async fn update(
         &self,
         _txn: Transaction,
+        _cri: Option<&ClientRequestInfo>,
         _cc_ctx: CommitCloudContext,
         _args: Self::UpdateArgs,
-    ) -> anyhow::Result<i64> {
+    ) -> anyhow::Result<(Transaction, u64)> {
         // Checkout locations update op endpoint is never used
         unimplemented!("delete is not implemented for checkout locations")
     }
