@@ -5,19 +5,21 @@
  * GNU General Public License version 2.
  */
 
-mod filenodes;
+mod microwave_filenodes;
 
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use ::filenodes::ArcFilenodes;
 use anyhow::format_err;
 use anyhow::Error;
 use blobrepo_override::DangerousOverride;
 use blobstore_factory::BlobstoreArgDefaults;
 use blobstore_factory::PutBehaviour;
+use bonsai_hg_mapping::BonsaiHgMapping;
 use bookmarks::BookmarkKey;
+use bookmarks::BookmarkUpdateLog;
 use bookmarks::BookmarkUpdateLogRef;
+use bookmarks::Bookmarks;
 use bookmarks::BookmarksRef;
 use cache_warmup::CacheWarmupKind;
 use cache_warmup::CacheWarmupRequest;
@@ -26,9 +28,12 @@ use clap::Args;
 use clap::Parser;
 use clap::Subcommand;
 use cloned::cloned;
+use commit_graph::CommitGraph;
 use context::CoreContext;
 use context::SessionContainer;
 use fbinit::FacebookInit;
+use filenodes::ArcFilenodes;
+use filenodes::Filenodes;
 use filenodes_derivation::FilenodesOnlyPublic;
 use futures::channel::mpsc;
 use futures::future;
@@ -36,23 +41,71 @@ use mercurial_derivation::MappedHgChangesetId;
 use metaconfig_types::CacheWarmupParams;
 use microwave::Snapshot;
 use microwave::SnapshotLocation;
-use mononoke_api_types::InnerRepo;
 use mononoke_app::fb303::AliveService;
 use mononoke_app::fb303::Fb303AppExtension;
 use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
+use repo_blobstore::RepoBlobstore;
+use repo_derived_data::RepoDerivedData;
 use repo_derived_data::RepoDerivedDataArc;
+use repo_identity::RepoIdentity;
 use slog::info;
 use slog::o;
 use warm_bookmarks_cache::create_derived_data_warmer;
 use warm_bookmarks_cache::find_latest_derived_and_underived;
 use warm_bookmarks_cache::LatestDerivedBookmarkEntry;
 
-use crate::filenodes::MicrowaveFilenodes;
+use crate::microwave_filenodes::MicrowaveFilenodes;
+
+#[facet::container]
+#[derive(Clone)]
+struct Repo {
+    #[facet]
+    repo_derived_data: RepoDerivedData,
+
+    #[facet]
+    repo_identity: RepoIdentity,
+
+    #[facet]
+    repo_blobstore: RepoBlobstore,
+
+    #[facet]
+    bookmarks: dyn Bookmarks,
+
+    #[facet]
+    bookmark_update_log: dyn BookmarkUpdateLog,
+
+    #[facet]
+    filenodes: dyn Filenodes,
+
+    #[facet]
+    commit_graph: CommitGraph,
+
+    #[facet]
+    bonsai_hg_mapping: dyn BonsaiHgMapping,
+}
+
+impl DangerousOverride<ArcFilenodes> for Repo {
+    fn dangerous_override<F>(&self, modify: F) -> Self
+    where
+        F: FnOnce(ArcFilenodes) -> ArcFilenodes,
+    {
+        let filenodes = modify(self.filenodes.clone());
+        let repo_derived_data = Arc::new(
+            self.repo_derived_data
+                .with_replaced_filenodes(filenodes.clone()),
+        );
+        Self {
+            filenodes,
+            repo_derived_data,
+            ..self.clone()
+        }
+    }
+}
 
 async fn cache_warmup_target(
     ctx: &CoreContext,
-    repo: &InnerRepo,
+    repo: &Repo,
     bookmark: &BookmarkKey,
 ) -> Result<CacheWarmupTarget, Error> {
     let warmers = vec![
@@ -119,7 +172,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
 
                 let warmup = async move {
                     let cache_warmup = config.cache_warmup.clone();
-                    let repo: InnerRepo = repo_factory.build(name, config, common_config).await?;
+                    let repo: Repo = repo_factory.build(name, config, common_config).await?;
 
                     // Rewind bookmarks to the point where we have derived data. Cache
                     // warmup requires filenodes to be present.
@@ -142,7 +195,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
                         None => None,
                     };
 
-                    let warmup_repo = repo.blob_repo.dangerous_override(|inner| -> ArcFilenodes {
+                    let warmup_repo = repo.dangerous_override(|inner| -> ArcFilenodes {
                         Arc::new(MicrowaveFilenodes::new(filenodes_sender, inner))
                     });
 
@@ -164,7 +217,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
                 // the repo back.
                 let repo = handle.await??;
 
-                snapshot.commit(&ctx, &repo.blob_repo, location).await?;
+                snapshot.commit(&ctx, &repo, location).await?;
 
                 Result::<_, Error>::Ok(())
             }

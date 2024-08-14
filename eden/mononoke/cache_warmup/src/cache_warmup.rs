@@ -5,11 +5,13 @@
  * GNU General Public License version 2.
  */
 
+#![feature(trait_alias)]
+
 use anyhow::Context;
 use anyhow::Error;
-use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
+use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarksRef;
 use cloned::cloned;
@@ -17,6 +19,7 @@ use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use context::PerfCounterType;
 use filenodes::FilenodeResult;
+use filenodes::FilenodesRef;
 use filenodes_derivation::FilenodesOnlyPublic;
 use futures::future;
 use futures::future::TryFutureExt;
@@ -38,6 +41,18 @@ use slog::debug;
 use slog::info;
 use slog::warn;
 use tokio::task;
+
+pub trait Repo = RepoBlobstoreRef
+    + RepoDerivedDataRef
+    + RepoIdentityRef
+    + FilenodesRef
+    + CommitGraphRef
+    + BonsaiHgMappingRef
+    + BookmarksRef
+    + Send
+    + Sync
+    + Clone
+    + 'static;
 
 mod errors {
     use bookmarks::BookmarkKey;
@@ -91,7 +106,7 @@ impl From<CacheWarmupParams> for CacheWarmupRequest {
 // there can be too many of them.
 async fn blobstore_and_filenodes_warmup(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &impl Repo,
     bcs_id: ChangesetId,
     hg_cs_id: HgChangesetId,
 ) -> Result<(), Error> {
@@ -171,7 +186,7 @@ async fn blobstore_and_filenodes_warmup(
 
 async fn commit_graph_segments_warmup(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &impl Repo,
     bcs_id: ChangesetId,
 ) -> Result<(), Error> {
     info!(
@@ -190,7 +205,7 @@ async fn commit_graph_segments_warmup(
 
 async fn do_cache_warmup(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &impl Repo,
     target: CacheWarmupTarget,
     cache_warmup_kind: CacheWarmupKind,
 ) -> Result<(), Error> {
@@ -252,7 +267,7 @@ async fn do_cache_warmup(
     Ok(())
 }
 
-async fn microwave_preload(ctx: &CoreContext, repo: &BlobRepo, req: &CacheWarmupRequest) {
+async fn microwave_preload(ctx: &CoreContext, repo: &impl Repo, req: &CacheWarmupRequest) {
     if req.microwave_preload {
         match microwave::prime_cache(ctx, repo, SnapshotLocation::Blobstore).await {
             Ok(_) => {
@@ -269,7 +284,7 @@ async fn microwave_preload(ctx: &CoreContext, repo: &BlobRepo, req: &CacheWarmup
 /// ancestors of the bookmark.
 pub async fn cache_warmup<T: Into<CacheWarmupRequest>>(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &impl Repo,
     cache_warmup: Option<T>,
     cache_warmup_kind: CacheWarmupKind,
 ) -> Result<(), Error> {

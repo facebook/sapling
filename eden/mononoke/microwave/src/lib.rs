@@ -10,7 +10,6 @@ use std::path::Path;
 use std::path::PathBuf;
 
 use anyhow::Error;
-use blobrepo::BlobRepo;
 use blobstore::Blobstore;
 use context::CoreContext;
 use fbthrift::compact_protocol;
@@ -88,7 +87,7 @@ impl Snapshot {
     pub async fn commit(
         &self,
         ctx: &CoreContext,
-        repo: &BlobRepo,
+        repo: &(impl RepoIdentityRef + RepoBlobstoreRef),
         location: SnapshotLocation<'_>,
     ) -> Result<(), Error> {
         let serialized = compact_protocol::serialize(&self.snapshot);
@@ -120,7 +119,7 @@ fn snapshot_path(shared_local_path: &Path, repo_id: RepositoryId) -> PathBuf {
 
 async fn load_snapshot(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &(impl RepoIdentityRef + RepoBlobstoreRef),
     location: SnapshotLocation<'_>,
 ) -> Result<thrift::RepoSnapshot, Error> {
     match location {
@@ -144,7 +143,7 @@ async fn load_snapshot(
 
 pub async fn prime_cache(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &(impl RepoIdentityRef + RepoBlobstoreRef + FilenodesRef),
     location: SnapshotLocation<'_>,
 ) -> Result<(), Error> {
     let snapshot = load_snapshot(ctx, repo, location).await?;
