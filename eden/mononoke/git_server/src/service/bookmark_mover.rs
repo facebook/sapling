@@ -34,6 +34,7 @@ use crate::model::RepositoryRequestContext;
 use crate::service::uploader::peel_tag_target;
 
 const DEFAULT_ADDITIONAL_CHANGESETS_LIMIT: usize = 200_000;
+const HOOK_WIKI_LINK: &str = "https://fburl.com/wiki/mb4wtk1j";
 
 /// Struct representing a ref update (create, move, delete) operation
 pub struct RefUpdateOperation {
@@ -265,7 +266,11 @@ async fn update_error(mappings_store: &GitMappingsStore, err: MononokeError) -> 
                     hook_rejection.hook_name, git_sha, hook_rejection.reason.long_description
                 ));
             }
-            anyhow::anyhow!("hooks failed:\n{}", hook_msgs.join("\n"))
+            anyhow::anyhow!(
+                "hooks failed:\n{}\n\nFor more information about hooks and bypassing, refer {}",
+                hook_msgs.join("\n"),
+                HOOK_WIKI_LINK
+            )
         }
         e => e.into(),
     }

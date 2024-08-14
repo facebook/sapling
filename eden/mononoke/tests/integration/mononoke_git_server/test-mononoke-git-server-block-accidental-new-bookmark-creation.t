@@ -85,7 +85,9 @@
   $ git_client push origin --all
   To https://localhost:$LOCAL_PORT/repos/git/ro/repo.git
    ! [remote rejected] brand_new_branch -> brand_new_branch (hooks failed:
-    block_accidental_new_bookmark_creation for 1f4e1649c9648f8d8a2fbc5d42bbc6dddd1404df: Add "@new-branch: brand_new_branch" to the commit message to be able to create this branch.)
+    block_accidental_new_bookmark_creation for 1f4e1649c9648f8d8a2fbc5d42bbc6dddd1404df: Add "@new-branch: brand_new_branch" to the commit message to be able to create this branch.
+  
+  For more information about hooks and bypassing, refer https://fburl.com/wiki/mb4wtk1j)
   error: failed to push some refs to 'https://localhost:$LOCAL_PORT/repos/git/ro/repo.git'
   [1]
 

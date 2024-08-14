@@ -76,7 +76,9 @@
     block_unannotated_tags for e8615d6f149b876be0a2f30a1c5bf0c42bf8e136: The un-annotated tag "tags/completely_new_tag" is not allowed in this repository.
   Use 'git tag [ -a | -s ]' for tags you want to propagate.
     block_unannotated_tags for 8ce3eae44760b500bf3f2c3922a95dcd3c908e9e: The un-annotated tag "tags/completely_new_tag" is not allowed in this repository.
-  Use 'git tag [ -a | -s ]' for tags you want to propagate.)
+  Use 'git tag [ -a | -s ]' for tags you want to propagate.
+  
+  For more information about hooks and bypassing, refer https://fburl.com/wiki/mb4wtk1j)
   error: failed to push some refs to 'https://localhost:$LOCAL_PORT/repos/git/ro/repo.git'
   [1]
 
