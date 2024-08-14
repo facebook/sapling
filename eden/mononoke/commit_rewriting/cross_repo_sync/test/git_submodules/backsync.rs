@@ -95,6 +95,64 @@ async fn test_changing_submodule_expansion_validation_passes_when_working_copy_m
     Ok(())
 }
 
+/// Test that if the submodule expansion is completely deleted along with its
+/// submodule metadata file, the changeset deles the submodule in the small repo
+/// when backsynced.
+#[fbinit::test]
+async fn test_backsyncing_full_submodule_expansion_deletion(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb.clone());
+
+    let (repo_b, _repo_b_cs_map) = build_repo_b(fb).await.context("Failed to build repo_b")?;
+
+    let SubmoduleSyncTestData {
+        large_repo_info: (large_repo, large_repo_master),
+        commit_syncer,
+        small_repo_info: (_small_repo, _small_repo_cs_map),
+        ..
+    } = build_submodule_backsync_test_data(
+        fb,
+        &repo_b,
+        vec![(NonRootMPath::new(REPO_B_SUBMODULE_PATH)?, repo_b.clone())],
+    )
+    .await
+    .context("Failed to build test data")?;
+
+    const MESSAGE: &str = "Update git commit in submodule metadata file";
+    let cs_id = CreateCommitContext::new(&ctx, &large_repo, vec![large_repo_master])
+        .set_message(MESSAGE)
+        .delete_file("small_repo/submodules/.x-repo-submodule-repo_b")
+        // Delete all files from repo_b submodule expansion.
+        .delete_file("small_repo/submodules/repo_b/B_A")
+        .delete_file("small_repo/submodules/repo_b/B_B")
+        .commit()
+        .await
+        .context("Failed to create commit modifying small_repo directory")?;
+
+    let sync_result = sync_to_master(ctx.clone(), &commit_syncer, cs_id).await;
+
+    // TODO(T179530927): support backsyncing submodule expansion deletion
+    // For now, backsyncing will fail complaining about the change made to the
+    // submodule metadata file.
+    assert!(
+        sync_result
+            .is_err_and(|err| { err.to_string() == "Submodule metadata file change is invalid" })
+    );
+
+    // let small_repo_changesets = get_all_changeset_data_from_repo(&ctx, &small_repo).await?;\
+    // println!("Small repo changesets: {0:#?}", &small_repo_changesets);
+    // derive_all_enabled_types_for_repo(&ctx, &small_repo, &small_repo_changesets).await?;
+    // check_mapping(ctx.clone(), &commit_syncer, cs_id, Some(small_repo_cs_id)).await;
+    // compare_expected_changesets(
+    //     small_repo_changesets.last_chunk::<1>().unwrap(),
+    //     &[ExpectedChangeset::new(MESSAGE).with_deletions(vec![
+    //         // Submodule being deleted
+    //         "submodules/repo_b",
+    //     ])],
+    // )?;
+
+    Ok(())
+}
+
 /// Test that backsync will crash for small repos with submodule expansion
 /// enabled while backsyncing submodule changes is not properly supported.
 #[fbinit::test]
