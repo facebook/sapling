@@ -29,7 +29,7 @@ sql_construct = { version = "0.1.0", path = "../../common/sql_construct" }
 tokio = { version = "1.37.0", features = ["full", "test-util", "tracing"] }
 
 [dev-dependencies]
-fbinit = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit-tokio = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 serde_json = { version = "1.0.100", features = ["float_roundtrip", "unbounded_depth"] }
 test_repo_factory = { version = "0.1.0", path = "../../repo_factory/test_repo_factory" }

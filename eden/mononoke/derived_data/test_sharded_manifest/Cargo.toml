@@ -28,7 +28,7 @@ test_manifest = { version = "0.1.0", path = "../test_manifest" }
 [dev-dependencies]
 async-recursion = "1.0.2"
 commit_graph = { version = "0.1.0", path = "../../repo_attributes/commit_graph/commit_graph" }
-fbinit = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit-tokio = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fixtures = { version = "0.1.0", path = "../../tests/fixtures" }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }

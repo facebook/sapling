@@ -19,7 +19,7 @@ vec1 = { version = "1", features = ["serde"] }
 
 [dev-dependencies]
 commit_graph_testlib = { version = "0.1.0", path = "../commit_graph_testlib" }
-fbinit = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit-tokio = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 rendezvous = { version = "0.1.0", path = "../../../common/rendezvous" }
 sql_commit_graph_storage = { version = "0.1.0", path = "../sql_commit_graph_storage" }

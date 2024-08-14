@@ -66,7 +66,7 @@ unbundle = { version = "0.1.0", path = "unbundle" }
 wireproto_handler = { version = "0.1.0", path = "../wireproto_handler" }
 
 [dev-dependencies]
-fbinit = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit-tokio = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fixtures = { version = "0.1.0", path = "../tests/fixtures" }
 mononoke_api_types = { version = "0.1.0", path = "../mononoke_api/types" }

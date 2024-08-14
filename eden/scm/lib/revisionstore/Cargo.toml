@@ -18,7 +18,7 @@ crossbeam = "0.8"
 curl = { version = "0.4.41", features = ["http2"] }
 edenapi = { version = "0.1.0", path = "../edenapi" }
 edenapi_types = { version = "0.1.0", path = "../edenapi/types" }
-fbinit = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main", optional = true }
+fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main", optional = true }
 fn-error-context = "0.2"
 fs-err = { version = "2.6.0", features = ["tokio"] }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }

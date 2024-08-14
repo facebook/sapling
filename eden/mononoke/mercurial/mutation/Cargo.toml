@@ -39,7 +39,7 @@ sql_ext = { version = "0.1.0", path = "../../common/rust/sql_ext" }
 types = { version = "0.1.0", path = "../../../scm/lib/types" }
 
 [dev-dependencies]
-fbinit = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit-tokio = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 maplit = "1.0"
 mercurial_types-mocks = { version = "0.1.0", path = "../types/mocks" }

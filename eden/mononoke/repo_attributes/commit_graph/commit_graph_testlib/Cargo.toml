@@ -24,5 +24,5 @@ smallvec = { version = "1.6.1", features = ["serde", "specialization", "union"] 
 vec1 = { version = "1", features = ["serde"] }
 
 [dev-dependencies]
-fbinit = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit-tokio = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

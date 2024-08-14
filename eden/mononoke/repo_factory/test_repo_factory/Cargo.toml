@@ -27,7 +27,7 @@ context = { version = "0.1.0", path = "../../server/context" }
 dbbookmarks = { version = "0.1.0", path = "../../bookmarks/dbbookmarks" }
 ephemeral_blobstore = { version = "0.1.0", path = "../../blobstore/ephemeral_blobstore" }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-fbinit = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 filenodes = { version = "0.1.0", path = "../../filenodes" }
 filestore = { version = "0.1.0", path = "../../filestore" }
 git_push_redirect = { version = "0.1.0", path = "../../git_push_redirect" }
