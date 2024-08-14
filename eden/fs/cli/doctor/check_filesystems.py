@@ -15,6 +15,7 @@ import stat
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Set, Tuple, Union
 
@@ -529,6 +530,7 @@ class MissingFilesForInodes(PathsProblem, FixableProblem):
             ),
             severity=ProblemSeverity.ERROR,
         )
+        self.EDEN_FILE_RECREATE_TIME = 1
 
     def dry_run_msg(self) -> str:
         return (
@@ -561,19 +563,30 @@ class MissingFilesForInodes(PathsProblem, FixableProblem):
 {errors}
 """
             )
+        # wait a little bit for eden to recreate the path
+        time.sleep(self.EDEN_FILE_RECREATE_TIME)
 
     def check_fix(self) -> bool:
-        try:
-            for dirent_path in self._paths:
+        failed_fixed_paths = []
+        missing_path = False
+        for dirent_path in self._paths:
+            try:
                 self._get_fn(self._mount / dirent_path)
-            return True
-        except FileNotFoundError as ex:
-            print(f"Failed to remediate {self._paths}: {ex}")
-        except Exception as ex:
-            print(
-                f"Unexpected error trying to remediate missing files {self._paths}: {ex}"
-            )
-        return False
+            except FileNotFoundError as ex:
+                failed_fixed_paths.append(
+                    f"Path still missing: {self._mount / dirent_path}: {ex}"
+                )
+                missing_path = True
+            except Exception as ex:
+                failed_fixed_paths.append(
+                    f"Unexpected error trying to remediate missing file {self._mount / dirent_path}: {ex}"
+                )
+        if failed_fixed_paths:
+            errorMsg = "\n".join(failed_fixed_paths)
+            if missing_path:
+                errorMsg += "\nPaths may take some time to be recreated, verify that the files are still missing"
+            raise RemediationError(f"Failed to fix paths for: \n{errorMsg}")
+        return True
 
 
 class DuplicateInodes(PathsProblem):
