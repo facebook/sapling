@@ -7,7 +7,6 @@
 
 use anyhow::Context;
 use anyhow::Error;
-use blobrepo::BlobRepo;
 use bookmarks_movement::BookmarkMovementError;
 use context::CoreContext;
 use futures::future::BoxFuture;
@@ -25,6 +24,7 @@ use crate::resolver::HgHookRejection;
 use crate::resolver::PostResolveAction;
 use crate::resolver::PostResolvePushRebase;
 use crate::BundleResolverError;
+use crate::Repo;
 
 /// A function to remap hook rejections from Bonsai to Hg.
 pub(crate) trait HookRejectionRemapper = (Fn(HookRejection) -> BoxFuture<'static, Result<HgHookRejection, Error>>)
@@ -34,7 +34,7 @@ pub(crate) trait HookRejectionRemapper = (Fn(HookRejection) -> BoxFuture<'static
 
 pub(crate) fn make_hook_rejection_remapper(
     ctx: &CoreContext,
-    repo: BlobRepo,
+    repo: impl Repo,
 ) -> Box<dyn HookRejectionRemapper> {
     let ctx = ctx.clone();
     Box::new(
@@ -72,7 +72,7 @@ pub(crate) async fn map_hook_rejections(
 
 pub async fn run_hooks(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &impl Repo,
     hook_manager: &HookManager,
     action: &PostResolveAction,
     cross_repo_push_source: CrossRepoPushSource,
@@ -90,7 +90,7 @@ pub async fn run_hooks(
 
 async fn run_pushrebase_hooks(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &impl Repo,
     hook_manager: &HookManager,
     action: &PostResolvePushRebase,
     cross_repo_push_source: CrossRepoPushSource,

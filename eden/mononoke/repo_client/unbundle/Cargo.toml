@@ -11,7 +11,6 @@ license = "GPLv2+"
 anyhow = "1.0.75"
 ascii = "1.0"
 backsyncer = { version = "0.1.0", path = "../../commit_rewriting/backsyncer" }
-blobrepo = { version = "0.1.0", path = "../../blobrepo" }
 blobrepo_hg = { version = "0.1.0", path = "../../blobrepo/blobrepo_hg" }
 blobstore = { version = "0.1.0", path = "../../blobstore" }
 bonsai_hg_mapping = { version = "0.1.0", path = "../../bonsai_hg_mapping" }
@@ -20,6 +19,7 @@ bookmarks_movement = { version = "0.1.0", path = "../../bookmarks/bookmarks_move
 bytes = { version = "1.6.0", features = ["serde"] }
 cacheblob = { version = "0.1.0", path = "../../blobstore/cacheblob" }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+commit_graph = { version = "0.1.0", path = "../../repo_attributes/commit_graph/commit_graph" }
 context = { version = "0.1.0", path = "../../server/context" }
 cross_repo_sync = { version = "0.1.0", path = "../../commit_rewriting/cross_repo_sync" }
 filestore = { version = "0.1.0", path = "../../filestore" }
@@ -43,6 +43,7 @@ mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 obsolete = { version = "0.1.0", path = "../obsolete" }
+phases = { version = "0.1.0", path = "../../phases" }
 pin-project = "0.4.30"
 pushrebase = { version = "0.1.0", path = "../../pushrebase" }
 pushrebase_client = { version = "0.1.0", path = "../../pushrebase/client" }
@@ -51,6 +52,7 @@ rate_limiting = { version = "0.1.0", path = "../../rate_limiting" }
 remotefilelog = { version = "0.1.0", path = "../remotefilelog" }
 repo_authorization = { version = "0.1.0", path = "../../repo_authorization" }
 repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
+repo_derived_data = { version = "0.1.0", path = "../../repo_attributes/repo_derived_data" }
 repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity" }
 repo_update_logger = { version = "0.1.0", path = "../../features/repo_update_logger" }
 scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
@@ -66,6 +68,7 @@ wirepack = { version = "0.1.0", path = "../wirepack" }
 wireproto_handler = { version = "0.1.0", path = "../../wireproto_handler" }
 
 [dev-dependencies]
+facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit-tokio = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 itertools = "0.11.0"

@@ -18,10 +18,8 @@ use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use ascii::AsciiString;
-use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use blobrepo_hg::ChangesetHandle;
-use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bookmarks::BookmarkKey;
 use bytes::Bytes;
 use context::CoreContext;
@@ -49,7 +47,6 @@ use metaconfig_types::PushrebaseFlags;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use rate_limiting::RateLimitBody;
-use repo_identity::RepoIdentityRef;
 use slog::trace;
 use topo_sort::sort_topological;
 use wirepack::parse_treemanifest_bundle2;
@@ -68,6 +65,7 @@ use crate::upload_blobs::upload_hg_blobs;
 use crate::upload_changesets::upload_changeset;
 use crate::upload_changesets::Filelogs;
 use crate::upload_changesets::Manifests;
+use crate::Repo;
 
 #[allow(non_snake_case)]
 mod UNBUNDLE_STATS {
@@ -256,11 +254,11 @@ pub enum PostResolveAction {
 }
 
 /// The resolve function takes a bundle2, interprets it's content as Changesets, Filelogs and
-/// Manifests and uploades all of them to the provided BlobRepo in the correct order.
+/// Manifests and uploades all of them to the provided repo in the correct order.
 /// It returns a Future that contains the response that should be send back to the requester.
 pub async fn resolve<'a>(
     ctx: &'a CoreContext,
-    repo: &'a BlobRepo,
+    repo: &'a impl Repo,
     infinitepush_writes_allowed: bool,
     bundle2: BoxStream<'static, Result<Bundle2Item<'static>>>,
     push_params: &'a PushParams,
@@ -283,7 +281,7 @@ pub async fn resolve<'a>(
 
 async fn resolve_impl<'a>(
     ctx: &'a CoreContext,
-    repo: &'a BlobRepo,
+    repo: &'a impl Repo,
     infinitepush_writes_allowed: bool,
     bundle2: BoxStream<'static, Result<Bundle2Item<'static>>>,
     push_params: &'a PushParams,
@@ -370,7 +368,7 @@ async fn resolve_impl<'a>(
 
 fn report_unbundle_type(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &impl Repo,
     post_resolve_action: &Result<PostResolveAction, BundleResolverError>,
 ) {
     let repo_name = repo.repo_identity().name().to_string();
@@ -406,9 +404,9 @@ fn report_unbundle_type(
     }
 }
 
-async fn resolve_push<'r>(
+async fn resolve_push<'r, R: Repo>(
     ctx: &'r CoreContext,
-    resolver: Bundle2Resolver<'r>,
+    resolver: Bundle2Resolver<'r, R>,
     bundle2: BoxStream<'static, Result<Bundle2Item<'static>>>,
     maybe_pushvars: Option<HashMap<String, Bytes>>,
     non_fast_forward_policy: NonFastForwardPolicy,
@@ -590,10 +588,10 @@ impl<T: Copy> PushrebaseBookmarkSpec<T> {
     }
 }
 
-async fn resolve_pushrebase<'r>(
+async fn resolve_pushrebase<'r, R: Repo>(
     ctx: &'r CoreContext,
     commonheads: CommonHeads,
-    resolver: Bundle2Resolver<'r>,
+    resolver: Bundle2Resolver<'r, R>,
     bundle2: BoxStream<'static, Result<Bundle2Item<'static>>>,
     maybe_pushvars: Option<HashMap<String, Bytes>>,
     changegroup_acceptable: impl FnOnce() -> bool + Send + Sync + 'static,
@@ -693,9 +691,9 @@ async fn resolve_pushrebase<'r>(
 }
 
 /// Do the right thing when pushrebase-enabled client only wants to manipulate bookmarks
-async fn resolve_bookmark_only_pushrebase<'r>(
+async fn resolve_bookmark_only_pushrebase<'r, R: Repo>(
     ctx: &'r CoreContext,
-    resolver: Bundle2Resolver<'r>,
+    resolver: Bundle2Resolver<'r, R>,
     bundle2: BoxStream<'static, Result<Bundle2Item<'static>>>,
     maybe_pushvars: Option<HashMap<String, Bytes>>,
     non_fast_forward_policy: NonFastForwardPolicy,
@@ -795,19 +793,19 @@ enum Pushkey {
 
 /// Holds repo and logger for convienience access from it's methods
 #[derive(Clone)]
-struct Bundle2Resolver<'r> {
+struct Bundle2Resolver<'r, R: Repo> {
     ctx: &'r CoreContext,
-    repo: &'r BlobRepo,
+    repo: &'r R,
     infinitepush_writes_allowed: bool,
     unbundle_commit_limit: Option<u64>,
     #[allow(dead_code)]
     pushrebase_flags: PushrebaseFlags,
 }
 
-impl<'r> Bundle2Resolver<'r> {
+impl<'r, R: Repo> Bundle2Resolver<'r, R> {
     fn new(
         ctx: &'r CoreContext,
-        repo: &'r BlobRepo,
+        repo: &'r R,
         infinitepush_writes_allowed: bool,
         unbundle_commit_limit: Option<u64>,
         pushrebase_flags: PushrebaseFlags,
@@ -926,7 +924,7 @@ impl<'r> Bundle2Resolver<'r> {
     /// Parse changegroup.
     /// The ChangegroupId will be used in the last step for preparing response
     /// The Changesets should be parsed as RevlogChangesets and used for uploading changesets
-    /// The Filelogs should be scheduled for uploading to BlobRepo and the Future resolving in
+    /// The Filelogs should be scheduled for uploading to the repo and the Future resolving in
     /// their upload should be used for uploading changesets
     /// `pure_push_allowed` argument is responsible for allowing
     /// pure (non-pushrebase and non-infinitepush) pushes
@@ -1136,7 +1134,7 @@ impl<'r> Bundle2Resolver<'r> {
     }
 
     /// Parse b2xtreegroup2.
-    /// The Manifests should be scheduled for uploading to BlobRepo and the Future resolving in
+    /// The Manifests should be scheduled for uploading to the repo and the Future resolving in
     /// their upload as well as their parsed content should be used for uploading changesets.
     async fn resolve_b2xtreegroup2(
         &self,
@@ -1360,7 +1358,7 @@ fn get_optional_changeset_param(
 
 async fn build_changegroup_push(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &impl Repo,
     part_header: PartHeader,
     changesets: Changesets,
     filelogs: Filelogs,
@@ -1502,7 +1500,7 @@ fn toposort_changesets(
 
 async fn bonsai_from_hg_opt(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &impl Repo,
     cs_id: Option<HgChangesetId>,
 ) -> Result<Option<ChangesetId>, Error> {
     match cs_id {
@@ -1523,7 +1521,7 @@ async fn bonsai_from_hg_opt(
 
 async fn plain_hg_bookmark_push_to_bonsai(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &impl Repo,
     bookmark_push: PlainBookmarkPush<HgChangesetId>,
 ) -> Result<PlainBookmarkPush<ChangesetId>, Error> {
     let PlainBookmarkPush {
@@ -1548,7 +1546,7 @@ async fn plain_hg_bookmark_push_to_bonsai(
 
 async fn infinite_hg_bookmark_push_to_bonsai(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &impl Repo,
     bookmark_push: InfiniteBookmarkPush<HgChangesetId>,
 ) -> Result<InfiniteBookmarkPush<ChangesetId>, Error> {
     let InfiniteBookmarkPush {
@@ -1579,7 +1577,7 @@ async fn infinite_hg_bookmark_push_to_bonsai(
 
 async fn hg_pushrebase_bookmark_spec_to_bonsai(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &impl Repo,
     bookmark_spec: PushrebaseBookmarkSpec<HgChangesetId>,
 ) -> Result<PushrebaseBookmarkSpec<ChangesetId>, Error> {
     let pbs = match bookmark_spec {
@@ -1597,7 +1595,7 @@ async fn hg_pushrebase_bookmark_spec_to_bonsai(
 
 async fn hg_all_bookmark_pushes_to_bonsai(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &impl Repo,
     all_bookmark_pushes: AllBookmarkPushes<HgChangesetId>,
 ) -> Result<AllBookmarkPushes<ChangesetId>, Error> {
     let abp = match all_bookmark_pushes {

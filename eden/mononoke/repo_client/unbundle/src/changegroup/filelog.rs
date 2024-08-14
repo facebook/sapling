@@ -12,13 +12,11 @@ use anyhow::bail;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
-use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
 use filestore::FetchKey;
-use filestore::FilestoreConfigRef;
 use futures::future::BoxFuture;
 use futures::Future;
 use futures::FutureExt;
@@ -45,11 +43,10 @@ use mercurial_types::NULL_HASH;
 use quickcheck::Arbitrary;
 use quickcheck::Gen;
 use remotefilelog::create_raw_filenode_blob;
-use repo_blobstore::RepoBlobstoreArc;
-use repo_blobstore::RepoBlobstoreRef;
 
 use crate::stats::*;
 use crate::upload_blobs::UploadableHgBlob;
+use crate::Repo;
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct FilelogDeltaed {
@@ -78,7 +75,7 @@ impl UploadableHgBlob for Filelog {
     //   one changeset, and all of those will want to refer to the corresponding future.
     type Value = TryShared<BoxFuture<'static, Result<(HgFileNodeId, RepoPath)>>>;
 
-    fn upload(self, ctx: &CoreContext, repo: &BlobRepo) -> Result<(HgNodeKey, Self::Value)> {
+    fn upload(self, ctx: &CoreContext, repo: &impl Repo) -> Result<(HgNodeKey, Self::Value)> {
         let node_key = self.node_key;
         let path = match &node_key.path {
             RepoPath::FilePath(path) => path.clone(),
@@ -105,12 +102,12 @@ impl UploadableHgBlob for Filelog {
     }
 }
 
-pub(crate) fn convert_to_revlog_filelog(
+pub(crate) fn convert_to_revlog_filelog<R: Repo>(
     ctx: CoreContext,
-    repo: BlobRepo,
+    repo: R,
     deltaed: impl Stream<Item = Result<FilelogDeltaed>> + Send + 'static,
 ) -> impl Stream<Item = Result<Filelog>> {
-    let mut delta_cache = DeltaCache::new(repo.clone());
+    let mut delta_cache = DeltaCache::<R>::new(repo.clone());
     deltaed
         .map_ok(move |FilelogDeltaed { path, chunk }| {
             let CgDeltaChunk {
@@ -160,7 +157,7 @@ pub(crate) fn convert_to_revlog_filelog(
 
 async fn generate_lfs_meta_data(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &impl Repo,
     data: Bytes,
 ) -> Result<ContentBlobMeta, Error> {
     // TODO(anastasiyaz): check size
@@ -177,7 +174,7 @@ async fn generate_lfs_meta_data(
 
 async fn get_filelog_data(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &impl Repo,
     data: Bytes,
     flags: RevFlags,
 ) -> Result<FilelogData, Error> {
@@ -189,13 +186,13 @@ async fn get_filelog_data(
     }
 }
 
-struct DeltaCache {
-    repo: BlobRepo,
+struct DeltaCache<R: Repo> {
+    repo: R,
     bytes_cache: HashMap<HgNodeHash, TryShared<BoxFuture<'static, Result<Bytes>>>>,
 }
 
-impl DeltaCache {
-    fn new(repo: BlobRepo) -> Self {
+impl<R: Repo> DeltaCache<R> {
+    fn new(repo: R) -> Self {
         Self {
             repo,
             bytes_cache: HashMap::new(),
@@ -335,17 +332,61 @@ impl Arbitrary for Filelog {
 mod tests {
     use std::cmp::min;
 
+    use bonsai_hg_mapping::BonsaiHgMapping;
+    use bookmarks::Bookmarks;
+    use commit_graph::CommitGraph;
+    use commit_graph::CommitGraphWriter;
     use fbinit::FacebookInit;
+    use filestore::FilestoreConfig;
     use futures::stream::iter;
     use itertools::assert_equal;
     use itertools::EitherOrBoth;
     use itertools::Itertools;
+    use mercurial_mutation::HgMutationStore;
     use mercurial_types::delta::Fragment;
     use mercurial_types::NULL_HASH;
     use mercurial_types_mocks::nodehash::*;
+    use phases::Phases;
     use quickcheck_macros::quickcheck;
+    use repo_blobstore::RepoBlobstore;
+    use repo_derived_data::RepoDerivedData;
+    use repo_identity::RepoIdentity;
 
     use super::*;
+
+    #[facet::container]
+    #[derive(Clone)]
+    struct TestRepo {
+        #[facet]
+        commit_graph: CommitGraph,
+
+        #[facet]
+        commit_graph_writer: dyn CommitGraphWriter,
+
+        #[facet]
+        bonsai_hg_mapping: dyn BonsaiHgMapping,
+
+        #[facet]
+        bookmarks: dyn Bookmarks,
+
+        #[facet]
+        repo_derived_data: RepoDerivedData,
+
+        #[facet]
+        phases: dyn Phases,
+
+        #[facet]
+        hg_mutation_store: dyn HgMutationStore,
+
+        #[facet]
+        repo_blobstore: RepoBlobstore,
+
+        #[facet]
+        filestore_config: FilestoreConfig,
+
+        #[facet]
+        repo_identity: RepoIdentity,
+    }
 
     struct NodeHashGen {
         bytes: Vec<u8>,
@@ -377,15 +418,12 @@ mod tests {
         I: IntoIterator<Item = FilelogDeltaed>,
         J: IntoIterator<Item = Filelog>,
     {
-        let repo_factory = test_repo_factory::build_empty(ctx.fb).await.unwrap();
-        let result = convert_to_revlog_filelog(
-            ctx,
-            repo_factory,
-            iter(inp.into_iter().map(Ok).collect::<Vec<_>>()),
-        )
-        .try_collect::<Vec<_>>()
-        .await
-        .unwrap();
+        let repo: TestRepo = test_repo_factory::build_empty(ctx.fb).await.unwrap();
+        let result =
+            convert_to_revlog_filelog(ctx, repo, iter(inp.into_iter().map(Ok).collect::<Vec<_>>()))
+                .try_collect::<Vec<_>>()
+                .await
+                .unwrap();
 
         assert_equal(result, exp);
     }
@@ -536,8 +574,8 @@ mod tests {
             vec![f2_deltaed, f1_deltaed]
         };
 
-        let repo_factory = test_repo_factory::build_empty(ctx.fb).await.unwrap();
-        let result = convert_to_revlog_filelog(ctx, repo_factory, iter(inp.into_iter().map(Ok)))
+        let repo: TestRepo = test_repo_factory::build_empty(ctx.fb).await.unwrap();
+        let result = convert_to_revlog_filelog(ctx, repo, iter(inp.into_iter().map(Ok)))
             .try_collect::<Vec<_>>()
             .await;
 

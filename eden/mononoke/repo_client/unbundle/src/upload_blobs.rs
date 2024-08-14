@@ -8,7 +8,6 @@
 use std::collections::HashMap;
 
 use anyhow::Result;
-use blobrepo::BlobRepo;
 use context::CoreContext;
 use futures::future::BoxFuture;
 use futures::Stream;
@@ -22,19 +21,20 @@ use mercurial_types::HgManifestId;
 use mercurial_types::HgNodeHash;
 use mercurial_types::HgNodeKey;
 use mononoke_types::RepoPath;
-use repo_blobstore::RepoBlobstoreArc;
 use wirepack::TreemanifestEntry;
+
+use crate::Repo;
 
 /// Represents data that is Mercurial-encoded and can be uploaded to the blobstore.
 pub trait UploadableHgBlob {
     type Value: Send + 'static;
 
-    fn upload(self, ctx: &CoreContext, repo: &BlobRepo) -> Result<(HgNodeKey, Self::Value)>;
+    fn upload(self, ctx: &CoreContext, repo: &impl Repo) -> Result<(HgNodeKey, Self::Value)>;
 }
 
 pub(crate) async fn upload_hg_blobs<'a, S, B>(
     ctx: &'a CoreContext,
-    repo: &'a BlobRepo,
+    repo: &'a impl Repo,
     blobs: S,
 ) -> Result<HashMap<HgNodeKey, B::Value>>
 where
@@ -60,7 +60,7 @@ impl UploadableHgBlob for TreemanifestEntry {
         TryShared<BoxFuture<'static, Result<(HgManifestId, RepoPath)>>>,
     );
 
-    fn upload(self, ctx: &CoreContext, repo: &BlobRepo) -> Result<(HgNodeKey, Self::Value)> {
+    fn upload(self, ctx: &CoreContext, repo: &impl Repo) -> Result<(HgNodeKey, Self::Value)> {
         let node_key = self.node_key;
         let manifest_content = self.manifest_content;
         let p1 = self.p1;

@@ -20,11 +20,22 @@ mod stats;
 mod upload_blobs;
 mod upload_changesets;
 
+use bonsai_hg_mapping::BonsaiHgMappingArc;
+use bookmarks::BookmarksRef;
+use commit_graph::CommitGraphArc;
+use commit_graph::CommitGraphWriterArc;
+use filestore::FilestoreConfigRef;
 pub use hook_running::run_hooks;
 pub use hooks::CrossRepoPushSource;
+use mercurial_mutation::HgMutationStoreArc;
+use phases::PhasesRef;
 pub use processing::run_post_resolve_action;
 pub use push_redirector::PushRedirector;
 pub use push_redirector::PushRedirectorArgs;
+use repo_blobstore::RepoBlobstoreArc;
+use repo_blobstore::RepoBlobstoreRef;
+use repo_derived_data::RepoDerivedDataArc;
+use repo_identity::RepoIdentityRef;
 pub use resolver::resolve;
 pub use resolver::BundleResolverError;
 pub use resolver::BundleResolverResultExt;
@@ -47,3 +58,20 @@ pub use response::UnbundlePushRebaseResponse;
 pub use response::UnbundlePushResponse;
 pub use response::UnbundleResponse;
 pub use upload_changesets::upload_changeset;
+
+pub trait Repo = CommitGraphArc
+    + CommitGraphWriterArc
+    + BonsaiHgMappingArc
+    + BookmarksRef
+    + RepoDerivedDataArc
+    + PhasesRef
+    + HgMutationStoreArc
+    + RepoBlobstoreRef
+    + RepoBlobstoreArc
+    + FilestoreConfigRef
+    + RepoIdentityRef
+    + remotefilelog::RepoLike
+    + Clone
+    + 'static
+    + Send
+    + Sync;

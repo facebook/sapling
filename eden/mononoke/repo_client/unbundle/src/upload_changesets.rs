@@ -12,7 +12,6 @@ use ::manifest::Entry;
 use anyhow::bail;
 use anyhow::Error;
 use anyhow::Result;
-use blobrepo::BlobRepo;
 use blobrepo_hg::create_bonsai_changeset_hook;
 use blobrepo_hg::ChangesetHandle;
 use blobrepo_hg::CreateChangeset;
@@ -45,6 +44,7 @@ use wireproto_handler::BackupSourceRepo;
 use crate::changegroup::Filelog;
 use crate::stats::*;
 use crate::upload_blobs::UploadableHgBlob;
+use crate::Repo;
 
 pub type Filelogs = HashMap<HgNodeKey, <Filelog as UploadableHgBlob>::Value>;
 pub type Manifests = HashMap<HgNodeKey, <TreemanifestEntry as UploadableHgBlob>::Value>;
@@ -263,7 +263,7 @@ fn is_entry_present_in_parent(
 /// Retrieves the parent from uploaded changesets, if it is missing then fetches it from BlobRepo
 fn get_parent(
     ctx: CoreContext,
-    repo: &BlobRepo,
+    repo: &impl Repo,
     map: &UploadedChangesets,
     p: Option<HgNodeHash>,
 ) -> Option<ChangesetHandle> {
@@ -282,7 +282,7 @@ fn get_parent(
 
 pub async fn upload_changeset(
     ctx: CoreContext,
-    repo: BlobRepo,
+    repo: impl Repo,
     scuba_logger: MononokeScubaSampleBuilder,
     node: HgChangesetId,
     revlog_cs: &RevlogChangeset,

@@ -9,7 +9,6 @@ use std::io::Cursor;
 
 use anyhow::Context;
 use anyhow::Result;
-use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use bookmarks::BookmarkKey;
 use bytes::Bytes;
@@ -30,6 +29,7 @@ use metaconfig_types::PushrebaseParams;
 use mononoke_types::ChangesetId;
 
 use crate::CommonHeads;
+use crate::Repo;
 
 /// Data, needed to generate a `Push` response
 pub struct UnbundlePushResponse {
@@ -112,7 +112,7 @@ impl UnbundleResponse {
     async fn generate_pushrebase_response_bytes(
         ctx: &CoreContext,
         data: UnbundlePushRebaseResponse,
-        repo: &BlobRepo,
+        repo: &impl Repo,
         pushrebase_params: PushrebaseParams,
         lfs_params: &SessionLfsParams,
     ) -> Result<Bytes> {
@@ -209,7 +209,7 @@ impl UnbundleResponse {
     pub async fn generate_bytes(
         self,
         ctx: &CoreContext,
-        repo: &BlobRepo,
+        repo: &impl Repo,
         pushrebase_params: PushrebaseParams,
         lfs_params: &SessionLfsParams,
         respondlightly: Option<bool>,
