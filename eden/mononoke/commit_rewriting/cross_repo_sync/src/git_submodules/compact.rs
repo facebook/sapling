@@ -7,6 +7,7 @@
 
 use std::clone::Clone;
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::sync::Arc;
 
 use anyhow::anyhow;
@@ -19,15 +20,19 @@ use commit_transformation::rewrite_commit;
 use commit_transformation::RewriteOpts;
 use context::CoreContext;
 use filestore::StoreRequest;
+use fsnodes::RootFsnodeId;
+use futures::future;
 use futures::stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use itertools::Itertools;
+use manifest::ManifestOps;
 use mononoke_types::BonsaiChangesetMut;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
 use mononoke_types::FileChange;
 use mononoke_types::FileType;
+use mononoke_types::FsnodeId;
 use mononoke_types::GitLfs;
 use mononoke_types::NonRootMPath;
 use movers::Mover;
@@ -39,6 +44,8 @@ use crate::git_submodules::utils::get_x_repo_submodule_metadata_file_path;
 use crate::git_submodules::validation::SubmoduleExpansionValidationToken;
 use crate::git_submodules::validation::ValidSubmoduleExpansionBonsai;
 use crate::git_submodules::SubmodulePath;
+use crate::reporting::log_debug;
+use crate::reporting::log_error;
 use crate::reporting::log_trace;
 use crate::reporting::run_and_log_stats_to_scuba;
 use crate::types::Repo;
@@ -262,7 +269,13 @@ async fn compact_submodule_expansion_file_changes<'a, R: Repo>(
                     .await
                 }
                 FileChange::Deletion => {
-                    Err(anyhow!("Submodule expansion deletion not supported yet"))
+                    compact_submodule_expansion_deletion(
+                        ctx,
+                        bonsai_mut,
+                        large_repo,
+                        large_repo_sm_path,
+                    )
+                    .await
                 }
                 _ => bail!("Unsupported change to submodule metadata file"),
             }
@@ -322,6 +335,100 @@ async fn compact_submodule_expansion_update<'a, R: Repo>(
     bonsai_mut
         .file_changes
         .insert(large_repo_sm_path, sm_file_change);
+
+    Ok(bonsai_mut)
+}
+
+/// Handle deletion of the submodule expansion.
+///
+///
+/// Even though deleting only the submodule metadata file would be a valid,
+/// "back-syncable" change, this change would add the entire expansion working
+/// copy to the small repo.
+/// Because users would likely shoot themselves in the foot when doing this,
+/// we'll only allow the deletion of the metadata file if the **entire
+/// submodule expansion is also deleted**.
+///
+/// NOTE: when this function is called, the caller has already removed the
+/// submodule metadata file change from the bonsai.
+async fn compact_submodule_expansion_deletion<'a, R: Repo>(
+    ctx: &'a CoreContext,
+    bonsai_mut: BonsaiChangesetMut,
+    large_repo: &'a R,
+    large_repo_sm_path: NonRootMPath,
+) -> Result<BonsaiChangesetMut> {
+    let parents = bonsai_mut.parents.clone();
+    let parent_cs_id = match parents[..] {
+        [cs_id] => cs_id,
+        [] => bail!("Can't compact expansion in bonsai without parents"),
+        _ => bail!("Can't compact expansion in bonsai with multiple parents"),
+    };
+
+    let parent_fsnode_id: FsnodeId = large_repo
+        .repo_derived_data()
+        .derive::<RootFsnodeId>(ctx, parent_cs_id)
+        .await
+        .context("Failed to derive parent root fsnode id")?
+        .into_fsnode_id();
+
+    let expansion_files_stream = parent_fsnode_id.list_leaf_entries_under(
+        ctx.clone(),
+        large_repo.repo_blobstore_arc(),
+        [large_repo_sm_path.clone()],
+    );
+
+    // Iterate over all the files in the submodule expansion working copy to
+    // ensure that they're all being deleted in this changeset.
+    //
+    // Keep track of any file in the expansion that is not being deleted, to
+    // throw an error and log.
+    let (mut bonsai_mut, missing_paths) = expansion_files_stream
+        .try_fold(
+            (bonsai_mut, HashSet::new()),
+            |(mut bonsai_mut, mut missing_paths), (file_path, _)| {
+                let fc = bonsai_mut.file_changes.remove(&file_path);
+                match fc {
+                    // File in expansion is being deleted, as expected
+                    Some(FileChange::Deletion) => (),
+                    Some(fc) => {
+                        log_trace(
+                            ctx,
+                            format!("File {file_path} is being modified when it should be deleted. Change: {fc:#?}"),
+                        );
+                        missing_paths.insert(file_path);
+                    }
+                    None => {
+                        log_trace(ctx, format!("File {file_path} was not deleted"));
+                        missing_paths.insert(file_path);
+                    }
+                };
+                future::ok((bonsai_mut, missing_paths))
+            },
+        )
+        .await?;
+
+    if !missing_paths.is_empty() {
+        let msg = format!(
+            "Submodule metadata file was deleted but {} files in the submodule expansion were not.",
+            missing_paths.len()
+        );
+        log_error(ctx, msg.clone());
+
+        let examples = missing_paths.into_iter().take(10).collect::<Vec<_>>();
+        log_debug(
+            ctx,
+            format!("Example paths that should be deleted but weren't: {examples:#?}"),
+        );
+
+        return Err(anyhow!(msg));
+    }
+
+    // All paths in submodule expansion were removed. The submodule metadata
+    // file change was removed by the caller, so now we just need to insert a
+    // deletion for the submodule.
+    bonsai_mut
+        .file_changes
+        .insert(large_repo_sm_path, FileChange::Deletion);
 
     Ok(bonsai_mut)
 }

@@ -107,7 +107,7 @@ async fn test_backsyncing_full_submodule_expansion_deletion(fb: FacebookInit) ->
     let SubmoduleSyncTestData {
         large_repo_info: (large_repo, large_repo_master),
         commit_syncer,
-        small_repo_info: (_small_repo, _small_repo_cs_map),
+        small_repo_info: (small_repo, _small_repo_cs_map),
         ..
     } = build_submodule_backsync_test_data(
         fb,
@@ -128,28 +128,22 @@ async fn test_backsyncing_full_submodule_expansion_deletion(fb: FacebookInit) ->
         .await
         .context("Failed to create commit modifying small_repo directory")?;
 
-    let sync_result = sync_to_master(ctx.clone(), &commit_syncer, cs_id).await;
+    let small_repo_cs_id = sync_to_master(ctx.clone(), &commit_syncer, cs_id)
+        .await?
+        .ok_or(anyhow!("Failed to sync commit"))?;
 
-    // TODO(T179530927): support backsyncing submodule expansion deletion
-    // For now, backsyncing will fail complaining about the change made to the
-    // submodule metadata file.
-    assert!(
-        sync_result.is_err_and(|err| {
-            err.to_string() == "Submodule expansion deletion not supported yet"
-        })
-    );
+    let small_repo_changesets = get_all_changeset_data_from_repo(&ctx, &small_repo).await?;
+    println!("Small repo changesets: {0:#?}", &small_repo_changesets);
 
-    // let small_repo_changesets = get_all_changeset_data_from_repo(&ctx, &small_repo).await?;\
-    // println!("Small repo changesets: {0:#?}", &small_repo_changesets);
-    // derive_all_enabled_types_for_repo(&ctx, &small_repo, &small_repo_changesets).await?;
-    // check_mapping(ctx.clone(), &commit_syncer, cs_id, Some(small_repo_cs_id)).await;
-    // compare_expected_changesets(
-    //     small_repo_changesets.last_chunk::<1>().unwrap(),
-    //     &[ExpectedChangeset::new(MESSAGE).with_deletions(vec![
-    //         // Submodule being deleted
-    //         "submodules/repo_b",
-    //     ])],
-    // )?;
+    derive_all_enabled_types_for_repo(&ctx, &small_repo, &small_repo_changesets).await?;
+    check_mapping(ctx.clone(), &commit_syncer, cs_id, Some(small_repo_cs_id)).await;
+    compare_expected_changesets(
+        small_repo_changesets.last_chunk::<1>().unwrap(),
+        &[ExpectedChangeset::new(MESSAGE).with_deletions(vec![
+            // Submodule being deleted
+            "submodules/repo_b",
+        ])],
+    )?;
 
     Ok(())
 }
@@ -366,7 +360,7 @@ async fn test_deleting_submodule_metadata_file_without_expansion_passes_validati
     assert!(sync_result.is_err_and(|err| {
         // TODO(T187241943): pass validation but fail backsyncing when user
         // only deletes the metadata file
-        err.to_string() == "Submodule expansion deletion not supported yet"
+        err.to_string() == "Submodule metadata file was deleted but 2 files in the submodule expansion were not."
     }));
 
     Ok(())

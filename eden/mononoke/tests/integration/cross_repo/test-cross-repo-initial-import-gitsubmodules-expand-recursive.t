@@ -940,8 +940,6 @@ TODO(T174902563): Fix deletion of submodules in EXPAND submodule action.
 -- ALL SCENARIOS BELOW SHOULD FAIL TO BACKSYNC
 -- -----------------------------------------------------------------------------
 
-TODO(T179530927): properly support backsyncing with submodule expansion
-
 
 -- Change a small repo file inside a submodule expansion
 -- First change the file without updating the submodule metadata file
@@ -971,7 +969,7 @@ TODO(T179530927): properly support backsyncing with submodule expansion
   $ backsync_get_info_and_derive_data
   Processing commit: Deleting repo_b submodule metadata file
   Commit hash: fc9ac6bc48350781bc9affc6125b3d3c234688d9
-  * error: Submodule expansion deletion not supported yet: Submodule expansion deletion not supported yet: Submodule expansion deletion not supported yet* (glob)
+  * Submodule metadata file was deleted but 7 files in the submodule expansion were not* (glob)
   [255]
 
 
