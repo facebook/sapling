@@ -11,7 +11,7 @@ import type {ReactNode} from 'react';
 import type {ContextMenuItem} from 'shared/ContextMenu';
 
 import {spacing} from '../../components/theme/tokens.stylex';
-import {Bookmarks, createBookmarkAtCommit} from './Bookmark';
+import {AllBookmarksTruncated, Bookmarks, createBookmarkAtCommit} from './Bookmark';
 import {openBrowseUrlForHash, supportsBrowseUrlForHash} from './BrowseRepo';
 import {hasUnsavedEditedCommitMessage} from './CommitInfoView/CommitInfoState';
 import {showComparison} from './ComparisonView/atoms';
@@ -395,11 +395,11 @@ export const Commit = memo(
               </span>
             )}
             <UnsavedEditedMessageIndicator commit={commit} />
-            <Bookmarks bookmarks={commit.bookmarks} kind="local" />
-            <Bookmarks bookmarks={commit.remoteBookmarks} kind="remote" />
-            {commit?.stableCommitMetadata != null ? (
-              <Bookmarks bookmarks={commit.stableCommitMetadata} kind="stable" />
-            ) : null}
+            <AllBookmarksTruncated
+              local={commit.bookmarks}
+              remote={commit.remoteBookmarks}
+              stable={commit?.stableCommitMetadata ?? []}
+            />
             {isPublic ? <CommitDate date={commit.date} /> : null}
             {isNarrow ? commitActions : null}
           </DragToRebase>

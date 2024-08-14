@@ -19,6 +19,7 @@ import {latestSuccessorUnlessExplicitlyObsolete} from './successionUtils';
 import {showModal} from './useModal';
 import * as stylex from '@stylexjs/stylex';
 import {Button} from 'isl-components/Button';
+import {Column} from 'isl-components/Flex';
 import {Tag} from 'isl-components/Tag';
 import {TextField} from 'isl-components/TextField';
 import {Tooltip} from 'isl-components/Tooltip';
@@ -90,14 +91,78 @@ export function Bookmark({
       onContextMenu={contextMenu}
       xstyle={[
         kind === 'stable' && styles.stable,
-        fullLength === true && styles.fullLength,
         styles.bookmarkTag,
+        fullLength === true && styles.fullLength,
       ]}
       title={tooltip == null ? bookmark : undefined}>
       {bookmark}
     </Tag>
   );
   return tooltip ? <Tooltip title={tooltip}>{inner}</Tooltip> : inner;
+}
+
+export function AllBookmarksTruncated({
+  stable,
+  remote,
+  local,
+}: {
+  stable: ReadonlyArray<string | {value: string; description: string}>;
+  remote: ReadonlyArray<string>;
+  local: ReadonlyArray<string>;
+}) {
+  const bookmarksData = useAtomValue(bookmarksDataStorage);
+  const finalBookmarks = (
+    [
+      ['local', local],
+      ['remote', remote],
+      ['stable', stable],
+    ] as const
+  )
+    .map(([kind, bookmarks]) =>
+      bookmarks
+        .filter(
+          bookmark =>
+            !bookmarksData.hiddenRemoteBookmarks.includes(
+              typeof bookmark === 'string' ? bookmark : bookmark.value,
+            ),
+        )
+        .map(bookmark => {
+          const value = typeof bookmark === 'string' ? bookmark : bookmark.value;
+          const tooltip = typeof bookmark === 'string' ? undefined : bookmark.description;
+
+          return {value, kind, tooltip};
+        }),
+    )
+    .flat();
+  const NUM_TO_SHOW = 3;
+  const shownBookmarks = finalBookmarks.slice(0, NUM_TO_SHOW);
+  const hiddenBookmarks = finalBookmarks.slice(NUM_TO_SHOW);
+  const numTruncated = hiddenBookmarks.length;
+  return (
+    <>
+      {shownBookmarks.map(({value, kind, tooltip}) => (
+        <Bookmark key={value} kind={kind} tooltip={tooltip}>
+          {value}
+        </Bookmark>
+      ))}
+      {numTruncated > 0 && (
+        <Tooltip
+          component={() => (
+            <Column alignStart>
+              {hiddenBookmarks.map(({value, kind, tooltip}) => (
+                <Bookmark key={value} kind={kind} tooltip={tooltip} fullLength>
+                  {value}
+                </Bookmark>
+              ))}
+            </Column>
+          )}>
+          <Tag>
+            <T replace={{$n: numTruncated}}>+$n more</T>
+          </Tag>
+        </Tooltip>
+      )}
+    </>
+  );
 }
 
 export function Bookmarks({
