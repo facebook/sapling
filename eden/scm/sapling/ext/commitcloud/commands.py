@@ -133,7 +133,7 @@ subcmd = cloud.subcommand(
         ("Enable sharing for a cloud workspace", ["share"]),
         (
             "Manage commits and bookmarks in workspaces",
-            ["move", "copy", "hide", "archive"],
+            ["move", "copy", "hide"],
         ),
         (
             "Import workspaces from different repositories (requires megarepo support)",
@@ -660,29 +660,6 @@ def cloudsmartlog(ui, repo, templatealias="sl_cloud", **opts):
 def cloudsupersmartlog(ui, repo, **opts):
     """get super smartlog view for the given workspace"""
     cloudsmartlog(ui, repo, "ssl_cloud", **opts)
-
-
-ARCHIVE_WORKSPACE_NAME = "archive"
-
-
-@subcmd(
-    "archive",
-    move.moveopts + createopts,
-)
-def cloudarchive(ui, repo, *revs, **opts):
-    """move commits or bookmarks on side to a separate 'archive' workspace
-
-    The command would typically be used to tidy up the default workspace.
-    """
-
-    # doesn't ask for creation confirmation
-    opts.update(
-        {
-            "create": True,
-            "destination": ARCHIVE_WORKSPACE_NAME,
-        }
-    )
-    return cloudmove(ui, repo, *revs, **opts)
 
 
 @subcmd(

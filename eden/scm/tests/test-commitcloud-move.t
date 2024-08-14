@@ -926,39 +926,7 @@ Try move with specified raw source and raw destination
   ├─╯
   @  Z: public
 
-
-Test `hg cloud archive` command
-  $ gensmartlogdata
   $ hg up $Z -q
-  $ hg cloud archive $A
-  commitcloud: moving requested commits and bookmarks from 'user/test/default' to 'user/test/archive' workspace for the 'server' repo
-  moving heads:
-      fb4a94a976cf  A
-  commitcloud: synchronizing 'server' with 'user/test/default'
-  commitcloud: nothing to upload
-  commitcloud: commits synchronized
-  finished in * (glob)
-
-  $ showgraph
-  o  Y: public  remote/other
-  │
-  │ o  W: public  remote/master
-  │ │
-  │ o  X: public
-  ├─╯
-  @  Z: public
-
-  $ showgraphother archive
-  o  A: draft
-  │
-  │ o  Y: public  remote/other
-  │ │
-  o │  W: public  remote/master
-  │ │
-  o │  X: public
-  ├─╯
-  @  Z: public
-
 Test copying commits and bookmarks between workspaces
   $ hg pull -r $B -q
   $ hg bookmark -r $B "new"
