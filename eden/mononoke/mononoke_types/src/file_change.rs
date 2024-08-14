@@ -78,6 +78,15 @@ impl GitLfs {
             GitLfs::FullContent => false,
         }
     }
+
+    pub fn non_canonical_pointer_content_id(&self) -> Option<ContentId> {
+        match self {
+            GitLfs::GitLfsPointer {
+                non_canonical_pointer,
+            } => *non_canonical_pointer,
+            GitLfs::FullContent => None,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash, Serialize, Deserialize)]

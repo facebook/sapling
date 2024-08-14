@@ -30,6 +30,7 @@ import_direct = { version = "0.1.0", path = "../import_direct" }
 import_tools = { version = "0.1.0", path = "../import_tools" }
 linked-hash-map = { version = "0.5", features = ["serde_impl"] }
 mercurial_derivation = { version = "0.1.0", path = "../../derived_data/mercurial_derivation" }
+metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_api = { version = "0.1.0", path = "../../mononoke_api" }
 mononoke_app = { version = "0.1.0", path = "../../cmdlib/mononoke_app" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }

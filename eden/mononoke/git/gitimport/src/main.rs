@@ -14,6 +14,7 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
 
+use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
 use blobrepo_override::DangerousOverride;
@@ -40,6 +41,7 @@ use import_tools::set_bookmark;
 use import_tools::upload_git_tag;
 use import_tools::BackfillDerivation;
 use import_tools::BookmarkOperation;
+use import_tools::GitImportLfs;
 use import_tools::GitRepoReader;
 use import_tools::GitimportPreferences;
 use import_tools::GitimportTarget;
@@ -47,9 +49,11 @@ use import_tools::ReuploadCommits;
 use linked_hash_map::LinkedHashMap;
 use mercurial_derivation::get_manifest_from_bonsai;
 use mercurial_derivation::DeriveHgChangeset;
+use metaconfig_types::RepoConfigRef;
 use mononoke_api::BookmarkFreshness;
 use mononoke_api::BookmarkKey;
 use mononoke_app::args::RepoArgs;
+use mononoke_app::args::TLSArgs;
 use mononoke_app::fb303::AliveService;
 use mononoke_app::fb303::Fb303AppExtension;
 use mononoke_app::MononokeApp;
@@ -67,6 +71,7 @@ use slog::warn;
 use crate::repo::Repo;
 
 pub const HEAD_SYMREF: &str = "HEAD";
+const LFS_SIMULTANEOUS_CONNECTION_LIMIT: usize = 20;
 
 // Refactor this a bit. Use a thread pool for git operations. Pass that wherever we use store repo.
 // Transform the walk into a stream of commit + file changes.
@@ -169,6 +174,12 @@ struct GitimportArgs {
     /// explicitly specified refs
     #[clap(long, use_value_delimiter = true, value_delimiter = ',')]
     include_refs: Vec<String>,
+    /// Lfs server url to use to fetch lfs files from
+    #[clap(long)]
+    lfs_server: Option<String>,
+    /// TLS parameters for this service used for outbound LFS connections
+    #[clap(flatten)]
+    tls_args: Option<TLSArgs>,
 }
 
 #[derive(Subcommand)]
@@ -261,10 +272,23 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
     } else {
         BackfillDerivation::AllConfiguredTypes
     };
+    let lfs = match repo.repo_config().git_lfs_interpret_pointers {
+        true => GitImportLfs::new(
+            args.lfs_server.ok_or_else(|| {
+                anyhow!("LFS server url is required when LFS is enabled in the repo config")
+            })?,
+            false,
+            Some(LFS_SIMULTANEOUS_CONNECTION_LIMIT),
+            args.tls_args,
+        )?,
+        false => GitImportLfs::new_disabled(),
+    };
+
     let mut prefs = GitimportPreferences {
         concurrency: args.concurrency,
         submodules: !args.discard_submodules,
         backfill_derivation,
+        lfs,
         ..Default::default()
     };
     // if we are readonly, then we'll set up some overrides to still be able to do meaningful

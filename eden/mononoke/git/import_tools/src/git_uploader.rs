@@ -230,11 +230,11 @@ pub async fn upload_file(
     oid: ObjectId,
     git_bytes: Bytes,
 ) -> Result<FileChange, Error> {
-    let meta = if ty == FileType::GitSubmodule {
+    let (meta, git_lfs) = if ty == FileType::GitSubmodule {
         // The file is a git submodule.  In Mononoke, we store the commit
         // id of the submodule as the content of the file.
         let oid_bytes = Bytes::copy_from_slice(oid.as_slice());
-        filestore::store(
+        let meta = filestore::store(
             repo.repo_blobstore(),
             *repo.filestore_config(),
             ctx,
@@ -242,31 +242,33 @@ pub async fn upload_file(
             stream::once(async move { Ok(oid_bytes) }),
         )
         .await
-        .context("filestore (upload submodule)")?
-    } else if let Some(lfs_meta) = lfs.is_lfs_file(&git_bytes, oid) {
+        .context("filestore (upload submodule)")?;
+        (meta, GitLfs::FullContent)
+    } else if let Some(lfs_pointer_data) = lfs.is_lfs_file(&git_bytes, oid) {
         let blobstore = repo.repo_blobstore();
         let filestore_config = *repo.filestore_config();
-        cloned!(ctx, lfs, blobstore, path);
-        lfs.with(
-            ctx,
-            lfs_meta,
-            move |ctx, lfs_meta, req, bstream| async move {
-                info!(
-                    ctx.logger(),
-                    "Uploading LFS {} sha256:{} size:{}",
-                    path,
-                    lfs_meta.sha256.to_brief(),
-                    lfs_meta.size,
-                );
-                filestore::store(&blobstore, filestore_config, &ctx, &req, bstream)
-                    .await
-                    .context("filestore (lfs)")
-            },
-        )
-        .await?
-    } else {
+        cloned!(lfs, blobstore, path);
+        // We want to store both:
+        // 1. actual file the pointer is pointing at
+        let meta = lfs
+            .with(ctx.clone(), lfs_pointer_data.clone(), {
+                move |ctx, lfs_pointer_data, req, bstream| async move {
+                    info!(
+                        ctx.logger(),
+                        "Uploading LFS {} sha256:{} size:{}",
+                        path,
+                        lfs_pointer_data.sha256.to_brief(),
+                        lfs_pointer_data.size,
+                    );
+                    filestore::store(&blobstore, filestore_config, &ctx, &req, bstream)
+                        .await
+                        .context("filestore (lfs contents)")
+                }
+            })
+            .await?;
+        // 2. the Git LFS pointer itself
         let (req, bstream) = git_store_request(ctx, oid, git_bytes).context("git_store_request")?;
-        filestore::store(
+        let pointer_meta = filestore::store(
             repo.repo_blobstore(),
             *repo.filestore_config(),
             ctx,
@@ -274,7 +276,26 @@ pub async fn upload_file(
             bstream,
         )
         .await
-        .context("filestore (upload regular)")?
+        .context("filestore (lfs pointer)")?;
+        // and return the contents of the actual file
+        let pointer = if lfs_pointer_data.is_canonical {
+            GitLfs::canonical_pointer()
+        } else {
+            GitLfs::non_canonical_pointer(pointer_meta.content_id)
+        };
+        (meta, pointer)
+    } else {
+        let (req, bstream) = git_store_request(ctx, oid, git_bytes).context("git_store_request")?;
+        let meta = filestore::store(
+            repo.repo_blobstore(),
+            *repo.filestore_config(),
+            ctx,
+            &req,
+            bstream,
+        )
+        .await
+        .context("filestore (upload regular)")?;
+        (meta, GitLfs::FullContent)
     };
     debug!(
         ctx.logger(),
@@ -287,7 +308,7 @@ pub async fn upload_file(
         ty,
         meta.total_size,
         None,
-        GitLfs::FullContent,
+        git_lfs,
     ))
 }
 

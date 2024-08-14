@@ -28,6 +28,7 @@ rust_binary(
         "//eden/mononoke/git/import_direct:import_direct",
         "//eden/mononoke/git/import_tools:import_tools",
         "//eden/mononoke/git_symbolic_refs:git_symbolic_refs",
+        "//eden/mononoke/metaconfig:metaconfig_types",
         "//eden/mononoke/mononoke_api:mononoke_api",
         "//eden/mononoke/mononoke_types:mononoke_types",
         "//eden/mononoke/repo_attributes/commit_graph/commit_graph:commit_graph",

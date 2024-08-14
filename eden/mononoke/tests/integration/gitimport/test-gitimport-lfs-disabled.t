@@ -81,3 +81,18 @@ The actual file content is not uploaded to the repo (this is the hash from point
 But it's available on the separate lfs server
   $ mononoke_newadmin filestore -R legacy_lfs fetch --content-sha256 6c54a4de10537e482e9f91281fb85ab614e0e0f62307047f9b9f3ccea2de8204
   laaaaaaaaaarge file
+
+Show that we still have all the original git objects
+  $ BUNDLE_PATH="${TESTTMP}/repo_bundle.bundle"
+  $ GIT_REPO_FROM_BUNDLE="${TESTTMP}/repo-git-from-bundle"
+  $ mononoke_newadmin git-bundle create from-repo -R repo --output-location "$BUNDLE_PATH"
+  $ git clone "$BUNDLE_PATH" "$GIT_REPO_FROM_BUNDLE"
+  Cloning into '$TESTTMP/repo-git-from-bundle'...
+
+  $ mononoke_newadmin filestore -R repo fetch --content-git-sha1 8910fc3d7dae273e6ffd1d3982af8dfc418af416
+  sml fle
+
+  $ mononoke_newadmin filestore -R repo fetch --content-git-sha1 1ab2b3357e304fef596198d92807d8d7e3580f0d
+  version https://git-lfs.github.com/spec/v1
+  oid sha256:6c54a4de10537e482e9f91281fb85ab614e0e0f62307047f9b9f3ccea2de8204
+  size 20

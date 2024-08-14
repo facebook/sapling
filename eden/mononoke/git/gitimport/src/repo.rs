@@ -18,6 +18,7 @@ use commit_graph::CommitGraph;
 use commit_graph::CommitGraphWriter;
 use filestore::FilestoreConfig;
 use git_symbolic_refs::GitSymbolicRefs;
+use metaconfig_types::RepoConfig;
 use repo_blobstore::RepoBlobstore;
 use repo_derived_data::RepoDerivedData;
 use repo_identity::RepoIdentity;
@@ -27,6 +28,9 @@ use repo_identity::RepoIdentity;
 pub(crate) struct Repo {
     #[facet]
     repo_identity: RepoIdentity,
+
+    #[facet]
+    repo_config: RepoConfig,
 
     #[facet]
     repo_derived_data: RepoDerivedData,

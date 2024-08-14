@@ -1043,6 +1043,12 @@ repo_client_use_warm_bookmarks_cache=true
 CONFIG
 fi
 
+if [ "$GIT_LFS_INTERPRET_POINTERS" == "1" ]; then
+  cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
+git_lfs_interpret_pointers = true
+CONFIG
+fi
+
 # Normally point to common storageconfig, but if none passed, create per-repo
 if [[ -z "$storageconfig" ]]; then
   storageconfig="blobstore_$reponame_urlencoded"
@@ -2273,6 +2279,9 @@ function gitimport() {
     "${COMMON_ARGS[@]}" \
     --repo-id "$REPOID" \
     --mononoke-config-path "${TESTTMP}/mononoke-config" \
+    --tls-ca "$TEST_CERTDIR/root-ca.crt" \
+    --tls-private-key "$TEST_CERTDIR/client0.key" \
+    --tls-certificate "$TEST_CERTDIR/client0.crt" \
     "$@"
 }
 

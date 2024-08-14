@@ -19,6 +19,7 @@ rust_library(
         "fbsource//third-party/rust:hyper",
         "fbsource//third-party/rust:hyper-openssl",
         "fbsource//third-party/rust:linked-hash-map",
+        "fbsource//third-party/rust:openssl",
         "fbsource//third-party/rust:rand",
         "fbsource//third-party/rust:slog",
         "fbsource//third-party/rust:smallvec",
@@ -33,6 +34,7 @@ rust_library(
         "//eden/mononoke/bookmarks:bookmarks",
         "//eden/mononoke/bookmarks:bookmarks_movement",
         "//eden/mononoke/changesets/changesets_creation:changesets_creation",
+        "//eden/mononoke/cmdlib/mononoke_app/tls:tls",
         "//eden/mononoke/derived_data:bulk_derivation",
         "//eden/mononoke/derived_data:derived_data_manager",
         "//eden/mononoke/filestore:filestore",
@@ -45,5 +47,6 @@ rust_library(
         "//eden/mononoke/repo_attributes/repo_derived_data:repo_derived_data",
         "//eden/mononoke/repo_attributes/repo_identity:repo_identity",
         "//eden/mononoke/server/context:context",
+        "//eden/scm/lib/clientinfo:clientinfo",
     ],
 )

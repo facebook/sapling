@@ -12,6 +12,8 @@ use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Error;
 use bytes::Bytes;
+use clientinfo::ClientInfo;
+use clientinfo::CLIENT_INFO_HEADER;
 use context::CoreContext;
 use filestore::StoreRequest;
 use futures::stream;
@@ -21,17 +23,24 @@ use futures::TryStreamExt;
 use git_types::git_lfs::parse_lfs_pointer;
 use git_types::git_lfs::LfsPointerData;
 use gix_hash::ObjectId;
+use http::HeaderValue;
+use http::Request;
 use http::Uri;
 use hyper::body;
 use hyper::client::connect::HttpConnector;
+use hyper::Body;
 use hyper::Client;
 use hyper::StatusCode;
 use hyper_openssl::HttpsConnector;
 use mononoke_types::hash;
+use openssl::ssl::SslConnector;
+use openssl::ssl::SslFiletype;
+use openssl::ssl::SslMethod;
 use rand::thread_rng;
 use rand::Rng;
 use slog::error;
 use slog::warn;
+use tls::TLSArgs;
 use tokio::sync::Semaphore;
 use tokio::time::sleep;
 use tokio::time::Duration;
@@ -73,8 +82,19 @@ impl GitImportLfs {
         lfs_server: String,
         allow_not_found: bool,
         conn_limit: Option<usize>,
+        tls_args: Option<TLSArgs>,
     ) -> Result<Self, Error> {
-        let connector = HttpsConnector::new().map_err(Error::from)?;
+        let mut ssl_connector = SslConnector::builder(SslMethod::tls_client())?;
+        if let Some(tls_args) = tls_args {
+            ssl_connector.set_ca_file(tls_args.tls_ca)?;
+            ssl_connector.set_certificate_file(tls_args.tls_certificate, SslFiletype::PEM)?;
+            ssl_connector.set_private_key_file(tls_args.tls_private_key, SslFiletype::PEM)?;
+        };
+        let mut http_connector = HttpConnector::new();
+        http_connector.enforce_http(false);
+        let connector =
+            HttpsConnector::with_connector(http_connector, ssl_connector).map_err(Error::from)?;
+
         let client: Client<_, body::Body> = Client::builder().build(connector);
         let inner = GitImportLfsInner {
             lfs_server,
@@ -118,9 +138,21 @@ impl GitImportLfs {
         let uri = [&inner.lfs_server, "/", &metadata.sha256.to_string()]
             .concat()
             .parse::<Uri>()?;
+        let mut req = Request::get(uri.clone())
+            .body(Body::empty())
+            .context("creating LFS fetch request")?;
+        let client_info = ctx
+            .metadata()
+            .client_info()
+            .cloned()
+            .unwrap_or_else(ClientInfo::default);
+        req.headers_mut().insert(
+            CLIENT_INFO_HEADER,
+            HeaderValue::from_str(&client_info.to_json()?)?,
+        );
         let resp = inner
             .client
-            .get(uri.clone())
+            .request(req)
             .await
             .with_context(|| format!("fetch_bytes_internal {}", uri))?;
 
