@@ -178,6 +178,22 @@ pub fn find_all<T: fmt::Debug + Clone + PartialEq>(
     TreeMatchState::default().find_all(items, pat)
 }
 
+/// Find a match align with the start of items. Similar to Python `re.match`.
+pub fn matches_start<T: fmt::Debug + Clone + PartialEq>(
+    items: &[Item<T>],
+    pat: &[Item<T>],
+) -> Option<Match<T>> {
+    TreeMatchState::default().find_one(items, pat, TreeMatchMode::MatchBegin)
+}
+
+/// Find a match align with items.
+pub fn matches_full<T: fmt::Debug + Clone + PartialEq>(
+    items: &[Item<T>],
+    pat: &[Item<T>],
+) -> Option<Match<T>> {
+    TreeMatchState::default().find_one(items, pat, TreeMatchMode::MatchFull)
+}
+
 /// Takes a single match and output its replacement.
 pub trait Replace<T> {
     fn expand(&self, m: &Match<T>) -> Vec<Item<T>>;
@@ -265,7 +281,6 @@ enum TreeMatchMode {
     /// `pat` must match `items`, consuming the entire sequence.
     MatchFull,
     /// `pat` can match `items[..subset]`, not the entire `items`.
-    #[allow(dead_code)]
     MatchBegin,
     /// Perform a search to find all matches. Start / end / depth do not
     /// have to match.
@@ -394,7 +409,6 @@ impl<'a, T: PartialEq + Clone + fmt::Debug> SeqMatchState<'a, T> {
     }
 
     /// Backtrack the match and fill `captures`.
-    #[allow(dead_code)]
     fn fill_match(&self, r#match: &mut Match<T>) {
         self.fill_match_with_match_end(r#match, None, true);
     }
@@ -624,6 +638,20 @@ impl<'a, T: PartialEq + Clone + fmt::Debug> TreeMatchState<'a, T> {
             }
         }
         result
+    }
+
+    fn find_one(
+        &self,
+        items: &'a [Item<T>],
+        pat: &'a [Item<T>],
+        mode: TreeMatchMode,
+    ) -> Option<Match<T>> {
+        let matched = self.matched(pat, items, mode);
+        matched.match_end.map(|_| {
+            let mut m = Match::default();
+            matched.fill_match(&mut m);
+            m
+        })
     }
 }
 

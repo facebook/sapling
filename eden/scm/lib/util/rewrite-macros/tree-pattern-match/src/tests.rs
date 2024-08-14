@@ -6,6 +6,8 @@
  */
 
 use crate::find_all;
+use crate::matches_full;
+use crate::matches_start;
 use crate::replace_all;
 use crate::tree_match::PlaceholderExt;
 use crate::Match;
@@ -223,6 +225,33 @@ fn test_find_all_greedy_matches() {
     let matches = find_all(&items, &pat);
     // ___1 includes both "a" and "b".
     assert_eq!(matches[0].show(), ["___1 => a b"]);
+}
+
+#[test]
+fn test_find_one() {
+    let items = parse!(a b c);
+
+    // Match align with the start.
+    let pat = parse!(a __1);
+    let m = matches_start(&items, &pat);
+    assert_eq!(m.unwrap().show(), ["__1 => b"]);
+
+    let pat = parse!(b __1);
+    let m = matches_start(&items, &pat);
+    assert!(m.is_none());
+
+    // Match align with the start and end.
+    let pat = parse!(a __1);
+    let m = matches_full(&items, &pat);
+    assert!(m.is_none());
+
+    let pat = parse!(b ___1);
+    let m = matches_full(&items, &pat);
+    assert!(m.is_none());
+
+    let pat = parse!(a ___1);
+    let m = matches_full(&items, &pat);
+    assert_eq!(m.unwrap().show(), ["___1 => b c"]);
 }
 
 #[test]
