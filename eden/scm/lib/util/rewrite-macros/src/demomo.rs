@@ -6,7 +6,6 @@
  */
 
 use proc_macro2::Delimiter;
-use tree_pattern_match::PlaceholderExt;
 
 use crate::prelude::*;
 

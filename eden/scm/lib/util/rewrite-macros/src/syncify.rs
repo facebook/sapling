@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-extern crate proc_macro;
-
 use crate::prelude::*;
 
 pub(crate) fn syncify(attr: TokenStream, mut tokens: TokenStream) -> TokenStream {

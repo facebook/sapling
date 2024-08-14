@@ -10,6 +10,7 @@ use std::str::FromStr;
 pub(crate) use proc_macro2::TokenStream;
 pub(crate) use quote::quote;
 pub(crate) use tree_pattern_match::Match;
+pub(crate) use tree_pattern_match::PlaceholderExt;
 
 pub(crate) use crate::token::TokenInfo;
 pub(crate) use crate::token_stream_ext::AngleBracket;
