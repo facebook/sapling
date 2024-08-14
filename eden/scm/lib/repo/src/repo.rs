@@ -609,27 +609,6 @@ impl Repo {
         Ok(())
     }
 
-    #[cfg(feature = "wdir")]
-    pub fn working_copy(&self) -> Result<WorkingCopy, errors::InvalidWorkingCopy> {
-        tracing::trace!(target: "repo::workingcopy", "creating file store");
-        let file_store = self.file_store()?;
-
-        tracing::trace!(target: "repo::workingcopy", "creating tree resolver");
-        let tree_resolver = self.tree_resolver()?;
-        let has_requirement = |s: &str| self.requirements.contains(s);
-
-        Ok(WorkingCopy::new(
-            &self.path,
-            &self.config,
-            self.storage_format(),
-            tree_resolver,
-            file_store,
-            self.locker.clone(),
-            &self.dot_hg_path,
-            &has_requirement,
-        )?)
-    }
-
     /// Construct both file and tree store if they are backed by the same storage.
     /// Return None if they are not backed by the same storage.
     /// Return Some((file_store, tree_store)) if they are constructed.
@@ -655,6 +634,29 @@ impl Repo {
                 Ok(Some((file_store, tree_store)))
             }
         }
+    }
+}
+
+#[cfg(feature = "wdir")]
+impl Repo {
+    pub fn working_copy(&self) -> Result<WorkingCopy, errors::InvalidWorkingCopy> {
+        tracing::trace!(target: "repo::workingcopy", "creating file store");
+        let file_store = self.file_store()?;
+
+        tracing::trace!(target: "repo::workingcopy", "creating tree resolver");
+        let tree_resolver = self.tree_resolver()?;
+        let has_requirement = |s: &str| self.requirements.contains(s);
+
+        Ok(WorkingCopy::new(
+            &self.path,
+            &self.config,
+            self.storage_format(),
+            tree_resolver,
+            file_store,
+            self.locker.clone(),
+            &self.dot_hg_path,
+            &has_requirement,
+        )?)
     }
 }
 
