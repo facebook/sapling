@@ -55,6 +55,11 @@ mononoke_queries! {
             END")
     }
 
+    write UpdateArchive(reponame: String, workspace: String, archived: bool) {
+        none,
+        "UPDATE versions SET archived={archived} WHERE reponame={reponame} AND workspace={workspace}"
+    }
+
 }
 
 #[async_trait]
@@ -103,18 +108,29 @@ impl Insert<WorkspaceVersion> for SqlCommitCloud {
     }
 }
 
+pub struct ArchiveArgs {
+    pub archived: bool,
+}
+
 #[async_trait]
 impl Update<WorkspaceVersion> for SqlCommitCloud {
-    type UpdateArgs = ();
+    type UpdateArgs = ArchiveArgs;
     async fn update(
         &self,
-        _txn: Transaction,
-        _cri: Option<&ClientRequestInfo>,
-        _cc_ctx: CommitCloudContext,
-        _args: Self::UpdateArgs,
+        txn: Transaction,
+        cri: Option<&ClientRequestInfo>,
+        cc_ctx: CommitCloudContext,
+        args: Self::UpdateArgs,
     ) -> anyhow::Result<(Transaction, u64)> {
-        //To be implemented among other Update queries
-        return Err(anyhow::anyhow!("Not implemented yet"));
+        let (txn, result) = UpdateArchive::maybe_traced_query_with_transaction(
+            txn,
+            cri,
+            &cc_ctx.reponame,
+            &cc_ctx.workspace,
+            &args.archived,
+        )
+        .await?;
+        Ok((txn, result.affected_rows()))
     }
 }
 
