@@ -476,7 +476,7 @@ async fn run_history_fixup_delete<'a>(
 
     let fixup_bcs_id = {
         let hash = sub_m.value_of(COMMIT_HASH).unwrap().to_owned();
-        helpers::csid_resolve(ctx, repo.clone(), hash).await?
+        helpers::csid_resolve(ctx, &repo, hash).await?
     };
 
     let correct_bcs_id = {
@@ -484,7 +484,7 @@ async fn run_history_fixup_delete<'a>(
             .value_of(COMMIT_HASH_CORRECT_HISTORY)
             .unwrap()
             .to_owned();
-        helpers::csid_resolve(ctx, repo.clone(), hash).await?
+        helpers::csid_resolve(ctx, &repo, hash).await?
     };
     let paths_file = sub_m.value_of(PATHS_FILE).unwrap().to_owned();
     let s = read_to_string(&paths_file).await?;

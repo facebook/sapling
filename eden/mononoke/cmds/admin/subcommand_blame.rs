@@ -154,7 +154,7 @@ pub async fn subcommand_blame<'a>(
             let hash_or_bookmark = String::from(matches.value_of(ARG_CSID).unwrap());
             let repo: BlobRepo =
                 args::not_shardmanager_compatible::open_repo(fb, &logger, toplevel_matches).await?;
-            let cs_id = helpers::csid_resolve(&ctx, repo.clone(), hash_or_bookmark).await?;
+            let cs_id = helpers::csid_resolve(&ctx, &repo, hash_or_bookmark).await?;
 
             let derived_unode = repo
                 .repo_derived_data()

@@ -113,7 +113,7 @@ pub async fn subcommand_deleted_manifest<'a>(
         (COMMAND_MANIFEST, Some(matches)) => {
             let hash_or_bookmark = String::from(matches.value_of(ARG_CSID).unwrap());
             let path = MPath::new(matches.value_of(ARG_PATH).unwrap())?;
-            let cs_id = helpers::csid_resolve(&ctx, repo.clone(), hash_or_bookmark).await?;
+            let cs_id = helpers::csid_resolve(&ctx, &repo, hash_or_bookmark).await?;
             subcommand_manifest(ctx, repo, cs_id, path).await?;
             Ok(())
         }
@@ -124,7 +124,7 @@ pub async fn subcommand_deleted_manifest<'a>(
                 .unwrap()
                 .parse::<u64>()
                 .expect("limit must be an integer");
-            let cs_id = helpers::csid_resolve(&ctx, repo.clone(), hash_or_bookmark).await?;
+            let cs_id = helpers::csid_resolve(&ctx, &repo, hash_or_bookmark).await?;
             subcommand_verify(ctx, repo, cs_id, limit).await?;
             Ok(())
         }

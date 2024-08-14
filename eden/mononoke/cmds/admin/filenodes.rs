@@ -278,7 +278,7 @@ pub async fn subcommand_filenodes<'a>(
                 ClientInfo::default_with_entry_point(ClientEntryPoint::MononokeAdmin),
             );
 
-            let mf_id = helpers::get_root_manifest_id(&ctx, repo.clone(), rev).await?;
+            let mf_id = helpers::get_root_manifest_id(&ctx, &repo, rev).await?;
             mf_id
                 .list_all_entries(ctx.clone(), repo.repo_blobstore().clone())
                 .map_ok(move |(path, entry)| {

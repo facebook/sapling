@@ -16,7 +16,6 @@ use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
-use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bookmarks::BookmarkKey;
@@ -31,6 +30,7 @@ use mercurial_types::HgChangesetId;
 use mercurial_types::HgManifestId;
 use mononoke_types::ChangesetId;
 use repo_blobstore::RepoBlobstoreRef;
+use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentityRef;
 use services::Fb303Service;
 use slog::error;
@@ -81,10 +81,10 @@ pub fn setup_repo_dir<P: AsRef<Path>>(data_dir: P, create: CreateStorage) -> Res
 /// Resolve changeset id by either bookmark name, hg hash, or changset id hash
 pub async fn csid_resolve(
     ctx: &CoreContext,
-    container: impl RepoIdentityRef + BonsaiHgMappingRef + BookmarksRef,
+    container: &(impl RepoIdentityRef + BonsaiHgMappingRef + BookmarksRef),
     hash_or_bookmark: impl ToString,
 ) -> Result<ChangesetId, Error> {
-    let res = csid_resolve_impl(ctx, &container, hash_or_bookmark).await;
+    let res = csid_resolve_impl(ctx, container, hash_or_bookmark).await;
     if let Ok(csid) = &res {
         info!(ctx.logger(), "changeset resolved as: {:?}", csid);
     }
@@ -94,7 +94,7 @@ pub async fn csid_resolve(
 /// Read and resolve a list of changeset from file
 pub async fn csids_resolve_from_file(
     ctx: &CoreContext,
-    container: impl RepoIdentityRef + BonsaiHgMappingRef + BookmarksRef,
+    container: &(impl RepoIdentityRef + BonsaiHgMappingRef + BookmarksRef),
     filename: &str,
 ) -> Result<Vec<ChangesetId>, Error> {
     let file = tokio::fs::File::open(filename).await?;
@@ -106,7 +106,7 @@ pub async fn csids_resolve_from_file(
     }
 
     stream::iter(csids)
-        .map(|csid| csid_resolve_impl(ctx, &container, csid))
+        .map(|csid| csid_resolve_impl(ctx, container, csid))
         .buffered(100)
         .try_collect::<Vec<_>>()
         .await
@@ -147,10 +147,18 @@ where
 
 pub async fn get_root_manifest_id(
     ctx: &CoreContext,
-    repo: BlobRepo,
+    repo: &(
+         impl RepoDerivedDataRef
+         + RepoBlobstoreRef
+         + RepoIdentityRef
+         + BonsaiHgMappingRef
+         + BookmarksRef
+         + Send
+         + Sync
+     ),
     hash_or_bookmark: impl ToString,
 ) -> Result<HgManifestId, Error> {
-    let cs_id = csid_resolve(ctx, &repo, hash_or_bookmark).await?;
+    let cs_id = csid_resolve(ctx, repo, hash_or_bookmark).await?;
     Ok(repo
         .derive_hg_changeset(ctx, cs_id)
         .await?
