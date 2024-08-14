@@ -401,22 +401,68 @@ pub async fn find_draft_ancestors(
 mod test {
     use std::collections::HashSet;
 
-    use blobrepo::AsBlobRepo;
+    use bonsai_globalrev_mapping::BonsaiGlobalrevMapping;
+    use bonsai_hg_mapping::BonsaiHgMapping;
+    use bookmarks::Bookmarks;
+    use commit_graph::CommitGraph;
+    use commit_graph::CommitGraphWriter;
     use fbinit::FacebookInit;
+    use filestore::FilestoreConfig;
     use maplit::hashset;
-    use mononoke_api_types::InnerRepo;
+    use metaconfig_types::RepoConfig;
+    use phases::Phases;
+    use repo_blobstore::RepoBlobstore;
+    use repo_derived_data::RepoDerivedData;
+    use repo_identity::RepoIdentity;
     use tests_utils::bookmark;
     use tests_utils::drawdag::create_from_dag;
 
     use super::*;
 
+    #[facet::container]
+    #[derive(Clone)]
+    struct Repo {
+        #[facet]
+        repo_identity: RepoIdentity,
+
+        #[facet]
+        repo_blobstore: RepoBlobstore,
+
+        #[facet]
+        repo_config: RepoConfig,
+
+        #[facet]
+        repo_derived_data: RepoDerivedData,
+
+        #[facet]
+        bookmarks: dyn Bookmarks,
+
+        #[facet]
+        bonsai_hg_mapping: dyn BonsaiHgMapping,
+
+        #[facet]
+        bonsai_globalrev_mapping: dyn BonsaiGlobalrevMapping,
+
+        #[facet]
+        phases: dyn Phases,
+
+        #[facet]
+        commit_graph: CommitGraph,
+
+        #[facet]
+        commit_graph_writer: dyn CommitGraphWriter,
+
+        #[facet]
+        filestore_config: FilestoreConfig,
+    }
+
     #[fbinit::test]
     async fn test_find_draft_ancestors_simple(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: InnerRepo = test_repo_factory::build_empty(fb).await?;
+        let repo: Repo = test_repo_factory::build_empty(fb).await?;
         let mapping = create_from_dag(
             &ctx,
-            repo.as_blob_repo(),
+            &repo,
             r##"
             A-B-C-D
             "##,
@@ -425,9 +471,7 @@ mod test {
 
         let cs_id = mapping.get("A").unwrap();
         let to_cs_id = mapping.get("D").unwrap();
-        bookmark(&ctx, repo.as_blob_repo(), "book")
-            .set_to(*cs_id)
-            .await?;
+        bookmark(&ctx, &repo, "book").set_to(*cs_id).await?;
         let drafts = find_draft_ancestors(&ctx, &repo, *to_cs_id).await?;
 
         let drafts = drafts
@@ -444,7 +488,7 @@ mod test {
             }
         );
 
-        bookmark(&ctx, repo.as_blob_repo(), "book")
+        bookmark(&ctx, &repo, "book")
             .set_to(*mapping.get("B").unwrap())
             .await?;
         let drafts = find_draft_ancestors(&ctx, &repo, *to_cs_id).await?;
@@ -467,10 +511,10 @@ mod test {
     #[fbinit::test]
     async fn test_find_draft_ancestors_merge(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: InnerRepo = test_repo_factory::build_empty(fb).await?;
+        let repo: Repo = test_repo_factory::build_empty(fb).await?;
         let mapping = create_from_dag(
             &ctx,
-            repo.as_blob_repo(),
+            &repo,
             r"
               B
              /  \
@@ -483,9 +527,7 @@ mod test {
 
         let cs_id = mapping.get("B").unwrap();
         let to_cs_id = mapping.get("D").unwrap();
-        bookmark(&ctx, repo.as_blob_repo(), "book")
-            .set_to(*cs_id)
-            .await?;
+        bookmark(&ctx, &repo, "book").set_to(*cs_id).await?;
         let drafts = find_draft_ancestors(&ctx, &repo, *to_cs_id).await?;
 
         let drafts = drafts
