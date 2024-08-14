@@ -14,6 +14,7 @@ pub(crate) use tree_pattern_match::Match;
 pub(crate) use crate::token::TokenInfo;
 pub(crate) use crate::token_stream_ext::AngleBracket;
 pub(crate) use crate::token_stream_ext::FindReplace;
+pub(crate) use crate::token_stream_ext::MatchExt;
 pub(crate) use crate::token_stream_ext::ToItems;
 pub(crate) use crate::token_stream_ext::ToTokens;
 

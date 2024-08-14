@@ -46,6 +46,10 @@ pub(crate) trait ToTokens {
     fn to_tokens(self) -> TokenStream;
 }
 
+pub(crate) trait MatchExt {
+    fn captured_tokens(&self, name: &str) -> TokenStream;
+}
+
 impl ToItems for TokenStream {
     fn to_items(&self) -> Vec<Item> {
         let mut iter = self.clone().into_iter().peekable();
@@ -237,6 +241,15 @@ impl AngleBracket for Vec<Item> {
             }
         }
         result
+    }
+}
+
+impl MatchExt for Match<TokenInfo> {
+    fn captured_tokens(&self, name: &str) -> TokenStream {
+        match self.captures.get(name) {
+            None => TokenStream::new(),
+            Some(v) => v.to_tokens(),
+        }
     }
 }
 
