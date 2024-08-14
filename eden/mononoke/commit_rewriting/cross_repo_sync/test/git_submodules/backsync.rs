@@ -364,12 +364,25 @@ async fn test_deleting_submodule_metadata_file_without_expansion_passes_fails(
     println!("Sync result: {0:#?}", &sync_result);
 
     assert!(sync_result.is_err_and(|err| {
-        // TODO(T187241943): pass validation but fail backsyncing when user
-        // only deletes the metadata file
         err.to_string() == "Submodule metadata file was deleted but 2 files in the submodule expansion were not."
     }));
 
-    // TODO(T182967556): test partial deletion of expansion also fails
+    const MESSAGE_2: &str = "Delete submodule metadata file and partially delete expansion";
+    let cs_id = CreateCommitContext::new(&ctx, &large_repo, vec![large_repo_master])
+        .set_message(MESSAGE_2)
+        .delete_file("small_repo/submodules/.x-repo-submodule-repo_b")
+        .delete_file("small_repo/submodules/repo_b/B_A")
+        .commit()
+        .await
+        .context("Failed to create commit modifying small_repo directory")?;
+
+    let sync_result = sync_to_master(ctx.clone(), &commit_syncer, cs_id).await;
+
+    println!("Sync result: {0:#?}", &sync_result);
+
+    assert!(sync_result.is_err_and(|err| {
+        err.to_string() == "Submodule metadata file was deleted but 1 files in the submodule expansion were not."
+    }));
 
     Ok(())
 }
