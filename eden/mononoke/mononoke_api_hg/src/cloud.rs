@@ -10,6 +10,8 @@ use commit_cloud::ctx::CommitCloudContext;
 use commit_cloud::CommitCloudRef;
 use commit_cloud::Phase;
 use commit_graph::CommitGraphRef;
+use edenapi_types::cloud::CloudShareWorkspaceRequest;
+use edenapi_types::cloud::WorkspaceSharingData;
 use edenapi_types::GetReferencesParams;
 use edenapi_types::GetSmartlogParams;
 use edenapi_types::HgId;
@@ -185,5 +187,24 @@ impl HgRepoContext {
             version: None,
             timestamp: None,
         })
+    }
+
+    pub async fn cloud_share_workspace(
+        &self,
+        request: &CloudShareWorkspaceRequest,
+    ) -> Result<WorkspaceSharingData, MononokeError> {
+        let mut ctx = CommitCloudContext::new(&request.workspace, &request.reponame)?;
+
+        let authz = self.repo().authorization_context();
+        authz
+            .require_commitcloud_operation(self.ctx(), &self.repo().repo(), &mut ctx, "maintainers")
+            .await?;
+
+        Ok(self
+            .repo()
+            .inner_repo()
+            .commit_cloud()
+            .share_workspace(&ctx)
+            .await?)
     }
 }

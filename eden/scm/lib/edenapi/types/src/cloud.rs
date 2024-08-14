@@ -242,6 +242,25 @@ pub struct SmartlogDataResponse {
 }
 
 #[auto_wire]
+#[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
+pub struct CloudShareWorkspaceRequest {
+    #[id(0)]
+    pub workspace: String,
+    #[id(1)]
+    pub reponame: String,
+}
+
+#[auto_wire]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
+pub struct CloudShareWorkspaceResponse {
+    #[id(0)]
+    #[no_default]
+    pub data: Result<WorkspaceSharingData, ServerError>,
+}
+
+#[auto_wire]
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct WorkspaceSharingData {

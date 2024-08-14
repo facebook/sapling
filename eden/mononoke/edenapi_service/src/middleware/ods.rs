@@ -27,6 +27,7 @@ define_stats! {
     bookmarks_duration_ms: histogram(10, 0, 500, Average, Sum, Count; P 50; P 75; P 95; P 99),
     capabilities_duration_ms: histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 95; P 99),
     cloud_references_duration_ms: histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 95; P 99),
+    cloud_share_workspace_duration_ms: histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 75; P 95; P 99),
     cloud_smartlog_duration_ms: histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 75; P 95; P 99),
     cloud_update_references_duration_ms: histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 95; P 95; P 99),
     cloud_workspace_duration_ms: histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 95; P 99),
@@ -90,6 +91,7 @@ fn log_stats(state: &mut State, status: StatusCode) -> Option<()> {
                 Bookmarks => STATS::bookmarks_duration_ms.add_value(dur_ms),
                 Capabilities => STATS::capabilities_duration_ms.add_value(dur_ms),
                 CloudReferences => STATS::cloud_references_duration_ms.add_value(dur_ms),
+                CloudShareWorkspace => STATS::cloud_share_workspace_duration_ms.add_value(dur_ms),
                 CloudSmartlog => STATS::cloud_smartlog_duration_ms.add_value(dur_ms),
                 CloudUpdateReferences => {
                     STATS::cloud_update_references_duration_ms.add_value(dur_ms)

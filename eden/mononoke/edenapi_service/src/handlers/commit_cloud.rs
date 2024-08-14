@@ -7,6 +7,8 @@
 
 use anyhow::Error;
 use async_trait::async_trait;
+use edenapi_types::CloudShareWorkspaceRequest;
+use edenapi_types::CloudShareWorkspaceResponse;
 use edenapi_types::CloudWorkspaceRequest;
 use edenapi_types::CloudWorkspacesRequest;
 use edenapi_types::GetReferencesParams;
@@ -31,6 +33,7 @@ pub struct CommitCloudWorkspaces;
 pub struct CommitCloudReferences;
 pub struct CommitCloudUpdateReferences;
 pub struct CommitCloudSmartlog;
+pub struct CommitCloudShareWorkspace;
 
 #[async_trait]
 impl SaplingRemoteApiHandler for CommitCloudWorkspace {
@@ -182,6 +185,37 @@ async fn get_smartlog(
     Ok(SmartlogDataResponse {
         data: repo
             .cloud_smartlog(&request)
+            .await
+            .map_err(ServerError::from),
+    })
+}
+
+#[async_trait]
+impl SaplingRemoteApiHandler for CommitCloudShareWorkspace {
+    type Request = CloudShareWorkspaceRequest;
+    type Response = CloudShareWorkspaceResponse;
+
+    const HTTP_METHOD: hyper::Method = hyper::Method::POST;
+    const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::CloudShareWorkspace;
+    const ENDPOINT: &'static str = "/cloud/share_workspace";
+
+    async fn handler(
+        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
+        request: Self::Request,
+    ) -> HandlerResult<'async_trait, Self::Response> {
+        let repo = ectx.repo();
+        let res = share_workspace(request, repo).boxed();
+        Ok(stream::once(res).boxed())
+    }
+}
+
+async fn share_workspace(
+    request: CloudShareWorkspaceRequest,
+    repo: HgRepoContext,
+) -> anyhow::Result<CloudShareWorkspaceResponse, Error> {
+    Ok(CloudShareWorkspaceResponse {
+        data: repo
+            .cloud_share_workspace(&request)
             .await
             .map_err(ServerError::from),
     })
