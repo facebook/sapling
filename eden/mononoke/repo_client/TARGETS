@@ -246,7 +246,6 @@ rust_library(
         "//common/rust/shed/cloned:cloned",
         "//common/rust/shed/futures_ext:futures_ext",
         "//common/rust/shed/futures_stats:futures_stats",
-        "//eden/mononoke/blobrepo:blobrepo",
         "//eden/mononoke/blobrepo:blobrepo_hg",
         "//eden/mononoke/blobrepo:repo_blobstore",
         "//eden/mononoke/blobstore:blobstore",

@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+#![feature(trait_alias)]
+
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::future::Future;
@@ -13,7 +15,6 @@ use std::sync::Arc;
 use anyhow::anyhow;
 use anyhow::Error;
 use anyhow::Result;
-use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
@@ -86,6 +87,17 @@ pub const MAX_FILENODE_BYTES_IN_MEMORY: u64 = 100_000_000;
 pub const GETBUNDLE_COMMIT_NUM_WARN: u64 = 1_000_000;
 const UNEXPECTED_NONE_ERR_MSG: &str = "unexpected None while calling ancestors_difference_stream";
 
+pub trait Repo = CommitGraphArc
+    + BonsaiHgMappingRef
+    + RepoDerivedDataRef
+    + PhasesRef
+    + HgMutationStoreArc
+    + RepoBlobstoreRef
+    + Clone
+    + 'static
+    + Send
+    + Sync;
+
 #[derive(PartialEq, Eq)]
 pub enum PhasesPart {
     Yes,
@@ -99,7 +111,7 @@ pub struct SessionLfsParams {
 
 pub async fn create_getbundle_response(
     ctx: &CoreContext,
-    blobrepo: &BlobRepo,
+    repo: &impl Repo,
     common: Vec<HgChangesetId>,
     heads: &[HgChangesetId],
     return_phases: PhasesPart,
@@ -111,12 +123,12 @@ pub async fn create_getbundle_response(
     let heads_len = heads.len();
     let common: HashSet<_> = common.into_iter().collect();
 
-    let phases = blobrepo.phases();
+    let phases = repo.phases();
     let (draft_commits, commits_to_send) = try_join!(
         find_new_draft_commits_and_derive_filenodes_for_public_roots(
-            ctx, blobrepo, &common, heads, phases
+            ctx, repo, &common, heads, phases
         ),
-        find_commits_to_send(ctx, blobrepo, &common, heads),
+        find_commits_to_send(ctx, repo, &common, heads),
     )?;
 
     report_draft_commits(ctx, &draft_commits);
@@ -126,13 +138,13 @@ pub async fn create_getbundle_response(
         // no heads means bookmark-only pushrebase, and the client
         // does not expect a changegroup part in this case
         let cg_part =
-            create_hg_changeset_part(ctx, blobrepo, commits_to_send.clone(), lfs_params).await?;
+            create_hg_changeset_part(ctx, repo, commits_to_send.clone(), lfs_params).await?;
         parts.push(cg_part);
 
         if !draft_commits.is_empty() {
             let mutations_fut = {
                 cloned!(ctx);
-                let hg_mutation_store = blobrepo.hg_mutation_store_arc();
+                let hg_mutation_store = repo.hg_mutation_store_arc();
                 async move {
                     hg_mutation_store
                         .all_predecessors(&ctx, draft_commits)
@@ -146,7 +158,7 @@ pub async fn create_getbundle_response(
 
     // Phases part has to be after the changegroup part.
     if return_phases {
-        let phase_heads = find_phase_heads(ctx, blobrepo, heads, phases).await?;
+        let phase_heads = find_phase_heads(ctx, repo, heads, phases).await?;
         parts.push(parts::phases_part(
             ctx.clone(),
             stream::iter(phase_heads).map(anyhow::Ok),
@@ -171,13 +183,13 @@ fn report_draft_commits(ctx: &CoreContext, draft_commits: &HashSet<HgChangesetId
 /// return ancestors of heads with hint to exclude ancestors of common
 pub async fn find_commits_to_send(
     ctx: &CoreContext,
-    blobrepo: &BlobRepo,
+    repo: &impl Repo,
     common: &HashSet<HgChangesetId>,
     heads: &[HgChangesetId],
 ) -> Result<Vec<ChangesetId>, Error> {
     let heads = hg_to_bonsai_stream(
         ctx,
-        blobrepo,
+        repo,
         heads
             .iter()
             .filter(|head| !common.contains(head))
@@ -187,7 +199,7 @@ pub async fn find_commits_to_send(
 
     let excludes = hg_to_bonsai_stream(
         ctx,
-        blobrepo,
+        repo,
         common
             .iter()
             .copied()
@@ -199,17 +211,13 @@ pub async fn find_commits_to_send(
 
     let params = Params { heads, excludes };
 
-    let nodes_to_send: Vec<_> = call_difference_of_union_of_ancestors_revset(
-        ctx,
-        &blobrepo.commit_graph_arc(),
-        params,
-        None,
-    )
-    .await?
-    .ok_or_else(|| anyhow!(UNEXPECTED_NONE_ERR_MSG))?
-    .into_iter()
-    .rev()
-    .collect();
+    let nodes_to_send: Vec<_> =
+        call_difference_of_union_of_ancestors_revset(ctx, &repo.commit_graph_arc(), params, None)
+            .await?
+            .ok_or_else(|| anyhow!(UNEXPECTED_NONE_ERR_MSG))?
+            .into_iter()
+            .rev()
+            .collect();
 
     ctx.session()
         .bump_load(Metric::Commits, nodes_to_send.len() as f64);
@@ -332,7 +340,7 @@ fn warn_expensive_getbundle(ctx: &CoreContext) {
 
 async fn create_hg_changeset_part(
     ctx: &CoreContext,
-    blobrepo: &BlobRepo,
+    repo: &impl Repo,
     nodes_to_send: Vec<ChangesetId>,
     lfs_params: &SessionLfsParams,
 ) -> Result<PartEncodeBuilder> {
@@ -342,11 +350,11 @@ async fn create_hg_changeset_part(
     let changelogentries = stream::iter(nodes_to_send)
         .chunks(map_chunk_size)
         .then({
-            cloned!(ctx, blobrepo);
+            cloned!(ctx, repo);
             move |bonsais| {
-                cloned!(ctx, blobrepo);
+                cloned!(ctx, repo);
                 async move {
-                    let mapping = blobrepo
+                    let mapping = repo
                         .get_hg_bonsai_mapping(ctx.clone(), bonsais.clone())
                         .await?
                         .into_iter()
@@ -372,13 +380,13 @@ async fn create_hg_changeset_part(
         .map_ok(stream::iter)
         .try_flatten()
         .map({
-            cloned!(ctx, blobrepo);
+            cloned!(ctx, repo);
             move |res| {
-                cloned!(ctx, blobrepo);
+                cloned!(ctx, repo);
                 async move {
                     match res {
                         Ok((hg_cs_id, _bcs_id)) => {
-                            let cs = hg_cs_id.load(&ctx, blobrepo.repo_blobstore()).await?;
+                            let cs = hg_cs_id.load(&ctx, repo.repo_blobstore()).await?;
                             Ok((hg_cs_id, cs))
                         }
                         Err(e) => Err(e),
@@ -420,7 +428,7 @@ async fn create_hg_changeset_part(
 
 async fn hg_to_bonsai_stream(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &impl Repo,
     nodes: Vec<HgChangesetId>,
 ) -> Result<Vec<(ChangesetId, Generation)>, Error> {
     stream::iter(nodes)
@@ -449,7 +457,7 @@ async fn hg_to_bonsai_stream(
 // have had their filenodes derived.
 pub async fn find_new_draft_commits_and_derive_filenodes_for_public_roots(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &impl Repo,
     common: &HashSet<HgChangesetId>,
     heads: &[HgChangesetId],
     phases: &dyn Phases,
@@ -501,7 +509,7 @@ pub async fn find_new_draft_commits_and_derive_filenodes_for_public_roots(
 /// and new_public_heads = `[A, B]`.
 async fn find_new_draft_commits_and_public_roots(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &impl Repo,
     common: &HashSet<HgChangesetId>,
     heads: &[HgChangesetId],
     phases: &dyn Phases,
@@ -565,7 +573,7 @@ async fn find_new_draft_commits_and_public_roots(
 /// `[(F, public), (E, draft), (D, draft), (B, public)]`
 async fn find_phase_heads(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &impl Repo,
     heads: &[HgChangesetId],
     phases: &dyn Phases,
 ) -> Result<Vec<(HgChangesetId, Phase)>, Error> {
@@ -640,7 +648,6 @@ async fn traverse_draft_commits(
         }
 
         // Get the parents of the changesets we are traversing.
-        // TODO(mbthomas): After blobrepo refactoring, change to use a method that calls `Changesets::get_many`.
         let parents: Vec<_> = stream::iter(traverse)
             .map(move |csid| async move {
                 let parents = repo.commit_graph().changeset_parents(ctx, csid).await?;
