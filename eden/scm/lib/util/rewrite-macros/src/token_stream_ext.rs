@@ -13,6 +13,7 @@ use proc_macro2::Spacing;
 use proc_macro2::TokenStream;
 use proc_macro2::TokenTree;
 use tree_pattern_match::find_all;
+use tree_pattern_match::matches_full;
 use tree_pattern_match::replace_all;
 use tree_pattern_match::Match;
 use tree_pattern_match::Placeholder;
@@ -30,6 +31,7 @@ pub(crate) trait FindReplace {
         self.replace_with(pat, replace.to_items())
     }
     fn find_all(&self, pat: impl ToItems) -> Vec<Match<TokenInfo>>;
+    fn matches_full(&self, pat: impl ToItems) -> Option<Match<TokenInfo>>;
 }
 
 pub(crate) trait AngleBracket {
@@ -184,6 +186,12 @@ impl FindReplace for TokenStream {
         let pat = pat.to_items();
         find_all(&items, &pat)
     }
+
+    fn matches_full(&self, pat: impl ToItems) -> Option<Match<TokenInfo>> {
+        let items = self.to_items();
+        let pat = pat.to_items();
+        matches_full(&items, &pat)
+    }
 }
 
 impl FindReplace for Vec<Item> {
@@ -195,6 +203,11 @@ impl FindReplace for Vec<Item> {
     fn find_all(&self, pat: impl ToItems) -> Vec<Match<TokenInfo>> {
         let pat = pat.to_items();
         find_all(self, &pat)
+    }
+
+    fn matches_full(&self, pat: impl ToItems) -> Option<Match<TokenInfo>> {
+        let pat = pat.to_items();
+        matches_full(self, &pat)
     }
 }
 
