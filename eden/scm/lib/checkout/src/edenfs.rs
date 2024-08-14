@@ -12,6 +12,8 @@ use std::io::Write;
 use std::os::unix::prelude::MetadataExt;
 use std::process::Command;
 use std::sync::Arc;
+use std::thread;
+use std::time::Duration;
 
 use anyhow::bail;
 use anyhow::Context;
@@ -21,6 +23,8 @@ use configmodel::ConfigExt;
 use context::CoreContext;
 use manifest::Manifest;
 use pathmatcher::AlwaysMatcher;
+use progress_model::ProgressBar;
+use progress_model::Registry;
 use repo::repo::Repo;
 use spawn_ext::CommandExt;
 use status::Status;
@@ -32,6 +36,7 @@ use types::workingcopy_client::CheckoutMode;
 use types::workingcopy_client::ConflictType;
 use types::HgId;
 use types::RepoPath;
+use workingcopy::client::WorkingCopyClient;
 use workingcopy::util::walk_treestate;
 use workingcopy::workingcopy::LockedWorkingCopy;
 use workingcopy::workingcopy::WorkingCopy;
@@ -160,7 +165,7 @@ pub fn edenfs_checkout(
 
     // Perform the actual checkout depending on the mode
     if revert_conflicts {
-        edenfs_force_checkout(repo, wc, target_commit, target_commit_tree_hash)?
+        edenfs_force_checkout(ctx, repo, wc, target_commit, target_commit_tree_hash)?
     } else {
         edenfs_noconflict_checkout(ctx, repo, wc, target_commit, target_commit_tree_hash)?
     }
@@ -215,7 +220,9 @@ fn edenfs_noconflict_checkout(
     let target_mf = tree_resolver.get(&target_commit)?;
 
     // Do a dry run to check if there will be any conflicts before modifying any actual files
-    let conflicts = wc.working_copy_client()?.checkout(
+    let conflicts = get_conflicts_with_progress(
+        ctx,
+        wc.working_copy_client()?,
         target_commit,
         target_commit_tree_hash,
         CheckoutMode::DryRun,
@@ -231,7 +238,9 @@ fn edenfs_noconflict_checkout(
     })?;
 
     // Do the actual checkout
-    let actual_conflicts = wc.working_copy_client()?.checkout(
+    let actual_conflicts = get_conflicts_with_progress(
+        ctx,
+        wc.working_copy_client()?,
         target_commit,
         target_commit_tree_hash,
         CheckoutMode::Normal,
@@ -249,13 +258,16 @@ fn edenfs_noconflict_checkout(
 }
 
 fn edenfs_force_checkout(
+    ctx: &CoreContext,
     repo: &Repo,
     wc: &LockedWorkingCopy,
     target_commit: HgId,
     target_commit_tree_hash: HgId,
 ) -> anyhow::Result<()> {
     // Try to run checkout on EdenFS on force mode, then check for network errors
-    let conflicts = wc.working_copy_client()?.checkout(
+    let conflicts = get_conflicts_with_progress(
+        ctx,
+        wc.working_copy_client()?,
         target_commit,
         target_commit_tree_hash,
         CheckoutMode::Force,
@@ -268,6 +280,53 @@ fn edenfs_force_checkout(
     clear_edenfs_dirstate(wc)?;
 
     Ok(())
+}
+
+fn get_conflicts_with_progress(
+    ctx: &CoreContext,
+    client: Arc<dyn WorkingCopyClient>,
+    node: HgId,
+    tree_node: HgId,
+    mode: CheckoutMode,
+) -> Result<Vec<CheckoutConflict>> {
+    thread::scope(|s| -> Result<_> {
+        // Used to tell the progress bar thread to stop
+        let checkout_revision_ref = Arc::new(());
+        if ctx
+            .config
+            .get_or_default("checkout", "progress.eden-enabled")?
+        {
+            let scope_check = Arc::downgrade(&checkout_revision_ref);
+            let interval_ms =
+                ctx.config
+                    .get_or("checkout", "progress.eden-update-interval-ms", || 50)?;
+            let client = client.clone();
+            let b = thread::Builder::new().name("eden-checkout-progress".to_owned());
+            let pb = progress_model::ProgressBarBuilder::new()
+                .topic(if mode == CheckoutMode::DryRun {
+                    "Checking for conflicts"
+                } else {
+                    "Updating files"
+                })
+                // TODO(sggutier): This is a placeholder for the actual inode count
+                .total(100000)
+                .unit("files")
+                .adhoc(true)
+                .thread_local_parent()
+                .pending();
+            b.spawn_scoped(s, move || -> Result<_> {
+                let _active = ProgressBar::push_active(pb.clone(), Registry::main());
+                while scope_check.upgrade().is_some() {
+                    if let Some(info) = client.checkout_progress()? {
+                        pb.set_position(info);
+                    }
+                    thread::sleep(Duration::from_millis(interval_ms));
+                }
+                Ok(())
+            })?;
+        }
+        client.checkout(node, tree_node, mode)
+    })
 }
 
 fn clear_edenfs_dirstate(wc: &LockedWorkingCopy) -> anyhow::Result<()> {
