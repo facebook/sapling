@@ -102,3 +102,105 @@ pub fn demomo(
 ) -> proc_macro::TokenStream {
     demomo::demomo(attr.into(), tokens.into()).into()
 }
+
+/// Fill boilerplate of a cached field.
+/// The callsite needs to define `OnceCell<Arc<_>>` field. For example:
+///
+/// ```
+/// use std::io::Result;
+/// use std::path::PathBuf;
+/// use std::sync::Arc;
+///
+/// use once_cell::sync::OnceCell;
+///
+/// struct FileReader {
+///     path: PathBuf,
+///     // Define this field before using `#[cached_field]`!
+///     content: OnceCell<Arc<String>>,
+/// }
+///
+/// impl FileReader {
+///     pub fn new(path: PathBuf) -> Self {
+///         Self {
+///             path,
+///             content: Default::default(),
+///         }
+///     }
+///
+///     #[rewrite_macros::cached_field]
+///     pub fn content(&self) -> Result<Arc<String>> {
+///         let data = std::fs::read_to_string(&self.path)?;
+///         Ok(Arc::new(data))
+///     }
+/// }
+///
+/// let dir = tempfile::tempdir().unwrap();
+/// let path = dir.path().join("a.txt");
+/// let reader = FileReader::new(path.clone());
+///
+/// std::fs::write(&path, "abc").unwrap();
+/// assert_eq!(reader.content().unwrap().as_ref(), "abc");
+///
+/// // Calling `content()` will use the cache, not read from filesystem again.
+/// std::fs::write(&path, "def").unwrap();
+/// assert_eq!(reader.content().unwrap().as_ref(), "abc");
+/// ```
+///
+/// If the type is `Arc<RwLock<_>>`, then the cache can be invalidated:
+///
+/// ```
+/// # use std::io::Result;
+/// # use std::path::PathBuf;
+/// # use std::sync::Arc;
+///
+/// # use once_cell::sync::OnceCell;
+///
+/// # struct FileReader {
+/// #     path: PathBuf,
+/// #     content: OnceCell<Arc<RwLock<String>>>,
+/// # }
+///
+/// # impl FileReader {
+/// #     pub fn new(path: PathBuf) -> Self {
+/// #         Self {
+/// #             path,
+/// #             content: Default::default(),
+/// #         }
+/// #     }
+/// # }
+///
+/// use parking_lot::RwLock;
+///
+/// impl FileReader {
+///     #[rewrite_macros::cached_field]
+///     pub fn content(&self) -> Result<Arc<RwLock<String>>> {
+///         let data = std::fs::read_to_string(&self.path)?;
+///         Ok(Arc::new(RwLock::new(data)))
+///     }
+/// }
+///
+/// let dir = tempfile::tempdir().unwrap();
+/// let path = dir.path().join("a.txt");
+/// let reader = FileReader::new(path.clone());
+///
+/// std::fs::write(&path, "abc").unwrap();
+/// assert_eq!(reader.content().unwrap().read().as_str(), "abc");
+///
+/// // Cached, stale content.
+/// std::fs::write(&path, "def").unwrap();
+/// let content = reader.content().unwrap();
+/// assert_eq!(content.read().as_str(), "abc");
+///
+/// // Cache can be invalidated to get the new content.
+/// reader.invalidate_content().unwrap();
+/// assert_eq!(content.read().as_str(), "def");
+/// ```
+///
+/// Use `#[cached(debug)]` to enable debug output at compile time.
+#[proc_macro_attribute]
+pub fn cached_field(
+    attr: proc_macro::TokenStream,
+    tokens: proc_macro::TokenStream,
+) -> proc_macro::TokenStream {
+    cached::cached_field(attr.into(), tokens.into()).into()
+}
