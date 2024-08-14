@@ -33,9 +33,7 @@ const REPO_B_SUBMODULE_PATH: &str = "submodules/repo_b";
 /// the submodule repo and the metadata file has that git commit, validation
 /// passes.
 #[fbinit::test]
-async fn test_changing_submodule_expansion_validation_passes_when_working_copy_matches(
-    fb: FacebookInit,
-) -> Result<()> {
+async fn test_valid_submodule_expansion_update_succeeds(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb.clone());
 
     let (repo_b, repo_b_cs_map) = build_repo_b(fb).await.context("Failed to build repo_b")?;
@@ -95,11 +93,15 @@ async fn test_changing_submodule_expansion_validation_passes_when_working_copy_m
     Ok(())
 }
 
+// TODO(T182967556): unit test for valid recursive submodule update
+
+// TODO(T182967556): unit test for multiple valid recursive submodule updates
+
 /// Test that if the submodule expansion is completely deleted along with its
 /// submodule metadata file, the changeset deles the submodule in the small repo
 /// when backsynced.
 #[fbinit::test]
-async fn test_backsyncing_full_submodule_expansion_deletion(fb: FacebookInit) -> Result<()> {
+async fn test_full_submodule_expansion_deletion_succeeds(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb.clone());
 
     let (repo_b, _repo_b_cs_map) = build_repo_b(fb).await.context("Failed to build repo_b")?;
@@ -148,10 +150,14 @@ async fn test_backsyncing_full_submodule_expansion_deletion(fb: FacebookInit) ->
     Ok(())
 }
 
+// TODO(T182967556): unit test for valid recursive submodule deletion
+
+// TODO(T182967556): test changing one submodule and deleting another
+
 /// Test that backsync will crash for small repos with submodule expansion
 /// enabled while backsyncing submodule changes is not properly supported.
 #[fbinit::test]
-async fn test_changing_submodule_expansion_without_metadata_file_fails_validation(
+async fn test_changing_submodule_expansion_without_metadata_file_fails(
     fb: FacebookInit,
 ) -> Result<()> {
     let ctx = CoreContext::test_mock(fb.clone());
@@ -204,7 +210,7 @@ async fn test_changing_submodule_expansion_without_metadata_file_fails_validatio
 /// without properly updating the working copy to match that commit will
 /// fail validation.
 #[fbinit::test]
-async fn test_changing_submodule_metadata_pointer_without_expansion_fails_validation(
+async fn test_changing_submodule_metadata_pointer_without_expansion_fails(
     fb: FacebookInit,
 ) -> Result<()> {
     let ctx = CoreContext::test_mock(fb.clone());
@@ -259,7 +265,7 @@ async fn test_changing_submodule_metadata_pointer_without_expansion_fails_valida
 /// Test that setting the submodule pointer to a valid git commit hash that's
 /// not present in the submodule repo fails validation.
 #[fbinit::test]
-async fn test_changing_submodule_metadata_pointer_to_git_commit_from_another_repo(
+async fn test_changing_submodule_metadata_pointer_to_git_commit_from_another_repo_fails(
     fb: FacebookInit,
 ) -> Result<()> {
     let ctx = CoreContext::test_mock(fb.clone());
@@ -325,7 +331,7 @@ async fn test_changing_submodule_metadata_pointer_to_git_commit_from_another_rep
 /// TODO(T187241943): don't allow users to backsync changesets where the metadat
 /// file is deleted but the expansion is not.
 #[fbinit::test]
-async fn test_deleting_submodule_metadata_file_without_expansion_passes_validation(
+async fn test_deleting_submodule_metadata_file_without_expansion_passes_fails(
     fb: FacebookInit,
 ) -> Result<()> {
     let ctx = CoreContext::test_mock(fb.clone());
@@ -363,13 +369,15 @@ async fn test_deleting_submodule_metadata_file_without_expansion_passes_validati
         err.to_string() == "Submodule metadata file was deleted but 2 files in the submodule expansion were not."
     }));
 
+    // TODO(T182967556): test partial deletion of expansion also fails
+
     Ok(())
 }
 
 /// Test that manually deleting the submodule expansion without deleting the
 /// metadata file fails validation
 #[fbinit::test]
-async fn test_deleting_submodule_expansion_without_metadata_file_fails_validation(
+async fn test_deleting_submodule_expansion_without_metadata_file_fails(
     fb: FacebookInit,
 ) -> Result<()> {
     let ctx = CoreContext::test_mock(fb.clone());
@@ -418,6 +426,8 @@ async fn test_deleting_submodule_expansion_without_metadata_file_fails_validatio
 
     Ok(())
 }
+
+// TODO(T182967556): test backsyncing valid atomic repo changing large and small repo
 
 /// Takes a Result that's expected to be a submodule expansion validation error
 /// when backsyncing a changeset and assert it matches the
