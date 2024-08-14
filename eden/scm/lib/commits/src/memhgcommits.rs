@@ -10,6 +10,7 @@ use std::collections::HashSet;
 use std::io;
 use std::sync::Arc;
 
+use anyhow::bail;
 use dag::delegate;
 use dag::errors::NotFoundError;
 use dag::ops::DagAddHeads;
@@ -100,6 +101,10 @@ impl AppendCommits for MemHgCommits {
         };
         self.dag.add_heads(&parents, &heads.into()).await?;
         Ok(())
+    }
+
+    async fn update_virtual_nodes(&mut self, _wdir_parents: Vec<Vertex>) -> Result<()> {
+        bail!("virtual nodes for memory backend is not implemented")
     }
 }
 

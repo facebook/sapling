@@ -62,6 +62,10 @@ impl AppendCommits for DoubleWriteCommits {
         self.commits.flush_commit_data().await?;
         Ok(())
     }
+
+    async fn update_virtual_nodes(&mut self, wdir_parents: Vec<Vertex>) -> Result<()> {
+        self.commits.update_virtual_nodes(wdir_parents).await
+    }
 }
 
 #[async_trait::async_trait]

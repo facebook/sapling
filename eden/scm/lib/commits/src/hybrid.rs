@@ -351,6 +351,10 @@ impl AppendCommits for HybridCommits {
         self.commits.dag.import_pull_data(clone_data, heads).await?;
         Ok(())
     }
+
+    async fn update_virtual_nodes(&mut self, wdir_parents: Vec<Vertex>) -> Result<()> {
+        self.commits.update_virtual_nodes(wdir_parents).await
+    }
 }
 
 /// Subset of HybridCommits useful to read commit text.

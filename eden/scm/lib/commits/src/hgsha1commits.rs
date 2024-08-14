@@ -11,11 +11,13 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
 
+use anyhow::bail;
 use dag::delegate;
 use dag::errors::NotFoundError;
 use dag::ops::DagAlgorithm;
 use dag::ops::DagPersistent;
 use dag::ops::DagStrip;
+use dag::ops::IdConvert;
 use dag::Dag;
 use dag::Group;
 use dag::Set;
@@ -25,6 +27,7 @@ use futures::stream::BoxStream;
 use futures::stream::StreamExt;
 use minibytes::Bytes;
 use parking_lot::RwLock;
+use types::HgId;
 use zstore::Id20;
 use zstore::Zstore;
 
@@ -125,6 +128,25 @@ impl AppendCommits for HgCommits {
     async fn flush_commit_data(&mut self) -> Result<()> {
         let mut zstore = self.commits.write();
         zstore.flush()?;
+        Ok(())
+    }
+
+    async fn update_virtual_nodes(&mut self, wdir_parents: Vec<Vertex>) -> Result<()> {
+        // For hg compatibility, use the same hardcoded hashes.
+        let null = Vertex::from(HgId::null_id().as_ref());
+        let wdir = Vertex::from(HgId::wdir_id().as_ref());
+        tracing::trace!("update wdir parents: {:?}", &wdir_parents);
+        let items = vec![(null.clone(), Vec::new()), (wdir.clone(), wdir_parents)];
+        self.dag.set_managed_virtual_group(Some(items)).await?;
+        let null_rev = self.dag.vertex_id(null).await?;
+        let wdir_rev = self.dag.vertex_id(wdir).await?;
+        if Group::VIRTUAL.min_id() != null_rev {
+            bail!("unexpected null rev: {:?}", null_rev);
+        }
+        if Group::VIRTUAL.min_id() + 1 != wdir_rev {
+            bail!("unexpected wdir rev: {:?}", wdir_rev);
+        }
+        tracing::trace!(null_rev=?null_rev, wdir_rev=?wdir_rev, dag_version=?self.dag.dag_version(), "updated virtual revs");
         Ok(())
     }
 }

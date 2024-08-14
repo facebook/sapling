@@ -14,6 +14,7 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
 
+use anyhow::bail;
 use anyhow::Result;
 use commits_trait::AppendCommits;
 use commits_trait::DagCommits;
@@ -27,6 +28,7 @@ use commits_trait::StripCommits;
 use dag::delegate;
 use dag::errors::NotFoundError;
 use dag::ops::DagPersistent;
+use dag::ops::IdConvert;
 use dag::Group;
 use dag::Set;
 use dag::Vertex;
@@ -320,6 +322,23 @@ impl AppendCommits for GitSegmentedCommits {
 
     fn update_references_to_match_metalog(&mut self, metalog: &MetaLog) -> Result<()> {
         self.metalog_to_git_references(metalog)
+    }
+
+    async fn update_virtual_nodes(&mut self, wdir_parents: Vec<Vertex>) -> Result<()> {
+        // For hg compatibility, use the same hardcoded hashes.
+        let null = Vertex::from(HgId::null_id().as_ref());
+        let wdir = Vertex::from(HgId::wdir_id().as_ref());
+        let items = vec![(null.clone(), Vec::new()), (wdir.clone(), wdir_parents)];
+        self.dag.set_managed_virtual_group(Some(items)).await?;
+        let null_rev = self.dag.vertex_id(null).await?;
+        let wdir_rev = self.dag.vertex_id(wdir).await?;
+        if Group::VIRTUAL.min_id() != null_rev {
+            bail!("unexpected null rev: {:?}", null_rev);
+        }
+        if Group::VIRTUAL.min_id() + 1 != wdir_rev {
+            bail!("unexpected wdir rev: {:?}", wdir_rev);
+        }
+        Ok(())
     }
 }
 

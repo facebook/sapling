@@ -142,6 +142,11 @@ impl AppendCommits for RevlogCommits {
         self.revlog.flush()?;
         Ok(())
     }
+
+    async fn update_virtual_nodes(&mut self, _wdir_parents: Vec<Vertex>) -> Result<()> {
+        // XXX: Dummy implementation - revlog is rarely used.
+        Ok(())
+    }
 }
 
 #[async_trait::async_trait]

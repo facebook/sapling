@@ -139,6 +139,10 @@ pub trait AppendCommits: Send + Sync {
         let _ = metalog;
         Ok(())
     }
+
+    /// Update virtual nodes like `wdir()` and `null()`.
+    /// `null()` and `wdir()` will have Id mapped to the first 2 ids in the virtual group.
+    async fn update_virtual_nodes(&mut self, wdir_parents: Vec<Vertex>) -> Result<()>;
 }
 
 pub trait DescribeBackend {
