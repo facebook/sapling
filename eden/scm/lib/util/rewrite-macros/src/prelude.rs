@@ -8,6 +8,8 @@
 use std::str::FromStr;
 
 pub(crate) use proc_macro2::TokenStream;
+pub(crate) use proc_macro2::TokenTree;
+pub(crate) use quote::format_ident;
 pub(crate) use quote::quote;
 pub(crate) use tree_pattern_match::Match;
 pub(crate) use tree_pattern_match::PlaceholderExt as _;

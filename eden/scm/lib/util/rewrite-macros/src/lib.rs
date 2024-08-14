@@ -7,6 +7,7 @@
 
 extern crate proc_macro;
 
+mod cached;
 mod demomo;
 #[allow(unused)]
 mod prelude;
