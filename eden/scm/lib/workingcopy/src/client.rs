@@ -80,7 +80,7 @@ impl WorkingCopyClient for edenfs_client::EdenFsClient {
     }
 
     fn checkout_progress(&self) -> Result<Option<u64>> {
-        bail!("Progress for EdenFS checkout not yet implemented!");
+        edenfs_client::EdenFsClient::checkout_progress(self)
     }
 
     fn as_any(&self) -> &dyn Any {
