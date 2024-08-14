@@ -7,6 +7,7 @@
 
 use std::str::FromStr;
 
+use proc_macro2::Delimiter;
 use proc_macro2::Group;
 use proc_macro2::Punct;
 use proc_macro2::Spacing;
@@ -17,6 +18,7 @@ use tree_pattern_match::matches_full;
 use tree_pattern_match::replace_all;
 use tree_pattern_match::Match;
 use tree_pattern_match::Placeholder;
+use tree_pattern_match::PlaceholderExt as _;
 use tree_pattern_match::Replace;
 
 use crate::prelude::Item;
@@ -50,6 +52,10 @@ pub(crate) trait ToTokens {
 
 pub(crate) trait MatchExt {
     fn captured_tokens(&self, name: &str) -> TokenStream;
+}
+
+pub(crate) trait PlaceholderExt {
+    fn disallow_group_match(self, name: &'static str) -> Self;
 }
 
 impl ToItems for TokenStream {
@@ -263,6 +269,15 @@ impl MatchExt for Match<TokenInfo> {
             None => TokenStream::new(),
             Some(v) => v.to_tokens(),
         }
+    }
+}
+
+impl PlaceholderExt for Vec<Item> {
+    fn disallow_group_match(self, name: &'static str) -> Self {
+        self.with_placeholder_matching_items([(name,
+            (|item: &Item| !matches!(item, Item::Tree(TokenInfo::Group(d), _) if *d == Delimiter::Brace))
+                as fn(&Item) -> bool,
+        )])
     }
 }
 

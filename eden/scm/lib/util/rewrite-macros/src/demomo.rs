@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use proc_macro2::Delimiter;
-
 use crate::prelude::*;
 
 // arg         | inner_arg | pass_arg      | inner_body
@@ -50,11 +48,7 @@ pub(crate) fn demomo(attr: TokenStream, tokens: TokenStream) -> TokenStream {
         );
     let pat = "fn __NAME (___ARGSg) ___RET { ___BODYg } "
         .to_items()
-        .with_placeholder_matching_items([(
-            "___RET",
-            (|item: &Item| !matches!(item, Item::Tree(TokenInfo::Group(d), _) if *d == Delimiter::Brace))
-                as fn(&Item) -> bool,
-        )]);
+        .disallow_group_match("___RET");
     tokens.replace_with(pat, |m: &Match<TokenInfo>| {
         let name = &m.captures["__NAME"];
         let args = m.captures["___ARGSg"]

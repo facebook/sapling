@@ -10,12 +10,13 @@ use std::str::FromStr;
 pub(crate) use proc_macro2::TokenStream;
 pub(crate) use quote::quote;
 pub(crate) use tree_pattern_match::Match;
-pub(crate) use tree_pattern_match::PlaceholderExt;
+pub(crate) use tree_pattern_match::PlaceholderExt as _;
 
 pub(crate) use crate::token::TokenInfo;
 pub(crate) use crate::token_stream_ext::AngleBracket;
 pub(crate) use crate::token_stream_ext::FindReplace;
 pub(crate) use crate::token_stream_ext::MatchExt;
+pub(crate) use crate::token_stream_ext::PlaceholderExt as _;
 pub(crate) use crate::token_stream_ext::ToItems;
 pub(crate) use crate::token_stream_ext::ToTokens;
 
