@@ -391,7 +391,7 @@ pub async fn import_commit_contents<Uploader: GitUploader, Reader: GitReader>(
                     let finalized_chunk = match finalized_chunk_res {
                         Err(e) => {
                             // Log the error if any
-                            info!(ctx.logger(), "{}", e);
+                            info!(ctx.logger(), "{:?}", e);
                             anyhow::bail!(e);
                         }
                         Ok(chunk) => chunk,
