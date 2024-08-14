@@ -15,14 +15,18 @@
 use std::collections::BTreeSet;
 
 use anyhow::Result;
-use blobrepo::BlobRepo;
 use blobstore::Loadable;
+use bonsai_hg_mapping::BonsaiHgMapping;
+use bookmarks::Bookmarks;
+use commit_graph::CommitGraph;
+use commit_graph::CommitGraphWriter;
 use context::CoreContext;
 use deleted_manifest::DeletedManifestOps;
 use deleted_manifest::RootDeletedManifestIdCommon;
 use deleted_manifest::RootDeletedManifestV2Id;
 use derived_data_manager::BonsaiDerivable as NewBonsaiDerivable;
 use fbinit::FacebookInit;
+use filestore::FilestoreConfig;
 use fsnodes::RootFsnodeId;
 use futures::future;
 use futures::stream::TryStreamExt;
@@ -35,11 +39,42 @@ use rand::distributions::Alphanumeric;
 use rand::distributions::Uniform;
 use rand::thread_rng;
 use rand::Rng;
+use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreRef;
+use repo_derived_data::RepoDerivedData;
 use repo_derived_data::RepoDerivedDataRef;
+use repo_identity::RepoIdentity;
 use skeleton_manifest::RootSkeletonManifestId;
 use tests_utils::CreateCommitContext;
 use unodes::RootUnodeManifestId;
+
+#[facet::container]
+#[derive(Clone)]
+struct Repo {
+    #[facet]
+    repo_identity: RepoIdentity,
+
+    #[facet]
+    repo_blobstore: RepoBlobstore,
+
+    #[facet]
+    repo_derived_data: RepoDerivedData,
+
+    #[facet]
+    bonsai_hg_mapping: dyn BonsaiHgMapping,
+
+    #[facet]
+    bookmarks: dyn Bookmarks,
+
+    #[facet]
+    commit_graph: CommitGraph,
+
+    #[facet]
+    commit_graph_writer: dyn CommitGraphWriter,
+
+    #[facet]
+    filestore_config: FilestoreConfig,
+}
 
 fn gen_filename(rng: &mut impl Rng, len: usize) -> String {
     std::iter::repeat_with(|| rng.sample(Alphanumeric))
@@ -50,7 +85,7 @@ fn gen_filename(rng: &mut impl Rng, len: usize) -> String {
 
 async fn make_initial_large_directory(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &Repo,
     count: usize,
 ) -> Result<(ChangesetId, BTreeSet<String>)> {
     let mut filenames = BTreeSet::new();
@@ -76,7 +111,7 @@ async fn make_initial_large_directory(
 
 async fn modify_large_directory(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &Repo,
     filenames: &mut BTreeSet<String>,
     csid: ChangesetId,
     index: usize,
@@ -136,7 +171,7 @@ async fn modify_large_directory(
     Ok(csid)
 }
 
-async fn derive(ctx: &CoreContext, repo: &BlobRepo, data: &str, csid: ChangesetId) -> String {
+async fn derive(ctx: &CoreContext, repo: &Repo, data: &str, csid: ChangesetId) -> String {
     match data {
         MappedHgChangesetId::NAME => repo
             .repo_derived_data()
@@ -184,7 +219,7 @@ async fn derive(ctx: &CoreContext, repo: &BlobRepo, data: &str, csid: ChangesetI
     }
 }
 
-async fn iterate(ctx: &CoreContext, repo: &BlobRepo, data: &str, csid: ChangesetId) -> u64 {
+async fn iterate(ctx: &CoreContext, repo: &Repo, data: &str, csid: ChangesetId) -> u64 {
     match data {
         MappedHgChangesetId::NAME => repo
             .repo_derived_data()
@@ -262,7 +297,7 @@ async fn main(fb: FacebookInit) -> Result<()> {
     let data = args.next().unwrap_or_else(|| String::from("fsnodes"));
     println!("Deriving: {}", data);
 
-    let repo: BlobRepo = test_repo_factory::build_empty(ctx.fb).await?;
+    let repo: Repo = test_repo_factory::build_empty(ctx.fb).await?;
 
     let (mut csid, mut filenames) = make_initial_large_directory(&ctx, &repo, 100_000).await?;
 
