@@ -971,7 +971,7 @@ TODO(T179530927): properly support backsyncing with submodule expansion
   $ backsync_get_info_and_derive_data
   Processing commit: Deleting repo_b submodule metadata file
   Commit hash: fc9ac6bc48350781bc9affc6125b3d3c234688d9
-  * error: Submodule metadata file change is invalid: Submodule metadata file change is invalid: Submodule metadata file change is invalid* (glob)
+  * error: Submodule expansion deletion not supported yet: Submodule expansion deletion not supported yet: Submodule expansion deletion not supported yet* (glob)
   [255]
 
 

@@ -10,6 +10,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use anyhow::anyhow;
+use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
 use bytes::Bytes;
@@ -24,6 +25,7 @@ use futures::stream::TryStreamExt;
 use itertools::Itertools;
 use mononoke_types::BonsaiChangesetMut;
 use mononoke_types::ChangesetId;
+use mononoke_types::ContentId;
 use mononoke_types::FileChange;
 use mononoke_types::FileType;
 use mononoke_types::GitLfs;
@@ -239,7 +241,7 @@ async fn compact_submodule_expansion_file_changes<'a, R: Repo>(
 
     // Consindering that the provided bonsai is valid, any change affecting the
     // expansion will be affecting the expansion's metadata file.
-    let sm_metadata_file_content_id = match bonsai_mut
+    match bonsai_mut
         .file_changes
         .remove(&synced_sm_metadata_file_path)
     {
@@ -248,20 +250,43 @@ async fn compact_submodule_expansion_file_changes<'a, R: Repo>(
                 ctx,
                 format!("Submodule metadata file {synced_sm_metadata_file_path} was modified"),
             );
-            let simple_fc = sm_metadata_file_fc
-                .simplify()
-                .ok_or(anyhow!("Submodule metadata file change is invalid"))?;
-            simple_fc.content_id()
+            match sm_metadata_file_fc {
+                FileChange::Change(tfc) => {
+                    compact_submodule_expansion_update(
+                        ctx,
+                        bonsai_mut,
+                        large_repo,
+                        large_repo_sm_path,
+                        tfc.content_id(),
+                    )
+                    .await
+                }
+                FileChange::Deletion => {
+                    Err(anyhow!("Submodule expansion deletion not supported yet"))
+                }
+                _ => bail!("Unsupported change to submodule metadata file"),
+            }
         }
         None => {
             log_trace(
                 ctx,
                 format!("Submodule metadata file {synced_sm_metadata_file_path} was NOT modified"),
             );
-            return Ok(bonsai_mut);
+            Ok(bonsai_mut)
         }
-    };
+    }
+}
 
+/// Handle updates to the submodulen pointer, i.e. where the metadata file was
+/// updated with a git commit and the expansion working copy was updated to
+/// match the working copy of that commit.
+async fn compact_submodule_expansion_update<'a, R: Repo>(
+    ctx: &'a CoreContext,
+    mut bonsai_mut: BonsaiChangesetMut,
+    large_repo: &'a R,
+    large_repo_sm_path: NonRootMPath,
+    sm_metadata_file_content_id: ContentId,
+) -> Result<BonsaiChangesetMut> {
     // If the submodule metadata file was changed, remove all changes from the
     // expansion.
     bonsai_mut
@@ -293,6 +318,7 @@ async fn compact_submodule_expansion_file_changes<'a, R: Repo>(
         None,
         GitLfs::FullContent,
     );
+
     bonsai_mut
         .file_changes
         .insert(large_repo_sm_path, sm_file_change);

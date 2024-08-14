@@ -134,8 +134,9 @@ async fn test_backsyncing_full_submodule_expansion_deletion(fb: FacebookInit) ->
     // For now, backsyncing will fail complaining about the change made to the
     // submodule metadata file.
     assert!(
-        sync_result
-            .is_err_and(|err| { err.to_string() == "Submodule metadata file change is invalid" })
+        sync_result.is_err_and(|err| {
+            err.to_string() == "Submodule expansion deletion not supported yet"
+        })
     );
 
     // let small_repo_changesets = get_all_changeset_data_from_repo(&ctx, &small_repo).await?;\
@@ -365,7 +366,7 @@ async fn test_deleting_submodule_metadata_file_without_expansion_passes_validati
     assert!(sync_result.is_err_and(|err| {
         // TODO(T187241943): pass validation but fail backsyncing when user
         // only deletes the metadata file
-        err.to_string() == "Submodule metadata file change is invalid"
+        err.to_string() == "Submodule expansion deletion not supported yet"
     }));
 
     Ok(())
