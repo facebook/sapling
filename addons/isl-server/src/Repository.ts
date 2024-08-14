@@ -10,6 +10,7 @@ import type {KindOfChange, PollKind} from './WatchForChanges';
 import type {TrackEventName} from './analytics/eventNames';
 import type {ConfigLevel, ResolveCommandConflictOutput} from './commands';
 import type {RepositoryContext} from './serverTypes';
+import type {ExecaError} from 'execa';
 import type {
   CommitInfo,
   Disposable,
@@ -782,20 +783,26 @@ export class Repository {
       };
       this.uncommittedChangesEmitter.emit('change', this.uncommittedChanges);
     } catch (err) {
-      this.initialConnectionContext.logger.error('Error fetching files: ', err);
-      if (isExecaError(err)) {
-        if (err.stderr.includes('checkout is currently in progress')) {
+      let error = err;
+      if (isExecaError(error)) {
+        if (error.stderr.includes('checkout is currently in progress')) {
           this.initialConnectionContext.logger.info(
             'Ignoring `sl status` error caused by in-progress checkout',
           );
           return;
         }
       }
+
+      this.initialConnectionContext.logger.error('Error fetching files: ', error);
+      if (isExecaError(error)) {
+        error = simplifyExecaError(error);
+      }
+
       // emit an error, but don't save it to this.uncommittedChanges
       this.uncommittedChangesEmitter.emit('change', {
         fetchStartTimestamp,
         fetchCompletedTimestamp: Date.now(),
-        files: {error: err instanceof Error ? err : new Error(err as string)},
+        files: {error: error instanceof Error ? error : new Error(error as string)},
       });
     }
   });
@@ -886,7 +893,12 @@ export class Repository {
       if (isExecaError(error) && error.stderr.includes('Please check your internet connection')) {
         error = Error('Network request failed. Please check your internet connection.');
       }
+
       this.initialConnectionContext.logger.error('Error fetching commits: ', error);
+      if (isExecaError(error)) {
+        error = simplifyExecaError(error);
+      }
+
       this.smartlogCommitsChangesEmitter.emit('change', {
         fetchStartTimestamp,
         fetchCompletedTimestamp: Date.now(),
@@ -1575,4 +1587,11 @@ export function absolutePathForFileInRepo(
 
 function isUnhealthyEdenFs(cwd: string): Promise<boolean> {
   return exists(path.join(cwd, 'README_EDEN.txt'));
+}
+
+/**
+ * Extract the actually useful stderr part of the Execa Error, to avoid the long command args being printed first.
+ * */
+function simplifyExecaError(error: ExecaError): Error {
+  return new Error(error.stderr.trim() || error.message);
 }
