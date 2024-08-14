@@ -15,7 +15,6 @@ path = "../cmds/blobimport.rs"
 anyhow = "1.0.75"
 ascii = "1.0"
 blobimport_lib = { version = "0.1.0", path = "../blobimport_lib" }
-blobrepo = { version = "0.1.0", path = "../blobrepo" }
 bonsai_globalrev_mapping = { version = "0.1.0", path = "../bonsai_globalrev_mapping" }
 clap = { version = "4.5.11", features = ["derive", "env", "string", "unicode", "wrap_help"] }
 cmdlib = { version = "0.1.0", path = "../cmdlib" }

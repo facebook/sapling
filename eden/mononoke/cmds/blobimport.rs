@@ -20,8 +20,8 @@ use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use ascii::AsciiString;
+use blobimport_lib::BlobimportRepo;
 use blobimport_lib::BookmarkImportPolicy;
-use blobrepo::BlobRepo;
 use bonsai_globalrev_mapping::SqlBonsaiGlobalrevMappingBuilder;
 use clap::Parser;
 use cmdlib::monitoring::AliveService;
@@ -242,7 +242,7 @@ async fn async_main(app: MononokeApp) -> Result<()> {
     )
     .await?;
 
-    let blobrepo: BlobRepo = if args.no_create {
+    let repo: BlobimportRepo = if args.no_create {
         app.open_repo_unredacted(repo_arg).await?
     } else {
         app.create_repo_unredacted(repo_arg, None).await?
@@ -260,21 +260,20 @@ async fn async_main(app: MononokeApp) -> Result<()> {
         (_, Some(name)) => Some(RepoArgs::from_repo_name(name)),
         _ => None,
     };
-    let origin_repo: Option<BlobRepo> = match backup_from_repo_args {
+    let origin_repo: Option<BlobimportRepo> = match backup_from_repo_args {
         Some(backup_from_repo_args) => {
             Some(app.open_repo(backup_from_repo_args.as_repo_arg()).await?)
         }
         _ => None,
     };
-    let globalrevs_store = Arc::new(
-        globalrevs_store_builder.build(env.rendezvous_options, blobrepo.repo_identity().id()),
-    );
+    let globalrevs_store =
+        Arc::new(globalrevs_store_builder.build(env.rendezvous_options, repo.repo_identity().id()));
     let synced_commit_mapping = Arc::new(synced_commit_mapping);
 
     async move {
         let blobimport = blobimport_lib::Blobimport {
             ctx,
-            blobrepo: blobrepo.clone(),
+            repo: repo.clone(),
             revlogrepo_path: args.input,
             changeset,
             skip: args.skip,
@@ -327,12 +326,8 @@ async fn async_main(app: MononokeApp) -> Result<()> {
                     );
                 }
 
-                maybe_update_highest_imported_generation_number(
-                    ctx,
-                    &blobrepo,
-                    latest_imported_cs_id,
-                )
-                .await?;
+                maybe_update_highest_imported_generation_number(ctx, &repo, latest_imported_cs_id)
+                    .await?;
             }
             None => info!(ctx.logger(), "didn't import any commits"),
         };
@@ -362,13 +357,13 @@ async fn async_main(app: MononokeApp) -> Result<()> {
 // 2) Accept that the hint might be incorrect sometimes.
 async fn maybe_update_highest_imported_generation_number(
     ctx: &CoreContext,
-    blobrepo: &BlobRepo,
+    repo: &BlobimportRepo,
     latest_imported_cs_id: ChangesetId,
 ) -> Result<(), Error> {
-    let maybe_highest_imported_gen_num = blobrepo
+    let maybe_highest_imported_gen_num = repo
         .mutable_counters()
         .get_counter(ctx, blobimport_lib::HIGHEST_IMPORTED_GEN_NUM);
-    let new_gen_num = blobrepo
+    let new_gen_num = repo
         .commit_graph()
         .changeset_generation(ctx, latest_imported_cs_id);
     let (maybe_highest_imported_gen_num, new_gen_num) =
@@ -386,8 +381,7 @@ async fn maybe_update_highest_imported_generation_number(
     };
 
     if let Some(new_gen_num) = new_gen_num {
-        blobrepo
-            .mutable_counters()
+        repo.mutable_counters()
             .set_counter(
                 ctx,
                 blobimport_lib::HIGHEST_IMPORTED_GEN_NUM,

@@ -13,7 +13,6 @@ use ::manifest::Entry;
 use anyhow::bail;
 use anyhow::Context;
 use anyhow::Error;
-use blobrepo::BlobRepo;
 use blobrepo_hg::create_bonsai_changeset_hook;
 use blobrepo_hg::ChangesetHandle;
 use blobrepo_hg::CreateChangeset;
@@ -76,6 +75,7 @@ use tokio::runtime::Handle;
 use wireproto_handler::BackupSourceRepo;
 
 use crate::concurrency::JobProcessor;
+use crate::BlobimportRepoLike;
 
 struct ParseChangeset {
     revlogcs: BoxFuture<SharedItem<RevlogChangeset>, Error>,
@@ -200,12 +200,12 @@ fn parse_changeset(revlog_repo: RevlogRepo, csid: HgChangesetId) -> ParseChanges
 
 fn upload_entry(
     ctx: CoreContext,
-    blobrepo: &BlobRepo,
+    repo: &(impl BlobimportRepoLike + Clone + 'static),
     lfs_uploader: Arc<JobProcessor<LFSContent, ContentMetadataV2>>,
     entry: RevlogEntry,
     path: MPath,
 ) -> BoxFuture<(Entry<HgManifestId, HgFileNodeId>, RepoPath), Error> {
-    let blobrepo = blobrepo.clone();
+    let repo = repo.clone();
 
     let ty = entry.get_type();
 
@@ -230,8 +230,8 @@ fn upload_entry(
         .and_then(move |(content, is_ext, parents)| {
             let (p1, p2) = parents.get_nodes();
             let upload_node_id = UploadHgNodeHash::Checked(entry.get_hash().into_nodehash());
-            let blobstore = blobrepo.repo_blobstore_arc();
-            let filestore_config = *blobrepo.filestore_config();
+            let blobstore = repo.repo_blobstore_arc();
+            let filestore_config = *repo.filestore_config();
             match (ty, is_ext) {
                 (Type::Tree, false) => {
                     let upload = UploadHgTreeEntry {
@@ -300,9 +300,9 @@ fn upload_entry(
         .boxify()
 }
 
-pub struct UploadChangesets {
+pub struct UploadChangesets<R: BlobimportRepoLike + Clone + 'static> {
     pub ctx: CoreContext,
-    pub blobrepo: BlobRepo,
+    pub repo: R,
     pub revlogrepo: RevlogRepo,
     pub lfs_helper: Option<String>,
     pub concurrent_changesets: usize,
@@ -311,7 +311,7 @@ pub struct UploadChangesets {
     pub fixed_parent_order: HashMap<HgChangesetId, Vec<HgChangesetId>>,
 }
 
-impl UploadChangesets {
+impl<R: BlobimportRepoLike + Clone + 'static> UploadChangesets<R> {
     pub fn upload(
         self,
         changesets: impl Stream<Item = (RevIdx, HgNodeHash), Error = Error> + Send + 'static,
@@ -320,7 +320,7 @@ impl UploadChangesets {
     ) -> BoxStream<(RevIdx, (BonsaiChangeset, HgBlobChangeset)), Error> {
         let Self {
             ctx,
-            blobrepo,
+            repo,
             revlogrepo,
             lfs_helper,
             concurrent_changesets,
@@ -335,16 +335,16 @@ impl UploadChangesets {
 
         let mut scuba_logger = ctx.scuba().clone();
         scuba_logger
-            .add("Repo Id", blobrepo.repo_identity().id().to_string())
-            .add("Repo name", blobrepo.repo_identity().name().to_string());
+            .add("Repo Id", repo.repo_identity().id().to_string())
+            .add("Repo name", repo.repo_identity().name().to_string());
 
         let lfs_uploader = Arc::new(try_boxstream!(JobProcessor::new(
             {
-                cloned!(ctx, blobrepo);
+                cloned!(ctx, repo);
                 move |lfs_content| match &lfs_helper {
                     Some(lfs_helper) => {
-                        cloned!(ctx, blobrepo, lfs_helper);
-                        async move { lfs_upload(&ctx, &blobrepo, &lfs_helper, &lfs_content).await }
+                        cloned!(ctx, repo, lfs_helper);
+                        async move { lfs_upload(&ctx, &repo, &lfs_helper, &lfs_content).await }
                             .boxed()
                             .compat()
                     }
@@ -360,9 +360,9 @@ impl UploadChangesets {
 
         let blob_uploader = Arc::new(try_boxstream!(JobProcessor::new(
             {
-                cloned!(ctx, blobrepo, lfs_uploader);
+                cloned!(ctx, repo, lfs_uploader);
                 move |(entry, path)| {
-                    upload_entry(ctx.clone(), &blobrepo, lfs_uploader.clone(), entry, path).boxify()
+                    upload_entry(ctx.clone(), &repo, lfs_uploader.clone(), entry, path).boxify()
                 }
             },
             &handle,
@@ -373,7 +373,7 @@ impl UploadChangesets {
 
         changesets
             .and_then({
-                cloned!(ctx, revlogrepo, blobrepo);
+                cloned!(ctx, revlogrepo, repo);
                 move |(revidx, csid)| {
                     let ParseChangeset {
                         revlogcs,
@@ -382,7 +382,7 @@ impl UploadChangesets {
                     } = parse_changeset(revlogrepo.clone(), HgChangesetId::new(csid));
 
                     let rootmf = rootmf.map({
-                        cloned!(ctx, blobrepo);
+                        cloned!(ctx, repo);
                         move |rootmf| {
                             match rootmf {
                                 None => future::ok(None).boxify(),
@@ -400,7 +400,7 @@ impl UploadChangesets {
                                         path: RepoPath::root(),
                                     };
                                     upload
-                                        .upload(ctx, blobrepo.repo_blobstore_arc())
+                                        .upload(ctx, repo.repo_blobstore_arc())
                                         .into_future()
                                         .and_then(|(_, entry)| entry.boxed().compat())
                                         .map(Some)
@@ -465,8 +465,8 @@ impl UploadChangesets {
                             let hg_cs_id = HgChangesetId::new(p);
 
                             maybe_handle.unwrap_or_else({
-                                cloned!(ctx, blobrepo);
-                                move || ChangesetHandle::ready_cs_handle(ctx, blobrepo, hg_cs_id)
+                                cloned!(ctx, repo);
+                                move || ChangesetHandle::ready_cs_handle(ctx, repo, hg_cs_id)
                             })
                         }
                     });
@@ -493,12 +493,11 @@ impl UploadChangesets {
                     create_bonsai_changeset_hook: Some(create_and_verify_bonsai.clone()),
                     upload_to_blobstore_only: false,
                 };
-                let cshandle =
-                    create_changeset.create(ctx.clone(), &blobrepo, scuba_logger.clone());
+                let cshandle = create_changeset.create(ctx.clone(), &repo, scuba_logger.clone());
                 parent_changeset_handles.insert(csid, cshandle.clone());
 
                 cloned!(ctx);
-                let phases = blobrepo.phases_arc();
+                let phases = repo.phases_arc();
 
                 // Uploading changeset and populate phases
                 // We know they are public.

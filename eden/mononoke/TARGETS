@@ -88,7 +88,6 @@ rust_binary(
         "//common/rust/shed/failure_ext:failure_ext",
         "//common/rust/shed/fbinit:fbinit",
         "//eden/mononoke/blobimport_lib:blobimport_lib",
-        "//eden/mononoke/blobrepo:blobrepo",
         "//eden/mononoke/bonsai_globalrev_mapping:bonsai_globalrev_mapping",
         "//eden/mononoke/cmdlib:cmdlib",
         "//eden/mononoke/cmdlib/mononoke_app:mononoke_app",

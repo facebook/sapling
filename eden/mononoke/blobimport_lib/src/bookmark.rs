@@ -11,7 +11,6 @@ use std::sync::Arc;
 use anyhow::format_err;
 use anyhow::Error;
 use ascii::AsciiString;
-use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bookmarks::BookmarkKey;
@@ -31,6 +30,8 @@ use mercurial_types::HgChangesetId;
 use mononoke_types::ChangesetId;
 use slog::info;
 use slog::Logger;
+
+use crate::BlobimportRepoLike;
 
 pub fn read_bookmarks(revlogrepo: &RevlogRepo) -> BoxFuture<Vec<(Vec<u8>, HgChangesetId)>, Error> {
     let bookmarks = Arc::new(try_boxfuture!(revlogrepo.get_bookmarks()));
@@ -67,7 +68,7 @@ pub fn upload_bookmarks(
     ctx: CoreContext,
     logger: &Logger,
     revlogrepo: RevlogRepo,
-    blobrepo: BlobRepo,
+    repo: impl BlobimportRepoLike + Clone + 'static,
     stale_bookmarks: Vec<(Vec<u8>, HgChangesetId)>,
     mononoke_bookmarks: Vec<(BookmarkKey, ChangesetId)>,
     bookmark_name_transformer: BookmarkKeyTransformer,
@@ -77,24 +78,24 @@ pub fn upload_bookmarks(
 
     read_bookmarks(&revlogrepo)
         .map({
-            cloned!(ctx, logger, blobrepo, stale_bookmarks);
+            cloned!(ctx, logger, repo, stale_bookmarks);
             move |bookmarks| {
                 stream::futures_unordered(bookmarks.into_iter().map(|(key, cs_id)| {
                     {
-                        cloned!(ctx, blobrepo);
-                        async move { blobrepo.hg_changeset_exists(ctx, cs_id).await }
+                        cloned!(ctx, repo);
+                        async move { repo.hg_changeset_exists(ctx, cs_id).await }
                     }
                     .boxed()
                     .compat()
                     .and_then({
-                            cloned!(ctx, logger, key, blobrepo, stale_bookmarks);
+                            cloned!(ctx, logger, key, repo, stale_bookmarks);
                             move |exists| {
                                 match (exists, stale_bookmarks.get(&key).cloned()) {
                                     (false, Some(stale_cs_id)) => {
                                         info!(
                                             logger,
                                             "current version of bookmark {} couldn't be \
-                                            imported, because cs {:?} was not present in blobrepo \
+                                            imported, because cs {:?} was not present in the repo \
                                             yet; using stale version instead {:?}",
                                             String::from_utf8_lossy(&key),
                                             cs_id,
@@ -102,7 +103,7 @@ pub fn upload_bookmarks(
                                         );
 
                                         async move {
-                                            let exists = blobrepo.hg_changeset_exists(ctx, stale_cs_id).await?;
+                                            let exists = repo.hg_changeset_exists(ctx, stale_cs_id).await?;
                                             Ok((key, stale_cs_id, exists))
                                         }
                                         .boxed()
@@ -113,10 +114,10 @@ pub fn upload_bookmarks(
                                 }
                             }})
                         .and_then({
-                            cloned!(ctx, blobrepo, logger);
+                            cloned!(ctx, repo, logger);
                             move |(key, cs_id, exists)| async move {
                                 if exists {
-                                    let bcs_id = blobrepo.bonsai_hg_mapping().get_bonsai_from_hg(&ctx, cs_id)
+                                    let bcs_id = repo.bonsai_hg_mapping().get_bonsai_from_hg(&ctx, cs_id)
                                         .await?
                                         .ok_or_else(|| format_err!("failed to resolve hg to bonsai: {}", cs_id))?;
                                     Ok(Some((key, bcs_id)))
@@ -140,10 +141,10 @@ pub fn upload_bookmarks(
         .filter_map(|key_cs_id| key_cs_id)
         .chunks(100) // send 100 bookmarks in a single transaction
         .and_then({
-            let blobrepo = blobrepo;
+            let repo = repo;
             let mononoke_bookmarks: HashMap<_, _> = mononoke_bookmarks.into_iter().collect();
             move |vec| {
-                let mut transaction = blobrepo.bookmarks().create_transaction(ctx.clone());
+                let mut transaction = repo.bookmarks().create_transaction(ctx.clone());
 
                 let mut count = 0;
                 for (key, value) in vec {
