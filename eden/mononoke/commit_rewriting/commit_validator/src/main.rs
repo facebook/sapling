@@ -18,7 +18,6 @@ use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
-use blobrepo::BlobRepo;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateLogArc;
 use bookmarks::BookmarkUpdateLogEntry;
@@ -32,7 +31,6 @@ use futures::stream;
 use futures::stream::Stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
-use mononoke_api_types::InnerRepo;
 use mononoke_app::args::AsRepoArg;
 use mononoke_app::fb303::AliveService;
 use mononoke_app::fb303::Fb303AppExtension;
@@ -44,6 +42,7 @@ use scuba_ext::MononokeScubaSampleBuilder;
 use slog::info;
 
 mod cli;
+mod repo;
 mod reporting;
 mod setup;
 mod tail;
@@ -52,6 +51,7 @@ mod validation;
 use crate::cli::MononokeCommitValidatorArgs;
 use crate::cli::SubcommandValidator::Once;
 use crate::cli::SubcommandValidator::Tail;
+use crate::repo::Repo;
 use crate::setup::format_counter;
 use crate::setup::get_start_id;
 use crate::setup::get_validation_helpers;
@@ -102,7 +102,7 @@ fn validate_stream<'a>(
 
 async fn run_in_tailing_mode(
     ctx: &CoreContext,
-    blobrepo: BlobRepo,
+    repo: Repo,
     skip_bookmarks: HashSet<BookmarkKey>,
     validation_helpers: ValidationHelpers,
     start_id: BookmarkUpdateLogId,
@@ -117,8 +117,8 @@ async fn run_in_tailing_mode(
         ctx.clone(),
         start_id,
         skip_bookmarks,
-        blobrepo.repo_identity().id(),
-        blobrepo.bookmark_update_log_arc(),
+        repo.repo_identity().id(),
+        repo.bookmark_update_log_arc(),
         scuba_sample,
     );
 
@@ -128,8 +128,7 @@ async fn run_in_tailing_mode(
                 let entry_id = validated_entry_id_res?;
                 if entry_id.last_commit_for_bookmark_move() {
                     let id = entry_id.bookmarks_update_log_entry_id;
-                    blobrepo
-                        .mutable_counters()
+                    repo.mutable_counters()
                         .set_counter(ctx, &counter_name, id.try_into()?, None)
                         .await?;
                 }
@@ -143,11 +142,11 @@ async fn run_in_tailing_mode(
 
 async fn run_in_once_mode(
     ctx: &CoreContext,
-    blobrepo: BlobRepo,
+    repo: Repo,
     validation_helpers: ValidationHelpers,
     entry_id: BookmarkUpdateLogId,
 ) -> Result<(), Error> {
-    let bookmark_update_log = blobrepo.bookmark_update_log();
+    let bookmark_update_log = repo.bookmark_update_log();
     let entries: Vec<Result<(BookmarkUpdateLogEntry, QueueSize), Error>> = bookmark_update_log
         .read_next_bookmark_log_entries(
             ctx.clone(),
@@ -162,7 +161,7 @@ async fn run_in_once_mode(
     if entries.is_empty() {
         return Err(format_err!(
             "No entries for {} with id >{}",
-            blobrepo.repo_identity().id(),
+            repo.repo_identity().id(),
             u64::from(entry_id) - 1
         ));
     }
@@ -180,7 +179,7 @@ async fn run<'a>(fb: FacebookInit, ctx: CoreContext, app: MononokeApp) -> Result
     let repo_arg = args.repo.as_repo_arg();
     let (_, repo_config) = app.repo_config(repo_arg)?;
 
-    let repo: InnerRepo = app.open_repo(&args.repo).await?;
+    let repo: Repo = app.open_repo(&args.repo).await?;
     let mysql_options = &env.mysql_options;
     let readonly_storage = env.readonly_storage;
     let scuba_sample = &env.scuba_sample_builder;
@@ -201,12 +200,10 @@ async fn run<'a>(fb: FacebookInit, ctx: CoreContext, app: MononokeApp) -> Result
     .await
     .context("While instantiating commit syncers")?;
 
-    let blobrepo = repo.blob_repo.clone();
-
     let subcommand = args.subcommand;
 
     match subcommand {
-        Once { entry_id } => run_in_once_mode(&ctx, blobrepo, validation_helpers, entry_id).await,
+        Once { entry_id } => run_in_once_mode(&ctx, repo, validation_helpers, entry_id).await,
         Tail { start_id } => {
             let start_id = get_start_id(&ctx, &repo, start_id)
                 .await
@@ -214,7 +211,7 @@ async fn run<'a>(fb: FacebookInit, ctx: CoreContext, app: MononokeApp) -> Result
 
             run_in_tailing_mode(
                 &ctx,
-                blobrepo,
+                repo,
                 skip_bookmarks,
                 validation_helpers,
                 start_id,

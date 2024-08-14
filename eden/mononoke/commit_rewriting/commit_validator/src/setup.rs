@@ -15,6 +15,7 @@ use blobstore_factory::ReadOnlyStorage;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateLogId;
 use borrowed::borrowed;
+use cloned::cloned;
 use context::CoreContext;
 use cross_repo_sync::Large;
 use cross_repo_sync::Small;
@@ -23,7 +24,6 @@ use futures::future::try_join_all;
 use live_commit_sync_config::CfgrLiveCommitSyncConfig;
 use live_commit_sync_config::LiveCommitSyncConfig;
 use metaconfig_types::RepoConfig;
-use mononoke_api_types::InnerRepo;
 use mononoke_app::args::RepoArg;
 use mononoke_app::MononokeApp;
 use mutable_counters::MutableCountersRef;
@@ -32,23 +32,25 @@ use repo_identity::RepoIdentityRef;
 use scuba_ext::MononokeScubaSampleBuilder;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::facebook::MysqlOptions;
+use sql_query_config::SqlQueryConfigArc;
 use synced_commit_mapping::SqlSyncedCommitMapping;
 
 use crate::cli::MononokeCommitValidatorArgs;
 use crate::reporting::add_common_commit_syncing_fields;
 use crate::validation::ValidationHelpers;
+use crate::Repo;
 
 pub async fn get_validation_helpers<'a>(
     fb: FacebookInit,
     ctx: CoreContext,
     app: &MononokeApp,
-    large_repo: InnerRepo,
+    large_repo: Repo,
     repo_config: RepoConfig,
     mysql_options: MysqlOptions,
     readonly_storage: ReadOnlyStorage,
     scuba_sample: MononokeScubaSampleBuilder,
 ) -> Result<ValidationHelpers, Error> {
-    let repo_id = large_repo.blob_repo.repo_identity().id();
+    let repo_id = large_repo.repo_identity().id();
 
     let config_store = app.config_store();
     let sql_factory: MetadataSqlFactory = MetadataSqlFactory::new(
@@ -61,7 +63,7 @@ pub async fn get_validation_helpers<'a>(
     let builder = sql_factory
         .open::<SqlPushRedirectionConfigBuilder>()
         .await?;
-    let push_redirection_config = builder.build(large_repo.sql_query_config.clone());
+    let push_redirection_config = builder.build(large_repo.sql_query_config_arc());
     let live_commit_sync_config = CfgrLiveCommitSyncConfig::new_with_xdb(
         ctx.logger(),
         config_store,
@@ -85,14 +87,14 @@ pub async fn get_validation_helpers<'a>(
             .small_repos
             .into_keys()
             .map(|small_repo_id| {
-                let large_blob_repo = large_repo.blob_repo.clone();
                 borrowed!(app, scuba_sample);
+                cloned!(large_repo);
                 async move {
                     let scuba_sample = {
                         let mut scuba_sample = scuba_sample.clone();
                         add_common_commit_syncing_fields(
                             &mut scuba_sample,
-                            Large(large_blob_repo.repo_identity().id()),
+                            Large(large_repo.repo_identity().id()),
                             Small(small_repo_id),
                         );
 
@@ -101,7 +103,7 @@ pub async fn get_validation_helpers<'a>(
                     let small_repo = app.open_repo(&RepoArg::Id(small_repo_id)).await?;
                     Result::<_, Error>::Ok((
                         small_repo_id,
-                        (Large(large_blob_repo), Small(small_repo), scuba_sample),
+                        (Large(large_repo), Small(small_repo), scuba_sample),
                     ))
                 }
             });
