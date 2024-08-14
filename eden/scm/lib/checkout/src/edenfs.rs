@@ -163,11 +163,41 @@ pub fn edenfs_checkout(
     // TODO (sggutier): try to unify these steps with the non-edenfs version of checkout
     let target_commit_tree_hash = repo.tree_resolver()?.get_root_id(&target_commit)?;
 
+    let (pb, _active) = if ctx
+        .config
+        .get_or_default("checkout", "progress.eden-enabled")?
+    {
+        let pb = progress_model::ProgressBarBuilder::new()
+            .topic("EdenFS update".to_owned())
+            .total(if revert_conflicts { 1 } else { 2 })
+            .adhoc(false)
+            .thread_local_parent()
+            .pending();
+        let active = ProgressBar::push_active(pb.clone(), Registry::main());
+        (Some(pb), Some(active))
+    } else {
+        (None, None)
+    };
+
     // Perform the actual checkout depending on the mode
     if revert_conflicts {
-        edenfs_force_checkout(ctx, repo, wc, target_commit, target_commit_tree_hash)?
+        edenfs_force_checkout(
+            ctx,
+            repo,
+            wc,
+            target_commit,
+            target_commit_tree_hash,
+            pb.clone(),
+        )?
     } else {
-        edenfs_noconflict_checkout(ctx, repo, wc, target_commit, target_commit_tree_hash)?
+        edenfs_noconflict_checkout(
+            ctx,
+            repo,
+            wc,
+            target_commit,
+            target_commit_tree_hash,
+            pb.clone(),
+        )?
     }
 
     // Update the treestate and parents with the new changes
@@ -213,6 +243,7 @@ fn edenfs_noconflict_checkout(
     wc: &LockedWorkingCopy,
     target_commit: HgId,
     target_commit_tree_hash: HgId,
+    parent_pb: Option<Arc<ProgressBar>>,
 ) -> anyhow::Result<()> {
     let current_commit = wc.first_parent()?;
     let tree_resolver = repo.tree_resolver()?;
@@ -227,6 +258,9 @@ fn edenfs_noconflict_checkout(
         target_commit_tree_hash,
         CheckoutMode::DryRun,
     )?;
+    if let Some(parent_pb) = &parent_pb {
+        parent_pb.increase_position(1);
+    }
     let (plan, status) = create_edenfs_plan(wc, repo.config(), &source_mf, &target_mf, conflicts)?;
 
     check_conflicts(repo, wc, &plan, &target_mf, &status)?;
@@ -245,6 +279,9 @@ fn edenfs_noconflict_checkout(
         target_commit_tree_hash,
         CheckoutMode::Normal,
     )?;
+    if let Some(parent_pb) = &parent_pb {
+        parent_pb.increase_position(1);
+    }
     abort_on_eden_conflict_error(repo.config(), actual_conflicts)?;
 
     // Execute the plan, applying changes to conflicting-ish files
@@ -263,6 +300,7 @@ fn edenfs_force_checkout(
     wc: &LockedWorkingCopy,
     target_commit: HgId,
     target_commit_tree_hash: HgId,
+    parent_pb: Option<Arc<ProgressBar>>,
 ) -> anyhow::Result<()> {
     // Try to run checkout on EdenFS on force mode, then check for network errors
     let conflicts = get_conflicts_with_progress(
@@ -272,6 +310,11 @@ fn edenfs_force_checkout(
         target_commit_tree_hash,
         CheckoutMode::Force,
     )?;
+
+    if let Some(parent_pb) = &parent_pb {
+        parent_pb.increase_position(1);
+    }
+
     abort_on_eden_conflict_error(repo.config(), conflicts)?;
 
     wc.clear_merge_state()?;
