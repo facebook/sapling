@@ -12,14 +12,19 @@ pub mod sql;
 use std::fmt::Display;
 use std::sync::Arc;
 
+use anyhow::bail;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use changeset_info::ChangesetInfo;
+use commit_cloud_helpers::make_workspace_acl_name;
+#[cfg(fbcode_build)]
+use commit_cloud_intern_utils::acl_check::ACL_LINK;
 #[cfg(fbcode_build)]
 use commit_cloud_intern_utils::interngraph_publisher::publish_single_update;
 #[cfg(fbcode_build)]
 use commit_cloud_intern_utils::notification::NotificationData;
 use context::CoreContext;
 use edenapi_types::cloud::RemoteBookmark;
+use edenapi_types::cloud::WorkspaceSharingData;
 use edenapi_types::GetReferencesParams;
 use edenapi_types::GetSmartlogParams;
 use edenapi_types::HgId;
@@ -299,6 +304,72 @@ impl CommitCloud {
         self.acl_provider
             .commitcloud_workspace_acl(name, &None)
             .await
+    }
+
+    pub async fn share_workspace(
+        &self,
+        ctx: &CommitCloudContext,
+    ) -> anyhow::Result<WorkspaceSharingData> {
+        let maybeworkspace =
+            WorkspaceVersion::fetch_from_db(&self.storage, &ctx.workspace, &ctx.reponame).await?;
+        if maybeworkspace.is_none() {
+            bail!(
+                "'share_workspace' failed: workspace {} does not exist in repo {}",
+                ctx.workspace,
+                ctx.reponame
+            )
+        }
+
+        if maybeworkspace.unwrap().archived {
+            bail!(
+                "'share_workspace' failed: workspace {} has been archived",
+                ctx.workspace
+            );
+        }
+        let acl_name = make_workspace_acl_name(&ctx.workspace, &ctx.reponame);
+
+        #[cfg(fbcode_build)]
+        let link = format!("[{}{}]", ACL_LINK, acl_name);
+        #[cfg(not(fbcode_build))]
+        let link = String::new();
+
+        let maybe_acl = self.commit_cloud_acl(&acl_name).await?;
+        if maybe_acl.is_some() {
+            return Ok(WorkspaceSharingData {
+                acl_name: acl_name.clone(),
+                sharing_message: format!(
+                    "'share_workspace' succeeded: workspace {} has been already shared under the acl {} {}",
+                    ctx.workspace, &acl_name, &link
+                ),
+            });
+        }
+
+        if ctx.owner.is_none() {
+            bail!(
+                "'share_workspace' failed: no owner inferred for workspace {} ",
+                ctx.workspace
+            );
+        }
+
+        match self
+            .acl_provider
+            .commitcloud_workspace_acl(&acl_name, &ctx.owner)
+            .await
+        {
+            Err(e) => bail!(
+                "'share_workspace' failed: unable to create acl {} for workspace {}: {} ",
+                ctx.workspace,
+                acl_name,
+                e
+            ),
+            Ok(_) => Ok(WorkspaceSharingData {
+                acl_name: acl_name.clone(),
+                sharing_message: format!(
+                    "'share_workspace' succeeded: workspace {} is now marked for sharing through the ACL {} [{}]",
+                    ctx.workspace, &acl_name, &link
+                ),
+            }),
+        }
     }
 
     pub async fn get_smartlog_raw_info(

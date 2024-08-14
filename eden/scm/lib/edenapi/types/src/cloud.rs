@@ -241,6 +241,16 @@ pub struct SmartlogDataResponse {
     pub data: Result<SmartlogData, ServerError>,
 }
 
+#[auto_wire]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
+pub struct WorkspaceSharingData {
+    #[id(0)]
+    pub acl_name: String,
+    #[id(1)]
+    pub sharing_message: String,
+}
+
 impl RemoteBookmark {
     pub fn full_name(&self) -> String {
         format!("{}/{}", self.remote, self.name)
