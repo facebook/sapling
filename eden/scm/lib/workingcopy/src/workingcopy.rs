@@ -654,6 +654,7 @@ impl<'a> LockedWorkingCopy<'a> {
 
     pub fn set_parents(&self, parents: Vec<HgId>, parent_tree_hash: Option<HgId>) -> Result<()> {
         debug!(?parents);
+        self.notify_parents_change(&parents)?;
 
         let p1 = parents
             .first()
@@ -682,4 +683,21 @@ impl<'a> LockedWorkingCopy<'a> {
             None => Ok(unlink_if_exists(&active_path)?),
         }
     }
+
+    fn notify_parents_change(&self, parents: &[HgId]) -> Result<()> {
+        let change = WdirParentChange {
+            root: self.wc.vfs.root().to_owned(),
+            parents: parents.to_owned(),
+        };
+        pubsub::publish("WdirParentChange", &change)?;
+        Ok(())
+    }
+}
+
+/// Used by `pubsub`. Notify a `WdirParentChange` event.
+pub struct WdirParentChange {
+    /// The root of the working copy, without `.sl`.
+    pub root: PathBuf,
+    /// The new parents.
+    pub parents: Vec<HgId>,
 }

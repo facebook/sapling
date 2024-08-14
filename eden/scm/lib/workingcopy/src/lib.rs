@@ -19,4 +19,5 @@ pub mod walker;
 mod watchman_client;
 pub mod workingcopy;
 
+pub use workingcopy::WdirParentChange;
 pub use workingcopy::WorkingCopy;
