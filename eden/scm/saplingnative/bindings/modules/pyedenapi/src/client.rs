@@ -30,6 +30,8 @@ use edenapi_types::AlterSnapshotRequest;
 use edenapi_types::AlterSnapshotResponse;
 use edenapi_types::AnyFileContentId;
 use edenapi_types::BlameResult;
+use edenapi_types::CloudShareWorkspaceRequest;
+use edenapi_types::CloudShareWorkspaceResponse;
 use edenapi_types::CommitGraphEntry;
 use edenapi_types::CommitGraphSegmentsEntry;
 use edenapi_types::CommitHashLookupResponse;
@@ -583,6 +585,12 @@ py_class!(pub class client |py| {
     -> PyResult<Serde<SmartlogDataResponse>>
     {
         self.inner(py).as_ref().cloud_smartlog_py(data, py)
+    }
+
+    def cloudshareworkspace(&self, data: Serde<CloudShareWorkspaceRequest>)
+    -> PyResult<Serde<CloudShareWorkspaceResponse>>
+    {
+        self.inner(py).as_ref().cloud_share_workspace_py(data, py)
     }
 });
 

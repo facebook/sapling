@@ -31,6 +31,8 @@ use edenapi_types::BonsaiChangesetContent;
 use edenapi_types::BookmarkEntry;
 use edenapi_types::BookmarkRequest;
 use edenapi_types::CloneData;
+use edenapi_types::CloudShareWorkspaceRequest;
+use edenapi_types::CloudShareWorkspaceResponse;
 use edenapi_types::CloudWorkspaceRequest;
 use edenapi_types::CloudWorkspacesRequest;
 use edenapi_types::CommitGraphEntry;
@@ -178,6 +180,7 @@ mod paths {
     pub const CLOUD_UPDATE_REFERENCES: &str = "cloud/update_references";
     pub const CLOUD_REFERENCES: &str = "cloud/references";
     pub const CLOUD_SMARTLOG: &str = "cloud/smartlog";
+    pub const CLOUD_SHARE_WORKSPACE: &str = "cloud/share_workspace";
     pub const SUFFIXQUERY: &str = "suffix_query";
 }
 
@@ -1157,6 +1160,25 @@ impl Client {
 
         self.fetch_single::<SmartlogDataResponse>(request).await
     }
+
+    async fn cloud_share_workspace_attempt(
+        &self,
+        data: CloudShareWorkspaceRequest,
+    ) -> Result<CloudShareWorkspaceResponse, SaplingRemoteApiError> {
+        tracing::info!(
+            "Requesting share workspace '{}' in the repo '{}'",
+            data.workspace,
+            data.reponame
+        );
+        let url = self.build_url(paths::CLOUD_SHARE_WORKSPACE)?;
+        let request = self
+            .configure_request(self.inner.client.post(url))?
+            .cbor(&data.to_wire())
+            .map_err(SaplingRemoteApiError::RequestSerializationFailed)?;
+
+        self.fetch_single::<CloudShareWorkspaceResponse>(request)
+            .await
+    }
 }
 
 #[async_trait]
@@ -1812,6 +1834,14 @@ impl SaplingRemoteApi for Client {
         data: GetSmartlogParams,
     ) -> Result<SmartlogDataResponse, SaplingRemoteApiError> {
         self.with_retry(|this| this.cloud_smartlog_attempt(data.clone()).boxed())
+            .await
+    }
+
+    async fn cloud_share_workspace(
+        &self,
+        data: CloudShareWorkspaceRequest,
+    ) -> Result<CloudShareWorkspaceResponse, SaplingRemoteApiError> {
+        self.with_retry(|this| this.cloud_share_workspace_attempt(data.clone()).boxed())
             .await
     }
 

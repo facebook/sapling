@@ -32,6 +32,8 @@ use edenapi_types::AlterSnapshotRequest;
 use edenapi_types::AlterSnapshotResponse;
 use edenapi_types::AnyFileContentId;
 use edenapi_types::AnyId;
+use edenapi_types::CloudShareWorkspaceRequest;
+use edenapi_types::CloudShareWorkspaceResponse;
 use edenapi_types::CommitGraphEntry;
 use edenapi_types::CommitGraphSegmentsEntry;
 use edenapi_types::CommitHashLookupResponse;
@@ -770,6 +772,18 @@ pub trait SaplingRemoteApiPyExt: SaplingRemoteApi {
     ) -> PyResult<Serde<SmartlogDataResponse>> {
         let responses = py
             .allow_threads(|| block_unless_interrupted(self.cloud_smartlog(data.0)))
+            .map_pyerr(py)?
+            .map_pyerr(py)?;
+        Ok(Serde(responses))
+    }
+
+    fn cloud_share_workspace_py(
+        &self,
+        data: Serde<CloudShareWorkspaceRequest>,
+        py: Python,
+    ) -> PyResult<Serde<CloudShareWorkspaceResponse>> {
+        let responses = py
+            .allow_threads(|| block_unless_interrupted(self.cloud_share_workspace(data.0)))
             .map_pyerr(py)?
             .map_pyerr(py)?;
         Ok(Serde(responses))

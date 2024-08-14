@@ -248,7 +248,16 @@ class SaplingRemoteAPIService(baseservice.BaseService):
 
     def shareworkspace(self, reponame, workspace):
         """Enable sharing for the given workspace"""
-        return self.fallback.shareworkspace(reponame, workspace)
+        self.ui.debug(
+            "sending 'share_workspace' request through Sapling Remote API\n",
+            component="commitcloud",
+        )
+        data = {
+            "reponame": reponame,
+            "workspace": workspace,
+        }
+        response = self.repo.edenapi.cloudshareworkspace(data)
+        return self._getdatafromresponse(response)
 
     def rollbackworkspace(self, reponame, workspace, version):
         """Rollback the given workspace to a specific version"""

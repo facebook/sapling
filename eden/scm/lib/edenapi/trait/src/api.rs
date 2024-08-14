@@ -19,6 +19,8 @@ use edenapi_types::BlameResult;
 use edenapi_types::BonsaiChangesetContent;
 use edenapi_types::BookmarkEntry;
 use edenapi_types::CloneData;
+use edenapi_types::CloudShareWorkspaceRequest;
+use edenapi_types::CloudShareWorkspaceResponse;
 use edenapi_types::CommitGraphEntry;
 use edenapi_types::CommitGraphSegmentsEntry;
 use edenapi_types::CommitHashLookupResponse;
@@ -415,6 +417,14 @@ pub trait SaplingRemoteApi: Send + Sync + 'static {
         &self,
         data: GetSmartlogParams,
     ) -> Result<SmartlogDataResponse, SaplingRemoteApiError> {
+        let _ = data;
+        Err(SaplingRemoteApiError::NotSupported)
+    }
+
+    async fn cloud_share_workspace(
+        &self,
+        data: CloudShareWorkspaceRequest,
+    ) -> Result<CloudShareWorkspaceResponse, SaplingRemoteApiError> {
         let _ = data;
         Err(SaplingRemoteApiError::NotSupported)
     }
