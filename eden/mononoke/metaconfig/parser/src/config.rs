@@ -87,6 +87,14 @@ pub fn load_repo_configs(
     load_configs_from_raw(raw_config).map(|(repo_configs, _)| repo_configs)
 }
 
+/// Empty repo configs useful for testing purposes
+pub fn load_empty_repo_configs() -> RepoConfigs {
+    RepoConfigs {
+        repos: HashMap::new(),
+        common: CommonConfig::default(),
+    }
+}
+
 /// Load configuration based on the provided raw configs.
 pub fn load_configs_from_raw(
     raw_repo_configs: RawRepoConfigs,

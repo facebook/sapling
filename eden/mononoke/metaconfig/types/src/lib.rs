@@ -93,7 +93,7 @@ impl PartialEq for ComparableRegex {
 impl Eq for ComparableRegex {}
 
 /// Structure representing general purpose identity.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Default, Debug, Eq, PartialEq)]
 pub struct Identity {
     /// Type of this identity.
     pub id_type: String,
@@ -114,7 +114,7 @@ pub struct RedactionConfig {
 
 /// Configuration for all repos
 #[facet::facet]
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Default, Debug, Eq, PartialEq)]
 pub struct CommonConfig {
     /// Hipster tier that is permitted to act as a trusted proxy.
     pub trusted_parties_hipster_tier: Option<String>,

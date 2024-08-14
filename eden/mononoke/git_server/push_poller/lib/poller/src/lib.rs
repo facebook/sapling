@@ -15,10 +15,13 @@ use anyhow::Result;
 use cached_config::ConfigStore;
 use clap::Parser;
 use context::CoreContext;
+use ephemeral_shard::EphemeralSchema;
 use fbinit::FacebookInit;
 use futures::prelude::*;
 use git_push_redirect::GitPushRedirectConfig;
 use git_push_redirect::SqlGitPushRedirectConfigBuilder;
+use git_push_redirect::Staleness;
+use metaconfig_parser::load_empty_repo_configs;
 use metaconfig_parser::RepoConfigs;
 use mysql_client::ConnectionOptionsBuilder;
 use mysql_client::ConnectionPoolOptionsBuilder;
@@ -73,6 +76,50 @@ impl GitSourceOfTruth {
             mononoke_production_xdb,
             metagit_xdb,
         })
+    }
+
+    pub async fn new_test(fb: FacebookInit) -> Self {
+        let ctx = CoreContext::test_mock(fb);
+        let repo_configs = load_empty_repo_configs();
+        let xdb_factory = create_ephemeral_xdb_factory(fb).unwrap();
+        let mononoke_production_xdb = xdb_factory
+            .create_or_get_shard(MONONOKE_PRODUCTION_SHARD_NAME)
+            .await
+            .unwrap();
+        let metagit_xdb = xdb_factory
+            .create_or_get_shard(METAGIT_SHARD_NAME)
+            .await
+            .unwrap();
+        Self {
+            ctx,
+            repo_configs,
+            mononoke_production_xdb,
+            metagit_xdb,
+        }
+    }
+
+    pub async fn mononoke_source_of_truth(
+        &self,
+        repo_name: &str,
+        staleness: Staleness,
+    ) -> Result<bool> {
+        let connections = self.mononoke_production_xdb.read_conns().await?;
+        let git_push_redirect_config: &dyn GitPushRedirectConfig =
+            &SqlGitPushRedirectConfigBuilder::from_sql_connections(connections).build();
+        let maybe_repo_id = self
+            .repo_configs
+            .repos
+            .get(repo_name)
+            .map(|repo_config| repo_config.repoid);
+        // If the repo is not in the config, we assume it is not a Mononoke Git repository.
+        if let Some(repo_id) = maybe_repo_id {
+            git_push_redirect_config
+                .get_by_repo_id(&self.ctx, repo_id, staleness)
+                .await
+                .map(|entry| entry.map_or(false, |entry| entry.mononoke))
+        } else {
+            Ok(false)
+        }
     }
 
     async fn current_mononoke_git_repositories<'a>(&'a self) -> Result<Vec<Repository<'a>>> {
@@ -155,6 +202,17 @@ fn create_prod_xdb_factory(fb: FacebookInit) -> Result<XdbFactory> {
         .build()
         .map_err(Error::msg)?;
     let destination = Destination::Prod;
+    XdbFactory::new(fb, destination, pool_options, conn_options)
+}
+
+fn create_ephemeral_xdb_factory(fb: FacebookInit) -> Result<XdbFactory> {
+    let pool_options = ConnectionPoolOptionsBuilder::default()
+        .build()
+        .map_err(Error::msg)?;
+    let conn_options = ConnectionOptionsBuilder::default()
+        .build()
+        .map_err(Error::msg)?;
+    let destination = Destination::Ephemeral(EphemeralSchema::Live);
     XdbFactory::new(fb, destination, pool_options, conn_options)
 }
 

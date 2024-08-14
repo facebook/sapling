@@ -20,6 +20,7 @@ rust_library(
         "//configerator/structs/fi/common:context-rust",
         "//eden/mononoke/common/sql_construct:sql_construct",
         "//eden/mononoke/git_push_redirect:git_push_redirect",
+        "//eden/mononoke/git_server/push_poller/lib/ephemeral_shard:ephemeral_shard",
         "//eden/mononoke/git_server/push_poller/lib/repository:repository",
         "//eden/mononoke/git_server/push_poller/lib/storage:storage",
         "//eden/mononoke/metaconfig:metaconfig_parser",
