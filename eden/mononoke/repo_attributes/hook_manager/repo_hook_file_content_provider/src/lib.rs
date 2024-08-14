@@ -14,6 +14,8 @@ use anyhow::format_err;
 use anyhow::Context as _;
 use async_trait::async_trait;
 use blobstore::Loadable;
+use bonsai_git_mapping::ArcBonsaiGitMapping;
+use bonsai_git_mapping::BonsaiGitMappingArc;
 use bonsai_tag_mapping::ArcBonsaiTagMapping;
 use bonsai_tag_mapping::BonsaiTagMappingArc;
 use bookmarks::ArcBookmarks;
@@ -38,6 +40,7 @@ use mercurial_derivation::MappedHgChangesetId;
 use mercurial_types::FileType;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
+use mononoke_types::hash::GitSha1;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
 use mononoke_types::ContentMetadataV2;
@@ -58,6 +61,7 @@ pub struct RepoHookStateProvider {
     bookmarks: ArcBookmarks,
     repo_derived_data: ArcRepoDerivedData,
     bonsai_tag_mapping: ArcBonsaiTagMapping,
+    bonsai_git_mapping: ArcBonsaiGitMapping,
 }
 
 #[async_trait]
@@ -312,22 +316,42 @@ impl HookStateProvider for RepoHookStateProvider {
             None => Ok(TagType::LightweightTag),
         }
     }
+
+    async fn get_git_commit<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        bonsai_commit_id: ChangesetId,
+    ) -> Result<Option<GitSha1>, HookStateProviderError> {
+        let maybe_git_sha1 = self
+            .bonsai_git_mapping
+            .get_git_sha1_from_bonsai(ctx, bonsai_commit_id)
+            .await?;
+        Ok(maybe_git_sha1)
+    }
 }
 
 impl RepoHookStateProvider {
     pub fn new(
-        container: &(impl RepoBlobstoreArc + BookmarksArc + RepoDerivedDataArc + BonsaiTagMappingArc),
+        container: &(
+             impl RepoBlobstoreArc
+             + BookmarksArc
+             + RepoDerivedDataArc
+             + BonsaiTagMappingArc
+             + BonsaiGitMappingArc
+         ),
     ) -> RepoHookStateProvider {
         let repo_blobstore = container.repo_blobstore_arc();
         let bookmarks = container.bookmarks_arc();
         let repo_derived_data = container.repo_derived_data_arc();
         let bonsai_tag_mapping = container.bonsai_tag_mapping_arc();
+        let bonsai_git_mapping = container.bonsai_git_mapping_arc();
 
         RepoHookStateProvider {
             repo_blobstore,
             bookmarks,
             repo_derived_data,
             bonsai_tag_mapping,
+            bonsai_git_mapping,
         }
     }
 
@@ -336,12 +360,14 @@ impl RepoHookStateProvider {
         repo_blobstore: ArcRepoBlobstore,
         repo_derived_data: ArcRepoDerivedData,
         bonsai_tag_mapping: ArcBonsaiTagMapping,
+        bonsai_git_mapping: ArcBonsaiGitMapping,
     ) -> Self {
         RepoHookStateProvider {
             repo_blobstore,
             bookmarks,
             repo_derived_data,
             bonsai_tag_mapping,
+            bonsai_git_mapping,
         }
     }
 }

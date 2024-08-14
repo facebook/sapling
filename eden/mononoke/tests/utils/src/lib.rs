@@ -13,6 +13,7 @@ use std::str::FromStr;
 
 use anyhow::format_err;
 use anyhow::Error;
+use bonsai_git_mapping::BonsaiGitMapping;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bonsai_tag_mapping::BonsaiTagMapping;
@@ -104,6 +105,9 @@ pub struct BasicTestRepo {
 
     #[facet]
     pub bonsai_tag_mapping: dyn BonsaiTagMapping,
+
+    #[facet]
+    pub bonsai_git_mapping: dyn BonsaiGitMapping,
 }
 
 pub async fn list_working_copy_utf8(

@@ -13,6 +13,7 @@ use bookmarks_types::BookmarkKey;
 use bytes::Bytes;
 use changeset_info::ChangesetInfo;
 use context::CoreContext;
+use mononoke_types::hash::GitSha1;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
 use mononoke_types::ContentMetadataV2;
@@ -118,6 +119,14 @@ impl<T: HookStateProvider + 'static> HookStateProvider for TextOnlyHookStateProv
         bookmark: &'b BookmarkKey,
     ) -> Result<TagType, HookStateProviderError> {
         self.inner.get_tag_type(ctx, bookmark).await
+    }
+
+    async fn get_git_commit<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        bonsai_commit_id: ChangesetId,
+    ) -> Result<Option<GitSha1>, HookStateProviderError> {
+        self.inner.get_git_commit(ctx, bonsai_commit_id).await
     }
 }
 

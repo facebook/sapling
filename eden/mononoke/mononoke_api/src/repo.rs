@@ -25,6 +25,7 @@ use blobstore::Loadable;
 use blobstore_factory::MetadataSqlFactory;
 use blobstore_factory::ReadOnlyStorage;
 use bonsai_git_mapping::BonsaiGitMapping;
+use bonsai_git_mapping::BonsaiGitMappingArc;
 use bonsai_git_mapping::BonsaiGitMappingRef;
 use bonsai_globalrev_mapping::BonsaiGlobalrevMapping;
 use bonsai_globalrev_mapping::BonsaiGlobalrevMappingRef;
@@ -476,6 +477,7 @@ impl Repo {
             &blob_repo.bookmarks_arc(),
             &blob_repo.repo_blobstore_arc(),
             &blob_repo.bonsai_tag_mapping_arc(),
+            &blob_repo.bonsai_git_mapping_arc(),
         );
         let repo_cross_repo = Arc::new(RepoCrossRepo::new(
             synced_commit_mapping,

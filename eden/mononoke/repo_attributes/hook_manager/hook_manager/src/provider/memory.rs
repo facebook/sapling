@@ -13,6 +13,7 @@ use bookmarks_types::BookmarkKey;
 use bytes::Bytes;
 use changeset_info::ChangesetInfo;
 use context::CoreContext;
+use mononoke_types::hash::GitSha1;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
 use mononoke_types::ContentMetadataV2;
@@ -150,6 +151,14 @@ impl HookStateProvider for InMemoryHookStateProvider {
         _bookmark: &'b BookmarkKey,
     ) -> Result<TagType, HookStateProviderError> {
         Err(anyhow!("`get_tag_state` is not implemented for `InMemoryHookStateProvider`").into())
+    }
+
+    async fn get_git_commit<'a>(
+        &'a self,
+        _ctx: &'a CoreContext,
+        _bonsai_commit_id: ChangesetId,
+    ) -> Result<Option<GitSha1>, HookStateProviderError> {
+        Err(anyhow!("`get_git_commit` is not implemented for `InMemoryHookStateProvider`").into())
     }
 }
 

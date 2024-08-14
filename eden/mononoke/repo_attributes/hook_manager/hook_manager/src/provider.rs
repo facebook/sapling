@@ -89,6 +89,14 @@ pub trait HookStateProvider: Send + Sync {
         bookmark: &'b BookmarkKey,
     ) -> Result<TagType, HookStateProviderError>;
 
+    /// If the repo for which the hook is being run is a Git repo, return the corresponding
+    /// Git commit hash for the given Bonsai commit.
+    async fn get_git_commit<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        bonsai_commit_id: ChangesetId,
+    ) -> Result<Option<GitSha1>, HookStateProviderError>;
+
     /// Find the content of a set of files at a particular bookmark.
     async fn find_content<'a>(
         &'a self,

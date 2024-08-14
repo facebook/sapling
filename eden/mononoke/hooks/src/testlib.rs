@@ -7,6 +7,7 @@
 
 use anyhow::Result;
 use blobstore::Loadable;
+use bonsai_git_mapping::BonsaiGitMappingArc;
 use bonsai_tag_mapping::BonsaiTagMappingArc;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarksArc;
@@ -24,8 +25,12 @@ use crate::FileHook;
 use crate::HookExecution;
 use crate::PushAuthoredBy;
 
-pub trait Repo =
-    RepoBlobstoreRef + RepoBlobstoreArc + BookmarksArc + RepoDerivedDataArc + BonsaiTagMappingArc;
+pub trait Repo = RepoBlobstoreRef
+    + RepoBlobstoreArc
+    + BookmarksArc
+    + RepoDerivedDataArc
+    + BonsaiTagMappingArc
+    + BonsaiGitMappingArc;
 
 /// Test a changeset hook
 ///
