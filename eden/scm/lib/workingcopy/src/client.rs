@@ -8,6 +8,7 @@
 use std::any::Any;
 use std::collections::BTreeMap;
 
+use anyhow::bail;
 use anyhow::Result;
 use gitcompat::rungit::RunGitOptions;
 use types::workingcopy_client::CheckoutConflict;
@@ -34,6 +35,11 @@ pub trait WorkingCopyClient: Send + Sync {
     /// Set parents (tracked by the external program) without changing the working copy content.
     /// This is used by commands like `reset -k`.
     fn set_parents(&self, p1: HgId, p2: Option<HgId>, p1_tree: HgId) -> Result<()>;
+
+    /// Progress as reported by the external program (in reported units of
+    /// progress, not percentage).
+    /// When a checkout is not ongoing it returns None.
+    fn checkout_progress(&self) -> Result<Option<u64>>;
 
     /// Checkout. Set parents and update working copy content.
     fn checkout(
@@ -71,6 +77,10 @@ impl WorkingCopyClient for edenfs_client::EdenFsClient {
     ) -> Result<Vec<CheckoutConflict>> {
         tracing::debug!(p1=?node, p1_tree=?tree_node, mode=?mode, "checkout");
         edenfs_client::EdenFsClient::checkout(self, node, tree_node, mode)
+    }
+
+    fn checkout_progress(&self) -> Result<Option<u64>> {
+        bail!("Progress for EdenFS checkout not yet implemented!");
     }
 
     fn as_any(&self) -> &dyn Any {
@@ -167,5 +177,9 @@ impl WorkingCopyClient for RunGitOptions {
 
     fn as_any(&self) -> &dyn Any {
         self as &dyn Any
+    }
+
+    fn checkout_progress(&self) -> Result<Option<u64>> {
+        bail!("Progress for Git checkout not yet implemented!");
     }
 }
