@@ -76,6 +76,8 @@ pub struct Repo {
     file_scm_store: OnceCell<Arc<scmstore::FileStore>>,
     tree_store: OnceCell<Arc<dyn TreeStore>>,
     tree_scm_store: OnceCell<Arc<scmstore::TreeStore>>,
+    #[cfg(feature = "wdir")]
+    working_copy: OnceCell<Arc<RwLock<WorkingCopy>>>,
     eager_store: Option<EagerRepoStore>,
     locker: Arc<RepoLocker>,
     cas_client: OnceCell<Option<Arc<dyn CasClient>>>,
@@ -184,6 +186,8 @@ impl Repo {
             file_scm_store: Default::default(),
             tree_store: Default::default(),
             tree_scm_store: Default::default(),
+            #[cfg(feature = "wdir")]
+            working_copy: Default::default(),
             eager_store: None,
             locker,
         })
@@ -210,6 +214,8 @@ impl Repo {
         self.invalidate_dag_commits()?;
         self.invalidate_stores()?;
         self.invalidate_metalog()?;
+        #[cfg(feature = "wdir")]
+        self.invalidate_working_copy()?;
         Ok(())
     }
 
@@ -639,7 +645,7 @@ impl Repo {
 
 #[cfg(feature = "wdir")]
 impl Repo {
-    pub fn working_copy(&self) -> Result<WorkingCopy, errors::InvalidWorkingCopy> {
+    fn load_working_copy(&self) -> Result<WorkingCopy, errors::InvalidWorkingCopy> {
         tracing::trace!(target: "repo::workingcopy", "creating file store");
         let file_store = self.file_store()?;
 
@@ -657,6 +663,20 @@ impl Repo {
             &self.dot_hg_path,
             &has_requirement,
         )?)
+    }
+
+    pub fn working_copy(&self) -> Result<Arc<RwLock<WorkingCopy>>, errors::InvalidWorkingCopy> {
+        let wc = self.working_copy.get_or_try_init(|| {
+            Ok::<_, errors::InvalidWorkingCopy>(Arc::new(RwLock::new(self.load_working_copy()?)))
+        })?;
+        Ok(wc.clone())
+    }
+
+    pub fn invalidate_working_copy(&self) -> Result<()> {
+        if let Some(v) = self.working_copy.get() {
+            *v.write() = self.load_working_copy()?;
+        }
+        Ok(())
     }
 }
 

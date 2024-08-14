@@ -68,6 +68,7 @@ pub fn init_working_copy(
     let wc = repo.working_copy()?;
 
     if let Some(target) = target {
+        let wc = wc.write();
         let wc = wc.lock()?;
 
         if let Err(err) = checkout::checkout(

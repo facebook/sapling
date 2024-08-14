@@ -434,7 +434,8 @@ impl Dispatcher {
                 CommandFunc::NoRepo(f) => f(parsed, io, self.optional_repo.config()),
                 CommandFunc::WorkingCopy(f) => {
                     let repo = self.repo_mut()?;
-                    let mut wc = repo.working_copy()?;
+                    let wc = repo.working_copy()?;
+                    let mut wc = wc.write();
                     f(parsed, io, repo, &mut wc)
                 }
             };
