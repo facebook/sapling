@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use anyhow::ensure;
 use commit_cloud_helpers::sanity_check_workspace_name;
 use permission_checker::MononokeIdentity;
 
@@ -17,11 +18,11 @@ pub struct CommitCloudContext {
 
 impl CommitCloudContext {
     pub fn new(workspace: &str, reponame: &str) -> anyhow::Result<Self> {
-        if workspace.is_empty() || reponame.is_empty() {
-            return Err(anyhow::anyhow!(
-                "'commit cloud' failed: empty reponame or workspace"
-            ));
-        }
+        ensure!(
+            !workspace.is_empty() && !reponame.is_empty(),
+            "'commit cloud' failed: empty reponame or workspace"
+        );
+
         Ok(Self {
             workspace: workspace.to_owned(),
             reponame: reponame.to_owned(),
@@ -30,12 +31,12 @@ impl CommitCloudContext {
     }
 
     pub fn check_workspace_name(&self) -> anyhow::Result<()> {
-        if !sanity_check_workspace_name(&self.workspace) {
-            return Err(anyhow::anyhow!(
-                "'commit cloud' failed: creating a new workspace with name '{}' is not allowed",
-                self.workspace
-            ));
-        }
+        ensure!(
+            sanity_check_workspace_name(&self.workspace),
+            "'commit cloud' failed: creating a new workspace with name '{}' is not allowed",
+            self.workspace
+        );
+
         Ok(())
     }
 

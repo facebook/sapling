@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use anyhow::bail;
 use async_trait::async_trait;
 use clientinfo::ClientRequestInfo;
 use edenapi_types::cloud::RemoteBookmark;
@@ -141,7 +142,7 @@ impl Update<WorkspaceRemoteBookmark> for SqlCommitCloud {
         _args: Self::UpdateArgs,
     ) -> anyhow::Result<(Transaction, u64)> {
         //To be implemented among other Update queries
-        return Err(anyhow::anyhow!("Not implemented yet"));
+        bail!("Not implemented yet");
     }
 }
 

@@ -6,6 +6,7 @@
  */
 
 use ::sql_ext::mononoke_queries;
+use anyhow::bail;
 use async_trait::async_trait;
 use clientinfo::ClientRequestInfo;
 use mercurial_types::HgChangesetId;
@@ -94,7 +95,7 @@ impl Update<WorkspaceHead> for SqlCommitCloud {
         _args: Self::UpdateArgs,
     ) -> anyhow::Result<(Transaction, u64)> {
         //To be implemented among other Update queries
-        return Err(anyhow::anyhow!("Not implemented yet"));
+        bail!("Not implemented yet");
     }
 }
 

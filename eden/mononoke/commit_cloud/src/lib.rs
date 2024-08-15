@@ -127,17 +127,16 @@ impl CommitCloud {
         prefix: &str,
         reponame: &str,
     ) -> anyhow::Result<Vec<WorkspaceData>> {
-        if reponame.is_empty() || prefix.is_empty() {
-            return Err(anyhow::anyhow!(
-                "'get workspaces' failed: empty reponame or prefix "
-            ));
-        }
+        ensure!(
+            !reponame.is_empty() && !prefix.is_empty(),
+            "'get workspaces' failed: empty reponame or prefix "
+        );
 
-        if prefix.len() < 3 {
-            return Err(anyhow::anyhow!(
-                "'get workspaces' failed: prefix must be at least 3 characters "
-            ));
-        }
+        ensure!(
+            prefix.len() >= 3,
+            "'get workspaces' failed: prefix must be at least 3 characters "
+        );
+
         let maybeworkspace =
             WorkspaceVersion::fetch_by_prefix(&self.storage, prefix, reponame).await?;
 
@@ -163,20 +162,21 @@ impl CommitCloud {
             latest_version = workspace_version.version;
             version_timestamp = workspace_version.timestamp.timestamp_nanos();
         }
-        if base_version > latest_version && latest_version == 0 {
-            return Err(anyhow::anyhow!(
-                "'get_references' failed: workspace {} has been removed or renamed",
-                cc_ctx.workspace.clone()
-            ));
-        }
 
-        if base_version > latest_version {
-            return Err(anyhow::anyhow!(
-                "'get_references' failed: base version {} is greater than latest version {}",
-                base_version,
-                latest_version
-            ));
-        }
+        ensure!(
+            base_version <= latest_version,
+            if latest_version == 0 {
+                format!(
+                    "'get_references' failed: workspace {} has been removed or renamed",
+                    cc_ctx.workspace.clone()
+                )
+            } else {
+                format!(
+                    "'get_references' failed: base version {} is greater than latest version {}",
+                    base_version, latest_version
+                )
+            }
+        );
 
         if base_version == latest_version {
             return Ok(ReferencesData {
