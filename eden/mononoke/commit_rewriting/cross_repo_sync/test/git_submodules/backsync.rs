@@ -16,6 +16,7 @@ use context::CoreContext;
 use fbinit::FacebookInit;
 use git_types::MappedGitCommitId;
 use mononoke_types::ChangesetId;
+use mononoke_types::FileType;
 use mononoke_types::NonRootMPath;
 use repo_derived_data::RepoDerivedDataRef;
 use tests_utils::CreateCommitContext;
@@ -93,7 +94,119 @@ async fn test_valid_submodule_expansion_update_succeeds(fb: FacebookInit) -> Res
     Ok(())
 }
 
-// TODO(T182967556): unit test for valid recursive submodule update
+/// Test that updating the submodule expansion of a recursive submodule (thus,
+/// updating the expansion of the parent submodule) backsyncs successfully.
+#[fbinit::test]
+async fn test_valid_recursive_submodule_expansion_update_succeeds(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb.clone());
+
+    let (repo_c, repo_c_cs_map) = build_repo_c(fb).await?;
+    let c_master_git_sha1 = git_sha1_from_changeset(&ctx, &repo_c, repo_c_cs_map["C_B"])
+        .await
+        .context("c_master")?;
+
+    let repo_c_submodule_path_in_repo_b = NonRootMPath::new("submodules/repo_c")?;
+
+    let repo_c_rec_sm_path_in_repo_a =
+        NonRootMPath::new(REPO_B_SUBMODULE_PATH)?.join(&repo_c_submodule_path_in_repo_b);
+
+    // Build repo_b with repo_c as submodule, pointing to commit C_B
+    let (repo_b, repo_b_cs_map) =
+        build_repo_b_with_c_submodule(fb, c_master_git_sha1, &repo_c_submodule_path_in_repo_b)
+            .await
+            .context("Failed to build repo_b")?;
+
+    // Get git hash of commit C_A
+    let c_a_git_sha1 = git_sha1_from_changeset(&ctx, &repo_c, repo_c_cs_map["C_A"])
+        .await
+        .context("c_a")?;
+
+    // Create a changeset in repo_b that updates the repo_c submodule pointer to
+    // commit C_A
+    const MESSAGE_REPO_B: &str = "Update repo_c submodule pointer in repo_b";
+    let repo_b_cs_id = CreateCommitContext::new(&ctx, &repo_b, vec![repo_b_cs_map["B_B"]])
+        .set_message(MESSAGE_REPO_B)
+        // Update repo_c submodule pointer in repo_b
+        .add_file_with_type(
+            repo_c_submodule_path_in_repo_b,
+            c_a_git_sha1.into_inner(),
+            FileType::GitSubmodule,
+        )
+        .commit()
+        .await
+        .context("Failed to create commit modifying small_repo directory")?;
+
+    // Save the git hash of that repo_b commit, to use it in its submodule
+    // expansion
+    let repo_b_git_sha1 = git_sha1_from_changeset(&ctx, &repo_b, repo_b_cs_id)
+        .await
+        .context("repo_b_cs_id")?;
+
+    // Build small and large repos
+    let SubmoduleSyncTestData {
+        small_repo_info: (small_repo, _small_repo_cs_map),
+        large_repo_info: (large_repo, large_repo_master),
+        commit_syncer,
+        ..
+    } = build_submodule_backsync_test_data(
+        fb,
+        &repo_b,
+        vec![
+            (NonRootMPath::new(REPO_B_SUBMODULE_PATH)?, repo_b.clone()),
+            (repo_c_rec_sm_path_in_repo_a, repo_c.clone()),
+        ],
+    )
+    .await?;
+
+    // Create a commit in large repo, updating the submodule expansion of repos
+    // B and C.
+    // Update repo_b pointer to the commit where it updates its repo_c submodule
+    // pointer.
+    const MESSAGE: &str = "Update submodules repo_b and repo_c git pointers";
+    let cs_id = CreateCommitContext::new(&ctx, &large_repo, vec![large_repo_master])
+        .set_message(MESSAGE)
+        // Update repo_c submodule pointer in repo_b expansion to commit C_A
+        .add_file(
+            "small_repo/submodules/repo_b/submodules/.x-repo-submodule-repo_c",
+            c_a_git_sha1.to_string(),
+        )
+        // Delete file to bring repo_c expansion working copy to commit C_A in
+        // repo_C.
+        .delete_file("small_repo/submodules/repo_b/submodules/repo_c/C_B")
+        // Also update repo_b submodule pointer
+        .add_file(
+            "small_repo/submodules/.x-repo-submodule-repo_b",
+            repo_b_git_sha1.to_string(),
+        )
+        .commit()
+        .await
+        .context("Failed to create commit modifying small_repo directory")?;
+
+    println!("Created large repo changeset {cs_id}");
+
+    let small_repo_cs_id = sync_to_master(ctx.clone(), &commit_syncer, cs_id)
+        .await
+        .with_context(|| format!("Failed to sync changeset {cs_id}"))?
+        .ok_or(anyhow!("Failed to sync commit"))?;
+
+    let small_repo_changesets = get_all_changeset_data_from_repo(&ctx, &small_repo).await?;
+
+    println!("Small repo changesets: {0:#?}", &small_repo_changesets);
+
+    derive_all_enabled_types_for_repo(&ctx, &small_repo, &small_repo_changesets).await?;
+
+    check_mapping(ctx.clone(), &commit_syncer, cs_id, Some(small_repo_cs_id)).await;
+
+    compare_expected_changesets(
+        small_repo_changesets.last_chunk::<1>().unwrap(),
+        &[ExpectedChangeset::new(MESSAGE).with_git_submodules(vec![
+            // Expect only a repo_b git submodule change
+            "submodules/repo_b",
+        ])],
+    )?;
+
+    Ok(())
+}
 
 // TODO(T182967556): unit test for multiple valid recursive submodule updates
 
