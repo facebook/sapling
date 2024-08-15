@@ -88,6 +88,7 @@ By using a script, default files and bookmarks are disabled.
 
 import base64
 import collections
+import os
 import re
 from dataclasses import dataclass, field
 
@@ -338,7 +339,11 @@ class simplecommitctx(context.committablectx):
             renamed = m.group(2)
         else:
             renamed = None
-        if data.startswith("base85:"):
+
+        if data.startswith("random:"):
+            file_size = int(data.split(":", 1)[-1].strip())
+            bdata = os.urandom(file_size)
+        elif data.startswith("base85:"):
             bdata = base64.b85decode(data.split(":", 1)[-1].strip())
         else:
             bdata = data.encode("utf-8")
