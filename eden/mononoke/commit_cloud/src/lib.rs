@@ -14,6 +14,7 @@ use std::sync::Arc;
 use std::time::Instant;
 
 use anyhow::bail;
+use anyhow::ensure;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use changeset_info::ChangesetInfo;
 use commit_cloud_helpers::make_workspace_acl_name;
@@ -50,6 +51,8 @@ use crate::references::RawSmartlogData;
 use crate::sql::ops::Get;
 use crate::sql::ops::Insert;
 use crate::sql::ops::SqlCommitCloud;
+use crate::sql::ops::Update;
+use crate::sql::versions_ops::ArchiveArgs;
 
 #[facet]
 pub struct CommitCloud {
@@ -419,5 +422,39 @@ impl CommitCloud {
             remote_bookmarks: remote_bookmarks.to_owned(),
         };
         Ok(node)
+    }
+
+    pub async fn update_workspace_archive(
+        &self,
+        cc_ctx: &CommitCloudContext,
+        archived: bool,
+    ) -> anyhow::Result<String> {
+        // Check if workspace exists
+        let _ = self.get_workspace(cc_ctx).await?;
+
+        let txn = self
+            .storage
+            .connections
+            .write_connection
+            .start_transaction()
+            .await?;
+        let cri = self.ctx.client_request_info();
+        let (txn, affected_rows) = Update::<WorkspaceVersion>::update(
+            &self.storage,
+            txn,
+            cri,
+            cc_ctx.clone(),
+            ArchiveArgs { archived },
+        )
+        .await?;
+        txn.commit().await?;
+
+        ensure!(
+            affected_rows > 0,
+            "'update_workspace_archive' failed: failed on updating the workspace {} from DB",
+            cc_ctx.workspace.clone()
+        );
+
+        Ok(String::from("'update_workspace_archive' succeeded"))
     }
 }

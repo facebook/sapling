@@ -270,6 +270,18 @@ pub struct WorkspaceSharingData {
     pub sharing_message: String,
 }
 
+#[auto_wire]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
+pub struct UpdateArchiveParams {
+    #[id(0)]
+    pub workspace: String,
+    #[id(1)]
+    pub reponame: String,
+    #[id(2)]
+    pub archived: bool,
+}
+
 impl RemoteBookmark {
     pub fn full_name(&self) -> String {
         format!("{}/{}", self.remote, self.name)

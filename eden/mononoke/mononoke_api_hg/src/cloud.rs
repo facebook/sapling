@@ -17,6 +17,7 @@ use edenapi_types::GetSmartlogParams;
 use edenapi_types::HgId;
 use edenapi_types::ReferencesData;
 use edenapi_types::SmartlogData;
+use edenapi_types::UpdateArchiveParams;
 use edenapi_types::UpdateReferencesParams;
 use edenapi_types::WorkspaceData;
 use futures::TryStreamExt;
@@ -205,6 +206,24 @@ impl HgRepoContext {
             .inner_repo()
             .commit_cloud()
             .share_workspace(&ctx)
+            .await?)
+    }
+    pub async fn cloud_update_archive(
+        &self,
+        params: &UpdateArchiveParams,
+    ) -> Result<String, MononokeError> {
+        let mut cc_ctx = CommitCloudContext::new(&params.workspace, &params.reponame)?;
+
+        let authz = self.repo().authorization_context();
+        authz
+            .require_commitcloud_operation(self.ctx(), &self.repo().repo(), &mut cc_ctx, "write")
+            .await?;
+
+        Ok(self
+            .repo()
+            .inner_repo()
+            .commit_cloud()
+            .update_workspace_archive(&cc_ctx, params.archived)
             .await?)
     }
 }
