@@ -112,23 +112,7 @@ impl FetchState {
             let entry = LazyTree::SaplingRemoteApi(entry);
 
             if aux_cache.is_some() || tree_aux_store.is_some() {
-                let aux_data = entry.children_aux_data();
-                for (hgid, aux) in aux_data.into_iter() {
-                    match aux {
-                        AuxData::File(file_aux) => {
-                            if let Some(aux_cache) = aux_cache.as_ref() {
-                                tracing::trace!(?hgid, "writing to aux cache");
-                                aux_cache.put(hgid, &file_aux)?;
-                            }
-                        }
-                        AuxData::Tree(tree_aux) => {
-                            if let Some(tree_aux_store) = tree_aux_store.as_ref() {
-                                tracing::trace!(?hgid, "writing to tree aux store");
-                                tree_aux_store.put(hgid, &tree_aux)?;
-                            }
-                        }
-                    }
-                }
+                cache_child_aux_data(&entry, aux_cache, tree_aux_store)?;
 
                 if let Some(aux_data) = entry.aux_data() {
                     if let Some(tree_aux_store) = tree_aux_store.as_ref() {
@@ -172,7 +156,12 @@ impl FetchState {
         Ok(())
     }
 
-    pub(crate) fn fetch_cas(&mut self, cas_client: &dyn CasClient) {
+    pub(crate) fn fetch_cas(
+        &mut self,
+        cas_client: &dyn CasClient,
+        aux_cache: Option<&AuxStore>,
+        tree_aux_store: Option<&TreeAuxStore>,
+    ) {
         let span = tracing::info_span!(
             "fetch_cas",
             keys = field::Empty,
@@ -250,18 +239,27 @@ impl FetchState {
                                 Ok(tree) => {
                                     found += 1;
                                     tracing::trace!(target: "cas", ?key, ?digest, "tree found in cas");
-                                    self.common.found(
-                                        key,
-                                        StoreTree {
-                                            content: Some(LazyTree::Cas(AugmentedTreeWithDigest {
-                                                augmented_manifest_id: digest.hash,
-                                                augmented_manifest_size: digest.size,
-                                                augmented_tree: tree,
-                                            })),
-                                            parents: None,
-                                            aux_data: None,
-                                        },
-                                    );
+
+                                    let lazy_tree = LazyTree::Cas(AugmentedTreeWithDigest {
+                                        augmented_manifest_id: digest.hash,
+                                        augmented_manifest_size: digest.size,
+                                        augmented_tree: tree,
+                                    });
+
+                                    if let Err(err) =
+                                        cache_child_aux_data(&lazy_tree, aux_cache, tree_aux_store)
+                                    {
+                                        self.errors.keyed_error(key, err);
+                                    } else {
+                                        self.common.found(
+                                            key,
+                                            StoreTree {
+                                                content: Some(lazy_tree),
+                                                parents: None,
+                                                aux_data: None,
+                                            },
+                                        );
+                                    }
                                 }
                                 Err(err) => {
                                     error += 1;
@@ -292,4 +290,33 @@ impl FetchState {
         self.metrics.cas.err(error);
         self.metrics.cas.hit(found);
     }
+}
+
+fn cache_child_aux_data(
+    tree: &LazyTree,
+    aux_cache: Option<&AuxStore>,
+    tree_aux_store: Option<&TreeAuxStore>,
+) -> Result<()> {
+    if aux_cache.is_none() && tree_aux_store.is_none() {
+        return Ok(());
+    }
+
+    let aux_data = tree.children_aux_data();
+    for (hgid, aux) in aux_data.into_iter() {
+        match aux {
+            AuxData::File(file_aux) => {
+                if let Some(aux_cache) = aux_cache.as_ref() {
+                    tracing::trace!(?hgid, "writing to aux cache");
+                    aux_cache.put(hgid, &file_aux)?;
+                }
+            }
+            AuxData::Tree(tree_aux) => {
+                if let Some(tree_aux_store) = tree_aux_store.as_ref() {
+                    tracing::trace!(?hgid, "writing to tree aux store");
+                    tree_aux_store.put(hgid, &tree_aux)?;
+                }
+            }
+        }
+    }
+    Ok(())
 }

@@ -283,7 +283,7 @@ impl TreeStore {
 
             if fetch_remote {
                 if let Some(cas_client) = &cas_client {
-                    state.fetch_cas(cas_client);
+                    state.fetch_cas(cas_client, aux_cache.as_deref(), tree_aux_store.as_deref());
                 }
 
                 if let Some(edenapi) = &edenapi {
