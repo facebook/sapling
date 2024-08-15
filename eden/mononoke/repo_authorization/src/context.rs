@@ -528,9 +528,6 @@ impl AuthorizationContext {
         let permitted = match self {
             AuthorizationContext::FullAccess => true,
             AuthorizationContext::Identity => {
-                #[allow(unused_assignments)]
-                let mut owner_check = true;
-
                 #[cfg(fbcode_build)]
                 {
                     if cc_ctx.owner.is_none() {
@@ -545,35 +542,62 @@ impl AuthorizationContext {
                             Err(_) => (),
                         };
                     }
-                    owner_check = match &cc_ctx.owner {
-                        Some(owner) => ctx.metadata().identities().contains(owner),
-                        None => false,
+                    match &cc_ctx.owner {
+                        Some(owner) => {
+                            if ctx.metadata().identities().contains(owner) {
+                                ctx.scuba().clone().log_with_msg(
+                                    "commit cloud ACL check success",
+                                    Some("inferred owner check".to_owned()),
+                                );
+                                return AuthorizationCheckOutcome::from_permitted(true);
+                            }
+                        }
+                        None => (),
                     };
                 }
-                owner_check
-                    || match repo
-                        .commit_cloud()
-                        .commit_cloud_acl(&make_workspace_acl_name(
-                            &cc_ctx.workspace,
-                            &cc_ctx.reponame,
-                        ))
-                        .await
-                    {
-                        Ok(Some(checker)) => {
-                            checker
-                                .check_set(ctx.metadata().identities(), &[action])
-                                .await
+
+                match repo
+                    .commit_cloud()
+                    .commit_cloud_acl(&make_workspace_acl_name(
+                        &cc_ctx.workspace,
+                        &cc_ctx.reponame,
+                    ))
+                    .await
+                {
+                    Ok(Some(checker)) => {
+                        if checker
+                            .check_set(ctx.metadata().identities(), &[action])
+                            .await
+                        {
+                            ctx.scuba().clone().log_with_msg(
+                                "commit cloud ACL check success",
+                                Some("ACL check".to_owned()),
+                            );
+                            return AuthorizationCheckOutcome::from_permitted(true);
                         }
-                        Err(_) | Ok(None) => false,
                     }
-                    || match repo.commit_cloud().commit_cloud_acl("allow_list").await {
-                        Ok(Some(checker)) => {
-                            checker
-                                .check_set(ctx.metadata().identities(), &[action])
-                                .await
+                    Err(_) | Ok(None) => (),
+                }
+
+                match repo.commit_cloud().commit_cloud_acl("allow_list").await {
+                    Ok(Some(checker)) => {
+                        if checker
+                            .check_set(ctx.metadata().identities(), &[action])
+                            .await
+                        {
+                            ctx.scuba().clone().log_with_msg(
+                                "commit cloud ACL check success",
+                                Some("global allow list".to_owned()),
+                            );
+                            return AuthorizationCheckOutcome::from_permitted(true);
                         }
-                        Err(_) | Ok(None) => false,
                     }
+                    Err(_) | Ok(None) => (),
+                }
+                ctx.scuba()
+                    .clone()
+                    .log_with_msg("commit cloud ACL check failed", None);
+                false
             }
             AuthorizationContext::Service(_service_name) => false,
             AuthorizationContext::ReadOnlyIdentity | AuthorizationContext::DraftOnlyIdentity => {
