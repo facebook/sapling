@@ -275,20 +275,42 @@ mod test {
     use std::str::FromStr;
 
     use anyhow::format_err;
+    use bonsai_git_mapping::BonsaiGitMapping;
+    use bonsai_hg_mapping::BonsaiHgMapping;
     use bookmarks::BookmarkKey;
+    use bookmarks::Bookmarks;
     use bookmarks::BookmarksRef;
+    use commit_graph::CommitGraph;
+    use commit_graph::CommitGraphWriter;
     use fbinit::FacebookInit;
     use filestore::Alias;
     use filestore::FetchKey;
+    use filestore::FilestoreConfig;
     use fixtures::TestRepoFixture;
     use git2::Oid;
     use git2::Repository;
     use manifest::ManifestOps;
+    use repo_blobstore::RepoBlobstore;
     use repo_blobstore::RepoBlobstoreArc;
+    use repo_derived_data::RepoDerivedData;
     use repo_derived_data::RepoDerivedDataRef;
+    use repo_identity::RepoIdentity;
     use tempfile::TempDir;
 
     use super::*;
+
+    #[facet::container]
+    struct Repo(
+        dyn BonsaiGitMapping,
+        dyn BonsaiHgMapping,
+        dyn Bookmarks,
+        RepoBlobstore,
+        RepoDerivedData,
+        RepoIdentity,
+        CommitGraph,
+        dyn CommitGraphWriter,
+        FilestoreConfig,
+    );
 
     /// This function creates a new Git tree from the fixture's master Bonsai bookmark,
     /// materializes it to disk, then verifies that libgit produces the same Git tree for it.
@@ -349,7 +371,7 @@ mod test {
             fn $test_name(fb: FacebookInit) -> Result<(), Error> {
                 let runtime = tokio::runtime::Runtime::new()?;
                 runtime.block_on(async move {
-                    let repo = fixtures::$fixture::getrepo(fb).await;
+                    let repo: Repo = fixtures::$fixture::get_custom_test_repo(fb).await;
                     run_tree_derivation_for_fixture(fb, repo).await
                 })
             }

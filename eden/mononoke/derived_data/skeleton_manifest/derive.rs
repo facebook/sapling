@@ -360,24 +360,16 @@ mod test {
     use crate::mapping::get_file_changes;
 
     #[facet::container]
-    struct TestRepo {
-        #[facet]
-        bonsai_hg_mapping: dyn BonsaiHgMapping,
-        #[facet]
-        bookmarks: dyn Bookmarks,
-        #[facet]
-        commit_graph: CommitGraph,
-        #[facet]
-        commit_graph_writer: dyn CommitGraphWriter,
-        #[facet]
-        repo_derived_data: RepoDerivedData,
-        #[facet]
-        repo_blobstore: RepoBlobstore,
-        #[facet]
-        filestore_config: FilestoreConfig,
-        #[facet]
-        repo_identity: RepoIdentity,
-    }
+    struct TestRepo(
+        dyn BonsaiHgMapping,
+        dyn Bookmarks,
+        CommitGraph,
+        dyn CommitGraphWriter,
+        RepoDerivedData,
+        RepoBlobstore,
+        FilestoreConfig,
+        RepoIdentity,
+    );
 
     const B_FILES: &[&str] = &[
         "dir1/subdir1/subsubdir1/file1",

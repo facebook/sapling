@@ -192,11 +192,17 @@ mod test {
 
     use anyhow::format_err;
     use blobstore::Loadable;
+    use bonsai_git_mapping::BonsaiGitMapping;
     use bonsai_git_mapping::BonsaiGitMappingRef;
+    use bonsai_hg_mapping::BonsaiHgMapping;
     use bookmarks::BookmarkKey;
+    use bookmarks::Bookmarks;
     use bookmarks::BookmarksRef;
+    use commit_graph::CommitGraph;
     use commit_graph::CommitGraphRef;
+    use commit_graph::CommitGraphWriter;
     use fbinit::FacebookInit;
+    use filestore::FilestoreConfig;
     use fixtures::TestRepoFixture;
     use futures::stream;
     use futures::StreamExt;
@@ -204,11 +210,27 @@ mod test {
     use maplit::hashmap;
     use mononoke_types::hash::GitSha1;
     use mononoke_types::ChangesetIdPrefix;
+    use repo_blobstore::RepoBlobstore;
     use repo_blobstore::RepoBlobstoreArc;
+    use repo_derived_data::RepoDerivedData;
     use repo_derived_data::RepoDerivedDataRef;
+    use repo_identity::RepoIdentity;
 
     use super::*;
     use crate::fetch_non_blob_git_object;
+
+    #[facet::container]
+    struct Repo(
+        dyn BonsaiGitMapping,
+        dyn BonsaiHgMapping,
+        dyn Bookmarks,
+        RepoBlobstore,
+        RepoDerivedData,
+        RepoIdentity,
+        CommitGraph,
+        dyn CommitGraphWriter,
+        FilestoreConfig,
+    );
 
     async fn compare_commits(
         repo: &(impl RepoBlobstoreArc + BonsaiGitMappingRef),
@@ -274,13 +296,7 @@ mod test {
     /// represent the same data.
     async fn run_commit_derivation_for_fixture(
         fb: FacebookInit,
-        repo: impl BookmarksRef
-        + RepoBlobstoreArc
-        + RepoDerivedDataRef
-        + CommitGraphRef
-        + BonsaiGitMappingRef
-        + Send
-        + Sync,
+        repo: Repo,
     ) -> Result<(), anyhow::Error> {
         let ctx = CoreContext::test_mock(fb);
 
@@ -334,7 +350,7 @@ mod test {
             fn $test_name(fb: FacebookInit) -> Result<(), anyhow::Error> {
                 let runtime = tokio::runtime::Runtime::new()?;
                 runtime.block_on(async move {
-                    let repo = fixtures::$fixture::getrepo(fb).await;
+                    let repo: Repo = fixtures::$fixture::get_custom_test_repo(fb).await;
                     run_commit_derivation_for_fixture(fb, repo).await
                 })
             }
