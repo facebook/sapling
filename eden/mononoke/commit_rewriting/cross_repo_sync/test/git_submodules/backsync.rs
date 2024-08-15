@@ -9,7 +9,6 @@
 
 //! Tests for handling git submodules in x-repo sync
 
-use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
 use context::CoreContext;
@@ -71,15 +70,9 @@ async fn test_valid_submodule_expansion_update_succeeds(fb: FacebookInit) -> Res
         .await
         .context("Failed to create commit modifying small_repo directory")?;
 
-    let small_repo_cs_id = sync_to_master(ctx.clone(), &commit_syncer, cs_id)
-        .await?
-        .ok_or(anyhow!("Failed to sync commit"))?;
-
-    let small_repo_changesets = get_all_changeset_data_from_repo(&ctx, &small_repo).await?;
-
-    println!("Small repo changesets: {0:#?}", &small_repo_changesets);
-
-    derive_all_enabled_types_for_repo(&ctx, &small_repo, &small_repo_changesets).await?;
+    let (small_repo_cs_id, small_repo_changesets) =
+        sync_changeset_and_derive_all_types(ctx.clone(), cs_id, &small_repo, &commit_syncer)
+            .await?;
 
     check_mapping(ctx.clone(), &commit_syncer, cs_id, Some(small_repo_cs_id)).await;
 
@@ -182,18 +175,9 @@ async fn test_valid_recursive_submodule_expansion_update_succeeds(fb: FacebookIn
         .await
         .context("Failed to create commit modifying small_repo directory")?;
 
-    println!("Created large repo changeset {cs_id}");
-
-    let small_repo_cs_id = sync_to_master(ctx.clone(), &commit_syncer, cs_id)
-        .await
-        .with_context(|| format!("Failed to sync changeset {cs_id}"))?
-        .ok_or(anyhow!("Failed to sync commit"))?;
-
-    let small_repo_changesets = get_all_changeset_data_from_repo(&ctx, &small_repo).await?;
-
-    println!("Small repo changesets: {0:#?}", &small_repo_changesets);
-
-    derive_all_enabled_types_for_repo(&ctx, &small_repo, &small_repo_changesets).await?;
+    let (small_repo_cs_id, small_repo_changesets) =
+        sync_changeset_and_derive_all_types(ctx.clone(), cs_id, &small_repo, &commit_syncer)
+            .await?;
 
     check_mapping(ctx.clone(), &commit_syncer, cs_id, Some(small_repo_cs_id)).await;
 
@@ -243,14 +227,10 @@ async fn test_full_submodule_expansion_deletion_succeeds(fb: FacebookInit) -> Re
         .await
         .context("Failed to create commit modifying small_repo directory")?;
 
-    let small_repo_cs_id = sync_to_master(ctx.clone(), &commit_syncer, cs_id)
-        .await?
-        .ok_or(anyhow!("Failed to sync commit"))?;
+    let (small_repo_cs_id, small_repo_changesets) =
+        sync_changeset_and_derive_all_types(ctx.clone(), cs_id, &small_repo, &commit_syncer)
+            .await?;
 
-    let small_repo_changesets = get_all_changeset_data_from_repo(&ctx, &small_repo).await?;
-    println!("Small repo changesets: {0:#?}", &small_repo_changesets);
-
-    derive_all_enabled_types_for_repo(&ctx, &small_repo, &small_repo_changesets).await?;
     check_mapping(ctx.clone(), &commit_syncer, cs_id, Some(small_repo_cs_id)).await;
     compare_expected_changesets(
         small_repo_changesets.last_chunk::<1>().unwrap(),

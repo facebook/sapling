@@ -801,3 +801,32 @@ pub(crate) async fn git_sha1_from_changeset(
 
     Ok(*c_master_mapped_git_commit.oid())
 }
+
+/// Sync a changeset to the target repo and derive all data types for it.
+/// Also print a few things to debug test failures.
+#[context("Failed to sync changeset {cs_id} to repo {}", target_repo.repo_identity().name())]
+pub(crate) async fn sync_changeset_and_derive_all_types(
+    ctx: CoreContext,
+    cs_id: ChangesetId,
+    target_repo: &TestRepo,
+    commit_syncer: &CommitSyncer<SqlSyncedCommitMapping, TestRepo>,
+) -> Result<(ChangesetId, Vec<ChangesetData>)> {
+    let target_repo_cs_id = sync_to_master(ctx.clone(), commit_syncer, cs_id)
+        .await
+        .with_context(|| format!("Failed to sync commit {cs_id}"))?
+        .ok_or(anyhow!("No commit was synced"))?;
+
+    println!("Changeset {cs_id} successfully synced as {target_repo_cs_id}");
+
+    let target_repo_changesets = get_all_changeset_data_from_repo(&ctx, target_repo).await?;
+
+    // Print all target repo changesets for debugging, if the test fails
+    println!(
+        "All target repo changesets: {0:#?}",
+        &target_repo_changesets
+    );
+
+    derive_all_enabled_types_for_repo(&ctx, target_repo, &target_repo_changesets).await?;
+
+    Ok((target_repo_cs_id, target_repo_changesets.to_vec()))
+}

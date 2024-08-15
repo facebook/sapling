@@ -118,13 +118,13 @@ async fn test_submodule_expansion_basic(fb: FacebookInit) -> Result<()> {
     .commit()
     .await?;
 
-    let large_repo_cs_id = sync_to_master(ctx.clone(), &commit_syncer, small_repo_cs_id)
-        .await?
-        .ok_or(anyhow!("Failed to sync commit"))?;
-
-    let large_repo_changesets = get_all_changeset_data_from_repo(&ctx, &large_repo).await?;
-
-    derive_all_enabled_types_for_repo(&ctx, &large_repo, &large_repo_changesets).await?;
+    let (large_repo_cs_id, large_repo_changesets) = sync_changeset_and_derive_all_types(
+        ctx.clone(),
+        small_repo_cs_id,
+        &large_repo,
+        &commit_syncer,
+    )
+    .await?;
 
     check_mapping(
         ctx.clone(),
@@ -246,14 +246,13 @@ async fn test_recursive_submodule_expansion_basic(fb: FacebookInit) -> Result<()
             .commit()
             .await?;
 
-    let large_repo_cs_id = sync_to_master(ctx.clone(), &commit_syncer, small_repo_cs_id)
-        .await?
-        .ok_or(anyhow!("Failed to sync commit"))?;
-
-    let large_repo_changesets = get_all_changeset_data_from_repo(&ctx, &large_repo).await?;
-    println!("large_repo_changesets: {:#?}\n\n", &large_repo_changesets);
-
-    derive_all_enabled_types_for_repo(&ctx, &large_repo, &large_repo_changesets).await?;
+    let (large_repo_cs_id, _large_repo_changesets) = sync_changeset_and_derive_all_types(
+        ctx.clone(),
+        small_repo_cs_id,
+        &large_repo,
+        &commit_syncer,
+    )
+    .await?;
 
     check_submodule_metadata_file_in_large_repo(
         &ctx,
@@ -335,15 +334,9 @@ async fn test_submodule_deletion(fb: FacebookInit) -> Result<()> {
     .commit()
     .await?;
 
-    let large_repo_cs_id = sync_to_master(ctx.clone(), &commit_syncer, cs_id)
-        .await?
-        .ok_or(anyhow!("Failed to sync commit deleting submodule B"))?;
-
-    println!("large_repo_cs_id: {}", large_repo_cs_id);
-
-    let large_repo_changesets = get_all_changeset_data_from_repo(&ctx, &large_repo).await?;
-
-    derive_all_enabled_types_for_repo(&ctx, &large_repo, &large_repo_changesets).await?;
+    let (large_repo_cs_id, large_repo_changesets) =
+        sync_changeset_and_derive_all_types(ctx.clone(), cs_id, &large_repo, &commit_syncer)
+            .await?;
 
     check_mapping(ctx.clone(), &commit_syncer, cs_id, Some(large_repo_cs_id)).await;
 
@@ -414,15 +407,13 @@ async fn test_recursive_submodule_deletion(fb: FacebookInit) -> Result<()> {
             .commit()
             .await?;
 
-    let large_repo_cs_id = sync_to_master(ctx.clone(), &commit_syncer, small_repo_cs_id)
-        .await
-        .context("sync_to_master failed")
-        .and_then(|res| res.ok_or(anyhow!("No commit was synced")))?;
-
-    let large_repo_changesets = get_all_changeset_data_from_repo(&ctx, &large_repo).await?;
-    println!("large_repo_changesets: {:#?}\n\n", &large_repo_changesets);
-
-    derive_all_enabled_types_for_repo(&ctx, &large_repo, &large_repo_changesets).await?;
+    let (large_repo_cs_id, large_repo_changesets) = sync_changeset_and_derive_all_types(
+        ctx.clone(),
+        small_repo_cs_id,
+        &large_repo,
+        &commit_syncer,
+    )
+    .await?;
 
     compare_expected_changesets(
         large_repo_changesets.last_chunk::<1>().unwrap(),
@@ -508,15 +499,13 @@ async fn test_submodule_with_recursive_submodule_deletion(fb: FacebookInit) -> R
             .commit()
             .await?;
 
-    let large_repo_cs_id = sync_to_master(ctx.clone(), &commit_syncer, small_repo_cs_id)
-        .await
-        .context("sync_to_master failed")
-        .and_then(|res| res.ok_or(anyhow!("No commit was synced")))?;
-
-    let large_repo_changesets = get_all_changeset_data_from_repo(&ctx, &large_repo).await?;
-    println!("large_repo_changesets: {:#?}\n\n", &large_repo_changesets);
-
-    derive_all_enabled_types_for_repo(&ctx, &large_repo, &large_repo_changesets).await?;
+    let (large_repo_cs_id, large_repo_changesets) = sync_changeset_and_derive_all_types(
+        ctx.clone(),
+        small_repo_cs_id,
+        &large_repo,
+        &commit_syncer,
+    )
+    .await?;
 
     compare_expected_changesets(
         large_repo_changesets.last_chunk::<1>().unwrap(),
@@ -645,15 +634,14 @@ async fn test_deleting_submodule_but_keeping_directory(fb: FacebookInit) -> Resu
         .commit()
         .await?;
 
-    let large_repo_cs_id = sync_to_master(ctx.clone(), &commit_syncer, chg_sm_path_cs_id)
-        .await
-        .context("sync_to_master failed")
-        .and_then(|res| res.ok_or(anyhow!("No commit was synced")))?;
+    let (large_repo_cs_id, large_repo_changesets) = sync_changeset_and_derive_all_types(
+        ctx.clone(),
+        chg_sm_path_cs_id,
+        &large_repo,
+        &commit_syncer,
+    )
+    .await?;
 
-    println!("large_repo_cs_id: {0:#?}", large_repo_cs_id);
-
-    let large_repo_changesets = get_all_changeset_data_from_repo(&ctx, &large_repo).await?;
-    derive_all_enabled_types_for_repo(&ctx, &large_repo, &large_repo_changesets).await?;
     compare_expected_changesets_from_basic_setup(
         &large_repo_changesets,
         &[
@@ -797,8 +785,6 @@ async fn test_deleting_recursive_submodule_but_keeping_directory(fb: FacebookIni
 
     let first_expected_cs_id = large_repo_cs_id;
 
-    println!("large_repo_cs_id: {0:#?}", large_repo_cs_id);
-
     assert_working_copy_matches_expected(
         &ctx,
         &large_repo,
@@ -856,15 +842,13 @@ async fn test_deleting_recursive_submodule_but_keeping_directory(fb: FacebookIni
         .commit()
         .await?;
 
-    let large_repo_cs_id = sync_to_master(ctx.clone(), &commit_syncer, chg_sm_path_cs_id)
-        .await
-        .context("Failed to sync chg_sm_path_cs_id")
-        .and_then(|res| res.ok_or(anyhow!("No commit was synced")))?;
-
-    println!("large_repo_cs_id: {0:#?}", large_repo_cs_id);
-
-    let large_repo_changesets = get_all_changeset_data_from_repo(&ctx, &large_repo).await?;
-    derive_all_enabled_types_for_repo(&ctx, &large_repo, &large_repo_changesets).await?;
+    let (large_repo_cs_id, large_repo_changesets) = sync_changeset_and_derive_all_types(
+        ctx.clone(),
+        chg_sm_path_cs_id,
+        &large_repo,
+        &commit_syncer,
+    )
+    .await?;
 
     compare_expected_changesets(
         large_repo_changesets.last_chunk::<2>().unwrap(),
@@ -985,14 +969,9 @@ async fn test_implicitly_deleting_submodule(fb: FacebookInit) -> Result<()> {
     .commit()
     .await?;
 
-    let large_repo_cs_id = sync_to_master(ctx.clone(), &commit_syncer, cs_id)
-        .await?
-        .ok_or(anyhow!("Commit wasn't synced"))?;
-
-    println!("large_repo_cs_id: {}", large_repo_cs_id);
-
-    let large_repo_changesets = get_all_changeset_data_from_repo(&ctx, &large_repo).await?;
-    derive_all_enabled_types_for_repo(&ctx, &large_repo, &large_repo_changesets).await?;
+    let (large_repo_cs_id, large_repo_changesets) =
+        sync_changeset_and_derive_all_types(ctx.clone(), cs_id, &large_repo, &commit_syncer)
+            .await?;
 
     compare_expected_changesets_from_basic_setup(
         &large_repo_changesets,
@@ -1086,12 +1065,9 @@ async fn test_implicit_deletions_inside_submodule_repo(fb: FacebookInit) -> Resu
     .commit()
     .await?;
 
-    let large_repo_cs_id = sync_to_master(ctx.clone(), &commit_syncer, cs_id)
-        .await?
-        .ok_or(anyhow!("Failed to sync commit"))?;
-
-    let large_repo_changesets = get_all_changeset_data_from_repo(&ctx, &large_repo).await?;
-    derive_all_enabled_types_for_repo(&ctx, &large_repo, &large_repo_changesets).await?;
+    let (large_repo_cs_id, large_repo_changesets) =
+        sync_changeset_and_derive_all_types(ctx.clone(), cs_id, &large_repo, &commit_syncer)
+            .await?;
 
     check_mapping(ctx.clone(), &commit_syncer, cs_id, Some(large_repo_cs_id)).await;
 
@@ -1203,13 +1179,9 @@ async fn test_implicitly_deleting_file_with_submodule(fb: FacebookInit) -> Resul
         .commit()
         .await?;
 
-    let large_repo_cs_id = sync_to_master(ctx.clone(), &commit_syncer, cs_id)
-        .await?
-        .ok_or(anyhow!("No commit synced"))?;
-
-    let large_repo_changesets = get_all_changeset_data_from_repo(&ctx, &large_repo).await?;
-
-    derive_all_enabled_types_for_repo(&ctx, &large_repo, large_repo_changesets.as_slice()).await?;
+    let (large_repo_cs_id, large_repo_changesets) =
+        sync_changeset_and_derive_all_types(ctx.clone(), cs_id, &large_repo, &commit_syncer)
+            .await?;
 
     check_mapping(ctx.clone(), &commit_syncer, cs_id, Some(large_repo_cs_id)).await;
 
@@ -1319,14 +1291,9 @@ async fn test_adding_submodule_on_existing_directory(fb: FacebookInit) -> Result
         .commit()
         .await?;
 
-    let large_repo_cs_id = sync_to_master(ctx.clone(), &commit_syncer, cs_id)
-        .await
-        .context("Failed to sync commit replacing existing directory with submodule expansion")?
-        .ok_or(anyhow!("No commit synced"))?;
-
-    let large_repo_changesets = get_all_changeset_data_from_repo(&ctx, &large_repo).await?;
-
-    derive_all_enabled_types_for_repo(&ctx, &large_repo, large_repo_changesets.as_slice()).await?;
+    let (large_repo_cs_id, large_repo_changesets) =
+        sync_changeset_and_derive_all_types(ctx.clone(), cs_id, &large_repo, &commit_syncer)
+            .await?;
 
     compare_expected_changesets_from_basic_setup(
         &large_repo_changesets,
