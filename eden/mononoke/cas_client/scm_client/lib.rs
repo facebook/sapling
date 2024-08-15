@@ -164,7 +164,7 @@ where
         &self,
         ctx: &'a CoreContext,
         blobstore: &'a impl Blobstore,
-        ids: Vec<(HgFileNodeId, Option<MononokeDigest>)>,
+        ids: impl IntoIterator<Item = (HgFileNodeId, Option<MononokeDigest>)>,
         prior_lookup: bool,
     ) -> Vec<Result<(HgFileNodeId, UploadOutcome), Error>> {
         let uploads = ids.into_iter().map(move |id| async move {
@@ -185,7 +185,7 @@ where
         &self,
         ctx: &'a CoreContext,
         blobstore: &'a impl Blobstore,
-        ids: Vec<ContentId>,
+        ids: impl IntoIterator<Item = ContentId>,
         prior_lookup: bool,
     ) -> Vec<Result<(ContentId, UploadOutcome), Error>> {
         stream::iter(ids.into_iter().map(move |id| async move {
@@ -203,7 +203,7 @@ where
         &self,
         ctx: &'a CoreContext,
         blobstore: &'a impl Blobstore,
-        ids: Vec<(HgFileNodeId, Option<MononokeDigest>)>,
+        ids: impl IntoIterator<Item = (HgFileNodeId, Option<MononokeDigest>)>,
         prior_lookup: bool,
     ) -> Result<Vec<(HgFileNodeId, UploadOutcome)>, Error> {
         self.upload_file_contents(ctx, blobstore, ids, prior_lookup)
@@ -278,7 +278,7 @@ where
         &self,
         ctx: &'a CoreContext,
         blobstore: &'a impl Blobstore,
-        manifest_ids: Vec<(HgAugmentedManifestId, Option<MononokeDigest>)>,
+        manifest_ids: impl IntoIterator<Item = (HgAugmentedManifestId, Option<MononokeDigest>)>,
         prior_lookup: bool,
     ) -> Vec<Result<(HgAugmentedManifestId, UploadOutcome), Error>> {
         let uploads = manifest_ids.into_iter().map(move |id| async move {
@@ -297,7 +297,7 @@ where
         &self,
         ctx: &'a CoreContext,
         blobstore: &'a impl Blobstore,
-        manifest_ids: Vec<(HgAugmentedManifestId, Option<MononokeDigest>)>,
+        manifest_ids: impl IntoIterator<Item = (HgAugmentedManifestId, Option<MononokeDigest>)>,
         prior_lookup: bool,
     ) -> Result<Vec<(HgAugmentedManifestId, UploadOutcome)>, Error> {
         self.upload_augmented_trees(ctx, blobstore, manifest_ids, prior_lookup)

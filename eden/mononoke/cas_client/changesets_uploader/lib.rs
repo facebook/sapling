@@ -216,6 +216,8 @@ where
             .await
             .map_err(|e| CasChangesetUploaderErrorKind::Error(e.into()))?;
 
+        let hg_root_manifest_id = HgAugmentedManifestId::new(hg_cs.manifestid().into_nodehash());
+
         // Diff hg manifest with parents
         let diff_stream = match (
             hg_cs.p1().map(HgChangesetId::new),
@@ -340,12 +342,15 @@ where
                     });
             }
             UploadPolicy::All => {
+                // Ensure the root manifest is uploaded last, so that we can use it to derive if entire changeset is already present in CAS
                 let (outcomes_trees, outcomes_files) = try_join!(
                     self.client
                         .ensure_upload_augmented_trees(
                             ctx,
                             &blobstore,
-                            manifests_list,
+                            manifests_list
+                                .into_iter()
+                                .filter(|(treeid, _)| *treeid != hg_root_manifest_id),
                             trees_lookup
                         )
                         .watched(ctx.logger()),
@@ -361,6 +366,20 @@ where
                 outcomes_files.into_iter().for_each(|(_, outcome)| {
                     upload_counter.tick(ctx, outcome);
                 });
+
+                // Upload the root manifest last
+                let outcome_root = self
+                    .client
+                    .upload_augmented_tree(
+                        ctx,
+                        &blobstore,
+                        &hg_root_manifest_id,
+                        None,
+                        trees_lookup,
+                    )
+                    .watched(ctx.logger())
+                    .await?;
+                upload_counter.tick(ctx, outcome_root);
             }
         }
 
