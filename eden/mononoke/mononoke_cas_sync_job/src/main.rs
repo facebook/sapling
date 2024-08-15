@@ -706,6 +706,7 @@ async fn run<'a>(
             )
         })?;
     let main_bookmark_to_sync = sync_config.main_bookmark_to_sync.as_str();
+    let sync_all_bookmarks = sync_config.sync_all_bookmarks;
 
     // Before beginning any actual processing, check if cancellation has been requested.
     // If yes, then lets return early.
@@ -777,7 +778,9 @@ async fn run<'a>(
                     components: entries
                         .into_iter()
                         .filter_map(|entry| {
-                            if entry.bookmark_name.as_str() == main_bookmark_to_sync {
+                            if sync_all_bookmarks
+                                || entry.bookmark_name.as_str() == main_bookmark_to_sync
+                            {
                                 Some(entry)
                             } else {
                                 None

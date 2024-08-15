@@ -1797,6 +1797,8 @@ pub struct HgSyncConfig {
 pub struct MononokeCasSyncConfig {
     /// The name of the main bookmark to sync to RE CAS
     pub main_bookmark_to_sync: String,
+    /// Enabling it would expand the sync to all the bookmarks
+    pub sync_all_bookmarks: bool,
 }
 
 /// Destination for telemetry logging.
