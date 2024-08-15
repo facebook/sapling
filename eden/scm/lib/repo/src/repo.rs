@@ -645,7 +645,7 @@ impl Repo {
 
 #[cfg(feature = "wdir")]
 impl Repo {
-    fn load_working_copy(&self) -> Result<WorkingCopy, errors::InvalidWorkingCopy> {
+    fn load_working_copy(&self) -> Result<WorkingCopy> {
         tracing::trace!(target: "repo::workingcopy", "creating file store");
         let file_store = self.file_store()?;
 
@@ -662,12 +662,13 @@ impl Repo {
             self.locker.clone(),
             &self.dot_hg_path,
             &has_requirement,
-        )?)
+        )
+        .map_err(errors::InvalidWorkingCopy::from)?)
     }
 
-    pub fn working_copy(&self) -> Result<Arc<RwLock<WorkingCopy>>, errors::InvalidWorkingCopy> {
+    pub fn working_copy(&self) -> Result<Arc<RwLock<WorkingCopy>>> {
         let wc = self.working_copy.get_or_try_init(|| {
-            Ok::<_, errors::InvalidWorkingCopy>(Arc::new(RwLock::new(self.load_working_copy()?)))
+            Ok::<_, anyhow::Error>(Arc::new(RwLock::new(self.load_working_copy()?)))
         })?;
         Ok(wc.clone())
     }
