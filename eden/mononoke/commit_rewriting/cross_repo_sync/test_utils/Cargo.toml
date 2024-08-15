@@ -13,7 +13,6 @@ path = "lib.rs"
 [dependencies]
 anyhow = "1.0.75"
 ascii = "1.0"
-blobrepo = { version = "0.1.0", path = "../../../blobrepo" }
 blobstore = { version = "0.1.0", path = "../../../blobstore" }
 bonsai_git_mapping = { version = "0.1.0", path = "../../../bonsai_git_mapping" }
 bonsai_globalrev_mapping = { version = "0.1.0", path = "../../../bonsai_globalrev_mapping" }

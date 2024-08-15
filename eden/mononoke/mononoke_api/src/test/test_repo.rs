@@ -12,7 +12,6 @@ use std::sync::Arc;
 use anyhow::anyhow;
 use anyhow::Error;
 use anyhow::Result;
-use blobrepo::AsBlobRepo;
 use blobstore::Loadable;
 use bookmarks::BookmarkKey;
 use bytes::Bytes;
@@ -42,7 +41,6 @@ use mononoke_types::NonRootMPath;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
 use slog::info;
-use synced_commit_mapping::ArcSyncedCommitMapping;
 use tests_utils::bookmark;
 use tests_utils::resolve_cs_id;
 use tests_utils::CreateCommitContext;
@@ -888,23 +886,13 @@ async fn xrepo_commit_lookup_config_changing_live(fb: FacebookInit) -> Result<()
 async fn init_x_repo(
     ctx: &CoreContext,
 ) -> Result<(Mononoke, TestLiveCommitSyncConfigSource), Error> {
-    let (syncers, commit_sync_config, lv_cfg, lv_cfg_src) = init_small_large_repo(ctx).await?;
+    let (syncers, commit_sync_config, _lv_cfg, lv_cfg_src) =
+        init_small_large_repo::<crate::Repo>(ctx).await?;
 
     let small_to_large = syncers.small_to_large;
-    let mapping: ArcSyncedCommitMapping = Arc::new(small_to_large.get_mapping().clone());
     let mononoke = Mononoke::new_test_xrepo(
-        ctx.clone(),
-        (
-            "smallrepo".to_string(),
-            small_to_large.get_small_repo().as_blob_repo().clone(),
-        ),
-        (
-            "largerepo".to_string(),
-            small_to_large.get_large_repo().as_blob_repo().clone(),
-        ),
-        commit_sync_config.clone(),
-        mapping.clone(),
-        lv_cfg,
+        small_to_large.get_small_repo().clone(),
+        small_to_large.get_large_repo().clone(),
     )
     .await?;
     lv_cfg_src.add_config(commit_sync_config);

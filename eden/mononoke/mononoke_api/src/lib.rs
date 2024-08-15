@@ -204,12 +204,7 @@ pub(crate) fn invalid_push_redirected_request(method_name: &str) -> MononokeErro
 }
 
 pub mod test_impl {
-    use blobrepo::BlobRepo;
-    use cloned::cloned;
-    use live_commit_sync_config::LiveCommitSyncConfig;
-    use metaconfig_types::CommitSyncConfig;
     use repo_identity::RepoIdentityRef;
-    use synced_commit_mapping::ArcSyncedCommitMapping;
 
     use super::*;
 
@@ -234,39 +229,24 @@ pub mod test_impl {
             })
         }
 
-        pub async fn new_test_xrepo(
-            ctx: CoreContext,
-            small_repo: (String, BlobRepo),
-            large_repo: (String, BlobRepo),
-            _commit_sync_config: CommitSyncConfig,
-            mapping: ArcSyncedCommitMapping,
-            lv_cfg: Arc<dyn LiveCommitSyncConfig>,
-        ) -> Result<Self, Error> {
-            use futures::stream::FuturesOrdered;
-            use futures::stream::TryStreamExt;
-
-            let repos = vec![small_repo, large_repo]
-                .into_iter()
-                .map({
-                    move |(name, repo)| {
-                        cloned!(ctx, lv_cfg, mapping);
-                        async move {
-                            Repo::new_test_xrepo(ctx.clone(), repo, lv_cfg, mapping)
-                                .await
-                                .map(move |repo| {
-                                    (repo.blob_repo().repo_identity().id().id(), name, repo)
-                                })
-                        }
-                    }
-                })
-                .collect::<FuturesOrdered<_>>()
-                .try_collect::<Vec<_>>()
-                .await?;
-
-            let repo_names_in_tier =
-                Vec::from_iter(repos.iter().map(|(_, name, _)| name.to_string()));
+        pub async fn new_test_xrepo(small_repo: Repo, large_repo: Repo) -> Result<Self, Error> {
+            let repo_names_in_tier = vec![
+                small_repo.repo_identity().name().to_string(),
+                large_repo.repo_identity().name().to_string(),
+            ];
             let mononoke_repos = MononokeRepos::new();
-            mononoke_repos.populate(repos);
+            mononoke_repos.populate(vec![
+                (
+                    small_repo.repo_identity().id().id(),
+                    small_repo.repo_identity().name().to_string(),
+                    small_repo,
+                ),
+                (
+                    large_repo.repo_identity().id().id(),
+                    large_repo.repo_identity().name().to_string(),
+                    large_repo,
+                ),
+            ]);
             Ok(Self {
                 repos: Arc::new(mononoke_repos),
                 repo_names_in_tier,

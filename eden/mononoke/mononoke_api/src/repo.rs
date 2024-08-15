@@ -14,7 +14,6 @@ use std::sync::Arc;
 use std::time::SystemTime;
 use std::time::UNIX_EPOCH;
 
-use acl_regions::build_disabled_acl_regions;
 use acl_regions::AclRegions;
 use anyhow::anyhow;
 use anyhow::Error;
@@ -25,7 +24,6 @@ use blobstore::Loadable;
 use blobstore_factory::MetadataSqlFactory;
 use blobstore_factory::ReadOnlyStorage;
 use bonsai_git_mapping::BonsaiGitMapping;
-use bonsai_git_mapping::BonsaiGitMappingArc;
 use bonsai_git_mapping::BonsaiGitMappingRef;
 use bonsai_globalrev_mapping::BonsaiGlobalrevMapping;
 use bonsai_globalrev_mapping::BonsaiGlobalrevMappingRef;
@@ -34,7 +32,6 @@ use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bonsai_svnrev_mapping::BonsaiSvnrevMapping;
 use bonsai_svnrev_mapping::BonsaiSvnrevMappingRef;
 use bonsai_tag_mapping::BonsaiTagMapping;
-use bonsai_tag_mapping::BonsaiTagMappingArc;
 use bookmarks::BookmarkCategory;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarkKind;
@@ -42,17 +39,14 @@ use bookmarks::BookmarkName;
 use bookmarks::BookmarkPagination;
 use bookmarks::BookmarkPrefix;
 use bookmarks::BookmarkUpdateLog;
-use bookmarks::BookmarkUpdateLogArc;
 use bookmarks::BookmarkUpdateLogRef;
 use bookmarks::Bookmarks;
-use bookmarks::BookmarksArc;
 use bookmarks::BookmarksRef;
 pub use bookmarks::Freshness as BookmarkFreshness;
 use bookmarks::Freshness;
 use bookmarks_cache::BookmarksCache;
 use bulk_derivation::BulkDerivation;
 use bytes::Bytes;
-use cacheblob::InProcessLease;
 use cacheblob::LeaseOps;
 use changeset_info::ChangesetInfo;
 use commit_cloud::CommitCloud;
@@ -94,7 +88,6 @@ use futures::stream::TryStreamExt;
 use futures::try_join;
 use futures::Future;
 use git_push_redirect::GitPushRedirectConfig;
-use git_push_redirect::TestGitPushRedirectConfig;
 use git_symbolic_refs::GitSymbolicRefs;
 use git_types::MappedGitCommitId;
 use hook_manager::manager::HookManager;
@@ -104,11 +97,7 @@ use live_commit_sync_config::LiveCommitSyncConfig;
 use mercurial_derivation::MappedHgChangesetId;
 use mercurial_mutation::HgMutationStore;
 use mercurial_types::Globalrev;
-use metaconfig_types::HookManagerParams;
-use metaconfig_types::InfinitepushNamespace;
-use metaconfig_types::InfinitepushParams;
 use metaconfig_types::RepoConfig;
-use metaconfig_types::SourceControlServiceParams;
 use mononoke_api_types::InnerRepo;
 use mononoke_repos::MononokeRepos;
 use mononoke_types::hash::Blake3;
@@ -124,12 +113,9 @@ use mutable_counters::MutableCounters;
 use mutable_renames::ArcMutableRenames;
 use mutable_renames::MutableRenames;
 use mutable_renames::MutableRenamesArc;
-use mutable_renames::SqlMutableRenamesStore;
 use phases::Phases;
-use phases::PhasesArc;
 use phases::PhasesRef;
 use pushrebase_mutation_mapping::PushrebaseMutationMapping;
-use regex::Regex;
 use repo_authorization::AuthorizationContext;
 use repo_blobstore::ArcRepoBlobstore;
 use repo_blobstore::RepoBlobstore;
@@ -138,10 +124,8 @@ use repo_blobstore::RepoBlobstoreRef;
 use repo_bookmark_attrs::RepoBookmarkAttrs;
 use repo_cross_repo::RepoCrossRepo;
 use repo_derived_data::RepoDerivedData;
-use repo_derived_data::RepoDerivedDataArc;
 use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentity;
-use repo_identity::RepoIdentityArc;
 use repo_identity::RepoIdentityRef;
 use repo_lock::RepoLock;
 use repo_permission_checker::RepoPermissionChecker;
@@ -151,18 +135,14 @@ use repo_sparse_profiles::RepoSparseProfilesArc;
 use repo_stats_logger::RepoStatsLogger;
 use slog::debug;
 use slog::error;
-use sql_construct::SqlConstruct;
 use sql_ext::facebook::MysqlOptions;
 use sql_query_config::SqlQueryConfig;
 use stats::prelude::*;
 use streaming_clone::StreamingClone;
-use streaming_clone::StreamingCloneBuilder;
 use synced_commit_mapping::ArcSyncedCommitMapping;
 use synced_commit_mapping::SqlSyncedCommitMapping;
-use test_repo_factory::TestRepoFactory;
 use unbundle::PushRedirector;
 use unbundle::PushRedirectorArgs;
-use warm_bookmarks_cache::WarmBookmarksCacheBuilder;
 use wireproto_handler::PushRedirectorBase;
 use wireproto_handler::RepoHandlerBase;
 use wireproto_handler::RepoHandlerBaseRef;
@@ -436,105 +416,6 @@ impl Repo {
             filestore_config: self.filestore_config.clone(),
             repo_stats_logger: self.repo_stats_logger.clone(),
         }
-    }
-
-    /// Construct a Repo from a test BlobRepo and commit_sync_config
-    pub async fn new_test_xrepo(
-        ctx: CoreContext,
-        blob_repo: BlobRepo,
-        live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
-        synced_commit_mapping: ArcSyncedCommitMapping,
-    ) -> Result<Self, Error> {
-        // TODO: Migrate more of this code to use the TestRepoFactory so that we can eventually
-        // replace these test methods.
-        let repo_factory: TestRepoFactory = TestRepoFactory::new(ctx.fb)?;
-
-        let repo_id = blob_repo.repo_identity().id();
-
-        let config = RepoConfig {
-            infinitepush: InfinitepushParams {
-                namespace: Some(InfinitepushNamespace::new(
-                    Regex::new("scratch/.+").unwrap(),
-                )),
-                ..Default::default()
-            },
-            source_control_service: SourceControlServiceParams {
-                permit_writes: true,
-                ..Default::default()
-            },
-            hook_manager_params: Some(HookManagerParams {
-                disable_acl_checker: true,
-                ..Default::default()
-            }),
-            ..Default::default()
-        };
-
-        let name = blob_repo.repo_identity().name().to_string();
-        let repo_blobstore = blob_repo.repo_blobstore_arc();
-        let hook_manager = repo_factory.hook_manager(
-            &blob_repo.repo_identity_arc(),
-            &blob_repo.repo_derived_data_arc(),
-            &blob_repo.bookmarks_arc(),
-            &blob_repo.repo_blobstore_arc(),
-            &blob_repo.bonsai_tag_mapping_arc(),
-            &blob_repo.bonsai_git_mapping_arc(),
-        );
-        let repo_cross_repo = Arc::new(RepoCrossRepo::new(
-            synced_commit_mapping,
-            live_commit_sync_config,
-            Arc::new(InProcessLease::new()),
-        ));
-        let mutable_counters = repo_factory.mutable_counters(&blob_repo.repo_identity_arc())?;
-        let repo_handler_base = repo_factory.repo_handler_base(
-            &Arc::new(config.clone()),
-            &repo_cross_repo,
-            &blob_repo.repo_identity_arc(),
-            &blob_repo.bookmarks_arc(),
-            &blob_repo.bookmark_update_log_arc(),
-            &mutable_counters,
-        )?;
-        let inner = InnerRepo {
-            blob_repo,
-            repo_config: Arc::new(config.clone()),
-            ephemeral_store: Arc::new(RepoEphemeralStore::disabled(repo_id)),
-            mutable_renames: Arc::new(MutableRenames::new_test(
-                repo_id,
-                SqlMutableRenamesStore::with_sqlite_in_memory()?,
-            )),
-            repo_cross_repo,
-            acl_regions: build_disabled_acl_regions(),
-            sparse_profiles: Arc::new(RepoSparseProfiles::new(None)),
-            streaming_clone: Arc::new(
-                StreamingCloneBuilder::with_sqlite_in_memory()?.build(repo_id, repo_blobstore),
-            ),
-            sql_query_config: Arc::new(SqlQueryConfig { caching: None }),
-            git_push_redirect_config: Arc::new(TestGitPushRedirectConfig::new()),
-        };
-
-        let mut warm_bookmarks_cache_builder = WarmBookmarksCacheBuilder::new(
-            ctx.clone(),
-            inner.bookmarks_arc(),
-            inner.bookmark_update_log_arc(),
-            inner.repo_identity_arc(),
-        );
-        warm_bookmarks_cache_builder
-            .add_all_warmers(&inner.repo_derived_data_arc(), &inner.phases_arc())?;
-        // We are constructing a test repo, so ensure the warm bookmark cache
-        // is fully warmed, so that tests see up-to-date bookmarks.
-        warm_bookmarks_cache_builder.wait_until_warmed();
-        let warm_bookmarks_cache = warm_bookmarks_cache_builder.build().await?;
-        let filestore_config = Arc::new(FilestoreConfig::no_chunking_filestore());
-
-        let repo_stats_logger = Arc::new(RepoStatsLogger::noop());
-        Ok(Self {
-            name: name.clone(),
-            inner,
-            warm_bookmarks_cache: Arc::new(warm_bookmarks_cache),
-            hook_manager,
-            repo_handler_base,
-            filestore_config,
-            repo_stats_logger,
-        })
     }
 
     /// The name of the underlying repo.

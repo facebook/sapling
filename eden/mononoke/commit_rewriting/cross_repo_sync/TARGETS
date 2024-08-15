@@ -101,7 +101,6 @@ rust_library(
         "fbsource//third-party/rust:maplit",
         ":cross_repo_sync",
         "//common/rust/shed/facet:facet",
-        "//eden/mononoke/blobrepo:blobrepo",
         "//eden/mononoke/blobrepo:repo_blobstore",
         "//eden/mononoke/blobstore:blobstore",
         "//eden/mononoke/bonsai_git_mapping:bonsai_git_mapping",

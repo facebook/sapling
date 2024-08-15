@@ -85,6 +85,7 @@ pub async fn manual_commit_sync<M: SyncedCommitMapping + Clone + 'static, R: Cro
 mod test {
     use cross_repo_sync_test_utils::init_small_large_repo;
     use cross_repo_sync_test_utils::xrepo_mapping_version_with_small_repo;
+    use cross_repo_sync_test_utils::TestRepo;
     use fbinit::FacebookInit;
     use maplit::hashmap;
     use mononoke_types::NonRootMPath;
@@ -117,7 +118,7 @@ mod test {
         // |
         // O <- file: "content"
 
-        let (syncers, _, _, _) = init_small_large_repo(&ctx).await?;
+        let (syncers, _, _, _) = init_small_large_repo::<TestRepo>(&ctx).await?;
         let small_to_large = syncers.small_to_large;
         let small_repo = small_to_large.get_source_repo();
         let large_repo = small_to_large.get_target_repo();
@@ -180,7 +181,7 @@ mod test {
         // |
         // O <- file: "content"
 
-        let (syncers, _, _, _) = init_small_large_repo(&ctx).await?;
+        let (syncers, _, _, _) = init_small_large_repo::<TestRepo>(&ctx).await?;
         let large_to_small = syncers.large_to_small;
         let large_repo = large_to_small.get_source_repo();
         let small_repo = large_to_small.get_target_repo();
