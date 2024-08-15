@@ -260,7 +260,8 @@ impl Dispatcher {
             in_repo_command,
         ) {
             (false, Some(command), _) => Ok(command.to_string()),
-            (true, _, None) | (false, None, None) => Err(UnknownCommand(String::new()).into()),
+            (true, _, None) => Err(errors::CommandRequired.into()),
+            (false, None, None) => Err(UnknownCommand(String::new()).into()),
             (true, _, Some(command)) | (false, None, Some(command)) => Ok(command.to_string()),
         }
     }

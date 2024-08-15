@@ -42,6 +42,10 @@ pub struct FailedFallbackToPython;
 pub struct RepoRequired(pub String);
 
 #[derive(Debug, Error)]
+#[error("missing command name\n(use 'sl help' to get help)")]
+pub struct CommandRequired;
+
+#[derive(Debug, Error)]
 #[error("malformed --config option: '{0}' (use --config section.name=value)")]
 pub struct MalformedConfigOption(pub String);
 

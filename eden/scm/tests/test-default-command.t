@@ -69,7 +69,7 @@ Test that when falling back due to --help it keeps the rest of the arguments
   $ hg --help --time --pager never 2>&1 | grep time
   time: real * secs * (glob)
 
-Make sure that running a command without the naked default config errors out outside of a repo but but not inside a repo.
+Make sure that running a command without the naked default config errors out outside of a repo:
 
   $ cat >> $HGRCPATH << EOF
   > [commands]
@@ -81,6 +81,8 @@ Make sure that running a command without the naked default config errors out out
   abort: '$TESTTMP' is not inside a repository, but this command requires a repository!
   (use 'cd' to go to a directory inside a repository and try again)
   [255]
+
+Naked command inside a repo without in-repo command config is an error:
   $ newclientrepo
   $ hg
   $ cat >> $HGRCPATH << EOF
@@ -88,4 +90,6 @@ Make sure that running a command without the naked default config errors out out
   > %unset naked-default.in-repo
   > EOF
   $ hg | grep "These are some common"
-  These are some common Sapling commands.  Use 'hg help commands' to list all
+  abort: missing command name
+  (use 'sl help' to get help)
+  [1]
