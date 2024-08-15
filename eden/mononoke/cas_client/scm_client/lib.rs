@@ -305,4 +305,18 @@ where
             .into_iter()
             .collect()
     }
+
+    pub async fn is_augmented_tree_uploaded<'a>(
+        &self,
+        ctx: &'a CoreContext,
+        blobstore: &'a impl Blobstore,
+        manifest_id: &HgAugmentedManifestId,
+    ) -> Result<bool, Error> {
+        let augmented_manifest_envelope = manifest_id.load(ctx, blobstore).await?;
+        let digest = MononokeDigest(
+            augmented_manifest_envelope.augmented_manifest_id(),
+            augmented_manifest_envelope.augmented_manifest_size(),
+        );
+        self.lookup_digest(&digest).await
+    }
 }
