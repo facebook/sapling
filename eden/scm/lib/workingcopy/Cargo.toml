@@ -9,8 +9,8 @@ edition = "2021"
 anyhow = "1.0.75"
 async-runtime = { version = "0.1.0", path = "../async-runtime" }
 bitflags = { version = "2.4", features = ["serde"] }
-configloader = { version = "0.1.0", path = "../config/loader" }
 configmodel = { version = "0.1.0", path = "../config/model" }
+configset = { version = "0.1.0", path = "../config/set" }
 context = { version = "0.1.0", path = "../context" }
 crossbeam = "0.8"
 edenfs-client = { version = "0.1.0", path = "../edenfs-client", optional = true }

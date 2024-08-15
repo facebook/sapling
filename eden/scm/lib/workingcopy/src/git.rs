@@ -7,8 +7,8 @@
 
 use anyhow::bail;
 use anyhow::Result;
-use configloader::config::ConfigSet;
-use configloader::Config;
+use configmodel::Config;
+use configset::ConfigSet;
 
 pub struct Submodule {
     pub name: String,
