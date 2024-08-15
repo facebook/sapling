@@ -16,6 +16,8 @@ use edenapi_types::GetSmartlogParams;
 use edenapi_types::ReferencesDataResponse;
 use edenapi_types::ServerError;
 use edenapi_types::SmartlogDataResponse;
+use edenapi_types::UpdateArchiveParams;
+use edenapi_types::UpdateArchiveResponse;
 use edenapi_types::UpdateReferencesParams;
 use edenapi_types::WorkspaceDataResponse;
 use edenapi_types::WorkspacesDataResponse;
@@ -34,6 +36,8 @@ pub struct CommitCloudReferences;
 pub struct CommitCloudUpdateReferences;
 pub struct CommitCloudSmartlog;
 pub struct CommitCloudShareWorkspace;
+
+pub struct CommitCloudUpdateArchive;
 
 #[async_trait]
 impl SaplingRemoteApiHandler for CommitCloudWorkspace {
@@ -216,6 +220,37 @@ async fn share_workspace(
     Ok(CloudShareWorkspaceResponse {
         data: repo
             .cloud_share_workspace(&request)
+            .await
+            .map_err(ServerError::from),
+    })
+}
+
+#[async_trait]
+impl SaplingRemoteApiHandler for CommitCloudUpdateArchive {
+    type Request = UpdateArchiveParams;
+    type Response = UpdateArchiveResponse;
+
+    const HTTP_METHOD: hyper::Method = hyper::Method::POST;
+    const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::CloudUpdateArchive;
+    const ENDPOINT: &'static str = "/cloud/update_archive";
+
+    async fn handler(
+        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
+        request: Self::Request,
+    ) -> HandlerResult<'async_trait, Self::Response> {
+        let repo = ectx.repo();
+        let res = update_archive(request, repo).boxed();
+        Ok(stream::once(res).boxed())
+    }
+}
+
+async fn update_archive(
+    request: UpdateArchiveParams,
+    repo: HgRepoContext,
+) -> anyhow::Result<UpdateArchiveResponse, Error> {
+    Ok(UpdateArchiveResponse {
+        data: repo
+            .cloud_update_archive(&request)
             .await
             .map_err(ServerError::from),
     })

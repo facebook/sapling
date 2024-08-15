@@ -92,6 +92,7 @@ pub enum SaplingRemoteApiMethod {
     CloudReferences,
     CloudShareWorkspace,
     CloudSmartlog,
+    CloudUpdateArchive,
     CloudUpdateReferences,
     CloudWorkspace,
     CloudWorkspaces,
@@ -130,6 +131,7 @@ impl fmt::Display for SaplingRemoteApiMethod {
             Self::CloudReferences => "cloud_references",
             Self::CloudShareWorkspace => "cloud_share_workspace",
             Self::CloudSmartlog => "cloud_smartlog",
+            Self::CloudUpdateArchive => "cloud_update_archive",
             Self::CloudUpdateReferences => "cloud_update_references",
             Self::CloudWorkspace => "cloud_workspace",
             Self::CloudWorkspaces => "cloud_workspaces",
@@ -426,6 +428,7 @@ pub fn build_router(ctx: ServerContext) -> Router {
         Handlers::setup::<commit_cloud::CommitCloudReferences>(route);
         Handlers::setup::<commit_cloud::CommitCloudShareWorkspace>(route);
         Handlers::setup::<commit_cloud::CommitCloudSmartlog>(route);
+        Handlers::setup::<commit_cloud::CommitCloudUpdateArchive>(route);
         Handlers::setup::<commit_cloud::CommitCloudUpdateReferences>(route);
         Handlers::setup::<commit_cloud::CommitCloudWorkspace>(route);
         Handlers::setup::<commit_cloud::CommitCloudWorkspaces>(route);

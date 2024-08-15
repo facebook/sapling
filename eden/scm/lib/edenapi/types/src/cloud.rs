@@ -282,6 +282,15 @@ pub struct UpdateArchiveParams {
     pub archived: bool,
 }
 
+#[auto_wire]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
+pub struct UpdateArchiveResponse {
+    #[id(0)]
+    #[no_default]
+    pub data: Result<String, ServerError>,
+}
+
 impl RemoteBookmark {
     pub fn full_name(&self) -> String {
         format!("{}/{}", self.remote, self.name)
