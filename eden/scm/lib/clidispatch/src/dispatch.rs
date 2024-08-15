@@ -249,24 +249,20 @@ impl Dispatcher {
         if self.early_global_opts.help || hgplain::is_plain(None) {
             return Err(UnknownCommand(String::new()).into());
         }
-        let command = if let (OptionalRepo::None(_), Some(command)) = (
-            &self.optional_repo,
-            self.optional_repo
-                .config()
-                .get_nonempty("commands", "naked-default.no-repo"),
+
+        let config = self.optional_repo.config();
+        let no_repo_command = config.get_nonempty("commands", "naked-default.no-repo");
+        let in_repo_command = config.get_nonempty("commands", "naked-default.in-repo");
+
+        match (
+            self.optional_repo.has_repo(),
+            no_repo_command,
+            in_repo_command,
         ) {
-            command
-        } else {
-            // When there is no repo and no default command is specified, users are
-            // unlikely to know what's going on. Because having the in-repo command
-            // is now the expected behavior, we should fall back to that unless
-            // the naked command for no repo is specified.
-            self.optional_repo
-                .config()
-                .get_nonempty("commands", "naked-default.in-repo")
-                .ok_or_else(|| UnknownCommand(String::new()))?
-        };
-        Ok(command.to_string())
+            (false, Some(command), _) => Ok(command.to_string()),
+            (true, _, None) | (false, None, None) => Err(UnknownCommand(String::new()).into()),
+            (true, _, Some(command)) | (false, None, Some(command)) => Ok(command.to_string()),
+        }
     }
 
     fn prepare_command<'a>(
