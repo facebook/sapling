@@ -372,30 +372,11 @@ impl Repo {
             .clone())
     }
 
+    #[cached_field]
     pub fn dag_commits(&self) -> Result<Arc<RwLock<Box<dyn DagCommits + Send + 'static>>>> {
-        Ok(self
-            .dag_commits
-            .get_or_try_init(
-                || -> Result<Arc<RwLock<Box<dyn DagCommits + Send + 'static>>>> {
-                    let info: &dyn StoreInfo = self;
-                    let commits: Box<dyn DagCommits + Send + 'static> =
-                        factory::call_constructor(info)?;
-                    let commits = Arc::new(RwLock::new(commits));
-                    Ok(commits)
-                },
-            )?
-            .clone())
-    }
-
-    pub fn invalidate_dag_commits(&self) -> Result<()> {
-        if let Some(dag_commits) = self.dag_commits.get() {
-            let mut dag_commits = dag_commits.write();
-            let info: &dyn StoreInfo = self;
-            let new_commits: Box<dyn DagCommits + Send + 'static> =
-                factory::call_constructor(info)?;
-            *dag_commits = new_commits;
-        }
-        Ok(())
+        let info: &dyn StoreInfo = self;
+        let commits: Box<dyn DagCommits + Send + 'static> = factory::call_constructor(info)?;
+        Ok(Arc::new(RwLock::new(commits)))
     }
 
     pub fn remote_bookmarks(&self) -> Result<BTreeMap<String, HgId>> {
