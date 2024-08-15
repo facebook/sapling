@@ -13,8 +13,6 @@
   $ hgmn_init repo
   $ cd repo
   $ drawdag << EOS
-  > F # F/quux = random:30
-  > |
   > D # D/qux = random:30
   > |
   > C # C/baz = random:30
@@ -28,6 +26,6 @@
   $ sl push -r . --to master -q --create
 
 
-Sync all bookmark moves and test the "stats" output. For now, incorrectly, only 1 commit will be synced for the initial boomark creation move, instead of the range [from=None, to=rev]
+Validate that blobs and trees were uploaded for _all_ 4 commits (this should include 4 files and 4 trees)
   $ with_stripped_logs mononoke_cas_sync repo 0 | grep stats
-  log entries [1] synced (1 commits uploaded, upload stats: uploaded digests: 2, already present digests: 0, uploaded bytes: 747 B, the largest uploaded blob: 717 B), took overall * sec, repo: repo (glob)
+  log entries [1] synced (4 commits uploaded, upload stats: uploaded digests: 8, already present digests: 0, uploaded bytes: 2.0 kiB, the largest uploaded blob: 717 B), took overall * sec, repo: repo (glob)

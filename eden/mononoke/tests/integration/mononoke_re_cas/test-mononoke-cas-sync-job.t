@@ -43,7 +43,7 @@ Sync all bookmarks moves
   using repo "repo" repoid RepositoryId(0), repo: repo
   syncing log entries [1, 2, 3, 4] ..., repo: repo
   log entry BookmarkUpdateLogEntry * is a creation of bookmark, repo: repo (glob)
-  log entries [1, 2, 3, 4] synced (4 commits uploaded, upload stats: *, repo: repo (glob)
+  log entries [1, 2, 3, 4] synced *, repo: repo (glob)
   queue size after processing: 0, repo: repo
   successful sync of entries [1, 2, 3, 4], repo: repo
   Finished mononoke RE CAS sync command execution for repo repo, repo: repo

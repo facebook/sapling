@@ -6,6 +6,7 @@
  */
 
 use anyhow::Error;
+use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateLogEntry;
 use cas_client::CasClient;
 use changesets_uploader::CasChangesetsUploader;
@@ -22,6 +23,7 @@ use futures_watchdog::WatchdogExt;
 use mercurial_derivation::RootHgAugmentedManifestId;
 use mononoke_types::ChangesetId;
 use repo_derived_data::RepoDerivedDataRef;
+use slog::error;
 use slog::info;
 
 use crate::CombinedBookmarkUpdateLogEntry;
@@ -31,14 +33,52 @@ use crate::RetryAttemptsCount;
 const DEFAULT_UPLOAD_RETRY_NUM: usize = 1;
 const DEFAULT_UPLOAD_CONCURRENT_COMMITS: usize = 100;
 const DEFAULT_CONCURRENT_ENTRIES_FOR_COMMIT_GRAPH: usize = 100;
+const DEFAULT_MAX_COMMITS_PER_BOOKMARK_CREATION: u64 = 1000;
 
 pub async fn try_expand_bookmark_creation_entry<'a>(
-    _repo: &'a Repo,
-    _ctx: &'a CoreContext,
+    re_cas_client: &CasChangesetsUploader<impl CasClient + 'a>,
+    repo: &'a Repo,
+    ctx: &'a CoreContext,
     to_bcs_id: ChangesetId,
+    bookmark: BookmarkKey,
 ) -> Result<Vec<ChangesetId>, Error> {
-    // TODO(liubov): implement support for bookmark creation.
-    Ok(vec![to_bcs_id])
+    let frontier = repo
+        .commit_graph()
+        .ancestors_frontier_with(ctx, vec![to_bcs_id], move |bcs_id| async move {
+            re_cas_client
+                .is_changeset_uploaded(ctx, repo, &bcs_id)
+                .await
+                .map_err(Error::from)
+        })
+        .await?;
+
+    // Estimate the number of commits to upload for the bookmark creation entry.
+    // Runs in O((heads + common) * log) regardless of stream size
+    let estimate: u64 = repo
+        .commit_graph()
+        .ancestors_difference_segments(ctx, vec![to_bcs_id], frontier.clone())
+        .await?
+        .into_iter()
+        .map(|segment| segment.length)
+        .sum();
+
+    if estimate > DEFAULT_MAX_COMMITS_PER_BOOKMARK_CREATION {
+        error!(
+            ctx.logger(),
+            "Too many commits to upload for the bookmark creation entry {}: {}, limit is {}. Please, consider recursive uploading a revision with mononoke_newadmin instead",
+            bookmark,
+            estimate,
+            DEFAULT_MAX_COMMITS_PER_BOOKMARK_CREATION
+        );
+        // Upload only the bookmark creation commit. The working copy for this commit will have gaps in CAS.
+        return Ok(vec![to_bcs_id]);
+    }
+
+    repo.commit_graph()
+        .ancestors_difference_stream(ctx, vec![to_bcs_id], frontier)
+        .await?
+        .try_collect::<Vec<_>>()
+        .await
 }
 
 pub async fn try_derive<'a>(
@@ -76,6 +116,7 @@ pub async fn try_sync<'a>(
 }
 
 pub async fn try_expand_entry<'a>(
+    re_cas_client: &CasChangesetsUploader<impl CasClient + 'a>,
     repo: &'a Repo,
     ctx: &'a CoreContext,
     entry: BookmarkUpdateLogEntry,
@@ -107,7 +148,8 @@ pub async fn try_expand_entry<'a>(
             "log entry {:?} is a creation of bookmark", &entry
         );
         return Ok(Some(
-            try_expand_bookmark_creation_entry(repo, ctx, to).await?,
+            try_expand_bookmark_creation_entry(re_cas_client, repo, ctx, to, entry.bookmark_name)
+                .await?,
         ));
     }
     let from = entry.from_changeset_id.unwrap();
@@ -138,7 +180,7 @@ pub async fn try_sync_single_combined_entry<'a>(
 
     let start_time = std::time::Instant::now();
     let queue: Vec<ChangesetId> = futures::stream::iter(combined_entry.components.clone())
-        .map(|entry| async move { try_expand_entry(repo, ctx, entry).await })
+        .map(|entry| async move { try_expand_entry(re_cas_client, repo, ctx, entry).await })
         .buffer_unordered(DEFAULT_CONCURRENT_ENTRIES_FOR_COMMIT_GRAPH)
         .try_collect::<Vec<_>>()
         .await?
