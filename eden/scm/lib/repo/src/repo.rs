@@ -635,7 +635,8 @@ impl Repo {
 
 #[cfg(feature = "wdir")]
 impl Repo {
-    fn load_working_copy(&self) -> Result<WorkingCopy> {
+    #[cached_field]
+    pub fn working_copy(&self) -> Result<Arc<RwLock<WorkingCopy>>> {
         tracing::trace!(target: "repo::workingcopy", "creating file store");
         let file_store = self.file_store()?;
 
@@ -643,7 +644,7 @@ impl Repo {
         let tree_resolver = self.tree_resolver()?;
         let has_requirement = |s: &str| self.requirements.contains(s);
 
-        Ok(WorkingCopy::new(
+        let wc = WorkingCopy::new(
             &self.path,
             &self.config,
             self.storage_format(),
@@ -653,21 +654,9 @@ impl Repo {
             &self.dot_hg_path,
             &has_requirement,
         )
-        .map_err(errors::InvalidWorkingCopy::from)?)
-    }
+        .map_err(errors::InvalidWorkingCopy::from)?;
 
-    pub fn working_copy(&self) -> Result<Arc<RwLock<WorkingCopy>>> {
-        let wc = self.working_copy.get_or_try_init(|| {
-            Ok::<_, anyhow::Error>(Arc::new(RwLock::new(self.load_working_copy()?)))
-        })?;
-        Ok(wc.clone())
-    }
-
-    pub fn invalidate_working_copy(&self) -> Result<()> {
-        if let Some(v) = self.working_copy.get() {
-            *v.write() = self.load_working_copy()?;
-        }
-        Ok(())
+        Ok(Arc::new(RwLock::new(wc)))
     }
 }
 
