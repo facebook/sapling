@@ -26,7 +26,6 @@ use repo_derived_data::RepoDerivedDataRef;
 use slog::debug;
 use slog::error;
 use slog::info;
-use slog::warn;
 
 use crate::CombinedBookmarkUpdateLogEntry;
 use crate::Repo;
@@ -168,7 +167,28 @@ pub async fn try_expand_entry<'a>(
                 .await?,
         ));
     }
+
     let from = entry.from_changeset_id.unwrap();
+
+    // The sync wasn't started from the beginning of the repo, so we may encounter this bookmark first time. Let's treat it as creation.
+    // This can also happen if the gap between the update exceeds our TTL (1 year)
+    // We know this can't happen with the main bookmark, skip the check for it to avoid unnecessary CAS lookups.
+    if entry.bookmark_name.as_str() != main_bookmark
+        && !re_cas_client
+            .is_changeset_uploaded(ctx, repo, &from)
+            .await?
+    {
+        info!(
+            ctx.logger(),
+            "log entry {:?} is a not creation of bookmark, however we sync it first time or it was updated last time more than our TTL",
+            &entry
+        );
+        return Ok(Some(
+            try_expand_bookmark_creation_entry(re_cas_client, repo, ctx, to, entry.bookmark_name)
+                .await?,
+        ));
+    }
+
     Ok(Some(
         repo.commit_graph()
             .range_stream(ctx, from, to)
