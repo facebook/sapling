@@ -672,8 +672,7 @@ impl Convert for RawCasSyncConfig {
     fn convert(self) -> Result<Self::Output> {
         Ok(MononokeCasSyncConfig {
             main_bookmark_to_sync: self.main_bookmark_to_sync,
-            // TODO(liubovd): add new field in the RawCasSyncConfig
-            sync_all_bookmarks: false,
+            sync_all_bookmarks: self.sync_all_bookmarks,
         })
     }
 }
