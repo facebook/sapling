@@ -38,13 +38,16 @@ pub(crate) fn cached_field(attr: TokenStream, tokens: TokenStream) -> TokenStrea
             let invalidate_name = format_ident!("invalidate_{}", name_str);
             quote! {
                 pub fn #name(&self) -> Result<#ret_type> {
+                    ::tracing::trace!(stringify!(#name));
                     Ok(self.#name.get_or_try_init(|| self.#load_name().map(|v| Arc::new(RwLock::new(v))))?.clone())
                 }
                 fn #load_name(&self) -> Result<#ret_type_inner> {
+                    ::tracing::debug!(stringify!(#load_name));
                     #body
                     Ok(#ret_value_inner)
                 }
                 pub fn #invalidate_name(&self) -> Result<()> {
+                    ::tracing::debug!(stringify!(#invalidate_name));
                     if let Some(v) = self.#name.get() {
                         *v.write() = self.#load_name()?;
                     }
@@ -54,9 +57,11 @@ pub(crate) fn cached_field(attr: TokenStream, tokens: TokenStream) -> TokenStrea
         } else {
             quote! {
                 pub fn #name(&self) -> Result<#ret_type> {
+                    ::tracing::trace!(stringify!(#name));
                     Ok(self.#name.get_or_try_init(|| self.#load_name())?.clone())
                 }
                 fn #load_name(&self) -> Result<#ret_type> {
+                    ::tracing::debug!(stringify!(#load_name));
                     #body
                     Ok(#ret_value)
                 }
@@ -101,13 +106,16 @@ mod tests {
             unparse(&cached_field(attr, code)),
             r#"
             pub fn foo (& self) -> Result < Arc < RwLock < Data >>> {
+                :: tracing :: trace ! (stringify ! (foo));
                 Ok (self . foo . get_or_try_init (|| self . load_foo () . map (| v | Arc :: new (RwLock :: new (v)))) ? . clone ())
             }
             fn load_foo (& self) -> Result < Data > {
+                :: tracing :: debug ! (stringify ! (load_foo));
                 let data = calculate_data (self) ?;
                 Ok (data)
             }
             pub fn invalidate_foo (& self) -> Result < () > {
+                :: tracing :: debug ! (stringify ! (invalidate_foo));
                 if let Some (v) = self . foo . get () {
                     * v . write () = self . load_foo () ?;
                 }
@@ -131,9 +139,11 @@ mod tests {
             unparse(&cached_field(attr, code)),
             r#"
             pub fn foo (& self) -> Result < Arc < dyn Trait >> {
+                :: tracing :: trace ! (stringify ! (foo));
                 Ok (self . foo . get_or_try_init (|| self . load_foo ()) ? . clone ())
             }
             fn load_foo (& self) -> Result < Arc < dyn Trait >> {
+                :: tracing :: debug ! (stringify ! (load_foo));
                 let data = calculate_data (self) ?;
                 Ok (Arc :: new (data))
             }"#
@@ -163,15 +173,23 @@ mod tests {
             r#"
             impl MyStruct {
                 pub fn baz (& self , x : usize) -> usize { x + 1 } pub fn foo (& self) -> Result < String > {
+                    :: tracing :: trace ! (stringify ! (foo));
                     Ok (self . foo . get_or_try_init (|| self . load_foo ()) ? . clone ())
                 }
                 fn load_foo (& self) -> Result < String > {
+                    :: tracing :: debug ! (stringify ! (load_foo));
                     Ok (String :: new ())
                 }
                 pub fn bar (& self) -> Result < Arc < RwLock < usize >>> {
+                    :: tracing :: trace ! (stringify ! (bar));
                     Ok (self . bar . get_or_try_init (|| self . load_bar () . map (| v | Arc :: new (RwLock :: new (v)))) ? . clone ())
                 }
-                fn load_bar (& self) -> Result < usize > { Ok (42) } pub fn invalidate_bar (& self) -> Result < () > {
+                fn load_bar (& self) -> Result < usize > {
+                    :: tracing :: debug ! (stringify ! (load_bar));
+                    Ok (42)
+                }
+                pub fn invalidate_bar (& self) -> Result < () > {
+                    :: tracing :: debug ! (stringify ! (invalidate_bar));
                     if let Some (v) = self . bar . get () {
                         * v . write () = self . load_bar () ?;
                     }

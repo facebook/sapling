@@ -12,6 +12,7 @@ rust_library(
                     "fbsource//third-party/rust:once_cell",
                     "fbsource//third-party/rust:parking_lot",
                     "fbsource//third-party/rust:tempfile",
+                    "fbsource//third-party/rust:tracing",
                 ],
             },
         },
@@ -21,6 +22,7 @@ rust_library(
         "fbsource//third-party/rust:once_cell",
         "fbsource//third-party/rust:parking_lot",
         "fbsource//third-party/rust:tempfile",
+        "fbsource//third-party/rust:tracing",
     ],
     proc_macro = True,
     rustc_flags = [
