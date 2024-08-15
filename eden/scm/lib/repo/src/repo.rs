@@ -42,6 +42,7 @@ use revisionstore::SaplingRemoteApiFileStore;
 use revisionstore::SaplingRemoteApiTreeStore;
 use revsets::errors::RevsetLookupError;
 use revsets::utils as revset_utils;
+use rewrite_macros::cached_field;
 use storemodel::FileStore;
 use storemodel::StoreInfo;
 use storemodel::StoreOutput;
@@ -265,22 +266,11 @@ impl Repo {
         self.dot_hg_path.join(self.ident.config_repo_file())
     }
 
+    #[cached_field]
     pub fn metalog(&self) -> Result<Arc<RwLock<MetaLog>>> {
-        self.metalog
-            .get_or_try_init(|| Ok(Arc::new(RwLock::new(self.load_metalog()?))))
-            .cloned()
-    }
-
-    pub fn invalidate_metalog(&self) -> Result<()> {
-        if let Some(ml) = self.metalog.get() {
-            *ml.write() = self.load_metalog()?;
-        }
-        Ok(())
-    }
-
-    fn load_metalog(&self) -> Result<MetaLog> {
         let metalog_path = self.metalog_path();
-        Ok(MetaLog::open_from_env(metalog_path.as_path())?)
+        let metalog = MetaLog::open_from_env(metalog_path.as_path())?;
+        Ok(Arc::new(RwLock::new(metalog)))
     }
 
     pub fn metalog_path(&self) -> PathBuf {

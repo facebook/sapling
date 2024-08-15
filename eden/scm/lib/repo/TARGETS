@@ -67,6 +67,7 @@ rust_library(
         "//eden/scm/lib/types:types",
         "//eden/scm/lib/util:util",
         "//eden/scm/lib/util/factory:factory",
+        "//eden/scm/lib/util/rewrite-macros:rewrite-macros",
         "//eden/scm/lib/workingcopy:workingcopy",
     ],
 )
