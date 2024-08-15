@@ -32,6 +32,7 @@ use cross_repo_sync::SubmoduleDeps;
 use cross_repo_sync_test_utils::rebase_root_on_master;
 use cross_repo_sync_test_utils::TestRepo;
 use fbinit::FacebookInit;
+use fn_error_context::context;
 use fsnodes::RootFsnodeId;
 use futures::stream;
 use futures::StreamExt;
@@ -783,4 +784,20 @@ pub(crate) async fn assert_working_copy_matches_expected(
         "Working copy doesn't match expectation"
     );
     Ok(())
+}
+
+// Helper to easily get GitSha1 from a bonsai changeset
+#[context("Failed to compute GitSha1 from changeset {cs_id} in repo {}", repo.repo_identity().name())]
+pub(crate) async fn git_sha1_from_changeset(
+    ctx: &CoreContext,
+    repo: &TestRepo,
+    cs_id: ChangesetId,
+) -> Result<GitSha1> {
+    let c_master_mapped_git_commit = repo
+        .repo_derived_data()
+        .derive::<MappedGitCommitId>(ctx, cs_id)
+        .await
+        .with_context(|| format!("Failed to derive MappedGitCommitId for changeset {cs_id}"))?;
+
+    Ok(*c_master_mapped_git_commit.oid())
 }

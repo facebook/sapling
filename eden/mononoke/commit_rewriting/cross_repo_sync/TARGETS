@@ -139,6 +139,7 @@ rust_unittest(
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:ascii",
+        "fbsource//third-party/rust:fn-error-context",
         "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:maplit",
         "fbsource//third-party/rust:strum",

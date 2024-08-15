@@ -154,6 +154,17 @@ async fn test_full_submodule_expansion_deletion_succeeds(fb: FacebookInit) -> Re
 
 // TODO(T182967556): test changing one submodule and deleting another
 
+// TODO(T182967556): test backsyncing valid atomic repo changing large and small repo
+
+// TODO(T182967556): test updating 2 small repos with submodule expansions.
+
+//
+//
+// ----------------------------------------------------------------------------
+// ------------------------- Invalid changes ----------------------------------
+//
+// Test scenarios where backsyncing should fail
+
 /// Test that backsync will crash for small repos with submodule expansion
 /// enabled while backsyncing submodule changes is not properly supported.
 #[fbinit::test]
@@ -439,8 +450,6 @@ async fn test_deleting_submodule_expansion_without_metadata_file_fails(
 
     Ok(())
 }
-
-// TODO(T182967556): test backsyncing valid atomic repo changing large and small repo
 
 /// Takes a Result that's expected to be a submodule expansion validation error
 /// when backsyncing a changeset and assert it matches the
