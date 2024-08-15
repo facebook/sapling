@@ -9,6 +9,8 @@ jobs:
     steps:
     - name: Checkout Code
       uses: actions/checkout@v3
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v3
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v2
     - name: Login to GitHub Container Registry
@@ -23,4 +25,5 @@ jobs:
         context: .
         file: .github/workflows/sapling-cli-ubuntu-20.04.Dockerfile
         push: true
+        platforms: linux/amd64,linux/arm64
         tags: ${{ format('ghcr.io/{0}/build_ubuntu_20_04:latest', github.repository) }}
