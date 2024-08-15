@@ -243,7 +243,98 @@ async fn test_full_submodule_expansion_deletion_succeeds(fb: FacebookInit) -> Re
     Ok(())
 }
 
-// TODO(T182967556): unit test for valid recursive submodule deletion
+/// Test valid recursive submodule deletions backsync successfully
+#[fbinit::test]
+async fn test_valid_recursive_submodule_expansion_deletion_succeeds(
+    fb: FacebookInit,
+) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb.clone());
+
+    let (repo_c, repo_c_cs_map) = build_repo_c(fb).await?;
+    let c_master_git_sha1 = git_sha1_from_changeset(&ctx, &repo_c, repo_c_cs_map["C_B"])
+        .await
+        .context("c_master")?;
+
+    let repo_c_submodule_path_in_repo_b = NonRootMPath::new("submodules/repo_c")?;
+
+    let repo_c_rec_sm_path_in_repo_a =
+        NonRootMPath::new(REPO_B_SUBMODULE_PATH)?.join(&repo_c_submodule_path_in_repo_b);
+
+    // Build repo_b with repo_c as submodule, pointing to commit C_B
+    let (repo_b, repo_b_cs_map) =
+        build_repo_b_with_c_submodule(fb, c_master_git_sha1, &repo_c_submodule_path_in_repo_b)
+            .await
+            .context("Failed to build repo_b")?;
+
+    // Create a changeset in repo_b that updates the repo_c submodule pointer to
+    // commit C_A
+    const MESSAGE_REPO_B: &str = "Delete repo_c submodule in repo_b";
+    let repo_b_cs_id = CreateCommitContext::new(&ctx, &repo_b, vec![repo_b_cs_map["B_B"]])
+        .set_message(MESSAGE_REPO_B)
+        // Delete repo_c submodule pointer in repo_b
+        .delete_file(repo_c_submodule_path_in_repo_b)
+        .commit()
+        .await
+        .context("Failed to create commit modifying small_repo directory")?;
+
+    // Save the git hash of that repo_b commit, to use it in its submodule
+    // expansion
+    let repo_b_git_sha1 = git_sha1_from_changeset(&ctx, &repo_b, repo_b_cs_id)
+        .await
+        .context("repo_b_cs_id")?;
+
+    // Build small and large repos
+    let SubmoduleSyncTestData {
+        small_repo_info: (small_repo, _small_repo_cs_map),
+        large_repo_info: (large_repo, large_repo_master),
+        commit_syncer,
+        ..
+    } = build_submodule_backsync_test_data(
+        fb,
+        &repo_b,
+        vec![
+            (NonRootMPath::new(REPO_B_SUBMODULE_PATH)?, repo_b.clone()),
+            (repo_c_rec_sm_path_in_repo_a, repo_c.clone()),
+        ],
+    )
+    .await?;
+
+    // Create a commit in large repo, updating the submodule expansion of repos
+    // B and C.
+    // Update repo_b pointer to the commit where it updates its repo_c submodule
+    // pointer.
+    const MESSAGE: &str = "Update submodules repo_b and repo_c git pointers";
+    let cs_id = CreateCommitContext::new(&ctx, &large_repo, vec![large_repo_master])
+        .set_message(MESSAGE)
+        // Completely delete the repo_c recursive submodule expansion
+        .delete_file("small_repo/submodules/repo_b/submodules/.x-repo-submodule-repo_c")
+        .delete_file("small_repo/submodules/repo_b/submodules/repo_c/C_A")
+        .delete_file("small_repo/submodules/repo_b/submodules/repo_c/C_B")
+        // Also update repo_b submodule pointer
+        .add_file(
+            "small_repo/submodules/.x-repo-submodule-repo_b",
+            repo_b_git_sha1.to_string(),
+        )
+        .commit()
+        .await
+        .context("Failed to create commit modifying small_repo directory")?;
+
+    let (small_repo_cs_id, small_repo_changesets) =
+        sync_changeset_and_derive_all_types(ctx.clone(), cs_id, &small_repo, &commit_syncer)
+            .await?;
+
+    check_mapping(ctx.clone(), &commit_syncer, cs_id, Some(small_repo_cs_id)).await;
+
+    compare_expected_changesets(
+        small_repo_changesets.last_chunk::<1>().unwrap(),
+        &[ExpectedChangeset::new(MESSAGE).with_git_submodules(vec![
+            // Expect only a repo_b git submodule change
+            "submodules/repo_b",
+        ])],
+    )?;
+
+    Ok(())
+}
 
 // TODO(T182967556): test changing one submodule and deleting another
 
