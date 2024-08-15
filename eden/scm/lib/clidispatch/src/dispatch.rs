@@ -244,7 +244,7 @@ impl Dispatcher {
     }
 
     fn default_command(&self) -> Result<String> {
-        // Passing in --verbose also disables this behavior,
+        // Passing in --version also disables this behavior,
         // but that option is handled somewhere else
         if self.early_global_opts.help || hgplain::is_plain(None) {
             return Err(UnknownCommand(String::new()).into());
