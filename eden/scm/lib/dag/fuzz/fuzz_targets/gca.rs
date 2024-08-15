@@ -15,7 +15,7 @@ mod tests;
 
 lazy_static! {
     static ref CONTEXT: TestContext =
-        TestContext::from_bin(bindag::GIT).truncate(u16::max_value() as usize);
+        TestContext::from_bin(bindag::MOZILLA).truncate(u16::max_value() as usize);
 }
 
 fuzz_target!(|input: Vec<u16>| {

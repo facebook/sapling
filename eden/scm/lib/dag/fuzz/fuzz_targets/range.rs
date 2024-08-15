@@ -16,7 +16,7 @@ mod tests;
 lazy_static! {
     // The complete DAG is too large for `range` operation to run reasonably fast.
     // Therefore take a subset of it.
-    static ref CONTEXT: TestContext = TestContext::from_bin_sliced(bindag::GIT, 49040..60415);
+    static ref CONTEXT: TestContext = TestContext::from_bin_sliced(bindag::MOZILLA, 49040..60415);
 }
 
 fuzz_target!(|input: (Vec<u16>, Vec<u16>)| {

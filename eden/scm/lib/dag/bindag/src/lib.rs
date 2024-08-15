@@ -24,7 +24,6 @@ pub use test_context::OctopusTestContext;
 pub use test_context::TestContext;
 
 pub static MOZILLA: &[u8] = include_bytes!("mozilla-central.bindag");
-pub static GIT: &[u8] = include_bytes!("git.bindag");
 
 /// "smallvec" optimization
 #[derive(Clone, Copy)]

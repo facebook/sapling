@@ -16,7 +16,7 @@ mod tests;
 lazy_static! {
     static ref CONTEXT: TestContext = {
         let start = 60146;
-        TestContext::from_bin_sliced(bindag::GIT, start..start + 256)
+        TestContext::from_bin_sliced(bindag::MOZILLA, start..start + 256)
     };
 }
 

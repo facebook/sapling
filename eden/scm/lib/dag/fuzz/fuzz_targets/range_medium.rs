@@ -15,7 +15,7 @@ mod tests;
 
 lazy_static! {
     // Pick a subset of the DAG (with many merges).
-    static ref CONTEXT: TestContext = TestContext::from_bin_sliced(bindag::GIT, 56666..60415);
+    static ref CONTEXT: TestContext = TestContext::from_bin_sliced(bindag::MOZILLA, 56666..60415);
 }
 
 fuzz_target!(|input: (Vec<u16>, Vec<u16>)| {
