@@ -321,21 +321,42 @@ where
 #[cfg(test)]
 mod test {
     use anyhow::Result;
+    use bonsai_hg_mapping::BonsaiHgMapping;
+    use bookmarks::Bookmarks;
     use bytes::Bytes;
+    use commit_graph::CommitGraph;
+    use commit_graph::CommitGraphWriter;
     use fbinit::FacebookInit;
+    use filestore::FilestoreConfig;
     use fixtures::TestRepoFixture;
     use gix_hash::ObjectId;
     use gix_object::Object;
     use gix_object::Tag;
     use packfile::types::to_vec_bytes;
     use packfile::types::BaseObject;
+    use repo_blobstore::RepoBlobstore;
     use repo_blobstore::RepoBlobstoreArc;
+    use repo_derived_data::RepoDerivedData;
+    use repo_identity::RepoIdentity;
 
     use super::*;
 
+    #[facet::container]
+    #[derive(Clone)]
+    struct TestRepo(
+        dyn BonsaiHgMapping,
+        dyn Bookmarks,
+        RepoBlobstore,
+        RepoDerivedData,
+        RepoIdentity,
+        CommitGraph,
+        dyn CommitGraphWriter,
+        FilestoreConfig,
+    );
+
     #[fbinit::test]
     async fn store_and_load_packfile_base_item(fb: FacebookInit) -> Result<()> {
-        let repo = fixtures::Linear::getrepo(fb).await;
+        let repo: TestRepo = fixtures::Linear::get_custom_test_repo(fb).await;
         let ctx = CoreContext::test_mock(fb);
         let blobstore = repo.repo_blobstore_arc();
         // Create a random Git object and get its bytes

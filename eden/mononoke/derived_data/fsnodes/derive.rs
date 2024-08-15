@@ -465,23 +465,44 @@ async fn check_fsnode_leaf(
 mod test {
     use std::str::FromStr;
 
+    use bonsai_hg_mapping::BonsaiHgMapping;
+    use bookmarks::Bookmarks;
+    use commit_graph::CommitGraph;
+    use commit_graph::CommitGraphWriter;
     use derived_data_test_utils::bonsai_changeset_from_hg;
     use derived_data_test_utils::iterate_all_manifest_entries;
     use fbinit::FacebookInit;
+    use filestore::FilestoreConfig;
     use fixtures::Linear;
     use fixtures::ManyFilesDirs;
     use fixtures::TestRepoFixture;
+    use repo_blobstore::RepoBlobstore;
     use repo_blobstore::RepoBlobstoreRef;
+    use repo_derived_data::RepoDerivedData;
     use repo_derived_data::RepoDerivedDataRef;
+    use repo_identity::RepoIdentity;
     use tokio::runtime::Runtime;
 
     use super::*;
     use crate::mapping::get_file_changes;
 
+    #[facet::container]
+    #[derive(Clone)]
+    struct TestRepo(
+        dyn BonsaiHgMapping,
+        dyn Bookmarks,
+        RepoBlobstore,
+        RepoDerivedData,
+        RepoIdentity,
+        CommitGraph,
+        dyn CommitGraphWriter,
+        FilestoreConfig,
+    );
+
     #[fbinit::test]
     fn flat_linear_test(fb: FacebookInit) {
         let runtime = Runtime::new().unwrap();
-        let repo = runtime.block_on(Linear::getrepo(fb));
+        let repo: TestRepo = runtime.block_on(Linear::get_custom_test_repo(fb));
         let derivation_ctx = repo.repo_derived_data().manager().derivation_context(None);
 
         let ctx = CoreContext::test_mock(fb);
@@ -596,7 +617,7 @@ mod test {
     #[fbinit::test]
     fn nested_directories_test(fb: FacebookInit) {
         let runtime = Runtime::new().unwrap();
-        let repo = runtime.block_on(ManyFilesDirs::getrepo(fb));
+        let repo: TestRepo = runtime.block_on(ManyFilesDirs::get_custom_test_repo(fb));
         let derivation_ctx = repo.repo_derived_data().manager().derivation_context(None);
 
         let ctx = CoreContext::test_mock(fb);

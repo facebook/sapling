@@ -798,14 +798,35 @@ impl<Store: Blobstore> AsyncManifest<Store> for HgAugmentedManifestEnvelope {
 mod sharded_augmented_manifest_tests {
     use std::io::Cursor;
 
+    use bonsai_hg_mapping::BonsaiHgMapping;
+    use bookmarks::Bookmarks;
     use bytes::BytesMut;
+    use commit_graph::CommitGraph;
+    use commit_graph::CommitGraphWriter;
     use fbinit::FacebookInit;
+    use filestore::FilestoreConfig;
     use fixtures::Linear;
     use fixtures::TestRepoFixture;
+    use repo_blobstore::RepoBlobstore;
     use repo_blobstore::RepoBlobstoreArc;
+    use repo_derived_data::RepoDerivedData;
+    use repo_identity::RepoIdentity;
     use types::AugmentedTree;
 
     use super::*;
+
+    #[facet::container]
+    #[derive(Clone)]
+    struct TestRepo(
+        dyn BonsaiHgMapping,
+        dyn Bookmarks,
+        RepoBlobstore,
+        RepoDerivedData,
+        RepoIdentity,
+        CommitGraph,
+        dyn CommitGraphWriter,
+        FilestoreConfig,
+    );
 
     fn hash_ones() -> HgNodeHash {
         HgNodeHash::new("1111111111111111111111111111111111111111".parse().unwrap())
@@ -860,7 +881,7 @@ mod sharded_augmented_manifest_tests {
     #[fbinit::test]
     async fn test_serialize_augmented_manifest(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
-        let blobrepo = Linear::getrepo(fb).await;
+        let blobrepo: TestRepo = Linear::get_custom_test_repo(fb).await;
         let blobstore = blobrepo.repo_blobstore_arc();
 
         let subentries = vec![

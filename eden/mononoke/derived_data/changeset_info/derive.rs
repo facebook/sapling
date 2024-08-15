@@ -185,7 +185,7 @@ mod test {
     #[fbinit::test]
     async fn batch_derive(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo = Linear::getrepo(fb).await;
+        let repo: Repo = Linear::get_custom_test_repo(fb).await;
         let master_cs_id = resolve_cs_id(&ctx, &repo, "master").await?;
         let manager = repo.repo_derived_data().manager();
 
