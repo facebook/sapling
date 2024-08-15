@@ -17,6 +17,7 @@ use context::CoreContext;
 use futures::stream;
 use futures::StreamExt;
 use futures::TryStreamExt;
+use futures_stats::TimedTryFutureExt;
 use futures_watchdog::WatchdogExt;
 use mercurial_derivation::RootHgAugmentedManifestId;
 use mononoke_types::ChangesetId;
@@ -29,7 +30,6 @@ use crate::RetryAttemptsCount;
 
 const DEFAULT_UPLOAD_RETRY_NUM: usize = 1;
 const DEFAULT_UPLOAD_CONCURRENT_COMMITS: usize = 100;
-const DEFAULT_DERIVE_CONCURRENT_COMMITS: usize = 100;
 const DEFAULT_CONCURRENT_ENTRIES_FOR_COMMIT_GRAPH: usize = 100;
 
 pub async fn try_expand_bookmark_creation_entry<'a>(
@@ -45,12 +45,12 @@ pub async fn try_derive<'a>(
     repo: &'a Repo,
     ctx: &'a CoreContext,
     bcs_id: ChangesetId,
-) -> Result<ChangesetId, Error> {
+) -> Result<(), Error> {
     // Derive augmented manifest for this changeset if not yet derived.
     repo.repo_derived_data()
         .derive::<RootHgAugmentedManifestId>(ctx, bcs_id)
         .await?;
-    Ok(bcs_id)
+    Ok(())
 }
 
 pub async fn try_sync<'a>(
@@ -139,7 +139,7 @@ pub async fn try_sync_single_combined_entry<'a>(
     let start_time = std::time::Instant::now();
     let queue: Vec<ChangesetId> = futures::stream::iter(combined_entry.components.clone())
         .map(|entry| async move { try_expand_entry(repo, ctx, entry).await })
-        .buffered(DEFAULT_CONCURRENT_ENTRIES_FOR_COMMIT_GRAPH)
+        .buffer_unordered(DEFAULT_CONCURRENT_ENTRIES_FOR_COMMIT_GRAPH)
         .try_collect::<Vec<_>>()
         .await?
         .into_iter()
@@ -147,16 +147,18 @@ pub async fn try_sync_single_combined_entry<'a>(
         .flatten()
         .collect();
 
-    // Order is important for derivation of augmented manifests.
-    let derived = stream::iter(queue)
-        .map(move |bcs_id| async move { try_derive(repo, ctx, bcs_id).await })
-        .buffered(DEFAULT_DERIVE_CONCURRENT_COMMITS)
-        .try_collect::<Vec<ChangesetId>>()
+    // Derive augmented manifests for all commits in the queue if not yet derived.
+    let (derivation_stats, _) = repo
+        .commit_graph()
+        .process_topologically(ctx, queue.clone(), move |bcs_id| async move {
+            try_derive(repo, ctx, bcs_id).await
+        })
+        .try_timed()
         .await?;
 
     // Once everything is derived, the upload order does not matter.
-    let uploaded_len = derived.len();
-    let upload_stats = stream::iter(derived)
+    let uploaded_len = queue.len();
+    let upload_stats = stream::iter(queue)
         .map(move |bcs_id| async move { try_sync(re_cas_client, repo, ctx, bcs_id).await })
         .buffer_unordered(DEFAULT_UPLOAD_CONCURRENT_COMMITS)
         .try_collect::<Vec<_>>()
@@ -173,11 +175,12 @@ pub async fn try_sync_single_combined_entry<'a>(
 
     info!(
         ctx.logger(),
-        "log entries {:?} synced ({} commits uploaded, upload stats: {}), took overall {:.3} sec",
+        "log entries {:?} synced ({} commits uploaded, upload stats: {}), took overall {:.3} sec, derivation checks took {:.3} sec",
         ids,
         uploaded_len,
         upload_stats,
         start_time.elapsed().as_secs_f64(),
+        derivation_stats.completion_time.as_secs_f64(),
     );
     // TODO: add configurable retries.
     Ok(RetryAttemptsCount(DEFAULT_UPLOAD_RETRY_NUM))
