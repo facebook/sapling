@@ -107,7 +107,7 @@ impl CasClient for ThinCasClient {
         &self,
         digests: &[CasDigest],
     ) -> Result<Vec<(CasDigest, Result<Option<Vec<u8>>>)>> {
-        tracing::debug!(target: "cas", "thin client fetching {} digests", digests.len());
+        tracing::debug!(target: "cas", "thin client fetching {} digest(s)", digests.len());
 
         let request = DownloadRequest {
             inlined_digests: Some(digests.iter().map(to_re_digest).collect()),
