@@ -196,6 +196,48 @@ pub fn demomo(
 /// assert_eq!(content.read().as_str(), "def");
 /// ```
 ///
+/// To add post processing on the `Arc<RwLock>`, use `post_load`
+/// attribute:
+///
+/// ```
+/// # use std::io::Result;
+/// # use std::path::PathBuf;
+/// # use std::sync::Arc;
+///
+/// # use once_cell::sync::OnceCell;
+///
+/// # impl FileReader {
+/// #     pub fn new(path: PathBuf) -> Self {
+/// #         Self {
+/// #             path,
+/// #             content: Default::default(),
+/// #             backup: Default::default(),
+/// #         }
+/// #     }
+/// # }
+///
+/// struct FileReader {
+///     path: PathBuf,
+///     content: OnceCell<Arc<RwLock<String>>>,
+///     backup: RwLock<Option<Arc<RwLock<String>>>>,
+/// }
+///
+/// use parking_lot::RwLock;
+///
+/// impl FileReader {
+///     #[rewrite_macros::cached_field(post_load(self.backup_content))]
+///     pub fn content(&self) -> Result<Arc<RwLock<String>>> {
+///         let data = std::fs::read_to_string(&self.path)?;
+///         Ok(Arc::new(RwLock::new(data)))
+///     }
+///
+///     fn backup_content(&self, arc: &Arc<RwLock<String>>) -> Result<()> {
+///         *self.backup.write() = Some(Arc::clone(arc));
+///         Ok(())
+///     }
+/// }
+/// ```
+///
 /// Use `#[cached(debug)]` to enable debug output at compile time.
 #[proc_macro_attribute]
 pub fn cached_field(
