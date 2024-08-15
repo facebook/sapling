@@ -11,6 +11,7 @@ pub mod references;
 pub mod sql;
 use std::fmt::Display;
 use std::sync::Arc;
+use std::time::Instant;
 
 use anyhow::bail;
 use bonsai_hg_mapping::BonsaiHgMapping;
@@ -276,6 +277,7 @@ impl CommitCloud {
 
         #[cfg(fbcode_build)]
         if !self.config.disable_interngraph_notification && !initiate_workspace {
+            let now = Instant::now();
             let notification =
                 NotificationData::from_update_references_params(params.clone(), new_version);
             let _ = publish_single_update(
@@ -285,6 +287,15 @@ impl CommitCloud {
                 self.ctx.fb,
             )
             .await?;
+            self.ctx.scuba().clone().log_with_msg(
+                "Sent interngraph notification",
+                format!(
+                    "For workspace {} in repo {} took {} ms",
+                    cc_ctx.workspace,
+                    cc_ctx.reponame,
+                    now.elapsed().as_millis()
+                ),
+            );
         }
         Ok(ReferencesData {
             version: new_version,
