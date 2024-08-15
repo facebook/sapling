@@ -16,6 +16,7 @@ use std::any::Any;
 use std::sync::OnceLock;
 
 pub use pubsub::PubSub;
+pub use pubsub::SubscribedHandle;
 
 /// Delegates to the global `PubSub`'s `subscribe`.
 pub fn subscribe(
