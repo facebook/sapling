@@ -240,7 +240,13 @@ class SaplingRemoteAPIService(baseservice.BaseService):
 
     def updateworkspacearchive(self, reponame, workspace, archived):
         """Archive or Restore the given workspace"""
-        return self.fallback.updateworkspacearchive(reponame, workspace, archived)
+        self.ui.debug(
+            "sending 'update_workspace_archive' request on SaplingRemoteAPI\n",
+            component="commitcloud",
+        )
+
+        data = {"reponame": reponame, "workspace": workspace, "archived": archived}
+        self.repo.edenapi.cloudupdatearchive(data)
 
     def renameworkspace(self, reponame, workspace, new_workspace):
         """Rename the given workspace"""

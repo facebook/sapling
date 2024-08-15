@@ -59,6 +59,8 @@ use edenapi_types::SaplingRemoteApiServerError;
 use edenapi_types::SetBookmarkResponse;
 use edenapi_types::TreeAttributes;
 use edenapi_types::TreeEntry;
+use edenapi_types::UpdateArchiveParams;
+use edenapi_types::UpdateArchiveResponse;
 use edenapi_types::UpdateReferencesParams;
 use edenapi_types::UploadHgChangeset;
 use edenapi_types::UploadToken;
@@ -784,6 +786,18 @@ pub trait SaplingRemoteApiPyExt: SaplingRemoteApi {
     ) -> PyResult<Serde<CloudShareWorkspaceResponse>> {
         let responses = py
             .allow_threads(|| block_unless_interrupted(self.cloud_share_workspace(data.0)))
+            .map_pyerr(py)?
+            .map_pyerr(py)?;
+        Ok(Serde(responses))
+    }
+
+    fn cloud_update_archive_py(
+        &self,
+        data: Serde<UpdateArchiveParams>,
+        py: Python,
+    ) -> PyResult<Serde<UpdateArchiveResponse>> {
+        let responses = py
+            .allow_threads(|| block_unless_interrupted(self.cloud_update_archive(data.0)))
             .map_pyerr(py)?
             .map_pyerr(py)?;
         Ok(Serde(responses))

@@ -61,6 +61,8 @@ use edenapi_types::SnapshotRawData;
 use edenapi_types::SuffixQueryResponse;
 use edenapi_types::TreeAttributes;
 use edenapi_types::TreeEntry;
+use edenapi_types::UpdateArchiveParams;
+use edenapi_types::UpdateArchiveResponse;
 use edenapi_types::UpdateReferencesParams;
 use edenapi_types::UploadSnapshotResponse;
 use edenapi_types::UploadToken;
@@ -591,6 +593,12 @@ py_class!(pub class client |py| {
     -> PyResult<Serde<CloudShareWorkspaceResponse>>
     {
         self.inner(py).as_ref().cloud_share_workspace_py(data, py)
+    }
+
+    def cloudupdatearchive(&self, data: Serde<UpdateArchiveParams>)
+    -> PyResult<Serde<UpdateArchiveResponse>>
+    {
+        self.inner(py).as_ref().cloud_update_archive_py(data, py)
     }
 });
 

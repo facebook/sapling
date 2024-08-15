@@ -51,6 +51,8 @@ use edenapi_types::SetBookmarkResponse;
 use edenapi_types::SuffixQueryResponse;
 use edenapi_types::TreeAttributes;
 use edenapi_types::TreeEntry;
+use edenapi_types::UpdateArchiveParams;
+use edenapi_types::UpdateArchiveResponse;
 use edenapi_types::UpdateReferencesParams;
 use edenapi_types::UploadHgChangeset;
 use edenapi_types::UploadToken;
@@ -425,6 +427,14 @@ pub trait SaplingRemoteApi: Send + Sync + 'static {
         &self,
         data: CloudShareWorkspaceRequest,
     ) -> Result<CloudShareWorkspaceResponse, SaplingRemoteApiError> {
+        let _ = data;
+        Err(SaplingRemoteApiError::NotSupported)
+    }
+
+    async fn cloud_update_archive(
+        &self,
+        data: UpdateArchiveParams,
+    ) -> Result<UpdateArchiveResponse, SaplingRemoteApiError> {
         let _ = data;
         Err(SaplingRemoteApiError::NotSupported)
     }
