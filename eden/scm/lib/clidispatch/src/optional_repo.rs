@@ -85,4 +85,8 @@ impl OptionalRepo {
             OptionalRepo::None(_) => None,
         }
     }
+
+    pub fn has_repo(&self) -> bool {
+        matches!(self, OptionalRepo::Some(_))
+    }
 }
