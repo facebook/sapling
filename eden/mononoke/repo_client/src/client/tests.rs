@@ -21,7 +21,6 @@ use manifest::ManifestOps;
 use maplit::hashset;
 use mercurial_derivation::DeriveHgChangeset;
 use metaconfig_types::LfsParams;
-use mononoke_api::Repo;
 use mononoke_types_mocks::changesetid::ONES_CSID;
 use repo_blobstore::RepoBlobstoreRef;
 use scuba_ext::MononokeScubaSampleBuilder;
@@ -29,6 +28,7 @@ use serde_json::json;
 use tests_utils::CreateCommitContext;
 
 use super::*;
+use crate::repo::RepoClientRepo;
 
 #[test]
 fn test_parsing_caps_simple() {
@@ -90,7 +90,7 @@ fn get_changed_manifests_stream_test(fb: FacebookInit) -> Result<(), Error> {
 
 async fn get_changed_manifests_stream_test_impl(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let repo = ManyFilesDirs::getrepo(fb).await;
+    let repo: RepoClientRepo = ManyFilesDirs::get_custom_test_repo(fb).await;
 
     // Commit that has only dir2 directory
     let root_mf_id = HgChangesetId::from_str("051946ed218061e925fb120dac02634f9ad40ae2")?
@@ -158,7 +158,7 @@ fn get_changed_manifests_stream_test_depth(fb: FacebookInit) -> Result<(), Error
 
 async fn get_changed_manifests_stream_test_depth_impl(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let repo = ManyFilesDirs::getrepo(fb).await;
+    let repo: RepoClientRepo = ManyFilesDirs::get_custom_test_repo(fb).await;
 
     let root_mf_id = HgChangesetId::from_str("d261bc7900818dea7c86935b3fb17a33b2e3a6b4")?
         .load(&ctx, &repo.repo_blobstore().clone())
@@ -212,7 +212,7 @@ fn get_changed_manifests_stream_test_base_path(fb: FacebookInit) -> Result<(), E
 
 async fn get_changed_manifests_stream_test_base_path_impl(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let repo = ManyFilesDirs::getrepo(fb).await;
+    let repo: RepoClientRepo = ManyFilesDirs::get_custom_test_repo(fb).await;
 
     let root_mf_id = HgChangesetId::from_str("d261bc7900818dea7c86935b3fb17a33b2e3a6b4")?
         .load(&ctx, &repo.repo_blobstore().clone())
@@ -291,7 +291,7 @@ async fn test_lfs_rollout(fb: FacebookInit) -> Result<(), Error> {
 #[fbinit::test]
 async fn test_maybe_validate_pushed_bonsais(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let repo: BlobRepo = test_repo_factory::build_empty(ctx.fb).await?;
+    let repo: RepoClientRepo = test_repo_factory::build_empty(ctx.fb).await?;
     let commit = CreateCommitContext::new_root(&ctx, &repo)
         .add_file("largefile", "11111_11111")
         .commit()
@@ -374,10 +374,10 @@ async fn test_maybe_validate_pushed_bonsais(fb: FacebookInit) -> Result<(), Erro
 }
 
 async fn run_and_check_if_lfs(ctx: &CoreContext, lfs_params: LfsParams) -> Result<bool, Error> {
-    let repo = Arc::new(
+    let repo: Arc<RepoClientRepo> = Arc::new(
         test_repo_factory::TestRepoFactory::new(ctx.fb)?
             .with_config_override(|config| config.lfs = lfs_params)
-            .build::<Repo>()
+            .build()
             .await?,
     );
     let commit = CreateCommitContext::new_root(ctx, &repo)
@@ -443,7 +443,7 @@ async fn run_and_check_if_lfs(ctx: &CoreContext, lfs_params: LfsParams) -> Resul
 
 async fn fetch_mfs(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &RepoClientRepo,
     root_mf_id: HgManifestId,
     base_root_mf_id: HgManifestId,
     base_path: MPath,

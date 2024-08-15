@@ -26,8 +26,6 @@ use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
-use blobrepo::AsBlobRepo;
-use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use bonsai_git_mapping::BonsaiGitMappingRef;
@@ -117,7 +115,6 @@ use mercurial_types::NULL_CSID;
 use mercurial_types::NULL_HASH;
 use metaconfig_types::RepoClientKnobs;
 use metaconfig_types::RepoConfigRef;
-use mononoke_api::Repo;
 use mononoke_types::hash::GitSha1;
 use mononoke_types::path::MPath;
 use mononoke_types::ChangesetId;
@@ -131,6 +128,7 @@ use remotefilelog::get_unordered_file_history_for_multiple_nodes;
 use remotefilelog::GetpackBlobInfo;
 use repo_authorization::AuthorizationContext;
 use repo_blobstore::RepoBlobstoreRef;
+use repo_cross_repo::RepoCrossRepoRef;
 use repo_identity::RepoIdentityRef;
 use revisionstore_types::Metadata;
 use serde::Deserialize;
@@ -151,6 +149,7 @@ use unbundle::PushRedirectorArgs;
 use wireproto_handler::BackupSourceRepo;
 
 use crate::errors::ErrorKind;
+use crate::Repo;
 
 mod logging;
 mod session_bookmarks_cache;
@@ -358,8 +357,8 @@ fn bundle2caps() -> String {
 }
 
 #[derive(Clone)]
-pub struct RepoClient {
-    repo: Arc<Repo>,
+pub struct RepoClient<R: Repo> {
+    repo: Arc<R>,
     // The session for this repo access.
     session: SessionContainer,
     // A base logging container. This will be combined with the Session container for each command
@@ -371,8 +370,8 @@ pub struct RepoClient {
     // The client then gets a bookmark that points to a commit it does not yet have, and ignores it.
     // We currently fix it by caching bookmarks at the beginning of discovery.
     // TODO: T45411456 Fix this by teaching the client to expect extra commits to correspond to the bookmarks.
-    session_bookmarks_cache: Arc<SessionBookmarkCache>,
-    maybe_push_redirector_args: Option<PushRedirectorArgs<Repo>>,
+    session_bookmarks_cache: Arc<SessionBookmarkCache<Arc<R>>>,
+    maybe_push_redirector_args: Option<PushRedirectorArgs<R>>,
     force_lfs: Arc<AtomicBool>,
     knobs: RepoClientKnobs,
     request_perf_counters: Arc<PerfCounters>,
@@ -381,12 +380,12 @@ pub struct RepoClient {
     maybe_backup_repo_source: Option<BackupSourceRepo>,
 }
 
-impl RepoClient {
+impl<R: Repo> RepoClient<R> {
     pub fn new(
-        repo: Arc<Repo>,
+        repo: Arc<R>,
         session: SessionContainer,
         logging: LoggingContainer,
-        maybe_push_redirector_args: Option<PushRedirectorArgs<Repo>>,
+        maybe_push_redirector_args: Option<PushRedirectorArgs<R>>,
         knobs: RepoClientKnobs,
         maybe_backup_repo_source: Option<BackupSourceRepo>,
     ) -> Self {
@@ -500,7 +499,7 @@ impl RepoClient {
         args: GetbundleArgs,
     ) -> BoxStream<'static, Result<Bytes, Error>> {
         let lfs_params = self.lfs_params();
-        let blobrepo = self.repo.blob_repo().clone();
+        let repo = self.repo.clone();
 
         let GetbundleArgs {
             bundlecaps,
@@ -530,7 +529,7 @@ impl RepoClient {
         async move {
             let mut getbundle_response = create_getbundle_response(
                 &ctx,
-                &blobrepo,
+                &repo,
                 common,
                 &heads,
                 if use_phases {
@@ -565,7 +564,7 @@ impl RepoClient {
         ctx: CoreContext,
         params: GettreepackArgs,
     ) -> BoxStream<'static, Result<Bytes, Error>> {
-        let changed_entries = gettreepack_entries(ctx.clone(), self.repo.blob_repo(), params)
+        let changed_entries = gettreepack_entries(ctx.clone(), &self.repo, params)
             .filter({
                 let mut used_hashes = HashSet::new();
                 move |(hg_mf_id, _)| {
@@ -574,8 +573,7 @@ impl RepoClient {
                 }
             })
             .map({
-                cloned!(ctx);
-                let blobrepo = self.repo.blob_repo().clone();
+                cloned!(ctx, self.repo);
                 move |(hg_mf_id, path)| {
                     ctx.perf_counters()
                         .increment_counter(PerfCounterType::GettreepackNumTreepacks);
@@ -585,7 +583,7 @@ impl RepoClient {
                     if ctx.session().is_quicksand() {
                         STATS::quicksand_tree_count.add_value(1);
                     }
-                    fetch_treepack_part_input(ctx.clone(), &blobrepo, hg_mf_id, path, true)
+                    fetch_treepack_part_input(ctx.clone(), &repo, hg_mf_id, path, true)
                         .compat()
                         .boxed()
                 }
@@ -610,7 +608,7 @@ impl RepoClient {
         Content: Future<Output = Result<(HgFileNodeId, Bytes, Option<Metadata>), Error>>
             + Send
             + 'static,
-        GetpackHandler: Fn(CoreContext, BlobRepo, HgFileNodeId, SessionLfsParams, bool) -> WeightedContent
+        GetpackHandler: Fn(CoreContext, Arc<R>, HgFileNodeId, SessionLfsParams, bool) -> WeightedContent
             + Send
             + 'static,
     {
@@ -619,7 +617,7 @@ impl RepoClient {
             // We buffer all parameters in memory so that we can log them.
             // That shouldn't be a problem because requests are quite small
             let getpack_params = Arc::new(Mutex::new(vec![]));
-            let repo = self.repo.blob_repo().clone();
+            let repo = self.repo.clone();
 
             let lfs_params = self.lfs_params();
 
@@ -842,11 +840,11 @@ impl RepoClient {
     fn lfs_params(&self) -> SessionLfsParams {
         if self.force_lfs.load(Ordering::Relaxed) {
             SessionLfsParams {
-                threshold: self.repo.inner_repo().repo_config().lfs.threshold,
+                threshold: self.repo.repo_config().lfs.threshold,
             }
         } else {
             let client_hostname = self.session.metadata().client_hostname();
-            let percentage = self.repo.inner_repo().repo_config().lfs.rollout_percentage;
+            let percentage = self.repo.repo_config().lfs.rollout_percentage;
 
             let allowed = match client_hostname {
                 Some(client_hostname) => {
@@ -863,7 +861,7 @@ impl RepoClient {
 
             if allowed {
                 SessionLfsParams {
-                    threshold: self.repo.inner_repo().repo_config().lfs.threshold,
+                    threshold: self.repo.repo_config().lfs.threshold,
                 }
             } else {
                 SessionLfsParams { threshold: None }
@@ -875,7 +873,7 @@ impl RepoClient {
         &self,
         ctx: &CoreContext,
         action: &unbundle::PostResolveAction,
-    ) -> Result<Option<PushRedirector<Repo>>> {
+    ) -> Result<Option<PushRedirector<R>>> {
         let push_redirector_args = match self.maybe_push_redirector_args.clone() {
             Some(push_redirector_args) => push_redirector_args,
             None => {
@@ -889,9 +887,13 @@ impl RepoClient {
 
         use unbundle::PostResolveAction::*;
 
-        let live_commit_sync_config = self.repo.live_commit_sync_config();
+        let live_commit_sync_config = self
+            .repo
+            .repo_cross_repo()
+            .live_commit_sync_config()
+            .clone();
 
-        let repo_id = self.repo.blob_repo().repo_identity().id();
+        let repo_id = self.repo.repo_identity().id();
         let redirect = match action {
             InfinitePush(_) => {
                 live_commit_sync_config
@@ -913,7 +915,7 @@ impl RepoClient {
             Ok(Some(push_redirector_args.into_push_redirector(
                 ctx,
                 live_commit_sync_config,
-                self.repo.x_repo_sync_lease().clone(),
+                self.repo.repo_cross_repo().sync_lease().clone(),
             )?))
         } else {
             debug!(
@@ -937,7 +939,7 @@ impl RepoClient {
         Fut: Future<Output = Result<Vec<bool>, Error>> + Send + 'static,
     {
         self.command_future(command, UNSAMPLED, |ctx, mut command_logger| {
-            let blobrepo = self.repo.blob_repo().clone();
+            let repo = self.repo.clone();
 
             let nodes_len = nodes.len();
             ctx.perf_counters()
@@ -964,7 +966,7 @@ impl RepoClient {
                             ));
                         }
                     }
-                    let hg_bcs_mapping = blobrepo
+                    let hg_bcs_mapping = repo
                         .get_hg_bonsai_mapping(ctx.clone(), nodes.clone())
                         .await?;
 
@@ -1015,24 +1017,24 @@ where
     .try_flatten_stream()
 }
 
-impl HgCommands for RepoClient {
+impl<R: Repo> HgCommands for RepoClient<R> {
     // @wireprotocommand('between', 'pairs')
     fn between(
         &self,
         pairs: Vec<(HgChangesetId, HgChangesetId)>,
     ) -> HgCommandRes<Vec<Vec<HgChangesetId>>> {
-        struct ParentStream<CS> {
+        struct ParentStream<CS, R> {
             ctx: CoreContext,
-            repo: Arc<Repo>,
+            repo: Arc<R>,
             n: HgChangesetId,
             bottom: HgChangesetId,
             wait_cs: Option<CS>,
         }
 
-        impl<CS> ParentStream<CS> {
+        impl<CS, R: Repo> ParentStream<CS, R> {
             fn new(
                 ctx: CoreContext,
-                repo: &Arc<Repo>,
+                repo: &Arc<R>,
                 top: HgChangesetId,
                 bottom: HgChangesetId,
             ) -> Self {
@@ -1046,7 +1048,7 @@ impl HgCommands for RepoClient {
             }
         }
 
-        impl OldStream for ParentStream<OldBoxFuture<HgBlobChangeset, Error>> {
+        impl<R: Repo> OldStream for ParentStream<OldBoxFuture<HgBlobChangeset, Error>, R> {
             type Item = HgChangesetId;
             type Error = Error;
 
@@ -1059,7 +1061,7 @@ impl HgCommands for RepoClient {
                     Some(
                         {
                             cloned!(self.n, self.ctx, self.repo);
-                            async move { n.load(&ctx, repo.blob_repo().repo_blobstore()).await }
+                            async move { n.load(&ctx, repo.repo_blobstore()).await }
                         }
                         .boxed()
                         .compat()
@@ -1179,9 +1181,9 @@ impl HgCommands for RepoClient {
 
         // Generate error response with the message including suggestions (commits info).
         // Suggestions are ordered by commit time (most recent first).
-        fn generate_suggestions_resp_buf(
+        fn generate_suggestions_resp_buf<R: Repo>(
             ctx: CoreContext,
-            repo: BlobRepo,
+            repo: R,
             suggestion_cids: Vec<HgChangesetId>,
         ) -> HgCommandRes<Bytes> {
             let futs = suggestion_cids
@@ -1217,7 +1219,7 @@ impl HgCommands for RepoClient {
 
         let maybe_git_lookup = parse_git_lookup(&key);
         self.command_future(ops::LOOKUP, UNSAMPLED, |ctx, command_logger| {
-            let repo = self.repo.blob_repo().clone();
+            let repo = self.repo.clone();
 
             // Resolves changeset or set of suggestions from the key (full hex hash or a prefix) if exist.
             // Note: `get_many_hg_by_prefix` works for the full hex hashes well but
@@ -1343,7 +1345,7 @@ impl HgCommands for RepoClient {
 
     // @wireprotocommand('known', 'nodes *'), but the '*' is ignored
     fn known(&self, nodes: Vec<HgChangesetId>) -> HgCommandRes<Vec<bool>> {
-        let phases_hint = self.repo.inner_repo().phases_arc();
+        let phases_hint = self.repo.phases_arc();
         self.known_impl(
             nodes,
             ops::KNOWN,
@@ -1473,7 +1475,7 @@ impl HgCommands for RepoClient {
         }
 
         self.command_future(ops::LISTKEYSPATTERNS, UNSAMPLED, |ctx, command_logger| {
-            let max = self.repo.inner_repo().repo_config().list_keys_patterns_max;
+            let max = self.repo.repo_config().list_keys_patterns_max;
             let session_bookmarks_cache = self.session_bookmarks_cache.clone();
 
             let queries = patterns.into_iter().map(move |pattern| {
@@ -1535,7 +1537,7 @@ impl HgCommands for RepoClient {
         respondlightly: Option<bool>,
         maybereplaydata: Option<String>,
     ) -> HgCommandRes<Bytes> {
-        let reponame = self.repo.inner_repo().repo_identity().name().to_string();
+        let reponame = self.repo.repo_identity().name().to_string();
         cloned!(self.session_bookmarks_cache, self as repoclient);
 
         let hook_manager = self.repo.hook_manager_arc();
@@ -1549,14 +1551,14 @@ impl HgCommands for RepoClient {
         let client = repoclient.clone();
         repoclient.command_future(ops::UNBUNDLE, UNSAMPLED, move |ctx, command_logger| {
             async move {
-                let repo = client.repo.inner_repo();
+                let repo = &client.repo;
 
                 // To use unbundle wireproto command the user needs at least all-repo `draft` permission.
                 // This is overkill - we could check more granular permissions but wireproto is deprecated and
                 // it doesn't seem worth auditing each codepath there so let's use the big hammer!
                 let authz = AuthorizationContext::new(&ctx);
                 authz
-                    .require_full_repo_draft(&ctx, &repo)
+                    .require_full_repo_draft(&ctx, repo)
                     .await
                     .map_err(|err| BundleResolverError::Error(err.into()))?;
 
@@ -1567,7 +1569,7 @@ impl HgCommands for RepoClient {
                 let pushrebase_flags = pushrebase_params.flags.clone();
                 let action = unbundle::resolve(
                     &ctx,
-                    repo.as_blob_repo(),
+                    repo,
                     infinitepush_writes_allowed,
                     stream,
                     &repo.repo_config().push,
@@ -1577,8 +1579,7 @@ impl HgCommands for RepoClient {
                 .await?;
 
                 let unbundle_future = async {
-                    maybe_validate_pushed_bonsais(&ctx, repo.as_blob_repo(), &maybereplaydata)
-                        .await?;
+                    maybe_validate_pushed_bonsais(&ctx, repo, &maybereplaydata).await?;
 
                     match client
                         .maybe_get_pushredirector_for_action(&ctx, &action)
@@ -1591,7 +1592,7 @@ impl HgCommands for RepoClient {
                             // in the small repo.
                             run_hooks(
                                 &ctx,
-                                repo.as_blob_repo(),
+                                repo,
                                 hook_manager.as_ref(),
                                 &action,
                                 CrossRepoPushSource::NativeToThisRepo,
@@ -1601,11 +1602,11 @@ impl HgCommands for RepoClient {
                             let ctx = ctx.with_mutated_scuba(|mut sample| {
                                 sample.add(
                                     "target_repo_name",
-                                    push_redirector.repo.inner_repo().repo_identity().name(),
+                                    push_redirector.repo.repo_identity().name(),
                                 );
                                 sample.add(
                                     "target_repo_id",
-                                    push_redirector.repo.inner_repo().repo_identity().id().id(),
+                                    push_redirector.repo.repo_identity().id().id(),
                                 );
                                 sample
                             });
@@ -1627,13 +1628,7 @@ impl HgCommands for RepoClient {
                             .await?
                         }
                     }
-                    .generate_bytes(
-                        &ctx,
-                        repo.as_blob_repo(),
-                        pushrebase_params,
-                        &lfs_params,
-                        respondlightly,
-                    )
+                    .generate_bytes(&ctx, repo, pushrebase_params, &lfs_params, respondlightly)
                     .await
                 };
 
@@ -1782,7 +1777,7 @@ impl HgCommands for RepoClient {
     // @wireprotocommand('stream_out_shallow')
     fn stream_out_shallow(&self, tag: Option<String>) -> BoxStream<'static, Result<Bytes, Error>> {
         self.command_stream(ops::STREAMOUTSHALLOW, UNSAMPLED, |ctx, command_logger| {
-            let streaming_clone = self.repo.inner_repo().streaming_clone_arc();
+            let streaming_clone = self.repo.streaming_clone_arc();
 
             let stream = {
                 cloned!(ctx);
@@ -1953,7 +1948,7 @@ impl HgCommands for RepoClient {
     fn getcommitdata(&self, nodes: Vec<HgChangesetId>) -> BoxStream<'static, Result<Bytes, Error>> {
         self.command_stream(ops::GETCOMMITDATA, UNSAMPLED, |ctx, mut command_logger| {
             let args = json!(nodes);
-            let blobrepo = self.repo.blob_repo().clone();
+            let repo = self.repo.clone();
             ctx.scuba()
                 .clone()
                 .add("getcommitdata_nodes", nodes.len())
@@ -1961,12 +1956,12 @@ impl HgCommands for RepoClient {
 
             let s = stream::iter(nodes)
                 .map({
-                    cloned!(ctx, blobrepo);
+                    cloned!(ctx, repo);
                     move |hg_cs_id| {
-                        cloned!(ctx, blobrepo, hg_cs_id);
+                        cloned!(ctx, repo, hg_cs_id);
                         async move {
                             let revlog_cs =
-                                RevlogChangeset::load(&ctx, blobrepo.repo_blobstore(), hg_cs_id)
+                                RevlogChangeset::load(&ctx, repo.repo_blobstore(), hg_cs_id)
                                     .await?;
                             let bytes = serialize_getcommitdata(hg_cs_id, revlog_cs)?;
                             anyhow::Ok(bytes)
@@ -2014,7 +2009,7 @@ impl HgCommands for RepoClient {
 
 pub fn gettreepack_entries(
     ctx: CoreContext,
-    repo: &BlobRepo,
+    repo: &impl Repo,
     params: GettreepackArgs,
 ) -> OldBoxStream<(HgManifestId, MPath), Error> {
     let GettreepackArgs {
@@ -2103,7 +2098,7 @@ pub fn gettreepack_entries(
 
 fn get_changed_manifests_stream(
     ctx: CoreContext,
-    repo: &BlobRepo,
+    repo: &impl Repo,
     mfid: HgManifestId,
     basemfid: HgManifestId,
     rootpath: MPath,
@@ -2149,7 +2144,7 @@ fn get_changed_manifests_stream(
 
 pub fn fetch_treepack_part_input(
     ctx: CoreContext,
-    repo: &BlobRepo,
+    repo: &impl Repo,
     hg_mf_id: HgManifestId,
     path: MPath,
     validate_content: bool,
@@ -2346,7 +2341,11 @@ enum GitLookup {
 }
 
 impl GitLookup {
-    pub async fn lookup(&self, ctx: &CoreContext, repo: &BlobRepo) -> Result<Option<Bytes>, Error> {
+    pub async fn lookup(
+        &self,
+        ctx: &CoreContext,
+        repo: &impl Repo,
+    ) -> Result<Option<Bytes>, Error> {
         use GitLookup::*;
         match self {
             GitToHg(git_sha1) => {
@@ -2431,7 +2430,7 @@ struct ReplayData {
 // This function verifies them.
 async fn maybe_validate_pushed_bonsais(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &impl Repo,
     maybereplaydata: &Option<String>,
 ) -> Result<(), Error> {
     let parsed: ReplayData = match maybereplaydata {

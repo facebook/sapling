@@ -468,7 +468,7 @@ impl HgRepoContext {
         depth: Option<usize>,
     ) -> impl TryStream<Ok = (HgTreeContext, MPath), Error = MononokeError> {
         let ctx = self.ctx().clone();
-        let blob_repo = self.blob_repo();
+        let repo = self.repo.repo();
         let args = GettreepackArgs {
             rootdir: path,
             mfnodes: root_versions.into_iter().collect(),
@@ -477,7 +477,7 @@ impl HgRepoContext {
             depth,
         };
 
-        gettreepack_entries(ctx, blob_repo, args)
+        gettreepack_entries(ctx, repo, args)
             .compat()
             .map_err(MononokeError::from)
             .and_then({
