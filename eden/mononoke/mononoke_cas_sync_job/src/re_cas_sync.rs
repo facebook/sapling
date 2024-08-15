@@ -32,6 +32,15 @@ const DEFAULT_UPLOAD_CONCURRENT_COMMITS: usize = 100;
 const DEFAULT_DERIVE_CONCURRENT_COMMITS: usize = 100;
 const DEFAULT_CONCURRENT_ENTRIES_FOR_COMMIT_GRAPH: usize = 100;
 
+pub async fn try_expand_bookmark_creation_entry<'a>(
+    _repo: &'a Repo,
+    _ctx: &'a CoreContext,
+    to_bcs_id: ChangesetId,
+) -> Result<Vec<ChangesetId>, Error> {
+    // TODO(liubov): implement support for bookmark creation.
+    Ok(vec![to_bcs_id])
+}
+
 pub async fn try_derive<'a>(
     repo: &'a Repo,
     ctx: &'a CoreContext,
@@ -97,8 +106,9 @@ pub async fn try_expand_entry<'a>(
             ctx.logger(),
             "log entry {:?} is a creation of bookmark", &entry
         );
-        // TODO(liubovd): think about the creation case, how to process correctly
-        return Ok(Some(vec![to]));
+        return Ok(Some(
+            try_expand_bookmark_creation_entry(repo, ctx, to).await?,
+        ));
     }
     let from = entry.from_changeset_id.unwrap();
     Ok(Some(
