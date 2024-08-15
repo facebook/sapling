@@ -136,9 +136,7 @@ async fn create_key_list(
     output_file: Option<&Path>,
 ) -> Result<()> {
     let redaction_blobstore = app.redaction_config_blobstore().await?;
-    let darkstorm_blobstore = app.redaction_config_blobstore_for_darkstorm().await?;
-    let key_list_id =
-        redaction::create_key_list(ctx, &redaction_blobstore, &darkstorm_blobstore, keys).await?;
+    let key_list_id = redaction::create_key_list(ctx, &redaction_blobstore, keys).await?;
     if let Some(output_file) = output_file {
         let mut output = File::create(output_file).with_context(|| {
             format!(
