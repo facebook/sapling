@@ -25,7 +25,6 @@ rust_library(
     crate_root = "proc_macros/lib.rs",
     proc_macro = True,
     deps = [
-        # "fbsource//third-party/rust:proc-macro-crate",
         "fbsource//third-party/rust:proc-macro2",
         "fbsource//third-party/rust:quote",
         "fbsource//third-party/rust:syn1",
