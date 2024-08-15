@@ -97,11 +97,20 @@ pub async fn create_history_fixup_deletes<'a>(
 mod test {
     use std::collections::BTreeSet;
 
+    use bonsai_hg_mapping::BonsaiHgMapping;
+    use bookmarks::Bookmarks;
     use cloned::cloned;
+    use commit_graph::CommitGraph;
+    use commit_graph::CommitGraphWriter;
     use fbinit::FacebookInit;
+    use filestore::FilestoreConfig;
     use fixtures::TestRepoFixture;
     use fixtures::UnsharedMergeUneven;
     use mononoke_types::DateTime;
+    use phases::Phases;
+    use repo_blobstore::RepoBlobstore;
+    use repo_derived_data::RepoDerivedData;
+    use repo_identity::RepoIdentity;
     use tests_utils::resolve_cs_id;
 
     use super::*;
@@ -109,9 +118,23 @@ mod test {
     use crate::common::StackPosition;
     use crate::working_copy::get_working_copy_paths;
 
+    #[facet::container]
+    #[derive(Clone)]
+    struct TestRepo(
+        dyn BonsaiHgMapping,
+        dyn Bookmarks,
+        RepoBlobstore,
+        RepoDerivedData,
+        RepoIdentity,
+        CommitGraph,
+        dyn CommitGraphWriter,
+        FilestoreConfig,
+        dyn Phases,
+    );
+
     #[fbinit::test]
     async fn test_create_fixup_deletes(fb: FacebookInit) -> Result<(), Error> {
-        let repo = UnsharedMergeUneven::getrepo(fb).await;
+        let repo: TestRepo = UnsharedMergeUneven::get_custom_test_repo(fb).await;
         let ctx = CoreContext::test_mock(fb);
 
         // Side of the history that needs fixing up is one line of commit with the following

@@ -112,22 +112,42 @@ mod test {
     use std::str::FromStr;
 
     use blobstore::Loadable;
+    use bonsai_hg_mapping::BonsaiHgMapping;
     use bonsai_hg_mapping::BonsaiHgMappingRef;
+    use bookmarks::Bookmarks;
+    use commit_graph::CommitGraph;
     use commit_graph::CommitGraphRef;
+    use commit_graph::CommitGraphWriter;
     use fbinit::FacebookInit;
+    use filestore::FilestoreConfig;
     use fixtures::Linear;
     use fixtures::TestRepoFixture;
     use mercurial_types::HgChangesetId;
     use mononoke_types::BonsaiChangeset;
+    use repo_blobstore::RepoBlobstore;
     use repo_blobstore::RepoBlobstoreRef;
+    use repo_derived_data::RepoDerivedData;
     use repo_derived_data::RepoDerivedDataRef;
+    use repo_identity::RepoIdentity;
     use tests_utils::resolve_cs_id;
 
     use super::*;
 
+    #[facet::container]
+    struct Repo(
+        dyn BonsaiHgMapping,
+        dyn Bookmarks,
+        RepoBlobstore,
+        RepoDerivedData,
+        RepoIdentity,
+        CommitGraph,
+        dyn CommitGraphWriter,
+        FilestoreConfig,
+    );
+
     #[fbinit::test]
     async fn derive_info_test(fb: FacebookInit) -> Result<(), Error> {
-        let repo = Linear::getrepo(fb).await;
+        let repo: Repo = Linear::get_custom_test_repo(fb).await;
         let ctx = CoreContext::test_mock(fb);
         let manager = repo.repo_derived_data().manager();
 

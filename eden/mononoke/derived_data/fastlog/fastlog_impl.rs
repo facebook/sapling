@@ -238,21 +238,41 @@ fn flatten_raw_list(
 
 #[cfg(test)]
 mod test {
+    use bonsai_hg_mapping::BonsaiHgMapping;
+    use bookmarks::Bookmarks;
     use borrowed::borrowed;
+    use commit_graph::CommitGraph;
+    use commit_graph::CommitGraphWriter;
     use fbinit::FacebookInit;
+    use filestore::FilestoreConfig;
     use fixtures::Linear;
     use fixtures::TestRepoFixture;
     use mononoke_types_mocks::changesetid::ONES_CSID;
     use mononoke_types_mocks::changesetid::THREES_CSID;
     use mononoke_types_mocks::changesetid::TWOS_CSID;
+    use repo_blobstore::RepoBlobstore;
     use repo_blobstore::RepoBlobstoreRef;
+    use repo_derived_data::RepoDerivedData;
+    use repo_identity::RepoIdentity;
 
     use super::*;
+
+    #[facet::container]
+    struct Repo(
+        dyn BonsaiHgMapping,
+        dyn Bookmarks,
+        RepoBlobstore,
+        RepoDerivedData,
+        RepoIdentity,
+        CommitGraph,
+        dyn CommitGraphWriter,
+        FilestoreConfig,
+    );
 
     #[fbinit::test]
     async fn fetch_flattened_simple(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo = Linear::getrepo(fb).await;
+        let repo: Repo = Linear::get_custom_test_repo(fb).await;
         let blobstore = repo.repo_blobstore();
         borrowed!(ctx);
         let mut d = VecDeque::new();
@@ -269,7 +289,7 @@ mod test {
     #[fbinit::test]
     async fn fetch_flattened_prepend(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo = Linear::getrepo(fb).await;
+        let repo: Repo = Linear::get_custom_test_repo(fb).await;
         let blobstore = repo.repo_blobstore();
         borrowed!(ctx);
         let mut d = VecDeque::new();
