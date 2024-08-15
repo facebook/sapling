@@ -14,11 +14,13 @@ use nonblocking::non_blocking_result as r;
 use crate::ops::DagAddHeads;
 use crate::ops::DagPersistent;
 use crate::ops::IdConvert;
+use crate::ops::IdMapSnapshot;
 use crate::tests::dbg;
 use crate::tests::DrawDag;
 use crate::tests::TestDag;
 use crate::DagAlgorithm;
 use crate::Result;
+use crate::Set;
 use crate::VertexListWithOptions;
 use crate::VertexOptions;
 
@@ -151,6 +153,34 @@ fn test_setting_managed_virtual_group_clears_existing_virtual_group() -> Result<
     };
     r(dag.import_pull_data(data, VertexListWithOptions::default()))?;
     assert!(r(dag.contains_vertex_name(&"wdir".into()))?);
+
+    Ok(())
+}
+
+#[test]
+fn test_setting_managed_virtual_group_clears_snapshot() -> Result<()> {
+    let parents: Vec<(Vertex, Vec<Vertex>)> =
+        vec![("N".into(), vec![]), ("W".into(), vec!["B".into()])];
+
+    let mut dag = TestDag::draw("A..C");
+    dag.insert_virtual("C..E");
+
+    // Populate the snapshot caches.
+    let _dag_snapshot = dag.dag_snapshot()?;
+    let _id_map_snapshot = dag.id_map_snapshot()?;
+
+    // Update virtual group.
+    r(dag.set_managed_virtual_group(Some(parents)))?;
+
+    // Take new snapshot - they should include the virtual group changes.
+    let dag_snapshot = dag.dag_snapshot()?;
+    let id_map_snapshot = dag.id_map_snapshot()?;
+    let b_children =
+        r(dag_snapshot.children(Set::from_static_names(vec![Vertex::copy_from(b"B")])))?;
+    assert_eq!(dbg(b_children), "<spans [W+V1, C+N2]>");
+
+    let wdir_id = r(id_map_snapshot.vertex_id_optional(&Vertex::copy_from(b"W")))?;
+    assert!(wdir_id.is_some());
 
     Ok(())
 }
