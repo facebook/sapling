@@ -64,6 +64,11 @@ Make sure passing either --help or --version, or using HGPLAIN does not trigger 
   $ HGPLAIN=true hg | grep "These are some common"
   These are some common Sapling commands.  Use 'hg help commands' to list all
 
+Test that when falling back due to --help it keeps the rest of the arguments
+
+  $ hg --help --time --pager never 2>&1 | grep time
+  time: real * secs * (glob)
+
 Make sure that running a command without the naked default config errors out outside of a repo but but not inside a repo.
 
   $ cat >> $HGRCPATH << EOF
