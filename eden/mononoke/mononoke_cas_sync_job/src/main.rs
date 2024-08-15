@@ -518,8 +518,16 @@ async fn try_sync_single_combined_entry<'a>(
     repo: &'a Repo,
     ctx: &'a CoreContext,
     combined_entry: &'a CombinedBookmarkUpdateLogEntry,
+    main_bookmark: &'a str,
 ) -> Result<RetryAttemptsCount, Error> {
-    re_cas_sync::try_sync_single_combined_entry(re_cas_client, repo, ctx, combined_entry).await
+    re_cas_sync::try_sync_single_combined_entry(
+        re_cas_client,
+        repo,
+        ctx,
+        combined_entry,
+        main_bookmark,
+    )
+    .await
 }
 
 /// Logs to Scuba information about a single sync event
@@ -778,11 +786,16 @@ async fn run<'a>(
                         .collect::<Vec<_>>(),
                 };
                 if can_continue() && !combined_entry.components.is_empty() {
-                    let (stats, res) =
-                        try_sync_single_combined_entry(re_cas_client, repo, ctx, &combined_entry)
-                            .watched(ctx.logger())
-                            .timed()
-                            .await;
+                    let (stats, res) = try_sync_single_combined_entry(
+                        re_cas_client,
+                        repo,
+                        ctx,
+                        &combined_entry,
+                        main_bookmark_to_sync,
+                    )
+                    .watched(ctx.logger())
+                    .timed()
+                    .await;
 
                     let res = bind_sync_result(&combined_entry.components, res);
                     let res = match res {

@@ -23,8 +23,10 @@ use futures_watchdog::WatchdogExt;
 use mercurial_derivation::RootHgAugmentedManifestId;
 use mononoke_types::ChangesetId;
 use repo_derived_data::RepoDerivedDataRef;
+use slog::debug;
 use slog::error;
 use slog::info;
+use slog::warn;
 
 use crate::CombinedBookmarkUpdateLogEntry;
 use crate::Repo;
@@ -119,6 +121,7 @@ pub async fn try_expand_entry<'a>(
     re_cas_client: &CasChangesetsUploader<impl CasClient + 'a>,
     repo: &'a Repo,
     ctx: &'a CoreContext,
+    main_bookmark: &'a str,
     entry: BookmarkUpdateLogEntry,
 ) -> Result<Option<Vec<ChangesetId>>, Error> {
     match (entry.from_changeset_id, entry.to_changeset_id) {
@@ -142,6 +145,19 @@ pub async fn try_expand_entry<'a>(
         return Ok(None);
     }
     let to = entry.to_changeset_id.unwrap();
+
+    // Let's double check that all the blobs for the main bookmark are uploaded, and do not rely on the lookups, they are never expected to be hit anyway.
+    if entry.bookmark_name.as_str() != main_bookmark
+        && re_cas_client.is_changeset_uploaded(ctx, repo, &to).await?
+    {
+        // Many bookmarks are moved to already uploaded commits, so we can skip them (like stable)
+        debug!(
+            ctx.logger(),
+            "log entry {:?} is a move of bookmark to already uploaded commit, skipping...", &entry
+        );
+        return Ok(None);
+    }
+
     if entry.from_changeset_id.is_none() {
         info!(
             ctx.logger(),
@@ -170,6 +186,7 @@ pub async fn try_sync_single_combined_entry<'a>(
     repo: &'a Repo,
     ctx: &'a CoreContext,
     combined_entry: &'a CombinedBookmarkUpdateLogEntry,
+    main_bookmark: &'a str,
 ) -> Result<RetryAttemptsCount, Error> {
     let ids: Vec<_> = combined_entry
         .components
@@ -180,7 +197,9 @@ pub async fn try_sync_single_combined_entry<'a>(
 
     let start_time = std::time::Instant::now();
     let queue: Vec<ChangesetId> = futures::stream::iter(combined_entry.components.clone())
-        .map(|entry| async move { try_expand_entry(re_cas_client, repo, ctx, entry).await })
+        .map(|entry| async move {
+            try_expand_entry(re_cas_client, repo, ctx, main_bookmark, entry).await
+        })
         .buffer_unordered(DEFAULT_CONCURRENT_ENTRIES_FOR_COMMIT_GRAPH)
         .try_collect::<Vec<_>>()
         .await?
