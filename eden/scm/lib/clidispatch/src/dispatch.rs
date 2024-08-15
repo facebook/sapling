@@ -243,11 +243,11 @@ impl Dispatcher {
         configloader::hg::load(None, &pinned_configs(&self.early_global_opts))
     }
 
-    fn default_command(&self) -> Result<String, UnknownCommand> {
+    fn default_command(&self) -> Result<String> {
         // Passing in --verbose also disables this behavior,
         // but that option is handled somewhere else
         if self.early_global_opts.help || hgplain::is_plain(None) {
-            return Err(UnknownCommand(String::new()));
+            return Err(UnknownCommand(String::new()).into());
         }
         let command = if let (OptionalRepo::None(_), Some(command)) = (
             &self.optional_repo,
