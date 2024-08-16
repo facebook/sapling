@@ -15,8 +15,8 @@ use std::time::Duration;
 use anyhow::bail;
 use anyhow::format_err;
 use anyhow::Error;
-use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
+use bonsai_hg_mapping::BonsaiHgMapping;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
 use clap_old::App;
 use clap_old::Arg;
@@ -26,6 +26,7 @@ use clientinfo::ClientEntryPoint;
 use clientinfo::ClientInfo;
 use cmdlib::args;
 use cmdlib::args::MononokeMatches;
+use commit_graph::CommitGraph;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::stream;
@@ -33,11 +34,29 @@ use futures::StreamExt;
 use futures::TryStreamExt;
 use mercurial_types::HgChangesetId;
 use mononoke_types::ChangesetId;
+use phases::Phases;
 use phases::PhasesRef;
+use repo_derived_data::RepoDerivedData;
 use slog::info;
 use slog::Logger;
 
 use crate::error::SubcommandError;
+
+#[facet::container]
+#[derive(Clone)]
+pub struct Repo {
+    #[facet]
+    bonsai_hg_mapping: dyn BonsaiHgMapping,
+
+    #[facet]
+    commit_graph: CommitGraph,
+
+    #[facet]
+    repo_derived_data: RepoDerivedData,
+
+    #[facet]
+    phases: dyn Phases,
+}
 
 pub const PHASES: &str = "phases";
 const ADD_PUBLIC_PHASES: &str = "add-public";
@@ -149,7 +168,7 @@ pub async fn subcommand_phases<'a>(
 
 async fn add_public_phases(
     ctx: CoreContext,
-    repo: BlobRepo,
+    repo: Repo,
     logger: Logger,
     path: impl AsRef<str>,
     chunk_size: usize,
@@ -188,7 +207,7 @@ async fn add_public_phases(
 async fn subcommand_list_public_impl(
     ctx: CoreContext,
     ty: String,
-    repo: BlobRepo,
+    repo: Repo,
 ) -> Result<(), Error> {
     let public = repo.phases().list_all_public(&ctx).await?;
     if ty == "bonsai" {
@@ -215,7 +234,7 @@ async fn subcommand_list_public_impl(
 
 pub async fn subcommand_fetch_phase_impl<'a>(
     fb: FacebookInit,
-    repo: BlobRepo,
+    repo: Repo,
     hash: Result<String, Error>,
     ty: String,
 ) -> Result<(), Error> {

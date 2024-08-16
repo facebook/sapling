@@ -19,6 +19,8 @@ blobrepo = { version = "0.1.0", path = "../blobrepo" }
 blobrepo_hg = { version = "0.1.0", path = "../blobrepo/blobrepo_hg" }
 blobstore = { version = "0.1.0", path = "../blobstore" }
 blobstore_factory = { version = "0.1.0", path = "../blobstore/factory" }
+bonsai_git_mapping = { version = "0.1.0", path = "../bonsai_git_mapping" }
+bonsai_globalrev_mapping = { version = "0.1.0", path = "../bonsai_globalrev_mapping" }
 bonsai_hg_mapping = { version = "0.1.0", path = "../bonsai_hg_mapping" }
 bookmarks = { version = "0.1.0", path = "../bookmarks" }
 bookmarks_movement = { version = "0.1.0", path = "../bookmarks/bookmarks_movement" }
@@ -50,14 +52,16 @@ maplit = "1.0"
 mercurial_derivation = { version = "0.1.0", path = "../derived_data/mercurial_derivation" }
 mercurial_types = { version = "0.1.0", path = "../mercurial/types" }
 metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
-mononoke_api_types = { version = "0.1.0", path = "../mononoke_api/types" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 mutable_counters = { version = "0.1.0", path = "../mutable_counters" }
 phases = { version = "0.1.0", path = "../phases" }
 pushrebase = { version = "0.1.0", path = "../pushrebase" }
+pushrebase_mutation_mapping = { version = "0.1.0", path = "../pushrebase_mutation_mapping" }
 pushredirect = { version = "0.1.0", path = "../megarepo_api/pushredirect" }
 regex = "1.9.2"
 repo_blobstore = { version = "0.1.0", path = "../blobrepo/repo_blobstore" }
+repo_bookmark_attrs = { version = "0.1.0", path = "../repo_attributes/repo_bookmark_attrs" }
+repo_cross_repo = { version = "0.1.0", path = "../repo_attributes/repo_cross_repo" }
 repo_derived_data = { version = "0.1.0", path = "../repo_attributes/repo_derived_data" }
 repo_factory = { version = "0.1.0", path = "../repo_factory" }
 repo_identity = { version = "0.1.0", path = "../repo_attributes/repo_identity" }

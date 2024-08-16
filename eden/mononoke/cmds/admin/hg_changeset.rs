@@ -12,8 +12,8 @@ use std::str::FromStr;
 
 use anyhow::format_err;
 use anyhow::Error;
-use blobrepo::BlobRepo;
 use blobstore::Loadable;
+use bonsai_hg_mapping::BonsaiHgMapping;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
 use clap_old::App;
 use clap_old::ArgMatches;
@@ -22,6 +22,7 @@ use clientinfo::ClientEntryPoint;
 use clientinfo::ClientInfo;
 use cmdlib::args;
 use cmdlib::args::MononokeMatches;
+use commit_graph::CommitGraph;
 use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use fbinit::FacebookInit;
@@ -33,11 +34,29 @@ use mercurial_derivation::DeriveHgChangeset;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgManifestId;
 use mercurial_types::NonRootMPath;
+use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreRef;
+use repo_derived_data::RepoDerivedData;
 use serde_derive::Serialize;
 use slog::Logger;
 
 use crate::error::SubcommandError;
+
+#[facet::container]
+#[derive(Clone)]
+pub struct Repo {
+    #[facet]
+    repo_blobstore: RepoBlobstore,
+
+    #[facet]
+    repo_derived_data: RepoDerivedData,
+
+    #[facet]
+    commit_graph: CommitGraph,
+
+    #[facet]
+    bonsai_hg_mapping: dyn BonsaiHgMapping,
+}
 
 pub const HG_CHANGESET: &str = "hg-changeset";
 const HG_CHANGESET_DIFF: &str = "diff";
@@ -102,7 +121,7 @@ pub async fn subcommand_hg_changeset<'a>(
                 .ok_or_else(|| format_err!("STOP_CS argument expected"))
                 .and_then(HgChangesetId::from_str)?;
 
-            let repo: BlobRepo =
+            let repo: Repo =
                 args::not_shardmanager_compatible::open_repo(fb, &logger, matches).await?;
             let (start_cs_opt, stop_cs_opt) = futures::try_join!(
                 repo.bonsai_hg_mapping().get_bonsai_from_hg(&ctx, start_cs),
@@ -128,7 +147,7 @@ pub async fn subcommand_hg_changeset<'a>(
 
 async fn hg_changeset_diff(
     ctx: CoreContext,
-    repo: BlobRepo,
+    repo: Repo,
     left_id: HgChangesetId,
     right_id: HgChangesetId,
 ) -> Result<ChangesetDiff, Error> {
@@ -185,7 +204,7 @@ async fn hg_changeset_diff(
 
 async fn hg_manifest_diff(
     ctx: CoreContext,
-    repo: BlobRepo,
+    repo: Repo,
     left: HgManifestId,
     right: HgManifestId,
 ) -> Result<Option<ChangesetAttrDiff>, Error> {

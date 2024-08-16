@@ -10,7 +10,8 @@ use std::num::NonZeroU64;
 use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
-use blobrepo::BlobRepo;
+use bonsai_hg_mapping::BonsaiHgMapping;
+use bookmarks::Bookmarks;
 use clap_old::App;
 use clap_old::Arg;
 use clap_old::ArgMatches;
@@ -20,21 +21,55 @@ use clientinfo::ClientInfo;
 use cmdlib::args;
 use cmdlib::args::MononokeMatches;
 use cmdlib::helpers;
+use commit_graph::CommitGraph;
+use commit_graph::CommitGraphWriter;
 use context::CoreContext;
 use copy_utils::copy;
 use copy_utils::remove_excessive_files;
 use copy_utils::Limits;
 use copy_utils::Options;
 use fbinit::FacebookInit;
+use filestore::FilestoreConfig;
 use futures::future::try_join;
 use mononoke_types::ChangesetId;
 use mononoke_types::NonRootMPath;
 use regex::Regex;
+use repo_blobstore::RepoBlobstore;
+use repo_derived_data::RepoDerivedData;
+use repo_identity::RepoIdentity;
 use slog::warn;
 use slog::Logger;
 
 use crate::common::get_source_target_repos_and_mapping;
 use crate::error::SubcommandError;
+
+#[facet::container]
+#[derive(Clone)]
+pub struct Repo {
+    #[facet]
+    repo_derived_data: RepoDerivedData,
+
+    #[facet]
+    repo_blobstore: RepoBlobstore,
+
+    #[facet]
+    repo_identity: RepoIdentity,
+
+    #[facet]
+    filestore_config: FilestoreConfig,
+
+    #[facet]
+    bonsai_hg_mapping: dyn BonsaiHgMapping,
+
+    #[facet]
+    bookmarks: dyn Bookmarks,
+
+    #[facet]
+    commit_graph: CommitGraph,
+
+    #[facet]
+    commit_graph_writer: dyn CommitGraphWriter,
+}
 
 pub const ARG_COMMIT_AUTHOR: &str = "commit-author";
 pub const ARG_COMMIT_MESSAGE: &str = "commit-message";
@@ -167,8 +202,8 @@ pub fn add_common_args<'a, 'b>(sub_m: App<'a, 'b>) -> App<'a, 'b> {
 async fn parse_common_args<'a>(
     ctx: &'a CoreContext,
     matches: &'a ArgMatches<'_>,
-    source_repo: &'a BlobRepo,
-    target_repo: &'a BlobRepo,
+    source_repo: &'a Repo,
+    target_repo: &'a Repo,
 ) -> Result<
     (
         ChangesetId,
