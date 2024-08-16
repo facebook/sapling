@@ -280,9 +280,6 @@ pub struct Repo {
     #[facet]
     pub sql_query_config: SqlQueryConfig,
 
-    #[init(repo_identity.name().to_string())]
-    pub name: String,
-
     #[facet]
     pub warm_bookmarks_cache: dyn BookmarksCache,
 
@@ -467,8 +464,8 @@ impl Repo {
     }
 
     /// The name of the underlying repo.
-    pub fn name(&self) -> &String {
-        &self.name
+    pub fn name(&self) -> &str {
+        self.repo_identity().name()
     }
 
     /// The internal id of the repo. Used for comparing the repo objects with each other.
@@ -1544,7 +1541,8 @@ impl RepoContext {
             .map_err(|e| {
                 MononokeError::InvalidRequest(format!(
                     "Commits from {} are not configured to be remapped to another repo: {}",
-                    self.repo.name, e
+                    self.name(),
+                    e
                 ))
             })?;
 

@@ -122,7 +122,7 @@ async fn acknowledgements(
         .with_context(|| {
             format!(
                 "Failed to fetch bonsai_git_mapping for repo {}",
-                context.repo.name
+                context.repo.name()
             )
         })?;
     let mut output_buffer = vec![];
@@ -153,7 +153,7 @@ async fn git_commits(
         .with_context(|| {
             format!(
                 "Failed to fetch bonsai_git_mapping for repo {}",
-                context.repo.name
+                context.repo.name()
             )
         })
 }
