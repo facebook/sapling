@@ -16,8 +16,6 @@ use anyhow::Result;
 use bonsai_git_mapping::BonsaisOrGitShas;
 use bonsai_tag_mapping::BonsaiTagMappingEntry;
 use bookmarks::BookmarkKey;
-use bookmarks::BookmarkPagination;
-use bookmarks::BookmarkPrefix;
 use buffered_weighted::MemoryBound;
 use bytes::Bytes;
 use cloned::cloned;
@@ -57,6 +55,8 @@ use repo_derived_data::RepoDerivedData;
 use rustc_hash::FxHashMap;
 use rustc_hash::FxHashSet;
 
+use crate::bookmarks_provider::bookmarks;
+use crate::bookmarks_provider::list_tags;
 use crate::types::DeltaInclusion;
 use crate::types::FetchFilter;
 use crate::types::FetchRequest;
@@ -69,6 +69,7 @@ use crate::types::PackItemStreamResponse;
 use crate::types::PackfileConcurrency;
 use crate::types::PackfileItemInclusion;
 use crate::types::RefTarget;
+use crate::types::RefsSource;
 use crate::types::RequestedRefs;
 use crate::types::RequestedSymrefs;
 use crate::types::ShallowInfoRequest;
@@ -79,7 +80,6 @@ use crate::types::TagInclusion;
 use crate::Repo;
 use crate::HEAD_REF;
 use crate::REF_PREFIX;
-use crate::TAGS_PREFIX;
 
 /// Set of parameters that are needed by the generators used for constructing
 /// response for fetch request
@@ -126,62 +126,6 @@ impl FetchContainer {
     }
 }
 
-/// Get the bookmarks (branches, tags) and their corresponding commits
-/// for the given repo based on the request parameters. If the request
-/// specifies a predefined mapping of an existing or new bookmark to a
-/// commit, include that in the output as well
-async fn bookmarks(
-    ctx: &CoreContext,
-    repo: &impl Repo,
-    requested_refs: &RequestedRefs,
-) -> Result<FxHashMap<BookmarkKey, ChangesetId>> {
-    let mut bookmarks = repo
-        .bookmarks_cache()
-        .list(
-            ctx,
-            &BookmarkPrefix::empty(),
-            &BookmarkPagination::FromStart,
-            None, // Limit
-        )
-        .await?
-        .into_iter()
-        .filter_map(|(bookmark, (cs_id, _))| {
-            let refs = requested_refs.clone();
-            let name = bookmark.name().to_string();
-            match refs {
-                RequestedRefs::Included(refs) if refs.contains(&name) => Some((bookmark, cs_id)),
-                RequestedRefs::IncludedWithPrefix(ref_prefixes) => {
-                    let ref_name = format!("{}{}", REF_PREFIX, name);
-                    if ref_prefixes
-                        .iter()
-                        .any(|ref_prefix| ref_name.starts_with(ref_prefix))
-                    {
-                        Some((bookmark, cs_id))
-                    } else {
-                        None
-                    }
-                }
-                RequestedRefs::Excluded(refs) if !refs.contains(&name) => Some((bookmark, cs_id)),
-                RequestedRefs::IncludedWithValue(refs) => {
-                    refs.get(&name).map(|cs_id| (bookmark, cs_id.clone()))
-                }
-                _ => None,
-            }
-        })
-        .collect::<FxHashMap<_, _>>();
-    // In case the requested refs include specified refs with value and those refs are not
-    // bookmarks known at the server, we need to manually include them in the output
-    if let RequestedRefs::IncludedWithValue(ref ref_value_map) = requested_refs {
-        for (ref_name, ref_value) in ref_value_map {
-            bookmarks.insert(
-                BookmarkKey::with_name(ref_name.as_str().try_into()?),
-                ref_value.clone(),
-            );
-        }
-    }
-    Ok(bookmarks)
-}
-
 /// Get the refs (branches, tags) and their corresponding object ids
 /// The input refs should be of the form `refs/<ref_name>`
 pub async fn ref_oid_mapping(
@@ -195,7 +139,8 @@ pub async fn ref_oid_mapping(
             .map(|want_ref| want_ref.trim_start_matches(REF_PREFIX).to_owned())
             .collect(),
     );
-    let wanted_refs = bookmarks(ctx, repo, &requested_refs)
+    // Fetch the bookmarks from the WBC since this is Git read path and we are fine with some staleness
+    let wanted_refs = bookmarks(ctx, repo, &requested_refs, RefsSource::WarmBookmarksCache)
         .await
         .context("Error while fetching bookmarks for ref_oid_mapping")?;
     let bonsai_git_mappings =
@@ -519,15 +464,8 @@ async fn tagged_commits(
         .collect::<FxHashSet<String>>();
     let tag_names = Arc::new(tag_names);
     // Fetch the commits pointed to by those tags
-    // TODO: We can probably do the filtering on the DB instead of on the server
-    let tagged_commits = repo
-        .bookmarks_cache()
-        .list(
-            ctx,
-            &BookmarkPrefix::new(TAGS_PREFIX)?,
-            &BookmarkPagination::FromStart,
-            None, // Limit
-        )
+    // Use WBC for fetching bookmarks since this is Git read path
+    let tagged_commits = list_tags(ctx, repo, RefsSource::WarmBookmarksCache)
         .await
         .map(|entries| {
             entries
@@ -1362,29 +1300,21 @@ async fn tags_packfile_stream<'a>(
     // NOTE: Fun git trick. If the client says it doesn't want tags, then instead of excluding all tags (like regular systems)
     // we still send the tags that were explicitly part of the client's WANT request :)
     let required_tag_names = match include_tags {
-        true => {
-            repo.bookmarks_cache()
-                .list(
-                    &ctx,
-                    &BookmarkPrefix::new(TAGS_PREFIX)?,
-                    &BookmarkPagination::FromStart,
-                    None, // Limit
-                )
-                .await
-                .map(|entries| {
-                    entries
-                        .into_iter()
-                        .filter_map(|(bookmark, (cs_id, _))| {
-                            if requested_commits.contains(&cs_id) {
-                                Some(bookmark.name().to_string())
-                            } else {
-                                None
-                            }
-                        })
-                        .collect::<FxHashSet<_>>()
-                })
-                .context("Error in getting tags pointing to input set of commits")?
-        }
+        true => list_tags(&ctx, repo, RefsSource::WarmBookmarksCache) // Use WBC for read path
+            .await
+            .map(|entries| {
+                entries
+                    .into_iter()
+                    .filter_map(|(bookmark, (cs_id, _))| {
+                        if requested_commits.contains(&cs_id) {
+                            Some(bookmark.name().to_string())
+                        } else {
+                            None
+                        }
+                    })
+                    .collect::<FxHashSet<_>>()
+            })
+            .context("Error in getting tags pointing to input set of commits")?,
         false => FxHashSet::default(),
     };
     // Fetch entries corresponding to annotated tags in the repo or with names
@@ -1413,7 +1343,7 @@ pub async fn generate_pack_item_stream<'a>(
     request: PackItemStreamRequest,
 ) -> Result<PackItemStreamResponse<'a>> {
     // We need to include the bookmarks (i.e. branches, tags) in the pack based on the request parameters
-    let bookmarks = bookmarks(&ctx, repo, &request.requested_refs)
+    let bookmarks = bookmarks(&ctx, repo, &request.requested_refs, request.refs_source)
         .await
         .with_context(|| {
             format!(
@@ -1512,7 +1442,7 @@ pub async fn ls_refs_response(
     request: LsRefsRequest,
 ) -> Result<LsRefsResponse> {
     // We need to include the bookmarks (i.e. branches, tags) based on the request parameters
-    let bookmarks = bookmarks(ctx, repo, &request.requested_refs)
+    let bookmarks = bookmarks(ctx, repo, &request.requested_refs, request.refs_source)
         .await
         .with_context(|| {
             format!(

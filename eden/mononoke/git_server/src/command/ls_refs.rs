@@ -12,6 +12,7 @@ use gix_packetline::PacketLineRef;
 use gix_packetline::StreamingPeekableIter;
 use gix_transport::bstr::ByteSlice;
 use protocol::types::LsRefsRequest;
+use protocol::types::RefsSource;
 use protocol::types::RequestedRefs;
 use protocol::types::RequestedSymrefs;
 use protocol::types::SymrefFormat;
@@ -94,6 +95,8 @@ impl LsRefsArgs {
             requested_symrefs,
             tag_inclusion,
             requested_refs,
+            // Use WBC since this request is for read path
+            refs_source: RefsSource::WarmBookmarksCache,
         }
     }
 }

@@ -75,7 +75,7 @@ async fn write_advertisement(
     let mut refs = ls_refs_response(
         &request_context.ctx,
         &request_context.repo,
-        LsRefsRequest::advertisement(),
+        LsRefsRequest::write_advertisement(),
     )
     .await?
     .included_refs

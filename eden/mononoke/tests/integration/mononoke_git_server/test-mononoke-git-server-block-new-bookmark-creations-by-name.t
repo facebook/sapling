@@ -88,7 +88,6 @@
 # This push is blocked
   $ git_client push origin --all
   To https://localhost:$LOCAL_PORT/repos/git/ro/repo.git
-   ! [remote rejected] master -> master (invalid request: Bookmark transaction failed)
    ! [remote rejected] this_is_blocked -> this_is_blocked (hooks failed:
     block_new_bookmark_creations_by_name for 8643610acce921ac6df12107a4e671da0406984f: Creation of bookmark "heads/this_is_blocked" was blocked because it matched the '.*this_is_blocked.*' regular expression
     block_new_bookmark_creations_by_name for 8ff9b0ab58e4c2785dc5a516ae6e549e73a801d5: Creation of bookmark "heads/this_is_blocked" was blocked because it matched the '.*this_is_blocked.*' regular expression

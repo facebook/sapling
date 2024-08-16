@@ -21,6 +21,7 @@ use repo_derived_data::RepoDerivedDataArc;
 use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentityRef;
 
+mod bookmarks_provider;
 pub mod generator;
 pub mod pack_processor;
 pub mod types;
