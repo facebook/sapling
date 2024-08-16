@@ -44,6 +44,10 @@ mononoke_queries! {
         mysql("INSERT INTO `remotebookmarks` (`reponame`, `workspace`, `remote`,`name`, `node` ) VALUES ({reponame}, {workspace}, {remote}, {name}, {commit})")
         sqlite("INSERT INTO `remotebookmarks` (`reponame`, `workspace`, `remote`,`name`, `commit` ) VALUES ({reponame}, {workspace}, {remote}, {name}, {commit})")
     }
+    write UpdateWorkspaceName( reponame: String, workspace: String, new_workspace: String) {
+        none,
+        "UPDATE remotebookmarks SET workspace = {new_workspace} WHERE workspace = {workspace} and reponame = {reponame}"
+    }
 }
 
 #[async_trait]

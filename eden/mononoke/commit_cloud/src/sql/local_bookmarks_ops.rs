@@ -43,6 +43,11 @@ mononoke_queries! {
         mysql("INSERT INTO `bookmarks` (`reponame`, `workspace`, `name`, `node`) VALUES ({reponame}, {workspace}, {name}, {commit})")
         sqlite("INSERT INTO `workspacebookmarks` (`reponame`, `workspace`, `name`, `commit`) VALUES ({reponame}, {workspace}, {name}, {commit})")
     }
+    write UpdateWorkspaceName( reponame: String, workspace: String, new_workspace: String) {
+        none,
+        mysql("UPDATE `bookmarks` SET workspace = {new_workspace} WHERE workspace = {workspace} and reponame = {reponame}")
+        sqlite("UPDATE `workspacebookmarks` SET workspace = {new_workspace} WHERE workspace = {workspace} and reponame = {reponame}")
+    }
 }
 
 #[async_trait]

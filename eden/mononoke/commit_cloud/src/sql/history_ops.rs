@@ -87,6 +87,11 @@ mononoke_queries! {
         VALUES ({reponame},{workspace},{version},{heads},{bookmarks},{remote_bookmarks}, {timestamp}) ")
     }
 
+    write UpdateWorkspaceName( reponame: String, workspace: String, new_workspace: String) {
+        none,
+        "UPDATE history SET workspace = {new_workspace} WHERE workspace = {workspace} and reponame = {reponame}"
+    }
+
 
 }
 

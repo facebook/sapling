@@ -88,6 +88,11 @@ mononoke_queries! {
             {timestamp})")
     }
 
+    write UpdateWorkspaceName( reponame: String, workspace: String, new_workspace: String) {
+        none,
+        "UPDATE checkoutlocations SET workspace = {new_workspace} WHERE workspace = {workspace} and reponame = {reponame}"
+    }
+
 }
 
 #[async_trait]

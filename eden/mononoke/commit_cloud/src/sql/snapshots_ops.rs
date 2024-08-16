@@ -44,6 +44,11 @@ mononoke_queries! {
         mysql("INSERT INTO `snapshots` (`reponame`, `workspace`, `node`) VALUES ({reponame}, {workspace}, {commit})")
         sqlite("INSERT INTO `snapshots` (`reponame`, `workspace`, `commit`) VALUES ({reponame}, {workspace}, {commit})")
     }
+
+    write UpdateWorkspaceName( reponame: String, workspace: String, new_workspace: String) {
+        none,
+        "UPDATE snapshots SET workspace = {new_workspace} WHERE workspace = {workspace} and reponame = {reponame}"
+    }
 }
 
 #[async_trait]

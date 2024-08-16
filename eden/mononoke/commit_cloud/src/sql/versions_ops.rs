@@ -60,6 +60,11 @@ mononoke_queries! {
         "UPDATE versions SET archived={archived} WHERE reponame={reponame} AND workspace={workspace}"
     }
 
+    write UpdateWorkspaceName( reponame: String, workspace: String, new_workspace: String) {
+        none,
+        "UPDATE versions SET workspace = {new_workspace} WHERE workspace = {workspace} and reponame = {reponame}"
+    }
+
 }
 
 #[async_trait]
