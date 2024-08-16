@@ -8,9 +8,10 @@
 use anyhow::anyhow;
 use anyhow::format_err;
 use anyhow::Error;
-use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
+use bonsai_hg_mapping::BonsaiHgMapping;
+use bookmarks::Bookmarks;
 use clap_old::App;
 use clap_old::Arg;
 use clap_old::ArgMatches;
@@ -21,10 +22,12 @@ use cloned::cloned;
 use cmdlib::args;
 use cmdlib::args::MononokeMatches;
 use cmdlib::helpers;
+use commit_graph::CommitGraph;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use filenodes::FilenodeInfo;
 use filenodes::FilenodeRange;
+use filenodes::Filenodes;
 use filenodes::FilenodesRef;
 use futures::future::try_join_all;
 use futures::TryStreamExt;
@@ -36,13 +39,41 @@ use mercurial_types::HgFileEnvelope;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::NonRootMPath;
 use mononoke_types::RepoPath;
+use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreRef;
+use repo_derived_data::RepoDerivedData;
+use repo_identity::RepoIdentity;
 use slog::debug;
 use slog::info;
 use slog::Logger;
 
 use crate::common::get_file_nodes;
 use crate::error::SubcommandError;
+
+#[facet::container]
+#[derive(Clone)]
+struct Repo {
+    #[facet]
+    bookmarks: dyn Bookmarks,
+
+    #[facet]
+    repo_blobstore: RepoBlobstore,
+
+    #[facet]
+    repo_derived_data: RepoDerivedData,
+
+    #[facet]
+    repo_identity: RepoIdentity,
+
+    #[facet]
+    commit_graph: CommitGraph,
+
+    #[facet]
+    bonsai_hg_mapping: dyn BonsaiHgMapping,
+
+    #[facet]
+    filenodes: dyn Filenodes,
+}
 
 pub const FILENODES: &str = "filenodes";
 const COMMAND_ID: &str = "by-id";
@@ -162,17 +193,17 @@ fn log_filenode(
 
 async fn handle_filenodes_at_revision(
     ctx: CoreContext,
-    blobrepo: BlobRepo,
+    repo: Repo,
     revision: &str,
     paths: Vec<NonRootMPath>,
     log_envelope: bool,
 ) -> Result<(), Error> {
-    let cs_id = helpers::csid_resolve(&ctx, &blobrepo, revision.to_string()).await?;
-    let cs_id = blobrepo.derive_hg_changeset(&ctx, cs_id).await?;
+    let cs_id = helpers::csid_resolve(&ctx, &repo, revision.to_string()).await?;
+    let cs_id = repo.derive_hg_changeset(&ctx, cs_id).await?;
     let filenode_ids = get_file_nodes(
         ctx.clone(),
         ctx.logger().clone(),
-        &blobrepo,
+        &repo,
         cs_id,
         paths.clone(),
     )
@@ -183,21 +214,18 @@ async fn handle_filenodes_at_revision(
             .into_iter()
             .zip(filenode_ids.into_iter())
             .map(move |(path, filenode_id)| {
-                cloned!(ctx, blobrepo);
+                cloned!(ctx, repo);
                 async move {
                     let path = RepoPath::FilePath(path);
 
                     let filenode_fut = async {
-                        blobrepo
-                            .get_filenode(ctx.clone(), &path, filenode_id)
+                        repo.get_filenode(ctx.clone(), &path, filenode_id)
                             .await?
                             .do_not_handle_disabled_filenodes()
                     };
                     let envelope_fut = async {
                         if log_envelope {
-                            Ok(Some(
-                                filenode_id.load(&ctx, blobrepo.repo_blobstore()).await?,
-                            ))
+                            Ok(Some(filenode_id.load(&ctx, repo.repo_blobstore()).await?))
                         } else {
                             Ok(None)
                         }

@@ -13,9 +13,10 @@ use anyhow::Error;
 use blame::fetch_blame_v2;
 use blame::fetch_content_for_blame;
 use blame::FetchOutcome;
-use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
+use bonsai_hg_mapping::BonsaiHgMapping;
+use bookmarks::Bookmarks;
 use bounded_traversal::bounded_traversal_dag;
 use bounded_traversal::Iter;
 use clap_old::App;
@@ -28,6 +29,7 @@ use cloned::cloned;
 use cmdlib::args;
 use cmdlib::args::MononokeMatches;
 use cmdlib::helpers;
+use commit_graph::CommitGraph;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::future::try_join;
@@ -46,13 +48,38 @@ use mononoke_types::ChangesetId;
 use mononoke_types::FileChange;
 use mononoke_types::FileUnodeId;
 use mononoke_types::NonRootMPath;
+use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreArc;
 use repo_blobstore::RepoBlobstoreRef;
+use repo_derived_data::RepoDerivedData;
 use repo_derived_data::RepoDerivedDataRef;
+use repo_identity::RepoIdentity;
 use slog::Logger;
 use unodes::RootUnodeManifestId;
 
 use crate::error::SubcommandError;
+
+#[facet::container]
+#[derive(Clone)]
+pub struct Repo {
+    #[facet]
+    bookmarks: dyn Bookmarks,
+
+    #[facet]
+    bonsai_hg_mapping: dyn BonsaiHgMapping,
+
+    #[facet]
+    repo_derived_data: RepoDerivedData,
+
+    #[facet]
+    repo_blobstore: RepoBlobstore,
+
+    #[facet]
+    repo_identity: RepoIdentity,
+
+    #[facet]
+    commit_graph: CommitGraph,
+}
 
 pub const BLAME: &str = "blame";
 const COMMAND_DERIVE: &str = "derive";
@@ -152,7 +179,7 @@ pub async fn subcommand_blame<'a>(
         (COMMAND_FIND_REJECTED, Some(matches)) => {
             let print_errors = matches.is_present(ARG_PRINT_ERRORS);
             let hash_or_bookmark = String::from(matches.value_of(ARG_CSID).unwrap());
-            let repo: BlobRepo =
+            let repo: Repo =
                 args::not_shardmanager_compatible::open_repo(fb, &logger, toplevel_matches).await?;
             let cs_id = helpers::csid_resolve(&ctx, &repo, hash_or_bookmark).await?;
 
@@ -196,12 +223,12 @@ pub async fn subcommand_blame<'a>(
 
 async fn with_changeset_and_path<F, FOut>(
     ctx: CoreContext,
-    repo: BlobRepo,
+    repo: Repo,
     matches: &ArgMatches<'_>,
     fun: F,
 ) -> Result<(), SubcommandError>
 where
-    F: FnOnce(CoreContext, BlobRepo, ChangesetId, NonRootMPath) -> FOut + Send + 'static,
+    F: FnOnce(CoreContext, Repo, ChangesetId, NonRootMPath) -> FOut + Send + 'static,
     FOut: Future<Output = Result<(), Error>> + Send + 'static,
 {
     let hash_or_bookmark = String::from(matches.value_of(ARG_CSID).unwrap());
@@ -213,7 +240,7 @@ where
 
 async fn subcommand_show_blame(
     ctx: CoreContext,
-    repo: BlobRepo,
+    repo: Repo,
     csid: ChangesetId,
     path: NonRootMPath,
     line_number: bool,
@@ -231,7 +258,7 @@ async fn subcommand_show_blame(
 /// a file in this changeset.
 async fn find_leaf(
     ctx: CoreContext,
-    repo: BlobRepo,
+    repo: Repo,
     csid: ChangesetId,
     path: NonRootMPath,
 ) -> Result<FileUnodeId, Error> {
@@ -257,7 +284,7 @@ async fn find_leaf(
 /// Attempts to find a leaf, but returns `None` if the path is not a file.
 async fn try_find_leaf(
     ctx: CoreContext,
-    repo: BlobRepo,
+    repo: Repo,
     csid: ChangesetId,
     path: NonRootMPath,
 ) -> Result<Option<FileUnodeId>, Error> {
@@ -275,7 +302,7 @@ async fn try_find_leaf(
 
 async fn subcommand_show_diffs(
     ctx: CoreContext,
-    repo: BlobRepo,
+    repo: Repo,
     csid: ChangesetId,
     path: NonRootMPath,
 ) -> Result<(), Error> {
@@ -294,7 +321,7 @@ async fn subcommand_show_diffs(
 
 async fn diff(
     ctx: CoreContext,
-    repo: BlobRepo,
+    repo: Repo,
     new: FileUnodeId,
     old: FileUnodeId,
 ) -> Result<String, Error> {
@@ -325,7 +352,7 @@ async fn diff(
 /// Recalculate blame by going through whole history of a file
 async fn subcommand_compute_blame(
     ctx: CoreContext,
-    repo: BlobRepo,
+    repo: Repo,
     csid: ChangesetId,
     path: NonRootMPath,
     line_number: bool,
@@ -439,7 +466,7 @@ async fn subcommand_compute_blame(
 /// Format blame the same way `hg blame` does
 async fn blame_hg_annotate<C: AsRef<[u8]> + 'static + Send>(
     ctx: CoreContext,
-    repo: BlobRepo,
+    repo: Repo,
     content: C,
     blame: BlameV2,
     show_line_number: bool,

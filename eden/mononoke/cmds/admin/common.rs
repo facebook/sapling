@@ -9,7 +9,6 @@ use std::collections::HashMap;
 
 use anyhow::format_err;
 use anyhow::Error;
-use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use cmdlib::args;
 use context::CoreContext;
@@ -32,7 +31,7 @@ use synced_commit_mapping::SqlSyncedCommitMapping;
 pub async fn get_file_nodes(
     ctx: CoreContext,
     logger: Logger,
-    repo: &BlobRepo,
+    repo: &impl RepoBlobstoreRef,
     cs_id: HgChangesetId,
     paths: Vec<NonRootMPath>,
 ) -> Result<Vec<HgFileNodeId>, Error> {

@@ -10,9 +10,10 @@ use std::str::FromStr;
 
 use anyhow::format_err;
 use anyhow::Error;
-use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
+use bonsai_hg_mapping::BonsaiHgMapping;
+use bookmarks::Bookmarks;
 use clap_old::App;
 use clap_old::Arg;
 use clap_old::ArgMatches;
@@ -23,6 +24,7 @@ use cloned::cloned;
 use cmdlib::args;
 use cmdlib::args::MononokeMatches;
 use cmdlib::helpers;
+use commit_graph::CommitGraph;
 use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use deleted_manifest::DeletedManifestOps;
@@ -38,12 +40,37 @@ use mononoke_types::path::MPath;
 use mononoke_types::ChangesetId;
 use mononoke_types::DeletedManifestV2Id;
 use mononoke_types::NonRootMPath;
+use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreRef;
+use repo_derived_data::RepoDerivedData;
 use repo_derived_data::RepoDerivedDataRef;
+use repo_identity::RepoIdentity;
 use slog::debug;
 use slog::Logger;
 
 use crate::error::SubcommandError;
+
+#[facet::container]
+#[derive(Clone)]
+pub struct Repo {
+    #[facet]
+    bookmarks: dyn Bookmarks,
+
+    #[facet]
+    bonsai_hg_mapping: dyn BonsaiHgMapping,
+
+    #[facet]
+    repo_derived_data: RepoDerivedData,
+
+    #[facet]
+    repo_blobstore: RepoBlobstore,
+
+    #[facet]
+    repo_identity: RepoIdentity,
+
+    #[facet]
+    commit_graph: CommitGraph,
+}
 
 pub const DELETED_MANIFEST: &str = "deleted-manifest";
 const COMMAND_MANIFEST: &str = "manifest";
@@ -102,7 +129,7 @@ pub async fn subcommand_deleted_manifest<'a>(
     matches: &'a MononokeMatches<'_>,
     sub_matches: &'a ArgMatches<'_>,
 ) -> Result<(), SubcommandError> {
-    let repo: BlobRepo = args::not_shardmanager_compatible::open_repo(fb, &logger, matches).await?;
+    let repo: Repo = args::not_shardmanager_compatible::open_repo(fb, &logger, matches).await?;
     let ctx = CoreContext::new_with_logger_and_client_info(
         fb,
         logger.clone(),
@@ -147,7 +174,7 @@ pub async fn subcommand_deleted_manifest<'a>(
 
 async fn subcommand_manifest(
     ctx: CoreContext,
-    repo: BlobRepo,
+    repo: Repo,
     cs_id: ChangesetId,
     prefix: MPath,
 ) -> Result<(), Error> {
@@ -173,7 +200,7 @@ async fn subcommand_manifest(
 
 async fn subcommand_verify(
     ctx: CoreContext,
-    repo: BlobRepo,
+    repo: Repo,
     cs_id: ChangesetId,
     limit: u64,
 ) -> Result<(), Error> {
@@ -190,7 +217,7 @@ async fn subcommand_verify(
 
 async fn get_file_changes(
     ctx: CoreContext,
-    repo: BlobRepo,
+    repo: Repo,
     cs_id: ChangesetId,
 ) -> Result<(Vec<NonRootMPath>, Vec<NonRootMPath>), Error> {
     let paths_added_fut = async {
@@ -232,7 +259,7 @@ async fn get_file_changes(
 
 async fn verify_single_commit(
     ctx: CoreContext,
-    repo: BlobRepo,
+    repo: Repo,
     cs_id: ChangesetId,
 ) -> Result<(), Error> {
     let file_changes = get_file_changes(ctx.clone(), repo.clone(), cs_id.clone());
