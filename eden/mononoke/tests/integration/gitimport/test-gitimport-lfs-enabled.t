@@ -22,16 +22,9 @@ But it's available on the separate lfs server
   laaaaaaaaaarge file
 
 Git Import
-  $ with_stripped_logs gitimport "$GIT_REPO_SERVER" --generate-bookmarks --concurrency 100 --lfs-server "$LEGACY_LFS_URL/download_sha256" full-repo 
-  using repo "repo" repoid RepositoryId(0)
+  $ quiet_grep Uploading -- with_stripped_logs gitimport "$GIT_REPO_SERVER" --generate-bookmarks --concurrency 100 --lfs-server "$LEGACY_LFS_URL/download_sha256" full-repo | sort
   Uploading LFS large_file sha256:6c54a4de size:20
   Uploading LFS large_file_non_canonical_pointer sha256:6c54a4de size:20
-  GitRepo:$TESTTMP/repo-git-server commit 3 of 3 - Oid:c13a0ad2 => Bid:84fd51b5
-  Ref: "refs/heads/main": Some(ChangesetId(Blake2(84fd51b5fa2a956b4c6135697f3e626655fbf2eb7c8478e4f3d5159b153effef)))
-  Initializing repo: repo
-  Initialized repo: repo
-  All repos initialized. It took: * seconds (glob)
-  Bookmark: "heads/main": ChangesetId(Blake2(84fd51b5fa2a956b4c6135697f3e626655fbf2eb7c8478e4f3d5159b153effef)) (created)
 We store full file contents for non-LFS file
   $ mononoke_newadmin fetch -R repo -B heads/main --path small_file
   File-Type: regular
