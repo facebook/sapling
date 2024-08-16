@@ -2393,7 +2393,6 @@ class changeset_templater(changeset_printer):
         props["index"] = index = next(self._counter)
         props["revcache"] = {"copies": copies}
         props["cache"] = self.cache
-        props = props
 
         # write separator, which wouldn't work well with the header part below
         # since there's inherently a conflict between header (across items) and
