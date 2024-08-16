@@ -31,6 +31,8 @@ use crate::errors::bug;
 use crate::id::Group;
 use crate::id::Id;
 use crate::idset::Span;
+use crate::lifecycle::trace_print_short_backtrace;
+use crate::lifecycle::LifecycleId;
 use crate::ops::Persist;
 use crate::ops::StorageVersion;
 use crate::ops::TryClone;
@@ -50,6 +52,7 @@ pub struct IndexedLogStore {
     /// Segments in Group::VIRTUAL that should not be written to disk.
     /// Expected to be a few entries (like wdir() and null) so not stored in a sorted container.
     virtual_segments: Vec<Segment>,
+    lifecycle_id: LifecycleId,
 }
 
 /// Fold (accumulator) that tracks IdSet covered in groups.
@@ -255,6 +258,7 @@ impl IdDagStore for IndexedLogStore {
 
     fn insert_segment(&mut self, segment: Segment) -> Result<()> {
         if segment.high()?.is_virtual() {
+            tracing::trace!(lifecycle_id=?self.lifecycle_id, ?segment, "insert virtual segment");
             self.virtual_segments.push(segment);
             return Ok(());
         }
@@ -286,6 +290,8 @@ impl IdDagStore for IndexedLogStore {
     fn remove_flat_segment_unchecked(&mut self, segment: &Segment) -> Result<()> {
         let span = segment.span()?;
         if span.high.is_virtual() {
+            tracing::trace!(lifecycle_id=?self.lifecycle_id, ?segment, "remove virtual segment");
+            trace_print_short_backtrace();
             self.virtual_segments.retain(|s| {
                 if let Ok(s_span) = s.span() {
                     if span.overlaps_with(&s_span) {
@@ -795,6 +801,7 @@ impl IndexedLogStore {
             path,
             cached_max_level: AtomicU8::new(MAX_LEVEL_UNKNOWN),
             virtual_segments: Default::default(),
+            lifecycle_id: LifecycleId::new::<Self>(),
         };
         Ok(iddag)
     }
@@ -809,6 +816,7 @@ impl IndexedLogStore {
             path,
             cached_max_level: AtomicU8::new(MAX_LEVEL_UNKNOWN),
             virtual_segments: Default::default(),
+            lifecycle_id: LifecycleId::new::<Self>(),
         };
         Ok(iddag)
     }
@@ -822,6 +830,7 @@ impl TryClone for IndexedLogStore {
             path: self.path.clone(),
             cached_max_level: AtomicU8::new(self.cached_max_level.load(Acquire)),
             virtual_segments: self.virtual_segments.clone(),
+            lifecycle_id: self.lifecycle_id.clone(),
         };
         Ok(store)
     }
