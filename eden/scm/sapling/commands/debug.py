@@ -2833,12 +2833,6 @@ def debugrebuilddirstate(ui, repo, rev, **opts) -> None:
         dirstate.rebuild(ctx.node(), ctx.manifest(), changedfiles)
 
 
-@command("debugrebuildfncache", [], "")
-def debugrebuildfncache(ui, repo: Sized) -> None:
-    """rebuild the fncache file"""
-    repair.rebuildfncache(ui, repo)
-
-
 @command(
     "debugrename",
     [("r", "rev", "", _("revision to debug"), _("REV"))],

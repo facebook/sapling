@@ -33,18 +33,6 @@ The *store* repository layout should be used.
 This requirement has been enabled by default since the ``requires`` file
 was introduced in Mercurial 0.9.2.
 
-fncache
-=======
-
-The *fncache* repository layout should be used.
-
-The *fncache* layout hash encodes filenames with long paths and
-encodes reserved filenames.
-
-This requirement is enabled by default when the *store* requirement is
-enabled (which is the default behavior). It was introduced in Mercurial
-1.1 (released December 2008).
-
 shared
 ======
 

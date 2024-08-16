@@ -14,9 +14,9 @@
 from __future__ import absolute_import
 
 import hashlib
-from typing import List, Optional, Sized
+from typing import List, Optional
 
-from . import bundle2, changegroup, discovery, error, progress, scmutil, util
+from . import bundle2, changegroup, discovery, error, scmutil, util
 from .i18n import _
 from .node import hex, short
 from .pycompat import encodeutf8, range
@@ -221,83 +221,3 @@ def stripmanifest(repo, striprev, tr, files) -> None:
 
 def striptrees(repo, tr, striprev, files) -> None:
     pass
-
-
-def rebuildfncache(ui, repo: Sized) -> None:
-    """Rebuilds the fncache file from repo history.
-
-    Missing entries will be added. Extra entries will be removed.
-    """
-
-    # pyre-fixme[16]: `Sized` has no attribute `requirements`.
-    if "fncache" not in repo.requirements:
-        ui.warn(
-            _(
-                "(not rebuilding fncache because repository does not "
-                "support fncache)\n"
-            )
-        )
-        return
-
-    # pyre-fixme[16]: `Sized` has no attribute `lock`.
-    with repo.lock():
-        # pyre-fixme[16]: `Sized` has no attribute `store`.
-        fnc = repo.store.fncache
-        # Trigger load of fncache.
-        if "irrelevant" in fnc:
-            pass
-
-        oldentries = set(fnc.entries)
-        newentries = set()
-        seenfiles = set()
-
-        repolen = len(repo)
-        with progress.bar(ui, _("rebuilding"), _("changesets"), repolen) as prog:
-            # pyre-fixme[16]: `Sized` has no attribute `__iter__`.
-            for rev in repo:
-                prog.value = rev
-                # pyre-fixme[16]: `Sized` has no attribute `__getitem__`.
-                ctx = repo[rev]
-                for f in ctx.files():
-                    # This is to minimize I/O.
-                    if f in seenfiles:
-                        continue
-                    seenfiles.add(f)
-
-                    i = "data/%s.i" % f
-                    d = "data/%s.d" % f
-
-                    if repo.store._exists(i):
-                        newentries.add(i)
-                    if repo.store._exists(d):
-                        newentries.add(d)
-
-        if "treemanifest" in repo.requirements:  # safe but unnecessary otherwise
-            for dir in util.dirs(seenfiles):
-                i = "meta/%s/00manifest.i" % dir
-                d = "meta/%s/00manifest.d" % dir
-
-                if repo.store._exists(i):
-                    newentries.add(i)
-                if repo.store._exists(d):
-                    newentries.add(d)
-
-        addcount = len(newentries - oldentries)
-        removecount = len(oldentries - newentries)
-        for p in sorted(oldentries - newentries):
-            ui.write(_("removing %s\n") % p)
-        for p in sorted(newentries - oldentries):
-            ui.write(_("adding %s\n") % p)
-
-        if addcount or removecount:
-            ui.write(
-                _("%d items added, %d removed from fncache\n") % (addcount, removecount)
-            )
-            fnc.entries = newentries
-            fnc._dirty = True
-
-            # pyre-fixme[16]: `Sized` has no attribute `transaction`.
-            with repo.transaction("fncache") as tr:
-                fnc.write(tr)
-        else:
-            ui.write(_("fncache already up to date\n"))
