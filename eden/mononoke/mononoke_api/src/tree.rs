@@ -26,7 +26,7 @@ use crate::repo::RepoContext;
 
 #[derive(Clone)]
 pub struct TreeContext {
-    repo: RepoContext,
+    repo_ctx: RepoContext,
     id: TreeId,
     fsnode: LazyShared<Result<Fsnode, MononokeError>>,
 }
@@ -35,8 +35,8 @@ impl fmt::Debug for TreeContext {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "TreeContext(repo={:?} id={:?})",
-            self.repo().name(),
+            "TreeContext(repo_ctx={:?} id={:?})",
+            self.repo_ctx().name(),
             self.id()
         )
     }
@@ -49,9 +49,9 @@ impl TreeContext {
     ///
     /// To construct a `TreeContext` for a tree that might not exist, use
     /// `new_check_exists`.
-    pub(crate) fn new_authorized(repo: RepoContext, id: TreeId) -> Self {
+    pub(crate) fn new_authorized(repo_ctx: RepoContext, id: TreeId) -> Self {
         Self {
-            repo,
+            repo_ctx,
             id,
             fsnode: LazyShared::new_empty(),
         }
@@ -60,19 +60,23 @@ impl TreeContext {
     /// Create a new TreeContext using an ID that might not exist. Returns
     /// `None` if the tree doesn't exist.
     pub(crate) async fn new_check_exists(
-        repo: RepoContext,
+        repo_ctx: RepoContext,
         id: TreeId,
     ) -> Result<Option<Self>, MononokeError> {
         // Access to an arbitrary tree requires full access to the repo,
         // as we do not know which path it corresponds to.
-        repo.authorization_context()
-            .require_full_repo_read(repo.ctx(), repo.inner_repo())
+        repo_ctx
+            .authorization_context()
+            .require_full_repo_read(repo_ctx.ctx(), repo_ctx.repo())
             .await?;
         // Try to load the fsnode immediately to see if it exists. Unlike
         // `new`, if the fsnode is missing, we simply return `Ok(None)`.
-        match id.load(repo.ctx(), repo.blob_repo().repo_blobstore()).await {
+        match id
+            .load(repo_ctx.ctx(), repo_ctx.repo().repo_blobstore())
+            .await
+        {
             Ok(fsnode) => Ok(Some(Self {
-                repo,
+                repo_ctx,
                 id,
                 fsnode: LazyShared::new_ready(Ok(fsnode)),
             })),
@@ -82,16 +86,16 @@ impl TreeContext {
     }
 
     /// The `RepoContext` for this query.
-    pub(crate) fn repo(&self) -> &RepoContext {
-        &self.repo
+    pub(crate) fn repo_ctx(&self) -> &RepoContext {
+        &self.repo_ctx
     }
 
     async fn fsnode(&self) -> Result<Fsnode, MononokeError> {
         self.fsnode
             .get_or_init(|| {
-                cloned!(self.repo, self.id);
+                cloned!(self.repo_ctx, self.id);
                 async move {
-                    id.load(repo.ctx(), repo.blob_repo().repo_blobstore())
+                    id.load(repo_ctx.ctx(), repo_ctx.repo().repo_blobstore())
                         .await
                         .map_err(Error::from)
                         .map_err(MononokeError::from)
