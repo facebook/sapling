@@ -354,17 +354,6 @@ def dispatch(req):
             from pprint import pformat
 
             if metrics:
-                # developer config: devel.print-metrics
-
-                # This used to be a bool, but I changed it to a prefix list. Keep previous
-                # behavior around by using empty prefix to mean print everything.
-                prefix = ui.config("devel", "print-metrics")
-                if prefix == "":
-                    # Print it out.
-                    msg = "%s\n" % pformat({"metrics": metrics}).replace("'", " ")
-                    ui.flush()
-                    ui.write_err(msg, label="hgmetrics")
-
                 # Write to blackbox
                 ui.log("metrics", pformat({"metrics": metrics}, width=1024))
         blackbox.sync()

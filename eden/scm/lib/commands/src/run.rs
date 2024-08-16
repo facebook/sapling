@@ -334,8 +334,12 @@ fn dispatch_command(
         }
     }
 
-    let _ = log_perftrace(io, config, start_time);
-    let _ = print_metrics(io, config);
+    if let Err(err) = log_perftrace(io, config, start_time) {
+        tracing::error!(?err, "error logging perftrace");
+    }
+    if let Err(err) = print_metrics(io, config) {
+        tracing::error!(?err, "error printing metrics");
+    }
 
     exit_code
 }
@@ -873,19 +877,31 @@ fn log_perftrace(io: &IO, config: &dyn Config, start_time: StartTime) -> Result<
 }
 
 fn print_metrics(io: &IO, config: &dyn Config) -> Result<()> {
-    let prefixes: Vec<Text> = config.must_get::<Vec<Text>>("devel", "print-metrics")?;
-    if prefixes.is_empty() {
-        return Ok(());
-    }
+    // Empty value means print everything.
+    let prefixes: Vec<Text> = match config.get_opt("devel", "print-metrics")? {
+        Some(prefixes) => prefixes,
+        None => return Ok(()),
+    };
+
+    let skip_prefixes: Vec<Text> = config.get_or_default("devel", "skip-metrics")?;
 
     let metrics = hg_metrics::summarize();
     let mut keys = metrics.keys().collect::<Vec<_>>();
     keys.sort();
     for key in keys {
-        for prefix in prefixes.iter() {
-            if key.starts_with(prefix.as_ref()) {
-                writeln!(io.error(), "{key}: {}", metrics.get(key).unwrap())?;
-            }
+        if skip_prefixes
+            .iter()
+            .any(|prefix| key.starts_with(prefix.as_ref()))
+        {
+            continue;
+        }
+
+        if prefixes.is_empty()
+            || prefixes
+                .iter()
+                .any(|prefix| key.starts_with(prefix.as_ref()))
+        {
+            writeln!(io.error(), "{key}: {}", metrics.get(key).unwrap())?;
         }
     }
 
