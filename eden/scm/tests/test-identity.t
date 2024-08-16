@@ -112,23 +112,16 @@ Export/import works:
   $ echo "A" | drawdag
   $ HGIDENTITY=sl hg export -r $A | hg import -
   applying patch from stdin
-FIXME: not right!
   $ hg show
-  commit:      3b0f2a06f01b
+  commit:      426bada5c675
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       A
   description:
-  # SL changeset patch
-  # User test
-  # Date 0 0
-  #      Thu Jan 01 00:00:00 1970 +0000
-  # Node ID 426bada5c67598ca65036d57d9e4b64b0c1ce7a0
-  # Parent  0000000000000000000000000000000000000000
   A
   
   
-  diff -r 000000000000 -r 3b0f2a06f01b A
+  diff -r 000000000000 -r 426bada5c675 A
   --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
   +++ b/A	Thu Jan 01 00:00:00 1970 +0000
   @@ -0,0 +1,1 @@
