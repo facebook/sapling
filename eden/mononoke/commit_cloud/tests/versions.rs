@@ -22,6 +22,7 @@ async fn test_versions(_fb: FacebookInit) -> anyhow::Result<()> {
     let sql = SqlCommitCloudBuilder::with_sqlite_in_memory()?.new(false);
     let reponame = "test_repo".to_owned();
     let workspace = "user/testuser/default".to_owned();
+    let renamed_workspace = "user/testuser/renamed_workspace".to_owned();
     let initial_timestamp = Timestamp::now();
     let args = WorkspaceVersion {
         workspace: workspace.clone(),
@@ -73,11 +74,21 @@ async fn test_versions(_fb: FacebookInit) -> anyhow::Result<()> {
     let archive_args = UpdateVersionArgs::Archive(true);
     txn = sql.connections.write_connection.start_transaction().await?;
     let (txn, affected_rows) =
-        Update::<WorkspaceVersion>::update(&sql, txn, None, cc_ctx, archive_args).await?;
+        Update::<WorkspaceVersion>::update(&sql, txn, None, cc_ctx.clone(), archive_args).await?;
     txn.commit().await?;
     assert_eq!(affected_rows, 1);
     let res3: Vec<WorkspaceVersion> = sql.get(reponame.clone(), workspace.clone()).await?;
     assert!(res3[0].archived);
+
+    let new_name_args = UpdateVersionArgs::WorkspaceName(renamed_workspace.clone());
+    let txn = sql.connections.write_connection.start_transaction().await?;
+    let (txn, affected_rows) =
+        Update::<WorkspaceVersion>::update(&sql, txn, None, cc_ctx, new_name_args).await?;
+    txn.commit().await?;
+    assert_eq!(affected_rows, 1);
+
+    let res4: Vec<WorkspaceVersion> = sql.get(reponame.clone(), renamed_workspace).await?;
+    assert_eq!(res4.len(), 1);
 
     Ok(())
 }

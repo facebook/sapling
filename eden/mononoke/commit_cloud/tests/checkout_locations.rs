@@ -8,9 +8,12 @@
 use std::path::PathBuf;
 use std::str::FromStr;
 
+use commit_cloud::ctx::CommitCloudContext;
 use commit_cloud::sql::builder::SqlCommitCloudBuilder;
 use commit_cloud::sql::checkout_locations_ops::WorkspaceCheckoutLocation;
+use commit_cloud::sql::common::UpdateWorkspaceNameArgs;
 use commit_cloud::sql::ops::Insert;
+use commit_cloud::sql::ops::Update;
 use fbinit::FacebookInit;
 use mercurial_types::HgChangesetId;
 use mononoke_types::Timestamp;
@@ -22,6 +25,8 @@ async fn test_checkout_locations(_fb: FacebookInit) -> anyhow::Result<()> {
     let sql = SqlCommitCloudBuilder::with_sqlite_in_memory()?.new(false);
     let reponame = "test_repo".to_owned();
     let workspace = "user_testuser_default".to_owned();
+    let renamed_workspace = "user_testuser_default_renamed".to_owned();
+    let cc_ctx = CommitCloudContext::new(&workspace.clone(), &reponame.clone())?;
 
     let args = WorkspaceCheckoutLocation {
         hostname: "testhost".to_owned(),
@@ -39,8 +44,20 @@ async fn test_checkout_locations(_fb: FacebookInit) -> anyhow::Result<()> {
         .await?;
     txn.commit().await?;
 
-    let res: Vec<WorkspaceCheckoutLocation> = sql.get(reponame, workspace).await?;
-
+    let res: Vec<WorkspaceCheckoutLocation> = sql.get(reponame.clone(), workspace).await?;
     assert_eq!(vec![expected], res);
+
+    let new_name_args = UpdateWorkspaceNameArgs {
+        new_workspace: renamed_workspace.clone(),
+    };
+    let txn = sql.connections.write_connection.start_transaction().await?;
+    let (txn, affected_rows) =
+        Update::<WorkspaceCheckoutLocation>::update(&sql, txn, None, cc_ctx, new_name_args).await?;
+    txn.commit().await?;
+    assert_eq!(affected_rows, 1);
+
+    let res: Vec<WorkspaceCheckoutLocation> = sql.get(reponame.clone(), renamed_workspace).await?;
+    assert_eq!(res.len(), 1);
+
     Ok(())
 }

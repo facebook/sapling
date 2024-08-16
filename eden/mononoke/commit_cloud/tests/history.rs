@@ -7,12 +7,15 @@
 
 use std::str::FromStr;
 
+use commit_cloud::ctx::CommitCloudContext;
 use commit_cloud::references::heads::WorkspaceHead;
 use commit_cloud::references::local_bookmarks::WorkspaceLocalBookmark;
 use commit_cloud::references::remote_bookmarks::WorkspaceRemoteBookmark;
 use commit_cloud::sql::builder::SqlCommitCloudBuilder;
+use commit_cloud::sql::common::UpdateWorkspaceNameArgs;
 use commit_cloud::sql::ops::Delete;
 use commit_cloud::sql::ops::Insert;
+use commit_cloud::sql::ops::Update;
 use fbinit::FacebookInit;
 use mercurial_types::HgChangesetId;
 use mononoke_types::Timestamp;
@@ -30,6 +33,8 @@ async fn test_history(_fb: FacebookInit) -> anyhow::Result<()> {
     let sql = SqlCommitCloudBuilder::with_sqlite_in_memory()?.new(false);
     let reponame = "test_repo".to_owned();
     let workspace = "user_testuser_default".to_owned();
+    let renamed_workspace = "user_testuser_default_renamed".to_owned();
+    let cc_ctx = CommitCloudContext::new(&workspace.clone(), &reponame.clone())?;
     let timestamp = Timestamp::now();
 
     let head1 = WorkspaceHead {
@@ -143,6 +148,27 @@ async fn test_history(_fb: FacebookInit) -> anyhow::Result<()> {
         .collect::<Vec<WorkspaceHistory>>();
 
     assert_eq!(vec![args2], res_as_history);
+
+    let new_name_args = UpdateWorkspaceNameArgs {
+        new_workspace: renamed_workspace.clone(),
+    };
+    let txn = sql.connections.write_connection.start_transaction().await?;
+    let (txn, affected_rows) =
+        Update::<WorkspaceHistory>::update(&sql, txn, None, cc_ctx, new_name_args).await?;
+    txn.commit().await?;
+    assert_eq!(affected_rows, 1);
+
+    let res: Vec<GetOutput> = sql
+        .get(
+            reponame.clone(),
+            renamed_workspace.clone(),
+            GetType::GetHistoryDate {
+                timestamp,
+                limit: 2,
+            },
+        )
+        .await?;
+    assert_eq!(res.len(), 1);
 
     Ok(())
 }
