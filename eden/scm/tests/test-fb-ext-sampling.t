@@ -221,9 +221,9 @@ Metrics is logged to blackbox:
   atexit handler executed
   $ hg blackbox --no-timestamp --no-sid --pattern '{"legacy_log":{"service":"metrics"}}' | grep foo
   atexit handler executed
-  [legacy][metrics] {'metrics':*'test': {'bar': 2, 'foo': {'a': 1, 'b': 5}}}} (glob)
-  [legacy][metrics] {'metrics':*'test': {'bar': 2, 'foo': {'a': 1, 'b': 5}}}} (glob)
-  [legacy][metrics] {'metrics':*'test': {'bar': 2, 'foo': {'a': 1, 'b': 5}}}} (glob)
+  [legacy][metrics] {"metrics":*,"test":{"bar":2,"foo":{"a":1,"b":5}}}} (glob)
+  [legacy][metrics] {"metrics":*,"test":{"bar":2,"foo":{"a":1,"b":5}}}} (glob)
+  [legacy][metrics] {"metrics":*,"test":{"bar":2,"foo":{"a":1,"b":5}}}} (glob)
 
 Invalid format strings don't crash Mercurial
 

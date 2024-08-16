@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::BTreeMap;
+use std::collections::HashMap;
 use std::env;
 use std::fs::File;
 use std::io;
@@ -337,7 +339,7 @@ fn dispatch_command(
     if let Err(err) = log_perftrace(io, config, start_time) {
         tracing::error!(?err, "error logging perftrace");
     }
-    if let Err(err) = print_metrics(io, config) {
+    if let Err(err) = log_metrics(io, config) {
         tracing::error!(?err, "error printing metrics");
     }
 
@@ -876,19 +878,25 @@ fn log_perftrace(io: &IO, config: &dyn Config, start_time: StartTime) -> Result<
     Ok(())
 }
 
-fn print_metrics(io: &IO, config: &dyn Config) -> Result<()> {
-    // Empty value means print everything.
-    let prefixes: Vec<Text> = match config.get_opt("devel", "print-metrics")? {
-        Some(prefixes) => prefixes,
-        None => return Ok(()),
-    };
+fn log_metrics(io: &IO, config: &dyn Config) -> Result<()> {
+    let metrics = hg_metrics::summarize();
+    if metrics.is_empty() {
+        return Ok(());
+    }
 
+    // Empty value means print everything.
+    let prefixes: Option<Vec<Text>> = config.get_opt("devel", "print-metrics")?;
     let skip_prefixes: Vec<Text> = config.get_or_default("devel", "skip-metrics")?;
 
-    let metrics = hg_metrics::summarize();
+    let mut nested_counters = NestedCounters::Map(BTreeMap::new());
+
     let mut keys = metrics.keys().collect::<Vec<_>>();
     keys.sort();
     for key in keys {
+        let value = *metrics.get(key).unwrap();
+
+        nested_counters.insert(key, value);
+
         if skip_prefixes
             .iter()
             .any(|prefix| key.starts_with(prefix.as_ref()))
@@ -896,16 +904,55 @@ fn print_metrics(io: &IO, config: &dyn Config) -> Result<()> {
             continue;
         }
 
-        if prefixes.is_empty()
-            || prefixes
-                .iter()
-                .any(|prefix| key.starts_with(prefix.as_ref()))
-        {
-            writeln!(io.error(), "{key}: {}", metrics.get(key).unwrap())?;
+        if prefixes.as_ref().is_some_and(|prefixes| {
+            prefixes.is_empty()
+                || prefixes
+                    .iter()
+                    .any(|prefix| key.starts_with(prefix.as_ref()))
+        }) {
+            writeln!(io.error(), "{key}: {}", value)?;
         }
     }
 
+    blackbox::log(&blackbox::event::Event::LegacyLog {
+        service: "metrics".to_string(),
+        msg: serde_json::to_string(&HashMap::from([("metrics", nested_counters)]))?,
+        opts: Default::default(),
+    });
+
     Ok(())
+}
+
+// Type for transforming {foo.bar.baz: 123} into {foo: {bar: {baz: 123}}}.
+#[derive(serde::Serialize)]
+#[serde(untagged)]
+enum NestedCounters<'a> {
+    Value(u64),
+    Map(BTreeMap<&'a str, NestedCounters<'a>>),
+}
+
+impl<'a> NestedCounters<'a> {
+    fn insert(&mut self, key: &'a str, value: u64) {
+        // collision between a value and map will drop value and use map
+        // e.g. {"foo" => 123, "foo.bar" => 456} becomes {"foo" => {"bar" => 456}}
+
+        match self {
+            Self::Value(_) => {
+                *self = Self::Map(BTreeMap::new());
+                self.insert(key, value)
+            }
+            Self::Map(map) => {
+                if let Some(idx) = key.find(['.', '_', '/']) {
+                    let (name, rest) = (&key[..idx], &key[idx + 1..]);
+                    map.entry(name)
+                        .or_insert_with(|| Self::Map(BTreeMap::new()))
+                        .insert(rest, value);
+                } else if !map.contains_key(key) {
+                    map.insert(key, Self::Value(value));
+                }
+            }
+        }
+    }
 }
 
 // TODO: Replace this with the 'exitcode' crate once it's available.

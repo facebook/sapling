@@ -73,6 +73,7 @@ repo = { version = "0.1.0", path = "../repo", features = ["wdir"] }
 revisionstore = { version = "0.1.0", path = "../revisionstore" }
 runlog = { version = "0.1.0", path = "../runlog" }
 sampling = { version = "0.1.0", path = "../sampling" }
+serde = { version = "1.0.185", features = ["derive", "rc"] }
 tracing = { version = "0.1.40", features = ["attributes", "valuable"] }
 tracing-collector = { version = "0.1.0", path = "../tracing-collector" }
 tracing-reload = { version = "0.1.0", path = "../tracing-reload" }
