@@ -4988,3 +4988,74 @@ def no_recursion(func):
             depth -= 1
 
     return wrapper
+
+
+class proxy_wrapper:
+    """Generic wrapper class to customize an object's behavior without mutating it.
+
+    wrapped: the object to wrap (available as "self.inner")
+    wrapper_attrs: attributes owned by the wrapper
+
+    Attribute gets or sets outside what's in wrapper_attrs will get proxied to the
+    wrapped object.
+
+    Method resolution will prefer the wrapper's methods if both the wrapper and wrapped
+    object have implementations. If the wrapper has a second base class, it is assumed to
+    be a "common" base with the wrapped object. In this case, method resolution performs a
+    3-way merge of sorts where the wrapped object's method will be preferred if the
+    wrapped object overrides a method that the wrapper does not override, relative to the
+    base class.
+    """
+
+    def __init__(self, wrapped, **wrapper_attrs) -> None:
+        # Use "__dict__" to bypass our __setattr__ impl.
+        self.__dict__["inner"] = wrapped
+
+        if len(self.__class__.__bases__) == 1:
+            self.__dict__["_base_class"] = None
+        elif len(self.__class__.__bases__) == 2:
+            self.__dict__["_base_class"] = self.__class__.__bases__[1]
+        else:
+            raise ValueError("proxy_wrapper inheritor must have 1 or 2 base classes")
+
+        for k, v in wrapper_attrs.items():
+            self.__dict__[k] = v
+
+    def __getattribute__(self, name):
+        try:
+            my_attr = object.__getattribute__(self, name)
+        except AttributeError:
+            # We don't have this attribute - use wrapped object's.
+            return getattr(self.inner, name)
+
+        # Never delegate special attributes like __class__ or any of our __dict__
+        # attributes.
+        if name.startswith("__") or name in self.__dict__:
+            return my_attr
+
+        try:
+            wrapped_attr = getattr(self.inner, name)
+        except AttributeError:
+            # Wrapped object doesn't have this attribute - use ours.
+            return my_attr
+
+        # From here assume we are dealing with a method lookup.
+
+        try:
+            base_attr = getattr(self._base_class, name)
+        except AttributeError:
+            # Base class doesn't implement or we have no base - use ours.
+            return my_attr
+
+        if my_attr.__func__ == base_attr and wrapped_attr.__func__ != base_attr:
+            # If we don't override the function but the wrapped object does, use the
+            # wrapped object's.
+            return wrapped_attr
+        else:
+            # In all other cases use ours.
+            return my_attr
+
+    def __setattr__(self, name, value):
+        if name.startswith("__") or name in self.__dict__:
+            return super().__setattr__(name, value)
+        return setattr(self.inner, name, value)
