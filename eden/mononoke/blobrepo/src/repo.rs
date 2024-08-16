@@ -177,16 +177,3 @@ impl BlobRepo {
         }
     }
 }
-
-/// Compatibility trait for conversion between a facet-style repo (that
-/// happens to contain a BlobRepo) and the blob repo (for calling things that
-/// still require blobrepo).
-pub trait AsBlobRepo {
-    fn as_blob_repo(&self) -> &BlobRepo;
-}
-
-impl AsBlobRepo for BlobRepo {
-    fn as_blob_repo(&self) -> &BlobRepo {
-        self
-    }
-}

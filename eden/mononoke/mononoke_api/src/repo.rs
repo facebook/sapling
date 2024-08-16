@@ -17,7 +17,6 @@ use std::time::UNIX_EPOCH;
 use acl_regions::AclRegions;
 use anyhow::anyhow;
 use anyhow::Error;
-use blobrepo::AsBlobRepo;
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
@@ -241,12 +240,6 @@ pub struct Repo {
 
     #[facet]
     pub repo_stats_logger: RepoStatsLogger,
-}
-
-impl AsBlobRepo for Repo {
-    fn as_blob_repo(&self) -> &BlobRepo {
-        self.inner.as_blob_repo()
-    }
 }
 
 #[derive(Clone)]

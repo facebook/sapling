@@ -6,7 +6,6 @@
  */
 
 use acl_regions::AclRegions;
-use blobrepo::AsBlobRepo;
 use blobrepo::BlobRepo;
 use bonsai_git_mapping::BonsaiGitMapping;
 use bonsai_globalrev_mapping::BonsaiGlobalrevMapping;
@@ -99,10 +98,4 @@ pub struct InnerRepo {
 
     #[facet]
     pub git_push_redirect_config: dyn GitPushRedirectConfig,
-}
-
-impl AsBlobRepo for InnerRepo {
-    fn as_blob_repo(&self) -> &BlobRepo {
-        &self.blob_repo
-    }
 }

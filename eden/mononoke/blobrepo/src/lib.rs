@@ -9,6 +9,5 @@ mod repo;
 
 pub use filestore::StoreRequest;
 
-pub use crate::repo::AsBlobRepo;
 pub use crate::repo::BlobRepo;
 pub use crate::repo::BlobRepoInner;
