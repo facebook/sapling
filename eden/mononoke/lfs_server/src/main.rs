@@ -209,6 +209,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let tls_acceptor = args
         .tls_params
+        .clone()
         .map(|tls_params| {
             secure_utils::SslConfig::new(
                 tls_params.tls_ca,
@@ -300,6 +301,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 max_upload_size,
                 will_exit,
                 config_handle.clone(),
+                &args.tls_params,
             )?;
             let enforce_authentication = ctx.get_config().enforce_authentication();
 

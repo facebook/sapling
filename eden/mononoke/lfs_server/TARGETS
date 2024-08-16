@@ -31,6 +31,7 @@ rust_binary(
         "fbsource//third-party/rust:maplit",
         "fbsource//third-party/rust:mime",
         "fbsource//third-party/rust:once_cell",
+        "fbsource//third-party/rust:openssl",
         "fbsource//third-party/rust:pin-project",
         "fbsource//third-party/rust:rand",
         "fbsource//third-party/rust:regex",

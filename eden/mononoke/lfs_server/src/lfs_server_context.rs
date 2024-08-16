@@ -46,7 +46,11 @@ use lfs_protocol::RequestBatch;
 use lfs_protocol::RequestObject;
 use lfs_protocol::ResponseBatch;
 use metaconfig_types::RepoConfigRef;
+use mononoke_app::args::TLSArgs;
 use mononoke_types::ContentId;
+use openssl::ssl::SslConnector;
+use openssl::ssl::SslFiletype;
+use openssl::ssl::SslMethod;
 use repo_authorization::AuthorizationContext;
 use repo_permission_checker::RepoPermissionCheckerRef;
 use slog::Logger;
@@ -89,10 +93,23 @@ impl LfsServerContext {
         max_upload_size: Option<u64>,
         will_exit: Arc<AtomicBool>,
         config_handle: ConfigHandle<ServerConfig>,
+        tls_args: &Option<TLSArgs>,
     ) -> Result<Self, Error> {
-        let connector = HttpsConnector::new()
-            .map_err(Error::from)
-            .context(ErrorKind::HttpClientInitializationFailed)?;
+        let connector = match tls_args {
+            Some(tls_args) => {
+                let mut ssl_connector = SslConnector::builder(SslMethod::tls_client())?;
+                ssl_connector.set_ca_file(&tls_args.tls_ca)?;
+                ssl_connector.set_certificate_file(&tls_args.tls_certificate, SslFiletype::PEM)?;
+                ssl_connector.set_private_key_file(&tls_args.tls_private_key, SslFiletype::PEM)?;
+                let mut http_connector = HttpConnector::new();
+                http_connector.enforce_http(false);
+                HttpsConnector::with_connector(http_connector, ssl_connector)
+            }
+            None => HttpsConnector::new(),
+        }
+        .map_err(Error::from)
+        .context(ErrorKind::HttpClientInitializationFailed)?;
+
         let client = Client::builder().build(connector);
         let server_hostname =
             Arc::new(get_hostname().unwrap_or_else(|_| "UNKNOWN_HOSTNAME".to_string()));
