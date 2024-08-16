@@ -333,7 +333,7 @@ where
 
         if path == "/drop_bookmarks_cache" {
             for repo in self.acceptor().mononoke.repos() {
-                repo.blob_repo().bookmarks().drop_caches();
+                repo.bookmarks().drop_caches();
             }
 
             return Ok(ok);

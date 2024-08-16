@@ -17,7 +17,6 @@ use std::time::UNIX_EPOCH;
 use acl_regions::AclRegions;
 use anyhow::anyhow;
 use anyhow::Error;
-use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use blobstore_factory::MetadataSqlFactory;
@@ -395,9 +394,16 @@ pub enum XRepoLookupExactBehaviour {
 impl Repo {
     /// Construct a new Repo based on an existing one with a bubble opened.
     pub fn with_bubble(&self, bubble: Bubble) -> Self {
-        let blob_repo = self.inner.blob_repo.with_bubble(bubble);
+        let repo_blobstore = Arc::new(bubble.wrap_repo_blobstore(self.repo_blobstore().clone()));
+        let commit_graph = Arc::new(bubble.repo_commit_graph(self));
+        let commit_graph_writer = bubble.repo_commit_graph_writer(self);
+        let repo_derived_data = Arc::new(self.repo_derived_data().for_bubble(bubble));
+
         let inner = InnerRepo {
-            blob_repo,
+            repo_blobstore,
+            commit_graph,
+            commit_graph_writer,
+            repo_derived_data,
             ..self.inner.clone()
         };
         Self {
@@ -424,11 +430,6 @@ impl Repo {
     /// The underlying `InnerRepo`.
     pub fn inner_repo(&self) -> &InnerRepo {
         &self.inner
-    }
-
-    /// The underlying `BlobRepo`.
-    pub fn blob_repo(&self) -> &BlobRepo {
-        &self.inner.blob_repo
     }
 
     /// `LiveCommitSyncConfig` instance to query current state of sync configs.
@@ -730,11 +731,6 @@ impl RepoContext {
     /// The underlying `InnerRepo`.
     pub fn inner_repo(&self) -> &InnerRepo {
         self.repo.inner_repo()
-    }
-
-    /// The underlying `BlobRepo`.
-    pub fn blob_repo(&self) -> &BlobRepo {
-        self.repo.blob_repo()
     }
 
     /// `LiveCommitSyncConfig` instance to query current state of sync configs.

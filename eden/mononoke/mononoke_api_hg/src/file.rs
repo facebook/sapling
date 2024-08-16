@@ -40,7 +40,7 @@ use super::HgRepoContext;
 /// aware of the path to the file to which it refers.
 #[derive(Clone)]
 pub struct HgFileContext {
-    repo: HgRepoContext,
+    repo_ctx: HgRepoContext,
     envelope: HgFileEnvelope,
 }
 
@@ -50,25 +50,25 @@ impl HgFileContext {
     /// To construct an `HgFileContext` for a file that may not exist, use
     /// `new_check_exists`.
     pub async fn new(
-        repo: HgRepoContext,
+        repo_ctx: HgRepoContext,
         filenode_id: HgFileNodeId,
     ) -> Result<Self, MononokeError> {
         // Fetch and store Mononoke's internal representation of the metadata of this
         // file. The actual file contents are not fetched here.
-        let ctx = repo.ctx();
-        let blobstore = repo.blob_repo().repo_blobstore();
+        let ctx = repo_ctx.ctx();
+        let blobstore = repo_ctx.repo().repo_blobstore();
         let envelope = filenode_id.load(ctx, blobstore).await?;
-        Ok(Self { repo, envelope })
+        Ok(Self { repo_ctx, envelope })
     }
 
     pub async fn new_check_exists(
-        repo: HgRepoContext,
+        repo_ctx: HgRepoContext,
         filenode_id: HgFileNodeId,
     ) -> Result<Option<Self>, MononokeError> {
-        let ctx = repo.ctx();
-        let blobstore = repo.blob_repo().repo_blobstore();
+        let ctx = repo_ctx.ctx();
+        let blobstore = repo_ctx.repo().repo_blobstore();
         match filenode_id.load(ctx, blobstore).await {
-            Ok(envelope) => Ok(Some(Self { repo, envelope })),
+            Ok(envelope) => Ok(Some(Self { repo_ctx, envelope })),
             Err(LoadableError::Missing(_)) => Ok(None),
             Err(e) => Err(e.into()),
         }
@@ -86,12 +86,12 @@ impl HgFileContext {
         path: NonRootMPath,
         max_length: Option<u32>,
     ) -> impl TryStream<Ok = HgFileHistoryEntry, Error = MononokeError> {
-        let ctx = self.repo.ctx().clone();
-        let blob_repo = self.repo.blob_repo().clone();
+        let ctx = self.repo_ctx.ctx().clone();
+        let repo = self.repo_ctx.repo().clone();
         let filenode_id = self.node_id();
         get_file_history_maybe_incomplete(
             ctx,
-            blob_repo,
+            repo,
             filenode_id,
             path,
             max_length.map(|len| len as u64),
@@ -106,8 +106,8 @@ impl HgFileContext {
     pub async fn content_metadata(&self) -> Result<ContentMetadataV2, MononokeError> {
         let content_id = self.envelope.content_id();
         let fetch_key = filestore::FetchKey::Canonical(content_id);
-        let blobstore = self.repo.blob_repo().repo_blobstore();
-        filestore::get_metadata(blobstore, self.repo.ctx(), &fetch_key)
+        let blobstore = self.repo_ctx.repo().repo_blobstore();
+        filestore::get_metadata(blobstore, self.repo_ctx.ctx(), &fetch_key)
             .await?
             .ok_or_else(|| {
                 MononokeError::NotAvailable(format!(
@@ -171,15 +171,15 @@ impl HgDataContext for HgFileContext {
     /// should not assume that the data returned by this function only contains
     /// file content.
     async fn content(&self) -> Result<(Bytes, Metadata), MononokeError> {
-        let ctx = self.repo.ctx();
-        let blob_repo = self.repo.blob_repo();
+        let ctx = self.repo_ctx.ctx();
+        let repo = self.repo_ctx.repo();
         let filenode_id = self.node_id();
         let lfs_params = SessionLfsParams {
-            threshold: self.repo.config().lfs.threshold,
+            threshold: self.repo_ctx.config().lfs.threshold,
         };
 
         let (_size, content_fut) =
-            create_getpack_v2_blob(ctx, blob_repo, filenode_id, lfs_params, false).await?;
+            create_getpack_v2_blob(ctx, repo, filenode_id, lfs_params, false).await?;
 
         // TODO(kulshrax): Right now this buffers the entire file content in memory. It would
         // probably be better for this method to return a stream of the file content instead.

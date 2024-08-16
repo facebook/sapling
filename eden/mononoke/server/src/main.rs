@@ -127,13 +127,12 @@ impl MononokeServerProcess {
         if self.repos_mgr.repos().get_by_name(repo_name).is_none() {
             // The input repo is a deep-sharded repo, so it needs to be added now.
             let repo = self.repos_mgr.add_repo(repo_name).await?;
-            let blob_repo = repo.blob_repo().clone();
             let cache_warmup_params = repo.config().cache_warmup.clone();
             let ctx =
                 CoreContext::new_with_logger_and_scuba(self.fb, logger.clone(), scuba.clone());
             cache_warmup(
                 &ctx,
-                &blob_repo,
+                &repo,
                 cache_warmup_params,
                 CacheWarmupKind::MononokeServer,
             )
@@ -324,7 +323,6 @@ fn main(fb: FacebookInit) -> Result<()> {
             stream::iter(mononoke.repos())
                 .map(|repo| {
                     let repo_name = repo.name().to_string();
-                    let blob_repo = repo.blob_repo().clone();
                     let root_log = root_log.clone();
                     let cache_warmup_params = repo.config().cache_warmup.clone();
                     cloned!(scuba);
@@ -333,7 +331,7 @@ fn main(fb: FacebookInit) -> Result<()> {
                         let ctx = CoreContext::new_with_logger_and_scuba(fb, logger, scuba);
                         cache_warmup(
                             &ctx,
-                            &blob_repo,
+                            &repo,
                             cache_warmup_params,
                             CacheWarmupKind::MononokeServer,
                         )

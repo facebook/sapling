@@ -198,7 +198,7 @@ impl<'a> AddSyncTarget<'a> {
         let bookmark = BookmarkKey::new(bookmark_name).map_err(MegarepoError::request)?;
 
         let maybe_cs_id = repo
-            .blob_repo()
+            .repo()
             .bookmarks()
             .get(ctx.clone(), &bookmark)
             .map_err(MegarepoError::internal)

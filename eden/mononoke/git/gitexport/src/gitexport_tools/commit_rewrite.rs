@@ -123,7 +123,7 @@ pub async fn rewrite_partial_changesets(
         .map(|cs| {
             cloned!(source_repo_ctx, export_paths);
 
-            let blobstore = source_repo_ctx.blob_repo().repo_blobstore_arc();
+            let blobstore = source_repo_ctx.repo().repo_blobstore_arc();
             async move {
                 task::spawn(async move {
                     let ctx = source_repo_ctx.ctx();
@@ -299,7 +299,7 @@ async fn create_bonsai_for_new_repo<'a>(
         &changeset_ctx.message().await?
     );
 
-    let blobstore = source_repo_ctx.blob_repo().repo_blobstore_arc();
+    let blobstore = source_repo_ctx.repo().repo_blobstore_arc();
     let bcs: BonsaiChangeset = changeset_ctx
         .id()
         .load(source_repo_ctx.ctx(), &blobstore)

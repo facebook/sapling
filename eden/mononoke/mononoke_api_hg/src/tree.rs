@@ -35,7 +35,7 @@ use super::HgRepoContext;
 #[derive(Clone)]
 pub struct HgTreeContext {
     #[allow(dead_code)]
-    repo: HgRepoContext,
+    repo_ctx: HgRepoContext,
     envelope: HgManifestEnvelope,
 }
 
@@ -45,23 +45,23 @@ impl HgTreeContext {
     /// The tree node must exist in the repository. To construct an `HgTreeContext`
     /// for a tree node that may not exist, use `new_check_exists`.
     pub async fn new(
-        repo: HgRepoContext,
+        repo_ctx: HgRepoContext,
         manifest_id: HgManifestId,
     ) -> Result<Self, MononokeError> {
-        let ctx = repo.ctx();
-        let blobstore = repo.blob_repo().repo_blobstore();
+        let ctx = repo_ctx.ctx();
+        let blobstore = repo_ctx.repo().repo_blobstore();
         let envelope = fetch_manifest_envelope(ctx, blobstore, manifest_id).await?;
-        Ok(Self { repo, envelope })
+        Ok(Self { repo_ctx, envelope })
     }
 
     pub async fn new_check_exists(
-        repo: HgRepoContext,
+        repo_ctx: HgRepoContext,
         manifest_id: HgManifestId,
     ) -> Result<Option<Self>, MononokeError> {
-        let ctx = repo.ctx();
-        let blobstore = repo.blob_repo().repo_blobstore();
+        let ctx = repo_ctx.ctx();
+        let blobstore = repo_ctx.repo().repo_blobstore();
         let envelope = fetch_manifest_envelope_opt(ctx, blobstore, manifest_id).await?;
-        Ok(envelope.map(move |envelope| Self { repo, envelope }))
+        Ok(envelope.map(move |envelope| Self { repo_ctx, envelope }))
     }
 
     /// Get the content for this tree manifest node in the format expected
@@ -86,25 +86,25 @@ impl HgTreeContext {
 #[derive(Clone)]
 pub struct HgAugmentedTreeContext {
     #[allow(dead_code)]
-    repo: HgRepoContext,
+    repo_ctx: HgRepoContext,
     preloaded_manifest: HgPreloadedAugmentedManifest,
 }
 
 impl HgAugmentedTreeContext {
     /// Create a new `HgAugmentedTreeContext`, representing a single augmented tree manifest node.
     pub async fn new_check_exists(
-        repo: HgRepoContext,
+        repo_ctx: HgRepoContext,
         augmented_manifest_id: HgAugmentedManifestId,
     ) -> Result<Option<Self>, MononokeError> {
-        let ctx = repo.ctx();
-        let blobstore = repo.blob_repo().repo_blobstore();
+        let ctx = repo_ctx.ctx();
+        let blobstore = repo_ctx.repo().repo_blobstore();
         let envelope =
             fetch_augmented_manifest_envelope_opt(ctx, blobstore, augmented_manifest_id).await?;
         if let Some(envelope) = envelope {
             let preloaded_manifest =
                 HgPreloadedAugmentedManifest::load_from_sharded(envelope, ctx, blobstore).await?;
             Ok(Some(Self {
-                repo,
+                repo_ctx,
                 preloaded_manifest,
             }))
         } else {
@@ -262,9 +262,7 @@ mod tests {
         // Get the HgManifestId of the root tree manifest for a commit in this repo.
         // (Commit hash was found by inspecting the source of the `fixtures` crate.)
         let hg_cs_id = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?;
-        let hg_cs = hg_cs_id
-            .load(&ctx, rctx.blob_repo().repo_blobstore())
-            .await?;
+        let hg_cs = hg_cs_id.load(&ctx, rctx.repo().repo_blobstore()).await?;
         let manifest_id = hg_cs.manifestid();
 
         let hg = rctx.hg();

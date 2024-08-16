@@ -55,22 +55,22 @@ impl From<bool> for Lookup {
 }
 
 async fn maybe_copy_file(
-    repo: HgRepoContext,
+    hg_repo_ctx: HgRepoContext,
     id: AnyFileContentId,
     bubble_id: Option<BubbleId>,
     copy_from_bubble_id: BubbleId,
 ) -> Result<Lookup> {
     Ok(if let Some(bubble_id) = bubble_id {
-        let blob_repo = repo.repo_ctx().blob_repo();
-        match repo
+        let repo = hg_repo_ctx.repo_ctx().repo();
+        match hg_repo_ctx
             .open_bubble(copy_from_bubble_id)
             .await?
             .copy_file_to_bubble(
-                repo.ctx(),
-                blob_repo.repo_identity().id(),
-                blob_repo.repo_blobstore().clone(),
+                hg_repo_ctx.ctx(),
+                repo.repo_identity().id(),
+                repo.repo_blobstore().clone(),
                 bubble_id,
-                *blob_repo.filestore_config(),
+                *repo.filestore_config(),
                 id.into(),
             )
             .await?

@@ -177,7 +177,7 @@ pub trait TestRepoFixture {
             .build()
             .await
             .unwrap();
-        Self::init_repo(fb, &repo.blob_repo).await.unwrap();
+        Self::init_repo(fb, &repo).await.unwrap();
         repo
     }
 }

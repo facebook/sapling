@@ -85,7 +85,7 @@ impl RepoChangesetsPushrebaseHistory {
         let RepoChangeset(repo_name, bcs_id) = &self.head;
         let repo = self.repo(repo_name).await?;
         let is_public = repo
-            .blob_repo()
+            .repo()
             .phases()
             .get_public(&self.ctx, vec![*bcs_id], true /* ephemeral_derive */)
             .await
@@ -105,7 +105,7 @@ impl RepoChangesetsPushrebaseHistory {
         let RepoChangeset(repo_name, bcs_id) = self.last();
         let repo = self.repo(&repo_name).await?;
         let bcs_ids = repo
-            .blob_repo()
+            .repo()
             .pushrebase_mutation_mapping()
             .get_prepushrebase_ids(&self.ctx, bcs_id)
             .await

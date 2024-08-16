@@ -53,21 +53,21 @@ async fn test_add_sync_target_simple(fb: FacebookInit) -> Result<(), Error> {
         .build(&mut test.configs_storage);
 
     println!("Create initial source commits and bookmarks");
-    let first_source_cs_id = CreateCommitContext::new_root(&ctx, &test.blobrepo)
+    let first_source_cs_id = CreateCommitContext::new_root(&ctx, &test.repo)
         .add_file("first", "first")
         .commit()
         .await?;
 
-    bookmark(&ctx, &test.blobrepo, first_source_name.to_string())
+    bookmark(&ctx, &test.repo, first_source_name.to_string())
         .set_to(first_source_cs_id)
         .await?;
 
-    let second_source_cs_id = CreateCommitContext::new_root(&ctx, &test.blobrepo)
+    let second_source_cs_id = CreateCommitContext::new_root(&ctx, &test.repo)
         .add_file("second", "second")
         .commit()
         .await?;
 
-    bookmark(&ctx, &test.blobrepo, second_source_name.to_string())
+    bookmark(&ctx, &test.repo, second_source_name.to_string())
         .set_to(second_source_cs_id)
         .await?;
 
@@ -96,11 +96,11 @@ async fn test_add_sync_target_simple(fb: FacebookInit) -> Result<(), Error> {
         )
         .await?;
 
-    let target_cs_id = resolve_cs_id(&ctx, &test.blobrepo, "target").await?;
-    let mut wc = list_working_copy_utf8(&ctx, &test.blobrepo, target_cs_id).await?;
+    let target_cs_id = resolve_cs_id(&ctx, &test.repo, "target").await?;
+    let mut wc = list_working_copy_utf8(&ctx, &test.repo, target_cs_id).await?;
 
     let state =
-        CommitRemappingState::read_state_from_commit(&ctx, &test.blobrepo, target_cs_id).await?;
+        CommitRemappingState::read_state_from_commit(&ctx, &test.repo, target_cs_id).await?;
     assert_eq!(
         state.get_latest_synced_changeset(&first_source_name),
         Some(&first_source_cs_id),
@@ -126,12 +126,12 @@ async fn test_add_sync_target_simple(fb: FacebookInit) -> Result<(), Error> {
     );
 
     // Sync a few changesets on top of target
-    let cs_id = CreateCommitContext::new(&ctx, &test.blobrepo, vec![first_source_cs_id])
+    let cs_id = CreateCommitContext::new(&ctx, &test.repo, vec![first_source_cs_id])
         .add_file("first", "first_updated")
         .commit()
         .await?;
 
-    bookmark(&ctx, &test.blobrepo, first_source_name.to_string())
+    bookmark(&ctx, &test.repo, first_source_name.to_string())
         .set_to(cs_id)
         .await?;
 
@@ -146,8 +146,8 @@ async fn test_add_sync_target_simple(fb: FacebookInit) -> Result<(), Error> {
         .sync(&ctx, cs_id, &first_source_name, &target, target_cs_id)
         .await?;
 
-    let target_cs_id = resolve_cs_id(&ctx, &test.blobrepo, "target").await?;
-    let mut wc = list_working_copy_utf8(&ctx, &test.blobrepo, target_cs_id).await?;
+    let target_cs_id = resolve_cs_id(&ctx, &test.repo, "target").await?;
+    let mut wc = list_working_copy_utf8(&ctx, &test.repo, target_cs_id).await?;
     // Remove file with commit remapping state because it's never present in source
     assert!(
         wc.remove(&NonRootMPath::new(REMAPPING_STATE_FILE)?)
@@ -186,21 +186,21 @@ async fn test_add_sync_target_with_linkfiles(fb: FacebookInit) -> Result<(), Err
         .build(&mut test.configs_storage);
 
     println!("Create initial source commits and bookmarks");
-    let first_source_cs_id = CreateCommitContext::new_root(&ctx, &test.blobrepo)
+    let first_source_cs_id = CreateCommitContext::new_root(&ctx, &test.repo)
         .add_file("first", "first")
         .commit()
         .await?;
 
-    bookmark(&ctx, &test.blobrepo, first_source_name.to_string())
+    bookmark(&ctx, &test.repo, first_source_name.to_string())
         .set_to(first_source_cs_id)
         .await?;
 
-    let second_source_cs_id = CreateCommitContext::new_root(&ctx, &test.blobrepo)
+    let second_source_cs_id = CreateCommitContext::new_root(&ctx, &test.repo)
         .add_file("second", "second")
         .commit()
         .await?;
 
-    bookmark(&ctx, &test.blobrepo, second_source_name.to_string())
+    bookmark(&ctx, &test.repo, second_source_name.to_string())
         .set_to(second_source_cs_id)
         .await?;
 
@@ -229,8 +229,8 @@ async fn test_add_sync_target_with_linkfiles(fb: FacebookInit) -> Result<(), Err
         )
         .await?;
 
-    let target_cs_id = resolve_cs_id(&ctx, &test.blobrepo, "target").await?;
-    let mut wc = list_working_copy_utf8_with_types(&ctx, &test.blobrepo, target_cs_id).await?;
+    let target_cs_id = resolve_cs_id(&ctx, &test.repo, "target").await?;
+    let mut wc = list_working_copy_utf8_with_types(&ctx, &test.repo, target_cs_id).await?;
 
     // Remove file with commit remapping state because it's never present in source
     assert!(
@@ -273,21 +273,21 @@ async fn test_add_sync_target_invalid_same_prefix(fb: FacebookInit) -> Result<()
         .build(&mut test.configs_storage);
 
     println!("Create initial source commits and bookmarks");
-    let first_source_cs_id = CreateCommitContext::new_root(&ctx, &test.blobrepo)
+    let first_source_cs_id = CreateCommitContext::new_root(&ctx, &test.repo)
         .add_file("file", "content")
         .commit()
         .await?;
 
-    bookmark(&ctx, &test.blobrepo, first_source_name.to_string())
+    bookmark(&ctx, &test.repo, first_source_name.to_string())
         .set_to(first_source_cs_id)
         .await?;
 
-    let second_source_cs_id = CreateCommitContext::new_root(&ctx, &test.blobrepo)
+    let second_source_cs_id = CreateCommitContext::new_root(&ctx, &test.repo)
         .add_file("file", "content")
         .commit()
         .await?;
 
-    bookmark(&ctx, &test.blobrepo, second_source_name.to_string())
+    bookmark(&ctx, &test.repo, second_source_name.to_string())
         .set_to(second_source_cs_id)
         .await?;
 
@@ -340,21 +340,21 @@ async fn test_add_sync_target_same_file_different_prefix(fb: FacebookInit) -> Re
         .build(&mut test.configs_storage);
 
     println!("Create initial source commits and bookmarks");
-    let first_source_cs_id = CreateCommitContext::new_root(&ctx, &test.blobrepo)
+    let first_source_cs_id = CreateCommitContext::new_root(&ctx, &test.repo)
         .add_file("file", "file")
         .commit()
         .await?;
 
-    bookmark(&ctx, &test.blobrepo, first_source_name.to_string())
+    bookmark(&ctx, &test.repo, first_source_name.to_string())
         .set_to(first_source_cs_id)
         .await?;
 
-    let second_source_cs_id = CreateCommitContext::new_root(&ctx, &test.blobrepo)
+    let second_source_cs_id = CreateCommitContext::new_root(&ctx, &test.repo)
         .add_file("file", "file")
         .commit()
         .await?;
 
-    bookmark(&ctx, &test.blobrepo, second_source_name.to_string())
+    bookmark(&ctx, &test.repo, second_source_name.to_string())
         .set_to(second_source_cs_id)
         .await?;
 
@@ -383,11 +383,11 @@ async fn test_add_sync_target_same_file_different_prefix(fb: FacebookInit) -> Re
         )
         .await?;
 
-    let target_cs_id = resolve_cs_id(&ctx, &test.blobrepo, "target").await?;
-    let mut wc = list_working_copy_utf8(&ctx, &test.blobrepo, target_cs_id).await?;
+    let target_cs_id = resolve_cs_id(&ctx, &test.repo, "target").await?;
+    let mut wc = list_working_copy_utf8(&ctx, &test.repo, target_cs_id).await?;
 
     let state =
-        CommitRemappingState::read_state_from_commit(&ctx, &test.blobrepo, target_cs_id).await?;
+        CommitRemappingState::read_state_from_commit(&ctx, &test.repo, target_cs_id).await?;
     assert_eq!(
         state.get_latest_synced_changeset(&first_source_name),
         Some(&first_source_cs_id),
@@ -436,21 +436,21 @@ async fn test_add_sync_target_invalid_linkfiles(fb: FacebookInit) -> Result<(), 
         .build(&mut test.configs_storage);
 
     println!("Create initial source commits and bookmarks");
-    let first_source_cs_id = CreateCommitContext::new_root(&ctx, &test.blobrepo)
+    let first_source_cs_id = CreateCommitContext::new_root(&ctx, &test.repo)
         .add_file("first", "first")
         .commit()
         .await?;
 
-    bookmark(&ctx, &test.blobrepo, first_source_name.to_string())
+    bookmark(&ctx, &test.repo, first_source_name.to_string())
         .set_to(first_source_cs_id)
         .await?;
 
-    let second_source_cs_id = CreateCommitContext::new_root(&ctx, &test.blobrepo)
+    let second_source_cs_id = CreateCommitContext::new_root(&ctx, &test.repo)
         .add_file("second", "second")
         .commit()
         .await?;
 
-    bookmark(&ctx, &test.blobrepo, second_source_name.to_string())
+    bookmark(&ctx, &test.repo, second_source_name.to_string())
         .set_to(second_source_cs_id)
         .await?;
 
@@ -491,16 +491,15 @@ async fn test_add_sync_target_invalid_hash_to_merge(fb: FacebookInit) -> Result<
     let target: Target = test.target("target".to_string());
 
     println!("Create initial source commits and bookmarks");
-    let first_source_cs_id = CreateCommitContext::new_root(&ctx, &test.blobrepo)
+    let first_source_cs_id = CreateCommitContext::new_root(&ctx, &test.repo)
         .add_file("first", "first")
         .commit()
         .await?;
 
-    let second_source_cs_id =
-        CreateCommitContext::new(&ctx, &test.blobrepo, vec![first_source_cs_id])
-            .add_file("second", "second")
-            .commit()
-            .await?;
+    let second_source_cs_id = CreateCommitContext::new(&ctx, &test.repo, vec![first_source_cs_id])
+        .add_file("second", "second")
+        .commit()
+        .await?;
 
     let first_source_name = SourceName::new("source_1");
     let version = "version_1".to_string();
@@ -565,30 +564,30 @@ async fn test_add_sync_target_merge_three_sources(fb: FacebookInit) -> Result<()
         .build(&mut test.configs_storage);
 
     println!("Create initial source commits and bookmarks");
-    let first_source_cs_id = CreateCommitContext::new_root(&ctx, &test.blobrepo)
+    let first_source_cs_id = CreateCommitContext::new_root(&ctx, &test.repo)
         .add_file("first", "first")
         .commit()
         .await?;
 
-    bookmark(&ctx, &test.blobrepo, first_source_name.to_string())
+    bookmark(&ctx, &test.repo, first_source_name.to_string())
         .set_to(first_source_cs_id)
         .await?;
 
-    let second_source_cs_id = CreateCommitContext::new_root(&ctx, &test.blobrepo)
+    let second_source_cs_id = CreateCommitContext::new_root(&ctx, &test.repo)
         .add_file("second", "second")
         .commit()
         .await?;
 
-    bookmark(&ctx, &test.blobrepo, second_source_name.to_string())
+    bookmark(&ctx, &test.repo, second_source_name.to_string())
         .set_to(second_source_cs_id)
         .await?;
 
-    let third_source_cs_id = CreateCommitContext::new_root(&ctx, &test.blobrepo)
+    let third_source_cs_id = CreateCommitContext::new_root(&ctx, &test.repo)
         .add_file("third", "third")
         .commit()
         .await?;
 
-    bookmark(&ctx, &test.blobrepo, third_source_name.to_string())
+    bookmark(&ctx, &test.repo, third_source_name.to_string())
         .set_to(third_source_cs_id)
         .await?;
 
@@ -618,8 +617,8 @@ async fn test_add_sync_target_merge_three_sources(fb: FacebookInit) -> Result<()
         )
         .await?;
 
-    let target_cs_id = resolve_cs_id(&ctx, &test.blobrepo, "target").await?;
-    let mut wc = list_working_copy_utf8(&ctx, &test.blobrepo, target_cs_id).await?;
+    let target_cs_id = resolve_cs_id(&ctx, &test.repo, "target").await?;
+    let mut wc = list_working_copy_utf8(&ctx, &test.repo, target_cs_id).await?;
     // Remove file with commit remapping state because it's never present in source
     assert!(
         wc.remove(&NonRootMPath::new(REMAPPING_STATE_FILE)?)
@@ -642,22 +641,16 @@ async fn test_add_sync_target_merge_three_sources(fb: FacebookInit) -> Result<()
     //     o   M
     //    / \
 
-    let target_cs = target_cs_id
-        .load(&ctx, test.blobrepo.repo_blobstore())
-        .await?;
+    let target_cs = target_cs_id.load(&ctx, test.repo.repo_blobstore()).await?;
     assert!(target_cs.is_merge());
 
     let parents = target_cs.parents().collect::<Vec<_>>();
     assert_eq!(parents.len(), 2);
 
-    let first_merge = parents[0]
-        .load(&ctx, test.blobrepo.repo_blobstore())
-        .await?;
+    let first_merge = parents[0].load(&ctx, test.repo.repo_blobstore()).await?;
     assert!(first_merge.is_merge());
 
-    let move_commit = parents[1]
-        .load(&ctx, test.blobrepo.repo_blobstore())
-        .await?;
+    let move_commit = parents[1].load(&ctx, test.repo.repo_blobstore()).await?;
     assert!(!move_commit.is_merge());
 
     Ok(())
@@ -682,21 +675,21 @@ async fn test_add_sync_target_repeat_same_request(fb: FacebookInit) -> Result<()
         .build(&mut test.configs_storage);
 
     println!("Create initial source commits and bookmarks");
-    let first_source_cs_id = CreateCommitContext::new_root(&ctx, &test.blobrepo)
+    let first_source_cs_id = CreateCommitContext::new_root(&ctx, &test.repo)
         .add_file("first", "first")
         .commit()
         .await?;
 
-    bookmark(&ctx, &test.blobrepo, first_source_name.to_string())
+    bookmark(&ctx, &test.repo, first_source_name.to_string())
         .set_to(first_source_cs_id)
         .await?;
 
-    let second_source_cs_id = CreateCommitContext::new_root(&ctx, &test.blobrepo)
+    let second_source_cs_id = CreateCommitContext::new_root(&ctx, &test.repo)
         .add_file("second", "second")
         .commit()
         .await?;
 
-    bookmark(&ctx, &test.blobrepo, second_source_name.to_string())
+    bookmark(&ctx, &test.repo, second_source_name.to_string())
         .set_to(second_source_cs_id)
         .await?;
 

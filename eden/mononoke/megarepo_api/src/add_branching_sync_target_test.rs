@@ -40,12 +40,12 @@ async fn test_add_branching_sync_target_success(fb: FacebookInit) -> Result<(), 
         .build(&mut test.configs_storage);
 
     println!("Create initial source commits and bookmarks");
-    let first_source_cs_id = CreateCommitContext::new_root(&ctx, &test.blobrepo)
+    let first_source_cs_id = CreateCommitContext::new_root(&ctx, &test.repo)
         .add_file("first", "first")
         .commit()
         .await?;
 
-    bookmark(&ctx, &test.blobrepo, first_source_name.to_string())
+    bookmark(&ctx, &test.repo, first_source_name.to_string())
         .set_to(first_source_cs_id)
         .await?;
 
@@ -73,7 +73,7 @@ async fn test_add_branching_sync_target_success(fb: FacebookInit) -> Result<(), 
         )
         .await?;
 
-    let target_cs_id = resolve_cs_id(&ctx, &test.blobrepo, "target").await?;
+    let target_cs_id = resolve_cs_id(&ctx, &test.repo, "target").await?;
 
     println!("Create new release branch");
     let new_target = test.target("release".to_string());
@@ -84,10 +84,7 @@ async fn test_add_branching_sync_target_success(fb: FacebookInit) -> Result<(), 
     let new_cs_id = add_branching_sync_target
         .run(&ctx, new_config, target_cs_id)
         .await?;
-    assert_eq!(
-        new_cs_id,
-        resolve_cs_id(&ctx, &test.blobrepo, "release").await?
-    );
+    assert_eq!(new_cs_id, resolve_cs_id(&ctx, &test.repo, "release").await?);
 
     Ok(())
 }
@@ -99,7 +96,7 @@ async fn test_add_branching_sync_target_no_source(fb: FacebookInit) -> Result<()
     let target: Target = test.target("target".to_string());
     let configs_storage: Arc<dyn MononokeMegarepoConfigs> = Arc::new(test.configs_storage.clone());
 
-    let target_cs_id = CreateCommitContext::new_root(&ctx, &test.blobrepo)
+    let target_cs_id = CreateCommitContext::new_root(&ctx, &test.repo)
         .add_file("first", "first")
         .commit()
         .await?;
@@ -132,12 +129,12 @@ async fn test_add_branching_sync_target_wrong_branch(fb: FacebookInit) -> Result
         .build(&mut test.configs_storage);
 
     println!("Create initial source commits and bookmarks");
-    let first_source_cs_id = CreateCommitContext::new_root(&ctx, &test.blobrepo)
+    let first_source_cs_id = CreateCommitContext::new_root(&ctx, &test.repo)
         .add_file("first", "first")
         .commit()
         .await?;
 
-    bookmark(&ctx, &test.blobrepo, first_source_name.to_string())
+    bookmark(&ctx, &test.repo, first_source_name.to_string())
         .set_to(first_source_cs_id)
         .await?;
 
@@ -175,12 +172,12 @@ async fn test_add_branching_sync_target_wrong_branch(fb: FacebookInit) -> Result
         .build(&mut test.configs_storage);
 
     println!("Create alternate source commits and bookmarks");
-    let second_source_cs_id = CreateCommitContext::new_root(&ctx, &test.blobrepo)
+    let second_source_cs_id = CreateCommitContext::new_root(&ctx, &test.repo)
         .add_file("third", "third")
         .commit()
         .await?;
 
-    bookmark(&ctx, &test.blobrepo, second_source_name.to_string())
+    bookmark(&ctx, &test.repo, second_source_name.to_string())
         .set_to(second_source_cs_id)
         .await?;
 
@@ -213,7 +210,7 @@ async fn test_add_branching_sync_target_wrong_branch(fb: FacebookInit) -> Result
         )
         .await?;
 
-    let target_cs_id = resolve_cs_id(&ctx, &test.blobrepo, "alt_target").await?;
+    let target_cs_id = resolve_cs_id(&ctx, &test.repo, "alt_target").await?;
 
     println!("Create new release branch against alt_target's unification commit");
     let new_target = test.target("release".to_string());

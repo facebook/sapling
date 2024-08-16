@@ -6,7 +6,6 @@
  */
 
 use acl_regions::AclRegions;
-use blobrepo::BlobRepo;
 use bonsai_git_mapping::BonsaiGitMapping;
 use bonsai_globalrev_mapping::BonsaiGlobalrevMapping;
 use bonsai_hg_mapping::BonsaiHgMapping;
@@ -45,32 +44,74 @@ use streaming_clone::StreamingClone;
 #[facet::container]
 #[derive(Clone)]
 pub struct InnerRepo {
-    #[delegate(
-        FilestoreConfig,
-        RepoBlobstore,
-        RepoBookmarkAttrs,
-        RepoDerivedData,
-        RepoIdentity,
-        dyn BonsaiGitMapping,
-        dyn BonsaiTagMapping,
-        dyn BonsaiGlobalrevMapping,
-        dyn BonsaiHgMapping,
-        dyn BonsaiSvnrevMapping,
-        dyn BookmarkUpdateLog,
-        dyn Bookmarks,
-        dyn Filenodes,
-        dyn Phases,
-        dyn PushrebaseMutationMapping,
-        dyn HgMutationStore,
-        dyn MutableCounters,
-        dyn RepoPermissionChecker,
-        dyn RepoLock,
-        CommitGraph,
-        dyn CommitGraphWriter,
-        dyn GitSymbolicRefs,
-        CommitCloud
-    )]
-    pub blob_repo: BlobRepo,
+    #[facet]
+    pub filestore_config: FilestoreConfig,
+
+    #[facet]
+    pub repo_blobstore: RepoBlobstore,
+
+    #[facet]
+    pub repo_bookmark_attrs: RepoBookmarkAttrs,
+
+    #[facet]
+    pub repo_derived_data: RepoDerivedData,
+
+    #[facet]
+    pub repo_identity: RepoIdentity,
+
+    #[facet]
+    pub bonsai_git_mapping: dyn BonsaiGitMapping,
+
+    #[facet]
+    pub bonsai_tag_mapping: dyn BonsaiTagMapping,
+
+    #[facet]
+    pub bonsai_globalrev_mapping: dyn BonsaiGlobalrevMapping,
+
+    #[facet]
+    pub bonsai_hg_mapping: dyn BonsaiHgMapping,
+
+    #[facet]
+    pub bonsai_svnrev_mapping: dyn BonsaiSvnrevMapping,
+
+    #[facet]
+    pub bookmark_update_log: dyn BookmarkUpdateLog,
+
+    #[facet]
+    pub bookmarks: dyn Bookmarks,
+
+    #[facet]
+    pub filenodes: dyn Filenodes,
+
+    #[facet]
+    pub phases: dyn Phases,
+
+    #[facet]
+    pub pushrebase_mutation_mapping: dyn PushrebaseMutationMapping,
+
+    #[facet]
+    pub hg_mutation_store: dyn HgMutationStore,
+
+    #[facet]
+    pub mutable_counters: dyn MutableCounters,
+
+    #[facet]
+    pub repo_permission_checker: dyn RepoPermissionChecker,
+
+    #[facet]
+    pub repo_lock: dyn RepoLock,
+
+    #[facet]
+    pub commit_graph: CommitGraph,
+
+    #[facet]
+    pub commit_graph_writer: dyn CommitGraphWriter,
+
+    #[facet]
+    pub git_symbolic_refs: dyn GitSymbolicRefs,
+
+    #[facet]
+    pub commit_cloud: CommitCloud,
 
     #[facet]
     pub repo_config: RepoConfig,

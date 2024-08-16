@@ -846,18 +846,39 @@ mod test {
 
     use anyhow::bail;
     use blobstore::Loadable;
+    use bonsai_hg_mapping::BonsaiHgMapping;
+    use bookmarks::Bookmarks;
+    use commit_graph::CommitGraph;
+    use commit_graph::CommitGraphWriter;
     use fbinit::FacebookInit;
+    use filestore::FilestoreConfig;
     use maplit::btreemap;
     use maplit::hashmap;
     use maplit::hashset;
     use mononoke_types::ContentId;
     use mononoke_types::FileType;
     use mononoke_types::GitLfs;
+    use repo_blobstore::RepoBlobstore;
+    use repo_derived_data::RepoDerivedData;
+    use repo_identity::RepoIdentity;
     use test_repo_factory::TestRepoFactory;
     use tests_utils::list_working_copy_utf8;
     use tests_utils::CreateCommitContext;
 
     use super::*;
+
+    #[facet::container]
+    #[derive(Clone)]
+    pub struct Repo(
+        RepoIdentity,
+        RepoBlobstore,
+        dyn Bookmarks,
+        dyn BonsaiHgMapping,
+        RepoDerivedData,
+        CommitGraph,
+        dyn CommitGraphWriter,
+        FilestoreConfig,
+    );
 
     #[test]
     fn test_multi_mover_simple() -> Result<(), Error> {
@@ -996,7 +1017,7 @@ mod test {
 
     #[fbinit::test]
     async fn test_rewrite_commit_marks_lossy_conversions(fb: FacebookInit) -> Result<(), Error> {
-        let repo: blobrepo::BlobRepo = TestRepoFactory::new(fb)?.build().await?;
+        let repo: Repo = TestRepoFactory::new(fb)?.build().await?;
         let ctx = CoreContext::test_mock(fb);
         let mapping_rules = SourceMappingRules {
             default_prefix: "".to_string(), // Rewrite to root
@@ -1130,7 +1151,7 @@ mod test {
     async fn test_rewrite_commit_marks_lossy_conversions_with_implicit_deletes(
         fb: FacebookInit,
     ) -> Result<(), Error> {
-        let repo: blobrepo::BlobRepo = TestRepoFactory::new(fb)?.build().await?;
+        let repo: Repo = TestRepoFactory::new(fb)?.build().await?;
         let ctx = CoreContext::test_mock(fb);
         // This commit is not lossy because all paths will be mapped somewhere.
         let first = CreateCommitContext::new_root(&ctx, &repo)
@@ -1219,7 +1240,7 @@ mod test {
 
     #[fbinit::test]
     async fn test_rewrite_commit(fb: FacebookInit) -> Result<(), Error> {
-        let repo: blobrepo::BlobRepo = TestRepoFactory::new(fb)?.build().await?;
+        let repo: Repo = TestRepoFactory::new(fb)?.build().await?;
         let ctx = CoreContext::test_mock(fb);
         let first = CreateCommitContext::new_root(&ctx, &repo)
             .add_file("path", "path")
@@ -1371,7 +1392,7 @@ mod test {
         file_change_filters: Vec<FileChangeFilter<'_>>,
         mut expected_affected_paths: HashMap<&str, HashSet<NonRootMPath>>,
     ) -> Result<(), Error> {
-        let repo: blobrepo::BlobRepo = TestRepoFactory::new(fb)?.build().await?;
+        let repo: Repo = TestRepoFactory::new(fb)?.build().await?;
 
         let ctx = CoreContext::test_mock(fb);
         // This commit is not lossy because all paths will be mapped somewhere.
@@ -1404,7 +1425,7 @@ mod test {
 
         async fn verify_affected_paths(
             ctx: &CoreContext,
-            repo: &blobrepo::BlobRepo,
+            repo: &Repo,
             rewritten_bcs_id: &ChangesetId,
             expected_affected_paths: HashSet<NonRootMPath>,
         ) -> Result<()> {
@@ -1664,7 +1685,7 @@ mod test {
 
     async fn test_rewrite_commit_cs_id<'a>(
         ctx: &'a CoreContext,
-        repo: &'a impl Repo,
+        repo: &'a Repo,
         bcs_id: ChangesetId,
         parents: HashMap<ChangesetId, ChangesetId>,
         multi_mover: MultiMover<'a>,
@@ -1684,7 +1705,7 @@ mod test {
 
     async fn test_rewrite_commit_cs_id_with_file_change_filters<'a>(
         ctx: &'a CoreContext,
-        repo: &'a impl Repo,
+        repo: &'a Repo,
         bcs_id: ChangesetId,
         parents: HashMap<ChangesetId, ChangesetId>,
         multi_mover: MultiMover<'a>,
@@ -1716,7 +1737,7 @@ mod test {
 
     async fn assert_changeset_is_marked_lossy<'a>(
         ctx: &'a CoreContext,
-        repo: &'a impl Repo,
+        repo: &'a Repo,
         bcs_id: ChangesetId,
     ) -> Result<(), Error> {
         let bcs = bcs_id.load(ctx, &repo.repo_blobstore()).await?;
@@ -1731,7 +1752,7 @@ mod test {
 
     async fn assert_changeset_is_not_marked_lossy<'a>(
         ctx: &'a CoreContext,
-        repo: &'a impl Repo,
+        repo: &'a Repo,
         bcs_id: ChangesetId,
     ) -> Result<(), Error> {
         let bcs = bcs_id.load(ctx, &repo.repo_blobstore()).await?;
@@ -1762,7 +1783,7 @@ mod test {
 
     #[fbinit::test]
     async fn test_rewrite_lfs_file(fb: FacebookInit) -> Result<(), Error> {
-        let repo: blobrepo::BlobRepo = TestRepoFactory::new(fb)?.build().await?;
+        let repo: Repo = TestRepoFactory::new(fb)?.build().await?;
         let ctx = CoreContext::test_mock(fb);
         let mapping_rules = SourceMappingRules {
             default_prefix: "small".to_string(),

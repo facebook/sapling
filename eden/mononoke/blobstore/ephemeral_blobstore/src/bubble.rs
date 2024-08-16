@@ -451,7 +451,7 @@ impl Bubble {
         )
     }
 
-    fn commit_graph_writer(
+    fn commit_graph_writer_with_blobstore(
         &self,
         repo_id: RepositoryId,
         repo_blobstore: RepoBlobstore,
@@ -468,6 +468,27 @@ impl Bubble {
                 ))
             }),
         ))
+    }
+
+    pub fn commit_graph_writer(
+        &self,
+        repo_id: RepositoryId,
+        repo_blobstore: RepoBlobstore,
+        commit_graph: &CommitGraph,
+    ) -> ArcCommitGraphWriter {
+        let repo_blobstore = self.wrap_repo_blobstore(repo_blobstore);
+        self.commit_graph_writer_with_blobstore(repo_id, repo_blobstore, commit_graph)
+    }
+
+    pub fn repo_commit_graph_writer(
+        &self,
+        repo: &(impl CommitGraphRef + RepoIdentityRef + RepoBlobstoreRef),
+    ) -> ArcCommitGraphWriter {
+        self.commit_graph_writer(
+            repo.repo_identity().id(),
+            repo.repo_blobstore().clone(),
+            repo.commit_graph(),
+        )
     }
 
     pub fn repo_view(
@@ -490,7 +511,7 @@ impl Bubble {
                 repo_blobstore.clone(),
                 container.commit_graph(),
             )),
-            commit_graph_writer: self.commit_graph_writer(
+            commit_graph_writer: self.commit_graph_writer_with_blobstore(
                 repo_identity.id(),
                 repo_blobstore,
                 container.commit_graph(),
