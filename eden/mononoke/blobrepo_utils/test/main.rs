@@ -13,25 +13,86 @@ mod test {
         ($test_name:ident, $repo:ident) => {
             mod $test_name {
                 use std::collections::HashSet;
+                use std::sync::Arc;
 
                 use anyhow::Result;
                 use blobrepo_hg::BlobRepoHg;
+                use blobrepo_override::DangerousOverride;
                 use blobrepo_utils::BonsaiMFVerify;
                 use blobrepo_utils::BonsaiMFVerifyResult;
+                use blobstore::Blobstore;
+                use bonsai_hg_mapping::BonsaiHgMapping;
+                use bookmarks::Bookmarks;
+                use commit_graph::CommitGraph;
+                use commit_graph::CommitGraphWriter;
                 use context::CoreContext;
                 use fbinit::FacebookInit;
+                use filestore::FilestoreConfig;
                 use fixtures::TestRepoFixture;
                 use futures::stream::FuturesOrdered;
                 use futures::TryFutureExt;
                 use futures::TryStreamExt;
+                use repo_blobstore::RepoBlobstore;
+                use repo_derived_data::RepoDerivedData;
+                use repo_identity::RepoIdentity;
 
                 use crate::$repo;
+
+                #[facet::container]
+                #[derive(Clone)]
+                struct TestRepo {
+                    #[facet]
+                    bonsai_hg_mapping: dyn BonsaiHgMapping,
+
+                    #[facet]
+                    bookmarks: dyn Bookmarks,
+
+                    #[facet]
+                    commit_graph: CommitGraph,
+
+                    #[facet]
+                    commit_graph_writer: dyn CommitGraphWriter,
+
+                    #[facet]
+                    repo_blobstore: RepoBlobstore,
+
+                    #[facet]
+                    repo_identity: RepoIdentity,
+
+                    #[facet]
+                    repo_derived_data: RepoDerivedData,
+
+                    #[facet]
+                    filestore_config: FilestoreConfig,
+                }
+
+                impl DangerousOverride<Arc<dyn Blobstore>> for TestRepo {
+                    fn dangerous_override<F>(&self, modify: F) -> Self
+                    where
+                        F: FnOnce(Arc<dyn Blobstore>) -> Arc<dyn Blobstore>,
+                    {
+                        let blobstore = RepoBlobstore::new_with_wrapped_inner_blobstore(
+                            self.repo_blobstore.as_ref().clone(),
+                            modify,
+                        );
+                        let repo_derived_data = Arc::new(
+                            self.repo_derived_data
+                                .with_replaced_blobstore(blobstore.clone()),
+                        );
+                        let repo_blobstore = Arc::new(blobstore);
+                        Self {
+                            repo_blobstore,
+                            repo_derived_data,
+                            ..self.clone()
+                        }
+                    }
+                }
 
                 #[fbinit::test]
                 async fn test(fb: FacebookInit) -> Result<()> {
                     let ctx = CoreContext::test_mock(fb);
 
-                    let repo = $repo::getrepo(fb).await;
+                    let repo: TestRepo = $repo::get_custom_test_repo(fb).await;
                     let heads = repo
                         .get_hg_heads_maybe_stale(ctx.clone())
                         .try_collect::<Vec<_>>()

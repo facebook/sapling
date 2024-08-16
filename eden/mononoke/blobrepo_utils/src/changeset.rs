@@ -9,7 +9,6 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use async_recursion::async_recursion;
-use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use cloned::cloned;
@@ -18,7 +17,6 @@ use dashmap::DashMap;
 use futures::try_join;
 use futures::Stream;
 use mercurial_types::HgChangesetId;
-use repo_blobstore::RepoBlobstoreRef;
 use slog::o;
 use slog::Logger;
 use tokio::sync::mpsc;
@@ -27,6 +25,7 @@ use tokio_stream::wrappers::ReceiverStream;
 
 use crate::bonsai::BonsaiMFVerifyVisitor;
 use crate::BonsaiMFVerifyResult;
+use crate::Repo;
 
 /// Information about the specific changeset whose result is provided.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -40,14 +39,14 @@ pub struct ChangesetVisitMeta {
 /// Behind this scenes, this uses the default tokio executor (which is typically a thread pool, so
 /// this is typically highly parallel). Dropping the returned stream will cause further visiting to
 /// be canceled.
-pub fn visit_changesets<I>(
+pub fn visit_changesets<I, R: Repo>(
     ctx: CoreContext,
     logger: Logger,
-    repo: BlobRepo,
+    repo: R,
     visitor: BonsaiMFVerifyVisitor,
     start_points: I,
     follow_limit: usize,
-) -> impl Stream<Item = Result<(BonsaiMFVerifyResult, ChangesetVisitMeta)>> + Send
+) -> impl Stream<Item = Result<(BonsaiMFVerifyResult<R>, ChangesetVisitMeta)>> + Send
 where
     I: IntoIterator<Item = HgChangesetId>,
 {
@@ -81,14 +80,14 @@ where
     ReceiverStream::new(receiver)
 }
 
-struct VisitOneShared {
+struct VisitOneShared<R> {
     logger: Logger,
-    repo: BlobRepo,
+    repo: R,
     visitor: BonsaiMFVerifyVisitor,
     visit_started: DashMap<HgChangesetId, ()>,
 }
 
-impl VisitOneShared {
+impl<R> VisitOneShared<R> {
     fn visit_started(&self, changeset_id: HgChangesetId) -> bool {
         self.visit_started.contains_key(&changeset_id)
     }
@@ -98,22 +97,22 @@ impl VisitOneShared {
     }
 }
 
-struct VisitOne {
+struct VisitOne<R> {
     ctx: CoreContext,
-    shared: Arc<VisitOneShared>,
+    shared: Arc<VisitOneShared<R>>,
     logger: Logger,
     changeset_id: HgChangesetId,
     follow_remaining: usize,
-    sender: Sender<Result<(BonsaiMFVerifyResult, ChangesetVisitMeta)>>,
+    sender: Sender<Result<(BonsaiMFVerifyResult<R>, ChangesetVisitMeta)>>,
 }
 
-impl VisitOne {
+impl<R: Repo> VisitOne<R> {
     fn new(
         ctx: CoreContext,
-        shared: &Arc<VisitOneShared>,
+        shared: &Arc<VisitOneShared<R>>,
         changeset_id: HgChangesetId,
         prev_follow_remaining: usize,
-        sender: &mut Sender<Result<(BonsaiMFVerifyResult, ChangesetVisitMeta)>>,
+        sender: &mut Sender<Result<(BonsaiMFVerifyResult<R>, ChangesetVisitMeta)>>,
     ) -> Option<Self> {
         // Checks to figure out whether to terminate the visit.
         if prev_follow_remaining == 0 {
@@ -218,19 +217,5 @@ impl VisitOne {
         }
 
         Ok(())
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-
-    #[test]
-    fn send_sync() {
-        fn assert_send<T: Send>() {}
-        fn assert_sync<T: Sync>() {}
-
-        assert_send::<VisitOneShared>();
-        assert_sync::<VisitOneShared>();
     }
 }

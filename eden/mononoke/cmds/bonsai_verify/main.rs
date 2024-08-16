@@ -19,14 +19,17 @@ use std::time::Instant;
 use anyhow::format_err;
 use anyhow::Error;
 use anyhow::Result;
-use blobrepo::BlobRepo;
+use blobrepo_override::DangerousOverride;
 use blobrepo_utils::BonsaiMFVerify;
 use blobrepo_utils::BonsaiMFVerifyResult;
+use blobstore::Blobstore;
 use blobstore::Loadable;
+use bonsai_hg_mapping::BonsaiHgMapping;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
 use clap::Parser;
 use clap::Subcommand;
 use cloned::cloned;
+use commit_graph::CommitGraph;
 use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use failure_ext::DisplayChain;
@@ -41,13 +44,53 @@ use mercurial_derivation::DeriveHgChangeset;
 use mercurial_types::HgChangesetId;
 use mononoke_app::args::RepoArgs;
 use mononoke_app::MononokeAppBuilder;
+use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreArc;
 use repo_blobstore::RepoBlobstoreRef;
+use repo_derived_data::RepoDerivedData;
 use slog::debug;
 use slog::error;
 use slog::info;
 use slog::warn;
 use slog::Logger;
+
+#[facet::container]
+#[derive(Clone)]
+struct Repo {
+    #[facet]
+    bonsai_hg_mapping: dyn BonsaiHgMapping,
+
+    #[facet]
+    commit_graph: CommitGraph,
+
+    #[facet]
+    repo_derived_data: RepoDerivedData,
+
+    #[facet]
+    repo_blobstore: RepoBlobstore,
+}
+
+impl DangerousOverride<Arc<dyn Blobstore>> for Repo {
+    fn dangerous_override<F>(&self, modify: F) -> Self
+    where
+        F: FnOnce(Arc<dyn Blobstore>) -> Arc<dyn Blobstore>,
+    {
+        let blobstore = RepoBlobstore::new_with_wrapped_inner_blobstore(
+            self.repo_blobstore.as_ref().clone(),
+            modify,
+        );
+        let repo_derived_data = Arc::new(
+            self.repo_derived_data
+                .with_replaced_blobstore(blobstore.clone()),
+        );
+        let repo_blobstore = Arc::new(blobstore);
+        Self {
+            repo_blobstore,
+            repo_derived_data,
+            ..self.clone()
+        }
+    }
+}
 
 #[derive(Parser)]
 struct CommandArgs {
@@ -103,7 +146,7 @@ fn main(fb: FacebookInit) -> Result<()> {
     let app = MononokeAppBuilder::new(fb).build::<CommandArgs>()?;
     let args: CommandArgs = app.args()?;
     let runtime = app.runtime();
-    let repo = runtime.block_on(app.open_repo(&args.repo))?;
+    let repo: Repo = runtime.block_on(app.open_repo(&args.repo))?;
     let logger = app.logger();
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
@@ -121,7 +164,7 @@ fn subcommand_round_trip(
     ctx: CoreContext,
     logger: Logger,
     runtime: &tokio::runtime::Handle,
-    repo: BlobRepo,
+    repo: Repo,
     args: RoundTrip,
 ) -> Result<()> {
     let config = config::get_config(args.config).expect("getting configuration failed");
@@ -300,7 +343,7 @@ fn summarize(
 fn subcommmand_hg_manifest_verify(
     ctx: &CoreContext,
     runtime: &tokio::runtime::Handle,
-    repo: &BlobRepo,
+    repo: &Repo,
     args: HgManifest,
 ) -> Result<()> {
     let total = &AtomicUsize::new(0);

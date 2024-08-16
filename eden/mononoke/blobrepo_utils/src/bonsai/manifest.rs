@@ -11,8 +11,6 @@ use std::sync::Arc;
 
 use anyhow::bail;
 use anyhow::Result;
-use blobrepo::BlobRepo;
-use blobrepo_override::DangerousOverride;
 use blobstore::Blobstore;
 use blobstore::Loadable;
 use cacheblob::MemWritesBlobstore;
@@ -38,28 +36,27 @@ use mercurial_types::HgManifestId;
 use mercurial_types::HgNodeHash;
 use mononoke_types::DateTime;
 use mononoke_types::FileType;
-use repo_blobstore::RepoBlobstoreArc;
-use repo_blobstore::RepoBlobstoreRef;
 use slog::debug;
 use slog::Logger;
 
 use crate::changeset::visit_changesets;
 use crate::changeset::ChangesetVisitMeta;
+use crate::Repo;
 
 #[derive(Clone, Debug)]
-pub enum BonsaiMFVerifyResult {
+pub enum BonsaiMFVerifyResult<R> {
     Valid {
         lookup_mf_id: HgNodeHash,
         computed_mf_id: HgNodeHash,
     },
     // ValidDifferentHash means that the root manifest ID didn't match up, but that that was
     // because of an expected difference in hash that isn't substantive.
-    ValidDifferentId(BonsaiMFVerifyDifference),
-    Invalid(BonsaiMFVerifyDifference),
+    ValidDifferentId(BonsaiMFVerifyDifference<R>),
+    Invalid(BonsaiMFVerifyDifference<R>),
     Ignored(HgChangesetId),
 }
 
-impl BonsaiMFVerifyResult {
+impl<R> BonsaiMFVerifyResult<R> {
     pub fn is_valid(&self) -> bool {
         match self {
             BonsaiMFVerifyResult::Valid { .. } | BonsaiMFVerifyResult::ValidDifferentId(..) => true,
@@ -76,7 +73,7 @@ impl BonsaiMFVerifyResult {
 }
 
 #[derive(Clone)]
-pub struct BonsaiMFVerifyDifference {
+pub struct BonsaiMFVerifyDifference<R> {
     // Root manifests in treemanifest hybrid mode use a different ID than what's computed.
     // See the documentation in mercurial_types/if/mercurial_thrift.thrift's HgManifestEnvelope
     // for more.
@@ -84,10 +81,10 @@ pub struct BonsaiMFVerifyDifference {
     // The difference/inconsistency is that expected_mf_id is not the same as roundtrip_mf_id.
     pub expected_mf_id: HgNodeHash,
     pub roundtrip_mf_id: HgNodeHash,
-    repo: BlobRepo,
+    repo: R,
 }
 
-impl BonsaiMFVerifyDifference {
+impl<R: Repo> BonsaiMFVerifyDifference<R> {
     /// What entries changed from the original manifest to the roundtripped one.
     pub fn changes(
         &self,
@@ -130,7 +127,7 @@ impl BonsaiMFVerifyDifference {
     // XXX might need to return repo here if callers want to do direct queries
 }
 
-impl fmt::Debug for BonsaiMFVerifyDifference {
+impl<R> fmt::Debug for BonsaiMFVerifyDifference<R> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("BonsaiMFVerifyDifference")
             .field("lookup_mf_id", &format!("{}", self.lookup_mf_id))
@@ -140,23 +137,23 @@ impl fmt::Debug for BonsaiMFVerifyDifference {
     }
 }
 
-pub struct BonsaiMFVerify {
+pub struct BonsaiMFVerify<R> {
     pub ctx: CoreContext,
     pub logger: Logger,
-    pub repo: BlobRepo,
+    pub repo: R,
     pub follow_limit: usize,
     pub ignores: HashSet<HgChangesetId>,
     pub broken_merges_before: Option<DateTime>,
     pub debug_bonsai_diff: bool,
 }
 
-impl BonsaiMFVerify {
+impl<R: Repo> BonsaiMFVerify<R> {
     /// Verify that a list of changesets roundtrips through bonsai. Returns a stream of
     /// inconsistencies and errors encountered, which completes once verification is complete.
     pub fn verify(
         self,
         start_points: impl IntoIterator<Item = HgChangesetId>,
-    ) -> impl Stream<Item = Result<(BonsaiMFVerifyResult, ChangesetVisitMeta)>> + Send {
+    ) -> impl Stream<Item = Result<(BonsaiMFVerifyResult<R>, ChangesetVisitMeta)>> + Send {
         let repo = self
             .repo
             .dangerous_override(|blobstore| -> Arc<dyn Blobstore> {
@@ -186,13 +183,13 @@ pub struct BonsaiMFVerifyVisitor {
 }
 
 impl BonsaiMFVerifyVisitor {
-    pub async fn visit(
+    pub async fn visit<R: Repo>(
         self,
         ctx: CoreContext,
         logger: Logger,
-        repo: BlobRepo,
+        repo: R,
         changeset: HgBlobChangeset,
-    ) -> Result<BonsaiMFVerifyResult> {
+    ) -> Result<BonsaiMFVerifyResult<R>> {
         let changeset_id = changeset.get_changeset_id();
         if self.ignores.contains(&changeset_id) {
             debug!(logger, "Changeset ignored");
@@ -332,7 +329,7 @@ impl BonsaiMFVerifyVisitor {
 
 async fn apply_diff(
     ctx: CoreContext,
-    repo: BlobRepo,
+    repo: impl Repo,
     diff_result: Vec<BonsaiDiffFileChange<HgFileNodeId>>,
     manifestids: Vec<HgManifestId>,
 ) -> Result<HgNodeHash> {

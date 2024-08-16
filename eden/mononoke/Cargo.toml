@@ -40,6 +40,7 @@ path = "cmds/streaming_clone_warmup/main.rs"
 anyhow = "1.0.75"
 ascii = "1.0"
 blobrepo = { version = "0.1.0", path = "blobrepo" }
+blobrepo_override = { version = "0.1.0", path = "blobrepo/override" }
 blobrepo_utils = { version = "0.1.0", path = "blobrepo_utils" }
 blobstore = { version = "0.1.0", path = "blobstore" }
 blobstore_factory = { version = "0.1.0", path = "blobstore/factory" }
