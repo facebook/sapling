@@ -106,6 +106,17 @@ pub struct DiskUsageCmd {
     )]
     purgeable: bool,
 
+    #[clap(
+        long,
+        help = "Prints only the disk usage summary",
+        conflicts_with = "deep-clean",
+        conflicts_with = "clean",
+        conflicts_with = "json",
+        conflicts_with = "clean-orphaned",
+        conflicts_with = "purgeable"
+    )]
+    fast: bool,
+
     #[clap(long, help = "Print the output in JSON format")]
     json: bool,
 }
@@ -806,121 +817,122 @@ impl crate::Subcommand for DiskUsageCmd {
             }
 
             // PRINT MOUNTS
-            write_title("Mounts");
-            for path in &mounts {
-                println!("{}", path.display());
-            }
-            write_failed_to_check_files_message(&mount_failed_file_checks);
-
-            if self.should_clean() {
-                self.clean_fsck_directories(fsck_dirs);
-            }
-
-            // PRINT REDIRECTIONS
-            write_title("Buck redirections");
-            if buck_redirections.is_empty() {
-                println!("No Buck redirections");
-            } else {
-                for redir in &buck_redirections {
-                    println!("{}", redir.display());
+            if !self.fast {
+                write_title("Mounts");
+                for path in &mounts {
+                    println!("{}", path.display());
                 }
-            }
-            write_failed_to_check_files_message(&redirect_usage_count.failed_file_checks);
+                write_failed_to_check_files_message(&mount_failed_file_checks);
 
-            if !buck_redirections.is_empty() {
                 if self.should_clean() {
-                    clean_buck_redirections(buck_redirections)
-                        .context("Failed to clean Buck redirections")?;
+                    self.clean_fsck_directories(fsck_dirs);
+                }
+
+                // PRINT REDIRECTIONS
+                write_title("Buck redirections");
+                if buck_redirections.is_empty() {
+                    println!("No Buck redirections");
                 } else {
-                    println!(
-                        "\nTo reclaim space from buck-out directories, run `buck clean` from the \
-                        parent of the buck-out directory."
-                    );
-                }
-            }
-
-            write_title("Orphaned redirections");
-            if orphaned_redirections.is_empty() {
-                println!("No orphaned redirections");
-            } else {
-                for redir in orphaned_redirections.iter() {
-                    println!("{}", redir.display());
-                }
-            }
-            write_failed_to_check_files_message(&orphaned_redirection_failed_file_checks);
-
-            if !orphaned_redirections.is_empty() {
-                if self.clean_orphaned || self.should_clean() {
-                    for redir in orphaned_redirections.iter() {
-                        fs::remove_dir_all(&redir).with_context(|| {
-                            format!("Failed to recursively remove {}", redir.display())
-                        })?;
+                    for redir in &buck_redirections {
+                        println!("{}", redir.display());
                     }
                 }
-            }
+                write_failed_to_check_files_message(&redirect_usage_count.failed_file_checks);
 
-            // PRINT BACKING REPOS
-            if !backing_repos.is_empty() || !backing_failed_file_checks.is_empty() {
-                write_title("Backing repos");
-            }
-            if !backing_repos.is_empty() {
-                for backing in backing_repos.iter() {
-                    println!("{}", backing.display());
+                if !buck_redirections.is_empty() {
+                    if self.should_clean() {
+                        clean_buck_redirections(buck_redirections)
+                            .context("Failed to clean Buck redirections")?;
+                    } else {
+                        println!(
+                            "\nTo reclaim space from buck-out directories, run `buck clean` from the \
+                            parent of the buck-out directory."
+                        );
+                    }
                 }
-                println!(
-                    "\n{}",
-                    "CAUTION: You can lose work and break things by manually deleting data \
-                    from the backing repo directory!"
-                        .yellow()
-                );
-            }
-            write_failed_to_check_files_message(&backing_failed_file_checks);
 
-            // GET HGCACHE PATH
-            let hg_cache_path = get_hg_cache_path().context("Failed to get hgcache path")?;
-
-            println!("\nTo reclaim space from the hgcache directory, run:");
-            if cfg!(windows) {
-                println!("\n`rmdir {}`", hg_cache_path.display());
-            } else {
-                println!("\n`rm -rf {}/*`", hg_cache_path.display());
-            }
-            println!(
-                "\nNOTE: The hgcache should manage its size itself. You should only run the command \
-                above if you are completely out of space and quickly need to reclaim some space \
-                temporarily. This will affect other users if you run this command on a shared machine."
-            );
-
-            warn_about_working_copy_for_backing_repo(&backing_repos)
-                .context("Failed to warn about working copy in backing repo")?;
-
-            // PRINT SHARED SPACE
-            write_title("Shared space");
-            if self.should_clean() {
-                println!(
-                    "{}",
-                    "Cleaning shared space used by the storage engine...".blue()
-                );
-                let output = Exec::cmd("eden")
-                    .arg("gc")
-                    .stdout(SubprocessRedirection::Pipe)
-                    .stderr(SubprocessRedirection::Pipe)
-                    .capture()?;
-
-                if output.success() {
-                    println!("{}", "Finished cleaning shared space.".blue())
+                write_title("Orphaned redirections");
+                if orphaned_redirections.is_empty() {
+                    println!("No orphaned redirections");
                 } else {
-                    return Err(anyhow!(
-                        "Failed to execute `eden gc`, stderr: {}, exit status: {:?}",
-                        output.stderr_str(),
-                        output.exit_status,
-                    ));
+                    for redir in orphaned_redirections.iter() {
+                        println!("{}", redir.display());
+                    }
                 }
-            } else {
-                println!("Run `eden gc` to reduce the space used by the storage engine.");
-            }
-            write_failed_to_check_files_message(&shared_failed_file_checks);
+                write_failed_to_check_files_message(&orphaned_redirection_failed_file_checks);
 
+                if !orphaned_redirections.is_empty() {
+                    if self.clean_orphaned || self.should_clean() {
+                        for redir in orphaned_redirections.iter() {
+                            fs::remove_dir_all(&redir).with_context(|| {
+                                format!("Failed to recursively remove {}", redir.display())
+                            })?;
+                        }
+                    }
+                }
+
+                // PRINT BACKING REPOS
+                if !backing_repos.is_empty() || !backing_failed_file_checks.is_empty() {
+                    write_title("Backing repos");
+                }
+                if !backing_repos.is_empty() {
+                    for backing in backing_repos.iter() {
+                        println!("{}", backing.display());
+                    }
+                    println!(
+                        "\n{}",
+                        "CAUTION: You can lose work and break things by manually deleting data \
+                        from the backing repo directory!"
+                            .yellow()
+                    );
+                }
+                write_failed_to_check_files_message(&backing_failed_file_checks);
+
+                // GET HGCACHE PATH
+                let hg_cache_path = get_hg_cache_path().context("Failed to get hgcache path")?;
+
+                println!("\nTo reclaim space from the hgcache directory, run:");
+                if cfg!(windows) {
+                    println!("\n`rmdir {}`", hg_cache_path.display());
+                } else {
+                    println!("\n`rm -rf {}/*`", hg_cache_path.display());
+                }
+                println!(
+                    "\nNOTE: The hgcache should manage its size itself. You should only run the command \
+                    above if you are completely out of space and quickly need to reclaim some space \
+                    temporarily. This will affect other users if you run this command on a shared machine."
+                );
+
+                warn_about_working_copy_for_backing_repo(&backing_repos)
+                    .context("Failed to warn about working copy in backing repo")?;
+
+                // PRINT SHARED SPACE
+                write_title("Shared space");
+                if self.should_clean() {
+                    println!(
+                        "{}",
+                        "Cleaning shared space used by the storage engine...".blue()
+                    );
+                    let output = Exec::cmd("eden")
+                        .arg("gc")
+                        .stdout(SubprocessRedirection::Pipe)
+                        .stderr(SubprocessRedirection::Pipe)
+                        .capture()?;
+
+                    if output.success() {
+                        println!("{}", "Finished cleaning shared space.".blue())
+                    } else {
+                        return Err(anyhow!(
+                            "Failed to execute `eden gc`, stderr: {}, exit status: {:?}",
+                            output.stderr_str(),
+                            output.exit_status,
+                        ));
+                    }
+                } else {
+                    println!("Run `eden gc` to reduce the space used by the storage engine.");
+                }
+                write_failed_to_check_files_message(&shared_failed_file_checks);
+            }
             // PRINT SUMMARY
             write_title("Summary");
             if self.clean_orphaned {
@@ -946,7 +958,8 @@ impl crate::Subcommand for DiskUsageCmd {
                 }
             }
 
-            if !self.should_clean() {
+            // Don't suggest --clean if we're already cleaning or if we're in fast mode
+            if !(self.should_clean() || self.fast) {
                 println!(
                     "{}",
                     "\nTo perform automated cleanup, run `eden du --clean`".blue()
