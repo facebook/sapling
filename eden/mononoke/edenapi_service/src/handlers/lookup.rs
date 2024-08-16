@@ -61,7 +61,7 @@ async fn maybe_copy_file(
     copy_from_bubble_id: BubbleId,
 ) -> Result<Lookup> {
     Ok(if let Some(bubble_id) = bubble_id {
-        let blob_repo = repo.repo().blob_repo();
+        let blob_repo = repo.repo_ctx().blob_repo();
         match repo
             .open_bubble(copy_from_bubble_id)
             .await?

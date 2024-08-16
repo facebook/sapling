@@ -60,7 +60,7 @@ impl SaplingRemoteApiHandler for SuffixQueryHandler {
 
         // Changeset may return None if given an incorrect commit id.
         let changeset = repo
-            .repo()
+            .repo_ctx()
             .changeset(commit.clone())
             .await
             .with_context(|| anyhow!("Error getting changeset {}", commit.clone()))?

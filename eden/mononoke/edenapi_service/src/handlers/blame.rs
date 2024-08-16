@@ -78,7 +78,7 @@ async fn blame_file(repo: HgRepoContext, key: Key) -> Result<BlameResult> {
 }
 
 async fn blame_file_data(repo: HgRepoContext, key: Key) -> Result<BlameData> {
-    let repo = repo.repo();
+    let repo = repo.repo_ctx();
 
     let cs = repo
         .changeset(key.hgid)

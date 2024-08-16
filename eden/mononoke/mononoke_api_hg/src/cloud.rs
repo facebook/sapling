@@ -35,12 +35,12 @@ impl HgRepoContext {
         reponame: &str,
     ) -> Result<WorkspaceData, MononokeError> {
         let mut cc_ctx = CommitCloudContext::new(workspace, reponame)?;
-        let authz = self.repo().authorization_context();
+        let authz = self.repo_ctx().authorization_context();
         authz
-            .require_commitcloud_operation(self.ctx(), &self.repo().repo(), &mut cc_ctx, "read")
+            .require_commitcloud_operation(self.ctx(), &self.repo_ctx().repo(), &mut cc_ctx, "read")
             .await?;
         Ok(self
-            .repo()
+            .repo_ctx()
             .inner_repo()
             .commit_cloud()
             .get_workspace(&cc_ctx)
@@ -53,7 +53,7 @@ impl HgRepoContext {
         reponame: &str,
     ) -> Result<Vec<WorkspaceData>, MononokeError> {
         Ok(self
-            .repo()
+            .repo_ctx()
             .inner_repo()
             .commit_cloud()
             .get_workspaces(prefix, reponame)
@@ -65,13 +65,13 @@ impl HgRepoContext {
         params: &GetReferencesParams,
     ) -> Result<ReferencesData, MononokeError> {
         let mut ctx = CommitCloudContext::new(&params.workspace, &params.reponame)?;
-        let authz = self.repo().authorization_context();
+        let authz = self.repo_ctx().authorization_context();
         authz
-            .require_commitcloud_operation(self.ctx(), &self.repo().repo(), &mut ctx, "read")
+            .require_commitcloud_operation(self.ctx(), &self.repo_ctx().repo(), &mut ctx, "read")
             .await?;
         let cc_ctx = CommitCloudContext::new(&params.workspace, &params.reponame)?;
         Ok(self
-            .repo()
+            .repo_ctx()
             .inner_repo()
             .commit_cloud()
             .get_references(&cc_ctx, params)
@@ -87,13 +87,18 @@ impl HgRepoContext {
             cc_ctx.check_workspace_name()?;
         }
 
-        let authz = self.repo().authorization_context();
+        let authz = self.repo_ctx().authorization_context();
         authz
-            .require_commitcloud_operation(self.ctx(), &self.repo().repo(), &mut cc_ctx, "write")
+            .require_commitcloud_operation(
+                self.ctx(),
+                &self.repo_ctx().repo(),
+                &mut cc_ctx,
+                "write",
+            )
             .await?;
 
         Ok(self
-            .repo()
+            .repo_ctx()
             .inner_repo()
             .commit_cloud()
             .update_references(&cc_ctx, params)
@@ -105,7 +110,7 @@ impl HgRepoContext {
         params: &GetSmartlogParams,
     ) -> Result<SmartlogData, MononokeError> {
         let raw_data = self
-            .repo()
+            .repo_ctx()
             .inner_repo()
             .commit_cloud()
             .get_smartlog_raw_info(params)
@@ -113,7 +118,7 @@ impl HgRepoContext {
         let hg_ids = raw_data.collapse_into_vec();
 
         let ctx = self.ctx();
-        let repo = self.repo().repo();
+        let repo = self.repo_ctx().repo();
         let cs_ids = self.convert_changeset_ids(hg_ids).await?;
 
         let public_frontier = repo
@@ -136,7 +141,7 @@ impl HgRepoContext {
             .await?
             .map_ok({
                 |cs_id| async move {
-                    self.repo()
+                    self.repo_ctx()
                         .changeset(ChangesetSpecifier::Bonsai(cs_id))
                         .await
                 }
@@ -149,7 +154,7 @@ impl HgRepoContext {
         let public_commits_ctx = try_join_all(
             public_frontier
                 .into_iter()
-                .map(|cs_id| self.repo().changeset(ChangesetSpecifier::Bonsai(cs_id))),
+                .map(|cs_id| self.repo_ctx().changeset(ChangesetSpecifier::Bonsai(cs_id))),
         )
         .await?;
         let mut nodes = Vec::new();
@@ -164,21 +169,26 @@ impl HgRepoContext {
                 if let Some(hgid) = changeset.hg_id().await? {
                     let parents = changeset.parents().await?;
                     let hg_parents = self
-                        .repo()
+                        .repo_ctx()
                         .many_changeset_hg_ids(parents)
                         .await?
                         .into_iter()
                         .map(|(_, hg_id)| HgId::from(hg_id))
                         .collect();
 
-                    nodes.push(self.repo().inner_repo().commit_cloud().make_smartlog_node(
-                        &hgid,
-                        &hg_parents,
-                        &changeset.changeset_info().await?,
-                        &bookmarks.get(&hgid).cloned(),
-                        &remote_bookmarks.get(&hgid).cloned(),
-                        &phase,
-                    )?)
+                    nodes.push(
+                        self.repo_ctx()
+                            .inner_repo()
+                            .commit_cloud()
+                            .make_smartlog_node(
+                                &hgid,
+                                &hg_parents,
+                                &changeset.changeset_info().await?,
+                                &bookmarks.get(&hgid).cloned(),
+                                &remote_bookmarks.get(&hgid).cloned(),
+                                &phase,
+                            )?,
+                    )
                 }
             }
         }
@@ -196,13 +206,18 @@ impl HgRepoContext {
     ) -> Result<WorkspaceSharingData, MononokeError> {
         let mut ctx = CommitCloudContext::new(&request.workspace, &request.reponame)?;
 
-        let authz = self.repo().authorization_context();
+        let authz = self.repo_ctx().authorization_context();
         authz
-            .require_commitcloud_operation(self.ctx(), &self.repo().repo(), &mut ctx, "maintainers")
+            .require_commitcloud_operation(
+                self.ctx(),
+                &self.repo_ctx().repo(),
+                &mut ctx,
+                "maintainers",
+            )
             .await?;
 
         Ok(self
-            .repo()
+            .repo_ctx()
             .inner_repo()
             .commit_cloud()
             .share_workspace(&ctx)
@@ -214,13 +229,18 @@ impl HgRepoContext {
     ) -> Result<String, MononokeError> {
         let mut cc_ctx = CommitCloudContext::new(&params.workspace, &params.reponame)?;
 
-        let authz = self.repo().authorization_context();
+        let authz = self.repo_ctx().authorization_context();
         authz
-            .require_commitcloud_operation(self.ctx(), &self.repo().repo(), &mut cc_ctx, "write")
+            .require_commitcloud_operation(
+                self.ctx(),
+                &self.repo_ctx().repo(),
+                &mut cc_ctx,
+                "write",
+            )
             .await?;
 
         Ok(self
-            .repo()
+            .repo_ctx()
             .inner_repo()
             .commit_cloud()
             .update_workspace_archive(&cc_ctx, params.archived)

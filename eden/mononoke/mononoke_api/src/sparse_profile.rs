@@ -285,7 +285,7 @@ async fn calculate_size<'a>(
         (root, *root_fsnode_id.fsnode_id(), matchers),
         |(path, fsnode_id, matchers)| {
             cloned!(ctx, matchers);
-            let blobstore = changeset.repo().blob_repo().repo_blobstore();
+            let blobstore = changeset.repo_ctx().blob_repo().repo_blobstore();
             async move {
                 let mut sizes: Out = HashMap::new();
                 let mut next: HashMap<_, HashMap<_, _>> = HashMap::new();

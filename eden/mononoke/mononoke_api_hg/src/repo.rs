@@ -79,7 +79,7 @@ use super::HgTreeContext;
 
 #[derive(Clone)]
 pub struct HgRepoContext {
-    repo: RepoContext,
+    repo_ctx: RepoContext,
 }
 
 pub struct HgChangesetSegment {
@@ -95,28 +95,28 @@ pub struct HgChangesetSegmentParent {
 }
 
 impl HgRepoContext {
-    pub(crate) fn new(repo: RepoContext) -> Self {
-        Self { repo }
+    pub(crate) fn new(repo_ctx: RepoContext) -> Self {
+        Self { repo_ctx }
     }
 
     /// The `CoreContext` for this query.
     pub fn ctx(&self) -> &CoreContext {
-        self.repo.ctx()
+        self.repo_ctx.ctx()
     }
 
     /// The `RepoContext` for this query.
-    pub fn repo(&self) -> &RepoContext {
-        &self.repo
+    pub fn repo_ctx(&self) -> &RepoContext {
+        &self.repo_ctx
     }
 
     /// The underlying Mononoke `BlobRepo` backing this repo.
     pub(crate) fn blob_repo(&self) -> &BlobRepo {
-        self.repo().blob_repo()
+        self.repo_ctx().blob_repo()
     }
 
     /// The configuration for the repository.
     pub(crate) fn config(&self) -> &RepoConfig {
-        self.repo.config()
+        self.repo_ctx.config()
     }
 
     /// Create bubble and return its id
@@ -126,19 +126,19 @@ impl HgRepoContext {
         labels: Vec<String>,
     ) -> Result<Bubble, MononokeError> {
         Ok(self
-            .repo()
+            .repo_ctx()
             .repo_ephemeral_store_arc()
             .create_bubble(self.ctx(), custom_duration, labels)
             .await?)
     }
 
     pub fn ephemeral_store(&self) -> Arc<RepoEphemeralStore> {
-        self.repo().repo_ephemeral_store_arc()
+        self.repo_ctx().repo_ephemeral_store_arc()
     }
 
     /// Load bubble from id
     pub async fn open_bubble(&self, bubble_id: BubbleId) -> Result<Bubble, MononokeError> {
-        self.repo.open_bubble(bubble_id).await
+        self.repo_ctx.open_bubble(bubble_id).await
     }
 
     /// Get blobstore. If bubble id is present, this is the ephemeral blobstore
@@ -149,7 +149,7 @@ impl HgRepoContext {
         let main_blobstore = self.blob_repo().repo_blobstore().clone();
         Ok(match bubble_id {
             Some(id) => self
-                .repo
+                .repo_ctx
                 .open_bubble(id)
                 .await?
                 .wrap_repo_blobstore(main_blobstore),
@@ -297,7 +297,7 @@ impl HgRepoContext {
         changeset_id: ChangesetId,
         storage_location: StorageLocation,
     ) -> Result<bool, MononokeError> {
-        self.repo
+        self.repo_ctx
             .changeset_exists(changeset_id, storage_location)
             .await
     }
@@ -424,7 +424,13 @@ impl HgRepoContext {
             };
             results.push(result);
         }
-        log_new_commits(self.ctx(), self.repo().inner_repo(), None, commits_to_log).await;
+        log_new_commits(
+            self.ctx(),
+            self.repo_ctx().inner_repo(),
+            None,
+            commits_to_log,
+        )
+        .await;
         self.blob_repo()
             .hg_mutation_store()
             .add_entries(self.ctx(), hg_changesets, mutations)
@@ -468,7 +474,7 @@ impl HgRepoContext {
         depth: Option<usize>,
     ) -> impl TryStream<Ok = (HgTreeContext, MPath), Error = MononokeError> {
         let ctx = self.ctx().clone();
-        let repo = self.repo.repo();
+        let repo = self.repo_ctx.repo();
         let args = GettreepackArgs {
             rootdir: path,
             mfnodes: root_versions.into_iter().collect(),
@@ -526,7 +532,7 @@ impl HgRepoContext {
             })
             .await?;
         let result_csids = self
-            .repo()
+            .repo_ctx()
             .location_to_changeset_id(cs_location, count)
             .await?;
         let hg_id_futures = result_csids.iter().map(|result_csid| {
@@ -579,7 +585,7 @@ impl HgRepoContext {
             .collect::<Vec<ChangesetId>>();
 
         let cs_to_blocations = self
-            .repo()
+            .repo_ctx()
             .many_changeset_ids_to_locations(master_heads, cs_ids)
             .await?;
 
@@ -654,7 +660,7 @@ impl HgRepoContext {
         freshness: Freshness,
     ) -> Result<Option<HgChangesetId>, MononokeError> {
         match self
-            .repo
+            .repo_ctx
             .resolve_bookmark(&BookmarkKey::new(bookmark)?, freshness)
             .await?
         {
@@ -717,7 +723,7 @@ impl HgRepoContext {
         let bonsai_heads = self.convert_changeset_ids(heads).await?;
 
         let segments = self
-            .repo()
+            .repo_ctx()
             .repo()
             .commit_graph()
             .ancestors_difference_segments(self.ctx(), bonsai_heads, bonsai_common)
@@ -805,7 +811,7 @@ impl HgRepoContext {
         let bonsai_heads = self.convert_changeset_ids(heads).await?;
         debug!(ctx.logger(), "Streaming Commit Graph...");
         let commit_graph_stream = self
-            .repo()
+            .repo_ctx()
             .repo()
             .commit_graph()
             .ancestors_difference_stream(&ctx, bonsai_heads, bonsai_common)
@@ -854,7 +860,7 @@ impl HgRepoContext {
             {
                 let bonsai_common = self.convert_changeset_ids(common).await?;
                 let bonsai_heads = self.convert_changeset_ids(heads).await?;
-                self.repo().repo().commit_graph().ancestors_difference(
+                self.repo_ctx().repo().commit_graph().ancestors_difference(
                     &ctx,
                     bonsai_heads,
                     bonsai_common,
@@ -949,7 +955,7 @@ mod tests {
         let repo_ctx = RepoContext::new_test(ctx, Arc::new(repo)).await?;
 
         let hg = repo_ctx.hg();
-        assert_eq!(hg.repo().name(), "repo");
+        assert_eq!(hg.repo_ctx().name(), "repo");
 
         Ok(())
     }

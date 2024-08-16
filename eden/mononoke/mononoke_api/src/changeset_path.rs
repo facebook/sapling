@@ -100,7 +100,7 @@ impl fmt::Debug for ChangesetPathContentContext {
         write!(
             f,
             "ChangesetPathContentContext(repo={:?} id={:?} path={:?})",
-            self.repo().name(),
+            self.repo_ctx().name(),
             self.changeset().id(),
             self.path()
         )
@@ -120,7 +120,7 @@ impl fmt::Debug for ChangesetPathHistoryContext {
         write!(
             f,
             "ChangesetPathHistoryContext(repo={:?} id={:?} path={:?})",
-            self.repo().name(),
+            self.repo_ctx().name(),
             self.changeset().id(),
             self.path()
         )
@@ -139,7 +139,7 @@ impl fmt::Debug for ChangesetPathContext {
         write!(
             f,
             "ChangesetPathContext(repo={:?} id={:?} path={:?})",
-            self.repo().name(),
+            self.repo_ctx().name(),
             self.changeset().id(),
             self.path()
         )
@@ -153,11 +153,11 @@ impl ChangesetPathContentContext {
     ) -> Result<Self, MononokeError> {
         let path = path.into();
         changeset
-            .repo()
+            .repo_ctx()
             .authorization_context()
             .require_path_read(
                 changeset.ctx(),
-                changeset.repo().inner_repo(),
+                changeset.repo_ctx().inner_repo(),
                 changeset.id(),
                 &path,
             )
@@ -176,11 +176,11 @@ impl ChangesetPathContentContext {
     ) -> Result<Self, MononokeError> {
         let path = path.into();
         changeset
-            .repo()
+            .repo_ctx()
             .authorization_context()
             .require_path_read(
                 changeset.ctx(),
-                changeset.repo().inner_repo(),
+                changeset.repo_ctx().inner_repo(),
                 changeset.id(),
                 &path,
             )
@@ -193,8 +193,8 @@ impl ChangesetPathContentContext {
     }
 
     /// The `RepoContext` for this query.
-    pub fn repo(&self) -> &RepoContext {
-        self.changeset.repo()
+    pub fn repo_ctx(&self) -> &RepoContext {
+        self.changeset.repo_ctx()
     }
 
     /// The `ChangesetContext` for this query.
@@ -213,7 +213,7 @@ impl ChangesetPathContentContext {
                 cloned!(self.changeset, self.path);
                 async move {
                     let ctx = changeset.ctx().clone();
-                    let blobstore = changeset.repo().blob_repo().repo_blobstore().clone();
+                    let blobstore = changeset.repo_ctx().blob_repo().repo_blobstore().clone();
                     let root_fsnode_id = changeset.root_fsnode_id().await?;
                     if let Some(mpath) = path.into_optional_non_root_path() {
                         root_fsnode_id
@@ -263,9 +263,10 @@ impl ChangesetPathContentContext {
     /// is not a directory in this commit.
     pub async fn tree(&self) -> Result<Option<TreeContext>, MononokeError> {
         let tree = match self.fsnode_id().await? {
-            Some(Entry::Tree(fsnode_id)) => {
-                Some(TreeContext::new_authorized(self.repo().clone(), fsnode_id))
-            }
+            Some(Entry::Tree(fsnode_id)) => Some(TreeContext::new_authorized(
+                self.repo_ctx().clone(),
+                fsnode_id,
+            )),
             _ => None,
         };
         Ok(tree)
@@ -276,7 +277,7 @@ impl ChangesetPathContentContext {
     pub async fn file(&self) -> Result<Option<FileContext>, MononokeError> {
         let file = match self.fsnode_id().await? {
             Some(Entry::Leaf(file)) => Some(FileContext::new_authorized(
-                self.repo().clone(),
+                self.repo_ctx().clone(),
                 FetchKey::Canonical(*file.content_id()),
             )),
             _ => None,
@@ -304,12 +305,13 @@ impl ChangesetPathContentContext {
     /// or directory in this commit.
     pub async fn entry(&self) -> Result<PathEntry, MononokeError> {
         let entry = match self.fsnode_id().await? {
-            Some(Entry::Tree(fsnode_id)) => {
-                PathEntry::Tree(TreeContext::new_authorized(self.repo().clone(), fsnode_id))
-            }
+            Some(Entry::Tree(fsnode_id)) => PathEntry::Tree(TreeContext::new_authorized(
+                self.repo_ctx().clone(),
+                fsnode_id,
+            )),
             Some(Entry::Leaf(file)) => PathEntry::File(
                 FileContext::new_authorized(
-                    self.repo().clone(),
+                    self.repo_ctx().clone(),
                     FetchKey::Canonical(*file.content_id()),
                 ),
                 *file.file_type(),
@@ -327,11 +329,11 @@ impl ChangesetPathHistoryContext {
     ) -> Result<Self, MononokeError> {
         let path = path.into();
         changeset
-            .repo()
+            .repo_ctx()
             .authorization_context()
             .require_path_read(
                 changeset.ctx(),
-                changeset.repo().inner_repo(),
+                changeset.repo_ctx().inner_repo(),
                 changeset.id(),
                 &path,
             )
@@ -351,11 +353,11 @@ impl ChangesetPathHistoryContext {
     ) -> Result<Self, MononokeError> {
         let path = path.into();
         changeset
-            .repo()
+            .repo_ctx()
             .authorization_context()
             .require_path_read(
                 changeset.ctx(),
-                changeset.repo().inner_repo(),
+                changeset.repo_ctx().inner_repo(),
                 changeset.id(),
                 &path,
             )
@@ -374,17 +376,17 @@ impl ChangesetPathHistoryContext {
         deleted_manifest_id: Manifest::Id,
     ) -> Result<Self, MononokeError> {
         changeset
-            .repo()
+            .repo_ctx()
             .authorization_context()
             .require_path_read(
                 changeset.ctx(),
-                changeset.repo().inner_repo(),
+                changeset.repo_ctx().inner_repo(),
                 changeset.id(),
                 &path,
             )
             .await?;
         let ctx = changeset.ctx().clone();
-        let blobstore = changeset.repo().blob_repo().repo_blobstore().clone();
+        let blobstore = changeset.repo_ctx().blob_repo().repo_blobstore().clone();
         Ok(Self {
             changeset,
             path,
@@ -397,8 +399,8 @@ impl ChangesetPathHistoryContext {
     }
 
     /// The `RepoContext` for this query.
-    pub fn repo(&self) -> &RepoContext {
-        self.changeset.repo()
+    pub fn repo_ctx(&self) -> &RepoContext {
+        self.changeset.repo_ctx()
     }
 
     /// The `ChangesetContext` for this query.
@@ -420,7 +422,7 @@ impl ChangesetPathHistoryContext {
                 cloned!(self.changeset, self.path);
                 async move {
                     let ctx = changeset.ctx().clone();
-                    let blobstore = changeset.repo().blob_repo().repo_blobstore().clone();
+                    let blobstore = changeset.repo_ctx().blob_repo().repo_blobstore().clone();
                     let root_unode_manifest_id = changeset.root_unode_manifest_id().await?;
                     if let Some(mpath) = path.into_optional_non_root_path() {
                         root_unode_manifest_id
@@ -465,7 +467,7 @@ impl ChangesetPathHistoryContext {
                 cloned!(self.changeset, self.path);
                 async move {
                     let ctx = changeset.ctx();
-                    let blobstore = changeset.repo().blob_repo().repo_blobstore();
+                    let blobstore = changeset.repo_ctx().blob_repo().repo_blobstore();
                     Self::linknode_from_id(
                         ctx,
                         blobstore,
@@ -484,17 +486,17 @@ impl ChangesetPathHistoryContext {
         match self.unode_id().await? {
             Some(Entry::Tree(manifest_unode_id)) => {
                 let ctx = self.changeset.ctx();
-                let repo = self.changeset.repo().blob_repo();
+                let repo = self.changeset.repo_ctx().blob_repo();
                 let manifest_unode = manifest_unode_id.load(ctx, repo.repo_blobstore()).await?;
                 let cs_id = manifest_unode.linknode().clone();
-                Ok(Some(ChangesetContext::new(self.repo().clone(), cs_id)))
+                Ok(Some(ChangesetContext::new(self.repo_ctx().clone(), cs_id)))
             }
             Some(Entry::Leaf(file_unode_id)) => {
                 let ctx = self.changeset.ctx();
-                let repo = self.changeset.repo().blob_repo();
+                let repo = self.changeset.repo_ctx().blob_repo();
                 let file_unode = file_unode_id.load(ctx, repo.repo_blobstore()).await?;
                 let cs_id = file_unode.linknode().clone();
-                Ok(Some(ChangesetContext::new(self.repo().clone(), cs_id)))
+                Ok(Some(ChangesetContext::new(self.repo_ctx().clone(), cs_id)))
             }
             None => Ok(None),
         }
@@ -506,13 +508,13 @@ impl ChangesetPathHistoryContext {
         Ok(self
             .linknode()
             .await?
-            .map(|cs_id| ChangesetContext::new(self.repo().clone(), cs_id)))
+            .map(|cs_id| ChangesetContext::new(self.repo_ctx().clone(), cs_id)))
     }
 
     /// Blame metadata for this path.
     pub async fn blame(&self, follow_mutable_file_history: bool) -> Result<BlameV2, MononokeError> {
         let ctx = self.changeset.ctx();
-        let repo = self.changeset.repo().inner_repo();
+        let repo = self.changeset.repo_ctx().inner_repo();
         let csid = self.changeset.id();
         let (blame, _) =
             history_traversal::blame(ctx, repo, csid, &self.path, follow_mutable_file_history)
@@ -526,7 +528,7 @@ impl ChangesetPathHistoryContext {
         follow_mutable_file_history: bool,
     ) -> Result<(BlameV2, Bytes), MononokeError> {
         let ctx = self.changeset.ctx();
-        let repo = self.changeset.repo().inner_repo();
+        let repo = self.changeset.repo_ctx().inner_repo();
         let csid = self.changeset.id();
         Ok(history_traversal::blame_with_content(
             ctx,
@@ -544,7 +546,7 @@ impl ChangesetPathHistoryContext {
         &self,
         opts: ChangesetPathHistoryOptions,
     ) -> Result<BoxStream<'_, Result<ChangesetContext, MononokeError>>, MononokeError> {
-        let repo = self.repo().repo().clone();
+        let repo = self.repo_ctx().repo().clone();
 
         if let Some(descendants_of) = opts.descendants_of {
             if !repo
@@ -675,7 +677,7 @@ impl ChangesetPathHistoryContext {
                 Ok(())
             }
         }
-        let cs_info_enabled = self.repo().derive_changeset_info_enabled();
+        let cs_info_enabled = self.repo_ctx().derive_changeset_info_enabled();
 
         let history_across_deletions = if opts.follow_history_across_deletions {
             HistoryAcrossDeletions::Track
@@ -685,7 +687,7 @@ impl ChangesetPathHistoryContext {
 
         let history = list_file_history(
             self.changeset.ctx(),
-            self.repo().inner_repo(),
+            self.repo_ctx().inner_repo(),
             self.path.clone(),
             self.changeset.id(),
             FilterVisitor {
@@ -701,7 +703,7 @@ impl ChangesetPathHistoryContext {
             } else {
                 FollowMutableRenames::No
             },
-            self.repo().mutable_renames().clone(),
+            self.repo_ctx().mutable_renames().clone(),
             TraversalOrder::new_gen_num_order(
                 self.changeset.ctx().clone(),
                 repo.commit_graph_arc(),
@@ -717,7 +719,9 @@ impl ChangesetPathHistoryContext {
 
         Ok(history
             .map_err(MononokeError::from)
-            .map_ok(move |changeset_id| ChangesetContext::new(self.repo().clone(), changeset_id))
+            .map_ok(move |changeset_id| {
+                ChangesetContext::new(self.repo_ctx().clone(), changeset_id)
+            })
             .boxed())
     }
 }
@@ -729,11 +733,11 @@ impl ChangesetPathContext {
     ) -> Result<Self, MononokeError> {
         let path = path.into();
         changeset
-            .repo()
+            .repo_ctx()
             .authorization_context()
             .require_path_read(
                 changeset.ctx(),
-                changeset.repo().inner_repo(),
+                changeset.repo_ctx().inner_repo(),
                 changeset.id(),
                 &path,
             )
@@ -752,11 +756,11 @@ impl ChangesetPathContext {
     ) -> Result<Self, MononokeError> {
         let path = path.into();
         changeset
-            .repo()
+            .repo_ctx()
             .authorization_context()
             .require_path_read(
                 changeset.ctx(),
-                changeset.repo().inner_repo(),
+                changeset.repo_ctx().inner_repo(),
                 changeset.id(),
                 &path,
             )
@@ -769,8 +773,8 @@ impl ChangesetPathContext {
     }
 
     /// The `RepoContext` for this query.
-    pub fn repo(&self) -> &RepoContext {
-        self.changeset.repo()
+    pub fn repo_ctx(&self) -> &RepoContext {
+        self.changeset.repo_ctx()
     }
 
     /// The `ChangesetContext` for this query.
@@ -791,7 +795,7 @@ impl ChangesetPathContext {
                 cloned!(self.changeset, self.path);
                 async move {
                     let ctx = changeset.ctx().clone();
-                    let blobstore = changeset.repo().blob_repo().repo_blobstore().clone();
+                    let blobstore = changeset.repo_ctx().blob_repo().repo_blobstore().clone();
                     let root_skeleton_manifest_id = changeset.root_skeleton_manifest_id().await?;
                     if let Some(mpath) = path.into_optional_non_root_path() {
                         root_skeleton_manifest_id

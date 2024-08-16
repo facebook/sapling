@@ -340,7 +340,8 @@ impl AsyncIntoResponseWith<thrift::CommitInfo> for ChangesetContext {
         {
             let parents = changeset.parents().await?;
             let parent_id_mapping =
-                map_commit_identities(changeset.repo(), parents.clone(), identity_schemes).await?;
+                map_commit_identities(changeset.repo_ctx(), parents.clone(), identity_schemes)
+                    .await?;
             Ok(parents
                 .iter()
                 .map(|parent_id| {
@@ -416,7 +417,7 @@ impl AsyncIntoResponseWith<Vec<BTreeMap<thrift::CommitIdentityScheme, thrift::Co
         let res = try_join_all({
             let changesets_grouped_by_repo = self
                 .into_iter()
-                .map(|c| c.into_repo_and_id())
+                .map(|c| c.into_repo_ctx_and_id())
                 .into_group_map();
 
             changesets_grouped_by_repo

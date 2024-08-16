@@ -388,7 +388,7 @@ impl SaplingRemoteApiHandler for UploadBonsaiChangesetHandler {
             .try_collect()
             .await?;
         let (_hg_extra, cs_ctx) = repo
-            .repo()
+            .repo_ctx()
             .create_changeset(
                 parents,
                 CreateInfo {
@@ -637,14 +637,14 @@ impl SaplingRemoteApiHandler for GraphHandlerV2 {
 
         if common.is_empty()
             && repo
-                .repo()
+                .repo_ctx()
                 .config()
                 .commit_graph_config
                 .disable_commit_graph_v2_with_empty_common
         {
             Err(anyhow!(
                 "Commit graph v2 with empty common is not allowed for repo {}",
-                repo.repo().name(),
+                repo.repo_ctx().name(),
             ))?
         }
 
@@ -805,13 +805,13 @@ impl SaplingRemoteApiHandler for CommitTranslateId {
             Some(from_repo) => ectx.other_repo(from_repo).await?,
             None => ectx.repo(),
         };
-        let from_repo = from_repo.repo();
+        let from_repo = from_repo.repo_ctx();
 
         let to_repo = match request.to_repo {
             Some(to_repo) => ectx.other_repo(to_repo).await?,
             None => ectx.repo(),
         };
-        let to_repo = to_repo.repo();
+        let to_repo = to_repo.repo_ctx();
 
         let mut hg_ids = Vec::new();
         let mut bonsai_ids = Vec::new();

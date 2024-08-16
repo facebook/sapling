@@ -182,7 +182,7 @@ async fn add_mutable_rename(
     src: &ChangesetPathHistoryContext,
     dst: &ChangesetPathHistoryContext,
 ) -> Result<()> {
-    let repo = src.repo();
+    let repo = src.repo_ctx();
     let mutable_renames = repo.mutable_renames();
 
     let src_unode = src.unode_id().await?.expect("No source unode");

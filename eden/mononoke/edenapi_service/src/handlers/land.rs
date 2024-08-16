@@ -83,7 +83,7 @@ async fn land_stack(
     base_hgid: HgId,
     pushvars: HashMap<String, Bytes>,
 ) -> Result<LandStackData, Error> {
-    let repo = repo.repo();
+    let repo = repo.repo_ctx();
 
     let head = HgChangesetId::new(HgNodeHash::from(head_hgid));
     let head = repo

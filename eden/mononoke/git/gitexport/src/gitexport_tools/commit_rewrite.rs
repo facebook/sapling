@@ -291,7 +291,7 @@ async fn create_bonsai_for_new_repo<'a>(
     ),
     MononokeError,
 > {
-    let logger = changeset_ctx.repo().ctx().logger();
+    let logger = changeset_ctx.ctx().logger();
     trace!(
         logger,
         "Rewriting changeset: {:#?} | {:#?}",
