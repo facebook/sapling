@@ -130,15 +130,7 @@ rust_library(
     autocargo = {
         "cargo_toml_dir": "override",
     },
-    deps = [
-        ":blobrepo",
-        ":repo_blobstore",
-        "//eden/mononoke/blobstore:blobstore",
-        "//eden/mononoke/blobstore:cacheblob",
-        "//eden/mononoke/bonsai_hg_mapping:bonsai_hg_mapping",
-        "//eden/mononoke/filenodes:filenodes",
-        "//eden/mononoke/repo_attributes/commit_graph/commit_graph:commit_graph",
-    ],
+    deps = [],
 )
 
 rust_library(

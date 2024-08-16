@@ -6,12 +6,3 @@ version = "0.1.0"
 authors = ["Facebook"]
 edition = "2021"
 license = "GPLv2+"
-
-[dependencies]
-blobrepo = { version = "0.1.0", path = ".." }
-blobstore = { version = "0.1.0", path = "../../blobstore" }
-bonsai_hg_mapping = { version = "0.1.0", path = "../../bonsai_hg_mapping" }
-cacheblob = { version = "0.1.0", path = "../../blobstore/cacheblob" }
-commit_graph = { version = "0.1.0", path = "../../repo_attributes/commit_graph/commit_graph" }
-filenodes = { version = "0.1.0", path = "../../filenodes" }
-repo_blobstore = { version = "0.1.0", path = "../repo_blobstore" }
