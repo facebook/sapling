@@ -81,6 +81,7 @@ impl GitImportLfs {
     pub fn new(
         lfs_server: String,
         allow_not_found: bool,
+        max_attempts: u32,
         conn_limit: Option<usize>,
         tls_args: Option<TLSArgs>,
     ) -> Result<Self, Error> {
@@ -99,7 +100,7 @@ impl GitImportLfs {
         let inner = GitImportLfsInner {
             lfs_server,
             allow_not_found,
-            max_attempts: 30,
+            max_attempts,
             time_ms_between_attempts: 10000,
             conn_limit_sem: conn_limit.map(|x| Arc::new(Semaphore::new(x))),
             client,

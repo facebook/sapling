@@ -180,6 +180,14 @@ struct GitimportArgs {
     /// TLS parameters for this service used for outbound LFS connections
     #[clap(flatten)]
     tls_args: Option<TLSArgs>,
+    /// If LFS file can't be obtained from LFS server, don't fail the import
+    /// but import the pointer as-is.
+    #[clap(long)]
+    allow_dangling_lfs_pointers: bool,
+    /// How many times to retry fetching LFS files from the server
+    /// before deciding that the file is missing.
+    #[clap(long, default_value_t = 5)]
+    lfs_import_max_attempts: u32,
 }
 
 #[derive(Subcommand)]
@@ -277,7 +285,8 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
             args.lfs_server.ok_or_else(|| {
                 anyhow!("LFS server url is required when LFS is enabled in the repo config")
             })?,
-            false,
+            args.allow_dangling_lfs_pointers,
+            args.lfs_import_max_attempts,
             Some(LFS_SIMULTANEOUS_CONNECTION_LIMIT),
             args.tls_args,
         )?,
