@@ -791,11 +791,6 @@ fn log_end(
         }
         blackbox::sync();
     });
-
-    let counters = hg_metrics::summarize();
-    if !counters.is_empty() {
-        sampling::append_sample_map("metrics", &counters);
-    }
 }
 
 #[derive(Copy, Clone)]
@@ -883,6 +878,9 @@ fn log_metrics(io: &IO, config: &dyn Config) -> Result<()> {
     if metrics.is_empty() {
         return Ok(());
     }
+
+    // Log counters to "sampling" file.
+    sampling::append_sample_map("metrics", &metrics);
 
     // Empty value means print everything.
     let prefixes: Option<Vec<Text>> = config.get_opt("devel", "print-metrics")?;
