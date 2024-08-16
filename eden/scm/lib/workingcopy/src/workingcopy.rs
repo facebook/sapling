@@ -98,6 +98,7 @@ pub struct WorkingCopy {
     pub(crate) dot_hg_path: PathBuf,
     pub journal: Journal,
     watchman_client: Arc<DeferredWatchmanClient>,
+    notify_parents_change_func: Option<Box<dyn Fn(&[HgId]) -> Result<()> + Send + Sync>>,
 }
 
 const ACTIVE_BOOKMARK_FILE: &str = "bookmarks.current";
@@ -199,6 +200,7 @@ impl WorkingCopy {
             dot_hg_path,
             journal,
             watchman_client,
+            notify_parents_change_func: None,
         })
     }
 
@@ -612,6 +614,26 @@ impl WorkingCopy {
     pub fn config(&self) -> &Arc<dyn Config> {
         &self.config
     }
+
+    /// Update the "parent change" callback.
+    /// It will be called immediately with the current parents.
+    pub fn set_notify_parents_change_func(
+        &mut self,
+        func: impl Fn(&[HgId]) -> Result<()> + 'static + Send + Sync,
+    ) -> Result<()> {
+        let func = Box::new(func);
+        let parents = self.parents()?;
+        (func)(&parents)?;
+        self.notify_parents_change_func = Some(func);
+        Ok(())
+    }
+
+    fn notify_parents_change(&self, parents: &[HgId]) -> Result<()> {
+        if let Some(func) = self.notify_parents_change_func.as_ref() {
+            (func)(parents)?;
+        }
+        Ok(())
+    }
 }
 
 // Example:
@@ -654,7 +676,6 @@ impl<'a> LockedWorkingCopy<'a> {
 
     pub fn set_parents(&self, parents: Vec<HgId>, parent_tree_hash: Option<HgId>) -> Result<()> {
         debug!(?parents);
-        self.notify_parents_change(&parents)?;
 
         let p1 = parents
             .first()
@@ -662,7 +683,11 @@ impl<'a> LockedWorkingCopy<'a> {
             .clone();
         let p2 = parents.get(1).copied();
         self.treestate.lock().set_parents(&mut parents.iter())?;
-        self.filesystem.lock().set_parents(p1, p2, parent_tree_hash)
+        self.filesystem
+            .lock()
+            .set_parents(p1, p2, parent_tree_hash)?;
+        self.wc.notify_parents_change(&parents)?;
+        Ok(())
     }
 
     pub fn clear_merge_state(&self) -> Result<()> {
@@ -683,21 +708,4 @@ impl<'a> LockedWorkingCopy<'a> {
             None => Ok(unlink_if_exists(&active_path)?),
         }
     }
-
-    fn notify_parents_change(&self, parents: &[HgId]) -> Result<()> {
-        let change = WdirParentChange {
-            root: self.wc.vfs.root().to_owned(),
-            parents: parents.to_owned(),
-        };
-        pubsub::publish("WdirParentChange", &change)?;
-        Ok(())
-    }
-}
-
-/// Used by `pubsub`. Notify a `WdirParentChange` event.
-pub struct WdirParentChange {
-    /// The root of the working copy, without `.sl`.
-    pub root: PathBuf,
-    /// The new parents.
-    pub parents: Vec<HgId>,
 }
