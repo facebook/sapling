@@ -19,6 +19,7 @@ factory = { version = "0.1.0", path = "../util/factory" }
 fail = { version = "0.4", features = ["failpoints"] }
 fs-err = { version = "2.6.0", features = ["tokio"] }
 identity = { version = "0.1.0", path = "../identity" }
+lru-cache = "0.1.2"
 manifest-tree = { version = "0.1.0", path = "../manifest-tree" }
 metalog = { version = "0.1.0", path = "../metalog" }
 once_cell = "1.12"
