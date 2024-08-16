@@ -115,7 +115,6 @@ members = [
   "blobimport",
   "blobimport_lib",
   "blobimport_lib/consts",
-  "blobrepo",
   "blobrepo/blobrepo_hg",
   "blobrepo/blobsync",
   "blobrepo/common",
