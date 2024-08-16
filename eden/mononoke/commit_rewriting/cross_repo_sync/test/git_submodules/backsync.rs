@@ -338,7 +338,72 @@ async fn test_valid_recursive_submodule_expansion_deletion_succeeds(
 
 // TODO(T182967556): test changing one submodule and deleting another
 
-// TODO(T182967556): test backsyncing valid atomic repo changing large and small repo
+/// Test that updating submodule expansions and changing small and large repo
+/// files in the same commit backsyncs successfully and that **the small repo
+/// commit is lossy**, i.e. it only contains the changes made to the small repo.
+#[fbinit::test]
+async fn test_atomic_submodule_updates_with_other_changes_backsync_successfully(
+    fb: FacebookInit,
+) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb.clone());
+
+    let (repo_b, repo_b_cs_map) = build_repo_b(fb).await.context("Failed to build repo_b")?;
+
+    let SubmoduleSyncTestData {
+        large_repo_info: (large_repo, large_repo_master),
+        commit_syncer,
+        small_repo_info: (small_repo, _small_repo_cs_map),
+        ..
+    } = build_submodule_backsync_test_data(
+        fb,
+        &repo_b,
+        vec![(NonRootMPath::new(REPO_B_SUBMODULE_PATH)?, repo_b.clone())],
+    )
+    .await
+    .context("Failed to build test data")?;
+    let b_a_mapped_git_commit = repo_b
+        .repo_derived_data()
+        .derive::<MappedGitCommitId>(&ctx, repo_b_cs_map["B_A"])
+        .await?;
+
+    let b_a_git_hash = *b_a_mapped_git_commit.oid();
+    const MESSAGE: &str = "Update git commit in submodule metadata file";
+    let cs_id = CreateCommitContext::new(&ctx, &large_repo, vec![large_repo_master])
+        .set_message(MESSAGE)
+        .add_file(
+            "small_repo/submodules/.x-repo-submodule-repo_b",
+            b_a_git_hash.to_string(),
+        )
+        // Delete the file added in commit B_B, to achieve working copy
+        // equivalence with B_A
+        .delete_file("small_repo/submodules/repo_b/B_B")
+        .add_file("large_repo_root", "Change large repo file")
+        .add_file("small_repo/A_C", "Change small repo file")
+        .commit()
+        .await
+        .context("Failed to create commit modifying small_repo directory")?;
+
+    let (small_repo_cs_id, small_repo_changesets) =
+        sync_changeset_and_derive_all_types(ctx.clone(), cs_id, &small_repo, &commit_syncer)
+            .await?;
+
+    check_mapping(ctx.clone(), &commit_syncer, cs_id, Some(small_repo_cs_id)).await;
+
+    compare_expected_changesets(
+        small_repo_changesets.last_chunk::<1>().unwrap(),
+        &[ExpectedChangeset::new(MESSAGE)
+            .with_git_submodules(vec![
+                // GitSubmodule file change
+                "submodules/repo_b",
+            ])
+            .with_regular_changes(vec![
+                // Small repo file change
+                "A_C",
+            ])],
+    )?;
+
+    Ok(())
+}
 
 // TODO(T182967556): test updating 2 small repos with submodule expansions.
 
@@ -523,8 +588,6 @@ async fn test_changing_submodule_metadata_pointer_to_git_commit_from_another_rep
 /// Deleting the submodule metadata file without deleting the expansion is a
 /// valid scenario, e.g. when users delete a submodule but keep its static copy
 /// in the repo as regular files.
-/// TODO(T187241943): don't allow users to backsync changesets where the metadat
-/// file is deleted but the expansion is not.
 #[fbinit::test]
 async fn test_deleting_submodule_metadata_file_without_expansion_passes_fails(
     fb: FacebookInit,
