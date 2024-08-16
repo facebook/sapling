@@ -669,3 +669,16 @@ Cross-directory graft removes phabricator diff link:
   @@ -1,1 +1,1 @@
   -A
   +B
+
+Graft supports non-root relative paths
+  $ newclientrepo
+  $ drawdag <<EOS
+  > C B  # B/my/bar/file = a\nb\ncc\n (copied from my/foo/file)
+  > |/   # C/my/foo/file = aa\nb\nc\n
+  > A    # A/my/foo/file = a\nb\nc\n
+  > EOS
+  $ hg go -q $B
+  $ cd my
+Tofix: graft should be able to graft commit $C when using non-relative paths
+  $ hg graft -qr $C --from-path foo --to-path bar
+  note: graft of 48b96237613e created no changes to commit
