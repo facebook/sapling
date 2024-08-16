@@ -24,6 +24,7 @@ pub mod iddagstore;
 pub mod idmap;
 mod idset;
 mod integrity;
+pub(crate) mod lifecycle;
 pub mod ops;
 pub mod protocol;
 #[cfg(any(test, feature = "render"))]
