@@ -148,6 +148,13 @@ macro_rules! delegate {
             {
                 self.$($t)*.master_group()
             }
+            fn virtual_group<'a: 's, 's>(&'a self)
+                -> std::pin::Pin<Box<dyn std::future::Future<Output=
+                        $crate::Result<$crate::Set>
+                    > + Send + 's>> where Self: 's
+            {
+                self.$($t)*.virtual_group()
+            }
             fn ancestors<'a: 's, 's>(&'a self, set: $crate::Set)
                 -> std::pin::Pin<Box<dyn std::future::Future<Output=
                         $crate::Result<$crate::Set>

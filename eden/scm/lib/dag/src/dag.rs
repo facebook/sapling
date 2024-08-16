@@ -1887,6 +1887,7 @@ where
     }
 
     /// Returns a set that covers all vertexes tracked by this DAG.
+    /// Excluding the virtual group.
     async fn all(&self) -> Result<Set> {
         let spans = self.dag().all()?;
         let result = Set::from_id_set_dag(spans, self)?;
@@ -1899,6 +1900,13 @@ where
         let spans = self.dag().master_group()?;
         let result = Set::from_id_set_dag(spans, self)?;
         result.hints().add_flags(Flags::ANCESTORS);
+        Ok(result)
+    }
+
+    /// Returns a set that covers all vertexes in the virtual group.
+    async fn virtual_group(&self) -> Result<Set> {
+        let spans = self.dag().all_ids_in_groups(&[Group::VIRTUAL])?;
+        let result = Set::from_id_set_dag(spans, self)?;
         Ok(result)
     }
 

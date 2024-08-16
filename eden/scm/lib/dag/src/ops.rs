@@ -63,6 +63,9 @@ pub trait DagAlgorithm: Send + Sync {
     /// Returns a set that covers all vertexes in the master group.
     async fn master_group(&self) -> Result<Set>;
 
+    /// Returns a set that covers all vertexes in the virtual group.
+    async fn virtual_group(&self) -> Result<Set>;
+
     /// Calculates all ancestors reachable from any name from the given set.
     async fn ancestors(&self, set: Set) -> Result<Set>;
 

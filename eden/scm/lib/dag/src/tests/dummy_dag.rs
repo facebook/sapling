@@ -51,6 +51,10 @@ impl DagAlgorithm for DummyDag {
         crate::errors::programming("DummyDag does not support master_group()")
     }
 
+    async fn virtual_group(&self) -> Result<Set> {
+        crate::errors::programming("DummyDag does not support virtual_group()")
+    }
+
     /// Vertexes buffered in memory, not yet written to disk.
     async fn dirty(&self) -> Result<Set> {
         Ok(Set::empty())

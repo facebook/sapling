@@ -1185,6 +1185,14 @@ impl DagAlgorithm for RevlogIndex {
         self.all().await
     }
 
+    async fn virtual_group(&self) -> dag::Result<Set> {
+        // XXX: Reports nothing. Revlog is rarely used so do not borther implementing the VIRTUAL group.
+        let id_set = IdSet::empty();
+        let result = Set::from_id_set_dag(id_set, self)?;
+        result.hints().add_flags(Flags::EMPTY);
+        Ok(result)
+    }
+
     /// Vertexes buffered, not persisted.
     async fn dirty(&self) -> dag::Result<Set> {
         let low = Id(self.data_len() as _);

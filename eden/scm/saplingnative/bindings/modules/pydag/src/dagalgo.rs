@@ -37,6 +37,11 @@ py_class!(pub class dagalgo |py| {
         Ok(Names(block_on(self.dag(py).master_group()).map_pyerr(py)?))
     }
 
+    /// Return a set including vertexes in the virtual group.
+    def virtualgroup(&self) -> PyResult<Names> {
+        Ok(Names(block_on(self.dag(py).virtual_group()).map_pyerr(py)?))
+    }
+
     /// Return a set including vertexes pending in memory.
     def dirty(&self) -> PyResult<Names> {
         Ok(Names(block_on(self.dag(py).dirty()).map_pyerr(py)?))
