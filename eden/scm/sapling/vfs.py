@@ -581,54 +581,37 @@ class vfs(abstractvfs):
 opener = vfs
 
 
-class proxyvfs:
-    def __init__(self, vfs: "abstractvfs") -> None:
-        self.vfs = vfs
-
-    @property
-    def options(self):
-        return self.vfs.options
-
-    @options.setter
-    def options(self, value):
-        self.vfs.options = value
-
-
-class filtervfs(abstractvfs, proxyvfs):
+class filtervfs(util.proxy_wrapper, abstractvfs):
     """Wrapper vfs for filtering filenames with a function."""
 
     def __init__(self, vfs: "abstractvfs", filter: "Callable[[str], str]") -> None:
-        proxyvfs.__init__(self, vfs)
-        self._filter = filter
+        super().__init__(vfs, _filter=filter)
 
     def __call__(self, path, *args, **kwargs):
-        return self.vfs(self._filter(path), *args, **kwargs)
+        return self.inner(self._filter(path), *args, **kwargs)
 
     def join(self, path: "Optional[str]", *insidef: str) -> str:
         if path:
-            return self.vfs.join(self._filter(self.vfs.reljoin(path, *insidef)))
+            return self.inner.join(self._filter(self.inner.reljoin(path, *insidef)))
         else:
-            return self.vfs.join(path)
+            return self.inner.join(path)
 
 
 filteropener = filtervfs
 
 
-class readonlyvfs(abstractvfs, proxyvfs):
+class readonlyvfs(util.proxy_wrapper, abstractvfs):
     """Wrapper vfs preventing any writing."""
-
-    def __init__(self, vfs):
-        proxyvfs.__init__(self, vfs)
 
     def __call__(
         self, path: str, mode: str = "r", *args: bool, **kw: bool
     ) -> "BinaryIO":
         if mode not in ("r", "rb"):
             raise error.Abort(_("this vfs is read only"))
-        return self.vfs(path, mode, *args, **kw)
+        return self.inner(path, mode, *args, **kw)
 
     def join(self, path: "Optional[str]", *insidef: str) -> str:
-        return self.vfs.join(path, *insidef)
+        return self.inner.join(path, *insidef)
 
 
 class closewrapbase:

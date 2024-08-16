@@ -81,7 +81,7 @@ def _shareddatastoresrepack(repo, incremental, category) -> None:
 
 def _localdatarepack(repo, incremental, category) -> None:
     if repo.ui.configbool("remotefilelog", "localdatarepack"):
-        packpath = shallowutil.getlocalpackpath(repo.svfs.vfs.base, category)
+        packpath = shallowutil.getlocalpackpath(repo.svfs.base, category)
         _cleanuppacks(repo.ui, packpath, 0)
 
         _runrustrepack(
@@ -92,7 +92,7 @@ def _localdatarepack(repo, incremental, category) -> None:
 def fulllocaldatarepack(repo, stores) -> None:
     if repo.ui.configbool("remotefilelog", "localdatarepack"):
         packpath = shallowutil.getlocalpackpath(
-            repo.svfs.vfs.base, constants.FILEPACK_CATEGORY
+            repo.svfs.base, constants.FILEPACK_CATEGORY
         )
         _cleanuppacks(repo.ui, packpath, 0)
 
@@ -171,7 +171,7 @@ def _getmanifeststores(repo):
 
     sharedpackpath = shallowutil.getcachepackpath(repo, constants.TREEPACK_CATEGORY)
     localpackpath = shallowutil.getlocalpackpath(
-        repo.svfs.vfs.base, constants.TREEPACK_CATEGORY
+        repo.svfs.base, constants.TREEPACK_CATEGORY
     )
 
     return (

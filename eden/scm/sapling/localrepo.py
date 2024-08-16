@@ -591,10 +591,7 @@ class localrepository:
         if self.ui.configbool("devel", "all-warnings") or self.ui.configbool(
             "devel", "check-locks"
         ):
-            if hasattr(self.svfs, "vfs"):  # this is filtervfs
-                self.svfs.vfs.audit = self._getsvfsward(self.svfs.vfs.audit)
-            else:  # standard vfs
-                self.svfs.audit = self._getsvfsward(self.svfs.audit)
+            self.svfs.audit = self._getsvfsward(self.svfs.audit)
         if "store" in self.requirements:
             try:
                 self.storerequirements = scmutil.readrequires(

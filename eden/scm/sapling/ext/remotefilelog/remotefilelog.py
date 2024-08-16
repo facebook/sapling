@@ -567,7 +567,7 @@ class remotefileslog(filelog.fileslog):
         try:
             self.filestore = repo._rsrepo.filescmstore(remotestore)
             self.metadatastore = revisionstore.metadatastore(
-                repo.svfs.vfs.base,
+                repo.svfs.base,
                 repo.ui._rcfg,
                 remotestore,
                 edenapistore,

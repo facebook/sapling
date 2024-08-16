@@ -696,7 +696,7 @@ def setuptreestores(repo, mfl):
     packpath = shallowutil.getcachepackpath(repo, PACK_CATEGORY)
     _prunesharedpacks(repo, packpath)
 
-    localpackpath = shallowutil.getlocalpackpath(repo.svfs.vfs.base, PACK_CATEGORY)
+    localpackpath = shallowutil.getlocalpackpath(repo.svfs.base, PACK_CATEGORY)
 
     demanddownload = ui.configbool("treemanifest", "demanddownload", True)
     demandgenerate = (
@@ -975,7 +975,7 @@ class basetreemanifestlog:
             # Do all reads fall back through _httpgetdesignatednodes instead
             # Of the normal contentstore fallback path?
             self.treescmstore = revisionstore.treescmstore(
-                self._repo.svfs.vfs.base,
+                self._repo.svfs.base,
                 self.ui._rcfg,
                 remotestore,
                 edenapistore,
@@ -984,7 +984,7 @@ class basetreemanifestlog:
             )
             self.datastore = self.treescmstore.get_contentstore()
             self.historystore = revisionstore.metadatastore(
-                self._repo.svfs.vfs.base,
+                self._repo.svfs.base,
                 self.ui._rcfg,
                 remotestore,
                 None,

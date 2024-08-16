@@ -594,7 +594,7 @@ class basetreemanifestlog:
             )
             self.datastore = self.treescmstore
             self.historystore = revisionstore.metadatastore(
-                self._repo.svfs.vfs.base,
+                self._repo.svfs.base,
                 self.ui._rcfg,
                 remotestore,
                 None,

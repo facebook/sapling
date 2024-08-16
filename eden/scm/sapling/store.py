@@ -548,18 +548,16 @@ class fncache:
         return iter(self.entries)
 
 
-class metavfs:
+class metavfs(util.proxy_wrapper, vfsmod.abstractvfs):
     """Wrapper vfs that writes data to metalog"""
 
-    metapaths = {}
-
-    def __init__(self):
-        super().__init__()
-        self._rsrepo = None
+    def __init__(self, vfs, **kwargs):
+        super().__init__(
+            vfs, _rsrepo=None, metapaths=set(bindings.metalog.tracked()), **kwargs
+        )
 
     @util.propertycache
     def metalog(self):
-        vfs = self.vfs
         metalog = self._rsrepo.metalog()
 
         # Keys that are previously tracked in metalog.
@@ -569,7 +567,7 @@ class metavfs:
 
         # Migrate up (from svfs plain files to metalog).
         for name in desired.difference(tracked):
-            data = vfs.tryread(name)
+            data = self.inner.tryread(name)
             if data is not None:
                 metalog[name] = data
 
@@ -657,11 +655,9 @@ class writablestream:
         self.writefunc(value)
 
 
-class _fncachevfs(vfsmod.abstractvfs, vfsmod.proxyvfs, metavfs):
+class _fncachevfs(metavfs):
     def __init__(self, vfs, fnc, encode):
-        vfsmod.proxyvfs.__init__(self, vfs)
-        self.fncache = fnc
-        self.encode = encode
+        super().__init__(vfs, fncache=fnc, encode=encode)
 
     def __call__(self, path, mode="r", *args, **kw):
         if path in self.metapaths:
@@ -670,13 +666,13 @@ class _fncachevfs(vfsmod.abstractvfs, vfsmod.proxyvfs, metavfs):
             path.startswith("data/") or path.startswith("meta/")
         ):
             self.fncache.add(path)
-        return self.vfs(self.encode(path), mode, *args, **kw)
+        return self.inner(self.encode(path), mode, *args, **kw)
 
     def join(self, path: "Optional[str]", *insidef: str) -> str:
         if path:
-            return self.vfs.join(self.encode(os.path.join(path, *insidef)))
+            return self.inner.join(self.encode(os.path.join(path, *insidef)))
         else:
-            return self.vfs.join(path)
+            return self.inner.join(path)
 
 
 class fncachestore(basicstore):
@@ -743,5 +739,4 @@ def store(requirements, path, vfstype, uiconfig=None) -> fncachestore:
     store = fncachestore(path, vfstype, "dotencode" in requirements)
     # Change remotenames and visibleheads to be backed by metalog,
     # so they can be atomically read or written.
-    store.vfs.metapaths = set(bindings.metalog.tracked())
     return store
