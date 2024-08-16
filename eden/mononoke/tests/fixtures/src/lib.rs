@@ -22,7 +22,6 @@ use futures::stream;
 use mercurial_derivation::DeriveHgChangeset;
 use mercurial_types::HgChangesetId;
 use mercurial_types::NonRootMPath;
-use mononoke_api_types::InnerRepo;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::BonsaiChangesetMut;
 use mononoke_types::ChangesetId;
@@ -155,22 +154,6 @@ pub trait TestRepoFixture {
         id: RepositoryId,
     ) -> R {
         let repo: R = TestRepoFactory::new(fb)
-            .unwrap()
-            .with_id(id)
-            .with_name(Self::REPO_NAME.to_string())
-            .build()
-            .await
-            .unwrap();
-        Self::init_repo(fb, &repo).await.unwrap();
-        repo
-    }
-
-    async fn get_inner_repo(fb: FacebookInit) -> InnerRepo {
-        Self::get_inner_repo_with_id(fb, RepositoryId::new(0)).await
-    }
-
-    async fn get_inner_repo_with_id(fb: FacebookInit, id: RepositoryId) -> InnerRepo {
-        let repo: InnerRepo = TestRepoFactory::new(fb)
             .unwrap()
             .with_id(id)
             .with_name(Self::REPO_NAME.to_string())
