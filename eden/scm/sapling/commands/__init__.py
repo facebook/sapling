@@ -4301,7 +4301,7 @@ def log(ui, repo, *pats, **opts):
     "manifest|mani",
     [
         ("r", "rev", "", _("revision to display"), _("REV")),
-        ("", "all", False, _("list files from all revisions")),
+        ("", "all", False, _("list files from all revisions (DEPRECATED)")),
     ]
     + formatteropts,
     _("[-r REV]"),
@@ -4327,24 +4327,7 @@ def manifest(ui, repo, node=None, rev=None, **opts):
     fm = ui.formatter("manifest", opts)
 
     if opts.get("all"):
-        if rev or node:
-            raise error.Abort(_("can't specify a revision with --all"))
-
-        res = []
-        prefix = "data/"
-        suffix = ".i"
-        plen = len(prefix)
-        slen = len(suffix)
-        with repo.lock():
-            for fn, b, size in repo.store.datafiles():
-                if size != 0 and fn[-slen:] == suffix and fn[:plen] == prefix:
-                    res.append(fn[plen:-slen])
-        ui.pager("manifest")
-        for f in res:
-            fm.startitem()
-            fm.write("path", "%s\n", f)
-        fm.end()
-        return
+        raise error.Abort(_("--all not supported"))
 
     if rev and node:
         raise error.Abort(_("please specify just one revision"))

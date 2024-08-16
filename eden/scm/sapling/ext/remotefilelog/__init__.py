@@ -189,15 +189,6 @@ def uisetup(ui):
     extensions.wrapcommand(commands.table, "pull", pull)
     extensions.wrapfunction(bundle2, "getrepocaps", getrepocaps)
 
-    # Prevent 'hg manifest --all'
-    def _manifest(orig, ui, repo, *args, **opts):
-        if shallowrepo.requirement in repo.requirements and opts.get("all"):
-            raise error.Abort(_("--all is not supported in a shallow repo"))
-
-        return orig(ui, repo, *args, **opts)
-
-    extensions.wrapcommand(commands.table, "manifest", _manifest)
-
     # Wrap remotefilelog with lfs code
     def _lfsloaded(loaded=False):
         lfsmod = None
