@@ -25,6 +25,7 @@ from typing import Dict
 import bindings
 from bindings import renderdag
 from sapling import tracing
+from sapling.ext.extlib.phabricator import PHABRICATOR_COMMIT_MESSAGE_TAGS
 
 from . import (
     bookmarks,
@@ -4082,6 +4083,77 @@ def commiteditor(repo, ctx, editform=""):
     return commitforceeditor(
         repo, ctx, editform=editform, unchangedmessagedetection=True
     )
+
+
+def add_summary_footer(
+    commit_msg: str,
+    summary_footer: str,
+    commit_tags: str = PHABRICATOR_COMMIT_MESSAGE_TAGS,
+) -> str:
+    """
+    >>> print(add_summary_footer("", "i am a summary footer"))
+    <BLANKLINE>
+    i am a summary footer
+
+    >>> print(add_summary_footer("this is a title", ""))
+    this is a title
+
+    >>> print(add_summary_footer("this is a title", "i am a summary footer"))
+    this is a title
+    <BLANKLINE>
+    i am a summary footer
+
+    >>> print(add_summary_footer(
+    ...   "this is a title\\n\\nSummary: I am a summary",
+    ...   "i am a summary footer"
+    ... ))
+    this is a title
+    <BLANKLINE>
+    Summary: I am a summary
+    <BLANKLINE>
+    i am a summary footer
+
+    >>> print(add_summary_footer(
+    ...   "this is a title\\n\\nSummary: I am a summary\\n\\nTest Plan: I am a test plan",
+    ...   "i am a summary footer"
+    ... ))
+    this is a title
+    <BLANKLINE>
+    Summary: I am a summary
+    <BLANKLINE>
+    i am a summary footer
+    <BLANKLINE>
+    Test Plan: I am a test plan
+    """
+    if not summary_footer:
+        return commit_msg
+
+    lines = commit_msg.split("\n")
+    prev_tag = None
+    insert_idx = len(lines)
+    for i, line in enumerate(lines):
+        try:
+            tag = line[: line.index(":")]
+        except ValueError:
+            # not found ":"
+            continue
+
+        if tag in commit_tags:
+            if prev_tag == "Summary":
+                # found a tag after summary
+                insert_idx = i
+                break
+            prev_tag = tag
+
+    new_lines = lines[:insert_idx]
+    if new_lines[-1]:
+        new_lines.append("")
+    new_lines.append(summary_footer)
+    if insert_idx < len(lines):
+        new_lines.append("")
+    new_lines.extend(lines[insert_idx:])
+
+    return "\n".join(new_lines)
 
 
 def commitforceeditor(
