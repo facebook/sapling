@@ -1005,16 +1005,8 @@ def mergeeditform(ctxorbool, baseformname):
     return baseformname + ".normal"
 
 
-def getcommiteditor(
-    edit=False, finishdesc=None, extramsg=None, editform="", summaryfooter="", **opts
-):
+def getcommiteditor(edit=False, extramsg=None, editform="", summaryfooter="", **opts):
     """get appropriate commit message editor according to '--edit' option
-
-    'finishdesc' is a function to be called with edited commit message
-    (= 'description' of the new changeset) just after editing, but
-    before checking empty-ness. It should return actual text to be
-    stored into history. This allows to change description before
-    storing.
 
     'extramsg' is a extra message to be shown in the editor instead of
     'Leave message empty to abort commit' line. 'HG: ' prefix and EOL
@@ -1027,14 +1019,13 @@ def getcommiteditor(
     summary.
 
     'getcommiteditor' returns 'commitforceeditor' regardless of
-    'edit', if one of 'finishdesc' or 'extramsg' is specified, because
+    'edit', if 'extramsg' is specified, because
     they are specific for usage in MQ.
     """
-    if edit or finishdesc or extramsg:
+    if edit or extramsg:
         return lambda r, c: commitforceeditor(
             r,
             c,
-            finishdesc=finishdesc,
             extramsg=extramsg,
             editform=editform,
             summaryfooter=summaryfooter,
@@ -4179,7 +4170,6 @@ def add_summary_footer(
 def commitforceeditor(
     repo,
     ctx,
-    finishdesc=None,
     extramsg=None,
     editform="",
     unchangedmessagedetection=False,
@@ -4239,8 +4229,6 @@ def commitforceeditor(
     text = re.sub(f"(?m)^({all_prefixes}):.*(\n|$)", "", text)
     os.chdir(olddir)
 
-    if finishdesc:
-        text = finishdesc(text)
     if not text.strip():
         raise error.Abort(_("empty commit message"))
     if unchangedmessagedetection and editortext == templatetext:

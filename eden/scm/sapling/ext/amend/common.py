@@ -213,7 +213,7 @@ def rewrite(repo, old, updates, head, newbases, commitopts, mutop=None):
         )
 
         if commitopts.get("edit"):
-            new._text = cmdutil.commitforceeditor(repo, new, [])
+            new._text = cmdutil.commitforceeditor(repo, new)
         revcount = len(repo)
         newid = repo.commitctx(new)
         new = repo[newid]
@@ -265,7 +265,7 @@ def metarewrite(repo, old, newbases, commitopts):
         )
 
         if commitopts.get("edit"):
-            new._text = cmdutil.commitforceeditor(repo, new, [])
+            new._text = cmdutil.commitforceeditor(repo, new)
         revcount = len(repo)
         newid = repo.commitctx(new)
         new = repo[newid]
