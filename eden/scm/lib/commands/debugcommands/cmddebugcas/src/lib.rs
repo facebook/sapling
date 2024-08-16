@@ -34,7 +34,7 @@ define_flags! {
     }
 }
 
-pub fn run(ctx: ReqCtx<DebugCasOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Result<u8> {
+pub fn run(ctx: ReqCtx<DebugCasOpts>, repo: &Repo, wc: &WorkingCopy) -> Result<u8> {
     let client = match cas_client::new(ctx.config().clone())? {
         Some(client) => client,
         None => abort!("no CAS client constructor registered"),

@@ -24,7 +24,7 @@ define_flags! {
     }
 }
 
-pub fn run(ctx: ReqCtx<DebugMergeStateOpts>, _repo: &mut Repo, wc: &mut WorkingCopy) -> Result<u8> {
+pub fn run(ctx: ReqCtx<DebugMergeStateOpts>, _repo: &Repo, wc: &WorkingCopy) -> Result<u8> {
     if ctx.opts.add_unsupported_mandatory_record || ctx.opts.add_unsupported_advisory_record {
         ensure!(std::env::var_os("TESTTMP").is_some(), "only for tests");
 

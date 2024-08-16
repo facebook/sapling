@@ -26,7 +26,7 @@ define_flags! {
     }
 }
 
-pub fn run(ctx: ReqCtx<GraphOpts>, repo: &mut Repo) -> Result<u8> {
+pub fn run(ctx: ReqCtx<GraphOpts>, repo: &Repo) -> Result<u8> {
     let group = match ctx.opts.group.as_ref() {
         "master" => dag::Group::MASTER,
         "non_master" => dag::Group::NON_MASTER,

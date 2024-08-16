@@ -28,7 +28,7 @@ define_flags! {
     }
 }
 
-pub fn run(ctx: ReqCtx<DebugConfigTreeOpts>, repo: Option<&mut Repo>) -> Result<u8> {
+pub fn run(ctx: ReqCtx<DebugConfigTreeOpts>, repo: Option<&Repo>) -> Result<u8> {
     // repo is used to load repo-specific config.
     let config = match repo {
         None => ctx.config(),

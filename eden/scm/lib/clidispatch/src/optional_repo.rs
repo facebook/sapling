@@ -79,7 +79,7 @@ impl OptionalRepo {
         }
     }
 
-    pub fn repo_opt(&mut self) -> Option<&mut Repo> {
+    pub fn repo_opt(&self) -> Option<&Repo> {
         match self {
             OptionalRepo::Some(repo) => Some(repo),
             OptionalRepo::None(_) => None,

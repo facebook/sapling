@@ -29,7 +29,7 @@ enum Format {
     Json,
 }
 
-pub fn run(ctx: ReqCtx<DebugRunlogOpts>, repo: &mut Repo) -> Result<u8> {
+pub fn run(ctx: ReqCtx<DebugRunlogOpts>, repo: &Repo) -> Result<u8> {
     let mut stdout = ctx.io().output();
     let mut stderr = ctx.io().error();
 

@@ -69,7 +69,7 @@ enum FetchType {
     Tree,
 }
 
-pub fn run(ctx: ReqCtx<DebugScmStoreOpts>, repo: &mut Repo) -> Result<u8> {
+pub fn run(ctx: ReqCtx<DebugScmStoreOpts>, repo: &Repo) -> Result<u8> {
     let mode = match ctx.opts.mode.as_ref() {
         "file" => FetchType::File,
         "tree" => FetchType::Tree,

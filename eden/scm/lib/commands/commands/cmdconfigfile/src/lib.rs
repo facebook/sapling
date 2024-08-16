@@ -30,7 +30,7 @@ define_flags! {
     }
 }
 
-pub fn run(ctx: ReqCtx<DebugConfigLocationOpts>, repo: Option<&mut Repo>) -> Result<u8> {
+pub fn run(ctx: ReqCtx<DebugConfigLocationOpts>, repo: Option<&Repo>) -> Result<u8> {
     let optcnt = (ctx.opts.user as i32) + (ctx.opts.local as i32) + (ctx.opts.system as i32);
 
     abort_if!(

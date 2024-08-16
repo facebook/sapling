@@ -13,7 +13,7 @@ use cmdutil::NoOpts;
 use cmdutil::Result;
 use repo::repo::Repo;
 
-pub fn run(_ctx: ReqCtx<NoOpts>, repo: &mut Repo) -> Result<u8> {
+pub fn run(_ctx: ReqCtx<NoOpts>, repo: &Repo) -> Result<u8> {
     let store_path = repo.store_path();
     let patterns = [
         "indexedlogdatastore/*",

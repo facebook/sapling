@@ -66,7 +66,7 @@ define_flags! {
     }
 }
 
-pub fn run(ctx: ReqCtx<GotoOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Result<u8> {
+pub fn run(ctx: ReqCtx<GotoOpts>, repo: &Repo, wc: &WorkingCopy) -> Result<u8> {
     if !repo.config().get_or_default("checkout", "use-rust")? {
         fallback!("checkout.use-rust is False");
     }

@@ -20,7 +20,7 @@ define_flags! {
     }
 }
 
-pub fn run(ctx: ReqCtx<RootOpts>, repo: &mut Repo) -> Result<u8> {
+pub fn run(ctx: ReqCtx<RootOpts>, repo: &Repo) -> Result<u8> {
     let path = match (ctx.opts.shared, ctx.opts.dotdir) {
         (false, false) => repo.path(),
         (false, true) => repo.dot_hg_path(),

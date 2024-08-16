@@ -23,7 +23,7 @@ define_flags! {
     }
 }
 
-pub fn run(ctx: ReqCtx<DebugDynamicConfigOpts>, repo: Option<&mut Repo>) -> Result<u8> {
+pub fn run(ctx: ReqCtx<DebugDynamicConfigOpts>, repo: Option<&Repo>) -> Result<u8> {
     #[cfg(feature = "fb")]
     {
         use configloader::fb::FbConfigMode;

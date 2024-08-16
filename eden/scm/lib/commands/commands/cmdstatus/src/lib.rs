@@ -94,7 +94,7 @@ define_flags! {
     }
 }
 
-pub fn run(ctx: ReqCtx<StatusOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Result<u8> {
+pub fn run(ctx: ReqCtx<StatusOpts>, repo: &Repo, wc: &WorkingCopy) -> Result<u8> {
     if !repo.config().get_or_default("status", "use-rust")? {
         tracing::debug!(target: "status_info", status_detail="use_rust_disabled");
         fallback!("status.use-rust=false");

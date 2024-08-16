@@ -34,7 +34,7 @@ define_flags! {
     }
 }
 
-pub fn run(ctx: ReqCtx<Opts>, repo: &mut Repo) -> Result<u8> {
+pub fn run(ctx: ReqCtx<Opts>, repo: &Repo) -> Result<u8> {
     let limit = ctx.opts.limit;
     let io = ctx.io();
     let (tx, rx) = mpsc::channel::<&'static str>();

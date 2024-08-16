@@ -551,11 +551,7 @@ impl Repo {
         Ok(tr.clone())
     }
 
-    pub fn resolve_commit(
-        &mut self,
-        treestate: Option<&TreeState>,
-        change_id: &str,
-    ) -> Result<HgId> {
+    pub fn resolve_commit(&self, treestate: Option<&TreeState>, change_id: &str) -> Result<HgId> {
         let dag = self.dag_commits()?;
         let dag = dag.read();
         let metalog = self.metalog()?;
@@ -573,7 +569,7 @@ impl Repo {
     }
 
     pub fn resolve_commit_opt(
-        &mut self,
+        &self,
         treestate: Option<&TreeState>,
         change_id: &str,
     ) -> Result<Option<HgId>> {

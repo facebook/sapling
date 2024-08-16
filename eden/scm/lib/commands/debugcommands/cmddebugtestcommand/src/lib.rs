@@ -29,7 +29,7 @@ define_flags! {
     }
 }
 
-pub fn run(ctx: ReqCtx<TestCommandOpts>, _repo: Option<&mut Repo>) -> Result<u8> {
+pub fn run(ctx: ReqCtx<TestCommandOpts>, _repo: Option<&Repo>) -> Result<u8> {
     if ctx.opts.abort {
         abort!("aborting");
     }

@@ -727,7 +727,7 @@ fn get_selective_bookmarks(repo: &Repo) -> Result<Vec<String>> {
 #[instrument(skip_all, err, ret)]
 fn get_update_target(
     logger: &TermLogger,
-    repo: &mut Repo,
+    repo: &Repo,
     clone_opts: &CloneOpts,
 ) -> Result<Option<(HgId, String)>> {
     if clone_opts.noupdate {

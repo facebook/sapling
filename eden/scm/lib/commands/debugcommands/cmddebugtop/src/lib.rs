@@ -33,7 +33,7 @@ define_flags! {
     }
 }
 
-pub fn run(ctx: ReqCtx<DebugTopOpts>, repo: &mut Repo) -> Result<u8> {
+pub fn run(ctx: ReqCtx<DebugTopOpts>, repo: &Repo) -> Result<u8> {
     let mut stdout = ctx.io().output();
     let mut stderr = ctx.io().error();
     let running_in_tty = stdout.is_tty();

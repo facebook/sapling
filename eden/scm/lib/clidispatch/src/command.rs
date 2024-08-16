@@ -23,9 +23,9 @@ use crate::ReqCtx;
 
 pub enum CommandFunc {
     NoRepo(Box<dyn Fn(ParseOutput, &IO, &Arc<dyn Config>) -> Result<u8>>),
-    OptionalRepo(Box<dyn Fn(ParseOutput, &IO, &mut OptionalRepo) -> Result<u8>>),
-    Repo(Box<dyn Fn(ParseOutput, &IO, &mut Repo) -> Result<u8>>),
-    WorkingCopy(Box<dyn Fn(ParseOutput, &IO, &mut Repo, &mut WorkingCopy) -> Result<u8>>),
+    OptionalRepo(Box<dyn Fn(ParseOutput, &IO, &OptionalRepo) -> Result<u8>>),
+    Repo(Box<dyn Fn(ParseOutput, &IO, &Repo) -> Result<u8>>),
+    WorkingCopy(Box<dyn Fn(ParseOutput, &IO, &Repo, &WorkingCopy) -> Result<u8>>),
 }
 
 pub struct CommandDefinition {
@@ -136,11 +136,11 @@ pub trait Register<FN, T> {
 impl<S, FN> Register<FN, ((), S)> for CommandTable
 where
     S: TryFrom<ParseOutput, Error = anyhow::Error> + StructFlags,
-    FN: Fn(ReqCtx<S>, Option<&mut Repo>) -> Result<u8> + 'static,
+    FN: Fn(ReqCtx<S>, Option<&Repo>) -> Result<u8> + 'static,
 {
     fn register(&mut self, f: FN, aliases: &str, doc: &str, synopsis: Option<&str>) {
         self.insert_aliases(aliases);
-        let func = move |opts: ParseOutput, io: &IO, repo: &mut OptionalRepo| {
+        let func = move |opts: ParseOutput, io: &IO, repo: &OptionalRepo| {
             f(
                 ReqCtx::new(repo.config().clone(), opts, io.clone())?,
                 repo.repo_opt(),
@@ -156,11 +156,11 @@ where
 impl<S, FN> Register<FN, ((), (), S)> for CommandTable
 where
     S: TryFrom<ParseOutput, Error = anyhow::Error> + StructFlags,
-    FN: Fn(ReqCtx<S>, &mut Repo) -> Result<u8> + 'static,
+    FN: Fn(ReqCtx<S>, &Repo) -> Result<u8> + 'static,
 {
     fn register(&mut self, f: FN, aliases: &str, doc: &str, synopsis: Option<&str>) {
         self.insert_aliases(aliases);
-        let func = move |opts: ParseOutput, io: &IO, repo: &mut Repo| {
+        let func = move |opts: ParseOutput, io: &IO, repo: &Repo| {
             f(ReqCtx::new(repo.config().clone(), opts, io.clone())?, repo)
         };
         let func = CommandFunc::Repo(Box::new(func));
@@ -190,18 +190,17 @@ where
 impl<S, FN> Register<FN, ((), (), (), (), S)> for CommandTable
 where
     S: TryFrom<ParseOutput, Error = anyhow::Error> + StructFlags,
-    FN: Fn(ReqCtx<S>, &mut Repo, &mut WorkingCopy) -> Result<u8> + 'static,
+    FN: Fn(ReqCtx<S>, &Repo, &WorkingCopy) -> Result<u8> + 'static,
 {
     fn register(&mut self, f: FN, aliases: &str, doc: &str, synopsis: Option<&str>) {
         self.insert_aliases(aliases);
-        let func =
-            move |opts: ParseOutput, io: &IO, repo: &mut Repo, working_copy: &mut WorkingCopy| {
-                f(
-                    ReqCtx::new(repo.config().clone(), opts, io.clone())?,
-                    repo,
-                    working_copy,
-                )
-            };
+        let func = move |opts: ParseOutput, io: &IO, repo: &Repo, working_copy: &WorkingCopy| {
+            f(
+                ReqCtx::new(repo.config().clone(), opts, io.clone())?,
+                repo,
+                working_copy,
+            )
+        };
         let func = CommandFunc::WorkingCopy(Box::new(func));
         let def = CommandDefinition::new(aliases, doc, S::flags, func, synopsis);
         self.commands.insert(aliases.to_string(), def);

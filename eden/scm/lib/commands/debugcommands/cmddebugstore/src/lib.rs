@@ -40,7 +40,7 @@ define_flags! {
     }
 }
 
-pub fn run(ctx: ReqCtx<DebugstoreOpts>, repo: &mut Repo) -> Result<u8> {
+pub fn run(ctx: ReqCtx<DebugstoreOpts>, repo: &Repo) -> Result<u8> {
     let path = RepoPathBuf::from_string(ctx.opts.path)?;
     let hgid = HgId::from_str(&ctx.opts.hgid)?;
     let config = repo.config();

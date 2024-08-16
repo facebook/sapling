@@ -31,7 +31,7 @@ define_flags! {
     }
 }
 
-pub fn run(ctx: ReqCtx<StatusOpts>, repo: &mut Repo) -> Result<u8> {
+pub fn run(ctx: ReqCtx<StatusOpts>, repo: &Repo) -> Result<u8> {
     let config = repo.config();
 
     let edenapi_client = edenapi::Builder::from_config(config)?.build()?;

@@ -16,7 +16,7 @@ use repo::repo::Repo;
 use treestate::serialization::Serializable;
 use types::HgId;
 
-pub fn run(ctx: ReqCtx<NoOpts>, repo: &mut Repo) -> Result<u8> {
+pub fn run(ctx: ReqCtx<NoOpts>, repo: &Repo) -> Result<u8> {
     let mut stdout = ctx.io().output();
 
     let dirstate_path = repo.dot_hg_path().join("dirstate");

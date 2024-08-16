@@ -20,7 +20,7 @@ define_flags! {
     }
 }
 
-pub fn run(ctx: ReqCtx<DebugRevsetOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Result<u8> {
+pub fn run(ctx: ReqCtx<DebugRevsetOpts>, repo: &Repo, wc: &WorkingCopy) -> Result<u8> {
     let resolved_revset = repo.resolve_commit(Some(&wc.treestate().lock()), &ctx.opts.rev)?;
 
     write!(ctx.io().output(), "{}\n", resolved_revset.to_hex())?;

@@ -60,7 +60,7 @@ define_flags! {
     }
 }
 
-pub fn run(ctx: ReqCtx<ConfigOpts>, _repo: Option<&mut Repo>) -> Result<u8> {
+pub fn run(ctx: ReqCtx<ConfigOpts>, _repo: Option<&Repo>) -> Result<u8> {
     let config = ctx.config();
 
     let force_rust = config
