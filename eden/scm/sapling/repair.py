@@ -220,12 +220,7 @@ def stripmanifest(repo, striprev, tr, files) -> None:
 
 
 def striptrees(repo, tr, striprev, files) -> None:
-    if "treemanifest" in repo.requirements:  # safe but unnecessary
-        # otherwise
-        for unencoded, encoded, size in repo.store.datafiles():
-            if unencoded.startswith("meta/") and unencoded.endswith("00manifest.i"):
-                dir = unencoded[5:-12]
-                repo.manifestlog._revlog.dirlog(dir).strip(striprev, tr)
+    pass
 
 
 def rebuildfncache(ui, repo: Sized) -> None:

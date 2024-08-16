@@ -90,11 +90,6 @@ def onetimesetup(ui):
                             visit.append(fp)
 
             shallowtrees = repo.ui.configbool("remotefilelog", "shallowtrees", False)
-            if "treemanifest" in repo.requirements and not shallowtrees:
-                for u, e, s in repo.store.datafiles():
-                    if u.startswith("meta/") and (u.endswith(".i") or u.endswith(".d")):
-                        yield (u, e, s)
-
             for x in repo.store.topfiles():
                 if shallowtrees and x[0][:15] == "00manifesttree.":
                     continue

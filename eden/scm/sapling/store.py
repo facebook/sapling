@@ -443,9 +443,6 @@ class basicstore:
         l.sort()
         return l
 
-    def datafiles(self):
-        return self._walk("data", True) + self._walk("meta", True)
-
     def topfiles(self):
         # yield manifest before changelog
         return reversed(self._walk("", False))
@@ -453,8 +450,6 @@ class basicstore:
     def walk(self):
         """yields (unencoded, encoded, size)"""
         # yield data files first
-        for x in self.datafiles():
-            yield x
         for x in self.topfiles():
             yield x
 
@@ -707,15 +702,6 @@ class fncachestore(basicstore):
 
     def getsize(self, path):
         return self.rawvfs.stat(path).st_size
-
-    def datafiles(self):
-        for f in sorted(self.fncache):
-            ef = self.encode(f)
-            try:
-                yield f, ef, self.getsize(ef)
-            except OSError as err:
-                if err.errno != errno.ENOENT:
-                    raise
 
     def write(self, tr):
         self.fncache.write(tr)
