@@ -20,6 +20,7 @@ use futures::StreamExt;
 use futures::TryStreamExt;
 use futures_stats::TimedTryFutureExt;
 use futures_watchdog::WatchdogExt;
+use itertools::Itertools;
 use mercurial_derivation::RootHgAugmentedManifestId;
 use mononoke_types::ChangesetId;
 use repo_derived_data::RepoDerivedDataRef;
@@ -226,6 +227,7 @@ pub async fn try_sync_single_combined_entry<'a>(
         .into_iter()
         .filter_map(|res| res)
         .flatten()
+        .unique()
         .collect();
 
     // Derive augmented manifests for all commits in the queue if not yet derived.

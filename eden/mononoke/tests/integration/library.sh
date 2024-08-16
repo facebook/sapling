@@ -1104,6 +1104,7 @@ CONFIG
   cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
 [mononoke_cas_sync_config]
 main_bookmark_to_sync="master"
+sync_all_bookmarks=true
 CONFIG
 
   cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG

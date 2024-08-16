@@ -15,6 +15,7 @@ rust_binary(
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:async-trait",
         "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:itertools",
         "fbsource//third-party/rust:slog",
         "fbsource//third-party/rust:thiserror",
         "fbsource//third-party/rust:tokio",
