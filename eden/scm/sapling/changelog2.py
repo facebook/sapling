@@ -464,8 +464,9 @@ class changelog:
 
     def children(self, node):
         """Return children(node)"""
-        nodes = self.dag.children([node])
-        return list(nodes)
+        children = self.dag.children([node])
+        children_except_wdir = [n for n in children if n != wdirid]
+        return children_except_wdir
 
     def descendants(self, revs):
         """Return ((revs::) - roots(revs)) in revs."""
