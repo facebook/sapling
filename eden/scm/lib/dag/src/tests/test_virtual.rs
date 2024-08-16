@@ -170,7 +170,7 @@ fn test_setting_managed_virtual_group_clears_snapshot() -> Result<()> {
     let _id_map_snapshot = dag.id_map_snapshot()?;
 
     // Update virtual group.
-    r(dag.set_managed_virtual_group(Some(parents)))?;
+    r(dag.set_managed_virtual_group(Some(parents.clone())))?;
 
     // Take new snapshot - they should include the virtual group changes.
     let dag_snapshot = dag.dag_snapshot()?;
@@ -180,6 +180,23 @@ fn test_setting_managed_virtual_group_clears_snapshot() -> Result<()> {
     assert_eq!(dbg(b_children), "<spans [W+V1, C+N2]>");
 
     let wdir_id = r(id_map_snapshot.vertex_id_optional(&Vertex::copy_from(b"W")))?;
+    assert!(wdir_id.is_some());
+
+    // Remove virtual group.
+    r(dag.set_managed_virtual_group(Some(Vec::new())))?;
+    let dag_snapshot = dag.dag_snapshot()?;
+    let id_map_snapshot = dag.id_map_snapshot()?;
+    let b_children =
+        r(dag_snapshot.children(Set::from_static_names(vec![Vertex::copy_from(b"B")])))?;
+    assert_eq!(dbg(b_children), "<spans [C+N2]>");
+    let wdir_id = r(id_map_snapshot.vertex_id_optional(&Vertex::copy_from(b"W")))?;
+    assert!(wdir_id.is_none());
+
+    // Re-insert virtual group.
+    r(dag.set_managed_virtual_group(Some(parents)))?;
+    let b_children = r(dag.children(Set::from_static_names(vec![Vertex::copy_from(b"B")])))?;
+    assert_eq!(dbg(b_children), "<spans [W+V1, C+N2]>");
+    let wdir_id = r(dag.vertex_id_optional(&Vertex::copy_from(b"W")))?;
     assert!(wdir_id.is_some());
 
     Ok(())
