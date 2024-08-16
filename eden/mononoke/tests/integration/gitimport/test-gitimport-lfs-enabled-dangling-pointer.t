@@ -81,7 +81,6 @@ We store just LFS pointer for LFS file
 This repo has 3 file content blobs stored (small + two LFS pointers + one large content)
   $ ls "$TESTTMP"/blobstore/blobs/blob-repo0000.content.*
   $TESTTMP/blobstore/blobs/blob-repo0000.content.blake2.0356a836e448b746fa1f83ebdfd27d039bdf6038168d4fdba6074633d1af82a4
-  $TESTTMP/blobstore/blobs/blob-repo0000.content.blake2.03c6b43e065ca438ad5d7df41544db9f8637e61ae6aa657e5f5e7ab84edb6a81
   $TESTTMP/blobstore/blobs/blob-repo0000.content.blake2.0809a96fbfd58f5d4f4074754d701540354e3a6946326bf284665a824eb054a4
   $TESTTMP/blobstore/blobs/blob-repo0000.content.blake2.46eb1ec21f0a347eb1397b55b6b9bc3cd5a39bf5898728251c25679f987fff57
   $TESTTMP/blobstore/blobs/blob-repo0000.content.blake2.48ef00ac63821b09154b55f1b380d253f936afb076a873e1bcc1d137c8b5bab2
@@ -97,9 +96,6 @@ Show that we still have all the original git objects
   $ mononoke_newadmin git-bundle create from-repo -R repo --output-location "$BUNDLE_PATH"
   $ git clone "$BUNDLE_PATH" "$GIT_REPO_FROM_BUNDLE"
   Cloning into '$TESTTMP/repo-git-from-bundle'...
-  fatal: bad tree object a29ca711342d3cf022d5da7b59c86009de3dc94c
-  fatal: remote did not send all necessary objects
-  [128]
   $ cd "$GIT_REPO_CLIENT"
   $ git cat-file -p HEAD
   tree a29ca711342d3cf022d5da7b59c86009de3dc94c
@@ -122,12 +118,12 @@ Show that we still have all the original git objects
 
 Inspect bonsai change
   $ mononoke_newadmin fetch -R repo -B heads/main
-  BonsaiChangesetId: dfcbb9de6e9a8e2fb4ad9a948c8a41329bac4f056483c70d4d22e29309569653
+  BonsaiChangesetId: 9fdf792450a6f263f7a3417827e261709fcc14a521e24fb60dde0346300eda2a
   Author: mononoke <mononoke@mononoke>
   Message: add dangling pointer
   
   FileChanges:
-  	 ADDED/MODIFIED (LFS): large_file_dangling_pointer 0809a96fbfd58f5d4f4074754d701540354e3a6946326bf284665a824eb054a4
+  	 ADDED/MODIFIED: large_file_dangling_pointer 0809a96fbfd58f5d4f4074754d701540354e3a6946326bf284665a824eb054a4
   
 
   $ mononoke_newadmin git-objects -R repo fetch --id afae45be853e0e99e21ef1b1a0beba60e41d9753

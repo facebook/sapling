@@ -250,9 +250,9 @@ pub async fn upload_file(
         cloned!(lfs, blobstore, path);
         // We want to store both:
         // 1. actual file the pointer is pointing at
-        let meta = lfs
+        let (meta, fetch_result) = lfs
             .with(ctx.clone(), lfs_pointer_data.clone(), {
-                move |ctx, lfs_pointer_data, req, bstream| async move {
+                move |ctx, lfs_pointer_data, req, bstream, fetch_result| async move {
                     info!(
                         ctx.logger(),
                         "Uploading LFS {} sha256:{} size:{}",
@@ -260,30 +260,41 @@ pub async fn upload_file(
                         lfs_pointer_data.sha256.to_brief(),
                         lfs_pointer_data.size,
                     );
-                    filestore::store(&blobstore, filestore_config, &ctx, &req, bstream)
-                        .await
-                        .context("filestore (lfs contents)")
+                    Ok((
+                        filestore::store(&blobstore, filestore_config, &ctx, &req, bstream)
+                            .await
+                            .context("filestore (lfs contents)")?,
+                        fetch_result,
+                    ))
                 }
             })
             .await?;
-        // 2. the Git LFS pointer itself
-        let (req, bstream) = git_store_request(ctx, oid, git_bytes).context("git_store_request")?;
-        let pointer_meta = filestore::store(
-            repo.repo_blobstore(),
-            *repo.filestore_config(),
-            ctx,
-            &req,
-            bstream,
-        )
-        .await
-        .context("filestore (lfs pointer)")?;
-        // and return the contents of the actual file
-        let pointer = if lfs_pointer_data.is_canonical {
-            GitLfs::canonical_pointer()
+
+        if fetch_result.is_not_found() {
+            // In case the pointer wasn't found (and we allow that), mark the pointer as full
+            // content.
+            (meta, GitLfs::FullContent)
         } else {
-            GitLfs::non_canonical_pointer(pointer_meta.content_id)
-        };
-        (meta, pointer)
+            // 3. Upload the Git LFS pointer itself
+            let (req, bstream) =
+                git_store_request(ctx, oid, git_bytes).context("git_store_request")?;
+            let pointer_meta = filestore::store(
+                repo.repo_blobstore(),
+                *repo.filestore_config(),
+                ctx,
+                &req,
+                bstream,
+            )
+            .await
+            .context("filestore (lfs pointer)")?;
+            // and return the contents of the actual file
+            let pointer = if lfs_pointer_data.is_canonical {
+                GitLfs::canonical_pointer()
+            } else {
+                GitLfs::non_canonical_pointer(pointer_meta.content_id)
+            };
+            (meta, pointer)
+        }
     } else {
         let (req, bstream) = git_store_request(ctx, oid, git_bytes).context("git_store_request")?;
         let meta = filestore::store(
