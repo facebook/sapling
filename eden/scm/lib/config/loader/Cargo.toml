@@ -26,6 +26,7 @@ hostcaps = { version = "0.1.0", git = "https://github.com/facebookexperimental/r
 hostname = "0.3"
 http-client = { version = "0.1.0", path = "../../http-client", optional = true }
 identity = { version = "0.1.0", path = "../../identity" }
+io = { version = "0.1.0", path = "../../io" }
 minibytes = { version = "0.1.0", path = "../../minibytes" }
 regex = { version = "1.9.2", optional = true }
 repo-minimal-info = { version = "0.1.0", path = "../../repo/repo-minimal-info" }

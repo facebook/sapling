@@ -794,9 +794,18 @@ pub fn calculate_internalconfig(
     canary: Option<String>,
     user_name: String,
     proxy_sock_path: Option<String>,
+    allow_remote_snapshot: bool,
 ) -> Result<ConfigSet> {
     use crate::fb::internalconfig::Generator;
-    Generator::new(mode, repo_name, config_dir, user_name, proxy_sock_path)?.execute(canary)
+    Generator::new(
+        mode,
+        repo_name,
+        config_dir,
+        user_name,
+        proxy_sock_path,
+        allow_remote_snapshot,
+    )?
+    .execute(canary)
 }
 
 #[cfg(feature = "fb")]
@@ -807,6 +816,7 @@ pub fn generate_internalconfig(
     canary: Option<String>,
     user_name: String,
     proxy_sock_path: Option<String>,
+    allow_remote_snapshot: bool,
 ) -> Result<()> {
     use std::io::Write;
 
@@ -858,8 +868,9 @@ pub fn generate_internalconfig(
         canary,
         user_name,
         proxy_sock_path,
+        allow_remote_snapshot,
     )?;
-    let config_str = format!("{}{}", header, config.to_string());
+    let config_str = format!("{}{}", header, config);
 
     // If the file exists and will be unchanged, just update the mtime.
     if hgrc_path.exists() && read_to_string(&hgrc_path).unwrap_or_default() == config_str {
@@ -957,7 +968,16 @@ fn load_dynamic(
         };
 
         // Regen inline
-        let res = generate_internalconfig(mode, info, repo_name, None, user_name, proxy_sock_path);
+        let res = generate_internalconfig(
+            mode,
+            info,
+            repo_name,
+            None,
+            user_name,
+            proxy_sock_path,
+            // Allow using baked in remote config snapshot in case remote fetch fails.
+            true,
+        );
         if let Err(e) = res {
             let is_perm_error = e
                 .chain()

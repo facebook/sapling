@@ -92,6 +92,7 @@ rust_library(
         "//common/rust/shed/hostcaps:hostcaps",
         "//eden/scm/lib/hgtime:hgtime",
         "//eden/scm/lib/http-client:http-client",
+        "//eden/scm/lib/io:io",
         "//eden/scm/lib/spawn-ext:spawn-ext",
         "//eden/scm/lib/types:types",
         "//eden/scm/lib/util:util",

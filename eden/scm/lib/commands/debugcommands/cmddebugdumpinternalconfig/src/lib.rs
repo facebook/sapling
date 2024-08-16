@@ -62,6 +62,7 @@ pub fn run(ctx: ReqCtx<DebugDumpConfigOpts>) -> Result<u8> {
             canary,
             username,
             config.get_opt("auth_proxy", "unix_socket_path")?,
+            true,
         )?;
 
         if ctx.opts.args.is_empty() {

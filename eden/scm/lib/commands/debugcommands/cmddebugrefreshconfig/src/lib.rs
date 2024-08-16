@@ -52,6 +52,9 @@ pub fn run(ctx: ReqCtx<DebugDynamicConfigOpts>, repo: Option<&mut Repo>) -> Resu
             ctx.opts.canary,
             username,
             config.get_opt("auth_proxy", "unix_socket_path")?,
+            // We are explicitly requesting a config refresh - do not allow using baked in
+            // remote config snapshot in case remote fetch fails.
+            false,
         )?;
     }
     #[cfg(not(feature = "fb"))]
