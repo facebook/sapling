@@ -621,17 +621,13 @@ effect and style see :prog:`help color`.
 In addition to pre-defined template keywords, commit log specific one
 below can be used for customization:
 
-``extramsg``
-    String: Extra message (typically 'Leave message empty to abort
-    commit.'). This may be changed by some commands or extensions.
-
 For example, the template configuration below shows as same text as
 one shown by default::
 
     [committemplate]
     changeset = {desc}\n\n
         @PROG@: Enter commit message.  Lines beginning with '@PROG@:' are removed.
-        @PROG@: {extramsg}
+        @PROG@: Leave message empty to abort commit.
         @PROG@: --
         @PROG@: user: {author}\n{ifeq(p2rev, "-1", "",
        "@PROG@: branch merge\n")
@@ -658,7 +654,7 @@ extra message::
     [committemplate]
     changeset = {desc}\n\n
         @PROG@: Enter commit message.  Lines beginning with '@PROG@:' are removed.
-        @PROG@: {extramsg}
+        @PROG@: Leave message empty to abort commit.
         @PROG@: ------------------------ >8 ------------------------
         @PROG@: Do not touch the line above.
         @PROG@: Everything below will be removed.

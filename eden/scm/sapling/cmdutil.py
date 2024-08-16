@@ -1005,28 +1005,19 @@ def mergeeditform(ctxorbool, baseformname):
     return baseformname + ".normal"
 
 
-def getcommiteditor(edit=False, extramsg=None, editform="", summaryfooter="", **opts):
+def getcommiteditor(edit=False, editform="", summaryfooter="", **opts):
     """get appropriate commit message editor according to '--edit' option
-
-    'extramsg' is a extra message to be shown in the editor instead of
-    'Leave message empty to abort commit' line. 'HG: ' prefix and EOL
-    is automatically added.
 
     'editform' is a dot-separated list of names, to distinguish
     the purpose of commit text editing.
 
     'summaryfooter' is a prepopulated message to add extra info to the commit
     summary.
-
-    'getcommiteditor' returns 'commitforceeditor' regardless of
-    'edit', if 'extramsg' is specified, because
-    they are specific for usage in MQ.
     """
-    if edit or extramsg:
+    if edit:
         return lambda r, c: commitforceeditor(
             r,
             c,
-            extramsg=extramsg,
             editform=editform,
             summaryfooter=summaryfooter,
         )
@@ -4170,14 +4161,10 @@ def add_summary_footer(
 def commitforceeditor(
     repo,
     ctx,
-    extramsg=None,
     editform="",
     unchangedmessagedetection=False,
     summaryfooter="",
 ):
-    if not extramsg:
-        extramsg = _("Leave message empty to abort commit.")
-
     forms = [e for e in editform.split(".") if e]
     forms.insert(0, "changeset")
     templatetext = None
@@ -4185,12 +4172,12 @@ def commitforceeditor(
         ref = ".".join(forms)
         if repo.ui.config("committemplate", ref):
             templatetext = committext = buildcommittemplate(
-                repo, ctx, extramsg, ref, summaryfooter
+                repo, ctx, ref, summaryfooter
             )
             break
         forms.pop()
     else:
-        committext = buildcommittext(repo, ctx, extramsg, summaryfooter)
+        committext = buildcommittext(repo, ctx, summaryfooter)
 
     # run editor in the repository root
     olddir = pycompat.getcwd()
@@ -4237,7 +4224,7 @@ def commitforceeditor(
     return text
 
 
-def buildcommittemplate(repo, ctx, extramsg, ref, summaryfooter=""):
+def buildcommittemplate(repo, ctx, ref, summaryfooter=""):
     ui = repo.ui
     spec = formatter.templatespec(ref, None, None)
     t = changeset_templater(ui, repo, spec, None, {}, False)
@@ -4254,11 +4241,8 @@ def buildcommittemplate(repo, ctx, extramsg, ref, summaryfooter=""):
         localtemplate = localcommittemplate(repo, ctx)
         t.t.cache.update((k, templater.unquotestring(v)) for k, v in localtemplate)
 
-    if not extramsg:
-        extramsg = ""  # ensure that extramsg is string
-
     ui.pushbuffer()
-    t.show(ctx, extramsg=extramsg)
+    t.show(ctx)
     return pycompat.decodeutf8(ui.popbufferbytes(), errors="replace")
 
 
@@ -4303,7 +4287,7 @@ def hgprefix(msg):
     return "\n".join([f"{identity.tmplprefix()}: {a}" for a in msg.split("\n") if a])
 
 
-def buildcommittext(repo, ctx, extramsg, summaryfooter=""):
+def buildcommittext(repo, ctx, summaryfooter=""):
     edittext = []
     modified, added, removed = ctx.modified(), ctx.added(), ctx.removed()
     description = ctx.description()
@@ -4319,7 +4303,7 @@ def buildcommittext(repo, ctx, extramsg, summaryfooter=""):
             )
         )
     )
-    edittext.append(hgprefix(extramsg))
+    edittext.append(hgprefix(_("Leave message empty to abort commit.")))
     edittext.append(f"{identity.tmplprefix()}: --")
     edittext.append(hgprefix(_("user: %s") % ctx.user()))
     if ctx.p2():

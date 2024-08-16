@@ -19,7 +19,7 @@ cachepath=~/.sl_cache
 [committemplate]
 changeset={if(desc, desc, emptymsg)}\n
  SL: Enter commit message.  Lines beginning with 'SL:' are removed.
- SL: {extramsg}
+ SL: Leave message empty to abort commit.
  SL: --
  SL: user: {author}\n{ifgt(parents|count, 1,
  "SL: merging:\n{parents % 'SL:   {node|short}: {desc|firstline}\n'}")
