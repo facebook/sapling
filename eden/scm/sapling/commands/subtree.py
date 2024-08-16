@@ -85,16 +85,21 @@ def _docopy(ui, repo, *args, **opts):
 
     user = opts.get("user")
     date = opts.get("date")
+    text = opts.get("message")
 
     # if 'rev' is not specificed, copy from the working copy parent
     from_rev = opts.get("rev") or "."
     from_ctx = scmutil.revsingle(repo, from_rev)
     to_ctx = repo["."]
 
-    text = _append_subtree_metadata(opts.get("message"), from_ctx, from_paths, to_paths)
-
     extra = {}
     extra.update(_gen_branch_info(from_ctx.hex(), from_paths, to_paths))
+
+    summaryfooter = _gen_prepopulated_commit_msg(from_ctx, from_paths, to_paths)
+    editform = cmdutil.mergeeditform(repo[None], "subtree.copy")
+    editor = cmdutil.getcommiteditor(
+        editform=editform, summaryfooter=summaryfooter, **opts
+    )
 
     newctx = context.subtreecopyctx(
         repo,
@@ -106,6 +111,7 @@ def _docopy(ui, repo, *args, **opts):
         user=user,
         date=date,
         extra=extra,
+        editor=editor,
     )
 
     newid = repo.commitctx(newctx)
@@ -131,15 +137,9 @@ def _gen_branch_info(from_commit, from_paths, to_paths):
     return {key: str_val}
 
 
-def _append_subtree_metadata(orig_msg, from_commit, from_paths, to_paths):
-    if orig_msg:
-        msgs = [orig_msg + "\n"]
-    else:
-        # title
-        msgs = ["Subtree copy from {}\n".format(from_commit)]
-
+def _gen_prepopulated_commit_msg(from_commit, from_paths, to_paths):
     full_commit_hash = from_commit.hex()
-    msgs.append(f"Subtree copy from {full_commit_hash}")
+    msgs = [f"Subtree copy from {full_commit_hash}"]
     for from_path, to_path in zip(from_paths, to_paths):
         msgs.append(f"  Copied path {from_path} to {to_path}")
     return "\n".join(msgs)

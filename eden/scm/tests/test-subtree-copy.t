@@ -11,20 +11,20 @@ setup backing repo
 
 test subtree copy
   $ hg go $B -q
-  $ hg subtree cp -r $A --from-path foo --to-path bar
+  $ hg subtree cp -r $A --from-path foo --to-path bar -m "subtree copy foo -> bar"
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg log -G -T '{node|short} {desc|firstline}\n'
-  @  8aec2826c174 Subtree copy from d908813f0f7c
+  @  bfc51ae2a942 subtree copy foo -> bar
   │
   o  b9450a0e6ae4 B
   │
   o  d908813f0f7c A
   $ hg show --git
-  commit:      8aec2826c174
+  commit:      bfc51ae2a942
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   description:
-  Subtree copy from d908813f0f7c
+  subtree copy foo -> bar
   
   Subtree copy from d908813f0f7c9078810e26aad1e37bdb32013d4b
     Copied path foo to bar
