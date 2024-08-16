@@ -434,7 +434,7 @@ pub trait TreeStore: KeyStore {
 /// base can agree on how to generate a SHA1, how to lookup in a tree, etc.
 /// Ideally this information is private and the differences are behind
 /// abstractions too.
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash, Ord, PartialOrd, Default)]
 pub enum SerializationFormat {
     // Hg SHA1:
     //   SORTED_PARENTS CONTENT
@@ -446,6 +446,7 @@ pub enum SerializationFormat {
     //   NAME '\0' HEX_SHA1 MODE '\n'
     //   MODE: 't' (tree), 'l' (symlink), 'x' (executable)
     //   (sorted by name)
+    #[default]
     Hg,
 
     // Git SHA1:
