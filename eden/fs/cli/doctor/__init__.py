@@ -282,6 +282,7 @@ class EdenDoctorChecker:
                 checkouts[path] = checkout
 
         # Get information about the checkouts listed in the config file
+        missing_checkouts = []
         for configured_checkout in self.instance.get_checkouts():
             checkout_info = checkouts.get(configured_checkout.path, None)
             if checkout_info is None:
@@ -290,10 +291,21 @@ class EdenDoctorChecker:
                 checkouts[checkout_info.path] = checkout_info
 
             if checkout_info.backing_repo is None:
-                checkout_info.backing_repo = (
-                    configured_checkout.get_config().backing_repo
-                )
+                try:
+                    checkout_info.backing_repo = (
+                        configured_checkout.get_config().backing_repo
+                    )
+                except Exception as ex:
+                    # Config file is missing or invalid. The string here is formatted to make sense with the remediation message for EdenCheckoutInfosCorruption
+                    missing_checkouts.append(
+                        f"{configured_checkout.path} (error: {ex})"
+                    )
+                    continue
+
             checkout_info.configured_state_dir = configured_checkout.state_dir
+        if missing_checkouts:
+            errmsg = "\n".join(missing_checkouts)
+            raise RuntimeError(errmsg)
 
         return checkouts
 
@@ -332,7 +344,12 @@ class EdenDoctorChecker:
 
     def run_normal_checks(self) -> None:
         check_edenfs_version(self.tracker, self.instance)
-        checkouts = self._get_checkouts_info()
+        try:
+            checkouts = self._get_checkouts_info()
+            print(checkouts)
+        except RuntimeError as ex:
+            self.tracker.add_problem(EdenCheckoutInfosCorruption(ex))
+            return
         checked_backing_repos = set()
 
         if sys.platform == "win32":
@@ -660,6 +677,23 @@ To remove the corrupted repo, run: `eden rm {checkout.path}`"""
 
         super().__init__(
             f"Eden's checkout state for {checkout.path} has been corrupted: {ex}",
+            remediation=remediation,
+        )
+
+
+class EdenCheckoutInfosCorruption(Problem):
+    def __init__(self, ex: Exception) -> None:
+        remediation = """\
+To recover, you will need to remove and reclone the repo.
+You will lose uncommitted work or shelves, but all your local
+commits are safe.
+
+To reclone the corrupted repo, run: `fbclone $REPO --reclone --eden`"""
+        if get_doctor_link():
+            remediation += f"\nFor additional info see the wiki at {get_doctor_link()}"
+
+        super().__init__(
+            f"Encountered errors reading Eden's checkout info for the following checkouts:\n{ex}",
             remediation=remediation,
         )
 
