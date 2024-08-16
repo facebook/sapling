@@ -213,7 +213,7 @@ impl ChangesetPathContentContext {
                 cloned!(self.changeset, self.path);
                 async move {
                     let ctx = changeset.ctx().clone();
-                    let blobstore = changeset.repo_ctx().blob_repo().repo_blobstore().clone();
+                    let blobstore = changeset.repo_ctx().repo().repo_blobstore().clone();
                     let root_fsnode_id = changeset.root_fsnode_id().await?;
                     if let Some(mpath) = path.into_optional_non_root_path() {
                         root_fsnode_id
@@ -386,7 +386,7 @@ impl ChangesetPathHistoryContext {
             )
             .await?;
         let ctx = changeset.ctx().clone();
-        let blobstore = changeset.repo_ctx().blob_repo().repo_blobstore().clone();
+        let blobstore = changeset.repo_ctx().repo().repo_blobstore().clone();
         Ok(Self {
             changeset,
             path,
@@ -422,7 +422,7 @@ impl ChangesetPathHistoryContext {
                 cloned!(self.changeset, self.path);
                 async move {
                     let ctx = changeset.ctx().clone();
-                    let blobstore = changeset.repo_ctx().blob_repo().repo_blobstore().clone();
+                    let blobstore = changeset.repo_ctx().repo().repo_blobstore().clone();
                     let root_unode_manifest_id = changeset.root_unode_manifest_id().await?;
                     if let Some(mpath) = path.into_optional_non_root_path() {
                         root_unode_manifest_id
@@ -467,7 +467,7 @@ impl ChangesetPathHistoryContext {
                 cloned!(self.changeset, self.path);
                 async move {
                     let ctx = changeset.ctx();
-                    let blobstore = changeset.repo_ctx().blob_repo().repo_blobstore();
+                    let blobstore = changeset.repo_ctx().repo().repo_blobstore();
                     Self::linknode_from_id(
                         ctx,
                         blobstore,
@@ -486,14 +486,14 @@ impl ChangesetPathHistoryContext {
         match self.unode_id().await? {
             Some(Entry::Tree(manifest_unode_id)) => {
                 let ctx = self.changeset.ctx();
-                let repo = self.changeset.repo_ctx().blob_repo();
+                let repo = self.changeset.repo_ctx().repo();
                 let manifest_unode = manifest_unode_id.load(ctx, repo.repo_blobstore()).await?;
                 let cs_id = manifest_unode.linknode().clone();
                 Ok(Some(ChangesetContext::new(self.repo_ctx().clone(), cs_id)))
             }
             Some(Entry::Leaf(file_unode_id)) => {
                 let ctx = self.changeset.ctx();
-                let repo = self.changeset.repo_ctx().blob_repo();
+                let repo = self.changeset.repo_ctx().repo();
                 let file_unode = file_unode_id.load(ctx, repo.repo_blobstore()).await?;
                 let cs_id = file_unode.linknode().clone();
                 Ok(Some(ChangesetContext::new(self.repo_ctx().clone(), cs_id)))
@@ -795,7 +795,7 @@ impl ChangesetPathContext {
                 cloned!(self.changeset, self.path);
                 async move {
                     let ctx = changeset.ctx().clone();
-                    let blobstore = changeset.repo_ctx().blob_repo().repo_blobstore().clone();
+                    let blobstore = changeset.repo_ctx().repo().repo_blobstore().clone();
                     let root_skeleton_manifest_id = changeset.root_skeleton_manifest_id().await?;
                     if let Some(mpath) = path.into_optional_non_root_path() {
                         root_skeleton_manifest_id

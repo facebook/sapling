@@ -215,7 +215,7 @@ pub mod test_impl {
         ) -> Result<Self, Error> {
             let repos = repos
                 .into_iter()
-                .map(|(name, repo)| (repo.blob_repo().repo_identity().id().id(), name, repo))
+                .map(|(name, repo)| (repo.repo_identity().id().id(), name, repo))
                 .collect::<Vec<_>>();
             let repo_names_in_tier = repos
                 .iter()

@@ -552,7 +552,7 @@ async fn xrepo_commit_lookup_simple(fb: FacebookInit) -> Result<(), Error> {
         .build()
         .await?;
 
-    let small_master_cs_id = resolve_cs_id(&ctx, smallrepo.blob_repo(), "master").await?;
+    let small_master_cs_id = resolve_cs_id(&ctx, smallrepo.repo(), "master").await?;
 
     info!(
         ctx.logger(),
@@ -569,7 +569,7 @@ async fn xrepo_commit_lookup_simple(fb: FacebookInit) -> Result<(), Error> {
         )
         .await?
         .expect("changeset should exist");
-    let large_master_cs_id = resolve_cs_id(&ctx, largerepo.blob_repo(), "master").await?;
+    let large_master_cs_id = resolve_cs_id(&ctx, largerepo.repo(), "master").await?;
     assert_eq!(cs.id(), large_master_cs_id);
 
     info!(
@@ -601,17 +601,17 @@ async fn xrepo_commit_lookup_draft(fb: FacebookInit) -> Result<(), Error> {
         .expect("repo exists")
         .build()
         .await?;
-    let small_master_cs_id = resolve_cs_id(&ctx, smallrepo.blob_repo(), "master").await?;
+    let small_master_cs_id = resolve_cs_id(&ctx, smallrepo.repo(), "master").await?;
     let largerepo = mononoke
         .repo(ctx.clone(), "largerepo")
         .await?
         .expect("repo exists")
         .build()
         .await?;
-    let large_master_cs_id = resolve_cs_id(&ctx, largerepo.blob_repo(), "master").await?;
+    let large_master_cs_id = resolve_cs_id(&ctx, largerepo.repo(), "master").await?;
 
     let new_large_draft =
-        CreateCommitContext::new(&ctx, largerepo.blob_repo(), vec![large_master_cs_id])
+        CreateCommitContext::new(&ctx, largerepo.repo(), vec![large_master_cs_id])
             .add_file("prefix/remapped", "content1")
             .add_file("not_remapped", "content2")
             .commit()
@@ -630,14 +630,14 @@ async fn xrepo_commit_lookup_draft(fb: FacebookInit) -> Result<(), Error> {
     let bcs = cs
         .unwrap()
         .id()
-        .load(&ctx, smallrepo.blob_repo().repo_blobstore())
+        .load(&ctx, smallrepo.repo().repo_blobstore())
         .await?;
     let file_changes: Vec<_> = bcs.file_changes().map(|(path, _)| path).cloned().collect();
     assert_eq!(file_changes, vec![NonRootMPath::new("remapped")?]);
 
     // Now in another direction
     let new_small_draft =
-        CreateCommitContext::new(&ctx, smallrepo.blob_repo(), vec![small_master_cs_id])
+        CreateCommitContext::new(&ctx, smallrepo.repo(), vec![small_master_cs_id])
             .add_file("remapped2", "content2")
             .commit()
             .await?;
@@ -654,7 +654,7 @@ async fn xrepo_commit_lookup_draft(fb: FacebookInit) -> Result<(), Error> {
     let bcs = cs
         .unwrap()
         .id()
-        .load(&ctx, largerepo.blob_repo().repo_blobstore())
+        .load(&ctx, largerepo.repo().repo_blobstore())
         .await?;
     let file_changes: Vec<_> = bcs.file_changes().map(|(path, _)| path).cloned().collect();
     assert_eq!(file_changes, vec![NonRootMPath::new("prefix/remapped2")?]);
@@ -673,23 +673,23 @@ async fn xrepo_commit_lookup_public(fb: FacebookInit) -> Result<(), Error> {
         .expect("repo exists")
         .build()
         .await?;
-    let small_master_cs_id = resolve_cs_id(&ctx, smallrepo.blob_repo(), "master").await?;
+    let small_master_cs_id = resolve_cs_id(&ctx, smallrepo.repo(), "master").await?;
     let largerepo = mononoke
         .repo(ctx.clone(), "largerepo")
         .await?
         .expect("repo exists")
         .build()
         .await?;
-    let large_master_cs_id = resolve_cs_id(&ctx, largerepo.blob_repo(), "master").await?;
+    let large_master_cs_id = resolve_cs_id(&ctx, largerepo.repo(), "master").await?;
 
     let new_large_public =
-        CreateCommitContext::new(&ctx, largerepo.blob_repo(), vec![large_master_cs_id])
+        CreateCommitContext::new(&ctx, largerepo.repo(), vec![large_master_cs_id])
             .add_file("prefix/remapped", "content1")
             .add_file("not_remapped", "content2")
             .commit()
             .await?;
 
-    bookmark(&ctx, largerepo.blob_repo(), "publicbook")
+    bookmark(&ctx, largerepo.repo(), "publicbook")
         .set_to(new_large_public)
         .await?;
 
@@ -706,18 +706,18 @@ async fn xrepo_commit_lookup_public(fb: FacebookInit) -> Result<(), Error> {
     let bcs = cs
         .unwrap()
         .id()
-        .load(&ctx, smallrepo.blob_repo().repo_blobstore())
+        .load(&ctx, smallrepo.repo().repo_blobstore())
         .await?;
     let file_changes: Vec<_> = bcs.file_changes().map(|(path, _)| path).cloned().collect();
     assert_eq!(file_changes, vec![NonRootMPath::new("remapped")?]);
 
     // Now in another direction - it should fail
     let new_small_public =
-        CreateCommitContext::new(&ctx, smallrepo.blob_repo(), vec![small_master_cs_id])
+        CreateCommitContext::new(&ctx, smallrepo.repo(), vec![small_master_cs_id])
             .add_file("remapped2", "content2")
             .commit()
             .await?;
-    bookmark(&ctx, smallrepo.blob_repo(), "newsmallpublicbook")
+    bookmark(&ctx, smallrepo.repo(), "newsmallpublicbook")
         .set_to(new_small_public)
         .await?;
     let res = smallrepo
@@ -751,16 +751,15 @@ async fn xrepo_commit_lookup_config_changing_live(fb: FacebookInit) -> Result<()
         .expect("repo exists")
         .build()
         .await?;
-    let small_master_cs_id = resolve_cs_id(&ctx, smallrepo.blob_repo(), "master").await?;
-    let large_master_cs_id = resolve_cs_id(&ctx, largerepo.blob_repo(), "master").await?;
+    let small_master_cs_id = resolve_cs_id(&ctx, smallrepo.repo(), "master").await?;
+    let large_master_cs_id = resolve_cs_id(&ctx, largerepo.repo(), "master").await?;
 
     // Before config change
-    let first_large =
-        CreateCommitContext::new(&ctx, largerepo.blob_repo(), vec![large_master_cs_id])
-            .add_file("prefix/remapped_before", "content1")
-            .add_file("not_remapped", "content2")
-            .commit()
-            .await?;
+    let first_large = CreateCommitContext::new(&ctx, largerepo.repo(), vec![large_master_cs_id])
+        .add_file("prefix/remapped_before", "content1")
+        .add_file("not_remapped", "content2")
+        .commit()
+        .await?;
 
     let first_small = largerepo
         .xrepo_commit_lookup(
@@ -774,7 +773,7 @@ async fn xrepo_commit_lookup_config_changing_live(fb: FacebookInit) -> Result<()
     let file_changes: Vec<_> = first_small
         .unwrap()
         .id()
-        .load(&ctx, smallrepo.blob_repo().repo_blobstore())
+        .load(&ctx, smallrepo.repo().repo_blobstore())
         .await?
         .file_changes()
         .map(|(path, _)| path)
@@ -784,8 +783,8 @@ async fn xrepo_commit_lookup_config_changing_live(fb: FacebookInit) -> Result<()
     assert_eq!(file_changes, vec![NonRootMPath::new("remapped_before")?]);
 
     // Config change: new config remaps prefix2 instead of prefix
-    let large_repo_id = largerepo.blob_repo().repo_identity().id();
-    let small_repo_id = smallrepo.blob_repo().repo_identity().id();
+    let large_repo_id = largerepo.repo().repo_identity().id();
+    let small_repo_id = smallrepo.repo().repo_identity().id();
     let mut cfg = cfg_src
         .get_commit_sync_config_by_version_if_exists(
             large_repo_id,
@@ -806,11 +805,11 @@ async fn xrepo_commit_lookup_config_changing_live(fb: FacebookInit) -> Result<()
     cfg_src.add_config(cfg.clone());
 
     let change_mapping_small =
-        CreateCommitContext::new(&ctx, smallrepo.blob_repo(), vec![small_master_cs_id])
+        CreateCommitContext::new(&ctx, smallrepo.repo(), vec![small_master_cs_id])
             .commit()
             .await?;
     let change_mapping_large =
-        CreateCommitContext::new(&ctx, largerepo.blob_repo(), vec![large_master_cs_id])
+        CreateCommitContext::new(&ctx, largerepo.repo(), vec![large_master_cs_id])
             .commit()
             .await?;
 
@@ -838,12 +837,11 @@ async fn xrepo_commit_lookup_config_changing_live(fb: FacebookInit) -> Result<()
     .await?;
 
     // After config change
-    let second_large =
-        CreateCommitContext::new(&ctx, largerepo.blob_repo(), vec![change_mapping_large])
-            .add_file("prefix2/remapped_after", "content1")
-            .add_file("not_remapped", "content2")
-            .commit()
-            .await?;
+    let second_large = CreateCommitContext::new(&ctx, largerepo.repo(), vec![change_mapping_large])
+        .add_file("prefix2/remapped_after", "content1")
+        .add_file("not_remapped", "content2")
+        .commit()
+        .await?;
 
     let second_small = largerepo
         .xrepo_commit_lookup(
@@ -857,7 +855,7 @@ async fn xrepo_commit_lookup_config_changing_live(fb: FacebookInit) -> Result<()
     let file_changes: Vec<_> = second_small
         .unwrap()
         .id()
-        .load(&ctx, smallrepo.blob_repo().repo_blobstore())
+        .load(&ctx, smallrepo.repo().repo_blobstore())
         .await?
         .file_changes()
         .map(|(path, _)| path)

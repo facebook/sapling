@@ -418,7 +418,7 @@ impl Repo {
 
     /// The internal id of the repo. Used for comparing the repo objects with each other.
     pub fn repoid(&self) -> RepositoryId {
-        self.blob_repo().repo_identity().id()
+        self.repo_identity().id()
     }
 
     /// The underlying `InnerRepo`.
@@ -521,10 +521,8 @@ impl Repo {
         ctx: &CoreContext,
         bookmark: &BookmarkKey,
     ) -> Result<(), MononokeError> {
-        let repo = self.blob_repo();
-
         let maybe_bcs_id_from_service = self.warm_bookmarks_cache.get(ctx, bookmark).await?;
-        let maybe_bcs_id_from_blobrepo = repo.bookmarks().get(ctx.clone(), bookmark).await?;
+        let maybe_bcs_id_from_blobrepo = self.bookmarks().get(ctx.clone(), bookmark).await?;
 
         if maybe_bcs_id_from_blobrepo.is_none() {
             self.report_bookmark_missing_from_repo(ctx, bookmark);
@@ -556,7 +554,7 @@ impl Repo {
                 debug!(
                     ctx.logger(),
                     "Reporting bookmark age difference for {}: latest {} value is {}, cache points to {}",
-                    repo.repo_identity().id(),
+                    self.repo_identity().id(),
                     bookmark,
                     blobrepo_bcs_id,
                     service_bcs_id,
@@ -578,7 +576,7 @@ impl Repo {
                 let compare_bcs_id = maybe_child.unwrap_or(service_bcs_id);
 
                 let compare_timestamp = compare_bcs_id
-                    .load(ctx, repo.repo_blobstore())
+                    .load(ctx, self.repo_blobstore())
                     .await?
                     .author_date()
                     .timestamp_secs();
@@ -792,21 +790,21 @@ impl RepoContext {
     }
 
     pub fn derive_changeset_info_enabled(&self) -> bool {
-        self.blob_repo()
+        self.repo()
             .repo_derived_data()
             .config()
             .is_enabled(ChangesetInfo::VARIANT)
     }
 
     pub fn derive_gitcommit_enabled(&self) -> bool {
-        self.blob_repo()
+        self.repo()
             .repo_derived_data()
             .config()
             .is_enabled(MappedGitCommitId::VARIANT)
     }
 
     pub fn derive_hgchangesets_enabled(&self) -> bool {
-        self.blob_repo()
+        self.repo()
             .repo_derived_data()
             .config()
             .is_enabled(MappedHgChangesetId::VARIANT)
@@ -826,12 +824,8 @@ impl RepoContext {
         bubble_id: Option<BubbleId>,
     ) -> Result<ArcCommitGraph, MononokeError> {
         Ok(match bubble_id {
-            Some(id) => Arc::new(
-                self.open_bubble(id)
-                    .await?
-                    .repo_commit_graph(self.blob_repo()),
-            ),
-            None => self.blob_repo().commit_graph_arc(),
+            Some(id) => Arc::new(self.open_bubble(id).await?.repo_commit_graph(self.repo())),
+            None => self.repo().commit_graph_arc(),
         })
     }
 
@@ -882,25 +876,25 @@ impl RepoContext {
                 .await?
                 .then_some(cs_id),
             ChangesetSpecifier::Hg(hg_cs_id) => {
-                self.blob_repo()
+                self.repo()
                     .bonsai_hg_mapping()
                     .get_bonsai_from_hg(&self.ctx, hg_cs_id)
                     .await?
             }
             ChangesetSpecifier::Globalrev(rev) => {
-                self.blob_repo()
+                self.repo()
                     .bonsai_globalrev_mapping()
                     .get_bonsai_from_globalrev(&self.ctx, rev)
                     .await?
             }
             ChangesetSpecifier::Svnrev(rev) => {
-                self.blob_repo()
+                self.repo()
                     .bonsai_svnrev_mapping()
                     .get_bonsai_from_svnrev(&self.ctx, rev)
                     .await?
             }
             ChangesetSpecifier::GitSha1(git_sha1) => {
-                self.blob_repo()
+                self.repo()
                     .bonsai_git_mapping()
                     .get_bonsai_from_git_sha1(&self.ctx, git_sha1)
                     .await?
@@ -926,7 +920,7 @@ impl RepoContext {
         // be a scratch bookmark, so always do the look-up.
         if cs_id.is_none() {
             cs_id = self
-                .blob_repo()
+                .repo()
                 .bookmarks()
                 .get(self.ctx.clone(), bookmark)
                 .await?
@@ -943,26 +937,26 @@ impl RepoContext {
         const MAX_LIMIT_AMBIGUOUS_IDS: usize = 10;
         let resolved = match prefix {
             ChangesetPrefixSpecifier::Hg(prefix) => ChangesetSpecifierPrefixResolution::from(
-                self.blob_repo()
+                self.repo()
                     .bonsai_hg_mapping()
                     .get_many_hg_by_prefix(&self.ctx, prefix, MAX_LIMIT_AMBIGUOUS_IDS)
                     .await?,
             ),
             ChangesetPrefixSpecifier::Bonsai(prefix) => ChangesetSpecifierPrefixResolution::from(
-                self.blob_repo()
+                self.repo()
                     .commit_graph()
                     .find_by_prefix(&self.ctx, prefix, MAX_LIMIT_AMBIGUOUS_IDS)
                     .await?,
             ),
             ChangesetPrefixSpecifier::GitSha1(prefix) => ChangesetSpecifierPrefixResolution::from(
-                self.blob_repo()
+                self.repo()
                     .bonsai_git_mapping()
                     .get_many_git_sha1_by_prefix(&self.ctx, prefix, MAX_LIMIT_AMBIGUOUS_IDS)
                     .await?,
             ),
             ChangesetPrefixSpecifier::Globalrev(prefix) => {
                 ChangesetSpecifierPrefixResolution::from(
-                    self.blob_repo()
+                    self.repo()
                         .bonsai_globalrev_mapping()
                         .get_closest_globalrev(&self.ctx, prefix)
                         .await?,
@@ -1024,7 +1018,7 @@ impl RepoContext {
         changesets: Vec<ChangesetId>,
     ) -> Result<Vec<(ChangesetId, HgChangesetId)>, MononokeError> {
         let mapping = self
-            .blob_repo()
+            .repo()
             .get_hg_bonsai_mapping(self.ctx.clone(), changesets)
             .await?
             .into_iter()
@@ -1039,7 +1033,7 @@ impl RepoContext {
         changesets: Vec<HgChangesetId>,
     ) -> Result<Vec<(HgChangesetId, ChangesetId)>, MononokeError> {
         let mapping = self
-            .blob_repo()
+            .repo()
             .get_hg_bonsai_mapping(self.ctx.clone(), changesets)
             .await?;
         Ok(mapping)
@@ -1051,7 +1045,7 @@ impl RepoContext {
         changesets: Vec<ChangesetId>,
     ) -> Result<Vec<(ChangesetId, GitSha1)>, MononokeError> {
         let mapping = self
-            .blob_repo()
+            .repo()
             .bonsai_git_mapping()
             .get(&self.ctx, changesets.into())
             .await?
@@ -1067,7 +1061,7 @@ impl RepoContext {
         changesets: Vec<GitSha1>,
     ) -> Result<Vec<(GitSha1, ChangesetId)>, MononokeError> {
         let mapping = self
-            .blob_repo()
+            .repo()
             .bonsai_git_mapping()
             .get(&self.ctx, changesets.into())
             .await?
@@ -1083,7 +1077,7 @@ impl RepoContext {
         changesets: Vec<ChangesetId>,
     ) -> Result<Vec<(ChangesetId, Globalrev)>, MononokeError> {
         let mapping = self
-            .blob_repo()
+            .repo()
             .bonsai_globalrev_mapping()
             .get(&self.ctx, changesets.into())
             .await?
@@ -1099,7 +1093,7 @@ impl RepoContext {
         changesets: Vec<Globalrev>,
     ) -> Result<Vec<(Globalrev, ChangesetId)>, MononokeError> {
         let mapping = self
-            .blob_repo()
+            .repo()
             .bonsai_globalrev_mapping()
             .get(&self.ctx, changesets.into())
             .await?
@@ -1115,7 +1109,7 @@ impl RepoContext {
         changesets: Vec<ChangesetId>,
     ) -> Result<Vec<(ChangesetId, Svnrev)>, MononokeError> {
         let mapping = self
-            .blob_repo()
+            .repo()
             .bonsai_svnrev_mapping()
             .get(&self.ctx, changesets.into())
             .await?
@@ -1152,11 +1146,8 @@ impl RepoContext {
         let (maybe_warm_cs_id, maybe_log_entry) = try_join!(
             self.warm_bookmarks_cache().get(&self.ctx, &bookmark),
             async {
-                let mut entries_stream = self
-                    .repo
-                    .blob_repo()
-                    .bookmark_update_log()
-                    .list_bookmark_log_entries(
+                let mut entries_stream =
+                    self.repo().bookmark_update_log().list_bookmark_log_entries(
                         self.ctx.clone(),
                         bookmark.clone(),
                         1,
@@ -1243,9 +1234,9 @@ impl RepoContext {
             // Scratch bookmarks must be queried directly from the blobrepo as
             // they are not stored in the cache.  To maintain ordering with
             // public bookmarks, query all the bookmarks we are interested in.
-            let blob_repo = self.blob_repo();
+            let repo = self.repo();
             let cache = self.warm_bookmarks_cache();
-            let bookmarks = blob_repo
+            let bookmarks = repo
                 .bookmarks()
                 .list(
                     self.ctx.clone(),
@@ -1305,7 +1296,7 @@ impl RepoContext {
         // initialize visited
         let mut visited: HashSet<_> = changesets.iter().cloned().collect();
 
-        let phases = self.blob_repo().phases();
+        let phases = self.repo().phases();
 
         // get phases
         let public_phases = phases
@@ -1514,7 +1505,7 @@ impl RepoContext {
     ) -> Result<Option<ChangesetContext>, MononokeError> {
         let common_config = self
             .live_commit_sync_config()
-            .get_common_config(self.blob_repo().repo_identity().id())
+            .get_common_config(self.repo().repo_identity().id())
             .map_err(|e| {
                 MononokeError::InvalidRequest(format!(
                     "Commits from {} are not configured to be remapped to another repo: {}",

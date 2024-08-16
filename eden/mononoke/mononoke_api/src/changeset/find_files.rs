@@ -108,7 +108,7 @@ impl ChangesetContext {
             .await?
             .find_files_filter_basenames(
                 self.ctx(),
-                self.repo_ctx().blob_repo().repo_blobstore().clone(),
+                self.repo_ctx().repo().repo_blobstore().clone(),
                 prefixes.unwrap_or_else(Vec::new).into_iter().collect(),
                 basenames_and_suffixes,
                 match ordering {

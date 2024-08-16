@@ -188,12 +188,7 @@ async fn validate_unnecessary_derived_data_is_not_derived(
     cs_id: ChangesetId,
     derived_data_to_derive: DerivableType,
 ) -> Result<(), Error> {
-    for ty in &repo
-        .blob_repo()
-        .repo_derived_data_arc()
-        .active_config()
-        .types
-    {
+    for ty in &repo.repo().repo_derived_data_arc().active_config().types {
         if *ty == DerivableType::GitTrees {
             // Derived data utils doesn't support git_trees, so we have to skip it
             continue;
