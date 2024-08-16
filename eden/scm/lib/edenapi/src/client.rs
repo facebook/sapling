@@ -144,8 +144,8 @@ const MAX_CONCURRENT_HASH_LOOKUPS_PER_REQUEST: usize = 1000;
 const MAX_CONCURRENT_BLAMES_PER_REQUEST: usize = 10;
 const MAX_ERROR_MSG_LEN: usize = 500;
 
-static REQUESTS_INFLIGHT: Counter = Counter::new("edenapi.req_inflight");
-static FILES_ATTRS_INFLIGHT: Counter = Counter::new("edenapi.files_attrs_inflight");
+static REQUESTS_INFLIGHT: Counter = Counter::new_counter("edenapi.req_inflight");
+static FILES_ATTRS_INFLIGHT: Counter = Counter::new_counter("edenapi.files_attrs_inflight");
 
 mod paths {
     pub const HEALTH_CHECK: &str = "health_check";

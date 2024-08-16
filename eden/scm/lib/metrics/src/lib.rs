@@ -18,20 +18,26 @@ pub struct Counter {
     name: &'static str,
     inner: AtomicUsize,
     registered: OnceCell<()>,
+    gauge: bool,
 }
 
 impl Counter {
     /// By convention metric name should be crate.metric_name
     /// Metrics without '.' in name are not allowed (cause compilation error)
-    pub const fn new(name: &'static str) -> Self {
+    pub const fn new_counter(name: &'static str) -> Self {
         // Unfortunately we can't check name this here because of const restriction
-        let inner = AtomicUsize::new(0);
-        let registered = OnceCell::new();
         Self {
             name,
-            inner,
-            registered,
+            inner: AtomicUsize::new(0),
+            registered: OnceCell::new(),
+            gauge: false,
         }
+    }
+
+    pub const fn new_gauge(name: &'static str) -> Self {
+        let mut counter = Self::new_counter(name);
+        counter.gauge = true;
+        counter
     }
 
     pub fn increment(&'static self) {
@@ -54,6 +60,10 @@ impl Counter {
     pub fn entrance_guard(&'static self, v: usize) -> EntranceGuard {
         self.add(v);
         EntranceGuard(self, v)
+    }
+
+    pub fn is_gauge(&'static self) -> bool {
+        self.gauge
     }
 
     fn inner(&'static self) -> &AtomicUsize {
@@ -112,8 +122,8 @@ mod test {
 
     #[test]
     fn counters_test() {
-        static COUNTER1: Counter = Counter::new("COUNTER1");
-        static COUNTER2: Counter = Counter::new("COUNTER2");
+        static COUNTER1: Counter = Counter::new_counter("COUNTER1");
+        static COUNTER2: Counter = Counter::new_counter("COUNTER2");
         COUNTER1.increment();
         COUNTER2.add(5);
         let counters = Registry::global().counters();
@@ -123,7 +133,7 @@ mod test {
 
     #[test]
     fn entrance_test() {
-        static COUNTER3: Counter = Counter::new("COUNTER3");
+        static COUNTER3: Counter = Counter::new_counter("COUNTER3");
         let guard1 = COUNTER3.entrance_guard(1);
         let counters = Registry::global().counters();
         assert_eq!(1, counters.get("COUNTER3").unwrap().value());

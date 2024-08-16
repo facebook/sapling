@@ -159,6 +159,11 @@ impl Renderer {
     ) {
         let progress_registry = ProgressRegistry::main();
         for (name, counter) in metrics {
+            if !counter.is_gauge() {
+                // The below logic doesn't make sense for monotonic counters.
+                continue;
+            }
+
             if !inner.insert(name) {
                 continue;
             }
