@@ -201,3 +201,35 @@ fn test_setting_managed_virtual_group_clears_snapshot() -> Result<()> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn test_setting_managed_virtual_group_on_lazy_graph() -> Result<()> {
+    let server = TestDag::draw("A..E  # master: E");
+    let mut client = server.client_cloned_data().await;
+
+    let parents: Vec<(Vertex, Vec<Vertex>)> =
+        vec![("N".into(), vec![]), ("W".into(), vec!["B".into()])];
+    client.set_managed_virtual_group(Some(parents)).await?;
+
+    // Client should see the virtual group, and be able to query it.
+    assert_eq!(dbg(client.virtual_group().await?), "<spans [V0:V1]>");
+    let b_children = client
+        .children(Set::from_static_names(vec![Vertex::copy_from(b"B")]))
+        .await?;
+    assert_eq!(dbg(b_children), "<spans [V1, 2]>");
+    let wdir_id = client.vertex_id_optional(&Vertex::copy_from(b"W")).await?;
+    assert!(wdir_id.is_some());
+
+    // Snapshots should include the virtual group too.
+    // FIXME: The snapshots do not include the virtual group.
+    let dag_snapshot = client.dag_snapshot()?;
+    let id_map_snapshot = client.id_map_snapshot()?;
+    assert_eq!(dbg(dag_snapshot.virtual_group().await?), "<spans []>");
+    let b_children =
+        r(dag_snapshot.children(Set::from_static_names(vec![Vertex::copy_from(b"B")])))?;
+    assert_eq!(dbg(b_children), "<spans [2]>");
+    let wdir_id = r(id_map_snapshot.vertex_id_optional(&Vertex::copy_from(b"W")))?;
+    assert!(wdir_id.is_none());
+
+    Ok(())
+}
