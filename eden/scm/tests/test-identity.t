@@ -105,3 +105,32 @@ Works from within a repo of the opposite flavor:
   $ SL_REPO_IDENTITY=sl hg init foo
   $ ls foo/.sl/requires
   foo/.sl/requires
+
+
+Export/import works:
+  $ newrepo
+  $ echo "A" | drawdag
+  $ HGIDENTITY=sl hg export -r $A | hg import -
+  applying patch from stdin
+FIXME: not right!
+  $ hg show
+  commit:      3b0f2a06f01b
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  files:       A
+  description:
+  # SL changeset patch
+  # User test
+  # Date 0 0
+  #      Thu Jan 01 00:00:00 1970 +0000
+  # Node ID 426bada5c67598ca65036d57d9e4b64b0c1ce7a0
+  # Parent  0000000000000000000000000000000000000000
+  A
+  
+  
+  diff -r 000000000000 -r 3b0f2a06f01b A
+  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/A	Thu Jan 01 00:00:00 1970 +0000
+  @@ -0,0 +1,1 @@
+  +A
+  \ No newline at end of file
