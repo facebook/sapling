@@ -50,7 +50,8 @@ TEST_F(ScmStatusCacheTest, insert_sequence_status_pair) {
   ScmStatus thirdStatus;
   initialStatus.entries_ref()->emplace("bar", ScmFileStatus::ADDED);
 
-  cache->insert(key, sequenceId, initialStatus);
+  auto val = std::make_shared<SeqStatusPair>(sequenceId, initialStatus);
+  cache->insert(key, val);
   EXPECT_TRUE(cache->contains(key));
   EXPECT_EQ(1, cache->getObjectCount());
   auto statusRes = extractStatus(cache->get(key, sequenceId));
@@ -58,7 +59,8 @@ TEST_F(ScmStatusCacheTest, insert_sequence_status_pair) {
 
   // because the sequence number is smaller the
   // orignal value should stay in the cache
-  cache->insert(key, seqSmall, secondStatus);
+  val = std::make_shared<SeqStatusPair>(seqSmall, secondStatus);
+  cache->insert(key, val);
   EXPECT_TRUE(cache->contains(key));
   EXPECT_EQ(1, cache->getObjectCount());
   statusRes = extractStatus(cache->get(key, sequenceId));
@@ -66,7 +68,8 @@ TEST_F(ScmStatusCacheTest, insert_sequence_status_pair) {
 
   // because the sequence number is larger the
   // value in the cache should be replaced.
-  cache->insert(key, seqLarge, thirdStatus);
+  val = std::make_shared<SeqStatusPair>(seqLarge, thirdStatus);
+  cache->insert(key, val);
   EXPECT_TRUE(cache->contains(key));
   EXPECT_EQ(1, cache->getObjectCount());
   statusRes = extractStatus(cache->get(key, sequenceId));
@@ -99,7 +102,7 @@ TEST_F(ScmStatusCacheTest, evict_when_cache_size_too_large) {
 
         ObjectId::sha1(fmt::format("{}", i)));
 
-    cache->insert(keys.back(), i, status);
+    cache->insert(keys.back(), std::make_shared<SeqStatusPair>(i, status));
 
     if (i <= maxItemCnt) {
       EXPECT_EQ(i, cache->getObjectCount());
@@ -136,7 +139,7 @@ TEST_F(ScmStatusCacheTest, evict_on_update) {
   std::vector<ObjectId> keys;
   for (auto i = 0; i < maxItemCnt; i++) {
     keys.push_back(ObjectId::sha1(fmt::format("{}", i)));
-    cache->insert(keys.back(), i, status);
+    cache->insert(keys.back(), std::make_shared<SeqStatusPair>(i, status));
   }
 
   EXPECT_EQ(maxItemCnt, cache->getObjectCount());
@@ -147,8 +150,10 @@ TEST_F(ScmStatusCacheTest, evict_on_update) {
         fmt::format("file{}", i), ScmFileStatus::ADDED);
   }
 
+  auto v = std::make_shared<SeqStatusPair>(1, statusWithManyEntries);
+
   // this should evict the the cache size to be maxItemCnt-1
-  cache->insert(keys.front(), 1, statusWithManyEntries);
+  cache->insert(keys.front(), v);
   EXPECT_EQ(maxItemCnt - 1, cache->getObjectCount());
 }
 
@@ -228,7 +233,7 @@ TEST_F(ScmStatusCacheTest, get_results_as_promise_or_future) {
     EXPECT_EQ(status, (std::move(future)).get());
   }
 
-  cache->insert(key, 1, status);
+  cache->insert(key, std::make_shared<SeqStatusPair>(1, status));
   EXPECT_TRUE(cache->contains(key));
 
   for (int i = 0; i < 10; i++) {
@@ -285,10 +290,11 @@ TEST_F(ScmStatusCacheTest, check_sequence_range_validity) {
 
 TEST_F(ScmStatusCacheTest, cache_clear) {
   auto key = ObjectId::fromHex("0123456789abcdef");
+  auto val = std::make_shared<SeqStatusPair>(0, ScmStatus{});
   auto cache = ScmStatusCache::create(
       rawEdenConfig.get(), makeRefPtr<EdenStats>(), journal);
   cache->resetCachedWorkingDir(hash1);
-  cache->insert(key, 0, ScmStatus{});
+  cache->insert(key, val);
   EXPECT_EQ(1, cache->getObjectCount());
   cache->clear();
   EXPECT_EQ(0, cache->getObjectCount());
