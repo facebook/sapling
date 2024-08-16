@@ -6,7 +6,6 @@
  */
 
 use ::sql_ext::mononoke_queries;
-use anyhow::bail;
 use async_trait::async_trait;
 use clientinfo::ClientRequestInfo;
 use mercurial_types::HgChangesetId;
@@ -14,6 +13,7 @@ use sql::Transaction;
 
 use crate::ctx::CommitCloudContext;
 use crate::references::heads::WorkspaceHead;
+use crate::sql::common::UpdateWorkspaceNameArgs;
 use crate::sql::ops::Delete;
 use crate::sql::ops::Get;
 use crate::sql::ops::Insert;
@@ -90,17 +90,23 @@ impl Insert<WorkspaceHead> for SqlCommitCloud {
 
 #[async_trait]
 impl Update<WorkspaceHead> for SqlCommitCloud {
-    type UpdateArgs = ();
-
+    type UpdateArgs = UpdateWorkspaceNameArgs;
     async fn update(
         &self,
-        _txn: Transaction,
-        _cri: Option<&ClientRequestInfo>,
-        _cc_ctx: CommitCloudContext,
-        _args: Self::UpdateArgs,
+        txn: Transaction,
+        cri: Option<&ClientRequestInfo>,
+        cc_ctx: CommitCloudContext,
+        args: Self::UpdateArgs,
     ) -> anyhow::Result<(Transaction, u64)> {
-        //To be implemented among other Update queries
-        bail!("Not implemented yet");
+        let (txn, result) = UpdateWorkspaceName::maybe_traced_query_with_transaction(
+            txn,
+            cri,
+            &cc_ctx.reponame,
+            &cc_ctx.workspace,
+            &args.new_workspace,
+        )
+        .await?;
+        Ok((txn, result.affected_rows()))
     }
 }
 

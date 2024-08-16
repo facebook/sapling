@@ -52,7 +52,7 @@ use crate::sql::ops::Get;
 use crate::sql::ops::Insert;
 use crate::sql::ops::SqlCommitCloud;
 use crate::sql::ops::Update;
-use crate::sql::versions_ops::ArchiveArgs;
+use crate::sql::versions_ops::UpdateVersionArgs;
 
 #[facet]
 pub struct CommitCloud {
@@ -444,7 +444,7 @@ impl CommitCloud {
             txn,
             cri,
             cc_ctx.clone(),
-            ArchiveArgs { archived },
+            UpdateVersionArgs::Archive(archived),
         )
         .await?;
         txn.commit().await?;

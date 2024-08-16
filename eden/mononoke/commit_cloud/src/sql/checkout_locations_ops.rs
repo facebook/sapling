@@ -16,6 +16,7 @@ use sql::Connection;
 use sql::Transaction;
 
 use crate::ctx::CommitCloudContext;
+use crate::sql::common::UpdateWorkspaceNameArgs;
 use crate::sql::ops::Get;
 use crate::sql::ops::Insert;
 use crate::sql::ops::SqlCommitCloud;
@@ -152,15 +153,22 @@ impl Insert<WorkspaceCheckoutLocation> for SqlCommitCloud {
 
 #[async_trait]
 impl Update<WorkspaceCheckoutLocation> for SqlCommitCloud {
-    type UpdateArgs = ();
+    type UpdateArgs = UpdateWorkspaceNameArgs;
     async fn update(
         &self,
-        _txn: Transaction,
-        _cri: Option<&ClientRequestInfo>,
-        _cc_ctx: CommitCloudContext,
-        _args: Self::UpdateArgs,
+        txn: Transaction,
+        cri: Option<&ClientRequestInfo>,
+        cc_ctx: CommitCloudContext,
+        args: Self::UpdateArgs,
     ) -> anyhow::Result<(Transaction, u64)> {
-        // Checkout locations update op endpoint is never used
-        unimplemented!("delete is not implemented for checkout locations")
+        let (txn, result) = UpdateWorkspaceName::maybe_traced_query_with_transaction(
+            txn,
+            cri,
+            &cc_ctx.reponame,
+            &cc_ctx.workspace,
+            &args.new_workspace,
+        )
+        .await?;
+        Ok((txn, result.affected_rows()))
     }
 }

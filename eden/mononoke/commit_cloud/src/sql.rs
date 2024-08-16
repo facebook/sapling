@@ -7,6 +7,7 @@
 
 pub mod builder;
 pub mod checkout_locations_ops;
+pub mod common;
 pub mod heads_ops;
 pub mod history_ops;
 pub mod local_bookmarks_ops;
