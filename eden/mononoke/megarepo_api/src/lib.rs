@@ -193,7 +193,7 @@ impl MegarepoApi {
         let target_repo = self.target_repo(ctx, target).await?;
         common::find_target_sync_config(
             ctx,
-            target_repo.inner_repo(),
+            target_repo.repo(),
             *cs_id,
             target,
             &self.megarepo_configs,

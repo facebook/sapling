@@ -78,11 +78,7 @@ impl SourceControlServiceImpl {
         // Check that we are allowed to write to the target repo
         target_repo
             .authorization_context()
-            .require_repo_write(
-                ctx,
-                target_repo.inner_repo(),
-                RepoWriteOperation::MegarepoSync,
-            )
+            .require_repo_write(ctx, target_repo.repo(), RepoWriteOperation::MegarepoSync)
             .await
             .map_err(MononokeError::from)?;
         Ok(())

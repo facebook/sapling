@@ -157,7 +157,7 @@ impl ChangesetPathContentContext {
             .authorization_context()
             .require_path_read(
                 changeset.ctx(),
-                changeset.repo_ctx().inner_repo(),
+                changeset.repo_ctx().repo(),
                 changeset.id(),
                 &path,
             )
@@ -180,7 +180,7 @@ impl ChangesetPathContentContext {
             .authorization_context()
             .require_path_read(
                 changeset.ctx(),
-                changeset.repo_ctx().inner_repo(),
+                changeset.repo_ctx().repo(),
                 changeset.id(),
                 &path,
             )
@@ -333,7 +333,7 @@ impl ChangesetPathHistoryContext {
             .authorization_context()
             .require_path_read(
                 changeset.ctx(),
-                changeset.repo_ctx().inner_repo(),
+                changeset.repo_ctx().repo(),
                 changeset.id(),
                 &path,
             )
@@ -357,7 +357,7 @@ impl ChangesetPathHistoryContext {
             .authorization_context()
             .require_path_read(
                 changeset.ctx(),
-                changeset.repo_ctx().inner_repo(),
+                changeset.repo_ctx().repo(),
                 changeset.id(),
                 &path,
             )
@@ -380,7 +380,7 @@ impl ChangesetPathHistoryContext {
             .authorization_context()
             .require_path_read(
                 changeset.ctx(),
-                changeset.repo_ctx().inner_repo(),
+                changeset.repo_ctx().repo(),
                 changeset.id(),
                 &path,
             )
@@ -514,7 +514,7 @@ impl ChangesetPathHistoryContext {
     /// Blame metadata for this path.
     pub async fn blame(&self, follow_mutable_file_history: bool) -> Result<BlameV2, MononokeError> {
         let ctx = self.changeset.ctx();
-        let repo = self.changeset.repo_ctx().inner_repo();
+        let repo = self.changeset.repo_ctx().repo();
         let csid = self.changeset.id();
         let (blame, _) =
             history_traversal::blame(ctx, repo, csid, &self.path, follow_mutable_file_history)
@@ -528,7 +528,7 @@ impl ChangesetPathHistoryContext {
         follow_mutable_file_history: bool,
     ) -> Result<(BlameV2, Bytes), MononokeError> {
         let ctx = self.changeset.ctx();
-        let repo = self.changeset.repo_ctx().inner_repo();
+        let repo = self.changeset.repo_ctx().repo();
         let csid = self.changeset.id();
         Ok(history_traversal::blame_with_content(
             ctx,
@@ -687,7 +687,7 @@ impl ChangesetPathHistoryContext {
 
         let history = list_file_history(
             self.changeset.ctx(),
-            self.repo_ctx().inner_repo(),
+            self.repo_ctx().repo(),
             self.path.clone(),
             self.changeset.id(),
             FilterVisitor {
@@ -737,7 +737,7 @@ impl ChangesetPathContext {
             .authorization_context()
             .require_path_read(
                 changeset.ctx(),
-                changeset.repo_ctx().inner_repo(),
+                changeset.repo_ctx().repo(),
                 changeset.id(),
                 &path,
             )
@@ -760,7 +760,7 @@ impl ChangesetPathContext {
             .authorization_context()
             .require_path_read(
                 changeset.ctx(),
-                changeset.repo_ctx().inner_repo(),
+                changeset.repo_ctx().repo(),
                 changeset.id(),
                 &path,
             )

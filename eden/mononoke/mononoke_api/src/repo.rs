@@ -96,7 +96,6 @@ use mercurial_derivation::MappedHgChangesetId;
 use mercurial_mutation::HgMutationStore;
 use mercurial_types::Globalrev;
 use metaconfig_types::RepoConfig;
-use mononoke_api_types::InnerRepo;
 use mononoke_repos::MononokeRepos;
 use mononoke_types::hash::Blake3;
 use mononoke_types::hash::GitSha1;
@@ -121,6 +120,7 @@ use repo_blobstore::RepoBlobstoreArc;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_bookmark_attrs::RepoBookmarkAttrs;
 use repo_cross_repo::RepoCrossRepo;
+use repo_cross_repo::RepoCrossRepoRef;
 use repo_derived_data::RepoDerivedData;
 use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentity;
@@ -187,42 +187,100 @@ define_stats! {
 #[facet::container]
 #[derive(Clone)]
 pub struct Repo {
-    #[delegate(
-        RepoBlobstore,
-        RepoBookmarkAttrs,
-        RepoDerivedData,
-        RepoIdentity,
-        dyn BonsaiTagMapping,
-        dyn BonsaiGitMapping,
-        dyn BonsaiGlobalrevMapping,
-        dyn BonsaiSvnrevMapping,
-        dyn BonsaiHgMapping,
-        dyn BookmarkUpdateLog,
-        dyn Bookmarks,
-        dyn Phases,
-        dyn PushrebaseMutationMapping,
-        dyn HgMutationStore,
-        dyn MutableCounters,
-        dyn RepoPermissionChecker,
-        dyn RepoLock,
-        RepoConfig,
-        RepoEphemeralStore,
-        MutableRenames,
-        RepoCrossRepo,
-        dyn AclRegions,
-        RepoSparseProfiles,
-        StreamingClone,
-        CommitGraph,
-        dyn CommitGraphWriter,
-        dyn GitSymbolicRefs,
-        dyn GitPushRedirectConfig,
-        dyn Filenodes,
-        CommitCloud,
-        SqlQueryConfig,
-    )]
-    pub inner: InnerRepo,
+    #[facet]
+    pub repo_blobstore: RepoBlobstore,
 
-    #[init(inner.repo_identity().name().to_string())]
+    #[facet]
+    pub repo_bookmark_attrs: RepoBookmarkAttrs,
+
+    #[facet]
+    pub repo_derived_data: RepoDerivedData,
+
+    #[facet]
+    pub repo_identity: RepoIdentity,
+
+    #[facet]
+    pub bonsai_tag_mapping: dyn BonsaiTagMapping,
+
+    #[facet]
+    pub bonsai_git_mapping: dyn BonsaiGitMapping,
+
+    #[facet]
+    pub bonsai_globalrev_mapping: dyn BonsaiGlobalrevMapping,
+
+    #[facet]
+    pub bonsai_svnrev_mapping: dyn BonsaiSvnrevMapping,
+
+    #[facet]
+    pub bonsai_hg_mapping: dyn BonsaiHgMapping,
+
+    #[facet]
+    pub bookmark_update_log: dyn BookmarkUpdateLog,
+
+    #[facet]
+    pub bookmarks: dyn Bookmarks,
+
+    #[facet]
+    pub phases: dyn Phases,
+
+    #[facet]
+    pub pushrebase_mutation_mapping: dyn PushrebaseMutationMapping,
+
+    #[facet]
+    pub hg_mutation_store: dyn HgMutationStore,
+
+    #[facet]
+    pub mutable_counters: dyn MutableCounters,
+
+    #[facet]
+    pub repo_permission_checker: dyn RepoPermissionChecker,
+
+    #[facet]
+    pub repo_lock: dyn RepoLock,
+
+    #[facet]
+    pub repo_config: RepoConfig,
+
+    #[facet]
+    pub repo_ephemeral_store: RepoEphemeralStore,
+
+    #[facet]
+    pub mutable_renames: MutableRenames,
+
+    #[facet]
+    pub repo_cross_repo: RepoCrossRepo,
+
+    #[facet]
+    pub acl_regions: dyn AclRegions,
+
+    #[facet]
+    pub repo_sparse_profiles: RepoSparseProfiles,
+
+    #[facet]
+    pub streaming_clone: StreamingClone,
+
+    #[facet]
+    pub commit_graph: CommitGraph,
+
+    #[facet]
+    pub commit_graph_writer: dyn CommitGraphWriter,
+
+    #[facet]
+    pub git_symbolic_refs: dyn GitSymbolicRefs,
+
+    #[facet]
+    pub git_push_redirect_config: dyn GitPushRedirectConfig,
+
+    #[facet]
+    pub filenodes: dyn Filenodes,
+
+    #[facet]
+    pub commit_cloud: CommitCloud,
+
+    #[facet]
+    pub sql_query_config: SqlQueryConfig,
+
+    #[init(repo_identity.name().to_string())]
     pub name: String,
 
     #[facet]
@@ -293,7 +351,7 @@ async fn maybe_push_redirector(
             .into_push_redirector(
                 ctx,
                 live_commit_sync_config,
-                repo.inner_repo().repo_cross_repo.sync_lease().clone(),
+                repo.repo_cross_repo().sync_lease().clone(),
             )
             .map_err(|e| MononokeError::InvalidRequest(e.to_string()))?,
         ))
@@ -399,21 +457,12 @@ impl Repo {
         let commit_graph_writer = bubble.repo_commit_graph_writer(self);
         let repo_derived_data = Arc::new(self.repo_derived_data().for_bubble(bubble));
 
-        let inner = InnerRepo {
+        Self {
             repo_blobstore,
             commit_graph,
             commit_graph_writer,
             repo_derived_data,
-            ..self.inner.clone()
-        };
-        Self {
-            name: self.name.clone(),
-            inner,
-            warm_bookmarks_cache: self.warm_bookmarks_cache.clone(),
-            hook_manager: self.hook_manager.clone(),
-            repo_handler_base: self.repo_handler_base.clone(),
-            filestore_config: self.filestore_config.clone(),
-            repo_stats_logger: self.repo_stats_logger.clone(),
+            ..self.clone()
         }
     }
 
@@ -427,24 +476,19 @@ impl Repo {
         self.repo_identity().id()
     }
 
-    /// The underlying `InnerRepo`.
-    pub fn inner_repo(&self) -> &InnerRepo {
-        &self.inner
-    }
-
     /// `LiveCommitSyncConfig` instance to query current state of sync configs.
     pub fn live_commit_sync_config(&self) -> Arc<dyn LiveCommitSyncConfig> {
-        self.inner.repo_cross_repo.live_commit_sync_config().clone()
+        self.repo_cross_repo.live_commit_sync_config().clone()
     }
 
     /// The commit sync mapping for the referenced repository.
     pub fn synced_commit_mapping(&self) -> &ArcSyncedCommitMapping {
-        self.inner.repo_cross_repo.synced_commit_mapping()
+        self.repo_cross_repo.synced_commit_mapping()
     }
 
     /// The commit sync lease for the referenced repository.
     pub fn x_repo_sync_lease(&self) -> &Arc<dyn LeaseOps> {
-        self.inner.repo_cross_repo.sync_lease()
+        self.repo_cross_repo.sync_lease()
     }
 
     /// The warm bookmarks cache for the referenced repository.
@@ -454,7 +498,7 @@ impl Repo {
 
     /// The configuration for the referenced repository.
     pub fn config(&self) -> &RepoConfig {
-        &self.inner.repo_config
+        &self.repo_config
     }
 
     pub async fn report_monitoring_stats(&self, ctx: &CoreContext) -> Result<(), MononokeError> {
@@ -673,7 +717,7 @@ impl RepoContext {
         });
 
         // Check the user is permitted to access this repo.
-        authz.require_repo_metadata_read(&ctx, &repo.inner).await?;
+        authz.require_repo_metadata_read(&ctx, &repo).await?;
 
         // Open the bubble if necessary.
         let repo = if let Some(bubble_id) = bubble_id {
@@ -726,11 +770,6 @@ impl RepoContext {
 
     pub fn repo_arc(&self) -> Arc<Repo> {
         self.repo.clone()
-    }
-
-    /// The underlying `InnerRepo`.
-    pub fn inner_repo(&self) -> &InnerRepo {
-        self.repo.inner_repo()
     }
 
     /// `LiveCommitSyncConfig` instance to query current state of sync configs.

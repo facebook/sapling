@@ -41,7 +41,7 @@ impl HgRepoContext {
             .await?;
         Ok(self
             .repo_ctx()
-            .inner_repo()
+            .repo()
             .commit_cloud()
             .get_workspace(&cc_ctx)
             .await?)
@@ -54,7 +54,7 @@ impl HgRepoContext {
     ) -> Result<Vec<WorkspaceData>, MononokeError> {
         Ok(self
             .repo_ctx()
-            .inner_repo()
+            .repo()
             .commit_cloud()
             .get_workspaces(prefix, reponame)
             .await?)
@@ -72,7 +72,7 @@ impl HgRepoContext {
         let cc_ctx = CommitCloudContext::new(&params.workspace, &params.reponame)?;
         Ok(self
             .repo_ctx()
-            .inner_repo()
+            .repo()
             .commit_cloud()
             .get_references(&cc_ctx, params)
             .await?)
@@ -99,7 +99,7 @@ impl HgRepoContext {
 
         Ok(self
             .repo_ctx()
-            .inner_repo()
+            .repo()
             .commit_cloud()
             .update_references(&cc_ctx, params)
             .await?)
@@ -111,7 +111,7 @@ impl HgRepoContext {
     ) -> Result<SmartlogData, MononokeError> {
         let raw_data = self
             .repo_ctx()
-            .inner_repo()
+            .repo()
             .commit_cloud()
             .get_smartlog_raw_info(params)
             .await?;
@@ -176,19 +176,14 @@ impl HgRepoContext {
                         .map(|(_, hg_id)| HgId::from(hg_id))
                         .collect();
 
-                    nodes.push(
-                        self.repo_ctx()
-                            .inner_repo()
-                            .commit_cloud()
-                            .make_smartlog_node(
-                                &hgid,
-                                &hg_parents,
-                                &changeset.changeset_info().await?,
-                                &bookmarks.get(&hgid).cloned(),
-                                &remote_bookmarks.get(&hgid).cloned(),
-                                &phase,
-                            )?,
-                    )
+                    nodes.push(self.repo_ctx().repo().commit_cloud().make_smartlog_node(
+                        &hgid,
+                        &hg_parents,
+                        &changeset.changeset_info().await?,
+                        &bookmarks.get(&hgid).cloned(),
+                        &remote_bookmarks.get(&hgid).cloned(),
+                        &phase,
+                    )?)
                 }
             }
         }
@@ -218,7 +213,7 @@ impl HgRepoContext {
 
         Ok(self
             .repo_ctx()
-            .inner_repo()
+            .repo()
             .commit_cloud()
             .share_workspace(&ctx)
             .await?)
@@ -241,7 +236,7 @@ impl HgRepoContext {
 
         Ok(self
             .repo_ctx()
-            .inner_repo()
+            .repo()
             .commit_cloud()
             .update_workspace_archive(&cc_ctx, params.archived)
             .await?)

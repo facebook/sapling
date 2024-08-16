@@ -89,17 +89,13 @@ impl RepoContext {
         if let Some(redirector) = self.push_redirector.as_ref() {
             let ctx = self.ctx();
             let log_id = delete_op
-                .run(
-                    self.ctx(),
-                    self.authorization_context(),
-                    redirector.repo.inner_repo(),
-                )
+                .run(self.ctx(), self.authorization_context(), &redirector.repo)
                 .await?;
             // Wait for bookmark to catch up on small repo
             redirector.ensure_backsynced(ctx, log_id).await?;
         } else {
             delete_op
-                .run(self.ctx(), self.authorization_context(), self.inner_repo())
+                .run(self.ctx(), self.authorization_context(), self.repo())
                 .await?;
         }
         Ok(())
@@ -123,12 +119,7 @@ impl RepoContext {
             .await?;
 
         let bookmark_info_transaction = delete_op
-            .run_with_transaction(
-                self.ctx(),
-                self.authorization_context(),
-                self.inner_repo(),
-                txn,
-            )
+            .run_with_transaction(self.ctx(), self.authorization_context(), self.repo(), txn)
             .await?;
         Ok(bookmark_info_transaction)
     }

@@ -90,7 +90,7 @@ impl<'a> RemergeSource<'a> {
             })?;
         let (old_remapping_state, config) = find_target_sync_config(
             ctx,
-            target_repo.inner_repo(),
+            target_repo.repo(),
             target_location,
             target,
             self.megarepo_configs,
@@ -106,7 +106,7 @@ impl<'a> RemergeSource<'a> {
         let moved_commits = self
             .create_move_commits(
                 ctx,
-                target_repo.inner_repo(),
+                target_repo.repo(),
                 &[source_config.clone()],
                 new_remapping_state.get_all_latest_synced_changesets(),
                 self.mutable_renames,
@@ -152,7 +152,7 @@ impl<'a> RemergeSource<'a> {
 
         self.move_bookmark_conditionally(
             ctx,
-            target_repo.inner_repo(),
+            target_repo.repo(),
             target.bookmark.clone(),
             (target_location, remerged),
         )

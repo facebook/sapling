@@ -814,8 +814,8 @@ async fn xrepo_commit_lookup_config_changing_live(fb: FacebookInit) -> Result<()
             .await?;
 
     let commit_sync_repos = CommitSyncRepos::new(
-        largerepo.inner_repo().clone(),
-        smallrepo.inner_repo().clone(),
+        largerepo.repo().clone(),
+        smallrepo.repo().clone(),
         SubmoduleDeps::ForSync(HashMap::new()),
         &common_config,
     )?;

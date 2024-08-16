@@ -147,8 +147,7 @@ pub async fn set_refs(
         return Err(update_error(&mappings_store, e).await);
     }
     if !tags_to_delete.is_empty() {
-        repo.inner_repo()
-            .bonsai_tag_mapping()
+        repo.bonsai_tag_mapping()
             .delete_mappings_by_name(tags_to_delete)
             .await?;
     }
@@ -219,8 +218,7 @@ async fn set_ref_inner(
     // If the bookmark is a tag and the operation is a delete, then we need to remove the tag entry
     // from bonsai_tag_mapping table in addition to removing the bookmark entry from bookmarks table
     if bookmark_key.is_tag() && bookmark_operation.is_delete() {
-        repo.inner_repo()
-            .bonsai_tag_mapping()
+        repo.bonsai_tag_mapping()
             .delete_mappings_by_name(vec![bookmark_key.name().to_string()])
             .await?;
     }

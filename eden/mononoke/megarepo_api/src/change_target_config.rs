@@ -210,7 +210,7 @@ impl<'a> ChangeTargetConfig<'a> {
             })?;
         let (old_remapping_state, old_config) = find_target_sync_config(
             ctx,
-            target_repo.inner_repo(),
+            target_repo.repo(),
             target_location,
             target,
             self.megarepo_configs,
@@ -294,7 +294,7 @@ impl<'a> ChangeTargetConfig<'a> {
 
         // Derrive all the necessary data before moving the bookmark
         let derived_data_types = target_repo
-            .inner_repo()
+            .repo()
             .repo_derived_data()
             .active_config()
             .types
@@ -302,7 +302,7 @@ impl<'a> ChangeTargetConfig<'a> {
             .copied()
             .collect::<Vec<_>>();
         target_repo
-            .inner_repo()
+            .repo()
             .repo_derived_data()
             .manager()
             .derive_bulk(ctx, &[final_merge], None, &derived_data_types, None)
@@ -311,7 +311,7 @@ impl<'a> ChangeTargetConfig<'a> {
         // Move bookmark
         self.move_bookmark_conditionally(
             ctx,
-            target_repo.inner_repo(),
+            target_repo.repo(),
             target_bookmark.to_string(),
             (target_location, final_merge),
         )
@@ -347,7 +347,7 @@ impl<'a> ChangeTargetConfig<'a> {
         let moved_commits = self
             .create_move_commits(
                 ctx,
-                repo.inner_repo(),
+                repo.repo(),
                 &sources_to_add,
                 changesets_to_merge,
                 mutable_renames,
@@ -362,7 +362,7 @@ impl<'a> ChangeTargetConfig<'a> {
         Ok(Some(
             self.create_merge_commits(
                 ctx,
-                repo.inner_repo(),
+                repo.repo(),
                 moved_commits,
                 false, /* write_commit_remapping_state */
                 sync_config_version,

@@ -176,7 +176,7 @@ impl RepoContext {
             // Land the mapped changesets on the large repo
             let outcome = normal_pushrebase(
                 self.ctx(),
-                &redirector.repo.inner,
+                &redirector.repo,
                 small_to_large.into_values().collect(),
                 &large_bookmark,
                 pushvars,
@@ -195,7 +195,7 @@ impl RepoContext {
         } else {
             normal_pushrebase(
                 self.ctx(),
-                self.inner_repo(),
+                self.repo(),
                 changesets,
                 &bookmark,
                 pushvars,

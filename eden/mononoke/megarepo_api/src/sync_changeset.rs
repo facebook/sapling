@@ -147,7 +147,7 @@ impl<'a> SyncChangeset<'a> {
 
         let (commit_remapping_state, target_config) = find_target_sync_config(
             ctx,
-            target_repo.inner_repo(),
+            target_repo.repo(),
             target_location,
             target,
             self.megarepo_configs,
@@ -161,7 +161,7 @@ impl<'a> SyncChangeset<'a> {
         // Find source repo and changeset that we need to sync
         let source_repo = self.find_repo_by_id(ctx, source_config.repo_id).await?;
         let source_cs = source_cs_id
-            .load(ctx, source_repo.inner_repo().repo_blobstore())
+            .load(ctx, source_repo.repo().repo_blobstore())
             .await?;
 
         validate_can_sync_changeset(
@@ -232,9 +232,9 @@ impl<'a> SyncChangeset<'a> {
             ctx,
             &source_config.mapping,
             source_name,
-            source_repo.inner_repo(),
+            source_repo.repo(),
             source_cs,
-            target_repo.inner_repo(),
+            target_repo.repo(),
             target_location,
             target,
             commit_remapping_state,
@@ -256,7 +256,7 @@ impl<'a> SyncChangeset<'a> {
         // Move the bookmark and record latest synced source changeset
         self.move_bookmark_conditionally(
             ctx,
-            target_repo.inner_repo(),
+            target_repo.repo(),
             target.bookmark.clone(),
             (target_location, new_target_cs_id),
         )
@@ -349,7 +349,7 @@ impl<'a> SyncChangeset<'a> {
             .map(|parent| {
                 self.create_single_move_commit(
                     ctx,
-                    target_repo.inner_repo(),
+                    target_repo.repo(),
                     parent.clone(),
                     &mover,
                     &directory_mover,
@@ -363,7 +363,7 @@ impl<'a> SyncChangeset<'a> {
 
         save_changesets(
             ctx,
-            target_repo.inner_repo(),
+            target_repo.repo(),
             moved_commits.iter().map(|css| css.moved.clone()).collect(),
         )
         .await?;
@@ -377,7 +377,7 @@ impl<'a> SyncChangeset<'a> {
         scuba.log_with_msg("Started saving mutable renames", None);
         self.save_mutable_renames(
             ctx,
-            target_repo.inner_repo().commit_graph(),
+            target_repo.repo().commit_graph(),
             self.mutable_renames,
             moved_commits.iter().map(|css| &css.mutable_renames),
         )
@@ -1152,7 +1152,7 @@ mod test {
         // Find source repo and changeset that we need to sync
         let target_repo = sync_changeset.find_repo_by_id(&ctx, target.repo_id).await?;
         let merge_cs = merge_target
-            .load(&ctx, target_repo.inner_repo().repo_blobstore())
+            .load(&ctx, target_repo.repo().repo_blobstore())
             .await?;
 
         let parents: Vec<_> = merge_cs.parents().collect();

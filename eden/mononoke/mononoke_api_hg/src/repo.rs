@@ -424,13 +424,7 @@ impl HgRepoContext {
             };
             results.push(result);
         }
-        log_new_commits(
-            self.ctx(),
-            self.repo_ctx().inner_repo(),
-            None,
-            commits_to_log,
-        )
-        .await;
+        log_new_commits(self.ctx(), self.repo_ctx().repo(), None, commits_to_log).await;
         self.repo()
             .hg_mutation_store()
             .add_entries(self.ctx(), hg_changesets, mutations)

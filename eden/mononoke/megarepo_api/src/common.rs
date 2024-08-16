@@ -187,7 +187,7 @@ pub trait MegarepoOp {
         );
         state.save_in_changeset(ctx, repo.repo(), &mut bcs).await?;
         let merge = bcs.freeze()?;
-        save_changesets(ctx, repo.inner_repo(), vec![merge.clone()]).await?;
+        save_changesets(ctx, repo.repo(), vec![merge.clone()]).await?;
 
         // We don't want to have deletion commit on our mainline. So we'd like to create a new
         // merge commit whose parent is not a deletion commit. For that we take the manifest
@@ -202,7 +202,7 @@ pub trait MegarepoOp {
         let result = self
             .create_new_changeset_using_parents(
                 ctx,
-                repo.inner_repo(),
+                repo.repo(),
                 merge.get_changeset_id(),
                 new_parents,
                 message,

@@ -727,11 +727,7 @@ impl RepoContext {
     ) -> Result<Vec<(SortedVectorMap<String, Vec<u8>>, ChangesetContext)>, MononokeError> {
         self.start_write()?;
         self.authorization_context()
-            .require_repo_write(
-                self.ctx(),
-                self.inner_repo(),
-                RepoWriteOperation::CreateChangeset,
-            )
+            .require_repo_write(self.ctx(), self.repo(), RepoWriteOperation::CreateChangeset)
             .await?;
 
         let allowed_no_parents = self
@@ -1046,14 +1042,10 @@ impl RepoContext {
         }
 
         if let Some(bubble) = &bubble {
-            self.save_changesets(
-                new_changesets,
-                &bubble.repo_view(self.inner_repo()),
-                Some(bubble),
-            )
-            .await?;
+            self.save_changesets(new_changesets, &bubble.repo_view(self.repo()), Some(bubble))
+                .await?;
         } else {
-            self.save_changesets(new_changesets, self.inner_repo(), None)
+            self.save_changesets(new_changesets, self.repo(), None)
                 .await?;
         }
 

@@ -47,7 +47,7 @@ impl SourceControlServiceImpl {
         // Validate that the request sender has an internal service identity with the right permission.
         repo_ctx
             .authorization_context()
-            .require_git_import_operations(repo_ctx.ctx(), repo_ctx.inner_repo())
+            .require_git_import_operations(repo_ctx.ctx(), repo_ctx.repo())
             .await
             .map_err(MononokeError::from)?;
         // Validate that the bytes correspond to a valid git hash.
@@ -77,7 +77,7 @@ impl SourceControlServiceImpl {
         // Validate that the request sender has an internal service identity with the right permission.
         repo_ctx
             .authorization_context()
-            .require_git_import_operations(repo_ctx.ctx(), repo_ctx.inner_repo())
+            .require_git_import_operations(repo_ctx.ctx(), repo_ctx.repo())
             .await
             .map_err(MononokeError::from)?;
         // Validate that the provided byte content constitutes a hash.
@@ -105,7 +105,7 @@ impl SourceControlServiceImpl {
         // Validate that the request sender has an internal service identity with the right permission.
         repo_ctx
             .authorization_context()
-            .require_git_import_operations(repo_ctx.ctx(), repo_ctx.inner_repo())
+            .require_git_import_operations(repo_ctx.ctx(), repo_ctx.repo())
             .await
             .map_err(MononokeError::from)?;
         let author_date = params
@@ -262,7 +262,7 @@ impl SourceControlServiceImpl {
         // Validate that the request sender has an internal service identity with the right permission.
         repo_ctx
             .authorization_context()
-            .require_git_import_operations(repo_ctx.ctx(), repo_ctx.inner_repo())
+            .require_git_import_operations(repo_ctx.ctx(), repo_ctx.repo())
             .await
             .map_err(MononokeError::from)?;
         // Validate that the bytes correspond to a valid git hash.

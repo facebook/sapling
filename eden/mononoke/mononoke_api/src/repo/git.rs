@@ -75,12 +75,12 @@ impl RepoContext {
                 // We can't derive right now, so always do the permission check for
                 // overriding in the case of mismatch.
                 self.authorization_context()
-                    .require_override_git_mapping(self.ctx(), self.inner_repo())
+                    .require_override_git_mapping(self.ctx(), self.repo())
                     .await?;
 
                 let hggit_sha1 = String::from_utf8_lossy(hggit_sha1).parse()?;
                 let entry = BonsaiGitMappingEntry::new(hggit_sha1, changeset_ctx.id());
-                let mapping = self.inner_repo().bonsai_git_mapping();
+                let mapping = self.repo().bonsai_git_mapping();
                 mapping
                     .bulk_add(self.ctx(), &[entry])
                     .await
@@ -103,7 +103,7 @@ impl RepoContext {
     ) -> anyhow::Result<(), GitError> {
         upload_non_blob_git_object(
             &self.ctx,
-            self.inner_repo().repo_blobstore(),
+            self.repo().repo_blobstore(),
             git_hash,
             raw_content,
         )
@@ -115,7 +115,7 @@ impl RepoContext {
         &self,
         git_tree_hash: &gix_hash::oid,
     ) -> anyhow::Result<(), GitError> {
-        create_git_tree(&self.ctx, self.inner_repo(), git_tree_hash).await
+        create_git_tree(&self.ctx, self.repo(), git_tree_hash).await
     }
 
     /// Create a new annotated tag in the repository.
@@ -131,7 +131,7 @@ impl RepoContext {
     ) -> Result<ChangesetContext, GitError> {
         let new_changeset_id = create_annotated_tag(
             self.ctx(),
-            self.inner_repo(),
+            self.repo(),
             tag_object_id,
             name,
             author,
@@ -164,7 +164,7 @@ impl RepoContext {
     ) -> anyhow::Result<(), GitError> {
         upload_packfile_base_item(
             &self.ctx,
-            self.inner_repo().repo_blobstore(),
+            self.repo().repo_blobstore(),
             git_hash,
             raw_content,
         )

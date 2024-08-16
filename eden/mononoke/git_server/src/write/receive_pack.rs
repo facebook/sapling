@@ -14,6 +14,7 @@ use context::CoreContext;
 use futures::stream;
 use futures::StreamExt;
 use futures::TryStreamExt;
+use git_push_redirect::GitPushRedirectConfigRef;
 use git_push_redirect::Staleness;
 use gotham::mime;
 use gotham::state::FromState;
@@ -102,7 +103,7 @@ async fn push<'a>(
         // Create bonsai_git_mapping store to enable mapping lookup during bookmark movement
         let git_bonsai_mapping_store = Arc::new(GitMappingsStore::new(
             ctx,
-            request_context.repo.inner.bonsai_git_mapping_arc(),
+            request_context.repo.bonsai_git_mapping_arc(),
             ref_map,
         ));
         let updated_refs = refs_update(
@@ -238,8 +239,7 @@ async fn atomic_refs_update(
 
 async fn mononoke_source_of_truth(ctx: &CoreContext, repo: Arc<Repo>) -> anyhow::Result<bool> {
     let repo_id = repo.repo_identity().id();
-    repo.inner
-        .git_push_redirect_config
+    repo.git_push_redirect_config()
         .get_by_repo_id(ctx, repo_id, Staleness::MostRecent)
         .await
         .map(|entry| entry.map_or(false, |entry| entry.mononoke))
