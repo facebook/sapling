@@ -415,7 +415,7 @@ class basicstore:
         self.path = vfs.base
         self.createmode = vfs.createmode
         self.rawvfs = vfs
-        self.vfs = vfsmod.filtervfs(vfs, encodedir)
+        self.vfs = metavfs(vfsmod.filtervfs(vfs, encodedir))
         self.opener = self.vfs
 
     def join(self, f):
@@ -551,10 +551,8 @@ class fncache:
 class metavfs(util.proxy_wrapper, vfsmod.abstractvfs):
     """Wrapper vfs that writes data to metalog"""
 
-    def __init__(self, vfs, **kwargs):
-        super().__init__(
-            vfs, _rsrepo=None, metapaths=set(bindings.metalog.tracked()), **kwargs
-        )
+    def __init__(self, vfs):
+        super().__init__(vfs, _rsrepo=None, metapaths=set(bindings.metalog.tracked()))
 
     @util.propertycache
     def metalog(self):
@@ -604,6 +602,14 @@ class metavfs(util.proxy_wrapper, vfsmod.abstractvfs):
             return writablestream(write)
         else:
             raise error.ProgrammingError("mode %s is unsupported for %s" % (mode, path))
+
+    def __call__(self, path, mode="r", *args, **kw):
+        if path in self.metapaths:
+            return self.metaopen(path, mode)
+        return self.inner(path, mode, *args, **kw)
+
+    def join(self, path: "Optional[str]", *insidef: str) -> str:
+        return self.inner.join(path)
 
 
 class readablestream:
@@ -655,13 +661,11 @@ class writablestream:
         self.writefunc(value)
 
 
-class _fncachevfs(metavfs):
+class _fncachevfs(util.proxy_wrapper, vfsmod.abstractvfs):
     def __init__(self, vfs, fnc, encode):
         super().__init__(vfs, fncache=fnc, encode=encode)
 
     def __call__(self, path, mode="r", *args, **kw):
-        if path in self.metapaths:
-            return self.metaopen(path, mode)
         if mode not in ("r", "rb") and (
             path.startswith("data/") or path.startswith("meta/")
         ):
@@ -690,7 +694,7 @@ class fncachestore(basicstore):
         self.rawvfs = vfs
         fnc = fncache(vfs)
         self.fncache = fnc
-        self.vfs = _fncachevfs(vfs, fnc, encode)
+        self.vfs = metavfs(_fncachevfs(vfs, fnc, encode))
         self.opener = self.vfs
 
     def join(self, f):

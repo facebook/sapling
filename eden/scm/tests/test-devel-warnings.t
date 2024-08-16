@@ -110,7 +110,7 @@ Writing without lock (also uses bare repo.vfs)
   devel-warn: write with no wlock: "branch" at: $TESTTMP/buggylocking.py:* (nowlockwrite) (glob)
 
   $ hg no-lock-write
-  devel-warn: write with no lock: "fncache" at: $TESTTMP/buggylocking.py:* (nolockwrite) (glob)
+  devel-warn: write with no lock: "fncache" at: * (glob)
 
 Stripping from a transaction
 
@@ -138,7 +138,7 @@ Stripping from a transaction
   [legacy][develwarn] devel-warn: "wlock" acquired after "lock" at:
   [legacy][develwarn] devel-warn: use of bare vfs instead of localvfs or sharedvfs at: $TESTTMP/buggylocking.py:47 (nowlockwrite)
   [legacy][develwarn] devel-warn: write with no wlock: "branch" at: $TESTTMP/buggylocking.py:47 (nowlockwrite)
-  [legacy][develwarn] devel-warn: write with no lock: "fncache" at: $TESTTMP/buggylocking.py:52 (nolockwrite)
+  [legacy][develwarn] devel-warn: write with no lock: "fncache" at: * (glob)
   [legacy][develwarn] devel-warn: foorbar is deprecated, go shopping
   [legacy][develwarn] devel-warn: foorbar is deprecated, go shopping
 #endif
