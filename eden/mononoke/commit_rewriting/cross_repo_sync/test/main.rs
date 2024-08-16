@@ -474,7 +474,7 @@ async fn test_sync_causes_conflict(fb: FacebookInit) -> Result<(), Error> {
         .await?;
 
     let mapping = SqlSyncedCommitMapping::with_sqlite_in_memory()?;
-    let linear: TestRepo = Linear::get_custom_test_repo(fb).await;
+    let linear: TestRepo = Linear::get_repo(fb).await;
     let (live_commit_sync_config, source) = TestLiveCommitSyncConfig::new_with_source();
     populate_config(&linear, &megarepo, "linear", &source)?;
     let linear_config = create_small_to_large_commit_syncer(

@@ -1738,10 +1738,8 @@ mod test {
         Error,
     > {
         let ctx = CoreContext::test_mock(fb);
-        let small_repo: TestRepo =
-            Linear::get_custom_test_repo_with_id(fb, RepositoryId::new(0)).await;
-        let large_repo: TestRepo =
-            Linear::get_custom_test_repo_with_id(fb, RepositoryId::new(1)).await;
+        let small_repo: TestRepo = Linear::get_repo_with_id(fb, RepositoryId::new(0)).await;
+        let large_repo: TestRepo = Linear::get_repo_with_id(fb, RepositoryId::new(1)).await;
 
         let master = BookmarkKey::new("master")?;
         let maybe_master_val = small_repo.bookmarks().get(ctx.clone(), &master).await?;

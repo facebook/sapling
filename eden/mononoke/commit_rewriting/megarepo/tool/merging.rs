@@ -84,7 +84,7 @@ mod test {
 
     #[fbinit::test]
     async fn test_path_conflict_detection(fb: FacebookInit) {
-        let repo = MergeEven::get_custom_test_repo(fb).await;
+        let repo = MergeEven::get_repo(fb).await;
         let ctx = CoreContext::test_mock(fb);
         let p1 = HgChangesetId::from_str("4f7f3fd428bec1a48f9314414b063c706d9c1aed").unwrap();
         let p2 = HgChangesetId::from_str("16839021e338500b3cf7c9b871c8a07351697d68").unwrap();

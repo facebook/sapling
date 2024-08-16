@@ -1759,7 +1759,7 @@ mod tests {
     #[fbinit::test]
     async fn test_try_find_child(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: Repo = Linear::get_custom_test_repo(fb).await;
+        let repo: Repo = Linear::get_repo(fb).await;
 
         let ancestor = ChangesetId::from_str(
             "c9f9a2a39195a583d523a4e5f6973443caeb0c66a315d5bf7db1b5775c725310",
@@ -1786,7 +1786,7 @@ mod tests {
     #[fbinit::test]
     async fn test_try_find_child_merge(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: Repo = MergeEven::get_custom_test_repo(fb).await;
+        let repo: Repo = MergeEven::get_repo(fb).await;
 
         let ancestor = ChangesetId::from_str(
             "35fb4e0fb3747b7ca4d18281d059be0860d12407dc5dce5e02fb99d1f6a79d2a",

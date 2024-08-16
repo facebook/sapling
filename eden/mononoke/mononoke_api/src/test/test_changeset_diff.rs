@@ -210,7 +210,7 @@ async fn test_diff_with_dirs(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let mononoke = Mononoke::new_test(vec![(
         "test".to_string(),
-        ManyFilesDirs::get_custom_test_repo(fb).await,
+        ManyFilesDirs::get_repo(fb).await,
     )])
     .await?;
     let repo = mononoke

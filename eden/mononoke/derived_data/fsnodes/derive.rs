@@ -502,7 +502,7 @@ mod test {
     #[fbinit::test]
     fn flat_linear_test(fb: FacebookInit) {
         let runtime = Runtime::new().unwrap();
-        let repo: TestRepo = runtime.block_on(Linear::get_custom_test_repo(fb));
+        let repo: TestRepo = runtime.block_on(Linear::get_repo(fb));
         let derivation_ctx = repo.repo_derived_data().manager().derivation_context(None);
 
         let ctx = CoreContext::test_mock(fb);
@@ -617,7 +617,7 @@ mod test {
     #[fbinit::test]
     fn nested_directories_test(fb: FacebookInit) {
         let runtime = Runtime::new().unwrap();
-        let repo: TestRepo = runtime.block_on(ManyFilesDirs::get_custom_test_repo(fb));
+        let repo: TestRepo = runtime.block_on(ManyFilesDirs::get_repo(fb));
         let derivation_ctx = repo.repo_derived_data().manager().derivation_context(None);
 
         let ctx = CoreContext::test_mock(fb);

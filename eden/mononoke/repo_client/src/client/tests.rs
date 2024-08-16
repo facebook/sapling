@@ -90,7 +90,7 @@ fn get_changed_manifests_stream_test(fb: FacebookInit) -> Result<(), Error> {
 
 async fn get_changed_manifests_stream_test_impl(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let repo: RepoClientRepo = ManyFilesDirs::get_custom_test_repo(fb).await;
+    let repo: RepoClientRepo = ManyFilesDirs::get_repo(fb).await;
 
     // Commit that has only dir2 directory
     let root_mf_id = HgChangesetId::from_str("051946ed218061e925fb120dac02634f9ad40ae2")?
@@ -158,7 +158,7 @@ fn get_changed_manifests_stream_test_depth(fb: FacebookInit) -> Result<(), Error
 
 async fn get_changed_manifests_stream_test_depth_impl(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let repo: RepoClientRepo = ManyFilesDirs::get_custom_test_repo(fb).await;
+    let repo: RepoClientRepo = ManyFilesDirs::get_repo(fb).await;
 
     let root_mf_id = HgChangesetId::from_str("d261bc7900818dea7c86935b3fb17a33b2e3a6b4")?
         .load(&ctx, &repo.repo_blobstore().clone())
@@ -212,7 +212,7 @@ fn get_changed_manifests_stream_test_base_path(fb: FacebookInit) -> Result<(), E
 
 async fn get_changed_manifests_stream_test_base_path_impl(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let repo: RepoClientRepo = ManyFilesDirs::get_custom_test_repo(fb).await;
+    let repo: RepoClientRepo = ManyFilesDirs::get_repo(fb).await;
 
     let root_mf_id = HgChangesetId::from_str("d261bc7900818dea7c86935b3fb17a33b2e3a6b4")?
         .load(&ctx, &repo.repo_blobstore().clone())

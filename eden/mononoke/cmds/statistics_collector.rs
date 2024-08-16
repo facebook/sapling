@@ -823,7 +823,7 @@ mod tests {
     fn linear_test_get_statistics_from_changeset(fb: FacebookInit) {
         let runtime = Runtime::new().unwrap();
         runtime.block_on(async move {
-            let repo: MyRepo = Linear::get_custom_test_repo(fb).await;
+            let repo: MyRepo = Linear::get_repo(fb).await;
 
             let ctx = CoreContext::test_mock(fb);
             let blobstore = repo.repo_blobstore().clone();
@@ -875,7 +875,7 @@ mod tests {
     fn linear_test_get_statistics_from_entry_tree(fb: FacebookInit) {
         let runtime = Runtime::new().unwrap();
         runtime.block_on(async move {
-            let repo: MyRepo = Linear::get_custom_test_repo(fb).await;
+            let repo: MyRepo = Linear::get_repo(fb).await;
 
             let ctx = CoreContext::test_mock(fb);
             let blobstore = repo.repo_blobstore().clone();
@@ -942,7 +942,7 @@ mod tests {
     fn linear_test_update_statistics(fb: FacebookInit) {
         let runtime = Runtime::new().unwrap();
         runtime.block_on(async move {
-            let repo: MyRepo = Linear::get_custom_test_repo(fb).await;
+            let repo: MyRepo = Linear::get_repo(fb).await;
 
             let ctx = CoreContext::test_mock(fb);
             let blobstore = repo.repo_blobstore().clone();

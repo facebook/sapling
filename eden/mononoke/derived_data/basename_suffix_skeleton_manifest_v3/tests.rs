@@ -94,7 +94,7 @@ async fn validate(
 
 async fn test_for_fixture<F: TestRepoFixture + Send>(fb: FacebookInit) -> Result<()> {
     let ctx = &CoreContext::test_mock(fb);
-    let repo: TestRepo = F::get_custom_test_repo(fb).await;
+    let repo: TestRepo = F::get_repo(fb).await;
     let derived_data = repo.repo_derived_data();
     let blobstore = repo.repo_blobstore();
     let all_commits = repo

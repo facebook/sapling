@@ -501,7 +501,7 @@ mod tests {
 
     #[fbinit::test]
     async fn delta_manifest_v2_linear(fb: FacebookInit) -> Result<()> {
-        let repo: Repo = fixtures::Linear::get_custom_test_repo(fb).await;
+        let repo: Repo = fixtures::Linear::get_repo(fb).await;
         let ctx = CoreContext::test_mock(fb);
         let blobstore = repo.repo_blobstore();
         let (master_mf_id, _) = common_gdm_v2_validation(&repo, &ctx).await?;
@@ -524,7 +524,7 @@ mod tests {
 
     #[fbinit::test]
     async fn delta_manifest_v2_branch_even(fb: FacebookInit) -> Result<()> {
-        let repo: Repo = fixtures::BranchEven::get_custom_test_repo(fb).await;
+        let repo: Repo = fixtures::BranchEven::get_repo(fb).await;
         let ctx = CoreContext::test_mock(fb);
         let blobstore = repo.repo_blobstore();
         let (master_mf_id, _) = common_gdm_v2_validation(&repo, &ctx).await?;
@@ -553,7 +553,7 @@ mod tests {
 
     #[fbinit::test]
     async fn delta_manifest_v2_branch_uneven(fb: FacebookInit) -> Result<()> {
-        let repo: Repo = fixtures::BranchUneven::get_custom_test_repo(fb).await;
+        let repo: Repo = fixtures::BranchUneven::get_repo(fb).await;
         let ctx = CoreContext::test_mock(fb);
         let blobstore = repo.repo_blobstore();
         let (master_mf_id, _) = common_gdm_v2_validation(&repo, &ctx).await?;
@@ -587,7 +587,7 @@ mod tests {
 
     #[fbinit::test]
     async fn delta_manifest_v2_branch_wide(fb: FacebookInit) -> Result<()> {
-        let repo: Repo = fixtures::BranchWide::get_custom_test_repo(fb).await;
+        let repo: Repo = fixtures::BranchWide::get_repo(fb).await;
         let ctx = CoreContext::test_mock(fb);
         let blobstore = repo.repo_blobstore();
         let (master_mf_id, _) = common_gdm_v2_validation(&repo, &ctx).await?;
@@ -621,7 +621,7 @@ mod tests {
 
     #[fbinit::test]
     async fn delta_manifest_v2_merge_even(fb: FacebookInit) -> Result<()> {
-        let repo: Repo = fixtures::MergeEven::get_custom_test_repo(fb).await;
+        let repo: Repo = fixtures::MergeEven::get_repo(fb).await;
         let ctx = CoreContext::test_mock(fb);
         let blobstore = repo.repo_blobstore();
         let (master_mf_id, _) = common_gdm_v2_validation(&repo, &ctx).await?;
@@ -647,7 +647,7 @@ mod tests {
 
     #[fbinit::test]
     async fn delta_manifest_v2_many_files_dirs(fb: FacebookInit) -> Result<()> {
-        let repo: Repo = fixtures::ManyFilesDirs::get_custom_test_repo(fb).await;
+        let repo: Repo = fixtures::ManyFilesDirs::get_repo(fb).await;
         let ctx = CoreContext::test_mock(fb);
         let blobstore = repo.repo_blobstore();
         let (master_mf_id, _) = common_gdm_v2_validation(&repo, &ctx).await?;
@@ -670,7 +670,7 @@ mod tests {
 
     #[fbinit::test]
     async fn delta_manifest_v2_merge_uneven(fb: FacebookInit) -> Result<()> {
-        let repo: Repo = fixtures::MergeUneven::get_custom_test_repo(fb).await;
+        let repo: Repo = fixtures::MergeUneven::get_repo(fb).await;
         let ctx = CoreContext::test_mock(fb);
         let blobstore = repo.repo_blobstore();
         let (master_mf_id, _) = common_gdm_v2_validation(&repo, &ctx).await?;
@@ -692,7 +692,7 @@ mod tests {
 
     #[fbinit::test]
     async fn delta_manifest_v2_merge_multiple_files(fb: FacebookInit) -> Result<()> {
-        let repo: Repo = fixtures::MergeMultipleFiles::get_custom_test_repo(fb).await;
+        let repo: Repo = fixtures::MergeMultipleFiles::get_repo(fb).await;
         let ctx = CoreContext::test_mock(fb);
         let blobstore = repo.repo_blobstore();
         let (master_mf_id, _) = common_gdm_v2_validation(&repo, &ctx).await?;
@@ -741,7 +741,7 @@ mod tests {
 
     #[fbinit::test]
     async fn delta_manifest_v2_instructions_encoding(fb: FacebookInit) -> Result<()> {
-        let repo: Repo = fixtures::Linear::get_custom_test_repo(fb).await;
+        let repo: Repo = fixtures::Linear::get_repo(fb).await;
         let ctx = CoreContext::test_mock(fb);
         let blobstore = repo.repo_blobstore();
         let (master_mf_id, _) = common_gdm_v2_validation(&repo, &ctx).await?;

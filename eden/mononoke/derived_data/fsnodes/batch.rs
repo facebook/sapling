@@ -194,7 +194,7 @@ mod test {
     async fn batch_derive(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let new_batch = {
-            let repo: TestRepo = Linear::get_custom_test_repo(fb).await;
+            let repo: TestRepo = Linear::get_repo(fb).await;
             let master_cs_id = resolve_cs_id(&ctx, &repo, "master").await?;
 
             let mut cs_ids = repo
@@ -217,7 +217,7 @@ mod test {
         };
 
         let sequential = {
-            let repo: TestRepo = Linear::get_custom_test_repo(fb).await;
+            let repo: TestRepo = Linear::get_repo(fb).await;
             let master_cs_id = resolve_cs_id(&ctx, &repo, "master").await?;
             repo.repo_derived_data()
                 .manager()

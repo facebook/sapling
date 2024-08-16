@@ -485,7 +485,7 @@ mod tests {
 
     #[fbinit::test]
     async fn linear_test(fb: FacebookInit) -> Result<(), Error> {
-        let repo: TestRepo = Linear::get_custom_test_repo(fb).await;
+        let repo: TestRepo = Linear::get_repo(fb).await;
         let derivation_ctx = repo.repo_derived_data().manager().derivation_context(None);
         let ctx = CoreContext::test_mock(fb);
 
@@ -570,7 +570,7 @@ mod tests {
 
     #[fbinit::test]
     async fn test_same_content_different_paths(fb: FacebookInit) -> Result<(), Error> {
-        let repo: TestRepo = Linear::get_custom_test_repo(fb).await;
+        let repo: TestRepo = Linear::get_repo(fb).await;
         let ctx = CoreContext::test_mock(fb);
 
         async fn check_unode_uniqeness(
@@ -617,7 +617,7 @@ mod tests {
 
     #[fbinit::test]
     async fn test_same_content_no_change(fb: FacebookInit) -> Result<(), Error> {
-        let repo: TestRepo = Linear::get_custom_test_repo(fb).await;
+        let repo: TestRepo = Linear::get_repo(fb).await;
         let ctx = CoreContext::test_mock(fb);
 
         build_diamond_graph(

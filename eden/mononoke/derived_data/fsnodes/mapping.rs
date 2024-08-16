@@ -309,15 +309,15 @@ mod test {
     #[fbinit::test]
     fn test_derive_data(fb: FacebookInit) {
         let runtime = Runtime::new().unwrap();
-        verify_repo(fb, Linear::get_custom_test_repo(fb), &runtime);
-        verify_repo(fb, BranchEven::get_custom_test_repo(fb), &runtime);
-        verify_repo(fb, BranchUneven::get_custom_test_repo(fb), &runtime);
-        verify_repo(fb, BranchWide::get_custom_test_repo(fb), &runtime);
-        verify_repo(fb, ManyDiamonds::get_custom_test_repo(fb), &runtime);
-        verify_repo(fb, ManyFilesDirs::get_custom_test_repo(fb), &runtime);
-        verify_repo(fb, MergeEven::get_custom_test_repo(fb), &runtime);
-        verify_repo(fb, MergeUneven::get_custom_test_repo(fb), &runtime);
-        verify_repo(fb, UnsharedMergeEven::get_custom_test_repo(fb), &runtime);
-        verify_repo(fb, UnsharedMergeUneven::get_custom_test_repo(fb), &runtime);
+        verify_repo(fb, Linear::get_repo(fb), &runtime);
+        verify_repo(fb, BranchEven::get_repo(fb), &runtime);
+        verify_repo(fb, BranchUneven::get_repo(fb), &runtime);
+        verify_repo(fb, BranchWide::get_repo(fb), &runtime);
+        verify_repo(fb, ManyDiamonds::get_repo(fb), &runtime);
+        verify_repo(fb, ManyFilesDirs::get_repo(fb), &runtime);
+        verify_repo(fb, MergeEven::get_repo(fb), &runtime);
+        verify_repo(fb, MergeUneven::get_repo(fb), &runtime);
+        verify_repo(fb, UnsharedMergeEven::get_repo(fb), &runtime);
+        verify_repo(fb, UnsharedMergeUneven::get_repo(fb), &runtime);
     }
 }

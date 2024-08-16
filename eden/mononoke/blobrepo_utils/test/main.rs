@@ -92,7 +92,7 @@ mod test {
                 async fn test(fb: FacebookInit) -> Result<()> {
                     let ctx = CoreContext::test_mock(fb);
 
-                    let repo: TestRepo = $repo::get_custom_test_repo(fb).await;
+                    let repo: TestRepo = $repo::get_repo(fb).await;
                     let heads = repo
                         .get_hg_heads_maybe_stale(ctx.clone())
                         .try_collect::<Vec<_>>()

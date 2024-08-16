@@ -132,7 +132,7 @@ async fn is_public(
 
 #[fbinit::test]
 async fn get_phase_hint_test(fb: FacebookInit) -> Result<(), Error> {
-    let repo: PhasesTestRepo = Linear::get_custom_test_repo(fb).await;
+    let repo: PhasesTestRepo = Linear::get_repo(fb).await;
     //  @  79a13814c5ce7330173ec04d279bf95ab3f652fb
     //  |
     //  o  a5ffa77602a066db7d5cfb9fb5823a0895717c5a
@@ -277,7 +277,7 @@ async fn get_phase_hint_test(fb: FacebookInit) -> Result<(), Error> {
 
 #[fbinit::test]
 async fn test_mark_reachable_as_public(fb: FacebookInit) -> Result<()> {
-    let repo: PhasesTestRepo = fixtures::BranchEven::get_custom_test_repo(fb).await;
+    let repo: PhasesTestRepo = fixtures::BranchEven::get_repo(fb).await;
     // @  4f7f3fd428bec1a48f9314414b063c706d9c1aed (6)
     // |
     // o  b65231269f651cfe784fd1d97ef02a049a37b8a0 (5)

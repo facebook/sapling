@@ -127,7 +127,7 @@ async fn test_sparse_monitoring_config(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let mononoke = Mononoke::new_test(vec![(
         "test".to_string(),
-        ManyFilesDirs::get_custom_test_repo(fb).await,
+        ManyFilesDirs::get_repo(fb).await,
     )])
     .await?;
     let repo = mononoke
@@ -227,7 +227,7 @@ async fn sparse_profile_parsing(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let mononoke = Mononoke::new_test(vec![(
         "test".to_string(),
-        ManyFilesDirs::get_custom_test_repo(fb).await,
+        ManyFilesDirs::get_repo(fb).await,
     )])
     .await?;
     let repo = mononoke
@@ -260,7 +260,7 @@ async fn sparse_profile_size(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let mononoke = Mononoke::new_test(vec![(
         "test".to_string(),
-        ManyFilesDirs::get_custom_test_repo(fb).await,
+        ManyFilesDirs::get_repo(fb).await,
     )])
     .await?;
     let repo = mononoke
@@ -328,7 +328,7 @@ async fn multiple_sparse_profile_sizes(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let mononoke = Mononoke::new_test(vec![(
         "test".to_string(),
-        ManyFilesDirs::get_custom_test_repo(fb).await,
+        ManyFilesDirs::get_repo(fb).await,
     )])
     .await?;
     let repo = mononoke
@@ -365,7 +365,7 @@ async fn sparse_profile_delta(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let mononoke = Mononoke::new_test(vec![(
         "test".to_string(),
-        ManyFilesDirs::get_custom_test_repo(fb).await,
+        ManyFilesDirs::get_repo(fb).await,
     )])
     .await?;
     let repo = mononoke
@@ -535,7 +535,7 @@ async fn sparse_profile_config_change(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let mononoke = Mononoke::new_test(vec![(
         "test".to_string(),
-        ManyFilesDirs::get_custom_test_repo(fb).await,
+        ManyFilesDirs::get_repo(fb).await,
     )])
     .await?;
     let repo = mononoke
@@ -650,7 +650,7 @@ async fn test_sparse_external_config(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let mononoke = Mononoke::new_test(vec![(
         "test".to_string(),
-        ManyFilesDirs::get_custom_test_repo(fb).await,
+        ManyFilesDirs::get_repo(fb).await,
     )])
     .await?;
     let repo = mononoke

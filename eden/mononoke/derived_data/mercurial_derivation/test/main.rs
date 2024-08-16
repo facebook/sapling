@@ -577,7 +577,7 @@ async fn upload_entries_finalize_fail(fb: FacebookInit) {
 #[fbinit::test]
 async fn test_compute_changed_files_no_parents(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
-    let repo: Repo = ManyFilesDirs::get_custom_test_repo(fb).await;
+    let repo: Repo = ManyFilesDirs::get_repo(fb).await;
     let nodehash = string_to_nodehash("051946ed218061e925fb120dac02634f9ad40ae2");
     let expected = vec![
         NonRootMPath::new(b"1").unwrap(),
@@ -614,7 +614,7 @@ async fn test_compute_changed_files_one_parent(fb: FacebookInit) {
     // Note that this is a commit and its parent commit, so you can use:
     // hg log -T"{node}\n{files % '    NonRootMPath::new(b\"{file}\").unwrap(),\\n'}\\n" -r $HASH
     // to see how Mercurial would compute the files list and confirm that it's the same
-    let repo: Repo = ManyFilesDirs::get_custom_test_repo(fb).await;
+    let repo: Repo = ManyFilesDirs::get_repo(fb).await;
     let nodehash = string_to_nodehash("051946ed218061e925fb120dac02634f9ad40ae2");
     let parenthash = string_to_nodehash("d261bc7900818dea7c86935b3fb17a33b2e3a6b4");
     let expected = vec![
@@ -746,7 +746,7 @@ async fn entry_parents(
 #[fbinit::test]
 async fn test_get_manifest_from_bonsai(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
-    let repo: Repo = MergeUneven::get_custom_test_repo(fb).await;
+    let repo: Repo = MergeUneven::get_repo(fb).await;
 
     let get_entries = {
         cloned!(ctx, repo);
@@ -868,7 +868,7 @@ async fn test_get_manifest_from_bonsai(fb: FacebookInit) {
 
 #[fbinit::test]
 async fn test_hg_commit_generation_simple(fb: FacebookInit) {
-    let repo: Repo = fixtures::Linear::get_custom_test_repo(fb).await;
+    let repo: Repo = fixtures::Linear::get_repo(fb).await;
     let bcs = create_bonsai_changeset(vec![]);
 
     let bcs_id = bcs.get_changeset_id();
@@ -893,7 +893,7 @@ async fn test_hg_commit_generation_simple(fb: FacebookInit) {
 
 #[fbinit::test]
 async fn test_hg_commit_generation_stack(fb: FacebookInit) {
-    let repo: Repo = fixtures::Linear::get_custom_test_repo(fb).await;
+    let repo: Repo = fixtures::Linear::get_repo(fb).await;
     let mut changesets = vec![];
     let bcs = create_bonsai_changeset(vec![]);
 
@@ -924,7 +924,7 @@ async fn test_hg_commit_generation_stack(fb: FacebookInit) {
 #[fbinit::test]
 async fn test_hg_commit_generation_one_after_another(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
-    let repo: Repo = fixtures::Linear::get_custom_test_repo(fb).await;
+    let repo: Repo = fixtures::Linear::get_repo(fb).await;
 
     let first_bcs = create_bonsai_changeset(vec![]);
     let first_bcs_id = first_bcs.get_changeset_id();
@@ -955,7 +955,7 @@ async fn test_hg_commit_generation_one_after_another(fb: FacebookInit) {
 #[fbinit::test]
 async fn test_hg_commit_generation_diamond(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
-    let repo: Repo = fixtures::Linear::get_custom_test_repo(fb).await;
+    let repo: Repo = fixtures::Linear::get_repo(fb).await;
 
     let last_bcs_id = fixtures::save_diamond_commits(&ctx, &repo, vec![])
         .await
@@ -973,7 +973,7 @@ async fn test_hg_commit_generation_diamond(fb: FacebookInit) {
 #[fbinit::test]
 async fn test_hg_commit_generation_many_diamond(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
-    let repo: Repo = fixtures::ManyDiamonds::get_custom_test_repo(fb).await;
+    let repo: Repo = fixtures::ManyDiamonds::get_repo(fb).await;
     let book = bookmarks::BookmarkKey::new("master").unwrap();
     let bcs_id = repo
         .bookmarks()

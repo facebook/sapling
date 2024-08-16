@@ -272,7 +272,7 @@ mod test {
     #[fbinit::test]
     async fn fetch_flattened_simple(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: Repo = Linear::get_custom_test_repo(fb).await;
+        let repo: Repo = Linear::get_repo(fb).await;
         let blobstore = repo.repo_blobstore();
         borrowed!(ctx);
         let mut d = VecDeque::new();
@@ -289,7 +289,7 @@ mod test {
     #[fbinit::test]
     async fn fetch_flattened_prepend(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: Repo = Linear::get_custom_test_repo(fb).await;
+        let repo: Repo = Linear::get_repo(fb).await;
         let blobstore = repo.repo_blobstore();
         borrowed!(ctx);
         let mut d = VecDeque::new();

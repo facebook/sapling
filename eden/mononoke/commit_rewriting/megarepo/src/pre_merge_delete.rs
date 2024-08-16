@@ -111,7 +111,7 @@ mod test {
 
     #[fbinit::test]
     async fn test_create_pre_merge_delete(fb: FacebookInit) -> Result<(), Error> {
-        let repo: TestRepo = Linear::get_custom_test_repo(fb).await;
+        let repo: TestRepo = Linear::get_repo(fb).await;
         let ctx = CoreContext::test_mock(fb);
 
         let bcs_id = resolve_cs_id(&ctx, &repo, "master").await?;
@@ -187,7 +187,7 @@ mod test {
 
     #[fbinit::test]
     async fn test_create_pre_merge_delete_with_base(fb: FacebookInit) -> Result<(), Error> {
-        let repo: TestRepo = Linear::get_custom_test_repo(fb).await;
+        let repo: TestRepo = Linear::get_repo(fb).await;
         let ctx = CoreContext::test_mock(fb);
 
         let master_bcs_id = resolve_cs_id(&ctx, &repo, "master").await?;

@@ -881,7 +881,7 @@ mod sharded_augmented_manifest_tests {
     #[fbinit::test]
     async fn test_serialize_augmented_manifest(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
-        let blobrepo: TestRepo = Linear::get_custom_test_repo(fb).await;
+        let blobrepo: TestRepo = Linear::get_repo(fb).await;
         let blobstore = blobrepo.repo_blobstore_arc();
 
         let subentries = vec![

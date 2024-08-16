@@ -350,7 +350,7 @@ mod test {
         ChangesetId,
         ChangesetArgs,
     ) {
-        let repo: Arc<TestRepo> = Arc::new(ManyFilesDirs::get_custom_test_repo(fb).await);
+        let repo: Arc<TestRepo> = Arc::new(ManyFilesDirs::get_repo(fb).await);
         let ctx = CoreContext::test_mock(fb);
 
         let hg_cs_id = HgChangesetId::from_str("2f866e7e549760934e31bf0420a873f65100ad63").unwrap();
@@ -501,7 +501,7 @@ mod test {
 
     #[fbinit::test]
     async fn test_stack_move(fb: FacebookInit) -> Result<(), Error> {
-        let repo: Arc<TestRepo> = Arc::new(Linear::get_custom_test_repo(fb).await);
+        let repo: Arc<TestRepo> = Arc::new(Linear::get_repo(fb).await);
         let ctx = CoreContext::test_mock(fb);
 
         let old_bcs_id = resolve_cs_id(&ctx, &repo, "master").await?;

@@ -134,7 +134,7 @@ mod test {
 
     #[fbinit::test]
     async fn test_create_fixup_deletes(fb: FacebookInit) -> Result<(), Error> {
-        let repo: TestRepo = UnsharedMergeUneven::get_custom_test_repo(fb).await;
+        let repo: TestRepo = UnsharedMergeUneven::get_repo(fb).await;
         let ctx = CoreContext::test_mock(fb);
 
         // Side of the history that needs fixing up is one line of commit with the following

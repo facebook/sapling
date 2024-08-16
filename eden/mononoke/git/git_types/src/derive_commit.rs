@@ -350,7 +350,7 @@ mod test {
             fn $test_name(fb: FacebookInit) -> Result<(), anyhow::Error> {
                 let runtime = tokio::runtime::Runtime::new()?;
                 runtime.block_on(async move {
-                    let repo: Repo = fixtures::$fixture::get_custom_test_repo(fb).await;
+                    let repo: Repo = fixtures::$fixture::get_repo(fb).await;
                     run_commit_derivation_for_fixture(fb, repo).await
                 })
             }

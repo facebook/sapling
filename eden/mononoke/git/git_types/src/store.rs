@@ -356,7 +356,7 @@ mod test {
 
     #[fbinit::test]
     async fn store_and_load_packfile_base_item(fb: FacebookInit) -> Result<()> {
-        let repo: TestRepo = fixtures::Linear::get_custom_test_repo(fb).await;
+        let repo: TestRepo = fixtures::Linear::get_repo(fb).await;
         let ctx = CoreContext::test_mock(fb);
         let blobstore = repo.repo_blobstore_arc();
         // Create a random Git object and get its bytes

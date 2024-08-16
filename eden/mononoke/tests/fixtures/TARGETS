@@ -17,7 +17,6 @@ rust_library(
         "fbsource//third-party/rust:futures",
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/sorted_vector_map:sorted_vector_map",
-        "//eden/mononoke/blobrepo:blobrepo",
         "//eden/mononoke/bookmarks:bookmarks",
         "//eden/mononoke/changesets/changesets_creation:changesets_creation",
         "//eden/mononoke/derived_data/mercurial_derivation:mercurial_derivation",
