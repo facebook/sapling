@@ -58,6 +58,7 @@ hgplain = { version = "0.1.0", path = "../util/hgplain" }
 hostname = "0.3"
 identity = { version = "0.1.0", path = "../identity" }
 libc = "0.2.139"
+metrics = { version = "0.1.0", path = "../metrics" }
 metrics-render = { version = "0.1.0", path = "../metrics/render" }
 mincode = { version = "0.1.0", path = "../mincode" }
 nodeipc = { version = "0.1.0", path = "../util/nodeipc" }

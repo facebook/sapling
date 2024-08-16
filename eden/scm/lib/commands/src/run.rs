@@ -874,7 +874,22 @@ fn log_perftrace(io: &IO, config: &dyn Config, start_time: StartTime) -> Result<
 }
 
 fn log_metrics(io: &IO, config: &dyn Config) -> Result<()> {
-    let metrics = hg_metrics::summarize();
+    let mut metrics = hg_metrics::summarize();
+
+    // Mix in counters from the "metrics" crate.
+    metrics.extend(
+        ::metrics::Registry::global()
+            .counters()
+            .into_iter()
+            .filter_map(|(n, c)| {
+                if c.is_gauge() {
+                    None
+                } else {
+                    Some((n.to_string(), c.value() as u64))
+                }
+            }),
+    );
+
     if metrics.is_empty() {
         return Ok(());
     }
