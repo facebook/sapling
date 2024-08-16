@@ -7,48 +7,26 @@
 
 use std::sync::Arc;
 
-use anyhow::Error;
 use anyhow::Result;
+use async_recursion::async_recursion;
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use cloned::cloned;
 use context::CoreContext;
 use dashmap::DashMap;
-use futures::compat::Future01CompatExt;
-use futures::FutureExt;
-use futures::TryFutureExt;
-use futures_ext::send_discard;
-use futures_ext::BoxFuture;
-use futures_old::sync::mpsc;
-use futures_old::sync::mpsc::Sender;
-use futures_old::Future;
-use futures_old::Stream;
-use mercurial_types::blobs::HgBlobChangeset;
+use futures::try_join;
+use futures::Stream;
 use mercurial_types::HgChangesetId;
 use repo_blobstore::RepoBlobstoreRef;
 use slog::o;
 use slog::Logger;
+use tokio::sync::mpsc;
+use tokio::sync::mpsc::Sender;
+use tokio_stream::wrappers::ReceiverStream;
 
-/// This trait enables parallelized walks over changesets.
-pub trait ChangesetVisitor: Clone + Send + Sync + 'static {
-    type Item: Send;
-
-    /// Visit a specific changeset.
-    ///
-    /// `logger` is already customized to be specific to this changeset.
-    ///
-    /// Each visit instance will get a fresh copy of the changeset visitor -- this is unfortunately
-    /// unavoidable due to the way tokio works. To share state between instances, use an Arc.
-    fn visit(
-        self,
-        ctx: CoreContext,
-        logger: Logger,
-        repo: BlobRepo,
-        changeset: HgBlobChangeset,
-        follow_remaining: usize,
-    ) -> BoxFuture<Self::Item, Error>;
-}
+use crate::bonsai::BonsaiMFVerifyVisitor;
+use crate::BonsaiMFVerifyResult;
 
 /// Information about the specific changeset whose result is provided.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -62,16 +40,15 @@ pub struct ChangesetVisitMeta {
 /// Behind this scenes, this uses the default tokio executor (which is typically a thread pool, so
 /// this is typically highly parallel). Dropping the returned stream will cause further visiting to
 /// be canceled.
-pub fn visit_changesets<V, I>(
+pub fn visit_changesets<I>(
     ctx: CoreContext,
     logger: Logger,
     repo: BlobRepo,
-    visitor: V,
+    visitor: BonsaiMFVerifyVisitor,
     start_points: I,
     follow_limit: usize,
-) -> impl Stream<Item = (V::Item, ChangesetVisitMeta), Error = Error> + Send
+) -> impl Stream<Item = Result<(BonsaiMFVerifyResult, ChangesetVisitMeta)>> + Send
 where
-    V: ChangesetVisitor,
     I: IntoIterator<Item = HgChangesetId>,
 {
     // Some notes about this:
@@ -97,56 +74,46 @@ where
         // Start off with follow_limit + 1 because that's logically the previous follow_remaining.
         let visit_one = VisitOne::new(ctx.clone(), &inner, changeset_id, follow_limit, &mut sender);
         if let Some(visit_one) = visit_one {
-            tokio::spawn(visit_one.visit().compat());
+            tokio::spawn(visit_one.visit());
         }
     }
 
-    receiver
-        .map_err(|()| unreachable!("Receiver can never produce errors"))
-        .and_then(|res| res)
+    ReceiverStream::new(receiver)
 }
 
-struct VisitOneShared<V> {
+struct VisitOneShared {
     logger: Logger,
     repo: BlobRepo,
-    visitor: V,
+    visitor: BonsaiMFVerifyVisitor,
     visit_started: DashMap<HgChangesetId, ()>,
 }
 
-impl<V> VisitOneShared<V> {
-    #[inline]
+impl VisitOneShared {
     fn visit_started(&self, changeset_id: HgChangesetId) -> bool {
         self.visit_started.contains_key(&changeset_id)
     }
 
-    #[inline]
     fn mark_visit_started(&self, changeset_id: HgChangesetId) {
         self.visit_started.insert(changeset_id, ());
     }
 }
 
-struct VisitOne<V>
-where
-    V: ChangesetVisitor,
-{
+struct VisitOne {
     ctx: CoreContext,
-    shared: Arc<VisitOneShared<V>>,
+    shared: Arc<VisitOneShared>,
     logger: Logger,
     changeset_id: HgChangesetId,
     follow_remaining: usize,
-    sender: Sender<Result<(V::Item, ChangesetVisitMeta)>>,
+    sender: Sender<Result<(BonsaiMFVerifyResult, ChangesetVisitMeta)>>,
 }
 
-impl<V> VisitOne<V>
-where
-    V: ChangesetVisitor,
-{
+impl VisitOne {
     fn new(
         ctx: CoreContext,
-        shared: &Arc<VisitOneShared<V>>,
+        shared: &Arc<VisitOneShared>,
         changeset_id: HgChangesetId,
         prev_follow_remaining: usize,
-        sender: &mut Sender<Result<(V::Item, ChangesetVisitMeta)>>,
+        sender: &mut Sender<Result<(BonsaiMFVerifyResult, ChangesetVisitMeta)>>,
     ) -> Option<Self> {
         // Checks to figure out whether to terminate the visit.
         if prev_follow_remaining == 0 {
@@ -155,7 +122,7 @@ where
         if shared.visit_started(changeset_id) {
             return None;
         }
-        if sender.poll_ready().is_err() {
+        if sender.is_closed() {
             // The receiver is closed, so there's no point doing anything.
             return None;
         }
@@ -174,7 +141,8 @@ where
         })
     }
 
-    fn visit(self) -> impl Future<Item = (), Error = ()> + Send {
+    #[async_recursion]
+    async fn visit(self) -> Result<()> {
         let Self {
             ctx,
             shared,
@@ -186,64 +154,70 @@ where
 
         shared.mark_visit_started(changeset_id);
 
-        let parents_fut = {
-            let repo = shared.repo.clone();
-            cloned!(ctx);
-            async move { repo.get_hg_changeset_parents(ctx, changeset_id).await }
-        }
-        .boxed()
-        .compat()
-        .map({
-            cloned!(ctx, shared, mut sender);
-            move |parent_hashes| {
+        let parent_fut = {
+            cloned!(ctx, shared, sender);
+            async move {
+                let parent_hashes = shared
+                    .repo
+                    .get_hg_changeset_parents(ctx.clone(), changeset_id)
+                    .await?;
+
                 for parent_id in parent_hashes {
-                    let visit_one = VisitOne::new(
-                        ctx.clone(),
-                        &shared,
-                        parent_id,
-                        follow_remaining,
-                        &mut sender,
-                    );
-                    if let Some(visit_one) = visit_one {
-                        // Avoid unbounded recursion by spawning separate futures for each parent
-                        // directly on the executor.
-                        tokio::spawn(visit_one.visit().compat());
-                    }
+                    cloned!(ctx, shared, mut sender);
+                    let visit_one_fut = async move {
+                        let visit_one = VisitOne::new(
+                            ctx.clone(),
+                            &shared,
+                            parent_id,
+                            follow_remaining,
+                            &mut sender,
+                        );
+                        if let Some(visit_one) = visit_one {
+                            visit_one.visit().await
+                        } else {
+                            Ok(())
+                        }
+                    };
+                    // Avoid unbounded recursion by spawning separate futures for each parent
+                    // directly on the executor.
+                    tokio::spawn(visit_one_fut);
                 }
+
+                Ok(())
             }
-        });
+        };
 
         let visit_fut = {
-            cloned!(ctx, changeset_id, shared);
-            async move { changeset_id.load(&ctx, shared.repo.repo_blobstore()).await }
-        }
-        .boxed()
-        .compat()
-        .from_err()
-        .and_then({
-            cloned!(ctx, shared.visitor, shared.repo);
-            move |changeset| visitor.visit(ctx, logger, repo, changeset, follow_remaining)
-        })
-        .and_then({
-            let sender = sender.clone();
-            move |item| {
-                send_discard(
-                    sender,
-                    Ok((
+            cloned!(sender);
+            async move {
+                let changeset = changeset_id
+                    .load(&ctx, shared.repo.repo_blobstore())
+                    .await?;
+                let repo = shared.repo.clone();
+                let item = shared
+                    .visitor
+                    .clone()
+                    .visit(ctx, logger, repo, changeset)
+                    .await?;
+
+                sender
+                    .send(Ok((
                         item,
                         ChangesetVisitMeta {
                             changeset_id,
                             follow_remaining,
                         },
-                    )),
-                )
+                    )))
+                    .await
+                    .map_err(anyhow::Error::msg)
             }
-        });
+        };
 
-        visit_fut
-            .join(parents_fut)
-            .map(|((), ())| ())
-            .or_else(move |err| send_discard(sender, Err(err)))
+        if let Err(err) = try_join!(visit_fut, parent_fut) {
+            let _ = sender.send(Err(err)).await;
+        }
+
+        Ok(())
     }
 }
 
@@ -256,7 +230,7 @@ mod test {
         fn assert_send<T: Send>() {}
         fn assert_sync<T: Sync>() {}
 
-        assert_send::<VisitOneShared<()>>();
-        assert_sync::<VisitOneShared<()>>();
+        assert_send::<VisitOneShared>();
+        assert_sync::<VisitOneShared>();
     }
 }

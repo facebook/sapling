@@ -10,3 +10,4 @@ mod manifest;
 pub use self::manifest::BonsaiMFVerify;
 pub use self::manifest::BonsaiMFVerifyDifference;
 pub use self::manifest::BonsaiMFVerifyResult;
+pub use self::manifest::BonsaiMFVerifyVisitor;

@@ -41,9 +41,6 @@ tokio_dependency_test(
 rust_binary(
     name = "bonsai_verify",
     srcs = glob(["cmds/bonsai_verify/**/*.rs"]),
-    named_deps = {
-        "futures-old": "fbsource//third-party/rust:futures-old",
-    },
     unittests = False,
     deps = [
         "fbsource//third-party/rust:anyhow",

@@ -63,7 +63,6 @@ failure_ext = { version = "0.1.0", git = "https://github.com/facebookexperimenta
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
 futures-util = "0.3.30"
-futures_old = { package = "futures", version = "0.1.31" }
 git2 = "0.14"
 lock_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 mercurial_derivation = { version = "0.1.0", path = "derived_data/mercurial_derivation" }

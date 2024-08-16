@@ -7,17 +7,15 @@ oncall("mononoke")
 rust_library(
     name = "blobrepo_utils",
     srcs = glob(["src/**/*.rs"]),
-    named_deps = {
-        "futures-old": "fbsource//third-party/rust:futures-old",
-        "futures_ext": "//common/rust/shed/futures_01_ext:futures_01_ext",
-    },
     deps = [
         "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:async-recursion",
         "fbsource//third-party/rust:dashmap",
         "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:slog",
         "fbsource//third-party/rust:thiserror",
         "fbsource//third-party/rust:tokio",
+        "fbsource//third-party/rust:tokio-stream",
         "//common/rust/shed/cloned:cloned",
         "//eden/mononoke/blobrepo:blobrepo",
         "//eden/mononoke/blobrepo:blobrepo_hg",
@@ -36,10 +34,8 @@ rust_library(
 rust_unittest(
     name = "blobrepo_utils_test",
     srcs = glob(["test/**/*.rs"]),
-    named_deps = {
-        "futures-old": "fbsource//third-party/rust:futures-old",
-    },
     deps = [
+        "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:futures",
         ":blobrepo_utils",
         "//common/rust/shed/fbinit:fbinit",

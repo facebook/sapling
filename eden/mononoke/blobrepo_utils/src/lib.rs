@@ -24,7 +24,6 @@ pub use crate::bonsai::BonsaiMFVerify;
 pub use crate::bonsai::BonsaiMFVerifyDifference;
 pub use crate::bonsai::BonsaiMFVerifyResult;
 pub use crate::changeset::visit_changesets;
-pub use crate::changeset::ChangesetVisitor;
 pub use crate::errors::ErrorKind;
 
 /// This is a function that's used to generate additional file changes for rebased diamond merges.
