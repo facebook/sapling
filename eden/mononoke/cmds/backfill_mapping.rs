@@ -14,10 +14,12 @@ use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
 use ascii::AsciiStr;
-use blobrepo::BlobRepo;
 use blobstore::Loadable;
+use bonsai_git_mapping::BonsaiGitMapping;
 use bonsai_git_mapping::BonsaiGitMappingRef;
+use bonsai_hg_mapping::BonsaiHgMapping;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
+use bonsai_svnrev_mapping::BonsaiSvnrevMapping;
 use bonsai_svnrev_mapping::BonsaiSvnrevMappingRef;
 use clap::ArgGroup;
 use clap::Parser;
@@ -31,6 +33,7 @@ use futures_util::stream::TryStreamExt;
 use mercurial_types::HgChangesetId;
 use mononoke_app::args::RepoArgs;
 use mononoke_app::MononokeAppBuilder;
+use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreRef;
 
 #[derive(Parser)]
@@ -55,6 +58,22 @@ struct BackFillArgs {
     in_filename: Option<String>,
 }
 
+#[facet::container]
+#[derive(Clone)]
+pub struct Repo {
+    #[facet]
+    bonsai_git_mapping: dyn BonsaiGitMapping,
+
+    #[facet]
+    bonsai_hg_mapping: dyn BonsaiHgMapping,
+
+    #[facet]
+    bonsai_svnrev_mapping: dyn BonsaiSvnrevMapping,
+
+    #[facet]
+    repo_blobstore: RepoBlobstore,
+}
+
 fn parse_input<P: AsRef<Path>>(
     file: P,
 ) -> Result<impl Iterator<Item = Result<HgChangesetId, Error>>, Error> {
@@ -73,7 +92,7 @@ pub enum BackfillMode {
 
 pub async fn backfill<P: AsRef<Path>>(
     ctx: CoreContext,
-    repo: BlobRepo,
+    repo: Repo,
     in_path: P,
     mode: BackfillMode,
 ) -> Result<(), Error> {
