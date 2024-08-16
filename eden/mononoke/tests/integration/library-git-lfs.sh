@@ -40,13 +40,20 @@ EOF
     permit_writes = true
 EOF
 
+    SCUBA_LEGACY_LFS="$TESTTMP/scuba_legacy_lfs_server.json"
     # start LFS server
+    LFS_LOG_LEGACY="${TESTTMP}/lfs-legacy.log"
     LFS_LOG="${TESTTMP}/lfs.log"
-    quiet lfs_server  --tls --log "$LFS_LOG"  --git-blob-upload-allowed
-    export MONONOKE_LFS_URL
-    MONONOKE_LFS_URL="$BASE_LFS_URL/repo"
+    quiet lfs_server --tls --log "$LFS_LOG_LEGACY" --scuba-dataset "file://$SCUBA_LEGACY_LFS"
     export LEGACY_LFS_URL
     LEGACY_LFS_URL="$BASE_LFS_URL/legacy_lfs"
+    if  [ "$LFS_USE_UPSTREAM" == "1" ]; then
+        quiet lfs_server  --tls --log "$LFS_LOG"  --git-blob-upload-allowed  --upstream "${LEGACY_LFS_URL}"
+    else
+        quiet lfs_server  --tls --log "$LFS_LOG"  --git-blob-upload-allowed
+    fi
+    export MONONOKE_LFS_URL
+    MONONOKE_LFS_URL="$BASE_LFS_URL/repo"
 
     # Start SCS
     if [ "$START_SCS" == "1" ]; then
