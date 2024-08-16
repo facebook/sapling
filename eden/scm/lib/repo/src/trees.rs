@@ -14,6 +14,7 @@ use lru_cache::LruCache;
 use manifest_tree::ReadTreeManifest;
 use manifest_tree::TreeManifest;
 use manifest_tree::TreeStore;
+use metrics::Counter;
 use parking_lot::Mutex;
 use parking_lot::RwLock;
 use storemodel::BoxIterator;
@@ -86,6 +87,9 @@ impl ReadTreeManifest for TreeManifestResolver {
     }
 }
 
+static CACHE_HITS: Counter = Counter::new_counter("treeresolver.cache.hits");
+static CACHE_REQS: Counter = Counter::new_counter("treeresolver.cache.reqs");
+
 // TreeStore wrapper which caches trees in an LRU cache.
 struct CachingTreeStore {
     store: Arc<dyn TreeStore>,
@@ -95,11 +99,19 @@ struct CachingTreeStore {
 impl CachingTreeStore {
     // Fetch a single item from cache.
     fn cached_single(&self, id: &HgId) -> Option<Bytes> {
-        self.cache.lock().get_mut(id).cloned()
+        CACHE_REQS.add(1);
+
+        let cached = self.cache.lock().get_mut(id).cloned();
+        if cached.is_some() {
+            CACHE_HITS.add(1);
+        }
+        cached
     }
 
     // Fetch multiple items from cache, returning (misses, hits).
     fn cached_multi(&self, mut keys: Vec<Key>) -> (Vec<Key>, Vec<(Key, Bytes)>) {
+        CACHE_REQS.add(keys.len());
+
         let mut cache = self.cache.lock();
 
         let mut found = Vec::new();
@@ -111,6 +123,8 @@ impl CachingTreeStore {
                 true
             }
         });
+
+        CACHE_HITS.add(found.len());
 
         (keys, found)
     }

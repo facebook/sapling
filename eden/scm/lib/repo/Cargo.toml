@@ -22,6 +22,7 @@ identity = { version = "0.1.0", path = "../identity" }
 lru-cache = "0.1.2"
 manifest-tree = { version = "0.1.0", path = "../manifest-tree" }
 metalog = { version = "0.1.0", path = "../metalog" }
+metrics = { version = "0.1.0", path = "../metrics" }
 once_cell = "1.12"
 parking_lot = { version = "0.12.1", features = ["send_guard"] }
 refencode = { version = "0.1.0", path = "../refencode" }
