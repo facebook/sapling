@@ -49,12 +49,11 @@ pub(crate) fn builtin_system(
     let is_test = std::env::var_os("TESTTMP").is_some();
     let force_prod = std::env::var_os("TEST_PROD_CONFIGS").is_some();
 
-    let mut need_static = false;
+    #[cfg(not(feature = "fb"))]
+    let need_static = false;
+
     #[cfg(feature = "fb")]
-    {
-        let mode = crate::fb::FbConfigMode::from_identity(ident);
-        need_static = mode.need_static();
-    }
+    let need_static = crate::fb::FbConfigMode::from_identity(ident).need_static();
 
     if !is_test || force_prod || need_static {
         configs.push(Arc::new(&production::CONFIG));
