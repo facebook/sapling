@@ -3282,7 +3282,6 @@ def newreporequirements(repo) -> Set[str]:
     ui = repo.ui
     requirements = {"revlogv1"}
     requirements.add("store")
-    requirements.add("dotencode")
 
     compengine = ui.config("experimental", "format.compression")
     if compengine not in util.compengines:

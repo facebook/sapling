@@ -119,7 +119,7 @@ fn write_requirements_file(path: &Path, requirements: HashSet<&str>) -> Result<(
 }
 
 fn write_requirements(path: &Path, config: &ConfigSet) -> Result<(), InitError> {
-    let mut requirements = HashSet::from(["revlogv1", "store", "dotencode", "treestate"]);
+    let mut requirements = HashSet::from(["revlogv1", "store", "treestate"]);
 
     if config
         .get_or_default("format", "generaldelta")
@@ -221,8 +221,7 @@ mod tests {
         write_requirements(tmp.path(), &config).unwrap();
         assert_eq!(
             fs::read_to_string(&path).unwrap(),
-            r#"dotencode
-revlogv1
+            r#"revlogv1
 store
 treestate
 "#
@@ -232,8 +231,7 @@ treestate
         write_requirements(tmp.path(), &config).unwrap();
         assert_eq!(
             fs::read_to_string(&path).unwrap(),
-            r#"dotencode
-generaldelta
+            r#"generaldelta
 revlogv1
 store
 treestate
