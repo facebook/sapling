@@ -37,8 +37,16 @@ pub struct TreeManifestResolver {
 impl TreeManifestResolver {
     pub fn new(
         dag_commits: Arc<RwLock<Box<dyn DagCommits + Send + 'static>>>,
-        tree_store: Arc<dyn TreeStore>,
+        mut tree_store: Arc<dyn TreeStore>,
+        cache_size: usize,
     ) -> Self {
+        if cache_size > 0 {
+            tree_store = Arc::new(CachingTreeStore {
+                store: tree_store,
+                cache: Arc::new(Mutex::new(LruCache::new(cache_size))),
+            });
+        }
+
         TreeManifestResolver {
             dag_commits,
             tree_store,

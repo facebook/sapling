@@ -82,6 +82,7 @@ pub struct Repo {
     eager_store: Option<EagerRepoStore>,
     locker: Arc<RepoLocker>,
     cas_client: OnceCell<Option<Arc<dyn CasClient>>>,
+    tree_resolver: OnceCell<Arc<dyn ReadTreeManifest + Send + Sync>>,
 }
 
 impl Repo {
@@ -190,6 +191,7 @@ impl Repo {
             #[cfg(feature = "wdir")]
             working_copy: Default::default(),
             eager_store: None,
+            tree_resolver: Default::default(),
             locker,
         })
     }
@@ -535,10 +537,18 @@ impl Repo {
     }
 
     pub fn tree_resolver(&self) -> Result<Arc<dyn ReadTreeManifest + Send + Sync>> {
-        Ok(Arc::new(TreeManifestResolver::new(
-            self.dag_commits()?,
-            self.tree_store()?,
-        )))
+        let tr = self.tree_resolver.get_or_try_init(|| {
+            Ok::<_, anyhow::Error>(Arc::new(TreeManifestResolver::new(
+                self.dag_commits()?,
+                self.tree_store()?,
+                self.config
+                    // Trees are typically pretty small (and they are often kept in memory
+                    // anyway within a TreeManifest object), so let's pick a sizable
+                    // default. Set to 0 to disable caching.
+                    .get_or("experimental", "tree-resolver-cache-size", || 10_000)?,
+            )))
+        })?;
+        Ok(tr.clone())
     }
 
     pub fn resolve_commit(
