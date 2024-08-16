@@ -402,13 +402,6 @@ def _calcmode(vfs):
     return mode
 
 
-_data = (
-    "data meta 00manifest.d 00manifest.i 00changelog.d 00changelog.i"
-    " phaseroots visibleheads"
-    " segments hgcommits mutation metalog"
-)
-
-
 def setvfsmode(vfs) -> None:
     vfs.createmode = _calcmode(vfs)
 
@@ -466,7 +459,15 @@ class basicstore:
             yield x
 
     def copylist(self):
-        return ["requires"] + _data.split()
+        d = (
+            "data meta dh fncache indexedlogdatastore indexedloghistorystore phaseroots visibleheads"
+            " 00manifest.d 00manifest.i 00changelog.d 00changelog.i"
+            " segments hgcommits lfs manifests mutation metalog"
+            " revlogmeta"
+        )
+        return ["requires", "00changelog.i", "store/requires"] + [
+            "store/" + f for f in d.split()
+        ]
 
     def write(self, tr):
         pass
@@ -715,17 +716,6 @@ class fncachestore(basicstore):
             except OSError as err:
                 if err.errno != errno.ENOENT:
                     raise
-
-    def copylist(self):
-        d = (
-            "data meta dh fncache indexedlogdatastore indexedloghistorystore phaseroots visibleheads"
-            " 00manifest.d 00manifest.i 00changelog.d 00changelog.i"
-            " segments hgcommits lfs manifests mutation metalog"
-            " revlogmeta"
-        )
-        return ["requires", "00changelog.i", "store/requires"] + [
-            "store/" + f for f in d.split()
-        ]
 
     def write(self, tr):
         self.fncache.write(tr)
