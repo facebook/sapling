@@ -929,9 +929,9 @@ impl RepoContext {
                 self.ctx(),
                 match &bubble {
                     Some(bubble) => {
-                        bubble.wrap_repo_blobstore(self.blob_repo().repo_blobstore().clone())
+                        bubble.wrap_repo_blobstore(self.repo().repo_blobstore().clone())
                     }
-                    None => self.blob_repo().repo_blobstore().clone(),
+                    None => self.repo().repo_blobstore().clone(),
                 },
                 stack_parent_ctxs,
                 path_changes_stack
@@ -950,8 +950,8 @@ impl RepoContext {
         // Resolve the changes so that they are ready to be converted into
         // bonsai changes. This also checks (1) for copy-from info.
         let blobstore = match &bubble {
-            Some(bubble) => bubble.wrap_repo_blobstore(self.blob_repo().repo_blobstore().clone()),
-            None => self.blob_repo().repo_blobstore().clone(),
+            Some(bubble) => bubble.wrap_repo_blobstore(self.repo().repo_blobstore().clone()),
+            None => self.repo().repo_blobstore().clone(),
         };
         borrowed!(blobstore);
         let resolve_file_changes_fut = async move {
@@ -966,7 +966,7 @@ impl RepoContext {
                                 change
                                     .resolve(
                                         self.ctx(),
-                                        *self.blob_repo().filestore_config(),
+                                        *self.repo().filestore_config(),
                                         blobstore.clone(),
                                         stack_changes,
                                         stack_parent_ctxs,

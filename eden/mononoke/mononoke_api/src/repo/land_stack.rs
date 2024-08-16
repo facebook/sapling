@@ -136,7 +136,7 @@ impl RepoContext {
         // changesets.   These are the commits that are ancestors of the head
         // commit and descendants of the base commit.
         let ctx = self.ctx();
-        let blobstore = self.blob_repo().repo_blobstore();
+        let blobstore = self.repo().repo_blobstore();
         let changesets: HashSet<_> = self
             .repo()
             .commit_graph()

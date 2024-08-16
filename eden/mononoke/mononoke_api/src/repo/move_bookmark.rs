@@ -46,7 +46,7 @@ impl RepoContext {
         let old_target = match old_target {
             Some(old_target) => old_target,
             None => self
-                .blob_repo()
+                .repo()
                 .bookmarks()
                 .get(self.ctx().clone(), bookmark)
                 .await

@@ -148,7 +148,7 @@ async fn land_stack(fb: FacebookInit) -> Result<()> {
 
     // Check the bookmark moves created BookmarkLogUpdate entries
     let entries = repo
-        .blob_repo()
+        .repo()
         .bookmark_update_log()
         .list_bookmark_log_entries(
             ctx.clone(),

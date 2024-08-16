@@ -30,7 +30,7 @@ use crate::repo::RepoContext;
 
 #[derive(Clone)]
 pub struct FileContext {
-    repo: RepoContext,
+    repo_ctx: RepoContext,
     fetch_key: FetchKey,
     metadata: LazyShared<Result<FileMetadata, MononokeError>>,
 }
@@ -40,7 +40,7 @@ impl fmt::Debug for FileContext {
         write!(
             f,
             "FileContext(repo={:?} fetch_key={:?})",
-            self.repo().name(),
+            self.repo_ctx().name(),
             self.fetch_key
         )
     }
@@ -61,9 +61,9 @@ impl FileContext {
     ///
     /// To construct a `FileContext` for a file that might not exist, use
     /// `new_check_exists`.
-    pub(crate) fn new_authorized(repo: RepoContext, fetch_key: FetchKey) -> Self {
+    pub(crate) fn new_authorized(repo_ctx: RepoContext, fetch_key: FetchKey) -> Self {
         Self {
-            repo,
+            repo_ctx,
             fetch_key,
             metadata: LazyShared::new_empty(),
         }
@@ -72,19 +72,20 @@ impl FileContext {
     /// Create a new  FileContext using an ID that might not exist. Returns
     /// `None` if the file doesn't exist.
     pub(crate) async fn new_check_exists(
-        repo: RepoContext,
+        repo_ctx: RepoContext,
         fetch_key: FetchKey,
     ) -> Result<Option<Self>, MononokeError> {
         // Access to an arbitrary file requires full access to the repo,
         // as we do not know which path it corresponds to.
-        repo.authorization_context()
-            .require_full_repo_read(repo.ctx(), repo.inner_repo())
+        repo_ctx
+            .authorization_context()
+            .require_full_repo_read(repo_ctx.ctx(), repo_ctx.repo())
             .await?;
         // Try to get the file metadata immediately to see if it exists.
-        let file = get_metadata(repo.blob_repo().repo_blobstore(), repo.ctx(), &fetch_key)
+        let file = get_metadata(repo_ctx.repo().repo_blobstore(), repo_ctx.ctx(), &fetch_key)
             .await?
             .map(|metadata| Self {
-                repo,
+                repo_ctx,
                 fetch_key,
                 metadata: LazyShared::new_ready(Ok(metadata)),
             });
@@ -93,12 +94,12 @@ impl FileContext {
 
     /// The context for this query.
     pub(crate) fn ctx(&self) -> &CoreContext {
-        self.repo.ctx()
+        self.repo_ctx.ctx()
     }
 
     /// The `RepoContext` for this query.
-    pub(crate) fn repo(&self) -> &RepoContext {
-        &self.repo
+    pub(crate) fn repo_ctx(&self) -> &RepoContext {
+        &self.repo_ctx
     }
 
     /// Return the ID of the file.
@@ -111,9 +112,9 @@ impl FileContext {
     pub async fn metadata(&self) -> Result<FileMetadata, MononokeError> {
         self.metadata
             .get_or_init(|| {
-                cloned!(self.repo, self.fetch_key);
+                cloned!(self.repo_ctx, self.fetch_key);
                 async move {
-                    get_metadata(repo.blob_repo().repo_blobstore(), repo.ctx(), &fetch_key)
+                    get_metadata(repo_ctx.repo().repo_blobstore(), repo_ctx.ctx(), &fetch_key)
                         .await
                         .map_err(MononokeError::from)
                         .and_then(|metadata| {
@@ -130,7 +131,7 @@ impl FileContext {
     /// be expensive in the case of large files.
     pub async fn content_concat(&self) -> Result<Bytes, MononokeError> {
         let bytes = filestore::fetch_concat_opt(
-            self.repo().blob_repo().repo_blobstore(),
+            self.repo_ctx().repo().repo_blobstore(),
             self.ctx(),
             &self.fetch_key,
         )
@@ -154,7 +155,7 @@ impl FileContext {
         size: u64,
     ) -> Result<Bytes, MononokeError> {
         let ret = filestore::fetch_range_with_size(
-            self.repo().blob_repo().repo_blobstore(),
+            self.repo_ctx().repo().repo_blobstore(),
             self.ctx(),
             &self.fetch_key,
             filestore::Range::sized(start, size),

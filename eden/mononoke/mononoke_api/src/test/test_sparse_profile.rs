@@ -39,7 +39,7 @@ use crate::RepoContext;
 
 async fn init_sparse_profile(
     ctx: &CoreContext,
-    repo: &RepoContext,
+    repo_ctx: &RepoContext,
     cs_id: HgChangesetId,
 ) -> Result<ChangesetId> {
     let base_profile_content = r#"
@@ -68,7 +68,7 @@ async fn init_sparse_profile(
     let empty_profile_content = r#""#;
     let ignored = r#"[[[["#;
 
-    CreateCommitContext::new(ctx, repo.blob_repo(), vec![cs_id])
+    CreateCommitContext::new(ctx, repo_ctx.repo(), vec![cs_id])
         .add_file("sparse/base", base_profile_content)
         .add_file("sparse/include", include_test_profile_content)
         .add_file("sparse/other", other_profile_content)
@@ -81,12 +81,12 @@ async fn init_sparse_profile(
 
 async fn commit_changes<T: AsRef<str>>(
     ctx: &CoreContext,
-    repo: &RepoContext,
+    repo_ctx: &RepoContext,
     cs_id: ChangesetId,
     changes: BTreeMap<&str, Option<T>>,
 ) -> Result<ChangesetId> {
-    let changes = store_files(ctx, changes, repo.blob_repo()).await;
-    let commit = CreateCommitContext::new(ctx, repo.blob_repo(), vec![cs_id]);
+    let changes = store_files(ctx, changes, repo_ctx.repo()).await;
+    let commit = CreateCommitContext::new(ctx, repo_ctx.repo(), vec![cs_id]);
     changes
         .into_iter()
         .fold(commit, |commit, (path, change)| {
@@ -130,7 +130,7 @@ async fn test_sparse_monitoring_config(fb: FacebookInit) -> Result<()> {
         ManyFilesDirs::get_repo(fb).await,
     )])
     .await?;
-    let repo = mononoke
+    let repo_ctx = mononoke
         .repo(ctx.clone(), "test")
         .await?
         .expect("repo exists")
@@ -138,8 +138,8 @@ async fn test_sparse_monitoring_config(fb: FacebookInit) -> Result<()> {
         .await?;
     let hg_cs_id = "d261bc7900818dea7c86935b3fb17a33b2e3a6b4".parse::<HgChangesetId>()?;
 
-    let a = init_sparse_profile(&ctx, &repo, hg_cs_id).await?;
-    let changeset_a = ChangesetContext::new(repo.clone(), a);
+    let a = init_sparse_profile(&ctx, &repo_ctx, hg_cs_id).await?;
+    let changeset_a = ChangesetContext::new(repo_ctx.clone(), a);
 
     // Default should list all files in sparse location
     let monitor = mock_sparse_monitoring(vec![], vec![], MonitoringProfiles::All)?;
@@ -230,7 +230,7 @@ async fn sparse_profile_parsing(fb: FacebookInit) -> Result<()> {
         ManyFilesDirs::get_repo(fb).await,
     )])
     .await?;
-    let repo = mononoke
+    let repo_ctx = mononoke
         .repo(ctx.clone(), "test")
         .await?
         .expect("repo exists")
@@ -238,9 +238,9 @@ async fn sparse_profile_parsing(fb: FacebookInit) -> Result<()> {
         .await?;
     let hg_cs_id = "d261bc7900818dea7c86935b3fb17a33b2e3a6b4".parse::<HgChangesetId>()?;
 
-    let a = init_sparse_profile(&ctx, &repo, hg_cs_id).await?;
+    let a = init_sparse_profile(&ctx, &repo_ctx, hg_cs_id).await?;
 
-    let changeset = ChangesetContext::new(repo, a);
+    let changeset = ChangesetContext::new(repo_ctx, a);
 
     let path = "sparse/include".to_string();
     let content = fetch(path.clone(), &changeset).await?.unwrap();
@@ -263,7 +263,7 @@ async fn sparse_profile_size(fb: FacebookInit) -> Result<()> {
         ManyFilesDirs::get_repo(fb).await,
     )])
     .await?;
-    let repo = mononoke
+    let repo_ctx = mononoke
         .repo(ctx.clone(), "test")
         .await?
         .expect("repo exists")
@@ -271,8 +271,8 @@ async fn sparse_profile_size(fb: FacebookInit) -> Result<()> {
         .await?;
     let hg_cs_id = "d261bc7900818dea7c86935b3fb17a33b2e3a6b4".parse::<HgChangesetId>()?;
 
-    let a = init_sparse_profile(&ctx, &repo, hg_cs_id).await?;
-    let changeset_a = ChangesetContext::new(repo.clone(), a);
+    let a = init_sparse_profile(&ctx, &repo_ctx, hg_cs_id).await?;
+    let changeset_a = ChangesetContext::new(repo_ctx.clone(), a);
     let monitor = mock_default_sparse_monitoring()?;
     let size = monitor
         .get_profile_size(
@@ -290,9 +290,9 @@ async fn sparse_profile_size(fb: FacebookInit) -> Result<()> {
     let changes = btreemap! {
         "dir1/subdir1/file_1" => Some(content),
     };
-    let b = commit_changes(&ctx, &repo, a, changes).await?;
+    let b = commit_changes(&ctx, &repo_ctx, a, changes).await?;
 
-    let changeset_b = ChangesetContext::new(repo.clone(), b);
+    let changeset_b = ChangesetContext::new(repo_ctx.clone(), b);
     let size = monitor
         .get_profile_size(
             &ctx,
@@ -308,9 +308,9 @@ async fn sparse_profile_size(fb: FacebookInit) -> Result<()> {
     let changes = btreemap! {
         "dir1/file_1_in_dir1" => Some(content),
     };
-    let c = commit_changes(&ctx, &repo, b, changes).await?;
+    let c = commit_changes(&ctx, &repo_ctx, b, changes).await?;
 
-    let changeset_c = ChangesetContext::new(repo, c);
+    let changeset_c = ChangesetContext::new(repo_ctx, c);
     let size = monitor
         .get_profile_size(
             &ctx,
@@ -331,7 +331,7 @@ async fn multiple_sparse_profile_sizes(fb: FacebookInit) -> Result<()> {
         ManyFilesDirs::get_repo(fb).await,
     )])
     .await?;
-    let repo = mononoke
+    let repo_ctx = mononoke
         .repo(ctx.clone(), "test")
         .await?
         .expect("repo exists")
@@ -339,8 +339,8 @@ async fn multiple_sparse_profile_sizes(fb: FacebookInit) -> Result<()> {
         .await?;
     let hg_cs_id = "d261bc7900818dea7c86935b3fb17a33b2e3a6b4".parse::<HgChangesetId>()?;
 
-    let a = init_sparse_profile(&ctx, &repo, hg_cs_id).await?;
-    let changeset_a = ChangesetContext::new(repo.clone(), a);
+    let a = init_sparse_profile(&ctx, &repo_ctx, hg_cs_id).await?;
+    let changeset_a = ChangesetContext::new(repo_ctx.clone(), a);
     let profiles_map = hashmap! {
         "sparse/base".to_string() => 9,
         "sparse/include".to_string() => 45,
@@ -368,7 +368,7 @@ async fn sparse_profile_delta(fb: FacebookInit) -> Result<()> {
         ManyFilesDirs::get_repo(fb).await,
     )])
     .await?;
-    let repo = mononoke
+    let repo_ctx = mononoke
         .repo(ctx.clone(), "test")
         .await?
         .expect("repo exists")
@@ -376,19 +376,19 @@ async fn sparse_profile_delta(fb: FacebookInit) -> Result<()> {
         .await?;
     let hg_cs_id = "d261bc7900818dea7c86935b3fb17a33b2e3a6b4".parse::<HgChangesetId>()?;
 
-    let a = init_sparse_profile(&ctx, &repo, hg_cs_id).await?;
-    let changeset_a = ChangesetContext::new(repo.clone(), a);
+    let a = init_sparse_profile(&ctx, &repo_ctx, hg_cs_id).await?;
+    let changeset_a = ChangesetContext::new(repo_ctx.clone(), a);
 
     let monitor = mock_default_sparse_monitoring()?;
     let profiles_names = monitor.get_monitoring_profiles(&changeset_a).await?;
 
     // replace the file of size 9 with the file of size 17
-    let b = CreateCommitContext::new(&ctx, repo.blob_repo(), vec![a])
+    let b = CreateCommitContext::new(&ctx, repo_ctx.repo(), vec![a])
         .add_file("dir1/subdir1/file_2", "added new file_2\n")
         .delete_file("dir1/subdir1/file_1")
         .commit()
         .await?;
-    let changeset_b = ChangesetContext::new(repo.clone(), b);
+    let changeset_b = ChangesetContext::new(repo_ctx.clone(), b);
     let sizes = get_profile_delta_size(
         &ctx,
         &monitor,
@@ -406,7 +406,7 @@ async fn sparse_profile_delta(fb: FacebookInit) -> Result<()> {
     assert_eq!(sizes, expected);
 
     // move file and change content at the same time
-    let b1 = CreateCommitContext::new(&ctx, repo.blob_repo(), vec![a])
+    let b1 = CreateCommitContext::new(&ctx, repo_ctx.repo(), vec![a])
         .delete_file("dir1/subdir1/file_1")
         .add_file_with_copy_info(
             "dir2/file_3",
@@ -415,7 +415,7 @@ async fn sparse_profile_delta(fb: FacebookInit) -> Result<()> {
         )
         .commit()
         .await?;
-    let changeset_b1 = ChangesetContext::new(repo.clone(), b1);
+    let changeset_b1 = ChangesetContext::new(repo_ctx.clone(), b1);
     let sizes = get_profile_delta_size(
         &ctx,
         &monitor,
@@ -434,7 +434,7 @@ async fn sparse_profile_delta(fb: FacebookInit) -> Result<()> {
     assert_eq!(sizes, expected);
 
     // move file from one sparse profile to another
-    let c = CreateCommitContext::new(&ctx, repo.blob_repo(), vec![b])
+    let c = CreateCommitContext::new(&ctx, repo_ctx.repo(), vec![b])
         .delete_file("dir1/subdir1/file_2")
         .add_file("dir2/file_2", "added new file_2\n")
         .add_file_with_copy_info(
@@ -444,7 +444,7 @@ async fn sparse_profile_delta(fb: FacebookInit) -> Result<()> {
         )
         .commit()
         .await?;
-    let changeset_c = ChangesetContext::new(repo.clone(), c);
+    let changeset_c = ChangesetContext::new(repo_ctx.clone(), c);
     let sizes = get_profile_delta_size(
         &ctx,
         &monitor,
@@ -463,11 +463,11 @@ async fn sparse_profile_delta(fb: FacebookInit) -> Result<()> {
     assert_eq!(sizes, expected);
 
     // replace directory with file
-    let c1 = CreateCommitContext::new(&ctx, repo.blob_repo(), vec![c])
+    let c1 = CreateCommitContext::new(&ctx, repo_ctx.repo(), vec![c])
         .add_file("dir1/subdir1", "len4")
         .commit()
         .await?;
-    let changeset_c1 = ChangesetContext::new(repo.clone(), c1);
+    let changeset_c1 = ChangesetContext::new(repo_ctx.clone(), c1);
     let sizes = get_profile_delta_size(
         &ctx,
         &monitor,
@@ -483,7 +483,7 @@ async fn sparse_profile_delta(fb: FacebookInit) -> Result<()> {
     };
     assert_eq!(sizes, expected);
 
-    let d = CreateCommitContext::new(&ctx, repo.blob_repo(), vec![c])
+    let d = CreateCommitContext::new(&ctx, repo_ctx.repo(), vec![c])
         // this essentially deletes 'dir1' directory
         .delete_file("dir1/file_1_in_dir1")
         .delete_file("dir1/file_2_in_dir1")
@@ -493,7 +493,7 @@ async fn sparse_profile_delta(fb: FacebookInit) -> Result<()> {
         .delete_file("dir1/subdir1/subsubdir2/file_2")
         .commit()
         .await?;
-    let changeset_d = ChangesetContext::new(repo.clone(), d);
+    let changeset_d = ChangesetContext::new(repo_ctx.clone(), d);
     let sizes = get_profile_delta_size(
         &ctx,
         &monitor,
@@ -515,9 +515,9 @@ async fn sparse_profile_delta(fb: FacebookInit) -> Result<()> {
     let changes = btreemap! {
         "dir2/file_2" => Some(content),
     };
-    let e = commit_changes(&ctx, &repo, d, changes).await?;
+    let e = commit_changes(&ctx, &repo_ctx, d, changes).await?;
 
-    let changeset_e = ChangesetContext::new(repo.clone(), e);
+    let changeset_e = ChangesetContext::new(repo_ctx.clone(), e);
     let sizes =
         get_profile_delta_size(&ctx, &monitor, &changeset_e, &changeset_d, profiles_names).await?;
     let expected = hashmap! {
@@ -538,7 +538,7 @@ async fn sparse_profile_config_change(fb: FacebookInit) -> Result<()> {
         ManyFilesDirs::get_repo(fb).await,
     )])
     .await?;
-    let repo = mononoke
+    let repo_ctx = mononoke
         .repo(ctx.clone(), "test")
         .await?
         .expect("repo exists")
@@ -546,8 +546,8 @@ async fn sparse_profile_config_change(fb: FacebookInit) -> Result<()> {
         .await?;
     let hg_cs_id = "d261bc7900818dea7c86935b3fb17a33b2e3a6b4".parse::<HgChangesetId>()?;
 
-    let a = init_sparse_profile(&ctx, &repo, hg_cs_id).await?;
-    let changeset_a = ChangesetContext::new(repo.clone(), a);
+    let a = init_sparse_profile(&ctx, &repo_ctx, hg_cs_id).await?;
+    let changeset_a = ChangesetContext::new(repo_ctx.clone(), a);
 
     let monitor = mock_default_sparse_monitoring()?;
     let profiles_names = monitor.get_monitoring_profiles(&changeset_a).await?;
@@ -566,9 +566,9 @@ async fn sparse_profile_config_change(fb: FacebookInit) -> Result<()> {
     let changes = btreemap! {
         "sparse/base" => Some(content),
     };
-    let e = commit_changes(&ctx, &repo, a, changes).await?;
+    let e = commit_changes(&ctx, &repo_ctx, a, changes).await?;
 
-    let changeset_e = ChangesetContext::new(repo.clone(), e);
+    let changeset_e = ChangesetContext::new(repo_ctx.clone(), e);
     let sizes = get_profile_delta_size(
         &ctx,
         &monitor,
@@ -588,12 +588,12 @@ async fn sparse_profile_config_change(fb: FacebookInit) -> Result<()> {
         [include]
         path:dir2
     "#;
-    let f = CreateCommitContext::new(&ctx, repo.blob_repo(), vec![e])
+    let f = CreateCommitContext::new(&ctx, repo_ctx.repo(), vec![e])
         .add_file("sparse/another", content)
         .commit()
         .await?;
 
-    let changeset_f = ChangesetContext::new(repo.clone(), f);
+    let changeset_f = ChangesetContext::new(repo_ctx.clone(), f);
     let sizes =
         get_profile_delta_size(&ctx, &monitor, &changeset_f, &changeset_e, profiles_names).await?;
 
@@ -603,12 +603,12 @@ async fn sparse_profile_config_change(fb: FacebookInit) -> Result<()> {
     assert_eq!(sizes, expected);
 
     // remove profile
-    let g = CreateCommitContext::new(&ctx, repo.blob_repo(), vec![f])
+    let g = CreateCommitContext::new(&ctx, repo_ctx.repo(), vec![f])
         .delete_file("sparse/top_level_files")
         .commit()
         .await?;
 
-    let changeset_g = ChangesetContext::new(repo.clone(), g);
+    let changeset_g = ChangesetContext::new(repo_ctx.clone(), g);
     let profiles_names = monitor.get_monitoring_profiles(&changeset_g).await?;
     let sizes =
         get_profile_delta_size(&ctx, &monitor, &changeset_g, &changeset_f, profiles_names).await?;
@@ -623,7 +623,7 @@ async fn sparse_profile_config_change(fb: FacebookInit) -> Result<()> {
         [include]
         path:dir1
     "#;
-    let h = CreateCommitContext::new(&ctx, repo.blob_repo(), vec![g])
+    let h = CreateCommitContext::new(&ctx, repo_ctx.repo(), vec![g])
         .add_file_with_copy_info(
             "sparse/other_copy",
             other_profile_content,
@@ -631,7 +631,7 @@ async fn sparse_profile_config_change(fb: FacebookInit) -> Result<()> {
         )
         .commit()
         .await?;
-    let changeset_h = ChangesetContext::new(repo.clone(), h);
+    let changeset_h = ChangesetContext::new(repo_ctx.clone(), h);
     let profiles_names = monitor.get_monitoring_profiles(&changeset_h).await?;
     let sizes =
         get_profile_delta_size(&ctx, &monitor, &changeset_h, &changeset_g, profiles_names).await?;
@@ -653,7 +653,7 @@ async fn test_sparse_external_config(fb: FacebookInit) -> Result<()> {
         ManyFilesDirs::get_repo(fb).await,
     )])
     .await?;
-    let repo = mononoke
+    let repo_ctx = mononoke
         .repo(ctx.clone(), "test")
         .await?
         .expect("repo exists")
@@ -661,18 +661,18 @@ async fn test_sparse_external_config(fb: FacebookInit) -> Result<()> {
         .await?;
     let hg_cs_id = "d261bc7900818dea7c86935b3fb17a33b2e3a6b4".parse::<HgChangesetId>()?;
 
-    let a = init_sparse_profile(&ctx, &repo, hg_cs_id).await?;
-    let changeset_a = ChangesetContext::new(repo.clone(), a);
+    let a = init_sparse_profile(&ctx, &repo_ctx, hg_cs_id).await?;
+    let changeset_a = ChangesetContext::new(repo_ctx.clone(), a);
     let content = r#"
         [include]
         path:dir1/subdir1/subsubdir2
     "#;
     // add new profile
-    let b = CreateCommitContext::new(&ctx, repo.blob_repo(), vec![a])
+    let b = CreateCommitContext::new(&ctx, repo_ctx.repo(), vec![a])
         .add_file("dir1/external_profile", content)
         .commit()
         .await?;
-    let changeset_b = ChangesetContext::new(repo.clone(), b);
+    let changeset_b = ChangesetContext::new(repo_ctx.clone(), b);
 
     // Default should list all files in sparse location
     let monitor = mock_sparse_monitoring(
