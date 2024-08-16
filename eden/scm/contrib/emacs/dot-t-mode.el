@@ -135,11 +135,9 @@
 
   (add-to-list 'compilation-error-regexp-alist 'dot-t)
   ;; Make `"/some/path.py", line 123` into a link.
-  (add-to-list 'compilation-error-regexp-alist-alist
-               '(dot-t . ("\"\\([^\"]+\\)\", line \\([0-9]+\\)" 1 2)))
   ;; Make `/some/path.py:123` into a link.
   (add-to-list 'compilation-error-regexp-alist-alist
-               '(dot-t . ("\\(/.*\\.py\\):\\([0-9]+\\)" 1 2)))
+               '(dot-t . ("\\(/.*?\\.py\\)\\(?:\", line \\|:\\)\\([0-9]+\\)" 1 2)))
 
   (add-hook 'compilation-filter-hook #'ansi-color-compilation-filter nil t))
 
