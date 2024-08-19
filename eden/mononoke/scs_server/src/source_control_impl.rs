@@ -796,24 +796,28 @@ macro_rules! impl_thrift_methods {
                 'req_ctxt: 'async_trait,
                 Self: Sync + 'async_trait,
             {
-                let svc = self.0.clone();
-                let handler = async move {
+                let fut = async move {
+                    let svc = self.0.clone();
                     let ctx = create_ctx!(svc, $method_name, req_ctxt, $( $param_name ),*).await?;
-                    let start_mem_stats = log_start(&ctx, stringify!($method_name));
-                    STATS::total_request_start.add_value(1);
-                    let (stats, res) = async {
-                        check_memory_usage(&ctx, stringify!($method_name), start_mem_stats.as_ref())?;
-                        svc.$method_name(ctx.clone(), $( $param_name ),* ).await
-                    }
-                    .timed()
-                    .on_cancel_with_data(|stats| log_cancelled(&ctx, stringify!($method_name), &stats, start_mem_stats.as_ref()))
-                    .await;
-                    log_result(ctx, stringify!($method_name), &stats, &res, start_mem_stats.as_ref());
-                    let method = stringify!($method_name).to_string();
-                    STATS::method_completion_time_ms.add_value(stats.completion_time.as_millis_unchecked() as i64, (method,));
-                    res.map_err(Into::into)
+                    let handler = async move {
+                        let start_mem_stats = log_start(&ctx, stringify!($method_name));
+                        STATS::total_request_start.add_value(1);
+                        let (stats, res) = async {
+                            check_memory_usage(&ctx, stringify!($method_name), start_mem_stats.as_ref())?;
+                            svc.$method_name(ctx.clone(), $( $param_name ),* ).await
+                        }
+                        .timed()
+                        .on_cancel_with_data(|stats| log_cancelled(&ctx, stringify!($method_name), &stats, start_mem_stats.as_ref()))
+                        .await;
+                        log_result(ctx, stringify!($method_name), &stats, &res, start_mem_stats.as_ref());
+                        let method = stringify!($method_name).to_string();
+                        STATS::method_completion_time_ms.add_value(stats.completion_time.as_millis_unchecked() as i64, (method,));
+                        res.map_err(Into::into)
+                    };
+                    let res: Result<$ok_type, $err_type> = handler.await;
+                    res
                 };
-                Box::pin(handler)
+                Box::pin(fut)
             }
         )*
     }
