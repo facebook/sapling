@@ -36,7 +36,11 @@ import GatedComponent from '../components/GatedComponent';
 import {FoldButton, useRunFoldPreview} from '../fold';
 import {t, T} from '../i18n';
 import {readAtom, writeAtom} from '../jotaiUtils';
-import {messageSyncingEnabledState, updateRemoteMessage} from '../messageSyncing';
+import {
+  messageSyncingEnabledState,
+  messageSyncingOverrideState,
+  updateRemoteMessage,
+} from '../messageSyncing';
 import {AmendMessageOperation} from '../operations/AmendMessageOperation';
 import {getAmendOperation} from '../operations/AmendOperation';
 import {getCommitOperation} from '../operations/CommitOperation';
@@ -51,6 +55,7 @@ import {CommitPreview, uncommittedChangesWithPreviews} from '../previews';
 import {selectedCommits} from '../selection';
 import {commitByHash, latestHeadCommit, repositoryInfo} from '../serverAPIState';
 import {latestSuccessorUnlessExplicitlyObsolete} from '../successionUtils';
+import {showToast} from '../toast';
 import {GeneratedStatus, succeedableRevset} from '../types';
 import {useModal} from '../useModal';
 import {firstOfIterable} from '../utils';
@@ -83,6 +88,7 @@ import {Badge} from 'isl-components/Badge';
 import {Banner, BannerKind, BannerTooltip} from 'isl-components/Banner';
 import {Button} from 'isl-components/Button';
 import {Divider} from 'isl-components/Divider';
+import {Column} from 'isl-components/Flex';
 import {Icon} from 'isl-components/Icon';
 import {RadioGroup} from 'isl-components/Radio';
 import {Subtle} from 'isl-components/Subtle';
@@ -471,6 +477,7 @@ function ShowingRemoteMessageBanner({
   const schema = useAtomValue(commitMessageFieldsSchema);
   const runOperation = useRunOperation();
   const syncingEnabled = useAtomValue(messageSyncingEnabledState);
+  const syncingOverride = useAtomValue(messageSyncingOverrideState);
 
   const loadLocalMessage = useCallback(() => {
     const originalFields = parseCommitMessageFields(schema, commit.title, commit.description);
@@ -501,8 +508,37 @@ function ShowingRemoteMessageBanner({
     ];
   });
 
-  if (!syncingEnabled || !provider) {
+  if (!provider || (syncingOverride == null && !syncingEnabled)) {
     return null;
+  }
+
+  if (syncingOverride === false) {
+    return (
+      <BannerTooltip
+        tooltip={t(
+          'Message syncing with $provider has been temporarily disabled due to a failed sync.\n\n' +
+            'Your local commit message is shown instead.\n' +
+            "Changes you make won't be automatically synced.\n\n" +
+            'Make sure to manually sync your message with $provider, then reenable or restart ISL to start syncing again.',
+          {replace: {$provider: provider.label}},
+        )}>
+        <Banner
+          icon={<Icon icon="warn" />}
+          alwaysShowButtons
+          kind={BannerKind.warning}
+          buttons={
+            <Button
+              icon
+              onClick={() => {
+                writeAtom(messageSyncingOverrideState, null);
+              }}>
+              <T>Show Remote Messages Instead</T>
+            </Button>
+          }>
+          <T replace={{$provider: provider.label}}>Not syncing messages with $provider</T>
+        </Banner>
+      </BannerTooltip>
+    );
   }
 
   const originalFields = parseCommitMessageFields(schema, commit.title, commit.description);
@@ -510,6 +546,7 @@ function ShowingRemoteMessageBanner({
   if (areTextFieldsUnchanged(schema, originalFields, latestFields)) {
     return null;
   }
+
   return (
     <BannerTooltip
       tooltip={t(
@@ -960,8 +997,28 @@ async function tryToUpdateRemoteMessage(
       .operation('SyncDiffMessageMutation', 'SyncMessageError', {extras: {reason}}, () =>
         updateRemoteMessage(diffId, title, description),
       )
-      .catch(() => {
-        // TODO: We should notify about this in the UI
+      .catch(err => {
+        // Uh oh we failed to sync. Let's override all syncing so you can see your local changes
+        // and we don't get you stuck in a syncing loop.
+
+        writeAtom(messageSyncingOverrideState, false);
+
+        showToast(
+          <Banner kind={BannerKind.error}>
+            <Column alignStart>
+              <div>
+                <T>Failed to sync message to remote. Further syncing has been disabled.</T>
+              </div>
+              <div>
+                <T>Try manually syncing and restarting ISL.</T>
+              </div>
+              <div>{firstLine(err.message || err.toString())}</div>
+            </Column>
+          </Banner>,
+          {
+            durationMs: 20_000,
+          },
+        );
       });
   }
   return false;

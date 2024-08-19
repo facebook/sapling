@@ -11,7 +11,20 @@ import serverAPI from './ClientToServerAPI';
 import {codeReviewProvider} from './codeReview/CodeReviewInfo';
 import {atom} from 'jotai';
 
+/**
+ * In some cases, we need to explicitly disable message syncing after a failure.
+ * This setting overrides the default value from the code review provider.
+ * It's not intended to be set by users nor is it persisted across restarts.
+ * When this is set, a warning will also be shown to the user.
+ */
+export const messageSyncingOverrideState = atom<boolean | null>(null);
+
+/** Whether message syncing is enabled for the current repo. */
 export const messageSyncingEnabledState = atom(get => {
+  const override = get(messageSyncingOverrideState);
+  if (override != null) {
+    return override;
+  }
   const provider = get(codeReviewProvider);
   return provider?.enableMessageSyncing ?? false;
 });
