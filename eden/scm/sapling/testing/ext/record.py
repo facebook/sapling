@@ -46,7 +46,6 @@ def _get_record_metalog(test_filename: str, testcase=None, create=False):
     )
     if create and os.path.isdir(metalog_path):
         shutil.rmtree(metalog_path)
-        _get_record_metalog.cache_clear()
     elif not create and not os.path.isdir(metalog_path):
         return None
     metalog = bindings.metalog.metalog(metalog_path)
