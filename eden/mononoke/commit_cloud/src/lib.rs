@@ -28,7 +28,7 @@ use context::CoreContext;
 use edenapi_types::cloud::RemoteBookmark;
 use edenapi_types::cloud::WorkspaceSharingData;
 use edenapi_types::GetReferencesParams;
-use edenapi_types::GetSmartlogParams;
+use edenapi_types::GetSmartlogFlag;
 use edenapi_types::HgId;
 use edenapi_types::ReferencesData;
 use edenapi_types::SmartlogNode;
@@ -388,12 +388,13 @@ impl CommitCloud {
 
     pub async fn get_smartlog_raw_info(
         &self,
-        params: &GetSmartlogParams,
+        cc_ctx: &CommitCloudContext,
+        flags: &[GetSmartlogFlag],
     ) -> anyhow::Result<RawSmartlogData> {
         RawSmartlogData::fetch_smartlog_references(
-            &CommitCloudContext::new(&params.workspace, &params.reponame)?,
+            &CommitCloudContext::new(&cc_ctx.workspace, &cc_ctx.reponame)?,
             &self.storage,
-            &params.flags,
+            flags,
         )
         .await
     }

@@ -109,11 +109,12 @@ impl HgRepoContext {
         &self,
         params: &GetSmartlogParams,
     ) -> Result<SmartlogData, MononokeError> {
+        let cc_ctx = CommitCloudContext::new(&params.workspace, &params.reponame)?;
         let raw_data = self
             .repo_ctx()
             .repo()
             .commit_cloud()
-            .get_smartlog_raw_info(params)
+            .get_smartlog_raw_info(&cc_ctx, &params.flags)
             .await?;
         let hg_ids = raw_data.collapse_into_vec();
 
