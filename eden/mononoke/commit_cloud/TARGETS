@@ -18,6 +18,7 @@ rust_library(
         "fbsource//third-party/rust:serde",
         "fbsource//third-party/rust:serde_json",
         "//common/rust/shed/facet:facet",
+        "//common/rust/shed/futures_stats:futures_stats",
         "//common/rust/shed/sql:sql",
         "//eden/mononoke/bonsai_hg_mapping:bonsai_hg_mapping",
         "//eden/mononoke/commit_cloud/helpers:commit_cloud_helpers",

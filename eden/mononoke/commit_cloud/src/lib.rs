@@ -12,7 +12,6 @@ pub mod smartlog;
 pub mod sql;
 use std::fmt::Display;
 use std::sync::Arc;
-use std::time::Instant;
 
 use anyhow::bail;
 use anyhow::ensure;
@@ -31,6 +30,7 @@ use edenapi_types::ReferencesData;
 use edenapi_types::UpdateReferencesParams;
 use edenapi_types::WorkspaceData;
 use facet::facet;
+use futures_stats::futures03::TimedFutureExt;
 use metaconfig_types::CommitCloudConfig;
 use mononoke_types::Timestamp;
 use permission_checker::AclProvider;
@@ -275,25 +275,27 @@ impl CommitCloud {
 
         #[cfg(fbcode_build)]
         if !self.config.disable_interngraph_notification && !initiate_workspace {
-            let now = Instant::now();
             let notification =
                 NotificationData::from_update_references_params(params.clone(), new_version);
-            let _ = publish_single_update(
+            let (stats, res) = publish_single_update(
                 notification,
                 &cc_ctx.workspace.clone(),
                 &cc_ctx.reponame.clone(),
                 self.ctx.fb,
             )
-            .await?;
-            self.ctx.scuba().clone().log_with_msg(
-                "Sent interngraph notification",
-                format!(
-                    "For workspace {} in repo {} took {} ms",
-                    cc_ctx.workspace,
-                    cc_ctx.reponame,
-                    now.elapsed().as_millis()
-                ),
-            );
+            .timed()
+            .await;
+            self.ctx
+                .scuba()
+                .clone()
+                .add_future_stats(&stats)
+                .log_with_msg(
+                    "commit cloud: sent interngraph notification",
+                    format!(
+                        "For workspace {} in repo {} with response {}",
+                        cc_ctx.workspace, cc_ctx.reponame, res?
+                    ),
+                );
         }
         Ok(ReferencesData {
             version: new_version,
