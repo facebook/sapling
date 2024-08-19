@@ -25,6 +25,7 @@ use mononoke_api::repo::RepoContextBuilder;
 use mononoke_api::BookmarkKey;
 use mononoke_api::MononokeError;
 use mononoke_types::ChangesetId;
+use protocol::bookmarks_provider::wait_for_bookmark_move;
 use repo_authorization::AuthorizationContext;
 
 use super::GitMappingsStore;
@@ -221,6 +222,10 @@ async fn set_ref_inner(
         repo.bonsai_tag_mapping()
             .delete_mappings_by_name(vec![bookmark_key.name().to_string()])
             .await?;
+    }
+    // If requested, let's wait for the bookmark move to get reflected in WBC
+    if request_context.pushvars.wait_for_wbc_update() {
+        wait_for_bookmark_move(&ctx, &repo, &bookmark_key, old_changeset).await?;
     }
     Ok(())
 }

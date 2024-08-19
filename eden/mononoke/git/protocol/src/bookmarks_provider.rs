@@ -117,3 +117,37 @@ async fn list_bookmarks(
         }
     }
 }
+
+/// Function that waits for the WBC to move past the given bookmark value
+pub async fn wait_for_bookmark_move(
+    ctx: &CoreContext,
+    repo: &impl Repo,
+    bookmark: &BookmarkKey,
+    old_bookmark_val: Option<ChangesetId>,
+) -> Result<()> {
+    loop {
+        let new_bookmark_val = repo.bookmarks_cache().get(ctx, bookmark).await?;
+        match (old_bookmark_val, new_bookmark_val) {
+            (Some(old), Some(new)) => {
+                if old == new {
+                    continue; // Retring the loop immediately is fine since this is in-memory access                    
+                } else {
+                    return Ok(());
+                }
+            }
+            (Some(_), None) => {
+                // The bookmark appears to be deleted and WBC caught up with that change
+                return Ok(());
+            }
+            (None, Some(_)) => {
+                // The bookmark appears to be created and WBC caught up with that change
+                return Ok(());
+            }
+            (None, None) => {
+                // The operation is a bookmark create which still hasn't happened as per WBC
+                // Retry until it does.
+                continue;
+            }
+        }
+    }
+}
