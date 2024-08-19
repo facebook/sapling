@@ -110,7 +110,7 @@ pub(crate) struct SourceControlServiceImpl {
     identity_proxy_checker: Arc<ConnectionSecurityChecker>,
 }
 
-pub(crate) struct SourceControlServiceThriftImpl(SourceControlServiceImpl);
+pub(crate) struct SourceControlServiceThriftImpl(Arc<SourceControlServiceImpl>);
 
 impl SourceControlServiceImpl {
     pub fn new(
@@ -143,7 +143,7 @@ impl SourceControlServiceImpl {
     }
 
     pub(crate) fn thrift_server(&self) -> SourceControlServiceThriftImpl {
-        SourceControlServiceThriftImpl(self.clone())
+        SourceControlServiceThriftImpl(Arc::new(self.clone()))
     }
 
     pub(crate) async fn create_ctx(
@@ -796,13 +796,14 @@ macro_rules! impl_thrift_methods {
                 'req_ctxt: 'async_trait,
                 Self: Sync + 'async_trait,
             {
+                let svc = self.0.clone();
                 let handler = async move {
-                    let ctx = create_ctx!(self.0, $method_name, req_ctxt, $( $param_name ),*).await?;
+                    let ctx = create_ctx!(svc, $method_name, req_ctxt, $( $param_name ),*).await?;
                     let start_mem_stats = log_start(&ctx, stringify!($method_name));
                     STATS::total_request_start.add_value(1);
                     let (stats, res) = async {
                         check_memory_usage(&ctx, stringify!($method_name), start_mem_stats.as_ref())?;
-                        (self.0).$method_name(ctx.clone(), $( $param_name ),* ).await
+                        svc.$method_name(ctx.clone(), $( $param_name ),* ).await
                     }
                     .timed()
                     .on_cancel_with_data(|stats| log_cancelled(&ctx, stringify!($method_name), &stats, start_mem_stats.as_ref()))
