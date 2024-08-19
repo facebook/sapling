@@ -477,11 +477,11 @@ class EdenConfig : private ConfigSettingManager {
    * Controls if RocksDbLocalStore operations should run asynchronously or
    * synchronously.
    *
-   * This is a temporary option to help us mitigate 433447.
+   * This is a temporary option to help us mitigate S433447.
    */
   ConfigSetting<bool> asyncRocksDbLocalStore{
       "store:async-rocksdb-local-store",
-      true,
+      false,
       this};
 
   // [fuse]
