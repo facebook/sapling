@@ -46,6 +46,8 @@ use edenapi_types::HistoryEntry;
 use edenapi_types::LandStackResponse;
 use edenapi_types::LookupResponse;
 use edenapi_types::ReferencesDataResponse;
+use edenapi_types::RenameWorkspaceRequest;
+use edenapi_types::RenameWorkspaceResponse;
 use edenapi_types::SaplingRemoteApiServerError;
 use edenapi_types::SetBookmarkResponse;
 use edenapi_types::SuffixQueryResponse;
@@ -435,6 +437,14 @@ pub trait SaplingRemoteApi: Send + Sync + 'static {
         &self,
         data: UpdateArchiveParams,
     ) -> Result<UpdateArchiveResponse, SaplingRemoteApiError> {
+        let _ = data;
+        Err(SaplingRemoteApiError::NotSupported)
+    }
+
+    async fn cloud_rename_workspace(
+        &self,
+        data: RenameWorkspaceRequest,
+    ) -> Result<RenameWorkspaceResponse, SaplingRemoteApiError> {
         let _ = data;
         Err(SaplingRemoteApiError::NotSupported)
     }

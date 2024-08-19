@@ -56,6 +56,8 @@ use edenapi_types::HistoryEntry;
 use edenapi_types::Key;
 use edenapi_types::LandStackResponse;
 use edenapi_types::ReferencesDataResponse;
+use edenapi_types::RenameWorkspaceRequest;
+use edenapi_types::RenameWorkspaceResponse;
 use edenapi_types::SetBookmarkResponse;
 use edenapi_types::SnapshotRawData;
 use edenapi_types::SuffixQueryResponse;
@@ -599,6 +601,10 @@ py_class!(pub class client |py| {
     -> PyResult<Serde<UpdateArchiveResponse>>
     {
         self.inner(py).as_ref().cloud_update_archive_py(data, py)
+    }
+
+    def cloudrenameworkspace(&self, data: Serde<RenameWorkspaceRequest>) -> PyResult<Serde<RenameWorkspaceResponse>> {
+        self.inner(py).as_ref().cloud_rename_workspace_py(data, py)
     }
 });
 

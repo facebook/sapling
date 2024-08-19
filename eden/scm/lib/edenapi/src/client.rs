@@ -77,6 +77,8 @@ use edenapi_types::LookupResponse;
 use edenapi_types::LookupResult;
 use edenapi_types::PushVar;
 use edenapi_types::ReferencesDataResponse;
+use edenapi_types::RenameWorkspaceRequest;
+use edenapi_types::RenameWorkspaceResponse;
 use edenapi_types::SaplingRemoteApiServerError;
 use edenapi_types::ServerError;
 use edenapi_types::SetBookmarkRequest;
@@ -181,6 +183,7 @@ mod paths {
     pub const CLOUD_WORKSPACES: &str = "cloud/workspaces";
     pub const CLOUD_UPDATE_ARCHIVE: &str = "cloud/update_archive";
     pub const CLOUD_UPDATE_REFERENCES: &str = "cloud/update_references";
+    pub const CLOUD_RENAME_WORKSPACE: &str = "cloud/rename_workspace";
     pub const CLOUD_REFERENCES: &str = "cloud/references";
     pub const CLOUD_SMARTLOG: &str = "cloud/smartlog";
     pub const CLOUD_SHARE_WORKSPACE: &str = "cloud/share_workspace";
@@ -1200,6 +1203,24 @@ impl Client {
 
         self.fetch_single::<UpdateArchiveResponse>(request).await
     }
+
+    async fn cloud_rename_workspace_attempt(
+        &self,
+        data: RenameWorkspaceRequest,
+    ) -> Result<RenameWorkspaceResponse, SaplingRemoteApiError> {
+        tracing::info!(
+            "Requesting cloud rename workspace for the workspace '{}' in the repo '{}' ",
+            data.workspace,
+            data.reponame
+        );
+        let url = self.build_url(paths::CLOUD_RENAME_WORKSPACE)?;
+        let request = self
+            .configure_request(self.inner.client.post(url))?
+            .cbor(&data.to_wire())
+            .map_err(SaplingRemoteApiError::RequestSerializationFailed)?;
+
+        self.fetch_single::<RenameWorkspaceResponse>(request).await
+    }
 }
 
 #[async_trait]
@@ -1871,6 +1892,14 @@ impl SaplingRemoteApi for Client {
         data: UpdateArchiveParams,
     ) -> Result<UpdateArchiveResponse, SaplingRemoteApiError> {
         self.with_retry(|this| this.cloud_update_archive_attempt(data.clone()).boxed())
+            .await
+    }
+
+    async fn cloud_rename_workspace(
+        &self,
+        data: RenameWorkspaceRequest,
+    ) -> Result<RenameWorkspaceResponse, SaplingRemoteApiError> {
+        self.with_retry(|this| this.cloud_rename_workspace_attempt(data.clone()).boxed())
             .await
     }
 

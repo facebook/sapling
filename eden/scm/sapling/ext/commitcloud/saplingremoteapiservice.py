@@ -250,7 +250,17 @@ class SaplingRemoteAPIService(baseservice.BaseService):
 
     def renameworkspace(self, reponame, workspace, new_workspace):
         """Rename the given workspace"""
-        return self.fallback.renameworkspace(reponame, workspace, new_workspace)
+        self.ui.debug(
+            "sending 'rename_workspace' request on SaplingRemoteAPI\n",
+            component="commitcloud",
+        )
+
+        data = {
+            "reponame": reponame,
+            "workspace": workspace,
+            "new_workspace": new_workspace,
+        }
+        self._getdatafromresponse(self.repo.edenapi.cloudrenameworkspace(data))
 
     def shareworkspace(self, reponame, workspace):
         """Enable sharing for the given workspace"""
