@@ -7,6 +7,8 @@
 
 use borrowed::borrowed;
 use commit_cloud::ctx::CommitCloudContext;
+use commit_cloud::references::local_bookmarks::LocalBookmarksMap;
+use commit_cloud::references::remote_bookmarks::RemoteBookmarksMap;
 use commit_cloud::CommitCloudRef;
 use commit_cloud::Phase;
 use commit_graph::CommitGraphRef;
@@ -17,11 +19,13 @@ use edenapi_types::GetSmartlogParams;
 use edenapi_types::HgId;
 use edenapi_types::ReferencesData;
 use edenapi_types::SmartlogData;
+use edenapi_types::SmartlogNode;
 use edenapi_types::UpdateArchiveParams;
 use edenapi_types::UpdateReferencesParams;
 use edenapi_types::WorkspaceData;
 use futures::TryStreamExt;
 use futures_util::future::try_join_all;
+use mercurial_types::HgChangesetId;
 use mononoke_api::ChangesetContext;
 use mononoke_api::ChangesetSpecifier;
 use mononoke_api::MononokeError;
@@ -118,10 +122,30 @@ impl HgRepoContext {
             .await?;
         let hg_ids = raw_data.collapse_into_vec();
 
+        let nodes = self
+            .form_smartlog_with_info(
+                hg_ids,
+                raw_data.local_bookmarks.unwrap_or_default(),
+                raw_data.remote_bookmarks.unwrap_or_default(),
+            )
+            .await?;
+
+        Ok(SmartlogData {
+            nodes,
+            version: None,
+            timestamp: None,
+        })
+    }
+
+    async fn form_smartlog_with_info(
+        &self,
+        hg_ids: Vec<HgChangesetId>,
+        local_bookmarks: LocalBookmarksMap,
+        remote_bookmarks: RemoteBookmarksMap,
+    ) -> anyhow::Result<Vec<SmartlogNode>> {
         let ctx = self.ctx();
         let repo = self.repo_ctx().repo();
         let cs_ids = self.convert_changeset_ids(hg_ids).await?;
-
         let public_frontier = repo
             .commit_graph()
             .ancestors_frontier_with(ctx, cs_ids.clone(), |csid| {
@@ -159,8 +183,6 @@ impl HgRepoContext {
         )
         .await?;
         let mut nodes = Vec::new();
-        let bookmarks = raw_data.local_bookmarks.unwrap_or_default();
-        let remote_bookmarks = raw_data.remote_bookmarks.unwrap_or_default();
 
         for (phase, changesets) in [
             (Phase::Public, public_commits_ctx),
@@ -181,19 +203,14 @@ impl HgRepoContext {
                         &hgid,
                         &hg_parents,
                         &changeset.changeset_info().await?,
-                        &bookmarks.get(&hgid).cloned(),
+                        &local_bookmarks.get(&hgid).cloned(),
                         &remote_bookmarks.get(&hgid).cloned(),
                         &phase,
                     )?)
                 }
             }
         }
-
-        Ok(SmartlogData {
-            nodes,
-            version: None,
-            timestamp: None,
-        })
+        Ok(nodes)
     }
 
     pub async fn cloud_share_workspace(
@@ -219,6 +236,7 @@ impl HgRepoContext {
             .share_workspace(&ctx)
             .await?)
     }
+
     pub async fn cloud_update_archive(
         &self,
         params: &UpdateArchiveParams,
