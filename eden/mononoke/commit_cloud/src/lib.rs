@@ -35,7 +35,9 @@ use metaconfig_types::CommitCloudConfig;
 use mononoke_types::Timestamp;
 use permission_checker::AclProvider;
 use permission_checker::BoxPermissionChecker;
+use references::rename_all;
 use repo_derived_data::ArcRepoDerivedData;
+use sql::versions_ops::UpdateVersionArgs;
 
 use crate::ctx::CommitCloudContext;
 use crate::references::cast_references_data;
@@ -46,7 +48,6 @@ use crate::sql::ops::Get;
 use crate::sql::ops::Insert;
 use crate::sql::ops::SqlCommitCloud;
 use crate::sql::ops::Update;
-use crate::sql::versions_ops::UpdateVersionArgs;
 
 #[facet]
 pub struct CommitCloud {
@@ -378,6 +379,41 @@ impl CommitCloud {
                 ),
             }),
         }
+    }
+
+    pub async fn rename_workspace(
+        &self,
+        cc_ctx: CommitCloudContext,
+        new_workspace: &str,
+    ) -> anyhow::Result<String> {
+        ensure!(
+            !new_workspace.is_empty(),
+            "'rename_workspace' failed: new workspace name cannot be empty"
+        );
+
+        ensure!(
+            WorkspaceVersion::fetch_from_db(&self.storage, new_workspace, &cc_ctx.reponame)
+                .await?
+                .is_none(),
+            format!(
+                "'rename_workspace' failed: workspace {} already exists",
+                new_workspace
+            ),
+        );
+
+        let cri = self.ctx.client_request_info();
+        let (txn, affected_rows) = rename_all(&self.storage, cri, &cc_ctx, new_workspace).await?;
+
+        ensure!(
+            affected_rows > 0,
+            format!(
+                "'rename_workspace' failed: workspace {} does not exist",
+                cc_ctx.workspace
+            )
+        );
+        txn.commit().await?;
+
+        Ok("'rename_workspace' succeeded".to_string())
     }
 
     pub async fn update_workspace_archive(

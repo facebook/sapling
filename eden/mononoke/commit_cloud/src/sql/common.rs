@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct UpdateWorkspaceNameArgs {
     pub new_workspace: String,
 }

@@ -18,9 +18,11 @@ use edenapi_types::GetSmartlogFlag;
 use edenapi_types::HgId;
 use edenapi_types::ReferencesData;
 use edenapi_types::UpdateReferencesParams;
+use history::WorkspaceHistory;
 use mercurial_types::HgChangesetId;
 use repo_derived_data::ArcRepoDerivedData;
 use sql::Transaction;
+use versions::WorkspaceVersion;
 
 use crate::references::heads::update_heads;
 use crate::references::heads::WorkspaceHead;
@@ -32,9 +34,13 @@ use crate::references::remote_bookmarks::RemoteBookmarksMap;
 use crate::references::remote_bookmarks::WorkspaceRemoteBookmark;
 use crate::references::snapshots::update_snapshots;
 use crate::references::snapshots::WorkspaceSnapshot;
+use crate::sql::checkout_locations_ops::WorkspaceCheckoutLocation;
+use crate::sql::common::UpdateWorkspaceNameArgs;
 use crate::sql::ops::Get;
 use crate::sql::ops::GetAsMap;
 use crate::sql::ops::SqlCommitCloud;
+use crate::sql::ops::Update;
+use crate::sql::versions_ops::UpdateVersionArgs;
 use crate::CommitCloudContext;
 
 pub mod heads;
@@ -247,4 +253,40 @@ pub(crate) async fn update_references_data(
     )
     .await?;
     Ok(txn)
+}
+
+pub async fn rename_all(
+    sql: &SqlCommitCloud,
+    cri: Option<&ClientRequestInfo>,
+    cc_ctx: &CommitCloudContext,
+    new_workspace: &str,
+) -> anyhow::Result<(Transaction, u64)> {
+    let args = UpdateWorkspaceNameArgs {
+        new_workspace: new_workspace.to_string(),
+    };
+    let mut txn = sql.connections.write_connection.start_transaction().await?;
+
+    (txn, _) = Update::<WorkspaceHead>::update(sql, txn, cri, cc_ctx.clone(), args.clone()).await?;
+    (txn, _) =
+        Update::<WorkspaceLocalBookmark>::update(sql, txn, cri, cc_ctx.clone(), args.clone())
+            .await?;
+    (txn, _) =
+        Update::<WorkspaceRemoteBookmark>::update(sql, txn, cri, cc_ctx.clone(), args.clone())
+            .await?;
+    (txn, _) =
+        Update::<WorkspaceSnapshot>::update(sql, txn, cri, cc_ctx.clone(), args.clone()).await?;
+    (txn, _) =
+        Update::<WorkspaceCheckoutLocation>::update(sql, txn, cri, cc_ctx.clone(), args.clone())
+            .await?;
+    (txn, _) =
+        Update::<WorkspaceHistory>::update(sql, txn, cri, cc_ctx.clone(), args.clone()).await?;
+    let (txn, affected_rows) = Update::<WorkspaceVersion>::update(
+        sql,
+        txn,
+        cri,
+        cc_ctx.clone(),
+        UpdateVersionArgs::WorkspaceName(new_workspace.to_string()),
+    )
+    .await?;
+    Ok((txn, affected_rows))
 }
