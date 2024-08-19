@@ -447,22 +447,6 @@ pub enum XRepoLookupExactBehaviour {
 }
 
 impl Repo {
-    /// Construct a new Repo based on an existing one with a bubble opened.
-    pub fn with_bubble(&self, bubble: Bubble) -> Self {
-        let repo_blobstore = Arc::new(bubble.wrap_repo_blobstore(self.repo_blobstore().clone()));
-        let commit_graph = Arc::new(bubble.repo_commit_graph(self));
-        let commit_graph_writer = bubble.repo_commit_graph_writer(self);
-        let repo_derived_data = Arc::new(self.repo_derived_data().for_bubble(bubble));
-
-        Self {
-            repo_blobstore,
-            commit_graph,
-            commit_graph_writer,
-            repo_derived_data,
-            ..self.clone()
-        }
-    }
-
     /// The name of the underlying repo.
     pub fn name(&self) -> &str {
         self.repo_identity().name()
@@ -682,6 +666,29 @@ impl Repo {
         cs_id: &ChangesetId,
     ) -> Result<Generation, Error> {
         self.commit_graph().changeset_generation(ctx, *cs_id).await
+    }
+}
+
+/// Trait for repo objects that can be wrapped in a bubble.
+trait RepoWithBubble {
+    /// Construct a new Repo based on an existing one with a bubble opened.
+    fn with_bubble(&self, bubble: Bubble) -> Self;
+}
+
+impl RepoWithBubble for Repo {
+    fn with_bubble(&self, bubble: Bubble) -> Self {
+        let repo_blobstore = Arc::new(bubble.wrap_repo_blobstore(self.repo_blobstore().clone()));
+        let commit_graph = Arc::new(bubble.repo_commit_graph(self));
+        let commit_graph_writer = bubble.repo_commit_graph_writer(self);
+        let repo_derived_data = Arc::new(self.repo_derived_data().for_bubble(bubble));
+
+        Self {
+            repo_blobstore,
+            commit_graph,
+            commit_graph_writer,
+            repo_derived_data,
+            ..self.clone()
+        }
     }
 }
 
