@@ -291,6 +291,27 @@ pub struct UpdateArchiveResponse {
     pub data: Result<String, ServerError>,
 }
 
+#[auto_wire]
+#[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
+pub struct RenameWorkspaceRequest {
+    #[id(0)]
+    pub workspace: String,
+    #[id(1)]
+    pub reponame: String,
+    #[id(2)]
+    pub new_workspace: String,
+}
+
+#[auto_wire]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
+pub struct RenameWorkspaceResponse {
+    #[id(0)]
+    #[no_default]
+    pub data: Result<String, ServerError>,
+}
+
 impl RemoteBookmark {
     pub fn full_name(&self) -> String {
         format!("{}/{}", self.remote, self.name)

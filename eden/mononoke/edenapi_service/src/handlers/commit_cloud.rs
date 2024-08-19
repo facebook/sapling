@@ -14,6 +14,8 @@ use edenapi_types::CloudWorkspacesRequest;
 use edenapi_types::GetReferencesParams;
 use edenapi_types::GetSmartlogParams;
 use edenapi_types::ReferencesDataResponse;
+use edenapi_types::RenameWorkspaceRequest;
+use edenapi_types::RenameWorkspaceResponse;
 use edenapi_types::ServerError;
 use edenapi_types::SmartlogDataResponse;
 use edenapi_types::UpdateArchiveParams;
@@ -36,6 +38,7 @@ pub struct CommitCloudReferences;
 pub struct CommitCloudUpdateReferences;
 pub struct CommitCloudSmartlog;
 pub struct CommitCloudShareWorkspace;
+pub struct CommitCloudRenameWorkspace;
 
 pub struct CommitCloudUpdateArchive;
 
@@ -251,6 +254,37 @@ async fn update_archive(
     Ok(UpdateArchiveResponse {
         data: repo
             .cloud_update_archive(&request)
+            .await
+            .map_err(ServerError::from),
+    })
+}
+
+#[async_trait]
+impl SaplingRemoteApiHandler for CommitCloudRenameWorkspace {
+    type Request = RenameWorkspaceRequest;
+    type Response = RenameWorkspaceResponse;
+
+    const HTTP_METHOD: hyper::Method = hyper::Method::POST;
+    const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::CloudRenameWorkspace;
+    const ENDPOINT: &'static str = "/cloud/rename_workspace";
+
+    async fn handler(
+        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
+        request: Self::Request,
+    ) -> HandlerResult<'async_trait, Self::Response> {
+        let repo = ectx.repo();
+        let res = rename_workspace(request, repo).boxed();
+        Ok(stream::once(res).boxed())
+    }
+}
+
+async fn rename_workspace(
+    request: RenameWorkspaceRequest,
+    repo: HgRepoContext,
+) -> anyhow::Result<RenameWorkspaceResponse, Error> {
+    Ok(RenameWorkspaceResponse {
+        data: repo
+            .cloud_rename_workspace(&request)
             .await
             .map_err(ServerError::from),
     })

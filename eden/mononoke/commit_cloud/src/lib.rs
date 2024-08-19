@@ -383,7 +383,7 @@ impl CommitCloud {
 
     pub async fn rename_workspace(
         &self,
-        cc_ctx: CommitCloudContext,
+        cc_ctx: &CommitCloudContext,
         new_workspace: &str,
     ) -> anyhow::Result<String> {
         ensure!(

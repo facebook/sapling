@@ -18,6 +18,7 @@ use edenapi_types::GetReferencesParams;
 use edenapi_types::GetSmartlogParams;
 use edenapi_types::HgId;
 use edenapi_types::ReferencesData;
+use edenapi_types::RenameWorkspaceRequest;
 use edenapi_types::SmartlogData;
 use edenapi_types::SmartlogNode;
 use edenapi_types::UpdateArchiveParams;
@@ -258,6 +259,25 @@ impl HgRepoContext {
             .repo()
             .commit_cloud()
             .update_workspace_archive(&cc_ctx, params.archived)
+            .await?)
+    }
+
+    pub async fn cloud_rename_workspace(
+        &self,
+        request: &RenameWorkspaceRequest,
+    ) -> Result<String, MononokeError> {
+        let mut ctx = CommitCloudContext::new(&request.workspace, &request.reponame)?;
+
+        let authz = self.repo_ctx().authorization_context();
+        authz
+            .require_commitcloud_operation(self.ctx(), &self.repo_ctx().repo(), &mut ctx, "write")
+            .await?;
+
+        Ok(self
+            .repo_ctx()
+            .repo()
+            .commit_cloud()
+            .rename_workspace(&ctx, &request.new_workspace)
             .await?)
     }
 }

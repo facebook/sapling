@@ -90,6 +90,7 @@ pub enum SaplingRemoteApiMethod {
     Bookmarks,
     Capabilities,
     CloudReferences,
+    CloudRenameWorkspace,
     CloudShareWorkspace,
     CloudSmartlog,
     CloudUpdateArchive,
@@ -129,6 +130,7 @@ impl fmt::Display for SaplingRemoteApiMethod {
             Self::Bookmarks => "bookmarks",
             Self::Capabilities => "capabilities",
             Self::CloudReferences => "cloud_references",
+            Self::CloudRenameWorkspace => "cloud_rename_workspace",
             Self::CloudShareWorkspace => "cloud_share_workspace",
             Self::CloudSmartlog => "cloud_smartlog",
             Self::CloudUpdateArchive => "cloud_update_archive",
@@ -426,6 +428,7 @@ pub fn build_router(ctx: ServerContext) -> Router {
         Handlers::setup::<bookmarks::BookmarksHandler>(route);
         Handlers::setup::<bookmarks::SetBookmarkHandler>(route);
         Handlers::setup::<commit_cloud::CommitCloudReferences>(route);
+        Handlers::setup::<commit_cloud::CommitCloudRenameWorkspace>(route);
         Handlers::setup::<commit_cloud::CommitCloudShareWorkspace>(route);
         Handlers::setup::<commit_cloud::CommitCloudSmartlog>(route);
         Handlers::setup::<commit_cloud::CommitCloudUpdateArchive>(route);
