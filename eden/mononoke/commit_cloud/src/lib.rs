@@ -8,6 +8,7 @@
 #![feature(trait_alias)]
 pub mod ctx;
 pub mod references;
+pub mod smartlog;
 pub mod sql;
 use std::fmt::Display;
 use std::sync::Arc;
@@ -16,7 +17,6 @@ use std::time::Instant;
 use anyhow::bail;
 use anyhow::ensure;
 use bonsai_hg_mapping::BonsaiHgMapping;
-use changeset_info::ChangesetInfo;
 use commit_cloud_helpers::make_workspace_acl_name;
 #[cfg(fbcode_build)]
 use commit_cloud_intern_utils::acl_check::ACL_LINK;
@@ -25,17 +25,12 @@ use commit_cloud_intern_utils::interngraph_publisher::publish_single_update;
 #[cfg(fbcode_build)]
 use commit_cloud_intern_utils::notification::NotificationData;
 use context::CoreContext;
-use edenapi_types::cloud::RemoteBookmark;
 use edenapi_types::cloud::WorkspaceSharingData;
 use edenapi_types::GetReferencesParams;
-use edenapi_types::GetSmartlogFlag;
-use edenapi_types::HgId;
 use edenapi_types::ReferencesData;
-use edenapi_types::SmartlogNode;
 use edenapi_types::UpdateReferencesParams;
 use edenapi_types::WorkspaceData;
 use facet::facet;
-use mercurial_types::HgChangesetId;
 use metaconfig_types::CommitCloudConfig;
 use mononoke_types::Timestamp;
 use permission_checker::AclProvider;
@@ -47,7 +42,6 @@ use crate::references::cast_references_data;
 use crate::references::fetch_references;
 use crate::references::update_references_data;
 use crate::references::versions::WorkspaceVersion;
-use crate::references::RawSmartlogData;
 use crate::sql::ops::Get;
 use crate::sql::ops::Insert;
 use crate::sql::ops::SqlCommitCloud;
@@ -384,45 +378,6 @@ impl CommitCloud {
                 ),
             }),
         }
-    }
-
-    pub async fn get_smartlog_raw_info(
-        &self,
-        cc_ctx: &CommitCloudContext,
-        flags: &[GetSmartlogFlag],
-    ) -> anyhow::Result<RawSmartlogData> {
-        RawSmartlogData::fetch_smartlog_references(
-            &CommitCloudContext::new(&cc_ctx.workspace, &cc_ctx.reponame)?,
-            &self.storage,
-            flags,
-        )
-        .await
-    }
-
-    pub fn make_smartlog_node(
-        &self,
-        hgid: &HgChangesetId,
-        parents: &Vec<HgId>,
-        node: &ChangesetInfo,
-        local_bookmarks: &Option<Vec<String>>,
-        remote_bookmarks: &Option<Vec<RemoteBookmark>>,
-        phase: &Phase,
-    ) -> anyhow::Result<SmartlogNode> {
-        let author = node.author();
-        let date = node.author_date().as_chrono().timestamp();
-        let message = node.message();
-
-        let node = SmartlogNode {
-            node: (*hgid).into(),
-            phase: phase.to_string(),
-            author: author.to_string(),
-            date,
-            message: message.to_string(),
-            parents: parents.to_owned(),
-            bookmarks: local_bookmarks.to_owned().unwrap_or_default(),
-            remote_bookmarks: remote_bookmarks.to_owned(),
-        };
-        Ok(node)
     }
 
     pub async fn update_workspace_archive(
