@@ -19,6 +19,7 @@ rust_library(
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:thiserror",
+        "//common/rust/shed/futures_stats:futures_stats",
         "//eden/mononoke/acl_regions:acl_regions",
         "//eden/mononoke/bookmarks:bookmarks",
         "//eden/mononoke/commit_cloud:commit_cloud",
