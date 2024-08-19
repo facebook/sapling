@@ -190,7 +190,7 @@ impl Mononoke {
     /// Report configured monitoring stats
     pub async fn report_monitoring_stats(&self, ctx: &CoreContext) -> Result<(), MononokeError> {
         for repo in self.repos.iter() {
-            repo.report_monitoring_stats(ctx).await?;
+            crate::repo::report_monitoring_stats(ctx, &repo).await?;
         }
 
         Ok(())

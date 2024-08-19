@@ -43,6 +43,7 @@ use bookmarks::BookmarksRef;
 pub use bookmarks::Freshness as BookmarkFreshness;
 use bookmarks::Freshness;
 use bookmarks_cache::BookmarksCache;
+use bookmarks_cache::BookmarksCacheRef;
 use bulk_derivation::BulkDerivation;
 use bytes::Bytes;
 use cacheblob::LeaseOps;
@@ -96,13 +97,13 @@ use mercurial_derivation::MappedHgChangesetId;
 use mercurial_mutation::HgMutationStore;
 use mercurial_types::Globalrev;
 use metaconfig_types::RepoConfig;
+use metaconfig_types::RepoConfigRef;
 use mononoke_repos::MononokeRepos;
 use mononoke_types::hash::Blake3;
 use mononoke_types::hash::GitSha1;
 use mononoke_types::hash::Sha1;
 use mononoke_types::hash::Sha256;
 use mononoke_types::ContentId;
-use mononoke_types::Generation;
 use mononoke_types::RepositoryId;
 use mononoke_types::Svnrev;
 use mononoke_types::Timestamp;
@@ -481,192 +482,213 @@ impl Repo {
     pub fn config(&self) -> &RepoConfig {
         &self.repo_config
     }
+}
 
-    pub async fn report_monitoring_stats(&self, ctx: &CoreContext) -> Result<(), MononokeError> {
-        match self.config().source_control_service_monitoring.as_ref() {
-            None => {}
-            Some(monitoring_config) => {
-                for bookmark in monitoring_config.bookmarks_to_report_age.iter() {
-                    self.report_bookmark_age_difference(ctx, bookmark).await?;
-                }
+pub trait MonitoredRepo = BookmarksCacheRef
+    + BookmarksRef
+    + RepoBlobstoreRef
+    + RepoIdentityRef
+    + RepoConfigRef
+    + CommitGraphRef;
+
+pub async fn report_monitoring_stats(
+    ctx: &CoreContext,
+    repo: &impl MonitoredRepo,
+) -> Result<(), MononokeError> {
+    match repo
+        .repo_config()
+        .source_control_service_monitoring
+        .as_ref()
+    {
+        None => {}
+        Some(monitoring_config) => {
+            for bookmark in monitoring_config.bookmarks_to_report_age.iter() {
+                report_bookmark_age_difference(ctx, repo, bookmark).await?;
             }
         }
-
-        Ok(())
     }
 
-    fn report_bookmark_missing_from_cache(&self, ctx: &CoreContext, bookmark: &BookmarkKey) {
-        error!(
+    Ok(())
+}
+
+fn report_bookmark_missing_from_cache(
+    ctx: &CoreContext,
+    repo: &impl RepoIdentityRef,
+    bookmark: &BookmarkKey,
+) {
+    error!(
+        ctx.logger(),
+        "Monitored bookmark does not exist in the cache: {}, repo: {}",
+        bookmark,
+        repo.repo_identity().name()
+    );
+
+    STATS::missing_from_cache.set_value(
+        ctx.fb,
+        1,
+        (repo.repo_identity().id(), bookmark.to_string()),
+    );
+}
+
+fn report_bookmark_missing_from_repo(
+    ctx: &CoreContext,
+    repo: &impl RepoIdentityRef,
+    bookmark: &BookmarkKey,
+) {
+    error!(
+        ctx.logger(),
+        "Monitored bookmark does not exist in the repo: {}", bookmark
+    );
+
+    STATS::missing_from_repo.set_value(
+        ctx.fb,
+        1,
+        (repo.repo_identity().id(), bookmark.to_string()),
+    );
+}
+
+fn report_bookmark_staleness(
+    ctx: &CoreContext,
+    repo: &impl RepoIdentityRef,
+    bookmark: &BookmarkKey,
+    staleness: i64,
+) {
+    // Don't log if staleness is 0 to make output less spammy
+    if staleness > 0 {
+        debug!(
             ctx.logger(),
-            "Monitored bookmark does not exist in the cache: {}, repo: {}",
+            "Reporting staleness of {} in repo {} to be {}s",
             bookmark,
-            self.repo_identity().name()
-        );
-
-        STATS::missing_from_cache.set_value(
-            ctx.fb,
-            1,
-            (self.repo_identity().id(), bookmark.to_string()),
+            repo.repo_identity().id(),
+            staleness
         );
     }
 
-    fn report_bookmark_missing_from_repo(&self, ctx: &CoreContext, bookmark: &BookmarkKey) {
-        error!(
-            ctx.logger(),
-            "Monitored bookmark does not exist in the repo: {}", bookmark
-        );
+    STATS::staleness.set_value(
+        ctx.fb,
+        staleness,
+        (repo.repo_identity().id(), bookmark.to_string()),
+    );
+}
 
-        STATS::missing_from_repo.set_value(
-            ctx.fb,
-            1,
-            (self.repo_identity().id(), bookmark.to_string()),
-        );
+async fn report_bookmark_age_difference(
+    ctx: &CoreContext,
+    repo: &impl MonitoredRepo,
+    bookmark: &BookmarkKey,
+) -> Result<(), MononokeError> {
+    let maybe_bcs_id_from_service = repo.bookmarks_cache().get(ctx, bookmark).await?;
+    let maybe_bcs_id_from_blobrepo = repo.bookmarks().get(ctx.clone(), bookmark).await?;
+
+    if maybe_bcs_id_from_blobrepo.is_none() {
+        report_bookmark_missing_from_repo(ctx, repo, bookmark);
     }
 
-    fn report_bookmark_staleness(&self, ctx: &CoreContext, bookmark: &BookmarkKey, staleness: i64) {
-        // Don't log if staleness is 0 to make output less spammy
-        if staleness > 0 {
+    if maybe_bcs_id_from_service.is_none() {
+        report_bookmark_missing_from_cache(ctx, repo, bookmark);
+    }
+
+    if let (Some(service_bcs_id), Some(blobrepo_bcs_id)) =
+        (maybe_bcs_id_from_service, maybe_bcs_id_from_blobrepo)
+    {
+        // We report the difference between current time (i.e. SystemTime::now())
+        // and timestamp of the first child of bookmark value from cache (see graph below)
+        //
+        //       O <- bookmark value from blobrepo
+        //       |
+        //      ...
+        //       |
+        //       O <- first child of bookmark value from cache.
+        //       |
+        //       O <- bookmark value from cache, it's outdated
+        //
+        // This way of reporting shows for how long the oldest commit not in cache hasn't been
+        // imported, and it should work correctly both for high and low commit rates.
+
+        // Do not log if there's no lag to make output less spammy
+        if blobrepo_bcs_id != service_bcs_id {
             debug!(
                 ctx.logger(),
-                "Reporting staleness of {} in repo {} to be {}s",
+                "Reporting bookmark age difference for {}: latest {} value is {}, cache points to {}",
+                repo.repo_identity().id(),
                 bookmark,
-                self.repo_identity().id(),
-                staleness
+                blobrepo_bcs_id,
+                service_bcs_id,
             );
         }
 
-        STATS::staleness.set_value(
-            ctx.fb,
-            staleness,
-            (self.repo_identity().id(), bookmark.to_string()),
-        );
+        let difference = if blobrepo_bcs_id == service_bcs_id {
+            0
+        } else {
+            let limit = 100;
+            let maybe_child =
+                try_find_child(ctx, repo, service_bcs_id, blobrepo_bcs_id, limit).await?;
+
+            // If we can't find a child of a bookmark value from cache, then it might mean
+            // that either cache is too far behind or there was a non-forward bookmark move.
+            // Either way, we can't really do much about it here, so let's just find difference
+            // between current timestamp and bookmark value from cache.
+            let compare_bcs_id = maybe_child.unwrap_or(service_bcs_id);
+
+            let compare_timestamp = compare_bcs_id
+                .load(ctx, repo.repo_blobstore())
+                .await?
+                .author_date()
+                .timestamp_secs();
+
+            let current_timestamp = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .map_err(Error::from)?;
+            let current_timestamp = current_timestamp.as_secs() as i64;
+            current_timestamp - compare_timestamp
+        };
+        report_bookmark_staleness(ctx, repo, bookmark, difference);
     }
 
-    async fn report_bookmark_age_difference(
-        &self,
-        ctx: &CoreContext,
-        bookmark: &BookmarkKey,
-    ) -> Result<(), MononokeError> {
-        let maybe_bcs_id_from_service = self.warm_bookmarks_cache.get(ctx, bookmark).await?;
-        let maybe_bcs_id_from_blobrepo = self.bookmarks().get(ctx.clone(), bookmark).await?;
+    Ok(())
+}
 
-        if maybe_bcs_id_from_blobrepo.is_none() {
-            self.report_bookmark_missing_from_repo(ctx, bookmark);
+/// Try to find a changeset that's ancestor of `descendant` and direct child of
+/// `ancestor`. Returns None if this commit doesn't exist (for example if `ancestor` is not
+/// actually an ancestor of `descendant`) or if child is too far away from descendant.
+async fn try_find_child(
+    ctx: &CoreContext,
+    repo: &impl CommitGraphRef,
+    ancestor: ChangesetId,
+    descendant: ChangesetId,
+    limit: u64,
+) -> Result<Option<ChangesetId>, Error> {
+    // This is a generation number beyond which we don't need to traverse
+    let min_gen_num = repo
+        .commit_graph()
+        .changeset_generation(ctx, ancestor)
+        .await?;
+
+    let mut ancestors = repo
+        .commit_graph()
+        .ancestors_difference_stream(ctx, vec![descendant], vec![])
+        .await?;
+
+    let mut traversed = 0;
+    while let Some(cs_id) = ancestors.next().await {
+        traversed += 1;
+        if traversed > limit {
+            return Ok(None);
         }
 
-        if maybe_bcs_id_from_service.is_none() {
-            self.report_bookmark_missing_from_cache(ctx, bookmark);
-        }
+        let cs_id = cs_id?;
+        let parents = repo.commit_graph().changeset_parents(ctx, cs_id).await?;
 
-        if let (Some(service_bcs_id), Some(blobrepo_bcs_id)) =
-            (maybe_bcs_id_from_service, maybe_bcs_id_from_blobrepo)
-        {
-            // We report the difference between current time (i.e. SystemTime::now())
-            // and timestamp of the first child of bookmark value from cache (see graph below)
-            //
-            //       O <- bookmark value from blobrepo
-            //       |
-            //      ...
-            //       |
-            //       O <- first child of bookmark value from cache.
-            //       |
-            //       O <- bookmark value from cache, it's outdated
-            //
-            // This way of reporting shows for how long the oldest commit not in cache hasn't been
-            // imported, and it should work correctly both for high and low commit rates.
-
-            // Do not log if there's no lag to make output less spammy
-            if blobrepo_bcs_id != service_bcs_id {
-                debug!(
-                    ctx.logger(),
-                    "Reporting bookmark age difference for {}: latest {} value is {}, cache points to {}",
-                    self.repo_identity().id(),
-                    bookmark,
-                    blobrepo_bcs_id,
-                    service_bcs_id,
-                );
-            }
-
-            let difference = if blobrepo_bcs_id == service_bcs_id {
-                0
-            } else {
-                let limit = 100;
-                let maybe_child = self
-                    .try_find_child(ctx, service_bcs_id, blobrepo_bcs_id, limit)
-                    .await?;
-
-                // If we can't find a child of a bookmark value from cache, then it might mean
-                // that either cache is too far behind or there was a non-forward bookmark move.
-                // Either way, we can't really do much about it here, so let's just find difference
-                // between current timestamp and bookmark value from cache.
-                let compare_bcs_id = maybe_child.unwrap_or(service_bcs_id);
-
-                let compare_timestamp = compare_bcs_id
-                    .load(ctx, self.repo_blobstore())
-                    .await?
-                    .author_date()
-                    .timestamp_secs();
-
-                let current_timestamp = SystemTime::now()
-                    .duration_since(UNIX_EPOCH)
-                    .map_err(Error::from)?;
-                let current_timestamp = current_timestamp.as_secs() as i64;
-                current_timestamp - compare_timestamp
-            };
-            self.report_bookmark_staleness(ctx, bookmark, difference);
-        }
-
-        Ok(())
-    }
-
-    /// Try to find a changeset that's ancestor of `descendant` and direct child of
-    /// `ancestor`. Returns None if this commit doesn't exist (for example if `ancestor` is not
-    /// actually an ancestor of `descendant`) or if child is too far away from descendant.
-    async fn try_find_child(
-        &self,
-        ctx: &CoreContext,
-        ancestor: ChangesetId,
-        descendant: ChangesetId,
-        limit: u64,
-    ) -> Result<Option<ChangesetId>, Error> {
-        // This is a generation number beyond which we don't need to traverse
-        let min_gen_num = self.fetch_gen_num(ctx, &ancestor).await?;
-
-        let mut ancestors = self
-            .commit_graph()
-            .ancestors_difference_stream(ctx, vec![descendant], vec![])
-            .await?;
-
-        let mut traversed = 0;
-        while let Some(cs_id) = ancestors.next().await {
-            traversed += 1;
-            if traversed > limit {
+        if parents.contains(&ancestor) {
+            return Ok(Some(cs_id));
+        } else {
+            let gen_num = repo.commit_graph().changeset_generation(ctx, cs_id).await?;
+            if gen_num < min_gen_num {
                 return Ok(None);
             }
-
-            let cs_id = cs_id?;
-            let parents = self.commit_graph().changeset_parents(ctx, cs_id).await?;
-
-            if parents.contains(&ancestor) {
-                return Ok(Some(cs_id));
-            } else {
-                let gen_num = self.fetch_gen_num(ctx, &cs_id).await?;
-                if gen_num < min_gen_num {
-                    return Ok(None);
-                }
-            }
         }
-
-        Ok(None)
     }
 
-    async fn fetch_gen_num(
-        &self,
-        ctx: &CoreContext,
-        cs_id: &ChangesetId,
-    ) -> Result<Generation, Error> {
-        self.commit_graph().changeset_generation(ctx, *cs_id).await
-    }
+    Ok(None)
 }
 
 /// Trait for repo objects that can be wrapped in a bubble.
@@ -1792,7 +1814,7 @@ mod tests {
             "7785606eb1f26ff5722c831de402350cf97052dc44bc175da6ac0d715a3dbbf6",
         )?;
 
-        let maybe_child = repo.try_find_child(&ctx, ancestor, descendant, 100).await?;
+        let maybe_child = try_find_child(&ctx, &repo, ancestor, descendant, 100).await?;
         let child = maybe_child.ok_or_else(|| anyhow!("didn't find child"))?;
         assert_eq!(
             child,
@@ -1801,7 +1823,7 @@ mod tests {
             )?
         );
 
-        let maybe_child = repo.try_find_child(&ctx, ancestor, descendant, 1).await?;
+        let maybe_child = try_find_child(&ctx, &repo, ancestor, descendant, 1).await?;
         assert!(maybe_child.is_none());
 
         Ok(())
@@ -1819,7 +1841,7 @@ mod tests {
             "567a25d453cafaef6550de955c52b91bf9295faf38d67b6421d5d2e532e5adef",
         )?;
 
-        let maybe_child = repo.try_find_child(&ctx, ancestor, descendant, 100).await?;
+        let maybe_child = try_find_child(&ctx, &repo, ancestor, descendant, 100).await?;
         let child = maybe_child.ok_or_else(|| anyhow!("didn't find child"))?;
         assert_eq!(child, descendant);
         Ok(())
