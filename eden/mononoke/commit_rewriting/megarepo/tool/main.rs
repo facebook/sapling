@@ -39,7 +39,6 @@ use cross_repo_sync::Source;
 use cross_repo_sync::Target;
 use fbinit::FacebookInit;
 use fsnodes::RootFsnodeId;
-use futures::compat::Future01CompatExt;
 use futures::future::try_join;
 use futures::future::try_join_all;
 use futures::Stream;
@@ -213,7 +212,7 @@ async fn run_move<'a>(
 ) -> Result<(), Error> {
     let origin_repo =
         RepositoryId::new(args::get_i32_opt(sub_m, ORIGIN_REPO).expect("Origin repo is missing"));
-    let resulting_changeset_args = cs_args_from_matches(sub_m);
+    let resulting_changeset_args = cs_args_from_matches(sub_m)?;
     let move_parent = sub_m.value_of(CHANGESET).unwrap().to_owned();
 
     let mapping_version_name = sub_m
@@ -234,13 +233,10 @@ async fn run_move<'a>(
     let max_num_of_moves_in_commit: Option<NonZeroU64> =
         args::get_and_parse_opt(sub_m, MAX_NUM_OF_MOVES_IN_COMMIT);
 
-    let (repo, resulting_changeset_args) = try_join(
-        args::not_shardmanager_compatible::open_repo::<Repo>(
-            ctx.fb,
-            &ctx.logger().clone(),
-            matches,
-        ),
-        resulting_changeset_args.compat(),
+    let repo = args::not_shardmanager_compatible::open_repo::<Repo>(
+        ctx.fb,
+        &ctx.logger().clone(),
+        matches,
     )
     .await?;
 
@@ -280,14 +276,11 @@ async fn run_merge<'a>(
 ) -> Result<(), Error> {
     let first_parent = sub_m.value_of(FIRST_PARENT).unwrap().to_owned();
     let second_parent = sub_m.value_of(SECOND_PARENT).unwrap().to_owned();
-    let resulting_changeset_args = cs_args_from_matches(sub_m);
-    let (repo, resulting_changeset_args) = try_join(
-        args::not_shardmanager_compatible::open_repo::<Repo>(
-            ctx.fb,
-            &ctx.logger().clone(),
-            matches,
-        ),
-        resulting_changeset_args.compat(),
+    let resulting_changeset_args = cs_args_from_matches(sub_m)?;
+    let repo = args::not_shardmanager_compatible::open_repo::<Repo>(
+        ctx.fb,
+        &ctx.logger().clone(),
+        matches,
     )
     .await?;
 
@@ -610,7 +603,7 @@ async fn run_bonsai_merge<'a>(
     )
     .await?;
 
-    let cs_args = cs_args_from_matches(sub_m).compat().await?;
+    let cs_args = cs_args_from_matches(sub_m)?;
 
     let merge_cs_id =
         create_and_save_bonsai(ctx, &repo, vec![p1, p2], Default::default(), cs_args).await?;
@@ -1360,7 +1353,7 @@ async fn run_delete_no_longer_bound_files_from_large_repo<'a>(
     }
     info!(ctx.logger(), "need to delete {} paths", to_delete.len());
 
-    let resulting_changeset_args = cs_args_from_matches(sub_m).compat().await?;
+    let resulting_changeset_args = cs_args_from_matches(sub_m)?;
     let deletion_cs_id = create_and_save_bonsai(
         ctx,
         large_repo,

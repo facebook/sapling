@@ -15,11 +15,6 @@ use clap::ArgMatches;
 use clap::SubCommand;
 use cmdlib::args;
 use cmdlib::args::MononokeClapApp;
-use futures_ext::try_boxfuture;
-use futures_ext::BoxFuture;
-use futures_ext::FutureExt;
-use futures_old::future::err;
-use futures_old::future::ok;
 use megarepolib::common::ChangesetArgs;
 use megarepolib::common::ChangesetArgsFactory;
 use megarepolib::common::StackPosition;
@@ -83,46 +78,36 @@ pub const TO_MERGE_CS_ID: &str = "to-merge-cs-id";
 pub const VERSION: &str = "version";
 pub const WAIT_SECS: &str = "wait-secs";
 
-pub fn cs_args_from_matches<'a>(sub_m: &ArgMatches<'a>) -> BoxFuture<ChangesetArgs, Error> {
-    let message = try_boxfuture!(
-        sub_m
-            .value_of(COMMIT_MESSAGE)
-            .ok_or_else(|| format_err!("missing argument {}", COMMIT_MESSAGE))
-    )
-    .to_string();
-    let author = try_boxfuture!(
-        sub_m
-            .value_of(COMMIT_AUTHOR)
-            .ok_or_else(|| format_err!("missing argument {}", COMMIT_AUTHOR))
-    )
-    .to_string();
-    let datetime = try_boxfuture!(
-        sub_m
-            .value_of(COMMIT_DATE_RFC3339)
-            .map_or_else(|| Ok(DateTime::now()), DateTime::from_rfc3339)
-    );
-    let bookmark = try_boxfuture!(
-        sub_m
-            .value_of(COMMIT_BOOKMARK)
-            .map(BookmarkKey::new)
-            .transpose()
-    );
+pub fn cs_args_from_matches<'a>(sub_m: &ArgMatches<'a>) -> Result<ChangesetArgs, Error> {
+    let message = sub_m
+        .value_of(COMMIT_MESSAGE)
+        .ok_or_else(|| format_err!("missing argument {}", COMMIT_MESSAGE))?
+        .to_string();
+    let author = sub_m
+        .value_of(COMMIT_AUTHOR)
+        .ok_or_else(|| format_err!("missing argument {}", COMMIT_AUTHOR))?
+        .to_string();
+    let datetime = sub_m
+        .value_of(COMMIT_DATE_RFC3339)
+        .map_or_else(|| Ok(DateTime::now()), DateTime::from_rfc3339)?;
+    let bookmark = sub_m
+        .value_of(COMMIT_BOOKMARK)
+        .map(BookmarkKey::new)
+        .transpose()?;
     let mark_public = sub_m.is_present(MARK_PUBLIC);
     if !mark_public && bookmark.is_some() {
-        return err(format_err!(
+        return Err(format_err!(
             "--mark-public is required if --bookmark is provided"
-        ))
-        .boxify();
+        ));
     }
 
-    ok(ChangesetArgs {
+    Ok(ChangesetArgs {
         author,
         message,
         datetime,
         bookmark,
         mark_public,
     })
-    .boxify()
 }
 
 pub fn get_delete_commits_cs_args_factory<'a>(

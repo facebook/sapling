@@ -46,10 +46,6 @@ rust_library(
 rust_binary(
     name = "megarepotool",
     srcs = glob(["tool/**/*.rs"]),
-    named_deps = {
-        "futures-old": "fbsource//third-party/rust:futures-old",
-        "futures_ext": "//common/rust/shed/futures_01_ext:futures_01_ext",
-    },
     test_deps = [
         "fbsource//third-party/rust:tokio",
         "//common/rust/shed/fbinit:fbinit-tokio",

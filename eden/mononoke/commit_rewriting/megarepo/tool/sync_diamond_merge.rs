@@ -40,17 +40,12 @@ use cross_repo_sync::InMemoryRepo;
 use cross_repo_sync::SubmoduleDeps;
 use cross_repo_sync::SubmoduleExpansionData;
 use cross_repo_sync::Syncers;
-use futures::compat::Future01CompatExt;
-use futures::future::FutureExt;
-use futures::future::TryFutureExt;
+use futures::stream;
 use futures::stream::futures_unordered::FuturesUnordered;
+use futures::stream::BoxStream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
-use futures_ext::BoxStream;
-use futures_ext::StreamExt as _;
-use futures_old::Future;
-use futures_old::IntoFuture;
-use futures_old::Stream;
+use futures::try_join;
 use live_commit_sync_config::LiveCommitSyncConfig;
 use manifest::bonsai_diff;
 use manifest::BonsaiDiffFileChange;
@@ -366,8 +361,7 @@ async fn generate_additional_file_changes(
     version: &CommitSyncConfigVersion,
 ) -> Result<SortedVectorMap<NonRootMPath, FileChange>, Error> {
     let bonsai_diff = find_bonsai_diff(ctx.clone(), large_repo, root, onto_value)
-        .collect()
-        .compat()
+        .try_collect::<Vec<_>>()
         .await?;
 
     let additional_file_changes = FuturesUnordered::new();
@@ -495,39 +489,38 @@ fn find_bonsai_diff(
     repo: &Repo,
     ancestor: ChangesetId,
     descendant: ChangesetId,
-) -> BoxStream<BonsaiDiffFileChange<HgFileNodeId>, Error> {
-    (
-        id_to_manifestid(ctx.clone(), repo.clone(), descendant),
-        id_to_manifestid(ctx.clone(), repo.clone(), ancestor),
-    )
-        .into_future()
-        .map({
-            cloned!(ctx, repo);
-            move |(d_mf, a_mf)| {
-                bonsai_diff(
-                    ctx,
-                    repo.repo_blobstore().clone(),
-                    d_mf,
-                    Some(a_mf).into_iter().collect(),
-                )
-                .boxed()
-                .compat()
-            }
-        })
-        .flatten_stream()
-        .boxify()
+) -> BoxStream<'static, Result<BonsaiDiffFileChange<HgFileNodeId>, Error>> {
+    stream::once({
+        cloned!(ctx, repo);
+        async move {
+            try_join!(
+                id_to_manifestid(ctx.clone(), repo.clone(), descendant),
+                id_to_manifestid(ctx, repo, ancestor)
+            )
+        }
+    })
+    .map_ok({
+        cloned!(ctx, repo);
+        move |(d_mf, a_mf)| {
+            bonsai_diff(
+                ctx.clone(),
+                repo.repo_blobstore().clone(),
+                d_mf,
+                Some(a_mf).into_iter().collect(),
+            )
+            .boxed()
+        }
+    })
+    .try_flatten()
+    .boxed()
 }
 
-fn id_to_manifestid(
+async fn id_to_manifestid(
     ctx: CoreContext,
     repo: Repo,
     bcs_id: ChangesetId,
-) -> impl Future<Item = HgManifestId, Error = Error> {
-    async move {
-        let cs_id = repo.derive_hg_changeset(&ctx, bcs_id).await?;
-        let cs = cs_id.load(&ctx, repo.repo_blobstore()).await?;
-        Ok(cs.manifestid())
-    }
-    .boxed()
-    .compat()
+) -> Result<HgManifestId, Error> {
+    let cs_id = repo.derive_hg_changeset(&ctx, bcs_id).await?;
+    let cs = cs_id.load(&ctx, repo.repo_blobstore()).await?;
+    Ok(cs.manifestid())
 }
