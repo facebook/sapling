@@ -561,6 +561,11 @@ class nameset(abstractsmartset):
       to reduce or elimate generatorset usage.
     """
 
+    @property
+    def _constructor(self):
+        # used by subclassing, usually self.__class__ except for fullreposet
+        return nameset
+
     def __init__(
         self,
         value=None,
@@ -839,7 +844,7 @@ class nameset(abstractsmartset):
         if otherset is not None:
             # set operation by the Rust layer
             newset = getattr(self._set, op)(otherset)
-            s = nameset(newset, repo=self.repo())
+            s = self._constructor(newset, repo=self.repo())
             # preserve order
             if self.isascending():
                 s.sort()
@@ -892,7 +897,7 @@ class nameset(abstractsmartset):
             return baseset([], repo=repo)
 
         newset = self._set.skip(skip).take(take)
-        s = nameset(newset, repo=self.repo())
+        s = self._constructor(newset, repo=self.repo())
         # preserve order
         if self.isascending():
             s.sort()
