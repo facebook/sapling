@@ -476,7 +476,7 @@ class changelog:
             result = dag.all()
         else:
             nodes = self.tonodes(revs)
-            result = dag.descendants(nodes) - dag.roots(nodes)
+            result = dag.descendants(nodes) - dag.roots(nodes) - dag.virtualgroup()
         for rev in self.torevs(result).iterasc():
             yield rev
 
