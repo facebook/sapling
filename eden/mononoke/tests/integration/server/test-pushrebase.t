@@ -145,6 +145,7 @@ Pushrebased commits {3, 4} over commits {B, C, 1} (thus the distance should be 3
 Push fast-forward
   $ hg up master_bookmark
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ OLD_HASH="$(hg whereami)"
   $ echo 5 > 5 && hg add 5 && hg ci -m 5
   $ sl push -r . --to master_bookmark
   pushing rev 59e5396444cf to destination https://localhost:*/edenapi/ bookmark master_bookmark (glob)
@@ -177,6 +178,7 @@ Push fast-forward
 
 
 Push with no new commits
+  $ wait_for_bookmark_move_away_edenapi repo master_bookmark "$OLD_HASH"
   $ sl push -r . --to master_bookmark
   pushing rev 59e5396444cf to destination https://localhost:*/edenapi/ bookmark master_bookmark (glob)
   moving remote bookmark master_bookmark from 59e5396444cf to 59e5396444cf
@@ -318,6 +320,7 @@ Test a non-forward push
   $ sl push --force -r . --to master_bookmark_2 --non-forward-move --pushvar NON_FAST_FORWARD=true
   pushing rev 589551466f25 to destination https://localhost:*/edenapi/ bookmark master_bookmark_2 (glob)
   moving remote bookmark master_bookmark_2 from eb388b759fde to 589551466f25
+  $ wait_for_bookmark_move_edenapi repo master_bookmark_2 "$(hg log -T"{node}" -r 22)"
   $ log -r "20::"
   o    merge 10 and 12 [public;rev=25;eb388b759fde] default/master_bookmark
   ├─╮

@@ -1566,6 +1566,26 @@ function wait_for_bookmark_move_away_edenapi() {
   done
 }
 
+function wait_for_bookmark_move_edenapi() {
+  local repo="$1"
+  local bookmark="$2"
+  local target="$3"
+  local attempt=1
+  sleep 1
+  flush_mononoke_bookmarks
+  while [[ "$(get_bookmark_value_edenapi "$repo" "$bookmark")" != "$target" ]]
+  do
+    attempt=$((attempt + 1))
+    if [[ $attempt -gt 30 ]]
+    then
+        echo "bookmark move of $bookmark away to $target has not happened"
+        return 1
+    fi
+    sleep 2
+    flush_mononoke_bookmarks
+  done
+}
+
 function wait_for_git_bookmark_move() {
   local bookmark_name="$1"
   local last_bookmark_target="$2"
