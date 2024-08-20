@@ -824,6 +824,8 @@ pub struct LfsParams {
     pub rollout_percentage: u32,
     /// Whether hg sync job should generate lfs blobs
     pub generate_lfs_blob_in_hg_sync_job: bool,
+    /// Whether to use upstream LFS server
+    pub use_upstream_lfs_server: bool,
 }
 
 /// Id used to discriminate diffirent underlying blobstore instances

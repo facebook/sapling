@@ -391,11 +391,13 @@ impl RepositoryRequestContext {
         &self,
         batch: &RequestBatch,
     ) -> Result<Option<ResponseBatch>, ErrorKind> {
-        let uri = match self.uri_builder.upstream_batch_uri()? {
-            Some(uri) => uri,
-            None => {
-                return Ok(None);
-            }
+        // If upstream is disabled, we won't send an upstream request
+        if !self.repo.repo_config().lfs.use_upstream_lfs_server {
+            return Ok(None);
+        }
+        // If we don't have an upstream, we can't send an upstream request
+        let Some(uri) = self.uri_builder.upstream_batch_uri()? else {
+            return Ok(None);
         };
 
         let body: Bytes = serde_json::to_vec(&batch)

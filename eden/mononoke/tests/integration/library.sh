@@ -1208,12 +1208,19 @@ CONFIG
 fi
 
 
-if [[ -n "${LFS_THRESHOLD:-}" ]]; then
   cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
 [lfs]
+CONFIG
+if [[ -n "${LFS_THRESHOLD:-}" ]]; then
+  cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
 threshold=$LFS_THRESHOLD
 rollout_percentage=${LFS_ROLLOUT_PERCENTAGE:-100}
 generate_lfs_blob_in_hg_sync_job=${LFS_BLOB_HG_SYNC_JOB:-true}
+CONFIG
+fi
+if [[ -n "${LFS_USE_UPSTREAM:-}" ]]; then
+  cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
+use_upstream_lfs_server = true
 CONFIG
 fi
 

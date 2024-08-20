@@ -896,6 +896,7 @@ mod test {
             threshold = 1000
             rollout_percentage = 56
             generate_lfs_blob_in_hg_sync_job = true
+            use_upstream_lfs_server = false
 
             [infinitepush]
             allow_writes = true
@@ -1232,6 +1233,7 @@ mod test {
                     threshold: Some(1000),
                     rollout_percentage: 56,
                     generate_lfs_blob_in_hg_sync_job: true,
+                    use_upstream_lfs_server: false,
                 },
                 hash_validation_percentage: 0,
                 readonly: RepoReadOnly::ReadWrite,

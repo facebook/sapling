@@ -10,7 +10,7 @@
 
   $ setup_common_config blob_files
   $ REPOID=1 FILESTORE=1 FILESTORE_CHUNK_SIZE=10 setup_mononoke_repo_config lfs1
-  $ REPOID=2 FILESTORE=1 FILESTORE_CHUNK_SIZE=10 setup_mononoke_repo_config lfs2
+  $ REPOID=2 FILESTORE=1 FILESTORE_CHUNK_SIZE=10 LFS_USE_UPSTREAM=1 setup_mononoke_repo_config lfs2
 
 # Start a LFS server (lfs_upstream is an upstream of lfs_proxy)
 

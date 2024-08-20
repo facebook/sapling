@@ -362,6 +362,7 @@ impl Convert for RawLfsParams {
             generate_lfs_blob_in_hg_sync_job: self
                 .generate_lfs_blob_in_hg_sync_job
                 .unwrap_or(false),
+            use_upstream_lfs_server: self.use_upstream_lfs_server.unwrap_or(false),
         })
     }
 }

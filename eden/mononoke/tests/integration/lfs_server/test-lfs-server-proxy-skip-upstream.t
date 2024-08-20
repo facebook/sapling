@@ -8,7 +8,7 @@
 
 # Create two repositories
   $ setup_common_config blob_files
-  $ REPOID=1 FILESTORE=1 FILESTORE_CHUNK_SIZE=10 setup_mononoke_repo_config lfs_repo
+  $ REPOID=1 FILESTORE=1 FILESTORE_CHUNK_SIZE=10 LFS_USE_UPSTREAM=1 setup_mononoke_repo_config lfs_repo
 
 # Start a "server" that never responds as the upstream
   $ upstream_port="$(get_free_socket)"
