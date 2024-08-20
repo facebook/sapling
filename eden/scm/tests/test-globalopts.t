@@ -1,7 +1,7 @@
 
 #require no-eden
 
-
+  $ setconfig devel.collapse-traceback=true
 
   $ newclientrepo server
   $ newclientrepo a test:server_server

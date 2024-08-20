@@ -31,7 +31,6 @@ ignore.test=$RUNTESTDIR/gitignore
 
 [devel]
 all-warnings=True
-collapse-traceback =True
 default-date=0 0
 
 [web]

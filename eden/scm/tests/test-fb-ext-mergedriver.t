@@ -4,7 +4,7 @@
 
   $ eagerepo
   $ enable mergedriver
-  $ setconfig commands.update.check=none
+  $ setconfig commands.update.check=none devel.collapse-traceback=true
 
 basic merge driver: just lists out files and contents, doesn't resolve any files
 

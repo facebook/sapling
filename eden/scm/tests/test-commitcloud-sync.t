@@ -3,7 +3,7 @@
 #require no-eden
 
 #inprocess-hg-incompatible
-  $ setconfig experimental.allowfilepeer=True
+  $ setconfig experimental.allowfilepeer=True devel.collapse-traceback=true
 
   $ configure dummyssh mutation-norecord
   $ enable amend directaccess commitcloud infinitepush rebase remotenames share smartlog

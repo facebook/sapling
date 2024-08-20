@@ -3,6 +3,8 @@
 
   $ eagerepo
   $ configure mutation-norecord
+  $ setconfig devel.collapse-traceback=true
+
 Test a mergedriver that raises exceptions in its preprocess() hook:
 
   $ newrepo

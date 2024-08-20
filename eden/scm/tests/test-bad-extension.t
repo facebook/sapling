@@ -4,6 +4,8 @@
 #inprocess-hg-incompatible
 
   $ eagerepo
+  $ setconfig devel.collapse-traceback=true
+
 ensure that failing ui.atexit handlers report sensibly
 
   $ cat > $TESTTMP/bailatexit.py <<EOF
