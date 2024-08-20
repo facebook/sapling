@@ -2353,10 +2353,14 @@ class localrepository:
         """Fully invalidates both store and non-store parts, causing the
         subsequent operation to reread any outside changes."""
         # extension should hook this to invalidate its caches
+        # Order matters. Invalidate changelog first so loading dirstate will
+        # pick up new commits in the changelog.
+        self.invalidatechangelog()
+        # Trigger _rsrepo.invalidatechangelog()
+        self.changelog
         self.invalidate()
         self.invalidatedirstate()
         self.invalidatemetalog()
-        self.invalidatechangelog()
 
     def _refreshfilecachestats(self, tr):
         """Reload stats of cached files so that they are flagged as valid"""
