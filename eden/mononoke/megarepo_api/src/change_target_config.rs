@@ -24,6 +24,7 @@ use megarepo_mapping::CommitRemappingState;
 use megarepo_mapping::SourceName;
 use metaconfig_types::RepoConfigArc;
 use mononoke_api::Mononoke;
+use mononoke_api::MononokeRepo;
 use mononoke_api::RepoContext;
 use mononoke_types::ChangesetId;
 use mutable_renames::MutableRenames;
@@ -145,22 +146,22 @@ fn diff_configs(
 /// M - move commits
 /// S - source commits that need to be merged
 /// ```
-pub struct ChangeTargetConfig<'a> {
+pub struct ChangeTargetConfig<'a, R> {
     pub megarepo_configs: &'a Arc<dyn MononokeMegarepoConfigs>,
-    pub mononoke: &'a Arc<Mononoke>,
+    pub mononoke: &'a Arc<Mononoke<R>>,
     pub mutable_renames: &'a Arc<MutableRenames>,
 }
 
-impl<'a> MegarepoOp for ChangeTargetConfig<'a> {
-    fn mononoke(&self) -> &Arc<Mononoke> {
+impl<'a, R> MegarepoOp<R> for ChangeTargetConfig<'a, R> {
+    fn mononoke(&self) -> &Arc<Mononoke<R>> {
         self.mononoke
     }
 }
 
-impl<'a> ChangeTargetConfig<'a> {
+impl<'a, R: MononokeRepo> ChangeTargetConfig<'a, R> {
     pub fn new(
         megarepo_configs: &'a Arc<dyn MononokeMegarepoConfigs>,
-        mononoke: &'a Arc<Mononoke>,
+        mononoke: &'a Arc<Mononoke<R>>,
         mutable_renames: &'a Arc<MutableRenames>,
     ) -> Self {
         Self {
@@ -327,7 +328,7 @@ impl<'a> ChangeTargetConfig<'a> {
     async fn create_commit_with_new_sources(
         &self,
         ctx: &CoreContext,
-        repo: &RepoContext,
+        repo: &RepoContext<R>,
         diff: &SyncTargetConfigChanges,
         changesets_to_merge: &BTreeMap<SourceName, ChangesetId>,
         sync_config_version: SyncConfigVersion,
@@ -383,7 +384,7 @@ impl<'a> ChangeTargetConfig<'a> {
         new_version: &SyncConfigVersion,
         (expected_target_location, actual_target_location): (ChangesetId, ChangesetId),
         changesets_to_merge: &BTreeMap<SourceName, ChangesetId>,
-        repo: &RepoContext,
+        repo: &RepoContext<R>,
     ) -> Result<ChangesetId, MegarepoError> {
         // Bookmark points a non-expected commit - let's see if changeset it points to was created
         // by a previous change_target_config call

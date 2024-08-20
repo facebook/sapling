@@ -20,6 +20,7 @@ use maplit::hashset;
 use mononoke_types::DateTime;
 use tests_utils::CreateCommitContext;
 
+use crate::repo::Repo;
 use crate::ChangesetHistoryOptions;
 use crate::ChangesetId;
 use crate::ChangesetLinearHistoryOptions;
@@ -57,8 +58,10 @@ use crate::RepoContext;
 //   o "a1"
 //
 // Commits e1, e2 and e3 are empty (contain no file changes).
-async fn init_repo(ctx: &CoreContext) -> Result<(RepoContext, HashMap<&'static str, ChangesetId>)> {
-    let repo = test_repo_factory::build_empty(ctx.fb).await?;
+async fn init_repo(
+    ctx: &CoreContext,
+) -> Result<(RepoContext<Repo>, HashMap<&'static str, ChangesetId>)> {
+    let repo: Repo = test_repo_factory::build_empty(ctx.fb).await?;
     let mut changesets = HashMap::new();
 
     changesets.insert(

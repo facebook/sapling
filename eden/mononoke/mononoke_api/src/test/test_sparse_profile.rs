@@ -35,11 +35,12 @@ use crate::sparse_profile::ProfileSizeChange;
 use crate::sparse_profile::SparseProfileMonitoring;
 use crate::ChangesetContext;
 use crate::Mononoke;
+use crate::MononokeRepo;
 use crate::RepoContext;
 
-async fn init_sparse_profile(
+async fn init_sparse_profile<R: MononokeRepo>(
     ctx: &CoreContext,
-    repo_ctx: &RepoContext,
+    repo_ctx: &RepoContext<R>,
     cs_id: HgChangesetId,
 ) -> Result<ChangesetId> {
     let base_profile_content = r#"
@@ -79,9 +80,9 @@ async fn init_sparse_profile(
         .await
 }
 
-async fn commit_changes<T: AsRef<str>>(
+async fn commit_changes<T: AsRef<str>, R: MononokeRepo>(
     ctx: &CoreContext,
-    repo_ctx: &RepoContext,
+    repo_ctx: &RepoContext<R>,
     cs_id: ChangesetId,
     changes: BTreeMap<&str, Option<T>>,
 ) -> Result<ChangesetId> {

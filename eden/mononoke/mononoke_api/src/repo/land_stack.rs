@@ -32,12 +32,12 @@ use unbundle::PushRedirector;
 
 use crate::errors::MononokeError;
 use crate::repo::RepoContext;
-use crate::Repo;
+use crate::MononokeRepo;
 
-impl RepoContext {
+impl<R: MononokeRepo> RepoContext<R> {
     async fn convert_old_bookmark_value(
         &self,
-        redirector: &PushRedirector<Repo>,
+        redirector: &PushRedirector<R>,
         bookmark_value: Large<Option<ChangesetId>>,
     ) -> anyhow::Result<Small<Option<ChangesetId>>> {
         let large_cs_id = match bookmark_value {
@@ -70,7 +70,7 @@ impl RepoContext {
     }
     async fn convert_outcome(
         &self,
-        redirector: &PushRedirector<Repo>,
+        redirector: &PushRedirector<R>,
         outcome: Large<PushrebaseOutcome>,
         _bookmark: BookmarkKey,
     ) -> Result<Small<PushrebaseOutcome>, MononokeError> {

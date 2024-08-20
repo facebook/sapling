@@ -12,6 +12,7 @@ use metaconfig_types::RepoClientKnobs;
 use mononoke_api::Mononoke;
 use mononoke_api::Repo;
 use repo_client::PushRedirectorArgs;
+use repo_identity::RepoIdentityRef;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::Logger;
 use wireproto_handler::BackupSourceRepo;
@@ -28,7 +29,7 @@ pub struct RepoHandler {
     pub maybe_backup_repo_source: Option<BackupSourceRepo>,
 }
 
-pub fn repo_handler(mononoke: Arc<Mononoke>, repo_name: &str) -> anyhow::Result<RepoHandler> {
+pub fn repo_handler(mononoke: Arc<Mononoke<Repo>>, repo_name: &str) -> anyhow::Result<RepoHandler> {
     let source_repo = mononoke.raw_repo(repo_name).ok_or_else(|| {
         anyhow!(
             "Requested repo {} is not being served by this server",
@@ -54,8 +55,10 @@ pub fn repo_handler(mononoke: Arc<Mononoke>, repo_name: &str) -> anyhow::Result<
     let maybe_backup_repo_source = match &base.backup_repo_config {
         None => None,
         Some(ref backup_repo_config) => {
-            let (orig_repo_name, source_repo_name) =
-                (source_repo.name(), &backup_repo_config.source_repo_name);
+            let (orig_repo_name, source_repo_name) = (
+                source_repo.repo_identity().name(),
+                &backup_repo_config.source_repo_name,
+            );
             // If the repo itself serves as its backup source, then it's not a backup repo.
             // Hence, no need to setup backup_repo_source
             if *orig_repo_name == *source_repo_name {

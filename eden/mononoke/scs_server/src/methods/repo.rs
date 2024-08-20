@@ -37,6 +37,7 @@ use mononoke_api::CreateInfo;
 use mononoke_api::FileId;
 use mononoke_api::FileType;
 use mononoke_api::MononokeError;
+use mononoke_api::Repo;
 use mononoke_api::RepoContext;
 use mononoke_api::StoreRequest;
 use mononoke_api::SubmoduleExpansionUpdate;
@@ -279,7 +280,7 @@ impl SourceControlServiceImpl {
     }
 
     async fn convert_create_commit_parents(
-        repo: &RepoContext,
+        repo: &RepoContext<Repo>,
         parents: &[thrift::CommitId],
     ) -> Result<Vec<ChangesetId>, errors::ServiceError> {
         let parents: Vec<_> = parents
@@ -308,7 +309,7 @@ impl SourceControlServiceImpl {
     }
 
     async fn convert_create_commit_file_content(
-        repo: &RepoContext,
+        repo: &RepoContext<Repo>,
         content: thrift::RepoCreateCommitParamsFileContent,
     ) -> Result<CreateChangeFileContents, errors::ServiceError> {
         let contents = match content {
@@ -373,7 +374,7 @@ impl SourceControlServiceImpl {
     }
 
     async fn convert_create_commit_change(
-        repo: &RepoContext,
+        repo: &RepoContext<Repo>,
         change: thrift::RepoCreateCommitParamsChange,
     ) -> Result<CreateChange, errors::ServiceError> {
         let change = match change {
@@ -442,7 +443,7 @@ impl SourceControlServiceImpl {
     }
 
     async fn convert_create_commit_changes(
-        repo: &RepoContext,
+        repo: &RepoContext<Repo>,
         changes: BTreeMap<String, thrift::RepoCreateCommitParamsChange>,
     ) -> Result<BTreeMap<MPath, CreateChange>, errors::ServiceError> {
         let changes = changes

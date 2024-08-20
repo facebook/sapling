@@ -78,6 +78,7 @@ use crate::repo::RepoContext;
 use crate::specifiers::ChangesetId;
 use crate::specifiers::GitSha1;
 use crate::specifiers::HgChangesetId;
+use crate::MononokeRepo;
 
 mod find_files;
 
@@ -116,8 +117,8 @@ impl PathMutableHistory {
 }
 
 #[derive(Clone)]
-pub struct ChangesetContext {
-    repo_ctx: RepoContext,
+pub struct ChangesetContext<R> {
+    repo_ctx: RepoContext<R>,
     id: ChangesetId,
     bonsai_changeset: LazyShared<Result<BonsaiChangeset, MononokeError>>,
     changeset_info: LazyShared<Result<ChangesetInfo, MononokeError>>,
@@ -156,7 +157,7 @@ pub enum ChangesetDiffItem {
     FILES,
 }
 
-impl fmt::Debug for ChangesetContext {
+impl<R: MononokeRepo> fmt::Debug for ChangesetContext<R> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
@@ -172,10 +173,10 @@ fn to_vec1<X>(maybe_vec: Option<Vec<X>>) -> Option<Vec1<X>> {
 }
 
 /// A context object representing a query to a particular commit in a repo.
-impl ChangesetContext {
+impl<R: MononokeRepo> ChangesetContext<R> {
     /// Construct a new `MononokeChangeset`.  The changeset must exist
     /// in the repo.
-    pub(crate) fn new(repo_ctx: RepoContext, id: ChangesetId) -> Self {
+    pub(crate) fn new(repo_ctx: RepoContext<R>, id: ChangesetId) -> Self {
         let bonsai_changeset = LazyShared::new_empty();
         let changeset_info = LazyShared::new_empty();
         let root_unode_manifest_id = LazyShared::new_empty();
@@ -233,7 +234,7 @@ impl ChangesetContext {
     }
 
     /// The `RepoContext` for this query.
-    pub fn repo_ctx(&self) -> &RepoContext {
+    pub fn repo_ctx(&self) -> &RepoContext<R> {
         &self.repo_ctx
     }
 
@@ -243,7 +244,7 @@ impl ChangesetContext {
     }
 
     /// Deconstruct the changeset into RepoContext and ChangesetId.
-    pub fn into_repo_ctx_and_id(self) -> (RepoContext, ChangesetId) {
+    pub fn into_repo_ctx_and_id(self) -> (RepoContext<R>, ChangesetId) {
         let Self { repo_ctx, id, .. } = self;
         (repo_ctx, id)
     }
@@ -350,7 +351,7 @@ impl ChangesetContext {
     }
 
     /// Query the root directory in the repository at this changeset revision.
-    pub async fn root(&self) -> Result<ChangesetPathContentContext, MononokeError> {
+    pub async fn root(&self) -> Result<ChangesetPathContentContext<R>, MononokeError> {
         ChangesetPathContentContext::new(self.clone(), None).await
     }
 
@@ -362,7 +363,7 @@ impl ChangesetContext {
     pub async fn path_with_content<P>(
         &self,
         path: P,
-    ) -> Result<ChangesetPathContentContext, MononokeError>
+    ) -> Result<ChangesetPathContentContext<R>, MononokeError>
     where
         P: TryInto<MPath>,
         P::Error: Display,
@@ -383,7 +384,7 @@ impl ChangesetContext {
     pub async fn path_with_history<P>(
         &self,
         path: P,
-    ) -> Result<ChangesetPathHistoryContext, MononokeError>
+    ) -> Result<ChangesetPathHistoryContext<R>, MononokeError>
     where
         P: TryInto<MPath>,
         P::Error: Display,
@@ -404,7 +405,7 @@ impl ChangesetContext {
     ///
     /// If you need to query the content or history of a path, use
     /// `path_with_content` or `path_with_history` instead.
-    pub async fn path<P>(&self, path: P) -> Result<ChangesetPathContext, MononokeError>
+    pub async fn path<P>(&self, path: P) -> Result<ChangesetPathContext<R>, MononokeError>
     where
         P: TryInto<MPath>,
         P::Error: Display,
@@ -424,8 +425,10 @@ impl ChangesetContext {
     pub async fn paths_with_history(
         &self,
         paths: impl Iterator<Item = MPath>,
-    ) -> Result<impl Stream<Item = Result<ChangesetPathHistoryContext, MononokeError>>, MononokeError>
-    {
+    ) -> Result<
+        impl Stream<Item = Result<ChangesetPathHistoryContext<R>, MononokeError>>,
+        MononokeError,
+    > {
         Ok(self
             .root_unode_manifest_id()
             .await?
@@ -455,8 +458,10 @@ impl ChangesetContext {
     pub async fn paths_with_content(
         &self,
         paths: impl Iterator<Item = MPath>,
-    ) -> Result<impl Stream<Item = Result<ChangesetPathContentContext, MononokeError>>, MononokeError>
-    {
+    ) -> Result<
+        impl Stream<Item = Result<ChangesetPathContentContext<R>, MononokeError>>,
+        MononokeError,
+    > {
         Ok(self
             .root_fsnode_id()
             .await?
@@ -490,7 +495,7 @@ impl ChangesetContext {
     pub async fn paths(
         &self,
         paths: impl Iterator<Item = MPath>,
-    ) -> Result<impl Stream<Item = Result<ChangesetPathContext, MononokeError>>, MononokeError>
+    ) -> Result<impl Stream<Item = Result<ChangesetPathContext<R>, MononokeError>>, MononokeError>
     {
         Ok(self
             .root_skeleton_manifest_id()
@@ -518,7 +523,7 @@ impl ChangesetContext {
         &self,
         root: Root,
         paths: impl Iterator<Item = MPath> + 'static,
-    ) -> impl Stream<Item = Result<ChangesetPathHistoryContext, MononokeError>> + '_ {
+    ) -> impl Stream<Item = Result<ChangesetPathHistoryContext<R>, MononokeError>> + '_ {
         root.find_entries(self.ctx(), self.repo_ctx().repo().repo_blobstore(), paths)
             .map_err(MononokeError::from)
             .and_then({
@@ -541,7 +546,7 @@ impl ChangesetContext {
         &self,
         paths: impl Iterator<Item = MPath> + 'static,
     ) -> Result<
-        impl Stream<Item = Result<ChangesetPathHistoryContext, MononokeError>> + '_,
+        impl Stream<Item = Result<ChangesetPathHistoryContext<R>, MononokeError>> + '_,
         MononokeError,
     > {
         Ok(self.deleted_paths_impl(self.root_deleted_manifest_v2_id().await?, paths))
@@ -705,7 +710,7 @@ impl ChangesetContext {
     pub async fn common_base_with(
         &self,
         other_commit: ChangesetId,
-    ) -> Result<Option<ChangesetContext>, MononokeError> {
+    ) -> Result<Option<ChangesetContext<R>>, MononokeError> {
         let lca = self
             .repo_ctx()
             .repo()
@@ -717,11 +722,11 @@ impl ChangesetContext {
 
     pub async fn diff_unordered(
         &self,
-        other: &ChangesetContext,
+        other: &ChangesetContext<R>,
         include_copies_renames: bool,
         path_restrictions: Option<Vec<MPath>>,
         diff_items: BTreeSet<ChangesetDiffItem>,
-    ) -> Result<Vec<ChangesetPathDiffContext>, MononokeError> {
+    ) -> Result<Vec<ChangesetPathDiffContext<R>>, MononokeError> {
         self.diff(
             other,
             include_copies_renames,
@@ -742,13 +747,13 @@ impl ChangesetContext {
     /// `diff_items` what to include in the output (files, dirs or both)
     pub async fn diff(
         &self,
-        other: &ChangesetContext,
+        other: &ChangesetContext<R>,
         include_copies_renames: bool,
         path_restrictions: Option<Vec<MPath>>,
         diff_items: BTreeSet<ChangesetDiffItem>,
         ordering: ChangesetFileOrdering,
         limit: Option<usize>,
-    ) -> Result<Vec<ChangesetPathDiffContext>, MononokeError> {
+    ) -> Result<Vec<ChangesetPathDiffContext<R>>, MononokeError> {
         // Helper to that checks if a path is within the givien path restrictions
         fn within_restrictions(path: &MPath, path_restrictions: &Option<Vec<MPath>>) -> bool {
             path_restrictions.as_ref().map_or(true, |i| {
@@ -1145,7 +1150,7 @@ impl ChangesetContext {
     pub async fn history(
         &self,
         opts: ChangesetHistoryOptions,
-    ) -> Result<BoxStream<'_, Result<ChangesetContext, MononokeError>>, MononokeError> {
+    ) -> Result<BoxStream<'_, Result<ChangesetContext<R>, MononokeError>>, MononokeError> {
         let mut ancestors_stream_builder = AncestorsStreamBuilder::new(
             self.repo_ctx().repo().commit_graph_arc(),
             self.ctx().clone(),
@@ -1199,7 +1204,7 @@ impl ChangesetContext {
     pub async fn linear_history(
         &self,
         opts: ChangesetLinearHistoryOptions,
-    ) -> Result<BoxStream<'_, Result<ChangesetContext, MononokeError>>, MononokeError> {
+    ) -> Result<BoxStream<'_, Result<ChangesetContext<R>, MononokeError>>, MononokeError> {
         let mut linear_ancestors_stream_builder = LinearAncestorsStreamBuilder::new(
             self.repo_ctx().repo().commit_graph_arc(),
             self.ctx().clone(),
@@ -1235,7 +1240,7 @@ impl ChangesetContext {
         &self,
         path_restrictions: Option<Vec<MPath>>,
         diff_items: BTreeSet<ChangesetDiffItem>,
-    ) -> Result<Vec<ChangesetPathDiffContext>, MononokeError> {
+    ) -> Result<Vec<ChangesetPathDiffContext<R>>, MononokeError> {
         self.diff_root(
             path_restrictions,
             diff_items,
@@ -1256,7 +1261,7 @@ impl ChangesetContext {
         diff_items: BTreeSet<ChangesetDiffItem>,
         ordering: ChangesetFileOrdering,
         limit: Option<usize>,
-    ) -> Result<Vec<ChangesetPathDiffContext>, MononokeError> {
+    ) -> Result<Vec<ChangesetPathDiffContext<R>>, MononokeError> {
         let diff_files = diff_items.contains(&ChangesetDiffItem::FILES);
         let diff_trees = diff_items.contains(&ChangesetDiffItem::TREES);
 

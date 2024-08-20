@@ -36,6 +36,7 @@ use futures::Stream;
 use megarepo_api::MegarepoApi;
 use megarepo_config::Target;
 use megarepo_error::MegarepoError;
+use mononoke_api::MononokeRepo;
 use mononoke_types::RepositoryId;
 use mononoke_types::Timestamp;
 use slog::debug;
@@ -51,17 +52,17 @@ const ABANDONED_REQUEST_THRESHOLD_SECS: i64 = 5 * 60;
 const KEEP_ALIVE_INTERVAL: Duration = Duration::from_secs(10);
 
 #[derive(Clone)]
-pub struct AsyncMethodRequestWorker {
-    megarepo: Arc<MegarepoApi>,
+pub struct AsyncMethodRequestWorker<R> {
+    megarepo: Arc<MegarepoApi<R>>,
     name: String,
 }
 
-impl AsyncMethodRequestWorker {
+impl<R: MononokeRepo> AsyncMethodRequestWorker<R> {
     /// Creates a new tailer instance that's going to use provided megarepo API
     /// The name argument should uniquely identify tailer instance and will be put
     /// in the queue table so it's possible to find out which instance is working on
     /// a given task (for debugging purposes).
-    pub fn new(megarepo: Arc<MegarepoApi>, name: String) -> Self {
+    pub fn new(megarepo: Arc<MegarepoApi<R>>, name: String) -> Self {
         Self { megarepo, name }
     }
 
@@ -373,7 +374,7 @@ mod test {
         q.enqueue(ctx.clone(), &mononoke, params).await?;
 
         let will_exit = Arc::new(AtomicBool::new(false));
-        let s = AsyncMethodRequestWorker::request_stream_inner(
+        let s = AsyncMethodRequestWorker::<Repo>::request_stream_inner(
             ctx,
             ClaimedBy("name".to_string()),
             vec![(vec![RepositoryId::new(0)], q)],
@@ -426,7 +427,7 @@ mod test {
 
         // ... and check that the queue is empty now...
         let will_exit = Arc::new(AtomicBool::new(false));
-        let s = AsyncMethodRequestWorker::request_stream_inner(
+        let s = AsyncMethodRequestWorker::<Repo>::request_stream_inner(
             ctx.clone(),
             ClaimedBy("name".to_string()),
             vec![(vec![RepositoryId::new(0)], q.clone())],
@@ -444,7 +445,7 @@ mod test {
         // ... now make it "abandoned", and make sure we reclaim it
         tokio::time::sleep(Duration::from_secs(1)).await;
         let will_exit = Arc::new(AtomicBool::new(false));
-        let s = AsyncMethodRequestWorker::request_stream_inner(
+        let s = AsyncMethodRequestWorker::<Repo>::request_stream_inner(
             ctx,
             ClaimedBy("name".to_string()),
             vec![(vec![RepositoryId::new(0)], q)],

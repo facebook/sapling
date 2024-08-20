@@ -18,7 +18,9 @@ use pretty_assertions::assert_eq;
 use tests_utils::CreateCommitContext;
 
 use crate::changeset_path::ChangesetPathHistoryContext;
+use crate::repo::Repo;
 use crate::ChangesetId;
+use crate::MononokeRepo;
 use crate::RepoContext;
 
 // Generates this commit graph:
@@ -47,8 +49,10 @@ use crate::RepoContext;
 // m commits are pure merges without any changes
 // c change the number of lines in a and b.
 // There are no subdirectories here.
-async fn init_repo(ctx: &CoreContext) -> Result<(RepoContext, HashMap<&'static str, ChangesetId>)> {
-    let repo = test_repo_factory::build_empty(ctx.fb).await?;
+async fn init_repo(
+    ctx: &CoreContext,
+) -> Result<(RepoContext<Repo>, HashMap<&'static str, ChangesetId>)> {
+    let repo: Repo = test_repo_factory::build_empty(ctx.fb).await?;
     let mut changesets = HashMap::new();
 
     changesets.insert(
@@ -178,9 +182,9 @@ async fn test_immutable_blame(fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
-async fn add_mutable_rename(
-    src: &ChangesetPathHistoryContext,
-    dst: &ChangesetPathHistoryContext,
+async fn add_mutable_rename<R: MononokeRepo>(
+    src: &ChangesetPathHistoryContext<R>,
+    dst: &ChangesetPathHistoryContext<R>,
 ) -> Result<()> {
     let repo = src.repo_ctx();
     let mutable_renames = repo.mutable_renames();

@@ -54,6 +54,7 @@ use metaconfig_types::RepoConfigArc;
 use mononoke_api::path::MononokePathPrefixes;
 use mononoke_api::ChangesetContext;
 use mononoke_api::Mononoke;
+use mononoke_api::MononokeRepo;
 use mononoke_api::RepoContext;
 use mononoke_types::path::MPath;
 use mononoke_types::BonsaiChangeset;
@@ -82,14 +83,17 @@ pub struct SourceAndMovedChangesets {
 const MAX_BOOKMARK_MOVE_ATTEMPTS: usize = 5;
 
 #[async_trait]
-pub trait MegarepoOp {
-    fn mononoke(&self) -> &Arc<Mononoke>;
+pub trait MegarepoOp<R> {
+    fn mononoke(&self) -> &Arc<Mononoke<R>>;
 
     async fn find_repo_by_id(
         &self,
         ctx: &CoreContext,
         repo_id: i64,
-    ) -> Result<RepoContext, MegarepoError> {
+    ) -> Result<RepoContext<R>, MegarepoError>
+    where
+        R: MononokeRepo,
+    {
         let target_repo_id = RepositoryId::new(repo_id.try_into().unwrap());
         let target_repo = self
             .mononoke()
@@ -131,14 +135,17 @@ pub trait MegarepoOp {
     async fn create_final_merge_commit_with_removals(
         &self,
         ctx: &CoreContext,
-        repo: &RepoContext,
+        repo: &RepoContext<R>,
         removed: &[(Source, ChangesetId)],
         message: Option<String>,
-        additions_merge: &Option<ChangesetContext>,
-        old_target_cs: &ChangesetContext,
+        additions_merge: &Option<ChangesetContext<R>>,
+        old_target_cs: &ChangesetContext<R>,
         state: &CommitRemappingState,
         new_version: Option<String>,
-    ) -> Result<ChangesetId, MegarepoError> {
+    ) -> Result<ChangesetId, MegarepoError>
+    where
+        R: MononokeRepo,
+    {
         let mut all_removed_files = HashSet::new();
         for (source, source_cs_id) in removed {
             let paths_in_target_belonging_to_source = self
@@ -285,11 +292,14 @@ pub trait MegarepoOp {
     async fn create_deletion_commit(
         &self,
         ctx: &CoreContext,
-        repo: &RepoContext,
-        old_target_cs: &ChangesetContext,
+        repo: &RepoContext<R>,
+        old_target_cs: &ChangesetContext<R>,
         removed_files: HashSet<NonRootMPath>,
         new_version: Option<String>,
-    ) -> Result<ChangesetId, MegarepoError> {
+    ) -> Result<ChangesetId, MegarepoError>
+    where
+        R: MononokeRepo,
+    {
         let file_changes = removed_files
             .into_iter()
             .map(|path| (path, FileChange::Deletion))
@@ -316,10 +326,13 @@ pub trait MegarepoOp {
 
     async fn verify_no_file_conflicts(
         &self,
-        repo: &RepoContext,
-        additions_merge: &ChangesetContext,
+        repo: &RepoContext<R>,
+        additions_merge: &ChangesetContext<R>,
         p1: ChangesetId,
-    ) -> Result<(), MegarepoError> {
+    ) -> Result<(), MegarepoError>
+    where
+        R: MononokeRepo,
+    {
         let p1 = repo
             .changeset(p1)
             .await?
@@ -383,13 +396,16 @@ pub trait MegarepoOp {
     async fn create_single_move_commit(
         &self,
         ctx: &CoreContext,
-        repo: &impl Repo,
+        repo: &R,
         cs_id: ChangesetId,
         mover: &MultiMover,
         directory_mover: &DirectoryMultiMover,
         linkfiles: BTreeMap<NonRootMPath, FileChange>,
         source_name: &SourceName,
-    ) -> Result<SourceAndMovedChangesets, MegarepoError> {
+    ) -> Result<SourceAndMovedChangesets, MegarepoError>
+    where
+        R: Repo,
+    {
         let root_fsnode_id = repo
             .repo_derived_data()
             .derive::<RootFsnodeId>(ctx, cs_id)
@@ -457,7 +473,10 @@ pub trait MegarepoOp {
         ctx: &CoreContext,
         source: &Source,
         source_changeset_id: ChangesetId,
-    ) -> Result<HashSet<MPath>, MegarepoError> {
+    ) -> Result<HashSet<MPath>, MegarepoError>
+    where
+        R: MononokeRepo,
+    {
         let source_repo = self.find_repo_by_id(ctx, source.repo_id).await?;
         let mover = &create_source_to_target_multi_mover(source.mapping.clone())?;
         let source_changeset = source_repo
@@ -491,12 +510,15 @@ pub trait MegarepoOp {
     async fn create_mutable_renames(
         &self,
         ctx: &CoreContext,
-        repo: &impl Repo,
+        repo: &R,
         cs_id: ChangesetId,
         dst_cs_id: ChangesetId,
         mover: &MultiMover,
         directory_mover: &DirectoryMultiMover,
-    ) -> Result<Vec<MutableRenameEntry>, Error> {
+    ) -> Result<Vec<MutableRenameEntry>, Error>
+    where
+        R: Repo,
+    {
         let root_unode_id = repo
             .repo_derived_data()
             .derive::<RootUnodeManifestId>(ctx, cs_id)
@@ -561,11 +583,14 @@ pub trait MegarepoOp {
     async fn create_move_commits<'b>(
         &'b self,
         ctx: &'b CoreContext,
-        repo: &'b impl Repo,
+        repo: &'b R,
         sources: &[Source],
         changesets_to_merge: &'b BTreeMap<SourceName, ChangesetId>,
         mutable_renames: &Arc<MutableRenames>,
-    ) -> Result<Vec<(SourceName, SourceAndMovedChangesets)>, Error> {
+    ) -> Result<Vec<(SourceName, SourceAndMovedChangesets)>, Error>
+    where
+        R: MononokeRepo,
+    {
         let moved_commits = stream::iter(sources.iter().cloned().map(Ok))
             .map_ok(|source_config| {
                 async move {
@@ -678,10 +703,13 @@ pub trait MegarepoOp {
     async fn validate_changeset_to_merge(
         &self,
         _ctx: &CoreContext,
-        _source_repo: &RepoContext,
+        _source_repo: &RepoContext<R>,
         source_config: &Source,
         changesets_to_merge: &BTreeMap<SourceName, ChangesetId>,
-    ) -> Result<ChangesetId, MegarepoError> {
+    ) -> Result<ChangesetId, MegarepoError>
+    where
+        R: MononokeRepo,
+    {
         let changeset_id = changesets_to_merge
             .get(&SourceName(source_config.source_name.clone()))
             .ok_or_else(|| {
@@ -776,8 +804,11 @@ pub trait MegarepoOp {
         &self,
         ctx: &CoreContext,
         links: BTreeMap<NonRootMPath, Bytes>,
-        repo: &impl Repo,
-    ) -> Result<BTreeMap<NonRootMPath, FileChange>, Error> {
+        repo: &R,
+    ) -> Result<BTreeMap<NonRootMPath, FileChange>, Error>
+    where
+        R: Repo,
+    {
         let linkfiles = stream::iter(links.into_iter())
             .map(Ok)
             .map_ok(|(path, content)| async {
@@ -824,13 +855,16 @@ pub trait MegarepoOp {
     async fn create_merge_commits(
         &self,
         ctx: &CoreContext,
-        repo: &impl Repo,
+        repo: &R,
         moved_commits: Vec<(SourceName, SourceAndMovedChangesets)>,
         write_commit_remapping_state: bool,
         sync_config_version: SyncConfigVersion,
         message: Option<String>,
         bookmark: String,
-    ) -> Result<ChangesetId, MegarepoError> {
+    ) -> Result<ChangesetId, MegarepoError>
+    where
+        R: Repo,
+    {
         // Now let's create a merge commit that merges all moved changesets
 
         // We need to create a file with the latest commits that were synced from
@@ -911,10 +945,13 @@ pub trait MegarepoOp {
     async fn create_bookmark(
         &self,
         ctx: &CoreContext,
-        repo: &impl Repo,
+        repo: &R,
         bookmark: String,
         cs_id: ChangesetId,
-    ) -> Result<(), MegarepoError> {
+    ) -> Result<(), MegarepoError>
+    where
+        R: Repo,
+    {
         let mut txn = repo.bookmarks().create_transaction(ctx.clone());
         let bookmark = BookmarkKey::new(bookmark).map_err(MegarepoError::request)?;
 
@@ -936,10 +973,13 @@ pub trait MegarepoOp {
     async fn move_bookmark_conditionally(
         &self,
         ctx: &CoreContext,
-        repo: &impl Repo,
+        repo: &R,
         bookmark: String,
         (from_cs_id, to_cs_id): (ChangesetId, ChangesetId),
-    ) -> Result<(), MegarepoError> {
+    ) -> Result<(), MegarepoError>
+    where
+        R: Repo,
+    {
         let mut res = Ok(());
         for _retry_num in 0..MAX_BOOKMARK_MOVE_ATTEMPTS {
             res = self
@@ -960,10 +1000,13 @@ pub trait MegarepoOp {
     async fn move_bookmark_conditionally_internal(
         &self,
         ctx: &CoreContext,
-        repo: &impl Repo,
+        repo: &R,
         bookmark: String,
         (from_cs_id, to_cs_id): (ChangesetId, ChangesetId),
-    ) -> Result<(), MegarepoError> {
+    ) -> Result<(), MegarepoError>
+    where
+        R: Repo,
+    {
         let mut txn = repo.bookmarks().create_transaction(ctx.clone());
         let bookmark = BookmarkKey::new(bookmark).map_err(MegarepoError::request)?;
         txn.update(
@@ -991,7 +1034,10 @@ pub trait MegarepoOp {
         ctx: &CoreContext,
         megarepo_configs: &Arc<dyn MononokeMegarepoConfigs>,
         sync_target_config: &SyncTargetConfig,
-    ) -> Result<(), MegarepoError> {
+    ) -> Result<(), MegarepoError>
+    where
+        R: MononokeRepo,
+    {
         let repo = self
             .find_repo_by_id(ctx, sync_target_config.target.repo_id)
             .await?;
@@ -1028,8 +1074,11 @@ pub trait MegarepoOp {
         cs_id: ChangesetId,
         version: &SyncConfigVersion,
         changesets_to_merge: &BTreeMap<SourceName, ChangesetId>,
-        repo: &RepoContext,
-    ) -> Result<Option<ChangesetId>, MegarepoError> {
+        repo: &RepoContext<R>,
+    ) -> Result<Option<ChangesetId>, MegarepoError>
+    where
+        R: MononokeRepo,
+    {
         let state = self.read_remapping_state_file(ctx, repo, cs_id).await?;
 
         if version != state.sync_config_version() {
@@ -1090,9 +1139,12 @@ pub trait MegarepoOp {
     async fn read_remapping_state_file(
         &self,
         ctx: &CoreContext,
-        repo: &RepoContext,
+        repo: &RepoContext<R>,
         cs_id: ChangesetId,
-    ) -> Result<CommitRemappingState, MegarepoError> {
+    ) -> Result<CommitRemappingState, MegarepoError>
+    where
+        R: MononokeRepo,
+    {
         let maybe_state = CommitRemappingState::read_state_from_commit_opt(ctx, repo.repo(), cs_id)
             .await
             .context("While reading remapping state file")
@@ -1104,9 +1156,9 @@ pub trait MegarepoOp {
     }
 }
 
-pub async fn find_bookmark_and_value(
+pub async fn find_bookmark_and_value<R: MononokeRepo>(
     ctx: &CoreContext,
-    repo: &RepoContext,
+    repo: &RepoContext<R>,
     bookmark_name: &str,
 ) -> Result<(BookmarkKey, ChangesetId), MegarepoError> {
     let bookmark = BookmarkKey::new(bookmark_name).map_err(MegarepoError::request)?;
@@ -1208,9 +1260,9 @@ pub(crate) async fn find_target_sync_config<'a>(
     Ok((state, target_config))
 }
 
-pub(crate) async fn find_target_bookmark_and_value(
+pub(crate) async fn find_target_bookmark_and_value<R: MononokeRepo>(
     ctx: &CoreContext,
-    target_repo: &RepoContext,
+    target_repo: &RepoContext<R>,
     target: &Target,
 ) -> Result<(BookmarkKey, ChangesetId), MegarepoError> {
     find_bookmark_and_value(ctx, target_repo, &target.bookmark).await

@@ -8,7 +8,7 @@ rust_binary(
     name = "mononoke",
     srcs = glob(["server/src/**/*.rs"]),
     autocargo = {"cargo_toml_dir": "server"},
-    deps = [
+    deps = ([
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:async-trait",
         "fbsource//third-party/rust:clap",
@@ -28,9 +28,10 @@ rust_binary(
         "//eden/mononoke/metaconfig:metaconfig_types",
         "//eden/mononoke/mononoke_api:mononoke_api",
         "//eden/mononoke/server/repo_listener:repo_listener",
+        "//eden/mononoke/repo_attributes/repo_identity:repo_identity",
     ] + ([] if rust_oss.is_oss_build() else [
         "//eden/mononoke/pushrebase:pushrebase_client",
-    ]),
+    ])),
 )
 
 tokio_dependency_test(

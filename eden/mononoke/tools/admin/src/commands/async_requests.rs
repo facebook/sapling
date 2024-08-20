@@ -18,6 +18,7 @@ use clap::Parser;
 use clap::Subcommand;
 use context::SessionContainer;
 use megarepo_api::MegarepoApi;
+use mononoke_api::Repo;
 use mononoke_app::args::RepoArgs;
 use mononoke_app::MononokeApp;
 
@@ -59,7 +60,8 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
             .context("Failed to initialize Mononoke API")?
             .make_mononoke_api()?,
     );
-    let megarepo = MegarepoApi::new(&app, mononoke).context("Failed to initialize MegarepoApi")?;
+    let megarepo: MegarepoApi<Repo> =
+        MegarepoApi::new(&app, mononoke).context("Failed to initialize MegarepoApi")?;
 
     let session = SessionContainer::new_with_defaults(app.environment().fb);
     let ctx = session.new_context(

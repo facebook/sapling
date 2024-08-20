@@ -26,6 +26,7 @@ use mononoke_api::BookmarkFreshness;
 use mononoke_api::BookmarkKey;
 use mononoke_api::ChangesetContext;
 use mononoke_api::CoreContext;
+use mononoke_api::MononokeRepo;
 use mononoke_api::RepoContext;
 use mononoke_types::ChangesetId;
 use mononoke_types::NonRootMPath;
@@ -293,8 +294,8 @@ async fn test_oldest_commit_ts_option(fb: FacebookInit) -> Result<()> {
 ///
 /// NOTE: changesets are passed as string slices and they're ids and changeset
 /// contexts are fetched after the test repo is built.
-async fn test_renamed_export_paths_are_followed(
-    source_repo_ctx: RepoContext,
+async fn test_renamed_export_paths_are_followed<R: MononokeRepo>(
+    source_repo_ctx: RepoContext<R>,
     changeset_ids: BTreeMap<String, ChangesetId>,
     // Path and the name of its upper bounds changeset
     export_paths: Vec<(NonRootMPath, &str)>,
@@ -322,7 +323,7 @@ async fn test_renamed_export_paths_are_followed(
         })
         .collect();
 
-    let export_path_infos: Vec<(NonRootMPath, ChangesetContext)> = stream::iter(export_paths)
+    let export_path_infos: Vec<(NonRootMPath, ChangesetContext<R>)> = stream::iter(export_paths)
         .then(|(path, cs_name): (NonRootMPath, &str)| {
             borrowed!(changeset_ids);
             borrowed!(source_repo_ctx);
@@ -333,10 +334,10 @@ async fn test_renamed_export_paths_are_followed(
                     cs_name
                 ))?;
 
-                anyhow::Ok::<(NonRootMPath, ChangesetContext)>((path, cs_context))
+                anyhow::Ok::<(NonRootMPath, ChangesetContext<R>)>((path, cs_context))
             }
         })
-        .try_collect::<Vec<(NonRootMPath, ChangesetContext)>>()
+        .try_collect::<Vec<(NonRootMPath, ChangesetContext<R>)>>()
         .await?;
 
     let graph_info =

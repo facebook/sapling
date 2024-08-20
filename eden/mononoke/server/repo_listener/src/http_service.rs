@@ -34,6 +34,7 @@ use http::Uri;
 use hyper::service::Service;
 use hyper::Body;
 use metadata::Metadata;
+use mononoke_api::Repo;
 use percent_encoding::percent_decode;
 use qps::Qps;
 use session_id::generate_session_id;
@@ -384,7 +385,7 @@ where
         Ok(res)
     }
 
-    fn acceptor(&self) -> &Acceptor {
+    fn acceptor(&self) -> &Acceptor<Repo> {
         &self.conn.pending.acceptor
     }
 

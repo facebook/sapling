@@ -11,6 +11,7 @@ use std::sync::Arc;
 use context::CoreContext;
 use metaconfig_types::CommonCommitSyncConfig;
 use mononoke_api::Mononoke;
+use mononoke_api::Repo;
 use mononoke_api::RepoContext;
 use mononoke_types::ChangesetId;
 use phases::PhasesRef;
@@ -43,7 +44,7 @@ impl RepoChangeset {
 // mappings.
 struct RepoChangesetsPushrebaseHistory {
     ctx: CoreContext,
-    mononoke: Arc<Mononoke>,
+    mononoke: Arc<Mononoke<Repo>>,
     head: RepoChangeset,
     changesets: Vec<RepoChangeset>,
 }
@@ -51,7 +52,7 @@ struct RepoChangesetsPushrebaseHistory {
 impl RepoChangesetsPushrebaseHistory {
     fn new(
         ctx: CoreContext,
-        mononoke: Arc<Mononoke>,
+        mononoke: Arc<Mononoke<Repo>>,
         repo_name: String,
         changeset: ChangesetId,
     ) -> Self {
@@ -70,7 +71,7 @@ impl RepoChangesetsPushrebaseHistory {
         }
     }
 
-    async fn repo(&self, repo_name: &String) -> Result<RepoContext, errors::ServiceError> {
+    async fn repo(&self, repo_name: &String) -> Result<RepoContext<Repo>, errors::ServiceError> {
         let repo = self
             .mononoke
             .repo(self.ctx.clone(), repo_name)
@@ -147,7 +148,7 @@ impl RepoChangesetsPushrebaseHistory {
     // Only needed for better code readability
     async fn try_traverse_commit_sync_inner(
         &mut self,
-        repo: RepoContext,
+        repo: RepoContext<Repo>,
         bcs_id: ChangesetId,
         config: CommonCommitSyncConfig,
     ) -> Result<bool, errors::ServiceError> {

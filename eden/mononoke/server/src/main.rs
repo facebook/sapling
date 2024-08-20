@@ -31,6 +31,7 @@ use futures::channel::oneshot;
 use futures::stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
+use metaconfig_types::RepoConfigRef;
 use metaconfig_types::ShardedService;
 use mononoke_api::CoreContext;
 use mononoke_api::Repo;
@@ -47,6 +48,7 @@ use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
 use mononoke_app::MononokeReposManager;
 use openssl::ssl::AlpnError;
+use repo_identity::RepoIdentityRef;
 use scuba_ext::MononokeScubaSampleBuilder;
 use sharding_ext::RepoShard;
 use slog::error;
@@ -127,7 +129,7 @@ impl MononokeServerProcess {
         if self.repos_mgr.repos().get_by_name(repo_name).is_none() {
             // The input repo is a deep-sharded repo, so it needs to be added now.
             let repo = self.repos_mgr.add_repo(repo_name).await?;
-            let cache_warmup_params = repo.config().cache_warmup.clone();
+            let cache_warmup_params = repo.repo_config().cache_warmup.clone();
             let ctx =
                 CoreContext::new_with_logger_and_scuba(self.fb, logger.clone(), scuba.clone());
             cache_warmup(
@@ -315,16 +317,16 @@ fn main(fb: FacebookInit) -> Result<()> {
         cloned!(root_log, will_exit, env, runtime, service_name);
         move |app: MononokeApp| async move {
             let common = configs.common.clone();
-            let repos_mgr = app.open_managed_repos(service_name).await?;
+            let repos_mgr = app.open_managed_repos::<Repo>(service_name).await?;
             let mononoke = Arc::new(repos_mgr.make_mononoke_api()?);
             info!(&root_log, "Built Mononoke");
 
             info!(&root_log, "Warming up cache");
             stream::iter(mononoke.repos())
                 .map(|repo| {
-                    let repo_name = repo.name().to_string();
+                    let repo_name = repo.repo_identity().name().to_string();
                     let root_log = root_log.clone();
-                    let cache_warmup_params = repo.config().cache_warmup.clone();
+                    let cache_warmup_params = repo.repo_config().cache_warmup.clone();
                     cloned!(scuba);
                     async move {
                         let logger = root_log.new(o!("repo" => repo_name.clone()));

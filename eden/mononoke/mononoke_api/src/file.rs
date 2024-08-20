@@ -27,15 +27,16 @@ use repo_blobstore::RepoBlobstoreRef;
 
 use crate::errors::MononokeError;
 use crate::repo::RepoContext;
+use crate::MononokeRepo;
 
 #[derive(Clone)]
-pub struct FileContext {
-    repo_ctx: RepoContext,
+pub struct FileContext<R> {
+    repo_ctx: RepoContext<R>,
     fetch_key: FetchKey,
     metadata: LazyShared<Result<FileMetadata, MononokeError>>,
 }
 
-impl fmt::Debug for FileContext {
+impl<R: MononokeRepo> fmt::Debug for FileContext<R> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
@@ -54,14 +55,14 @@ impl fmt::Debug for FileContext {
 ///
 /// See `ChangesetPathContentContext` if you need to refer to a specific file in a
 /// specific commit.
-impl FileContext {
+impl<R: MononokeRepo> FileContext<R> {
     /// Create a new FileContext.  The file must exist in the repository,
     /// and the user must be known to have permission to access the path
     /// the file exists at.
     ///
     /// To construct a `FileContext` for a file that might not exist, use
     /// `new_check_exists`.
-    pub(crate) fn new_authorized(repo_ctx: RepoContext, fetch_key: FetchKey) -> Self {
+    pub(crate) fn new_authorized(repo_ctx: RepoContext<R>, fetch_key: FetchKey) -> Self {
         Self {
             repo_ctx,
             fetch_key,
@@ -72,7 +73,7 @@ impl FileContext {
     /// Create a new  FileContext using an ID that might not exist. Returns
     /// `None` if the file doesn't exist.
     pub(crate) async fn new_check_exists(
-        repo_ctx: RepoContext,
+        repo_ctx: RepoContext<R>,
         fetch_key: FetchKey,
     ) -> Result<Option<Self>, MononokeError> {
         // Access to an arbitrary file requires full access to the repo,
@@ -98,7 +99,7 @@ impl FileContext {
     }
 
     /// The `RepoContext` for this query.
-    pub(crate) fn repo_ctx(&self) -> &RepoContext {
+    pub(crate) fn repo_ctx(&self) -> &RepoContext<R> {
         &self.repo_ctx
     }
 
@@ -196,9 +197,9 @@ pub struct HeaderlessUnifiedDiff {
     pub is_binary: bool,
 }
 
-pub async fn headerless_unified_diff(
-    old_file: &FileContext,
-    new_file: &FileContext,
+pub async fn headerless_unified_diff<R: MononokeRepo>(
+    old_file: &FileContext<R>,
+    new_file: &FileContext<R>,
     context_lines: usize,
 ) -> Result<HeaderlessUnifiedDiff, MononokeError> {
     let (old_diff_file, new_diff_file) =

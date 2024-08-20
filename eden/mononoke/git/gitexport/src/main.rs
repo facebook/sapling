@@ -34,6 +34,7 @@ use mononoke_api::BookmarkFreshness;
 use mononoke_api::ChangesetContext;
 use mononoke_api::ChangesetId;
 use mononoke_api::CoreContext;
+use mononoke_api::MononokeRepo;
 use mononoke_api::Repo;
 use mononoke_api::RepoContext;
 use mononoke_app::fb303::AliveService;
@@ -240,7 +241,7 @@ async fn async_main_impl(
     };
 
     let auth_ctx = AuthorizationContext::new_bypass_access_control();
-    let repo_ctx: RepoContext = RepoContext::new(
+    let repo_ctx: RepoContext<Repo> = RepoContext::new(
         ctx,
         auth_ctx.into(),
         repo,
@@ -276,13 +277,13 @@ async fn async_main_impl(
         .collect::<Result<Vec<NonRootMPath>>>()?;
 
     let export_path_infos = {
-        let mut export_path_infos: Vec<(NonRootMPath, ChangesetContext)> = export_paths
+        let mut export_path_infos: Vec<(NonRootMPath, ChangesetContext<Repo>)> = export_paths
             .into_iter()
             .map(|p| (p, cs_ctx.clone()))
             .collect();
 
         // Paths provided with associated head commits through a JSON file
-        let export_paths_with_specific_heads: Vec<ExportPathInfo> =
+        let export_paths_with_specific_heads: Vec<ExportPathInfo<Repo>> =
             match args.bounded_export_paths_file {
                 Some(file) => get_bounded_export_paths(&repo_ctx, file).await?,
                 None => vec![],
@@ -358,8 +359,8 @@ async fn async_main_impl(
     Ok(())
 }
 
-async fn print_commit_graph(
-    repo_ctx: &RepoContext,
+async fn print_commit_graph<R: MononokeRepo>(
+    repo_ctx: &RepoContext<R>,
     cs_id: ChangesetId,
     output: PathBuf,
     limit: usize,
@@ -388,10 +389,10 @@ async fn print_commit_graph(
 
 /// Gets the head commit for all export paths provided via the
 /// `-p` (or `--export_paths`) argument.
-async fn get_latest_changeset_context(
-    repo_ctx: &RepoContext,
+async fn get_latest_changeset_context<R: MononokeRepo>(
+    repo_ctx: &RepoContext<R>,
     args: &GitExportArgs,
-) -> Result<ChangesetContext> {
+) -> Result<ChangesetContext<R>> {
     if let Some(changeset_id) = &args.latest_cs_id {
         return get_changeset_context_from_head_arg(
             repo_ctx,
@@ -407,10 +408,10 @@ async fn get_latest_changeset_context(
     get_changeset_context_from_head_arg(repo_ctx, HeadChangesetArg::Bookmark(bookmark_name)).await
 }
 
-async fn get_bounded_export_paths(
-    repo_ctx: &RepoContext,
+async fn get_bounded_export_paths<R: MononokeRepo>(
+    repo_ctx: &RepoContext<R>,
     bounded_export_paths_file: String,
-) -> Result<Vec<ExportPathInfo>> {
+) -> Result<Vec<ExportPathInfo<R>>> {
     let export_path_info_args = read_bounded_export_paths_file(bounded_export_paths_file)?;
 
     stream::iter(export_path_info_args)
@@ -421,10 +422,11 @@ async fn get_bounded_export_paths(
                 .map(|p| TryFrom::try_from(p.as_os_str()))
                 .collect::<Result<Vec<NonRootMPath>>>()?;
 
-            let head_cs: ChangesetContext =
+            let head_cs: ChangesetContext<R> =
                 get_changeset_context_from_head_arg(repo_ctx, ep_arg.head).await?;
 
-            Ok(stream::iter(export_paths).map(move |p| Ok::<ExportPathInfo>((p, head_cs.clone()))))
+            Ok(stream::iter(export_paths)
+                .map(move |p| Ok::<ExportPathInfo<R>>((p, head_cs.clone()))))
         })
         .try_flatten()
         .try_collect::<Vec<_>>()
@@ -441,10 +443,10 @@ fn read_bounded_export_paths_file(
     Ok(serde_json::from_str(&contents)?)
 }
 
-async fn get_changeset_context_from_head_arg(
-    repo_ctx: &RepoContext,
+async fn get_changeset_context_from_head_arg<R: MononokeRepo>(
+    repo_ctx: &RepoContext<R>,
     head_cs: HeadChangesetArg,
-) -> Result<ChangesetContext> {
+) -> Result<ChangesetContext<R>> {
     match head_cs {
         HeadChangesetArg::ID(changeset_id) => {
             let cs_id =

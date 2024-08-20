@@ -12,6 +12,7 @@ use async_requests::types::RowId;
 use clap::Args;
 use context::CoreContext;
 use megarepo_api::MegarepoApi;
+use mononoke_api::MononokeRepo;
 
 #[derive(Args)]
 /// Changes the request status to ready and put error as result.
@@ -22,10 +23,10 @@ pub struct AsyncRequestsRequeueArgs {
     request_id: u64,
 }
 
-pub async fn requeue_request(
+pub async fn requeue_request<R: MononokeRepo>(
     args: AsyncRequestsRequeueArgs,
     ctx: CoreContext,
-    megarepo: MegarepoApi,
+    megarepo: MegarepoApi<R>,
 ) -> Result<(), Error> {
     let repos_and_queues = megarepo.all_async_method_request_queues(&ctx).await?;
 

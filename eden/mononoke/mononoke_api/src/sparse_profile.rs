@@ -39,6 +39,7 @@ use crate::ChangesetDiffItem;
 use crate::ChangesetFileOrdering;
 use crate::ChangesetPathContentContext;
 use crate::ChangesetPathDiffContext;
+use crate::MononokeRepo;
 use crate::PathEntry;
 
 // This struct contains matchers which will be consulted in various scenarious
@@ -125,9 +126,9 @@ impl SparseProfileMonitoring {
         })
     }
 
-    pub async fn get_monitoring_profiles(
+    pub async fn get_monitoring_profiles<R: MononokeRepo>(
         &self,
-        changeset: &ChangesetContext,
+        changeset: &ChangesetContext<R>,
     ) -> Result<Vec<NonRootMPath>, MononokeError> {
         match &self.monitoring_profiles {
             MonitoringProfiles::All => {
@@ -186,10 +187,10 @@ impl SparseProfileMonitoring {
         matcher.matches(path.to_string().as_str())
     }
 
-    pub async fn get_profile_size(
+    pub async fn get_profile_size<R: MononokeRepo>(
         &self,
         ctx: &CoreContext,
-        changeset: &ChangesetContext,
+        changeset: &ChangesetContext<R>,
         paths: Vec<NonRootMPath>,
     ) -> Result<Out, MononokeError> {
         let cs_id = changeset.id();
@@ -232,7 +233,10 @@ impl SparseProfileMonitoring {
     }
 }
 
-pub(crate) async fn fetch(path: String, changeset: &ChangesetContext) -> Result<Option<Vec<u8>>> {
+pub(crate) async fn fetch<R: MononokeRepo>(
+    path: String,
+    changeset: &ChangesetContext<R>,
+) -> Result<Option<Vec<u8>>> {
     let path: &str = &path;
     let path = NonRootMPath::try_from(path)?;
     let path_with_content = changeset.path_with_content(path.clone()).await?;
@@ -247,8 +251,8 @@ pub(crate) async fn fetch(path: String, changeset: &ChangesetContext) -> Result<
         .map(|b| Some(b.to_vec()))
 }
 
-async fn create_matchers(
-    changeset: &ChangesetContext,
+async fn create_matchers<R: MononokeRepo>(
+    changeset: &ChangesetContext<R>,
     paths: Vec<NonRootMPath>,
 ) -> Result<HashMap<String, Arc<dyn Matcher + Send + Sync>>> {
     stream::iter(paths)
@@ -273,9 +277,9 @@ async fn create_matchers(
 
 type Out = HashMap<String, u64>;
 
-async fn calculate_size<'a>(
+async fn calculate_size<'a, R: MononokeRepo>(
     ctx: &'a CoreContext,
-    changeset: &'a ChangesetContext,
+    changeset: &'a ChangesetContext<R>,
     matchers: HashMap<String, Arc<dyn Matcher + Send + Sync>>,
 ) -> Result<Out, MononokeError> {
     let root_fsnode_id = changeset.root_fsnode_id().await?;
@@ -348,7 +352,9 @@ fn fold_maps(mut a: Out, b: Out) -> Out {
     a
 }
 
-async fn get_entry_size(content: &ChangesetPathContentContext) -> Result<u64, MononokeError> {
+async fn get_entry_size<R: MononokeRepo>(
+    content: &ChangesetPathContentContext<R>,
+) -> Result<u64, MononokeError> {
     let path = content.path();
     match content.entry().await? {
         PathEntry::File(file, _) => Ok(file.metadata().await?.total_size),
@@ -360,9 +366,9 @@ async fn get_entry_size(content: &ChangesetPathContentContext) -> Result<u64, Mo
     }
 }
 
-async fn get_bonsai_size_change(
-    current: &ChangesetContext,
-    other: &ChangesetContext,
+async fn get_bonsai_size_change<R: MononokeRepo>(
+    current: &ChangesetContext<R>,
+    other: &ChangesetContext<R>,
 ) -> Result<Vec<BonsaiSizeChange>> {
     let diff_items = btreeset! { ChangesetDiffItem::FILES };
     let diff = current
@@ -435,22 +441,22 @@ fn match_path(matcher: &dyn Matcher, path: &MPath) -> Result<bool> {
     matcher.matches_file(RepoPath::from_utf8(&path_vec)?)
 }
 
-pub async fn get_profile_delta_size(
+pub async fn get_profile_delta_size<R: MononokeRepo>(
     ctx: &CoreContext,
     monitor: &SparseProfileMonitoring,
-    current: &ChangesetContext,
-    other: &ChangesetContext,
+    current: &ChangesetContext<R>,
+    other: &ChangesetContext<R>,
     paths: Vec<NonRootMPath>,
 ) -> Result<HashMap<String, ProfileSizeChange>, MononokeError> {
     let matchers = create_matchers(current, paths).await?;
     calculate_delta_size(ctx, monitor, current, other, matchers).await
 }
 
-pub async fn calculate_delta_size<'a>(
+pub async fn calculate_delta_size<'a, R: MononokeRepo>(
     ctx: &'a CoreContext,
     monitor: &'a SparseProfileMonitoring,
-    current: &'a ChangesetContext,
-    other: &'a ChangesetContext,
+    current: &'a ChangesetContext<R>,
+    other: &'a ChangesetContext<R>,
     matchers: HashMap<String, Arc<dyn Matcher + Send + Sync>>,
 ) -> Result<HashMap<String, ProfileSizeChange>, MononokeError> {
     let diff_change = get_bonsai_size_change(current, other).await?;
@@ -488,11 +494,11 @@ pub async fn calculate_delta_size<'a>(
         .collect())
 }
 
-async fn calculate_profile_config_change<'a>(
+async fn calculate_profile_config_change<'a, R: MononokeRepo>(
     ctx: &'a CoreContext,
     monitor: &'a SparseProfileMonitoring,
-    current: &'a ChangesetContext,
-    other: &'a ChangesetContext,
+    current: &'a ChangesetContext<R>,
+    other: &'a ChangesetContext<R>,
     // This should be changes to the sparse profile configs only
     changes: Vec<BonsaiSizeChange>,
 ) -> Result<HashMap<String, ProfileSizeChange>, MononokeError> {

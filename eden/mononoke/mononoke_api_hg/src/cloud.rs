@@ -30,10 +30,11 @@ use mercurial_types::HgChangesetId;
 use mononoke_api::ChangesetContext;
 use mononoke_api::ChangesetSpecifier;
 use mononoke_api::MononokeError;
+use mononoke_api::MononokeRepo;
 use phases::PhasesRef;
 
 use crate::HgRepoContext;
-impl HgRepoContext {
+impl<R: MononokeRepo> HgRepoContext<R> {
     pub async fn cloud_workspace(
         &self,
         workspace: &str,
@@ -42,7 +43,7 @@ impl HgRepoContext {
         let mut cc_ctx = CommitCloudContext::new(workspace, reponame)?;
         let authz = self.repo_ctx().authorization_context();
         authz
-            .require_commitcloud_operation(self.ctx(), &self.repo_ctx().repo(), &mut cc_ctx, "read")
+            .require_commitcloud_operation(self.ctx(), self.repo_ctx().repo(), &mut cc_ctx, "read")
             .await?;
         Ok(self
             .repo_ctx()
@@ -72,7 +73,7 @@ impl HgRepoContext {
         let mut ctx = CommitCloudContext::new(&params.workspace, &params.reponame)?;
         let authz = self.repo_ctx().authorization_context();
         authz
-            .require_commitcloud_operation(self.ctx(), &self.repo_ctx().repo(), &mut ctx, "read")
+            .require_commitcloud_operation(self.ctx(), self.repo_ctx().repo(), &mut ctx, "read")
             .await?;
         let cc_ctx = CommitCloudContext::new(&params.workspace, &params.reponame)?;
         Ok(self
@@ -94,12 +95,7 @@ impl HgRepoContext {
 
         let authz = self.repo_ctx().authorization_context();
         authz
-            .require_commitcloud_operation(
-                self.ctx(),
-                &self.repo_ctx().repo(),
-                &mut cc_ctx,
-                "write",
-            )
+            .require_commitcloud_operation(self.ctx(), self.repo_ctx().repo(), &mut cc_ctx, "write")
             .await?;
 
         Ok(self
@@ -174,7 +170,7 @@ impl HgRepoContext {
             })
             .map_err(MononokeError::from)
             .try_buffered(100)
-            .try_collect::<Vec<Option<ChangesetContext>>>()
+            .try_collect::<Vec<Option<ChangesetContext<R>>>>()
             .await?;
 
         let public_commits_ctx = try_join_all(
@@ -224,7 +220,7 @@ impl HgRepoContext {
         authz
             .require_commitcloud_operation(
                 self.ctx(),
-                &self.repo_ctx().repo(),
+                self.repo_ctx().repo(),
                 &mut ctx,
                 "maintainers",
             )
@@ -246,12 +242,7 @@ impl HgRepoContext {
 
         let authz = self.repo_ctx().authorization_context();
         authz
-            .require_commitcloud_operation(
-                self.ctx(),
-                &self.repo_ctx().repo(),
-                &mut cc_ctx,
-                "write",
-            )
+            .require_commitcloud_operation(self.ctx(), self.repo_ctx().repo(), &mut cc_ctx, "write")
             .await?;
 
         Ok(self
@@ -270,7 +261,7 @@ impl HgRepoContext {
 
         let authz = self.repo_ctx().authorization_context();
         authz
-            .require_commitcloud_operation(self.ctx(), &self.repo_ctx().repo(), &mut ctx, "write")
+            .require_commitcloud_operation(self.ctx(), self.repo_ctx().repo(), &mut ctx, "write")
             .await?;
 
         Ok(self

@@ -59,6 +59,7 @@ use crate::file::FileType;
 use crate::path::MononokePathPrefixes;
 use crate::repo::RepoContext;
 use crate::specifiers::ChangesetSpecifier;
+use crate::MononokeRepo;
 
 #[derive(Clone)]
 pub struct CreateCopyInfo {
@@ -71,10 +72,10 @@ impl CreateCopyInfo {
         CreateCopyInfo { path, parent_index }
     }
 
-    async fn check_valid(
+    async fn check_valid<R: MononokeRepo>(
         &self,
         stack_changes: Option<&PathTree<CreateChangeType>>,
-        stack_parents: &[ChangesetContext],
+        stack_parents: &[ChangesetContext<R>],
     ) -> Result<(), MononokeError> {
         if let Some(stack_changes) = stack_changes {
             // Since this is a stacked commit, there is only one parent.
@@ -309,13 +310,13 @@ impl CreateChangeType {
 }
 
 impl CreateChange {
-    async fn resolve(
+    async fn resolve<R: MononokeRepo>(
         &mut self,
         ctx: &CoreContext,
         filestore_config: FilestoreConfig,
         repo_blobstore: RepoBlobstore,
         stack_changes: Option<&PathTree<CreateChangeType>>,
-        stack_parents: &[ChangesetContext],
+        stack_parents: &[ChangesetContext<R>],
     ) -> Result<(), MononokeError> {
         let file = match self {
             CreateChange::Tracked(file, copy_info) => {
@@ -402,13 +403,13 @@ pub struct CreateInfo {
 }
 
 /// Verify that all deleted files existed in at least one of the parents.
-async fn verify_deleted_files_existed_in_a_parent(
-    parent_ctxs: &[ChangesetContext],
+async fn verify_deleted_files_existed_in_a_parent<R: MononokeRepo>(
+    parent_ctxs: &[ChangesetContext<R>],
     stack_changes: Option<&PathTree<CreateChangeType>>,
     mut deleted_files: BTreeSet<MPath>,
 ) -> Result<(), MononokeError> {
-    async fn get_matching_files<'a>(
-        parent_ctx: &'a ChangesetContext,
+    async fn get_matching_files<'a, R: MononokeRepo>(
+        parent_ctx: &'a ChangesetContext<R>,
         files: &'a BTreeSet<MPath>,
     ) -> Result<impl Stream<Item = Result<MPath, MononokeError>> + 'a, MononokeError> {
         Ok(parent_ctx
@@ -499,8 +500,8 @@ fn is_prefix_changed(path: &MPath, paths: &PathTree<CreateChangeType>) -> bool {
 /// Verify that any files in `prefix_paths` that exist in any of
 /// `parent_ctxs`, as modified by the existing stack changes, have been marked
 /// as deleted in `path_changes`.
-async fn verify_prefix_files_deleted(
-    parent_ctxs: &[ChangesetContext],
+async fn verify_prefix_files_deleted<R: MononokeRepo>(
+    parent_ctxs: &[ChangesetContext<R>],
     stack_changes: Option<&PathTree<CreateChangeType>>,
     mut prefix_paths: BTreeSet<MPath>,
     path_changes: &PathTree<CreateChangeType>,
@@ -549,10 +550,10 @@ async fn verify_prefix_files_deleted(
         .await
 }
 
-async fn check_addless_union_conflicts(
+async fn check_addless_union_conflicts<R: MononokeRepo>(
     ctx: &CoreContext,
     repo_blobstore: RepoBlobstore,
-    changesets: &[ChangesetContext],
+    changesets: &[ChangesetContext<R>],
     fix_paths: &PathTree<CreateChangeType>,
 ) -> Result<(), MononokeError> {
     if changesets.len() < 2 {
@@ -645,7 +646,7 @@ async fn check_addless_union_conflicts(
     }
 }
 
-impl RepoContext {
+impl<R: MononokeRepo> RepoContext<R> {
     pub(crate) async fn save_changesets(
         &self,
         changesets: Vec<BonsaiChangeset>,
@@ -697,7 +698,7 @@ impl RepoContext {
         // If some, this changeset is a snapshot. Currently unsupported to upload a
         // normal commit to a bubble, though can be easily added.
         bubble: Option<&Bubble>,
-    ) -> Result<(SortedVectorMap<String, Vec<u8>>, ChangesetContext), MononokeError> {
+    ) -> Result<(SortedVectorMap<String, Vec<u8>>, ChangesetContext<R>), MononokeError> {
         let changesets = self
             .create_changeset_stack(parents, vec![info], vec![changes], bubble)
             .await?;
@@ -724,7 +725,7 @@ impl RepoContext {
         // If some, this changeset is a snapshot. Currently unsupported to upload a
         // normal commit to a bubble, though can be easily added.
         bubble: Option<&Bubble>,
-    ) -> Result<Vec<(SortedVectorMap<String, Vec<u8>>, ChangesetContext)>, MononokeError> {
+    ) -> Result<Vec<(SortedVectorMap<String, Vec<u8>>, ChangesetContext<R>)>, MononokeError> {
         self.start_write()?;
         self.authorization_context()
             .require_repo_write(self.ctx(), self.repo(), RepoWriteOperation::CreateChangeset)

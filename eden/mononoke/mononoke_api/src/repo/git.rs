@@ -48,6 +48,7 @@ use crate::changeset::ChangesetContext;
 use crate::errors::MononokeError;
 use crate::repo::RepoBlobstoreArc;
 use crate::repo::RepoContext;
+use crate::MononokeRepo;
 
 const HGGIT_MARKER_EXTRA: &str = "hg-git-rename-source";
 const HGGIT_MARKER_VALUE: &[u8] = b"git";
@@ -56,14 +57,14 @@ const GIT_OBJECT_PREFIX: &str = "git_object";
 const SEPARATOR: &str = ".";
 const BUNDLE_HEAD: &str = "BUNDLE_HEAD";
 
-impl RepoContext {
+impl<R: MononokeRepo> RepoContext<R> {
     /// Set the bonsai to git mapping based on the changeset
     /// If the user is trusted, this will use the hggit extra
     /// Otherwise, it will only work if we can derive a git commit ID, and that ID matches the hggit extra
     /// or the hggit extra is missing from the changeset completely.
     pub async fn set_git_mapping_from_changeset(
         &self,
-        changeset_ctx: &ChangesetContext,
+        changeset_ctx: &ChangesetContext<R>,
         hg_extras: &SortedVectorMap<String, Vec<u8>>,
     ) -> Result<(), MononokeError> {
         //TODO(simonfar): Once we support deriving git commits, do derivation here
@@ -128,7 +129,7 @@ impl RepoContext {
         annotation: String,
         annotated_tag: BonsaiAnnotatedTag,
         target_is_tag: bool,
-    ) -> Result<ChangesetContext, GitError> {
+    ) -> Result<ChangesetContext<R>, GitError> {
         let new_changeset_id = create_annotated_tag(
             self.ctx(),
             self.repo(),

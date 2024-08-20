@@ -59,6 +59,7 @@ use crate::FileType;
 use crate::HgChangesetId;
 use crate::HgChangesetIdPrefix;
 use crate::Mononoke;
+use crate::Repo;
 use crate::TreeEntry;
 use crate::TreeId;
 use crate::XRepoLookupSyncBehaviour;
@@ -868,7 +869,7 @@ async fn xrepo_commit_lookup_config_changing_live(fb: FacebookInit) -> Result<()
 
 async fn init_x_repo(
     ctx: &CoreContext,
-) -> Result<(Mononoke, TestLiveCommitSyncConfigSource), Error> {
+) -> Result<(Mononoke<Repo>, TestLiveCommitSyncConfigSource), Error> {
     let (syncers, commit_sync_config, _lv_cfg, lv_cfg_src) =
         init_small_large_repo::<crate::Repo>(ctx).await?;
 

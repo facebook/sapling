@@ -22,6 +22,8 @@ use futures::StreamExt;
 use hooks::PushAuthoredBy;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgNodeHash;
+use mononoke_api::MononokeRepo;
+use mononoke_api::Repo;
 use mononoke_api_hg::HgRepoContext;
 use repo_identity::RepoIdentityRef;
 
@@ -44,7 +46,7 @@ impl SaplingRemoteApiHandler for LandStackHandler {
     const ENDPOINT: &'static str = "/land";
 
     async fn handler(
-        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
+        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor, Repo>,
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
         Ok(stream::once(land_stack_response(
@@ -62,8 +64,8 @@ impl SaplingRemoteApiHandler for LandStackHandler {
     }
 }
 
-async fn land_stack_response(
-    repo: HgRepoContext,
+async fn land_stack_response<R: MononokeRepo>(
+    repo: HgRepoContext<R>,
     bookmark: String,
     head_hgid: HgId,
     base_hgid: HgId,
@@ -76,8 +78,8 @@ async fn land_stack_response(
     })
 }
 
-async fn land_stack(
-    repo: HgRepoContext,
+async fn land_stack<R: MononokeRepo>(
+    repo: HgRepoContext<R>,
     bookmark: String,
     head_hgid: HgId,
     base_hgid: HgId,

@@ -14,6 +14,7 @@ use gotham_ext::error::HttpError;
 use gotham_ext::middleware::request_context::RequestContext;
 use http::HeaderMap;
 use hyper::Body;
+use mononoke_api::MononokeRepo;
 use mononoke_api_hg::HgRepoContext;
 use mononoke_api_hg::RepoContextHgExt;
 use rate_limiting::Metric;
@@ -38,12 +39,12 @@ pub use convert::to_hg_path;
 pub use convert::to_mpath;
 pub use convert::to_revlog_changeset;
 
-pub async fn get_repo(
-    sctx: &ServerContext,
+pub async fn get_repo<R: MononokeRepo>(
+    sctx: &ServerContext<R>,
     rctx: &RequestContext,
     name: impl AsRef<str>,
     throttle_metric: impl Into<Option<Metric>>,
-) -> Result<HgRepoContext, HttpError> {
+) -> Result<HgRepoContext<R>, HttpError> {
     rctx.ctx.session().check_load_shed()?;
 
     if let Some(throttle_metric) = throttle_metric.into() {

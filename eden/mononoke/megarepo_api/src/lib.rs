@@ -44,6 +44,7 @@ use metaconfig_types::ArcRepoConfig;
 use metaconfig_types::RepoConfigArc;
 use metaconfig_types::RepoConfigRef;
 use mononoke_api::Mononoke;
+use mononoke_api::MononokeRepo;
 use mononoke_api::RepoContext;
 use mononoke_app::MononokeApp;
 use mononoke_types::ChangesetId;
@@ -58,7 +59,6 @@ use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataRef;
 use repo_factory::RepoFactory;
 use repo_identity::ArcRepoIdentity;
-use repo_identity::RepoIdentity;
 use repo_identity::RepoIdentityArc;
 use repo_identity::RepoIdentityRef;
 use requests_table::LongRunningRequestsQueue;
@@ -137,16 +137,16 @@ impl<K: Clone + Eq + Hash, V: Clone> Cache<K, V> {
     }
 }
 
-pub struct MegarepoApi {
+pub struct MegarepoApi<R> {
     megarepo_configs: Arc<dyn MononokeMegarepoConfigs>,
     queue_cache: Cache<ArcRepoIdentity, AsyncMethodRequestQueue>,
     megarepo_mapping_cache: Cache<ArcRepoIdentity, Arc<MegarepoMapping>>,
-    mononoke: Arc<Mononoke>,
+    mononoke: Arc<Mononoke<R>>,
     repo_factory: Arc<RepoFactory>,
 }
 
-impl MegarepoApi {
-    pub fn new(app: &MononokeApp, mononoke: Arc<Mononoke>) -> Result<Self, MegarepoError> {
+impl<R: MononokeRepo> MegarepoApi<R> {
+    pub fn new(app: &MononokeApp, mononoke: Arc<Mononoke<R>>) -> Result<Self, MegarepoError> {
         let env = app.environment();
         let fb = env.fb;
         let logger = env.logger.new(o!("megarepo" => ""));
@@ -202,7 +202,7 @@ impl MegarepoApi {
     }
 
     /// Get mononoke object
-    pub fn mononoke(&self) -> Arc<Mononoke> {
+    pub fn mononoke(&self) -> Arc<Mononoke<R>> {
         self.mononoke.clone()
     }
 
@@ -254,9 +254,9 @@ impl MegarepoApi {
         // per group of repos with exactly same storage configs. This way even with
         // a lot of repos we'll have few queues.
         let queues = try_join_all(self.mononoke.repos().map(|repo| {
-            let repo_id = repo.repoid();
-            let repo_identity = RepoIdentity::new(repo_id, repo.name().to_string());
-            let repo_config = repo.config().clone();
+            let repo_identity = repo.repo_identity().clone();
+            let repo_id = repo_identity.id();
+            let repo_config = repo.repo_config().clone();
             async move {
                 let queue = self
                     .async_method_request_queue_for_repo(
@@ -323,7 +323,7 @@ impl MegarepoApi {
         &self,
         ctx: &CoreContext,
         target: &Target,
-    ) -> Result<RepoContext, Error> {
+    ) -> Result<RepoContext<R>, Error> {
         let repo_id: i32 = TryFrom::<i64>::try_from(target.repo_id)?;
         let repo_id = RepositoryId::new(repo_id);
         let repo = self

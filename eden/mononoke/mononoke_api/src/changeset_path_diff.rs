@@ -11,6 +11,7 @@ use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
 use bytes::Bytes;
+use derivative::Derivative;
 use futures::try_join;
 use lazy_static::lazy_static;
 use mononoke_types::hash::GitSha1;
@@ -22,6 +23,7 @@ use crate::changeset_path::ChangesetPathContentContext;
 use crate::errors::MononokeError;
 use crate::file::FileType;
 use crate::FileContext;
+use crate::MononokeRepo;
 
 lazy_static! {
     static ref BEGIN_MANUAL_SECTION_REGEX: Regex =
@@ -38,13 +40,23 @@ lazy_static! {
 /// The changed, copied and moved variants contain the items in the same
 /// order as the commits that were compared, i.e. in `a.diff(b)`, they
 /// will contain `(a, b)`.  This usually means the destination is first.
-#[derive(Clone, Debug)]
-pub enum ChangesetPathDiffContext {
-    Added(ChangesetPathContentContext),
-    Removed(ChangesetPathContentContext),
-    Changed(ChangesetPathContentContext, ChangesetPathContentContext),
-    Copied(ChangesetPathContentContext, ChangesetPathContentContext),
-    Moved(ChangesetPathContentContext, ChangesetPathContentContext),
+#[derive(Derivative)]
+#[derivative(Clone, Debug(bound = ""))]
+pub enum ChangesetPathDiffContext<R: MononokeRepo> {
+    Added(ChangesetPathContentContext<R>),
+    Removed(ChangesetPathContentContext<R>),
+    Changed(
+        ChangesetPathContentContext<R>,
+        ChangesetPathContentContext<R>,
+    ),
+    Copied(
+        ChangesetPathContentContext<R>,
+        ChangesetPathContentContext<R>,
+    ),
+    Moved(
+        ChangesetPathContentContext<R>,
+        ChangesetPathContentContext<R>,
+    ),
 }
 
 /// A diff between two files in extended unified diff format
@@ -256,7 +268,7 @@ impl From<&FileGeneratedSpan> for FileGeneratedStatus {
 }
 
 impl ParsedFileContent {
-    async fn new(file: FileContext) -> Result<Self, MononokeError> {
+    async fn new<R: MononokeRepo>(file: FileContext<R>) -> Result<Self, MononokeError> {
         let metadata = file.metadata().await?;
         let parsed_content = if metadata.is_binary {
             ParsedFileContent::Binary
@@ -376,15 +388,15 @@ impl FileGeneratedSpan {
     }
 }
 
-impl ChangesetPathDiffContext {
+impl<R: MononokeRepo> ChangesetPathDiffContext<R> {
     /// Create a new path diff context that compares the contents of two
     /// changeset paths.
     ///
     /// Copy information must be provided if the file has been copied or
     /// moved.
     pub fn new(
-        base: Option<ChangesetPathContentContext>,
-        other: Option<ChangesetPathContentContext>,
+        base: Option<ChangesetPathContentContext<R>>,
+        other: Option<ChangesetPathContentContext<R>>,
         copy_info: CopyInfo,
     ) -> Result<Self, MononokeError> {
         match (base, other, copy_info) {
@@ -403,7 +415,7 @@ impl ChangesetPathDiffContext {
 
     /// Return the base path that is being compared.  This is the
     /// contents after modification.
-    pub fn base(&self) -> Option<&ChangesetPathContentContext> {
+    pub fn base(&self) -> Option<&ChangesetPathContentContext<R>> {
         match self {
             Self::Added(base)
             | Self::Changed(base, _)
@@ -415,7 +427,7 @@ impl ChangesetPathDiffContext {
 
     /// Return the other path that is being compared against.  This
     /// is the contents before modification.
-    pub fn other(&self) -> Option<&ChangesetPathContentContext> {
+    pub fn other(&self) -> Option<&ChangesetPathContentContext<R>> {
         match self {
             Self::Removed(other)
             | Self::Changed(_, other)
@@ -428,7 +440,7 @@ impl ChangesetPathDiffContext {
     /// Return the main path for this difference.  This is the added or
     /// removed path, or the base (destination) in the case of modifications,
     /// copies, or moves.
-    pub fn path(&self) -> &ChangesetPathContentContext {
+    pub fn path(&self) -> &ChangesetPathContentContext<R> {
         match self {
             Self::Added(base)
             | Self::Changed(base, _)
@@ -449,7 +461,7 @@ impl ChangesetPathDiffContext {
 
     // Helper for getting file information.
     async fn get_file_data(
-        path: Option<&ChangesetPathContentContext>,
+        path: Option<&ChangesetPathContentContext<R>>,
         mode: UnifiedDiffMode,
     ) -> Result<Option<xdiff::DiffFile<String, Bytes>>, MononokeError> {
         match path {

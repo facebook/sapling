@@ -19,6 +19,7 @@ use futures::stream;
 use futures::StreamExt;
 use mononoke_api::BookmarkKey;
 use mononoke_api::MononokeError;
+use mononoke_api::MononokeRepo;
 use mononoke_api::RepoContext;
 use mononoke_types::ChangesetId;
 use slog::info;
@@ -95,9 +96,9 @@ impl BookmarkOperationType {
 }
 
 /// Method responsible for either creating, moving or deleting a bookmark in gitimport and gitserver.
-pub async fn set_bookmark(
+pub async fn set_bookmark<R: MononokeRepo>(
     ctx: &CoreContext,
-    repo_context: &RepoContext,
+    repo_context: &RepoContext<R>,
     bookmark_operation: &BookmarkOperation,
     pushvars: Option<&HashMap<String, Bytes>>,
     allow_non_fast_forward: bool,
@@ -178,9 +179,9 @@ pub async fn set_bookmark(
 
 /// Method responsible for multiple bookmark moves, where each bookmark move can either be creating,
 /// moving or deleting a bookmark in gitimport and gitserver.
-pub async fn set_bookmarks(
+pub async fn set_bookmarks<R: MononokeRepo>(
     ctx: &CoreContext,
-    repo_context: &RepoContext,
+    repo_context: &RepoContext<R>,
     bookmark_operations: Vec<BookmarkOperation>,
     pushvars: Option<&HashMap<String, Bytes>>,
     allow_non_fast_forward: bool,
@@ -225,8 +226,8 @@ pub async fn set_bookmarks(
     Result::Ok(())
 }
 
-async fn move_bookmark(
-    repo_context: &RepoContext,
+async fn move_bookmark<R: MononokeRepo>(
+    repo_context: &RepoContext<R>,
     bookmark_operation: BookmarkOperation,
     pushvars: Option<&HashMap<String, Bytes>>,
     allow_non_fast_forward: bool,

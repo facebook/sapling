@@ -17,6 +17,7 @@ use futures::StreamExt;
 use gotham_ext::error::HttpError;
 use itertools::EitherOrBoth;
 use mononoke_api::ChangesetFileOrdering;
+use mononoke_api::Repo;
 use mononoke_types::MPath;
 use types::RepoPathBuf;
 use vec1::Vec1;
@@ -43,7 +44,7 @@ impl SaplingRemoteApiHandler for SuffixQueryHandler {
     }
 
     async fn handler(
-        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
+        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor, Repo>,
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
         let repo = ectx.repo();

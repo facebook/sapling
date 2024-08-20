@@ -25,6 +25,7 @@ use fbinit::FacebookInit;
 use hostname::get_hostname;
 use megarepo_api::MegarepoApi;
 use metaconfig_types::ShardedService;
+use mononoke_api::Repo;
 use mononoke_app::args::HooksAppExtension;
 use mononoke_app::args::RepoFilterAppExtension;
 use mononoke_app::args::ShutdownTimeoutArgs;
@@ -72,7 +73,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let mononoke = Arc::new(
         runtime
-            .block_on(app.open_managed_repos(Some(ShardedService::AsyncRequestsWorker)))?
+            .block_on(app.open_managed_repos::<Repo>(Some(ShardedService::AsyncRequestsWorker)))?
             .make_mononoke_api()?,
     );
     let megarepo = Arc::new(MegarepoApi::new(&app, mononoke)?);

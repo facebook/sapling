@@ -27,6 +27,8 @@ use mercurial_types::HgChangesetId;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
 use mercurial_types::HgNodeHash;
+use mononoke_api::MononokeRepo;
+use mononoke_api::Repo;
 use mononoke_api_hg::HgDataId;
 use mononoke_api_hg::HgRepoContext;
 use repo_blobstore::RepoBlobstoreRef;
@@ -54,8 +56,8 @@ impl From<bool> for Lookup {
     }
 }
 
-async fn maybe_copy_file(
-    hg_repo_ctx: HgRepoContext,
+async fn maybe_copy_file<R: MononokeRepo>(
+    hg_repo_ctx: HgRepoContext<R>,
     id: AnyFileContentId,
     bubble_id: Option<BubbleId>,
     copy_from_bubble_id: BubbleId,
@@ -88,8 +90,8 @@ async fn maybe_copy_file(
     })
 }
 
-async fn check_file(
-    repo: HgRepoContext,
+async fn check_file<R: MononokeRepo>(
+    repo: HgRepoContext<R>,
     id: AnyFileContentId,
     bubble_id: Option<BubbleId>,
     copy_from_bubble: Option<BubbleId>,
@@ -129,7 +131,10 @@ async fn check_file(
 ///     * hg filenode id
 ///     * hg tree id
 ///     * hg changeset id
-async fn check_request_item(repo: HgRepoContext, item: LookupRequest) -> Result<LookupResponse> {
+async fn check_request_item<R: MononokeRepo>(
+    repo: HgRepoContext<R>,
+    item: LookupRequest,
+) -> Result<LookupResponse> {
     let old_bubble_id = item.bubble_id;
     let bubble_id = old_bubble_id.map(BubbleId::new);
     if item.copy_from_bubble_id.is_some() && !matches!(item.id, AnyId::AnyFileContentId(_)) {
@@ -165,7 +170,9 @@ async fn check_request_item(repo: HgRepoContext, item: LookupRequest) -> Result<
             .into(),
         // Hg derived data does not exist on bubbles, let's fail fast
         AnyId::HgFilenodeId(id) => repo
-            .filenode_exists(HgFileNodeId::from_node_hash(HgNodeHash::from(id)))
+            .filenode_exists(<HgFileNodeId as HgDataId<R>>::from_node_hash(
+                HgNodeHash::from(id),
+            ))
             .await?
             .into(),
         AnyId::HgTreeId(id) => repo
@@ -212,7 +219,7 @@ impl SaplingRemoteApiHandler for LookupHandler {
     const ENDPOINT: &'static str = "/lookup";
 
     async fn handler(
-        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
+        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor, Repo>,
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
         let repo = ectx.repo();

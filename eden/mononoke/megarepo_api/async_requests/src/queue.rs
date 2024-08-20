@@ -22,6 +22,7 @@ use futures::TryStreamExt;
 use megarepo_error::MegarepoError;
 use memblob::Memblob;
 use mononoke_api::Mononoke;
+use mononoke_api::MononokeRepo;
 use mononoke_types::BlobstoreKey as BlobstoreKeyTrait;
 use mononoke_types::RepositoryId;
 use mononoke_types::Timestamp;
@@ -65,10 +66,10 @@ impl AsyncMethodRequestQueue {
         Ok(Self { blobstore, table })
     }
 
-    pub async fn enqueue<P: ThriftParams>(
+    pub async fn enqueue<P: ThriftParams, R: MononokeRepo>(
         &self,
         ctx: CoreContext,
-        mononoke: &Mononoke,
+        mononoke: &Mononoke<R>,
         thrift_params: P,
     ) -> Result<<P::R as Request>::Token, Error> {
         let request_type = RequestType(P::R::NAME.to_owned());

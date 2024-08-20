@@ -18,6 +18,7 @@ use megarepo_config::Target;
 use megarepo_mapping::SourceName;
 use megarepo_mapping::REMAPPING_STATE_FILE;
 use metaconfig_types::RepoConfigArc;
+use mononoke_api::MononokeRepo;
 use mononoke_types::FileType;
 use mononoke_types::NonRootMPath;
 use repo_blobstore::RepoBlobstoreRef;
@@ -116,7 +117,10 @@ async fn test_change_target_config(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-async fn init_megarepo(ctx: &CoreContext, test: &mut MegarepoTest) -> Result<(), Error> {
+async fn init_megarepo<R: MononokeRepo>(
+    ctx: &CoreContext,
+    test: &mut MegarepoTest<R>,
+) -> Result<(), Error> {
     let first_source_name = SourceName::new("source_1");
     let second_source_name = SourceName::new("source_2");
     let version = "version_1".to_string();

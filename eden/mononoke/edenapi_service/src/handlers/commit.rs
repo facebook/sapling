@@ -67,6 +67,8 @@ use mercurial_types::HgChangesetId;
 use mercurial_types::HgNodeHash;
 use mononoke_api::CreateInfo;
 use mononoke_api::MononokeError;
+use mononoke_api::MononokeRepo;
+use mononoke_api::Repo;
 use mononoke_api::XRepoLookupExactBehaviour;
 use mononoke_api::XRepoLookupSyncBehaviour;
 use mononoke_api_hg::HgRepoContext;
@@ -120,8 +122,8 @@ pub struct UploadBonsaiChangesetQueryString {
 
 pub struct LocationToHashHandler;
 
-async fn translate_location(
-    hg_repo_ctx: HgRepoContext,
+async fn translate_location<R: MononokeRepo>(
+    hg_repo_ctx: HgRepoContext<R>,
     request: CommitLocationToHashRequest,
 ) -> Result<CommitLocationToHashResponse, Error> {
     let location = request.location.map_descendant(|x| x.into());
@@ -152,7 +154,7 @@ impl SaplingRemoteApiHandler for LocationToHashHandler {
     }
 
     async fn handler(
-        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
+        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor, Repo>,
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
         let repo = ectx.repo();
@@ -166,8 +168,8 @@ impl SaplingRemoteApiHandler for LocationToHashHandler {
 }
 
 pub async fn hash_to_location(state: &mut State) -> Result<impl TryIntoResponse, HttpError> {
-    async fn hash_to_location_chunk(
-        hg_repo_ctx: HgRepoContext,
+    async fn hash_to_location_chunk<R: MononokeRepo>(
+        hg_repo_ctx: HgRepoContext<R>,
         master_heads: Vec<HgChangesetId>,
         hg_cs_ids: Vec<HgChangesetId>,
     ) -> impl Stream<Item = CommitHashToLocationResponse> {
@@ -203,7 +205,7 @@ pub async fn hash_to_location(state: &mut State) -> Result<impl TryIntoResponse,
     let sctx = ServerContext::borrow_from(state);
     let rctx = RequestContext::borrow_from(state).clone();
 
-    let hg_repo_ctx = get_repo(sctx, &rctx, &params.repo, None).await?;
+    let hg_repo_ctx: HgRepoContext<Repo> = get_repo(sctx, &rctx, &params.repo, None).await?;
 
     let batch = parse_wire_request::<WireCommitHashToLocationRequestBatch>(state).await?;
 
@@ -243,7 +245,7 @@ pub async fn revlog_data(state: &mut State) -> Result<impl TryIntoResponse, Http
     let sctx = ServerContext::borrow_from(state);
     let rctx = RequestContext::borrow_from(state).clone();
 
-    let hg_repo_ctx = get_repo(sctx, &rctx, &params.repo, None).await?;
+    let hg_repo_ctx: HgRepoContext<Repo> = get_repo(sctx, &rctx, &params.repo, None).await?;
 
     let request: CommitRevlogDataRequest = parse_cbor_request(state).await?;
     let revlog_commits = request
@@ -257,8 +259,8 @@ pub async fn revlog_data(state: &mut State) -> Result<impl TryIntoResponse, Http
     )))
 }
 
-async fn commit_revlog_data(
-    hg_repo_ctx: HgRepoContext,
+async fn commit_revlog_data<R: MononokeRepo>(
+    hg_repo_ctx: HgRepoContext<R>,
     hg_id: HgId,
 ) -> Result<CommitRevlogData, Error> {
     let bytes = hg_repo_ctx
@@ -282,7 +284,7 @@ impl SaplingRemoteApiHandler for HashLookupHandler {
     const ENDPOINT: &'static str = "/commit/hash_lookup";
 
     async fn handler(
-        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
+        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor, Repo>,
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
         let repo = ectx.repo();
@@ -318,7 +320,7 @@ impl SaplingRemoteApiHandler for UploadHgChangesetsHandler {
     const ENDPOINT: &'static str = "/upload/changesets";
 
     async fn handler(
-        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
+        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor, Repo>,
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
         let repo = ectx.repo();
@@ -371,7 +373,7 @@ impl SaplingRemoteApiHandler for UploadBonsaiChangesetHandler {
     const ENDPOINT: &'static str = "/upload/changeset/bonsai";
 
     async fn handler(
-        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
+        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor, Repo>,
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
         let repo = ectx.repo();
@@ -445,7 +447,7 @@ impl SaplingRemoteApiHandler for FetchSnapshotHandler {
     const ENDPOINT: &'static str = "/snapshot";
 
     async fn handler(
-        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
+        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor, Repo>,
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
         let repo = ectx.repo();
@@ -535,7 +537,7 @@ impl SaplingRemoteApiHandler for AlterSnapshotHandler {
     const ENDPOINT: &'static str = "/snapshot/alter";
 
     async fn handler(
-        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
+        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor, Repo>,
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
         let repo = ectx.repo();
@@ -588,7 +590,7 @@ impl SaplingRemoteApiHandler for EphemeralPrepareHandler {
     const ENDPOINT: &'static str = "/ephemeral/prepare";
 
     async fn handler(
-        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
+        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor, Repo>,
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
         let repo = ectx.repo();
@@ -620,7 +622,7 @@ impl SaplingRemoteApiHandler for GraphHandlerV2 {
     const ENDPOINT: &'static str = "/commit/graph_v2";
 
     async fn handler(
-        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
+        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor, Repo>,
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
         let repo = ectx.repo();
@@ -706,7 +708,7 @@ impl SaplingRemoteApiHandler for GraphSegmentsHandler {
     const ENDPOINT: &'static str = "/commit/graph_segments";
 
     async fn handler(
-        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
+        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor, Repo>,
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
         let repo = ectx.repo();
@@ -761,7 +763,7 @@ impl SaplingRemoteApiHandler for CommitMutationsHandler {
     const ENDPOINT: &'static str = "/commit/mutations";
 
     async fn handler(
-        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
+        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor, Repo>,
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
         let repo = ectx.repo();
@@ -798,7 +800,7 @@ impl SaplingRemoteApiHandler for CommitTranslateId {
     const ENDPOINT: &'static str = "/commit/translate_id";
 
     async fn handler(
-        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
+        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor, Repo>,
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
         let from_repo = match request.from_repo {

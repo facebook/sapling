@@ -24,6 +24,7 @@ pub use megarepo_types_thrift::MegarepoAsynchronousRequestParamsId as ThriftMega
 pub use megarepo_types_thrift::MegarepoAsynchronousRequestResult as ThriftMegarepoAsynchronousRequestResult;
 pub use megarepo_types_thrift::MegarepoAsynchronousRequestResultId as ThriftMegarepoAsynchronousRequestResultId;
 use mononoke_api::Mononoke;
+use mononoke_api::MononokeRepo;
 use mononoke_types::hash::Blake2;
 use mononoke_types::impl_typed_context;
 use mononoke_types::impl_typed_hash_no_context;
@@ -547,12 +548,12 @@ impl MegarepoAsynchronousRequestParams {
 }
 
 /// Convert an item into a thrift type we use for storing configuration
-pub trait IntoConfigFormat<T> {
-    fn into_config_format(self, mononoke: &Mononoke) -> Result<T, MegarepoError>;
+pub trait IntoConfigFormat<T, R> {
+    fn into_config_format(self, mononoke: &Mononoke<R>) -> Result<T, MegarepoError>;
 }
 
-impl IntoConfigFormat<Target> for ThriftMegarepoTarget {
-    fn into_config_format(self, mononoke: &Mononoke) -> Result<Target, MegarepoError> {
+impl<R: MononokeRepo> IntoConfigFormat<Target, R> for ThriftMegarepoTarget {
+    fn into_config_format(self, mononoke: &Mononoke<R>) -> Result<Target, MegarepoError> {
         let repo_id = match (self.repo, self.repo_id) {
             (Some(repo), _) => mononoke
                 .repo_id_from_name(repo.name.clone())
@@ -569,8 +570,8 @@ impl IntoConfigFormat<Target> for ThriftMegarepoTarget {
     }
 }
 
-impl IntoConfigFormat<SyncTargetConfig> for ThriftMegarepoSyncTargetConfig {
-    fn into_config_format(self, mononoke: &Mononoke) -> Result<SyncTargetConfig, MegarepoError> {
+impl<R: MononokeRepo> IntoConfigFormat<SyncTargetConfig, R> for ThriftMegarepoSyncTargetConfig {
+    fn into_config_format(self, mononoke: &Mononoke<R>) -> Result<SyncTargetConfig, MegarepoError> {
         Ok(SyncTargetConfig {
             target: self.target.into_config_format(mononoke)?,
             sources: self.sources,
@@ -580,13 +581,16 @@ impl IntoConfigFormat<SyncTargetConfig> for ThriftMegarepoSyncTargetConfig {
 }
 
 /// Convert an item into a thrift type we use in APIs
-pub trait IntoApiFormat<T> {
-    fn into_api_format(self, mononoke: &Mononoke) -> Result<T, MegarepoError>;
+pub trait IntoApiFormat<T, R> {
+    fn into_api_format(self, mononoke: &Mononoke<R>) -> Result<T, MegarepoError>;
 }
 
 #[async_trait]
-impl IntoApiFormat<ThriftMegarepoTarget> for Target {
-    fn into_api_format(self, mononoke: &Mononoke) -> Result<ThriftMegarepoTarget, MegarepoError> {
+impl<R: MononokeRepo> IntoApiFormat<ThriftMegarepoTarget, R> for Target {
+    fn into_api_format(
+        self,
+        mononoke: &Mononoke<R>,
+    ) -> Result<ThriftMegarepoTarget, MegarepoError> {
         let repo = mononoke
             .repo_name_from_id(RepositoryId::new(self.repo_id as i32))
             .map(|name| ThriftRepoSpecifier {
@@ -603,10 +607,10 @@ impl IntoApiFormat<ThriftMegarepoTarget> for Target {
 }
 
 #[async_trait]
-impl IntoApiFormat<ThriftMegarepoSyncTargetConfig> for SyncTargetConfig {
+impl<R: MononokeRepo> IntoApiFormat<ThriftMegarepoSyncTargetConfig, R> for SyncTargetConfig {
     fn into_api_format(
         self,
-        mononoke: &Mononoke,
+        mononoke: &Mononoke<R>,
     ) -> Result<ThriftMegarepoSyncTargetConfig, MegarepoError> {
         Ok(ThriftMegarepoSyncTargetConfig {
             target: self.target.into_api_format(mononoke)?,

@@ -29,6 +29,7 @@ use mononoke_api::MetadataDiffFileInfo;
 use mononoke_api::MetadataDiffLinesCount;
 use mononoke_api::MononokeError;
 use mononoke_api::PushrebaseOutcome;
+use mononoke_api::Repo;
 use mononoke_api::RepoContext;
 use mononoke_api::TreeEntry;
 use mononoke_api::TreeId;
@@ -277,7 +278,7 @@ impl IntoResponse<thrift::Diff> for HeaderlessUnifiedDiff {
 }
 
 #[async_trait]
-impl AsyncIntoResponse<thrift::FilePathInfo> for &ChangesetPathContentContext {
+impl AsyncIntoResponse<thrift::FilePathInfo> for &ChangesetPathContentContext<Repo> {
     async fn into_response(self) -> Result<thrift::FilePathInfo, errors::ServiceError> {
         let (meta, type_) = try_join!(
             async {
@@ -307,7 +308,7 @@ impl AsyncIntoResponse<thrift::FilePathInfo> for &ChangesetPathContentContext {
 }
 
 #[async_trait]
-impl AsyncIntoResponse<thrift::TreePathInfo> for &ChangesetPathContentContext {
+impl AsyncIntoResponse<thrift::TreePathInfo> for &ChangesetPathContentContext<Repo> {
     async fn into_response(self) -> Result<thrift::TreePathInfo, errors::ServiceError> {
         let tree = self
             .tree()
@@ -324,7 +325,7 @@ impl AsyncIntoResponse<thrift::TreePathInfo> for &ChangesetPathContentContext {
 }
 
 #[async_trait]
-impl AsyncIntoResponseWith<thrift::CommitInfo> for ChangesetContext {
+impl AsyncIntoResponseWith<thrift::CommitInfo> for ChangesetContext<Repo> {
     /// The additional data is the set of commit identity schemes to be
     /// returned in the response.
     type Additional = BTreeSet<thrift::CommitIdentityScheme>;
@@ -334,7 +335,7 @@ impl AsyncIntoResponseWith<thrift::CommitInfo> for ChangesetContext {
         identity_schemes: &BTreeSet<thrift::CommitIdentityScheme>,
     ) -> Result<thrift::CommitInfo, errors::ServiceError> {
         async fn map_parent_identities(
-            changeset: &ChangesetContext,
+            changeset: &ChangesetContext<Repo>,
             identity_schemes: &BTreeSet<thrift::CommitIdentityScheme>,
         ) -> Result<Vec<BTreeMap<thrift::CommitIdentityScheme, thrift::CommitId>>, MononokeError>
         {
@@ -403,7 +404,7 @@ impl AsyncIntoResponseWith<thrift::CommitInfo> for ChangesetContext {
 
 #[async_trait]
 impl AsyncIntoResponseWith<Vec<BTreeMap<thrift::CommitIdentityScheme, thrift::CommitId>>>
-    for Vec<ChangesetContext>
+    for Vec<ChangesetContext<Repo>>
 {
     /// The additional data is the set of commit identity schemes to be
     /// returned in the response.
@@ -461,7 +462,7 @@ impl AsyncIntoResponseWith<thrift::PushrebaseOutcome> for PushrebaseOutcome {
     /// schemes to be returned in the response, and optionally a different set
     /// of commit identity schemes to use for the old commit ids.
     type Additional = (
-        RepoContext,
+        RepoContext<Repo>,
         BTreeSet<thrift::CommitIdentityScheme>,
         Option<BTreeSet<thrift::CommitIdentityScheme>>,
     );
@@ -531,7 +532,7 @@ impl AsyncIntoResponseWith<thrift::PushrebaseOutcome> for PushrebaseOutcome {
 }
 
 #[async_trait]
-impl AsyncIntoResponseWith<thrift::BookmarkInfo> for BookmarkInfo {
+impl AsyncIntoResponseWith<thrift::BookmarkInfo> for BookmarkInfo<Repo> {
     /// The additional data is the set of commit identity schemes to be
     /// returned in the response.
     type Additional = BTreeSet<thrift::CommitIdentityScheme>;

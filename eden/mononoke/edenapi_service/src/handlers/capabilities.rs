@@ -14,6 +14,7 @@ use gotham_ext::error::HttpError;
 use gotham_ext::middleware::request_context::RequestContext;
 use gotham_ext::response::BytesBody;
 use mononoke_api::MononokeError;
+use mononoke_api::Repo;
 use mononoke_api_hg::HgRepoContext;
 use serde::Deserialize;
 
@@ -36,8 +37,8 @@ static CAP_COMMIT_GRAPH_SEGMENTS: &str = "commit-graph-segments";
 /// feature on, and also valid to have the feature off, for a long time).
 /// Features that are designed to be always on might not qualify as
 /// capabilities.
-async fn get_capabilities_vec(
-    _hg_repo_ctx: &HgRepoContext,
+async fn get_capabilities_vec<R>(
+    _hg_repo_ctx: &HgRepoContext<R>,
 ) -> Result<Vec<&'static str>, MononokeError> {
     let mut capabilities = Vec::new();
 
@@ -56,7 +57,7 @@ pub async fn capabilities_handler(state: &mut State) -> Result<BytesBody<Bytes>,
 
     let sctx = ServerContext::borrow_from(state);
     let rctx = RequestContext::borrow_from(state).clone();
-    let hg_repo_ctx = get_repo(sctx, &rctx, &params.repo, None).await?;
+    let hg_repo_ctx: HgRepoContext<Repo> = get_repo(sctx, &rctx, &params.repo, None).await?;
     let caps = get_capabilities_vec(&hg_repo_ctx)
         .await
         .map_err(|e| e.into_http_error("error getting capabilities"))?;

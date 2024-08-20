@@ -14,13 +14,14 @@ use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use mononoke_api::ChangesetContext;
 use mononoke_api::MononokeError;
+use mononoke_api::Repo;
 use source_control as thrift;
 
 use crate::errors;
 use crate::into_response::AsyncIntoResponseWith;
 
 pub(crate) async fn collect_history(
-    history_stream: impl Stream<Item = Result<ChangesetContext, MononokeError>>,
+    history_stream: impl Stream<Item = Result<ChangesetContext<Repo>, MononokeError>>,
     skip: usize,
     limit: usize,
     before_timestamp: Option<i64>,
@@ -85,7 +86,7 @@ pub(crate) async fn collect_history(
                 .chunks(100)
                 // TryStreamExt doesn't have the try_chunks method yet so we have to do it by mapping
                 .map(|chunk| chunk.into_iter().collect::<Result<Vec<_>, _>>())
-                .and_then(move |changesets: Vec<ChangesetContext>| {
+                .and_then(move |changesets: Vec<ChangesetContext<Repo>>| {
                     let identity_schemes = identity_schemes.clone();
                     async move {
                         Ok(stream::iter(

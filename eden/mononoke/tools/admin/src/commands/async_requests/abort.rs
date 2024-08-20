@@ -15,6 +15,7 @@ use clap::Args;
 use context::CoreContext;
 use megarepo_api::MegarepoApi;
 use megarepo_error::MegarepoError;
+use mononoke_api::MononokeRepo;
 use source_control::MegarepoAddBranchingTargetResult;
 use source_control::MegarepoAddTargetResult;
 use source_control::MegarepoChangeTargetConfigResult;
@@ -30,10 +31,10 @@ pub struct AsyncRequestsAbortArgs {
     request_id: u64,
 }
 
-pub async fn abort_request(
+pub async fn abort_request<R: MononokeRepo>(
     args: AsyncRequestsAbortArgs,
     ctx: CoreContext,
-    megarepo: MegarepoApi,
+    megarepo: MegarepoApi<R>,
 ) -> Result<(), Error> {
     let repos_and_queues = megarepo.all_async_method_request_queues(&ctx).await?;
 

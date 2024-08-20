@@ -20,6 +20,7 @@ use mercurial_types::HgFileNodeId;
 use mercurial_types::HgNodeHash;
 use mercurial_types::HgParents;
 use mononoke_api::errors::MononokeError;
+use mononoke_api::MononokeRepo;
 use mononoke_types::fsnode::FsnodeFile;
 use mononoke_types::ContentMetadataV2;
 use mononoke_types::NonRootMPath;
@@ -39,18 +40,18 @@ use super::HgRepoContext;
 /// within the repo; as such, perhaps counterintuitively, an HgFileContext is not
 /// aware of the path to the file to which it refers.
 #[derive(Clone)]
-pub struct HgFileContext {
-    repo_ctx: HgRepoContext,
+pub struct HgFileContext<R> {
+    repo_ctx: HgRepoContext<R>,
     envelope: HgFileEnvelope,
 }
 
-impl HgFileContext {
+impl<R: MononokeRepo> HgFileContext<R> {
     /// Create a new `HgFileContext`. The file must exist in the repository.
     ///
     /// To construct an `HgFileContext` for a file that may not exist, use
     /// `new_check_exists`.
     pub async fn new(
-        repo_ctx: HgRepoContext,
+        repo_ctx: HgRepoContext<R>,
         filenode_id: HgFileNodeId,
     ) -> Result<Self, MononokeError> {
         // Fetch and store Mononoke's internal representation of the metadata of this
@@ -62,7 +63,7 @@ impl HgFileContext {
     }
 
     pub async fn new_check_exists(
-        repo_ctx: HgRepoContext,
+        repo_ctx: HgRepoContext<R>,
         filenode_id: HgFileNodeId,
     ) -> Result<Option<Self>, MononokeError> {
         let ctx = repo_ctx.ctx();
@@ -139,7 +140,7 @@ impl HgFileContext {
 }
 
 #[async_trait]
-impl HgDataContext for HgFileContext {
+impl<R: MononokeRepo> HgDataContext<R> for HgFileContext<R> {
     type NodeId = HgFileNodeId;
 
     /// Get the filenode hash (HgFileNodeId) for this file version.
@@ -190,14 +191,17 @@ impl HgDataContext for HgFileContext {
 }
 
 #[async_trait]
-impl HgDataId for HgFileNodeId {
-    type Context = HgFileContext;
+impl<R: MononokeRepo> HgDataId<R> for HgFileNodeId {
+    type Context = HgFileContext<R>;
 
     fn from_node_hash(hash: HgNodeHash) -> Self {
         HgFileNodeId::new(hash)
     }
 
-    async fn context(self, repo: HgRepoContext) -> Result<Option<HgFileContext>, MononokeError> {
+    async fn context(
+        self,
+        repo: HgRepoContext<R>,
+    ) -> Result<Option<HgFileContext<R>>, MononokeError> {
         HgFileContext::new_check_exists(repo, self).await
     }
 }

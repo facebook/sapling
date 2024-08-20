@@ -47,6 +47,7 @@ use gotham_ext::state_ext::StateExt;
 use hyper::Body;
 use hyper::Response;
 use mime::Mime;
+use mononoke_api::Repo;
 use serde::Deserialize;
 use serde::Serialize;
 use time_ext::DurationExt;
@@ -248,7 +249,7 @@ static EXITING: &str = "EXITING";
 
 // Used for monitoring VIP health
 fn proxygen_health_handler(state: State) -> (State, &'static str) {
-    if ServerContext::borrow_from(&state).will_exit() {
+    if ServerContext::<Repo>::borrow_from(&state).will_exit() {
         (state, EXITING)
     } else {
         if let Some(request_load) = RequestLoad::try_borrow_from(&state) {
@@ -265,7 +266,7 @@ fn proxygen_health_handler(state: State) -> (State, &'static str) {
 
 // Used for monitoring TW tasks
 fn health_handler(state: State) -> (State, &'static str) {
-    if ServerContext::borrow_from(&state).will_exit() {
+    if ServerContext::<Repo>::borrow_from(&state).will_exit() {
         (state, EXITING)
     } else {
         (state, ALIVE)
@@ -414,7 +415,7 @@ where
     }
 }
 
-pub fn build_router(ctx: ServerContext) -> Router {
+pub fn build_router<R: Send + Sync + Clone + 'static>(ctx: ServerContext<R>) -> Router {
     let pipeline = new_pipeline().add(StateMiddleware::new(ctx)).build();
     let (chain, pipelines) = single_pipeline(pipeline);
 

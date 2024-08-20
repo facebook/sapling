@@ -16,6 +16,7 @@ use futures::stream::{self};
 use itertools::Itertools;
 use mononoke_api::changeset_path::ChangesetPathHistoryOptions;
 use mononoke_api::ChangesetContext;
+use mononoke_api::MononokeRepo;
 use mononoke_types::ChangesetId;
 use mononoke_types::NonRootMPath;
 use slog::debug;
@@ -34,12 +35,24 @@ pub type ChangesetParents = HashMap<ChangesetId, Vec<ChangesetId>>;
 /// This head changeset will be used to query the history of the path,
 /// i.e. all exported commits that affect this path will be this changeset's
 /// ancestor.
-pub type ExportPathInfo = (NonRootMPath, ChangesetContext);
+pub type ExportPathInfo<R> = (NonRootMPath, ChangesetContext<R>);
 
-#[derive(Debug)]
-pub struct GitExportGraphInfo {
-    pub changesets: Vec<ChangesetContext>,
+pub struct GitExportGraphInfo<R> {
+    pub changesets: Vec<ChangesetContext<R>>,
     pub parents_map: ChangesetParents,
+}
+
+impl<R> std::fmt::Debug for GitExportGraphInfo<R>
+where
+    ChangesetContext<R>: std::fmt::Debug,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(
+            f,
+            "GitExportGraphInfo(changesets={:?}, parents_map={:?})",
+            self.changesets, self.parents_map,
+        )
+    }
 }
 
 /// Given a list of paths and a changeset, return a commit graph
@@ -47,13 +60,13 @@ pub struct GitExportGraphInfo {
 /// modified at least one of the paths.
 /// The commit graph is returned as a topologically sorted list of changesets
 /// and a hashmap of changset id to their parents' ids.
-pub async fn build_partial_commit_graph_for_export(
+pub async fn build_partial_commit_graph_for_export<R: MononokeRepo>(
     logger: &Logger,
-    paths: Vec<ExportPathInfo>,
+    paths: Vec<ExportPathInfo<R>>,
     // Consider history until the provided timestamp, i.e. all commits in the
     // graph will have its creation time greater than or equal to it.
     oldest_commit_ts: Option<i64>,
-) -> Result<GitExportGraphInfo> {
+) -> Result<GitExportGraphInfo<R>> {
     info!(logger, "Building partial commit graph for export...");
 
     let cs_path_history_options = ChangesetPathHistoryOptions {
@@ -62,7 +75,7 @@ pub async fn build_partial_commit_graph_for_export(
         ..Default::default()
     };
 
-    let history_changesets: Vec<Vec<ChangesetContext>> = stream::iter(paths)
+    let history_changesets: Vec<Vec<ChangesetContext<R>>> = stream::iter(paths)
         .then(|(p, cs_ctx)| async move {
             get_relevant_changesets_for_single_path(p, &cs_ctx, &cs_path_history_options).await
         })
@@ -87,14 +100,14 @@ pub async fn build_partial_commit_graph_for_export(
 
 /// Get all changesets that affected the provided path up to a specific head
 /// commit.
-async fn get_relevant_changesets_for_single_path(
+async fn get_relevant_changesets_for_single_path<R: MononokeRepo>(
     path: NonRootMPath,
-    head_cs: &ChangesetContext,
+    head_cs: &ChangesetContext<R>,
     cs_path_history_opts: &ChangesetPathHistoryOptions,
-) -> Result<Vec<ChangesetContext>> {
+) -> Result<Vec<ChangesetContext<R>>> {
     let cs_path_hist_ctx = head_cs.path_with_history(path).await?;
 
-    let changesets: Vec<ChangesetContext> = cs_path_hist_ctx
+    let changesets: Vec<ChangesetContext<R>> = cs_path_hist_ctx
         .history(*cs_path_history_opts)
         .await?
         .try_collect()
@@ -112,15 +125,15 @@ async fn get_relevant_changesets_for_single_path(
 /// Example: Given the graph `A -> b -> c -> D -> e`, where commits with uppercase
 /// have modified export paths, the parent map should be `{A: [D]}`, because
 /// the partial graph is `A -> D`.
-async fn merge_cs_lists_and_build_parents_map(
+async fn merge_cs_lists_and_build_parents_map<R: MononokeRepo>(
     logger: &Logger,
-    changeset_lists: Vec<Vec<ChangesetContext>>,
-) -> Result<(Vec<ChangesetContext>, ChangesetParents)> {
+    changeset_lists: Vec<Vec<ChangesetContext<R>>>,
+) -> Result<(Vec<ChangesetContext<R>>, ChangesetParents)> {
     info!(
         logger,
         "Merging changeset lists and building parents map..."
     );
-    let mut changesets_with_gen: Vec<(ChangesetContext, u64)> =
+    let mut changesets_with_gen: Vec<(ChangesetContext<R>, u64)> =
         stream::iter(changeset_lists.into_iter().flatten())
             .then(|cs| async move {
                 let generation = cs.generation().await?.value();

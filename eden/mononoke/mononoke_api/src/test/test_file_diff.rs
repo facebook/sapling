@@ -15,12 +15,15 @@ use tests_utils::drawdag::changes;
 use tests_utils::drawdag::create_from_dag_with_changes;
 
 use crate::headerless_unified_diff;
+use crate::repo::Repo;
 use crate::ChangesetId;
 use crate::CoreContext;
 use crate::RepoContext;
 
-async fn init_repo(ctx: &CoreContext) -> Result<(RepoContext, BTreeMap<String, ChangesetId>)> {
-    let repo = test_repo_factory::build_empty(ctx.fb).await?;
+async fn init_repo(
+    ctx: &CoreContext,
+) -> Result<(RepoContext<Repo>, BTreeMap<String, ChangesetId>)> {
+    let repo: Repo = test_repo_factory::build_empty(ctx.fb).await?;
     let changesets = create_from_dag_with_changes(
         ctx,
         &repo,

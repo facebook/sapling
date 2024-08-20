@@ -11,11 +11,12 @@ use std::time::Duration;
 use futures::StreamExt;
 use mononoke_api::CoreContext;
 use mononoke_api::Mononoke;
+use mononoke_api::Repo;
 use slog::warn;
 
 const SUBMIT_STATS_ONCE_PER_SECS: u64 = 10;
 
-pub async fn monitoring_stats_submitter(ctx: CoreContext, mononoke: Arc<Mononoke>) {
+pub async fn monitoring_stats_submitter(ctx: CoreContext, mononoke: Arc<Mononoke<Repo>>) {
     tokio_stream::wrappers::IntervalStream::new(tokio::time::interval(Duration::from_secs(
         SUBMIT_STATS_ONCE_PER_SECS,
     )))

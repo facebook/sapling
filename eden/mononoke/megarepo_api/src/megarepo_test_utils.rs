@@ -29,6 +29,7 @@ use megarepo_mapping::SourceName;
 use megarepo_mapping::SyncTargetConfig;
 use metaconfig_types::RepoConfigArc;
 use mononoke_api::Mononoke;
+use mononoke_api::MononokeRepo;
 use mononoke_api::Repo;
 use mononoke_types::ChangesetId;
 use mononoke_types::RepositoryId;
@@ -40,15 +41,15 @@ use tests_utils::list_working_copy_utf8;
 use tests_utils::resolve_cs_id;
 use tests_utils::CreateCommitContext;
 
-pub struct MegarepoTest {
-    pub repo: Repo,
+pub struct MegarepoTest<R> {
+    pub repo: R,
     pub megarepo_mapping: Arc<MegarepoMapping>,
-    pub mononoke: Arc<Mononoke>,
+    pub mononoke: Arc<Mononoke<R>>,
     pub configs_storage: TestMononokeMegarepoConfigs,
     pub mutable_renames: Arc<MutableRenames>,
 }
 
-impl MegarepoTest {
+impl MegarepoTest<Repo> {
     pub async fn new(ctx: &CoreContext) -> Result<Self, Error> {
         let id = RepositoryId::new(0);
         let mut factory = TestRepoFactory::new(ctx.fb)?;
@@ -70,7 +71,9 @@ impl MegarepoTest {
             mutable_renames,
         })
     }
+}
 
+impl<R: MononokeRepo> MegarepoTest<R> {
     pub fn repo_id(&self) -> RepositoryId {
         self.repo.repo_identity().id()
     }

@@ -52,6 +52,7 @@ use mercurial_derivation::DeriveHgChangeset;
 use metaconfig_types::RepoConfigRef;
 use mononoke_api::BookmarkFreshness;
 use mononoke_api::BookmarkKey;
+use mononoke_api::RepoContext;
 use mononoke_app::args::RepoArgs;
 use mononoke_app::args::TLSArgs;
 use mononoke_app::fb303::AliveService;
@@ -385,7 +386,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
         }
         if args.generate_bookmarks {
             let authz = AuthorizationContext::new_bypass_access_control();
-            let repo_context = app
+            let repo_context: RepoContext<mononoke_api::Repo> = app
                 .open_managed_repo_arg(&args.repo_args)
                 .await
                 .context("failed to create mononoke app")?

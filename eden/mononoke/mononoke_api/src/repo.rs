@@ -46,7 +46,6 @@ use bookmarks_cache::BookmarksCache;
 use bookmarks_cache::BookmarksCacheRef;
 use bulk_derivation::BulkDerivation;
 use bytes::Bytes;
-use cacheblob::LeaseOps;
 use changeset_info::ChangesetInfo;
 use commit_cloud::CommitCloud;
 use commit_graph::ArcCommitGraph;
@@ -297,42 +296,48 @@ pub struct Repo {
     pub repo_stats_logger: RepoStatsLogger,
 }
 
+pub trait MononokeRepo = RepoLike + RepoWithBubble + Clone + 'static;
+
 #[derive(Clone)]
-pub struct RepoContext {
+pub struct RepoContext<R> {
     ctx: CoreContext,
     authz: Arc<AuthorizationContext>,
-    repo: Arc<Repo>,
-    push_redirector: Option<Arc<PushRedirector<Repo>>>,
-    repos: Arc<MononokeRepos<Repo>>,
+    repo: Arc<R>,
+    push_redirector: Option<Arc<PushRedirector<R>>>,
+    repos: Arc<MononokeRepos<R>>,
 }
 
-impl fmt::Debug for RepoContext {
+impl<R: RepoIdentityRef> fmt::Debug for RepoContext<R> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "RepoContext(repo={:?})", self.name())
+        write!(
+            f,
+            "RepoContext(repo={:?})",
+            self.repo.repo_identity().name()
+        )
     }
 }
 
-pub struct RepoContextBuilder {
+pub struct RepoContextBuilder<R> {
     ctx: CoreContext,
     authz: Option<AuthorizationContext>,
-    repo: Arc<Repo>,
-    push_redirector: Option<Arc<PushRedirector<Repo>>>,
+    repo: Arc<R>,
+    push_redirector: Option<Arc<PushRedirector<R>>>,
     bubble_id: Option<BubbleId>,
-    repos: Arc<MononokeRepos<Repo>>,
+    repos: Arc<MononokeRepos<R>>,
 }
 
-async fn maybe_push_redirector(
+async fn maybe_push_redirector<R: MononokeRepo>(
     ctx: &CoreContext,
-    repo: &Arc<Repo>,
-    repos: &MononokeRepos<Repo>,
-) -> Result<Option<PushRedirector<Repo>>, MononokeError> {
+    repo: &Arc<R>,
+    repos: &MononokeRepos<R>,
+) -> Result<Option<PushRedirector<R>>, MononokeError> {
     let base = match repo.repo_handler_base().maybe_push_redirector_base.as_ref() {
         None => return Ok(None),
         Some(base) => base,
     };
-    let live_commit_sync_config = repo.live_commit_sync_config();
+    let live_commit_sync_config = repo.repo_cross_repo().live_commit_sync_config();
     let enabled = live_commit_sync_config
-        .push_redirector_enabled_for_public(ctx, repo.repoid())
+        .push_redirector_enabled_for_public(ctx, repo.repo_identity().id())
         .await?;
     if enabled {
         let large_repo_id = base.common_commit_sync_config.large_repo_id;
@@ -348,7 +353,7 @@ async fn maybe_push_redirector(
             )
             .into_push_redirector(
                 ctx,
-                live_commit_sync_config,
+                live_commit_sync_config.clone(),
                 repo.repo_cross_repo().sync_lease().clone(),
             )
             .map_err(|e| MononokeError::InvalidRequest(e.to_string()))?,
@@ -358,11 +363,11 @@ async fn maybe_push_redirector(
     }
 }
 
-impl RepoContextBuilder {
+impl<R: MononokeRepo> RepoContextBuilder<R> {
     pub async fn new(
         ctx: CoreContext,
-        repo: Arc<Repo>,
-        repos: Arc<MononokeRepos<Repo>>,
+        repo: Arc<R>,
+        repos: Arc<MononokeRepos<R>>,
     ) -> Result<Self, MononokeError> {
         let push_redirector = maybe_push_redirector(&ctx, &repo, repos.as_ref())
             .await?
@@ -378,10 +383,10 @@ impl RepoContextBuilder {
         })
     }
 
-    pub async fn with_bubble<F, R>(mut self, bubble_fetcher: F) -> Result<Self, MononokeError>
+    pub async fn with_bubble<F, Fut>(mut self, bubble_fetcher: F) -> Result<Self, MononokeError>
     where
-        F: FnOnce(RepoEphemeralStore) -> R,
-        R: Future<Output = anyhow::Result<Option<BubbleId>>>,
+        F: FnOnce(RepoEphemeralStore) -> Fut,
+        Fut: Future<Output = anyhow::Result<Option<BubbleId>>>,
     {
         self.bubble_id = bubble_fetcher(self.repo.repo_ephemeral_store().clone()).await?;
         Ok(self)
@@ -392,7 +397,7 @@ impl RepoContextBuilder {
         self
     }
 
-    pub async fn build(self) -> Result<RepoContext, MononokeError> {
+    pub async fn build(self) -> Result<RepoContext<R>, MononokeError> {
         let authz = Arc::new(
             self.authz
                 .clone()
@@ -445,43 +450,6 @@ pub enum XRepoLookupExactBehaviour {
     OnlyExactMapping,
     // Returns result also when there's working copy equivalent match
     WorkingCopyEquivalence,
-}
-
-impl Repo {
-    /// The name of the underlying repo.
-    pub fn name(&self) -> &str {
-        self.repo_identity().name()
-    }
-
-    /// The internal id of the repo. Used for comparing the repo objects with each other.
-    pub fn repoid(&self) -> RepositoryId {
-        self.repo_identity().id()
-    }
-
-    /// `LiveCommitSyncConfig` instance to query current state of sync configs.
-    pub fn live_commit_sync_config(&self) -> Arc<dyn LiveCommitSyncConfig> {
-        self.repo_cross_repo.live_commit_sync_config().clone()
-    }
-
-    /// The commit sync mapping for the referenced repository.
-    pub fn synced_commit_mapping(&self) -> &ArcSyncedCommitMapping {
-        self.repo_cross_repo.synced_commit_mapping()
-    }
-
-    /// The commit sync lease for the referenced repository.
-    pub fn x_repo_sync_lease(&self) -> &Arc<dyn LeaseOps> {
-        self.repo_cross_repo.sync_lease()
-    }
-
-    /// The warm bookmarks cache for the referenced repository.
-    pub fn warm_bookmarks_cache(&self) -> &Arc<dyn BookmarksCache + Send + Sync> {
-        &self.warm_bookmarks_cache
-    }
-
-    /// The configuration for the referenced repository.
-    pub fn config(&self) -> &RepoConfig {
-        &self.repo_config
-    }
 }
 
 pub trait MonitoredRepo = BookmarksCacheRef
@@ -692,7 +660,7 @@ async fn try_find_child(
 }
 
 /// Trait for repo objects that can be wrapped in a bubble.
-trait RepoWithBubble {
+pub trait RepoWithBubble {
     /// Construct a new Repo based on an existing one with a bubble opened.
     fn with_bubble(&self, bubble: Bubble) -> Self;
 }
@@ -721,21 +689,21 @@ pub struct Stack {
     pub leftover_heads: Vec<ChangesetId>,
 }
 
-pub struct BookmarkInfo {
-    pub warm_changeset: ChangesetContext,
-    pub fresh_changeset: ChangesetContext,
+pub struct BookmarkInfo<R> {
+    pub warm_changeset: ChangesetContext<R>,
+    pub fresh_changeset: ChangesetContext<R>,
     pub last_update_timestamp: Timestamp,
 }
 
 /// A context object representing a query to a particular repo.
-impl RepoContext {
+impl<R: MononokeRepo> RepoContext<R> {
     pub async fn new(
         ctx: CoreContext,
         authz: Arc<AuthorizationContext>,
-        repo: Arc<Repo>,
+        repo: Arc<R>,
         bubble_id: Option<BubbleId>,
-        push_redirector: Option<Arc<PushRedirector<Repo>>>,
-        repos: Arc<MononokeRepos<Repo>>,
+        push_redirector: Option<Arc<PushRedirector<R>>>,
+        repos: Arc<MononokeRepos<R>>,
     ) -> Result<Self, MononokeError> {
         let ctx = ctx.with_mutated_scuba(|mut scuba| {
             scuba.add("permissions_model", format!("{:?}", authz));
@@ -765,7 +733,7 @@ impl RepoContext {
         })
     }
 
-    pub async fn new_test(ctx: CoreContext, repo: Arc<Repo>) -> Result<Self, MononokeError> {
+    pub async fn new_test(ctx: CoreContext, repo: Arc<R>) -> Result<Self, MononokeError> {
         let authz = Arc::new(AuthorizationContext::new_bypass_access_control());
         RepoContext::new(ctx, authz, repo, None, None, Arc::new(MononokeRepos::new())).await
     }
@@ -777,12 +745,12 @@ impl RepoContext {
 
     /// The name of the underlying repo.
     pub fn name(&self) -> &str {
-        self.repo.name()
+        self.repo.repo_identity().name()
     }
 
     /// The internal id of the repo. Used for comparing the repo objects with each other.
     pub fn repoid(&self) -> RepositoryId {
-        self.repo.repoid()
+        self.repo.repo_identity().id()
     }
 
     /// The authorization context of the request.
@@ -790,17 +758,20 @@ impl RepoContext {
         &self.authz
     }
 
-    pub fn repo(&self) -> &Repo {
+    pub fn repo(&self) -> &R {
         self.repo.as_ref()
     }
 
-    pub fn repo_arc(&self) -> Arc<Repo> {
+    pub fn repo_arc(&self) -> Arc<R> {
         self.repo.clone()
     }
 
     /// `LiveCommitSyncConfig` instance to query current state of sync configs.
     pub fn live_commit_sync_config(&self) -> Arc<dyn LiveCommitSyncConfig> {
-        self.repo.live_commit_sync_config()
+        self.repo
+            .repo_cross_repo()
+            .live_commit_sync_config()
+            .clone()
     }
 
     /// The ephemeral store for the referenced repository
@@ -810,12 +781,12 @@ impl RepoContext {
 
     /// The commit sync mapping for the referenced repository
     pub fn synced_commit_mapping(&self) -> &ArcSyncedCommitMapping {
-        self.repo.synced_commit_mapping()
+        self.repo.repo_cross_repo().synced_commit_mapping()
     }
 
     /// The warm bookmarks cache for the referenced repository.
-    pub fn warm_bookmarks_cache(&self) -> &Arc<dyn BookmarksCache + Send + Sync> {
-        self.repo.warm_bookmarks_cache()
+    pub fn warm_bookmarks_cache(&self) -> &(dyn BookmarksCache + Send + Sync) {
+        self.repo.bookmarks_cache()
     }
 
     /// The repo blobstore for the referenced repository.
@@ -831,7 +802,7 @@ impl RepoContext {
     /// The base for push redirection logic for this repo
     pub fn maybe_push_redirector_base(&self) -> Option<&PushRedirectorBase> {
         self.repo
-            .repo_handler_base
+            .repo_handler_base()
             .maybe_push_redirector_base
             .as_ref()
             .map(AsRef::as_ref)
@@ -839,7 +810,7 @@ impl RepoContext {
 
     /// The configuration for the referenced repository.
     pub fn config(&self) -> &RepoConfig {
-        self.repo.config()
+        self.repo.repo_config()
     }
 
     pub fn mutable_renames(&self) -> ArcMutableRenames {
@@ -969,7 +940,7 @@ impl RepoContext {
         &self,
         bookmark: &BookmarkKey,
         freshness: BookmarkFreshness,
-    ) -> Result<Option<ChangesetContext>, MononokeError> {
+    ) -> Result<Option<ChangesetContext<R>>, MononokeError> {
         let mut cs_id = match freshness {
             BookmarkFreshness::MaybeStale => {
                 self.warm_bookmarks_cache().get(&self.ctx, bookmark).await?
@@ -1031,7 +1002,7 @@ impl RepoContext {
     pub async fn changeset(
         &self,
         specifier: impl Into<ChangesetSpecifier>,
-    ) -> Result<Option<ChangesetContext>, MononokeError> {
+    ) -> Result<Option<ChangesetContext<R>>, MononokeError> {
         let specifier = specifier.into();
         let changeset = self
             .resolve_specifier(specifier)
@@ -1041,7 +1012,7 @@ impl RepoContext {
     }
 
     /// Create changeset context from known existing changeset id.
-    pub fn changeset_from_existing_id(&self, cs_id: ChangesetId) -> ChangesetContext {
+    pub fn changeset_from_existing_id(&self, cs_id: ChangesetId) -> ChangesetContext<R> {
         ChangesetContext::new(self.clone(), cs_id)
     }
 
@@ -1049,7 +1020,7 @@ impl RepoContext {
         &'a self,
         includes: Vec<ChangesetId>,
         excludes: Vec<ChangesetId>,
-    ) -> Result<impl Stream<Item = Result<ChangesetContext, MononokeError>> + 'a, MononokeError>
+    ) -> Result<impl Stream<Item = Result<ChangesetContext<R>, MononokeError>> + 'a, MononokeError>
     {
         let repo = self.clone();
 
@@ -1199,7 +1170,7 @@ impl RepoContext {
     pub async fn bookmark_info(
         &self,
         bookmark: impl AsRef<str>,
-    ) -> Result<Option<BookmarkInfo>, MononokeError> {
+    ) -> Result<Option<BookmarkInfo<R>>, MononokeError> {
         // a non ascii bookmark name is an invalid request
         let bookmark = BookmarkKey::new(bookmark.as_ref())
             .map_err(|e| MononokeError::InvalidRequest(e.to_string()))?;
@@ -1415,12 +1386,18 @@ impl RepoContext {
     }
 
     /// Get a Tree by id.  Returns `None` if the tree doesn't exist.
-    pub async fn tree(&self, tree_id: TreeId) -> Result<Option<TreeContext>, MononokeError> {
+    pub async fn tree(&self, tree_id: TreeId) -> Result<Option<TreeContext<R>>, MononokeError>
+    where
+        R: Clone,
+    {
         TreeContext::new_check_exists(self.clone(), tree_id).await
     }
 
     /// Get a File by id.  Returns `None` if the file doesn't exist.
-    pub async fn file(&self, file_id: FileId) -> Result<Option<FileContext>, MononokeError> {
+    pub async fn file(&self, file_id: FileId) -> Result<Option<FileContext<R>>, MononokeError>
+    where
+        R: Clone,
+    {
         FileContext::new_check_exists(self.clone(), FetchKey::Canonical(file_id)).await
     }
 
@@ -1428,7 +1405,10 @@ impl RepoContext {
     pub async fn file_by_content_sha1(
         &self,
         hash: Sha1,
-    ) -> Result<Option<FileContext>, MononokeError> {
+    ) -> Result<Option<FileContext<R>>, MononokeError>
+    where
+        R: Clone,
+    {
         FileContext::new_check_exists(self.clone(), FetchKey::Aliased(Alias::Sha1(hash))).await
     }
 
@@ -1436,7 +1416,10 @@ impl RepoContext {
     pub async fn file_by_content_sha256(
         &self,
         hash: Sha256,
-    ) -> Result<Option<FileContext>, MononokeError> {
+    ) -> Result<Option<FileContext<R>>, MononokeError>
+    where
+        R: Clone,
+    {
         FileContext::new_check_exists(self.clone(), FetchKey::Aliased(Alias::Sha256(hash))).await
     }
 
@@ -1444,7 +1427,10 @@ impl RepoContext {
     pub async fn file_by_content_gitsha1(
         &self,
         hash: GitSha1,
-    ) -> Result<Option<FileContext>, MononokeError> {
+    ) -> Result<Option<FileContext<R>>, MononokeError>
+    where
+        R: Clone,
+    {
         FileContext::new_check_exists(self.clone(), FetchKey::Aliased(Alias::GitSha1(hash))).await
     }
 
@@ -1468,12 +1454,12 @@ impl RepoContext {
     pub async fn file_by_content_seeded_blake3(
         &self,
         hash: Blake3,
-    ) -> Result<Option<FileContext>, MononokeError> {
+    ) -> Result<Option<FileContext<R>>, MononokeError> {
         FileContext::new_check_exists(self.clone(), FetchKey::Aliased(Alias::SeededBlake3(hash)))
             .await
     }
 
-    fn target_repo(&self) -> Target<Repo> {
+    fn target_repo(&self) -> Target<R> {
         Target(self.repo().clone())
     }
 
@@ -1481,7 +1467,7 @@ impl RepoContext {
         &self,
         maybe_args: Option<CandidateSelectionHintArgs>,
         other_repo_context: &Self,
-    ) -> Result<CandidateSelectionHint<Repo>, MononokeError> {
+    ) -> Result<CandidateSelectionHint<R>, MononokeError> {
         let args = match maybe_args {
             None => return Ok(CandidateSelectionHint::Only),
             Some(args) => args,
@@ -1563,7 +1549,10 @@ impl RepoContext {
         maybe_candidate_selection_hint_args: Option<CandidateSelectionHintArgs>,
         sync_behaviour: XRepoLookupSyncBehaviour,
         exact: XRepoLookupExactBehaviour,
-    ) -> Result<Option<ChangesetContext>, MononokeError> {
+    ) -> Result<Option<ChangesetContext<R>>, MononokeError>
+    where
+        R: Clone,
+    {
         let common_config = self
             .live_commit_sync_config()
             .get_common_config(self.repo().repo_identity().id())
@@ -1575,15 +1564,19 @@ impl RepoContext {
                 ))
             })?;
 
-        let candidate_selection_hint: CandidateSelectionHint<Repo> = self
+        let candidate_selection_hint: CandidateSelectionHint<R> = self
             .build_candidate_selection_hint(maybe_candidate_selection_hint_args, other)
             .await?;
 
         let (_small_repo, _large_repo) =
             get_small_and_large_repos(self.repo.as_ref(), other.repo.as_ref(), &common_config)?;
 
-        let live_commit_sync_config = self.repo.live_commit_sync_config();
-        let repo_provider: RepoProvider<'a, Repo> = Arc::new(move |repo_id| {
+        let live_commit_sync_config = self
+            .repo
+            .repo_cross_repo()
+            .live_commit_sync_config()
+            .clone();
+        let repo_provider: RepoProvider<'a, R> = Arc::new(move |repo_id| {
             Box::pin({
                 let repos = self.repos.clone();
 
@@ -1622,7 +1615,7 @@ impl RepoContext {
             self.synced_commit_mapping().clone(),
             commit_sync_repos,
             self.live_commit_sync_config(),
-            self.repo.x_repo_sync_lease().clone(),
+            self.repo.repo_cross_repo().sync_lease().clone(),
         );
 
         if sync_behaviour == XRepoLookupSyncBehaviour::SyncIfAbsent {
@@ -1779,14 +1772,14 @@ impl RepoContext {
     }
 }
 
-impl PartialEq for RepoContext {
+impl<R: MononokeRepo> PartialEq for RepoContext<R> {
     fn eq(&self, other: &Self) -> bool {
         self.repoid() == other.repoid()
     }
 }
-impl Eq for RepoContext {}
+impl<R: MononokeRepo> Eq for RepoContext<R> {}
 
-impl Hash for RepoContext {
+impl<R: MononokeRepo> Hash for RepoContext<R> {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.repoid().hash(state);
     }

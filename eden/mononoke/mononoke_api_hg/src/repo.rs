@@ -56,8 +56,8 @@ use mercurial_types::HgManifestId;
 use mercurial_types::HgNodeHash;
 use metaconfig_types::RepoConfig;
 use mononoke_api::errors::MononokeError;
-use mononoke_api::repo::Repo;
 use mononoke_api::repo::RepoContext;
+use mononoke_api::MononokeRepo;
 use mononoke_types::path::MPath;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
@@ -78,8 +78,8 @@ use super::HgFileContext;
 use super::HgTreeContext;
 
 #[derive(Clone)]
-pub struct HgRepoContext {
-    repo_ctx: RepoContext,
+pub struct HgRepoContext<R> {
+    repo_ctx: RepoContext<R>,
 }
 
 pub struct HgChangesetSegment {
@@ -94,8 +94,8 @@ pub struct HgChangesetSegmentParent {
     pub location: Option<Location<HgChangesetId>>,
 }
 
-impl HgRepoContext {
-    pub(crate) fn new(repo_ctx: RepoContext) -> Self {
+impl<R: MononokeRepo> HgRepoContext<R> {
+    pub(crate) fn new(repo_ctx: RepoContext<R>) -> Self {
         Self { repo_ctx }
     }
 
@@ -105,12 +105,12 @@ impl HgRepoContext {
     }
 
     /// The `RepoContext` for this query.
-    pub fn repo_ctx(&self) -> &RepoContext {
+    pub fn repo_ctx(&self) -> &RepoContext<R> {
         &self.repo_ctx
     }
 
     /// The underlying Mononoke `Repo` backing this `HgRepoContext`.
-    pub(crate) fn repo(&self) -> &Repo {
+    pub(crate) fn repo(&self) -> &R {
         self.repo_ctx().repo()
     }
 
@@ -318,7 +318,7 @@ impl HgRepoContext {
     pub async fn file(
         &self,
         filenode_id: HgFileNodeId,
-    ) -> Result<Option<HgFileContext>, MononokeError> {
+    ) -> Result<Option<HgFileContext<R>>, MononokeError> {
         HgFileContext::new_check_exists(self.clone(), filenode_id).await
     }
 
@@ -326,7 +326,7 @@ impl HgRepoContext {
     pub async fn tree(
         &self,
         manifest_id: HgManifestId,
-    ) -> Result<Option<HgTreeContext>, MononokeError> {
+    ) -> Result<Option<HgTreeContext<R>>, MononokeError> {
         HgTreeContext::new_check_exists(self.clone(), manifest_id).await
     }
 
@@ -466,7 +466,7 @@ impl HgRepoContext {
         root_versions: impl IntoIterator<Item = HgManifestId>,
         base_versions: impl IntoIterator<Item = HgManifestId>,
         depth: Option<usize>,
-    ) -> impl TryStream<Ok = (HgTreeContext, MPath), Error = MononokeError> {
+    ) -> impl TryStream<Ok = (HgTreeContext<R>, MPath), Error = MononokeError> {
         let ctx = self.ctx().clone();
         let repo = self.repo_ctx.repo();
         let args = GettreepackArgs {

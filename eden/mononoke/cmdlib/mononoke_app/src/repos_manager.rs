@@ -22,6 +22,7 @@ use metaconfig_types::Redaction;
 use metaconfig_types::RepoConfig;
 use metaconfig_types::ShardedService;
 use mononoke_api::Mononoke;
+use mononoke_api::MononokeRepo;
 use mononoke_configs::ConfigUpdateReceiver;
 use mononoke_configs::MononokeConfigs;
 use mononoke_repos::MononokeRepos;
@@ -221,10 +222,8 @@ impl<Repo> MononokeReposManager<Repo> {
     }
 }
 
-// This has a concrete type until we make `mononoke_api::Mononoke` generic
-// also.
-impl MononokeReposManager<mononoke_api::Repo> {
-    pub fn make_mononoke_api(&self) -> Result<Mononoke> {
+impl<R: MononokeRepo> MononokeReposManager<R> {
+    pub fn make_mononoke_api(&self) -> Result<Mononoke<R>> {
         let repo_names_in_tier =
             Vec::from_iter(self.configs.repo_configs().repos.iter().filter_map(
                 |(name, config)| {

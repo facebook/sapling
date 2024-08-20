@@ -23,6 +23,8 @@ use edenapi_types::ServerError;
 use futures::stream;
 use futures::StreamExt;
 use mononoke_api::ChangesetId;
+use mononoke_api::MononokeRepo;
+use mononoke_api::Repo;
 use mononoke_api_hg::HgRepoContext;
 use mononoke_types::blame_v2::BlameV2;
 
@@ -53,7 +55,7 @@ impl SaplingRemoteApiHandler for BlameHandler {
     }
 
     async fn handler(
-        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
+        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor, Repo>,
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
         let repo = ectx.repo();
@@ -68,7 +70,7 @@ impl SaplingRemoteApiHandler for BlameHandler {
     }
 }
 
-async fn blame_file(repo: HgRepoContext, key: Key) -> Result<BlameResult> {
+async fn blame_file<R: MononokeRepo>(repo: HgRepoContext<R>, key: Key) -> Result<BlameResult> {
     Ok(BlameResult {
         file: key.clone(),
         data: blame_file_data(repo, key.clone())
@@ -77,7 +79,7 @@ async fn blame_file(repo: HgRepoContext, key: Key) -> Result<BlameResult> {
     })
 }
 
-async fn blame_file_data(repo: HgRepoContext, key: Key) -> Result<BlameData> {
+async fn blame_file_data<R: MononokeRepo>(repo: HgRepoContext<R>, key: Key) -> Result<BlameData> {
     let repo = repo.repo_ctx();
 
     let cs = repo

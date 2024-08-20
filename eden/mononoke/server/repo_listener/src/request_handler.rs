@@ -30,6 +30,7 @@ use hgproto::HgProtoHandler;
 use maplit::hashmap;
 use maplit::hashset;
 use mononoke_api::Mononoke;
+use mononoke_api::Repo;
 use mononoke_configs::MononokeConfigs;
 use qps::Qps;
 use rate_limiting::Metric;
@@ -65,7 +66,7 @@ define_stats! {
 pub async fn request_handler(
     fb: FacebookInit,
     reponame: String,
-    mononoke: Arc<Mononoke>,
+    mononoke: Arc<Mononoke<Repo>>,
     configs: Arc<MononokeConfigs>,
     _security_checker: &ConnectionSecurityChecker,
     stdio: Stdio,

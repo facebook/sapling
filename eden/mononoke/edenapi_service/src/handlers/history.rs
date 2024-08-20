@@ -18,6 +18,8 @@ use futures::StreamExt;
 use futures::TryStreamExt;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgNodeHash;
+use mononoke_api::MononokeRepo;
+use mononoke_api::Repo;
 use mononoke_api_hg::HgRepoContext;
 use types::Key;
 
@@ -45,7 +47,7 @@ impl SaplingRemoteApiHandler for HistoryHandler {
     const ENDPOINT: &'static str = "/history";
 
     async fn handler(
-        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
+        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor, Repo>,
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
         let repo = ectx.repo();
@@ -71,8 +73,8 @@ impl SaplingRemoteApiHandler for HistoryHandler {
     }
 }
 
-async fn fetch_history_for_key(
-    repo: HgRepoContext,
+async fn fetch_history_for_key<R: MononokeRepo>(
+    repo: HgRepoContext<R>,
     key: Key,
     length: Option<u32>,
 ) -> Result<HistoryStream, Error> {

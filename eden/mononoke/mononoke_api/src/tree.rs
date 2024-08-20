@@ -22,16 +22,17 @@ pub use mononoke_types::FsnodeId as TreeId;
 use repo_blobstore::RepoBlobstoreRef;
 
 use crate::errors::MononokeError;
+use crate::repo::MononokeRepo;
 use crate::repo::RepoContext;
 
 #[derive(Clone)]
-pub struct TreeContext {
-    repo_ctx: RepoContext,
+pub struct TreeContext<R> {
+    repo_ctx: RepoContext<R>,
     id: TreeId,
     fsnode: LazyShared<Result<Fsnode, MononokeError>>,
 }
 
-impl fmt::Debug for TreeContext {
+impl<R: MononokeRepo> fmt::Debug for TreeContext<R> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
@@ -42,14 +43,14 @@ impl fmt::Debug for TreeContext {
     }
 }
 
-impl TreeContext {
+impl<R: MononokeRepo> TreeContext<R> {
     /// Create a new TreeContext. The tree must exist in the repo and have
     /// had its derived data generated, and the user must be known to have
     /// permission to access the file.
     ///
     /// To construct a `TreeContext` for a tree that might not exist, use
     /// `new_check_exists`.
-    pub(crate) fn new_authorized(repo_ctx: RepoContext, id: TreeId) -> Self {
+    pub(crate) fn new_authorized(repo_ctx: RepoContext<R>, id: TreeId) -> Self {
         Self {
             repo_ctx,
             id,
@@ -60,7 +61,7 @@ impl TreeContext {
     /// Create a new TreeContext using an ID that might not exist. Returns
     /// `None` if the tree doesn't exist.
     pub(crate) async fn new_check_exists(
-        repo_ctx: RepoContext,
+        repo_ctx: RepoContext<R>,
         id: TreeId,
     ) -> Result<Option<Self>, MononokeError> {
         // Access to an arbitrary tree requires full access to the repo,
@@ -86,7 +87,7 @@ impl TreeContext {
     }
 
     /// The `RepoContext` for this query.
-    pub(crate) fn repo_ctx(&self) -> &RepoContext {
+    pub(crate) fn repo_ctx(&self) -> &RepoContext<R> {
         &self.repo_ctx
     }
 

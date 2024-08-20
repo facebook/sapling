@@ -44,6 +44,8 @@ use mercurial_types::HgAugmentedManifestId;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
 use mercurial_types::HgNodeHash;
+use mononoke_api::MononokeRepo;
+use mononoke_api::Repo;
 use mononoke_api_hg::HgDataContext;
 use mononoke_api_hg::HgDataId;
 use mononoke_api_hg::HgRepoContext;
@@ -88,7 +90,8 @@ pub async fn trees(state: &mut State) -> Result<impl TryIntoResponse, HttpError>
     let rctx = RequestContext::borrow_from(state).clone();
     let sctx = ServerContext::borrow_from(state);
 
-    let repo = get_repo(sctx, &rctx, &params.repo, Metric::TotalManifests).await?;
+    let repo: HgRepoContext<Repo> =
+        get_repo(sctx, &rctx, &params.repo, Metric::TotalManifests).await?;
     let request = parse_wire_request::<WireTreeRequest>(state).await?;
     if let Some(rd) = RequestDumper::try_borrow_mut_from(state) {
         rd.add_request(&request);
@@ -103,8 +106,8 @@ pub async fn trees(state: &mut State) -> Result<impl TryIntoResponse, HttpError>
 }
 
 /// Fetch trees for all of the requested keys concurrently.
-fn fetch_all_trees(
-    repo: HgRepoContext,
+fn fetch_all_trees<R: MononokeRepo>(
+    repo: HgRepoContext<R>,
     request: TreeRequest,
 ) -> impl Stream<Item = Result<TreeEntry, SaplingRemoteApiServerError>> {
     let ctx = repo.ctx().clone();
@@ -124,8 +127,8 @@ fn fetch_all_trees(
 /// Fetch requested tree for a single key.
 /// Note that this function consumes the repo context in order
 /// to construct a tree context for the requested blob.
-async fn fetch_tree(
-    repo: HgRepoContext,
+async fn fetch_tree<R: MononokeRepo>(
+    repo: HgRepoContext<R>,
     key: Key,
     attributes: TreeAttributes,
 ) -> Result<TreeEntry, Error> {
@@ -231,7 +234,7 @@ async fn fetch_tree(
         }
     }
 
-    let id = HgManifestId::from_node_hash(HgNodeHash::from(key.hgid));
+    let id = <HgManifestId as HgDataId<R>>::from_node_hash(HgNodeHash::from(key.hgid));
 
     let ctx = id
         .context(repo.clone())
@@ -275,9 +278,9 @@ async fn fetch_tree(
     Ok(entry)
 }
 
-async fn fetch_child_file_metadata_entries<'a>(
-    repo: &'a HgRepoContext,
-    ctx: &'a HgTreeContext,
+async fn fetch_child_file_metadata_entries<'a, R: MononokeRepo>(
+    repo: &'a HgRepoContext<R>,
+    ctx: &'a HgTreeContext<R>,
 ) -> Result<
     Option<impl Stream<Item = impl Future<Output = Result<TreeChildEntry, Error>> + 'a> + 'a>,
     Error,
@@ -312,8 +315,8 @@ async fn fetch_child_file_metadata_entries<'a>(
     ))
 }
 
-async fn fetch_child_file_metadata(
-    repo: &HgRepoContext,
+async fn fetch_child_file_metadata<R: MononokeRepo>(
+    repo: &HgRepoContext<R>,
     child_key: Key,
 ) -> Result<TreeChildEntry, Error> {
     let ctx = repo
@@ -335,8 +338,8 @@ async fn fetch_child_file_metadata(
 }
 
 /// Store the content of a single tree
-async fn store_tree(
-    repo: HgRepoContext,
+async fn store_tree<R: MononokeRepo>(
+    repo: HgRepoContext<R>,
     item: UploadTreeRequest,
 ) -> Result<UploadTreeResponse, Error> {
     let upload_node_id = HgNodeHash::from(item.entry.node_id);
@@ -363,7 +366,7 @@ impl SaplingRemoteApiHandler for UploadTreesHandler {
     const ENDPOINT: &'static str = "/upload/trees";
 
     async fn handler(
-        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
+        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor, Repo>,
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
         let repo = ectx.repo();

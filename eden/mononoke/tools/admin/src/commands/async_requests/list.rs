@@ -11,6 +11,7 @@ use async_requests::types::ThriftMegarepoAsynchronousRequestParams;
 use clap::Args;
 use context::CoreContext;
 use megarepo_api::MegarepoApi;
+use mononoke_api::MononokeRepo;
 use mononoke_types::ChangesetId;
 use mononoke_types::DateTime;
 use mononoke_types::Timestamp;
@@ -28,10 +29,10 @@ pub struct AsyncRequestsListArgs {
     lookback: i64,
 }
 
-pub async fn list_requests(
+pub async fn list_requests<R: MononokeRepo>(
     args: AsyncRequestsListArgs,
     ctx: CoreContext,
-    megarepo: MegarepoApi,
+    megarepo: MegarepoApi<R>,
 ) -> Result<(), Error> {
     let repos_and_queues = megarepo.all_async_method_request_queues(&ctx).await?;
     let lookback = args.lookback;

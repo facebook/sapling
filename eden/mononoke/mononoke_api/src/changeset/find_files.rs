@@ -22,9 +22,10 @@ use super::to_vec1;
 use super::ChangesetContext;
 use super::ChangesetFileOrdering;
 use crate::errors::MononokeError;
+use crate::MononokeRepo;
 
 /// A context object representing a query to a particular commit in a repo.
-impl ChangesetContext {
+impl<R: MononokeRepo> ChangesetContext<R> {
     pub async fn find_files_unordered(
         &self,
         prefixes: Option<Vec<MPath>>,

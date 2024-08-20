@@ -18,11 +18,12 @@ use gix_hash::ObjectId;
 use gix_object::Tag;
 use gix_object::WriteTo;
 
+use crate::repo::Repo;
 use crate::CoreContext;
 use crate::RepoContext;
 
-async fn init_repo(ctx: &CoreContext) -> Result<RepoContext> {
-    let repo = test_repo_factory::build_empty(ctx.fb).await?;
+async fn init_repo(ctx: &CoreContext) -> Result<RepoContext<Repo>> {
+    let repo: Repo = test_repo_factory::build_empty(ctx.fb).await?;
     let repo_context = RepoContext::new_test(ctx.clone(), Arc::new(repo)).await?;
     Ok(repo_context)
 }

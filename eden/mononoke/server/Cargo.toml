@@ -23,6 +23,7 @@ mononoke_api = { version = "0.1.0", path = "../mononoke_api" }
 mononoke_app = { version = "0.1.0", path = "../cmdlib/mononoke_app" }
 openssl = "0.10.61"
 pushrebase_client = { version = "0.1.0", path = "../pushrebase/client" }
+repo_identity = { version = "0.1.0", path = "../repo_attributes/repo_identity" }
 repo_listener = { version = "0.1.0", path = "repo_listener" }
 scuba_ext = { version = "0.1.0", path = "../common/scuba_ext" }
 secure_utils = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

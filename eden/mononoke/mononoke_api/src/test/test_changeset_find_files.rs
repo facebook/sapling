@@ -24,10 +24,11 @@ use crate::ChangesetFileOrdering;
 use crate::ChangesetId;
 use crate::CoreContext;
 use crate::Mononoke;
+use crate::Repo;
 
 async fn commit_find_files_impl(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let mononoke = Mononoke::new_test(vec![(
+    let mononoke: Mononoke<Repo> = Mononoke::new_test(vec![(
         "test".to_string(),
         ManyFilesDirs::get_repo(fb).await,
     )])

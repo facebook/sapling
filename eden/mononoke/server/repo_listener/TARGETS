@@ -54,6 +54,7 @@ rust_library(
         "//eden/mononoke/permission_checker:permission_checker",
         "//eden/mononoke/quiet_stream:quiet_stream",
         "//eden/mononoke/rate_limiting:rate_limiting",
+        "//eden/mononoke/repo_attributes/repo_identity:repo_identity",
         "//eden/mononoke/repo_attributes/repo_permission_checker:repo_permission_checker",
         "//eden/mononoke/repo_client:repo_client",
         "//eden/mononoke/server/context:context",

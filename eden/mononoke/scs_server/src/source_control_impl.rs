@@ -39,6 +39,7 @@ use mononoke_api::CoreContext;
 use mononoke_api::FileContext;
 use mononoke_api::FileId;
 use mononoke_api::Mononoke;
+use mononoke_api::Repo;
 use mononoke_api::RepoContext;
 use mononoke_api::SessionContainer;
 use mononoke_api::TreeContext;
@@ -101,8 +102,8 @@ define_stats! {
 #[derive(Clone)]
 pub(crate) struct SourceControlServiceImpl {
     pub(crate) fb: FacebookInit,
-    pub(crate) mononoke: Arc<Mononoke>,
-    pub(crate) megarepo_api: Arc<MegarepoApi>,
+    pub(crate) mononoke: Arc<Mononoke<Repo>>,
+    pub(crate) megarepo_api: Arc<MegarepoApi<Repo>>,
     pub(crate) logger: Logger,
     pub(crate) scuba_builder: MononokeScubaSampleBuilder,
     pub(crate) identity: Identity,
@@ -117,8 +118,8 @@ pub(crate) struct SourceControlServiceThriftImpl(Arc<SourceControlServiceImpl>);
 impl SourceControlServiceImpl {
     pub fn new(
         fb: FacebookInit,
-        mononoke: Arc<Mononoke>,
-        megarepo_api: Arc<MegarepoApi>,
+        mononoke: Arc<Mononoke<Repo>>,
+        megarepo_api: Arc<MegarepoApi<Repo>>,
         logger: Logger,
         mut scuba_builder: MononokeScubaSampleBuilder,
         scribe: Scribe,
@@ -359,7 +360,7 @@ impl SourceControlServiceImpl {
         &self,
         ctx: CoreContext,
         repo: &thrift::RepoSpecifier,
-    ) -> Result<RepoContext, errors::ServiceError> {
+    ) -> Result<RepoContext<Repo>, errors::ServiceError> {
         let authz = AuthorizationContext::new(&ctx);
         self.repo_impl(ctx, repo, authz, |_| async { Ok(None) })
             .await
@@ -372,7 +373,7 @@ impl SourceControlServiceImpl {
         ctx: CoreContext,
         repo: &thrift::RepoSpecifier,
         service_name: Option<String>,
-    ) -> Result<RepoContext, errors::ServiceError> {
+    ) -> Result<RepoContext<Repo>, errors::ServiceError> {
         let authz = match service_name {
             Some(service_name) => AuthorizationContext::new_for_service_writes(service_name),
             None => AuthorizationContext::new(&ctx),
@@ -387,7 +388,7 @@ impl SourceControlServiceImpl {
         repo: &thrift::RepoSpecifier,
         authz: AuthorizationContext,
         bubble_fetcher: F,
-    ) -> Result<RepoContext, errors::ServiceError>
+    ) -> Result<RepoContext<Repo>, errors::ServiceError>
     where
         F: FnOnce(RepoEphemeralStore) -> R,
         R: Future<Output = anyhow::Result<Option<BubbleId>>>,
@@ -419,7 +420,7 @@ impl SourceControlServiceImpl {
         &self,
         ctx: CoreContext,
         commit: &thrift::CommitSpecifier,
-    ) -> Result<(RepoContext, ChangesetContext), errors::ServiceError> {
+    ) -> Result<(RepoContext<Repo>, ChangesetContext<Repo>), errors::ServiceError> {
         let changeset_specifier = ChangesetSpecifier::from_request(&commit.id)?;
         let authz = AuthorizationContext::new(&ctx);
         let bubble_fetcher =
@@ -441,7 +442,14 @@ impl SourceControlServiceImpl {
         ctx: CoreContext,
         commit: &thrift::CommitSpecifier,
         other_commit: &thrift::CommitId,
-    ) -> Result<(RepoContext, ChangesetContext, ChangesetContext), errors::ServiceError> {
+    ) -> Result<
+        (
+            RepoContext<Repo>,
+            ChangesetContext<Repo>,
+            ChangesetContext<Repo>,
+        ),
+        errors::ServiceError,
+    > {
         let changeset_specifier =
             ChangesetSpecifier::from_request(&commit.id).context("invalid target commit id")?;
         let other_changeset_specifier = ChangesetSpecifier::from_request(other_commit)
@@ -488,7 +496,7 @@ impl SourceControlServiceImpl {
     /// Get the changeset id specified by a `thrift::CommitId`.
     pub(crate) async fn changeset_id(
         &self,
-        repo: &RepoContext,
+        repo: &RepoContext<Repo>,
         id: &thrift::CommitId,
     ) -> Result<ChangesetId, errors::ServiceError> {
         let changeset_specifier = ChangesetSpecifier::from_request(id)?;
@@ -508,7 +516,7 @@ impl SourceControlServiceImpl {
         &self,
         ctx: CoreContext,
         tree: &thrift::TreeSpecifier,
-    ) -> Result<(RepoContext, Option<TreeContext>), errors::ServiceError> {
+    ) -> Result<(RepoContext<Repo>, Option<TreeContext<Repo>>), errors::ServiceError> {
         let (repo, tree) = match tree {
             thrift::TreeSpecifier::by_commit_path(commit_path) => {
                 let (repo, changeset) = self.repo_changeset(ctx, &commit_path.commit).await?;
@@ -543,7 +551,7 @@ impl SourceControlServiceImpl {
         &self,
         ctx: CoreContext,
         file: &thrift::FileSpecifier,
-    ) -> Result<(RepoContext, Option<FileContext>), errors::ServiceError> {
+    ) -> Result<(RepoContext<Repo>, Option<FileContext<Repo>>), errors::ServiceError> {
         let (repo, file) = match file {
             thrift::FileSpecifier::by_commit_path(commit_path) => {
                 let (repo, changeset) = self.repo_changeset(ctx, &commit_path.commit).await?;

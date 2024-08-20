@@ -36,6 +36,7 @@ use megarepo_mapping::MegarepoMapping;
 use megarepo_mapping::SourceName;
 use mononoke_api::ChangesetContext;
 use mononoke_api::Mononoke;
+use mononoke_api::MononokeRepo;
 use mononoke_api::RepoContext;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
@@ -47,25 +48,24 @@ use crate::common::find_target_bookmark_and_value;
 use crate::common::find_target_sync_config;
 use crate::common::MegarepoOp;
 use crate::common::SourceAndMovedChangesets;
-use crate::Repo;
 
-pub(crate) struct SyncChangeset<'a> {
+pub(crate) struct SyncChangeset<'a, R> {
     megarepo_configs: &'a Arc<dyn MononokeMegarepoConfigs>,
-    mononoke: &'a Arc<Mononoke>,
+    mononoke: &'a Arc<Mononoke<R>>,
     target_megarepo_mapping: &'a Arc<MegarepoMapping>,
     mutable_renames: &'a Arc<MutableRenames>,
 }
 
 #[async_trait]
-impl<'a> MegarepoOp for SyncChangeset<'a> {
-    fn mononoke(&self) -> &Arc<Mononoke> {
+impl<'a, R> MegarepoOp<R> for SyncChangeset<'a, R> {
+    fn mononoke(&self) -> &Arc<Mononoke<R>> {
         self.mononoke
     }
 }
 
-pub enum MergeMode {
+pub enum MergeMode<R> {
     Squashed {
-        side_commits: Vec<ChangesetContext>,
+        side_commits: Vec<ChangesetContext<R>>,
     },
     ExtraMoveCommits {
         side_parents_move_commits: Vec<SourceAndMovedChangesets>,
@@ -102,10 +102,10 @@ pub struct SquashingConfig {
 
 const MERGE_COMMIT_MOVES_CONCURRENCY: usize = 10;
 
-impl<'a> SyncChangeset<'a> {
+impl<'a, R: MononokeRepo> SyncChangeset<'a, R> {
     pub(crate) fn new(
         megarepo_configs: &'a Arc<dyn MononokeMegarepoConfigs>,
-        mononoke: &'a Arc<Mononoke>,
+        mononoke: &'a Arc<Mononoke<R>>,
         target_megarepo_mapping: &'a Arc<MegarepoMapping>,
         mutable_renames: &'a Arc<MutableRenames>,
     ) -> Self {
@@ -271,9 +271,9 @@ impl<'a> SyncChangeset<'a> {
         source_cs_id: ChangesetId,
         commit_remapping_state: &CommitRemappingState,
         source_name: &SourceName,
-        source_repo: &RepoContext,
+        source_repo: &RepoContext<R>,
         squashing_config: &SquashingConfig,
-    ) -> Result<(bool, Vec<ChangesetContext>)> {
+    ) -> Result<(bool, Vec<ChangesetContext<R>>)> {
         if squashing_config.squash_limit == 0 {
             return Ok((false, vec![]));
         }
@@ -332,7 +332,7 @@ impl<'a> SyncChangeset<'a> {
         target: &Target,
         source_cs: &BonsaiChangeset,
         commit_remapping_state: &CommitRemappingState,
-        target_repo: &RepoContext,
+        target_repo: &RepoContext<R>,
         source_name: &SourceName,
         source: &Source,
     ) -> Result<Vec<SourceAndMovedChangesets>, MegarepoError> {
@@ -397,7 +397,7 @@ impl<'a> SyncChangeset<'a> {
         source_cs_id: ChangesetId,
         source_name: &SourceName,
         (expected_target_location, actual_target_location): (ChangesetId, ChangesetId),
-        repo: &RepoContext,
+        repo: &RepoContext<R>,
     ) -> Result<ChangesetId, MegarepoError> {
         // Bookmark points a non-expected commit - let's see if changeset it points to was created
         // by a previous sync_changeset call
@@ -436,12 +436,12 @@ impl<'a> SyncChangeset<'a> {
 
 // We allow syncing changeset from a source if one of its parents was the latest synced changeset
 // from this source into this target.
-async fn validate_can_sync_changeset(
+async fn validate_can_sync_changeset<R: MononokeRepo>(
     _ctx: &CoreContext,
     target: &Target,
     source_cs: &BonsaiChangeset,
     commit_remapping_state: &CommitRemappingState,
-    _source_repo: &RepoContext,
+    _source_repo: &RepoContext<R>,
     source: &Source,
 ) -> Result<(), MegarepoError> {
     match &source.revision {
@@ -481,7 +481,7 @@ async fn validate_can_sync_changeset(
     Ok(())
 }
 
-async fn sync_changeset_to_target<R: Repo>(
+async fn sync_changeset_to_target<R: MononokeRepo>(
     ctx: &CoreContext,
     mapping: &SourceMappingRules,
     source: &SourceName,
@@ -491,7 +491,7 @@ async fn sync_changeset_to_target<R: Repo>(
     target_cs_id: ChangesetId,
     target: &Target,
     mut state: CommitRemappingState,
-    merge_mode: MergeMode,
+    merge_mode: MergeMode<R>,
 ) -> Result<ChangesetId, MegarepoError> {
     let mover =
         create_source_to_target_multi_mover(mapping.clone()).map_err(MegarepoError::internal)?;

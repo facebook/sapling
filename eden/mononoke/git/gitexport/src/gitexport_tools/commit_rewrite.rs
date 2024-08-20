@@ -43,6 +43,7 @@ use mononoke_api::BookmarkKey;
 use mononoke_api::ChangesetContext;
 use mononoke_api::CoreContext;
 use mononoke_api::MononokeError;
+use mononoke_api::MononokeRepo;
 use mononoke_api::Repo;
 use mononoke_api::RepoContext;
 use mononoke_types::BonsaiChangeset;
@@ -74,8 +75,8 @@ pub use crate::partial_commit_graph::GitExportGraphInfo;
 
 pub const MASTER_BOOKMARK: &str = "heads/master";
 
-struct ChangesetRewriteInfo {
-    changeset_context: ChangesetContext,
+struct ChangesetRewriteInfo<R> {
+    changeset_context: ChangesetContext<R>,
     export_paths: Vec<NonRootMPath>,
     implicit_deletes: Vec<Vec<NonRootMPath>>,
 }
@@ -83,13 +84,13 @@ struct ChangesetRewriteInfo {
 /// Given a list of changesets, their parents and a list of paths, create
 /// copies in a target mononoke repository containing only changes that
 /// were made on the given paths.
-pub async fn rewrite_partial_changesets(
+pub async fn rewrite_partial_changesets<R: MononokeRepo>(
     fb: FacebookInit,
-    source_repo_ctx: RepoContext,
-    graph_info: GitExportGraphInfo,
-    export_paths: Vec<ExportPathInfo>,
+    source_repo_ctx: RepoContext<R>,
+    graph_info: GitExportGraphInfo<R>,
+    export_paths: Vec<ExportPathInfo<R>>,
     implicit_delete_prefetch_buffer_size: usize,
-) -> Result<RepoContext> {
+) -> Result<RepoContext<Repo>> {
     let source_repo_ctx = Arc::new(source_repo_ctx);
     let ctx = source_repo_ctx.ctx().clone();
     let changesets = graph_info.changesets;
@@ -274,12 +275,12 @@ pub async fn rewrite_partial_changesets(
 
 /// Given a changeset and a set of paths being exported, build the
 /// BonsaiChangeset containing only the changes to those paths.
-async fn create_bonsai_for_new_repo<'a>(
-    source_repo_ctx: &RepoContext,
+async fn create_bonsai_for_new_repo<'a, R: MononokeRepo>(
+    source_repo_ctx: &RepoContext<R>,
     multi_mover: MultiMover<'_>,
     changeset_parents: &ChangesetParents,
     mut remapped_parents: HashMap<ChangesetId, ChangesetId>,
-    changeset_ctx: ChangesetContext,
+    changeset_ctx: ChangesetContext<R>,
     export_paths: &'a [NonRootMPath],
     mut export_paths_not_created: HashSet<NonRootMPath>,
     implicit_deletes: Vec<Vec<NonRootMPath>>,
@@ -438,9 +439,9 @@ async fn create_bonsai_for_new_repo<'a>(
 
 /// Builds a vector of references to the paths that should be exported when
 /// rewriting the provided changeset based on each export path's head commit.
-async fn get_export_paths_for_changeset<'a>(
-    processed_cs: &ChangesetContext,
-    export_path_infos: &'a Vec<ExportPathInfo>,
+async fn get_export_paths_for_changeset<'a, R: MononokeRepo>(
+    processed_cs: &ChangesetContext<R>,
+    export_path_infos: &'a Vec<ExportPathInfo<R>>,
 ) -> Result<Vec<NonRootMPath>> {
     // Get the export paths for the changeset being processed considering its
     // head commit.
@@ -512,7 +513,7 @@ fn build_multi_mover_for_changeset<'a>(
 /// directories.
 /// The temporary repo uses file-backed storage and does not perform any writes
 /// to the Mononoke instance provided to the tool (e.g. production Mononoke).
-async fn create_temp_repo(fb: FacebookInit, ctx: &CoreContext) -> Result<RepoContext, Error> {
+async fn create_temp_repo(fb: FacebookInit, ctx: &CoreContext) -> Result<RepoContext<Repo>, Error> {
     let logger = ctx.logger();
     let system_tmp = env::temp_dir();
     let temp_dir_suffix = Alphanumeric.sample_string(&mut rand::thread_rng(), 16);

@@ -16,6 +16,8 @@ use maplit::hashmap;
 use mononoke_api::ChangesetContext;
 use mononoke_api::CoreContext;
 use mononoke_api::MononokeError;
+use mononoke_api::MononokeRepo;
+use mononoke_api::Repo;
 use mononoke_api::RepoContext;
 use mononoke_types::ChangesetId;
 use mononoke_types::DateTime;
@@ -38,16 +40,16 @@ const SECOND_IRRELEVANT_FILE: &str = "internal/foo.txt";
 const SECOND_EXPORT_DIR: &str = "EXP_2";
 const FILE_IN_SECOND_EXPORT_DIR: &str = "EXP_2/foo.txt";
 
-pub async fn get_relevant_changesets_from_ids(
-    repo_ctx: &RepoContext,
+pub async fn get_relevant_changesets_from_ids<R: MononokeRepo>(
+    repo_ctx: &RepoContext<R>,
     cs_ids: Vec<ChangesetId>,
-) -> Result<Vec<ChangesetContext>, MononokeError> {
+) -> Result<Vec<ChangesetContext<R>>, MononokeError> {
     try_join_all(cs_ids.iter().map(|cs_id| async {
-        let csc: ChangesetContext = repo_ctx
+        let csc: ChangesetContext<R> = repo_ctx
             .changeset(*cs_id)
             .await?
             .ok_or(anyhow!("Can't get ChangesetContext from id"))?;
-        Ok::<ChangesetContext, MononokeError>(csc)
+        Ok::<ChangesetContext<R>, MononokeError>(csc)
     }))
     .await
 }
@@ -58,9 +60,9 @@ pub struct GitExportTestRepoOptions {
 }
 
 /// Store all relevant data about a test case to avoid harcoding and duplication
-pub struct GitExportTestData {
+pub struct GitExportTestData<R> {
     /// Repo created for the test case
-    pub repo_ctx: RepoContext,
+    pub repo_ctx: RepoContext<R>,
     /// Map of commit id/name to the actual ChangesetId
     pub commit_id_map: BTreeMap<String, ChangesetId>,
     /// ID of the HEAD commit
@@ -73,9 +75,9 @@ pub async fn build_test_repo(
     fb: FacebookInit,
     ctx: &CoreContext,
     opts: GitExportTestRepoOptions,
-) -> Result<GitExportTestData> {
-    let source_repo = TestRepoFactory::new(fb)?.build().await?;
-    let source_repo_ctx = RepoContext::new_test(ctx.clone(), source_repo).await?;
+) -> Result<GitExportTestData<Repo>> {
+    let source_repo: Repo = TestRepoFactory::new(fb)?.build().await?;
+    let source_repo_ctx = RepoContext::new_test(ctx.clone(), source_repo.into()).await?;
     let source_repo = source_repo_ctx.repo();
 
     let relevant_paths = hashmap! {
@@ -155,9 +157,9 @@ pub async fn build_test_repo(
 pub async fn repo_with_renamed_export_path(
     fb: FacebookInit,
     ctx: &CoreContext,
-) -> Result<GitExportTestData> {
-    let source_repo = TestRepoFactory::new(fb)?.build().await?;
-    let source_repo_ctx = RepoContext::new_test(ctx.clone(), source_repo).await?;
+) -> Result<GitExportTestData<Repo>> {
+    let source_repo: Repo = TestRepoFactory::new(fb)?.build().await?;
+    let source_repo_ctx = RepoContext::new_test(ctx.clone(), source_repo.into()).await?;
     let source_repo = source_repo_ctx.repo();
 
     const HEAD_ID: &str = "G";
@@ -241,9 +243,9 @@ pub async fn repo_with_renamed_export_path(
 pub async fn repo_with_multiple_renamed_export_directories(
     fb: FacebookInit,
     ctx: &CoreContext,
-) -> Result<GitExportTestData> {
-    let source_repo = TestRepoFactory::new(fb)?.build().await?;
-    let source_repo_ctx = RepoContext::new_test(ctx.clone(), source_repo).await?;
+) -> Result<GitExportTestData<Repo>> {
+    let source_repo: Repo = TestRepoFactory::new(fb)?.build().await?;
+    let source_repo_ctx = RepoContext::new_test(ctx.clone(), source_repo.into()).await?;
     let source_repo = source_repo_ctx.repo();
 
     const HEAD_ID: &str = "D";

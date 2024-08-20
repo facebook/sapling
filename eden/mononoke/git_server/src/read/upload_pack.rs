@@ -43,6 +43,7 @@ use protocol::generator::ref_oid_mapping;
 use protocol::generator::shallow_info as fetch_shallow_info;
 use protocol::types::PackfileConcurrency;
 use protocol::types::ShallowInfoResponse;
+use repo_identity::RepoIdentityRef;
 use rustc_hash::FxHashSet;
 use tokio::io::ErrorKind;
 use tokio::sync::mpsc;
@@ -122,7 +123,7 @@ async fn acknowledgements(
         .with_context(|| {
             format!(
                 "Failed to fetch bonsai_git_mapping for repo {}",
-                context.repo.name()
+                context.repo.repo_identity().name()
             )
         })?;
     let mut output_buffer = vec![];
@@ -153,7 +154,7 @@ async fn git_commits(
         .with_context(|| {
             format!(
                 "Failed to fetch bonsai_git_mapping for repo {}",
-                context.repo.name()
+                context.repo.repo_identity().name()
             )
         })
 }

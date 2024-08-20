@@ -21,12 +21,13 @@ use async_requests::types::MegarepoAsynchronousRequestResult;
 use context::CoreContext;
 use megarepo_api::MegarepoApi;
 use megarepo_error::MegarepoError;
+use mononoke_api::MononokeRepo;
 use mononoke_types::ChangesetId;
 use source_control as thrift;
 
-async fn megarepo_sync_changeset(
+async fn megarepo_sync_changeset<R: MononokeRepo>(
     ctx: &CoreContext,
-    megarepo_api: &MegarepoApi,
+    megarepo_api: &MegarepoApi<R>,
     params: thrift::MegarepoSyncChangesetParams,
 ) -> Result<thrift::MegarepoSyncChangesetResponse, MegarepoError> {
     let source_cs_id = ChangesetId::from_bytes(params.cs_id).map_err(MegarepoError::request)?;
@@ -49,9 +50,9 @@ async fn megarepo_sync_changeset(
     })
 }
 
-async fn megarepo_add_sync_target(
+async fn megarepo_add_sync_target<R: MononokeRepo>(
     ctx: &CoreContext,
-    megarepo_api: &MegarepoApi,
+    megarepo_api: &MegarepoApi<R>,
     params: thrift::MegarepoAddTargetParams,
 ) -> Result<thrift::MegarepoAddTargetResponse, MegarepoError> {
     let config = params.config_with_new_target;
@@ -76,9 +77,9 @@ async fn megarepo_add_sync_target(
     })
 }
 
-async fn megarepo_add_branching_sync_target(
+async fn megarepo_add_branching_sync_target<R: MononokeRepo>(
     ctx: &CoreContext,
-    megarepo_api: &MegarepoApi,
+    megarepo_api: &MegarepoApi<R>,
     params: thrift::MegarepoAddBranchingTargetParams,
 ) -> Result<thrift::MegarepoAddBranchingTargetResponse, MegarepoError> {
     let cs_id = megarepo_api
@@ -99,9 +100,9 @@ async fn megarepo_add_branching_sync_target(
     })
 }
 
-async fn megarepo_change_target_config(
+async fn megarepo_change_target_config<R: MononokeRepo>(
     ctx: &CoreContext,
-    megarepo_api: &MegarepoApi,
+    megarepo_api: &MegarepoApi<R>,
     params: thrift::MegarepoChangeTargetConfigParams,
 ) -> Result<thrift::MegarepoChangeTargetConfigResponse, MegarepoError> {
     let mut changesets_to_merge = HashMap::new();
@@ -129,9 +130,9 @@ async fn megarepo_change_target_config(
     })
 }
 
-async fn megarepo_remerge_source(
+async fn megarepo_remerge_source<R: MononokeRepo>(
     ctx: &CoreContext,
-    megarepo_api: &MegarepoApi,
+    megarepo_api: &MegarepoApi<R>,
     params: thrift::MegarepoRemergeSourceParams,
 ) -> Result<thrift::MegarepoRemergeSourceResponse, MegarepoError> {
     let remerge_cs_id = ChangesetId::from_bytes(params.cs_id).map_err(MegarepoError::request)?;
@@ -160,9 +161,9 @@ async fn megarepo_remerge_source(
 /// funtion and returns the computation result. This function doesn't return
 /// `Result` as both successfull computation and error are part of
 /// `MegarepoAsynchronousRequestResult` structure.
-pub(crate) async fn megarepo_async_request_compute(
+pub(crate) async fn megarepo_async_request_compute<R: MononokeRepo>(
     ctx: &CoreContext,
-    megarepo_api: &MegarepoApi,
+    megarepo_api: &MegarepoApi<R>,
     params: MegarepoAsynchronousRequestParams,
 ) -> MegarepoAsynchronousRequestResult {
     match params.into() {

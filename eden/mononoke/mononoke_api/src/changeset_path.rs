@@ -58,6 +58,7 @@ use crate::errors::MononokeError;
 use crate::file::FileContext;
 use crate::repo::RepoContext;
 use crate::tree::TreeContext;
+use crate::MononokeRepo;
 
 pub struct HistoryEntry {
     pub name: String,
@@ -73,10 +74,10 @@ pub struct ChangesetPathHistoryOptions {
     pub follow_mutable_file_history: bool,
 }
 
-pub enum PathEntry {
+pub enum PathEntry<R> {
     NotPresent,
-    Tree(TreeContext),
-    File(FileContext, FileType),
+    Tree(TreeContext<R>),
+    File(FileContext<R>, FileType),
 }
 
 type UnodeResult = Result<Option<Entry<ManifestUnodeId, FileUnodeId>>, MononokeError>;
@@ -89,13 +90,13 @@ type LinknodeResult = Result<Option<ChangesetId>, MononokeError>;
 /// A ChangesetPathContentContext may represent a file, a directory, a path where a
 /// file or directory has been deleted, or a path where nothing ever existed.
 #[derive(Clone)]
-pub struct ChangesetPathContentContext {
-    changeset: ChangesetContext,
+pub struct ChangesetPathContentContext<R> {
+    changeset: ChangesetContext<R>,
     path: MPath,
     fsnode_id: LazyShared<FsnodeResult>,
 }
 
-impl fmt::Debug for ChangesetPathContentContext {
+impl<R: MononokeRepo> fmt::Debug for ChangesetPathContentContext<R> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
@@ -108,14 +109,14 @@ impl fmt::Debug for ChangesetPathContentContext {
 }
 
 /// Context that makes it cheap to fetch history info about a path within a changeset.
-pub struct ChangesetPathHistoryContext {
-    changeset: ChangesetContext,
+pub struct ChangesetPathHistoryContext<R> {
+    changeset: ChangesetContext<R>,
     path: MPath,
     unode_id: LazyShared<UnodeResult>,
     linknode: LazyShared<LinknodeResult>,
 }
 
-impl fmt::Debug for ChangesetPathHistoryContext {
+impl<R: MononokeRepo> fmt::Debug for ChangesetPathHistoryContext<R> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
@@ -128,13 +129,13 @@ impl fmt::Debug for ChangesetPathHistoryContext {
 }
 
 /// Context to check if a file or a directory exists in a changeset
-pub struct ChangesetPathContext {
-    changeset: ChangesetContext,
+pub struct ChangesetPathContext<R> {
+    changeset: ChangesetContext<R>,
     path: MPath,
     skeleton_manifest_id: LazyShared<SkeletonResult>,
 }
 
-impl fmt::Debug for ChangesetPathContext {
+impl<R: MononokeRepo> fmt::Debug for ChangesetPathContext<R> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
@@ -146,9 +147,9 @@ impl fmt::Debug for ChangesetPathContext {
     }
 }
 
-impl ChangesetPathContentContext {
+impl<R: MononokeRepo> ChangesetPathContentContext<R> {
     pub(crate) async fn new(
-        changeset: ChangesetContext,
+        changeset: ChangesetContext<R>,
         path: impl Into<MPath>,
     ) -> Result<Self, MononokeError> {
         let path = path.into();
@@ -170,7 +171,7 @@ impl ChangesetPathContentContext {
     }
 
     pub(crate) async fn new_with_fsnode_entry(
-        changeset: ChangesetContext,
+        changeset: ChangesetContext<R>,
         path: impl Into<MPath>,
         fsnode_entry: Entry<FsnodeId, FsnodeFile>,
     ) -> Result<Self, MononokeError> {
@@ -193,12 +194,12 @@ impl ChangesetPathContentContext {
     }
 
     /// The `RepoContext` for this query.
-    pub fn repo_ctx(&self) -> &RepoContext {
+    pub fn repo_ctx(&self) -> &RepoContext<R> {
         self.changeset.repo_ctx()
     }
 
     /// The `ChangesetContext` for this query.
-    pub fn changeset(&self) -> &ChangesetContext {
+    pub fn changeset(&self) -> &ChangesetContext<R> {
         &self.changeset
     }
 
@@ -261,7 +262,7 @@ impl ChangesetPathContentContext {
 
     /// Returns a `TreeContext` for the tree at this path.  Returns `None` if the path
     /// is not a directory in this commit.
-    pub async fn tree(&self) -> Result<Option<TreeContext>, MononokeError> {
+    pub async fn tree(&self) -> Result<Option<TreeContext<R>>, MononokeError> {
         let tree = match self.fsnode_id().await? {
             Some(Entry::Tree(fsnode_id)) => Some(TreeContext::new_authorized(
                 self.repo_ctx().clone(),
@@ -274,7 +275,7 @@ impl ChangesetPathContentContext {
 
     /// Returns a `FileContext` for the file at this path.  Returns `None` if the path
     /// is not a file in this commit.
-    pub async fn file(&self) -> Result<Option<FileContext>, MononokeError> {
+    pub async fn file(&self) -> Result<Option<FileContext<R>>, MononokeError> {
         let file = match self.fsnode_id().await? {
             Some(Entry::Leaf(file)) => Some(FileContext::new_authorized(
                 self.repo_ctx().clone(),
@@ -303,7 +304,7 @@ impl ChangesetPathContentContext {
     /// Returns a `TreeContext` or `FileContext` and `FileType` for the tree
     /// or file at this path. Returns `NotPresent` if the path is not a file
     /// or directory in this commit.
-    pub async fn entry(&self) -> Result<PathEntry, MononokeError> {
+    pub async fn entry(&self) -> Result<PathEntry<R>, MononokeError> {
         let entry = match self.fsnode_id().await? {
             Some(Entry::Tree(fsnode_id)) => PathEntry::Tree(TreeContext::new_authorized(
                 self.repo_ctx().clone(),
@@ -322,9 +323,9 @@ impl ChangesetPathContentContext {
     }
 }
 
-impl ChangesetPathHistoryContext {
+impl<R: MononokeRepo> ChangesetPathHistoryContext<R> {
     pub(crate) async fn new(
-        changeset: ChangesetContext,
+        changeset: ChangesetContext<R>,
         path: impl Into<MPath>,
     ) -> Result<Self, MononokeError> {
         let path = path.into();
@@ -347,7 +348,7 @@ impl ChangesetPathHistoryContext {
     }
 
     pub(crate) async fn new_with_unode_entry(
-        changeset: ChangesetContext,
+        changeset: ChangesetContext<R>,
         path: impl Into<MPath>,
         unode_entry: Entry<ManifestUnodeId, FileUnodeId>,
     ) -> Result<Self, MononokeError> {
@@ -371,7 +372,7 @@ impl ChangesetPathHistoryContext {
     }
 
     pub(crate) async fn new_with_deleted_manifest<Manifest: DeletedManifestCommon>(
-        changeset: ChangesetContext,
+        changeset: ChangesetContext<R>,
         path: MPath,
         deleted_manifest_id: Manifest::Id,
     ) -> Result<Self, MononokeError> {
@@ -399,12 +400,12 @@ impl ChangesetPathHistoryContext {
     }
 
     /// The `RepoContext` for this query.
-    pub fn repo_ctx(&self) -> &RepoContext {
+    pub fn repo_ctx(&self) -> &RepoContext<R> {
         self.changeset.repo_ctx()
     }
 
     /// The `ChangesetContext` for this query.
-    pub fn changeset(&self) -> &ChangesetContext {
+    pub fn changeset(&self) -> &ChangesetContext<R> {
         &self.changeset
     }
 
@@ -482,7 +483,7 @@ impl ChangesetPathHistoryContext {
 
     /// Returns the last commit that modified this path.  If there is nothing
     /// at this path, returns `None`.
-    pub async fn last_modified(&self) -> Result<Option<ChangesetContext>, MononokeError> {
+    pub async fn last_modified(&self) -> Result<Option<ChangesetContext<R>>, MononokeError> {
         match self.unode_id().await? {
             Some(Entry::Tree(manifest_unode_id)) => {
                 let ctx = self.changeset.ctx();
@@ -504,7 +505,7 @@ impl ChangesetPathHistoryContext {
 
     /// Returns the last commit that deleted this path.  If something exists
     /// at this path, or nothing ever existed at this path, returns `None`.
-    pub async fn last_deleted(&self) -> Result<Option<ChangesetContext>, MononokeError> {
+    pub async fn last_deleted(&self) -> Result<Option<ChangesetContext<R>>, MononokeError> {
         Ok(self
             .linknode()
             .await?
@@ -545,7 +546,7 @@ impl ChangesetPathHistoryContext {
     pub async fn history(
         &self,
         opts: ChangesetPathHistoryOptions,
-    ) -> Result<BoxStream<'_, Result<ChangesetContext, MononokeError>>, MononokeError> {
+    ) -> Result<BoxStream<'_, Result<ChangesetContext<R>, MononokeError>>, MononokeError> {
         let repo = self.repo_ctx().repo().clone();
 
         if let Some(descendants_of) = opts.descendants_of {
@@ -726,9 +727,9 @@ impl ChangesetPathHistoryContext {
     }
 }
 
-impl ChangesetPathContext {
+impl<R: MononokeRepo> ChangesetPathContext<R> {
     pub(crate) async fn new(
-        changeset: ChangesetContext,
+        changeset: ChangesetContext<R>,
         path: impl Into<MPath>,
     ) -> Result<Self, MononokeError> {
         let path = path.into();
@@ -750,7 +751,7 @@ impl ChangesetPathContext {
     }
 
     pub(crate) async fn new_with_skeleton_manifest_entry(
-        changeset: ChangesetContext,
+        changeset: ChangesetContext<R>,
         path: impl Into<MPath>,
         skeleton_manifest_entry: Entry<SkeletonManifestId, ()>,
     ) -> Result<Self, MononokeError> {
@@ -773,12 +774,12 @@ impl ChangesetPathContext {
     }
 
     /// The `RepoContext` for this query.
-    pub fn repo_ctx(&self) -> &RepoContext {
+    pub fn repo_ctx(&self) -> &RepoContext<R> {
         self.changeset.repo_ctx()
     }
 
     /// The `ChangesetContext` for this query.
-    pub fn changeset(&self) -> &ChangesetContext {
+    pub fn changeset(&self) -> &ChangesetContext<R> {
         &self.changeset
     }
 

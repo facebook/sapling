@@ -23,6 +23,8 @@ use futures::stream;
 use futures::StreamExt;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgNodeHash;
+use mononoke_api::MononokeRepo;
+use mononoke_api::Repo;
 use mononoke_api_hg::HgRepoContext;
 
 use super::handler::SaplingRemoteApiContext;
@@ -47,7 +49,7 @@ impl SaplingRemoteApiHandler for BookmarksHandler {
     const ENDPOINT: &'static str = "/bookmarks";
 
     async fn handler(
-        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
+        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor, Repo>,
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
         let repo = ectx.repo();
@@ -63,7 +65,10 @@ impl SaplingRemoteApiHandler for BookmarksHandler {
 }
 
 /// Fetch the value of a single bookmark.
-async fn fetch_bookmark(repo: HgRepoContext, bookmark: String) -> Result<BookmarkEntry, Error> {
+async fn fetch_bookmark<R: MononokeRepo>(
+    repo: HgRepoContext<R>,
+    bookmark: String,
+) -> Result<BookmarkEntry, Error> {
     let hgid = repo
         .resolve_bookmark(bookmark.clone(), Freshness::MaybeStale)
         .await
@@ -85,7 +90,7 @@ impl SaplingRemoteApiHandler for SetBookmarkHandler {
     const ENDPOINT: &'static str = "/bookmarks/set";
 
     async fn handler(
-        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
+        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor, Repo>,
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
         let res = set_bookmark_response(
@@ -104,8 +109,8 @@ impl SaplingRemoteApiHandler for SetBookmarkHandler {
     }
 }
 
-async fn set_bookmark_response(
-    repo: HgRepoContext,
+async fn set_bookmark_response<R: MononokeRepo>(
+    repo: HgRepoContext<R>,
     bookmark: String,
     to: Option<HgId>,
     from: Option<HgId>,
@@ -118,8 +123,8 @@ async fn set_bookmark_response(
     })
 }
 
-async fn set_bookmark(
-    repo: HgRepoContext,
+async fn set_bookmark<R: MononokeRepo>(
+    repo: HgRepoContext<R>,
     bookmark: String,
     to: Option<HgId>,
     from: Option<HgId>,

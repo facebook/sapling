@@ -26,6 +26,8 @@ use edenapi_types::WorkspacesDataResponse;
 use futures::stream;
 use futures::FutureExt;
 use futures::StreamExt;
+use mononoke_api::MononokeRepo;
+use mononoke_api::Repo;
 use mononoke_api_hg::HgRepoContext;
 
 use super::handler::SaplingRemoteApiContext;
@@ -52,7 +54,7 @@ impl SaplingRemoteApiHandler for CommitCloudWorkspace {
     const ENDPOINT: &'static str = "/cloud/workspace";
 
     async fn handler(
-        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
+        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor, Repo>,
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
         let repo = ectx.repo();
@@ -61,9 +63,9 @@ impl SaplingRemoteApiHandler for CommitCloudWorkspace {
     }
 }
 
-async fn get_workspace(
+async fn get_workspace<R: MononokeRepo>(
     request: CloudWorkspaceRequest,
-    repo: HgRepoContext,
+    repo: HgRepoContext<R>,
 ) -> anyhow::Result<WorkspaceDataResponse> {
     Ok(WorkspaceDataResponse {
         data: repo
@@ -83,7 +85,7 @@ impl SaplingRemoteApiHandler for CommitCloudWorkspaces {
     const ENDPOINT: &'static str = "/cloud/workspaces";
 
     async fn handler(
-        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
+        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor, Repo>,
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
         let repo = ectx.repo();
@@ -92,9 +94,9 @@ impl SaplingRemoteApiHandler for CommitCloudWorkspaces {
     }
 }
 
-async fn get_workspaces(
+async fn get_workspaces<R: MononokeRepo>(
     request: CloudWorkspacesRequest,
-    repo: HgRepoContext,
+    repo: HgRepoContext<R>,
 ) -> anyhow::Result<WorkspacesDataResponse> {
     Ok(WorkspacesDataResponse {
         data: repo
@@ -114,7 +116,7 @@ impl SaplingRemoteApiHandler for CommitCloudReferences {
     const ENDPOINT: &'static str = "/cloud/references";
 
     async fn handler(
-        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
+        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor, Repo>,
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
         let repo = ectx.repo();
@@ -123,9 +125,9 @@ impl SaplingRemoteApiHandler for CommitCloudReferences {
     }
 }
 
-async fn get_references(
+async fn get_references<R: MononokeRepo>(
     request: GetReferencesParams,
-    repo: HgRepoContext,
+    repo: HgRepoContext<R>,
 ) -> anyhow::Result<ReferencesDataResponse, Error> {
     Ok(ReferencesDataResponse {
         data: repo
@@ -145,7 +147,7 @@ impl SaplingRemoteApiHandler for CommitCloudUpdateReferences {
     const ENDPOINT: &'static str = "/cloud/update_references";
 
     async fn handler(
-        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
+        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor, Repo>,
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
         let repo = ectx.repo();
@@ -154,9 +156,9 @@ impl SaplingRemoteApiHandler for CommitCloudUpdateReferences {
     }
 }
 
-async fn update_references(
+async fn update_references<R: MononokeRepo>(
     request: UpdateReferencesParams,
-    repo: HgRepoContext,
+    repo: HgRepoContext<R>,
 ) -> anyhow::Result<ReferencesDataResponse, Error> {
     Ok(ReferencesDataResponse {
         data: repo
@@ -176,7 +178,7 @@ impl SaplingRemoteApiHandler for CommitCloudSmartlog {
     const ENDPOINT: &'static str = "/cloud/smartlog";
 
     async fn handler(
-        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
+        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor, Repo>,
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
         let repo = ectx.repo();
@@ -185,9 +187,9 @@ impl SaplingRemoteApiHandler for CommitCloudSmartlog {
     }
 }
 
-async fn get_smartlog(
+async fn get_smartlog<R: MononokeRepo>(
     request: GetSmartlogParams,
-    repo: HgRepoContext,
+    repo: HgRepoContext<R>,
 ) -> anyhow::Result<SmartlogDataResponse, Error> {
     Ok(SmartlogDataResponse {
         data: repo
@@ -207,7 +209,7 @@ impl SaplingRemoteApiHandler for CommitCloudShareWorkspace {
     const ENDPOINT: &'static str = "/cloud/share_workspace";
 
     async fn handler(
-        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
+        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor, Repo>,
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
         let repo = ectx.repo();
@@ -216,9 +218,9 @@ impl SaplingRemoteApiHandler for CommitCloudShareWorkspace {
     }
 }
 
-async fn share_workspace(
+async fn share_workspace<R: MononokeRepo>(
     request: CloudShareWorkspaceRequest,
-    repo: HgRepoContext,
+    repo: HgRepoContext<R>,
 ) -> anyhow::Result<CloudShareWorkspaceResponse, Error> {
     Ok(CloudShareWorkspaceResponse {
         data: repo
@@ -238,7 +240,7 @@ impl SaplingRemoteApiHandler for CommitCloudUpdateArchive {
     const ENDPOINT: &'static str = "/cloud/update_archive";
 
     async fn handler(
-        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
+        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor, Repo>,
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
         let repo = ectx.repo();
@@ -247,9 +249,9 @@ impl SaplingRemoteApiHandler for CommitCloudUpdateArchive {
     }
 }
 
-async fn update_archive(
+async fn update_archive<R: MononokeRepo>(
     request: UpdateArchiveParams,
-    repo: HgRepoContext,
+    repo: HgRepoContext<R>,
 ) -> anyhow::Result<UpdateArchiveResponse, Error> {
     Ok(UpdateArchiveResponse {
         data: repo
@@ -269,7 +271,7 @@ impl SaplingRemoteApiHandler for CommitCloudRenameWorkspace {
     const ENDPOINT: &'static str = "/cloud/rename_workspace";
 
     async fn handler(
-        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
+        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor, Repo>,
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
         let repo = ectx.repo();
@@ -278,9 +280,9 @@ impl SaplingRemoteApiHandler for CommitCloudRenameWorkspace {
     }
 }
 
-async fn rename_workspace(
+async fn rename_workspace<R: MononokeRepo>(
     request: RenameWorkspaceRequest,
-    repo: HgRepoContext,
+    repo: HgRepoContext<R>,
 ) -> anyhow::Result<RenameWorkspaceResponse, Error> {
     Ok(RenameWorkspaceResponse {
         data: repo

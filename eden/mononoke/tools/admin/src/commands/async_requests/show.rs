@@ -19,6 +19,7 @@ use clap::Args;
 use context::CoreContext;
 use megarepo_api::MegarepoApi;
 use mononoke_api::Mononoke;
+use mononoke_api::MononokeRepo;
 use mononoke_types::ChangesetId;
 
 #[derive(Args)]
@@ -30,9 +31,9 @@ pub struct AsyncRequestsShowArgs {
     request_id: u64,
 }
 
-struct ParamsWrapper<'a>(&'a Mononoke, MegarepoAsynchronousRequestParams);
+struct ParamsWrapper<'a, R>(&'a Mononoke<R>, MegarepoAsynchronousRequestParams);
 
-impl<'a> std::fmt::Debug for ParamsWrapper<'a> {
+impl<'a, R: MononokeRepo> std::fmt::Debug for ParamsWrapper<'a, R> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         // impl Debug for HexArray here
         match self.1.thrift() {
@@ -109,10 +110,10 @@ impl std::fmt::Debug for ResultsWrapper {
     }
 }
 
-pub async fn show_request(
+pub async fn show_request<R: MononokeRepo>(
     args: AsyncRequestsShowArgs,
     ctx: CoreContext,
-    megarepo: MegarepoApi,
+    megarepo: MegarepoApi<R>,
 ) -> Result<(), Error> {
     let repos_and_queues = megarepo.all_async_method_request_queues(&ctx).await?;
 

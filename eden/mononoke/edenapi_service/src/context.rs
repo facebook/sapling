@@ -19,13 +19,13 @@ use mononoke_api::Mononoke;
 /// this type is designed to be cheaply clonable, with all cloned sharing
 /// the same underlying data.
 #[derive(Clone, StateData)]
-pub struct ServerContext {
-    inner: Arc<Mutex<ServerContextInner>>,
+pub struct ServerContext<R: Send + Sync + 'static> {
+    inner: Arc<Mutex<ServerContextInner<R>>>,
     will_exit: Arc<AtomicBool>,
 }
 
-impl ServerContext {
-    pub fn new(mononoke: Arc<Mononoke>, will_exit: Arc<AtomicBool>) -> Self {
+impl<R: Send + Sync + 'static> ServerContext<R> {
+    pub fn new(mononoke: Arc<Mononoke<R>>, will_exit: Arc<AtomicBool>) -> Self {
         let inner = ServerContextInner::new(mononoke);
         Self {
             inner: Arc::new(Mutex::new(inner)),
@@ -39,7 +39,7 @@ impl ServerContext {
 
     /// Get a reference to the Mononoke API. This is the main way that
     /// the SaplingRemoteAPI server should interact with the Mononoke backend.
-    pub fn mononoke_api(&self) -> Arc<Mononoke> {
+    pub fn mononoke_api(&self) -> Arc<Mononoke<R>> {
         self.inner.lock().expect("lock poisoned").mononoke.clone()
     }
 }
@@ -47,12 +47,12 @@ impl ServerContext {
 /// Underlying global state for a ServerContext. Any data that needs to
 /// be broadly available throughout the server's request handlers should
 /// be placed here.
-struct ServerContextInner {
-    mononoke: Arc<Mononoke>,
+struct ServerContextInner<R: Send + Sync + 'static> {
+    mononoke: Arc<Mononoke<R>>,
 }
 
-impl ServerContextInner {
-    fn new(mononoke: Arc<Mononoke>) -> Self {
+impl<R: Send + Sync + 'static> ServerContextInner<R> {
+    fn new(mononoke: Arc<Mononoke<R>>) -> Self {
         Self { mononoke }
     }
 }

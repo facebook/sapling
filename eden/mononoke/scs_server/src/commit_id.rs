@@ -15,13 +15,14 @@ use futures_util::FutureExt;
 use mononoke_api::ChangesetContext;
 use mononoke_api::ChangesetId;
 use mononoke_api::MononokeError;
+use mononoke_api::Repo;
 use mononoke_api::RepoContext;
 use source_control as thrift;
 
 /// Generate a mapping for a commit's identity into the requested identity
 /// schemes.
 pub(crate) async fn map_commit_identity(
-    changeset_ctx: &ChangesetContext,
+    changeset_ctx: &ChangesetContext<Repo>,
     schemes: &BTreeSet<thrift::CommitIdentityScheme>,
 ) -> Result<BTreeMap<thrift::CommitIdentityScheme, thrift::CommitId>, MononokeError> {
     let mut ids = BTreeMap::new();
@@ -96,7 +97,7 @@ pub(crate) async fn map_commit_identity(
 /// Generate mappings for multiple commits' identities into the requested
 /// identity schemes.
 pub(crate) async fn map_commit_identities(
-    repo_ctx: &RepoContext,
+    repo_ctx: &RepoContext<Repo>,
     ids: Vec<ChangesetId>,
     schemes: &BTreeSet<thrift::CommitIdentityScheme>,
 ) -> Result<

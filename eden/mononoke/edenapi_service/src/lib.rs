@@ -50,11 +50,11 @@ use crate::scuba::SaplingRemoteApiScubaHandler;
 
 pub type SaplingRemoteApi = MononokeHttpHandler<Router>;
 
-pub fn build(
+pub fn build<R: Send + Sync + Clone + 'static>(
     fb: FacebookInit,
     logger: Logger,
     scuba: MononokeScubaSampleBuilder,
-    mononoke: Arc<Mononoke>,
+    mononoke: Arc<Mononoke<R>>,
     will_exit: Arc<AtomicBool>,
     test_friendly_loging: bool,
     tls_session_data_log_path: Option<&Path>,

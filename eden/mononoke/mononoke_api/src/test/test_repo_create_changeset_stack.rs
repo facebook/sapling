@@ -28,13 +28,14 @@ use crate::CreateCopyInfo;
 use crate::CreateInfo;
 use crate::Mononoke;
 use crate::MononokeError;
+use crate::MononokeRepo;
 use crate::RepoContext;
 
-async fn create_changeset_stack(
-    repo: &RepoContext,
+async fn create_changeset_stack<R: MononokeRepo>(
+    repo: &RepoContext<R>,
     changes_stack: Vec<BTreeMap<MPath, CreateChange>>,
     stack_parents: Vec<ChangesetId>,
-) -> Result<Vec<ChangesetContext>, MononokeError> {
+) -> Result<Vec<ChangesetContext<R>>, MononokeError> {
     let author = String::from("Test Author <test@example.com>");
     let author_date = FixedOffset::east_opt(0)
         .unwrap()
@@ -64,11 +65,11 @@ async fn create_changeset_stack(
         .collect())
 }
 
-async fn create_changesets_sequentially(
-    repo: &RepoContext,
+async fn create_changesets_sequentially<R: MononokeRepo>(
+    repo: &RepoContext<R>,
     changes_stack: Vec<BTreeMap<MPath, CreateChange>>,
     stack_parents: Vec<ChangesetId>,
-) -> Result<Vec<ChangesetContext>, MononokeError> {
+) -> Result<Vec<ChangesetContext<R>>, MononokeError> {
     let author = String::from("Test Author <test@example.com>");
     let author_date = FixedOffset::east_opt(0)
         .unwrap()
@@ -102,12 +103,12 @@ async fn create_changesets_sequentially(
     Ok(result)
 }
 
-async fn compare_create_stack(
-    stack_repo: &RepoContext,
-    seq_repo: &RepoContext,
+async fn compare_create_stack<R: MononokeRepo>(
+    stack_repo: &RepoContext<R>,
+    seq_repo: &RepoContext<R>,
     changes_stack: Vec<BTreeMap<MPath, CreateChange>>,
     stack_parents: Vec<ChangesetId>,
-) -> Result<Option<Vec<ChangesetContext>>, Error> {
+) -> Result<Option<Vec<ChangesetContext<R>>>, Error> {
     let stack =
         create_changeset_stack(stack_repo, changes_stack.clone(), stack_parents.clone()).await;
     let seq = create_changesets_sequentially(seq_repo, changes_stack, stack_parents).await;

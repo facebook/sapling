@@ -25,6 +25,7 @@ use futures::FutureExt;
 use live_commit_sync_config::CfgrLiveCommitSyncConfig;
 use live_commit_sync_config::LiveCommitSyncConfig;
 use metaconfig_types::CommitSyncConfigVersion;
+use metaconfig_types::RepoConfigRef;
 use mononoke_app::args::AsRepoArg;
 use mononoke_app::args::SourceAndTargetRepoArgs;
 use mononoke_app::MononokeApp;
@@ -274,7 +275,12 @@ impl XRepoSyncProcessExecutor {
         if let Some(regex) = cli_bookmark_regex {
             let regex = Regex::new(regex.as_str())?;
             Ok(Some(regex))
-        } else if let Some(configs) = self.small_repo.config().x_repo_sync_source_mapping.as_ref() {
+        } else if let Some(configs) = self
+            .small_repo
+            .repo_config()
+            .x_repo_sync_source_mapping
+            .as_ref()
+        {
             let large_repo_name = self.large_repo.repo_identity().name();
             let regex = configs
                 .mapping

@@ -46,6 +46,8 @@ use gotham_ext::response::TryIntoResponse;
 use hyper::Body;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgNodeHash;
+use mononoke_api::MononokeRepo;
+use mononoke_api::Repo;
 use mononoke_api_hg::HgDataContext;
 use mononoke_api_hg::HgDataId;
 use mononoke_api_hg::HgRepoContext;
@@ -98,7 +100,7 @@ impl SaplingRemoteApiHandler for Files2Handler {
     }
 
     async fn handler(
-        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
+        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor, Repo>,
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
         let repo = ectx.repo();
@@ -132,8 +134,8 @@ impl SaplingRemoteApiHandler for Files2Handler {
     }
 }
 
-async fn fetch_file_response(
-    repo: HgRepoContext,
+async fn fetch_file_response<R: MononokeRepo>(
+    repo: HgRepoContext<R>,
     key: Key,
     attrs: FileAttributes,
 ) -> Result<FileResponse, Error> {
@@ -146,12 +148,12 @@ async fn fetch_file_response(
 /// Fetch requested file for a single key.
 /// Note that this function consumes the repo context in order
 /// to construct a file context for the requested blob.
-async fn fetch_file(
-    repo: HgRepoContext,
+async fn fetch_file<R: MononokeRepo>(
+    repo: HgRepoContext<R>,
     key: Key,
     attrs: FileAttributes,
 ) -> Result<FileEntry, Error> {
-    let id = HgFileNodeId::from_node_hash(HgNodeHash::from(key.hgid));
+    let id = <HgFileNodeId as HgDataId<R>>::from_node_hash(HgNodeHash::from(key.hgid));
 
     let ctx = id
         .context(repo)
@@ -204,8 +206,8 @@ async fn fetch_file(
 }
 
 /// Generate an upload token for alredy uploaded content
-async fn generate_upload_token(
-    _repo: HgRepoContext,
+async fn generate_upload_token<R>(
+    _repo: HgRepoContext<R>,
     id: AnyFileContentId,
     content_size: u64,
     bubble_id: Option<NonZeroU64>,
@@ -219,8 +221,8 @@ async fn generate_upload_token(
 }
 
 /// Upload content of a file
-async fn store_file(
-    repo: HgRepoContext,
+async fn store_file<R: MononokeRepo>(
+    repo: HgRepoContext<R>,
     id: AnyFileContentId,
     data: impl Stream<Item = Result<Bytes, Error>> + Send,
     content_size: u64,
@@ -243,7 +245,7 @@ pub async fn upload_file(state: &mut State) -> Result<impl TryIntoResponse, Http
     let rctx = RequestContext::borrow_from(state).clone();
     let sctx = ServerContext::borrow_from(state);
 
-    let repo = get_repo(sctx, &rctx, &params.repo, None).await?;
+    let repo: HgRepoContext<Repo> = get_repo(sctx, &rctx, &params.repo, None).await?;
 
     let id = AnyFileContentId::from_str(&format!("{}/{}", &params.idtype, &params.id))
         .map_err(HttpError::e400)?;
@@ -272,8 +274,8 @@ pub async fn upload_file(state: &mut State) -> Result<impl TryIntoResponse, Http
 }
 
 /// Store the content of a single HgFilenode
-async fn store_hg_filenode(
-    repo: HgRepoContext,
+async fn store_hg_filenode<R: MononokeRepo>(
+    repo: HgRepoContext<R>,
     item: UploadHgFilenodeRequest,
 ) -> Result<UploadTokensResponse, Error> {
     // TODO(liubovd): validate signature of the upload token (item.token) and
@@ -283,7 +285,7 @@ async fn store_hg_filenode(
     let node_id = item.data.node_id;
     let token = item.data.file_content_upload_token;
 
-    let filenode: HgFileNodeId = HgFileNodeId::from_node_hash(HgNodeHash::from(node_id));
+    let filenode = <HgFileNodeId as HgDataId<R>>::from_node_hash(HgNodeHash::from(node_id));
 
     let p1: Option<HgFileNodeId> = item
         .data
@@ -291,7 +293,7 @@ async fn store_hg_filenode(
         .p1()
         .cloned()
         .map(HgNodeHash::from)
-        .map(HgFileNodeId::from_node_hash);
+        .map(<HgFileNodeId as HgDataId<R>>::from_node_hash);
 
     let p2: Option<HgFileNodeId> = item
         .data
@@ -299,7 +301,7 @@ async fn store_hg_filenode(
         .p2()
         .cloned()
         .map(HgNodeHash::from)
-        .map(HgFileNodeId::from_node_hash);
+        .map(<HgFileNodeId as HgDataId<R>>::from_node_hash);
 
     let any_file_content_id = match token.data.id {
         AnyId::AnyFileContentId(id) => Some(id),
@@ -345,7 +347,7 @@ impl SaplingRemoteApiHandler for UploadHgFilenodesHandler {
     const ENDPOINT: &'static str = "/upload/filenodes";
 
     async fn handler(
-        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
+        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor, Repo>,
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
         let repo = ectx.repo();
@@ -372,7 +374,7 @@ impl SaplingRemoteApiHandler for DownloadFileHandler {
     const ENDPOINT: &'static str = "/download/file";
 
     async fn handler(
-        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
+        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor, Repo>,
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
         let repo = ectx.repo();

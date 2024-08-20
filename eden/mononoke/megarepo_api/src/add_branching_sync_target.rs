@@ -14,27 +14,28 @@ use megarepo_config::Target;
 use megarepo_error::MegarepoError;
 use metaconfig_types::RepoConfigArc;
 use mononoke_api::Mononoke;
+use mononoke_api::MononokeRepo;
 use mononoke_types::ChangesetId;
 
 use crate::common::find_target_sync_config;
 use crate::common::MegarepoOp;
 
 // Create a new sync target
-pub struct AddBranchingSyncTarget<'a> {
+pub struct AddBranchingSyncTarget<'a, R> {
     pub megarepo_configs: &'a Arc<dyn MononokeMegarepoConfigs>,
-    pub mononoke: &'a Arc<Mononoke>,
+    pub mononoke: &'a Arc<Mononoke<R>>,
 }
 
-impl<'a> MegarepoOp for AddBranchingSyncTarget<'a> {
-    fn mononoke(&self) -> &Arc<Mononoke> {
+impl<'a, R> MegarepoOp<R> for AddBranchingSyncTarget<'a, R> {
+    fn mononoke(&self) -> &Arc<Mononoke<R>> {
         self.mononoke
     }
 }
 
-impl<'a> AddBranchingSyncTarget<'a> {
+impl<'a, R: MononokeRepo> AddBranchingSyncTarget<'a, R> {
     pub fn new(
         megarepo_configs: &'a Arc<dyn MononokeMegarepoConfigs>,
-        mononoke: &'a Arc<Mononoke>,
+        mononoke: &'a Arc<Mononoke<R>>,
     ) -> Self {
         Self {
             megarepo_configs,

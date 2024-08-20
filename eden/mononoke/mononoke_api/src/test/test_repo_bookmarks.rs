@@ -12,6 +12,7 @@ use anyhow::Result;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks::BookmarksRef;
+use bookmarks_cache::BookmarksCacheRef;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::stream::TryStreamExt;
@@ -22,7 +23,9 @@ use crate::repo::BookmarkFreshness;
 use crate::repo::Repo;
 use crate::repo::RepoContext;
 
-async fn init_repo(ctx: &CoreContext) -> Result<(RepoContext, BTreeMap<String, ChangesetId>)> {
+async fn init_repo(
+    ctx: &CoreContext,
+) -> Result<(RepoContext<Repo>, BTreeMap<String, ChangesetId>)> {
     let repo: Repo = test_repo_factory::build_empty(ctx.fb).await?;
     let changesets = create_from_dag(
         ctx,
@@ -44,7 +47,7 @@ async fn init_repo(ctx: &CoreContext) -> Result<(RepoContext, BTreeMap<String, C
     txn.create_scratch(&BookmarkKey::new("scratch/branchpoint")?, changesets["B"])?;
     txn.commit().await?;
 
-    repo.warm_bookmarks_cache().sync(ctx).await;
+    repo.bookmarks_cache().sync(ctx).await;
 
     let repo_ctx = RepoContext::new_test(ctx.clone(), Arc::new(repo)).await?;
     Ok((repo_ctx, changesets))

@@ -25,6 +25,8 @@ use mononoke_api::BookmarkKey;
 use mononoke_api::ChangesetContext;
 use mononoke_api::CoreContext;
 use mononoke_api::MononokeError;
+use mononoke_api::MononokeRepo;
+use mononoke_api::Repo;
 use mononoke_api::RepoContext;
 use mononoke_types::ChangesetId;
 use mononoke_types::NonRootMPath;
@@ -63,7 +65,7 @@ async fn test_rewrite_partial_changesets(fb: FacebookInit) -> Result<(), Error> 
     // topologically sorted
     let relevant_changeset_ids: Vec<ChangesetId> = vec![A, C, E, F, G, I, J];
 
-    let relevant_changesets: Vec<ChangesetContext> =
+    let relevant_changesets: Vec<ChangesetContext<Repo>> =
         get_relevant_changesets_from_ids(&source_repo_ctx, relevant_changeset_ids).await?;
 
     let relevant_changeset_parents = HashMap::from([
@@ -139,7 +141,7 @@ async fn test_rewriting_fails_with_irrelevant_changeset(fb: FacebookInit) -> Res
     // Passing an irrelevant changeset in the list should result in an error
     let broken_changeset_list_ids: Vec<ChangesetId> = vec![A, C, D, E];
 
-    let broken_changeset_list: Vec<ChangesetContext> =
+    let broken_changeset_list: Vec<ChangesetContext<Repo>> =
         get_relevant_changesets_from_ids(&source_repo_ctx, broken_changeset_list_ids).await?;
 
     let broken_changeset_parents =
@@ -202,7 +204,7 @@ async fn test_renamed_export_paths_are_followed_with_manual_input(fb: FacebookIn
 
     let relevant_changeset_ids: Vec<ChangesetId> = vec![A, C, E, F, G];
 
-    let relevant_changesets: Vec<ChangesetContext> =
+    let relevant_changesets: Vec<ChangesetContext<Repo>> =
         get_relevant_changesets_from_ids(&source_repo_ctx, relevant_changeset_ids).await?;
 
     let relevant_changeset_parents = HashMap::from([
@@ -284,7 +286,7 @@ async fn test_multiple_renamed_export_directories(fb: FacebookInit) -> Result<()
 
     let relevant_changeset_ids: Vec<ChangesetId> = vec![B, D];
 
-    let relevant_changesets: Vec<ChangesetContext> =
+    let relevant_changesets: Vec<ChangesetContext<Repo>> =
         get_relevant_changesets_from_ids(&source_repo_ctx, relevant_changeset_ids).await?;
 
     let relevant_changeset_parents = HashMap::from([(B, vec![]), (D, vec![B])]);
@@ -328,10 +330,10 @@ async fn test_multiple_renamed_export_directories(fb: FacebookInit) -> Result<()
     .await
 }
 
-async fn check_expected_results(
-    temp_repo_ctx: RepoContext,
+async fn check_expected_results<R: MononokeRepo>(
+    temp_repo_ctx: RepoContext<R>,
     // All the changesets that should be exported
-    relevant_changesets: Vec<ChangesetContext>,
+    relevant_changesets: Vec<ChangesetContext<R>>,
     // Topologically sorted list of the messages and affected files expected
     // in the changesets in the temporary repo
     expected_message_and_affected_files: Vec<(String, Vec<NonRootMPath>)>,
@@ -370,8 +372,8 @@ async fn check_expected_results(
         try_join_all(relevant_changesets.iter().map(ChangesetContext::message)).await?
     );
 
-    async fn get_msg_and_files_changed(
-        cs: &ChangesetContext,
+    async fn get_msg_and_files_changed<R: MononokeRepo>(
+        cs: &ChangesetContext<R>,
         file_filter: Box<dyn Fn(&NonRootMPath) -> bool>,
     ) -> Result<(String, Vec<NonRootMPath>), MononokeError> {
         let msg = cs.message().await?;

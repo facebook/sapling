@@ -15,6 +15,7 @@ pub use bookmarks::BookmarkCategory;
 pub use bookmarks::BookmarkKey;
 use mononoke_repos::MononokeRepos;
 pub use mononoke_types::RepositoryId;
+use repo_identity::RepoIdentityRef;
 
 use crate::repo::RepoContextBuilder;
 
@@ -74,6 +75,7 @@ pub use crate::repo::update_submodule_expansion::SubmoduleExpansionUpdate;
 pub use crate::repo::update_submodule_expansion::SubmoduleExpansionUpdateCommitInfo;
 pub use crate::repo::BookmarkFreshness;
 pub use crate::repo::BookmarkInfo;
+pub use crate::repo::MononokeRepo;
 pub use crate::repo::Repo;
 pub use crate::repo::RepoContext;
 pub use crate::repo::StoreRequest;
@@ -94,21 +96,21 @@ pub use crate::tree::TreeSummary;
 pub use crate::xrepo::CandidateSelectionHintArgs;
 
 /// An instance of Mononoke, which may manage multiple repositories.
-pub struct Mononoke {
+pub struct Mononoke<R> {
     // Collection of instantiated repos currently being served.
-    pub repos: Arc<MononokeRepos<Repo>>,
+    pub repos: Arc<MononokeRepos<R>>,
     // The collective list of all enabled repos that exist
     // in the current tier (e.g. prod, backup, etc.)
     pub repo_names_in_tier: Vec<String>,
 }
 
-impl Mononoke {
+impl<R: MononokeRepo> Mononoke<R> {
     /// Create a MononokeAPI instance for MononokeRepos
     ///
     /// Takes extra argument containing list of all aviailable repos
     /// (used to power APIs listing repos; TODO: change that arg to MonononokeConfigs)
     pub fn new(
-        repos: Arc<MononokeRepos<Repo>>,
+        repos: Arc<MononokeRepos<R>>,
         repo_names_in_tier: Vec<String>,
     ) -> Result<Self, Error> {
         Ok(Self {
@@ -124,7 +126,7 @@ impl Mononoke {
         &self,
         ctx: CoreContext,
         name: impl AsRef<str>,
-    ) -> Result<Option<RepoContextBuilder>, MononokeError> {
+    ) -> Result<Option<RepoContextBuilder<R>>, MononokeError> {
         match self.repos.get_by_name(name.as_ref()) {
             None => Ok(None),
             Some(repo) => Ok(Some(
@@ -140,7 +142,7 @@ impl Mononoke {
         &self,
         ctx: CoreContext,
         repo_id: RepositoryId,
-    ) -> Result<Option<RepoContextBuilder>, MononokeError> {
+    ) -> Result<Option<RepoContextBuilder<R>>, MononokeError> {
         match self.repos.get_by_id(repo_id.id()) {
             None => Ok(None),
             Some(repo) => Ok(Some(
@@ -151,13 +153,13 @@ impl Mononoke {
 
     /// Return the raw underlying repo corresponding to the provided
     /// repo name.
-    pub fn raw_repo(&self, name: impl AsRef<str>) -> Option<Arc<Repo>> {
+    pub fn raw_repo(&self, name: impl AsRef<str>) -> Option<Arc<R>> {
         self.repos.get_by_name(name.as_ref())
     }
 
     /// Return the raw underlying repo corresponding to the provided
     /// repo id.
-    pub fn raw_repo_by_id(&self, id: i32) -> Option<Arc<Repo>> {
+    pub fn raw_repo_by_id(&self, id: i32) -> Option<Arc<R>> {
         self.repos.get_by_id(id)
     }
 
@@ -171,20 +173,20 @@ impl Mononoke {
         self.repos.iter_names()
     }
 
-    pub fn repos(&self) -> impl Iterator<Item = Arc<Repo>> {
+    pub fn repos(&self) -> impl Iterator<Item = Arc<R>> {
         self.repos.iter()
     }
 
     pub fn repo_name_from_id(&self, repo_id: RepositoryId) -> Option<String> {
         self.repos
             .get_by_id(repo_id.id())
-            .map(|repo| repo.name().to_string())
+            .map(|repo| repo.repo_identity().name().to_string())
     }
 
     pub fn repo_id_from_name(&self, name: impl AsRef<str>) -> Option<RepositoryId> {
         self.repos
             .get_by_name(name.as_ref())
-            .map(|repo| repo.repoid())
+            .map(|repo| repo.repo_identity().id())
     }
 
     /// Report configured monitoring stats
@@ -208,7 +210,7 @@ pub mod test_impl {
 
     use super::*;
 
-    impl Mononoke {
+    impl Mononoke<Repo> {
         /// Create a Mononoke instance for testing.
         pub async fn new_test(
             repos: impl IntoIterator<Item = (String, Repo)>,

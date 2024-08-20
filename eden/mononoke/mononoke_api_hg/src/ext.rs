@@ -5,17 +5,18 @@
  * GNU General Public License version 2.
  */
 
+use mononoke_api::MononokeRepo;
 use mononoke_api::RepoContext;
 
 use super::HgRepoContext;
 
-pub trait RepoContextHgExt {
+pub trait RepoContextHgExt<R> {
     /// Get an HgRepoContext to access this repo's data in Mercurial-specific formats.
-    fn hg(self) -> HgRepoContext;
+    fn hg(self) -> HgRepoContext<R>;
 }
 
-impl RepoContextHgExt for RepoContext {
-    fn hg(self) -> HgRepoContext {
+impl<R: MononokeRepo> RepoContextHgExt<R> for RepoContext<R> {
+    fn hg(self) -> HgRepoContext<R> {
         HgRepoContext::new(self)
     }
 }

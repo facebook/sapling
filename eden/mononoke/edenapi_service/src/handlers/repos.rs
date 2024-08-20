@@ -11,6 +11,7 @@ use gotham::state::FromState;
 use gotham::state::State;
 use gotham_ext::error::HttpError;
 use gotham_ext::response::BytesBody;
+use mononoke_api::Repo;
 use serde::Serialize;
 
 use crate::context::ServerContext;
@@ -22,7 +23,7 @@ struct ReposResponse {
 }
 
 pub async fn repos(state: &mut State) -> Result<BytesBody<Bytes>, HttpError> {
-    let sctx = ServerContext::borrow_from(state);
+    let sctx = ServerContext::<Repo>::borrow_from(state);
     let mononoke = sctx.mononoke_api();
 
     let repos = mononoke.repo_names().collect::<Vec<_>>();

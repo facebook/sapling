@@ -20,8 +20,9 @@ use mononoke_types::ChangesetId;
 use crate::errors::MononokeError;
 use crate::invalid_push_redirected_request;
 use crate::repo::RepoContext;
+use crate::MononokeRepo;
 
-impl RepoContext {
+impl<R: MononokeRepo> RepoContext<R> {
     async fn delete_bookmark_op<'a>(
         &self,
         bookmark: &'_ BookmarkKey,

@@ -17,6 +17,7 @@ use mononoke_types::DateTime as MononokeDateTime;
 use mononoke_types::MPath;
 use mononoke_types::NonRootMPath;
 use mononoke_types::RepositoryId;
+use repo_cross_repo::RepoCrossRepoRef;
 use repo_identity::RepoIdentityRef;
 use synced_commit_mapping::WorkingCopyEquivalence;
 
@@ -29,6 +30,7 @@ use crate::repo::RepoContext;
 use crate::CreateChange;
 use crate::CreateChangeFile;
 use crate::CreateChangeFileContents;
+use crate::MononokeRepo;
 use crate::XRepoLookupExactBehaviour;
 use crate::XRepoLookupSyncBehaviour;
 
@@ -45,7 +47,7 @@ pub struct SubmoduleExpansionUpdateCommitInfo {
     pub author_date: Option<MononokeDateTime>,
 }
 
-impl RepoContext {
+impl<R: MononokeRepo> RepoContext<R> {
     /// Create a commit in the large repo updating a submodule expansion.
     ///
     /// This is done by creating a commit in the small repo with a single
@@ -57,7 +59,7 @@ impl RepoContext {
         submodule_expansion_path: NonRootMPath,
         submodule_expansion_update: SubmoduleExpansionUpdate,
         commit_info: SubmoduleExpansionUpdateCommitInfo,
-    ) -> Result<ChangesetContext, MononokeError> {
+    ) -> Result<ChangesetContext<R>, MononokeError> {
         let ctx = &self.ctx;
 
         // Get the small repo to which the submodule expansion belongs and the
@@ -118,15 +120,19 @@ impl RepoContext {
     /// its expansion.
     pub async fn create_small_repo_commit(
         &self,
-        small_repo_ctx: &RepoContext,
+        small_repo_ctx: &RepoContext<R>,
         base_changeset_id: ChangesetId,
         submodule_expansion_path: NonRootMPath,
         submodule_expansion_update: SubmoduleExpansionUpdate,
         commit_info: SubmoduleExpansionUpdateCommitInfo,
-    ) -> Result<ChangesetContext, MononokeError> {
+    ) -> Result<ChangesetContext<R>, MononokeError> {
         let large_repo_ctx = self; // For readability
 
-        let synced_commit_mapping = large_repo_ctx.repo().synced_commit_mapping().clone();
+        let synced_commit_mapping = large_repo_ctx
+            .repo()
+            .repo_cross_repo()
+            .synced_commit_mapping()
+            .clone();
         let large_repo_id = large_repo_ctx.repo().repo_identity().id();
 
         // Get small repo changeset with working copy equivalence to the provided
@@ -214,7 +220,11 @@ impl RepoContext {
     ) -> Result<(RepositoryId, NonRootMPath), MononokeError> {
         let large_repo_ctx = self; // For readability
 
-        let synced_commit_mapping = large_repo_ctx.repo().synced_commit_mapping().clone();
+        let synced_commit_mapping = large_repo_ctx
+            .repo()
+            .repo_cross_repo()
+            .synced_commit_mapping()
+            .clone();
         let large_repo_id = large_repo_ctx.repo().repo_identity().id();
 
         // Get the commit sync mapping from the provided large repo base commit
