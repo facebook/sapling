@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use core::str;
+
 use anyhow::Error;
 use bytes::Bytes;
 use gotham::mime;
@@ -72,14 +74,17 @@ async fn write_advertisement(
     request_context: RepositoryRequestContext,
     output: &mut Vec<u8>,
 ) -> Result<(), Error> {
-    let mut refs = ls_refs_response(
+    let mut refs: Vec<_> = ls_refs_response(
         &request_context.ctx,
         &request_context.repo,
         LsRefsRequest::write_advertisement(),
     )
     .await?
     .included_refs
-    .into_iter();
+    .into_iter()
+    .collect();
+    refs.sort_by(|a, b| a.0.cmp(&b.0));
+    let mut refs = refs.into_iter();
     if let Some((ref_name, target)) = refs.next() {
         let first_ref_line = ref_line(ref_name.as_str(), &target);
         write_text_packetline(

@@ -111,3 +111,39 @@
   e8615d6f149b876be0a2f30a1c5bf0c42bf8e136 refs/remotes/origin/HEAD
   e8615d6f149b876be0a2f30a1c5bf0c42bf8e136 refs/remotes/origin/master
   fc3048042ba6628ce96a6a6ce7d1839327ec4563 refs/remotes/origin/yet_another_branch
+
+# Modify existing branches in the repo
+  $ cd "$TESTTMP"/repo
+  $ git checkout master
+  Switched to branch 'master'
+  Your branch is up to date with 'origin/master'.
+  $ echo "Moving master file" > file1
+  $ git add .
+  $ git commit -qam "Moving master branch"
+  $ git checkout yet_another_branch
+  Switched to a new branch 'yet_another_branch'
+  branch 'yet_another_branch' set up to track 'origin/yet_another_branch'.
+  $ echo "Moving yet another file" > yet_another_new_file
+  $ git add .
+  $ git commit -qam "Moving yet another branch"
+  $ git_client -c http.extraHeader="x-git-read-after-write-consistency: 1" push origin --all
+  error: RPC failed; HTTP 500 curl 22 The requested URL returned error: 500
+  fatal: the remote end hung up unexpectedly
+  Everything up-to-date
+  [1]
+
+# Without waiting for the WBC, clone the repo and check its state
+  $ cd "$TESTTMP"
+  $ rm -rf new_repo
+  $ git_client clone $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git new_repo
+  Cloning into 'new_repo'...
+  $ cd new_repo
+
+# List all the known refs. Ensure that the modified branches show their changes
+  $ git show-ref | sort
+  55e2d4267a1afd04875670380119e989c8e0bf97 refs/remotes/origin/brand_new_branch
+  8963e1f55d1346a07c3aec8c8fc72bf87d0452b1 refs/tags/first_tag
+  e8615d6f149b876be0a2f30a1c5bf0c42bf8e136 refs/heads/master
+  e8615d6f149b876be0a2f30a1c5bf0c42bf8e136 refs/remotes/origin/HEAD
+  e8615d6f149b876be0a2f30a1c5bf0c42bf8e136 refs/remotes/origin/master
+  fc3048042ba6628ce96a6a6ce7d1839327ec4563 refs/remotes/origin/yet_another_branch
