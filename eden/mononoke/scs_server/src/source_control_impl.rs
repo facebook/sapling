@@ -18,6 +18,7 @@ use clientinfo::CLIENT_INFO_HEADER;
 use connection_security_checker::ConnectionSecurityChecker;
 use ephemeral_blobstore::BubbleId;
 use ephemeral_blobstore::RepoEphemeralStore;
+use factory_group::FactoryGroup;
 use fbinit::FacebookInit;
 use futures::future::BoxFuture;
 use futures::try_join;
@@ -97,6 +98,7 @@ define_stats! {
 
 }
 
+#[allow(dead_code)]
 #[derive(Clone)]
 pub(crate) struct SourceControlServiceImpl {
     pub(crate) fb: FacebookInit,
@@ -107,6 +109,7 @@ pub(crate) struct SourceControlServiceImpl {
     pub(crate) identity: Identity,
     pub(crate) scribe: Scribe,
     pub(crate) configs: Arc<MononokeConfigs>,
+    pub(crate) factory_group: Option<Arc<FactoryGroup<2>>>,
     identity_proxy_checker: Arc<ConnectionSecurityChecker>,
 }
 
@@ -123,6 +126,7 @@ impl SourceControlServiceImpl {
         identity_proxy_checker: ConnectionSecurityChecker,
         configs: Arc<MononokeConfigs>,
         common_config: &CommonConfig,
+        factory_group: Option<Arc<FactoryGroup<2>>>,
     ) -> Self {
         scuba_builder.add_common_server_data();
 
@@ -139,6 +143,7 @@ impl SourceControlServiceImpl {
             scribe,
             configs,
             identity_proxy_checker: Arc::new(identity_proxy_checker),
+            factory_group,
         }
     }
 

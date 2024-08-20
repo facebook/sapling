@@ -27,6 +27,7 @@ use environment::BookmarkCacheOptions;
 use executor_lib::args::ShardedExecutorArgs;
 use executor_lib::RepoShardedProcess;
 use executor_lib::RepoShardedProcessExecutor;
+use factory_group::FactoryGroup;
 use fb303_core_services::make_BaseService_server;
 use fbinit::FacebookInit;
 use megarepo_api::MegarepoApi;
@@ -82,6 +83,7 @@ mod specifiers;
 
 const SERVICE_NAME: &str = "mononoke_scs_server";
 const SM_CLEANUP_TIMEOUT_SECS: u64 = 60;
+const NUM_PRIORITY_QUEUES: usize = 2;
 
 /// Mononoke Source Control Service Server
 #[derive(Parser)]
@@ -116,12 +118,19 @@ struct ScsServerArgs {
     /// Number of Thrift workers
     #[clap(long, default_value = "1000")]
     thrift_workers_num: usize,
+    /// Number of Thrift workers for fast methods
+    #[clap(long, default_value = "1000")]
+    thrift_workers_num_fast: usize,
+    /// Number of Thrift workers for slow methods
+    #[clap(long, default_value = "5")]
+    thrift_workers_num_slow: usize,
 }
 
 #[derive(ValueEnum, Clone, Copy, Debug, PartialEq, Eq)]
 enum ThriftServerMode {
     Default,
     ThriftFactory,
+    FactoryGroup,
 }
 
 /// Struct representing the Source Control Service process when sharding by
@@ -259,17 +268,37 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         acl_provider.as_ref(),
         &app.repo_configs().common,
     ))?;
-    let source_control_server = source_control_impl::SourceControlServiceImpl::new(
-        fb,
-        mononoke.clone(),
-        megarepo_api,
-        logger.clone(),
-        scuba_builder,
-        args.scribe_logging_args.get_scribe(fb)?,
-        security_checker,
-        app.configs(),
-        &app.repo_configs().common,
-    );
+
+    let source_control_server = {
+        let maybe_factory_group = if let ThriftServerMode::FactoryGroup = args.thift_server_mode {
+            let worker_counts: [usize; NUM_PRIORITY_QUEUES] =
+                vec![args.thrift_workers_num_fast, args.thrift_workers_num_slow]
+                    .try_into()
+                    .unwrap();
+            Some(Arc::new(runtime.block_on(FactoryGroup::<
+                { NUM_PRIORITY_QUEUES },
+            >::new(
+                fb,
+                "requests-pri-queues",
+                worker_counts,
+                None,
+            ))?))
+        } else {
+            None
+        };
+        source_control_impl::SourceControlServiceImpl::new(
+            fb,
+            mononoke.clone(),
+            megarepo_api,
+            logger.clone(),
+            scuba_builder,
+            args.scribe_logging_args.get_scribe(fb)?,
+            security_checker,
+            app.configs(),
+            &app.repo_configs().common,
+            maybe_factory_group,
+        )
+    };
 
     let monitoring_forever = {
         let monitoring_ctx = CoreContext::new_with_logger(fb, logger.clone());
@@ -285,7 +314,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             source_control_server,
             runtime.clone(),
         ),
-        ThriftServerMode::ThriftFactory => {
+        _ => {
             let (factory, _processing_handle) = runtime.block_on(async move {
                 ThriftFactoryBuilder::new(fb, "main-thrift-incoming", args.thrift_workers_num)
                     .with_queueing_limit(args.thrift_queue_size)

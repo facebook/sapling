@@ -15,6 +15,7 @@ use mononoke_api::MononokeError;
 use source_control as thrift;
 use source_control_services::errors::source_control_service as service;
 
+#[derive(Debug)]
 pub(crate) enum ServiceError {
     Request(thrift::RequestError),
     Internal(thrift::InternalError),
