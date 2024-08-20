@@ -444,6 +444,10 @@ impl Drop for Resolver {
 impl HybridResolver<Vertex, Bytes, anyhow::Error> for Resolver {
     fn resolve_local(&mut self, vertex: &Vertex) -> anyhow::Result<Option<Bytes>> {
         let id = Id20::from_slice(vertex.as_ref())?;
+        if &id == Id20::wdir_id() || &id == Id20::null_id() {
+            // Do not borther asking server about virtual nodes.
+            return Ok(Some(Bytes::new()));
+        }
         match self.zstore.read().get(id)? {
             Some(bytes) => Ok(Some(bytes.slice(Id20::len() * 2..))),
             None => Ok(crate::revlog::get_hard_coded_commit_text(vertex)),
