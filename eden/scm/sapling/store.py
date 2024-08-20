@@ -83,9 +83,9 @@ def _reserved():
         yield x
 
 
-def _buildencodefun(forfncache):
+def _buildencodefun():
     """
-    >>> enc, dec = _buildencodefun(False)
+    >>> enc, dec = _buildencodefun()
 
     >>> enc('nothing/special.txt')
     'nothing/special.txt'
@@ -149,34 +149,33 @@ def _buildencodefun(forfncache):
     for k, v in cmap.items():
         dmap[v] = k
 
-    if not forfncache:
-        cmaplong = cmap.copy()
+    cmaplong = cmap.copy()
 
-        for i in capitals:
-            c = inttobyte(i)
-            cmaplong[c] = c
-            assert c not in dmap
-            dmap[c] = c
+    for i in capitals:
+        c = inttobyte(i)
+        cmaplong[c] = c
+        assert c not in dmap
+        dmap[c] = c
 
-        cmapverylong = cmaplong.copy()
-        cmapverylong[b"_"] = b":"
-        assert b":" not in dmap
-        dmap[b":"] = b"_"
+    cmapverylong = cmaplong.copy()
+    cmapverylong[b"_"] = b":"
+    assert b":" not in dmap
+    dmap[b":"] = b"_"
 
-        def encodecomp(comp):
-            assert isinstance(comp, str), "encodecomp accepts str paths"
-            comp = encodeutf8(comp)
-            comp = [comp[i : i + 1] for i in range(len(comp))]
-            encoded = b"".join(cmap[c] for c in comp)
-            if len(encoded) > 255:
-                encoded = b"".join(cmaplong[c] for c in comp)
-            if len(encoded) > 255:
-                encoded = b"".join(cmapverylong[c] for c in comp)
-            return decodeutf8(encoded)
+    def encodecomp(comp):
+        assert isinstance(comp, str), "encodecomp accepts str paths"
+        comp = encodeutf8(comp)
+        comp = [comp[i : i + 1] for i in range(len(comp))]
+        encoded = b"".join(cmap[c] for c in comp)
+        if len(encoded) > 255:
+            encoded = b"".join(cmaplong[c] for c in comp)
+        if len(encoded) > 255:
+            encoded = b"".join(cmapverylong[c] for c in comp)
+        return decodeutf8(encoded)
 
-        def encodemaybelong(path):
-            assert isinstance(path, str), "encodemaybelong accepts str paths"
-            return "/".join(map(encodecomp, path.split("/")))
+    def encodemaybelong(path):
+        assert isinstance(path, str), "encodemaybelong accepts str paths"
+        return "/".join(map(encodecomp, path.split("/")))
 
     def decode(s):
         assert isinstance(s, bytes), "decode accepts bytes paths"
@@ -192,23 +191,14 @@ def _buildencodefun(forfncache):
             else:
                 raise KeyError
 
-    if forfncache:
-
-        def encode(s):
-            assert isinstance(s, str), "encode accepts str paths"
-            s = encodeutf8(s)
-            return decodeutf8(b"".join([cmap[s[c : c + 1]] for c in range(len(s))]))
-
-        return (encode, lambda s: decodeutf8(b"".join(list(decode(s)))))
-    else:
-        return (
-            encodemaybelong,
-            lambda s: decodeutf8(b"".join(list(decode(encodeutf8(s))))),
-        )
+    return (
+        encodemaybelong,
+        lambda s: decodeutf8(b"".join(list(decode(encodeutf8(s))))),
+    )
 
 
 # Special version that works with long upper-case file names
-_encodefnamelong = _buildencodefun(False)[0]
+_encodefnamelong = _buildencodefun()[0]
 
 
 def encodefilename(s):
