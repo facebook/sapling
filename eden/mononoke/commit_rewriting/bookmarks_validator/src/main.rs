@@ -19,6 +19,8 @@ use async_trait::async_trait;
 use bookmarks::BookmarkKey;
 use bookmarks::Freshness;
 use cached_config::ConfigStore;
+use clientinfo::ClientEntryPoint;
+use clientinfo::ClientInfo;
 use cmdlib::args;
 use cmdlib::args::MononokeMatches;
 use cmdlib::helpers;
@@ -38,6 +40,7 @@ use fbinit::FacebookInit;
 use futures::future;
 use futures::TryStreamExt;
 use live_commit_sync_config::CONFIGERATOR_PUSHREDIRECT_ENABLE;
+use metadata::Metadata;
 use mononoke_types::ChangesetId;
 use pushredirect_enable::MononokePushRedirectEnable;
 use scuba_ext::MononokeScubaSampleBuilder;
@@ -278,8 +281,16 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 }
 
 fn create_core_context(fb: FacebookInit, logger: Logger) -> CoreContext {
-    let session_container = SessionContainer::new_with_defaults(fb);
+    let mut metadata = Metadata::default();
+    metadata.add_client_info(ClientInfo::default_with_entry_point(
+        ClientEntryPoint::MegarepoBookmarksValidator,
+    ));
+
+    let session_container = SessionContainer::builder(fb)
+        .metadata(Arc::new(metadata))
+        .build();
     let scuba_sample = MononokeScubaSampleBuilder::with_discard();
+
     session_container.new_context(logger, scuba_sample)
 }
 
