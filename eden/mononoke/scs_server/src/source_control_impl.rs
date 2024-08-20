@@ -98,7 +98,6 @@ define_stats! {
 
 }
 
-#[allow(dead_code)]
 #[derive(Clone)]
 pub(crate) struct SourceControlServiceImpl {
     pub(crate) fb: FacebookInit,
@@ -819,8 +818,15 @@ macro_rules! impl_thrift_methods {
                         STATS::method_completion_time_ms.add_value(stats.completion_time.as_millis_unchecked() as i64, (method,));
                         res.map_err(Into::into)
                     };
-                    let res: Result<$ok_type, $err_type> = handler.await;
-                    res
+
+                    if let Some(factory_group) = &self.0.factory_group {
+                        let group = factory_group.clone();
+                        let priority = 0; // TODO compute dynamically
+                        group.execute(priority, handler, None).await.expect("Failed to execute request") // FIXME convert error correctly
+                    } else {
+                        let res: Result<$ok_type, $err_type> = handler.await;
+                        res
+                    }
                 };
                 Box::pin(fut)
             }
