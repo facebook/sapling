@@ -7,7 +7,7 @@
 function print_help {
     echo "This command runs individual test file."
     echo
-    echo "Usage: $0 [--oss | --flagfile <FLAGFILE>] test-file.t ..."
+    echo "Usage: $0 [--oss | --opt | --flagfile <FLAGFILE>] test-file.t ..."
     echo
     echo "The default build mode is dev-nosan-lg."
     echo "--oss    change build mode to fbcode//mode/dev-rust-oss"
@@ -42,6 +42,9 @@ while [[ $# -gt 0 ]]; do
       ;;
     "--oss")
       mode="fbcode//mode/dev-rust-oss"
+      ;;
+    "--opt")
+      mode="fbcode//mode/opt"
       ;;
     *)
       break;
