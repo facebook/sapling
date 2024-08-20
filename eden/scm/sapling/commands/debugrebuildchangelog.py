@@ -106,6 +106,15 @@ def debugrebuildchangelog(ui, repo, **opts) -> None:
                 repo.svfs.write("remotenames", bookmod.encoderemotenames(remotenames))
                 repo.svfs.write("tip", tip or b"")
 
+                # The dirstate p1 (wdir parent) might be missing before addcommits
+                # the backed up draft commits. Setting dirstate parents to null
+                # temporarily so the dag-dirstate link won't complain about missing
+                # commits.
+                ds = repo.dirstate
+                wparent = ds.p1()
+                with ds.parentchange():
+                    ds.setparents(nullid)
+
                 # This is the *destructive* operation that makes commits "missing".
                 # Before this, hgcommits is the way to access the commit graph.
                 # After this, repo.changelog.inner is the way to access the
@@ -125,6 +134,9 @@ def debugrebuildchangelog(ui, repo, **opts) -> None:
                 repo.changelog.inner.addcommits(
                     [c for c in commits if c[0] not in known]
                 )
+                # Restore dirstate parents.
+                with ds.parentchange():
+                    ds.setparents(wparent)
         except BaseException:
             if baksuffix:
                 ui.write(_("restoring changelog from previous state\n"))
