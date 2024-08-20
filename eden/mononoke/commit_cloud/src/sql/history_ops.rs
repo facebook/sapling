@@ -87,8 +87,8 @@ mononoke_queries! {
 
     write InsertHistory(reponame: String, workspace: String, version: u64, heads: Vec<u8>, bookmarks: Vec<u8>, remote_bookmarks: Vec<u8>, timestamp: Timestamp) {
         none,
-        mysql("INSERT INTO history (reponame, workspace, version, heads, bookmarks, remotebookmarks, timestamp
-            VALUES ({reponame},{workspace},{version},{heads},{bookmarks},{remote_bookmarks}, FROM_UNIXTIME({timestamp}))")
+        mysql("INSERT INTO history (reponame, workspace, version, heads, bookmarks, remotebookmarks, timestamp)
+        VALUES ({reponame}, {workspace}, {version}, {heads}, {bookmarks}, {remote_bookmarks}, FROM_UNIXTIME({timestamp}))")
         sqlite("INSERT INTO history (reponame, workspace, version, heads, bookmarks, remotebookmarks, timestamp)
         VALUES ({reponame},{workspace},{version},{heads},{bookmarks},{remote_bookmarks}, {timestamp}) ")
     }

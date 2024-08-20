@@ -35,6 +35,7 @@ use metaconfig_types::CommitCloudConfig;
 use mononoke_types::Timestamp;
 use permission_checker::AclProvider;
 use permission_checker::BoxPermissionChecker;
+use references::history::WorkspaceHistory;
 use references::rename_all;
 use repo_derived_data::ArcRepoDerivedData;
 use sql::versions_ops::UpdateVersionArgs;
@@ -216,9 +217,8 @@ impl CommitCloud {
             latest_version = workspace_version.version;
             version_timestamp = workspace_version.timestamp.timestamp_nanos();
         }
-
+        let raw_references_data = fetch_references(cc_ctx, &self.storage).await?;
         if params.version < latest_version {
-            let raw_references_data = fetch_references(cc_ctx, &self.storage).await?;
             return cast_references_data(
                 raw_references_data,
                 latest_version,
@@ -268,6 +268,23 @@ impl CommitCloud {
                 cc_ctx.reponame.clone(),
                 cc_ctx.workspace.clone(),
                 args.clone(),
+            )
+            .await?;
+
+        let history_entry = WorkspaceHistory::from_references(
+            raw_references_data,
+            latest_version,
+            version_timestamp,
+        );
+
+        txn = self
+            .storage
+            .insert(
+                txn,
+                cri,
+                cc_ctx.reponame.clone(),
+                cc_ctx.workspace.clone(),
+                history_entry,
             )
             .await?;
 
