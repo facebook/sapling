@@ -193,7 +193,7 @@ async fn get_copy_info(
     ctx: CoreContext,
     blobstore: RepoBlobstore,
     bonsai_parents: Vec<ChangesetId>,
-    copy_from_path: NonRootMPath,
+    copy_to_path: NonRootMPath,
     envelope: HgFileEnvelope,
     parent_manifests: Vec<HgManifestId>,
 ) -> Result<Option<(NonRootMPath, ChangesetId)>, Error> {
@@ -204,8 +204,10 @@ async fn get_copy_info(
         .map(|(path, hash)| (RepoPath::FilePath(path), hash));
 
     match maybecopy {
-        Some((repopath, copyfromnode)) => {
-            let repopath = repopath.mpath().ok_or(ErrorKind::UnexpectedRootPath)?;
+        Some((copy_from_path, copy_from_node)) => {
+            let copy_from_path = copy_from_path
+                .mpath()
+                .ok_or(ErrorKind::UnexpectedRootPath)?;
 
             let parents_bonsai_and_mfs =
                 stream::iter(bonsai_parents.into_iter().zip(parent_manifests.into_iter()));
@@ -215,10 +217,10 @@ async fn get_copy_info(
                     cloned!(ctx, blobstore);
                     async move {
                         let entry = parent_mf
-                            .find_entry(ctx, blobstore, repopath.clone().into())
+                            .find_entry(ctx, blobstore, copy_from_path.clone().into())
                             .await
                             .ok()?;
-                        if entry?.into_leaf()?.1 == copyfromnode {
+                        if entry?.into_leaf()?.1 == copy_from_node {
                             Some(bonsai_parent)
                         } else {
                             None
@@ -233,14 +235,15 @@ async fn get_copy_info(
                 .await;
 
             match copied_from.first() {
-                Some(bonsai_cs_copied_from) => {
-                    Ok(Some((repopath.clone(), bonsai_cs_copied_from.clone())))
-                }
+                Some(bonsai_cs_copied_from) => Ok(Some((
+                    copy_from_path.clone(),
+                    bonsai_cs_copied_from.clone(),
+                ))),
                 None => Err(ErrorKind::IncorrectCopyInfo {
-                    from_path: copy_from_path,
-                    from_node: node_id,
-                    to_path: repopath.clone(),
-                    to_node: copyfromnode,
+                    from_path: copy_from_path.clone(),
+                    from_node: copy_from_node,
+                    to_path: copy_to_path,
+                    to_node: node_id,
                 }
                 .into()),
             }

@@ -63,6 +63,5 @@ tofix: push should be succeeded after Mononoke support subtree copy metadata
   abort: failed to upload commits to server: ['bd0866acb901221ac9e8cacf82acb921fba3a4b5']
   [255]
 
-tofix: Incorrect copy info has wrong copy_from and copy_to info
   $ rg "Incorrect copy info" $TESTTMP/log.json --no-filename | jq '.normal.edenapi_error'
-  * Incorrect copy info: not found a file version bar/file2 b38f90c0ef9cb3c9f06668edc38e13c4c816d8cb the file foo/file1 2dce614a68fd6647ca187d760191a35d1cab54d8 was copied from" (glob)
+  * Incorrect copy info: not found a file version foo/file1 2dce614a68fd6647ca187d760191a35d1cab54d8 the file bar/file2 b38f90c0ef9cb3c9f06668edc38e13c4c816d8cb was copied from" (glob)
