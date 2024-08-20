@@ -9,6 +9,7 @@ import type {RenderResult} from '@testing-library/react';
 
 import App from '../App';
 import {cancelAllHighlightingTasks} from '../ComparisonView/SplitDiffView/syntaxHighlighting';
+import {parsePatchAndFilter, sortFilesByType} from '../ComparisonView/utils';
 import platform from '../platform';
 import {
   COMMIT,
@@ -616,3 +617,27 @@ function mockFetchToSupportSyntaxHighlighting(): jest.SpyInstance {
     }) as jest.Mock,
   );
 }
+
+describe('ComparisonView utils', () => {
+  describe('sortFilesByType', () => {
+    it('sorts by type', () => {
+      const files = parsePatchAndFilter(UNCOMMITTED_CHANGES_DIFF);
+
+      expect(files).toEqual([
+        expect.objectContaining({newFileName: 'deletedFile.txt', type: 'Removed'}),
+        expect.objectContaining({newFileName: 'newFile.txt', type: 'Added'}),
+        expect.objectContaining({newFileName: 'someFile.txt', type: 'Modified'}),
+        expect.objectContaining({newFileName: 'some/path/foo.go', type: 'Modified'}),
+      ]);
+
+      sortFilesByType(files);
+
+      expect(files).toEqual([
+        expect.objectContaining({newFileName: 'some/path/foo.go', type: 'Modified'}),
+        expect.objectContaining({newFileName: 'someFile.txt', type: 'Modified'}),
+        expect.objectContaining({newFileName: 'newFile.txt', type: 'Added'}),
+        expect.objectContaining({newFileName: 'deletedFile.txt', type: 'Removed'}),
+      ]);
+    });
+  });
+});

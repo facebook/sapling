@@ -20,6 +20,7 @@ import {latestHeadCommit} from '../serverAPIState';
 import {GeneratedStatus} from '../types';
 import {SplitDiffView} from './SplitDiffView';
 import {currentComparisonMode} from './atoms';
+import {parsePatchAndFilter, sortFilesByType} from './utils';
 import {Button} from 'isl-components/Button';
 import {Dropdown} from 'isl-components/Dropdown';
 import {ErrorBoundary, ErrorNotice} from 'isl-components/ErrorNotice';
@@ -35,7 +36,6 @@ import {
   ComparisonType,
   comparisonStringKey,
 } from 'shared/Comparison';
-import {parsePatch} from 'shared/patch/parse';
 import {group, notEmpty} from 'shared/utils';
 
 import './ComparisonView.css';
@@ -46,14 +46,6 @@ import './ComparisonView.css';
  */
 function mapResult<T, U>(result: Result<T>, fn: (t: T) => U): Result<U> {
   return result.error == null ? {value: fn(result.value)} : result;
-}
-
-function parsePatchAndFilter(patch: string): ReturnType<typeof parsePatch> {
-  const result = parsePatch(patch);
-  return result.filter(
-    // empty patches and other weird situations can cause invalid files to get parsed, ignore these entirely
-    diff => diff.hunks.length > 0 || diff.newFileName != null || diff.oldFileName != null,
-  );
 }
 
 const currentComparisonData = atomFamilyWeak((comparison: Comparison) =>
@@ -161,6 +153,7 @@ export default function ComparisonView({
       );
   } else {
     const files = data.value ?? [];
+    sortFilesByType(files);
     const fileGroups = group(files, file => generatedStatuses[file.newFileName ?? '']);
     content = (
       <>
