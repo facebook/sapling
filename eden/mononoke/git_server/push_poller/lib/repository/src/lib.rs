@@ -198,7 +198,7 @@ impl<'a> Repository<'a> {
                 let update_metagit_fingerprint_query = query!(
                 r#"
             UPDATE repositories
-                SET fingerprint = {fingerprint}
+                SET fingerprint = {fingerprint}, publish_fingerprint_now = NULL
             WHERE
                 repositories.name = {name}
                 AND repositories.fingerprint {fingerprint_equals}
