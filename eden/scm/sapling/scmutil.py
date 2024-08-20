@@ -1520,3 +1520,19 @@ def setup(ui):
 
         def revf64encode(rev):
             return rev
+
+
+def rootrelpath(ctx, path):
+    """Convert a path or a relative path pattern to a root relative path."""
+    SUPPORTED_PAT_KINDS = {"path", "relpath"}
+    if kind := matchmod.patkind(path):
+        if kind not in SUPPORTED_PAT_KINDS:
+            raise error.Abort(_("unsupported pattern kind: '%s'"), kind)
+    files = ctx.match(pats=[path], default="relpath").files()
+    if len(files) != 1:
+        if not files:
+            hint = _("the path '%s' matches the repo root directory") % (path)
+        else:
+            hint = _("the path '%s' matches multiple files: %s") % (path, files)
+        raise error.Abort(_("path must match exactly one file path"), hint=hint)
+    return files[0]
