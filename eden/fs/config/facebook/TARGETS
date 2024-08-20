@@ -33,6 +33,7 @@ python_library(
         "//eden/fs/cli:hostname",
         "//eden/fs/cli:lib",
         "//eden/fs/cli:telemetry",
+        "//manifold/clients/python:manifold_client_deprecated",
         "//thrift/lib/py3:common",
         "//thrift/lib/py3:types",
     ],
