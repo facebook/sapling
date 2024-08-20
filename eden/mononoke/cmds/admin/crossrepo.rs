@@ -1667,7 +1667,7 @@ async fn get_large_to_small_commit_syncer<'a>(
 }
 
 async fn get_live_commit_sync_config<'a>(
-    ctx: &'a CoreContext,
+    _ctx: &'a CoreContext,
     fb: FacebookInit,
     matches: &'a MononokeMatches<'_>,
     repo_id: RepositoryId,
@@ -1687,11 +1687,7 @@ async fn get_live_commit_sync_config<'a>(
         .open::<SqlPushRedirectionConfigBuilder>()
         .await?;
     let push_redirection_config = builder.build(Arc::new(SqlQueryConfig { caching: None }));
-    CfgrLiveCommitSyncConfig::new_with_xdb(
-        ctx.logger(),
-        config_store,
-        Arc::new(push_redirection_config),
-    )
+    CfgrLiveCommitSyncConfig::new(config_store, Arc::new(push_redirection_config))
 }
 
 #[cfg(test)]

@@ -1300,17 +1300,11 @@ impl RepoFactory {
     /// Cross-repo sync manager for this repo
     pub async fn repo_cross_repo(
         &self,
-        repo_identity: &ArcRepoIdentity,
         synced_commit_mapping: &ArcSyncedCommitMapping,
         push_redirection_config: &ArcPushRedirectionConfig,
     ) -> Result<ArcRepoCrossRepo> {
         let sync_lease = create_commit_syncer_lease(self.env.fb, self.env.caching)?;
-        let logger = self
-            .env
-            .logger
-            .new(o!("repo" => repo_identity.name().to_string()));
-        let live_commit_sync_config = Arc::new(CfgrLiveCommitSyncConfig::new_with_xdb(
-            &logger,
+        let live_commit_sync_config = Arc::new(CfgrLiveCommitSyncConfig::new(
             &self.env.config_store,
             push_redirection_config.clone(),
         )?);

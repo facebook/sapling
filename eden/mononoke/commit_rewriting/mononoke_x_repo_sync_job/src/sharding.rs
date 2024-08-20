@@ -129,7 +129,6 @@ impl XRepoSyncProcessExecutor {
         let large_repo: Arc<Repo> = app.open_repo(&repo_args.target_repo).await?;
         let syncers = create_commit_syncers_from_app_unredacted(&ctx, &app, repo_args).await?;
         let config_store = app.environment().config_store.clone();
-        let logger = ctx.logger();
         let commit_syncer = syncers.small_to_large;
         let mut scuba_sample = ctx.scuba().clone();
         let (_, repo_config) = app.repo_config(repo_args.source_repo.as_repo_arg())?;
@@ -144,8 +143,7 @@ impl XRepoSyncProcessExecutor {
             .open::<SqlPushRedirectionConfigBuilder>()
             .await?;
         let push_redirection_config = builder.build(small_repo.sql_query_config_arc());
-        let live_commit_sync_config = Arc::new(CfgrLiveCommitSyncConfig::new_with_xdb(
-            logger,
+        let live_commit_sync_config = Arc::new(CfgrLiveCommitSyncConfig::new(
             &config_store,
             Arc::new(push_redirection_config),
         )?);

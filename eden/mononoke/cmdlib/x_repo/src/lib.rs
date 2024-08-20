@@ -179,12 +179,9 @@ async fn get_things_from_matches<R: Repo>(
         .await?;
     let push_redirection_config = builder.build(source_repo.sql_query_config_arc());
 
-    let live_commit_sync_config: Arc<dyn LiveCommitSyncConfig> =
-        Arc::new(CfgrLiveCommitSyncConfig::new_with_xdb(
-            ctx.logger(),
-            config_store,
-            Arc::new(push_redirection_config),
-        )?);
+    let live_commit_sync_config: Arc<dyn LiveCommitSyncConfig> = Arc::new(
+        CfgrLiveCommitSyncConfig::new(config_store, Arc::new(push_redirection_config))?,
+    );
 
     Ok((
         Source(source_repo),

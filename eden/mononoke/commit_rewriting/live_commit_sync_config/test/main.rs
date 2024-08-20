@@ -81,12 +81,8 @@ fn get_ctx_source_store_and_live_config(
     let test_push_redirection_config = Arc::new(TestPushRedirectionConfig::new());
 
     let store = ConfigStore::new(test_source.clone(), Duration::from_millis(2), None);
-    let live_commit_sync_config = CfgrLiveCommitSyncConfig::new_with_xdb(
-        ctx.logger(),
-        &store,
-        test_push_redirection_config.clone(),
-    )
-    .unwrap();
+    let live_commit_sync_config =
+        CfgrLiveCommitSyncConfig::new(&store, test_push_redirection_config.clone()).unwrap();
     (
         ctx,
         test_source,

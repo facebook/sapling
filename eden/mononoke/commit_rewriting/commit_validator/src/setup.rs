@@ -42,7 +42,7 @@ use crate::Repo;
 
 pub async fn get_validation_helpers<'a>(
     fb: FacebookInit,
-    ctx: CoreContext,
+    _ctx: CoreContext,
     app: &MononokeApp,
     large_repo: Repo,
     repo_config: RepoConfig,
@@ -64,11 +64,8 @@ pub async fn get_validation_helpers<'a>(
         .open::<SqlPushRedirectionConfigBuilder>()
         .await?;
     let push_redirection_config = builder.build(large_repo.sql_query_config_arc());
-    let live_commit_sync_config = CfgrLiveCommitSyncConfig::new_with_xdb(
-        ctx.logger(),
-        config_store,
-        Arc::new(push_redirection_config),
-    )?;
+    let live_commit_sync_config =
+        CfgrLiveCommitSyncConfig::new(config_store, Arc::new(push_redirection_config))?;
     let common_commit_sync_config = live_commit_sync_config.get_common_config(repo_id)?;
 
     let mapping = SqlSyncedCommitMapping::with_metadata_database_config(

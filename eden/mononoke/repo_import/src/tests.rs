@@ -501,11 +501,8 @@ mod tests {
         let repo0 = create_repo(fb, 0).await?;
 
         let config_store = ConfigStore::new(test_source.clone(), Duration::from_millis(2), None);
-        let live_commit_sync_config = CfgrLiveCommitSyncConfig::new_with_xdb(
-            ctx.logger(),
-            &config_store,
-            test_push_redirection_config,
-        )?;
+        let live_commit_sync_config =
+            CfgrLiveCommitSyncConfig::new(&config_store, test_push_redirection_config)?;
 
         insert_repo_config(0, &mut repos);
         assert!(

@@ -1395,7 +1395,7 @@ async fn find_mover_for_commit<R: cross_repo_sync::Repo>(
 }
 
 async fn get_live_commit_sync_config(
-    ctx: &CoreContext,
+    _ctx: &CoreContext,
     fb: FacebookInit,
     matches: &MononokeMatches<'_>,
     config_store: &ConfigStore,
@@ -1415,11 +1415,7 @@ async fn get_live_commit_sync_config(
         .await?;
     let push_redirection_config = builder.build(Arc::new(SqlQueryConfig { caching: None }));
 
-    CfgrLiveCommitSyncConfig::new_with_xdb(
-        ctx.logger(),
-        config_store,
-        Arc::new(push_redirection_config),
-    )
+    CfgrLiveCommitSyncConfig::new(config_store, Arc::new(push_redirection_config))
 }
 
 #[fbinit::main]

@@ -115,7 +115,7 @@ async fn create_commit_syncers_from_app_impl<R: CrossRepo>(
 /// Instantiate some auxiliary things from `app`
 /// Naming is hard.
 async fn get_things_from_app<R: CrossRepo>(
-    ctx: &CoreContext,
+    _ctx: &CoreContext,
     app: &MononokeApp,
     repo_args: &SourceAndTargetRepoArgs,
     unredacted: bool,
@@ -173,12 +173,9 @@ async fn get_things_from_app<R: CrossRepo>(
         .await?;
     let push_redirection_config = builder.build(source_repo.sql_query_config_arc());
 
-    let live_commit_sync_config: Arc<dyn LiveCommitSyncConfig> =
-        Arc::new(CfgrLiveCommitSyncConfig::new_with_xdb(
-            ctx.logger(),
-            config_store,
-            Arc::new(push_redirection_config),
-        )?);
+    let live_commit_sync_config: Arc<dyn LiveCommitSyncConfig> = Arc::new(
+        CfgrLiveCommitSyncConfig::new(config_store, Arc::new(push_redirection_config))?,
+    );
 
     Ok((
         Source(source_repo),

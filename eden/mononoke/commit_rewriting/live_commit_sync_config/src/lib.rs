@@ -26,7 +26,6 @@ use mononoke_types::RepositoryId;
 use pushredirect::PushRedirectionConfig;
 use pushredirect_enable::PushRedirectEnableState;
 use slog::error;
-use slog::Logger;
 use thiserror::Error;
 
 pub const CONFIGERATOR_PUSHREDIRECT_ENABLE: &str = "scm/mononoke/pushredirect/enable";
@@ -130,18 +129,7 @@ pub struct CfgrLiveCommitSyncConfig {
 }
 
 impl CfgrLiveCommitSyncConfig {
-    pub fn new(_logger: &Logger, config_store: &ConfigStore) -> Result<Self, Error> {
-        let config_handle_for_all_versions =
-            config_store.get_config_handle(CONFIGERATOR_ALL_COMMIT_SYNC_CONFIGS.to_string())?;
-        Ok(Self {
-            config_handle_for_all_versions,
-            push_redirect_config: None,
-        })
-    }
-
-    // This is temporary while we migrate every callsite.
-    pub fn new_with_xdb(
-        _logger: &Logger,
+    pub fn new(
         config_store: &ConfigStore,
         push_redirect_config: Arc<dyn PushRedirectionConfig>,
     ) -> Result<Self, Error> {
