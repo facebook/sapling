@@ -24,9 +24,7 @@ use metaconfig_types::CommitSyncConfigVersion;
 use metaconfig_types::CommonCommitSyncConfig;
 use mononoke_types::RepositoryId;
 use pushredirect::PushRedirectionConfig;
-use pushredirect_enable::MononokePushRedirectEnable;
 use pushredirect_enable::PushRedirectEnableState;
-use slog::debug;
 use slog::error;
 use slog::Logger;
 use thiserror::Error;
@@ -125,54 +123,32 @@ pub trait LiveCommitSyncConfig: Send + Sync {
     ) -> Result<Option<CommonCommitSyncConfig>>;
 }
 
-#[allow(dead_code)]
 #[derive(Clone)]
 pub struct CfgrLiveCommitSyncConfig {
     config_handle_for_all_versions: ConfigHandle<RawCommitSyncAllVersions>,
-    config_handle_for_push_redirection: ConfigHandle<MononokePushRedirectEnable>,
     push_redirect_config: Option<Arc<dyn PushRedirectionConfig>>,
 }
 
 impl CfgrLiveCommitSyncConfig {
-    pub fn new(logger: &Logger, config_store: &ConfigStore) -> Result<Self, Error> {
-        debug!(logger, "Initializing CfgrLiveCommitSyncConfig");
-        let config_handle_for_push_redirection =
-            config_store.get_config_handle(CONFIGERATOR_PUSHREDIRECT_ENABLE.to_string())?;
-        debug!(logger, "Initialized PushRedirect configerator config");
+    pub fn new(_logger: &Logger, config_store: &ConfigStore) -> Result<Self, Error> {
         let config_handle_for_all_versions =
             config_store.get_config_handle(CONFIGERATOR_ALL_COMMIT_SYNC_CONFIGS.to_string())?;
-        debug!(
-            logger,
-            "Initialized all commit sync versions configerator config"
-        );
-        debug!(logger, "Done initializing CfgrLiveCommitSyncConfig");
         Ok(Self {
             config_handle_for_all_versions,
-            config_handle_for_push_redirection,
             push_redirect_config: None,
         })
     }
 
     // This is temporary while we migrate every callsite.
     pub fn new_with_xdb(
-        logger: &Logger,
+        _logger: &Logger,
         config_store: &ConfigStore,
         push_redirect_config: Arc<dyn PushRedirectionConfig>,
     ) -> Result<Self, Error> {
-        debug!(logger, "Initializing CfgrLiveCommitSyncConfig");
-        let config_handle_for_push_redirection =
-            config_store.get_config_handle(CONFIGERATOR_PUSHREDIRECT_ENABLE.to_string())?;
-        debug!(logger, "Initialized PushRedirect configerator config");
         let config_handle_for_all_versions =
             config_store.get_config_handle(CONFIGERATOR_ALL_COMMIT_SYNC_CONFIGS.to_string())?;
-        debug!(
-            logger,
-            "Initialized all commit sync versions configerator config"
-        );
-        debug!(logger, "Done initializing CfgrLiveCommitSyncConfig");
         Ok(Self {
             config_handle_for_all_versions,
-            config_handle_for_push_redirection,
             push_redirect_config: Some(push_redirect_config),
         })
     }
