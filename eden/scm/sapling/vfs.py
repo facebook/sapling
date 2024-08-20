@@ -581,25 +581,6 @@ class vfs(abstractvfs):
 opener = vfs
 
 
-class filtervfs(util.proxy_wrapper, abstractvfs):
-    """Wrapper vfs for filtering filenames with a function."""
-
-    def __init__(self, vfs: "abstractvfs", filter: "Callable[[str], str]") -> None:
-        super().__init__(vfs, _filter=filter)
-
-    def __call__(self, path, *args, **kwargs):
-        return self.inner(self._filter(path), *args, **kwargs)
-
-    def join(self, path: "Optional[str]", *insidef: str) -> str:
-        if path:
-            return self.inner.join(self._filter(self.inner.reljoin(path, *insidef)))
-        else:
-            return self.inner.join(path)
-
-
-filteropener = filtervfs
-
-
 class readonlyvfs(util.proxy_wrapper, abstractvfs):
     """Wrapper vfs preventing any writing."""
 

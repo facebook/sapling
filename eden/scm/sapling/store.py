@@ -245,7 +245,7 @@ class basicstore:
         self.path = vfs.base
         self.createmode = vfs.createmode
         self.rawvfs = vfs
-        self.vfs = metavfs(vfsmod.filtervfs(vfs, encodedir))
+        self.vfs = metavfs(vfs)
         self.opener = self.vfs
 
     def join(self, f):
