@@ -74,6 +74,7 @@ fast-forward the bookmark
   $ sl push -r . --to main
   pushing rev 112478962961 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark main
   moving remote bookmark main from 426bada5c675 to 112478962961
+  $ wait_for_bookmark_move_away_edenapi repo main "$A"
 
 fast-forward the bookmark over a commit that fails the hook
   $ hg up -q $D
@@ -88,6 +89,7 @@ bypass the hook, the push will now work
   $ sl push -r . --to main --pushvar ALLOW_LARGE_FILES=true
   pushing rev 7ff4b7c298ec to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark main
   moving remote bookmark main from 112478962961 to 7ff4b7c298ec
+  $ wait_for_bookmark_move_away_edenapi repo main "$B"
 
 attempt a non-fast-forward move, it should fail
   $ hg up -q $F
@@ -108,6 +110,7 @@ bypass the hook too, and it should work
   $ sl push -r . --to main --pushvar NON_FAST_FORWARD=true --pushvar ALLOW_LARGE_FILES=true
   pushing rev af09fbbc2f05 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark main
   moving remote bookmark main from 7ff4b7c298ec to af09fbbc2f05
+  $ wait_for_bookmark_move_away_edenapi repo main "$D"
 
 Noop bookmark-only push doesn't need to bypass hooks to go through.
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select count(*) from bookmarks_update_log";
