@@ -190,7 +190,7 @@ pub(crate) async fn cast_references_data(
         }
     }
     for bookmark in raw_references_data.local_bookmarks {
-        bookmarks.insert(bookmark.name.clone(), bookmark.commit.into());
+        bookmarks.insert(bookmark.name().clone(), (*bookmark.commit()).into());
     }
 
     for remote_bookmark in raw_references_data.remote_bookmarks {

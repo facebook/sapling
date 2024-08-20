@@ -65,10 +65,7 @@ impl Get<WorkspaceLocalBookmark> for SqlCommitCloud {
         .await?;
         rows.into_iter()
             .map(|(name, commit)| {
-                Ok(WorkspaceLocalBookmark {
-                    name,
-                    commit: changeset_from_bytes(&commit, self.uses_mysql)?,
-                })
+                WorkspaceLocalBookmark::new(name, changeset_from_bytes(&commit, self.uses_mysql)?)
             })
             .collect::<anyhow::Result<Vec<WorkspaceLocalBookmark>>>()
     }
@@ -116,8 +113,8 @@ impl Insert<WorkspaceLocalBookmark> for SqlCommitCloud {
             cri,
             &reponame,
             &workspace,
-            &data.name,
-            &changeset_as_bytes(&data.commit, self.uses_mysql)?,
+            data.name(),
+            &changeset_as_bytes(data.commit(), self.uses_mysql)?,
         )
         .await?;
         Ok(txn)

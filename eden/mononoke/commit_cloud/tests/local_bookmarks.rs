@@ -22,6 +22,28 @@ use fbinit::FacebookInit;
 use mercurial_types::HgChangesetId;
 use sql_construct::SqlConstruct;
 
+#[test]
+fn test_local_bookmarks_success() {
+    let commit_id = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap();
+    let bookmark = WorkspaceLocalBookmark::new("valid_name".to_string(), commit_id);
+    assert!(bookmark.is_ok());
+}
+#[test]
+fn test_local_bookmarks_empty_name() {
+    let commit_id = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap();
+    let bookmark = WorkspaceLocalBookmark::new("".to_string(), commit_id);
+    assert!(bookmark.is_err());
+    assert_eq!(
+        bookmark.unwrap_err().to_string(),
+        "'commit cloud' failed: Local bookmark name cannot be empty"
+    );
+}
+#[test]
+fn test_local_bookmarks_invalid_commit() {
+    let commit_id = HgChangesetId::from_str("invalidlength");
+    assert!(commit_id.is_err());
+}
+
 #[fbinit::test]
 async fn test_local_bookmarks(_fb: FacebookInit) -> anyhow::Result<()> {
     let sql = SqlCommitCloudBuilder::with_sqlite_in_memory()?.new(false);
@@ -29,17 +51,12 @@ async fn test_local_bookmarks(_fb: FacebookInit) -> anyhow::Result<()> {
     let workspace = "user_testuser_default".to_owned();
     let renamed_workspace = "user_testuser_default_renamed".to_owned();
     let cc_ctx = CommitCloudContext::new(&workspace.clone(), &reponame.clone())?;
+
     let hgid1 = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap();
     let hgid2 = HgChangesetId::from_str("3e0e761030db6e479a7fb58b12881883f9f8c63f").unwrap();
-    let bookmark1 = WorkspaceLocalBookmark {
-        name: "my_bookmark1".to_owned(),
-        commit: hgid1,
-    };
 
-    let bookmark2 = WorkspaceLocalBookmark {
-        name: "my_bookmark2".to_owned(),
-        commit: hgid2,
-    };
+    let bookmark1 = WorkspaceLocalBookmark::new("my_bookmark1".to_owned(), hgid1)?;
+    let bookmark2 = WorkspaceLocalBookmark::new("my_bookmark2".to_owned(), hgid2)?;
 
     let mut txn = sql.connections.write_connection.start_transaction().await?;
     txn = sql
@@ -76,7 +93,7 @@ async fn test_local_bookmarks(_fb: FacebookInit) -> anyhow::Result<()> {
         vec!["my_bookmark2"]
     );
 
-    let removed_bookmarks = vec![bookmark1.name.clone()];
+    let removed_bookmarks = vec![bookmark1.name().clone()];
     txn = sql.connections.write_connection.start_transaction().await?;
     txn = Delete::<WorkspaceLocalBookmark>::delete(
         &sql,
