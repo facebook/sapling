@@ -5,9 +5,12 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
 use std::str::FromStr;
 
 use commit_cloud::ctx::CommitCloudContext;
+use commit_cloud::references::local_bookmarks::lbs_from_map;
+use commit_cloud::references::local_bookmarks::lbs_to_map;
 use commit_cloud::references::local_bookmarks::LocalBookmarksMap;
 use commit_cloud::references::local_bookmarks::WorkspaceLocalBookmark;
 use commit_cloud::sql::builder::SqlCommitCloudBuilder;
@@ -42,6 +45,50 @@ fn test_local_bookmarks_empty_name() {
 fn test_local_bookmarks_invalid_commit() {
     let commit_id = HgChangesetId::from_str("invalidlength");
     assert!(commit_id.is_err());
+}
+
+#[test]
+fn test_lbs_from_map_valid() {
+    let mut map = HashMap::new();
+    map.insert(
+        "bookmark1".to_string(),
+        "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536".to_string(),
+    );
+    let expected = vec![
+        WorkspaceLocalBookmark::new(
+            "bookmark1".to_string(),
+            HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap(),
+        )
+        .unwrap(),
+    ];
+    let result = lbs_from_map(&map).unwrap();
+    assert_eq!(result, expected);
+}
+
+#[test]
+fn test_lbs_from_map_invalid_value() {
+    let mut map = HashMap::new();
+    map.insert("bookmark1".to_string(), "invalid".to_string());
+    let result = lbs_from_map(&map);
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_lbs_to_map() {
+    let list = vec![
+        WorkspaceLocalBookmark::new(
+            "bookmark1".to_string(),
+            HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap(),
+        )
+        .unwrap(),
+    ];
+    let mut expected = HashMap::new();
+    expected.insert(
+        "bookmark1".to_string(),
+        "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536".to_string(),
+    );
+    let result = lbs_to_map(list);
+    assert_eq!(result, expected);
 }
 
 #[fbinit::test]
