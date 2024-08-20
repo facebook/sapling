@@ -111,7 +111,7 @@ function processCopiesAndRenames(files: Array<ChangedFile>): Array<UIChangedFile
       .map((file, i) => {
         const minimalName = disambiguousPaths[i];
         let fileLabel = minimalName;
-        let tooltip = file.path;
+        let tooltip = `${nameForStatus(file.status)}: ${file.path}`;
         let copiedFrom;
         let renamedFrom;
         let visualStatus: VisualChangedFileType = file.status;
@@ -168,6 +168,25 @@ const sortKeyForStatus: Record<VisualChangedFileType, number> = {
   U: 7,
   Resolved: 8,
 };
+
+function nameForStatus(status: ChangedFileType): string {
+  switch (status) {
+    case '!':
+      return t('Missing');
+    case '?':
+      return t('Untracked');
+    case 'A':
+      return t('Added');
+    case 'M':
+      return t('Modified');
+    case 'R':
+      return t('Removed');
+    case 'U':
+      return t('Unresolved');
+    case 'Resolved':
+      return t('Resolved');
+  }
+}
 
 type SectionProps = Omit<React.ComponentProps<typeof LinearFileList>, 'files'> & {
   filesByPrefix: Map<string, Array<UIChangedFile>>;
