@@ -10,7 +10,6 @@ eden/mononoke/derived_data/if/derived_data_type.thrift derived_data_type_if //ed
 eden/mononoke/megarepo_api/if/megarepo_configs.thrift megarepo_configs //eden/mononoke/megarepo_api/if:megarepo_configs-rust
 eden/mononoke/scs/if/source_control.thrift crate //eden/mononoke/scs/if:source_control-rust
 fb303/thrift/fb303_core.thrift fb303_core //fb303/thrift:fb303_core-rust
-thrift/annotation/cpp.thrift fb303_core->cpp //thrift/annotation:cpp-rust
 thrift/annotation/rust.thrift megarepo_configs->rust //thrift/annotation:rust-rust
 thrift/annotation/scope.thrift thrift->scope //thrift/annotation:scope-rust
 thrift/annotation/thrift.thrift thrift //thrift/annotation:thrift-rust
