@@ -262,6 +262,7 @@ impl IdDagStore for IndexedLogStore {
             self.virtual_segments.push(segment);
             return Ok(());
         }
+        tracing::trace!(lifecycle_id=?self.lifecycle_id, ?segment, "insert segment");
 
         let level = segment.level()?;
         self.cached_max_level.fetch_max(level, AcqRel);
