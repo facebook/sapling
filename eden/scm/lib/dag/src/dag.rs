@@ -518,8 +518,12 @@ where
     ) -> Result<bool> {
         // Populate vertex negative cache to reduce round-trips doing remote lookups.
         // Attention: this might have side effect recreating the snapshots!
-        self.populate_missing_vertexes_for_add_heads(parents, &heads.vertexes())
-            .await?;
+        // Skip this optimization for virtual group add_heads since the virutal set
+        // is usually small and related tracing logs can be noisy.
+        if heads.min_desired_group().unwrap_or(Group::VIRTUAL) < Group::VIRTUAL {
+            self.populate_missing_vertexes_for_add_heads(parents, &heads.vertexes())
+                .await?;
+        }
 
         // When heads are not VIRTUAL, invalidate_snapshot() helps performance, is optional for
         // correctness. invalidate_snapshot() decreases VerLink ref count so VerLink::bump() can
