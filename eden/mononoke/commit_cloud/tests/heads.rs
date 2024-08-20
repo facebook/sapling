@@ -8,6 +8,8 @@
 use std::str::FromStr;
 
 use commit_cloud::ctx::CommitCloudContext;
+use commit_cloud::references::heads::heads_from_list;
+use commit_cloud::references::heads::heads_to_list;
 use commit_cloud::references::heads::WorkspaceHead;
 use commit_cloud::sql::builder::SqlCommitCloudBuilder;
 use commit_cloud::sql::common::UpdateWorkspaceNameArgs;
@@ -17,6 +19,33 @@ use commit_cloud::sql::ops::Update;
 use fbinit::FacebookInit;
 use mercurial_types::HgChangesetId;
 use sql_construct::SqlConstruct;
+
+#[test]
+fn test_heads_from_list_valid() {
+    let input = vec!["2d7d4ba9ce0a6ffd222de7785b249ead9c51c536".to_string()];
+    let expected = vec![WorkspaceHead {
+        commit: HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap(),
+    }];
+    let result = heads_from_list(&input).unwrap();
+    assert_eq!(result, expected);
+}
+
+#[test]
+fn test_heads_from_list_invalid() {
+    let input = vec!["invalid".to_string()];
+    let result = heads_from_list(&input);
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_heads_to_list() {
+    let input = vec![WorkspaceHead {
+        commit: HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap(),
+    }];
+    let expected = vec!["2d7d4ba9ce0a6ffd222de7785b249ead9c51c536".to_string()];
+    let result = heads_to_list(&input);
+    assert_eq!(result, expected);
+}
 
 #[fbinit::test]
 async fn test_heads(_fb: FacebookInit) -> anyhow::Result<()> {
