@@ -16,6 +16,7 @@ import type {
 import type {Json} from 'shared/typeUtils';
 
 import {executeVSCodeCommand} from './commands';
+import {shouldOpenBeside} from './config';
 import {t} from './i18n';
 import {Repository} from 'isl-server/src/Repository';
 import {arraysEqual} from 'isl/src/utils';
@@ -45,21 +46,26 @@ function openFile(
     });
     return;
   }
-  vscode.window.showTextDocument(uri, {preview}).then(
-    editor => {
-      if (line != null) {
-        const lineZeroIndexed = line - 1; // vscode uses 0-indexed line numbers
-        editor.selections = [new vscode.Selection(lineZeroIndexed, 0, lineZeroIndexed, 0)]; // move cursor to line
-        editor.revealRange(
-          new vscode.Range(lineZeroIndexed, 0, lineZeroIndexed, 0),
-          vscode.TextEditorRevealType.InCenterIfOutsideViewport,
-        ); // scroll to line
-      }
-    },
-    err => {
-      vscode.window.showErrorMessage(err.message ?? String(err));
-    },
-  );
+  vscode.window
+    .showTextDocument(uri, {
+      preview,
+      viewColumn: shouldOpenBeside() ? vscode.ViewColumn.Beside : undefined,
+    })
+    .then(
+      editor => {
+        if (line != null) {
+          const lineZeroIndexed = line - 1; // vscode uses 0-indexed line numbers
+          editor.selections = [new vscode.Selection(lineZeroIndexed, 0, lineZeroIndexed, 0)]; // move cursor to line
+          editor.revealRange(
+            new vscode.Range(lineZeroIndexed, 0, lineZeroIndexed, 0),
+            vscode.TextEditorRevealType.InCenterIfOutsideViewport,
+          ); // scroll to line
+        }
+      },
+      err => {
+        vscode.window.showErrorMessage(err.message ?? String(err));
+      },
+    );
 }
 export type VSCodeServerPlatform = ServerPlatform & {
   panelOrView: undefined | vscode.WebviewPanel | vscode.WebviewView;

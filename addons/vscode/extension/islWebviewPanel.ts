@@ -14,7 +14,7 @@ import type {Comparison} from 'shared/Comparison';
 import packageJson from '../package.json';
 import {Internal} from './Internal';
 import {executeVSCodeCommand} from './commands';
-import {getCLICommand} from './config';
+import {getCLICommand, shouldOpenBeside} from './config';
 import {locale, t} from './i18n';
 import {onClientConnection} from 'isl-server/src';
 import {deserializeFromString, serializeToString} from 'isl/src/serialize';
@@ -68,7 +68,10 @@ function createComparisonWebview(
   logger: Logger,
 ): vscode.WebviewPanel {
   // always create a new comparison webview
-  const column = vscode.window.activeTextEditor?.viewColumn ?? vscode.ViewColumn.One;
+  const column =
+    shouldOpenBeside() && islPanelOrView != null && isPanel(islPanelOrView) && islPanelOrView.active
+      ? vscode.ViewColumn.Beside
+      : vscode.window.activeTextEditor?.viewColumn ?? vscode.ViewColumn.One;
 
   const webview = populateAndSetISLWebview(
     context,

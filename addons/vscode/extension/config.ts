@@ -22,3 +22,8 @@ export function getCLICommand(): string {
     (os.platform() === 'win32' ? 'sl.exe' : 'sl')
   );
 }
+
+/** Whether the user has configured for files, diffs, and comparisons to open in ViewColumn.Beside instead of ViewColumn.Active. */
+export function shouldOpenBeside(): boolean {
+  return vscode.workspace.getConfiguration('sapling').get<boolean>('isl.openBeside') === true;
+}

@@ -66,6 +66,11 @@
           "description": "%settings.comparisonPanelMode.description%",
           "default": "Auto"
         },
+        "sapling.isl.openBeside": {
+          "type": "boolean",
+          "default": false,
+          "description": "%settings.isl.openBeside.description%"
+        },
         "sapling.isl.showInSidebar": {
           "type": "boolean",
           "default": false,
