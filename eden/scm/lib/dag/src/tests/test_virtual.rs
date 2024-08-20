@@ -235,3 +235,19 @@ async fn test_setting_managed_virtual_group_on_lazy_graph() -> Result<()> {
 
     Ok(())
 }
+
+#[cfg(any())]  // skip: panics
+#[tokio::test]
+async fn test_reassign_group_of_virtual_parent() -> Result<()> {
+    let mut dag = TestDag::draw("A..C");
+    dag.flush("").await;
+
+    let parents: Vec<(Vertex, Vec<Vertex>)> = vec![("V".into(), vec!["B".into()])];
+    dag.set_managed_virtual_group(Some(parents)).await?;
+
+    // Reassign virtual V's parent B from NonMaster to Master.
+    // FIXME: This panics.
+    dag.flush("C").await;
+
+    Ok(())
+}
