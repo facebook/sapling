@@ -363,6 +363,9 @@ impl IdMap {
     fn find_names_by_hex_prefix(&self, hex_prefix: &[u8], limit: usize) -> Result<Vec<Vertex>> {
         let mut result = Vec::with_capacity(limit);
         for group in Group::ALL.iter().rev() {
+            if result.len() >= limit {
+                break;
+            }
             if *group == Group::VIRTUAL {
                 result.extend(self.virtual_map.lookup_vertexes_by_hex_prefix(
                     hex_prefix,
@@ -376,15 +379,15 @@ impl IdMap {
                     .log
                     .lookup_prefix_hex(Self::INDEX_GROUP_NAME_TO_ID, prefix)?
                 {
+                    if result.len() >= limit {
+                        break;
+                    }
                     let (k, _v) = entry?;
                     let vertex = Vertex(self.log.slice_to_bytes(&k[Group::BYTES..]));
                     if !result.contains(&vertex) {
                         result.push(vertex);
                     }
                 }
-            }
-            if result.len() >= limit {
-                break;
             }
         }
         Ok(result)

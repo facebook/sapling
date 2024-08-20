@@ -74,14 +74,18 @@ impl CoreMemIdMap {
     ) -> Result<Vec<Vertex>> {
         let start = Vertex::from_hex(hex_prefix)?;
         let mut result = Vec::new();
-        for (vertex, _) in self.name2id.range(start..) {
+        for (vertex, id) in self.name2id.range(start..) {
+            if result.len() >= limit {
+                break;
+            }
+            if id.is_virtual() && hex_prefix.len() != vertex.as_ref().len() * 2 {
+                // Virtual group requires full match.
+                continue;
+            }
             if !vertex.to_hex().as_bytes().starts_with(hex_prefix) {
                 break;
             }
             result.push(vertex.clone());
-            if result.len() >= limit {
-                break;
-            }
         }
         Ok(result)
     }
