@@ -17,38 +17,37 @@ class base:
         return "base"
 
 
-class wrapped(base):
+class inner(base):
     def __init__(self):
-        self.wrapped_attr = 456
+        self.inner_attr = 456
 
     def bar(self):
-        return "wrapped"
+        return "inner"
 
     def qux(self):
-        return "wrapped"
+        return "inner"
 
-    def wrapped_only(self):
-        return "wrapped"
+    def inner_only(self):
+        return "inner"
 
 
 class wrapper(util.proxy_wrapper, base):
-    def __init__(self, wrapped):
-        super().__init__(wrapped, wrapper_attr=123)
+    def __init__(self, inner):
+        super().__init__(inner, wrapper_attr=123)
 
     def bar(self):
         return "wrapper"
 
     def wrapper_only(self):
-        return "wrapper " + self.inner.wrapped_only()
+        return "wrapper " + self.inner.inner_only()
 
 
 class ProxyWrapper(unittest.TestCase):
     def testWrap(self):
-        inner = wrapped()
-        w = wrapper(inner)
+        w = wrapper(inner())
 
         self.assertEqual(w.wrapper_attr, 123)
-        self.assertEqual(w.wrapped_attr, 456)
+        self.assertEqual(w.inner_attr, 456)
 
         w.new_attr = "a"
         self.assertEqual(w.new_attr, "a")
@@ -57,24 +56,24 @@ class ProxyWrapper(unittest.TestCase):
         w.wrapper_attr = "b"
         self.assertEqual(w.wrapper_attr, "b")
 
-        w.wrapped_attr = "c"
-        self.assertEqual(w.wrapped_attr, "c")
-        self.assertEqual(w.inner.wrapped_attr, "c")
+        w.inner_attr = "c"
+        self.assertEqual(w.inner_attr, "c")
+        self.assertEqual(w.inner.inner_attr, "c")
 
-        # Wrapper and wrapped override "bar" - use wrapper's
+        # Wrapper and inner override "bar" - use wrapper's
         self.assertEqual(w.bar(), "wrapper")
 
         # Neither override "foo" - use wrapper's
         self.assertEqual(w.foo(), "wrapper")
 
-        # Wrapped overrides "qux" - use wrapped's
-        self.assertEqual(w.qux(), "wrapped")
+        # Inner overrides "qux" - use inner's
+        self.assertEqual(w.qux(), "inner")
 
-        # Only exists on wrapped
-        self.assertEqual(w.wrapped_only(), "wrapped")
+        # Only exists on inner
+        self.assertEqual(w.inner_only(), "inner")
 
         # Only exists in wrapper
-        self.assertEqual(w.wrapper_only(), "wrapper wrapped")
+        self.assertEqual(w.wrapper_only(), "wrapper inner")
 
 
 if __name__ == "__main__":

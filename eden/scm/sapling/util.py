@@ -4993,23 +4993,23 @@ def no_recursion(func):
 class proxy_wrapper:
     """Generic wrapper class to customize an object's behavior without mutating it.
 
-    wrapped: the object to wrap (available as "self.inner")
+    inner: the object to wrap (available as "self.inner")
     wrapper_attrs: attributes owned by the wrapper
 
     Attribute gets or sets outside what's in wrapper_attrs will get proxied to the
-    wrapped object.
+    inner object.
 
-    Method resolution will prefer the wrapper's methods if both the wrapper and wrapped
+    Method resolution will prefer the wrapper's methods if both the wrapper and inner
     object have implementations. If the wrapper has a second base class, it is assumed to
-    be a "common" base with the wrapped object. In this case, method resolution performs a
-    3-way merge of sorts where the wrapped object's method will be preferred if the
-    wrapped object overrides a method that the wrapper does not override, relative to the
+    be a "common" base with the inner object. In this case, method resolution performs a
+    3-way merge of sorts where the inner object's method will be preferred if the
+    inner object overrides a method that the wrapper does not override, relative to the
     base class.
     """
 
-    def __init__(self, wrapped, **wrapper_attrs) -> None:
+    def __init__(self, inner, **wrapper_attrs) -> None:
         # Use "__dict__" to bypass our __setattr__ impl.
-        self.__dict__["inner"] = wrapped
+        self.__dict__["inner"] = inner
 
         if len(self.__class__.__bases__) == 1:
             self.__dict__["_base_class"] = None
@@ -5025,7 +5025,7 @@ class proxy_wrapper:
         try:
             my_attr = object.__getattribute__(self, name)
         except AttributeError:
-            # We don't have this attribute - use wrapped object's.
+            # We don't have this attribute - use inner object's.
             return getattr(self.inner, name)
 
         # Never delegate special attributes like __class__ or any of our __dict__
@@ -5034,9 +5034,9 @@ class proxy_wrapper:
             return my_attr
 
         try:
-            wrapped_attr = getattr(self.inner, name)
+            inner_attr = getattr(self.inner, name)
         except AttributeError:
-            # Wrapped object doesn't have this attribute - use ours.
+            # Inner object doesn't have this attribute - use ours.
             return my_attr
 
         # From here assume we are dealing with a method lookup.
@@ -5047,10 +5047,10 @@ class proxy_wrapper:
             # Base class doesn't implement or we have no base - use ours.
             return my_attr
 
-        if my_attr.__func__ == base_attr and wrapped_attr.__func__ != base_attr:
-            # If we don't override the function but the wrapped object does, use the
-            # wrapped object's.
-            return wrapped_attr
+        if my_attr.__func__ == base_attr and inner_attr.__func__ != base_attr:
+            # If we don't override the function but the inner object does, use the
+            # inner object's.
+            return inner_attr
         else:
             # In all other cases use ours.
             return my_attr
