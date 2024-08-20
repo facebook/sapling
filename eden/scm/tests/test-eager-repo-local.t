@@ -55,25 +55,15 @@ Rename
   R E
   $ hg ci -m E1
 
-XXX: rename is tracked but not shown
-  $ hg log -p -r .
+  $ hg log -p -r . --config diff.git=true
   commit:      bb41b36a84b5
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     E1
   
-  diff -r 9bc730a19041 -r bb41b36a84b5 E
-  --- a/E	Thu Jan 01 00:00:00 1970 +0000
-  +++ /dev/null	Thu Jan 01 00:00:00 1970 +0000
-  @@ -1,1 +0,0 @@
-  -E
-  \ No newline at end of file
-  diff -r 9bc730a19041 -r bb41b36a84b5 E1
-  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-  +++ b/E1	Thu Jan 01 00:00:00 1970 +0000
-  @@ -0,0 +1,1 @@
-  +E
-  \ No newline at end of file
+  diff --git a/E b/E1
+  rename from E
+  rename to E1
 
 Export to revlog repo:
   $ hg debugexportrevlog "$TESTTMP/export-revlog"
