@@ -111,6 +111,13 @@ impl RemoteIdConvertProtocol for SaplingRemoteApiProtocol {
                     );
                     return Err(dag::errors::BackendError::Generic(msg).into());
                 }
+                if name.as_ref() == Id20::wdir_id().as_ref()
+                    || name.as_ref() == Id20::null_id().as_ref()
+                {
+                    // Do not borther asking server about virtual nodes.
+                    // Check resolve_names_to_relative_paths API docstring.
+                    continue;
+                }
                 if let Some(threshold) = self.remote_name_threshold {
                     let current = self.remote_name_current.fetch_add(1, SeqCst);
                     if current >= threshold {
