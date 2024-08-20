@@ -6,6 +6,7 @@
  */
 
 use std::collections::HashMap;
+use std::str::FromStr;
 
 use anyhow::ensure;
 use clientinfo::ClientRequestInfo;
@@ -68,6 +69,30 @@ impl From<RemoteBookmark> for WorkspaceRemoteBookmark {
             remote: bookmark.remote,
         }
     }
+}
+
+pub fn rbs_from_list(bookmarks: &Vec<Vec<String>>) -> anyhow::Result<Vec<WorkspaceRemoteBookmark>> {
+    bookmarks
+        .iter()
+        .map(|bookmark| {
+            ensure!(
+                bookmark.len() == 3,
+                "'commit cloud' failed: Invalid remote bookmark format for {}",
+                bookmark.join(" ")
+            );
+            HgChangesetId::from_str(&bookmark[2]).map(|commit_id| WorkspaceRemoteBookmark {
+                remote: bookmark[0].clone(),
+                name: bookmark[1].clone(),
+                commit: commit_id,
+            })
+        })
+        .collect()
+}
+
+pub fn rbs_to_list(lbs: Vec<WorkspaceRemoteBookmark>) -> Vec<Vec<String>> {
+    lbs.into_iter()
+        .map(|lb| vec![lb.remote, lb.name, lb.commit.to_string()])
+        .collect()
 }
 
 pub async fn update_remote_bookmarks(

@@ -8,6 +8,8 @@
 use std::str::FromStr;
 
 use commit_cloud::ctx::CommitCloudContext;
+use commit_cloud::references::remote_bookmarks::rbs_from_list;
+use commit_cloud::references::remote_bookmarks::rbs_to_list;
 use commit_cloud::references::remote_bookmarks::WorkspaceRemoteBookmark;
 use commit_cloud::sql::builder::SqlCommitCloudBuilder;
 use commit_cloud::sql::common::UpdateWorkspaceNameArgs;
@@ -52,6 +54,51 @@ fn test_remote_bookmark_creation_empty_remote() {
         bookmark.unwrap_err().to_string(),
         "'commit cloud' failed: remote bookmark 'remote' part cannot be empty"
     );
+}
+
+#[test]
+fn test_rbs_from_list_valid() {
+    let bookmarks = vec![vec![
+        "origin".to_string(),
+        "bookmark_name".to_string(),
+        "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536".to_string(),
+    ]];
+    let result = rbs_from_list(&bookmarks).unwrap();
+    assert_eq!(result.len(), 1);
+    let bookmark = &result[0];
+    assert_eq!(bookmark.name(), &"bookmark_name".to_string());
+    assert_eq!(
+        *bookmark.commit(),
+        HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap()
+    );
+    assert_eq!(bookmark.remote(), &"origin".to_string());
+}
+
+#[test]
+fn test_rbs_from_list_invalid_format() {
+    let bookmarks = vec![vec!["origin".to_string(), "bookmark_name".to_string()]];
+    let result = rbs_from_list(&bookmarks);
+    assert!(result.is_err());
+    assert_eq!(
+        result.unwrap_err().to_string(),
+        "'commit cloud' failed: Invalid remote bookmark format for origin bookmark_name"
+    );
+}
+
+#[test]
+fn test_rbs_to_list() {
+    let commit_id = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap();
+    let bookmark =
+        WorkspaceRemoteBookmark::new("origin".to_string(), "bookmark_name".to_string(), commit_id)
+            .unwrap();
+    let bookmarks = vec![bookmark];
+    let result = rbs_to_list(bookmarks);
+    assert_eq!(result.len(), 1);
+    let bookmark = &result[0];
+    assert_eq!(bookmark.len(), 3);
+    assert_eq!(bookmark[0], "origin");
+    assert_eq!(bookmark[1], "bookmark_name");
+    assert_eq!(bookmark[2], "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536");
 }
 
 #[fbinit::test]
