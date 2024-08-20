@@ -193,7 +193,9 @@ where
 {
     /// Set the content of the VIRTUAL group that survives reloading.
     ///
-    /// `items` is a list of vertexes and parents.
+    /// `items` is a list of vertexes and parents. The vertexes MUST be unique
+    /// and not already exist in non-VIRTUAL groups. This assumption is used
+    /// as an optimization to avoid remote lookups.
     ///
     /// Existing content of the VIRTUAL group will be cleared before inserting
     /// `items`. So this API feels declarative. As a comparison, `add_heads`
@@ -246,6 +248,15 @@ where
             self.clear_virtual_group().await?;
             let parents = &maintained_virtual_group.0;
             let head_opts = &maintained_virtual_group.1;
+            // With the assumption (see set_managed_virtual_group docstring) that VIRTUAL group
+            // only has unique vertexes, we can pre-populate the negative cache to avoid remote
+            // lookup.
+            {
+                let mut cache = self.missing_vertexes_confirmed_by_remote.write().unwrap();
+                for v in head_opts.vertexes() {
+                    cache.insert(v);
+                }
+            }
             // Insert to the VIRTUAL group, using the a precalculated insertion order.
             self.add_heads(parents.as_ref(), head_opts).await?;
         }
