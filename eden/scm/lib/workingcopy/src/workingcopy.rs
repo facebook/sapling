@@ -43,7 +43,6 @@ use status::StatusBuilder;
 use storemodel::FileStore;
 use tracing::debug;
 use treestate::filestate::StateFlags;
-use treestate::tree::VisitorResult;
 use treestate::treestate::TreeState;
 use types::hgid::NULL_ID;
 use types::repo::StorageFormat;
@@ -67,6 +66,7 @@ use crate::filesystem::PhysicalFileSystem;
 use crate::filesystem::WatchmanFileSystem;
 use crate::git::parse_submodules;
 use crate::status::compute_status;
+use crate::util::added_files;
 use crate::util::walk_treestate;
 use crate::watchman_client::DeferredWatchmanClient;
 
@@ -328,36 +328,6 @@ impl WorkingCopy {
         })
     }
 
-    fn added_files(&self) -> Result<Vec<RepoPathBuf>> {
-        let mut added_files: Vec<RepoPathBuf> = vec![];
-        self.treestate.lock().visit(
-            &mut |components, _| {
-                let path = components.concat();
-                let path = RepoPathBuf::from_utf8(path)?;
-                added_files.push(path);
-                Ok(VisitorResult::NotChanged)
-            },
-            &|_path, dir| match dir.get_aggregated_state() {
-                None => true,
-                Some(state) => {
-                    let any_not_exists_parent = !state
-                        .intersection
-                        .intersects(StateFlags::EXIST_P1 | StateFlags::EXIST_P2);
-                    let any_exists_next = state.union.intersects(StateFlags::EXIST_NEXT);
-                    any_not_exists_parent && any_exists_next
-                }
-            },
-            &|_path, file| {
-                !file
-                    .state
-                    .intersects(StateFlags::EXIST_P1 | StateFlags::EXIST_P2)
-                    && file.state.intersects(StateFlags::EXIST_NEXT)
-            },
-        )?;
-        tracing::trace!(target: "workingcopy::added_files", ?added_files);
-        Ok(added_files)
-    }
-
     pub fn status(
         &self,
         ctx: &CoreContext,
@@ -407,7 +377,7 @@ impl WorkingCopy {
         let span = tracing::info_span!("status", status_len = tracing::field::Empty);
         let _enter = span.enter();
 
-        let added_files = self.added_files()?;
+        let added_files = added_files(&mut self.treestate.lock())?;
 
         let manifests =
             WorkingCopy::current_manifests(&self.treestate.lock(), &self.tree_resolver)?;
@@ -434,8 +404,8 @@ impl WorkingCopy {
 
         let mut ignore_dirs = vec![PathBuf::from(self.ident.dot_dir())];
         if self.format.is_git() {
-            // Ignore file within submodules. Python has some logic additional
-            // logic layered on top to add submodule info into status results.
+            // Ignore file within submodules. Python has some additional logic layered on
+            // top to add submodule info into status results.
             let git_modules_path = self.vfs.join(".gitmodules".try_into()?);
             if git_modules_path.exists() {
                 ignore_dirs.extend(

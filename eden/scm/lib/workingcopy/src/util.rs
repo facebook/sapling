@@ -16,6 +16,7 @@ use repolock::RepoLocker;
 use treestate::dirstate;
 use treestate::filestate::FileStateV2;
 use treestate::filestate::StateFlags;
+use treestate::tree::VisitorResult;
 use treestate::treestate::TreeState;
 use treestate::ErrorKind;
 use types::path::ParseError;
@@ -142,4 +143,34 @@ pub(crate) fn update_filestate_from_fs_meta(state: &mut FileStateV2, fs_meta: &M
 
         state.mode = fs_meta.mode();
     }
+}
+
+pub(crate) fn added_files(ts: &mut TreeState) -> Result<Vec<RepoPathBuf>> {
+    let mut added_files: Vec<RepoPathBuf> = vec![];
+    ts.visit(
+        &mut |components, _| {
+            let path = components.concat();
+            let path = RepoPathBuf::from_utf8(path)?;
+            added_files.push(path);
+            Ok(VisitorResult::NotChanged)
+        },
+        &|_path, dir| match dir.get_aggregated_state() {
+            None => true,
+            Some(state) => {
+                let any_not_exists_parent = !state
+                    .intersection
+                    .intersects(StateFlags::EXIST_P1 | StateFlags::EXIST_P2);
+                let any_exists_next = state.union.intersects(StateFlags::EXIST_NEXT);
+                any_not_exists_parent && any_exists_next
+            }
+        },
+        &|_path, file| {
+            !file
+                .state
+                .intersects(StateFlags::EXIST_P1 | StateFlags::EXIST_P2)
+                && file.state.intersects(StateFlags::EXIST_NEXT)
+        },
+    )?;
+    tracing::trace!(?added_files);
+    Ok(added_files)
 }
