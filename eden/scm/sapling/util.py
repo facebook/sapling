@@ -5039,7 +5039,9 @@ class proxy_wrapper:
             # Inner object doesn't have this attribute - use ours.
             return my_attr
 
-        # From here assume we are dealing with a method lookup.
+        if not callable(my_attr):
+            # Non-methods go to inner.
+            return inner_attr
 
         try:
             base_attr = getattr(self._base_class, name)

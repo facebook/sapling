@@ -133,16 +133,15 @@ class ProxyWrapper(unittest.TestCase):
 
         # Delegate class attributes to inner object.
         # XXX FIXME - shouldn't crash
-        with self.assertRaises(Exception):
-            self.assertEqual(w._base_class_attr, 123)
+        self.assertEqual(w._base_class_attr, 123)
 
-            w._base_class_attr = 456
-            self.assertEqual(w._base_class_attr, 456)
-            self.assertEqual(w.inner._base_class_attr, 456)
+        w._base_class_attr = 456
+        self.assertEqual(w._base_class_attr, 456)
+        self.assertEqual(w.inner._base_class_attr, 456)
 
-            w.inner._base_class_attr = 123
-            self.assertEqual(w._base_class_attr, 123)
-            self.assertEqual(w.inner._base_class_attr, 123)
+        w.inner._base_class_attr = 123
+        self.assertEqual(w._base_class_attr, 123)
+        self.assertEqual(w.inner._base_class_attr, 123)
 
         self.assertEqual(w.wrapper_property, "wrapper")
         self.assertEqual(w.base_property, "base")
