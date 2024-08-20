@@ -77,7 +77,6 @@ cpp_unittest(
 cpp_unittest(
     name = "glob_test",
     srcs = ["GlobMatcherTest.cpp"],
-    link_execution_preference = "remote",
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/fmt:fmt",
