@@ -111,6 +111,10 @@ impl VFS {
         })
     }
 
+    pub fn exists(&self, path: &RepoPath) -> Result<bool> {
+        Ok(self.join(path).try_exists()?)
+    }
+
     pub fn is_file(&self, path: &RepoPath) -> Result<bool> {
         let filepath = self.inner.auditor.audit(path)?;
         Ok(filepath.is_file())

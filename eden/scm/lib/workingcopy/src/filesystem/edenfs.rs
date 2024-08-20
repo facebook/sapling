@@ -30,6 +30,7 @@ use vfs::VFS;
 use crate::client::WorkingCopyClient;
 use crate::filesystem::FileSystem;
 use crate::filesystem::PendingChange;
+use crate::util::added_files;
 
 pub struct EdenFileSystem {
     treestate: Arc<Mutex<TreeState>>,
@@ -85,6 +86,29 @@ impl FileSystem for EdenFileSystem {
             .unwrap_or_else(|| Ok(NULL_ID))?;
 
         let status_map = self.client.get_status(p1, include_ignored)?;
+
+        // In rare cases, a file can transition in the dirstate directly from "normal" to
+        // "added". Eden won't report a pending change if the file is not modified (since
+        // it looks like an unmodified file until dirstate p1 is updated). So, here we
+        // look for added files that aren't in the results from Eden. If the files exist
+        // on disk, we inject a pending change. Otherwise, later logic in status infers
+        // that the added file must have been removed from disk because the file isn't in
+        // the pending changes.
+        let extra_added_files = added_files(&mut self.treestate.lock())?
+            .into_iter()
+            .filter_map(|path| {
+                if status_map.contains_key(&path) {
+                    None
+                } else {
+                    match self.vfs.exists(&path) {
+                        Ok(true) => Some(Ok(PendingChange::Changed(path))),
+                        Ok(false) => None,
+                        Err(err) => Some(Err(err)),
+                    }
+                }
+            })
+            .collect::<Vec<_>>();
+
         Ok(Box::new(status_map.into_iter().filter_map(
             move |(path, status)| {
                 tracing::trace!(target: "workingcopy::filesystem::edenfs::status", %path, ?status, "eden status");
@@ -138,7 +162,7 @@ impl FileSystem for EdenFileSystem {
 
                 result
             },
-        )))
+        ).chain(extra_added_files.into_iter())))
     }
 
     fn wait_for_potential_change(&self, config: &dyn Config) -> Result<()> {

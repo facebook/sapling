@@ -16,6 +16,4 @@
   > B # B/foo = B
   > EOS
   $ hg rebase -q -r $A -d $B
-FIXME: don't show "!" for eden
   $ hg st
-  ! foo (eden !)
