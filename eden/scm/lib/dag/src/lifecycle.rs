@@ -37,6 +37,10 @@ impl LifecycleId {
         let type_name = std::any::type_name::<T>();
         // make it less verbose: "foo::bar::T" -> "T"
         let type_name = type_name.rsplit("::").next().unwrap_or(type_name);
+        Self::new_with_type_name(type_name)
+    }
+
+    pub(crate) fn new_with_type_name(type_name: &'static str) -> Self {
         let id = NEXT_LIFECYCLE_ID.fetch_add(1, Ordering::AcqRel);
         tracing::debug!(type_name = type_name, id = id, "created");
         trace_print_short_backtrace();

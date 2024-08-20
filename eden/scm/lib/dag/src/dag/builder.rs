@@ -8,6 +8,7 @@
 use std::sync::Arc;
 
 use crate::dag::AbstractDag;
+use crate::lifecycle::LifecycleId;
 use crate::IdDag;
 use crate::IdDagStore;
 
@@ -100,6 +101,7 @@ where
 
             missing_vertexes_confirmed_by_remote: Default::default(),
 
+            lifecycle_id: LifecycleId::new_with_type_name("Dag"),
             internal_stats: Default::default(),
         };
         Ok(dag)

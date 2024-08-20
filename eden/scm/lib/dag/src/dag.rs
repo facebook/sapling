@@ -44,6 +44,7 @@ use crate::iddagstore::IdDagStore;
 use crate::idmap::CoreMemIdMap;
 use crate::idmap::IdMapAssignHead;
 use crate::idmap::IdMapWrite;
+use crate::lifecycle::LifecycleId;
 use crate::ops::CheckIntegrity;
 use crate::ops::DagAddHeads;
 use crate::ops::DagAlgorithm;
@@ -154,7 +155,8 @@ where
     /// confirmed the vertexes are outside the master group.
     missing_vertexes_confirmed_by_remote: Arc<RwLock<HashSet<Vertex>>>,
 
-    /// Internal stats (for testing).
+    /// Internal stats (for testing and debugging).
+    lifecycle_id: LifecycleId,
     pub(crate) internal_stats: DagInternalStats,
 }
 
@@ -209,6 +211,7 @@ where
         &mut self,
         items: Option<Vec<(Vertex, Vec<Vertex>)>>,
     ) -> Result<()> {
+        tracing::debug!(target: "dag::set_managed_virtual_group", lifecycle_id=?self.lifecycle_id, ?items);
         self.managed_virtual_group = items.map(|items| {
             // Calculate `Parents` and `VertexListWithOptions` so they can be
             // used in `maybe_recreate_virtual_group`.
@@ -285,6 +288,7 @@ where
                 &self.pending_heads.vertexes(),
             ));
         }
+        tracing::debug!(target: "dag::add_heads_and_flush", lifecycle_id=?self.lifecycle_id, ?heads);
 
         // Clear the VIRTUAL group. Their parents might have changed in incompatible ways.
         self.clear_virtual_group().await?;
@@ -343,6 +347,7 @@ where
     /// is empty, then `VertexOptions` provided to `add_head` will be
     /// used.
     async fn flush(&mut self, heads: &VertexListWithOptions) -> Result<()> {
+        tracing::debug!(target: "dag::flush", lifecycle_id=?self.lifecycle_id, ?heads);
         // Sanity check.
         for result in self.vertex_id_batch(&heads.vertexes()).await? {
             result?;
@@ -527,6 +532,7 @@ where
         parents: &dyn Parents,
         heads: &VertexListWithOptions,
     ) -> Result<bool> {
+        tracing::debug!(target: "dag::add_heads", lifecycle_id=?self.lifecycle_id, ?heads);
         // Populate vertex negative cache to reduce round-trips doing remote lookups.
         // Attention: this might have side effect recreating the snapshots!
         // Skip this optimization for virtual group add_heads since the virutal set
@@ -645,6 +651,7 @@ where
                 &self.pending_heads.vertexes(),
             ));
         }
+        tracing::debug!(target: "dag::strip", lifecycle_id=?self.lifecycle_id, ?set);
 
         // Do strip with a lock to avoid cases where descendants are added to
         // the stripped segments.
@@ -1354,6 +1361,7 @@ where
                     missing_vertexes_confirmed_by_remote: Arc::clone(
                         &self.missing_vertexes_confirmed_by_remote,
                     ),
+                    lifecycle_id: self.lifecycle_id.clone(),
                     internal_stats: Default::default(),
                 };
                 let result = Arc::new(cloned);
