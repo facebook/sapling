@@ -13,7 +13,6 @@ use anyhow::Result;
 use gix_hash::ObjectId;
 use gix_packetline::PacketLineRef;
 use gix_packetline::StreamingPeekableIter;
-use gix_transport::bstr::ByteSlice;
 
 use super::fetch::parse_oid;
 use super::PUSH_MARKER;
@@ -143,7 +142,6 @@ pub struct PushArgs<'a> {
 impl<'a> PushArgs<'a> {
     pub fn parse_from_packetline(args: &'a [u8]) -> Result<Self> {
         let mut push_args = Self::default();
-        let args = args.trim();
         let mut tokens = StreamingPeekableIter::new(args, &[PacketLineRef::Flush], true);
         while let Some(token) = tokens.read_line() {
             let token =

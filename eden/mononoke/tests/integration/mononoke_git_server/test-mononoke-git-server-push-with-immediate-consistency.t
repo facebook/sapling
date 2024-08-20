@@ -127,10 +127,9 @@
   $ git add .
   $ git commit -qam "Moving yet another branch"
   $ git_client -c http.extraHeader="x-git-read-after-write-consistency: 1" push origin --all
-  error: RPC failed; HTTP 500 curl 22 The requested URL returned error: 500
-  fatal: the remote end hung up unexpectedly
-  Everything up-to-date
-  [1]
+  To https://localhost:$LOCAL_PORT/repos/git/ro/repo.git
+     e8615d6..bbc5b18  master -> master
+     fc30480..afa25c0  yet_another_branch -> yet_another_branch
 
 # Without waiting for the WBC, clone the repo and check its state
   $ cd "$TESTTMP"
@@ -143,7 +142,7 @@
   $ git show-ref | sort
   55e2d4267a1afd04875670380119e989c8e0bf97 refs/remotes/origin/brand_new_branch
   8963e1f55d1346a07c3aec8c8fc72bf87d0452b1 refs/tags/first_tag
-  e8615d6f149b876be0a2f30a1c5bf0c42bf8e136 refs/heads/master
-  e8615d6f149b876be0a2f30a1c5bf0c42bf8e136 refs/remotes/origin/HEAD
-  e8615d6f149b876be0a2f30a1c5bf0c42bf8e136 refs/remotes/origin/master
-  fc3048042ba6628ce96a6a6ce7d1839327ec4563 refs/remotes/origin/yet_another_branch
+  afa25c08df81858debe9dcede1bc5de3f2512a08 refs/remotes/origin/yet_another_branch
+  bbc5b18b3fdb6465d94ad062818434a1aa9b1bbb refs/heads/master
+  bbc5b18b3fdb6465d94ad062818434a1aa9b1bbb refs/remotes/origin/HEAD
+  bbc5b18b3fdb6465d94ad062818434a1aa9b1bbb refs/remotes/origin/master
