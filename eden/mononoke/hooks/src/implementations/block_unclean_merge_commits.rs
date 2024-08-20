@@ -54,6 +54,10 @@ impl ChangesetHook for BlockUncleanMergeCommitsHook {
         _cross_repo_push_source: CrossRepoPushSource,
         _push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution, Error> {
+        if bookmark.is_tag() {
+            return Ok(HookExecution::Accepted);
+        }
+
         if !changeset.is_merge() {
             return Ok(HookExecution::Accepted);
         }
