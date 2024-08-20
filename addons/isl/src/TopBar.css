@@ -25,4 +25,5 @@
   display: flex;
   gap: var(--pad);
   align-items: center;
+  flex-grow: 1;
 }
