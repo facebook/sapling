@@ -61,6 +61,7 @@ use bulk_derivation::BulkDerivation;
 use clientinfo::ClientEntryPoint;
 use clientinfo::ClientInfo;
 use context::CoreContext;
+use context::SessionContainer;
 use cross_repo_sync::CandidateSelectionHint;
 use cross_repo_sync::CommitSyncContext;
 use cross_repo_sync::CommitSyncer;
@@ -582,22 +583,25 @@ impl BackpressureParams {
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<()> {
     let app = create_app(fb)?;
-    let ctx = app.new_basic_context();
 
-    let mut metadata: Metadata = ctx.session().metadata().clone();
+    let mut metadata = Metadata::default();
     metadata.add_client_info(ClientInfo::default_with_entry_point(
         ClientEntryPoint::MegarepoForwardsyncer,
     ));
 
-    let ctx = ctx.with_mutated_scuba(|mut scuba| {
-        scuba.add_metadata(&metadata);
-        scuba
-    });
+    let mut scuba = app.environment().scuba_sample_builder.clone();
+    scuba.add_metadata(&metadata);
+
+    let session_container = SessionContainer::builder(fb)
+        .metadata(Arc::new(metadata))
+        .build();
+
+    let ctx = session_container.new_context(app.logger().clone(), scuba);
 
     info!(
         ctx.logger(),
         "Starting session with id {}",
-        metadata.session_id()
+        ctx.metadata().session_id()
     );
 
     app.run_with_monitoring_and_logging(
