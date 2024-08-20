@@ -13,6 +13,7 @@
 //! produced correct results
 
 use std::collections::HashSet;
+use std::sync::Arc;
 
 use anyhow::format_err;
 use anyhow::Context;
@@ -24,13 +25,17 @@ use bookmarks::BookmarkUpdateLogEntry;
 use bookmarks::BookmarkUpdateLogId;
 use bookmarks::BookmarkUpdateLogRef;
 use bookmarks::Freshness;
+use clientinfo::ClientEntryPoint;
+use clientinfo::ClientInfo;
 use context::CoreContext;
+use context::SessionContainer;
 use fbinit::FacebookInit;
 use futures::future;
 use futures::stream;
 use futures::stream::Stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
+use metadata::Metadata;
 use mononoke_app::args::AsRepoArg;
 use mononoke_app::fb303::AliveService;
 use mononoke_app::fb303::Fb303AppExtension;
@@ -182,7 +187,7 @@ async fn run<'a>(fb: FacebookInit, ctx: CoreContext, app: MononokeApp) -> Result
     let repo: Repo = app.open_repo(&args.repo).await?;
     let mysql_options = &env.mysql_options;
     let readonly_storage = env.readonly_storage;
-    let scuba_sample = &env.scuba_sample_builder;
+    let scuba_sample = ctx.scuba();
     let skip_bookmarks = repo_config
         .cross_repo_commit_validation_config
         .as_ref()
@@ -223,8 +228,21 @@ async fn run<'a>(fb: FacebookInit, ctx: CoreContext, app: MononokeApp) -> Result
 }
 
 async fn async_main(app: MononokeApp) -> Result<()> {
-    let (fb, logger) = (app.environment().fb, app.logger());
-    let ctx = CoreContext::new_with_logger(fb, logger.clone());
+    let fb = app.environment().fb;
+
+    let mut metadata = Metadata::default();
+    metadata.add_client_info(ClientInfo::default_with_entry_point(
+        ClientEntryPoint::MegarepoCommitValidator,
+    ));
+
+    let mut scuba = app.environment().scuba_sample_builder.clone();
+    scuba.add_metadata(&metadata);
+
+    let session_container = SessionContainer::builder(fb)
+        .metadata(Arc::new(metadata))
+        .build();
+
+    let ctx = session_container.new_context(app.logger().clone(), scuba);
 
     run(fb, ctx, app).await
 }
