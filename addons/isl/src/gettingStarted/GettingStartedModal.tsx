@@ -9,7 +9,6 @@ import {useCommand} from '../ISLShortcuts';
 import {Modal} from '../Modal';
 import {localStorageBackedAtom} from '../jotaiUtils';
 import platform from '../platform';
-import {useModal} from '../useModal';
 import {Icon} from 'isl-components/Icon';
 import {useAtom} from 'jotai';
 import {Suspense, useEffect, useState} from 'react';
@@ -40,23 +39,6 @@ function DismissableGettingStartedModal() {
   useCommand('Escape', () => {
     setVisible(false);
   });
-
-  const showModal = useModal();
-
-  useEffect(() => {
-    const GettingStartedBugNuxContent = platform.GettingStartedBugNuxContent;
-    if (!visible && GettingStartedBugNuxContent) {
-      showModal({
-        type: 'custom',
-        title: '',
-        component: ({returnResultAndDismiss}) => (
-          <Suspense>
-            <GettingStartedBugNuxContent dismiss={() => returnResultAndDismiss(true)} />
-          </Suspense>
-        ),
-      });
-    }
-  }, [visible, showModal]);
 
   if (!visible) {
     return null;
