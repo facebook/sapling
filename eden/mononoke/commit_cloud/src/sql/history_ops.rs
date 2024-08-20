@@ -12,9 +12,15 @@ use mononoke_types::Timestamp;
 use sql::Transaction;
 
 use crate::ctx::CommitCloudContext;
+use crate::references::heads::heads_from_list;
+use crate::references::heads::heads_to_list;
 use crate::references::heads::WorkspaceHead;
 use crate::references::history::WorkspaceHistory;
+use crate::references::local_bookmarks::lbs_from_map;
+use crate::references::local_bookmarks::lbs_to_map;
 use crate::references::local_bookmarks::WorkspaceLocalBookmark;
+use crate::references::remote_bookmarks::rbs_from_list;
+use crate::references::remote_bookmarks::rbs_to_list;
 use crate::references::remote_bookmarks::WorkspaceRemoteBookmark;
 use crate::sql::common::UpdateWorkspaceNameArgs;
 use crate::sql::ops::Delete;
@@ -133,11 +139,12 @@ impl GenericGet<WorkspaceHistory> for SqlCommitCloud {
                 return rows
                     .into_iter()
                     .map(|(heads, bookmarks, remotebookmarks, timestamp, version)| {
-                        let heads: Vec<WorkspaceHead> = serde_json::from_slice(&heads)?;
+                        let heads: Vec<WorkspaceHead> =
+                            heads_from_list(&serde_json::from_slice(&heads)?)?;
                         let bookmarks: Vec<WorkspaceLocalBookmark> =
-                            serde_json::from_slice(&bookmarks)?;
+                            lbs_from_map(&serde_json::from_slice(&bookmarks)?)?;
                         let remotebookmarks: Vec<WorkspaceRemoteBookmark> =
-                            serde_json::from_slice(&remotebookmarks)?;
+                            rbs_from_list(&serde_json::from_slice(&remotebookmarks)?)?;
                         Ok(GetOutput::WorkspaceHistory(WorkspaceHistory {
                             version,
                             timestamp: Some(timestamp),
@@ -159,11 +166,12 @@ impl GenericGet<WorkspaceHistory> for SqlCommitCloud {
                 return rows
                     .into_iter()
                     .map(|(heads, bookmarks, remotebookmarks, timestamp, version)| {
-                        let heads: Vec<WorkspaceHead> = serde_json::from_slice(&heads)?;
+                        let heads: Vec<WorkspaceHead> =
+                            heads_from_list(&serde_json::from_slice(&heads)?)?;
                         let bookmarks: Vec<WorkspaceLocalBookmark> =
-                            serde_json::from_slice(&bookmarks)?;
+                            lbs_from_map(&serde_json::from_slice(&bookmarks)?)?;
                         let remotebookmarks: Vec<WorkspaceRemoteBookmark> =
-                            serde_json::from_slice(&remotebookmarks)?;
+                            rbs_from_list(&serde_json::from_slice(&remotebookmarks)?)?;
                         Ok(GetOutput::WorkspaceHistory(WorkspaceHistory {
                             version,
                             timestamp: Some(timestamp),
@@ -215,11 +223,15 @@ impl Insert<WorkspaceHistory> for SqlCommitCloud {
         data: WorkspaceHistory,
     ) -> anyhow::Result<Transaction> {
         let mut heads_bytes: Vec<u8> = Vec::new();
-        serde_json::to_writer(&mut heads_bytes, &data.heads).unwrap();
+        serde_json::to_writer(&mut heads_bytes, &heads_to_list(&data.heads)).unwrap();
         let mut bookmarks_bytes: Vec<u8> = Vec::new();
-        serde_json::to_writer(&mut bookmarks_bytes, &data.local_bookmarks).unwrap();
+        serde_json::to_writer(&mut bookmarks_bytes, &lbs_to_map(data.local_bookmarks)).unwrap();
         let mut remotebookmarks_bytes: Vec<u8> = Vec::new();
-        serde_json::to_writer(&mut remotebookmarks_bytes, &data.remote_bookmarks).unwrap();
+        serde_json::to_writer(
+            &mut remotebookmarks_bytes,
+            &rbs_to_list(data.remote_bookmarks),
+        )
+        .unwrap();
         let res_txn;
         if data.timestamp.is_none() {
             (res_txn, _) = InsertHistoryNoTimestamp::maybe_traced_query_with_transaction(
