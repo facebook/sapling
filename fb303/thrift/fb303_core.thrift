@@ -16,8 +16,6 @@
 
 package "facebook.com/fb303"
 
-include "thrift/annotation/cpp.thrift"
-
 namespace cpp2 "facebook.fb303.cpp2"
 namespace py3 ""
 namespace java com.facebook.fb303.core
@@ -51,13 +49,11 @@ service BaseService {
   /**
    * Gets the status of this service
    */
-  @cpp.GenerateDeprecatedHeaderClientMethods
   fb303_status getStatus() (priority = 'IMPORTANT');
 
   /**
    * Returns a descriptive name of the service
    */
-  @cpp.GenerateDeprecatedHeaderClientMethods
   string getName();
 
   /**
