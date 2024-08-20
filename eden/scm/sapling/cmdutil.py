@@ -4920,6 +4920,9 @@ def registerdiffgrafts(opts, *ctxs):
     These grafts are applied temporarily before diff operations, allowing users
     to "remap" directories.
     """
+    if not ctxs:
+        return error.ProgrammingError("registerdiffgrafts() requires ctxs")
+
     from_paths = opts.get("from_path") or []
     to_paths = opts.get("to_path") or []
 
