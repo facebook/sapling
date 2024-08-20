@@ -1,5 +1,0 @@
-publish(
-    wiki_root_path = "Source_Control/Mononoke/Development",
-    folder = "facebook/docs",
-    oncall = "scm_server_infra",
-)
