@@ -501,27 +501,15 @@ function PartialSelectionAction({file}: {file: UIChangedFile}) {
       component={() => (
         <div style={{maxWidth: '300px'}}>
           <div>
-            <T
-              replace={{
-                $beta: (
-                  <span
-                    style={{
-                      color: 'var(--scm-removed-foreground)',
-                      marginLeft: 'var(--halfpad)',
-                      fontSize: '80%',
-                    }}>
-                    (Beta)
-                  </span>
-                ),
-              }}>
-              Toggle chunk selection $beta
-            </T>
+            <T>Toggle chunk selection</T>
           </div>
           <div>
-            <T>
-              Shows changed files in your commit and lets you select individual chunks or lines to
-              include.
-            </T>
+            <Subtle>
+              <T>
+                Shows changed files in your commit and lets you select individual chunks or lines to
+                include.
+              </T>
+            </Subtle>
           </div>
         </div>
       )}>
