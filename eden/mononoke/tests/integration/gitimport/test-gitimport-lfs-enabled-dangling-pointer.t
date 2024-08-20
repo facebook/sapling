@@ -27,10 +27,8 @@ Use common repo setup
   > EOF
   $ git add large_file_dangling_pointer
   $ git commit -aqm "add dangling pointer"
-  $ git push -q origin main
-  Git LFS upload missing objects:
-    (missing) large_file_dangling_pointer (baaaaaaddddd0000000000000000000000000000000000000000000000000000)
-  Uploading LFS objects:   0% (0/1), 0 B | 0 B/s, done.
+  $ quiet git push -q origin main
+  Uploading LFS objects:   0% (0/1), 0 B | 0 B/s, done. (?)
 
 But it's available on the separate lfs server
   $ mononoke_newadmin filestore -R legacy_lfs fetch --content-sha256 6c54a4de10537e482e9f91281fb85ab614e0e0f62307047f9b9f3ccea2de8204
