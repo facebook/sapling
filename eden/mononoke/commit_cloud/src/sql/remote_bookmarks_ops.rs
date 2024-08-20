@@ -65,11 +65,11 @@ impl Get<WorkspaceRemoteBookmark> for SqlCommitCloud {
         .await?;
         rows.into_iter()
             .map(|(remote, name, commit)| {
-                Ok(WorkspaceRemoteBookmark {
-                    name,
-                    commit: changeset_from_bytes(&commit, self.uses_mysql)?,
+                WorkspaceRemoteBookmark::new(
                     remote,
-                })
+                    name,
+                    changeset_from_bytes(&commit, self.uses_mysql)?,
+                )
             })
             .collect::<anyhow::Result<Vec<WorkspaceRemoteBookmark>>>()
     }
@@ -126,9 +126,9 @@ impl Insert<WorkspaceRemoteBookmark> for SqlCommitCloud {
             cri,
             &reponame,
             &workspace,
-            &data.remote,
-            &data.name,
-            &changeset_as_bytes(&data.commit, self.uses_mysql)?,
+            data.remote(),
+            data.name(),
+            &changeset_as_bytes(data.commit(), self.uses_mysql)?,
         )
         .await?;
         Ok(txn)

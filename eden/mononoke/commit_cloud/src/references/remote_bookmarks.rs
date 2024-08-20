@@ -7,6 +7,7 @@
 
 use std::collections::HashMap;
 
+use anyhow::ensure;
 use clientinfo::ClientRequestInfo;
 use mercurial_types::HgChangesetId;
 use serde::Deserialize;
@@ -22,9 +23,39 @@ use crate::CommitCloudContext;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct WorkspaceRemoteBookmark {
-    pub name: String,
-    pub commit: HgChangesetId,
-    pub remote: String,
+    name: String,
+    commit: HgChangesetId,
+    remote: String,
+}
+
+impl WorkspaceRemoteBookmark {
+    pub fn new(remote: String, name: String, commit: HgChangesetId) -> anyhow::Result<Self> {
+        ensure!(
+            !name.is_empty(),
+            "'commit cloud' failed: remote bookmark name cannot be empty"
+        );
+        ensure!(
+            !remote.is_empty(),
+            "'commit cloud' failed: remote bookmark 'remote' part cannot be empty"
+        );
+        Ok(Self {
+            name,
+            commit,
+            remote,
+        })
+    }
+
+    pub fn name(&self) -> &String {
+        &self.name
+    }
+
+    pub fn commit(&self) -> &HgChangesetId {
+        &self.commit
+    }
+
+    pub fn remote(&self) -> &String {
+        &self.remote
+    }
 }
 
 pub type RemoteBookmarksMap = HashMap<HgChangesetId, Vec<RemoteBookmark>>;

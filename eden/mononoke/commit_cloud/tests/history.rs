@@ -41,11 +41,11 @@ async fn test_history(_fb: FacebookInit) -> anyhow::Result<()> {
         commit: HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap(),
     };
 
-    let remote_bookmark1 = WorkspaceRemoteBookmark {
-        name: "my_bookmark1".to_owned(),
-        commit: HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap(),
-        remote: "remote".to_owned(),
-    };
+    let remote_bookmark1 = WorkspaceRemoteBookmark::new(
+        "remote".to_owned(),
+        "my_bookmark1".to_owned(),
+        HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap(),
+    )?;
 
     let local_bookmark1 = WorkspaceLocalBookmark::new(
         "my_bookmark1".to_owned(),

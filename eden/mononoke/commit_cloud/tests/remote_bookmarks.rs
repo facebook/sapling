@@ -19,6 +19,41 @@ use fbinit::FacebookInit;
 use mercurial_types::HgChangesetId;
 use sql_construct::SqlConstruct;
 
+#[test]
+fn test_remote_bookmark_creation() {
+    let commit_id = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap();
+    let bookmark =
+        WorkspaceRemoteBookmark::new("origin".to_string(), "bookmark_name".to_string(), commit_id);
+    assert!(bookmark.is_ok());
+    let bookmark = bookmark.unwrap();
+    assert_eq!(bookmark.name(), &"bookmark_name".to_string());
+    assert_eq!(*bookmark.commit(), commit_id);
+    assert_eq!(bookmark.remote(), &"origin".to_string());
+}
+
+#[test]
+fn test_remote_bookmark_creation_empty_name() {
+    let commit_id = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap();
+    let bookmark = WorkspaceRemoteBookmark::new("origin".to_string(), "".to_string(), commit_id);
+    assert!(bookmark.is_err());
+    assert_eq!(
+        bookmark.unwrap_err().to_string(),
+        "'commit cloud' failed: remote bookmark name cannot be empty"
+    );
+}
+
+#[test]
+fn test_remote_bookmark_creation_empty_remote() {
+    let commit_id = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap();
+    let bookmark =
+        WorkspaceRemoteBookmark::new("".to_string(), "bookmark_name".to_string(), commit_id);
+    assert!(bookmark.is_err());
+    assert_eq!(
+        bookmark.unwrap_err().to_string(),
+        "'commit cloud' failed: remote bookmark 'remote' part cannot be empty"
+    );
+}
+
 #[fbinit::test]
 async fn test_remote_bookmarks(_fb: FacebookInit) -> anyhow::Result<()> {
     use commit_cloud::references::remote_bookmarks::RemoteBookmarksMap;
@@ -32,17 +67,11 @@ async fn test_remote_bookmarks(_fb: FacebookInit) -> anyhow::Result<()> {
     let cc_ctx = CommitCloudContext::new(&workspace.clone(), &reponame.clone())?;
     let hgid1 = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap();
     let hgid2 = HgChangesetId::from_str("3e0e761030db6e479a7fb58b12881883f9f8c63f").unwrap();
-    let bookmark1 = WorkspaceRemoteBookmark {
-        name: "my_bookmark1".to_owned(),
-        commit: hgid1,
-        remote: "remote".to_owned(),
-    };
+    let bookmark1 =
+        WorkspaceRemoteBookmark::new("remote".to_owned(), "my_bookmark1".to_owned(), hgid1)?;
 
-    let bookmark2 = WorkspaceRemoteBookmark {
-        name: "my_bookmark2".to_owned(),
-        commit: hgid2,
-        remote: "remote".to_owned(),
-    };
+    let bookmark2 =
+        WorkspaceRemoteBookmark::new("remote".to_owned(), "my_bookmark2".to_owned(), hgid2)?;
 
     let mut txn = sql.connections.write_connection.start_transaction().await?;
     txn = sql

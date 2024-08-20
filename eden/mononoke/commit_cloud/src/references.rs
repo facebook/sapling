@@ -195,9 +195,9 @@ pub(crate) async fn cast_references_data(
 
     for remote_bookmark in raw_references_data.remote_bookmarks {
         remote_bookmarks.push(RemoteBookmark {
-            remote: remote_bookmark.remote.clone(),
-            name: remote_bookmark.name.clone(),
-            node: Some(remote_bookmark.commit.into()),
+            remote: remote_bookmark.remote().clone(),
+            name: remote_bookmark.name().clone(),
+            node: Some((*remote_bookmark.commit()).into()),
         });
     }
 
