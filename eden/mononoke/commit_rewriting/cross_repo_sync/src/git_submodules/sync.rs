@@ -106,10 +106,13 @@ pub async fn sync_commit_with_submodule_expansion<'a, R: Repo>(
 
     let ctx = &set_scuba_logger_fields(
         ctx,
-        [(
-            "target_repo",
-            sm_exp_data.large_repo.repo_identity().id().id(),
-        )],
+        [
+            ("source_repo", sm_exp_data.small_repo_id.id()),
+            (
+                "target_repo",
+                sm_exp_data.large_repo.repo_identity().id().id(),
+            ),
+        ],
     );
 
     let (new_bonsai, submodule_expansion_content_ids) = run_and_log_stats_to_scuba(
