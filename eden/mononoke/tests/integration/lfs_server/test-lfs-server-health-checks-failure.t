@@ -66,7 +66,8 @@
       "http_method": "GET",
       "http_path": "/health_check",
       "http_user_agent": "curl/*", (glob)
-      "request_id": "*" (glob)
+      "request_id": "*", (glob)
+      "sandcastle_alias": null
     },
     "normvector": {
       "client_identities": []

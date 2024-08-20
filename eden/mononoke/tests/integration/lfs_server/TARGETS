@@ -1,0 +1,16 @@
+load(
+    "//eden/mononoke/tests/integration/facebook:fb_manifest_deps.bzl",
+    "dott_test",
+)
+
+oncall("scm_server_infra")
+
+dott_test(
+    name = "lfs-server",
+    dott_files = glob(["*.t"]),
+    deps = [
+        "//eden/mononoke:blobimport",
+        "//eden/mononoke/lfs_server:lfs_server",
+        "//eden/mononoke/tools/import:import",
+    ],
+)

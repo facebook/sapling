@@ -83,7 +83,8 @@
       "http_user_agent": "mercurial/* git/*", (glob)
       "method": "batch",
       "repository": "lfs1",
-      "request_id": "*" (glob)
+      "request_id": "*", (glob)
+      "sandcastle_alias": null
     },
     "normvector": {
       "client_identities": []
@@ -139,7 +140,8 @@
       "http_user_agent": "mercurial/* git/*", (glob)
       "method": "upload",
       "repository": "lfs1",
-      "request_id": "*" (glob)
+      "request_id": "*", (glob)
+      "sandcastle_alias": null
     },
     "normvector": {
       "client_identities": []
@@ -199,7 +201,8 @@
       "http_user_agent": "mercurial/* git/*", (glob)
       "method": "batch",
       "repository": "lfs1",
-      "request_id": "*" (glob)
+      "request_id": "*", (glob)
+      "sandcastle_alias": null
     },
     "normvector": {
       "batch_internal_missing_blobs": [],
@@ -262,7 +265,8 @@
       "http_user_agent": "mercurial/* git/*", (glob)
       "method": "download",
       "repository": "lfs1",
-      "request_id": "*" (glob)
+      "request_id": "*", (glob)
+      "sandcastle_alias": null
     },
     "normvector": {
       "client_identities": []
@@ -312,7 +316,8 @@
       "http_path": "/config",
       "http_query": "foo=bar",
       "http_user_agent": "curl/*", (glob)
-      "request_id": * (glob)
+      "request_id": "*", (glob)
+      "sandcastle_alias": null
     },
     "normvector": {
       "client_identities": []
