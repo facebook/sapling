@@ -639,6 +639,7 @@ where
 
         new.strip_with_lock(set, &map_lock).await?;
         new.persist(lock, map_lock, dag_lock)?;
+        new.maybe_recreate_virtual_group().await?;
 
         *self = new;
         Ok(())
@@ -701,9 +702,6 @@ where
 
         // Snapshot cannot be reused.
         self.invalidate_snapshot();
-
-        // Re-create the VIRTUAL group content.
-        self.maybe_recreate_virtual_group().await?;
 
         Ok(())
     }
