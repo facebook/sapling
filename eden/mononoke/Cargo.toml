@@ -370,6 +370,8 @@ members = [
   "mononoke_cas_sync_job",
   "mononoke_configs",
   "mononoke_hg_sync_job",
+  "mononoke_macros",
+  "mononoke_macros/proc_macros",
   "mononoke_repos",
   "mononoke_types",
   "mononoke_types/mocks",

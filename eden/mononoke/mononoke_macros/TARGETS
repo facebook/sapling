@@ -1,0 +1,29 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mononoke")
+
+rust_library(
+    name = "mononoke_proc_macros",
+    srcs = glob([
+        "proc_macros/**/*.rs",
+    ]),
+    autocargo = {
+        "cargo_toml_dir": "proc_macros",
+    },
+    proc_macro = True,
+    deps = [
+        "fbsource//third-party/rust:quote",
+        "fbsource//third-party/rust:syn1",
+    ],
+)
+
+rust_library(
+    name = "mononoke_macros",
+    srcs = glob([
+        "src/**/*.rs",
+    ]),
+    deps = [
+        ":mononoke_proc_macros",
+    ],
+)
