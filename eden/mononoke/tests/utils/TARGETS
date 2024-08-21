@@ -29,7 +29,6 @@ rust_library(
         "//eden/mononoke/bonsai_hg_mapping:bonsai_hg_mapping",
         "//eden/mononoke/bonsai_tag_mapping:bonsai_tag_mapping",
         "//eden/mononoke/bookmarks:bookmarks",
-        "//eden/mononoke/changesets:changesets",
         "//eden/mononoke/changesets/changesets_creation:changesets_creation",
         "//eden/mononoke/derived_data:fsnodes",
         "//eden/mononoke/filestore:filestore",

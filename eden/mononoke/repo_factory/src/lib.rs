@@ -67,8 +67,6 @@ use cacheblob::LeaseOps;
 use cacheblob::MemcacheOps;
 use caching_commit_graph_storage::CachingCommitGraphStorage;
 use caching_ext::CacheHandlerFactory;
-use changesets::ArcChangesets;
-use changesets_impl::SqlChangesetsBuilder;
 use commit_cloud::sql::builder::SqlCommitCloudBuilder;
 use commit_cloud::ArcCommitCloud;
 use commit_cloud::CommitCloud;
@@ -651,9 +649,6 @@ pub fn cachelib_blobstore<B: Blobstore + 'static>(
 
 #[derive(Debug, Error)]
 pub enum RepoFactoryError {
-    #[error("Error opening changesets")]
-    Changesets,
-
     #[error("Error opening bookmarks")]
     Bookmarks,
 
@@ -755,20 +750,6 @@ impl RepoFactory {
 
     pub fn caching(&self) -> Caching {
         self.env.caching
-    }
-
-    pub async fn changesets(
-        &self,
-        repo_identity: &ArcRepoIdentity,
-        repo_config: &ArcRepoConfig,
-    ) -> Result<ArcChangesets> {
-        let builder = self
-            .open_sql::<SqlChangesetsBuilder>(repo_config)
-            .await
-            .context(RepoFactoryError::Changesets)?;
-        let changesets = builder.build(self.env.rendezvous_options, repo_identity.id());
-
-        Ok(Arc::new(changesets))
     }
 
     pub async fn repo_stats_logger(

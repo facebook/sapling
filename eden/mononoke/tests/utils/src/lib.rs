@@ -23,7 +23,6 @@ use bookmarks::Bookmarks;
 use bookmarks::BookmarksRef;
 use bytes::Bytes;
 use bytes::BytesMut;
-use changesets::Changesets;
 use changesets_creation::save_changesets;
 use commit_graph::CommitGraph;
 use commit_graph::CommitGraphRef;
@@ -78,9 +77,6 @@ pub trait Repo = BonsaiHgMappingRef
 pub struct BasicTestRepo {
     #[facet]
     pub repo_blobstore: RepoBlobstore,
-
-    #[facet]
-    pub changesets: dyn Changesets,
 
     #[facet]
     pub commit_graph: CommitGraph,

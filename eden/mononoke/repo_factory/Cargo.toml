@@ -25,8 +25,6 @@ cacheblob = { version = "0.1.0", path = "../blobstore/cacheblob" }
 cachelib = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 caching_commit_graph_storage = { version = "0.1.0", path = "../repo_attributes/commit_graph/caching_commit_graph_storage" }
 caching_ext = { version = "0.1.0", path = "../common/rust/caching_ext" }
-changesets = { version = "0.1.0", path = "../changesets" }
-changesets_impl = { version = "0.1.0", path = "../changesets/changesets_impl" }
 commit_cloud = { version = "0.1.0", path = "../commit_cloud" }
 commit_graph = { version = "0.1.0", path = "../repo_attributes/commit_graph/commit_graph" }
 commit_graph_types = { version = "0.1.0", path = "../repo_attributes/commit_graph/commit_graph_types" }

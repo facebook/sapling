@@ -30,8 +30,6 @@ use bookmarks::ArcBookmarks;
 use bookmarks_cache::ArcBookmarksCache;
 use cacheblob::InProcessLease;
 use cacheblob::LeaseOps;
-use changesets::ArcChangesets;
-use changesets_impl::SqlChangesetsBuilder;
 use commit_cloud::sql::builder::SqlCommitCloudBuilder;
 use commit_cloud::ArcCommitCloud;
 use commit_cloud::CommitCloud;
@@ -252,7 +250,6 @@ impl TestRepoFactory {
         metadata_con.execute_batch(MegarepoMapping::CREATION_QUERY)?;
         metadata_con.execute_batch(SqlMutableCountersBuilder::CREATION_QUERY)?;
         metadata_con.execute_batch(SqlBookmarksBuilder::CREATION_QUERY)?;
-        metadata_con.execute_batch(SqlChangesetsBuilder::CREATION_QUERY)?;
         metadata_con.execute_batch(SqlBonsaiGitMappingBuilder::CREATION_QUERY)?;
         metadata_con.execute_batch(SqlBonsaiGlobalrevMappingBuilder::CREATION_QUERY)?;
         metadata_con.execute_batch(SqlBonsaiSvnrevMappingBuilder::CREATION_QUERY)?;
@@ -405,14 +402,6 @@ impl TestRepoFactory {
     /// Construct RepoIdentity based on the config and name in the factory.
     pub fn repo_identity(&self, repo_config: &ArcRepoConfig) -> ArcRepoIdentity {
         Arc::new(RepoIdentity::new(repo_config.repoid, self.name.clone()))
-    }
-
-    /// Construct Changesets using the in-memory metadata database.
-    pub fn changesets(&self, repo_identity: &ArcRepoIdentity) -> Result<ArcChangesets> {
-        Ok(Arc::new(
-            SqlChangesetsBuilder::from_sql_connections(self.metadata_db.clone())
-                .build(RendezVousOptions::for_test(), repo_identity.id()),
-        ))
     }
 
     /// Construct SQL bookmarks using the in-memory metadata database.
