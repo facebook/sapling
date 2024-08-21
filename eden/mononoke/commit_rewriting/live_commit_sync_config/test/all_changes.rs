@@ -16,7 +16,6 @@ use pretty_assertions::assert_eq;
 
 use crate::ensure_all_updated;
 use crate::get_ctx_source_store_and_live_config;
-use crate::EMPTY_PUSHREDIRECTOR;
 
 // Since these huge blobs of json may be hard to read, I will explain
 // the difference in the comment. The comparison of `ALL_COMMIT_SYNC_CONFIG_V1`
@@ -292,7 +291,7 @@ const ALL_COMMIT_SYNC_CONFIG_V3: &str = r#"{
 #[fbinit::test]
 async fn test_adding_a_new_version(fb: FacebookInit) {
     let (_ctx, test_source, _store, _test_push_redirection_config, live_commit_sync_config) =
-        get_ctx_source_store_and_live_config(fb, EMPTY_PUSHREDIRECTOR, ALL_COMMIT_SYNC_CONFIG_V1);
+        get_ctx_source_store_and_live_config(fb, ALL_COMMIT_SYNC_CONFIG_V1);
     let repo_1 = RepositoryId::new(1);
     let repo_3 = RepositoryId::new(3);
 
@@ -368,7 +367,7 @@ async fn test_adding_a_new_version(fb: FacebookInit) {
 #[fbinit::test]
 async fn test_query_by_version_name(fb: FacebookInit) {
     let (_ctx, test_source, _store, _test_push_redirection_config, live_commit_sync_config) =
-        get_ctx_source_store_and_live_config(fb, EMPTY_PUSHREDIRECTOR, ALL_COMMIT_SYNC_CONFIG_V1);
+        get_ctx_source_store_and_live_config(fb, ALL_COMMIT_SYNC_CONFIG_V1);
     let repo_1 = RepositoryId::new(1);
     let repo_3 = RepositoryId::new(3);
 

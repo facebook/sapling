@@ -35,9 +35,6 @@ mod all_simple;
 mod current_simple;
 mod push_redirection;
 
-const EMPTY_PUSHREDIRECTOR: &str = r#"{
-     "per_repo": {}
- }"#;
 const EMTPY_COMMIT_SYNC_ALL: &str = r#"{
      "repos": {}
  }"#;
@@ -51,7 +48,6 @@ fn ensure_all_updated() {
 
 fn get_ctx_source_store_and_live_config(
     fb: FacebookInit,
-    _pushredirector_config: &str,
     all_commit_syncs: &str,
 ) -> (
     CoreContext,

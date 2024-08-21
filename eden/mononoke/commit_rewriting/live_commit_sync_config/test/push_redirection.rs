@@ -13,13 +13,12 @@ use pushredirect::PushRedirectionConfig;
 
 use crate::ensure_all_updated;
 use crate::get_ctx_source_store_and_live_config;
-use crate::EMPTY_PUSHREDIRECTOR;
 use crate::EMTPY_COMMIT_SYNC_ALL;
 
 #[fbinit::test]
 async fn test_enabling_push_redirection(fb: FacebookInit) -> Result<()> {
     let (ctx, _test_source, _store, test_push_redirection_config, live_commit_sync_config) =
-        get_ctx_source_store_and_live_config(fb, EMPTY_PUSHREDIRECTOR, EMTPY_COMMIT_SYNC_ALL);
+        get_ctx_source_store_and_live_config(fb, EMTPY_COMMIT_SYNC_ALL);
     let repo_1 = RepositoryId::new(1);
 
     // Enable push-redirection of public commits
