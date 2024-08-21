@@ -62,6 +62,10 @@ use clientinfo::ClientEntryPoint;
 use clientinfo::ClientInfo;
 use context::CoreContext;
 use context::SessionContainer;
+use cross_repo_sync::log_debug;
+use cross_repo_sync::log_error;
+use cross_repo_sync::log_info;
+use cross_repo_sync::log_warning;
 use cross_repo_sync::CandidateSelectionHint;
 use cross_repo_sync::CommitSyncContext;
 use cross_repo_sync::CommitSyncer;
@@ -96,9 +100,6 @@ use repo_identity::RepoIdentityRef;
 use scuba_ext::MononokeScubaSampleBuilder;
 use sharding::XRepoSyncProcess;
 use sharding::XRepoSyncProcessExecutor;
-use slog::debug;
-use slog::info;
-use slog::warn;
 use synced_commit_mapping::SyncedCommitMapping;
 
 use crate::cli::ForwardSyncerArgs;
@@ -132,18 +133,20 @@ async fn run_in_single_commit_mode<M: SyncedCommitMapping + Clone + 'static>(
     new_version: Option<CommitSyncConfigVersion>,
     unsafe_force_rewrite_parent_to_target_bookmark: bool,
 ) -> Result<(), Error> {
-    info!(
-        ctx.logger(),
-        "Checking if {} is already synced {}->{}",
-        bcs,
-        commit_syncer.repos.get_source_repo().repo_identity().id(),
-        commit_syncer.repos.get_target_repo().repo_identity().id()
+    log_info(
+        ctx,
+        format!(
+            "Checking if {} is already synced {}->{}",
+            bcs,
+            commit_syncer.repos.get_source_repo().repo_identity().id(),
+            commit_syncer.repos.get_target_repo().repo_identity().id(),
+        ),
     );
     if commit_syncer
         .commit_sync_outcome_exists(ctx, Source(bcs))
         .await?
     {
-        info!(ctx.logger(), "{} is already synced", bcs);
+        log_info(ctx, format!("{} is already synced", bcs));
         return Ok(());
     }
 
@@ -163,7 +166,7 @@ async fn run_in_single_commit_mode<M: SyncedCommitMapping + Clone + 'static>(
     .await;
 
     if res.is_ok() {
-        info!(ctx.logger(), "successful sync");
+        log_info(ctx, "successful sync");
     }
     res.map(|_| ())
 }
@@ -178,21 +181,23 @@ async fn run_in_initial_import_mode_for_single_head<M: SyncedCommitMapping + Clo
     no_automatic_derivation: bool,
     derivation_batch_size: usize,
 ) -> Result<()> {
-    info!(
-        ctx.logger(),
-        "Checking if {} is already synced {}->{}",
-        bcs,
-        commit_syncer.repos.get_source_repo().repo_identity().id(),
-        commit_syncer.repos.get_target_repo().repo_identity().id()
+    log_info(
+        ctx,
+        format!(
+            "Checking if {} is already synced {}->{}",
+            bcs,
+            commit_syncer.repos.get_source_repo().repo_identity().id(),
+            commit_syncer.repos.get_target_repo().repo_identity().id()
+        ),
     );
     if commit_syncer
         .commit_sync_outcome_exists(ctx, Source(bcs))
         .await?
     {
-        info!(ctx.logger(), "{} is already synced", bcs);
+        log_info(ctx, format!("{} is already synced", bcs));
         return Ok(());
     }
-    let _ = sync_commits_for_initial_import(
+    let res = sync_commits_for_initial_import(
         ctx,
         commit_syncer,
         scuba_sample.clone(),
@@ -202,8 +207,14 @@ async fn run_in_initial_import_mode_for_single_head<M: SyncedCommitMapping + Clo
         no_automatic_derivation,
         derivation_batch_size,
     )
-    .await?;
-    info!(ctx.logger(), "successful sync of head {}", bcs);
+    .await;
+
+    if let Err(e) = res {
+        log_error(ctx, format!("Initial import failed: {e:#?}"));
+        return Err(e);
+    }
+
+    log_info(ctx, format!("successful sync of head {}", bcs));
     Ok(())
 }
 
@@ -382,7 +393,7 @@ async fn tail<M: SyncedCommitMapping + Clone + 'static>(
         Ok(false)
     } else {
         scuba_sample.add("queue_size", remaining_entries);
-        info!(ctx.logger(), "queue size is {}", remaining_entries);
+        log_info(ctx, format!("queue size is {}", remaining_entries));
 
         for entry in log_entries {
             let entry_id = entry.id;
@@ -429,9 +440,12 @@ async fn tail<M: SyncedCommitMapping + Clone + 'static>(
                     .await?;
                 }
             } else {
-                info!(
-                    ctx.logger(),
-                    "skipping log entry #{} for {}", entry.id, entry.bookmark_name
+                log_info(
+                    ctx,
+                    format!(
+                        "skipping log entry #{} for {}",
+                        entry.id, entry.bookmark_name,
+                    ),
                 );
                 let mut scuba_sample = scuba_sample.clone();
                 scuba_sample.add("source_bookmark_name", format!("{}", entry.bookmark_name));
@@ -477,7 +491,7 @@ async fn maybe_apply_backpressure(
                     match maybe_counter {
                         Some(counter) => {
                             let bookmark_update_log = repo.bookmark_update_log();
-                            debug!(ctx.logger(), "repo {}, counter {}", repo_id, counter);
+                            log_debug(ctx, format!("repo {}, counter {}", repo_id, counter));
                             bookmark_update_log
                                 .count_further_bookmark_log_entries(
                                     ctx.clone(),
@@ -487,9 +501,9 @@ async fn maybe_apply_backpressure(
                                 .await
                         }
                         None => {
-                            warn!(
-                                ctx.logger(),
-                                "backsyncer counter not found for repo {}!", repo_id,
+                            log_warning(
+                                ctx,
+                                format!("backsyncer counter not found for repo {}!", repo_id),
                             );
                             Ok(0)
                         }
@@ -598,10 +612,9 @@ fn main(fb: FacebookInit) -> Result<()> {
 
     let ctx = session_container.new_context(app.logger().clone(), scuba);
 
-    info!(
-        ctx.logger(),
-        "Starting session with id {}",
-        ctx.metadata().session_id()
+    log_info(
+        &ctx,
+        format!("Starting session with id {}", ctx.metadata().session_id(),),
     );
 
     app.run_with_monitoring_and_logging(
