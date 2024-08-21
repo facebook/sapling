@@ -56,6 +56,7 @@ use workingcopy::workingcopy::WorkingCopy;
 
 use crate::errors;
 use crate::init;
+use crate::trees::CachingTreeStore;
 use crate::trees::TreeManifestResolver;
 
 pub struct Repo {
@@ -83,6 +84,7 @@ pub struct Repo {
     locker: Arc<RepoLocker>,
     cas_client: OnceCell<Option<Arc<dyn CasClient>>>,
     tree_resolver: OnceCell<Arc<dyn ReadTreeManifest + Send + Sync>>,
+    caching_tree_store: OnceCell<Arc<dyn TreeStore>>,
 }
 
 impl Repo {
@@ -192,6 +194,7 @@ impl Repo {
             working_copy: Default::default(),
             eager_store: None,
             tree_resolver: Default::default(),
+            caching_tree_store: Default::default(),
             locker,
         })
     }
@@ -524,6 +527,25 @@ impl Repo {
         Ok(ts)
     }
 
+    pub fn caching_tree_store(&self) -> Result<Arc<dyn TreeStore>> {
+        let store = self.caching_tree_store.get_or_try_init(|| {
+            let cache_size = self
+                .config
+                // Trees are typically pretty small (and they are often kept in memory
+                // anyway within a TreeManifest object), so let's pick a sizable
+                // default. Set to 0 to disable caching.
+                .get_or("experimental", "tree-resolver-cache-size", || 10_000)?;
+
+            let inner_store = self.tree_store()?;
+            if cache_size == 0 {
+                return Ok::<_, anyhow::Error>(inner_store);
+            }
+
+            Ok(Arc::new(CachingTreeStore::new(inner_store, cache_size)))
+        });
+        Ok(store?.clone())
+    }
+
     // This should only be used to share stores with Python.
     pub fn tree_scm_store(&self) -> Option<Arc<scmstore::TreeStore>> {
         self.tree_scm_store.get().cloned()
@@ -540,12 +562,7 @@ impl Repo {
         let tr = self.tree_resolver.get_or_try_init(|| {
             Ok::<_, anyhow::Error>(Arc::new(TreeManifestResolver::new(
                 self.dag_commits()?,
-                self.tree_store()?,
-                self.config
-                    // Trees are typically pretty small (and they are often kept in memory
-                    // anyway within a TreeManifest object), so let's pick a sizable
-                    // default. Set to 0 to disable caching.
-                    .get_or("experimental", "tree-resolver-cache-size", || 10_000)?,
+                self.caching_tree_store()?,
             )))
         })?;
         Ok(tr.clone())

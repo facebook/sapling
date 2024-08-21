@@ -38,16 +38,8 @@ pub struct TreeManifestResolver {
 impl TreeManifestResolver {
     pub fn new(
         dag_commits: Arc<RwLock<Box<dyn DagCommits + Send + 'static>>>,
-        mut tree_store: Arc<dyn TreeStore>,
-        cache_size: usize,
+        tree_store: Arc<dyn TreeStore>,
     ) -> Self {
-        if cache_size > 0 {
-            tree_store = Arc::new(CachingTreeStore {
-                store: tree_store,
-                cache: Arc::new(Mutex::new(LruCache::new(cache_size))),
-            });
-        }
-
         TreeManifestResolver {
             dag_commits,
             tree_store,
@@ -91,12 +83,19 @@ static CACHE_HITS: Counter = Counter::new_counter("treeresolver.cache.hits");
 static CACHE_REQS: Counter = Counter::new_counter("treeresolver.cache.reqs");
 
 // TreeStore wrapper which caches trees in an LRU cache.
-struct CachingTreeStore {
+pub(crate) struct CachingTreeStore {
     store: Arc<dyn TreeStore>,
     cache: Arc<Mutex<LruCache<HgId, Bytes>>>,
 }
 
 impl CachingTreeStore {
+    pub fn new(store: Arc<dyn TreeStore>, size: usize) -> Self {
+        Self {
+            store,
+            cache: Arc::new(Mutex::new(LruCache::new(size))),
+        }
+    }
+
     // Fetch a single item from cache.
     fn cached_single(&self, id: &HgId) -> Option<Bytes> {
         CACHE_REQS.add(1);
