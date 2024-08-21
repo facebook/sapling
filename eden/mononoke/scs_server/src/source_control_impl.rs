@@ -829,8 +829,9 @@ macro_rules! impl_thrift_methods {
 
                     if let Some(factory_group) = &self.0.factory_group {
                         let group = factory_group.clone();
-                        let priority = 0; // TODO compute dynamically
-                        group.execute(priority, handler, None).await.expect("Failed to execute request") // FIXME convert error correctly
+                        let queue: usize =
+                            justknobs::get_as::<u64>("scm/mononoke:scs_factory_queue_for_method", Some(stringify!($method_name))).unwrap_or(0) as usize;
+                        group.execute(queue, handler, None).await.expect("Failed to execute request") // FIXME convert error correctly
                     } else {
                         let res: Result<$ok_type, $err_type> = handler.await;
                         res
