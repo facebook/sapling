@@ -72,8 +72,13 @@ impl pyfilescmstore {
 
 impl treescmstore {
     fn to_dyn_treestore(&self, py: Python) -> Arc<dyn TreeStore> {
-        let store = self.extract_inner(py) as Arc<dyn LegacyStore>;
-        Arc::new(ManifestStore::new(store))
+        match &self.caching_store(py) {
+            Some(caching_store) => caching_store.clone(),
+            None => {
+                let store = self.extract_inner(py) as Arc<dyn LegacyStore>;
+                Arc::new(ManifestStore::new(store))
+            }
+        }
     }
 }
 

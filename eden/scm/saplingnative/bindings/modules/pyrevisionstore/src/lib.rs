@@ -27,6 +27,7 @@ use cpython_ext::PyPathBuf;
 use cpython_ext::ResultPyErrExt;
 use parking_lot::RwLock;
 use pyconfigloader::config;
+use pythonutil::to_node;
 use revisionstore::repack;
 use revisionstore::scmstore::FileAttributes;
 use revisionstore::scmstore::FileStore;
@@ -1299,6 +1300,8 @@ impl ExtractInnerRef for pyfilescmstore {
 
 py_class!(pub class treescmstore |py| {
     data store: Arc<TreeStore>;
+    // Caching wrapper around store.
+    data caching_store: Option<Arc<dyn storemodel::TreeStore>>;
     data contentstore: Arc<ContentStore>;
 
     def __new__(_cls,
@@ -1318,7 +1321,7 @@ py_class!(pub class treescmstore |py| {
 
         let (treestore, contentstore) = make_treescmstore(path, &config, remote, edenapi, filestore, suffix).map_pyerr(py)?;
 
-        Self::create_instance(py, treestore, contentstore)
+        Self::create_instance(py, treestore, None, contentstore)
     }
 
     def get_contentstore(&self) -> PyResult<contentstore> {
@@ -1326,6 +1329,17 @@ py_class!(pub class treescmstore |py| {
     }
 
     def get(&self, name: PyPathBuf, node: &PyBytes) -> PyResult<PyBytes> {
+        if let Some(caching_store) = &self.caching_store(py) {
+            let repo_path = name.to_repo_path().map_pyerr(py)?;
+            let node = to_node(py, node);
+            return py.allow_threads(|| caching_store.get_content(
+                repo_path,
+                node,
+                FetchMode::AllowRemote,
+            )).map_pyerr(py)
+              .map(|bytes| PyBytes::new(py, &bytes[..]));
+        }
+
         let store = self.store(py);
         store.get_py(py, &name, node)
     }
@@ -1361,6 +1375,15 @@ py_class!(pub class treescmstore |py| {
     }
 
     def prefetch(&self, keys: PyList) -> PyResult<PyObject> {
+        if let Some(caching_store) = &self.caching_store(py) {
+            let keys =  keys
+                .iter(py)
+                .map(|tuple| from_tuple_to_key(py, &tuple))
+                .collect::<PyResult<Vec<Key>>>()?;
+            py.allow_threads(|| caching_store.prefetch(keys)).map_pyerr(py)?;
+            return Ok(Python::None(py));
+        }
+
         let store = self.store(py);
         store.prefetch_py(py, keys)
     }

@@ -1,5 +1,6 @@
   $ setconfig push.edenapi=true
   $ setconfig scmstore.fetch-from-cas=true scmstore.fetch-tree-aux-data=true scmstore.tree-metadata-mode=always
+  $ setconfig scmstore.contentstorefallback=false
 
 First sanity check eagerepo works as CAS store
   $ newclientrepo client1 test:server
@@ -144,10 +145,6 @@ FIXME - not using CAS to fetch file
   $ LOG=cas=debug,eagerepo=debug hg prefetch -r $A .
   DEBUG cas: creating eager remote client
   DEBUG cas: created client
-  DEBUG cas: EagerRepoStore fetching 1 digest(s)
-  DEBUG cas: EagerRepoStore fetching 1 digest(s)
-  DEBUG cas: EagerRepoStore fetching 1 digest(s)
-  DEBUG cas: EagerRepoStore fetching 1 digest(s)
   DEBUG cas: EagerRepoStore fetching 1 digest(s)
   DEBUG cas: EagerRepoStore fetching 1 digest(s)
   DEBUG eagerepo::api: files_attrs * (glob)

@@ -48,6 +48,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let m = PyModule::new(py, &name)?;
     m.add_class::<repo>(py)?;
     m.add_class::<repolock>(py)?;
+
     Ok(m)
 }
 
@@ -178,13 +179,18 @@ py_class!(pub class repo |py| {
         }
 
         let contentstore = Arc::new(builder.build().map_pyerr(py)?);
+        let mut caching_store = Some(repo.caching_tree_store().map_pyerr(py)?);
 
         if repo.config().get_or_default("scmstore", "contentstorefallback").map_pyerr(py)? {
             tree_scm_store = Arc::new(tree_scm_store.with_content_store(contentstore.clone()));
+
+            // Disable cache if contentstore is in play. This is only the case for legacy
+            // tests. The repo's caching store does not include the contentstore, so the
+            // caching store can not answer queries authoritatively.
+            caching_store = None;
         }
 
-
-        PyTreeScmStore::create_instance(py, tree_scm_store, contentstore)
+        PyTreeScmStore::create_instance(py, tree_scm_store, caching_store, contentstore)
     }
 
     def changelog(&self) -> PyResult<PyCommits> {
