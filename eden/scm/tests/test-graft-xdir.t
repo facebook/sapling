@@ -22,7 +22,10 @@ Test validation of --from-path and --to-path
   grafting 7b3f3d5e5faf "A"
   abort: overlapping --to-path entries
   [255]
-  $ hg graft -qr $A --from-path foo --from-path bar --to-path baz/a --to-path baz/b
+  $ hg graft -r $A --from-path foo --from-path bar --to-path baz/a --to-path baz/b
+  grafting 7b3f3d5e5faf "A"
+  path 'foo' does not exist in commit 7b3f3d5e5faf
+  path 'bar' does not exist in commit 7b3f3d5e5faf
   note: graft of 7b3f3d5e5faf created no changes to commit
   $ hg graft -r $A --from-path foo --from-path bar --to-path baz/a --to-path baz/a
   grafting 7b3f3d5e5faf "A"

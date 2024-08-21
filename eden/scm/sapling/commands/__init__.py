@@ -2700,6 +2700,9 @@ def _dograft(ui, repo, *revs, **opts):
             text=message, user=user, date=date, extra=extra, editor=editor
         )
         if node is None:
+            # users might provide wrong from paths, this validate function will
+            # provide more info for users to understand why no changes to commit
+            scmutil.validate_path_exist(ui, ctx, from_paths)
             ui.warn(_("note: graft of %s created no changes to commit\n") % (ctx))
 
     # remove state when we complete successfully
