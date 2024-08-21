@@ -135,3 +135,19 @@ Then fetch "dir" from CAS:
           aux_data: None,
       },
   )
+
+Empty the caches
+  $ setconfig remotefilelog.cachepath=$TESTTMP/cache4
+
+Make sure prefetch uses CAS:
+FIXME - not using CAS to fetch file
+  $ LOG=cas=debug,eagerepo=debug hg prefetch -r $A .
+  DEBUG cas: creating eager remote client
+  DEBUG cas: created client
+  DEBUG cas: EagerRepoStore fetching 1 digest(s)
+  DEBUG cas: EagerRepoStore fetching 1 digest(s)
+  DEBUG cas: EagerRepoStore fetching 1 digest(s)
+  DEBUG cas: EagerRepoStore fetching 1 digest(s)
+  DEBUG cas: EagerRepoStore fetching 1 digest(s)
+  DEBUG cas: EagerRepoStore fetching 1 digest(s)
+  DEBUG eagerepo::api: files_attrs * (glob)

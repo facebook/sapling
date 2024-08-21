@@ -133,6 +133,8 @@ impl CasClient for EagerRepoStore {
         &self,
         digests: &[CasDigest],
     ) -> anyhow::Result<Vec<(CasDigest, anyhow::Result<Option<Vec<u8>>>)>> {
+        tracing::debug!(target: "cas", "EagerRepoStore fetching {} digest(s)", digests.len());
+
         Ok(digests
             .iter()
             .map(|digest| {
