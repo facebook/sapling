@@ -5,7 +5,8 @@
 
 import json
 
-from .. import cmdutil, context, error, hg, pathutil, scmutil
+from .. import cmdutil, context, error, hg, scmutil
+
 from ..cmdutil import commitopts, commitopts2
 from ..i18n import _
 from .cmdtable import command
@@ -76,10 +77,10 @@ def copy(ui, repo, *args, **opts):
 
 def _docopy(ui, repo, *args, **opts):
     cmdutil.bailifchanged(repo)
-    cwd = repo.getcwd()
 
-    from_paths = [pathutil.canonpath(repo.root, cwd, f) for f in opts.get("from_path")]
-    to_paths = [pathutil.canonpath(repo.root, cwd, f) for f in opts.get("to_path")]
+    ctx = repo["."]
+    from_paths = [scmutil.rootrelpath(ctx, p) for p in opts.get("from_path")]
+    to_paths = [scmutil.rootrelpath(ctx, p) for p in opts.get("to_path")]
     if len(from_paths) != len(to_paths):
         raise error.Abort(_("must provide same number of --from-path and --to-path"))
 
