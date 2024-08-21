@@ -7,10 +7,9 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.75"
-async-trait = "0.1.71"
 cas-client = { version = "0.1.0", path = ".." }
 configmodel = { version = "0.1.0", path = "../../config/model" }
 factory = { version = "0.1.0", path = "../../util/factory" }
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+re-cas-common = { version = "0.1.0", path = "../re-cas-common" }
 tracing = { version = "0.1.40", features = ["attributes", "valuable"] }
-types = { version = "0.1.0", path = "../../types" }

@@ -10,19 +10,13 @@ use std::sync::Arc;
 use anyhow::anyhow;
 use anyhow::Result;
 use cas_client::CasClient;
-use cas_client::CasDigest;
 use configmodel::Config;
 use configmodel::ConfigExt;
 use re_client_lib::create_default_config;
-use re_client_lib::DownloadRequest;
 use re_client_lib::ExternalCASDaemonAddress;
 use re_client_lib::REClient;
 use re_client_lib::REClientBuilder;
 use re_client_lib::RemoteExecutionMetadata;
-use re_client_lib::TCode;
-use re_client_lib::TDigest;
-use re_client_lib::THashAlgo;
-use types::Blake3;
 
 pub struct ThinCasClient {
     client: REClient,
@@ -85,57 +79,4 @@ impl ThinCasClient {
     }
 }
 
-fn to_re_digest(d: &CasDigest) -> TDigest {
-    TDigest {
-        hash: d.hash.to_hex(),
-        size_in_bytes: d.size as i64,
-        hash_algo: Some(THashAlgo::BLAKE3),
-        ..Default::default()
-    }
-}
-
-fn from_re_digest(d: &TDigest) -> Result<CasDigest> {
-    Ok(CasDigest {
-        hash: Blake3::from_hex(d.hash.as_bytes())?,
-        size: d.size_in_bytes as u64,
-    })
-}
-
-#[async_trait::async_trait]
-impl CasClient for ThinCasClient {
-    async fn fetch(
-        &self,
-        digests: &[CasDigest],
-    ) -> Result<Vec<(CasDigest, Result<Option<Vec<u8>>>)>> {
-        tracing::debug!(target: "cas", "thin client fetching {} digest(s)", digests.len());
-
-        let request = DownloadRequest {
-            inlined_digests: Some(digests.iter().map(to_re_digest).collect()),
-            ..Default::default()
-        };
-
-        self.client
-            .download(self.metadata.clone(), request)
-            .await?
-            .inlined_blobs
-            .unwrap_or_default()
-            .into_iter()
-            .map(|blob| {
-                let digest = from_re_digest(&blob.digest)?;
-                match blob.status.code {
-                    TCode::OK => Ok((digest, Ok(Some(blob.blob)))),
-                    TCode::NOT_FOUND => Ok((digest, Ok(None))),
-                    _ => Ok((
-                        digest,
-                        Err(anyhow!(
-                            "bad status (code={}, message={}, group={})",
-                            blob.status.code,
-                            blob.status.message,
-                            blob.status.group
-                        )),
-                    )),
-                }
-            })
-            .collect::<Result<Vec<_>>>()
-    }
-}
+re_cas_common::re_client!(ThinCasClient);

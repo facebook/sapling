@@ -16,6 +16,7 @@ members = [
   "lib/blackbox",
   "lib/blackbox/serde_alt",
   "lib/cas-client",
+  "lib/cas-client/re-cas-common",
   "lib/cas-client/rich-client",
   "lib/cas-client/thin-client",
   "lib/cats",
