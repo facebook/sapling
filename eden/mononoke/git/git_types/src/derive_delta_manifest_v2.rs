@@ -139,16 +139,20 @@ async fn gdm_v2_entries_root(
         .list_all_entries(ctx.clone(), blobstore.clone())
         .map_ok(|(path, entry)| async move {
             let member = TreeMember::from(entry);
-
-            Ok((
+            // If the entry corresponds to a submodule (and shows up as a commit), then we ignore it
+            if member.filemode() == crate::mode::GIT_FILEMODE_COMMIT {
+                return Ok(None);
+            }
+            Ok(Some((
                 path,
                 GDMV2Entry {
                     full_object: GDMV2ObjectEntry::from_tree_member(&member, None)?,
                     deltas: vec![],
                 },
-            ))
+            )))
         })
         .try_buffered(100)
+        .try_filter_map(futures::future::ok)
         .try_collect::<Vec<_>>()
         .await
 }
