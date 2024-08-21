@@ -28,21 +28,153 @@ pub const SCS_DEFAULT_TIER: &str = "shardmanager:mononoke.scs";
 const CONN_TIMEOUT_MS: u32 = 5000;
 const RECV_TIMEOUT_MS: u32 = 30_000;
 
-pub struct ScsClientBuilder {}
+pub struct ScsClientBuilder {
+    fb: FacebookInit,
+    client_id: String,
+    repo: Option<String>,
+    tier: String,
+}
 
 impl ScsClientBuilder {
+    pub fn new(fb: FacebookInit, client_id: String) -> Self {
+        Self {
+            fb,
+            client_id,
+            repo: None,
+            tier: SCS_DEFAULT_TIER.to_string(),
+        }
+    }
+
+    pub fn with_repo(mut self, repo: Option<String>) -> Self {
+        self.repo = repo;
+        self
+    }
+
+    pub fn with_tier(mut self, tier: impl AsRef<str>) -> Self {
+        self.tier = tier.as_ref().to_string();
+        self
+    }
+
+    pub fn build(self) -> Result<ScsClient, Error> {
+        build_from_tier_name(self.fb, self.client_id, self.tier, self.repo.clone())
+    }
+}
+
+/// Build a scsclient from a tier name via servicerouter.
+#[cfg(not(any(target_os = "macos", target_os = "windows")))]
+fn build_from_tier_name_via_sr(
+    fb: FacebookInit,
+    client_id: String,
+    tier: impl AsRef<str>,
+    shardmanager_domain: Option<String>,
+) -> Result<ScsClient, Error> {
+    use source_control_srclients::make_SourceControlService_srclient;
+    use srclient::ClientParams;
+
+    let client_info = ClientInfo::new_with_entry_point(ClientEntryPoint::ScsClient)?;
+    let correlator = client_info
+        .request_info
+        .as_ref()
+        .map(|request_info| request_info.correlator.clone());
+    let headers = hashmap! {
+        String::from(CLIENT_INFO_HEADER) => client_info.to_json()?,
+    };
+
+    let client_params = ClientParams::new()
+        .with_client_id(client_id)
+        .maybe_with(correlator.clone(), |c, correlator| {
+            c.with_logging_context(correlator)
+        })
+        .maybe_with(shardmanager_domain, |c, shardmanager_domain| {
+            c.with_shard_manager_domain(encode_repo_name(&shardmanager_domain))
+        });
+
+    let client = make_SourceControlService_srclient!(
+        fb,
+        tiername = tier.as_ref(),
+        with_persistent_headers = headers,
+        with_client_params = client_params,
+    )?;
+
+    Ok(ScsClient { client, correlator })
+}
+
+/// Build a scsclient from a tier name via servicerouter.
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+fn build_from_tier_name_via_sr(
+    _fb: FacebookInit,
+    _client_id: String,
+    _tier: impl AsRef<str>,
+    _shardmanager_domain: Option<String>,
+) -> Result<ScsClient, Error> {
+    Err(anyhow!(
+        "Connection via ServiceRouter is not supported on this platform"
+    ))
+}
+
+/// Build a scsclient from a tier name via x2p.
+fn build_from_tier_name_via_x2p(
+    fb: FacebookInit,
+    client_id: String,
+    tier: impl AsRef<str>,
+    shardmanager_domain: Option<String>,
+) -> Result<ScsClient, Error> {
+    let client_info = ClientInfo::new_with_entry_point(ClientEntryPoint::ScsClient)?;
+    let headers = hashmap! {
+        String::from(CLIENT_INFO_HEADER) => client_info.to_json()?,
+    };
+    let client = if let Some(shardmanager_domain) = shardmanager_domain {
+        make_SourceControlService_x2pclient!(
+            fb,
+            tiername = tier.as_ref(),
+            with_client_id = client_id,
+            with_persistent_headers = headers,
+            with_shard_manager_domain = encode_repo_name(&shardmanager_domain)
+        )?
+    } else {
+        make_SourceControlService_x2pclient!(
+            fb,
+            tiername = tier.as_ref(),
+            with_client_id = client_id,
+            with_persistent_headers = headers,
+        )?
+    };
+
+    Ok(ScsClient {
+        client,
+        correlator: None,
+    })
+}
+
+/// Build a scsclient from a tier name.
+fn build_from_tier_name(
+    fb: FacebookInit,
+    client_id: String,
+    tier: impl AsRef<str>,
+    shardmanager_domain: Option<String>,
+) -> Result<ScsClient, Error> {
+    match x2pclient::get_env(fb) {
+        x2pclient::Environment::Prod => {
+            if cfg!(target_os = "linux") {
+                build_from_tier_name_via_sr(fb, client_id, tier, shardmanager_domain)
+            } else {
+                build_from_tier_name_via_x2p(fb, client_id, tier, shardmanager_domain)
+            }
+        }
+        x2pclient::Environment::Corp => {
+            build_from_tier_name_via_x2p(fb, client_id, tier, shardmanager_domain)
+        }
+        other_env => Err(anyhow!("{} not supported", other_env)),
+    }
+}
+
+pub struct ScsClientHostBuilder {}
+
+impl ScsClientHostBuilder {
     pub fn new() -> Self {
         Self {}
     }
 
-    pub fn build(
-        self,
-        fb: FacebookInit,
-        client_id: String,
-        repo: Option<&str>,
-    ) -> Result<ScsClient, Error> {
-        self.build_from_tier_name(fb, client_id, SCS_DEFAULT_TIER, repo)
-    }
     /// Build a scsclient from a `host:port` string.
     #[cfg(not(target_os = "windows"))]
     pub fn build_from_host_port(
@@ -86,118 +218,6 @@ impl ScsClientBuilder {
         Err(anyhow!(
             "Connection to host and port is not supported on this platform"
         ))
-    }
-
-    /// Build a scsclient from a tier name via servicerouter.
-    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
-    pub fn build_from_tier_name_via_sr(
-        self,
-        fb: FacebookInit,
-        client_id: String,
-        tier: impl AsRef<str>,
-        shardmanager_domain: Option<&str>,
-    ) -> Result<ScsClient, Error> {
-        use source_control_srclients::make_SourceControlService_srclient;
-        use srclient::ClientParams;
-
-        let client_info = ClientInfo::new_with_entry_point(ClientEntryPoint::ScsClient)?;
-        let correlator = client_info
-            .request_info
-            .as_ref()
-            .map(|request_info| request_info.correlator.clone());
-        let headers = hashmap! {
-            String::from(CLIENT_INFO_HEADER) => client_info.to_json()?,
-        };
-
-        let client_params = ClientParams::new()
-            .with_client_id(client_id)
-            .maybe_with(correlator.clone(), |c, correlator| {
-                c.with_logging_context(correlator)
-            })
-            .maybe_with(shardmanager_domain, |c, shardmanager_domain| {
-                c.with_shard_manager_domain(encode_repo_name(shardmanager_domain))
-            });
-
-        let client = make_SourceControlService_srclient!(
-            fb,
-            tiername = tier.as_ref(),
-            with_persistent_headers = headers,
-            with_client_params = client_params,
-        )?;
-
-        Ok(ScsClient { client, correlator })
-    }
-
-    /// Build a scsclient from a tier name via servicerouter.
-    #[cfg(any(target_os = "macos", target_os = "windows"))]
-    pub fn build_from_tier_name_via_sr(
-        self,
-        _fb: FacebookInit,
-        _client_id: String,
-        _tier: impl AsRef<str>,
-        _shardmanager_domain: Option<&str>,
-    ) -> Result<ScsClient, Error> {
-        Err(anyhow!(
-            "Connection via ServiceRouter is not supported on this platform"
-        ))
-    }
-
-    /// Build a scsclient from a tier name via x2p.
-    pub fn build_from_tier_name_via_x2p(
-        self,
-        fb: FacebookInit,
-        client_id: String,
-        tier: impl AsRef<str>,
-        shardmanager_domain: Option<&str>,
-    ) -> Result<ScsClient, Error> {
-        let client_info = ClientInfo::new_with_entry_point(ClientEntryPoint::ScsClient)?;
-        let headers = hashmap! {
-            String::from(CLIENT_INFO_HEADER) => client_info.to_json()?,
-        };
-        let client = if let Some(shardmanager_domain) = shardmanager_domain {
-            make_SourceControlService_x2pclient!(
-                fb,
-                tiername = tier.as_ref(),
-                with_client_id = client_id,
-                with_persistent_headers = headers,
-                with_shard_manager_domain = encode_repo_name(shardmanager_domain)
-            )?
-        } else {
-            make_SourceControlService_x2pclient!(
-                fb,
-                tiername = tier.as_ref(),
-                with_client_id = client_id,
-                with_persistent_headers = headers,
-            )?
-        };
-
-        Ok(ScsClient {
-            client,
-            correlator: None,
-        })
-    }
-
-    /// Build a scsclient from a tier name.
-    pub fn build_from_tier_name(
-        self,
-        fb: FacebookInit,
-        client_id: String,
-        tier: impl AsRef<str>,
-        shardmanager_domain: Option<&str>,
-    ) -> Result<ScsClient, Error> {
-        match x2pclient::get_env(fb) {
-            x2pclient::Environment::Prod => {
-                if cfg!(target_os = "linux") {
-                    self.build_from_tier_name_via_sr(fb, client_id, tier, shardmanager_domain)
-                } else {
-                    self.build_from_tier_name_via_x2p(fb, client_id, tier, shardmanager_domain)
-                }
-            }
-            x2pclient::Environment::Corp => {
-                self.build_from_tier_name_via_x2p(fb, client_id, tier, shardmanager_domain)
-            }
-            other_env => Err(anyhow!("{} not supported", other_env)),
-        }
     }
 }
 
