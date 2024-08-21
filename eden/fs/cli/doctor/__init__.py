@@ -346,7 +346,6 @@ class EdenDoctorChecker:
         check_edenfs_version(self.tracker, self.instance)
         try:
             checkouts = self._get_checkouts_info()
-            print(checkouts)
         except RuntimeError as ex:
             self.tracker.add_problem(EdenCheckoutInfosCorruption(ex))
             return
