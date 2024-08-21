@@ -39,6 +39,8 @@ serde_derive = "1.0.185"
 serde_json = { version = "1.0.100", features = ["float_roundtrip", "unbounded_depth"] }
 serde_regex = "1"
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
+source_control = { version = "0.1.0", path = "../scs/if" }
+source_control_clients = { version = "0.1.0", path = "../scs/if/clients" }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 thiserror = "1.0.49"
 tokio = { version = "1.37.0", features = ["full", "test-util", "tracing"] }
