@@ -1,7 +1,7 @@
 load("@fbcode_macros//build_defs:custom_unittest.bzl", "custom_unittest")
 load("@fbcode_macros//build_defs:native_rules.bzl", "buck_filegroup")
 load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
-load("//antlir/fbpkg:fbpkg.bzl", "fbpkg")
+load("//fbpkg:fbpkg.bzl", "fbpkg")
 
 oncall("mononoke")
 

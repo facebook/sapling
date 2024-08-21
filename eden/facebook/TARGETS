@@ -1,6 +1,6 @@
 load("@fbcode_macros//build_defs:python_binary.bzl", "python_binary")
-load("//antlir/fbpkg:fbpkg.bzl", "fbpkg")
 load("//eden:defs.bzl", "make_rule_compatible_with")
+load("//fbpkg:fbpkg.bzl", "fbpkg")
 
 oncall("scm_client_infra")
 

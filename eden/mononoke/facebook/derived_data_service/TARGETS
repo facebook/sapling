@@ -2,7 +2,7 @@
 load("@fbcode_macros//build_defs:rust_binary.bzl", "rust_binary")
 load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
 load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
-load("//antlir/fbpkg:fbpkg.bzl", "fbpkg")
+load("//fbpkg:fbpkg.bzl", "fbpkg")
 load("//tupperware/cm/antlir2/bzl:buck2_container.bzl", "tw")
 
 oncall("mononoke")

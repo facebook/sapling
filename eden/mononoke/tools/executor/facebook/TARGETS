@@ -1,4 +1,4 @@
-load("//antlir/fbpkg:fbpkg.bzl", "fbpkg")
+load("//fbpkg:fbpkg.bzl", "fbpkg")
 
 oncall("mononoke")
 

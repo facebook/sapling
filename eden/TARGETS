@@ -1,5 +1,5 @@
 load("@fbcode_macros//build_defs:native_rules.bzl", "buck_genrule")
-load("//antlir/fbpkg:fbpkg.bzl", "fbpkg")
+load("//fbpkg:fbpkg.bzl", "fbpkg")
 
 oncall("scm_client_infra")
 
