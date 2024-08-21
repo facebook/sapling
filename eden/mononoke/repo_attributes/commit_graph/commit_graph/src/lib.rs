@@ -59,7 +59,6 @@ pub use crate::writer::BaseCommitGraphWriter;
 pub use crate::writer::CommitGraphWriter;
 pub use crate::writer::CommitGraphWriterArc;
 pub use crate::writer::CommitGraphWriterRef;
-pub use crate::writer::CompatCommitGraphWriter;
 pub use crate::writer::LoggingCommitGraphWriter;
 
 mod ancestors_stream;

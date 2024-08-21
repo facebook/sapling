@@ -76,7 +76,6 @@ use commit_graph::ArcCommitGraph;
 use commit_graph::ArcCommitGraphWriter;
 use commit_graph::BaseCommitGraphWriter;
 use commit_graph::CommitGraph;
-use commit_graph::CompatCommitGraphWriter;
 use commit_graph::LoggingCommitGraphWriter;
 use commit_graph_types::storage::CommitGraphStorage;
 use context::CoreContext;
@@ -1681,7 +1680,6 @@ impl RepoFactory {
         repo_identity: &ArcRepoIdentity,
         repo_config: &ArcRepoConfig,
         commit_graph: &CommitGraph,
-        changesets: &ArcChangesets,
     ) -> Result<ArcCommitGraphWriter> {
         let scuba_table = repo_config.commit_graph_config.scuba_table.as_deref();
         let scuba = match scuba_table {
@@ -1694,13 +1692,8 @@ impl RepoFactory {
 
         let base_writer = Arc::new(BaseCommitGraphWriter::new(commit_graph.clone()));
 
-        let compat_writer = Arc::new(CompatCommitGraphWriter::new(
-            base_writer,
-            changesets.clone(),
-        ));
-
         Ok(Arc::new(LoggingCommitGraphWriter::new(
-            compat_writer,
+            base_writer,
             scuba,
             repo_identity.name().to_string(),
         )))

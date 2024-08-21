@@ -12,7 +12,6 @@ anyhow = "1.0.75"
 async-trait = "0.1.71"
 borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 buffered_commit_graph_storage = { version = "0.1.0", path = "../buffered_commit_graph_storage" }
-changesets = { version = "0.1.0", path = "../../../changesets" }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 commit_graph_types = { version = "0.1.0", path = "../commit_graph_types" }
 context = { version = "0.1.0", path = "../../../server/context" }
@@ -20,7 +19,6 @@ facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
 futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 itertools = "0.11.0"
-justknobs = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 memwrites_commit_graph_storage = { version = "0.1.0", path = "../memwrites_commit_graph_storage" }
 mononoke_types = { version = "0.1.0", path = "../../../mononoke_types" }
 scuba_ext = { version = "0.1.0", path = "../../../common/scuba_ext" }

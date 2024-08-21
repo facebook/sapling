@@ -18,8 +18,6 @@ rust_library(
         "//common/rust/shed/cloned:cloned",
         "//common/rust/shed/facet:facet",
         "//common/rust/shed/futures_stats:futures_stats",
-        "//common/rust/shed/justknobs_stub:justknobs",
-        "//eden/mononoke/changesets:changesets",
         "//eden/mononoke/common/scuba_ext:scuba_ext",
         "//eden/mononoke/mononoke_types:mononoke_types",
         "//eden/mononoke/repo_attributes/commit_graph/buffered_commit_graph_storage:buffered_commit_graph_storage",

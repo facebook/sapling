@@ -39,7 +39,6 @@ use commit_graph::ArcCommitGraph;
 use commit_graph::ArcCommitGraphWriter;
 use commit_graph::BaseCommitGraphWriter;
 use commit_graph::CommitGraph;
-use commit_graph::CompatCommitGraphWriter;
 use context::CoreContext;
 use dbbookmarks::ArcSqlBookmarks;
 use dbbookmarks::SqlBookmarksBuilder;
@@ -797,16 +796,9 @@ impl TestRepoFactory {
     }
 
     /// Commit graph writer
-    pub fn commit_graph_writer(
-        &self,
-        commit_graph: &CommitGraph,
-        changesets: &ArcChangesets,
-    ) -> Result<ArcCommitGraphWriter> {
+    pub fn commit_graph_writer(&self, commit_graph: &CommitGraph) -> Result<ArcCommitGraphWriter> {
         let base_writer = BaseCommitGraphWriter::new(commit_graph.clone());
-        Ok(Arc::new(CompatCommitGraphWriter::new(
-            Arc::new(base_writer),
-            changesets.clone(),
-        )))
+        Ok(Arc::new(base_writer))
     }
 
     /// Commit graph bulk fetcher
