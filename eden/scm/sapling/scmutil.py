@@ -1529,10 +1529,9 @@ def rootrelpath(ctx, path):
         if kind not in SUPPORTED_PAT_KINDS:
             raise error.Abort(_("unsupported pattern kind: '%s'"), kind)
     files = ctx.match(pats=[path], default="relpath").files()
-    if len(files) != 1:
-        if not files:
-            hint = _("the path '%s' matches the repo root directory") % (path)
-        else:
-            hint = _("the path '%s' matches multiple files: %s") % (path, files)
-        raise error.Abort(_("path must match exactly one file path"), hint=hint)
+    if not files:
+        # path is repo root directory
+        return ""
+    # this should be true since we only pass "path" or "relpath" pattern kinds to match()
+    assert len(files) == 1, f"path '{path}' should match exactly one file path"
     return files[0]
