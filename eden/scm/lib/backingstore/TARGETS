@@ -1,49 +1,27 @@
 load("@fbcode//eden/scm:targets.bzl", "is_experimental_cas_build")
 load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
-load("@fbcode_macros//build_defs:rust_cxx_bridge.bzl", "rust_cxx_bridge")
 load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
 
 oncall("sapling")
 
 cpp_library(
-    name = "sapling_native_backingstore-include",
-    srcs = [],
+    name = "sapling_native_backingstore",
+    srcs = glob(["src/**/*.cpp"]),
     headers = glob(["include/**/*.h"]),
+    undefined_symbols = True,
+    deps = [
+        "//folly:string",
+        "//folly/io:iobuf",
+        "//folly/logging:logging",
+    ],
     exported_deps = [
         "fbsource//third-party/rust:cxx-core",
+        ":backingstore@header",
         "//eden/fs/store:context",
         "//folly:function",
         "//folly:range",
         "//folly:try",
         "//folly/futures:core",
-    ],
-)
-
-cpp_library(
-    # @autodeps-skip
-    name = "sapling_native_backingstore",
-    srcs = glob(["src/**/*.cpp"]),
-    headers = [],
-    preferred_linkage = "static",
-    undefined_symbols = True,
-    deps = [
-        "fbsource//third-party/rust:cxx-core",
-        ":backingstore_bridge@header",
-        ":sapling_native_backingstore-include",
-        "//eden/fs/store:context",
-        "//folly:range",
-        "//folly:string",
-        "//folly/io:iobuf",
-        "//folly/logging:logging",
-    ],
-)
-
-rust_cxx_bridge(
-    name = "backingstore_bridge",
-    src = "src/ffi.rs",
-    deps = [
-        ":sapling_native_backingstore-include",
-        "//eden/fs/store:context",
     ],
 )
 
@@ -72,8 +50,12 @@ rust_library(
             },
         },
     },
-    cpp_deps = [":sapling_native_backingstore"],
+    cpp_deps = [
+        ":sapling_native_backingstore",
+        "//eden/fs/store:context",
+    ],
     crate_root = "src/lib.rs",
+    cxx_bridge = "src/ffi.rs",
     features = ["cas"] if is_experimental_cas_build() else [],
     deps = [
         "fbsource//third-party/rust:anyhow",
@@ -84,7 +66,6 @@ rust_library(
         "fbsource//third-party/rust:parking_lot",
         "fbsource//third-party/rust:tracing",
         "fbsource//third-party/rust:tracing-subscriber",
-        ":backingstore_bridge",
         "//eden/scm/lib/config/loader:configloader",
         "//eden/scm/lib/constructors:constructors",
         "//eden/scm/lib/eagerepo:eagerepo",

@@ -15,7 +15,7 @@
 #include <string_view>
 
 #include "eden/fs/store/ObjectFetchContext.h"
-#include "eden/scm/lib/backingstore/src/ffi.rs.h" // @manual
+#include "eden/scm/lib/backingstore/src/ffi.rs.h"
 
 namespace folly {
 class IOBuf;
