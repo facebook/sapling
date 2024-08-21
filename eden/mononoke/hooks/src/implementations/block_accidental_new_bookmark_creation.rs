@@ -36,6 +36,8 @@ const NAMED_CAPTURE_NAME: &str = "marker_capture";
 #[derive(Clone, Debug, Deserialize)]
 pub struct BlockAccidentalNewBookmarkCreationConfig {
     allow_creations_with_marker: Option<AllowCreationsWithMarker>,
+    #[serde(default, with = "serde_regex")]
+    bypass_for_bookmarks_matching_regex: Option<Regex>,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -54,6 +56,7 @@ struct CreationAllowedWithMarkerOptions {
 #[derive(Clone, Debug)]
 pub struct BlockAccidentalNewBookmarkCreationHook {
     creation_allowed_with_marker_options: Option<CreationAllowedWithMarkerOptions>,
+    bypass_for_bookmarks_matching_regex: Option<Regex>,
 }
 
 impl BlockAccidentalNewBookmarkCreationHook {
@@ -82,6 +85,7 @@ impl BlockAccidentalNewBookmarkCreationHook {
 
         Ok(Self {
             creation_allowed_with_marker_options,
+            bypass_for_bookmarks_matching_regex: config.bypass_for_bookmarks_matching_regex,
         })
     }
 }
@@ -117,6 +121,12 @@ impl ChangesetHook for BlockAccidentalNewBookmarkCreationHook {
         }
 
         let bookmark_name = bookmark.as_str();
+
+        if let Some(regex) = &self.bypass_for_bookmarks_matching_regex {
+            if regex.is_match(&bookmark_name) {
+                return Ok(HookExecution::Accepted);
+            }
+        }
 
         if let Some(options) = &self.creation_allowed_with_marker_options {
             if let Some(value_from_marker) = extract_value_from_marker(options, changeset) {

@@ -27,7 +27,8 @@
   > "allow_creations_with_marker": {
   >   "marker": "@new-branch",
   >   "comparison_prefix": "heads/"
-  >  }
+  >  },
+  >  "bypass_for_bookmarks_matching_regex": "^heads/prefix.*"
   > }'''
   > EOF
 
@@ -102,3 +103,14 @@
   $ git_client push origin --all
   To https://localhost:$LOCAL_PORT/repos/git/ro/repo.git
    * [new branch]      brand_new_branch -> brand_new_branch
+
+# now test the bypass based on bookmark matching a regex
+  $ git checkout -b prefix_should_land_as_is
+  Switched to a new branch 'prefix_should_land_as_is'
+  $ echo a_file > a_file
+  $ git add .
+  $ git commit -qam "new commit"
+  $ git_client push origin --all
+  To https://localhost:$LOCAL_PORT/repos/git/ro/repo.git
+   * [new branch]      prefix_should_land_as_is -> prefix_should_land_as_is
+
