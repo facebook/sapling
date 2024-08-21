@@ -1537,6 +1537,11 @@ def rootrelpath(ctx, path):
     return files[0]
 
 
+def rootrelpaths(ctx, paths):
+    """Convert a list of path or relative path patterns to root relative paths."""
+    return [rootrelpath(ctx, path) for path in paths]
+
+
 def validate_path_size(from_paths, to_paths, abort_on_empty=False):
     if len(from_paths) != len(to_paths):
         raise error.Abort(_("must provide same number of --from-path and --to-path"))
