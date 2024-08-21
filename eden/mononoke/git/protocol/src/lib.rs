@@ -23,8 +23,11 @@ use repo_identity::RepoIdentityRef;
 
 pub mod bookmarks_provider;
 pub mod generator;
+pub mod mapping;
 pub mod pack_processor;
+mod store;
 pub mod types;
+pub mod utils;
 
 const HEAD_REF: &str = "HEAD";
 const TAGS_PREFIX: &str = "tags/";

@@ -12,20 +12,29 @@ use std::fmt::Formatter;
 use std::hash::Hash;
 use std::hash::Hasher;
 use std::marker::Unpin;
+use std::sync::Arc;
 
+use anyhow::anyhow;
 use anyhow::Result;
+use context::CoreContext;
 use futures::stream::BoxStream;
 use git_types::DeltaObjectKind;
 use git_types::GDMV2Entry;
 use git_types::GDMV2ObjectEntry;
 use gix_hash::ObjectId;
+use metaconfig_types::GitDeltaManifestVersion;
 use mononoke_types::hash::RichGitSha1;
 use mononoke_types::path::MPath;
 use mononoke_types::ChangesetId;
 use packetline::encode::write_binary_packetline;
 use packfile::pack::DeltaForm;
 use packfile::types::PackfileItem;
+use repo_blobstore::RepoBlobstore;
+use repo_derived_data::RepoDerivedData;
+use rustc_hash::FxHashSet;
 use tokio::io::AsyncWrite;
+
+use crate::Repo;
 
 const SYMREF_HEAD: &str = "HEAD";
 // The upper bound on the RSS bytes beyond which we will pause executing futures until the process
@@ -608,3 +617,73 @@ impl PartialEq for FullObjectEntry {
 }
 
 impl Eq for FullObjectEntry {}
+
+/// Set of parameters that are needed by the generators used for constructing
+/// response for fetch request
+#[derive(Clone)]
+pub(crate) struct FetchContainer {
+    pub(crate) ctx: Arc<CoreContext>,
+    pub(crate) blobstore: Arc<RepoBlobstore>,
+    pub(crate) derived_data: Arc<RepoDerivedData>,
+    pub(crate) git_delta_manifest_version: GitDeltaManifestVersion,
+    pub(crate) delta_inclusion: DeltaInclusion,
+    pub(crate) filter: Arc<Option<FetchFilter>>,
+    pub(crate) concurrency: PackfileConcurrency,
+    pub(crate) packfile_item_inclusion: PackfileItemInclusion,
+    pub(crate) shallow_info: Arc<Option<ShallowInfoResponse>>,
+}
+
+impl FetchContainer {
+    pub(crate) fn new(
+        ctx: Arc<CoreContext>,
+        repo: &impl Repo,
+        delta_inclusion: DeltaInclusion,
+        filter: Arc<Option<FetchFilter>>,
+        concurrency: PackfileConcurrency,
+        packfile_item_inclusion: PackfileItemInclusion,
+        shallow_info: Arc<Option<ShallowInfoResponse>>,
+    ) -> Result<Self> {
+        let git_delta_manifest_version = repo
+            .repo_config()
+            .derived_data_config
+            .get_active_config()
+            .ok_or_else(|| anyhow!("No enabled derived data types config"))?
+            .git_delta_manifest_version;
+        Ok(Self {
+            ctx,
+            git_delta_manifest_version,
+            delta_inclusion,
+            filter,
+            concurrency,
+            packfile_item_inclusion,
+            shallow_info,
+            blobstore: repo.repo_blobstore_arc(),
+            derived_data: repo.repo_derived_data_arc(),
+        })
+    }
+}
+
+#[derive(Debug, Clone, Default)]
+pub(crate) struct CommitTagMappings {
+    pub(crate) tagged_commits: Vec<ChangesetId>,
+    pub(crate) tag_names: Arc<FxHashSet<String>>,
+    pub(crate) non_tag_oids: Vec<ObjectId>,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct TranslatedShas {
+    pub(crate) bonsais: Vec<ChangesetId>,
+    pub(crate) tag_names: Arc<FxHashSet<String>>,
+    pub(crate) non_tag_non_commit_oids: Vec<ObjectId>,
+}
+
+impl TranslatedShas {
+    pub(crate) fn new(mut commit_bonsais: Vec<ChangesetId>, mappings: CommitTagMappings) -> Self {
+        commit_bonsais.extend(mappings.tagged_commits);
+        Self {
+            bonsais: commit_bonsais,
+            tag_names: mappings.tag_names,
+            non_tag_non_commit_oids: mappings.non_tag_oids,
+        }
+    }
+}
