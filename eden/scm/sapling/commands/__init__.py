@@ -2225,7 +2225,9 @@ def diff(ui, repo, *pats, **opts):
         ctx1, ctx2 = ctx2, ctx1
         opts["from_path"], opts["to_path"] = opts.get("to_path"), opts.get("from_path")
 
-    cmdutil.registerdiffgrafts(opts, ctx1)
+    from_paths = scmutil.rootrelpaths(ctx1, opts.get("from_path"))
+    to_paths = scmutil.rootrelpaths(ctx1, opts.get("to_path"))
+    cmdutil.registerdiffgrafts(from_paths, to_paths, ctx1)
 
     if onlyfilesinrevs:
         files1 = set(ctx1.files())
@@ -2631,6 +2633,9 @@ def _dograft(ui, repo, *revs, **opts):
         if not revs:
             return -1
 
+    from_paths = scmutil.rootrelpaths(repo["."], opts.get("from_path"))
+    to_paths = scmutil.rootrelpaths(repo["."], opts.get("to_path"))
+
     for pos, ctx in enumerate(repo.set("%ld", revs)):
         desc = '%s "%s"' % (ctx, ctx.description().split("\n", 1)[0])
         names = repo.nodebookmarks(ctx.node())
@@ -2657,7 +2662,7 @@ def _dograft(ui, repo, *revs, **opts):
 
         # Apply --from-path/--to-path mappings to manifest being grafted, and its
         # parent manifest.
-        cmdutil.registerdiffgrafts(opts, ctx, ctx.p1())
+        cmdutil.registerdiffgrafts(from_paths, to_paths, ctx, ctx.p1())
 
         # we don't merge the first commit when continuing
         if not cont:

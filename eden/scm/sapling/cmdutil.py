@@ -4914,7 +4914,7 @@ diffgraftopts = [
 ]
 
 
-def registerdiffgrafts(opts, *ctxs):
+def registerdiffgrafts(from_paths, to_paths, *ctxs):
     """Register --from-path/--to-path manifest "grafts" in ctx's manifest.
 
     These grafts are applied temporarily before diff operations, allowing users
@@ -4922,10 +4922,6 @@ def registerdiffgrafts(opts, *ctxs):
     """
     if not ctxs:
         return error.ProgrammingError("registerdiffgrafts() requires ctxs")
-
-    ctx = ctxs[0]
-    from_paths = [scmutil.rootrelpath(ctx, p) for p in opts.get("from_path")]
-    to_paths = [scmutil.rootrelpath(ctx, p) for p in opts.get("to_path")]
 
     scmutil.validate_path_size(from_paths, to_paths)
     scmutil.validate_path_overlap(to_paths)
