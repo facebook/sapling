@@ -23,7 +23,7 @@ use maplit::hashmap;
 use sharding_ext::encode_repo_name;
 pub use source_control as thrift;
 use source_control_clients::SourceControlService;
-use source_control_x2pclients::make_SourceControlService_x2pclient;
+use source_control_x2pclients::build_SourceControlService_client;
 
 pub const SCS_DEFAULT_TIER: &str = "shardmanager:mononoke.scs";
 
@@ -86,7 +86,7 @@ fn build_from_tier_name_via_sr(
     client_id: String,
     tier: impl AsRef<str>,
     shardmanager_domain: Option<String>,
-    host_and_port: Option<SocketAddr>,
+    single_host: Option<SocketAddr>,
 ) -> Result<ScsClient, Error> {
     use source_control_srclients::make_SourceControlService_srclient;
     use srclient::ClientParams;
@@ -108,8 +108,8 @@ fn build_from_tier_name_via_sr(
         .maybe_with(shardmanager_domain, |c, shardmanager_domain| {
             c.with_shard_manager_domain(encode_repo_name(&shardmanager_domain))
         })
-        .maybe_with(host_and_port, |c, host_and_port| {
-            c.with_single_host(host_and_port, None)
+        .maybe_with(single_host, |c, single_host| {
+            c.with_single_host(single_host, None)
         });
 
     let client = make_SourceControlService_srclient!(
@@ -129,7 +129,7 @@ fn build_from_tier_name_via_sr(
     _client_id: String,
     _tier: impl AsRef<str>,
     _shardmanager_domain: Option<String>,
-    _host_and_port: Option<String>,
+    _single_host: Option<String>,
 ) -> Result<ScsClient, Error> {
     Err(anyhow!(
         "Connection via ServiceRouter is not supported on this platform"
@@ -148,33 +148,15 @@ fn build_from_tier_name_via_x2p(
     let headers = hashmap! {
         String::from(CLIENT_INFO_HEADER) => client_info.to_json()?,
     };
-    let client = if let Some(shardmanager_domain) = shardmanager_domain {
-        if let Some(host_and_port) = single_host {
-            make_SourceControlService_x2pclient!(
-                fb,
-                tiername = tier.as_ref(),
-                with_client_id = client_id,
-                with_host = host_and_port,
-                with_persistent_headers = headers,
-                with_shard_manager_domain = encode_repo_name(&shardmanager_domain),
-            )?
-        } else {
-            make_SourceControlService_x2pclient!(
-                fb,
-                tiername = tier.as_ref(),
-                with_client_id = client_id,
-                with_persistent_headers = headers,
-                with_shard_manager_domain = encode_repo_name(&shardmanager_domain)
-            )?
-        }
-    } else {
-        make_SourceControlService_x2pclient!(
-            fb,
-            tiername = tier.as_ref(),
-            with_client_id = client_id,
-            with_persistent_headers = headers,
-        )?
-    };
+
+    let channel = x2pclient::X2pClientBuilder::from_service_name(fb, tier.as_ref())
+        .with_client_id(client_id)
+        .with_persistent_headers(headers)
+        .maybe_with(shardmanager_domain, |c, shardmanager_domain| {
+            c.with_shard_manager_domain(encode_repo_name(&shardmanager_domain))
+        })
+        .maybe_with(single_host, |c, single_host| c.with_host(single_host));
+    let client = build_SourceControlService_client(channel)?;
 
     Ok(ScsClient {
         client,
@@ -279,22 +261,36 @@ impl std::ops::Deref for ScsClient {
 }
 
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]
-trait MaybeWith {
+trait MaybeWith<T> {
+    fn maybe_with<S>(self, optional: Option<S>, f: impl FnOnce(T, S) -> Self) -> Self
+    where
+        S: ToString;
+}
+
+#[cfg(not(any(target_os = "macos", target_os = "windows")))]
+impl MaybeWith<srclient::ClientParams> for srclient::ClientParams {
     fn maybe_with<S>(
         self,
         optional: Option<S>,
         f: impl FnOnce(srclient::ClientParams, S) -> Self,
     ) -> Self
     where
-        S: ToString;
+        S: ToString,
+    {
+        if let Some(s) = optional {
+            f(self, s)
+        } else {
+            self
+        }
+    }
 }
 
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]
-impl MaybeWith for srclient::ClientParams {
+impl MaybeWith<x2pclient::X2pClientBuilder> for x2pclient::X2pClientBuilder {
     fn maybe_with<S>(
         self,
         optional: Option<S>,
-        f: impl FnOnce(srclient::ClientParams, S) -> Self,
+        f: impl FnOnce(x2pclient::X2pClientBuilder, S) -> Self,
     ) -> Self
     where
         S: ToString,
