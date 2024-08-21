@@ -679,6 +679,24 @@ Graft supports non-root relative paths
   > EOS
   $ hg go -q $B
   $ cd my
-Tofix: graft should be able to graft commit $C when using non-relative paths
   $ hg graft -qr $C --from-path foo --to-path bar
-  note: graft of 48b96237613e created no changes to commit
+  $ hg show
+  commit:      79108b2a64e6
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  files:       my/bar/file
+  description:
+  C
+  
+  Grafted from 48b96237613e0f4a5fb16198b55dd4a03ca3c527
+    Grafted path foo to bar
+  
+  
+  diff --git a/my/bar/file b/my/bar/file
+  --- a/my/bar/file
+  +++ b/my/bar/file
+  @@ -1,3 +1,3 @@
+  -a
+  +aa
+   b
+   cc

@@ -4923,8 +4923,9 @@ def registerdiffgrafts(opts, *ctxs):
     if not ctxs:
         return error.ProgrammingError("registerdiffgrafts() requires ctxs")
 
-    from_paths = opts.get("from_path") or []
-    to_paths = opts.get("to_path") or []
+    ctx = ctxs[0]
+    from_paths = [scmutil.rootrelpath(ctx, p) for p in opts.get("from_path")]
+    to_paths = [scmutil.rootrelpath(ctx, p) for p in opts.get("to_path")]
 
     if not from_paths and not to_paths:
         return
