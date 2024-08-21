@@ -306,14 +306,18 @@ fn cache_child_aux_data(
         match aux {
             AuxData::File(file_aux) => {
                 if let Some(aux_cache) = aux_cache.as_ref() {
-                    tracing::trace!(?hgid, "writing to aux cache");
-                    aux_cache.put(hgid, &file_aux)?;
+                    if !aux_cache.contains(hgid)? {
+                        tracing::trace!(?hgid, "writing to aux cache");
+                        aux_cache.put(hgid, &file_aux)?;
+                    }
                 }
             }
             AuxData::Tree(tree_aux) => {
                 if let Some(tree_aux_store) = tree_aux_store.as_ref() {
-                    tracing::trace!(?hgid, "writing to tree aux store");
-                    tree_aux_store.put(hgid, &tree_aux)?;
+                    if !tree_aux_store.contains(hgid)? {
+                        tracing::trace!(?hgid, "writing to tree aux store");
+                        tree_aux_store.put(hgid, &tree_aux)?;
+                    }
                 }
             }
         }

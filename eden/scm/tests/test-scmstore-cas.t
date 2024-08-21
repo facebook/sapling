@@ -149,8 +149,5 @@ Make sure prefetch uses CAS:
   DEBUG cas: EagerRepoStore fetching 2 digest(s)
 
 Don't rewrite aux data to cache:
-FIXME - we are rewriting the aux data!
   $ LOG=revisionstore=trace hg prefetch -r $A . 2>&1 | grep "writing to"
-  TRACE fetch_cas{keys=1}: revisionstore::scmstore::tree::fetch: writing to aux cache hgid=HgId("005d992c5dcf32993668f7cede29d296c494a5d9")
-  TRACE fetch_cas{keys=1}: revisionstore::scmstore::tree::fetch: writing to tree aux store hgid=HgId("1d12614b1101689fa2c31b749d0c17fa9ad10564")
-  TRACE fetch_cas{keys=1}: revisionstore::scmstore::tree::fetch: writing to aux cache hgid=HgId("755659c90eeec95dba978cb076b6aab1a02fb313")
+  [1]

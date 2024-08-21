@@ -98,7 +98,7 @@ impl TreeAuxStore {
             })
     }
 
-    pub fn contains(&self, hgid: &HgId) -> Result<bool> {
+    pub fn contains(&self, hgid: HgId) -> Result<bool> {
         self.store.read().contains(0, hgid)
     }
 
