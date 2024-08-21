@@ -347,7 +347,6 @@ Test extension help:
        share         share a common history between several working directories
        shelve        save and restore changes to the working directory
        sigtrace      sigtrace - dump stack and memory traces on signal
-       simplecache
        smartlog      command to display a relevant subgraph
        snapshot      stores snapshots of uncommitted changes
        sparse        allow sparse checkouts of the working directory

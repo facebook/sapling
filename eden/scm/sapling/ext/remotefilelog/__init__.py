@@ -78,8 +78,6 @@ Configs:
     requires flat manifests, despite blocksendflat being set. This is primarily
     used for mirroring infrastructure.
 
-    ``remotefilelog.simplecacheserverstore`` use simplecache as cache implementation.
-
     ``remotefilelog.indexedlogdatastore`` use an IndexedLog content store.
 
     ``remotefilelog.indexedloghistorystore`` use an IndexedLog history store.
@@ -161,7 +159,6 @@ configitem = registrar.configitem(configtable)
 configitem("remotefilelog", "descendantrevfastpath", default=False)
 configitem("remotefilelog", "updatesharedcache", default=True)
 configitem("remotefilelog", "servercachepath", default=None)
-configitem("remotefilelog", "simplecacheserverstore", default=False)
 configitem("remotefilelog", "server", default=None)
 configitem("remotefilelog", "getpackversion", default=1)
 configitem("remotefilelog", "http", default=True)

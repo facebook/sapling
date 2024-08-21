@@ -174,33 +174,9 @@ def readvalue(repo, path, node):
 
 
 def _loadfileblob(repo, path, node):
-    usesimplecache = repo.ui.configbool("remotefilelog", "simplecacheserverstore")
     cachepath = repo.ui.config("remotefilelog", "servercachepath")
-    if cachepath and usesimplecache:
-        raise error.Abort(
-            "remotefilelog.servercachepath and remotefilelog.simplecacheserverstore can't be both enabled"
-        )
 
     key = os.path.join(path, hex(node))
-
-    # simplecache store for remotefilelogcache
-    if usesimplecache:
-        try:
-            simplecache = extensions.find("simplecache")
-        except KeyError:
-            raise error.Abort(
-                "simplecache extension must be enabled with remotefilelog.simplecacheserverstore enabled"
-            )
-
-        # this function doesn't raise exception
-        text = simplecache.cacheget(key, trivialserializer, repo.ui)
-        if text:
-            return text
-        else:
-            text = readvalue(repo, path, node)
-            # this function doesn't raise exception
-            simplecache.cacheset(key, text, trivialserializer, repo.ui)
-            return text
 
     # on disk store for remotefilelogcache
     if not cachepath:

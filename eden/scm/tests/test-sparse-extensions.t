@@ -17,13 +17,7 @@
   $ cat > .hg/hgrc << 'EOF'
   > [extensions]
   > sparse=
-  > # Remove once default-on:
-  > simplecache=
-  > [simplecache]
-  > showdebug=true
   > EOF
-
-# Test integration with simplecache for profile reads
 
   $ printf '[include]\nfoo\n.gitignore\n' > .hgsparse
   $ hg add .hgsparse

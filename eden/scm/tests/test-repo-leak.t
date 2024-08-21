@@ -146,7 +146,6 @@ Somehow problematic: With many extensions
   > sampling=
   > shelve=
   > sigtrace=
-  > simplecache=
   > smartlog=
   > sparse=
   > stat=

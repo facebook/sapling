@@ -1618,19 +1618,7 @@ def readsparseprofile(
 
 
 def getrawprofile(repo, profile, changeid):
-    try:
-        simplecache = extensions.find("simplecache")
-
-        # Use unfiltered to avoid computing hidden commits
-        node = repo[changeid].hex()
-
-        def func():
-            return pycompat.decodeutf8(repo.filectx(profile, changeid=changeid).data())
-
-        key = "sparseprofile:%s:%s" % (profile.replace("/", "__"), node)
-        return simplecache.memoize(func, key, simplecache.stringserializer, repo.ui)
-    except KeyError:
-        return pycompat.decodeutf8(repo.filectx(profile, changeid=changeid).data())
+    return pycompat.decodeutf8(repo.filectx(profile, changeid=changeid).data())
 
 
 def _getcachedprofileconfigs(repo):

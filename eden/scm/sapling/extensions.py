@@ -80,6 +80,7 @@ _ignoreextensions = {
     "releasenotes",
     "relink",
     "remoteid",
+    "simplecache",
     "stat",
     "strip",
     "treedirstate",

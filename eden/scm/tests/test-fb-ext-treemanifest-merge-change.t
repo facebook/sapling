@@ -12,10 +12,6 @@ Disable Rust strip since it does not strip manifest revlog.
 
   $ setconfig experimental.rust-commits=0
 
-Disable simplecache since it can cause certain reads to not actually hit the
-ondisk structures.
-  $ disable simplecache
-
   $ hginit repo
   $ cd repo
   $ enable pushrebase

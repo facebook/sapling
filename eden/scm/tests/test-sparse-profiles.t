@@ -401,12 +401,9 @@ Test profile discovery
     "path": "profiles/foo/spam"
    }
   ]
-  $ enable simplecache
   $ cat >> .hg/hgrc <<EOF
   > [sparse]
   > profile_directory = profiles/
-  > [simplecache]
-  > caches=
   > EOF
   $ hg sparse list
   Available Profiles:
@@ -851,18 +848,6 @@ Files for included profiles are taken along:
 
   $ hg sparse files profiles/bar/ham | wc -l
   \s*11 (re)
-
-File count and size data for hg explain is cached in the simplecache extension:
-
-  $ cat >> .hg/hgrc <<EOF
-  > [simplecache]
-  > caches=local
-  > cachedir=$TESTTMP/cache
-  > EOF
-  $ hg sparse explain profiles/bar/eggs profiles/bar/ham > /dev/null
-  $ ls -1 $TESTTMP/cache
-  sparseprofile:profiles__bar__eggs:*:v2 (glob)
-  sparseprofile:profiles__bar__ham:*:v2 (glob)
 
 Test non-existing profiles are properly reported
   $ newclientrepo

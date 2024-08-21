@@ -67,15 +67,6 @@ to prevent accesses of flat manifests.
     [treemanifest]
     treeonly = True
 
-`treemanifest.simplecacheserverstore` causes the treemanifest server to store a cache
-of treemanifest revisions in simplecache. This is a replacement for treemanifest.cacheserverstore
-Simplecache can be configured to use memcache as a store or a local disk.
-
-::
-
-    [treemanifest]
-    simplecacheserverstore = True
-
 `treemanifest.cacheserverstore` causes the treemanifest server to store a cache
 of treemanifest revisions in individual files. These improve lookup speed since
 we don't have to open a revlog.
@@ -86,7 +77,7 @@ we don't have to open a revlog.
     cacheserverstore = True
 
 `treemanifest.servermaxcachesize` the maximum number of entries in the server
-cache. Not used for treemanifest.simplecacheserverstore.
+cache.
 
 ::
 
@@ -94,7 +85,7 @@ cache. Not used for treemanifest.simplecacheserverstore.
     servermaxcachesize = 1000000
 
 `treemanifest.servercacheevictionpercent` the percent of the cache to evict
-when the maximum size is hit. Not used for treemanifest.simplecacheserverstore.
+when the maximum size is hit.
 
 ::
 
@@ -211,7 +202,6 @@ configitem = registrar.configitem(configtable)
 
 configitem("treemanifest", "sendtrees", default=False)
 configitem("treemanifest", "server", default=False)
-configitem("treemanifest", "simplecacheserverstore", default=False)
 configitem("treemanifest", "cacheserverstore", default=True)
 configitem("treemanifest", "servermaxcachesize", default=1000000)
 configitem("treemanifest", "servercacheevictionpercent", default=50)
@@ -651,22 +641,12 @@ def setuptreestores(repo, mfl):
         revlogstore = manifestrevlogstore(repo)
         mfl.revlogstore = revlogstore
 
-        if ui.configbool("treemanifest", "cacheserverstore") and ui.configbool(
-            "treemanifest", "simplecacheserverstore"
-        ):
-            raise error.Abort(
-                "treemanifest.cacheserverstore and treemanifest.simplecacheserverstore can't be both enabled"
-            )
-
         if ui.configbool("treemanifest", "cacheserverstore"):
             maxcachesize = ui.configint("treemanifest", "servermaxcachesize")
             evictionrate = ui.configint("treemanifest", "servercacheevictionpercent")
             revlogstore = vfscachestore(
                 revlogstore, repo.cachevfs, maxcachesize, evictionrate
             )
-
-        if ui.configbool("treemanifest", "simplecacheserverstore"):
-            revlogstore = simplecachestore(ui, revlogstore)
 
         mfl.datastore = unioncontentstore(
             datastore, revlogstore, mutablelocalstore, ondemandstore
@@ -2923,27 +2903,6 @@ class cachestorecommon(pycompat.ABC):
     @abc.abstractmethod
     def _exists(self, key):
         """Check in the cache"""
-
-
-class simplecachestore(cachestorecommon):
-    def __init__(self, ui, store):
-        super(simplecachestore, self).__init__(store, version=2)
-        self.ui = ui
-        try:
-            self.simplecache = extensions.find("simplecache")
-        except KeyError:
-            raise error.Abort("simplecache extension must be enabled")
-
-    def _read(self, key):
-        return self.simplecache.cacheget(key, cachestoreserializer(key), self.ui)
-
-    def _write(self, key, value):
-        self.simplecache.cacheset(key, value, cachestoreserializer(key), self.ui)
-
-    def _exists(self, key):
-        # _exists is not yet implemented in simplecache
-        # on server side this is only used by hooks
-        return False
 
 
 class vfscachestore(cachestorecommon):
