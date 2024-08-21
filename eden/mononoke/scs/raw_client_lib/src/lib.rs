@@ -7,11 +7,13 @@
 
 //! Raw SCS Client.
 
+use std::net::SocketAddr;
 use std::net::ToSocketAddrs;
 use std::sync::Arc;
 
 use anyhow::anyhow;
 use anyhow::Error;
+use anyhow::Result;
 use clientinfo::ClientEntryPoint;
 use clientinfo::ClientInfo;
 use clientinfo::CLIENT_INFO_HEADER;
@@ -31,8 +33,9 @@ const RECV_TIMEOUT_MS: u32 = 30_000;
 pub struct ScsClientBuilder {
     fb: FacebookInit,
     client_id: String,
-    repo: Option<String>,
     tier: String,
+    repo: Option<String>,
+    single_host: Option<SocketAddr>,
 }
 
 impl ScsClientBuilder {
@@ -40,8 +43,9 @@ impl ScsClientBuilder {
         Self {
             fb,
             client_id,
-            repo: None,
             tier: SCS_DEFAULT_TIER.to_string(),
+            repo: None,
+            single_host: None,
         }
     }
 
@@ -55,8 +59,23 @@ impl ScsClientBuilder {
         self
     }
 
+    pub fn with_host_and_port(mut self, host_and_port: Option<String>) -> Result<Self> {
+        if let Some(host_and_port) = host_and_port {
+            let mut addrs = host_and_port.to_socket_addrs()?;
+            let addr = addrs.next().expect("no address found");
+            self.single_host = Some(addr);
+        }
+        Ok(self)
+    }
+
     pub fn build(self) -> Result<ScsClient, Error> {
-        build_from_tier_name(self.fb, self.client_id, self.tier, self.repo.clone())
+        build_from_tier_name(
+            self.fb,
+            self.client_id,
+            self.tier,
+            self.repo.clone(),
+            self.single_host,
+        )
     }
 }
 
@@ -67,6 +86,7 @@ fn build_from_tier_name_via_sr(
     client_id: String,
     tier: impl AsRef<str>,
     shardmanager_domain: Option<String>,
+    host_and_port: Option<SocketAddr>,
 ) -> Result<ScsClient, Error> {
     use source_control_srclients::make_SourceControlService_srclient;
     use srclient::ClientParams;
@@ -87,6 +107,9 @@ fn build_from_tier_name_via_sr(
         })
         .maybe_with(shardmanager_domain, |c, shardmanager_domain| {
             c.with_shard_manager_domain(encode_repo_name(&shardmanager_domain))
+        })
+        .maybe_with(host_and_port, |c, host_and_port| {
+            c.with_single_host(host_and_port, None)
         });
 
     let client = make_SourceControlService_srclient!(
@@ -106,6 +129,7 @@ fn build_from_tier_name_via_sr(
     _client_id: String,
     _tier: impl AsRef<str>,
     _shardmanager_domain: Option<String>,
+    _host_and_port: Option<String>,
 ) -> Result<ScsClient, Error> {
     Err(anyhow!(
         "Connection via ServiceRouter is not supported on this platform"
@@ -118,19 +142,31 @@ fn build_from_tier_name_via_x2p(
     client_id: String,
     tier: impl AsRef<str>,
     shardmanager_domain: Option<String>,
+    single_host: Option<SocketAddr>,
 ) -> Result<ScsClient, Error> {
     let client_info = ClientInfo::new_with_entry_point(ClientEntryPoint::ScsClient)?;
     let headers = hashmap! {
         String::from(CLIENT_INFO_HEADER) => client_info.to_json()?,
     };
     let client = if let Some(shardmanager_domain) = shardmanager_domain {
-        make_SourceControlService_x2pclient!(
-            fb,
-            tiername = tier.as_ref(),
-            with_client_id = client_id,
-            with_persistent_headers = headers,
-            with_shard_manager_domain = encode_repo_name(&shardmanager_domain)
-        )?
+        if let Some(host_and_port) = single_host {
+            make_SourceControlService_x2pclient!(
+                fb,
+                tiername = tier.as_ref(),
+                with_client_id = client_id,
+                with_host = host_and_port,
+                with_persistent_headers = headers,
+                with_shard_manager_domain = encode_repo_name(&shardmanager_domain),
+            )?
+        } else {
+            make_SourceControlService_x2pclient!(
+                fb,
+                tiername = tier.as_ref(),
+                with_client_id = client_id,
+                with_persistent_headers = headers,
+                with_shard_manager_domain = encode_repo_name(&shardmanager_domain)
+            )?
+        }
     } else {
         make_SourceControlService_x2pclient!(
             fb,
@@ -152,17 +188,18 @@ fn build_from_tier_name(
     client_id: String,
     tier: impl AsRef<str>,
     shardmanager_domain: Option<String>,
+    single_host: Option<SocketAddr>,
 ) -> Result<ScsClient, Error> {
     match x2pclient::get_env(fb) {
         x2pclient::Environment::Prod => {
             if cfg!(target_os = "linux") {
-                build_from_tier_name_via_sr(fb, client_id, tier, shardmanager_domain)
+                build_from_tier_name_via_sr(fb, client_id, tier, shardmanager_domain, single_host)
             } else {
-                build_from_tier_name_via_x2p(fb, client_id, tier, shardmanager_domain)
+                build_from_tier_name_via_x2p(fb, client_id, tier, shardmanager_domain, single_host)
             }
         }
         x2pclient::Environment::Corp => {
-            build_from_tier_name_via_x2p(fb, client_id, tier, shardmanager_domain)
+            build_from_tier_name_via_x2p(fb, client_id, tier, shardmanager_domain, single_host)
         }
         other_env => Err(anyhow!("{} not supported", other_env)),
     }

@@ -29,12 +29,15 @@ pub(super) struct ConnectionArgs {
 
 impl ConnectionArgs {
     pub fn get_connection(&self, fb: FacebookInit, repo: Option<&str>) -> Result<ScsClient, Error> {
-        if let Some(host_port) = &self.host {
-            ScsClientHostBuilder::new().build_from_host_port(fb, host_port)
+        let disable_sr =
+            std::env::var("MONONOKE_INTEGRATION_TEST_DISABLE_SR").map_or(false, |v| v == "true");
+        if self.host.is_some() && disable_sr {
+            ScsClientHostBuilder::new().build_from_host_port(fb, self.host.clone().unwrap())
         } else {
             ScsClientBuilder::new(fb, self.client_id.clone())
                 .with_tier(&self.tier)
                 .with_repo(repo.map(|r| r.to_string()))
+                .with_host_and_port(self.host.clone())?
                 .build()
         }
     }
