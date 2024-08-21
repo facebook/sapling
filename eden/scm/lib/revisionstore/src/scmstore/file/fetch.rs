@@ -330,6 +330,7 @@ impl FetchState {
         let mut errors = 0;
         let mut count = 0;
         let mut error: Option<String> = None;
+        let ignore_results = self.fetch_mode.ignore_result() && !have_cas;
 
         let mut wants_aux = FileAttributes::AUX;
         if have_cas && loc == StoreLocation::Cache {
@@ -343,7 +344,7 @@ impl FetchState {
             .iter_pending(wants_aux, self.compute_aux_data, |key| {
                 count += 1;
 
-                let res = if self.fetch_mode.ignore_result() {
+                let res = if ignore_results {
                     store.contains(key.hgid).map(|contains| {
                         if contains {
                             // Insert a stub entry if caller is ignoring the results.
