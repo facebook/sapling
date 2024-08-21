@@ -1537,6 +1537,14 @@ def rootrelpath(ctx, path):
     return files[0]
 
 
+def validate_path_size(from_paths, to_paths, abort_on_empty=False):
+    if len(from_paths) != len(to_paths):
+        raise error.Abort(_("must provide same number of --from-path and --to-path"))
+
+    if abort_on_empty and not from_paths:
+        raise error.Abort(_("must provide --from-path and --to-path"))
+
+
 def validate_path_overlap(to_paths):
     # Disallow overlapping --to-path to keep things simple.
     to_dirs = util.dirs(to_paths)

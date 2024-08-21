@@ -4927,12 +4927,7 @@ def registerdiffgrafts(opts, *ctxs):
     from_paths = [scmutil.rootrelpath(ctx, p) for p in opts.get("from_path")]
     to_paths = [scmutil.rootrelpath(ctx, p) for p in opts.get("to_path")]
 
-    if not from_paths and not to_paths:
-        return
-
-    if len(from_paths) != len(to_paths):
-        raise error.Abort(_("must provide same number of --from-path and --to-path"))
-
+    scmutil.validate_path_size(from_paths, to_paths)
     scmutil.validate_path_overlap(to_paths)
 
     for ctx in ctxs:

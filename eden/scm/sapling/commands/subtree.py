@@ -81,8 +81,7 @@ def _docopy(ui, repo, *args, **opts):
     ctx = repo["."]
     from_paths = [scmutil.rootrelpath(ctx, p) for p in opts.get("from_path")]
     to_paths = [scmutil.rootrelpath(ctx, p) for p in opts.get("to_path")]
-    if len(from_paths) != len(to_paths):
-        raise error.Abort(_("must provide same number of --from-path and --to-path"))
+    scmutil.validate_path_size(from_paths, to_paths, abort_on_empty=True)
 
     user = opts.get("user")
     date = opts.get("date")
