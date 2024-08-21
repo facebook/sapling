@@ -39,7 +39,6 @@ mod tests {
     use live_commit_sync_config::LiveCommitSyncConfig;
     use live_commit_sync_config::TestLiveCommitSyncConfig;
     use live_commit_sync_config::CONFIGERATOR_ALL_COMMIT_SYNC_CONFIGS;
-    use live_commit_sync_config::CONFIGERATOR_PUSHREDIRECT_ENABLE;
     use maplit::hashmap;
     use mercurial_types::NonRootMPath;
     use mercurial_types_mocks::nodehash::ONES_CSID as HG_CSID;
@@ -399,19 +398,6 @@ mod tests {
         Ok(())
     }
 
-    const PUSHREDIRECTOR_PUBLIC_ENABLED: &str = r#"{
-        "per_repo": {
-            "1": {
-                "draft_push": false,
-                "public_push": true
-            },
-            "2": {
-                "draft_push": true,
-                "public_push": false
-            }
-        }
-    }"#;
-
     const COMMIT_SYNC_ALL: &str = r#"{
         "repos": {
             "large_repo_1": {
@@ -476,18 +462,11 @@ mod tests {
         let mut repos: HashMap<String, RepoConfig> = HashMap::new();
 
         test_source.insert_config(
-            CONFIGERATOR_PUSHREDIRECT_ENABLE,
-            PUSHREDIRECTOR_PUBLIC_ENABLED,
-            ModificationTime::UnixTimestamp(0),
-        );
-
-        test_source.insert_config(
             CONFIGERATOR_ALL_COMMIT_SYNC_CONFIGS,
             COMMIT_SYNC_ALL,
             ModificationTime::UnixTimestamp(0),
         );
 
-        test_source.insert_to_refresh(CONFIGERATOR_PUSHREDIRECT_ENABLE.to_string());
         test_source.insert_to_refresh(CONFIGERATOR_ALL_COMMIT_SYNC_CONFIGS.to_string());
 
         let test_push_redirection_config = Arc::new(TestPushRedirectionConfig::new());

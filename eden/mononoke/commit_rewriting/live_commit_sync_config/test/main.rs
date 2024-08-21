@@ -16,7 +16,6 @@ use context::CoreContext;
 use fbinit::FacebookInit;
 use live_commit_sync_config::CfgrLiveCommitSyncConfig;
 use live_commit_sync_config::CONFIGERATOR_ALL_COMMIT_SYNC_CONFIGS;
-use live_commit_sync_config::CONFIGERATOR_PUSHREDIRECT_ENABLE;
 use pushredirect::TestPushRedirectionConfig;
 
 macro_rules! is_error_kind {
@@ -52,7 +51,7 @@ fn ensure_all_updated() {
 
 fn get_ctx_source_store_and_live_config(
     fb: FacebookInit,
-    pushredirector_config: &str,
+    _pushredirector_config: &str,
     all_commit_syncs: &str,
 ) -> (
     CoreContext,
@@ -64,18 +63,12 @@ fn get_ctx_source_store_and_live_config(
     let ctx = CoreContext::test_mock(fb);
     let test_source = Arc::new(TestSource::new());
     test_source.insert_config(
-        CONFIGERATOR_PUSHREDIRECT_ENABLE,
-        pushredirector_config,
-        ModificationTime::UnixTimestamp(0),
-    );
-    test_source.insert_config(
         CONFIGERATOR_ALL_COMMIT_SYNC_CONFIGS,
         all_commit_syncs,
         ModificationTime::UnixTimestamp(0),
     );
 
     // We want to always refresh these paths in the test setting
-    test_source.insert_to_refresh(CONFIGERATOR_PUSHREDIRECT_ENABLE.to_string());
     test_source.insert_to_refresh(CONFIGERATOR_ALL_COMMIT_SYNC_CONFIGS.to_string());
 
     let test_push_redirection_config = Arc::new(TestPushRedirectionConfig::new());
