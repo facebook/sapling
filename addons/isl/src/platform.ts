@@ -66,6 +66,13 @@ export interface Platform {
    * may import any files without worrying about the platform being set up yet or not.
    */
   GettingStartedContent?: LazyExoticComponent<({dismiss}: {dismiss: () => void}) => JSX.Element>;
+  /**
+   * Component representing additional buttons/info in the cwd menu,
+   * used to show a button or hint about how to add more cwds.
+   * Note: This should be lazy-loaded via `React.lazy()` so that implementations
+   * may import any files without worrying about the platform being set up yet or not.
+   */
+  AddMoreCwdsHint?: LazyExoticComponent<() => JSX.Element>;
 
   /** Platform-specific settings, such as how ISL panels work */
   Settings?: LazyExoticComponent<() => JSX.Element>;

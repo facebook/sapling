@@ -19,6 +19,7 @@ import {lazy} from 'react';
 import {tryJsonParse} from 'shared/utils';
 
 const VSCodeSettings = lazy(() => import('./VSCodeSettings'));
+const AddMoreCwdsHint = lazy(() => import('./AddMoreCwdsHint'));
 
 declare global {
   interface Window {
@@ -164,6 +165,7 @@ export const vscodeWebviewPlatform: Platform = {
 
   AdditionalDebugContent: Internal.AdditionalDebugContent,
   GettingStartedContent: Internal.GettingStartedContent,
+  AddMoreCwdsHint,
   Settings: VSCodeSettings,
 };
 
