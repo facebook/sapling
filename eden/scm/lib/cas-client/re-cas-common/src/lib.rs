@@ -5,9 +5,11 @@
  * GNU General Public License version 2.
  */
 
+pub use anyhow::anyhow;
 pub use anyhow::Result;
 pub use async_trait::async_trait;
 pub use cas_client::CasClient;
+pub use once_cell::sync::OnceCell;
 pub use tracing;
 pub use types::Blake3;
 pub use types::CasDigest;
@@ -19,6 +21,12 @@ use re_client_lib::DownloadRequest;
 use re_client_lib::TCode;
 use re_client_lib::TDigest;
 use re_client_lib::THashAlgo;
+
+impl $struct {
+    fn client(&self) -> Result<&REClient> {
+        self.client.get_or_try_init(|| self.build())
+    }
+}
 
 fn to_re_digest(d: &$crate::CasDigest) -> TDigest {
     TDigest {
@@ -49,7 +57,7 @@ impl $crate::CasClient for $struct {
             ..Default::default()
         };
 
-        self.client
+        self.client()?
             .download(self.metadata.clone(), request)
             .await?
             .inlined_blobs
@@ -62,7 +70,7 @@ impl $crate::CasClient for $struct {
                     TCode::NOT_FOUND => Ok((digest, Ok(None))),
                     _ => Ok((
                         digest,
-                        Err(anyhow!(
+                        Err($crate::anyhow!(
                             "bad status (code={}, message={}, group={})",
                             blob.status.code,
                             blob.status.message,
