@@ -4933,13 +4933,7 @@ def registerdiffgrafts(opts, *ctxs):
     if len(from_paths) != len(to_paths):
         raise error.Abort(_("must provide same number of --from-path and --to-path"))
 
-    # Disallow overlapping --to-path to keep things simple.
-    to_dirs = util.dirs(to_paths)
-    seen = set()
-    for p in to_paths:
-        if p in to_dirs or p in seen:
-            raise error.Abort(_("overlapping --to-path entries"))
-        seen.add(p)
+    scmutil.validate_path_overlap(to_paths)
 
     for ctx in ctxs:
         manifest = ctx.manifest()

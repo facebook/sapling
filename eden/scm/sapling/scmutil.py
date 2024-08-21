@@ -1535,3 +1535,13 @@ def rootrelpath(ctx, path):
     # this should be true since we only pass "path" or "relpath" pattern kinds to match()
     assert len(files) == 1, f"path '{path}' should match exactly one file path"
     return files[0]
+
+
+def validate_path_overlap(to_paths):
+    # Disallow overlapping --to-path to keep things simple.
+    to_dirs = util.dirs(to_paths)
+    seen = set()
+    for p in to_paths:
+        if p in to_dirs or p in seen:
+            raise error.Abort(_("overlapping --to-path entries"))
+        seen.add(p)
