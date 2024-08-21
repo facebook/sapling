@@ -123,7 +123,7 @@ impl ChangesetHook for BlockAccidentalNewBookmarkCreationHook {
         let bookmark_name = bookmark.as_str();
 
         if let Some(regex) = &self.bypass_for_bookmarks_matching_regex {
-            if regex.is_match(&bookmark_name) {
+            if regex.is_match(bookmark_name) {
                 return Ok(HookExecution::Accepted);
             }
         }
