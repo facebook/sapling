@@ -401,18 +401,3 @@ dott_test(
         "//eden/mononoke/tools/testtool:testtool",
     ],
 )
-
-dott_test(
-    name = "edenapi",
-    dott_files =
-        glob([
-            "test-edenapi-*.t",
-        ]),
-    deps = [
-        "//eden/mononoke:admin",
-        "//eden/mononoke:blobimport",
-        "//eden/mononoke:mononoke",
-        "//eden/mononoke/tools/admin:newadmin",
-        "//eden/mononoke/tools/testtool:testtool",
-    ],
-)
