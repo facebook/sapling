@@ -287,8 +287,8 @@ pub fn compare_manifest_tree<'a, M, Store>(
 where
     Store: Send + Sync + 'static,
     M: AsyncManifest<Store> + Send + Sync + 'static,
-    M::TreeId: StoreLoadable<Store, Value = M> + Send + Sync + Eq + std::fmt::Debug + 'static,
-    M::LeafId: Send + Sync + Eq + std::fmt::Debug + 'static,
+    M::TreeId: StoreLoadable<Store, Value = M> + Send + Sync + Eq + 'static,
+    M::LeafId: Send + Sync + Eq + 'static,
     M::TrieMapType: TrieMapOps<Store, Entry<M::TreeId, M::LeafId>> + Eq,
 {
     let base_manifest_ids: Vec<_> = base_manifest_ids.into_iter().map(Some).collect();
