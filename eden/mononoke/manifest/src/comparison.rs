@@ -287,7 +287,7 @@ pub fn compare_manifest_tree<'a, M, Store>(
 where
     Store: Send + Sync + 'static,
     M: AsyncManifest<Store> + Send + Sync + 'static,
-    M::TreeId: StoreLoadable<Store, Value = M> + Send + Sync + Eq + 'static,
+    M::TreeId: StoreLoadable<Store, Value = M> + Clone + Send + Sync + Eq + 'static,
     M::LeafId: Send + Sync + Eq + 'static,
     M::TrieMapType: TrieMapOps<Store, Entry<M::TreeId, M::LeafId>> + Eq,
 {
@@ -332,37 +332,32 @@ where
                                     index,
                                 ));
                             }
-                            ManifestComparison::Changed(elem, entry, base_entries) => match entry {
-                                Entry::Tree(tree_id) => {
+                            ManifestComparison::Changed(elem, entry, base_entries) => {
+                                if let Entry::Tree(tree_id) = &entry {
                                     let mut base_tree_ids = Vec::new();
-                                    let mut base_leaf_entries = Vec::new();
-                                    for base_entry in base_entries {
+                                    for base_entry in base_entries.iter() {
                                         match base_entry {
                                             Some(Entry::Tree(tree_id)) => {
-                                                base_tree_ids.push(Some(tree_id))
+                                                base_tree_ids.push(Some(tree_id.clone()))
                                             }
                                             Some(Entry::Leaf(_)) | None => {
                                                 base_tree_ids.push(None);
-                                                base_leaf_entries.push(base_entry);
                                             }
                                         }
                                     }
-                                    recurse.push((path.join(&elem), tree_id, base_tree_ids));
-                                    if !base_leaf_entries.is_empty() {
-                                        outs.push(Comparison::Removed(
-                                            path.join_into_non_root_mpath(&elem),
-                                            base_leaf_entries,
-                                        ));
-                                    }
-                                }
-                                Entry::Leaf(_) => {
-                                    outs.push(Comparison::Changed(
-                                        path.join_into_non_root_mpath(&elem),
-                                        entry,
-                                        base_entries,
+                                    recurse.push((
+                                        path.join(&elem),
+                                        tree_id.clone(),
+                                        base_tree_ids,
                                     ));
                                 }
-                            },
+
+                                outs.push(Comparison::Changed(
+                                    path.join_into_non_root_mpath(&elem),
+                                    entry,
+                                    base_entries,
+                                ));
+                            }
                             ManifestComparison::Removed(elem, entries) => {
                                 outs.push(Comparison::Removed(
                                     path.join_into_non_root_mpath(&elem),
@@ -650,8 +645,19 @@ mod tests {
                     vec![Some(get_trie_map(ctx, blobstore, mf0, "", "dir5").await?)],
                     0
                 ),
-                Comparison::Removed(
+                Comparison::Changed(
+                    NonRootMPath::new("dir2")?,
+                    get_entry(ctx, blobstore, mf1, "dir2").await?,
+                    vec![Some(get_entry(ctx, blobstore, mf0, "dir2").await?)],
+                ),
+                Comparison::Changed(
+                    NonRootMPath::new("dir1")?,
+                    get_entry(ctx, blobstore, mf1, "dir1").await?,
+                    vec![Some(get_entry(ctx, blobstore, mf0, "dir1").await?)],
+                ),
+                Comparison::Changed(
                     NonRootMPath::new("file7")?,
+                    get_entry(ctx, blobstore, mf1, "file7").await?,
                     vec![Some(get_entry(ctx, blobstore, mf0, "file7").await?)],
                 ),
                 Comparison::ManyNew(
@@ -742,6 +748,11 @@ mod tests {
                     vec![Some(get_trie_map(ctx, blobstore, mf0, "", "dir5").await?)],
                     0
                 ),
+                Comparison::Changed(
+                    NonRootMPath::new("dir1")?,
+                    get_entry(ctx, blobstore, mf2, "dir1").await?,
+                    vec![Some(get_entry(ctx, blobstore, mf0, "dir1").await?)],
+                ),
                 Comparison::ManySame(
                     MPath::new("dir1")?,
                     MPathElementPrefix::from_slice(b"file2")?,
@@ -812,6 +823,14 @@ mod tests {
                     vec![
                         Some(get_trie_map(ctx, blobstore, mf1, "", "dir5").await?),
                         Some(get_trie_map(ctx, blobstore, mf2, "", "dir5").await?)
+                    ],
+                ),
+                Comparison::Changed(
+                    NonRootMPath::new("dir2")?,
+                    get_entry(ctx, blobstore, mf3, "dir2").await?,
+                    vec![
+                        Some(get_entry(ctx, blobstore, mf1, "dir2").await?),
+                        Some(get_entry(ctx, blobstore, mf2, "dir2").await?)
                     ],
                 ),
                 Comparison::ManySame(
