@@ -111,7 +111,7 @@ pub trait HookStateProvider: Send + Sync {
         ctx: &'a CoreContext,
         new_cs_id: ChangesetId,
         old_cs_id: ChangesetId,
-    ) -> Result<Vec<(NonRootMPath, FileChange)>, HookStateProviderError>;
+    ) -> Result<Vec<(NonRootMPath, FileChangeType)>, HookStateProviderError>;
 
     /// Find the latest changesets that affected a set of paths at a particular bookmark.
     async fn latest_changes<'a>(
@@ -137,7 +137,7 @@ pub enum PathContent {
 }
 
 #[derive(Clone, Debug)]
-pub enum FileChange {
+pub enum FileChangeType {
     Added(ContentId),
     Changed(ContentId, ContentId),
     Removed,

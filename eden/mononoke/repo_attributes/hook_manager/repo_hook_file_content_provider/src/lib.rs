@@ -29,7 +29,7 @@ use futures::stream::TryStreamExt;
 use futures_util::future::TryFutureExt;
 use hook_manager::provider::BookmarkState;
 use hook_manager::provider::TagType;
-use hook_manager::FileChange;
+use hook_manager::FileChangeType;
 use hook_manager::HookStateProvider;
 use hook_manager::HookStateProviderError;
 use hook_manager::PathContent;
@@ -131,7 +131,7 @@ impl HookStateProvider for RepoHookStateProvider {
         ctx: &'a CoreContext,
         new_cs_id: ChangesetId,
         old_cs_id: ChangesetId,
-    ) -> Result<Vec<(NonRootMPath, FileChange)>, HookStateProviderError> {
+    ) -> Result<Vec<(NonRootMPath, FileChangeType)>, HookStateProviderError> {
         let new_mf_fut = derive_hg_manifest(
             ctx,
             &self.repo_derived_data,
@@ -155,7 +155,7 @@ impl HookStateProvider for RepoHookStateProvider {
                         Some(path) => {
                             match resolve_content_id(ctx, &self.repo_blobstore, entry).await? {
                                 PathContent::File(content) => {
-                                    Ok(Some((path, FileChange::Added(content))))
+                                    Ok(Some((path, FileChangeType::Added(content))))
                                 }
                                 PathContent::Directory => Ok(None),
                             }
@@ -175,7 +175,7 @@ impl HookStateProvider for RepoHookStateProvider {
                                         PathContent::File(content_id),
                                     ) => Ok(Some((
                                         path,
-                                        FileChange::Changed(old_content_id, content_id),
+                                        FileChangeType::Changed(old_content_id, content_id),
                                     ))),
                                     _ => Ok(None),
                                 }
@@ -186,7 +186,7 @@ impl HookStateProvider for RepoHookStateProvider {
                     Diff::Removed(path, entry) => match Option::<NonRootMPath>::from(path) {
                         Some(path) => {
                             if let Entry::Leaf(_) = entry {
-                                Ok(Some((path, FileChange::Removed)))
+                                Ok(Some((path, FileChangeType::Removed)))
                             } else {
                                 Ok(None)
                             }

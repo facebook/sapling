@@ -24,7 +24,7 @@ use quickcheck::Gen;
 
 use crate::errors::HookStateProviderError;
 use crate::provider::BookmarkState;
-use crate::provider::FileChange;
+use crate::provider::FileChangeType;
 use crate::provider::HookStateProvider;
 use crate::provider::PathContent;
 use crate::provider::TagType;
@@ -112,7 +112,7 @@ impl HookStateProvider for InMemoryHookStateProvider {
         _ctx: &'a CoreContext,
         _new_cs_id: ChangesetId,
         _old_cs_id: ChangesetId,
-    ) -> Result<Vec<(NonRootMPath, FileChange)>, HookStateProviderError> {
+    ) -> Result<Vec<(NonRootMPath, FileChangeType)>, HookStateProviderError> {
         Err(anyhow!("`file_changes` is not implemented for `InMemoryHookStateProvider`").into())
     }
 

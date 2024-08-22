@@ -22,7 +22,7 @@ use mononoke_types::NonRootMPath;
 
 use crate::errors::HookStateProviderError;
 use crate::provider::BookmarkState;
-use crate::provider::FileChange;
+use crate::provider::FileChangeType;
 use crate::provider::HookStateProvider;
 use crate::provider::PathContent;
 use crate::provider::TagType;
@@ -83,7 +83,7 @@ impl<T: HookStateProvider + 'static> HookStateProvider for TextOnlyHookStateProv
         ctx: &'a CoreContext,
         new_cs_id: ChangesetId,
         old_cs_id: ChangesetId,
-    ) -> Result<Vec<(NonRootMPath, FileChange)>, HookStateProviderError> {
+    ) -> Result<Vec<(NonRootMPath, FileChangeType)>, HookStateProviderError> {
         self.inner.file_changes(ctx, new_cs_id, old_cs_id).await
     }
 

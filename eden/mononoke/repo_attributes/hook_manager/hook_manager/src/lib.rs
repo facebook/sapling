@@ -35,7 +35,7 @@ pub use crate::errors::HookStateProviderError;
 pub use crate::manager::HookManager;
 pub use crate::provider::memory::InMemoryHookStateProvider;
 pub use crate::provider::text_only::TextOnlyHookStateProvider;
-pub use crate::provider::FileChange;
+pub use crate::provider::FileChangeType;
 pub use crate::provider::HookStateProvider;
 pub use crate::provider::PathContent;
 
