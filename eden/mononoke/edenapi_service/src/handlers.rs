@@ -94,6 +94,7 @@ pub enum SaplingRemoteApiMethod {
     CloudRenameWorkspace,
     CloudShareWorkspace,
     CloudSmartlog,
+    CloudSmartlogByVersion,
     CloudUpdateArchive,
     CloudUpdateReferences,
     CloudWorkspace,
@@ -134,6 +135,7 @@ impl fmt::Display for SaplingRemoteApiMethod {
             Self::CloudRenameWorkspace => "cloud_rename_workspace",
             Self::CloudShareWorkspace => "cloud_share_workspace",
             Self::CloudSmartlog => "cloud_smartlog",
+            Self::CloudSmartlogByVersion => "cloud_smartlog_by_version",
             Self::CloudUpdateArchive => "cloud_update_archive",
             Self::CloudUpdateReferences => "cloud_update_references",
             Self::CloudWorkspace => "cloud_workspace",
@@ -432,6 +434,7 @@ pub fn build_router<R: Send + Sync + Clone + 'static>(ctx: ServerContext<R>) -> 
         Handlers::setup::<commit_cloud::CommitCloudRenameWorkspace>(route);
         Handlers::setup::<commit_cloud::CommitCloudShareWorkspace>(route);
         Handlers::setup::<commit_cloud::CommitCloudSmartlog>(route);
+        Handlers::setup::<commit_cloud::CommitCloudSmartlogByVersion>(route);
         Handlers::setup::<commit_cloud::CommitCloudUpdateArchive>(route);
         Handlers::setup::<commit_cloud::CommitCloudUpdateReferences>(route);
         Handlers::setup::<commit_cloud::CommitCloudWorkspace>(route);
@@ -453,7 +456,6 @@ pub fn build_router<R: Send + Sync + Clone + 'static>(ctx: ServerContext<R>) -> 
         Handlers::setup::<history::HistoryHandler>(route);
         Handlers::setup::<land::LandStackHandler>(route);
         Handlers::setup::<lookup::LookupHandler>(route);
-        Handlers::setup::<commit_cloud::CommitCloudSmartlog>(route);
         Handlers::setup::<suffix_query::SuffixQueryHandler>(route);
         Handlers::setup::<trees::UploadTreesHandler>(route);
         route.get("/:repo/health_check").to(health_handler);
