@@ -630,7 +630,7 @@ export default class ServerToClientAPI {
                 type: 'fetchedPendingSignificantLinesOfCode',
                 requestId: data.requestId,
                 hash: data.hash,
-                linesOfCode: {value},
+                result: {value: {linesOfCode: value.sloc, strictLinesOfCode: value.strictSloc}},
               });
             })
             .catch(err => {
@@ -638,29 +638,7 @@ export default class ServerToClientAPI {
                 type: 'fetchedPendingSignificantLinesOfCode',
                 hash: data.hash,
                 requestId: data.requestId,
-                linesOfCode: {error: err as Error},
-              });
-            });
-        }
-        break;
-      case 'fetchPendingStrictSignificantLinesOfCode':
-        {
-          repo
-            .fetchPendingStrictSignificantLinesOfCode(ctx, data.hash, data.includedFiles)
-            .then(value => {
-              this.postMessage({
-                type: 'fetchedPendingStrictSignificantLinesOfCode',
-                requestId: data.requestId,
-                hash: data.hash,
-                linesOfCode: {value},
-              });
-            })
-            .catch(err => {
-              this.postMessage({
-                type: 'fetchedPendingStrictSignificantLinesOfCode',
-                hash: data.hash,
-                requestId: data.requestId,
-                linesOfCode: {error: err as Error},
+                result: {error: err as Error},
               });
             });
         }
@@ -673,34 +651,14 @@ export default class ServerToClientAPI {
               this.postMessage({
                 type: 'fetchedSignificantLinesOfCode',
                 hash: data.hash,
-                linesOfCode: {value},
+                result: {value: {linesOfCode: value.sloc, strictLinesOfCode: value.strictSloc}},
               });
             })
             .catch(err => {
               this.postMessage({
                 type: 'fetchedSignificantLinesOfCode',
                 hash: data.hash,
-                linesOfCode: {error: err as Error},
-              });
-            });
-        }
-        break;
-      case 'fetchStrictSignificantLinesOfCode':
-        {
-          repo
-            .fetchStrictSignificantLinesOfCode(ctx, data.hash, data.excludedFiles)
-            .then(value => {
-              this.postMessage({
-                type: 'fetchedStrictSignificantLinesOfCode',
-                hash: data.hash,
-                linesOfCode: {value},
-              });
-            })
-            .catch(err => {
-              this.postMessage({
-                type: 'fetchedStrictSignificantLinesOfCode',
-                hash: data.hash,
-                linesOfCode: {error: err as Error},
+                result: {error: err as Error},
               });
             });
         }
@@ -714,7 +672,7 @@ export default class ServerToClientAPI {
                 type: 'fetchedPendingAmendSignificantLinesOfCode',
                 requestId: data.requestId,
                 hash: data.hash,
-                linesOfCode: {value},
+                result: {value: {linesOfCode: value.sloc, strictLinesOfCode: value.strictSloc}},
               });
             })
             .catch(err => {
@@ -722,29 +680,7 @@ export default class ServerToClientAPI {
                 type: 'fetchedPendingAmendSignificantLinesOfCode',
                 hash: data.hash,
                 requestId: data.requestId,
-                linesOfCode: {error: err as Error},
-              });
-            });
-        }
-        break;
-      case 'fetchPendingAmendStrictSignificantLinesOfCode':
-        {
-          repo
-            .fetchPendingAmendStrictSignificantLinesOfCode(ctx, data.hash, data.includedFiles)
-            .then(value => {
-              this.postMessage({
-                type: 'fetchedPendingAmendStrictSignificantLinesOfCode',
-                requestId: data.requestId,
-                hash: data.hash,
-                linesOfCode: {value},
-              });
-            })
-            .catch(err => {
-              this.postMessage({
-                type: 'fetchedPendingAmendStrictSignificantLinesOfCode',
-                hash: data.hash,
-                requestId: data.requestId,
-                linesOfCode: {error: err as Error},
+                result: {error: err as Error},
               });
             });
         }

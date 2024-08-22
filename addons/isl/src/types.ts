@@ -236,6 +236,13 @@ export type StableInfo = {
   date: Date;
 };
 
+export type SlocInfo = {
+  /** Significant lines of code for commit */
+  sloc: number | undefined;
+  /** Significant lines of code for commit (filtering out test and markdown files) */
+  strictSloc: number | undefined;
+};
+
 export type CommitInfo = {
   title: string;
   hash: Hash;
@@ -752,7 +759,6 @@ export type ClientToServerMessage =
   | CodeReviewProviderSpecificClientToServerMessages
   | PlatformSpecificClientToServerMessages
   | {type: 'fetchSignificantLinesOfCode'; hash: Hash; excludedFiles: string[]}
-  | {type: 'fetchStrictSignificantLinesOfCode'; hash: Hash; excludedFiles: string[]}
   | {
       type: 'fetchPendingSignificantLinesOfCode';
       requestId: number;
@@ -760,19 +766,7 @@ export type ClientToServerMessage =
       includedFiles: string[];
     }
   | {
-      type: 'fetchPendingStrictSignificantLinesOfCode';
-      requestId: number;
-      hash: Hash;
-      includedFiles: string[];
-    }
-  | {
       type: 'fetchPendingAmendSignificantLinesOfCode';
-      requestId: number;
-      hash: Hash;
-      includedFiles: string[];
-    }
-  | {
-      type: 'fetchPendingAmendStrictSignificantLinesOfCode';
       requestId: number;
       hash: Hash;
       includedFiles: string[];
@@ -854,31 +848,22 @@ export type ServerToClientMessage =
   | {type: 'getUiState'}
   | OperationProgressEvent
   | PlatformSpecificServerToClientMessages
-  | {type: 'fetchedSignificantLinesOfCode'; hash: Hash; linesOfCode: Result<number>}
-  | {type: 'fetchedStrictSignificantLinesOfCode'; hash: Hash; linesOfCode: Result<number>}
+  | {
+      type: 'fetchedSignificantLinesOfCode';
+      hash: Hash;
+      result: Result<{linesOfCode: number; strictLinesOfCode: number}>;
+    }
   | {
       type: 'fetchedPendingSignificantLinesOfCode';
       requestId: number;
       hash: Hash;
-      linesOfCode: Result<number>;
-    }
-  | {
-      type: 'fetchedPendingStrictSignificantLinesOfCode';
-      requestId: number;
-      hash: Hash;
-      linesOfCode: Result<number>;
+      result: Result<{linesOfCode: number; strictLinesOfCode: number}>;
     }
   | {
       type: 'fetchedPendingAmendSignificantLinesOfCode';
       requestId: number;
       hash: Hash;
-      linesOfCode: Result<number>;
-    }
-  | {
-      type: 'fetchedPendingAmendStrictSignificantLinesOfCode';
-      requestId: number;
-      hash: Hash;
-      linesOfCode: Result<number>;
+      result: Result<{linesOfCode: number; strictLinesOfCode: number}>;
     };
 export type Disposable = {
   dispose(): void;

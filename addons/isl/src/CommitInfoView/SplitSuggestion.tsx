@@ -19,9 +19,9 @@ import {
   SLOC_THRESHOLD_FOR_SPLIT_SUGGESTIONS,
 } from '../sloc/diffStatConstants';
 import {
-  useFetchStrictSignificantLinesOfCode,
-  useFetchStrictPendingAmendSignificantLinesOfCode,
-  useFetchStrictPendingSignificantLinesOfCode,
+  useFetchSignificantLinesOfCode,
+  useFetchPendingSignificantLinesOfCode,
+  useFetchPendingAmendSignificantLinesOfCode,
 } from '../sloc/useFetchSignificantLinesOfCode';
 import {SplitButton} from '../stackEdit/ui/SplitButton';
 import {type CommitInfo} from '../types';
@@ -103,7 +103,8 @@ function SuggestionBanner({
 }
 
 function NewCommitSuggestion() {
-  const pendingSignificantLinesOfCode = useFetchStrictPendingSignificantLinesOfCode();
+  const pendingSignificantLinesOfCode = useFetchPendingSignificantLinesOfCode()?.strictSloc;
+
   if (pendingSignificantLinesOfCode == null) {
     return null;
   }
@@ -124,7 +125,8 @@ function NewCommitSuggestion() {
 }
 
 function AmendSuggestion() {
-  const pendingAmendSignificantLinesOfCode = useFetchStrictPendingAmendSignificantLinesOfCode();
+  const pendingAmendSignificantLinesOfCode =
+    useFetchPendingAmendSignificantLinesOfCode()?.strictSloc;
 
   if (pendingAmendSignificantLinesOfCode == null) {
     return null;
@@ -147,7 +149,7 @@ function AmendSuggestion() {
 
 function SplitSuggestionImpl({commit}: {commit: CommitInfo}) {
   const mode = useAtomValue(commitMode);
-  const significantLinesOfCode = useFetchStrictSignificantLinesOfCode(commit) ?? -1;
+  const significantLinesOfCode = useFetchSignificantLinesOfCode(commit)?.strictSloc ?? -1;
   const uncommittedChanges = useAtomValue(uncommittedChangesWithPreviews);
 
   // no matter what if the commit is over the threshold, we show the split suggestion
