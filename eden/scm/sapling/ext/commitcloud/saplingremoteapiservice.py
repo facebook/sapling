@@ -196,9 +196,42 @@ class SaplingRemoteAPIService(baseservice.BaseService):
     def getsmartlogbyversion(
         self, reponame, workspace, repo, date, version, limit, flags=[]
     ):
-        return self.fallback.getsmartlogbyversion(
-            reponame, workspace, repo, date, version, limit, flags=[]
+        self.ui.debug("sending 'get_old_smartlog' request\n", component="commitcloud")
+        if date:
+            data = {
+                "reponame": reponame,
+                "workspace": workspace,
+                "filter": {"Timestamp": date[0]},
+                "flags": self._map_legacy_flags(flags),
+            }
+        else:
+            data = {
+                "reponame": reponame,
+                "workspace": workspace,
+                "filter": {"Version": int(version)},
+                "flags": self._map_legacy_flags(flags),
+            }
+
+        response = self.repo.edenapi.cloudsmartlogbyversion(data)
+
+        smartlog = self._getdatafromresponse(response)
+        if limit != 0:
+            cutoff = smartlog["timestamp"] - limit
+            smartlog["nodes"] = list(
+                filter(lambda x: x["date"] >= cutoff, smartlog["nodes"])
+            )
+        for nodeinfo in smartlog["nodes"]:
+            nodeinfo["node"] = nodeinfo["node"].hex()
+            nodeinfo["parents"] = list(map(lambda x: x.hex(), nodeinfo["parents"]))
+        self.ui.debug(
+            "'get_smartlog' returns %d entries\n" % len(smartlog["nodes"]),
+            component="commitcloud",
         )
+
+        try:
+            return self._makesmartloginfo(smartlog)
+        except Exception as e:
+            raise error.UnexpectedError(self.ui, e)
 
     def updatecheckoutlocations(
         self, reponame, workspace, hostname, commit, checkoutpath, sharedpath, unixname

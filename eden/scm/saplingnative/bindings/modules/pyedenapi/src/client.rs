@@ -49,6 +49,7 @@ use edenapi_types::FileResponse;
 use edenapi_types::FileSpec;
 use edenapi_types::FileType;
 use edenapi_types::GetReferencesParams;
+use edenapi_types::GetSmartlogByVersionParams;
 use edenapi_types::GetSmartlogParams;
 use edenapi_types::HgChangesetContent;
 use edenapi_types::HgMutationEntryContent;
@@ -605,6 +606,12 @@ py_class!(pub class client |py| {
 
     def cloudrenameworkspace(&self, data: Serde<RenameWorkspaceRequest>) -> PyResult<Serde<RenameWorkspaceResponse>> {
         self.inner(py).as_ref().cloud_rename_workspace_py(data, py)
+    }
+
+    def cloudsmartlogbyversion(&self, data: Serde<GetSmartlogByVersionParams>)
+    -> PyResult<Serde<SmartlogDataResponse>>
+    {
+        self.inner(py).as_ref().cloud_smartlog_by_version_py(data, py)
     }
 });
 

@@ -39,6 +39,7 @@ use edenapi_types::FetchSnapshotResponse;
 use edenapi_types::FileResponse;
 use edenapi_types::FileSpec;
 use edenapi_types::GetReferencesParams;
+use edenapi_types::GetSmartlogByVersionParams;
 use edenapi_types::GetSmartlogParams;
 use edenapi_types::HgFilenodeData;
 use edenapi_types::HgMutationEntryContent;
@@ -445,6 +446,14 @@ pub trait SaplingRemoteApi: Send + Sync + 'static {
         &self,
         data: RenameWorkspaceRequest,
     ) -> Result<RenameWorkspaceResponse, SaplingRemoteApiError> {
+        let _ = data;
+        Err(SaplingRemoteApiError::NotSupported)
+    }
+
+    async fn cloud_smartlog_by_version(
+        &self,
+        data: GetSmartlogByVersionParams,
+    ) -> Result<SmartlogDataResponse, SaplingRemoteApiError> {
         let _ = data;
         Err(SaplingRemoteApiError::NotSupported)
     }

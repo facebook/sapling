@@ -63,6 +63,7 @@ use edenapi_types::FileRequest;
 use edenapi_types::FileResponse;
 use edenapi_types::FileSpec;
 use edenapi_types::GetReferencesParams;
+use edenapi_types::GetSmartlogByVersionParams;
 use edenapi_types::GetSmartlogParams;
 use edenapi_types::HgFilenodeData;
 use edenapi_types::HgMutationEntryContent;
@@ -186,6 +187,7 @@ mod paths {
     pub const CLOUD_RENAME_WORKSPACE: &str = "cloud/rename_workspace";
     pub const CLOUD_REFERENCES: &str = "cloud/references";
     pub const CLOUD_SMARTLOG: &str = "cloud/smartlog";
+    pub const CLOUD_SMARTLOG_BY_VERSION: &str = "cloud/smartlog_by_version";
     pub const CLOUD_SHARE_WORKSPACE: &str = "cloud/share_workspace";
     pub const SUFFIXQUERY: &str = "suffix_query";
 }
@@ -1221,6 +1223,24 @@ impl Client {
 
         self.fetch_single::<RenameWorkspaceResponse>(request).await
     }
+
+    async fn cloud_smartlog_by_version_attempt(
+        &self,
+        data: GetSmartlogByVersionParams,
+    ) -> Result<SmartlogDataResponse, SaplingRemoteApiError> {
+        tracing::info!(
+            "Requesting cloud smartlog for the workspace '{}' in the repo '{}' ",
+            data.workspace,
+            data.reponame
+        );
+        let url = self.build_url(paths::CLOUD_SMARTLOG_BY_VERSION)?;
+        let request = self
+            .configure_request(self.inner.client.post(url))?
+            .cbor(&data.to_wire())
+            .map_err(SaplingRemoteApiError::RequestSerializationFailed)?;
+
+        self.fetch_single::<SmartlogDataResponse>(request).await
+    }
 }
 
 #[async_trait]
@@ -1900,6 +1920,14 @@ impl SaplingRemoteApi for Client {
         data: RenameWorkspaceRequest,
     ) -> Result<RenameWorkspaceResponse, SaplingRemoteApiError> {
         self.with_retry(|this| this.cloud_rename_workspace_attempt(data.clone()).boxed())
+            .await
+    }
+
+    async fn cloud_smartlog_by_version(
+        &self,
+        data: GetSmartlogByVersionParams,
+    ) -> Result<SmartlogDataResponse, SaplingRemoteApiError> {
+        self.with_retry(|this| this.cloud_smartlog_by_version_attempt(data.clone()).boxed())
             .await
     }
 
