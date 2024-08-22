@@ -2515,9 +2515,10 @@ void EdenServer::detectNfsCrawl() {
                        processRecords.find(pid) == processRecords.end()) {
                   auto processInfo =
                       serverState->getProcessInfoCache()->lookup(pid).get();
-                  nonLeafPids.insert(processInfo.ppid);
-                  processRecords.insert({pid, processInfo});
-                  pid = processInfo.ppid;
+                  auto ppid = processInfo.ppid;
+                  nonLeafPids.insert(ppid);
+                  processRecords.insert({pid, std::move(processInfo)});
+                  pid = ppid;
                 }
               }
 
