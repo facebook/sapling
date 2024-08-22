@@ -114,7 +114,79 @@ async fn add_and_get<M: SyncedCommitMapping>(fb: FacebookInit, mapping: M) {
         result,
         (
             bonsai::ONES_CSID,
-            Some(version_name),
+            Some(version_name.clone()),
+            Some(SyncedCommitSourceRepo::Large)
+        )
+    );
+
+    let result = mapping
+        .get_many(
+            &ctx,
+            REPO_ZERO,
+            REPO_ONE,
+            &[bonsai::ONES_CSID, bonsai::THREES_CSID],
+        )
+        .await
+        .expect("Get many failed");
+    assert_eq!(
+        result
+            .get(&bonsai::ONES_CSID)
+            .unwrap()
+            .iter()
+            .next()
+            .expect("Unexpectedly, mapping is absent"),
+        &(
+            bonsai::TWOS_CSID,
+            Some(version_name.clone()),
+            Some(SyncedCommitSourceRepo::Large)
+        )
+    );
+    assert_eq!(
+        result
+            .get(&bonsai::THREES_CSID)
+            .unwrap()
+            .iter()
+            .next()
+            .expect("Unexpectedly, mapping is absent"),
+        &(
+            bonsai::FOURS_CSID,
+            Some(version_name.clone()),
+            Some(SyncedCommitSourceRepo::Large)
+        )
+    );
+
+    let result = mapping
+        .get_many(
+            &ctx,
+            REPO_ONE,
+            REPO_ZERO,
+            &[bonsai::FOURS_CSID, bonsai::TWOS_CSID],
+        )
+        .await
+        .expect("Get many failed");
+    assert_eq!(
+        result
+            .get(&bonsai::TWOS_CSID)
+            .unwrap()
+            .iter()
+            .next()
+            .expect("Unexpectedly, mapping is absent"),
+        &(
+            bonsai::ONES_CSID,
+            Some(version_name.clone()),
+            Some(SyncedCommitSourceRepo::Large)
+        )
+    );
+    assert_eq!(
+        result
+            .get(&bonsai::FOURS_CSID)
+            .unwrap()
+            .iter()
+            .next()
+            .expect("Unexpectedly, mapping is absent"),
+        &(
+            bonsai::THREES_CSID,
+            Some(version_name.clone()),
             Some(SyncedCommitSourceRepo::Large)
         )
     );
