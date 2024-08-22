@@ -212,6 +212,18 @@ pub trait SyncedCommitMapping: Send + Sync {
         Error,
     >;
 
+    /// Find all the mapping entries for a given source commit and target repo.
+    ///
+    /// This method is similar to `get`, but it doesn't query the DB master
+    /// and so can return stale data.
+    async fn get_maybe_stale(
+        &self,
+        ctx: &CoreContext,
+        source_repo_id: RepositoryId,
+        bcs_id: ChangesetId,
+        target_repo_id: RepositoryId,
+    ) -> Result<Vec<FetchedMappingEntry>, Error>;
+
     /// Find all the mapping entries given many source commits and a target repo
     async fn get_many(
         &self,
@@ -737,6 +749,32 @@ impl SyncedCommitMapping for SqlSyncedCommitMapping {
                 )
             })
             .collect())
+    }
+
+    async fn get_maybe_stale(
+        &self,
+        ctx: &CoreContext,
+        source_repo_id: RepositoryId,
+        bcs_id: ChangesetId,
+        target_repo_id: RepositoryId,
+    ) -> Result<Vec<FetchedMappingEntry>, Error> {
+        STATS::gets.add_value(1);
+        ctx.perf_counters()
+            .increment_counter(PerfCounterType::SqlReadsReplica);
+
+        let entries = self
+            .get_many_impl(
+                ctx,
+                source_repo_id,
+                target_repo_id,
+                &[bcs_id],
+                &self.read_connection,
+            )
+            .await?
+            .remove(&bcs_id)
+            .unwrap_or_default();
+
+        Ok(entries)
     }
 
     async fn get_many(
