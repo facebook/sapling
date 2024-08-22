@@ -40,7 +40,7 @@ linked-hash-map = { version = "0.5", features = ["serde_impl"] }
 manifest = { version = "0.1.0", path = "../../manifest" }
 mononoke_api = { version = "0.1.0", path = "../../mononoke_api" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
-openssl = "0.10.61"
+openssl = "0.10.63"
 rand = { version = "0.8", features = ["small_rng"] }
 repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
 repo_derived_data = { version = "0.1.0", path = "../../repo_attributes/repo_derived_data" }

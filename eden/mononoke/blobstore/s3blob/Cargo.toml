@@ -18,7 +18,7 @@ hyper = { version = "0.14.26", features = ["client", "http1", "http2", "stream"]
 hyper-openssl = "0.9"
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 nonzero_ext = "0.2"
-openssl = "0.10.61"
+openssl = "0.10.63"
 rusoto_core = "0.46.0"
 rusoto_credential = "0.46.0"
 rusoto_s3 = "0.46.0"

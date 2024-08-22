@@ -31,7 +31,7 @@ metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
 metadata = { version = "0.1.0", path = "../server/metadata" }
 mime = "0.3.14"
 mononoke_configs = { version = "0.1.0", path = "../mononoke_configs" }
-openssl = "0.10.61"
+openssl = "0.10.63"
 percent-encoding = "2.1"
 permission_checker = { version = "0.1.0", path = "../permission_checker" }
 pin-project = "0.4.30"
