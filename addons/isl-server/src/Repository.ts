@@ -263,6 +263,7 @@ export class Repository {
           if (Internal.runArcanistCommand == null) {
             return Promise.reject(Error('InternalArcanist runner is not supported'));
           }
+          ctx.logger.info('running arcanist command:', normalizedArgs);
           return Internal.runArcanistCommand(cwd, normalizedArgs, handleCommandProgress, signal);
         }
         return Promise.resolve();
@@ -698,14 +699,17 @@ export class Repository {
     execution.stderr?.on('data', data => {
       onProgress('stderr', data.toString());
     });
-    execution.on('exit', exitCode => {
-      onProgress('exit', exitCode || 0);
-    });
     signal.addEventListener('abort', () => {
       ctx.logger.log('kill operation: ', command, cwdRelativeArgs.join(' '));
     });
     handleAbortSignalOnProcess(execution, signal);
-    await execution;
+    try {
+      const result = await execution;
+      onProgress('exit', result.exitCode || 0);
+    } catch (err) {
+      onProgress('exit', isExecaError(err) ? err.exitCode : -1);
+      throw err;
+    }
   }
 
   /**
