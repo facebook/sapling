@@ -7,6 +7,8 @@
 
 import App from '../App';
 import {tracker} from '../analytics';
+import {readAtom} from '../jotaiUtils';
+import {operationList} from '../operationsState';
 import {mostRecentSubscriptionIds} from '../serverAPIState';
 import {CommitTreeListTestUtils} from '../testQueries';
 import {
@@ -203,6 +205,71 @@ describe('operations', () => {
     expect(
       within(screen.getByTestId('progress-container')).getByText('sl goto --rev c'),
     ).toBeInTheDocument();
+  });
+
+  it('handles out of order exit messages', async () => {
+    mockNextOperationId('1');
+    await clickGoto('c');
+
+    act(() => {
+      simulateMessageFromServer({
+        type: 'operationProgress',
+        id: '1',
+        kind: 'spawn',
+        queue: [],
+      });
+    });
+
+    mockNextOperationId('2');
+    await clickGoto('d');
+
+    act(() => {
+      simulateMessageFromServer({
+        type: 'operationProgress',
+        id: '2',
+        kind: 'spawn',
+        queue: [],
+      });
+    });
+
+    // get an exit for the SECOND operation before the first
+    act(() => {
+      simulateMessageFromServer({
+        type: 'operationProgress',
+        id: '2',
+        kind: 'exit',
+        exitCode: 0,
+        timestamp: 1234,
+      });
+    });
+
+    // but then get the first
+    act(() => {
+      simulateMessageFromServer({
+        type: 'operationProgress',
+        id: '1',
+        kind: 'exit',
+        exitCode: 0,
+        timestamp: 1234,
+      });
+    });
+
+    // This test is a bit bad: we directly read the jotai state instead of asserting on the UI state.
+    // This is to make sure our state is correct, and isn't represented in the UI in an obvious way.
+    const opList = readAtom(operationList);
+
+    expect(opList.currentOperation).toEqual(
+      expect.objectContaining({
+        operation: expect.objectContaining({id: '2'}),
+        exitCode: 0,
+      }),
+    );
+    expect(opList.operationHistory).toEqual([
+      expect.objectContaining({
+        operation: expect.objectContaining({id: '1'}),
+        exitCode: 0, // we marked it as exited even though they came out of order
+      }),
+    ]);
   });
 
   it('reacts to abort', async () => {

@@ -197,7 +197,29 @@ registerDisposable(
       case 'forgot':
         writeAtom(operationList, current => {
           const currentOperation = current.currentOperation;
-          if (currentOperation == null || currentOperation.exitCode != null) {
+
+          let operationThatExited: OperationInfo | undefined;
+
+          if (
+            currentOperation == null ||
+            currentOperation.exitCode != null ||
+            currentOperation.operation.id !== progress.id
+          ) {
+            // We've seen casees where we somehow got this exit out of order.
+            // Instead of updating the currentOperation, we need to find the matching historical operation.
+            // (which has the matching ID, and as long as it hasn't already been marked as exited)
+
+            operationThatExited = current.operationHistory.find(
+              op => op.operation.id === progress.id && op.exitCode == null,
+            );
+          }
+
+          if (operationThatExited == null) {
+            operationThatExited = currentOperation;
+          }
+
+          if (operationThatExited == null) {
+            // We can't do anything about this.
             return current;
           }
 
@@ -205,21 +227,35 @@ registerDisposable(
             progress.kind === 'exit'
               ? progress
               : {exitCode: EXIT_CODE_FORGET, timestamp: Date.now()};
-          const complete = operationCompletionCallbacks.get(currentOperation.operation.id);
+          const complete = operationCompletionCallbacks.get(operationThatExited.operation.id);
           complete?.(
             exitCode === 0 ? undefined : new Error(`Process exited with code ${exitCode}`),
           );
-          operationCompletionCallbacks.delete(currentOperation.operation.id);
+          operationCompletionCallbacks.delete(operationThatExited.operation.id);
 
-          return {
-            ...current,
-            currentOperation: {
-              ...currentOperation,
-              exitCode,
-              endTime: new Date(timestamp),
-              inlineProgress: undefined, // inline progress never lasts after exiting
-            },
+          const updatedOperation = {
+            ...operationThatExited,
+            exitCode,
+            endTime: new Date(timestamp),
+            inlineProgress: undefined, // inline progress never lasts after exiting
           };
+
+          if (operationThatExited === currentOperation) {
+            return {
+              ...current,
+              currentOperation: updatedOperation,
+            };
+          } else {
+            return {
+              ...current,
+              operationHistory: current.operationHistory.map(op => {
+                if (op === operationThatExited) {
+                  return updatedOperation;
+                }
+                return op;
+              }),
+            };
+          }
         });
         break;
     }
