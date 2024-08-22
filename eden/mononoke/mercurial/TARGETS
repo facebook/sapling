@@ -232,6 +232,7 @@ rust_unittest(
         ":mercurial_types-mocks",
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/fbinit:fbinit-tokio",
+        "//common/rust/shed/justknobs_stub:justknobs",
         "//eden/mononoke/common/sql_construct:sql_construct",
         "//eden/mononoke/mononoke_types:mononoke_types",
         "//eden/mononoke/mononoke_types:mononoke_types-mocks",

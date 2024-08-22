@@ -9,7 +9,6 @@ use std::collections::hash_map;
 use std::collections::HashMap;
 use std::collections::HashSet;
 
-use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
@@ -47,18 +46,18 @@ pub struct SqlHgMutationStore {
 
 /// Convenience alias for the type of each row returned from the entries queries.
 type EntryRow = (
-    HgChangesetId, // Successor
-    HgChangesetId, // Primordial
-    u64,           // Predecessor Count
-    u64,           // Predecessor Index
-    HgChangesetId, // Predecessor
-    HgChangesetId, // Predecessor's Primordial
-    u64,           // Split Count
-    String,        // Op
-    String,        // User
-    i64,           // Timestamp
-    i32,           // Time Zone
-    String,        // Extras
+    HgChangesetId,         // Successor
+    Option<HgChangesetId>, // Primordial
+    u64,                   // Predecessor Count
+    u64,                   // Predecessor Index
+    HgChangesetId,         // Predecessor
+    Option<HgChangesetId>, // Predecessor's Primordial
+    u64,                   // Split Count
+    String,                // Op
+    String,                // User
+    i64,                   // Timestamp
+    i32,                   // Time Zone
+    String,                // Extras
 );
 
 impl SqlHgMutationStore {
@@ -105,19 +104,11 @@ impl SqlHgMutationStore {
                 Some(entry) => entry,
                 None => continue,
             };
-            let primordial = entry_set
-                .changeset_primordials
-                .get(entry.successor())
-                .ok_or_else(|| {
-                    anyhow!(
-                        "failed to determine primordial commit for successor {}",
-                        entry.successor()
-                    )
-                })?;
+            let primordial = entry_set.changeset_primordials.get(entry.successor());
             db_entries.push((
                 &self.repo_id,
                 entry.successor(),
-                primordial,
+                primordial.cloned(),
                 entry.predecessors().len() as u64,
                 entry.split().len() as u64,
                 entry.op(),
@@ -127,21 +118,13 @@ impl SqlHgMutationStore {
                 entry.extra_json()?,
             ));
             for (index, predecessor) in entry.predecessors().enumerate() {
-                let primordial = entry_set
-                    .changeset_primordials
-                    .get(predecessor)
-                    .ok_or_else(|| {
-                        anyhow!(
-                            "failed to determine primordial commit for predecessor {}",
-                            predecessor
-                        )
-                    })?;
+                let primordial = entry_set.changeset_primordials.get(predecessor);
                 db_preds.push((
                     &self.repo_id,
                     entry.successor(),
                     index as u64,
                     predecessor,
-                    primordial,
+                    primordial.cloned(),
                 ));
             }
             for (index, split_successor) in entry.split().enumerate() {
@@ -171,7 +154,7 @@ impl SqlHgMutationStore {
                 |&(
                     repo_id,
                     successor,
-                    primordial,
+                    ref primordial,
                     ref extra_pred_count,
                     ref split_count,
                     op,
@@ -198,7 +181,7 @@ impl SqlHgMutationStore {
         let ref_db_preds: Vec<_> = db_preds
             .iter()
             .map(
-                |&(repo_id, successor, ref index, predecessor, primordial)| {
+                |&(repo_id, successor, ref index, predecessor, ref primordial)| {
                     (repo_id, successor, index, predecessor, primordial)
                 },
             )
@@ -324,15 +307,19 @@ impl SqlHgMutationStore {
             extra,
         ) in rows
         {
-            if !entry_set.changeset_primordials.contains_key(&successor) {
-                entry_set
-                    .changeset_primordials
-                    .insert(successor.clone(), primordial.clone());
+            if let Some(primordial) = primordial {
+                if !entry_set.changeset_primordials.contains_key(&successor) {
+                    entry_set
+                        .changeset_primordials
+                        .insert(successor.clone(), primordial.clone());
+                }
             }
-            if !entry_set.changeset_primordials.contains_key(&p_predecessor) {
-                entry_set
-                    .changeset_primordials
-                    .insert(p_predecessor.clone(), p_primordial.clone());
+            if let Some(p_primordial) = p_primordial {
+                if !entry_set.changeset_primordials.contains_key(&p_predecessor) {
+                    entry_set
+                        .changeset_primordials
+                        .insert(p_predecessor.clone(), p_primordial.clone());
+                }
             }
             let entry = match entry_set.entries.entry(successor) {
                 hash_map::Entry::Occupied(entry) => entry.into_mut(),
@@ -538,7 +525,10 @@ impl HgMutationStore for SqlHgMutationStore {
         // fetch them and all of their predecessors in order to find which
         // predecessor entries are missing and what their primordial commits
         // are.
-        if !missing_primordials.is_empty() {
+        if !missing_primordials.is_empty()
+            && justknobs::eval("scm/mononoke:mutation_find_missing_primordials", None, None)
+                .unwrap_or(true)
+        {
             // Find all predecessors of the entries that are missing in the
             // store by iterating over the entries provided by the client,
             // starting with the missing ones, and fetching all of their
@@ -575,6 +565,9 @@ impl HgMutationStore for SqlHgMutationStore {
                 entry_set
                     .add_entries_and_find_primordials(remaining_entries, &missing_primordials)?,
             );
+        } else {
+            added.extend(remaining_entries.keys().copied());
+            entry_set.entries.extend(remaining_entries);
         }
 
         // Store the new entries.
@@ -643,7 +636,7 @@ mononoke_queries! {
         values: (
             repo_id: RepositoryId,
             successor: HgChangesetId,
-            primordial: HgChangesetId,
+            primordial: Option<HgChangesetId>,
             pred_count: u64,
             split_count: u64,
             op: str,
@@ -674,7 +667,7 @@ mononoke_queries! {
             successor: HgChangesetId,
             seq: u64,
             predecessor: HgChangesetId,
-            primordial: HgChangesetId
+            primordial: Option<HgChangesetId>,
         )
     ) {
         insert_or_ignore,
@@ -714,11 +707,11 @@ mononoke_queries! {
 
     read SelectBySuccessor(repo_id: RepositoryId, >list cs_id: HgChangesetId) -> (
         HgChangesetId,
-        HgChangesetId,
+        Option<HgChangesetId>,
         u64,
         u64,
         HgChangesetId,
-        HgChangesetId,
+        Option<HgChangesetId>,
         u64,
         String,
         String,
@@ -740,11 +733,11 @@ mononoke_queries! {
 
     read SelectBySuccessorChain(repo_id: RepositoryId, mut_lim: usize, >list cs_id: HgChangesetId) -> (
         HgChangesetId,
-        HgChangesetId,
+        Option<HgChangesetId>,
         u64,
         u64,
         HgChangesetId,
-        HgChangesetId,
+        Option<HgChangesetId>,
         u64,
         String,
         String,
