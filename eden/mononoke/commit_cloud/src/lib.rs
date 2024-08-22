@@ -27,6 +27,7 @@ use context::CoreContext;
 use edenapi_types::cloud::SmartlogFilter;
 use edenapi_types::cloud::WorkspaceSharingData;
 use edenapi_types::GetReferencesParams;
+use edenapi_types::HistoricalVersionsData;
 use edenapi_types::ReferencesData;
 use edenapi_types::UpdateReferencesParams;
 use edenapi_types::WorkspaceData;
@@ -37,6 +38,7 @@ use mononoke_types::DateTime;
 use mononoke_types::Timestamp;
 use permission_checker::AclProvider;
 use permission_checker::BoxPermissionChecker;
+use references::history::historical_versions_from_get_output;
 use references::history::WorkspaceHistory;
 use references::rename_all;
 use repo_derived_data::ArcRepoDerivedData;
@@ -520,5 +522,21 @@ impl CommitCloud {
             Some(GetOutput::WorkspaceHistory(history)) => Ok(history.clone()),
             _ => Err(anyhow::anyhow!("unexpected history type")),
         };
+    }
+
+    pub async fn get_historical_versions(
+        &self,
+        cc_ctx: &CommitCloudContext,
+    ) -> anyhow::Result<HistoricalVersionsData> {
+        let args = GetType::GetHistoryVersionTimestamp;
+        let results = GenericGet::<WorkspaceHistory>::get(
+            &self.storage,
+            cc_ctx.reponame.clone(),
+            cc_ctx.workspace.clone(),
+            args.clone(),
+        )
+        .await?;
+
+        historical_versions_from_get_output(results)
     }
 }

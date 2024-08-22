@@ -81,6 +81,8 @@ pub use crate::cloud::GetReferencesParams;
 pub use crate::cloud::GetSmartlogByVersionParams;
 pub use crate::cloud::GetSmartlogFlag;
 pub use crate::cloud::GetSmartlogParams;
+pub use crate::cloud::HistoricalVersion;
+pub use crate::cloud::HistoricalVersionsData;
 pub use crate::cloud::ReferencesData;
 pub use crate::cloud::ReferencesDataResponse;
 pub use crate::cloud::RenameWorkspaceRequest;

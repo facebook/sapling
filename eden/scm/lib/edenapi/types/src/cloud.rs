@@ -344,6 +344,24 @@ impl Default for SmartlogFilter {
     }
 }
 
+#[auto_wire]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
+pub struct HistoricalVersion {
+    #[id(0)]
+    pub version_number: i64,
+    #[id(1)]
+    pub timestamp: i64,
+}
+
+#[auto_wire]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
+pub struct HistoricalVersionsData {
+    #[id(0)]
+    pub versions: Vec<HistoricalVersion>,
+}
+
 impl RemoteBookmark {
     pub fn full_name(&self) -> String {
         format!("{}/{}", self.remote, self.name)

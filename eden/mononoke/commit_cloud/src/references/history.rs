@@ -5,6 +5,9 @@
  * GNU General Public License version 2.
  */
 
+use anyhow::bail;
+use edenapi_types::cloud::HistoricalVersion;
+use edenapi_types::cloud::HistoricalVersionsData;
 use edenapi_types::cloud::RemoteBookmark;
 use mercurial_types::HgChangesetId;
 use mononoke_types::Timestamp;
@@ -15,6 +18,7 @@ use super::RawReferencesData;
 use crate::references::heads::WorkspaceHead;
 use crate::references::local_bookmarks::WorkspaceLocalBookmark;
 use crate::references::remote_bookmarks::WorkspaceRemoteBookmark;
+use crate::sql::history_ops::GetOutput;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct WorkspaceHistory {
@@ -82,4 +86,22 @@ impl WorkspaceHistory {
             .chain(lbs.keys().cloned())
             .collect::<Vec<HgChangesetId>>()
     }
+}
+
+pub fn historical_versions_from_get_output(
+    output: Vec<GetOutput>,
+) -> anyhow::Result<HistoricalVersionsData> {
+    let mut versions = Vec::new();
+    for out in output {
+        match out {
+            GetOutput::VersionTimestamp((version, timestamp)) => {
+                versions.push(HistoricalVersion {
+                    version_number: version as i64,
+                    timestamp: timestamp.timestamp_nanos(),
+                });
+            }
+            _ => bail!("'historical_data' failed: expected output from get_version_timestamp"),
+        }
+    }
+    Ok(HistoricalVersionsData { versions })
 }
