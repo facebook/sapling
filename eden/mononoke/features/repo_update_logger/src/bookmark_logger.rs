@@ -18,10 +18,11 @@ use bookmarks_types::BookmarkKey;
 use bookmarks_types::BookmarkKind;
 use context::CoreContext;
 use futures::join;
-use git_push_redirect::GitPushRedirectConfigRef;
-use git_push_redirect::Staleness;
 #[cfg(fbcode_build)]
 use git_ref_rust_logger::GitRefLogger;
+use git_source_of_truth::GitSourceOfTruth;
+use git_source_of_truth::GitSourceOfTruthConfigRef;
+use git_source_of_truth::Staleness;
 use gix_hash::Kind;
 use gix_hash::ObjectId;
 use hostname::get_hostname;
@@ -223,7 +224,7 @@ impl Loggable for PlainBookmarkInfo {
 
 pub async fn log_bookmark_operation(
     ctx: &CoreContext,
-    repo: &(impl RepoIdentityRef + RepoConfigRef + BonsaiGitMappingRef + GitPushRedirectConfigRef),
+    repo: &(impl RepoIdentityRef + RepoConfigRef + BonsaiGitMappingRef + GitSourceOfTruthConfigRef),
     info: &BookmarkInfo,
 ) {
     if let Some(bookmark_logging_destination) = &repo
@@ -238,10 +239,14 @@ pub async fn log_bookmark_operation(
         };
         let git_logger_future = async move {
             let mononoke_source_of_truth = repo
-                .git_push_redirect_config()
+                .git_source_of_truth_config()
                 .get_by_repo_id(ctx, repo.repo_identity().id(), Staleness::MaybeStale)
                 .await
-                .map(|entry| entry.map_or(false, |entry| entry.mononoke))
+                .map(|entry| {
+                    entry.map_or(false, |entry| {
+                        entry.source_of_truth == GitSourceOfTruth::Mononoke
+                    })
+                })
                 .unwrap_or(false);
             // Only log Git bookmarks if the Git repo is SoT'd in Mononoke
             if mononoke_source_of_truth {

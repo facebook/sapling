@@ -15,7 +15,7 @@ use commit_graph::CommitGraph;
 use commit_graph::CommitGraphWriter;
 use filenodes::Filenodes;
 use filestore::FilestoreConfig;
-use git_push_redirect::GitPushRedirectConfig;
+use git_source_of_truth::GitSourceOfTruthConfig;
 use hook_manager::HookManager;
 use mercurial_mutation::HgMutationStore;
 use metaconfig_types::RepoConfig;
@@ -57,7 +57,7 @@ pub struct RepoClientRepo(
     StreamingClone,
     dyn BookmarksCache,
     dyn HgMutationStore,
-    dyn GitPushRedirectConfig,
+    dyn GitSourceOfTruthConfig,
     HookManager,
     dyn RepoLock,
     dyn RepoPermissionChecker,

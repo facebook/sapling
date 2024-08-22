@@ -54,7 +54,7 @@ rust_binary(
         "//eden/mononoke/git/packetline:packetline",
         "//eden/mononoke/git/packfile:packfile",
         "//eden/mononoke/git/protocol:protocol",
-        "//eden/mononoke/git_push_redirect:git_push_redirect",
+        "//eden/mononoke/git_source_of_truth:git_source_of_truth",
         "//eden/mononoke/gotham_ext:gotham_ext",
         "//eden/mononoke/metaconfig:metaconfig_parser",
         "//eden/mononoke/metaconfig:metaconfig_types",

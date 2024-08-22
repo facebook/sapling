@@ -27,7 +27,7 @@ fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rus
 flate2 = { version = "1.0.26", features = ["rust_backend"], default-features = false }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
 futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-git_push_redirect = { version = "0.1.0", path = "../git_push_redirect" }
+git_source_of_truth = { version = "0.1.0", path = "../git_source_of_truth" }
 git_types = { version = "0.1.0", path = "../git/git_types" }
 gix-date = "0.7"
 gix-hash = "0.11"

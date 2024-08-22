@@ -40,7 +40,7 @@ rust_library(
         "//eden/mononoke/bookmarks:bookmarks",
         "//eden/mononoke/bookmarks:bookmarks_types",
         "//eden/mononoke/common/logger_ext:logger_ext",
-        "//eden/mononoke/git_push_redirect:git_push_redirect",
+        "//eden/mononoke/git_source_of_truth:git_source_of_truth",
         "//eden/mononoke/metaconfig:metaconfig_types",
         "//eden/mononoke/mononoke_types:mononoke_types",
         "//eden/mononoke/permission_checker:permission_checker",

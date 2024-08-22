@@ -1,21 +1,23 @@
 load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbcode_macros//build_defs/lib:rust_oss.bzl", "rust_oss")
 load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
 
 oncall("mononoke")
 
 rust_library(
-    name = "git_push_redirect",
+    name = "git_source_of_truth",
     srcs = glob([
         "src/**/*.rs",
         "schemas/**/*.sql",
     ]),
-    test_deps = [
+    test_deps = [] if rust_oss.is_oss_build() else [
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/fbinit:fbinit-tokio",
     ],
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:async-trait",
+        "fbsource//third-party/rust:strum",
         "//common/rust/shed/facet:facet",
         "//common/rust/shed/sql:sql",
         "//eden/mononoke/common/rust/sql_ext:sql_ext",

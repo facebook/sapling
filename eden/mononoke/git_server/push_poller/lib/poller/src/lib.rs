@@ -18,9 +18,10 @@ use context::CoreContext;
 use ephemeral_shard::EphemeralSchema;
 use fbinit::FacebookInit;
 use futures::prelude::*;
-use git_push_redirect::GitPushRedirectConfig;
-use git_push_redirect::SqlGitPushRedirectConfigBuilder;
-use git_push_redirect::Staleness;
+use git_source_of_truth::GitSourceOfTruth as DbGitSourceOfTruth;
+use git_source_of_truth::GitSourceOfTruthConfig;
+use git_source_of_truth::SqlGitSourceOfTruthConfigBuilder;
+use git_source_of_truth::Staleness;
 use metaconfig_parser::load_empty_repo_configs;
 use metaconfig_parser::RepoConfigs;
 use mysql_client::ConnectionOptionsBuilder;
@@ -104,8 +105,8 @@ impl GitSourceOfTruth {
         staleness: Staleness,
     ) -> Result<bool> {
         let connections = self.mononoke_production_xdb.read_conns().await?;
-        let git_push_redirect_config: &dyn GitPushRedirectConfig =
-            &SqlGitPushRedirectConfigBuilder::from_sql_connections(connections).build();
+        let git_source_of_truth_config: &dyn GitSourceOfTruthConfig =
+            &SqlGitSourceOfTruthConfigBuilder::from_sql_connections(connections).build();
         let maybe_repo_id = self
             .repo_configs
             .repos
@@ -113,10 +114,14 @@ impl GitSourceOfTruth {
             .map(|repo_config| repo_config.repoid);
         // If the repo is not in the config, we assume it is not a Mononoke Git repository.
         if let Some(repo_id) = maybe_repo_id {
-            git_push_redirect_config
+            git_source_of_truth_config
                 .get_by_repo_id(&self.ctx, repo_id, staleness)
                 .await
-                .map(|entry| entry.map_or(false, |entry| entry.mononoke))
+                .map(|entry| {
+                    entry.map_or(false, |entry| {
+                        entry.source_of_truth == DbGitSourceOfTruth::Mononoke
+                    })
+                })
         } else {
             Ok(false)
         }
@@ -124,10 +129,10 @@ impl GitSourceOfTruth {
 
     async fn current_mononoke_git_repositories<'a>(&'a self) -> Result<Vec<Repository<'a>>> {
         let connections = self.mononoke_production_xdb.read_conns().await?;
-        let git_push_redirect_config: &dyn GitPushRedirectConfig =
-            &SqlGitPushRedirectConfigBuilder::from_sql_connections(connections).build();
+        let git_source_of_truth_config: &dyn GitSourceOfTruthConfig =
+            &SqlGitSourceOfTruthConfigBuilder::from_sql_connections(connections).build();
 
-        let current_mononoke_git_repository_ids: HashSet<_> = git_push_redirect_config
+        let current_mononoke_git_repository_ids: HashSet<_> = git_source_of_truth_config
             .get_redirected_to_mononoke(&self.ctx)
             .await?
             .into_iter()

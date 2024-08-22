@@ -53,7 +53,7 @@ mod restrictions;
 mod update;
 
 pub use bookmarks_types::BookmarkKind;
-use git_push_redirect::GitPushRedirectConfigRef;
+use git_source_of_truth::GitSourceOfTruthConfigRef;
 pub use hooks::CrossRepoPushSource;
 pub use hooks::HookRejection;
 pub use pushrebase::PushrebaseOutcome;
@@ -93,7 +93,7 @@ pub trait Repo = BonsaiHgMappingRef
     + RepoLockRef
     + CommitGraphRef
     + CommitGraphWriterRef
-    + GitPushRedirectConfigRef
+    + GitSourceOfTruthConfigRef
     + Send
     + Sync;
 
@@ -214,7 +214,7 @@ impl BookmarkInfoData {
              + RepoConfigRef
              + BonsaiGlobalrevMappingRef
              + BonsaiGitMappingRef
-             + GitPushRedirectConfigRef
+             + GitSourceOfTruthConfigRef
          ),
     ) {
         if self.log_new_public_commits_to_scribe {

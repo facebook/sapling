@@ -16,9 +16,11 @@ use mononoke_types::RepositoryId;
 
 mod store;
 mod types;
-pub use crate::store::SqlGitPushRedirectConfig;
-pub use crate::store::SqlGitPushRedirectConfigBuilder;
-pub use crate::types::GitPushRedirectConfigEntry;
+pub use crate::store::SqlGitSourceOfTruthConfig;
+pub use crate::store::SqlGitSourceOfTruthConfigBuilder;
+pub use crate::types::GitSourceOfTruth;
+pub use crate::types::GitSourceOfTruthConfigEntry;
+pub use crate::types::RepositoryName;
 pub use crate::types::RowId;
 
 /// Enum representing the staleness of the SoT status for a repo
@@ -32,33 +34,45 @@ pub enum Staleness {
 
 #[facet::facet]
 #[async_trait]
-pub trait GitPushRedirectConfig: Send + Sync {
-    async fn set(&self, ctx: &CoreContext, repo_id: RepositoryId, mononoke: bool) -> Result<()>;
+pub trait GitSourceOfTruthConfig: Send + Sync {
+    async fn set(
+        &self,
+        ctx: &CoreContext,
+        repo_id: RepositoryId,
+        repo_name: RepositoryName,
+        source_of_truth: GitSourceOfTruth,
+    ) -> Result<()>;
 
     async fn get_by_repo_id(
         &self,
         ctx: &CoreContext,
         repo_id: RepositoryId,
         staleness: Staleness,
-    ) -> Result<Option<GitPushRedirectConfigEntry>>;
+    ) -> Result<Option<GitSourceOfTruthConfigEntry>>;
 
     async fn get_redirected_to_mononoke(
         &self,
         _ctx: &CoreContext,
-    ) -> Result<Vec<GitPushRedirectConfigEntry>>;
+    ) -> Result<Vec<GitSourceOfTruthConfigEntry>>;
 
     async fn get_redirected_to_metagit(
         &self,
         _ctx: &CoreContext,
-    ) -> Result<Vec<GitPushRedirectConfigEntry>>;
+    ) -> Result<Vec<GitSourceOfTruthConfigEntry>>;
 }
 
 #[derive(Clone)]
-pub struct NoopGitPushRedirectConfig {}
+pub struct NoopGitSourceOfTruthConfig {}
 
 #[async_trait]
-impl GitPushRedirectConfig for NoopGitPushRedirectConfig {
-    async fn set(&self, _ctx: &CoreContext, _repo_id: RepositoryId, _mononoke: bool) -> Result<()> {
+impl GitSourceOfTruthConfig for NoopGitSourceOfTruthConfig {
+    async fn set(
+        &self,
+        _ctx: &CoreContext,
+        _repo_id: RepositoryId,
+        _repo_name: RepositoryName,
+        _source_of_truth: GitSourceOfTruth,
+    ) -> Result<()> {
         Ok(())
     }
 
@@ -67,31 +81,31 @@ impl GitPushRedirectConfig for NoopGitPushRedirectConfig {
         _ctx: &CoreContext,
         _repo_id: RepositoryId,
         _staleness: Staleness,
-    ) -> Result<Option<GitPushRedirectConfigEntry>> {
+    ) -> Result<Option<GitSourceOfTruthConfigEntry>> {
         Ok(None)
     }
 
     async fn get_redirected_to_mononoke(
         &self,
         _ctx: &CoreContext,
-    ) -> Result<Vec<GitPushRedirectConfigEntry>> {
+    ) -> Result<Vec<GitSourceOfTruthConfigEntry>> {
         Ok(vec![])
     }
 
     async fn get_redirected_to_metagit(
         &self,
         _ctx: &CoreContext,
-    ) -> Result<Vec<GitPushRedirectConfigEntry>> {
+    ) -> Result<Vec<GitSourceOfTruthConfigEntry>> {
         Ok(vec![])
     }
 }
 
 #[derive(Clone)]
-pub struct TestGitPushRedirectConfig {
-    entries: Arc<Mutex<HashMap<RepositoryId, GitPushRedirectConfigEntry>>>,
+pub struct TestGitSourceOfTruthConfig {
+    entries: Arc<Mutex<HashMap<RepositoryId, GitSourceOfTruthConfigEntry>>>,
 }
 
-impl TestGitPushRedirectConfig {
+impl TestGitSourceOfTruthConfig {
     pub fn new() -> Self {
         Self {
             entries: Arc::new(Mutex::new(HashMap::new())),
@@ -100,15 +114,22 @@ impl TestGitPushRedirectConfig {
 }
 
 #[async_trait]
-impl GitPushRedirectConfig for TestGitPushRedirectConfig {
-    async fn set(&self, _ctx: &CoreContext, repo_id: RepositoryId, mononoke: bool) -> Result<()> {
+impl GitSourceOfTruthConfig for TestGitSourceOfTruthConfig {
+    async fn set(
+        &self,
+        _ctx: &CoreContext,
+        repo_id: RepositoryId,
+        repo_name: RepositoryName,
+        source_of_truth: GitSourceOfTruth,
+    ) -> Result<()> {
         let mut map = self.entries.lock().expect("poisoned lock");
         map.insert(
             repo_id.to_owned(),
-            GitPushRedirectConfigEntry {
+            GitSourceOfTruthConfigEntry {
                 id: RowId(0),
                 repo_id,
-                mononoke,
+                repo_name,
+                source_of_truth,
             },
         );
         Ok(())
@@ -119,7 +140,7 @@ impl GitPushRedirectConfig for TestGitPushRedirectConfig {
         _ctx: &CoreContext,
         repo_id: RepositoryId,
         _staleness: Staleness,
-    ) -> Result<Option<GitPushRedirectConfigEntry>> {
+    ) -> Result<Option<GitSourceOfTruthConfigEntry>> {
         Ok(self
             .entries
             .lock()
@@ -131,13 +152,13 @@ impl GitPushRedirectConfig for TestGitPushRedirectConfig {
     async fn get_redirected_to_mononoke(
         &self,
         _ctx: &CoreContext,
-    ) -> Result<Vec<GitPushRedirectConfigEntry>> {
+    ) -> Result<Vec<GitSourceOfTruthConfigEntry>> {
         Ok(self
             .entries
             .lock()
             .expect("poisoned lock")
             .values()
-            .filter(|entry| entry.mononoke)
+            .filter(|entry| entry.source_of_truth == GitSourceOfTruth::Mononoke)
             .cloned()
             .collect())
     }
@@ -145,13 +166,13 @@ impl GitPushRedirectConfig for TestGitPushRedirectConfig {
     async fn get_redirected_to_metagit(
         &self,
         _ctx: &CoreContext,
-    ) -> Result<Vec<GitPushRedirectConfigEntry>> {
+    ) -> Result<Vec<GitSourceOfTruthConfigEntry>> {
         Ok(self
             .entries
             .lock()
             .expect("poisoned lock")
             .values()
-            .filter(|entry| !entry.mononoke)
+            .filter(|entry| entry.source_of_truth == GitSourceOfTruth::Metagit)
             .cloned()
             .collect())
     }

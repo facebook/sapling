@@ -82,7 +82,7 @@ use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use futures::try_join;
 use futures::Future;
-use git_push_redirect::GitPushRedirectConfig;
+use git_source_of_truth::GitSourceOfTruthConfig;
 use git_symbolic_refs::GitSymbolicRefs;
 use git_types::MappedGitCommitId;
 use hook_manager::manager::HookManager;
@@ -264,7 +264,7 @@ pub struct Repo {
     pub git_symbolic_refs: dyn GitSymbolicRefs,
 
     #[facet]
-    pub git_push_redirect_config: dyn GitPushRedirectConfig,
+    pub git_source_of_truth_config: dyn GitSourceOfTruthConfig,
 
     #[facet]
     pub filenodes: dyn Filenodes,

@@ -220,7 +220,7 @@ rust_library(
         "//eden/mononoke/commit_rewriting/cross_repo_sync:cross_repo_sync",
         "//eden/mononoke/derived_data:skeleton_manifest",
         "//eden/mononoke/features/repo_update_logger:repo_update_logger",
-        "//eden/mononoke/git_push_redirect:git_push_redirect",
+        "//eden/mononoke/git_source_of_truth:git_source_of_truth",
         "//eden/mononoke/hooks:hooks",
         "//eden/mononoke/metaconfig:metaconfig_types",
         "//eden/mononoke/mononoke_types:mononoke_types",

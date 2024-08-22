@@ -235,7 +235,7 @@ mod tests {
     use commit_graph::CommitGraphWriter;
     use fbinit::FacebookInit;
     use filestore::FilestoreConfig;
-    use git_push_redirect::GitPushRedirectConfig;
+    use git_source_of_truth::GitSourceOfTruthConfig;
     use maplit::hashmap;
     use maplit::hashset;
     use metaconfig_types::RepoConfig;
@@ -318,7 +318,7 @@ mod tests {
         commit_graph_writer: dyn CommitGraphWriter,
 
         #[facet]
-        git_push_redirect_config: dyn GitPushRedirectConfig,
+        git_source_of_truth_config: dyn GitSourceOfTruthConfig,
     }
 
     fn add_git_extras(
