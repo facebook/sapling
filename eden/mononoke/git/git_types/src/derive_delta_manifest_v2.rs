@@ -273,7 +273,14 @@ async fn create_delta_entry(
     new_member: TreeMember,
 ) -> Result<Option<GDMV2DeltaEntry>> {
     let old_member = match old_member {
-        Some(member) => member,
+        Some(member) => {
+            // If the entry corresponds to a submodule (and shows up as a commit), then we ignore it
+            if member.filemode() == crate::mode::GIT_FILEMODE_COMMIT {
+                return Ok(None);
+            } else {
+                member
+            }
+        }
         None => {
             return Ok(None);
         }
