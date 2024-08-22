@@ -284,8 +284,8 @@ class EdenHgTestCase(testcase.EdenTestCase, metaclass=abc.ABCMeta):
         op: Optional[str] = None,
         check_ignored: bool = True,
         rev: Optional[str] = None,
-        timeout_seconds: float = 1.0,
-    ) -> None:
+        timeout_seconds: float = 1.0,  # after adding status cache, we need to wait for edenfs to pick up the working copy modifications
+    ) -> int:
         """Asserts the output of `hg status` matches the expected state.
 
         `expected` is a dict where keys are paths relative to the repo
@@ -296,11 +296,15 @@ class EdenHgTestCase(testcase.EdenTestCase, metaclass=abc.ABCMeta):
 
         Use timeout to wait for EdenFS pick up the working copy modifications.
         For details of this see 'SyncBehavior' in eden.thrift
+
+        Returns the total number of tries.
         """
         poll_interval_seconds = 0.1
         deadline = time.monotonic() + timeout_seconds
+        num_of_tries = 0
         while True:
             try:
+                num_of_tries += 1
                 actual_status = self.repo.status(include_ignored=check_ignored, rev=rev)
                 self.assertDictEqual(expected, actual_status, msg=msg)
                 self.assert_unfinished_operation(op)
@@ -310,6 +314,7 @@ class EdenHgTestCase(testcase.EdenTestCase, metaclass=abc.ABCMeta):
                     raise e
                 time.sleep(poll_interval_seconds)
                 continue
+        return num_of_tries
 
     def assert_status_empty(
         self,
