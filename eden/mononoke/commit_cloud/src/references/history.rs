@@ -40,7 +40,7 @@ impl WorkspaceHistory {
             timestamp: if timestamp == 0 {
                 None
             } else {
-                Some(Timestamp::from_timestamp_nanos(timestamp))
+                Some(Timestamp::from_timestamp_secs(timestamp))
             },
             heads: raw.heads,
             local_bookmarks: raw.local_bookmarks,
@@ -97,7 +97,7 @@ pub fn historical_versions_from_get_output(
             GetOutput::VersionTimestamp((version, timestamp)) => {
                 versions.push(HistoricalVersion {
                     version_number: version as i64,
-                    timestamp: timestamp.timestamp_nanos(),
+                    timestamp: timestamp.timestamp_seconds(),
                 });
             }
             _ => bail!("'historical_data' failed: expected output from get_version_timestamp"),

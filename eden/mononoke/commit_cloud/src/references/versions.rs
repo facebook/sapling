@@ -45,7 +45,7 @@ impl WorkspaceVersion {
         WorkspaceData {
             name: self.workspace,
             version: self.version,
-            timestamp: self.timestamp.timestamp_nanos(),
+            timestamp: self.timestamp.timestamp_seconds(),
             archived: self.archived,
             reponame: reponame.to_owned(),
         }

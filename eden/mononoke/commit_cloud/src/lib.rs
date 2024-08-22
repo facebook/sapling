@@ -163,7 +163,7 @@ impl CommitCloud {
                 .await?;
         if let Some(workspace_version) = maybeworkspace {
             latest_version = workspace_version.version;
-            version_timestamp = workspace_version.timestamp.timestamp_nanos();
+            version_timestamp = workspace_version.timestamp.timestamp_seconds();
         }
 
         ensure!(
@@ -222,7 +222,7 @@ impl CommitCloud {
 
         if let Some(workspace_version) = maybeworkspace {
             latest_version = workspace_version.version;
-            version_timestamp = workspace_version.timestamp.timestamp_nanos();
+            version_timestamp = workspace_version.timestamp.timestamp_seconds();
         }
         let raw_references_data = fetch_references(cc_ctx, &self.storage).await?;
         if params.version < latest_version {
@@ -328,7 +328,7 @@ impl CommitCloud {
             heads_dates: None,
             remote_bookmarks: None,
             snapshots: None,
-            timestamp: Some(new_version_timestamp.timestamp_nanos()),
+            timestamp: Some(new_version_timestamp.timestamp_seconds()),
         })
     }
 
@@ -492,7 +492,7 @@ impl CommitCloud {
                 }
             }
             SmartlogFilter::Timestamp(timestamp) => {
-                let timestamp = Timestamp::from_timestamp_nanos(*timestamp);
+                let timestamp = Timestamp::from_timestamp_secs(*timestamp);
                 GetType::GetHistoryDate {
                     timestamp,
                     limit: 1,

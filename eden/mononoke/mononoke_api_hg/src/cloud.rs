@@ -301,7 +301,7 @@ impl<R: MononokeRepo> HgRepoContext<R> {
         Ok(SmartlogData {
             nodes,
             version: Some(history.version as i64),
-            timestamp: history.timestamp.map(|ts| ts.timestamp_nanos()),
+            timestamp: history.timestamp.map(|ts| ts.timestamp_seconds()),
         })
     }
 
