@@ -276,23 +276,23 @@ pub(crate) async fn include_symrefs(
                         repo.repo_identity().name()
                     )
                 })?;
+
             // Get the commit id pointed by the HEAD reference
-            let head_commit_id = refs_to_include
+            if let Some(head_commit_id) = refs_to_include
                 .get(&head_ref.ref_name_with_type())
-                .ok_or_else(|| {
-                    anyhow::anyhow!(
-                        "HEAD reference points to branch/tag {} which does not exist. Known refs: {:?}",
-                        &head_ref.ref_name_with_type(),
-                        refs_to_include.keys()
-                    )
-                })?
-                .id();
-            let ref_target = symref_target(
-                &head_ref.ref_name_with_type(),
-                head_commit_id.clone(),
-                symref_format,
-            );
-            FxHashMap::from_iter([(head_ref.symref_name, ref_target)])
+                .map(|target| target.id())
+            {
+                let ref_target = symref_target(
+                    &head_ref.ref_name_with_type(),
+                    head_commit_id.clone(),
+                    symref_format,
+                );
+                FxHashMap::from_iter([(head_ref.symref_name, ref_target)])
+            } else {
+                // Silently ignore the Symrefs that point to a non-existent
+                // Git branch to maintain parity with Git
+                FxHashMap::default()
+            }
         }
         RequestedSymrefs::IncludeAll(symref_format) => {
             // Get all the symrefs with the branches/tags that they point to
@@ -307,21 +307,24 @@ pub(crate) async fn include_symrefs(
                     )
                 })?;
             // Get the commit ids pointed by each symref
-            symref_entries.into_iter().map(|entry| {
-                let ref_commit_id = refs_to_include
-                    .get(&entry.ref_name_with_type())
-                    .ok_or_else(|| {
-                        anyhow::anyhow!(
-                            "{} reference points to branch/tag {} which does not exist. Known refs: {:?}",
-                            &entry.symref_name,
-                            &entry.ref_name_with_type(),
-                            refs_to_include.keys()
-                        )
-                    })?
-                    .id();
-                let ref_target = symref_target(&entry.ref_name_with_type(), ref_commit_id.clone(), symref_format);
-                Ok((entry.symref_name, ref_target))
-            }).collect::<Result<FxHashMap<_, _>>>()?
+            symref_entries
+                .into_iter()
+                .filter_map(|entry| {
+                    // Silently ignore the Symrefs that point to a non-existent
+                    // Git branch to maintain parity with Git
+                    refs_to_include
+                        .get(&entry.ref_name_with_type())
+                        .map(|target| (entry, target.id()))
+                })
+                .map(|(entry, ref_commit_id)| {
+                    let ref_target = symref_target(
+                        &entry.ref_name_with_type(),
+                        ref_commit_id.clone(),
+                        symref_format,
+                    );
+                    Ok((entry.symref_name, ref_target))
+                })
+                .collect::<Result<FxHashMap<_, _>>>()?
         }
         RequestedSymrefs::ExcludeAll => FxHashMap::default(),
     };
