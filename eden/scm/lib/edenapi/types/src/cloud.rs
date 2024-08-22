@@ -345,7 +345,7 @@ impl Default for SmartlogFilter {
 }
 
 #[auto_wire]
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Default, Debug, Eq, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct HistoricalVersion {
     #[id(0)]
@@ -355,11 +355,30 @@ pub struct HistoricalVersion {
 }
 
 #[auto_wire]
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Default, Debug, Eq, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct HistoricalVersionsData {
     #[id(0)]
     pub versions: Vec<HistoricalVersion>,
+}
+
+#[auto_wire]
+#[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
+pub struct HistoricalVersionsParams {
+    #[id(0)]
+    pub workspace: String,
+    #[id(1)]
+    pub reponame: String,
+}
+
+#[auto_wire]
+#[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
+pub struct HistoricalVersionsResponse {
+    #[id(0)]
+    #[no_default]
+    pub data: Result<HistoricalVersionsData, ServerError>,
 }
 
 impl RemoteBookmark {

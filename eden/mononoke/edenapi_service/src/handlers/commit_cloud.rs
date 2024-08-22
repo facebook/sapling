@@ -14,6 +14,7 @@ use edenapi_types::CloudWorkspacesRequest;
 use edenapi_types::GetReferencesParams;
 use edenapi_types::GetSmartlogByVersionParams;
 use edenapi_types::GetSmartlogParams;
+use edenapi_types::HistoricalVersionsParams;
 use edenapi_types::ReferencesDataResponse;
 use edenapi_types::RenameWorkspaceRequest;
 use edenapi_types::RenameWorkspaceResponse;
@@ -44,6 +45,8 @@ pub struct CommitCloudSmartlogByVersion;
 pub struct CommitCloudShareWorkspace;
 pub struct CommitCloudRenameWorkspace;
 pub struct CommitCloudUpdateArchive;
+pub struct CommitCloudHistoricalVersions;
+use edenapi_types::HistoricalVersionsResponse;
 
 #[async_trait]
 impl SaplingRemoteApiHandler for CommitCloudWorkspace {
@@ -319,6 +322,37 @@ async fn get_smartlog_by_version<R: MononokeRepo>(
     Ok(SmartlogDataResponse {
         data: repo
             .cloud_smartlog_by_version(&request)
+            .await
+            .map_err(ServerError::from),
+    })
+}
+
+#[async_trait]
+impl SaplingRemoteApiHandler for CommitCloudHistoricalVersions {
+    type Request = HistoricalVersionsParams;
+    type Response = HistoricalVersionsResponse;
+
+    const HTTP_METHOD: hyper::Method = hyper::Method::POST;
+    const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::CloudHistoricalVersions;
+    const ENDPOINT: &'static str = "/cloud/historical_versions";
+
+    async fn handler(
+        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor, Repo>,
+        request: Self::Request,
+    ) -> HandlerResult<'async_trait, Self::Response> {
+        let repo = ectx.repo();
+        let res = historical_versions(request, repo).boxed();
+        Ok(stream::once(res).boxed())
+    }
+}
+
+async fn historical_versions<R: MononokeRepo>(
+    request: HistoricalVersionsParams,
+    repo: HgRepoContext<R>,
+) -> anyhow::Result<HistoricalVersionsResponse, Error> {
+    Ok(HistoricalVersionsResponse {
+        data: repo
+            .cloud_historical_versions(&request)
             .await
             .map_err(ServerError::from),
     })

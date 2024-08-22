@@ -18,6 +18,8 @@ use edenapi_types::GetReferencesParams;
 use edenapi_types::GetSmartlogByVersionParams;
 use edenapi_types::GetSmartlogParams;
 use edenapi_types::HgId;
+use edenapi_types::HistoricalVersionsData;
+use edenapi_types::HistoricalVersionsParams;
 use edenapi_types::ReferencesData;
 use edenapi_types::RenameWorkspaceRequest;
 use edenapi_types::SmartlogData;
@@ -301,5 +303,23 @@ impl<R: MononokeRepo> HgRepoContext<R> {
             version: Some(history.version as i64),
             timestamp: history.timestamp.map(|ts| ts.timestamp_nanos()),
         })
+    }
+
+    pub async fn cloud_historical_versions(
+        &self,
+        params: &HistoricalVersionsParams,
+    ) -> Result<HistoricalVersionsData, MononokeError> {
+        let mut cc_ctx = CommitCloudContext::new(&params.workspace, &params.reponame)?;
+        let authz = self.repo_ctx().authorization_context();
+        authz
+            .require_commitcloud_operation(self.ctx(), self.repo_ctx().repo(), &mut cc_ctx, "read")
+            .await?;
+
+        Ok(self
+            .repo_ctx()
+            .repo()
+            .commit_cloud()
+            .get_historical_versions(&cc_ctx)
+            .await?)
     }
 }
