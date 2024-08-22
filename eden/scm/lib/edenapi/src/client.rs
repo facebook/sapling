@@ -67,6 +67,8 @@ use edenapi_types::GetSmartlogByVersionParams;
 use edenapi_types::GetSmartlogParams;
 use edenapi_types::HgFilenodeData;
 use edenapi_types::HgMutationEntryContent;
+use edenapi_types::HistoricalVersionsParams;
+use edenapi_types::HistoricalVersionsResponse;
 use edenapi_types::HistoryEntry;
 use edenapi_types::HistoryRequest;
 use edenapi_types::HistoryResponseChunk;
@@ -180,15 +182,16 @@ mod paths {
     pub const ALTER_SNAPSHOT: &str = "snapshot/alter";
     pub const DOWNLOAD_FILE: &str = "download/file";
     pub const BLAME: &str = "blame";
-    pub const CLOUD_WORKSPACE: &str = "cloud/workspace";
-    pub const CLOUD_WORKSPACES: &str = "cloud/workspaces";
+    pub const CLOUD_HISTORICAL_VERSIONS: &str = "cloud/historical_versions";
+    pub const CLOUD_REFERENCES: &str = "cloud/references";
+    pub const CLOUD_RENAME_WORKSPACE: &str = "cloud/rename_workspace";
+    pub const CLOUD_SHARE_WORKSPACE: &str = "cloud/share_workspace";
+    pub const CLOUD_SMARTLOG_BY_VERSION: &str = "cloud/smartlog_by_version";
+    pub const CLOUD_SMARTLOG: &str = "cloud/smartlog";
     pub const CLOUD_UPDATE_ARCHIVE: &str = "cloud/update_archive";
     pub const CLOUD_UPDATE_REFERENCES: &str = "cloud/update_references";
-    pub const CLOUD_RENAME_WORKSPACE: &str = "cloud/rename_workspace";
-    pub const CLOUD_REFERENCES: &str = "cloud/references";
-    pub const CLOUD_SMARTLOG: &str = "cloud/smartlog";
-    pub const CLOUD_SMARTLOG_BY_VERSION: &str = "cloud/smartlog_by_version";
-    pub const CLOUD_SHARE_WORKSPACE: &str = "cloud/share_workspace";
+    pub const CLOUD_WORKSPACE: &str = "cloud/workspace";
+    pub const CLOUD_WORKSPACES: &str = "cloud/workspaces";
     pub const SUFFIXQUERY: &str = "suffix_query";
 }
 
@@ -1241,6 +1244,25 @@ impl Client {
 
         self.fetch_single::<SmartlogDataResponse>(request).await
     }
+
+    async fn cloud_historical_versions_attempt(
+        &self,
+        data: HistoricalVersionsParams,
+    ) -> Result<HistoricalVersionsResponse, SaplingRemoteApiError> {
+        tracing::info!(
+            "Requesting cloud historical versions for the workspace '{}' in the repo '{}' ",
+            data.workspace,
+            data.reponame
+        );
+        let url = self.build_url(paths::CLOUD_HISTORICAL_VERSIONS)?;
+        let request = self
+            .configure_request(self.inner.client.post(url))?
+            .cbor(&data.to_wire())
+            .map_err(SaplingRemoteApiError::RequestSerializationFailed)?;
+
+        self.fetch_single::<HistoricalVersionsResponse>(request)
+            .await
+    }
 }
 
 #[async_trait]
@@ -1928,6 +1950,14 @@ impl SaplingRemoteApi for Client {
         data: GetSmartlogByVersionParams,
     ) -> Result<SmartlogDataResponse, SaplingRemoteApiError> {
         self.with_retry(|this| this.cloud_smartlog_by_version_attempt(data.clone()).boxed())
+            .await
+    }
+
+    async fn cloud_historical_versions(
+        &self,
+        data: HistoricalVersionsParams,
+    ) -> Result<HistoricalVersionsResponse, SaplingRemoteApiError> {
+        self.with_retry(|this| this.cloud_historical_versions_attempt(data.clone()).boxed())
             .await
     }
 

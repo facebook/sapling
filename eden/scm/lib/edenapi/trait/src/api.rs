@@ -43,6 +43,8 @@ use edenapi_types::GetSmartlogByVersionParams;
 use edenapi_types::GetSmartlogParams;
 use edenapi_types::HgFilenodeData;
 use edenapi_types::HgMutationEntryContent;
+use edenapi_types::HistoricalVersionsParams;
+use edenapi_types::HistoricalVersionsResponse;
 use edenapi_types::HistoryEntry;
 use edenapi_types::LandStackResponse;
 use edenapi_types::LookupResponse;
@@ -454,6 +456,14 @@ pub trait SaplingRemoteApi: Send + Sync + 'static {
         &self,
         data: GetSmartlogByVersionParams,
     ) -> Result<SmartlogDataResponse, SaplingRemoteApiError> {
+        let _ = data;
+        Err(SaplingRemoteApiError::NotSupported)
+    }
+
+    async fn cloud_historical_versions(
+        &self,
+        data: HistoricalVersionsParams,
+    ) -> Result<HistoricalVersionsResponse, SaplingRemoteApiError> {
         let _ = data;
         Err(SaplingRemoteApiError::NotSupported)
     }

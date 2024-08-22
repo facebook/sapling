@@ -53,6 +53,8 @@ use edenapi_types::GetSmartlogByVersionParams;
 use edenapi_types::GetSmartlogParams;
 use edenapi_types::HgChangesetContent;
 use edenapi_types::HgMutationEntryContent;
+use edenapi_types::HistoricalVersionsParams;
+use edenapi_types::HistoricalVersionsResponse;
 use edenapi_types::HistoryEntry;
 use edenapi_types::Key;
 use edenapi_types::LandStackResponse;
@@ -612,6 +614,12 @@ py_class!(pub class client |py| {
     -> PyResult<Serde<SmartlogDataResponse>>
     {
         self.inner(py).as_ref().cloud_smartlog_by_version_py(data, py)
+    }
+
+    def cloudhistoricalversions(&self, data: Serde<HistoricalVersionsParams>)
+    -> PyResult<Serde<HistoricalVersionsResponse>>
+    {
+        self.inner(py).as_ref().cloud_historical_versions_py(data, py)
     }
 });
 

@@ -51,6 +51,8 @@ use edenapi_types::GetSmartlogParams;
 use edenapi_types::HgChangesetContent;
 use edenapi_types::HgFilenodeData;
 use edenapi_types::HgMutationEntryContent;
+use edenapi_types::HistoricalVersionsParams;
+use edenapi_types::HistoricalVersionsResponse;
 use edenapi_types::HistoryEntry;
 use edenapi_types::IndexableId;
 use edenapi_types::LandStackResponse;
@@ -825,6 +827,18 @@ pub trait SaplingRemoteApiPyExt: SaplingRemoteApi {
     ) -> PyResult<Serde<SmartlogDataResponse>> {
         let responses = py
             .allow_threads(|| block_unless_interrupted(self.cloud_smartlog_by_version(data.0)))
+            .map_pyerr(py)?
+            .map_pyerr(py)?;
+        Ok(Serde(responses))
+    }
+
+    fn cloud_historical_versions_py(
+        &self,
+        data: Serde<HistoricalVersionsParams>,
+        py: Python,
+    ) -> PyResult<Serde<HistoricalVersionsResponse>> {
+        let responses = py
+            .allow_threads(|| block_unless_interrupted(self.cloud_historical_versions(data.0)))
             .map_pyerr(py)?
             .map_pyerr(py)?;
         Ok(Serde(responses))

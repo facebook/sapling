@@ -317,7 +317,22 @@ class SaplingRemoteAPIService(baseservice.BaseService):
         return self.fallback.cleanupworkspace(reponame, workspace)
 
     def gethistoricalversions(self, reponame, workspace):
-        return self.fallback.gethistoricalversions(reponame, workspace)
+        self.ui.debug(
+            "sending 'get_historical_versions' request on SaplingRemoteAPI\n",
+            component="commitcloud",
+        )
+
+        data = {"reponame": reponame, "workspace": workspace}
+
+        response = self.repo.edenapi.cloudhistoricalversions(data)
+        versions = self._getdatafromresponse(response)["versions"]
+
+        self.ui.debug(
+            "'get_historical_versions' returns %d entries\n" % len(versions),
+            component="commitcloud",
+        )
+
+        return versions
 
     def _castreferences(self, refs):
         """
