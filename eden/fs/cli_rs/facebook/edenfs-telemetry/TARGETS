@@ -18,6 +18,7 @@ rust_library(
         "fbsource//third-party/rust:whoami",
         "//common/rust/build_info:build_info",
         "//common/rust/fbwhoami:fbwhoami",
+        "//devx_www/cross_env_session_id:cross_env_session_id",
         "//eden/scm/lib/procinfo:procinfo",
     ],
 )
