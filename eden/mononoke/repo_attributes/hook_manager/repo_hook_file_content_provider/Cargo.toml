@@ -23,8 +23,6 @@ futures = { version = "0.3.30", features = ["async-await", "compat"] }
 futures-util = "0.3.30"
 hook_manager = { version = "0.1.0", path = "../hook_manager" }
 manifest = { version = "0.1.0", path = "../../../manifest" }
-mercurial_derivation = { version = "0.1.0", path = "../../../derived_data/mercurial_derivation" }
-mercurial_types = { version = "0.1.0", path = "../../../mercurial/types" }
 mononoke_types = { version = "0.1.0", path = "../../../mononoke_types" }
 repo_blobstore = { version = "0.1.0", path = "../../../blobrepo/repo_blobstore" }
 repo_derived_data = { version = "0.1.0", path = "../../repo_derived_data" }

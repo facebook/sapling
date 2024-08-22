@@ -37,10 +37,6 @@ use hook_manager::PathContent;
 use manifest::Diff;
 use manifest::Entry;
 use manifest::ManifestOps;
-use mercurial_derivation::MappedHgChangesetId;
-use mercurial_types::FileType;
-use mercurial_types::HgFileNodeId;
-use mercurial_types::HgManifestId;
 use mononoke_types::hash::GitSha1;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
@@ -50,7 +46,6 @@ use mononoke_types::MPath;
 use mononoke_types::ManifestUnodeId;
 use mononoke_types::NonRootMPath;
 use repo_blobstore::ArcRepoBlobstore;
-use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreArc;
 use repo_derived_data::ArcRepoDerivedData;
 use repo_derived_data::RepoDerivedData;
@@ -134,18 +129,9 @@ impl HookStateProvider for RepoHookStateProvider {
         new_cs_id: ChangesetId,
         old_cs_id: ChangesetId,
     ) -> Result<Vec<(NonRootMPath, FileChangeType)>, HookStateProviderError> {
-        let new_mf_fut = derive_hg_manifest(
-            ctx,
-            &self.repo_derived_data,
-            &self.repo_blobstore,
-            new_cs_id,
-        );
-        let old_mf_fut = derive_hg_manifest(
-            ctx,
-            &self.repo_derived_data,
-            &self.repo_blobstore,
-            old_cs_id,
-        );
+        let new_mf_fut = derive_fsnode(ctx, &self.repo_derived_data, new_cs_id);
+        let old_mf_fut = derive_fsnode(ctx, &self.repo_derived_data, old_cs_id);
+
         let (new_mf, old_mf) = future::try_join(new_mf_fut, old_mf_fut).await?;
 
         old_mf
@@ -154,34 +140,23 @@ impl HookStateProvider for RepoHookStateProvider {
             .map_ok(move |diff| async move {
                 match diff {
                     Diff::Added(path, entry) => match Option::<NonRootMPath>::from(path) {
-                        Some(path) => {
-                            match resolve_content_id(ctx, &self.repo_blobstore, entry).await? {
-                                PathContent::File(content) => {
-                                    Ok(Some((path, FileChangeType::Added(content))))
-                                }
-                                PathContent::Directory => Ok(None),
+                        Some(path) => match entry {
+                            Entry::Tree(_) => Ok(None),
+                            Entry::Leaf(c) => {
+                                Ok(Some((path, FileChangeType::Added(*c.content_id()))))
                             }
-                        }
+                        },
                         None => Ok(None),
                     },
                     Diff::Changed(path, old_entry, entry) if !path.is_root() => {
                         match Option::<NonRootMPath>::from(path) {
-                            Some(path) => {
-                                let old_content =
-                                    resolve_content_id(ctx, &self.repo_blobstore, old_entry);
-                                let content = resolve_content_id(ctx, &self.repo_blobstore, entry);
-
-                                match future::try_join(old_content, content).await? {
-                                    (
-                                        PathContent::File(old_content_id),
-                                        PathContent::File(content_id),
-                                    ) => Ok(Some((
-                                        path,
-                                        FileChangeType::Changed(old_content_id, content_id),
-                                    ))),
-                                    _ => Ok(None),
-                                }
-                            }
+                            Some(path) => match (old_entry, entry) {
+                                (Entry::Leaf(old_c), Entry::Leaf(c)) => Ok(Some((
+                                    path,
+                                    FileChangeType::Changed(*old_c.content_id(), *c.content_id()),
+                                ))),
+                                _ => Ok(None),
+                            },
                             None => Ok(None),
                         }
                     }
@@ -394,26 +369,6 @@ async fn derive_fsnode(
     Ok(fsnode_id)
 }
 
-async fn derive_hg_manifest(
-    ctx: &CoreContext,
-    repo_derived_data: &RepoDerivedData,
-    blobstore: &RepoBlobstore,
-    changeset_id: ChangesetId,
-) -> Result<HgManifestId, HookStateProviderError> {
-    let hg_changeset_id = repo_derived_data
-        .derive::<MappedHgChangesetId>(ctx, changeset_id)
-        .await
-        .map(|id| id.hg_changeset_id())
-        .with_context(|| format!("Error deriving hg changeset for bonsai: {}", changeset_id))?;
-    let hg_mf_id = hg_changeset_id
-        .load(ctx, blobstore)
-        .map_ok(|hg_changeset| hg_changeset.manifestid())
-        .await
-        .with_context(|| format!("Error loading hg changeset: {}", hg_changeset_id))?;
-
-    Ok(hg_mf_id)
-}
-
 async fn derive_unode_manifest(
     ctx: &CoreContext,
     repo_derived_data: &RepoDerivedData,
@@ -426,23 +381,4 @@ async fn derive_unode_manifest(
         .manifest_unode_id()
         .clone();
     Ok(unode_mf)
-}
-
-async fn resolve_content_id(
-    ctx: &CoreContext,
-    blobstore: &RepoBlobstore,
-    entry: Entry<HgManifestId, (FileType, HgFileNodeId)>,
-) -> Result<PathContent, HookStateProviderError> {
-    match entry {
-        Entry::Tree(_tree) => {
-            // there is no content for trees
-            Ok(PathContent::Directory)
-        }
-        Entry::Leaf((_type, file_node_id)) => file_node_id
-            .load(ctx, blobstore)
-            .map_ok(|file_env| PathContent::File(file_env.content_id()))
-            .await
-            .with_context(|| format!("Error loading filenode: {}", file_node_id))
-            .map_err(HookStateProviderError::from),
-    }
 }
