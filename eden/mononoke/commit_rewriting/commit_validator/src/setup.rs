@@ -33,7 +33,7 @@ use scuba_ext::MononokeScubaSampleBuilder;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::facebook::MysqlOptions;
 use sql_query_config::SqlQueryConfigArc;
-use synced_commit_mapping::SqlSyncedCommitMapping;
+use synced_commit_mapping::SqlSyncedCommitMappingBuilder;
 
 use crate::cli::MononokeCommitValidatorArgs;
 use crate::reporting::add_common_commit_syncing_fields;
@@ -68,13 +68,14 @@ pub async fn get_validation_helpers<'a>(
         CfgrLiveCommitSyncConfig::new(config_store, Arc::new(push_redirection_config))?;
     let common_commit_sync_config = live_commit_sync_config.get_common_config(repo_id)?;
 
-    let mapping = SqlSyncedCommitMapping::with_metadata_database_config(
+    let mapping = SqlSyncedCommitMappingBuilder::with_metadata_database_config(
         fb,
         &repo_config.storage_config.metadata,
         &mysql_options,
         readonly_storage.0,
     )
-    .await?;
+    .await?
+    .build(app.environment().rendezvous_options);
 
     let large_repo_master_bookmark =
         BookmarkKey::new(app.args::<MononokeCommitValidatorArgs>()?.master_bookmark)?;

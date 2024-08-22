@@ -33,6 +33,7 @@ use pushredirect::SqlPushRedirectionConfigBuilder;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_query_config::SqlQueryConfigArc;
 use synced_commit_mapping::SqlSyncedCommitMapping;
+use synced_commit_mapping::SqlSyncedCommitMappingBuilder;
 
 pub trait CrossRepo = cross_repo_sync::Repo
     + SqlQueryConfigArc
@@ -143,13 +144,14 @@ async fn get_things_from_app<R: CrossRepo>(
     let mysql_options = app.mysql_options();
     let readonly_storage = app.readonly_storage();
 
-    let mapping = SqlSyncedCommitMapping::with_metadata_database_config(
+    let mapping = SqlSyncedCommitMappingBuilder::with_metadata_database_config(
         fb,
         &source_repo_config.storage_config.metadata,
         mysql_options,
         readonly_storage.0,
     )
-    .await?;
+    .await?
+    .build(app.environment().rendezvous_options);
 
     let (source_repo, target_repo): (R, R) = if !unredacted {
         app.open_source_and_target_repos(repo_args).await?

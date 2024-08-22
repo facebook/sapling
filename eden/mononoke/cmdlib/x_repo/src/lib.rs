@@ -37,6 +37,7 @@ use pushredirect::SqlPushRedirectionConfigBuilder;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_query_config::SqlQueryConfigArc;
 use synced_commit_mapping::SqlSyncedCommitMapping;
+use synced_commit_mapping::SqlSyncedCommitMappingBuilder;
 
 pub trait Repo = cross_repo_sync::Repo
     + SqlQueryConfigArc
@@ -154,13 +155,14 @@ async fn get_things_from_matches<R: Repo>(
     let mysql_options = matches.mysql_options();
     let readonly_storage = matches.readonly_storage();
 
-    let mapping = SqlSyncedCommitMapping::with_metadata_database_config(
+    let mapping = SqlSyncedCommitMappingBuilder::with_metadata_database_config(
         ctx.fb,
         &source_repo_config.storage_config.metadata,
         mysql_options,
         readonly_storage.0,
     )
-    .await?;
+    .await?
+    .build(matches.environment().rendezvous_options);
 
     let source_repo_fut = args::open_repo_with_repo_id(fb, logger, source_repo_id, matches);
     let target_repo_fut = args::open_repo_with_repo_id(fb, logger, target_repo_id, matches);

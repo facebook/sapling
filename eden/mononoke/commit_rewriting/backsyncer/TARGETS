@@ -26,6 +26,7 @@ rust_library(
         "//eden/mononoke/commit_rewriting/cross_repo_sync:cross_repo_sync_test_utils",
         "//eden/mononoke/commit_rewriting/live_commit_sync_config:live_commit_sync_config",
         "//eden/mononoke/commit_rewriting/movers:movers",
+        "//eden/mononoke/common/rendezvous:rendezvous",
         "//eden/mononoke/common/sql_construct:sql_construct",
         "//eden/mononoke/filestore:filestore",
         "//eden/mononoke/manifest:manifest",

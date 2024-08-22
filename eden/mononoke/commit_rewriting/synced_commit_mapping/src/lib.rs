@@ -6,6 +6,7 @@
  */
 
 use std::collections::HashMap;
+use std::sync::Arc;
 
 use anyhow::anyhow;
 use anyhow::Error;
@@ -13,10 +14,15 @@ use async_trait::async_trait;
 use auto_impl::auto_impl;
 use context::CoreContext;
 use context::PerfCounterType;
+use dashmap::DashMap;
 use itertools::Itertools;
 use metaconfig_types::CommitSyncConfigVersion;
 use mononoke_types::ChangesetId;
 use mononoke_types::RepositoryId;
+use rendezvous::ConfigurableRendezVousController;
+use rendezvous::RendezVous;
+use rendezvous::RendezVousOptions;
+use rendezvous::RendezVousStats;
 use sql::mysql;
 use sql::mysql_async::prelude::ConvIr;
 use sql::mysql_async::prelude::FromValue;
@@ -213,17 +219,7 @@ pub trait SyncedCommitMapping: Send + Sync {
         source_repo_id: RepositoryId,
         target_repo_id: RepositoryId,
         bcs_ids: &[ChangesetId],
-    ) -> Result<
-        HashMap<
-            ChangesetId,
-            Vec<(
-                ChangesetId,
-                Option<CommitSyncConfigVersion>,
-                Option<SyncedCommitSourceRepo>,
-            )>,
-        >,
-        Error,
-    >;
+    ) -> Result<HashMap<ChangesetId, Vec<FetchedMappingEntry>>, Error>;
 
     /// Inserts equivalent working copy of a large bcs id. It's similar to mapping entry,
     /// however there are a few differences:
@@ -286,10 +282,93 @@ pub trait SyncedCommitMapping: Send + Sync {
 }
 
 #[derive(Clone)]
+pub struct SqlSyncedCommitMappingBuilder {
+    connections: SqlConnections,
+}
+
+impl SqlConstruct for SqlSyncedCommitMappingBuilder {
+    const LABEL: &'static str = "synced_commit_mapping";
+
+    const CREATION_QUERY: &'static str =
+        include_str!("../schemas/sqlite-synced-commit-mapping.sql");
+
+    fn from_sql_connections(connections: SqlConnections) -> Self {
+        Self { connections }
+    }
+}
+
+impl SqlConstructFromMetadataDatabaseConfig for SqlSyncedCommitMappingBuilder {}
+
+impl SqlSyncedCommitMappingBuilder {
+    pub fn build(self, opts: RendezVousOptions) -> SqlSyncedCommitMapping {
+        SqlSyncedCommitMapping {
+            write_connection: self.connections.write_connection,
+            read_connection: RendezVousConnection::new(
+                self.connections.read_connection,
+                "read",
+                opts,
+            ),
+            read_master_connection: RendezVousConnection::new(
+                self.connections.read_master_connection,
+                "read_master",
+                opts,
+            ),
+        }
+    }
+}
+
+#[derive(Clone)]
+struct RendezVousConnection {
+    // For fetching synced commit mappings, we create a separate rendezvous instace per (source_repo_id, target_repo_id) pair
+    fetch_synced_commit_mappings:
+        DashMap<(RepositoryId, RepositoryId), RendezVous<ChangesetId, Vec<FetchedMappingEntry>>>,
+    opts: RendezVousOptions,
+    stats: Arc<RendezVousStats>,
+    conn: Connection,
+}
+
+impl RendezVousConnection {
+    fn new(conn: Connection, name: &str, opts: RendezVousOptions) -> Self {
+        Self {
+            fetch_synced_commit_mappings: Default::default(),
+            opts,
+            stats: Arc::new(RendezVousStats::new(format!(
+                "synced_commit_mapping.fetch_synced_commit_mappings.{}",
+                name,
+            ))),
+            conn,
+        }
+    }
+
+    fn per_repo_pair_rendezvous(
+        &self,
+        source_repo_id: RepositoryId,
+        target_repo_id: RepositoryId,
+    ) -> RendezVous<ChangesetId, Vec<FetchedMappingEntry>> {
+        self.fetch_synced_commit_mappings
+            .entry((source_repo_id, target_repo_id))
+            .or_insert_with(|| {
+                RendezVous::new(
+                    ConfigurableRendezVousController::new(self.opts),
+                    self.stats.clone(),
+                )
+            })
+            .clone()
+    }
+}
+
+#[derive(Clone)]
 pub struct SqlSyncedCommitMapping {
     write_connection: Connection,
-    read_connection: Connection,
-    read_master_connection: Connection,
+    read_connection: RendezVousConnection,
+    read_master_connection: RendezVousConnection,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct FetchedMappingEntry {
+    pub target_bcs_id: ChangesetId,
+    pub maybe_version_name: Option<CommitSyncConfigVersion>,
+    pub maybe_source_repo: Option<SyncedCommitSourceRepo>,
 }
 
 mononoke_queries! {
@@ -397,23 +476,6 @@ mononoke_queries! {
     }
 }
 
-impl SqlConstruct for SqlSyncedCommitMapping {
-    const LABEL: &'static str = "synced_commit_mapping";
-
-    const CREATION_QUERY: &'static str =
-        include_str!("../schemas/sqlite-synced-commit-mapping.sql");
-
-    fn from_sql_connections(connections: SqlConnections) -> Self {
-        Self {
-            write_connection: connections.write_connection,
-            read_connection: connections.read_connection,
-            read_master_connection: connections.read_master_connection,
-        }
-    }
-}
-
-impl SqlConstructFromMetadataDatabaseConfig for SqlSyncedCommitMapping {}
-
 impl SqlSyncedCommitMapping {
     async fn add_many(
         &self,
@@ -434,42 +496,56 @@ impl SqlSyncedCommitMapping {
         source_repo_id: RepositoryId,
         target_repo_id: RepositoryId,
         bcs_ids: &[ChangesetId],
-        conn: &Connection,
-    ) -> Result<
-        HashMap<
-            ChangesetId,
-            Vec<(
-                ChangesetId,
-                Option<CommitSyncConfigVersion>,
-                Option<SyncedCommitSourceRepo>,
-            )>,
-        >,
-        Error,
-    > {
+        rendezvous: &RendezVousConnection,
+    ) -> Result<HashMap<ChangesetId, Vec<FetchedMappingEntry>>, Error> {
         if bcs_ids.is_empty() {
             // SQL doesn't support querying empty lists.
             return Ok(HashMap::new());
         }
 
-        let rows = SelectManyMappings::maybe_traced_query(
-            conn,
-            ctx.client_request_info(),
-            &source_repo_id,
-            &target_repo_id,
-            bcs_ids,
-        )
-        .await?;
+        let map = rendezvous
+            .per_repo_pair_rendezvous(source_repo_id, target_repo_id)
+            .dispatch(ctx.fb, bcs_ids.iter().copied().collect(), || {
+                let conn = rendezvous.conn.clone();
+                let cri = ctx.client_request_info().cloned();
 
-        Ok(rows
-            .into_iter()
-            .map(|row| {
-                let (source_bcs_id, target_bcs_id, maybe_version_name, maybe_source_repo) = row;
-                (
-                    source_bcs_id,
-                    (target_bcs_id, maybe_version_name, maybe_source_repo),
-                )
+                move |bcs_ids| async move {
+                    let bcs_ids = bcs_ids.into_iter().collect::<Vec<_>>();
+                    let rows = SelectManyMappings::maybe_traced_query(
+                        &conn,
+                        cri.as_ref(),
+                        &source_repo_id,
+                        &target_repo_id,
+                        &bcs_ids,
+                    )
+                    .await?;
+                    Ok(rows
+                        .into_iter()
+                        .map(|row| {
+                            let (
+                                source_bcs_id,
+                                target_bcs_id,
+                                maybe_version_name,
+                                maybe_source_repo,
+                            ) = row;
+                            (
+                                source_bcs_id,
+                                FetchedMappingEntry {
+                                    target_bcs_id,
+                                    maybe_version_name,
+                                    maybe_source_repo,
+                                },
+                            )
+                        })
+                        .into_group_map())
+                }
             })
-            .into_group_map())
+            .await?;
+
+        Ok(map
+            .into_iter()
+            .map(|(bcs_id, entries)| (bcs_id, entries.unwrap_or_default()))
+            .collect())
     }
 
     async fn insert_or_overwrite_equivalent_working_copy(
@@ -646,11 +722,21 @@ impl SyncedCommitMapping for SqlSyncedCommitMapping {
         )>,
         Error,
     > {
-        Ok(self
+        let entries = self
             .get_many(ctx, source_repo_id, target_repo_id, &[bcs_id])
             .await?
             .remove(&bcs_id)
-            .unwrap_or_default())
+            .unwrap_or_default();
+        Ok(entries
+            .into_iter()
+            .map(|entry| {
+                (
+                    entry.target_bcs_id,
+                    entry.maybe_version_name,
+                    entry.maybe_source_repo,
+                )
+            })
+            .collect())
     }
 
     async fn get_many(
@@ -659,17 +745,7 @@ impl SyncedCommitMapping for SqlSyncedCommitMapping {
         source_repo_id: RepositoryId,
         target_repo_id: RepositoryId,
         bcs_ids: &[ChangesetId],
-    ) -> Result<
-        HashMap<
-            ChangesetId,
-            Vec<(
-                ChangesetId,
-                Option<CommitSyncConfigVersion>,
-                Option<SyncedCommitSourceRepo>,
-            )>,
-        >,
-        Error,
-    > {
+    ) -> Result<HashMap<ChangesetId, Vec<FetchedMappingEntry>>, Error> {
         STATS::gets.add_value(1);
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
@@ -750,7 +826,7 @@ impl SyncedCommitMapping for SqlSyncedCommitMapping {
             .increment_counter(PerfCounterType::SqlReadsReplica);
 
         let rows = SelectWorkingCopyEquivalence::maybe_traced_query(
-            &self.read_connection,
+            &self.read_connection.conn,
             ctx.client_request_info(),
             &source_repo_id,
             &source_bcs_id,
@@ -763,7 +839,7 @@ impl SyncedCommitMapping for SqlSyncedCommitMapping {
             ctx.perf_counters()
                 .increment_counter(PerfCounterType::SqlReadsMaster);
             SelectWorkingCopyEquivalence::maybe_traced_query(
-                &self.read_master_connection,
+                &self.read_master_connection.conn,
                 ctx.client_request_info(),
                 &source_repo_id,
                 &source_bcs_id,
@@ -851,7 +927,7 @@ impl SyncedCommitMapping for SqlSyncedCommitMapping {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
         let maybe_version = SelectVersionForLargeRepoCommit::maybe_traced_query(
-            &self.read_connection,
+            &self.read_connection.conn,
             ctx.client_request_info(),
             &large_repo_id,
             &large_repo_cs_id,
@@ -867,7 +943,7 @@ impl SyncedCommitMapping for SqlSyncedCommitMapping {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsMaster);
         Ok(SelectVersionForLargeRepoCommit::maybe_traced_query(
-            &self.read_master_connection,
+            &self.read_master_connection.conn,
             ctx.client_request_info(),
             &large_repo_id,
             &large_repo_cs_id,

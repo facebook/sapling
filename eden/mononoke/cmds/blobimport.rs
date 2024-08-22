@@ -50,7 +50,7 @@ use slog::info;
 use slog::warn;
 use slog::Logger;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
-use synced_commit_mapping::SqlSyncedCommitMapping;
+use synced_commit_mapping::SqlSyncedCommitMappingBuilder;
 use wireproto_handler::BackupSourceRepo;
 
 fn parse_fixed_parent_order<P: AsRef<Path>>(
@@ -234,13 +234,14 @@ async fn async_main(app: MononokeApp) -> Result<()> {
         env.readonly_storage.0,
     )
     .await?;
-    let synced_commit_mapping = SqlSyncedCommitMapping::with_metadata_database_config(
+    let synced_commit_mapping = SqlSyncedCommitMappingBuilder::with_metadata_database_config(
         app.fb,
         &repo_config.storage_config.metadata,
         &env.mysql_options,
         env.readonly_storage.0,
     )
-    .await?;
+    .await?
+    .build(env.rendezvous_options);
 
     let repo: BlobimportRepo = if args.no_create {
         app.open_repo_unredacted(repo_arg).await?

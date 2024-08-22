@@ -184,6 +184,7 @@ rust_binary(
         "fbsource//third-party/rust:ascii",
         "fbsource//third-party/rust:tokio",
         "//eden/mononoke/blobstore:cacheblob",
+        "//eden/mononoke/common/rendezvous:rendezvous",
         "//eden/mononoke/common/sql_construct:sql_construct",
         "//eden/mononoke/tests/fixtures:fixtures",
     ],

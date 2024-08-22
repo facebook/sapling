@@ -127,7 +127,7 @@ use streaming_clone::ArcStreamingClone;
 use streaming_clone::StreamingCloneBuilder;
 use strum::IntoEnumIterator;
 use synced_commit_mapping::ArcSyncedCommitMapping;
-use synced_commit_mapping::SqlSyncedCommitMapping;
+use synced_commit_mapping::SqlSyncedCommitMappingBuilder;
 use warm_bookmarks_cache::WarmBookmarksCacheBuilder;
 use wireproto_handler::ArcRepoHandlerBase;
 use wireproto_handler::PushRedirectorBase;
@@ -260,7 +260,7 @@ impl TestRepoFactory {
         metadata_con.execute_batch(SqlPushrebaseMutationMappingConnection::CREATION_QUERY)?;
         metadata_con.execute_batch(SqlLongRunningRequestsQueue::CREATION_QUERY)?;
         metadata_con.execute_batch(SqlMutableRenamesStore::CREATION_QUERY)?;
-        metadata_con.execute_batch(SqlSyncedCommitMapping::CREATION_QUERY)?;
+        metadata_con.execute_batch(SqlSyncedCommitMappingBuilder::CREATION_QUERY)?;
         metadata_con.execute_batch(SqlRepoLock::CREATION_QUERY)?;
         metadata_con.execute_batch(SqlSparseProfilesSizes::CREATION_QUERY)?;
         metadata_con.execute_batch(StreamingCloneBuilder::CREATION_QUERY)?;
@@ -633,9 +633,10 @@ impl TestRepoFactory {
 
     /// The commit mapping bettween repos for synced commits.
     pub fn synced_commit_mapping(&self) -> Result<ArcSyncedCommitMapping> {
-        Ok(Arc::new(SqlSyncedCommitMapping::from_sql_connections(
-            self.metadata_db.clone(),
-        )))
+        Ok(Arc::new(
+            SqlSyncedCommitMappingBuilder::from_sql_connections(self.metadata_db.clone())
+                .build(RendezVousOptions::for_test()),
+        ))
     }
 
     /// Cross-repo sync manager for this repo

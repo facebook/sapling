@@ -80,4 +80,5 @@ xdiff = { version = "0.1.0", path = "../../scm/lib/xdiff" }
 ascii = "1.0"
 cacheblob = { version = "0.1.0", path = "../blobstore/cacheblob" }
 fixtures = { version = "0.1.0", path = "../tests/fixtures" }
+rendezvous = { version = "0.1.0", path = "../common/rendezvous" }
 sql_construct = { version = "0.1.0", path = "../common/sql_construct" }

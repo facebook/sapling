@@ -66,10 +66,11 @@ mod tests {
     use mutable_counters::MutableCountersRef;
     use pushredirect::PushRedirectionConfig;
     use pushredirect::TestPushRedirectionConfig;
+    use rendezvous::RendezVousOptions;
     use repo_blobstore::RepoBlobstoreRef;
     use repo_derived_data::RepoDerivedDataRef;
     use sql_construct::SqlConstruct;
-    use synced_commit_mapping::SqlSyncedCommitMapping;
+    use synced_commit_mapping::SqlSyncedCommitMappingBuilder;
     use test_repo_factory::TestRepoFactory;
     use tests_utils::bookmark;
     use tests_utils::drawdag::create_from_dag;
@@ -609,7 +610,9 @@ mod tests {
     #[fbinit::test]
     async fn test_get_large_repo_setting(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
-        let mapping = SqlSyncedCommitMapping::with_sqlite_in_memory().unwrap();
+        let mapping = SqlSyncedCommitMappingBuilder::with_sqlite_in_memory()
+            .unwrap()
+            .build(RendezVousOptions::for_test());
         let large_repo = create_repo(fb, 0).await?;
         let small_repo_1 = create_repo(fb, 1).await?;
 
@@ -699,7 +702,9 @@ mod tests {
         let cs_ids: Vec<ChangesetId> = changesets.values().copied().collect();
 
         let live_commit_sync_config = get_large_repo_live_commit_sync_config();
-        let mapping = SqlSyncedCommitMapping::with_sqlite_in_memory().unwrap();
+        let mapping = SqlSyncedCommitMappingBuilder::with_sqlite_in_memory()
+            .unwrap()
+            .build(RendezVousOptions::for_test());
         let syncers = create_commit_syncers(
             &ctx,
             small_repo.clone(),
@@ -871,7 +876,8 @@ mod tests {
         let cs_ids: Vec<ChangesetId> = changesets.values().copied().collect();
 
         let live_commit_sync_config = get_large_repo_live_commit_sync_config();
-        let mapping = SqlSyncedCommitMapping::with_sqlite_in_memory()?;
+        let mapping = SqlSyncedCommitMappingBuilder::with_sqlite_in_memory()?
+            .build(RendezVousOptions::for_test());
         let syncers = create_commit_syncers(
             &ctx,
             small_repo.clone(),
@@ -959,7 +965,8 @@ mod tests {
             .await?;
 
         let live_commit_sync_config = get_large_repo_live_commit_sync_config();
-        let mapping = SqlSyncedCommitMapping::with_sqlite_in_memory()?;
+        let mapping = SqlSyncedCommitMappingBuilder::with_sqlite_in_memory()?
+            .build(RendezVousOptions::for_test());
         let syncers = create_commit_syncers(
             &ctx,
             small_repo.clone(),

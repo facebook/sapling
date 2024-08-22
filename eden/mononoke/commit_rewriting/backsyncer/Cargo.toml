@@ -63,6 +63,7 @@ mercurial_derivation = { version = "0.1.0", path = "../../derived_data/mercurial
 mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
 movers = { version = "0.1.0", path = "../movers" }
 pretty_assertions = { version = "1.2", features = ["alloc"], default-features = false }
+rendezvous = { version = "0.1.0", path = "../../common/rendezvous" }
 sql_construct = { version = "0.1.0", path = "../../common/sql_construct" }
 test_repo_factory = { version = "0.1.0", path = "../../repo_factory/test_repo_factory" }
 tests_utils = { version = "0.1.0", path = "../../tests/utils" }

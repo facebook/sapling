@@ -85,6 +85,7 @@ use serde::Serialize;
 use slog::info;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use synced_commit_mapping::SqlSyncedCommitMapping;
+use synced_commit_mapping::SqlSyncedCommitMappingBuilder;
 use synced_commit_mapping::SyncedCommitMapping;
 use synced_commit_mapping::SyncedCommitMappingRef;
 use tokio::fs;
@@ -971,7 +972,9 @@ async fn get_pushredirected_vars(
     )
     .await?;
 
-    let mapping = open_sql::<SqlSyncedCommitMapping>(ctx.fb, repo.repo_id(), configs, env).await?;
+    let mapping = open_sql::<SqlSyncedCommitMappingBuilder>(ctx.fb, repo.repo_id(), configs, env)
+        .await?
+        .build(env.rendezvous_options);
     let syncers = create_commit_syncers(
         ctx,
         repo.clone(),

@@ -70,12 +70,14 @@ use mononoke_types::FileChange;
 use mononoke_types::NonRootMPath;
 use mononoke_types::RepositoryId;
 use pushrebase::PushrebaseError;
+use rendezvous::RendezVousOptions;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
 use sorted_vector_map::sorted_vector_map;
 use sql::rusqlite::Connection as SqliteConnection;
 use sql_construct::SqlConstruct;
 use synced_commit_mapping::SqlSyncedCommitMapping;
+use synced_commit_mapping::SqlSyncedCommitMappingBuilder;
 use synced_commit_mapping::SyncedCommitMapping;
 use synced_commit_mapping::SyncedCommitMappingEntry;
 use test_repo_factory::TestRepoFactory;
@@ -473,7 +475,8 @@ async fn test_sync_causes_conflict(fb: FacebookInit) -> Result<(), Error> {
         .build()
         .await?;
 
-    let mapping = SqlSyncedCommitMapping::with_sqlite_in_memory()?;
+    let mapping = SqlSyncedCommitMappingBuilder::with_sqlite_in_memory()?
+        .build(RendezVousOptions::for_test());
     let linear: TestRepo = Linear::get_repo(fb).await;
     let (live_commit_sync_config, source) = TestLiveCommitSyncConfig::new_with_source();
     populate_config(&linear, &megarepo, "linear", &source)?;
@@ -554,7 +557,7 @@ async fn prepare_repos_mapping_and_config_with_repo_config_overrides(
     Error,
 > {
     let metadata_con = SqliteConnection::open_in_memory()?;
-    metadata_con.execute_batch(SqlSyncedCommitMapping::CREATION_QUERY)?;
+    metadata_con.execute_batch(SqlSyncedCommitMappingBuilder::CREATION_QUERY)?;
     let hg_mutation_con = SqliteConnection::open_in_memory()?;
     let mut factory = TestRepoFactory::with_sqlite_connection(fb, metadata_con, hg_mutation_con)?;
     let (live_commit_sync_config, source) = TestLiveCommitSyncConfig::new_with_source();
@@ -572,7 +575,9 @@ async fn prepare_repos_mapping_and_config_with_repo_config_overrides(
         .with_id(RepositoryId::new(0))
         .build()
         .await?;
-    let mapping = SqlSyncedCommitMapping::from_sql_connections(factory.metadata_db().clone());
+    let mapping =
+        SqlSyncedCommitMappingBuilder::from_sql_connections(factory.metadata_db().clone())
+            .build(RendezVousOptions::for_test());
     Ok((
         small_repo,
         megarepo,
@@ -1875,7 +1880,8 @@ async fn merge_test_setup(
     let mut factory = TestRepoFactory::new(fb)?;
     let large_repo: TestRepo = factory.with_id(RepositoryId::new(0)).build().await?;
     let small_repo: TestRepo = factory.with_id(RepositoryId::new(1)).build().await?;
-    let mapping = SqlSyncedCommitMapping::with_sqlite_in_memory()?;
+    let mapping = SqlSyncedCommitMappingBuilder::with_sqlite_in_memory()?
+        .build(RendezVousOptions::for_test());
     let v1 = CommitSyncConfigVersion("v1".to_string());
     let v2 = CommitSyncConfigVersion("v2".to_string());
     let (live_commit_sync_config, source) = TestLiveCommitSyncConfig::new_with_source();
@@ -2239,7 +2245,9 @@ async fn test_not_sync_candidate_if_mapping_does_not_have_small_repo(
 ) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let mut factory = TestRepoFactory::new(fb)?;
-    let mapping = SqlSyncedCommitMapping::from_sql_connections(factory.metadata_db().clone());
+    let mapping =
+        SqlSyncedCommitMappingBuilder::from_sql_connections(factory.metadata_db().clone())
+            .build(RendezVousOptions::for_test());
 
     let large_repo_id = RepositoryId::new(0);
     let large_repo: TestRepo = factory.with_id(large_repo_id).build().await?;

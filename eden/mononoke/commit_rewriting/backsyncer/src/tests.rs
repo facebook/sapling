@@ -74,11 +74,13 @@ use mononoke_types::RepositoryId;
 use movers::Movers;
 use mutable_counters::MutableCountersArc;
 use pretty_assertions::assert_eq;
+use rendezvous::RendezVousOptions;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
 use sql_construct::SqlConstruct;
 use synced_commit_mapping::EquivalentWorkingCopyEntry;
 use synced_commit_mapping::SqlSyncedCommitMapping;
+use synced_commit_mapping::SqlSyncedCommitMappingBuilder;
 use synced_commit_mapping::SyncedCommitMapping;
 use synced_commit_mapping::SyncedCommitMappingEntry;
 use synced_commit_mapping::SyncedCommitSourceRepo;
@@ -711,7 +713,8 @@ async fn backsync_change_mapping(fb: FacebookInit) -> Result<(), Error> {
     };
     init_target_repo(&ctx, &target_repo_dbs, source_repo_id).await?;
     let target_repo_dbs = Arc::new(target_repo_dbs);
-    let mapping = SqlSyncedCommitMapping::with_sqlite_in_memory()?;
+    let mapping = SqlSyncedCommitMappingBuilder::with_sqlite_in_memory()?
+        .build(RendezVousOptions::for_test());
 
     let repos = CommitSyncRepos::LargeToSmall {
         large_repo: source_repo.clone(),
@@ -1335,7 +1338,8 @@ async fn init_repos(
     };
     init_target_repo(&ctx, &target_repo_dbs, source_repo_id).await?;
 
-    let mapping = SqlSyncedCommitMapping::with_sqlite_in_memory()?;
+    let mapping = SqlSyncedCommitMappingBuilder::with_sqlite_in_memory()?
+        .build(RendezVousOptions::for_test());
 
     let repos = CommitSyncRepos::LargeToSmall {
         large_repo: source_repo.clone(),
@@ -1645,7 +1649,8 @@ async fn init_merged_repos(
     let large_repo_id = RepositoryId::new(num_repos as i32);
     let large_repo: TestRepo = factory.with_id(large_repo_id).build().await?;
 
-    let mapping = SqlSyncedCommitMapping::with_sqlite_in_memory()?;
+    let mapping = SqlSyncedCommitMappingBuilder::with_sqlite_in_memory()?
+        .build(RendezVousOptions::for_test());
 
     let mut output = vec![];
     let mut small_repos = vec![];

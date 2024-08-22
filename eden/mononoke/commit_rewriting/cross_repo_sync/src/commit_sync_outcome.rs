@@ -663,11 +663,13 @@ mod tests {
     use mononoke_types_mocks::changesetid::ONES_CSID;
     use mononoke_types_mocks::changesetid::THREES_CSID;
     use mononoke_types_mocks::changesetid::TWOS_CSID;
+    use rendezvous::RendezVousOptions;
     use sql::rusqlite::Connection as SqliteConnection;
     use sql::Connection;
     use sql_construct::SqlConstruct;
     use sql_ext::SqlConnections;
     use synced_commit_mapping::SqlSyncedCommitMapping;
+    use synced_commit_mapping::SqlSyncedCommitMappingBuilder;
     use synced_commit_mapping::SyncedCommitMappingEntry;
     use synced_commit_mapping::SyncedCommitSourceRepo;
     use test_repo_factory::TestRepoFactory;
@@ -691,9 +693,11 @@ mod tests {
         large_repo_id: RepositoryId,
     ) -> Result<SqlSyncedCommitMapping, Error> {
         let sqlite_con = SqliteConnection::open_in_memory()?;
-        sqlite_con.execute_batch(SqlSyncedCommitMapping::CREATION_QUERY)?;
+        sqlite_con.execute_batch(SqlSyncedCommitMappingBuilder::CREATION_QUERY)?;
         let con = Connection::with_sqlite(sqlite_con);
-        let m = SqlSyncedCommitMapping::from_sql_connections(SqlConnections::new_single(con));
+        let m =
+            SqlSyncedCommitMappingBuilder::from_sql_connections(SqlConnections::new_single(con))
+                .build(RendezVousOptions::for_test());
         for (small_bcs_id, large_bcs_id) in entires {
             m.add(
                 ctx,

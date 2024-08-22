@@ -59,6 +59,7 @@ use mononoke_types::RepositoryId;
 use mutable_counters::MutableCounters;
 use phases::Phases;
 use pushrebase_mutation_mapping::PushrebaseMutationMapping;
+use rendezvous::RendezVousOptions;
 use repo_blobstore::RepoBlobstore;
 use repo_bookmark_attrs::RepoBookmarkAttrs;
 use repo_cross_repo::RepoCrossRepo;
@@ -68,6 +69,7 @@ use repo_identity::RepoIdentityRef;
 use sql_construct::SqlConstruct;
 use sql_query_config::SqlQueryConfig;
 use synced_commit_mapping::SqlSyncedCommitMapping;
+use synced_commit_mapping::SqlSyncedCommitMappingBuilder;
 use synced_commit_mapping::SyncedCommitMapping;
 use synced_commit_mapping::SyncedCommitMappingEntry;
 use test_repo_factory::TestRepoFactory;
@@ -282,7 +284,9 @@ where
         .with_live_commit_sync_config(sync_config.clone())
         .build()
         .await?;
-    let mapping = SqlSyncedCommitMapping::from_sql_connections(factory.metadata_db().clone());
+    let mapping =
+        SqlSyncedCommitMappingBuilder::from_sql_connections(factory.metadata_db().clone())
+            .build(RendezVousOptions::for_test());
     let smallrepo: Repo = factory
         .with_id(RepositoryId::new(0))
         .with_name("smallrepo")

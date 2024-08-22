@@ -87,6 +87,7 @@ fixtures = { version = "0.1.0", path = "../../tests/fixtures" }
 fn-error-context = "0.2"
 mercurial_derivation = { version = "0.1.0", path = "../../derived_data/mercurial_derivation" }
 mononoke_types-mocks = { version = "0.1.0", path = "../../mononoke_types/mocks" }
+rendezvous = { version = "0.1.0", path = "../../common/rendezvous" }
 sql_construct = { version = "0.1.0", path = "../../common/sql_construct" }
 sql_ext = { version = "0.1.0", path = "../../common/rust/sql_ext" }
 strum = { version = "0.26.2", features = ["derive"] }

@@ -13,6 +13,7 @@ rust_binary(
         "//common/rust/shed/fbinit:fbinit-tokio",
         "//eden/mononoke/blobstore:blobstore",
         "//eden/mononoke/blobstore:cacheblob",
+        "//eden/mononoke/common/rendezvous:rendezvous",
         "//eden/mononoke/common/sql_construct:sql_construct",
         "//eden/mononoke/derived_data:derived_data_manager",
         "//eden/mononoke/git/git_types:git_types",

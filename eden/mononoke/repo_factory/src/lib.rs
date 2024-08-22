@@ -186,7 +186,7 @@ use sqlphases::SqlPhasesBuilder;
 use streaming_clone::ArcStreamingClone;
 use streaming_clone::StreamingCloneBuilder;
 use synced_commit_mapping::ArcSyncedCommitMapping;
-use synced_commit_mapping::SqlSyncedCommitMapping;
+use synced_commit_mapping::SqlSyncedCommitMappingBuilder;
 use thiserror::Error;
 use virtually_sharded_blobstore::VirtuallyShardedBlobstore;
 use warm_bookmarks_cache::NoopBookmarksCache;
@@ -1273,7 +1273,9 @@ impl RepoFactory {
         repo_config: &ArcRepoConfig,
     ) -> Result<ArcSyncedCommitMapping> {
         Ok(Arc::new(
-            self.open_sql::<SqlSyncedCommitMapping>(repo_config).await?,
+            self.open_sql::<SqlSyncedCommitMappingBuilder>(repo_config)
+                .await?
+                .build(self.env.rendezvous_options),
         ))
     }
 

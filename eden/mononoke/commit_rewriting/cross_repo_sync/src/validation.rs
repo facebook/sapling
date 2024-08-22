@@ -1444,8 +1444,10 @@ mod test {
     use metaconfig_types::SmallRepoPermanentConfig;
     use mononoke_types::NonRootMPath;
     use mononoke_types::RepositoryId;
+    use rendezvous::RendezVousOptions;
     use sql_construct::SqlConstruct;
     use synced_commit_mapping::SqlSyncedCommitMapping;
+    use synced_commit_mapping::SqlSyncedCommitMappingBuilder;
     use synced_commit_mapping::SyncedCommitMappingEntry;
     use test_repo_factory::TestRepoFactory;
     use tests_utils::bookmark;
@@ -1642,7 +1644,8 @@ mod test {
             .commit()
             .await?;
 
-        let mapping = SqlSyncedCommitMapping::with_sqlite_in_memory()?;
+        let mapping = SqlSyncedCommitMappingBuilder::with_sqlite_in_memory()?
+            .build(RendezVousOptions::for_test());
         let repos = CommitSyncRepos::LargeToSmall {
             small_repo: target,
             large_repo: source,
@@ -1765,7 +1768,9 @@ mod test {
             },
         };
 
-        let mapping = SqlSyncedCommitMapping::with_sqlite_in_memory().unwrap();
+        let mapping = SqlSyncedCommitMappingBuilder::with_sqlite_in_memory()
+            .unwrap()
+            .build(RendezVousOptions::for_test());
         for cs_id in changesets {
             mapping
                 .add(

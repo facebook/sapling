@@ -1713,7 +1713,9 @@ mod test {
     use metaconfig_types::SmallRepoCommitSyncConfig;
     use metaconfig_types::SmallRepoPermanentConfig;
     use mononoke_types::RepositoryId;
+    use rendezvous::RendezVousOptions;
     use sql_construct::SqlConstruct;
+    use synced_commit_mapping::SqlSyncedCommitMappingBuilder;
     use synced_commit_mapping::SyncedCommitMappingEntry;
     use synced_commit_mapping::SyncedCommitSourceRepo;
 
@@ -1855,7 +1857,8 @@ mod test {
 
         let current_version = CommitSyncConfigVersion("TEST_VERSION_NAME".to_string());
 
-        let mapping = SqlSyncedCommitMapping::with_sqlite_in_memory()?;
+        let mapping = SqlSyncedCommitMappingBuilder::with_sqlite_in_memory()?
+            .build(RendezVousOptions::for_test());
         for cs_id in changesets {
             mapping
                 .add(

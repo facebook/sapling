@@ -72,6 +72,7 @@ use sql_ext::replication::WaitForReplicationConfig;
 use sql_query_config::SqlQueryConfig;
 use synced_commit_mapping::EquivalentWorkingCopyEntry;
 use synced_commit_mapping::SqlSyncedCommitMapping;
+use synced_commit_mapping::SqlSyncedCommitMappingBuilder;
 use synced_commit_mapping::SyncedCommitMapping;
 use synced_commit_mapping::SyncedCommitMappingEntry;
 use synced_commit_mapping::WorkingCopyEquivalence;
@@ -319,12 +320,14 @@ async fn run_sync_diamond_merge<'a>(
 
     let source_repo = args::open_repo_with_repo_id(ctx.fb, ctx.logger(), source_repo_id, matches);
     let target_repo = args::open_repo_with_repo_id(ctx.fb, ctx.logger(), target_repo_id, matches);
-    let mapping = args::not_shardmanager_compatible::open_source_sql::<SqlSyncedCommitMapping>(
-        ctx.fb,
-        config_store,
-        matches,
-    )
-    .await?;
+    let mapping =
+        args::not_shardmanager_compatible::open_source_sql::<SqlSyncedCommitMappingBuilder>(
+            ctx.fb,
+            config_store,
+            matches,
+        )
+        .await?
+        .build(matches.environment().rendezvous_options);
 
     let merge_commit_hash = sub_m.value_of(COMMIT_HASH).unwrap().to_owned();
     let (source_repo, target_repo): (Repo, Repo) = try_join(source_repo, target_repo).await?;
