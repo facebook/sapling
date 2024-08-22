@@ -83,6 +83,7 @@ type ExternalVSCodeCommands = {
     namespace: string,
     metadata: surveyMetaData,
   ) => Thenable<void>;
+  'workbench.action.pinEditor': () => Thenable<void>;
   'sapling.open-isl': () => Thenable<void>;
   'sapling.close-isl': () => Thenable<void>;
   'sapling.isl.focus': () => Thenable<void>;

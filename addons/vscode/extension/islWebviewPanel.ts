@@ -36,6 +36,7 @@ function createOrFocusISLWebview(
   context: vscode.ExtensionContext,
   platform: VSCodeServerPlatform,
   logger: Logger,
+  column?: vscode.ViewColumn,
 ): vscode.WebviewPanel | vscode.WebviewView {
   // Try to re-use existing ISL panel/view
   if (islPanelOrView) {
@@ -44,14 +45,14 @@ function createOrFocusISLWebview(
   }
   // Otherwise, create a new panel/view
 
-  const column = vscode.window.activeTextEditor?.viewColumn ?? vscode.ViewColumn.One;
+  const viewColumn = column ?? vscode.window.activeTextEditor?.viewColumn ?? vscode.ViewColumn.One;
 
   islPanelOrView = populateAndSetISLWebview(
     context,
     vscode.window.createWebviewPanel(
       islViewType,
       t('isl.title'),
-      column,
+      viewColumn,
       getWebviewOptions(context),
     ),
     platform,
@@ -111,12 +112,57 @@ export function hasOpenedISLWebviewBefore() {
   return hasOpenedISLWebviewBeforeState;
 }
 
+/**
+ * If a vscode extension host is restarted while ISL is open, the connection to the webview is severed.
+ * If we activate and see pre-existing ISLs, we should either destroy them,
+ * or open a fresh ISL in their place.
+ * You might expect deserialization to handle this, but it doesn't.
+ * See: https://github.com/microsoft/vscode/issues/188257
+ */
+function replaceExistingOrphanedISLWindows(
+  context: vscode.ExtensionContext,
+  platform: VSCodeServerPlatform,
+  logger: Logger,
+) {
+  const orphanedTabs = vscode.window.tabGroups.all
+    .flatMap(tabGroup => tabGroup.tabs)
+    .filter(tab => (tab.input as vscode.TabInputWebview)?.viewType?.includes(islViewType));
+  logger.info(`Found ${orphanedTabs.length} orphaned ISL tabs`);
+  if (orphanedTabs.length > 0) {
+    for (const tab of orphanedTabs) {
+      // We only remake the ISL tab if it's active, since otherwise it will focus it.
+      // The exception is if you had ISL pinned, since your pin would get destroyed which is annoying.
+      // It does mean that the pinned ISL steals focus, but I think that's reasonable during an exthost restart.
+      if ((tab.isActive || tab.isPinned) && !shouldUseWebviewView()) {
+        // Make sure we use the matching ViewColumn so it feels like we recreate ISL in the same place.
+        const {viewColumn} = tab.group;
+        logger.info(` > Replacing orphaned ISL with fresh one for view column ${viewColumn}`);
+        try {
+          // We only expect there to be at most one "active" tab, but even if there were,
+          // this command would still reuse the existing ISL.
+          createOrFocusISLWebview(context, platform, logger, viewColumn);
+        } catch (err: unknown) {
+          vscode.window.showErrorMessage(`error opening isl: ${err}`);
+        }
+
+        if (tab.isPinned) {
+          executeVSCodeCommand('workbench.action.pinEditor');
+        }
+      }
+      // Regardless of if we opened a new ISL, reap the old one. It wouldn't work if you clicked on it.
+      vscode.window.tabGroups.close(orphanedTabs);
+    }
+  }
+}
+
 export function registerISLCommands(
   context: vscode.ExtensionContext,
   platform: VSCodeServerPlatform,
   logger: Logger,
 ): vscode.Disposable {
   const webviewViewProvider = new ISLWebviewViewProvider(context, platform, logger);
+
+  replaceExistingOrphanedISLWindows(context, platform, logger);
 
   const createComparisonWebviewCommand = (comparison: Comparison) => {
     try {
