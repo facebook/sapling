@@ -166,7 +166,10 @@ class SaplingRemoteAPIService(baseservice.BaseService):
         )
 
     def getsmartlog(self, reponame, workspace, repo, limit, flags=[]):
-        self.ui.debug("sending 'get_smartlog' request\n", component="commitcloud")
+        self.ui.debug(
+            "sending 'get_smartlog' request on SaplingRemoteAPI\n",
+            component="commitcloud",
+        )
 
         data = {
             "reponame": reponame,
@@ -196,7 +199,10 @@ class SaplingRemoteAPIService(baseservice.BaseService):
     def getsmartlogbyversion(
         self, reponame, workspace, repo, date, version, limit, flags=[]
     ):
-        self.ui.debug("sending 'get_old_smartlog' request\n", component="commitcloud")
+        self.ui.debug(
+            "sending 'get_old_smartlog' request on SaplingRemoteAPI\n",
+            component="commitcloud",
+        )
         if date:
             data = {
                 "reponame": reponame,
