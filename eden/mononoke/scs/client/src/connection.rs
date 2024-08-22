@@ -25,6 +25,8 @@ pub(super) struct ConnectionArgs {
     #[clap(long, short = 'H', conflicts_with = "tier", global = true)]
     /// Connect to SCS through a given host and port pair, format HOST:PORT.
     host: Option<String>,
+    #[clap(long, global = true)]
+    processing_timeout: Option<u64>,
 }
 
 impl ConnectionArgs {
@@ -38,6 +40,7 @@ impl ConnectionArgs {
                 .with_tier(&self.tier)
                 .with_repo(repo.map(|r| r.to_string()))
                 .with_host_and_port(self.host.clone())?
+                .with_processing_timeout(self.processing_timeout.clone())
                 .build()
         }
     }

@@ -10,6 +10,7 @@
 use std::net::SocketAddr;
 use std::net::ToSocketAddrs;
 use std::sync::Arc;
+use std::time::Duration;
 
 use anyhow::anyhow;
 use anyhow::Error;
@@ -36,6 +37,7 @@ pub struct ScsClientBuilder {
     tier: String,
     repo: Option<String>,
     single_host: Option<SocketAddr>,
+    processing_timeout: Option<Duration>,
 }
 
 impl ScsClientBuilder {
@@ -46,6 +48,7 @@ impl ScsClientBuilder {
             tier: SCS_DEFAULT_TIER.to_string(),
             repo: None,
             single_host: None,
+            processing_timeout: None,
         }
     }
 
@@ -68,6 +71,11 @@ impl ScsClientBuilder {
         Ok(self)
     }
 
+    pub fn with_processing_timeout(mut self, processing_timeout_ms: Option<u64>) -> Self {
+        self.processing_timeout = processing_timeout_ms.map(Duration::from_millis);
+        self
+    }
+
     pub fn build(self) -> Result<ScsClient, Error> {
         build_from_tier_name(
             self.fb,
@@ -75,6 +83,7 @@ impl ScsClientBuilder {
             self.tier,
             self.repo.clone(),
             self.single_host,
+            self.processing_timeout,
         )
     }
 }
@@ -87,6 +96,7 @@ fn build_from_tier_name_via_sr(
     tier: impl AsRef<str>,
     shardmanager_domain: Option<String>,
     single_host: Option<SocketAddr>,
+    processing_timeout: Option<Duration>,
 ) -> Result<ScsClient, Error> {
     use source_control_srclients::make_SourceControlService_srclient;
     use srclient::ClientParams;
@@ -110,6 +120,9 @@ fn build_from_tier_name_via_sr(
         })
         .maybe_with(single_host, |c, single_host| {
             c.with_single_host(single_host, None)
+        })
+        .maybe_with(processing_timeout, |c, processing_timeout| {
+            c.with_processing_timeout(processing_timeout)
         });
 
     let client = make_SourceControlService_srclient!(
@@ -130,6 +143,7 @@ fn build_from_tier_name_via_sr(
     _tier: impl AsRef<str>,
     _shardmanager_domain: Option<String>,
     _single_host: Option<String>,
+    _processing_timeout: Option<Duration>,
 ) -> Result<ScsClient, Error> {
     Err(anyhow!(
         "Connection via ServiceRouter is not supported on this platform"
@@ -143,6 +157,7 @@ fn build_from_tier_name_via_x2p(
     tier: impl AsRef<str>,
     shardmanager_domain: Option<String>,
     single_host: Option<SocketAddr>,
+    _processing_timeout: Option<Duration>,
 ) -> Result<ScsClient, Error> {
     let client_info = ClientInfo::new_with_entry_point(ClientEntryPoint::ScsClient)?;
     let headers = hashmap! {
@@ -171,18 +186,38 @@ fn build_from_tier_name(
     tier: impl AsRef<str>,
     shardmanager_domain: Option<String>,
     single_host: Option<SocketAddr>,
+    processing_timeout: Option<Duration>,
 ) -> Result<ScsClient, Error> {
     match x2pclient::get_env(fb) {
         x2pclient::Environment::Prod => {
             if cfg!(target_os = "linux") {
-                build_from_tier_name_via_sr(fb, client_id, tier, shardmanager_domain, single_host)
+                build_from_tier_name_via_sr(
+                    fb,
+                    client_id,
+                    tier,
+                    shardmanager_domain,
+                    single_host,
+                    processing_timeout,
+                )
             } else {
-                build_from_tier_name_via_x2p(fb, client_id, tier, shardmanager_domain, single_host)
+                build_from_tier_name_via_x2p(
+                    fb,
+                    client_id,
+                    tier,
+                    shardmanager_domain,
+                    single_host,
+                    processing_timeout,
+                )
             }
         }
-        x2pclient::Environment::Corp => {
-            build_from_tier_name_via_x2p(fb, client_id, tier, shardmanager_domain, single_host)
-        }
+        x2pclient::Environment::Corp => build_from_tier_name_via_x2p(
+            fb,
+            client_id,
+            tier,
+            shardmanager_domain,
+            single_host,
+            processing_timeout,
+        ),
         other_env => Err(anyhow!("{} not supported", other_env)),
     }
 }
@@ -264,7 +299,7 @@ impl std::ops::Deref for ScsClient {
 trait MaybeWith<T> {
     fn maybe_with<S>(self, optional: Option<S>, f: impl FnOnce(T, S) -> Self) -> Self
     where
-        S: ToString;
+        S: Sized;
 }
 
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]
@@ -275,7 +310,7 @@ impl MaybeWith<srclient::ClientParams> for srclient::ClientParams {
         f: impl FnOnce(srclient::ClientParams, S) -> Self,
     ) -> Self
     where
-        S: ToString,
+        S: Sized,
     {
         if let Some(s) = optional {
             f(self, s)
@@ -293,7 +328,7 @@ impl MaybeWith<x2pclient::X2pClientBuilder> for x2pclient::X2pClientBuilder {
         f: impl FnOnce(x2pclient::X2pClientBuilder, S) -> Self,
     ) -> Self
     where
-        S: ToString,
+        S: Sized,
     {
         if let Some(s) = optional {
             f(self, s)
