@@ -6,6 +6,7 @@
  */
 
 import App from '../App';
+import {Internal} from '../Internal';
 import {tracker} from '../analytics';
 import {readAtom} from '../jotaiUtils';
 import {operationList} from '../operationsState';
@@ -270,6 +271,15 @@ describe('operations', () => {
         exitCode: 0, // we marked it as exited even though they came out of order
       }),
     ]);
+
+    if (Internal.sendAnalyticsDataToServer != null) {
+      expectMessageSentToServer({
+        type: 'track',
+        data: expect.objectContaining({
+          eventName: 'ExitMessageOutOfOrder',
+        }),
+      });
+    }
   });
 
   it('reacts to abort', async () => {

@@ -212,6 +212,12 @@ registerDisposable(
             operationThatExited = current.operationHistory.find(
               op => op.operation.id === progress.id && op.exitCode == null,
             );
+
+            window.globalIslClientTracker.track('ExitMessageOutOfOrder', {
+              extras: {
+                operationThatExited: operationThatExited?.operation.trackEventName,
+              },
+            });
           }
 
           if (operationThatExited == null) {

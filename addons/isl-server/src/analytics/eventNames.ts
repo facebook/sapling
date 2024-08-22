@@ -116,6 +116,7 @@ export type TrackEventName =
   | 'FetchCommitTemplateCommand'
   | 'ImportStackCommand'
   | 'ExportStackCommand'
+  | 'ExitMessageOutOfOrder'
   | 'ShowBugButtonNux'
   | 'StackEditMetrics'
   | 'StackEditChangeTab'
