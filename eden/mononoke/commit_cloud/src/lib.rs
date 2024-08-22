@@ -24,6 +24,7 @@ use commit_cloud_intern_utils::interngraph_publisher::publish_single_update;
 #[cfg(fbcode_build)]
 use commit_cloud_intern_utils::notification::NotificationData;
 use context::CoreContext;
+use edenapi_types::cloud::SmartlogFilter;
 use edenapi_types::cloud::WorkspaceSharingData;
 use edenapi_types::GetReferencesParams;
 use edenapi_types::ReferencesData;
@@ -32,12 +33,15 @@ use edenapi_types::WorkspaceData;
 use facet::facet;
 use futures_stats::futures03::TimedFutureExt;
 use metaconfig_types::CommitCloudConfig;
+use mononoke_types::DateTime;
 use mononoke_types::Timestamp;
 use permission_checker::AclProvider;
 use permission_checker::BoxPermissionChecker;
 use references::history::WorkspaceHistory;
 use references::rename_all;
 use repo_derived_data::ArcRepoDerivedData;
+use sql::history_ops::GetOutput;
+use sql::history_ops::GetType;
 use sql::versions_ops::UpdateVersionArgs;
 
 use crate::ctx::CommitCloudContext;
@@ -45,6 +49,7 @@ use crate::references::cast_references_data;
 use crate::references::fetch_references;
 use crate::references::update_references_data;
 use crate::references::versions::WorkspaceVersion;
+use crate::sql::ops::GenericGet;
 use crate::sql::ops::Get;
 use crate::sql::ops::Insert;
 use crate::sql::ops::SqlCommitCloud;
@@ -467,5 +472,53 @@ impl CommitCloud {
         );
 
         Ok(String::from("'update_workspace_archive' succeeded"))
+    }
+
+    pub async fn get_history_by(
+        &self,
+        cc_ctx: &CommitCloudContext,
+        filter: &SmartlogFilter,
+    ) -> anyhow::Result<WorkspaceHistory> {
+        let args = match filter {
+            SmartlogFilter::Version(version) => {
+                ensure!(
+                    *version > 0,
+                    "'get_smartlog_by_version' failed: version must be greater than 0"
+                );
+                GetType::GetHistoryVersion {
+                    version: *version as u64,
+                }
+            }
+            SmartlogFilter::Timestamp(timestamp) => {
+                let timestamp = Timestamp::from_timestamp_nanos(*timestamp);
+                GetType::GetHistoryDate {
+                    timestamp,
+                    limit: 1,
+                }
+            }
+        };
+
+        let history = GenericGet::<WorkspaceHistory>::get(
+            &self.storage,
+            cc_ctx.reponame.clone(),
+            cc_ctx.workspace.clone(),
+            args.clone(),
+        )
+        .await?;
+
+        ensure!(
+            !history.is_empty(),
+            "'get_smartlog_by_version' failed: no smartlog found for {}",
+            match args {
+                GetType::GetHistoryVersion { version } => format!("version {}", version),
+                GetType::GetHistoryDate { timestamp, .. } =>
+                    format!("timestamp {}", DateTime::from(timestamp)),
+                _ => unreachable!(),
+            }
+        );
+        return match history.first() {
+            Some(GetOutput::WorkspaceHistory(history)) => Ok(history.clone()),
+            _ => Err(anyhow::anyhow!("unexpected history type")),
+        };
     }
 }

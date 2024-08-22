@@ -29,6 +29,7 @@ use crate::sql::ops::Insert;
 use crate::sql::ops::SqlCommitCloud;
 use crate::sql::ops::Update;
 
+#[derive(Debug, Clone, PartialEq)]
 pub enum GetType {
     GetHistoryVersionTimestamp,
     GetHistoryDate { timestamp: Timestamp, limit: u64 },

@@ -15,6 +15,7 @@ use commit_graph::CommitGraphRef;
 use edenapi_types::cloud::CloudShareWorkspaceRequest;
 use edenapi_types::cloud::WorkspaceSharingData;
 use edenapi_types::GetReferencesParams;
+use edenapi_types::GetSmartlogByVersionParams;
 use edenapi_types::GetSmartlogParams;
 use edenapi_types::HgId;
 use edenapi_types::ReferencesData;
@@ -270,5 +271,35 @@ impl<R: MononokeRepo> HgRepoContext<R> {
             .commit_cloud()
             .rename_workspace(&ctx, &request.new_workspace)
             .await?)
+    }
+
+    pub async fn cloud_smartlog_by_version(
+        &self,
+        params: &GetSmartlogByVersionParams,
+    ) -> Result<SmartlogData, MononokeError> {
+        let mut cc_ctx = CommitCloudContext::new(&params.workspace, &params.reponame)?;
+
+        let authz = self.repo_ctx().authorization_context();
+        authz
+            .require_commitcloud_operation(self.ctx(), self.repo_ctx().repo(), &mut cc_ctx, "read")
+            .await?;
+
+        let history = self
+            .repo_ctx()
+            .repo()
+            .commit_cloud()
+            .get_history_by(&cc_ctx, &params.filter)
+            .await?;
+        let lbs = history.local_bookmarks_as_map();
+        let rbs = history.remote_bookmarks_as_map();
+        let hg_ids = history.collapse_into_vec(&rbs, &lbs);
+
+        let nodes = self.form_smartlog_with_info(hg_ids, lbs, rbs).await?;
+
+        Ok(SmartlogData {
+            nodes,
+            version: Some(history.version as i64),
+            timestamp: history.timestamp.map(|ts| ts.timestamp_nanos()),
+        })
     }
 }

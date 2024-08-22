@@ -312,6 +312,38 @@ pub struct RenameWorkspaceResponse {
     pub data: Result<String, ServerError>,
 }
 
+#[auto_wire]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
+pub struct GetSmartlogByVersionParams {
+    #[id(0)]
+    pub workspace: String,
+    #[id(1)]
+    pub reponame: String,
+    #[id(2)]
+    #[no_default]
+    pub filter: SmartlogFilter,
+    #[id(3)]
+    pub flags: Vec<GetSmartlogFlag>,
+}
+
+#[auto_wire]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
+pub enum SmartlogFilter {
+    #[id(1)]
+    Version(i64),
+    #[id(2)]
+    Timestamp(i64),
+}
+
+// Wire requires a default value, shouldn't be used
+impl Default for SmartlogFilter {
+    fn default() -> Self {
+        Self::Version(0)
+    }
+}
+
 impl RemoteBookmark {
     pub fn full_name(&self) -> String {
         format!("{}/{}", self.remote, self.name)

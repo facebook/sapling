@@ -5,8 +5,12 @@
  * GNU General Public License version 2.
  */
 
+use edenapi_types::cloud::RemoteBookmark;
+use mercurial_types::HgChangesetId;
 use mononoke_types::Timestamp;
 
+use super::local_bookmarks::LocalBookmarksMap;
+use super::remote_bookmarks::RemoteBookmarksMap;
 use super::RawReferencesData;
 use crate::references::heads::WorkspaceHead;
 use crate::references::local_bookmarks::WorkspaceLocalBookmark;
@@ -38,5 +42,44 @@ impl WorkspaceHistory {
             local_bookmarks: raw.local_bookmarks,
             remote_bookmarks: raw.remote_bookmarks,
         }
+    }
+
+    pub fn local_bookmarks_as_map(&self) -> LocalBookmarksMap {
+        let mut map = LocalBookmarksMap::new();
+        self.local_bookmarks.iter().for_each(|bookmark| {
+            let value = map.entry(*bookmark.commit()).or_insert(vec![]);
+            value.push(bookmark.name().clone())
+        });
+        map
+    }
+
+    pub fn remote_bookmarks_as_map(&self) -> RemoteBookmarksMap {
+        let mut map = RemoteBookmarksMap::new();
+        self.remote_bookmarks.iter().for_each(|bookmark| {
+            let rb = RemoteBookmark {
+                name: bookmark.name().clone(),
+                node: Some((*bookmark.commit()).into()),
+                remote: bookmark.remote().clone(),
+            };
+            let value = map.entry(*bookmark.commit()).or_insert(vec![]);
+            value.push(rb)
+        });
+        map
+    }
+
+    // Takes all the heads and bookmarks and returns them as a single Vec<HgChangesetId>
+    // in order to create a  smartlog node list
+    pub fn collapse_into_vec(
+        &self,
+        rbs: &RemoteBookmarksMap,
+        lbs: &LocalBookmarksMap,
+    ) -> Vec<HgChangesetId> {
+        self.heads
+            .clone()
+            .into_iter()
+            .map(|head| head.commit)
+            .chain(rbs.keys().cloned())
+            .chain(lbs.keys().cloned())
+            .collect::<Vec<HgChangesetId>>()
     }
 }

@@ -78,6 +78,7 @@ pub use crate::cloud::CloudShareWorkspaceResponse;
 pub use crate::cloud::CloudWorkspaceRequest;
 pub use crate::cloud::CloudWorkspacesRequest;
 pub use crate::cloud::GetReferencesParams;
+pub use crate::cloud::GetSmartlogByVersionParams;
 pub use crate::cloud::GetSmartlogFlag;
 pub use crate::cloud::GetSmartlogParams;
 pub use crate::cloud::ReferencesData;
