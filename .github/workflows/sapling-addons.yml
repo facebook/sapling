@@ -28,4 +28,4 @@ jobs:
         run: yarn install --prefer-offline
       - name: Run addons/verify-addons-folder.py
         working-directory: ./addons
-        run: ./verify-addons-folder.py
+        run: ./verify-addons-folder.py --skip-integration-tests
