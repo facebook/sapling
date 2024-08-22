@@ -18,6 +18,7 @@ bytes = { version = "1.6.0", features = ["serde"] }
 changeset_info = { version = "0.1.0", path = "../../../derived_data/changeset_info" }
 context = { version = "0.1.0", path = "../../../server/context" }
 filestore = { version = "0.1.0", path = "../../../filestore" }
+fsnodes = { version = "0.1.0", path = "../../../derived_data/fsnodes" }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
 futures-util = "0.3.30"
 hook_manager = { version = "0.1.0", path = "../hook_manager" }

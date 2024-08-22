@@ -24,6 +24,7 @@ use bookmarks::BookmarksArc;
 use bytes::Bytes;
 use changeset_info::ChangesetInfo;
 use context::CoreContext;
+use fsnodes::RootFsnodeId;
 use futures::future;
 use futures::stream::TryStreamExt;
 use futures_util::future::TryFutureExt;
@@ -44,6 +45,7 @@ use mononoke_types::hash::GitSha1;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
 use mononoke_types::ContentMetadataV2;
+use mononoke_types::FsnodeId;
 use mononoke_types::MPath;
 use mononoke_types::ManifestUnodeId;
 use mononoke_types::NonRootMPath;
@@ -102,19 +104,19 @@ impl HookStateProvider for RepoHookStateProvider {
             .with_context(|| format!("Error fetching bookmark: {}", bookmark))?
             .ok_or_else(|| format_err!("Bookmark {} does not exist", bookmark))?;
 
-        let master_mf = derive_hg_manifest(
-            ctx,
-            &self.repo_derived_data,
-            &self.repo_blobstore,
-            changeset_id,
-        )
-        .await?;
-        master_mf
+        let fsnode_id = derive_fsnode(ctx, &self.repo_derived_data, changeset_id).await?;
+
+        fsnode_id
             .find_entries(ctx.clone(), self.repo_blobstore.clone(), paths)
             .map_ok(|(mb_path, entry)| async move {
                 if let Some(path) = Option::<NonRootMPath>::from(mb_path) {
-                    let content = resolve_content_id(ctx, &self.repo_blobstore, entry).await?;
-                    Ok(Some((path, content)))
+                    match entry {
+                        Entry::Tree(_) => Ok(Some((path, PathContent::Directory))),
+                        Entry::Leaf(file) => {
+                            let content_id = file.content_id();
+                            Ok(Some((path, PathContent::File(*content_id))))
+                        }
+                    }
                 } else {
                     Ok(None)
                 }
@@ -370,6 +372,26 @@ impl RepoHookStateProvider {
             bonsai_git_mapping,
         }
     }
+}
+
+async fn derive_fsnode(
+    ctx: &CoreContext,
+    repo_derived_data: &RepoDerivedData,
+    changeset_id: ChangesetId,
+) -> Result<FsnodeId, HookStateProviderError> {
+    let fsnode_id = repo_derived_data
+        .derive::<RootFsnodeId>(ctx, changeset_id.clone())
+        .await
+        .with_context(|| {
+            format!(
+                "Error deriving fsnode manifest for bonsai: {}",
+                changeset_id
+            )
+        })?
+        .into_fsnode_id()
+        .clone();
+
+    Ok(fsnode_id)
 }
 
 async fn derive_hg_manifest(
