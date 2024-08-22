@@ -165,27 +165,25 @@ impl RepoChangesetsPushrebaseHistory {
         for target_repo_id in target_repo_ids.into_iter() {
             let entries = repo
                 .synced_commit_mapping()
-                .get(&self.ctx, repo.repoid(), bcs_id, target_repo_id)
+                .get_maybe_stale(&self.ctx, repo.repoid(), bcs_id, target_repo_id)
                 .await
                 .map_err(errors::internal_error)?;
             if let Some(target_repo_name) = self.mononoke.repo_name_from_id(target_repo_id) {
-                synced_changesets.extend(entries.into_iter().filter_map(
-                    |(cs, _, maybe_source_repo)| {
-                        let traverse = match maybe_source_repo {
-                            // source_repo information can be absent e.g. for old commits but
-                            // let's still traverse the mapping because in most cases we will
-                            // get the correct result.
-                            None => true,
-                            Some(source_repo) if source_repo == expected_sync_origin => true,
-                            _ => false,
-                        };
-                        if traverse {
-                            Some(RepoChangeset(target_repo_name.clone(), cs))
-                        } else {
-                            None
-                        }
-                    },
-                ));
+                synced_changesets.extend(entries.into_iter().filter_map(|entry| {
+                    let traverse = match entry.maybe_source_repo {
+                        // source_repo information can be absent e.g. for old commits but
+                        // let's still traverse the mapping because in most cases we will
+                        // get the correct result.
+                        None => true,
+                        Some(source_repo) if source_repo == expected_sync_origin => true,
+                        _ => false,
+                    };
+                    if traverse {
+                        Some(RepoChangeset(target_repo_name.clone(), entry.target_bcs_id))
+                    } else {
+                        None
+                    }
+                }));
             }
         }
 
