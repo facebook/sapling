@@ -484,7 +484,7 @@ impl CommitCloud {
         let args = match filter {
             SmartlogFilter::Version(version) => {
                 ensure!(
-                    *version > 0,
+                    *version >= 0,
                     "'get_smartlog_by_version' failed: version must be greater than 0"
                 );
                 GetType::GetHistoryVersion {

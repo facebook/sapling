@@ -49,7 +49,7 @@ CREATE TABLE IF NOT EXISTS  `history`(
   `reponame` VARCHAR(255) NOT NULL,
   `workspace` VARCHAR(255) NOT NULL,
   `version` BIGINT(20) NOT NULL,
-  `timestamp` TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+  `timestamp` BIGINT NOT NULL,
   `heads` BLOB NOT NULL,
   `bookmarks` BLOB NOT NULL,
   `remotebookmarks` BLOB NOT NULL,

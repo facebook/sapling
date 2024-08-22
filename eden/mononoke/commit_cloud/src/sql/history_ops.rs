@@ -80,11 +80,6 @@ mononoke_queries! {
           ORDER BY `version`
           LIMIT {delete_limit})")
     }
-    write InsertHistoryNoTimestamp(reponame: String, workspace: String, version: u64, heads: Vec<u8>, bookmarks: Vec<u8>, remote_bookmarks: Vec<u8>) {
-        none,
-        "INSERT INTO history (reponame, workspace, version, heads, bookmarks, remotebookmarks)
-        VALUES ({reponame},{workspace},{version},{heads},{bookmarks},{remote_bookmarks})"
-    }
 
     write InsertHistory(reponame: String, workspace: String, version: u64, heads: Vec<u8>, bookmarks: Vec<u8>, remote_bookmarks: Vec<u8>, timestamp: Timestamp) {
         none,
@@ -234,32 +229,22 @@ impl Insert<WorkspaceHistory> for SqlCommitCloud {
         )
         .unwrap();
         let res_txn;
-        if data.timestamp.is_none() {
-            (res_txn, _) = InsertHistoryNoTimestamp::maybe_traced_query_with_transaction(
-                txn,
-                cri,
-                &reponame,
-                &workspace,
-                &data.version,
-                &heads_bytes,
-                &bookmarks_bytes,
-                &remotebookmarks_bytes,
-            )
-            .await?;
-        } else {
-            (res_txn, _) = InsertHistory::maybe_traced_query_with_transaction(
-                txn,
-                cri,
-                &reponame,
-                &workspace,
-                &data.version,
-                &heads_bytes,
-                &bookmarks_bytes,
-                &remotebookmarks_bytes,
-                &data.timestamp.unwrap(),
-            )
-            .await?;
-        }
+
+        let timestamp = data.timestamp.unwrap_or(Timestamp::now());
+
+        (res_txn, _) = InsertHistory::maybe_traced_query_with_transaction(
+            txn,
+            cri,
+            &reponame,
+            &workspace,
+            &data.version,
+            &heads_bytes,
+            &bookmarks_bytes,
+            &remotebookmarks_bytes,
+            &timestamp,
+        )
+        .await?;
+
         Ok(res_txn)
     }
 }
