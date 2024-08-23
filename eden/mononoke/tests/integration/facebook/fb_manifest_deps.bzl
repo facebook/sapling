@@ -68,6 +68,7 @@ MONONOKE_TARGETS_TO_ENV = {
 
 # Every .t test run needs these currently
 DOTT_DEPS = {
+    "//eden/mononoke/mononoke_macros:just_knobs_defaults": "JUST_KNOBS_DEFAULTS",
     "//eden/mononoke/tests/integration/certs/facebook:test_certs": "TEST_CERTS",
     # fixtures
     "//eden/mononoke/tests/integration/facebook:facebook_test_fixtures": "FB_TEST_FIXTURES",

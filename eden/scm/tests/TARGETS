@@ -206,6 +206,8 @@ M_ENV["HGTEST_INCLUDED"] = "test_(fb_ext_remotefilelog_(log|getpackv2|worker|rus
 
 M_ENV["TEST_FIXTURES"] = "$(location //eden/mononoke/tests/integration:test_fixtures)"
 
+M_ENV["JUST_KNOBS_DEFAULTS"] = "$(location //eden/mononoke/mononoke_macros:just_knobs_defaults)"
+
 M_ENV["FB_TEST_FIXTURES"] = "$(location //eden/mononoke/tests/integration/facebook:facebook_test_fixtures)"
 
 python_unittest(

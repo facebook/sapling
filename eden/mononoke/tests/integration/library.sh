@@ -62,7 +62,7 @@ mkdir -p "${LOCAL_CONFIGERATOR_PATH}"
 export ACL_FILE="$TESTTMP/acls.json"
 
 export MONONOKE_JUST_KNOBS_OVERRIDES_PATH="${LOCAL_CONFIGERATOR_PATH}/just_knobs.json"
-cp "${TEST_FIXTURES}/just_knobs.json" "$MONONOKE_JUST_KNOBS_OVERRIDES_PATH"
+cp "${JUST_KNOBS_DEFAULTS}/just_knobs_defaults/just_knobs.json" "$MONONOKE_JUST_KNOBS_OVERRIDES_PATH"
 
 function get_configerator_relative_path {
   realpath --relative-to "${LOCAL_CONFIGERATOR_PATH}" "$1"

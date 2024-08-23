@@ -19,7 +19,6 @@ buck_filegroup(
         "commitsync/flipped_config.toml",
         "fixtures/repo_with_newline_author_commit.tar.xz",
         "gitexport_library.sh",
-        "just_knobs.json",
         "library.sh",
         "library-commit.sh",
         "library-git-lfs.sh",

@@ -1,3 +1,4 @@
+load("@fbcode_macros//build_defs:native_rules.bzl", "buck_filegroup")
 load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
 load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
 
@@ -22,8 +23,16 @@ rust_library(
     name = "mononoke_macros",
     srcs = glob([
         "src/**/*.rs",
+        "just_knobs_defaults/**/*.json",
     ]),
     deps = [
         ":mononoke_proc_macros",
+    ],
+)
+
+buck_filegroup(
+    name = "just_knobs_defaults",
+    srcs = [
+        "just_knobs_defaults/just_knobs.json",
     ],
 )
