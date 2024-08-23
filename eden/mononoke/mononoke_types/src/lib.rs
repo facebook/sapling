@@ -34,6 +34,7 @@ pub mod sha1_hash;
 pub mod sharded_map;
 pub mod sharded_map_v2;
 pub mod skeleton_manifest;
+pub mod skeleton_manifest_v2;
 pub mod sorted_vector_trie_map;
 pub mod sql_types;
 pub mod svnrev;
@@ -114,6 +115,7 @@ pub use typed_hash::ManifestUnodeId;
 pub use typed_hash::MononokeId;
 pub use typed_hash::RawBundle2Id;
 pub use typed_hash::SkeletonManifestId;
+pub use typed_hash::SkeletonManifestV2Id;
 pub use typed_hash::TestManifestId;
 pub use typed_hash::TestShardedManifestId;
 

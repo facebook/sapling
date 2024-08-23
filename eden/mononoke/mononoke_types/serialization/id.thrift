@@ -40,6 +40,7 @@ union Id {
 
 typedef Id BasenameSuffixSkeletonManifestId (rust.newtype)
 typedef Id BssmV3DirectoryId (rust.newtype)
+typedef Id SkeletonManifestV2Id (rust.newtype)
 typedef Id ChangesetId (rust.newtype)
 typedef Id ContentChunkId (rust.newtype)
 typedef Id ContentId (rust.newtype)

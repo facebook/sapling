@@ -17,6 +17,7 @@
 
 include "eden/mononoke/mononoke_types/serialization/id.thrift"
 include "eden/mononoke/mononoke_types/serialization/path.thrift"
+include "eden/mononoke/mononoke_types/serialization/sharded_map.thrift"
 
 struct SkeletonManifestDirectory {
   1: id.SkeletonManifestId id;
@@ -59,3 +60,22 @@ struct SkeletonManifest {
 typedef map<path.MPathElement, SkeletonManifestEntry> (
   rust.type = "sorted_vector_map::SortedVectorMap",
 ) map_MPathElement_SkeletonManifestEntry_4470
+
+// SkeletonManifestV2 is sharded version of SkeletonManifest that differs from it in two ways:
+// 1) It doesn't include any extra metadata except a rollup count of its descendants that's used
+// to enable ordered traversal. In particular this means that it can no longer be used for case
+// conflicts checking which will be delegated to a different derived data type (`CaseConflictsManifest`).
+// 2) It stores the sharded map inline without a layer of indirection, and relies only on the sharded
+// map to decide which parts of the manifest should be inlined and which should be stored in a
+// separate blob. This avoids the large number of tiny blobs that would otherwise be created
+// for each small directory.
+struct SkeletonManifestV2 {
+  1: sharded_map.ShardedMapV2Node subentries;
+} (rust.exhaustive)
+
+struct SkeletonManifestV2File {} (rust.exhaustive)
+
+union SkeletonManifestV2Entry {
+  1: SkeletonManifestV2File file;
+  2: SkeletonManifestV2 directory;
+} (rust.exhaustive)
