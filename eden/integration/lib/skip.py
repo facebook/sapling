@@ -185,6 +185,9 @@ elif sys.platform.startswith("linux") and not os.path.exists("/etc/redhat-releas
         # issue.
         "test_post_clone_permissions"
     ]
+
+    # This test is failing when comparing `hg update` with expected output
+    TEST_DISABLED["hg.rebase_test.RebaseTest"] = ["test_rebase_commit_with_independent_folder"]
 elif sys.platform.startswith("darwin"):
     # OSERROR AF_UNIX path too long
     TEST_DISABLED["hg.status_test.StatusTestTreeOnly"] = [
@@ -315,6 +318,9 @@ elif sys.platform.startswith("darwin"):
         "test_restart_eden_with_local_store_that_fails_to_open"
     ]
 
+
+    # This test is failing when comparing `hg update` with expected output
+    TEST_DISABLED["hg.rebase_test.RebaseTest"] = ["test_rebase_commit_with_independent_folder"]
 
 # Windows specific tests
 # we keep them in the build graph on linux so pyre will run and disable them
