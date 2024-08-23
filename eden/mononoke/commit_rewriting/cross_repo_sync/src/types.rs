@@ -66,6 +66,7 @@ use repo_identity::RepoIdentity;
 use repo_identity::RepoIdentityRef;
 use sorted_vector_map::SortedVectorMap;
 use sql_query_config::SqlQueryConfig;
+use sql_query_config::SqlQueryConfigArc;
 use static_assertions::assert_impl_all;
 use thiserror::Error;
 
@@ -204,6 +205,7 @@ pub trait Repo = BookmarksArc
     + CommitGraphArc
     + FilenodesArc
     + FilenodesRef
+    + SqlQueryConfigArc
     + Send
     + Sync
     + Clone
