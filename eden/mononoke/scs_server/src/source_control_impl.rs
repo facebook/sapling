@@ -1142,5 +1142,9 @@ impl SourceControlService for SourceControlServiceThriftImpl {
             repo: thrift::RepoSpecifier,
             params: thrift::RepoUploadPackfileBaseItemParams,
         ) -> Result<thrift::RepoUploadPackfileBaseItemResponse, service::RepoUploadPackfileBaseItemExn>;
+
+        async fn cloud_workspace_info(
+            params: thrift::CloudWorkspaceInfoParams,
+        ) -> Result<thrift::CloudWorkspaceInfoResponse, service::CloudWorkspaceInfoExn>;
     }
 }

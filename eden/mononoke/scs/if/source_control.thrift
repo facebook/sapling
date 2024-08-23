@@ -2148,6 +2148,36 @@ struct CreateGitTagResponse {
   1: binary created_changeset_id;
 }
 
+/// Specifies a commit cloud workspace
+struct WorkspaceSpecifier {
+  /// The repository associated with the workspace.
+  1: RepoSpecifier repo;
+  /// Workspace name (user/<unixname>/<workspace_name>)
+  2: string name;
+} (rust.ord)
+
+/// Information about a commit cloud workspace
+struct WorkspaceInfo {
+  /// Workspace name and the repo it's associated with
+  1: WorkspaceSpecifier specifier;
+  /// Whether the workspace has been archived
+  2: bool is_achived;
+  /// Latest version number of the workspace
+  3: i64 latest_version;
+  /// Latest timestamp the workspace was updated
+  4: i64 latest_timestamp;
+}
+
+struct CloudWorkspaceInfoParams {
+  /// Workspace name and the repo it's associated with
+  1: WorkspaceSpecifier workspace;
+}
+
+struct CloudWorkspaceInfoResponse {
+  /// General info about the workspace, similar to `sl cloud status`
+  1: WorkspaceInfo workspace_info;
+}
+
 /// Exceptions
 
 enum RequestErrorKind {
@@ -2895,6 +2925,18 @@ service SourceControlService extends fb303_core.BaseService {
   CreateGitTagResponse create_git_tag(
     1: RepoSpecifier repo,
     2: CreateGitTagParams params,
+  ) throws (
+    1: RequestError request_error,
+    2: InternalError internal_error,
+    3: OverloadError overload_error,
+  );
+
+  /// Commit Cloud Methods
+  /// ==================
+
+  /// Get heads, bookmarks, remote bookmarks and other relevant info of a commit cloud workspace
+  CloudWorkspaceInfoResponse cloud_workspace_info(
+    1: CloudWorkspaceInfoParams params,
   ) throws (
     1: RequestError request_error,
     2: InternalError internal_error,

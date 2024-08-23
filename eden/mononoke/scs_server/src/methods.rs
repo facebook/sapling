@@ -11,6 +11,7 @@ use source_control as thrift;
 use crate::errors;
 use crate::source_control_impl::SourceControlServiceImpl;
 
+pub(crate) mod cloud;
 pub(crate) mod commit;
 pub(crate) mod commit_lookup_pushrebase_history;
 pub(crate) mod commit_path;

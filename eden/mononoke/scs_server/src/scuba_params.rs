@@ -645,3 +645,9 @@ impl AddScubaParams for thrift::RepoUploadPackfileBaseItemParams {
         scuba.add("param_git_object_id", hex(&self.git_hash));
     }
 }
+
+impl AddScubaParams for thrift::CloudWorkspaceInfoParams {
+    fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
+        scuba.add("param_workspace", self.workspace.name.clone());
+    }
+}
