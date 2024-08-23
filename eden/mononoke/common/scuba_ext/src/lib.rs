@@ -397,3 +397,30 @@ impl MononokeScubaSampleBuilder {
         self.inner.get(key)
     }
 }
+
+pub trait FutureStatsScubaExt {
+    type Output;
+
+    fn log_future_stats(
+        self,
+        scuba: MononokeScubaSampleBuilder,
+        log_tag: &str,
+        msg: impl Into<Option<String>>,
+    ) -> Self::Output;
+}
+
+impl<T> FutureStatsScubaExt for (FutureStats, T) {
+    type Output = T;
+
+    fn log_future_stats(
+        self,
+        mut scuba: MononokeScubaSampleBuilder,
+        log_tag: &str,
+        msg: impl Into<Option<String>>,
+    ) -> T {
+        let (stats, res) = self;
+        scuba.add_future_stats(&stats);
+        scuba.log_with_msg(log_tag, msg);
+        res
+    }
+}
