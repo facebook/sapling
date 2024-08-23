@@ -1,3 +1,4 @@
+load("@fbcode//target_determinator/macros:ci_hint.bzl", "ci_hint")
 load(
     "//eden/mononoke/tests/integration/facebook:fb_manifest_deps.bzl",
     "dott_test",
@@ -21,4 +22,10 @@ dott_test(
         "//eden/mononoke/tools/admin:newadmin",
         "//eden/mononoke/tools/testtool:testtool",
     ],
+)
+
+ci_hint(
+    ci_srcs = ["fbcode/eden/scm/**"],
+    reason = "Those tests should be triggered on hg diffs despite the longer CI distance",
+    target = "mononoke_re_cas",
 )
