@@ -10,7 +10,7 @@ import type {ReactNode} from 'react';
 import type {ExclusiveOr} from 'shared/typeUtils';
 
 import {colors} from '../../../components/theme/tokens.stylex';
-import {debugLogMessageTraffic} from '../ClientToServerAPI';
+import serverApi, {debugLogMessageTraffic} from '../ClientToServerAPI';
 import {Column, Row} from '../ComponentUtils';
 import {DropdownField, DropdownFields} from '../DropdownFields';
 import messageBus from '../MessageBus';
@@ -37,9 +37,11 @@ import {ComponentExplorerButton} from './ComponentExplorer';
 import {readInterestingAtoms, serializeAtomsState} from './getInterestingAtoms';
 import * as stylex from '@stylexjs/stylex';
 import {Badge} from 'isl-components/Badge';
+import {Banner, BannerKind} from 'isl-components/Banner';
 import {Button} from 'isl-components/Button';
 import {Checkbox} from 'isl-components/Checkbox';
 import {InlineErrorBadge} from 'isl-components/ErrorNotice';
+import {Icon} from 'isl-components/Icon';
 import {Subtle} from 'isl-components/Subtle';
 import {Tooltip} from 'isl-components/Tooltip';
 import {atom, useAtom, useAtomValue} from 'jotai';
@@ -78,12 +80,105 @@ export default function DebugToolsMenu({dismiss}: {dismiss: () => unknown}) {
             <ForceDisconnectButton />
             <NopOperationButtons />
           </Row>
+          <Row>
+            <StressTestMessages />
+          </Row>
         </Column>
       </DropdownField>
       <DropdownField title={<T>Component Explorer</T>}>
         <ComponentExplorerButton dismiss={dismiss} />
       </DropdownField>
     </DropdownFields>
+  );
+}
+
+function nextTick(): Promise<void> {
+  return new Promise(res => setTimeout(res, 0));
+}
+
+const stressTestAtom = atom<{progressPct: number | null; mismatches: Array<number>}>({
+  progressPct: null,
+  mismatches: [],
+});
+/** Look for out of order message passing by sending thousands of messages and verifying their ordering */
+function StressTestMessages() {
+  const [result, setResult] = useAtom(stressTestAtom);
+
+  const N = 100_000;
+  // how many messages to send before pausing an async tick
+  const tickEvery = 5_000;
+
+  const ONE_KILOBYTE = 1000;
+  // how large of a string payload to add to each message
+  const payloadSize = 1.0 * ONE_KILOBYTE;
+
+  const enableLogging = false;
+
+  return (
+    <>
+      <Button
+        disabled={result.progressPct != null && result.progressPct !== 100}
+        onClick={async () => {
+          const log = enableLogging ? console.log : () => null;
+
+          setResult({
+            progressPct: null,
+            mismatches: [],
+          });
+          await nextTick();
+
+          log(' ------ Begin Stress ------');
+          const payload = 'a'.repeat(payloadSize);
+
+          let lastReceivedId = 0;
+          const dispose = serverApi.onMessageOfType('stress', ({id, time}) => {
+            log(' < ', id, time);
+            if (id !== lastReceivedId + 1) {
+              setResult(last => ({...last, mismatches: [...last.mismatches, id]}));
+            }
+            lastReceivedId = id;
+
+            setResult(last => ({...last, progressPct: (100 * id) / N}));
+            if (id == N) {
+              dispose.dispose();
+              setResult(last => ({...last, progressPct: 100})); // if last message was out of order, we'd get stuck
+              log(' ------ End Stress ------');
+            }
+          });
+
+          for (let id = 1; id <= N; id++) {
+            if (id % tickEvery === 0) {
+              // eslint-disable-next-line no-await-in-loop
+              await nextTick();
+            }
+            serverApi.postMessage({
+              type: 'stress',
+              id,
+              time: new Date().valueOf(),
+              message: payload,
+            });
+            log(' > ', id);
+          }
+        }}>
+        <T>Message Stress Test</T>
+      </Button>
+      {result.progressPct == null ? null : result.progressPct < 100 ? (
+        <Row style={{fontVariant: 'tabular-nums'}}>
+          <Icon icon="loading" /> {Math.round(result.progressPct)}%
+        </Row>
+      ) : (
+        <Tooltip title={t(`Sent ${N} messages, with ${result.mismatches.length} out of order`)}>
+          {result.mismatches.length === 0 ? (
+            <Icon icon="pass" color="green" />
+          ) : (
+            <Icon icon="error" color="red" />
+          )}
+        </Tooltip>
+      )}
+      {result.mismatches.length === 0 ? null : (
+        <Banner kind={BannerKind.error}>{result.mismatches.join(',')}</Banner>
+      )}
+    </>
   );
 }
 

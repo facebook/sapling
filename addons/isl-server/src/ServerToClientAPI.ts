@@ -49,6 +49,7 @@ export type OutgoingMessage = ServerToClientMessage;
 type GeneralMessage = IncomingMessage &
   (
     | {type: 'heartbeat'}
+    | {type: 'stress'}
     | {type: 'changeCwd'}
     | {type: 'requestRepoInfo'}
     | {type: 'requestApplicationInfo'}
@@ -304,6 +305,10 @@ export default class ServerToClientAPI {
     switch (data.type) {
       case 'heartbeat': {
         this.postMessage({type: 'heartbeat', id: data.id});
+        break;
+      }
+      case 'stress': {
+        this.postMessage(data);
         break;
       }
       case 'track': {

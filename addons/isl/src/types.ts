@@ -700,6 +700,7 @@ export type LocalStorageName =
 
 export type ClientToServerMessage =
   | {type: 'heartbeat'; id: string}
+  | {type: 'stress'; id: number; time: number; message: string}
   | {type: 'refresh'}
   | {type: 'getConfig'; name: ConfigName}
   | {type: 'setConfig'; name: SettableConfigName; value: string}
@@ -793,6 +794,7 @@ export type ServerToClientMessage =
   | BeganFetchingUncommittedChangesEvent
   | FileABugProgressMessage
   | {type: 'heartbeat'; id: string}
+  | {type: 'stress'; id: number; time: number; message: string}
   | {type: 'gotConfig'; name: ConfigName; value: string | undefined}
   | {
       type: 'fetchedGeneratedStatuses';
