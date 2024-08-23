@@ -116,7 +116,7 @@ async fn validate_packetline_writer_large_write() -> anyhow::Result<()> {
         let mut bytes = line.as_bytes();
         while !bytes.is_empty() {
             let written = write_binary_packetline(bytes, &mut writer).await?;
-            bytes = bytes.split_at(written + 1).1;
+            bytes = bytes.split_at(written).1;
         }
     }
     assert_eq!(writer.contents(), expected_output.to_string());
@@ -163,9 +163,7 @@ async fn validate_write_text_packetline_large_write_with_count() -> anyhow::Resu
     let data = vec![b'X'; 70_000];
     let count = write_text_packetline(data.as_slice(), &mut writer).await?;
     // Validate that the reported number of bytes written are the same as the input size
-    // assert_eq!(count, 70_000);
-    // Because write_text_packetline over reports, we see 2 more than the actual value
-    assert_eq!(count, 70_002);
+    assert_eq!(count, 70_000);
     Ok(())
 }
 
@@ -176,9 +174,7 @@ async fn validate_write_binary_packetline_large_write_with_count() -> anyhow::Re
     let data = vec![b'X'; 70_000];
     let count = write_binary_packetline(data.as_slice(), &mut writer).await?;
     // Validate that the reported number of bytes written are the same as the input size
-    // assert_eq!(count, 70_000);
-    // Because write_binary_packetline under reports, we see 2 less than the actual value
-    assert_eq!(count, 69_998);
+    assert_eq!(count, 70_000);
     Ok(())
 }
 

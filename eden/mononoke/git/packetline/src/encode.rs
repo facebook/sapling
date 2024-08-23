@@ -123,15 +123,15 @@ async fn write_packetline(
         let (data, rest) = buf.split_at(buf.len().min(max_data_len));
         written += if is_binary {
             if let Some(channel) = channel {
-                band_to_write(channel, data, out).await?
+                band_to_write(channel, data, out).await? - 1 // Don't count the prefix
             } else {
                 data_to_write(data, out).await?
             }
         } else {
-            text_to_write(data, out).await?
+            text_to_write(data, out).await? - 1 // Don't count the prefix
         };
         // subtract header (and trailing NL) because write-all can't handle writing more than it passes in
-        written -= U16_HEX_BYTES + usize::from(is_binary);
+        written -= U16_HEX_BYTES;
         buf = rest;
     }
     Ok(written)
