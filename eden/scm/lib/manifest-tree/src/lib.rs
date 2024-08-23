@@ -667,6 +667,11 @@ impl TreeManifest {
         Ok(())
     }
 
+    /// Get registered grafts.
+    pub fn diff_grafts(&self) -> &[(RepoPathBuf, RepoPathBuf)] {
+        self.diff_grafts.as_slice()
+    }
+
     /// Map a grafted path back to this manifest's original path.
     /// This is used in conjunction with `graft_for_diff` to translate a grafted path in the
     /// diff result back to the original path, if any.

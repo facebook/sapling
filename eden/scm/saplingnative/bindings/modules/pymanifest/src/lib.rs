@@ -17,6 +17,7 @@ use std::sync::Arc;
 use anyhow::Result;
 use cpython::*;
 use cpython_ext::convert::ImplInto;
+use cpython_ext::convert::Serde;
 use cpython_ext::pyset_add;
 use cpython_ext::pyset_new;
 use cpython_ext::PyNone;
@@ -356,6 +357,15 @@ py_class!(pub class treemanifest |py| {
                 to.to_repo_path().map_pyerr(py)?,
             ).map_pyerr(py)?;
         Ok(PyNone)
+    }
+
+    /// Get registered grafts.
+    def diffgrafts(&self) -> PyResult<Serde<Vec<(RepoPathBuf, RepoPathBuf)>>> {
+        Ok(Serde(self.underlying(py)
+            .read()
+            .diff_grafts()
+            .to_vec()
+        ))
     }
 
     /// Map a grafted path back to this manifest's original path.
