@@ -528,6 +528,16 @@ impl CommitCloud {
         &self,
         cc_ctx: &CommitCloudContext,
     ) -> anyhow::Result<HistoricalVersionsData> {
+        ensure!(
+            WorkspaceVersion::fetch_from_db(&self.storage, &cc_ctx.workspace, &cc_ctx.reponame)
+                .await?
+                .is_some(),
+            format!(
+                "'get_historical_versions' failed: workspace {} does not exist",
+                &cc_ctx.workspace
+            ),
+        );
+
         let args = GetType::GetHistoryVersionTimestamp;
         let results = GenericGet::<WorkspaceHistory>::get(
             &self.storage,
