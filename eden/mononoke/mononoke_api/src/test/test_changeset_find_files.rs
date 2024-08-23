@@ -18,6 +18,7 @@ use justknobs::test_helpers::with_just_knobs_async;
 use justknobs::test_helpers::JustKnobsInMemory;
 use justknobs::test_helpers::KnobVal;
 use maplit::hashmap;
+use mononoke_macros::mononoke;
 use mononoke_types::path::MPath;
 
 use crate::ChangesetFileOrdering;
@@ -539,7 +540,7 @@ async fn commit_find_files_impl(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn commit_find_files_with_bssm_v3(fb: FacebookInit) {
     let justknobs = JustKnobsInMemory::new(hashmap! {
         "scm/mononoke:enable_bssm_v3".to_string() => KnobVal::Bool(true),
@@ -551,7 +552,7 @@ async fn commit_find_files_with_bssm_v3(fb: FacebookInit) {
         .unwrap();
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn commit_find_files_without_bssm(fb: FacebookInit) {
     let justknobs = JustKnobsInMemory::new(hashmap! {
         "scm/mononoke:enable_bssm_v3".to_string() => KnobVal::Bool(false),

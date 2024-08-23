@@ -19,6 +19,7 @@ use fixtures::Linear;
 use fixtures::ManyFilesDirs;
 use fixtures::TestRepoFixture;
 use futures::try_join;
+use mononoke_macros::mononoke;
 use mononoke_types::hash::Sha256;
 use mononoke_types::path::MPath;
 use mononoke_types::DerivableType;
@@ -40,7 +41,7 @@ use crate::MononokeRepo;
 use crate::RepoContext;
 use crate::StoreRequest;
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_create_commit(fb: FacebookInit) -> Result<(), Error> {
     create_commit(fb, DerivableType::SkeletonManifests).await?;
 
@@ -211,7 +212,7 @@ async fn validate_unnecessary_derived_data_is_not_derived<R: MononokeRepo>(
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn create_commit_bad_changes(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let mononoke = Mononoke::new_test(vec![(
@@ -325,7 +326,7 @@ async fn create_commit_bad_changes(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_create_merge_commit(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let mononoke =
@@ -406,7 +407,7 @@ async fn test_create_merge_commit(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_merge_commit_parent_file_conflict(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let mononoke =
@@ -503,7 +504,7 @@ async fn test_merge_commit_parent_file_conflict(fb: FacebookInit) -> Result<(), 
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_merge_commit_parent_tree_file_conflict(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let mononoke =

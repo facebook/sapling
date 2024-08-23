@@ -17,6 +17,7 @@ use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::stream::TryStreamExt;
 use maplit::hashset;
+use mononoke_macros::mononoke;
 use mononoke_types::DateTime;
 use tests_utils::CreateCommitContext;
 
@@ -200,7 +201,7 @@ async fn init_repo(
     Ok((repo_ctx, changesets))
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn commit_path_history(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let (repo, changesets) = init_repo(&ctx).await?;
@@ -385,7 +386,7 @@ async fn assert_history(
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn commit_history(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let (repo, changesets) = init_repo(&ctx).await?;
@@ -594,7 +595,7 @@ async fn commit_history(fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn commit_linear_history(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let (repo, changesets) = init_repo(&ctx).await?;

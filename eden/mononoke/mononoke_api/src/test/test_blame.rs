@@ -11,6 +11,7 @@ use std::sync::Arc;
 use anyhow::Result;
 use context::CoreContext;
 use fbinit::FacebookInit;
+use mononoke_macros::mononoke;
 use mononoke_types::DateTime;
 use mononoke_types::NonRootMPath;
 use mutable_renames::MutableRenameEntry;
@@ -131,7 +132,7 @@ async fn init_repo(
     Ok((repo_ctx, changesets))
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_immutable_blame(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let (repo, changesets) = init_repo(&ctx).await?;
@@ -204,7 +205,7 @@ async fn add_mutable_rename<R: MononokeRepo>(
         .await
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_linear_mutable_blame(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let (repo, changesets) = init_repo(&ctx).await?;
@@ -303,7 +304,7 @@ async fn test_linear_mutable_blame(fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_merge_commit_mutable_blame(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let (repo, changesets) = init_repo(&ctx).await?;
@@ -459,7 +460,7 @@ async fn test_merge_commit_mutable_blame(fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_two_entry_mutable_blame(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let (repo, changesets) = init_repo(&ctx).await?;

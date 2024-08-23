@@ -17,6 +17,7 @@ use fbinit::FacebookInit;
 use fixtures::Linear;
 use fixtures::TestRepoFixture;
 use maplit::btreemap;
+use mononoke_macros::mononoke;
 use mononoke_types::path::MPath;
 
 use crate::ChangesetContext;
@@ -129,7 +130,7 @@ async fn compare_create_stack<R: MononokeRepo>(
     }
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_create_commit_stack(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let mononoke = Mononoke::new_test(vec![
@@ -215,7 +216,7 @@ async fn test_create_commit_stack(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_create_commit_stack_delete_files(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let mononoke = Mononoke::new_test(vec![
@@ -331,7 +332,7 @@ async fn test_create_commit_stack_delete_files(fb: FacebookInit) -> Result<(), E
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_create_commit_stack_path_conflicts(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let mononoke = Mononoke::new_test(vec![
@@ -404,7 +405,7 @@ async fn test_create_commit_stack_path_conflicts(fb: FacebookInit) -> Result<(),
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_create_commit_stack_copy_from(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let mononoke = Mononoke::new_test(vec![

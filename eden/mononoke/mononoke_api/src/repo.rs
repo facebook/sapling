@@ -1800,7 +1800,7 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_try_find_child_merge(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let repo: Repo = MergeEven::get_repo(fb).await;

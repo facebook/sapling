@@ -32,6 +32,7 @@ use live_commit_sync_config::TestLiveCommitSyncConfigSource;
 use maplit::hashmap;
 use metaconfig_types::CommitSyncConfigVersion;
 use metaconfig_types::DefaultSmallToLargeCommitSyncPathAction;
+use mononoke_macros::mononoke;
 use mononoke_types::hash::Blake3;
 use mononoke_types::hash::GitSha1;
 use mononoke_types::hash::RichGitSha1;
@@ -64,7 +65,7 @@ use crate::TreeEntry;
 use crate::TreeId;
 use crate::XRepoLookupSyncBehaviour;
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn commit_info_by_hash(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let mononoke =
@@ -93,7 +94,7 @@ async fn commit_info_by_hash(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn commit_info_by_hg_hash(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let mononoke =
@@ -124,7 +125,7 @@ async fn commit_info_by_hg_hash(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn commit_info_by_bookmark(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let mononoke =
@@ -157,7 +158,7 @@ async fn commit_info_by_bookmark(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn commit_hg_changeset_ids(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let mononoke =
@@ -192,7 +193,7 @@ async fn commit_hg_changeset_ids(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn commit_is_ancestor_of(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let mononoke =
@@ -250,7 +251,7 @@ async fn commit_is_ancestor_of(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn commit_path_exists_and_type(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let mononoke = Mononoke::new_test(vec![(
@@ -290,7 +291,7 @@ async fn commit_path_exists_and_type(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn tree_list(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let mononoke = Mononoke::new_test(vec![(
@@ -412,7 +413,7 @@ async fn tree_list(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn file_metadata(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let mononoke = Mononoke::new_test(vec![(
@@ -505,7 +506,7 @@ async fn file_metadata(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn file_contents(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let mononoke = Mononoke::new_test(vec![(
@@ -535,7 +536,7 @@ async fn file_contents(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn xrepo_commit_lookup_simple(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let (mononoke, _cfg_src) = init_x_repo(&ctx).await?;
@@ -591,7 +592,7 @@ async fn xrepo_commit_lookup_simple(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn xrepo_commit_lookup_draft(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let (mononoke, _cfg_src) = init_x_repo(&ctx).await?;
@@ -663,7 +664,7 @@ async fn xrepo_commit_lookup_draft(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn xrepo_commit_lookup_public(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let (mononoke, _cfg_src) = init_x_repo(&ctx).await?;
@@ -735,7 +736,7 @@ async fn xrepo_commit_lookup_public(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn xrepo_commit_lookup_config_changing_live(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let (mononoke, cfg_src) = init_x_repo(&ctx).await?;
@@ -883,7 +884,7 @@ async fn init_x_repo(
     Ok((mononoke, lv_cfg_src))
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn resolve_changeset_id_prefix(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let mononoke =

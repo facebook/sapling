@@ -15,6 +15,7 @@ use fbinit::FacebookInit;
 use fixtures::ManyFilesDirs;
 use fixtures::TestRepoFixture;
 use maplit::btreeset;
+use mononoke_macros::mononoke;
 use mononoke_types::path::MPath;
 use pretty_assertions::assert_eq;
 use tests_utils::CreateCommitContext;
@@ -28,7 +29,7 @@ use crate::CoreContext;
 use crate::HgChangesetId;
 use crate::Mononoke;
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_diff_with_moves(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let repo: Repo = test_repo_factory::build_empty(fb).await?;
@@ -77,7 +78,7 @@ async fn test_diff_with_moves(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_diff_with_multiple_copies(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let repo: Repo = test_repo_factory::build_empty(fb).await?;
@@ -131,7 +132,7 @@ async fn test_diff_with_multiple_copies(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_diff_with_multiple_moves(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let repo: Repo = test_repo_factory::build_empty(fb).await?;
@@ -208,7 +209,7 @@ fn check_root_dir_diff<R: MononokeRepo>(
     }
     Ok(())
 }
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_diff_with_dirs(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let mononoke = Mononoke::new_test(vec![(
@@ -304,7 +305,7 @@ fn check_diff_paths<R: MononokeRepo>(diff_ctxs: &[ChangesetPathDiffContext<R>], 
     assert_eq!(diff_paths, paths,);
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_ordered_diff(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let repo: Repo = test_repo_factory::build_empty(fb).await?;
@@ -514,7 +515,7 @@ async fn test_ordered_diff(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_ordered_root_diff(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let repo: Repo = test_repo_factory::build_empty(fb).await?;

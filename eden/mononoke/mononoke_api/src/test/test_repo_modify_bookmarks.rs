@@ -19,6 +19,7 @@ use bookmarks::Freshness;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::stream::TryStreamExt;
+use mononoke_macros::mononoke;
 use mononoke_types::ChangesetId;
 use tests_utils::drawdag::create_from_dag;
 
@@ -53,7 +54,7 @@ async fn init_repo(
     Ok((repo_ctx, changesets))
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn create_bookmark(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let (repo_ctx, changesets) = init_repo(&ctx).await?;
@@ -123,7 +124,7 @@ async fn create_bookmark(fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn move_bookmark(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let (repo_ctx, changesets) = init_repo(&ctx).await?;
@@ -196,7 +197,7 @@ async fn move_bookmark(fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn delete_bookmark(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let (repo_ctx, changesets) = init_repo(&ctx).await?;

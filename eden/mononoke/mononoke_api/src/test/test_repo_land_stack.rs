@@ -22,6 +22,7 @@ use fbinit::FacebookInit;
 use futures::stream::TryStreamExt;
 use hooks::PushAuthoredBy::User;
 use maplit::hashset;
+use mononoke_macros::mononoke;
 use mononoke_types::ChangesetId;
 use tests_utils::drawdag::create_from_dag;
 
@@ -56,7 +57,7 @@ async fn init_repo(
     Ok((repo_ctx, changesets))
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn land_stack(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let (repo, changesets) = init_repo(&ctx).await?;

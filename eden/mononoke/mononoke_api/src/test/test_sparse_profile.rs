@@ -20,6 +20,7 @@ use maplit::hashmap;
 use maplit::hashset;
 use mercurial_types::HgChangesetId;
 use metaconfig_types::SparseProfilesConfig;
+use mononoke_macros::mononoke;
 use mononoke_types::ChangesetId;
 use mononoke_types::NonRootMPath;
 use pathmatcher::Matcher;
@@ -123,7 +124,7 @@ fn mock_default_sparse_monitoring() -> Result<SparseProfileMonitoring> {
     )
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_sparse_monitoring_config(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let mononoke = Mononoke::new_test(vec![(
@@ -223,7 +224,7 @@ async fn test_sparse_monitoring_config(fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn sparse_profile_parsing(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let mononoke = Mononoke::new_test(vec![(
@@ -256,7 +257,7 @@ async fn sparse_profile_parsing(fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn sparse_profile_size(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let mononoke = Mononoke::new_test(vec![(
@@ -324,7 +325,7 @@ async fn sparse_profile_size(fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn multiple_sparse_profile_sizes(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let mononoke = Mononoke::new_test(vec![(
@@ -361,7 +362,7 @@ async fn multiple_sparse_profile_sizes(fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn sparse_profile_delta(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let mononoke = Mononoke::new_test(vec![(
@@ -531,7 +532,7 @@ async fn sparse_profile_delta(fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn sparse_profile_config_change(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let mononoke = Mononoke::new_test(vec![(
@@ -646,7 +647,7 @@ async fn sparse_profile_config_change(fb: FacebookInit) -> Result<()> {
 }
 
 // add test to analyse external profile config and it's change.
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_sparse_external_config(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let mononoke = Mononoke::new_test(vec![(
