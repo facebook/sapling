@@ -898,8 +898,11 @@ void EdenServer::unloadInodes() {
       auto& rootInode = mountHandle.getRootInode();
       auto unloaded = rootInode->unloadChildrenLastAccessedBefore(cutoff_ts);
       if (unloaded) {
-        XLOG(INFO) << "Unloaded " << unloaded
-                   << " inodes in background from mount " << mount.getPath();
+        XLOGF(
+            DBG6,
+            "Unloaded {} inodes in background from mount {}",
+            unloaded,
+            mount.getPath());
       }
       mount.getInodeMap()->recordPeriodicInodeUnload(unloaded);
     }
