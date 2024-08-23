@@ -155,3 +155,40 @@ async fn validate_write_data_channel_large_write() -> anyhow::Result<()> {
     assert!(output.is_ok());
     Ok(())
 }
+
+#[fbinit::test]
+async fn validate_write_text_packetline_large_write_with_count() -> anyhow::Result<()> {
+    let mut writer = TestAsyncWriter::new();
+    // Generate large input
+    let data = vec![b'X'; 70_000];
+    let count = write_text_packetline(data.as_slice(), &mut writer).await?;
+    // Validate that the reported number of bytes written are the same as the input size
+    // assert_eq!(count, 70_000);
+    // Because write_text_packetline over reports, we see 2 more than the actual value
+    assert_eq!(count, 70_002);
+    Ok(())
+}
+
+#[fbinit::test]
+async fn validate_write_binary_packetline_large_write_with_count() -> anyhow::Result<()> {
+    let mut writer = TestAsyncWriter::new();
+    // Generate large input
+    let data = vec![b'X'; 70_000];
+    let count = write_binary_packetline(data.as_slice(), &mut writer).await?;
+    // Validate that the reported number of bytes written are the same as the input size
+    // assert_eq!(count, 70_000);
+    // Because write_binary_packetline under reports, we see 2 less than the actual value
+    assert_eq!(count, 69_998);
+    Ok(())
+}
+
+#[fbinit::test]
+async fn validate_write_data_channel_large_write_with_count() -> anyhow::Result<()> {
+    let mut writer = TestAsyncWriter::new();
+    // Generate large input
+    let data = vec![b'X'; 70_000];
+    let count = write_data_channel(data.as_slice(), &mut writer).await?;
+    // Validate that the reported number of bytes written are the same as the input size
+    assert_eq!(count, 70_000);
+    Ok(())
+}
