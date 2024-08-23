@@ -7,10 +7,8 @@
 
 mod commit_rewrite;
 mod git_repo;
-mod logging;
 
 mod partial_commit_graph;
 
 pub use crate::commit_rewrite::*;
-pub use crate::logging::*;
 pub use crate::partial_commit_graph::*;
