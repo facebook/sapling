@@ -73,6 +73,7 @@ use rate_limiting::Metric;
 use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataRef;
+use scuba_ext::FutureStatsScubaExt;
 use sha1::Digest;
 use sha1::Sha1;
 use slog::debug;
@@ -305,7 +306,7 @@ async fn call_difference_of_union_of_ancestors_revset(
             }
         });
 
-    let (stats, res) = async move {
+    let res = async move {
         if let Some(limit) = limit {
             let res: Vec<_> = nodes_to_send
                 .take(limit.try_into().unwrap())
@@ -321,10 +322,8 @@ async fn call_difference_of_union_of_ancestors_revset(
         }
     }
     .try_timed()
-    .await?;
-
-    scuba.add_future_stats(&stats);
-    scuba.log_with_msg("call_difference_of_union_of_ancestors_revset", None);
+    .await?
+    .log_future_stats(scuba, "call_difference_of_union_of_ancestors_revset", None);
 
     Ok(res)
 }

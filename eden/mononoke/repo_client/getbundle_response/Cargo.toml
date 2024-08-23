@@ -33,6 +33,7 @@ phases = { version = "0.1.0", path = "../../phases" }
 rate_limiting = { version = "0.1.0", path = "../../rate_limiting" }
 repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
 repo_derived_data = { version = "0.1.0", path = "../../repo_attributes/repo_derived_data" }
+scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
 sha1 = "0.10.5"
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 thiserror = "1.0.49"

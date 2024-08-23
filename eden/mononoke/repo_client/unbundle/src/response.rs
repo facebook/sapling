@@ -27,6 +27,7 @@ use mercurial_bundles::PartId;
 use mercurial_derivation::DeriveHgChangeset;
 use metaconfig_types::PushrebaseParams;
 use mononoke_types::ChangesetId;
+use scuba_ext::FutureStatsScubaExt;
 
 use crate::CommonHeads;
 use crate::Repo;
@@ -146,8 +147,8 @@ impl UnbundleResponse {
             false => None,
         };
 
-        let mut scuba_logger = ctx.scuba().clone();
-        let (stats, response_bytes) = async move {
+        let scuba_logger = ctx.scuba().clone();
+        let response_bytes = async move {
             let (maybe_onto_head, pushrebased_hg_rev) =
                 try_join(maybe_onto_head, pushrebased_hg_rev).await?;
 
@@ -179,11 +180,8 @@ impl UnbundleResponse {
         }
         .try_timed()
         .await
-        .context("While preparing pushrebase response")?;
-
-        scuba_logger
-            .add_future_stats(&stats)
-            .log_with_msg("Pushrebase: prepared the response", None);
+        .context("While preparing pushrebase response")?
+        .log_future_stats(scuba_logger, "Pushrebase: prepared the response", None);
         Ok(response_bytes)
     }
 

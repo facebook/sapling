@@ -26,6 +26,7 @@ use mononoke_types::path::MPath;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileUnodeId;
 use mononoke_types::NonRootMPath;
+use scuba_ext::FutureStatsScubaExt;
 use unodes::RootUnodeManifestId;
 
 use crate::common::find_possible_mutable_ancestors;
@@ -190,13 +191,10 @@ pub async fn blame(
         .into_optional_non_root_path()
         .ok_or_else(|| anyhow!("Blame is not available for directory: `/`"))?;
     if follow_mutable_file_history {
-        let (stats, result) = fetch_mutable_blame(ctx, repo, csid, &path, &mut HashSet::new())
+        fetch_mutable_blame(ctx, repo, csid, &path, &mut HashSet::new())
             .timed()
-            .await;
-        let mut scuba = ctx.scuba().clone();
-        scuba.add_future_stats(&stats);
-        scuba.log_with_msg("Computed mutable blame", None);
-        result
+            .await
+            .log_future_stats(ctx.scuba().clone(), "Computed mutable blame", None)
     } else {
         fetch_immutable_blame(ctx, repo, csid, &path).await
     }

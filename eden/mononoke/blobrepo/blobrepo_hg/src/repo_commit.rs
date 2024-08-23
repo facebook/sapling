@@ -53,6 +53,7 @@ use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreRef;
+use scuba_ext::FutureStatsScubaExt;
 use scuba_ext::MononokeScubaSampleBuilder;
 use stats::prelude::*;
 
@@ -319,7 +320,7 @@ impl UploadEntries {
 
         let required_checks = {
             async move {
-                let (stats, ()) = find_intersection_of_diffs(
+                find_intersection_of_diffs(
                     ctx.clone(),
                     this.blobstore.clone().boxed(),
                     mf_id,
@@ -338,11 +339,8 @@ impl UploadEntries {
                     }
                 })
                 .try_timed()
-                .await?;
-
-                this.scuba_logger()
-                    .add_future_stats(&stats)
-                    .log_with_msg("Required checks", None);
+                .await?
+                .log_future_stats(this.scuba_logger(), "Required checks", None);
 
                 Ok::<_, Error>(())
             }
@@ -370,14 +368,12 @@ impl UploadEntries {
 
             STATS::finalize_parent.add_value(checks.len() as i64);
 
-            let (stats, ()) = stream::iter(checks)
+            stream::iter(checks)
                 .map(Ok)
                 .try_for_each_concurrent(100, |f| f)
                 .try_timed()
-                .await?;
-            this.scuba_logger()
-                .add_future_stats(&stats)
-                .log_with_msg("Parent checks", None);
+                .await?
+                .log_future_stats(this.scuba_logger(), "Parent checks", None);
             Ok(())
         };
 
@@ -443,15 +439,10 @@ pub async fn process_entries<'a>(
             .await
     };
 
-    let (stats, (root_hash, ())) = future::try_join(root_manifest_fut, child_entries_fut)
+    let (root_hash, ()) = future::try_join(root_manifest_fut, child_entries_fut)
         .try_timed()
-        .await?;
-
-    entry_processor
-        .scuba_logger
-        .clone()
-        .add_future_stats(&stats)
-        .log_with_msg("Upload entries", None);
+        .await?
+        .log_future_stats(entry_processor.scuba_logger.clone(), "Upload entries", None);
 
     match root_hash {
         None => Ok(HgManifestId::new(NULL_HASH)),
@@ -497,7 +488,7 @@ pub fn extract_parents_complete(
 }
 
 pub async fn handle_parents(
-    mut scuba_logger: MononokeScubaSampleBuilder,
+    scuba_logger: MononokeScubaSampleBuilder,
     p1: Option<ChangesetHandle>,
     p2: Option<ChangesetHandle>,
 ) -> Result<(HgParents, Vec<HgManifestId>, Vec<ChangesetId>), Error> {
@@ -520,7 +511,7 @@ pub async fn handle_parents(
     //  |\
     //  ~ ~
     //
-    let (stats, result) = async move {
+    let result = async move {
         let mut bonsai_parents = Vec::new();
         let mut parent_manifest_hashes = Vec::new();
         let p1_hash = match p1 {
@@ -545,10 +536,8 @@ pub async fn handle_parents(
         Ok::<_, Error>((parents, parent_manifest_hashes, bonsai_parents))
     }
     .try_timed()
-    .await?;
-    scuba_logger
-        .add_future_stats(&stats)
-        .log_with_msg("Wait for parents ready", None);
+    .await?
+    .log_future_stats(scuba_logger, "Wait for parents ready", None);
     Ok(result)
 }
 

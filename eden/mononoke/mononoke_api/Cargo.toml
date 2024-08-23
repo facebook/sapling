@@ -90,6 +90,7 @@ repo_permission_checker = { version = "0.1.0", path = "../repo_attributes/repo_p
 repo_sparse_profiles = { version = "0.1.0", path = "../repo_attributes/repo_sparse_profiles" }
 repo_stats_logger = { version = "0.1.0", path = "../repo_stats_logger" }
 repo_update_logger = { version = "0.1.0", path = "../features/repo_update_logger" }
+scuba_ext = { version = "0.1.0", path = "../common/scuba_ext" }
 skeleton_manifest = { version = "0.1.0", path = "../derived_data/skeleton_manifest" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 smallvec = { version = "1.6.1", features = ["serde", "specialization", "union"] }

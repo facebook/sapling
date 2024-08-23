@@ -81,6 +81,7 @@ rust_library(
         "//eden/mononoke/commit_rewriting/live_commit_sync_config:live_commit_sync_config",
         "//eden/mononoke/commit_rewriting/synced_commit_mapping:synced_commit_mapping",
         "//eden/mononoke/common/bounded_traversal:bounded_traversal",
+        "//eden/mononoke/common/scuba_ext:scuba_ext",
         "//eden/mononoke/derived_data:basename_suffix_skeleton_manifest_v3",
         "//eden/mononoke/derived_data:blame",
         "//eden/mononoke/derived_data:bulk_derivation",

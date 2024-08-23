@@ -31,6 +31,7 @@ mutable_renames = { version = "0.1.0", path = "../../mutable_renames" }
 repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
 repo_derived_data = { version = "0.1.0", path = "../../repo_attributes/repo_derived_data" }
 repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity" }
+scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 thiserror = "1.0.49"
 time_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

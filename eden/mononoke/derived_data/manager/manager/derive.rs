@@ -41,6 +41,7 @@ use futures_stats::TimedTryFutureExt;
 use lock_ext::LockExt;
 use mononoke_types::ChangesetId;
 use mononoke_types::DerivableType;
+use scuba_ext::FutureStatsScubaExt;
 use slog::debug;
 
 use super::DerivationAssignment;
@@ -829,10 +830,11 @@ impl DerivedDataManager {
 
             // Flush the blobstore.  If it has been set up to cache writes, these
             // must be flushed before we write the mapping.
-            let (stats, _) = derivation_ctx.flush(ctx).try_timed().await?;
-            scuba
-                .add_future_stats(&stats)
-                .log_with_msg("Flushed derived blobs", None);
+            derivation_ctx
+                .flush(ctx)
+                .try_timed()
+                .await?
+                .log_future_stats(scuba.clone(), "Flushed derived blobs", None);
 
             let mut derivation_ctx = self.derivation_context(rederivation.clone());
             derivation_ctx.enable_write_batching();
