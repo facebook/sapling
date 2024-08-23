@@ -979,7 +979,7 @@ export default class ServerToClientAPI {
         const args = ['url', '--rev', data.revset];
         // validate that the path is a valid file in repo
         if (data.path != null && absolutePathForFileInRepo(data.path, repo) != null) {
-          args.push(data.path);
+          args.push(`path:${data.path}`);
         }
         repo
           .runCommand(args, 'RepoUrlCommand', ctx)
