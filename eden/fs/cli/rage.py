@@ -319,8 +319,15 @@ def print_diagnostic_info(
     print_third_party_vscode_extensions(instance, out)
 
     print_env_variables(out)
-
     print_system_mount_table(out)
+
+    section_title("Disk Space Usage:", out)
+    paste_output(
+        lambda sink: print_disk_space_usage(sink),
+        processor,
+        out,
+        dry_run,
+    )
 
     print_system_load(out)
 
@@ -606,6 +613,17 @@ def print_system_mount_table(out: IO[bytes]) -> None:
         out.write(output)
     except Exception as e:
         out.write(f"Error printing system mount table: {e}\n".encode())
+
+
+def print_disk_space_usage(out: IO[bytes]) -> None:
+
+    section_title("Disk space usage:", out)
+    cmd = ["eden", "du", "--fast"]
+    try:
+        output = subprocess.check_output(cmd)
+        out.write(output)
+    except Exception as e:
+        out.write(f"Error printing {cmd}: {e}\n".encode())
 
 
 def print_system_load(out: IO[bytes]) -> None:
