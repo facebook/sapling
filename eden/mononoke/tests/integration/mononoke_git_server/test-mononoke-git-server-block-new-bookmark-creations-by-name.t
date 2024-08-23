@@ -26,6 +26,7 @@
   > config_json='''{
   > "blocked_bookmarks": ".*this_is_blocked.*"
   > }'''
+  > bypass_pushvar="x-git-allow-all-bookmarks=1"
   > EOF
 
 # Setup git repository
@@ -95,3 +96,8 @@
   For more information about hooks and bypassing, refer https://fburl.com/wiki/mb4wtk1j)
   error: failed to push some refs to 'https://localhost:$LOCAL_PORT/repos/git/ro/repo.git'
   [1]
+
+# This push succeeds
+  $ git_client -c http.extraHeader="x-git-allow-all-bookmarks: 1" push origin --all
+  To https://localhost:$LOCAL_PORT/repos/git/ro/repo.git
+   * [new branch]      this_is_blocked -> this_is_blocked
