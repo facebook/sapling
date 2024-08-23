@@ -28,7 +28,6 @@ use pushredirect_enable::PushRedirectEnableState;
 use slog::error;
 use thiserror::Error;
 
-pub const CONFIGERATOR_PUSHREDIRECT_ENABLE: &str = "scm/mononoke/pushredirect/enable";
 pub const CONFIGERATOR_ALL_COMMIT_SYNC_CONFIGS: &str = "scm/mononoke/repos/commitsyncmaps/all";
 
 #[derive(Debug, Eq, Error, PartialEq)]
