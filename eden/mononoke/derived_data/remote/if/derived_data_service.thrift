@@ -77,6 +77,7 @@ union DerivedData {
   17: DerivedDataBssmV3 bssm_v3;
   18: DerivedDataHgAugmentedManifest hg_augmented_manifest;
   19: DerivedDataGitDeltaManifestV2 git_delta_manifest_v2;
+  20: DerivedDataSkeletonManifestV2 skeleton_manifest_v2;
 }
 
 union DerivedDataFsnode {
@@ -124,6 +125,10 @@ union DerivedDataDeletedManifestV2 {
 
 union DerivedDataBssmV3 {
   1: id.BssmV3DirectoryId root_bssm_v3_directory_id;
+}
+
+union DerivedDataSkeletonManifestV2 {
+  1: id.SkeletonManifestV2Id root_skeleton_manifest_v2_id;
 }
 
 union DerivedDataTestManifest {

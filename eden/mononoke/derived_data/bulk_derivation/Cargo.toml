@@ -27,6 +27,7 @@ git_types = { version = "0.1.0", path = "../../git/git_types" }
 mercurial_derivation = { version = "0.1.0", path = "../mercurial_derivation" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 skeleton_manifest = { version = "0.1.0", path = "../skeleton_manifest" }
+skeleton_manifest_v2 = { version = "0.1.0", path = "../skeleton_manifest_v2" }
 test_manifest = { version = "0.1.0", path = "../test_manifest" }
 test_sharded_manifest = { version = "0.1.0", path = "../test_sharded_manifest" }
 unodes = { version = "0.1.0", path = "../unodes" }

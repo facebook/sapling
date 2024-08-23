@@ -33,4 +33,5 @@ enum DerivedDataType {
   BSSM_V3 = 17,
   HG_AUGMENTED_MANIFEST = 18,
   GIT_DELTA_MANIFEST_V2 = 19,
+  SKELETON_MANIFEST_V2 = 20,
 } (rust.exhaustive)

@@ -35,6 +35,7 @@ use mercurial_derivation::MappedHgChangesetId;
 use mercurial_derivation::RootHgAugmentedManifestId;
 use mononoke_types::ChangesetId;
 use skeleton_manifest::RootSkeletonManifestId;
+use skeleton_manifest_v2::RootSkeletonManifestV2Id;
 use test_manifest::RootTestManifestDirectory;
 use test_sharded_manifest::RootTestShardedManifestDirectory;
 use unodes::RootUnodeManifestId;
@@ -311,6 +312,9 @@ fn manager_for_type(
         }
         DerivableType::SkeletonManifests => {
             Arc::new(SingleTypeManager::<RootSkeletonManifestId>::new(manager))
+        }
+        DerivableType::SkeletonManifestsV2 => {
+            Arc::new(SingleTypeManager::<RootSkeletonManifestV2Id>::new(manager))
         }
         DerivableType::ChangesetInfo => Arc::new(SingleTypeManager::<ChangesetInfo>::new(manager)),
         DerivableType::GitTrees => Arc::new(SingleTypeManager::<TreeHandle>::new(manager)),

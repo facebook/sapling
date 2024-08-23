@@ -70,6 +70,7 @@ use repo_identity::ArcRepoIdentity;
 use repo_identity::RepoIdentity;
 use repo_identity::RepoIdentityRef;
 use skeleton_manifest::RootSkeletonManifestId;
+use skeleton_manifest_v2::RootSkeletonManifestV2Id;
 use slog::debug;
 use slog::info;
 use slog::warn;
@@ -257,6 +258,11 @@ impl WarmBookmarksCacheBuilder {
             )),
             DerivableType::SkeletonManifests => Some(create_derived_data_warmer::<
                 RootSkeletonManifestId,
+            >(
+                &self.ctx, repo_derived_data.clone()
+            )),
+            DerivableType::SkeletonManifestsV2 => Some(create_derived_data_warmer::<
+                RootSkeletonManifestV2Id,
             >(
                 &self.ctx, repo_derived_data.clone()
             )),

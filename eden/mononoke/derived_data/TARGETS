@@ -56,6 +56,7 @@ rust_library(
         ":fastlog",
         ":fsnodes",
         ":skeleton_manifest",
+        ":skeleton_manifest_v2",
         ":test_manifest",
         ":test_sharded_manifest",
         ":unodes",
@@ -457,6 +458,22 @@ rust_library(
         "//eden/mononoke/derived_data:derived_data_manager",
         "//eden/mononoke/derived_data/remote/if:derived_data_service_if-rust",
         "//eden/mononoke/manifest:manifest",
+        "//eden/mononoke/mononoke_types:mononoke_types",
+        "//eden/mononoke/server/context:context",
+    ],
+)
+
+rust_library(
+    name = "skeleton_manifest_v2",
+    srcs = glob(["skeleton_manifest_v2/*.rs"]),
+    autocargo = {"cargo_toml_dir": "skeleton_manifest_v2"},
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:async-trait",
+        "//eden/mononoke/blobstore:blobstore",
+        "//eden/mononoke/derived_data:derived_data_manager",
+        "//eden/mononoke/derived_data:skeleton_manifest",
+        "//eden/mononoke/derived_data/remote/if:derived_data_service_if-rust",
         "//eden/mononoke/mononoke_types:mononoke_types",
         "//eden/mononoke/server/context:context",
     ],
