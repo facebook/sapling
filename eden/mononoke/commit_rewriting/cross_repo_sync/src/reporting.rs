@@ -10,8 +10,6 @@ use std::time::Duration;
 
 use anyhow::Error;
 use context::CoreContext;
-use futures::Future;
-use futures_stats::TimedFutureExt;
 use mononoke_types::ChangesetId;
 use scuba_ext::MononokeScubaSampleBuilder;
 use scuba_ext::ScubaValue;
@@ -119,22 +117,6 @@ pub fn get_scuba_sample(
         .add(TARGET_REPO, target_repo.as_ref().to_string());
 
     scuba_sample
-}
-
-pub async fn run_and_log_stats_to_scuba<R, S>(
-    ctx: &CoreContext,
-    log_tag: &str,
-    msg: S,
-    fut: impl Future<Output = R>,
-) -> R
-where
-    S: Into<Option<String>>,
-{
-    let (stats, result) = fut.timed().await;
-    let mut scuba = ctx.scuba().clone();
-    scuba.add_future_stats(&stats);
-    scuba.log_with_msg(log_tag, msg);
-    result
 }
 
 // Helpers to log both to terminal and to scuba

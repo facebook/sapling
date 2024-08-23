@@ -25,6 +25,7 @@ use either::Either::*;
 use futures::stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
+use futures_stats::TimedFutureExt;
 use manifest::BonsaiDiffFileChange;
 use maplit::hashmap;
 use mononoke_types::hash::GitSha1;
@@ -39,6 +40,7 @@ use mononoke_types::GitLfs;
 use mononoke_types::NonRootMPath;
 use mononoke_types::RepositoryId;
 use mononoke_types::TrackedFileChange;
+use scuba_ext::FutureStatsScubaExt;
 use sorted_vector_map::SortedVectorMap;
 
 use crate::commit_syncers_lib::SubmoduleExpansionContentIds;
@@ -53,7 +55,6 @@ use crate::git_submodules::utils::is_path_git_submodule;
 use crate::git_submodules::utils::list_non_submodule_files_under;
 use crate::git_submodules::utils::submodule_diff;
 use crate::reporting::log_debug;
-use crate::reporting::run_and_log_stats_to_scuba;
 use crate::types::Repo;
 
 /// Wrapper to differentiate submodule paths from file changes paths at the
@@ -136,22 +137,21 @@ pub(crate) async fn expand_all_git_submodule_file_changes<'a, R: Repo>(
             async move {
                 match &fc {
                     FileChange::Change(tfc) => match &tfc.file_type() {
-                        FileType::GitSubmodule => {
-                            run_and_log_stats_to_scuba(
-                                ctx,
-                                "Expand git submodule file change",
-                                format!("submodule_file_path: {p}"),
-                                expand_git_submodule_file_change(
-                                    ctx,
-                                    small_repo,
-                                    sm_exp_data.clone(),
-                                    parents,
-                                    p,
-                                    tfc.content_id(),
-                                ),
-                            )
-                            .await
-                        }
+                        FileType::GitSubmodule => expand_git_submodule_file_change(
+                            ctx,
+                            small_repo,
+                            sm_exp_data.clone(),
+                            parents,
+                            p.clone(),
+                            tfc.content_id(),
+                        )
+                        .timed()
+                        .await
+                        .log_future_stats(
+                            ctx.scuba().clone(),
+                            "Expand git submodule file change",
+                            format!("submodule_file_path: {p}"),
+                        ),
                         _ => {
                             if sm_exp_data.submodule_deps.contains_key(&p) {
                                 // A normal file is replacing a submodule in the
@@ -740,13 +740,15 @@ async fn handle_submodule_deletion<'a, R: Repo>(
         }
 
         // This is a submodule file, so delete its entire expanded directory.
-        let generated_deletions = run_and_log_stats_to_scuba(
-            ctx,
-            "Deleting submodule expansion",
-            format!("Submodule path: {deleted_path}"),
-            delete_submodule_expansion(ctx, small_repo, sm_exp_data, parents, deleted_path.clone()),
-        )
-        .await?;
+        let generated_deletions =
+            delete_submodule_expansion(ctx, small_repo, sm_exp_data, parents, deleted_path.clone())
+                .timed()
+                .await
+                .log_future_stats(
+                    ctx.scuba().clone(),
+                    "Deleting submodule expansion",
+                    format!("Submodule path: {deleted_path}"),
+                )?;
 
         return Ok(generated_deletions
             .into_iter()

@@ -24,6 +24,7 @@ use fsnodes::RootFsnodeId;
 use futures::stream;
 use futures::stream::TryStreamExt;
 use futures::StreamExt;
+use futures_stats::TimedFutureExt;
 use itertools::Itertools;
 use manifest::Entry;
 use manifest::ManifestOps;
@@ -38,6 +39,7 @@ use mononoke_types::FsnodeId;
 use mononoke_types::MPathElement;
 use mononoke_types::NonRootMPath;
 use movers::Mover;
+use scuba_ext::FutureStatsScubaExt;
 
 use crate::git_submodules::expand::SubmoduleExpansionData;
 use crate::git_submodules::expand::SubmodulePath;
@@ -52,7 +54,6 @@ use crate::git_submodules::utils::x_repo_submodule_metadata_file_basename;
 use crate::reporting::log_debug;
 use crate::reporting::log_error;
 use crate::reporting::log_trace;
-use crate::reporting::run_and_log_stats_to_scuba;
 use crate::types::Repo;
 
 /// A wrapper over BonsaiChangeset that can only be created by running submodule
@@ -90,20 +91,21 @@ impl ValidSubmoduleExpansionBonsai {
                 .try_fold(bonsai, |bonsai, (submodule_path, submodule_repo)| {
                     cloned!(mover, sm_exp_data);
                     async move {
-                        run_and_log_stats_to_scuba(
+                        validate_submodule_expansion(
                             ctx,
+                            sm_exp_data,
+                            bonsai,
+                            submodule_path,
+                            submodule_repo.as_ref(),
+                            mover,
+                        )
+                        .timed()
+                        .await
+                        .log_future_stats(
+                            ctx.scuba().clone(),
                             "Validating submodule expansion",
                             format!("Submodule path: {submodule_path}"),
-                            validate_submodule_expansion(
-                                ctx,
-                                sm_exp_data,
-                                bonsai,
-                                submodule_path,
-                                submodule_repo.as_ref(),
-                                mover,
-                            ),
                         )
-                        .await
                         .with_context(|| format!("Validation of submodule {submodule_path} failed"))
                     }
                 })
@@ -269,30 +271,37 @@ async fn validate_submodule_expansion<'a, R: Repo>(
     // This is the root fsnode from the submodule at the commit the submodule
     // metadata file points to.
 
-    let submodule_fsnode_id = run_and_log_stats_to_scuba(
+    let submodule_fsnode_id = root_fsnode_id_from_submodule_git_commit(
         ctx,
+        submodule_repo,
+        git_hash,
+        &sm_exp_data.dangling_submodule_pointers,
+    )
+    .timed()
+    .await
+    .log_future_stats(
+        ctx.scuba().clone(),
         "Getting root fsnode id from submodule git commit",
         format!("Submodule repo: {}", &submodule_repo.repo_identity().name()),
-        root_fsnode_id_from_submodule_git_commit(
-            ctx,
-            submodule_repo,
-            git_hash,
-            &sm_exp_data.dangling_submodule_pointers,
-        ),
-    )
-    .await?;
+    )?;
 
     // ------------------------------------------------------------------------
     // STEP 3: Get the fsnode from the expansion of the submodule in the large
     // repo and compare it with the fsnode from the submodule commit.
 
-    let expansion_fsnode_id = run_and_log_stats_to_scuba(
+    let expansion_fsnode_id = get_submodule_expansion_fsnode_id(
         ctx,
+        sm_exp_data.clone(),
+        &bonsai,
+        &synced_submodule_path,
+    )
+    .timed()
+    .await
+    .log_future_stats(
+        ctx.scuba().clone(),
         "Get submodule expansion fsnode id",
         format!("Synced submodule path: {}", &synced_submodule_path),
-        get_submodule_expansion_fsnode_id(ctx, sm_exp_data.clone(), &bonsai, synced_submodule_path),
     )
-    .await
     .context("Failed to get submodule expansion fsnode id")?;
 
     if submodule_fsnode_id == expansion_fsnode_id {
@@ -313,23 +322,24 @@ async fn validate_submodule_expansion<'a, R: Repo>(
 
     // The submodule roots fsnode and the fsnode from its expansion in the large
     // repo should be exactly the same.
-    run_and_log_stats_to_scuba(
+    validate_working_copy_of_expansion_with_recursive_submodules(
         ctx,
+        sm_exp_data,
+        adjusted_submodule_deps,
+        submodule_repo,
+        expansion_fsnode_id,
+        submodule_fsnode_id,
+    )
+    .timed()
+    .await
+    .log_future_stats(
+        ctx.scuba().clone(),
         "Validate working copy of submodule expansion with recursive submodules",
         format!(
             "Recursive submodule: {}",
             submodule_repo.repo_identity().name()
         ),
-        validate_working_copy_of_expansion_with_recursive_submodules(
-            ctx,
-            sm_exp_data,
-            adjusted_submodule_deps,
-            submodule_repo,
-            expansion_fsnode_id,
-            submodule_fsnode_id,
-        ),
-    )
-    .await?;
+    )?;
 
     Ok(bonsai)
 }
@@ -425,7 +435,7 @@ async fn get_submodule_expansion_fsnode_id<'a, R: Repo>(
     sm_exp_data: SubmoduleExpansionData<'a, R>,
     // Bonsai from the large repo
     bonsai: &'a BonsaiChangeset,
-    synced_submodule_path: NonRootMPath,
+    synced_submodule_path: &NonRootMPath,
 ) -> Result<FsnodeId> {
     let large_repo = sm_exp_data.large_repo.clone();
 
@@ -434,34 +444,36 @@ async fn get_submodule_expansion_fsnode_id<'a, R: Repo>(
 
     // Get the root fsnodes from the parent commits, so the one from this commit
     // can be derived.
-    let parent_root_fsnodes = run_and_log_stats_to_scuba(
-        ctx,
-        "Deriving large repo bonsai parent's fsnode ids",
-        format!("Synced submodule path: {}", &synced_submodule_path),
-        stream::iter(bonsai.parents())
-            .then(|cs_id| large_repo_derived_data.derive::<RootFsnodeId>(ctx, cs_id))
-            .boxed()
-            .try_collect::<Vec<_>>(),
-    )
-    .await
-    .context("Failed to derive parent fsnodes in large repo")?;
+    let parent_root_fsnodes = stream::iter(bonsai.parents())
+        .then(|cs_id| large_repo_derived_data.derive::<RootFsnodeId>(ctx, cs_id))
+        .boxed()
+        .try_collect::<Vec<_>>()
+        .timed()
+        .await
+        .log_future_stats(
+            ctx.scuba().clone(),
+            "Deriving large repo bonsai parent's fsnode ids",
+            format!("Synced submodule path: {}", synced_submodule_path),
+        )
+        .context("Failed to derive parent fsnodes in large repo")?;
 
     let large_derived_data_ctx = large_repo_derived_data.manager().derivation_context(None);
 
-    let new_root_fsnode_id = run_and_log_stats_to_scuba(
+    let new_root_fsnode_id = RootFsnodeId::derive_single(
         ctx,
-        "Deriving large repo bonsai root fsnode id",
-        format!("Synced submodule path: {}", &synced_submodule_path),
-        RootFsnodeId::derive_single(
-            ctx,
-            &large_derived_data_ctx,
-            // NOTE: deriving directly from the bonsai requires an owned type, so
-            // the bonsai needs to be cloned.
-            bonsai.clone(),
-            parent_root_fsnodes,
-        ),
+        &large_derived_data_ctx,
+        // NOTE: deriving directly from the bonsai requires an owned type, so
+        // the bonsai needs to be cloned.
+        bonsai.clone(),
+        parent_root_fsnodes,
     )
+    .timed()
     .await
+    .log_future_stats(
+        ctx.scuba().clone(),
+        "Deriving large repo bonsai root fsnode id",
+        format!("Synced submodule path: {}", synced_submodule_path),
+    )
     .context("Deriving root fsnode for new bonsai")?
     .into_fsnode_id();
 
@@ -469,7 +481,7 @@ async fn get_submodule_expansion_fsnode_id<'a, R: Repo>(
         .find_entry(
             ctx.clone(),
             large_repo_blobstore.clone(),
-            synced_submodule_path.into(),
+            synced_submodule_path.clone().into(),
         )
         .await
         .context("Getting fsnode entry for submodule expansion in target repo")?;
@@ -654,25 +666,26 @@ where
                 borrowed!(submodule_repo);
 
                 async move {
-                    run_and_log_stats_to_scuba(
+                    validate_expansion_directory_against_submodule_manifest_entry(
                         ctx,
+                        sm_exp_data,
+                        submodule_repo,
+                        adjusted_submodule_deps,
+                        iteration_data,
+                        exp_path.clone(),
+                        exp_directory,
+                    )
+                    .timed()
+                    .await
+                    .log_future_stats(
+                        ctx.scuba().clone(),
                         "Validate expansion directory against submodule manifest entry",
                         format!(
                             "submodule_repo: {} / exp_path: {}",
                             submodule_repo.repo_identity().name(),
                             exp_path
                         ),
-                        validate_expansion_directory_against_submodule_manifest_entry(
-                            ctx,
-                            sm_exp_data,
-                            submodule_repo,
-                            adjusted_submodule_deps,
-                            iteration_data,
-                            exp_path,
-                            exp_directory,
-                        ),
                     )
-                    .await
                     .context(
                         "Failed to validate expansion directory against submodule manifest entry",
                     )

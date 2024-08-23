@@ -13,10 +13,12 @@ use anyhow::Result;
 use commit_transformation::rewrite_commit;
 use commit_transformation::RewriteOpts;
 use context::CoreContext;
+use futures_stats::TimedFutureExt;
 use itertools::Itertools;
 use mononoke_types::BonsaiChangesetMut;
 use mononoke_types::ChangesetId;
 use movers::Movers;
+use scuba_ext::FutureStatsScubaExt;
 
 use crate::commit_syncers_lib::mover_to_multi_mover;
 use crate::commit_syncers_lib::CommitRewriteResult;
@@ -25,7 +27,6 @@ use crate::git_submodules::expand::expand_all_git_submodule_file_changes;
 use crate::git_submodules::utils::get_submodule_expansions_affected;
 use crate::git_submodules::validation::ValidSubmoduleExpansionBonsai;
 use crate::reporting::set_scuba_logger_fields;
-use crate::run_and_log_stats_to_scuba;
 use crate::types::Repo;
 use crate::SubmoduleExpansionData;
 
@@ -115,50 +116,51 @@ pub async fn sync_commit_with_submodule_expansion<'a, R: Repo>(
         ],
     );
 
-    let (new_bonsai, submodule_expansion_content_ids) = run_and_log_stats_to_scuba(
-        ctx,
-        "Expanding all git submodule file changes",
-        None,
-        expand_all_git_submodule_file_changes(ctx, bonsai, source_repo, sm_exp_data.clone()),
-    )
-    .await
-    .context("Failed to expand submodule file changes from bonsai")?;
+    let (new_bonsai, submodule_expansion_content_ids) =
+        expand_all_git_submodule_file_changes(ctx, bonsai, source_repo, sm_exp_data.clone())
+            .timed()
+            .await
+            .log_future_stats(
+                ctx.scuba().clone(),
+                "Expanding all git submodule file changes",
+                None,
+            )
+            .context("Failed to expand submodule file changes from bonsai")?;
 
-    let mb_rewritten_bonsai = run_and_log_stats_to_scuba(
+    let mb_rewritten_bonsai = rewrite_commit(
         ctx,
-        "Rewriting commit",
+        new_bonsai,
+        remapped_parents,
+        mover_to_multi_mover(movers.mover.clone()),
+        source_repo,
         None,
-        rewrite_commit(
-            ctx,
-            new_bonsai,
-            remapped_parents,
-            mover_to_multi_mover(movers.mover.clone()),
-            source_repo,
-            None,
-            rewrite_opts,
-        ),
+        rewrite_opts,
     )
+    .timed()
     .await
+    .log_future_stats(ctx.scuba().clone(), "Rewriting commit", None)
     .context("Failed to rewrite commit")?;
 
     match mb_rewritten_bonsai {
         Some(rewritten_bonsai) => {
             let rewritten_bonsai = rewritten_bonsai.freeze()?;
 
-            let validated_bonsai = run_and_log_stats_to_scuba(
-                ctx,
-                "Validating all submodule expansions",
-                None,
+            let validated_bonsai =
                 ValidSubmoduleExpansionBonsai::validate_all_submodule_expansions(
                     ctx,
                     sm_exp_data,
                     rewritten_bonsai,
                     movers.mover,
-                ),
-            )
-            .await
-            // TODO(gustavoavena): print some identifier of changeset that failed
-            .context("Validation of submodule expansion failed")?;
+                )
+                .timed()
+                .await
+                .log_future_stats(
+                    ctx.scuba().clone(),
+                    "Validating all submodule expansions",
+                    None,
+                )
+                // TODO(gustavoavena): print some identifier of changeset that failed
+                .context("Validation of submodule expansion failed")?;
 
             let rewritten = Some(validated_bonsai.into_inner().into_mut());
 

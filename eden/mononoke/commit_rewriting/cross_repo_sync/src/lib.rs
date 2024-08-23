@@ -59,7 +59,6 @@ pub use reporting::log_error;
 pub use reporting::log_info;
 pub use reporting::log_trace;
 pub use reporting::log_warning;
-pub use reporting::run_and_log_stats_to_scuba;
 pub use reporting::CommitSyncContext;
 pub use sync_config_version_utils::CHANGE_XREPO_MAPPING_EXTRA;
 pub use types::ConcreteRepo;

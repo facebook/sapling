@@ -29,7 +29,6 @@ use cross_repo_sync::log_debug;
 use cross_repo_sync::log_info;
 use cross_repo_sync::log_trace;
 use cross_repo_sync::log_warning;
-use cross_repo_sync::run_and_log_stats_to_scuba;
 use cross_repo_sync::unsafe_get_parent_map_for_target_bookmark_rewrite;
 use cross_repo_sync::CandidateSelectionHint;
 use cross_repo_sync::CommitSyncContext;
@@ -44,6 +43,7 @@ use futures::stream::TryStreamExt;
 use futures::try_join;
 use futures::FutureExt;
 use futures_stats::TimedFutureExt;
+use futures_stats::TimedTryFutureExt;
 use indicatif::ProgressBar;
 use indicatif::ProgressStyle;
 use metaconfig_types::CommitSyncConfigVersion;
@@ -51,6 +51,7 @@ use mononoke_types::ChangesetId;
 use mononoke_types::Timestamp;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
+use scuba_ext::FutureStatsScubaExt;
 use scuba_ext::MononokeScubaSampleBuilder;
 use synced_commit_mapping::SyncedCommitMapping;
 
@@ -592,13 +593,14 @@ where
     // using the config version that was provided manually, or we can create
     // a broken set of commits.
     let (unsynced_ancestors, synced_ancestors_versions, _last_synced_ancestors) =
-        run_and_log_stats_to_scuba(
-            ctx,
-            "Finding toposorted unsynced ancestors with commit graph",
-            None,
-            find_toposorted_unsynced_ancestors_with_commit_graph(ctx, commit_syncer, cs_id.clone()),
-        )
-        .await?;
+        find_toposorted_unsynced_ancestors_with_commit_graph(ctx, commit_syncer, cs_id.clone())
+            .try_timed()
+            .await?
+            .log_future_stats(
+                ctx.scuba().clone(),
+                "Finding toposorted unsynced ancestors with commit graph",
+                None,
+            );
 
     let synced_ancestors_versions = synced_ancestors_versions
         .versions
