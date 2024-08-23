@@ -367,25 +367,38 @@ class StatusTest(EdenHgTestCase):
             )
 
             # at the beginning, all counters should be 0
-            self.counter_check(client, miss_cnt=0, hit_cnt=0)
+            miss_cnt, hit_cnt = 0, 0
+            self.counter_check(client, miss_cnt=miss_cnt, hit_cnt=hit_cnt)
 
+            # the first call should miss the cache
+            miss_cnt += 1
             self.assert_status_empty()
-            self.counter_check(client, miss_cnt=1, hit_cnt=0)
+            self.counter_check(client, miss_cnt=miss_cnt, hit_cnt=hit_cnt)
 
             # a second call should hit the cache
+            hit_cnt += 1
             self.assert_status_empty()
-            self.counter_check(client, miss_cnt=1, hit_cnt=1)
+            self.counter_check(client, miss_cnt=miss_cnt, hit_cnt=hit_cnt)
 
             self.touch("world.txt")
-            self.assert_status({"world.txt": "?"})
-            self.counter_check(client, miss_cnt=2, hit_cnt=1)
+            num_of_tries = self.assert_status({"world.txt": "?"})
+            expected_num_of_miss = 1
+            hit_cnt += num_of_tries - expected_num_of_miss
+            miss_cnt += expected_num_of_miss
+            self.counter_check(client, miss_cnt=miss_cnt, hit_cnt=hit_cnt)
 
             self.hg("add", "world.txt")
-            self.counter_check(client, miss_cnt=3, hit_cnt=1)
+            # `hg add` would internally call getStatus with listIgnored=False.
+            # But the cached key was from listIgnored=True, so the key mismatches
+            # and the call misses the cache
+            miss_cnt += 1
 
             second_commit = self.repo.commit("adding world")
-            # looks like `commit` method would internally call it twice and miss twice
-            self.counter_check(client, miss_cnt=5, hit_cnt=1)
+            # `commit` method would internally call getStatus twice
+            # against the old commit with listIgnoired=False.
+            # This adds 2 to the miss count because .hg changes advance the Journal sequence
+            miss_cnt += 2
+            self.counter_check(client, miss_cnt=miss_cnt, hit_cnt=hit_cnt)
 
             def verify_status(commit, listIgnored, expect_status) -> None:
                 res = client.getScmStatusV2(
@@ -397,23 +410,33 @@ class StatusTest(EdenHgTestCase):
                 )
                 self.assertEqual(expect_status, dict(res.status.entries))
 
-            verify_status(second_commit, True, {})
-            self.counter_check(client, miss_cnt=6, hit_cnt=1)
+            verify_status(second_commit, True, {})  # miss
+            miss_cnt += 1
+            self.counter_check(client, miss_cnt=miss_cnt, hit_cnt=hit_cnt)
 
-            verify_status(second_commit, True, {})
-            self.counter_check(client, miss_cnt=6, hit_cnt=2)
+            verify_status(second_commit, True, {})  # hit
+            hit_cnt += 1
+            self.counter_check(client, miss_cnt=miss_cnt, hit_cnt=hit_cnt)
 
-            verify_status(second_commit, False, {})
-            self.counter_check(client, miss_cnt=7, hit_cnt=2)
+            verify_status(second_commit, False, {})  # miss
+            miss_cnt += 1
+            self.counter_check(client, miss_cnt=miss_cnt, hit_cnt=hit_cnt)
 
+            # cache miss because a commit will update the working directory
+            # so the cached result from the previous assert_status call is lost
+            # at this point
             verify_status(initial_commit, True, {b"world.txt": 0})  # '0' means ADDED
-            self.counter_check(client, miss_cnt=8, hit_cnt=2)
+            miss_cnt += 1
+            self.counter_check(client, miss_cnt=miss_cnt, hit_cnt=hit_cnt)
+
+            # cache miss due to the same reason as above
+            verify_status(initial_commit, False, {b"world.txt": 0})
+            miss_cnt += 1
+            self.counter_check(client, miss_cnt=miss_cnt, hit_cnt=hit_cnt)
 
             verify_status(initial_commit, False, {b"world.txt": 0})
-            self.counter_check(client, miss_cnt=9, hit_cnt=2)
-
-            verify_status(initial_commit, False, {b"world.txt": 0})
-            self.counter_check(client, miss_cnt=9, hit_cnt=3)
+            hit_cnt += 1
+            self.counter_check(client, miss_cnt=miss_cnt, hit_cnt=hit_cnt)
 
     def test_scm_status_cache_concurrent_calls(self) -> None:
         """Test the SCM status cache when there are concurrent calls to getScmStatusV2"""
