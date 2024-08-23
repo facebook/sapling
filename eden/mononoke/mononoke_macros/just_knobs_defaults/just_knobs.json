@@ -51,6 +51,13 @@
     "scm/mononoke:scs_other_methods_sampling_rate": 1,
     "scm/mononoke:warm_bookmark_cache_poll_interval_ms": 1000,
     "scm/mononoke:derivation_worker_max_concurrent_derivations": 10,
-    "scm/mononoke:live_git_sync_batch_size": 50
+    "scm/mononoke:live_git_sync_batch_size": 50,
+    "scm/mononoke_memcache_sitevers:bonsai_git_mapping": 0,
+    "scm/mononoke_memcache_sitevers:blobstore": 0,
+    "scm/mononoke_memcache_sitevers:bonsai_hg_mapping": 0,
+    "scm/mononoke_memcache_sitevers:filenodes": 0,
+    "scm/mononoke_memcache_sitevers:hg_mutation_store": 0,
+    "scm/mononoke_memcache_sitevers:mutable_renames": 0,
+    "scm/mononoke_memcache_sitevers:sql": 0
   }
 }
