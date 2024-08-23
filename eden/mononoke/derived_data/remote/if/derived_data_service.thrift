@@ -11,7 +11,6 @@ include "eden/mononoke/filenodes/if/filenodes.thrift"
 include "eden/mononoke/mercurial/types/if/mercurial_thrift.thrift"
 include "eden/mononoke/mononoke_types/serialization/id.thrift"
 include "eden/mononoke/mononoke_types/serialization/changeset_info.thrift"
-include "eden/mononoke/mononoke_types/serialization/bssm.thrift"
 include "eden/mononoke/mononoke_types/serialization/test_manifest.thrift"
 
 struct DerivedDataType {
@@ -66,11 +65,11 @@ union DerivedData {
   5: DerivedDataBlame blame;
   6: DerivedDataHgChangeset hg_changeset;
   7: DerivedDataChangesetInfo changeset_info;
-  8: DerivedDataDeletedManifest deleted_manifest;
+  // 8: deleted deleted_manifest
   9: DerivedDataSkeletonManifest skeleton_manifest;
   10: DerivedDataTreeHandle tree_handle;
   11: DerivedDataDeletedManifestV2 deleted_manifest_v2;
-  12: DerivedDataBasenameSuffixSkeletonManifest basename_suffix_skeleton_manifest;
+  // 12: deleted basename_suffix_skeleton_manifest
   13: DerivedDataCommitHandle commit_handle;
   // 14: deleted git_delta_manifest
   15: DerivedDataTestManifest test_manifest;
@@ -119,16 +118,8 @@ union DerivedDataChangesetInfo {
   1: changeset_info.ChangesetInfo changeset_info;
 }
 
-union DerivedDataDeletedManifest {
-  1: id.DeletedManifestId root_deleted_manifest_id;
-}
-
 union DerivedDataDeletedManifestV2 {
   1: id.DeletedManifestV2Id root_deleted_manifest_v2_id;
-}
-
-union DerivedDataBasenameSuffixSkeletonManifest {
-  1: bssm.BssmDirectory root_basename_suffix_skeleton_manifest;
 }
 
 union DerivedDataBssmV3 {

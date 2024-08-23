@@ -15,31 +15,12 @@
 //! IMPORTANT!!!
 //! ------------
 
-include "eden/mononoke/mononoke_types/serialization/id.thrift"
 include "eden/mononoke/mononoke_types/serialization/sharded_map.thrift"
-
-struct BssmFile {} (rust.exhaustive)
-struct BssmDirectory {
-  1: id.BasenameSuffixSkeletonManifestId id;
-  // Number of entries in this subtree.
-  // This doesn't need to be part of the manifest, but we add it here to
-  // speed up ordered manifest operations
-  2: i64 rollup_count;
-} (rust.exhaustive)
-
-union BssmEntry {
-  1: BssmFile file;
-  2: BssmDirectory directory;
-} (rust.exhaustive)
 
 // Basename suffix manifest stores file trees in a way that allows fast filtering
 // based on suffix of basenames as well as directory prefix of root.
 // See docs/basename_suffix_skeleton_manifest.md for more documentation on this.
-struct BasenameSuffixSkeletonManifest {
-  // Map of MPathElement -> BssmEntry
-  1: sharded_map.ShardedMapNode subentries;
-} (rust.exhaustive)
-
+//
 // BssmV3 is an optimized version of Bssm that differs from it in two ways:
 //
 // 1) It uses ShardedMapV2 instead of ShardedMap which avoids creating un-cachable blobs,
