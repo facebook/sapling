@@ -15,7 +15,7 @@ fn modify_function(mut function: ItemFn) -> ItemFn {
     function
         .block
         .stmts
-        .insert(0, parse_quote! { override_just_knobs(Default::default()); });
+        .insert(0, parse_quote! { mononoke::override_just_knobs(); });
     function
 }
 

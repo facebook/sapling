@@ -1769,7 +1769,6 @@ mod tests {
     use fixtures::Linear;
     use fixtures::MergeEven;
     use fixtures::TestRepoFixture;
-    use justknobs::test_helpers::override_just_knobs;
     use mononoke_macros::mononoke;
 
     use super::*;
