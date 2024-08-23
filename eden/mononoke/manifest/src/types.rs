@@ -31,6 +31,8 @@ use mononoke_types::fsnode::FsnodeFile;
 use mononoke_types::sharded_map_v2::LoadableShardedMapV2Node;
 use mononoke_types::skeleton_manifest::SkeletonManifest;
 use mononoke_types::skeleton_manifest::SkeletonManifestEntry;
+use mononoke_types::skeleton_manifest_v2::SkeletonManifestV2;
+use mononoke_types::skeleton_manifest_v2::SkeletonManifestV2Entry;
 use mononoke_types::test_manifest::TestManifest;
 use mononoke_types::test_manifest::TestManifestDirectory;
 use mononoke_types::test_manifest::TestManifestEntry;
@@ -176,6 +178,38 @@ impl<Store: Blobstore> TrieMapOps<Store, Entry<BssmV3Directory, ()>>
             .await?
             .into_entries(ctx, blobstore)
             .map_ok(|(k, v)| (k, bssm_v3_to_mf_entry(v)))
+            .boxed())
+    }
+
+    fn is_empty(&self) -> bool {
+        self.size() == 0
+    }
+}
+
+#[async_trait]
+impl<Store: Blobstore> TrieMapOps<Store, Entry<SkeletonManifestV2, ()>>
+    for LoadableShardedMapV2Node<SkeletonManifestV2Entry>
+{
+    async fn expand(
+        self,
+        ctx: &CoreContext,
+        blobstore: &Store,
+    ) -> Result<(Option<Entry<SkeletonManifestV2, ()>>, Vec<(u8, Self)>)> {
+        let (entry, children) = self.expand(ctx, blobstore).await?;
+        Ok((entry.map(skeleton_manifest_v2_to_mf_entry), children))
+    }
+
+    async fn into_stream(
+        self,
+        ctx: &CoreContext,
+        blobstore: &Store,
+    ) -> Result<BoxStream<'async_trait, Result<(SmallVec<[u8; 24]>, Entry<SkeletonManifestV2, ()>)>>>
+    {
+        Ok(self
+            .load(ctx, blobstore)
+            .await?
+            .into_entries(ctx, blobstore)
+            .map_ok(|(k, v)| (k, skeleton_manifest_v2_to_mf_entry(v)))
             .boxed())
     }
 
@@ -725,6 +759,102 @@ impl<Store: Blobstore> AsyncManifest<Store> for BssmV3Directory {
     }
 }
 
+fn skeleton_manifest_v2_to_mf_entry(
+    entry: SkeletonManifestV2Entry,
+) -> Entry<SkeletonManifestV2, ()> {
+    match entry {
+        SkeletonManifestV2Entry::Directory(dir) => Entry::Tree(dir),
+        SkeletonManifestV2Entry::File => Entry::Leaf(()),
+    }
+}
+
+#[async_trait]
+impl<Store: Blobstore> AsyncManifest<Store> for SkeletonManifestV2 {
+    type TreeId = SkeletonManifestV2;
+    type LeafId = ();
+    type TrieMapType = LoadableShardedMapV2Node<SkeletonManifestV2Entry>;
+
+    async fn list(
+        &self,
+        ctx: &CoreContext,
+        blobstore: &Store,
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>
+    {
+        anyhow::Ok(
+            self.clone()
+                .into_subentries(ctx, blobstore)
+                .map_ok(|(path, entry)| (path, skeleton_manifest_v2_to_mf_entry(entry)))
+                .boxed(),
+        )
+    }
+
+    async fn list_prefix(
+        &self,
+        ctx: &CoreContext,
+        blobstore: &Store,
+        prefix: &[u8],
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>
+    {
+        anyhow::Ok(
+            self.clone()
+                .into_prefix_subentries(ctx, blobstore, prefix)
+                .map_ok(|(path, entry)| (path, skeleton_manifest_v2_to_mf_entry(entry)))
+                .boxed(),
+        )
+    }
+
+    async fn list_prefix_after(
+        &self,
+        ctx: &CoreContext,
+        blobstore: &Store,
+        prefix: &[u8],
+        after: &[u8],
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>
+    {
+        anyhow::Ok(
+            self.clone()
+                .into_prefix_subentries_after(ctx, blobstore, prefix, after)
+                .map_ok(|(path, entry)| (path, skeleton_manifest_v2_to_mf_entry(entry)))
+                .boxed(),
+        )
+    }
+
+    async fn list_skip(
+        &self,
+        ctx: &CoreContext,
+        blobstore: &Store,
+        skip: usize,
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>
+    {
+        anyhow::Ok(
+            self.clone()
+                .into_subentries_skip(ctx, blobstore, skip)
+                .map_ok(|(path, entry)| (path, skeleton_manifest_v2_to_mf_entry(entry)))
+                .boxed(),
+        )
+    }
+
+    async fn lookup(
+        &self,
+        ctx: &CoreContext,
+        blobstore: &Store,
+        name: &MPathElement,
+    ) -> Result<Option<Entry<Self::TreeId, Self::LeafId>>> {
+        Ok(self
+            .lookup(ctx, blobstore, name)
+            .await?
+            .map(skeleton_manifest_v2_to_mf_entry))
+    }
+
+    async fn into_trie_map(
+        self,
+        _ctx: &CoreContext,
+        _blobstore: &Store,
+    ) -> Result<Self::TrieMapType> {
+        Ok(LoadableShardedMapV2Node::Inlined(self.subentries))
+    }
+}
+
 impl Manifest for ManifestUnode {
     type TreeId = ManifestUnodeId;
     type LeafId = FileUnodeId;
@@ -1034,6 +1164,52 @@ impl<Store: Blobstore> AsyncOrderedManifest<Store> for BssmV3Directory {
         AsyncManifest::lookup(self, ctx, blobstore, name)
             .await
             .map(|opt| opt.map(convert_bssm_v3_to_weighted))
+    }
+}
+
+fn convert_skeleton_manifest_v2_to_weighted(
+    entry: Entry<SkeletonManifestV2, ()>,
+) -> Entry<(Weight, SkeletonManifestV2), ()> {
+    match entry {
+        Entry::Tree(dir) => Entry::Tree((
+            dir.rollup_count()
+                .into_inner()
+                .try_into()
+                .unwrap_or(usize::MAX),
+            dir,
+        )),
+        Entry::Leaf(()) => Entry::Leaf(()),
+    }
+}
+
+#[async_trait]
+impl<Store: Blobstore> AsyncOrderedManifest<Store> for SkeletonManifestV2 {
+    async fn list_weighted(
+        &self,
+        ctx: &CoreContext,
+        blobstore: &Store,
+    ) -> Result<
+        BoxStream<
+            'async_trait,
+            Result<(MPathElement, Entry<(Weight, Self::TreeId), Self::LeafId>)>,
+        >,
+    > {
+        self.list(ctx, blobstore).await.map(|stream| {
+            stream
+                .map_ok(|(p, entry)| (p, convert_skeleton_manifest_v2_to_weighted(entry)))
+                .boxed()
+        })
+    }
+
+    async fn lookup_weighted(
+        &self,
+        ctx: &CoreContext,
+        blobstore: &Store,
+        name: &MPathElement,
+    ) -> Result<Option<Entry<(Weight, Self::TreeId), Self::LeafId>>> {
+        AsyncManifest::lookup(self, ctx, blobstore, name)
+            .await
+            .map(|opt| opt.map(convert_skeleton_manifest_v2_to_weighted))
     }
 }
 
