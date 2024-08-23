@@ -113,9 +113,14 @@ async fn write_packetline(
             "empty packet lines are not permitted as '0004' is invalid",
         ));
     }
+    let max_data_len = if !is_binary || channel.is_some() {
+        MAX_DATA_LEN - 1 // One byte would be taken up by the prefix
+    } else {
+        MAX_DATA_LEN
+    };
     let mut written = 0;
     while !buf.is_empty() {
-        let (data, rest) = buf.split_at(buf.len().min(MAX_DATA_LEN));
+        let (data, rest) = buf.split_at(buf.len().min(max_data_len));
         written += if is_binary {
             if let Some(channel) = channel {
                 band_to_write(channel, data, out).await?
