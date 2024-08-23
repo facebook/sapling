@@ -9,8 +9,26 @@ setup backing repo
   >     # drawdag.defaultfiles=false
   > EOS
 
-test subtree copy
   $ hg go $B -q
+
+test subtree copy paths validation
+  $ hg subtree copy -r $A
+  abort: must provide --from-path and --to-path
+  [255]
+  $ hg subtree copy -r $A --from-path foo
+  abort: must provide same number of --from-path and --to-path
+  [255]
+  $ hg subtree copy -r $A --from-path bar
+  abort: must provide same number of --from-path and --to-path
+  [255]
+  $ hg subtree copy -r $A --from-path foo --to-path bar --from-path foo --to-path ""
+  abort: overlapping --to-path entries
+  [255]
+  $ hg subtree copy -r $A --from-path nonexist --to-path bar
+  abort: path 'nonexist' does not exist in commit d908813f0f7c
+  [255]
+
+test subtree copy
   $ hg subtree cp -r $A --from-path foo --to-path bar -m "subtree copy foo -> bar"
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg log -G -T '{node|short} {desc|firstline}\n'

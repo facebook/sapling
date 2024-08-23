@@ -1546,11 +1546,11 @@ def validate_path_exist(ui, ctx, paths, abort_on_missing=False):
     """Validate that the given path exists in the given context."""
     for p in paths:
         if not (p in ctx or ctx.hasdir(p)):
-            msg = _("path '%s' does not exist in commit %s\n") % (p, ctx)
+            msg = _("path '%s' does not exist in commit %s") % (p, ctx)
             if abort_on_missing:
                 raise error.Abort(msg)
             else:
-                ui.status(msg)
+                ui.status(msg + "\n")
 
 
 def validate_path_size(from_paths, to_paths, abort_on_empty=False):

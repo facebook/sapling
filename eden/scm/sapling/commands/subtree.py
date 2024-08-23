@@ -78,19 +78,20 @@ def copy(ui, repo, *args, **opts):
 def _docopy(ui, repo, *args, **opts):
     cmdutil.bailifchanged(repo)
 
-    ctx = repo["."]
-    from_paths = [scmutil.rootrelpath(ctx, p) for p in opts.get("from_path")]
-    to_paths = [scmutil.rootrelpath(ctx, p) for p in opts.get("to_path")]
-    scmutil.validate_path_size(from_paths, to_paths, abort_on_empty=True)
-
-    user = opts.get("user")
-    date = opts.get("date")
-    text = opts.get("message")
-
     # if 'rev' is not specificed, copy from the working copy parent
     from_rev = opts.get("rev") or "."
     from_ctx = scmutil.revsingle(repo, from_rev)
     to_ctx = repo["."]
+
+    from_paths = scmutil.rootrelpaths(from_ctx, opts.get("from_path"))
+    to_paths = scmutil.rootrelpaths(from_ctx, opts.get("to_path"))
+    scmutil.validate_path_size(from_paths, to_paths, abort_on_empty=True)
+    scmutil.validate_path_exist(ui, from_ctx, from_paths, abort_on_missing=True)
+    scmutil.validate_path_overlap(to_paths)
+
+    user = opts.get("user")
+    date = opts.get("date")
+    text = opts.get("message")
 
     extra = {}
     extra.update(_gen_branch_info(from_ctx.hex(), from_paths, to_paths))
