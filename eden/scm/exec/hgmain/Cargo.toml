@@ -29,7 +29,7 @@ webview-app = { version = "0.1.0", path = "../../lib/webview-app" }
 
 [target.'cfg(target_os = "windows")'.dependencies]
 anyhow = "1.0.75"
-winapi = { version = "0.3", features = ["everything"] }
+winapi = { version = "0.3", features = ["everything", "std"] }
 
 [features]
 buildinfo = []

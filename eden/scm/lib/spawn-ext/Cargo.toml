@@ -16,7 +16,7 @@ libc = "0.2.139"
 
 [target.'cfg(target_os = "windows")'.dependencies]
 tracing = { version = "0.1.40", features = ["attributes", "valuable"] }
-winapi = { version = "0.3", features = ["everything"] }
+winapi = { version = "0.3", features = ["everything", "std"] }
 
 [target.'cfg(windows)'.dependencies]
 winapi = { version = "0.3", features = ["handleapi", "winbase"] }

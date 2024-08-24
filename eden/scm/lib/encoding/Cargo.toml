@@ -9,7 +9,7 @@ edition = "2021"
 types = { version = "0.1.0", path = "../types" }
 
 [target.'cfg(target_os = "windows")'.dependencies]
-winapi = { version = "0.3", features = ["everything"] }
+winapi = { version = "0.3", features = ["everything", "std"] }
 
 [target.'cfg(target_os = "windows")'.dev-dependencies]
 local-encoding = "0.2"

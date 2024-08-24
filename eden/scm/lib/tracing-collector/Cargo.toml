@@ -15,7 +15,7 @@ tracing = { version = "0.1.40", features = ["attributes", "valuable"] }
 tracing-subscriber = { version = "0.3.18", features = ["chrono", "env-filter", "json", "local-time", "parking_lot", "registry"] }
 
 [target.'cfg(target_os = "windows")'.dependencies]
-winapi = { version = "0.3", features = ["everything"] }
+winapi = { version = "0.3", features = ["everything", "std"] }
 
 [target.'cfg(windows)'.dependencies]
 winapi = { version = "0.3.7", features = ["processthreadsapi"] }
