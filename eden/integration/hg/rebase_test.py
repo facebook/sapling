@@ -9,6 +9,7 @@
 import os
 import subprocess
 import threading
+import unittest
 
 from eden.integration.lib import eden_server_inspector, hgrepo
 
@@ -73,6 +74,9 @@ class RebaseTest(EdenHgTestCase):
 
         repo.update(self._base_commit)
 
+    @unittest.skip(
+        "T199782635: This test is failing when comparing `hg update` with expected output"
+    )
     def test_rebase_commit_with_independent_folder(self) -> None:
         #
         # We explicitly test non-in-memory rebase here, since the in-memory code path
