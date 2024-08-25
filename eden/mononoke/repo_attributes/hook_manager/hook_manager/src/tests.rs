@@ -8,6 +8,7 @@
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::sync::Arc;
 
 use anyhow::Error;
 use async_trait::async_trait;
@@ -33,6 +34,7 @@ use mononoke_types_mocks::contentid::THREES_CTID;
 use mononoke_types_mocks::contentid::TWOS_CTID;
 use permission_checker::InternalAclProvider;
 use regex::Regex;
+use repo_permission_checker::NeverAllowRepoPermissionChecker;
 use scuba_ext::MononokeScubaSampleBuilder;
 use sorted_vector_map::sorted_vector_map;
 
@@ -403,6 +405,7 @@ async fn hook_manager_inmem(fb: FacebookInit) -> HookManager {
             disable_acl_checker: true,
             ..Default::default()
         },
+        Arc::new(NeverAllowRepoPermissionChecker {}),
         MononokeScubaSampleBuilder::with_discard(),
         "zoo".to_string(),
     )

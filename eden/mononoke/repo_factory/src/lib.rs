@@ -1328,6 +1328,7 @@ impl RepoFactory {
         repo_blobstore: &ArcRepoBlobstore,
         bonsai_tag_mapping: &ArcBonsaiTagMapping,
         bonsai_git_mapping: &ArcBonsaiGitMapping,
+        permission_checker: &ArcRepoPermissionChecker,
     ) -> Result<ArcHookManager> {
         let name = repo_identity.name();
 
@@ -1368,6 +1369,7 @@ impl RepoFactory {
                 self.env.acl_provider.as_ref(),
                 content_provider,
                 repo_config.hook_manager_params.clone().unwrap_or_default(),
+                permission_checker.clone(),
                 hooks_scuba,
                 name.to_string(),
             )

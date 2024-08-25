@@ -28,6 +28,7 @@ mononoke_types = { version = "0.1.0", path = "../../../mononoke_types" }
 permission_checker = { version = "0.1.0", path = "../../../permission_checker" }
 quickcheck = "1.0"
 regex = "1.9.2"
+repo_permission_checker = { version = "0.1.0", path = "../../repo_permission_checker" }
 scuba = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 scuba_ext = { version = "0.1.0", path = "../../../common/scuba_ext" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }

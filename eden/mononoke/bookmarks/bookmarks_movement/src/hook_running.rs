@@ -38,13 +38,17 @@ pub async fn is_admin_bypass(
         return Ok(false);
     }
 
-    if !hook_manager
+    let is_admin = hook_manager
         .get_admin_perm_checker()
         .is_member(ctx.metadata().identities())
-        .await
-    {
+        .await;
+    let has_write_no_hook_action = hook_manager
+        .get_repo_perm_checker()
+        .check_if_all_hooks_bypass_allowed(ctx.metadata().identities())
+        .await;
+    if !is_admin && !has_write_no_hook_action {
         return Err(anyhow!(
-            "In order to use BYPASS_ALL_HOOKS pushvar one needs to be member of the scm group."
+            "In order to use BYPASS_ALL_HOOKS pushvar one needs to be member of the scm group OR have access to write_no_hooks action on repo ACL"
         ));
     }
 

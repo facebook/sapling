@@ -6,6 +6,7 @@
  */
 
 use std::collections::HashMap;
+use std::sync::Arc;
 
 use anyhow::Error;
 use async_trait::async_trait;
@@ -41,6 +42,7 @@ use mononoke_types_mocks::contentid::TWOS_CTID;
 use permission_checker::InternalAclProvider;
 use regex::Regex;
 use repo_blobstore::RepoBlobstoreRef;
+use repo_permission_checker::AlwaysAllowRepoPermissionChecker;
 use scuba_ext::MononokeScubaSampleBuilder;
 use sorted_vector_map::sorted_vector_map;
 use tests_utils::bookmark;
@@ -435,6 +437,7 @@ async fn hook_manager_repo(fb: FacebookInit, repo: &BasicTestRepo) -> HookManage
             disable_acl_checker: true,
             ..Default::default()
         },
+        Arc::new(AlwaysAllowRepoPermissionChecker {}),
         MononokeScubaSampleBuilder::with_discard(),
         "zoo".to_string(),
     )

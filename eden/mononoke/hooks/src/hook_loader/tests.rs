@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::sync::Arc;
+
 use bookmarks::BookmarkKey;
 use context::CoreContext;
 use fbinit::FacebookInit;
@@ -16,6 +18,7 @@ use metaconfig_types::HookParams;
 use metaconfig_types::RepoConfig;
 use permission_checker::InternalAclProvider;
 use repo_hook_file_content_provider::RepoHookStateProvider;
+use repo_permission_checker::NeverAllowRepoPermissionChecker;
 use scuba_ext::MononokeScubaSampleBuilder;
 use tests_utils::BasicTestRepo;
 
@@ -35,6 +38,7 @@ async fn hook_manager_repo(fb: FacebookInit, repo: &BasicTestRepo) -> HookManage
             disable_acl_checker: true,
             ..Default::default()
         },
+        Arc::new(NeverAllowRepoPermissionChecker {}),
         MononokeScubaSampleBuilder::with_discard(),
         "zoo".to_string(),
     )

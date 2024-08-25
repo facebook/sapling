@@ -7,6 +7,7 @@
 
 use std::collections::HashMap;
 use std::str;
+use std::sync::Arc;
 
 use anyhow::Error;
 use anyhow::Result;
@@ -32,6 +33,8 @@ use permission_checker::AclProvider;
 use permission_checker::ArcMembershipChecker;
 use permission_checker::NeverMember;
 use regex::Regex;
+use repo_permission_checker::ArcRepoPermissionChecker;
+use repo_permission_checker::NeverAllowRepoPermissionChecker;
 use scuba::builder::ServerData;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::debug;
@@ -59,6 +62,7 @@ pub struct HookManager {
     content_provider: Box<dyn HookStateProvider>,
     reviewers_membership: ArcMembershipChecker,
     admin_membership: ArcMembershipChecker,
+    repo_permission_checker: ArcRepoPermissionChecker,
     scuba: MononokeScubaSampleBuilder,
     all_hooks_bypassed: bool,
     scuba_bypassed_commits: MononokeScubaSampleBuilder,
@@ -70,6 +74,7 @@ impl HookManager {
         acl_provider: &dyn AclProvider,
         content_provider: Box<dyn HookStateProvider>,
         hook_manager_params: HookManagerParams,
+        repo_permission_checker: ArcRepoPermissionChecker,
         mut scuba: MononokeScubaSampleBuilder,
         repo_name: String,
     ) -> Result<HookManager> {
@@ -83,11 +88,22 @@ impl HookManager {
                 _ => data.default_key(),
             });
 
-        let (reviewers_membership, admin_membership) = if hook_manager_params.disable_acl_checker {
-            (NeverMember::new(), NeverMember::new())
-        } else {
-            try_join!(acl_provider.reviewers_group(), acl_provider.admin_group())?
-        };
+        let (reviewers_membership, admin_membership, repo_permission_checker) =
+            if hook_manager_params.disable_acl_checker {
+                (
+                    NeverMember::new(),
+                    NeverMember::new(),
+                    Arc::new(NeverAllowRepoPermissionChecker {}) as ArcRepoPermissionChecker,
+                )
+            } else {
+                let (reviewers_membership, admin_membership) =
+                    try_join!(acl_provider.reviewers_group(), acl_provider.admin_group(),)?;
+                (
+                    reviewers_membership,
+                    admin_membership,
+                    repo_permission_checker,
+                )
+            };
 
         let scuba_bypassed_commits: MononokeScubaSampleBuilder =
             scuba_ext::MononokeScubaSampleBuilder::with_opt_table(
@@ -106,6 +122,7 @@ impl HookManager {
             scuba,
             all_hooks_bypassed: hook_manager_params.all_hooks_bypassed,
             scuba_bypassed_commits,
+            repo_permission_checker,
         })
     }
 
@@ -122,6 +139,7 @@ impl HookManager {
             scuba: MononokeScubaSampleBuilder::with_discard(),
             all_hooks_bypassed: false,
             scuba_bypassed_commits: MononokeScubaSampleBuilder::with_discard(),
+            repo_permission_checker: Arc::new(NeverAllowRepoPermissionChecker {}),
         }
     }
 
@@ -162,6 +180,10 @@ impl HookManager {
 
     pub fn get_admin_perm_checker(&self) -> ArcMembershipChecker {
         self.admin_membership.clone()
+    }
+
+    pub fn get_repo_perm_checker(&self) -> ArcRepoPermissionChecker {
+        self.repo_permission_checker.clone()
     }
 
     pub fn hooks_exist_for_bookmark(&self, bookmark: &BookmarkKey) -> bool {
