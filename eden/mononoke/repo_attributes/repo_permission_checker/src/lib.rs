@@ -59,6 +59,9 @@ pub trait RepoPermissionChecker: Send + Sync + 'static {
     /// read-only state** of the repository.
     async fn check_if_read_only_bypass_allowed(&self, identities: &MononokeIdentitySet) -> bool;
 
+    /// Check whether the give identities are permitted to **bypass all the hooks** of the repository
+    async fn check_if_all_hooks_bypass_allowed(&self, identities: &MononokeIdentitySet) -> bool;
+
     /// Check whether the given identities are permitted to **act as a
     /// service** to make modifications to the repository.  This means
     /// making any modification to the repository that the named service
@@ -235,6 +238,12 @@ impl RepoPermissionChecker for ProdRepoPermissionChecker {
             .await
     }
 
+    async fn check_if_all_hooks_bypass_allowed(&self, identities: &MononokeIdentitySet) -> bool {
+        self.repo_permchecker
+            .check_set(identities, &["write_no_hooks"])
+            .await
+    }
+
     async fn check_if_service_writes_allowed(
         &self,
         identities: &MononokeIdentitySet,
@@ -284,6 +293,10 @@ impl RepoPermissionChecker for AlwaysAllowRepoPermissionChecker {
     }
 
     async fn check_if_read_only_bypass_allowed(&self, _identities: &MononokeIdentitySet) -> bool {
+        true
+    }
+
+    async fn check_if_all_hooks_bypass_allowed(&self, _identities: &MononokeIdentitySet) -> bool {
         true
     }
 

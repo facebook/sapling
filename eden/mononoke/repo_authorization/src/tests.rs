@@ -80,6 +80,7 @@ struct TestPermissionChecker {
     draft: bool,
     write: bool,
     read_only_bypass: bool,
+    all_hooks_bypass: bool,
     any_region_read: bool,
     service_writes: HashMap<String, bool>,
 }
@@ -115,6 +116,10 @@ impl RepoPermissionChecker for TestPermissionChecker {
 
     async fn check_if_read_only_bypass_allowed(&self, _identities: &MononokeIdentitySet) -> bool {
         self.read_only_bypass
+    }
+
+    async fn check_if_all_hooks_bypass_allowed(&self, _identities: &MononokeIdentitySet) -> bool {
+        self.all_hooks_bypass
     }
 
     async fn check_if_service_writes_allowed(
