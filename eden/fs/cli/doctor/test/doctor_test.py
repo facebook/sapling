@@ -20,7 +20,7 @@ from unittest.mock import call, MagicMock, patch
 import eden.fs.cli.doctor as doctor
 
 import facebook.eden.ttypes as eden_ttypes
-from eden.fs.cli.config import EdenCheckout, EdenInstance, SnapshotState
+from eden.fs.cli.config import EdenCheckout, EdenInstance, HealthStatus, SnapshotState
 from eden.fs.cli.doctor import (
     check_hg,
     check_mount,
@@ -307,9 +307,15 @@ Repairing hg directory contents for {edenfs_path3}...<green>fixed<reset>
         self.assertEqual("EdenFS is not in use.\n", out.getvalue())
         self.assertEqual(0, exit_code)
 
+    @patch("eden.fs.cli.util.HealthStatus.is_healthy")
+    @patch("eden.fs.cli.daemon.start_edenfs_service")
     @patch("eden.fs.cli.doctor.check_watchman._call_watchman")
-    # pyre-fixme[2]: Parameter must be annotated.
-    def test_edenfs_not_running(self, mock_watchman) -> None:
+    def test_edenfs_not_running_then_started(
+        self,
+        mock_watchman: MagicMock,
+        mock_start: MagicMock,
+        mock_is_healthy: MagicMock,
+    ) -> None:
         instance = FakeEdenInstance(
             self.make_temporary_directory(), status=fb303_status.DEAD
         )
@@ -317,6 +323,10 @@ Repairing hg directory contents for {edenfs_path3}...<green>fixed<reset>
 
         out = TestOutput()
         dry_run = False
+        # We can't actually start the Eden daemon in a unit test, so we mock
+        # it instead.
+        mock_start.return_value = None
+        mock_is_healthy.return_value = True
         exit_code = doctor.cure_what_ails_you(
             # pyre-fixme[6]: For 1st param expected `EdenInstance` but got
             #  `FakeEdenInstance`.
@@ -334,15 +344,54 @@ Repairing hg directory contents for {edenfs_path3}...<green>fixed<reset>
         self.assertRegex(
             out.getvalue(),
             r"""<yellow>- Found problem:<reset>
-EdenFS is not running\.
-To start EdenFS, run:
+EdenFS is not running
+Running `eden start` to start EdenFS......<green>fixed<reset>
 
-    eden start
-
-<yellow>1 issue requires manual attention\.<reset>
-Collect an 'eden rage' and ask in the EdenFS (Windows |macOS )?Users group if you need help fixing issues with EdenFS:
-(https://fb\.workplace\.com/groups/eden\.users|https://fb\.workplace\.com/groups/edenfswindows|https://fb\.workplace\.com/groups/edenfsmacos)
+<yellow>Successfully fixed 1 problem.<reset>
 """,
+        )
+        self.assertEqual(0, exit_code)
+
+    @patch("eden.fs.cli.util.HealthStatus.is_starting")
+    @patch("eden.fs.cli.daemon.start_edenfs_service")
+    @patch("eden.fs.cli.doctor.check_watchman._call_watchman")
+    def test_edenfs_not_running_then_still_starting(
+        self,
+        mock_watchman: MagicMock,
+        mock_start: MagicMock,
+        mock_is_starting: MagicMock,
+    ) -> None:
+        instance = FakeEdenInstance(
+            self.make_temporary_directory(), status=fb303_status.DEAD
+        )
+        instance.create_test_mount("eden-mount")
+
+        out = TestOutput()
+        dry_run = False
+        # We can't actually start the Eden daemon in a unit test, so we mock
+        # it instead.
+        mock_start.return_value = None
+        mock_is_starting.return_value = True
+        exit_code = doctor.cure_what_ails_you(
+            # pyre-fixme[6]: For 1st param expected `EdenInstance` but got
+            #  `FakeEdenInstance`.
+            instance,
+            dry_run,
+            min_severity_to_report=ProblemSeverity.ALL,
+            mount_table=FakeMountTable(),
+            fs_util=FakeFsUtil(),
+            proc_utils=self.make_proc_utils(),
+            kerberos_checker=FakeKerberosChecker(),
+            vscode_extensions_checker=getFakeVSCodeExtensionsChecker(),
+            out=out,
+        )
+
+        self.assertRegex(
+            out.getvalue(),
+            r"""<yellow>- Found problem:<reset>
+EdenFS is not running
+Running `eden start` to start EdenFS......<yellow>EdenFS still starting, use `eden status --wait` to watch progress and ensure it starts<reset>
+<red>error<reset>.*""",
         )
         self.assertEqual(1, exit_code)
 

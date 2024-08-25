@@ -16,6 +16,8 @@ from typing import Dict, List, Optional, Set
 
 from eden.fs.cli import (
     config as config_mod,
+    daemon,
+    daemon_util,
     filesystem,
     mtab,
     prjfs,
@@ -235,7 +237,7 @@ class EdenDoctorChecker:
     def run_edenfs_not_healthy_checks(self) -> None:
         configured_mounts = self.instance.get_mount_paths()
         if configured_mounts:
-            self.tracker.add_problem(EdenfsNotHealthy())
+            self.tracker.add_problem(EdenfsNotHealthy(self.instance, self.out))
         else:
             self.tracker.using_edenfs = False
             return
@@ -556,12 +558,46 @@ class EdenDoctor(EdenDoctorChecker):
         return 1
 
 
-class EdenfsNotHealthy(Problem):
-    def __init__(self) -> None:
-        super().__init__(
-            "EdenFS is not running.",
-            remediation="To start EdenFS, run:\n\n    eden start",
-        )
+class EdenfsNotHealthy(FixableProblem):
+
+    def __init__(
+        self,
+        instance: EdenInstance,
+        out: ui.Output,
+    ) -> None:
+        self._instance = instance
+        self._out = out
+
+    def description(self) -> str:
+        return "EdenFS is not running"
+
+    def dry_run_msg(self) -> str:
+        return "Would run `eden start` to start EdenFS"
+
+    def start_msg(self) -> str:
+        return "Running `eden start` to start EdenFS..."
+
+    def perform_fix(self) -> None:
+        """Try to start EdenFS. If Eden is running, an exception will be thrown (and ignored)."""
+        try:
+            daemon.start_edenfs_service(self._instance, None, None)
+        except Exception:
+            # Eden start failed, or Eden is already running/starting. Either way,
+            # check_fix will determine if the fix worked.
+            pass
+
+    def check_fix(self) -> bool:
+        health = self._instance.check_health()
+        if health.is_starting():
+            self._out.writeln(
+                "EdenFS still starting, use `eden status --wait` to watch progress and ensure it starts",
+                fg=self._out.YELLOW,
+            )
+            return False
+        elif health.is_healthy():
+            return True
+        else:
+            return False
 
 
 class EdenfsPrivHelperNotHealthy(Problem):
