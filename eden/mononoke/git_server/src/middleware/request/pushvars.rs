@@ -16,6 +16,7 @@ use hyper::Body;
 use crate::model::Pushvars;
 
 const PUSHVAR_PREFIX: &str = "x-git-";
+const METAGIT_PUSHVAR_PREFIX: &str = "x-metagit";
 
 #[derive(Clone)]
 pub struct PushvarsParsingMiddleware {}
@@ -27,10 +28,12 @@ impl Middleware for PushvarsParsingMiddleware {
         let pushvars = headers
             .iter()
             .filter_map(|(name, value)| {
-                name.as_str()
-                    .to_lowercase()
-                    .starts_with(PUSHVAR_PREFIX)
-                    .then_some((name.to_string(), Bytes::copy_from_slice(value.as_bytes())))
+                let name = name.as_str().to_lowercase();
+                if name.starts_with(METAGIT_PUSHVAR_PREFIX) || name.starts_with(PUSHVAR_PREFIX) {
+                    return Some((name, Bytes::copy_from_slice(value.as_bytes())));
+                } else {
+                    None
+                }
             })
             .collect();
         state.put(Pushvars::new(pushvars));
