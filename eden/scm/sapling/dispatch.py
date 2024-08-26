@@ -597,6 +597,11 @@ def _callcatch(ui, req, func):
             debugmod = getdebugmod()
             if not ui.tracebackflag:
                 ui.write_err(util.smartformatexc())
+
+            # disable progress bar to avoid polluting the pdb debugger when typing
+            if ui.configbool("devel", "debugger.noprogress", True):
+                util.get_main_io().disable_progress()
+
             debugmod.post_mortem(sys.exc_info()[2])
             os._exit(255)
         if not handlecommandexception(ui):
