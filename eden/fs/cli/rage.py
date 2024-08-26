@@ -329,6 +329,8 @@ def print_diagnostic_info(
         dry_run,
     )
 
+    print_eden_doctor(processor, out, dry_run)
+
     print_system_load(out)
 
     quickstack_cmd = get_quickstack_cmd(instance)
@@ -664,6 +666,20 @@ def run_cmd(
         out.write(
             f"Command {' '.join(cmd)} timed out after {timeout} seconds\n".encode()
         )
+
+
+def print_eden_doctor(processor: str, out: IO[bytes], dry_run: bool) -> None:
+    section_title("EdenFS doctor:", out)
+    cmd = ["edenfsctl", "doctor"]
+    try:
+        paste_output(
+            lambda sink: run_cmd(cmd, sink, out, 20),
+            processor,
+            out,
+            dry_run,
+        )
+    except Exception as e:
+        out.write(f"Error printing {cmd}: {e}\n".encode())
 
 
 def print_eden_config(
