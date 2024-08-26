@@ -132,12 +132,8 @@ blobimport
   adding changesets
   adding manifests
   adding file changes
-  adding remote bookmark head_bookmark
-  adding remote bookmark pre_merge_head_bookmark
-  adding remote bookmark small_repo_head_bookmark
   $ hgmn up head_bookmark
   6 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  (activating bookmark head_bookmark)
   $ ls
   a
   ab
@@ -147,7 +143,6 @@ blobimport
   unchanged_files
   $ hg log -G
   @  commit:      * (glob)
-  │  bookmark:    head_bookmark
   │  bookmark:    default/head_bookmark
   │  hoistedname: head_bookmark
   │  user:        user
@@ -160,7 +155,6 @@ blobimport
   │  summary:     [MEGAREPO CATCHUP DELETE] deletion commit (0)
   │
   │ o  commit:      f910c17f2a72
-  │ │  bookmark:    small_repo_head_bookmark
   │ │  bookmark:    default/small_repo_head_bookmark
   │ │  hoistedname: small_repo_head_bookmark
   │ │  user:        test
@@ -188,7 +182,6 @@ blobimport
   │    summary:     small repo first commit
   │
   o  commit:      * (glob)
-  │  bookmark:    pre_merge_head_bookmark
   │  bookmark:    default/pre_merge_head_bookmark
   │  hoistedname: pre_merge_head_bookmark
   │  user:        test

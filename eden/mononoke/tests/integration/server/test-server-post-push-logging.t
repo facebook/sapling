@@ -166,7 +166,7 @@ Use normal push (non-pushrebase).  Since we are not pushing to a public bookmark
   $ echo push > push
   $ hg add -q push
   $ hg ci -m 'commit'
-  $ sl push --force
+  $ sl push --force --allow-anon
   pushing to mononoke://$LOCALIP:$LOCAL_PORT/repo
   searching for changes
 
@@ -186,10 +186,9 @@ Use infinitepush push
   > server=False
   > branchpattern=re:^scratch/.+$
   > EOF
-  $ hgmn up -q master_bookmark
 
 Stop tracking master_bookmark
-  $ hgmn up -q master_bookmark
+  $ hgmn up -q 0e7ec5675652
   $ echo infinitepush > infinitepush
   $ hg add -q infinitepush
   $ hg ci -m 'infinitepush'

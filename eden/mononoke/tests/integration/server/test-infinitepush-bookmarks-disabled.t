@@ -94,7 +94,7 @@ Do infinitepush (aka commit cloud) push
   $ tglogp
   @  47da8b81097c draft 'new'
   │
-  o  3903775176ed draft 'a' master_bookmark
+  o  3903775176ed public 'a'
   
 Bookmark push should have been ignored
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" 'SELECT name, hg_kind, HEX(changeset_id) FROM bookmarks;'

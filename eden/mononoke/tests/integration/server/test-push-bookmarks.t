@@ -75,8 +75,8 @@ Try non fastforward moves (backwards and across branches)
   $ cd ../repo-push
   $ hg update -q master_bookmark
   $ echo other_commit > other_commit && hg -q addremove && hg ci -m other_commit
-  $ hgmn push
-  pushing to mononoke://$LOCALIP:$LOCAL_PORT/repo
+  $ hgmn push --to master_bookmark
+  pushing rev a075b5221b92 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   updating bookmark master_bookmark
   $ hgmn push --non-forward-move --pushvar NON_FAST_FORWARD=true -r 0e7ec5675652 --to master_bookmark

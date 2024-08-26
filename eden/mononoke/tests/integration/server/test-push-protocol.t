@@ -174,6 +174,8 @@ move master bookmarks
    2 files changed, 2 insertions(+), 1 deletions(-)
   
   commit:      0e7ec5675652
+  bookmark:    default/master_bookmark
+  hoistedname: master_bookmark
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     a
@@ -184,7 +186,8 @@ move master bookmarks
 
 push to Mononoke
 
-  $ hgmn push --force --config treemanifest.treeonly=True --debug mononoke://$(mononoke_address)/repo
+  $ hgmn push --force --config treemanifest.treeonly=True --debug mononoke://$(mononoke_address)/repo --allow-anon
+  tracking on None {}
   pushing to mononoke://$LOCALIP:$LOCAL_PORT/repo
   sending hello command
   sending clienttelemetry command
@@ -220,13 +223,17 @@ push to Mononoke
   bundle2-input-part: "reply:pushkey" (params: 2 mandatory) supported
   bundle2-input-bundle: 1 parts total
   updating bookmark master_bookmark
+  preparing listkeys for "bookmarks"
+  sending listkeys command
+  received listkey for "bookmarks": 57 bytes
 
 Now pull what was just pushed
 
   $ cd ../repo3
   $ hgmn log -r "reverse(all())" --stat
   commit:      0e7ec5675652
-  bookmark:    master_bookmark
+  bookmark:    default/master_bookmark
+  hoistedname: master_bookmark
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     a
@@ -248,7 +255,7 @@ compare output of the entire tree. Instead we compare only linear histories
   @  0e7ec5675652a04069cbf976a42e45b740f3243c
    (re)
   $ hgmn log --graph --template '{node} {bookmarks}' -r "::634de738bb0f"
-  o  634de738bb0ff135e32d48567718fb9d7dedf575 master_bookmark
+  o  634de738bb0ff135e32d48567718fb9d7dedf575
   │
   o  8315ea53ef41d34f56232c88669cc80225b6e66d
   │

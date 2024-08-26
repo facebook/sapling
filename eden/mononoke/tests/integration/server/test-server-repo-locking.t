@@ -48,7 +48,7 @@ Can still push to commit cloud
 
 Cannot push to the server
   $ hgmn push --to master
-  pushing to mononoke://$LOCALIP:$LOCAL_PORT/repo
+  pushing rev 9c00c53d25b3 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -70,15 +70,16 @@ Unlock the repo
 
 Now we can push
   $ hgmn push --to master
-  pushing to mononoke://$LOCALIP:$LOCAL_PORT/repo
+  pushing rev 9c00c53d25b3 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master
   searching for changes
   adding changesets
   adding manifests
   adding file changes
+  updating bookmark master
 
   $ hgmn pull -q
   $ tglogp
-  o  1e21255e651f public 'D' master
+  o  1e21255e651f public 'D'
   │
   │ @  9c00c53d25b3 draft 'D'
   │ │

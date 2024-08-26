@@ -48,7 +48,7 @@ create new hg commits
   adding b
 
 try doing a non-pushrebase push with the new commits
-  $ sl push --force
+  $ sl push --force --allow-anon
   pushing to mononoke://$LOCALIP:$LOCAL_PORT/repo
   searching for changes
   remote: Command failed

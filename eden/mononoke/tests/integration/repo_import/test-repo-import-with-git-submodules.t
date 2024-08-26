@@ -227,11 +227,8 @@
   adding changesets
   adding manifests
   adding file changes
-  updating bookmark master_bookmark
-  adding remote bookmark repo_import_new_repo
   $ hgmn up master_bookmark
   6 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  (activating bookmark master_bookmark)
 
   $ hg whereami
   abb3e8e8e71f1aa9ba229c72b7ee12a9825143e2
@@ -251,17 +248,17 @@
 
 Normal log works
   $ log -r "ancestors(master_bookmark)"
-  @    merging [draft;rev=5;abb3e8e8e71f]
+  @    merging [public;rev=5;abb3e8e8e71f] default/master_bookmark default/repo_import_new_repo
   ├─╮
-  │ o  Added git submodule [draft;rev=4;d5bd7c7af4df]
+  │ o  Added git submodule [public;rev=4;d5bd7c7af4df]
   │ │
-  │ o  Add file1 and file2 [draft;rev=3;4ad443ff73f0]
+  │ o  Add file1 and file2 [public;rev=3;4ad443ff73f0]
   │
-  o  C [draft;rev=2;26805aba1e60]
+  o  C [public;rev=2;26805aba1e60]
   │
-  o  B [draft;rev=1;112478962961]
+  o  B [public;rev=1;112478962961]
   │
-  o  A [draft;rev=0;426bada5c675]
+  o  A [public;rev=0;426bada5c675]
   $
 
 But using --stat crashes
@@ -308,8 +305,10 @@ But using --stat crashes
    1 files changed, 3 insertions(+), 0 deletions(-)
   
   commit:      abb3e8e8e71f
-  bookmark:    master_bookmark
-  bookmark:    repo_import_new_repo
+  bookmark:    default/master_bookmark
+  bookmark:    default/repo_import_new_repo
+  hoistedname: master_bookmark
+  hoistedname: repo_import_new_repo
   user:        user
   date:        Sat Apr 02 21:37:00 2005 +0100
   summary:     merging

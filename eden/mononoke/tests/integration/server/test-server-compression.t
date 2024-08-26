@@ -40,9 +40,7 @@ clone and checkout the repository with compression enabled
   $ cd repo
   $ hgmn checkout master_bookmark --config mononokepeer.compression=true
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  (activating bookmark master_bookmark)
 
 without compression again, no zstd indicator that compression is used
   $ hgmn pull --debug 2>&1 | grep -P "(zstd|pulling|checking)"
   pulling from mononoke://* (glob)
-  checking for updated bookmarks

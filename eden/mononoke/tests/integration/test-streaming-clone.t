@@ -160,7 +160,8 @@ Clone it again to make sure saved streaming chunks are valid
   $ cd repo-streamclone-3
   $ hg log -r tip
   commit:      9e0f64de2fee
-  bookmark:    master_bookmark
+  bookmark:    default/master_bookmark
+  hoistedname: master_bookmark
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     echo 111

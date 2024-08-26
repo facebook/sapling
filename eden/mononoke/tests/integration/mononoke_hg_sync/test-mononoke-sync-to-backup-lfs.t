@@ -82,10 +82,8 @@ Check LFS is not in backup
   adding changesets
   adding manifests
   adding file changes
-  adding remote bookmark master_bookmark
   $ hg up master_bookmark
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  (activating bookmark master_bookmark)
   $ [ -f lfs-largefile ]; echo "$?"
   1
 
@@ -102,7 +100,6 @@ Check LFS is in backup
   adding changesets
   adding manifests
   adding file changes
-  updating bookmark master_bookmark
   $ hg up master_bookmark
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ [ -f lfs-largefile ]; echo "$?"

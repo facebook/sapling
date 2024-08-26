@@ -132,7 +132,6 @@ Do a manual move
   adding changesets
   adding manifests
   adding file changes
-  adding remote bookmark master_bookmark
   $ hgmn log -r master_bookmark -T '{node}\n'
   f5fb745185a2d197d092e7dfffe147f36de1af76
   $ echo "$TIP_PARENT"
@@ -155,7 +154,6 @@ Move forward to a commit that's already present in the destination
   adding changesets
   adding manifests
   adding file changes
-  updating bookmark master_bookmark
   $ hgmn log -r master_bookmark -T '{node}\n'
   bcf523b814e2cbae2d4d2d5b1cbbe3e391f4b4d8
   $ echo "$TIP"

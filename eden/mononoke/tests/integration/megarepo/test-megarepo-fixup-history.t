@@ -114,7 +114,7 @@ Start mononoke server
   │
   o  [MEGAREPO DELETE] history fixup (0) [public;c2a5523610c4]
   │
-  o  small repo commit 3 [public;ea8595b036ed]
+  o  small repo commit 3 [public;ea8595b036ed] default/correct_history_branch
   │
   o  small repo commit 2 [corrected history] [public;6c017a8ba0a6]
   │

@@ -43,14 +43,12 @@ update master_bookmark concurrently.
   $ cd repo-push
   $ hg up master_bookmark
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  (activating bookmark master_bookmark)
   $ echo "b file content" > b
   $ hg add b
   $ hg ci -mb
-  $ hgmn push mononoke://$(mononoke_address)/repo -r .
+  $ hgmn push mononoke://$(mononoke_address)/repo -r . --allow-anon
   pushing to mononoke://$LOCALIP:$LOCAL_PORT/repo
   searching for changes
-  updating bookmark master_bookmark
   $ echo "c file content" > c
   $ hg add c
   $ hg ci -mc
@@ -69,7 +67,7 @@ configure an extension so that a push happens right after pulldiscovery
   >     orig(pullop)
   >     pullop.repo.ui.write("*** running push\n")
   >     pullop.repo.ui.system(
-  >         "bash -c 'source \"${TEST_FIXTURES}/library.sh\"; hgmn push -R $TESTTMP/repo-push'",
+  >         "bash -c 'source \"${TEST_FIXTURES}/library.sh\"; hgmn push -R $TESTTMP/repo-push --allow-anon'",
   >         onerr=lambda str: Exception(str),
   >     )
   >     pullop.repo.ui.write("*** push complete\n")
@@ -84,24 +82,25 @@ configure an extension so that a push happens right after pulldiscovery
   *** running push
   pushing to mononoke://$LOCALIP:$LOCAL_PORT/repo
   searching for changes
-  updating bookmark master_bookmark
   *** push complete
+  no changes found
   adding changesets
   adding manifests
   adding file changes
-  updating bookmark master_bookmark
 
-  $ hg bookmarks
-     master_bookmark           e2750f699c89
+  $ hg bookmarks --all
+  no bookmarks set
+     default/master_bookmark   0e7ec5675652
 
 pull again to ensure the new version makes it into repo-pull
 
   $ hgmn pull
   pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo
   searching for changes
+  no changes found
   adding changesets
   adding manifests
   adding file changes
-  updating bookmark master_bookmark
-  $ hg bookmarks
-     master_bookmark           e5c8b04bf9a0
+  $ hg bookmarks --all
+  no bookmarks set
+     default/master_bookmark   0e7ec5675652

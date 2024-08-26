@@ -64,7 +64,6 @@ start mononoke
   adding changesets
   adding manifests
   adding file changes
-  adding remote bookmark master_bookmark
   $ hgmn up 2
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg st --change . -C

@@ -616,22 +616,39 @@ function setup_common_hg_configs {
   cat >> "$HGRCPATH" <<EOF
 [ui]
 ssh="$DUMMYSSH"
+
 [devel]
 segmented-changelog-rev-compat=True
+
 [extensions]
 remotefilelog=
+commitextras=
+treemanifest=
+remotenames=
+smartlog=
+clienttelemetry=
+
 [remotefilelog]
 cachepath=$TESTTMP/cachepath
-[extensions]
-commitextras=
+shallowtrees=True
+
+[treemanifest]
+flatcompat=False
+sendtrees=True
+treeonly=True
+
 [hint]
 ack=*
+
 [experimental]
 changegroup3=True
+
 [mutation]
 record=False
+
 [web]
 cacerts=$TEST_CERTDIR/root-ca.crt
+
 [auth]
 mononoke.prefix=*
 mononoke.schemes=https mononoke
@@ -1857,78 +1874,37 @@ function hginit_treemanifest() {
 [extensions]
 treemanifest=!
 treemanifestserver=
-remotefilelog=
-smartlog=
-clienttelemetry=
+
 [treemanifest]
-flatcompat=False
 server=True
-sendtrees=True
-treeonly=True
+
 [remotefilelog]
 reponame=$1
-cachepath=$TESTTMP/cachepath
 server=True
-shallowtrees=True
 EOF
 }
 
 function hgclone_treemanifest() {
-  hg clone -q --shallow --config remotefilelog.reponame="$2" --config extensions.treemanifest= --config treemanifest.treeonly=True "$@"
+  hg clone -q --shallow --config remotefilelog.reponame="$2" "$@"
   cat >> "$2"/.hg/hgrc <<EOF
-[extensions]
-treemanifest=
-remotefilelog=
-smartlog=
-clienttelemetry=
-[treemanifest]
-flatcompat=False
-sendtrees=True
-treeonly=True
 [remotefilelog]
 reponame=$2
-cachepath=$TESTTMP/cachepath
-shallowtrees=True
 EOF
 }
 
 function hgmn_init() {
   hg init "$@"
   cat >> "$1"/.hg/hgrc <<EOF
-[extensions]
-treemanifest=
-remotefilelog=
-remotenames=
-smartlog=
-clienttelemetry=
-[treemanifest]
-flatcompat=False
-sendtrees=True
-treeonly=True
 [remotefilelog]
 reponame=$1
-cachepath=$TESTTMP/cachepath
-shallowtrees=True
 EOF
 }
 
 function hgmn_clone() {
-  quiet hgmn clone --shallow  --config extensions.remotenames= --config remotefilelog.reponame="$REPONAME" "$@" --config extensions.treemanifest= --config treemanifest.treeonly=True && \
+  quiet hgmn clone --shallow --config remotefilelog.reponame="$REPONAME" "$@" && \
   cat >> "$2"/.hg/hgrc <<EOF
-[extensions]
-treemanifest=
-remotefilelog=
-remotenames=
-smartlog=
-clienttelemetry=
-[treemanifest]
-flatcompat=False
-sendtrees=True
-treeonly=True
 [remotefilelog]
 reponame=$REPONAME
-cachepath=$TESTTMP/cachepath
-shallowtrees=True
 EOF
 }
 
@@ -1942,32 +1918,22 @@ EOF
 function setup_hg_server() {
   cat >> .hg/hgrc <<EOF
 [extensions]
-commitextras=
 treemanifest=!
 treemanifestserver=
-remotefilelog=
-clienttelemetry=
+
 [treemanifest]
 server=True
+
 [remotefilelog]
 server=True
-shallowtrees=True
 EOF
 }
 
 function setup_hg_client() {
   cat >> .hg/hgrc <<EOF
-[extensions]
-treemanifest=
-remotefilelog=
-clienttelemetry=
-[treemanifest]
-flatcompat=False
-server=False
-treeonly=True
 [remotefilelog]
-server=False
 reponame=$REPONAME
+
 [mutation]
 record=False
 EOF
@@ -2029,7 +1995,7 @@ EOF
 
   start_and_wait_for_mononoke_server
 
-  hgclone_treemanifest ssh://user@dummy/repo-hg repo2 --noupdate --config extensions.remotenames= -q
+  hgclone_treemanifest ssh://user@dummy/repo-hg repo2 --noupdate -q
   cd repo2 || exit 1
   setup_hg_client
   cat >> .hg/hgrc <<EOF
@@ -2057,10 +2023,13 @@ function setup_hg_modern_lfs() {
 lfs=True
 useruststore=True
 getpackversion = 2
+
 [worker]
 rustworkers=True
+
 [extensions]
 lfs=!
+
 [lfs]
 url=$1
 threshold=$2
@@ -2076,10 +2045,12 @@ function setup_hg_edenapi() {
 [edenapi]
 enable=true
 url=https://localhost:$MONONOKE_SOCKET/edenapi/$repo
+
 [remotefilelog]
 http=True
 useruststore=True
 getpackversion = 2
+
 [treemanifest]
 http=True
 useruststore=True
@@ -2271,7 +2242,7 @@ function default_setup() {
   start_and_wait_for_mononoke_server "$@"
 
   echo "cloning repo in hg client 'repo2'"
-  hgclone_treemanifest ssh://user@dummy/repo-hg repo2 --noupdate --config extensions.remotenames= -q
+  hgclone_treemanifest ssh://user@dummy/repo-hg repo2 --noupdate -q
   cd repo2 || exit 1
   setup_hg_client
   cat >> .hg/hgrc <<EOF

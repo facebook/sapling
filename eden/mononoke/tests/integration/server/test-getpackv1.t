@@ -94,7 +94,8 @@ Then make sure update succeeds
   AA
   $ hg log -f A
   commit:      be4e0feadad6
-  bookmark:    master_bookmark
+  bookmark:    default/master_bookmark
+  hoistedname: master_bookmark
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     AA
@@ -110,11 +111,12 @@ Rename a file and then prefetch it
   $ hg mv A AA
   $ sl ci -m 'rename A to AA'
   $ hgmn push -r . --to master_bookmark
-  pushing to mononoke://$LOCALIP:$LOCAL_PORT/repo
+  pushing rev daf20827925b to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
   adding file changes
+  updating bookmark master_bookmark
   $ cd $TESTTMP/repo3
   $ hgmn pull -q
   $ hgmn prefetch -r 4 --debug 2>&1 | grep "getpackv1 command"

@@ -71,8 +71,8 @@ Test land stack
 
 Inspect results
   $ sl pull -q
-  $ sl log -G -T '{node} {desc} {bookmarks}\n' -r "sort(all(),topo)"
-  o  cee85bb77dff9258b0b36fbe83501f3fd953fc4d E master_bookmark
+  $ sl log -G -T '{node} {desc} {remotenames}\n' -r "sort(all(),topo)"
+  o  cee85bb77dff9258b0b36fbe83501f3fd953fc4d E default/master_bookmark
   │
   o  c5ef64ddf563718659b4c9777f0110de43055135 D
   │
