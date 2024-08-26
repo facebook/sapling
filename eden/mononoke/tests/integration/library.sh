@@ -633,14 +633,11 @@ record=False
 [web]
 cacerts=$TEST_CERTDIR/root-ca.crt
 [auth]
+mononoke.prefix=*
+mononoke.schemes=https mononoke
 mononoke.cert=$TEST_CERTDIR/${OVERRIDE_CLIENT_CERT:-client0}.crt
 mononoke.key=$TEST_CERTDIR/${OVERRIDE_CLIENT_CERT:-client0}.key
-mononoke.prefix=mononoke://*
 mononoke.cn=localhost
-edenapi.cert=$TEST_CERTDIR/${OVERRIDE_CLIENT_CERT:-client0}.crt
-edenapi.key=$TEST_CERTDIR/${OVERRIDE_CLIENT_CERT:-client0}.key
-edenapi.prefix=localhost
-edenapi.cacerts=$TEST_CERTDIR/root-ca.crt
 
 [checkout]
 use-rust=false
@@ -2086,12 +2083,6 @@ getpackversion = 2
 [treemanifest]
 http=True
 useruststore=True
-[auth]
-edenapi.cert=$TEST_CERTDIR/client0.crt
-edenapi.key=$TEST_CERTDIR/client0.key
-edenapi.prefix=localhost
-edenapi.schemes=https
-edenapi.cacerts=$TEST_CERTDIR/root-ca.crt
 EOF
 }
 
