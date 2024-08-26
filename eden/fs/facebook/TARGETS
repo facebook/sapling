@@ -61,7 +61,6 @@ python_binary(
         ":edenfs_restarter_lib",
         "//eden/fs/cli:lib",
         "//eden/fs/cli:telemetry",
-        "//eden/fs/cli/facebook:telemetry",
         "//libfb/py:dateutil",
     ],
 )

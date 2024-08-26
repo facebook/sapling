@@ -3,6 +3,22 @@ load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
 oncall("scm_client_infra")
 
 cpp_library(
+    name = "server_observer",
+    srcs = [
+        "ServerObserver.cpp",
+    ],
+    headers = [
+        "ServerObserver.h",
+    ],
+    deps = [
+        "//common/fb303/cpp:server_observer",
+    ],
+    exported_deps = [
+        "//thrift/lib/cpp/server:server_observer",
+    ],
+)
+
+cpp_library(
     name = "edenfs_smartplatform_service",
     srcs = [
         "EdenFSSmartPlatformServiceEndpoint.cpp",

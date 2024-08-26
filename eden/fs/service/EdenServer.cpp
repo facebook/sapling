@@ -104,6 +104,10 @@
 #include "eden/fs/service/facebook/EdenFSSmartPlatformServiceEndpoint.h" // @manual
 #endif
 
+#ifdef EDEN_HAVE_SERVER_OBSERVER
+#include "eden/fs/service/facebook/ServerObserver.h" // @manual
+#endif
+
 #ifndef _WIN32
 #include <sys/wait.h>
 #include "eden/fs/fuse/FuseChannel.h"
@@ -2055,6 +2059,9 @@ std::vector<size_t> EdenServer::collectSaplingBackingStoreCounters(
 folly::SemiFuture<Unit> EdenServer::createThriftServer() {
   auto edenConfig = config_->getEdenConfig();
   server_ = make_shared<ThriftServer>();
+#ifdef EDEN_HAVE_SERVER_OBSERVER
+  server_->setObserver(createServerObserver(kServiceName));
+#endif
   server_->setMaxRequests(edenConfig->thriftMaxRequests.getValue());
 
   // Set up the CPU worker threads

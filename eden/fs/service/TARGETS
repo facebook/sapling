@@ -315,18 +315,21 @@ cpp_library(
             "linux",
             [
                 "//eden/fs/service/facebook:edenfs_smartplatform_service",
+                "//eden/fs/service/facebook:server_observer",
             ],
         ),
         (
             "macos",
             [
                 "//eden/fs/service/facebook:edenfs_smartplatform_service",
+                "//eden/fs/service/facebook:server_observer",
             ],
         ),
         (
             "windows",
             [
                 "//eden/fs/service/facebook:edenfs_smartplatform_service",
+                "//eden/fs/service/facebook:server_observer",
                 "//eden/fs/notifications:windows_notifier",
             ],
         ),
