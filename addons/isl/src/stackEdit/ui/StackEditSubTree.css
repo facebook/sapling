@@ -23,6 +23,10 @@
   cursor: default;
 }
 
+.commit-reorder-preview {
+  opacity: 0.5;
+}
+
 .stack-edit-subtree .commit:hover .stack-edit-right-side-buttons {
   opacity: 1;
 }
