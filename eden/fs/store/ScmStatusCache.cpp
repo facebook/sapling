@@ -31,49 +31,54 @@ ScmStatusCache::ScmStatusCache(
           std::move(stats)}, journal_(std::move(journal)) {}
 
 std::variant<StatusResultFuture, StatusResultPromise> ScmStatusCache::get(
-    const ObjectId& id,
-    JournalDelta::SequenceNumber seq) {
-  auto internalCachedItem = getSimple(id);
-  if (internalCachedItem && internalCachedItem->seq >= seq) {
+    const ObjectId& key,
+    JournalDelta::SequenceNumber curSeq) {
+  auto internalCachedItem = getSimple(key);
+  if (internalCachedItem && internalCachedItem->seq >= curSeq) {
     return ImmediateFuture<ScmStatus>{internalCachedItem->status};
   }
 
-  auto it = promiseMap_.find(id);
-  if (it != promiseMap_.end() && it->second.first >= seq) {
+  auto it = promiseMap_.find(key);
+  if (it != promiseMap_.end() && it->second.first >= curSeq) {
     return it->second.second->getFuture();
   }
 
   auto promise = std::make_shared<folly::SharedPromise<ScmStatus>>();
-  promiseMap_.insert_or_assign(id, std::make_pair(seq, promise));
+  promiseMap_.insert_or_assign(key, std::make_pair(curSeq, promise));
 
   return promise;
 }
 
 void ScmStatusCache::insert(
-    ObjectId id,
-    std::shared_ptr<const SeqStatusPair> pair) {
-  auto internalCachedItem = getSimple(id);
+    ObjectId key,
+    JournalDelta::SequenceNumber curSeq,
+    ScmStatus status) {
+  auto internalCachedItem = getSimple(key);
 
   if (!internalCachedItem) {
-    insertSimple(std::move(id), pair);
+    insertSimple(
+        std::move(key),
+        std::make_shared<SeqStatusPair>(curSeq, std::move(status)));
     return;
   }
 
   // it's only necessary to update the cache if the diff is computed
   // for a larger sequenceID than the existing one.
-  if (pair->seq > internalCachedItem->seq) {
-    invalidate(id);
-    insertSimple(std::move(id), std::move(pair));
+  if (curSeq > internalCachedItem->seq) {
+    invalidate(key);
+    insertSimple(
+        std::move(key),
+        std::make_shared<SeqStatusPair>(curSeq, std::move(status)));
   }
 }
 
 void ScmStatusCache::dropPromise(
     const ObjectId& key,
-    JournalDelta::SequenceNumber seq) {
+    JournalDelta::SequenceNumber curSeq) {
   auto it = promiseMap_.find(key);
   // we don't want to accidentally drop promises owned by other requests
   // which query with a larger sequence number
-  if (it != promiseMap_.end() && it->second.first == seq) {
+  if (it != promiseMap_.end() && it->second.first == curSeq) {
     promiseMap_.erase(key);
   }
 }

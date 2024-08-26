@@ -107,8 +107,8 @@ class ScmStatusCache : public ObjectCache<
    * reference to the promise should always be held by a caller.
    */
   std::variant<StatusResultFuture, StatusResultPromise> get(
-      const ObjectId& hash,
-      JournalDelta::SequenceNumber seq);
+      const ObjectId& key,
+      JournalDelta::SequenceNumber curSeq);
 
   /**
    * Insert a new result into the internal cache.
@@ -123,7 +123,8 @@ class ScmStatusCache : public ObjectCache<
    *    indicates a later point in time and we want to keep our cache up to
    *    date.
    */
-  void insert(ObjectId key, std::shared_ptr<const SeqStatusPair> pair);
+  void
+  insert(ObjectId key, JournalDelta::SequenceNumber curSeq, ScmStatus status);
 
   /**
    * Drop the promise for a given key and sequence number from the promise map.

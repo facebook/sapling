@@ -1940,10 +1940,7 @@ ImmediateFuture<Unit> EdenMount::diff(
                 auto lockedCachePtr = scmStatusCache_.wlock();
                 if (shouldInsert) {
                   (*lockedCachePtr)
-                      ->insert(
-                          key,
-                          std::make_shared<SeqStatusPair>(
-                              curSequenceID, std::move(newStatus)));
+                      ->insert(key, curSequenceID, std::move(newStatus));
                 }
 
                 // FaultInjector check point: for testing only
