@@ -105,6 +105,7 @@ DEFAULT_EXTENSIONS = {
     "progressfile",
     "remotefilelog",
     "sampling",
+    "schemes",
     "tweakdefaults",
 }
 

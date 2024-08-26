@@ -286,6 +286,7 @@ Test extension help:
        remotefilelog
                      minimize and speed up large repositories
        sampling      (no help text available)
+       schemes       extend schemes with shortcuts to repository swarms
        treemanifest
        tweakdefaults
                      user friendly defaults
@@ -343,7 +344,6 @@ Test extension help:
        remotenames   mercurial extension for improving client/server workflows
        reset         reset the active bookmark and working copy to a desired
                      revision
-       schemes       extend schemes with shortcuts to repository swarms
        share         share a common history between several working directories
        shelve        save and restore changes to the working directory
        sigtrace      sigtrace - dump stack and memory traces on signal
