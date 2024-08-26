@@ -32,6 +32,7 @@ use crate::scmstore::file::FileStoreMetrics;
 use crate::scmstore::tree::TreeMetadataMode;
 use crate::scmstore::FileStore;
 use crate::scmstore::TreeStore;
+use crate::util::get_cache_path;
 use crate::util::get_indexedlogdatastore_aux_path;
 use crate::util::get_indexedlogdatastore_path;
 use crate::util::get_indexedloghistorystore_path;
@@ -198,7 +199,7 @@ impl<'a> FileStoreBuilder<'a> {
 
     #[context("failed to build indexedlog cache")]
     pub fn build_indexedlog_cache(&self) -> Result<Option<Arc<IndexedLogHgIdDataStore>>> {
-        let cache_path = match cache_path(self.config, &self.suffix)? {
+        let cache_path = match get_cache_path(self.config, &self.suffix)? {
             Some(p) => p,
             None => return Ok(None),
         };
@@ -228,7 +229,7 @@ impl<'a> FileStoreBuilder<'a> {
 
     #[context("failed to build aux cache")]
     pub fn build_aux_cache(&self) -> Result<Option<Arc<AuxStore>>> {
-        let cache_path = match cache_path(self.config, &self.suffix)? {
+        let cache_path = match get_cache_path(self.config, &self.suffix)? {
             Some(p) => p,
             None => return Ok(None),
         };
@@ -261,7 +262,7 @@ impl<'a> FileStoreBuilder<'a> {
             return Ok(None);
         }
 
-        let cache_path = match cache_path(self.config, &self.suffix)? {
+        let cache_path = match get_cache_path(self.config, &self.suffix)? {
             Some(p) => p,
             None => return Ok(None),
         };
@@ -273,7 +274,7 @@ impl<'a> FileStoreBuilder<'a> {
     pub fn build(mut self) -> Result<FileStore> {
         tracing::trace!(target: "revisionstore::filestore", "checking cache");
         if self.contentstore.is_none() {
-            if let Some(cache_path) = cache_path(self.config, &self.suffix)? {
+            if let Some(cache_path) = get_cache_path(self.config, &self.suffix)? {
                 check_cache_buster(&self.config, &cache_path);
             }
         }
@@ -427,24 +428,6 @@ impl<'a> FileStoreBuilder<'a> {
     }
 }
 
-// Return remotefilelog cache path, or None if there is no cache path
-// (e.g. because we have no repo name).
-fn cache_path(config: &dyn Config, suffix: &Option<PathBuf>) -> Result<Option<PathBuf>> {
-    match crate::util::get_cache_path(config, suffix) {
-        Ok(p) => Ok(Some(p)),
-        Err(err) => {
-            if matches!(
-                err.downcast_ref::<configmodel::Error>(),
-                Some(configmodel::Error::NotSet(_, _))
-            ) {
-                Ok(None)
-            } else {
-                Err(err)
-            }
-        }
-    }
-}
-
 pub struct TreeStoreBuilder<'a> {
     config: &'a dyn Config,
     local_path: Option<PathBuf>,
@@ -571,7 +554,7 @@ impl<'a> TreeStoreBuilder<'a> {
 
     #[context("failed to build indexedlog cache")]
     pub fn build_indexedlog_cache(&self) -> Result<Option<Arc<IndexedLogHgIdDataStore>>> {
-        let cache_path = match cache_path(self.config, &self.suffix)? {
+        let cache_path = match get_cache_path(self.config, &self.suffix)? {
             Some(p) => p,
             None => return Ok(None),
         };
@@ -638,7 +621,7 @@ impl<'a> TreeStoreBuilder<'a> {
 
     #[context("failed to build shared history")]
     pub fn build_historystore_cache(&self) -> Result<Option<Arc<IndexedLogHgIdHistoryStore>>> {
-        let cache_path = match cache_path(self.config, &None)? {
+        let cache_path = match get_cache_path(self.config, &None::<&Path>)? {
             Some(p) => p,
             None => return Ok(None),
         };
@@ -656,7 +639,7 @@ impl<'a> TreeStoreBuilder<'a> {
         // (the SaplingRemoteApiAdapter stuff needs to be fixed in particular)
         tracing::trace!(target: "revisionstore::treestore", "checking cache");
         if self.contentstore.is_none() {
-            if let Some(cache_path) = cache_path(self.config, &self.suffix)? {
+            if let Some(cache_path) = get_cache_path(self.config, &self.suffix)? {
                 check_cache_buster(&self.config, &cache_path);
             }
         }

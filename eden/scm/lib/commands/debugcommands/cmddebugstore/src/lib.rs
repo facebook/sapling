@@ -45,7 +45,7 @@ pub fn run(ctx: ReqCtx<DebugstoreOpts>, repo: &Repo) -> Result<u8> {
     let hgid = HgId::from_str(&ctx.opts.hgid)?;
     let config = repo.config();
 
-    let packs_path = revisionstore::util::get_cache_path(config, &Some("packs"))?;
+    let packs_path = revisionstore::util::get_cache_path(config, &Some("packs"))?.unwrap();
     let packstore = Box::new(DataPackStore::new(
         packs_path,
         CorruptionPolicy::IGNORE,
@@ -53,7 +53,8 @@ pub fn run(ctx: ReqCtx<DebugstoreOpts>, repo: &Repo) -> Result<u8> {
         ExtStoredPolicy::Use,
     ));
 
-    let datastore_path = revisionstore::util::get_cache_path(config, &Some("indexedlogdatastore"))?;
+    let datastore_path =
+        revisionstore::util::get_cache_path(config, &Some("indexedlogdatastore"))?.unwrap();
 
     let max_log_count = config.get_opt::<u8>("indexedlog", "data.max-log-count")?;
     let max_bytes_per_log = config.get_opt::<ByteCount>("indexedlog", "data.max-bytes-per-log")?;

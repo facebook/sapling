@@ -9,6 +9,7 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
 
+use anyhow::bail;
 use anyhow::format_err;
 use anyhow::Result;
 use configmodel::convert::ByteCount;
@@ -233,20 +234,27 @@ impl<'a> MetadataStoreBuilder<'a> {
             .map(|v| v.value());
 
         let cache_packs_path = get_cache_packs_path(self.config, &self.suffix)?;
-        let shared_pack_store = Arc::new(MutableHistoryPackStore::new(
-            cache_packs_path,
-            CorruptionPolicy::REMOVE,
-            max_pending,
-            max_bytes,
-        )?);
+        let shared_pack_store = match cache_packs_path {
+            Some(path) => Some(Arc::new(MutableHistoryPackStore::new(
+                path,
+                CorruptionPolicy::REMOVE,
+                max_pending,
+                max_bytes,
+            )?)),
+            None => None,
+        };
+
         let mut historystore: UnionHgIdHistoryStore<Arc<dyn HgIdHistoryStore>> =
             UnionHgIdHistoryStore::new();
 
-        let shared_indexedloghistorystore = Arc::new(IndexedLogHgIdHistoryStore::new(
-            get_indexedloghistorystore_path(cache_path)?,
-            &self.config,
-            StoreType::Rotated,
-        )?);
+        let shared_indexedloghistorystore = match cache_path {
+            Some(cache_path) => Some(Arc::new(IndexedLogHgIdHistoryStore::new(
+                get_indexedloghistorystore_path(cache_path)?,
+                &self.config,
+                StoreType::Rotated,
+            )?)),
+            None => None,
+        };
 
         // The shared store should precede the local one for 2 reasons:
         //  - It is expected that the number of blobs and the number of requests satisfied by the
@@ -254,19 +262,27 @@ impl<'a> MetadataStoreBuilder<'a> {
         //  - When pushing changes on a pushrebase server, the local linknode will become
         //    incorrect, future fetches will put that change in the shared cache where the linknode
         //    will be correct.
-        let primary: Arc<dyn HgIdMutableHistoryStore> =
+        let primary: Option<Arc<dyn HgIdMutableHistoryStore>> =
             if self
                 .config
                 .get_or("remotefilelog", "write-hgcache-to-indexedlog", || true)?
             {
                 // Put the indexedlog first, since recent data will have gone there.
-                historystore.add(shared_indexedloghistorystore.clone());
-                historystore.add(shared_pack_store);
-                shared_indexedloghistorystore
+                if let Some(shared_indexedloghistorystore) = shared_indexedloghistorystore.clone() {
+                    historystore.add(shared_indexedloghistorystore);
+                }
+                if let Some(shared_pack_store) = shared_pack_store {
+                    historystore.add(shared_pack_store);
+                }
+                shared_indexedloghistorystore.map(|store| store as Arc<dyn HgIdMutableHistoryStore>)
             } else {
-                historystore.add(shared_pack_store.clone());
-                historystore.add(shared_indexedloghistorystore);
-                shared_pack_store
+                if let Some(shared_pack_store) = shared_pack_store.clone() {
+                    historystore.add(shared_pack_store);
+                }
+                if let Some(shared_indexedloghistorystore) = shared_indexedloghistorystore {
+                    historystore.add(shared_indexedloghistorystore);
+                }
+                shared_pack_store.map(|store| store as Arc<dyn HgIdMutableHistoryStore>)
             };
 
         let local_mutablehistorystore: Option<Arc<dyn HgIdMutableHistoryStore>> =
@@ -306,6 +322,14 @@ impl<'a> MetadataStoreBuilder<'a> {
                 }
                 None
             };
+
+        let primary = match primary {
+            Some(primary) => primary,
+            None => match local_mutablehistorystore.as_ref() {
+                Some(local) => local.clone(),
+                None => bail!("MetadataStore requires at least one of local store or shared store"),
+            },
+        };
 
         let remote_store: Option<Arc<dyn RemoteHistoryStore>> =
             if let Some(remotestore) = self.remotestore {

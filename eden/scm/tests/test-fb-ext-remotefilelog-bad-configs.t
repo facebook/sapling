@@ -14,18 +14,6 @@ no-check-code
 
   $ newclientrepo shallow test:master_server
 
-Verify error message when no cachepath specified
-  $ hg up -q null
-  $ cp $HGRCPATH $HGRCPATH.bak
-  $ sed -i.bak -n "/cachepath/!p" $HGRCPATH
-  $ hg up tip --config checkout.use-rust=false
-  abort: get_cache_path
-  
-  Caused by:
-      config remotefilelog.cachepath is not set
-  [255]
-  $ mv $HGRCPATH.bak $HGRCPATH
-
 Verify error message when no fallback specified
 
   $ hg up -q null

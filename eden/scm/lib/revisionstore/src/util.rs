@@ -24,30 +24,40 @@ use util::path::create_dir;
 use util::path::create_shared_dir;
 use util::path::create_shared_dir_all;
 
-pub fn get_repo_name(config: &dyn Config) -> Result<String> {
-    Ok(config.must_get("remotefilelog", "reponame")?)
-}
+fn get_config_cache_path(config: &dyn Config) -> Result<Option<PathBuf>> {
+    let reponame = match config.get_nonempty("remotefilelog", "reponame") {
+        Some(name) => name,
+        None => return Ok(None),
+    };
 
-fn get_config_cache_path(config: &dyn Config) -> Result<PathBuf> {
-    let reponame = get_repo_name(config)?;
-    let mut path: PathBuf = config.must_get("remotefilelog", "cachepath")?;
+    let mut path: PathBuf = match config.get_nonempty_opt("remotefilelog", "cachepath")? {
+        Some(path) => path,
+        None => return Ok(None),
+    };
+
     create_shared_dir_all(&path)?;
     path.push(encode_repo_name(reponame));
     create_shared_dir(&path)?;
 
-    Ok(path)
+    Ok(Some(path))
 }
 
 #[context("get_cache_path")]
-pub fn get_cache_path(config: &dyn Config, suffix: &Option<impl AsRef<Path>>) -> Result<PathBuf> {
-    let mut path = get_config_cache_path(config)?;
+pub fn get_cache_path(
+    config: &dyn Config,
+    suffix: &Option<impl AsRef<Path>>,
+) -> Result<Option<PathBuf>> {
+    let mut path = match get_config_cache_path(config) {
+        Ok(Some(path)) => path,
+        res => return res,
+    };
 
     if let Some(ref suffix) = suffix {
         path.push(suffix);
         create_shared_dir(&path)?;
     }
 
-    Ok(path)
+    Ok(Some(path))
 }
 
 #[context("get_local_path")]
@@ -108,8 +118,15 @@ pub fn get_packs_path(path: impl AsRef<Path>, suffix: &Option<PathBuf>) -> Resul
     Ok(path)
 }
 
-pub fn get_cache_packs_path(config: &dyn Config, suffix: &Option<PathBuf>) -> Result<PathBuf> {
-    get_packs_path(get_config_cache_path(config)?, suffix)
+pub fn get_cache_packs_path(
+    config: &dyn Config,
+    suffix: &Option<PathBuf>,
+) -> Result<Option<PathBuf>> {
+    let cache_path = match get_config_cache_path(config) {
+        Ok(Some(path)) => path,
+        res => return res,
+    };
+    Ok(Some(get_packs_path(cache_path, suffix)?))
 }
 
 #[context("get_lfs_path")]
