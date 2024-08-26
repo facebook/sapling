@@ -16,6 +16,7 @@ import {Checkbox} from '../Checkbox';
 import {Divider} from '../Divider';
 import {Dropdown} from '../Dropdown';
 import {ErrorNotice} from '../ErrorNotice';
+import {HorizontallyGrowingTextField} from '../HorizontallyGrowingTextField';
 import {Icon} from '../Icon';
 import {Kbd} from '../Kbd';
 import {Panels} from '../Panels';
@@ -302,6 +303,12 @@ export default function ComponentExplorer() {
           <Tooltip trigger="manual" shouldShow={true} title="Tooltip" placement="bottom">
             Thing
           </Tooltip>
+        </Row>
+        <Row>
+          <HorizontallyGrowingTextField
+            placeholder="grows as you type"
+            onInput={e => console.log(e.currentTarget.value)}
+          />
         </Row>
         <Row>
           <span>Typeahead:</span>

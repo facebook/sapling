@@ -12,7 +12,7 @@ import {Column} from './Flex';
 import * as stylex from '@stylexjs/stylex';
 import {forwardRef, useId} from 'react';
 
-const styles = stylex.create({
+export const textFieldStyles = stylex.create({
   root: {
     gap: 0,
   },
@@ -59,14 +59,14 @@ export const TextField = forwardRef(
   ) => {
     const id = useId();
     return (
-      <Column xstyle={[styles.root, containerXstyle ?? null]} style={{width}} alignStart>
+      <Column xstyle={[textFieldStyles.root, containerXstyle ?? null]} style={{width}} alignStart>
         {children && (
-          <label htmlFor={id} {...stylex.props(styles.label)}>
+          <label htmlFor={id} {...stylex.props(textFieldStyles.label)}>
             {children}
           </label>
         )}
         <input
-          {...stylex.props(styles.input, xstyle)}
+          {...stylex.props(textFieldStyles.input, xstyle)}
           type="text"
           id={id}
           value={value}

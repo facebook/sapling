@@ -78,8 +78,8 @@ import {Badge} from 'isl-components/Badge';
 import {Banner, BannerKind} from 'isl-components/Banner';
 import {Button} from 'isl-components/Button';
 import {ErrorNotice} from 'isl-components/ErrorNotice';
+import {HorizontallyGrowingTextField} from 'isl-components/HorizontallyGrowingTextField';
 import {Icon} from 'isl-components/Icon';
-import {TextField} from 'isl-components/TextField';
 import {DOCUMENTATION_DELAY, Tooltip} from 'isl-components/Tooltip';
 import {useAtom, useAtomValue} from 'jotai';
 import React, {useCallback, useMemo, useEffect, useRef, useState} from 'react';
@@ -746,7 +746,7 @@ export function UncommittedChanges({place}: {place: Place}) {
                 <Icon slot="start" icon="plus" />
                 <T>Commit</T>
               </Button>
-              <TextField
+              <HorizontallyGrowingTextField
                 data-testid="quick-commit-title"
                 placeholder="Title"
                 ref={commitTitleRef}
