@@ -229,9 +229,15 @@ class remotefilelog:
         # The content comparison is expensive as well, since we have to load
         # the content from the store and from disk. Let's just check the
         # node instead.
-        p1, p2, linknode, copyfrom = self.repo.fileslog.metadatastore.getnodeinfo(
-            self.filename, node
-        )
+        try:
+            p1, p2, linknode, copyfrom = self.repo.fileslog.metadatastore.getnodeinfo(
+                self.filename, node
+            )
+        except KeyError:
+            # for subtree copy, we are reusing the old filelog node but with a new filename,
+            # so the key (filename, node) is not in the metadatastore, let's just do a full
+            # comparison.
+            return self.read(node) != text
 
         if copyfrom or text.startswith(b"\1\n"):
             meta = {}
