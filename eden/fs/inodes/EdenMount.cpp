@@ -1852,6 +1852,11 @@ ImmediateFuture<Unit> EdenMount::diff(
     auto latestInfo = getJournal().getLatest();
     if (latestInfo.has_value()) {
       auto key = ScmStatusCache::makeKey(commitHash, listIgnored);
+      XLOG(DBG7) << fmt::format(
+          "ScmStatusCache: hash={}, listIgnored={}, key={}",
+          commitHash.value(),
+          listIgnored,
+          key);
       auto curSequenceID = latestInfo.value().sequenceID;
       std::variant<StatusResultFuture, StatusResultPromise> getResult{nullptr};
       {
