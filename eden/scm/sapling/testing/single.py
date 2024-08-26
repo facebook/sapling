@@ -4,6 +4,7 @@
 # GNU General Public License version 2.
 
 import argparse
+import logging
 import os
 import sys
 from unittest import SkipTest
@@ -28,6 +29,8 @@ Exit code (matches run-tests.py DebugRunTestTest):
 - 81: Test failed (Python exception)
 """
 
+logger = logging.getLogger(__name__)
+
 
 def main():
     # argparse does not like "None" argv[0], which can happen with the
@@ -48,8 +51,17 @@ def main():
         action="append",
         default=["sapling.testing.ext.hg", "sapling.testing.ext.python"],
     )
+    parser.add_argument(
+        "-d",
+        "--debug",
+        action="store_true",
+        help="enable debug logging",
+    )
     parser.add_argument("path", metavar="PATH", type=str, help="test file path")
     args = parser.parse_args()
+
+    log_level = logging.DEBUG if args.debug else logging.INFO
+    logging.basicConfig(level=log_level)
 
     testid = TestId.frompath(args.path)
     exts = args.ext
@@ -70,7 +82,8 @@ def main():
 
     try:
         runtest(testid, exts, mismatchcb)
-    except SkipTest:
+    except SkipTest as e:
+        logger.debug(e)
         return 80
     if not mismatches:
         return 0

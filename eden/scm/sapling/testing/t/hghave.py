@@ -10,6 +10,7 @@
 
 
 import errno
+import logging
 import os
 import re
 import socket
@@ -18,6 +19,7 @@ import subprocess
 import sys
 import tempfile
 
+logger = logging.getLogger(__name__)
 
 tempprefix = "hg-hghave-"
 
@@ -93,6 +95,7 @@ _checkfeaturecache = {}
 def checkfeatures(features):
     result = {"error": [], "missing": [], "skipped": []}
 
+    logger.debug("avaible features: %s", list(checks.keys()))
     for feature in features:
         if feature.startswith("/"):
             # feature is a path to a binary on POSIX
@@ -106,6 +109,7 @@ def checkfeatures(features):
 
         if feature not in checks:
             if not negate:
+                logger.debug("unknown feature: %s", feature)
                 result["missing"].append(feature)
             continue
 
