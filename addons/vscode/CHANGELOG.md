@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.1.56
+
+### Aug 26 2024
+
+- Horiztonally grow the quick commit title input as you type
+- Improve reliability of process exit messages, which could sometimes cause incorrect state
+- Fix VS Code extension host restarts disconnecting ISL. ISL now restarts on extension host restart
+- Add quick button to mount additional workspace folders from the ISL cwd dropdown
+- Ensure files are sorted the same in the comparison view as in the changed files list
+- Add VS Code config option to open files / diffs / comparisons beside the ISL window instead of re-using the same view column
+- Add file status name to the tooltip when hovering on a file
+- Remote "Beta" label on chunk selection UI
+
 ## 0.1.55
 
 ### Aug 13 2024
