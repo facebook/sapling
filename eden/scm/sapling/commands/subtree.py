@@ -7,7 +7,7 @@ import json
 
 from .. import cmdutil, context, error, hg, scmutil
 
-from ..cmdutil import commitopts, commitopts2
+from ..cmdutil import commitopts, commitopts2, diffgraftopts, dryrunopts, mergetoolopts
 from ..i18n import _
 from .cmdtable import command
 
@@ -15,7 +15,7 @@ from .cmdtable import command
 @command(
     "subtree",
     [],
-    _("<copy>"),
+    _("<copy|graft>"),
 )
 def subtree(ui, repo, *pats, **opts) -> None:
     """subtree (directory or file) branching in monorepo"""
@@ -68,6 +68,43 @@ subtree_subcmd = subtree.subcommand(
 def subtree_copy(ui, repo, *args, **opts):
     """create a directory or file branching"""
     copy(ui, repo, *args, **opts)
+
+
+@subtree_subcmd(
+    "graft",
+    [
+        ("r", "rev", [], _("revisions to graft"), _("REV")),
+        ("c", "continue", False, _("resume interrupted graft")),
+        ("", "abort", False, _("abort an interrupted graft")),
+        ("e", "edit", False, _("invoke editor on commit messages")),
+        ("", "log", None, _("append graft info to log message")),
+        ("f", "force", False, _("force graft")),
+        ("D", "currentdate", False, _("record the current date as commit date")),
+        (
+            "U",
+            "currentuser",
+            False,
+            _("record the current user as committer"),
+        ),
+    ]
+    + commitopts2
+    + mergetoolopts
+    + dryrunopts
+    + diffgraftopts,
+    _("[OPTION]... --from-path PATH --to-path PATH ..."),
+)
+def subtree_graft(ui, repo, *revs, **opts):
+    """move commits from one path to another"""
+    from sapling.commands import _dograft
+
+    from_paths = opts.get("from_path")
+    to_paths = opts.get("to_path")
+    if not (opts.get("continue") or opts.get("abort")):
+        if not (from_paths and to_paths):
+            raise error.Abort(_("must provide --from-path and --to-path"))
+
+    with repo.wlock():
+        return _dograft(ui, repo, *revs, **opts)
 
 
 def copy(ui, repo, *args, **opts):
