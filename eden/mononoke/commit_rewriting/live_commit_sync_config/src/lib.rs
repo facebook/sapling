@@ -24,7 +24,6 @@ use metaconfig_types::CommitSyncConfigVersion;
 use metaconfig_types::CommonCommitSyncConfig;
 use mononoke_types::RepositoryId;
 use pushredirect::PushRedirectionConfig;
-use pushredirect_enable::PushRedirectEnableState;
 use slog::error;
 use thiserror::Error;
 
@@ -50,6 +49,11 @@ pub enum ErrorKind {
     PartOfMultipleConfigs(RepositoryId),
     #[error("Multiple commit sync config with the same version {0}")]
     MultipleConfigsForSameVersion(CommitSyncConfigVersion),
+}
+
+struct PushRedirectEnableState {
+    draft_push: bool,
+    public_push: bool,
 }
 
 #[async_trait]

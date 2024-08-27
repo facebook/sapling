@@ -13,7 +13,6 @@ rust_library(
         "fbsource//third-party/rust:slog",
         "fbsource//third-party/rust:thiserror",
         "//common/rust/shed/cached_config:cached_config",
-        "//configerator/structs/scm/mononoke/pushredirect:pushredirect_enable-rust",
         "//configerator/structs/scm/mononoke/repos:commitsync-rust",
         "//eden/mononoke/megarepo_api:pushredirect",
         "//eden/mononoke/metaconfig:metaconfig_parser",
