@@ -837,7 +837,9 @@ export default class ServerToClientAPI {
           ?.updateDiffMessage?.(data.diffId, data.title, data.description)
           ?.catch(err => err)
           ?.then((error: string | undefined) => {
-            this.logger.error('Error updating remote diff message:', error);
+            if (error != null) {
+              this.logger.error('Error updating remote diff message:', error);
+            }
             this.postMessage({type: 'updatedRemoteDiffMessage', diffId: data.diffId, error});
           });
         break;
