@@ -1919,9 +1919,7 @@ server=True
 EOF
 }
 
-# Does all the setup necessary for hook tests
-function hook_test_setup() {
-  HOOKS_SCUBA_LOGGING_PATH="$TESTTMP/hooks-scuba.json" setup_mononoke_config
+function register_hooks {
   cd "$TESTTMP/mononoke-config" || exit 1
 
   reponame_urlencoded="$(urlencode encode "$REPONAME")"
@@ -1948,6 +1946,14 @@ CONFIG
     fi
     register_hook "$HOOK_NAME" "$EXTRA_CONFIG_DESCRIPTOR"
   done
+
+
+}
+# Does all the setup necessary for hook tests
+function hook_test_setup() {
+  HOOKS_SCUBA_LOGGING_PATH="$TESTTMP/hooks-scuba.json" setup_mononoke_config
+
+  register_hooks "$@"
 
   setup_common_hg_configs
   cd "$TESTTMP" || exit 1
