@@ -374,3 +374,35 @@ function update_repo_c_submodule_pointer_in_large_repo {
   hg commit -Aq -m "Valid repo_b and repo_c recursive submodule version bump from large repo"
   REPONAME="$LARGE_REPO_NAME" sl cloud backup -q
 }
+
+function switch_source_of_truth_to_large_repo {
+  export LARGE_REPO_BOOKMARK_UPDATE_LOG_ID;
+  local small_repo=$1
+  local large_repo=$2
+
+  # Kill forward syncer job
+  killandwait "$XREPOSYNC_PID"
+
+  # Enable pushredirection for small repo, i.e. switch the source of truth to large repo
+  print_section "Enable push redirection for small repo"
+  enable_pushredirect "$small_repo" false true
+
+  print_section "Get current large repo bookmark update log id to set the backsyncer counter"
+  LARGE_REPO_BOOKMARK_UPDATE_LOG_ID=$(mononoke_newadmin bookmarks \
+    --repo-id "$large_repo" log "$MASTER_BOOKMARK_NAME" -S bonsai,hg -l1 \
+    | cut -d " " -f1)
+
+  echo "LARGE_REPO_BOOKMARK_UPDATE_LOG_ID: $LARGE_REPO_BOOKMARK_UPDATE_LOG_ID"
+
+  # Delete the forward syncer counter
+  print_section "Delete forward syncer counter and set backsyncer counter"
+  sqlite3 "$TESTTMP/monsql/sqlite_dbs" \
+    "DELETE FROM mutable_counters WHERE name = 'xreposync_from_$SUBMODULE_REPO_ID'";
+  sqlite3 "$TESTTMP/monsql/sqlite_dbs" \
+    "INSERT INTO mutable_counters (repo_id, name, value) \
+    VALUES ($small_repo, 'backsync_from_$LARGE_REPO_ID', $LARGE_REPO_BOOKMARK_UPDATE_LOG_ID)";
+
+  BACKSYNC_COUNTER=$(sqlite3 "$TESTTMP/monsql/sqlite_dbs" \
+    "SELECT value FROM mutable_counters WHERE name = 'backsync_from_$LARGE_REPO_ID';")
+  echo "BACKSYNC_COUNTER: $BACKSYNC_COUNTER"
+}
