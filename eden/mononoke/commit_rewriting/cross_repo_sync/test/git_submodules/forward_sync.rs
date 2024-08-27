@@ -18,6 +18,8 @@ use blobstore::Loadable;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarksRef;
 use context::CoreContext;
+use cross_repo_sync::CandidateSelectionHint;
+use cross_repo_sync::CommitSyncContext;
 use fbinit::FacebookInit;
 use maplit::btreemap;
 use mononoke_types::hash::GitSha1;
@@ -1904,6 +1906,139 @@ async fn test_expanding_known_dangling_submodule_pointers(fb: FacebookInit) -> R
                 ]),
         ],
     )?;
+
+    Ok(())
+}
+
+/// Test that submodule expansion updates and deletions will work for merge
+/// commits.
+#[fbinit::test]
+async fn test_submodule_expansion_and_deletion_on_merge_commits(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb.clone());
+    let (repo_b, repo_b_cs_map) = build_repo_b(fb).await?;
+
+    let SubmoduleSyncTestData {
+        small_repo_info: (small_repo, small_repo_cs_map),
+        large_repo_info: (large_repo, _large_repo_master),
+        commit_syncer,
+        ..
+    } = build_submodule_sync_test_data(
+        fb,
+        &repo_b,
+        vec![(NonRootMPath::new(REPO_B_SUBMODULE_PATH)?, repo_b.clone())],
+    )
+    .await?;
+
+    // Standalone commit with no parent, because we don't support syncing diamond merges
+    // through forward syncer.
+    let p1_cs_id = CreateCommitContext::new(&ctx, &small_repo, Vec::<ChangesetId>::new())
+        .set_message("Parent commit P1")
+        .add_file("file_from_p1", "file_from_p1")
+        .commit()
+        .await?;
+
+    // Another commit to be used as a parent
+    let p2_cs_id = CreateCommitContext::new(&ctx, &small_repo, Vec::<ChangesetId>::new())
+        .set_message("Parent commit P2")
+        .add_file("file_from_p2", "file_from_p2")
+        .commit()
+        .await?;
+
+    // Sync both standalone commits, because we can't sync any commits without
+    // first syncing all of their parents.
+    let _large_p1_cs_id = commit_syncer
+        .unsafe_sync_commit(
+            &ctx,
+            p1_cs_id,
+            CandidateSelectionHint::Only,
+            CommitSyncContext::XRepoSyncJob,
+            Some(base_commit_sync_version_name()),
+        )
+        .await
+        .context("Failed to sync standalone parent commit")?;
+
+    let _large_p2_cs_id = commit_syncer
+        .unsafe_sync_commit(
+            &ctx,
+            p2_cs_id,
+            CandidateSelectionHint::Only,
+            CommitSyncContext::XRepoSyncJob,
+            Some(base_commit_sync_version_name()),
+        )
+        .await
+        .context("Failed to sync standalone parent commit")?;
+
+    // COMMIT 1: MERGE commit updating the repo_b submodule pointer
+    let repo_b_git_commit_hash =
+        git_sha1_from_changeset(&ctx, &repo_b, repo_b_cs_map["B_A"]).await?;
+
+    const MESSAGE_1: &str = "Change repo_b submodule with two parent commits";
+    let cs_id_1 =
+        CreateCommitContext::new(&ctx, &small_repo, vec![small_repo_cs_map["A_C"], p1_cs_id])
+            .set_message(MESSAGE_1)
+            .add_file_with_type(
+                REPO_B_SUBMODULE_PATH,
+                repo_b_git_commit_hash.into_inner(),
+                FileType::GitSubmodule,
+            )
+            .commit()
+            .await?;
+
+    let large_repo_cs_id_1 = sync_to_master(ctx.clone(), &commit_syncer, cs_id_1)
+        .await
+        .context("Failed to sync del_md_file_cs_id")
+        .and_then(|res| res.ok_or(anyhow!("No commit was synced")))?;
+
+    check_mapping(
+        ctx.clone(),
+        &commit_syncer,
+        cs_id_1,
+        Some(large_repo_cs_id_1),
+    )
+    .await;
+
+    // COMMIT 2: MERGE commit deleting the repo_b submodule
+    const MESSAGE_2: &str = "Delete repo_b submodule with two parent commits";
+    let cs_id_2 = CreateCommitContext::new(&ctx, &small_repo, vec![cs_id_1, p2_cs_id])
+        .set_message(MESSAGE_2)
+        .delete_file(REPO_B_SUBMODULE_PATH)
+        .commit()
+        .await?;
+
+    let sync_result =
+        sync_changeset_and_derive_all_types(ctx.clone(), cs_id_2, &large_repo, &commit_syncer)
+            .await;
+
+    // TODO(T174902563): fix submodule expansion deletion on merge commits
+    assert!(sync_result.is_err_and(|err| {
+        err.chain().any(|e| {
+            // Make sure that we're throwing because the submodule repo is not available
+            e.to_string()
+                .contains("Failed to get submodule file content id from parent changeset for submodule deletion")
+        })
+    }));
+
+    // TODO(T174902563): fix submodule expansion deletion on merge commits
+    // check_mapping(
+    //     ctx.clone(),
+    //     &commit_syncer,
+    //     cs_id_2,
+    //     Some(large_repo_cs_id_2),
+    // )
+    // .await;
+
+    // compare_expected_changesets(
+    //     large_repo_changesets.last_chunk::<2>().unwrap(),
+    //     &[
+    //         ExpectedChangeset::new(MESSAGE_1)
+    //             .with_regular_changes(vec!["small_repo/submodules/.x-repo-submodule-repo_b"])
+    //             .with_deletions(vec!["small_repo/submodules/repo_b/B_B"]),
+    //         ExpectedChangeset::new(MESSAGE_2).with_deletions(vec![
+    //             "small_repo/submodules/.x-repo-submodule-repo_b",
+    //             "small_repo/submodules/repo_b/B_A",
+    //         ]),
+    //     ],
+    // )?;
 
     Ok(())
 }
