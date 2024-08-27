@@ -17,7 +17,6 @@ use futures::stream::StreamExt;
 use tokio::time;
 
 #[derive(clap::Parser)]
-/// List the contents of a directory
 pub(crate) struct StressArgs {
     /// Run in stress test mode
     #[clap(long = "stress")]
