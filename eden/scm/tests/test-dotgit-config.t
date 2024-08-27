@@ -35,3 +35,8 @@ ui.username can be synced from git:
   $ sl config ui.username
   Foo <foo@example.com>
 
+Scp-like URL is translated to ssh URL:
+
+  $ git remote add myfork foo@bar:baz/repo1.git
+  $ sl paths myfork
+  ssh://foo@bar/baz/repo1.git

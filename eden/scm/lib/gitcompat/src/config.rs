@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::borrow::Cow;
+
 use anyhow::Result;
 
 use crate::rungit::RunGitOptions;
@@ -53,14 +55,14 @@ fn translate_git_config_output(out: &str) -> (String, String) {
                                 "# from git config: {}\n{} = {}\n",
                                 name,
                                 normalize_remote_name(remote),
-                                value
+                                translate_scp_url_to_ssh(value),
                             ));
                         } else if let Some(remote) = rest.strip_suffix(".pushurl") {
                             paths_config.push(format!(
                                 "# from git config: {}\n{}-push = {}\n",
                                 name,
                                 normalize_remote_name(remote),
-                                value
+                                translate_scp_url_to_ssh(value),
                             ));
                         }
                     }
@@ -102,6 +104,30 @@ fn normalize_remote_name(name: &str) -> &str {
     if name == "origin" { "default" } else { name }
 }
 
+/// translate "a@b:c" to "ssh://a@b/c".
+fn translate_scp_url_to_ssh(value: &str) -> Cow<str> {
+    // Check "man git-clone", "GIT URLS" for the specification.
+    'not_scp: {
+        if value.contains("://") {
+            break 'not_scp;
+        }
+
+        if let Some((left, right)) = value.split_once(':') {
+            if left.contains('/') {
+                // "./foo:bar" is a filename.
+                break 'not_scp;
+            }
+            let ssh_url = if let Some((user, host)) = left.split_once('@') {
+                format!("ssh://{user}@{host}/{right}")
+            } else {
+                format!("ssh://{left}/{right}")
+            };
+            return Cow::Owned(ssh_url);
+        }
+    }
+    Cow::Borrowed(value)
+}
+
 fn parse_git_config_output_line(line: &str) -> Option<(&str, &str, &str)> {
     let (scope, rest) = line.split_once('\t')?;
     let (name, value) = rest.split_once(' ')?;
@@ -135,7 +161,7 @@ username = Foo Bar <foorbar@example.com>
 # from git config: remote.origin.url
 default = https://example.com/foo/repo
 # from git config: remote.origin.pushurl
-default-push = git@example.com:foo/repo
+default-push = ssh://git@example.com/foo/repo
 # from git config: remote.upstream.url
 upstream = https://example.com/upstream/repo
 
@@ -144,5 +170,12 @@ upstream = https://example.com/upstream/repo
 username = Foo Bar <foo@bar.net>
 "#
         );
+    }
+
+    #[test]
+    fn test_translate_scp_url_to_ssh() {
+        assert_eq!(translate_scp_url_to_ssh("a:b"), "ssh://a/b");
+        assert_eq!(translate_scp_url_to_ssh("a@b.com:c/d"), "ssh://a@b.com/c/d");
+        assert_eq!(translate_scp_url_to_ssh("./a:b"), "./a:b");
     }
 }
