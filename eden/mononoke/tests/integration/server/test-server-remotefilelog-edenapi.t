@@ -33,9 +33,8 @@ Create a new client repository. Enable SaplingRemoteAPI there.
 
   $ hg clone -q mono:repo repo-clone --noupdate
   $ cd repo-clone
-  $ setup_hg_edenapi
-  $ hgmn pull -q -B master_bookmark
-  $ hgmn up -q master_bookmark
+  $ sl pull -q -B master_bookmark
+  $ sl up -q master_bookmark
   $ cat smallfile
   s
 
