@@ -1630,7 +1630,10 @@ impl LfsRemote {
                             read_from_store.clone(),
                             http.http_options.clone(),
                         )
-                        .map(|_| None)
+                        .map(|res| match res {
+                            Ok(()) => None,
+                            Err(err) => Some(Err(err)),
+                        })
                         .left_future(),
                         Operation::Download => LfsRemote::process_download(
                             http.client.clone(),
