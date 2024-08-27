@@ -83,7 +83,7 @@ async fn test_submodule_expansion_basic(fb: FacebookInit) -> Result<()> {
     check_mapping(
         ctx.clone(),
         &commit_syncer,
-        *small_repo_cs_map.get("A_C").unwrap(),
+        small_repo_cs_map["A_C"],
         ChangesetId::from_str("8d60517a2c3491ac2cbee5e254153037e9d7c6b83a5ab58a615b841421661bdc")
             .ok(),
     )
@@ -104,19 +104,16 @@ async fn test_submodule_expansion_basic(fb: FacebookInit) -> Result<()> {
 
     const MESSAGE: &str = "Update submodule after adding and deleting a file";
 
-    let small_repo_cs_id = CreateCommitContext::new(
-        &ctx,
-        &small_repo,
-        vec![*small_repo_cs_map.get("A_C").unwrap()],
-    )
-    .set_message(MESSAGE)
-    .add_file_with_type(
-        REPO_B_SUBMODULE_PATH,
-        repo_b_git_commit_hash.into_inner(),
-        FileType::GitSubmodule,
-    )
-    .commit()
-    .await?;
+    let small_repo_cs_id =
+        CreateCommitContext::new(&ctx, &small_repo, vec![small_repo_cs_map["A_C"]])
+            .set_message(MESSAGE)
+            .add_file_with_type(
+                REPO_B_SUBMODULE_PATH,
+                repo_b_git_commit_hash.into_inner(),
+                FileType::GitSubmodule,
+            )
+            .commit()
+            .await?;
 
     let (large_repo_cs_id, large_repo_changesets) = sync_changeset_and_derive_all_types(
         ctx.clone(),
@@ -324,15 +321,11 @@ async fn test_submodule_deletion(fb: FacebookInit) -> Result<()> {
     .await?;
 
     const MESSAGE: &str = "Delete repo_b submodule in small_repo";
-    let cs_id = CreateCommitContext::new(
-        &ctx,
-        &small_repo,
-        vec![*small_repo_cs_map.get("A_C").unwrap()],
-    )
-    .set_message(MESSAGE)
-    .delete_file(REPO_B_SUBMODULE_PATH)
-    .commit()
-    .await?;
+    let cs_id = CreateCommitContext::new(&ctx, &small_repo, vec![small_repo_cs_map["A_C"]])
+        .set_message(MESSAGE)
+        .delete_file(REPO_B_SUBMODULE_PATH)
+        .commit()
+        .await?;
 
     let (large_repo_cs_id, large_repo_changesets) =
         sync_changeset_and_derive_all_types(ctx.clone(), cs_id, &large_repo, &commit_syncer)
@@ -959,15 +952,11 @@ async fn test_implicitly_deleting_submodule(fb: FacebookInit) -> Result<()> {
 
     const MESSAGE: &str = "Implicitly delete repo_b submodule in small_repo";
 
-    let cs_id = CreateCommitContext::new(
-        &ctx,
-        &small_repo,
-        vec![*small_repo_cs_map.get("A_C").unwrap()],
-    )
-    .set_message(MESSAGE)
-    .add_file(REPO_B_SUBMODULE_PATH, "File implicitly deleting submodule")
-    .commit()
-    .await?;
+    let cs_id = CreateCommitContext::new(&ctx, &small_repo, vec![small_repo_cs_map["A_C"]])
+        .set_message(MESSAGE)
+        .add_file(REPO_B_SUBMODULE_PATH, "File implicitly deleting submodule")
+        .commit()
+        .await?;
 
     let (large_repo_cs_id, large_repo_changesets) =
         sync_changeset_and_derive_all_types(ctx.clone(), cs_id, &large_repo, &commit_syncer)
@@ -1051,19 +1040,15 @@ async fn test_implicit_deletions_inside_submodule_repo(fb: FacebookInit) -> Resu
     // Update repo B submodule pointer in repo A to point to the last commit
     // with the implicit deletions.
     const MESSAGE: &str = "Update submodule after implicit deletions";
-    let cs_id = CreateCommitContext::new(
-        &ctx,
-        &small_repo,
-        vec![*small_repo_cs_map.get("A_C").unwrap()],
-    )
-    .set_message(MESSAGE)
-    .add_file_with_type(
-        REPO_B_SUBMODULE_PATH,
-        repo_b_git_commit_hash.into_inner(),
-        FileType::GitSubmodule,
-    )
-    .commit()
-    .await?;
+    let cs_id = CreateCommitContext::new(&ctx, &small_repo, vec![small_repo_cs_map["A_C"]])
+        .set_message(MESSAGE)
+        .add_file_with_type(
+            REPO_B_SUBMODULE_PATH,
+            repo_b_git_commit_hash.into_inner(),
+            FileType::GitSubmodule,
+        )
+        .commit()
+        .await?;
 
     let (large_repo_cs_id, large_repo_changesets) =
         sync_changeset_and_derive_all_types(ctx.clone(), cs_id, &large_repo, &commit_syncer)
@@ -1630,19 +1615,16 @@ async fn test_expanding_known_dangling_submodule_pointers(fb: FacebookInit) -> R
     // Test expanding a known dangling submodule pointer
     let repo_b_dangling_pointer = GitSha1::from_str(REPO_B_DANGLING_GIT_COMMIT_HASH)?;
 
-    let small_repo_cs_id = CreateCommitContext::new(
-        &ctx,
-        &small_repo,
-        vec![*small_repo_cs_map.get("A_C").unwrap()],
-    )
-    .set_message(COMMIT_MSG_1)
-    .add_file_with_type(
-        REPO_B_SUBMODULE_PATH,
-        repo_b_dangling_pointer.into_inner(),
-        FileType::GitSubmodule,
-    )
-    .commit()
-    .await?;
+    let small_repo_cs_id =
+        CreateCommitContext::new(&ctx, &small_repo, vec![small_repo_cs_map["A_C"]])
+            .set_message(COMMIT_MSG_1)
+            .add_file_with_type(
+                REPO_B_SUBMODULE_PATH,
+                repo_b_dangling_pointer.into_inner(),
+                FileType::GitSubmodule,
+            )
+            .commit()
+            .await?;
 
     let large_repo_cs_id = sync_to_master(ctx.clone(), &commit_syncer, small_repo_cs_id)
         .await?
