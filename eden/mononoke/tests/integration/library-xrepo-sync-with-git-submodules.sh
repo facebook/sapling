@@ -112,6 +112,12 @@ function run_common_xrepo_sync_with_gitsubmodules_setup {
   INFINITEPUSH_ALLOW_WRITES=true ENABLE_API_WRITES=1 REPOID="$SUBMODULE_REPO_ID" \
     REPONAME="$SUBMODULE_REPO_NAME" setup_common_config "$REPOTYPE"
 
+  # Set the REPONAME environment variable to the large repo name, so that all
+  # sapling commands run with the large repo by default.
+  # The small repos don't support sapling, because hg types are not derived in
+  # them, since they have submodule file changes.
+  export REPONAME=$LARGE_REPO_NAME
+
   setup_sync_config_stripping_git_submodules
 
   start_and_wait_for_mononoke_server
@@ -130,6 +136,10 @@ EOF
   cd "$TESTTMP" || exit
 }
 
+function sl_log() {
+   sl log --graph -T '{node|short} {desc}\n' "$@"
+}
+
 function clone_and_log_large_repo {
   LARGE_BCS_IDS=( "$@" )
   cd "$TESTTMP" || exit
@@ -144,7 +154,7 @@ function clone_and_log_large_repo {
     fi
   done
 
-  hg log --graph -T '{node|short} {desc}\n' --stat -r "sort(all(), desc)"
+  sl_log --stat -r "sort(all(), desc)"
 
   printf "\n\nRunning mononoke_admin to verify mapping\n\n"
   for LARGE_BCS_ID in "${LARGE_BCS_IDS[@]}"; do
