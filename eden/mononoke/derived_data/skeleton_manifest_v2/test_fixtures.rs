@@ -37,6 +37,7 @@ use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentity;
 use skeleton_manifest::RootSkeletonManifestId;
 
+use crate::derive_from_predecessor::inner_derive_from_predecessor;
 use crate::RootSkeletonManifestV2Id;
 
 #[facet::container]
@@ -133,6 +134,15 @@ async fn test_for_fixture<F: TestRepoFixture + Send>(fb: FacebookInit) -> Result
                     .into_iter()
                     .sorted()
                     .collect::<Vec<_>>(),
+            );
+
+            let skeleton_manifest_v2_from_skeleton_manifest =
+                inner_derive_from_predecessor(ctx, &blobstore.boxed(), skeleton_manifest, 3)
+                    .await?;
+
+            assert_eq!(
+                skeleton_manifest_v2,
+                skeleton_manifest_v2_from_skeleton_manifest
             );
 
             Ok(())
