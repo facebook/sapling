@@ -23,6 +23,8 @@ use mononoke_types::SkeletonManifestV2Id;
 use mononoke_types::ThriftConvert;
 use skeleton_manifest::RootSkeletonManifestId;
 
+use crate::derive::derive_single;
+
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct RootSkeletonManifestV2Id(pub(crate) SkeletonManifestV2Id);
 
@@ -69,12 +71,12 @@ impl BonsaiDerivable for RootSkeletonManifestV2Id {
     type PredecessorDependencies = dependencies![RootSkeletonManifestId];
 
     async fn derive_single(
-        _ctx: &CoreContext,
-        _derivation_ctx: &DerivationContext,
-        _bonsai: BonsaiChangeset,
-        _parents: Vec<Self>,
+        ctx: &CoreContext,
+        derivation_ctx: &DerivationContext,
+        bonsai: BonsaiChangeset,
+        parents: Vec<Self>,
     ) -> Result<Self> {
-        unimplemented!("SkeletonManifestsV2 derivation is not implemented")
+        derive_single(ctx, derivation_ctx, bonsai, parents).await
     }
 
     async fn store_mapping(
