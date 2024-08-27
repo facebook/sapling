@@ -57,7 +57,7 @@ Clone:
   9 files updated, 0 files merged, 0 files removed, 0 files unresolved
 #else
   $ hg clone test:e3 cloned
-  Cloning reponame-default into $TESTTMP/cloned
+  Cloning e3 into $TESTTMP/cloned
   Checking out 'master'
   9 files updated
 #endif

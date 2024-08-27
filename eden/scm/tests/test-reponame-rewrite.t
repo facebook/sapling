@@ -1,7 +1,7 @@
-
 #require no-eden
 
   $ configure modern
+  $ setconfig remotefilelog.reponame=reponame-default
   $ newrepo
 
 Make sure we do not rewrite by default:

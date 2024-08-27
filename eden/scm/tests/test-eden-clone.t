@@ -51,12 +51,12 @@ test rust clone
   $ hg config edenfs.command
   $TESTTMP/bin/eden (no-windows !)
   $TESTTMP/bin/eden.bat (windows !)
-  $ LOG=cmdclone hg clone eager:$TESTTMP/e1 hemlo --config remotenames.selectivepulldefault='master, stable'
-  Cloning reponame-default into $TESTTMP/hemlo
+  $ LOG=cmdclone hg clone eager://$TESTTMP/e1 hemlo --config remotenames.selectivepulldefault='master, stable'
+  Cloning e1 into $TESTTMP/hemlo
   TRACE cmdclone: performing rust clone
-   INFO clone_metadata{repo="reponame-default"}: cmdclone: enter
-  TRACE clone_metadata{repo="reponame-default"}: cmdclone: fetching lazy commit data and bookmarks
-   INFO clone_metadata{repo="reponame-default"}: cmdclone: exit
+   INFO clone_metadata{repo="e1"}: cmdclone: enter
+  TRACE clone_metadata{repo="e1"}: cmdclone: fetching lazy commit data and bookmarks
+   INFO clone_metadata{repo="e1"}: cmdclone: exit
    INFO get_update_target: cmdclone: enter
    INFO get_update_target: cmdclone: return=Some((HgId("9bc730a19041f9ec7cb33c626e811aa233efb18c"), "master"))
    INFO get_update_target: cmdclone: exit
@@ -65,8 +65,8 @@ test rust clone
   $TESTTMP/e2
   $TESTTMP/hemlo
   $ ls -a $TESTTMP/.eden-backing-repos
+  e1
   e1_client
-  reponame-default
   $ ls -a hemlo
   .eden
   .hg
@@ -97,12 +97,12 @@ test rust clone with test instead of eager
   $TESTTMP/testo2
   $ ls -a $TESTTMP/.eden-backing-repos
   aname
+  e1
   e1_client
-  reponame-default
 
 Make sure that --updaterev works on EdenFS
    $ hg clone test:e1 testo3 -u stable
-   Cloning reponame-default into $TESTTMP/testo3
+   Cloning e1 into $TESTTMP/testo3
    $ ls testo3
    A
    B

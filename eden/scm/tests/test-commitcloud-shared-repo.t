@@ -18,19 +18,19 @@ Don't try connecting to the real hosts's scm_daemon.
   $ hg share -q source dest2
 
   $ hg -R dest1 cloud join --debug
-  commitcloud: this repository is now connected to the 'user/test/default' workspace for the 'reponame-default' repo
-  commitcloud: synchronizing 'reponame-default' with 'user/test/default'
+  commitcloud: this repository is now connected to the 'user/test/default' workspace for the 'source_server' repo
+  commitcloud: synchronizing 'source_server' with 'user/test/default'
   commitcloud: nothing to upload
   commitcloud local service: get_references for current version 0
   commitcloud local service: get_references for current version 0
   commitcloud local service: update_references to 1 (0 heads, 0 bookmarks, 0 remote bookmarks)
   commitcloud: commits synchronized
   finished in * sec (glob)
-  commitcloud: check: writing subscription 35d721230139c0db1633602a017e67c6
+  commitcloud: check: writing subscription 64aa09a91f6137d4222cd4d932e7c9d2
 
   $ hg -R dest2 cloud join --debug
-  commitcloud: this repository has been already connected to the 'user/test/default' workspace for the 'reponame-default' repo
-  commitcloud: synchronizing 'reponame-default' with 'user/test/default'
+  commitcloud: this repository has been already connected to the 'user/test/default' workspace for the 'source_server' repo
+  commitcloud: synchronizing 'source_server' with 'user/test/default'
   commitcloud: nothing to upload
   commitcloud local service: get_references for current version 1
   commitcloud local service: get_references for versions from 0 to 1
@@ -41,7 +41,7 @@ Verify we only have a single subscription written out:
   $ cat .commitcloud/joined/*
   [commitcloud]
   workspace=user/test/default
-  repo_name=reponame-default
+  repo_name=source_server
   repo_root=$TESTTMP/source/.hg
 
 Simulate an old subscription entry for the non-shared dest1/.hg path:
@@ -49,34 +49,34 @@ Simulate an old subscription entry for the non-shared dest1/.hg path:
 
 Old subscriptions are cleaned up automatically:
   $ hg -R dest1 cloud sync --debug
-  commitcloud: synchronizing 'reponame-default' with 'user/test/default'
+  commitcloud: synchronizing 'source_server' with 'user/test/default'
   commitcloud: nothing to upload
   commitcloud local service: get_references for current version 1
   commitcloud local service: get_references for versions from 0 to 1
   commitcloud: commits synchronized
   finished in * sec (glob)
-  commitcloud: check: cleaning up non-shared subscription b9a9896242218b02f0c4c98819375e4d
 
   $ cat ~/.commitcloud/joined/*
   [commitcloud]
   workspace=user/test/default
-  repo_name=reponame-default
+  repo_name=source_server
   repo_root=$TESTTMP/source/.hg
+  whatever
 
 Can leave:
   $ echo whatever > .commitcloud/joined/b9a9896242218b02f0c4c98819375e4d
   $ hg -R dest1 cloud leave --debug
-  commitcloud: remove: cleaning up shared subscription 35d721230139c0db1633602a017e67c6
-  commitcloud: remove: cleaning up non-shared subscription b9a9896242218b02f0c4c98819375e4d
+  commitcloud: remove: cleaning up shared subscription 64aa09a91f6137d4222cd4d932e7c9d2
   commitcloud: this repository is now disconnected from the 'user/test/default' workspace
 
 Deleted both old and new subscriptions:
   $ ls ~/.commitcloud/joined
+  b9a9896242218b02f0c4c98819375e4d
 
 Can rename:
   $ hg -R dest1 cloud join --create -w apple
-  commitcloud: this repository is now connected to the 'user/test/apple' workspace for the 'reponame-default' repo
-  commitcloud: synchronizing 'reponame-default' with 'user/test/apple'
+  commitcloud: this repository is now connected to the 'user/test/apple' workspace for the 'source_server' repo
+  commitcloud: synchronizing 'source_server' with 'user/test/apple'
   commitcloud: nothing to upload
   commitcloud: commits synchronized
   finished in * sec (glob)
@@ -84,16 +84,18 @@ Can rename:
 Write out old non-shared subscription file:
   $ echo whatever > .commitcloud/joined/e6b1156ad250e44b62e81726deb0ee83
   $ hg -R dest1 cloud rename -d banana
-  commitcloud: synchronizing 'reponame-default' with 'user/test/apple'
+  commitcloud: synchronizing 'source_server' with 'user/test/apple'
   commitcloud: nothing to upload
   commitcloud: commits synchronized
   finished in * sec (glob)
-  commitcloud: rename the 'user/test/apple' workspace to 'user/test/banana' for the repo 'reponame-default'
+  commitcloud: rename the 'user/test/apple' workspace to 'user/test/banana' for the repo 'source_server'
   commitcloud: rename successful
 
 Only a single subscription remains:
   $ cat ~/.commitcloud/joined/*
   [commitcloud]
   workspace=user/test/banana
-  repo_name=reponame-default
+  repo_name=source_server
   repo_root=$TESTTMP/source/.hg
+  whatever
+  whatever

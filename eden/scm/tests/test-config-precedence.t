@@ -42,6 +42,7 @@ Make sure --config options are available when loading config itself.
 Only load config a single time.
   $ LOG=configloader::hg=info hg files abc
    INFO configloader::hg: loading config repo_path=* (glob)
+   WARN configloader::hg: repo name: no remotefilelog.reponame
   [1]
 
 Only load config a single time when repo config file doesn't exist:
@@ -50,4 +51,6 @@ Only load config a single time when repo config file doesn't exist:
   $ rm .hg/hgrc
   $ LOG=configloader::hg=info hg files abc --config paths.default=test:test1_server
    INFO configloader::hg: loading config repo_path=* (glob)
+   WARN configloader::hg: repo name: no remotefilelog.reponame
+   WARN configloader::hg: repo name: no path.default reponame: 
   [1]

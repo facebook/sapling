@@ -41,8 +41,8 @@ Set up fake cert paths so we don't hit "missing certs" error.
 
 
 Works for native rust commands as well.
-  $ hg clone mononoke://banana --config commands.force-rust=clone --config edenapi.url=https://test_fail/foo --config doctor.external-host-check-url=https://test_succeed
-  Cloning reponame-default into $TESTTMP/repo/reponame-default
+  $ hg clone mononoke://169.254.1.2/banana --config commands.force-rust=clone --config edenapi.url=https://test_fail/foo --config doctor.external-host-check-url=https://test_succeed
+  Cloning banana into $TESTTMP/repo/banana
   abort: command failed due to network error
   
   Please check your VPN connection (internet okay, but can't reach corp).

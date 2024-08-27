@@ -60,7 +60,6 @@ rustmanifest=True
 useruststore=True
 
 [remotefilelog]
-reponame=reponame-default
 cachepath=$TESTTMP/default-hgcache
 
 [mutation]
