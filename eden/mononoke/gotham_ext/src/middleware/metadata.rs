@@ -127,7 +127,7 @@ fn request_identities_from_headers(headers: &HeaderMap) -> Option<MononokeIdenti
     MononokeIdentity::try_from_json_encoded(&json_identities).ok()
 }
 
-fn ingress_request_identities_from_headers(headers: &HeaderMap) -> Option<MononokeIdentitySet> {
+pub fn ingress_request_identities_from_headers(headers: &HeaderMap) -> Option<MononokeIdentitySet> {
     let encoded_cert = headers.get(INGRESS_LEAF_CERT_HEADER)?;
     let cert = openssl::x509::X509::from_pem(
         &percent_decode(encoded_cert.as_bytes()).collect::<Vec<u8>>(),

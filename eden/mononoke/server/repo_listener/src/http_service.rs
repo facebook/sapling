@@ -24,6 +24,7 @@ use clientinfo::ClientInfo;
 use clientinfo::CLIENT_INFO_HEADER;
 use futures::future::BoxFuture;
 use futures::future::FutureExt;
+use gotham_ext::middleware::metadata::ingress_request_identities_from_headers;
 use gotham_ext::socket_data::TlsSocketData;
 use http::HeaderMap;
 use http::HeaderValue;
@@ -603,6 +604,15 @@ mod h2m {
 
         let mut identities = cats_identities.unwrap_or_default();
         identities.extend(conn.identities.iter().cloned());
+
+        if conn.mtls_disabled {
+            identities.extend(
+                ingress_request_identities_from_headers(headers)
+                    .unwrap()
+                    .iter()
+                    .cloned(),
+            );
+        }
 
         // Generic fallback
         let mut metadata = Metadata::new(
