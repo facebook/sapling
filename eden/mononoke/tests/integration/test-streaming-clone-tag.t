@@ -30,7 +30,7 @@ Try creating with a tag
 
   $ start_and_wait_for_mononoke_server
 Clone - check that no bytes were transferred from streaming clone because no tags were used
-  $ hgmn clone --stream mononoke://$(mononoke_address)/repo repo-streamclone --config remotefilelog.reponame=master
+  $ hgmn clone --stream mononoke://$(mononoke_address)/repo repo-streamclone
   streaming all changes
   2 files to transfer, 0 bytes of data (glob)
   transferred 0 bytes in * seconds (*) (glob)
@@ -47,7 +47,7 @@ Clone - check that no bytes were transferred from streaming clone because no tag
   another_mainline|streaming_clone-chunk000000-d1de0dadf747295f0e1ea4db829b8e87437476f94cefcb948cd3b366b599d49e5a7c74b2777372b74c4962c513f71c72252bf673a8c880387ea84a5317abb14b-idx|streaming_clone-chunk000000-a5750ff674daa16106403d02aebff7d19ad96a33886c026427002f30c9eea7bac76387c4dd5f5c42a9e3ab1ecd9c9b5d3c2a079406e127146bddd9dcc8c63e23-data
 
 Now clone with tag, make sure that streaming clone was used
-  $ hgmn clone --stream mononoke://$(mononoke_address)/repo repo-streamclone-tag --config remotefilelog.reponame=master --config stream_out_shallow.tag="$TAG"
+  $ hgmn clone --stream mononoke://$(mononoke_address)/repo repo-streamclone-tag --config stream_out_shallow.tag="$TAG"
   streaming all changes
   2 files to transfer, 357 bytes of data
   transferred 357 bytes in * seconds (*) (glob)

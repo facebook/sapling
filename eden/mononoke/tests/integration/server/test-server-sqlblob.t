@@ -204,7 +204,7 @@ to create a fileblob bookmark
 #     test-bookmark             0:3903775176ed
 
 Do a streaming clone of the repo
-  $ hgmn clone -U --stream mononoke://$(mononoke_address)/repo repo-streamclone --config remotefilelog.reponame=master
+  $ hgmn clone -U --stream mononoke://$(mononoke_address)/repo repo-streamclone
   fetching changelog
   2 files to transfer, * bytes of data (glob)
   transferred * bytes in * seconds (* bytes/sec) (glob)
