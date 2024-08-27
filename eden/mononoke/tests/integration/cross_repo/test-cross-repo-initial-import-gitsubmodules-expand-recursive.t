@@ -26,27 +26,16 @@
   $ . "${TEST_FIXTURES}/library-push-redirector.sh"
   $ . "${TEST_FIXTURES}/library-xrepo-git-submodule-expansion.sh"
 
-Avoid local clone error "fatal: transport 'file' not allowed" in new Git versions (see CVE-2022-39253).
-  $ export XDG_CONFIG_HOME=$TESTTMP
-  $ git config --global protocol.file.allow always
 
 
 Run the x-repo with submodules setup  
   $ ENABLE_API_WRITES=1 REPOID="$REPO_C_ID" REPONAME="repo_c" setup_common_config "$REPOTYPE"
   $ ENABLE_API_WRITES=1 REPOID="$REPO_B_ID" REPONAME="repo_b" setup_common_config "$REPOTYPE"
   $ run_common_xrepo_sync_with_gitsubmodules_setup
+  L_A=b006a2b1425af8612bc80ff4aa9fa8a1a2c44936ad167dd21cb9af2a9a0248c4
   $ set_git_submodules_action_in_config_version "$LATEST_CONFIG_VERSION_NAME" "$SUBMODULE_REPO_ID" 3 # 3=expand
   $ set_git_submodule_dependencies_in_config_version "$LATEST_CONFIG_VERSION_NAME" \
   > "$SUBMODULE_REPO_ID" "{\"git-repo-b\": $REPO_B_ID, \"git-repo-b/git-repo-c\": $REPO_C_ID, \"repo_c\": $REPO_C_ID}"
-
-
--- Create a commit in the large repo
-  $ testtool_drawdag -R "$LARGE_REPO_NAME" --no-default-files <<EOF
-  > L_A
-  > # modify: L_A "file_in_large_repo.txt" "first file"
-  > # bookmark: L_A master
-  > EOF
-  L_A=b006a2b1425af8612bc80ff4aa9fa8a1a2c44936ad167dd21cb9af2a9a0248c4
 
 -- Setup git repos A, B and C
   $ setup_git_repos_a_b_c

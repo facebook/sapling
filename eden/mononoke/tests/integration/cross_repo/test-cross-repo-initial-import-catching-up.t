@@ -18,6 +18,7 @@
 
 Setup configuration
   $ run_common_xrepo_sync_with_gitsubmodules_setup
+  L_A=b006a2b1425af8612bc80ff4aa9fa8a1a2c44936ad167dd21cb9af2a9a0248c4
 
 # Test how the initial-import command behaves when it runs again after new
 # commits have been added to the small repo.
@@ -41,7 +42,7 @@ Create small repo commits
 # Ignoring lines with `initializing` or `initialized
   $ with_stripped_logs mononoke_x_repo_sync "$SUBMODULE_REPO_ID" "$LARGE_REPO_ID" --log-level=TRACE \
   > initial-import --no-progress-bar --derivation-batch-size 2 -i "$B" --version-name "$LATEST_CONFIG_VERSION_NAME" | \
-  > rg -v "nitializ" | rg -v "derive" | rg -v "Upload"
+  > rg -v "nitializ" | rg -v "derive" | rg -v "Upload" | tee $TESTTMP/initial_import.out
   enabled stdlog with level: Error (set RUST_LOG to configure)
   Starting session with id * (glob)
   Reloading redacted config from configerator
@@ -74,7 +75,8 @@ Create small repo commits
   X Repo Sync execution finished from small repo small_repo to large repo large_repo
 
 
-  $ clone_and_log_large_repo "85776cdc88303208a1cde5c614996a89441d3a9175a6311dda34d178428ba652"
+  $ SYNCED_HEAD=$(rg ".+synced as (\w+) .+" -or '$1' "$TESTTMP/initial_import.out")
+  $ clone_and_log_large_repo "$SYNCED_HEAD"
   o  5e3f6798b6a3 B
   │   smallrepofolder1/bar/c.txt |  1 +
   │   smallrepofolder1/foo/d     |  1 +
@@ -84,6 +86,10 @@ Create small repo commits
       smallrepofolder1/bar/b.txt |  1 +
       smallrepofolder1/foo/a.txt |  1 +
       2 files changed, 2 insertions(+), 0 deletions(-)
+  
+  @  54a6db91baf1 L_A
+      file_in_large_repo.txt |  1 +
+      1 files changed, 1 insertions(+), 0 deletions(-)
   
   
   
@@ -162,6 +168,10 @@ Add more commits to small repo
       smallrepofolder1/bar/b.txt |  1 +
       smallrepofolder1/foo/a.txt |  1 +
       2 files changed, 2 insertions(+), 0 deletions(-)
+  
+  @  54a6db91baf1 L_A
+      file_in_large_repo.txt |  1 +
+      1 files changed, 1 insertions(+), 0 deletions(-)
   
   
   

@@ -17,6 +17,7 @@
 
 Setup configuration
   $ run_common_xrepo_sync_with_gitsubmodules_setup
+  L_A=b006a2b1425af8612bc80ff4aa9fa8a1a2c44936ad167dd21cb9af2a9a0248c4
 
 # Simple integration test for the initial-import command in the forward syncer
 Create small repo commits
@@ -40,7 +41,9 @@ Create small repo commits
   M=3eb23b278c44bf5d812c96f2a3211408d2a779b566984670127eebcd01fe459d
 
 
-  $ with_stripped_logs mononoke_x_repo_sync "$SUBMODULE_REPO_ID"  "$LARGE_REPO_ID" initial-import --no-progress-bar -i "$M" --version-name "$LATEST_CONFIG_VERSION_NAME"
+  $ with_stripped_logs mononoke_x_repo_sync "$SUBMODULE_REPO_ID"  "$LARGE_REPO_ID" \
+  > initial-import --no-progress-bar -i "$M" --version-name "$LATEST_CONFIG_VERSION_NAME" \
+  > | tee $TESTTMP/initial_import.out
   Starting session with id * (glob)
   Starting up X Repo Sync from small repo small_repo to large repo large_repo
   Checking if 3eb23b278c44bf5d812c96f2a3211408d2a779b566984670127eebcd01fe459d is already synced 11->10
@@ -52,30 +55,35 @@ Create small repo commits
   X Repo Sync execution finished from small repo small_repo to large repo large_repo
 
 
-  $ clone_and_log_large_repo 154e057495ead9af16d2ad3401b1fca7a7d23e39a295e277d84ba37f244e48ff
+  $ SYNCED_HEAD=$(rg ".+synced as (\w+) .+" -or '$1' "$TESTTMP/initial_import.out")
+  $ clone_and_log_large_repo "$SYNCED_HEAD"
   o    fb2024205bd9 M
   ├─╮   smallrepofolder1/foo/e |  1 +
   │ │   1 files changed, 1 insertions(+), 0 deletions(-)
   │ │
-  │ o  3ec8b0b8bd17 E
-  │ │   smallrepofolder1/foo/e |  1 +
-  │ │   1 files changed, 1 insertions(+), 0 deletions(-)
-  │ │
-  │ o  df0e7f5dd366 D
-  │ │
-  o │  cbb9c8a988b5 C
+  │ o  cbb9c8a988b5 C
   │ │   smallrepofolder1/foo/b.txt |  1 +
   │ │   1 files changed, 1 insertions(+), 0 deletions(-)
   │ │
-  o │  5e3f6798b6a3 B
-  ├─╯   smallrepofolder1/bar/c.txt |  1 +
-  │     smallrepofolder1/foo/d     |  1 +
-  │     2 files changed, 2 insertions(+), 0 deletions(-)
-  │
+  │ o  5e3f6798b6a3 B
+  │ │   smallrepofolder1/bar/c.txt |  1 +
+  │ │   smallrepofolder1/foo/d     |  1 +
+  │ │   2 files changed, 2 insertions(+), 0 deletions(-)
+  │ │
+  o │  3ec8b0b8bd17 E
+  │ │   smallrepofolder1/foo/e |  1 +
+  │ │   1 files changed, 1 insertions(+), 0 deletions(-)
+  │ │
+  o │  df0e7f5dd366 D
+  ├─╯
   o  e462fc947f26 A
       smallrepofolder1/bar/b.txt |  1 +
       smallrepofolder1/foo/a.txt |  1 +
       2 files changed, 2 insertions(+), 0 deletions(-)
+  
+  @  54a6db91baf1 L_A
+      file_in_large_repo.txt |  1 +
+      1 files changed, 1 insertions(+), 0 deletions(-)
   
   
   

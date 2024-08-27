@@ -17,6 +17,7 @@
 
 Setup configuration
   $ run_common_xrepo_sync_with_gitsubmodules_setup
+  L_A=b006a2b1425af8612bc80ff4aa9fa8a1a2c44936ad167dd21cb9af2a9a0248c4
 
 # In this scenario a git submodule is created and implicitly deletes regular
 # files. Because the changes to the git submodule aren't synced, the implicit
@@ -35,7 +36,9 @@ Create commit that modifies git submodule in small repo
   A=85dfabda124636200fe6499b65123179020d32c0ab50818b72a8097dcf9b1880
   B=4ab1f8925a8b6a48eaafb3bb8ce5bfb351bd4301c78d557cd799b721b5a4c6e9
 
-  $ with_stripped_logs mononoke_x_repo_sync "$SUBMODULE_REPO_ID"  "$LARGE_REPO_ID" initial-import --no-progress-bar --version-name "$LATEST_CONFIG_VERSION_NAME" --all-bookmarks
+  $ with_stripped_logs mononoke_x_repo_sync "$SUBMODULE_REPO_ID" "$LARGE_REPO_ID" \
+  > initial-import --no-progress-bar --version-name "$LATEST_CONFIG_VERSION_NAME" \
+  > --all-bookmarks | tee $TESTTMP/initial_import.out
   Starting session with id * (glob)
   Starting up X Repo Sync from small repo small_repo to large repo large_repo
   Checking if 4ab1f8925a8b6a48eaafb3bb8ce5bfb351bd4301c78d557cd799b721b5a4c6e9 is already synced 11->10
@@ -48,7 +51,8 @@ Create commit that modifies git submodule in small repo
 
 
 
-  $ clone_and_log_large_repo "30a912050a27826f649bcce7bd1b2fbfe1bf9b2883dcabc17753c2f9f1ab3ad5"
+  $ SYNCED_HEAD=$(rg ".+synced as (\w+) .+" -or '$1' "$TESTTMP/initial_import.out")
+  $ clone_and_log_large_repo "$SYNCED_HEAD"
   o  9b75b98ff186 B
   │   smallrepofolder1/foo/a/c |  1 -
   │   smallrepofolder1/foo/a/d |  1 -
@@ -62,6 +66,10 @@ Create commit that modifies git submodule in small repo
       smallrepofolder1/foo/a/d |  1 +
       smallrepofolder1/foo/b/e |  1 +
       5 files changed, 5 insertions(+), 0 deletions(-)
+  
+  @  54a6db91baf1 L_A
+      file_in_large_repo.txt |  1 +
+      1 files changed, 1 insertions(+), 0 deletions(-)
   
   
   

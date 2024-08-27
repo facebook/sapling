@@ -17,6 +17,7 @@
 
 Setup configuration
   $ run_common_xrepo_sync_with_gitsubmodules_setup
+  L_A=b006a2b1425af8612bc80ff4aa9fa8a1a2c44936ad167dd21cb9af2a9a0248c4
 
 # Simple integration test for the initial-import command in the forward syncer
 Create small repo commits
@@ -34,7 +35,9 @@ Create small repo commits
   C=738630e43445144e9f5ddbe1869730cfbaf8ff6bf95b25b8410cb35ca92f25c7
 
 
-  $ with_stripped_logs mononoke_x_repo_sync "$SUBMODULE_REPO_ID"  "$LARGE_REPO_ID" initial-import --no-progress-bar -i "$C" --version-name "$LATEST_CONFIG_VERSION_NAME"
+  $ with_stripped_logs mononoke_x_repo_sync "$SUBMODULE_REPO_ID"  "$LARGE_REPO_ID" \
+  > initial-import --no-progress-bar -i "$C" \
+  > --version-name "$LATEST_CONFIG_VERSION_NAME" | tee $TESTTMP/initial_import.out
   Starting session with id * (glob)
   Starting up X Repo Sync from small repo small_repo to large repo large_repo
   Checking if 738630e43445144e9f5ddbe1869730cfbaf8ff6bf95b25b8410cb35ca92f25c7 is already synced 11->10
@@ -45,7 +48,8 @@ Create small repo commits
   successful sync of head 738630e43445144e9f5ddbe1869730cfbaf8ff6bf95b25b8410cb35ca92f25c7
   X Repo Sync execution finished from small repo small_repo to large repo large_repo
 
-  $ clone_and_log_large_repo "ca175120dfe7fb7fcb0d872e26ce331cb24c7d9ec457d599a40684527c65d63a"
+  $ SYNCED_HEAD=$(rg ".+synced as (\w+) .+" -or '$1' "$TESTTMP/initial_import.out")
+  $ clone_and_log_large_repo "$SYNCED_HEAD"
   o  cbb9c8a988b5 C
   │   smallrepofolder1/foo/b.txt |  1 +
   │   1 files changed, 1 insertions(+), 0 deletions(-)
@@ -59,6 +63,10 @@ Create small repo commits
       smallrepofolder1/bar/b.txt |  1 +
       smallrepofolder1/foo/a.txt |  1 +
       2 files changed, 2 insertions(+), 0 deletions(-)
+  
+  @  54a6db91baf1 L_A
+      file_in_large_repo.txt |  1 +
+      1 files changed, 1 insertions(+), 0 deletions(-)
   
   
   

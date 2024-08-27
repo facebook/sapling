@@ -101,6 +101,11 @@ function setup_sync_config_stripping_git_submodules {
 }
 
 function run_common_xrepo_sync_with_gitsubmodules_setup {
+  export SM_COMMIT_DATE="1970-1-1 00:00:01"
+  # Avoid local clone error "fatal: transport 'file' not allowed" in new Git versions (see CVE-2022-39253).
+  export XDG_CONFIG_HOME=$TESTTMP
+  git config --global protocol.file.allow always
+
   INFINITEPUSH_ALLOW_WRITES=true ENABLE_API_WRITES=1 REPOID="$LARGE_REPO_ID" \
     REPONAME="$LARGE_REPO_NAME" setup_common_config "$REPOTYPE"
   # Enable writes in small repo as well, so we can update bookmarks when running gitimport
@@ -110,6 +115,13 @@ function run_common_xrepo_sync_with_gitsubmodules_setup {
   setup_sync_config_stripping_git_submodules
 
   start_and_wait_for_mononoke_server
+
+  # Create a commit in the large repo
+  testtool_drawdag -R "$LARGE_REPO_NAME" --no-default-files <<EOF
+L_A
+# modify: L_A "file_in_large_repo.txt" "first file"
+# bookmark: L_A master
+EOF
 
   # Setting up mutable counter for live forward sync
   # NOTE: this might need to be updated/refactored when setting up test for backsyncing

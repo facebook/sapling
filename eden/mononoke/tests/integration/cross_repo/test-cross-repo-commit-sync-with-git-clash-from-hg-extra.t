@@ -32,6 +32,7 @@
 
 Setup configuration
   $ run_common_xrepo_sync_with_gitsubmodules_setup
+  L_A=b006a2b1425af8612bc80ff4aa9fa8a1a2c44936ad167dd21cb9af2a9a0248c4
 
   $ testtool_drawdag -R "$LARGE_REPO_NAME" --no-default-files <<EOF
   > A

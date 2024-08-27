@@ -13,10 +13,9 @@
   $ . "${TEST_FIXTURES}/library.sh"
   $ . "${TEST_FIXTURES}/library-xrepo-sync-with-git-submodules.sh"
 
-
-
 Setup configuration
   $ run_common_xrepo_sync_with_gitsubmodules_setup
+  L_A=b006a2b1425af8612bc80ff4aa9fa8a1a2c44936ad167dd21cb9af2a9a0248c4
 
 # This tests the scenario where a commit contains ONLY changes to git submodules
 # i.e. there are not file changes that should be synced to the large repo.
@@ -34,7 +33,9 @@ Create commit that modifies git submodule in small repo
   B=b51882d566acc1f3979a389e452e2c11ccdd05be65bf777c05924fc412b2cc71
   C=6473a332b6f2c52543365108144f9b1cff6b4874bc3ade72a8268f50226f86f4
 
-  $ with_stripped_logs mononoke_x_repo_sync "$SUBMODULE_REPO_ID"  "$LARGE_REPO_ID" initial-import --no-progress-bar -i "$C" --version-name "$LATEST_CONFIG_VERSION_NAME"
+  $ with_stripped_logs mononoke_x_repo_sync "$SUBMODULE_REPO_ID" "$LARGE_REPO_ID" \
+  > initial-import --no-progress-bar -i "$C" --version-name "$LATEST_CONFIG_VERSION_NAME" \
+  > | tee $TESTTMP/initial_import.out
   Starting session with id * (glob)
   Starting up X Repo Sync from small repo small_repo to large repo large_repo
   Checking if 6473a332b6f2c52543365108144f9b1cff6b4874bc3ade72a8268f50226f86f4 is already synced 11->10
@@ -45,7 +46,11 @@ Create commit that modifies git submodule in small repo
   successful sync of head 6473a332b6f2c52543365108144f9b1cff6b4874bc3ade72a8268f50226f86f4
   X Repo Sync execution finished from small repo small_repo to large repo large_repo
 
-  $ clone_and_log_large_repo 5cac851d3a164f682613d6901e17a03e18afe8576145d4f5ff9dd0a51a82437f
+  $ SYNCED_HEAD=$(rg ".+synced as (\w+) .+" -or '$1' "$TESTTMP/initial_import.out")
+  $ echo "$SYNCED_HEAD"
+  5cac851d3a164f682613d6901e17a03e18afe8576145d4f5ff9dd0a51a82437f
+  $ sleep 2
+  $ clone_and_log_large_repo "$SYNCED_HEAD"
   o  f9abb21ba833 C
   │   smallrepofolder1/foo/b.txt |  1 +
   │   1 files changed, 1 insertions(+), 0 deletions(-)
@@ -56,6 +61,10 @@ Create commit that modifies git submodule in small repo
       smallrepofolder1/bar/b.txt |  1 +
       smallrepofolder1/foo/a.txt |  1 +
       2 files changed, 2 insertions(+), 0 deletions(-)
+  
+  @  54a6db91baf1 L_A
+      file_in_large_repo.txt |  1 +
+      1 files changed, 1 insertions(+), 0 deletions(-)
   
   
   
