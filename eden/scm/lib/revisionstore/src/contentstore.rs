@@ -34,9 +34,9 @@ use crate::datastore::StoreResult;
 use crate::indexedlogdatastore::IndexedLogHgIdDataStore;
 use crate::indexedlogdatastore::IndexedLogHgIdDataStoreConfig;
 use crate::indexedlogutil::StoreType;
+use crate::lfs::LfsClient;
 use crate::lfs::LfsFallbackRemoteStore;
 use crate::lfs::LfsMultiplexer;
-use crate::lfs::LfsRemote;
 use crate::lfs::LfsStore;
 use crate::localstore::ExtStoredPolicy;
 use crate::localstore::LocalStore;
@@ -577,7 +577,7 @@ impl<'a> ContentStoreBuilder<'a> {
                 // fetch the actual blobs in this store.
                 if enable_lfs {
                     if let Some(shared_lfs_store) = shared_lfs_store {
-                        let lfs_remote_store = Arc::new(LfsRemote::new(
+                        let lfs_remote_store = Arc::new(LfsClient::new(
                             shared_lfs_store,
                             local_lfs_store,
                             self.config,

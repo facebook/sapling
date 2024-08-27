@@ -25,7 +25,7 @@ use crate::indexedlogdatastore::IndexedLogHgIdDataStore;
 use crate::indexedlogdatastore::IndexedLogHgIdDataStoreConfig;
 use crate::indexedlogtreeauxstore::TreeAuxStore;
 use crate::indexedlogutil::StoreType;
-use crate::lfs::LfsRemote;
+use crate::lfs::LfsClient;
 use crate::lfs::LfsStore;
 use crate::scmstore::activitylogger::ActivityLogger;
 use crate::scmstore::file::FileStoreMetrics;
@@ -323,7 +323,7 @@ impl<'a> FileStoreBuilder<'a> {
             if let Some(ref lfs_cache) = lfs_cache {
                 // TODO(meyer): Refactor upload functionality so we don't need to use LfsRemote with it's own references to the
                 // underlying stores.
-                Some(Arc::new(LfsRemote::new(
+                Some(Arc::new(LfsClient::new(
                     lfs_cache.clone(),
                     lfs_local.clone(),
                     self.config,

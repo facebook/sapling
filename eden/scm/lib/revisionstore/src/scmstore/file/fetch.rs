@@ -40,7 +40,7 @@ use crate::indexedlogauxstore::AuxStore;
 use crate::indexedlogdatastore::Entry;
 use crate::indexedlogdatastore::IndexedLogHgIdDataStore;
 use crate::lfs::LfsPointersEntry;
-use crate::lfs::LfsRemoteInner;
+use crate::lfs::LfsRemote;
 use crate::lfs::LfsStore;
 use crate::lfs::LfsStoreEntry;
 use crate::scmstore::attrs::StoreAttrs;
@@ -849,7 +849,7 @@ impl FetchState {
 
     pub(crate) fn fetch_lfs_remote(
         &mut self,
-        store: &LfsRemoteInner,
+        store: &LfsRemote,
         _local: Option<Arc<LfsStore>>,
         cache: Option<Arc<LfsStore>>,
     ) {

@@ -161,15 +161,15 @@ struct HttpOptions {
     request_timeout: Duration,
 }
 
-pub(crate) enum LfsRemoteInner {
+pub(crate) enum LfsRemote {
     Http(HttpLfsRemote),
     File(LfsBlobsStore),
 }
 
-pub struct LfsRemote {
+pub struct LfsClient {
     local: Option<Arc<LfsStore>>,
     shared: Arc<LfsStore>,
-    pub(crate) remote: LfsRemoteInner,
+    pub(crate) remote: LfsRemote,
     move_after_upload: bool,
     ignore_prefetch_errors: bool,
 }
@@ -1098,7 +1098,7 @@ impl HgIdMutableDeltaStore for LfsMultiplexer {
     }
 }
 
-impl LfsRemoteInner {
+impl LfsRemote {
     pub fn batch_fetch(
         &self,
         objs: &HashSet<(Sha256, usize)>,
@@ -1107,7 +1107,7 @@ impl LfsRemoteInner {
     ) -> Result<()> {
         let read_from_store = |_sha256, _size| unreachable!();
         match self {
-            LfsRemoteInner::Http(http) => Self::batch_http(
+            LfsRemote::Http(http) => Self::batch_http(
                 http,
                 objs,
                 Operation::Download,
@@ -1115,7 +1115,7 @@ impl LfsRemoteInner {
                 write_to_store,
                 error_handler,
             ),
-            LfsRemoteInner::File(file) => Self::batch_fetch_file(file, objs, write_to_store),
+            LfsRemote::File(file) => Self::batch_fetch_file(file, objs, write_to_store),
         }
     }
 
@@ -1127,7 +1127,7 @@ impl LfsRemoteInner {
     ) -> Result<()> {
         let write_to_store = |_, _| unreachable!();
         match self {
-            LfsRemoteInner::Http(http) => Self::batch_http(
+            LfsRemote::Http(http) => Self::batch_http(
                 http,
                 objs,
                 Operation::Upload,
@@ -1135,7 +1135,7 @@ impl LfsRemoteInner {
                 write_to_store,
                 error_handler,
             ),
-            LfsRemoteInner::File(file) => Self::batch_upload_file(file, objs, read_from_store),
+            LfsRemote::File(file) => Self::batch_upload_file(file, objs, read_from_store),
         }
     }
 
@@ -1147,7 +1147,7 @@ impl LfsRemoteInner {
         check_status: impl Fn(StatusCode) -> Result<(), TransferError>,
         http_options: Arc<HttpOptions>,
     ) -> Result<Bytes, FetchError> {
-        let span = trace_span!("LfsRemoteInner::send_with_retry", url = %url);
+        let span = trace_span!("LfsRemote::send_with_retry", url = %url);
 
         let host_str = url.host_str().expect("No host in url").to_string();
 
@@ -1339,7 +1339,7 @@ impl LfsRemoteInner {
         let batch_url = http.url.join("objects/batch")?;
 
         let response_fut = async move {
-            LfsRemoteInner::send_with_retry(
+            LfsRemote::send_with_retry(
                 http.client.clone(),
                 Method::Post,
                 batch_url,
@@ -1370,7 +1370,7 @@ impl LfsRemoteInner {
         let body = spawn_blocking(move || read_from_store(oid, size)).await??;
 
         let url = Url::from_str(&action.href.to_string())?;
-        LfsRemoteInner::send_with_retry(
+        LfsRemote::send_with_retry(
             client,
             Method::Put,
             url,
@@ -1415,7 +1415,7 @@ impl LfsRemoteInner {
                         let chunk_end = std::cmp::min(file_end, chunk_start + chunk_increment);
                         let range = format!("bytes={}-{}", chunk_start, chunk_end);
 
-                        let chunk = LfsRemoteInner::send_with_retry(
+                        let chunk = LfsRemote::send_with_retry(
                             client.clone(),
                             Method::Get,
                             url.clone(),
@@ -1447,7 +1447,7 @@ impl LfsRemoteInner {
                 .await
             }
             None => {
-                LfsRemoteInner::send_with_retry(
+                LfsRemote::send_with_retry(
                     client,
                     Method::Get,
                     url,
@@ -1495,7 +1495,7 @@ impl LfsRemoteInner {
 
         for request_objs_chunk in &request_objs_iter.chunks(http.max_batch_size) {
             let response =
-                LfsRemoteInner::send_batch_request(http, request_objs_chunk.collect(), operation)?;
+                LfsRemote::send_batch_request(http, request_objs_chunk.collect(), operation)?;
             let response = match response {
                 None => return Ok(()),
                 Some(response) => response,
@@ -1525,7 +1525,7 @@ impl LfsRemoteInner {
                     let oid = Sha256::from(oid.0);
 
                     let fut = match op {
-                        Operation::Upload => LfsRemoteInner::process_upload(
+                        Operation::Upload => LfsRemote::process_upload(
                             http.client.clone(),
                             action,
                             oid,
@@ -1535,7 +1535,7 @@ impl LfsRemoteInner {
                         )
                         .map(|_| None)
                         .left_future(),
-                        Operation::Download => LfsRemoteInner::process_download(
+                        Operation::Download => LfsRemote::process_download(
                             http.client.clone(),
                             http.download_chunk_size,
                             action,
@@ -1599,7 +1599,7 @@ impl LfsRemoteInner {
     }
 }
 
-impl LfsRemote {
+impl LfsClient {
     pub fn new(
         shared: Arc<LfsStore>,
         local: Option<Arc<LfsStore>>,
@@ -1623,7 +1623,7 @@ impl LfsRemote {
                 local,
                 ignore_prefetch_errors,
                 move_after_upload,
-                remote: LfsRemoteInner::File(file),
+                remote: LfsRemote::File(file),
             })
         } else {
             if !["http", "https"].contains(&url.scheme()) {
@@ -1696,7 +1696,7 @@ impl LfsRemote {
                 local,
                 move_after_upload,
                 ignore_prefetch_errors,
-                remote: LfsRemoteInner::Http(HttpLfsRemote {
+                remote: LfsRemote::Http(HttpLfsRemote {
                     url,
                     client: Arc::new(client),
                     concurrent_fetches,
@@ -1736,7 +1736,7 @@ impl LfsRemote {
     }
 }
 
-impl HgIdRemoteStore for LfsRemote {
+impl HgIdRemoteStore for LfsClient {
     fn datastore(
         self: Arc<Self>,
         store: Arc<dyn HgIdMutableDeltaStore>,
@@ -1783,7 +1783,7 @@ fn move_blob(hash: &Sha256, size: u64, from: &LfsStore, to: &LfsStore) -> Result
 
 struct LfsRemoteStore {
     store: Arc<dyn HgIdMutableDeltaStore>,
-    remote: Arc<LfsRemote>,
+    remote: Arc<LfsClient>,
 }
 
 impl RemoteDataStore for LfsRemoteStore {
@@ -2844,7 +2844,7 @@ mod tests {
             let _m2 = get_lfs_download_mock(&mut server, 200, blob);
 
             let lfs = Arc::new(LfsStore::rotated(&lfsdir, &config)?);
-            let remote = LfsRemote::new(lfs, None, &config)?;
+            let remote = LfsClient::new(lfs, None, &config)?;
 
             let objs = [(blob.sha, blob.size)]
                 .iter()
@@ -2869,7 +2869,7 @@ mod tests {
             set_var("https_proxy", "fwdproxy:8082");
 
             let lfs = Arc::new(LfsStore::rotated(&lfsdir, &config)?);
-            let remote = LfsRemote::new(lfs, None, &config)?;
+            let remote = LfsClient::new(lfs, None, &config)?;
 
             let blob = example_blob();
             let objs = [(blob.sha, blob.size)]
@@ -2897,7 +2897,7 @@ mod tests {
             set_var("https_proxy", "http://fwdproxy:8082");
 
             let lfs = Arc::new(LfsStore::rotated(&lfsdir, &config)?);
-            let remote = LfsRemote::new(lfs, None, &config)?;
+            let remote = LfsClient::new(lfs, None, &config)?;
 
             let blob = example_blob();
             let objs = [(blob.sha, blob.size)]
@@ -2929,7 +2929,7 @@ mod tests {
             set_var("NO_PROXY", "localhost,127.0.0.1");
 
             let lfs = Arc::new(LfsStore::rotated(&lfsdir, &config)?);
-            let remote = LfsRemote::new(lfs, None, &config)?;
+            let remote = LfsClient::new(lfs, None, &config)?;
 
             let objs = [(blob.sha, blob.size)]
                 .iter()
@@ -2956,7 +2956,7 @@ mod tests {
             let mut config = make_lfs_config(server, &cachedir, "test_download");
             configure(&mut config);
             let lfs = Arc::new(LfsStore::rotated(&lfsdir, &config)?);
-            let remote = LfsRemote::new(lfs, None, &config)?;
+            let remote = LfsClient::new(lfs, None, &config)?;
 
             let _mocks: Vec<_> = blobs
                 .iter()
@@ -3071,7 +3071,7 @@ mod tests {
             setconfig(&mut config, "lfs", "http-version", "3");
 
             let lfs = Arc::new(LfsStore::rotated(&lfsdir, &config).unwrap());
-            let result = LfsRemote::new(lfs, None, &config);
+            let result = LfsClient::new(lfs, None, &config);
 
             assert!(result.is_err());
 
@@ -3090,7 +3090,7 @@ mod tests {
             setconfig(&mut config, "lfs", "requesttimeout", "0");
 
             let lfs = Arc::new(LfsStore::rotated(&lfsdir, &config)?);
-            let remote = LfsRemote::new(lfs, None, &config)?;
+            let remote = LfsClient::new(lfs, None, &config)?;
 
             let blob = (
                 Sha256::from_str(
@@ -3122,7 +3122,7 @@ mod tests {
             let _m2 = get_lfs_download_mock(&mut server, 200, blob);
 
             let lfs = Arc::new(LfsStore::rotated(&lfsdir, &config)?);
-            let remote = Arc::new(LfsRemote::new(lfs.clone(), None, &config)?);
+            let remote = Arc::new(LfsClient::new(lfs.clone(), None, &config)?);
 
             let key = key("a/b", "1234");
 
@@ -3183,7 +3183,7 @@ mod tests {
                 .create();
 
             let lfs = Arc::new(LfsStore::rotated(&lfsdir, &config)?);
-            let remote = LfsRemote::new(lfs, None, &config)?;
+            let remote = LfsClient::new(lfs, None, &config)?;
 
             let objs = [(blob.sha, blob.size)]
                 .iter()
@@ -3234,7 +3234,7 @@ mod tests {
         let url = Url::from_file_path(&remote).unwrap();
         setconfig(&mut config, "lfs", "url", url.as_str());
 
-        let remote = LfsRemote::new(lfs, None, &config)?;
+        let remote = LfsClient::new(lfs, None, &config)?;
 
         let objs = [(blob1.0, blob1.1), (blob2.0, blob2.1)]
             .iter()
@@ -3295,7 +3295,7 @@ mod tests {
         let url = Url::from_file_path(&remote_dir).unwrap();
         setconfig(&mut config, "lfs", "url", url.as_str());
 
-        let remote = LfsRemote::new(shared_lfs, Some(local_lfs.clone()), &config)?;
+        let remote = LfsClient::new(shared_lfs, Some(local_lfs.clone()), &config)?;
 
         let objs = [(blob1.0, blob1.1), (blob2.0, blob2.1)]
             .iter()
@@ -3344,7 +3344,7 @@ mod tests {
         let url = Url::from_file_path(&remote_dir).unwrap();
         setconfig(&mut config, "lfs", "url", url.as_str());
 
-        let remote = Arc::new(LfsRemote::new(
+        let remote = Arc::new(LfsClient::new(
             shared_lfs.clone(),
             Some(local_lfs.clone()),
             &config,
@@ -3431,7 +3431,7 @@ mod tests {
         setconfig(&mut config, "lfs", "url", "http://192.0.2.0/");
 
         let lfs = Arc::new(LfsStore::rotated(&lfsdir, &config)?);
-        let remote = Arc::new(LfsRemote::new(lfs, None, &config)?);
+        let remote = Arc::new(LfsClient::new(lfs, None, &config)?);
 
         let resp = remote.datastore(store).prefetch(&[]);
         assert!(resp.is_ok());
@@ -3505,7 +3505,7 @@ mod tests {
 
             let lfsdir = TempDir::new()?;
             let lfs = Arc::new(LfsStore::rotated(&lfsdir, &config)?);
-            let remote = LfsRemote::new(lfs, None, &config)?;
+            let remote = LfsClient::new(lfs, None, &config)?;
             let objs = [(blobs[0].sha, blobs[0].size)]
                 .iter()
                 .cloned()

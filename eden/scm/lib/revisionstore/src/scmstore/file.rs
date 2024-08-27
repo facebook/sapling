@@ -47,8 +47,8 @@ use crate::indexedlogauxstore::AuxStore;
 use crate::indexedlogdatastore::Entry;
 use crate::indexedlogdatastore::IndexedLogHgIdDataStore;
 use crate::lfs::lfs_from_hg_file_blob;
+use crate::lfs::LfsClient;
 use crate::lfs::LfsPointersEntry;
-use crate::lfs::LfsRemote;
 use crate::lfs::LfsStore;
 use crate::remotestore::HgIdRemoteStore;
 use crate::scmstore::activitylogger::ActivityLogger;
@@ -98,7 +98,7 @@ pub struct FileStore {
     pub(crate) lfs_cache: Option<Arc<LfsStore>>,
 
     // Remote stores
-    pub(crate) lfs_remote: Option<Arc<LfsRemote>>,
+    pub(crate) lfs_remote: Option<Arc<LfsClient>>,
     pub(crate) edenapi: Option<Arc<SaplingRemoteApiFileStore>>,
 
     // Legacy ContentStore fallback
