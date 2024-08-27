@@ -63,7 +63,7 @@ _errors = {
         # strerror()
         rb"Not a directory",
         # FormatMessage(ERROR_PATH_NOT_FOUND)
-        rb"The system cannot find the path specified",
+        rb"The system cannot find the path specified(?:\. \(os error 3\))?",
     ),
     rb"$ECONNRESET$": (
         # strerror()
