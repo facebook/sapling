@@ -84,7 +84,7 @@ Try creating again, this should fail
 
 Push a few new commits and update streaming clone
   $ cd "$TESTTMP"
-  $ hgclone_treemanifest ssh://user@dummy/repo-hg repo-push --noupdate
+  $ hg clone -q ssh://user@dummy/repo-hg repo-push --noupdate
   $ cd repo-push
   $ enableextension remotenames
   $ hgmn up tip

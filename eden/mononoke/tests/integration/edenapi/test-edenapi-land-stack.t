@@ -58,7 +58,7 @@ Start up SaplingRemoteAPI server.
   $ start_and_wait_for_mononoke_server
 Clone the repo
   $ cd $TESTTMP
-  $ hgclone_treemanifest ssh://user@dummy/repo-hg repo2 --noupdate -q
+  $ hg clone -q ssh://user@dummy/repo-hg repo2 --noupdate
   $ cd repo2
   $ setup_hg_client
 

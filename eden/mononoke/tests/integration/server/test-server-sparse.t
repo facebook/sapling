@@ -43,7 +43,7 @@ start mononoke
   $ wait_for_mononoke $TESTTMP/repo
 
 Clone the repo
-  $ hgclone_treemanifest ssh://user@dummy/repo-hg repo2 --noupdate --config extensions.remotenames= -q
+  $ hg clone -q ssh://user@dummy/repo-hg repo2 --noupdate --config extensions.remotenames=
   $ cd repo2
   $ setup_hg_client
   $ cat >> .hgsparse_profile <<EOF

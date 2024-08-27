@@ -80,8 +80,8 @@ Disable bookmarks cache because bookmarks are modified by two separate processes
 
 -- setup hg client repos
   $ cd "$TESTTMP"
-  $ hgclone_treemanifest ssh://user@dummy/fbs-hg-srv fbs-hg-cnt --noupdate
-  $ hgclone_treemanifest ssh://user@dummy/meg-hg-srv meg-hg-cnt --noupdate
+  $ hg clone -q ssh://user@dummy/fbs-hg-srv fbs-hg-cnt --noupdate
+  $ hg clone -q ssh://user@dummy/meg-hg-srv meg-hg-cnt --noupdate
 
 -- start mononoke
   $ start_and_wait_for_mononoke_server

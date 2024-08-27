@@ -27,8 +27,8 @@ create master bookmark
 
 setup repo-push and repo-pull
   $ cd $TESTTMP
-  $ hgclone_treemanifest ssh://user@dummy/repo-hg repo-push --noupdate
-  $ hgclone_treemanifest ssh://user@dummy/repo-hg repo-pull --noupdate
+  $ hg clone -q ssh://user@dummy/repo-hg repo-push --noupdate
+  $ hg clone -q ssh://user@dummy/repo-hg repo-pull --noupdate
 
 blobimport
 

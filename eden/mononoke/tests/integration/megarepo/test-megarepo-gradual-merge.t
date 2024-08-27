@@ -116,7 +116,7 @@ setup hg server repo
 
   $ start_and_wait_for_mononoke_server
   $ cd "$TESTTMP"
-  $ hgclone_treemanifest ssh://user@dummy/repo-hg repo --noupdate
+  $ hg clone -q ssh://user@dummy/repo-hg repo --noupdate
   $ cd repo
   $ hgmn pull
   pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo

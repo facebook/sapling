@@ -34,7 +34,7 @@ blobimport them into Mononoke storage and start Mononoke
 start mononoke
   $ start_and_wait_for_mononoke_server
 Make client repo
-  $ hgclone_treemanifest ssh://user@dummy/repo-hg client-push --noupdate --config extensions.remotenames= -q
+  $ hg clone -q ssh://user@dummy/repo-hg client-push --noupdate --config extensions.remotenames=
 
 Push a simple commit to Mononoke
   $ cd $TESTTMP/client-push

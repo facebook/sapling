@@ -28,7 +28,7 @@ EOF
 
     cd "$TESTTMP"
     for clone in "$@"; do
-        hgclone_treemanifest ssh://user@dummy/repo "$clone"
+        hg clone -q ssh://user@dummy/repo "$clone"
     done
     blobimport repo/.hg repo
 

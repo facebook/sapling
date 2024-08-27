@@ -39,7 +39,7 @@ start mononoke
   $ start_and_wait_for_mononoke_server
 setup the client repo
   $ cd $TESTTMP
-  $ hgclone_treemanifest ssh://user@dummy/repo-hg-server client --noupdate --config extensions.remotenames= -q
+  $ hg clone -q ssh://user@dummy/repo-hg-server client --noupdate --config extensions.remotenames=
 
 create new hg commits
   $ cd $TESTTMP/client

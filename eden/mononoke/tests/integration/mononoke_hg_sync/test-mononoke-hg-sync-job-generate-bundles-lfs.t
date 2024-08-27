@@ -53,7 +53,7 @@ start mononoke with LFS enabled
   $ wait_for_mononoke
 
 Make client repo
-  $ hgclone_treemanifest ssh://user@dummy/repo-hg client-push --noupdate --config extensions.remotenames= -q
+  $ hg clone -q ssh://user@dummy/repo-hg client-push --noupdate --config extensions.remotenames=
   $ cd client-push
   $ setup_hg_client
   $ setup_hg_modern_lfs "$lfs_uri" 1000B "$TESTTMP/lfs-cache1"
@@ -153,7 +153,7 @@ Sync a lfs pushrebase
 
 Setup another client and update to latest commit from mercurial
   $ cd ..
-  $ hgclone_treemanifest ssh://user@dummy/repo-hg client-pull --noupdate --config extensions.remotenames= -q
+  $ hg clone -q ssh://user@dummy/repo-hg client-pull --noupdate --config extensions.remotenames=
   $ cd client-pull
   $ setup_hg_client
   $ setup_hg_modern_lfs "$lfs_uri" 1000B "$TESTTMP/lfs-cache1"

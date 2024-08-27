@@ -36,7 +36,7 @@ setup config
   > EOF
 
 set up the local repo
-  $ hgclone_treemanifest ssh://user@dummy/repo-hg local -q
+  $ hg clone -q ssh://user@dummy/repo-hg local
   $ cd local
   $ hgmn pull
   pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo

@@ -35,7 +35,7 @@ Setup repo, and create test repo
 
 Setup a client repo that doesn't have any of the manifests in its local store.
 
-  $ hgclone_treemanifest ssh://user@dummy/repo-hg test_repo --noupdate --config extensions.remotenames= -q
+  $ hg clone -q ssh://user@dummy/repo-hg test_repo --noupdate --config extensions.remotenames=
   $ cd test_repo
   $ sl pull -q -B master_bookmark
 

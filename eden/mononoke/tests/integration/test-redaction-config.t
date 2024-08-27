@@ -34,10 +34,10 @@ create another commit that has other content we can redact
   $ cd $TESTTMP
 
 setup repo-pull and repo-push
-  $ hgclone_treemanifest ssh://user@dummy/repo-hg repo-push --noupdate
-  $ hgclone_treemanifest ssh://user@dummy/repo-hg repo-pull --noupdate
-  $ hgclone_treemanifest ssh://user@dummy/repo-hg repo-pull2 --noupdate
-  $ hgclone_treemanifest ssh://user@dummy/repo-hg repo-pull3 --noupdate
+  $ hg clone -q ssh://user@dummy/repo-hg repo-push --noupdate
+  $ hg clone -q ssh://user@dummy/repo-hg repo-pull --noupdate
+  $ hg clone -q ssh://user@dummy/repo-hg repo-pull2 --noupdate
+  $ hg clone -q ssh://user@dummy/repo-hg repo-pull3 --noupdate
 
 blobimport
   $ blobimport repo-hg/.hg repo
@@ -142,6 +142,8 @@ Restart mononoke
   $ start_and_wait_for_mononoke_server --enable-wbc-with no-derivation
 
   $ cd "$TESTTMP/repo-pull2"
+# Don't share caches.
+  $ setconfig remotefilelog.cachepath="$(pwd)/.hg/cache"
   $ hgmn pull -q
   $ hgmn up -q 14961831bd3a
 
@@ -168,6 +170,8 @@ Restart mononoke and disable redaction verification
   $ wait_for_mononoke
 
   $ cd "$TESTTMP/repo-pull3"
+# Don't share caches.
+  $ setconfig remotefilelog.cachepath="$(pwd)/.hg/cache"
   $ hgmn pull -q
   $ hgmn up -q 14961831bd3a
 

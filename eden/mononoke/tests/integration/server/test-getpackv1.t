@@ -22,8 +22,8 @@ setup hg server repo
   $ cd $TESTTMP
 
 setup client repo2
-  $ hgclone_treemanifest ssh://user@dummy/repo-hg repo2 --noupdate -q
-  $ hgclone_treemanifest ssh://user@dummy/repo-hg repo3 --noupdate -q
+  $ hg clone -q ssh://user@dummy/repo-hg repo2 --noupdate
+  $ hg clone -q ssh://user@dummy/repo-hg repo3 --noupdate
   $ cd repo2
   $ setup_hg_client
 
@@ -121,8 +121,8 @@ Rename a file and then prefetch it
   $ hgmn pull -q
   $ hgmn prefetch -r 4 --debug 2>&1 | grep "getpackv1 command"
   sending getpackv1 command
-  $ hg debugdatapack --node 5abbc96341e3bb0cdfc5c54599ee869e2ffa573f $TESTTMP/cachepath/repo3/packs/ee71793980651ba90038f48b623b83d4f3c8585a.dataidx
-  $TESTTMP/cachepath/repo3/packs/ee71793980651ba90038f48b623b83d4f3c8585a:
+  $ hg debugdatapack --node 5abbc96341e3bb0cdfc5c54599ee869e2ffa573f $TESTTMP/cachepath/repo-hg/packs/ee71793980651ba90038f48b623b83d4f3c8585a.dataidx
+  $TESTTMP/cachepath/repo-hg/packs/ee71793980651ba90038f48b623b83d4f3c8585a:
   \x01 (esc)
   copy: A
   copyrev: bb3317de12b1232de9b883d9026c1ffa9291e3e6

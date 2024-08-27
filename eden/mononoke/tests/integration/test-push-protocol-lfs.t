@@ -29,7 +29,7 @@ Start mononoke and the LFS Server
 
 Setup client repo
 
-  $ hgclone_treemanifest ssh://user@dummy/repo-hg hg-client
+  $ hg clone -q ssh://user@dummy/repo-hg hg-client
   $ cd hg-client
   $ setup_hg_modern_lfs "$lfs_uri" 10B "$TESTTMP/lfs-cache"
 
@@ -73,7 +73,7 @@ Create new commits
 
 Clone the repository, and pull
 
-  $ hgclone_treemanifest ssh://user@dummy/repo-hg hg-client
+  $ hg clone -q ssh://user@dummy/repo-hg hg-client
   $ cd hg-client
   $ setup_hg_modern_lfs "$lfs_uri" 10B "$TESTTMP/lfs-cache"
   $ hgmn pull

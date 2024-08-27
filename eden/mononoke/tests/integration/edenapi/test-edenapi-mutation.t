@@ -56,9 +56,9 @@ Initialize test repo.
 
 Import and start mononoke
   $ cd $TESTTMP
-  $ hgclone_treemanifest ssh://user@dummy/repo client1 --noupdate --config clone.prefer-edenapi-clonedata=false
+  $ hg clone -q ssh://user@dummy/repo client1 --noupdate --config clone.prefer-edenapi-clonedata=false
   DEBUG pull::httpbookmarks: edenapi fetched bookmarks: {'master': None}
-  $ hgclone_treemanifest ssh://user@dummy/repo client2 --noupdate --config clone.prefer-edenapi-clonedata=false
+  $ hg clone -q ssh://user@dummy/repo client2 --noupdate --config clone.prefer-edenapi-clonedata=false
   DEBUG pull::httpbookmarks: edenapi fetched bookmarks: {'master': None}
   $ blobimport repo/.hg repo
   $ start_and_wait_for_mononoke_server

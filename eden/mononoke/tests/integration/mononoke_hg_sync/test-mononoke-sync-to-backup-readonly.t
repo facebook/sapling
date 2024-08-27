@@ -56,7 +56,7 @@ Blobimport the hg repo to Mononoke
 start mononoke
   $ start_and_wait_for_mononoke_server
 Push to Mononoke
-  $ hgclone_treemanifest ssh://user@dummy/repo-hg client-push --noupdate --config extensions.remotenames=
+  $ hg clone -q ssh://user@dummy/repo-hg client-push --noupdate --config extensions.remotenames=
   $ cd $TESTTMP/client-push
   $ setup_hg_client
   $ cat >> .hg/hgrc <<EOF
@@ -83,7 +83,7 @@ Sync it to another client with bypass-readonly should success
   * successful sync of entries [2]* (glob)
 
 Check synced commit in backup repo
-  $ hgclone_treemanifest mononoke://$(mononoke_address)/backup backup --noupdate --config extensions.remotenames=
+  $ hg clone -q mononoke://$(mononoke_address)/backup backup --noupdate --config extensions.remotenames=
   $ cd "$TESTTMP/backup"
   $ REPONAME=backup
   $ hgmn pull -q

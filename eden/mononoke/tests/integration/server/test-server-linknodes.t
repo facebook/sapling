@@ -37,7 +37,7 @@ setup repo-push and repo-pull
   $ cd $TESTTMP
   $ for name in push pull1 pull2 pull3
   > do
-  >   hgclone_treemanifest ssh://user@dummy/repo-hg repo-$name --noupdate --config extensions.remotenames= --config treemanifest.treeonly=true
+  >   hg clone -q ssh://user@dummy/repo-hg repo-$name --noupdate --config extensions.remotenames= --config treemanifest.treeonly=true
   >   cat >> repo-$name/.hg/hgrc <<EOF
   > [extensions]
   > loglinkrevfixup = $TESTTMP/loglinkrevfixup.py

@@ -37,7 +37,7 @@ verify content
   $ blobimport repo-hg/.hg repo
 
 setup push source repo
-  $ hgclone_treemanifest ssh://user@dummy/repo-hg repo2
+  $ hg clone -q ssh://user@dummy/repo-hg repo2
 
 start mononoke
 

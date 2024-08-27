@@ -13,7 +13,7 @@ setup configuration
 setup repo
 
   $ hginit_treemanifest repo-hg
-  $ hgclone_treemanifest ssh://user@dummy/repo-hg client --noupdate
+  $ hg clone -q ssh://user@dummy/repo-hg client --noupdate
 
   $ cd repo-hg
   $ touch a

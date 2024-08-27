@@ -219,7 +219,7 @@
     "x_repo_check_disabled": false
   }
 
-  $ hgclone_treemanifest ssh://user@dummy/repo-hg repo1 --noupdate -q
+  $ hg clone -q ssh://user@dummy/repo-hg repo1 --noupdate
   $ cd repo1
   $ hgmn pull
   pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo

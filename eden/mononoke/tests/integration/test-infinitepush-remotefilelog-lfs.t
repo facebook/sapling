@@ -39,13 +39,13 @@ Setup common client configuration for these tests
 
 setup repo-push and repo-pull
   $ cd "$TESTTMP"
-  $ hgclone_treemanifest ssh://user@dummy/repo-hg repo-push --noupdate
+  $ hg clone -q ssh://user@dummy/repo-hg repo-push --noupdate
   $ cd "${TESTTMP}/repo-push"
   $ setup_hg_modern_lfs "$lfs_uri" 10B
   $ setconfig "remotefilelog.cachepath=$TESTTMP/cachepath-push"
 
   $ cd "$TESTTMP"
-  $ hgclone_treemanifest ssh://user@dummy/repo-hg repo-pull --noupdate
+  $ hg clone -q ssh://user@dummy/repo-hg repo-pull --noupdate
   $ cd "${TESTTMP}/repo-pull"
   $ setup_hg_modern_lfs "$lfs_uri" 10B
   $ setconfig "remotefilelog.cachepath=$TESTTMP/cachepath-pull"

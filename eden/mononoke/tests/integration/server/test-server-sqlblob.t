@@ -60,7 +60,7 @@ setup repo2
   > [remotefilelog]
   > cachepath=$TESTTMP/cachepath
   > EOF
-  $ hgclone_treemanifest ssh://user@dummy/repo-hg repo2 --noupdate --config clone.prefer-edenapi-clonedata=false
+  $ hg clone -q ssh://user@dummy/repo-hg repo2 --noupdate --config clone.prefer-edenapi-clonedata=false
   $ cd repo2
   $ hg pull
   pulling from ssh://user@dummy/repo-hg

@@ -32,8 +32,8 @@ blobimport
 setup two repos: one will be used to push from, another will be used
 to pull these pushed commits
 
-  $ hgclone_treemanifest ssh://user@dummy/repo-hg repo-push
-  $ hgclone_treemanifest ssh://user@dummy/repo-hg repo-pull
+  $ hg clone -q ssh://user@dummy/repo-hg repo-push
+  $ hg clone -q ssh://user@dummy/repo-hg repo-pull
 
 start mononoke
 

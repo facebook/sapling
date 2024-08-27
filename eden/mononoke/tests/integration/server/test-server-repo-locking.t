@@ -29,7 +29,7 @@ Show it is locked
   repo                 Locked("integration test")
 
 Can still clone the repo
-  $ hgclone_treemanifest mononoke://$(mononoke_address)/repo repo-hg
+  $ hg clone -q mononoke://$(mononoke_address)/repo repo-hg
   $ cd repo-hg
   $ enable infinitepush commitcloud pushrebase
   $ hg checkout -q '.^' 

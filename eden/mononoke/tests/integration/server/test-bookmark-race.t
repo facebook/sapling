@@ -37,9 +37,9 @@ start mononoke
 setup two repos: one will be used to pull into, and one will be used to
 update master_bookmark concurrently.
 
-  $ hgclone_treemanifest ssh://user@dummy/repo-hg repo-pull
+  $ hg clone -q ssh://user@dummy/repo-hg repo-pull
 
-  $ hgclone_treemanifest ssh://user@dummy/repo-hg repo-push
+  $ hg clone -q ssh://user@dummy/repo-hg repo-push
   $ cd repo-push
   $ hg up master_bookmark
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved

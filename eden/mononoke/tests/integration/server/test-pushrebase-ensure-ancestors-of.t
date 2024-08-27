@@ -44,7 +44,7 @@ Prepare the server-side repo
   $ start_and_wait_for_mononoke_server
 Prepare the client-side repo
 
-  $ hgclone_treemanifest ssh://user@dummy/repo-hg client-repo --noupdate --config extensions.remotenames= -q
+  $ hg clone -q ssh://user@dummy/repo-hg client-repo --noupdate --config extensions.remotenames=
   $ cd $TESTTMP/client-repo
   $ setup_hg_client
   $ cat >> .hg/hgrc <<EOF

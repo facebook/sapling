@@ -609,7 +609,7 @@ function create_first_post_move_commit {
 
 function init_client() {
   cd "$TESTTMP" || exit 1
-  hgclone_treemanifest ssh://user@dummy/"$1" "$2" --noupdate --config extensions.remotenames=
+  hg clone -q ssh://user@dummy/"$1" "$2" --noupdate --config extensions.remotenames=
   cd "$TESTTMP/$2" || exit 1
   cat >> .hg/hgrc <<EOF
 [extensions]

@@ -41,8 +41,8 @@ verify content
 setup two repos: one will be used to push from, another will be used
 to pull these pushed commits
 
-  $ hgclone_treemanifest ssh://user@dummy/repo-hg repo2
-  $ hgclone_treemanifest ssh://user@dummy/repo-hg repo3
+  $ hg clone -q ssh://user@dummy/repo-hg repo2
+  $ hg clone -q ssh://user@dummy/repo-hg repo3
   $ cd repo2
   $ hg pull ssh://user@dummy/repo-hg
   pulling from ssh://user@dummy/repo-hg

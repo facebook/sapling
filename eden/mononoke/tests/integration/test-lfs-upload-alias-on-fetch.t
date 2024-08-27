@@ -41,7 +41,7 @@
   $ lfs_uri="$(lfs_server)/repo"
 
 # 5. Clone hg nolfs repo to lfs client hg repo. Setup small threshold for large file size.
-  $ hgclone_treemanifest ssh://user@dummy/repo-hg-nolfs repo-hg-lfs --noupdate --config extensions.remotenames=
+  $ hg clone -q ssh://user@dummy/repo-hg-nolfs repo-hg-lfs --noupdate --config extensions.remotenames=
   $ cd repo-hg-lfs
   $ setup_hg_client
   $ setup_hg_modern_lfs "$lfs_uri" 1000B "$TESTTMP/lfs-cache1"
@@ -86,7 +86,7 @@
 
   $ cd ..
 7. Hg pull from hg client repo.
-  $ hgclone_treemanifest ssh://user@dummy/repo-hg-nolfs repo-hg-lfs2 --noupdate --config extensions.remotenames=
+  $ hg clone -q ssh://user@dummy/repo-hg-nolfs repo-hg-lfs2 --noupdate --config extensions.remotenames=
   $ cd repo-hg-lfs2
   $ setup_hg_client
   $ setup_hg_modern_lfs "$lfs_uri" 1000B $TESTTMP/lfs-cache2

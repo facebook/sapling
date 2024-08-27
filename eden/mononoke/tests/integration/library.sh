@@ -1890,14 +1890,6 @@ server=True
 EOF
 }
 
-function hgclone_treemanifest() {
-  hg clone -q --shallow --config remotefilelog.reponame="$2" "$@"
-  cat >> "$2"/.hg/hgrc <<EOF
-[remotefilelog]
-reponame=$2
-EOF
-}
-
 function hgmn_init() {
   hg init "$@"
   cat >> "$1"/.hg/hgrc <<EOF
@@ -1993,7 +1985,7 @@ EOF
 
   start_and_wait_for_mononoke_server
 
-  hgclone_treemanifest ssh://user@dummy/repo-hg repo2 --noupdate -q
+  hg clone -q ssh://user@dummy/repo-hg repo2 --noupdate
   cd repo2 || exit 1
   setup_hg_client
   cat >> .hg/hgrc <<EOF
@@ -2240,7 +2232,7 @@ function default_setup() {
   start_and_wait_for_mononoke_server "$@"
 
   echo "cloning repo in hg client 'repo2'"
-  hgclone_treemanifest ssh://user@dummy/repo-hg repo2 --noupdate -q
+  hg clone -q ssh://user@dummy/repo-hg repo2 --noupdate
   cd repo2 || exit 1
   setup_hg_client
   cat >> .hg/hgrc <<EOF
