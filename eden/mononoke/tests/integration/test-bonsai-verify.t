@@ -19,20 +19,9 @@ setup common configuration
 
 setup repo
 
-  $ hg init repo-hg
+  $ hginit_treemanifest repo-hg
 
-Init treemanifest and remotefilelog
   $ cd repo-hg
-  $ cat >> .hg/hgrc <<EOF
-  > [extensions]
-  > treemanifest=!
-  > treemanifestserver=
-  > remotefilelog=
-  > [treemanifest]
-  > server=True
-  > [remotefilelog]
-  > server=True
-  > EOF
 
   $ touch a
   $ hg add a

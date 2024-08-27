@@ -35,9 +35,8 @@ setup configuration
   $ enable amend
 
 setup repo
-  $ hg init repo-hg
+  $ hginit_treemanifest repo-hg
   $ cd repo-hg
-  $ setup_hg_server
   $ drawdag <<EOF
   > D F           # C/large = file_too_large
   > | |           # E/large = file_too_large

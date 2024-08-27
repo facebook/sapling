@@ -24,9 +24,8 @@ Setup helpers
   > }
 
 setup repo
-  $ hg init repo-hg
+  $ hginit_treemanifest repo-hg
   $ cd repo-hg
-  $ setup_hg_server
   $ hg debugdrawdag <<EOF
   > C
   > |

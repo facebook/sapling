@@ -17,7 +17,6 @@ setup configuration
 Setup hg repo, create a commit there. No LFS blobs yet.
   $ hginit_treemanifest repo-hg
   $ cd repo-hg
-  $ setup_hg_server
 
   $ echo s > smallfile
   $ hg commit -Aqm "add small file"

@@ -36,7 +36,6 @@ setup configuration
 setup repo
   $ hginit_treemanifest repo-hg
   $ cd repo-hg
-  $ setup_hg_server
 
   $ echo s > smallfile
   $ hg commit -Aqm "add small file"

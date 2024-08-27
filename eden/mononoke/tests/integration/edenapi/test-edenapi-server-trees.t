@@ -13,7 +13,6 @@ Set up local hgrc and Mononoke config.
 Initialize test repo.
   $ hginit_treemanifest repo-hg
   $ cd repo-hg
-  $ setup_hg_server
 
 Populate test repo
   $ echo "test content" > test.txt

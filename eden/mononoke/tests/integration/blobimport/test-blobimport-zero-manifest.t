@@ -7,19 +7,9 @@
   $ . "${TEST_FIXTURES}/library.sh"
 
 # setup repo, usefncache flag for forcing algo encoding run
-  $ hg init repo-hg --config format.usefncache=False
-
-# Init treemanifest and remotefilelog
+  $ hginit_treemanifest repo-hg --config format.usefncache=False
   $ cd repo-hg
-  $ cat >> .hg/hgrc <<EOF
-  > [extensions]
-  > treemanifest=!
-  > treemanifestserver=
-  > [treemanifest]
-  > server=True
-  > EOF
 
-EOF
 # Push single empty commit
   $ echo 1 > 1 && hg add 1 && hg ci -m 1
   $ hg rm 1

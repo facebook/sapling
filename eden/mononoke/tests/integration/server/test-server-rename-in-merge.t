@@ -18,9 +18,8 @@ setup common configuration
   > EOF
 
 setup repo
-  $ hg init repo-hg
+  $ hginit_treemanifest repo-hg
   $ cd repo-hg
-  $ setup_hg_server
   $ echo 1 > 1 && hg addremove && hg ci -m 1
   adding 1
   $ hg up null

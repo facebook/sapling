@@ -6,17 +6,9 @@
 
   $ . "${TEST_FIXTURES}/library.sh"
 
-  $ hg init repo-hg --config format.usefncache=False
+  $ hginit_treemanifest repo-hg --config format.usefncache=False
 
   $ cd repo-hg
-  $ cat >> .hg/hgrc <<EOF
-  > [extensions]
-  > commitextras=
-  > treemanifest=!
-  > treemanifestserver=
-  > [treemanifest]
-  > server=True
-  > EOF
 
   $ touch file1
   $ hg add

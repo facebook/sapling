@@ -25,20 +25,10 @@ setup common configuration
 
 setup repo
 
-  $ hg init repo-hg
+  $ hginit_treemanifest repo-hg
 
 Init treemanifest and remotefilelog
   $ cd repo-hg
-  $ cat >> .hg/hgrc <<EOF
-  > [extensions]
-  > treemanifest=!
-  > treemanifestserver=
-  > remotefilelog=
-  > [treemanifest]
-  > server=True
-  > [remotefilelog]
-  > server=True
-  > EOF
 
   $ touch a
   $ hg add a
@@ -53,12 +43,6 @@ Init treemanifest and remotefilelog
   $ cd $TESTTMP
 
 setup repo2
-  $ cat >> $HGRCPATH <<EOF
-  > [extensions]
-  > remotefilelog=
-  > [remotefilelog]
-  > cachepath=$TESTTMP/cachepath
-  > EOF
   $ hg clone -q ssh://user@dummy/repo-hg repo2 --noupdate --config clone.prefer-edenapi-clonedata=false
   $ cd repo2
   $ hg pull

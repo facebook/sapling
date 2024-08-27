@@ -6,17 +6,9 @@
 
   $ . "${TEST_FIXTURES}/library.sh"
 
-  $ hg init repo-hg --config format.usefncache=False
+  $ hginit_treemanifest repo-hg --config format.usefncache=False
 
-# Init treemanifest and remotefilelog
   $ cd repo-hg
-  $ cat >> .hg/hgrc <<EOF
-  > [extensions]
-  > treemanifest=!
-  > treemanifestserver=
-  > [treemanifest]
-  > server=True
-  > EOF
 
   $ touch file1.txt
   $ hg commit -Aqm "commit 1"

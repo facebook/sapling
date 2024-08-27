@@ -15,7 +15,6 @@
 
   $ hginit_treemanifest repo-hg-nolfs
   $ cd repo-hg-nolfs
-  $ setup_hg_server
 # Commit files
   $ echo f1 > f1
   $ hg commit -Aqm "f1"

@@ -14,7 +14,6 @@ Setup repo config (we use blob_files to share across Mononoke and API Server):
 Setup hg repo, create a commit there. No LFS blobs yet.
   $ hginit_treemanifest repo-hg-nolfs
   $ cd repo-hg-nolfs
-  $ setup_hg_server
 
 Commit small file
   $ echo s > smallfile

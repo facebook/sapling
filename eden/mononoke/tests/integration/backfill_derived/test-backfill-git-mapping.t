@@ -13,9 +13,8 @@
   $ cd "$TESTTMP"
 
 Setup testing repo for mononoke:
-  $ hg init repo-hg
+  $ hginit_treemanifest repo-hg
   $ cd repo-hg
-  $ setup_hg_server
 
 Commit without git mapping:
   $ touch a

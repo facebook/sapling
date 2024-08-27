@@ -14,7 +14,6 @@ Set up local hgrc and Mononoke config.
 Initialize test repo.
   $ hginit_treemanifest repo-hg
   $ cd repo-hg
-  $ setup_hg_server
 
 Populate test repo
   $ echo "my commit message" > test.txt

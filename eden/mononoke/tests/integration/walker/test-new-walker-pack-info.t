@@ -11,7 +11,6 @@ setup configuration with some compressable files
   $ cd $TESTTMP
   $ hginit_treemanifest repo-hg-nolfs
   $ cd repo-hg-nolfs
-  $ setup_hg_server
   $ cp "${TEST_FIXTURES}/raw_text.txt" f1
   $ hg commit -Aqm "f1"
   $ cp f1 f2

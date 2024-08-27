@@ -16,8 +16,8 @@ setup common configuration
   $ setconfig ui.ssh="\"$DUMMYSSH\"" mutation.date="0 0"
   $ enable amend
 
-  $ newrepo repo-hg
-  $ setup_hg_server
+  $ hginit_treemanifest repo-hg
+  $ cd repo-hg
   $ echo base > base
   $ hg commit -Aqm base
   $ hg bookmark master -r tip

@@ -17,7 +17,6 @@
 
   $ hginit_treemanifest repo-hg-nolfs
   $ cd repo-hg-nolfs
-  $ setup_hg_server
 
 # Commit files
   $ cp "${TEST_FIXTURES}/raw_text.txt" f1

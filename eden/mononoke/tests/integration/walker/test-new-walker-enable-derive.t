@@ -17,9 +17,8 @@ setup configuration
   > amend=
   > EOF
 
-  $ hg init repo-hg
+  $ hginit_treemanifest repo-hg
   $ cd repo-hg || exit 1
-  $ setup_hg_server
   $ drawdag <<EOF
   > C
   > |

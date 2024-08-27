@@ -16,7 +16,6 @@ Setup repo
 
   $ hginit_treemanifest repo-orig
   $ cd repo-orig
-  $ setup_hg_server
   $ echo s > smallfile
   $ hg commit -Aqm "add small file"
   $ hg bookmark master_bookmark -r tip

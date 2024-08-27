@@ -14,7 +14,6 @@ Set up local hgrc and Mononoke config.
 Setup testing repo for mononoke:
   $ hginit_treemanifest repo-hg
   $ cd repo-hg
-  $ setup_hg_server
 
 
   $ drawdag << EOS

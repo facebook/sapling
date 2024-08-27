@@ -25,8 +25,8 @@
 
 Prepare the server-side repo
 
-  $ newrepo repo-hg
-  $ setup_hg_server
+  $ hginit_treemanifest repo-hg
+  $ cd repo-hg
   $ hg debugdrawdag <<EOF
   > B
   > |

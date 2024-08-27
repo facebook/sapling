@@ -18,9 +18,8 @@
   $ init_local_large_small_clones
 
 -- enable verification hook in small-hg-srv
-  $ hg init "$TESTTMP/small-hg-srv"
+  $ hginit_treemanifest "$TESTTMP/small-hg-srv"
   $ cd "$TESTTMP/small-hg-srv"
-  $ setup_hg_server
   $ enable_replay_verification_hook
 
 -- normal pushrebase with one commit

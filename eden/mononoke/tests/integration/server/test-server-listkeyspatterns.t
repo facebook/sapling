@@ -11,11 +11,10 @@ setup configuration
   $ cd $TESTTMP
 
 setup repo
-  $ hg init repo-hg
+  $ hginit_treemanifest repo-hg
 
 setup hg server repo
   $ cd repo-hg
-  $ setup_hg_server
   $ cd $TESTTMP
 
 setup client repo

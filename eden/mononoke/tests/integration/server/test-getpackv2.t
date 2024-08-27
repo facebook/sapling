@@ -14,12 +14,7 @@ setup configuration
 
 setup repo
 
-  $ hg init repo-hg
-
-setup hg server repo
-  $ cd repo-hg
-  $ setup_hg_server
-  $ cd $TESTTMP
+  $ hginit_treemanifest repo-hg
 
 setup client repo2
   $ hg clone -q ssh://user@dummy/repo-hg repo2 --noupdate

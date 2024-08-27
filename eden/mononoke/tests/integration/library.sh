@@ -1908,6 +1908,7 @@ function hginit_treemanifest() {
 [extensions]
 treemanifest=!
 treemanifestserver=
+commitextras=
 
 [treemanifest]
 server=True
@@ -1930,20 +1931,6 @@ function enableextension() {
   cat >> .hg/hgrc <<EOF
 [extensions]
 $1=
-EOF
-}
-
-function setup_hg_server() {
-  cat >> .hg/hgrc <<EOF
-[extensions]
-treemanifest=!
-treemanifestserver=
-
-[treemanifest]
-server=True
-
-[remotefilelog]
-server=True
 EOF
 }
 
@@ -1991,9 +1978,8 @@ function hook_test_setup() {
 ssh="$DUMMYSSH"
 EOF
 
-  hg init repo-hg
+  hginit_treemanifest repo-hg
   cd repo-hg || exit 1
-  setup_hg_server
   drawdag <<EOF
 C
 |
@@ -2202,9 +2188,8 @@ ssh="$DUMMYSSH"
 amend=
 EOF
 
-hg init repo-hg
+hginit_treemanifest repo-hg
 cd repo-hg || exit 1
-setup_hg_server
 drawdag <<EOF
 C
 |

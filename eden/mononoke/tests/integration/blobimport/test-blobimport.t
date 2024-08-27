@@ -7,17 +7,8 @@
   $ . "${TEST_FIXTURES}/library.sh"
 
 # setup repo, usefncache flag for forcing algo encoding run
-  $ hg init repo-hg --config format.usefncache=False
-
-# Init treemanifest and remotefilelog
+  $ hginit_treemanifest repo-hg --config format.usefncache=False
   $ cd repo-hg
-  $ cat >> .hg/hgrc <<EOF
-  > [extensions]
-  > treemanifest=!
-  > treemanifestserver=
-  > [treemanifest]
-  > server=True
-  > EOF
 
 # From blobimport fail real case
   $ DIR="data/scm/www/Hhg/store/data/flib/site/web/ads/rtb_neko/web_request/__tests__/codegen/__snapshots__"

@@ -17,7 +17,6 @@
 # 1. Setup nolfs hg repo, create several commit to it
   $ hginit_treemanifest repo-hg-nolfs
   $ cd repo-hg-nolfs
-  $ setup_hg_server
 
 # Commit small file
   $ echo s > smallfile

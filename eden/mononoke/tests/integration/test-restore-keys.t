@@ -16,9 +16,8 @@ setup configuration
   $ REPOID_DEST=1
   $ cd $TESTTMP
 
-  $ hg init repo-hg
+  $ hginit_treemanifest repo-hg
   $ cd repo-hg
-  $ setup_hg_server
   $ drawdag <<EOF
   > C
   > |

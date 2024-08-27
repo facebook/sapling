@@ -16,7 +16,6 @@ Setup config
 Setup repo
   $ hginit_treemanifest repo-hg-nolfs
   $ cd repo-hg-nolfs
-  $ setup_hg_server
 
 # Commit small file and blobimport
   $ echo s > small

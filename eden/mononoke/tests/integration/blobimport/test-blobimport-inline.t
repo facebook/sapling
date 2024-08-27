@@ -8,17 +8,8 @@
 
 # setup repo, usegeneraldelta flag = false for forcing inline flag for file
 # forcing running algo for inline revlof parsing
-  $ hg init repo-hg --config format.usegeneraldelta=false
-
-# Init treemanifest and remotefilelog
+  $ hginit_treemanifest repo-hg --config format.usegeneraldelta=false
   $ cd repo-hg
-  $ cat >> .hg/hgrc <<EOF
-  > [extensions]
-  > treemanifest=!
-  > treemanifestserver=
-  > [treemanifest]
-  > server=True
-  > EOF
 
   $ touch file
   $ max_line_length=20

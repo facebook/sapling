@@ -13,11 +13,10 @@ setup configuration
 
 setup repo
 
-  $ hg init repo-hg
+  $ hginit_treemanifest repo-hg
 
 setup hg server repo
   $ cd repo-hg
-  $ setup_hg_server
   $ echo a > a && hg add a && hg ci -m a
 
 create master bookmark
