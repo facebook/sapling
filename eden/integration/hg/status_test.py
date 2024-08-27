@@ -140,6 +140,9 @@ class StatusTest(EdenHgTestCase):
             self.touch("new_tracked.txt")
 
             self.hg("add", "new_tracked.txt")
+            client.synchronizeWorkingCopy(
+                self.mount.encode("utf-8"), SynchronizeWorkingCopyParams()
+            )
 
             # `hg add` would trigger a call to getScmStatusV2
             if enable_status_cache:
@@ -148,6 +151,9 @@ class StatusTest(EdenHgTestCase):
                 self.counter_check(client, miss_cnt=0, hit_cnt=0)
 
             self.touch("untracked.txt")
+            client.synchronizeWorkingCopy(
+                self.mount.encode("utf-8"), SynchronizeWorkingCopyParams()
+            )
             expected_entries = {
                 b"hello.txt": ScmFileStatus.MODIFIED,
                 b"new_tracked.txt": ScmFileStatus.ADDED,
@@ -548,6 +554,9 @@ class StatusTest(EdenHgTestCase):
 
         with self.get_thrift_client_legacy() as client:
             self.touch("world.txt")
+            client.synchronizeWorkingCopy(
+                self.mount.encode("utf-8"), SynchronizeWorkingCopyParams()
+            )
             client.injectFault(
                 FaultDefinition(
                     keyClass="scmStatusCache",
