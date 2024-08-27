@@ -55,6 +55,7 @@ use crate::git_submodules::utils::is_path_git_submodule;
 use crate::git_submodules::utils::list_non_submodule_files_under;
 use crate::git_submodules::utils::submodule_diff;
 use crate::reporting::log_debug;
+use crate::reporting::log_info;
 use crate::types::Repo;
 
 /// Wrapper to differentiate submodule paths from file changes paths at the
@@ -783,33 +784,72 @@ async fn delete_submodule_expansion<'a, R: Repo>(
 ) -> Result<Vec<NonRootMPath>> {
     let submodule_path = SubmodulePath(submodule_file_path.clone());
 
+    if parents.len() > 1 {
+        log_info(
+            ctx,
+            format!(
+                "Deleting submodule expansion for {} with multiple parents {parents:#?}",
+                submodule_path.0
+            ),
+        );
+    }
+
+    let sm_file_content_ids = stream::iter(parents).map(anyhow::Ok).try_filter_map(|cs_id| {
+        cloned!(submodule_path);
+        async move {
+            get_submodule_file_content_id(ctx, small_repo, *cs_id, &submodule_path.0)
+                .await
+                .with_context(|| {
+                    log_info(ctx, format!("Parent changeset {cs_id}, submodule_path: {0}, small_repo: {1}", submodule_path.0, small_repo.repo_identity().name()));    
+                    anyhow!("Failed to get submodule file content id from parent changeset for submodule deletion")
+                })
+        }
+    }).try_collect::<Vec<_>>().await?;
+
+    if sm_file_content_ids.is_empty() {
+        // At least one of the parents should have the submodule in its working
+        // copy. This file change will provide the submodule commit that is
+        // currently expanded.
+        log_info(
+            ctx,
+            format!(
+                "Parents: {parents:#?}, submodule_path: {0}, small_repo: {1}",
+                submodule_path.0,
+                small_repo.repo_identity().name()
+            ),
+        );
+        return Err(anyhow!(
+            "Didn't find content id of submodule file in any of the parents."
+        ));
+    }
+
     // Get the entire working copy of the submodule in those revisions, so we
     // can generate the proper paths to be deleted.
-    let full_expansion_paths = stream::iter(parents).map(anyhow::Ok)
-        .try_fold(Vec::new(), |mut full_exp_paths, cs_id| {
-            cloned!(submodule_path, sm_exp_data, submodule_file_path);
-            async move {
-                let submodule_file_content_id =
-                    get_submodule_file_content_id(ctx, small_repo, *cs_id, &submodule_path.0)
-                        .await?.ok_or(anyhow!("Failed to get submodule file content id from parent changeset for submodule deletion"))?;
-
-                let expansion_changes = expand_git_submodule_file_change(
-                    ctx,
-                    small_repo,
-                    sm_exp_data,
-                    &[], // Get the entire expansion by passing an empty set of parents
-                    submodule_file_path,
-                    submodule_file_content_id,
-                )
-                .await?;
-                let paths = expansion_changes
-                    .into_iter()
-                    .map(ExpansionFileChange::into_path)
-                    .collect::<Vec<_>>();
-                full_exp_paths.extend(paths);
-                anyhow::Ok(full_exp_paths)
-            }
-        })
+    let full_expansion_paths = stream::iter(sm_file_content_ids)
+        .map(anyhow::Ok)
+        .try_fold(
+            Vec::new(),
+            |mut full_exp_paths, submodule_file_content_id| {
+                cloned!(sm_exp_data, submodule_file_path);
+                async move {
+                    let expansion_changes = expand_git_submodule_file_change(
+                        ctx,
+                        small_repo,
+                        sm_exp_data,
+                        &[], // Get the entire expansion by passing an empty set of parents
+                        submodule_file_path,
+                        submodule_file_content_id,
+                    )
+                    .await?;
+                    let paths = expansion_changes
+                        .into_iter()
+                        .map(ExpansionFileChange::into_path)
+                        .collect::<Vec<_>>();
+                    full_exp_paths.extend(paths);
+                    anyhow::Ok(full_exp_paths)
+                }
+            },
+        )
         .await?;
 
     Ok(full_expansion_paths)

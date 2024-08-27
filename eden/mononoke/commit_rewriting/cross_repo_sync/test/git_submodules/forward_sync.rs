@@ -2005,40 +2005,30 @@ async fn test_submodule_expansion_and_deletion_on_merge_commits(fb: FacebookInit
         .commit()
         .await?;
 
-    let sync_result =
+    let (large_repo_cs_id_2, large_repo_changesets) =
         sync_changeset_and_derive_all_types(ctx.clone(), cs_id_2, &large_repo, &commit_syncer)
-            .await;
+            .await?;
 
-    // TODO(T174902563): fix submodule expansion deletion on merge commits
-    assert!(sync_result.is_err_and(|err| {
-        err.chain().any(|e| {
-            // Make sure that we're throwing because the submodule repo is not available
-            e.to_string()
-                .contains("Failed to get submodule file content id from parent changeset for submodule deletion")
-        })
-    }));
+    check_mapping(
+        ctx.clone(),
+        &commit_syncer,
+        cs_id_2,
+        Some(large_repo_cs_id_2),
+    )
+    .await;
 
-    // TODO(T174902563): fix submodule expansion deletion on merge commits
-    // check_mapping(
-    //     ctx.clone(),
-    //     &commit_syncer,
-    //     cs_id_2,
-    //     Some(large_repo_cs_id_2),
-    // )
-    // .await;
-
-    // compare_expected_changesets(
-    //     large_repo_changesets.last_chunk::<2>().unwrap(),
-    //     &[
-    //         ExpectedChangeset::new(MESSAGE_1)
-    //             .with_regular_changes(vec!["small_repo/submodules/.x-repo-submodule-repo_b"])
-    //             .with_deletions(vec!["small_repo/submodules/repo_b/B_B"]),
-    //         ExpectedChangeset::new(MESSAGE_2).with_deletions(vec![
-    //             "small_repo/submodules/.x-repo-submodule-repo_b",
-    //             "small_repo/submodules/repo_b/B_A",
-    //         ]),
-    //     ],
-    // )?;
+    compare_expected_changesets(
+        large_repo_changesets.last_chunk::<2>().unwrap(),
+        &[
+            ExpectedChangeset::new(MESSAGE_1)
+                .with_regular_changes(vec!["small_repo/submodules/.x-repo-submodule-repo_b"])
+                .with_deletions(vec!["small_repo/submodules/repo_b/B_B"]),
+            ExpectedChangeset::new(MESSAGE_2).with_deletions(vec![
+                "small_repo/submodules/.x-repo-submodule-repo_b",
+                "small_repo/submodules/repo_b/B_A",
+            ]),
+        ],
+    )?;
 
     Ok(())
 }
