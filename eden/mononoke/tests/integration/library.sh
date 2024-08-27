@@ -1577,13 +1577,41 @@ function wait_for_bookmark_move_away_edenapi() {
   local repo="$1"
   local bookmark="$2"
   local prev="$3"
+  local max_attempts=${ATTEMPTS:-30}
   local attempt=1
   sleep 1
   flush_mononoke_bookmarks
   while [[ "$(get_bookmark_value_edenapi "$repo" "$bookmark")" == "$prev" ]]
   do
     attempt=$((attempt + 1))
-    if [[ $attempt -gt 30 ]]
+    if [[ $attempt -gt $max_attempts ]]
+    then
+        echo "bookmark move of $bookmark away from $prev has not happened"
+        return 1
+    fi
+    sleep 2
+    flush_mononoke_bookmarks
+  done
+}
+
+function get_bookmark_value_bonsai {
+  local repo="$1"
+  local bookmark="$2"
+  mononoke_newadmin bookmarks -R "$repo" get "$bookmark"
+}
+
+function wait_for_bookmark_move_away_bonsai() {
+  local repo="$1"
+  local bookmark="$2"
+  local prev="$3"
+  local max_attempts=${ATTEMPTS:-30}
+  local attempt=1
+  sleep 1
+  flush_mononoke_bookmarks
+  while [[ "$(get_bookmark_value_bonsai "$repo" "$bookmark")" == "$prev" ]]
+  do
+    attempt=$((attempt + 1))
+    if [[ $attempt -gt $max_attempts ]]
     then
         echo "bookmark move of $bookmark away from $prev has not happened"
         return 1
