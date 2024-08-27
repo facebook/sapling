@@ -35,7 +35,6 @@
 # 3. Clone hg server repo to hg client repo
   $ hg clone -q ssh://user@dummy/repo-hg repo-hg-client --noupdate
   $ cd repo-hg-client
-  $ setup_hg_client
 
   $ cat >> .hg/hgrc <<EOF
   > [extensions]

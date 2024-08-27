@@ -35,7 +35,6 @@ Setup LFS server
 Clone the repository, then enable LFS
   $ hg clone -q ssh://user@dummy/repo-hg-nolfs repo-hg-lfs --noupdate
   $ cd repo-hg-lfs
-  $ setup_hg_client
   $ setup_hg_modern_lfs "$lfs_uri" 1000B "$TESTTMP/lfs-cache1"
 
   $ cat >> .hg/hgrc <<EOF
@@ -57,7 +56,6 @@ Submit a large file
 Create a new repository, enable LFS there as well
   $ hg clone -q ssh://user@dummy/repo-hg-nolfs repo-hg-lfs2 --noupdate
   $ cd repo-hg-lfs2
-  $ setup_hg_client
   $ setup_hg_modern_lfs "$lfs_uri" 1000B "$TESTTMP/lfs-cache2"
 
   $ cat >> .hg/hgrc <<EOF

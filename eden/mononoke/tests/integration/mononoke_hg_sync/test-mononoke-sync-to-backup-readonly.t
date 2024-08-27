@@ -58,7 +58,6 @@ start mononoke
 Push to Mononoke
   $ hg clone -q ssh://user@dummy/repo-hg client-push --noupdate
   $ cd $TESTTMP/client-push
-  $ setup_hg_client
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > pushrebase =

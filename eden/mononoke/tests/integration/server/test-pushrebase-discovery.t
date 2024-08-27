@@ -62,10 +62,9 @@ blobimport them into Mononoke storage and start Mononoke
 start mononoke
   $ start_and_wait_for_mononoke_server
 Clone the repo
-  $ hg clone -q ssh://user@dummy/repo-hg repo2 --noupdate
-  $ hg clone -q ssh://user@dummy/repo-hg repo3 --noupdate
+  $ hg clone -q mono:repo repo2 --noupdate
+  $ hg clone -q mono:repo repo3 --noupdate
   $ cd repo2
-  $ setup_hg_client
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > pushrebase =
@@ -91,7 +90,6 @@ Unsuccessful push creates a draft commit on the server
 In order to hit an edge case the master on the server needs to point to another commit.
 Let's make a push
   $ cd ../repo3
-  $ setup_hg_client
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > pushrebase =

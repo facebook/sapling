@@ -46,7 +46,6 @@ Prepare the client-side repo
 
   $ hg clone -q ssh://user@dummy/repo-hg client-repo --noupdate
   $ cd $TESTTMP/client-repo
-  $ setup_hg_client
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > pushrebase =

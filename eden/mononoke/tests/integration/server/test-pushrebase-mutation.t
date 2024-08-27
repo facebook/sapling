@@ -31,7 +31,6 @@ start mononoke
 clone the repo
   $ hg clone -q ssh://user@dummy/repo-hg client --noupdate
   $ cd client
-  $ setup_hg_client
   $ enable pushrebase remotenames
 
 create a commit with mutation extras

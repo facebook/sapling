@@ -40,9 +40,8 @@ blobimport them into Mononoke storage and start Mononoke
 start mononoke
   $ start_and_wait_for_mononoke_server
 Clone the repo
-  $ hg clone -q ssh://user@dummy/repo-hg repo2 --noupdate
+  $ hg clone -q mono:repo repo2 --noupdate
   $ cd repo2
-  $ setup_hg_client
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > pushrebase =

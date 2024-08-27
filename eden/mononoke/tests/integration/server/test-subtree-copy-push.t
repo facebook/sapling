@@ -29,7 +29,7 @@ subtree copy and push
   $ hg ci -m 'foo/file1 -> foo/file2'
   $ echo bbb >> foo/file2
   $ hg ci -m 'update foo/file2'
-  $ hg subtree copy -r .^ --from-path foo --to-path bar
+  $ sl subtree copy -r .^ --from-path foo --to-path bar
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ ls bar
   file2

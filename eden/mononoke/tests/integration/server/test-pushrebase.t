@@ -52,9 +52,8 @@ Pushrebased commit 1 over commits B and C (thus the distance should be 2).
 
 Check that the filenode for 1 does not point to the draft commit in a new clone
   $ cd ..
-  $ hg clone -q ssh://user@dummy/repo-hg repo3 --noupdate
+  $ hg clone -q mono:repo repo3 --noupdate
   $ cd repo3
-  $ setup_hg_client
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > pushrebase =
@@ -62,7 +61,7 @@ Check that the filenode for 1 does not point to the draft commit in a new clone
 
   $ hgmn pull -r master_bookmark
   pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo
-  searching for changes
+  no changes found
   adding changesets
   adding manifests
   adding file changes

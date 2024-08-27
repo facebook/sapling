@@ -1919,16 +1919,6 @@ server=True
 EOF
 }
 
-function setup_hg_client() {
-  cat >> .hg/hgrc <<EOF
-[remotefilelog]
-reponame=$REPONAME
-
-[mutation]
-record=False
-EOF
-}
-
 # Does all the setup necessary for hook tests
 function hook_test_setup() {
   HOOKS_SCUBA_LOGGING_PATH="$TESTTMP/hooks-scuba.json" setup_mononoke_config
@@ -1987,7 +1977,6 @@ EOF
 
   hg clone -q ssh://user@dummy/repo-hg repo2 --noupdate
   cd repo2 || exit 1
-  setup_hg_client
   cat >> .hg/hgrc <<EOF
 [extensions]
 pushrebase =
@@ -2231,9 +2220,8 @@ function default_setup() {
   start_and_wait_for_mononoke_server "$@"
 
   echo "cloning repo in hg client 'repo2'"
-  hg clone -q ssh://user@dummy/repo-hg repo2 --noupdate
+  hg clone -q "mono:$REPONAME" repo2 --noupdate
   cd repo2 || exit 1
-  setup_hg_client
   cat >> .hg/hgrc <<EOF
 [extensions]
 pushrebase =

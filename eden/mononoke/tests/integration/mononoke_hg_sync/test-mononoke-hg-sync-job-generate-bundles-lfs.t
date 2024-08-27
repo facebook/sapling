@@ -55,7 +55,6 @@ start mononoke with LFS enabled
 Make client repo
   $ hg clone -q ssh://user@dummy/repo-hg client-push --noupdate
   $ cd client-push
-  $ setup_hg_client
   $ setup_hg_modern_lfs "$lfs_uri" 1000B "$TESTTMP/lfs-cache1"
 
 Push to Mononoke
@@ -150,7 +149,6 @@ Setup another client and update to latest commit from mercurial
   $ cd ..
   $ hg clone -q ssh://user@dummy/repo-hg client-pull --noupdate
   $ cd client-pull
-  $ setup_hg_client
   $ setup_hg_modern_lfs "$lfs_uri" 1000B "$TESTTMP/lfs-cache1"
 
   $ cat >> .hg/hgrc <<EOF

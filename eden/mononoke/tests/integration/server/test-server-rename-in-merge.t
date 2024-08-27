@@ -32,7 +32,6 @@ Clone the repo
   $ cd ..
   $ hg clone -q ssh://user@dummy/repo-hg repo2 --noupdate
   $ cd repo2
-  $ setup_hg_client
   $ cd ../repo-hg
 
 Create merge commit with rename

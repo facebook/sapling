@@ -25,7 +25,6 @@ setup client repo2
   $ hg clone -q ssh://user@dummy/repo-hg repo2 --noupdate
   $ hg clone -q ssh://user@dummy/repo-hg repo3 --noupdate
   $ cd repo2
-  $ setup_hg_client
 
 make a few commits on the server
   $ cd $TESTTMP/repo-hg
@@ -57,7 +56,7 @@ Pull from Mononoke
   warning: stream clone is disabled
 
 Make sure that cache is empty
-  $ ls $TESTTMP/cachepath/repo/packs/manifests
+  $ ls $TESTTMP/cachepath/repo-hg/packs/manifests
 
   $ hgmn prefetch -r "min(all())" -r1 --debug 2>&1 | grep "getpackv2 command"
   sending getpackv2 command

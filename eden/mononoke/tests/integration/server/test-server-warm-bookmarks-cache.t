@@ -19,7 +19,6 @@ Setup repository
   $ cd "$TESTTMP"
   $ hg clone -q ssh://user@dummy/repo-hg repo2 --noupdate
   $ cd repo2 || exit 1
-  $ setup_hg_client
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > pushrebase =

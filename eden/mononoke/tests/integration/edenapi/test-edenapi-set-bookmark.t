@@ -54,7 +54,6 @@ Clone the repo
   $ cd $TESTTMP
   $ hg clone -q ssh://user@dummy/repo-hg repo2 --noupdate
   $ cd repo2
-  $ setup_hg_client
 
 Test move bookmark
   $ sl debugapi -e setbookmark -i "'master_bookmark'" -i "'$E'" -i "'$C'"

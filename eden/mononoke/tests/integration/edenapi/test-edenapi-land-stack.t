@@ -60,7 +60,6 @@ Clone the repo
   $ cd $TESTTMP
   $ hg clone -q ssh://user@dummy/repo-hg repo2 --noupdate
   $ cd repo2
-  $ setup_hg_client
 
 Test land stack
   $ sl debugapi -e landstack -i "'master_bookmark'" -i "'$E'" -i "'$B'"

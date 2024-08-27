@@ -66,7 +66,6 @@ Remove the phase information. See D58415927 for an explanation as to why that is
 clone
   $ hg clone -q ssh://user@dummy/repo-hg repo2 --noupdate
   $ cd repo2
-  $ setup_hg_client
   $ enable pushrebase remotenames
 
 fast-forward the bookmark

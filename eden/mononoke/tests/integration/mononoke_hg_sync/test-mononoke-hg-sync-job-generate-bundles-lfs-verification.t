@@ -47,7 +47,6 @@ Make client repo
   $ hg clone -q ssh://user@dummy/repo-hg client-push --noupdate
   $ cd client-push
 
-  $ setup_hg_client
   $ setup_hg_modern_lfs "$lfs_uri" 10B "$TESTTMP/lfs-cache1"
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
