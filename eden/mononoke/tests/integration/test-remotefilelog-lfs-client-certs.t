@@ -28,7 +28,7 @@ Create a repo
 
 Clone the repo. Enable LFS. Take a different cache path to make sure we have to go to the server.
 
-  $ hgmn_clone mononoke://$(mononoke_address)/repo repo-clone --noupdate --config extensions.remotenames=
+  $ hg clone -q mono:repo repo-clone --noupdate --config extensions.remotenames=
   $ cd repo-clone
   $ setup_hg_modern_lfs "$lfs_url" 10B
   $ setconfig "remotefilelog.cachepath=$TESTTMP/cachepath2"

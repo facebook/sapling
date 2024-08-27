@@ -121,7 +121,7 @@ function run_common_xrepo_sync_with_gitsubmodules_setup {
 function clone_and_log_large_repo {
   LARGE_BCS_IDS=( "$@" )
   cd "$TESTTMP" || exit
-  REPONAME="$LARGE_REPO_NAME" hgmn_clone "mononoke://$(mononoke_address)/$LARGE_REPO_NAME" "$LARGE_REPO_NAME"
+  hg clone -q mono:$LARGE_REPO_NAME "$LARGE_REPO_NAME"
   cd "$LARGE_REPO_NAME" || exit
 
 

@@ -572,6 +572,12 @@ function wait_for_mononoke {
   wait_for_server "Mononoke" MONONOKE_SOCKET "$TESTTMP/mononoke.out" \
     "${MONONOKE_START_TIMEOUT:-"$MONONOKE_DEFAULT_START_TIMEOUT"}" "$MONONOKE_SERVER_ADDR_FILE" \
     mononoke_health
+
+  # Now that we have started, write out a Sapling "mono" scheme that references our current IP/port.
+  cat >> "$HGRCPATH" <<EOF
+[schemes]
+mono=mononoke://$(mononoke_address)/{1}
+EOF
 }
 
 function flush_mononoke_bookmarks {
@@ -1897,14 +1903,6 @@ function hgmn_init() {
   cat >> "$1"/.hg/hgrc <<EOF
 [remotefilelog]
 reponame=$1
-EOF
-}
-
-function hgmn_clone() {
-  quiet hgmn clone --shallow --config remotefilelog.reponame="$REPONAME" "$@" && \
-  cat >> "$2"/.hg/hgrc <<EOF
-[remotefilelog]
-reponame=$REPONAME
 EOF
 }
 

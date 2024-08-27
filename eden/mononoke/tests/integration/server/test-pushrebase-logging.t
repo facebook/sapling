@@ -19,7 +19,7 @@
   B=80521a640a0c8f51dcc128c2658b224d595840ac
   C=d3b399ca8757acdb81c3681b052eb978db6768d8
   $ start_and_wait_for_mononoke_server
-  $ hgmn_clone mononoke://$(mononoke_address)/repo repo
+  $ hg clone -q mono:repo repo
   $ cd repo
   $ hg up -q $A
 

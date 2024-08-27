@@ -37,7 +37,7 @@ Setup configuration
   C=5bfc3bc38a36db879cf0c7215f91df159c4b6cf9ebb9fc6e33faf17ed00a1860
 
   $ start_and_wait_for_mononoke_server
-  $ hgmn_clone mononoke://$(mononoke_address)/repo repo
+  $ hg clone -q mono:repo repo
   $ cd repo
   $ hg -q co master
 

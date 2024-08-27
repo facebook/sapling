@@ -24,7 +24,7 @@ setup repo
   $ hgmn push -q --to master --create
 
 clone from the new repo as well
-  $ hgmn_clone mononoke://$(mononoke_address)/repo repo-clone
+  $ hg clone -q mono:repo repo-clone
 
 Push with bookmark
   $ cd repo-clone

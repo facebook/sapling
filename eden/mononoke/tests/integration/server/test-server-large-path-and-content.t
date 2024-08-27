@@ -29,7 +29,7 @@ create a repo with some long paths and filenames
 clone the repo and check that mercurial can access the file
 
   $ cd $TESTTMP
-  $ hgmn_clone mononoke://$(mononoke_address)/repo repo-hg
+  $ hg clone -q mono:repo repo-hg
   $ cd repo-hg
   $ hgmn log
   commit:      41c590dc2a01
@@ -71,7 +71,7 @@ push another long path with a large file
   updating bookmark master_bookmark
 
   $ cd $TESTTMP
-  $ hgmn_clone mononoke://$(mononoke_address)/repo repo-hg2
+  $ hg clone -q mono:repo repo-hg2
   $ cd repo-hg2
   $ du "${LONG_PATH}2/${LONG_FILENAME}2"
   10240	very/long/path/one/two/three/four/five/six/seven/eight/nine/ten/eleven/twelve/thirteen/fourteen/fifteen/sixteen/seventeen/eighteen/nineteen/twenty/@special@/ONE/TWO/THREE/FOUR/FIVE/SIX/SEVEN/EIGHT/NINE/TEN/ELEVEN/TWELVE/THIRTEEN/FOURTEEN/FIFTEEN/SIXTEEN2/very_long_filename_to_test_Mononoke_can_handle_both_long_paths_and_file_names_This_path_name_will_have_two_hundred_and_fifty_three_characters_in_order_to_fully_test_the_limits_of_what_Mononoke_can_handle_and_to_ensure_we_dont_introduce_unexpected_limits2

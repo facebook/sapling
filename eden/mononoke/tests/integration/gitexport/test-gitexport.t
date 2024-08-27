@@ -65,7 +65,7 @@ Set some env vars that will be used frequently
   K=ca1b7e33632b3b9a89abe7f820b590f1185cf7e187386e9bddf4c1cbe62dc324
 
   $ start_and_wait_for_mononoke_server
-  $ hgmn_clone mononoke://$(mononoke_address)/repo repo
+  $ hg clone -q mono:repo repo
   $ cd repo
   $ hg -q co master
 

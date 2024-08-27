@@ -44,7 +44,7 @@ Set some env vars that will be used frequently
 
 
   $ start_and_wait_for_mononoke_server
-  $ hgmn_clone mononoke://$(mononoke_address)/repo repo
+  $ hg clone -q mono:repo repo
   $ cd repo
   $ hg -q co master
   $ B_AUTHOR_TS=1451613600

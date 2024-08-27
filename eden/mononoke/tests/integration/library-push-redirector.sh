@@ -573,12 +573,12 @@ function init_large_small_repo() {
 
 function init_local_large_small_clones {
   cd "$TESTTMP" || exit 1
-  REPONAME=small-mon hgmn_clone "mononoke://$(mononoke_address)/small-mon" small-hg-client --config extensions.remotenames=
+  hg clone -q mono:small-mon small-hg-client --config extensions.remotenames=
   cat >> small-hg-client/.hg/hgrc <<EOF
 [extensions]
 pushrebase =
 EOF
-  REPONAME=large-mon hgmn_clone "mononoke://$(mononoke_address)/large-mon" large-hg-client --config extensions.remotenames=
+  hg clone -q mono:large-mon large-hg-client --config extensions.remotenames=
   cat >> large-hg-client/.hg/hgrc <<EOF
 [extensions]
 pushrebase =
