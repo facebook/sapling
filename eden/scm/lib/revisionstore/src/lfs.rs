@@ -1099,6 +1099,103 @@ impl HgIdMutableDeltaStore for LfsMultiplexer {
 }
 
 impl LfsRemote {
+    pub fn from_config(config: &dyn Config) -> Result<Self> {
+        let mut url: String = config.must_get("lfs", "url")?;
+        // A trailing '/' needs to be present so that `Url::join` doesn't remove the reponame
+        // present at the end of the config.
+        url.push('/');
+        let url = Url::parse(&url)?;
+
+        if url.scheme() == "file" {
+            let path = url.to_file_path().unwrap();
+            create_dir(&path)?;
+            let file = LfsBlobsStore::loose(path);
+            Ok(Self::File(file))
+        } else {
+            if !["http", "https"].contains(&url.scheme()) {
+                bail!("Unsupported url: {}", url);
+            }
+
+            let user_agent = config.get_or("experimental", "lfs.user-agent", || {
+                format!("Sapling/{}", ::version::VERSION)
+            })?;
+
+            let concurrent_fetches = config.get_or("lfs", "concurrentfetches", || 4)?;
+
+            let backoff_times = config.get_or("lfs", "backofftimes", || vec![1f32, 4f32, 8f32])?;
+
+            // Backoff throtling is a lot more aggressive. This is here to mitigate large surges in
+            // downloads when new LFS content is checked in. There's no way to eliminate those
+            // without seriously overprovisioning. Retrying for a longer period of time is simply a
+            // way to wait until whatever surge of traffic is happening ends.
+            let throttle_backoff_times = config.get_or("lfs", "throttlebackofftimes", || {
+                vec![
+                    1f32, 4f32, 8f32, 8f32, 8f32, 8f32, 8f32, 8f32, 8f32, 8f32, 8f32, 8f32,
+                ]
+            })?;
+
+            let request_timeout =
+                Duration::from_millis(config.get_or("lfs", "requesttimeout", || 10_000)?);
+
+            let accept_zstd = config.get_or("lfs", "accept-zstd", || true)?;
+
+            let http_version = match config
+                .get_or("lfs", "http-version", || "2".to_string())?
+                .as_str()
+            {
+                "1.1" => HttpVersion::V11,
+                "2" => {
+                    if !curl::Version::get().feature_http2() {
+                        warn!(
+                            "Asked to use HTTP/2 but HTTP/2 not available in current build; falling back to 1.1"
+                        );
+                        HttpVersion::V11
+                    } else {
+                        HttpVersion::V2
+                    }
+                }
+                x => bail!("Unsupported http_version: {}", x),
+            };
+
+            let low_speed_grace_period =
+                Duration::from_millis(config.get_or("lfs", "low-speed-grace-period", || 10_000)?);
+            let low_speed_min_bytes_per_second =
+                config.get_opt::<u32>("lfs", "low-speed-min-bytes-per-second")?;
+            let min_transfer_speed =
+                low_speed_min_bytes_per_second.map(|min_bytes_per_second| MinTransferSpeed {
+                    min_bytes_per_second,
+                    grace_period: low_speed_grace_period,
+                });
+
+            let download_chunk_size = config.get_opt::<u64>("lfs", "download-chunk-size")?;
+            let download_chunk_size = download_chunk_size
+                .map(|s| NonZeroU64::new(s).context("download chunk size cannot be 0"))
+                .transpose()?;
+
+            // Pick something relatively low. Doesn't seem like we need many concurrent LFS downloads to saturate available BW.
+            let max_batch_size = config.get_or("lfs", "max-batch-size", || 100)?;
+
+            let client = http_client("lfs", http_config(config, &url)?);
+
+            Ok(Self::Http(HttpLfsRemote {
+                url,
+                client: Arc::new(client),
+                concurrent_fetches,
+                download_chunk_size,
+                max_batch_size,
+                http_options: Arc::new(HttpOptions {
+                    accept_zstd,
+                    http_version,
+                    min_transfer_speed,
+                    user_agent,
+                    backoff_times,
+                    throttle_backoff_times,
+                    request_timeout,
+                }),
+            }))
+        }
+    }
+
     pub fn batch_fetch(
         &self,
         objs: &HashSet<(Sha256, usize)>,
@@ -1605,115 +1702,16 @@ impl LfsClient {
         local: Option<Arc<LfsStore>>,
         config: &dyn Config,
     ) -> Result<Self> {
-        let mut url: String = config.must_get("lfs", "url")?;
-        // A trailing '/' needs to be present so that `Url::join` doesn't remove the reponame
-        // present at the end of the config.
-        url.push('/');
-        let url = Url::parse(&url)?;
-
         let move_after_upload = config.get_or("lfs", "moveafterupload", || false)?;
         let ignore_prefetch_errors = config.get_or("lfs", "ignore-prefetch-errors", || false)?;
 
-        if url.scheme() == "file" {
-            let path = url.to_file_path().unwrap();
-            create_dir(&path)?;
-            let file = LfsBlobsStore::loose(path);
-            Ok(Self {
-                shared,
-                local,
-                ignore_prefetch_errors,
-                move_after_upload,
-                remote: LfsRemote::File(file),
-            })
-        } else {
-            if !["http", "https"].contains(&url.scheme()) {
-                bail!("Unsupported url: {}", url);
-            }
-
-            let user_agent = config.get_or("experimental", "lfs.user-agent", || {
-                format!("Sapling/{}", ::version::VERSION)
-            })?;
-
-            let concurrent_fetches = config.get_or("lfs", "concurrentfetches", || 4)?;
-
-            let backoff_times = config.get_or("lfs", "backofftimes", || vec![1f32, 4f32, 8f32])?;
-
-            // Backoff throtling is a lot more aggressive. This is here to mitigate large surges in
-            // downloads when new LFS content is checked in. There's no way to eliminate those
-            // without seriously overprovisioning. Retrying for a longer period of time is simply a
-            // way to wait until whatever surge of traffic is happening ends.
-            let throttle_backoff_times = config.get_or("lfs", "throttlebackofftimes", || {
-                vec![
-                    1f32, 4f32, 8f32, 8f32, 8f32, 8f32, 8f32, 8f32, 8f32, 8f32, 8f32, 8f32,
-                ]
-            })?;
-
-            let request_timeout =
-                Duration::from_millis(config.get_or("lfs", "requesttimeout", || 10_000)?);
-
-            let accept_zstd = config.get_or("lfs", "accept-zstd", || true)?;
-
-            let http_version = match config
-                .get_or("lfs", "http-version", || "2".to_string())?
-                .as_str()
-            {
-                "1.1" => HttpVersion::V11,
-                "2" => {
-                    if !curl::Version::get().feature_http2() {
-                        warn!(
-                            "Asked to use HTTP/2 but HTTP/2 not available in current build; falling back to 1.1"
-                        );
-                        HttpVersion::V11
-                    } else {
-                        HttpVersion::V2
-                    }
-                }
-                x => bail!("Unsupported http_version: {}", x),
-            };
-
-            let low_speed_grace_period =
-                Duration::from_millis(config.get_or("lfs", "low-speed-grace-period", || 10_000)?);
-            let low_speed_min_bytes_per_second =
-                config.get_opt::<u32>("lfs", "low-speed-min-bytes-per-second")?;
-            let min_transfer_speed =
-                low_speed_min_bytes_per_second.map(|min_bytes_per_second| MinTransferSpeed {
-                    min_bytes_per_second,
-                    grace_period: low_speed_grace_period,
-                });
-
-            let download_chunk_size = config.get_opt::<u64>("lfs", "download-chunk-size")?;
-            let download_chunk_size = download_chunk_size
-                .map(|s| NonZeroU64::new(s).context("download chunk size cannot be 0"))
-                .transpose()?;
-
-            // Pick something relatively low. Doesn't seem like we need many concurrent LFS downloads to saturate available BW.
-            let max_batch_size = config.get_or("lfs", "max-batch-size", || 100)?;
-
-            let client = http_client("lfs", http_config(config, &url)?);
-
-            Ok(Self {
-                shared,
-                local,
-                move_after_upload,
-                ignore_prefetch_errors,
-                remote: LfsRemote::Http(HttpLfsRemote {
-                    url,
-                    client: Arc::new(client),
-                    concurrent_fetches,
-                    download_chunk_size,
-                    max_batch_size,
-                    http_options: Arc::new(HttpOptions {
-                        accept_zstd,
-                        http_version,
-                        min_transfer_speed,
-                        user_agent,
-                        backoff_times,
-                        throttle_backoff_times,
-                        request_timeout,
-                    }),
-                }),
-            })
-        }
+        Ok(Self {
+            shared,
+            local,
+            ignore_prefetch_errors,
+            move_after_upload,
+            remote: LfsRemote::from_config(config)?,
+        })
     }
 
     fn batch_fetch(
