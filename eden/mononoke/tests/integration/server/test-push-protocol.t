@@ -186,7 +186,7 @@ move master bookmarks
 
 push to Mononoke
 
-  $ hgmn push --force --config treemanifest.treeonly=True --debug mononoke://$(mononoke_address)/repo --allow-anon
+  $ hgmn push --force --debug mononoke://$(mononoke_address)/repo --allow-anon
   tracking on None {}
   pushing to mononoke://$LOCALIP:$LOCAL_PORT/repo
   sending hello command

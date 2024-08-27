@@ -38,14 +38,13 @@ blobimport them into Mononoke storage and start Mononoke
 start mononoke
   $ start_and_wait_for_mononoke_server
 Make client repo
-  $ hg clone -q ssh://user@dummy/repo-hg client-push --noupdate --config extensions.remotenames=
+  $ hg clone -q ssh://user@dummy/repo-hg client-push --noupdate
 
 Push to Mononoke
   $ cd $TESTTMP/client-push
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > pushrebase =
-  > remotenames =
   > EOF
   $ hg up -q tip
 
@@ -85,10 +84,6 @@ Two pushes synced one after another
 Sync it to another client
   $ cd $TESTTMP/repo-hg
   $ enable_replay_verification_hook
-  $ cat >> .hg/hgrc <<EOF
-  > [treemanifest]
-  > treeonly=True
-  > EOF
   $ cd $TESTTMP
 
 Sync a pushrebase bookmark move

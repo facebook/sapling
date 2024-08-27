@@ -44,13 +44,12 @@ Prepare the server-side repo
   $ start_and_wait_for_mononoke_server
 Prepare the client-side repo
 
-  $ hg clone -q ssh://user@dummy/repo-hg client-repo --noupdate --config extensions.remotenames=
+  $ hg clone -q ssh://user@dummy/repo-hg client-repo --noupdate
   $ cd $TESTTMP/client-repo
   $ setup_hg_client
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > pushrebase =
-  > remotenames =
   > EOF
 
 Push commit to ancestor bookmark, should work

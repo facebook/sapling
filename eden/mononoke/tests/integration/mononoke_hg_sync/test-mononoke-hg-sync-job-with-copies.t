@@ -34,14 +34,13 @@ blobimport them into Mononoke storage and start Mononoke
 start mononoke
   $ start_and_wait_for_mononoke_server
 Make client repo
-  $ hg clone -q ssh://user@dummy/repo-hg client-push --noupdate --config extensions.remotenames=
+  $ hg clone -q ssh://user@dummy/repo-hg client-push --noupdate
 
 Push a simple commit to Mononoke
   $ cd $TESTTMP/client-push
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > pushrebase =
-  > remotenames =
   > EOF
   $ hg up -q tip
   $ echo 1 > 1

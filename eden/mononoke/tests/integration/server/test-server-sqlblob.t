@@ -38,7 +38,6 @@ Init treemanifest and remotefilelog
   > server=True
   > [remotefilelog]
   > server=True
-  > shallowtrees=True
   > EOF
 
   $ touch a
@@ -205,7 +204,7 @@ to create a fileblob bookmark
 #     test-bookmark             0:3903775176ed
 
 Do a streaming clone of the repo
-  $ hgmn clone -U --stream mononoke://$(mononoke_address)/repo repo-streamclone --config extensions.treemanifest= --config remotefilelog.reponame=master --shallow --config treemanifest.treeonly=true
+  $ hgmn clone -U --stream mononoke://$(mononoke_address)/repo repo-streamclone --config remotefilelog.reponame=master
   fetching changelog
   2 files to transfer, * bytes of data (glob)
   transferred * bytes in * seconds (* bytes/sec) (glob)

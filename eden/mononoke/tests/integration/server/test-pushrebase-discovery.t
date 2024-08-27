@@ -62,14 +62,13 @@ blobimport them into Mononoke storage and start Mononoke
 start mononoke
   $ start_and_wait_for_mononoke_server
 Clone the repo
-  $ hg clone -q ssh://user@dummy/repo-hg repo2 --noupdate --config extensions.remotenames=
-  $ hg clone -q ssh://user@dummy/repo-hg repo3 --noupdate --config extensions.remotenames=
+  $ hg clone -q ssh://user@dummy/repo-hg repo2 --noupdate
+  $ hg clone -q ssh://user@dummy/repo-hg repo3 --noupdate
   $ cd repo2
   $ setup_hg_client
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > pushrebase =
-  > remotenames =
   > EOF
   $ hg up -q "min(all())"
   $ echo 1 > 1 && hg addremove -q
@@ -96,8 +95,6 @@ Let's make a push
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > pushrebase =
-  > remotenames =
-  > [remotenames]
   > EOF
   $ hg up -q "min(all())"
   $ echo 2 > 2 && hg addremove -q

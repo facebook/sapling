@@ -31,7 +31,7 @@ Start Mononoke API server, to serve LFS blobs
   $ lfs_uri="$(lfs_server)/repo"
 
 Create a new client repository. Enable LFS there.
-  $ hg clone -q ssh://user@dummy/repo-hg-nolfs repo-hg-lfs --noupdate --config extensions.remotenames=
+  $ hg clone -q ssh://user@dummy/repo-hg-nolfs repo-hg-lfs --noupdate
   $ cd repo-hg-lfs
   $ setup_hg_client
   $ setup_hg_modern_lfs "$lfs_uri" 1000B "$TESTTMP/lfs-cache1"
@@ -39,7 +39,6 @@ Create a new client repository. Enable LFS there.
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > pushrebase =
-  > remotenames =
   > EOF
 
 Update in the client repo
@@ -64,7 +63,7 @@ Perform LFS push
   updating bookmark master_bookmark
 
 Create a new client repository, using getpack (with its own cachepath).
-  $ hg clone -q ssh://user@dummy/repo-hg-nolfs repo-hg-lfs2 --noupdate --config extensions.remotenames=
+  $ hg clone -q ssh://user@dummy/repo-hg-nolfs repo-hg-lfs2 --noupdate
   $ cd repo-hg-lfs2
   $ setup_hg_client
   $ setup_hg_lfs "$lfs_uri" 1000B "$TESTTMP/lfs-cache2"
@@ -72,7 +71,6 @@ Create a new client repository, using getpack (with its own cachepath).
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > pushrebase =
-  > remotenames =
   > [remotefilelog]
   > fetchpacks = True
   > getpackversion = 2
@@ -87,7 +85,7 @@ Make sure lfs is not used during update
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 Create a new client repository, using getpack (with its own cachepath).
-  $ hg clone -q ssh://user@dummy/repo-hg-nolfs repo-hg-lfs3 --noupdate --config extensions.remotenames=
+  $ hg clone -q ssh://user@dummy/repo-hg-nolfs repo-hg-lfs3 --noupdate
   $ cd repo-hg-lfs3
   $ setup_hg_client
   $ setup_hg_lfs "$lfs_uri" 1000B "$TESTTMP/lfs-cache3"
@@ -95,7 +93,6 @@ Create a new client repository, using getpack (with its own cachepath).
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > pushrebase =
-  > remotenames =
   > [remotefilelog]
   > fetchpacks = True
   > getpackversion = 2

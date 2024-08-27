@@ -38,8 +38,8 @@ create master bookmark
   $ cd $TESTTMP
 
 setup repo-push and repo-pull
-  $ hg clone -q ssh://user@dummy/repo-hg repo-push --noupdate --config extensions.remotenames=
-  $ hg clone -q ssh://user@dummy/repo-hg repo-pull --noupdate --config extensions.remotenames=
+  $ hg clone -q ssh://user@dummy/repo-hg repo-push --noupdate
+  $ hg clone -q ssh://user@dummy/repo-hg repo-pull --noupdate
 
 blobimport
 

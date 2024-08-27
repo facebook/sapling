@@ -33,13 +33,12 @@ setup repo
 
 Clone the repo
   $ cd ..
-  $ hg clone -q ssh://user@dummy/repo-hg repo2 --noupdate --config extensions.remotenames=
+  $ hg clone -q ssh://user@dummy/repo-hg repo2 --noupdate
   $ cd repo2
   $ setup_hg_client
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > pushrebase =
-  > remotenames =
   > EOF
 
 

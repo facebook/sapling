@@ -44,7 +44,7 @@
 # because that breaks over utf-8 characters as well.
 
   $ cd "$TESTTMP"
-  $ hg clone -q mono:repo "$HG_REPO" --noupdate --config extensions.remotenames=
+  $ hg clone -q mono:repo "$HG_REPO" --noupdate
   $ cd "$HG_REPO"
   $ hgmn cat -r "$BOOKMARK" "$NAME"
   foo

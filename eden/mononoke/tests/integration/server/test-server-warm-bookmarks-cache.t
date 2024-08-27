@@ -17,13 +17,12 @@ Setup repository
   $ mononoke --scuba-dataset "file://$SCUBA_LOGGING_PATH"
   $ wait_for_mononoke "$TESTTMP/repo"
   $ cd "$TESTTMP"
-  $ hg clone -q ssh://user@dummy/repo-hg repo2 --noupdate --config extensions.remotenames=
+  $ hg clone -q ssh://user@dummy/repo-hg repo2 --noupdate
   $ cd repo2 || exit 1
   $ setup_hg_client
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > pushrebase =
-  > remotenames =
   > EOF
 
   $ cd "$TESTTMP/repo2"

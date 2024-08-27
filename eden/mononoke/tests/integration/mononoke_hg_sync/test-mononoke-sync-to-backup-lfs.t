@@ -40,13 +40,12 @@ Start Mononoke API server, to serve LFS blobs
   $ lfs_uri="$(lfs_server)/orig"
 
 Create a new client repository. Enable LFS there.
-  $ hg clone -q ssh://user@dummy/repo-hg repo-hg-lfs --noupdate --config extensions.remotenames=
-  $ hg clone -q mononoke://$(mononoke_address)/backup backup --noupdate --config extensions.remotenames=
+  $ hg clone -q ssh://user@dummy/repo-hg repo-hg-lfs --noupdate
+  $ hg clone -q mononoke://$(mononoke_address)/backup backup --noupdate
   $ cd repo-hg-lfs
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > pushrebase =
-  > remotenames =
   > EOF
   $ setup_hg_modern_lfs "$lfs_uri" 1000B "$TESTTMP/lfs-cache1"
 

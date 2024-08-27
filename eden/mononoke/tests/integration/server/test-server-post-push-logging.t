@@ -61,7 +61,7 @@ create new commits in repo2 and check that they are seen as outgoing
   $ echo "b file content" > b_dir/b
   $ hg add b_dir/b
   $ hg ci -mb
-  $ sl push -r . --to master_bookmark --create --config extensions.remotenames= --config extensions.pushrebase=
+  $ sl push -r . --to master_bookmark --create --config extensions.pushrebase=
   pushing rev bb0985934a0f to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
   edenapi: queue 1 commit for upload
   edenapi: queue 2 files for upload
@@ -129,7 +129,7 @@ The timestamp is not stable, so count its digits instead to ensure it is not nul
   $ echo forcepushrebase > forcepushrebase
   $ hg add -q forcepushrebase
   $ hg ci -m forcepushrebase
-  $ sl push -r . --to forcepushrebase --create --force --config extensions.remotenames= --config extensions.pushrebase=
+  $ sl push -r . --to forcepushrebase --create --force --config extensions.pushrebase=
   pushing rev 0c1e5152244c to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark forcepushrebase
   edenapi: queue 1 commit for upload
   edenapi: queue 1 file for upload
@@ -242,7 +242,7 @@ Update the scratch/123 bookmark
 
 Delete the master_bookmark
 
-  $ sl push --delete master_bookmark --config extensions.remotenames= --config extensions.pushrebase=
+  $ sl push --delete master_bookmark --config extensions.pushrebase=
   deleting remote bookmark master_bookmark
 
   $ cat "$TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY" | jq .repo_name

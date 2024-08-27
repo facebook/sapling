@@ -104,7 +104,7 @@
   
 
   $ cd "$TESTTMP"
-  $ hg clone -q ssh://user@dummy/repo-hg repo-client --noupdate --config extensions.remotenames=
+  $ hg clone -q ssh://user@dummy/repo-hg repo-client --noupdate
 
 blobimport
   $ blobimport repo-hg/.hg repo

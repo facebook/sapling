@@ -48,13 +48,12 @@ start mononoke
   $ wait_for_mononoke $TESTTMP/repo
 
 Clone the repo
-  $ hg clone -q ssh://user@dummy/repo-hg repo2 --noupdate --config extensions.remotenames=
+  $ hg clone -q ssh://user@dummy/repo-hg repo2 --noupdate
   $ cd repo2
   $ setup_hg_client
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > pushrebase =
-  > remotenames =
   > EOF
 
 Pushrebase commit 1

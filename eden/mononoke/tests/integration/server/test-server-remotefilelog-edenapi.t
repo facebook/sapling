@@ -31,7 +31,7 @@ Blobimport the hg repo to Mononoke
 
 Create a new client repository. Enable SaplingRemoteAPI there.
 
-  $ hg clone -q ssh://user@dummy/repo-orig repo-clone --noupdate --config extensions.remotenames=
+  $ hg clone -q ssh://user@dummy/repo-orig repo-clone --noupdate
   $ cd repo-clone
   $ setup_hg_client
   $ setup_hg_edenapi

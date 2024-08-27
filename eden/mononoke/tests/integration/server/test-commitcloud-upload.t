@@ -21,7 +21,6 @@ mononoke  local commit cloud backend
   > commitcloud =
   > infinitepush =
   > rebase =
-  > remotenames =
   > share =
   > [commitcloud]
   > hostname = testhost

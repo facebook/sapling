@@ -52,13 +52,12 @@ Pushrebased commit 1 over commits B and C (thus the distance should be 2).
 
 Check that the filenode for 1 does not point to the draft commit in a new clone
   $ cd ..
-  $ hg clone -q ssh://user@dummy/repo-hg repo3 --noupdate --config extensions.remotenames=
+  $ hg clone -q ssh://user@dummy/repo-hg repo3 --noupdate
   $ cd repo3
   $ setup_hg_client
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > pushrebase =
-  > remotenames =
   > EOF
 
   $ hgmn pull -r master_bookmark

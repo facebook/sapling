@@ -30,10 +30,6 @@ Setup destination repo
   adding a
   adding b
   $ enable_replay_verification_hook
-  $ cat >> .hg/hgrc <<EOF
-  > [treemanifest]
-  > treeonly=True
-  > EOF
   $ hg bookmark master_bookmark -r tip
   $ cd "$TESTTMP"
 
@@ -48,7 +44,7 @@ Start mononoke and a LFS server
   $ wait_for_mononoke
 
 Make client repo
-  $ hg clone -q ssh://user@dummy/repo-hg client-push --noupdate --config extensions.remotenames=
+  $ hg clone -q ssh://user@dummy/repo-hg client-push --noupdate
   $ cd client-push
 
   $ setup_hg_client
@@ -56,7 +52,6 @@ Make client repo
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > pushrebase =
-  > remotenames =
   > EOF
   $ hg up -q tip
 

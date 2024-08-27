@@ -33,7 +33,7 @@ Setup LFS server
   $ lfs_uri="$(lfs_server)/repo"
 
 Clone the repository, then enable LFS
-  $ hg clone -q ssh://user@dummy/repo-hg-nolfs repo-hg-lfs --noupdate --config extensions.remotenames=
+  $ hg clone -q ssh://user@dummy/repo-hg-nolfs repo-hg-lfs --noupdate
   $ cd repo-hg-lfs
   $ setup_hg_client
   $ setup_hg_modern_lfs "$lfs_uri" 1000B "$TESTTMP/lfs-cache1"
@@ -41,7 +41,6 @@ Clone the repository, then enable LFS
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > pushrebase =
-  > remotenames =
   > EOF
 
   $ hgmn pull -q
@@ -56,7 +55,7 @@ Submit a large file
   $ hgmn push -q -r . --to master_bookmark
 
 Create a new repository, enable LFS there as well
-  $ hg clone -q ssh://user@dummy/repo-hg-nolfs repo-hg-lfs2 --noupdate --config extensions.remotenames=
+  $ hg clone -q ssh://user@dummy/repo-hg-nolfs repo-hg-lfs2 --noupdate
   $ cd repo-hg-lfs2
   $ setup_hg_client
   $ setup_hg_modern_lfs "$lfs_uri" 1000B "$TESTTMP/lfs-cache2"
@@ -64,7 +63,6 @@ Create a new repository, enable LFS there as well
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > pushrebase =
-  > remotenames =
   > [remotefilelog]
   > getpackversion = 2
   > EOF

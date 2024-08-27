@@ -39,14 +39,13 @@ blobimport them into Mononoke storage and start Mononoke
 start mononoke
   $ start_and_wait_for_mononoke_server
 Make client repo
-  $ hg clone -q ssh://user@dummy/repo-hg client-push --noupdate --config extensions.remotenames=
+  $ hg clone -q ssh://user@dummy/repo-hg client-push --noupdate
 
 Push to Mononoke
   $ cd $TESTTMP/client-push
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > pushrebase =
-  > remotenames =
   > EOF
   $ hg up -q tip
 
@@ -64,11 +63,6 @@ Check that new entry was added to the sync database. 3 pushes and 1 blobimport
 
 Sync it to another client
   $ cd $TESTTMP
-  $ cat >> repo-hg/.hg/hgrc <<EOF
-  > [treemanifest]
-  > treeonly=True
-  > EOF
-
 
 Make a copy of it that will be used later
   $ cp -r repo-hg repo-hg-2

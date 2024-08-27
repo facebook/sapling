@@ -30,7 +30,7 @@ any block size boundaries or such.
 Clone the repo. Take a unique cache path to go to the server, and turn off compression.
 
   $ cd "$TESTTMP"
-  $ hg clone -q mono:repo repo2 --noupdate --config extensions.remotenames=
+  $ hg clone -q mono:repo repo2 --noupdate
   $ cd repo2
   $ setup_hg_modern_lfs "$lfs_url" 10B
   $ setconfig "remotefilelog.cachepath=$TESTTMP/cachepath2"
@@ -56,7 +56,7 @@ Update. Check for compression. It shouldn't be used.
 Clone again. This time, enable compression
 
   $ cd "$TESTTMP"
-  $ hg clone -q mono:repo repo3 --noupdate --config extensions.remotenames=
+  $ hg clone -q mono:repo repo3 --noupdate
   $ cd repo3
   $ setup_hg_modern_lfs "$lfs_url" 10B
   $ setconfig "remotefilelog.cachepath=$TESTTMP/cachepath3"

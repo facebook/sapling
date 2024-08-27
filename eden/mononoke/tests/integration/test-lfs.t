@@ -30,10 +30,6 @@
 
 # Setup hgrc to allow cloning the LFS repository
   $ cd repo-hg-nolfs
-  $ cat >> $HGRCPATH << EOF
-  > [treemanifest]
-  > treeonly=True
-  > EOF
 
   $ cat >> .hg/hgrc << EOF
   > [extensions]
@@ -58,13 +54,12 @@
   $ lfs_uri="$(lfs_server --log "$LFS_LOG")/repo"
 
 # Create a new hg repository clone, with a low threshold for new LFS files
-  $ hg clone -q ssh://user@dummy/repo-hg-nolfs repo-hg-lfs --noupdate --config extensions.remotenames=
+  $ hg clone -q ssh://user@dummy/repo-hg-nolfs repo-hg-lfs --noupdate
   $ cd repo-hg-lfs
   $ setup_hg_client
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > pushrebase =
-  > remotenames =
   > lfs=
   > [lfs]
   > threshold=1000B
@@ -103,13 +98,12 @@
 
 # Create a new hg repository, and update to the new file
   $ cd ..
-  $ hg clone -q ssh://user@dummy/repo-hg-nolfs repo-hg-lfs2 --noupdate --config extensions.remotenames=
+  $ hg clone -q ssh://user@dummy/repo-hg-nolfs repo-hg-lfs2 --noupdate
   $ cd repo-hg-lfs2
   $ setup_hg_client
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > pushrebase =
-  > remotenames =
   > lfs=
   > [lfs]
   > threshold=1000B

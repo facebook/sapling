@@ -25,10 +25,6 @@ setup configuration
 setup repo
   $ hginit_treemanifest repo-hg
   $ cd repo-hg
-  $ cat >> .hg/hgrc <<EOF
-  > [treemanifest]
-  > treeonly = true
-  > EOF
   $ echo "content0" > file
   $ sl commit -Aqm base
   $ sl bookmark master_bookmark -r tip
@@ -37,17 +33,14 @@ setup repo-push and repo-pull
   $ cd $TESTTMP
   $ for name in push pull1 pull2 pull3
   > do
-  >   hg clone -q ssh://user@dummy/repo-hg repo-$name --noupdate --config extensions.remotenames= --config treemanifest.treeonly=true
+  >   hg clone -q ssh://user@dummy/repo-hg repo-$name --noupdate
   >   cat >> repo-$name/.hg/hgrc <<EOF
   > [extensions]
   > loglinkrevfixup = $TESTTMP/loglinkrevfixup.py
   > infinitepush =
   > commitcloud =
-  > remotenames =
   > [infinitepush]
   > branchpattern = re:scratch/.*
-  > [treemanifest]
-  > treeonly = true
   > EOF
   >   
   >   # Defeat shared cache between repos.

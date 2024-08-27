@@ -573,12 +573,12 @@ function init_large_small_repo() {
 
 function init_local_large_small_clones {
   cd "$TESTTMP" || exit 1
-  hg clone -q mono:small-mon small-hg-client --config extensions.remotenames=
+  hg clone -q mono:small-mon small-hg-client
   cat >> small-hg-client/.hg/hgrc <<EOF
 [extensions]
 pushrebase =
 EOF
-  hg clone -q mono:large-mon large-hg-client --config extensions.remotenames=
+  hg clone -q mono:large-mon large-hg-client
   cat >> large-hg-client/.hg/hgrc <<EOF
 [extensions]
 pushrebase =
@@ -609,12 +609,11 @@ function create_first_post_move_commit {
 
 function init_client() {
   cd "$TESTTMP" || exit 1
-  hg clone -q ssh://user@dummy/"$1" "$2" --noupdate --config extensions.remotenames=
+  hg clone -q ssh://user@dummy/"$1" "$2" --noupdate
   cd "$TESTTMP/$2" || exit 1
   cat >> .hg/hgrc <<EOF
 [extensions]
 pushrebase =
-remotenames =
 EOF
 }
 

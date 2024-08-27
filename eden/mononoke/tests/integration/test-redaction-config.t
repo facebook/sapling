@@ -49,28 +49,24 @@ start mononoke
   > [extensions]
   > pushrebase =
   > rebase =
-  > remotenames =
   > EOF
 
   $ cd ../repo-pull
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > pushrebase =
-  > remotenames =
   > EOF
 
   $ cd ../repo-pull2
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > pushrebase =
-  > remotenames =
   > EOF
 
   $ cd ../repo-pull3
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > pushrebase =
-  > remotenames =
   > EOF
 
   $ cd ../repo-push

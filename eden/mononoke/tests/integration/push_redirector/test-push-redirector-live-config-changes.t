@@ -135,12 +135,11 @@ blobimport hg servers repos into Mononoke repos
 setup hg client repos
   $ function init_client() {
   > cd "$TESTTMP"
-  > hg clone -q ssh://user@dummy/"$1" "$2" --noupdate --config extensions.remotenames=
+  > hg clone -q ssh://user@dummy/"$1" "$2" --noupdate
   > cd "$TESTTMP/$2"
   > cat >> .hg/hgrc <<EOF
   > [extensions]
   > pushrebase =
-  > remotenames =
   > EOF
   > }
 

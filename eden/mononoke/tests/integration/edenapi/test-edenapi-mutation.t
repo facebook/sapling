@@ -22,7 +22,6 @@ Set up local hgrc and Mononoke config, with commit cloud, http pull and upload.
   > commitcloud =
   > infinitepush =
   > rebase =
-  > remotenames =
   > share =
   > [commitcloud]
   > hostname = testhost

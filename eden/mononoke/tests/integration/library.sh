@@ -1992,7 +1992,6 @@ EOF
 [extensions]
 pushrebase =
 amend=
-remotenames =
 EOF
 }
 
@@ -2238,7 +2237,6 @@ function default_setup() {
   cat >> .hg/hgrc <<EOF
 [extensions]
 pushrebase =
-remotenames =
 EOF
 }
 

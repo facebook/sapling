@@ -38,7 +38,7 @@ Try creating again, this should fail
   [1]
 
   $ start_and_wait_for_mononoke_server
-  $ hgmn clone --stream mononoke://$(mononoke_address)/repo repo-streamclone --config extensions.treemanifest= --config remotefilelog.reponame=master --shallow --config treemanifest.treeonly=true
+  $ hgmn clone --stream mononoke://$(mononoke_address)/repo repo-streamclone --config remotefilelog.reponame=master
   streaming all changes
   2 files to transfer, 357 bytes of data
   transferred 357 bytes in * seconds (*) (glob)
@@ -64,7 +64,7 @@ Try creating again, this should fail
   * current max chunk num is None, repo: repo (glob)
   $ rm -rf "$TESTTMP/repo-streamclone"
   $ cd "$TESTTMP"
-  $ hgmn clone --stream mononoke://$(mononoke_address)/repo repo-streamclone --config extensions.treemanifest= --config remotefilelog.reponame=master --shallow --config treemanifest.treeonly=true
+  $ hgmn clone --stream mononoke://$(mononoke_address)/repo repo-streamclone --config remotefilelog.reponame=master
   streaming all changes
   2 files to transfer, 357 bytes of data
   transferred 357 bytes in * seconds (*) (glob)
@@ -118,7 +118,7 @@ Push a few new commits and update streaming clone
   
 
   $ cd "$TESTTMP"
-  $ hgmn clone --stream mononoke://$(mononoke_address)/repo repo-streamclone-2 --config extensions.treemanifest= --config remotefilelog.reponame=master --shallow --config treemanifest.treeonly=true
+  $ hgmn clone --stream mononoke://$(mononoke_address)/repo repo-streamclone-2 --config remotefilelog.reponame=master
   streaming all changes
   2 files to transfer, 357 bytes of data
   transferred 357 bytes in * seconds (* KB/sec) (glob)
@@ -146,7 +146,7 @@ Check that with last chunk skipping no new batches are uploaded
 
 Clone it again to make sure saved streaming chunks are valid
   $ cd "$TESTTMP"
-  $ hgmn clone --stream mononoke://$(mononoke_address)/repo repo-streamclone-3 --config extensions.treemanifest= --config remotefilelog.reponame=master --shallow --config treemanifest.treeonly=true
+  $ hgmn clone --stream mononoke://$(mononoke_address)/repo repo-streamclone-3 --config remotefilelog.reponame=master
   streaming all changes
   2 files to transfer, 731 bytes of data
   transferred 731 bytes in 0.0 seconds (* KB/sec) (glob)

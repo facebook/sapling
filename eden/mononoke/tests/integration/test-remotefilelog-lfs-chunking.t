@@ -31,7 +31,7 @@ any block size boundaries or such.
 Clone the repo. Take a unique cache path to go to the server, and enable chunking.
 
   $ cd "$TESTTMP"
-  $ hg clone -q mono:repo repo2 --noupdate --config extensions.remotenames=
+  $ hg clone -q mono:repo repo2 --noupdate
   $ cd repo2
   $ setup_hg_modern_lfs "$lfs_url" 10B
   $ setconfig "remotefilelog.cachepath=$TESTTMP/cachepath2"

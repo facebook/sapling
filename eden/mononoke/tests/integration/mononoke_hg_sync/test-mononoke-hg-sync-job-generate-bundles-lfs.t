@@ -53,7 +53,7 @@ start mononoke with LFS enabled
   $ wait_for_mononoke
 
 Make client repo
-  $ hg clone -q ssh://user@dummy/repo-hg client-push --noupdate --config extensions.remotenames=
+  $ hg clone -q ssh://user@dummy/repo-hg client-push --noupdate
   $ cd client-push
   $ setup_hg_client
   $ setup_hg_modern_lfs "$lfs_uri" 1000B "$TESTTMP/lfs-cache1"
@@ -63,7 +63,6 @@ Push to Mononoke
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > pushrebase =
-  > remotenames =
   > EOF
   $ hg up -q tip
 
@@ -122,10 +121,6 @@ Push normal file
 Sync it to another client
   $ cd "$TESTTMP/repo-hg"
   $ enable_replay_verification_hook
-  $ cat >> .hg/hgrc <<EOF
-  > [treemanifest]
-  > treeonly=True
-  > EOF
   $ cd "$TESTTMP"
 
 Sync a lfs pushrebase
@@ -153,7 +148,7 @@ Sync a lfs pushrebase
 
 Setup another client and update to latest commit from mercurial
   $ cd ..
-  $ hg clone -q ssh://user@dummy/repo-hg client-pull --noupdate --config extensions.remotenames=
+  $ hg clone -q ssh://user@dummy/repo-hg client-pull --noupdate
   $ cd client-pull
   $ setup_hg_client
   $ setup_hg_modern_lfs "$lfs_uri" 1000B "$TESTTMP/lfs-cache1"
