@@ -20,7 +20,7 @@
 
 # Send an unacceptable file
   $ yes A 2>/dev/null | head -c 11 | hg --config extensions.lfs= debuglfssend "$lfs_uri"
-  abort: LFS server error: *Object size (11) exceeds max allowed size (10)* (glob)
+  abort: *Object size (11) exceeds max allowed size (10)* (glob)
   [255]
 
 # Verify that direct uploads fail too

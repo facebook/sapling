@@ -121,6 +121,7 @@ rust_library(
         "//eden/scm/lib/commands/debugcommands/cmddebugdumpinternalconfig:cmddebugdumpinternalconfig",
         "//eden/scm/lib/commands/debugcommands/cmddebugfsync:cmddebugfsync",
         "//eden/scm/lib/commands/debugcommands/cmddebughttp:cmddebughttp",
+        "//eden/scm/lib/commands/debugcommands/cmddebuglfssend:cmddebuglfssend",
         "//eden/scm/lib/commands/debugcommands/cmddebugmergestate:cmddebugmergestate",
         "//eden/scm/lib/commands/debugcommands/cmddebugmetrics:cmddebugmetrics",
         "//eden/scm/lib/commands/debugcommands/cmddebugnetworkdoctor:cmddebugnetworkdoctor",

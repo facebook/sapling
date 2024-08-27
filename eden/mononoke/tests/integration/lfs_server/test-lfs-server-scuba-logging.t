@@ -61,6 +61,9 @@
       "batch_request_parsed_us": *, (glob)
       "batch_request_received_us": *, (glob)
       "batch_response_ready_us": *, (glob)
+      "client_attempt": 1,
+      "client_attempts_left": *, (glob)
+      "client_throttle_attempts_left": *, (glob)
       "duration_ms": *, (glob)
       "error_count": 0,
       "headers_duration_ms": *, (glob)
@@ -80,7 +83,7 @@
       "http_host": "*", (glob)
       "http_method": "POST",
       "http_path": "/lfs1/objects/batch",
-      "http_user_agent": "mercurial/* git/*", (glob)
+      "http_user_agent": "Sapling/*", (glob)
       "method": "batch",
       "repository": "lfs1",
       "request_id": "*", (glob)
@@ -116,6 +119,9 @@
       "SqlReadsMaster": 0,
       "SqlReadsReplica": 0,
       "SqlWrites": 0,
+      "client_attempt": 1,
+      "client_attempts_left": *, (glob)
+      "client_throttle_attempts_left": *, (glob)
       "duration_ms": *, (glob)
       "error_count": 0,
       "headers_duration_ms": *, (glob)
@@ -137,7 +143,7 @@
       "http_method": "PUT",
       "http_path": "/lfs1/upload/ab02c2a1923c8eb11cb3ddab70320746d71d32ad63f255698dc67c3295757746/2048",
       "http_query": "server_hostname=*", (glob)
-      "http_user_agent": "mercurial/* git/*", (glob)
+      "http_user_agent": "Sapling/*", (glob)
       "method": "upload",
       "repository": "lfs1",
       "request_id": "*", (glob)

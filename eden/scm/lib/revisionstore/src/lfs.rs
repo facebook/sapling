@@ -124,14 +124,14 @@ use crate::util::get_lfs_pointers_path;
 /// The `LfsPointersStore` holds the mapping between a `HgId` and the content hash (sha256) of the LFS blob.
 struct LfsPointersStore(Store);
 
-pub(crate) struct LfsIndexedLogBlobsStore {
+pub struct LfsIndexedLogBlobsStore {
     inner: Store,
     chunk_size: usize,
 }
 
 /// The `LfsBlobsStore` holds the actual blobs. Lookup is done via the content hash (sha256) of the
 /// blob.
-pub(crate) enum LfsBlobsStore {
+pub enum LfsBlobsStore {
     /// Blobs are stored on-disk and will stay on it until garbage collected.
     Loose(PathBuf, bool),
 
@@ -142,7 +142,7 @@ pub(crate) enum LfsBlobsStore {
     Union(Box<LfsBlobsStore>, Box<LfsBlobsStore>),
 }
 
-pub(crate) struct HttpLfsRemote {
+pub struct HttpLfsRemote {
     url: Url,
     client: Arc<HttpClient>,
     concurrent_fetches: usize,
@@ -161,7 +161,7 @@ struct HttpOptions {
     request_timeout: Duration,
 }
 
-pub(crate) enum LfsRemote {
+pub enum LfsRemote {
     Http(HttpLfsRemote),
     File(LfsBlobsStore),
 }

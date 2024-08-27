@@ -64,5 +64,12 @@
   200
 
   $ yes B 2>/dev/null | head -c 2KiB | hg debuglfssend "$LFS_URI"
-  abort: HTTP error: HTTP Error 403: Forbidden (oid=a1bcf2c963bec9588aaa30bd33ef07873792e3ec241453b0d21635d1c4bbae84, action=upload)!
+  abort: Fetch failed: https://localhost:$LOCAL_PORT/repo1/upload/a1bcf2c963bec9588aaa30bd33ef07873792e3ec241453b0d21635d1c4bbae84/2048?server_hostname=* PUT: HTTP status 403 Forbidden. Returned headers: { (glob)
+      "x-request-id": * (glob)
+      "content-type": "application/vnd.git-lfs+json",
+      "server": "mononoke-lfs",
+      "x-load": * (glob)
+      "content-length": * (glob)
+      "date": * (glob)
+  }
   [255]

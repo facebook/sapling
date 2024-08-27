@@ -214,25 +214,6 @@ def _adhocstores(ui, url):
     return blobstoremod.memlocal(), blobstore.remote(ui)
 
 
-@command("debuglfssend", [], _("@prog@ debuglfssend [URL]"), norepo=True)
-def debuglfssend(ui, url=None):
-    """read from stdin, send it as a single file to LFS server
-
-    Print oid and size.
-    """
-    local, remote = _adhocstores(ui, url)
-
-    data = ui.fin.read()
-    oid = hashlib.sha256(data).hexdigest()
-    longoid = "sha256:%s" % oid
-    size = len(data)
-    pointers = [pointer.gitlfspointer(oid=longoid, size=str(size))]
-
-    local.write(oid, data)
-    remote.writebatch(pointers, local)
-    ui.write(_x("%s %s\n") % (oid, size))
-
-
 @command(
     "debuglfsreceive|debuglfsrecv",
     [],
