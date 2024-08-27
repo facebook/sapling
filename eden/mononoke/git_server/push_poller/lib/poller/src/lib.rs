@@ -127,6 +127,34 @@ impl GitSourceOfTruth {
         }
     }
 
+    pub async fn metagit_source_of_truth(
+        &self,
+        repo_name: &str,
+        staleness: Staleness,
+    ) -> Result<bool> {
+        let connections = self.mononoke_production_xdb.read_conns().await?;
+        let git_source_of_truth_config: &dyn GitSourceOfTruthConfig =
+            &SqlGitSourceOfTruthConfigBuilder::from_sql_connections(connections).build();
+        let maybe_repo_id = self
+            .repo_configs
+            .repos
+            .get(repo_name)
+            .map(|repo_config| repo_config.repoid);
+        // If the repo is not in the config, we assume it is MetaGit repository.
+        if let Some(repo_id) = maybe_repo_id {
+            git_source_of_truth_config
+                .get_by_repo_id(&self.ctx, repo_id, staleness)
+                .await
+                .map(|entry| {
+                    entry.map_or(false, |entry| {
+                        entry.source_of_truth == DbGitSourceOfTruth::Metagit
+                    })
+                })
+        } else {
+            Ok(true)
+        }
+    }
+
     async fn current_mononoke_git_repositories<'a>(&'a self) -> Result<Vec<Repository<'a>>> {
         let connections = self.mononoke_production_xdb.read_conns().await?;
         let git_source_of_truth_config: &dyn GitSourceOfTruthConfig =
