@@ -712,6 +712,22 @@ pub fn repo_name_from_url(config: &dyn Config, s: &str) -> Option<String> {
                         return Some(path.to_string());
                     }
                 }
+                "eager" => {
+                    // eager URLs such as eager://C:\some\path don't work with the default
+                    // URL logic, so special case to always take the last path component.
+                    if let Some((_, path)) = s.split_once(':') {
+                        let delims = if cfg!(windows) {
+                            &['/', '\\'][..]
+                        } else {
+                            &['/'][..]
+                        };
+                        if let Some((_, last)) = path.trim_end_matches(delims).rsplit_once(delims) {
+                            if !last.is_empty() {
+                                return Some(last.to_string());
+                            }
+                        }
+                    }
+                }
                 _ => {
                     // Try to remove special prefixes to guess the repo name from that
                     if let Some(repo_prefix) = config.get("remotefilelog", "reponame-path-prefixes")
@@ -1388,6 +1404,16 @@ mod tests {
         // there.
         check("fb://repo/", Some("repo"));
         check("fb://path/to/repo", Some("path/to/repo"));
+
+        check("eager:/some/repo//", Some("repo"));
+        check("eager:///some/repo", Some("repo"));
+        if cfg!(windows) {
+            check(r"eager:C:\some\repo", Some("repo"));
+            check(r"eager:C:\some/repo", Some("repo"));
+            check(r"eager://C:\some\repo", Some("repo"));
+            check(r"eager://C:\some/repo", Some("repo"));
+            check(r"eager:\\C\some\repo", Some("repo"));
+        }
     }
 
     #[test]

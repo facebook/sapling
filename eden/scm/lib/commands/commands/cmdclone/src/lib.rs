@@ -138,7 +138,13 @@ impl CloneOpts {
             scheme: resolve_custom_scheme(config, url.clone())?
                 .scheme()
                 .to_string(),
-            path: url.to_string(),
+            // Certain URLs like "eager://C:\some\path" don't round-trip through Url,
+            // so use original URL if there was no fragment.
+            path: if frag.is_none() {
+                self.source.clone()
+            } else {
+                url.to_string()
+            },
             default_bookmark: frag,
         })
     }
