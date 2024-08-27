@@ -50,7 +50,7 @@
       (2 font-lock-keyword-face nil t)))
 
     ;; in "$ hg foo", "hg" is builtin, "foo" is function.
-    ("^\\s-+\\$\\s-.*?+\\_<\\(hg\\|sl\\)\\_>.*? \\([a-z]+\\)[[:space:]$]"
+    ("^\\s-+\\$\\s-.*?+\\_<\\(hg\\|sl\\)\\_>.*? \\(\\w+\\)[[:space:]$]"
      (1 font-lock-builtin-face)
      (2 font-lock-function-name-face))
 
@@ -58,7 +58,7 @@
     ("^  \\$" (" -[^[:space:]]+" nil nil (0 font-lock-variable-name-face)))
 
     ;; In "$ ENV=var foo", "$" is keyword, "foo" is function.
-    ("^\\s-+\\$\\(?:[[:space:]]\\|[A-Z]+=[^[:space:]]+\\)+.*?\\([a-z]+\\)"
+    ("^\\s-+\\$\\(?:[[:space:]]\\|[A-Z]+=[^[:space:]]+\\)+.*?\\([a-z]\\w+\\)"
      (1 font-lock-function-name-face))
 
     ;; In "foo.bar=", "foo.bar" is variable name.
