@@ -28,8 +28,6 @@ Shallow clone from full
   $ clone master shallow --noupdate
   $ cd shallow
   $ cat .hg/requires
-  dotencode
-  fncache
   generaldelta
   lz4revlog
   remotefilelog
