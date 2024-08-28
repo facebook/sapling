@@ -755,17 +755,6 @@ function enable_pushredirect {
   local draft_push=${2:-false}
   local public_push=${3:-true}
 
-  cat > "$PUSHREDIRECT_CONF/enable" <<EOF
-{
-  "per_repo": {
-    "$repo_id": {
-      "draft_push": $draft_push,
-      "public_push": $public_push
-    }
-  }
-}
-EOF
-
   enable_pushredirect_xdb "$repo_id" "$draft_push" "$public_push"
 }
 
