@@ -216,7 +216,7 @@ describe('Suggested Rebase button', () => {
     fireEvent.click(rebaseOntoButton);
 
     const suggestion = within(screen.getByTestId('context-menu-container')).getByText(
-      'Current Stack Base, remote/main',
+      /Current Stack Base \(.*\), remote\/main/,
     );
     fireEvent.click(suggestion);
 

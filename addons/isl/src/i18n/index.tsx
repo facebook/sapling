@@ -101,7 +101,7 @@ export function t(
  *
  * Unlike `t()`, `options.replace` can include arbitrary `ReactNode` contents
  * ```
- * <T replace={{name: <b>{getName()}</b>}}>Hello, my name is $name.</T>
+ * <T replace={{$name: <b>{getName()}</b>}}>Hello, my name is $name.</T>
  * ```
  */
 export function T({

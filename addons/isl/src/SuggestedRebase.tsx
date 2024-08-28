@@ -8,9 +8,10 @@
 import type {Operation} from './operations/Operation';
 import type {CommitInfo, ExactRevset, Hash, OptimisticRevset, SucceedableRevset} from './types';
 
+import {allCommands} from './ISLShortcuts';
 import {tracker} from './analytics';
 import {findPublicBaseAncestor} from './getCommitTree';
-import {T, t} from './i18n';
+import {T} from './i18n';
 import {atomFamilyWeak, readAtom} from './jotaiUtils';
 import {BulkRebaseOperation} from './operations/BulkRebaseOperation';
 import {RebaseAllDraftCommitsOperation} from './operations/RebaseAllDraftCommitsOperation';
@@ -22,10 +23,11 @@ import {commitsShownRange, latestDag} from './serverAPIState';
 import {succeedableRevset} from './types';
 import {Button} from 'isl-components/Button';
 import {Icon} from 'isl-components/Icon';
+import {Kbd} from 'isl-components/Kbd';
 import {Subtle} from 'isl-components/Subtle';
 import {atom} from 'jotai';
+import React from 'react';
 import {useContextMenu} from 'shared/ContextMenu';
-
 import './SuggestedRebase.css';
 
 /**
@@ -67,7 +69,7 @@ export const showSuggestedRebaseForStack = atomFamilyWeak((hash: Hash) =>
 export const suggestedRebaseDestinations = atom(get => {
   const dag = get(latestDag);
   const publicBase = findPublicBaseAncestor(get(dagWithPreviews));
-  const destinations = dag
+  const destinations: Array<[CommitInfo, React.ReactNode]> = dag
     .getBatch(dag.public_().toArray())
     .filter(
       commit => commit.remoteBookmarks.length > 0 || (commit.stableCommitMetadata?.length ?? 0) > 0,
@@ -82,10 +84,24 @@ export const suggestedRebaseDestinations = atom(get => {
     ])
     .filter(([_commit, label]) => label.length > 0);
   if (publicBase) {
-    const publicBaseLabel = t('Current Stack Base');
+    const [modifiers, keycode] = allCommands.RebaseOntoCurrentStackBase;
+    const publicBaseLabel = (
+      <T
+        replace={{
+          $shortcut: (
+            <Kbd modifiers={Array.isArray(modifiers) ? modifiers : [modifiers]} keycode={keycode} />
+          ),
+        }}>
+        Current Stack Base ($shortcut)
+      </T>
+    );
     const existing = destinations.find(dest => dest[0].hash === publicBase.hash);
     if (existing != null) {
-      existing[1] = [publicBaseLabel, existing[1]].join(', ');
+      existing[1] = (
+        <>
+          {publicBaseLabel}, {existing[1]}
+        </>
+      );
     } else {
       destinations.push([publicBase, publicBaseLabel]);
     }

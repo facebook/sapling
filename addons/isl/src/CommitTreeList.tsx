@@ -27,6 +27,7 @@ import {
   selectedCommits,
   useArrowKeysToChangeSelection,
   useBackspaceToHideSelected,
+  useShortcutToRebaseSelected,
   useCommitCallbacks,
 } from './selection';
 import {
@@ -203,6 +204,7 @@ export function CommitTreeList() {
 
   useArrowKeysToChangeSelection();
   useBackspaceToHideSelected();
+  useShortcutToRebaseSelected();
 
   const isNarrow = useAtomValue(isNarrowCommitTree);
 

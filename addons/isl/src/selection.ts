@@ -6,7 +6,6 @@
  */
 
 import type {ISLCommandName} from './ISLShortcuts';
-import type {CommitInfo, Hash} from './types';
 import type React from 'react';
 
 import {commitMode} from './CommitInfoView/CommitInfoState';
@@ -15,12 +14,18 @@ import {useSelectAllCommitsShortcut} from './SelectAllCommits';
 import {successionTracker} from './SuccessionTracker';
 import {YOU_ARE_HERE_VIRTUAL_COMMIT} from './dag/virtualCommit';
 import {islDrawerState} from './drawerState';
+import {findPublicBaseAncestor} from './getCommitTree';
+import {t} from './i18n';
 import {readAtom, useAtomHas, writeAtom} from './jotaiUtils';
+import {BulkRebaseOperation} from './operations/BulkRebaseOperation';
 import {HideOperation} from './operations/HideOperation';
-import {operationBeingPreviewed} from './operationsState';
+import {RebaseOperation} from './operations/RebaseOperation';
+import {operationBeingPreviewed, useRunOperation} from './operationsState';
+import foundPlatform from './platform';
 import {dagWithPreviews} from './previews';
 import {latestDag} from './serverAPIState';
 import {latestSuccessorUnlessExplicitlyObsolete} from './successionUtils';
+import {exactRevset, type CommitInfo, type Hash} from './types';
 import {firstOfIterable, registerCleanup} from './utils';
 import {atom} from 'jotai';
 import {useCallback} from 'react';
@@ -336,5 +341,41 @@ export function useBackspaceToHideSelected(): void {
     );
   }, []);
 
-  useCommand('HideSelectedCommits', () => cb());
+  useCommand('HideSelectedCommits', cb);
+}
+
+export function useShortcutToRebaseSelected(): void {
+  const runOperation = useRunOperation();
+
+  const cb = useCallback(async () => {
+    const dag = readAtom(dagWithPreviews);
+    const baseCommit = findPublicBaseAncestor(dag);
+    if (!baseCommit) {
+      return;
+    }
+    const baseCommitRevset = exactRevset(baseCommit.hash);
+
+    const selectedCommits = readAtom(selectedCommitInfos);
+    const selectedRevsets = selectedCommits
+      .filter(commitInfo => findPublicBaseAncestor(dag, commitInfo.hash)?.hash !== baseCommit.hash)
+      .map(latestSuccessorUnlessExplicitlyObsolete);
+
+    if (selectedRevsets.length === 0) {
+      return;
+    } else if (selectedRevsets.length === 1) {
+      writeAtom(
+        operationBeingPreviewed,
+        () => new RebaseOperation(selectedRevsets[0], baseCommitRevset),
+      );
+    } else {
+      if (
+        await foundPlatform.confirm(
+          t('Are you sure you want to rebase $count commits?', {count: selectedRevsets.length}),
+        )
+      ) {
+        runOperation(new BulkRebaseOperation(selectedRevsets, baseCommitRevset));
+      }
+    }
+  }, [runOperation]);
+  useCommand('RebaseOntoCurrentStackBase', cb);
 }

@@ -11,7 +11,7 @@ import type {ReactNode} from 'react';
 import type {ContextMenuItem} from 'shared/ContextMenu';
 
 import {spacing} from '../../components/theme/tokens.stylex';
-import {AllBookmarksTruncated, Bookmarks, createBookmarkAtCommit} from './Bookmark';
+import {AllBookmarksTruncated, createBookmarkAtCommit} from './Bookmark';
 import {openBrowseUrlForHash, supportsBrowseUrlForHash} from './BrowseRepo';
 import {hasUnsavedEditedCommitMessage} from './CommitInfoView/CommitInfoState';
 import {showComparison} from './ComparisonView/atoms';
@@ -207,7 +207,7 @@ export const Commit = memo(
           type: 'submenu',
           children:
             suggestedRebases?.map(([dest, name]) => ({
-              label: <T>{name}</T>,
+              label: name,
               onClick: () => {
                 const operation = getSuggestedRebaseOperation(
                   dest,

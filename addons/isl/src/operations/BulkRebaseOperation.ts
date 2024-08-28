@@ -13,7 +13,7 @@ import {Operation} from './Operation';
 
 export class BulkRebaseOperation extends Operation {
   constructor(
-    private sources: Array<SucceedableRevset>,
+    private sources: Array<SucceedableRevset | ExactRevset | OptimisticRevset>,
     private destination: SucceedableRevset | ExactRevset | OptimisticRevset,
   ) {
     super('BulkRebaseOperation');
