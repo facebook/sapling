@@ -4089,7 +4089,7 @@ def commiteditor(repo, ctx, editform="", summaryfooter=""):
 def add_summary_footer(
     commit_msg: str,
     summary_footer: str,
-    commit_tags: str = PHABRICATOR_COMMIT_MESSAGE_TAGS,
+    commit_tags: Set[str] = PHABRICATOR_COMMIT_MESSAGE_TAGS,
 ) -> str:
     """
     >>> print(add_summary_footer("", "i am a summary footer"))
@@ -4130,31 +4130,25 @@ def add_summary_footer(
         return commit_msg
 
     lines = commit_msg.split("\n")
-    prev_tag = None
-    insert_idx = len(lines)
-    for i, line in enumerate(lines):
-        try:
-            tag = line[: line.index(":")]
-        except ValueError:
-            # not found ":"
-            continue
+    field_content_list = _parse_commit_message(lines, commit_tags)
 
-        if tag in commit_tags:
-            if prev_tag == "Summary":
-                # found a tag after summary
-                insert_idx = i
-                break
-            prev_tag = tag
+    # defaults to the last field
+    summary_index = len(field_content_list) - 1
+    summary_content = field_content_list[summary_index][1]
+    for i, (field, content) in enumerate(field_content_list):
+        if field == "Summary":
+            summary_index, summary_content = i, content
+            break
 
-    new_lines = lines[:insert_idx]
-    if new_lines[-1]:
-        new_lines.append("")
-    new_lines.append(summary_footer)
-    if insert_idx < len(lines):
-        new_lines.append("")
-    new_lines.extend(lines[insert_idx:])
+    if summary_content[-1]:
+        summary_content.append("")
+    summary_content.append(summary_footer)
+    if summary_index < len(field_content_list) - 1:
+        summary_content.append("")
 
-    return "\n".join(new_lines)
+    return "\n".join(
+        line for (_field, content) in field_content_list for line in content
+    )
 
 
 def _parse_commit_message(
