@@ -20,7 +20,7 @@ import stat
 import tempfile
 import typing
 from enum import Enum
-from typing import Dict
+from typing import Dict, List, Optional, Set, Tuple
 
 import bindings
 from bindings import renderdag
@@ -4155,6 +4155,46 @@ def add_summary_footer(
     new_lines.extend(lines[insert_idx:])
 
     return "\n".join(new_lines)
+
+
+def _parse_commit_message(
+    lines: List[str], commit_fields: Set[str]
+) -> List[Tuple[Optional[str], List[str]]]:
+    """Parse commit message lines and return list of (field, content_lines) pairs.
+
+    >>> _parse_commit_message(["this is a title"], {"Summary"})
+    [(None, ['this is a title'])]
+    >>> _parse_commit_message(
+    ...   ['this is a title', '', 'Summary: I am a summary'],
+    ...   {'Summary', 'Test Plan'},
+    ... )
+    [(None, ['this is a title', '']), ('Summary', ['Summary: I am a summary'])]
+    >>> _parse_commit_message(
+    ...   ["this is a title", "", "Summary: I am a summary", "", "Test Plan: I am a test plan"],
+    ...   {"Summary", "Test Plan"},
+    ... )
+    [(None, ['this is a title', '']), ('Summary', ['Summary: I am a summary', '']), ('Test Plan', ['Test Plan: I am a test plan'])]
+    """
+    result = []
+    curr_key, curr_content = None, []
+    for line in lines:
+        try:
+            key = line[: line.index(":")]
+        except ValueError:
+            # not found ":"
+            curr_content.append(line)
+            continue
+
+        if key in commit_fields:
+            if curr_content:
+                result.append((curr_key, curr_content))
+            curr_key, curr_content = key, [line]
+        else:
+            curr_content.append(line)
+
+    if curr_content:
+        result.append((curr_key, curr_content))
+    return result
 
 
 def commitforceeditor(
