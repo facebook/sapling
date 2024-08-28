@@ -39,6 +39,7 @@ fn main(_fb: FacebookInit) -> Result<()> {
     // Run `git push` with provided args
     let mut command = Command::new("git");
     command.arg("push");
+
     if let Some(repository) = args.repository {
         command.arg(repository);
     }
@@ -46,17 +47,13 @@ fn main(_fb: FacebookInit) -> Result<()> {
         command.arg(refspec);
     }
 
-    let output = command
-        .output()
-        .context("Failed to execute git push command")?;
+    let mut child = command
+        .spawn()
+        .context("Failed to spawn git push command")?;
 
-    // Pipe stderr
-    let error_message = String::from_utf8_lossy(&output.stderr);
-    eprintln!("{}", error_message);
-
-    // Pipe stdout
-    let result = String::from_utf8_lossy(&output.stdout);
-    println!("{}", result);
+    child
+        .wait()
+        .context("Failed to wait for git push command child process")?;
 
     Ok(())
 }

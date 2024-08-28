@@ -61,22 +61,16 @@
   $ git pushrebase "file://${GIT_SERVER_REPO}" master
   To file://$TESTTMP/git_server_repo
    * [new branch]      master -> master
-  
-  
 
 -- Test different combinations of arguments
 
 -- Should fail because of missing origin and refspec
   $ git pushrebase
   Everything up-to-date
-  
-  
 
 -- Should fail because of missing refspec
   $ git pushrebase "file://${GIT_SERVER_REPO}"
   Everything up-to-date
-  
-  
 -- Should fail because of missing repository
   $ git pushrebase master
   fatal: 'master' does not appear to be a git repository
@@ -84,8 +78,6 @@
   
   Please make sure you have the correct access rights
   and the repository exists.
-  
-  
 
 -- Check git server repo
   $ cd $GIT_SERVER_REPO
