@@ -23,7 +23,7 @@ mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 skeleton_manifest = { version = "0.1.0", path = "../skeleton_manifest" }
 
 [dev-dependencies]
-async-recursion = "1.0.2"
+async-recursion = "1.1.1"
 bonsai_hg_mapping = { version = "0.1.0", path = "../../bonsai_hg_mapping" }
 bookmarks = { version = "0.1.0", path = "../../bookmarks" }
 commit_graph = { version = "0.1.0", path = "../../repo_attributes/commit_graph/commit_graph" }

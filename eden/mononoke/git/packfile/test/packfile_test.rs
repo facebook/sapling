@@ -46,7 +46,7 @@ async fn get_objects_stream(
     }))?);
     let tree_bytes = Bytes::from(to_vec_bytes(&gix_object::Object::Tree(gix_object::Tree {
         entries: vec![gix_object::tree::Entry {
-            mode: gix_object::tree::EntryMode::Blob,
+            mode: gix_object::tree::EntryKind::Blob.into(),
             filename: "JustAFile.txt".into(),
             oid: ObjectId::empty_blob(gix_hash::Kind::Sha1),
         }],
@@ -190,7 +190,10 @@ async fn validate_packfile_generation_format() -> anyhow::Result<()> {
     assert_eq!(opened_packfile.data_len(), size as usize);
     // Verify the checksum of the packfile
     let checksum_from_file = opened_packfile
-        .verify_checksum(gix_features::progress::Discard, &AtomicBool::new(false))
+        .verify_checksum(
+            &mut gix_features::progress::Discard,
+            &AtomicBool::new(false),
+        )
         .expect("Expected successful checksum computation");
     // Verify the checksum matches the hash generated when computing the packfile
     assert_eq!(checksum, checksum_from_file);
@@ -226,7 +229,7 @@ async fn validate_staggered_packfile_generation() -> anyhow::Result<()> {
         .expect("Expected successful write of object to packfile");
     let tree_bytes = Bytes::from(to_vec_bytes(&gix_object::Object::Tree(gix_object::Tree {
         entries: vec![gix_object::tree::Entry {
-            mode: gix_object::tree::EntryMode::Blob,
+            mode: gix_object::tree::EntryKind::Blob.into(),
             filename: "JustAFile.txt".into(),
             oid: ObjectId::empty_blob(gix_hash::Kind::Sha1),
         }],
@@ -260,7 +263,10 @@ async fn validate_staggered_packfile_generation() -> anyhow::Result<()> {
     assert_eq!(opened_packfile.data_len(), size as usize);
     // Verify the checksum of the packfile
     let checksum_from_file = opened_packfile
-        .verify_checksum(gix_features::progress::Discard, &AtomicBool::new(false))
+        .verify_checksum(
+            &mut gix_features::progress::Discard,
+            &AtomicBool::new(false),
+        )
         .expect("Expected successful checksum computation");
     // Verify the checksum matches the hash generated when computing the packfile
     assert_eq!(checksum, checksum_from_file);

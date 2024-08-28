@@ -13,7 +13,7 @@ path = "test/main.rs"
 
 [dependencies]
 anyhow = "1.0.86"
-async-recursion = "1.0.2"
+async-recursion = "1.1.1"
 blobrepo_hg = { version = "0.1.0", path = "../blobrepo/blobrepo_hg" }
 blobrepo_override = { version = "0.1.0", path = "../blobrepo/override" }
 blobstore = { version = "0.1.0", path = "../blobstore" }

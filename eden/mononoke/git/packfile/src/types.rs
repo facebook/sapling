@@ -161,7 +161,7 @@ impl BaseObject {
 
     /// The uncompressed size of the Git object contained within the pack item.
     pub fn size(&self) -> usize {
-        self.object.size()
+        self.object.size() as usize
     }
 
     /// The 20-byte SHA1 hash (ObjectId) of the Git object contained within the

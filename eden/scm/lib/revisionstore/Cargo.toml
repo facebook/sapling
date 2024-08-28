@@ -59,7 +59,7 @@ tokio = { version = "1.37.0", features = ["full", "test-util", "tracing"] }
 tokio-stream = { version = "0.1.14", features = ["fs", "io-util", "net", "signal", "sync", "time"] }
 tracing = { version = "0.1.40", features = ["attributes", "valuable"] }
 types = { version = "0.1.0", path = "../types" }
-url = "2.2.2"
+url = "2.5.2"
 util = { version = "0.1.0", path = "../util" }
 version = { version = "0.1.0", path = "../version" }
 vlqencoding = { version = "0.1.0", path = "../vlqencoding" }

@@ -52,15 +52,15 @@ fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbth
 fileblob = { version = "0.1.0", path = "../../blobstore/fileblob" }
 filenodes = { version = "0.1.0", path = "../../filenodes" }
 filestore = { version = "0.1.0", path = "../../filestore" }
-flate2 = { version = "1.0.26", features = ["rust_backend"], default-features = false }
+flate2 = { version = "1.0.33", features = ["rust_backend"], default-features = false }
 fsnodes = { version = "0.1.0", path = "../../derived_data/fsnodes" }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
 futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 git_source_of_truth = { version = "0.1.0", path = "../../git_source_of_truth" }
 git_symbolic_refs = { version = "0.1.0", path = "../../git_symbolic_refs" }
 git_types = { version = "0.1.0", path = "../../git/git_types" }
-gix-hash = "0.11"
-gix-object = "0.33"
+gix-hash = "0.14.2"
+gix-object = "0.44.0"
 manifest = { version = "0.1.0", path = "../../manifest" }
 megarepo_api = { version = "0.1.0", path = "../../megarepo_api" }
 megarepo_error = { version = "0.1.0", path = "../../megarepo_api/megarepo_error" }

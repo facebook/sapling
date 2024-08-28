@@ -52,7 +52,7 @@ futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimen
 git_source_of_truth = { version = "0.1.0", path = "../git_source_of_truth" }
 git_symbolic_refs = { version = "0.1.0", path = "../git_symbolic_refs" }
 git_types = { version = "0.1.0", path = "../git/git_types" }
-gix-hash = "0.11"
+gix-hash = "0.14.2"
 history_traversal = { version = "0.1.0", path = "../features/history_traversal" }
 hook_manager = { version = "0.1.0", path = "../repo_attributes/hook_manager/hook_manager" }
 hooks = { version = "0.1.0", path = "../hooks" }
@@ -116,7 +116,7 @@ cross_repo_sync_test_utils = { version = "0.1.0", path = "../commit_rewriting/cr
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit-tokio = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fixtures = { version = "0.1.0", path = "../tests/fixtures" }
-gix-object = "0.33"
+gix-object = "0.44.0"
 mononoke_macros = { version = "0.1.0", path = "../mononoke_macros" }
 pretty_assertions = { version = "1.2", features = ["alloc"], default-features = false }
 test_repo_factory = { version = "0.1.0", path = "../repo_factory/test_repo_factory" }

@@ -82,7 +82,7 @@
          tagger mononoke <mononoke@mononoke>
          ```
          into object of kind Tag
-  
+      2: object parsing failed
   Error: Execution failed
 
 

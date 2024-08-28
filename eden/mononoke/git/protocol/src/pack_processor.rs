@@ -60,7 +60,7 @@ fn git_object_bytes(
     kind: gix_object::Kind,
     size: usize,
 ) -> Vec<u8> {
-    let mut object_bytes = loose_header(kind, size).into_vec();
+    let mut object_bytes = loose_header(kind, size as u64).into_vec();
     object_bytes.extend(headerless_object_bytes);
     object_bytes
 }
@@ -159,7 +159,7 @@ async fn parse_stored_pack(
     })?;
     // Verify that the packfile is valid
     pack_file
-        .verify_checksum(Discard, &AtomicBool::new(false))
+        .verify_checksum(&mut Discard, &AtomicBool::new(false))
         .context("The checksum of the packfile is invalid")?;
 
     // Load all the prerequisite objects
@@ -178,7 +178,8 @@ async fn parse_stored_pack(
                 .decode_entry(
                     into_data_entry(entry),
                     &mut output,
-                    |oid, out| resolve_delta(oid, out, &prereq_objects),
+                    &mut gix_features::zlib::Inflate::default(),
+                    &|oid, out| resolve_delta(oid, out, &prereq_objects),
                     &mut Never,
                 )
                 .context(err_context)?;

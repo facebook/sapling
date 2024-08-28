@@ -53,7 +53,7 @@ configmodel = { version = "0.1.0", path = "../config/model" }
 constructors = { version = "0.1.0", path = "../constructors", features = ["git"] }
 ctrlc = { version = "3.1", features = ["termination"] }
 fail = { version = "0.4", features = ["failpoints"] }
-flate2 = { version = "1.0.26", features = ["rust_backend"], default-features = false }
+flate2 = { version = "1.0.33", features = ["rust_backend"], default-features = false }
 hg-http = { version = "0.1.0", path = "../hg-http" }
 hg-metrics = { version = "0.1.0", path = "../hg-metrics" }
 hgplain = { version = "0.1.0", path = "../util/hgplain" }

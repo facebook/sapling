@@ -25,5 +25,5 @@ repo = { version = "0.1.0", path = "../../../repo" }
 repo_name = { version = "0.1.0", path = "../../../repo_name" }
 tracing = { version = "0.1.40", features = ["attributes", "valuable"] }
 types = { version = "0.1.0", path = "../../../types" }
-url = "2.2.2"
+url = "2.5.2"
 util = { version = "0.1.0", path = "../../../util" }

@@ -24,11 +24,11 @@ filestore = { version = "0.1.0", path = "../../filestore" }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
 git_symbolic_refs = { version = "0.1.0", path = "../../git_symbolic_refs" }
 git_types = { version = "0.1.0", path = "../git_types" }
-gix-date = "0.7"
-gix-features = { version = "0.32", features = ["parallel", "rustsha1"] }
-gix-hash = "0.11"
-gix-object = "0.33"
-gix-pack = "0.40"
+gix-date = "0.9.0"
+gix-features = { version = "0.38.2", features = ["parallel", "rustsha1"] }
+gix-hash = "0.14.2"
+gix-object = "0.44.0"
+gix-pack = "0.53.0"
 manifest = { version = "0.1.0", path = "../../manifest" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }

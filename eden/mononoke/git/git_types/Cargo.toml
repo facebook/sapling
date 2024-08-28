@@ -19,13 +19,13 @@ derived_data_manager = { version = "0.1.0", path = "../../derived_data/manager" 
 derived_data_service_if = { version = "0.1.0", path = "../../derived_data/remote/if" }
 digest = "0.10"
 filestore = { version = "0.1.0", path = "../../filestore" }
-flate2 = { version = "1.0.26", features = ["rust_backend"], default-features = false }
+flate2 = { version = "1.0.33", features = ["rust_backend"], default-features = false }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
 git_delta = { version = "0.1.0", path = "../../third_party/git_delta" }
 git_types_thrift = { version = "0.1.0", path = "if" }
-gix-actor = "0.24"
-gix-hash = "0.11"
-gix-object = "0.33"
+gix-actor = "0.32.0"
+gix-hash = "0.14.2"
+gix-object = "0.44.0"
 itertools = "0.11.0"
 lazy_static = "1.4"
 manifest = { version = "0.1.0", path = "../../manifest" }

@@ -109,24 +109,24 @@ async fn load_git_tree<const SUBMODULES: bool, Reader: GitReader>(
                     Err(e) => return Some(Err(e)),
                 };
 
-                let r = match mode {
-                    tree::EntryMode::Blob => {
+                let r = match mode.into() {
+                    tree::EntryKind::Blob => {
                         Some((name, Entry::Leaf((FileType::Regular, GitLeaf(oid)))))
                     }
-                    tree::EntryMode::BlobExecutable => {
+                    tree::EntryKind::BlobExecutable => {
                         Some((name, Entry::Leaf((FileType::Executable, GitLeaf(oid)))))
                     }
-                    tree::EntryMode::Link => {
+                    tree::EntryKind::Link => {
                         Some((name, Entry::Leaf((FileType::Symlink, GitLeaf(oid)))))
                     }
-                    tree::EntryMode::Tree => Some((name, Entry::Tree(GitTree(oid)))),
+                    tree::EntryKind::Tree => Some((name, Entry::Tree(GitTree(oid)))),
 
                     // Git submodules are represented as ObjectType::Commit inside the tree.
                     //
                     // Depending on the repository configuration, we may or may not wish to
                     // include submodules in the imported manifest.  Generate a leaf on the
                     // basis of the SUBMODULES parameter.
-                    tree::EntryMode::Commit => {
+                    tree::EntryKind::Commit => {
                         if SUBMODULES {
                             Some((name, Entry::Leaf((FileType::GitSubmodule, GitLeaf(oid)))))
                         } else {
