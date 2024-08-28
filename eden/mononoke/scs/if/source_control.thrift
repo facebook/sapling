@@ -2161,7 +2161,7 @@ struct WorkspaceInfo {
   /// Workspace name and the repo it's associated with
   1: WorkspaceSpecifier specifier;
   /// Whether the workspace has been archived
-  2: bool is_achived;
+  2: bool is_archived;
   /// Latest version number of the workspace
   3: i64 latest_version;
   /// Latest timestamp the workspace was updated
