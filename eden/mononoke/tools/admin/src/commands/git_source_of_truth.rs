@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+mod set;
 mod show;
 
 use anyhow::Result;
@@ -14,6 +15,8 @@ use git_source_of_truth::GitSourceOfTruthConfig;
 use mononoke_app::args::RepoArgs;
 use mononoke_app::MononokeApp;
 use repo_identity::RepoIdentity;
+use set::set;
+use set::SetArgs;
 use show::show;
 use show::ShowArgs;
 
@@ -31,6 +34,8 @@ pub struct CommandArgs {
 pub enum GitSourceOfTruthSubcommand {
     /// Show git source of truth config for this repo.
     Show(ShowArgs),
+    /// Set git source of truth config for this repo.
+    Set(SetArgs),
 }
 
 #[facet::container]
@@ -48,5 +53,6 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
 
     match args.subcommand {
         GitSourceOfTruthSubcommand::Show(args) => show(&ctx, &repo, args).await,
+        GitSourceOfTruthSubcommand::Set(args) => set(&ctx, &repo, args).await,
     }
 }
