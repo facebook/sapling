@@ -15,11 +15,11 @@
   $ lfs_uri="$(lfs_server --log "$lfs_log" --max-upload-size 10)/lfs1"
 
 # Send an acceptable file
-  $ yes A 2>/dev/null | head -c 10 | hg --config extensions.lfs= debuglfssend "$lfs_uri"
+  $ yes A 2>/dev/null | head -c 10 | hg debuglfssend "$lfs_uri"
   * 10 (glob)
 
 # Send an unacceptable file
-  $ yes A 2>/dev/null | head -c 11 | hg --config extensions.lfs= debuglfssend "$lfs_uri"
+  $ yes A 2>/dev/null | head -c 11 | hg debuglfssend "$lfs_uri"
   abort: *Object size (11) exceeds max allowed size (10)* (glob)
   [255]
 

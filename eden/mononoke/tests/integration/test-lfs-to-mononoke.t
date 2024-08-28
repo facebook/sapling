@@ -80,7 +80,6 @@ Perform LFS push
 
 Verify that if we fail to upload LFS blobs first, the push fails
   $ cat >> .hg/hgrc << EOF
-  > [extensions]
   > [lfs]
   > url=file://$TESTTMP/unused-dummystore
   > [remotefilelog]

@@ -10,15 +10,13 @@ import errno
 import os
 import struct
 import typing
-from collections import defaultdict
 from typing import Dict, IO, Mapping
 
-from sapling import error, filelog, pycompat, revlog, util
+from sapling import error, filelog, pycompat, util
 from sapling.i18n import _
 from sapling.node import hex
 from sapling.pycompat import decodeutf8, encodeutf8
 
-from ..lfs import pointer
 from . import constants
 
 
@@ -107,15 +105,10 @@ def createrevlogtext(text, copyfrom=None, copyrev=None):
 
 def parsemeta(text, flags=0):
     """parse mercurial filelog metadata"""
-    if flags == revlog.REVIDX_EXTSTORED:
-        # LFS stores copy metadata differently
-        p = pointer.deserialize(text)
-        meta = p.hgmeta()
-    else:
-        meta, size = filelog.parsemeta(text)
-        if text.startswith(b"\1\n"):
-            s = text.index(b"\1\n", 2)
-            text = text[s + 2 :]
+    meta, size = filelog.parsemeta(text)
+    if text.startswith(b"\1\n"):
+        s = text.index(b"\1\n", 2)
+        text = text[s + 2 :]
     return meta or {}, text
 
 

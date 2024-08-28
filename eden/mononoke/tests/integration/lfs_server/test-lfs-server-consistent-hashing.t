@@ -26,7 +26,7 @@
   $ LFS_URI="$LFS_ROOT/repo1"
 
 # Upload a blob
-  $ yes A 2>/dev/null | head -c 2KiB | hg --config extensions.lfs= debuglfssend "$LFS_URI"
+  $ yes A 2>/dev/null | head -c 2KiB | hg debuglfssend "$LFS_URI"
   ab02c2a1923c8eb11cb3ddab70320746d71d32ad63f255698dc67c3295757746 2048
 
 # Prepare a batch request for our new object
@@ -58,7 +58,7 @@
   "http://$LOCALIP:*/repo1/download/d28548bc21aabf04d143886d717d72375e3deecd0dafb3d110676b70a192cb5d?routing=ab02c2a1923c8eb11cb3ddab70320746d71d32ad63f255698dc67c3295757746?server_hostname=*" (glob)
 
 # Make sure we can read it back
-  $ hg --config extensions.lfs= debuglfsreceive ab02c2a1923c8eb11cb3ddab70320746d71d32ad63f255698dc67c3295757746 2048 "$LFS_URI" | sha256sum
+  $ hg debuglfsreceive ab02c2a1923c8eb11cb3ddab70320746d71d32ad63f255698dc67c3295757746 2048 "$LFS_URI" | sha256sum
   ab02c2a1923c8eb11cb3ddab70320746d71d32ad63f255698dc67c3295757746  -
 
 # Verify that we used the consistent URL

@@ -12,10 +12,6 @@
   $ cat >> $HGRCPATH << 'EOF'
   > [extensions]
   > journal=
-  > lfs=
-  > [lfs]
-  > threshold=1000B
-  > usercache=$TESTTMP/lfs-cache
   > EOF
 
   $ hg init repo

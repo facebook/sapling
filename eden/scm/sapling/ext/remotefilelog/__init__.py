@@ -186,19 +186,6 @@ def uisetup(ui):
     extensions.wrapcommand(commands.table, "pull", pull)
     extensions.wrapfunction(bundle2, "getrepocaps", getrepocaps)
 
-    # Wrap remotefilelog with lfs code
-    def _lfsloaded(loaded=False):
-        lfsmod = None
-        try:
-            lfsmod = extensions.find("lfs")
-        except KeyError:
-            pass
-        if lfsmod:
-            lfsmod.wrapfilelog(ui, remotefilelog.remotefilelog)
-            fileserverclient._lfsmod = lfsmod
-
-    extensions.afterloaded("lfs", _lfsloaded)
-
     # debugdata needs remotefilelog.len to work
     extensions.wrapcommand(commands.table, "debugdata", debugdatashallow)
 

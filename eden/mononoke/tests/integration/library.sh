@@ -2023,9 +2023,6 @@ getpackversion = 2
 [worker]
 rustworkers=True
 
-[extensions]
-lfs=!
-
 [lfs]
 url=$1
 threshold=$2

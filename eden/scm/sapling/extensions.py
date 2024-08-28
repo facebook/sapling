@@ -63,6 +63,7 @@ _ignoreextensions = {
     "hiddenerror",
     "inotify",
     "interhg",
+    "lfs",
     "lz4revlog",
     "morecolors",
     "mq",

@@ -42,7 +42,7 @@
   * lfs_upload: imported blob Sha256(ab02c2a1923c8eb11cb3ddab70320746d71d32ad63f255698dc67c3295757746) (glob)
 
 # Downloading a present blob should succeed without talking to the upstream
-  $ hg --config extensions.lfs= debuglfsreceive ab02c2a1923c8eb11cb3ddab70320746d71d32ad63f255698dc67c3295757746 2048 "$lfs_proxy" | sha256sum
+  $ hg debuglfsreceive ab02c2a1923c8eb11cb3ddab70320746d71d32ad63f255698dc67c3295757746 2048 "$lfs_proxy" | sha256sum
   ab02c2a1923c8eb11cb3ddab70320746d71d32ad63f255698dc67c3295757746  -
 
   $ cat "$log_proxy"
@@ -63,7 +63,7 @@
 
 # Downloading a missing blob should however wait (we check that we took ~4 seconds for this)
 
-  $ hg --config extensions.lfs= debuglfsreceive 0000000000000000000000000000000000000000000000000000000000000000 2048 "$lfs_proxy" --config lfs.backofftimes=
+  $ hg debuglfsreceive 0000000000000000000000000000000000000000000000000000000000000000 2048 "$lfs_proxy" --config lfs.backofftimes=
   abort: Fetch failed: http://$LOCALIP:$LOCAL_PORT/lfs_repo/objects/batch POST: HTTP status 500 Internal Server Error. Returned headers: {
       "x-request-id": * (glob)
       "content-type": "application/vnd.git-lfs+json",

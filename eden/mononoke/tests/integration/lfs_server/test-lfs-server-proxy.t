@@ -20,7 +20,7 @@
   $ lfs_proxy="$(lfs_server --always-wait-for-upstream --upstream "$lfs_upstream" --log "$log_proxy")/lfs_proxy"
 
 # Upload data to upstream only
-  $ yes A 2>/dev/null | head -c 2KiB | hg --config extensions.lfs= debuglfssend "$lfs_upstream"
+  $ yes A 2>/dev/null | head -c 2KiB | hg debuglfssend "$lfs_upstream"
   ab02c2a1923c8eb11cb3ddab70320746d71d32ad63f255698dc67c3295757746 2048
 
   $ cat "$log_proxy"
@@ -34,7 +34,7 @@
   $ truncate -s 0 "$log_proxy" "$log_upstream"
 
 # Reading data should succeed if it is in upstream
-  $ hg --config extensions.lfs= debuglfsreceive ab02c2a1923c8eb11cb3ddab70320746d71d32ad63f255698dc67c3295757746 2048 "$lfs_proxy" | sha256sum
+  $ hg debuglfsreceive ab02c2a1923c8eb11cb3ddab70320746d71d32ad63f255698dc67c3295757746 2048 "$lfs_proxy" | sha256sum
   ab02c2a1923c8eb11cb3ddab70320746d71d32ad63f255698dc67c3295757746  -
 
   $ cat "$log_proxy"
@@ -50,7 +50,7 @@
   $ truncate -s 0 "$log_proxy" "$log_upstream"
 
 # Uploading data that is present in upstream but not locally should trigger a new upload
-  $ yes A 2>/dev/null | head -c 2KiB | hg --config extensions.lfs= debuglfssend "$lfs_proxy"
+  $ yes A 2>/dev/null | head -c 2KiB | hg debuglfssend "$lfs_proxy"
   ab02c2a1923c8eb11cb3ddab70320746d71d32ad63f255698dc67c3295757746 2048
 
   $ cat "$log_proxy"
@@ -69,7 +69,7 @@
   $ truncate -s 0 "$log_proxy" "$log_upstream" "$SCUBA"
 
 # Uploading should make data available in both locations
-  $ yes B 2>/dev/null | head -c 2KiB | hg --config extensions.lfs= debuglfssend "$lfs_proxy"
+  $ yes B 2>/dev/null | head -c 2KiB | hg debuglfssend "$lfs_proxy"
   a1bcf2c963bec9588aaa30bd33ef07873792e3ec241453b0d21635d1c4bbae84 2048
 
 
@@ -95,10 +95,10 @@
       "http_user_agent": "mononoke-lfs-server/0.1.0 git/2.15.1",
   $ truncate -s 0 "$log_proxy" "$log_upstream"
 
-  $ hg --config extensions.lfs= debuglfsreceive a1bcf2c963bec9588aaa30bd33ef07873792e3ec241453b0d21635d1c4bbae84 2048 "$lfs_proxy" | sha256sum
+  $ hg debuglfsreceive a1bcf2c963bec9588aaa30bd33ef07873792e3ec241453b0d21635d1c4bbae84 2048 "$lfs_proxy" | sha256sum
   a1bcf2c963bec9588aaa30bd33ef07873792e3ec241453b0d21635d1c4bbae84  -
 
-  $ hg --config extensions.lfs= debuglfsreceive a1bcf2c963bec9588aaa30bd33ef07873792e3ec241453b0d21635d1c4bbae84 2048 "$lfs_upstream" | sha256sum
+  $ hg debuglfsreceive a1bcf2c963bec9588aaa30bd33ef07873792e3ec241453b0d21635d1c4bbae84 2048 "$lfs_upstream" | sha256sum
   a1bcf2c963bec9588aaa30bd33ef07873792e3ec241453b0d21635d1c4bbae84  -
 
   $ cat "$log_proxy"

@@ -39,7 +39,7 @@
   }
 
 # Send some data
-  $ yes A 2>/dev/null | head -c 2KiB | hg --config extensions.lfs= debuglfssend "${lfs_root}/lfs1"
+  $ yes A 2>/dev/null | head -c 2KiB | hg debuglfssend "${lfs_root}/lfs1"
   ab02c2a1923c8eb11cb3ddab70320746d71d32ad63f255698dc67c3295757746 2048
 
 # Check that Scuba logs *do not* contain `client_hostname`
@@ -63,7 +63,7 @@
   $ sleep 2
 
 # Send some data
-  $ yes A 2>/dev/null | head -c 2KiB | hg --config extensions.lfs= debuglfssend "${lfs_root}/lfs1"
+  $ yes A 2>/dev/null | head -c 2KiB | hg debuglfssend "${lfs_root}/lfs1"
   ab02c2a1923c8eb11cb3ddab70320746d71d32ad63f255698dc67c3295757746 2048
 
 # Check that Scuba logs contain `client_hostname`

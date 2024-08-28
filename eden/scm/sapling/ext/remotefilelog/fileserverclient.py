@@ -11,9 +11,8 @@ import struct
 import time
 import traceback
 
-from sapling import error, perftrace, pycompat, revlog, wireproto
+from sapling import error, perftrace, pycompat, wireproto
 from sapling.i18n import _
-from sapling.node import bin
 
 from . import constants, shallowutil, wirepack
 
@@ -23,8 +22,6 @@ fetchcost = 0
 fetches = 0
 fetched = 0
 fetchmisses = 0
-
-_lfsmod = None
 
 
 def peersetup(ui, peer):
@@ -202,11 +199,6 @@ class fileserverclient:
         """downloads the given file versions to the cache"""
         repo = self.repo
 
-        batchlfsdownloads = self.ui.configbool(
-            "remotefilelog", "_batchlfsdownloads", True
-        )
-        dolfsprefetch = self.ui.configbool("remotefilelog", "dolfsprefetch", True)
-
         if not force:
             contentstore = repo.fileslog.filestore
             metadatastore = repo.fileslog.metadatastore
@@ -222,9 +214,6 @@ class fileserverclient:
         if fetchhistory:
             metadatastore.prefetch(fileids)
 
-        if batchlfsdownloads and dolfsprefetch:
-            self._lfsprefetch(fileids)
-
         if force:
             # Yay, since the shared-only stores and the regular ones aren't
             # shared, we need to commit data to force the stores to be
@@ -233,31 +222,6 @@ class fileserverclient:
             contentstore = None
             metadatastore = None
             repo.commitpending()
-
-    @perftrace.tracefunc("LFS Prefetch")
-    def _lfsprefetch(self, fileids):
-        if not _lfsmod or not hasattr(self.repo.svfs, "lfslocalblobstore"):
-            return
-        if not _lfsmod.wrapper.candownload(self.repo):
-            return
-        pointers = []
-        filenames = {}
-        store = self.repo.svfs.lfslocalblobstore
-        for file, node in fileids:
-            rlog = self.repo.file(file)
-            if rlog.flags(node) & revlog.REVIDX_EXTSTORED:
-                text = rlog.revision(node, raw=True)
-                p = _lfsmod.pointer.deserialize(text)
-                oid = p.oid()
-                if not store.has(oid):
-                    pointers.append(p)
-                    filenames[oid] = file
-        if len(pointers) > 0:
-            perftrace.tracevalue("Missing", len(pointers))
-            self.repo.svfs.lfsremoteblobstore.readbatch(
-                pointers, store, objectnames=filenames
-            )
-            assert all(store.has(p.oid()) for p in pointers)
 
     def logstacktrace(self):
         self.ui.log(

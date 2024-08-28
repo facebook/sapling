@@ -8,14 +8,6 @@
 
 Setup configuration
 
-  $ cat >> $HGRCPATH << EOF
-  > [extensions]
-  > lfs=
-  > [lfs]
-  > threshold=20B
-  > usercache=$TESTTMP/lfs-cache
-  > EOF
-
   $ LFS_THRESHOLD="20" setup_common_config blob_files
   $ REPOID=2 setup_mononoke_repo_config lfs_other
   $ cd "$TESTTMP"

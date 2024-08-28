@@ -24,10 +24,10 @@
 
 # Put content in lfs1 and lfs2
 
-  $ yes A 2>/dev/null | head -c 2KiB | hg --config extensions.lfs= debuglfssend "${lfs_upstream}/lfs1"
+  $ yes A 2>/dev/null | head -c 2KiB | hg debuglfssend "${lfs_upstream}/lfs1"
   ab02c2a1923c8eb11cb3ddab70320746d71d32ad63f255698dc67c3295757746 2048
 
-  $ yes B 2>/dev/null | head -c 2KiB | hg --config extensions.lfs= debuglfssend "${lfs_upstream}/lfs2"
+  $ yes B 2>/dev/null | head -c 2KiB | hg debuglfssend "${lfs_upstream}/lfs2"
   a1bcf2c963bec9588aaa30bd33ef07873792e3ec241453b0d21635d1c4bbae84 2048
 
   $ cat "$log_proxy" >> "$log_proxy.saved"
