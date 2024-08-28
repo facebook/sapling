@@ -528,7 +528,7 @@ impl AuthorizationContext {
     ) -> AuthorizationCheckOutcome {
         let permitted = match self {
             AuthorizationContext::FullAccess => true,
-            AuthorizationContext::Identity => {
+            AuthorizationContext::Identity | AuthorizationContext::DraftOnlyIdentity => {
                 #[cfg(fbcode_build)]
                 {
                     if cc_ctx.owner.is_none() {
@@ -611,9 +611,7 @@ impl AuthorizationContext {
                 false
             }
             AuthorizationContext::Service(_service_name) => false,
-            AuthorizationContext::ReadOnlyIdentity | AuthorizationContext::DraftOnlyIdentity => {
-                false
-            }
+            AuthorizationContext::ReadOnlyIdentity => false,
         };
         AuthorizationCheckOutcome::from_permitted(permitted)
     }
