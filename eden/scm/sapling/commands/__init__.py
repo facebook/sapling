@@ -2573,8 +2573,6 @@ def _dograft(ui, repo, *revs, **opts):
     if not opts.get("date") and opts.get("currentdate"):
         opts["date"] = "%d %d" % util.makedate()
 
-    editor = cmdutil.getcommiteditor(editform="graft", **opts)
-
     cont = False
     if opts.get("continue") or opts.get("abort"):
         if revs and opts.get("continue"):
@@ -2658,7 +2656,6 @@ def _dograft(ui, repo, *revs, **opts):
         date = ctx.date()
         if opts.get("date"):
             date = opts["date"]
-        message = _makegraftmessage(ctx, opts)
 
         # Apply --from-path/--to-path mappings to manifest being grafted, and its
         # parent manifest.
@@ -2696,6 +2693,8 @@ def _dograft(ui, repo, *revs, **opts):
             cont = False
 
         # commit
+        editor = cmdutil.getcommiteditor(editform="graft", **opts)
+        message = _makegraftmessage(ctx, opts)
         node = repo.commit(
             text=message, user=user, date=date, extra=extra, editor=editor
         )
