@@ -215,23 +215,6 @@ def _adhocstores(ui, url):
 
 
 @command(
-    "debuglfsreceive|debuglfsrecv",
-    [],
-    _("@prog@ debuglfsreceive OID SIZE [URL]"),
-    norepo=True,
-)
-def debuglfsreceive(ui, oid, size, url=None):
-    """receive a single object from LFS server, write it to stdout"""
-    local, remote = _adhocstores(ui, url)
-
-    longoid = "sha256:%s" % oid
-    pointers = [pointer.gitlfspointer(oid=longoid, size=size)]
-    remote.readbatch(pointers, local)
-
-    ui.writebytes((local.read(oid)))
-
-
-@command(
     "debuglfsreceiveall|debuglfsrecvall",
     [],
     _("@prog@ debuglfsreceiveall URL OID SIZE [OID SIZE]"),

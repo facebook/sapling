@@ -184,6 +184,9 @@
       "batch_request_parsed_us": *, (glob)
       "batch_request_received_us": *, (glob)
       "batch_response_ready_us": *, (glob)
+      "client_attempt": 1,
+      "client_attempts_left": *, (glob)
+      "client_throttle_attempts_left": *, (glob)
       "duration_ms": *, (glob)
       "error_count": 0,
       "headers_duration_ms": *, (glob)
@@ -204,7 +207,7 @@
       "http_host": "*", (glob)
       "http_method": "POST",
       "http_path": "/lfs1/objects/batch",
-      "http_user_agent": "mercurial/* git/*", (glob)
+      "http_user_agent": "Sapling/*", (glob)
       "method": "batch",
       "repository": "lfs1",
       "request_id": "*", (glob)
@@ -241,13 +244,15 @@
       "SqlReadsMaster": 0,
       "SqlReadsReplica": 0,
       "SqlWrites": 0,
+      "client_attempt": 1,
+      "client_attempts_left": *, (glob)
+      "client_throttle_attempts_left": *, (glob)
       "download_content_size": 2048,
       "duration_ms": *, (glob)
       "error_count": 0,
       "headers_duration_ms": *, (glob)
       "http_status": 200,
-      "response_bytes_sent": 2048,
-      "response_content_length": 2048,
+      "response_bytes_sent": 18,
       "seq": 0,
       "stream_completed": *, (glob)
       "stream_completion_time_us": *, (glob)
@@ -268,10 +273,11 @@
       "http_method": "GET",
       "http_path": "/lfs1/download/d28548bc21aabf04d143886d717d72375e3deecd0dafb3d110676b70a192cb5d",
       "http_query": "server_hostname=*", (glob)
-      "http_user_agent": "mercurial/* git/*", (glob)
+      "http_user_agent": "Sapling/*", (glob)
       "method": "download",
       "repository": "lfs1",
       "request_id": "*", (glob)
+      "response_content_encoding": "zstd",
       "sandcastle_alias": null
     },
     "normvector": {

@@ -21,6 +21,7 @@ cmddebugdumpindexedlog = { version = "0.1.0", path = "debugcommands/cmddebugdump
 cmddebugdumpinternalconfig = { version = "0.1.0", path = "debugcommands/cmddebugdumpinternalconfig" }
 cmddebugfsync = { version = "0.1.0", path = "debugcommands/cmddebugfsync" }
 cmddebughttp = { version = "0.1.0", path = "debugcommands/cmddebughttp" }
+cmddebuglfsreceive = { version = "0.1.0", path = "debugcommands/cmddebuglfsreceive" }
 cmddebuglfssend = { version = "0.1.0", path = "debugcommands/cmddebuglfssend" }
 cmddebugmergestate = { version = "0.1.0", path = "debugcommands/cmddebugmergestate" }
 cmddebugmetrics = { version = "0.1.0", path = "debugcommands/cmddebugmetrics" }
