@@ -12,8 +12,8 @@ setup configuration
   $ cd $TESTTMP
 
 setup repo
-  $ hginit_treemanifest repo-hg
-  $ cd repo-hg
+  $ hginit_treemanifest repo
+  $ cd repo
   $ echo foo > a
   $ echo foo > b
   $ hg ci -Aqm 'initial'
@@ -29,12 +29,12 @@ create master bookmark
 
 blobimport them into Mononoke storage and start Mononoke
   $ cd ..
-  $ blobimport repo-hg/.hg repo
+  $ blobimport repo/.hg repo
 
 start mononoke
   $ start_and_wait_for_mononoke_server
 Make client repo
-  $ hg clone -q ssh://user@dummy/repo-hg client-push --noupdate
+  $ hg clone -q ssh://user@dummy/repo client-push --noupdate
 
 Push a simple commit to Mononoke
   $ cd $TESTTMP/client-push
@@ -63,21 +63,21 @@ Push two commits to Mononoke, one of them has a force copy
   a1e678b3ed9a3df8ef590d407b97d88891a66778
 
 Sync it to another client
-  $ cd $TESTTMP/repo-hg
+  $ cd $TESTTMP/repo
   $ enable_replay_verification_hook
 
 Sync first simple push
   $ cd $TESTTMP
-  $ mononoke_hg_sync repo-hg 1 &> /dev/null
-  $ cd repo-hg
+  $ mononoke_hg_sync repo 1 &> /dev/null
+  $ cd repo
   $ hg log -r master_bookmark -T '{node}\n'
   f1c370cc51a0684dcc579385cc255882bcdc8bcb
 
 Sync second tricky push
   $ cd $TESTTMP
-  $ mononoke_hg_sync repo-hg 2 2>&1 | grep 'successful sync'
+  $ mononoke_hg_sync repo 2 2>&1 | grep 'successful sync'
   * successful sync of entries [3]* (glob)
-  $ cd repo-hg
+  $ cd repo
   $ hg log -r master_bookmark -T '{node}\n'
   a1e678b3ed9a3df8ef590d407b97d88891a66778
 
@@ -116,8 +116,8 @@ Push of a merge with a copy
   A remotecopied
 
   $ cd $TESTTMP
-  $ mononoke_hg_sync repo-hg 3 &> /dev/null
-  $ cd $TESTTMP/repo-hg
+  $ mononoke_hg_sync repo 3 &> /dev/null
+  $ cd $TESTTMP/repo
   $ hg log -r tip
   commit:      bc6bfc6ac632
   bookmark:    master_bookmark
@@ -201,11 +201,11 @@ parent
   c019126b122e679401c27e13131609aa50d3e806
 
   $ cd $TESTTMP
-  $ mononoke_hg_sync repo-hg 4 &> /dev/null
+  $ mononoke_hg_sync repo 4 &> /dev/null
 Sync merges
-  $ mononoke_hg_sync repo-hg 5 &>/dev/null
-  $ mononoke_hg_sync repo-hg 6 &>/dev/null
-  $ mononoke_hg_sync repo-hg 7 &>/dev/null
-  $ cd $TESTTMP/repo-hg
+  $ mononoke_hg_sync repo 5 &>/dev/null
+  $ mononoke_hg_sync repo 6 &>/dev/null
+  $ mononoke_hg_sync repo 7 &>/dev/null
+  $ cd $TESTTMP/repo
   $ hg log -r tip -T '{node}\n'
   c019126b122e679401c27e13131609aa50d3e806

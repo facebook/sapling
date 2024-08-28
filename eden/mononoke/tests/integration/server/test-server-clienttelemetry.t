@@ -12,8 +12,8 @@ setup configuration
   $ cd $TESTTMP
 
 setup repo
-  $ hginit_treemanifest repo-hg
-  $ cd repo-hg
+  $ hginit_treemanifest repo
+  $ cd repo
   $ echo "a file content" > a
   $ hg add a
   $ hg ci -ma
@@ -23,7 +23,7 @@ create master bookmark
 
 setup data
   $ cd $TESTTMP
-  $ blobimport repo-hg/.hg repo
+  $ blobimport repo/.hg repo
 
 start mononoke
   $ start_and_wait_for_mononoke_server
@@ -36,7 +36,7 @@ setup config
   > EOF
 
 set up the local repo
-  $ hg clone -q ssh://user@dummy/repo-hg local
+  $ hg clone -q ssh://user@dummy/repo local
   $ cd local
   $ hgmn pull
   pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo

@@ -23,8 +23,8 @@ setup configuration
   $ enable amend
 
 setup repo
-  $ hginit_treemanifest repo-hg
-  $ cd repo-hg
+  $ hginit_treemanifest repo
+  $ cd repo
   $ drawdag <<EOF
   > A X
   > EOF
@@ -34,12 +34,12 @@ setup repo
 
 blobimport
   $ cd ..
-  $ blobimport repo-hg/.hg repo
+  $ blobimport repo/.hg repo
 
 start mononoke
   $ start_and_wait_for_mononoke_server
 clone
-  $ hg clone -q ssh://user@dummy/repo-hg repo2 --noupdate
+  $ hg clone -q ssh://user@dummy/repo repo2 --noupdate
   $ cd repo2
   $ enable remotenames
 

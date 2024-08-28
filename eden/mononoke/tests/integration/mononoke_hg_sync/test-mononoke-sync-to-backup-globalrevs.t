@@ -15,8 +15,8 @@ setup configuration
 
 setup repo
 
-  $ hginit_treemanifest repo-hg
-  $ cd repo-hg
+  $ hginit_treemanifest repo
+  $ cd repo
   $ echo foo > a
   $ echo foo > b
   $ hg addremove && hg ci -m 'initial'
@@ -35,14 +35,14 @@ create master bookmark
 
 blobimport them into Mononoke storage and start Mononoke
   $ cd ..
-  $ REPOID=0 blobimport repo-hg/.hg orig
+  $ REPOID=0 blobimport repo/.hg orig
   $ REPONAME=orig
-  $ REPOID=1 blobimport repo-hg/.hg backup
+  $ REPOID=1 blobimport repo/.hg backup
 
 start mononoke
   $ start_and_wait_for_mononoke_server
 Make client repo
-  $ hg clone -q ssh://user@dummy/repo-hg client-push --noupdate
+  $ hg clone -q ssh://user@dummy/repo client-push --noupdate
   $ hg clone -q mononoke://$(mononoke_address)/backup backup --noupdate
 
 Push to Mononoke

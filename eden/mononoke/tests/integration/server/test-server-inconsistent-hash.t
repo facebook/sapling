@@ -18,8 +18,8 @@
   $ cd $TESTTMP
 
 # 1. Setup nolfs hg repo, create several commit to it
-  $ hginit_treemanifest repo-hg
-  $ cd repo-hg
+  $ hginit_treemanifest repo
+  $ cd repo
 
 # Commit small file
   $ echo s > smallfile
@@ -27,13 +27,13 @@
   $ hg bookmark master_bookmark -r tip
   $ cd ..
 
-  $ blobimport repo-hg/.hg repo
+  $ blobimport repo/.hg repo
 
 # 2. Setup Mononoke.
   $ start_and_wait_for_mononoke_server
 # 3. Clone hg server repo to hg client repo
-  $ hg clone -q ssh://user@dummy/repo-hg repo-hg-client --noupdate
-  $ cd repo-hg-client
+  $ hg clone -q ssh://user@dummy/repo repo-client --noupdate
+  $ cd repo-client
 
   $ cat >> .hg/hgrc <<EOF
   > [extensions]

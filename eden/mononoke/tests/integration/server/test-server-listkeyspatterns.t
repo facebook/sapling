@@ -11,18 +11,18 @@ setup configuration
   $ cd $TESTTMP
 
 setup repo
-  $ hginit_treemanifest repo-hg
+  $ hginit_treemanifest repo
 
 setup hg server repo
-  $ cd repo-hg
+  $ cd repo
   $ cd $TESTTMP
 
 setup client repo
-  $ hg clone -q ssh://user@dummy/repo-hg repo-client --noupdate
+  $ hg clone -q ssh://user@dummy/repo repo-client --noupdate
   $ cd repo-client
 
 make a few commits on the server
-  $ cd $TESTTMP/repo-hg
+  $ cd $TESTTMP/repo
   $ hg debugdrawdag <<'EOF'
   > C E G
   > | | |
@@ -40,7 +40,7 @@ create bookmarks
 
 blobimport them into Mononoke storage and start Mononoke
   $ cd ..
-  $ blobimport repo-hg/.hg repo
+  $ blobimport repo/.hg repo
 
 start mononoke
   $ start_and_wait_for_mononoke_server

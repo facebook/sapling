@@ -15,7 +15,7 @@ setup configuration
   │
   o  A [draft;rev=0;426bada5c675]
   $
-  $ blobimport repo-hg/.hg repo --derived-data-type=blame --derived-data-type=unodes
+  $ blobimport repo/.hg repo --derived-data-type=blame --derived-data-type=unodes
 
 validate, expecting all valid, checking marker types
   $ mononoke_walker -l validate validate -q -I deep -I marker -b master_bookmark 2>&1 | strip_glog
@@ -36,12 +36,12 @@ Record the filenode info
 
 Make a really non-public commit by importing it and not advancing bookmarks
   $ BONSAIPUBLIC=$(mononoke_newadmin bookmarks --repo-id $REPOID get master_bookmark)
-  $ cd repo-hg
+  $ cd repo
   $ HGCOMMITC=$(hg log -r tip -T '{node}')
   $ mkcommit C
   $ HGCOMMITCNEW=$(hg log -r tip -T '{node}')
   $ cd ..
-  $ blobimport repo-hg/.hg repo --no-bookmark --derived-data-type=unodes --exclude-derived-data-type=filenodes
+  $ blobimport repo/.hg repo --no-bookmark --derived-data-type=unodes --exclude-derived-data-type=filenodes
 
 Remove the phase information so we do not use a cached public value
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "DELETE FROM phases where repo_id >= 0";

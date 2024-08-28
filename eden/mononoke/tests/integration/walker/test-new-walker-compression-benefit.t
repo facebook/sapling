@@ -15,7 +15,7 @@ setup configuration
   │
   o  A [draft;rev=0;426bada5c675]
   $
-  $ blobimport repo-hg/.hg repo --derived-data-type=fsnodes
+  $ blobimport repo/.hg repo --derived-data-type=fsnodes
 
 compression-benefit, file content only, not expecting any compression from the tiny test files
   $ mononoke_walker -l sizing compression-benefit -q --bookmark master_bookmark --sample-rate 1 --include-sample-node-type FileContent 2>&1 | strip_glog

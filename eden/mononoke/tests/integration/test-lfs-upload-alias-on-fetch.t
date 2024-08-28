@@ -15,8 +15,8 @@
   $ cd $TESTTMP
 
 # 1. Setup nolfs hg repo, create several commit to it
-  $ hginit_treemanifest repo-hg-nolfs
-  $ cd repo-hg-nolfs
+  $ hginit_treemanifest repo
+  $ cd repo
 
 # Commit small file
   $ echo s > smallfile
@@ -32,7 +32,7 @@
 #   2.b Motivation: For blob_files storage, is because we need to run Mononoke and Mononoke API server.
 #       We cannot have 2 processes for 1 RocksDB repo, as RocksDb does not allows us to do that.
 #   2.c Still Mononoke config is blobimported to Rocks DB. As Api server and Mononoke server are using them separately.
-  $ blobimport repo-hg-nolfs/.hg repo
+  $ blobimport repo/.hg repo
 
 # 3. Setup Mononoke. Introduce LFS_THRESHOLD into Mononoke server config.
   $ start_and_wait_for_mononoke_server
@@ -40,8 +40,8 @@
   $ lfs_uri="$(lfs_server)/repo"
 
 # 5. Clone hg nolfs repo to lfs client hg repo. Setup small threshold for large file size.
-  $ hg clone -q ssh://user@dummy/repo-hg-nolfs repo-hg-lfs --noupdate
-  $ cd repo-hg-lfs
+  $ hg clone -q ssh://user@dummy/repo repo-lfs --noupdate
+  $ cd repo-lfs
   $ setup_hg_modern_lfs "$lfs_uri" 1000B "$TESTTMP/lfs-cache1"
 
   $ cat >> .hg/hgrc <<EOF
@@ -83,8 +83,8 @@
 
   $ cd ..
 7. Hg pull from hg client repo.
-  $ hg clone -q ssh://user@dummy/repo-hg-nolfs repo-hg-lfs2 --noupdate
-  $ cd repo-hg-lfs2
+  $ hg clone -q ssh://user@dummy/repo repo-lfs2 --noupdate
+  $ cd repo-lfs2
   $ setup_hg_modern_lfs "$lfs_uri" 1000B $TESTTMP/lfs-cache2
 
   $ cat >> .hg/hgrc <<EOF

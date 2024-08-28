@@ -9,8 +9,8 @@
 setup configuration with some compressable files
   $ PACK_BLOB=0 setup_common_config "blob_files"
   $ cd $TESTTMP
-  $ hginit_treemanifest repo-hg-nolfs
-  $ cd repo-hg-nolfs
+  $ hginit_treemanifest repo
+  $ cd repo
   $ cp "${TEST_FIXTURES}/raw_text.txt" f1
   $ hg commit -Aqm "f1"
   $ cp f1 f2
@@ -21,7 +21,7 @@ setup configuration with some compressable files
   $ hg commit -Aqm "f3"
   $ hg bookmark master_bookmark -r tip
   $ cd ..
-  $ blobimport repo-hg-nolfs/.hg repo
+  $ blobimport repo/.hg repo
 
 Run a scrub with the pack logging enabled
   $ mononoke_walker -l loaded scrub -q -I deep -i bonsai -i FileContent -b master_bookmark -a all --pack-log-scuba-file pack-info.json 2>&1 | strip_glog

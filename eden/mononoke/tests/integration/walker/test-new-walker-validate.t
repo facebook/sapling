@@ -58,7 +58,7 @@ Check scuba data
   1,"hg_link_node_populated","hgfilenode.sha1.35e7525ce3a48913275d7061dd9a867ffef1e34d","B","HgFileNode","repo","hgmanifest.sha1.*","(none)","HgManifest","hgchangeset.sha1.*",,"HgChangeset","validate" (glob)
 
 repair by blobimport.
-  $ blobimport repo-hg/.hg repo
+  $ blobimport repo/.hg repo
 
 validate, expecting all valid, this time checking marker types as well
   $ mononoke_walker -l validate validate -q -I deep -I marker -b master_bookmark 2>&1 | strip_glog

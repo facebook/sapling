@@ -14,8 +14,8 @@ setup configuration
 
 setup repo
 
-  $ hginit_treemanifest repo-hg
-  $ cd repo-hg
+  $ hginit_treemanifest repo
+  $ cd repo
   $ echo foo > a
   $ echo foo > b
   $ hg addremove && hg ci -m 'initial'
@@ -34,12 +34,12 @@ create master bookmark
 
 blobimport them into Mononoke storage and start Mononoke
   $ cd ..
-  $ blobimport repo-hg/.hg repo
+  $ blobimport repo/.hg repo
 
 start mononoke
   $ start_and_wait_for_mononoke_server
 Make client repo
-  $ hg clone -q ssh://user@dummy/repo-hg client-push --noupdate
+  $ hg clone -q ssh://user@dummy/repo client-push --noupdate
 
 Push to Mononoke
   $ cd $TESTTMP/client-push
@@ -65,23 +65,23 @@ Sync it to another client
   $ cd $TESTTMP
 
 Make a copy of it that will be used later
-  $ cp -r repo-hg repo-hg-2
-  $ cp -r repo-hg repo-hg-3
+  $ cp -r repo repo-2
+  $ cp -r repo repo-3
 
 Try to sync blobimport bookmark move, which should fail
   $ cd "$TESTTMP"
 
 State 0 means Mononoke is unlocked
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "insert into repo_lock (repo_id, state, reason) values(0, 0, null)";
-  $ mononoke_hg_sync_with_failure_handler repo-hg 0 2>&1 | grep 'unexpected bookmark move'
+  $ mononoke_hg_sync_with_failure_handler repo 0 2>&1 | grep 'unexpected bookmark move'
   * unexpected bookmark move: blobimport* (glob)
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select count(*) from repo_lock"
   1
 
 Sync a pushrebase bookmark move
-  $ mononoke_hg_sync repo-hg 1 2>&1 | grep 'successful sync'
+  $ mononoke_hg_sync repo 1 2>&1 | grep 'successful sync'
   * successful sync of entries [2]* (glob)
-  $ cd repo-hg
+  $ cd repo
   $ hg log -r master_bookmark
   commit:      1e43292ffbb3
   bookmark:    master_bookmark
@@ -90,9 +90,9 @@ Sync a pushrebase bookmark move
   summary:     pushcommit
   
   $ cd $TESTTMP
-  $ mononoke_hg_sync repo-hg 2 2>&1 | grep 'successful sync'
+  $ mononoke_hg_sync repo 2 2>&1 | grep 'successful sync'
   * successful sync of entries [3]* (glob)
-  $ cd repo-hg
+  $ cd repo
   $ hg log -r master_bookmark
   commit:      6cc06ef82eeb
   bookmark:    master_bookmark
@@ -107,9 +107,9 @@ Sync a pushrebase bookmark move
   summary:     pushcommit
   
   $ cd $TESTTMP
-  $ mononoke_hg_sync repo-hg 3 2>&1 | grep 'successful sync'
+  $ mononoke_hg_sync repo 3 2>&1 | grep 'successful sync'
   * successful sync of entries [4]* (glob)
-  $ cd repo-hg
+  $ cd repo
   $ hg log -r master_bookmark
   commit:      1e43292ffbb3
   bookmark:    master_bookmark
@@ -118,7 +118,7 @@ Sync a pushrebase bookmark move
   summary:     pushcommit
   
 Enable replay verification hooks
-  $ cd $TESTTMP/repo-hg-2
+  $ cd $TESTTMP/repo-2
   $ enable_replay_verification_hook
   $ hg log -r master_bookmark
   commit:      add0c792bfce
@@ -128,7 +128,7 @@ Enable replay verification hooks
   summary:     a => bar
   
   $ cd $TESTTMP
-  $ cd repo-hg-2
+  $ cd repo-2
   $ hg log -r master_bookmark
   commit:      add0c792bfce
   bookmark:    master_bookmark
@@ -138,9 +138,9 @@ Enable replay verification hooks
   
 Replay in a loop
   $ cd $TESTTMP
-  $ mononoke_hg_sync_loop repo-hg-3 0 2>&1 | grep 'unexpected bookmark'
+  $ mononoke_hg_sync_loop repo-3 0 2>&1 | grep 'unexpected bookmark'
   * unexpected bookmark move: blobimport* (glob)
-  $ mononoke_hg_sync_loop repo-hg-3 1 --bundle-prefetch 0 2>&1 | grep 'successful sync'
+  $ mononoke_hg_sync_loop repo-3 1 --bundle-prefetch 0 2>&1 | grep 'successful sync'
   * successful sync of entries [2]* (glob)
   * successful sync of entries [3]* (glob)
   * successful sync of entries [4]* (glob)
@@ -158,9 +158,9 @@ Make one more push from the client
 
 Continue replay
   $ cd $TESTTMP
-  $ mononoke_hg_sync_loop repo-hg-3 1 2>&1 | grep 'successful sync'
+  $ mononoke_hg_sync_loop repo-3 1 2>&1 | grep 'successful sync'
   * successful sync of entries [5]* (glob)
-  $ cd $TESTTMP/repo-hg-3
+  $ cd $TESTTMP/repo-3
   $ hg log -r tip
   commit:      67d5c96d65a7
   bookmark:    master_bookmark
@@ -194,17 +194,17 @@ Make a commit that makes a file executable and a commit that adds a symlink. Mak
   updating bookmark master_bookmark
 
 Continue replay
-  $ cd $TESTTMP/repo-hg-3
+  $ cd $TESTTMP/repo-3
   $ cat >>.hg/hgrc <<CONFIG
   > [hooks]
   > prepushkey = python "$TESTTMP/replayverification.py"
   > CONFIG
 
   $ cd $TESTTMP
-  $ mononoke_hg_sync_loop repo-hg-3 5 2>&1 | grep 'successful sync'
+  $ mononoke_hg_sync_loop repo-3 5 2>&1 | grep 'successful sync'
   * successful sync of entries [6]* (glob)
   * successful sync of entries [7]* (glob)
-  $ cd repo-hg-3
+  $ cd repo-3
   $ hg log -r master_bookmark^
   commit:      a7acac33c050
   user:        test
@@ -218,12 +218,12 @@ Continue replay
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     symlink
   
-Verify that repo-hg-2 is locked for normal pushes
+Verify that repo-2 is locked for normal pushes
   $ cd $TESTTMP/client-push
   $ hg up 0 -q
   $ echo >> ababagalamaga && hg ci -qAm ababagalamaga
-  $ hg push -r . --to master_bookmark ssh://user@dummy/repo-hg-2
-  pushing rev 24e27c11427d to destination ssh://user@dummy/repo-hg-2 bookmark master_bookmark
+  $ hg push -r . --to master_bookmark ssh://user@dummy/repo-2
+  pushing rev 24e27c11427d to destination ssh://user@dummy/repo-2 bookmark master_bookmark
   searching for changes
   remote: pushing 1 changeset:
   remote:     24e27c11427d  ababagalamaga
@@ -234,7 +234,7 @@ Verify that repo-hg-2 is locked for normal pushes
   [255]
 
 Test hook bypass using REPLAY_BYPASS file
-  $ cd $TESTTMP/repo-hg-2
+  $ cd $TESTTMP/repo-2
   $ cat >>.hg/hgrc <<CONFIG
   > [hooks]
   > prepushkey = python:$TESTTMP/replayverification.py:verify_replay
@@ -249,18 +249,18 @@ Test hook bypass using REPLAY_BYPASS file
   summary:     a => bar
   
   $ cd $TESTTMP
-  $ touch repo-hg-2/.hg/REPLAY_BYPASS
+  $ touch repo-2/.hg/REPLAY_BYPASS
 
 Test failing to sync, but already having the correct bookmark location
-  $ mononoke_hg_sync_with_retry repo-hg-2 1 2>&1 | grep 'successful sync'
+  $ mononoke_hg_sync_with_retry repo-2 1 2>&1 | grep 'successful sync'
   * successful sync of entries [2]* (glob)
 
 Test further sync
-  $ mononoke_hg_sync_with_retry repo-hg-2 1 2>&1 | grep -E '(sync failed|successful sync)'
+  $ mononoke_hg_sync_with_retry repo-2 1 2>&1 | grep -E '(sync failed|successful sync)'
   * successful sync of entries [2]* (glob)
 
 Test bookmark deletion sync
-  $ cat >>$TESTTMP/repo-hg-3/.hg/hgrc <<CONFIG
+  $ cat >>$TESTTMP/repo-3/.hg/hgrc <<CONFIG
   > [hooks]
   > prepushkey = python:$TESTTMP/replayverification.py:verify_replay
   > CONFIG
@@ -278,7 +278,7 @@ Test bookmark deletion sync
   summary:     symlink
   
   $ cd $TESTTMP
-  $ mononoke_hg_sync_loop repo-hg-3 7 2>&1 | grep 'successful sync'
+  $ mononoke_hg_sync_loop repo-3 7 2>&1 | grep 'successful sync'
   * successful sync of entries [8]* (glob)
   $ cd $TESTTMP/client-push
   $ hgmn push --delete book_to_delete
@@ -296,9 +296,9 @@ Test bookmark deletion sync
   summary:     symlink
   
   $ cd $TESTTMP
-  $ mononoke_hg_sync_loop repo-hg-3 8 2>&1 | grep 'successful sync'
+  $ mononoke_hg_sync_loop repo-3 8 2>&1 | grep 'successful sync'
   * successful sync of entries [9]* (glob)
-  $ cd $TESTTMP/repo-hg-3
+  $ cd $TESTTMP/repo-3
   $ hg log -r master_bookmark
   commit:      6f24f1b38581
   bookmark:    master_bookmark
@@ -331,10 +331,10 @@ Test force pushrebase sync
   
 -- let us now see if we can replay it
   $ cd $TESTTMP
-  $ mononoke_hg_sync_loop repo-hg-3 8 2>&1 | grep 'successful sync'
+  $ mononoke_hg_sync_loop repo-3 8 2>&1 | grep 'successful sync'
   * successful sync of entries [10]* (glob)
 -- and if the replay result is good (e.g. master_bookmark points to the same commit as in client-push)
-  $ cd $TESTTMP/repo-hg-3
+  $ cd $TESTTMP/repo-3
   $ hg log -r master_bookmark
   commit:      cc83c88b72d3
   bookmark:    master_bookmark
@@ -350,5 +350,5 @@ Test the job exits when the exit file is set
   $ hgmn push -r . --to master_bookmark -q
   $ touch $TESTTMP/exit-file
   $ cd $TESTTMP
-  $ mononoke_hg_sync_loop repo-hg-3 8 --exit-file $TESTTMP/exit-file 2>&1 | grep 'exists'
+  $ mononoke_hg_sync_loop repo-3 8 --exit-file $TESTTMP/exit-file 2>&1 | grep 'exists'
   * path "$TESTTMP/exit-file" exists: exiting ...* (glob)

@@ -13,8 +13,8 @@ setup configuration
 
 setup repo
 
-  $ hginit_treemanifest repo-hg
-  $ cd repo-hg
+  $ hginit_treemanifest repo
+  $ cd repo
   $ echo foo > a
   $ echo foo > b
   $ hg addremove && hg ci -m 'initial'
@@ -33,12 +33,12 @@ create master bookmark
 
 blobimport them into Mononoke storage and start Mononoke
   $ cd ..
-  $ blobimport repo-hg/.hg repo
+  $ blobimport repo/.hg repo
 
 start mononoke
   $ start_and_wait_for_mononoke_server
 Make client repo
-  $ hg clone -q ssh://user@dummy/repo-hg client-push --noupdate
+  $ hg clone -q ssh://user@dummy/repo client-push --noupdate
 
 Push to Mononoke
   $ cd $TESTTMP/client-push
@@ -69,12 +69,12 @@ Move backward
   updating bookmark master_bookmark
 
 Sync it to another client
-  $ cd $TESTTMP/repo-hg
+  $ cd $TESTTMP/repo
   $ enable_replay_verification_hook
   $ cd $TESTTMP
 
 Sync a push and a force push
-  $ mononoke_hg_sync_loop_regenerate repo-hg 1 --bundle-prefetch 2 2>&1 | grep 'successful sync of entries'
+  $ mononoke_hg_sync_loop_regenerate repo 1 --bundle-prefetch 2 2>&1 | grep 'successful sync of entries'
   * successful sync of entries [2]* (glob)
   * successful sync of entries [3]* (glob)
   * successful sync of entries [4]* (glob)

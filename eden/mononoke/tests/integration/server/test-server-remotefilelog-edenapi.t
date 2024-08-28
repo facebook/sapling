@@ -14,8 +14,8 @@ Setup repo config
 
 Setup repo
 
-  $ hginit_treemanifest repo-orig
-  $ cd repo-orig
+  $ hginit_treemanifest repo
+  $ cd repo
   $ echo s > smallfile
   $ hg commit -Aqm "add small file"
   $ hg bookmark master_bookmark -r tip
@@ -23,7 +23,7 @@ Setup repo
 
 Blobimport the hg repo to Mononoke
 
-  $ blobimport repo-orig/.hg repo
+  $ blobimport repo/.hg repo
   $ mononoke --scuba-dataset "file://$TESTTMP/log.json"
   $ wait_for_mononoke
 

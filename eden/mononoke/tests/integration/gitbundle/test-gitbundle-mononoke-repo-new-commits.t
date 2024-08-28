@@ -9,7 +9,7 @@
   $ ENABLED_DERIVED_DATA='["git_commits", "git_trees", "git_delta_manifests_v2", "unodes", "filenodes", "hgchangesets"]' INFINITEPUSH_ALLOW_WRITES=true setup_common_config $REPOTYPE
   $ GIT_REPO_ORIGIN="${TESTTMP}/origin/repo-git"
   $ GIT_REPO="${TESTTMP}/repo-git"
-  $ HG_REPO="${TESTTMP}/repo-hg"
+  $ HG_REPO="${TESTTMP}/repo"
   $ BUNDLE_PATH="${TESTTMP}/repo_bundle.bundle"
   $ cat >> $HGRCPATH <<EOF
   > [extensions]

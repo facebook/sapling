@@ -13,11 +13,11 @@ Setup repository
   $ export REPO_CLIENT_USE_WARM_BOOKMARKS_CACHE="true"
   $ BLOB_TYPE="blob_files" quiet default_setup_pre_blobimport
 
-  $ blobimport repo-hg/.hg repo
+  $ blobimport repo/.hg repo
   $ mononoke --scuba-dataset "file://$SCUBA_LOGGING_PATH"
   $ wait_for_mononoke "$TESTTMP/repo"
   $ cd "$TESTTMP"
-  $ hg clone -q ssh://user@dummy/repo-hg repo2 --noupdate
+  $ hg clone -q ssh://user@dummy/repo repo2 --noupdate
   $ cd repo2 || exit 1
   $ cat >> .hg/hgrc <<EOF
   > [extensions]

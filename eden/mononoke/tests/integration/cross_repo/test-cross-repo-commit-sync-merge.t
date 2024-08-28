@@ -20,8 +20,8 @@ setup hg server repos
   $ function createfile { mkdir -p "$(dirname  $1)" && echo "$1" > "$1" && hg add -q "$1"; }
 
   $ cd $TESTTMP
-  $ hginit_treemanifest fbs-hg-srv
-  $ cd fbs-hg-srv
+  $ hginit_treemanifest fbs-mon
+  $ cd fbs-mon
 -- create an initial stack of commits, which will be the last_synced_commit
 -- note that stack is important here, because we have a heuristic in mononoke_x_repo_sync_job
 -- that looks at generation number to decide what is being merged.
@@ -42,8 +42,8 @@ setup hg server repos
   $ hg -q ci -m 'merge_commit' && hg book -ir . fbsource_master
 
   $ cd $TESTTMP
-  $ hginit_treemanifest meg-hg-srv
-  $ cd meg-hg-srv
+  $ hginit_treemanifest meg-mon
+  $ cd meg-mon
   $ createfile fbcode/fbcodefile_fbsource
   $ createfile .fbsource-rest/arvr/arvrfile_fbsource
   $ createfile otherfile_fbsource
@@ -56,8 +56,8 @@ setup hg server repos
 
 blobimport hg servers repos into Mononoke repos
   $ cd $TESTTMP
-  $ REPOID=0 blobimport meg-hg-srv/.hg meg-mon
-  $ REPOID=1 blobimport fbs-hg-srv/.hg fbs-mon
+  $ REPOID=0 blobimport meg-mon/.hg meg-mon
+  $ REPOID=1 blobimport fbs-mon/.hg fbs-mon
 
 get some bonsai hashes to avoid magic strings later
   $ FBSOURCE_C1_BONSAI=$(mononoke_newadmin bookmarks --repo-id 1 get fbsource_c1)
@@ -65,8 +65,8 @@ get some bonsai hashes to avoid magic strings later
   $ MEGAREPO_MERGE_BONSAI=$(mononoke_newadmin bookmarks --repo-id 0 get master_bookmark)
 
 setup hg client repos
-  $ hg clone -q ssh://user@dummy/fbs-hg-srv fbs-hg-cnt --noupdate
-  $ hg clone -q ssh://user@dummy/meg-hg-srv meg-hg-cnt --noupdate
+  $ hg clone -q ssh://user@dummy/fbs-mon fbs-hg-cnt --noupdate
+  $ hg clone -q ssh://user@dummy/meg-mon meg-hg-cnt --noupdate
 
 start mononoke server
   $ start_and_wait_for_mononoke_server

@@ -8,8 +8,8 @@
 
 # setup repo, usegeneraldelta flag = false for forcing inline flag for file
 # forcing running algo for inline revlof parsing
-  $ hginit_treemanifest repo-hg --config format.usegeneraldelta=false
-  $ cd repo-hg
+  $ hginit_treemanifest repo --config format.usegeneraldelta=false
+  $ cd repo
 
   $ touch file
   $ max_line_length=20
@@ -43,4 +43,4 @@
 
   $ setup_mononoke_config
   $ cd $TESTTMP
-  $ blobimport repo-hg/.hg repo
+  $ blobimport repo/.hg repo

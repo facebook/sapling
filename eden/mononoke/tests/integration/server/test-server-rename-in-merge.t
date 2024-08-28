@@ -18,8 +18,8 @@ setup common configuration
   > EOF
 
 setup repo
-  $ hginit_treemanifest repo-hg
-  $ cd repo-hg
+  $ hginit_treemanifest repo
+  $ cd repo
   $ echo 1 > 1 && hg addremove && hg ci -m 1
   adding 1
   $ hg up null
@@ -29,9 +29,9 @@ setup repo
 
 Clone the repo
   $ cd ..
-  $ hg clone -q ssh://user@dummy/repo-hg repo2 --noupdate
+  $ hg clone -q ssh://user@dummy/repo repo2 --noupdate
   $ cd repo2
-  $ cd ../repo-hg
+  $ cd ../repo
 
 Create merge commit with rename
   $ hg up -q "min(all())"
@@ -51,7 +51,7 @@ create master bookmark
 
 blobimport them into Mononoke storage and start Mononoke
   $ cd ..
-  $ blobimport repo-hg/.hg repo
+  $ blobimport repo/.hg repo
 
 start mononoke
   $ start_and_wait_for_mononoke_server

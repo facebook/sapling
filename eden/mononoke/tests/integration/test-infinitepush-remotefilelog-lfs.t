@@ -11,8 +11,8 @@ Setup configuration
   $ cd "$TESTTMP"
 
 Setup repo
-  $ hginit_treemanifest repo-hg
-  $ cd repo-hg
+  $ hginit_treemanifest repo
+  $ cd repo
   $ touch a && hg addremove && hg ci -q -ma
   adding a
   $ hg log -T '{short(node)}\n'
@@ -20,7 +20,7 @@ Setup repo
   $ hg bookmark master_bookmark -r tip
 
   $ cd "$TESTTMP"
-  $ blobimport repo-hg/.hg repo
+  $ blobimport repo/.hg repo
 
 Start Mononoke
   $ start_and_wait_for_mononoke_server
@@ -39,13 +39,13 @@ Setup common client configuration for these tests
 
 setup repo-push and repo-pull
   $ cd "$TESTTMP"
-  $ hg clone -q ssh://user@dummy/repo-hg repo-push --noupdate
+  $ hg clone -q ssh://user@dummy/repo repo-push --noupdate
   $ cd "${TESTTMP}/repo-push"
   $ setup_hg_modern_lfs "$lfs_uri" 10B
   $ setconfig "remotefilelog.cachepath=$TESTTMP/cachepath-push"
 
   $ cd "$TESTTMP"
-  $ hg clone -q ssh://user@dummy/repo-hg repo-pull --noupdate
+  $ hg clone -q ssh://user@dummy/repo repo-pull --noupdate
   $ cd "${TESTTMP}/repo-pull"
   $ setup_hg_modern_lfs "$lfs_uri" 10B
   $ setconfig "remotefilelog.cachepath=$TESTTMP/cachepath-pull"

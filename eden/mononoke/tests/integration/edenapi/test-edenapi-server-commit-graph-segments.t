@@ -41,11 +41,11 @@
 
 Ensure we can clone the repo using the commit graph segments endpoint
   $ cd $TESTTMP
-  $ sl clone "mononoke://$(mononoke_address)/repo" repo-hg --config clone.use-rust=true --config clone.use-commit-graph=true
-  Cloning repo into $TESTTMP/repo-hg
+  $ sl clone "mononoke://$(mononoke_address)/repo" repo --config clone.use-rust=true --config clone.use-commit-graph=true
+  Cloning repo into $TESTTMP/repo
   Checking out 'master_bookmark'
   17 files updated
-  $ cd repo-hg
+  $ cd repo
   $ sl log -G -T '{node|short} {desc}'
   @  4e9f8e556b01 Q
   │

@@ -16,8 +16,8 @@ setup configuration
   $ REPOID_DEST=1
   $ cd $TESTTMP
 
-  $ hginit_treemanifest repo-hg
-  $ cd repo-hg
+  $ hginit_treemanifest repo
+  $ cd repo
   $ drawdag <<EOF
   > C
   > |
@@ -31,7 +31,7 @@ setup configuration
   $ hg ci -m 'large commit'
   $ hg book -r . master_bookmark
   $ cd $TESTTMP
-  $ blobimport repo-hg/.hg repo
+  $ blobimport repo/.hg repo
 
 Put list of keys reachable from master_bookmark in a file. This list was produced by running
 walker

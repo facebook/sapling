@@ -13,8 +13,8 @@ setup configuration
 
 setup repo
 
-  $ hginit_treemanifest repo-hg
-  $ cd repo-hg
+  $ hginit_treemanifest repo
+  $ cd repo
   $ echo foo > a
   $ echo foo > b
   $ hg addremove && hg ci -m 'initial'
@@ -33,12 +33,12 @@ create master bookmark
 
 blobimport them into Mononoke storage and start Mononoke
   $ cd ..
-  $ blobimport repo-hg/.hg repo
+  $ blobimport repo/.hg repo
 
 start mononoke
   $ start_and_wait_for_mononoke_server
 Make client repo
-  $ hg clone -q ssh://user@dummy/repo-hg client-push --noupdate
+  $ hg clone -q ssh://user@dummy/repo client-push --noupdate
 
 Push to Mononoke
   $ cd $TESTTMP/client-push
@@ -77,12 +77,12 @@ Two pushes synced one after another
   $ mkcommit commit_7
   $ hgmn push -r . --to master_bookmark -q
 Sync it to another client
-  $ cd $TESTTMP/repo-hg
+  $ cd $TESTTMP/repo
   $ enable_replay_verification_hook
   $ cd $TESTTMP
 
 Sync a pushrebase bookmark move
-  $ mononoke_hg_sync_loop_regenerate repo-hg 1 --combine-bundles 2 --bundle-buffer-size 2 2>&1 | grep 'ful sync\|prepare' | cut -d " "  -f 6- > out
+  $ mononoke_hg_sync_loop_regenerate repo 1 --combine-bundles 2 --bundle-buffer-size 2 2>&1 | grep 'ful sync\|prepare' | cut -d " "  -f 6- > out
 
 (the actual syncs need to happen in-order)
   $ cat out | grep sync
@@ -98,6 +98,6 @@ Sync a pushrebase bookmark move
   successful prepare of entries #[6, 7], repo: repo
   successful prepare of entries #[8], repo: repo
 
-  $ cd "$TESTTMP"/repo-hg
+  $ cd "$TESTTMP"/repo
   $ hg log -r tip -T '{desc}\n'
   commit_7

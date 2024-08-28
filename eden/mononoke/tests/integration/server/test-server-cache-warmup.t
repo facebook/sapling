@@ -13,10 +13,10 @@ setup configuration
 
 setup repo
 
-  $ hginit_treemanifest repo-hg
+  $ hginit_treemanifest repo
 
 setup hg server repo
-  $ cd repo-hg
+  $ cd repo
   $ echo a > a && hg add a && hg ci -m a
 
 create master bookmark
@@ -25,7 +25,7 @@ create master bookmark
 
 blobimport them into Mononoke storage and start Mononoke
   $ cd ..
-  $ blobimport repo-hg/.hg repo
+  $ blobimport repo/.hg repo
 
 start mononoke
 

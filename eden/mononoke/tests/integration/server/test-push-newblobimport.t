@@ -12,10 +12,10 @@ setup configuration
 
 setup repo
 
-  $ hginit_treemanifest repo-hg
-  $ hg clone -q ssh://user@dummy/repo-hg client --noupdate
+  $ hginit_treemanifest repo
+  $ hg clone -q ssh://user@dummy/repo client --noupdate
 
-  $ cd repo-hg
+  $ cd repo
   $ touch a
   $ hg add a
   $ hg ci -ma
@@ -46,7 +46,7 @@ verify content
    (re)
 
   $ cd $TESTTMP
-  $ blobimport repo-hg/.hg repo
+  $ blobimport repo/.hg repo
   $ start_and_wait_for_mononoke_server
   $ cd client
   $ echo 'remotefilelog' >> .hg/requires

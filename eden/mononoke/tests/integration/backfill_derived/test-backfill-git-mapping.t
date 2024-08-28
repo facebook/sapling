@@ -13,8 +13,8 @@
   $ cd "$TESTTMP"
 
 Setup testing repo for mononoke:
-  $ hginit_treemanifest repo-hg
-  $ cd repo-hg
+  $ hginit_treemanifest repo
+  $ cd repo
 
 Commit without git mapping:
   $ touch a
@@ -30,7 +30,7 @@ Commit git SHA:
 
 import testing repo to mononoke
   $ cd ..
-  $ blobimport repo-hg/.hg repo --has-globalrev
+  $ blobimport repo/.hg repo --has-globalrev
 
   $ echo $HG_HASH_1 > hash_list
   $ echo $HG_HASH_2 > hash_list

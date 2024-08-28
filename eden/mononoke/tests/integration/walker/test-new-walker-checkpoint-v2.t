@@ -15,7 +15,7 @@ setup configuration
   │
   o  A [draft;rev=0;426bada5c675]
   $
-  $ blobimport repo-hg/.hg repo
+  $ blobimport repo/.hg repo
 
 bonsai core data, deep, unchunked. This is the base case
   $ mononoke_walker -L sizing scrub --checkpoint-version=v2 -q -b master_bookmark -I bonsai 2>&1 | strip_glog
@@ -93,10 +93,10 @@ inspect the checkpoint table, check the update time is at least one second after
   0|bonsai_deep2|1|4
 
 additional commit
-  $ cd repo-hg
+  $ cd repo
   $ mkcommit D
   $ cd ..
-  $ blobimport repo-hg/.hg repo
+  $ blobimport repo/.hg repo
 
 run again, should catchup with new data since checkpoint and nothing to do in main bounds
   $ mononoke_walker -L sizing -L graph scrub --checkpoint-version=v2 -q -p Changeset --chunk-size=2 --checkpoint-name=bonsai_deep --checkpoint-path=test_sqlite -I deep -i bonsai -i FileContent 2>&1 | strip_glog
@@ -184,10 +184,10 @@ OldestFirst hg setup
   Completed in 4 chunks of size 1, repo: repo
 
 now the additional commit
-  $ cd repo-hg
+  $ cd repo
   $ mkcommit E
   $ cd ..
-  $ blobimport repo-hg/.hg repo
+  $ blobimport repo/.hg repo
 
 finally, bonsai should have a run with both catchup and main bounds
   $ mononoke_walker -L sizing -L graph scrub --checkpoint-version=v2 -q -p Changeset --chunk-size=1 --checkpoint-sample-rate=3 --checkpoint-name=bonsai_deep3 --checkpoint-path=test_sqlite -I deep -i bonsai -i FileContent 2>&1 | strip_glog

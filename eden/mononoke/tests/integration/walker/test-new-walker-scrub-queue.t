@@ -21,7 +21,7 @@ Erase the sqllites and blobstore_sync_queue
   $ rm -rf "$TESTTMP/monsql/sqlite_dbs" "$TESTTMP/blobstore_sync_queue/sqlite_dbs" "$TESTTMP/blobstore"
 
 blobimport them into Mononoke storage again, but with write failures on one side
-  $ blobimport repo-hg/.hg repo --blobstore-write-chaos-rate=1
+  $ blobimport repo/.hg repo --blobstore-write-chaos-rate=1
 
 Check that healer queue has successful items
   $ read_blobstore_wal_queue_size

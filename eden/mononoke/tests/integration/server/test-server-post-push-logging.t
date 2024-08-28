@@ -16,8 +16,8 @@ setup configuration
 
 setup repo
 
-  $ hginit_treemanifest repo-hg
-  $ cd repo-hg
+  $ hginit_treemanifest repo
+  $ cd repo
   $ echo "a file content" > a
   $ hg add a
   $ hg ci -ma
@@ -36,16 +36,16 @@ verify content
   
 
   $ cd $TESTTMP
-  $ blobimport repo-hg/.hg repo
+  $ blobimport repo/.hg repo
 
 setup two repos: one will be used to push from, another will be used
 to pull these pushed commits
 
-  $ hg clone -q ssh://user@dummy/repo-hg repo2
-  $ hg clone -q ssh://user@dummy/repo-hg repo3
+  $ hg clone -q ssh://user@dummy/repo repo2
+  $ hg clone -q ssh://user@dummy/repo repo3
   $ cd repo2
-  $ hg pull ssh://user@dummy/repo-hg
-  pulling from ssh://user@dummy/repo-hg
+  $ hg pull ssh://user@dummy/repo
+  pulling from ssh://user@dummy/repo
   searching for changes
   no changes found
 

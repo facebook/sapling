@@ -32,12 +32,12 @@ Check scuba data is logged for lfs and that it contains useful hg changeset and 
   0,"file_content_is_lfs",1,"content.blake2.eb56488e97bb4cf5eb17f05357b80108a4a71f6c3bab52dfcaec07161d105ec9","A","FileContentMetadataV2","repo","HgFileEnvelope","hgchangeset.sha1.26805aba1e600a82e93661149f2313866a221a7b","HgChangeset","validate",
 
 Make a commit for a file in a subdir path
-  $ cd repo-hg
+  $ cd repo
   $ mkdir foo
   $ cd foo
   $ mkcommit bar
   $ cd ../..
-  $ blobimport repo-hg/.hg repo
+  $ blobimport repo/.hg repo
 
 validate with LFS enabled, deep.  Params are setup so that ValidateRoute contains the HgChangeset that originated a Bonsai and then the Bonsai points to the files it touched.
   $ mononoke_walker --scuba-dataset file://scuba-validate-deep.json validate --include-check-type=FileContentIsLfs -I deep -X HgFileNodeToLinkedHgChangeset -X HgFileNodeToHgParentFileNode -X HgFileNodeToHgCopyfromFileNode -X ChangesetToBonsaiParent -X ChangesetToBonsaiHgMapping -X HgChangesetToHgParent -i default -x HgFileEnvelope -x AliasContentMapping -q -p BonsaiHgMapping 2>&1 | strip_glog

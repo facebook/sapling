@@ -9,8 +9,8 @@
   $ setup_common_config $REPOTYPE
 
   $ cd "$TESTTMP"  
-  $ hginit_treemanifest repo-hg
-  $ cd repo-hg
+  $ hginit_treemanifest repo
+  $ cd repo
   $ echo a > a && hg add a && hg ci -m 'large repo first commit'
   $ echo b > b && hg add b && hg ci -m 'large repo second commit'
   $ hg book -r . pre_merge_head_bookmark
@@ -34,7 +34,7 @@
   $ hg addremove -q
   $ hg ci -m 'small repo first commit'
   $ hg book -r . small_repo_head_bookmark
-  $ cd "$TESTTMP/repo-hg"
+  $ cd "$TESTTMP/repo"
 
   $ hg up -q head_bookmark
   $ hg merge -q small_repo_head_bookmark
@@ -104,10 +104,10 @@
   
 
   $ cd "$TESTTMP"
-  $ hg clone -q ssh://user@dummy/repo-hg repo-client --noupdate
+  $ hg clone -q ssh://user@dummy/repo repo-client --noupdate
 
 blobimport
-  $ blobimport repo-hg/.hg repo
+  $ blobimport repo/.hg repo
 
   $ megarepo_tool create-catchup-head-deletion-commits \
   > --head-bookmark head_bookmark \

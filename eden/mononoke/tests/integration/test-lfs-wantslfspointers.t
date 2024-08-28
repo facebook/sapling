@@ -12,8 +12,8 @@ Setup repo config (we use blob_files to share across Mononoke and API Server):
   $ cd $TESTTMP
 
 Setup hg repo, create a commit there. No LFS blobs yet.
-  $ hginit_treemanifest repo-hg-nolfs
-  $ cd repo-hg-nolfs
+  $ hginit_treemanifest repo
+  $ cd repo
 
 Commit small file
   $ echo s > smallfile
@@ -22,7 +22,7 @@ Commit small file
   $ cd ..
 
 Blobimport the hg repo to Mononoke
-  $ blobimport repo-hg-nolfs/.hg repo
+  $ blobimport repo/.hg repo
 
 Start Mononoke with LFS enabled.
   $ start_and_wait_for_mononoke_server
@@ -30,8 +30,8 @@ Start Mononoke API server, to serve LFS blobs
   $ lfs_uri="$(lfs_server)/repo"
 
 Create a new client repository. Enable LFS there.
-  $ hg clone -q ssh://user@dummy/repo-hg-nolfs repo-hg-lfs --noupdate
-  $ cd repo-hg-lfs
+  $ hg clone -q ssh://user@dummy/repo repo-lfs --noupdate
+  $ cd repo-lfs
   $ setup_hg_modern_lfs "$lfs_uri" 1000B "$TESTTMP/lfs-cache1"
 
   $ cat >> .hg/hgrc <<EOF
@@ -61,8 +61,8 @@ Perform LFS push
   updating bookmark master_bookmark
 
 Create a new client repository, using getpack (with its own cachepath).
-  $ hg clone -q ssh://user@dummy/repo-hg-nolfs repo-hg-lfs2 --noupdate
-  $ cd repo-hg-lfs2
+  $ hg clone -q ssh://user@dummy/repo repo-lfs2 --noupdate
+  $ cd repo-lfs2
   $ setup_hg_lfs "$lfs_uri" 1000B "$TESTTMP/lfs-cache2"
 
   $ cat >> .hg/hgrc <<EOF
@@ -82,8 +82,8 @@ Make sure lfs is not used during update
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 Create a new client repository, using getpack (with its own cachepath).
-  $ hg clone -q ssh://user@dummy/repo-hg-nolfs repo-hg-lfs3 --noupdate
-  $ cd repo-hg-lfs3
+  $ hg clone -q ssh://user@dummy/repo repo-lfs3 --noupdate
+  $ cd repo-lfs3
   $ setup_hg_lfs "$lfs_uri" 1000B "$TESTTMP/lfs-cache3"
 
   $ cat >> .hg/hgrc <<EOF

@@ -6,8 +6,8 @@
 
   $ . "${TEST_FIXTURES}/library.sh"
 
-  $ hginit_treemanifest repo-hg --config format.usefncache=False
-  $ cd repo-hg
+  $ hginit_treemanifest repo --config format.usefncache=False
+  $ cd repo
 
   $ touch file1
   $ hg add
@@ -31,8 +31,8 @@
 
   $ POPULATE_GIT_MAPPING=1 setup_mononoke_config
   $ cd $TESTTMP
-  $ blobimport repo-hg/.hg repo
-  $ blobimport repo-hg/.hg repo
+  $ blobimport repo/.hg repo
+  $ blobimport repo/.hg repo
   $ get_bonsai_git_mapping
   F81E4A4F6A773CFBCE1A4204B0A7BCA28EA200224AFDBC8C0FB47B5B42DFF249|37B0A167E07F2B84149C918CEC818FFEB183AAAA
   8B67890898056D938E08AD5025875C07B55EBE53CE8376C1106C5C8A1699D43D|37B0A167E07F2B84149C918CEC818FFEB183BBBB

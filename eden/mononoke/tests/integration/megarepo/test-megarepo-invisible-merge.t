@@ -47,8 +47,8 @@ Setup repositories
 
 -- init hg fbsource server repo
   $ cd $TESTTMP
-  $ hginit_treemanifest fbs-hg-srv
-  $ cd fbs-hg-srv
+  $ hginit_treemanifest fbs-mon
+  $ cd fbs-mon
 -- create an initial commit, which will be the last_synced_commit
   $ createfile fbcode/fbcodefile_fbsource
   $ createfile arvr/arvrfile_fbsource
@@ -57,8 +57,8 @@ Setup repositories
 
 -- init hg ovrsource server repo
   $ cd $TESTTMP
-  $ hginit_treemanifest ovr-hg-srv
-  $ cd ovr-hg-srv
+  $ hginit_treemanifest ovr-mon
+  $ cd ovr-mon
   $ createfile fbcode/fbcodefile_ovrsource
   $ createfile arvr/arvrfile_ovrsource
   $ createfile otherfile_ovrsource
@@ -67,8 +67,8 @@ Setup repositories
 
 -- init hg megarepo server repo
   $ cd $TESTTMP
-  $ hginit_treemanifest meg-hg-srv
-  $ cd meg-hg-srv
+  $ hginit_treemanifest meg-mon
+  $ cd meg-mon
   $ createfile fbcode/fbcodefile_fbsource
   $ createfile_with_content .fbsource-rest/arvr/arvrfile_fbsource arvr/arvrfile_fbsource
   $ createfile otherfile_fbsource
@@ -81,15 +81,15 @@ Setup repositories
 
 -- blobimport hg server repos into Mononoke repos
   $ cd "$TESTTMP"
-  $ REPOID=$MEG_REPOID blobimport meg-hg-srv/.hg meg-mon
-  $ REPOID=$FBS_REPOID blobimport fbs-hg-srv/.hg fbs-mon
-  $ REPOID=$OVR_REPOID blobimport ovr-hg-srv/.hg ovr-mon
+  $ REPOID=$MEG_REPOID blobimport meg-mon/.hg meg-mon
+  $ REPOID=$FBS_REPOID blobimport fbs-mon/.hg fbs-mon
+  $ REPOID=$OVR_REPOID blobimport ovr-mon/.hg ovr-mon
 
 -- setup hg client repos
   $ cd "$TESTTMP"
-  $ hg clone -q ssh://user@dummy/fbs-hg-srv fbs-hg-cnt --noupdate
-  $ hg clone -q ssh://user@dummy/ovr-hg-srv ovr-hg-cnt --noupdate
-  $ hg clone -q ssh://user@dummy/meg-hg-srv meg-hg-cnt --noupdate
+  $ hg clone -q ssh://user@dummy/fbs-mon fbs-hg-cnt --noupdate
+  $ hg clone -q ssh://user@dummy/ovr-mon ovr-hg-cnt --noupdate
+  $ hg clone -q ssh://user@dummy/meg-mon meg-hg-cnt --noupdate
 
 
 Start mononoke server

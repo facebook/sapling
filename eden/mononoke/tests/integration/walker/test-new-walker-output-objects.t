@@ -15,7 +15,7 @@ setup configuration
   │
   o  A [draft;rev=0;426bada5c675]
   $
-  $ blobimport repo-hg/.hg repo --derived-data-type=blame --derived-data-type=changeset_info --derived-data-type=fsnodes --derived-data-type=unodes
+  $ blobimport repo/.hg repo --derived-data-type=blame --derived-data-type=changeset_info --derived-data-type=fsnodes --derived-data-type=unodes
 
 Output pretty debug to stdout
   $ mononoke_walker -L sizing scrub -q -b master_bookmark -I shallow -i bonsai --include-output-node-type=Changeset 2>&1 | strip_glog

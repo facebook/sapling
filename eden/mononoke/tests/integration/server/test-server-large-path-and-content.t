@@ -29,8 +29,8 @@ create a repo with some long paths and filenames
 clone the repo and check that mercurial can access the file
 
   $ cd $TESTTMP
-  $ hg clone -q mono:repo repo-hg
-  $ cd repo-hg
+  $ hg clone -q mono:repo repo
+  $ cd repo
   $ hgmn log
   commit:      41c590dc2a01
   bookmark:    default/master_bookmark

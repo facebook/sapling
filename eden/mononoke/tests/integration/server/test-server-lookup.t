@@ -11,8 +11,8 @@ setup configuration
 
 setup repo
   $ cd $TESTTMP
-  $ hginit_treemanifest repo-hg
-  $ cd repo-hg
+  $ hginit_treemanifest repo
+  $ cd repo
   $ touch a
   $ hg add a
   $ hg ci -ma
@@ -38,11 +38,11 @@ setup master bookmark
 
 blobimport
   $ cd $TESTTMP
-  $ blobimport repo-hg/.hg repo
+  $ blobimport repo/.hg repo
 
 start mononoke
   $ start_and_wait_for_mononoke_server
-  $ cd repo-hg
+  $ cd repo
   $ hg up -q "min(all())"
 
 Helper script to test the lookup function

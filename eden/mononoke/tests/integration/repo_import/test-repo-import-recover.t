@@ -9,7 +9,7 @@
 
   $ setup_common_config
   $ GIT_REPO="${TESTTMP}/repo-git"
-  $ HG_REPO="${TESTTMP}/repo-hg"
+  $ HG_REPO="${TESTTMP}/repo"
   $ BLOB_TYPE="blob_files" default_setup
   hg repo
   o  C [draft;rev=2;26805aba1e60]

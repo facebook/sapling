@@ -14,15 +14,15 @@ setup configuration
 
 setup repo
 
-  $ hginit_treemanifest repo-hg
+  $ hginit_treemanifest repo
 
 setup client repo2
-  $ hg clone -q ssh://user@dummy/repo-hg repo2 --noupdate
-  $ hg clone -q ssh://user@dummy/repo-hg repo3 --noupdate
+  $ hg clone -q ssh://user@dummy/repo repo2 --noupdate
+  $ hg clone -q ssh://user@dummy/repo repo3 --noupdate
   $ cd repo2
 
 make a few commits on the server
-  $ cd $TESTTMP/repo-hg
+  $ cd $TESTTMP/repo
   $ drawdag <<EOF
   > C
   > |
@@ -37,7 +37,7 @@ create master bookmark
 
 blobimport them into Mononoke storage and start Mononoke
   $ cd ..
-  $ blobimport repo-hg/.hg repo
+  $ blobimport repo/.hg repo
 
 start mononoke
 
@@ -51,7 +51,7 @@ Pull from Mononoke
   warning: stream clone is disabled
 
 Make sure that cache is empty
-  $ ls $TESTTMP/cachepath/repo-hg/packs/manifests
+  $ ls $TESTTMP/cachepath/repo/packs/manifests
 
   $ hgmn prefetch -r "min(all())" -r1 --debug 2>&1 | grep "getpackv2 command"
   sending getpackv2 command
@@ -117,8 +117,8 @@ Rename a file and then prefetch it
   $ hgmn pull -q
   $ hgmn prefetch -r 4 --debug 2>&1 | grep "getpackv2 command"
   sending getpackv2 command
-  $ hg debugdatapack --node 5abbc96341e3bb0cdfc5c54599ee869e2ffa573f $TESTTMP/cachepath/repo-hg/packs/ee71793980651ba90038f48b623b83d4f3c8585a.dataidx
-  $TESTTMP/cachepath/repo-hg/packs/ee71793980651ba90038f48b623b83d4f3c8585a:
+  $ hg debugdatapack --node 5abbc96341e3bb0cdfc5c54599ee869e2ffa573f $TESTTMP/cachepath/repo/packs/ee71793980651ba90038f48b623b83d4f3c8585a.dataidx
+  $TESTTMP/cachepath/repo/packs/ee71793980651ba90038f48b623b83d4f3c8585a:
   \x01 (esc)
   copy: A
   copyrev: bb3317de12b1232de9b883d9026c1ffa9291e3e6

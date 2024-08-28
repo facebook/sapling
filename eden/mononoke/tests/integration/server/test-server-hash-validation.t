@@ -12,14 +12,14 @@ setup configuration
 
 setup repo
 
-  $ hginit_treemanifest repo-hg
+  $ hginit_treemanifest repo
 
 setup client repo2
-  $ hg clone -q ssh://user@dummy/repo-hg repo-client --noupdate
+  $ hg clone -q ssh://user@dummy/repo repo-client --noupdate
   $ cd repo-client
 
 make a few commits on the server
-  $ cd $TESTTMP/repo-hg
+  $ cd $TESTTMP/repo
   $ drawdag <<EOF
   > C
   > |
@@ -34,7 +34,7 @@ create master bookmark
 
 blobimport them into Mononoke storage and start Mononoke
   $ cd ..
-  $ blobimport repo-hg/.hg repo
+  $ blobimport repo/.hg repo
 
 Corrupt blobs by replacing one content blob with another
   $ cd blobstore/blobs

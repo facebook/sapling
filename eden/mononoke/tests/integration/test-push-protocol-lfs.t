@@ -13,14 +13,14 @@ setup configuration
 
 Setup repo and blobimport it
 
-  $ hginit_treemanifest repo-hg
-  $ cd repo-hg
+  $ hginit_treemanifest repo
+  $ cd repo
   $ echo "a file content" > a
   $ hg add a
   $ hg ci -ma
   $ hg bookmark master_bookmark -r 'tip'
   $ cd "$TESTTMP"
-  $ blobimport repo-hg/.hg repo
+  $ blobimport repo/.hg repo
 
 Start mononoke and the LFS Server
 
@@ -29,7 +29,7 @@ Start mononoke and the LFS Server
 
 Setup client repo
 
-  $ hg clone -q ssh://user@dummy/repo-hg hg-client
+  $ hg clone -q ssh://user@dummy/repo hg-client
   $ cd hg-client
   $ setup_hg_modern_lfs "$lfs_uri" 10B "$TESTTMP/lfs-cache"
 
@@ -73,7 +73,7 @@ Create new commits
 
 Clone the repository, and pull
 
-  $ hg clone -q ssh://user@dummy/repo-hg hg-client
+  $ hg clone -q ssh://user@dummy/repo hg-client
   $ cd hg-client
   $ setup_hg_modern_lfs "$lfs_uri" 10B "$TESTTMP/lfs-cache"
   $ hgmn pull

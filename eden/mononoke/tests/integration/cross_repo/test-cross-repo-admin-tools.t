@@ -16,8 +16,8 @@
 setup configuration
 
   $ REPOTYPE="blob_files"
-  $ REPOID=0 REPONAME=large_mon setup_common_config $REPOTYPE
-  $ REPOID=1 REPONAME=small_mon setup_common_config $REPOTYPE
+  $ REPOID=0 REPONAME=large setup_common_config $REPOTYPE
+  $ REPOID=1 REPONAME=small setup_common_config $REPOTYPE
   $ setup_commitsyncmap
   $ setup_configerator_configs
 
@@ -47,8 +47,8 @@ setup configuration
 
 blobimport hg servers repos into Mononoke repos
   $ cd "$TESTTMP"
-  $ REPOID=0 blobimport large/.hg large_mon
-  $ REPOID=1 blobimport small/.hg small_mon
+  $ REPOID=0 blobimport large/.hg large
+  $ REPOID=1 blobimport small/.hg small
 
 Try to insert with invalid version name
   $ mononoke_admin_source_target 0 1 crossrepo insert equivalent-working-copy \

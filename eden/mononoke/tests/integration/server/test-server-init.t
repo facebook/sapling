@@ -20,8 +20,8 @@ setup common configuration
 
 setup repo
 
-  $ hginit_treemanifest repo-hg
-  $ cd repo-hg
+  $ hginit_treemanifest repo
+  $ cd repo
 
   $ touch a
   $ hg add a
@@ -41,15 +41,15 @@ setup repo2
   > [remotefilelog]
   > cachepath=$TESTTMP/cachepath
   > EOF
-  $ hg clone -q ssh://user@dummy/repo-hg repo2 --noupdate
+  $ hg clone -q ssh://user@dummy/repo repo2 --noupdate
   $ cd repo2
   $ hg pull
-  pulling from ssh://user@dummy/repo-hg
+  pulling from ssh://user@dummy/repo
   searching for changes
   no changes found
 
   $ cd $TESTTMP
-  $ cd repo-hg
+  $ cd repo
   $ touch b
   $ hg add b
   $ hg ci -mb
@@ -106,7 +106,7 @@ setup master bookmarks
 blobimport
 
   $ cd ..
-  $ blobimport repo-hg/.hg repo
+  $ blobimport repo/.hg repo
 
 start mononoke
 

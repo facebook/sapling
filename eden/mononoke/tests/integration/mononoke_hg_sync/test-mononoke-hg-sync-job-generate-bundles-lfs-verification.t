@@ -22,8 +22,8 @@ Setup configuration
 
 Setup destination repo
 
-  $ hginit_treemanifest repo-hg
-  $ cd repo-hg
+  $ hginit_treemanifest repo
+  $ cd repo
   $ echo foo > a
   $ echo foo > b
   $ hg addremove && hg ci -m 'initial'
@@ -34,7 +34,7 @@ Setup destination repo
   $ cd "$TESTTMP"
 
 Blobimport them into Mononoke storage and start Mononoke
-  $ blobimport repo-hg/.hg repo
+  $ blobimport repo/.hg repo
 
 Start mononoke and a LFS server
   $ mononoke
@@ -44,7 +44,7 @@ Start mononoke and a LFS server
   $ wait_for_mononoke
 
 Make client repo
-  $ hg clone -q ssh://user@dummy/repo-hg client-push --noupdate
+  $ hg clone -q ssh://user@dummy/repo client-push --noupdate
   $ cd client-push
 
   $ setup_hg_modern_lfs "$lfs_uri" 10B "$TESTTMP/lfs-cache1"
@@ -74,7 +74,7 @@ Make client repo
   $ cd "$TESTTMP"
 
 Two missing blobs that were uploaded
-  $ mononoke_hg_sync repo-hg 1 --verify-lfs-blob-presence "${lfs_uri_other}/objects/batch" 2>&1 | grep missing
+  $ mononoke_hg_sync repo 1 --verify-lfs-blob-presence "${lfs_uri_other}/objects/batch" 2>&1 | grep missing
   * missing * object, uploading* (glob)
   * missing * object, uploading* (glob)
 

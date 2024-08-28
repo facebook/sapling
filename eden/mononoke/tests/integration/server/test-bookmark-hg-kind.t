@@ -17,8 +17,8 @@ setup common configuration for these tests
 
 setup repo
 
-  $ hginit_treemanifest repo-hg
-  $ cd repo-hg
+  $ hginit_treemanifest repo
+  $ cd repo
   $ touch a && hg addremove && hg ci -q -m 'add a'
   adding a
   $ hg log -T '{short(node)}\n'
@@ -30,12 +30,12 @@ create master bookmark
   $ cd $TESTTMP
 
 setup repo-push, repo-pull
-  $ hg clone -q ssh://user@dummy/repo-hg repo-push --noupdate
-  $ hg clone -q ssh://user@dummy/repo-hg repo-pull --noupdate
+  $ hg clone -q ssh://user@dummy/repo repo-push --noupdate
+  $ hg clone -q ssh://user@dummy/repo repo-pull --noupdate
 
 blobimport
 
-  $ blobimport repo-hg/.hg repo
+  $ blobimport repo/.hg repo
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" 'SELECT name, hg_kind FROM bookmarks;'
   master_bookmark|pull_default
 start mononoke

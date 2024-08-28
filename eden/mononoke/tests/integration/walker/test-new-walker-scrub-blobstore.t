@@ -18,14 +18,14 @@ setup configuration
   blobimporting
 
 setup repo2 so we can try multi-repo
-  $ hginit_treemanifest repo2-hg
-  $ cd repo2-hg
+  $ hginit_treemanifest repo2
+  $ cd repo2
   $ mkcommit X
   $ hg bookmark master_bookmark -r tip
   $ cd ..
   $ MULTIPLEXED=1 REPOID=2 setup_mononoke_repo_config repo2 blobstore
   $ cd ..
-  $ REPOID=2 blobimport repo2-hg/.hg repo2 --exclude-derived-data-type=filenodes
+  $ REPOID=2 blobimport repo2/.hg repo2 --exclude-derived-data-type=filenodes
 
 Base case, check can walk fine, one repo
   $ mononoke_walker scrub -I deep -q -b master_bookmark 2>&1 | strip_glog

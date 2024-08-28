@@ -1018,7 +1018,6 @@ function setup_mononoke_repo_config {
   mkdir -p "repos/$reponame_urlencoded"
   mkdir -p "repo_definitions/$reponame_urlencoded"
   mkdir -p "$TESTTMP/monsql"
-  mkdir -p "$TESTTMP/$reponame_urlencoded"
   mkdir -p "$everstore_local_path"
   cat > "repos/$reponame_urlencoded/server.toml" <<CONFIG
 hash_validation_percentage=100
@@ -1436,7 +1435,6 @@ function blobimport {
   local revlog="$input/revlog-export"
   rm -rf "$revlog"
   sl --cwd "$input" debugexportrevlog revlog-export
-  mkdir -p "$output"
   $MONONOKE_BLOBIMPORT \
     "${CACHE_ARGS[@]}" \
     "${COMMON_ARGS[@]}" \
@@ -1978,8 +1976,8 @@ function hook_test_setup() {
 ssh="$DUMMYSSH"
 EOF
 
-  hginit_treemanifest repo-hg
-  cd repo-hg || exit 1
+  hginit_treemanifest "$REPONAME"
+  cd "$REPONAME" || exit 1
   drawdag <<EOF
 C
 |
@@ -1991,15 +1989,15 @@ EOF
   hg bookmark "$HOOKBOOKMARK" -r tip
 
   cd ..
-  blobimport repo-hg/.hg "$REPONAME"
+  blobimport "$REPONAME"/.hg "$REPONAME"
 
   start_and_wait_for_mononoke_server
 
-  hg clone -q ssh://user@dummy/repo-hg repo2 --noupdate
+  hg clone -q ssh://user@dummy/"$REPONAME" repo2 --noupdate
   cd repo2 || exit 1
   cat >> .hg/hgrc <<EOF
 [extensions]
-pushrebase =
+pushrebase=
 amend=
 EOF
 }
@@ -2188,8 +2186,8 @@ ssh="$DUMMYSSH"
 amend=
 EOF
 
-hginit_treemanifest repo-hg
-cd repo-hg || exit 1
+hginit_treemanifest repo
+cd repo || exit 1
 drawdag <<EOF
 C
 |
@@ -2209,7 +2207,7 @@ EOF
 function default_setup_blobimport() {
   default_setup_pre_blobimport "$@"
   echo "blobimporting"
-  blobimport repo-hg/.hg "$REPONAME"
+  blobimport repo/.hg "$REPONAME"
 }
 
 function default_setup() {

@@ -23,8 +23,8 @@ setup configuration
   $ cd $TESTTMP
 
 setup repo
-  $ hginit_treemanifest repo-hg
-  $ cd repo-hg
+  $ hginit_treemanifest repo
+  $ cd repo
   $ echo "content0" > file
   $ sl commit -Aqm base
   $ sl bookmark master_bookmark -r tip
@@ -33,7 +33,7 @@ setup repo-push and repo-pull
   $ cd $TESTTMP
   $ for name in push pull1 pull2 pull3
   > do
-  >   hg clone -q ssh://user@dummy/repo-hg repo-$name --noupdate
+  >   hg clone -q ssh://user@dummy/repo repo-$name --noupdate
   >   cat >> repo-$name/.hg/hgrc <<EOF
   > [extensions]
   > loglinkrevfixup = $TESTTMP/loglinkrevfixup.py
@@ -51,7 +51,7 @@ setup repo-push and repo-pull
   > done
 
 blobimport
-  $ blobimport repo-hg/.hg repo
+  $ blobimport repo/.hg repo
 
 start mononoke
   $ start_and_wait_for_mononoke_server

@@ -23,8 +23,8 @@ Setup repositories
 
 -- init hg fbsource server repo
   $ cd $TESTTMP
-  $ hginit_treemanifest fbs-hg-srv
-  $ cd fbs-hg-srv
+  $ hginit_treemanifest repo
+  $ cd repo
 -- create an initial commits
   $ createfile fbcode/file_with_correct_history
   $ hg -q ci -m "master commit 1"
@@ -59,11 +59,11 @@ Setup repositories
 
 -- blobimport hg server repos into Mononoke repos
   $ cd "$TESTTMP"
-  $ REPOID="$FBS_REPOID" blobimport "fbs-hg-srv/.hg" "repo"
+  $ REPOID="$FBS_REPOID" blobimport "repo/.hg" "repo"
 
 -- setup hg client repos
   $ cd "$TESTTMP"
-  $ hg clone -q ssh://user@dummy/fbs-hg-srv fbs-hg-cnt --noupdate
+  $ hg clone -q ssh://user@dummy/repo fbs-hg-cnt --noupdate
 
 Start mononoke server
   $ start_and_wait_for_mononoke_server

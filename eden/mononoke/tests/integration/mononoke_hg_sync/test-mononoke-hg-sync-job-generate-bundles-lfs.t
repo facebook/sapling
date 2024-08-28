@@ -22,8 +22,8 @@ setup configuration
 
 setup repo
 
-  $ hginit_treemanifest repo-hg
-  $ cd repo-hg
+  $ hginit_treemanifest repo
+  $ cd repo
   $ echo foo > a
   $ echo foo > b
   $ hg addremove && hg ci -m 'initial'
@@ -42,10 +42,10 @@ create master bookmark
 
 blobimport them into Mononoke storage and start Mononoke
   $ cd ..
-  $ blobimport repo-hg/.hg repo
+  $ blobimport repo/.hg repo
 
 Make a copy to be used later
-  $ cp -r repo-hg repo-hg-2
+  $ cp -r repo repo-2
 
 start mononoke with LFS enabled
   $ mononoke
@@ -53,7 +53,7 @@ start mononoke with LFS enabled
   $ wait_for_mononoke
 
 Make client repo
-  $ hg clone -q ssh://user@dummy/repo-hg client-push --noupdate
+  $ hg clone -q ssh://user@dummy/repo client-push --noupdate
   $ cd client-push
   $ setup_hg_modern_lfs "$lfs_uri" 1000B "$TESTTMP/lfs-cache1"
 
@@ -118,20 +118,20 @@ Push normal file
 
 
 Sync it to another client
-  $ cd "$TESTTMP/repo-hg"
+  $ cd "$TESTTMP/repo"
   $ enable_replay_verification_hook
   $ cd "$TESTTMP"
 
 Sync a lfs pushrebase
-  $ mononoke_hg_sync repo-hg 1 2>&1 | grep 'successful sync'
+  $ mononoke_hg_sync repo 1 2>&1 | grep 'successful sync'
   * successful sync of entries [2]* (glob)
-  $ mononoke_hg_sync repo-hg 2 2>&1 | grep 'successful sync'
+  $ mononoke_hg_sync repo 2 2>&1 | grep 'successful sync'
   * successful sync of entries [3]* (glob)
-  $ mononoke_hg_sync repo-hg 3 2>&1 | grep 'successful sync'
+  $ mononoke_hg_sync repo 3 2>&1 | grep 'successful sync'
   * successful sync of entries [4]* (glob)
-  $ mononoke_hg_sync repo-hg 4 2>&1 | grep 'successful sync'
+  $ mononoke_hg_sync repo 4 2>&1 | grep 'successful sync'
   * successful sync of entries [5]* (glob)
-  $ cd "$TESTTMP/repo-hg"
+  $ cd "$TESTTMP/repo"
   $ hg debugfilerev lfs-largefile -v -r 2
   b2a5e71d6d8d: add lfs-large files
    lfs-largefile: bin=1 lnk=0 flag=2000 size=40 copied=''
@@ -147,7 +147,7 @@ Sync a lfs pushrebase
 
 Setup another client and update to latest commit from mercurial
   $ cd ..
-  $ hg clone -q ssh://user@dummy/repo-hg client-pull --noupdate
+  $ hg clone -q ssh://user@dummy/repo client-pull --noupdate
   $ cd client-pull
   $ setup_hg_modern_lfs "$lfs_uri" 1000B "$TESTTMP/lfs-cache1"
 
@@ -193,9 +193,9 @@ Sync a pushrebase with lfs hg sync disabled in the config
   $ rm -rf mononoke-config
   $ LFS_THRESHOLD="20" LFS_BLOB_HG_SYNC_JOB=false setup_common_config blob_files
   $ cd "$TESTTMP"
-  $ mononoke_hg_sync repo-hg-2 1 2>&1 | grep 'successful sync'
+  $ mononoke_hg_sync repo-2 1 2>&1 | grep 'successful sync'
   * successful sync of entries [2]* (glob)
-  $ cd "$TESTTMP/repo-hg-2"
+  $ cd "$TESTTMP/repo-2"
   $ hg debugfilerev lfs-largefile -v -r master_bookmark
   b2a5e71d6d8d: add lfs-large files
    lfs-largefile: bin=0 lnk=0 flag=0 size=40 copied=''
@@ -203,9 +203,9 @@ Sync a pushrebase with lfs hg sync disabled in the config
 
 Now override lfs sync config option via command line
   $ cd "$TESTTMP"
-  $ mononoke_hg_sync repo-hg-2 2 --bookmark-regex-force-generate-lfs "master.+" 2>&1 | grep 'force generating lfs bundle'
+  $ mononoke_hg_sync repo-2 2 --bookmark-regex-force-generate-lfs "master.+" 2>&1 | grep 'force generating lfs bundle'
   * force generating lfs bundle for master_bookmark* (glob)
-  $ cd "$TESTTMP/repo-hg-2"
+  $ cd "$TESTTMP/repo-2"
   $ hg debugfilerev lfs-largefile -v -r master_bookmark
   0700ec892f3c: modify lfs-large file
    lfs-largefile: bin=1 lnk=0 flag=2000 size=30 copied=''
@@ -213,9 +213,9 @@ Now override lfs sync config option via command line
 
 Now change the regex, make sure non-lfs push was used
   $ cd "$TESTTMP"
-  $ mononoke_hg_sync repo-hg-2 3 --bookmark-regex-force-generate-lfs "someotherregex" 2>&1 | grep 'force generating lfs bundle'
+  $ mononoke_hg_sync repo-2 3 --bookmark-regex-force-generate-lfs "someotherregex" 2>&1 | grep 'force generating lfs bundle'
   [1]
-  $ cd "$TESTTMP/repo-hg-2"
+  $ cd "$TESTTMP/repo-2"
   $ hg debugfilerev lfs-renamed-largefile -v -r master_bookmark
   b75c987b6343: move lfs-large file
    lfs-renamed-largefile: bin=0 lnk=0 flag=0 size=30 copied='lfs-largefile'

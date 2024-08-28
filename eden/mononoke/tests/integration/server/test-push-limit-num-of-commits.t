@@ -13,8 +13,8 @@ setup configuration
 
 setup repo
 
-  $ hginit_treemanifest repo-hg
-  $ cd repo-hg
+  $ hginit_treemanifest repo
+  $ cd repo
   $ echo "a file content" > a
   $ hg add a
   $ hg ci -ma
@@ -33,10 +33,10 @@ verify content
    (re)
 
   $ cd $TESTTMP
-  $ blobimport repo-hg/.hg repo
+  $ blobimport repo/.hg repo
 
 setup push source repo
-  $ hg clone -q ssh://user@dummy/repo-hg repo2
+  $ hg clone -q ssh://user@dummy/repo repo2
 
 start mononoke
 

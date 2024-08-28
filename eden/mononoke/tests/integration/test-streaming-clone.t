@@ -20,7 +20,7 @@ setup configuration
   blobimporting
 
   $ LOG_FILE="$TESTTMP/log_file"
-  $ streaming_clone --scuba-dataset "file://$LOG_FILE" create --dot-hg-path "$TESTTMP/repo-hg/.hg"
+  $ streaming_clone --scuba-dataset "file://$LOG_FILE" create --dot-hg-path "$TESTTMP/repo/.hg"
   * using repo "repo" repoid RepositoryId(0) (glob)
   * current sizes in database: index: 0, data: 0, repo: repo (glob)
   * about to upload 1 entries, repo: repo (glob)
@@ -32,7 +32,7 @@ setup configuration
   "1"
 
 Try creating again, this should fail
-  $ streaming_clone create --dot-hg-path "$TESTTMP/repo-hg/.hg"
+  $ streaming_clone create --dot-hg-path "$TESTTMP/repo/.hg"
   * using repo "repo" repoid RepositoryId(0) (glob)
   * cannot create new streaming clone chunks because they already exists (glob)
   [1]
@@ -50,13 +50,13 @@ Try creating again, this should fail
   updating to branch default
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
-  $ diff repo-streamclone/.hg/store/00changelog.i repo-hg/.hg/store/00changelog.i
-  $ diff repo-streamclone/.hg/store/00changelog.d repo-hg/.hg/store/00changelog.d
+  $ diff repo-streamclone/.hg/store/00changelog.i repo/.hg/store/00changelog.i
+  $ diff repo-streamclone/.hg/store/00changelog.d repo/.hg/store/00changelog.d
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select idx_blob_name, data_blob_name from streaming_changelog_chunks where repo_id = 0 order by chunk_num asc;"
   streaming_clone-chunk000000-d1de0dadf747295f0e1ea4db829b8e87437476f94cefcb948cd3b366b599d49e5a7c74b2777372b74c4962c513f71c72252bf673a8c880387ea84a5317abb14b-idx|streaming_clone-chunk000000-a5750ff674daa16106403d02aebff7d19ad96a33886c026427002f30c9eea7bac76387c4dd5f5c42a9e3ab1ecd9c9b5d3c2a079406e127146bddd9dcc8c63e23-data
 
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "delete from streaming_changelog_chunks where repo_id = 0;"
-  $ streaming_clone create --dot-hg-path "$TESTTMP/repo-hg/.hg" --max-data-chunk-size 1
+  $ streaming_clone create --dot-hg-path "$TESTTMP/repo/.hg" --max-data-chunk-size 1
   * using repo "repo" repoid RepositoryId(0) (glob)
   * current sizes in database: index: 0, data: 0, repo: repo (glob)
   * about to upload 3 entries, repo: repo (glob)
@@ -75,8 +75,8 @@ Try creating again, this should fail
   adding file changes
   updating to branch default
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ diff repo-streamclone/.hg/store/00changelog.i repo-hg/.hg/store/00changelog.i
-  $ diff repo-streamclone/.hg/store/00changelog.d repo-hg/.hg/store/00changelog.d
+  $ diff repo-streamclone/.hg/store/00changelog.i repo/.hg/store/00changelog.i
+  $ diff repo-streamclone/.hg/store/00changelog.d repo/.hg/store/00changelog.d
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select idx_blob_name, data_blob_name from streaming_changelog_chunks where repo_id = 0 order by chunk_num asc;"
   streaming_clone-chunk000000-760d25b269f0be9a5ef3aabd126ef025d5f13d279da46d9721d8a07423dc9ba03be1acceb23e6f0ccd9bdc330bc2911ff386f1444cdf279ee0506368013792be-idx|streaming_clone-chunk000000-31d5f335f6e9ac058258e7d242402d6d0f218f075647b8aa9caee655127f66b1954236f46b1f0c19cf837ff9a80651f4f5681ace3bea083437f310d2ef92cf3e-data
   streaming_clone-chunk000001-ddc1b4ac17d56e27b899602bca51925d3fdfd21a1defc05ecf83c1d7b3ef2e0c4c9a3cb3a6e412936019888259d39b62f89bafe0af101f29d0eb189b9b528cfd-idx|streaming_clone-chunk000001-ff9763a4f2f9bce3bef31a9e03814d59e6d78b77371024d9b613f8a5829efe21d75fbf7374f1b7219c87ece7805246b7c0a74128b9d48f84e8840bf6ebf65249-data
@@ -84,7 +84,7 @@ Try creating again, this should fail
 
 Push a few new commits and update streaming clone
   $ cd "$TESTTMP"
-  $ hg clone -q ssh://user@dummy/repo-hg repo-push --noupdate
+  $ hg clone -q ssh://user@dummy/repo repo-push --noupdate
   $ cd repo-push
   $ enableextension remotenames
   $ hgmn up tip
@@ -172,11 +172,11 @@ Clone it again to make sure saved streaming chunks are valid
 
 Check no-upload-if-less-than-chunks option
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "delete from streaming_changelog_chunks where repo_id = 0;"
-  $ streaming_clone create --dot-hg-path "$TESTTMP/repo-hg/.hg" --no-upload-if-less-than-chunks 2
+  $ streaming_clone create --dot-hg-path "$TESTTMP/repo/.hg" --no-upload-if-less-than-chunks 2
   * using repo "repo" repoid RepositoryId(0) (glob)
   * current sizes in database: index: 0, data: 0, repo: repo (glob)
   * has too few chunks to upload - 1. Exiting, repo: repo (glob)
-  $ streaming_clone create --dot-hg-path "$TESTTMP/repo-hg/.hg" --no-upload-if-less-than-chunks 2 --max-data-chunk-size 1
+  $ streaming_clone create --dot-hg-path "$TESTTMP/repo/.hg" --no-upload-if-less-than-chunks 2 --max-data-chunk-size 1
   * using repo "repo" repoid RepositoryId(0) (glob)
   * current sizes in database: index: 0, data: 0, repo: repo (glob)
   * about to upload 3 entries, repo: repo (glob)

@@ -15,8 +15,8 @@ setup configuration
   $ cd $TESTTMP
 
 Setup hg repo, create a commit there. No LFS blobs yet.
-  $ hginit_treemanifest repo-hg
-  $ cd repo-hg
+  $ hginit_treemanifest repo
+  $ cd repo
 
   $ echo s > smallfile
   $ hg commit -Aqm "add small file"
@@ -29,9 +29,9 @@ Setup hg repo, create a commit there. No LFS blobs yet.
   $ cd ..
 
 Blobimport the hg repo to Mononoke
-  $ REPOID=0 blobimport repo-hg/.hg orig
+  $ REPOID=0 blobimport repo/.hg orig
   $ REPONAME=orig
-  $ REPOID=1 blobimport repo-hg/.hg backup
+  $ REPOID=1 blobimport repo/.hg backup
 
 Start Mononoke with LFS enabled.
   $ start_and_wait_for_mononoke_server
@@ -39,9 +39,9 @@ Start Mononoke API server, to serve LFS blobs
   $ lfs_uri="$(lfs_server)/orig"
 
 Create a new client repository. Enable LFS there.
-  $ hg clone -q ssh://user@dummy/repo-hg repo-hg-lfs --noupdate
+  $ hg clone -q ssh://user@dummy/repo repo-lfs --noupdate
   $ hg clone -q mononoke://$(mononoke_address)/backup backup --noupdate
-  $ cd repo-hg-lfs
+  $ cd repo-lfs
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > pushrebase =

@@ -37,8 +37,8 @@ Setup
 
 Prepare the server-side repo
 
-  $ hginit_treemanifest repo-hg
-  $ cd repo-hg
+  $ hginit_treemanifest repo
+  $ cd repo
   $ hg debugdrawdag <<EOF
   > B
   > |
@@ -54,11 +54,11 @@ Prepare the server-side repo
 - Import and start Mononoke (the Mononoke repo name is 'repo')
 
   $ cd $TESTTMP
-  $ blobimport repo-hg/.hg repo
+  $ blobimport repo/.hg repo
   $ start_and_wait_for_mononoke_server
 Prepare the client-side repo
 
-  $ hg clone -q ssh://user@dummy/repo-hg client-repo --noupdate
+  $ hg clone -q ssh://user@dummy/repo client-repo --noupdate
   $ cd $TESTTMP/client-repo
   $ hg debugdrawdag <<'EOS'
   > E C D

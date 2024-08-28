@@ -13,8 +13,8 @@ Set up local hgrc and Mononoke config.
   $ cd $TESTTMP
 
 Initialize test repo.
-  $ hginit_treemanifest repo-hg
-  $ cd repo-hg
+  $ hginit_treemanifest repo
+  $ cd repo
 
 Populate test repo
   $ drawdag << EOS
@@ -44,14 +44,14 @@ Populate test repo
 
 Blobimport test repo.
   $ cd ..
-  $ blobimport repo-hg/.hg repo
+  $ blobimport repo/.hg repo
 
 Start up SaplingRemoteAPI server.
   $ ENABLE_API_WRITES=1 setup_mononoke_config
   $ start_and_wait_for_mononoke_server
 Clone the repo
   $ cd $TESTTMP
-  $ hg clone -q ssh://user@dummy/repo-hg repo2 --noupdate
+  $ hg clone -q ssh://user@dummy/repo repo2 --noupdate
   $ cd repo2
 
 Test move bookmark

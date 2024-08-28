@@ -15,8 +15,8 @@ setup configuration
   $ cd $TESTTMP
 
 setup hg server repo
-  $ hginit_treemanifest repo-hg
-  $ cd repo-hg
+  $ hginit_treemanifest repo
+  $ cd repo
   $ touch a && hg ci -A -q -m 'add a'
 
 create master bookmark
@@ -34,13 +34,13 @@ create another commit that has other content we can redact
   $ cd $TESTTMP
 
 setup repo-pull and repo-push
-  $ hg clone -q ssh://user@dummy/repo-hg repo-push --noupdate
-  $ hg clone -q ssh://user@dummy/repo-hg repo-pull --noupdate
-  $ hg clone -q ssh://user@dummy/repo-hg repo-pull2 --noupdate
-  $ hg clone -q ssh://user@dummy/repo-hg repo-pull3 --noupdate
+  $ hg clone -q ssh://user@dummy/repo repo-push --noupdate
+  $ hg clone -q ssh://user@dummy/repo repo-pull --noupdate
+  $ hg clone -q ssh://user@dummy/repo repo-pull2 --noupdate
+  $ hg clone -q ssh://user@dummy/repo repo-pull3 --noupdate
 
 blobimport
-  $ blobimport repo-hg/.hg repo
+  $ blobimport repo/.hg repo
 
 start mononoke
   $ start_and_wait_for_mononoke_server

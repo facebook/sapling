@@ -14,8 +14,8 @@
   $ setconfig remotefilelog.http=false
 
 # Setup nolfs hg repo, create several commit to it
-  $ hginit_treemanifest repo-hg-nolfs
-  $ cd repo-hg-nolfs
+  $ hginit_treemanifest repo
+  $ cd repo
 
 # Commit a small file
   $ echo s > smallfile
@@ -25,10 +25,10 @@
 
 # Blobimport hg nolfs to mononoke
   $ cd ..
-  $ blobimport repo-hg-nolfs/.hg repo
+  $ blobimport repo/.hg repo
 
 # Setup hgrc to allow cloning the LFS repository
-  $ cd repo-hg-nolfs
+  $ cd repo
 
   $ cat >> .hg/hgrc << EOF
   > [extensions]
@@ -53,8 +53,8 @@
   $ lfs_uri="$(lfs_server --log "$LFS_LOG")/repo"
 
 # Create a new hg repository clone, with a low threshold for new LFS files
-  $ hg clone -q ssh://user@dummy/repo-hg-nolfs repo-hg-lfs --noupdate
-  $ cd repo-hg-lfs
+  $ hg clone -q ssh://user@dummy/repo repo-lfs --noupdate
+  $ cd repo-lfs
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > pushrebase =
@@ -73,7 +73,7 @@
   $ SHA_LARGE_FILE=$(sha256sum lfs-largefile | awk '{print $1;}')
   $ hg commit -Aqm "add lfs-large file"
   $ hg push -r . --to master_bookmark -v
-  pushing rev d6c13aab6acd to destination ssh://user@dummy/repo-hg-nolfs bookmark master_bookmark
+  pushing rev d6c13aab6acd to destination ssh://user@dummy/repo bookmark master_bookmark
   searching for changes
   lfs: uploading 2a49733d725b4e6dfa94410d29da9e64803ff946339c54ecc471eccc951047fe (1.95 KB)
   lfs: processed: 2a49733d725b4e6dfa94410d29da9e64803ff946339c54ecc471eccc951047fe
@@ -96,8 +96,8 @@
 
 # Create a new hg repository, and update to the new file
   $ cd ..
-  $ hg clone -q ssh://user@dummy/repo-hg-nolfs repo-hg-lfs2 --noupdate
-  $ cd repo-hg-lfs2
+  $ hg clone -q ssh://user@dummy/repo repo-lfs2 --noupdate
+  $ cd repo-lfs2
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > pushrebase =

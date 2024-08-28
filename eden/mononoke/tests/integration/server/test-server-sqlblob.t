@@ -25,10 +25,10 @@ setup common configuration
 
 setup repo
 
-  $ hginit_treemanifest repo-hg
+  $ hginit_treemanifest repo
 
 Init treemanifest and remotefilelog
-  $ cd repo-hg
+  $ cd repo
 
   $ touch a
   $ hg add a
@@ -43,13 +43,13 @@ Init treemanifest and remotefilelog
   $ cd $TESTTMP
 
 setup repo2
-  $ hg clone -q ssh://user@dummy/repo-hg repo2 --noupdate --config clone.prefer-edenapi-clonedata=false
+  $ hg clone -q ssh://user@dummy/repo repo2 --noupdate --config clone.prefer-edenapi-clonedata=false
   $ cd repo2
   $ hg pull
-  pulling from ssh://user@dummy/repo-hg
+  pulling from ssh://user@dummy/repo
 
   $ cd $TESTTMP
-  $ cd repo-hg
+  $ cd repo
   $ touch b
   $ hg add b
   $ hg ci -mb
@@ -106,7 +106,7 @@ setup master bookmarks
 blobimport
 
   $ cd ..
-  $ blobimport repo-hg/.hg repo
+  $ blobimport repo/.hg repo
 
 start mononoke
 

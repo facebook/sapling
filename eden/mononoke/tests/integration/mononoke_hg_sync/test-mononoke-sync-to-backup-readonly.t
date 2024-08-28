@@ -34,8 +34,8 @@ setup configuration
   $ cd $TESTTMP
 
 setup repo
-  $ hginit_treemanifest repo-hg
-  $ cd repo-hg
+  $ hginit_treemanifest repo
+  $ cd repo
 
   $ echo s > smallfile
   $ hg commit -Aqm "add small file"
@@ -48,14 +48,14 @@ setup repo
   $ cd ..
 
 Blobimport the hg repo to Mononoke
-  $ REPOID=0 blobimport repo-hg/.hg orig
+  $ REPOID=0 blobimport repo/.hg orig
   $ REPONAME=orig
-  $ REPOID=1 blobimport repo-hg/.hg backup
+  $ REPOID=1 blobimport repo/.hg backup
 
 start mononoke
   $ start_and_wait_for_mononoke_server
 Push to Mononoke
-  $ hg clone -q ssh://user@dummy/repo-hg client-push --noupdate
+  $ hg clone -q ssh://user@dummy/repo client-push --noupdate
   $ cd $TESTTMP/client-push
   $ cat >> .hg/hgrc <<EOF
   > [extensions]

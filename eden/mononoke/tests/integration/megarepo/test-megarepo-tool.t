@@ -18,8 +18,8 @@ setup configuration
 
 setup hg server repo
 
-  $ hginit_treemanifest repo-hg
-  $ cd repo-hg
+  $ hginit_treemanifest repo
+  $ cd repo
   $ function createfile { mkdir -p "$(dirname  $1)" && echo "$1" > "$1" && hg add "$1"; }
 
 -- create some semblance of fbsource
@@ -52,10 +52,10 @@ setup hg server repo
   $ cd $TESTTMP
 
 setup repo-pull
-  $ hg clone -q ssh://user@dummy/repo-hg repo-pull --noupdate
+  $ hg clone -q ssh://user@dummy/repo repo-pull --noupdate
 
 blobimport
-  $ blobimport repo-hg/.hg repo
+  $ blobimport repo/.hg repo
 
   $ export COMMIT_DATE="1985-09-04T00:00:00.00Z"
 move things in fbsource

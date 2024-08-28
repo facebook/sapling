@@ -16,20 +16,20 @@ setup common configuration
   $ setconfig ui.ssh="\"$DUMMYSSH\"" mutation.date="0 0"
   $ enable amend
 
-  $ hginit_treemanifest repo-hg
-  $ cd repo-hg
+  $ hginit_treemanifest repo
+  $ cd repo
   $ echo base > base
   $ hg commit -Aqm base
   $ hg bookmark master -r tip
 
 blobimport
   $ cd $TESTTMP
-  $ blobimport repo-hg/.hg repo
+  $ blobimport repo/.hg repo
 
 start mononoke
   $ start_and_wait_for_mononoke_server
 clone the repo
-  $ hg clone -q ssh://user@dummy/repo-hg client --noupdate
+  $ hg clone -q ssh://user@dummy/repo client --noupdate
   $ cd client
   $ enable pushrebase remotenames
 

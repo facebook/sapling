@@ -16,8 +16,8 @@ setup common configuration for these tests
 
 setup repo
 
-  $ hginit_treemanifest repo-hg
-  $ cd repo-hg
+  $ hginit_treemanifest repo
+  $ cd repo
   $ touch a && hg addremove && hg ci -q -ma
   adding a
   $ hg log -T '{short(node)}\n'
@@ -29,12 +29,12 @@ create master bookmark
   $ cd $TESTTMP
 
 setup repo-push and repo-pull
-  $ hg clone -q ssh://user@dummy/repo-hg repo-push --noupdate
-  $ hg clone -q ssh://user@dummy/repo-hg repo-pull --noupdate
+  $ hg clone -q ssh://user@dummy/repo repo-push --noupdate
+  $ hg clone -q ssh://user@dummy/repo repo-pull --noupdate
 
 blobimport
 
-  $ blobimport repo-hg/.hg repo
+  $ blobimport repo/.hg repo
 
 start mononoke
 

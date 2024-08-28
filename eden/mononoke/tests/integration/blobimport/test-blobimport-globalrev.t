@@ -6,8 +6,8 @@
 
   $ . "${TEST_FIXTURES}/library.sh"
 
-  $ hginit_treemanifest repo-hg --config format.usefncache=False
-  $ cd repo-hg
+  $ hginit_treemanifest repo --config format.usefncache=False
+  $ cd repo
 
   $ touch file1
   $ hg add
@@ -37,7 +37,7 @@
 
   $ setup_mononoke_config
   $ cd $TESTTMP
-  $ blobimport repo-hg/.hg repo --has-globalrev
+  $ blobimport repo/.hg repo --has-globalrev
   $ get_bonsai_globalrev_mapping
   ADB923EB43189CF56394F61995A9E1FA5CD003CED7167B6FDDB03E94229DB10F|9999999991
   BEA29B6994B07C79FD1B641BC5EFDDFC8955C43E673BE83242D0A1C55D026AC2|9999999992

@@ -15,8 +15,8 @@ setup configuration
 
 setup repo
 
-  $ hginit_treemanifest repo-hg-server
-  $ cd repo-hg-server
+  $ hginit_treemanifest repo
+  $ cd repo
   $ echo "a file content" > a
   $ hg add a
   $ hg ci -ma
@@ -32,14 +32,14 @@ verify content
   
 blobimport the repo
   $ cd $TESTTMP
-  $ blobimport repo-hg-server/.hg repo
+  $ blobimport repo/.hg repo
 
 start mononoke
 
   $ start_and_wait_for_mononoke_server
 setup the client repo
   $ cd $TESTTMP
-  $ hg clone -q ssh://user@dummy/repo-hg-server client --noupdate
+  $ hg clone -q ssh://user@dummy/repo client --noupdate
 
 create new hg commits
   $ cd $TESTTMP/client

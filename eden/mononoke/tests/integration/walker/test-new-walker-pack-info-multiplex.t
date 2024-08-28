@@ -9,8 +9,8 @@
 setup configuration with some compressable files.  3 way multiplex with first two stores packed
   $ MULTIPLEXED=2 PACK_BLOB=1 setup_common_config "blob_files"
   $ cd $TESTTMP
-  $ hginit_treemanifest repo-hg-nolfs
-  $ cd repo-hg-nolfs
+  $ hginit_treemanifest repo
+  $ cd repo
   $ cp "${TEST_FIXTURES}/raw_text.txt" f1
   $ hg commit -Aqm "f1"
   $ cp f1 f2
@@ -21,7 +21,7 @@ setup configuration with some compressable files.  3 way multiplex with first tw
   $ hg commit -Aqm "f3"
   $ hg bookmark master_bookmark -r tip
   $ cd ..
-  $ blobimport repo-hg-nolfs/.hg repo
+  $ blobimport repo/.hg repo
 
 Set up the key file for packing
   $ mkdir -p $TESTTMP/pack_key_files_0/

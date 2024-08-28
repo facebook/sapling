@@ -7,12 +7,11 @@
   $ . "${TEST_FIXTURES}/library.sh"
 
 setup configuration
-  $ REPONAME="test/repo"
   $ configure modern
   $ cat >> "$ACL_FILE" << ACLS
   > {
   >   "repos": {
-  >     "test/repo": {
+  >     "repo": {
   >       "actions": {
   >         "read": ["$CLIENT0_ID_TYPE:$CLIENT0_ID_DATA"],
   >         "write": ["$CLIENT0_ID_TYPE:$CLIENT0_ID_DATA"],
@@ -22,14 +21,14 @@ setup configuration
   >   }
   > }
   > ACLS
-  $ READ_ONLY_REPO=1 REPONAME="test/repo" ACL_NAME="test/repo" setup_common_config
+  $ READ_ONLY_REPO=1 ACL_NAME="repo" setup_common_config
 
   $ cd $TESTTMP
 
 setup repo
 
-  $ hginit_treemanifest repo-hg
-  $ cd repo-hg
+  $ hginit_treemanifest repo
+  $ cd repo
   $ echo "a file content" > a
   $ hg add a
   $ hg ci -ma
@@ -48,10 +47,10 @@ verify content
    (re)
 
   $ cd $TESTTMP
-  $ blobimport repo-hg/.hg $REPONAME
+  $ blobimport repo/.hg repo
 
 setup push source repo
-  $ hg clone -q ssh://user@dummy/repo-hg repo2
+  $ hg clone -q ssh://user@dummy/repo repo2
 
 start mononoke
 
@@ -65,10 +64,10 @@ create new commit in repo2 and check that push to a bookmark fails
   $ hg add b_dir/b
   $ hg ci -mb
 
-  $ sl push --to master_bookmark --force --debug mononoke://$(mononoke_address)/test%2Frepo
+  $ sl push --to master_bookmark --force --debug mononoke://$(mononoke_address)/repo
   sending hello command
   sending clienttelemetry command
-  pushing rev bb0985934a0f to destination mononoke://$LOCALIP:$LOCAL_PORT/test/repo bookmark master_bookmark
+  pushing rev bb0985934a0f to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   query 1; heads
   sending heads command
   searching for changes
@@ -112,16 +111,16 @@ create new commit in repo2 and check that push to a bookmark fails
   [255]
 
 Try to bypass the check
-  $ sl push --force --to master_bookmark mononoke://$(mononoke_address)/test%2Frepo --pushvars "BYPASS_READONLY=true"
-  pushing rev bb0985934a0f to destination mononoke://$LOCALIP:$LOCAL_PORT/test/repo bookmark master_bookmark
+  $ sl push --force --to master_bookmark mononoke://$(mononoke_address)/repo --pushvars "BYPASS_READONLY=true"
+  pushing rev bb0985934a0f to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   no changes found
   updating bookmark master_bookmark
 
 Check that a push which doesn't move a bookmark is allowed
-  $ sl push --force --debug mononoke://$(mononoke_address)/test%2Frepo
+  $ sl push --force --debug mononoke://$(mononoke_address)/repo
   tracking on None {}
-  pushing to mononoke://$LOCALIP:$LOCAL_PORT/test/repo
+  pushing to mononoke://$LOCALIP:$LOCAL_PORT/repo
   sending hello command
   sending clienttelemetry command
   query 1; heads

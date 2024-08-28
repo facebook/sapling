@@ -14,8 +14,8 @@ Setup config
   $ cd $TESTTMP
 
 Setup repo
-  $ hginit_treemanifest repo-hg-nolfs
-  $ cd repo-hg-nolfs
+  $ hginit_treemanifest repo
+  $ cd repo
 
 # Commit small file and blobimport
   $ echo s > small
@@ -24,7 +24,7 @@ Setup repo
   $ hg bookmark master_bookmark -r tip
 
   $ cd ..
-  $ blobimport repo-hg-nolfs/.hg repo
+  $ blobimport repo/.hg repo
 
 Setup Mononoke
   $ start_and_wait_for_mononoke_server
@@ -32,8 +32,8 @@ Setup LFS server
   $ lfs_uri="$(lfs_server)/repo"
 
 Clone the repository, then enable LFS
-  $ hg clone -q ssh://user@dummy/repo-hg-nolfs repo-hg-lfs --noupdate
-  $ cd repo-hg-lfs
+  $ hg clone -q ssh://user@dummy/repo repo-lfs --noupdate
+  $ cd repo-lfs
   $ setup_hg_modern_lfs "$lfs_uri" 1000B "$TESTTMP/lfs-cache1"
 
   $ cat >> .hg/hgrc <<EOF
@@ -53,8 +53,8 @@ Submit a large file
   $ hgmn push -q -r . --to master_bookmark
 
 Create a new repository, enable LFS there as well
-  $ hg clone -q ssh://user@dummy/repo-hg-nolfs repo-hg-lfs2 --noupdate
-  $ cd repo-hg-lfs2
+  $ hg clone -q ssh://user@dummy/repo repo-lfs2 --noupdate
+  $ cd repo-lfs2
   $ setup_hg_modern_lfs "$lfs_uri" 1000B "$TESTTMP/lfs-cache2"
 
   $ cat >> .hg/hgrc <<EOF

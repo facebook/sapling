@@ -7,7 +7,7 @@
 # Setup Mononoke
   $ . "${TEST_FIXTURES}/library.sh"
   $ GIT_REPO="${TESTTMP}/repo-git"
-  $ HG_REPO="${TESTTMP}/repo-hg"
+  $ HG_REPO="${TESTTMP}/repo"
   $ setup_common_config
 
 # Setup git repo without LFS

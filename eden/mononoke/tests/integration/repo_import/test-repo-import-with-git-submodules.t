@@ -10,7 +10,7 @@
   $ setup_common_config
   $ GIT_REPO="${TESTTMP}/repo-git"
   $ GIT_SUBMODULE_REPO="${TESTTMP}/repo-submodule"
-  $ HG_REPO="${TESTTMP}/repo-hg"
+  $ HG_REPO="${TESTTMP}/repo"
   $ BLOB_TYPE="blob_files" default_setup
   hg repo
   o  C [draft;rev=2;26805aba1e60]
@@ -219,7 +219,7 @@
     "x_repo_check_disabled": false
   }
 
-  $ hg clone -q ssh://user@dummy/repo-hg repo1 --noupdate
+  $ hg clone -q ssh://user@dummy/repo repo1 --noupdate
   $ cd repo1
   $ hgmn pull
   pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo

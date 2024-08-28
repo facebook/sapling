@@ -34,8 +34,8 @@ Disable bookmarks cache because bookmarks are modified by two separate processes
 
 -- init fbsource
   $ cd $TESTTMP
-  $ hginit_treemanifest fbs-hg-srv
-  $ cd fbs-hg-srv
+  $ hginit_treemanifest fbs-mon
+  $ cd fbs-mon
 -- create an initial commit, which will be the last_synced_commit
   $ createfile fbcode/fbcodefile_fbsource
   $ createfile arvr/arvrfile_fbsource
@@ -54,8 +54,8 @@ Disable bookmarks cache because bookmarks are modified by two separate processes
 
 -- init megarepo - note that some paths are shifted, but content stays the same
   $ cd $TESTTMP
-  $ hginit_treemanifest meg-hg-srv
-  $ cd meg-hg-srv
+  $ hginit_treemanifest meg-mon
+  $ cd meg-mon
   $ createfile fbcode/fbcodefile_fbsource
   $ createfile_with_content .fbsource-rest/arvr/arvrfile_fbsource arvr/arvrfile_fbsource
   $ createfile otherfile_fbsource
@@ -68,8 +68,8 @@ Disable bookmarks cache because bookmarks are modified by two separate processes
 
 -- blobimport hg servers repos into Mononoke repos
   $ cd "$TESTTMP"
-  $ REPOID=0 blobimport meg-hg-srv/.hg meg-mon
-  $ REPOID=1 blobimport fbs-hg-srv/.hg fbs-mon
+  $ REPOID=0 blobimport meg-mon/.hg meg-mon
+  $ REPOID=1 blobimport fbs-mon/.hg fbs-mon
 
 -- get some bonsai hashes to avoid magic strings later
   $ FBSOURCE_MASTER_BONSAI=$(mononoke_newadmin bookmarks --repo-id 1 get master_bookmark)
@@ -80,8 +80,8 @@ Disable bookmarks cache because bookmarks are modified by two separate processes
 
 -- setup hg client repos
   $ cd "$TESTTMP"
-  $ hg clone -q ssh://user@dummy/fbs-hg-srv fbs-hg-cnt --noupdate
-  $ hg clone -q ssh://user@dummy/meg-hg-srv meg-hg-cnt --noupdate
+  $ hg clone -q ssh://user@dummy/fbs-mon fbs-hg-cnt --noupdate
+  $ hg clone -q ssh://user@dummy/meg-mon meg-hg-cnt --noupdate
 
 -- start mononoke
   $ start_and_wait_for_mononoke_server

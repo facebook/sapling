@@ -103,14 +103,14 @@ setup hg server repos
   > }
 
   $ cd $TESTTMP
-  $ hginit_treemanifest small-hg-srv-1
-  $ cd "$TESTTMP/small-hg-srv-1"
+  $ hginit_treemanifest small-mon-1
+  $ cd "$TESTTMP/small-mon-1"
   $ echo 1 > file.txt
   $ hg addremove -q && hg ci -q -m 'pre-move commit 1'
 
   $ cd "$TESTTMP"
-  $ cp -r small-hg-srv-1 large-hg-srv
-  $ cd large-hg-srv
+  $ cp -r small-mon-1 large-mon
+  $ cd large-mon
   $ mkdir smallrepofolder1
   $ hg mv file.txt smallrepofolder1/file.txt
   $ hg ci -m 'move commit'
@@ -121,7 +121,7 @@ setup hg server repos
   $ create_first_post_move_commit smallrepofolder1
   $ hg book -r . master_bookmark
 
-  $ cd "$TESTTMP/small-hg-srv-1"
+  $ cd "$TESTTMP/small-mon-1"
   $ create_first_post_move_commit .
   $ hg book -r . master_bookmark
 
@@ -129,8 +129,8 @@ blobimport hg servers repos into Mononoke repos
   $ cd $TESTTMP
   $ REPOIDLARGE=0
   $ REPOIDSMALL1=1
-  $ REPOID="$REPOIDLARGE" blobimport large-hg-srv/.hg large-mon
-  $ REPOID="$REPOIDSMALL1" blobimport small-hg-srv-1/.hg small-mon-1
+  $ REPOID="$REPOIDLARGE" blobimport large-mon/.hg large-mon
+  $ REPOID="$REPOIDSMALL1" blobimport small-mon-1/.hg small-mon-1
 
 setup hg client repos
   $ function init_client() {
@@ -143,9 +143,9 @@ setup hg client repos
   > EOF
   > }
 
-  $ init_client small-hg-srv-1 small-hg-client-1
+  $ init_client small-mon-1 small-hg-client-1
   $ cd "$TESTTMP"
-  $ init_client large-hg-srv large-hg-client
+  $ init_client large-mon large-hg-client
 
 Setup helpers
   $ LARGE_MASTER_BONSAI=$(mononoke_newadmin bookmarks --repo-id $REPOIDLARGE get master_bookmark)

@@ -116,7 +116,7 @@ Executable binary under specific directory - should fail
   > }'''
   > CONF
   > )
-  abort: repository `$TESTTMP/repo-hg` already exists
+  abort: repository `$TESTTMP/repo` already exists
   abort: destination 'repo2' is not empty
   $ force_update_configerator
 

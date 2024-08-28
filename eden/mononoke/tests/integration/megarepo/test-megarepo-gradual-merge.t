@@ -15,8 +15,8 @@ setup configuration
 
 setup hg server repo
 
-  $ hginit_treemanifest repo-hg
-  $ cd repo-hg
+  $ hginit_treemanifest repo
+  $ cd repo
   $ drawdag <<EOF
   > C
   > |
@@ -64,7 +64,7 @@ setup hg server repo
      pre_deletion_commit       0069ba24938a
 
   $ cd .. 
-  $ blobimport repo-hg/.hg repo
+  $ blobimport repo/.hg repo
   $ megarepo_tool gradual-merge \
   > stash \
   > "gradual merge" \
@@ -116,8 +116,8 @@ setup hg server repo
 
   $ start_and_wait_for_mononoke_server
   $ cd "$TESTTMP"
-  $ hg clone -q ssh://user@dummy/repo-hg repo --noupdate
-  $ cd repo
+  $ hg clone -q ssh://user@dummy/repo client --noupdate
+  $ cd client
   $ hgmn pull
   pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo
   searching for changes

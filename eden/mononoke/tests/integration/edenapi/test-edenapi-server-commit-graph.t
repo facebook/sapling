@@ -13,8 +13,8 @@ Set up local hgrc and Mononoke config.
   $ cd $TESTTMP
 
 Initialize test repo.
-  $ hginit_treemanifest repo-hg
-  $ cd repo-hg
+  $ hginit_treemanifest repo
+  $ cd repo
 
 Populate test repo
   $ drawdag << EOS
@@ -55,7 +55,7 @@ Populate test repo
 
 Blobimport test repo.
   $ cd ..
-  $ blobimport repo-hg/.hg repo
+  $ blobimport repo/.hg repo
 
 Start up SaplingRemoteAPI server.
   $ setup_mononoke_config

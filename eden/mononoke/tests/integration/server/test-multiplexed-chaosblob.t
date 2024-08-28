@@ -30,7 +30,7 @@ Erase the sqllites and blobstore_sync_queue
   $ rm -rf "$TESTTMP/blobstore/"*/blobs/*
 
 blobimport them into Mononoke storage again, but with failures on one side
-  $ blobimport repo-hg/.hg repo --blobstore-write-chaos-rate=1
+  $ blobimport repo/.hg repo --blobstore-write-chaos-rate=1
 
 Check the stores have expected counts
   $ ls blobstore/0/blobs/ | wc -l

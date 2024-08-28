@@ -15,8 +15,8 @@
   $ setup_common_config $REPOTYPE
   $ cd $TESTTMP
 
-  $ hginit_treemanifest repo-hg-nolfs
-  $ cd repo-hg-nolfs
+  $ hginit_treemanifest repo
+  $ cd repo
 
 # Commit files
   $ cp "${TEST_FIXTURES}/raw_text.txt" f1
@@ -32,7 +32,7 @@
 
   $ cd ..
 
-  $ blobimport repo-hg-nolfs/.hg repo
+  $ blobimport repo/.hg repo
 
 # Get the space consumed by the content as-is
   $ stat -c '%s %h %N' $TESTTMP/blobstore/0/blobs/blob-repo0000.content.blake2.* | sort -n

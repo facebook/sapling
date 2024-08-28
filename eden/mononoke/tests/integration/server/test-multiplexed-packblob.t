@@ -32,7 +32,7 @@ Move the uncompressed packed store aside
   $ rm -rf "$TESTTMP/blobstore_sync_queue/sqlite_dbs" "$TESTTMP/blobstore"
 
 Blobimport again, but this time enable zstd compression
-  $ blobimport repo-hg/.hg repo --blobstore-write-zstd=true --blobstore-write-zstd-level=0
+  $ blobimport repo/.hg repo --blobstore-write-zstd=true --blobstore-write-zstd-level=0
 
 Check that the packed sizes are smaller due to compression
   $ PACKED=$(du -s --bytes blobstore/0/blobs/ | cut -f1); OLDPACKED=$(du -s --bytes blobstore.raw/blobs/ | cut -f1)

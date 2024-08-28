@@ -7,8 +7,8 @@
   $ . "${TEST_FIXTURES}/library.sh"
 
 # setup repo, usefncache flag for forcing algo encoding run
-  $ hginit_treemanifest repo-hg --config format.usefncache=False
-  $ cd repo-hg
+  $ hginit_treemanifest repo --config format.usefncache=False
+  $ cd repo
 
 # From blobimport fail real case
   $ DIR="data/scm/www/Hhg/store/data/flib/site/web/ads/rtb_neko/web_request/__tests__/codegen/__snapshots__"
@@ -58,20 +58,20 @@
 
   $ setup_mononoke_config
   $ cd $TESTTMP
-  $ blobimport --log repo-hg/.hg repo --find-already-imported-rev-only
+  $ blobimport --log repo/.hg repo --find-already-imported-rev-only
   * using repo "repo" repoid RepositoryId(0) (glob)
   * didn't import any commits (glob)
-  $ blobimport --log repo-hg/.hg repo --commits-limit 1
+  $ blobimport --log repo/.hg repo --commits-limit 1
   * using repo "repo" repoid RepositoryId(0) (glob)
   * inserted commits # 0 (glob)
   * Deriving data for: ["filenodes"] (glob)
   * finished uploading changesets, globalrevs and deriving data (glob)
   * latest imported revision 0 (glob)
-  $ blobimport --log repo-hg/.hg repo --find-already-imported-rev-only
+  $ blobimport --log repo/.hg repo --find-already-imported-rev-only
   * using repo "repo" repoid RepositoryId(0) (glob)
   * latest imported revision 0 (glob)
-  $ blobimport repo-hg/.hg repo
-  $ blobimport --log repo-hg/.hg repo --find-already-imported-rev-only
+  $ blobimport repo/.hg repo
+  $ blobimport --log repo/.hg repo --find-already-imported-rev-only
   * using repo "repo" repoid RepositoryId(0) (glob)
   * latest imported revision 4 (glob)
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select * from mutable_counters";

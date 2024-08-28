@@ -11,8 +11,8 @@ setup configuration
   $ cd $TESTTMP
 
 setup repo with 1MB file, which is larger then zstd stream buffer size
-  $ hginit_treemanifest repo-hg
-  $ cd repo-hg
+  $ hginit_treemanifest repo
+  $ cd repo
   $ printf '=%.0s' {1..1048576} > a
   $ hg add a
   $ hg ci -ma
@@ -20,8 +20,8 @@ setup repo with 1MB file, which is larger then zstd stream buffer size
 setup master bookmarks
   $ hg bookmark master_bookmark -r 'tip'
   $ cd $TESTTMP
-  $ blobimport repo-hg/.hg repo
-  $ rm -rf repo-hg
+  $ blobimport repo/.hg repo
+  $ rm -rf repo
 
 Setup the right configuration
   $ merge_just_knobs <<EOF

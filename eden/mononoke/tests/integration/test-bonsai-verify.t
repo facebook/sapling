@@ -19,9 +19,9 @@ setup common configuration
 
 setup repo
 
-  $ hginit_treemanifest repo-hg
+  $ hginit_treemanifest repo
 
-  $ cd repo-hg
+  $ cd repo
 
   $ touch a
   $ hg add a
@@ -38,7 +38,7 @@ setup repo
 blobimport
 
   $ cd ..
-  $ blobimport repo-hg/.hg repo
+  $ blobimport repo/.hg repo
 
 smoke test to ensure bonsai_verify works
 

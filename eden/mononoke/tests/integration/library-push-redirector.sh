@@ -714,8 +714,8 @@ EOF
 
   # init fbsource
   cd "$TESTTMP" || exit 1
-  hginit_treemanifest fbs-hg-srv
-  cd fbs-hg-srv || exit 1
+  hginit_treemanifest fbs-mon
+  cd fbs-mon || exit 1
   # create an initial commit, which will be the last_synced_commit
   createfile fbcode/fbcodefile_fbsource
   createfile arvr/arvrfile_fbsource
@@ -723,8 +723,8 @@ EOF
   hg -q ci -m "fbsource commit 1" && hg book -ir . "${MASTER_BOOKMARK:-master_bookmark}"
   # init ovrsource
   cd "$TESTTMP" || exit 1
-  hginit_treemanifest ovr-hg-srv
-  cd ovr-hg-srv || exit 1
+  hginit_treemanifest ovr-mon
+  cd ovr-mon || exit 1
   createfile fbcode/fbcodefile_ovrsource
   createfile arvr/arvrfile_ovrsource
   createfile otherfile_ovrsource
@@ -732,8 +732,8 @@ EOF
   hg -q ci -m "ovrsource commit 1" && hg book -r . "${MASTER_BOOKMARK:-master_bookmark}"
   # init megarepo - note that some paths are shifted, but content stays the same
   cd "$TESTTMP" || exit 1
-  hginit_treemanifest meg-hg-srv
-  cd meg-hg-srv || exit 1
+  hginit_treemanifest meg-mon
+  cd meg-mon || exit 1
   createfile fbcode/fbcodefile_fbsource
   createfile_with_content .fbsource-rest/arvr/arvrfile_fbsource arvr/arvrfile_fbsource
   createfile otherfile_fbsource
@@ -745,9 +745,9 @@ EOF
   hg book -r . "${MASTER_BOOKMARK:-master_bookmark}"
   # blobimport hg servers repos into Mononoke repos
   cd "$TESTTMP" || exit 1
-  REPOID=0 blobimport meg-hg-srv/.hg meg-mon
-  REPOID=1 blobimport fbs-hg-srv/.hg fbs-mon
-  REPOID=2 blobimport ovr-hg-srv/.hg ovr-mon
+  REPOID=0 blobimport meg-mon/.hg meg-mon
+  REPOID=1 blobimport fbs-mon/.hg fbs-mon
+  REPOID=2 blobimport ovr-mon/.hg ovr-mon
 }
 
 function enable_pushredirect {
