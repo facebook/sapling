@@ -12,6 +12,7 @@ use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
+use base64::Engine;
 use blake3::Hasher as Blake3Hasher;
 use blobstore::Blobstore;
 use blobstore::BlobstoreBytes;
@@ -294,7 +295,11 @@ impl ShardedHgAugmentedManifest {
             w.write_all(file.content_sha1.to_hex().as_bytes())?;
             w.write_all(b" ")?;
             if let Some(file_header_metadata) = &file.file_header_metadata {
-                w.write_all(base64::encode(file_header_metadata).as_ref())?;
+                w.write_all(
+                    base64::engine::general_purpose::STANDARD
+                        .encode(file_header_metadata)
+                        .as_ref(),
+                )?;
             } else {
                 w.write_all(b"-")?;
             }

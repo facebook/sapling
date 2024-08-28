@@ -11,6 +11,11 @@ use std::io::Write;
 
 use anyhow::anyhow;
 use anyhow::Error;
+use base64::alphabet::STANDARD;
+use base64::engine::general_purpose::GeneralPurpose;
+use base64::engine::general_purpose::GeneralPurposeConfig;
+use base64::engine::DecodePaddingMode;
+use base64::Engine;
 use blake3::Hasher as Blake3Hasher;
 use minibytes::Bytes;
 
@@ -21,6 +26,12 @@ use crate::HgId;
 use crate::Id20;
 use crate::RepoPathBuf;
 use crate::Sha1;
+
+// Bring back the pre 0.20 bevahiour and allow either padded or un-padded base64 strings at decode time.
+const STANDARD_INDIFFERENT: GeneralPurpose = GeneralPurpose::new(
+    &STANDARD,
+    GeneralPurposeConfig::new().with_decode_padding_mode(DecodePaddingMode::Indifferent),
+);
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct AugmentedFileNode {
@@ -187,7 +198,11 @@ impl AugmentedTree {
                     w.write_all(file.content_sha1.to_hex().as_ref())?;
                     w.write_all(b" ")?;
                     if let Some(file_header_metadata) = &file.file_header_metadata {
-                        w.write_all(base64::encode(file_header_metadata).as_bytes())?;
+                        w.write_all(
+                            base64::engine::general_purpose::STANDARD
+                                .encode(file_header_metadata)
+                                .as_bytes(),
+                        )?;
                     } else {
                         w.write_all(b"-")?;
                     };
@@ -311,7 +326,9 @@ impl AugmentedTree {
                             let file_header_metadata = if file_header_metadata == "-" {
                                 None
                             } else {
-                                Some(Bytes::from(base64::decode(file_header_metadata)?))
+                                Some(Bytes::from(
+                                    STANDARD_INDIFFERENT.decode(file_header_metadata)?,
+                                ))
                             };
 
                             Ok((

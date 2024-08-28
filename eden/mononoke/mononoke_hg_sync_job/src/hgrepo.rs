@@ -19,6 +19,7 @@ use anyhow::format_err;
 use anyhow::Context as _;
 use anyhow::Error;
 use anyhow::Result;
+use base64::Engine;
 use bookmarks::BookmarkKey;
 use futures::future;
 use futures::future::FutureExt;
@@ -314,7 +315,7 @@ impl HgPeer {
         };
 
         let onto_bookmark = onto_bookmark.to_string();
-        let onto_bookmark = base64::encode(&onto_bookmark);
+        let onto_bookmark = base64::engine::general_purpose::STANDARD.encode(&onto_bookmark);
         let expected_hash = expected_location_string_arg(expected_bookmark_position);
 
         let hgbonsaimapping = match commits_in_bundle {

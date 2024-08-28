@@ -16,6 +16,7 @@ use std::str;
 use std::time::SystemTime;
 
 use anyhow::Result;
+use base64::Engine;
 use configset::Config;
 use filetime::FileTime;
 use log::error;
@@ -214,7 +215,8 @@ pub fn read_or_generate_access_token(user_token_path: &Option<PathBuf>) -> Resul
         clicat_tool
     );
     let token_timeout_seconds = 1200;
-    let payload = base64::encode(json!({"app":COMMIT_CLOUD_APP_ID}).to_string());
+    let payload = base64::engine::general_purpose::STANDARD
+        .encode(json!({"app":COMMIT_CLOUD_APP_ID}).to_string());
     let output = Command::new(clicat_tool)
         .args(vec![
             "create",

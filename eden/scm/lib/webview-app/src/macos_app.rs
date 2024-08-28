@@ -10,6 +10,7 @@ use std::path::PathBuf;
 use std::process::Command;
 
 use anyhow::Context;
+use base64::Engine;
 use serde::Deserialize;
 use serde::Serialize;
 
@@ -351,7 +352,8 @@ extern "C" fn handle_webview_invoke(webview: *mut webview_sys::CWebView, arg: *c
                             file_name.to_owned().into_string().unwrap_or_default();
                         Some(WebviewInvokeFile {
                             name: file_name,
-                            base64_content: base64::encode(content),
+                            base64_content: base64::engine::general_purpose::STANDARD
+                                .encode(content),
                         })
                     }
                     Err(e) => {

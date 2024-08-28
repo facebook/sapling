@@ -14,7 +14,7 @@ anyhow = "1.0.86"
 ascii = "1.0"
 async-stream = "0.3"
 async-trait = "0.1.71"
-base64 = "0.13"
+base64 = "0.21"
 bitflags = { version = "2.4", features = ["serde"] }
 blake3 = { version = "=1.5.0", features = ["traits-preview"] }
 blobstore = { version = "0.1.0", path = "../../blobstore" }

@@ -14,7 +14,7 @@ harness = false
 
 [dependencies]
 anyhow = "1.0.86"
-base64 = "0.13"
+base64 = "0.21"
 configmodel = { version = "0.1.0", path = "../model" }
 configset = { version = "0.1.0", path = "../set" }
 dirs = "2.0"

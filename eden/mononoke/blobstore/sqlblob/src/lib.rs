@@ -30,6 +30,11 @@ use anyhow::format_err;
 use anyhow::Error;
 use anyhow::Result;
 use async_trait::async_trait;
+use base64::alphabet::STANDARD;
+use base64::engine::general_purpose::GeneralPurpose;
+use base64::engine::general_purpose::NO_PAD;
+use base64::engine::DecodePaddingMode;
+use base64::Engine;
 use blobstore::Blobstore;
 use blobstore::BlobstoreGetData;
 use blobstore::BlobstoreIsPresent;
@@ -77,6 +82,11 @@ use crate::store::ChunkGenerationState;
 use crate::store::ChunkSqlStore;
 use crate::store::ChunkingMethod;
 use crate::store::DataSqlStore;
+// Bring back the pre 0.20 bevahiour and allow either padded or un-padded base64 strings at decode time.
+const STANDARD_NO_PAD_INDIFFERENT: GeneralPurpose = GeneralPurpose::new(
+    &STANDARD,
+    NO_PAD.with_decode_padding_mode(DecodePaddingMode::Indifferent),
+);
 
 // Leaving some space for metadata
 const MAX_KEY_SIZE: usize = 200;
@@ -122,7 +132,7 @@ const DEFAULT_CTIME_INLINE_GRACE: i64 = 86400;
 pub const MAX_INLINE_LEN: u64 = 255 * 3 / 4;
 
 fn encode_small_value(raw: &[u8]) -> String {
-    base64::encode_config(raw, base64::STANDARD_NO_PAD)
+    STANDARD_NO_PAD_INDIFFERENT.encode(raw)
 }
 
 impl Sqlblob {
@@ -505,7 +515,7 @@ impl Sqlblob {
         if let Some(chunked) = chunked {
             let blob = match chunked.chunking_method {
                 ChunkingMethod::InlineBase64 => {
-                    let decoded = base64::decode_config(&chunked.id, base64::STANDARD_NO_PAD)?;
+                    let decoded = STANDARD_NO_PAD_INDIFFERENT.decode(&chunked.id)?;
                     Bytes::copy_from_slice(decoded.as_ref())
                 }
                 ChunkingMethod::ByContentHashBlake2 => {

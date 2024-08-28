@@ -15,6 +15,7 @@ use abomonation_derive::Abomonation;
 use anyhow::anyhow;
 use anyhow::Result;
 use async_trait::async_trait;
+use base64::Engine;
 use bytes::Bytes;
 use caching_ext::*;
 use itertools::Itertools;
@@ -615,7 +616,7 @@ where
     fn get_cache_key(&self, key: &Key) -> String {
         // We just need a unique representation of the key as a String.
         // Let's use base64 as it's smaller than just .to_string()
-        base64::encode(key.to_ne_bytes())
+        base64::engine::general_purpose::STANDARD.encode(key.to_ne_bytes())
     }
 
     async fn get_from_db(

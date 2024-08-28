@@ -11,7 +11,7 @@ license = "GPLv2+"
 anyhow = "1.0.86"
 async-stream = "0.3"
 async-trait = "0.1.71"
-base64 = "0.13"
+base64 = "0.21"
 blobstore = { version = "0.1.0", path = "../blobstore" }
 bookmarks = { version = "0.1.0", path = "../bookmarks" }
 bookmarks_movement = { version = "0.1.0", path = "../bookmarks/bookmarks_movement" }
