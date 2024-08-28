@@ -8,7 +8,7 @@ edition = "2021"
 license = "GPLv2+"
 
 [dependencies]
-anyhow = "1.0.75"
+anyhow = "1.0.86"
 blobrepo_utils = { version = "0.1.0", path = "../../blobrepo_utils" }
 blobsync = { version = "0.1.0", path = "../../blobrepo/blobsync" }
 bonsai_hg_mapping = { version = "0.1.0", path = "../../bonsai_hg_mapping" }

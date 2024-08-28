@@ -8,6 +8,6 @@ edition = "2021"
 license = "GPLv2+"
 
 [dependencies]
-anyhow = "1.0.75"
+anyhow = "1.0.86"
 async-trait = "0.1.71"
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }

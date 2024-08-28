@@ -7,7 +7,7 @@ authors = ["Source Control Oncall oncall+source_control@xmail.facebook.com"]
 edition = "2021"
 
 [dependencies]
-anyhow = "1.0.75"
+anyhow = "1.0.86"
 clap = { version = "3.2.25", features = ["derive", "env", "regex", "unicode", "wrap_help"] }
 dirs = "2.0"
 hex = "0.4.3"

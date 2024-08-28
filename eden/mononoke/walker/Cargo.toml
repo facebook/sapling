@@ -9,7 +9,7 @@ license = "GPLv2+"
 
 [dependencies]
 ahash = "0.8"
-anyhow = "1.0.75"
+anyhow = "1.0.86"
 array-init = "0.1"
 async-trait = "0.1.71"
 auto_impl = "1.1.0"

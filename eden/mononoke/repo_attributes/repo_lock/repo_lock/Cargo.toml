@@ -11,7 +11,7 @@ license = "GPLv2+"
 path = "../src/lib.rs"
 
 [dependencies]
-anyhow = "1.0.75"
+anyhow = "1.0.86"
 async-trait = "0.1.71"
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 maplit = "1.0"

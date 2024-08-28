@@ -8,7 +8,7 @@ edition = "2021"
 license = "GPLv2+"
 
 [dependencies]
-anyhow = "1.0.75"
+anyhow = "1.0.86"
 bytes = { version = "1.6.0", features = ["serde"] }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
 mercurial_bundles = { version = "0.1.0", path = "../../mercurial/bundles" }

@@ -6,7 +6,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-anyhow = "1.0.75"
+anyhow = "1.0.86"
 auto_impl = "1.1.0"
 minibytes = { version = "0.1.0", path = "../../minibytes" }
 thiserror = "1.0.49"

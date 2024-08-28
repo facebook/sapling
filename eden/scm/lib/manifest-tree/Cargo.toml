@@ -12,7 +12,7 @@ harness = false
 required-features = ["for-tests"]
 
 [dependencies]
-anyhow = "1.0.75"
+anyhow = "1.0.86"
 crossbeam = "0.8"
 factory = { version = "0.1.0", path = "../util/factory" }
 manifest = { version = "0.1.0", path = "../manifest" }

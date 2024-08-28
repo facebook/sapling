@@ -8,7 +8,7 @@ edition = "2021"
 license = "GPLv2+"
 
 [dependencies]
-anyhow = "1.0.75"
+anyhow = "1.0.86"
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
 libc = "0.2.139"
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }

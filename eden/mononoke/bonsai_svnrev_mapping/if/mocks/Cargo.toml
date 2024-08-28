@@ -15,7 +15,7 @@ doctest = false
 doc = false
 
 [dependencies]
-anyhow = "1.0.75"
+anyhow = "1.0.86"
 async-trait = "0.1.71"
 bonsai_svnrev_mapping_thrift__clients = { package = "bonsai_svnrev_mapping_thrift_clients", version = "0.1.0", path = "../clients" }
 bonsai_svnrev_mapping_thrift__types = { package = "bonsai_svnrev_mapping_thrift", version = "0.1.0", path = ".." }

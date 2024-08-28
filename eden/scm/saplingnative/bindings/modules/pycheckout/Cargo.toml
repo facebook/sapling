@@ -6,7 +6,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-anyhow = "1.0.75"
+anyhow = "1.0.86"
 checkout = { version = "0.1.0", path = "../../../../lib/checkout" }
 configmodel = { version = "0.1.0", path = "../../../../lib/config/model" }
 cpython = { version = "0.7.2", default-features = false }

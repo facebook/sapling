@@ -18,7 +18,7 @@ description = """
 """
 
 [dependencies]
-anyhow = "1.0.75"
+anyhow = "1.0.86"
 base64 = "0.13"
 configset = { version = "0.1.0", path = "../config/set" }
 filetime = "0.2.9"

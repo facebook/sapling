@@ -9,7 +9,7 @@ license = "GPLv2+"
 
 [dependencies]
 acl_regions = { version = "0.1.0", path = "../../acl_regions" }
-anyhow = "1.0.75"
+anyhow = "1.0.86"
 blobstore = { version = "0.1.0", path = "../../blobstore" }
 bonsai_git_mapping = { version = "0.1.0", path = "../../bonsai_git_mapping" }
 bonsai_globalrev_mapping = { version = "0.1.0", path = "../../bonsai_globalrev_mapping" }

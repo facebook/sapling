@@ -9,7 +9,7 @@ license = "GPLv2+"
 
 [dependencies]
 acl_regions = { version = "0.1.0", path = "../acl_regions" }
-anyhow = "1.0.75"
+anyhow = "1.0.86"
 bookmarks = { version = "0.1.0", path = "../bookmarks" }
 commit_cloud = { version = "0.1.0", path = "../commit_cloud" }
 commit_cloud_helpers = { version = "0.1.0", path = "../commit_cloud/helpers" }

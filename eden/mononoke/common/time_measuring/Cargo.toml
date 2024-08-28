@@ -8,6 +8,6 @@ edition = "2021"
 license = "GPLv2+"
 
 [dependencies]
-anyhow = "1.0.75"
+anyhow = "1.0.86"
 dashmap = { version = "5.5.3", features = ["rayon", "serde"] }
 thiserror = "1.0.49"

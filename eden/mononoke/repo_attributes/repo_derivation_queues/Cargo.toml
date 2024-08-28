@@ -8,7 +8,7 @@ edition = "2021"
 license = "GPLv2+"
 
 [dependencies]
-anyhow = "1.0.75"
+anyhow = "1.0.86"
 async-trait = "0.1.71"
 bounded_traversal = { version = "0.1.0", path = "../../common/bounded_traversal" }
 bulk_derivation = { version = "0.1.0", path = "../../derived_data/bulk_derivation" }
