@@ -2713,18 +2713,19 @@ def _dograft(ui, repo, *revs, **opts):
 
 
 def _makegraftmessage(ctx, opts):
-    message = ctx.description()
+    description = ctx.description()
+    message = []
     if opts.get("from_path"):
         # For xdir grafts, include "grafted from" breadcrumb by default.
         if opts.get("log") is not False:
-            message += "\n\nGrafted from %s\n" % ctx.hex()
+            message.append("Grafted from %s" % ctx.hex())
             for f, t in zip(opts.get("from_path"), opts.get("to_path")):
-                message += "  Grafted path %s to %s\n" % (f, t)
-            message += "\n"
+                message.append("  Grafted path %s to %s" % (f, t))
     else:
         if opts.get("log"):
-            message += "\n(grafted from %s)" % ctx.hex()
-    return message
+            message.append("(grafted from %s)" % ctx.hex())
+    message = "\n".join(message)
+    return cmdutil.add_summary_footer(description, message)
 
 
 @command(

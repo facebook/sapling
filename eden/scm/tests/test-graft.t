@@ -414,7 +414,8 @@
   grafting 4c60f11aa304 "3"
   warning: can't find ancestor for 'c' copied from 'b'!
   $ hg log --template '{rev}:{node|short} {parents} {desc}\n' -r tip
-  14:0c921c65ef1e 5d205f8b35b6  3
+  14:2618d22676d7 5d205f8b35b6  3
+  
   (grafted from 4c60f11aa304a54ae1c199feb94e7fc771e51ed8)
 
 # Resolve conflicted graft

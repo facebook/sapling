@@ -632,6 +632,52 @@ Can opt out of "Grafted by" line in commit message:
   +B
 
 
+Cross-directory graft add graft info as summary footer:
+  $ newclientrepo
+  $ drawdag <<EOS
+  > B  # B/B = B\n (copied from A)
+  > |
+  > A  # A/A = A\n
+  > EOS
+  $ hg metaedit -r $B -m "B\
+  > \
+  > Summary:\
+  > \
+  > Foo\
+  > \
+  > Test Plan:\
+  > \
+  > Bar"
+  $ hg go -q $A
+  $ hg graft -qr 'desc("Summary")' --from-path B --to-path A --config extensions.fbcodereview=
+  $ hg show
+  commit:      3826d30b657d
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  files:       A
+  description:
+  B
+  
+  Summary:
+  
+  Foo
+  
+  Grafted from e8470334d2058106534ac7d72485e6bfaa76ca01
+    Grafted path B to A
+  
+  Test Plan:
+  
+  Bar
+  
+  
+  diff --git a/A b/A
+  --- a/A
+  +++ b/A
+  @@ -1,1 +1,1 @@
+  -A
+  +B
+
+
 Cross-directory graft removes phabricator diff link:
   $ newclientrepo
   $ drawdag <<EOS
