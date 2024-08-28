@@ -48,19 +48,19 @@ pub struct DeleteArgs {
 }
 
 mononoke_queries! {
-    read GetHistoryVersionTimestamp(reponame: String, workspace: String) -> ( u64, Timestamp){
+    read GetHistoryVersionTimestamp(reponame: String, workspace: String) -> ( u64, i64){
         mysql("SELECT `version`, UNIX_TIMESTAMP(`timestamp`) FROM history WHERE reponame={reponame} AND workspace={workspace} ORDER BY version DESC LIMIT 500")
         sqlite("SELECT `version`, `timestamp` FROM history WHERE reponame={reponame} AND workspace={workspace} ORDER BY version DESC LIMIT 500")
     }
 
-    read GetHistoryDate(reponame: String, workspace: String, timestamp: Timestamp, limit: u64) -> (Vec<u8>, Vec<u8>, Vec<u8>, Timestamp, u64){
+    read GetHistoryDate(reponame: String, workspace: String, timestamp: i64, limit: u64) -> (Vec<u8>, Vec<u8>, Vec<u8>, i64, u64){
         mysql("SELECT heads, bookmarks, remotebookmarks, UNIX_TIMESTAMP(timestamp), version FROM history
         WHERE reponame={reponame} AND workspace={workspace} AND UNIX_TIMESTAMP(timestamp) >= {timestamp} ORDER BY timestamp LIMIT {limit}")
         sqlite("SELECT heads, bookmarks, remotebookmarks, timestamp, version FROM history
         WHERE reponame={reponame} AND workspace={workspace} AND timestamp >= {timestamp} ORDER BY timestamp LIMIT {limit}")
     }
 
-    read GetHistoryVersion(reponame: String, workspace: String, version: u64) -> (Vec<u8>, Vec<u8>, Vec<u8>, Timestamp, u64){
+    read GetHistoryVersion(reponame: String, workspace: String, version: u64) -> (Vec<u8>, Vec<u8>, Vec<u8>, i64, u64){
         mysql("SELECT heads, bookmarks, remotebookmarks, UNIX_TIMESTAMP(timestamp), version FROM history
         WHERE reponame={reponame} AND workspace={workspace} AND version={version}")
        sqlite( "SELECT heads, bookmarks, remotebookmarks, timestamp, version FROM history
@@ -81,7 +81,7 @@ mononoke_queries! {
           LIMIT {delete_limit})")
     }
 
-    write InsertHistory(reponame: String, workspace: String, version: u64, heads: Vec<u8>, bookmarks: Vec<u8>, remote_bookmarks: Vec<u8>, timestamp: Timestamp) {
+    write InsertHistory(reponame: String, workspace: String, version: u64, heads: Vec<u8>, bookmarks: Vec<u8>, remote_bookmarks: Vec<u8>, timestamp: i64) {
         none,
         mysql("INSERT INTO history (reponame, workspace, version, heads, bookmarks, remotebookmarks, timestamp)
         VALUES ({reponame}, {workspace}, {version}, {heads}, {bookmarks}, {remote_bookmarks}, FROM_UNIXTIME({timestamp}))")
@@ -119,7 +119,10 @@ impl GenericGet<WorkspaceHistory> for SqlCommitCloud {
                 return rows
                     .into_iter()
                     .map(|(version, timestamp)| {
-                        Ok(GetOutput::VersionTimestamp((version, timestamp)))
+                        Ok(GetOutput::VersionTimestamp((
+                            version,
+                            Timestamp::from_timestamp_secs(timestamp),
+                        )))
                     })
                     .collect::<anyhow::Result<Vec<GetOutput>>>();
             }
@@ -128,7 +131,7 @@ impl GenericGet<WorkspaceHistory> for SqlCommitCloud {
                     &self.connections.read_connection,
                     &reponame,
                     &workspace,
-                    &timestamp,
+                    &timestamp.timestamp_seconds(),
                     &limit,
                 )
                 .await?;
@@ -143,7 +146,7 @@ impl GenericGet<WorkspaceHistory> for SqlCommitCloud {
                             rbs_from_list(&serde_json::from_slice(&remotebookmarks)?)?;
                         Ok(GetOutput::WorkspaceHistory(WorkspaceHistory {
                             version,
-                            timestamp: Some(timestamp),
+                            timestamp: Some(Timestamp::from_timestamp_secs(timestamp)),
                             heads,
                             local_bookmarks: bookmarks,
                             remote_bookmarks: remotebookmarks,
@@ -170,7 +173,7 @@ impl GenericGet<WorkspaceHistory> for SqlCommitCloud {
                             rbs_from_list(&serde_json::from_slice(&remotebookmarks)?)?;
                         Ok(GetOutput::WorkspaceHistory(WorkspaceHistory {
                             version,
-                            timestamp: Some(timestamp),
+                            timestamp: Some(Timestamp::from_timestamp_secs(timestamp)),
                             heads,
                             local_bookmarks: bookmarks,
                             remote_bookmarks: remotebookmarks,
@@ -230,7 +233,7 @@ impl Insert<WorkspaceHistory> for SqlCommitCloud {
         .unwrap();
         let res_txn;
 
-        let timestamp = data.timestamp.unwrap_or(Timestamp::now());
+        let timestamp = data.timestamp.unwrap_or(Timestamp::now_as_secs());
 
         (res_txn, _) = InsertHistory::maybe_traced_query_with_transaction(
             txn,
@@ -241,7 +244,7 @@ impl Insert<WorkspaceHistory> for SqlCommitCloud {
             &heads_bytes,
             &bookmarks_bytes,
             &remotebookmarks_bytes,
-            &timestamp,
+            &timestamp.timestamp_seconds(),
         )
         .await?;
 

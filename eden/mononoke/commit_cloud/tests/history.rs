@@ -35,7 +35,7 @@ async fn test_history(_fb: FacebookInit) -> anyhow::Result<()> {
     let workspace = "user_testuser_default".to_owned();
     let renamed_workspace = "user_testuser_default_renamed".to_owned();
     let cc_ctx = CommitCloudContext::new(&workspace.clone(), &reponame.clone())?;
-    let timestamp = Timestamp::now();
+    let timestamp = Timestamp::now_as_secs();
 
     let head1 = WorkspaceHead {
         commit: HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap(),
@@ -54,7 +54,7 @@ async fn test_history(_fb: FacebookInit) -> anyhow::Result<()> {
 
     let args1 = WorkspaceHistory {
         version: 1,
-        timestamp: Some(Timestamp::now()),
+        timestamp: Some(Timestamp::now_as_secs()),
         heads: vec![head1.clone()],
         local_bookmarks: vec![local_bookmark1.clone()],
         remote_bookmarks: vec![remote_bookmark1.clone()],
@@ -94,7 +94,7 @@ async fn test_history(_fb: FacebookInit) -> anyhow::Result<()> {
     // Insert a new history entry
     let args2 = WorkspaceHistory {
         version: 2,
-        timestamp: Some(Timestamp::now()),
+        timestamp: Some(Timestamp::now_as_secs()),
         heads: vec![head1],
         local_bookmarks: vec![local_bookmark1],
         remote_bookmarks: vec![remote_bookmark1],

@@ -23,7 +23,7 @@ async fn test_versions(_fb: FacebookInit) -> anyhow::Result<()> {
     let reponame = "test_repo".to_owned();
     let workspace = "user/testuser/default".to_owned();
     let renamed_workspace = "user/testuser/renamed_workspace".to_owned();
-    let initial_timestamp = Timestamp::now();
+    let initial_timestamp = Timestamp::now_as_secs();
     let args = WorkspaceVersion {
         workspace: workspace.clone(),
         version: 1,
@@ -52,7 +52,7 @@ async fn test_versions(_fb: FacebookInit) -> anyhow::Result<()> {
     let args2 = WorkspaceVersion {
         workspace: workspace.clone(),
         version: 2,
-        timestamp: Timestamp::now(),
+        timestamp: Timestamp::now_as_secs(),
         archived: false,
     };
 
@@ -68,7 +68,7 @@ async fn test_versions(_fb: FacebookInit) -> anyhow::Result<()> {
         .await?;
     txn.commit().await?;
     let res2: Vec<WorkspaceVersion> = sql.get(reponame.clone(), workspace.clone()).await?;
-    assert!(res2[0].timestamp > initial_timestamp);
+    assert!(res2[0].timestamp >= initial_timestamp);
 
     let cc_ctx = CommitCloudContext::new(&workspace.clone(), &reponame.clone())?;
     let archive_args = UpdateVersionArgs::Archive(true);

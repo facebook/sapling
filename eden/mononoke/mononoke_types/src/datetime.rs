@@ -213,6 +213,10 @@ impl Timestamp {
         DateTime::now().into()
     }
 
+    pub fn now_as_secs() -> Self {
+        Timestamp(Timestamp::now().timestamp_seconds() * SEC_IN_NS)
+    }
+
     pub fn from_timestamp_secs(ts: i64) -> Self {
         Timestamp(ts * SEC_IN_NS)
     }

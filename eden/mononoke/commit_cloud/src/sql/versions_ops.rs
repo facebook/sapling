@@ -22,19 +22,19 @@ use crate::sql::ops::Update;
 use crate::sql::utils::prepare_prefix;
 
 mononoke_queries! {
-    read GetVersion(reponame: String, workspace: String) -> (String, u64, bool, Timestamp){
+    read GetVersion(reponame: String, workspace: String) -> (String, u64, bool, i64){
         mysql("SELECT `workspace`, `version`, `archived`, UNIX_TIMESTAMP(`timestamp`) FROM `versions` WHERE `reponame`={reponame} AND `workspace`={workspace}")
         sqlite("SELECT `workspace`, `version`, `archived`, `timestamp` FROM `versions` WHERE `reponame`={reponame} AND `workspace`={workspace}")
     }
 
-    read GetVersionByPrefix(reponame: String, prefix: String) -> (String,  u64, bool, Timestamp){
+    read GetVersionByPrefix(reponame: String, prefix: String) -> (String,  u64, bool, i64){
         mysql("SELECT `workspace`, `version`, `archived`, UNIX_TIMESTAMP(`timestamp`) FROM `versions` WHERE `reponame`={reponame} AND `workspace` LIKE {prefix}")
         sqlite("SELECT `workspace`,  `version`, `archived`, `timestamp` FROM `versions` WHERE `reponame`={reponame} AND `workspace` LIKE {prefix}")
     }
 
     // We have to check the version again inside the transaction because in rare case
     // it could be modified by another transaction fail the transaction in such cases
-    write InsertVersion(reponame: String, workspace: String, version: u64, timestamp: Timestamp, now: Timestamp) {
+    write InsertVersion(reponame: String, workspace: String, version: u64, timestamp: i64, now: i64) {
         none,
         mysql("INSERT INTO versions (`reponame`, `workspace`, `version`, `timestamp`) VALUES ({reponame}, {workspace}, {version}, COALESCE({timestamp},{now})) \
         ON DUPLICATE KEY UPDATE timestamp = current_timestamp, version = \
@@ -82,7 +82,7 @@ impl Get<WorkspaceVersion> for SqlCommitCloud {
                     workspace,
                     version,
                     archived,
-                    timestamp,
+                    timestamp: Timestamp::from_timestamp_secs(timestamp),
                 })
             })
             .collect::<anyhow::Result<Vec<WorkspaceVersion>>>()
@@ -105,8 +105,8 @@ impl Insert<WorkspaceVersion> for SqlCommitCloud {
             &reponame,
             &workspace,
             &data.version,
-            &data.timestamp,
-            &Timestamp::now(),
+            &data.timestamp.timestamp_seconds(),
+            &Timestamp::now().timestamp_seconds(),
         )
         .await?;
         Ok(txn)
@@ -172,7 +172,7 @@ pub async fn get_version_by_prefix(
                 workspace,
                 version,
                 archived,
-                timestamp,
+                timestamp: Timestamp::from_timestamp_secs(timestamp),
             })
         })
         .collect::<anyhow::Result<Vec<WorkspaceVersion>>>()
