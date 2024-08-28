@@ -113,7 +113,7 @@ impl<'a> Repository<'a> {
             vec![
                 "git",
                 "-c",
-                "http.extraHeader='x-route-to-mononoke: 1'",
+                "http.extraHeader=x-route-to-mononoke: 1",
                 "ls-remote",
                 "--refs",
                 &repo_url,
