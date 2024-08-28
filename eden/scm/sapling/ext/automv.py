@@ -13,7 +13,7 @@ The threshold at which a file is considered a move can be set with the
 (disabled) and 100 (files must be identical), the default is 95.
 
 The ``automv.max-files`` sets the maximum changed files for automv to run.
-The default is 50.
+The default is 1000.
 
 """
 
@@ -35,7 +35,7 @@ from sapling.i18n import _
 configtable = {}
 configitem = registrar.configitem(configtable)
 
-configitem("automv", "max-files", default=50)
+configitem("automv", "max-files", default=1000)
 configitem("automv", "similarity", default=95)
 
 
