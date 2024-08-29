@@ -255,6 +255,7 @@ mod test {
     use context::SamplingKey;
     use fbinit::FacebookInit;
     use memblob::Memblob;
+    use mononoke_macros::mononoke;
 
     use super::*;
 
@@ -296,7 +297,7 @@ mod test {
         }
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_sample_called(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
         borrowed!(ctx);
@@ -370,7 +371,7 @@ mod test {
         }
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_component_sample_called(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
         borrowed!(ctx);

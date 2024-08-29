@@ -117,9 +117,11 @@ impl From<PackEnvelope> for BlobstoreBytes {
 
 #[cfg(test)]
 mod tests {
+    use mononoke_macros::mononoke;
+
     use super::*;
 
-    #[test]
+    #[mononoke::test]
     fn serialize_roundtrip() -> Result<(), Error> {
         let value = "hello world!".to_string();
         let magic = 42;

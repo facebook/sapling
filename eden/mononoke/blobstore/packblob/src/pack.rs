@@ -380,6 +380,7 @@ fn split_key_prefix(key: &str) -> (&str, &str) {
 #[cfg(test)]
 mod tests {
     use bytes::Bytes;
+    use mononoke_macros::mononoke;
     use rand::Rng;
     use rand::RngCore;
     use rand::SeedableRng;
@@ -387,7 +388,7 @@ mod tests {
 
     use super::*;
 
-    #[test]
+    #[mononoke::test]
     fn decode_independent_zstd_test() -> Result<()> {
         // Highly compressable!
         let bytes_in = vec![7u8; 65535];
@@ -408,7 +409,7 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[mononoke::test]
     fn decode_zstd_from_dict_test() -> Result<()> {
         let mut rng = XorShiftRng::seed_from_u64(0); // reproducable Rng
 
@@ -451,7 +452,7 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[mononoke::test]
     fn pack_zstd_from_dict_chain_test() -> Result<()> {
         let mut rng = XorShiftRng::seed_from_u64(0); // reproducable Rng
 
@@ -522,7 +523,7 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[mononoke::test]
     fn pack_zstd_from_dict_unchained_test() -> Result<()> {
         let mut rng = XorShiftRng::seed_from_u64(0); // reproducable Rng
 
@@ -593,7 +594,7 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[mononoke::test]
     fn pack_size_test() -> Result<()> {
         let mut rng = XorShiftRng::seed_from_u64(0); // reproducable Rng
 

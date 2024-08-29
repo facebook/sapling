@@ -339,11 +339,12 @@ mod test {
     use fbinit::FacebookInit;
     use maplit::hashmap;
     use memblob::Memblob;
+    use mononoke_macros::mononoke;
     use prefixblob::PrefixBlobstore;
 
     use super::*;
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_redacted_key(fb: FacebookInit) {
         let unredacted_key = "foo";
         let redacted_key = "bar";
@@ -405,7 +406,7 @@ mod test {
         assert!(res.is_ok(), "the key should be found and available");
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_log_only_redacted_key(fb: FacebookInit) -> Result<()> {
         let redacted_log_only_key = "bar";
         let redacted_task = "bar task";

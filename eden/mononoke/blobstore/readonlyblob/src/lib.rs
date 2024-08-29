@@ -102,10 +102,11 @@ mod test {
     use borrowed::borrowed;
     use fbinit::FacebookInit;
     use memblob::Memblob;
+    use mononoke_macros::mononoke;
 
     use super::*;
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_error_on_write(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
         borrowed!(ctx);
@@ -129,7 +130,7 @@ mod test {
         assert!(!base_present);
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_error_on_put_with_status(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
         borrowed!(ctx);

@@ -101,10 +101,11 @@ impl BlobstoreUnlinkOps for DisabledBlob {
 #[cfg(test)]
 mod test {
     use fbinit::FacebookInit;
+    use mononoke_macros::mononoke;
 
     use super::*;
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_disabled(fb: FacebookInit) {
         let disabled = DisabledBlob::new("test");
         let ctx = CoreContext::test_mock(fb);

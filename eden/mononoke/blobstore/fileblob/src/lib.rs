@@ -280,10 +280,11 @@ impl BlobstoreKeySource for Fileblob {
 #[cfg(test)]
 mod test {
     use fbinit::FacebookInit;
+    use mononoke_macros::mononoke;
 
     use super::*;
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_persist_error(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
 

@@ -605,6 +605,7 @@ mod test {
 
     use fbinit::FacebookInit;
     use futures_stats::TimedTryFutureExt;
+    use mononoke_macros::mononoke;
     use nonzero_ext::nonzero;
     use time_ext::DurationExt;
 
@@ -658,7 +659,7 @@ mod test {
 
         use super::*;
 
-        #[fbinit::test]
+        #[mononoke::fbinit_test]
         fn test_filestore_chunk_is_not_compressed(fb: FacebookInit) -> Result<()> {
             fn assert_below_threshold(b: &Bytes) -> Result<()> {
                 assert!(
@@ -810,7 +811,7 @@ mod test {
             }
         }
 
-        #[fbinit::test]
+        #[mononoke::fbinit_test]
         async fn test_dedupe_reads(fb: FacebookInit) -> Result<()> {
             let ctx = CoreContext::test_mock(fb);
             borrowed!(ctx);
@@ -853,7 +854,7 @@ mod test {
             Ok(())
         }
 
-        #[fbinit::test]
+        #[mononoke::fbinit_test]
         async fn test_cache_read(fb: FacebookInit) -> Result<()> {
             let ctx = CoreContext::test_mock(fb);
             borrowed!(ctx);
@@ -889,7 +890,7 @@ mod test {
             Ok(())
         }
 
-        #[fbinit::test]
+        #[mononoke::fbinit_test]
         async fn test_read_after_write(fb: FacebookInit) -> Result<()> {
             let ctx = CoreContext::test_mock(fb);
             borrowed!(ctx);
@@ -918,7 +919,7 @@ mod test {
             Ok(())
         }
 
-        #[fbinit::test]
+        #[mononoke::fbinit_test]
         async fn test_dedupe_reads_not_storable(fb: FacebookInit) -> Result<()> {
             let ctx = CoreContext::test_mock(fb);
             borrowed!(ctx);
@@ -1036,7 +1037,7 @@ mod test {
             Ok(())
         }
 
-        #[fbinit::test]
+        #[mononoke::fbinit_test]
         async fn test_dedupe_writes(fb: FacebookInit) -> Result<()> {
             let ctx = CoreContext::test_mock(fb);
             borrowed!(ctx);
@@ -1075,7 +1076,7 @@ mod test {
             Ok(())
         }
 
-        #[fbinit::test]
+        #[mononoke::fbinit_test]
         async fn test_dedupe_writes_different_data(fb: FacebookInit) -> Result<()> {
             let ctx = CoreContext::test_mock(fb);
             borrowed!(ctx);
@@ -1177,6 +1178,7 @@ mod test {
         use fbinit::FacebookInit;
         use governor::Quota;
         use governor::RateLimiter;
+        use mononoke_macros::mononoke;
         use nonzero_ext::nonzero;
         use scuba_ext::MononokeScubaSampleBuilder;
         use slog::o;
@@ -1238,7 +1240,7 @@ mod test {
             Logger::root(drain, o![])
         }
 
-        #[fbinit::test]
+        #[mononoke::fbinit_test]
         async fn test_qps(fb: FacebookInit) -> Result<()> {
             let l1 = RateLimiter::direct(Quota::with_period(Duration::from_millis(10)).unwrap());
             let l1 = AsyncLimiter::new(l1).await;
@@ -1293,7 +1295,7 @@ mod test {
             Ok(())
         }
 
-        #[fbinit::test]
+        #[mononoke::fbinit_test]
         async fn test_early_cache_hits_do_not_count(fb: FacebookInit) -> Result<()> {
             let l1 = RateLimiter::direct(
                 Quota::per_second(nonzero!(100u32)).allow_burst(nonzero!(10u32)),

@@ -54,6 +54,7 @@ rust_library(
     test_deps = [
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/fbinit:fbinit-tokio",
+        "//eden/mononoke/mononoke_macros:mononoke_macros",
     ],
     deps = [
         "fbsource//third-party/rust:abomonation",
@@ -83,6 +84,7 @@ rust_library(
         ":memblob",
         "//common/rust/shed/borrowed:borrowed",
         "//common/rust/shed/fbinit:fbinit-tokio",
+        "//eden/mononoke/mononoke_macros:mononoke_macros",
     ],
     deps = [
         "fbsource//third-party/rust:anyhow",
@@ -128,6 +130,7 @@ rust_unittest(
         "//common/rust/shed/borrowed:borrowed",
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/fbinit:fbinit-tokio",
+        "//eden/mononoke/mononoke_macros:mononoke_macros",
         "//eden/mononoke/mononoke_types:mononoke_types",
         "//eden/mononoke/server/context:context",
     ],
@@ -142,6 +145,7 @@ rust_library(
         "//common/rust/shed/borrowed:borrowed",
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/fbinit:fbinit-tokio",
+        "//eden/mononoke/mononoke_macros:mononoke_macros",
     ],
     deps = [
         "fbsource//third-party/rust:anyhow",
@@ -161,6 +165,7 @@ rust_library(
     test_deps = [
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/fbinit:fbinit-tokio",
+        "//eden/mononoke/mononoke_macros:mononoke_macros",
     ],
     deps = [
         "fbsource//third-party/rust:anyhow",
@@ -188,6 +193,7 @@ rust_library(
         "//common/rust/shed/borrowed:borrowed",
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/fbinit:fbinit-tokio",
+        "//eden/mononoke/mononoke_macros:mononoke_macros",
     ],
     deps = [
         "fbsource//third-party/rust:anyhow",
@@ -221,6 +227,7 @@ rust_library(
         "//common/rust/shed/borrowed:borrowed",
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/fbinit:fbinit-tokio",
+        "//eden/mononoke/mononoke_macros:mononoke_macros",
     ],
     deps = [
         "fbsource//third-party/rust:anyhow",
@@ -276,6 +283,7 @@ rust_library(
         "fbsource//third-party/rust:tokio",
         "//common/rust/shed/borrowed:borrowed",
         "//common/rust/shed/fbinit:fbinit-tokio",
+        "//eden/mononoke/mononoke_macros:mononoke_macros",
         "//eden/mononoke/server/context:context",
     ],
     deps = [
@@ -364,6 +372,7 @@ rust_library(
         "//common/rust/shed/fbinit:fbinit-tokio",
         "//common/rust/shed/lock_ext:lock_ext",
         "//eden/mononoke/common/sql_construct:sql_construct",
+        "//eden/mononoke/mononoke_macros:mononoke_macros",
     ],
     deps = [
         "fbsource//third-party/rust:anyhow",
@@ -410,6 +419,7 @@ rust_library(
         "//common/rust/shed/borrowed:borrowed",
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/fbinit:fbinit-tokio",
+        "//eden/mononoke/mononoke_macros:mononoke_macros",
     ],
     deps = [
         "fbsource//third-party/rust:anyhow",
@@ -430,6 +440,7 @@ rust_library(
         "//common/rust/shed/borrowed:borrowed",
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/fbinit:fbinit-tokio",
+        "//eden/mononoke/mononoke_macros:mononoke_macros",
     ],
     deps = [
         "fbsource//third-party/rust:anyhow",
@@ -450,6 +461,7 @@ rust_library(
         "//common/rust/shed/borrowed:borrowed",
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/fbinit:fbinit-tokio",
+        "//eden/mononoke/mononoke_macros:mononoke_macros",
     ],
     deps = [
         "fbsource//third-party/rust:anyhow",
@@ -524,6 +536,7 @@ rust_library(
         "//common/rust/shed/fbinit:fbinit-tokio",
         "//common/rust/shed/slog_glog_fmt:slog_glog_fmt",
         "//eden/mononoke/common/scuba_ext:scuba_ext",
+        "//eden/mononoke/mononoke_macros:mononoke_macros",
     ],
     deps = [
         "fbsource//third-party/rust:anyhow",
@@ -563,6 +576,7 @@ rust_library(
         "//common/rust/shed/fbinit:fbinit-tokio",
         "//eden/mononoke/common/scuba_ext:scuba_ext",
         "//eden/mononoke/metaconfig:metaconfig_types",
+        "//eden/mononoke/mononoke_macros:mononoke_macros",
         "//eden/mononoke/mononoke_types:mononoke_types-mocks",
     ],
     deps = [

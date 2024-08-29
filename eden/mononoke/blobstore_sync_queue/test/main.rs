@@ -13,10 +13,11 @@ use blobstore_sync_queue::SqlBlobstoreWal;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use metaconfig_types::MultiplexId;
+use mononoke_macros::mononoke;
 use mononoke_types::DateTime;
 use sql_construct::SqlConstruct;
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_write_ahead_log(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let wal = SqlBlobstoreWal::with_sqlite_in_memory()?;

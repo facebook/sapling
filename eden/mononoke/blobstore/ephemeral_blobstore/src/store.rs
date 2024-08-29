@@ -717,6 +717,7 @@ mod test {
     use memblob::Memblob;
     use metaconfig_types::BubbleDeletionMode;
     use metaconfig_types::PackFormat;
+    use mononoke_macros::mononoke;
     use mononoke_types_mocks::repo::REPO_ZERO;
     use packblob::PackBlob;
     use repo_blobstore::RepoBlobstore;
@@ -762,7 +763,7 @@ mod test {
         Ok((ctx, blobstore, repo_blobstore, eph))
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn basic_test(fb: FacebookInit) -> Result<()> {
         let initial = Duration::from_secs(30 * 24 * 60 * 60);
         let grace = Duration::from_secs(6 * 60 * 60);
@@ -828,7 +829,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn basic_test_with_labels(fb: FacebookInit) -> Result<()> {
         let initial = Duration::from_secs(30 * 24 * 60 * 60);
         let grace = Duration::from_secs(6 * 60 * 60);
@@ -850,7 +851,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn add_bubble_labels_test(fb: FacebookInit) -> Result<()> {
         let initial = Duration::from_secs(30 * 24 * 60 * 60);
         let grace = Duration::from_secs(6 * 60 * 60);
@@ -876,7 +877,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn add_duplicate_bubble_labels_test(fb: FacebookInit) -> Result<()> {
         let initial = Duration::from_secs(30 * 24 * 60 * 60);
         let grace = Duration::from_secs(6 * 60 * 60);
@@ -909,7 +910,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn add_empty_bubble_labels_test(fb: FacebookInit) -> Result<()> {
         let initial = Duration::from_secs(30 * 24 * 60 * 60);
         let grace = Duration::from_secs(6 * 60 * 60);
@@ -929,7 +930,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn empty_labels_from_bubble_test(fb: FacebookInit) -> Result<()> {
         let initial = Duration::from_secs(30 * 24 * 60 * 60);
         let grace = Duration::from_secs(6 * 60 * 60);
@@ -944,7 +945,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn non_empty_labels_from_bubble_test(fb: FacebookInit) -> Result<()> {
         let initial = Duration::from_secs(30 * 24 * 60 * 60);
         let grace = Duration::from_secs(6 * 60 * 60);
@@ -961,7 +962,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn added_removed_labels_from_bubble_test(fb: FacebookInit) -> Result<()> {
         let initial = Duration::from_secs(30 * 24 * 60 * 60);
         let grace = Duration::from_secs(6 * 60 * 60);
@@ -987,7 +988,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn remove_bubble_labels_test(fb: FacebookInit) -> Result<()> {
         let initial = Duration::from_secs(30 * 24 * 60 * 60);
         let grace = Duration::from_secs(6 * 60 * 60);
@@ -1014,7 +1015,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn partial_remove_bubble_labels_test(fb: FacebookInit) -> Result<()> {
         let initial = Duration::from_secs(30 * 24 * 60 * 60);
         let grace = Duration::from_secs(6 * 60 * 60);
@@ -1039,7 +1040,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn remove_absent_bubble_labels_test(fb: FacebookInit) -> Result<()> {
         let initial = Duration::from_secs(30 * 24 * 60 * 60);
         let grace = Duration::from_secs(6 * 60 * 60);
@@ -1069,7 +1070,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn remove_duplicate_bubble_labels_test(fb: FacebookInit) -> Result<()> {
         let initial = Duration::from_secs(30 * 24 * 60 * 60);
         let grace = Duration::from_secs(6 * 60 * 60);
@@ -1100,7 +1101,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn remove_all_bubble_labels_without_input_test(fb: FacebookInit) -> Result<()> {
         let initial = Duration::from_secs(30 * 24 * 60 * 60);
         let grace = Duration::from_secs(6 * 60 * 60);
@@ -1119,7 +1120,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn remove_all_bubble_labels_with_empty_bubble_test(fb: FacebookInit) -> Result<()> {
         let initial = Duration::from_secs(30 * 24 * 60 * 60);
         let grace = Duration::from_secs(6 * 60 * 60);
@@ -1138,7 +1139,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn add_and_remove_bubble_labels_test(fb: FacebookInit) -> Result<()> {
         let initial = Duration::from_secs(30 * 24 * 60 * 60);
         let grace = Duration::from_secs(6 * 60 * 60);
@@ -1178,7 +1179,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn create_and_fetch_labels_test(fb: FacebookInit) -> Result<()> {
         let initial = Duration::from_secs(30 * 24 * 60 * 60);
         let grace = Duration::from_secs(6 * 60 * 60);
@@ -1200,7 +1201,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn create_and_fetch_active_test(fb: FacebookInit) -> Result<()> {
         let initial = Duration::from_secs(30 * 24 * 60 * 60);
         let grace = Duration::from_secs(6 * 60 * 60);
@@ -1214,7 +1215,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn deletion_mode_disabled_test(fb: FacebookInit) -> Result<()> {
         let initial = Duration::from_secs(30 * 24 * 60 * 60);
         let grace = Duration::from_secs(6 * 60 * 60);
@@ -1237,7 +1238,7 @@ mod test {
         }
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn deletion_mode_markonly_test(fb: FacebookInit) -> Result<()> {
         let initial = Duration::from_secs(30 * 24 * 60 * 60);
         let grace = Duration::from_secs(6 * 60 * 60);
@@ -1288,7 +1289,7 @@ mod test {
         }
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn delete_empty_bubble_test(fb: FacebookInit) -> Result<()> {
         let initial = Duration::from_secs(30 * 24 * 60 * 60);
         let grace = Duration::from_secs(6 * 60 * 60);
@@ -1302,7 +1303,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn delete_empty_bubble_with_label_test(fb: FacebookInit) -> Result<()> {
         let initial = Duration::from_secs(30 * 24 * 60 * 60);
         let grace = Duration::from_secs(6 * 60 * 60);
@@ -1317,7 +1318,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn delete_nonempty_bubble_test(fb: FacebookInit) -> Result<()> {
         let initial = Duration::from_secs(30 * 24 * 60 * 60);
         let grace = Duration::from_secs(6 * 60 * 60);
@@ -1369,7 +1370,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn reopen_deleted_bubble_test(fb: FacebookInit) -> Result<()> {
         let initial = Duration::from_secs(30 * 24 * 60 * 60);
         let grace = Duration::from_secs(6 * 60 * 60);
@@ -1399,7 +1400,7 @@ mod test {
         }
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn get_expired_bubbles_test(fb: FacebookInit) -> Result<()> {
         // We want immediately expiring bubbles
         let initial = Duration::from_secs(0);
@@ -1430,7 +1431,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn get_expired_bubbles_with_labels_test(fb: FacebookInit) -> Result<()> {
         // We want immediately expiring bubbles
         let initial = Duration::from_secs(0);
@@ -1450,7 +1451,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn get_expired_bubbles_with_removed_labels_test(fb: FacebookInit) -> Result<()> {
         // We want immediately expiring bubbles
         let initial = Duration::from_secs(0);
@@ -1482,7 +1483,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn add_labels_to_expired_bubble_test(fb: FacebookInit) -> Result<()> {
         // We want immediately expiring bubbles
         let initial = Duration::from_secs(0);
@@ -1506,7 +1507,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn remove_labels_from_expired_bubble_test(fb: FacebookInit) -> Result<()> {
         // We want immediately expiring bubbles
         let initial = Duration::from_secs(0);
@@ -1528,7 +1529,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn get_expired_bubbles_offset_test(fb: FacebookInit) -> Result<()> {
         // We want immediately expiring bubbles
         let initial = Duration::from_secs(0);
@@ -1554,7 +1555,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn get_expired_bubbles_markonly_test(fb: FacebookInit) -> Result<()> {
         // We want immediately expiring bubbles
         let initial = Duration::from_secs(0);
@@ -1586,7 +1587,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn get_n_expired_bubbles_test(fb: FacebookInit) -> Result<()> {
         // We want immediately expiring bubbles
         let initial = Duration::from_secs(0);
@@ -1613,7 +1614,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn reopen_expired_bubble_test(fb: FacebookInit) -> Result<()> {
         // We want immediately expiring bubbles
         let initial = Duration::from_secs(0);
@@ -1636,7 +1637,7 @@ mod test {
         }
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn reopen_expired_bubble_with_labels_test(fb: FacebookInit) -> Result<()> {
         // We want immediately expiring bubbles
         let initial = Duration::from_secs(0);

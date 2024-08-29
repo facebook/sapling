@@ -11,6 +11,7 @@ use blobstore::DEFAULT_PUT_BEHAVIOUR;
 use borrowed::borrowed;
 use bytes::Bytes;
 use fbinit::FacebookInit;
+use mononoke_macros::mononoke;
 use rand::distributions::Alphanumeric;
 use rand::thread_rng;
 use rand::Rng;
@@ -80,7 +81,7 @@ async fn read_write_size(
     .await
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn read_write(fb: FacebookInit) -> Result<(), Error> {
     for put_behaviour in PutBehaviour::iter() {
         // test a range of sizes that are inlineable and not inlineable
@@ -94,7 +95,7 @@ async fn read_write(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn double_put(fb: FacebookInit) -> Result<(), Error> {
     test_chunking_methods(fb, DEFAULT_PUT_BEHAVIOUR, |ctx, bs, _| async move {
         borrowed!(ctx);
@@ -130,7 +131,7 @@ async fn double_put(fb: FacebookInit) -> Result<(), Error> {
     .await
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn overwrite(fb: FacebookInit) -> Result<(), Error> {
     test_chunking_methods(fb, PutBehaviour::Overwrite, |ctx, bs, _| async move {
         borrowed!(ctx);
@@ -164,7 +165,7 @@ async fn overwrite(fb: FacebookInit) -> Result<(), Error> {
     .await
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn dedup(fb: FacebookInit) -> Result<(), Error> {
     test_chunking_methods(fb, DEFAULT_PUT_BEHAVIOUR, |ctx, bs, _| async move {
         borrowed!(ctx);
@@ -221,7 +222,7 @@ async fn dedup(fb: FacebookInit) -> Result<(), Error> {
     .await
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn link(fb: FacebookInit) -> Result<(), Error> {
     test_chunking_methods(fb, DEFAULT_PUT_BEHAVIOUR, |ctx, bs, _| async move {
         borrowed!(ctx);
@@ -286,7 +287,7 @@ async fn link(fb: FacebookInit) -> Result<(), Error> {
     .await
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn generations(fb: FacebookInit) -> Result<(), Error> {
     for auto_inline_puts in [true, false] {
         // Generate unique keys.

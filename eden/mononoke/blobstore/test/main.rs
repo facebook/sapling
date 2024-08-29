@@ -24,6 +24,7 @@ use context::CoreContext;
 use fbinit::FacebookInit;
 use fileblob::Fileblob;
 use memblob::Memblob;
+use mononoke_macros::mononoke;
 use mononoke_types::BlobstoreBytes;
 use sqlblob::get_test_config_store;
 use sqlblob::Sqlblob;
@@ -176,7 +177,7 @@ macro_rules! blobstore_test_impl {
         mod $mod_name {
             use super::*;
 
-            #[fbinit::test]
+            #[mononoke::fbinit_test]
             async fn test_overwrite(fb: FacebookInit) -> Result<(), Error> {
                 let state = $state;
                 let has_ctime = $has_ctime;
@@ -187,7 +188,7 @@ macro_rules! blobstore_test_impl {
                 Ok(())
             }
 
-            #[fbinit::test]
+            #[mononoke::fbinit_test]
             async fn test_roundtrip_and_link(fb: FacebookInit) -> Result<(), Error> {
                 let state = $state;
                 let has_ctime = $has_ctime;
@@ -200,14 +201,14 @@ macro_rules! blobstore_test_impl {
                 .await
             }
 
-            #[fbinit::test]
+            #[mononoke::fbinit_test]
             async fn test_missing(fb: FacebookInit) -> Result<(), Error> {
                 let state = $state;
                 let factory = $new_cb;
                 missing(fb, factory(state, PutBehaviour::Overwrite)?).await
             }
 
-            #[fbinit::test]
+            #[mononoke::fbinit_test]
             async fn test_boxable(_fb: FacebookInit) -> Result<(), Error> {
                 let state = $state;
                 let factory = $new_cb;
@@ -272,13 +273,13 @@ fn create_cache(fb: FacebookInit) -> Result<(), Error> {
 }
 
 #[cfg(fbcode_build)]
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_cache_blob_maybe_zstd(fb: FacebookInit) -> Result<(), Error> {
     cache_blob_tests(fb, true).await
 }
 
 #[cfg(fbcode_build)]
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_cache_blob_no_zstd(fb: FacebookInit) -> Result<(), Error> {
     cache_blob_tests(fb, false).await
 }

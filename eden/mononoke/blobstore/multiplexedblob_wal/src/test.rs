@@ -30,6 +30,7 @@ use futures::task::Poll;
 use lock_ext::LockExt;
 use metaconfig_types::BlobstoreId;
 use metaconfig_types::MultiplexId;
+use mononoke_macros::mononoke;
 use mononoke_types::BlobstoreBytes;
 use mononoke_types::Timestamp;
 use multiplexedblob::LoggingScrubHandler;
@@ -46,7 +47,7 @@ use crate::MultiplexTimeout;
 use crate::Scuba;
 use crate::WalMultiplexedBlobstore;
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_quorum_is_valid(_fb: FacebookInit) -> Result<()> {
     let scuba = Scuba::new(
         MononokeScubaSampleBuilder::with_discard(),
@@ -102,7 +103,7 @@ async fn test_quorum_is_valid(_fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_put_wal_fails(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let (tickable_queue, tickable_blobstores, multiplex) = setup_multiplex(3, 2, None)?;
@@ -134,7 +135,7 @@ async fn test_put_wal_fails(fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_put_fails(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let (tickable_queue, tickable_blobstores, multiplex) = setup_multiplex(3, 2, None)?;
@@ -251,7 +252,7 @@ async fn queue_keys(ctx: &CoreContext, multiplex: &WalMultiplexedBlobstore) -> R
     Ok(entries)
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_put_succeeds(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
 
@@ -370,7 +371,7 @@ async fn test_put_succeeds(fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_get_on_missing(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let (_tickable_queue, tickable_blobstores, multiplex) = setup_multiplex(3, 2, None)?;
@@ -425,7 +426,7 @@ async fn test_get_on_missing(fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_get_on_existing(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let (tickable_queue, tickable_blobstores, multiplex) = setup_multiplex(3, 2, None)?;
@@ -531,7 +532,7 @@ async fn test_get_on_existing(fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_is_present_missing(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let (_tickable_queue, tickable_blobstores, multiplex) = setup_multiplex(3, 2, None)?;
@@ -599,7 +600,7 @@ async fn test_is_present_missing(fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_unlink(fb: FacebookInit) -> Result<()> {
     async fn setup_multiplex_for_unlink(
         ctx: &CoreContext,
@@ -714,7 +715,7 @@ async fn test_unlink(fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_is_present_existing(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let (tickable_queue, tickable_blobstores, multiplex) = setup_multiplex(3, 2, None)?;
@@ -829,7 +830,7 @@ async fn test_is_present_existing(fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_timeout_on_request(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
 
@@ -1049,7 +1050,7 @@ async fn scrub_none(
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn scrub_blobstore_fetch_none(fb: FacebookInit) -> Result<()> {
     scrub_none(fb, SrubWriteOnly::Scrub).await?;
     scrub_none(fb, SrubWriteOnly::SkipMissing).await?;
@@ -1324,7 +1325,7 @@ async fn scrub_scenarios(
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn scrubbed(fb: FacebookInit) {
     scrub_scenarios(fb, SrubWriteOnly::Scrub).await.unwrap();
     scrub_scenarios(fb, SrubWriteOnly::SkipMissing)

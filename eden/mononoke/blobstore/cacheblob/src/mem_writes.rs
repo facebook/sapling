@@ -175,11 +175,12 @@ mod test {
     use cloned::cloned;
     use fbinit::FacebookInit;
     use memblob::Memblob;
+    use mononoke_macros::mononoke;
     use tokio::sync::watch;
 
     use super::*;
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn basic_read(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
         borrowed!(ctx);
@@ -214,7 +215,7 @@ mod test {
         );
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn redirect_writes(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
         borrowed!(ctx);
@@ -260,7 +261,7 @@ mod test {
         );
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_persist(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         borrowed!(ctx);
@@ -328,7 +329,7 @@ mod test {
         }
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_persist_concurrency(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         borrowed!(ctx);

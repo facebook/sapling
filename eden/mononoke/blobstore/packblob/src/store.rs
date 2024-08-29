@@ -260,13 +260,14 @@ mod tests {
     use bytes::Bytes;
     use fbinit::FacebookInit;
     use memblob::Memblob;
+    use mononoke_macros::mononoke;
     use rand::RngCore;
     use rand::SeedableRng;
     use rand_xorshift::XorShiftRng;
 
     use super::*;
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn simple_roundtrip_test(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         borrowed!(ctx);
@@ -279,7 +280,7 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn compressible_roundtrip_test(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         borrowed!(ctx);
@@ -298,7 +299,7 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn incompressible_roundtrip_test(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         borrowed!(ctx);
@@ -361,7 +362,7 @@ mod tests {
         Ok(inner_key.to_owned())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn simple_pack_test(fb: FacebookInit) -> Result<()> {
         let mut input_values = vec![];
         let pack = pack::EmptyPack::new(0);
@@ -420,7 +421,7 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn single_precompressed_test(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         borrowed!(ctx);
