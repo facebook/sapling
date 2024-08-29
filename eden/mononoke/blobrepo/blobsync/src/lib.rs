@@ -55,6 +55,7 @@ mod test {
     use filestore::StoreRequest;
     use futures::stream;
     use memblob::Memblob;
+    use mononoke_macros::mononoke;
     use mononoke_types::typed_hash;
     use mononoke_types::BlobstoreBytes;
     use mononoke_types::ContentMetadataV2;
@@ -75,7 +76,7 @@ mod test {
         ctx.finish()
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_copy_content(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let inner1 = Arc::new(Memblob::default());

@@ -27,6 +27,7 @@ use mercurial_types::HgChangesetId;
 use mercurial_types::HgChangesetIdPrefix;
 use mercurial_types::HgChangesetIdsResolvedFromPrefix;
 use mercurial_types_mocks::nodehash as hg;
+use mononoke_macros::mononoke;
 use mononoke_types::RepositoryId;
 use mononoke_types_mocks::changesetid as bonsai;
 use mononoke_types_mocks::repo::REPO_ZERO;
@@ -395,7 +396,7 @@ async fn caching<M: BonsaiHgMapping + 'static>(fb: FacebookInit, mapping: M) {
     assert_eq!(gets.load(Ordering::Relaxed), 2);
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_add_and_get(fb: FacebookInit) {
     add_and_get(
         fb,
@@ -406,7 +407,7 @@ async fn test_add_and_get(fb: FacebookInit) {
     .await;
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_missing(fb: FacebookInit) {
     missing(
         fb,
@@ -417,7 +418,7 @@ async fn test_missing(fb: FacebookInit) {
     .await;
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_caching(fb: FacebookInit) {
     caching(
         fb,
@@ -428,7 +429,7 @@ async fn test_caching(fb: FacebookInit) {
     .await;
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_get_many_hg_by_prefix(fb: FacebookInit) {
     get_many_hg_by_prefix(
         fb,
@@ -439,7 +440,7 @@ async fn test_get_many_hg_by_prefix(fb: FacebookInit) {
     .await;
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_get_hg_in_range(fb: FacebookInit) {
     get_hg_in_range(
         fb,
@@ -450,7 +451,7 @@ async fn test_get_hg_in_range(fb: FacebookInit) {
     .await;
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_overwrite(fb: FacebookInit) -> Result<(), Error> {
     let mapping = SqlBonsaiHgMappingBuilder::with_sqlite_in_memory()
         .unwrap()

@@ -21,6 +21,7 @@ use bonsai_git_mapping::CachingBonsaiGitMapping;
 use bonsai_git_mapping::SqlBonsaiGitMappingBuilder;
 use context::CoreContext;
 use fbinit::FacebookInit;
+use mononoke_macros::mononoke;
 use mononoke_types::hash::GitSha1;
 use mononoke_types::RepositoryId;
 use mononoke_types_mocks::changesetid as bonsai;
@@ -104,7 +105,7 @@ impl BonsaiGitMapping for CountedBonsaiGitMapping {
     }
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_add_and_get(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let mapping = SqlBonsaiGitMappingBuilder::with_sqlite_in_memory()?.build(REPO_ZERO);
@@ -132,7 +133,7 @@ async fn test_add_and_get(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_add_duplicate(fb: FacebookInit) -> Result<(), Error> {
     // Inserting duplicate entries should just be a successful no-op.
     let ctx = CoreContext::test_mock(fb);
@@ -154,7 +155,7 @@ async fn test_add_duplicate(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_add_conflict(fb: FacebookInit) -> Result<(), Error> {
     // Adding conflicting entries should fail. Other entries inserted in the
     // same bulk_add should be inserted.
@@ -214,7 +215,7 @@ async fn test_add_conflict(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_bulk_add(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let mapping = SqlBonsaiGitMappingBuilder::with_sqlite_in_memory()?.build(REPO_ZERO);
@@ -239,7 +240,7 @@ async fn test_bulk_add(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_missing(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let mapping = SqlBonsaiGitMappingBuilder::with_sqlite_in_memory()?.build(REPO_ZERO);
@@ -253,7 +254,7 @@ async fn test_missing(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_add_with_transaction(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let conn = open_sqlite_in_memory()?;
@@ -337,7 +338,7 @@ async fn test_add_with_transaction(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_get_with_caching(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let conn = open_sqlite_in_memory()?;

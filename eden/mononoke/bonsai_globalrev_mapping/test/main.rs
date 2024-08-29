@@ -20,6 +20,7 @@ use bonsai_globalrev_mapping::SqlBonsaiGlobalrevMappingBuilder;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use mercurial_types_mocks::globalrev::*;
+use mononoke_macros::mononoke;
 use mononoke_types_mocks::changesetid as bonsai;
 use mononoke_types_mocks::repo::REPO_ZERO;
 use rendezvous::RendezVousOptions;
@@ -28,7 +29,7 @@ use sql_construct::SqlConstruct;
 use sql_ext::open_sqlite_in_memory;
 use sql_ext::SqlConnections;
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_add_and_get(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let mapping = SqlBonsaiGlobalrevMappingBuilder::with_sqlite_in_memory()?
@@ -58,7 +59,7 @@ async fn test_add_and_get(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_bulk_import(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let mapping = SqlBonsaiGlobalrevMappingBuilder::with_sqlite_in_memory()?
@@ -84,7 +85,7 @@ async fn test_bulk_import(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_missing(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let mapping = SqlBonsaiGlobalrevMappingBuilder::with_sqlite_in_memory()?
@@ -99,7 +100,7 @@ async fn test_missing(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_get_max(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let mapping = SqlBonsaiGlobalrevMappingBuilder::with_sqlite_in_memory()?
@@ -124,7 +125,7 @@ async fn test_get_max(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_add_globalrevs(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let conn = open_sqlite_in_memory()?;
@@ -190,7 +191,7 @@ async fn test_add_globalrevs(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_closest_globalrev(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let mapping = SqlBonsaiGlobalrevMappingBuilder::with_sqlite_in_memory()?
@@ -236,7 +237,7 @@ async fn test_closest_globalrev(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_caching(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let mapping = Arc::new(
@@ -380,7 +381,7 @@ async fn test_caching(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_globalrev_gaps(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let mapping = Arc::new(

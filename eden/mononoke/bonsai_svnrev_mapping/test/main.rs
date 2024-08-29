@@ -15,12 +15,13 @@ use bonsai_svnrev_mapping::CachingBonsaiSvnrevMapping;
 use bonsai_svnrev_mapping::SqlBonsaiSvnrevMappingBuilder;
 use context::CoreContext;
 use fbinit::FacebookInit;
+use mononoke_macros::mononoke;
 use mononoke_types_mocks::changesetid as bonsai;
 use mononoke_types_mocks::repo::REPO_ZERO;
 use mononoke_types_mocks::svnrev::*;
 use sql_construct::SqlConstruct;
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_add_and_get(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let mapping = SqlBonsaiSvnrevMappingBuilder::with_sqlite_in_memory()?.build(REPO_ZERO);
@@ -46,7 +47,7 @@ async fn test_add_and_get(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_bulk_import(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let mapping = SqlBonsaiSvnrevMappingBuilder::with_sqlite_in_memory()?.build(REPO_ZERO);
@@ -71,7 +72,7 @@ async fn test_bulk_import(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_missing(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let mapping = SqlBonsaiSvnrevMappingBuilder::with_sqlite_in_memory()?.build(REPO_ZERO);
@@ -85,7 +86,7 @@ async fn test_missing(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_caching(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let mapping =

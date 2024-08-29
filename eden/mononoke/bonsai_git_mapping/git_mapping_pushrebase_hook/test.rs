@@ -19,6 +19,7 @@ use context::CoreContext;
 use fbinit::FacebookInit;
 use filestore::FilestoreConfig;
 use maplit::hashset;
+use mononoke_macros::mononoke;
 use mononoke_types::RepositoryId;
 use mononoke_types_mocks::hash::*;
 use pushrebase::do_pushrebase_bonsai;
@@ -63,7 +64,7 @@ struct Repo {
     repo_identity: RepoIdentity,
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn pushrebase_populates_git_mapping(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let repo: Repo = TestRepoFactory::new(fb)?

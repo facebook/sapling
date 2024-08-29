@@ -138,9 +138,11 @@ fn mercurial_mpath_comparator(a: &NonRootMPath, b: &NonRootMPath) -> ::std::cmp:
 
 #[cfg(test)]
 mod tests {
+    use mononoke_macros::mononoke;
+
     use super::*;
 
-    #[test]
+    #[mononoke::test]
     fn test_mercurial_mpath_comparator() {
         let mut paths = vec![
             "foo/bar/baz/a.test",

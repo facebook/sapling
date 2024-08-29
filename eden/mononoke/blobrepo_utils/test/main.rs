@@ -32,6 +32,7 @@ mod test {
                 use futures::stream::FuturesOrdered;
                 use futures::TryFutureExt;
                 use futures::TryStreamExt;
+                use mononoke_macros::mononoke;
                 use repo_blobstore::RepoBlobstore;
                 use repo_derived_data::RepoDerivedData;
                 use repo_identity::RepoIdentity;
@@ -88,7 +89,7 @@ mod test {
                     }
                 }
 
-                #[fbinit::test]
+                #[mononoke::fbinit_test]
                 async fn test(fb: FacebookInit) -> Result<()> {
                     let ctx = CoreContext::test_mock(fb);
 

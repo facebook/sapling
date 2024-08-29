@@ -23,6 +23,7 @@ use fbinit::FacebookInit;
 use filestore::FilestoreConfig;
 use futures::future::try_join_all;
 use maplit::hashset;
+use mononoke_macros::mononoke;
 use mononoke_types::globalrev::Globalrev;
 use mononoke_types::globalrev::START_COMMIT_GLOBALREV;
 use mononoke_types::BonsaiChangesetMut;
@@ -78,7 +79,7 @@ struct Repo {
     bookmarks: dyn Bookmarks,
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 fn pushrebase_assigns_globalrevs(fb: FacebookInit) -> Result<(), Error> {
     let runtime = tokio::runtime::Runtime::new()?;
     runtime.block_on(pushrebase_assigns_globalrevs_impl(fb))
@@ -187,7 +188,7 @@ async fn pushrebase_assigns_globalrevs_impl(fb: FacebookInit) -> Result<(), Erro
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 fn test_pushrebase_race_assigns_monotonic_globalrevs(fb: FacebookInit) -> Result<(), Error> {
     let runtime = tokio::runtime::Runtime::new()?;
     runtime.block_on(pushrebase_race_assigns_monotonic_globalrevs(fb))

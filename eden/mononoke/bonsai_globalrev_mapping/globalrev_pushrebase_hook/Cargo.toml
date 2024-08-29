@@ -30,6 +30,7 @@ fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rus
 filestore = { version = "0.1.0", path = "../../filestore" }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
 maplit = "1.0"
+mononoke_macros = { version = "0.1.0", path = "../../mononoke_macros" }
 pushrebase = { version = "0.1.0", path = "../../pushrebase" }
 rand = { version = "0.8", features = ["small_rng"] }
 repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }

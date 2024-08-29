@@ -13,6 +13,7 @@ use bonsai_tag_mapping::BonsaiTagMapping;
 use bonsai_tag_mapping::BonsaiTagMappingEntry;
 use bonsai_tag_mapping::SqlBonsaiTagMappingBuilder;
 use fbinit::FacebookInit;
+use mononoke_macros::mononoke;
 use mononoke_types::hash::GitSha1;
 use mononoke_types_mocks::changesetid as bonsai;
 use mononoke_types_mocks::repo::REPO_ZERO;
@@ -21,7 +22,7 @@ use sql_construct::SqlConstruct;
 const ZERO_GIT_HASH: &str = "0000000000000000000000000000000000000000";
 const ONE_GIT_HASH: &str = "1111111111111111111111111111111111111111";
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_add_and_get(_: FacebookInit) -> Result<(), Error> {
     let mapping = SqlBonsaiTagMappingBuilder::with_sqlite_in_memory()?.build(REPO_ZERO);
     let tag_name = "JustATag";
@@ -59,7 +60,7 @@ async fn test_add_and_get(_: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_update_and_get(_: FacebookInit) -> Result<(), Error> {
     let mapping = SqlBonsaiTagMappingBuilder::with_sqlite_in_memory()?.build(REPO_ZERO);
     let tag_name = "JustATag";
@@ -100,7 +101,7 @@ async fn test_update_and_get(_: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_get_without_add(_: FacebookInit) -> Result<(), Error> {
     let mapping = SqlBonsaiTagMappingBuilder::with_sqlite_in_memory()?.build(REPO_ZERO);
     let result = mapping
@@ -113,7 +114,7 @@ async fn test_get_without_add(_: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_get_multiple_tags(_: FacebookInit) -> Result<(), Error> {
     let mapping = SqlBonsaiTagMappingBuilder::with_sqlite_in_memory()?.build(REPO_ZERO);
     let entry = BonsaiTagMappingEntry {
@@ -145,7 +146,7 @@ async fn test_get_multiple_tags(_: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_get_tags_by_multiple_changesets(_: FacebookInit) -> Result<(), Error> {
     let mapping = SqlBonsaiTagMappingBuilder::with_sqlite_in_memory()?.build(REPO_ZERO);
     let entry = BonsaiTagMappingEntry {
@@ -176,7 +177,7 @@ async fn test_get_tags_by_multiple_changesets(_: FacebookInit) -> Result<(), Err
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_get_all_tags(_: FacebookInit) -> Result<(), Error> {
     let mapping = SqlBonsaiTagMappingBuilder::with_sqlite_in_memory()?.build(REPO_ZERO);
     let entry = BonsaiTagMappingEntry {
@@ -207,7 +208,7 @@ async fn test_get_all_tags(_: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_get_tag_by_tag_hashes(_: FacebookInit) -> Result<(), Error> {
     let mapping = SqlBonsaiTagMappingBuilder::with_sqlite_in_memory()?.build(REPO_ZERO);
     let entry = BonsaiTagMappingEntry {
@@ -241,7 +242,7 @@ async fn test_get_tag_by_tag_hashes(_: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_delete_mappings_by_name(_: FacebookInit) -> Result<(), Error> {
     let mapping = SqlBonsaiTagMappingBuilder::with_sqlite_in_memory()?.build(REPO_ZERO);
     let entry = BonsaiTagMappingEntry {
