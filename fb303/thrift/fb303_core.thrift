@@ -49,12 +49,15 @@ service BaseService {
   /**
    * Gets the status of this service
    */
-  fb303_status getStatus() (priority = 'IMPORTANT');
+  fb303_status getStatus() (
+    priority = 'IMPORTANT',
+    cpp.generate_deprecated_header_client_methods,
+  );
 
   /**
    * Returns a descriptive name of the service
    */
-  string getName();
+  string getName() (cpp.generate_deprecated_header_client_methods);
 
   /**
    * Returns the version of the service
