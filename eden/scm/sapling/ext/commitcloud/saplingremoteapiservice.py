@@ -188,9 +188,8 @@ class SaplingRemoteAPIService(baseservice.BaseService):
             "'get_smartlog' returns %d entries\n" % len(smartlog["nodes"]),
             component="commitcloud",
         )
-        for nodeinfo in smartlog["nodes"]:
-            nodeinfo["node"] = nodeinfo["node"].hex()
-            nodeinfo["parents"] = list(map(lambda x: x.hex(), nodeinfo["parents"]))
+
+        smartlog["nodes"] = self._decode_smartlog_nodes(smartlog["nodes"])
         try:
             return self._makesmartloginfo(smartlog)
         except Exception as e:
@@ -226,9 +225,8 @@ class SaplingRemoteAPIService(baseservice.BaseService):
             smartlog["nodes"] = list(
                 filter(lambda x: x["date"] >= cutoff, smartlog["nodes"])
             )
-        for nodeinfo in smartlog["nodes"]:
-            nodeinfo["node"] = nodeinfo["node"].hex()
-            nodeinfo["parents"] = list(map(lambda x: x.hex(), nodeinfo["parents"]))
+
+        smartlog["nodes"] = self._decode_smartlog_nodes(smartlog["nodes"])
         self.ui.debug(
             "'get_smartlog' returns %d entries\n" % len(smartlog["nodes"]),
             component="commitcloud",
@@ -395,3 +393,12 @@ class SaplingRemoteAPIService(baseservice.BaseService):
             "SKIP_PUBLIC_COMMITS_METADATA": "SkipPublicCommitsMetadata",
         }
         return [mapping[s] for s in strings]
+
+    def _decode_smartlog_nodes(self, nodes):
+        for nodeinfo in nodes:
+            nodeinfo["node"] = nodeinfo["node"].hex()
+            nodeinfo["parents"] = list(map(lambda x: x.hex(), nodeinfo["parents"]))
+            if nodeinfo["remote_bookmarks"] is not None:
+                for bookmark in nodeinfo["remote_bookmarks"]:
+                    bookmark["node"] = bookmark["node"].hex()
+        return nodes
