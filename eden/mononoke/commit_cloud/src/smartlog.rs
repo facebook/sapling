@@ -26,13 +26,13 @@ use crate::SqlCommitCloud;
 #[derive(Debug, Clone)]
 pub struct RawSmartlogData {
     pub heads: Vec<WorkspaceHead>,
-    pub local_bookmarks: Option<LocalBookmarksMap>,
-    pub remote_bookmarks: Option<RemoteBookmarksMap>,
+    pub local_bookmarks: LocalBookmarksMap,
+    pub remote_bookmarks: RemoteBookmarksMap,
 }
 impl RawSmartlogData {
     // Takes all the heads and bookmarks and returns them as a single Vec<HgChangesetId>
     // in order to create a  smartlog node list
-    pub fn collapse_into_vec(&self) -> Vec<HgChangesetId> {
+    pub fn collapse_into_vec(&self, flags: &[GetSmartlogFlag]) -> Vec<HgChangesetId> {
         let mut heads = self
             .heads
             .clone()
@@ -40,16 +40,18 @@ impl RawSmartlogData {
             .map(|head| head.commit)
             .collect::<Vec<HgChangesetId>>();
 
-        if let Some(remote_bookmarks) = self.remote_bookmarks.clone() {
-            let mut rbs = remote_bookmarks
+        if flags.contains(&GetSmartlogFlag::AddRemoteBookmarks) {
+            let mut rbs = self
+                .remote_bookmarks
                 .keys()
                 .cloned()
                 .collect::<Vec<HgChangesetId>>();
             heads.append(&mut rbs);
         }
 
-        if let Some(local_bookmarks) = self.local_bookmarks.clone() {
-            let mut lbs = local_bookmarks
+        if flags.contains(&GetSmartlogFlag::AddAllBookmarks) {
+            let mut lbs = self
+                .local_bookmarks
                 .keys()
                 .cloned()
                 .collect::<Vec<HgChangesetId>>();
@@ -61,28 +63,17 @@ impl RawSmartlogData {
     pub(crate) async fn fetch_smartlog_references(
         ctx: &CommitCloudContext,
         sql: &SqlCommitCloud,
-        flags: &[GetSmartlogFlag],
     ) -> Result<Self, anyhow::Error> {
         let heads: Vec<WorkspaceHead> =
             sql.get(ctx.reponame.clone(), ctx.workspace.clone()).await?;
 
-        let local_bookmarks = if flags.contains(&GetSmartlogFlag::AddAllBookmarks) {
-            Some(
-                sql.get_as_map(ctx.reponame.clone(), ctx.workspace.clone())
-                    .await?,
-            )
-        } else {
-            None
-        };
+        let local_bookmarks = sql
+            .get_as_map(ctx.reponame.clone(), ctx.workspace.clone())
+            .await?;
 
-        let remote_bookmarks = if flags.contains(&GetSmartlogFlag::AddRemoteBookmarks) {
-            Some(
-                sql.get_as_map(ctx.reponame.clone(), ctx.workspace.clone())
-                    .await?,
-            )
-        } else {
-            None
-        };
+        let remote_bookmarks = sql
+            .get_as_map(ctx.reponame.clone(), ctx.workspace.clone())
+            .await?;
 
         Ok(RawSmartlogData {
             heads,
@@ -96,12 +87,10 @@ impl CommitCloud {
     pub async fn get_smartlog_raw_info(
         &self,
         cc_ctx: &CommitCloudContext,
-        flags: &[GetSmartlogFlag],
     ) -> anyhow::Result<RawSmartlogData> {
         RawSmartlogData::fetch_smartlog_references(
             &CommitCloudContext::new(&cc_ctx.workspace, &cc_ctx.reponame)?,
             &self.storage,
-            flags,
         )
         .await
     }

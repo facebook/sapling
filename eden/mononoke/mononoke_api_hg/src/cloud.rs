@@ -118,16 +118,12 @@ impl<R: MononokeRepo> HgRepoContext<R> {
             .repo_ctx()
             .repo()
             .commit_cloud()
-            .get_smartlog_raw_info(&cc_ctx, &params.flags)
+            .get_smartlog_raw_info(&cc_ctx)
             .await?;
-        let hg_ids = raw_data.collapse_into_vec();
+        let hg_ids = raw_data.collapse_into_vec(&params.flags);
 
         let nodes = self
-            .form_smartlog_with_info(
-                hg_ids,
-                raw_data.local_bookmarks.unwrap_or_default(),
-                raw_data.remote_bookmarks.unwrap_or_default(),
-            )
+            .form_smartlog_with_info(hg_ids, raw_data.local_bookmarks, raw_data.remote_bookmarks)
             .await?;
 
         Ok(SmartlogData {
