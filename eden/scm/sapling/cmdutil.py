@@ -4167,6 +4167,55 @@ def add_summary_footer(
     )
 
 
+def extract_summary(ui, message: str) -> str:
+    """Extract summary (including title) of a commit message.
+
+    >>> class FakeUI:
+    ...   def configlist(self, section, key):
+    ...     assert section == "committemplate" and key == "commit-message-fields"
+    ...     return ["Summary", "Test Plan"]
+    ...
+    ...   def config(self, section, key):
+    ...     assert section == "committemplate" and key == "summary-field"
+    ...     return "Summary"
+    ...
+
+    >>> ui = FakeUI()
+
+    >>> print(extract_summary(ui, "this is a title"))
+    this is a title
+
+    >>> print(extract_summary(
+    ...   ui,
+    ...   "this is a title\\n\\nSummary: I am a summary"
+    ... ))
+    this is a title
+    <BLANKLINE>
+    Summary: I am a summary
+
+    >>> print(extract_summary(
+    ...   ui,
+    ...   "this is a title\\n\\nSummary: I am a summary\\n\\nTest Plan: I am a test plan",
+    ... ))
+    this is a title
+    <BLANKLINE>
+    Summary: I am a summary
+    """
+    commit_fields = set(ui.configlist("committemplate", "commit-message-fields"))
+    summary_field = ui.config("committemplate", "summary-field")
+    lines = message.split("\n")
+    field_content_list = _parse_commit_message(lines, commit_fields)
+
+    new_lines = []
+    for field, content in field_content_list:
+        new_lines.extend(content)
+        if field == summary_field:
+            break
+    while new_lines and not new_lines[-1]:
+        new_lines.pop()
+    return "\n".join(new_lines)
+
+
 def _parse_commit_message(
     lines: List[str], commit_fields: Set[str]
 ) -> List[Tuple[Optional[str], List[str]]]:
