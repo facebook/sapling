@@ -295,6 +295,7 @@ mod test {
     use fbinit::FacebookInit;
     use filestore::FilestoreConfig;
     use maplit::btreemap;
+    use mononoke_macros::mononoke;
     use mononoke_types::FileType;
     use repo_blobstore::RepoBlobstore;
     use repo_blobstore::RepoBlobstoreRef;
@@ -324,7 +325,7 @@ mod test {
         repo_identity: RepoIdentity,
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_split_batch_in_linear_stacks_simple(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let repo: TestRepo = test_repo_factory::build_empty(fb).await?;
@@ -420,7 +421,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_split_batch_in_linear_stacks_with_limit(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let repo: TestRepo = test_repo_factory::build_empty(fb).await?;
@@ -485,7 +486,7 @@ mod test {
 
         Ok(())
     }
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_split_batch_in_linear_stacks_merge(fb: FacebookInit) -> Result<(), Error> {
         let repo: TestRepo = test_repo_factory::build_empty(fb).await?;
         let ctx = CoreContext::test_mock(fb);
@@ -557,7 +558,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_split_batch_in_linear_stacks_replace_dir_with_file(
         fb: FacebookInit,
     ) -> Result<(), Error> {
@@ -602,7 +603,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_split_batch_in_linear_stacks_delete_file(fb: FacebookInit) -> Result<(), Error> {
         let repo: TestRepo = test_repo_factory::build_empty(fb).await?;
         let ctx = CoreContext::test_mock(fb);
@@ -641,7 +642,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_split_batch_in_linear_stacks_add_same_file(
         fb: FacebookInit,
     ) -> Result<(), Error> {
@@ -707,7 +708,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_split_batch_in_linear_stacks_replace_file_with_dir(
         fb: FacebookInit,
     ) -> Result<(), Error> {
@@ -764,7 +765,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_split_batch_in_linear_stacks_copy_info(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let repo: TestRepo = test_repo_factory::build_empty(fb).await?;

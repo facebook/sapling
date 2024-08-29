@@ -207,6 +207,7 @@ mod test {
     use mercurial_derivation::DeriveHgChangeset;
     use mercurial_types::HgChangesetId;
     use mercurial_types::HgManifestId;
+    use mononoke_macros::mononoke;
     use mononoke_types::ChangesetId;
     use repo_blobstore::RepoBlobstore;
     use repo_blobstore::RepoBlobstoreRef;
@@ -313,7 +314,7 @@ mod test {
             .unwrap();
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     fn test_derive_data(fb: FacebookInit) {
         let runtime = Runtime::new().unwrap();
         verify_repo(fb, Linear::get_repo(fb), &runtime);

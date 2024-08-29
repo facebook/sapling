@@ -263,6 +263,7 @@ mod test {
     use mercurial_derivation::DeriveHgChangeset;
     use mercurial_types::HgChangesetId;
     use mercurial_types::HgManifestId;
+    use mononoke_macros::mononoke;
     use mononoke_types::ChangesetId;
     use repo_derived_data::RepoDerivedDataRef;
     use tests_utils::CreateCommitContext;
@@ -382,7 +383,7 @@ mod test {
         }
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_unode_derivation_on_multiple_repos(fb: FacebookInit) {
         verify_repo(fb, || Linear::get_repo::<TestRepo>(fb)).await;
         verify_repo(fb, || BranchEven::get_repo::<TestRepo>(fb)).await;

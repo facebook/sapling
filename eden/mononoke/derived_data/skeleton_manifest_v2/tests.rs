@@ -19,6 +19,7 @@ use filestore::FilestoreConfig;
 use futures::TryStreamExt;
 use itertools::Itertools;
 use manifest::ManifestOps;
+use mononoke_macros::mononoke;
 use mononoke_types::ChangesetId;
 use pretty_assertions::assert_eq;
 use repo_blobstore::RepoBlobstore;
@@ -174,7 +175,7 @@ async fn assert_all_leaves(
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_skeleton_manifests_v2(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let (repo, changesets) = init_repo(&ctx).await?;

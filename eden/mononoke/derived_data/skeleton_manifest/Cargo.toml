@@ -40,6 +40,7 @@ filestore = { version = "0.1.0", path = "../../filestore" }
 fixtures = { version = "0.1.0", path = "../../tests/fixtures" }
 mercurial_derivation = { version = "0.1.0", path = "../mercurial_derivation" }
 mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
+mononoke_macros = { version = "0.1.0", path = "../../mononoke_macros" }
 pretty_assertions = { version = "1.2", features = ["alloc"], default-features = false }
 repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
 repo_derived_data = { version = "0.1.0", path = "../../repo_attributes/repo_derived_data" }

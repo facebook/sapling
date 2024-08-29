@@ -52,6 +52,7 @@ impl BssmPath {
 
 #[cfg(test)]
 mod test {
+    use mononoke_macros::mononoke;
     use quickcheck::quickcheck;
 
     use super::*;
@@ -80,7 +81,7 @@ mod test {
         }
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_transform() {
         assert_transform("a/b/c", "c/a/b/c");
         assert_transform("dir/file", "elif/dir/file");
@@ -89,7 +90,7 @@ mod test {
         assert_transform("eden/mononoke/main.rs", "sr.niam/eden/mononoke/main.rs");
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_untransform() {
         assert_untransform("c/a/b/c", Some("a/b/c"));
         assert_untransform("elif/dir/file", Some("dir/file"));

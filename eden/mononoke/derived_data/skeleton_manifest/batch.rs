@@ -145,6 +145,7 @@ mod test {
     use filestore::FilestoreConfig;
     use fixtures::Linear;
     use fixtures::TestRepoFixture;
+    use mononoke_macros::mononoke;
     use repo_blobstore::RepoBlobstore;
     use repo_derived_data::RepoDerivedData;
     use repo_derived_data::RepoDerivedDataRef;
@@ -169,7 +170,7 @@ mod test {
         RepoIdentity,
     );
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn batch_derive(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
 
@@ -208,7 +209,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn batch_derive_with_merge(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let new_batch = {

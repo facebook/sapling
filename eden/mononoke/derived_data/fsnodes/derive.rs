@@ -476,6 +476,7 @@ mod test {
     use fixtures::Linear;
     use fixtures::ManyFilesDirs;
     use fixtures::TestRepoFixture;
+    use mononoke_macros::mononoke;
     use repo_blobstore::RepoBlobstore;
     use repo_blobstore::RepoBlobstoreRef;
     use repo_derived_data::RepoDerivedData;
@@ -499,7 +500,7 @@ mod test {
         FilestoreConfig,
     );
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     fn flat_linear_test(fb: FacebookInit) {
         let runtime = Runtime::new().unwrap();
         let repo: TestRepo = runtime.block_on(Linear::get_repo(fb));
@@ -614,7 +615,7 @@ mod test {
         }
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     fn nested_directories_test(fb: FacebookInit) {
         let runtime = Runtime::new().unwrap();
         let repo: TestRepo = runtime.block_on(ManyFilesDirs::get_repo(fb));

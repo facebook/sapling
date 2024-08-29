@@ -26,6 +26,7 @@ use fixtures::TestRepoFixture;
 use futures::TryStreamExt;
 use itertools::Itertools;
 use manifest::ManifestOps;
+use mononoke_macros::mononoke;
 use mononoke_types::skeleton_manifest_v2::SkeletonManifestV2;
 use mononoke_types::skeleton_manifest_v2::SkeletonManifestV2Entry;
 use mononoke_types::ChangesetIdPrefix;
@@ -151,7 +152,7 @@ async fn test_for_fixture<F: TestRepoFixture + Send>(fb: FacebookInit) -> Result
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_skeleton_manifest_v2_repo_fixtures(fb: FacebookInit) {
     futures::try_join!(
         test_for_fixture::<fixtures::Linear>(fb),

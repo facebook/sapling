@@ -123,6 +123,7 @@ mod test {
     use fixtures::Linear;
     use fixtures::TestRepoFixture;
     use mercurial_types::HgChangesetId;
+    use mononoke_macros::mononoke;
     use mononoke_types::BonsaiChangeset;
     use repo_blobstore::RepoBlobstore;
     use repo_blobstore::RepoBlobstoreRef;
@@ -145,7 +146,7 @@ mod test {
         FilestoreConfig,
     );
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn derive_info_test(fb: FacebookInit) -> Result<(), Error> {
         let repo: Repo = Linear::get_repo(fb).await;
         let ctx = CoreContext::test_mock(fb);
@@ -182,7 +183,7 @@ mod test {
         );
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn batch_derive(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let repo: Repo = Linear::get_repo(fb).await;

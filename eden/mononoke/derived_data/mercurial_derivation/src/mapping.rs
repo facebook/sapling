@@ -431,6 +431,7 @@ mod test {
     use fixtures::UnsharedMergeUneven;
     use futures::Future;
     use futures::TryStreamExt;
+    use mononoke_macros::mononoke;
     use repo_blobstore::RepoBlobstore;
     use repo_derived_data::RepoDerivedData;
     use repo_derived_data::RepoDerivedDataRef;
@@ -524,7 +525,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_batch_derive(fb: FacebookInit) -> Result<()> {
         verify_repo(fb, || Linear::get_repo::<TestRepo>(fb)).await?;
         verify_repo(fb, || BranchEven::get_repo::<TestRepo>(fb)).await?;

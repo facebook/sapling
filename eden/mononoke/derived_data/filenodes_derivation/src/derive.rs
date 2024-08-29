@@ -306,6 +306,7 @@ mod tests {
     use fixtures::TestRepoFixture;
     use manifest::ManifestOps;
     use mercurial_derivation::DeriveHgChangeset;
+    use mononoke_macros::mononoke;
     use mononoke_types::FileType;
     use repo_blobstore::RepoBlobstore;
     use repo_derived_data::RepoDerivedData;
@@ -395,7 +396,7 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     fn generate_filenodes_simple(fb: FacebookInit) -> Result<()> {
         let runtime = tokio::runtime::Runtime::new()?;
         runtime.block_on(test_generate_filenodes_simple(fb))
@@ -424,7 +425,7 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     fn generate_filenodes_merge(fb: FacebookInit) -> Result<()> {
         let runtime = tokio::runtime::Runtime::new()?;
         runtime.block_on(test_generate_filenodes_merge(fb))
@@ -449,7 +450,7 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     fn generate_filenodes_type_change(fb: FacebookInit) -> Result<()> {
         let runtime = tokio::runtime::Runtime::new()?;
         runtime.block_on(test_generate_type_change(fb))
@@ -490,7 +491,7 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     fn many_parents(fb: FacebookInit) -> Result<()> {
         let runtime = tokio::runtime::Runtime::new()?;
         runtime.block_on(test_many_parents(fb))
@@ -521,7 +522,7 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     fn derive_empty_commits(fb: FacebookInit) -> Result<()> {
         let runtime = tokio::runtime::Runtime::new()?;
         runtime.block_on(test_derive_empty_commits(fb))
@@ -549,13 +550,13 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     fn derive_only_empty_commits(fb: FacebookInit) -> Result<()> {
         let runtime = tokio::runtime::Runtime::new()?;
         runtime.block_on(test_derive_only_empty_commits(fb))
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn verify_batch_and_sequential_derive(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let repo1: TestRepo = test_repo_factory::build_empty(ctx.fb).await?;
@@ -596,7 +597,7 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn derive_parents_before_children(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let filenodes_cs_id = Arc::new(Mutex::new(None));

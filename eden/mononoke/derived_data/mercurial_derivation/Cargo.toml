@@ -55,6 +55,7 @@ filenodes_derivation = { version = "0.1.0", path = "../filenodes_derivation" }
 fixtures = { version = "0.1.0", path = "../../tests/fixtures" }
 memblob = { version = "0.1.0", path = "../../blobstore/memblob" }
 mercurial_types-mocks = { version = "0.1.0", path = "../../mercurial/types/mocks" }
+mononoke_macros = { version = "0.1.0", path = "../../mononoke_macros" }
 rand = { version = "0.8", features = ["small_rng"] }
 rand_distr = "0.4"
 rand_xorshift = "0.3"

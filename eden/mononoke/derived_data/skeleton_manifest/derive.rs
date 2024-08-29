@@ -344,6 +344,7 @@ mod test {
     use commit_graph::CommitGraphWriter;
     use fbinit::FacebookInit;
     use filestore::FilestoreConfig;
+    use mononoke_macros::mononoke;
     use mononoke_types::ChangesetId;
     use mononoke_types::PrefixTrie;
     use pretty_assertions::assert_eq;
@@ -476,7 +477,7 @@ mod test {
         }
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_skeleton_manifests(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let (repo, changesets) = init_repo(&ctx).await?;

@@ -880,6 +880,7 @@ mod test {
     use derived_data_manager::BonsaiDerivable;
     use fbinit::FacebookInit;
     use maplit::btreemap;
+    use mononoke_macros::mononoke;
     use mononoke_types::DeletedManifestV2Id;
     use pretty_assertions::assert_eq;
     use repo_blobstore::RepoBlobstoreArc;
@@ -942,7 +943,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_stack_derive(fb: FacebookInit) -> Result<()> {
         let repo: TestRepo = build_repo(fb).await.unwrap();
         let blobstore = repo.repo_blobstore_arc() as Arc<dyn Blobstore>;

@@ -68,6 +68,7 @@ use mercurial_types::HgParents;
 use mercurial_types::NonRootMPath;
 use mercurial_types::RepoPath;
 use mercurial_types_mocks::nodehash::ONES_FNID;
+use mononoke_macros::mononoke;
 use mononoke_types::blob::BlobstoreValue;
 use mononoke_types::bonsai_changeset::BonsaiChangesetMut;
 use mononoke_types::BonsaiChangeset;
@@ -137,7 +138,7 @@ async fn get_content(
     content.await
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn upload_blob_no_parents(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
     let repo: Repo = test_repo_factory::build_empty(fb)
@@ -165,7 +166,7 @@ async fn upload_blob_no_parents(fb: FacebookInit) {
     assert!(bytes.as_ref() == &b"blob"[..]);
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn upload_blob_one_parent(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
     let repo: Repo = test_repo_factory::build_empty(fb)
@@ -195,7 +196,7 @@ async fn upload_blob_one_parent(fb: FacebookInit) {
     assert!(bytes.as_ref() == &b"blob"[..]);
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn create_one_changeset(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
     let repo: Repo = test_repo_factory::build_empty(fb)
@@ -253,7 +254,7 @@ async fn create_one_changeset(fb: FacebookInit) {
     assert!(bytes.as_ref() == &b"blob"[..]);
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn create_two_changesets(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
     let repo: Repo = test_repo_factory::build_empty(fb)
@@ -334,7 +335,7 @@ async fn create_two_changesets(fb: FacebookInit) {
     assert!(commit2.parents().get_nodes() == expected_parents);
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn check_bonsai_creation(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
     let repo: Repo = test_repo_factory::build_empty(fb)
@@ -389,7 +390,7 @@ async fn check_bonsai_creation(fb: FacebookInit) {
     );
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn check_bonsai_creation_with_rename(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
     let repo: Repo = test_repo_factory::build_empty(fb)
@@ -479,7 +480,7 @@ async fn check_bonsai_creation_with_rename(fb: FacebookInit) {
     );
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn create_bad_changeset(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
     let repo: Repo = test_repo_factory::build_empty(fb)
@@ -503,7 +504,7 @@ async fn create_bad_changeset(fb: FacebookInit) {
         .expect_err("This should fail");
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn upload_entries_finalize_success(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
     let repo: Repo = test_repo_factory::build_empty(fb)
@@ -543,7 +544,7 @@ async fn upload_entries_finalize_success(fb: FacebookInit) {
     (entries.finalize(&ctx, roothash, vec![])).await.unwrap();
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn upload_entries_finalize_fail(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
     let repo: Repo = test_repo_factory::build_empty(fb)
@@ -574,7 +575,7 @@ async fn upload_entries_finalize_fail(fb: FacebookInit) {
     assert!(res.is_err());
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_compute_changed_files_no_parents(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
     let repo: Repo = ManyFilesDirs::get_repo(fb).await;
@@ -608,7 +609,7 @@ async fn test_compute_changed_files_no_parents(fb: FacebookInit) {
     );
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_compute_changed_files_one_parent(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
     // Note that this is a commit and its parent commit, so you can use:
@@ -743,7 +744,7 @@ async fn entry_parents(
     Ok(ret)
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_get_manifest_from_bonsai(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
     let repo: Repo = MergeUneven::get_repo(fb).await;
@@ -866,7 +867,7 @@ async fn test_get_manifest_from_bonsai(fb: FacebookInit) {
     }
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_hg_commit_generation_simple(fb: FacebookInit) {
     let repo: Repo = fixtures::Linear::get_repo(fb).await;
     let bcs = create_bonsai_changeset(vec![]);
@@ -891,7 +892,7 @@ async fn test_hg_commit_generation_simple(fb: FacebookInit) {
     assert_eq!(map_bcs_id, Some(bcs_id));
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_hg_commit_generation_stack(fb: FacebookInit) {
     let repo: Repo = fixtures::Linear::get_repo(fb).await;
     let mut changesets = vec![];
@@ -921,7 +922,7 @@ async fn test_hg_commit_generation_stack(fb: FacebookInit) {
     );
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_hg_commit_generation_one_after_another(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
     let repo: Repo = fixtures::Linear::get_repo(fb).await;
@@ -952,7 +953,7 @@ async fn test_hg_commit_generation_one_after_another(fb: FacebookInit) {
     );
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_hg_commit_generation_diamond(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
     let repo: Repo = fixtures::Linear::get_repo(fb).await;
@@ -970,7 +971,7 @@ async fn test_hg_commit_generation_diamond(fb: FacebookInit) {
     );
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_hg_commit_generation_many_diamond(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
     let repo: Repo = fixtures::ManyDiamonds::get_repo(fb).await;
@@ -991,7 +992,7 @@ async fn test_hg_commit_generation_many_diamond(fb: FacebookInit) {
     );
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_hg_commit_generation_uneven_branch(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
     let repo: Repo = test_repo_factory::build_empty(fb)
@@ -1037,7 +1038,7 @@ async fn test_hg_commit_generation_uneven_branch(fb: FacebookInit) {
 }
 
 #[cfg(fbcode_build)]
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn save_reproducibility_under_load(fb: FacebookInit) -> Result<(), Error> {
     use delayblob::DelayedBlobstore;
     use rand::Rng;
@@ -1113,7 +1114,7 @@ async fn save_reproducibility_under_load(fb: FacebookInit) -> Result<(), Error> 
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_filenode_lookup(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
 
@@ -1219,7 +1220,7 @@ async fn test_filenode_lookup(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_content_uploaded_filenode_id(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
 
@@ -1360,7 +1361,7 @@ impl TestHelper {
 mod octopus_merges {
     use super::*;
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_basic(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let repo: Repo = test_repo_factory::build_empty(fb)
@@ -1399,7 +1400,7 @@ mod octopus_merges {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_basic_filenode_parents(fb: FacebookInit) -> Result<(), Error> {
         let helper = TestHelper::new(fb).await?;
 
@@ -1445,7 +1446,7 @@ mod octopus_merges {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_many_filenode_parents(fb: FacebookInit) -> Result<(), Error> {
         let helper = TestHelper::new(fb).await?;
 
@@ -1475,7 +1476,7 @@ mod octopus_merges {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_mixed_filenode_parents(fb: FacebookInit) -> Result<(), Error> {
         let helper = TestHelper::new(fb).await?;
 
@@ -1505,7 +1506,7 @@ mod octopus_merges {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_strip_copy_from(fb: FacebookInit) -> Result<(), Error> {
         let helper = TestHelper::new(fb).await?;
 
@@ -1529,7 +1530,7 @@ mod octopus_merges {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_mixed_manifest_parents(fb: FacebookInit) -> Result<(), Error> {
         let helper = TestHelper::new(fb).await?;
 
@@ -1584,7 +1585,7 @@ mod octopus_merges {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_step_parents_metadata(fb: FacebookInit) -> Result<(), Error> {
         let helper = TestHelper::new(fb).await?;
 
@@ -1652,7 +1653,7 @@ mod octopus_merges {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_resolve_trivial_conflict(fb: FacebookInit) -> Result<(), Error> {
         let helper = TestHelper::new(fb).await?;
 
@@ -1683,7 +1684,7 @@ mod octopus_merges {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_fail_to_resolve_conflict_on_content(fb: FacebookInit) -> Result<(), Error> {
         let helper = TestHelper::new(fb).await?;
 
@@ -1709,7 +1710,7 @@ mod octopus_merges {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_fail_to_resolve_conflict_on_type(fb: FacebookInit) -> Result<(), Error> {
         let helper = TestHelper::new(fb).await?;
 
@@ -1744,7 +1745,7 @@ mod octopus_merges {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_changeset_file_changes(fb: FacebookInit) -> Result<(), Error> {
         let helper = TestHelper::new(fb).await?;
 

@@ -19,6 +19,7 @@ use mercurial_derivation::derive_hg_augmented_manifest;
 use mercurial_derivation::DeriveHgChangeset;
 use mercurial_types::HgAugmentedManifestId;
 use mercurial_types::HgManifestId;
+use mononoke_macros::mononoke;
 use mononoke_types::ChangesetId;
 use repo_blobstore::RepoBlobstoreRef;
 use tests_utils::drawdag::extend_from_dag_with_actions;
@@ -107,7 +108,7 @@ async fn compare_manifests(
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_augmented_manifest(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
 

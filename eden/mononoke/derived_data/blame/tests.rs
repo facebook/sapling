@@ -20,6 +20,7 @@ use filestore::FilestoreConfig;
 use maplit::btreemap;
 use maplit::hashmap;
 use metaconfig_types::BlameVersion;
+use mononoke_macros::mononoke;
 use mononoke_types::blame_v2::BlameRejected;
 use mononoke_types::blame_v2::BlameV2;
 use mononoke_types::ChangesetId;
@@ -164,7 +165,7 @@ c3: 4 0
 c0: 1 1
 "#;
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_blame_v2(fb: FacebookInit) -> Result<(), Error> {
     test_blame_version(fb, BlameVersion::V2).await
 }
@@ -278,7 +279,7 @@ async fn test_blame_version(fb: FacebookInit, version: BlameVersion) -> Result<(
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_blame_size_rejected_v2(fb: FacebookInit) -> Result<(), Error> {
     test_blame_size_rejected_version(fb, BlameVersion::V2).await
 }
@@ -337,7 +338,7 @@ async fn test_blame_size_rejected_version(
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_blame_copy_source(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let repo: TestRepo = TestRepoFactory::new(fb)?

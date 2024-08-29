@@ -26,6 +26,7 @@ use fixtures::TestRepoFixture;
 use futures::stream;
 use futures::TryStreamExt;
 use manifest::ManifestOps;
+use mononoke_macros::mononoke;
 use mononoke_types::test_sharded_manifest::TestShardedManifestDirectory;
 use mononoke_types::test_sharded_manifest::TestShardedManifestEntry;
 use mononoke_types::ChangesetIdPrefix;
@@ -154,7 +155,7 @@ async fn test_for_fixture<F: TestRepoFixture + Send>(fb: FacebookInit) -> Result
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_sharded_manifest_on_repo_fixtures(fb: FacebookInit) {
     futures::try_join!(
         test_for_fixture::<fixtures::Linear>(fb),

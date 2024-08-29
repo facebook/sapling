@@ -18,6 +18,7 @@ use fixtures::Linear;
 use fixtures::TestRepoFixture;
 use manifest::ManifestOps;
 use mercurial_types::HgChangesetId;
+use mononoke_macros::mononoke;
 use mononoke_types::NonRootMPath;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataRef;
@@ -25,7 +26,7 @@ use tests_utils::resolve_cs_id;
 
 use crate::Repo;
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_linear_get_file_history(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let repo: Repo = Linear::get_repo(fb).await;

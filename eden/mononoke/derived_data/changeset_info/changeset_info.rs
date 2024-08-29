@@ -287,6 +287,7 @@ fn get_title(message: &str) -> &str {
 
 #[cfg(test)]
 mod test {
+    use mononoke_macros::mononoke;
     use mononoke_types::BonsaiChangeset;
     use mononoke_types::BonsaiChangesetMut;
     use mononoke_types::DateTime;
@@ -296,7 +297,7 @@ mod test {
 
     use super::*;
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     fn changeset_info_title_test() {
         {
             let bcs = create_bonsai_with_message("   \n\n  title \n\n summary\n");

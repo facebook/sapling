@@ -139,6 +139,7 @@ mod tests {
     use fbinit::FacebookInit;
     use filenodes::Filenodes;
     use filestore::FilestoreConfig;
+    use mononoke_macros::mononoke;
     use mononoke_types::NonRootMPath;
     use repo_blobstore::RepoBlobstore;
     use repo_derived_data::RepoDerivedData;
@@ -171,7 +172,7 @@ mod tests {
         pub(crate) repo_identity: RepoIdentity,
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_find_unode_rename_sources(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let repo: TestRepo = test_repo_factory::build_empty(ctx.fb).await?;

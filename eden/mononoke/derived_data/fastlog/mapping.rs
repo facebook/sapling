@@ -222,6 +222,7 @@ mod tests {
     use maplit::btreemap;
     use mercurial_derivation::DeriveHgChangeset;
     use mercurial_types::HgChangesetId;
+    use mononoke_macros::mononoke;
     use mononoke_types::fastlog_batch::max_entries_in_fastlog_batch;
     use mononoke_types::fastlog_batch::MAX_BATCHES;
     use mononoke_types::fastlog_batch::MAX_LATEST_LEN;
@@ -260,7 +261,7 @@ mod tests {
         repo_identity: RepoIdentity,
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_derive_single_empty_commit_no_parents(fb: FacebookInit) {
         let repo: TestRepo = Linear::get_repo(fb).await;
         let ctx = CoreContext::test_mock(fb);
@@ -274,7 +275,7 @@ mod tests {
         assert_eq!(list, vec![(bcs_id, vec![])]);
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_derive_single_commit_no_parents(fb: FacebookInit) {
         let repo: TestRepo = Linear::get_repo(fb).await;
         let ctx = CoreContext::test_mock(fb);
@@ -309,7 +310,7 @@ mod tests {
         assert_eq!(list, vec![(bcs_id, vec![])]);
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_derive_linear(fb: FacebookInit) {
         let repo: TestRepo = Linear::get_repo(fb).await;
         let ctx = CoreContext::test_mock(fb);
@@ -337,7 +338,7 @@ mod tests {
         }
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_derive_overflow(fb: FacebookInit) {
         let repo: TestRepo = Linear::get_repo(fb).await;
         let ctx = CoreContext::test_mock(fb);
@@ -366,7 +367,7 @@ mod tests {
         verify_all_entries_for_commit(&ctx, &repo, *latest).await;
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_random_repo(fb: FacebookInit) {
         let repo: TestRepo = Linear::get_repo(fb).await;
         let ctx = CoreContext::test_mock(fb);
@@ -380,7 +381,7 @@ mod tests {
         verify_all_entries_for_commit(&ctx, &repo, latest).await;
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_derive_empty_commits(fb: FacebookInit) {
         let repo: TestRepo = Linear::get_repo(fb).await;
         let ctx = CoreContext::test_mock(fb);
@@ -400,7 +401,7 @@ mod tests {
         verify_all_entries_for_commit(&ctx, &repo, *latest).await;
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_find_intersection_of_diffs_unodes_linear(fb: FacebookInit) -> Result<(), Error> {
         let repo: TestRepo = Linear::get_repo(fb).await;
         let ctx = CoreContext::test_mock(fb);
@@ -433,7 +434,7 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_find_intersection_of_diffs_merge(fb: FacebookInit) -> Result<(), Error> {
         async fn test_single_find_unodes_merge(
             fb: FacebookInit,
@@ -561,7 +562,7 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_derive_merges(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
 
@@ -604,7 +605,7 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_bfs_order(fb: FacebookInit) -> Result<(), Error> {
         let repo: TestRepo = Linear::get_repo(fb).await;
         let ctx = CoreContext::test_mock(fb);

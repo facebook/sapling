@@ -464,6 +464,7 @@ mod tests {
     use mercurial_types::blobs::HgBlobManifest;
     use mercurial_types::HgFileNodeId;
     use mercurial_types::HgManifestId;
+    use mononoke_macros::mononoke;
     use mononoke_types::path::MPath;
     use mononoke_types::BlobstoreValue;
     use mononoke_types::BonsaiChangeset;
@@ -483,7 +484,7 @@ mod tests {
     use crate::mapping::RootUnodeManifestId;
     use crate::tests::TestRepo;
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn linear_test(fb: FacebookInit) -> Result<(), Error> {
         let repo: TestRepo = Linear::get_repo(fb).await;
         let derivation_ctx = repo.repo_derived_data().manager().derivation_context(None);
@@ -568,7 +569,7 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_same_content_different_paths(fb: FacebookInit) -> Result<(), Error> {
         let repo: TestRepo = Linear::get_repo(fb).await;
         let ctx = CoreContext::test_mock(fb);
@@ -615,7 +616,7 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_same_content_no_change(fb: FacebookInit) -> Result<(), Error> {
         let repo: TestRepo = Linear::get_repo(fb).await;
         let ctx = CoreContext::test_mock(fb);
@@ -733,12 +734,12 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_diamond_merge_unodes_v2(fb: FacebookInit) -> Result<(), Error> {
         diamond_merge_unodes_v2(fb).await
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_parent_order(fb: FacebookInit) -> Result<(), Error> {
         let repo: TestRepo = test_repo_factory::build_empty(fb).await.unwrap();
         let derivation_ctx = repo.repo_derived_data().manager().derivation_context(None);

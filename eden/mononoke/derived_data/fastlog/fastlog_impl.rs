@@ -247,6 +247,7 @@ mod test {
     use filestore::FilestoreConfig;
     use fixtures::Linear;
     use fixtures::TestRepoFixture;
+    use mononoke_macros::mononoke;
     use mononoke_types_mocks::changesetid::ONES_CSID;
     use mononoke_types_mocks::changesetid::THREES_CSID;
     use mononoke_types_mocks::changesetid::TWOS_CSID;
@@ -269,7 +270,7 @@ mod test {
         FilestoreConfig,
     );
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn fetch_flattened_simple(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let repo: Repo = Linear::get_repo(fb).await;
@@ -286,7 +287,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn fetch_flattened_prepend(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let repo: Repo = Linear::get_repo(fb).await;
@@ -329,7 +330,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_create_merged_list() -> Result<(), Error> {
         assert_eq!(
             create_merged_list(ONES_CSID, vec![]),
@@ -355,7 +356,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_create_merged_list_same_commit() -> Result<(), Error> {
         assert_eq!(
             create_merged_list(ONES_CSID, vec![]),
@@ -374,7 +375,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_convert_to_raw_list_simple() -> Result<(), Error> {
         let list = vec![
             (
