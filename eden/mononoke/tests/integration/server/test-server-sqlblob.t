@@ -43,10 +43,9 @@ Init treemanifest and remotefilelog
   $ cd $TESTTMP
 
 setup repo2
-  $ hg clone -q ssh://user@dummy/repo repo2 --noupdate --config clone.prefer-edenapi-clonedata=false
+  $ hg clone -q mono:repo repo2 --noupdate --config clone.prefer-edenapi-clonedata=false
   $ cd repo2
-  $ hg pull
-  pulling from ssh://user@dummy/repo
+  $ hg pull -q
 
   $ cd $TESTTMP
   $ cd repo

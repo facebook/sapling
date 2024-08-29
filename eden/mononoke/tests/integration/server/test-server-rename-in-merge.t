@@ -29,7 +29,7 @@ setup repo
 
 Clone the repo
   $ cd ..
-  $ hg clone -q ssh://user@dummy/repo repo2 --noupdate
+  $ hg clone -q mono:repo repo2 --noupdate
   $ cd repo2
   $ cd ../repo
 

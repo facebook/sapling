@@ -104,7 +104,7 @@
   
 
   $ cd "$TESTTMP"
-  $ hg clone -q ssh://user@dummy/repo repo-client --noupdate
+  $ hg clone -q mono:repo repo-client --noupdate
 
 blobimport
   $ blobimport repo/.hg repo

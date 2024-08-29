@@ -63,7 +63,7 @@ Setup repositories
 
 -- setup hg client repos
   $ cd "$TESTTMP"
-  $ hg clone -q ssh://user@dummy/repo fbs-hg-cnt --noupdate
+  $ hg clone -q mono:repo fbs-hg-cnt --noupdate
 
 Start mononoke server
   $ start_and_wait_for_mononoke_server

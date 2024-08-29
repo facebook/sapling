@@ -32,7 +32,7 @@ Setup LFS server
   $ lfs_uri="$(lfs_server)/repo"
 
 Clone the repository, then enable LFS
-  $ hg clone -q ssh://user@dummy/repo repo-lfs --noupdate
+  $ hg clone -q mono:repo repo-lfs --noupdate
   $ cd repo-lfs
   $ setup_hg_modern_lfs "$lfs_uri" 1000B "$TESTTMP/lfs-cache1"
 
@@ -53,7 +53,7 @@ Submit a large file
   $ hgmn push -q -r . --to master_bookmark
 
 Create a new repository, enable LFS there as well
-  $ hg clone -q ssh://user@dummy/repo repo-lfs2 --noupdate
+  $ hg clone -q mono:repo repo-lfs2 --noupdate
   $ cd repo-lfs2
   $ setup_hg_modern_lfs "$lfs_uri" 1000B "$TESTTMP/lfs-cache2"
 

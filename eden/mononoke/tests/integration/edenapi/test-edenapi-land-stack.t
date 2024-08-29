@@ -57,8 +57,9 @@ Start up SaplingRemoteAPI server.
   $ start_and_wait_for_mononoke_server
 Clone the repo
   $ cd $TESTTMP
-  $ hg clone -q ssh://user@dummy/repo repo2 --noupdate
+  $ hg clone -q mono:repo repo2 --noupdate
   $ cd repo2
+  $ hg pull -q -r $H -r $E
 
 Test land stack
   $ sl debugapi -e landstack -i "'master_bookmark'" -i "'$E'" -i "'$B'"

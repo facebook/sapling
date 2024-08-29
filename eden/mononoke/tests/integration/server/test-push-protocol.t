@@ -39,8 +39,8 @@ verify content
 setup two repos: one will be used to push from, another will be used
 to pull these pushed commits
 
-  $ hg clone -q ssh://user@dummy/repo repo2
-  $ hg clone -q ssh://user@dummy/repo repo3
+  $ hg clone -q mono:repo repo2
+  $ hg clone -q mono:repo repo3
   $ cd repo2
   $ hg pull ssh://user@dummy/repo
   pulling from ssh://user@dummy/repo

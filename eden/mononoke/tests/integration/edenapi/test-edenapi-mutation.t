@@ -55,10 +55,8 @@ Initialize test repo.
 
 Import and start mononoke
   $ cd $TESTTMP
-  $ hg clone -q ssh://user@dummy/repo client1 --noupdate --config clone.prefer-edenapi-clonedata=false
-  DEBUG pull::httpbookmarks: edenapi fetched bookmarks: {'master': None}
-  $ hg clone -q ssh://user@dummy/repo client2 --noupdate --config clone.prefer-edenapi-clonedata=false
-  DEBUG pull::httpbookmarks: edenapi fetched bookmarks: {'master': None}
+  $ hg clone -q mono:repo client1 --noupdate --config clone.prefer-edenapi-clonedata=false
+  $ hg clone -q mono:repo client2 --noupdate --config clone.prefer-edenapi-clonedata=false
   $ blobimport repo/.hg repo
   $ start_and_wait_for_mononoke_server
 Test mutations on client 1

@@ -45,9 +45,9 @@ setup configuration
 
 Setup client repos
   $ cd "$TESTTMP"
-  $ hg clone -q ssh://user@dummy/with_merge with_merge_hg --noupdate
-  $ hg clone -q ssh://user@dummy/another another_hg --noupdate
-  $ hg clone -q ssh://user@dummy/with_merge meg_hg --noupdate
+  $ hg clone -q mono:with_merge with_merge_hg --noupdate
+  $ hg clone -q mono:another another_hg --noupdate
+  $ hg clone -q mono:with_merge meg_hg --noupdate
 
 blobimport hg servers repos into Mononoke repos
   $ cd "$TESTTMP"

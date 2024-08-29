@@ -34,10 +34,10 @@ create another commit that has other content we can redact
   $ cd $TESTTMP
 
 setup repo-pull and repo-push
-  $ hg clone -q ssh://user@dummy/repo repo-push --noupdate
-  $ hg clone -q ssh://user@dummy/repo repo-pull --noupdate
-  $ hg clone -q ssh://user@dummy/repo repo-pull2 --noupdate
-  $ hg clone -q ssh://user@dummy/repo repo-pull3 --noupdate
+  $ hg clone -q mono:repo repo-push --noupdate
+  $ hg clone -q mono:repo repo-pull --noupdate
+  $ hg clone -q mono:repo repo-pull2 --noupdate
+  $ hg clone -q mono:repo repo-pull3 --noupdate
 
 blobimport
   $ blobimport repo/.hg repo

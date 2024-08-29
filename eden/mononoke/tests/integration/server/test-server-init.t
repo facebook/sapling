@@ -41,12 +41,9 @@ setup repo2
   > [remotefilelog]
   > cachepath=$TESTTMP/cachepath
   > EOF
-  $ hg clone -q ssh://user@dummy/repo repo2 --noupdate
+  $ hg clone -q mono:repo repo2 --noupdate
   $ cd repo2
-  $ hg pull
-  pulling from ssh://user@dummy/repo
-  searching for changes
-  no changes found
+  $ hg pull -q
 
   $ cd $TESTTMP
   $ cd repo

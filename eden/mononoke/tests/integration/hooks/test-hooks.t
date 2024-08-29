@@ -51,7 +51,7 @@ blobimport them into Mononoke storage and start Mononoke
 start mononoke
   $ start_and_wait_for_mononoke_server
 Clone the repo
-  $ hg clone -q ssh://user@dummy/repo repo2 --noupdate
+  $ hg clone -q mono:repo repo2 --noupdate
   $ cd repo2
   $ cat >> .hg/hgrc <<EOF
   > [extensions]

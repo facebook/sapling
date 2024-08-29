@@ -33,7 +33,7 @@ setup repo-push and repo-pull
   $ cd $TESTTMP
   $ for name in push pull1 pull2 pull3
   > do
-  >   hg clone -q ssh://user@dummy/repo repo-$name --noupdate
+  >   hg clone -q mono:repo repo-$name --noupdate
   >   cat >> repo-$name/.hg/hgrc <<EOF
   > [extensions]
   > loglinkrevfixup = $TESTTMP/loglinkrevfixup.py

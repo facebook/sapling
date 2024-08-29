@@ -40,7 +40,7 @@
   $ lfs_uri="$(lfs_server)/repo"
 
 # 5. Clone hg nolfs repo to lfs client hg repo. Setup small threshold for large file size.
-  $ hg clone -q ssh://user@dummy/repo repo-lfs --noupdate
+  $ hg clone -q mono:repo repo-lfs --noupdate
   $ cd repo-lfs
   $ setup_hg_modern_lfs "$lfs_uri" 1000B "$TESTTMP/lfs-cache1"
 
@@ -83,7 +83,7 @@
 
   $ cd ..
 7. Hg pull from hg client repo.
-  $ hg clone -q ssh://user@dummy/repo repo-lfs2 --noupdate
+  $ hg clone -q mono:repo repo-lfs2 --noupdate
   $ cd repo-lfs2
   $ setup_hg_modern_lfs "$lfs_uri" 1000B $TESTTMP/lfs-cache2
 
@@ -97,6 +97,7 @@
   $ hgmn pull
   pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo
   searching for changes
+  no changes found
   adding changesets
   adding manifests
   adding file changes

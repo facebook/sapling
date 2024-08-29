@@ -87,9 +87,9 @@ Setup repositories
 
 -- setup hg client repos
   $ cd "$TESTTMP"
-  $ hg clone -q ssh://user@dummy/fbs-mon fbs-hg-cnt --noupdate
-  $ hg clone -q ssh://user@dummy/ovr-mon ovr-hg-cnt --noupdate
-  $ hg clone -q ssh://user@dummy/meg-mon meg-hg-cnt --noupdate
+  $ hg clone -q mono:fbs-mon fbs-hg-cnt --noupdate
+  $ hg clone -q mono:ovr-mon ovr-hg-cnt --noupdate
+  $ hg clone -q mono:meg-mon meg-hg-cnt --noupdate
 
 
 Start mononoke server

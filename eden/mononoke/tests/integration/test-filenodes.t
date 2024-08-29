@@ -47,7 +47,7 @@ start mononoke
   $ wait_for_mononoke $TESTTMP/repo
 
 Clone the repo
-  $ hg clone -q ssh://user@dummy/repo repo2 --noupdate
+  $ hg clone -q mono:repo repo2 --noupdate
   $ cd repo2
   $ cat >> .hg/hgrc <<EOF
   > [extensions]

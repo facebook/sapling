@@ -55,7 +55,7 @@ Blobimport the hg repo to Mononoke
 start mononoke
   $ start_and_wait_for_mononoke_server
 Push to Mononoke
-  $ hg clone -q ssh://user@dummy/repo client-push --noupdate
+  $ hg clone -q mono:orig client-push --noupdate
   $ cd $TESTTMP/client-push
   $ cat >> .hg/hgrc <<EOF
   > [extensions]

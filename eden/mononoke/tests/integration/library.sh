@@ -668,6 +668,16 @@ use-rust=false
 [workingcopy]
 rust-checkout=false
 EOF
+
+  # Only set the dummy ssh "mono" scheme the first time. If we are called again after
+  # Mononoke starts, we don't want to override the scheme.
+  if ! hg config schemes.mono > /dev/null; then
+    cat >> "$HGRCPATH" <<EOF
+[schemes]
+mono=ssh://user@dummy/{1}
+hg=ssh://user@dummy/{1}
+EOF
+  fi
 }
 
 function setup_common_config {
@@ -1981,7 +1991,7 @@ EOF
 
   start_and_wait_for_mononoke_server
 
-  hg clone -q ssh://user@dummy/"$REPONAME" repo2 --noupdate
+  hg clone -q hg:"$REPONAME" repo2 --noupdate
   cd repo2 || exit 1
   cat >> .hg/hgrc <<EOF
 [extensions]

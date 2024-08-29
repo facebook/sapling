@@ -50,7 +50,7 @@ escaping.
 
 Setup a client repo that doesn't have any of the manifests in its local store.
 
-  $ hg clone -q ssh://user@dummy/repo test_repo --noupdate
+  $ hg clone -q mono:repo test_repo --noupdate
   $ cd test_repo
   $ hgmn pull -q -B master_bookmark
 
@@ -94,7 +94,7 @@ Fetch with designated ndoes
 
 Confirm that Mononoke logged commands, but didn't log any missing filenodes
   $ grep "Command processed" "$SCUBA_LOGGING_PATH" | wc -l
-  48
+  54
   $ grep NullLinknode "$SCUBA_LOGGING_PATH"
   [1]
 

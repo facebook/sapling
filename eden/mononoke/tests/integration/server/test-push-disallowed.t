@@ -39,7 +39,7 @@ start mononoke
   $ start_and_wait_for_mononoke_server
 setup the client repo
   $ cd $TESTTMP
-  $ hg clone -q ssh://user@dummy/repo client --noupdate
+  $ hg clone -q mono:repo client --noupdate
 
 create new hg commits
   $ cd $TESTTMP/client

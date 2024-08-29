@@ -65,8 +65,8 @@ get some bonsai hashes to avoid magic strings later
   $ MEGAREPO_MERGE_BONSAI=$(mononoke_newadmin bookmarks --repo-id 0 get master_bookmark)
 
 setup hg client repos
-  $ hg clone -q ssh://user@dummy/fbs-mon fbs-hg-cnt --noupdate
-  $ hg clone -q ssh://user@dummy/meg-mon meg-hg-cnt --noupdate
+  $ hg clone -q mono:fbs-mon fbs-hg-cnt --noupdate
+  $ hg clone -q mono:meg-mon meg-hg-cnt --noupdate
 
 start mononoke server
   $ start_and_wait_for_mononoke_server

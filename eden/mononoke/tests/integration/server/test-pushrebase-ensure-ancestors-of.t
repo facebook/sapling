@@ -44,7 +44,7 @@ Prepare the server-side repo
   $ start_and_wait_for_mononoke_server
 Prepare the client-side repo
 
-  $ hg clone -q ssh://user@dummy/repo client-repo --noupdate
+  $ hg clone -q mono:repo client-repo --noupdate
   $ cd $TESTTMP/client-repo
   $ cat >> .hg/hgrc <<EOF
   > [extensions]

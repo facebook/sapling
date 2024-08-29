@@ -30,8 +30,8 @@ create master bookmark
   $ cd $TESTTMP
 
 setup repo-push, repo-pull
-  $ hg clone -q ssh://user@dummy/repo repo-push --noupdate
-  $ hg clone -q ssh://user@dummy/repo repo-pull --noupdate
+  $ hg clone -q mono:repo repo-push --noupdate
+  $ hg clone -q mono:repo repo-pull --noupdate
 
 blobimport
 

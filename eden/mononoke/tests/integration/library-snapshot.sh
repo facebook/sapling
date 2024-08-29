@@ -28,7 +28,7 @@ EOF
 
     cd "$TESTTMP"
     for clone in "$@"; do
-        hg clone -q ssh://user@dummy/repo "$clone"
+        hg clone -q mono:repo "$clone"
     done
     blobimport repo/.hg repo
 

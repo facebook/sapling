@@ -29,7 +29,7 @@ blobimport
 start mononoke
   $ start_and_wait_for_mononoke_server
 clone the repo
-  $ hg clone -q ssh://user@dummy/repo client --noupdate
+  $ hg clone -q mono:repo client --noupdate
   $ cd client
   $ enable pushrebase remotenames
 

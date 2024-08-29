@@ -190,11 +190,12 @@
     "x_repo_check_disabled": false
   }
 
-  $ hg clone -q ssh://user@dummy/repo repo1 --noupdate
+  $ hg clone -q mono:repo repo1 --noupdate
   $ cd repo1
   $ hgmn pull
   pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo
   searching for changes
+  no changes found
   adding changesets
   adding manifests
   adding file changes

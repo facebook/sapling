@@ -114,10 +114,12 @@ setup hg server repo
   * Now running pushrebase... (glob)
   * Pushrebased to * (glob)
 
-  $ start_and_wait_for_mononoke_server
   $ cd "$TESTTMP"
-  $ hg clone -q ssh://user@dummy/repo client --noupdate
+  $ hg clone -q mono:repo client --noupdate
   $ cd client
+
+  $ start_and_wait_for_mononoke_server
+
   $ hgmn pull
   pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo
   searching for changes

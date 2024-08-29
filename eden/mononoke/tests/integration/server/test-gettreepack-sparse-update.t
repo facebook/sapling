@@ -35,7 +35,7 @@ Setup repo, and create test repo
 
 Setup a client repo that doesn't have any of the manifests in its local store.
 
-  $ hg clone -q ssh://user@dummy/repo test_repo --noupdate
+  $ hg clone -q mono:repo test_repo --noupdate
   $ cd test_repo
   $ sl pull -q -B master_bookmark
 

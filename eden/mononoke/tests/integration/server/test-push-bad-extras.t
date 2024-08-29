@@ -37,7 +37,7 @@ verify content
   $ blobimport repo/.hg repo
 
 setup push source repo
-  $ hg clone -q ssh://user@dummy/repo repo2
+  $ hg clone -q mono:repo repo2
 
 start mononoke
 

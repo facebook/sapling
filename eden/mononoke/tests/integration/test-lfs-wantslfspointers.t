@@ -30,7 +30,7 @@ Start Mononoke API server, to serve LFS blobs
   $ lfs_uri="$(lfs_server)/repo"
 
 Create a new client repository. Enable LFS there.
-  $ hg clone -q ssh://user@dummy/repo repo-lfs --noupdate
+  $ hg clone -q mono:repo repo-lfs --noupdate
   $ cd repo-lfs
   $ setup_hg_modern_lfs "$lfs_uri" 1000B "$TESTTMP/lfs-cache1"
 
@@ -61,7 +61,7 @@ Perform LFS push
   updating bookmark master_bookmark
 
 Create a new client repository, using getpack (with its own cachepath).
-  $ hg clone -q ssh://user@dummy/repo repo-lfs2 --noupdate
+  $ hg clone -q mono:repo repo-lfs2 --noupdate
   $ cd repo-lfs2
   $ setup_hg_lfs "$lfs_uri" 1000B "$TESTTMP/lfs-cache2"
 
@@ -82,7 +82,7 @@ Make sure lfs is not used during update
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 Create a new client repository, using getpack (with its own cachepath).
-  $ hg clone -q ssh://user@dummy/repo repo-lfs3 --noupdate
+  $ hg clone -q mono:repo repo-lfs3 --noupdate
   $ cd repo-lfs3
   $ setup_hg_lfs "$lfs_uri" 1000B "$TESTTMP/lfs-cache3"
 

@@ -52,8 +52,8 @@ create master bookmark
   $ cd $TESTTMP
 
 setup client1 and client2
-  $ hg clone -q ssh://user@dummy/repo client1 --noupdate
-  $ hg clone -q ssh://user@dummy/repo client2 --noupdate
+  $ hg clone -q mono:repo client1 --noupdate
+  $ hg clone -q mono:repo client2 --noupdate
 
 blobimport
 

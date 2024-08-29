@@ -52,7 +52,7 @@ setup hg server repo
   $ cd $TESTTMP
 
 setup repo-pull
-  $ hg clone -q ssh://user@dummy/repo repo-pull --noupdate
+  $ hg clone -q mono:repo repo-pull --noupdate
 
 blobimport
   $ blobimport repo/.hg repo

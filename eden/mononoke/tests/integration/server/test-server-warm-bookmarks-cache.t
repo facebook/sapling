@@ -17,7 +17,7 @@ Setup repository
   $ mononoke --scuba-dataset "file://$SCUBA_LOGGING_PATH"
   $ wait_for_mononoke "$TESTTMP/repo"
   $ cd "$TESTTMP"
-  $ hg clone -q ssh://user@dummy/repo repo2 --noupdate
+  $ hg clone -q mono:repo repo2 --noupdate
   $ cd repo2 || exit 1
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
@@ -47,8 +47,8 @@ Setup repository
 
   $ sleep 2
   $ grep "Fetching bookmarks from Warm bookmarks cache" "$SCUBA_LOGGING_PATH" | wc -l
-  2
+  3
 
   $ hgmn pull -q
   $ grep "Fetching bookmarks from Warm bookmarks cache" "$SCUBA_LOGGING_PATH" | wc -l
-  3
+  4

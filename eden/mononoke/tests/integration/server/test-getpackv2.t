@@ -17,8 +17,8 @@ setup repo
   $ hginit_treemanifest repo
 
 setup client repo2
-  $ hg clone -q ssh://user@dummy/repo repo2 --noupdate
-  $ hg clone -q ssh://user@dummy/repo repo3 --noupdate
+  $ hg clone -q mono:repo repo2 --noupdate
+  $ hg clone -q mono:repo repo3 --noupdate
   $ cd repo2
 
 make a few commits on the server

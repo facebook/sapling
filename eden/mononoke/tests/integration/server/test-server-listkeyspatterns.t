@@ -18,7 +18,7 @@ setup hg server repo
   $ cd $TESTTMP
 
 setup client repo
-  $ hg clone -q ssh://user@dummy/repo repo-client --noupdate
+  $ hg clone -q mono:repo repo-client --noupdate
   $ cd repo-client
 
 make a few commits on the server

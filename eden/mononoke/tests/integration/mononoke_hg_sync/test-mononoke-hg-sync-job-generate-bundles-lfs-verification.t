@@ -36,7 +36,7 @@ Start mononoke and a LFS server
   $ wait_for_mononoke
 
 Make client repo
-  $ hg clone -q ssh://user@dummy/repo client-push --noupdate
+  $ hg clone -q mono:repo client-push --noupdate
   $ cd client-push
 
   $ setup_hg_modern_lfs "$lfs_uri" 10B "$TESTTMP/lfs-cache1"

@@ -42,7 +42,7 @@ blobimport them into Mononoke storage and start Mononoke
 start mononoke
   $ start_and_wait_for_mononoke_server
 Make client repo
-  $ hg clone -q ssh://user@dummy/repo client-push --noupdate
+  $ hg clone -q mono:orig client-push --noupdate
   $ hg clone -q mononoke://$(mononoke_address)/backup backup --noupdate
 
 Push to Mononoke

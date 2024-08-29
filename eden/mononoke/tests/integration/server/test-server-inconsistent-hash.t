@@ -32,7 +32,7 @@
 # 2. Setup Mononoke.
   $ start_and_wait_for_mononoke_server
 # 3. Clone hg server repo to hg client repo
-  $ hg clone -q ssh://user@dummy/repo repo-client --noupdate
+  $ hg clone -q mono:repo repo-client --noupdate
   $ cd repo-client
 
   $ cat >> .hg/hgrc <<EOF

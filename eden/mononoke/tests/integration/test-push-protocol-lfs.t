@@ -29,7 +29,7 @@ Start mononoke and the LFS Server
 
 Setup client repo
 
-  $ hg clone -q ssh://user@dummy/repo hg-client
+  $ hg clone -q mono:repo hg-client
   $ cd hg-client
   $ setup_hg_modern_lfs "$lfs_uri" 10B "$TESTTMP/lfs-cache"
 
@@ -73,16 +73,10 @@ Create new commits
 
 Clone the repository, and pull
 
-  $ hg clone -q ssh://user@dummy/repo hg-client
+  $ hg clone -q mono:repo hg-client
   $ cd hg-client
   $ setup_hg_modern_lfs "$lfs_uri" 10B "$TESTTMP/lfs-cache"
-  $ hgmn pull
-  pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo
-  searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
-  $ hgmn up master_bookmark
-  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hgmn pull -q
+  $ hgmn up -q master_bookmark
   $ sha256sum large
   f9f7889fcedc8580403673810e2be90e35980f10234f80d08a6497bbda16a245  large
