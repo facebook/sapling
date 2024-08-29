@@ -175,6 +175,15 @@ impl GitSourceOfTruthConfig for SqlGitSourceOfTruthConfig {
         .await?;
         Ok(rows.into_iter().map(row_to_entry).collect())
     }
+
+    async fn get_locked(&self, _ctx: &CoreContext) -> Result<Vec<GitSourceOfTruthConfigEntry>> {
+        let rows = GetByGitSourceOfTruth::query(
+            &self.connections.read_master_connection,
+            &GitSourceOfTruth::Locked,
+        )
+        .await?;
+        Ok(rows.into_iter().map(row_to_entry).collect())
+    }
 }
 
 #[cfg(all(fbcode_build, test))]
@@ -297,6 +306,33 @@ mod test {
         assert_eq!(push.get_redirected_to_mononoke(&ctx).await?.len(), 2);
         assert_eq!(push.get_redirected_to_metagit(&ctx).await?.len(), 1);
 
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn test_get_locked(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let builder = SqlGitSourceOfTruthConfigBuilder::with_sqlite_in_memory()?;
+        let push = builder.build();
+
+        let to_be_locked_repo_id = RepositoryId::new(1);
+        let to_be_locked_repo_name = RepositoryName("test1".to_string());
+        push.set(
+            &ctx,
+            to_be_locked_repo_id,
+            to_be_locked_repo_name.clone(),
+            GitSourceOfTruth::Locked,
+        )
+        .await?;
+        push.set(
+            &ctx,
+            RepositoryId::new(2),
+            RepositoryName("test2".to_string()),
+            GitSourceOfTruth::Locked,
+        )
+        .await?;
+
+        assert_eq!(push.get_locked(&ctx).await?.len(), 2);
         Ok(())
     }
 }
