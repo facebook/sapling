@@ -346,6 +346,7 @@ mod tests {
     use mercurial_types::delta::Fragment;
     use mercurial_types::NULL_HASH;
     use mercurial_types_mocks::nodehash::*;
+    use mononoke_macros::mononoke;
     use phases::Phases;
     use quickcheck_macros::quickcheck;
     use repo_blobstore::RepoBlobstore;
@@ -502,7 +503,7 @@ mod tests {
         Delta::new(frags).unwrap()
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn two_fulltext_files(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
         let f1 = Filelog {
@@ -591,12 +592,12 @@ mod tests {
         }
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn files_order_correct(fb: FacebookInit) {
         files_check_order(CoreContext::test_mock(fb), true).await;
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn files_order_incorrect(fb: FacebookInit) {
         files_check_order(CoreContext::test_mock(fb), false).await;
     }

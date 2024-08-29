@@ -21,6 +21,7 @@ use manifest::ManifestOps;
 use maplit::hashset;
 use mercurial_derivation::DeriveHgChangeset;
 use metaconfig_types::LfsParams;
+use mononoke_macros::mononoke;
 use mononoke_types_mocks::changesetid::ONES_CSID;
 use repo_blobstore::RepoBlobstoreRef;
 use scuba_ext::MononokeScubaSampleBuilder;
@@ -30,7 +31,7 @@ use tests_utils::CreateCommitContext;
 use super::*;
 use crate::repo::RepoClientRepo;
 
-#[test]
+#[mononoke::test]
 fn test_parsing_caps_simple() {
     assert_eq!(
         parse_utf8_getbundle_caps(b"cap"),
@@ -82,7 +83,7 @@ fn test_parsing_caps_simple() {
     );
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 fn get_changed_manifests_stream_test(fb: FacebookInit) -> Result<(), Error> {
     let runtime = tokio::runtime::Runtime::new()?;
     runtime.block_on(get_changed_manifests_stream_test_impl(fb))
@@ -150,7 +151,7 @@ async fn get_changed_manifests_stream_test_impl(fb: FacebookInit) -> Result<(), 
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 fn get_changed_manifests_stream_test_depth(fb: FacebookInit) -> Result<(), Error> {
     let runtime = tokio::runtime::Runtime::new()?;
     runtime.block_on(get_changed_manifests_stream_test_depth_impl(fb))
@@ -204,7 +205,7 @@ async fn get_changed_manifests_stream_test_depth_impl(fb: FacebookInit) -> Resul
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 fn get_changed_manifests_stream_test_base_path(fb: FacebookInit) -> Result<(), Error> {
     let runtime = tokio::runtime::Runtime::new()?;
     runtime.block_on(get_changed_manifests_stream_test_base_path_impl(fb))
@@ -245,7 +246,7 @@ async fn get_changed_manifests_stream_test_base_path_impl(fb: FacebookInit) -> R
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_lfs_rollout(fb: FacebookInit) -> Result<(), Error> {
     with_just_knobs_async(
         JustKnobsInMemory::new(hashmap! {
@@ -288,7 +289,7 @@ async fn test_lfs_rollout(fb: FacebookInit) -> Result<(), Error> {
     ).await
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_maybe_validate_pushed_bonsais(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let repo: RepoClientRepo = test_repo_factory::build_empty(ctx.fb).await?;
@@ -468,14 +469,14 @@ async fn fetch_mfs(
     Ok(fetched_mfs)
 }
 
-#[test]
+#[mononoke::test]
 fn test_debug_format_directories() {
     assert_eq!(&debug_format_directories(vec![&"foo"]), "foo,");
     assert_eq!(&debug_format_directories(vec![&"foo,bar"]), "foo:obar,");
     assert_eq!(&debug_format_directories(vec![&"foo", &"bar"]), "foo,bar,");
 }
 
-#[test]
+#[mononoke::test]
 fn test_parse_git_lookup() -> Result<(), Error> {
     assert!(parse_git_lookup("ololo").is_none());
     assert!(parse_git_lookup("_gitlookup_hg_badhash").is_none());

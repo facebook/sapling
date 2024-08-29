@@ -381,6 +381,7 @@ mod test {
     use manifest::Manifest;
     use mercurial_derivation::DeriveHgChangeset;
     use metaconfig_types::FilestoreParams;
+    use mononoke_macros::mononoke;
     use mononoke_types::MPathElement;
     use test_repo_factory::TestRepoFactory;
     use tests_utils::BasicTestRepo;
@@ -432,7 +433,7 @@ mod test {
         Ok(kind)
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_prepare_blob(fb: FacebookInit) -> Result<()> {
         let repo: BasicTestRepo = test_repo_factory::build_empty(fb).await?;
         let blob = roundtrip_blob(fb, &repo, "foo", Some(3)).await?;
@@ -440,7 +441,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_prepare_blob_chunked(fb: FacebookInit) -> Result<()> {
         let repo: BasicTestRepo = TestRepoFactory::new(fb)?
             .with_config_override(|config| {
@@ -457,7 +458,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_prepare_blob_lfs(fb: FacebookInit) -> Result<()> {
         let repo: BasicTestRepo = test_repo_factory::build_empty(fb).await?;
         let blob = roundtrip_blob(fb, &repo, "foo", Some(2)).await?;

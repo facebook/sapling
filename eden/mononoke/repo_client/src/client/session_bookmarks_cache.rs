@@ -306,6 +306,7 @@ mod test {
     use bookmarks::BookmarksArc;
     use fbinit::FacebookInit;
     use maplit::hashmap;
+    use mononoke_macros::mononoke;
     use phases::PhasesArc;
     use repo_derived_data::RepoDerivedDataArc;
     use repo_identity::RepoIdentityArc;
@@ -337,7 +338,7 @@ mod test {
         }
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_fetch_prefix_no_warm_bookmark_cache(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
 
