@@ -160,6 +160,7 @@ fn deny_unacceptable_patterns<'a, 'b, 'c>(
 
 #[cfg(test)]
 mod test {
+    use mononoke_macros::mononoke;
     use mononoke_types::FileType;
     use mononoke_types::GitLfs;
     use mononoke_types_mocks::contentid::TWOS_CTID;
@@ -180,7 +181,7 @@ mod test {
         NonRootMPath::new(s).unwrap()
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_denied_in_any_push() {
         let (all, native) = setup_patterns();
         let mp = mpath("all/1");
@@ -205,7 +206,7 @@ mod test {
         assert!(matches!(r, HookExecution::Rejected(_)));
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_denied_only_in_native_push() {
         let (all, native) = setup_patterns();
         let mp = mpath("native/1");
@@ -230,7 +231,7 @@ mod test {
         assert!(matches!(r, HookExecution::Accepted));
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_remove_denied_only_in_native_push() {
         let (all, native) = setup_patterns();
         let mp = mpath("native/1");
@@ -255,7 +256,7 @@ mod test {
         assert!(matches!(r, HookExecution::Accepted));
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_allowed_in_any_push() {
         let (all, native) = setup_patterns();
         let mp = mpath("ababagalamaga");

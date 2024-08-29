@@ -120,6 +120,8 @@ impl FileHook for NoWindowsFilenamesHook {
 /// hook is only tested through integration tests.
 #[cfg(test)]
 mod test {
+    use mononoke_macros::mononoke;
+
     use super::*;
 
     fn check_path(path: &str) -> bool {
@@ -136,7 +138,7 @@ mod test {
         }
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_good_paths() {
         assert!(check_path("dir/some_filename.exe"));
         assert!(check_path(
@@ -148,14 +150,14 @@ mod test {
         assert!(check_path("x/y/z/file_with_tildle~_in_the_name"));
     }
 
-    #[test]
+    #[mononoke::test]
     fn invalid_chars() {
         assert!(!check_path("x/y/z/file_with_backslash\\_in_the_name"));
         assert!(!check_path("x/y/dir_with_pipe|in_the_name/file"));
         assert!(!check_path("x/y/dir_with_less_than<in_the_name/file"));
     }
 
-    #[test]
+    #[mononoke::test]
     fn invalid_names() {
         assert!(!check_path("aaa/COm1"));
         assert!(!check_path("aaa/lPt3"));

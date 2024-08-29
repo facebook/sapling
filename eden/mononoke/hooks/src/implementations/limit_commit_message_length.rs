@@ -98,26 +98,28 @@ fn extract_title<'a>(message: &'a str, max_length: usize) -> &'a str {
 
 #[cfg(test)]
 mod test {
+    use mononoke_macros::mononoke;
+
     use super::*;
 
-    #[test]
+    #[mononoke::test]
     fn test_extract_title_short() {
         assert_eq!(extract_title("foo\nbar", 4), "foo");
         assert_eq!(extract_title("foo\nbar", 5), "foo");
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_extract_title_long() {
         assert_eq!(extract_title("foo\nbar", 2), "fo");
         assert_eq!(extract_title("foo\nbar", 3), "foo");
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_extract_title_exact() {
         assert_eq!(extract_title("foo", 3), "foo");
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_extract_title_empty() {
         assert_eq!(extract_title("", 3), "");
     }

@@ -128,15 +128,17 @@ fn check_path(path: &NonRootMPath) -> Result<Option<HookExecution>, Error> {
 
 #[cfg(test)]
 mod test {
+    use mononoke_macros::mononoke;
+
     use super::*;
 
-    #[test]
+    #[mononoke::test]
     fn test_path_bad() {
         let path = NonRootMPath::new("flib/intern/__generated__/GraphQLMeerkatStep/flib/intern/entschema/generated/entity/profile_plus/EntPlatformToolViewerContextCallsiteMigrationRuleAction.php/GQLG_Intern__PlatformToolViewerContextCallsiteMigrationRuleChangeRuleDescriptionResponsePayload__EntPlatformToolViewerContextCallsiteMigrationRuleAction__genPerformGraphQLPlatformToolViewerContextCallsiteMigrationRuleChangeRuleDescriptionMutationType.php").unwrap();
         assert!(check_path(&path).unwrap().is_some());
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_path_ok() {
         let path = NonRootMPath::new("flib/intern/__generated__/GraphQLFetchersMeerkatStep/ic/GQLG_File__EntIcxPositionSearchHitWorkdayPositionViewStateJunction__GraphQLFacebookInternalTypeSetFetcherWrapper.php").unwrap();
         assert!(check_path(&path).unwrap().is_none());

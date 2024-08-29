@@ -16,6 +16,7 @@ use metaconfig_types::BookmarkParams;
 use metaconfig_types::HookManagerParams;
 use metaconfig_types::HookParams;
 use metaconfig_types::RepoConfig;
+use mononoke_macros::mononoke;
 use permission_checker::InternalAclProvider;
 use repo_hook_file_content_provider::RepoHookStateProvider;
 use repo_permission_checker::NeverAllowRepoPermissionChecker;
@@ -50,7 +51,7 @@ async fn hook_manager_many_files_dirs_repo(fb: FacebookInit) -> HookManager {
     hook_manager_repo(fb, &fixtures::ManyFilesDirs::get_test_repo(fb).await).await
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_load_hooks_bad_rust_hook(fb: FacebookInit) {
     let mut config = RepoConfig::default();
     config.bookmarks = vec![BookmarkParams {
@@ -91,7 +92,7 @@ async fn test_load_hooks_bad_rust_hook(fb: FacebookInit) {
     };
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_load_disabled_hooks(fb: FacebookInit) {
     let mut config = RepoConfig::default();
 
@@ -114,7 +115,7 @@ async fn test_load_disabled_hooks(fb: FacebookInit) {
     .expect("disabling a broken hook should allow loading to succeed");
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_load_disabled_hooks_referenced_by_bookmark(fb: FacebookInit) {
     let mut config = RepoConfig::default();
 
@@ -149,7 +150,7 @@ async fn test_load_disabled_hooks_referenced_by_bookmark(fb: FacebookInit) {
     .expect("disabling a broken hook should allow loading to succeed");
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_load_disabled_hooks_hook_does_not_exist(fb: FacebookInit) {
     let config = RepoConfig::default();
     let mut hm = hook_manager_many_files_dirs_repo(fb).await;
@@ -172,7 +173,7 @@ async fn test_load_disabled_hooks_hook_does_not_exist(fb: FacebookInit) {
     };
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_load_hook_with_different_name_and_implementation(fb: FacebookInit) {
     let mut config = RepoConfig::default();
 

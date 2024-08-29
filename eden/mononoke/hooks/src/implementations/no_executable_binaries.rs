@@ -112,6 +112,7 @@ mod test {
     use fbinit::FacebookInit;
     use maplit::hashmap;
     use maplit::hashset;
+    use mononoke_macros::mononoke;
     use mononoke_types::BonsaiChangeset;
     use repo_hook_file_content_provider::RepoHookStateProvider;
     use tests_utils::BasicTestRepo;
@@ -182,7 +183,7 @@ mod test {
     }
 
     /// Test that the hook rejects an executable binary file
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_reject_single_executable_binary(fb: FacebookInit) -> Result<()> {
         let (ctx, repo, content_manager, hook) = test_setup(fb).await;
 
@@ -210,7 +211,7 @@ mod test {
     }
 
     /// Test that the hook rejects multiple executable binaries
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_reject_multiple_executable_binaries(fb: FacebookInit) -> Result<()> {
         let (ctx, repo, content_manager, hook) = test_setup(fb).await;
 
@@ -245,7 +246,7 @@ mod test {
     }
 
     /// That that non-executable binaries pass
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_non_executable_binaries_pass(fb: FacebookInit) -> Result<()> {
         let (ctx, repo, content_manager, hook) = test_setup(fb).await;
 
@@ -269,7 +270,7 @@ mod test {
     }
 
     /// That that executable scripts pass
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_executable_scripts_pass(fb: FacebookInit) -> Result<()> {
         let (ctx, repo, content_manager, hook) = test_setup(fb).await;
 
@@ -293,7 +294,7 @@ mod test {
     }
 
     /// That that changes without executable file types are still allowed
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_changes_without_binaries_pass(fb: FacebookInit) -> Result<()> {
         let (ctx, repo, content_manager, hook) = test_setup(fb).await;
 
@@ -317,7 +318,7 @@ mod test {
     }
 
     /// Test that the hook allows executable binaries under allow-listed paths
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_executable_binaries_under_allow_listed_path_pass(fb: FacebookInit) -> Result<()> {
         let (ctx, repo, content_manager, hook) = test_setup(fb).await;
 

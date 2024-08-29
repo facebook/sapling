@@ -175,6 +175,7 @@ mod test {
     use blobstore::Loadable;
     use borrowed::borrowed;
     use fbinit::FacebookInit;
+    use mononoke_macros::mononoke;
     use repo_hook_file_content_provider::RepoHookStateProvider;
     use tests_utils::BasicTestRepo;
     use tests_utils::CreateCommitContext;
@@ -193,7 +194,7 @@ mod test {
         }
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_limit_commit_size(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let repo: BasicTestRepo = test_repo_factory::build_empty(ctx.fb).await?;
@@ -288,7 +289,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_limit_commit_size_removed_files(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let repo: BasicTestRepo = test_repo_factory::build_empty(ctx.fb).await?;
@@ -350,7 +351,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_limit_commit_size_override(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let repo: BasicTestRepo = test_repo_factory::build_empty(ctx.fb).await?;
@@ -390,7 +391,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_limit_commit_size_override_hits_limit(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let repo: BasicTestRepo = test_repo_factory::build_empty(ctx.fb).await?;
@@ -438,7 +439,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_limit_commit_size_ignored_files(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let repo: BasicTestRepo = test_repo_factory::build_empty(ctx.fb).await?;

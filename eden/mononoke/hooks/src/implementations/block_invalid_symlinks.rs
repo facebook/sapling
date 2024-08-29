@@ -134,6 +134,7 @@ impl FileHook for BlockInvalidSymlinksHook {
 #[cfg(test)]
 mod tests {
     use fbinit::FacebookInit;
+    use mononoke_macros::mononoke;
     use tests_utils::bookmark;
     use tests_utils::drawdag::changes;
     use tests_utils::drawdag::create_from_dag_with_changes;
@@ -142,7 +143,7 @@ mod tests {
     use super::*;
     use crate::testlib::test_file_hook;
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_block_invalid_symlinks(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let repo: BasicTestRepo = test_repo_factory::build_empty(fb).await?;

@@ -204,26 +204,28 @@ impl fmt::Display for LuaPattern {
 
 #[cfg(test)]
 mod tests {
+    use mononoke_macros::mononoke;
+
     // All tests represent something that went wrong in translation during manual testing
     use super::*;
 
-    #[test]
+    #[mononoke::test]
     fn test_literal() {
         assert_eq!("hello", pattern_to_regex("hello"));
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_anchors() {
         assert_eq!("^str$", pattern_to_regex("^str$"));
         assert_eq!("^buck\\-out/", pattern_to_regex("^buck%-out/"));
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_escaped() {
         assert_eq!("/buck\\-out/", pattern_to_regex("/buck%-out/"));
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_class() {
         assert_eq!("[[:alpha:]]", pattern_to_regex("%a"));
         assert_eq!("[[:^digit:]]", pattern_to_regex("%D"));
@@ -233,7 +235,7 @@ mod tests {
         assert_eq!("[ab\\]]", pattern_to_regex("[ab\\]]"));
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_matching() {
         let pattern: LuaPattern = "^[.]git/"
             .try_into()
@@ -248,7 +250,7 @@ mod tests {
         assert!(!pattern.is_match("/buck-out/file"));
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_re_matching() {
         let pattern: LuaPattern = "re:^[.]git/"
             .try_into()
@@ -263,7 +265,7 @@ mod tests {
         assert!(!pattern.is_match("/buck-out/file"));
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_fancy_re_matching() {
         let pattern: LuaPattern = "re:^www/(?!html/(xplat-react|megarepo))"
             .try_into()

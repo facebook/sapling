@@ -52,6 +52,7 @@ bonsai_tag_mapping = { version = "0.1.0", path = "../bonsai_tag_mapping" }
 borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit-tokio = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fixtures = { version = "0.1.0", path = "../tests/fixtures" }
+mononoke_macros = { version = "0.1.0", path = "../mononoke_macros" }
 mononoke_types-mocks = { version = "0.1.0", path = "../mononoke_types/mocks" }
 pretty_assertions = { version = "1.2", features = ["alloc"], default-features = false }
 repo_blobstore = { version = "0.1.0", path = "../blobrepo/repo_blobstore" }

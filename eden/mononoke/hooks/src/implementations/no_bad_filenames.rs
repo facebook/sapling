@@ -101,6 +101,7 @@ mod test {
     use blobstore::Loadable;
     use borrowed::borrowed;
     use fbinit::FacebookInit;
+    use mononoke_macros::mononoke;
     use repo_hook_file_content_provider::RepoHookStateProvider;
     use tests_utils::BasicTestRepo;
     use tests_utils::CreateCommitContext;
@@ -123,7 +124,7 @@ mod test {
         }
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_no_bad_filenames_hook_basic(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let repo: BasicTestRepo = test_repo_factory::build_empty(ctx.fb).await?;
@@ -155,7 +156,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_no_bad_filenames_hook_illegal_filenames(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let repo: BasicTestRepo = test_repo_factory::build_empty(ctx.fb).await?;
@@ -203,7 +204,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_no_bad_filenames_hook_fishy_but_legal_filenames(
         fb: FacebookInit,
     ) -> Result<(), Error> {
@@ -238,7 +239,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_no_bad_filenames_hook_illegal_filenames_with_allowlist(
         fb: FacebookInit,
     ) -> Result<(), Error> {

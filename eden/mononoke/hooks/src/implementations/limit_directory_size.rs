@@ -275,6 +275,7 @@ mod test {
     use blobstore::Loadable;
     use borrowed::borrowed;
     use fbinit::FacebookInit;
+    use mononoke_macros::mononoke;
     use repo_hook_file_content_provider::RepoHookStateProvider;
     use tests_utils::BasicTestRepo;
 
@@ -308,7 +309,7 @@ mod test {
         };
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_limit_directory_size(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let repo: BasicTestRepo = test_repo_factory::build_empty(ctx.fb).await?;
