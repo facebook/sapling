@@ -197,7 +197,7 @@ pub(crate) async fn build_submodule_sync_test_data(
     let test_jk = JustKnobsInMemory::new(hashmap! {
         "scm/mononoke:backsync_submodule_expansion_changes".to_string() => KnobVal::Bool(true),
     });
-    override_just_knobs(Some(test_jk));
+    override_just_knobs(test_jk);
 
     let small_repo_ddt_cfg = submodule_repo_derived_data_types_config();
 

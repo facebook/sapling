@@ -206,10 +206,10 @@ async fn add_entries_and_fetch_predecessors(fb: FacebookInit) -> Result<()> {
     // The cycles test changes behaviour when this knob is turned off.  The
     // new behaviour is also fine, it's just different.  For now we continue
     // testing the old behaviour.
-    justknobs::test_helpers::override_just_knobs(Some(
-        justknobs::test_helpers::JustKnobsInMemory::new(hashmap! {
+    justknobs::test_helpers::override_just_knobs(justknobs::test_helpers::JustKnobsInMemory::new(
+        hashmap! {
             String::from("scm/mononoke:mutation_find_missing_primordials") => justknobs::test_helpers::KnobVal::Bool(true),
-        }),
+        },
     ));
 
     let ctx = CoreContext::test_mock(fb);

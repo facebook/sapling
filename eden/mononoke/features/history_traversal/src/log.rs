@@ -1256,7 +1256,7 @@ mod test {
 
     #[fbinit::test]
     async fn test_list_linear_history(fb: FacebookInit) -> Result<(), Error> {
-        override_just_knobs(None);
+        override_just_knobs(Default::default());
         // generate couple of hundreds linear file changes and list history
         let repo: TestRepoWithMutableRenames = test_repo_factory::build_empty(fb).await.unwrap();
         let mutable_renames = repo.mutable_renames_arc();
@@ -1334,7 +1334,7 @@ mod test {
         //           A
         //
 
-        override_just_knobs(None);
+        override_just_knobs(Default::default());
         let repo: TestRepoWithMutableRenames = test_repo_factory::build_empty(fb).await.unwrap();
         let mutable_renames = repo.mutable_renames_arc();
         let ctx = CoreContext::test_mock(fb);
@@ -1409,7 +1409,7 @@ mod test {
         //           o
         //
 
-        override_just_knobs(None);
+        override_just_knobs(Default::default());
         let repo: TestRepoWithMutableRenames = test_repo_factory::build_empty(fb).await.unwrap();
         let mutable_renames = repo.mutable_renames_arc();
         let ctx = CoreContext::test_mock(fb);
@@ -1472,7 +1472,7 @@ mod test {
         //        |   |
         //        o   o
         //
-        override_just_knobs(None);
+        override_just_knobs(Default::default());
         let repo: TestRepoWithMutableRenames = test_repo_factory::build_empty(fb).await.unwrap();
         let mutable_renames = repo.mutable_renames_arc();
         let ctx = CoreContext::test_mock(fb);
@@ -1564,7 +1564,7 @@ mod test {
 
     #[fbinit::test]
     async fn test_list_history_deleted(fb: FacebookInit) -> Result<(), Error> {
-        override_just_knobs(None);
+        override_just_knobs(Default::default());
         let repo: TestRepoWithMutableRenames = test_repo_factory::build_empty(fb).await.unwrap();
         let mutable_renames = repo.mutable_renames_arc();
         let ctx = CoreContext::test_mock(fb);
@@ -1659,7 +1659,7 @@ mod test {
         //     |
         //     A
         //
-        override_just_knobs(None);
+        override_just_knobs(Default::default());
         let repo: TestRepoWithMutableRenames = test_repo_factory::build_empty(fb).await.unwrap();
         let mutable_renames = repo.mutable_renames_arc();
         let ctx = CoreContext::test_mock(fb);
@@ -1789,7 +1789,7 @@ mod test {
 
     #[fbinit::test]
     async fn test_list_history_across_deletions_linear(fb: FacebookInit) -> Result<(), Error> {
-        override_just_knobs(None);
+        override_just_knobs(Default::default());
         let repo: TestRepoWithMutableRenames = test_repo_factory::build_empty(fb).await.unwrap();
         let mutable_renames = repo.mutable_renames_arc();
         let ctx = CoreContext::test_mock(fb);
@@ -1846,7 +1846,7 @@ mod test {
 
     #[fbinit::test]
     async fn test_list_history_across_deletions_with_merges(fb: FacebookInit) -> Result<(), Error> {
-        override_just_knobs(None);
+        override_just_knobs(Default::default());
         let repo: TestRepoWithMutableRenames = test_repo_factory::build_empty(fb).await.unwrap();
         let mutable_renames = repo.mutable_renames_arc();
         let ctx = CoreContext::test_mock(fb);
@@ -2108,7 +2108,7 @@ mod test {
     async fn test_list_history_with_mutable_renames_attached_to_unrelated_commits(
         fb: FacebookInit,
     ) -> Result<(), Error> {
-        override_just_knobs(None);
+        override_just_knobs(Default::default());
         let repo: TestRepoWithMutableRenames = test_repo_factory::build_empty(fb).await.unwrap();
         let mutable_renames = repo.mutable_renames_arc();
         let ctx = CoreContext::test_mock(fb);
@@ -2237,7 +2237,7 @@ mod test {
 
     #[fbinit::test]
     async fn test_different_order(fb: FacebookInit) -> Result<(), Error> {
-        override_just_knobs(None);
+        override_just_knobs(Default::default());
         let repo: TestRepoWithMutableRenames = test_repo_factory::build_empty(fb).await.unwrap();
         let mutable_renames = repo.mutable_renames_arc();
         let ctx = CoreContext::test_mock(fb);
@@ -2306,7 +2306,7 @@ mod test {
 
     #[fbinit::test]
     async fn test_simple_gen_num(fb: FacebookInit) -> Result<(), Error> {
-        override_just_knobs(None);
+        override_just_knobs(Default::default());
         let repo: TestRepoWithMutableRenames = test_repo_factory::build_empty(fb).await.unwrap();
         let mutable_renames = repo.mutable_renames_arc();
         let ctx = CoreContext::test_mock(fb);
