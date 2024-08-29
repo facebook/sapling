@@ -582,6 +582,7 @@ mod tests {
     use cross_repo_sync::CommitSyncContext;
     use cross_repo_sync_test_utils::init_small_large_repo;
     use cross_repo_sync_test_utils::TestRepo;
+    use mononoke_macros::mononoke;
     use mononoke_types::DateTime;
     use tests_utils::bookmark;
     use tests_utils::resolve_cs_id;
@@ -589,7 +590,7 @@ mod tests {
 
     use super::*;
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_simple_check_large_bookmark_history(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let (syncers, _, _, _) = init_small_large_repo::<TestRepo>(&ctx).await?;
@@ -664,7 +665,7 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_another_repo_check_large_bookmark_history(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let (syncers, _, _, _) = init_small_large_repo::<TestRepo>(&ctx).await?;
@@ -736,7 +737,7 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_recently_created_check_large_bookmark_history(
         fb: FacebookInit,
     ) -> Result<(), Error> {
@@ -789,7 +790,7 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_deleted_added_back_created_check_large_bookmark_history(
         fb: FacebookInit,
     ) -> Result<(), Error> {
@@ -820,7 +821,7 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_check_large_bookmark_history_after_bookmark_moved(
         fb: FacebookInit,
     ) -> Result<(), Error> {

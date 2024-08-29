@@ -336,6 +336,7 @@ async fn push_merge_commit(
 mod test {
     use fbinit::FacebookInit;
     use maplit::hashmap;
+    use mononoke_macros::mononoke;
     use mononoke_types::DateTime;
     use mononoke_types::NonRootMPath;
     use tests_utils::bookmark;
@@ -345,7 +346,7 @@ mod test {
 
     use super::*;
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_find_all_commits_to_merge(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let (repo, pre_deletion_commit, deletion_commits) = create_repo(&ctx).await?;
@@ -363,7 +364,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_find_unmerged_commits(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let (repo, pre_deletion_commit, deletion_commits) = create_repo(&ctx).await?;
@@ -426,7 +427,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_gradual_merge(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let (repo, pre_deletion_commit, deletion_commits) = create_repo(&ctx).await?;
@@ -461,7 +462,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_gradual_merge_with_limit(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let (repo, pre_deletion_commit, deletion_commits) = create_repo(&ctx).await?;
@@ -495,7 +496,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_stack_position(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let (repo, pre_deletion_commit, deletion_commits) = create_repo(&ctx).await?;

@@ -68,6 +68,7 @@ use metaconfig_types::CommonCommitSyncConfig;
 use metaconfig_types::DefaultSmallToLargeCommitSyncPathAction;
 use metaconfig_types::SmallRepoCommitSyncConfig;
 use metaconfig_types::SmallRepoPermanentConfig;
+use mononoke_macros::mononoke;
 use mononoke_types::ChangesetId;
 use mononoke_types::NonRootMPath;
 use mononoke_types::RepositoryId;
@@ -104,7 +105,7 @@ const REPOMERGE_FOLDER: &str = "repomerge";
 const REPOMERGE_FILE: &str = "repomergefile";
 const BRANCHMERGE_FILE: &str = "branchmerge";
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn backsync_linear_simple(fb: FacebookInit) -> Result<(), Error> {
     let (commit_syncer, target_repo_dbs) =
         init_repos(fb, MoverType::Noop, BookmarkRenamerType::Noop).await?;
@@ -163,7 +164,7 @@ async fn backsync_linear_simple(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 fn test_sync_entries(fb: FacebookInit) -> Result<(), Error> {
     // Test makes sure sync_entries() actually sync ALL entries even if transaction
     // for updating bookmark and/or counter failed. This transaction failure is benign and
@@ -233,7 +234,7 @@ fn test_sync_entries(fb: FacebookInit) -> Result<(), Error> {
     })
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn backsync_linear_with_mover_that_removes_some_files(fb: FacebookInit) -> Result<(), Error> {
     let (commit_syncer, target_repo_dbs) = init_repos(
         fb,
@@ -262,7 +263,7 @@ async fn backsync_linear_with_mover_that_removes_some_files(fb: FacebookInit) ->
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn backsync_linear_with_mover_that_removes_single_file(
     fb: FacebookInit,
 ) -> Result<(), Error> {
@@ -326,7 +327,7 @@ async fn backsync_linear_with_mover_that_removes_single_file(
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn backsync_linear_bookmark_renamer_only_master(fb: FacebookInit) -> Result<(), Error> {
     let master = BookmarkKey::new("master")?;
     let (commit_syncer, target_repo_dbs) =
@@ -368,7 +369,7 @@ async fn backsync_linear_bookmark_renamer_only_master(fb: FacebookInit) -> Resul
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn backsync_linear_bookmark_renamer_remove_all(fb: FacebookInit) -> Result<(), Error> {
     let (commit_syncer, target_repo_dbs) =
         init_repos(fb, MoverType::Noop, BookmarkRenamerType::RemoveAll).await?;
@@ -396,7 +397,7 @@ async fn backsync_linear_bookmark_renamer_remove_all(fb: FacebookInit) -> Result
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn backsync_two_small_repos(fb: FacebookInit) -> Result<(), Error> {
     let (small_repos, _large_repo, _latest_log_id, dont_verify_commits) =
         init_merged_repos(fb, 2).await?;
@@ -434,7 +435,7 @@ async fn backsync_two_small_repos(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn backsync_merge_new_repo_all_files_removed(fb: FacebookInit) -> Result<(), Error> {
     // Remove all files from new repo except for the file in the merge commit itself
     let (commit_syncer, target_repo_dbs) = init_repos(
@@ -496,7 +497,7 @@ async fn backsync_merge_new_repo_all_files_removed(fb: FacebookInit) -> Result<(
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn backsync_merge_new_repo_branch_removed(fb: FacebookInit) -> Result<(), Error> {
     // Remove all files from new repo except for the file in the merge commit itself
     let (commit_syncer, target_repo_dbs) = init_repos(
@@ -556,7 +557,7 @@ async fn backsync_merge_new_repo_branch_removed(fb: FacebookInit) -> Result<(), 
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn backsync_branch_merge_remove_branch_merge_file(fb: FacebookInit) -> Result<(), Error> {
     let (commit_syncer, target_repo_dbs) = init_repos(
         fb,
@@ -619,7 +620,7 @@ async fn backsync_branch_merge_remove_branch_merge_file(fb: FacebookInit) -> Res
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn backsync_unrelated_branch(fb: FacebookInit) -> Result<(), Error> {
     let master = BookmarkKey::new("master")?;
     let (commit_syncer, target_repo_dbs) = init_repos(
@@ -695,7 +696,7 @@ async fn backsync_unrelated_branch(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn backsync_change_mapping(fb: FacebookInit) -> Result<(), Error> {
     // Initialize source and target repos
     let ctx = CoreContext::test_mock(fb);

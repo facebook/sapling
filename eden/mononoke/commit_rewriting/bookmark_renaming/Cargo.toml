@@ -17,3 +17,4 @@ thiserror = "1.0.49"
 
 [dev-dependencies]
 maplit = "1.0"
+mononoke_macros = { version = "0.1.0", path = "../../mononoke_macros" }

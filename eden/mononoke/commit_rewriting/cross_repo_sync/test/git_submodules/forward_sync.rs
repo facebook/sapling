@@ -22,6 +22,7 @@ use cross_repo_sync::CandidateSelectionHint;
 use cross_repo_sync::CommitSyncContext;
 use fbinit::FacebookInit;
 use maplit::btreemap;
+use mononoke_macros::mononoke;
 use mononoke_types::hash::GitSha1;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileType;
@@ -46,7 +47,7 @@ const REPO_B_SUBMODULE_PATH: &str = "submodules/repo_b";
 /// Tests the basic setup of expanding a submodule.
 /// Also test that adding and deleting files in the submodule repo will generate
 /// the proper change in its expansion.
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_submodule_expansion_basic(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb.clone());
     let (repo_b, repo_b_cs_map) = build_repo_b(fb).await?;
@@ -164,7 +165,7 @@ async fn test_submodule_expansion_basic(fb: FacebookInit) -> Result<()> {
 }
 
 /// Tests the basic setup of expanding submodules that contain other submodules.
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_recursive_submodule_expansion_basic(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb.clone());
     let (repo_c, repo_c_cs_map) = build_repo_c(fb).await?;
@@ -305,7 +306,7 @@ async fn test_recursive_submodule_expansion_basic(fb: FacebookInit) -> Result<()
 
 /// Deleting an entire submodule in the small repo (i.e. small_repo) should delete
 /// its expansion and its metadata file in small_repo folder in the large repo.
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_submodule_deletion(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb.clone());
     let (repo_b, _repo_b_cs_map) = build_repo_b(fb).await?;
@@ -350,7 +351,7 @@ async fn test_submodule_deletion(fb: FacebookInit) -> Result<()> {
 }
 
 /// Test that deleting a recursive submodule also deletes its metadata file.
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_recursive_submodule_deletion(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb.clone());
     let (repo_c, repo_c_cs_map) = build_repo_c(fb).await?;
@@ -457,7 +458,7 @@ async fn test_recursive_submodule_deletion(fb: FacebookInit) -> Result<()> {
 
 /// Test that deleting a submodule with a recursive submodule properly deletes
 /// both and their metadata files.
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_submodule_with_recursive_submodule_deletion(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb.clone());
     let (repo_c, repo_c_cs_map) = build_repo_c(fb).await?;
@@ -551,7 +552,7 @@ async fn test_submodule_with_recursive_submodule_deletion(fb: FacebookInit) -> R
 /// This also tests that **later modifying this static copy** also passes
 /// validation, even if the path is still in the small repo config as one
 /// of its submodule deps.
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_deleting_submodule_but_keeping_directory(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb.clone());
     let (repo_b, _repo_b_cs_map) = build_repo_b(fb).await?;
@@ -707,7 +708,7 @@ async fn test_deleting_submodule_but_keeping_directory(fb: FacebookInit) -> Resu
 
 /// Same scenario as `test_deleting_submodule_but_keeping_directory`, but with
 /// a recursive submodule.
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_deleting_recursive_submodule_but_keeping_directory(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb.clone());
 
@@ -935,7 +936,7 @@ async fn test_deleting_recursive_submodule_but_keeping_directory(fb: FacebookIni
 /// Implicitly deleting a submodule in the source repo (i.e. by adding a file
 /// with the same path) should delete the **entire submodule expansion and its
 /// metadata file**, like when the submodule itself is manually deleted.
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_implicitly_deleting_submodule(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb.clone());
     let (repo_b, _repo_b_cs_map) = build_repo_b(fb).await?;
@@ -1005,7 +1006,7 @@ async fn test_implicitly_deleting_submodule(fb: FacebookInit) -> Result<()> {
 
 /// Implicitly deleting files in the submodule repo (repo_b) should generate the
 /// proper deletions in its expansion.
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_implicit_deletions_inside_submodule_repo(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb.clone());
     let (repo_b, repo_b_cs_map) = build_repo_b(fb).await?;
@@ -1109,7 +1110,7 @@ async fn test_implicit_deletions_inside_submodule_repo(fb: FacebookInit) -> Resu
 /// Test adding a submodule dependency in the source repo in the path of an existing
 /// file. This should generate a deletion of the file in the large repo, along
 /// with the expansion of the submodule.
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_implicitly_deleting_file_with_submodule(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb.clone());
     let (repo_b, _repo_b_cs_map) = build_repo_b(fb).await?;
@@ -1201,7 +1202,7 @@ async fn test_implicitly_deleting_file_with_submodule(fb: FacebookInit) -> Resul
 /// Test adding a submodule dependency in the source repo in the path of an
 /// existing **directory**. This should generate a deletion for all the files
 /// in the directory, along with the expansion of the submodule.
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_adding_submodule_on_existing_directory(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb.clone());
     let (repo_b, _repo_b_cs_map) = build_repo_b(fb).await?;
@@ -1328,7 +1329,7 @@ async fn test_adding_submodule_on_existing_directory(fb: FacebookInit) -> Result
 // ------------------ Unexpected state / Error handling ------------------
 
 /// Test that sync fails if submodule dependency repo is not available.
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_submodule_expansion_crashes_when_dep_not_available(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb.clone());
     let (repo_b, _repo_b_cs_map) = build_repo_b(fb).await?;
@@ -1395,7 +1396,7 @@ async fn test_submodule_expansion_crashes_when_dep_not_available(fb: FacebookIni
 /// It's an unlikely scenario, but we want to be certain of what would happen,
 /// because users might, for example, manually copy directories from the large
 /// repo to the git repo.
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_submodule_validation_fails_with_file_on_metadata_file_path_in_small_repo(
     fb: FacebookInit,
 ) -> Result<()> {
@@ -1496,7 +1497,7 @@ async fn test_submodule_validation_fails_with_file_on_metadata_file_path_in_smal
 
 /// Similar to the test above, but adding a file that maps to a submodule
 /// metadata file path of a recursive submodule.
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_submodule_validation_fails_with_file_on_metadata_file_path_in_recursive_submodule(
     fb: FacebookInit,
 ) -> Result<()> {
@@ -1582,7 +1583,7 @@ async fn test_submodule_validation_fails_with_file_on_metadata_file_path_in_recu
 /// the pointer didn't exist in the submodule.
 /// The list of known dangling submodule pointers can be set in the small repo's
 /// sync config.
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_expanding_known_dangling_submodule_pointers(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb.clone());
 
@@ -1912,7 +1913,7 @@ async fn test_expanding_known_dangling_submodule_pointers(fb: FacebookInit) -> R
 
 /// Test that submodule expansion updates and deletions will work for merge
 /// commits.
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_submodule_expansion_and_deletion_on_merge_commits(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb.clone());
     let (repo_b, repo_b_cs_map) = build_repo_b(fb).await?;

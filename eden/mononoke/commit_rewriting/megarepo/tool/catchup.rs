@@ -233,6 +233,7 @@ mod test {
     use fbinit::FacebookInit;
     use futures::StreamExt;
     use megarepolib::common::ChangesetArgs;
+    use mononoke_macros::mononoke;
     use mononoke_types::DateTime;
     use tests_utils::bookmark;
     use tests_utils::resolve_cs_id;
@@ -242,7 +243,7 @@ mod test {
 
     const PATH_REGEX: &str = "^(unchanged/.*|changed/.*|toremove/.*)";
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_find_files_that_needs_to_be_deleted(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let repo = prepare_repo(&ctx).await?;
@@ -272,7 +273,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_find_changed_files_with_revert(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
 
@@ -314,7 +315,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_create_deletion_head_commits(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let repo = prepare_repo(&ctx).await?;

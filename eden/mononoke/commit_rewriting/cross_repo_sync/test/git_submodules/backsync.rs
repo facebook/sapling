@@ -14,6 +14,7 @@ use anyhow::Result;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use git_types::MappedGitCommitId;
+use mononoke_macros::mononoke;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileType;
 use mononoke_types::NonRootMPath;
@@ -32,7 +33,7 @@ const REPO_B_SUBMODULE_PATH: &str = "submodules/repo_b";
 /// Test that if a submodule expansion is updated to match a certain commit from
 /// the submodule repo and the metadata file has that git commit, validation
 /// passes.
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_valid_submodule_expansion_update_succeeds(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb.clone());
 
@@ -89,7 +90,7 @@ async fn test_valid_submodule_expansion_update_succeeds(fb: FacebookInit) -> Res
 
 /// Test that updating the submodule expansion of a recursive submodule (thus,
 /// updating the expansion of the parent submodule) backsyncs successfully.
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_valid_recursive_submodule_expansion_update_succeeds(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb.clone());
 
@@ -197,7 +198,7 @@ async fn test_valid_recursive_submodule_expansion_update_succeeds(fb: FacebookIn
 /// Test that if the submodule expansion is completely deleted along with its
 /// submodule metadata file, the changeset deles the submodule in the small repo
 /// when backsynced.
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_full_submodule_expansion_deletion_succeeds(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb.clone());
 
@@ -244,7 +245,7 @@ async fn test_full_submodule_expansion_deletion_succeeds(fb: FacebookInit) -> Re
 }
 
 /// Test valid recursive submodule deletions backsync successfully
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_valid_recursive_submodule_expansion_deletion_succeeds(
     fb: FacebookInit,
 ) -> Result<()> {
@@ -341,7 +342,7 @@ async fn test_valid_recursive_submodule_expansion_deletion_succeeds(
 /// Test that updating submodule expansions and changing small and large repo
 /// files in the same commit backsyncs successfully and that **the small repo
 /// commit is lossy**, i.e. it only contains the changes made to the small repo.
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_atomic_submodule_updates_with_other_changes_backsync_successfully(
     fb: FacebookInit,
 ) -> Result<()> {
@@ -416,7 +417,7 @@ async fn test_atomic_submodule_updates_with_other_changes_backsync_successfully(
 
 /// Test that backsync will crash for small repos with submodule expansion
 /// enabled while backsyncing submodule changes is not properly supported.
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_changing_submodule_expansion_without_metadata_file_fails(
     fb: FacebookInit,
 ) -> Result<()> {
@@ -469,7 +470,7 @@ async fn test_changing_submodule_expansion_without_metadata_file_fails(
 /// Test that manually changing the submodule pointer in the metadata file
 /// without properly updating the working copy to match that commit will
 /// fail validation.
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_changing_submodule_metadata_pointer_without_expansion_fails(
     fb: FacebookInit,
 ) -> Result<()> {
@@ -524,7 +525,7 @@ async fn test_changing_submodule_metadata_pointer_without_expansion_fails(
 
 /// Test that setting the submodule pointer to a valid git commit hash that's
 /// not present in the submodule repo fails validation.
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_changing_submodule_metadata_pointer_to_git_commit_from_another_repo_fails(
     fb: FacebookInit,
 ) -> Result<()> {
@@ -588,7 +589,7 @@ async fn test_changing_submodule_metadata_pointer_to_git_commit_from_another_rep
 /// Deleting the submodule metadata file without deleting the expansion is a
 /// valid scenario, e.g. when users delete a submodule but keep its static copy
 /// in the repo as regular files.
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_deleting_submodule_metadata_file_without_expansion_passes_fails(
     fb: FacebookInit,
 ) -> Result<()> {
@@ -647,7 +648,7 @@ async fn test_deleting_submodule_metadata_file_without_expansion_passes_fails(
 
 /// Test that manually deleting the submodule expansion without deleting the
 /// metadata file fails validation
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_deleting_submodule_expansion_without_metadata_file_fails(
     fb: FacebookInit,
 ) -> Result<()> {

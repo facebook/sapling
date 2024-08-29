@@ -16,13 +16,14 @@ use cross_repo_sync::verify_working_copy_with_version;
 use cross_repo_sync::Source;
 use cross_repo_sync::Target;
 use fbinit::FacebookInit;
+use mononoke_macros::mononoke;
 use mononoke_types::NonRootMPath;
 use tests_utils::CreateCommitContext;
 
 use crate::git_submodules::git_submodules_test_utils::*;
 const REPO_B_SUBMODULE_PATH: &str = "submodules/repo_b";
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_verify_working_copy_with_submodules(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb.clone());
     let (repo_b, _repo_b_cs_map) = build_repo_b(fb).await?;
@@ -57,7 +58,7 @@ async fn test_verify_working_copy_with_submodules(fb: FacebookInit) -> Result<()
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_verify_working_copy_with_submodules_simple_error_case(
     fb: FacebookInit,
 ) -> Result<()> {

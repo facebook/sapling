@@ -8,6 +8,7 @@
 use anyhow::Result;
 use fbinit::FacebookInit;
 use live_commit_sync_config::*;
+use mononoke_macros::mononoke;
 use mononoke_types::RepositoryId;
 use pushredirect::PushRedirectionConfig;
 
@@ -15,7 +16,7 @@ use crate::ensure_all_updated;
 use crate::get_ctx_source_store_and_live_config;
 use crate::EMTPY_COMMIT_SYNC_ALL;
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_enabling_push_redirection(fb: FacebookInit) -> Result<()> {
     let (ctx, _test_source, _store, test_push_redirection_config, live_commit_sync_config) =
         get_ctx_source_store_and_live_config(fb, EMTPY_COMMIT_SYNC_ALL);

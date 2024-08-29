@@ -55,4 +55,5 @@ zk_leader_election = { version = "0.1.0", path = "../../cmdlib/zk_leader_electio
 cross_repo_sync_test_utils = { version = "0.1.0", path = "../cross_repo_sync/test_utils" }
 fbinit-tokio = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 maplit = "1.0"
+mononoke_macros = { version = "0.1.0", path = "../../mononoke_macros" }
 tests_utils = { version = "0.1.0", path = "../../tests/utils" }

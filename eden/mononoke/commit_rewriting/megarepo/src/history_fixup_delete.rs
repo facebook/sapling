@@ -106,6 +106,7 @@ mod test {
     use filestore::FilestoreConfig;
     use fixtures::TestRepoFixture;
     use fixtures::UnsharedMergeUneven;
+    use mononoke_macros::mononoke;
     use mononoke_types::DateTime;
     use phases::Phases;
     use repo_blobstore::RepoBlobstore;
@@ -132,7 +133,7 @@ mod test {
         dyn Phases,
     );
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_create_fixup_deletes(fb: FacebookInit) -> Result<(), Error> {
         let repo: TestRepo = UnsharedMergeUneven::get_repo(fb).await;
         let ctx = CoreContext::test_mock(fb);

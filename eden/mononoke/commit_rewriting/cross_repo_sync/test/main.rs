@@ -63,6 +63,7 @@ use metaconfig_types::RepoConfig;
 use metaconfig_types::SmallRepoCommitSyncConfig;
 use metaconfig_types::SmallRepoGitSubmoduleConfig;
 use metaconfig_types::SmallRepoPermanentConfig;
+use mononoke_macros::mononoke;
 use mononoke_types::BonsaiChangesetMut;
 use mononoke_types::ChangesetId;
 use mononoke_types::DateTime;
@@ -377,7 +378,7 @@ fn create_large_to_small_commit_syncer(
     ))
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_sync_parentage(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let (small_repo, megarepo, mapping, live_commit_sync_config, source) =
@@ -467,7 +468,7 @@ async fn update_master_file(ctx: CoreContext, repo: &TestRepo) -> ChangesetId {
     bcs_id
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_sync_causes_conflict(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let megarepo: TestRepo = TestRepoFactory::new(fb)?
@@ -587,7 +588,7 @@ async fn prepare_repos_mapping_and_config_with_repo_config_overrides(
     ))
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_sync_empty_commit(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let (linear, megarepo, mapping, live_commit_sync_config, source) =
@@ -657,7 +658,7 @@ async fn megarepo_copy_file(ctx: CoreContext, repo: &TestRepo) -> ChangesetId {
     bcs_id
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_sync_copyinfo(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let (small_repo, megarepo, mapping, live_commit_sync_config, source) =
@@ -739,7 +740,7 @@ async fn test_sync_copyinfo(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_sync_implicit_deletes(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let (small_repo, megarepo, mapping, live_commit_sync_config, source) =
@@ -885,7 +886,7 @@ async fn update_linear_1_file(ctx: CoreContext, repo: &TestRepo) -> ChangesetId 
     bcs_id
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_sync_parent_search(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let (small_repo, megarepo, mapping, live_commit_sync_config, source) =
@@ -1121,7 +1122,7 @@ async fn get_multiple_master_mapping_setup(
     ))
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_sync_parent_has_multiple_mappings(fb: FacebookInit) -> Result<(), Error> {
     let (
         ctx,
@@ -1170,7 +1171,7 @@ async fn test_sync_parent_has_multiple_mappings(fb: FacebookInit) -> Result<(), 
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_sync_no_op_pushrebase_has_multiple_mappings(fb: FacebookInit) -> Result<(), Error> {
     let (
         ctx,
@@ -1209,7 +1210,7 @@ async fn test_sync_no_op_pushrebase_has_multiple_mappings(fb: FacebookInit) -> R
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_sync_real_pushrebase_has_multiple_mappings(fb: FacebookInit) -> Result<(), Error> {
     let (
         ctx,
@@ -1258,7 +1259,7 @@ async fn test_sync_real_pushrebase_has_multiple_mappings(fb: FacebookInit) -> Re
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_sync_with_mapping_change(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let (old_version, new_version, large_to_small_syncer, live_commit_sync_config) =
@@ -1369,7 +1370,7 @@ async fn test_sync_with_mapping_change(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_sync_equivalent_wc_with_mapping_change(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let (old_version, new_version, large_to_small_syncer, live_commit_sync_config) =
@@ -1518,7 +1519,7 @@ async fn test_sync_equivalent_wc_with_mapping_change(fb: FacebookInit) -> Result
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_disabled_sync(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let (_, _, large_to_small_syncer, _) = prepare_commit_syncer_with_mapping_change(fb).await?;
@@ -1561,7 +1562,7 @@ async fn test_disabled_sync(fb: FacebookInit) -> Result<(), Error> {
     }
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_disabled_sync_pushrebase(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let (small_repo, megarepo, mapping, live_commit_sync_config, source) =
@@ -1994,7 +1995,7 @@ async fn create_merge(
     bcs_id
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_sync_merge_gets_version_from_parents_1(fb: FacebookInit) -> Result<(), Error> {
     let v1 = CommitSyncConfigVersion("v1".to_string());
     let (ctx, lts_syncer, heads_with_versions) = merge_test_setup(fb).await?;
@@ -2027,7 +2028,7 @@ async fn test_sync_merge_gets_version_from_parents_1(fb: FacebookInit) -> Result
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_sync_merge_gets_version_from_parents_2(fb: FacebookInit) -> Result<(), Error> {
     let v2 = CommitSyncConfigVersion("v2".to_string());
     let (ctx, lts_syncer, heads_with_versions) = merge_test_setup(fb).await?;
@@ -2058,7 +2059,7 @@ async fn test_sync_merge_gets_version_from_parents_2(fb: FacebookInit) -> Result
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_sync_merge_fails_when_parents_have_different_versions(
     fb: FacebookInit,
 ) -> Result<(), Error> {
@@ -2209,7 +2210,7 @@ async fn test_no_accidental_preserved_roots(
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_no_accidental_preserved_roots_large_to_small(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let (small_repo, large_repo, mapping, live_commit_sync_config, source) =
@@ -2224,7 +2225,7 @@ async fn test_no_accidental_preserved_roots_large_to_small(fb: FacebookInit) -> 
         .await
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_no_accidental_preserved_roots_small_to_large(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let (small_repo, large_repo, mapping, live_commit_sync_config, source) =
@@ -2239,7 +2240,7 @@ async fn test_no_accidental_preserved_roots_small_to_large(fb: FacebookInit) -> 
         .await
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_not_sync_candidate_if_mapping_does_not_have_small_repo(
     fb: FacebookInit,
 ) -> Result<(), Error> {

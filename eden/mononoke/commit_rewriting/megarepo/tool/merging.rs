@@ -79,10 +79,11 @@ mod test {
     use fbinit::FacebookInit;
     use fixtures::MergeEven;
     use fixtures::TestRepoFixture;
+    use mononoke_macros::mononoke;
 
     use super::*;
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_path_conflict_detection(fb: FacebookInit) {
         let repo = MergeEven::get_repo(fb).await;
         let ctx = CoreContext::test_mock(fb);

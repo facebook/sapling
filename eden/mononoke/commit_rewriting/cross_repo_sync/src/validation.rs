@@ -1442,6 +1442,7 @@ mod test {
     use metaconfig_types::CommonCommitSyncConfig;
     use metaconfig_types::SmallRepoCommitSyncConfig;
     use metaconfig_types::SmallRepoPermanentConfig;
+    use mononoke_macros::mononoke;
     use mononoke_types::NonRootMPath;
     use mononoke_types::RepositoryId;
     use rendezvous::RendezVousOptions;
@@ -1457,7 +1458,7 @@ mod test {
     use crate::CommitSyncRepos;
     use crate::SubmoduleDeps;
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     fn test_bookmark_diff_with_renamer(fb: FacebookInit) -> Result<(), Error> {
         let runtime = tokio::runtime::Runtime::new()?;
         runtime.block_on(test_bookmark_diff_with_renamer_impl(fb))
@@ -1493,7 +1494,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     fn test_bookmark_small_to_large(fb: FacebookInit) -> Result<(), Error> {
         let runtime = tokio::runtime::Runtime::new()?;
         runtime.block_on(test_bookmark_small_to_large_impl(fb))
@@ -1516,7 +1517,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     fn test_bookmark_no_sync_outcome(fb: FacebookInit) -> Result<(), Error> {
         let runtime = tokio::runtime::Runtime::new()?;
         runtime.block_on(test_bookmark_no_sync_outcome_impl(fb))
@@ -1546,7 +1547,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_verify_working_copy(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let (commit_syncer, live_commit_sync_config) =
@@ -1577,7 +1578,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_verify_working_copy_with_prefixes(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let (commit_syncer, live_commit_sync_config) =
@@ -1611,7 +1612,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_verify_working_copy_fp(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let mut factory = TestRepoFactory::new(fb)?;

@@ -188,11 +188,12 @@ pub fn set_mapping_change_version(
 #[cfg(test)]
 mod tests {
     use fbinit::FacebookInit;
+    use mononoke_macros::mononoke;
     use mononoke_types_mocks::changesetid as bonsai;
 
     use super::*;
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     fn test_merge_version_determinator_success_single_rewritten(_fb: FacebookInit) {
         // Basic test: there's a single non-preserved parent, determining
         // Mover version should succeed
@@ -207,7 +208,7 @@ mod tests {
         assert_eq!(rv, v1);
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     fn test_merge_version_determinator_success(_fb: FacebookInit) {
         // There are two rewritten parents, both preserved with the same
         // version. Determining Mover version should succeed
@@ -222,7 +223,7 @@ mod tests {
         assert_eq!(rv, v1);
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     fn test_merge_version_determinator_failure_different_versions(_fb: FacebookInit) {
         // There are two rewritten parents, with different versions
         // Determining Mover version should fail
@@ -240,7 +241,7 @@ mod tests {
         );
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     fn test_merge_version_determinator_failure_all_not_candidates(_fb: FacebookInit) {
         // All parents are preserved, this function should not have been called
         use CommitSyncOutcome::*;

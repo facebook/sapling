@@ -61,6 +61,7 @@ manifest = { version = "0.1.0", path = "../../manifest" }
 maplit = "1.0"
 mercurial_derivation = { version = "0.1.0", path = "../../derived_data/mercurial_derivation" }
 mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
+mononoke_macros = { version = "0.1.0", path = "../../mononoke_macros" }
 movers = { version = "0.1.0", path = "../movers" }
 pretty_assertions = { version = "1.2", features = ["alloc"], default-features = false }
 rendezvous = { version = "0.1.0", path = "../../common/rendezvous" }

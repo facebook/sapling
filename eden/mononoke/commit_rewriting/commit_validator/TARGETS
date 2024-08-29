@@ -10,6 +10,7 @@ rust_binary(
         "fbsource//third-party/rust:maplit",
         "fbsource//third-party/rust:tokio",
         "//eden/mononoke/commit_rewriting/cross_repo_sync:cross_repo_sync_test_utils",
+        "//eden/mononoke/mononoke_macros:mononoke_macros",
         "//eden/mononoke/tests/utils:tests_utils",
     ],
     deps = [

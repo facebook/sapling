@@ -83,6 +83,7 @@ mod test {
     use filestore::FilestoreConfig;
     use fixtures::Linear;
     use fixtures::TestRepoFixture;
+    use mononoke_macros::mononoke;
     use mononoke_types::DateTime;
     use phases::Phases;
     use repo_blobstore::RepoBlobstore;
@@ -109,7 +110,7 @@ mod test {
         dyn Phases,
     );
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_create_pre_merge_delete(fb: FacebookInit) -> Result<(), Error> {
         let repo: TestRepo = Linear::get_repo(fb).await;
         let ctx = CoreContext::test_mock(fb);
@@ -185,7 +186,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_create_pre_merge_delete_with_base(fb: FacebookInit) -> Result<(), Error> {
         let repo: TestRepo = Linear::get_repo(fb).await;
         let ctx = CoreContext::test_mock(fb);

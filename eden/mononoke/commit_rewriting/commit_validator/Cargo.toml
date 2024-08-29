@@ -50,4 +50,5 @@ tokio = { version = "1.37.0", features = ["full", "test-util", "tracing"] }
 [dev-dependencies]
 cross_repo_sync_test_utils = { version = "0.1.0", path = "../cross_repo_sync/test_utils" }
 maplit = "1.0"
+mononoke_macros = { version = "0.1.0", path = "../../mononoke_macros" }
 tests_utils = { version = "0.1.0", path = "../../tests/utils" }

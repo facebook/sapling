@@ -11,6 +11,7 @@ use anyhow::Error;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use metaconfig_types::CommitSyncConfigVersion;
+use mononoke_macros::mononoke;
 use mononoke_types_mocks::changesetid as bonsai;
 use mononoke_types_mocks::repo::REPO_ONE;
 use mononoke_types_mocks::repo::REPO_ZERO;
@@ -303,7 +304,7 @@ async fn equivalent_working_copy<M: SyncedCommitMapping>(fb: FacebookInit, mappi
     );
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_add_and_get(fb: FacebookInit) {
     add_and_get(
         fb,
@@ -314,7 +315,7 @@ async fn test_add_and_get(fb: FacebookInit) {
     .await;
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_missing(fb: FacebookInit) {
     missing(
         fb,
@@ -325,7 +326,7 @@ async fn test_missing(fb: FacebookInit) {
     .await
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_equivalent_working_copy(fb: FacebookInit) {
     equivalent_working_copy(
         fb,
@@ -336,7 +337,7 @@ async fn test_equivalent_working_copy(fb: FacebookInit) {
     .await
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_version_for_large_repo_commit(fb: FacebookInit) -> Result<(), Error> {
     let mapping = SqlSyncedCommitMappingBuilder::with_sqlite_in_memory()?
         .build(RendezVousOptions::for_test());
@@ -409,7 +410,7 @@ async fn test_version_for_large_repo_commit(fb: FacebookInit) -> Result<(), Erro
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_overwrite(fb: FacebookInit) -> Result<(), Error> {
     let mapping = SqlSyncedCommitMappingBuilder::with_sqlite_in_memory()?
         .build(RendezVousOptions::for_test());

@@ -91,9 +91,11 @@ pub fn even_chunker_with_max_size<T: Clone>(max_chunk_size: usize) -> Result<Chu
 
 #[cfg(test)]
 mod test {
+    use mononoke_macros::mononoke;
+
     use super::*;
 
-    #[test]
+    #[mononoke::test]
     fn test_parse_chunking_hint() {
         let hint = r#"/a/b, /a/c
 
@@ -118,7 +120,7 @@ mod test {
         assert_eq!(parsed, vec![vec![NonRootMPath::new("/a/b").unwrap()]]);
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_path_chunked_form_hint() {
         let hint = parse_chunking_hint(
             r#"
@@ -154,7 +156,7 @@ mod test {
         )
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_path_chunked_form_hint_with_empty() {
         let hint = parse_chunking_hint(
             r#"

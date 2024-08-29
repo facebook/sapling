@@ -659,6 +659,7 @@ mod tests {
     use cross_repo_sync_test_utils::TestRepo;
     use fbinit::FacebookInit;
     use live_commit_sync_config::TestLiveCommitSyncConfig;
+    use mononoke_macros::mononoke;
     use mononoke_types_mocks::changesetid::FOURS_CSID;
     use mononoke_types_mocks::changesetid::ONES_CSID;
     use mononoke_types_mocks::changesetid::THREES_CSID;
@@ -771,7 +772,7 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_ancestor_hint_selector(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let blob_repo: TestRepo = TestRepoFactory::new(fb)?
@@ -855,7 +856,7 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_descendant_hint_selector(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let blob_repo: TestRepo = test_repo_factory::build_empty(ctx.fb).await?;
@@ -939,7 +940,7 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_exact_hint_selector(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
 
@@ -983,7 +984,7 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_bookmark_hint_selector(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let blob_repo: TestRepo = TestRepoFactory::new(fb)?
@@ -1042,7 +1043,7 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_only_hint(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let blob_repo: TestRepo = TestRepoFactory::new(fb)?

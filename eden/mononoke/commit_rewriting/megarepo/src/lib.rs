@@ -267,6 +267,7 @@ mod test {
     use fixtures::TestRepoFixture;
     use futures::FutureExt;
     use mercurial_types::HgChangesetId;
+    use mononoke_macros::mononoke;
     use mononoke_types::BonsaiChangeset;
     use mononoke_types::BonsaiChangesetMut;
     use mononoke_types::DateTime;
@@ -384,7 +385,7 @@ mod test {
         bcs_id.load(&ctx, repo.repo_blobstore()).await.unwrap()
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_do_not_move_anything(fb: FacebookInit) {
         let (ctx, repo, _hg_cs_id, bcs_id, changeset_args) = prepare(fb).await;
         let newcs = perform_move(
@@ -407,7 +408,7 @@ mod test {
         assert_eq!(file_changes, Default::default());
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_drop_file(fb: FacebookInit) {
         let (ctx, repo, _hg_cs_id, bcs_id, changeset_args) = prepare(fb).await;
         let newcs = perform_move(&ctx, &repo, bcs_id, Arc::new(skip_one), changeset_args)
@@ -429,7 +430,7 @@ mod test {
         );
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_shift_path_by_one(fb: FacebookInit) {
         let (ctx, repo, _hg_cs_id, bcs_id, changeset_args) = prepare(fb).await;
         let newcs = perform_move(&ctx, &repo, bcs_id, Arc::new(shift_one), changeset_args)
@@ -475,7 +476,7 @@ mod test {
             .unwrap()
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_performed_move(fb: FacebookInit) {
         let (ctx, repo, old_hg_cs_id, old_bcs_id, changeset_args) = prepare(fb).await;
         let new_hg_cs_id = perform_move(
@@ -499,7 +500,7 @@ mod test {
         assert_eq!(old_wc, new_wc);
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_stack_move(fb: FacebookInit) -> Result<(), Error> {
         let repo: Arc<TestRepo> = Arc::new(Linear::get_repo(fb).await);
         let ctx = CoreContext::test_mock(fb);

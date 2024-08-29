@@ -1582,6 +1582,7 @@ mod tests {
     use cross_repo_sync_test_utils::TestRepo;
     use fbinit::FacebookInit;
     use maplit::hashmap;
+    use mononoke_macros::mononoke;
     use tests_utils::CommitIdentifier;
     use tests_utils::CreateCommitContext;
     use tokio::runtime::Runtime;
@@ -1666,7 +1667,7 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     fn test_topological_order_validation_ok(fb: FacebookInit) -> Result<(), Error> {
         // Large repo  Mapping  Small repo
         //    2    -------------    1
@@ -1698,7 +1699,7 @@ mod tests {
         })
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     fn test_topological_order_validation_bad_direct_parents(fb: FacebookInit) -> Result<(), Error> {
         // Large repo  Mapping  Small repo
         //    1      --\   /--      1
@@ -1729,7 +1730,7 @@ mod tests {
         })
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     fn test_topological_order_validation_bad_ancestors(fb: FacebookInit) -> Result<(), Error> {
         // Large repo  Mapping  Small repo
         //    2      --\   /--      1
@@ -1761,7 +1762,7 @@ mod tests {
         })
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     fn test_topological_order_validation_bad_unremapped_ancestors(
         fb: FacebookInit,
     ) -> Result<(), Error> {

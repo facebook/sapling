@@ -11,6 +11,7 @@ use live_commit_sync_config::ErrorKind;
 use live_commit_sync_config::LiveCommitSyncConfig;
 use live_commit_sync_config::CONFIGERATOR_ALL_COMMIT_SYNC_CONFIGS;
 use metaconfig_types::CommitSyncConfigVersion;
+use mononoke_macros::mononoke;
 use mononoke_types::RepositoryId;
 use pretty_assertions::assert_eq;
 
@@ -288,7 +289,7 @@ const ALL_COMMIT_SYNC_CONFIG_V3: &str = r#"{
     }
 }"#;
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_adding_a_new_version(fb: FacebookInit) {
     let (_ctx, test_source, _store, _test_push_redirection_config, live_commit_sync_config) =
         get_ctx_source_store_and_live_config(fb, ALL_COMMIT_SYNC_CONFIG_V1);
@@ -364,7 +365,7 @@ async fn test_adding_a_new_version(fb: FacebookInit) {
     assert!(av3.contains_key(&vr31));
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_query_by_version_name(fb: FacebookInit) {
     let (_ctx, test_source, _store, _test_push_redirection_config, live_commit_sync_config) =
         get_ctx_source_store_and_live_config(fb, ALL_COMMIT_SYNC_CONFIG_V1);

@@ -32,6 +32,7 @@ rust_library(
         "//eden/mononoke/manifest:manifest",
         "//eden/mononoke/megarepo_api:commit_transformation",
         "//eden/mononoke/mercurial:mercurial_types",
+        "//eden/mononoke/mononoke_macros:mononoke_macros",
         "//eden/mononoke/repo_attributes/repo_identity:repo_identity",
         "//eden/mononoke/repo_factory:test_repo_factory",
         "//eden/mononoke/tests/fixtures:fixtures",

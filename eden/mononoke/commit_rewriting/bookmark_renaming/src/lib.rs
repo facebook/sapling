@@ -157,6 +157,7 @@ mod test {
 
     use maplit::hashmap;
     use metaconfig_types::SmallRepoPermanentConfig;
+    use mononoke_macros::mononoke;
 
     use super::*;
 
@@ -184,7 +185,7 @@ mod test {
         }
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_small_to_large_renamer() {
         let commit_sync_config = get_commit_sync_config();
         let bookmark_renamer_1 =
@@ -215,7 +216,7 @@ mod test {
         assert_eq!(bookmark_renamer_3(&m2), Some(m2.clone()));
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_large_to_small_renamer() {
         let commit_sync_config = get_commit_sync_config();
         let bookmark_renamer_1 =

@@ -1050,6 +1050,7 @@ mod test {
     use fbinit::FacebookInit;
     use futures::TryStreamExt;
     use maplit::hashset;
+    use mononoke_macros::mononoke;
     use mutable_counters::MutableCountersRef;
     use synced_commit_mapping::SqlSyncedCommitMapping;
     use tests_utils::bookmark;
@@ -1059,7 +1060,7 @@ mod test {
 
     use super::*;
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     fn test_simple(fb: FacebookInit) -> Result<(), Error> {
         let runtime = Runtime::new()?;
         runtime.block_on(async move {
@@ -1143,7 +1144,7 @@ mod test {
         })
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     fn test_simple_merge(fb: FacebookInit) -> Result<(), Error> {
         let runtime = Runtime::new()?;
         runtime.block_on(async move {
@@ -1203,7 +1204,7 @@ mod test {
         })
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     fn test_merge_added_in_single_bookmark_update(fb: FacebookInit) -> Result<(), Error> {
         let runtime = Runtime::new()?;
         runtime.block_on(async move {
@@ -1235,7 +1236,7 @@ mod test {
         })
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     fn test_merge_of_a_merge_one_step(fb: FacebookInit) -> Result<(), Error> {
         let runtime = Runtime::new()?;
         runtime.block_on(async move {
@@ -1272,7 +1273,7 @@ mod test {
         })
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     fn test_merge_of_a_merge_two_steps(fb: FacebookInit) -> Result<(), Error> {
         let runtime = Runtime::new()?;
         runtime.block_on(async move {
@@ -1325,7 +1326,7 @@ mod test {
         })
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     fn test_merge_non_shared_bookmark(fb: FacebookInit) -> Result<(), Error> {
         let runtime = Runtime::new()?;
         runtime.block_on(async move {
@@ -1371,7 +1372,7 @@ mod test {
         })
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_merge_different_versions(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let (syncers, _, _, _) = init_small_large_repo(&ctx).await?;

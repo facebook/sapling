@@ -88,6 +88,7 @@ mod test {
     use cross_repo_sync_test_utils::TestRepo;
     use fbinit::FacebookInit;
     use maplit::hashmap;
+    use mononoke_macros::mononoke;
     use mononoke_types::NonRootMPath;
     use tests_utils::list_working_copy_utf8;
     use tests_utils::resolve_cs_id;
@@ -95,7 +96,7 @@ mod test {
 
     use super::*;
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_manual_commit_sync(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
 
@@ -156,7 +157,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_manual_commit_sync_select_parents_automatically(
         fb: FacebookInit,
     ) -> Result<(), Error> {
