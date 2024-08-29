@@ -6,7 +6,6 @@
  */
 
 use anyhow::Result;
-use clap::builder::PossibleValuesParser;
 use clap::Args;
 use context::CoreContext;
 use git_source_of_truth::GitSourceOfTruth;
