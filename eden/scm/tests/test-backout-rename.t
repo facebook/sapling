@@ -57,8 +57,24 @@ Back out a commit copying and modifying a file:
   > A
   > EOF
   $ hg go -q $C
-XXX Fixme
   $ hg backout -r $B
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  nothing changed
-  [1]
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  changeset 45998aa158d6 backs out changeset 6910c7fd50e3
+  $ hg show
+  commit:      45998aa158d6
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  files:       A B
+  description:
+  Back out "B"
+  
+  Original commit changeset: 6910c7fd50e3
+  
+  
+  diff --git a/B b/B
+  deleted file mode 100644
+  --- a/B
+  +++ /dev/null
+  @@ -1,1 +0,0 @@
+  -B
+  \ No newline at end of file

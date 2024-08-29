@@ -17,6 +17,7 @@ import hashlib
 import posixpath
 import shutil
 import struct
+from collections import defaultdict
 
 from bindings import (
     checkout as nativecheckout,
@@ -853,7 +854,6 @@ def manifestmerge(
     repo.ui.debug(" ancestor: %s, local: %s, remote: %s\n" % (pa, wctx, p2))
 
     m1, m2, ma = wctx.manifest(), p2.manifest(), pa.manifest()
-    copied = set(copy.values())
 
     matcher = None
 
@@ -916,6 +916,11 @@ def manifestmerge(
     if matcher is None:
         matcher = matchmod.always("", "")
 
+    diff_files = set(diff.keys())
+    reverse_copies = defaultdict(list)
+    for k, v in copy.items():
+        reverse_copies[v].append(k)
+
     actions = {}
     # (n1, fl1) = "local"
     # (n2, fl2) = "remote"
@@ -962,7 +967,9 @@ def manifestmerge(
                         "versions differ",
                     )
         elif n1:  # file exists only on local side
-            if f1 in copied:
+            if f1 in reverse_copies and any(
+                f in diff_files for f in reverse_copies[f1]
+            ):
                 pass  # we'll deal with it on m2 side
             elif f1 in copy:
                 f1prev = copy[f1]
@@ -999,7 +1006,9 @@ def manifestmerge(
                 else:
                     actions[f1] = ("r", None, "other deleted")
         elif n2:  # file exists only on remote side
-            if f1 in copied:
+            if f1 in reverse_copies and any(
+                f in diff_files for f in reverse_copies[f1]
+            ):
                 pass  # we'll deal with it on m1 side
             elif f1 in copy:
                 f1prev = copy[f1]
