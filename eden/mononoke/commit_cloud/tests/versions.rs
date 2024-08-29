@@ -14,10 +14,11 @@ use commit_cloud::sql::ops::Update;
 use commit_cloud::sql::versions_ops::get_version_by_prefix;
 use commit_cloud::sql::versions_ops::UpdateVersionArgs;
 use fbinit::FacebookInit;
+use mononoke_macros::mononoke;
 use mononoke_types::Timestamp;
 use sql_construct::SqlConstruct;
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_versions(_fb: FacebookInit) -> anyhow::Result<()> {
     let sql = SqlCommitCloudBuilder::with_sqlite_in_memory()?.new(false);
     let reponame = "test_repo".to_owned();

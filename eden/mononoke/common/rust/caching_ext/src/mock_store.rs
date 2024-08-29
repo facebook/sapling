@@ -80,9 +80,11 @@ impl<T: Clone> MockStore<T> {
 
 #[cfg(test)]
 mod test {
+    use mononoke_macros::mononoke;
+
     use super::*;
 
-    #[test]
+    #[mononoke::test]
     fn test_counts() {
         let store = MockStore::new();
         assert_eq!(

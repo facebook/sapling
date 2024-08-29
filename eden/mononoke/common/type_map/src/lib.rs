@@ -72,6 +72,8 @@ impl TypeMap {
 
 #[cfg(test)]
 mod test {
+    use mononoke_macros::mononoke;
+
     use super::*;
 
     #[derive(Debug)]
@@ -87,7 +89,7 @@ mod test {
         }
     }
 
-    #[test]
+    #[mononoke::test]
     fn basic_test() {
         // make sure it works with unsized types
         let mut m = TypeMap::new();

@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use mononoke_macros::mononoke;
 use thrift_convert::ThriftConvert;
 use thrift_convert_test as thrift;
 
@@ -41,7 +42,7 @@ fn round_trips(s: impl ThriftConvert + std::fmt::Debug + Clone + Eq) {
     assert_eq!(s, round_triped);
 }
 
-#[test]
+#[mononoke::test]
 fn test_derive_thrift_convert() {
     let test = TestStruct {
         a: 1,

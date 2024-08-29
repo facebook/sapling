@@ -55,9 +55,11 @@ fn populate_stats(max_memory: usize, used_mem: usize) -> MemoryStats {
 
 #[cfg(test)]
 mod test {
+    use mononoke_macros::mononoke;
+
     use super::*;
 
-    #[test]
+    #[mononoke::test]
     fn test_get_stats() {
         let old = MAX_MEMORY.load(Ordering::Relaxed);
         let max_memory = 1024 * 1024 * 1024;
@@ -74,7 +76,7 @@ mod test {
         MAX_MEMORY.store(old, Ordering::Relaxed);
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_populate_stats() {
         let cases = [
             (

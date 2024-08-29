@@ -5,4 +5,5 @@ oncall("mononoke")
 rust_library(
     name = "type_map",
     srcs = ["src/lib.rs"],
+    test_deps = ["//eden/mononoke/mononoke_macros:mononoke_macros"],
 )

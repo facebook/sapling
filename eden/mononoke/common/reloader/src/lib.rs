@@ -213,17 +213,18 @@ mod test {
     use std::time::Duration;
 
     use fbinit::FacebookInit;
+    use mononoke_macros::mononoke;
 
     use super::*;
 
-    #[test]
+    #[mononoke::test]
     fn test_fixed() {
         let l = Reloader::fixed(12);
         assert_eq!(**l.load(), 12);
         assert_eq!(**l.load(), 12);
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_reload(fb: FacebookInit) {
         tokio::time::pause();
         struct NumberLoader {
@@ -255,7 +256,7 @@ mod test {
         assert_eq!(**l.load(), 2);
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_reload_fail_then_succeed(fb: FacebookInit) {
         tokio::time::pause();
         struct NumberLoader {

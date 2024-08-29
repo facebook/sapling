@@ -243,10 +243,11 @@ mod test {
     use maplit::btreemap;
     use maplit::hashmap;
     use maplit::hashset;
+    use mononoke_macros::mononoke;
 
     use super::*;
 
-    #[test]
+    #[mononoke::test]
     fn sort_topological_test() {
         let res = sort_topological(&hashmap! {1 => vec![2]});
         assert_eq!(Some(vec![2, 1]), res);
@@ -288,17 +289,17 @@ mod test {
         assert!(Some(vec![5, 3, 4, 2, 1]) == res);
     }
 
-    #[test]
+    #[mononoke::test]
     fn topo_sorted_traversal() {
         let mut dag = TopoSortedDagTraversal::new(hashmap! {1 => vec![]});
         assert_eq!(dag.drain(10).collect::<Vec<_>>(), vec![1]);
-        assert_eq!(dag.drain(10).collect::<Vec<_>>(), vec![]);
+        assert_eq!(dag.drain(10).collect::<Vec<_>>(), Vec::<i32>::new());
 
         let mut dag = TopoSortedDagTraversal::new(hashmap! {1 => vec![2], 2 => vec![3]});
         assert_eq!(dag.drain(10).collect::<Vec<_>>(), vec![3]);
         dag.visited(3);
         assert_eq!(dag.drain(10).collect::<Vec<_>>(), vec![2]);
-        assert_eq!(dag.drain(10).collect::<Vec<_>>(), vec![]);
+        assert_eq!(dag.drain(10).collect::<Vec<_>>(), Vec::<i32>::new());
         dag.visited(2);
         assert_eq!(dag.drain(10).collect::<Vec<_>>(), vec![1]);
 
@@ -311,11 +312,11 @@ mod test {
             hashmap! {1 => vec![2, 3], 2 => vec![4], 3 => vec![4], 4 => vec![]},
         );
         assert_eq!(dag.drain(10).collect::<Vec<_>>(), vec![4]);
-        assert_eq!(dag.drain(10).collect::<Vec<_>>(), vec![]);
+        assert_eq!(dag.drain(10).collect::<Vec<_>>(), Vec::<i32>::new());
         dag.visited(4);
         assert_eq!(dag.drain(10).collect::<HashSet<_>>(), hashset![2, 3]);
         dag.visited(2);
-        assert_eq!(dag.drain(10).collect::<Vec<_>>(), vec![]);
+        assert_eq!(dag.drain(10).collect::<Vec<_>>(), Vec::<i32>::new());
         dag.visited(3);
         assert_eq!(dag.drain(10).collect::<Vec<_>>(), vec![1]);
 

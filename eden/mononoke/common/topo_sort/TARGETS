@@ -5,7 +5,10 @@ oncall("mononoke")
 rust_library(
     name = "topo_sort",
     srcs = glob(["src/**/*.rs"]),
-    test_deps = ["fbsource//third-party/rust:maplit"],
+    test_deps = [
+        "fbsource//third-party/rust:maplit",
+        "//eden/mononoke/mononoke_macros:mononoke_macros",
+    ],
     deps = [
     ],
 )

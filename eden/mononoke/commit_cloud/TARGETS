@@ -11,6 +11,7 @@ rust_library(
     ]),
     test_deps = [
         "fbsource//third-party/rust:once_cell",
+        "//eden/mononoke/mononoke_macros:mononoke_macros",
     ],
     deps = [
         "fbsource//third-party/rust:anyhow",
@@ -47,6 +48,7 @@ rust_unittest(
         "//eden/mononoke/commit_cloud:commit_cloud",
         "//eden/mononoke/common/sql_construct:sql_construct",
         "//eden/mononoke/mercurial:mercurial_types",
+        "//eden/mononoke/mononoke_macros:mononoke_macros",
         "//eden/mononoke/mononoke_types:mononoke_types",
     ],
 )

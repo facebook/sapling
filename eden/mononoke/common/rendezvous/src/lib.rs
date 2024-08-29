@@ -83,11 +83,12 @@ mod demo {
     use fbinit::FacebookInit;
     use maplit::hashmap;
     use maplit::hashset;
+    use mononoke_macros::mononoke;
 
     use super::*;
 
     // NOTE: I'd make this a doctest, but we don't have support for running those at the moment
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn demo(fb: FacebookInit) -> Result<(), Error> {
         // RendezVousOptions would typically be instantiated from CLI args via cmdlib.
         let opts = RendezVousOptions::for_test();

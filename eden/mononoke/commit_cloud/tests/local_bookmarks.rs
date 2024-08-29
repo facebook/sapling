@@ -23,15 +23,16 @@ use commit_cloud::sql::ops::Insert;
 use commit_cloud::sql::ops::Update;
 use fbinit::FacebookInit;
 use mercurial_types::HgChangesetId;
+use mononoke_macros::mononoke;
 use sql_construct::SqlConstruct;
 
-#[test]
+#[mononoke::test]
 fn test_local_bookmarks_success() {
     let commit_id = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap();
     let bookmark = WorkspaceLocalBookmark::new("valid_name".to_string(), commit_id);
     assert!(bookmark.is_ok());
 }
-#[test]
+#[mononoke::test]
 fn test_local_bookmarks_empty_name() {
     let commit_id = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap();
     let bookmark = WorkspaceLocalBookmark::new("".to_string(), commit_id);
@@ -41,13 +42,13 @@ fn test_local_bookmarks_empty_name() {
         "'commit cloud' failed: Local bookmark name cannot be empty"
     );
 }
-#[test]
+#[mononoke::test]
 fn test_local_bookmarks_invalid_commit() {
     let commit_id = HgChangesetId::from_str("invalidlength");
     assert!(commit_id.is_err());
 }
 
-#[test]
+#[mononoke::test]
 fn test_lbs_from_map_valid() {
     let mut map = HashMap::new();
     map.insert(
@@ -65,7 +66,7 @@ fn test_lbs_from_map_valid() {
     assert_eq!(result, expected);
 }
 
-#[test]
+#[mononoke::test]
 fn test_lbs_from_map_invalid_value() {
     let mut map = HashMap::new();
     map.insert("bookmark1".to_string(), "invalid".to_string());
@@ -73,7 +74,7 @@ fn test_lbs_from_map_invalid_value() {
     assert!(result.is_err());
 }
 
-#[test]
+#[mononoke::test]
 fn test_lbs_to_map() {
     let list = vec![
         WorkspaceLocalBookmark::new(
@@ -91,7 +92,7 @@ fn test_lbs_to_map() {
     assert_eq!(result, expected);
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_local_bookmarks(_fb: FacebookInit) -> anyhow::Result<()> {
     let sql = SqlCommitCloudBuilder::with_sqlite_in_memory()?.new(false);
     let reponame = "test_repo".to_owned();

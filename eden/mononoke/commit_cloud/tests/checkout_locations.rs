@@ -16,10 +16,11 @@ use commit_cloud::sql::ops::Insert;
 use commit_cloud::sql::ops::Update;
 use fbinit::FacebookInit;
 use mercurial_types::HgChangesetId;
+use mononoke_macros::mononoke;
 use mononoke_types::Timestamp;
 use sql_construct::SqlConstruct;
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_checkout_locations(_fb: FacebookInit) -> anyhow::Result<()> {
     use commit_cloud::sql::ops::Get;
     let sql = SqlCommitCloudBuilder::with_sqlite_in_memory()?.new(false);

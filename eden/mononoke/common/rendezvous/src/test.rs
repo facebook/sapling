@@ -17,6 +17,7 @@ use futures::future::BoxFuture;
 use futures::future::FutureExt;
 use maplit::hashmap;
 use maplit::hashset;
+use mononoke_macros::mononoke;
 use tokio::sync::Notify;
 
 pub use crate::RendezVous;
@@ -95,7 +96,7 @@ fn stats() -> Arc<RendezVousStats> {
     Arc::new(RendezVousStats::new("test".into()))
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_batch_wait(fb: FacebookInit) -> Result<(), Error> {
     let store = MockStore::new();
     let controller = MockController::new(usize::MAX);
@@ -123,7 +124,7 @@ async fn test_batch_wait(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_batch_limit(fb: FacebookInit) -> Result<(), Error> {
     let store = MockStore::new();
     let controller = MockController::new(2);
@@ -155,7 +156,7 @@ async fn test_batch_limit(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_unbatched(fb: FacebookInit) -> Result<(), Error> {
     let store = MockStore::new();
     let controller = MockController::new(2);

@@ -12,6 +12,7 @@ rust_library(
         "fbsource//third-party/rust:abomonation_derive",
         "fbsource//third-party/rust:maplit",
         "fbsource//third-party/rust:quickcheck",
+        "//eden/mononoke/mononoke_macros:mononoke_macros",
     ],
     deps = [
         "fbsource//third-party/rust:abomonation",

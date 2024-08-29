@@ -6,4 +6,5 @@ oncall("mononoke")
 rust_library(
     name = "dedupmap",
     srcs = glob(["src/**/*.rs"]),
+    test_deps = ["//eden/mononoke/mononoke_macros:mononoke_macros"],
 )

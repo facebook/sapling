@@ -7,5 +7,6 @@ rust_library(
     name = "iterhelpers",
     srcs = glob(["src/*.rs"]),
     test_deps = [
+        "//eden/mononoke/mononoke_macros:mononoke_macros",
     ],
 )

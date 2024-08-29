@@ -18,9 +18,10 @@ use commit_cloud::sql::ops::Insert;
 use commit_cloud::sql::ops::Update;
 use fbinit::FacebookInit;
 use mercurial_types::HgChangesetId;
+use mononoke_macros::mononoke;
 use sql_construct::SqlConstruct;
 
-#[test]
+#[mononoke::test]
 fn test_heads_from_list_valid() {
     let input = vec!["2d7d4ba9ce0a6ffd222de7785b249ead9c51c536".to_string()];
     let expected = vec![WorkspaceHead {
@@ -30,14 +31,14 @@ fn test_heads_from_list_valid() {
     assert_eq!(result, expected);
 }
 
-#[test]
+#[mononoke::test]
 fn test_heads_from_list_invalid() {
     let input = vec!["invalid".to_string()];
     let result = heads_from_list(&input);
     assert!(result.is_err());
 }
 
-#[test]
+#[mononoke::test]
 fn test_heads_to_list() {
     let input = vec![WorkspaceHead {
         commit: HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap(),
@@ -47,7 +48,7 @@ fn test_heads_to_list() {
     assert_eq!(result, expected);
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_heads(_fb: FacebookInit) -> anyhow::Result<()> {
     use commit_cloud::sql::heads_ops::DeleteArgs;
     use commit_cloud::sql::ops::Get;

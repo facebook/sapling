@@ -80,9 +80,11 @@ where
 
 #[cfg(test)]
 mod tests {
+    use mononoke_macros::mononoke;
+
     use super::*;
 
-    #[test]
+    #[mononoke::test]
     fn basic() {
         let mut dedup_map: DedupMap<String> = DedupMap::new();
 

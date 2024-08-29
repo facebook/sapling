@@ -5,6 +5,7 @@ oncall("mononoke")
 rust_library(
     name = "commit_cloud_helpers",
     srcs = glob(["*.rs"]),
+    test_deps = ["//eden/mononoke/mononoke_macros:mononoke_macros"],
     deps = [
         "fbsource//third-party/rust:regex",
     ],

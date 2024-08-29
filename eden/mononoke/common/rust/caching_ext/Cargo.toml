@@ -24,4 +24,5 @@ tokio = { version = "1.37.0", features = ["full", "test-util", "tracing"] }
 [dev-dependencies]
 abomonation_derive = "0.5"
 maplit = "1.0"
+mononoke_macros = { version = "0.1.0", path = "../../../mononoke_macros" }
 quickcheck = "1.0"

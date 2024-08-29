@@ -5,6 +5,7 @@ oncall("mononoke")
 rust_library(
     name = "memory",
     srcs = glob(["src/**/*.rs"]),
+    test_deps = ["//eden/mononoke/mononoke_macros:mononoke_macros"],
     test_labels = ["serialize_test_cases"],
     deps = [
         "fbsource//third-party/rust:memory-stats",

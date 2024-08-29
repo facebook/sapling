@@ -72,11 +72,13 @@ pub fn make_workspace_acl_name(workspace: &str, reponame: &str) -> String {
 
 #[cfg(test)]
 mod test {
+    use mononoke_macros::mononoke;
+
     use crate::decorate_workspace_name_to_valid_acl_name;
     use crate::is_valid_acl_name;
     use crate::sanity_check_workspace_name;
 
-    #[test]
+    #[mononoke::test]
     fn test_invalid_workspace_names() {
         assert!(!sanity_check_workspace_name("user_testuser_default"));
         assert!(!sanity_check_workspace_name("user_testuser/default"));
@@ -88,7 +90,7 @@ mod test {
         assert!(!sanity_check_workspace_name("user/[[[user@fb.com/default"));
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_valid_workspace_names() {
         assert!(sanity_check_workspace_name("user/testuser/default"));
         assert!(sanity_check_workspace_name(
@@ -102,7 +104,7 @@ mod test {
         ));
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_invalid_acl_names() {
         assert!(!is_valid_acl_name(
             "user/testuser@oculus.com/other name with spaces"
@@ -110,12 +112,12 @@ mod test {
         assert!(!is_valid_acl_name("user/testuser@oculus.com/default"));
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_valid_acl_names() {
         assert!(is_valid_acl_name("user/testuser/default"));
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_workspace_name_decorate_for_acl() {
         assert_eq!(
             decorate_workspace_name_to_valid_acl_name("user/testuser/default"),

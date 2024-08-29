@@ -38,16 +38,18 @@ pub fn chunk_by_accumulation<T, A: Copy>(
 
 #[cfg(test)]
 mod tests {
+    use mononoke_macros::mononoke;
+
     use super::*;
 
-    #[test]
+    #[mononoke::test]
     fn test_chunk_by_accumulation_simple() {
         let v = vec![1, 2, 3, 1, 1, 1];
         let chunks = chunk_by_accumulation(v, 0, |a, x| a + x, |a| a > 3);
         assert_eq!(chunks, vec![vec![1, 2], vec![3], vec![1, 1, 1]]);
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_chunk_by_accumulation_one_item_overflows() {
         // even though 3 on its own overflows the accumulator,
         // we don't drop it
@@ -56,21 +58,21 @@ mod tests {
         assert_eq!(chunks, vec![vec![1], vec![2], vec![3], vec![1, 1], vec![1]]);
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_chunk_by_accumulation_empty() {
         let v = vec![];
         let chunks = chunk_by_accumulation(v, 0, |a, x| a + x, |a| a > 3);
         assert!(chunks.is_empty());
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_chunk_by_accumulation_single_item() {
         let v = vec![5];
         let chunks = chunk_by_accumulation(v, 0, |a, x| a + x, |a| a > 3);
         assert_eq!(chunks, vec![vec![5]]);
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_chunk_by_accumulation_all_fit_in_single_chunk() {
         let v = vec![1, 2, 3, 1, 1, 1];
         let chunks = chunk_by_accumulation(v.clone(), 0, |a, x| a + x, |a| a > 1000);

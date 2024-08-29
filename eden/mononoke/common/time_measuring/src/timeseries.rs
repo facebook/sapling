@@ -178,9 +178,11 @@ impl<T> TimeseriesAccumulator for Vec<T> {
 
 #[cfg(test)]
 mod test {
+    use mononoke_macros::mononoke;
+
     use super::*;
 
-    #[test]
+    #[mononoke::test]
     fn test_iter() -> Result<(), Error> {
         let mut ts = Timeseries::<Vec<u64>, _, _>::new(0usize, 1usize, 3);
 
@@ -197,12 +199,12 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_basic() -> Result<(), Error> {
         let mut ts = Timeseries::<Vec<u64>, _, _>::new(0usize, 2usize, 2);
         assert_eq!(ts.start_instant, 0);
         assert_eq!(ts.start_idx, 0);
-        assert_eq!(ts.buckets, vec![vec![], vec![]]);
+        assert_eq!(ts.buckets, vec![Vec::<u64>::new(), vec![]]);
 
         ts.insert(0, 1)?;
         assert_eq!(ts.start_instant, 0);
@@ -232,7 +234,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_add_buckets() -> Result<(), Error> {
         let mut ts = Timeseries::<Vec<u64>, _, _>::new(0usize, 2usize, 3);
 
@@ -249,7 +251,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_reset_buckets() -> Result<(), Error> {
         let mut ts = Timeseries::<Vec<u64>, _, _>::new(0usize, 2usize, 3);
 
@@ -274,7 +276,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_sequence() -> Result<(), Error> {
         #[derive(Default, Debug)]
         struct Last(usize);

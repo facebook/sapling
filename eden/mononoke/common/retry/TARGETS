@@ -6,6 +6,7 @@ oncall("mononoke")
 rust_library(
     name = "retry",
     srcs = glob(["src/**/*.rs"]),
+    test_deps = ["//eden/mononoke/mononoke_macros:mononoke_macros"],
     deps = [
         "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:rand",

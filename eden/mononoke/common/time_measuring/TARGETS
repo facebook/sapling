@@ -7,6 +7,7 @@ rust_library(
     srcs = glob([
         "src/**/*.rs",
     ]),
+    test_deps = ["//eden/mononoke/mononoke_macros:mononoke_macros"],
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:dashmap",
