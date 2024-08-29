@@ -917,18 +917,6 @@ function setup_configerator_configs {
 EOF
   fi
 
-  export PUSHREDIRECT_CONF
-  PUSHREDIRECT_CONF="${LOCAL_CONFIGERATOR_PATH}/scm/mononoke/pushredirect"
-  mkdir -p "$PUSHREDIRECT_CONF"
-
-  if [[ ! -f "$PUSHREDIRECT_CONF/enable" ]]; then
-    cat >> "$PUSHREDIRECT_CONF/enable" <<EOF
-{
-  "per_repo": {}
-}
-EOF
-  fi
-
   COMMIT_SYNC_CONF="${LOCAL_CONFIGERATOR_PATH}/scm/mononoke/repos/commitsyncmaps"
   mkdir -p "$COMMIT_SYNC_CONF"
   export COMMIT_SYNC_CONF
