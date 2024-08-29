@@ -410,6 +410,7 @@ mod test {
     use filestore::FilestoreConfig;
     use maplit::hashset;
     use metaconfig_types::RepoConfig;
+    use mononoke_macros::mononoke;
     use phases::Phases;
     use repo_blobstore::RepoBlobstore;
     use repo_derived_data::RepoDerivedData;
@@ -456,7 +457,7 @@ mod test {
         filestore_config: FilestoreConfig,
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_find_draft_ancestors_simple(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let repo: Repo = test_repo_factory::build_empty(fb).await?;
@@ -508,7 +509,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_find_draft_ancestors_merge(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let repo: Repo = test_repo_factory::build_empty(fb).await?;

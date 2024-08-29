@@ -1209,11 +1209,11 @@ mod test {
     use filestore::FilestoreConfig;
     use futures::future::FutureExt;
     use futures::future::TryFutureExt;
-    use justknobs::test_helpers::override_just_knobs;
     use justknobs::test_helpers::with_just_knobs_async;
     use justknobs::test_helpers::JustKnobsInMemory;
     use justknobs::test_helpers::KnobVal;
     use maplit::hashmap;
+    use mononoke_macros::mononoke;
     use mutable_renames::MutableRenameEntry;
     use mutable_renames::MutableRenamesArc;
     use repo_blobstore::RepoBlobstore;
@@ -1254,9 +1254,8 @@ mod test {
         mutable_renames: MutableRenames,
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_list_linear_history(fb: FacebookInit) -> Result<(), Error> {
-        override_just_knobs(Default::default());
         // generate couple of hundreds linear file changes and list history
         let repo: TestRepoWithMutableRenames = test_repo_factory::build_empty(fb).await.unwrap();
         let mutable_renames = repo.mutable_renames_arc();
@@ -1305,7 +1304,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_list_history_with_merges(fb: FacebookInit) -> Result<(), Error> {
         // test generates commit graph with merges and compares result of list_file_history with
         // the result of BFS sorting on the graph
@@ -1333,8 +1332,6 @@ mod test {
         //           o
         //           A
         //
-
-        override_just_knobs(Default::default());
         let repo: TestRepoWithMutableRenames = test_repo_factory::build_empty(fb).await.unwrap();
         let mutable_renames = repo.mutable_renames_arc();
         let ctx = CoreContext::test_mock(fb);
@@ -1382,7 +1379,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_list_history_many_diamonds(fb: FacebookInit) -> Result<(), Error> {
         // test generates commit graph with 50 diamonds
         //
@@ -1408,8 +1405,6 @@ mod test {
         //           |
         //           o
         //
-
-        override_just_knobs(Default::default());
         let repo: TestRepoWithMutableRenames = test_repo_factory::build_empty(fb).await.unwrap();
         let mutable_renames = repo.mutable_renames_arc();
         let ctx = CoreContext::test_mock(fb);
@@ -1450,7 +1445,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_list_history_visitor(fb: FacebookInit) -> Result<(), Error> {
         // Test history termination on one of the history branches.
         // The main branch (top) and branch A have commits that change only single file.
@@ -1472,7 +1467,6 @@ mod test {
         //        |   |
         //        o   o
         //
-        override_just_knobs(Default::default());
         let repo: TestRepoWithMutableRenames = test_repo_factory::build_empty(fb).await.unwrap();
         let mutable_renames = repo.mutable_renames_arc();
         let ctx = CoreContext::test_mock(fb);
@@ -1562,9 +1556,8 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_list_history_deleted(fb: FacebookInit) -> Result<(), Error> {
-        override_just_knobs(Default::default());
         let repo: TestRepoWithMutableRenames = test_repo_factory::build_empty(fb).await.unwrap();
         let mutable_renames = repo.mutable_renames_arc();
         let ctx = CoreContext::test_mock(fb);
@@ -1642,7 +1635,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_list_history_merged_deleted(fb: FacebookInit) -> Result<(), Error> {
         //
         //     L
@@ -1659,7 +1652,6 @@ mod test {
         //     |
         //     A
         //
-        override_just_knobs(Default::default());
         let repo: TestRepoWithMutableRenames = test_repo_factory::build_empty(fb).await.unwrap();
         let mutable_renames = repo.mutable_renames_arc();
         let ctx = CoreContext::test_mock(fb);
@@ -1787,9 +1779,8 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_list_history_across_deletions_linear(fb: FacebookInit) -> Result<(), Error> {
-        override_just_knobs(Default::default());
         let repo: TestRepoWithMutableRenames = test_repo_factory::build_empty(fb).await.unwrap();
         let mutable_renames = repo.mutable_renames_arc();
         let ctx = CoreContext::test_mock(fb);
@@ -1844,9 +1835,8 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_list_history_across_deletions_with_merges(fb: FacebookInit) -> Result<(), Error> {
-        override_just_knobs(Default::default());
         let repo: TestRepoWithMutableRenames = test_repo_factory::build_empty(fb).await.unwrap();
         let mutable_renames = repo.mutable_renames_arc();
         let ctx = CoreContext::test_mock(fb);
@@ -1927,7 +1917,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_list_history_with_mutable_renames(fb: FacebookInit) -> Result<(), Error> {
         let repo: TestRepoWithMutableRenames = test_repo_factory::build_empty(fb).await.unwrap();
         let mutable_renames = repo.mutable_renames_arc();
@@ -2104,11 +2094,10 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_list_history_with_mutable_renames_attached_to_unrelated_commits(
         fb: FacebookInit,
     ) -> Result<(), Error> {
-        override_just_knobs(Default::default());
         let repo: TestRepoWithMutableRenames = test_repo_factory::build_empty(fb).await.unwrap();
         let mutable_renames = repo.mutable_renames_arc();
         let ctx = CoreContext::test_mock(fb);
@@ -2235,9 +2224,8 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_different_order(fb: FacebookInit) -> Result<(), Error> {
-        override_just_knobs(Default::default());
         let repo: TestRepoWithMutableRenames = test_repo_factory::build_empty(fb).await.unwrap();
         let mutable_renames = repo.mutable_renames_arc();
         let ctx = CoreContext::test_mock(fb);
@@ -2304,9 +2292,8 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_simple_gen_num(fb: FacebookInit) -> Result<(), Error> {
-        override_just_knobs(Default::default());
         let repo: TestRepoWithMutableRenames = test_repo_factory::build_empty(fb).await.unwrap();
         let mutable_renames = repo.mutable_renames_arc();
         let ctx = CoreContext::test_mock(fb);
