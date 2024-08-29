@@ -41,6 +41,8 @@ defaultadvice=
 emptymsg={if(title, title, defaulttitle)}\n
  Summary: {summary}\n
  Test Plan: {testplan}\n
+commit-message-fields=Summary,"Test Plan"
+summary-field=Summary
 
 [smartlog]
 names=master main

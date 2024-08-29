@@ -88,6 +88,10 @@ use-rust=true
 
 [copytrace]
 dagcopytrace=True
+
+[committemplate]
+commit-message-fields=Summary,"Test Plan",Reviewers,Subscribers,Tasks,Tags,"Differential Revision","Reviewed By"
+summary-field=Summary
 """
     if use_watchman:
         content += """

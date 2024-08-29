@@ -4075,7 +4075,7 @@ def _amend(ui, repo, wctx, old, extra, opts, matcher):
 
 def commiteditor(repo, ctx, editform="", summaryfooter=""):
     if description := ctx.description():
-        return add_summary_footer(description, summaryfooter)
+        return add_summary_footer(repo.ui, description, summaryfooter)
 
     return commitforceeditor(
         repo,
@@ -4087,24 +4087,36 @@ def commiteditor(repo, ctx, editform="", summaryfooter=""):
 
 
 def add_summary_footer(
+    ui,
     commit_msg: str,
     summary_footer: str,
-    commit_tags: Set[str] = PHABRICATOR_COMMIT_MESSAGE_TAGS,
 ) -> str:
     """
-    >>> print(add_summary_footer("", "i am a summary footer"))
+    >>> class FakeUI:
+    ...   def configlist(self, section, key):
+    ...     assert section == "committemplate" and key == "commit-message-fields"
+    ...     return ["Summary", "Test Plan"]
+    ...
+    ...   def config(self, section, key):
+    ...     assert section == "committemplate" and key == "summary-field"
+    ...     return "Summary"
+    ...
+
+    >>> ui = FakeUI()
+    >>> print(add_summary_footer(ui, "", "i am a summary footer"))
     <BLANKLINE>
     i am a summary footer
 
-    >>> print(add_summary_footer("this is a title", ""))
+    >>> print(add_summary_footer(ui, "this is a title", ""))
     this is a title
 
-    >>> print(add_summary_footer("this is a title", "i am a summary footer"))
+    >>> print(add_summary_footer(ui, "this is a title", "i am a summary footer"))
     this is a title
     <BLANKLINE>
     i am a summary footer
 
     >>> print(add_summary_footer(
+    ...   ui,
     ...   "this is a title\\n\\nSummary: I am a summary",
     ...   "i am a summary footer"
     ... ))
@@ -4115,6 +4127,7 @@ def add_summary_footer(
     i am a summary footer
 
     >>> print(add_summary_footer(
+    ...   ui,
     ...   "this is a title\\n\\nSummary: I am a summary\\n\\nTest Plan: I am a test plan",
     ...   "i am a summary footer"
     ... ))
@@ -4129,14 +4142,17 @@ def add_summary_footer(
     if not summary_footer:
         return commit_msg
 
+    commit_fields = set(ui.configlist("committemplate", "commit-message-fields"))
+    summary_field = ui.config("committemplate", "summary-field")
+
     lines = commit_msg.split("\n")
-    field_content_list = _parse_commit_message(lines, commit_tags)
+    field_content_list = _parse_commit_message(lines, commit_fields)
 
     # defaults to the last field
     summary_index = len(field_content_list) - 1
     summary_content = field_content_list[summary_index][1]
     for i, (field, content) in enumerate(field_content_list):
-        if field == "Summary":
+        if field == summary_field:
             summary_index, summary_content = i, content
             break
 
@@ -4324,7 +4340,7 @@ def buildcommittext(repo, ctx, summaryfooter=""):
     edittext = []
     modified, added, removed = ctx.modified(), ctx.added(), ctx.removed()
     description = ctx.description()
-    edittext.append(add_summary_footer(description, summaryfooter))
+    edittext.append(add_summary_footer(repo.ui, description, summaryfooter))
     if edittext[-1]:
         edittext.append("")
     edittext.append("")  # Empty line between message and comments.

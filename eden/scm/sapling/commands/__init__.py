@@ -2724,7 +2724,7 @@ def _makegraftmessage(ctx, opts):
         if opts.get("log"):
             message.append("(grafted from %s)" % ctx.hex())
     message = "\n".join(message)
-    return cmdutil.add_summary_footer(description, message)
+    return cmdutil.add_summary_footer(ctx.repo().ui, description, message)
 
 
 @command(
