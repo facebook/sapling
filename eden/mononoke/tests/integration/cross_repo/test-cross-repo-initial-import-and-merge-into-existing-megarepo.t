@@ -48,9 +48,9 @@
   $ large_small_setup
   Adding synced mapping entry
   $ setup_configerator_configs
-  $ enable_pushredirect_xdb 1 false true
-  $ enable_pushredirect_xdb 2 false false
-  $ enable_pushredirect_xdb 2 false false
+  $ enable_pushredirect 1 false true
+  $ enable_pushredirect 2 false false
+  $ enable_pushredirect 3 false false
 
   $ start_large_small_repo
   Starting Mononoke server

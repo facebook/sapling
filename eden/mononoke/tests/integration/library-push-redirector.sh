@@ -755,14 +755,6 @@ function enable_pushredirect {
   local draft_push=${2:-false}
   local public_push=${3:-true}
 
-  enable_pushredirect_xdb "$repo_id" "$draft_push" "$public_push"
-}
-
-function enable_pushredirect_xdb {
-  local repo_id=$1
-  local draft_push=${2:-false}
-  local public_push=${3:-true}
-
   setup_acls
   mkdir -p "$TESTTMP"/mononoke-config
   # redirecting stderr is not nice, but avoids a lot of noise in the "disable-all-network-access" case
@@ -775,13 +767,6 @@ function enable_pushredirect_xdb {
 
 function reset_pushredirect {
   local repo_id=$1
-
-  cat > "$PUSHREDIRECT_CONF/enable" <<EOF
-{
-  "per_repo": {
-  }
-}
-EOF
 
   sqlite3 "$TESTTMP/monsql/sqlite_dbs" <<EOF
     DELETE from pushredirect;
