@@ -7,7 +7,7 @@
 
 use anyhow::Error;
 use anyhow::Result;
-use async_requests::types::ThriftMegarepoAsynchronousRequestParams;
+use async_requests::types::ThriftAsynchronousRequestParams;
 use clap::Args;
 use context::CoreContext;
 use megarepo_api::MegarepoApi;
@@ -60,12 +60,10 @@ pub async fn list_requests<R: MononokeRepo>(
             .await?;
         for (req_id, entry, params) in res.into_iter() {
             let (source_name, changeset_id) = match params.thrift() {
-                ThriftMegarepoAsynchronousRequestParams::megarepo_sync_changeset_params(params) => {
-                    (
-                        params.source_name.clone(),
-                        ChangesetId::from_bytes(params.cs_id.clone())?.to_string(),
-                    )
-                }
+                ThriftAsynchronousRequestParams::megarepo_sync_changeset_params(params) => (
+                    params.source_name.clone(),
+                    ChangesetId::from_bytes(params.cs_id.clone())?.to_string(),
+                ),
                 _ => ("".to_string(), "".to_string()),
             };
             let created_at: DateTime = entry.created_at.into();

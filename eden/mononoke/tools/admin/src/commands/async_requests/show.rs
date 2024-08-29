@@ -8,12 +8,12 @@
 use anyhow::anyhow;
 use anyhow::Error;
 use anyhow::Result;
+use async_requests::types::AsynchronousRequestParams;
+use async_requests::types::AsynchronousRequestResult;
 use async_requests::types::IntoConfigFormat;
-use async_requests::types::MegarepoAsynchronousRequestParams;
-use async_requests::types::MegarepoAsynchronousRequestResult;
 use async_requests::types::RowId;
-use async_requests::types::ThriftMegarepoAsynchronousRequestParams;
-use async_requests::types::ThriftMegarepoAsynchronousRequestResult;
+use async_requests::types::ThriftAsynchronousRequestParams;
+use async_requests::types::ThriftAsynchronousRequestResult;
 use async_requests::types::ThriftMegarepoSyncChangesetResult;
 use clap::Args;
 use context::CoreContext;
@@ -31,13 +31,13 @@ pub struct AsyncRequestsShowArgs {
     request_id: u64,
 }
 
-struct ParamsWrapper<'a, R>(&'a Mononoke<R>, MegarepoAsynchronousRequestParams);
+struct ParamsWrapper<'a, R>(&'a Mononoke<R>, AsynchronousRequestParams);
 
 impl<'a, R: MononokeRepo> std::fmt::Debug for ParamsWrapper<'a, R> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         // impl Debug for HexArray here
         match self.1.thrift() {
-            ThriftMegarepoAsynchronousRequestParams::megarepo_add_target_params(params) => f
+            ThriftAsynchronousRequestParams::megarepo_add_target_params(params) => f
                 .debug_struct("MegarepoAddTargetParams")
                 .field(
                     "config_with_new_target",
@@ -56,7 +56,7 @@ impl<'a, R: MononokeRepo> std::fmt::Debug for ParamsWrapper<'a, R> {
                 )
                 .field("message", &params.message)
                 .finish()?,
-            ThriftMegarepoAsynchronousRequestParams::megarepo_change_target_params(params) => f
+            ThriftAsynchronousRequestParams::megarepo_change_target_params(params) => f
                 .debug_struct("MegarepoAddTargetParams")
                 .field("target", &params.target)
                 .field("new_version", &params.new_version)
@@ -74,7 +74,7 @@ impl<'a, R: MononokeRepo> std::fmt::Debug for ParamsWrapper<'a, R> {
                 )
                 .field("message", &params.message)
                 .finish()?,
-            ThriftMegarepoAsynchronousRequestParams::megarepo_sync_changeset_params(params) => f
+            ThriftAsynchronousRequestParams::megarepo_sync_changeset_params(params) => f
                 .debug_struct("MegarepoSyncChangesetParams")
                 .field("source_name", &params.source_name)
                 .field("target", &params.target)
@@ -90,13 +90,13 @@ impl<'a, R: MononokeRepo> std::fmt::Debug for ParamsWrapper<'a, R> {
     }
 }
 
-struct ResultsWrapper(Option<MegarepoAsynchronousRequestResult>);
+struct ResultsWrapper(Option<AsynchronousRequestResult>);
 impl std::fmt::Debug for ResultsWrapper {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         // impl Debug for HexArray here
         match &self.0 {
             Some(res) => match res.thrift() {
-                ThriftMegarepoAsynchronousRequestResult::megarepo_sync_changeset_result(
+                ThriftAsynchronousRequestResult::megarepo_sync_changeset_result(
                     ThriftMegarepoSyncChangesetResult::success(result),
                 ) => f
                     .debug_struct("MegarepoSyncChangesetResponse")

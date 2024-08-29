@@ -36,10 +36,10 @@ pub use requests_table::RowId;
 use requests_table::SqlLongRunningRequestsQueue;
 use sql_construct::SqlConstruct;
 
+use crate::types::AsynchronousRequestParams;
+use crate::types::AsynchronousRequestResult;
 use crate::types::IntoApiFormat;
 use crate::types::IntoConfigFormat;
-use crate::types::MegarepoAsynchronousRequestParams;
-use crate::types::MegarepoAsynchronousRequestResult;
 use crate::types::Request;
 use crate::types::ThriftParams;
 use crate::types::Token;
@@ -77,7 +77,7 @@ impl AsyncMethodRequestQueue {
             .target()
             .clone()
             .into_config_format(mononoke)?;
-        let rust_params: MegarepoAsynchronousRequestParams = thrift_params.into();
+        let rust_params: AsynchronousRequestParams = thrift_params.into();
         let params_object_id = rust_params.store(&ctx, &self.blobstore).await?;
         let blobstore_key = BlobstoreKey(params_object_id.blobstore_key());
         let table_id = self
@@ -102,14 +102,14 @@ impl AsyncMethodRequestQueue {
         ctx: &CoreContext,
         claimed_by: &ClaimedBy,
         supported_repos: &[RepositoryId],
-    ) -> Result<Option<(RequestId, MegarepoAsynchronousRequestParams)>, MegarepoError> {
+    ) -> Result<Option<(RequestId, AsynchronousRequestParams)>, MegarepoError> {
         let entry = self
             .table
             .claim_and_get_new_request(ctx, claimed_by, supported_repos)
             .await?;
 
         if let Some(entry) = entry {
-            let thrift_params = MegarepoAsynchronousRequestParams::load_from_key(
+            let thrift_params = AsynchronousRequestParams::load_from_key(
                 ctx,
                 &self.blobstore,
                 &entry.args_blobstore_key.0,
@@ -127,7 +127,7 @@ impl AsyncMethodRequestQueue {
         &self,
         ctx: &CoreContext,
         req_id: &RequestId,
-        result: MegarepoAsynchronousRequestResult,
+        result: AsynchronousRequestResult,
     ) -> Result<bool, MegarepoError> {
         let result_object_id = result.store(ctx, &self.blobstore).await?;
         let blobstore_key = BlobstoreKey(result_object_id.blobstore_key());
@@ -154,13 +154,9 @@ impl AsyncMethodRequestQueue {
             }
         };
 
-        let result: MegarepoAsynchronousRequestResult =
-            MegarepoAsynchronousRequestResult::load_from_key(
-                ctx,
-                &self.blobstore,
-                &result_blobstore_key.0,
-            )
-            .await?;
+        let result: AsynchronousRequestResult =
+            AsynchronousRequestResult::load_from_key(ctx, &self.blobstore, &result_blobstore_key.0)
+                .await?;
         Ok(Some(result.try_into()?))
     }
 
@@ -248,7 +244,7 @@ impl AsyncMethodRequestQueue {
         Vec<(
             RequestId,
             LongRunningRequestEntry,
-            MegarepoAsynchronousRequestParams,
+            AsynchronousRequestParams,
         )>,
         MegarepoError,
     > {
@@ -259,7 +255,7 @@ impl AsyncMethodRequestQueue {
 
         stream::iter(entries)
             .map(|entry| async {
-                let thrift_params = MegarepoAsynchronousRequestParams::load_from_key(
+                let thrift_params = AsynchronousRequestParams::load_from_key(
                     ctx,
                     &self.blobstore,
                     &entry.args_blobstore_key.0,
@@ -281,15 +277,15 @@ impl AsyncMethodRequestQueue {
         Option<(
             RequestId,
             LongRunningRequestEntry,
-            MegarepoAsynchronousRequestParams,
-            Option<MegarepoAsynchronousRequestResult>,
+            AsynchronousRequestParams,
+            Option<AsynchronousRequestResult>,
         )>,
         MegarepoError,
     > {
         let entry = self.table.test_get_request_entry_by_id(ctx, row_id).await?;
 
         if let Some(entry) = entry {
-            let thrift_params = MegarepoAsynchronousRequestParams::load_from_key(
+            let thrift_params = AsynchronousRequestParams::load_from_key(
                 ctx,
                 &self.blobstore,
                 &entry.args_blobstore_key.0,
@@ -298,7 +294,7 @@ impl AsyncMethodRequestQueue {
             let req_id = RequestId(entry.id.clone(), entry.request_type.clone());
             let thrift_result = if let Some(result_blobstore_key) = &entry.result_blobstore_key {
                 Some(
-                    MegarepoAsynchronousRequestResult::load_from_key(
+                    AsynchronousRequestResult::load_from_key(
                         ctx,
                         &self.blobstore,
                         &result_blobstore_key.0,
@@ -338,9 +334,9 @@ mod tests {
     use source_control::RepoSpecifier;
 
     use super::*;
+    use crate::types::AsynchronousRequestResult;
     use crate::types::MegarepoAddBranchingSyncTarget;
     use crate::types::MegarepoAddSyncTarget;
-    use crate::types::MegarepoAsynchronousRequestResult;
     use crate::types::MegarepoChangeTargetConfig;
     use crate::types::MegarepoRemergeSource;
     use crate::types::MegarepoSyncChangeset;
@@ -406,7 +402,7 @@ mod tests {
                 // Verify that poll_once on this request in a "in_progress" state
                 // returns injected result
                 let fake_specific_result: $result = Default::default();
-                let fake_result: MegarepoAsynchronousRequestResult = fake_specific_result.clone().into();
+                let fake_result: AsynchronousRequestResult = fake_specific_result.clone().into();
                 q.complete(&ctx, &req_id, fake_result).await?;
                 let ready_poll = q.poll_once::<$request_struct>(&ctx, &req_id).await?;
                 let ready_poll_response = ready_poll.unwrap();

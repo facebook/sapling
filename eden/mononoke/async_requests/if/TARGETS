@@ -1,0 +1,17 @@
+load("@fbcode_macros//build_defs:thrift_library.bzl", "thrift_library")
+
+oncall("mononoke")
+
+thrift_library(
+    name = "async_requests_types-thrift",
+    languages = [
+        "rust",
+    ],
+    thrift_srcs = {
+        "async_requests_types_thrift.thrift": [],
+    },
+    deps = [
+        "//eden/mononoke/mononoke_types/serialization:mononoke_types_serialization",
+        "//eden/mononoke/scs/if:source_control",
+    ],
+)
