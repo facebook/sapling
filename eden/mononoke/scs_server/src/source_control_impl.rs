@@ -15,6 +15,7 @@ use std::sync::Arc;
 use clientinfo::ClientEntryPoint;
 use clientinfo::ClientInfo;
 use clientinfo::CLIENT_INFO_HEADER;
+use cloned::cloned;
 use connection_security_checker::ConnectionSecurityChecker;
 use ephemeral_blobstore::BubbleId;
 use ephemeral_blobstore::RepoEphemeralStore;
@@ -54,6 +55,7 @@ use scribe_ext::Scribe;
 use scuba_ext::MononokeScubaSampleBuilder;
 use scuba_ext::ScubaValue;
 use slog::debug;
+use slog::info;
 use slog::Logger;
 use source_control as thrift;
 use source_control_services::errors::source_control_service as service;
@@ -811,26 +813,30 @@ macro_rules! impl_thrift_methods {
                 let fut = async move {
                     let svc = self.0.clone();
                     let ctx = create_ctx!(svc, $method_name, req_ctxt, $( $param_name ),*).await?;
-                    let handler = async move {
-                        let start_mem_stats = log_start(&ctx, stringify!($method_name));
-                        STATS::total_request_start.add_value(1);
-                        let (stats, res) = async {
-                            check_memory_usage(&ctx, stringify!($method_name), start_mem_stats.as_ref())?;
-                            svc.$method_name(ctx.clone(), $( $param_name ),* ).await
+                    let handler = {
+                        cloned!(ctx);
+                        async move {
+                            let start_mem_stats = log_start(&ctx, stringify!($method_name));
+                            STATS::total_request_start.add_value(1);
+                            let (stats, res) = async {
+                                check_memory_usage(&ctx, stringify!($method_name), start_mem_stats.as_ref())?;
+                                svc.$method_name(ctx.clone(), $( $param_name ),* ).await
+                            }
+                            .timed()
+                            .on_cancel_with_data(|stats| log_cancelled(&ctx, stringify!($method_name), &stats, start_mem_stats.as_ref()))
+                            .await;
+                            log_result(ctx, stringify!($method_name), &stats, &res, start_mem_stats.as_ref());
+                            let method = stringify!($method_name).to_string();
+                            STATS::method_completion_time_ms.add_value(stats.completion_time.as_millis_unchecked() as i64, (method,));
+                            res.map_err(Into::into)
                         }
-                        .timed()
-                        .on_cancel_with_data(|stats| log_cancelled(&ctx, stringify!($method_name), &stats, start_mem_stats.as_ref()))
-                        .await;
-                        log_result(ctx, stringify!($method_name), &stats, &res, start_mem_stats.as_ref());
-                        let method = stringify!($method_name).to_string();
-                        STATS::method_completion_time_ms.add_value(stats.completion_time.as_millis_unchecked() as i64, (method,));
-                        res.map_err(Into::into)
                     };
 
                     if let Some(factory_group) = &self.0.factory_group {
                         let group = factory_group.clone();
                         let queue: usize =
                             justknobs::get_as::<u64>("scm/mononoke:scs_factory_queue_for_method", Some(stringify!($method_name))).unwrap_or(0) as usize;
+                        info!(ctx.logger(), "Using factory group queue {} for method {}", queue, stringify!($method_name));
                         group.execute(queue, handler, None).await.map_err(|e| errors::internal_error(e.to_string()))?
                     } else {
                         let res: Result<$ok_type, $err_type> = handler.await;
