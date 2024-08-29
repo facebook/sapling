@@ -25,7 +25,16 @@
     "scm/mononoke:xrepo_assign_large_repo_version_on_pushrebase": true,
     "scm/mononoke:xrepo_disable_forward_sync_over_mapping_change": false,
     "scm/mononoke:bookmarks_movement_use_precise_boundary": true,
-    "scm/mononoke:mutation_find_missing_primordials": true
+    "scm/mononoke:mutation_find_missing_primordials": true,
+    "scm/mononoke:run_hooks_on_additional_changesets": false,
+    "scm/mononoke:bookmarks_movement_load_changesets_aggressive_simplification": false,
+    "scm/mononoke:enable_hooks_on_service_pushrebase": false,
+    "scm/mononoke:fastlog_disable_mutable_renames": false,
+    "scm/mononoke:derived_data_use_background_session_class": false,
+    "scm/mononoke:xrepo_disable_commit_sync_lease": false,
+    "scm/mononoke:commit_graph_prefetch_store_in_memcache": false,
+    "scm/mononoke:disable_commit_graph_memcache_for_prefetch": false,
+    "scm/mononoke:disable_commit_graph_prefetch": false
   },
   "ints": {
     "scm/mononoke_timeouts:repo_client_clone_timeout_secs": 14400,
@@ -50,6 +59,7 @@
     "scm/mononoke:scs_popular_methods_sampling_rate": 1000,
     "scm/mononoke:scs_other_methods_sampling_rate": 1,
     "scm/mononoke:warm_bookmark_cache_poll_interval_ms": 1000,
+    "scm/mononoke:bookmarks_cache_ttl_ms": 0,
     "scm/mononoke:derivation_worker_max_concurrent_derivations": 10,
     "scm/mononoke:live_git_sync_batch_size": 50,
     "scm/mononoke_memcache_sitevers:bonsai_git_mapping": 0,

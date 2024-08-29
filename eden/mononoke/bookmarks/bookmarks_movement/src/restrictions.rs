@@ -23,13 +23,13 @@ use crate::Repo;
 
 pub(crate) fn should_run_hooks(authz: &AuthorizationContext, reason: BookmarkUpdateReason) -> bool {
     if authz.is_service() {
-        let disable_running_hooks_in_pushredirected_repo = justknobs::eval(
+        let enable_hooks_on_service_pushrebase = justknobs::eval(
             "scm/mononoke:enable_hooks_on_service_pushrebase",
             None,
             None,
         )
         .unwrap_or_default();
-        reason == BookmarkUpdateReason::Pushrebase && disable_running_hooks_in_pushredirected_repo
+        reason == BookmarkUpdateReason::Pushrebase && enable_hooks_on_service_pushrebase
     } else {
         true
     }
