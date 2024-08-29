@@ -28,6 +28,7 @@ use dbbookmarks::SqlBookmarksBuilder;
 use fbinit::FacebookInit;
 use futures::stream::TryStreamExt;
 use maplit::hashmap;
+use mononoke_macros::mononoke;
 use mononoke_types::ChangesetId;
 use mononoke_types::Timestamp;
 use mononoke_types_mocks::changesetid::FIVES_CSID;
@@ -69,7 +70,7 @@ fn compare_log_entries(
     }
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_simple_unconditional_set_get(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
     let bookmarks = SqlBookmarksBuilder::with_sqlite_in_memory()
@@ -118,7 +119,7 @@ async fn test_simple_unconditional_set_get(fb: FacebookInit) {
     );
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_multi_unconditional_set_get(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
     let bookmarks = SqlBookmarksBuilder::with_sqlite_in_memory()
@@ -145,7 +146,7 @@ async fn test_multi_unconditional_set_get(fb: FacebookInit) {
     );
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_unconditional_set_same_bookmark(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
     let bookmarks = SqlBookmarksBuilder::with_sqlite_in_memory()
@@ -169,7 +170,7 @@ async fn test_unconditional_set_same_bookmark(fb: FacebookInit) {
     );
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_simple_create(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
     let bookmarks = SqlBookmarksBuilder::with_sqlite_in_memory()
@@ -210,7 +211,7 @@ async fn test_simple_create(fb: FacebookInit) {
     );
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_create_already_existing(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
     let bookmarks = SqlBookmarksBuilder::with_sqlite_in_memory()
@@ -229,7 +230,7 @@ async fn test_create_already_existing(fb: FacebookInit) {
     assert!(txn.commit().await.unwrap().is_none());
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_create_change_same_bookmark(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
     let bookmarks = SqlBookmarksBuilder::with_sqlite_in_memory()
@@ -302,7 +303,7 @@ async fn test_create_change_same_bookmark(fb: FacebookInit) {
     );
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_simple_update_bookmark(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
     let bookmarks = SqlBookmarksBuilder::with_sqlite_in_memory()
@@ -348,7 +349,7 @@ async fn test_simple_update_bookmark(fb: FacebookInit) {
     );
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_noop_update(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
     let bookmarks = SqlBookmarksBuilder::with_sqlite_in_memory()
@@ -372,7 +373,7 @@ async fn test_noop_update(fb: FacebookInit) {
     );
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_scratch_update_bookmark(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
     let bookmarks = SqlBookmarksBuilder::with_sqlite_in_memory()
@@ -408,7 +409,7 @@ async fn test_scratch_update_bookmark(fb: FacebookInit) {
     );
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_update_non_existent_bookmark(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
     let bookmarks = SqlBookmarksBuilder::with_sqlite_in_memory()
@@ -422,7 +423,7 @@ async fn test_update_non_existent_bookmark(fb: FacebookInit) {
     assert!(txn.commit().await.unwrap().is_none());
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_update_existing_bookmark_with_incorrect_commit(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
     let bookmarks = SqlBookmarksBuilder::with_sqlite_in_memory()
@@ -441,7 +442,7 @@ async fn test_update_existing_bookmark_with_incorrect_commit(fb: FacebookInit) {
     assert!(txn.commit().await.unwrap().is_none());
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_force_delete(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
     let bookmarks = SqlBookmarksBuilder::with_sqlite_in_memory()
@@ -495,7 +496,7 @@ async fn test_force_delete(fb: FacebookInit) {
     );
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_delete(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
     let bookmarks = SqlBookmarksBuilder::with_sqlite_in_memory()
@@ -545,7 +546,7 @@ async fn test_delete(fb: FacebookInit) {
     );
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_delete_incorrect_hash(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
     let bookmarks = SqlBookmarksBuilder::with_sqlite_in_memory()
@@ -568,7 +569,7 @@ async fn test_delete_incorrect_hash(fb: FacebookInit) {
     assert!(txn.commit().await.unwrap().is_none());
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_list_by_prefix(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
     let bookmarks = SqlBookmarksBuilder::with_sqlite_in_memory()
@@ -649,7 +650,7 @@ async fn test_list_by_prefix(fb: FacebookInit) {
     );
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_create_different_repos(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
     let builder = SqlBookmarksBuilder::with_sqlite_in_memory().unwrap();
@@ -716,7 +717,7 @@ async fn fetch_single(
         .clone()
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_log_correct_order(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
     let bookmarks = SqlBookmarksBuilder::with_sqlite_in_memory()
@@ -887,7 +888,7 @@ async fn test_log_correct_order(fb: FacebookInit) {
     assert_eq!(cs_ids, vec![FIVES_CSID]);
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_read_log_entry_many_repos(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
     let builder = SqlBookmarksBuilder::with_sqlite_in_memory().unwrap();
@@ -967,7 +968,7 @@ async fn test_read_log_entry_many_repos(fb: FacebookInit) {
     );
 }
 
-#[test]
+#[mononoke::test]
 fn test_update_reason_conversion() -> Result<(), Error> {
     use BookmarkUpdateReason::*;
     let unusedreason = TestMove;
@@ -997,7 +998,7 @@ fn test_update_reason_conversion() -> Result<(), Error> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_list_bookmark_log_entries(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
     let bookmarks = SqlBookmarksBuilder::with_sqlite_in_memory()
@@ -1097,7 +1098,7 @@ async fn test_list_bookmark_log_entries(fb: FacebookInit) {
     );
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_get_largest_log_id(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
     let bookmarks = SqlBookmarksBuilder::with_sqlite_in_memory()
@@ -1167,7 +1168,7 @@ async fn test_get_largest_log_id(fb: FacebookInit) {
     );
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_creating_publishing_bookmarks(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
     let bookmarks = SqlBookmarksBuilder::with_sqlite_in_memory()
@@ -1223,7 +1224,7 @@ async fn test_creating_publishing_bookmarks(fb: FacebookInit) {
     );
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_pagination_ordering(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
     let bookmarks = SqlBookmarksBuilder::with_sqlite_in_memory()
@@ -1298,7 +1299,7 @@ async fn test_pagination_ordering(fb: FacebookInit) {
     }
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn bookmark_subscription_initialization(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let bookmarks = SqlBookmarksBuilder::with_sqlite_in_memory()?.with_repo_id(REPO_ZERO);
@@ -1344,7 +1345,7 @@ async fn bookmark_subscription_initialization(fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn bookmark_subscription_updates(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let bookmarks = SqlBookmarksBuilder::with_sqlite_in_memory()?.with_repo_id(REPO_ZERO);
@@ -1416,7 +1417,7 @@ enum TestOp {
 /// Verify bookmark subscriptions using Quickcheck. We create a test scenario and verify that the
 /// bookmark subscriptions returns the same data it would return if it was freshly created now (we
 /// test that this satisfies our assumptions in separate tests for the bookmarks subscription).
-#[fbinit::test]
+#[mononoke::fbinit_test]
 fn bookmark_subscription_quickcheck(_fb: FacebookInit) {
     #[tokio::main(flavor = "current_thread")]
     async fn check(fb: FacebookInit, mut ops: Vec<TestOp>) -> bool {

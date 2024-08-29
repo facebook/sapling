@@ -32,6 +32,7 @@ mod test {
     use context::CoreContext;
     use fbinit::FacebookInit;
     use futures::stream::TryStreamExt;
+    use mononoke_macros::mononoke;
     use mononoke_types::ChangesetId;
     use mononoke_types::RepositoryId;
     use mononoke_types_mocks::changesetid::ONES_CSID;
@@ -43,7 +44,7 @@ mod test {
 
     use super::*;
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_update_kind_compatibility(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let store = SqlBookmarksBuilder::with_sqlite_in_memory()

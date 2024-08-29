@@ -1167,6 +1167,7 @@ mod tests {
     use fixtures::TestRepoFixture;
     use maplit::hashmap;
     use memblob::Memblob;
+    use mononoke_macros::mononoke;
     use mononoke_types::RepositoryId;
     use repo_blobstore::RepoBlobstore;
     use repo_derived_data::RepoDerivedData;
@@ -1197,7 +1198,7 @@ mod tests {
         FilestoreConfig,
     );
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_simple(fb: FacebookInit) -> Result<(), Error> {
         let repo: Repo = Linear::get_repo(fb).await;
         let ctx = CoreContext::test_mock(fb);
@@ -1247,7 +1248,7 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_find_derived(fb: FacebookInit) -> Result<(), Error> {
         let put_distr = rand_distr::Normal::<f64>::new(0.1, 0.05).unwrap();
         let get_distr = rand_distr::Normal::<f64>::new(0.05, 0.025).unwrap();
@@ -1333,7 +1334,7 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_a_lot_of_moves(fb: FacebookInit) -> Result<(), Error> {
         let repo: Repo = Linear::get_repo(fb).await;
         let ctx = CoreContext::test_mock(fb);
@@ -1381,7 +1382,7 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_derived_right_after_threshold(fb: FacebookInit) -> Result<(), Error> {
         let repo: Repo = Linear::get_repo(fb).await;
         let ctx = CoreContext::test_mock(fb);
@@ -1436,7 +1437,7 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_spawn_bookmarks_coordinator_simple(fb: FacebookInit) -> Result<(), Error> {
         let repo: Repo = Linear::get_repo(fb).await;
         let ctx = CoreContext::test_mock(fb);
@@ -1498,7 +1499,7 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_single_bookmarks_coordinator_many_updates(fb: FacebookInit) -> Result<(), Error> {
         let repo: Repo = Linear::get_repo(fb).await;
         let ctx = CoreContext::test_mock(fb);
@@ -1587,7 +1588,7 @@ mod tests {
         .await?
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_spawn_bookmarks_coordinator_failing_warmer(
         fb: FacebookInit,
     ) -> Result<(), Error> {
@@ -1714,7 +1715,7 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_spawn_bookmarks_coordinator_check_single_updater(
         fb: FacebookInit,
     ) -> Result<(), Error> {
@@ -1820,7 +1821,7 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_spawn_bookmarks_coordinator_with_publishing_bookmarks(
         fb: FacebookInit,
     ) -> Result<(), Error> {
@@ -1898,7 +1899,7 @@ mod tests {
         }
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_single_bookmarks_no_history(fb: FacebookInit) -> Result<(), Error> {
         let factory = TestRepoFactory::new(fb)?;
         let repo: Repo = factory.build().await?;

@@ -14,6 +14,7 @@ rust_library(
         "fbsource//third-party/rust:tokio",
         "//common/rust/shed/ascii_ext:ascii_ext",
         "//common/rust/shed/fbinit:fbinit",
+        "//eden/mononoke/mononoke_macros:mononoke_macros",
         "//eden/mononoke/mononoke_types:mononoke_types-mocks",
     ],
     deps = [
@@ -49,6 +50,7 @@ rust_library(
         "//common/rust/shed/ascii_ext:ascii_ext",
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/fbinit:fbinit-tokio",
+        "//eden/mononoke/mononoke_macros:mononoke_macros",
         "//eden/mononoke/mononoke_types:mononoke_types-mocks",
     ],
     deps = [
@@ -88,6 +90,7 @@ rust_unittest(
         "//eden/mononoke/bookmarks:bookmarks",
         "//eden/mononoke/bookmarks:dbbookmarks",
         "//eden/mononoke/common/sql_construct:sql_construct",
+        "//eden/mononoke/mononoke_macros:mononoke_macros",
         "//eden/mononoke/mononoke_types:mononoke_types",
         "//eden/mononoke/mononoke_types:mononoke_types-mocks",
         "//eden/mononoke/server/context:context",
@@ -124,6 +127,7 @@ rust_library(
         "//eden/mononoke/bonsai_hg_mapping:bonsai_hg_mapping",
         "//eden/mononoke/common/rust/sql_ext:sql_ext",
         "//eden/mononoke/filestore:filestore",
+        "//eden/mononoke/mononoke_macros:mononoke_macros",
         "//eden/mononoke/repo_attributes/commit_graph/commit_graph:commit_graph",
         "//eden/mononoke/repo_factory:test_repo_factory",
         "//eden/mononoke/tests/fixtures:fixtures",
@@ -171,6 +175,7 @@ rust_library(
     name = "bookmarks_types",
     srcs = glob(["bookmarks_types/**/*.rs"]),
     autocargo = {"cargo_toml_dir": "bookmarks_types"},
+    test_deps = ["//eden/mononoke/mononoke_macros:mononoke_macros"],
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:ascii",
@@ -194,6 +199,7 @@ rust_library(
         "//common/rust/shed/fbinit:fbinit-tokio",
         "//common/rust/shed/sql:sql",
         "//eden/mononoke/filestore:filestore",
+        "//eden/mononoke/mononoke_macros:mononoke_macros",
         "//eden/mononoke/mononoke_types:mononoke_types-mocks",
         "//eden/mononoke/repo_factory:test_repo_factory",
         "//eden/mononoke/tests/utils:tests_utils",

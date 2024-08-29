@@ -680,11 +680,12 @@ fn prefix_to_range_end(mut prefix: AsciiString) -> Option<AsciiString> {
 
 #[cfg(test)]
 mod tests {
+    use mononoke_macros::mononoke;
     use quickcheck::quickcheck;
 
     use super::*;
 
-    #[test]
+    #[mononoke::test]
     fn bookmark_kind_all_contains_all_kinds() {
         // Test that `BookmarkKind::ALL` does indeed contain all bookmark
         // kinds.  If you need to add a variant here, make sure you add it

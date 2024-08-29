@@ -498,6 +498,7 @@ mod tests {
     use justknobs::test_helpers::JustKnobsInMemory;
     use justknobs::test_helpers::KnobVal;
     use maplit::hashmap;
+    use mononoke_macros::mononoke;
     use mononoke_types_mocks::changesetid::ONES_CSID;
     use mononoke_types_mocks::changesetid::THREES_CSID;
     use mononoke_types_mocks::changesetid::TWOS_CSID;
@@ -753,7 +754,7 @@ mod tests {
         with_just_knobs_async(just_knobs, fut)
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     fn test_cached_bookmarks(fb: FacebookInit) {
         let rt = tokio::runtime::Builder::new_current_thread()
             .enable_all()

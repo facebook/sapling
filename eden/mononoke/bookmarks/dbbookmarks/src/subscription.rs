@@ -239,6 +239,7 @@ mod test {
     use bookmarks::Bookmarks;
     use fbinit::FacebookInit;
     use maplit::hashmap;
+    use mononoke_macros::mononoke;
     use mononoke_types_mocks::changesetid::ONES_CSID;
     use mononoke_types_mocks::repo::REPO_ZERO;
     use sql_construct::SqlConstruct;
@@ -246,7 +247,7 @@ mod test {
     use super::*;
     use crate::builder::SqlBookmarksBuilder;
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_age_out(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let bookmarks = SqlBookmarksBuilder::with_sqlite_in_memory()?.with_repo_id(REPO_ZERO);
@@ -284,7 +285,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_protect_master(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let bookmarks = SqlBookmarksBuilder::with_sqlite_in_memory()?.with_repo_id(REPO_ZERO);

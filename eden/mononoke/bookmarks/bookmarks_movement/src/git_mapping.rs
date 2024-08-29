@@ -239,6 +239,7 @@ mod tests {
     use maplit::hashmap;
     use maplit::hashset;
     use metaconfig_types::RepoConfig;
+    use mononoke_macros::mononoke;
     use mononoke_types::hash::GitSha1;
     use mononoke_types_mocks::hash::FIVES_GIT_SHA1;
     use mononoke_types_mocks::hash::FOURS_GIT_SHA1;
@@ -366,7 +367,7 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_new_mapping_entries(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let repo: TestRepo = TestRepoFactory::new(fb)?.build().await?;
