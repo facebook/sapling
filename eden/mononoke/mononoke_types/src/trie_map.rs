@@ -369,10 +369,11 @@ impl<V: Arbitrary> Arbitrary for TrieMap<V> {
 mod test {
     use anyhow::Result;
     use itertools::Itertools;
+    use mononoke_macros::mononoke;
 
     use super::*;
 
-    #[test]
+    #[mononoke::test]
     fn trie_map() -> Result<()> {
         let mut trie_map: TrieMap<i32> = Default::default();
 

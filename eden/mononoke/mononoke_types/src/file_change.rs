@@ -599,6 +599,7 @@ impl Arbitrary for FileType {
 
 #[cfg(test)]
 mod test {
+    use mononoke_macros::mononoke;
     use quickcheck::quickcheck;
 
     use super::*;
@@ -619,13 +620,13 @@ mod test {
         }
     }
 
-    #[test]
+    #[mononoke::test]
     fn bad_filetype_thrift() {
         let thrift_ft = thrift::bonsai::FileType(42);
         FileType::from_thrift(thrift_ft).expect_err("unexpected OK - unknown file type");
     }
 
-    #[test]
+    #[mononoke::test]
     fn bad_filechange_thrift() {
         let thrift_fc = thrift::bonsai::FileChange {
             content_id: thrift::id::ContentId(thrift::id::Id::Blake2(thrift::id::Blake2(

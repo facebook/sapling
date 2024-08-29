@@ -305,6 +305,7 @@ impl Context {
 mod test {
     use std::str::FromStr;
 
+    use mononoke_macros::mononoke;
     use quickcheck::quickcheck;
     use quickcheck::TestResult;
 
@@ -317,18 +318,18 @@ mod test {
                                 0x95, 0x60, 0x18, 0x90,
                                 0xaf, 0xd8, 0x07, 0x09]);
 
-    #[test]
+    #[mononoke::test]
     fn test_null() {
         assert_eq!(NULL, Sha1([0_u8; SHA1_HASH_LENGTH_BYTES]));
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_nil() {
         let nil = Sha1::from(&[][..]);
         assert_eq!(nil, NILHASH);
     }
 
-    #[test]
+    #[mononoke::test]
     fn parse_ok() {
         assert_eq!(
             NULL,
@@ -344,7 +345,7 @@ mod test {
         );
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_display() {
         assert_eq!(
             format!("{}", NULL),
@@ -356,7 +357,7 @@ mod test {
         );
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_parse_and_display_prefix() {
         // even length
         assert_eq!(
@@ -388,7 +389,7 @@ mod test {
         assert_eq!(format!("{}", Sha1Prefix::from_str("").unwrap()), "");
     }
 
-    #[test]
+    #[mononoke::test]
     fn parse_bad() {
         match Sha1::from_str("") {
             Ok(_) => panic!("unexpected OK - zero len"),
@@ -416,7 +417,7 @@ mod test {
         };
     }
 
-    #[test]
+    #[mononoke::test]
     fn parse_thrift() {
         let null_thrift = thrift::id::Sha1(vec![0; SHA1_HASH_LENGTH_BYTES].into());
         assert_eq!(NULL, Sha1::from_thrift(null_thrift.clone()).unwrap());
@@ -427,7 +428,7 @@ mod test {
         assert_eq!(NILHASH.into_thrift(), nil_thrift);
     }
 
-    #[test]
+    #[mononoke::test]
     fn parse_thrift_bad() {
         Sha1::from_thrift(thrift::id::Sha1(vec![].into())).expect_err("unexpected OK - zero len");
         Sha1::from_thrift(thrift::id::Sha1(vec![0; 19].into()))

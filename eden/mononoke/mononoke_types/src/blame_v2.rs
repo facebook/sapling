@@ -1331,6 +1331,7 @@ impl<'a> Iterator for BlameMergeLines<'a> {
 mod test {
     #![allow(clippy::redundant_clone)]
 
+    use mononoke_macros::mononoke;
     use pretty_assertions::assert_eq;
 
     use super::*;
@@ -1357,7 +1358,7 @@ mod test {
         };
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_thrift() -> Result<()> {
         let p0 = NonRootMPath::new("path/zero")?;
         let p1 = NonRootMPath::new("path/one")?;
@@ -1422,7 +1423,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_annotate() -> Result<()> {
         let mut csids = VecMap::new();
         csids.insert(0, ONES_CSID);
@@ -1484,7 +1485,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_linear() -> Result<()> {
         let path1 = NonRootMPath::new("path")?;
         let path2 = NonRootMPath::new("new/path")?;
@@ -1744,7 +1745,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_simple_merge() -> Result<()> {
         //  4
         //  |\
@@ -1846,7 +1847,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_branch_and_merge() -> Result<()> {
         //  4
         //  |\
@@ -1990,7 +1991,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_origin_offset_merge() -> Result<()> {
         //  4
         //  |\
@@ -2099,7 +2100,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_rejected_parents() -> Result<()> {
         //  4
         //  |\
@@ -2190,7 +2191,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_octopus_merge() -> Result<()> {
         //    4
         //   /|\
@@ -2280,7 +2281,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_empty_file() -> Result<()> {
         let path = NonRootMPath::new("path")?;
 
@@ -2375,7 +2376,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_skip_past_this_change() -> Result<()> {
         //  6
         //  |
@@ -2538,7 +2539,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_mutated_blame_simple() -> Result<()> {
         // 4
         // |
@@ -2588,7 +2589,7 @@ mod test {
     }
 
     // No change test
-    #[test]
+    #[mononoke::test]
     fn test_mutated_blame_mutant_ignored() -> Result<()> {
         // 4
         // |
@@ -2643,7 +2644,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_mutated_blame_rename() -> Result<()> {
         // 4
         // |
@@ -2694,7 +2695,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_mutated_blame_long_path() -> Result<()> {
         // 6
         // |
@@ -2774,7 +2775,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_mutated_blame_shared_ancestor() -> Result<()> {
         // 7
         // |

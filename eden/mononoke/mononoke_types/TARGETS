@@ -17,6 +17,7 @@ rust_library(
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/fbinit:fbinit-tokio",
         "//eden/mononoke/blobstore:memblob",
+        "//eden/mononoke/mononoke_macros:mononoke_macros",
     ],
     deps = [
         "fbsource//third-party/rust:abomonation",
@@ -71,6 +72,7 @@ rust_library(
     autocargo = {
         "cargo_toml_dir": "mocks",
     },
+    test_deps = ["//eden/mononoke/mononoke_macros:mononoke_macros"],
     deps = [
         "fbsource//third-party/rust:chrono",
         "fbsource//third-party/rust:lazy_static",

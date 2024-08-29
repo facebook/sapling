@@ -14,3 +14,6 @@ path = "lib.rs"
 chrono = { version = "0.4", features = ["clock", "serde", "std"], default-features = false }
 lazy_static = "1.4"
 mononoke_types = { version = "0.1.0", path = ".." }
+
+[dev-dependencies]
+mononoke_macros = { version = "0.1.0", path = "../../mononoke_macros" }

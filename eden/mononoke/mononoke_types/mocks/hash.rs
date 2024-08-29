@@ -77,11 +77,12 @@ pub const FS_SHA256: Sha256 = Sha256::from_byte_array([0xff; 32]);
 
 #[cfg(test)]
 mod test {
+    use mononoke_macros::mononoke;
     use mononoke_types::hash::Blake2Prefix;
 
     use super::*;
 
-    #[test]
+    #[mononoke::test]
     fn verify() {
         assert_eq!(
             format!("{}", ONES),

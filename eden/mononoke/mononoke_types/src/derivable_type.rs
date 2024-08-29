@@ -144,11 +144,12 @@ impl DerivableType {
 
 #[cfg(test)]
 mod tests {
+    use mononoke_macros::mononoke;
     use strum::IntoEnumIterator;
 
     use super::DerivableType;
 
-    #[test]
+    #[mononoke::test]
     fn thrift_derived_data_type_conversion_must_be_bidirectional() {
         for variant in DerivableType::iter() {
             assert_eq!(
@@ -158,7 +159,7 @@ mod tests {
             );
         }
     }
-    #[test]
+    #[mononoke::test]
     fn name_derived_data_type_conversion_must_be_bidirectional() {
         for variant in DerivableType::iter() {
             assert_eq!(

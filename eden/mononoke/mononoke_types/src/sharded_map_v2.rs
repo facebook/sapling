@@ -999,6 +999,7 @@ mod test {
     use context::CoreContext;
     use fbinit::FacebookInit;
     use memblob::Memblob;
+    use mononoke_macros::mononoke;
 
     use super::*;
     use crate::impl_typed_hash;
@@ -1022,7 +1023,7 @@ mod test {
         context_key => "test.map2node",
     }
 
-    #[test]
+    #[mononoke::test]
     fn sharded_map_v2_blobstore_key() {
         let id = ShardedMapV2NodeTestId::from_byte_array([1; 32]);
         assert_eq!(id.blobstore_key(), format!("test.map2node.blake2.{}", id));
@@ -1489,7 +1490,7 @@ mod test {
         LoadableShardedMapV2Node::Inlined(test_node(prefix, value, children))
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_sharded_map_v2_example(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let blobstore = Memblob::default();
@@ -1819,7 +1820,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_sharded_map_v2_from_entries_only_maps(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let blobstore = Memblob::default();
@@ -1848,7 +1849,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_sharded_map_v2_from_entries_maps_and_values(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let blobstore = Memblob::default();
@@ -1875,7 +1876,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_sharded_map_v2_from_entries_conflict_detection(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let blobstore = Memblob::default();

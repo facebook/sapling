@@ -347,11 +347,12 @@ impl std::fmt::Debug for MPathElementPrefix {
 mod tests {
     use std::mem::size_of;
 
+    use mononoke_macros::mononoke;
     use quickcheck::quickcheck;
 
     use super::*;
 
-    #[test]
+    #[mononoke::test]
     fn test_mpath_element_size() {
         // MPathElement size is important as we have a lot of them.
         // Test so we are aware of any change.

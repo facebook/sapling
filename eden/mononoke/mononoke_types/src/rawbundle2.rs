@@ -127,6 +127,7 @@ impl Arbitrary for RawBundle2 {
 
 #[cfg(test)]
 mod test {
+    use mononoke_macros::mononoke;
     use quickcheck::quickcheck;
 
     use super::*;
@@ -147,7 +148,7 @@ mod test {
         }
     }
 
-    #[test]
+    #[mononoke::test]
     fn bad_thrift() {
         let thrift_fc = thrift::raw_bundle2::RawBundle2::UnknownField(-1);
         RawBundle2::from_thrift(thrift_fc).expect_err("unexpected OK - unknown field");

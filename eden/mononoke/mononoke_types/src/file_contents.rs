@@ -289,6 +289,7 @@ impl Arbitrary for ContentChunkPointer {
 
 #[cfg(test)]
 mod test {
+    use mononoke_macros::mononoke;
     use quickcheck::quickcheck;
 
     use super::*;
@@ -309,7 +310,7 @@ mod test {
         }
     }
 
-    #[test]
+    #[mononoke::test]
     fn bad_thrift() {
         let thrift_fc = thrift::content::FileContents::UnknownField(-1);
         FileContents::from_thrift(thrift_fc).expect_err("unexpected OK - unknown field");

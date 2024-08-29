@@ -249,13 +249,14 @@ mod test {
     use context::CoreContext;
     use fbinit::FacebookInit;
     use memblob::Memblob;
+    use mononoke_macros::mononoke;
     use pretty_assertions::assert_eq;
     use quickcheck::TestResult;
 
     use super::*;
     use crate::hash::Blake2;
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_fastlog_batch_empty(fb: FacebookInit) -> Result<()> {
         let blobstore = Arc::new(Memblob::default());
         let ctx = CoreContext::test_mock(fb);
@@ -269,7 +270,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_fastlog_batch_single(fb: FacebookInit) -> Result<()> {
         let blobstore = Arc::new(Memblob::default());
         let ctx = CoreContext::test_mock(fb);
@@ -285,7 +286,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_fastlog_batch_large(fb: FacebookInit) -> Result<()> {
         let blobstore = Arc::new(Memblob::default());
         let ctx = CoreContext::test_mock(fb);
@@ -307,7 +308,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_fastlog_batch_overflow(fb: FacebookInit) -> Result<()> {
         let blobstore = Arc::new(Memblob::default());
         let ctx = CoreContext::test_mock(fb);

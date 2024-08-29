@@ -697,6 +697,7 @@ impl std::fmt::Display for MononokeDigest {
 
 #[cfg(test)]
 mod test {
+    use mononoke_macros::mononoke;
     use quickcheck::quickcheck;
     use quickcheck::TestResult;
 
@@ -747,14 +748,14 @@ mod test {
                                     0xfa, 0xab, 0x45, 0xcd,
                                     0xf1, 0x2f, 0xe3, 0xa8]);
 
-    #[test]
+    #[mononoke::test]
     fn test_nil() {
         let context = Context::new(b"");
         let nil = context.finish();
         assert_eq!(nil, NILHASH);
     }
 
-    #[test]
+    #[mononoke::test]
     fn snapshot_hash() {
         let context = Context::new(b"abc");
         assert_eq!(
@@ -764,7 +765,7 @@ mod test {
         );
     }
 
-    #[test]
+    #[mononoke::test]
     fn parse_ok() {
         assert_eq!(
             NULL,
@@ -783,7 +784,7 @@ mod test {
         );
     }
 
-    #[test]
+    #[mononoke::test]
     fn parse_and_display_prefix_ok() {
         // max length
         assert_eq!(
@@ -815,7 +816,7 @@ mod test {
         );
     }
 
-    #[test]
+    #[mononoke::test]
     fn parse_thrift() {
         let null_thrift = thrift::id::Blake2(vec![0; BLAKE2_HASH_LENGTH_BYTES].into());
         assert_eq!(NULL, Blake2::from_thrift(null_thrift.clone()).unwrap());
@@ -826,7 +827,7 @@ mod test {
         assert_eq!(NILHASH.into_thrift(), nil_thrift);
     }
 
-    #[test]
+    #[mononoke::test]
     fn parse_git_sha1_thrift() {
         let null_thrift = thrift::id::GitSha1(vec![0; 20].into());
         assert_eq!(
@@ -836,7 +837,7 @@ mod test {
         assert_eq!(GitSha1([0; 20]).into_thrift(), null_thrift);
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_display() {
         assert_eq!(
             format!("{}", NULL),
@@ -848,7 +849,7 @@ mod test {
         );
     }
 
-    #[test]
+    #[mononoke::test]
     fn parse_bad() {
         Blake2::from_str("").expect_err("unexpected OK - zero len");
         Blake2::from_str("0e5751c026e543b2e8ab2eb06099daa1d1e5df47778f7787faab45cdf12fe3a")
@@ -861,7 +862,7 @@ mod test {
             .expect_err("unexpected OK - badchar middle");
     }
 
-    #[test]
+    #[mononoke::test]
     fn parse_blake3_bad() {
         Blake3::from_str("").expect_err("unexpected OK - zero len");
         Blake3::from_str("0e5751c026e543b2e8ab2eb06099daa1d1e5df47778f7787faab45cdf12fe3a")
@@ -874,7 +875,7 @@ mod test {
             .expect_err("unexpected OK - badchar middle");
     }
 
-    #[test]
+    #[mononoke::test]
     fn parse_thrift_bad() {
         Blake2::from_thrift(thrift::id::Blake2(vec![].into()))
             .expect_err("unexpected OK - zero len");
@@ -884,7 +885,7 @@ mod test {
             .expect_err("unexpected Ok - too long");
     }
 
-    #[test]
+    #[mononoke::test]
     fn parse_blake3_thrift_bad() {
         Blake3::from_thrift(thrift::id::Blake3(vec![].into()))
             .expect_err("unexpected OK - zero len");
@@ -897,7 +898,7 @@ mod test {
     quickcheck_hash!(Blake2, 32);
     quickcheck_hash!(Blake3, 32);
 
-    #[test]
+    #[mononoke::test]
     fn test_parse_sha1() {
         let sha1: Sha1 = "da39a3ee5e6b4b0d3255bfef95601890afd80709".parse().unwrap();
 
@@ -911,7 +912,7 @@ mod test {
         )
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_parse_sha256() {
         let sha256: Sha256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
             .parse()
@@ -928,7 +929,7 @@ mod test {
         )
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_parse_blake3() {
         let blake3: Blake3 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
             .parse()

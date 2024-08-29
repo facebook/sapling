@@ -96,9 +96,11 @@ impl FromStr for RepositoryId {
 
 #[cfg(test)]
 mod test {
+    use mononoke_macros::mononoke;
+
     use super::*;
 
-    #[test]
+    #[mononoke::test]
     fn prefix_generation() {
         assert_eq!(RepositoryId::new(0).prefix().as_str(), "repo0000.");
         assert_eq!(RepositoryId::new(1).prefix().as_str(), "repo0001.");
@@ -108,7 +110,7 @@ mod test {
         assert_eq!(RepositoryId::new(12000).prefix().as_str(), "repo12000.");
     }
 
-    #[test]
+    #[mononoke::test]
     fn prefix_match() {
         // Check generated prefixes match the expected form
         assert!(REPO_PREFIX_REGEX.is_match(RepositoryId::new(0).prefix().as_str()));
@@ -119,7 +121,7 @@ mod test {
         assert!(REPO_PREFIX_REGEX.is_match(RepositoryId::new(12000).prefix().as_str()));
     }
 
-    #[test]
+    #[mononoke::test]
     fn prefix_not_match() {
         // Check we dont match unexpected forms
         assert!(!REPO_PREFIX_REGEX.is_match(""));

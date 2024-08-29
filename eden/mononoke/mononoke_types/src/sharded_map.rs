@@ -1137,6 +1137,7 @@ mod test {
     use fbinit::FacebookInit;
     use futures::TryStreamExt;
     use memblob::Memblob;
+    use mononoke_macros::mononoke;
     use pretty_assertions::assert_eq;
     use quickcheck::Arbitrary;
     use quickcheck::Gen;
@@ -1492,7 +1493,7 @@ mod test {
         }
     }
 
-    #[test]
+    #[mononoke::test]
     fn basic_test() {
         let empty = ShardedMapNode::<MyType>::Terminal {
             values: Default::default(),
@@ -1519,7 +1520,7 @@ mod test {
         assert_round_trip(map);
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn lookup_test(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let blobstore = Memblob::default();
@@ -1541,7 +1542,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn into_entries_test(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let blobstore = Memblob::default();
@@ -1592,7 +1593,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn store_test(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let blobstore = Memblob::default();
@@ -1602,7 +1603,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn update_basic_test(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let blobstore = Memblob::default();
@@ -1671,7 +1672,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn update_tricky_test(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let blobstore = Memblob::default();
@@ -1716,7 +1717,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn update_tricky_deletes_test(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let blobstore = Memblob::default();
@@ -1747,7 +1748,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn update_cases_test(fb: FacebookInit) -> Result<()> {
         // Let's try to do updates that cause different cases and assert it all works out
         let ctx = CoreContext::test_mock(fb);
@@ -1787,7 +1788,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn update_case_3_test(fb: FacebookInit) -> Result<()> {
         // Let's try an update that causes case 3 and do detailed asserting
         let ctx = CoreContext::test_mock(fb);
@@ -1828,7 +1829,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_from_entries_only_values(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let blobstore = Memblob::default();
@@ -1846,7 +1847,7 @@ mod test {
         map.assert_example_map().await
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_from_entries_only_maps(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let blobstore = Memblob::default();
@@ -1897,7 +1898,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_from_entries_maps_and_values(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let blobstore = Memblob::default();
@@ -1930,7 +1931,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_from_entries_conflict_detection(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let blobstore = Memblob::default();
@@ -2060,7 +2061,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_sharded_trie_map(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let blobstore = Memblob::default();
@@ -2153,7 +2154,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     fn round_trip_quickcheck(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
         let blobstore = Memblob::default();

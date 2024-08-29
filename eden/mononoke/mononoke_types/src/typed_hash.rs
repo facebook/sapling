@@ -763,6 +763,7 @@ impl From<ChangesetId> for EdenapiCommitId {
 #[cfg(test)]
 mod test {
     use bytes::Bytes;
+    use mononoke_macros::mononoke;
     use quickcheck::quickcheck;
 
     use super::*;
@@ -783,7 +784,7 @@ mod test {
         }
     }
 
-    #[test]
+    #[mononoke::test]
     fn thrift_convert_bytes_consistent_for_ids() {
         let id = ShardedMapNodeDMv2Id::from_byte_array([1; 32]);
         let bytes_1 = Bytes::from(id.clone());
@@ -798,7 +799,7 @@ mod test {
         assert_eq!(rev_id_2_2, rev_id_2_1);
     }
 
-    #[test]
+    #[mononoke::test]
     fn blobstore_key() {
         // These IDs are persistent, and this test is really to make sure that they don't change
         // accidentally.
@@ -884,7 +885,7 @@ mod test {
         );
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_serialize_deserialize() {
         let id = ChangesetId::new(Blake2::from_byte_array([1; 32]));
         let serialized = serde_json::to_string(&id).unwrap();
