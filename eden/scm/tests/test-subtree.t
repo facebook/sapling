@@ -103,7 +103,7 @@ test subtree graft
   $ hg subtree graft -r $C --from-path foo --to-path bar
   grafting 78072751cf70 "C"
   $ hg log -G -T '{node|short} {desc|firstline}\n'
-  @  abc03124c3cd C
+  @  0104513073ef C
   │
   o  2b14f595f5b5 subtree copy foo -> bar
   │
@@ -113,7 +113,7 @@ test subtree graft
   │
   o  2f10237b4399 A
   $ hg show
-  commit:      abc03124c3cd
+  commit:      0104513073ef
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       bar/x
@@ -121,7 +121,7 @@ test subtree graft
   C
   
   Grafted from 78072751cf70f1ca47671c625f3b2d7f86f45f00
-    Grafted path foo to bar
+  - Grafted path foo to bar
   
   
   diff --git a/bar/x b/bar/x

@@ -2719,7 +2719,7 @@ def _makegraftmessage(ctx, opts):
         if opts.get("log") is not False:
             message.append("Grafted from %s" % ctx.hex())
             for f, t in zip(opts.get("from_path"), opts.get("to_path")):
-                message.append("  Grafted path %s to %s" % (f, t))
+                message.append("- Grafted path %s to %s" % (f, t))
     else:
         if opts.get("log"):
             message.append("(grafted from %s)" % ctx.hex())
