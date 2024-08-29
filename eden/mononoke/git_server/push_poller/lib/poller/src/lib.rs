@@ -7,7 +7,6 @@
 
 #![deny(warnings)]
 
-use std::collections::HashSet;
 use std::sync::Arc;
 
 use anyhow::Error;
@@ -160,27 +159,12 @@ impl GitSourceOfTruth {
         let git_source_of_truth_config: &dyn GitSourceOfTruthConfig =
             &SqlGitSourceOfTruthConfigBuilder::from_sql_connections(connections).build();
 
-        let current_mononoke_git_repository_ids: HashSet<_> = git_source_of_truth_config
+        let repositories: Vec<_> = git_source_of_truth_config
             .get_redirected_to_mononoke(&self.ctx)
             .await?
             .into_iter()
-            .map(|entry| entry.repo_id)
-            .collect();
-
-        let repositories: Vec<_> = self
-            .repo_configs
-            .repos
-            .iter()
-            .filter_map(|(name, repo_config)| {
-                if current_mononoke_git_repository_ids.contains(&repo_config.repoid) {
-                    Some(Repository::new(
-                        repo_config.repoid,
-                        name.to_string().into(),
-                        &self.metagit_xdb,
-                    ))
-                } else {
-                    None
-                }
+            .map(|entry| {
+                Repository::new(entry.repo_id, entry.repo_name.0.into(), &self.metagit_xdb)
             })
             .collect();
 
