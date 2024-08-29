@@ -1,0 +1,35 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("mononoke")
+
+rust_library(
+    name = "async_requests",
+    srcs = glob(["src/**/*.rs"]),
+    test_deps = [
+        "fbsource//third-party/rust:serde_json",
+        "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/fbinit:fbinit-tokio",
+        "//eden/mononoke/repo_factory:test_repo_factory",
+    ],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:async-trait",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:rand",
+        "fbsource//third-party/rust:tokio",
+        "//eden/mononoke/blobstore:blobstore",
+        "//eden/mononoke/blobstore:memblob",
+        "//eden/mononoke/bookmarks:bookmarks",
+        "//eden/mononoke/common/sql_construct:sql_construct",
+        "//eden/mononoke/megarepo_api:megarepo_config",
+        "//eden/mononoke/megarepo_api:megarepo_error",
+        "//eden/mononoke/megarepo_api:requests_table",
+        "//eden/mononoke/megarepo_api/if:megarepo_types-thrift-rust",
+        "//eden/mononoke/mononoke_api:mononoke_api",
+        "//eden/mononoke/mononoke_types:mononoke_types",
+        "//eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust",
+        "//eden/mononoke/scs/if:source_control-rust",
+        "//eden/mononoke/server/context:context",
+        "//thrift/lib/rust:fbthrift",
+    ],
+)

@@ -10,7 +10,7 @@ license = "GPLv2+"
 [dependencies]
 anyhow = "1.0.86"
 async-stream = "0.3"
-async_requests = { version = "0.1.0", path = "../../megarepo_api/async_requests" }
+async_requests = { version = "0.1.0", path = "../../async_requests" }
 blobstore = { version = "0.1.0", path = "../../blobstore" }
 blobstore_factory = { version = "0.1.0", path = "../../blobstore/factory" }
 bonsai_blob_mapping = { version = "0.1.0", path = "../../repo_attributes/bonsai_blob_mapping" }
