@@ -651,7 +651,7 @@ Cross-directory graft add graft info as summary footer:
   $ hg go -q $A
   $ hg graft -qr 'desc("Summary")' --from-path B --to-path A --config extensions.fbcodereview=
   $ hg show
-  commit:      3826d30b657d
+  commit:      e10add7c4dde
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       A
@@ -665,10 +665,6 @@ Cross-directory graft add graft info as summary footer:
   Grafted from e8470334d2058106534ac7d72485e6bfaa76ca01
     Grafted path B to A
   
-  Test Plan:
-  
-  Bar
-  
   
   diff --git a/A b/A
   --- a/A
@@ -678,7 +674,7 @@ Cross-directory graft add graft info as summary footer:
   +B
 
 
-Cross-directory graft removes phabricator diff link:
+Cross-directory graft removes phabricator tags (excerpt "Summary"):
   $ newclientrepo
   $ drawdag <<EOS
   > B  # B/B = B\n (copied from A)
@@ -687,28 +683,34 @@ Cross-directory graft removes phabricator diff link:
   > EOS
   $ hg metaedit -r $B -m "B\
   > \
+  > Summary:\
+  > \
   > Foo\
   > \
-  > Differential Revision: example.com/D123\
+  > Test Plan:\
   > \
-  > Bar"
+  > Bar\
+  > \
+  > Reviewed By: test1, test2\
+  > \
+  > Tags: tag1, tag2\
+  > \
+  > Differential Revision: example.com/D123"
   $ hg go -q $A
   $ hg graft -qr 'desc("Differential")' --from-path B --to-path A --config extensions.fbcodereview=
   $ hg show
-  commit:      4813cc8cb11b
+  commit:      cfdef3cf693a
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       A
   description:
   B
   
+  Summary:
+  
   Foo
   
-  Original Phabricator Diff: example.com/D123
-  
-  Bar
-  
-  Grafted from cf83d28f9744974da0629bf4ed27dc5c0848d29a
+  Grafted from 6a2f4620ac267db57400b129af01ac66f3cf2311 (D123)
     Grafted path B to A
   
   

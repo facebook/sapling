@@ -40,7 +40,6 @@ from sapling import (
     commands,
     error,
     extensions,
-    hg,
     json,
     mutation,
     namespaces,
@@ -99,6 +98,8 @@ DESCRIPTION_REGEX: Pattern[str] = re.compile(
     "(?P<callsign>[A-Z]{1,})"  # Callsign
     "(?P<id>[a-f0-9]+)"  # rev
 )
+
+GRAFT_INFO_REGEX: Pattern[str] = re.compile("(?m)^(Grafted from [a-f0-9]+)")
 
 DEFAULT_TIMEOUT = 60
 MAX_CONNECT_RETRIES = 3
@@ -171,11 +172,14 @@ def makebackoutmessage(orig, repo, message: str, node):
 
 def makegraftmessage(orig, ctx, opts):
     message = orig(ctx, opts)
-    if opts.get("from_path"):
-        message = re.sub(
-            "(?m)^Differential Revision:", "Original Phabricator Diff:", message
-        )
-    return message
+    if not opts.get("from_path"):
+        return message
+
+    # Grafted from e8470334d2058106534ac7d72485e6bfaa76ca01
+    new_message = cmdutil.extract_summary(ctx.repo().ui, message)
+    if revision := diffprops.parserevfromcommitmsg(message):
+        new_message = GRAFT_INFO_REGEX.sub(r"\1 (D%s)" % revision, new_message)
+    return new_message
 
 
 def extsetup(ui) -> None:
