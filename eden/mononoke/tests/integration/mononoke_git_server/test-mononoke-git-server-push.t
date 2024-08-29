@@ -84,6 +84,9 @@
 
 # Wait for the warm bookmark cache to catch up with the latest changes
   $ wait_for_git_bookmark_move HEAD $current_head
+  $ wait_for_git_bookmark_create refs/heads/new_branch
+  $ wait_for_git_bookmark_create refs/tags/push_tag
+  $ wait_for_git_bookmark_create refs/tags/past_tag
 
 # Cloning the repo in a new folder will not get the latest changes since we didn't really accept the push
   $ cd "$TESTTMP"
