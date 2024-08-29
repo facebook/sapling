@@ -93,7 +93,7 @@ async fn pack_header() -> Result<Bytes, Error> {
 }
 
 fn concurrency(context: &RepositoryRequestContext) -> PackfileConcurrency {
-    match &context.repo.repo_config.git_concurrency {
+    match &context.repo.repo_config.git_configs.git_concurrency {
         Some(concurrency) => PackfileConcurrency::new(
             concurrency.trees_and_blobs,
             concurrency.commits,

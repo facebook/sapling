@@ -281,7 +281,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
     } else {
         BackfillDerivation::AllConfiguredTypes
     };
-    let lfs = match repo.repo_config().git_lfs_interpret_pointers {
+    let lfs = match repo.repo_config().git_configs.git_lfs_interpret_pointers {
         true => GitImportLfs::new(
             args.lfs_server.ok_or_else(|| {
                 anyhow!("LFS server url is required when LFS is enabled in the repo config")

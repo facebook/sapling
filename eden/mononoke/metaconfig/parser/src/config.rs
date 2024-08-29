@@ -21,6 +21,7 @@ use metaconfig_types::BackupRepoConfig;
 use metaconfig_types::BlobConfig;
 use metaconfig_types::CensoredScubaParams;
 use metaconfig_types::CommonConfig;
+use metaconfig_types::GitConfigs;
 use metaconfig_types::Redaction;
 use metaconfig_types::RedactionConfig;
 use metaconfig_types::RepoConfig;
@@ -358,6 +359,10 @@ fn parse_with_repo_definition(
     let zelos_config = zelos_config.convert()?;
     let x_repo_sync_source_mapping = x_repo_sync_source_mapping.convert()?;
     let git_lfs_interpret_pointers = git_lfs_interpret_pointers.unwrap_or(false);
+    let git_configs = GitConfigs {
+        git_concurrency,
+        git_lfs_interpret_pointers,
+    };
 
     let commit_cloud_config = commit_cloud_config.convert()?.unwrap_or_default();
     let mononoke_cas_sync_config = mononoke_cas_sync_config.convert()?;
@@ -402,7 +407,6 @@ fn parse_with_repo_definition(
         default_commit_identity_scheme,
         deep_sharding_config,
         everstore_local_path,
-        git_concurrency,
         metadata_logger_config,
         zelos_config,
         bookmark_name_for_objects_count,
@@ -410,7 +414,7 @@ fn parse_with_repo_definition(
         x_repo_sync_source_mapping,
         commit_cloud_config,
         mononoke_cas_sync_config,
-        git_lfs_interpret_pointers,
+        git_configs,
     })
 }
 
@@ -1348,11 +1352,7 @@ mod test {
                 },
                 deep_sharding_config: Some(ShardingModeConfig { status: hashmap!() }),
                 everstore_local_path: None,
-                git_concurrency: Some(GitConcurrencyParams {
-                    trees_and_blobs: 500,
-                    commits: 1000,
-                    tags: 1000,
-                }),
+
                 metadata_logger_config: MetadataLoggerConfig {
                     bookmarks: vec![
                         BookmarkKey::new("master").unwrap(),
@@ -1378,7 +1378,14 @@ mod test {
                     disable_interngraph_notification: false,
                 },
                 mononoke_cas_sync_config: None,
-                git_lfs_interpret_pointers: false,
+                git_configs: GitConfigs {
+                    git_concurrency: Some(GitConcurrencyParams {
+                        trees_and_blobs: 500,
+                        commits: 1000,
+                        tags: 1000,
+                    }),
+                    git_lfs_interpret_pointers: false,
+                },
             },
         );
 
@@ -1443,7 +1450,6 @@ mod test {
                 commit_graph_config: CommitGraphConfig::default(),
                 deep_sharding_config: None,
                 everstore_local_path: None,
-                git_concurrency: None,
                 metadata_logger_config: MetadataLoggerConfig::default(),
                 zelos_config: None,
                 bookmark_name_for_objects_count: None,
@@ -1451,7 +1457,10 @@ mod test {
                 x_repo_sync_source_mapping: None,
                 commit_cloud_config: CommitCloudConfig::default(),
                 mononoke_cas_sync_config: None,
-                git_lfs_interpret_pointers: false,
+                git_configs: GitConfigs {
+                    git_concurrency: None,
+                    git_lfs_interpret_pointers: false,
+                },
             },
         );
         assert_eq!(
