@@ -40,3 +40,4 @@ wait_for_replication = { version = "0.1.0", path = "../common/wait_for_replicati
 [dev-dependencies]
 bytes = { version = "1.6.0", features = ["serde"] }
 fbinit-tokio = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+mononoke_macros = { version = "0.1.0", path = "../mononoke_macros" }

@@ -144,9 +144,11 @@ mod facebook {
 
     #[cfg(test)]
     mod test {
+        use mononoke_macros::mononoke;
+
         use super::*;
 
-        #[fbinit::test]
+        #[mononoke::fbinit_test]
         async fn test_manifold_write(fb: FacebookInit) -> Result<(), Error> {
             update_manifold_key(
                 fb,

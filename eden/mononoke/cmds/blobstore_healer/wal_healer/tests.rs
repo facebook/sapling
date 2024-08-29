@@ -21,6 +21,7 @@ use fbinit::FacebookInit;
 use futures_03_ext::BufferedParams;
 use metaconfig_types::BlobstoreId;
 use metaconfig_types::MultiplexId;
+use mononoke_macros::mononoke;
 use sql_construct::SqlConstruct;
 
 use super::*;
@@ -90,7 +91,7 @@ impl Blobstore for FailingBlob {
     }
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_all_blobstores_failing(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
 
@@ -139,7 +140,7 @@ async fn test_all_blobstores_failing(fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_healthy_blob(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
 
@@ -193,7 +194,7 @@ async fn test_healthy_blob(fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_missing_blob_healed(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
 
@@ -243,7 +244,7 @@ async fn test_missing_blob_healed(fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_missing_blob_not_healed(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
 
@@ -295,7 +296,7 @@ async fn test_missing_blob_not_healed(fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_blob_cannot_be_fetched(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
 
@@ -344,7 +345,7 @@ async fn test_blob_cannot_be_fetched(fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_different_blobs_wal_entries(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
 
@@ -416,7 +417,7 @@ async fn test_different_blobs_wal_entries(fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_blob_missing_completely(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
 
@@ -466,7 +467,7 @@ async fn test_blob_missing_completely(fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_entry_timestamp_updated(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
 

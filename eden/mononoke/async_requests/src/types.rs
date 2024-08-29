@@ -629,6 +629,7 @@ mod test {
     use context::CoreContext;
     use fbinit::FacebookInit;
     use memblob::Memblob;
+    use mononoke_macros::mononoke;
 
     use super::*;
 
@@ -653,7 +654,7 @@ mod test {
         }
     }
 
-    #[test]
+    #[mononoke::test]
     fn blobstore_key() {
         // These IDs are persistent, and this test is really to make sure that they don't change
         // accidentally. Same as in typed_hash.rs
@@ -675,7 +676,7 @@ mod test {
         );
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_serialize_deserialize() {
         serialize_deserialize!(AsynchronousRequestParamsId);
         serialize_deserialize!(AsynchronousRequestResultId);
@@ -700,7 +701,7 @@ mod test {
         }
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_megaerpo_add_target_params_type(fb: FacebookInit) {
         let blobstore = Memblob::new(PutBehaviour::IfAbsent);
         let ctx = CoreContext::test_mock(fb);

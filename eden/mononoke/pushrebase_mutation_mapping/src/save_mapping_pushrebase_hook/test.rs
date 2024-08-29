@@ -17,6 +17,7 @@ use fbinit::FacebookInit;
 use filestore::FilestoreConfig;
 use maplit::hashset;
 use metaconfig_types::PushrebaseFlags;
+use mononoke_macros::mononoke;
 use mononoke_types_mocks::repo;
 use pushrebase::do_pushrebase_bonsai;
 use repo_blobstore::RepoBlobstore;
@@ -59,7 +60,7 @@ struct Repo {
     filestore_config: FilestoreConfig,
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn pushrebase_saves_mapping(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
 

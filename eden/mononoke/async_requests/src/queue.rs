@@ -317,6 +317,7 @@ mod tests {
     use context::CoreContext;
     use fbinit::FacebookInit;
     use mononoke_api::Repo;
+    use mononoke_macros::mononoke;
     use requests_table::ClaimedBy;
     use requests_table::RequestStatus;
     use source_control::MegarepoAddBranchingTargetParams as ThriftMegarepoAddBranchingTargetParams;
@@ -349,7 +350,7 @@ mod tests {
             $result: ident,
             $request_type: expr,
         } => {
-            #[fbinit::test]
+            #[mononoke::fbinit_test]
             async fn $fn_name(fb: FacebookInit) -> Result<(), Error> {
                 let q = AsyncMethodRequestQueue::new_test_in_memory().unwrap();
                 let ctx = CoreContext::test_mock(fb);

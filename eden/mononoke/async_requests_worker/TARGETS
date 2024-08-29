@@ -9,6 +9,7 @@ rust_binary(
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/fbinit:fbinit-tokio",
         "//eden/mononoke/megarepo_api:requests_table",
+        "//eden/mononoke/mononoke_macros:mononoke_macros",
         "//eden/mononoke/repo_factory:test_repo_factory",
     ],
     deps = [

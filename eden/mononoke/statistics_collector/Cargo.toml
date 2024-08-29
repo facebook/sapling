@@ -48,4 +48,5 @@ borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/r
 bytes = { version = "1.6.0", features = ["serde"] }
 fixtures = { version = "0.1.0", path = "../tests/fixtures" }
 maplit = "1.0"
+mononoke_macros = { version = "0.1.0", path = "../mononoke_macros" }
 tests_utils = { version = "0.1.0", path = "../tests/utils" }

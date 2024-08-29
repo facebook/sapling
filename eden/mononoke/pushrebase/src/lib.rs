@@ -1289,6 +1289,7 @@ mod tests {
     use maplit::btreemap;
     use maplit::hashmap;
     use maplit::hashset;
+    use mononoke_macros::mononoke;
     use mononoke_types::BonsaiChangesetMut;
     use mononoke_types::FileType;
     use mononoke_types::GitLfs;
@@ -1448,7 +1449,7 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     fn pushrebase_one_commit(fb: FacebookInit) -> Result<(), Error> {
         let runtime = tokio::runtime::Runtime::new().unwrap();
         runtime.block_on(async move {
@@ -1475,7 +1476,7 @@ mod tests {
         })
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     fn pushrebase_one_commit_transaction_hook(fb: FacebookInit) -> Result<(), Error> {
         #[derive(Copy, Clone)]
         struct Hook(RepositoryId);
@@ -1600,7 +1601,7 @@ mod tests {
         })
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     fn pushrebase_stack(fb: FacebookInit) -> Result<(), Error> {
         let runtime = tokio::runtime::Runtime::new().unwrap();
 
@@ -1651,7 +1652,7 @@ mod tests {
         })
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     fn pushrebase_stack_with_renames(fb: FacebookInit) -> Result<(), Error> {
         let runtime = tokio::runtime::Runtime::new().unwrap();
 
@@ -1703,7 +1704,7 @@ mod tests {
         })
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     fn pushrebase_multi_root(fb: FacebookInit) -> Result<(), Error> {
         //
         // master -> o
@@ -1826,7 +1827,7 @@ mod tests {
         })
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     fn pushrebase_conflict(fb: FacebookInit) -> Result<(), Error> {
         let runtime = tokio::runtime::Runtime::new().unwrap();
 
@@ -1891,7 +1892,7 @@ mod tests {
         })
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     fn pushrebase_caseconflicting_rename(fb: FacebookInit) -> Result<(), Error> {
         let runtime = tokio::runtime::Runtime::new().unwrap();
         runtime.block_on(async move {
@@ -1940,7 +1941,7 @@ mod tests {
         })
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     fn pushrebase_caseconflicting_dirs(fb: FacebookInit) -> Result<(), Error> {
         let runtime = tokio::runtime::Runtime::new().unwrap();
         runtime.block_on(async move {
@@ -1986,7 +1987,7 @@ mod tests {
         })
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     fn pushrebase_recursion_limit(fb: FacebookInit) -> Result<(), Error> {
         let runtime = tokio::runtime::Runtime::new().unwrap();
         runtime.block_on(async move {
@@ -2066,7 +2067,7 @@ mod tests {
         })
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     fn pushrebase_rewritedates(fb: FacebookInit) -> Result<(), Error> {
         let runtime = tokio::runtime::Runtime::new().unwrap();
         runtime.block_on(async move {
@@ -2127,7 +2128,7 @@ mod tests {
         })
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     fn pushrebase_case_conflict(fb: FacebookInit) -> Result<(), Error> {
         let runtime = tokio::runtime::Runtime::new().unwrap();
         runtime.block_on(async move {
@@ -2182,7 +2183,7 @@ mod tests {
             Ok(())
         })
     }
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
 
     fn pushrebase_case_conflict_exclusion(fb: FacebookInit) -> Result<(), Error> {
         let runtime = tokio::runtime::Runtime::new().unwrap();
@@ -2278,7 +2279,7 @@ mod tests {
         })
     }
 
-    #[test]
+    #[mononoke::test]
     fn pushrebase_intersect_changed() -> Result<(), Error> {
         match intersect_changed_files(
             make_paths(&["a/b/c", "c", "a/b/d", "d/d", "b", "e/c"]),
@@ -2307,7 +2308,7 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     fn pushrebase_executable_bit_change(fb: FacebookInit) -> Result<(), Error> {
         let runtime = tokio::runtime::Runtime::new().unwrap();
         runtime.block_on(async move {
@@ -2483,7 +2484,7 @@ mod tests {
         }
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     fn pushrebase_simultaneously(fb: FacebookInit) -> Result<(), Error> {
         let runtime = tokio::runtime::Runtime::new().unwrap();
 
@@ -2559,7 +2560,7 @@ mod tests {
         })
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     fn pushrebase_create_new_bookmark(fb: FacebookInit) -> Result<(), Error> {
         let runtime = tokio::runtime::Runtime::new().unwrap();
         runtime.block_on(async move {
@@ -2587,7 +2588,7 @@ mod tests {
         })
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     fn pushrebase_simultaneously_and_create_new(fb: FacebookInit) -> Result<(), Error> {
         let runtime = tokio::runtime::Runtime::new().unwrap();
         runtime.block_on(async move {
@@ -2652,7 +2653,7 @@ mod tests {
         })
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     fn pushrebase_one_commit_with_bundle_id(fb: FacebookInit) -> Result<(), Error> {
         let runtime = tokio::runtime::Runtime::new().unwrap();
         runtime.block_on(async move {
@@ -2688,7 +2689,7 @@ mod tests {
         })
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     fn pushrebase_timezone(fb: FacebookInit) -> Result<(), Error> {
         // We shouldn't change timezone even if timestamp changes
 
@@ -2743,7 +2744,7 @@ mod tests {
         })
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     fn forbid_p2_root_rebases(fb: FacebookInit) -> Result<(), Error> {
         let runtime = tokio::runtime::Runtime::new().unwrap();
         runtime.block_on(async move {
@@ -2803,7 +2804,7 @@ mod tests {
         })
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     fn pushrebase_over_merge(fb: FacebookInit) -> Result<(), Error> {
         let runtime = tokio::runtime::Runtime::new().unwrap();
         runtime.block_on(async move {
@@ -2883,7 +2884,7 @@ mod tests {
         })
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     fn pushrebase_over_merge_even(fb: FacebookInit) -> Result<(), Error> {
         let runtime = tokio::runtime::Runtime::new().unwrap();
         runtime.block_on(async move {
@@ -2930,7 +2931,7 @@ mod tests {
         })
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     fn pushrebase_of_branch_merge(fb: FacebookInit) -> Result<(), Error> {
         let runtime = tokio::runtime::Runtime::new().unwrap();
         runtime.block_on(async move {
@@ -3013,7 +3014,7 @@ mod tests {
         })
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     fn pushrebase_of_branch_merge_with_removal(fb: FacebookInit) -> Result<(), Error> {
         let runtime = tokio::runtime::Runtime::new().unwrap();
         runtime.block_on(async move {
@@ -3086,7 +3087,7 @@ mod tests {
         })
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     fn pushrebase_of_branch_merge_with_rename(fb: FacebookInit) -> Result<(), Error> {
         let runtime = tokio::runtime::Runtime::new().unwrap();
         runtime.block_on(async move {
@@ -3171,7 +3172,7 @@ mod tests {
         })
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_pushrebase_new_repo_merge_no_new_file_changes(
         fb: FacebookInit,
     ) -> Result<(), Error> {
@@ -3233,7 +3234,7 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_commit_validation(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let repo: PushrebaseTestRepo = test_repo_factory::build_empty(ctx.fb).await?;
@@ -3338,7 +3339,7 @@ mod tests {
         }
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn pushrebase_test_failpushrebase_extra(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let repo: PushrebaseTestRepo = Linear::get_repo(fb).await;

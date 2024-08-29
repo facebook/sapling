@@ -103,8 +103,15 @@ pub trait MononokeIdentitySetExt {
     fn to_string(&self) -> String;
 }
 
-#[test]
-fn test_ipv6_identity() {
-    let id = MononokeIdentity::from_str("MACHINE:2621:10d:c1a8:12c9::1162").unwrap();
-    assert_eq!(id.id_data(), "2621:10d:c1a8:12c9::1162");
+#[cfg(test)]
+mod tests {
+    use mononoke_macros::mononoke;
+
+    use super::*;
+
+    #[mononoke::test]
+    fn test_ipv6_identity() {
+        let id = MononokeIdentity::from_str("MACHINE:2621:10d:c1a8:12c9::1162").unwrap();
+        assert_eq!(id.id_data(), "2621:10d:c1a8:12c9::1162");
+    }
 }

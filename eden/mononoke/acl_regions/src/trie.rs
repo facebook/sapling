@@ -94,6 +94,7 @@ mod test {
     use std::collections::HashSet;
 
     use metaconfig_types::AclRegion;
+    use mononoke_macros::mononoke;
     use mononoke_types::path::MPath;
     use pretty_assertions::assert_eq;
 
@@ -130,7 +131,7 @@ mod test {
         }
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     fn test_prefix_trie() {
         let mut trie = PrefixTrieWithRules::new();
         trie.add_rule(Arc::new(AclRegionRule {

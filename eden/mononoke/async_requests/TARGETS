@@ -9,6 +9,7 @@ rust_library(
         "fbsource//third-party/rust:serde_json",
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/fbinit:fbinit-tokio",
+        "//eden/mononoke/mononoke_macros:mononoke_macros",
         "//eden/mononoke/repo_factory:test_repo_factory",
     ],
     deps = [

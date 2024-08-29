@@ -107,9 +107,11 @@ pub trait Phases: Send + Sync {
 
 #[cfg(test)]
 mod tests {
+    use mononoke_macros::mononoke;
+
     use super::*;
 
-    #[test]
+    #[mononoke::test]
     fn test_phase_as_integer() {
         assert_eq!(u32::from(Phase::Public), 0);
         assert_eq!(u32::from(Phase::Draft), 1);

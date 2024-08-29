@@ -1027,9 +1027,11 @@ impl WalkVisitor<(Node, Option<NodeData>, Option<StepStats>), EmptyRoute> for Wa
 mod tests {
     use std::mem::size_of;
 
+    use mononoke_macros::mononoke;
+
     use super::*;
 
-    #[test]
+    #[mononoke::test]
     fn test_interned_size() {
         // InternedId size is important as we have a lot of them, so test in case it changes
         assert_eq!(4, size_of::<InternedId<ChangesetId>>());

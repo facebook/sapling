@@ -12,6 +12,7 @@ rust_library(
     test_deps = [
         "fbsource//third-party/rust:pretty_assertions",
         "//common/rust/shed/fbinit:fbinit",
+        "//eden/mononoke/mononoke_macros:mononoke_macros",
     ],
     deps = [
         "fbsource//third-party/rust:anyhow",
@@ -43,6 +44,7 @@ rust_unittest(
         "//eden/mononoke/bookmarks:bookmarks",
         "//eden/mononoke/filestore:filestore",
         "//eden/mononoke/metaconfig:metaconfig_types",
+        "//eden/mononoke/mononoke_macros:mononoke_macros",
         "//eden/mononoke/mononoke_types:mononoke_types",
         "//eden/mononoke/repo_attributes/commit_graph/commit_graph:commit_graph",
         "//eden/mononoke/repo_attributes/repo_derived_data:repo_derived_data",

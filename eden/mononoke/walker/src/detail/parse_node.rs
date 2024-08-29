@@ -195,6 +195,7 @@ pub fn parse_node(s: &str) -> Result<Node, Error> {
 #[cfg(test)]
 mod tests {
     use bookmarks::BookmarkKey;
+    use mononoke_macros::mononoke;
 
     use super::*;
 
@@ -437,7 +438,7 @@ mod tests {
         Ok(v)
     }
 
-    #[test]
+    #[mononoke::test]
     fn parse_all_node_types() -> Result<(), Error> {
         for t in NodeType::iter() {
             test_node_type(&t)?;

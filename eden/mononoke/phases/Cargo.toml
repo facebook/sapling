@@ -35,6 +35,7 @@ fixtures = { version = "0.1.0", path = "../tests/fixtures" }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
 maplit = "1.0"
 mercurial_types = { version = "0.1.0", path = "../mercurial/types" }
+mononoke_macros = { version = "0.1.0", path = "../mononoke_macros" }
 repo_blobstore = { version = "0.1.0", path = "../blobrepo/repo_blobstore" }
 repo_derived_data = { version = "0.1.0", path = "../repo_attributes/repo_derived_data" }
 repo_identity = { version = "0.1.0", path = "../repo_attributes/repo_identity" }

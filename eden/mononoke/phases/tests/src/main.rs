@@ -32,6 +32,7 @@ use futures::TryFutureExt;
 use futures::TryStreamExt;
 use maplit::hashset;
 use mercurial_types::nodehash::HgChangesetId;
+use mononoke_macros::mononoke;
 use mononoke_types::ChangesetId;
 use phases::Phases;
 use phases::PhasesRef;
@@ -130,7 +131,7 @@ async fn is_public(
     Ok(public.contains(&csid))
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn get_phase_hint_test(fb: FacebookInit) -> Result<(), Error> {
     let repo: PhasesTestRepo = Linear::get_repo(fb).await;
     //  @  79a13814c5ce7330173ec04d279bf95ab3f652fb
@@ -275,7 +276,7 @@ async fn get_phase_hint_test(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_mark_reachable_as_public(fb: FacebookInit) -> Result<()> {
     let repo: PhasesTestRepo = fixtures::BranchEven::get_repo(fb).await;
     // @  4f7f3fd428bec1a48f9314414b063c706d9c1aed (6)

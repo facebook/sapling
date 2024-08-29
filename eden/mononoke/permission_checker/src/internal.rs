@@ -147,6 +147,7 @@ impl AclProvider for InternalAclProvider {
 #[cfg(test)]
 mod test {
     use fbinit::FacebookInit;
+    use mononoke_macros::mononoke;
 
     use super::*;
 
@@ -158,7 +159,7 @@ mod test {
         Ok(set)
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn json_acls(_fb: FacebookInit) -> Result<()> {
         let json = r#"
             {

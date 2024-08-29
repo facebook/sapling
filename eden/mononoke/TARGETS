@@ -78,6 +78,7 @@ rust_binary(
     autocargo = {"cargo_toml_dir": "blobimport"},
     test_deps = [
         "//common/rust/shed/fbinit:fbinit-tokio",
+        "//eden/mononoke/mononoke_macros:mononoke_macros",
     ],
     deps = [
         "fbsource//third-party/rust:anyhow",
@@ -115,6 +116,7 @@ rust_binary(
     test_deps = [
         "fbsource//third-party/rust:bytes",
         "//common/rust/shed/fbinit:fbinit-tokio",
+        "//eden/mononoke/mononoke_macros:mononoke_macros",
     ],
     deps = [
         "fbsource//third-party/rust:anyhow",
@@ -186,6 +188,7 @@ rust_binary(
         "//eden/mononoke/blobstore:cacheblob",
         "//eden/mononoke/common/rendezvous:rendezvous",
         "//eden/mononoke/common/sql_construct:sql_construct",
+        "//eden/mononoke/mononoke_macros:mononoke_macros",
         "//eden/mononoke/tests/fixtures:fixtures",
     ],
     deps = [
@@ -302,6 +305,7 @@ rust_binary(
         "fbsource//third-party/rust:tokio",
         "//common/rust/shed/borrowed:borrowed",
         "//eden/mononoke/bonsai_hg_mapping:bonsai_hg_mapping",
+        "//eden/mononoke/mononoke_macros:mononoke_macros",
         "//eden/mononoke/tests/fixtures:fixtures",
         "//eden/mononoke/tests/utils:tests_utils",
     ],
@@ -389,7 +393,9 @@ rust_binary(
 rust_binary(
     name = "packer",
     srcs = glob(["cmds/packer/**/*.rs"]),
-    test_deps = [],
+    test_deps = [
+        "//eden/mononoke/mononoke_macros:mononoke_macros",
+    ],
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:clap",

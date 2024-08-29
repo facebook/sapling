@@ -763,6 +763,7 @@ mod tests {
     use futures::future;
     use futures::stream;
     use maplit::btreemap;
+    use mononoke_macros::mononoke;
     use tests_utils::create_commit;
     use tests_utils::store_files;
     use tokio::runtime::Runtime;
@@ -770,7 +771,7 @@ mod tests {
     use super::Repo as MyRepo;
     use super::*;
 
-    #[test]
+    #[mononoke::test]
     fn test_number_of_lines_empty_stream() -> Result<(), Error> {
         let rt = Runtime::new().unwrap();
 
@@ -780,7 +781,7 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_number_of_lines_one_line() -> Result<(), Error> {
         let rt = Runtime::new().unwrap();
 
@@ -790,7 +791,7 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_number_of_lines_many_lines() -> Result<(), Error> {
         let rt = Runtime::new().unwrap();
 
@@ -804,7 +805,7 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_number_of_lines_many_items() -> Result<(), Error> {
         let rt = Runtime::new().unwrap();
 
@@ -819,7 +820,7 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     fn linear_test_get_statistics_from_changeset(fb: FacebookInit) {
         let runtime = Runtime::new().unwrap();
         runtime.block_on(async move {
@@ -871,7 +872,7 @@ mod tests {
         });
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     fn linear_test_get_statistics_from_entry_tree(fb: FacebookInit) {
         let runtime = Runtime::new().unwrap();
         runtime.block_on(async move {
@@ -938,7 +939,7 @@ mod tests {
         });
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     fn linear_test_update_statistics(fb: FacebookInit) {
         let runtime = Runtime::new().unwrap();
         runtime.block_on(async move {

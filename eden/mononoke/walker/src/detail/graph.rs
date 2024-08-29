@@ -1106,18 +1106,19 @@ mod tests {
     use std::collections::HashSet;
     use std::mem::size_of;
 
+    use mononoke_macros::mononoke;
     use strum::EnumCount;
     use strum::IntoEnumIterator;
 
     use super::*;
 
-    #[test]
+    #[mononoke::test]
     fn test_node_size() {
         // Node size is important as we have lots of them, add a test to check for accidental changes
         assert_eq!(40, size_of::<Node>());
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_node_type_max_ordinal() {
         // Check the macros worked consistently
         for t in NodeType::iter() {
@@ -1125,7 +1126,7 @@ mod tests {
         }
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_small_graphs() -> Result<(), Error> {
         create_graph!(
             Test1NodeType,
@@ -1165,7 +1166,7 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_all_derived_data_types_supported() {
         // All enabled types for the repo
         let a = test_repo_factory::default_test_repo_config()

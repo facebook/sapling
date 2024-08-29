@@ -508,6 +508,7 @@ mononoke_queries! {
 #[cfg(test)]
 mod tests {
     use fbinit::FacebookInit;
+    use mononoke_macros::mononoke;
 
     use super::*;
 
@@ -563,12 +564,12 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_sql_roundtrip(_fb: FacebookInit) -> Result<(), Error> {
         test_sql_roundtrip_impl(CheckpointsVersion::V1).await
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_sql_roundtrip_v2(_fb: FacebookInit) -> Result<(), Error> {
         test_sql_roundtrip_impl(CheckpointsVersion::V2).await
     }

@@ -1712,6 +1712,7 @@ mod test {
     use metaconfig_types::CommonCommitSyncConfig;
     use metaconfig_types::SmallRepoCommitSyncConfig;
     use metaconfig_types::SmallRepoPermanentConfig;
+    use mononoke_macros::mononoke;
     use mononoke_types::RepositoryId;
     use rendezvous::RendezVousOptions;
     use sql_construct::SqlConstruct;
@@ -1721,7 +1722,7 @@ mod test {
 
     use super::*;
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     fn test_bookmark_diff(fb: FacebookInit) -> Result<(), Error> {
         let runtime = tokio::runtime::Runtime::new()?;
         runtime.block_on(test_bookmark_diff_impl(fb))

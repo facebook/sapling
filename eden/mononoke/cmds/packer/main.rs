@@ -255,24 +255,31 @@ fn main(fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
-#[test]
-fn test_parsing_repo_from_filename() -> Result<()> {
-    let mut filename = "repoadmin.store3.part1.keys.txt";
-    let mut repo_name = extract_repo_name_from_filename(filename);
-    assert_eq!(repo_name, "admin");
-    filename = "reporepo-hg-nolfs.store3.part1.keys.txt";
-    repo_name = extract_repo_name_from_filename(filename);
-    assert_eq!(repo_name, "repo-hg-nolfs");
-    Ok(())
-}
+#[cfg(test)]
+mod tests {
+    use mononoke_macros::mononoke;
 
-#[test]
-fn test_parsing_inner_blobstore_id_from_filename() -> Result<()> {
-    let mut filename = "repoadmin.store3.part1.keys.txt";
-    let mut blobstore_id = extract_inner_store_id_from_filename(filename);
-    assert_eq!(blobstore_id, Some(3));
-    filename = "repoadmin.store.part1.keys.txt";
-    blobstore_id = extract_inner_store_id_from_filename(filename);
-    assert_eq!(blobstore_id, None);
-    Ok(())
+    use super::*;
+
+    #[mononoke::test]
+    fn test_parsing_repo_from_filename() -> Result<()> {
+        let mut filename = "repoadmin.store3.part1.keys.txt";
+        let mut repo_name = extract_repo_name_from_filename(filename);
+        assert_eq!(repo_name, "admin");
+        filename = "reporepo-hg-nolfs.store3.part1.keys.txt";
+        repo_name = extract_repo_name_from_filename(filename);
+        assert_eq!(repo_name, "repo-hg-nolfs");
+        Ok(())
+    }
+
+    #[mononoke::test]
+    fn test_parsing_inner_blobstore_id_from_filename() -> Result<()> {
+        let mut filename = "repoadmin.store3.part1.keys.txt";
+        let mut blobstore_id = extract_inner_store_id_from_filename(filename);
+        assert_eq!(blobstore_id, Some(3));
+        filename = "repoadmin.store.part1.keys.txt";
+        blobstore_id = extract_inner_store_id_from_filename(filename);
+        assert_eq!(blobstore_id, None);
+        Ok(())
+    }
 }

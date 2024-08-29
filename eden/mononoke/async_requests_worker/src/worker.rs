@@ -346,12 +346,13 @@ mod test {
     use fbinit::FacebookInit;
     use mononoke_api::Mononoke;
     use mononoke_api::Repo;
+    use mononoke_macros::mononoke;
     use requests_table::RequestType;
     use source_control as thrift;
 
     use super::*;
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_request_stream_simple(fb: FacebookInit) -> Result<(), Error> {
         let q = AsyncMethodRequestQueue::new_test_in_memory().unwrap();
         let ctx = CoreContext::test_mock(fb);
@@ -393,7 +394,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_request_stream_clear_abandoned(fb: FacebookInit) -> Result<(), Error> {
         let q = AsyncMethodRequestQueue::new_test_in_memory().unwrap();
         let ctx = CoreContext::test_mock(fb);

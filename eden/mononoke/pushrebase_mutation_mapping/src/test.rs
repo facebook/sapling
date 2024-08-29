@@ -7,6 +7,7 @@
 
 use anyhow::Result;
 use fbinit::FacebookInit;
+use mononoke_macros::mononoke;
 use mononoke_types_mocks::changesetid;
 use mononoke_types_mocks::repo;
 use sql::Connection;
@@ -18,7 +19,7 @@ use crate::get_prepushrebase_ids;
 use crate::PushrebaseMutationMappingEntry;
 use crate::SqlPushrebaseMutationMappingConnection;
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_add_and_get(_fb: FacebookInit) -> Result<()> {
     let conn = open_sqlite_in_memory()?;
     conn.execute_batch(SqlPushrebaseMutationMappingConnection::CREATION_QUERY)?;
