@@ -157,10 +157,11 @@ mod test {
     use fbinit::FacebookInit;
     use gix_hash::ObjectId;
     use indoc::indoc;
+    use mononoke_macros::mononoke;
 
     use super::*;
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_canonical_git_pointer(_fb: FacebookInit) -> Result<()> {
         let raw_pointer = indoc! {b"
             version https://git-lfs.github.com/spec/v1
@@ -189,7 +190,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_non_canonical_git_pointer_legacy_version(_fb: FacebookInit) -> Result<()> {
         let raw_pointer = indoc! {b"
             version https://hawser.github.com/spec/v1
@@ -214,7 +215,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_non_canonical_git_pointer_legacy_extra_fields(_fb: FacebookInit) -> Result<()> {
         let raw_pointer = indoc! {b"
             oid sha256:6c54a4de10537e482e9f91281fb85ab614e0e0f62307047f9b9f3ccea2de8204
@@ -241,7 +242,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_non_canonical_git_pointer_no_newline_at_eof(_fb: FacebookInit) -> Result<()> {
         let raw_pointer = indoc! {b"
             oid sha256:6c54a4de10537e482e9f91281fb85ab614e0e0f62307047f9b9f3ccea2de8204
@@ -266,7 +267,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_non_pointer(_fb: FacebookInit) -> Result<()> {
         let raw_pointer = indoc! {b"random string"};
         let parsed_pointer = parse_lfs_pointer(
@@ -277,7 +278,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_wrong_version(_fb: FacebookInit) -> Result<()> {
         let raw_pointer = indoc! {b"
             version https://git-lfs.github.com/spec/v2137
@@ -292,7 +293,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_wrong_oid(_fb: FacebookInit) -> Result<()> {
         let raw_pointer = indoc! {b"
             version https://git-lfs.github.com/spec/v1
@@ -307,7 +308,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_wrong_size(_fb: FacebookInit) -> Result<()> {
         let raw_pointer = indoc! {b"
             version https://git-lfs.github.com/spec/v1
@@ -322,7 +323,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_missing_field(_fb: FacebookInit) -> Result<()> {
         let raw_pointer = indoc! {b"
             version https://git-lfs.github.com/spec/v1

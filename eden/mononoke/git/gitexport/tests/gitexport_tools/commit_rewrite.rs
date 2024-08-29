@@ -28,6 +28,7 @@ use mononoke_api::MononokeError;
 use mononoke_api::MononokeRepo;
 use mononoke_api::Repo;
 use mononoke_api::RepoContext;
+use mononoke_macros::mononoke;
 use mononoke_types::ChangesetId;
 use mononoke_types::NonRootMPath;
 use test_utils::build_test_repo;
@@ -38,7 +39,7 @@ use test_utils::GitExportTestRepoOptions;
 
 const IMPLICIT_DELETE_BUFFER_SIZE: usize = 100;
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_rewrite_partial_changesets(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
 
@@ -122,7 +123,7 @@ async fn test_rewrite_partial_changesets(fb: FacebookInit) -> Result<(), Error> 
     .await
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_rewriting_fails_with_irrelevant_changeset(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
 
@@ -181,7 +182,7 @@ async fn test_rewriting_fails_with_irrelevant_changeset(fb: FacebookInit) -> Res
 /// values in the rewritten commits should be updated in the following way:
 /// - To reference its new parent if this parent has the file being copied.
 /// - Set to None if the new parent doesn't have the file being copied.
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_renamed_export_paths_are_followed_with_manual_input(fb: FacebookInit) -> Result<()> {
     let old_export_file = "foo/file.txt";
     let new_export_file = "bar/file.txt";
@@ -266,7 +267,7 @@ async fn test_renamed_export_paths_are_followed_with_manual_input(fb: FacebookIn
 
 /// See docs from `repo_with_multiple_renamed_export_directories` for details
 /// about this test case.
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_multiple_renamed_export_directories(fb: FacebookInit) -> Result<()> {
     let new_bar_file = "bar/file.txt";
     let new_foo_file = "foo/file.txt";

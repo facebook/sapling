@@ -332,6 +332,7 @@ mod test {
     use gix_hash::ObjectId;
     use gix_object::Object;
     use gix_object::Tag;
+    use mononoke_macros::mononoke;
     use packfile::types::to_vec_bytes;
     use packfile::types::BaseObject;
     use repo_blobstore::RepoBlobstore;
@@ -354,7 +355,7 @@ mod test {
         FilestoreConfig,
     );
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn store_and_load_packfile_base_item(fb: FacebookInit) -> Result<()> {
         let repo: TestRepo = fixtures::Linear::get_repo(fb).await;
         let ctx = CoreContext::test_mock(fb);

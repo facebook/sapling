@@ -35,6 +35,7 @@ rust_unittest(
         "//common/rust/shed/fbinit:fbinit-tokio",
         "//common/rust/shed/slog_glog_fmt:slog_glog_fmt",
         "//eden/mononoke/mononoke_api:mononoke_api",
+        "//eden/mononoke/mononoke_macros:mononoke_macros",
         "//eden/mononoke/mononoke_types:mononoke_types",
     ],
 )

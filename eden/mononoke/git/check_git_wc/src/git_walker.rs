@@ -142,6 +142,8 @@ pub(crate) fn thread(
 
 #[cfg(test)]
 mod test {
+    use mononoke_macros::mononoke;
+
     use super::*;
 
     // The content used in the LFS pointer
@@ -160,7 +162,7 @@ mod test {
     // Unknown hash type
     const BAD_HASH_TYPE_LFS_POINTER: &[u8] = b"version https://git-lfs.github.com/spec/v1\noid sha2-256:5891b5b522d5df086d0ff0b110fbd9d21bb4fc7163af34d08286a2e846f6be03\nsize 6\n";
 
-    #[test]
+    #[mononoke::test]
     fn test_lfs_pointer() {
         // No LFS, hash of the pointer
         assert_eq!(
@@ -182,7 +184,7 @@ mod test {
         assert_eq!(get_sha256(true, LFS_POINTER), get_sha256(true, CONTENT));
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_bad_pointers() {
         // All of these are bad pointers of some form, so we should get their hash, not extract a hash
         // from the pointer

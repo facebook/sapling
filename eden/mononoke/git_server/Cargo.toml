@@ -68,3 +68,6 @@ tokio = { version = "1.37.0", features = ["full", "test-util", "tracing"] }
 tokio-stream = { version = "0.1.14", features = ["fs", "io-util", "net", "signal", "sync", "time"] }
 tokio-util = { version = "0.7.10", features = ["full"] }
 topo_sort = { version = "0.1.0", path = "../common/topo_sort" }
+
+[dev-dependencies]
+mononoke_macros = { version = "0.1.0", path = "../mononoke_macros" }

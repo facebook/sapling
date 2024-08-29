@@ -10,10 +10,11 @@ rust_library(
         "src/**/*.rs",
         "schemas/**/*.sql",
     ]),
-    test_deps = [] if rust_oss.is_oss_build() else [
+    test_deps = ([] if rust_oss.is_oss_build() else [
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/fbinit:fbinit-tokio",
-    ],
+        "//eden/mononoke/mononoke_macros:mononoke_macros",
+    ]),
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:async-trait",

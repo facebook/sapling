@@ -13,10 +13,11 @@ use fbinit::FacebookInit;
 use git_symbolic_refs::GitSymbolicRefs;
 use git_symbolic_refs::GitSymbolicRefsEntry;
 use git_symbolic_refs::SqlGitSymbolicRefsBuilder;
+use mononoke_macros::mononoke;
 use mononoke_types_mocks::repo::REPO_ZERO;
 use sql_construct::SqlConstruct;
 
-#[test]
+#[mononoke::test]
 fn test_symref_entry_creation() -> Result<()> {
     let symref_name = "HEAD".to_string();
     let ref_name = "master".to_string();
@@ -35,7 +36,7 @@ fn test_symref_entry_creation() -> Result<()> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_add_and_get(_: FacebookInit) -> Result<(), Error> {
     let symrefs = SqlGitSymbolicRefsBuilder::with_sqlite_in_memory()?.build(REPO_ZERO);
     let symref_name = "HEAD";
@@ -58,7 +59,7 @@ async fn test_add_and_get(_: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_add_and_delete(_: FacebookInit) -> Result<(), Error> {
     let symrefs = SqlGitSymbolicRefsBuilder::with_sqlite_in_memory()?.build(REPO_ZERO);
     let symref_name = "HEAD";
@@ -82,7 +83,7 @@ async fn test_add_and_delete(_: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_update_and_get(_: FacebookInit) -> Result<(), Error> {
     let symrefs = SqlGitSymbolicRefsBuilder::with_sqlite_in_memory()?.build(REPO_ZERO);
     let symref_name = "HEAD";
@@ -111,7 +112,7 @@ async fn test_update_and_get(_: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_get_without_add(_: FacebookInit) -> Result<(), Error> {
     let symrefs = SqlGitSymbolicRefsBuilder::with_sqlite_in_memory()?.build(REPO_ZERO);
     let result = symrefs.get_ref_by_symref("HEAD".to_string()).await?;
@@ -124,7 +125,7 @@ async fn test_get_without_add(_: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_get_multiple(_: FacebookInit) -> Result<(), Error> {
     let symrefs = SqlGitSymbolicRefsBuilder::with_sqlite_in_memory()?.build(REPO_ZERO);
     let entry = GitSymbolicRefsEntry::new(
@@ -163,7 +164,7 @@ async fn test_get_multiple(_: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_list_all(_: FacebookInit) -> Result<(), Error> {
     let symrefs = SqlGitSymbolicRefsBuilder::with_sqlite_in_memory()?.build(REPO_ZERO);
     let entry = GitSymbolicRefsEntry::new(

@@ -11,6 +11,7 @@ use std::pin::Pin;
 use std::task::Context;
 use std::task::Poll;
 
+use mononoke_macros::mononoke;
 use packetline::encode::write_binary_packetline;
 use packetline::encode::write_data_channel;
 use packetline::encode::write_text_packetline;
@@ -74,7 +75,7 @@ impl AsyncWrite for TestAsyncWriter {
     }
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn validate_packetline_writer_basic_case() -> anyhow::Result<()> {
     let mut writer = TestAsyncWriter::new();
     write_binary_packetline(b"Hello this is just a test", &mut writer).await?;
@@ -85,7 +86,7 @@ async fn validate_packetline_writer_basic_case() -> anyhow::Result<()> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn validate_packetline_text_writer_basic_case() -> anyhow::Result<()> {
     let mut writer = TestAsyncWriter::new();
     write_text_packetline(b"Hello this is just a test", &mut writer).await?;
@@ -96,7 +97,7 @@ async fn validate_packetline_text_writer_basic_case() -> anyhow::Result<()> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn validate_packetline_writer_large_write() -> anyhow::Result<()> {
     let mut writer = TestAsyncWriter::new();
     let data = [
@@ -123,7 +124,7 @@ async fn validate_packetline_writer_large_write() -> anyhow::Result<()> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn validate_write_text_packetline_large_write() -> anyhow::Result<()> {
     let mut writer = TestAsyncWriter::new();
     // Generate large input
@@ -134,7 +135,7 @@ async fn validate_write_text_packetline_large_write() -> anyhow::Result<()> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn validate_write_binary_packetline_large_write() -> anyhow::Result<()> {
     let mut writer = TestAsyncWriter::new();
     // Generate large input
@@ -145,7 +146,7 @@ async fn validate_write_binary_packetline_large_write() -> anyhow::Result<()> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn validate_write_data_channel_large_write() -> anyhow::Result<()> {
     let mut writer = TestAsyncWriter::new();
     // Generate large input
@@ -156,7 +157,7 @@ async fn validate_write_data_channel_large_write() -> anyhow::Result<()> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn validate_write_text_packetline_large_write_with_count() -> anyhow::Result<()> {
     let mut writer = TestAsyncWriter::new();
     // Generate large input
@@ -167,7 +168,7 @@ async fn validate_write_text_packetline_large_write_with_count() -> anyhow::Resu
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn validate_write_binary_packetline_large_write_with_count() -> anyhow::Result<()> {
     let mut writer = TestAsyncWriter::new();
     // Generate large input
@@ -178,7 +179,7 @@ async fn validate_write_binary_packetline_large_write_with_count() -> anyhow::Re
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn validate_write_data_channel_large_write_with_count() -> anyhow::Result<()> {
     let mut writer = TestAsyncWriter::new();
     // Generate large input

@@ -35,4 +35,5 @@ tokio = { version = "1.37.0", features = ["full", "test-util", "tracing"] }
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit-tokio = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 git_delta = { version = "0.1.0", path = "../../third_party/git_delta" }
+mononoke_macros = { version = "0.1.0", path = "../../mononoke_macros" }
 tempfile = "3.8"

@@ -380,10 +380,11 @@ mod tests {
     use anyhow::Result;
     use gix_packetline::encode::flush_to_write;
     use gix_packetline::Writer;
+    use mononoke_macros::mononoke;
 
     use super::*;
 
-    #[test]
+    #[mononoke::test]
     fn test_fetch_command_args_parsing() -> Result<()> {
         let inner_writer = Vec::new();
         let mut packetline_writer = Writer::new(inner_writer);
@@ -425,7 +426,7 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_fetch_command_args_validation() -> Result<()> {
         let inner_writer = Vec::new();
         let mut packetline_writer = Writer::new(inner_writer);
@@ -447,7 +448,7 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_fetch_command_args_time_parsing() -> Result<()> {
         let inner_writer = Vec::new();
         let mut packetline_writer = Writer::new(inner_writer);
@@ -467,7 +468,7 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_filter_args_parsing() -> Result<()> {
         let raw_input =
             "combine:blob:none+tree:5+object:type=blob+object:type=tree+object:type=commit"

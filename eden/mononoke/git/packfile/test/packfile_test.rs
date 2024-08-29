@@ -18,6 +18,7 @@ use gix_hash::ObjectId;
 use gix_object::Object;
 use gix_object::ObjectRef;
 use gix_object::Tag;
+use mononoke_macros::mononoke;
 use packfile::bundle::BundleWriter;
 use packfile::pack::DeltaForm;
 use packfile::pack::PackfileWriter;
@@ -87,7 +88,7 @@ async fn get_objects_stream(
     Ok(objects_stream)
 }
 
-#[test]
+#[mononoke::test]
 fn validate_packitem_creation() -> anyhow::Result<()> {
     // Create a Git object
     let tag = Tag {
@@ -106,7 +107,7 @@ fn validate_packitem_creation() -> anyhow::Result<()> {
     Ok(())
 }
 
-#[test]
+#[mononoke::test]
 fn validate_packfile_item_encoding() -> anyhow::Result<()> {
     // Create a Git object
     let tag = Tag {
@@ -138,7 +139,7 @@ fn validate_packfile_item_encoding() -> anyhow::Result<()> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn validate_basic_packfile_generation() -> anyhow::Result<()> {
     let objects_stream = get_objects_stream(false).await?;
     let concurrency = 100;
@@ -155,7 +156,7 @@ async fn validate_basic_packfile_generation() -> anyhow::Result<()> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn validate_packfile_generation_format() -> anyhow::Result<()> {
     // Create a few Git objects
     let objects_stream = get_objects_stream(false).await?;
@@ -200,7 +201,7 @@ async fn validate_packfile_generation_format() -> anyhow::Result<()> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn validate_staggered_packfile_generation() -> anyhow::Result<()> {
     let concurrency = 100;
     let mut packfile_writer =
@@ -273,7 +274,7 @@ async fn validate_staggered_packfile_generation() -> anyhow::Result<()> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn validate_roundtrip_packfile_generation() -> anyhow::Result<()> {
     // Create a few Git objects
     let objects_stream = get_objects_stream(false).await?;
@@ -313,7 +314,7 @@ async fn validate_roundtrip_packfile_generation() -> anyhow::Result<()> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn validate_delta_packfile_generation() -> anyhow::Result<()> {
     // Create a few Git objects along with delta variants
     let objects_stream = get_objects_stream(true).await?;
@@ -351,7 +352,7 @@ async fn validate_delta_packfile_generation() -> anyhow::Result<()> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn validate_basic_bundle_generation() -> anyhow::Result<()> {
     // Create a few Git objects
     let objects_stream = get_objects_stream(false).await?;
@@ -384,7 +385,7 @@ async fn validate_basic_bundle_generation() -> anyhow::Result<()> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn validate_staggered_bundle_generation() -> anyhow::Result<()> {
     let refs = vec![(
         "HEAD".to_owned(),

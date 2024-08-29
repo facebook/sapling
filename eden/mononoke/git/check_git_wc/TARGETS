@@ -5,6 +5,7 @@ oncall("mononoke")
 rust_library(
     name = "check_git_wc",
     srcs = glob(["src/**/*.rs"]),
+    test_deps = ["//eden/mononoke/mononoke_macros:mononoke_macros"],
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:futures",

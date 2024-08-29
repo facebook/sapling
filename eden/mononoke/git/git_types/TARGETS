@@ -24,6 +24,7 @@ rust_library(
         "//eden/mononoke/blobstore:memblob",
         "//eden/mononoke/bonsai_hg_mapping:bonsai_hg_mapping",
         "//eden/mononoke/bookmarks:bookmarks",
+        "//eden/mononoke/mononoke_macros:mononoke_macros",
         "//eden/mononoke/repo_attributes/commit_graph/commit_graph:commit_graph",
         "//eden/mononoke/repo_attributes/repo_identity:repo_identity",
         "//eden/mononoke/tests/fixtures:fixtures",

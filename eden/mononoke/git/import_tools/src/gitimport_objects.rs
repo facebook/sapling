@@ -605,6 +605,7 @@ impl BackfillDerivation {
 
 #[cfg(test)]
 mod tests {
+    use mononoke_macros::mononoke;
     use slog::o;
 
     use super::decode_message;
@@ -625,20 +626,20 @@ mod tests {
         assert!(m.is_err());
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_decode_commit_message_given_invalid_encoding_should_fail() {
         should_fail_to_decode(
             b"Hello, World!",
             &Some(BString::from("not a valid encoding label")),
         );
     }
-    #[test]
+    #[mononoke::test]
     fn test_decode_commit_message_given_ascii_as_utf8() {
         for encoding in [None, Some(BString::from("utf-8"))] {
             should_decode_into(b"Hello, World!", &encoding, "Hello, World!");
         }
     }
-    #[test]
+    #[mononoke::test]
     fn test_decode_commit_message_given_valid_utf8() {
         for encoding in [None, Some(BString::from("utf-8"))] {
             should_decode_into(
@@ -653,7 +654,7 @@ mod tests {
             );
         }
     }
-    #[test]
+    #[mononoke::test]
     fn test_decode_commit_message_given_malformed_utf8() {
         for encoding in [None, Some(BString::from("utf-8"))] {
             should_decode_into(
@@ -664,7 +665,7 @@ mod tests {
             );
         }
     }
-    #[test]
+    #[mononoke::test]
     fn test_decode_commit_message_given_valid_latin1() {
         should_decode_into(
             b"Hello, R\xe9mi-\xc9tienne!",      // Latin 1 encoded
@@ -672,7 +673,7 @@ mod tests {
             "Hello, Rémi-Étienne!",             // We decode just fine into legible UTF-8
         );
     }
-    #[test]
+    #[mononoke::test]
     fn test_decode_commit_message_given_malformed_latin1() {
         should_decode_into(
             b"Hello, R\xc3\xa9mi-\xc3\x89tienne!".as_slice(), // UTF-8 encoded
@@ -680,7 +681,7 @@ mod tests {
             "Hello, RÃ©mi-Ã‰tienne!", // Broken decoding, this is the best we can do
         );
     }
-    #[test]
+    #[mononoke::test]
     fn test_decode_utf8_with_bom() {
         // We can sniff the UTF-8 BOM mark
         assert_eq!(
@@ -695,7 +696,7 @@ mod tests {
             );
         }
     }
-    #[test]
+    #[mononoke::test]
     fn test_decode_non_utf8_with_bom() {
         // We can sniff the UTF-16BE BOM mark
         assert_eq!(
@@ -715,7 +716,7 @@ mod tests {
             &Some(BString::from("utf-8")),
         );
     }
-    #[test]
+    #[mononoke::test]
     fn test_decode_gb18030_with_bom_shows_the_limits_of_our_implementation() {
         // b"\x84\x31\x95\x33" is the BOM mark that indicates a GB18030 encoding. An encoding for
         // chinese characters.

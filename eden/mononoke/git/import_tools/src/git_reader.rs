@@ -315,9 +315,11 @@ async fn read_objects_task(
 
 #[cfg(test)]
 mod test {
+    use mononoke_macros::mononoke;
+
     use super::*;
 
-    #[test]
+    #[mononoke::test]
     fn test_kind_str_to_kind() {
         assert!(kind_str_to_kind("forest").is_err());
         assert_eq!(kind_str_to_kind("blob").unwrap(), Kind::Blob);
@@ -326,7 +328,7 @@ mod test {
         assert_eq!(kind_str_to_kind("tree").unwrap(), Kind::Tree);
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_parse_kind_and_size() {
         assert!(parse_kind_and_size("missing").is_err());
         assert_eq!(
@@ -335,7 +337,7 @@ mod test {
         );
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_parse_cat_header() {
         assert!(parse_cat_header("I am a fish").is_err());
         let (oid, kind_and_size) =

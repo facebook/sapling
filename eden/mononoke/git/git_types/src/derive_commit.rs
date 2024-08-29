@@ -208,6 +208,7 @@ mod test {
     use futures::StreamExt;
     use futures::TryStreamExt;
     use maplit::hashmap;
+    use mononoke_macros::mononoke;
     use mononoke_types::hash::GitSha1;
     use mononoke_types::ChangesetIdPrefix;
     use repo_blobstore::RepoBlobstore;
@@ -346,7 +347,7 @@ mod test {
 
     macro_rules! impl_test {
         ($test_name:ident, $fixture:ident) => {
-            #[fbinit::test]
+            #[mononoke::fbinit_test]
             fn $test_name(fb: FacebookInit) -> Result<(), anyhow::Error> {
                 let runtime = tokio::runtime::Runtime::new()?;
                 runtime.block_on(async move {
@@ -368,7 +369,7 @@ mod test {
     impl_test!(unshared_merge_uneven, UnsharedMergeUneven);
     impl_test!(many_diamonds, ManyDiamonds);
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     fn test_get_name_and_email() {
         let test_cases = hashmap! {
              "John Doe <john.doe@gmail.com>" => ("John Doe", "john.doe@gmail.com"),

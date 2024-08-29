@@ -25,5 +25,6 @@ rust_unittest(
         ":packetline",
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/fbinit:fbinit-tokio",
+        "//eden/mononoke/mononoke_macros:mononoke_macros",
     ],
 )

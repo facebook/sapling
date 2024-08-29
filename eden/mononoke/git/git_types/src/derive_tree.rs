@@ -290,6 +290,7 @@ mod test {
     use git2::Oid;
     use git2::Repository;
     use manifest::ManifestOps;
+    use mononoke_macros::mononoke;
     use repo_blobstore::RepoBlobstore;
     use repo_blobstore::RepoBlobstoreArc;
     use repo_derived_data::RepoDerivedData;
@@ -367,7 +368,7 @@ mod test {
 
     macro_rules! impl_test {
         ($test_name:ident, $fixture:ident) => {
-            #[fbinit::test]
+            #[mononoke::fbinit_test]
             fn $test_name(fb: FacebookInit) -> Result<(), Error> {
                 let runtime = tokio::runtime::Runtime::new()?;
                 runtime.block_on(async move {

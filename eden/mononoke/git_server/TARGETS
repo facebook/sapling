@@ -6,6 +6,7 @@ oncall("mononoke")
 rust_binary(
     name = "git_server",
     srcs = glob(["src/**/*.rs"]),
+    test_deps = ["//eden/mononoke/mononoke_macros:mononoke_macros"],
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:async-recursion",

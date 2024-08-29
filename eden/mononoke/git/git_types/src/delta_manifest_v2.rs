@@ -471,10 +471,11 @@ mod tests {
     use fbinit::FacebookInit;
     use flate2::write::ZlibDecoder;
     use memblob::Memblob;
+    use mononoke_macros::mononoke;
 
     use super::*;
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_gdm_v2_delta_instructions_round_trip(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
         let blobstore = DelayedBlobstore::new(
