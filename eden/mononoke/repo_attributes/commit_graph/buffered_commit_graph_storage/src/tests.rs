@@ -12,6 +12,7 @@ use anyhow::Result;
 use commit_graph_testlib::*;
 use context::CoreContext;
 use fbinit::FacebookInit;
+use mononoke_macros::mononoke;
 use mononoke_types::RepositoryId;
 use rendezvous::RendezVousOptions;
 use sql_commit_graph_storage::SqlCommitGraphStorageBuilder;

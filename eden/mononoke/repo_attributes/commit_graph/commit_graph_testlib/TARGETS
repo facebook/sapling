@@ -8,6 +8,7 @@ rust_library(
     test_deps = [
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/fbinit:fbinit-tokio",
+        "//eden/mononoke/mononoke_macros:mononoke_macros",
     ],
     deps = [
         "fbsource//third-party/rust:anyhow",

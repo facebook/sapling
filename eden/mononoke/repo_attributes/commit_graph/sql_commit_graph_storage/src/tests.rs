@@ -18,6 +18,7 @@ use commit_graph_types::storage::CommitGraphStorage;
 use commit_graph_types::storage::Prefetch;
 use context::CoreContext;
 use fbinit::FacebookInit;
+use mononoke_macros::mononoke;
 use mononoke_types::RepositoryId;
 use rendezvous::RendezVousOptions;
 use sql_construct::SqlConstruct;
@@ -45,7 +46,7 @@ where
 
 impl_commit_graph_tests!(run_test);
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 pub async fn test_lower_level_api(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let storage = Arc::new(

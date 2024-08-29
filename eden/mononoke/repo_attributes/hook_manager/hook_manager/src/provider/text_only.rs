@@ -133,13 +133,14 @@ impl<T: HookStateProvider + 'static> HookStateProvider for TextOnlyHookStateProv
 #[cfg(test)]
 mod test {
     use fbinit::FacebookInit;
+    use mononoke_macros::mononoke;
     use mononoke_types_mocks::contentid::ONES_CTID;
     use tokio::runtime::Runtime;
 
     use super::*;
     use crate::InMemoryHookStateProvider;
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     fn test_acceptable_file(fb: FacebookInit) {
         let rt = Runtime::new().unwrap();
         let ctx = CoreContext::test_mock(fb);
@@ -157,7 +158,7 @@ mod test {
         assert_eq!(ret, 6);
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     fn test_elide_large_file(fb: FacebookInit) {
         let rt = Runtime::new().unwrap();
         let ctx = CoreContext::test_mock(fb);
@@ -176,7 +177,7 @@ mod test {
         assert_eq!(ret, 6);
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     fn test_elide_binary_file(fb: FacebookInit) {
         let rt = Runtime::new().unwrap();
         let ctx = CoreContext::test_mock(fb);

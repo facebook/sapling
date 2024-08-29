@@ -202,6 +202,7 @@ mod tests {
     use commit_graph_testlib::utils::name_cs_id;
     use context::CoreContext;
     use fbinit::FacebookInit;
+    use mononoke_macros::mononoke;
     use mononoke_types::ChangesetId;
     use mononoke_types::RepositoryId;
     use rendezvous::RendezVousOptions;
@@ -229,7 +230,7 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_commit_graph_bulk_fetcher(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let storage = Arc::new(

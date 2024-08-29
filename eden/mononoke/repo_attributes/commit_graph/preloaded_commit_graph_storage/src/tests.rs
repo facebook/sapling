@@ -20,6 +20,7 @@ use context::CoreContext;
 use fbinit::FacebookInit;
 use fbthrift::compact_protocol;
 use in_memory_commit_graph_storage::InMemoryCommitGraphStorage;
+use mononoke_macros::mononoke;
 use mononoke_types::ChangesetId;
 use mononoke_types::RepositoryId;
 use reloader::Reloader;
@@ -96,7 +97,7 @@ async fn test_equivalent_storages(
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_preloaded_commit_graph_storage(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let underlying_storage = Arc::new(InMemoryCommitGraphStorage::new(RepositoryId::new(1)));

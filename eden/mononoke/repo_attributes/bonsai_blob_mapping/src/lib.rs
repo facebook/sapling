@@ -223,6 +223,7 @@ impl SqlShardableConstructFromMetadataDatabaseConfig for SqlBonsaiBlobMapping {
 
 #[cfg(test)]
 mod test {
+    use mononoke_macros::mononoke;
     use mononoke_types_mocks::changesetid::ONES_CSID;
     use mononoke_types_mocks::changesetid::THREES_CSID;
     use mononoke_types_mocks::changesetid::TWOS_CSID;
@@ -315,7 +316,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_sharding() -> Result<()> {
         let mut sql = SqlBonsaiBlobMapping::with_sqlite_in_memory()?;
         // manually specif multiple shards

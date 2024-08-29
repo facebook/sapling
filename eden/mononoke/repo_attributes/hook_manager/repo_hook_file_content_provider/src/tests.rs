@@ -28,6 +28,7 @@ use hook_manager::PathContent;
 use hook_manager::PushAuthoredBy;
 use maplit::hashmap;
 use metaconfig_types::HookManagerParams;
+use mononoke_macros::mononoke;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::BonsaiChangesetMut;
 use mononoke_types::ChangesetId;
@@ -168,7 +169,7 @@ impl ChangesetHook for LatestChangesChangesetHook {
     }
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_cs_find_content_hook_with_blob_store(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let repo: BasicTestRepo = test_repo_factory::build_empty(ctx.fb).await?;
@@ -257,7 +258,7 @@ async fn test_cs_find_content_hook_with_blob_store(fb: FacebookInit) -> Result<(
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_cs_file_changes_hook_with_blob_store(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let repo: BasicTestRepo = test_repo_factory::build_empty(ctx.fb).await?;
@@ -313,7 +314,7 @@ async fn test_cs_file_changes_hook_with_blob_store(fb: FacebookInit) -> Result<(
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_cs_latest_changes_hook_with_blob_store(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let repo: BasicTestRepo = test_repo_factory::build_empty(ctx.fb).await?;

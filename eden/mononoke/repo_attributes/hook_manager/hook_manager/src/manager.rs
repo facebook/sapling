@@ -501,9 +501,11 @@ impl Hook {
 
 #[cfg(test)]
 mod test {
+    use mononoke_macros::mononoke;
+
     use super::*;
 
-    #[test]
+    #[mononoke::test]
     fn test_commit_message_bypass() {
         let bypass = HookBypass::new_with_commit_msg("@mybypass".into());
 
@@ -514,7 +516,7 @@ mod test {
         assert!(r.is_some());
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_pushvar_bypass() {
         let bypass = HookBypass::new_with_pushvar("myvar".into(), "myvalue".into());
 

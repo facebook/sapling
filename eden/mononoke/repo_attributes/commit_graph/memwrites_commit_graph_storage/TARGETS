@@ -10,6 +10,7 @@ rust_library(
         "//common/rust/shed/fbinit:fbinit-tokio",
         "//eden/mononoke/common/rendezvous:rendezvous",
         "//eden/mononoke/common/sql_construct:sql_construct",
+        "//eden/mononoke/mononoke_macros:mononoke_macros",
         "//eden/mononoke/repo_attributes/commit_graph/commit_graph_testlib:commit_graph_testlib",
         "//eden/mononoke/repo_attributes/commit_graph/sql_commit_graph_storage:sql_commit_graph_storage",
     ],

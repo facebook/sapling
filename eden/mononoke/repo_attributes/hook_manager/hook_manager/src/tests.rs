@@ -21,6 +21,7 @@ use futures::stream::TryStreamExt;
 use maplit::hashmap;
 use maplit::hashset;
 use metaconfig_types::HookManagerParams;
+use mononoke_macros::mononoke;
 use mononoke_types::BasicFileChange;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::BonsaiChangesetMut;
@@ -526,7 +527,7 @@ async fn run_file_hooks(
     assert_eq!(expected, map);
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_changeset_hook_accepted(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
     let hooks: HashMap<String, Box<dyn ChangesetHook>> = hashmap! {
@@ -542,7 +543,7 @@ async fn test_changeset_hook_accepted(fb: FacebookInit) {
     run_changeset_hooks(ctx, "bm1", hooks, bookmarks, regexes, expected).await;
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_changeset_hook_rejected(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
     let hooks: HashMap<String, Box<dyn ChangesetHook>> = hashmap! {
@@ -558,7 +559,7 @@ async fn test_changeset_hook_rejected(fb: FacebookInit) {
     run_changeset_hooks(ctx, "bm1", hooks, bookmarks, regexes, expected).await;
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_changeset_hook_mix(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
     let hooks: HashMap<String, Box<dyn ChangesetHook>> = hashmap! {
@@ -580,7 +581,7 @@ async fn test_changeset_hook_mix(fb: FacebookInit) {
     run_changeset_hooks(ctx, "bm1", hooks, bookmarks, regexes, expected).await;
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_changeset_hook_file_text(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
     let hook1_map = hashmap![
@@ -617,7 +618,7 @@ async fn test_changeset_hook_file_text(fb: FacebookInit) {
     run_changeset_hooks(ctx, "bm1", hooks, bookmarks, regexes, expected).await;
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_changeset_hook_lengths(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
     let hook1_map = hashmap![
@@ -654,7 +655,7 @@ async fn test_changeset_hook_lengths(fb: FacebookInit) {
     run_changeset_hooks(ctx, "bm1", hooks, bookmarks, regexes, expected).await;
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_file_hook_accepted(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
     let hooks: HashMap<String, Box<dyn FileHook>> = hashmap! {
@@ -674,7 +675,7 @@ async fn test_file_hook_accepted(fb: FacebookInit) {
     run_file_hooks(ctx, "bm1", hooks, bookmarks, regexes, expected).await;
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_file_hook_rejected(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
     let hooks: HashMap<String, Box<dyn FileHook>> = hashmap! {
@@ -694,7 +695,7 @@ async fn test_file_hook_rejected(fb: FacebookInit) {
     run_file_hooks(ctx, "bm1", hooks, bookmarks, regexes, expected).await;
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_file_hook_mix(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
     let hooks: HashMap<String, Box<dyn FileHook>> = hashmap! {
@@ -722,7 +723,7 @@ async fn test_file_hook_mix(fb: FacebookInit) {
     run_file_hooks(ctx, "bm1", hooks, bookmarks, regexes, expected).await;
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_file_hooks_paths(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
     let matching_paths = hashset![
@@ -746,7 +747,7 @@ async fn test_file_hooks_paths(fb: FacebookInit) {
     run_file_hooks(ctx, "bm1", hooks, bookmarks, regexes, expected).await;
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_file_hooks_paths_mix(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
     let matching_paths1 = hashset![
@@ -779,7 +780,7 @@ async fn test_file_hooks_paths_mix(fb: FacebookInit) {
     run_file_hooks(ctx, "bm1", hooks, bookmarks, regexes, expected).await;
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_file_hook_file_text(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
     let hooks: HashMap<String, Box<dyn FileHook>> = hashmap! {
@@ -813,7 +814,7 @@ async fn test_file_hook_file_text(fb: FacebookInit) {
     run_file_hooks(ctx, "bm1", hooks, bookmarks, regexes, expected).await;
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_file_hook_is_symlink(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
     let hooks: HashMap<String, Box<dyn FileHook>> = hashmap! {
@@ -841,7 +842,7 @@ async fn test_file_hook_is_symlink(fb: FacebookInit) {
     run_file_hooks(ctx, "bm1", hooks, bookmarks, regexes, expected).await;
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_file_hook_length(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
     let hooks: HashMap<String, Box<dyn FileHook>> = hashmap! {

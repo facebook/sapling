@@ -86,7 +86,7 @@ macro_rules! impl_commit_graph_tests {
 macro_rules! impl_commit_graph_tests_internal {
     ( $test_runner:ident, $($test_name:ident, )* ) => {
         $(
-            #[fbinit::test]
+            #[mononoke::fbinit_test]
             pub async fn $test_name(fb: FacebookInit) -> Result<()> {
                 $test_runner(fb, $crate::$test_name).await
             }

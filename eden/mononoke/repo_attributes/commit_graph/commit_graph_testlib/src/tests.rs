@@ -11,6 +11,7 @@ use std::sync::Arc;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use in_memory_commit_graph_storage::InMemoryCommitGraphStorage;
+use mononoke_macros::mononoke;
 
 use super::*;
 
