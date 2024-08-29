@@ -188,20 +188,21 @@ pub async fn calculate_hg_node_id_stream(
 mod test {
     use bytes::BytesMut;
     use futures::stream;
+    use mononoke_macros::mononoke;
     use quickcheck::quickcheck;
     use tokio::runtime::Runtime;
 
     use super::*;
     use crate::blob::HgBlob;
 
-    #[test]
+    #[mononoke::test]
     fn test_node_none() {
         let blob = HgBlob::from(Bytes::from(&[0; 10][..]));
         let n = HgBlobNode::new(blob, None, None);
         assert_eq!(n.parents, HgParents::None);
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_node_one() {
         let blob = HgBlob::from(Bytes::from(&[0; 10][..]));
         let p = &HgBlobNode::new(blob.clone(), None, None);
@@ -222,7 +223,7 @@ mod test {
         }
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_node_two() {
         use std::mem;
         let mut p1 = HgBlobNode::new(HgBlob::from(Bytes::from(&b"foo1"[..])), None, None);

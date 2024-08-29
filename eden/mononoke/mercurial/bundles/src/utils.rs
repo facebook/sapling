@@ -167,9 +167,11 @@ where
 
 #[cfg(test)]
 mod test {
+    use mononoke_macros::mononoke;
+
     use super::*;
 
-    #[test]
+    #[mononoke::test]
     fn test_is_mandatory_param() {
         assert!(is_mandatory_param("Foo").unwrap());
         assert!(!is_mandatory_param("bar").unwrap());

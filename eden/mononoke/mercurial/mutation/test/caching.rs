@@ -24,6 +24,7 @@ use mercurial_mutation::HgMutationStore;
 use mercurial_mutation::SqlHgMutationStoreBuilder;
 use mercurial_types::HgChangesetId;
 use mercurial_types_mocks::nodehash::make_hg_cs_id;
+use mononoke_macros::mononoke;
 use mononoke_types::RepositoryId;
 use mononoke_types_mocks::repo::REPO_ZERO;
 use sql_construct::SqlConstruct;
@@ -81,7 +82,7 @@ impl HgMutationStore for CountedHgMutationStore {
     }
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn add_entries_and_fetch_predecessors_with_caching(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let sql_store = SqlHgMutationStoreBuilder::with_sqlite_in_memory()

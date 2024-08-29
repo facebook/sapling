@@ -49,10 +49,12 @@ pub fn apply(text: &[u8], deltas: &[Delta]) -> Vec<u8> {
 
 #[cfg(test)]
 mod test {
+    use mononoke_macros::mononoke;
+
     use super::apply;
     use super::Delta;
 
-    #[test]
+    #[mononoke::test]
     fn test_1() {
         let text = b"aaaa\nbbbb\ncccc\n";
         let delta = Delta {
@@ -66,7 +68,7 @@ mod test {
         assert_eq!(&res[..], b"aaaa\nxxxx\ncccc\n");
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_2() {
         let text = b"bbbb\ncccc\n";
         let deltas = [
@@ -86,7 +88,7 @@ mod test {
         assert_eq!(&res[..], b"aaaabbbb\ncccc\ndddd\n");
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_3a() {
         let text = b"aaaa\nbbbb\ncccc\n";
         let deltas = [Delta {
@@ -99,7 +101,7 @@ mod test {
         assert_eq!(&res[..], b"zzzz\nyyyy\nxxxx\n");
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_3b() {
         let text = b"aaaa\nbbbb\ncccc\n";
         let deltas = [
@@ -124,7 +126,7 @@ mod test {
         assert_eq!(&res[..], b"zzzz\nyyyy\nxxxx\n");
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_4() {
         let text = b"aaaa\nbbbb";
         let deltas = [Delta {
@@ -137,7 +139,7 @@ mod test {
         assert_eq!(&res[..], b"aaaa\nbbbbcccc");
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_5() {
         let text = b"aaaa\nbbbb\ncccc\n";
         let deltas = [Delta {

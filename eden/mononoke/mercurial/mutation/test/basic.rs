@@ -19,6 +19,7 @@ use mercurial_mutation::HgMutationEntry;
 use mercurial_mutation::HgMutationStore;
 use mercurial_mutation::SqlHgMutationStoreBuilder;
 use mercurial_types_mocks::nodehash::make_hg_cs_id;
+use mononoke_macros::mononoke;
 use mononoke_types_mocks::repo::REPO_ZERO;
 use sql_construct::SqlConstruct;
 
@@ -75,7 +76,7 @@ pub(crate) fn create_entries() -> HashMap<usize, HgMutationEntry> {
     }
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn add_entries_and_fetch_predecessors(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let store = SqlHgMutationStoreBuilder::with_sqlite_in_memory()
@@ -304,7 +305,7 @@ async fn add_entries_and_fetch_predecessors(fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn check_mutations_are_cut_when_reaching_limit(fb: FacebookInit) -> Result<()> {
     const TEST_MUTATION_LIMIT: usize = 10;
 

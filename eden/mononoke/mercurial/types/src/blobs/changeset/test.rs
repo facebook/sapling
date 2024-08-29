@@ -8,6 +8,7 @@
 use std::collections::BTreeMap;
 
 use bytes::Bytes;
+use mononoke_macros::mononoke;
 use mononoke_types::DateTime;
 use quickcheck::quickcheck;
 use quickcheck::QuickCheck;
@@ -27,7 +28,7 @@ use crate::NonRootMPath;
 const CHANGESET: &[u8] = include_bytes!("cset.bin");
 const CHANGESET_NOEXTRA: &[u8] = include_bytes!("cset_noextra.bin");
 
-#[test]
+#[mononoke::test]
 fn test_parse() {
     let csid: HgNodeHash = "0849d280663e46b3e247857f4a68fabd2ba503c3".parse().unwrap();
     let p1: HgNodeHash = "169cb9e47f8e86079ee9fd79972092f78fbf68b1".parse().unwrap();
@@ -90,7 +91,7 @@ clean up html code for w3c validation
     );
 }
 
-#[test]
+#[mononoke::test]
 fn test_generate() {
     fn test(csid: HgNodeHash, p1: Option<HgNodeHash>, blob: HgBlob, cs: &[u8]) {
         let cset = RevlogChangeset::parse(blob.clone(), p1, None).expect("parsed");
@@ -148,7 +149,7 @@ fn extras_roundtrip_prop(kv: BTreeMap<Vec<u8>, Vec<u8>>) -> TestResult {
     TestResult::from_bool(new == extra)
 }
 
-#[test]
+#[mononoke::test]
 fn extras_roundtrip() {
     QuickCheck::new()
         .tests(50) // more takes too much time

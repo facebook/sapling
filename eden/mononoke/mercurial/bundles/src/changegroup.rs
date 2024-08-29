@@ -55,6 +55,7 @@ mod test {
 
     use futures::StreamExt;
     use futures::TryStreamExt;
+    use mononoke_macros::mononoke;
     use partial_io::quickcheck_types::GenWouldBlock;
     use partial_io::quickcheck_types::PartialWithErrors;
     use partial_io::PartialAsyncRead;
@@ -73,7 +74,7 @@ mod test {
     use crate::chunk::NewChunkEncoder;
     use crate::quickcheck_types::CgPartSequence;
 
-    #[test]
+    #[mononoke::test]
     fn test_roundtrip() {
         // Each test case gets pretty big (O(size**2) parts (because of
         // filelogs), each part with O(size) deltas), so reduce the size a bit
@@ -94,7 +95,7 @@ mod test {
         );
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_roundtrip_giant() {
         // Test a smaller number of cases with much larger inputs.
         let gen = Gen::new(200);

@@ -470,6 +470,7 @@ pub fn serialize_extras<W: Write>(extras: &Extra, out: &mut W) -> io::Result<()>
 
 #[cfg(test)]
 mod tests {
+    use mononoke_macros::mononoke;
     use mononoke_types::sha1_hash;
     use quickcheck::quickcheck;
 
@@ -482,14 +483,14 @@ mod tests {
         }
     }
 
-    #[test]
+    #[mononoke::test]
     fn unescape_example_roundtrip() {
         let input = b"\x0c\\r\x90\x0c\x01\\n";
         let result = unescape(input.iter());
         assert_eq!(escape(result.iter()), input);
     }
 
-    #[test]
+    #[mononoke::test]
     fn sha1_bytes_match_hashes() {
         // Commit raw data created by: `hg init`, `hg commit -m y --config ui.allowemptycommit=1`,
         // then "[cl.revision(i) for i in cl]" in `hg dbsh`.

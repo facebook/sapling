@@ -31,12 +31,13 @@ use mercurial_types_mocks::nodehash::FOURS_FNID;
 use mercurial_types_mocks::nodehash::ONES_FNID;
 use mercurial_types_mocks::nodehash::THREES_FNID;
 use mercurial_types_mocks::nodehash::TWOS_FNID;
+use mononoke_macros::mononoke;
 use mononoke_types::hash::Sha256;
 use mononoke_types_mocks::contentid::ONES_CTID;
 use mononoke_types_mocks::contentid::TWOS_CTID;
 use quickcheck::quickcheck;
 
-#[test]
+#[mononoke::test]
 fn nodehash_option() {
     assert_eq!(NULL_HASH.into_option(), None);
     assert_eq!(HgNodeHash::from(None), NULL_HASH);
@@ -48,7 +49,7 @@ fn nodehash_option() {
     );
 }
 
-#[test]
+#[mononoke::test]
 fn nodehash_display_opt() {
     assert_eq!(
         format!("{}", HgNodeHash::display_opt(Some(&nodehash::ONES_HASH))),
@@ -57,7 +58,7 @@ fn nodehash_display_opt() {
     assert_eq!(format!("{}", HgNodeHash::display_opt(None)), "(none)");
 }
 
-#[test]
+#[mononoke::test]
 fn changeset_id_display_opt() {
     assert_eq!(
         format!("{}", HgChangesetId::display_opt(Some(&nodehash::ONES_CSID))),
@@ -66,68 +67,68 @@ fn changeset_id_display_opt() {
     assert_eq!(format!("{}", HgChangesetId::display_opt(None)), "(none)");
 }
 
-#[test]
+#[mononoke::test]
 fn extract_meta_sz() {
     assert_eq!(META_SZ, META_MARKER.len())
 }
 
-#[test]
+#[mononoke::test]
 fn extract_meta_0() {
     const DATA: &[u8] = b"foo - no meta";
 
     assert_eq!(File::extract_meta(DATA), (&[][..], 0));
 }
 
-#[test]
+#[mononoke::test]
 fn extract_meta_1() {
     const DATA: &[u8] = b"\x01\n\x01\nfoo - empty meta";
 
     assert_eq!(File::extract_meta(DATA), (&[][..], 4));
 }
 
-#[test]
+#[mononoke::test]
 fn extract_meta_2() {
     const DATA: &[u8] = b"\x01\nabc\x01\nfoo - some meta";
 
     assert_eq!(File::extract_meta(DATA), (&b"abc"[..], 7));
 }
 
-#[test]
+#[mononoke::test]
 fn extract_meta_3() {
     const DATA: &[u8] = b"\x01\nfoo - bad unterminated meta";
 
     assert_eq!(File::extract_meta(DATA), (&[][..], 2));
 }
 
-#[test]
+#[mononoke::test]
 fn extract_meta_4() {
     const DATA: &[u8] = b"\x01\n\x01\n\x01\nfoo - bad unterminated meta";
 
     assert_eq!(File::extract_meta(DATA), (&[][..], 4));
 }
 
-#[test]
+#[mononoke::test]
 fn extract_meta_5() {
     const DATA: &[u8] = b"\x01\n\x01\n";
 
     assert_eq!(File::extract_meta(DATA), (&[][..], 4));
 }
 
-#[test]
+#[mononoke::test]
 fn parse_meta_0() {
     const DATA: &[u8] = b"foo - no meta";
 
     assert!(File::parse_meta(DATA).is_empty())
 }
 
-#[test]
+#[mononoke::test]
 fn test_meta_1() {
     const DATA: &[u8] = b"\x01\n\x01\nfoo - empty meta";
 
     assert!(File::parse_meta(DATA).is_empty())
 }
 
-#[test]
+#[mononoke::test]
 fn test_meta_2() {
     const DATA: &[u8] = b"\x01\nfoo: bar\x01\nfoo - empty meta";
 
@@ -136,7 +137,7 @@ fn test_meta_2() {
     assert_eq!(kv, vec![(b"foo".as_ref(), b"bar".as_ref())])
 }
 
-#[test]
+#[mononoke::test]
 fn test_meta_3() {
     const DATA: &[u8] = b"\x01\nfoo: bar\nblim: blop: blap\x01\nfoo - empty meta";
 
@@ -152,7 +153,7 @@ fn test_meta_3() {
     )
 }
 
-#[test]
+#[mononoke::test]
 fn test_hash_meta_delimiter_only_0() {
     const DELIMITER: &[u8] = b"DELIMITER";
     const DATA: &[u8] = b"DELIMITER\n";
@@ -164,7 +165,7 @@ fn test_hash_meta_delimiter_only_0() {
     assert_eq!(kv, vec![(b"".as_ref(), b"".as_ref())])
 }
 
-#[test]
+#[mononoke::test]
 fn test_hash_meta_delimiter_only_1() {
     const DELIMITER: &[u8] = b"DELIMITER";
     const DATA: &[u8] = b"DELIMITER";
@@ -176,7 +177,7 @@ fn test_hash_meta_delimiter_only_1() {
     assert_eq!(kv, vec![(b"".as_ref(), b"".as_ref())])
 }
 
-#[test]
+#[mononoke::test]
 fn test_hash_meta_delimiter_short_0() {
     const DELIMITER: &[u8] = b"DELIMITER";
     const DATA: &[u8] = b"DELIM";
@@ -187,7 +188,7 @@ fn test_hash_meta_delimiter_short_0() {
     assert!(kv.as_mut_slice().is_empty())
 }
 
-#[test]
+#[mononoke::test]
 fn test_hash_meta_delimiter_short_1() {
     const DELIMITER: &[u8] = b"DELIMITER";
     const DATA: &[u8] = b"\n";
@@ -198,7 +199,7 @@ fn test_hash_meta_delimiter_short_1() {
     assert!(kv.as_mut_slice().is_empty())
 }
 
-#[test]
+#[mononoke::test]
 fn test_parse_to_hash_map_long_delimiter() {
     const DATA: &[u8] = b"x\nfooDELIMITERbar\nfoo1DELIMITERbar1";
     const DELIMITER: &[u8] = b"DELIMITER";
@@ -224,7 +225,7 @@ fn check_meta_roundtrip(file: &[u8], meta: &[u8]) {
     assert_eq!(f.metadata(), meta);
 }
 
-#[test]
+#[mononoke::test]
 fn generate_metadata_0() {
     const FILE_BYTES: &[u8] = b"foobar";
     let file_bytes = FileBytes(Bytes::from(FILE_BYTES));
@@ -247,7 +248,7 @@ fn generate_metadata_0() {
     check_meta_roundtrip(FILE_BYTES, &meta);
 }
 
-#[test]
+#[mononoke::test]
 fn generate_metadata_1() {
     // The meta marker in the beginning should cause metadata to unconditionally be emitted.
     const FILE_BYTES: &[u8] = b"\x01\nfoobar";
@@ -271,7 +272,7 @@ fn generate_metadata_1() {
     check_meta_roundtrip(FILE_BYTES, &meta);
 }
 
-#[test]
+#[mononoke::test]
 fn test_get_lfs_hash_map() {
     const DATA: &[u8] = b"version https://git-lfs.github.com/spec/v1\noid sha256:27c0a92fc51290e3227bea4dd9e780c5035f017de8d5ddfa35b269ed82226d97\nsize 17";
 
@@ -296,7 +297,7 @@ fn test_get_lfs_hash_map() {
     )
 }
 
-#[test]
+#[mononoke::test]
 fn test_get_lfs_struct_0() {
     let mut kv = HashMap::new();
     kv.insert(
@@ -322,7 +323,7 @@ fn test_get_lfs_struct_0() {
     )
 }
 
-#[test]
+#[mononoke::test]
 fn test_get_lfs_struct_wrong_small_sha256() {
     let mut kv = HashMap::new();
     kv.insert(
@@ -336,7 +337,7 @@ fn test_get_lfs_struct_wrong_small_sha256() {
     assert!(lfs.is_err())
 }
 
-#[test]
+#[mononoke::test]
 fn test_get_lfs_struct_wrong_size() {
     let mut kv = HashMap::new();
     kv.insert(
@@ -353,7 +354,7 @@ fn test_get_lfs_struct_wrong_size() {
     assert!(lfs.is_err())
 }
 
-#[test]
+#[mononoke::test]
 fn test_get_lfs_struct_non_all_mandatory_fields() {
     let mut kv = HashMap::new();
     kv.insert(
@@ -365,7 +366,7 @@ fn test_get_lfs_struct_non_all_mandatory_fields() {
     assert!(lfs.is_err())
 }
 
-#[test]
+#[mononoke::test]
 fn test_roundtrip_lfs_content() {
     let oid = Sha256::from_str("27c0a92fc51290e3227bea4dd9e780c5035f017de8d5ddfa35b269ed82226d97")
         .unwrap();
@@ -416,7 +417,7 @@ quickcheck! {
     }
 }
 
-#[test]
+#[mononoke::test]
 fn test_hashes_are_unique() -> Result<(), Error> {
     let mut h = HashSet::new();
 

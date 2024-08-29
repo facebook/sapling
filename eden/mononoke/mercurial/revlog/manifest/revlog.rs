@@ -455,10 +455,11 @@ impl RevlogEntry {
 #[cfg(test)]
 mod test {
     use mercurial_types_mocks::nodehash::*;
+    use mononoke_macros::mononoke;
 
     use super::*;
 
-    #[test]
+    #[mononoke::test]
     fn test_find() {
         assert_eq!(find(b"abc123", &b'b'), Some(1));
         assert_eq!(find(b"abc123", &b'x'), None);
@@ -466,7 +467,7 @@ mod test {
         assert_eq!(find(b"", &b'b'), None);
     }
 
-    #[test]
+    #[mononoke::test]
     fn empty() {
         assert_eq!(
             RevlogManifest::parse(None, &HgParents::None, b"").unwrap(),
@@ -480,7 +481,7 @@ mod test {
         );
     }
 
-    #[test]
+    #[mononoke::test]
     fn bad_nonil() {
         match RevlogManifest::parse(None, &HgParents::None, b"hello123") {
             Ok(m) => panic!("unexpected manifest {:?}", m),
@@ -488,7 +489,7 @@ mod test {
         }
     }
 
-    #[test]
+    #[mononoke::test]
     fn bad_nohash() {
         match RevlogManifest::parse(None, &HgParents::None, b"hello123\0") {
             Ok(m) => panic!("unexpected manifest {:?}", m),
@@ -496,7 +497,7 @@ mod test {
         }
     }
 
-    #[test]
+    #[mononoke::test]
     fn bad_badhash1() {
         match RevlogManifest::parse(None, &HgParents::None, b"hello123\0abc123") {
             Ok(m) => panic!("unexpected manifest {:?}", m),
@@ -504,7 +505,7 @@ mod test {
         }
     }
 
-    #[test]
+    #[mononoke::test]
     fn good_one() {
         match RevlogManifest::parse(
             None,
@@ -526,7 +527,7 @@ mod test {
         }
     }
 
-    #[test]
+    #[mononoke::test]
     fn one_roundtrip() {
         // Only one flag because its unclear how multiple flags should be ordered
         const RAW: &[u8] = b"hello123\0da39a3ee5e6b4b0d3255bfef95601890afd80709x\n";
@@ -550,7 +551,7 @@ mod test {
 
     const MANIFEST: &[u8] = include_bytes!("flatmanifest.bin");
 
-    #[test]
+    #[mononoke::test]
     fn fullmanifest() {
         match RevlogManifest::parse(None, &HgParents::Two(ONES_HASH, TWOS_HASH), MANIFEST) {
             Ok(m) => {
@@ -564,7 +565,7 @@ mod test {
         }
     }
 
-    #[test]
+    #[mononoke::test]
     fn roundtrip() {
         let m = RevlogManifest::parse(None, &HgParents::One(ONES_HASH), MANIFEST)
             .expect("parse failed");

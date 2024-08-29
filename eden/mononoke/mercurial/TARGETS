@@ -16,6 +16,7 @@ rust_library(
         "fbsource//third-party/rust:assert_matches",
         ":mercurial_types-mocks",
         "//common/rust/shed/failure_ext:failure_ext",
+        "//eden/mononoke/mononoke_macros:mononoke_macros",
     ],
     # A test inside this target is using #[should_panic], setting the backtrace
     # to false here, otherwise the test binary will try to extract the backtrace
@@ -55,6 +56,7 @@ rust_library(
         "//eden/mononoke/blobrepo:repo_blobstore",
         "//eden/mononoke/bonsai_hg_mapping:bonsai_hg_mapping",
         "//eden/mononoke/bookmarks:bookmarks",
+        "//eden/mononoke/mononoke_macros:mononoke_macros",
         "//eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust",
         "//eden/mononoke/repo_attributes/commit_graph/commit_graph:commit_graph",
         "//eden/mononoke/repo_attributes/repo_derived_data:repo_derived_data",
@@ -108,6 +110,7 @@ rust_library(
     name = "mercurial_types-mocks",
     srcs = glob(["types/mocks/**/*.rs"]),
     autocargo = {"cargo_toml_dir": "types/mocks"},
+    test_deps = ["//eden/mononoke/mononoke_macros:mononoke_macros"],
     deps = [
         "fbsource//third-party/rust:byteorder",
         ":mercurial_types",
@@ -127,6 +130,7 @@ rust_unittest(
         "fbsource//third-party/rust:quickcheck",
         ":mercurial_types",
         ":mercurial_types-mocks",
+        "//eden/mononoke/mononoke_macros:mononoke_macros",
         "//eden/mononoke/mononoke_types:mononoke_types",
         "//eden/mononoke/mononoke_types:mononoke_types-mocks",
     ],
@@ -144,6 +148,7 @@ rust_library(
         ":mercurial_types-mocks",
         "//common/rust/shed/failure_ext:failure_ext",
         "//common/rust/shed/fbinit:fbinit",
+        "//eden/mononoke/mononoke_macros:mononoke_macros",
     ],
     test_srcs = glob(["bundles/src/fixtures/*"]),
     deps = [
@@ -234,6 +239,7 @@ rust_unittest(
         "//common/rust/shed/fbinit:fbinit-tokio",
         "//common/rust/shed/justknobs_stub:justknobs",
         "//eden/mononoke/common/sql_construct:sql_construct",
+        "//eden/mononoke/mononoke_macros:mononoke_macros",
         "//eden/mononoke/mononoke_types:mononoke_types",
         "//eden/mononoke/mononoke_types:mononoke_types-mocks",
         "//eden/mononoke/server/context:context",

@@ -26,6 +26,7 @@ use mercurial_types::HgNodeHash;
 use mercurial_types::NonRootMPath;
 use mercurial_types::RepoPath;
 use mercurial_types::NULL_HASH;
+use mononoke_macros::mononoke;
 use partial_io::quickcheck_types::GenWouldBlock;
 use partial_io::quickcheck_types::PartialWithErrors;
 use partial_io::PartialAsyncRead;
@@ -77,7 +78,7 @@ impl<'a> Debug for ByteBuf<'a> {
     }
 }
 
-#[test]
+#[mononoke::test]
 fn test_parse_bzip2() {
     let gen = Gen::new(20);
     let mut quickcheck = QuickCheck::new().gen(gen);
@@ -88,7 +89,7 @@ fn parse_bzip2(read_ops: PartialWithErrors<GenWouldBlock>) {
     parse_bundle(BZIP2_BUNDLE2, Some("BZ"), read_ops);
 }
 
-#[test]
+#[mononoke::test]
 fn test_parse_uncompressed() {
     let gen = Gen::new(20);
     let mut quickcheck = QuickCheck::new().gen(gen);
@@ -99,7 +100,7 @@ fn parse_uncompressed(read_ops: PartialWithErrors<GenWouldBlock>) {
     parse_bundle(UNCOMP_BUNDLE2, None, read_ops);
 }
 
-#[test]
+#[mononoke::test]
 fn test_parse_unknown_compression() {
     let app_errors = Arc::new(Mutex::new(Vec::new()));
 
@@ -112,7 +113,7 @@ fn test_parse_unknown_compression() {
                     ErrorKind::Bundle2Decode(ref msg) if msg == "unknown compression 'IL'");
 }
 
-#[test]
+#[mononoke::test]
 fn test_empty_bundle_roundtrip_uncompressed() {
     // Encode an empty bundle.
     let cursor = Cursor::new(Vec::with_capacity(32 * 1024));
@@ -156,7 +157,7 @@ fn test_empty_bundle_roundtrip_uncompressed() {
     assert!(item.is_none());
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 fn test_phases_part_encording(fb: FacebookInit) {
     let phases_entries = stream::iter(vec![
         (
@@ -193,7 +194,7 @@ fn test_phases_part_encording(fb: FacebookInit) {
     );
 }
 
-#[test]
+#[mononoke::test]
 fn test_unknown_part_uncompressed() {
     let cursor = Cursor::new(Vec::with_capacity(32 * 1024));
     let mut builder = Bundle2EncodeBuilder::new(cursor);
@@ -421,7 +422,7 @@ fn verify_cg2(runtime: &Runtime, stream: BoxStream<'static, Result<changegroup::
     );
 }
 
-#[test]
+#[mononoke::test]
 fn test_parse_wirepack() {
     let gen = Gen::new(20);
     let mut quickcheck = QuickCheck::new().gen(gen);

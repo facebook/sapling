@@ -5,11 +5,13 @@
  * GNU General Public License version 2.
  */
 
+use mononoke_macros::mononoke;
+
 use super::*;
 
 static EMPTY: &[u8] = include_bytes!("empty.i.bin");
 
-#[test]
+#[mononoke::test]
 fn emptyrev() {
     let revlog = Revlog::new(EMPTY.to_vec(), None).expect("construction failed");
     let node = revlog

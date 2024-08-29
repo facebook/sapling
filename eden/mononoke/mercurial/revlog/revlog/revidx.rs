@@ -125,31 +125,33 @@ impl Iterator for RevIdxRange {
 mod test {
     use std::str::FromStr;
 
+    use mononoke_macros::mononoke;
+
     use super::*;
 
-    #[test]
+    #[mononoke::test]
     fn zero() {
         assert_eq!(RevIdx::zero(), RevIdx(0))
     }
 
-    #[test]
+    #[mononoke::test]
     fn succ() {
         assert_eq!(RevIdx::zero().succ(), RevIdx(1));
         assert_eq!(RevIdx::zero().succ().succ(), RevIdx(2));
     }
 
-    #[test]
+    #[mononoke::test]
     fn pred() {
         assert_eq!(RevIdx(10).pred(), RevIdx(9));
     }
 
-    #[test]
+    #[mononoke::test]
     #[should_panic]
     fn bad_pred() {
         println!("bad {:?}", RevIdx::zero().pred());
     }
 
-    #[test]
+    #[mononoke::test]
     fn range_to() {
         let v: Vec<_> = RevIdx::zero().range_to(RevIdx(5)).collect();
         assert_eq!(
@@ -158,7 +160,7 @@ mod test {
         );
     }
 
-    #[test]
+    #[mononoke::test]
     fn iter() {
         let v: Vec<_> = RevIdx::zero().into_iter().take(5).collect();
         assert_eq!(
@@ -167,13 +169,13 @@ mod test {
         )
     }
 
-    #[test]
+    #[mononoke::test]
     fn fromstr() {
         let idx: RevIdx = FromStr::from_str("555").expect("Valid string");
         assert_eq!(idx, RevIdx(555));
     }
 
-    #[test]
+    #[mononoke::test]
     fn fromstr_bad1() {
         match RevIdx::from_str("abc123") {
             Ok(x) => panic!("unexpected success with {:?}", x),
@@ -181,7 +183,7 @@ mod test {
         }
     }
 
-    #[test]
+    #[mononoke::test]
     fn fromstr_bad2() {
         match RevIdx::from_str("-1") {
             Ok(x) => panic!("unexpected success with {:?}", x),

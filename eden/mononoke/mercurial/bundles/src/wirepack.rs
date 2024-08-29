@@ -368,13 +368,14 @@ mod test {
     use mercurial_types::delta::Fragment;
     use mercurial_types_mocks::nodehash::AS_HASH;
     use mercurial_types_mocks::nodehash::BS_HASH;
+    use mononoke_macros::mononoke;
     use quickcheck::quickcheck;
     use quickcheck::Arbitrary;
     use quickcheck::Gen;
 
     use super::*;
 
-    #[test]
+    #[mononoke::test]
     fn test_history_verify_basic() {
         let foo_dir = RepoPath::dir("foo").unwrap();
         let bar_file = RepoPath::file("bar").unwrap();
@@ -413,7 +414,7 @@ mod test {
         }
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_history_verify_arbitrary() {
         let mut rng = Gen::new(100);
         for _n in 0..100 {
@@ -426,7 +427,7 @@ mod test {
         }
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_history_roundtrip() {
         let mut rng = Gen::new(100);
         for _n in 0..100 {
@@ -473,7 +474,7 @@ mod test {
         assert_eq!(encoded_bytes.len(), 0);
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_data_verify_basic() {
         #[rustfmt::skip]
         let tests = vec![

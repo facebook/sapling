@@ -355,6 +355,7 @@ fn hashencode(dirs: Vec<&[u8]>, file: &[u8], dotencode: bool) -> PathBuf {
 
 #[cfg(test)]
 mod test {
+    use mononoke_macros::mononoke;
     use mononoke_types::MPathElement;
     use mononoke_types::NonRootMPath;
 
@@ -378,22 +379,22 @@ mod test {
         assert_eq!(simple_fsencode(&elements), PathBuf::from(expected));
     }
 
-    #[test]
+    #[mononoke::test]
     fn fsencode_simple() {
         check_fsencode(b"foo/bar", "foo/bar");
     }
 
-    #[test]
+    #[mononoke::test]
     fn fsencode_simple_single() {
         check_fsencode(b"bar", "bar");
     }
 
-    #[test]
+    #[mononoke::test]
     fn fsencode_hexquote() {
         check_fsencode(b"oh?/wow~:<>", "oh~3f/wow~7e~3a~3c~3e");
     }
 
-    #[test]
+    #[mononoke::test]
     fn fsencode_direncode() {
         check_fsencode(b"foo.d/bar.d", "foo.d.hg/bar.d");
         check_fsencode(b"foo.d/bar.d/file", "foo.d.hg/bar.d.hg/file");
@@ -404,27 +405,27 @@ mod test {
         );
     }
 
-    #[test]
+    #[mononoke::test]
     fn fsencode_direncode_single() {
         check_fsencode(b"bar.d", "bar.d");
     }
 
-    #[test]
+    #[mononoke::test]
     fn fsencode_upper() {
         check_fsencode(b"HELLO/WORLD", "_h_e_l_l_o/_w_o_r_l_d");
     }
 
-    #[test]
+    #[mononoke::test]
     fn fsencode_upper_direncode() {
         check_fsencode(b"HELLO.d/WORLD.d", "_h_e_l_l_o.d.hg/_w_o_r_l_d.d");
     }
 
-    #[test]
+    #[mononoke::test]
     fn fsencode_single_underscore_fileencode() {
         check_fsencode(b"_", "__");
     }
 
-    #[test]
+    #[mononoke::test]
     fn fsencode_auxencode() {
         check_fsencode(b"com3", "co~6d3");
         check_fsencode(b"lpt9", "lp~749");
@@ -449,7 +450,7 @@ mod test {
         assert_eq!(fncache_fsencode(&elements, false), PathBuf::from(expected));
     }
 
-    #[test]
+    #[mononoke::test]
     fn join() {
         join_and_check(Some("prefix"), Some("suffix"), "prefix/suffix");
         join_and_check(Some("prefix"), None, "prefix");
@@ -474,7 +475,7 @@ mod test {
         );
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_get_extension() {
         assert_eq!(get_extension(b".foo"), b"");
         assert_eq!(get_extension(b"foo."), b".");
@@ -483,7 +484,7 @@ mod test {
         assert_eq!(get_extension(b"foo.bar.blat"), b".blat");
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_hashed_file() {
         let dirs = vec![&b"asdf"[..], b"asdf"];
         let file = b"file.txt";
@@ -493,7 +494,7 @@ mod test {
         );
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_fsencode() {
         let toencode = b"data/abcdefghijklmnopqrstuvwxyz0123456789 !#%&'()+,-.;=[]^`{}";
         let expected = "data/abcdefghijklmnopqrstuvwxyz0123456789 !#%&'()+,-.;=[]^`{}";
@@ -504,7 +505,7 @@ mod test {
         check_fsencode(&toencode[..], expected);
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_simple_fsencode() {
         let toencode: &[u8] = b"foo.i/bar.d/bla.hg/hi:world?/HELLO";
         let expected = "foo.i.hg/bar.d.hg/bla.hg.hg/hi~3aworld~3f/_h_e_l_l_o";
@@ -517,7 +518,7 @@ mod test {
     }
 
     /// Tested as in D8527475
-    #[test]
+    #[mononoke::test]
     fn test_very_long_simple_fsencode() {
         let toencode = vec![b'X'; 128];
         let expected = "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX";
@@ -539,7 +540,7 @@ mod test {
     }
 
     // Tested as in D9967059
-    #[test]
+    #[mononoke::test]
     fn test_hg() {
         let mut toencode = vec![b'X'; 253];
         toencode.push(b'_');

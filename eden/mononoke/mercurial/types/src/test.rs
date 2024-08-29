@@ -7,6 +7,7 @@
 
 use std::path::PathBuf;
 
+use mononoke_macros::mononoke;
 use mononoke_types::NonRootMPath;
 
 use crate::fsencode::fncache_fsencode;
@@ -21,7 +22,7 @@ fn check_fsencode_with_dotencode(path: &[u8], expected: &str) {
     assert_eq!(fncache_fsencode(&elements, true), PathBuf::from(expected));
 }
 
-#[test]
+#[mononoke::test]
 fn test_parse_svnrev() {
     let to_parse = "svn:uuid/path@1234";
     assert_eq!(Globalrev::parse_svnrev(to_parse).unwrap(), 1234);
@@ -36,7 +37,7 @@ fn test_parse_svnrev() {
     Globalrev::parse_svnrev(to_parse).expect_err("1234a shouldn't parse to int successfully");
 }
 
-#[test]
+#[mononoke::test]
 fn test_fsencode_from_core_hg() {
     let toencode = b"data/abcdefghijklmnopqrstuvwxyz0123456789 !#%&'()+,-.;=[]^`{}";
     let expected = "data/abcdefghijklmnopqrstuvwxyz0123456789 !#%&'()+,-.;=[]^`{}";

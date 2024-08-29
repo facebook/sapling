@@ -133,6 +133,7 @@ mod tests {
     use failure_ext::err_downcast_ref;
     use futures_old::Future;
     use mercurial_types_mocks::nodehash::*;
+    use mononoke_macros::mononoke;
 
     use super::*;
 
@@ -144,7 +145,7 @@ mod tests {
         assert_eq!(bookmarks.get(key).wait().unwrap(), expected);
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_parse() {
         let disk_bookmarks = b"\
             1111111111111111111111111111111111111111 abc\n\
@@ -167,7 +168,7 @@ mod tests {
     }
 
     /// Test a bunch of invalid bookmark lines
-    #[test]
+    #[mononoke::test]
     fn test_invalid() {
         let reader = Cursor::new(&b"111\n"[..]);
         let bookmarks = StockBookmarks::from_reader(reader);

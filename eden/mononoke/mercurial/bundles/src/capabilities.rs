@@ -91,10 +91,11 @@ pub fn encode_capabilities(caps: Capabilities) -> Bytes {
 #[cfg(test)]
 mod test {
     use maplit::hashmap;
+    use mononoke_macros::mononoke;
 
     use super::*;
 
-    #[test]
+    #[mononoke::test]
     fn caps_roundtrip() {
         let caps = hashmap! {
             "key1".to_string() => vec!["value11".to_string(), "value12".to_string()],

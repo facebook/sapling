@@ -293,12 +293,14 @@ impl Decoder for EmptyUnpacker {
 
 #[cfg(test)]
 mod test {
+    use mononoke_macros::mononoke;
+
     use crate::changegroup::unpacker::CgVersion;
     use crate::part_header::PartHeaderBuilder;
     use crate::part_header::PartHeaderType;
     use crate::part_inner::*;
 
-    #[test]
+    #[mononoke::test]
     fn test_cg_unpacker_v3() {
         let mut header_builder =
             PartHeaderBuilder::new(PartHeaderType::Changegroup, false).unwrap();
@@ -311,7 +313,7 @@ mod test {
         );
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_cg_unpacker_v2() {
         let mut header_builder =
             PartHeaderBuilder::new(PartHeaderType::Changegroup, false).unwrap();
@@ -324,7 +326,7 @@ mod test {
         );
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_cg_unpacker_default_v2() {
         let header_builder = PartHeaderBuilder::new(PartHeaderType::Changegroup, false).unwrap();
         let h = header_builder.build(1);

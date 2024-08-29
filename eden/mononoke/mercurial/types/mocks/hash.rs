@@ -52,9 +52,11 @@ pub fn make_hash(prefix: &'static [u8], number: u64) -> Sha1 {
 
 #[cfg(test)]
 mod test {
+    use mononoke_macros::mononoke;
+
     use super::*;
 
-    #[test]
+    #[mononoke::test]
     fn verify() {
         assert_eq!(
             format!("{}", NULL),

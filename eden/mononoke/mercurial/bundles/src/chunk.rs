@@ -165,6 +165,7 @@ mod test {
     use futures::stream;
     use futures::SinkExt;
     use futures::TryStreamExt;
+    use mononoke_macros::mononoke;
     use quickcheck::quickcheck;
     use quickcheck::TestResult;
     use tokio_util::codec::FramedRead;
@@ -172,7 +173,7 @@ mod test {
 
     use super::*;
 
-    #[test]
+    #[mononoke::test]
     fn test_empty_chunk() {
         let mut buf = BytesMut::with_capacity(4);
         buf.put_i32(0);
@@ -186,7 +187,7 @@ mod test {
         assert!(!chunk.is_error());
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_error_chunk() {
         let mut buf = BytesMut::with_capacity(4);
         buf.put_i32(-1);
@@ -200,7 +201,7 @@ mod test {
         assert!(chunk.is_error());
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_invalid_chunk() {
         let mut buf = BytesMut::with_capacity(4);
         buf.put_i32(-2);
@@ -215,7 +216,7 @@ mod test {
         );
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_roundtrip() {
         // Avoid using the quickcheck! macro because it eats up line numbers in
         // stack traces.

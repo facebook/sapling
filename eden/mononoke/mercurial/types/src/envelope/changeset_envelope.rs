@@ -155,6 +155,7 @@ impl Arbitrary for HgChangesetEnvelope {
 
 #[cfg(test)]
 mod test {
+    use mononoke_macros::mononoke;
     use quickcheck::quickcheck;
 
     use super::*;
@@ -175,7 +176,7 @@ mod test {
         }
     }
 
-    #[test]
+    #[mononoke::test]
     fn bad_thrift() {
         let mut thrift_ce = thrift::HgChangesetEnvelope {
             node_id: thrift::HgNodeHash(thrift::id::Sha1(vec![1; 20].into())),

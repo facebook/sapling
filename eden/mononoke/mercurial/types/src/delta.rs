@@ -336,12 +336,13 @@ pub mod compat {
 
 #[cfg(test)]
 mod tests {
+    use mononoke_macros::mononoke;
     use quickcheck::quickcheck;
 
     use super::*;
 
     /// Test that fragments are verified properly.
-    #[test]
+    #[mononoke::test]
     fn test_delta_new() {
         #[rustfmt::skip]
         let test_cases = vec![
@@ -367,7 +368,7 @@ mod tests {
         }
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_maybe_fulltext() {
         #[rustfmt::skip]
         let test_cases = vec![
@@ -410,7 +411,7 @@ mod tests {
         }
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_apply_1() {
         let text = b"aaaa\nbbbb\ncccc\n";
         let delta = Delta {
@@ -425,7 +426,7 @@ mod tests {
         assert_eq!(&res[..], b"aaaa\nxxxx\ncccc\n");
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_apply_2() {
         let text = b"bbbb\ncccc\n";
         let delta = Delta {
@@ -447,7 +448,7 @@ mod tests {
         assert_eq!(&res[..], b"aaaabbbb\ncccc\ndddd\n");
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_apply_3a() {
         let text = b"aaaa\nbbbb\ncccc\n";
         let delta = Delta {
@@ -462,7 +463,7 @@ mod tests {
         assert_eq!(&res[..], b"zzzz\nyyyy\nxxxx\n");
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_apply_3b() {
         let text = b"aaaa\nbbbb\ncccc\n";
         let delta = Delta {
@@ -489,7 +490,7 @@ mod tests {
         assert_eq!(&res[..], b"zzzz\nyyyy\nxxxx\n");
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_apply_4() {
         let text = b"aaaa\nbbbb";
         let delta = Delta {
@@ -504,7 +505,7 @@ mod tests {
         assert_eq!(&res[..], b"aaaa\nbbbbcccc");
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_apply_5() {
         let text = b"aaaa\nbbbb\ncccc\n";
         let delta = Delta {
@@ -519,7 +520,7 @@ mod tests {
         assert_eq!(&res[..], b"aaaa\ncccc\n");
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_malformed_1() {
         let text = b"aaaa";
         let delta = Delta {
@@ -536,7 +537,7 @@ mod tests {
         }
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_malformed_2() {
         let text = b"aaaa";
         let delta = Delta {
@@ -553,7 +554,7 @@ mod tests {
         }
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_apply_chain_logarithmic1() {
         let frags1 = vec![
             Fragment {
@@ -583,7 +584,7 @@ mod tests {
         assert_eq!(&res[..], b"xbbxaaaa");
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_apply_chain_logarithmic2() {
         let frags1 = vec![Fragment {
             start: 1,
@@ -599,7 +600,7 @@ mod tests {
         assert_eq!(&res[..], b"axxaaaa");
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_apply_chain_logarithmic3() {
         let frags1 = vec![
             Fragment {
@@ -629,7 +630,7 @@ mod tests {
         assert_eq!(&res[..], b"aaaaaxzzzzzzzxyyyyyccc");
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_apply_chain_logarithmic_append() {
         let frags1 = vec![Fragment {
             start: 1,

@@ -292,6 +292,7 @@ fn be_u48(i: &[u8]) -> IResult<&[u8], u64> {
 
 #[cfg(test)]
 mod test {
+    use mononoke_macros::mononoke;
     use nom::IResult;
 
     use super::header;
@@ -299,7 +300,7 @@ mod test {
     use super::Header;
     use super::Version;
 
-    #[test]
+    #[mononoke::test]
     fn test_header_0() {
         let d = [0x00, 0x00, 0x00, 0x00];
         assert_eq!(
@@ -314,7 +315,7 @@ mod test {
         )
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_header_1() {
         let d = [0x00, 0x00, 0x00, 0x01];
         assert_eq!(
@@ -329,7 +330,7 @@ mod test {
         )
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_header_feat_1() {
         let d = [0x00, 0x01, 0x00, 0x01];
         assert_eq!(
@@ -344,7 +345,7 @@ mod test {
         )
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_header_feat_2() {
         let d = [0x00, 0x02, 0x00, 0x01];
         assert_eq!(
@@ -359,7 +360,7 @@ mod test {
         )
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_header_feat_3() {
         let d = [0x00, 0x03, 0x00, 0x01];
         assert_eq!(

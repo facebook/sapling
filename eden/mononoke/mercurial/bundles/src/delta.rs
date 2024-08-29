@@ -89,11 +89,12 @@ mod test {
     use assert_matches::assert_matches;
     use failure_ext::err_downcast;
     use failure_ext::err_downcast_ref;
+    use mononoke_macros::mononoke;
     use quickcheck::quickcheck;
 
     use super::*;
 
-    #[test]
+    #[mononoke::test]
     fn invalid_deltas() {
         let short_delta = BytesMut::from(&b"\0\0\0\0\0\0\0\0\0\0\0\x20"[..]);
         assert_matches!(

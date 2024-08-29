@@ -812,6 +812,7 @@ mod sharded_augmented_manifest_tests {
     use filestore::FilestoreConfig;
     use fixtures::Linear;
     use fixtures::TestRepoFixture;
+    use mononoke_macros::mononoke;
     use repo_blobstore::RepoBlobstore;
     use repo_blobstore::RepoBlobstoreArc;
     use repo_derived_data::RepoDerivedData;
@@ -883,7 +884,7 @@ mod sharded_augmented_manifest_tests {
         Sha1::from_byte_array([0x44; 20])
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_serialize_augmented_manifest(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let blobrepo: TestRepo = Linear::get_repo(fb).await;

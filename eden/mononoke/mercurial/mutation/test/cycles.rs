@@ -36,6 +36,7 @@ use mercurial_mutation::HgMutationEntry;
 use mercurial_mutation::HgMutationStore;
 use mercurial_mutation::SqlHgMutationStoreBuilder;
 use mercurial_types_mocks::nodehash::make_hg_cs_id;
+use mononoke_macros::mononoke;
 use mononoke_types_mocks::repo::REPO_ZERO;
 use sql_construct::SqlConstruct;
 
@@ -201,7 +202,7 @@ fn create_entries() -> HashMap<usize, HgMutationEntry> {
     }
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn add_entries_and_fetch_predecessors(fb: FacebookInit) -> Result<()> {
     // The cycles test changes behaviour when this knob is turned off.  The
     // new behaviour is also fine, it's just different.  For now we continue

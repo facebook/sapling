@@ -194,6 +194,7 @@ impl Arbitrary for HgFileEnvelope {
 
 #[cfg(test)]
 mod test {
+    use mononoke_macros::mononoke;
     use quickcheck::quickcheck;
 
     use super::*;
@@ -214,7 +215,7 @@ mod test {
         }
     }
 
-    #[test]
+    #[mononoke::test]
     fn bad_thrift() {
         let mut thrift_fe = thrift::HgFileEnvelope {
             node_id: thrift::HgNodeHash(thrift::id::Sha1(vec![1; 20].into())),

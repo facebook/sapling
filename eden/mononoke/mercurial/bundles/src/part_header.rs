@@ -446,6 +446,7 @@ impl Arbitrary for PartHeaderType {
 
 #[cfg(test)]
 mod test {
+    use mononoke_macros::mononoke;
     use quickcheck::quickcheck;
     use quickcheck::TestResult;
 
@@ -454,7 +455,7 @@ mod test {
 
     const MAX_LEN: usize = u8::MAX as usize;
 
-    #[test]
+    #[mononoke::test]
     fn test_check_params() {
         let mut header = PartHeaderBuilder::new(PartHeaderType::Changegroup, false).unwrap();
 
@@ -469,7 +470,7 @@ mod test {
         assert_param(&mut header, "key3", "v".repeat(MAX_LEN + 1), false);
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_roundtrip() {
         quickcheck(
             roundtrip
